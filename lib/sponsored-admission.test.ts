@@ -20,7 +20,8 @@ vi.mock("./agent/run-agent", () => ({ runAgent: mocks.runAgent }));
 vi.mock("next/server", async original => ({ ...await original<typeof import("next/server")>(), after: mocks.after }));
 vi.mock("./config", async original => {
   const actual = await original<typeof import("./config")>();
-  return { ...actual, config: { ...actual.config, sellerAddress: "0x1111111111111111111111111111111111111111",
+  // Vite's BASE_URL is an asset path; the synthetic server needs a canonical origin.
+  return { ...actual, config: { ...actual.config, baseUrl: "http://localhost:3939", sellerAddress: "0x1111111111111111111111111111111111111111",
     get discordPublicKey() { return mocks.discordPublicKey; }, slackSigningSecret: "synthetic-slack-secret", telegramBotToken: "synthetic-token", telegramWebhookSecret: "synthetic-webhook-secret" } };
 });
 
@@ -64,7 +65,7 @@ const mcpRequest = (ip?: string, key?: string) => request("/mcp", {
 }, ip, key);
 const webRequest = (ip?: string, extra: Record<string, unknown> = {}) => request("/api/ask", { question: "Synthetic question", ...extra }, ip);
 
-function discordRequest(userId = "discord-user") {
+function discordRequest(userId = "123456789012345678") {
   const body = JSON.stringify({ type: 2, application_id: "synthetic-app", token: "synthetic-token", user: { id: userId },
     data: { name: "ask", options: [{ name: "question", value: "Synthetic question" }] } });
   const timestamp = String(Math.floor(Date.now() / 1000));
@@ -125,9 +126,10 @@ describe("shared sponsored admission with durable identity", () => {
     expect(history).toHaveLength(1); expect(history[0].askerFunded).not.toBe(true);
     expect(history[0].provenance).toEqual({ version: 1, surface: "api", ownershipMethod: "api-key" });
     const historyRequest = new NextRequest("http://localhost/api/me/asks?limit=1", { headers: { authorization: `Bearer ${key.rawKey}` } });
-    expect((await walletHistory(historyRequest)).status).toBe(401); // A key never substitutes for a history session.
+    expect((await walletHistory(historyRequest)).status).toBe(403); // Existing ask keys never acquire explicit history:read.
     mocks.getSession.mockResolvedValue({ address: OWNER });
-    const view = await (await walletHistory(historyRequest)).json();
+    expect((await walletHistory(historyRequest)).status).toBe(403); // A cookie cannot expand a key's scope.
+    const view = await (await walletHistory(new NextRequest("http://localhost/api/me/asks?view=recent&limit=1"))).json();
     expect(view.asks).toHaveLength(1); expect(view.asks[0]).toMatchObject({ funded: false, provenance: history[0].provenance });
     expect(view.totals.spentUsdc).toBe(0);
     await db.revokeApiKey(key.id, OWNER);
@@ -170,7 +172,7 @@ describe("shared sponsored admission with durable identity", () => {
     ]);
     for (const [input] of mocks.collectRun.mock.calls) {
       expect(input.asker).toBeUndefined(); expect(JSON.stringify(input)).not.toContain("slack-user");
-      expect(JSON.stringify(input)).not.toContain("discord-user");
+      expect(JSON.stringify(input)).not.toContain("123456789012345678");
     }
   });
 
@@ -277,10 +279,10 @@ describe("shared sponsored admission with durable identity", () => {
   });
 
   it("bot users retain their own five-call allowance and provider namespaces do not collide", async () => {
-    for (let i = 0; i < 5; i++) expect((await discord(discordRequest("same-id"))).status).toBe(200);
+    for (let i = 0; i < 5; i++) expect((await discord(discordRequest("123456789012345679"))).status).toBe(200);
     expect(mocks.after).toHaveBeenCalledTimes(5);
-    expect(await (await discord(discordRequest("same-id"))).text()).toContain("temporarily limited or unavailable");
-    await slack(slackRequest("same-id"));
+    expect(await (await discord(discordRequest("123456789012345679"))).text()).toContain("temporarily limited or unavailable");
+    await slack(slackRequest("123456789012345679"));
     expect(mocks.after).toHaveBeenCalledTimes(6);
   });
 

@@ -17,11 +17,13 @@ declare global { interface Window {
   sponsorSignatures: Record<string, unknown>[];
   setSponsorWallet: (value: { address: string; chainId: number }) => void;
   holdSponsorSignature: boolean; finishSponsorSignature: () => void;
+  indexedOriginals: string[];
 } }
 
 const browser = await chromium.launch({ headless: true });
 try {
   for (const profile of [ARC_TESTNET_PROFILE, ARC_MAINNET_PROFILE]) {
+    let nextOriginalNonce = 0n;
     function original(claim = claimId, state: SponsoredRegistration["state"] = "prepared"): SponsoredRegistration {
       const canonicalUrl = `https://feed.invalid/${claim === claimId ? "a" : "b"}`;
       const urlHash = keccak256(toBytes(canonicalUrl)), now = Date.now();
@@ -30,7 +32,7 @@ try {
         sourceId: `fixture-${claim}`, onchainId: registrationId(creator, urlHash), registryAddress: registry,
         registryCodeHash: hash, relayer: sponsor, chainId: profile.chainId as 5042 | 5042002,
         params: { urlHash, payoutWallet: creator, authors: [{ wallet: creator, basisPoints: 10000 }],
-          fetchPriceUsdc6: "16000", contentCid: "", tags: "research" }, nonce: "0",
+          fetchPriceUsdc6: "5000", contentCid: "", tags: "research" }, nonce: String(nextOriginalNonce++),
         deadline: Math.floor(now / 1000) + (state === "expired" ? -10 : 600), createdAt: now, updatedAt: now,
         reservedWei: "20000000000000000", state };
       row.id = registrationIntentDigest(row);
@@ -39,13 +41,13 @@ try {
     const bundle = await build({ stdin: { resolveDir: process.cwd(), loader: "tsx", contents: `
 import React from 'react';import {createRoot} from 'react-dom/client';
 import {SponsoredRegistrationForm} from './components/keryx/sponsored-registration-form';
-window.sponsorSignatures=[];window.holdSponsorSignature=false;window.holdSponsorRender=false;
+window.sponsorSignatures=[];window.indexedOriginals=[];window.holdSponsorSignature=false;window.holdSponsorRender=false;
 window.sponsorConnection={address:'${creator}',chainId:${profile.chainId},status:'connected'};
 function Harness(){const [wallet,setWallet]=React.useState({address:'${creator}',chainId:${profile.chainId}});
 window.sponsorWallet=wallet;window.setSponsorWallet=value=>{
 window.sponsorConnection={...value,status:'connected'};
 if(!window.holdSponsorRender)setWallet(value);};
-return React.createElement(SponsoredRegistrationForm,{claimId:new URL(location.href).searchParams.get('claimId')||undefined});}
+return React.createElement(SponsoredRegistrationForm,{claimId:new URL(location.href).searchParams.get('claimId')||undefined,initialFetchPrice:.005,onIndexed:original=>window.indexedOriginals.push(original.id)});}
 createRoot(document.getElementById('root')).render(React.createElement(Harness));
 ` }, bundle: true, platform: "browser", format: "iife", jsx: "automatic", write: false,
       define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(profile.name),
@@ -66,7 +68,7 @@ return '0x'+'1'.repeat(130);}});
 ` : "export const useSiweAuth=()=>({session:{address:window.sponsorWallet.address,role:'creator'}});" }));
       } }] });
     const page = await browser.newPage({ viewport: { width: 320, height: 800 } });
-    let row: SponsoredRegistration | null = null, available = true, lostResponse = false, lostRenewal = false, indexed = false;
+    let row: SponsoredRegistration | null = null, available = true, reservedGasAvailable = false, lostResponse = false, lostRenewal = false, indexed = false, wrongPreparedPrice = false;
     const history = new Map<string, SponsoredRegistration>();
     const posts: Record<string, unknown>[] = [], errors: string[] = [];
     page.on("pageerror", e => errors.push(e.message));
@@ -84,7 +86,9 @@ return '0x'+'1'.repeat(130);}});
         if (request.method() === "POST") {
           const body = request.postDataJSON(); posts.push(body);
           if (body.operation === "prepare") {
+            assert.equal(body.fetchPrice, 0.005, "Caller-selected exact price survives errors and recovery");
             const prior = row; row = original(body.claimId);
+            if (wrongPreparedPrice) { row.params.fetchPriceUsdc6 = "5001"; row.id = registrationIntentDigest(row); }
             if (body.replacesRequestId) {
               row.replacesRequestId = prior!.id; history.set(prior!.id, prior!);
               if (lostRenewal) return route.abort();
@@ -103,7 +107,7 @@ return '0x'+'1'.repeat(130);}});
             return route.fulfill({ status: 404, json: { error: "No prior original" } });
           return route.fulfill({ json: { original: found } });
         }
-        return route.fulfill({ json: { available, sponsorAddress: sponsor, policyDigest: hash, publisherOrigins: ["https://feed.invalid"] } });
+        return route.fulfill({ json: { available, reservedGasAvailable, ...(available ? {} : { reason: "insufficient-balance" }), sponsorAddress: sponsor, policyDigest: hash, eligibility: "verified-publisher", funding: "wallet-balance" } });
       }
       return route.fulfill({ contentType: "text/html", body: '<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>' });
     });
@@ -117,7 +121,7 @@ return '0x'+'1'.repeat(130);}});
     const inspect = page.getByRole("button", { name: "Inspect original registration", exact: true });
     const resume = page.getByRole("button", { name: "Resume original sponsored transaction", exact: true });
     await load(); await prepare.click(); await sign.waitFor();
-    await page.getByText("Gas sponsorship is limited to verified publishers at: https://feed.invalid.", { exact: true }).waitFor();
+    assert.equal(await page.getByText(/Gas sponsorship is limited to/).count(), 0);
     assert.equal(posts.length, 1); assert.equal(posts[0].operation, "prepare");
     assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
     await page.getByText("Keryx gas reservation: up to 0.02 USDC.", { exact: false }).waitFor();
@@ -134,6 +138,7 @@ return '0x'+'1'.repeat(130);}});
     assert.deepEqual(signatures[0].domain, { name: "KeryxSourceRegistry", version: "3", chainId: profile.chainId, verifyingContract: registry });
     assert.equal((signatures[0].message as Record<string, unknown>).creator, creator);
     assert.equal((signatures[0].message as Record<string, unknown>).relayer, sponsor);
+    assert.equal((signatures[0].message as Record<string, unknown>).fetchPriceUsdc6, "5000");
     assert.equal(signatures[0].account, creator);
     await load(); await page.getByText("Original transaction submitted: confirmation pending", { exact: true }).waitFor();
     assert.equal(await sign.count(), 0); assert.equal(posts.length, 2);
@@ -147,6 +152,9 @@ return '0x'+'1'.repeat(130);}});
     row = { ...row!, state: "confirmed", actualGasWei: "1000000000000000" }; indexed = true;
     await inspect.click(); await page.getByText("Registration confirmed and indexed", { exact: true }).waitFor();
     assert.equal(posts.length, 3);
+    assert.deepEqual(await page.evaluate(() => window.indexedOriginals), [row!.id]);
+    await inspect.click(); await page.waitForTimeout(50);
+    assert.deepEqual(await page.evaluate(() => window.indexedOriginals), [row!.id], "Indexed callback fires once per original, with no financial POST");
 
     // Saved claim A must not block independently verified claim B.
     row = null; lostResponse = false; await load(claimB); await prepare.waitFor();
@@ -179,9 +187,10 @@ return '0x'+'1'.repeat(130);}});
     available = false; row = original(claimB, "submitted"); row.transactionHash = hash; row.transactionNonce = 0;
     await load(claimB); await page.getByText("Original transaction submitted: confirmation pending", { exact: true }).waitFor();
     assert.equal(await prepare.count(), 0); assert.equal(await sign.count(), 0); assert.equal(posts.length, beforeSwitch);
+    assert(await resume.isDisabled(), "Absent funding observation cannot execute a covered original");
     assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
     await page.evaluate(() => localStorage.clear()); row = null;
-    await load(); await page.getByText("Registration gas sponsorship is currently unavailable", { exact: false }).waitFor();
+    await load(); await page.getByText("New sponsored registrations are paused because available gas funds are insufficient.", { exact: false }).waitFor();
     assert.equal(await prepare.count(), 0);
 
     // Only an explicit owner action resolves an expired signing original, without another signature.
@@ -214,8 +223,35 @@ return '0x'+'1'.repeat(130);}});
     assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
     await load(); await sign.waitFor();
     // Changed policy cannot open a wallet prompt for a retained original.
-    row!.policyDigest = `0x${"e".repeat(64)}`; await load(); await sign.click();
-    await page.getByText("This original has no current signing allowance", { exact: false }).waitFor();
+    row!.policyDigest = `0x${"e".repeat(64)}`; await load(); await sign.waitFor(); assert(await sign.isDisabled());
+    assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
+
+    // Last funded slot: available=false refuses new reservations, but the exact original's
+    // already-covered0.04 leg can still sign/resume. No policy/nonce/budget reset is implied.
+    available = false; reservedGasAvailable = true; lostResponse = false; indexed = false;
+    row = original(claimId); row.reservedWei = "40000000000000000";
+    const lastSlotId = row.id, beforeLastSlot = posts.length;
+    await load(); await sign.waitFor(); assert(!await sign.isDisabled()); assert.equal(await prepare.count(), 0);
+    assert.equal(posts.length, beforeLastSlot); await sign.click();
+    await page.getByText("Original transaction submitted: confirmation pending", { exact: true }).waitFor();
+    assert.deepEqual(posts.at(-1), { operation: "submit", id: lastSlotId, signature: "0x" + "1".repeat(130) });
+    const lastSlotHash = row!.transactionHash;
+    await load(); await resume.waitFor(); assert(!await resume.isDisabled()); await resume.click();
+    assert.deepEqual(posts.at(-1), { operation: "resume", id: lastSlotId }); assert.equal(row!.transactionHash, lastSlotHash);
+    assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), [], "Resume reuses the retained authorization");
+    row = original(claimId, "signing"); row.deadline = Math.floor(Date.now() / 1000) - 10; row.id = registrationIntentDigest(row); row.transactionNonce = 0;
+    const lastExpiredId = row.id;
+    await load(); const resolveLast = page.getByRole("button", { name: "Resolve expired original using reserved gas", exact: true });
+    await resolveLast.waitFor(); assert(!await resolveLast.isDisabled()); await resolveLast.click();
+    await page.getByText("Registration reverted", { exact: true }).waitFor(); assert.deepEqual(posts.at(-1), { operation: "resolveExpired", id: lastExpiredId });
+    assert.equal(await page.getByRole("button", { name: "Prepare new unsigned request", exact: true }).count(), 0, "No renewal when no new reservation is available");
+    row = original(claimId); row.policyDigest = `0x${"e".repeat(64)}`;
+    await load(); await sign.waitFor(); assert(await sign.isDisabled(), "Reserved gas for the current policy cannot execute an old-policy original");
+    assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
+    available = true; reservedGasAvailable = false; wrongPreparedPrice = true; row = null; await page.evaluate(() => localStorage.clear());
+    await load(); await prepare.click(); await page.getByText("The prepared registration does not match this source and selected price.", { exact: false }).waitFor();
+    assert(await sign.isDisabled(), "A server price mismatch never opens a signing prompt");
+    assert.equal(await page.getByLabel("Original request", { exact: true }).inputValue(), row!.id, "Retain the admitted original even when its terms mismatch");
     assert.deepEqual(await page.evaluate(() => window.sponsorSignatures), []);
     assert.deepEqual(errors, []);
     await page.close();

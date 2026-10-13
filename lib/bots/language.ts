@@ -6,6 +6,7 @@ import { botControlsEnglish } from "../../locales/en/bot-controls";
 import { botControlsVietnamese } from "../../locales/vi/bot-controls";
 import { botControlsPortuguese } from "../../locales/pt-BR/bot-controls";
 import { botControlsSpanish } from "../../locales/es/bot-controls";
+import { readBotAnswerPreference, writeBotAnswerPreference } from "./answer-preference";
 
 export type BotLanguage = "en" | "vi" | "pt" | "es";
 export type BotLanguagePreference = BotLanguage | "auto";
@@ -34,8 +35,8 @@ export function botHelpLanguage(input: { explicit?: unknown; stored?: BotLanguag
     : { language: "en" as const, source: "default" as const };
 }
 /** Private placeholder follows the same original-question authority as the answer, never help preferences. */
-export function botPrivatePreparing(originalQuestion: string) {
-  return botControlsCatalogues[answerPresentation(originalQuestion, "ordinary").language].privatePreparing;
+export function botPrivatePreparing(originalQuestion: string, requestedLanguage?: BotLanguage) {
+  return botControlsCatalogues[requestedLanguage ?? answerPresentation(originalQuestion, "ordinary").language].privatePreparing;
 }
 
 /** Construct only AFTER transport authentication. These IDs identify a bot recipient,
@@ -90,7 +91,7 @@ export function parseBotControl(text: string): BotControl | null {
 export async function botControlResponse(input: { control: BotControl; recipient?: BotRecipient; platformLocale?: unknown;
   privateOnly?: boolean }, store: Store = getDb) {
   const saved = input.privateOnly ? { available: false, preference: "auto" as BotLanguagePreference }
-    : await readBotHelpPreference(input.recipient, store);
+    : input.control.action === "help" ? await readBotHelpPreference(input.recipient, store) : await readBotAnswerPreference(input.recipient, store);
   const language = botHelpLanguage({ explicit: input.control.action === "help" ? input.control.value : undefined,
     stored: saved.preference, platformLocale: input.platformLocale }).language;
   const copy = botControlsCatalogues[language];
@@ -102,7 +103,7 @@ export async function botControlResponse(input: { control: BotControl; recipient
     : copy.languageUnavailable + "\n" + copy.languageHelp };
   const next = preference(value);
   if (!next) return { language, text: copy.languageInvalid + "\n" + copy.languageHelp };
-  const confirmed = await writeBotHelpPreference(input.recipient, next, store);
+  const confirmed = await writeBotAnswerPreference(input.recipient, next, store) && await writeBotHelpPreference(input.recipient, next, store);
   const responseLanguage = confirmed ? botHelpLanguage({ stored: next, platformLocale: input.platformLocale }).language : language;
   const responseCopy = botControlsCatalogues[responseLanguage];
   return { language: responseLanguage, text: confirmed

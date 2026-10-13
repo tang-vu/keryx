@@ -259,8 +259,8 @@ it("a hanging read reaches its finite deadline and unmount aborts without anothe
 
 it("the original page metadata and history callback bodies remain intact outside the tab insertion", () => {
   const source = readFileSync("app/me/asks/my-asks-view.tsx", "utf8");
-  expect(source).toContain("onClick={() => setBrowse(value => !value)}");
+  expect(source).toContain("setBrowse(value => !value)");
   expect(source).toContain('onClick={() => setHistorical(false)}'); expect(source).toContain('onClick={() => setHistorical(true)}');
   expect(source).toContain('onClick={() => { setLoading(true); setFailed(false); setRevision(value => value + 1); }}');
-  expect(source).toContain('historical ? "/api/me/asks?network=arcTestnet&limit=200" : "/api/me/asks"');
+  expect(source).toContain('historical ? "/api/me/asks?network=arcTestnet&limit=200" : "/api/me/asks?view=recent"');
 });

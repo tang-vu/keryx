@@ -8,6 +8,9 @@
   },
   "description": "Keryx — a citation-toll reading agent. Pays creators every time their work is cited, in USDC on Arc.",
   "scripts": {
+    "research:brief": "node --import tsx --no-warnings scripts/prepare-specialist-brief.mts",
+    "research:pilot": "node --import tsx --no-warnings scripts/research-pilot.mts",
+    "test:browser-specialist-briefs": "node --import tsx scripts/test-browser-specialist-briefs.mts",
     "test:browser-evidence-procurement": "node --import tsx scripts/test-browser-evidence-procurement.mts",
     "evidence:procurement": "node --import tsx --no-warnings scripts/evidence-procurement.mts",
     "verify:live": "node scripts/verify-public-deployment.mjs",
@@ -132,7 +135,8 @@
     "papers": "node --import tsx scripts/papers.mts",
     "papers:collect": "node --import tsx scripts/collect-paper-catalog.mts",
     "canary:isolate-research": "node --import tsx --env-file-if-exists=.env.local scripts/isolate-failed-canary-research.mts",
-    "test:browser-output-limit": "node --import tsx scripts/test-browser-output-limit.mts"
+    "test:browser-output-limit": "node --import tsx scripts/test-browser-output-limit.mts",
+    "audit:evidence": "node --import tsx scripts/research-evidence-audit.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.69.0",

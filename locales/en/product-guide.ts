@@ -6,6 +6,7 @@ export const productGuideMessages = Object.freeze({
   "product.overviewKicker": "What you get",
   "product.overviewTitle": "A research answer you can follow back to its sources.",
   "product.overviewBody": "Keryx is a citation-toll reading agent. Give it a question and a source budget: it discovers material, explains what it reads or skips, and writes an answer with citations. Eligible cited creators can receive separate USDC rewards.",
+  "product.briefsAction": "Prepare a focused research brief",
   "product.researchersTitle": "For researchers and students",
   "product.researchersBody": "Find papers, compare evidence and build a literature review. Keep unavailable papers and abstract-only reads visible instead of treating them as full-text evidence.",
   "product.researchersAction": "Open the literature workspace",

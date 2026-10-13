@@ -17,6 +17,8 @@ import { getSession } from "@/lib/auth";
 import { citedSourceIds, hasNewMaterial } from "@/lib/answers-freshness";
 import { getTestnetArchive } from "@/lib/history/testnet-archive";
 import { parseRunProvenance } from "@/lib/research/run-provenance";
+import { ownedHistoryHttp } from "@/lib/history/owned-history-runtime";
+import { privacyReadsActive } from "@/lib/run-privacy/contracts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,8 +27,13 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
 export async function GET(req: NextRequest) {
+  // Explicit owned reads/key authority never fall back. OFF retains the existing session ledger.
+  if (req.headers.has("authorization") || req.nextUrl.searchParams.has("contract"))
+    return ownedHistoryHttp("list")(req);
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (req.nextUrl.searchParams.get("network") !== "arcTestnet" && req.nextUrl.searchParams.get("view") !== "recent"
+    && privacyReadsActive(await getDb())) return ownedHistoryHttp("list")(req);
   const requestedNetwork = req.nextUrl.searchParams.get("network");
   if (requestedNetwork && requestedNetwork !== "arcTestnet" && requestedNetwork !== "current")
     return NextResponse.json({ error: "Invalid history network" }, { status: 400 });

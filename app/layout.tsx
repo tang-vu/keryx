@@ -157,7 +157,7 @@ const JSON_LD = {
  */
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" dir="ltr">
       <body
         className={`${bodoni.variable} ${spectral.variable} ${splineMono.variable} antialiased`}
       >

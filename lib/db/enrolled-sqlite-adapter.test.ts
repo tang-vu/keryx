@@ -21,6 +21,7 @@ import { REGISTRY_ABI } from "../registry/registry-abi";
 import { browserSourceRegistryId } from "../payments/browser-original-source-context";
 import type { BrowserSourceOriginalAdmission } from "./browser-signing-originals";
 import type { BrowserQueryPolicy } from "../payments/browser-query-policy";
+import type { RegistrationSponsorFundingObservation, WalletFundedRegistrationSponsorPolicy } from "../sources/registration-sponsor-protocol";
 
 function fixtureDiagnostics(label?: string) {
   const started = performance.now();
@@ -150,6 +151,35 @@ it("refuses every explicitly reviewed readonly mutator before invocation, includ
   expect(await adapter.listSources()).toEqual([]);
   expect(f.api.ENROLLED_SQLITE_METHOD_ACCESS.listUnfinishedA2aOrders).toBe("read");
   expect(await adapter.listUnfinishedA2aOrders!(5)).toEqual({ orders: [], unreadable: 0, truncated: false });
+  expect(readFileSync(f.file)).toEqual(before);
+});
+
+it("exposes wallet funding inspection on the actual readonly enrolled facade without journal or schema writes", async () => {
+  const f = await fixture();
+  const adapter = await f.api.createReadonlyEnrolledSqliteAdapter();
+  f.adapters.push(adapter);
+  const now = Date.UTC(2026, 9, 12, 12);
+  const hash = `0x${"12".repeat(32)}` as const;
+  const policy: WalletFundedRegistrationSponsorPolicy = {
+    protocol: "keryx-registration-sponsor-v2", eligibility: "verified-publisher", funding: "wallet-balance",
+    network: f.identity.network, deploymentOrigin: "https://keryx.example",
+    registryAddress: "0x3333333333333333333333333333333333333333", registryCodeHash: hash,
+    sponsorAddress: "0x4444444444444444444444444444444444444444",
+    maxTransactionWei: "40000000000000000", maxGas: 21000, maxFeePerGasWei: "20000000000",
+  };
+  const observation: RegistrationSponsorFundingObservation = {
+    network: policy.network, sponsorAddress: policy.sponsorAddress, blockNumber: "100", blockHash: hash,
+    blockTimestamp: Math.floor(now / 1000), observedAt: now,
+    nativeBalanceWei: policy.maxTransactionWei, latestTransactionNonce: 0,
+  };
+  const before = readFileSync(f.file);
+  expect(f.api.ENROLLED_SQLITE_METHOD_ACCESS.inspectRegistrationSponsorFunding).toBe("read");
+  expect(await adapter.inspectRegistrationSponsorFunding(policy, observation, now)).toEqual({
+    available: true, reservedGasCovered: false, heldWei: "0", spendableWei: policy.maxTransactionWei,
+  });
+  expect(readFileSync(f.file)).toEqual(before);
+  writeFileSync(f.manifestPath, "{}", "utf8");
+  expect(() => adapter.inspectRegistrationSponsorFunding(policy, observation, now)).toThrow();
   expect(readFileSync(f.file)).toEqual(before);
 });
 

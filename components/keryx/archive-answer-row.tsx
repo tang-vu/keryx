@@ -10,6 +10,8 @@ import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 import { ConfidenceBadge } from "./confidence-badge";
+import { archiveAnswerLanguage } from "@/lib/answers-language";
+import { quotedOriginalParts } from "@/lib/i18n/quoted-originals";
 
 const copy = createMessages("en");
 
@@ -35,12 +37,12 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
             {fmtDate(entry.createdAt)}
           </span>
         </div>
-        <h2 className="mt-2 font-display text-[19px] font-medium leading-snug text-ink transition-colors group-hover:text-seal">
+        <h2 lang="und" className="mt-2 font-display text-[19px] font-medium leading-snug text-ink transition-colors group-hover:text-seal">
           {entry.question}
         </h2>
         {entry.answerSnippet && (
-          <p className="mt-2 font-serif text-[15px] leading-[1.5] text-ink-2">
-            {entry.answerSnippet}
+          <p lang={archiveAnswerLanguage(entry)} className="mt-2 font-serif text-[15px] leading-[1.5] text-ink-2">
+            {quotedOriginalParts(entry.answerSnippet).map((part, i) => part.original ? <span key={i} lang="und">{part.text}</span> : part.text)}
           </p>
         )}
         <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.06em] text-ink-3">

@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "incremental": false, "plugins": [] },
+  "include": ["./*.ts", "../../next-env.d.ts", "../../scripts/research-mandate.mts", "../../scripts/test-browser-research-mandate.mts",
+    "../../components/keryx/research-mandate-workspace.tsx", "../../app/mandates/*.tsx", "../../app/api/research/mandates/**/*.ts"],
+  "exclude": ["../../node_modules"]
+}

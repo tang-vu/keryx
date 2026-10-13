@@ -1,4 +1,5 @@
 import type { PublicReference } from "../public-references/catalog";
+import type { PublicReferenceArchiveDb } from "../public-references/archive";
 import type { PrivateProfilesStore } from "../profiles/private-profile";
 import type { PrivateBibliographiesStore } from "../bibliographies/private-bibliography";
 import type { ZoteroStore } from "../references/zotero-contract";
@@ -208,7 +209,9 @@ export interface FeedbackStats {
   rate: number; // up / total, 0 when no feedback
 }
 
-export interface KeryxDB {
+export interface KeryxDB extends PublicReferenceArchiveDb {
+  /** Opt-in ordinary publication; absent on sealed/native stores and when privacy is inactive. */
+  readonly publicProfiles?: import("../profiles/public-profile").PublicProfilesStore;
   /** Explicitly admitted ordinary run text privacy. Public callers must never fall back to raw originals. */
   readonly runPrivacy?: import("../run-privacy/contracts").RunPrivacyStore;
   /** Captured staged activation; false preserves existing admitted readers, true requires the privacy port. */
@@ -230,11 +233,17 @@ export interface KeryxDB {
   readonly zotero?: ZoteroStore;
   /** Bounded ordinary current-store attribution only; absent on sealed/native/archive readers. */
   readonly personalHistory?: import("../history/personal-history").PersonalHistoryStore;
+  /** Optional CURRENT stored-membership read port supplied by #267. No write/login or pooled authority. */
+  readonly historyMembership?: import("../history/owned-history").HistoryMembershipStore;
   /** Ordinary-only decision opinions/admission sidecars; never payment authority. */
   readonly decisionReviews?: import("../research/decision-review-types").DecisionReviewsStore;
   /** Atomic creator gas originals; absent on storage without a reviewed sponsor journal. */
-  admitRegistrationSponsor?(policy: import("../sources/registration-sponsor-protocol").RegistrationSponsorPolicy,
-    row: import("../sources/registration-sponsor-protocol").SponsoredRegistration, now?: number): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
+  admitRegistrationSponsor?(policy: import("../sources/registration-sponsor-protocol").ActiveRegistrationSponsorPolicy,
+    row: import("../sources/registration-sponsor-protocol").SponsoredRegistration, now?: number,
+    fundingObservation?: import("../sources/registration-sponsor-protocol").RegistrationSponsorFundingObservation): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
+  inspectRegistrationSponsorFunding?(policy: import("../sources/registration-sponsor-protocol").ActiveRegistrationSponsorPolicy,
+    observation: import("../sources/registration-sponsor-protocol").RegistrationSponsorFundingObservation,
+    now?: number): Promise<import("./registration-sponsor").RegistrationSponsorFundingInspection>;
   getRegistrationSponsor?(input: { wallet: string; id?: string; canonicalUrl?: string }): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration | null>;
   transitionRegistrationSponsor?(input: import("./registration-sponsor").RegistrationSponsorTransition): Promise<import("../sources/registration-sponsor-protocol").SponsoredRegistration>;
   /** Server-only registration execution authority; never expose in API projections. */
@@ -255,7 +264,7 @@ export interface KeryxDB {
   verifySourceIfUnchanged(input: { sourceId: string; walletAddress: string; feedUrl: string }): Promise<boolean>;
   listPublicReferences?(): Promise<PublicReference[]>;
   getPublicReference?(id: string): Promise<PublicReference | null>;
-  upsertPublicReference?(reference: PublicReference): Promise<void>;
+  upsertPublicReference?(reference: PublicReference): Promise<void | { added: number; updated: number }>;
   listSources(): Promise<Source[]>;
   /** Every source row, including ones deactivated on-chain. Discovery must NEVER use this —
    *  it exists for owner-facing history (an audit export of what a wallet earned must still

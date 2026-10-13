@@ -7,7 +7,9 @@ import { draftCheckFixture } from "./fixtures/draft-check";
 
 it("opens empty with the privacy statement and nothing to submit", () => {
   const html = renderToStaticMarkup(createElement(DraftCheckWorkspace));
-  expect(html).toContain("Nothing is uploaded, saved or added to public history.");
+  expect(html).toContain("Nothing is uploaded or added to public history.");
+  expect(html).toContain("Nothing is saved unless you choose");
+  expect(html).toContain("Save on this device");
   expect(html).toContain("Wording check, not semantic or expert review.");
   expect(html).not.toContain("<form");
   expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Check cited sentences<\/button>/);

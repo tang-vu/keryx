@@ -5,7 +5,7 @@
  * `id` is the public identifier used in API payloads and the UI ("keryx:<id>" also
  * accepted on the OpenAI-compatible surface). `model` is the provider wire name.
  * Flash is the default workhorse. Any picked model that errors crosses the other configured
- * provider defaults before the offline heuristic, so an ask always answers.
+ * provider defaults before the offline heuristic. A guarded or failed run may still refuse.
  *
  * The catalog once carried seven open-weight models routed through Ollama Cloud. That account is
  * gone, and a picker offering models that answer only by silently falling back to DeepSeek is a
@@ -14,7 +14,7 @@
  * an entry whose provider is uncredentialed is filtered out of the picker rather than offered.
  */
 
-export type ModelProvider = "deepseek" | "mimo" | "cloudflare";
+export type ModelProvider = "deepseek" | "cloudflare";
 
 export interface ModelChoice {
   /** Public id used in API payloads and the picker. Colon-free (`keryx:` prefixing). */
@@ -39,8 +39,10 @@ export const DEFAULT_MODEL_ID = "deepseek-flash";
  * retired id must keep resolving rather than silently drop the caller to the default.
  */
 const RETIRED_IDS: Record<string, string> = {
-  // DeepSeek retired the `deepseek-chat` wire name; the API now serves v4-flash / v4-pro only.
+  // Canonical Flash serves V4.1. Retained aliases remain readable without rewriting old runs.
   "deepseek-chat": "deepseek-flash",
+  "deepseek-v4-flash": "deepseek-flash",
+  "deepseek-v4-flash-vision-exp": "deepseek-flash",
   // The open-weight tier is gone with the Ollama Cloud account. Every one of these ids may still be
   // sitting in a saved widget embed or someone's API client, so they resolve to the workhorse
   // instead of 400-ing — which is what the picker did for them at the end anyway.
@@ -55,31 +57,18 @@ const RETIRED_IDS: Record<string, string> = {
 export const MODEL_CATALOG: ModelChoice[] = [
   {
     id: "deepseek-flash",
-    label: "DeepSeek Flash",
+    label: "DeepSeek V4.1 Flash",
     provider: "deepseek",
-    model: "deepseek-v4-flash",
-    note: "The workhorse — fast, dependable, and the fallback for every other pick.",
+    model: "deepseek-flash",
+    note: "Default research model. Lower published cost; quality still depends on the task and evidence.",
   },
   {
     id: "deepseek-v4-pro",
-    label: "DeepSeek V4 Pro",
+    label: "DeepSeek V4 Pro 0813",
     provider: "deepseek",
     model: "deepseek-v4-pro",
-    note: "Deepest reasoning in the stable — thorough, noticeably slower.",
-  },
-  {
-    id: "mimo-v2.5",
-    label: "MiMo V2.5",
-    provider: "mimo",
-    model: "mimo-v2.5",
-    note: "Xiaomi's workhorse — a second house reading the same sources.",
-  },
-  {
-    id: "mimo-v2.5-pro",
-    label: "MiMo V2.5 Pro",
-    provider: "mimo",
-    model: "mimo-v2.5-pro",
-    note: "Xiaomi's deeper tier — more considered, slower to answer.",
+    note: "Explicit comparison option with a higher published price; not automatically better than V4.1 Flash.",
+    manualOnly: true,
   },
   {
     id: "cloudflare-llama-3.3",

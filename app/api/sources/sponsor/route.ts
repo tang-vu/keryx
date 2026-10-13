@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 import { RegistrationSponsorError } from "@/lib/db/registration-sponsor";
 import { SourceClaimError } from "@/lib/db/public-source-claims";
 import { claimBody } from "../../source-claims/shared";
-import { prepareSponsoredRegistration, recoverSponsoredRegistration, resolveExpiredSponsoredRegistration, resumeSponsoredRegistration, submitSponsoredRegistration } from "@/lib/sources/registration-sponsor-service";
+import { inspectSponsoredRegistrationFunding, prepareSponsoredRegistration, recoverSponsoredRegistration, resolveExpiredSponsoredRegistration, resumeSponsoredRegistration, submitSponsoredRegistration } from "@/lib/sources/registration-sponsor-service";
 import { registrationSponsorReadChain, registrationSponsorRuntime } from "@/lib/sources/registration-sponsor-runtime";
 import { registrationPolicyDigest, registrationWalletMayPrepare } from "@/lib/sources/registration-sponsor-protocol";
 
@@ -20,6 +20,11 @@ const bodySchema = z.discriminatedUnion("operation", [
 ]);
 const headers = { "Cache-Control": "no-store", Vary: "Cookie, Origin", "Referrer-Policy": "no-referrer" };
 const response = (value: unknown, status = 200) => Response.json(value, { status, headers });
+function availabilityFailure(error: unknown) {
+  const reason = error instanceof RegistrationSponsorError && error.code === "registration_sponsor_rpc_unavailable"
+    ? "rpc_unavailable" : "configuration_unavailable";
+  return response({ available: false, reservedGasAvailable: false, reason });
+}
 function failure(error: unknown) {
   if (error instanceof RegistrationSponsorError || error instanceof SourceClaimError)
     return response({ error: error.message, code: error.code }, error.status);
@@ -41,16 +46,22 @@ export async function GET(req: Request) {
       try { return response({ original: await recoverSponsoredRegistration(db, session.address, row.id, registrationSponsorReadChain(row)) }); }
       catch { return response({ original: row, recoveryUnavailable: true }); }
     }
+    if (!session) return response({ available: false, reservedGasAvailable: false, reason: "authentication_required" });
     const ctx = await registrationSponsorRuntime();
-    if (!ctx || !session || !registrationWalletMayPrepare(ctx.policy, session.address))
-      return response({ available: false });
-    await ctx.chain.assertRegistry();
-    return response({ available: true, network: ctx.policy.network, registryAddress: ctx.policy.registryAddress,
+    if (!ctx) return response({ available: false, reservedGasAvailable: false, reason: "sponsor_disabled" });
+    if (!registrationWalletMayPrepare(ctx.policy, session.address)) return response({ available: false, reservedGasAvailable: false, reason: "publisher_ineligible" });
+    try { await ctx.chain.assertRegistry(); }
+    catch { return response({ available: false, reservedGasAvailable: false, reason: "rpc_unavailable" }); }
+    const funding = await inspectSponsoredRegistrationFunding(ctx);
+    return response({ available: funding?.available ?? true, network: ctx.policy.network, registryAddress: ctx.policy.registryAddress,
       sponsorAddress: ctx.policy.sponsorAddress, policyDigest: registrationPolicyDigest(ctx.policy),
       maxGasWei: ctx.policy.maxTransactionWei, requiresPublishingProof: true,
-      ...(ctx.policy.allowlistedPublisherOrigins?.length && !ctx.policy.allowlistedCreators.includes(session.address.toLowerCase() as `0x${string}`)
+      ...(funding ? { reservedGasAvailable: funding.reservedGasCovered,
+        ...(!funding.available ? { reason: "insufficient_funds" } : {}) } : {}),
+      ...(ctx.policy.protocol === "keryx-registration-sponsor-v2" ? { eligibility: "verified-publisher", funding: "wallet-balance" } : {}),
+      ...(ctx.policy.protocol === "keryx-registration-sponsor-v1" && ctx.policy.allowlistedPublisherOrigins?.length && !ctx.policy.allowlistedCreators.includes(session.address.toLowerCase() as `0x${string}`)
         ? { publisherOrigins: ctx.policy.allowlistedPublisherOrigins } : {}) });
-  } catch { return response({ available: false }); }
+  } catch (error) { return availabilityFailure(error); }
 }
 export async function POST(req: Request) {
   try {

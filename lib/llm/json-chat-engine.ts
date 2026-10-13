@@ -17,7 +17,7 @@ import { presentationStatementGuidance } from "../research/answer-presentation";
 import { buildContextualQuoteOptions } from "./quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence, briefContextSources, briefReviewPacket, BRIEF_GENERATION_GUIDANCE, BRIEF_REVIEW_GUIDANCE, BRIEF_COMPACT_REVIEW_SCHEMA } from "./decision-brief";
 import { COVERAGE_GUIDANCE, normalizeCoverage, canStopForCoverage } from "./coverage-assessment";
-import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
+import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE, STATEMENT_LANGUAGE_REVIEW_GUIDANCE } from "./evidence-review";
 import { buildEvidenceReviewInput, MAX_EVIDENCE_REVIEW_INPUT_BYTES } from "./evidence-review-input";
 import { MAX_SELECTION_DIAGNOSTIC_HISTORY, ResearchSelectionError, invalidResearchSelectionOutput, parseResearchSelection } from "./research-selection";
 import { parseSelectionDiagnostic, type SelectionDiagnostic } from "../research/selection-diagnostic";
@@ -289,6 +289,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async synthesize(input: SynthInput): Promise<SynthResult> {
+    const observeLanguage = input.observeAnswerLanguage === true && input.generationFormat === "evidence-only" &&
+      !input.answerFormat && !input.teachingRequest;
     if (input.answerFormat === "decision-brief" && this.supportsDecisionBrief()) return this.synthesizeDecisionBrief(input);
     // Protected originals have no ordinary generation opt-in. Even a stray
     // teaching flag on a legacy/decision-brief input cannot alter their contract.
@@ -335,9 +337,11 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     let teachingReview = false;
     if (proposals.length) {
       try {
-        const reviewInput = this.synthesisEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims });
+        const reviewInput = this.synthesisEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims,
+          observeLanguage });
         reviewedIndexes = reviewInput.reviewedIndexes;
-        let reviewSystem = EVIDENCE_REVIEW_GUIDANCE, reviewJson = reviewInput.json;
+        let reviewSystem = EVIDENCE_REVIEW_GUIDANCE + (observeLanguage
+          ? STATEMENT_LANGUAGE_REVIEW_GUIDANCE : ""), reviewJson = reviewInput.json;
         if (teaching?.packet?.proposals.length) {
           try {
             const teachingInput = teachingProposalReviewInput(teaching.packet);
@@ -366,7 +370,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         synthesisOutputLimit = synthesisOutputLimitFromError(error, "review");
       }
     }
-    const evidence = applyEvidenceReview(proposals, review, reviewedIndexes);
+    const evidence = applyEvidenceReview(proposals, review, reviewedIndexes, observeLanguage);
     const envelope = input.generationFormat === "evidence-only" ? evidenceOnlyEnvelope(input, evidence) : undefined;
     return {
       answer: envelope?.answer ?? (out.answer as string) ?? "",
