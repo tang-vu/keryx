@@ -7,6 +7,7 @@ import { classifyUsage } from "../lib/research-audit/usage-cohort.ts";
 import { summarizeUsage } from "../lib/research-audit/usage-summary.ts";
 import { sourceLearningRecord, learnedValue } from "../lib/research-audit/source-learning.ts";
 import { canonicalReadPacket, MAX_READ_PACKET_BYTES, verifyActualReadPacket } from "../lib/research-audit/actual-read-record.ts";
+import { economicReplaySummary } from "../lib/research-audit/economic-checkpoint.ts";
 
 const MAX_INPUT = 2 * 1024 * 1024;
 const [command, file, expectedHash, ...extra] = process.argv.slice(2);
@@ -40,6 +41,9 @@ try {
     output = { verified, scope: "post-portfolio-checkpoints", facts: "assertions", sourceAuthenticity: "unproven", paymentAnchoring: "unproven" };
     if (packet?.schema === 2) output = { ...output, scope: packet.coverage, optimizerReplay: "unavailable" };
     if (packet?.schema === 3) output = { ...output, scope: packet.coverage, optimizerReplay: packet.optimizer.status === "available" ? "verified" : "unavailable" };
+    if (packet?.schema === 4) output = { ...output, scope: packet.coverage, optimizerReplay: packet.optimizer.status === "available" ? "verified" : "unavailable",
+      economicReplay: economicReplaySummary(packet.economics),
+      monetaryAuthority: "qualified-assertions-only", signerCapacity: "not-replayed", settlementAuthority: "unproven" };
     if (!verified) process.exitCode = 1;
   } else if (command === "score") output = scorePurchases(input.run, input.payments, input.network);
   else if (command === "cohort") output = classifyUsage(input);
