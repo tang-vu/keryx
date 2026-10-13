@@ -1,0 +1,183 @@
+{
+  "schema": "keryx-evidence-audit-input-v1",
+  "network": "eip155:5042002",
+  "receipt": {
+    "payload": {
+      "schema": "urn:keryx:research-receipt:1",
+      "dispatch": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "question": "Illustrative offline example only",
+        "answer": "Illustrative offline example: this synthetic article supports the example claim [1].",
+        "answerSha256": "sha256:7fd04e9262644b537bbe6e2faf09263066ffa19fa7fd60a74ad276f6ca7ceb05",
+        "createdAt": "2026-10-12T10:00:00.000Z",
+        "budgetUsdc": 0.005,
+        "researchMode": "quick",
+        "engine": "heuristic",
+        "confidence": null
+      },
+      "agency": {
+        "decisions": [
+          {
+            "sourceId": "synthetic-publisher",
+            "itemId": "synthetic-article",
+            "contentVersion": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "sourceName": "Illustrative synthetic publisher",
+            "action": "BUY",
+            "expectedValue": 1,
+            "priceUsdc": 0.002,
+            "confidence": 1,
+            "rationale": "Synthetic test data only",
+            "targets": [
+              0
+            ],
+            "external": false
+          }
+        ]
+      },
+      "claims": [
+        {
+          "claimIndex": 0,
+          "claim": "This synthetic article supports the example claim.",
+          "coverage": 1,
+          "coveredBy": [
+            "[1]"
+          ],
+          "evidence": [
+            {
+              "sourceId": "synthetic-publisher",
+              "itemId": "synthetic-article",
+              "contentVersion": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "marker": "[1]",
+              "sourceName": "Illustrative synthetic publisher",
+              "quote": "This synthetic article supports the example claim.",
+              "support": 1,
+              "qualifiesForAnswer": true,
+              "qualifiesForReward": true
+            }
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "sourceId": "synthetic-publisher",
+          "itemId": "synthetic-article",
+          "contentVersion": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "marker": "[1]",
+          "sourceName": "Illustrative synthetic publisher",
+          "weight": 1,
+          "rewardPlannedUsdc": 0.001,
+          "rationale": "Synthetic test data only"
+        }
+      ],
+      "settlement": {
+        "mode": "offline",
+        "status": "offline",
+        "ledgerCompleteness": "not_applicable",
+        "expectedRecordedPaymentsAtFinish": null,
+        "recordedCreatorPayments": 1,
+        "settledCreatorPayments": 0,
+        "pendingCreatorPayments": 0,
+        "failedCreatorPayments": 0,
+        "simulatedCreatorPayments": 1,
+        "settledCreators": 0,
+        "settledCreatorUsdc": 0,
+        "settledAccessUsdc": 0,
+        "settledCitationUsdc": 0,
+        "pendingCreatorUsdc": 0,
+        "failedCreatorUsdc": 0,
+        "simulatedCreatorUsdc": 0.002,
+        "creatorPayments": [
+          {
+            "sourceId": "synthetic-publisher",
+            "itemId": "synthetic-article",
+            "contentVersion": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "kind": "fetch",
+            "sourceName": "Illustrative synthetic publisher",
+            "payee": "0x1111111111111111111111111111111111111111",
+            "amountUsdc": 0.002,
+            "network": "eip155:5042002",
+            "status": "simulated",
+            "createdAt": "2026-10-12T10:00:00.000Z"
+          }
+        ]
+      },
+      "limits": [
+        "Illustrative offline synthetic example, not a real run, invoice, review or settlement."
+      ]
+    },
+    "integrity": {
+      "algorithm": "sha256",
+      "canonicalization": "keryx-json-v1",
+      "scope": "payload",
+      "digest": "sha256:6efc5c5a4a28f559c5436f72325fe41099c11836d386e49e0fa15aa44add17f8"
+    }
+  },
+  "review": {
+    "receiptDigest": "sha256:6efc5c5a4a28f559c5436f72325fe41099c11836d386e49e0fa15aa44add17f8",
+    "answerSha256": "sha256:7fd04e9262644b537bbe6e2faf09263066ffa19fa7fd60a74ad276f6ca7ceb05",
+    "reviewerRef": "illustrative-synthetic-review",
+    "reviewedAt": "2026-10-12T10:00:00.000Z",
+    "claims": [
+      {
+        "claimIndex": 0,
+        "verdict": "supported",
+        "evidence": [
+          {
+            "sourceId": "synthetic-publisher",
+            "itemId": "synthetic-article",
+            "contentVersion": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "marker": "[1]"
+          }
+        ]
+      }
+    ]
+  },
+  "costs": {
+    "receiptDigest": "sha256:6efc5c5a4a28f559c5436f72325fe41099c11836d386e49e0fa15aa44add17f8",
+    "llm": {
+      "status": "unknown"
+    },
+    "search": {
+      "status": "unknown"
+    },
+    "other": {
+      "status": "unknown"
+    }
+  },
+  "decisions": [
+    {
+      "policyVersion": "captured-owner-decisions-v1",
+      "engine": "heuristic",
+      "requestedModel": null,
+      "runId": "11111111-1111-4111-8111-111111111111",
+      "round": 0,
+      "ordinal": 0,
+      "sourceName": "Illustrative synthetic publisher",
+      "modelAction": "BUY",
+      "codeAction": "BUY",
+      "codeRule": "selected",
+      "initialCodeAction": "BUY",
+      "initialCodeRule": "selected",
+      "terms": {
+        "sourceId": "synthetic-publisher",
+        "itemId": "synthetic-article",
+        "contentVersion": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "assetId": "synthetic-article",
+        "owned": true,
+        "network": "eip155:5042002",
+        "payTo": "0x1111111111111111111111111111111111111111",
+        "priceMicroUsdc": "2000",
+        "citationBudgetMicroUsdc": "1000",
+        "listPriceMicroUsdc": "2000"
+      },
+      "reviewFirst": false,
+      "cohort": "unknown",
+      "cohortEvidence": null,
+      "id": "22222222-2222-4222-8222-222222222222",
+      "createdAt": "2026-10-12T09:59:00.000Z",
+      "expiresAt": null,
+      "state": "observed",
+      "verdict": null
+    }
+  ]
+}
