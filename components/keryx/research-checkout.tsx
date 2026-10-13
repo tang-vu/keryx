@@ -13,6 +13,7 @@ import { buyerRequestSchema, type BuyerRequest } from "@/lib/buyer/protocol";
 import { connectedBuyerWallet } from "@/lib/buyer/connected-wallet";
 import { buyBrowserResearch } from "@/lib/buyer/browser-client";
 import { downloadBuyerJson } from "@/lib/buyer/download";
+import { ResearchJobTarget } from "./research-job-target";
 
 const copy = createMessages("en");
 
@@ -80,6 +81,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
 
   return <div className="mt-5 space-y-4 border border-line bg-paper-2 p-4">
     <h3 className="font-display text-2xl">{copy("researchCheckout.title")}</h3>
+    <ResearchJobTarget mode={mode} version={version} />
     <p className="font-serif text-sm text-ink-2">{copy("researchCheckout.authorization", { network: browserPaymentProfile().label })}</p>
     {!address ? <WalletPicker isBusy={busy} onConnected={() => {}} /> : <>
       <p className="break-all font-mono text-xs">{copy("researchCheckout.wallet", { wallet: address })}</p>
@@ -94,6 +96,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
       </>}
     </>}
     {review && <div className="space-y-3 border-t border-line pt-4">
+      <ResearchJobTarget mode={review.request.researchMode} version={review.request.packageVersion ?? version} />
       <p className="whitespace-pre-wrap break-words font-serif">{review.request.question}</p>
       <p className="text-xs"><SigningAmount micros={review.amount} /></p>
       <p className="font-mono text-xs">{copy(review.request.researchMode === "quick" ? "researchCheckout.quickSummary" : "researchCheckout.deepSummary", { amount: formatAmount(BigInt(review.amount), { minimumFractionDigits: 6, useGrouping: false }), cap: review.request.budget })}</p>

@@ -1,0 +1,18 @@
+export const jobTargetCopy = {
+  target: (tier: string, seconds: number) => `${tier === "quick" ? "Quick" : "Deep"} completion target: ${seconds} seconds from original job acceptance.`,
+  monthly: "Each Monthly request starts its own target when that original request is accepted, not when the plan is purchased.",
+  terms: "This is a provisional target, not a guaranteed completion time. Existing package terms provide no automatic remedy. Keep the original job; do not pay again for recovery.",
+  unavailable: "Completion target unavailable for this package version. No timing or refund promise is inferred.",
+  localTitle: "Completion target elapsed since the last status check.",
+  localBody: "The last status had no delivered result. Check the original job for current delivery and payment evidence. This local clock warning does not establish its current state or notify a person.",
+  localObservation: "This warning uses elapsed browser time after the last server observation. A closed or suspended page cannot guarantee timely display.",
+  originalOnly: "Keep the original job and payment reference. Do not pay again to recover this job. Refund policy and execution require owner confirmation; no refund is offered or recorded here.",
+  choices: "Next-step guidance",
+  choiceNotice: "Choosing guidance only changes this page. It does not submit a request, notify support, resume research or move money.",
+  wait: "Wait",
+  partial: "Partial-result guidance",
+  human: "Human-review guidance",
+  waitBody: "Keep following the original job with its existing status/recovery controls. Waiting does not restart its target or authorize another purchase.",
+  partialBody: "Ask the owner to review any retained output for explicitly incomplete delivery. No partial result or acceptance is promised by this status; pending payment legs remain protected.",
+  humanBody: "Share the original job ID, original payment reference and last recorded stage privately with the owner. This page has not contacted a responder. Uncertain legs require original-only review before any remedy.",
+};
