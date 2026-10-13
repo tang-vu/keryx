@@ -10,9 +10,15 @@
  */
 
 import { useState } from "react";
-import { WagmiProvider } from "wagmi";
+import { WagmiProvider, useAccount } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { makeConfig } from "@/lib/wagmi-config";
+import { LocaleProvider } from "@/lib/i18n/locale-context";
+
+function LocaleBoundary({ children }: { children: React.ReactNode }) {
+  const { address, isConnected } = useAccount();
+  return <LocaleProvider connectedWallet={isConnected ? address ?? null : null}>{children}</LocaleProvider>;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   // Memoised per-component-tree instances — avoids re-creating on re-render.
@@ -21,7 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}><LocaleBoundary>{children}</LocaleBoundary></QueryClientProvider>
     </WagmiProvider>
   );
 }
