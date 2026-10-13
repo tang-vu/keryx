@@ -9,6 +9,7 @@
  */
 
 import { config } from "../config";
+import { recordedAnswerLanguage } from "../research/answer-language-provenance";
 import { unsupportedDecisionReviewFlag } from "../research/decision-review-types";
 import { formatRecordedUsdc, formatNumber, selectPlural } from "../i18n/format";
 import { answerPresentation } from "../research/answer-presentation";
@@ -32,6 +33,8 @@ export interface TelegramUpdate {
 }
 
 export interface AskMessage {
+  /** Set only by the authenticated route from scoped preference state. */
+  presentationLanguage?: BotLanguage;
   question: string;
   chatId: number;
   userId: number;
@@ -108,9 +111,9 @@ export function apiUrl(botToken: string, method: string): string {
  * The finished answer as one HTML-mode message: bold question, grounded answer, the creators
  * actually paid, and a link to the full dispatch trace (which carries any truncated text).
  */
-export function buildAnswerText(run: QueryRun): string {
-  const message = botResearchMessages(run.question);
-  const locale = answerPresentation(run.question, "ordinary").language;
+export function buildAnswerText(run: QueryRun, requestedLanguage?: BotLanguage): string {
+  const locale = recordedAnswerLanguage(run) ?? requestedLanguage ?? answerPresentation(run.question, "ordinary").language;
+  const message = botResearchMessages(run.question, locale);
   const parts = [`<b>${escapeHtml(truncate(run.question, 256))}</b>`, ""];
   parts.push(escapeHtml(truncate(run.answer, ANSWER_MAX)), "");
 
@@ -133,8 +136,8 @@ export function buildAnswerText(run: QueryRun): string {
 }
 
 /** Failure text for the placeholder — the run died, say so instead of hanging forever. */
-export function buildErrorText(err: unknown, originalQuestion = ""): string {
-  return truncate(escapeHtml(botResearchFailure(err, originalQuestion)), MESSAGE_MAX);
+export function buildErrorText(err: unknown, originalQuestion = "", requestedLanguage?: BotLanguage): string {
+  return truncate(escapeHtml(botResearchFailure(err, originalQuestion, requestedLanguage)), MESSAGE_MAX);
 }
 
 function escapeHtml(text: string): string {

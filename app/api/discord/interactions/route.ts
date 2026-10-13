@@ -22,6 +22,7 @@ import { privateRunClaimText } from "@/lib/run-claims/delivery";
 import { config } from "@/lib/config";
 import { botResearchMessages } from "@/lib/bots/research-messages";
 import { botControlResponse } from "@/lib/bots/language";
+import { botAnswerPresentation } from "@/lib/bots/answer-preference";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { verifyInteractionSignature } from "@/lib/discord/verify-interaction-signature";
 import {
@@ -76,9 +77,10 @@ export async function POST(req: NextRequest) {
   if (!cmd) {
     return Response.json(ephemeralReply(botResearchMessages()("discordUsage")));
   }
+  cmd.presentationLanguage = (await botAnswerPresentation(cmd.question, { platform: "discord", scope: cmd.applicationId, userId: cmd.userId })).language;
   if (!config.sellerAddress) {
     return Response.json(
-      ephemeralReply(botResearchMessages(cmd.question)("treasuryUnavailable")),
+      ephemeralReply(botResearchMessages(cmd.question, cmd.presentationLanguage)("treasuryUnavailable")),
     );
   }
 
@@ -87,7 +89,7 @@ export async function POST(req: NextRequest) {
   const limited = await checkSponsoredResearchAdmission({ kind: "bot", platform: "discord", userId: cmd.userId });
   if (limited) {
     return Response.json(
-      ephemeralReply(botResearchMessages(cmd.question)("sponsoredLimited")),
+      ephemeralReply(botResearchMessages(cmd.question, cmd.presentationLanguage)("sponsoredLimited")),
     );
   }
 
@@ -104,16 +106,17 @@ async function runAndReply(cmd: AskCommand, budget: number) {
     const privateClaim = await prepareHostedRunClaim(queryId);
     const run = await collectRun({
       question: cmd.question,
+      ...(cmd.presentationLanguage ? { presentationLanguage: cmd.presentationLanguage } : {}),
       budget,
       queryId,
       origin: "web",
       provenance: { version: 1, surface: "discord", ownershipMethod: "unknown" },
     });
     const packet = await privateClaim?.complete(run);
-    message = { ...buildAnswerMessage(run), ...(packet ? { content: privateRunClaimText(packet), allowed_mentions: { parse: [] } } : {}) };
+    message = { ...buildAnswerMessage(run, cmd.presentationLanguage), ...(packet ? { content: privateRunClaimText(packet), allowed_mentions: { parse: [] } } : {}) };
   } catch (err) {
     console.error("[discord] /ask run failed:", err);
-    message = buildErrorMessage(err, cmd.question);
+    message = buildErrorMessage(err, cmd.question, cmd.presentationLanguage);
   }
   try {
     const res = await fetch(followupUrl(cmd.applicationId, cmd.token), {

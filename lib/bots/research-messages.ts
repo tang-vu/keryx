@@ -4,6 +4,7 @@ import { botResearchPortuguese } from "../../locales/pt-BR/bot-research";
 import { botResearchSpanish } from "../../locales/es/bot-research";
 import { answerPresentation } from "../research/answer-presentation";
 import { researchAdmissionError } from "../research/availability-contract";
+import type { PresentationLanguage } from "../research/presentation-language";
 
 export const botResearchCatalogues = Object.freeze({
   en: botResearchEnglish, vi: botResearchVietnamese,
@@ -15,10 +16,11 @@ type Parameters<Text extends string> = Text extends `${string}{${infer Name}}${i
 type Arguments<Key extends BotResearchMessageKey> = [Parameters<typeof botResearchEnglish[Key]>] extends [never]
   ? [] : [Record<Parameters<typeof botResearchEnglish[Key]>, string | number>];
 
-/** Original question only, using the ordinary answer's finite selector. No UI
- * negotiation, preference I/O, source inference or mutable process-wide locale. */
-export function botResearchMessages(originalQuestion = "") {
-  const language = answerPresentation(originalQuestion, "ordinary").language;
+/** Validated presentation hint or original-question selector only. Callers bind
+ * result hints to recorded provenance; this pure renderer performs no preference
+ * I/O, language detection or mutable process-wide locale. */
+export function botResearchMessages(originalQuestion = "", recordedLanguage?: PresentationLanguage) {
+  const language = recordedLanguage ?? answerPresentation(originalQuestion, "ordinary").language;
   const catalogue = botResearchCatalogues[language];
   return function message<Key extends BotResearchMessageKey>(key: Key, ...args: Arguments<Key>): string {
     if (!Object.hasOwn(catalogue, key)) throw new Error("Unknown bot research message");
@@ -32,8 +34,8 @@ export function botResearchMessages(originalQuestion = "") {
 }
 
 /** Translate the product-owned pause, never provider/source diagnostic bytes. */
-export function botResearchFailure(error: unknown, originalQuestion = ""): string {
-  const message = botResearchMessages(originalQuestion);
+export function botResearchFailure(error: unknown, originalQuestion = "", requestedLanguage?: PresentationLanguage): string {
+  const message = botResearchMessages(originalQuestion, requestedLanguage);
   const detail = researchAdmissionError(error) ? message("paused")
     : error instanceof Error ? error.message : String(error);
   return message("failure", { detail });

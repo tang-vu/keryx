@@ -5,6 +5,7 @@ import { formatRecordedUsdc } from "./display/recorded-usdc";
 import { livePresentationLocale, type PresentationLocale } from "./research/presentation-language";
 import { researchPresentationMessages } from "./research/presentation-messages";
 import { API_SETTLEMENT_NOTICE, presentationLocaleNotice } from "./research/result-presentation";
+import { recordedAnswerLanguage } from "./research/answer-language-provenance";
 /**
  * OpenAI Chat Completions ↔ Keryx mappers (pure, side-effect free).
  *
@@ -120,7 +121,8 @@ function citationsFooter(run: QueryRun, locale: PresentationLocale): string {
 /** Assistant message body = the grounded answer plus planned rewards and receipt guidance. */
 export function buildAnswerContent(run: QueryRun, requestedLanguage?: ChatCompletionRequest["language"]): string {
   run = demoteSyntheticEvidence(run);
-  const locale = livePresentationLocale({ requestedLanguage, originalQuestion: run.question }), notice = presentationLocaleNotice(locale);
+  const locale = livePresentationLocale({ requestedLanguage, originalQuestion: run.question,
+    recordedAnswerLanguage: recordedAnswerLanguage(run) }), notice = presentationLocaleNotice(locale);
   return run.answer + citationsFooter(run, locale) + (notice ? `\n\n${notice}` : "");
 }
 

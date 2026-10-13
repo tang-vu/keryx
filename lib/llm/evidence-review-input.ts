@@ -1,14 +1,15 @@
 import type { GatheredContent, ProposedEvidence } from "./reasoning-engine";
 import type { QuoteOption } from "./quote-options";
 import { isCompleteEvidenceSpan } from "./evidence-span";
-import { EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE } from "./evidence-review";
+import { EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE, STATEMENT_LANGUAGE_REVIEW_GUIDANCE } from "./evidence-review";
 import type { SupplementalSpanCapability } from "./supplemental-span-capability";
 
 export const MAX_EVIDENCE_REVIEW_INPUT_BYTES = 32_000;
 // Bound both authored messages and reserve framing space; provider transport
 // policies remain separate and may impose a smaller cap. Never raise those caps.
 const REVIEW_FRAMING_BYTES = 1024;
-const schema = '{"reviews":[{"index":number,"supportedFact":string,"support":number(0..1),"statementSupport":number(0..1) when the row has a statement}]}';
+const legacySchema = '{"reviews":[{"index":number,"supportedFact":string,"support":number(0..1),"statementSupport":number(0..1) when the row has a statement}]}';
+const languageSchema = '{"reviews":[{"index":number,"supportedFact":string,"support":number(0..1),"statementSupport":number(0..1) when the row has a statement,"statementLanguage":"en"|"vi"|"pt"|"es"|"UNKNOWN" when the row has a statement}]}';
 
 /** Build the private verifier input. Unbound/over-budget rows never gain review authority. */
 export function buildEvidenceReviewInput(input: {
@@ -17,7 +18,11 @@ export function buildEvidenceReviewInput(input: {
   gathered: GatheredContent[];
   subClaims: string[];
   supplementalCapability?: SupplementalSpanCapability;
+  /** Trusted ordinary producer opt-in. Retained/private review prompts stay exact. */
+  observeLanguage?: boolean;
 }): { json: string; reviewedIndexes: ReadonlySet<number> } {
+  const schema = input.observeLanguage ? languageSchema : legacySchema;
+  const guidance = EVIDENCE_REVIEW_GUIDANCE + (input.observeLanguage ? STATEMENT_LANGUAGE_REVIEW_GUIDANCE : "");
   const sources = new Map(input.gathered.map(source => [source.marker, source]));
   const ids = new Set(input.options.map(option => option.quoteId));
   if (sources.size !== input.gathered.length || ids.size !== input.options.length) {
@@ -61,7 +66,7 @@ export function buildEvidenceReviewInput(input: {
         prefixOmitted: option.prefixOmitted, suffixOmitted: option.suffixOmitted },
     };
     if (Buffer.byteLength(JSON.stringify({ evidence: [...evidence, entry], schema }), "utf8") +
-        Buffer.byteLength(EVIDENCE_REVIEW_GUIDANCE, "utf8") + REVIEW_FRAMING_BYTES > MAX_EVIDENCE_REVIEW_INPUT_BYTES) continue;
+        Buffer.byteLength(guidance, "utf8") + REVIEW_FRAMING_BYTES > MAX_EVIDENCE_REVIEW_INPUT_BYTES) continue;
     evidence.push(entry);
     reviewedIndexes.add(index);
   }

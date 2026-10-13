@@ -7,12 +7,12 @@ export const botControlsEnglish = Object.freeze({
   privateQuestion: "In this private chat you can also just type the question.",
   status: "Status:",
   financialDetails: "Financial details (English):",
-  languageHelp: "Use /language en|vi|pt|es|auto to set the language of help. Research replies follow the original question; request a different answer language in the question itself.",
-  languageCurrent: "Help language preference: {preference}.",
-  languageSaved: "Saved help language preference: {preference}.",
-  languageUnavailable: "The help language preference could not be read or confirmed as saved. No successful save is claimed.",
+  languageHelp: "Use /language en|vi|pt|es|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
+  languageCurrent: "Answer language preference: {preference}.",
+  languageSaved: "Saved answer and help language preference: {preference}.",
+  languageUnavailable: "The language preference could not be read or confirmed as saved. No successful save is claimed.",
   languageInvalid: "Supported values: en, vi, pt (also pt-BR), es, auto.",
-  languagePrivate: "Set or inspect your help language in a private chat with Keryx.",
+  languagePrivate: "Set or inspect your language preference in a private chat with Keryx.",
   privatePreparing: "Keryx is preparing your private research reply…",
 } as const);
 export type BotControlsCatalogue = { readonly [K in keyof typeof botControlsEnglish]: string };

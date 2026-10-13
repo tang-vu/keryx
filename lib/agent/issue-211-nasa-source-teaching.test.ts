@@ -91,7 +91,7 @@ class SyntheticNasaTeachingTransport extends JsonChatEngine {
     const rows = packet.evidence as { index: number; source: { webProvenance: { normalizedBodyHash: string } } }[];
     for (const row of rows) expect(row.source.webProvenance.normalizedBodyHash).toBe(snapshot.normalizedBodyHash);
     const proposals = packet.teachingProposals as TeachingProposalPacket | undefined;
-    return { reviews: rows.map(row => ({ index: row.index, supportedFact: "Synthetic review of an actual NASA excerpt", support: 0.9, statementSupport: 0.9 })),
+    return { reviews: rows.map(row => ({ index: row.index, supportedFact: "Synthetic review of an actual NASA excerpt", support: 0.9, statementSupport: 0.9, statementLanguage: "vi" })),
       ...(proposals ? { teachingProposalReview: { digest: proposals.digest, proposals: proposals.proposals.map(row => ({
         id: row.id, premiseIds: row.premiseIds, premiseConsistency: "supported", conditions: "supported", instructionalConsistency: "supported",
         sourceAttribution: this.failure === "false-source-attribution" && row.id === "t1" ? "unsupported" : "supported", requestedScope: "supported", language: "supported",
