@@ -5,6 +5,7 @@ import { buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, 
   type EvidenceDraftRequest } from "@/lib/research/evidence-draft";
 import type { LiteratureWorkspace } from "@/lib/papers/literature-workspace";
 import type { CompletedEvidenceDraftPacket, CompletedReadSelection } from "@/lib/research/completed-evidence-draft";
+import { completedEvidenceDraftImportCopy as copy } from "@/locales/en/completed-evidence-draft-selection";
 
 export interface CompletedEvidenceDraftImportProps {
   currentOwner: string | null;
@@ -109,24 +110,24 @@ export function CompletedEvidenceDraftImport(props: CompletedEvidenceDraftImport
         || !selection.sources.some(source => source.itemUrl === row.paperUrl))) throw new Error();
       const count = buildEvidenceDraft(editable).excerpts.length;
       if (!latest.current.onImport({ report, readingStatuses })) throw new Error();
-      if (!count) { setMessage("This completed result has no usable exact retained excerpts. Reading observations imported; unavailable and unknown remain separate. Existing draft edits are preserved."); return; }
-      setMessage("Retained report appended. Existing draft edits are preserved. Semantic support is unjudged; downloaded or edited reports have caller-supplied origin.");
+      if (!count) { setMessage(copy.empty); return; }
+      setMessage(copy.imported);
     } catch {
       if (mounted.current && latest.current.key === capturedKey && !controller.signal.aborted)
-        setMessage("Completed private result unavailable or changed. Your draft is preserved.");
+        setMessage(copy.unavailable);
       else if (mounted.current && latest.current.key === capturedKey)
-        setMessage("Private read timed out. Your draft is preserved; retry is an explicit action.");
+        setMessage(copy.timedOut);
     } finally {
       clearTimeout(timer);
       if (pending.current === controller) pending.current = null;
       if (mounted.current && latest.current.key === capturedKey) setBusy(false);
     }
   }
-  return <section className="border border-line bg-paper p-5" aria-label="Import an owned completed private result">
-    <p className="font-serif text-sm text-ink-2">Import retained excerpts from the selected completed private result. This action reads your saved result and starts no new research or purchase.</p>
-    <p className="mt-2 font-serif text-xs text-ink-3">The result stays in this tab. Exact saved-ledger provenance is separate from semantic support and creator payment authority. An editable or downloaded report cannot authenticate itself when reimported.</p>
+  return <section className="border border-line bg-paper p-5" aria-label={copy.label}>
+    <p className="font-serif text-sm text-ink-2">{copy.guidance}</p>
+    <p className="mt-2 font-serif text-xs text-ink-3">{copy.privacy}</p>
     <button type="button" className={`${button} mt-3`} disabled={busy || !currentOwner || !selection} onClick={() => void importCompleted()}>
-      {busy ? "Reading saved result…" : "Import selected completed result"}
+      {busy ? copy.reading : copy.import}
     </button>
     <p role="status" aria-live="polite" className="mt-2 font-serif text-sm text-seal">{message}</p>
   </section>;
