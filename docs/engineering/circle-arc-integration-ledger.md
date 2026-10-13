@@ -1,16 +1,26 @@
 # Circle and Arc integration ledger
 
 This is an inventory of demonstrated Keryx integration, not a list of vendor capabilities.
-Source baseline: `f6f0a368c1fee5cab9effe6b8b2d9d7cff97debe`; public readbacks and official
-references checked October 9, 2026 (Asia/Saigon; October 8 UTC). Subsequent deployments
-have their own identity check at [public health](https://keryx.cc/api/health).
-[Issue #304](https://github.com/tang-vu/keryx/issues/304) remains open: **no Circle-sponsored
-testnet user action has been demonstrated by this work**. No sponsorship was enabled,
-wallet created, secret installed, transaction signed, funding sent, or payment made.
-See the [remaining sponsored-action proof gate](#remaining-end-to-end-proof-gate).
+Inventory reviewed in the retained `ec5f39c9750dfc9e80e66edd41348ca6034c01c3`
+worktree; relevant source compared with main `133f31465598499745215eacc655267ded9a5588`
+on October 14, 2026 (Asia/Saigon; October 13 UTC). Original payment/contract public
+readbacks remain dated October 9 local / October 8 UTC. ROOT's October 13 UTC
+app63 health receipt is reused below; other current working-link gates remain open.
+Official contract references retain their October 13 local review date; only the
+missing service references were revisited on October 14 local.
+Subsequent deployments have their own identity check at
+[public health](https://keryx.cc/api/health).
+[Issue #304](https://github.com/tang-vu/keryx/issues/304) remains open. Retained
+October 12 evidence includes **real Keryx-relayed testnet registrations with fixture
+publisher claims**, distinct from Circle Gas Station and actual user/browser proof.
+This documentation review performs no financial or runtime activation action.
+See the [original-criteria acceptance map](circle-arc-304-acceptance-2026-10-13.md)
+and [remaining sponsored-action proof gate](#remaining-end-to-end-proof-gate).
 
-`Live` means the narrow use stated in the row has public evidence below. It does not
+`Live` preserves the narrow use demonstrated by the dated public evidence below. It does not
 establish every caller surface, customer adoption, independent audit or withdrawal.
+Current working-link acceptance remains pending the root read-only request; a local
+HTTPS failure does not establish that a public service is down.
 `Testnet only` preserves historical test-USDC evidence. `Planned` includes implemented
 paths whose activation or end-to-end proof is missing. `Not used` gives the reason.
 Code links are relative to this document; an em dash means no implementation was found.
@@ -33,8 +43,9 @@ Every row has a tracking issue, including deliberate exclusions.
 | Wallets: developer-controlled | Not used: hosted signing roles use Keryx's reviewed custody, not Circle developer-controlled Wallets. | — | None | Not used | No Keryx proof claimed; never substitute a vendor wallet for existing custody. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Wallets: modular | Not used: current batch payer/session is an EOA; no modular/passkey SCA enrollment. | — | None | Not used | No Keryx proof claimed; SCA substitution needs a separate design. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Gas Station | Evaluated below; no enabled sponsored user action or compatible SCA flow established. | — | Proposed Arc testnet pilot only | Planned | [Official Arc support](https://developers.circle.com/wallets/gas-station), not Keryx proof; sponsored testnet receipt missing. | [#304](https://github.com/tang-vu/keryx/issues/304) |
+| Keryx creator-registration gas relay | Distinct sponsor EOA pays exact V3 registration gas; creator signs intent and keeps source/payout authority. Controlled-publisher financial rehearsal is retained; actual user admission remains open. | [registration service](../../lib/sources/registration-sponsor-service.ts), [native reservations](../../lib/db/registration-sponsor.ts), [funded driver](../../scripts/test-registration-sponsor-funded.mts) | Arc testnet evidence; separate bounded mainnet policy | Testnet only | [Retained normal registration](https://explorer.testnet.arc.io/tx/0x4b29ca0be1b7379abf28f9ea942f07ed097493bf8d1ee5283d2d2af9b660f966), [dated financial results and limits](registration-sponsor-funded-acceptance-20261012.md). This is Keryx relay gas, not Circle Gas Station or verified user/browser acceptance. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Permissionless Circle Paymaster | Not used: current official supported-network list does not include Arc; paying gas in USDC also does not mean Keryx sponsors it. | — | None for Keryx | Not used | [Official overview](https://developers.circle.com/paymaster); no Keryx UserOperation. | [#304](https://github.com/tang-vu/keryx/issues/304) |
-| Arc contracts: SourceRegistry | Registry-backed source control, pricing ceilings, payout wallets and splits; database entries remain a cache/fallback. | [contract](../../contracts/source-registry-v2.sol), [client](../../lib/registry/registry-client.ts), [parity](../../lib/registry/parity.ts) | Arc mainnet | Live | [Exact deployed contract](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb), [health registry projection](https://keryx.cc/api/health). | [#304](https://github.com/tang-vu/keryx/issues/304) |
+| Arc contracts: SourceRegistry | Retained V1 listing authority for source control, pricing and payouts; V3 registration uses separate origins. Database entries remain a cache/fallback. | [V1 contract](../../contracts/source-registry.sol), [V3 contract](../../contracts/source-registry-v3.sol), [origin authority](../../lib/registry/source-registry-authority.ts), [client](../../lib/registry/registry-client.ts), [parity](../../lib/registry/parity.ts) | Arc mainnet | Live | [Exact retained V1 contract](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb), [health registry projection](https://keryx.cc/api/health). V3 deployment is separate from a sponsored registration receipt. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Circle Contracts / Smart Contract Platform | Not used: registry deployment, reads and writes use Keryx's viem/Hardhat paths, not Circle's contract platform. | — | None | Not used | No Keryx proof claimed. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Circle CLI | Optional marketplace metadata discovery is implemented; no production search, purchase or CLI-managed custody proof established by this ledger. | [discovery adapter](../../lib/agent/external-discovery.ts) | Vendor catalog, optional | Planned | Source invokes `circle services search`; dependency/command presence alone is not live usage proof. | [#292](https://github.com/tang-vu/keryx/issues/292) |
 | Circle Agent Wallet | Not used: Keryx caller wallets and journals do not use the Agent Wallet service. | — | None | Not used | No Keryx proof claimed. | [#304](https://github.com/tang-vu/keryx/issues/304) |
@@ -77,6 +88,21 @@ when changing its claim; remove the Live label if exact evidence cannot be recov
 CI verifies ledger structure, tracking links and existing source paths offline. It
 does not call vendors or pretend to verify settlement or public availability.
 
+The October 13 native GET of `https://keryx.cc/api/health` failed with
+`The underlying connection was closed: An unexpected error occurred on a receive.`
+No transport, authentication or execution-policy override was attempted; that
+failure is preserved. ROOT's retained public postflight at `2026-10-13T16:42:53.4729332Z`
+reports app `0.27.63`, commit `ec5f39c9`, `network=arc`, `settles=real`, operational
+health and normal maintenance. Its selected registry is mainnet V3
+`0x2217250019ab614dae7391d346d05c3fc4d71ae1`; the older V1 proof keeps its own origin.
+ROOT separately binds the installed full ec5 commit/build. Registry parity and
+other monitoring timestamps in that health body are stale, not fresh chain proof.
+No new Keryx GET was made here. Proof-page HTML, the remaining Live proof URLs
+and retained testnet transactions still need the coordinator's readback. The
+[acceptance map](circle-arc-304-acceptance-2026-10-13.md) names every URL and the
+retained report hashes. Neither this failure nor offline CI supplies fresh HTTP,
+vendor, chain or deployment acceptance.
+
 ## Official network and service references
 
 Values below were checked against [Arc connection parameters](https://docs.arc.io/arc/references/connect-to-arc),
@@ -84,6 +110,9 @@ Values below were checked against [Arc connection parameters](https://docs.arc.i
 [Circle Gateway addresses](https://developers.circle.com/gateway/references/contract-addresses)
 and [Gateway networks/domains](https://developers.circle.com/gateway/references/supported-blockchains).
 The [source profile](../../lib/arc-network-profile.ts) remains authoritative for Keryx configuration.
+The October 13 web-tool projections confirmed the network-specific chain/domain,
+USDC and Gateway contract rows below. These are primary-reference readbacks, not
+RPC code/hash verification or raw native HTTP captures.
 
 | Parameter | Arc mainnet | Arc testnet |
 | --- | --- | --- |
@@ -98,22 +127,53 @@ The [source profile](../../lib/arc-network-profile.ts) remains authoritative for
 | Keryx Gateway API base | `https://gateway-api.circle.com` | `https://gateway-api-testnet.circle.com` |
 
 Gateway APIs above are the pinned batch SDK/profile bases; balances use `/v1/balances`.
-The official [Gateway OpenAPI servers](https://developers.circle.com/openapi/gateway.yaml)
-list both bases; the [balance API reference](https://developers.circle.com/api-reference/gateway/all/get-token-balances)
-specifies the read-only balance operation (HTTP POST). The repository pins the vendor-listed
+The prior official [Gateway OpenAPI servers](https://developers.circle.com/openapi/gateway.yaml)
+readback listed both bases. On October 14 local / October 13 UTC, the web tool
+refused `text/yaml` as an unsupported content type; an ordinary native GET at
+`2026-10-13T17:37:40.0435720Z` failed with the same receive error retained above,
+without an accepted HTTP status or body. Fresh official mainnet service-base
+confirmation remains **UNKNOWN**. The current
+[balance API reference](https://developers.circle.com/api-reference/gateway/all/get-token-balances)
+explicitly shows the testnet base and read-only balance operation (HTTP POST).
+The repository pins the vendor-listed
 Blockdaemon mainnet RPC `https://rpc.blockdaemon.mainnet.arc.io`. Its retained testnet
 RPC `https://rpc.testnet.arc.network` and explorer `https://testnet.arcscan.app` are
 historical aliases; current official references now name the `.arc.io` endpoints above.
 This ledger does not change network configuration. Alias availability and any proposed
 profile migration need separate read-only validation and network-bound regression checks.
 
-Circle Wallets uses `https://api.circle.com/v1/w3s` in the adapter; see the official
-[user-controlled Wallets guide](https://developers.circle.com/wallets/user-controlled).
+Circle Wallets uses `https://api.circle.com/v1/w3s` in the adapter; the official
+[wallet-app guide](https://developers.circle.com/wallets/user-controlled/build-a-wallet-app)
+names that base/path in its Arc testnet examples. October 14 local processed reads
+of [Wallets supported blockchains](https://developers.circle.com/wallets/supported-blockchains)
+explicitly pair mainnet `ARC` / testnet `ARC-TESTNET` with user-controlled EOA/SCA
+support. The [initialization reference](https://developers.circle.com/api-reference/wallets/user-controlled-wallets/create-user-with-pin-challenge)
+shows `https://api.circle.com/v1/w3s/user/initialize`, EOA/SCA options and both chain
+enums (tool crawl metadata: four days ago). These establish vendor reference values,
+not a live wallet. The missing official mainnet key/environment pairing remains
+**UNKNOWN**; neither that API example nor Onramp's sandbox origin proves it.
+At main `133f3146`, the adapter chooses `ARC` / `ARC-TESTNET` from the trusted profile,
+authenticates a Circle user token and requires `ENDUSER`, `EOA`, `LIVE` wallet data.
+Its readiness check only tests configured values; key presence proves neither
+environment compatibility nor an authenticated/funded genuine user.
 The [official Onramp guide](https://docs.arc.io/app-kit/onramp) describes owner-directed
 fiat delivery. The Onramp adapter fixes its hosted widget origin to `https://onramp.arc.io`; the checked-in
-kit boundary is not evidence that a purchase occurred. No address for an unused CCTP,
+kit boundary is not evidence that a purchase occurred. The official
+[Onramp hosting reference](https://docs.arc.io/app-kit/references/onramp-hosting-requirements)
+names production widget/API `https://onramp.arc.io` / `https://api.circle.com`
+and sandbox widget/API `https://onramp-sandbox.arc.io` / `https://api-test.circle.com`
+separately. Sandbox is not a mainnet purchase or a Wallets endpoint override.
+No address for an unused CCTP,
 Bridge, EURC, identity, escrow or memo deployment is copied into Keryx authority.
 Use the network-specific official reference before any future implementation.
+
+Read-only Git comparison from ec5 to full main `133f3146` found no changes in
+[network pins](../../lib/arc-network-profile.ts),
+[Wallets adapter](../../lib/circle-wallet-server.ts),
+[Onramp boundary](../../lib/onramp/arc-card-onramp.ts) or
+[registry authority](../../lib/registry/source-registry-authority.ts). Reuse the
+retained address/code references. Registry origins are trusted deployment inputs,
+not hardcoded endorsements; this comparison reads no environment or chain state.
 
 For evaluation only, Circle's [Gas Station contract reference](https://developers.circle.com/wallets/gas-station/contract-addresses)
 lists `0x7ceA357B5AC0639F89F9e378a1f03Aa5005C0a25` on both Arc networks.
@@ -123,8 +183,11 @@ do not infer an Arc Paymaster address from a different network.
 
 ## Gasless user-action evaluation
 
-**Current sponsored actions: none established. Current authorized sponsorship budget:
-zero.** Nanopayment authorizations and session consent are already offchain signatures;
+**Gateway deposit, budget consent and creator withdrawal have no established Circle
+Gas Station sponsorship. No new sponsorship or spending is authorized by this review.**
+The separate Keryx creator-registration relay has retained real testnet financial
+evidence and a separately retained bounded mainnet policy; it must not be described as a zero
+global sponsorship budget. Nanopayment authorizations and session consent are already offchain signatures;
 they have no user transaction gas to sponsor. Gateway funding and withdrawal minting
 are onchain operations with separate payer, receipt and recovery evidence.
 
@@ -133,6 +196,34 @@ are onchain operations with separate payer, receipt and recovery evidence.
 | Gateway deposit | Mainnet owner signs bounded USDC approval and `depositFor` to the retained session EOA through [owner funding](../../lib/session/owner-gateway-funding.ts). Owner pays native USDC gas. The legacy testnet session flow signs its own approval/deposit. | Assess an explicit opt-in SCA owner funding an unchanged EOA session. Sponsor only exact approval/deposit actions after compatibility and cost controls pass; never migrate an existing wallet identity implicitly. |
 | Enable or increase budget | Owner/session signs offchain consent; atomic spend reservation and exact cap still bind later payments. If funding is needed, it is the deposit flow above. | No separate gas sponsor or unlimited approval. A sponsor's gas allocation cannot increase the user's paid-content cap or authorize a new top-up. |
 | Creator withdrawal | Owner authorizes exact withdrawal; an admitted relay or browser submits mint and pays native USDC gas according to the selected existing flow. The retained testnet drill used owner-funded relay gas. | Assess only exact original recipient/amount/spec minting with finite relay gas reservation. Existing relay funding is not evidence of Circle Gas Station sponsorship. |
+| Creator registration through Keryx's V3 relay | Creator signs exact EIP-712 registration intent offchain. The separately admitted sponsor EOA signs/submits the zero-value registry call and bears its native USDC gas, including reverted gas. Creator retains ownership/payTo; this does not sponsor research, deposits or withdrawals. | Retain the existing finite Conzit policy and original journals. Public-policy successor source is queued, not admitted runtime authority. Actual creator/browser proof and current availability require separate evidence. |
+
+The retained production D7 scope is the existing Conzit-only policy: exact
+origin `https://conzit.com`, maximum 1,000,000 gas at 40 gwei, 0.04 native USDC
+per original, 0.08 per UTC day and 0.20 lifetime, five attempts total/day and two
+per wallet/origin, fixed expiry `2026-10-13T10:39:10.054Z`. The sponsor role is the
+existing public-fee EOA `0xdbd07d89eb85d7a36fb204b2a4d2aa68735c24e1`; V3 is
+`0x2217250019ab614dae7391d346d05c3fc4d71ae1`. These are retained owner authority,
+not this worker's fresh environment/availability observation or a registration
+receipt. Its fixed expiry has passed at this review; do not present those historical
+caps as fresh available allowance. Preserve ENV645b, V1 source origins and all existing
+holds. Queued public eligibility source does not expand this allowance, renew expiry
+or reset attempts.
+ROOT's October 13 UTC operating-fee activation on app63 was configuration only;
+it neither deploys code64 nor proves a sponsored user action, renews this policy,
+adds funding or resets a budget. Settled operating-fee totals remain zero.
+
+The existing relay binds network, deployment origin, registry address/version/code,
+creator/payTo, complete source terms, nonce, deadline and publishing proof. Native
+admission reserves maximum gas and attempt counts atomically; proof is reread
+before signing/broadcast. Sponsor nonce serialization, exact retained bytes and
+receipt/event matching prevent an implicit replacement. Ambiguous signing/submission
+keeps the full hold; confirmed or reverted receipts charge actual gas. Cap/expiry
+changes preserve cohort history. Per-origin limits constrain wallet rotation, but
+wallet/IP/account limits do not establish one human. Unauthenticated, changed-proof,
+wrong-target, replayed and over-cap actions must refuse at the actual signing boundary.
+See the existing [relay protocol](../creator-registration-sponsorship.md); this
+ledger changes neither its implementation nor another owner's documents.
 
 Circle [Gas Station](https://developers.circle.com/wallets/gas-station) supports Arc
 and sponsors developer-paid fees for ERC-4337 SCAs. The current Circle login adapter
@@ -151,7 +242,8 @@ verified gasless route for the current Keryx EOA flow.
 
 Proposed acceptance limits below are deliberately finite and **unapproved/unimplemented**.
 Any future trial needs its own explicit authorization and reviewed enforceable policy.
-The default remains disabled with zero sponsor liability.
+For this proposed Circle Gas Station pilot, the default remains disabled with zero
+additional sponsor liability. The retained Keryx relay policy above is separate.
 
 - Isolated Arc testnet only, one allowlisted owner and its explicitly bound session,
   one manual funding flow, at most two user operations (approval and deposit), no
@@ -190,9 +282,31 @@ cannot be assumed to pass Keryx's admission checks. Therefore the proposed limit
 Gas Station until first-operation liability and all eligible-action restrictions are
 proven at the actual boundary. Vendor testnet defaults are not authorization to spend.
 
+Gas Station also creates developer billing liability: its current
+[official overview](https://developers.circle.com/wallets/gas-station) describes
+credit-card billing and a 5% gas-fee markup. Native gas ceilings alone do not bound
+that fiat invoice, enrollment overhead, conversion or fees. Any later proposal must
+bound those costs separately. The permissionless Paymaster charges the end user;
+its stated 10% surcharge applies to Arbitrum/Base and their testnets, not an invented
+Arc fee. Neither vendor enrollment nor billing fallback is authorized here.
+
 ### Remaining end-to-end proof gate
 
-Issue #304's sponsored testnet criterion remains unchecked. A future authorized run
+Retained report hashes were checked against the October 12
+[funded acceptance record](registration-sponsor-funded-acceptance-20261012.md).
+Four testnet registrations succeeded, with distinct creator/sponsor EOAs and
+0.024540160001227008 native test USDC gas. The original fifth attempt expired
+unsigned. One separately authorized supplemental expired original reverted and
+cost 0.000714400000035720, giving 0.025254560001262728 combined registration gas.
+Those are real chain outcomes with controlled publisher fixtures, not synthetic
+settlement, Circle Gas Station usage, live publisher control or actual browser/SIWE
+acceptance. They must not be counted as five successful registrations.
+
+Issue #304's actual sponsored-user testnet criterion remains unchecked under the
+current owner's acceptance direction; fixture/browser checks and ordinary unsigned
+actions do not close it. The [minimum authority plan](circle-arc-304-acceptance-2026-10-13.md#minimum-reviewable-action-plan)
+first requests missing retained user evidence, without another transaction.
+A future separately authorized actual-user run
 must publish the exact source/policy digest, chain and wallet roles, sponsor identity,
 single original action/reference, successful transaction/UserOperation receipt,
 native test-USDC fee and actual payer, principal recipient/amount, and working public
