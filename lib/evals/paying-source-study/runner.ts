@@ -50,7 +50,7 @@ export async function runStudy(corpus: StudyCorpus): Promise<StudyTrial[]> {
       for (const { source, item } of fixtureRows(question, paidPriceMicro)) {
         await store.upsertSource(source); await store.addItems([item]);
       }
-      const allowed = new Set(["listSources", "getSource", "getItems", "getItem", "getArticleOffer", "getSourceClaimForSource", "listPublicReferences", "getPaperState"]);
+      const allowed = new Set(["listSources", "getSource", "getItems", "getItem", "getArticleOffer", "getSourceClaimForSource", "listPublicReferences", "queryPublicReferenceItems", "getPaperState"]);
       const db = new Proxy(store, { get(target, key) {
         if (typeof key !== "string" || !allowed.has(key)) { count(`db.denied.${String(key)}`); throw new Error(`Study denied database method ${String(key)}`); }
         const method = Reflect.get(target, key) as (...args: unknown[]) => unknown;

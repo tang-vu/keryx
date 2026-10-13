@@ -46,7 +46,7 @@ it("keeps mixed wallet funding totals without inferring service price or a payer
     run("Foreign private question", 0.99, 0.98, { asker: foreign, askerFunded: true }),
     run("Ownerless question", 0.99, 0.98, { asker: undefined }),
   ]) await db.saveQueryRun(value);
-  const request = new NextRequest(`https://history.test/api/me/asks?wallet=${foreign}&limit=200`);
+  const request = new NextRequest(`https://history.test/api/me/asks?view=recent&wallet=${foreign}&limit=200`);
   expect((await GET(request)).status).toBe(401);
   const { token } = await issueWebSession(db, "synthetic-history-secret-with-no-live-authority", owner, "asker");
   const response = await session.run(token, () => GET(request));
@@ -61,7 +61,7 @@ it("keeps mixed wallet funding totals without inferring service price or a payer
   expect(JSON.stringify(body)).not.toContain("Ownerless question");
 
   const bundle = (await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents:
-    "import React from 'react';import{createRoot}from'react-dom/client';import{MyAsksView}from'./app/me/asks/my-asks-view';createRoot(document.getElementById('root')).render(<MyAsksView/>);" },
+    "import React from 'react';import{createRoot}from'react-dom/client';import{MyAsksLedger}from'./app/me/asks/my-asks-view';createRoot(document.getElementById('root')).render(<MyAsksLedger historical={false}/>);" },
     bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: {
       "process.env.NODE_ENV": '"production"',
       // Mirror Next's public compile-time replacement for the imported optional pane.
@@ -87,7 +87,7 @@ it("keeps mixed wallet funding totals without inferring service price or a payer
     await context.route("**/*", route => {
       requests.push(route.request().url());
       if (route.request().url() === "https://history.test/") return route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' });
-      if (route.request().url() === "https://history.test/api/me/asks") return route.fulfill({ json: body });
+      if (route.request().url() === "https://history.test/api/me/asks?view=recent") return route.fulfill({ json: body });
       return route.abort();
     });
     const page = await context.newPage(), pageErrors: string[] = [], consoleErrors: string[] = [];
@@ -109,6 +109,6 @@ it("keeps mixed wallet funding totals without inferring service price or a payer
     expect(await page.getByText("· creator funding not recorded from your browser wallet", { exact: true }).count()).toBe(3);
     expect(await page.getByRole("link", { name: "Legacy result", exact: true }).locator("..").textContent()).toContain("creator funding not recorded from your browser wallet");
     expect(await page.getByRole("link", { name: "Browser-funded result", exact: true }).locator("..").textContent()).not.toContain("creator funding not recorded");
-    expect(requests).toEqual(["https://history.test/", "https://history.test/api/me/asks"]);
+    expect(requests).toEqual(["https://history.test/", "https://history.test/api/me/asks?view=recent"]);
   } finally { await context.close(); }
 }, 30000);

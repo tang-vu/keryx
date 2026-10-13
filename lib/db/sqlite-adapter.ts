@@ -20,8 +20,8 @@ import type { PersonalHistoryStore } from "../history/personal-history";
 import { createSqliteProfileIdentities } from "./profile-identities-sqlite";
 import { ProfileIdentityError, type ProfileIdentitiesStore } from "../profiles/verified-identities";
 import { PrivateProfileError, type PrivateProfilesStore } from "../profiles/private-profile";
-import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, getSqliteRegistrationSponsorExecution, transitionSqliteRegistrationSponsor, type RegistrationSponsorTransition } from "./registration-sponsor";
-import type { RegistrationSponsorPolicy, SponsoredRegistration } from "../sources/registration-sponsor-protocol";
+import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, getSqliteRegistrationSponsorExecution, inspectSqliteRegistrationSponsorFunding, transitionSqliteRegistrationSponsor, type RegistrationSponsorTransition } from "./registration-sponsor";
+import type { ActiveRegistrationSponsorPolicy, RegistrationSponsorFundingObservation, SponsoredRegistration } from "../sources/registration-sponsor-protocol";
 import { bindSqliteSourceRegistryOrigin, readSqliteSourceRegistryOrigin } from "./source-registry-origin";
 import { retainSqliteRegistryCollision } from "./registry-collisions";
 import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
@@ -43,7 +43,11 @@ import { hasScholarlyRights, assertNoOrphanedPaperMarker } from "./scholarly-cap
 import { storagePaymentProfile, type StorageIdentity } from "./storage-identity";
 import { ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { openEnrolledCacheText, sealEnrolledCacheText } from "../sources/enrolled-content-cache";
-import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
+import type { PublicReference } from "../public-references/catalog";
+import type { PublicReferenceItem, PublicReferenceQuery, PublicReferencePage,
+  PublicReferenceArchiveStats, PublicReferenceCollectionKind } from "../public-references/archive";
+import { archiveSqlitePublicReferenceItems, querySqlitePublicReferenceItems, readSqlitePublicReference,
+  sqlitePublicReferenceArchiveStats, upsertSqlitePublicReference } from "./public-reference-archive";
 import { issueSqliteSourceClaimChallenge, getSqliteSourceClaimChallenge, reserveSqliteSourceClaimVerification,
   verifySqliteSourceClaim, getSqliteSourceClaim, getSqliteSourceClaimForSource, listSqliteSourceClaims,
   bindSqliteSourceClaim, updateSqliteSourceClaimPolicy, getRetainedSourceClaimMarker } from "./public-source-claims";
@@ -374,18 +378,25 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listPublicReferences(): Promise<PublicReference[]> {
-    return this.db.prepare("SELECT snapshot FROM public_references WHERE active=1 ORDER BY id").all()
-      .map((row) => publicReferenceSchema.parse(JSON.parse(String(row.snapshot))));
+    return this.db.prepare("SELECT id,active,rss_url,snapshot FROM public_references WHERE active=1 ORDER BY id").all()
+      .map((row) => readSqlitePublicReference(this.db, row));
   }
   async getPublicReference(id: string): Promise<PublicReference | null> {
-    const row = this.db.prepare("SELECT snapshot FROM public_references WHERE id=?").get(id);
-    return row ? publicReferenceSchema.parse(JSON.parse(String(row.snapshot))) : null;
+    const row = this.db.prepare("SELECT id,active,rss_url,snapshot FROM public_references WHERE id=?").get(id);
+    return row ? readSqlitePublicReference(this.db, row) : null;
   }
-  async upsertPublicReference(reference: PublicReference): Promise<void> {
-    const value = publicReferenceSchema.parse(reference);
-    this.db.prepare(`INSERT INTO public_references(id,active,rss_url,snapshot) VALUES (?,?,?,?)
-      ON CONFLICT(id) DO UPDATE SET active=excluded.active,rss_url=excluded.rss_url,snapshot=excluded.snapshot`)
-      .run(value.id, Number(value.active), value.rssUrl, JSON.stringify(value));
+  async upsertPublicReference(reference: PublicReference): Promise<{ added: number; updated: number }> {
+    return upsertSqlitePublicReference(this.db, reference);
+  }
+  async archivePublicReferenceItems(referenceId: string, items: PublicReferenceItem[], kind: PublicReferenceCollectionKind,
+    observedAt?: string): Promise<{ added: number; updated: number }> {
+    return archiveSqlitePublicReferenceItems(this.db, referenceId, items, kind, observedAt);
+  }
+  async queryPublicReferenceItems(options: PublicReferenceQuery): Promise<PublicReferencePage> {
+    return querySqlitePublicReferenceItems(this.db, options);
+  }
+  async publicReferenceArchiveStats(): Promise<PublicReferenceArchiveStats> {
+    return sqlitePublicReferenceArchiveStats(this.db);
   }
   async listSources(): Promise<Source[]> {
     // Filter to active=1 only — deactivated on-chain sources must not be discovered/cited.
@@ -755,7 +766,8 @@ export class SqliteAdapter implements KeryxDB {
     const row = this.db.prepare(`SELECT value FROM sync_state WHERE key=?`).get(key);
     return row ? (row.value as string) : null;
   }
-  async admitRegistrationSponsor(policy: RegistrationSponsorPolicy, row: SponsoredRegistration, now?: number) { return admitSqliteRegistrationSponsor(this.db, policy, row, now); }
+  async admitRegistrationSponsor(policy: ActiveRegistrationSponsorPolicy, row: SponsoredRegistration, now?: number, fundingObservation?: RegistrationSponsorFundingObservation) { return admitSqliteRegistrationSponsor(this.db, policy, row, now, fundingObservation); }
+  async inspectRegistrationSponsorFunding(policy: ActiveRegistrationSponsorPolicy, observation: RegistrationSponsorFundingObservation, now?: number) { return inspectSqliteRegistrationSponsorFunding(this.db, policy, observation, now); }
   async getRegistrationSponsor(input: { wallet: string; id?: string; canonicalUrl?: string }) { return getSqliteRegistrationSponsor(this.db, input); }
   async getRegistrationSponsorExecution(input: { wallet: string; id: string }) { return getSqliteRegistrationSponsorExecution(this.db, input); }
   async transitionRegistrationSponsor(input: RegistrationSponsorTransition) { return transitionSqliteRegistrationSponsor(this.db, input); }

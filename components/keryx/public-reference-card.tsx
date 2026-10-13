@@ -83,6 +83,10 @@ export function PublicReferenceCard({ reference, compact = false, matchingQuery 
       </div>
 
       <div className="mt-auto border-t border-line pt-3">
+        {!compact && reference.archivedItemCount !== undefined && <Link href={`/sources?publisher=${encodeURIComponent(reference.id)}#article-library`}
+          className="mb-2 inline-block min-h-11 py-3 font-mono text-[11px] text-seal underline underline-offset-4">
+          {copy("sourceArchive.browse", { count: reference.archivedItemCount })} →
+        </Link>}
         <p className="font-mono text-[11px] leading-relaxed text-ink-3">
           {refreshed ? <>{richCopy("sourceFeed.collected", { date: <DisplayTime value={reference.refreshedAt!} /> })}</> : copy("sourceFeed.collectedUnavailable")}
         </p>
