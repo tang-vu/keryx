@@ -31,6 +31,8 @@ import { registerDraftCheckTool } from "../lib/research/draft-check-tool.ts";
 import { registerEvidenceProcurementTool } from "../lib/evidence-procurement/tool.ts";
 import { createHistoryClient } from "../lib/history/personal-history-client.ts";
 import { registerHistoryTool } from "../lib/history/personal-history-mcp.ts";
+import { registerOwnedHistoryTools } from "../lib/history/owned-history-mcp.ts";
+import { createOwnedHistoryClient } from "../lib/history/owned-history-client.ts";
 import { registerRunPrivacyRead } from "../lib/run-privacy/mcp.ts";
 import { createRunPrivacyClient } from "../lib/run-privacy/client.ts";
 import { registerAcceptanceTools } from "../lib/deliverable-acceptance/mcp.ts";
@@ -46,6 +48,8 @@ registerAcceptanceTools(server, { read: id => acceptanceClient().read(id), submi
 const profileClient = () => createProfileClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
 registerProfileTools(server, { read: () => profileClient().read(), update: input => profileClient().update(input) });
 registerHistoryTool(server, input => createHistoryClient(meta.baseUrl, () => process.env.KERYX_API_KEY).read(input));
+const ownedHistoryClient = () => createOwnedHistoryClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
+registerOwnedHistoryTools(server, input => ownedHistoryClient().read(input), input => ownedHistoryClient().export(input));
 registerRunPrivacyRead(server,(id,requestId)=>createRunPrivacyClient(meta.baseUrl,()=>process.env.KERYX_API_KEY).read(id,requestId));
 registerIdentityReadTool(server, () => profileClient().readIdentities());
 server.registerTool("paper_lookup", paperLookupToolOptions,

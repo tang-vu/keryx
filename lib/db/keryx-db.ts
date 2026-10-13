@@ -231,6 +231,8 @@ export interface KeryxDB extends PublicReferenceArchiveDb {
   readonly zotero?: ZoteroStore;
   /** Bounded ordinary current-store attribution only; absent on sealed/native/archive readers. */
   readonly personalHistory?: import("../history/personal-history").PersonalHistoryStore;
+  /** Optional CURRENT stored-membership read port supplied by #267. No write/login or pooled authority. */
+  readonly historyMembership?: import("../history/owned-history").HistoryMembershipStore;
   /** Ordinary-only decision opinions/admission sidecars; never payment authority. */
   readonly decisionReviews?: import("../research/decision-review-types").DecisionReviewsStore;
   /** Atomic creator gas originals; absent on storage without a reviewed sponsor journal. */
