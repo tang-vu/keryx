@@ -57,7 +57,7 @@ class OriginalTeachingEngine extends JsonChatEngine {
     }
     const rows = packet.evidence as { index: number }[];
     const candidate = packet.teachingProposals as TeachingProposalPacket | undefined;
-    return { reviews: rows.map(row => ({ index: row.index, supportedFact: source[row.index], support: 0.9, statementSupport: 0.9 })),
+    return { reviews: rows.map(row => ({ index: row.index, supportedFact: source[row.index], support: 0.9, statementSupport: 0.9, statementLanguage: "vi" })),
       ...(candidate ? { teachingProposalReview: { digest: candidate.digest, proposals: candidate.proposals.map(row => ({
         id: row.id, premiseIds: row.premiseIds, premiseConsistency: "supported", conditions: "supported",
         instructionalConsistency: "supported", sourceAttribution: "supported", requestedScope: "supported", language: "supported",
