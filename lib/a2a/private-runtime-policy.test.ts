@@ -25,6 +25,7 @@ it("refuses shared authorities, missing reservation, unapproved endpoints, incom
   for (const patch of [{ KERYX_PRIVATE_RESEARCH_PAYEE: address("1") }, { KERYX_PRIVATE_RESEARCH_PAYEE: address("2") },
     { KERYX_PRIVATE_TREASURY_ADDRESS: address("2") }, { KERYX_PRIVATE_RESEARCH_RESERVED_PAYEES: address("5") },
     { KERYX_PRIVATE_APPROVED_ENDPOINTS: '["https://other.example/v1/chat/completions"]' },
+    { KERYX_PRIVATE_PROVIDER: "mimo" }, { KERYX_PRIVATE_MODEL_ID: "mimo-v2.5" },
     { KERYX_PRIVATE_PROVIDER_API_KEY: "" }, { KERYX_PRIVATE_TREASURY_CAPACITY_MICROS: "1.5" },
     { KERYX_PRIVATE_APPROVED_ENDPOINTS: "synthetic-secret-marker-invalid-json" }]) {
     expect(() => privateRuntimePolicy({ ...env, ...patch }, context)).toThrow(/^Private research runtime policy unavailable$/);

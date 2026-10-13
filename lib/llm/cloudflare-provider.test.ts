@@ -33,7 +33,7 @@ it("adds an explicitly enabled configured provider after the existing default ti
   const { endpointFor } = await import("./provider-endpoints");
   expect(endpointFor("cloudflare")).toEqual({ baseUrl: "https://api.cloudflare.com/client/v4/accounts/" + "a".repeat(32) + "/ai/v1", apiKey: "synthetic" });
   const { llmProviderOrder } = await import("../config");
-  expect(llmProviderOrder()).toEqual(["anthropic", "deepseek", "mimo", "cloudflare"]);
+  expect(llmProviderOrder()).toEqual(["deepseek", "anthropic", "cloudflare"]);
 });
 
 it.each([false, true])("uses Cloudflare only after the existing providers fail (healthy primary: %s)", async healthy => {
@@ -51,12 +51,12 @@ it.each([false, true])("uses Cloudflare only after the existing providers fail (
   const { getReasoningEngine } = await import("./index");
   const { reasoningAttempts, effectiveEngineName } = await import("./resilient-engine");
   const chain = getReasoningEngine();
-  expect(chain.name).toBe("llm:deepseek:deepseek-v4-flash");
+  expect(chain.name).toBe("llm:deepseek:deepseek-flash");
   expect(await chain.decompose("fixture question")).toEqual(["What is the fixture fact?"]);
   expect(fetch.mock.calls.filter(([url]) => url.startsWith("https://api.cloudflare.com"))).toHaveLength(healthy ? 0 : 1);
-  expect(reasoningAttempts(chain)).toHaveLength(healthy ? 1 : 3);
+  expect(reasoningAttempts(chain)).toHaveLength(healthy ? 1 : 2);
   expect(effectiveEngineName(chain)).toContain(healthy ? "llm:deepseek:" : "llm:cloudflare:");
-  if (!healthy) expect(reasoningAttempts(chain)[2]).toMatchObject({ engine: `llm:cloudflare:${model}`, tier: 2, outcome: "served" });
+  if (!healthy) expect(reasoningAttempts(chain)[1]).toMatchObject({ engine: `llm:cloudflare:${model}`, tier: 1, outcome: "served" });
 });
 
 it("refuses an oversized multilingual prompt or excessive output without making an HTTP call", async () => {

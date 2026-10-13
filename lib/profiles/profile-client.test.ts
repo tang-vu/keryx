@@ -42,3 +42,48 @@ it("identity response bytes remain bounded before schema parsing", async () => {
   const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(" ".repeat(16385)));
   await expect(createProfileClient("https://keryx.cc", () => key, fetcher).readIdentities()).rejects.toThrow("size limit"); expect(fetcher).toHaveBeenCalledTimes(1);
 });
+
+const profileInput = { displayName: "Reader", handle: "reader_01", bio: "One line", purpose: "Papers", links: [{ kind: "github" as const, url: "https://github.com/reader" }] };
+const profile = { ...profileInput, wallet: owner, createdAt: "2026-10-09T00:00:00.000Z", updatedAt: "2026-10-09T00:00:00.000Z" };
+const activity = { firstSeenAt: null, questions: 3, surfacesUsed: ["web"], topics: ["biology"], creatorsPaid: 1, scope: "attributed-current-store", network: "eip155:5042" };
+it("profile update is one canonical full replacement with no implicit read, selector or signer", async () => {
+  const input = { ...profileInput, displayName: " Reader ", handle: "READER_01" }, before = JSON.stringify(input);
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ profile }));
+  expect(await createProfileClient("https://keryx.cc", () => key, fetcher).update(input)).toEqual({ profile });
+  expect(fetcher).toHaveBeenCalledTimes(1); expect(String(fetcher.mock.calls[0][0])).toBe("https://keryx.cc/api/me/profile");
+  const init = fetcher.mock.calls[0][1]!;
+  expect(init).toMatchObject({ method: "PUT", redirect: "error", credentials: "omit", cache: "no-store", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" } });
+  expect(init.signal).toBeInstanceOf(AbortSignal); expect(JSON.parse(String(init.body))).toEqual(profileInput); expect(JSON.stringify(input)).toBe(before);
+});
+it.each([
+  { ...profileInput, handle: "ADMIN" }, { ...profileInput, displayName: "x".repeat(81) },
+  { ...profileInput, bio: "x".repeat(161) }, { ...profileInput, purpose: "two\nlines" },
+  { ...profileInput, links: [{ kind: "github" as const, url: "javascript:alert(1)" }] }, { ...profileInput, wallet: owner },
+])("invalid replacement refuses before transport and preserves the caller's input %j", async input => {
+  const before = JSON.stringify(input), fetcher = vi.fn<typeof fetch>();
+  await expect(createProfileClient("https://keryx.cc", () => key, fetcher).update(input)).rejects.toThrow();
+  expect(fetcher).not.toHaveBeenCalled(); expect(JSON.stringify(input)).toBe(before);
+});
+it.each([401, 403, 409, 503])("profile write HTTP %i is returned without retry or a read fallback", async status => {
+  const before = JSON.stringify(profileInput), fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ error: "refused" }, { status }));
+  await expect(createProfileClient("https://keryx.cc", () => key, fetcher).update(profileInput)).rejects.toThrow(String(status));
+  expect(fetcher).toHaveBeenCalledTimes(1); expect(fetcher.mock.calls[0][1]?.method).toBe("PUT"); expect(JSON.stringify(profileInput)).toBe(before);
+});
+it("an interrupted profile write preserves input and never automatically resubmits an uncertain mutation", async () => {
+  const before = JSON.stringify(profileInput), fetcher = vi.fn<typeof fetch>().mockRejectedValue(new DOMException("Synthetic abort", "AbortError"));
+  await expect(createProfileClient("https://keryx.cc", () => key, fetcher).update(profileInput)).rejects.toThrow("Synthetic abort");
+  expect(fetcher).toHaveBeenCalledTimes(1); expect(JSON.stringify(profileInput)).toBe(before);
+});
+it.each([null, [], {}, { profile: null }, { profile, activity }, { profile: { ...profile, wallet: "0x1234" } },
+  { profile: { ...profile, payTo: owner } }])("profile update refuses a malformed acknowledgement %j", async value => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json(value));
+  await expect(createProfileClient("https://keryx.cc", () => key, fetcher).update(profileInput)).rejects.toThrow(); expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it.each([{ profile, activity: { ...activity, questions: -1 } }, { profile, activity, publicProfile: profile }, { profile, activity: null }])("profile read refuses malformed or extra fields %j", async value => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json(value));
+  await expect(createProfileClient("https://keryx.cc", () => key, fetcher).read()).rejects.toThrow(); expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it.each(["read", "update"] as const)("profile %s bounds the response before parsing without retries", async method => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(" ".repeat(16385))), client = createProfileClient("https://keryx.cc", () => key, fetcher);
+  await expect(method === "read" ? client.read() : client.update(profileInput)).rejects.toThrow("size limit"); expect(fetcher).toHaveBeenCalledTimes(1);
+});

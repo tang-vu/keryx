@@ -28,6 +28,8 @@ import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { verifyRequestSignature } from "@/lib/slack/verify-request-signature";
 import {
   type SlashCommand,
+  isSlackAccountControl,
+  slackAccountLinkingUnavailable,
   parseSlashCommand,
   helpText,
   buildAnswerText,
@@ -53,6 +55,8 @@ export async function POST(req: NextRequest) {
   }
 
   const params = new URLSearchParams(rawBody), command = params.get("command"), text = params.get("text")?.trim() ?? "";
+  // Authenticate first, then refuse unavailable account controls privately before storage or research.
+  if (isSlackAccountControl(params)) return Response.json(ephemeral(slackAccountLinkingUnavailable));
   const control = command === "/language" ? { action: "language" as const, ...(text ? { value: text } : {}) }
     : command === "/help" ? { action: "help" as const, ...(text ? { value: text } : {}) }
     : command === "/keryx" && !text ? { action: "help" as const } : parseBotControl(text);

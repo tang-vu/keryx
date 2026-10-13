@@ -1,4 +1,4 @@
-import {privacyReadsActive} from "./run-privacy/contracts";
+import { privacyReadsActive, requirePrivacy } from "./run-privacy/contracts";
 /**
  * The one place the public answer archive is built.
  *
@@ -28,9 +28,42 @@ const TTL_MS = 10 * 60 * 1000;
 let cached: { at: number; entries: ArchiveEntry[] } | null = null;
 /** In-flight rebuild, so a burst of concurrent renders parses the run log once, not once each. */
 let building: Promise<ArchiveEntry[]> | null = null;
+// Once this process has observed admitted privacy, a database outage must never
+// select a previously retained legacy cache. Configuration changes need a restart.
+let privacyObserved = privacyReadsActive({});
+
+async function publicArchive(db: Awaited<ReturnType<typeof getDb>>): Promise<ArchiveEntry[]> {
+  const privacy = requirePrivacy(db);
+  const candidates = async function* () {
+    let count = 0, before: { id: string; createdAt: string } | undefined;
+    while (count < ARCHIVE_WINDOW_RUNS) {
+      // The privacy port filters public/unerased rows in storage before text retrieval.
+      const rows = await privacy.list({ take: Math.min(32, ARCHIVE_WINDOW_RUNS - count), before });
+      if (!rows.length) break;
+      for (const run of rows) { count++; yield run; }
+      before = { id: rows.at(-1)!.id, createdAt: rows.at(-1)!.createdAt };
+    }
+  };
+  const selected = await buildArchiveStream(candidates());
+  // A winner may have been revoked while later candidates were being scanned.
+  // Project fresh bodies, not the text collected before its publication check.
+  const published = async function* () {
+    for (let offset = 0; offset < selected.length; offset += 32) {
+      const ids = selected.slice(offset, offset + 32).map(entry => entry.id);
+      const allowed = new Set(ids);
+      const rows = await privacy.list({ ids, take: ids.length });
+      for (const run of rows) {
+        if (!allowed.delete(run.id)) throw new Error("Unadmitted archive publication identity");
+        yield run;
+      }
+    }
+  };
+  return buildArchiveStream(published());
+}
 
 async function rebuild(): Promise<ArchiveEntry[]> {
   const db = await getDb();
+  if (privacyReadsActive(db)) { privacyObserved = true; return publicArchive(db); }
   const entries = await buildArchiveStream(db.iterateRecentQueries(ARCHIVE_WINDOW_RUNS));
   let historical: ArchiveEntry[] = [];
   let historicalUnavailable = false;
@@ -42,6 +75,9 @@ async function rebuild(): Promise<ArchiveEntry[]> {
   const merged = new Map<string, ArchiveEntry>(historical.map(entry => [entry.id, entry]));
   for (const entry of entries) merged.set(entry.id, entry);
   const combined = [...merged.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+  // Another concurrent reader may have admitted privacy while this legacy
+  // rebuild awaited storage. Its earlier visibility decision cannot publish now.
+  if (privacyObserved || privacyReadsActive({})) { privacyObserved = true; throw new Error("Legacy archive admission superseded"); }
   cached = { at: historicalUnavailable ? Date.now() - TTL_MS + 15_000 : Date.now(), entries: combined };
   return combined;
 }
@@ -60,16 +96,19 @@ async function legacyArchiveCached(): Promise<ArchiveEntry[]> {
   try {
     return await building;
   } catch {
-    return cached?.entries ?? [];
+    return privacyObserved || privacyReadsActive({}) ? [] : cached?.entries ?? [];
   }
 }
 
 /** Active privacy never serves a retained legacy cache or enumerates immutable archive originals. */
 export async function getArchiveCached():Promise<ArchiveEntry[]> {
-  let active=privacyReadsActive({});
+  let active=privacyObserved || privacyReadsActive({});
   try {
-    const db=await getDb();active=privacyReadsActive(db);
-    if(active)return await buildArchiveStream(db.iterateRecentQueries(ARCHIVE_WINDOW_RUNS));
+    const db=await getDb();active=active || privacyReadsActive(db);
+    if(active) {
+      privacyObserved = true;
+      return await publicArchive(db);
+    }
   } catch {if(active)return [];}
   return legacyArchiveCached();
 }

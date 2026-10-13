@@ -31,6 +31,8 @@ import {
   type AskMessage,
   type TelegramUpdate,
   parseAskMessage,
+  isTelegramAccountControl,
+  telegramAccountLinkingUnavailable,
   helpText,
   apiUrl,
   buildAnswerText,
@@ -54,6 +56,11 @@ export async function POST(req: NextRequest) {
   let update: TelegramUpdate;
   try {
     update = (await req.json()) as TelegramUpdate;
+    if (!update || typeof update !== "object" || Array.isArray(update)
+      || update.message !== undefined && (!update.message || typeof update.message !== "object" || Array.isArray(update.message)
+        || update.message.text !== undefined && typeof update.message.text !== "string")) {
+      return Response.json({ error: "malformed update body" }, { status: 400 });
+    }
   } catch {
     return Response.json({ error: "malformed update body" }, { status: 400 });
   }
@@ -64,6 +71,17 @@ export async function POST(req: NextRequest) {
   const chatId = update.message?.chat?.id;
   const sender = update.message?.from;
   const userId = sender?.id;
+  // Transport authentication is complete. Never pass account arguments to language/storage,
+  // sponsored admission or research, and never include them in a private or group reply.
+  if (isTelegramAccountControl(update)) {
+    if (typeof chatId !== "number" || !Number.isSafeInteger(chatId)
+      || typeof userId !== "number" || !Number.isSafeInteger(userId) || userId <= 0 || sender?.is_bot) {
+      return Response.json({ ok: true });
+    }
+    const privateChat = update.message?.chat?.type === "private" && chatId === userId;
+    return Response.json({ method: "sendMessage", chat_id: chatId, text: telegramAccountLinkingUnavailable,
+      ...(privateChat ? { protect_content: true } : {}) });
+  }
   const control = parseBotControl(update.message?.text ?? "");
   if (control && typeof chatId === "number" && typeof userId === "number" && Number.isSafeInteger(chatId)
     && Number.isSafeInteger(userId) && userId > 0 && !sender?.is_bot) {

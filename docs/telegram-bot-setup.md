@@ -52,6 +52,14 @@ just type the question                    # DMs only — no command needed
 /language auto                            # restore platform-locale / English help fallback
 ```
 
+Lowercase leading `link`, `unlink` and `whoami` (also with `/` or an `@bot` suffix)
+are reserved account controls. They return a fixed unavailable reply before preference
+lookup, sponsored admission or research; their arguments are discarded. A matching
+private recipient gets Telegram content protection. Group replies contain only the
+generic refusal. No account binding, sign-in token or account-history attachment is
+created, revoked or inspected. For an ordinary question beginning with a reserved
+verb, use `/ask …`. Secure linking remains an open feature.
+
 The placeholder "Keryx is dispatching…" appears instantly; the answer replaces it when the
 dispatch completes (typically well under a minute).
 

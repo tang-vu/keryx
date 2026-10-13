@@ -74,7 +74,7 @@ it("keeps GPT-OSS outside the automatic chain even when the new choice is enable
   }));
   const engine = (await import("./index")).getReasoningEngine();
   await engine.decompose("Synthetic question");
-  expect(requested).toEqual(["deepseek-v4-flash", "@cf/meta/llama-3.3-70b-instruct-fp8-fast"]);
+  expect(requested).toEqual(["deepseek-flash", "@cf/meta/llama-3.3-70b-instruct-fp8-fast"]);
 });
 
 it("uses model-specific context bounds without cutting multilingual input or expanding output ceilings", async () => {

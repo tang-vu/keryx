@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { LlmUsageRecord } from "../llm/reasoning-engine";
-import { capturePricePolicy, FLASH_POLICY, FLASH_POLICY_2026_10_06, usageCostBounds } from "./provider-cost-policy";
+import { capturePricePolicy, FLASH_POLICY, FLASH_POLICY_2026_10_06, FLASH_POLICY_2026_10_13, PRO_POLICY_2026_10_13, usageCostBounds } from "./provider-cost-policy";
 import { HISTORICAL_TOKEN_RATES_V1, HISTORICAL_ECONOMICS_POLICY_V1, calculateTestnetEconomics, economicsRunSample } from "./testnet-economics";
 import type { QueryRun } from "../types";
 
@@ -45,7 +45,7 @@ it.each(["deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp"])
   },
 );
 
-it("keeps unknown provider/model, Pro, missing cache and malformed captures unpriced", () => {
+it("keeps unknown models, historically unpriced Pro, missing cache and malformed captures unpriced", () => {
   for (const model of ["deepseek-v4-pro", "unknown"]) expect(usageCostBounds(usage(model))).toBeNull();
   expect(capturePricePolicy("mimo", "deepseek-flash")).toBeNull();
   expect(capturePricePolicy(undefined, "deepseek-flash")).toBeNull();
@@ -59,6 +59,21 @@ it("keeps unknown provider/model, Pro, missing cache and malformed captures unpr
     { ...record, costCapture: { ...record.costCapture!, pricing: { ...record.costCapture!.pricing!, id: "unknown-policy" } } },
     { ...record, costCapture: { ...record.costCapture!, pricing: { ...record.costCapture!.pricing!, wireModel: "other-model" } } },
   ]) expect(usageCostBounds(candidate)).toBeNull();
+});
+
+it("captures fresh canonical Flash and Pro prices without backfilling old Pro history", () => {
+  expect(capturePricePolicy("deepseek", "deepseek-flash")).toEqual({ ...FLASH_POLICY_2026_10_13, wireModel: "deepseek-flash" });
+  expect(capturePricePolicy("deepseek", "deepseek-v4-pro")).toEqual({ ...PRO_POLICY_2026_10_13, wireModel: "deepseek-v4-pro" });
+  expect(capturePricePolicy("deepseek", "deepseek-v4-flash")?.id).toBe(FLASH_POLICY_2026_10_06.id);
+  for (const [model, lower, upper] of [["deepseek-flash", 0.006, 0.012], ["deepseek-v4-pro", 0.0231, 0.0462]] as const) {
+    const record: LlmUsageRecord = { ...usage(model), inputTokens: 20_000, cachedInputTokens: 0, outputTokens: 5_000,
+      costCapture: { provider: "deepseek", requestStartedAt: "2026-10-13T01:00:00Z", responseReceivedAt: "2026-10-13T01:00:01Z",
+        pricing: capturePricePolicy("deepseek", model) } };
+    expect(usageCostBounds(record)?.lower).toBeCloseTo(lower, 10);
+    expect(usageCostBounds(record)?.upper).toBeCloseTo(upper, 10);
+    expect(usageCostBounds({ ...record, cachedInputTokens: null })).toBeNull();
+    expect(usageCostBounds({ ...record, costCapture: { ...record.costCapture!, requestStartedAt: "2026-10-12T23:59:59Z" } })).toBeNull();
+  }
 });
 
 it("preserves historical v1 as a scenario and never infers a capture for history", () => {
