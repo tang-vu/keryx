@@ -380,7 +380,24 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       assert.equal(await savedRecovery.getByRole("link", { name: `Original registration transaction: ${tx}`, exact: true }).getAttribute("href"), `${profile.explorerUrl}/tx/${tx}`);
       assert.equal(sponsorPosts.length, 2); assert.equal(policies.length, count + 1);
       assert.equal(await page.evaluate(() => (window as unknown as { typedSigns: unknown[] }).typedSigns.length), 0, "Receipt recovery is independent of proof and remains read-only");
-      await page.goto(indexedUrl); await page.getByText("Registration confirmed and indexed", { exact: true }).waitFor();
+      await page.goto(indexedUrl);
+      try { await page.getByText("Registration confirmed and indexed", { exact: true }).waitFor(); }
+      catch (error) {
+        const restored = new URL(page.url());
+        console.error(JSON.stringify({ fixture: "public-source-claim-indexed-revisit", profile: profile.name, viewport,
+          sameIndexedUrl: page.url() === indexedUrl, registrationPath: restored.pathname === "/register",
+          claimMatches: restored.searchParams.get("sourceClaimId") === claimId,
+          ownerMatches: restored.searchParams.get("owner") === owner,
+          chainMatches: restored.searchParams.get("chainId") === String(profile.chainId),
+          rssMatches: restored.searchParams.get("rss") === expectedRss,
+          walletFundedMode: restored.searchParams.get("mode") === "wallet-funded",
+          authenticated, sessionOwnerMatches: sessionOwner === owner, sponsorIndex, originalState: sponsorRow?.state,
+          sourceControlPresent: !!stored?.verifiedAt, pageErrors: errors.slice(-4),
+          alerts: await page.getByRole("alert").allTextContents().catch(() => ["diagnostic unavailable"]),
+          visibleStatus: await page.locator("main").innerText().then(text => text.slice(0, 1600)).catch(() => "diagnostic unavailable"),
+        }));
+        throw error;
+      }
       const fallback = new URL((await page.getByRole("link", { name: "Wallet-funded registration ▸", exact: true }).getAttribute("href"))!, "https://claim.test");
       assert.equal(fallback.searchParams.get("mode"), "wallet-funded"); assert.equal(fallback.searchParams.get("fetchPrice"), "0.005"); assert.equal(fallback.searchParams.get("owner"), owner); assert.equal(fallback.searchParams.get("sourceClaimId"), claimId);
       await page.goto(fallback.toString()); await page.locator("#price").waitFor(); assert.equal(await page.locator("#price").inputValue(), "0.005"); assert.equal(await page.locator("#rss").inputValue(), expectedRss);
