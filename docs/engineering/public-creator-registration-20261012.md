@@ -144,3 +144,46 @@ adoption or settled earnings merely from synthetic or testnet acceptance.
   pending originals remain inspectable. No automatic wallet-funded fallback occurs.
 - Focused payment/auth/storage tests, return-context tests, browser flow checks,
   TypeScript and a production build pass before full required CI and source review.
+
+## Google return recovery candidate — October 13
+
+The source-only R445-P2-GOOGLE-RETURN repair uses the existing tab-scoped,
+five-minute Circle continuation to retain a canonical public `/register` or
+`/claim-source` target and its initiating network. The fixed vendor redirect stays
+at bare `/connect`. After the existing Circle and server callback verification,
+the adapter revalidates the bounded target, network, expiry and original owner,
+then restores the query before auth listeners and connector consumers resume.
+Clearing identity during verification discards this navigation context. The
+connect page refreshes its public return state on the canonical auth event and
+callback completion even when the account address stays the same. Reload retains the public link, never signing
+credentials. Existing owner/network fields are preserved; public context grants
+no proof, payout, transaction, funding, retry or activation authority.
+
+Invalid, external, oversized, expired, cancelled, state/origin-mismatched,
+different-owner or different-profile continuations cannot restore that target.
+The added unit and existing SDK browser fixtures cover these refusals, exact
+draft/source/proof/price/chain links, bare callbacks, reload and same-address
+reconnect. Focused validation passed 79 unit tests across the wallet-browser and
+return-context files, followed by the existing installed-SDK browser fixture.
+The browser run includes valid-before/refusal/valid-after controls for nonce
+mismatch and vendor verification refusal; all vendor/API requests are intercepted.
+A nonce mismatch still creates one SDK verification frame but forwards no token
+and reaches no prepare/session/signing operation. The unit callback mocks prove
+adapter error containment only. Both checks ended with exit 0 and complete streams.
+Synthetic transport is not real Google, independent creator signing, settlement
+or production delivery evidence.
+
+Static text inspection records that these five changed paths are outside the
+study's retained 398-file reachable source inventory. The new browser import of
+`registration-return` adds no edge from the study entry. Before/after source-input
+pins are retained in the recovery handoff; no generated fingerprint, trial or
+receipt is rewritten and no producer runs. The TWO historical producers and the
+posthoc whole-file comparison keep their original qualification; all 48 old
+trial objects remain retained.
+
+ROOT retains frozen ec5/app63 priority, the merge hold and sole queue/release/
+financial/closure ownership. The original local233 physical-receipt gap, changed
+candidate CI, focused validation, real Google/user and applicable surface gates,
+combined-source acceptance, legacy-original inventory and V2 runtime/ENV/
+financial activation remain open. This isolated patch is uncommitted; integration
+into the original creator branch requires explicit ownership and accepted handoff.
