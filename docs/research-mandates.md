@@ -92,6 +92,9 @@ Suggested agent instruction:
 `contracts/research-spending-mandate.sol` implements an optional authority for a
 separately verified six-decimal USDC token. Only its immutable owner sets the
 agent, limits, task/category caps and reviewed source/recipient rules. The owner
+and agent addresses must differ. The adoption plan must also verify their real
+control and key separation; different addresses alone cannot prove that.
+The owner
 must set the actual contract reserve to reflect independently reviewed unpaid
 obligations. The compiler does **not** apply or synchronize those rules on chain.
 Its unsigned `prepareCalldata` is an inspection aid, not a complete deployment

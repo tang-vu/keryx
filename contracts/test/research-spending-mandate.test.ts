@@ -50,6 +50,13 @@ async function fixture() {
 }
 
 describe("ResearchSpendingMandate financial authority", () => {
+  it("refuses collapsing the bounded agent into the unrestricted owner address", async () => {
+    const f = await loadFixture(fixture);
+    await expect((await ethers.getContractFactory("ResearchSpendingMandate")).deploy(
+      await f.token.getAddress(), f.owner.address, f.owner.address, f.limits)).to.be.revertedWithCustomError(f.mandate, "InvalidPolicy");
+    await expect(f.mandate.setPolicy(f.owner.address, f.limits)).to.be.revertedWithCustomError(f.mandate, "InvalidPolicy");
+    expect(await f.mandate.agent()).to.equal(f.agent.address);
+  });
   it("checks an owner-appointed contract agent's EIP1271 signature and contains a refusing validator", async () => {
     const f = await loadFixture(fixture), p = await f.purchase();
     const wallet = await (await ethers.getContractFactory("ResearchMandateTestAgent")).deploy(f.agent.address) as unknown as Contract;
