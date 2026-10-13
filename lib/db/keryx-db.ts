@@ -210,6 +210,8 @@ export interface FeedbackStats {
 }
 
 export interface KeryxDB extends PublicReferenceArchiveDb {
+  /** Opt-in ordinary publication; absent on sealed/native stores and when privacy is inactive. */
+  readonly publicProfiles?: import("../profiles/public-profile").PublicProfilesStore;
   /** Explicitly admitted ordinary run text privacy. Public callers must never fall back to raw originals. */
   readonly runPrivacy?: import("../run-privacy/contracts").RunPrivacyStore;
   /** Captured staged activation; false preserves existing admitted readers, true requires the privacy port. */

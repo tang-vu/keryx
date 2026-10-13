@@ -95,6 +95,33 @@ jobs:
       - name: Run privacy PostgreSQL visibility, erasure and financial retention (synthetic)
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-run-privacy-postgres.mts --acceptance
+      - name: Public researcher profile PostgreSQL publication races (isolated PG17)
+        if: needs.scope.outputs.scope == 'full'
+        timeout-minutes: 3
+        run: |
+          mkdir -p .artifacts/profile264-postgres "$RUNNER_TEMP/profile264-pg-home"
+          # Reuse the official PG17 image already admitted by the preceding fixtures.
+          # The profile fixture requires --pull=never and never accepts a DB endpoint.
+          docker image inspect postgres:17-alpine > .artifacts/profile264-postgres/image.json
+          set +e
+          env -i PATH="$PATH" HOME="$RUNNER_TEMP/profile264-pg-home" node scripts/test-public-profiles-postgres.mts --acceptance > .artifacts/profile264-postgres/stdout.txt 2> .artifacts/profile264-postgres/stderr.txt
+          status=$?
+          printf '%s\n' "$status" > .artifacts/profile264-postgres/exit-code.txt
+          cat .artifacts/profile264-postgres/stdout.txt .artifacts/profile264-postgres/stderr.txt
+          exit "$status"
+      - name: Retain isolated public profile PostgreSQL result
+        if: always() && needs.scope.outputs.scope == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-profile-postgres-${{ github.sha }}
+          path: |
+            .artifacts/profile264-postgres/image.json
+            .artifacts/profile264-postgres/stdout.txt
+            .artifacts/profile264-postgres/stderr.txt
+            .artifacts/profile264-postgres/exit-code.txt
+          if-no-files-found: error
+          retention-days: 7
+          include-hidden-files: true
       - name: Prepaid A2A acceptance PostgreSQL atomic choices and active authority (synthetic)
         if: needs.scope.outputs.scope == 'full'
         run: node --import tsx scripts/test-deliverable-acceptance-postgres.mts
@@ -539,6 +566,25 @@ jobs:
 
       - name: Public transfer ledger (built API, sealed offline SQLite and production CSS)
         run: node --import tsx scripts/test-public-job-ledger-built.mts
+
+      - name: Public researcher profile built routes and phone CSS (isolated offline SQLite)
+        timeout-minutes: 3
+        run: |
+          env -i PATH="$PATH" HOME="$HOME" RUNNER_TEMP="$RUNNER_TEMP" KERYX_NETWORK=arcTestnet NEXT_PUBLIC_KERYX_NETWORK=arcTestnet KERYX_FORCE_OFFLINE=1 KERYX_EXTERNAL_DISCOVERY=0 KERYX_PUBLIC_PROFILES_ENABLED=true KERYX_RUN_PRIVACY_ENABLED=true node --import tsx scripts/test-public-profiles-built.mts --acceptance
+      - name: Retain actual built public profile route and phone result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-profile-built-${{ github.sha }}
+          path: |
+            .artifacts/public-profile-built-*/acceptance.json
+            .artifacts/public-profile-built-*/stdout.txt
+            .artifacts/public-profile-built-*/stderr.txt
+            .artifacts/public-profile-built-*/profile-*.png
+          if-no-files-found: error
+          retention-days: 7
+          # Only these named evidence files; never data/keryx.sqlite or the .next link.
+          include-hidden-files: true
 
       - name: Private bibliography snapshots (built routes, isolated SQLite and synthetic sessions)
         run: node --import tsx scripts/test-private-bibliography-built.mts
