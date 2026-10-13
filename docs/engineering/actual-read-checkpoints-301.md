@@ -12,19 +12,30 @@ payment arguments, amounts, allocation, reservation release or settlement change
 New focused injected-runner controls cover final assessment failure, cached
 funding refusal, reevaluation funding refusal, capture sink failure, digest
 tampering, unknown private fields and the private-ID exclusion. They compare
-answers/actions/money/call order with capture absent. In this native phase the
-PowerShell launcher was refused before Node started: these controls and fresh
-TypeScript/lint remain UNEXECUTED, with no execution-policy bypass. Retained
+answers/actions/money/call order with capture absent. In the earlier native phase the
+PowerShell launcher was refused before Node started; that refusal remains retained.
+After primary ordinary composition with main `17744375`, six focused test files
+accepted 367 cases (356 unchanged passes plus 11 corrected fixture passes).
+Ten older review-first assertions now require the current v4 schema, and the private
+control uses the existing job-scoped synthetic effects strategy with its own cache.
+TypeScript, scoped lint and the existing React/Web Crypto browser fixture passed.
+The new six late-sink controls reached their intended STOP/SKIP emissions. Retained
 35-vector/132-record and React/Web Crypto evidence covers its unchanged inputs,
 not this new emission delta or a compiled Next build. The old CLI engine PASS
 retains its artifact-name/parent-evidence qualification.
 
-Normal composition with reviewed release source `628c8ff8` was denied before any
-source/index change. Root must perform the ordinary merge, retain both whole
-DECISIONS sections and the whole incoming study/report pair, then reconcile the
-shared report inspection and browser import allowlist with v4. The NEXT source
-epoch, full release corpus, independent review, applicable CI, compiled/package
-and delivery gates remain open. Native/private/pre-enrollment capture and missing
+Earlier native composition with source `628c8ff8` was denied before any source/index
+change. Primary ordinary composition now retains both DECISIONS sections, the genuine
+historical study/report pair, and the closed browser import union. The shared report
+retains v4 optimizer observations; signed offline exports use the same closed v4
+canonical packet, digest and external Ed25519 trust anchor. This provisions no key.
+An independent review of this compatibility correction found no reachable P1/P2.
+One actual offline 48-trial producer accepted all 406 physical source pins, the same
+lock/corpus and zero outbound attempts. Every trial object and non-source artifact
+field matched the prior accepted study. Its report uses explicit `archive-v2` rendering.
+The earlier incorrect launcher environment was refused before trial imports; no
+application guard was changed. Required PR CI, compiled/package and delivery gates
+remain open. Native/private/pre-enrollment capture and missing
 integer monetary authority stay explicitly unsupported; no history is backfilled.
 Original #301 stays OPEN; source integrity does not attest source truth or private
 ledger authenticity, and payment anchoring remains separate #291 scope.

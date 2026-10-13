@@ -194,7 +194,7 @@ describe("identity-bound review-first pipeline", () => {
     expect(absent.packet).toBeNull(); expect(throwing.packet).toBeNull(); expect(throwing.status).toBe("unavailable");
     expect(available.packet).not.toBeNull();
     expect(await verifyActualReadPacket(available.packet!.packet, available.packet!.retainedDigest)).toBe(true);
-    expect(available.packet!.packet.schema).toBe(3);
+    expect(available.packet!.packet).toMatchObject({ schema: 4, policy: "ordinary-query-economics-v4" });
     expect(available.packet!.packet.records).toEqual(expect.arrayContaining([
       expect.objectContaining({ check: { kind: "review", required: true }, outcome: { action: "ESCALATE", rule: "human-review" } }),
     ]));
@@ -2945,6 +2945,11 @@ describe("actual READ checkpoint capture differentials", () => {
       tags: [], fetchPrice: 0.001, cached: false, preview: "Synthetic preview", external: { resource: "https://synthetic.example/api", chains: ["eip155:5042002"], payTo: "0xexternal", onArc: true } }];
     d.db.listPublicReferences = async () => expansion || scenario === "public" || scenario === "funding-refusal" ? [publicRef(), publicRef("public:extra")] : [];
     if (capture !== "missing") Object.defineProperty(d.db, "decisionReviews", { value: {} });
+    if (capture === "private") {
+      d.effects = isolatedTestEffects("prv_synthetic-checkpoint-control");
+      d.effects.getCachedAt = vi.fn(async key => ["checkpoint-a", "checkpoint-b"].includes(key) ? stamp : null);
+      d.effects.getCached = vi.fn(async () => "Scoped synthetic cached evidence.");
+    }
     if (capture === "throwing") d.readCheckpointSink = () => { throw Error("Synthetic observer unavailable"); };
     if (capture === "rejecting") d.readCheckpointSink = async () => { throw Error("Synthetic asynchronous observer unavailable"); };
     if (capture === "late-throwing" || capture === "late-rejecting") d.readCheckpointSink = record => {
