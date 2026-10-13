@@ -3,6 +3,7 @@ export interface RegistrationDraft {
   rssUrl?: string; url?: string; name?: string; description?: string;
   gapId?: string; matchedItemLink?: string; owner?: string;
   sourceClaimId?: string; fetchPrice?: number;
+  challengeId?: string; referenceId?: string; chainId?: number; mode?: "wallet-funded";
 }
 export interface SourceClaimDraft { url?: string; rssUrl?: string; referenceId?: string; claimId?: string; challengeId?: string; owner?: string }
 const MAX_CONNECT_HREF = 6_000;
@@ -24,7 +25,14 @@ export function registrationDraft(params: URLSearchParams): RegistrationDraft {
   const gap = params.get('gap')?.trim();
   const post = webUrl(params.get('post'));
   const owner = params.get('owner');
-  const sourceClaimId = params.get('sourceClaimId');
+  if (owner !== null && !/^0x[0-9a-fA-F]{40}$/.test(owner)) throw new Error('Invalid initiating wallet.');
+  const sourceClaimId = params.get('sourceClaimId') ?? params.get('claimId');
+  const challengeId = params.get('challengeId'), referenceId = params.get('referenceId'), chain = params.get('chainId'), mode = params.get('mode');
+  if (params.get('sourceClaimId') && params.get('claimId') && params.get('sourceClaimId') !== params.get('claimId')) throw new Error('Conflicting source claim context.');
+  if (challengeId && !/^[a-f0-9]{64}$/.test(challengeId)) throw new Error('Invalid source challenge.');
+  if (referenceId && !/^public:[a-z0-9-]{1,80}$/.test(referenceId)) throw new Error('Invalid public reference.');
+  if (chain !== null && !['5042', '5042002'].includes(chain)) throw new Error('Invalid registration network.');
+  if (mode !== null && mode !== 'wallet-funded') throw new Error('Invalid registration mode.');
   const price = params.get('fetchPrice');
   if (sourceClaimId && !/^[a-zA-Z0-9_-]{1,128}$/.test(sourceClaimId)) throw new Error('Invalid source claim context.');
   if (price !== null && (!/^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/.test(price) || !Number.isSafeInteger(Math.round(Number(price) * 1_000_000)) || Math.round(Number(price) * 1_000_000) / 1_000_000 !== Number(price))) throw new Error('Use an exact, nonnegative USDC read price with at most six decimal places.');
@@ -37,11 +45,12 @@ export function registrationDraft(params: URLSearchParams): RegistrationDraft {
     ...(rssUrl && gap && /^[a-zA-Z0-9_-]{1,128}$/.test(gap) && post ? { gapId: gap, matchedItemLink: post } : {}),
     ...(owner && /^0x[0-9a-fA-F]{40}$/.test(owner) ? { owner: owner.toLowerCase() } : {}),
     ...(sourceClaimId ? { sourceClaimId } : {}), ...(price !== null ? { fetchPrice: Number(price) } : {}),
+    ...(challengeId ? { challengeId } : {}), ...(referenceId ? { referenceId } : {}), ...(chain ? { chainId: Number(chain) } : {}), ...(mode === 'wallet-funded' ? { mode } : {}),
   };
 }
 export function registrationTarget(draft: RegistrationDraft): string {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries({ rss: draft.rssUrl, url: draft.url, name: draft.name, desc: draft.description, gap: draft.gapId, post: draft.matchedItemLink, owner: draft.owner, sourceClaimId: draft.sourceClaimId, fetchPrice: draft.fetchPrice })) {
+  for (const [key, value] of Object.entries({ rss: draft.rssUrl, url: draft.url, name: draft.name, desc: draft.description, gap: draft.gapId, post: draft.matchedItemLink, owner: draft.owner, sourceClaimId: draft.sourceClaimId, fetchPrice: draft.fetchPrice, challengeId: draft.challengeId, referenceId: draft.referenceId, chainId: draft.chainId, mode: draft.mode })) {
     if (value !== undefined && value !== '') params.set(key, String(value));
   }
   return `/register${params.size ? `?${params}` : ''}`;
@@ -60,6 +69,7 @@ export function sourceClaimDraft(params: URLSearchParams): SourceClaimDraft {
   if (params.get('rss') && (!url || !rssUrl || new URL(rssUrl).protocol !== 'https:' || new URL(rssUrl).origin !== new URL(url).origin))
     throw new Error('Use a full HTTPS feed URL on the same publisher origin.');
   const referenceId = params.get('referenceId'), claimId = params.get('claimId'), challengeId = params.get('challengeId'), owner = params.get('owner');
+  if (owner !== null && !/^0x[0-9a-fA-F]{40}$/.test(owner)) throw new Error('Invalid initiating wallet.');
   if (referenceId && !/^public:[a-z0-9-]{1,80}$/.test(referenceId)) throw new Error('Invalid public reference.');
   if (claimId && !/^[a-zA-Z0-9_-]{1,128}$/.test(claimId)) throw new Error('Invalid source claim.');
   if (challengeId && !/^[a-f0-9]{64}$/.test(challengeId)) throw new Error('Invalid source challenge.');

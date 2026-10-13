@@ -6,6 +6,7 @@ const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/).refine(value => !/^0x0{4
 const hash = z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform(value => value.toLowerCase() as Hex);
 const uint = z.string().regex(/^(0|[1-9]\d{0,77})$/).refine(value => BigInt(value) < BigInt(2) ** BigInt(256));
 const positive = uint.refine(value => BigInt(value) > BigInt(0));
+/** The legacy schema must retain its exact canonical representation and digest. */
 export const registrationSponsorPolicySchema = z.object({
   protocol: z.literal("keryx-registration-sponsor-v1"),
   network: z.enum(["eip155:5042", "eip155:5042002"]),
@@ -26,13 +27,47 @@ export const registrationSponsorPolicySchema = z.object({
   BigInt(p.maxTransactionWei) <= BigInt(p.maxDailyWei) &&
   BigInt(p.maxDailyWei) <= BigInt(p.maxLifetimeWei) &&
   BigInt(p.maxGas) * BigInt(p.maxFeePerGasWei) <= BigInt(p.maxTransactionWei), "Gas liability exceeds policy");
+export const registrationSponsorLegacyPolicySchema = registrationSponsorPolicySchema;
 export type RegistrationSponsorPolicy = z.infer<typeof registrationSponsorPolicySchema>;
-export function registrationCreatorEligible(policy: RegistrationSponsorPolicy, creator: string, canonicalUrl: string): boolean {
+export const registrationSponsorWalletFundedPolicySchema = z.object({
+  protocol: z.literal("keryx-registration-sponsor-v2"),
+  eligibility: z.literal("verified-publisher"), funding: z.literal("wallet-balance"),
+  network: z.enum(["eip155:5042", "eip155:5042002"]),
+  deploymentOrigin: z.string().url().refine(value => new URL(value).origin === value),
+  registryAddress: address, registryCodeHash: hash, sponsorAddress: address,
+  maxTransactionWei: positive.refine(value => BigInt(value) <= BigInt("40000000000000000")),
+  maxGas: z.number().int().min(21000).max(1_000_000),
+  maxFeePerGasWei: positive.refine(value => BigInt(value) >= BigInt(20_000_000_000) && BigInt(value) <= BigInt(40_000_000_000)),
+}).strict().refine(p => BigInt(p.maxGas) * BigInt(p.maxFeePerGasWei) <= BigInt(p.maxTransactionWei), "Gas liability exceeds policy");
+export type WalletFundedRegistrationSponsorPolicy = z.infer<typeof registrationSponsorWalletFundedPolicySchema>;
+export const activeRegistrationSponsorPolicySchema = z.union([registrationSponsorPolicySchema, registrationSponsorWalletFundedPolicySchema]);
+export type ActiveRegistrationSponsorPolicy = z.infer<typeof activeRegistrationSponsorPolicySchema>;
+/** Server-only same-block observation from the attested native RPC, never an API input. */
+export const registrationSponsorFundingObservationSchema = z.object({
+  network: z.enum(["eip155:5042", "eip155:5042002"]), sponsorAddress: address,
+  blockNumber: uint, blockHash: hash,
+  blockTimestamp: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  observedAt: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  nativeBalanceWei: uint, latestTransactionNonce: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+}).strict();
+export type RegistrationSponsorFundingObservation = z.infer<typeof registrationSponsorFundingObservationSchema>;
+export function registrationPolicyExpired(policy: ActiveRegistrationSponsorPolicy, now: number): boolean {
+  return policy.protocol === "keryx-registration-sponsor-v1" && now >= policy.expiresAt;
+}
+export function registrationAuthorizationDeadline(policy: ActiveRegistrationSponsorPolicy, now: number): number {
+  return Math.floor((policy.protocol === "keryx-registration-sponsor-v1" ? Math.min(now + 10 * 60_000, policy.expiresAt) : now + 10 * 60_000) / 1000);
+}
+export function registrationCreatorEligible(policy: ActiveRegistrationSponsorPolicy, creator: string, canonicalUrl: string): boolean {
+  if (policy.protocol === "keryx-registration-sponsor-v2") {
+    try { return address.safeParse(creator).success && new URL(canonicalUrl).protocol === "https:"; }
+    catch { return false; }
+  }
   return policy.allowlistedCreators.includes(creator.toLowerCase() as Address) ||
     Boolean(policy.allowlistedPublisherOrigins?.includes(new URL(canonicalUrl).origin));
 }
 /** Discovery only. Actual admission still requires the exact authenticated owner's fresh publishing proof. */
-export function registrationWalletMayPrepare(policy: RegistrationSponsorPolicy, creator: string): boolean {
+export function registrationWalletMayPrepare(policy: ActiveRegistrationSponsorPolicy, creator: string): boolean {
+  if (policy.protocol === "keryx-registration-sponsor-v2") return address.safeParse(creator).success;
   return policy.allowlistedCreators.includes(creator.toLowerCase() as Address) || Boolean(policy.allowlistedPublisherOrigins?.length);
 }
 export const registrationParamsSchema = z.object({
@@ -76,7 +111,7 @@ export function registrationTypedData(row: SponsoredRegistration) {
       tagsHash: keccak256(toBytes(row.params.tags)), nonce: BigInt(row.nonce), deadline: BigInt(row.deadline),
     } };
 }
-export const registrationPolicyDigest = (policy: RegistrationSponsorPolicy): Hex => keccak256(toBytes(canonicalJson(registrationSponsorPolicySchema.parse(policy))));
+export const registrationPolicyDigest = (policy: ActiveRegistrationSponsorPolicy): Hex => keccak256(toBytes(canonicalJson(activeRegistrationSponsorPolicySchema.parse(policy))));
 export const registrationIntentDigest = (row: SponsoredRegistration): Hex => hashTypedData(registrationTypedData(row));
 export const REGISTRATION_SPONSOR_ABI = [
   { type: "function", name: "registryVersion", stateMutability: "pure", inputs: [], outputs: [{ type: "uint8" }] },

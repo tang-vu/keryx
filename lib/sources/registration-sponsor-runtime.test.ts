@@ -8,8 +8,8 @@ import { registrationSponsorReadChain, registrationSponsorRuntime } from "./regi
 const mocked = vi.hoisted(() => ({
   config: { networkId: "eip155:5042", baseUrl: "https://keryx.example", registryAddress: "", registryReadAddress: "", rpcUrl: "https://rpc.invalid", registryOrigins: "", registryDeployBlock: "5" },
   getDb: vi.fn(), createClient: vi.fn(), transport: vi.fn(),
-  db: { admitRegistrationSponsor: vi.fn(), getRegistrationSponsor: vi.fn(), transitionRegistrationSponsor: vi.fn(), getRegistrationSponsorExecution: vi.fn() },
-  rpc: { getCode: vi.fn(), getBlock: vi.fn(), readContract: vi.fn(), getTransactionCount: vi.fn(), estimateGas: vi.fn(), sendRawTransaction: vi.fn(), getTransactionReceipt: vi.fn() },
+  db: { admitRegistrationSponsor: vi.fn(), getRegistrationSponsor: vi.fn(), transitionRegistrationSponsor: vi.fn(), getRegistrationSponsorExecution: vi.fn(), inspectRegistrationSponsorFunding: vi.fn() },
+  rpc: { getCode: vi.fn(), getBlock: vi.fn(), getBalance: vi.fn(), readContract: vi.fn(), getTransactionCount: vi.fn(), estimateGas: vi.fn(), sendRawTransaction: vi.fn(), getTransactionReceipt: vi.fn() },
 }));
 vi.mock("../config", () => ({ config: mocked.config }));
 vi.mock("../db", () => ({ getDb: mocked.getDb }));
@@ -53,11 +53,40 @@ beforeEach(() => {
   mocked.transport.mockReturnValue({ mocked: true }); mocked.rpc.getCode.mockResolvedValue(code);
   mocked.rpc.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => functionName === "registryVersion" ? 3 : BigInt(0));
   mocked.rpc.getTransactionCount.mockResolvedValue(7); mocked.rpc.sendRawTransaction.mockResolvedValue(hash);
+  mocked.rpc.getBalance.mockResolvedValue(BigInt("1000000000000000000"));
   mocked.rpc.getBlock.mockResolvedValue({ number: BigInt(5), hash, timestamp: BigInt(Math.floor(NOW / 1000)) });
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 
 describe("registration sponsor runtime custody boundary", () => {
+  it("observes native balance and nonce at one attested block and rechecks its hash", async () => {
+    const chain = registrationSponsorReadChain(original()), observation = await chain.fundingObservation!();
+    expect(observation).toMatchObject({ network: "eip155:5042", sponsorAddress: original().relayer,
+      blockNumber: "5", blockHash: hash, observedAt: NOW, nativeBalanceWei: "1000000000000000000", latestTransactionNonce: 7 });
+    expect(mocked.rpc.getBalance).toHaveBeenCalledWith({ address: original().relayer, blockNumber: BigInt(5) });
+    expect(mocked.rpc.getTransactionCount).toHaveBeenCalledWith({ address: original().relayer, blockNumber: BigInt(5) });
+    expect(mocked.rpc.getBlock).toHaveBeenLastCalledWith({ blockNumber: BigInt(5) });
+  });
+  it.each(["hash", "late"])("refuses %s inconsistency after same-block balance and nonce reads", async problem => {
+    mocked.rpc.getBlock.mockResolvedValueOnce({ number: BigInt(5), hash, timestamp: BigInt(NOW / 1000) });
+    mocked.rpc.getBlock.mockImplementationOnce(async () => {
+      if (problem === "late") vi.setSystemTime(NOW + 61_000);
+      return { number: BigInt(5), hash: problem === "hash" ? keccak256("0x6001") : hash, timestamp: BigInt(NOW / 1000) };
+    });
+    await expect(registrationSponsorReadChain(original()).fundingObservation!()).rejects.toThrow("Consistent sponsor funds are unavailable");
+    expect(mocked.rpc.sendRawTransaction).not.toHaveBeenCalled();
+  });
+  it("accepts wallet-funded configuration without a pilot expiry and still requires native funding inspection", async () => {
+    const p = policy();
+    vi.stubEnv("KERYX_REGISTRATION_SPONSOR_POLICY", JSON.stringify({ protocol: "keryx-registration-sponsor-v2",
+      eligibility: "verified-publisher", funding: "wallet-balance", network: p.network, deploymentOrigin: p.deploymentOrigin,
+      registryAddress: p.registryAddress, registryCodeHash: p.registryCodeHash, sponsorAddress: p.sponsorAddress,
+      maxTransactionWei: p.maxTransactionWei, maxGas: p.maxGas, maxFeePerGasWei: "40000000000" }));
+    const context = await registrationSponsorRuntime(); expect(context).not.toBeNull();
+    vi.setSystemTime(NOW + 365 * 86_400_000); expect(() => context!.assertPolicy()).not.toThrow();
+    mocked.getDb.mockResolvedValue({ ...mocked.db, inspectRegistrationSponsorFunding: undefined });
+    await expect(registrationSponsorRuntime()).rejects.toThrow("Registration sponsorship configuration is unavailable");
+  });
   it("requires the sponsor code pin to match the selected immutable registration origin", async () => {
     const origins = JSON.stringify([{ network: "eip155:5042", address: registry, version: 3, codeHash: keccak256(code), deployBlock: "5" }]);
     mocked.config.registryOrigins = origins;
@@ -135,7 +164,7 @@ describe("registration sponsor runtime custody boundary", () => {
     const context = (await registrationSponsorRuntime())!;
     if (changed === "policy") vi.stubEnv("KERYX_REGISTRATION_SPONSOR_POLICY", JSON.stringify(policy({ maxRegistrationsTotal: 11 })));
     if (changed === "custody") vi.stubEnv("KERYX_REGISTRATION_SPONSOR_PRIVATE_KEY", OTHER_TEST_KEY);
-    if (changed === "expiry") vi.setSystemTime(context.policy.expiresAt);
+    if (changed === "expiry" && context.policy.protocol === "keryx-registration-sponsor-v1") vi.setSystemTime(context.policy.expiresAt);
     expect(() => context.assertPolicy()).toThrow("Registration sponsor policy unavailable");
     await expect(context.chain.sign(transaction())).rejects.toThrow("Registration sponsor policy unavailable");
     await expect(context.chain.broadcast(hash)).rejects.toThrow("Registration sponsor policy unavailable");

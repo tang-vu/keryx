@@ -1,14 +1,54 @@
 # Creator registration gas sponsorship
 
-October 12, 2026 activation candidate: registration sponsorship is **disabled by
-default**. The owner selected the existing funded public-fee wallet for a bounded
-Conzit rollout. Production activation remains pending the funded acceptance and
-release readbacks recorded below. V1 listings retain their original authority;
-new V3 registrations use explicit immutable registry origins rather than moving
-legacy listings. Including source or selecting a version does not deploy a
-contract or prove a completed cutover.
-See [current deployment records](mainnet-status.md) and
-[the complete-product release gates](mainnet-delivery-plan.md).
+## Public wallet-funded registration candidate
+
+Owner direction on October 12: `/register` must be one quick creator flow for any
+verified publisher, with gas covered while the existing sponsor wallet has sufficient
+native funds. The new strict `keryx-registration-sponsor-v2` policy uses
+`eligibility: "verified-publisher"` and `funding: "wallet-balance"`. It admits no
+site/wallet allowlists, pilot expiry, daily/lifetime budget or attempt-count fields.
+Publishing proof, creator authorization and complete transaction gas limits remain
+mandatory. Fresh native balance and all unresolved reservations across old/new
+policies control admission and execution; an unavailable RPC or insufficient funds
+does not grant new authority.
+
+The main page keeps proof, chosen price, signing and confirmed/indexed completion
+together, with saved-request recovery under Advanced and an explicit wallet-funded
+fallback. Indexed registration does not activate earnings without distribution
+permission and matching registry terms. Google/Circle uses the same creator authority.
+
+Legacy finite policies and originals retain their digests, accounting and recovery.
+The earlier Conzit rollout and its dated evidence below are distinct from this public
+candidate. Activation and one combined deploy belong to the existing coordinator;
+including this source is not a claim that the new policy is already live.
+See [design, surface boundaries and acceptance](engineering/public-creator-registration-20261012.md).
+
+## Earlier finite-policy rollout
+
+The finite Conzit gas pilot was activated on Arc mainnet on October 12, 2026, in
+application **0.27.62**, source `d7f79046`; its policy was retained in the October 13
+**0.27.63** delivery. V3 is
+`0x2217250019ab614dae7391d346d05c3fc4d71ae1`; both existing V1 listings retain
+original creator/payout/price authority. Sponsorship stays **disabled by default**
+for unconfigured profiles, and future activations require the gates below.
+See [deployment, receipts and retained history](mainnet-status.md).
+
+The installed policy names only `https://conzit.com`, the existing public-fee EOA
+`0xdbd07d89eb85d7a36fb204b2a4d2aa68735c24e1`, and ceilings of **0.04 native
+USDC/original, 0.08/day, 0.20/lifetime**, at most five attempts/day and five total and two per
+wallet/origin. It starts `2026-10-12T10:39:10.054Z` and expires
+`2026-10-13T10:39:10.054Z` (**17:39:10.054 Vietnam time, October 13**), with no
+renewal or automatic funding/top-up. Digest:
+`0x961e313198b014bc0ed4f4328b63e7bb36d21f473fc8ca5686a0c1b376d737eb`.
+
+The [Conzit publishing-control handoff](https://keryx.cc/claim-source?url=https%3A%2F%2Fconzit.com%2F&rss=https%3A%2F%2Fconzit.com%2Frss.xml)
+returned HTTP 200. Authenticated availability/proof refusal and server-side
+session revocation passed; receipt SHA-256:
+`3f3834a1504f5a2db7411796de9f0d52c911b9fc288b1e3b71bf8696fdd62c63`.
+This acceptance did not verify Conzit's publishing control or submit a registration.
+The publisher must still prove control and sign; availability is not a completed listing.
+Funded [testnet acceptance](engineering/registration-sponsor-funded-acceptance-20261012.md)
+retains its original profile/source and is separate from these mainnet observations.
 
 The implemented pilot lets an eligible creator sign one exact feed registration
 while a configured sponsor pays its transaction gas. The creator remains the
@@ -19,7 +59,7 @@ remains available under its selected registry profile.
 
 ## Creator and contract authority
 
-The [V3 candidate](../contracts/source-registry-v3.sol) adds
+The [V3 contract](../contracts/source-registry-v3.sol) adds
 `registerWithSignature`. The creator signs the URL hash, payout wallet, complete
 author split, read price, content identifier, tags, named relayer, creator nonce
 and deadline. The EIP-712 domain binds `KeryxSourceRegistry`, version `3`, the
@@ -30,7 +70,7 @@ authority belong to the signed creator. Direct creator-paid registration retains
 its existing call shape. V3 signature recovery currently supports EOAs; it does
 not implement EIP-1271 contract-wallet signatures.
 
-The application requires a matching connected wallet and SIWE creator session.
+The application requires a matching connected wallet and authenticated creator session.
 The POST endpoint derives the creator from that session and requires the browser
 `Origin` header to match the configured deployment origin. It does not derive
 authority from Next's internal listener URL or caller-supplied proxy headers;
@@ -38,6 +78,8 @@ the reviewed public server wrapper separately validates ingress metadata. API ke
 not acquire this publishing role. SIWE establishes wallet authentication; it does
 not replace the separate registration authorization. See the authoritative
 [SIWE specification](https://eips.ethereum.org/EIPS/eip-4361).
+Google/Circle EOAs use the same wallet session, publishing proof and typed
+authorization gates; live Google end-to-end acceptance remains open.
 
 Before opening the wallet prompt and again after it resolves, the browser reads
 the live Wagmi connection store. An account, chain or connection-state change
@@ -77,10 +119,11 @@ The policy allowlists named creator wallets or exact HTTPS publisher origins and
 per-transaction maximum liability, daily/lifetime wei liability, registrations
 per wallet, daily attempts and total attempts. Publisher-origin admission requires
 a fresh ownership proof and a finite per-origin attempt cap shared across wallets
-and URLs. It does not require pre-enrolling the publisher's wallet. The intended
-mainnet scope is only `https://conzit.com`, up to two attempts per wallet/origin,
-five total, 0.04 native USDC per transaction, 0.08 daily and 0.20 lifetime over a
-single 24-hour policy. Deployment is separately bounded to 0.088 native USDC.
+and URLs. It does not require pre-enrolling the publisher's wallet. The October 12
+mainnet policy allows only `https://conzit.com`, up to two attempts per wallet/origin,
+five attempts/day and five total, 0.04 native USDC per transaction, 0.08 daily and
+0.20 lifetime over the fixed 24-hour policy above. Gas and fee ceilings are
+1,000,000 and 40 gwei. Deployment is separately bounded to 0.088 native USDC.
 These are ceilings, not observed spending or an automatic renewal. Gas and fee maxima must fit the
 transaction reservation. These are native gas amounts in wei, separate from
 the six-decimal ERC-20 USDC units used by source prices and rewards. Network
@@ -144,11 +187,11 @@ source selects the latest admitted request. Receipt recovery does not require
 an active allowance or sponsor key, but still requires the original network,
 registry code/version, transaction identity and event evidence. Missing or
 corrupt journal state fails closed. Supabase has no equivalent atomic sponsor
-journal in this candidate and cannot enable the relay.
+journal for this relay and cannot enable it.
 
 ## Recovery limits and activation gates
 
-The October 12 candidate retains the creator signature atomically with signing
+The October 12 release retains the creator signature atomically with signing
 admission and the exact signed transaction atomically with its hash before
 broadcast. These bearer values live only in the private journal envelope;
 creator lookups, API responses and browser storage receive only the existing
@@ -190,7 +233,7 @@ including its source pins and any remaining gates. Exact-source CI/review,
 production commit verification and applicable browser acceptance remain release
 evidence, separate from financial activation.
 
-Activation still requires explicit finite funding/spending authority, reviewed
+Any future activation still requires explicit finite funding/spending authority, reviewed
 dedicated sponsor custody, funded testnet acceptance including unresolved
 submission recovery, and owner-authorized registry deployment/cutover with
 listing/indexing/payout continuity. Existing mainnet authorization and V1
@@ -203,14 +246,17 @@ receipts cannot be repurposed as V3 activation consent or proof. See
 | Surface | Registration role |
 | --- | --- |
 | Web | `/register/sponsored` is an explicit pilot for one verified feed, with creator review/signing and retained request inspection. Bulk import does not automatically receive sponsorship. |
-| Hosted API | `/api/sources/sponsor` uses the same SIWE, same-origin, proof, allowlist and atomic caps. Its owner lookup and receipt reader retain original identity; explicit resume preserves the original private execution authority. |
-| CLI and remote/stdio MCP | Existing research, payment and inspection roles remain. No new publisher private key, creator transaction signing or sponsor executor is distributed. |
-| Desktop Operator | Existing desktop/local roles remain; this candidate grants no publisher custody or sponsored registration signing. |
-| Browser extension and bots | Existing hosted links and research adapters remain. A browser handoff still requires the creator's own session, proof and signature. |
+| Hosted API | `/api/sources/sponsor` uses the same authenticated wallet session, same-origin, proof, allowlist and atomic caps. Its owner lookup and receipt reader retain original identity; explicit resume preserves the original private execution authority. |
+| CLI | Existing research, payment, inspection and offline audit tools remain. No publisher private key, creator transaction signing or sponsor executor is distributed. |
+| Remote and stdio MCP | Existing research, payment and inspection roles remain; package publication grants no sponsor signing authority. |
+| Desktop Operator | Existing desktop/local roles remain; this rollout grants no publisher custody or sponsored registration signing. |
+| Browser extension | Existing hosted research links remain. Browser handoff requires the creator's own session, proof and signature. |
+| Bots | Existing hosted research adapters remain. Browser handoff requires the creator's own session, proof and signature. |
 
-No synchronized package/installer publication or deployed sponsorship is inferred
-from these shared source changes. Each applicable release artifact and production
-commit needs its own accepted readback; current role boundaries remain explicit.
+The live deployment and limited GitHub manifest observations are dated in the
+[mainnet record](mainnet-status.md). MCP 0.4.18's manifest records
+`npmRegistryPublished: false`; npm/binary byte equality was not verified by this
+readback. Each package/installer retains its own source acceptance and channel role.
 
 ## English copy and catalogue boundary
 
@@ -225,7 +271,7 @@ listing-control copy is outside this narrow extraction. This introduces no
 locale activation, translation approval or general locale framework, and leaves
 all sponsorship funding, custody and operational activation gates above intact.
 
-When this PR rebases onto the UI-copy guard introduction, retire only the old
+The historical UI-copy guard rebase handoff required retiring only the old
 listing-control `jsx-text` allowance for “Price updates also submit these fields.
 Avoid editing this source elsewhere while the wallet prompt is open.” Its
 SHA256 identity is `78cbcc36d747c6afd3eb685532c7c0cdb459bc76d8e0395cf92e4e7a5004e345`

@@ -18,7 +18,7 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
   const runtimeGuard = options.runtimeGuard;
   const suppliedProfiles = options.applicationProfiles;
   if (suppliedProfiles !== undefined && (!Array.isArray(suppliedProfiles) || suppliedProfiles.length < 1
-    || suppliedProfiles.length > 2)) return refuseStorage("storage_unavailable");
+    || suppliedProfiles.length > 4)) return refuseStorage("storage_unavailable");
   let profiles: readonly string[] | undefined;
   if (suppliedProfiles !== undefined) {
     const captured: string[] = [];
