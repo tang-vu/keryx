@@ -154,7 +154,7 @@ try {
     assert(edited.includes(`[@${citedKey}]`));
     await themes.getByRole("button", { name: "Clear reading observations", exact: true }).click();
     assert.equal(await themes.getByLabel("Your reading observation").first().inputValue(), "");
-    assert.equal(await themes.getByLabel("Your sentence").inputValue(), "My in-place contribution edit.");
+    assert.equal(await articles.first().getByLabel("Your sentence").inputValue(), "My in-place contribution edit.");
     assert.equal(await themes.getByLabel("Your synthesis notes (unverified)").nth(1).inputValue(), "Second-theme edits");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `Overflow at ${width}`);
     await page.evaluate(() => window.scrollTo(0, 0));
