@@ -66,7 +66,8 @@ try {
           return route.fulfill({ response: await route.fetch({ url: physicalOrigin + url.pathname + url.search }) });
         });
         const prefetch = page.waitForResponse(response => new URL(response.url()).pathname === destination &&
-          response.request().headers()["next-router-prefetch"] === "1");
+          response.request().headers()["next-router-prefetch"] === "1" &&
+          response.request().headers()["next-router-segment-prefetch"] === undefined);
         console.log(JSON.stringify({ phase: "goto-start", engine: engine.name(), width, destination, entryPath }));
         await page.goto(origin + entryPath);
         console.log(JSON.stringify({ phase: "goto-complete", engine: engine.name(), width, destination }));
@@ -85,7 +86,7 @@ try {
         console.log(JSON.stringify({ phase: "prefetch-body-start", engine: engine.name(), width, destination, status: prefetched.status() }));
         await prefetched.finished();
         console.log(JSON.stringify({ phase: "prefetch-body-complete", engine: engine.name(), width, destination }));
-        assert.equal(prefetched.status(), 200, `${destination} route tree is prefetched`);
+        assert.equal(prefetched.status(), 200, `${destination} loading boundary is prefetched`);
         // Measure from the actual input event to the fallback's next animation frame.
         // Playwright's scroll/actionability waits precede the user's click.
         await link.evaluate(anchor => {
