@@ -22,18 +22,23 @@ export function PrivateProfileView() {
 function ProfileEditor({ wallet }: { wallet: string }) {
   const [snapshot, setSnapshot] = useState<PrivateProfileSnapshot | null>(null), [form, setForm] = useState(empty);
   const [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true), [readAttempt, setReadAttempt] = useState(0);
   const ownerRequest = useRef<AbortController | null>(null);
   useEffect(() => {
     const controller = new AbortController();
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]);
     ownerRequest.current = controller;
-    fetch("/api/me/profile", { cache: "no-store", headers: { "X-Keryx-Expected-Wallet": wallet }, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]) }).then(async response => {
+    setLoading(true); setMessage("");
+    fetch("/api/me/profile", { cache: "no-store", headers: { "X-Keryx-Expected-Wallet": wallet }, signal }).then(async response => {
       const value = await response.json(); if (!response.ok) throw new Error(value.message ?? copy("privateProfile.accessUnavailable"));
+      signal.throwIfAborted();
       const parsed = privateProfileSnapshotSchema.parse(value);
       if (parsed.profile && parsed.profile.wallet !== wallet) throw new Error(copy("privateProfile.ownerMismatch"));
       if (!controller.signal.aborted) { setSnapshot(parsed); setForm(parsed.profile ? { displayName: parsed.profile.displayName, handle: parsed.profile.handle, bio: parsed.profile.bio, purpose: parsed.profile.purpose, links: parsed.profile.links } : empty); setMessage(""); }
-    }).catch(error => { if (!controller.signal.aborted) setMessage(error instanceof Error ? error.message : copy("privateProfile.unavailable")); });
+    }).catch(error => { if (!controller.signal.aborted) setMessage(error instanceof Error ? error.message : copy("privateProfile.unavailable")); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [wallet]);
+  }, [wallet, readAttempt]);
   const change = (key: "displayName" | "handle" | "bio" | "purpose", value: string) => setForm(current => ({ ...current, [key]: value }));
   const save = async (method: "PUT" | "DELETE") => {
     const controller = ownerRequest.current;
@@ -42,8 +47,12 @@ function ProfileEditor({ wallet }: { wallet: string }) {
     if (method === "PUT" && !parsed.success) { setMessage(parsed.error.issues[0]?.message ?? copy("privateProfile.checkFields")); return; }
     setBusy(true); setMessage("");
     try {
-      const response = await fetch("/api/me/profile", { method, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]), headers: { "Content-Type": "application/json", "X-Keryx-Expected-Wallet": wallet }, ...(method === "PUT" && parsed.success ? { body: JSON.stringify(parsed.data) } : {}) });
+      const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]);
+      const response = await fetch("/api/me/profile", { method, signal, headers: { "Content-Type": "application/json", "X-Keryx-Expected-Wallet": wallet }, ...(method === "PUT" && parsed.success ? { body: JSON.stringify(parsed.data) } : {}) });
       const value = await response.json(); if (!response.ok) throw new Error(value.message ?? copy("privateProfile.changeFailed"));
+      signal.throwIfAborted();
+      if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).length !== 1
+        || (method === "DELETE" ? value.deleted !== true : !("profile" in value))) throw new Error(copy("privateProfile.changeFailed"));
       const profile = method === "DELETE" ? null : privateProfileRecordSchema.parse(value.profile);
       if (profile && profile.wallet !== wallet) throw new Error(copy("privateProfile.ownerMismatch"));
       if (controller.signal.aborted) return;
@@ -55,7 +64,10 @@ function ProfileEditor({ wallet }: { wallet: string }) {
   return <div key={wallet} className="space-y-6">
     <p className="break-all font-mono text-xs text-ink-3">{richCopy("privateProfile.signedWallet", { wallet: wallet })}</p>
     {message && <p role="status" className="text-sm text-ink">{message}</p>}
-    {!snapshot ? <p className="text-sm text-ink-3">{copy("privateProfile.storeUnavailable")}</p> : <>
+    {!snapshot ? <div className="space-y-3">
+      <p role={loading ? "status" : undefined} className="text-sm text-ink-3">{loading ? copy("ledgerResource.loading", { label: copy("privateProfile.title") }) : copy("privateProfile.storeUnavailable")}</p>
+      <button type="button" disabled={loading} className="border border-line px-4 py-2 text-sm" onClick={() => { setLoading(true); setReadAttempt(current => current + 1); }}>{copy("ledgerResource.retry")}</button>
+    </div> : <>
       <form className="space-y-4" onSubmit={event => { event.preventDefault(); void save("PUT"); }}>
         {([ ["displayName", copy("privateProfile.displayName"), 80], ["handle", copy("privateProfile.handle"), 32], ["bio", copy("privateProfile.bio"), 160], ["purpose", copy("privateProfile.purpose"), 160] ] as const).map(([key, label, max]) => <label key={key} className="block text-sm text-ink">{label}<input className="mt-1 block w-full border border-line bg-paper px-3 py-2" value={form[key]} maxLength={max} onChange={event => change(key, event.target.value)} disabled={busy} /></label>)}
         <p className="text-xs text-ink-3">{copy("privateProfile.handleRules")}</p>

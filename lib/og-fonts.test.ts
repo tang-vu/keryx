@@ -5,11 +5,13 @@ import { fileURLToPath } from "node:url";
 import { ImageResponse } from "next/og";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { publicPreviewFonts, publicPreviewFontFamily } from "./og-fonts";
+import * as fontHelpers from "./og-fonts";
 
-const fixture = vi.hoisted(() => ({ text: "" }));
-vi.mock("@/lib/history/read-dispatch", () => ({ resolveDispatch: async () => ({
+const fixture = vi.hoisted(() => ({ text: "", visibility: "public" as "public" | "private" | "unlisted" | null }));
+vi.mock("@/lib/history/read-dispatch", () => ({ resolveDispatch: async () => fixture.visibility === null ? null : ({
   run: { question: fixture.text, citations: [{ sourceName: "Synthetic public fixture" }], totalSpent: 0,
     totalToCreators: 0, createdAt: "2026-10-11T00:00:00Z" }, archive: null,
+  visibility: fixture.visibility,
 }) }));
 vi.mock("@/lib/db", () => ({ getDb: async () => ({
   getSource: async () => ({ name: fixture.text }), creatorLeaderboard: async () => [],
@@ -21,7 +23,7 @@ import dispatchPreview from "@/app/dispatch/[id]/opengraph-image";
 import creatorPreview from "@/app/creator/[id]/opengraph-image";
 import wantedPreview from "@/app/wanted/[id]/opengraph-image";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); fixture.visibility = "public"; });
 
 async function localRendererAsset(input: string | URL | Request) {
   const url = new URL(input instanceof Request ? input.url : String(input));
@@ -63,6 +65,7 @@ describe("local public preview glyphs", () => {
     ["zh", "中文：人工智能为什么需要可靠的来源与引用证据？"],
   ])("renders all actual %s public preview routes with the local fonts", async (language, text) => {
     fixture.text = text;
+    const fonts = vi.spyOn(fontHelpers, "publicPreviewFonts");
     const fetch = vi.fn(localRendererAsset);
     vi.stubGlobal("fetch", fetch);
     for (const [name, render] of [["dispatch", dispatchPreview], ["creator", creatorPreview], ["wanted", wantedPreview]] as const) {
@@ -70,10 +73,27 @@ describe("local public preview glyphs", () => {
       const bytes = Buffer.from(await response.arrayBuffer());
       expect(bytes.readUInt32BE(16)).toBe(1200);
       expect(bytes.readUInt32BE(20)).toBe(630);
+      expect(fonts.mock.calls.at(-1)?.[0]).toContain(text);
       if (process.env.KERYX_PREVIEW_CAPTURE_DIR) {
         await mkdir(process.env.KERYX_PREVIEW_CAPTURE_DIR, { recursive: true });
         await writeFile(join(process.env.KERYX_PREVIEW_CAPTURE_DIR, `${name}-${language}.png`), bytes);
       }
+    }
+    expect(remoteProtocols(fetch)).toEqual([]);
+  }, 30_000);
+
+  it("renders identical generic dispatch previews for unknown, private and unlisted input without reading their question", async () => {
+    fixture.text = "PRIVATE SECRET 中文 Tiếng Việt";
+    const fonts = vi.spyOn(fontHelpers, "publicPreviewFonts");
+    const fetch = vi.fn(localRendererAsset); vi.stubGlobal("fetch", fetch);
+    let previous: Buffer | undefined;
+    for (const visibility of [null, "private", "unlisted"] as const) {
+      fixture.visibility = visibility;
+      const response = await dispatchPreview({ params: Promise.resolve({ id: "same-unpublished-id" }) });
+      const bytes = Buffer.from(await response.arrayBuffer());
+      if (previous) expect(bytes.equals(previous)).toBe(true);
+      previous = bytes;
+      expect(fonts.mock.calls.at(-1)?.[0]).not.toContain("PRIVATE SECRET");
     }
     expect(remoteProtocols(fetch)).toEqual([]);
   }, 30_000);
