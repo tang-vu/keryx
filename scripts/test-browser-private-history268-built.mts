@@ -458,7 +458,7 @@ try {
     } finally { try { await context.close(); } catch (error) { cleanupFailures.push(error); } }
   }
   await bounded((async () => {
-  await pair("normal-json-ack-and-two-tab-stale-fences", async (a, b) => {
+  timedScenarios = [pair("normal-json-ack-and-two-tab-stale-fences", async (a, b) => {
     const da = await pendingDetail(a), db = await pendingDetail(b, "body"), sa = await staleHookSessions(a), sb = await staleHookSessions(b);
     await hold(a, LOGOUT, "transport", true); await logout(a); const start = await received(b); await cleared(a); await cleared(b);
     const ack = await held(a, LOGOUT, 0), aa = await snapshot(a), bb = await snapshot(b);
@@ -474,8 +474,8 @@ try {
     assert.equal((await snapshot(a)).events.filter(e => e.value === "signed-out").length, 1);
     assert.equal((await snapshot(b)).events.filter(e => e.value === "signed-out").length, 0, "Peer confirmation never grants auth authority");
     await cleared(a, pa); await cleared(b, pb);
-  });
-  await pair("local-workspace-unmount-has-no-peer-authority", async (a, b) => {
+  }),
+  pair("local-workspace-unmount-has-no-peer-authority", async (a, b) => {
     const da = await pendingDetail(a), db = await pendingDetail(b), before = await snapshot(b);
     // Actual Next client navigation unmounts the actual page/workspace. Removing DOM
     // nodes or calling a test root's unmount would not establish this behavior.
@@ -486,7 +486,10 @@ try {
     await release(b, db.id); await workspace(b).getByText(answer, { exact: true }).waitFor();
     await release(a, da.id); assert.equal(await workspace(a).getByText(answer, { exact: true }).count(), 0);
     assert(!(await snapshot(a)).messages.some(m => typeof m.value === "object" && m.value.type === "logout"));
-  });
+  })];
+  currentCase = "independent-normal-and-unmount-contexts";
+  const initialOutcomes = await Promise.allSettled(timedScenarios);
+  for (const outcome of initialOutcomes) if (outcome.status === "rejected") throw outcome.reason;
   // Overlap only the independent real timers; retain every original deadline/assertion.
   timedScenarios = [pair("real-15s-abort-is-not-a-normal-ack", async (a, b) => {
     const da = await pendingDetail(a), db = await pendingDetail(b), sa = await staleHookSessions(a), sb = await staleHookSessions(b);
