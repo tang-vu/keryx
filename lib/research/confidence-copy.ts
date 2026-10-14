@@ -2,12 +2,18 @@ import type { AnswerPresentation } from "./answer-presentation";
 import type { Confidence } from "../types";
 
 type Language = AnswerPresentation["language"];
-type Rationale = { kind: "no-citation" | "no-coverage" | "incomplete" | "explained-conflict" }
+type Rationale = { kind: "no-citation" | "no-coverage" | "incomplete" | "explained-conflict" | "synthetic" }
   | { kind: "unresolved-conflict" | "gaps" | "publisher-groups" | "limited-sources"; count: number };
 
 /** Copy only: the caller computes the same confidence level and evidence gates. */
 export function evidenceConfidenceReason(language: Language, rationale: Rationale): string {
   switch (rationale.kind) {
+    case "synthetic": return {
+      en: "this run contains synthetic demo material, which cannot support factual confidence",
+      vi: "lượt nghiên cứu có dữ liệu mô phỏng minh họa, không thể dùng để xác lập độ tin cậy thực tế",
+      pt: "esta execução contém material sintético de demonstração, que não sustenta confiança factual",
+      es: "esta ejecución contiene material sintético de demostración, que no respalda confianza factual",
+    }[language];
     case "no-citation": return {
       en: "no citation passed the evidence gate", vi: "không có trích dẫn nào đáp ứng điều kiện bằng chứng",
       pt: "nenhuma citação passou pelo filtro de evidências", es: "ninguna cita superó el filtro de evidencias",
@@ -55,8 +61,10 @@ export function evidenceConfidenceReason(language: Language, rationale: Rational
   }
 }
 
-/** Ordinary answer limitations, never a promotion of the recorded evidence verdict. */
-export function ordinaryConfidence(language: Language, delivery: "unavailable" | "summary" | "excerpts", assessment: string): Confidence {
+/** Preserve delivery limitations. Only an assessment of the delivered reviewed
+ * sentences may supply a higher level; excerpt-only and unavailable stay Low. */
+export function ordinaryConfidence(language: Language, delivery: "unavailable" | "summary" | "excerpts", assessment: string,
+  reviewedSummary?: Confidence): Confidence {
   const reason = {
     unavailable: {
       en: "Synthesis or evidence review did not complete; source support and a useful answer remain unassessed.",
@@ -78,7 +86,9 @@ export function ordinaryConfidence(language: Language, delivery: "unavailable" |
     },
   }[delivery][language];
   const prefix = { en: "Evidence assessment", vi: "Đánh giá bằng chứng", pt: "Avaliação das evidências", es: "Evaluación de las evidencias" }[language];
-  return { level: "Low", reason: delivery === "unavailable" ? reason : `${reason} ${prefix}: ${assessment}` };
+  const summary = delivery === "summary" ? reviewedSummary : undefined;
+  return { level: summary?.level ?? "Low",
+    reason: delivery === "unavailable" ? reason : `${reason} ${prefix}: ${summary?.reason ?? assessment}` };
 }
 
 export function confidenceBanner(answer: string, verdict: Confidence, language: Language): string {
