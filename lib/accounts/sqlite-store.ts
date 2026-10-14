@@ -64,11 +64,15 @@ export function createEnrolledSqliteAccountMembership(db: DatabaseSync): Account
   let admitted = false;
   let sqlFailure: unknown;
   let sqlFailed = false;
+  // Cache only private guarded statement objects, never authority or row values.
+  // Their get/all/run methods still execute the genuine full connection guard.
+  const statements = new Map<string, StatementSync>();
   const contention = (error: unknown) => error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
     && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
   const latch = () => {
     if (refused) return;
     refused = true;
+    statements.clear();
     // Only a constructor that qualified genuine connection metadata may retire
     // its failed connection. A rejected raw/foreign argument is never closed.
     if (admitted) { try { db.close(); } catch { /* No failed authority is revived. */ } }
@@ -98,12 +102,17 @@ export function createEnrolledSqliteAccountMembership(db: DatabaseSync): Account
   const guarded = new Proxy(db, { get(target, property) {
     if (property === "exec") return (query: string) => sql(() => target.exec(query));
     if (property === "prepare") return (query: string) => {
+      if (refused) throw unavailable();
+      const existing = statements.get(query);
+      if (existing) return existing;
       const statement = sql(() => target.prepare(query));
-      return new Proxy(statement, { get(value, key) {
+      const wrapped = new Proxy(statement, { get(value, key) {
         if (["get", "all", "run"].includes(String(key)))
           return (...args: unknown[]) => sql(() => Reflect.apply(Reflect.get(value, key), value, args));
         throw unavailable();
       } }) as StatementSync;
+      statements.set(query, wrapped);
+      return wrapped;
     };
     throw unavailable();
   } });
@@ -148,9 +157,12 @@ export function createEnrolledSqliteAccountMembership(db: DatabaseSync): Account
     // and does not poison a healthy reader or run its runtime guard.
     if (write) { try { assertVerifiedSqliteWritePolicy(db); } catch { throw unavailable(); } }
     let begun = false;
+    let stateInspected = false;
     sqlFailed = false; sqlFailure = undefined;
     try {
-      if (sql(() => db.isTransaction)) { latch(); throw unavailable(); }
+      const inTransaction = sql(() => db.isTransaction);
+      stateInspected = true;
+      if (inTransaction) { latch(); throw unavailable(); }
       try { check(); } catch (error) { if (!contention(error)) latch(); throw error; }
       guarded.exec(write ? "BEGIN IMMEDIATE" : "BEGIN"); begun = true;
       try { check(); } catch (error) { if (!contention(error)) latch(); throw error; }
@@ -162,6 +174,10 @@ export function createEnrolledSqliteAccountMembership(db: DatabaseSync): Account
       try { check(); } catch (error) { latch(); throw error; }
       return value;
     } catch (error) {
+      // No account BEGIN was reached when its initial guarded state inspection
+      // failed. State and authority are unknown: retire, never reuse or claim a
+      // rollback. Another blocking inspection cannot authorize this operation.
+      if (!stateInspected) { latch(); throw unavailable(); }
       // Cleanup stays on the genuine guarded connection. A lock is recoverable
       // only after rollback/no-active-transaction AND a valid full runtime guard.
       // A lost COMMIT acknowledgement grants no success or automatic retry.
@@ -176,20 +192,100 @@ export function createEnrolledSqliteAccountMembership(db: DatabaseSync): Account
       throw unavailable();
     }
   };
-  return accountMembershipJournal(guarded, transaction);
+  return accountMembershipJournal(guarded, transaction, nativeAccountReads(guarded));
+}
+
+interface AccountJournalReads {
+  live(raw: InteractiveSession, now: number): InteractiveSession;
+  membership(accountId: string): AccountSnapshot["membership"];
+  resolve(raw: InteractiveSession, binding: AccountBinding, now: number): AccountSnapshot | null;
+}
+
+/** Fixed native read projection, executed afresh inside each owned transaction.
+ * Each independent array retains its original LIMIT 9 and order; no join can
+ * hide an extra credential or multiply member rows. No rows survive a call. */
+function nativeAccountReads(db: DatabaseSync): AccountJournalReads {
+  // CASE is deliberate: SQLite JSONB BLOBs must never be decoded into values
+  // that pass the original raw-row strict comparisons. Keep invalid array rows
+  // as markers instead of filtering them out or coercing their storage classes.
+  const typedJson = (text: string[], integer: string[], nullableInteger: string[] = []) => {
+    const types = [...text.map(field => `typeof(${field})='text'`), ...integer.map(field => `typeof(${field})='integer'`),
+      ...nullableInteger.map(field => `typeof(${field}) IN ('null','integer')`)];
+    const fields = [...text, ...integer, ...nullableInteger];
+    return `CASE WHEN ${types.join(" AND ")} THEN json_object(${fields.map(field => `'${field}',${field}`).join(",")})
+      ELSE json_object('__invalid_storage_class',1) END`;
+  };
+  const account = `(SELECT ${typedJson(["account_id"], ["revision", "created_at"])}
+    FROM account267_accounts WHERE account_id=(SELECT account_id FROM account_read)) AS account`;
+  const members = `(SELECT json_group_array(${typedJson(["wallet", "generation"], ["linked_at"])})
+    FROM (SELECT wallet,generation,linked_at FROM account267_members INDEXED BY account267_members_account
+      WHERE account_id=(SELECT account_id FROM account_read) ORDER BY wallet LIMIT 9)) AS members`;
+  const credentials = `(SELECT json_group_array(${typedJson(["wallet", "member_generation", "generation"], ["login_after", "active"])}) FROM (
+      SELECT wallet,member_generation,generation,login_after,active FROM account267_credentials INDEXED BY account267_credentials_account
+      WHERE account_id=(SELECT account_id FROM account_read) ORDER BY wallet LIMIT 9)) AS credentials`;
+  const parse = (value: unknown) => typeof value === "string" ? JSON.parse(value) : null;
+  function validateMembership(row: Record<string, unknown>) {
+    const a = parse(row.account), rows = parse(row.members), credentials = parse(row.credentials);
+    if (!a || !Array.isArray(rows) || !Array.isArray(credentials)) throw unavailable();
+    const result = membershipSchema.parse({ version: 1, accountId: a.account_id, revision: a.revision, createdAt: a.created_at,
+      members: rows.map(m => ({ wallet: m.wallet, generation: m.generation, linkedAt: m.linked_at })) });
+    if (credentials.length !== rows.length || credentials.some((c, i) => c.wallet !== rows[i].wallet || c.member_generation !== rows[i].generation
+      || !digestSchema.safeParse(c.generation).success || !timeSchema.safeParse(c.login_after).success || c.active !== 0 && c.active !== 1)
+      || new Set(credentials.map(c => c.generation)).size !== rows.length || !credentials.some(c => c.active === 1)) throw unavailable();
+    return result;
+  }
+  return {
+    live(raw, now) {
+      const s = interactiveSessionSchema.parse(raw);
+      const row = db.prepare("SELECT hash,wallet,issued_at,expires_at FROM web_sessions WHERE hash=?").get(s.sessionHash);
+      if (!row || row.hash !== s.sessionHash || row.wallet !== s.wallet || row.issued_at !== s.issuedAt || row.expires_at !== s.expiresAt
+        || s.issuedAt > now || s.expiresAt <= now) throw new AccountError("account_unauthenticated");
+      return s;
+    },
+    membership(accountId) {
+      const row = db.prepare(`WITH account_read AS (SELECT ? AS account_id) SELECT ${account},${members},${credentials}`).get(accountId);
+      if (!row) throw unavailable();
+      return validateMembership(row);
+    },
+    resolve(raw, rawBinding, now) {
+      const s = interactiveSessionSchema.parse(raw), binding = bindingSchema.parse(rawBinding);
+      const row = db.prepare(`WITH account_read AS (SELECT account_id FROM account267_sessions WHERE session_hash=?)
+        SELECT (SELECT ${typedJson(["hash", "wallet"], ["issued_at", "expires_at"])}
+          FROM web_sessions WHERE hash=?) AS live,
+        (SELECT ${typedJson(["wallet", "origin", "network", "account_id", "member_generation", "credential_generation"],
+          ["issued_at", "expires_at", "history_consent"], ["revoked_at"])}
+          FROM account267_sessions WHERE session_hash=?) AS session,
+        (SELECT ${typedJson(["account_id", "generation"], [])} FROM account267_members WHERE wallet=?) AS member,
+        (SELECT ${typedJson(["account_id", "member_generation", "generation"], ["active"])}
+          FROM account267_credentials WHERE wallet=?) AS credential,${account},${members},${credentials}`)
+        .get(s.sessionHash, s.sessionHash, s.sessionHash, s.wallet, s.wallet);
+      const live = parse(row?.live);
+      if (!live || live.hash !== s.sessionHash || live.wallet !== s.wallet || live.issued_at !== s.issuedAt || live.expires_at !== s.expiresAt
+        || s.issuedAt > now || s.expiresAt <= now) throw new AccountError("account_unauthenticated");
+      const session = parse(row?.session);
+      if (!session) return null;
+      if (session.revoked_at !== null || session.wallet !== s.wallet || session.issued_at !== s.issuedAt || session.expires_at !== s.expiresAt
+        || session.origin !== binding.origin || session.network !== binding.network || session.history_consent !== 1) throw new AccountError("account_unauthenticated");
+      const m = parse(row?.member), c = parse(row?.credential);
+      if (!m || !c || c.active !== 1 || m.account_id !== session.account_id || c.account_id !== session.account_id || m.generation !== session.member_generation
+        || c.member_generation !== session.member_generation || c.generation !== session.credential_generation) throw new AccountError("account_unauthenticated");
+      return snapshotSchema.parse({ membership: validateMembership(row!), session: s, memberGeneration: m.generation, credentialGeneration: c.generation, binding });
+    },
+  };
 }
 
 /** Private factoring only: the exported constructors fix their own authority. */
 function accountMembershipJournal(db: DatabaseSync,
-  transaction: <T>(action: (now: number) => T, write?: boolean) => T): AccountMembershipStore {
-  function live(raw: InteractiveSession, now: number) {
+  transaction: <T>(action: (now: number) => T, write?: boolean) => T, nativeReads?: AccountJournalReads): AccountMembershipStore {
+  function ordinaryLive(raw: InteractiveSession, now: number) {
     const s = interactiveSessionSchema.parse(raw);
     const row = db.prepare("SELECT hash,wallet,issued_at,expires_at FROM web_sessions WHERE hash=?").get(s.sessionHash);
     if (!row || row.hash !== s.sessionHash || row.wallet !== s.wallet || row.issued_at !== s.issuedAt || row.expires_at !== s.expiresAt
       || s.issuedAt > now || s.expiresAt <= now) throw new AccountError("account_unauthenticated");
     return s;
   }
-  function membership(accountId: string) {
+  const live = nativeReads?.live ?? ordinaryLive;
+  function ordinaryMembership(accountId: string) {
     const a = db.prepare("SELECT account_id,revision,created_at FROM account267_accounts WHERE account_id=?").get(accountId);
     if (!a) throw unavailable();
     const rows = db.prepare("SELECT wallet,generation,linked_at FROM account267_members WHERE account_id=? ORDER BY wallet LIMIT 9").all(accountId);
@@ -201,7 +297,8 @@ function accountMembershipJournal(db: DatabaseSync,
       || new Set(credentials.map(c => c.generation)).size !== rows.length || !credentials.some(c => c.active === 1)) throw unavailable();
     return result;
   }
-  function resolve(raw: InteractiveSession, rawBinding: AccountBinding, now: number): AccountSnapshot | null {
+  const membership = nativeReads?.membership ?? ordinaryMembership;
+  function ordinaryResolve(raw: InteractiveSession, rawBinding: AccountBinding, now: number): AccountSnapshot | null {
     const s = live(raw, now), binding = bindingSchema.parse(rawBinding);
     const row = db.prepare("SELECT * FROM account267_sessions WHERE session_hash=?").get(s.sessionHash);
     if (!row) return null; // Not admitted: this is NOT a history fallback.
@@ -213,6 +310,7 @@ function accountMembershipJournal(db: DatabaseSync,
       || c.member_generation !== row.member_generation || c.generation !== row.credential_generation) throw new AccountError("account_unauthenticated");
     return snapshotSchema.parse({ membership: membership(row.account_id as string), session: s, memberGeneration: m.generation, credentialGeneration: c.generation, binding });
   }
+  const resolve = nativeReads?.resolve ?? ordinaryResolve;
   function current(raw: AccountSnapshot, now: number) {
     const start = snapshotSchema.parse(raw), end = resolve(start.session, start.binding, now);
     if (!end || JSON.stringify(end) !== JSON.stringify(start)) throw new AccountError("account_changed");

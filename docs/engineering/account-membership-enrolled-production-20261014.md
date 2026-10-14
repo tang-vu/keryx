@@ -461,3 +461,98 @@ payment/registry/payTo authority and all production state remain untouched.
 R120 raw before/after files, minimal documentation patch, complete inverse, pins
 and remaining criteria are retained only under
 `output/resume-root-release63-20261012/refill-successors-20261013-120/worker-completeNativeAccountMeasuredCeremonyGap/`.
+
+
+## Native journal correction after current-helper measurement
+
+The later current-helper MAX8 observation still failed its original 20-second
+limit: the case finished in 44.926 seconds with explicit timeout, natural exit 1
+and both EOFs. Seven genuine EOA links took 21.550 seconds and eight live proof
+preparations took 10.200 seconds; retained setup took only 82 and 73 milliseconds.
+That result supersedes no earlier failure and does not qualify performance.
+
+The native constructor now retains private guarded prepared statements, not
+rows, authorization decisions or guard results. Each get/all/run still invokes
+the genuine connection's full runtime guard and the original SQL-failure observer.
+The native read strategy executes bounded live/session/member/credential and
+membership projections afresh inside the existing owned transaction. Independent
+member and credential arrays each preserve wallet ordering and LIMIT 9; an extra
+or missing credential cannot disappear through a join. Original validation of
+session times, wallet, revocation, binding, consent, generations, revision,
+credential uniqueness and active state remains mandatory before returning data.
+
+The ordinary constructor/schema checks, three ordinary read function bodies and
+all journal mutation/proof/consent/limit method bodies remain unchanged. Their
+private read strategy defaults to those ordinary functions. Only the native
+constructor selects the fixed same-file strategy; callers gain no callback,
+configuration, raw statement, row cache or new authority. Native transaction,
+readonly-before-SQL, checks, rollback and uncertainty/permanent-latch bodies are
+unchanged. Cached statement objects are discarded when the native port retires.
+
+The hot-guard assertion now expects nine full guards on a warmed resolve: four
+explicit checks, transaction state/BEGIN/COMMIT, current-clock execution and the
+single current fused read. This is a static/executable guard-count requirement,
+not a measured latency claim. New genuine controls check repeated reads after a
+durable session change and an independent extra credential. The swallowed-take
+failure control injects drift after the actual consumed-marker execution, rather
+than depending on a now-reused prepare call; its rollback, refusal and permanent
+retirement assertions remain. All MAX8, eight-live, 1024, EOA, nonce, financial,
+20-second and 15-second controls are preserved. These changes are UNRUN pending
+different-source review and the owner's proportionate affected checks/types.
+
+
+The first different review found a concrete P2 before execution: SQLite 3.53.4
+can decode a valid JSONB BLOB in json_object, so a BLOB session origin could
+become a matching JavaScript string although the original raw-row comparison
+refused it. The retained initial source/review are not accepted runtime evidence.
+The successor checks each projected SQLite storage class with CASE before JSON
+construction. Unexpected types become explicit invalid markers, including array
+entries; no row is filtered, cast or silently treated as optional absence. Every
+text/integer/nullable integer field in the native projection is covered. A genuine
+jsonb(origin) BLOB regression proves raw inequality and decoded string equality,
+requires native refusal and then healthy admission only after TEXT restoration.
+This successor remains UNRUN pending its different changed-block review.
+
+
+The first corrected-source run passed focused types (18.971 seconds) and 21
+meaningful controls, including JSONB refusal, current row rechecks, independent
+credential completeness, readonly policy, all selected drift/uncertainty classes,
+unlink, MAX8 and the graph. The complete original MAX8 case passed in 19.105
+seconds at its unchanged 20-second limit; unlink passed in 6.171 seconds. This
+is individual measured acceptance, not a general latency or Linux CI claim.
+
+One case still failed: EXCLUSIVE cleanup took 16.572 seconds at its original
+15-second limit. One bounded fixed-enum observation retained that failure and
+recorded exactly nine primitive events: two actual marker reads returned native
+BUSY5 after 7.463 and 7.470 seconds, each followed by a zero-millisecond Core
+rollback; close took six milliseconds. Thus configured busy_timeout=5000 is
+not an observed five-second wall-clock guarantee on this Windows runtime.
+No timeout, SQL authority, lock or guard was changed for that observation.
+
+The successor permanently retires the port when the initial full guarded
+transaction-state inspection itself fails. No account BEGIN has been reached;
+state and authority are unknown, so the code neither reuses the connection nor
+pretends an account rollback succeeded. It avoids another blocking inspection
+whose only purpose would be to try keeping that uncertain capability alive.
+After a successful initial inspection, the complete existing BEGIN contention,
+owned rollback, full cleanup guard and healthy-recovery path is unchanged.
+Readonly policy remains before all SQL, and no guard result is cached to grant
+success. Temporary primitive instrumentation was removed by exact raw inverse;
+the original EXCLUSIVE assertions and 15-second limit remain byte-identical.
+The proposed BEGIN IMMEDIATE spy was removed: this readonly resolve uses BEGIN,
+so that assertion was vacuous. Only EXCLUSIVE, genuine BEGIN contention and relevant types need refresh;
+the other accepted controls are retained. This successor is UNRUN at handoff.
+
+
+The final entry-state successor passed focused types in 20.242 seconds and both
+meaningful lock classes with natural exit 0 and both EOFs (27.329 seconds total).
+The original EXCLUSIVE class kept its 15-second limit; genuine post-entry BEGIN
+contention still refused once and recovered the same healthy store after unlock.
+The prior 21 passing controls, including original MAX8 at 19.105/20 seconds and
+the genuine JSONB refusal, remain scoped evidence for the unchanged paths;
+only the initial unknown-state retirement branch changed and received the two
+fresh controls. No unchanged native suite, model/provider trial or build ran.
+The final different source review is `4d328eb5`; the initial JSONB P2, both failed
+EXCLUSIVE captures and temporary diagnostic source/inverse remain retained.
+Current-main composition, applicable canonical provenance, required exact-head
+hosted CI, merge and deployment still remain separate pending delivery steps.

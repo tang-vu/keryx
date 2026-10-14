@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, StatementSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
@@ -204,9 +204,47 @@ describe("genuine enrolled account membership", () => {
     const base = await bootstrap(fixture({ runtimeGuard: () => { guardCalls++; } }));
     guardCalls = 0;
     expect(await base.store.resolve(base.s, binding)).toEqual(base.start);
-    // Four hot checks + isTransaction/BEGIN/COMMIT + clock prepare/get +
-    // seven business SELECT prepare/get-or-all pairs. No latency is inferred.
-    expect(guardCalls).toBe(23);
+    // Four hot checks + isTransaction/BEGIN/COMMIT + current clock execution +
+    // one fused current read execution. Every execution retains its full guard.
+    expect(guardCalls).toBe(9);
+  });
+  it("reuses only guarded statements and rechecks current session rows on every read", async () => {
+    const base = await bootstrap();
+    const prepare = vi.spyOn(DatabaseSync.prototype, "prepare");
+    expect(await base.store.resolve(base.s, binding)).toEqual(base.start);
+    expect(await base.store.resolve(base.s, binding)).toEqual(base.start);
+    // Bootstrap has already prepared this exact fixed native read. Full guards
+    // still prepare their own identity/fence/schema statements on each execute.
+    expect(prepare.mock.calls.filter(([query]) => query.startsWith("WITH account_read AS")).length).toBe(0);
+    prepare.mockRestore();
+    edit(base, db => db.prepare("UPDATE web_sessions SET wallet=? WHERE hash=?").run(wallets[1].address.toLowerCase(), base.s.sessionHash));
+    await expect(base.store.resolve(base.s, binding)).rejects.toThrow("account_unauthenticated");
+    edit(base, db => db.prepare("UPDATE web_sessions SET wallet=? WHERE hash=?").run(base.s.wallet, base.s.sessionHash));
+    expect(await base.store.resolve(base.s, binding)).toEqual(base.start);
+  });
+  it("keeps the independent bounded credential set in fused membership reads", async () => {
+    const base = await bootstrap(), wallet = wallets[1].address.toLowerCase();
+    edit(base, db => db.prepare(`INSERT INTO account267_credentials(wallet,account_id,member_generation,generation,login_after,active)
+      VALUES(?,?,?,?,?,1)`).run(wallet, base.start.membership.accountId, randomAccountValue(), randomAccountValue(), 0));
+    await expect(base.store.resolve(base.s, binding)).rejects.toThrow("account_unavailable");
+    edit(base, db => db.prepare("DELETE FROM account267_credentials WHERE wallet=?").run(wallet));
+    expect(await base.store.resolve(base.s, binding)).toEqual(base.start);
+  });
+  it("refuses a genuine JSONB BLOB origin before any fused session admission", async () => {
+    const base = await bootstrap();
+    const replaceOrigin = (blob: boolean) => edit(base, db => db.prepare(`INSERT OR REPLACE INTO account267_sessions(
+      session_hash,wallet,account_id,member_generation,credential_generation,issued_at,expires_at,origin,network,history_consent,revoked_at)
+      SELECT session_hash,wallet,account_id,member_generation,credential_generation,issued_at,expires_at,
+        ${blob ? "jsonb(?)" : "?"},network,history_consent,revoked_at FROM account267_sessions WHERE session_hash=?`)
+      .run(blob ? JSON.stringify(binding.origin) : binding.origin, base.s.sessionHash));
+    replaceOrigin(true);
+    const stored = inspect(base.file, db => db.prepare("SELECT origin,typeof(origin) AS storage,json_extract(origin,'$') AS decoded FROM account267_sessions WHERE session_hash=?").get(base.s.sessionHash)!);
+    expect(stored.storage).toBe("blob");
+    expect(stored.origin).not.toBe(binding.origin); // The original raw-row strict comparison refuses this value.
+    expect(stored.decoded).toBe(binding.origin); // Genuine JSONB coercion, not a mocked decoder.
+    await expect(base.store.resolve(base.s, binding)).rejects.toThrow("account_unauthenticated");
+    replaceOrigin(false);
+    expect(await base.store.resolve(base.s, binding)).toEqual(base.start);
   });
   it.each([false, true])("returns optional absence on exact BEFORE with archive=%s and preserves the same healthy connection", archive => {
     let guardCalls = 0;
@@ -625,11 +663,11 @@ describe("genuine enrolled account membership", () => {
     let fail = false;
     const base = await bootstrap(fixture({ runtimeGuard: () => { if (fail) throw new Error("Synthetic internal manifest drift"); } }));
     const proof = await base.service.prepareLink(base.s, wallets[1].address, expectedOf(base.start.membership), linkConsent);
-    const before = retained(base.file), prepare = DatabaseSync.prototype.prepare;
-    const spy = vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (this: DatabaseSync, query: string) {
-      const statement = Reflect.apply(prepare, this, [query]);
-      if (query === "SELECT * FROM account267_sessions WHERE session_hash=?") fail = true;
-      return statement;
+    const before = retained(base.file), run = StatementSync.prototype.run;
+    const spy = vi.spyOn(StatementSync.prototype, "run").mockImplementation(function (this: StatementSync, ...args) {
+      const result = Reflect.apply(run, this, args);
+      if (this.sourceSQL === "UPDATE account267_challenges SET consumed_at=?,lease_hash=? WHERE nonce_hash=? AND consumed_at IS NULL") fail = true;
+      return result;
     });
     await expect(base.store.take(base.s, binding, proof.nonce, "link-wallet", randomAccountValue())).rejects.toThrow("account_unavailable");
     spy.mockRestore(); fail = false;
