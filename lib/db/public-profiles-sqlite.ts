@@ -1,7 +1,7 @@
-import { DatabaseSync, type SQLOutputValue } from "node:sqlite";
+import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { assertOrdinarySqliteResearchAuthority } from "./research-monthly";
-import { assertRunPrivacySchema } from "./run-privacy-sqlite";
+import { assertRunPrivacySchema, createEnrolledSqliteRunPrivacy } from "./run-privacy-sqlite";
 import { PRIVATE_PROFILES_SQL } from "./private-profiles-sqlite";
 import { privateProfileRecordSchema } from "../profiles/private-profile";
 import { identitySnapshotSchema, identityUrl, type ProfileIdentitiesStore } from "../profiles/verified-identities";
@@ -9,8 +9,11 @@ import type { RunPrivacyStore } from "../run-privacy/contracts";
 import { validatePrivacyRun } from "../run-privacy/contracts";
 import type { RunOwnershipHistoryStore } from "../run-claims/history";
 import { PublicProfileError, publicHandle, publicProfileActor, publicProfileInput, publicProfileSettings,
-  publicProfileSnapshot, type PublicProfilesStore, type PublicProfileActor } from "../profiles/public-profile";
-import { publicRun, recordedMicros } from "../profiles/public-profile-projection";
+  publicProfileSnapshot, type PublicProfilesStore, type PublicProfileActor, type PublicProfileSnapshot } from "../profiles/public-profile";
+import { publicRun } from "../profiles/public-profile-projection";
+import { installPublicProfileFunctions } from "./public-profile-functions";
+import { createEnrolledSqliteProfileIdentities } from "./profile-identities-enrolled-sqlite";
+import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
 import { canonicalJson } from "../canonical-json";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
@@ -42,11 +45,11 @@ export function createSqlitePublicProfiles(db: DatabaseSync, privacy: RunPrivacy
   try { if (shape(db).length && JSON.stringify(shape(db)) !== expected) throw new PublicProfileError("public_profile_unavailable");
     if (!shape(db).length) db.exec(PUBLIC_PROFILES_SQL); guard(); db.exec("COMMIT"); }
   catch (error) { db.exec("ROLLBACK"); throw error; }
-  db.aggregate<string | null>("keryx_public_profile_micros", { start: "0", step: (total: string | null, amount: SQLOutputValue) => {
-    const micros = recordedMicros(amount); return total === null || micros === null ? null : (BigInt(total) + BigInt(micros)).toString();
-  } });
-  return publicProfilesOperations(db, privacy, identities, history, guard);
+  installPublicProfileFunctions(db);
+  return publicProfilesOperations(db, privacy, identities, history, guard).store;
 }
+
+type PublicProfileReadFinalizer = () => PublicProfileSnapshot | null;
 
 /** Private factoring only: the ordinary constructor retains its authority, DDL,
  * aggregate registration and transaction body. Native hooks add no public escape. */
@@ -54,7 +57,7 @@ function publicProfilesOperations(db: DatabaseSync, privacy: RunPrivacyStore, id
   history: RunOwnershipHistoryStore | undefined, guard: () => void, native?: {
     writeAccess(): void; afterAwait(): void; requireLedgers(): void;
     transaction<T>(operation: () => T): T;
-  }): PublicProfilesStore {
+  }): { store: PublicProfilesStore; prepareRead(handle: string): Promise<PublicProfileReadFinalizer> } {
   const profile = (wallet: string) => {
     const row = db.prepare("SELECT * FROM private_profiles WHERE wallet=?").get(wallet);
     return row ? privateProfileRecordSchema.parse({ wallet: row.wallet, handle: row.handle ?? "", displayName: row.display_name,
@@ -72,7 +75,7 @@ function publicProfilesOperations(db: DatabaseSync, privacy: RunPrivacyStore, id
     return who;
   };
   const transaction = <T>(operation: () => T): T => { if (native) return native.transaction(operation); guard(); db.exec("BEGIN IMMEDIATE"); try { guard(); const result = operation(); db.exec("COMMIT"); return result; } catch (error) { db.exec("ROLLBACK"); throw error; } };
-  return Object.freeze({
+  const store = Object.freeze({
     async settings(input) { const who = actor(input); return settings(who.wallet); },
     async update(rawActor, rawInput) {
       native?.writeAccess();
@@ -105,17 +108,26 @@ function publicProfilesOperations(db: DatabaseSync, privacy: RunPrivacyStore, id
       else db.prepare("INSERT INTO public_researcher_profiles VALUES(?,?,0,'[]','[]',?,1,?)")
         .run(who.wallet,current!.handle,JSON.stringify(who.binding),new Date().toISOString());
     }); },
-    async read(rawHandle) {
+    read: rawHandle => readPublication(rawHandle),
+    async sitemap(rawTake) { guard(); const take=z.number().int().min(1).max(1000).parse(rawTake);
+      return db.prepare(`SELECT s.handle,s.updated_at FROM public_researcher_profiles s JOIN private_profiles p ON p.wallet=s.wallet AND p.handle=s.handle WHERE s.published=1 ORDER BY s.handle LIMIT ?`).all(take)
+        .map(row=>({handle:publicHandle.parse(row.handle),updatedAt:z.string().datetime().parse(row.updated_at)})); }
+  } satisfies PublicProfilesStore);
+  return { store, prepareRead: handle => readPublication(handle, true) };
+
+  function readPublication(rawHandle: string): Promise<PublicProfileSnapshot | null>;
+  function readPublication(rawHandle: string, defer: true): Promise<PublicProfileReadFinalizer>;
+  async function readPublication(rawHandle: string, defer?: true) {
       guard(); const handle = publicHandle.parse(rawHandle);
       const publication = db.prepare(`SELECT s.* FROM public_researcher_profiles s JOIN private_profiles p ON p.wallet=s.wallet AND p.handle=s.handle WHERE s.handle=? AND s.published=1`).get(handle);
-      if (!publication) return null;
+      if (!publication) return defer ? () => null : null;
       const wallet = String(publication.wallet), current = profile(wallet)!;
       const selected = publicProfileSettings.parse({ handle,published:true,fields:JSON.parse(String(publication.fields)),runIds:JSON.parse(String(publication.run_ids)),revision:publication.revision,updatedAt:publication.updated_at });
       if (selected.fields.includes("ledgers")) native?.requireLedgers();
       const binding = publicProfileActor.shape.binding.parse(JSON.parse(String(publication.binding)));
       const rows = db.prepare(`SELECT q.id,q.asker,q.data FROM query_runs q JOIN run_privacy p ON p.run_id=q.id
         WHERE p.visibility='public' AND p.erased=0 AND q.id IN (SELECT value FROM json_each(?)) ORDER BY q.created_at DESC,q.id DESC LIMIT 50`).all(JSON.stringify(selected.runIds));
-      const runs = [];
+      const runs: PublicProfileSnapshot["runs"] = [];
       for (const row of rows) {
         const run = validatePrivacyRun(JSON.parse(String(row.data)),String(row.id)); let claimed = false;
         if (row.asker === wallet) { if (run.asker && run.asker.toLowerCase() !== wallet) throw new PublicProfileError("public_profile_unavailable"); }
@@ -127,6 +139,9 @@ function publicProfilesOperations(db: DatabaseSync, privacy: RunPrivacyStore, id
       const verified = selected.fields.includes("verifiedLinks") ? identitySnapshotSchema.parse(await identities.list(wallet)).identities : undefined;
       if (verified) native?.afterAwait();
       if (verified?.some(value => value.wallet !== wallet)) throw new PublicProfileError("public_profile_unavailable");
+      // Native reads invoke this private, same-store finalizer after their LAST
+      // await. Ordinary reads invoke it immediately at the original boundary.
+      const finalize: PublicProfileReadFinalizer = () => {
       // Recheck after awaited claim/identity reads so revocation/unpublish cannot publish a stale selection.
       guard(); const fresh = db.prepare("SELECT * FROM public_researcher_profiles WHERE wallet=? AND published=1 AND revision=?").get(wallet,publication.revision);
       const latest = profile(wallet); if (!fresh || latest?.handle !== handle || JSON.stringify(latest) !== JSON.stringify(current)) return null;
@@ -151,11 +166,9 @@ function publicProfilesOperations(db: DatabaseSync, privacy: RunPrivacyStore, id
         ...(selected.fields.includes("about") ? {about:current.bio} : {}),...(selected.fields.includes("purpose") ? {purpose:current.purpose} : {}),
         ...(verified ? {verifiedLinks:verified.map(identity => ({provider:identity.provider,label:identity.label,url:identityUrl(identity),verifiedAt:identity.verifiedAt}))} : {}),
         ...(ledgers ? {ledgers,ledgerBasis:"wallet-wide-recorded-settled-creator-events"} : {}),runs:runs.filter(run=>stillPublic.has(run.id)),ownershipBasis:"signed-wallet-publication-existing-run-proof" });
-    },
-    async sitemap(rawTake) { guard(); const take=z.number().int().min(1).max(1000).parse(rawTake);
-      return db.prepare(`SELECT s.handle,s.updated_at FROM public_researcher_profiles s JOIN private_profiles p ON p.wallet=s.wallet AND p.handle=s.handle WHERE s.published=1 ORDER BY s.handle LIMIT ?`).all(take)
-        .map(row=>({handle:publicHandle.parse(row.handle),updatedAt:z.string().datetime().parse(row.updated_at)})); }
-  } satisfies PublicProfilesStore);
+      };
+      return defer ? finalize : finalize();
+  }
 }
 
 const nativeContention = (error: unknown) => error instanceof Error
@@ -164,11 +177,10 @@ const nativeContention = (error: unknown) => error instanceof Error
 
 /** ROOT composition on the SAME verified Full19 connection. Publication remains
  * opt-in in the existing application facade; this factory neither activates it nor
- * creates schema/claims/privacy/provider ports. Exact BEFORE leaves it absent.
- * Native ledger selection is refused until ROOT's fixed aggregate helper exists. */
-export function createEnrolledSqlitePublicProfiles(db: DatabaseSync, privacy: RunPrivacyStore,
-  identities: ProfileIdentitiesStore, history?: RunOwnershipHistoryStore): PublicProfilesStore | undefined {
-  if (arguments.length < 3 || arguments.length > 4) throw new PublicProfileError("public_profile_unavailable");
+ * installs no schema or provider port. Exact BEFORE leaves it absent. All owner,
+ * privacy and identity dependencies are composed here on this same connection. */
+export function createEnrolledSqlitePublicProfiles(db: DatabaseSync): PublicProfilesStore | undefined {
+  if (arguments.length !== 1) throw new PublicProfileError("public_profile_unavailable");
   const unavailable = () => new PublicProfileError("public_profile_unavailable");
   let verified = false, revoked = false;
   const revoke = () => {
@@ -200,10 +212,12 @@ export function createEnrolledSqlitePublicProfiles(db: DatabaseSync, privacy: Ru
     };
     const admitted = schema();
     if (!admitted.present) return undefined;
-    // Only ROOT may supply genuinely admitted, same-store ports. No ordinary
-    // constructor, alternate owner proof, copied factory or missing-port fallback.
-    if (!privacy || typeof privacy.owner !== "function" || !identities || typeof identities.list !== "function"
-      || history !== undefined && typeof history.read !== "function") throw unavailable();
+    // Source-owned same-store composition, never caller-supplied owner proof,
+    // ordinary ports, optional claim fallback or provider/identity authority.
+    const privacy = createEnrolledSqliteRunPrivacy(db);
+    const identities = createEnrolledSqliteProfileIdentities(db);
+    const history = createEnrolledSqliteRunOwnershipHistory(db);
+    if (!identities) throw unavailable();
     const check = () => {
       try {
         const current = schema();
@@ -220,10 +234,10 @@ export function createEnrolledSqlitePublicProfiles(db: DatabaseSync, privacy: Ru
       try { assertVerifiedSqliteWritePolicy(db); } catch { throw unavailable(); }
       check();
     };
-    const ledgerDependency = unavailable();
-    const requireLedgers = () => { throw ledgerDependency; };
-    const expectedRefusal = (error: unknown) => error === ledgerDependency
-      || error instanceof PublicProfileError && error.code !== "public_profile_unavailable";
+    // Successful trusted Full19 opening installs the fixed aggregate before
+    // issuing this existing positive policy. Registration never escapes sealing.
+    const requireLedgers = () => { assertVerifiedSqliteNativeUserDomainPolicy(db); };
+    const expectedRefusal = (error: unknown) => error instanceof PublicProfileError && error.code !== "public_profile_unavailable";
     const fail = (error: unknown): never => {
       if (revoked) throw unavailable();
       // A real native5/6 can preserve the connection only after cleanup and a
@@ -256,7 +270,7 @@ export function createEnrolledSqlitePublicProfiles(db: DatabaseSync, privacy: Ru
       const who = publicProfileActor.parse(raw);
       if (who.binding.network !== identity.network) throw new PublicProfileError("unauthenticated");
     };
-    const body = publicProfilesOperations(db, privacy, identities, history, check,
+    const { store: body, prepareRead } = publicProfilesOperations(db, privacy, identities, history, check,
       { writeAccess, afterAwait: check, requireLedgers, transaction });
     const read = async <T>(operation: () => Promise<T>, validate: () => void): Promise<T> => {
       try { check(); } catch (error) { return fail(error); }
@@ -266,6 +280,14 @@ export function createEnrolledSqlitePublicProfiles(db: DatabaseSync, privacy: Ru
       try { const result = await operation(); check(); return result; }
       catch (error) { return fail(error); }
     };
+    const readPublication = async (handle: string): Promise<PublicProfileSnapshot | null> => {
+      try { check(); } catch (error) { return fail(error); }
+      publicHandle.parse(handle);
+      try {
+        const finalize = await prepareRead(handle);
+        check(); return finalize(); // No await between the full publication check and return.
+      } catch (error) { return fail(error); }
+    };
     const write = async <T>(operation: () => Promise<T>, validate: () => void): Promise<T> => {
       // Keep the metadata refusal outside the revoking boundary, before SQL.
       if (revoked) throw unavailable();
@@ -274,7 +296,7 @@ export function createEnrolledSqlitePublicProfiles(db: DatabaseSync, privacy: Ru
     };
     return Object.freeze({
       settings: who => read(() => body.settings(who), () => { validateActor(who); }),
-      read: handle => read(() => body.read(handle), () => { publicHandle.parse(handle); }),
+      read: readPublication,
       sitemap: take => read(() => body.sitemap(take), () => { z.number().int().min(1).max(1000).parse(take); }),
       update: (who, input) => write(() => body.update(who, input), () => { validateActor(who); publicProfileInput.parse(input); }),
       unpublish: who => write(() => body.unpublish(who), () => { validateActor(who); }),

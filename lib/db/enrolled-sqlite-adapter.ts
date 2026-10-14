@@ -7,6 +7,7 @@ import { createEnrolledSqliteDeliverableAcceptance } from "./deliverable-accepta
 import { createEnrolledSqliteRunClaims } from "./run-claims-sqlite";
 import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
 import { createEnrolledSqliteRunPrivacy } from "./run-privacy-sqlite";
+import { createEnrolledSqlitePublicProfiles } from "./public-profiles-sqlite";
 import { runClaimsEnabled } from "../run-claims/contracts";
 import { withRunReadProjection } from "../run-privacy/projection";
 import { projectRecordedEvidenceProvenance } from "../research/evidence-provenance";
@@ -336,6 +337,10 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     if (deployment.identity.authorityMode === "mainnet-real") {
       const acceptance = createEnrolledSqliteDeliverableAcceptance(db);
       if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
+      if (process.env.KERYX_PUBLIC_PROFILES_ENABLED === "true" && privacyActive) {
+        const publicProfiles = createEnrolledSqlitePublicProfiles(db);
+        if (publicProfiles) Object.defineProperty(facade, "publicProfiles", { value: publicProfiles });
+      }
     }
     Object.defineProperty(facade, "init", { value: async () => { assert(); } });
     Object.defineProperty(facade, "close", { value: connection.close });

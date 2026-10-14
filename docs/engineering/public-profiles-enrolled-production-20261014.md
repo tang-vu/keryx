@@ -1,118 +1,202 @@
 # Native public researcher profiles — source handoff, 2026-10-14
 
-Base: reviewed Core477 `f2fa7d3ff82203e32e560adac73d6206910c1e48`.
-This bounded worker authored only `lib/db/public-profiles-sqlite.ts`,
-`lib/db/public-profiles-enrolled-sqlite.test.ts`, and this document. Execution,
-independent review, checkpoints, PR and CI belong to the parent. ROOT owns facade
-composition, the shared MAX4 schema/migration, claims/ownership/privacy, merge and
-release. No module, test, compiler, database, provider, build, producer or Git
-writer was executed by the worker. All executable gates below are **UNRUN**.
+This handoff completes the selected-store `publicProfiles` facade caller in source.
+Parent dependency checkpoint: `6df70fc6c7fe9ecb952744d5c8e41980287bbaa7`;
+reviewed claims/privacy/ownership dependency: `51a22c286d17dcc6e097d5bca2f493944e945270`.
+The parent receipt at
+`keryx/output/resume-distribution63-audit-20261012/public-native-dependency-checkpoint-20261014/receipt.json`
+records that composition and preservation of the three original public-source
+files. Those facts do not accept this changed candidate. R101 requested a P2
+correction at the final native publication await; R106 supplied that correction.
+The assignment identifies the accepted R106 source reference as `896e2749`.
+Its finalizer, the fixed pure aggregate installer and trusted opening are immutable
+for this caller delta and remain byte-identical to the captured before files.
 
-`createEnrolledSqlitePublicProfiles(db, privacy, identities, history?)` borrows the
-same guarded native connection. Only exact mainnet Full19 with/without the public
-reference archive receives a store. Exact source BEFORE with/without archive
-returns `undefined`; partial/malformed/unknown bundles refuse without repair.
-Missing required ports on Full19 refuse; optional history never manufactures
-anonymous ownership. ROOT must provide genuine same-store native ports.
+This worker changed only `lib/db/enrolled-sqlite-adapter.ts`,
+`lib/db/public-profiles-enrolled-sqlite.test.ts`,
+`lib/operator/gateway-funding-composition.test.ts` and this document. The earlier
+five-file factory/aggregate handoff is retained. Current raw before/after files,
+whole inverse, minimal patch, pins and source handoff are under
+`keryx/output/resume-root-release63-20261012/refill-successors-20261013-110/worker-completeNativePublicProfileFacade`.
+No test, module, compiler, database, build, producer, Git writer, provider, ENV,
+target operation, activation,
+DDL or spend was executed. Executable acceptance is **UNRUN**.
 
-The private operation body is shared with the ordinary constructor. Its ordinary
-authority/privacy guards, additive autoDDL, micro-USDC aggregate registration,
-publication schema and SQL, session/revision checks, original comparisons, private
-filtering and public projection remain intact. Native-only hooks add pre-SQL
-readonly write policy, fixed positive FK/Full19 metadata, native runtime guard,
-identity/file/fence/fullshape checks, and checks after awaited identity/ownership
-reads. Unknown SQL/runtime/stored-data drift closes and permanently revokes the
-borrowed capability. Exact native `ERR_SQLITE_ERROR` codes 5/6 can refuse a request
-while retaining healthy readers only after owned rollback (if any), absence of an
-outstanding transaction and fresh positive admission. No denied operation retry,
-raw handle, function-registration port, caller guard or alternate financial sum is
-introduced. Input validation remains separate from malformed stored data.
+## Selected-store facade attachment
 
-Target constructors execute no DDL. The existing ROOT profile generator remains
-the source of the four profiles and is primed by trusted opening; it owns reference
-schema generation. Neither native factory installs schema or opens another DB.
-Ordinary source can be reconstructed exactly from the captured factoring inverse.
+The existing enrolled factory imports `createEnrolledSqlitePublicProfiles` and,
+inside its existing mainnet attachment block, calls it with the same verified `db`
+when the public flag is true and the captured `privacyActive` is true. A truthy
+result is attached with `Object.defineProperty` before the existing facade freeze.
+The native store is already frozen; the facade property is hidden, nonwritable
+and nonconfigurable. No core/constructor body, other port, financial method,
+ordinary fallback, caller proof, second database or flag setting was changed.
+Captured privacy OFF or public OFF leaves the facade property absent. Exact
+BEFORE stays absent on the selected facades with privacy OFF; the immutable
+native constructor's direct BEFORE behavior remains covered for both archives.
+Existing privacy-ON admission still requires the complete native domain.
 
-Publication remains default OFF: both existing explicit feature flags and actual
-privacy admission are required at ROOT's facade. Constructing a store does not
-select the feature. An explicit owner publication selects fields and run IDs; it
-never changes run visibility/defaults, promotes a historical owner, inherits a
-claim, changes a payer, creates an identity or mutates payment/custody originals.
-Native actors must match the admitted network. Web/API retain the existing owner
-editor/public projection. Desktop, CLI, remote/stdio MCP, extensions, A2A and bots
-retain their existing public-link handoff and gain no private enumeration,
-publication/signing tool or payment authority.
+The graph source already contains the public adapter's import of the closed
+schema profile. This delta permits only the exact
+`public-profiles-sqlite.ts -> enrolled-sqlite-schema-profile.ts` edge. Existing
+finite selector rules and every negative funding/enrollment case are retained.
+The separately owned private-profile/identity dependencies must bring their own
+reviewed composition and any applicable exact graph edges; this worker grants
+them no blanket permission.
 
-## Fixed native ledger dependency — UNRUN and unavailable
+## Fixed aggregate and trusted opening
 
-Core477's verified facade exposes `prepare`, `exec`, `isTransaction` and terminal
-close. It deliberately refuses `aggregate`/`function` registration. Ordinary
-`keryx_public_profile_micros` uses the existing `recordedMicros` decimal admission
-and BigInt micro-USDC step; reproducing it with SQL floating sums, rounding,
-truncation, a limited JS row window or a caller callback would change financial
-truth. The worker has not done so.
+`installPublicProfileFunctions(db)` installs only
+`keryx_public_profile_micros`. Its existing aggregate body is unchanged:
+start `"0"`, `recordedMicros(amount)`, null propagation, and addition of the two
+admitted decimal strings with BigInt. It takes no SQL, name, key, configuration or
+callback and returns no handle. No floating SQL sum, rounding, truncation, bounded
+row substitute or additional financial authority is introduced.
 
-The smallest proposed ROOT contract is a fixed trusted-opening installer for
-**only** `keryx_public_profile_micros`, using the unchanged ordinary start/step and
-`recordedMicros`, plus a metadata-only positive assertion that the sealed Full19
-connection has that projection. Install on the underlying connection after source
-admission and before sealing; expose no raw DB, aggregate selector, function name,
-SQL or callback. Like the existing ROOT ownership-function contract, it installs
-no schema/data and confers no writer/payment authority. ROOT owns its review,
-implementation, runtime binding and actual acceptance. This is a dependency
-proposal, not an implemented helper or an admission to call an absent aggregate.
+Mainnet raw opening calls the installer alongside the existing ownership installer
+after identity/schema/fence/FK admission and before SQL restriction, proxy wrapping
+and the verified-connection WeakMap record. Installation failure follows the
+unchanged opening cleanup and issues no genuine capability. The ordinary
+constructor calls the same pure installer at its original registration position;
+its full authority, privacy, DDL, transaction and operation bodies reconstruct
+exactly after the source factoring inverse.
 
-Until that fixed contract is accepted and composed, native published `ledgers`
-selection and reads of existing ledger selections refuse
-`public_profile_unavailable`. Explicit non-ledger publication works through the
-existing body. Unpublish and healthy readers remain usable after the dependency
-refusal. The ordinary ledger body remains unchanged, including canonical positive
-settled fetch/citation evidence, confirmation references, offline/treasury filters,
-separate stored networks and exact nullable micro-USDC totals. Native settled-ledger
-positive acceptance is **UNRUN**. No successful native totals are claimed.
+Native `requireLedgers` uses the existing metadata-only
+`assertVerifiedSqliteNativeUserDomainPolicy(db)`. This positively binds the
+source-known complete Full19 bundle and successful trusted opening, including
+fixed FK and native 5000 policy. The runtime guard still checks identity, manifest,
+held file, exact fullshape and fences before operations. No new metadata, policy,
+helper assertion, raw handle or aggregate-registration escape was added.
 
-## Parent composition and first validation recipe — all UNRUN
+## Source-owned dependency composition
 
-Read-only dependencies were inspected in separately owned worktrees, never copied
-or edited by the worker:
+`createEnrolledSqlitePublicProfiles(db)` accepts exactly one argument. After
+positive sealed mainnet and exact Full19 admission it internally constructs genuine
+privacy, verified identities and ownership history on that same database.
+Caller-provided ordinary, foreign, missing, shape-compatible or guard ports refuse
+before SQL. History is required internally; anonymous ownership always comes from
+the existing immutable receipt-claim proof. Identity absence on an admitted
+Full19 opening refuses construction. Exact source BEFORE, with or without archive,
+returns `undefined` before composing these dependencies; unknown/partial bundles
+refuse without target repair.
 
-- `cli-enrolled-private-profile260-production-20261014`: genuine native private profiles.
-- `cli-native-profile-identities-20261014`: genuine native identities (no provider substitute).
-- `root-native-claims-privacy-20261014`: genuine native claims, ownership and privacy,
-  including fixed trusted-opening ownership functions.
+`lib/db/private-profiles-enrolled-sqlite.ts`,
+`lib/db/profile-identities-enrolled-sqlite.ts` and the latter's
+`lib/db/profile-identities-storage-domain.ts` are absent from this worktree.
+The current private-profile ordinary module also lacks the native dependency's
+`PRIVATE_PROFILE_ACTIVITY_SQL` and `privateProfileFromSqliteRow` exports.
+The parent must compose the separately reviewed complete profile/identity sources
+before source loading or checking, including those factoring dependencies. Their
+factories were read at their canonical owned paths, never copied, mocked or edited
+here. The reviewed
+51a dependency is already composed. A missing module is a concrete implementation
+composition gate, not evidence of missing account credentials.
 
-The new fixture imports their canonical module paths. At this worker's Core477
-checkout those exports/files are absent; compose their reviewed sources in the
-parent-owned candidate before running or typechecking. Do not mock the factories,
-replace the full-profile generator, skip tests or infer a passing type gate from
-this source handoff. ROOT's default-OFF facade composition and original migration/
-Full19 gates are separate and unchanged by these three source files.
+The existing operation body retains signed-wallet sessions, revision/tombstone
+checks, write-time expiry, exact original comparisons, explicit field/run
+selection, private/unlisted/erased/historical exclusion and closed public output.
+Native checks still run after genuine awaited ownership/identity/history results.
+Readonly writes refuse using the existing zero-SQL metadata policy before runtime
+or SQL and retain healthy readers. Unknown drift permanently retires the
+capability. Genuine native5/6 recovery requires owned rollback, no remaining
+transaction and fresh positive admission; it never retries the refused operation.
 
-First run on that admitted combined candidate, with its pinned supported Node/npm,
-owned temporary fixture outputs and existing ambient-input isolation:
+The ledger SQL is unchanged. It requires positive fetch/citation amounts, the
+settled bit and canonical settled status, and a nonblank recorded transaction
+reference; it excludes offline runs/funding and treasury-funded reader spend.
+Reader, creator and sponsored-creator totals stay separate for each stored
+supported network. Eligible invalid amounts yield null, empty totals yield
+`"0"`, and admitted totals use exact decimal-string arithmetic. The publication
+basis remains wallet-wide recorded settled creator events. Fixture receipts are
+synthetic SQLite records and establish no actual on-chain settlement.
 
-```text
-npx vitest run lib/db/public-profiles-enrolled-sqlite.test.ts --maxWorkers=1
-npx vitest run lib/db/public-profiles-sqlite.test.ts lib/profiles/public-profile.test.ts lib/profiles/public-profile-view.test.ts --maxWorkers=1
-npx tsc --noEmit
-```
+## Authored acceptance — all UNRUN
 
-Native fixtures use actual `node:sqlite`, source Full19 installation before
-synthetic enrollment, real guarded opening, an actual pinned manifest and genuine
-ports. Delayed wrappers await genuine results then interpose bounded peer changes;
-they fabricate no owner, identity, settled sum, native error or guard result.
-Authored coverage includes BEFORE/no-profile/unpublished/unknown-handle absence,
-private/unlisted/historical/foreign filtering, selected public fields and sitemap,
-owner/session refusal, revisions/tombstones, stale originals/profile/identity/
-unpublish/privacy reads, genuine immutable receipt claims, default-OFF flags,
-readonly refusal before runtime/SQL, target no-DDL/no-aggregate construction,
-original/custody hashes, runtime/manifest/schema/fence/marker drift, actual file
-replacement (or Windows held-file protection), FK deletion cascade and real busy
-BEGIN/COMMIT rollback survival. Real native6 positive contention is not yet observed.
+The new cases call the real `createApplicationStorage` and
+`createReadonlyApplicationStorage` selectors against disposable, authentically
+installed BEFORE/Full19 fixtures. Bounded synthetic configuration is established
+before module imports and restored after each case, including matched nonzero
+server/public mainnet registry twins. No runtime ENV was activated by this worker.
+Profiles, visibility, identity challenges and anonymous claims use genuine native
+APIs; no positive proof/dependency result is mocked.
 
-After the first source checks, parent independent auth/privacy/storage/financial
-review and existing required aggregate/domain CI remain gates. Refresh changed
-source evidence. ROOT then owns facade/surface/built-route/PostgreSQL/publication
-acceptance and any one batched deployment. No activation, rollout, shared DDL,
-credential, ENV, payment, spend, funding, scheduler or issue-closure evidence comes
-from this worker handoff.
+Selected cases cover both archive variants, hidden/frozen descriptors, captured
+OFF absence, no automatic publication or historical backfill, exact revisions,
+session/wallet isolation, foreign/unknown/unclaimed ownership refusal, selected
+public-only output, identity unlink, current visibility and erasure. Readonly
+public/privacy mutations refuse before SQL while healthy publication, ownership
+and privacy readers survive. Genuine immutable claim reads and identity reads
+retain their after-await refusal controls. All original R106 three final-yield
+strict-null cases and existing assertions/deadlines remain; selected facade cases
+also require strict null for synchronous unpublish, selection or profile changes.
+
+Selected manifest/schema/fence/profile-digest/closed drift must permanently refuse
+after restoration. File replacement has two honest platform outcomes: Windows
+`EBUSY` prevention requires unchanged bytes and healthy provenance; successful
+replacement requires strict irreversible refusal after restoring the original.
+Both the old and selected cases accept only that specific prevention error.
+Original rows, exact ledger arithmetic/classification and payment/custody snapshots
+remain checked around explicit mutations; erasure preserves payment rows while
+its deliberate original-text removal is bound by an after-erasure snapshot.
+These cases are source-authored, **UNRUN**, and establish no operational acceptance.
+
+R101 found that the native wrapper awaited an already constructed publication
+snapshot, then checked only storage admission. A synchronous same-store unpublish
+could commit during that final yield and the wrapper could return withdrawn
+selected fields. The private operation now prepares a source-owned same-store
+finalizer. Native publication reads await preparation, run the full storage guard,
+then synchronously execute the existing publication-revision, profile, identity,
+original/ownership and public/nonerased-run checks and closed projection. There is
+no await between that final block and return. The ordinary path executes this
+same block immediately at its original boundary, without an additional yield.
+All original SQL, ledger predicates, projection, transaction and error retirement
+bodies remain unchanged; no caller callback or new dependency authority is exposed.
+
+The retained R106 disposable Full19 cases deliberately omit verifiedLinks and select a directly
+owned public run, so preparation has no inner claim/identity await. They start a
+read, synchronously commit genuine same-store unpublish or peer selection/profile
+changes at the final native yield, and require strict null output. They also bind
+all original rows after the deliberate peer change and keep original/economic/
+custody hashes exact. These regressions are authored, **UNRUN**. R106 raw before/
+after, minimal/inverse patches and the source handoff are retained at
+`keryx/output/resume-root-release63-20261012/refill-successors-20261013-106/worker-repairNativePublicFinalAwaitP2`.
+
+The native fixture suite now covers successful Full19 openings with/without
+archive, exact integer micros, empty totals, invalid/null poisoning in both step
+orders, totals above safe Number and signed64 micros, settlement/receipt/kind/
+offline/treasury/network filters, installer-failure cleanup, and sealed
+registration refusal. It covers raw, unsealed, foreign, closed, BEFORE and partial
+admission; caller dependency rejection before SQL; readonly ledger write refusal;
+after-await revocation/unpublish/selection; 50-run and strict-input caps; and
+original/payment/custody preservation.
+
+Existing genuine owner/privacy/claim/identity, revision/tombstone, erasure, rename/
+cascade, marker/file/schema/fence/runtime drift and actual native5 BEGIN/COMMIT
+rollback fixtures remain authored. Observation spies forward real native results;
+they supply no dependency, owner proof, identity record or native error.
+The original ordinary public fixtures and all native tests remain **UNRUN**.
+Real native6 contention has no observed positive evidence.
+
+R97 failed for model capacity before reading source: its verdict is **UNKNOWN**,
+never accepted. R101 completed the first different full finalized-source review:
+**SOURCE CHANGES REQUIRED**, one final-await P2 and no P1. Its receipt is at
+`keryx/output/resume-root-release63-20261012/refill-successors-20261013-101/worker-reviewNativePublicCompleteSource/receipt.json`.
+The current facade delta requires a different focused changed-source peer review, then
+parent composition of the actual separately accepted native dependencies and the
+first genuine native/ordinary/type acceptance, focused PR and required aggregate/
+domain CI. No passing check, PR, merge, activation or delivery is claimed here.
+
+## Remaining product and delivery boundary
+
+The facade caller is now authored. ROOT owns dependency composition, existing
+flags/privacy admission, original MAX4 schema/migration matrix,
+API/web/built-route/PostgreSQL/surface acceptance,
+focused PR and required CI. The sole coordinator owns merge and the deployment
+batch. No matrix, migration, ordinary constructor, ownership/privacy/policy body
+or activation setting was edited.
+
+Web/API continue explicit owner publication and public projections. Desktop, CLI,
+remote/stdio MCP, extensions, A2A and bots retain their established public-link
+handoffs, without private enumeration or new publication/signing/payment ports.
+Original #264 remains **OPEN** until those applicable parent gates and
+actual delivery are established; source authorship does not close the criterion.
