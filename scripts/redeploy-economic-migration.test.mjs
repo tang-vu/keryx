@@ -15,6 +15,7 @@ const rolesFile = '/root/.local/share/release/roles.json';
 const migrations = [
   ['keryx-redeploy-economic-migration-v1', '/root/keryx/scripts/mainnet-economic-storage-migrate.mts'],
   ['keryx-redeploy-original-fulfillment-migration-v1', '/root/keryx/scripts/mainnet-original-fulfillment-storage-migrate.mts'],
+  ['keryx-redeploy-native-user-domains-migration-v1', '/root/keryx/scripts/private-profile-storage-migrate.mts'],
 ];
 const config = (format = migrations[0][0]) => ({ format,
   manifest: '/root/.local/share/storage/manifest.json', expectedManifestDigest: 'a'.repeat(64),
