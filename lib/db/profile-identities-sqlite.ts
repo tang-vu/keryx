@@ -1,28 +1,11 @@
 import { DatabaseSync } from "node:sqlite";
-import { PRIVATE_PROFILES_SQL } from "./private-profiles-sqlite";
+import { PRIVATE_PROFILES_SQL, PROFILE_IDENTITIES_SQL } from "./profile-sqlite-schema-data";
 import { assertOrdinarySqliteResearchAuthority } from "./research-monthly";
 import { profileWallet } from "../profiles/private-profile";
 import { ProfileIdentityError, identityChallengeSchema, identityProviderSchema, identityRecordSchema, identitySnapshotSchema,
   providerIdentitySchema, type IdentityChallenge, type ProfileIdentitiesStore } from "../profiles/verified-identities";
 
-export const PROFILE_IDENTITIES_SQL = `CREATE TABLE IF NOT EXISTS profile_verified_identities (
-  wallet TEXT NOT NULL REFERENCES private_profiles(wallet) ON DELETE CASCADE,
-  provider TEXT NOT NULL CHECK(provider IN ('orcid','github')),
-  external_id TEXT, label TEXT, verified_at TEXT,
-  current_state_hash TEXT CHECK(current_state_hash IS NULL OR (length(current_state_hash)=64 AND current_state_hash NOT GLOB '*[^0-9a-f]*')),
-  PRIMARY KEY(wallet,provider), UNIQUE(provider,external_id),
-  CHECK((external_id IS NULL AND label IS NULL AND verified_at IS NULL) OR
-    (external_id IS NOT NULL AND length(external_id) BETWEEN 1 AND 32 AND label IS NOT NULL AND length(label)<=160 AND verified_at IS NOT NULL))
-);
-CREATE TABLE IF NOT EXISTS profile_identity_challenges (
-  state_hash TEXT PRIMARY KEY CHECK(length(state_hash)=64 AND state_hash NOT GLOB '*[^0-9a-f]*'),
-  wallet TEXT NOT NULL, provider TEXT NOT NULL,
-  session_hash TEXT NOT NULL CHECK(length(session_hash)=64 AND session_hash NOT GLOB '*[^0-9a-f]*'),
-  expires_at INTEGER NOT NULL CHECK(expires_at>=0),
-  status TEXT NOT NULL CHECK(status IN ('pending','consumed')),
-  UNIQUE(wallet,provider),
-  FOREIGN KEY(wallet,provider) REFERENCES profile_verified_identities(wallet,provider) ON DELETE CASCADE
-);`;
+export { PROFILE_IDENTITIES_SQL } from "./profile-sqlite-schema-data";
 
 // Exact ordinary session domain, including its indices. No optional domain may substitute sessions.
 const SESSION_SQL = `CREATE TABLE IF NOT EXISTS web_sessions (
