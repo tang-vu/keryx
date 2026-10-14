@@ -390,7 +390,7 @@ describe("same-selected-store verified native private bibliographies", () => {
       const before = readFileSync(f.file);
       await expect(port.create(alice, input)).rejects.toThrow("bibliography_unavailable");
       await expect(port.read(created.token)).rejects.toThrow("bibliography_unavailable");
-      expect(readFileSync(f.file)).toEqual(before); expect(() => f.open()).toThrow();
+      expect(readFileSync(f.file).equals(before)).toBe(true); expect(() => f.open()).toThrow();
     }
   });
 
