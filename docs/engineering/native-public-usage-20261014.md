@@ -327,3 +327,13 @@ outcome through current-main composition, applicable study provenance, PR/CI
 and the existing merge coordinator. Production activation and deployment remain
 with the release owner for the next batch; original epic/surface criteria remain
 open until their actual delivery evidence exists.
+
+Current-main composition retains the complete incoming facade and adds only the
+reviewed public-usage import and hidden port. That producer requires the genuine
+`mainnet-real` selected-application policy, so its attachment is inside the existing
+mainnet branch. Offline/testnet native facades retain their healthy absent-port
+behavior. The captured privacy-policy equality check remains before construction;
+there is no ordinary fallback, schema change or fabricated empty usage. The two
+existing native facade controls for offline absence and testnet installed-schema
+provenance exercise this compatibility seam; their changed-combination acceptance
+is recorded only after execution.

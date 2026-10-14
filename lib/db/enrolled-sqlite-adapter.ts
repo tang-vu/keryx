@@ -3,6 +3,7 @@ import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-pro
 import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection, assertVerifiedSqliteNativeUserDomainPolicy } from "./storage-identity-connection";
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
+import { createEnrolledSqlitePrivateBibliographies } from "./private-bibliographies-enrolled-sqlite";
 import { createEnrolledSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
 import { createEnrolledSqliteRunClaims } from "./run-claims-sqlite";
 import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
@@ -13,6 +14,7 @@ import { withRunReadProjection } from "../run-privacy/projection";
 import { projectRecordedEvidenceProvenance } from "../research/evidence-provenance";
 import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
+import { createEnrolledSqlitePrivateProfiles } from "./private-profiles-enrolled-sqlite";
 
 /** Explicit behavior inventory, including verifyApiKey's last-used write. New methods require review. */
 export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
@@ -330,6 +332,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       } });
     }
     Object.defineProperty(facade, "personalHistory", { value: createEnrolledSqlitePersonalHistory(db) });
+    const bibliographies = createEnrolledSqlitePrivateBibliographies(db);
+    if (bibliographies) Object.defineProperty(facade, "privateBibliographies", { value: bibliographies });
     Object.defineProperty(facade, "runPrivacyActive", { value: privacyActive });
     for (const name of ["runClaims", "runOwnershipHistory", "runPrivacy"] as const) {
       if (core[name]) Object.defineProperty(facade, name, { value: core[name] });
@@ -337,13 +341,15 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     if (deployment.identity.authorityMode === "mainnet-real") {
       const acceptance = createEnrolledSqliteDeliverableAcceptance(db);
       if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
+      Object.defineProperty(facade, "publicUsage", { value: (() => {
+        if (privacyActive !== (process.env.KERYX_RUN_PRIVACY_ENABLED === "true")) throw new Error("Enrolled SQLite privacy policy changed during construction");
+        return createEnrolledSqlitePublicUsage(db);
+      })() });
     }
     Object.defineProperty(facade, "init", { value: async () => { assert(); } });
     Object.defineProperty(facade, "close", { value: connection.close });
-    Object.defineProperty(facade, "publicUsage", { value: (() => {
-      if (privacyActive !== (process.env.KERYX_RUN_PRIVACY_ENABLED === "true")) throw new Error("Enrolled SQLite privacy policy changed during construction");
-      return createEnrolledSqlitePublicUsage(db);
-    })() });
+    const privateProfiles = createEnrolledSqlitePrivateProfiles(db);
+    if (privateProfiles) Object.defineProperty(facade, "privateProfiles", { value: privateProfiles });
     Object.freeze(facade);
     provenance.set(facade, { identity: deployment.identity, readOnly, assert });
     return facade;
