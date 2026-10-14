@@ -1452,14 +1452,27 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]> {
-    const { data } = await this.domainCall("list_payments_by_source", { p_source_id: sourceId, p_kind: "inbound" }, (_args) => this.#sb
-      .from("payment_events")
-      .select("*")
-      .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
-      .eq("source_id", _args.p_source_id)
-      .neq("kind", _args.p_kind)
-      .order("created_at", { ascending: false }));
-    return (data ?? []).map(rowToPayment);
+    // Enrolled RPC already returns a complete bounded result or refuses; keep its authority.
+    if (this.#enrolled) {
+      const { data, error } = await this.domainCall("list_payments_by_source", { p_source_id: sourceId, p_kind: "inbound" },
+        async (): Promise<{ data: Record<string, unknown>[] | null; error: unknown }> => { throw new Error("Enrolled source payment reader required"); });
+      if (error) throw error;
+      if (!Array.isArray(data)) throw new Error("Source payment history unavailable");
+      return data.map(rowToPayment);
+    }
+    // Ordinary PostgREST caps each response at 1000 rows. Never call a recent page all-time.
+    const rows: PaymentRecord[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await this.#sb.from("payment_events").select("*")
+        .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
+        .eq("source_id", sourceId).neq("kind", "inbound")
+        .order("created_at", { ascending: false }).order("id", { ascending: false })
+        .range(offset, offset + 999);
+      if (error) throw error;
+      if (!Array.isArray(data)) throw new Error("Source payment history unavailable");
+      rows.push(...data.map(rowToPayment));
+      if (data.length < 1000) return rows;
+    }
   }
 
   async dailySettled(days: number): Promise<DailyVolume[]> {

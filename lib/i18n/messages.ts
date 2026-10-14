@@ -19,9 +19,11 @@ import { reportMessages } from "../../locales/en/reports";
 import { researchFundingMessages } from "../../locales/en/research-funding";
 import { researchFlowMessages } from "../../locales/en/research-flow";
 import { sourceArchiveMessages } from "../../locales/en/source-archive";
+import { sourceLeaderboardMessages } from "../../locales/en/source-leaderboard";
 
 /** English source keys. Payment/legal prose remains in its separate review gate. */
 export const englishMessages = Object.freeze({
+  ...sourceLeaderboardMessages,
   ...sourceArchiveMessages,
   ...ledgerMessages,
   ...integrationsMessages,
