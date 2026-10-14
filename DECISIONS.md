@@ -8098,6 +8098,23 @@ patch grants no binding, token, sign-in or past-run ownership authority; origina
 #263 linking criteria remain open. Explicit `/ask` research and budget limits stay
 unchanged.
 
+2026-10-14 — Original #256 bank-first onramp source outcome: retain the existing
+helper/route/panel and compatibility names, but describe bank-transfer eligibility
+first. Current official Arc docs confirm merchant KYB is unnecessary for mainnet
+USDC bank transfers in select US states/EU countries; purchaser KYC still applies,
+and Vietnam/exact region lists are unverified. Bind production LIVE credentials to
+the canonical mainnet profile and isolate sandbox to a dedicated TEST credential,
+canonical testnet profile and fixed vendor origins, without a production fallback.
+The pinned Onramp Kit 1.0.3 has endpoint/origin options but no payment-method selector.
+Official sandbox bank deposits currently land only on Ethereum, so this Arc-only
+integration exposes the limitation and refuses sandbox bank sessions rather than
+widening custody or claiming Arc delivery. Preserve authenticated-owner delivery,
+USDC/Arc scope, short expiry, two-click synchronous popup opening and wallet balance
+as the sole funds evidence. Synthetic controls are source changes awaiting ROOT's
+checks/review/CI; no credentials, activation, purchase or deploy occurred. Real eligible
+bank purchase, integrated Arc sandbox proof, country/provider UI and original #256
+CCTP/sponsorship/passkey gates remain open. See [bank-first funding](docs/arc-card-onramp.md).
+
 ### 2026-10-14 — Implement bounded account membership without changing wallet authority (#267)
 
 ROOT authorized the next-batch implementation after the recorded design and R42

@@ -1,5 +1,27 @@
 # Supported-surface release parity
 
+## App64 release batch in preparation — October 13
+
+Delivered production is app **0.27.63 /ec5f39c9**. Local preparation reserves
+app/OpenAPI **0.27.64**, hosted MCP **0.3.18**, stdio/npm/Registry **0.4.20**
+and Desktop **0.4.18**. Each reviewed focused PR merges directly into main;
+the coordinator deploys the accepted final main once for the release batch.
+
+| Surface | Role and release acceptance |
+| --- | --- |
+| Web/API/OpenAI/A2A | Serve the accepted merged hosted source and existing public/private contracts; verify final CI, deployed commit and OpenAPI. |
+| Remote MCP | Preserve scoped hosted tools and result/receipt contracts; verify initialized 0.3.18 after deployment. |
+| Stdio/npm/Registry | Package the final shared executable graph; verify installed consumer, integrity, source provenance and exact/latest 0.4.20 readbacks. |
+| Desktop | Package the accepted helper/native source while retaining local Operator/custody roles; verify exact-source 0.4.18 acceptance and immutable installer assets. |
+| CLI | Retain audit, export, caller-funded buyer and recovery roles; check applicable changed shared contracts. |
+| Extension | Compare request/result/errors, evidence/money/exports and hosted handoffs with final source. Retain 0.1.4.2 only when all shipped inputs still match accepted bytes. |
+| Bots | Consume hosted source within existing signed-request, private-delivery and sponsored-admission controls; record command registration or vendor readback separately when applicable. |
+| Private ops/email | Preserve existing ENV, schedules and holds; source changes alone do not authorize activation or customer delivery. |
+
+New publication, owner installation and deployment remain pending. Original
+issue acceptance and separately held activation/usefulness gates remain explicit.
+See [distribution steps](mcp-distribution.md); older sections are historical.
+
 ## Website setup discovery — October 12 source candidate
 
 This web-only candidate adds indexed setup, download and integration guides for web,

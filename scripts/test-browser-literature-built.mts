@@ -145,6 +145,8 @@ try {
     assert.equal(await page.getByRole("searchbox", { name: "Title, topic, DOI or versioned arXiv identifier" }).inputValue(), "2005.11401v4");
     const exactCard = page.locator("#research-papers article");
     await exactCard.getByRole("heading", { name: "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks", exact: true }).waitFor();
+    // Wait for the streamed catalogue to settle; persistent duplicate nodes still fail.
+    await page.waitForFunction(() => document.querySelectorAll("#research-papers article").length === 1, null, { timeout: 30_000 });
     const cardBoundary = await page.evaluate(() => {
       const nodes = Array.from(document.querySelectorAll("#research-papers article"));
       return {

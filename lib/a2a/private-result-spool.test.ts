@@ -46,3 +46,43 @@ it("encrypts result and context, survives reopen, rejects tampering and retains 
     await rmdir(directory).catch(() => undefined); await rmdir(root);
   }
 });
+
+it("captures the closed packet before awaits and retains the encrypted original when restore drops metadata", async () => {
+  const root = await mkdtemp(join(tmpdir(), "keryx-provenance-backup-")), directory = join(root, "spool");
+  const key = randomBytes(32).toString("hex");
+  const context = { id: `prv_${"d".repeat(64)}`, payer: `0x${"e".repeat(40)}`, workerId: randomUUID() };
+  const provenance = { version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" } as const;
+  const run = { id: context.id, question: "Synthetic private provenance backup", budget: 0.03, researchMode: "quick",
+    answer: "Synthetic private backup", asker: context.payer, provenance: { ...provenance } } as QueryRun;
+  const serializedRun = JSON.stringify(run);
+  try {
+    const spool = await createPrivateResultSpool(directory, key);
+    const pending = spool.save(context, run);
+    run.provenance!.surface = "unknown";
+    const token = await pending;
+    const bytes = await readFile(join(directory, `${token}.json`), "utf8");
+    for (const value of [context.id, context.payer, "verified-payer", "agent-to-agent", run.question]) expect(bytes).not.toContain(value);
+    const reopened = await createPrivateResultSpool(directory, key);
+    expect(await reopened.read(token)).toEqual({ ...context, serializedRun });
+    const save = vi.fn(async (id: string, payer: string, workerId: string, restored: QueryRun) => {
+      expect({ id, payer, workerId }).toEqual(context);
+      expect(restored.provenance).toEqual(provenance);
+      const withoutPacket = { ...restored };
+      delete withoutPacket.provenance;
+      return { id, format: "query-run-v1" as const, savedAt: "2026-09-09T00:00:00.000Z", serializedRun: JSON.stringify(withoutPacket) };
+    });
+    await expect(reopened.restore({ savePrivateResearchResult: save }, token)).rejects.toThrow("Private result restore unavailable");
+    expect(await readFile(join(directory, `${token}.json`), "utf8")).toBe(bytes);
+    expect(await reopened.read(token)).toEqual({ ...context, serializedRun });
+    save.mockImplementationOnce(async (id, payer, workerId, restored) => {
+      expect({ id, payer, workerId }).toEqual(context);
+      expect(JSON.stringify(restored)).toBe(serializedRun);
+      return { id, format: "query-run-v1", savedAt: "2026-09-09T00:00:00.000Z", serializedRun };
+    });
+    expect(await reopened.restore({ savePrivateResearchResult: save }, token)).toEqual({ status: "restored" });
+    await expect(access(join(directory, `${token}.json`))).rejects.toThrow();
+  } finally {
+    for (const name of await readdir(directory).catch(() => [])) await unlink(join(directory, name));
+    await rmdir(directory).catch(() => undefined); await rmdir(root);
+  }
+});

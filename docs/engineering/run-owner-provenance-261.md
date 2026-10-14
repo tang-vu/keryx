@@ -1,11 +1,12 @@
 # Verified run ownership and ingress
 
 This is a partial source implementation of [issue #261](https://github.com/tang-vu/keryx/issues/261).
-Current main already attributes both streaming and non-streaming keyed OpenAI
-requests to the verified key wallet. Private execution and retained original
-fulfillment also already carry their verified original payer. This candidate
-fixes the missing payer in synchronous public A2A execution and its durable
-worker, and adds closed metadata for new shared research runs.
+The accepted public implementation attributes both streaming and non-streaming
+keyed OpenAI requests to the verified key wallet, and synchronous/queued public
+A2A runs to the verified original payer. Private execution and retained original
+fulfillment already carry their verified original payer. This NEXT-cohort change
+adds the same closed metadata to newly finalized job-scoped research runs and
+stamps private A2A execution from its already verified retained original.
 
 ## Authority and history
 
@@ -34,9 +35,11 @@ settled. Missing historical funding authority is not reconstructed from new
 ownership metadata.
 
 Private execution still saves through job-scoped effects to owner-scoped private
-results, never to public `query_runs`, payment events or cache. Its existing
-minimal private result projection remains unchanged. Old protected original
-fulfillment records and portable receipts are not rewritten or backfilled.
+results, never to public `query_runs`, recent wallet history, public Operator
+snapshots, payment events or cache. The packet is private backend metadata; its
+existing minimal owner-only result projection remains unchanged and omits it.
+Old protected original fulfillment records and portable receipts are not
+rewritten or backfilled.
 
 ## Closed metadata
 
@@ -53,7 +56,9 @@ and `unknown`. Implemented owner methods are `session`, `api-key`,
 endpoint behind this metadata.
 
 The metadata describes already established authority; it cannot create an
-`asker`. Without an owner the method is `unknown`. The browser-safe parser
+`asker`. New shared job and public finalization use the same closed packet.
+Without an established stamp, surface and method are `unknown`; without an owner
+the method is `unknown` even when the ingress is known. The browser-safe parser
 copies only the closed fields, refuses accessors/extra fields and omits invalid
 metadata from public projections. A missing packet on an old run remains absent
 and means unknown; payment origin and old wallet values cannot reconstruct it.
@@ -64,7 +69,7 @@ and means unknown; payment origin and old wallet values cannot reconstruct it.
 | OpenAI-compatible API, including extension clients using it | `api` | Verified ask-scoped key, otherwise absent |
 | Remote HTTP MCP | `remote-mcp` | Verified ask-scoped key, otherwise absent; `mcpClient` stays editable telemetry |
 | Public A2A synchronous/queued and Monthly worker | `agent-to-agent` | Verified original payer |
-| Isolated private research executor | Packet stays absent | Verified original payer; private storage/projection stays separate |
+| Isolated private research executor | `agent-to-agent` / `verified-payer` in the private backend snapshot | Verified retained original payer; private storage/projection stays separate |
 | Telegram / Discord / Slack | Respective verified bot ingress | Absent: platform authentication is not a wallet link |
 | Local `npm run ask` | `cli` | Absent: local execution does not establish a verified wallet |
 | Stdio MCP, buyer CLI and desktop using hosted A2A | Observed `agent-to-agent` ingress | Verified payer; remote client identity remains unknown |
@@ -84,6 +89,29 @@ filter. Both application writers use the same closed snapshot for a provided
 packet and preserve a missing packet. No column, SQL function, storage identity
 digest, enrollment cutover or historical DML is introduced. Rollback leaves
 additive JSON readable by older writers; older writers may omit new metadata.
+
+The private executor reads the retained signed intent through the existing
+payer-bound verifier, requires settled private payment and a fresh worker claim,
+then passes the retained authorization's `from` as `asker` at `collectRun`.
+That call stamps `agent-to-agent` / `verified-payer`; the treasury signer, origin
+string, user agent, editable client name and linked accounts supply no proof.
+All request, provider, prefunding, signer and worker checks remain unchanged.
+
+Private SQLite and Supabase writers capture `JSON.stringify(run)` before their
+asynchronous authority lookups and retain it as an opaque `query-run-v1`
+snapshot. Their existing routing/request checks and exact original conflict
+semantics are unchanged: dropping or replacing a packet on a retry conflicts
+with the original. Missing historical packets remain missing. The encrypted
+spool captures those same bytes, preserves the packet across reopen, and deletes
+a backup only after private persistence returns the exact serialized original.
+Restore revalidates the retained owner and worker in the adapter. These existing
+serializers need no new projection, columns, schema or ownership grants.
+
+Public result projections expose closed metadata only for runs their public
+routes already admit; this change introduces no route from private storage to
+those projections. The owner-only `private-result-v1` allowlist strips backend
+provenance, wallet, worker and trace fields, as before. Portable receipt contracts
+also remain unchanged.
 
 New public API/A2A/remote-MCP result projections expose the packet when present,
 without exposing a wallet, API key or raw platform identifier. Old projections
@@ -106,9 +134,26 @@ The mixed-history regression checks actual session-only wallet filtering and
 unchanged browser-funded/legacy totals, then renders that API response in a
 network-blocked browser to check keyed, prepaid and legacy funding wording.
 
+The private completion fixture exercises the actual shared finalizer and private
+effects with a signed, unfunded synthetic original, synthetic settlement storage
+evidence, an empty source catalog and a controlled executor. It checks encrypted
+spool-to-SQLite preservation and intercepted Supabase serialization/restore, immutable
+original conflicts, foreign payer/worker and unpaid/job-scope refusal, unknown
+and malformed metadata, unchanged owner-only projection and empty public history
+and snapshots. Outbound, funding, creator-payment and public-write functions are
+guarded to fail if called. Additional spool cases retain encrypted originals on
+lossy acknowledgements; historical metadata absence remains covered. These are
+authored regression cases, pending parent execution and independent review;
+they do not establish real settlement or deployed private delivery.
+
 Exact-source CI and independent review precede any merge. Deployment, app/package
 version coordination and actual deployed wallet-history acceptance belong to the
 root release. Stdio tool-description distribution needs its normal exact-source
 package gate before publication can be claimed. No source-only test closes
 #261's deployed acceptance. Linked chat accounts, later claims/admin assignment
 and independently verified remote app identities remain unimplemented.
+Hosted stdio/desktop/buyer and extension callers still record established A2A/API
+ingress rather than independently verified physical-client labels. Original #261
+stays OPEN until its full original criteria and applicable delivered history
+acceptance are established. This NEXT-cohort change imposes no hold on the frozen
+app0.27.64 source or its separate release.

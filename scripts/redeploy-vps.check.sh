@@ -121,7 +121,7 @@ grep -q 'roles.json .* a2a' "$DEPLOY_TEST_TRACE"
 grep -q 'roles.json .* web' "$DEPLOY_TEST_TRACE"
 grep -q 'curl -fsS' "$DEPLOY_TEST_TRACE"
 ! grep 'curl -fsS' "$DEPLOY_TEST_TRACE" | grep -v "Host: keryx.cc.*X-Forwarded-Proto: https"
-grep -q 'NODE_OPTIONS=--max-old-space-size=2560 npm run typecheck && test ! -e .next.tmp && test ! -L .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build' "$DEPLOY_TEST_TRACE"
+grep -Fqx 'keryx-vps cd /root/keryx && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=4096 npm run typecheck && test ! -e .next.tmp && test ! -L .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build' "$DEPLOY_TEST_TRACE"
 ! grep -q 'rm -rf .next' "$DEPLOY_TEST_TRACE"
 grep -qx "GIT reset -q --hard $expected" "$DEPLOY_TEST_TRACE"
 first_validate=$(grep -n 'roles.json .* validate' "$DEPLOY_TEST_TRACE" | head -1 | cut -d: -f1)
@@ -190,12 +190,22 @@ grep -q 'npm ci failed on attempt 3' "$fixture/output"
 clear_trace
 managed
 ! grep -Eq '^NPM ci|dependency-state.mjs (invalidate|record)' "$DEPLOY_TEST_TRACE"
-# Default path still pauses/resumes workers and uses its existing reload behavior.
+# Failed typechecks stop both paths before build or swap; legacy temporary output survives.
 clear_trace
 if DEPLOY_TEST_BAD_TYPECHECK=1 managed; then exit 1; fi
-! grep -Eq 'roles.json .* (a2a|web)|pm2 (restart|reload)|mv .next' "$DEPLOY_TEST_TRACE"
+grep -qx 'NPM run typecheck' "$DEPLOY_TEST_TRACE"
+! grep -Eq '^NPM run build|roles.json .* (a2a|web)|pm2 (restart|reload)|mv .next' "$DEPLOY_TEST_TRACE"
+mkdir "$fixture/.next.tmp"
+clear_trace
+if DEPLOY_TEST_BAD_TYPECHECK=1 run; then exit 1; fi
+[[ -d "$fixture/.next.tmp" ]]
+grep -qx 'NPM run typecheck' "$DEPLOY_TEST_TRACE"
+! grep -Eq '^NPM run build|pm2 (restart|reload)|mv .next|bash -s -- resume|crontab' "$DEPLOY_TEST_TRACE"
+rmdir "$fixture/.next.tmp"
+# Default path still pauses/resumes workers and uses its existing reload behavior.
 clear_trace
 run
+grep -Fqx 'keryx-vps cd /root/keryx && node --max-old-space-size=1536 scripts/check-next-worker-memory.cjs && NODE_OPTIONS=--max-old-space-size=4096 npm run typecheck && rm -rf .next.tmp && NODE_OPTIONS=--max-old-space-size=1536 NEXT_DIST_DIR=.next.tmp npm run build' "$DEPLOY_TEST_TRACE"
 grep -q 'bash -s -- stop' "$DEPLOY_TEST_TRACE"
 grep -q 'bash -s -- resume' "$DEPLOY_TEST_TRACE"
 grep -q 'pm2 reload' "$DEPLOY_TEST_TRACE"

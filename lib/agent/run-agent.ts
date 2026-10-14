@@ -2455,7 +2455,7 @@ async function* runAdmittedAgent(
       trace,
       createdAt: new Date().toISOString(),
       origin,
-      ...(effects.scope.kind === "public" ? { provenance: newRunProvenance(input) } : {}),
+      provenance: newRunProvenance(input),
       ...(origin === "mcp" && input.mcpClient ? { mcpClient: input.mcpClient } : {}),
       ...(input.asker ? { asker: input.asker.toLowerCase() } : {}),
       fundingOwner: gateway.mode === "offline" ? "offline" : (input.fundingOwner ?? "treasury"),

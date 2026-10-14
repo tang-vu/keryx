@@ -20,7 +20,7 @@
     "reevaluateRounds": 1,
     "searchCalls": 0
   },
-  "lockSha256": "e30c2bcfc8ce3cc2c730e12a6d2760c308211fa9d26ebfae1f68c9a3a6eb420b",
+  "lockSha256": "9dbd5844f20ca242ad199790195292cece8eca1d033f629ccf25d96fd6343cb2",
   "outboundAttempts": 0,
   "runtimeSources": {
     "lib/a2a/amount-micros.ts": "ad39789195855cc02b4dc12186e64ef25e265f2ecc562274ffa90c5f30249a25",
@@ -71,7 +71,7 @@
     "lib/agent/research-effects.ts": "03b112db36a63a94a8a00f644cefb1d9b65c3b91016053d1e9ba7532d5c98174",
     "lib/agent/research-follow-up.ts": "5fe8212365fd85d4918c880d562842d4f82791ccec5c4eb9b593864ad43be867",
     "lib/agent/research-verdict.ts": "30f1abb81ab37d84a765c7f1d5285be7a72145db899bf13132286f29c68f7084",
-    "lib/agent/run-agent.ts": "51efc9024ab05f523e0c0290906c6e0fce42ca26da09c731b7fd50841868217b",
+    "lib/agent/run-agent.ts": "e76fdfbc0b603c8b7524f7a4558497f309fb2d891bf669dfde629b2a82f3b855",
     "lib/agent/run-bibliographic-agent.ts": "ec1ed1ed8e24e62be35a1952723fa1bc33a628f0addad9f792d430a6e588c3e2",
     "lib/agent/sentence-note-answer.ts": "d97801bfa23f84a5a56f2c079520e6ccf63e6a0a7e6b5ec12c679c54208bee2c",
     "lib/agent/source-recency-observations.ts": "a965730639f47849e7edb83ddc9fd34f805be399bc2a3509caba44948a230ee7",
@@ -430,7 +430,7 @@
     "locales/en/registration.ts": "c8b526c8889c506321c9765074b5c8420aab8ef764a05975b787753d83fd0eb4",
     "locales/en/reports.ts": "3ef9c9df446f2d5ea84d314e233d4cdf1c0d8dd5d98c609409b983aec1206408",
     "locales/en/research-flow.ts": "b23cae7bd717df2f90968e5e9f08414aed07bb05d41a39c0737ef3a777dfb827",
-    "locales/en/research-funding.ts": "723154199f9eec3a4643031d4c137b489ba4f68542e2554f7142ef19526364ca",
+    "locales/en/research-funding.ts": "8b736422056a66aba9c554ba9be5addd9ad36e73685dd4547c4c8e669181af77",
     "locales/en/shared-helpers.ts": "abbd0f90681948fe923c0125bddbc9d380288258f8b8243d28d2c4ccad3c6f5d",
     "locales/en/shell.ts": "98de613c0f20357e8d901f40f221f5e183141096b6713f44c0c02baa5d0c1e5a",
     "locales/en/source-archive.ts": "68d70227094d71b19e43c483fec9c03f7a482d7005f71cd589c9cb5958043da4",
@@ -827,6 +827,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -1759,6 +1764,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -2689,6 +2699,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -3641,6 +3656,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -4780,6 +4800,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -5780,6 +5805,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -6793,6 +6823,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -7944,6 +7979,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -9082,6 +9122,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -10094,6 +10139,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -11245,6 +11295,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -12395,6 +12450,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -13524,6 +13584,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -14455,6 +14520,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -15385,6 +15455,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
@@ -16345,6 +16420,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
@@ -17729,6 +17809,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -18729,6 +18814,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
@@ -19750,6 +19840,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
@@ -21154,6 +21249,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -22537,6 +22637,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -23557,6 +23662,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
@@ -24961,6 +25071,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -26364,6 +26479,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -27736,6 +27856,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -28665,6 +28790,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -29593,6 +29723,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
@@ -30530,6 +30665,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
@@ -31831,6 +31971,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -32830,6 +32975,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -33827,6 +33977,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
@@ -35126,6 +35281,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
@@ -36427,6 +36587,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -37424,6 +37589,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
@@ -38724,6 +38894,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -40023,6 +40198,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -41314,6 +41494,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -42243,6 +42428,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -43171,6 +43361,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
@@ -44108,6 +44303,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
@@ -45409,6 +45609,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -46408,6 +46613,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -47405,6 +47615,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
@@ -48704,6 +48919,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
@@ -50005,6 +50225,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -51002,6 +51227,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
@@ -52302,6 +52532,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -53600,6 +53835,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],

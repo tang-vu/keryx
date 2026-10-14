@@ -33,7 +33,7 @@ beforeEach(() => {
 });
 afterEach(() => { f.sql.close(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const req = (path: string, body: string, headers = {}) => new NextRequest(`https://claims.example${path}`, { method: "POST", body, headers });
-const discordBody = JSON.stringify({ type: 2, application_id: "synthetic-app", token: "synthetic-interaction", member: { user: { id: "user-1" } },
+const discordBody = JSON.stringify({ type: 2, application_id: "synthetic-app", token: "synthetic-interaction", member: { user: { id: "123456789012345678" } },
   data: { name: "ask", options: [{ name: "question", value: "Synthetic private delivery" }] } });
 const slackBody = (url = "https://hooks.slack.com/commands/synthetic/private") => new URLSearchParams({ command: "/keryx", text: "Synthetic private delivery", user_id: "user-1", channel_id: "room", response_url: url }).toString();
 const telegramReq = () => req("/api/telegram/webhook", JSON.stringify({ message: { message_id: 42, chat: { id: -100123, type: "group" }, from: { id: 789, is_bot: false }, text: "/ask Synthetic private delivery" } }), { "x-telegram-bot-api-secret-token": "synthetic-webhook" });
@@ -97,4 +97,49 @@ it("private Telegram address must be the authenticated sender and must exist bef
   for (const command of [{ chatId: 790, userId: 789, chatType: "private" }, { chatId: -1, userId: 0, chatType: "group" }, { chatId: -1, userId: 789, chatType: "channel" }])
     expect(await prepareTelegramPrivateReply({ ...command, question: "Synthetic", messageId: 42 }, send)).toBeNull();
   expect(send).not.toHaveBeenCalled();
+});
+it.each(["discord", "slack", "telegram"] as const)("%s delivery failure cannot log an echoed credential or retry research", async platform => {
+  const issue = vi.spyOn(f.store, "issue");
+  fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body)); calls.push({ url, body });
+    const privateText = String(body.content ?? body.text ?? "");
+    if (privateText.includes("/claim-run#")) throw new Error("Synthetic transport echoed " + privateText);
+    return Response.json({ ok: true, result: { message_id: 55, chat: { id: 789, type: "private" } } });
+  });
+  if (platform === "discord") await discord(req("/api/discord/interactions", discordBody));
+  else if (platform === "slack") await slack(req("/api/slack/commands", slackBody()));
+  else await telegram(telegramReq());
+  await mocks.after[0]();
+  const privateCalls = calls.filter(call => String(call.body.content ?? call.body.text ?? "").includes("/claim-run#"));
+  expect(privateCalls).toHaveLength(1);
+  const token = String(privateCalls[0].body.content ?? privateCalls[0].body.text).match(/\/claim-run#([a-f0-9]{64})/)![1];
+  expect(JSON.stringify(logs.mock.calls)).not.toContain(token); expect(JSON.stringify(logs.mock.calls)).not.toContain("transport echoed");
+  expect(mocks.collect).toHaveBeenCalledOnce(); expect(issue).toHaveBeenCalledOnce();
+  expect(f.sql.prepare("SELECT id FROM query_runs").all()).toHaveLength(1);
+  expect(JSON.stringify(f.sql.prepare("SELECT * FROM query_runs").all())).not.toContain(token);
+  expect(JSON.stringify(f.sql.prepare("SELECT * FROM anonymous_run_claims").all())).not.toContain(token);
+  if (platform === "telegram") expect(calls.every(call => call.body.chat_id === 789)).toBe(true);
+  else expect(calls).toHaveLength(1);
+});
+it.each(["discord", "slack", "telegram"] as const)("%s late issuance failure preserves the answer and returns no backend secret", async platform => {
+  const secret = "e".repeat(64), issue = vi.spyOn(f.store, "issue").mockRejectedValue(new Error("Synthetic backend echoed /claim-run#" + secret));
+  if (platform === "discord") await discord(req("/api/discord/interactions", discordBody));
+  else if (platform === "slack") await slack(req("/api/slack/commands", slackBody()));
+  else await telegram(telegramReq());
+  await mocks.after[0]();
+  expect(JSON.stringify(calls)).toContain("Saved synthetic answer"); expect(JSON.stringify(calls)).toContain("private account claim is unavailable");
+  expect(JSON.stringify([calls, logs.mock.calls])).not.toContain(secret); expect(JSON.stringify([calls, logs.mock.calls])).not.toContain("backend echoed");
+  expect(mocks.collect).toHaveBeenCalledOnce(); expect(issue).toHaveBeenCalledOnce();
+  expect(f.sql.prepare("SELECT id FROM query_runs").all()).toHaveLength(1); expect(f.sql.prepare("SELECT * FROM anonymous_run_claims").all()).toEqual([]);
+  if (platform === "telegram") expect(calls.every(call => call.body.chat_id === 789)).toBe(true);
+});
+it.each(["discord", "slack", "telegram"] as const)("%s refuses a missing claim capability before research or issuance", async platform => {
+  mocks.db.mockResolvedValue({}); const issue = vi.spyOn(f.store, "issue");
+  if (platform === "discord") await discord(req("/api/discord/interactions", discordBody));
+  else if (platform === "slack") await slack(req("/api/slack/commands", slackBody()));
+  else await telegram(telegramReq());
+  await mocks.after[0]();
+  expect(mocks.collect).not.toHaveBeenCalled(); expect(issue).not.toHaveBeenCalled();
+  expect(JSON.stringify(calls)).not.toContain("/claim-run#");
+  expect(f.sql.prepare("SELECT * FROM query_runs").all()).toEqual([]); expect(f.sql.prepare("SELECT * FROM anonymous_run_claims").all()).toEqual([]);
 });
