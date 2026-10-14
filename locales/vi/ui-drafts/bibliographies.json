@@ -1,0 +1,140 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/bibliographies.json",
+  "sourceSha256": "f790ecae3b08a06150707fdd02efd765a54f0c6ef06697fc04b4be8923372b4f",
+  "entries": {
+    "pageTitle": {
+      "source": "Private synced bibliographies — Keryx",
+      "text": "Danh mục tài liệu đồng bộ riêng tư — Keryx"
+    },
+    "heading": {
+      "source": "Private synced bibliographies",
+      "text": "Danh mục tài liệu đồng bộ riêng tư"
+    },
+    "intro": {
+      "source": "Create a private BibTeX link from saved paper metadata, then explicitly replace its references as your review changes. Anyone with the link can download it until you revoke it.",
+      "text": "Tạo liên kết BibTeX riêng tư từ siêu dữ liệu bài đã lưu, rồi chủ động thay thế tài liệu tham khảo khi bản tổng quan thay đổi. Bất kỳ ai có liên kết đều có thể tải xuống cho đến khi bạn thu hồi."
+    },
+    "checking": {
+      "source": "Checking your sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "signIn": {
+      "source": "Sign in with your wallet",
+      "text": "Đăng nhập bằng ví của bạn"
+    },
+    "source": {
+      "source": "References come from this browser’s saved literature workspace. Personal notes, screening decisions and your research question are excluded. No paper is read and nothing is sent to a provider.",
+      "text": "Tài liệu tham khảo lấy từ không gian tài liệu đã lưu trong trình duyệt này. Không bao gồm ghi chú cá nhân, quyết định sàng lọc và câu hỏi nghiên cứu. Không đọc bài nào và không gửi gì cho nhà cung cấp."
+    },
+    "titleLabel": {
+      "source": "Private review name",
+      "text": "Tên bản tổng quan riêng tư"
+    },
+    "create": {
+      "source": "Create private BibTeX link",
+      "text": "Tạo liên kết BibTeX riêng tư"
+    },
+    "reload": {
+      "source": "Reload my bibliographies",
+      "text": "Tải lại danh mục tài liệu của tôi"
+    },
+    "replace": {
+      "source": "Replace references from this browser",
+      "text": "Thay tài liệu tham khảo từ trình duyệt này"
+    },
+    "revoke": {
+      "source": "Revoke link and delete snapshot",
+      "text": "Thu hồi liên kết và xóa bản chụp"
+    },
+    "replaceConfirm": {
+      "source": "Replace this bibliography with {count} currently saved papers? Its private link stays the same. Notes and screening decisions are excluded.",
+      "text": "Thay danh mục này bằng {count} bài hiện đã lưu? Liên kết riêng tư giữ nguyên. Không bao gồm ghi chú và quyết định sàng lọc."
+    },
+    "revokeConfirm": {
+      "source": "Revoke this private link and delete its server snapshot? Copies already downloaded elsewhere cannot be recalled.",
+      "text": "Thu hồi liên kết riêng tư và xóa bản chụp trên máy chủ? Không thể thu hồi các bản đã tải xuống ở nơi khác."
+    },
+    "created": {
+      "source": "Link created. Copy and save it now; it cannot be retrieved again after leaving this page.",
+      "text": "Đã tạo liên kết. Sao chép và lưu ngay; bạn không thể lấy lại sau khi rời trang này."
+    },
+    "updated": {
+      "source": "References replaced. The same link now serves this snapshot. Refresh the linked file in your writing tool to retrieve it.",
+      "text": "Đã thay tài liệu tham khảo. Liên kết cũ hiện cung cấp bản chụp này. Làm mới tệp được liên kết trong công cụ viết để lấy bản mới."
+    },
+    "revoked": {
+      "source": "Link revoked and server snapshot deleted. Existing downloaded copies remain.",
+      "text": "Đã thu hồi liên kết và xóa bản chụp trên máy chủ. Các bản đã tải xuống vẫn còn."
+    },
+    "secretLabel": {
+      "source": "Private bearer URL (shown once; keep it secret)",
+      "text": "URL riêng tư cấp quyền cho người có liên kết (chỉ hiển thị một lần; giữ bí mật)"
+    },
+    "copy": {
+      "source": "Copy private URL",
+      "text": "Sao chép URL riêng tư"
+    },
+    "copied": {
+      "source": "Private URL copied to your clipboard.",
+      "text": "Đã sao chép URL riêng tư vào bộ nhớ tạm."
+    },
+    "empty": {
+      "source": "No private bibliographies saved for this signed-in owner.",
+      "text": "Chưa có danh mục tài liệu riêng tư nào được lưu cho chủ sở hữu đang đăng nhập."
+    },
+    "papers": {
+      "source": "papers",
+      "text": "bài nghiên cứu"
+    },
+    "revision": {
+      "source": "Revision",
+      "text": "Bản sửa đổi"
+    },
+    "ready": {
+      "source": "saved papers ready to publish",
+      "text": "bài đã lưu sẵn sàng xuất bản"
+    },
+    "loading": {
+      "source": "Loading your bibliographies…",
+      "text": "Đang tải danh mục tài liệu của bạn…"
+    },
+    "unavailable": {
+      "source": "Private bibliographies are unavailable on this deployment. Your browser workspace is unchanged.",
+      "text": "Danh mục tài liệu riêng tư không khả dụng trên bản triển khai này. Không gian làm việc trong trình duyệt giữ nguyên."
+    },
+    "invalid": {
+      "source": "Check the review name and saved paper metadata, or reduce the bibliography size.",
+      "text": "Kiểm tra tên bản tổng quan và siêu dữ liệu bài đã lưu, hoặc giảm kích thước danh mục."
+    },
+    "conflict": {
+      "source": "This bibliography or signed-in owner changed. Reload before making another change.",
+      "text": "Danh mục này hoặc chủ sở hữu đang đăng nhập đã thay đổi. Tải lại trước khi thay đổi tiếp."
+    },
+    "limit": {
+      "source": "This bibliography exceeds the storage limit. Remove a saved bibliography or reduce the snapshot.",
+      "text": "Danh mục này vượt giới hạn lưu trữ. Xóa một danh mục đã lưu hoặc giảm kích thước bản chụp."
+    },
+    "failed": {
+      "source": "The request could not be confirmed. It may already have applied. Reload to inspect the saved state; no request is automatically retried.",
+      "text": "Chưa thể xác nhận yêu cầu. Yêu cầu có thể đã được áp dụng. Tải lại để kiểm tra trạng thái đã lưu; không tự động thử lại yêu cầu nào."
+    },
+    "clipboardFailed": {
+      "source": "Clipboard access failed. Select and copy the private URL manually.",
+      "text": "Không thể truy cập bộ nhớ tạm. Chọn và sao chép URL riêng tư thủ công."
+    },
+    "boundary": {
+      "source": "This publishes a metadata snapshot only when you choose Create or Replace. It does not automatically track workspace edits or synchronize Zotero. Revocation stops future downloads, not copies already imported.",
+      "text": "Chỉ xuất bản bản chụp siêu dữ liệu khi bạn chọn Tạo hoặc Thay thế. Không tự động theo dõi chỉnh sửa trong không gian làm việc hay đồng bộ Zotero. Thu hồi chỉ ngăn lượt tải sau này, không xóa bản đã nhập."
+    },
+    "workspace": {
+      "source": "Open saved literature workspace",
+      "text": "Mở không gian tài liệu đã lưu"
+    },
+    "manage": {
+      "source": "Manage private synced BibTeX",
+      "text": "Quản lý BibTeX đồng bộ riêng tư"
+    }
+  }
+}

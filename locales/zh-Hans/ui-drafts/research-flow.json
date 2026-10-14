@@ -1,0 +1,1152 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-flow.ts",
+  "sourceSha256": "b23cae7bd717df2f90968e5e9f08414aed07bb05d41a39c0737ef3a777dfb827",
+  "entries": {
+    "creatorPayments.stampRing": {
+      "source": "★ PAID IN FULL ★ KERYX ★ USDC ON ARC ",
+      "text": "★ 全额已付 ★ KERYX ★ ARC 上 USDC "
+    },
+    "creatorPayments.stampPaid": {
+      "source": "PAID",
+      "text": "已付款"
+    },
+    "creatorPayments.stampSettled": {
+      "source": "SETTLED · ARC",
+      "text": "已结算 · ARC"
+    },
+    "creatorPayments.contractTitle": {
+      "source": "Circle Gateway contract on {network}; inspect the original receipt for payment evidence",
+      "text": "{network} 上的 Circle Gateway 合约；查看原收据获取付款证据"
+    },
+    "creatorPayments.contractLink": {
+      "source": "Gateway · {network} ↗",
+      "text": "Gateway · {network} ↗"
+    },
+    "decisionLog.deciding": {
+      "source": "deciding",
+      "text": "决策中"
+    },
+    "decisionLog.title": {
+      "source": "The decision",
+      "text": "决策"
+    },
+    "decisionLog.label": {
+      "source": "Decision log",
+      "text": "决策日志"
+    },
+    "decisionLog.connecting": {
+      "source": "Contacting the herald…",
+      "text": "正在联系 herald…"
+    },
+    "decisionLog.jumpToLatest": {
+      "source": "Jump to latest",
+      "text": "跳转最新"
+    },
+    "decisionLog.settledAmount": {
+      "source": "${amount} settled",
+      "text": "${amount} 已结算"
+    },
+    "decisionLog.pendingAmount": {
+      "source": "${amount} confirmation pending",
+      "text": "${amount} 待确认"
+    },
+    "decisionLog.simulatedAmount": {
+      "source": "${amount} offline simulated",
+      "text": "${amount} 离线模拟"
+    },
+    "decisionLog.unverifiedAmount": {
+      "source": "${amount} conflicting payment state",
+      "text": "${amount} 付款状态冲突"
+    },
+    "decisionLog.steps.one": {
+      "source": "{count} steps",
+      "text": "{count} 个步骤"
+    },
+    "decisionLog.steps.other": {
+      "source": "{count} steps",
+      "text": "{count} 个步骤"
+    },
+    "sourceDecision.refused": {
+      "source": "Source selection refused",
+      "text": "来源选择被拒绝"
+    },
+    "sourceDecision.partiallyWithheld": {
+      "source": "Source selection partially withheld",
+      "text": "来源选择部分暂缓"
+    },
+    "sourceDecision.marketplace": {
+      "source": "x402 market",
+      "text": "x402 市场"
+    },
+    "sourceDecision.candidateCount.one": {
+      "source": "{count} candidates",
+      "text": "{count} 个候选"
+    },
+    "sourceDecision.candidateCount.other": {
+      "source": "{count} candidates",
+      "text": "{count} 个候选"
+    },
+    "sourceDecision.targetCount.one": {
+      "source": "{count} targets",
+      "text": "{count} 个目标"
+    },
+    "sourceDecision.targetCount.other": {
+      "source": "{count} targets",
+      "text": "{count} 个目标"
+    },
+    "sourceDecision.proposalCount.one": {
+      "source": "{count} proposal rows",
+      "text": "{count} 行提议"
+    },
+    "sourceDecision.proposalCount.other": {
+      "source": "{count} proposal rows",
+      "text": "{count} 行提议"
+    },
+    "sourceDecision.matchedCount.one": {
+      "source": "{count} matched",
+      "text": "{count} 个匹配"
+    },
+    "sourceDecision.matchedCount.other": {
+      "source": "{count} matched",
+      "text": "{count} 个匹配"
+    },
+    "sourceDecision.actionableCount.one": {
+      "source": "{count} actionable",
+      "text": "{count} 个可操作"
+    },
+    "sourceDecision.actionableCount.other": {
+      "source": "{count} actionable",
+      "text": "{count} 个可操作"
+    },
+    "sourceDecision.withheldCount.one": {
+      "source": "{count} withheld",
+      "text": "{count} 个暂不提供"
+    },
+    "sourceDecision.withheldCount.other": {
+      "source": "{count} withheld",
+      "text": "{count} 个暂不提供"
+    },
+    "sourceDecision.invalidCount.one": {
+      "source": "{count} invalid rows",
+      "text": "{count} 个无效行"
+    },
+    "sourceDecision.invalidCount.other": {
+      "source": "{count} invalid rows",
+      "text": "{count} 个无效行"
+    },
+    "sourceDecision.reasons": {
+      "source": "Reasons: {reasons}",
+      "text": "原因：{reasons}"
+    },
+    "sourceDecision.truncatedReasons": {
+      "source": "Reasons: {reasons} (additional reasons omitted)",
+      "text": "原因：{reasons}（省略其他原因）"
+    },
+    "sourceDecision.priceAndValue": {
+      "source": "${price} · EV {value}%",
+      "text": "${price} · 预期价值 {value}%"
+    },
+    "decisionPhase.decompose": {
+      "source": "Decompose",
+      "text": "分解"
+    },
+    "decisionPhase.discover": {
+      "source": "Discover",
+      "text": "发现"
+    },
+    "decisionPhase.precheck": {
+      "source": "Pre-check",
+      "text": "预检查"
+    },
+    "decisionPhase.decide": {
+      "source": "Decide",
+      "text": "决定"
+    },
+    "decisionPhase.fetch": {
+      "source": "Fetch",
+      "text": "获取"
+    },
+    "decisionPhase.sufficiency": {
+      "source": "Sufficiency",
+      "text": "充分性"
+    },
+    "decisionPhase.reevaluate": {
+      "source": "Re-evaluate",
+      "text": "重新评估"
+    },
+    "decisionPhase.synthesize": {
+      "source": "Synthesize",
+      "text": "综合"
+    },
+    "decisionPhase.evidence": {
+      "source": "Evidence",
+      "text": "证据"
+    },
+    "decisionPhase.adjudicate": {
+      "source": "Adjudicate",
+      "text": "裁定"
+    },
+    "decisionPhase.verdict": {
+      "source": "Verdict",
+      "text": "判断"
+    },
+    "decisionPhase.attribute": {
+      "source": "Attribute",
+      "text": "归属"
+    },
+    "decisionPhase.settle": {
+      "source": "Settle",
+      "text": "结算"
+    },
+    "decisionPhase.done": {
+      "source": "Done",
+      "text": "完成"
+    },
+    "sourceDecision.buy": {
+      "source": "BUY",
+      "term": "buy"
+    },
+    "sourceDecision.cache": {
+      "source": "CACHE",
+      "term": "cache"
+    },
+    "sourceDecision.skip": {
+      "source": "SKIP",
+      "term": "skip"
+    },
+    "decisionBudget.underCap": {
+      "source": "${amount} under cap",
+      "text": "低于上限 ${amount}"
+    },
+    "researchChat.sessionPayer": {
+      "source": "your funded session",
+      "text": "您的已注资会话"
+    },
+    "researchChat.expiredPayer": {
+      "source": "your expired funded session (recovery required)",
+      "text": "您的已过期注资会话（需要恢复）"
+    },
+    "researchChat.treasuryPayer": {
+      "source": "Keryx treasury",
+      "text": "Keryx 金库"
+    },
+    "researchChat.label": {
+      "source": "Research conversation",
+      "text": "研究对话"
+    },
+    "researchChat.kicker": {
+      "source": "Research with Keryx",
+      "text": "使用 Keryx 研究"
+    },
+    "researchChat.title": {
+      "source": "Ask Keryx",
+      "text": "向 Keryx 提问"
+    },
+    "researchChat.introduction": {
+      "source": "Get a cited answer. Inspect source decisions.",
+      "text": "获取带引用答案，查看来源决策。"
+    },
+    "researchChat.turnsLabel": {
+      "source": "Conversation turns",
+      "text": "对话轮次"
+    },
+    "researchChat.followUpContext": {
+      "source": "Follow-ups use the previous question only, not its answer or the full chat. Include the details you want researched.",
+      "text": "后续提问仅使用前一问题，不使用答案或完整聊天。请包含希望研究的详情。"
+    },
+    "researchChat.newQuestionContext": {
+      "source": "Start a new research question. Each request has its own source cap.",
+      "text": "开始新的研究问题。每个请求有独立来源上限。"
+    },
+    "researchChat.newResearch": {
+      "source": "New research",
+      "text": "新研究"
+    },
+    "researchChat.stopResearch": {
+      "source": "Stop research",
+      "text": "停止研究"
+    },
+    "researchChat.historyNotice": {
+      "source": "Conversation stays in this tab while the page is open. Completed reports have a saved link; signed-in reports appear in My saved reports. Download a report to keep a local copy.",
+      "text": "页面打开期间对话保留在此标签页。完成报告有保存链接；已登录报告显示在“我的已保存报告”。下载报告以保留本地副本。"
+    },
+    "researchChat.toolsLabel": {
+      "source": "Research tools",
+      "text": "研究工具"
+    },
+    "researchChat.savedReports": {
+      "source": "My saved reports",
+      "text": "我的已保存报告"
+    },
+    "researchChat.paidResearch": {
+      "source": "Paid agent research & recovery",
+      "text": "付费代理研究及恢复"
+    },
+    "researchChat.publishSource": {
+      "source": "Publish a paid source",
+      "text": "发布付费来源"
+    },
+    "researchTurn.inProgress": {
+      "source": "Keryx · Research in progress",
+      "text": "Keryx · 研究进行中"
+    },
+    "researchTurn.findingSources": {
+      "source": "Finding sources worth reading…",
+      "text": "正在寻找值得阅读的来源…"
+    },
+    "researchTurn.stoppedNotice": {
+      "source": "Stopped waiting for this research. Payments already signed may still settle; stopping does not refund them.",
+      "text": "已停止等待此研究。已签名付款仍可能结算；停止不会退款。"
+    },
+    "researchTurn.failed": {
+      "source": "Research could not finish. Try another question.",
+      "text": "研究未能完成。请尝试其他问题。"
+    },
+    "researchTurn.label": {
+      "source": "Research: {question}",
+      "text": "研究：{question}"
+    },
+    "researchTurn.requestSummary": {
+      "source": "You · {payer} · source cap {amount} USDC",
+      "text": "您 · {payer} · 来源上限 {amount} USDC"
+    },
+    "researchTurn.retryAfter": {
+      "source": "Try again in {seconds}s. Your saved reports remain available.",
+      "text": "{seconds} 秒后重试。已保存报告仍可用。"
+    },
+    "researchTurn.retryShortly": {
+      "source": "Try again shortly. Your saved reports remain available.",
+      "text": "稍后重试。已保存报告仍可用。"
+    },
+    "researchTurn.paymentPending": {
+      "source": "{amount} pending",
+      "text": "{amount} 待处理"
+    },
+    "researchTurn.paymentSimulated": {
+      "source": "{amount} simulated",
+      "text": "{amount} 模拟"
+    },
+    "researchTurn.paymentUnverified": {
+      "source": "{amount} unverified",
+      "text": "{amount} 未核验"
+    },
+    "researchTurn.paymentFailed": {
+      "source": "{amount} failed",
+      "text": "{amount} 失败"
+    },
+    "researchTurn.summary.one": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap",
+      "text": "决策日志及付款 · {count} 步 · 上限 {cap} 中 {settled} USDC 已结算"
+    },
+    "researchTurn.summaryWithUnsettled.one": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · {unsettled}",
+      "text": "决策日志及付款 · {count} 步 · 上限 {cap} 中 {settled} USDC 已结算 · {unsettled}"
+    },
+    "researchTurn.offlineSummary.one": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · offline simulation",
+      "text": "决策日志及付款 · {count} 步 · 上限 {cap} 中 {settled} USDC 已结算 · 离线模拟"
+    },
+    "researchTurn.offlineSummaryWithUnsettled.one": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · {unsettled} · offline simulation",
+      "text": "决策日志及付款 · {count} 步 · 上限 {cap} 中 {settled} USDC 已结算 · {unsettled} · 离线模拟"
+    },
+    "researchTurn.summary.other": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap",
+      "text": "决策日志及付款 · {count} 步 · 上限 {cap} 中 {settled} USDC 已结算"
+    },
+    "researchTurn.summaryWithUnsettled.other": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · {unsettled}",
+      "text": "决策日志及付款 · {count} 步 · 上限 {cap} 中 {settled} USDC 已结算 · {unsettled}"
+    },
+    "researchTurn.offlineSummary.other": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · offline simulation",
+      "text": "决策日志及付款 · {count} 步 · 上限 {cap} 中 {settled} USDC 已结算 · 离线模拟"
+    },
+    "researchTurn.offlineSummaryWithUnsettled.other": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · {unsettled} · offline simulation",
+      "text": "决策日志及付款 · {count} 步 · 上限 {cap} 中 {settled} USDC 已结算 · {unsettled} · 离线模拟"
+    },
+    "researchDecisions.boundary": {
+      "source": "Why the agent chose BUY, SKIP or CACHE. A decision is a plan, not proof of a completed read or payment.",
+      "text": "代理为何选择 BUY、SKIP 或 CACHE。决策是计划，不是完成阅读或付款的凭证。"
+    },
+    "researchDecisions.integrityNotice": {
+      "source": "Receipt integrity checked in this browser. Matches the displayed job and answer. Settlement remains server-reported; original request verification requires the buyer journal.",
+      "text": "收据完整性已在此浏览器检查，与显示任务及答案匹配。结算仍由服务器报告；原请求核验需买方日志。"
+    },
+    "researchDecisions.failed": {
+      "source": "Source decisions could not be loaded or verified. Your answer is still available.",
+      "text": "无法加载或核验来源决策。答案仍可用。"
+    },
+    "researchDecisions.retry": {
+      "source": "Retry loading decisions",
+      "text": "重试加载决策"
+    },
+    "researchDecisions.loading": {
+      "source": "Loading source decisions…",
+      "text": "正在加载来源决策…"
+    },
+    "researchDecisions.empty": {
+      "source": "No source decisions were recorded for this job.",
+      "text": "此任务未记录来源决策。"
+    },
+    "researchDecisions.title": {
+      "source": "Source decisions",
+      "text": "来源决策"
+    },
+    "researchDecisions.count.one": {
+      "source": "Source decisions ({count})",
+      "text": "来源决策（{count}）"
+    },
+    "researchDecisions.count.other": {
+      "source": "Source decisions ({count})",
+      "text": "来源决策（{count}）"
+    },
+    "researchDecisions.quotedPrice": {
+      "source": "{action} · quoted access price {amount} USDC",
+      "text": "{action} · 访问报价 {amount} USDC"
+    },
+    "researchDecisions.unavailableTarget": {
+      "source": "Research target {number} (text unavailable)",
+      "text": "研究目标 {number}（文本不可用）"
+    },
+    "followUp.title": {
+      "source": "Ask a follow-up",
+      "text": "提出后续问题"
+    },
+    "followUp.paymentNotice": {
+      "source": "New dispatch · creators paid again",
+      "text": "新研究 · 再次向创作者付款"
+    },
+    "followUp.questionLabel": {
+      "source": "Your follow-up question",
+      "text": "您的后续问题"
+    },
+    "followUp.placeholder": {
+      "source": "How does that compare to…?",
+      "text": "与…相比如何？"
+    },
+    "followUp.contextNotice": {
+      "source": "Carries this dispatch’s question as context — never its answer. The next dispatch is read from sources bought for it.",
+      "text": "携带此次研究的问题作为上下文，绝不携带答案。下一次研究从为其购买的来源阅读。"
+    },
+    "followUp.submit": {
+      "source": "Dispatch follow-up",
+      "text": "发起后续研究"
+    },
+    "researchTrial.label": {
+      "source": "Sponsored research trial",
+      "text": "赞助研究试用"
+    },
+    "researchTrial.title": {
+      "source": "Research trial, sponsored by Keryx",
+      "text": "Keryx 赞助研究试用"
+    },
+    "researchTrial.limits": {
+      "source": "No wallet or USDC deposit required. Keryx covers source purchases, eligible creator rewards and operating fees within its trial usage and spending limits.",
+      "text": "无需钱包或 USDC 存款。Keryx 在试用使用及支出限制内承担来源购买、合格创作者奖励和运营费。"
+    },
+    "researchTrial.prepareQuestion": {
+      "source": "Prepare a research question →",
+      "text": "准备研究问题 →"
+    },
+    "researchTrial.literatureLink": {
+      "source": "Working on a literature review? Save and compare papers →",
+      "text": "正在做文献综述？保存并比较论文 →"
+    },
+    "researchTrial.publicNotice": {
+      "source": "Trial reports have public links. Use questions you can share publicly.",
+      "text": "试用报告有公开链接。请使用可公开分享的问题。"
+    },
+    "researchTrial.publicAndPayerNotice": {
+      "source": "Trial reports have public links. Use questions you can share publicly. Check who pays in the question composer; an active research budget uses your USDC.",
+      "text": "试用报告有公开链接。请使用可公开分享的问题。在问题编辑器查看付款方；已启用研究预算会使用您的 USDC。"
+    },
+    "researchTour.budgetTitle": {
+      "source": "Research with a budget",
+      "text": "带预算研究"
+    },
+    "researchTour.budgetBody": {
+      "source": "Keryx finds sources, explains what it buys or skips, and cites evidence in its answer.",
+      "text": "Keryx 发现来源，解释购买或跳过的内容，并在答案引用证据。"
+    },
+    "researchTour.questionTitle": {
+      "source": "Ask a question",
+      "text": "提出问题"
+    },
+    "researchTour.questionBody": {
+      "source": "Enter the research question you want answered. You can inspect decisions as the answer streams.",
+      "text": "输入希望回答的研究问题。答案流式输出时可查看决策。"
+    },
+    "researchTour.capTitle": {
+      "source": "Choose a spending cap",
+      "text": "选择支出上限"
+    },
+    "researchTour.capBody": {
+      "source": "Set the most this request may spend. A cap is permission, not a promise to spend it all.",
+      "text": "设置此请求最多支出。上限是许可，不承诺全部花费。"
+    },
+    "researchTour.startTitle": {
+      "source": "Start research",
+      "text": "开始研究"
+    },
+    "researchTour.open": {
+      "source": "How it works",
+      "text": "工作原理"
+    },
+    "researchTour.label": {
+      "source": "How Keryx works",
+      "text": "Keryx 如何运作"
+    },
+    "researchTour.closeLabel": {
+      "source": "Close tour",
+      "text": "关闭导览"
+    },
+    "researchTour.close": {
+      "source": "Close",
+      "text": "关闭"
+    },
+    "researchTour.back": {
+      "source": "Back",
+      "text": "返回"
+    },
+    "researchTour.done": {
+      "source": "Done",
+      "text": "完成"
+    },
+    "researchTour.next": {
+      "source": "Next",
+      "text": "下一页"
+    },
+    "researchTour.startBody": {
+      "source": "Submit to see source decisions, payment state, citations, and creator rewards on {network}.",
+      "text": "提交后查看 {network} 上的来源决策、付款状态、引用及创作者奖励。"
+    },
+    "researchTour.step": {
+      "source": "Step {number} of {total}",
+      "text": "第 {number} 步，共 {total} 步"
+    },
+    "creatorPayments.title": {
+      "source": "The settlement",
+      "text": "结算"
+    },
+    "creatorPayments.currentNetwork": {
+      "source": "weighted · USDC on Arc",
+      "text": "加权 · Arc 上的 USDC"
+    },
+    "creatorPayments.operatingFees": {
+      "source": "Keryx operating fees",
+      "text": "Keryx 运营费用"
+    },
+    "creatorPayments.operatingFeeNotice": {
+      "source": "Research operating fees are recorded separately from creator rewards.",
+      "text": "研究运营费与创作者奖励分别记录。"
+    },
+    "creatorPayments.waiting": {
+      "source": "Waiting on the herald to pay…",
+      "text": "等待 herald 付款…"
+    },
+    "creatorPayments.empty": {
+      "source": "Payouts to cited creators appear here.",
+      "text": "向被引用创作者的付款在此显示。"
+    },
+    "creatorPayments.batched": {
+      "source": "batched",
+      "text": "批量处理"
+    },
+    "creatorPayments.failed": {
+      "source": "failed · not charged",
+      "text": "失败 · 未收费"
+    },
+    "creatorPayments.pending": {
+      "source": "confirmation pending",
+      "text": "待确认"
+    },
+    "creatorPayments.offline": {
+      "source": "Offline — simulated",
+      "text": "离线 — 模拟"
+    },
+    "creatorPayments.recordedStates": {
+      "source": "Recorded payment states",
+      "text": "已记录付款状态"
+    },
+    "creatorPayments.recordedNetwork": {
+      "source": "{network} · recorded USDC",
+      "text": "{network} · 已记录 USDC"
+    },
+    "creatorPayments.settlementTitle": {
+      "source": "Circle Gateway settlement ID {reference} — batched on-chain on Arc (not a per-tx EVM hash)",
+      "text": "Circle Gateway 结算 ID {reference}，在 Arc 链上批量处理（不是每笔交易的 EVM 哈希）"
+    },
+    "creatorPayments.settledWithoutReference": {
+      "source": "{payee} · recorded settled · transfer ID unavailable",
+      "text": "{payee} · 记录为已结算 · 转账 ID 不可用"
+    },
+    "creatorPayments.simulated": {
+      "source": "{payee} · simulated",
+      "text": "{payee} · 模拟"
+    },
+    "creatorPayments.pendingTotal.one": {
+      "source": "{count} pending · confirmed total",
+      "text": "{count} 个等待确认 · 已确认总额"
+    },
+    "creatorPayments.failedTotal.one": {
+      "source": "{count} failed · not charged",
+      "text": "{count} 个失败 · 未收费"
+    },
+    "creatorPayments.pendingTotal.other": {
+      "source": "{count} pending · confirmed total",
+      "text": "{count} 个等待确认 · 已确认总额"
+    },
+    "creatorPayments.failedTotal.other": {
+      "source": "{count} failed · not charged",
+      "text": "{count} 个失败 · 未收费"
+    },
+    "creatorPayments.operatingPayment": {
+      "source": "${amount} USDC · {state}",
+      "text": "${amount} USDC · {state}"
+    },
+    "creatorPayments.operatingPaymentWithReference": {
+      "source": "${amount} USDC · {state} · Circle reference {reference}",
+      "text": "${amount} USDC · {state} · Circle 参考 {reference}"
+    },
+    "sourceDecision.diagnosticNotice": {
+      "source": "This diagnostic records why source selection was blocked. It is not a completed report or payment receipt.",
+      "text": "此诊断记录来源选择被阻止的原因。不是完成报告或付款收据。"
+    },
+    "sourceDecision.downloadDiagnostic": {
+      "source": "Download failure diagnostic",
+      "text": "下载失败诊断"
+    },
+    "embedResearch.tagline": {
+      "source": "citations are currency",
+      "text": "引用就是货币"
+    },
+    "embedResearch.trial": {
+      "source": "Free · no wallet",
+      "text": "免费 · 无需钱包"
+    },
+    "embedResearch.checking": {
+      "source": "Checking research availability…",
+      "text": "正在检查研究可用性…"
+    },
+    "embedResearch.savedReports": {
+      "source": "Saved reports",
+      "text": "已保存报告"
+    },
+    "embedResearch.checkAvailability": {
+      "source": "Check availability",
+      "text": "检查可用性"
+    },
+    "embedResearch.placeholder": {
+      "source": "Ask a question…",
+      "text": "提出问题…"
+    },
+    "embedResearch.submit": {
+      "source": "Ask ▸",
+      "text": "提问 ▸"
+    },
+    "embedResearch.limitReached": {
+      "source": "Free trial · limit reached",
+      "text": "免费试用 · 已达上限"
+    },
+    "embedResearch.continueWithWallet": {
+      "source": "keep going on keryx.cc with your own wallet",
+      "text": "使用自己的钱包在 keryx.cc 继续"
+    },
+    "embedResearch.failed": {
+      "source": "Something went wrong — please try again.",
+      "text": "出现问题，请重试。"
+    },
+    "embedResearch.fullDispatch": {
+      "source": "Full dispatch",
+      "text": "完整研究"
+    },
+    "embedResearch.footer": {
+      "source": "Powered by Keryx — paid citations reward verified creators ↗",
+      "text": "由 Keryx 提供支持 — 付费引用奖励经核验创作者 ↗"
+    },
+    "embedResearch.sourceDesk": {
+      "source": "You’re asking from {source}’s desk — if the herald cites them, they’re paid for it, instantly.",
+      "text": "您正在 {source} 的工作台提问；若 herald 引用他们，他们会立即获得付款。"
+    },
+    "embedResearch.retryAfter": {
+      "source": "Try again in {seconds}s — or {continueLink}.",
+      "text": "{seconds} 秒后重试，或{continueLink}。"
+    },
+    "embedResearch.retryShortly": {
+      "source": "Try again shortly — or {continueLink}.",
+      "text": "稍后重试，或{continueLink}。"
+    },
+    "embedResearch.recordedRewards": {
+      "source": "Citations and planned rewards · ${amount} USDC recorded ({mode})",
+      "text": "引用及计划奖励 · 已记录 ${amount} USDC（{mode}）"
+    },
+    "embedResearch.pageTitle": {
+      "source": "Ask Keryx",
+      "text": "向 Keryx 提问"
+    },
+    "agentIntegration.title": {
+      "source": "Call Keryx from your own agent",
+      "text": "从您的代理调用 Keryx"
+    },
+    "agentIntegration.packageNotice": {
+      "source": "Keryx is itself a paid x402 endpoint. The request prepays a fixed Quick/Deep service fee plus its hard creator-spend cap; the receipt itemizes what reached creators and what reserve stayed unused. Package v1 pins the execution contract and returns measured latency and evidence quality; its initial SLO is provisional, not a refund-backed SLA.",
+      "text": "Keryx 本身是付费 x402 端点。请求预付固定 Quick/Deep 服务费及硬性创作者支出上限；收据逐项列出创作者所得及未用储备。套餐 v1 固定执行合约，返回实测延迟及证据质量；初始 SLO 为暂定，不是退款支持的 SLA。"
+    },
+    "agentIntegration.copyTitle": {
+      "source": "Copy to clipboard",
+      "text": "复制到剪贴板"
+    },
+    "agentIntegration.copied": {
+      "source": "copied",
+      "text": "已复制"
+    },
+    "agentIntegration.copy": {
+      "source": "copy",
+      "text": "复制"
+    },
+    "agentIntegration.remoteTools": {
+      "source": "Remote MCP service tools:",
+      "text": "远程 MCP 服务工具："
+    },
+    "agentIntegration.setupLink": {
+      "source": "setup and tool roles ↗",
+      "text": "设置及工具角色 ↗"
+    },
+    "agentIntegration.payerNotice": {
+      "source": "Remote research uses the service budget; local stdio pays from your configured wallet.",
+      "text": "远程研究使用服务预算；本地 stdio 从配置钱包付款。"
+    },
+    "agentIntegration.schemaLinkNotice": {
+      "source": "Full schema, response shape, and buyer integration →",
+      "text": "完整模式、响应结构及买方集成 →"
+    },
+    "agentIntegration.endpoint": {
+      "source": "{endpoint} · dynamic fixed price · {network}",
+      "text": "{endpoint} · 动态固定价格 · {network}"
+    },
+    "researchJob.responseUnverified": {
+      "source": "The job response could not be verified. Keep your job ID and refresh later.",
+      "text": "无法核验任务响应。保留任务 ID 并稍后刷新。"
+    },
+    "researchJob.refreshPaused": {
+      "source": "Automatic refresh paused after ten minutes. Refresh to keep following this job.",
+      "text": "十分钟后自动刷新暂停。刷新以继续跟踪任务。"
+    },
+    "researchJob.failed": {
+      "source": "Could not load this job.",
+      "text": "无法加载此任务。"
+    },
+    "researchJob.lookupStopped": {
+      "source": "Lookup stopped. Refresh to try again; no new payment is needed.",
+      "text": "查询已停止。刷新以重试；无需新付款。"
+    },
+    "researchJob.invalidId": {
+      "source": "Enter the complete a2a_ job ID returned by your paid request.",
+      "text": "输入付费请求返回的完整 a2a_ 任务 ID。"
+    },
+    "researchJob.title": {
+      "source": "Follow a paid job",
+      "text": "跟踪付费任务"
+    },
+    "researchJob.privacyNotice": {
+      "source": "Your job ID grants access to its result. Keep it private. This page does not save it to browser storage or the address bar.",
+      "text": "任务 ID 授予结果访问权，请私密保管。此页不将其存入浏览器存储或地址栏。"
+    },
+    "researchJob.idLabel": {
+      "source": "Paid job ID",
+      "text": "付费任务 ID"
+    },
+    "researchJob.open": {
+      "source": "Open / refresh",
+      "text": "打开 / 刷新"
+    },
+    "researchJob.clear": {
+      "source": "Clear job",
+      "text": "清除任务"
+    },
+    "researchJob.loading": {
+      "source": "Looking up job…",
+      "text": "正在查询任务…"
+    },
+    "researchJob.httpFailure": {
+      "source": "Job lookup failed ({status}). Keep your job ID and refresh; this does not buy another job.",
+      "text": "任务查询失败（{status}）。保留任务 ID 并刷新；这不购买其他任务。"
+    },
+    "researchJob.updated": {
+      "source": "{status} · updated {time}",
+      "text": "{status} · 更新于 {time}"
+    },
+    "researchJobDetails.unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "researchJobDetails.reviewRequired": {
+      "source": "Operator review is required. Automatic polling has stopped. Refresh this job after review; do not submit a new payment to recover it.",
+      "text": "需要 Operator 审核。自动轮询已停止。审核后刷新此任务；不要为恢复提交新付款。"
+    },
+    "researchJobDetails.unsupported": {
+      "source": "No supported answer. The job finished, but none of its research targets reached the evidence threshold. Review the interpretation and evidence before buying again. The fixed package remains paid; unused creator reserve is not a refund.",
+      "text": "没有获支持答案。任务完成，但没有研究目标达到证据阈值。再次购买前请审阅解释及证据。固定套餐仍已付款；未用创作者储备不是退款。"
+    },
+    "researchJobDetails.qualityUnverified": {
+      "source": "Research quality is unverified. Job completion and a valid receipt do not establish a supported answer.",
+      "text": "研究质量未核验。任务完成和有效收据不确立获支持答案。"
+    },
+    "researchJobDetails.targetExceeded": {
+      "source": "target exceeded",
+      "text": "超出目标"
+    },
+    "researchJobDetails.inProgress": {
+      "source": "in progress",
+      "text": "进行中"
+    },
+    "researchJobDetails.targetMet": {
+      "source": "target met",
+      "text": "达到目标"
+    },
+    "researchJobDetails.targetNotMet": {
+      "source": "target not met",
+      "text": "未达到目标"
+    },
+    "researchJobDetails.packagePaid": {
+      "source": "Package paid",
+      "text": "套餐已付款"
+    },
+    "researchJobDetails.serviceFee": {
+      "source": "Service fee",
+      "text": "服务费"
+    },
+    "researchJobDetails.creatorCap": {
+      "source": "Creator cap",
+      "text": "创作者支出上限"
+    },
+    "researchJobDetails.settled": {
+      "source": "Settled to creators",
+      "text": "已结算给创作者"
+    },
+    "researchJobDetails.pending": {
+      "source": "Pending creator spend",
+      "text": "待处理创作者支出"
+    },
+    "researchJobDetails.unusedReserve": {
+      "source": "Unused reserve (not a refund)",
+      "text": "未用储备（不是退款）"
+    },
+    "researchJobDetails.accountingIncomplete": {
+      "source": "Incomplete accounting: recorded creator payments are a lower bound. Unused reserve is unknown.",
+      "text": "记账不完整：创作者付款记录仅为下界。未用储备未知。"
+    },
+    "researchJobDetails.settlementUnavailable": {
+      "source": "Creator settlement totals are not available in this response yet.",
+      "text": "此响应尚无创作者结算总额。"
+    },
+    "researchJobDetails.answer": {
+      "source": "Research answer",
+      "text": "研究答案"
+    },
+    "researchJobDetails.claimEvidence": {
+      "source": "Claim evidence",
+      "text": "主张证据"
+    },
+    "researchJobDetails.downloadReceipt": {
+      "source": "Download verified receipt",
+      "text": "下载经核验收据"
+    },
+    "researchJobDetails.openReceipt": {
+      "source": "Open portable receipt JSON",
+      "text": "打开可携带收据 JSON"
+    },
+    "researchJobDetails.receiptBoundary": {
+      "source": "USDC; retain the original receipt network. Evidence coverage measures grounding; it does not certify factual correctness. This view displays server-reported settlement; downloading a receipt does not independently verify it.",
+      "text": "USDC；保留原收据网络。证据覆盖衡量依据，不认证事实正确性。此视图显示服务器报告结算；下载收据不独立核验结算。"
+    },
+    "researchJobDetails.monthlyAllocation": {
+      "source": "This job uses a {amount} allocation from prepaid Research Monthly. It creates no new inbound payment. Failed or pending execution keeps its request slot.",
+      "text": "此任务使用预付 Research Monthly 的 {amount} 分配，不产生新的入站付款。失败或待处理执行保留请求名额。"
+    },
+    "researchJobDetails.timing": {
+      "source": "{elapsed}s elapsed · {target}s provisional target · {state}. No SLA remedy.",
+      "text": "已过 {elapsed} 秒 · 暂定目标 {target} 秒 · {state}。无 SLA 补救。"
+    },
+    "researchJobDetails.groundedRate": {
+      "source": "Grounded claims: {rate}%.",
+      "text": "有依据主张：{rate}%。"
+    },
+    "researchJobDetails.groundedUnavailable": {
+      "source": "Grounded claims: measurement unavailable.",
+      "text": "有依据主张：测量不可用。"
+    },
+    "researchJobDetails.coverage": {
+      "source": "{rate}% evidence coverage",
+      "text": "{rate}% 证据覆盖"
+    },
+    "savedResearch.storageUnavailable": {
+      "source": "Saved jobs could not be read. Check browser storage or import your private recovery file. No payment was made.",
+      "text": "无法读取保存任务。检查浏览器存储或导入私密恢复文件。未付款。"
+    },
+    "savedResearch.lookupPaused": {
+      "source": "Automatic lookup paused. Refresh the same job to continue; no payment is needed.",
+      "text": "自动查询暂停。刷新同一任务以继续；无需付款。"
+    },
+    "savedResearch.lookupFailed": {
+      "source": "Could not load or verify this job and receipt. Keep the recovery file and retry this job; do not submit another payment to recover it.",
+      "text": "无法加载或核验此任务及收据。保留恢复文件并重试此任务；不要为恢复提交其他付款。"
+    },
+    "savedResearch.title": {
+      "source": "Saved research jobs",
+      "text": "已保存研究任务"
+    },
+    "savedResearch.privacyNotice": {
+      "source": "Private recovery data is stored in this browser. Anyone using this browser profile can read it. A recovery file grants access to the job; keep it private. This is local history, not an account backup.",
+      "text": "私密恢复数据保存在此浏览器。使用此浏览器配置文件的人均可读取。恢复文件授予任务访问权，请私密保管。这是本地历史，不是账户备份。"
+    },
+    "savedResearch.acknowledgementNotice": {
+      "source": "Exports include any saved payment acknowledgement. Importing restores access without paying again. Copied acknowledgements are seller assertions, not independent settlement proof.",
+      "text": "导出包含已保存付款确认。导入恢复访问，不再次付款。复制的确认是卖方声明，不是独立结算凭证。"
+    },
+    "savedResearch.refresh": {
+      "source": "Refresh saved jobs",
+      "text": "刷新已保存任务"
+    },
+    "savedResearch.import": {
+      "source": "Import recovery file",
+      "text": "导入恢复文件"
+    },
+    "savedResearch.importFailed": {
+      "source": "Recovery file could not be imported. It must be an unmodified Keryx recovery file under 64 KB. If already saved, open the existing job below.",
+      "text": "无法导入恢复文件。须为未修改且小于 64 KB 的 Keryx 恢复文件。若已保存，请打开下方现有任务。"
+    },
+    "savedResearch.empty": {
+      "source": "No jobs saved here yet. Buy a job or import a CLI recovery file.",
+      "text": "此处尚无保存任务。购买任务或导入 CLI 恢复文件。"
+    },
+    "savedResearch.imported": {
+      "source": "imported recovery",
+      "text": "导入的恢复数据"
+    },
+    "savedResearch.prepared": {
+      "source": "prepared locally",
+      "text": "本地准备"
+    },
+    "savedResearch.submissionRecorded": {
+      "source": "submission recorded",
+      "text": "提交已记录"
+    },
+    "savedResearch.refreshJob": {
+      "source": "Refresh this job",
+      "text": "刷新此任务"
+    },
+    "savedResearch.exportFailed": {
+      "source": "Recovery export failed. Keep this tab and try again.",
+      "text": "恢复导出失败。保留此标签页并重试。"
+    },
+    "savedResearch.export": {
+      "source": "Export recovery file",
+      "text": "导出恢复文件"
+    },
+    "savedResearch.remove": {
+      "source": "Remove local record",
+      "text": "移除本地记录"
+    },
+    "savedResearch.close": {
+      "source": "Close job",
+      "text": "关闭任务"
+    },
+    "savedResearch.removalBoundary": {
+      "source": "Removal only deletes this browser record. It does not cancel work, revoke payment, create a refund or delete server data. Export the recovery file first if you need access later.",
+      "text": "移除仅删除此浏览器记录，不取消工作、撤销付款、退款或删除服务器数据。以后需访问时，请先导出恢复文件。"
+    },
+    "savedResearch.removalFailed": {
+      "source": "Local removal failed. Try again.",
+      "text": "本地移除失败。请重试。"
+    },
+    "savedResearch.confirmRemoval": {
+      "source": "Confirm local removal",
+      "text": "确认本地移除"
+    },
+    "savedResearch.loading": {
+      "source": "Looking up the original job…",
+      "text": "正在查询原任务…"
+    },
+    "savedResearch.sellerAcknowledged": {
+      "source": "Saved data reports a seller payment acknowledgement; this is not independent settlement verification.",
+      "text": "保存数据报告卖方付款确认；这不是独立结算核验。"
+    },
+    "savedResearch.noAcknowledgement": {
+      "source": "No saved payment acknowledgement. This does not prove the payment failed.",
+      "text": "无保存付款确认。这不证明付款失败。"
+    },
+    "savedResearch.notFoundUncertain": {
+      "source": "No order was found. A missing order does not prove no debit. Keep the recovery file for review; do not buy again to recover.",
+      "text": "未找到订单。缺失订单不证明未扣款。保留恢复文件供审核；不要为恢复再次购买。"
+    },
+    "savedResearch.integrityNotice": {
+      "source": "Receipt integrity and original-request binding verified locally. This does not certify research truth or independently verify settlement.",
+      "text": "收据完整性及原请求绑定已本地核验。不认证研究真伪，也不独立核验结算。"
+    },
+    "walletResearch.title": {
+      "source": "Paid jobs for your wallet",
+      "text": "您钱包的付费任务"
+    },
+    "walletResearch.introduction": {
+      "source": "Find browser and agent purchases paid by your signed-in wallet, including jobs missing from this browser's saved files. Sponsored playground dispatches are separate.",
+      "text": "查找已登录钱包支付的浏览器及代理购买，包括缺少此浏览器保存文件的任务。赞助 playground 研究独立。"
+    },
+    "walletResearch.privacyBoundary": {
+      "source": "This account list requires sign-in. Existing job results still use link-based access and may appear in the public archive; signing in does not make past research private.",
+      "text": "此账户列表需登录。现有任务结果仍采用链接访问，可能出现在公开档案；登录不使过去研究私密。"
+    },
+    "walletResearch.checkingSignIn": {
+      "source": "Checking sign-in…",
+      "text": "正在检查登录状态…"
+    },
+    "walletResearch.signIn": {
+      "source": "Sign in with the wallet that paid",
+      "text": "使用付款钱包登录"
+    },
+    "walletResearch.sessionEnded": {
+      "source": "Sign in again to view paid jobs.",
+      "text": "重新登录查看付费任务。"
+    },
+    "walletResearch.loadFailed": {
+      "source": "Paid job history could not be loaded. Refresh to retry.",
+      "text": "无法加载付费任务历史。刷新重试。"
+    },
+    "walletResearch.verificationFailed": {
+      "source": "Paid job history could not be verified. Refresh to retry.",
+      "text": "无法核验付费任务历史。刷新重试。"
+    },
+    "walletResearch.walletMismatch": {
+      "source": "The history response did not match your wallet.",
+      "text": "历史响应与钱包不匹配。"
+    },
+    "walletResearch.timeout": {
+      "source": "History lookup timed out. Refresh to retry.",
+      "text": "历史查询超时。刷新重试。"
+    },
+    "walletResearch.refresh": {
+      "source": "Refresh paid jobs",
+      "text": "刷新付费任务"
+    },
+    "walletResearch.loading": {
+      "source": "Loading paid jobs…",
+      "text": "正在加载付费任务…"
+    },
+    "walletResearch.empty": {
+      "source": "No paid jobs found for this wallet. Purchases made by a separate agent wallet belong to that wallet.",
+      "text": "此钱包无付费任务。独立代理钱包购买归该钱包。"
+    },
+    "walletResearch.questionUnavailable": {
+      "source": "Question unavailable for this historical job",
+      "text": "此历史任务问题不可用"
+    },
+    "walletResearch.unknown": {
+      "source": "unknown",
+      "text": "未知"
+    },
+    "walletResearch.followJob": {
+      "source": "Follow this job",
+      "text": "跟踪此任务"
+    },
+    "walletResearch.loadOlder": {
+      "source": "Load older jobs",
+      "text": "加载较早任务"
+    },
+    "walletResearch.serverRecordNotice": {
+      "source": "This lookup uses the server record. Import your original recovery file to verify the receipt against the request saved before payment.",
+      "text": "此查询使用服务器记录。导入原恢复文件，以按付款前保存请求核验收据。"
+    },
+    "walletResearch.close": {
+      "source": "Close job",
+      "text": "关闭任务"
+    },
+    "walletResearch.payingWallet": {
+      "source": "Paying wallet: {wallet}",
+      "text": "付款钱包：{wallet}"
+    },
+    "walletResearch.monthlyPrice": {
+      "source": "Prepaid Monthly allocation: {amount} · retain the original payment network",
+      "text": "预付 Monthly 分配：{amount} · 保留原付款网络"
+    },
+    "walletResearch.packagePrice": {
+      "source": "Package price: {amount} · retain the original payment network",
+      "text": "套餐价格：{amount} · 保留原付款网络"
+    },
+    "privateResearchJobs.title": {
+      "source": "Private research for your wallet",
+      "text": "您钱包的私密研究"
+    },
+    "privateResearchJobs.introduction": {
+      "source": "Find existing private jobs from your account, even on a new device. Opening a job never submits another payment.",
+      "text": "从账户查找现有私密任务，即使换新设备。打开任务绝不提交另一付款。"
+    },
+    "privateResearchJobs.checkingSignIn": {
+      "source": "Checking sign-in…",
+      "text": "正在检查登录状态…"
+    },
+    "privateResearchJobs.signIn": {
+      "source": "Sign in to view private jobs",
+      "text": "登录查看私密任务"
+    },
+    "privateResearchJobs.historyUnavailable": {
+      "source": "Private history is unavailable. Check sign-in and refresh to retry.",
+      "text": "私密历史不可用。检查登录并刷新重试。"
+    },
+    "privateResearchJobs.resultUnavailable": {
+      "source": "Private result is unavailable. Check sign-in and refresh this job to retry.",
+      "text": "私密结果不可用。检查登录并刷新此任务重试。"
+    },
+    "privateResearchJobs.refresh": {
+      "source": "Refresh private jobs",
+      "text": "刷新私密任务"
+    },
+    "privateResearchJobs.loading": {
+      "source": "Loading private jobs…",
+      "text": "正在加载私密任务…"
+    },
+    "privateResearchJobs.empty": {
+      "source": "No private jobs found for this wallet. Jobs paid by a separate agent wallet belong to that account.",
+      "text": "此钱包无私密任务。独立代理钱包支付的任务归该账户。"
+    },
+    "privateResearchJobs.viewJob": {
+      "source": "View private job",
+      "text": "查看私密任务"
+    },
+    "privateResearchJobs.loadOlder": {
+      "source": "Load older private jobs",
+      "text": "加载较早私密任务"
+    },
+    "privateResearchJobs.refreshJob": {
+      "source": "Refresh this job",
+      "text": "刷新此任务"
+    },
+    "privateResearchJobs.close": {
+      "source": "Close private job",
+      "text": "关闭私密任务"
+    },
+    "privateResearchJobs.loadingResult": {
+      "source": "Loading private result…",
+      "text": "正在加载私密结果…"
+    },
+    "privateResearchJobs.pilotNotice": {
+      "source": "Private purchasing is limited to configured pilot accounts. This view does not change access to past public research. Results are restricted to the paying account; this is not end-to-end encryption.",
+      "text": "私密购买仅限配置的试点账户。此视图不更改过去公开研究访问。结果限付款账户访问；不是端到端加密。"
+    },
+    "privateResearchJobs.capacityNotice": {
+      "source": "Private purchasing is available when the service has capacity. This view does not change access to past public research. Results are restricted to the paying account; this is not end-to-end encryption.",
+      "text": "服务有容量时可私密购买。此视图不更改过去公开研究访问。结果限付款账户访问；不是端到端加密。"
+    },
+    "privateResearchJobs.account": {
+      "source": "Account: {wallet}",
+      "text": "账户：{wallet}"
+    },
+    "privateResearchJobs.jobSummary": {
+      "source": "{mode} · {date} · Package price {amount}",
+      "text": "{mode} · {date} · 套餐价格 {amount}"
+    }
+  }
+}

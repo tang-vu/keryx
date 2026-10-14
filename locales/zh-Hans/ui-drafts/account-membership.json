@@ -1,0 +1,116 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/account-membership.ts",
+  "sourceSha256": "c82feb6a9055ad9269d1f0fc6f1f78b51f02d07876278e913bc884c3dc20c407",
+  "entries": {
+    "title": {
+      "source": "Private account and wallets",
+      "text": "私密账户与钱包"
+    },
+    "authority": {
+      "source": "Link wallets you control to share their owned history in one private account. Funds, research limits, signing, API keys and creator powers stay with each wallet.",
+      "text": "关联您控制的钱包，在同一个私密账户中共享各钱包拥有的历史记录。资金、研究限额、签名、API 密钥和创作者权限仍分别属于各钱包。"
+    },
+    "walletFree": {
+      "source": "New to wallets? The existing Google sign-in can create an unfunded, user-controlled Circle wallet. Account creation requires a separate confirmation here.",
+      "text": "刚接触钱包？现有的 Google 登录方式可创建由用户控制、尚未注资的 Circle 钱包。创建账户需要在此另行确认。"
+    },
+    "reload": {
+      "source": "Reload account",
+      "text": "重新加载账户"
+    },
+    "checking": {
+      "source": "Checking your account…",
+      "text": "正在检查您的账户…"
+    },
+    "currentWallet": {
+      "source": "Current sign-in wallet:",
+      "text": "当前登录钱包："
+    },
+    "consentPrefix": {
+      "source": "I consent to",
+      "text": "我同意"
+    },
+    "accessing": {
+      "source": "accessing",
+      "text": "访问"
+    },
+    "creating": {
+      "source": "creating",
+      "text": "创建"
+    },
+    "consentSuffix": {
+      "source": "a private account and sharing my verified wallet's owned history.",
+      "text": "私密账户，并共享我已验证钱包所拥有的历史记录。"
+    },
+    "resume": {
+      "source": "Resume private account",
+      "text": "继续访问私密账户"
+    },
+    "reviewCreate": {
+      "source": "Review account creation",
+      "text": "审阅账户创建"
+    },
+    "account": {
+      "source": "Account:",
+      "text": "账户："
+    },
+    "revision": {
+      "source": "· revision",
+      "text": "· 修订版本"
+    },
+    "unlinkConsent": {
+      "source": "I confirm removal of the selected wallet's account access. Its own history and financial obligations remain.",
+      "text": "我确认移除所选钱包的账户访问权限。该钱包自身的历史记录及财务义务将保留。"
+    },
+    "unlink": {
+      "source": "Unlink",
+      "text": "解除关联"
+    },
+    "walletToProve": {
+      "source": "Wallet to prove",
+      "text": "待证明的钱包"
+    },
+    "walletPlaceholder": {
+      "source": "0x…",
+      "text": "0x…"
+    },
+    "linkConsent": {
+      "source": "I explicitly share this wallet's past and future owned history. Its funds, signing, API keys, claims and creator powers stay separate.",
+      "text": "我明确同意共享此钱包过去和未来拥有的历史记录。其资金、签名、API 密钥、认领和创作者权限仍相互独立。"
+    },
+    "reviewWallet": {
+      "source": "Review wallet proof",
+      "text": "审阅钱包证明"
+    },
+    "revoke": {
+      "source": "Revoke this account sign-in",
+      "text": "撤销此次账户登录"
+    },
+    "confirmIntent": {
+      "source": "Confirm the exact account, wallet and intent below. This proof expires after five minutes.",
+      "text": "确认下方的确切账户、钱包和意图。此证明将在五分钟后过期。"
+    },
+    "targetSignatureHelp": {
+      "source": "Sign these exact message bytes with the target wallet using personal_sign, while keeping the initiating sign-in unchanged. A Circle wallet needs its independently verified signing context; changing this sign-in makes the link stale.",
+      "text": "使用目标钱包通过 personal_sign 签署这些确切的消息字节，同时保持发起此次操作的登录状态不变。Circle 钱包需要独立验证的签名上下文；更改此次登录会使关联失效。"
+    },
+    "targetSignature": {
+      "source": "Target wallet signature",
+      "text": "目标钱包签名"
+    },
+    "confirmLink": {
+      "source": "Confirm wallet link",
+      "text": "确认钱包关联"
+    },
+    "confirmCreate": {
+      "source": "Confirm private account creation",
+      "text": "确认创建私密账户"
+    },
+    "cancel": {
+      "source": "Cancel and reload",
+      "text": "取消并重新加载"
+    }
+  }
+}

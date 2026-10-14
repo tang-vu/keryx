@@ -1,0 +1,376 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/draft-check.json",
+  "sourceSha256": "27ad4deabacee156da36fdf89ef22248454b2eac41ff4e5d1302644cfb4e8649",
+  "entries": {
+    "page.metadataTitle": {
+      "source": "Check a draft's citations — Keryx",
+      "text": "Kiểm tra trích dẫn bản nháp — Keryx"
+    },
+    "page.metadataDescription": {
+      "source": "Compare each cited sentence of a private draft with source text you supply. Every result quotes that text exactly or says no supporting passage was found.",
+      "text": "So sánh từng câu được trích dẫn của bản nháp riêng tư với văn bản nguồn bạn cung cấp. Mỗi kết quả trích nguyên văn nguồn hoặc nêu không tìm thấy đoạn hỗ trợ."
+    },
+    "page.back": {
+      "source": "Back to your saved review",
+      "text": "Quay lại bản tổng quan đã lưu"
+    },
+    "page.heading": {
+      "source": "Check a draft against the sources it cites.",
+      "text": "Kiểm tra bản nháp với các nguồn được trích dẫn."
+    },
+    "page.introduction": {
+      "source": "Paste a passage, its reference list and the source text you hold. Each cited sentence gets a result with the exact passage it rests on.",
+      "text": "Dán đoạn văn, danh mục tài liệu tham khảo và văn bản nguồn bạn có. Mỗi câu được trích dẫn có kết quả kèm đúng đoạn làm căn cứ."
+    },
+    "page.noScript": {
+      "source": "Enable JavaScript for this local checker. No passage, reference or source text is uploaded.",
+      "text": "Bật JavaScript để dùng công cụ kiểm tra cục bộ. Không tải lên đoạn văn, tài liệu tham khảo hay văn bản nguồn."
+    },
+    "page.navigation": {
+      "source": "Check a draft's citations",
+      "text": "Kiểm tra trích dẫn của bản nháp"
+    },
+    "workspace.label": {
+      "source": "Private draft check",
+      "text": "Kiểm tra bản nháp riêng tư"
+    },
+    "workspace.privacy": {
+      "source": "By default your passage, references and source text stay in this tab’s memory and are compared in your browser. Nothing is uploaded or added to public history. Nothing is saved unless you choose Save on this device or download a private file. Your browser and same-origin scripts can access this page and saved drafts.",
+      "text": "Mặc định đoạn văn, tài liệu tham khảo và văn bản nguồn giữ trong bộ nhớ tab này và được so sánh trong trình duyệt. Không tải lên hay thêm vào lịch sử công khai. Không lưu gì trừ khi bạn chọn Lưu trên thiết bị này hoặc tải tệp riêng tư. Trình duyệt và mã cùng nguồn gốc có thể truy cập trang và bản nháp đã lưu."
+    },
+    "workspace.check": {
+      "source": "Check cited sentences",
+      "text": "Kiểm tra câu được trích dẫn"
+    },
+    "workspace.clear": {
+      "source": "Clear this tab’s check",
+      "text": "Xóa lần kiểm tra trong tab này"
+    },
+    "workspace.cleared": {
+      "source": "Check cleared from this tab.",
+      "text": "Đã xóa lần kiểm tra khỏi tab."
+    },
+    "workspace.refused": {
+      "source": "This check could not run. Keep the passage, references and source text within 64 KiB in total, with at most 64 references and 128 sentences. Your text remains below.",
+      "text": "Không thể chạy kiểm tra. Giữ tổng đoạn văn, tài liệu tham khảo và văn bản nguồn trong 64 KiB, tối đa 64 tài liệu và 128 câu. Văn bản của bạn vẫn ở bên dưới."
+    },
+    "workspace.stale": {
+      "source": "Your text changed. Run the check again to update the results.",
+      "text": "Văn bản đã thay đổi. Chạy kiểm tra lại để cập nhật kết quả."
+    },
+    "workspace.done": {
+      "source": "Check complete. Read each excerpt before relying on a result.",
+      "text": "Đã kiểm tra xong. Đọc từng trích đoạn trước khi dựa vào kết quả."
+    },
+    "workspace.download": {
+      "source": "Download results as private JSON",
+      "text": "Tải kết quả dưới dạng JSON riêng tư"
+    },
+    "workspace.downloaded": {
+      "source": "Download started. It contains your passage and excerpts; keep it private.",
+      "text": "Đã bắt đầu tải. Tệp chứa đoạn văn và trích đoạn của bạn; giữ riêng tư."
+    },
+    "passage.label": {
+      "source": "Your passage",
+      "text": "Đoạn văn của bạn"
+    },
+    "passage.guidance": {
+      "source": "Sentences are checked as written and never reworded. Citations may be written as [3], \\cite{key}, [@key], Smith et al. (2020) or (Smith, 2020). A sentence without a citation is listed but not checked.",
+      "text": "Câu được kiểm tra đúng như đã viết, không diễn đạt lại. Trích dẫn có thể viết [3], \\\\cite{key}, [@key], Smith et al. (2020) hoặc (Smith, 2020). Câu không có trích dẫn được liệt kê nhưng không kiểm tra."
+    },
+    "retention.heading": {
+      "source": "Optional private retention",
+      "text": "Lưu giữ riêng tư (tùy chọn)"
+    },
+    "retention.notice": {
+      "source": "Save only when you choose. A device save contains the passage, references and source text in this browser’s local storage. Expired saves cannot be restored and are removed on the next restore attempt; closing the page does not schedule deletion. Browser backups and downloaded files follow your own retention settings. Clearing this tab does not delete a device save.",
+      "text": "Chỉ lưu khi bạn chọn. Bản lưu thiết bị chứa đoạn văn, tài liệu tham khảo và văn bản nguồn trong lưu trữ cục bộ trình duyệt. Bản hết hạn không thể khôi phục, sẽ bị xóa vào lần thử khôi phục tiếp theo; đóng trang không lên lịch xóa. Sao lưu trình duyệt và tệp tải xuống theo cài đặt lưu giữ của bạn. Xóa tab này không xóa bản lưu thiết bị."
+    },
+    "retention.lifetime": {
+      "source": "Allow restore for",
+      "text": "Cho phép khôi phục trong"
+    },
+    "retention.hour": {
+      "source": "One hour",
+      "text": "Một giờ"
+    },
+    "retention.day": {
+      "source": "One day",
+      "text": "Một ngày"
+    },
+    "retention.week": {
+      "source": "One week",
+      "text": "Một tuần"
+    },
+    "retention.save": {
+      "source": "Save on this device",
+      "text": "Lưu trên thiết bị này"
+    },
+    "retention.restore": {
+      "source": "Restore device save",
+      "text": "Khôi phục bản lưu trên thiết bị"
+    },
+    "retention.clear": {
+      "source": "Delete device save",
+      "text": "Xóa bản lưu trên thiết bị"
+    },
+    "retention.saved": {
+      "source": "Private input saved on this device for the selected period.",
+      "text": "Đã lưu đầu vào riêng tư trên thiết bị này trong thời hạn đã chọn."
+    },
+    "retention.restored": {
+      "source": "Private input restored. Results were checked again using the current method.",
+      "text": "Đã khôi phục đầu vào riêng tư. Kết quả được kiểm tra lại bằng phương pháp hiện tại."
+    },
+    "retention.absent": {
+      "source": "No current device save is available; expired saves were removed.",
+      "text": "Không có bản lưu thiết bị hiện hành; đã xóa bản hết hạn."
+    },
+    "retention.cleared": {
+      "source": "Device save deleted. Text currently in this tab remains until you clear it.",
+      "text": "Đã xóa bản lưu thiết bị. Văn bản hiện trong tab vẫn còn cho đến khi bạn xóa."
+    },
+    "retention.unavailable": {
+      "source": "Device retention could not be verified. Your current text remains in this tab.",
+      "text": "Chưa thể xác minh lưu giữ thiết bị. Văn bản hiện tại vẫn trong tab này."
+    },
+    "retention.downloadInput": {
+      "source": "Download private input for restore",
+      "text": "Tải đầu vào riêng tư để khôi phục"
+    },
+    "retention.importInput": {
+      "source": "Restore private input file",
+      "text": "Khôi phục tệp đầu vào riêng tư"
+    },
+    "references.label": {
+      "source": "Reference list",
+      "text": "Danh mục tài liệu tham khảo"
+    },
+    "references.guidance": {
+      "source": "Paste BibTeX, RIS, or one DOI, https link or formatted reference per line. Numbered citations follow the order of this list. References are read as written; no DOI or link is looked up.",
+      "text": "Dán BibTeX, RIS, hoặc mỗi dòng một DOI, liên kết https hay tài liệu tham khảo đã định dạng. Trích dẫn đánh số theo thứ tự danh sách. Đọc tài liệu tham khảo đúng như đã viết; không tra DOI hay liên kết."
+    },
+    "references.format": {
+      "source": "Read as {format}",
+      "text": "Đọc dưới dạng {format}"
+    },
+    "references.formats.bibtex": {
+      "source": "BibTeX",
+      "text": "BibTeX"
+    },
+    "references.formats.ris": {
+      "source": "RIS",
+      "text": "RIS"
+    },
+    "references.formats.list": {
+      "source": "one reference per line",
+      "text": "mỗi dòng một tài liệu tham khảo"
+    },
+    "references.heading": {
+      "source": "Source text for each reference",
+      "text": "Văn bản nguồn cho từng tài liệu tham khảo"
+    },
+    "references.sourceGuidance": {
+      "source": "Paste the text you hold for each cited work. A cited work without text is reported as unavailable, never as unsupported.",
+      "text": "Dán văn bản bạn có cho mỗi công trình được trích dẫn. Công trình không có văn bản được báo không khả dụng, không bao giờ báo không được hỗ trợ."
+    },
+    "references.entry": {
+      "source": "[{number}] {key}",
+      "text": "[{number}] {key}"
+    },
+    "references.untitled": {
+      "source": "No title, DOI or link was read from this entry.",
+      "text": "Không đọc được tiêu đề, DOI hay liên kết từ mục này."
+    },
+    "references.status.identified": {
+      "source": "DOI or link written",
+      "text": "DOI hoặc liên kết đã viết"
+    },
+    "references.status.described": {
+      "source": "Described, but no DOI or link",
+      "text": "Có mô tả nhưng không có DOI hay liên kết"
+    },
+    "references.status.unresolved": {
+      "source": "Could not be identified",
+      "text": "Không thể nhận diện"
+    },
+    "references.sourceLabel": {
+      "source": "Source text for {key}",
+      "text": "Văn bản nguồn cho {key}"
+    },
+    "references.complete": {
+      "source": "This is the complete text of the work",
+      "text": "Đây là toàn văn công trình"
+    },
+    "references.unreadable": {
+      "source": "The reference list could not be read. Use at most 64 references.",
+      "text": "Không thể đọc danh mục tài liệu tham khảo. Dùng tối đa 64 tài liệu."
+    },
+    "results.label": {
+      "source": "Check results",
+      "text": "Kết quả kiểm tra"
+    },
+    "results.heading": {
+      "source": "Results",
+      "text": "Kết quả"
+    },
+    "results.summary": {
+      "source": "Sentences: {claims} · supported: {supported} · partly supported: {partlySupported} · not found: {notFound} · source unavailable: {sourceUnavailable} · not checked: {notChecked}",
+      "text": "Câu: {claims} · được hỗ trợ: {supported} · hỗ trợ một phần: {partlySupported} · không tìm thấy: {notFound} · nguồn không khả dụng: {sourceUnavailable} · chưa kiểm tra: {notChecked}"
+    },
+    "results.verdicts.supported": {
+      "source": "Wording supported by the quoted passage",
+      "text": "Cách diễn đạt được đoạn trích hỗ trợ"
+    },
+    "results.verdicts.partly-supported": {
+      "source": "Partly supported by the quoted passage",
+      "text": "Được đoạn trích hỗ trợ một phần"
+    },
+    "results.verdicts.not-found": {
+      "source": "No supporting passage found in the supplied text",
+      "text": "Không tìm thấy đoạn hỗ trợ trong văn bản cung cấp"
+    },
+    "results.verdicts.source-unavailable": {
+      "source": "Source unavailable — not checked",
+      "text": "Nguồn không khả dụng — chưa kiểm tra"
+    },
+    "results.verdicts.not-checked": {
+      "source": "Not checked",
+      "text": "Chưa kiểm tra"
+    },
+    "results.notChecked.no-citation": {
+      "source": "This sentence has no citation.",
+      "text": "Câu này không có trích dẫn."
+    },
+    "results.notChecked.script-without-word-spacing": {
+      "source": "This check compares words separated by spaces and cannot read this sentence’s script.",
+      "text": "Kiểm tra so sánh từ tách bằng khoảng trắng và không đọc được hệ chữ của câu này."
+    },
+    "results.citation": {
+      "source": "Cited as {token} · {reference}",
+      "text": "Trích dẫn dưới dạng {token} · {reference}"
+    },
+    "results.citationUnbound": {
+      "source": "Cited as {token}",
+      "text": "Trích dẫn dưới dạng {token}"
+    },
+    "results.unavailable.source-text-not-supplied": {
+      "source": "No text was supplied for this work, so it was not checked.",
+      "text": "Chưa cung cấp văn bản công trình này nên chưa kiểm tra."
+    },
+    "results.unavailable.reference-unresolved": {
+      "source": "This citation could not be bound to a readable reference in the list.",
+      "text": "Không thể ràng buộc trích dẫn này với tài liệu tham khảo đọc được trong danh sách."
+    },
+    "results.unavailable.reference-ambiguous": {
+      "source": "This citation matches more than one listed work.",
+      "text": "Trích dẫn này khớp nhiều hơn một công trình trong danh sách."
+    },
+    "results.unavailable.reference-year-differs": {
+      "source": "The list has this author with a different year.",
+      "text": "Danh sách có tác giả này nhưng khác năm."
+    },
+    "results.unavailable.different-work": {
+      "source": "The supplied text identifies a different work. The cited work was not checked.",
+      "text": "Văn bản cung cấp định danh công trình khác. Chưa kiểm tra công trình được trích dẫn."
+    },
+    "results.unavailable.source-identity-unresolved": {
+      "source": "The recorded source identity cannot be matched to this reference. The cited work was not checked.",
+      "text": "Danh tính nguồn ghi nhận không khớp tài liệu tham khảo này. Chưa kiểm tra công trình được trích dẫn."
+    },
+    "results.unavailable.source-read-incomplete": {
+      "source": "No supporting passage was found in this partial read. The rest of the cited work is unavailable, so this is not an unsupported verdict.",
+      "text": "Không tìm thấy đoạn hỗ trợ trong phần đọc chưa đầy đủ này. Phần còn lại không khả dụng nên đây không phải kết luận không được hỗ trợ."
+    },
+    "results.unavailable.synthetic-source": {
+      "source": "Synthetic demonstration text cannot support a factual draft verdict.",
+      "text": "Văn bản demo tổng hợp không thể hỗ trợ kết luận thực tế về bản nháp."
+    },
+    "results.partialCoverage": {
+      "source": "Only part of this work was supplied; the rest was not searched.",
+      "text": "Chỉ cung cấp một phần công trình; chưa tìm trong phần còn lại."
+    },
+    "results.version": {
+      "source": "Recorded source version (caller asserted)",
+      "text": "Phiên bản nguồn ghi nhận (do người gọi khẳng định)"
+    },
+    "results.suggestions": {
+      "source": "Suggested alternative sources",
+      "text": "Nguồn thay thế được đề xuất"
+    },
+    "results.suggestionNotice": {
+      "source": "Suggestions are separate wording matches. They do not change your claims, written citations, verdicts or creator rewards. Read these works before changing your references.",
+      "text": "Đề xuất là kết quả khớp cách diễn đạt riêng. Không đổi nhận định, trích dẫn đã viết, kết luận hay phần thưởng tác giả. Đọc các công trình này trước khi đổi tài liệu tham khảo."
+    },
+    "results.noPassage": {
+      "source": "No supporting passage found in the text you supplied.",
+      "text": "Không tìm thấy đoạn hỗ trợ trong văn bản bạn cung cấp."
+    },
+    "results.missingTerms": {
+      "source": "Not in the quoted passage: {terms}",
+      "text": "Không có trong đoạn trích: {terms}"
+    },
+    "results.missingEverywhere": {
+      "source": "Not in the supplied text: {terms}",
+      "text": "Không có trong văn bản cung cấp: {terms}"
+    },
+    "results.tentative": {
+      "source": "The quoted passage is tentative where your sentence is not.",
+      "text": "Đoạn trích diễn đạt dè dặt trong khi câu của bạn khẳng định."
+    },
+    "results.closestHeading": {
+      "source": "Closest passage, not counted as support",
+      "text": "Đoạn gần nhất, không tính là hỗ trợ"
+    },
+    "results.difference.negation": {
+      "source": "It differs in negation.",
+      "text": "Khác nhau về phủ định."
+    },
+    "results.difference.opposite-term": {
+      "source": "It uses an opposite term.",
+      "text": "Dùng thuật ngữ trái nghĩa."
+    },
+    "results.difference.different-number": {
+      "source": "It states a different figure.",
+      "text": "Nêu số liệu khác."
+    },
+    "results.difference.reversed-comparison": {
+      "source": "It reverses the subjects of the comparison.",
+      "text": "Đảo ngược các đối tượng so sánh."
+    },
+    "flags.heading": {
+      "source": "Reference and citation flags",
+      "text": "Cờ tài liệu tham khảo và trích dẫn"
+    },
+    "flags.none": {
+      "source": "No reference or citation flags.",
+      "text": "Không có cờ tài liệu tham khảo hay trích dẫn."
+    },
+    "flags.reference-unresolved": {
+      "source": "Reference {reference} could not be identified from the list.",
+      "text": "Không thể nhận diện tài liệu tham khảo {reference} từ danh sách."
+    },
+    "flags.reference-not-cited": {
+      "source": "Reference {reference} is listed but not cited in the passage.",
+      "text": "Tài liệu tham khảo {reference} có trong danh sách nhưng không được trích trong đoạn văn."
+    },
+    "flags.citation-unresolved": {
+      "source": "{claim}: citation {token} could not be matched to one listed work.",
+      "text": "{claim}: không thể ghép trích dẫn {token} với một công trình trong danh sách."
+    },
+    "flags.possible-different-work": {
+      "source": "{claim}: the text names {author}, who is not an author of {reference}. Check that the citation points to the intended work.",
+      "text": "{claim}: văn bản nêu {author}, không phải tác giả của {reference}. Kiểm tra trích dẫn có dẫn đến đúng công trình không."
+    },
+    "flags.source-different-work": {
+      "source": "{claim}: the supplied source for {reference} identifies a different work ({url}). This citation remains unavailable.",
+      "text": "{claim}: nguồn cung cấp cho {reference} định danh công trình khác ({url}). Trích dẫn này vẫn không khả dụng."
+    },
+    "flags.claim": {
+      "source": "Sentence {number}",
+      "text": "Câu {number}"
+    }
+  }
+}

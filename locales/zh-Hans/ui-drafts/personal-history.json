@@ -1,0 +1,124 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/personal-history.ts",
+  "sourceSha256": "0cac5ddd8a09644deaf691f21787be444aa3c138429893bc25d1aabb47704d8c",
+  "entries": {
+    "browse": {
+      "source": "Browse attributed history",
+      "text": "浏览归属历史"
+    },
+    "recent": {
+      "source": "Recent creator ledger",
+      "text": "近期创作者账本"
+    },
+    "title": {
+      "source": "Attributed history",
+      "text": "归属历史"
+    },
+    "scope": {
+      "source": "Current store only. A run attributed to your wallet may have been funded elsewhere. Recorded amounts are not settlement evidence or the price you paid for a research service.",
+      "text": "仅限当前存储。归属于您钱包的研究可能由其他方提供资金。记录金额不是结算证据，也不是您为研究服务支付的价格。"
+    },
+    "search": {
+      "source": "Question contains (case sensitive)",
+      "text": "问题包含（区分大小写）"
+    },
+    "surface": {
+      "source": "Surface",
+      "text": "使用渠道"
+    },
+    "funding": {
+      "source": "Creator funding record",
+      "text": "创作者资金来源记录"
+    },
+    "all": {
+      "source": "All",
+      "text": "全部"
+    },
+    "unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "browser": {
+      "source": "Browser wallet recorded",
+      "text": "已记录浏览器钱包"
+    },
+    "other": {
+      "source": "Other or unknown",
+      "text": "其他或未知"
+    },
+    "from": {
+      "source": "From (UTC)",
+      "text": "起始（UTC）"
+    },
+    "to": {
+      "source": "Through (UTC)",
+      "text": "截至（UTC）"
+    },
+    "apply": {
+      "source": "Apply filters",
+      "text": "应用筛选"
+    },
+    "loading": {
+      "source": "Loading history…",
+      "text": "正在加载历史记录…"
+    },
+    "checking": {
+      "source": "Checking your sign-in…",
+      "text": "正在检查您的登录状态…"
+    },
+    "empty": {
+      "source": "No matching dispatches attributed to this wallet.",
+      "text": "没有归属于此钱包的匹配研究任务。"
+    },
+    "unavailable": {
+      "source": "History is unavailable on this storage deployment. Use the recent creator ledger or try again later.",
+      "text": "此存储部署不提供历史记录。请使用近期创作者账本或稍后再试。"
+    },
+    "changed": {
+      "source": "Your signed-in wallet changed. Reload history.",
+      "text": "已登录钱包发生变化。请重新加载历史记录。"
+    },
+    "signedOut": {
+      "source": "Sign in to browse your attributed history.",
+      "text": "登录以浏览归属于您的历史记录。"
+    },
+    "retry": {
+      "source": "Retry",
+      "text": "重试"
+    },
+    "newer": {
+      "source": "Newer page",
+      "text": "较新一页"
+    },
+    "older": {
+      "source": "Older page",
+      "text": "较早一页"
+    },
+    "report": {
+      "source": "Report",
+      "text": "报告"
+    },
+    "receipt": {
+      "source": "Receipt",
+      "term": "receipt"
+    },
+    "recorded": {
+      "source": "Recorded spend / creator allocation",
+      "text": "记录支出 / 创作者分配"
+    },
+    "usdc": {
+      "source": "USDC",
+      "term": "usdc"
+    },
+    "scopeLabel": {
+      "source": "(read attributed current-store history)",
+      "text": "（读取归属的当前存储历史）"
+    },
+    "scopeDefaults": {
+      "source": "Empty selection uses ask + export defaults. Profile and history permissions require explicit selection; write does not grant read.",
+      "text": "空选择使用 ask + export 默认权限。个人资料和历史权限需明确选择；写入权限不授予读取权限。"
+    }
+  }
+}

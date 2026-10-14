@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/run-claims.cjs",
+  "sourceSha256": "0c170b03eb67cf5a4a2c9e7a9cbe1cbfdd05910c412a81af0058f95e2db10607",
+  "entries": {
+    "title": {
+      "source": "Save this research to your account",
+      "text": "将此研究保存到您的账户"
+    },
+    "introduction": {
+      "source": "This private link can be used once within 24 hours. Claiming adds the saved run to your history. It does not change who paid or any payment or creator reward.",
+      "text": "此私密链接可在 24 小时内使用一次。认领会将已保存研究添加到您的历史记录。它不会更改付款者、任何付款或创作者奖励。"
+    },
+    "memory": {
+      "source": "The link has been removed from this address bar. Keep this tab open while signing in. Reloading or closing it loses this copy of the link; Keryx cannot reissue it.",
+      "text": "链接已从地址栏移除。登录期间请保持此标签页打开。重新加载或关闭会丢失此链接副本；Keryx 无法重新签发。"
+    },
+    "signIn": {
+      "source": "Sign in in a separate window",
+      "text": "在单独窗口登录"
+    },
+    "check": {
+      "source": "Check signed-in account",
+      "text": "检查已登录账户"
+    },
+    "claim": {
+      "source": "Save to this account",
+      "text": "保存到此账户"
+    },
+    "ready": {
+      "source": "Confirm the account below, then save this research.",
+      "text": "确认下方账户，然后保存此研究。"
+    },
+    "signedOut": {
+      "source": "Sign in, then return to this tab and check your account.",
+      "text": "登录后返回此标签页检查账户。"
+    },
+    "changed": {
+      "source": "Your signed-in account changed. Check the account below before confirming again.",
+      "text": "已登录账户发生变化。再次确认前请检查下方账户。"
+    },
+    "checking": {
+      "source": "Checking your signed-in account…",
+      "text": "正在检查已登录账户…"
+    },
+    "saving": {
+      "source": "Saving to your account…",
+      "text": "正在保存到您的账户…"
+    },
+    "saved": {
+      "source": "This research is now in this account’s private history. Its original payment records are unchanged.",
+      "text": "此研究已加入此账户的私密历史记录。原始付款记录保持不变。"
+    },
+    "unavailable": {
+      "source": "This claim link is unavailable. It may be invalid, expired, already used or no longer eligible.",
+      "text": "此认领链接不可用。它可能无效、已过期、已使用或不再符合条件。"
+    },
+    "serviceUnavailable": {
+      "source": "Run claims are unavailable on this deployment.",
+      "text": "此部署不提供研究认领功能。"
+    },
+    "authUnavailable": {
+      "source": "Your signed-in account could not be checked. Try checking again.",
+      "text": "无法检查已登录账户。请再次检查。"
+    },
+    "unconfirmed": {
+      "source": "The claim request could not be confirmed. Check your private history. This tab will not submit the link again.",
+      "text": "无法确认认领请求。请检查私密历史记录。此标签页不会再次提交链接。"
+    }
+  }
+}

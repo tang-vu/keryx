@@ -1,0 +1,220 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/specialist-briefs.ts",
+  "sourceSha256": "2fb57051feb09c896d6ae0ff4a9ee44a29cf2533a1dd1ec6729835161ba6ca90",
+  "entries": {
+    "title": {
+      "source": "Research for a decision.",
+      "text": "Nghiên cứu để quyết định."
+    },
+    "metadataTitle": {
+      "source": "Focused research briefs",
+      "text": "Bản tóm lược nghiên cứu tập trung"
+    },
+    "description": {
+      "source": "Prepare a focused API comparison, SaaS market brief or literature overview with an explicit scope and review checklist.",
+      "text": "Chuẩn bị so sánh API, tóm lược thị trường SaaS hoặc tổng quan tài liệu tập trung với phạm vi và danh sách xem xét rõ ràng."
+    },
+    "kicker": {
+      "source": "Focused research briefs",
+      "text": "Bản tóm lược nghiên cứu tập trung"
+    },
+    "introduction": {
+      "source": "Choose the work you need done, define one question and decide what a useful answer must show. Prepare a request you can review before starting research.",
+      "text": "Chọn công việc cần làm, xác định một câu hỏi và quyết định câu trả lời hữu ích cần thể hiện gì. Chuẩn bị yêu cầu có thể xem xét trước khi bắt đầu nghiên cứu."
+    },
+    "scopeNotice": {
+      "source": "These are request templates. Available evidence may support only a partial answer; check the delivered sources and gaps before accepting a result.",
+      "text": "Đây là mẫu yêu cầu. Bằng chứng khả dụng có thể chỉ hỗ trợ câu trả lời một phần; kiểm tra nguồn cung cấp và khoảng trống trước khi chấp nhận kết quả."
+    },
+    "selectTrack": {
+      "source": "Choose your brief",
+      "text": "Chọn bản tóm lược"
+    },
+    "decision": {
+      "source": "The decision or research question",
+      "text": "Quyết định hoặc câu hỏi nghiên cứu"
+    },
+    "decisionHelp": {
+      "source": "Keep this to one decision. Include the options, audience or topic you want compared.",
+      "text": "Giữ ở một quyết định. Nêu lựa chọn, đối tượng hoặc chủ đề cần so sánh."
+    },
+    "context": {
+      "source": "Constraints and context (optional)",
+      "text": "Ràng buộc và bối cảnh (không bắt buộc)"
+    },
+    "contextPlaceholder": {
+      "source": "Stack, region, use case, research period or requirements",
+      "text": "Công nghệ, khu vực, tình huống dùng, kỳ nghiên cứu hoặc yêu cầu"
+    },
+    "sources": {
+      "source": "Starting source links (optional)",
+      "text": "Liên kết nguồn khởi đầu (không bắt buộc)"
+    },
+    "sourcesHelp": {
+      "source": "Up to two HTTPS links, one per line. Links are starting points; their contents have not been read or verified.",
+      "text": "Tối đa hai liên kết HTTPS, mỗi dòng một liên kết. Liên kết là điểm bắt đầu; nội dung chưa được đọc hay xác minh."
+    },
+    "privacy": {
+      "source": "Use shareable questions. The draft stays in this page until you copy or download it. Public research and sponsored trial reports can have public links; use the separate private-research flow for confidential work.",
+      "text": "Dùng câu hỏi có thể chia sẻ. Bản nháp giữ trên trang cho đến khi sao chép hoặc tải. Nghiên cứu công khai và báo cáo thử nghiệm tài trợ có thể có liên kết công khai; dùng luồng nghiên cứu riêng tư cho công việc bí mật."
+    },
+    "prepare": {
+      "source": "Prepare my request",
+      "text": "Chuẩn bị yêu cầu của tôi"
+    },
+    "review": {
+      "source": "Review your request",
+      "text": "Xem xét yêu cầu"
+    },
+    "rubric": {
+      "source": "Review the delivered result against this checklist",
+      "text": "Xem kết quả cung cấp theo danh sách này"
+    },
+    "rubricNotice": {
+      "source": "This checklist is for your review. Preparing a request or opening a report does not record acceptance.",
+      "text": "Danh sách này để bạn xem xét. Chuẩn bị yêu cầu hay mở báo cáo không ghi nhận chấp nhận."
+    },
+    "copy": {
+      "source": "Copy request",
+      "text": "Sao chép yêu cầu"
+    },
+    "copied": {
+      "source": "Request copied.",
+      "text": "Đã sao chép yêu cầu."
+    },
+    "copyFailed": {
+      "source": "Copy is unavailable. Select the request text or download it.",
+      "text": "Không thể sao chép. Chọn văn bản yêu cầu hoặc tải xuống."
+    },
+    "download": {
+      "source": "Download API request JSON",
+      "text": "Tải JSON yêu cầu API"
+    },
+    "checkout": {
+      "source": "Open research checkout",
+      "text": "Mở thanh toán nghiên cứu"
+    },
+    "trial": {
+      "source": "Open the sponsored trial",
+      "text": "Mở thử nghiệm được tài trợ"
+    },
+    "handoff": {
+      "source": "Copy your request into the research form. Review the current price, source budget, availability and terms before submitting. Nothing starts or charges from this page.",
+      "text": "Sao chép yêu cầu vào biểu mẫu nghiên cứu. Xem giá, ngân sách nguồn, khả dụng và điều kiện hiện tại trước khi gửi. Trang này không bắt đầu gì hay thu phí."
+    },
+    "invalid": {
+      "source": "Enter one question of up to 450 characters, context of up to 250 characters and at most two HTTPS links of up to 160 characters each. The prepared request must fit the research service's question limit.",
+      "text": "Nhập một câu hỏi tối đa 450 ký tự, bối cảnh tối đa 250 ký tự và tối đa hai liên kết HTTPS mỗi liên kết 160 ký tự. Yêu cầu chuẩn bị phải trong giới hạn câu hỏi của dịch vụ."
+    },
+    "pricingTitle": {
+      "source": "Price and delivery are reviewed before purchase.",
+      "text": "Xem xét giá và việc cung cấp trước khi mua."
+    },
+    "pricingBody": {
+      "source": "Current Quick and Deep jobs have a service fee plus a creator reserve. A tailored request uses those existing terms; these templates do not create a new fixed-price offer or promise a complete report. Review pricing and checkout for the actual quote. Specialist pricing is being evaluated against full costs and accepted customer outcomes.",
+      "text": "Tác vụ Nhanh và Chuyên sâu hiện có phí dịch vụ cộng khoản dự trữ cho tác giả. Yêu cầu tùy chỉnh dùng điều kiện hiện có; mẫu không tạo đề nghị giá cố định mới hay hứa báo cáo đầy đủ. Xem giá và thanh toán để có báo giá thực tế. Giá chuyên biệt đang được đánh giá theo toàn bộ chi phí và kết quả khách hàng được chấp nhận."
+    },
+    "pricingAction": {
+      "source": "Review pricing & budgets",
+      "text": "Xem giá và ngân sách"
+    },
+    "apiPlatform.title": {
+      "source": "API & platform comparison",
+      "text": "So sánh API và nền tảng"
+    },
+    "apiPlatform.audience": {
+      "source": "For freelancers and small engineering teams",
+      "text": "Dành cho người làm tự do và nhóm kỹ thuật nhỏ"
+    },
+    "apiPlatform.scope": {
+      "source": "Compare up to two named options for one integration decision.",
+      "text": "So sánh tối đa hai lựa chọn có tên cho một quyết định tích hợp."
+    },
+    "apiPlatform.placeholder": {
+      "source": "Which of these two APIs fits our notification workflow?",
+      "text": "API nào trong hai API phù hợp quy trình thông báo của chúng tôi?"
+    },
+    "apiPlatform.instruction": {
+      "source": "Compare up to two named APIs/platforms for this decision. Use primary documentation. Cover requirements, integration effort, published price assumptions, limits and unresolved risks. Give a conditional recommendation only where read evidence supports it.",
+      "text": "So sánh tối đa hai API/nền tảng có tên cho quyết định này. Dùng tài liệu chính thức. Nêu yêu cầu, công sức tích hợp, giả định giá công bố, giới hạn và rủi ro chưa giải quyết. Chỉ khuyến nghị có điều kiện khi bằng chứng đã đọc hỗ trợ."
+    },
+    "apiPlatform.acceptance.0": {
+      "source": "Both options address the stated constraints, with source-backed trade-offs.",
+      "text": "Cả hai lựa chọn xử lý ràng buộc đã nêu, với đánh đổi có nguồn chứng minh."
+    },
+    "apiPlatform.acceptance.1": {
+      "source": "Prices, limits and versions state their source and observation date; missing information stays unknown.",
+      "text": "Giá, giới hạn và phiên bản nêu nguồn và ngày quan sát; thông tin thiếu vẫn chưa rõ."
+    },
+    "apiPlatform.acceptance.2": {
+      "source": "The next implementation check and reasons that could change the decision are explicit.",
+      "text": "Nêu rõ kiểm tra triển khai tiếp theo và lý do có thể làm đổi quyết định."
+    },
+    "saasCompetition.title": {
+      "source": "SaaS competitor & niche brief",
+      "text": "Tóm lược đối thủ SaaS và thị trường ngách"
+    },
+    "saasCompetition.audience": {
+      "source": "For founders and small product teams",
+      "text": "Dành cho người sáng lập và nhóm sản phẩm nhỏ"
+    },
+    "saasCompetition.scope": {
+      "source": "Compare up to two named competitors for one audience or positioning question.",
+      "text": "So sánh tối đa hai đối thủ có tên cho một câu hỏi đối tượng hoặc định vị."
+    },
+    "saasCompetition.placeholder": {
+      "source": "Where could our product fit beside these two competitors?",
+      "text": "Sản phẩm của chúng tôi có thể đứng ở đâu bên cạnh hai đối thủ này?"
+    },
+    "saasCompetition.instruction": {
+      "source": "Compare up to two named competitors for one audience/positioning decision. Separate published features and prices from proposed market hypotheses. Do not infer revenue, customer counts or demand. Explain a candidate gap and a concrete customer test, with unsupported claims marked unknown.",
+      "text": "So sánh tối đa hai đối thủ có tên cho một quyết định đối tượng/định vị. Tách tính năng và giá công bố với giả thuyết thị trường đề xuất. Không suy ra doanh thu, số khách hay nhu cầu. Giải thích khoảng trống tiềm năng và thử nghiệm khách hàng cụ thể, đánh dấu nhận định thiếu hỗ trợ là chưa rõ."
+    },
+    "saasCompetition.acceptance.0": {
+      "source": "Competitor claims link to the material actually read and state its date.",
+      "text": "Nhận định về đối thủ liên kết tài liệu thực sự đã đọc và nêu ngày."
+    },
+    "saasCompetition.acceptance.1": {
+      "source": "The proposed niche is labelled a hypothesis; traffic, revenue and customer demand are not invented.",
+      "text": "Thị trường ngách đề xuất có nhãn giả thuyết; không bịa lưu lượng, doanh thu và nhu cầu khách hàng."
+    },
+    "saasCompetition.acceptance.2": {
+      "source": "A specific customer experiment can confirm or disprove the proposed positioning.",
+      "text": "Thử nghiệm khách hàng cụ thể có thể xác nhận hoặc bác bỏ định vị đề xuất."
+    },
+    "scholarlyLiterature.title": {
+      "source": "Literature evidence overview",
+      "text": "Tổng quan bằng chứng tài liệu"
+    },
+    "scholarlyLiterature.audience": {
+      "source": "For researchers and students",
+      "text": "Dành cho người nghiên cứu và sinh viên"
+    },
+    "scholarlyLiterature.scope": {
+      "source": "Review one narrow question and up to three relevant papers within available reading limits.",
+      "text": "Xem một câu hỏi hẹp và tối đa ba bài liên quan trong giới hạn đọc khả dụng."
+    },
+    "scholarlyLiterature.placeholder": {
+      "source": "What do recent papers say about this specific method?",
+      "text": "Bài gần đây nói gì về phương pháp cụ thể này?"
+    },
+    "scholarlyLiterature.instruction": {
+      "source": "Prepare a bounded literature overview for one narrow question and up to three papers. State each paper's identity/version, publication date and actual read scope. Compare methods, findings and limitations. Distinguish abstracts, preprints and full-text reads. Do not call this a systematic review or invent references.",
+      "text": "Chuẩn bị tổng quan tài liệu có giới hạn cho một câu hỏi hẹp và tối đa ba bài. Nêu danh tính/phiên bản, ngày xuất bản và phạm vi đọc thực tế từng bài. So sánh phương pháp, phát hiện và giới hạn. Phân biệt tóm tắt, bản tiền xuất bản và đọc toàn văn. Không gọi là tổng quan hệ thống hay bịa tài liệu tham khảo."
+    },
+    "scholarlyLiterature.acceptance.0": {
+      "source": "Each paper has an inspectable identity and actual read scope, with unavailable text visible.",
+      "text": "Mỗi bài có danh tính kiểm tra được và phạm vi đọc thực tế, hiển thị văn bản không khả dụng."
+    },
+    "scholarlyLiterature.acceptance.1": {
+      "source": "Findings and limitations are supported by cited passages; disagreements remain visible.",
+      "text": "Phát hiện và giới hạn được đoạn trích hỗ trợ; bất đồng vẫn hiển thị."
+    },
+    "scholarlyLiterature.acceptance.2": {
+      "source": "Coverage limits and the next literature search are explicit; completeness is not assumed.",
+      "text": "Nêu rõ giới hạn bao phủ và lượt tìm tài liệu tiếp theo; không giả định đầy đủ."
+    }
+  }
+}

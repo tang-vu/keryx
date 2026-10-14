@@ -1,0 +1,692 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/withdrawal.ts",
+  "sourceSha256": "f3e27a218e592f26cd5bc90ca3846748c815372c7f278962ffc7a8c769fecee6",
+  "entries": {
+    "withdrawalWorkspace.connect": {
+      "source": "Connect your wallet to manage withdrawals.",
+      "text": "Kết nối ví để quản lý rút tiền."
+    },
+    "withdrawalWorkspace.unavailable": {
+      "source": "New withdrawals are unavailable. You can still recover saved requests.",
+      "text": "Rút mới không khả dụng. Bạn vẫn có thể khôi phục yêu cầu đã lưu."
+    },
+    "withdrawalWorkspace.amountInvalid": {
+      "source": "Enter a positive USDC amount within the limit, with at most 6 decimal places.",
+      "text": "Nhập số USDC dương trong giới hạn, tối đa 6 chữ số thập phân."
+    },
+    "withdrawalWorkspace.draftSaved": {
+      "source": "Unsigned draft saved. Review it before signing.",
+      "text": "Đã lưu bản nháp chưa ký. Xem xét trước khi ký."
+    },
+    "withdrawalWorkspace.prepareUncertain": {
+      "source": "Preparation did not finish. Refresh saved requests before preparing again; a draft may already be saved.",
+      "text": "Chuẩn bị chưa hoàn tất. Làm mới yêu cầu đã lưu trước khi chuẩn bị lại; bản nháp có thể đã lưu."
+    },
+    "withdrawalWorkspace.prepare": {
+      "source": "Prepare withdrawal",
+      "text": "Chuẩn bị rút tiền"
+    },
+    "withdrawalWorkspace.title": {
+      "source": "Withdraw USDC",
+      "text": "Rút USDC"
+    },
+    "withdrawalWorkspace.networkInstruction": {
+      "source": "Arc Testnet · Funds go to your connected wallet.",
+      "text": "Arc Testnet · Tiền vào ví đang kết nối."
+    },
+    "withdrawalWorkspace.amount": {
+      "source": "Amount to receive (USDC)",
+      "text": "Số tiền nhận (USDC)"
+    },
+    "withdrawalWorkspace.prepareBoundary": {
+      "source": "Preparation saves an unsigned draft. Review, signing and sending are separate steps.",
+      "text": "Chuẩn bị lưu bản nháp chưa ký. Xem xét, ký và gửi là bước riêng."
+    },
+    "withdrawalWorkspace.separateRequest": {
+      "source": "Preparing another withdrawal creates a separate request. Use saved requests to resume this one.",
+      "text": "Chuẩn bị rút khác tạo yêu cầu riêng. Dùng yêu cầu đã lưu để tiếp tục yêu cầu này."
+    },
+    "withdrawalWorkspace.prepareAnother": {
+      "source": "Prepare another withdrawal",
+      "text": "Chuẩn bị khoản rút khác"
+    },
+    "withdrawalWorkspace.preparing": {
+      "source": "Preparing and saving unsigned terms…",
+      "text": "Đang chuẩn bị và lưu điều kiện chưa ký…"
+    },
+    "withdrawalWorkspace.recipient": {
+      "source": "Recipient: {owner}",
+      "text": "Bên nhận: {owner}"
+    },
+    "withdrawalWorkspace.limits": {
+      "source": "Amount limit: {amount} USDC. Maximum Circle fee: {fee} USDC, charged in addition to the amount.",
+      "text": "Giới hạn số tiền: {amount} USDC. Phí Circle tối đa: {fee} USDC, thu thêm ngoài số tiền."
+    },
+    "withdrawalReview.connect": {
+      "source": "Connect the original wallet to review this withdrawal.",
+      "text": "Kết nối ví ban đầu để xem xét khoản rút."
+    },
+    "withdrawalReview.unavailable": {
+      "source": "The saved original is unavailable. Keep your recovery file; do not create another request as a retry.",
+      "text": "Bản gốc đã lưu không khả dụng. Giữ tệp khôi phục; không tạo yêu cầu khác để thử lại."
+    },
+    "withdrawalReview.signed": {
+      "source": "Signature saved. Review the details again before sending.",
+      "text": "Đã lưu chữ ký. Xem chi tiết lại trước khi gửi."
+    },
+    "withdrawalReview.submitted": {
+      "source": "Submission attempt saved. Check recovery status for the original request.",
+      "text": "Đã lưu lần thử gửi. Kiểm tra trạng thái khôi phục yêu cầu ban đầu."
+    },
+    "withdrawalReview.uncertain": {
+      "source": "The operation did not finish. Your saved original is retained; use recovery to check its state.",
+      "text": "Thao tác chưa hoàn tất. Bản gốc đã lưu được giữ; dùng khôi phục để kiểm tra trạng thái."
+    },
+    "withdrawalReview.aria": {
+      "source": "Review withdrawal",
+      "text": "Xem xét rút tiền"
+    },
+    "withdrawalReview.title": {
+      "source": "Review your withdrawal",
+      "text": "Xem xét khoản rút của bạn"
+    },
+    "withdrawalReview.amount": {
+      "source": "Amount received",
+      "text": "Số tiền nhận được"
+    },
+    "withdrawalReview.fee": {
+      "source": "Maximum Circle fee",
+      "text": "Phí Circle tối đa"
+    },
+    "withdrawalReview.debit": {
+      "source": "Maximum Gateway debit",
+      "text": "Khoản ghi nợ Gateway tối đa"
+    },
+    "withdrawalReview.recipient": {
+      "source": "Recipient",
+      "text": "Bên nhận"
+    },
+    "withdrawalReview.expiry": {
+      "source": "Authorization expires at source block",
+      "text": "Ủy quyền hết hạn tại khối nguồn"
+    },
+    "withdrawalReview.noExpiry": {
+      "source": "No finite expiry — recovery only",
+      "text": "Không có hạn hữu hạn — chỉ khôi phục"
+    },
+    "withdrawalReview.signingBoundary": {
+      "source": "Signing saves this authorization locally. Sending is a separate step. The server checks its expiry again before transfer.",
+      "text": "Ký lưu ủy quyền cục bộ. Gửi là bước riêng. Máy chủ kiểm tra hạn lại trước khi chuyển."
+    },
+    "withdrawalReview.sign": {
+      "source": "Sign reviewed withdrawal",
+      "text": "Ký khoản rút đã xem xét"
+    },
+    "withdrawalReview.send": {
+      "source": "Send signed withdrawal",
+      "text": "Gửi khoản rút có chữ ký"
+    },
+    "withdrawalReview.recoveryOnly": {
+      "source": "This request is recovery-only. Check its status in withdrawal recovery.",
+      "text": "Yêu cầu chỉ để khôi phục. Kiểm tra trạng thái trong khôi phục rút tiền."
+    },
+    "withdrawalReview.waiting": {
+      "source": "Waiting for this operation…",
+      "text": "Đang chờ thao tác này…"
+    },
+    "withdrawalReview.loading": {
+      "source": "Loading saved original…",
+      "text": "Đang tải bản gốc đã lưu…"
+    },
+    "withdrawalHistory.signIn": {
+      "source": "Sign in to view withdrawal history.",
+      "text": "Đăng nhập để xem lịch sử rút tiền."
+    },
+    "withdrawalHistory.signInAgain": {
+      "source": "Sign in again to view withdrawal history.",
+      "text": "Đăng nhập lại để xem lịch sử rút tiền."
+    },
+    "withdrawalHistory.loadFailed": {
+      "source": "History could not be loaded. Try again; your saved requests have not been changed.",
+      "text": "Không thể tải lịch sử. Thử lại; yêu cầu đã lưu không đổi."
+    },
+    "withdrawalHistory.aria": {
+      "source": "Server withdrawal history",
+      "text": "Lịch sử rút tiền trên máy chủ"
+    },
+    "withdrawalHistory.title": {
+      "source": "Withdrawal request history",
+      "text": "Lịch sử yêu cầu rút tiền"
+    },
+    "withdrawalHistory.boundary": {
+      "source": "Find requests saved to your account, including from another browser. These records do not confirm that funds reached your wallet.",
+      "text": "Tìm yêu cầu lưu cho tài khoản, kể cả từ trình duyệt khác. Hồ sơ không xác nhận tiền đã đến ví."
+    },
+    "withdrawalHistory.refresh": {
+      "source": "Refresh account history",
+      "text": "Làm mới lịch sử tài khoản"
+    },
+    "withdrawalHistory.load": {
+      "source": "Load account history",
+      "text": "Tải lịch sử tài khoản"
+    },
+    "withdrawalHistory.connect": {
+      "source": "Sign in",
+      "text": "Đăng nhập"
+    },
+    "withdrawalHistory.checking": {
+      "source": "Checking request progress…",
+      "text": "Đang kiểm tra tiến trình yêu cầu…"
+    },
+    "withdrawalHistory.loading": {
+      "source": "Loading account history…",
+      "text": "Đang tải lịch sử tài khoản…"
+    },
+    "withdrawalHistory.empty": {
+      "source": "No withdrawal requests have been saved to this account.",
+      "text": "Chưa lưu yêu cầu rút tiền cho tài khoản này."
+    },
+    "withdrawalHistory.check": {
+      "source": "Check progress",
+      "text": "Kiểm tra tiến độ"
+    },
+    "withdrawalHistory.older": {
+      "source": "Load older requests",
+      "text": "Tải yêu cầu cũ hơn"
+    },
+    "withdrawalHistory.amount": {
+      "source": "Requested: {amount} USDC",
+      "text": "Yêu cầu: {amount} USDC"
+    },
+    "withdrawalHistory.fee": {
+      "source": "Maximum Circle fee: {fee} USDC",
+      "text": "Phí Circle tối đa: {fee} USDC"
+    },
+    "withdrawalHistory.recipient": {
+      "source": "Recipient: {recipient}",
+      "text": "Bên nhận: {recipient}"
+    },
+    "withdrawalHistory.saved": {
+      "source": "Saved: {time}",
+      "text": "Đã lưu: {time}"
+    },
+    "withdrawalHistory.request": {
+      "source": "Request ID: {id}",
+      "text": "ID yêu cầu: {id}"
+    },
+    "withdrawalProgress.unchecked": {
+      "source": "Server record · Settlement not checked",
+      "text": "Hồ sơ máy chủ · chưa kiểm tra quyết toán"
+    },
+    "withdrawalProgress.readFailed": {
+      "source": "Progress could not be read. This does not mean the withdrawal failed.",
+      "text": "Không thể đọc tiến trình. Không có nghĩa khoản rút thất bại."
+    },
+    "withdrawalProgress.unavailable": {
+      "source": "The server could not find this request. Keep its ID and any recovery file; do not treat it as cancelled.",
+      "text": "Máy chủ không tìm thấy yêu cầu. Giữ ID và tệp khôi phục nếu có; không coi là đã hủy."
+    },
+    "withdrawalProgress.signIn": {
+      "source": "Sign in again to check progress.",
+      "text": "Đăng nhập lại để kiểm tra tiến trình."
+    },
+    "withdrawalProgress.rpcBoundary": {
+      "source": "Observation uses the operator's RPC; this browser has not independently verified settlement.",
+      "text": "Quan sát dùng RPC của operator; trình duyệt này chưa xác minh quyết toán độc lập."
+    },
+    "withdrawalProgress.transaction": {
+      "source": "View reported mint transaction",
+      "text": "Xem giao dịch mint được báo cáo"
+    },
+    "withdrawalProgress.requestSaved": {
+      "source": "Request saved. No transfer attempt is recorded.",
+      "text": "Đã lưu yêu cầu. Chưa ghi lần thử chuyển."
+    },
+    "withdrawalProgress.transferPending": {
+      "source": "Transfer evidence is still pending. Do not create a replacement request to retry it.",
+      "text": "Bằng chứng chuyển vẫn đang chờ. Không tạo yêu cầu thay thế để thử lại."
+    },
+    "withdrawalProgress.attestationSaved": {
+      "source": "Transfer attestation saved. This alone does not confirm receipt in your wallet.",
+      "text": "Đã lưu chứng thực chuyển. Chỉ vậy không xác nhận tiền đến ví."
+    },
+    "withdrawalProgress.mintUnchecked": {
+      "source": "Mint settlement has not been checked.",
+      "text": "Chưa kiểm tra quyết toán mint."
+    },
+    "withdrawalProgress.notQueued": {
+      "source": "No mint queue entry is reported.",
+      "text": "Không báo mục hàng chờ mint."
+    },
+    "withdrawalProgress.queued": {
+      "source": "Mint is queued; settlement is not confirmed.",
+      "text": "Mint trong hàng chờ; chưa xác nhận quyết toán."
+    },
+    "withdrawalProgress.prepared": {
+      "source": "Mint transaction is prepared; settlement is not confirmed.",
+      "text": "Đã chuẩn bị giao dịch mint; chưa xác nhận quyết toán."
+    },
+    "withdrawalProgress.title": {
+      "source": "Server-reported progress",
+      "text": "Tiến trình máy chủ báo"
+    },
+    "withdrawalProgress.observedMint": {
+      "source": "Server reports an observed mint on {network}.",
+      "text": "Máy chủ báo quan sát mint trên {network}."
+    },
+    "withdrawalProgress.observedAt": {
+      "source": "Observed: {time}",
+      "text": "Quan sát lúc: {time}"
+    },
+    "withdrawalPage.metadataTitle": {
+      "source": "My withdrawals — Keryx",
+      "text": "Khoản rút của tôi — Keryx"
+    },
+    "withdrawalPage.description": {
+      "source": "Review and recover your original USDC withdrawal requests.",
+      "text": "Xem xét và khôi phục yêu cầu rút USDC ban đầu."
+    },
+    "withdrawalPage.title": {
+      "source": "My withdrawals",
+      "text": "Khoản rút của tôi"
+    },
+    "withdrawalPage.introduction": {
+      "source": "Review your USDC withdrawal and recover the same request after a disconnect.",
+      "text": "Xem xét khoản rút USDC và khôi phục cùng yêu cầu sau mất kết nối."
+    },
+    "withdrawalPage.back": {
+      "source": "Back to my sources",
+      "text": "Quay lại nguồn của tôi"
+    },
+    "withdrawalPage.historyBoundary": {
+      "source": "{network}. Account history shows requests saved on the server, including from other browsers. Local drafts and private recovery files retain the original signing terms. Check pending requests before starting another withdrawal.",
+      "text": "{network}. Lịch sử tài khoản hiển thị yêu cầu lưu trên máy chủ, kể cả từ trình duyệt khác. Bản nháp cục bộ và tệp khôi phục riêng giữ điều kiện ký ban đầu. Kiểm tra yêu cầu đang chờ trước khoản rút khác."
+    },
+    "withdrawalRecovery.connect": {
+      "source": "Connect your wallet to recover withdrawals.",
+      "text": "Kết nối ví để khôi phục khoản rút."
+    },
+    "withdrawalRecovery.unavailable": {
+      "source": "Recovery is unavailable. Keep your original request or recovery file and try checking again.",
+      "text": "Khôi phục không khả dụng. Giữ yêu cầu hoặc tệp khôi phục ban đầu và thử kiểm tra lại."
+    },
+    "withdrawalRecovery.imported": {
+      "source": "Recovery file imported. It can check the original withdrawal, but cannot send it again.",
+      "text": "Đã nhập tệp khôi phục. Có thể kiểm tra khoản rút ban đầu nhưng không gửi lại."
+    },
+    "withdrawalRecovery.aria": {
+      "source": "Withdrawal recovery",
+      "text": "Khôi phục rút tiền"
+    },
+    "withdrawalRecovery.title": {
+      "source": "Recover a withdrawal",
+      "text": "Khôi phục một khoản rút"
+    },
+    "withdrawalRecovery.privacy": {
+      "source": "Check a saved request or import its recovery file. Keep recovery files private: they contain a signed authorization.",
+      "text": "Kiểm tra yêu cầu đã lưu hoặc nhập tệp khôi phục. Giữ tệp riêng tư: chứa ủy quyền có chữ ký."
+    },
+    "withdrawalRecovery.refresh": {
+      "source": "Refresh saved requests",
+      "text": "Làm mới yêu cầu đã lưu"
+    },
+    "withdrawalRecovery.import": {
+      "source": "Import recovery file",
+      "text": "Nhập tệp khôi phục"
+    },
+    "withdrawalRecovery.importAria": {
+      "source": "Import withdrawal recovery file",
+      "text": "Nhập tệp khôi phục rút tiền"
+    },
+    "withdrawalRecovery.checking": {
+      "source": "Checking saved withdrawal…",
+      "text": "Đang kiểm tra khoản rút đã lưu…"
+    },
+    "withdrawalRecovery.empty": {
+      "source": "No withdrawal requests saved for this wallet in this browser. Import a recovery file if you have one.",
+      "text": "Chưa lưu yêu cầu rút của ví này trong trình duyệt. Nhập tệp khôi phục nếu có."
+    },
+    "withdrawalRecovery.draft": {
+      "source": "Unsigned draft",
+      "text": "Bản nháp chưa ký"
+    },
+    "withdrawalRecovery.recoveryOnly": {
+      "source": "Imported for recovery only",
+      "text": "Chỉ nhập để khôi phục"
+    },
+    "withdrawalRecovery.signed": {
+      "source": "Signed original saved",
+      "text": "Đã lưu bản gốc có chữ ký"
+    },
+    "withdrawalRecovery.review": {
+      "source": "Review saved request",
+      "text": "Xem xét yêu cầu đã lưu"
+    },
+    "withdrawalRecovery.check": {
+      "source": "Check status",
+      "text": "Kiểm tra trạng thái"
+    },
+    "withdrawalRecovery.download": {
+      "source": "Download private recovery file",
+      "text": "Tải tệp khôi phục riêng tư"
+    },
+    "withdrawalRecovery.more": {
+      "source": "Load more saved requests",
+      "text": "Tải thêm yêu cầu đã lưu"
+    },
+    "withdrawalRecovery.signIn": {
+      "source": "Sign in with this wallet to check the withdrawal.",
+      "text": "Đăng nhập bằng ví này để kiểm tra khoản rút."
+    },
+    "withdrawalRecovery.serverUnavailable": {
+      "source": "No server record is available. Keep the original request; this does not mean it was never submitted.",
+      "text": "Không có hồ sơ máy chủ. Giữ yêu cầu ban đầu; không có nghĩa chưa từng gửi."
+    },
+    "withdrawalRecovery.unreadable.one": {
+      "source": "{count} saved request(s) could not be read. Other requests remain available. Keep your recovery files; unreadable records have not been deleted.",
+      "text": "Không thể đọc {count} yêu cầu đã lưu. Yêu cầu khác vẫn khả dụng. Giữ tệp khôi phục; hồ sơ không đọc được chưa bị xóa."
+    },
+    "withdrawalRecovery.unreadable.other": {
+      "source": "{count} saved request(s) could not be read. Other requests remain available. Keep your recovery files; unreadable records have not been deleted.",
+      "text": "Không thể đọc {count} yêu cầu đã lưu. Yêu cầu khác vẫn khả dụng. Giữ tệp khôi phục; hồ sơ không đọc được chưa bị xóa."
+    },
+    "withdrawalRecovery.request": {
+      "source": "Request {id}",
+      "text": "Yêu cầu {id}"
+    },
+    "withdrawalRecovery.transaction": {
+      "source": "View transaction",
+      "text": "Xem giao dịch"
+    },
+    "withdrawalRecovery.finalized": {
+      "source": "Mint observed as finalized on Arc Testnet. {transactionLink}",
+      "text": "Quan sát mint đã có tính cuối cùng trên Arc Testnet. {transactionLink}"
+    },
+    "withdrawalRecoveryStatus.attestation.unchecked": {
+      "source": "Transfer evidence is saved. Mint has not been checked.",
+      "text": "Đã lưu bằng chứng chuyển. Chưa kiểm tra mint."
+    },
+    "withdrawalRecoveryStatus.attestation.notQueued": {
+      "source": "Transfer evidence is saved. No mint is queued yet.",
+      "text": "Đã lưu bằng chứng chuyển. Chưa có mint trong hàng chờ."
+    },
+    "withdrawalRecoveryStatus.attestation.queued": {
+      "source": "Transfer evidence is saved. Mint is queued.",
+      "text": "Đã lưu bằng chứng chuyển. Mint trong hàng chờ."
+    },
+    "withdrawalRecoveryStatus.attestation.prepared": {
+      "source": "Transfer evidence is saved. Mint transaction is prepared; confirmation is not available yet.",
+      "text": "Đã lưu bằng chứng chuyển. Đã chuẩn bị giao dịch mint; chưa có xác nhận."
+    },
+    "withdrawalRecoveryStatus.attestation.unknown": {
+      "source": "Transfer evidence is saved. ",
+      "text": "Đã lưu bằng chứng chuyển. "
+    },
+    "withdrawalRecoveryStatus.transferPending.unchecked": {
+      "source": "Waiting for transfer evidence. Mint has not been checked.",
+      "text": "Đang chờ bằng chứng chuyển. Chưa kiểm tra mint."
+    },
+    "withdrawalRecoveryStatus.transferPending.notQueued": {
+      "source": "Waiting for transfer evidence. No mint is queued yet.",
+      "text": "Đang chờ bằng chứng chuyển. Chưa có mint trong hàng chờ."
+    },
+    "withdrawalRecoveryStatus.transferPending.queued": {
+      "source": "Waiting for transfer evidence. Mint is queued.",
+      "text": "Đang chờ bằng chứng chuyển. Mint trong hàng chờ."
+    },
+    "withdrawalRecoveryStatus.transferPending.prepared": {
+      "source": "Waiting for transfer evidence. Mint transaction is prepared; confirmation is not available yet.",
+      "text": "Đang chờ bằng chứng chuyển. Đã chuẩn bị giao dịch mint; chưa có xác nhận."
+    },
+    "withdrawalRecoveryStatus.transferPending.unknown": {
+      "source": "Waiting for transfer evidence. ",
+      "text": "Đang chờ bằng chứng chuyển. "
+    },
+    "withdrawalRecoveryStatus.request.unchecked": {
+      "source": "Request is saved. Mint has not been checked.",
+      "text": "Đã lưu yêu cầu. Chưa kiểm tra mint."
+    },
+    "withdrawalRecoveryStatus.request.notQueued": {
+      "source": "Request is saved. No mint is queued yet.",
+      "text": "Đã lưu yêu cầu. Chưa có mint trong hàng chờ."
+    },
+    "withdrawalRecoveryStatus.request.queued": {
+      "source": "Request is saved. Mint is queued.",
+      "text": "Đã lưu yêu cầu. Mint trong hàng chờ."
+    },
+    "withdrawalRecoveryStatus.request.prepared": {
+      "source": "Request is saved. Mint transaction is prepared; confirmation is not available yet.",
+      "text": "Đã lưu yêu cầu. Đã chuẩn bị giao dịch mint; chưa có xác nhận."
+    },
+    "withdrawalRecoveryStatus.request.unknown": {
+      "source": "Request is saved. ",
+      "text": "Yêu cầu đã lưu. "
+    },
+    "withdrawEarnings.connect": {
+      "source": "Connect your wallet to withdraw.",
+      "text": "Kết nối ví để rút."
+    },
+    "withdrawEarnings.signing": {
+      "source": "Sign the withdrawal in your wallet…",
+      "text": "Ký khoản rút trong ví…"
+    },
+    "withdrawEarnings.settling": {
+      "source": "Settling on-chain…",
+      "text": "Đang quyết toán trên chuỗi…"
+    },
+    "withdrawEarnings.failed": {
+      "source": "withdraw failed",
+      "text": "rút tiền không thành công"
+    },
+    "withdrawEarnings.minted": {
+      "source": "Minted on-chain — view the tx on ArcScan.",
+      "text": "Đã mint trên chuỗi — xem giao dịch trên ArcScan."
+    },
+    "withdrawEarnings.rejected": {
+      "source": "Signature rejected.",
+      "text": "Chữ ký bị từ chối."
+    },
+    "withdrawEarnings.title": {
+      "source": "Withdrawable earnings",
+      "text": "Thu nhập có thể rút"
+    },
+    "withdrawEarnings.description": {
+      "source": "Citation tolls accrue to your wallet's Circle Gateway balance. Pull them on-chain into your own wallet — one signature, no gas. A small network fee is reserved from the balance.",
+      "text": "Phí trích dẫn tích lũy vào số dư Circle Gateway của ví. Rút lên chuỗi vào ví của bạn — một chữ ký, không gas. Giữ một khoản phí mạng nhỏ từ số dư."
+    },
+    "withdrawEarnings.withdrawing": {
+      "source": "Withdrawing…",
+      "text": "Đang rút…"
+    },
+    "withdrawEarnings.unavailable": {
+      "source": "Balance unavailable",
+      "text": "Số dư không khả dụng"
+    },
+    "withdrawEarnings.checking": {
+      "source": "Checking balance…",
+      "text": "Đang kiểm tra số dư…"
+    },
+    "withdrawEarnings.belowFee": {
+      "source": "Balance below the withdraw fee",
+      "text": "Số dư thấp hơn phí rút"
+    },
+    "withdrawEarnings.empty": {
+      "source": "Nothing to withdraw yet",
+      "text": "Chưa có gì để rút"
+    },
+    "withdrawEarnings.retry": {
+      "source": "Retry balance check",
+      "text": "Thử kiểm tra số dư lại"
+    },
+    "withdrawEarnings.transaction": {
+      "source": "View the on-chain mint on ArcScan",
+      "text": "Xem mint trên chuỗi tại ArcScan"
+    },
+    "withdrawEarnings.success": {
+      "source": "Withdrew ${amount} to your wallet",
+      "text": "Đã rút ${amount} về ví"
+    },
+    "withdrawEarnings.withdraw": {
+      "source": "Withdraw ${amount} to my wallet ▸",
+      "text": "Rút ${amount} về ví tôi ▸"
+    },
+    "withdrawEarnings.balanceFailed": {
+      "source": "Gateway balance could not be read. This does not mean your earnings are zero. {retryButton}",
+      "text": "Không thể đọc số dư Gateway. Không có nghĩa thu nhập bằng 0. {retryButton}"
+    },
+    "creatorWithdrawal.precision": {
+      "source": "Enter USDC with at most six decimals",
+      "text": "Nhập USDC với tối đa sáu chữ số thập phân"
+    },
+    "creatorWithdrawal.positive": {
+      "source": "Choose a supported positive amount",
+      "text": "Chọn số tiền dương được hỗ trợ"
+    },
+    "creatorWithdrawal.signIn": {
+      "source": "Sign in as the original creator to continue recovery",
+      "text": "Đăng nhập bằng tác giả ban đầu để tiếp tục khôi phục"
+    },
+    "creatorWithdrawal.connect": {
+      "source": "Connect the original creator wallet",
+      "text": "Kết nối ví tác giả ban đầu"
+    },
+    "creatorWithdrawal.unavailable": {
+      "source": "Original creator withdrawal unavailable",
+      "text": "Khoản rút tác giả ban đầu không khả dụng"
+    },
+    "creatorWithdrawal.ownerChanged": {
+      "source": "Creator owner changed",
+      "text": "Chủ sở hữu tác giả đã thay đổi"
+    },
+    "creatorWithdrawal.prepared": {
+      "source": "Unsigned original saved. Review its amount, fee and recipient before signing.",
+      "text": "Đã lưu bản gốc chưa ký. Xem số tiền, phí và bên nhận trước khi ký."
+    },
+    "creatorWithdrawal.walletUnavailable": {
+      "source": "Creator wallet unavailable",
+      "text": "Ví tác giả không khả dụng"
+    },
+    "creatorWithdrawal.signed": {
+      "source": "Original burn signature saved; sending remains a separate step.",
+      "text": "Đã lưu chữ ký burn ban đầu; gửi vẫn là bước riêng."
+    },
+    "creatorWithdrawal.submitted": {
+      "source": "Original transfer attempt retained. Read its recovery status; do not send another burn.",
+      "text": "Giữ lần thử chuyển ban đầu. Đọc trạng thái khôi phục; không gửi burn khác."
+    },
+    "creatorWithdrawal.completed": {
+      "source": "Original owner mint finality verified",
+      "text": "Đã xác minh tính cuối cùng của mint chủ sở hữu ban đầu"
+    },
+    "creatorWithdrawal.gasUnavailable": {
+      "source": "Original creator wallet and gas RPC unavailable",
+      "text": "Ví tác giả ban đầu và RPC gas không khả dụng"
+    },
+    "creatorWithdrawal.minted": {
+      "source": "Owner mint submitted; original finality remains pending.",
+      "text": "Đã gửi mint chủ sở hữu; tính cuối cùng của bản gốc vẫn đang chờ."
+    },
+    "creatorWithdrawal.hashInvalid": {
+      "source": "Enter the original owner mint transaction hash",
+      "text": "Nhập hash giao dịch mint của chủ sở hữu ban đầu"
+    },
+    "creatorWithdrawal.aria": {
+      "source": "Creator owner withdrawal",
+      "text": "Rút tiền của chủ sở hữu tác giả"
+    },
+    "creatorWithdrawal.title": {
+      "source": "Withdraw creator earnings",
+      "text": "Rút thu nhập tác giả"
+    },
+    "creatorWithdrawal.introduction": {
+      "source": "Arc mainnet USDC returns to your connected creator wallet. Review the Circle fee, then sign and send the original burn. Minting needs a separate owner wallet transaction and native gas.",
+      "text": "USDC Arc mainnet về ví tác giả đang kết nối. Xem phí Circle rồi ký và gửi burn ban đầu. Mint cần giao dịch ví chủ sở hữu riêng và gas gốc."
+    },
+    "creatorWithdrawal.amount": {
+      "source": "Amount USDC",
+      "text": "Số tiền USDC"
+    },
+    "creatorWithdrawal.amountAria": {
+      "source": "Creator withdrawal amount",
+      "text": "Số tiền rút tác giả"
+    },
+    "creatorWithdrawal.fee": {
+      "source": "Maximum fee USDC",
+      "text": "Phí tối đa USDC"
+    },
+    "creatorWithdrawal.feeAria": {
+      "source": "Creator withdrawal maximum fee",
+      "text": "Phí rút tác giả tối đa"
+    },
+    "creatorWithdrawal.prepare": {
+      "source": "Prepare creator withdrawal",
+      "text": "Chuẩn bị khoản rút tác giả"
+    },
+    "creatorWithdrawal.originals": {
+      "source": "Saved originals",
+      "text": "Bản gốc đã lưu"
+    },
+    "creatorWithdrawal.originalsAria": {
+      "source": "Saved creator withdrawals",
+      "text": "Khoản rút tác giả đã lưu"
+    },
+    "creatorWithdrawal.choose": {
+      "source": "Choose an original",
+      "text": "Chọn bản gốc"
+    },
+    "creatorWithdrawal.request": {
+      "source": "Original request",
+      "text": "Yêu cầu ban đầu"
+    },
+    "creatorWithdrawal.requestAria": {
+      "source": "Original creator withdrawal request",
+      "text": "Yêu cầu rút tác giả ban đầu"
+    },
+    "creatorWithdrawal.sign": {
+      "source": "Sign reviewed creator burn",
+      "text": "Ký burn tác giả đã xem xét"
+    },
+    "creatorWithdrawal.send": {
+      "source": "Send signed creator burn",
+      "text": "Gửi burn tác giả đã ký"
+    },
+    "creatorWithdrawal.recover": {
+      "source": "Read creator recovery",
+      "text": "Đọc hướng dẫn khôi phục tác giả"
+    },
+    "creatorWithdrawal.mint": {
+      "source": "Review creator mint and gas",
+      "text": "Xem mint tác giả và gas"
+    },
+    "creatorWithdrawal.hash": {
+      "source": "Original owner mint hash",
+      "text": "Hash mint chủ sở hữu ban đầu"
+    },
+    "creatorWithdrawal.hashAria": {
+      "source": "Original creator mint hash",
+      "text": "Hash mint tác giả ban đầu"
+    },
+    "creatorWithdrawal.complete": {
+      "source": "Verify creator mint finality",
+      "text": "Xác minh tính cuối cùng của mint tác giả"
+    },
+    "creatorWithdrawal.recoveryBoundary": {
+      "source": "A lost response or interrupted wallet prompt retains the original attempt. Saved requests can be read after reload; browser data loss does not grant retry permission. Keep wallet transaction hashes for recovery.",
+      "text": "Mất phản hồi hay cửa sổ ví bị gián đoạn vẫn giữ lần thử ban đầu. Có thể đọc yêu cầu lưu sau tải lại; mất dữ liệu trình duyệt không cấp quyền thử lại. Giữ hash giao dịch ví để khôi phục."
+    },
+    "creatorWithdrawal.statusAria": {
+      "source": "Creator withdrawal status",
+      "text": "Trạng thái rút tác giả"
+    },
+    "creatorWithdrawal.pending": {
+      "source": "Transfer pending: {status}",
+      "text": "Khoản chuyển đang chờ: {status}"
+    },
+    "creatorWithdrawal.terms": {
+      "source": "Amount {amount} USDC, fee at most {fee} USDC; recipient {recipient}.",
+      "text": "Số tiền {amount} USDC, phí tối đa {fee} USDC; bên nhận {recipient}."
+    }
+  }
+}

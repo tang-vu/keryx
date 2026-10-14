@@ -1,0 +1,380 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/creator-registration.ts",
+  "sourceSha256": "01fcb71d46fcbe84714a92ccb12585609c94990f5b38d3a04b24b40ec2d2a788",
+  "entries": {
+    "unifiedHeading": {
+      "source": "Register your source",
+      "text": "Đăng ký nguồn"
+    },
+    "unifiedExplanation": {
+      "source": "Verify your RSS feed, review the registration and sign with your creator wallet. Keryx covers gas while its sponsorship wallet has enough funds. You keep control and receive creator payments.",
+      "text": "Xác minh nguồn cấp RSS, xem xét đăng ký và ký bằng ví tác giả. Keryx chi trả gas khi ví tài trợ còn đủ tiền. Bạn giữ quyền kiểm soát và nhận thanh toán cho tác giả."
+    },
+    "verificationStep": {
+      "source": "1. Verify your source",
+      "text": "1. Xác minh nguồn"
+    },
+    "registrationStep": {
+      "source": "2. Review and sign",
+      "text": "2. Xem xét và ký"
+    },
+    "permissionStep": {
+      "source": "3. Choose how your source earns",
+      "text": "3. Chọn cách nguồn tạo thu nhập"
+    },
+    "verificationExplanation": {
+      "source": "Publish a proof on your website or in your RSS feed. Verification alone does not enable paid distribution.",
+      "text": "Đăng bằng chứng trên website hoặc trong nguồn cấp RSS. Chỉ xác minh không bật phân phối trả phí."
+    },
+    "feedRequired": {
+      "source": "Include your exact HTTPS RSS feed before creating the ownership proof.",
+      "text": "Đưa đúng nguồn cấp RSS HTTPS vào trước khi tạo bằng chứng sở hữu."
+    },
+    "requiredFeedLabel": {
+      "source": "RSS feed URL (required)",
+      "text": "URL nguồn cấp RSS (bắt buộc)"
+    },
+    "inlineSourceHeading": {
+      "source": "Source details",
+      "text": "Thông tin nguồn"
+    },
+    "inlineFileHeading": {
+      "source": "Publish your proof file",
+      "text": "Đăng tệp bằng chứng"
+    },
+    "inlineTokenHeading": {
+      "source": "Publish your channel token",
+      "text": "Đăng mã kênh"
+    },
+    "draftNetworkMismatch": {
+      "source": "This draft belongs to another network. Return to that network or start a new draft.",
+      "text": "Bản nháp thuộc mạng khác. Quay lại mạng đó hoặc bắt đầu bản nháp mới."
+    },
+    "draftOwnerMismatch": {
+      "source": "This draft belongs to another wallet. Sign in with its creator wallet or start a new draft.",
+      "text": "Bản nháp thuộc ví khác. Đăng nhập bằng ví tác giả của bản nháp hoặc bắt đầu bản mới."
+    },
+    "indexedPolicyUnavailable": {
+      "source": "Your registration is indexed, but its verified ownership link is not yet available. Reload the source policy before continuing.",
+      "text": "Đăng ký đã lập chỉ mục nhưng liên kết sở hữu đã xác minh chưa khả dụng. Tải lại chính sách nguồn trước khi tiếp tục."
+    },
+    "reloadIndexedPolicy": {
+      "source": "Reload verified source policy",
+      "text": "Tải lại chính sách nguồn đã xác minh"
+    },
+    "policyReviewExplanation": {
+      "source": "Your listing is registered. Choose its earnings policy below; paid distribution still needs your explicit permission.",
+      "text": "Niêm yết đã đăng ký. Chọn chính sách thu nhập bên dưới; phân phối trả phí vẫn cần bạn cho phép rõ ràng."
+    },
+    "advancedRecovery": {
+      "source": "Advanced: recover a saved registration",
+      "text": "Nâng cao: khôi phục đăng ký đã lưu"
+    },
+    "savedRecoveryLabel": {
+      "source": "Saved registration recovery",
+      "text": "Khôi phục đăng ký đã lưu"
+    },
+    "sponsorshipFundsUnavailable": {
+      "source": "New sponsored registrations are paused because available gas funds are insufficient. Existing covered requests can still be completed within their reservation.",
+      "text": "Đăng ký mới được tài trợ tạm dừng vì tiền gas khả dụng không đủ. Yêu cầu hiện có đã được bảo đảm vẫn có thể hoàn tất trong khoản giữ."
+    },
+    "walletFundedExplanation": {
+      "source": "Prefer to pay the transaction gas yourself? Keep this source draft and use wallet-funded registration.",
+      "text": "Bạn muốn tự trả gas giao dịch? Giữ bản nháp nguồn và dùng đăng ký bằng tiền ví."
+    },
+    "startNewDraft": {
+      "source": "Start a new source draft",
+      "text": "Bắt đầu bản nháp nguồn mới"
+    },
+    "pageTitle": {
+      "source": "Sponsored source registration — Keryx",
+      "text": "Đăng ký nguồn được tài trợ — Keryx"
+    },
+    "pageHeading": {
+      "source": "Publish with sponsored gas",
+      "text": "Xuất bản với gas được tài trợ"
+    },
+    "pageExplanation": {
+      "source": "Prove control of your RSS feed, review its terms, then sign the registration. Keryx covers gas while sponsorship funds are available. Your wallet keeps control and receives creator payments.",
+      "text": "Chứng minh kiểm soát nguồn cấp RSS, xem xét điều kiện rồi ký đăng ký. Keryx trả gas khi tiền tài trợ còn khả dụng. Ví của bạn giữ quyền kiểm soát và nhận thanh toán tác giả."
+    },
+    "invitationHeading": {
+      "source": "Registration gas covered by Keryx",
+      "text": "Gas đăng ký do Keryx chi trả"
+    },
+    "invitationExplanation": {
+      "source": "Verify control of your feed, review the source terms and sign. You keep source management and payouts.",
+      "text": "Xác minh kiểm soát nguồn cấp, xem xét điều kiện nguồn và ký. Bạn giữ quyền quản lý nguồn và nhận thanh toán."
+    },
+    "sponsoredRegistrationLink": {
+      "source": "Use sponsored registration ▸",
+      "text": "Dùng đăng ký được tài trợ ▸"
+    },
+    "stateLabels.prepared": {
+      "source": "Review the prepared registration",
+      "text": "Xem xét đăng ký đã chuẩn bị"
+    },
+    "stateLabels.signing": {
+      "source": "Sponsor submission outcome unknown",
+      "text": "Chưa rõ kết quả gửi từ bên tài trợ"
+    },
+    "stateLabels.submitted": {
+      "source": "Original transaction submitted: confirmation pending",
+      "text": "Đã gửi giao dịch ban đầu: đang chờ xác nhận"
+    },
+    "stateLabels.confirmed": {
+      "source": "Registration confirmed: indexing pending",
+      "text": "Đã xác nhận đăng ký: đang chờ lập chỉ mục"
+    },
+    "stateLabels.reverted": {
+      "source": "Registration reverted",
+      "text": "Đăng ký bị hoàn nguyên"
+    },
+    "stateLabels.expired": {
+      "source": "Unsigned registration expired",
+      "text": "Đăng ký chưa ký đã hết hạn"
+    },
+    "recoveryUnavailable": {
+      "source": "Original recovery is unavailable. Keep this request; do not register again.",
+      "text": "Khôi phục bản gốc không khả dụng. Giữ yêu cầu này; không đăng ký lại."
+    },
+    "requestUnavailable": {
+      "source": "Registration request unavailable",
+      "text": "Yêu cầu đăng ký không khả dụng"
+    },
+    "originalWalletMismatch": {
+      "source": "Original registration belongs to another wallet or registry",
+      "text": "Đăng ký ban đầu thuộc ví hoặc registry khác"
+    },
+    "verifyConnectedWallet": {
+      "source": "Verify this source with the connected wallet first",
+      "text": "Xác minh nguồn bằng ví đang kết nối trước"
+    },
+    "originalClaimMismatch": {
+      "source": "Original registration belongs to another source claim",
+      "text": "Đăng ký ban đầu thuộc yêu cầu sở hữu nguồn khác"
+    },
+    "savedRecoveryUnavailable": {
+      "source": "Saved original recovery is unavailable; retain its ID.",
+      "text": "Khôi phục bản gốc đã lưu không khả dụng; giữ ID."
+    },
+    "originalUnavailable": {
+      "source": "Original registration unavailable",
+      "text": "Đăng ký ban đầu không khả dụng"
+    },
+    "waitForExpiry": {
+      "source": "Wait until the original unsigned request has conclusively expired.",
+      "text": "Chờ đến khi yêu cầu ban đầu chưa ký chắc chắn đã hết hạn."
+    },
+    "saveRequestBeforeSigning": {
+      "source": "Save the original request ID below before signing. Browser recovery storage is unavailable.",
+      "text": "Lưu ID yêu cầu ban đầu bên dưới trước khi ký. Lưu trữ khôi phục trình duyệt không khả dụng."
+    },
+    "preparationUnavailable": {
+      "source": "Preparation unavailable",
+      "text": "Chuẩn bị không khả dụng"
+    },
+    "preparedTermsMismatch": {
+      "source": "The prepared registration does not match this source and selected price. Review the original request before signing.",
+      "text": "Đăng ký đã chuẩn bị không khớp nguồn này và giá đã chọn. Xem xét yêu cầu ban đầu trước khi ký."
+    },
+    "signingAllowanceUnavailable": {
+      "source": "This original has no current signing allowance. Inspect its status; do not register again.",
+      "text": "Bản gốc này hiện không có hạn mức cho phép ký. Kiểm tra trạng thái; không đăng ký lại."
+    },
+    "submissionUnknown": {
+      "source": "Submission unknown. Inspect the original request.",
+      "text": "Chưa rõ việc gửi. Kiểm tra yêu cầu ban đầu."
+    },
+    "connectInstructions": {
+      "source": "Connect and sign in with your creator wallet on ${network}.",
+      "text": "Kết nối và đăng nhập bằng ví tác giả trên ${network}."
+    },
+    "connectWalletLink": {
+      "source": "Connect wallet ▸",
+      "text": "Kết nối ví ▸"
+    },
+    "formLabel": {
+      "source": "Sponsored source registration",
+      "text": "Đăng ký nguồn được tài trợ"
+    },
+    "sponsorshipUnavailable": {
+      "source": "Registration gas sponsorship is currently unavailable for this wallet. Existing requests can still be inspected.",
+      "text": "Tài trợ gas đăng ký hiện không khả dụng cho ví này. Vẫn có thể kiểm tra yêu cầu hiện có."
+    },
+    "verifiedFeed": {
+      "source": "Verified feed: ${feedUrl}",
+      "text": "Nguồn cấp đã xác minh: ${feedUrl}"
+    },
+    "readPriceLabel": {
+      "source": "Price per read (USDC)",
+      "text": "Giá mỗi lượt đọc (USDC)"
+    },
+    "prepareRegistrationButton": {
+      "source": "Prepare sponsored registration",
+      "text": "Chuẩn bị đăng ký được tài trợ"
+    },
+    "verifyFeedInstructions": {
+      "source": "Prove control of your exact feed first. ",
+      "text": "Trước tiên chứng minh quyền kiểm soát đúng nguồn cấp. "
+    },
+    "verifySourceLink": {
+      "source": "Verify my source ▸",
+      "text": "Xác minh nguồn của tôi ▸"
+    },
+    "indexedHeading": {
+      "source": "Registration confirmed and indexed",
+      "text": "Đã xác nhận và lập chỉ mục đăng ký"
+    },
+    "source": {
+      "source": "Source: ${sourceUrl}",
+      "text": "Nguồn: ${sourceUrl}"
+    },
+    "creatorWallet": {
+      "source": "Creator and payout wallet: ${wallet}",
+      "text": "Ví tác giả và nhận tiền: ${wallet}"
+    },
+    "authorRewardsLabel": {
+      "source": "Author rewards:",
+      "text": "Phần thưởng tác giả:"
+    },
+    "readPrice": {
+      "source": "Price per read: ${priceUsdc} USDC",
+      "text": "Giá mỗi lượt đọc: ${priceUsdc} USDC"
+    },
+    "contentIdentifier": {
+      "source": "Content identifier: ${contentId}",
+      "text": "Mã định danh nội dung: ${contentId}"
+    },
+    "retainedFeedContent": {
+      "source": "Feed content retained by Keryx",
+      "text": "Nội dung nguồn cấp do Keryx giữ"
+    },
+    "tags": {
+      "source": "Tags: ${tags}",
+      "text": "Thẻ: ${tags}"
+    },
+    "noTags": {
+      "source": "None",
+      "text": "Không có"
+    },
+    "networkRegistry": {
+      "source": "Network and registry: ${network}, ${registry}",
+      "text": "Mạng và registry: ${network}, ${registry}"
+    },
+    "gasSponsor": {
+      "source": "Gas sponsor: ${wallet}",
+      "text": "Bên tài trợ gas: ${wallet}"
+    },
+    "authorizationExpiry": {
+      "source": "Authorization expires: ${expiresAt}",
+      "text": "Ủy quyền hết hạn: ${expiresAt}"
+    },
+    "gasReservation": {
+      "source": "Keryx gas reservation: up to ${gasUsdc} USDC. This is separate from creator earnings.",
+      "text": "Khoản gas Keryx giữ: tối đa ${gasUsdc} USDC. Khoản này tách biệt với thu nhập tác giả."
+    },
+    "originalRequestLabel": {
+      "source": "Original request",
+      "text": "Yêu cầu ban đầu"
+    },
+    "originalTransaction": {
+      "source": "Original registration transaction: ${transactionHash}",
+      "text": "Giao dịch đăng ký ban đầu: ${transactionHash}"
+    },
+    "confirmedGasCost": {
+      "source": "Confirmed sponsor gas cost: ${gasUsdc} USDC",
+      "text": "Chi phí gas tài trợ đã xác nhận: ${gasUsdc} USDC"
+    },
+    "signRegistrationButton": {
+      "source": "Sign reviewed registration",
+      "text": "Ký đăng ký đã xem xét"
+    },
+    "expiredRequestExplanation": {
+      "source": "This original expired before sponsor signing. A new reviewed request uses another sponsorship attempt and retains the original history.",
+      "text": "Bản gốc hết hạn trước khi bên tài trợ ký. Yêu cầu mới đã xem xét dùng lần tài trợ khác và giữ lịch sử ban đầu."
+    },
+    "prepareReplacementButton": {
+      "source": "Prepare new unsigned request",
+      "text": "Chuẩn bị yêu cầu mới chưa ký"
+    },
+    "requestRecoveryUnavailable": {
+      "source": "Original recovery unavailable; retain this request.",
+      "text": "Khôi phục bản gốc không khả dụng; giữ yêu cầu này."
+    },
+    "inspectOriginalButton": {
+      "source": "Inspect original registration",
+      "text": "Kiểm tra đăng ký ban đầu"
+    },
+    "resumeOriginalButton": {
+      "source": "Resume original sponsored transaction",
+      "text": "Tiếp tục giao dịch tài trợ ban đầu"
+    },
+    "resumeOriginalExplanation": {
+      "source": "Resume uses the original creator authorization, transaction nonce and gas limits. A retained signed transaction is sent again unchanged. It does not register a new attempt or increase the gas reservation.",
+      "text": "Tiếp tục dùng ủy quyền tác giả, nonce giao dịch và giới hạn gas ban đầu. Giao dịch có chữ ký được giữ sẽ gửi lại nguyên trạng. Không đăng ký lần thử mới hay tăng khoản gas giữ."
+    },
+    "resolveExpiredButton": {
+      "source": "Resolve expired original using reserved gas",
+      "text": "Giải quyết bản gốc hết hạn bằng gas đã giữ"
+    },
+    "resolveExpiredExplanation": {
+      "source": "After authorization expires, you may explicitly finish the original transaction. Keryx pays its gas within the existing reservation; the registration must revert. Inspect its receipt before preparing a new attempt. This creates no source and increases no spending limit.",
+      "text": "Sau khi ủy quyền hết hạn, bạn có thể chủ động hoàn tất giao dịch ban đầu. Keryx trả gas trong khoản giữ hiện có; đăng ký phải bị revert. Kiểm tra biên nhận trước khi chuẩn bị lần thử mới. Không tạo nguồn và không tăng hạn mức chi."
+    },
+    "revertedRequestExplanation": {
+      "source": "The original transaction reverted and its actual gas was charged. A new reviewed registration consumes another attempt within the same allowance and retains the original history.",
+      "text": "Giao dịch ban đầu bị revert và đã thu gas thực tế. Đăng ký mới đã xem xét dùng thêm một lần thử trong cùng hạn mức và giữ lịch sử ban đầu."
+    },
+    "publisherScope": {
+      "source": "Gas sponsorship is limited to verified publishers at: ${publishers}.",
+      "text": "Tài trợ gas giới hạn cho nhà xuất bản đã xác minh tại: ${publishers}."
+    },
+    "feedUrlLabel": {
+      "source": "RSS feed URL (optional)",
+      "text": "URL nguồn cấp RSS (không bắt buộc)"
+    },
+    "feedUrlExplanation": {
+      "source": "For sponsored feed registration, include your exact HTTPS feed on the same website before creating the ownership proof.",
+      "text": "Để đăng ký nguồn cấp được tài trợ, đưa đúng nguồn cấp HTTPS trên cùng website vào trước khi tạo bằng chứng sở hữu."
+    },
+    "feedOriginUnavailable": {
+      "source": "Use a full HTTPS feed URL on the same publisher origin.",
+      "text": "Dùng URL nguồn cấp HTTPS đầy đủ cùng nguồn gốc nhà xuất bản."
+    },
+    "lostResponseExplanation": {
+      "source": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+      "text": "Mất phản hồi vẫn giữ lần thử này. Kiểm tra không gửi giao dịch mới. Chỉ đăng ký không kích hoạt thu nhập tác giả."
+    },
+    "earningsPolicyLink": {
+      "source": "Review this source's earnings policy ▸",
+      "text": "Xem xét chính sách thu nhập của nguồn này ▸"
+    },
+    "recoverRequestLabel": {
+      "source": "Recover original request",
+      "text": "Khôi phục yêu cầu ban đầu"
+    },
+    "idRecoveryUnavailable": {
+      "source": "Original recovery unavailable; retain its ID.",
+      "text": "Khôi phục bản gốc không khả dụng; giữ ID."
+    },
+    "inspectSavedButton": {
+      "source": "Inspect saved request",
+      "text": "Kiểm tra yêu cầu đã lưu"
+    },
+    "walletFundedRegistrationLink": {
+      "source": "Wallet-funded registration ▸",
+      "text": "Đăng ký bằng tiền ví ▸"
+    },
+    "priceOnlyUpdateExplanation": {
+      "source": "Price updates change only the price. A concurrent edit requires a fresh review before signing.",
+      "text": "Cập nhật giá chỉ đổi giá. Chỉnh sửa đồng thời cần xem xét lại trước khi ký."
+    },
+    "legacyPriceUpdateExplanation": {
+      "source": "Price updates also submit these fields. Avoid editing this source elsewhere while the wallet prompt is open.",
+      "text": "Cập nhật giá cũng gửi các trường này. Tránh sửa nguồn ở nơi khác khi cửa sổ ví đang mở."
+    }
+  }
+}

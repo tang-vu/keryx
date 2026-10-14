@@ -1,0 +1,196 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/integrations.ts",
+  "sourceSha256": "9de1bc7e839bcf805216bf8639d67ccb26cad172f12994c415fb8dd27b9e83fd",
+  "entries": {
+    "mcpSetup.metadataTitle": {
+      "source": "Remote MCP setup",
+      "text": "Thiết lập MCP từ xa"
+    },
+    "mcpSetup.description": {
+      "source": "Connect Codex, Claude Code, or Cursor to Keryx research and pay cited creators in Arc USDC.",
+      "text": "Kết nối Codex, Claude Code hoặc Cursor với nghiên cứu Keryx và trả tiền cho tác giả được trích dẫn bằng USDC trên Arc."
+    },
+    "mcpSetup.codexDetail": {
+      "source": "Add once from your terminal. Discover free paper metadata, research and service-status tools.",
+      "text": "Thêm một lần từ terminal. Khám phá công cụ siêu dữ liệu bài miễn phí, nghiên cứu và trạng thái dịch vụ."
+    },
+    "mcpSetup.claudeDetail": {
+      "source": "Register Keryx as a remote HTTP server in your current Claude scope.",
+      "text": "Đăng ký Keryx làm máy chủ HTTP từ xa trong phạm vi Claude hiện tại."
+    },
+    "mcpSetup.cursorDetail": {
+      "source": "Paste this server entry into your Cursor MCP configuration.",
+      "text": "Dán mục máy chủ này vào cấu hình MCP của Cursor."
+    },
+    "mcpSetup.copy": {
+      "source": "Copy",
+      "text": "Sao chép"
+    },
+    "mcpSetup.copied": {
+      "source": "Copied",
+      "text": "Đã sao chép"
+    },
+    "mcpSetup.title": {
+      "source": "One URL. Every agent. Creators get paid.",
+      "text": "Một URL. Mọi tác nhân. Tác giả được trả tiền."
+    },
+    "mcpSetup.introduction": {
+      "source": "Give your MCP client a budgeted research tool. Keryx finds relevant writing, settles citation rewards in Arc USDC, and returns the answer with a public receipt.",
+      "text": "Cung cấp công cụ nghiên cứu có ngân sách cho ứng dụng MCP. Keryx tìm bài liên quan, quyết toán phần thưởng trích dẫn bằng USDC trên Arc và trả câu trả lời kèm biên nhận công khai."
+    },
+    "mcpSetup.connect": {
+      "source": "Connect an agent",
+      "text": "Kết nối tác nhân"
+    },
+    "mcpSetup.liveEndpoint": {
+      "source": "Live endpoint",
+      "text": "Điểm cuối đang hoạt động"
+    },
+    "mcpSetup.checkAgain": {
+      "source": "Check connection again",
+      "text": "Kiểm tra kết nối lại"
+    },
+    "mcpSetup.checking": {
+      "source": "Checking connection...",
+      "text": "Đang kiểm tra kết nối..."
+    },
+    "mcpSetup.connected": {
+      "source": "MCP endpoint connected",
+      "text": "Đã kết nối điểm cuối MCP"
+    },
+    "mcpSetup.unavailable": {
+      "source": "Connection unavailable",
+      "text": "Kết nối không khả dụng"
+    },
+    "mcpSetup.availabilityChecking": {
+      "source": "Checking research availability…",
+      "text": "Đang kiểm tra khả dụng nghiên cứu…"
+    },
+    "mcpSetup.savedReports": {
+      "source": "Saved reports",
+      "text": "Báo cáo đã lưu"
+    },
+    "mcpSetup.browsePapers": {
+      "source": "Browse free paper metadata",
+      "text": "Duyệt siêu dữ liệu bài miễn phí"
+    },
+    "mcpSetup.dispatches": {
+      "source": "MCP dispatches",
+      "text": "Bản tin MCP"
+    },
+    "mcpSetup.payingDispatches": {
+      "source": "Paying dispatches",
+      "text": "Bản tin trả phí"
+    },
+    "mcpSetup.chooseClient": {
+      "source": "Choose your MCP client",
+      "text": "Chọn ứng dụng MCP"
+    },
+    "mcpSetup.tagBoundary": {
+      "source": "The client tag measures which setup path works. It does not identify or authorize you.",
+      "text": "Thẻ ứng dụng đo luồng thiết lập nào hoạt động. Không định danh hay cấp quyền cho bạn."
+    },
+    "mcpSetup.copySetup": {
+      "source": "Copy setup",
+      "text": "Sao chép cấu hình"
+    },
+    "mcpSetup.keySetup": {
+      "source": "Setup with an API key",
+      "text": "Thiết lập với khóa API"
+    },
+    "mcpSetup.researchTitle": {
+      "source": "Ask for research, not a search",
+      "text": "Yêu cầu nghiên cứu, không chỉ tìm kiếm"
+    },
+    "mcpSetup.researchIntroduction": {
+      "source": "Tell your agent to use Keryx. The response includes cited creators, reward amounts, confidence, settlement status, and a dispatch URL.",
+      "text": "Yêu cầu tác nhân dùng Keryx. Phản hồi gồm tác giả được trích dẫn, số tiền thưởng, độ tin cậy, trạng thái quyết toán và URL bản tin."
+    },
+    "mcpSetup.copyPrompt": {
+      "source": "Copy prompt",
+      "text": "Sao chép câu lệnh"
+    },
+    "mcpSetup.identityEyebrow": {
+      "source": "Anonymous first, verified when ready",
+      "text": "Thử ẩn danh trước, xác minh khi sẵn sàng"
+    },
+    "mcpSetup.limitTitle": {
+      "source": "Raise the research limit",
+      "text": "Tăng giới hạn nghiên cứu"
+    },
+    "mcpSetup.limitBoundary": {
+      "source": "Try Remote MCP without a key. For higher limits and wallet-level attribution, create an ask-scoped API key in the developer portal. Keryx still funds creator rewards; your key controls identity and rate limits only. All keys for one wallet share the same sponsored allowance across chat and Remote MCP.",
+      "text": "Thử MCP từ xa không cần khóa. Để có giới hạn cao hơn và quy thuộc theo ví, tạo khóa API có phạm vi ask trong cổng lập trình viên. Keryx vẫn chi trả phần thưởng tác giả; khóa chỉ kiểm soát danh tính và giới hạn tần suất. Mọi khóa của một ví dùng chung hạn mức tài trợ trên chat và MCP từ xa."
+    },
+    "mcpSetup.developerPortal": {
+      "source": "Developer portal",
+      "text": "Cổng lập trình viên"
+    },
+    "mcpSetup.versionedEndpoint": {
+      "source": "{endpoint} · server {version}",
+      "text": "{endpoint} · máy chủ {version}"
+    },
+    "mcpSetup.paperLookup": {
+      "source": "Need a paper’s title, authors or DOI? Use {lookup} with its exact identifier. Catalog metadata is free; repository search requires {repositorySearch}.",
+      "text": "Cần tiêu đề bài, tác giả hay DOI? Dùng {lookup} với mã định danh chính xác. Siêu dữ liệu danh mục miễn phí; tìm kho tài liệu cần {repositorySearch}."
+    },
+    "mcpSetup.setupEyebrow": {
+      "source": "{step} / Setup",
+      "text": "{step} / Thiết lập"
+    },
+    "mcpSetup.dispatchEyebrow": {
+      "source": "{step} / First dispatch",
+      "text": "{step} / Bản tin đầu tiên"
+    },
+    "integrationPlayground.title": {
+      "source": "OpenAI-compatible playground",
+      "text": "Khu thử nghiệm tương thích OpenAI"
+    },
+    "integrationPlayground.questionPlaceholder": {
+      "source": "Ask anything…",
+      "text": "Hỏi bất kỳ điều gì…"
+    },
+    "integrationPlayground.running": {
+      "source": "Running…",
+      "text": "Đang chạy…"
+    },
+    "integrationPlayground.run": {
+      "source": "Run",
+      "text": "Lượt chạy"
+    },
+    "integrationPlayground.answer": {
+      "source": "answer",
+      "text": "câu trả lời"
+    },
+    "integrationPlayground.copy": {
+      "source": "copy",
+      "text": "sao chép"
+    },
+    "integrationPlayground.requestFailed": {
+      "source": "Request failed ({status})",
+      "text": "Yêu cầu không thành công ({status})"
+    },
+    "integrationPlayground.introduction": {
+      "source": "The Run button calls {endpoint} exactly as any OpenAI SDK would (model {model}, {stream}). Free — no key. Watch the agent decide, then pay the creators it cites.",
+      "text": "Nút Chạy gọi {endpoint} đúng như OpenAI SDK (mô hình {model}, {stream}). Miễn phí — không cần khóa. Xem tác nhân quyết định rồi trả tiền cho tác giả được trích dẫn."
+    },
+    "integrationPlayground.reasoning": {
+      "source": "{field} (live)",
+      "text": "{field} (trực tiếp)"
+    },
+    "integrationPlayground.citations": {
+      "source": "Citations and planned rewards (USDC on Arc, {mode})",
+      "text": "Trích dẫn và phần thưởng dự kiến (USDC trên Arc, {mode})"
+    },
+    "integrationPlayground.rewardWeight": {
+      "source": "${reward} · w {weight}",
+      "text": "${reward} · trọng số {weight}"
+    },
+    "integrationPlayground.keyInstruction": {
+      "source": "Pass a {key} key (mint at {portal}) as the Bearer token for higher limits. Full schema at {schema}.",
+      "text": "Truyền khóa {key} (tạo tại {portal}) làm Bearer token để có giới hạn cao hơn. Lược đồ đầy đủ tại {schema}."
+    }
+  }
+}

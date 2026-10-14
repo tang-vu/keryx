@@ -1,0 +1,664 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/get-started.ts",
+  "sourceSha256": "d430fd307a429aedf218f6286314513893202a99b011f455fcbe3912bfe10bd5",
+  "entries": {
+    "navigation.start": {
+      "source": "Get started",
+      "text": "Bắt đầu"
+    },
+    "navigation.download": {
+      "source": "Download",
+      "text": "Tải xuống"
+    },
+    "navigation.integrations": {
+      "source": "Integrations",
+      "text": "Tích hợp"
+    },
+    "navigation.label": {
+      "source": "Ways to use Keryx",
+      "text": "Cách sử dụng Keryx"
+    },
+    "navigation.downloadAction": {
+      "source": "Get the app or extension",
+      "text": "Tải ứng dụng hoặc tiện ích"
+    },
+    "navigation.connectAction": {
+      "source": "Connect MCP, API or CLI",
+      "text": "Kết nối MCP, API hoặc CLI"
+    },
+    "navigation.entryBody": {
+      "source": "Use Keryx in your browser, on Windows, from an AI assistant or inside your own tools. Find the right setup and see what each option supports.",
+      "text": "Dùng Keryx trong trình duyệt, trên Windows, qua trợ lý AI hoặc trong công cụ của bạn. Tìm cách thiết lập phù hợp và xem từng lựa chọn hỗ trợ gì."
+    },
+    "common.steps": {
+      "source": "Get set up",
+      "text": "Thiết lập"
+    },
+    "common.requirements": {
+      "source": "What you need",
+      "text": "Những gì bạn cần"
+    },
+    "common.help": {
+      "source": "Need a hand?",
+      "text": "Cần hỗ trợ?"
+    },
+    "common.helpBody": {
+      "source": "Tell us which app or integration you are using and what happened. Include a report link if you have one. Keep wallet keys and API secrets private.",
+      "text": "Cho biết ứng dụng hoặc tích hợp bạn dùng và điều đã xảy ra. Kèm liên kết báo cáo nếu có. Giữ khóa ví và bí mật API riêng tư."
+    },
+    "common.support": {
+      "source": "Contact support",
+      "text": "Liên hệ hỗ trợ"
+    },
+    "common.pricing": {
+      "source": "Pricing & budgets",
+      "text": "Giá và ngân sách"
+    },
+    "common.status": {
+      "source": "Service status",
+      "text": "Trạng thái dịch vụ"
+    },
+    "common.copy": {
+      "source": "Copy",
+      "text": "Sao chép"
+    },
+    "common.copied": {
+      "source": "Copied",
+      "text": "Đã sao chép"
+    },
+    "common.copyFailed": {
+      "source": "Could not copy. Select and copy the example manually.",
+      "text": "Không thể sao chép. Chọn và sao chép ví dụ thủ công."
+    },
+    "common.docs": {
+      "source": "Read the full guide",
+      "text": "Đọc hướng dẫn đầy đủ"
+    },
+    "common.version": {
+      "source": "Version",
+      "text": "Phiên bản"
+    },
+    "common.release": {
+      "source": "Release notes & checksums",
+      "text": "Ghi chú phát hành và checksum"
+    },
+    "start.title": {
+      "source": "Your research. Wherever you work.",
+      "text": "Nghiên cứu của bạn. Ở mọi nơi bạn làm việc."
+    },
+    "start.metadata": {
+      "source": "Get started with Keryx",
+      "text": "Bắt đầu với Keryx"
+    },
+    "start.description": {
+      "source": "Choose the Keryx web app, Windows desktop, browser extension, MCP, API, CLI or chat bots, with clear setup guides and requirements.",
+      "text": "Chọn web Keryx, ứng dụng Windows, tiện ích trình duyệt, MCP, API, CLI hoặc bot trò chuyện, với hướng dẫn thiết lập và yêu cầu rõ ràng."
+    },
+    "start.body": {
+      "source": "Ask in your browser, research a page you are reading, connect your AI assistant, or build Keryx into your own workflow. Pick a starting point below.",
+      "text": "Hỏi trong trình duyệt, nghiên cứu trang đang đọc, kết nối trợ lý AI hoặc đưa Keryx vào quy trình của bạn. Chọn điểm bắt đầu bên dưới."
+    },
+    "start.try": {
+      "source": "Try Keryx in the browser",
+      "text": "Thử Keryx trong trình duyệt"
+    },
+    "start.browse": {
+      "source": "Browse downloads",
+      "text": "Xem bản tải xuống"
+    },
+    "start.firstTitle": {
+      "source": "Your first cited answer",
+      "text": "Câu trả lời có trích dẫn đầu tiên"
+    },
+    "start.firstBody": {
+      "source": "The browser is the quickest place to start. The sponsored public trial needs no installation, wallet or deposit, while available within service limits.",
+      "text": "Trình duyệt là nơi bắt đầu nhanh nhất. Thử nghiệm công khai được tài trợ không cần cài đặt, ví hay nạp tiền khi còn khả dụng trong giới hạn dịch vụ."
+    },
+    "start.steps.0": {
+      "source": "Open the question form and check the displayed availability, payer and source budget.",
+      "text": "Mở biểu mẫu câu hỏi và kiểm tra khả dụng, bên trả tiền và ngân sách nguồn hiển thị."
+    },
+    "start.steps.1": {
+      "source": "Choose Quick or Deep and ask a question you can share publicly. Sponsored trial reports have public links.",
+      "text": "Chọn Nhanh hoặc Chuyên sâu, hỏi câu có thể chia sẻ công khai. Báo cáo thử nghiệm được tài trợ có liên kết công khai."
+    },
+    "start.steps.2": {
+      "source": "Follow the source decisions, then open the citations and inspect the report's evidence and payment states.",
+      "text": "Theo dõi quyết định về nguồn, rồi mở trích dẫn và kiểm tra bằng chứng cùng trạng thái thanh toán báo cáo."
+    },
+    "start.choose": {
+      "source": "Choose how you use Keryx",
+      "text": "Chọn cách dùng Keryx"
+    },
+    "start.accountTitle": {
+      "source": "An account is optional for the trial",
+      "text": "Thử nghiệm không bắt buộc tài khoản"
+    },
+    "start.accountBody": {
+      "source": "Sign in when you want supported account features, manage API keys or publish a source. A wallet connection alone does not make public research private, add research credit or approve spending.",
+      "text": "Đăng nhập khi cần tính năng tài khoản được hỗ trợ, quản lý khóa API hoặc xuất bản nguồn. Chỉ kết nối ví không làm nghiên cứu công khai thành riêng tư, thêm tín dụng nghiên cứu hay phê duyệt chi tiêu."
+    },
+    "start.accountAction": {
+      "source": "Sign in & account setup",
+      "text": "Đăng nhập và thiết lập tài khoản"
+    },
+    "start.faqTitle": {
+      "source": "Before you install",
+      "text": "Trước khi cài đặt"
+    },
+    "start.faq.0.question": {
+      "source": "Which option should I choose?",
+      "text": "Tôi nên chọn cách nào?"
+    },
+    "start.faq.0.answer": {
+      "source": "Use the web app for a first question and the browser extension for selected text. Connect remote MCP for hosted research in an AI assistant. Choose the Windows Operator alpha for local tasks and receipt inspection. API and CLI guides cover developer and buyer workflows.",
+      "text": "Dùng web cho câu hỏi đầu tiên, tiện ích trình duyệt cho văn bản được chọn. Kết nối MCP từ xa để nghiên cứu được lưu trữ trong trợ lý AI. Chọn Windows Operator alpha cho tác vụ cục bộ và kiểm tra biên nhận. Hướng dẫn API và CLI phục vụ quy trình lập trình viên và bên mua."
+    },
+    "start.faq.1.question": {
+      "source": "Do all these options use the same payment path?",
+      "text": "Các cách này có cùng luồng thanh toán không?"
+    },
+    "start.faq.1.answer": {
+      "source": "No. Web, extension, bots and remote MCP use hosted research within its current limits. Stdio MCP and the buyer CLI have a separate caller-funded x402 path. Review the current quote and your spending limits before a purchase. A key or installation does not grant free research or spending permission.",
+      "text": "Không. Web, tiện ích, bot và MCP từ xa dùng nghiên cứu được lưu trữ trong giới hạn hiện tại. MCP stdio và CLI bên mua có luồng x402 riêng do người gọi cấp tiền. Xem báo giá hiện tại và giới hạn chi trước khi mua. Khóa hoặc cài đặt không cấp nghiên cứu miễn phí hay quyền chi tiêu."
+    },
+    "start.faq.2.question": {
+      "source": "Can I use Keryx on my phone, Mac or Linux?",
+      "text": "Tôi dùng Keryx trên điện thoại, Mac hoặc Linux được không?"
+    },
+    "start.faq.2.answer": {
+      "source": "Use the web app in a supported browser. The downloadable Operator alpha currently supports Windows x64. There are no Keryx mobile, macOS or Linux installers offered here; compatible MCP and API clients have their own platform requirements.",
+      "text": "Dùng web trong trình duyệt được hỗ trợ. Operator alpha tải xuống hiện hỗ trợ Windows x64. Tại đây chưa có bộ cài Keryx cho điện thoại, macOS hay Linux; ứng dụng MCP và API tương thích có yêu cầu nền tảng riêng."
+    },
+    "start.faq.3.question": {
+      "source": "What if a purchase or research stream is interrupted?",
+      "text": "Nếu giao dịch mua hoặc luồng nghiên cứu bị gián đoạn thì sao?"
+    },
+    "start.faq.3.answer": {
+      "source": "Keep the original report, job receipt and local recovery journal. Use that workflow's documented recovery steps instead of buying the same job again. Closing a window or stopping a stream does not guarantee that server work or payments stop.",
+      "text": "Giữ báo cáo, biên nhận tác vụ và nhật ký khôi phục cục bộ ban đầu. Dùng bước khôi phục được ghi trong hướng dẫn luồng đó thay vì mua lại cùng tác vụ. Đóng cửa sổ hay dừng luồng không bảo đảm công việc máy chủ hoặc thanh toán dừng."
+    },
+    "surfaces.0.title": {
+      "source": "Web app",
+      "text": "Ứng dụng web"
+    },
+    "surfaces.0.tag": {
+      "source": "No install",
+      "text": "Không cần cài đặt"
+    },
+    "surfaces.0.body": {
+      "source": "Ask a shareable question, inspect source choices and reopen a cited report.",
+      "text": "Hỏi câu có thể chia sẻ, kiểm tra lựa chọn nguồn và mở lại báo cáo có trích dẫn."
+    },
+    "surfaces.0.detail": {
+      "source": "Sponsored trial within service limits; browser-funded research is a separate choice.",
+      "text": "Thử nghiệm tài trợ trong giới hạn dịch vụ; nghiên cứu bằng tiền trình duyệt là lựa chọn riêng."
+    },
+    "surfaces.0.action": {
+      "source": "Open the web app",
+      "text": "Mở ứng dụng web"
+    },
+    "surfaces.1.title": {
+      "source": "Windows desktop",
+      "text": "Ứng dụng Windows"
+    },
+    "surfaces.1.tag": {
+      "source": "Operator alpha",
+      "text": "Operator alpha"
+    },
+    "surfaces.1.body": {
+      "source": "Prepare private local tasks, inspect recorded receipts and export original-task results.",
+      "text": "Chuẩn bị nhiệm vụ riêng tư cục bộ, kiểm tra biên nhận ghi nhận và xuất kết quả tác vụ ban đầu."
+    },
+    "surfaces.1.detail": {
+      "source": "Windows x64 + WebView2. Purchases stay in the deliberate buyer CLI handoff.",
+      "text": "Windows x64 + WebView2. Giao dịch mua vẫn qua chuyển tiếp CLI bên mua chủ động."
+    },
+    "surfaces.1.action": {
+      "source": "Download & install",
+      "text": "Tải và cài đặt"
+    },
+    "surfaces.2.title": {
+      "source": "Browser extension",
+      "text": "Tiện ích trình duyệt"
+    },
+    "surfaces.2.tag": {
+      "source": "Manual install",
+      "text": "Cài đặt thủ công"
+    },
+    "surfaces.2.body": {
+      "source": "Highlight text, ask from your toolbar and keep the original source links close by.",
+      "text": "Chọn văn bản, hỏi từ thanh công cụ và giữ liên kết nguồn gốc dễ truy cập."
+    },
+    "surfaces.2.detail": {
+      "source": "Chrome, Edge and other Chromium browsers. No wallet signer in the extension.",
+      "text": "Chrome, Edge và trình duyệt Chromium khác. Tiện ích không có bộ ký ví."
+    },
+    "surfaces.2.action": {
+      "source": "Install the extension",
+      "text": "Cài tiện ích"
+    },
+    "surfaces.3.title": {
+      "source": "MCP for AI assistants",
+      "text": "MCP cho trợ lý AI"
+    },
+    "surfaces.3.tag": {
+      "source": "Remote or local",
+      "text": "Từ xa hoặc cục bộ"
+    },
+    "surfaces.3.body": {
+      "source": "Bring Keryx tools into Codex, Claude Code, Cursor or a compatible MCP client.",
+      "text": "Đưa công cụ Keryx vào Codex, Claude Code, Cursor hoặc ứng dụng MCP tương thích."
+    },
+    "surfaces.3.detail": {
+      "source": "Remote hosted research and local caller-funded stdio have different roles.",
+      "text": "Nghiên cứu được lưu trữ từ xa và stdio cục bộ do người gọi cấp tiền có vai trò khác nhau."
+    },
+    "surfaces.3.action": {
+      "source": "Choose an MCP connection",
+      "text": "Chọn kết nối MCP"
+    },
+    "surfaces.4.title": {
+      "source": "API for developers",
+      "text": "API cho lập trình viên"
+    },
+    "surfaces.4.tag": {
+      "source": "OpenAI compatible",
+      "text": "Tương thích OpenAI"
+    },
+    "surfaces.4.body": {
+      "source": "Integrate cited research and streamed source decisions into your own application.",
+      "text": "Tích hợp nghiên cứu có trích dẫn và quyết định nguồn truyền trực tiếp vào ứng dụng của bạn."
+    },
+    "surfaces.4.detail": {
+      "source": "Hosted Chat Completions and a separate paid x402 agent API.",
+      "text": "Chat Completions được lưu trữ và API tác nhân x402 trả phí riêng."
+    },
+    "surfaces.4.action": {
+      "source": "Explore the API",
+      "text": "Khám phá API"
+    },
+    "surfaces.5.title": {
+      "source": "Command line",
+      "text": "Dòng lệnh"
+    },
+    "surfaces.5.tag": {
+      "source": "From source",
+      "text": "Từ mã nguồn"
+    },
+    "surfaces.5.body": {
+      "source": "Inspect Operator tasks or use the documented research and buyer commands.",
+      "text": "Kiểm tra nhiệm vụ Operator hoặc dùng lệnh nghiên cứu và bên mua theo tài liệu."
+    },
+    "surfaces.5.detail": {
+      "source": "Node 22.19+ or 24+ and npm 11.19.0. Start with help before configuring custody.",
+      "text": "Node 22.19+ hoặc 24+ và npm 11.19.0. Bắt đầu bằng trợ giúp trước khi cấu hình lưu ký."
+    },
+    "surfaces.5.action": {
+      "source": "Set up the CLI",
+      "text": "Thiết lập CLI"
+    },
+    "surfaces.6.title": {
+      "source": "Chat bots",
+      "text": "Bot trò chuyện"
+    },
+    "surfaces.6.tag": {
+      "source": "Telegram · Discord · Slack",
+      "text": "Telegram · Discord · Slack"
+    },
+    "surfaces.6.body": {
+      "source": "Ask Keryx from a chat or a community workspace.",
+      "text": "Hỏi Keryx từ chat hoặc không gian cộng đồng."
+    },
+    "surfaces.6.detail": {
+      "source": "Hosted sponsored limits apply. Slack requires workspace administrator setup.",
+      "text": "Áp dụng giới hạn tài trợ được lưu trữ. Slack cần quản trị viên không gian thiết lập."
+    },
+    "surfaces.6.action": {
+      "source": "Find your chat app",
+      "text": "Tìm ứng dụng trò chuyện"
+    },
+    "download.title": {
+      "source": "Bring Keryx to your workflow.",
+      "text": "Đưa Keryx vào quy trình của bạn."
+    },
+    "download.metadata": {
+      "source": "Download Keryx & install the extension",
+      "text": "Tải Keryx và cài tiện ích"
+    },
+    "download.description": {
+      "source": "Download the Windows Operator alpha and install the Keryx browser extension, with platform requirements, release verification and setup steps.",
+      "text": "Tải Windows Operator alpha và cài tiện ích trình duyệt Keryx, với yêu cầu nền tảng, xác minh phát hành và bước thiết lập."
+    },
+    "download.body": {
+      "source": "Download a published Windows build or set up the browser extension. Prefer a browser? You can start researching without installing anything.",
+      "text": "Tải bản Windows đã xuất bản hoặc thiết lập tiện ích trình duyệt. Thích trình duyệt hơn? Bắt đầu nghiên cứu mà không cần cài gì."
+    },
+    "download.desktopTitle": {
+      "source": "Keryx Operator for Windows",
+      "text": "Keryx Operator cho Windows"
+    },
+    "download.desktopTag": {
+      "source": "Windows x64 · Alpha",
+      "text": "Windows x64 · Alpha"
+    },
+    "download.desktopBody": {
+      "source": "A local workspace for preparing tasks, inspecting receipts and exporting recorded results. It is a companion to Keryx research, with its own task and recovery workflow.",
+      "text": "Không gian cục bộ để chuẩn bị nhiệm vụ, kiểm tra biên nhận và xuất kết quả ghi nhận. Đồng hành với nghiên cứu Keryx, có quy trình nhiệm vụ và khôi phục riêng."
+    },
+    "download.desktopRequirements": {
+      "source": "Windows x64 and Microsoft Edge WebView2 Runtime. Node is bundled; a separate Node installation is not required. Updates are manual in this alpha.",
+      "text": "Windows x64 và Microsoft Edge WebView2 Runtime. Node được đóng gói; không cần cài Node riêng. Bản alpha này cập nhật thủ công."
+    },
+    "download.installer": {
+      "source": "Download Windows installer",
+      "text": "Tải bộ cài Windows"
+    },
+    "download.portable": {
+      "source": "Download portable ZIP",
+      "text": "Tải ZIP di động"
+    },
+    "download.manifest": {
+      "source": "Build manifest",
+      "text": "Manifest bản dựng"
+    },
+    "download.webview": {
+      "source": "Get WebView2 Runtime",
+      "text": "Tải WebView2 Runtime"
+    },
+    "download.desktopVersion": {
+      "source": "Operator 0.4.17 · published in v0.27.63",
+      "text": "Operator 0.4.17 · xuất bản trong v0.27.63"
+    },
+    "download.desktopSteps.0": {
+      "source": "Download the installer from the published GitHub release. Review the release manifest and SHA256 checksums if you need to verify the build.",
+      "text": "Tải bộ cài từ bản phát hành GitHub đã xuất bản. Xem manifest phát hành và checksum SHA256 nếu cần xác minh bản dựng."
+    },
+    "download.desktopSteps.1": {
+      "source": "Run the installer in your normal Windows user session. Install WebView2 Runtime if it is missing. For the portable build, extract and keep the whole folder together.",
+      "text": "Chạy bộ cài trong phiên người dùng Windows thông thường. Cài WebView2 Runtime nếu thiếu. Với bản di động, giải nén và giữ toàn bộ thư mục cùng nhau."
+    },
+    "download.desktopSteps.2": {
+      "source": "Open Keryx Operator and choose or create a private local workspace. Prepare a task or inspect an existing task's receipts.",
+      "text": "Mở Keryx Operator và chọn hoặc tạo không gian cục bộ riêng tư. Chuẩn bị nhiệm vụ hoặc kiểm tra biên nhận của nhiệm vụ hiện có."
+    },
+    "download.desktopSteps.3": {
+      "source": "Preparing a task makes no purchase. If you choose to buy research, review the app's buyer CLI handoff, pinned payee and total cap first.",
+      "text": "Chuẩn bị nhiệm vụ không mua gì. Nếu chọn mua nghiên cứu, trước tiên xem chuyển tiếp CLI bên mua của ứng dụng, bên nhận cố định và tổng hạn mức."
+    },
+    "download.desktopBoundary": {
+      "source": "The desktop does not ask for a wallet key, sign payments or schedule unattended research. macOS, Linux and mobile installers are not available in this alpha.",
+      "text": "Ứng dụng máy tính không yêu cầu khóa ví, ký thanh toán hay lên lịch nghiên cứu không giám sát. Bản alpha chưa có bộ cài macOS, Linux và điện thoại."
+    },
+    "download.extensionTitle": {
+      "source": "Keryx in your browser",
+      "text": "Keryx trong trình duyệt"
+    },
+    "download.extensionTag": {
+      "source": "Chromium · Manual install",
+      "text": "Chromium · cài thủ công"
+    },
+    "download.extensionBody": {
+      "source": "Ask about selected text from the toolbar or right-click menu. Inspect the research trace, open cited sources and export recorded references from a completed report.",
+      "text": "Hỏi về văn bản được chọn từ thanh công cụ hoặc menu chuột phải. Kiểm tra nhật ký nghiên cứu, mở nguồn được trích dẫn và xuất tài liệu tham khảo ghi nhận từ báo cáo hoàn tất."
+    },
+    "download.extensionVersion": {
+      "source": "Extension 0.1.4.2 · source from v0.27.63",
+      "text": "Tiện ích 0.1.4.2 · nguồn từ v0.27.63"
+    },
+    "download.extensionDownload": {
+      "source": "Download extension source ZIP",
+      "text": "Tải ZIP mã nguồn tiện ích"
+    },
+    "download.extensionRequirements": {
+      "source": "Chrome or Edge on desktop, or another compatible Chromium browser. Developer mode is required for this unpacked install. A public Chrome Web Store install link is not available here.",
+      "text": "Chrome hoặc Edge trên máy tính, hoặc trình duyệt Chromium tương thích khác. Cần chế độ nhà phát triển để cài bản chưa đóng gói. Chưa có liên kết cài công khai qua Chrome Web Store tại đây."
+    },
+    "download.extensionSteps.0": {
+      "source": "Download and extract the source ZIP. It contains the project; use the extension folder inside the extracted project.",
+      "text": "Tải và giải nén ZIP nguồn. ZIP chứa dự án; dùng thư mục extension trong dự án đã giải nén."
+    },
+    "download.extensionSteps.1": {
+      "source": "Open chrome://extensions in Chrome or edge://extensions in Edge, then turn on Developer mode.",
+      "text": "Mở chrome://extensions trong Chrome hoặc edge://extensions trong Edge, rồi bật chế độ nhà phát triển."
+    },
+    "download.extensionSteps.2": {
+      "source": "Choose Load unpacked and select the extension folder, which contains manifest.json. Pin Keryx to your toolbar.",
+      "text": "Chọn Load unpacked và chọn thư mục extension có manifest.json. Ghim Keryx vào thanh công cụ."
+    },
+    "download.extensionSteps.3": {
+      "source": "Highlight text or type a question. Review the sponsored availability and budget before pressing Ask. Including the page URL is optional.",
+      "text": "Chọn văn bản hoặc nhập câu hỏi. Xem khả dụng tài trợ và ngân sách trước khi nhấn Hỏi. Đưa URL trang vào là tùy chọn."
+    },
+    "download.extensionBoundary": {
+      "source": "The extension sends your submitted question to the hosted service. It does not automatically read full pages or hold a wallet signer. Sponsored trial reports have public links. Stop watching disconnects the popup; it does not promise to cancel server work or payments.",
+      "text": "Tiện ích gửi câu hỏi bạn gửi đến dịch vụ được lưu trữ. Không tự đọc toàn trang hay giữ bộ ký ví. Báo cáo thử nghiệm được tài trợ có liên kết công khai. Dừng theo dõi ngắt cửa sổ bật lên; không hứa hủy công việc máy chủ hay thanh toán."
+    },
+    "download.alternativeTitle": {
+      "source": "Use Keryx without a download",
+      "text": "Dùng Keryx không cần tải xuống"
+    },
+    "download.alternativeBody": {
+      "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
+      "text": "Web hoạt động trong trình duyệt máy tính và điện thoại. Trợ lý AI kết nối qua MCP từ xa; lập trình viên dùng API được lưu trữ."
+    },
+    "integrations.title": {
+      "source": "Keryx, connected.",
+      "text": "Keryx đã kết nối."
+    },
+    "integrations.metadata": {
+      "source": "Keryx integrations: MCP, API, CLI & bots",
+      "text": "Tích hợp Keryx: MCP, API, CLI và bot"
+    },
+    "integrations.description": {
+      "source": "Connect Keryx through hosted or stdio MCP, the OpenAI-compatible API, caller-funded x402 research, command-line tools, Telegram, Discord and Slack.",
+      "text": "Kết nối Keryx qua MCP được lưu trữ hoặc stdio, API tương thích OpenAI, nghiên cứu x402 do người gọi cấp tiền, công cụ dòng lệnh, Telegram, Discord và Slack."
+    },
+    "integrations.body": {
+      "source": "Connect an AI assistant, add research to your application or ask from chat. Each integration below explains how to start and which research and payment role it uses.",
+      "text": "Kết nối trợ lý AI, thêm nghiên cứu vào ứng dụng hoặc hỏi từ chat. Mỗi tích hợp bên dưới giải thích cách bắt đầu và vai trò nghiên cứu, thanh toán sử dụng."
+    },
+    "integrations.mcpTitle": {
+      "source": "Connect an AI assistant with MCP",
+      "text": "Kết nối trợ lý AI bằng MCP"
+    },
+    "integrations.mcpBody": {
+      "source": "MCP lets your assistant call Keryx tools. Choose the hosted connection for remote tools or the local stdio package for its separate caller-funded buyer workflow.",
+      "text": "MCP cho phép trợ lý gọi công cụ Keryx. Chọn kết nối được lưu trữ cho công cụ từ xa hoặc gói stdio cục bộ cho quy trình bên mua riêng do người gọi cấp tiền."
+    },
+    "integrations.remoteTitle": {
+      "source": "Remote MCP",
+      "text": "MCP từ xa"
+    },
+    "integrations.remoteBody": {
+      "source": "No Keryx package or local wallet setup is required for hosted sponsored research. Use the setup page for Codex, Claude Code and Cursor commands, connection checks and current limits. Compatible clients must support Streamable HTTP; this endpoint is not an OAuth sign-in connector.",
+      "text": "Nghiên cứu tài trợ được lưu trữ không cần gói Keryx hay thiết lập ví cục bộ. Dùng trang thiết lập cho lệnh Codex, Claude Code, Cursor, kiểm tra kết nối và giới hạn hiện tại. Ứng dụng tương thích phải hỗ trợ Streamable HTTP; điểm cuối này không phải kết nối đăng nhập OAuth."
+    },
+    "integrations.remoteAction": {
+      "source": "Open remote MCP setup",
+      "text": "Mở thiết lập MCP từ xa"
+    },
+    "integrations.remoteEndpoint": {
+      "source": "Hosted MCP endpoint",
+      "text": "Điểm cuối MCP được lưu trữ"
+    },
+    "integrations.remoteStep": {
+      "source": "Add the endpoint in your client's MCP settings, or follow the client-specific command on the setup page. Check the connection and inspect the available tools before asking for research. Scoped account tools require the appropriate wallet-bound API key; the key does not add quota or prepaid credit.",
+      "text": "Thêm điểm cuối trong cài đặt MCP ứng dụng hoặc theo lệnh riêng cho ứng dụng trên trang thiết lập. Kiểm tra kết nối và công cụ khả dụng trước khi yêu cầu nghiên cứu. Công cụ tài khoản có phạm vi cần khóa API gắn ví phù hợp; khóa không thêm quota hay tín dụng trả trước."
+    },
+    "integrations.stdioTitle": {
+      "source": "Local stdio MCP",
+      "text": "MCP stdio cục bộ"
+    },
+    "integrations.stdioBody": {
+      "source": "The published keryx-mcp package runs on your machine. Its paid research tool uses your explicitly configured Arc wallet and bounded x402 buyer policy. Read the custody, funding and original-job recovery guide before enabling purchases.",
+      "text": "Gói keryx-mcp đã xuất bản chạy trên máy bạn. Công cụ nghiên cứu trả phí dùng ví Arc bạn cấu hình rõ ràng và chính sách mua x402 có giới hạn. Đọc hướng dẫn lưu ký, cấp tiền và khôi phục tác vụ ban đầu trước khi bật mua."
+    },
+    "integrations.stdioRequirements": {
+      "source": "Node 22.19+ or 24+, an MCP client supporting stdio, and protected local environment configuration for any caller-funded buyer tools. Installation does not create or fund a wallet.",
+      "text": "Node 22.19+ hoặc 24+, ứng dụng MCP hỗ trợ stdio và cấu hình môi trường cục bộ được bảo vệ cho công cụ bên mua do người gọi cấp tiền. Cài đặt không tạo hay cấp tiền ví."
+    },
+    "integrations.stdioConfig": {
+      "source": "Stdio client configuration",
+      "text": "Cấu hình ứng dụng stdio"
+    },
+    "integrations.stdioGuide": {
+      "source": "Stdio setup, wallet policy & recovery",
+      "text": "Thiết lập stdio, chính sách ví và khôi phục"
+    },
+    "integrations.stdioPackage": {
+      "source": "Published npm package",
+      "text": "Gói npm đã xuất bản"
+    },
+    "integrations.stdioStep": {
+      "source": "Add the configuration to a compatible client's local MCP settings and restart that client. Configure the existing wallet and buyer limits through the documented protected environment before requesting paid research. Keep secrets out of shared project configuration.",
+      "text": "Thêm cấu hình vào cài đặt MCP cục bộ của ứng dụng tương thích và khởi động lại ứng dụng đó. Cấu hình ví hiện có và giới hạn bên mua qua môi trường bảo vệ theo tài liệu trước khi yêu cầu nghiên cứu trả phí. Giữ bí mật ngoài cấu hình dự án được chia sẻ."
+    },
+    "integrations.apiTitle": {
+      "source": "Build with the API",
+      "text": "Xây dựng bằng API"
+    },
+    "integrations.apiBody": {
+      "source": "Use OpenAI-compatible Chat Completions for hosted ordinary research, or the x402 agent API for a separately quoted prepaid job. They have different payment and recovery contracts.",
+      "text": "Dùng Chat Completions tương thích OpenAI cho nghiên cứu thông thường được lưu trữ, hoặc API tác nhân x402 cho tác vụ trả trước được báo giá riêng. Chúng có hợp đồng thanh toán và khôi phục khác nhau."
+    },
+    "integrations.apiBase": {
+      "source": "Chat Completions base URL",
+      "text": "URL gốc Chat Completions"
+    },
+    "integrations.apiModel": {
+      "source": "Model",
+      "text": "Mô hình"
+    },
+    "integrations.apiConfigTitle": {
+      "source": "Connect an OpenAI-compatible client",
+      "text": "Kết nối ứng dụng tương thích OpenAI"
+    },
+    "integrations.apiSteps.0": {
+      "source": "Set your client's custom base URL to https://keryx.cc/api/v1 and select model keryx. Do not use an OpenAI account key for Keryx.",
+      "text": "Đặt URL gốc tùy chỉnh của ứng dụng thành https://keryx.cc/api/v1 và chọn model keryx. Không dùng khóa tài khoản OpenAI cho Keryx."
+    },
+    "integrations.apiSteps.1": {
+      "source": "For an admitted sponsored trial, clients requiring a token can use the placeholder keryx. For wallet-based identity and metering, sign in and create a scoped kx_live_ key in the developer portal.",
+      "text": "Với thử nghiệm tài trợ được chấp nhận, ứng dụng cần token có thể dùng giá trị mẫu keryx. Để có danh tính và đo mức dùng theo ví, đăng nhập và tạo khóa kx_live_ có phạm vi trong cổng lập trình viên."
+    },
+    "integrations.apiSteps.2": {
+      "source": "Enable streaming to inspect source decisions. Review the report and its recorded payment states; a completed answer does not imply every payment settled.",
+      "text": "Bật truyền trực tiếp để kiểm tra quyết định nguồn. Xem báo cáo và trạng thái thanh toán ghi nhận; câu trả lời hoàn tất không có nghĩa mọi thanh toán đã quyết toán."
+    },
+    "integrations.apiReadOnly": {
+      "source": "Check available models (Bash, read-only)",
+      "text": "Kiểm tra mô hình khả dụng (Bash, chỉ đọc)"
+    },
+    "integrations.apiExample": {
+      "source": "Hosted sponsored research example (Bash)",
+      "text": "Ví dụ nghiên cứu tài trợ được lưu trữ (Bash)"
+    },
+    "integrations.apiExampleNotice": {
+      "source": "Sending this example starts hosted research if admitted. It uses sponsored capacity within current limits and creates a public trial report. Changing the token does not bypass those limits.",
+      "text": "Gửi ví dụ này bắt đầu nghiên cứu được lưu trữ nếu được chấp nhận. Dùng khả năng tài trợ trong giới hạn hiện tại và tạo báo cáo thử nghiệm công khai. Đổi token không vượt các giới hạn đó."
+    },
+    "integrations.apiKeys": {
+      "source": "Manage API keys",
+      "text": "Quản lý khóa API"
+    },
+    "integrations.apiReference": {
+      "source": "OpenAPI reference",
+      "text": "Tài liệu OpenAPI"
+    },
+    "integrations.apiRecipes": {
+      "source": "SDK examples & streaming guide",
+      "text": "Ví dụ SDK và hướng dẫn truyền trực tiếp"
+    },
+    "integrations.a2aTitle": {
+      "source": "Caller-funded agent research",
+      "text": "Nghiên cứu tác nhân do người gọi cấp tiền"
+    },
+    "integrations.a2aBody": {
+      "source": "POST /api/agent/ask uses a quoted x402 payment challenge for Quick or Deep research. An API key identifies the caller; it is not payment. Review the current package quote, non-refundable terms and creator reserve, and retain the original job and purchase evidence for recovery after an uncertain response.",
+      "text": "POST /api/agent/ask dùng thách thức thanh toán x402 được báo giá cho nghiên cứu Nhanh hoặc Chuyên sâu. Khóa API định danh người gọi; không phải thanh toán. Xem báo giá gói hiện tại, điều kiện không hoàn tiền và khoản dự trữ cho tác giả; giữ bằng chứng tác vụ và giao dịch mua ban đầu để khôi phục sau phản hồi chưa rõ."
+    },
+    "integrations.a2aAction": {
+      "source": "Review paid research packages",
+      "text": "Xem gói nghiên cứu trả phí"
+    },
+    "integrations.cliTitle": {
+      "source": "Work from the command line",
+      "text": "Làm việc từ dòng lệnh"
+    },
+    "integrations.cliBody": {
+      "source": "The source checkout includes Operator, research and buyer commands. The CLI is currently distributed with the repository; keryx-mcp is the separate npm MCP package.",
+      "text": "Mã nguồn gồm lệnh Operator, nghiên cứu và bên mua. CLI hiện phân phối cùng kho; keryx-mcp là gói npm MCP riêng."
+    },
+    "integrations.cliRequirements": {
+      "source": "Git, Node 22.19+ or 24+, and the pinned npm 11.19.0 installer. Clone the project and install dependencies before running commands.",
+      "text": "Git, Node 22.19+ hoặc 24+ và trình cài npm 11.19.0 được ghim. Clone dự án và cài phụ thuộc trước khi chạy lệnh."
+    },
+    "integrations.cliSetup": {
+      "source": "Install from source & inspect help",
+      "text": "Cài từ nguồn và xem trợ giúp"
+    },
+    "integrations.cliGuide": {
+      "source": "CLI commands & configuration",
+      "text": "Lệnh và cấu hình CLI"
+    },
+    "integrations.cliBuyer": {
+      "source": "Caller-funded buyer guide",
+      "text": "Hướng dẫn bên mua do người gọi cấp tiền"
+    },
+    "integrations.cliBoundary": {
+      "source": "The help commands below do not submit research or buy a job. Configure the intended network, protected credentials and private state only when choosing a documented workflow. Use the browser for interactive review-first research; CLI and MCP do not co-sign that flow.",
+      "text": "Lệnh trợ giúp bên dưới không gửi nghiên cứu hay mua tác vụ. Chỉ cấu hình mạng dự định, thông tin xác thực bảo vệ và trạng thái riêng tư khi chọn quy trình theo tài liệu. Dùng trình duyệt cho nghiên cứu tương tác xem xét trước; CLI và MCP không đồng ký luồng đó."
+    },
+    "integrations.botsTitle": {
+      "source": "Ask from your chat app",
+      "text": "Hỏi từ ứng dụng chat"
+    },
+    "integrations.botsBody": {
+      "source": "These are hosted research clients with sponsored admission limits and public report links. They do not carry a caller wallet signer. Use shareable questions.",
+      "text": "Đây là ứng dụng nghiên cứu được lưu trữ với giới hạn chấp nhận tài trợ và liên kết báo cáo công khai. Không mang bộ ký ví người gọi. Dùng câu hỏi có thể chia sẻ."
+    },
+    "integrations.telegram": {
+      "source": "Telegram",
+      "text": "Telegram"
+    },
+    "integrations.telegramBody": {
+      "source": "Open the Keryx bot and send a question. In a group, use /ask followed by your question.",
+      "text": "Mở bot Keryx và gửi câu hỏi. Trong nhóm, dùng /ask rồi đến câu hỏi."
+    },
+    "integrations.telegramAction": {
+      "source": "Open Telegram bot",
+      "text": "Mở bot Telegram"
+    },
+    "integrations.discord": {
+      "source": "Discord",
+      "text": "Discord"
+    },
+    "integrations.discordBody": {
+      "source": "Add the Keryx application to a server you manage, then use /ask with your question. Review Discord's requested permissions before installing.",
+      "text": "Thêm ứng dụng Keryx vào máy chủ bạn quản lý rồi dùng /ask với câu hỏi. Xem quyền Discord yêu cầu trước khi cài."
+    },
+    "integrations.discordAction": {
+      "source": "Add to Discord",
+      "text": "Thêm vào Discord"
+    },
+    "integrations.slack": {
+      "source": "Slack",
+      "text": "Slack"
+    },
+    "integrations.slackBody": {
+      "source": "A workspace administrator creates the Slack app from Keryx's documented manifest and configures /keryx. A public one-click OAuth installer is not offered here.",
+      "text": "Quản trị viên không gian tạo ứng dụng Slack từ manifest Keryx được ghi trong tài liệu và cấu hình /keryx. Tại đây không cung cấp bộ cài OAuth công khai một nhấp."
+    },
+    "integrations.slackAction": {
+      "source": "Slack administrator setup",
+      "text": "Thiết lập cho quản trị viên Slack"
+    },
+    "integrations.selfHost": {
+      "source": "Self-hosting guide",
+      "text": "Hướng dẫn tự lưu trữ"
+    }
+  }
+}

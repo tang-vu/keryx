@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/run-claims.cjs",
+  "sourceSha256": "0c170b03eb67cf5a4a2c9e7a9cbe1cbfdd05910c412a81af0058f95e2db10607",
+  "entries": {
+    "title": {
+      "source": "Save this research to your account",
+      "text": "Lưu nghiên cứu này vào tài khoản"
+    },
+    "introduction": {
+      "source": "This private link can be used once within 24 hours. Claiming adds the saved run to your history. It does not change who paid or any payment or creator reward.",
+      "text": "Liên kết riêng tư này dùng một lần trong vòng 24 giờ. Nhận lượt chạy thêm lượt đã lưu vào lịch sử của bạn. Không thay đổi bên trả tiền, thanh toán hay phần thưởng tác giả."
+    },
+    "memory": {
+      "source": "The link has been removed from this address bar. Keep this tab open while signing in. Reloading or closing it loses this copy of the link; Keryx cannot reissue it.",
+      "text": "Đã xóa liên kết khỏi thanh địa chỉ này. Giữ tab mở khi đăng nhập. Tải lại hoặc đóng sẽ làm mất bản liên kết này; Keryx không thể cấp lại."
+    },
+    "signIn": {
+      "source": "Sign in in a separate window",
+      "text": "Đăng nhập trong cửa sổ riêng"
+    },
+    "check": {
+      "source": "Check signed-in account",
+      "text": "Kiểm tra tài khoản đăng nhập"
+    },
+    "claim": {
+      "source": "Save to this account",
+      "text": "Lưu vào tài khoản này"
+    },
+    "ready": {
+      "source": "Confirm the account below, then save this research.",
+      "text": "Xác nhận tài khoản bên dưới, rồi lưu nghiên cứu này."
+    },
+    "signedOut": {
+      "source": "Sign in, then return to this tab and check your account.",
+      "text": "Đăng nhập, rồi quay lại tab này và kiểm tra tài khoản."
+    },
+    "changed": {
+      "source": "Your signed-in account changed. Check the account below before confirming again.",
+      "text": "Tài khoản đang đăng nhập đã thay đổi. Kiểm tra tài khoản bên dưới trước khi xác nhận lại."
+    },
+    "checking": {
+      "source": "Checking your signed-in account…",
+      "text": "Đang kiểm tra tài khoản đăng nhập của bạn…"
+    },
+    "saving": {
+      "source": "Saving to your account…",
+      "text": "Đang lưu vào tài khoản…"
+    },
+    "saved": {
+      "source": "This research is now in this account’s private history. Its original payment records are unchanged.",
+      "text": "Nghiên cứu này đã nằm trong lịch sử riêng tư của tài khoản này. Hồ sơ thanh toán ban đầu giữ nguyên."
+    },
+    "unavailable": {
+      "source": "This claim link is unavailable. It may be invalid, expired, already used or no longer eligible.",
+      "text": "Liên kết nhận này không khả dụng. Có thể không hợp lệ, hết hạn, đã dùng hoặc không còn đủ điều kiện."
+    },
+    "serviceUnavailable": {
+      "source": "Run claims are unavailable on this deployment.",
+      "text": "Nhận lượt chạy về tài khoản không khả dụng trên bản triển khai này."
+    },
+    "authUnavailable": {
+      "source": "Your signed-in account could not be checked. Try checking again.",
+      "text": "Không thể kiểm tra tài khoản đang đăng nhập. Thử kiểm tra lại."
+    },
+    "unconfirmed": {
+      "source": "The claim request could not be confirmed. Check your private history. This tab will not submit the link again.",
+      "text": "Chưa thể xác nhận yêu cầu nhận lượt chạy. Kiểm tra lịch sử riêng tư. Tab này sẽ không gửi lại liên kết."
+    }
+  }
+}

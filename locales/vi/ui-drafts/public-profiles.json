@@ -1,0 +1,284 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/public-profiles.ts",
+  "sourceSha256": "1578750a13bc9300f7dbc209403ae55e10c8e4ad27969956c55ce4b16509b2f9",
+  "entries": {
+    "title": {
+      "source": "Publish your research profile",
+      "text": "Xuất bản hồ sơ nghiên cứu"
+    },
+    "introduction": {
+      "source": "Your profile stays invisible until you publish. Choose fields and run IDs; only currently PUBLIC runs with your existing ownership proof appear.",
+      "text": "Hồ sơ không hiển thị cho đến khi bạn xuất bản. Chọn trường và ID lượt chạy; chỉ lượt hiện là PUBLIC có bằng chứng sở hữu hiện có của bạn xuất hiện."
+    },
+    "editPrivate": {
+      "source": "Edit your private profile and verified accounts",
+      "text": "Sửa hồ sơ riêng tư và tài khoản đã xác minh"
+    },
+    "manageVisibility": {
+      "source": "Manage run visibility",
+      "text": "Quản lý hiển thị lượt chạy"
+    },
+    "checking": {
+      "source": "Checking sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "signIn": {
+      "source": "Sign in with your wallet",
+      "text": "Đăng nhập bằng ví của bạn"
+    },
+    "signInPurpose": {
+      "source": "to control publication.",
+      "text": "để kiểm soát xuất bản."
+    },
+    "publication": {
+      "source": "Profile publication",
+      "text": "Xuất bản hồ sơ"
+    },
+    "handle": {
+      "source": "Handle:",
+      "text": "Tên định danh:"
+    },
+    "missingHandle": {
+      "source": "Save a handle in your private profile first.",
+      "text": "Trước tiên lưu tên định danh trong hồ sơ riêng tư."
+    },
+    "published": {
+      "source": "Published",
+      "text": "Đã xuất bản"
+    },
+    "unpublished": {
+      "source": "Not published",
+      "text": "Chưa xuất bản"
+    },
+    "fieldsLegend": {
+      "source": "Fields to publish",
+      "text": "Trường sẽ xuất bản"
+    },
+    "fields.displayName": {
+      "source": "Display name",
+      "text": "Tên hiển thị"
+    },
+    "fields.about": {
+      "source": "About",
+      "text": "Giới thiệu"
+    },
+    "fields.purpose": {
+      "source": "Research purpose",
+      "text": "Mục đích nghiên cứu"
+    },
+    "fields.verifiedLinks": {
+      "source": "Verified account links",
+      "text": "Liên kết tài khoản đã xác minh"
+    },
+    "fields.ledgers": {
+      "source": "Wallet-wide settled creator ledger totals",
+      "text": "Tổng sổ thanh toán cho tác giả đã quyết toán của toàn ví"
+    },
+    "ledgerConsent": {
+      "source": "Ledger totals cover the wallet's recorded settled creator events, including amounts associated with private runs without exposing their identifiers. Treasury sponsorship is separate. Do not select this field unless you want those aggregate amounts public.",
+      "text": "Tổng sổ gồm sự kiện tác giả đã quyết toán ghi nhận của ví, kể cả số tiền gắn với lượt chạy riêng tư mà không lộ ID. Tài trợ ngân quỹ tách biệt. Chỉ chọn trường này nếu muốn công khai số tiền tổng hợp đó."
+    },
+    "selectedIds": {
+      "source": "Selected owned run IDs (one per line, at most 50)",
+      "text": "ID lượt chạy thuộc sở hữu được chọn (mỗi dòng một ID, tối đa 50)"
+    },
+    "publicationBoundary": {
+      "source": "Publication never makes a run PUBLIC. Change visibility separately. Private, unlisted, erased and no-longer-owned runs remain absent.",
+      "text": "Xuất bản không bao giờ làm lượt chạy thành PUBLIC. Đổi chế độ hiển thị riêng. Lượt riêng tư, không niêm yết, đã xóa và không còn thuộc sở hữu vẫn không xuất hiện."
+    },
+    "saving": {
+      "source": "Saving…",
+      "text": "Đang lưu…"
+    },
+    "updateSelection": {
+      "source": "Update published selection",
+      "text": "Cập nhật lựa chọn đã xuất bản"
+    },
+    "publish": {
+      "source": "Publish profile",
+      "text": "Xuất bản hồ sơ"
+    },
+    "unpublish": {
+      "source": "Unpublish",
+      "text": "Gỡ xuất bản"
+    },
+    "viewPublic": {
+      "source": "View public profile",
+      "text": "Xem hồ sơ công khai"
+    },
+    "unavailable": {
+      "source": "Public profile publishing is unavailable for this account.",
+      "text": "Xuất bản hồ sơ công khai không khả dụng cho tài khoản này."
+    },
+    "profileUnavailable": {
+      "source": "Profile unavailable.",
+      "text": "Hồ sơ không khả dụng."
+    },
+    "invalidSelection": {
+      "source": "Choose at most 50 unique run IDs and valid fields.",
+      "text": "Chọn tối đa 50 ID lượt chạy duy nhất và trường hợp lệ."
+    },
+    "changed": {
+      "source": "The profile changed. Reload before publishing.",
+      "text": "Hồ sơ đã thay đổi. Tải lại trước khi xuất bản."
+    },
+    "notOwned": {
+      "source": "One or more runs lack your ownership proof.",
+      "text": "Một hoặc nhiều lượt chạy thiếu bằng chứng sở hữu của bạn."
+    },
+    "unconfirmed": {
+      "source": "Publication could not be confirmed. Inspect the profile before trying again.",
+      "text": "Chưa thể xác nhận xuất bản. Kiểm tra hồ sơ trước khi thử lại."
+    },
+    "unpublishedNotice": {
+      "source": "Unpublished. The page, JSON and sitemap no longer list your profile.",
+      "text": "Đã gỡ xuất bản. Trang, JSON và sitemap không còn liệt kê hồ sơ."
+    },
+    "publishedNotice": {
+      "source": "Published. Only selected fields and PUBLIC owned runs are visible.",
+      "text": "Đã xuất bản. Chỉ trường đã chọn và lượt PUBLIC thuộc sở hữu hiển thị."
+    },
+    "unconfirmedNotice": {
+      "source": "Publication unconfirmed.",
+      "text": "Chưa xác nhận xuất bản."
+    },
+    "unavailableTitle": {
+      "source": "Profile unavailable",
+      "text": "Hồ sơ không khả dụng"
+    },
+    "metadataDescription": {
+      "source": "Selected public research on Keryx.",
+      "text": "Nghiên cứu công khai được chọn trên Keryx."
+    },
+    "imageAlt": {
+      "source": "Opt-in Keryx researcher profile",
+      "text": "Hồ sơ nhà nghiên cứu Keryx tự nguyện công khai"
+    },
+    "brand": {
+      "source": "KERYX",
+      "text": "KERYX"
+    },
+    "selectedResearch": {
+      "source": "Selected public research",
+      "text": "Nghiên cứu công khai được chọn"
+    },
+    "imageOwnership": {
+      "source": "Owner-published research profile",
+      "text": "Hồ sơ nghiên cứu do chủ sở hữu xuất bản"
+    },
+    "purposeLabel": {
+      "source": "Research purpose:",
+      "text": "Mục đích nghiên cứu:"
+    },
+    "ownerAssertion": {
+      "source": "Published by the signed wallet that controls this handle. Profile text is an owner assertion, not verified affiliation.",
+      "text": "Xuất bản bằng ví đã ký kiểm soát tên định danh này. Văn bản hồ sơ là tuyên bố của chủ sở hữu, không xác minh tổ chức liên kết."
+    },
+    "verifiedAccount": {
+      "source": "Verified account link",
+      "text": "Liên kết tài khoản đã xác minh"
+    },
+    "json": {
+      "source": "Profile JSON",
+      "text": "JSON hồ sơ"
+    },
+    "ledgerTitle": {
+      "source": "Recorded settled creator payments",
+      "text": "Thanh toán cho tác giả đã quyết toán ghi nhận"
+    },
+    "ledgerBasis": {
+      "source": "Wallet-wide totals, explicitly published by this owner. Includes amounts without exposing private run identifiers. Pending and simulated payments are excluded. These are stored settlement records, not a new chain reconciliation.",
+      "text": "Tổng toàn ví, được chủ sở hữu này chủ động xuất bản. Gồm số tiền mà không lộ ID lượt riêng tư. Loại trừ thanh toán đang chờ và mô phỏng. Đây là hồ sơ quyết toán lưu trữ, không phải đối soát chuỗi mới."
+    },
+    "ledgerLabels.reader": {
+      "source": "Paid to creators as reader",
+      "text": "Đã trả cho tác giả với vai trò người đọc"
+    },
+    "ledgerLabels.creator": {
+      "source": "Earned as creator (recorded payee)",
+      "text": "Thu nhập với vai trò tác giả (bên nhận ghi nhận)"
+    },
+    "ledgerLabels.sponsored": {
+      "source": "Treasury-sponsored creator payments",
+      "text": "Thanh toán cho tác giả do ngân quỹ tài trợ"
+    },
+    "selectedBoundary": {
+      "source": "Only selected, currently PUBLIC runs with an existing ownership proof appear. Private, unlisted and erased runs are omitted.",
+      "text": "Chỉ lượt đã chọn, hiện là PUBLIC, có bằng chứng sở hữu hiện có xuất hiện. Loại trừ lượt riêng tư, không niêm yết và đã xóa."
+    },
+    "emptyRuns": {
+      "source": "No selected public runs.",
+      "text": "Chưa có lượt công khai được chọn."
+    },
+    "funding.sponsored": {
+      "source": "Treasury sponsored",
+      "text": "Ngân quỹ tài trợ"
+    },
+    "funding.recorded": {
+      "source": "Recorded sponsorship; treasury payer unproved",
+      "text": "Tài trợ ghi nhận; chưa chứng minh ngân quỹ là bên trả"
+    },
+    "funding.simulation": {
+      "source": "Offline simulation",
+      "text": "Mô phỏng ngoại tuyến"
+    },
+    "funding.reader": {
+      "source": "Recorded reader funding",
+      "text": "Nguồn tiền người đọc đã ghi nhận"
+    },
+    "funding.unknown": {
+      "source": "Funding unrecorded",
+      "text": "Nguồn tiền chưa ghi nhận"
+    },
+    "ownershipLabel": {
+      "source": "Ownership:",
+      "text": "Quyền sở hữu:"
+    },
+    "ownership.session": {
+      "source": "Signed in",
+      "text": "Đã đăng nhập"
+    },
+    "ownership.api-key": {
+      "source": "Verified API key",
+      "text": "Khóa API đã xác minh"
+    },
+    "ownership.verified-payer": {
+      "source": "Verified original payer",
+      "text": "Bên trả ban đầu đã xác minh"
+    },
+    "ownership.claimed": {
+      "source": "Claimed through the original receipt",
+      "text": "Được nhận qua biên nhận ban đầu"
+    },
+    "ownership.recorded-unknown": {
+      "source": "Recorded owner; original method unrecorded",
+      "text": "Chủ sở hữu ghi nhận; chưa ghi phương thức ban đầu"
+    },
+    "report": {
+      "source": "Report",
+      "text": "Báo cáo"
+    },
+    "receipts": {
+      "source": "Stored receipts",
+      "text": "Biên nhận đã lưu"
+    },
+    "amountUnavailable": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "network.mainnet": {
+      "source": "Arc mainnet",
+      "text": "Arc mainnet"
+    },
+    "network.testnet": {
+      "source": "Arc testnet",
+      "text": "Arc testnet"
+    },
+    "network.unknown": {
+      "source": "Network unrecorded or conflicting",
+      "text": "Mạng chưa ghi nhận hoặc xung đột"
+    }
+  }
+}
