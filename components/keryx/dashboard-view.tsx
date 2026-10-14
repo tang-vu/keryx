@@ -12,6 +12,8 @@ import { SiteFooter } from "./site-footer";
 import { DispatchHistory, type RunSummary } from "./dispatch-history";
 import { PaymentsFeed } from "./payments-feed";
 import { CreatorLeaderboard, type LeaderboardEntry } from "./creator-leaderboard";
+import { SourceLeaderboard } from "./source-leaderboard";
+import type { SourceLeaderboard as SourceLeaderboardData } from "@/lib/sources/source-leaderboard";
 import { CreatorCashoutsPanel } from "./creator-cashouts-panel";
 import { fmtUsdc } from "./phase-style";
 import { currentArcLabel } from "@/lib/arc-network-display";
@@ -22,7 +24,7 @@ const message = createMessages("en");
 const uiCopy = message;
 const uiRichCopy = createRichMessages("en");
 
-interface MetricsResponse { metrics: DashboardMetrics; leaderboard: LeaderboardEntry[] }
+interface MetricsResponse { metrics: DashboardMetrics; leaderboard: LeaderboardEntry[]; sourceLeaderboard?: SourceLeaderboardData }
 
 function objectBody(body: unknown): Record<string, unknown> {
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("Invalid ledger response");
@@ -162,8 +164,10 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
 
       <section id="current-creators" aria-label={message("ledger.currentCreators")} className="mt-8">
         <ResourceNotice resource={withdrawalsResource} label={uiCopy("ledgerPresentation.cashouts")} />
-        {(leaderboard.length > 0 || withdrawals.length > 0) && <div className="mt-5 grid gap-5 lg:grid-cols-2">
-          {leaderboard.length > 0 && <CreatorLeaderboard rows={leaderboard} title={message("ledger.creatorLeaderboard", { network: currentArcLabel })} />}
+        {(!!metricsResource.data?.sourceLeaderboard?.rows.length || leaderboard.length > 0 || withdrawals.length > 0) && <div className={`mt-5 grid gap-5 ${withdrawals.length > 0 ? "lg:grid-cols-2" : ""}`}>
+          {metricsResource.data?.sourceLeaderboard
+            ? <SourceLeaderboard data={metricsResource.data.sourceLeaderboard} network={currentArcLabel} />
+            : leaderboard.length > 0 && <CreatorLeaderboard rows={leaderboard} title={message("ledger.creatorLeaderboard", { network: currentArcLabel })} />}
           {withdrawals.length > 0 && <CreatorCashoutsPanel withdrawals={withdrawals} compact />}
         </div>}
       </section>
