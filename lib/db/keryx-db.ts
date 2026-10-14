@@ -1,3 +1,4 @@
+import type { AccountMembershipStore } from "../accounts/contracts";
 import type { PublicReference } from "../public-references/catalog";
 import type { PublicReferenceArchiveDb } from "../public-references/archive";
 import type { PrivateProfilesStore } from "../profiles/private-profile";
@@ -210,6 +211,9 @@ export interface FeedbackStats {
 }
 
 export interface KeryxDB extends PublicReferenceArchiveDb {
+  /** Exact pre-existing ordinary account namespace only. No install, fallback or pooled financial authority.
+   * Absent on unsupported/native/enrolled/archive facades; interactive callers authenticate the durable login first. */
+  readonly accountMembership?: AccountMembershipStore;
   /** Opt-in ordinary publication; absent on sealed/native stores and when privacy is inactive. */
   readonly publicProfiles?: import("../profiles/public-profile").PublicProfilesStore;
   /** Explicitly admitted ordinary run text privacy. Public callers must never fall back to raw originals. */

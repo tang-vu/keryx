@@ -2,6 +2,8 @@
 
 import { getDb } from "@/lib/db";
 import { getTestnetArchive } from "@/lib/history/testnet-archive";
+import { loadSourceLeaderboard } from "@/lib/sources/source-leaderboard";
+import { config } from "@/lib/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,6 +55,7 @@ export async function GET() {
       ? namesById.get(row.sourceId) || row.sourceName || row.sourceId : row.sourceName,
   }));
   const topics = topicBreakdown(payments, tagsById);
+  const sourceLeaderboard = await loadSourceLeaderboard(db, { sources, earnings: namedLeaderboard, network: config.networkId });
   let historicalArchive;
   try {
     const archive = await getTestnetArchive();
@@ -70,6 +73,7 @@ export async function GET() {
       activationFunnel,
     },
     leaderboard: namedLeaderboard,
+    sourceLeaderboard,
     topics,
     dailySettled,
   });

@@ -725,7 +725,9 @@ it("runs one complete private job with durable source/reward receipts and no sha
     expect(complete.run.citations, complete.run.trace.map(step => step.message.replaceAll(value.id, "[synthetic job]")).join("\n")).toHaveLength(1);
     expect(complete.run.question).toBe(value.submission.request.question);
     expect(complete.run.asker).toBe(account.address.toLowerCase());
-    expect(complete.run).not.toHaveProperty("provenance");
+    expect(complete.run.provenance).toEqual({ version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" });
+    const retained = (await db.getPrivateResearchResult(value.id, account.address))!;
+    expect(retained.serializedRun).toBe(JSON.stringify(complete.run));
     expect(complete.run.totalSpent).toBeCloseTo(0.017, 6);
     expect(complete.diagnostics).toEqual({ alerts: 0, suppressedCitationNotifications: 1 });
     const ownerResult = await privateResultView(other, value.id, account.address);
@@ -735,6 +737,7 @@ it("runs one complete private job with durable source/reward receipts and no sha
     expect(await privateResultView(db, value.id, merchants.publicResearchPayee)).toBeNull();
     expect(JSON.stringify(ownerResult)).not.toContain(value.submission.payment.signature);
     expect(ownerResult?.result).not.toHaveProperty("trace");
+    expect(ownerResult?.result).not.toHaveProperty("provenance");
     const legs = await db.listPrivateCreatorSubmissions(value.id, account.address);
     expect(legs).toHaveLength(2);
     for (const leg of legs) expect(await db.getPrivateCreatorConfirmation(value.id, account.address, leg.data.submission.authorizationId)).not.toBeNull();
@@ -1040,6 +1043,7 @@ it("saves the first private result for its exact worker and owner, preserving re
   const replies = await Promise.all([db.savePrivateResearchResult(value.id, account.address, claim.workerId, run), other.savePrivateResearchResult(value.id, account.address, claim.workerId, run)]);
   expect(replies[0]).toEqual(replies[1]);
   expect(replies[0]).toMatchObject({ id: value.id, format: "query-run-v1", serializedRun: JSON.stringify(run) });
+  expect(JSON.parse(replies[0].serializedRun)).not.toHaveProperty("provenance");
   await expect(other.savePrivateResearchResult(value.id, account.address, claim.workerId, { ...run, answer: "Replacement" })).rejects.toThrow("result conflict");
   expect(await db.getPrivateResearchResult(value.id, merchants.privatePayee)).toBeNull();
   const reopened = new SqliteAdapter(file);
@@ -1059,9 +1063,14 @@ it("snapshots results before asynchronous lookups and refuses corrupt readbacks"
   await db.confirmPrivatePayment(value.id, account.address, proof);
   const claim = (await db.claimPrivateResearchExecution(value.id, account.address))!;
   const run = syntheticResult(value.id);
+  run.asker = account.address.toLowerCase();
+  run.provenance = { version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" };
   const save = db.savePrivateResearchResult(value.id, account.address, claim.workerId, run);
   run.question = "Mutated while verifying";
-  expect(JSON.parse((await save).serializedRun).question).toBe(request.question);
+  run.provenance.surface = "unknown";
+  const original = JSON.parse((await save).serializedRun);
+  expect(original.question).toBe(request.question);
+  expect(original.provenance).toEqual({ version: 1, surface: "agent-to-agent", ownershipMethod: "verified-payer" });
   for (const corrupt of ["not-json", JSON.stringify({ ...syntheticResult(value.id), question: "Wrong identity" })]) {
     raw.prepare("UPDATE private_research_results SET serialized_run=? WHERE id=?").run(corrupt, value.id);
     await expect(db.getPrivateResearchResult(value.id, account.address)).rejects.toThrow("result mismatch");

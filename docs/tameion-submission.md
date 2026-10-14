@@ -8,7 +8,9 @@ settlement on Arc.
 **[Submitted demo — 2:47, English narration and subtitles](https://youtu.be/sNonqLPMysg)** ·
 **[Live product](https://keryx.cc)** · **[Reviewer route](reviewer-start.md)** ·
 **[Windows/MCP release](https://github.com/tang-vu/keryx/releases/tag/v0.27.63)** ·
-**[User workflow video — 0xacee](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)**
+**[User workflow video — Hoàng](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)** ·
+**[User workflow video — 0xacee](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)** ·
+**[User research paper — Trần Minh Hiếu](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf)**
 
 The owner confirmed submitting the Google Form on **October 13, 2026**. The
 submitted code comparison is frozen from the September 25 pre-event baseline to
@@ -100,14 +102,23 @@ facial-analysis methods, privacy and app-platform policies, and MediaPipe Face
 Landmarker. He is outside the Keryx team. His identity and workflow were published
 by the owner with a screen recording on X ([@tangvu_dev](https://x.com/tangvu_dev),
 October 2) and in the October 3 Canteen traction update. The owner confirmed on
-October 14 that the X account is suspended, so its video is currently unavailable.
-The matched runs and payment evidence below remain independently inspectable.
+October 14 that the X account is suspended. The retained edited MP4 has now been
+restored from the original local archive:
+[watch the 1:53 recording](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4) ·
+[recording scope and SHA-256](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.txt).
+
+The edit uses chronological cuts at normal speed, enlarges the terminal, adds
+English chapter labels and retains original audio. Unsupported policy answers,
+the connection error/retry and partial low-confidence MediaPipe result remain
+visible. The original October 2 edit reported the CLI's payment state; the later
+October 3 Circle and chain verification below is separate evidence.
 
 | Field | Value |
 | --- | --- |
 | Participant | Hoàng — [GitHub](https://github.com/Hoang130203), [LinkedIn](https://linkedin.com/in/ho%C3%A0ng-mai-minh-93a5852aa/) |
 | Origin | Independent freelancer; his own app and his own questions |
 | Surface | Keryx MCP in Devin CLI, Arc testnet |
+| Video | 113-second archived recording, restored October 14; original X publication remains unavailable |
 | Runs | Three research runs: `3a43c6c2-fddf-40ce-98a1-701a2a58b439`, `fe7c06fd-65da-41a6-867c-0597a63304df`, `2405a2ea-7ee3-4f0d-88b9-f221df791070` |
 | Payment | One source-access payment of 0.002 USDC to the Conzit Labs source; the other two runs bought nothing |
 | Payer | Keryx treasury. The run was sponsored; Hoàng did not fund a wallet |
@@ -136,20 +147,54 @@ agreed to be named.
 | Person | Who they are | What they used Keryx for | Surface |
 | --- | --- | --- | --- |
 | [@JamWaveX](https://t.me/JamWaveX) (Telegram) | International student in China preparing for a master's programme | Scientific research for the master's application | Not recorded |
-| [Trần Minh Hiếu](https://www.linkedin.com/in/tr%E1%BA%A7n-minh-hi%E1%BA%BFu-667915335/) | Fourth-year university student | Undergraduate research for a study-abroad scholarship application | Not recorded |
+| [Trần Minh Hiếu](https://www.linkedin.com/in/tr%E1%BA%A7n-minh-hi%E1%BA%BFu-667915335/) | Fourth-year university student | Undergraduate research for a scholarship application; a later 65-report working paper is linked below | Sponsored Deep research for the working paper |
 | [0xacee](https://github.com/0xacee) | Builder working on a SaaS product | Finding a product niche; a later storage/backup design session is recorded below | Keryx API; later web session |
 
 Limits of these records:
 
-- Run IDs and payment legs for the two academic users and the earlier SaaS-niche
-  session are not matched in this pack yet. The later 0xacee recording has its own
-  three report IDs below. Stored runs do not carry a name, so matching needs each person's
-  session time or wallet.
+- Run IDs and payment legs for @JamWaveX, Hiếu's earlier scholarship-research
+  story and the earlier SaaS-niche session are not matched in this pack yet.
+  Hiếu's working-paper package retains its own 65 report IDs and receipts; the
+  later 0xacee recording has three report IDs below. Participant attribution
+  remains owner-confirmed rather than established by a name in the stored runs.
 - Participant attribution comes from the owner-confirmed stories. A matched
   research record and an outside wallet funding that record are separate facts.
 
 Other people have contacted the owner through X, LinkedIn and Product Hunt and are
 added here as their use is recorded.
+
+### Research artifact: Trần Minh Hiếu
+
+[Read the four-page working paper](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf) ·
+[Reproduce from the frozen data and code](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.zip) ·
+[Artifact scope and SHA-256](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.txt)
+
+On October 14 the owner confirmed that **Trần Minh Hiếu conducted this research
+himself**. His working paper, *Paid source access and evidence coverage in a
+sponsored research agent*, turns Keryx use into a concrete research output:
+methods, quantitative tables, two figures, sensitivity analysis and a frozen
+reproducibility package. It examines whether source-access charges and citation
+rewards are sufficient signals of complete recorded evidence coverage.
+
+| Field | Retained evidence |
+| --- | --- |
+| Researcher | Trần Minh Hiếu, an already documented outside user; authorship and self-conducted research confirmed by the owner |
+| Corpus | 65 retained Keryx Deep reports, 202 recorded research targets; receipts created October 11–13 |
+| Snapshot | October 13, 2026, 16:30:46 UTC; 65 completed reports from 68 journaled submissions |
+| Research output | Four-page working paper, report/target CSV and JSON tables, figures, original public report links and receipt manifests |
+| Reproduction | Four analysis tests and a local verifier reproduce the frozen report, target and monetary aggregates without another research purchase |
+| Funding and assistance | Sponsored public Deep requests; AI-assisted analysis and writing; no participant-funded purchase established |
+
+The October 14 edition corrects the earlier unnamed "owner-operated" attribution
+to name Hiếu and describe his user-led study. The original PDF is retained locally;
+the frozen receipts, datasets, figure inputs and conclusions are unchanged.
+
+This is evidence of a documented user's research activity and produced artifact.
+The coverage proxy remains system-reported, with no blinded factuality evaluation
+or peer review; receipt consistency does not independently verify external payment
+settlement. Hiếu was already included in the four-person minimum. These 65 reports
+and their recorded source payments are not additional totals to add to the dated
+mainnet activity snapshot.
 
 ### Recorded outside-user workflow: 0xacee
 
@@ -179,11 +224,11 @@ This is another documented workflow for an already identified user, not a fifth 
 
 ## Observed delivery and supported surfaces
 
-Read-only public health rechecked on **October 14, 2026** reported operational/db
+An early read-only public-health check on **October 14, 2026** reported operational/db
 ok, Arc mainnet and deployed commit `ec5f39c9`. The recorded full source is
 `ec5f39c9750dfc9e80e66edd41348ca6034c01c3`, application **0.27.63**.
 [Mainnet status](mainnet-status.md) retains the release/maintenance evidence.
-Public npm metadata reports **keryx-mcp 0.4.19**. The
+At that check, public npm metadata reported **keryx-mcp 0.4.19**. The
 [v0.27.63 release](https://github.com/tang-vu/keryx/releases/tag/v0.27.63) exposes the
 MCP tarball/source manifest and Windows **0.4.17** installer/portable ZIP/checksums,
 whose manifests name that full source. This refresh checked discovery/manifests;
@@ -200,9 +245,12 @@ it did not repeat a fresh installation or package acceptance trial.
 | Browser extension | Existing browser research/registration entry points | Thin adapter, separate package/store status; hosted handoffs |
 | Discord / Telegram / Slack | Existing chat research adapters and report links | Each adapter keeps its own authentication and sponsored-service role |
 
-The submitted source comparison ends at `92733ecc`; current main also includes
-later merged improvements. Public health remains the deployment authority. Source
-or downloadable artifacts alone do not establish independently accepted work.
+The submitted source comparison ends at `92733ecc`; main also includes later
+merged improvements. A later October 14 read-only health check reported
+operational Arc mainnet at `ae298ff4`. The client observations above retain their
+earlier source identity. Compare current health and release manifests with source
+before treating later changes as deployed. Source or downloadable artifacts alone
+do not establish independently accepted work.
 
 ## Arc OSS: components other builders can use
 
@@ -384,7 +432,8 @@ first run needs longer, record the genuine steps and disclose elapsed time/cuts.
 
 ## Pilot intake and evidence record
 
-Four outside users are recorded, one with matched runs and payment (Hoàng), in
+Four outside users are recorded, including Hoàng's matched runs/payment, Hiếu's
+working paper and 0xacee's recorded workflow, in
 [Event-period usage](#event-period-usage-testnet-week-then-mainnet) above. The
 own-business and small-team tracks, and the blank record below for the next
 participant, remain open.

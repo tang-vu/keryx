@@ -702,12 +702,12 @@ describe("ordinary complete-answer word budget", () => {
     const data = await wordBudgetRun();
     expect(data.run.answer.match(/\S+/g)!.length).toBeLessThanOrEqual(120);
     expect(data.run.answer).toContain(`${statement} [S1] Source text: “${quote}”`);
-    expect(data.run.answer).not.toContain("Research target 1");
+    expect(data.run.answer).toContain("Research target 1"); // Canonical answer already fits without a Low banner.
     const input = data.attribute.mock.calls[0][0] as { answer: string };
     expect(input.answer).toContain("Research target 1"); // canonical pre-projection attribution input
     expect(input.answer).toContain("Summary sentences are model-written and model-checked");
     expect(data.run.trace.find(step => step.message.includes("word-budget projection"))?.detail)
-      .toMatchObject({ answer: data.run.answer, maximumWords: 120, outcome: "compact" });
+      .toMatchObject({ answer: data.run.answer, maximumWords: 120, outcome: "unchanged" });
     expect(recordedAnswerLanguage(data.run)).toBe("en");
     expect(data.effects.saveQueryRun).toHaveBeenCalledWith(data.run);
     const payments = vi.mocked(data.effects.recordPayment).mock.calls.map(([payment]) => payment);
@@ -758,7 +758,7 @@ describe("ordinary complete-answer word budget", () => {
     expect(data.run.answer).toContain("Read failures and follow-up steps do not erase recorded charges or reservations.");
     expect(data.run.answer).toContain("These are suggested follow-up steps; this run has not performed them.");
     expect(data.run.answer.match(/\S+/g)!.length).toBeLessThanOrEqual(180);
-    expect(data.run.trace.find(step => step.message.includes("word-budget projection"))?.detail).toMatchObject({ outcome: "compact" });
+    expect(data.run.trace.find(step => step.message.includes("word-budget projection"))?.detail).toMatchObject({ outcome: "unchanged" });
     expect(data.run.pendingPayments).toBe(1);
     expect(data.run.pendingSpendUsdc).toBeGreaterThan(0);
     const canonical = data.attribute.mock.calls[0][0] as { answer: string };
@@ -777,7 +777,7 @@ describe("ordinary complete-answer word budget", () => {
     expect(run.answer).toContain("Supplied original source status");
     expect(run.answer).toContain("Extraction was truncated.");
     expect(run.answer.match(/\S+/g)!.length).toBeLessThanOrEqual(180);
-    expect(run.trace.find(step => step.message.includes("word-budget projection"))?.detail).toMatchObject({ outcome: "compact" });
+    expect(run.trace.find(step => step.message.includes("word-budget projection"))?.detail).toMatchObject({ outcome: "unchanged" });
     expect(gateway.citationCalls).toEqual([]);
     expect(run.evidence).toMatchObject([{ quote, qualifiesForAnswer: true, qualifiesForReward: false }]);
   });
@@ -4328,6 +4328,71 @@ describe("omitted-assertion completion boundary", () => {
     expect(receipt.payload.dispatch.answer).toBe(run.answer);
   });
 
+  it.each([[1, "Moderate"], [2, "High"]] as const)("records %s reviewed source(s) as %s across completed public surfaces", async (count, level) => {
+    const quotes = ["The protocol binds approval to canonical action identity.",
+      "Approval must be tied to the canonical identifier of an action."];
+    const statements = ["Approval is bound to the canonical identity of the action.",
+      "Action approval requires the canonical identifier."];
+    const sources = ["a", "b"].slice(0, count).map(id => makeSource({ id, fetchPrice: 0.004 }));
+    const items = Object.fromEntries(sources.map((source, index) => [source.id, [{ id: `confidence-${source.id}`,
+      sourceId: source.id, title: "Approval binding", link: `https://${source.id}.example/approval`,
+      summary: "Approval identity", content: quotes[index] }]]));
+    const engine = fakeEngine({
+      sufficiency: input => ({ sufficient: input.gathered.length === count, rationale: "Synthetic complete assessment",
+        perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.9, coveredBy: input.gathered.map(row => row.marker) })) }),
+      synthesize: input => ({ answer: input.gathered.map(row => `[${row.marker}]`).join(" "),
+        citedMarkers: input.gathered.map(row => row.marker), evidence: input.gathered.map((row, index) => ({
+          claimIndex: 0, marker: row.marker, quote: quotes[index], support: 0.9,
+          statement: statements[index], statementSupport: 0.9 })) }),
+    });
+    engine.decompose = async () => ["How is approval bound?"];
+    const gateway = fakeGateway(), effects = isolatedTestEffects();
+    const run = await collectRun({ question: "How is approval bound?", budget: 0.03,
+      executionLimits: { attentionLimit: count, reevaluateRounds: 0 } },
+      { deps: { ...deps(sources, engine, gateway, { items }), effects } });
+    expect(run.confidence?.level).toBe(level);
+    expect(run.answer).not.toContain("Low confidence");
+    expect(run.trace.find(step => step.phase === "verdict")?.detail).toEqual(run.confidence);
+    expect(gateway.fetchCalls).toHaveLength(count);
+    expect(gateway.citationCalls).toHaveLength(count);
+    expect(run.totalSpent).toBeCloseTo(count * 0.004 + 0.03 * config.citationPoolRatio, 8);
+    const payments = vi.mocked(effects.recordPayment).mock.calls.map(([payment]) => payment);
+    const receipt = buildResearchReceipt(run, payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.confidence).toEqual(run.confidence);
+    expect(remoteResearchResult(run).confidence).toEqual(run.confidence);
+    expect(researchReportMarkdown(run, null, payments)).toContain(run.answer);
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),
+      a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"))]) {
+      expect(result.evidence.map(item => item.quote)).toEqual(quotes.slice(0, count));
+    }
+    expect(effects.saveQueryRun).toHaveBeenCalledWith(run);
+  });
+
+  it("keeps the emitted and completed confidence Low for a skipped offline synthetic candidate", async () => {
+    const quote = "The protocol binds approval to canonical action identity.";
+    const source = makeSource({ id: "real-summary" }), demo = makeSource({ id: "skipped-demo", evidenceProvenance: "synthetic-demo" });
+    const items = Object.fromEntries([source, demo].map(row => [row.id, [{ id: `confidence-${row.id}`, sourceId: row.id,
+      title: "Approval binding", link: `https://${row.id}.example/approval`, summary: "Approval identity", content: quote }]]));
+    const gateway = { ...fakeGateway(), mode: "offline" as const };
+    const fetch = gateway.payFetch.bind(gateway), cite = gateway.payCitation.bind(gateway);
+    gateway.payFetch = async request => { const result = await fetch(request); return { ...result,
+      payment: { ...result.payment, settled: false, settlementStatus: "simulated", txHash: null } }; };
+    gateway.payCitation = async request => ({ ...await cite(request), settled: false, settlementStatus: "simulated", txHash: null });
+    const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+      ...(candidate.sourceId === demo.id ? { action: "SKIP" as const, expectedValue: 0, targets: [] } : {}) })),
+      synthesize: () => ({ answer: "Approval [S1].", citedMarkers: ["S1"], evidence: [{ claimIndex: 0, marker: "S1", quote,
+        support: 0.9, statement: "Approval is bound to the canonical identity of the action.", statementSupport: 0.9 }] }) });
+    const { run } = await drive({ question: "How is approval bound?", budget: 0.03,
+      executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } }, deps([source, demo], engine, gateway, { items }));
+    expect(run.decisions.find(decision => decision.sourceId === demo.id)).toMatchObject({ action: "SKIP", evidenceProvenance: "synthetic-demo" });
+    expect(run.confidence?.level).toBe("Low");
+    expect(run.trace.find(step => step.phase === "verdict")?.detail).toMatchObject({ level: "Low" });
+    expect(gateway.fetchCalls).toEqual([source.id]);
+    expect(gateway.citationCalls).toHaveLength(1);
+  });
+
   it.each([
     { label: "Portuguese", question: "Earlier context: Answer in English in four short bullets about approval identity.",
       originalQuestion: "Answer in Portuguese in one short bullet about approval identity.",
@@ -4362,8 +4427,8 @@ describe("omitted-assertion completion boundary", () => {
       executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } },
       { deps: { ...deps([source], engine, gateway, { items: { [source.id]: [item] } }), effects } });
     expect(run.answer).toContain(`- ${statement} [S1] ${fixture.quoteLabel}: “${quote}”`);
-    expect(run.answer.startsWith(`> ⚠ ${fixture.banner} — `)).toBe(true);
-    expect(run.confidence).toMatchObject({ level: "Low", reason: expect.stringContaining(fixture.reason) });
+    expect(run.answer.startsWith(`> ⚠ ${fixture.banner} — `)).toBe(false);
+    expect(run.confidence).toMatchObject({ level: "Moderate", reason: expect.stringContaining(fixture.reason) });
     expect(run.answer).not.toContain("Unsupported raw draft");
     expect(gateway.citationCalls).toHaveLength(1);
     expect(run.evidence).toHaveLength(1);

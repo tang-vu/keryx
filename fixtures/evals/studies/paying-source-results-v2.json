@@ -20,7 +20,7 @@
     "reevaluateRounds": 1,
     "searchCalls": 0
   },
-  "lockSha256": "9dbd5844f20ca242ad199790195292cece8eca1d033f629ccf25d96fd6343cb2",
+  "lockSha256": "0b37a58ac918b81931559041f55976f5d67c7e5cf44c1bec0c836bbd6db8e4ad",
   "outboundAttempts": 0,
   "runtimeSources": {
     "lib/a2a/amount-micros.ts": "ad39789195855cc02b4dc12186e64ef25e265f2ecc562274ffa90c5f30249a25",
@@ -47,7 +47,12 @@
     "lib/a2a/research-package-definition.ts": "ce63d10b16a55190f39569706329b2a63cda8b2bfc1874f511c8c65721464fc3",
     "lib/a2a/research-package.ts": "0be912200a8855dd8275258ab8f253b45d025e6d5a8a953249b6ff6689fa7c56",
     "lib/a2a/result.ts": "df4e5cdda9c13f2bffa5a72b4af9aeace95c05380cdc34f1daa88fc33f6da0b0",
+    "lib/accounts/contracts.ts": "0d334eb8bc3a6ee2bd06e241f1417bd5b24f664335a212d96bb68f014cd4eae3",
+    "lib/accounts/protocol.ts": "b27c6ab0b1c36a8d821134fb8214fc065b0ffbcf0c252994c610077bbb2b1b96",
+    "lib/accounts/sqlite-schema-data.ts": "b83e5822bf34ceb32dc60ae1ef5dc85a0aad97d56956535b003933819da7bd5d",
+    "lib/accounts/sqlite-store.ts": "5bb9aaa1ad15e5bbdc90582c58930fee484b07d8e2d0b42381b20630e231e1b1",
     "lib/activation.ts": "c201dbf1ac8785e706902238b44c8c03b1b072bd08b697d4904c1993a0aba031",
+    "lib/agent/answer-confidence.ts": "d369f5c9b14547ca44baeef625ff1247512e85c14378dd3a893402573cd44791",
     "lib/agent/answer-grounding.ts": "b61f266bdfa5cd047d43adbcff92089fdd70d4b06a128f7be05a49e749749a4e",
     "lib/agent/cache-freshness.ts": "cc689593315dc71758121198c3699e1e905b7fa2d51053d6394c169a6ce0d746",
     "lib/agent/cited-statements.ts": "742b1c42bd2764833ac3493ad193fe9258a1fe154d759b4d76b18704b8139e2f",
@@ -71,12 +76,12 @@
     "lib/agent/research-effects.ts": "03b112db36a63a94a8a00f644cefb1d9b65c3b91016053d1e9ba7532d5c98174",
     "lib/agent/research-follow-up.ts": "5fe8212365fd85d4918c880d562842d4f82791ccec5c4eb9b593864ad43be867",
     "lib/agent/research-verdict.ts": "30f1abb81ab37d84a765c7f1d5285be7a72145db899bf13132286f29c68f7084",
-    "lib/agent/run-agent.ts": "51efc9024ab05f523e0c0290906c6e0fce42ca26da09c731b7fd50841868217b",
+    "lib/agent/run-agent.ts": "690ee513309261dc8d1bfd58fc46e8b264008228a03766af14359a11f7ecef70",
     "lib/agent/run-bibliographic-agent.ts": "ec1ed1ed8e24e62be35a1952723fa1bc33a628f0addad9f792d430a6e588c3e2",
-    "lib/agent/sentence-note-answer.ts": "d97801bfa23f84a5a56f2c079520e6ccf63e6a0a7e6b5ec12c679c54208bee2c",
+    "lib/agent/sentence-note-answer.ts": "d0bcafb7bbb204fca80eb6dbfd7878619c1aa563da84a7f9ea03c83af78fe4fe",
     "lib/agent/source-recency-observations.ts": "a965730639f47849e7edb83ddc9fd34f805be399bc2a3509caba44948a230ee7",
     "lib/agent/synthesis-failure.ts": "dbc1985d4d2b98c457c2e45bc3f7c9a268459c65b23196e69825d4fcbf57cb0e",
-    "lib/agent/word-budget-answer.ts": "89152dd033fde4494eb881ba65cdfdc2c089aeb945511a718f22af2daf3a759a",
+    "lib/agent/word-budget-answer.ts": "6fc331a29c4dc69250e459b36e4f87a4a9e2f4135bc78a331f7561dc397df53a",
     "lib/answers-freshness.ts": "199dfd553c4bc6b3d9518de41809dc089f52af88981816dd3170388f5982cc9b",
     "lib/answers-topics.ts": "f30ae985107f1cab484bb3a7a5e1b0b937fa753e10024ae8ea471f2200a92fb5",
     "lib/answers-version-audit.ts": "1465f303539ee0dc22d44b9666d4008e722c53afd9c5c5ff0198dcde9653cb66",
@@ -123,22 +128,27 @@
     "lib/db/dashboard-metrics.ts": "0313bd7f95495cb3de98b638cbfd259f69668d9b53ae7bc1799690f8ea7ed7a1",
     "lib/db/decision-reviews-sqlite.ts": "e3290ae4d73183daeca24ff99d226ac1800ed91e1e9f3a8ef6e51383cb79a86d",
     "lib/db/decision-reviews-supabase.ts": "afc2d21cdf810d6686b5e8ed4bd49500082ea13364a314f549b8ef59e491774c",
-    "lib/db/deliverable-acceptance-sqlite.ts": "6a264e7fc97fbfe6a205d93969ba160024fa5692dd030b599d28d9aaab8adec9",
+    "lib/db/deliverable-acceptance-sqlite.ts": "7d3a681c2800450142b2ee79ddba01fdbcbce7b62727d9fc74a82e7329a5a663",
     "lib/db/deliverable-acceptance-supabase.ts": "62419d999390b387a388daa65b6bf07bf398358d1725711adbfe6fef35fc888f",
-    "lib/db/enrolled-sqlite-adapter.ts": "be063560d4eb263d1e97bdad0343148375bff75b462dc890cb686dc7cee790c6",
-    "lib/db/enrolled-sqlite-schema-profile.ts": "9d762753d55088be0aa6c676ae930fc164d739f08c8ac09bde058fdf695d9b6f",
+    "lib/db/enrolled-sqlite-adapter.ts": "40dcb32ea5002af1dace307d960c4ce155f2c29f442b9fc8d992b0cf1ac95d22",
+    "lib/db/enrolled-sqlite-schema-profile.ts": "66aed35fa301ff0772f065adee5a6b9596e4530799692b6c4f8cbed4ae4835a7",
     "lib/db/enrolled-supabase-adapter.ts": "2d2ba8e3409a5229fa0922352799ae8074d62cfabc316cbd8eca9c92aaecebda",
     "lib/db/gateway-funding-ledger-types.ts": "33b7379f95860a926f7dae6d929900e24223430ded7a654f9e81f15acff1828d",
     "lib/db/gateway-funding-sqlite-schema.ts": "1e52244a586ef2721aea26a1ac8d1abab5cc3010d7e3118c2014763bcbd7464e",
     "lib/db/hosted-treasury-journal.ts": "776362eb3fbf4a1f599b96460fa648c40fafe7fb807cad5c01dfe6e5608bf058",
     "lib/db/index.ts": "75bc7656d7dfce6d74de83220f74eff4c7fd470fbe88dd811d9a311962168c1a",
     "lib/db/mainnet-application-schema.ts": "22e9d2f47393847a11a6312b9913ca79c09ebaa23b387a4335398a5185fec590",
-    "lib/db/personal-history-sqlite.ts": "11e9e4624a290d5ea561b0c1687712ef25e24a71f45ab0f6cdea7e1e013a5747",
+    "lib/db/native-user-domain-schema-data.ts": "730e217480c81d6d92e4970f7190defbf8107c0c6c47d916cdb3c5bbd1d8b27f",
+    "lib/db/native-user-domain-schema.ts": "aca68b943f5ed3ff48f23994272aa0c8ba82ed0b4d39a9f0d8f715d3abd9e15b",
+    "lib/db/personal-history-sqlite.ts": "35f176617d73e293f26ecc43cc0427b056962d2d13e9947fd4d95a508d98808a",
     "lib/db/personal-history-supabase.ts": "00d8dbf90c9811ef85acc23a53645227a0a9c66388e9ccf557dae04bb4d2a245",
+    "lib/db/private-bibliographies-enrolled-sqlite.ts": "c6412340ecb33e399e80e9a13d3a19555427cffc0fb311f948b0bd6129cc7a11",
     "lib/db/private-bibliographies-sqlite.ts": "8c4eff8f6d516d3248bf7a5c86b2001655ebc1eb0884a8603fbd458b069e172a",
+    "lib/db/private-bibliographies-storage-domain.ts": "1acc3aec5386a4fc0745701aa80bc77266fd79e9a2614d76da6efdbddd6d6531",
     "lib/db/private-creator-confirmations.ts": "6a88d206054d1cc6cdc9d0e064d365727dae477154f39ac53304831df3bd07e9",
     "lib/db/private-creator-submissions.ts": "909a809fd9e1aab05c9e07a60ebfbd2a677dd11766a85569fe1c5d36be5dbe6e",
-    "lib/db/private-profiles-sqlite.ts": "48b76d695cca201590abc4ddda1fff09c21cd3491c5e91befbece408d002a99b",
+    "lib/db/private-profiles-enrolled-sqlite.ts": "5eb5b5e8d0c9913b5b94931a862649f10323fb2822f11e52d751feb54d47ebd3",
+    "lib/db/private-profiles-sqlite.ts": "63bc118fae122ddb8c9f4891940bc422e6f0dc9e4e9fa5687d01f5fb1dff29fc",
     "lib/db/private-profiles-supabase.ts": "178993c1d5497250aeaa969c8e2e3de52e7dc7c2982c0eb0b04ac597350e0058",
     "lib/db/private-research-executions.ts": "112ee6d4127488c10e24a841b7a75c2d392a67dd6d3e6ae0f2e760d7b30080b2",
     "lib/db/private-research-intents.ts": "9a8c051410b201969203176bb406e7ac891e26d02ffa3c24e0a6d05fef317da2",
@@ -149,24 +159,27 @@
     "lib/db/private-treasury-release.ts": "664d2c19ea6900ccd18212a25b9e310dfba217ed39a0ebd9286072d3ec9988c4",
     "lib/db/private-treasury-summary.ts": "73bc21f5eee4b6b846c227eadaa7ab557af9815be9839865a864a691851ea60f",
     "lib/db/private-worker-candidates.ts": "b4c2ae728218348bf76e4253a3c4b58033bb3d4b252131951f7afbdb498dd0ce",
+    "lib/db/profile-identities-enrolled-sqlite.ts": "49e4884efe5a968aa24c708918578547956ea02b281c8dc69e67ae27aaec61c3",
     "lib/db/profile-identities-sqlite.ts": "0b716dc3486c235a839f7f09bea9664dc085ad74546d16af104ee1fbb2ad5a68",
+    "lib/db/profile-identities-storage-domain.ts": "0e297d1ef33f5f80c4bd54845d17efe4ecdd866f3c5e8fd4ecd0ef659865046c",
     "lib/db/profile-identities-supabase.ts": "291d431d66c8b512d8d416edbe4175814bc8b50551bab2ac077c4687e321e513",
     "lib/db/public-profiles-sqlite.ts": "bcb0d710e5464210d8c5a20be134e425213a392b28039cad07ba24d3487c5bd1",
     "lib/db/public-profiles-supabase.ts": "61b83b374464be9214f3477ff19b1a916e15a4796a59f8f62f4d399a6bf88eb6",
     "lib/db/public-reference-archive.ts": "cada9047cab6092067b07dd7be91bce4aafd3ed377cf3a051f06cda3ca7c8798",
     "lib/db/public-source-claims.ts": "684c0f9d01cec633b1dbd237a2c8e12da7b125258961418651a18c57e62354e5",
-    "lib/db/public-usage-sqlite.ts": "1461cef041ed8dae8458331e4eb845c9a852317ed65fc6e1c29afe4434c2c8b0",
+    "lib/db/public-usage-sqlite.ts": "cc3a2fdb44da58d2100fbee20280273b7f42b0e312484afb40eb1bd31e47a01e",
     "lib/db/public-usage-supabase.ts": "6aec2cd4f758a49db4691c44463b5e46a08e67df880b39a1049fcf1dbbf37150",
     "lib/db/query-run-record.ts": "b99c14e71f670512454e7693d023ffa072a3a4090ad7da38972051be8103e8f0",
     "lib/db/recent-query-stream.ts": "8cb5d3cf3edee9546ef38dd1a47ea7df5eb8e68956dd5aa1ee29296de33dd3ef",
     "lib/db/registration-sponsor.ts": "1d3ee1b6ed1407d6f330de2aa6c9ed2f2b07da5ecdf51f59cc73f4267f4efe88",
     "lib/db/registry-collisions.ts": "3009b912e4de7ab15b3cbb7ef6c225591ddbfc390754b7824a1a6c1de26c3429",
     "lib/db/research-monthly.ts": "0d08d8abb2c38e30b7b14bf23b99a3ae54ba6646bcf1bea82089a3cd4c6b9c52",
-    "lib/db/run-claims-sqlite.ts": "dd64cfa8e8906cfa505dba08583fa9508e238456145cea5846d657508449ee38",
+    "lib/db/run-claims-sqlite.ts": "a5c042647c5dbd8f00d0feae004af3656523a23ee844169d97223319a2ca8c2b",
     "lib/db/run-claims-supabase.ts": "7115796d5632269df3f09ad519a68db396c8182d30df4fc8428b6f9c3f4ca2d0",
-    "lib/db/run-ownership-history-sqlite.ts": "d6fcbfb5c233fa302ab374da8ee59493d101991b13644bddb3fce6790d5d04f4",
+    "lib/db/run-ownership-functions.ts": "f1d0f71cc70d1e48b338e40680e308105f6d2773971cf7cf44b7f38251fa7d1e",
+    "lib/db/run-ownership-history-sqlite.ts": "3777515c356a33c6118a7ac3eda969286f00067dff3647278a2dbeccf2a28447",
     "lib/db/run-ownership-history-supabase.ts": "75097cd34df728cd6b9ae71e52b75fce32da49ab8ffea8e791ad29c17c263d67",
-    "lib/db/run-privacy-sqlite.ts": "ac84da36875e64974df65c6aeb67f70e8ffcc4dac4d591f0798df0f0031ccbba",
+    "lib/db/run-privacy-sqlite.ts": "4d7d3be9367596313808981f39b467a91eb687de0c0b5f0d3f8f6ad2dc637615",
     "lib/db/run-privacy-supabase.ts": "c1dc98243aa7e8d896ad9d0348b97a73464902527140ef52ac4308bb46fe594f",
     "lib/db/runtime-storage-config.ts": "2f288c000eae3c249ab656dcb3db4706866d3c052c2f7677a1572849190c0e59",
     "lib/db/scholarly-capability.ts": "b454815716f8be8227ec742f1e7ad4008cc30ecea1bb4aa2041eebe7d036cd78",
@@ -177,17 +190,17 @@
     "lib/db/session-withdrawal-journal.ts": "f20ac57d3d64d3e0291ceca5ad0fb97eab304851bf06b0c436aa7660056cb161",
     "lib/db/source-registry-origin.ts": "18b6592833aeb65265a8f155bb2cc3e30e90e4fe2ecb50dbeb2dc5b35120c731",
     "lib/db/source-upkeep.ts": "8455ef72133ec86d93faf18bbafff3b242cb600b7f86dc16e1b1c8132fa8b04d",
-    "lib/db/sqlite-adapter.ts": "f47467fd1f7361dc7427f7b3c3966704b2e47b11ab54dae18e1dee0a372c610c",
+    "lib/db/sqlite-adapter.ts": "c7932250dc61c9b7c1ecb193e0659bbf9362aff819701ba9ac906c09d002a2f3",
     "lib/db/sqlite-application-schema-profile.ts": "a9ab32809c8575de85d3d7aff6e5ae2532723cf1aeeb585e914cc9b7ac563a4d",
     "lib/db/sqlite-application-schema.ts": "1259627e38df4010f755ad579fcb9e058acdd0de132ea72fcdd9adec9519e17a",
     "lib/db/sqlite-browser-journal.ts": "de69cb201540437fa6c194042f1c8c7ae7a04775c00bf5ec7fbac5f327c31542",
     "lib/db/sqlite-browser-signing-originals.ts": "35501e9b6867120bc9840bd059e6e017a1e27e14f537c57448526d15891e18c0",
     "lib/db/sqlite-browser-source-context.ts": "aa0d6ba599f1fcab13cfd7cd6a110ec35a97d8bba5bd64d616ceaefda209cce2",
-    "lib/db/sqlite-schema-match.ts": "260096bab96ab01e8d55b3e12c59203e96470453146bdba165263c7cbadfe1b9",
-    "lib/db/storage-identity-connection.ts": "daffab0f9b2d4e90aec464685553ecfee8bacf14211c085fbdbccac5312d534d",
-    "lib/db/storage-identity-sqlite.ts": "e28baccc096e28b5220a1b69abd69fff56cbe9bf8c4b2da26ffc5f46b54bd8dc",
+    "lib/db/sqlite-schema-match.ts": "0d309289adca6d94861578923b8f4f58e4fecf6f170f6d1c775554bcf13a37d3",
+    "lib/db/storage-identity-connection.ts": "6ad92d7124f19729706f8d726a9e43bbbeac5786db06c41eaf647194e8b6c621",
+    "lib/db/storage-identity-sqlite.ts": "525a5bc28868dabc7038a5ffff1c0c32c2b60e358d7b92fb1071e92b77cab897",
     "lib/db/storage-identity.ts": "0804c3e5b784c7cffa6b687ebb605b2728bf70525d3c006b49667c76c9b312a8",
-    "lib/db/supabase-adapter.ts": "3acf62c80d7959c4afa9da5259ad808015b30c01bc2366f65adaa7fd855be264",
+    "lib/db/supabase-adapter.ts": "0b40f7b07a236dc2761a760f5d10f1ee86eba5aee22fa217c51af8653eeb3a0b",
     "lib/db/supabase-authority.ts": "7216bae7eb4d850777dd10f833ffd9bb1a0330b5f875078d7bfefc48b8bc6602",
     "lib/db/supabase-browser-signing-originals.ts": "73ed69c9bbed0dec93c5c182532e547b5dde4d2a632d02ea5464f9848f095d1b",
     "lib/db/supabase-enrolled-methods.ts": "4db70c64e02d4522d5bc69fb03fe5a08c04e4dcf986e896e447c3cdbc779fecd",
@@ -222,7 +235,7 @@
     "lib/gateway/withdrawal-rpc-transport.ts": "42b63d07b92749f417a277d885db8078a194bdf2b00892e0e713b0762b5b8214",
     "lib/history/owned-history.ts": "caddc70a34739ae14b8b73a3a7b1d2126a0e7b66f2ef8dd9ee54081904c8d43b",
     "lib/history/personal-history.ts": "8c2cbddfbb976180884dfc8691c76fecc3493bbc1706c7817e612239c8dc53c6",
-    "lib/i18n/messages.ts": "97975b8e7f152668c21ef1bf7ed96b573571127e097f3964734f6097d4f33902",
+    "lib/i18n/messages.ts": "b502c68d42365207da88c425ef26022f48387ed1ec6903e6409a026c2f0d5902",
     "lib/ingest/rss.ts": "eb2223294f2e8db0c747af63a02a3f5a4f4dae4b2672b0923d343d503cd34bad",
     "lib/ipfs/content-crypto.ts": "86ca610763790444bfc8e0448bb3697c8b534515390fec13077efc228396e1d9",
     "lib/ipfs/pinata-client.ts": "1982c6534c24d1164131c12eae54cfcde079e7f3f1b4a443e7b0a52f4bb563bf",
@@ -348,7 +361,7 @@
     "lib/research/bibliographic-task-result.ts": "b78966f6493f3c4cb554883eaaca4a48dcac900992856b5501db4fb340605a92",
     "lib/research/bibliographic-task.ts": "807208025997a860037379acb91fe368cd2803708b02ca6649b8ff3b4a5af365",
     "lib/research/bounded-portable-json.ts": "bffdc33815012aedac2e420a5aa1ec64eb4c7eaa95eb631631a28edfd1aa8e16",
-    "lib/research/confidence-copy.ts": "635f3565e1a4d541ee11cc1170b11cd30a74c67ad87fe4d7d8d9d1a07b0411c0",
+    "lib/research/confidence-copy.ts": "1040828ef5ee49e811b1ba94acbf2c797bdc3d8323ba2798f8bcfc75e197eeb6",
     "lib/research/decision-basis.ts": "e2f1a2a472de6658cec66a97040ad1296986ac40e910992a22ba3e74b1f820f1",
     "lib/research/decision-review-types.ts": "738a710e74201cb7ef66907588dcfeefae302e70e5b72bf98f60bb55f0ab348b",
     "lib/research/evidence-matrix.ts": "075649d9facb98e8542e3647d5c4736e4fd445e6e276453371e45a0a77c3a616",
@@ -436,6 +449,7 @@
     "locales/en/source-archive.ts": "68d70227094d71b19e43c483fec9c03f7a482d7005f71cd589c9cb5958043da4",
     "locales/en/source-claims.ts": "e81e709a2a8acb1f30bd4719906f32afd623b6cec597f79075d0f5815d0baee5",
     "locales/en/source-directory.ts": "65d55254a6598bc0ae3b73b25bf1d70eb005ef6c7bfcf07ac98c7aaac189abae",
+    "locales/en/source-leaderboard.ts": "1a93f5d778fbab8cf395bd9f24151f33c36b763b5b3ac9ac2c0f74c14ebcf8aa",
     "locales/en/wanted.ts": "cac2dc3a84a075abe50ba76fd7c09887d71168b50fe55ec81bb57b23821a3bac",
     "locales/en/withdrawal.ts": "f3e27a218e592f26cd5bc90ca3846748c815372c7f278962ffc7a8c769fecee6",
     "scripts/eval-paying-source-study.mts": "b525f9f270f0297f43df0352da6d288ca81b7d09e6c89b32e54a8f94e5c53d43",
@@ -827,6 +841,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -1759,6 +1778,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -2689,6 +2713,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -3641,6 +3670,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -4780,6 +4814,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -5780,6 +5819,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -6793,6 +6837,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -7944,6 +7993,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -9082,6 +9136,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -10094,6 +10153,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
@@ -11245,6 +11309,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -12395,6 +12464,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Meridian reservoir capacity? When did Meridian reservoir open?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -13524,6 +13598,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -14455,6 +14534,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -15385,6 +15469,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
@@ -16345,6 +16434,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
@@ -17729,6 +17823,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -18729,6 +18828,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
@@ -19750,6 +19854,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
@@ -21154,6 +21263,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -22537,6 +22651,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -23557,6 +23676,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
@@ -24961,6 +25085,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -26364,6 +26493,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Aurora beacon battery lifetime? What is Aurora beacon service interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -27736,6 +27870,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -28665,6 +28804,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -29593,6 +29737,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
@@ -30530,6 +30679,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
@@ -31831,6 +31985,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -32830,6 +32989,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -33827,6 +33991,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
@@ -35126,6 +35295,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
@@ -36427,6 +36601,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -37424,6 +37603,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
@@ -38724,6 +38908,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -40023,6 +40212,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Cedar archive backup frequency? What is Cedar archive retention period?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -41314,6 +41508,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -42243,6 +42442,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -43171,6 +43375,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
@@ -44108,6 +44317,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
@@ -45409,6 +45623,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -46408,6 +46627,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -47405,6 +47629,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
@@ -48704,6 +48933,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
@@ -50005,6 +50239,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -51002,6 +51241,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
@@ -52302,6 +52546,11 @@
           "status": "ready",
           "totalClaims": 2
         },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
+        },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],
         "researchMode": "deep",
@@ -53600,6 +53849,11 @@
           "ratio": 1,
           "status": "ready",
           "totalClaims": 2
+        },
+        "provenance": {
+          "ownershipMethod": "unknown",
+          "surface": "unknown",
+          "version": 1
         },
         "question": "What is Lumen sensor alarm threshold? What is Lumen sensor calibration interval?",
         "reasoningAttempts": [],

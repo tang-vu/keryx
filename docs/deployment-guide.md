@@ -199,7 +199,12 @@ non-writable ancestors. It contains exactly `format`, `manifest`,
 `expectedManifestDigest`, `expectedIdentityDigest`, `backup` and `receipt`.
 `keryx-redeploy-economic-migration-v1` retains the existing economic migration;
 `keryx-redeploy-original-fulfillment-migration-v1` selects only the fixed
-`scripts/mainnet-original-fulfillment-storage-migrate.mts`. Arbitrary script paths,
+  `scripts/mainnet-original-fulfillment-storage-migrate.mts`.
+  `keryx-redeploy-native-user-domains-migration-v1` selects only the compatibility
+  command `scripts/private-profile-storage-migrate.mts`, which installs the fixed
+  complete 19-table user-domain bundle with its one journal UUID. It retains the
+  same six-field protection, typed-original backup and stopped-writer boundary.
+  Arbitrary script paths,
 extra fields, changed hashes and active public roles refuse.
 
 Protected config and positively stopped public definitions are checked before source
