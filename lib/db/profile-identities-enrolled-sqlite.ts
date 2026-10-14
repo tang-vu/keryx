@@ -6,7 +6,8 @@ import { ProfileIdentityError, identityChallengeSchema, identityProviderSchema, 
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { PROFILE_IDENTITY_BASE_SCHEMA, PROFILE_IDENTITY_SCHEMA } from "./profile-identities-storage-domain";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
-import { assertVerifiedSqliteConnection, assertVerifiedSqliteWritePolicy, assertVerifiedSqliteForeignKeys } from "./storage-identity-connection";
+import { assertVerifiedSqliteConnection, assertVerifiedSqliteWritePolicy, assertVerifiedSqliteForeignKeys,
+  assertVerifiedSqliteNativeUserDomainPolicy } from "./storage-identity-connection";
 import { assertStorageFences, STORAGE_IDENTITY_TABLE, storageFenceStatements } from "./storage-identity-sqlite";
 
 const unavailable = () => new ProfileIdentityError("identity_unavailable");
@@ -60,11 +61,20 @@ export function createEnrolledSqliteProfileIdentities(db: DatabaseSync): Profile
     const admitted = schema();
     if (!admitted.present) return undefined;
     if (identity.authorityMode !== "mainnet-real") throw unavailable();
+    // Trusted opening captured this exact complete bundle. Its runtime guard
+    // rechecks the full schema, fences, identity, held file and manifest on every
+    // operation; rescanning through the guarded proxy multiplies those checks.
+    assertVerifiedSqliteNativeUserDomainPolicy(db);
     const check = () => {
       try {
-        const current = schema();
-        if (!current.present || current.profile !== admitted.profile) throw unavailable();
-      } catch { throw revoke(); }
+        if (revoked) throw unavailable();
+        assertVerifiedSqliteConnection(db);
+        assertVerifiedSqliteForeignKeys(db);
+        assertVerifiedSqliteNativeUserDomainPolicy(db);
+      } catch (error) {
+        if (nativeContention(error)) throw unavailable();
+        throw revoke();
+      }
     };
     const writeAccess = () => {
       if (revoked) throw unavailable();

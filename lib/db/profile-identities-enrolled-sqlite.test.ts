@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, StatementSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import { copyFileSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,19 +15,16 @@ import { createEnrolledSqlitePrivateProfiles } from "./private-profiles-enrolled
 import { PRIVATE_PROFILES_SQL } from "./private-profiles-sqlite";
 import { PROFILE_IDENTITIES_SQL, PROFILE_IDENTITIES_STORAGE_DOMAIN, PROFILE_IDENTITY_SCHEMA } from "./profile-identities-storage-domain";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
+import { installNativeUserDomainSchema } from "./native-user-domain-schema";
+import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { inspectStorageDeploymentManifest } from "./runtime-storage-config";
 import { openVerifiedSqliteStorage, assertVerifiedSqliteForeignKeys } from "./storage-identity-connection";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
-import { insertStorageIdentity, installStorageFences } from "./storage-identity-sqlite";
+import { assertStorageIdentity, insertStorageIdentity, installStorageFences } from "./storage-identity-sqlite";
 
-// ONLY the full-profile generator is replaced. These four fixed temporary reference
-// profiles exercise this domain, NOT ROOT's production bundle/migration acceptance.
-// Native provenance, readonly policy, positive FK metadata and guards are genuine.
-const temporaryProfiles = vi.hoisted(() => ({ values: [] as readonly string[] }));
-vi.mock("./enrolled-sqlite-schema-profile", () => ({ supportedSqliteApplicationProfiles: () => temporaryProfiles.values }));
-
+// Actual ROOT-reviewed four-profile full19 family; no profile generator replacement.
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`, stranger = `0x${"c".repeat(40)}`;
 const network = "eip155:5042";
 const profile: PrivateProfileInput = { displayName: "Alice", handle: "", bio: "Reader", purpose: "Papers", links: [{ kind: "github", url: "https://github.com/asserted" }] };
@@ -38,29 +35,15 @@ const directories: string[] = [], connections: { close(): void }[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
   for (const connection of connections.splice(0)) connection.close();
+  vi.unstubAllEnvs();
   for (const directory of directories.splice(0)) {
     if (!resolve(directory).startsWith(resolve(tmpdir()) + sep) || !directory.includes("keryx-native-identities-")) throw new Error("Unsafe fixture cleanup");
     rmSync(directory, { recursive: true, force: true });
   }
 });
 
-function references() {
-  if (temporaryProfiles.values.length) return;
-  const profiles: string[] = [];
-  for (const archive of [false, true]) for (const wholeTemporaryDomain of [false, true]) {
-    const db = new DatabaseSync(":memory:");
-    try {
-      installMainnetApplicationSchema(db, { publicReferenceArchive: archive });
-      if (wholeTemporaryDomain) db.exec(PRIVATE_PROFILES_SQL + PROFILE_IDENTITIES_SQL);
-      profiles.push(sqliteApplicationSchemaProfile(db, new Set()));
-    } finally { db.close(); }
-  }
-  temporaryProfiles.values = Object.freeze(profiles);
-}
-
 function fixture(options: { archive?: boolean; shape?: "present" | "absent" | "partial" | "missing-profile" | "changed-session";
   expired?: "pending" | "consumed" } = {}) {
-  references();
   const directory = mkdtempSync(join(tmpdir(), "keryx-native-identities-")); directories.push(directory);
   const file = join(directory, "native.sqlite"), manifest = join(directory, "deployment.json");
   const identity: StorageIdentity = { ...syntheticStorageIdentity("testnet-real"), format: "keryx-mainnet-storage-identity-v1",
@@ -69,6 +52,7 @@ function fixture(options: { archive?: boolean; shape?: "present" | "absent" | "p
   let initialNow = 0;
   const shape = options.shape ?? "present";
   try {
+    db.exec("BEGIN IMMEDIATE");
     installMainnetApplicationSchema(db, { publicReferenceArchive: options.archive ?? false });
     initialNow = Number(db.prepare("SELECT CAST(unixepoch('subsec')*1000 AS INTEGER) AS now").get()!.now);
     // Historical synthetic originals are fixture input seeded before enrollment.
@@ -79,9 +63,9 @@ function fixture(options: { archive?: boolean; shape?: "present" | "absent" | "p
     for (const wallet of [alice, bob]) db.prepare("INSERT INTO web_sessions(hash,wallet,issued_at,expires_at) VALUES(?,?,?,?)")
       .run(hash(wallet), wallet, initialNow - 60_000, initialNow + 3_600_000);
     if (shape !== "absent") {
-      if (shape !== "missing-profile") db.exec(PRIVATE_PROFILES_SQL);
-      if (shape === "partial") db.exec(PROFILE_IDENTITY_SCHEMA.find(row => row.name === "profile_verified_identities")!.sql!);
-      else db.exec(PROFILE_IDENTITIES_SQL);
+      installNativeUserDomainSchema(db);
+      if (shape === "missing-profile") db.exec("DROP TABLE private_profiles");
+      if (shape === "partial") db.exec("DROP TABLE profile_identity_challenges");
     }
     if (shape === "changed-session") db.exec("DROP INDEX web_sessions_wallet");
     if (options.expired) {
@@ -89,13 +73,13 @@ function fixture(options: { archive?: boolean; shape?: "present" | "absent" | "p
       db.prepare("INSERT INTO profile_verified_identities(wallet,provider,current_state_hash) VALUES(?,?,?)").run(alice, "github", hash("expired"));
       db.prepare("INSERT INTO profile_identity_challenges VALUES(?,?,?,?,?,?)").run(hash("expired"), alice, "github", hash(alice), initialNow - 10_000, options.expired);
     }
-    insertStorageIdentity(db, identity); installStorageFences(db, identity);
+    insertStorageIdentity(db, identity); installStorageFences(db, identity); db.exec("COMMIT");
   } finally { db.close(); }
   writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity, backend: { kind: "sqlite", databasePath: file } }));
   const pinned = canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: manifest }));
   const open = (readOnly = false, fullGuard = true) => {
     const connection = openVerifiedSqliteStorage(file, identity, { readOnly,
-      ...(fullGuard ? { applicationProfiles: temporaryProfiles.values } : {}),
+      ...(fullGuard ? { applicationProfiles: supportedSqliteApplicationProfiles(true) } : {}),
       runtimeGuard() { if (canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: manifest })) !== pinned) throw new Error("Manifest drift"); } });
     connections.push(connection); return connection;
   };
@@ -126,10 +110,56 @@ async function saved(options: Parameters<typeof fixture>[0] = {}) {
   return { ...f, connection, profiles, port, verify };
 }
 
-describe("temporary genuine native profile identities (not final bundle acceptance)", () => {
+async function selectedFacade(f: ReturnType<typeof fixture>) {
+  // Reset only the module cache between disposable selected deployments. Native
+  // provenance is issued by the actual factory, never supplied by a test double.
+  vi.resetModules();
+  vi.stubEnv("KERYX_STORAGE_MANIFEST", f.manifest);
+  vi.stubEnv("KERYX_SQLITE_PATH", f.file);
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
+  vi.stubEnv("CONTENT_MASTER_KEY", "41".repeat(32));
+  const api = await import("./enrolled-sqlite-adapter");
+  const facade = await api.createEnrolledSqliteAdapter();
+  connections.push(facade);
+  return { api, facade };
+}
+
+async function savedFacadeFixture(options: Parameters<typeof fixture>[0] = {}) {
+  const f = fixture(options), connection = f.open();
+  // The separate #260 selected binding is not composed in this source yet.
+  // Save through its actual declared native helper on this same file; do not
+  // fabricate a privateProfiles property or use the ordinary constructor.
+  const profiles = createEnrolledSqlitePrivateProfiles(connection.db)!;
+  for (const wallet of [alice, bob]) await profiles.update(wallet, { ...profile, displayName: wallet === alice ? "Alice" : "Bob" });
+  connection.close();
+  return f;
+}
+
+async function facadeIdentityGet(facade: KeryxDB, wallet = alice, expected = wallet) {
+  const routes = createIdentityRoutes({
+    session: async () => {
+      const session = await facade.getWebSession(hash(wallet));
+      if (!session || session.wallet !== wallet || session.expiresAt <= Date.now()) return new Response(null, { status: 401 });
+      return { db: facade, wallet: session.wallet, currentId: session.hash };
+    },
+    key: async () => { throw new Error("Cookie LIST must not use bearer authority"); },
+    db: async () => facade,
+    provider: () => { throw new Error("LIST must not select a provider"); },
+    exchange: async () => { throw new Error("LIST must not exchange provider credentials"); },
+    applicationOrigin: "https://keryx.invalid", secret: "synthetic-fixture-secret-".repeat(2),
+  });
+  return routes.GET(new Request("https://keryx.invalid/api/me/profile/identities", {
+    headers: { "X-Keryx-Expected-Wallet": expected },
+  }));
+}
+
+const wholeSchema = (file: string) => rawRead(file, db => canonicalJson(db.prepare(
+  "SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name").all()));
+
+describe("genuine full19 native profile identities (not deployed acceptance)", () => {
   it.each([false, true])("exact declaration, lifecycle, owner isolation and DB verification time (archive=%s)", async archive => {
     const f = await saved({ archive }), before = originals(f.file);
-    expect(temporaryProfiles.values).toHaveLength(4);
+    expect(supportedSqliteApplicationProfiles(true)).toHaveLength(4);
     expect(Object.isFrozen(f.port)).toBe(true);
     expect(PROFILE_IDENTITIES_STORAGE_DOMAIN.sql).toBe(PROFILE_IDENTITIES_SQL);
     expect(PROFILE_IDENTITIES_STORAGE_DOMAIN.fenceOperations).toEqual(["INSERT", "UPDATE", "DELETE"]);
@@ -173,6 +203,59 @@ describe("temporary genuine native profile identities (not final bundle acceptan
     await expect(f.port.consume(old)).rejects.toThrow("identity_expired");
     await expect(f.port.complete(old, github)).rejects.toThrow("identity_expired");
     expect((await f.port.list(alice)).identities[0].externalId).toBe(github.externalId);
+  });
+
+  it.each(["list", "begin"] as const)("genuine pre-transaction EXCLUSIVE contention refuses %s without retiring the same native port", async operation => {
+    const f = await saved(), record = await f.verify(f.challenge("exclusive-original"));
+    const pending = f.challenge("exclusive-preserved"); await f.port.begin(pending);
+    const actor = new DatabaseSync(f.file);
+    try {
+      // A separate disposable fixture actor holds the actual enrolled file;
+      // identity admission and every shared port still use the genuine factory.
+      assertStorageIdentity(actor, f.identity);
+      const snapshot = () => canonicalJson({
+        schema: actor.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY type,name").all(),
+        tables: actor.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all()
+          .map(row => ({ table: row.name, rows: actor.prepare(`SELECT * FROM "${String(row.name).replaceAll('"', '""')}" ORDER BY rowid`).all() })),
+      });
+      const before = snapshot(), bytes = readFileSync(f.file), manifest = readFileSync(f.manifest);
+      actor.exec("BEGIN EXCLUSIVE");
+      // Observation only: these spies execute the real native methods unchanged.
+      const prepare = vi.spyOn(DatabaseSync.prototype, "prepare"), get = vi.spyOn(StatementSync.prototype, "get");
+      const all = vi.spyOn(StatementSync.prototype, "all"), exec = vi.spyOn(DatabaseSync.prototype, "exec");
+      const close = vi.spyOn(DatabaseSync.prototype, "close"), started = performance.now();
+      try {
+        await expect(operation === "list" ? f.port.list(alice) : f.port.begin(f.challenge("exclusive-refused")))
+          .rejects.toThrow("identity_unavailable");
+        expect(performance.now() - started).toBeGreaterThanOrEqual(5000);
+        const failures = [...prepare.mock.results, ...get.mock.results, ...all.mock.results].filter(result => result.type === "throw");
+        expect(failures).toHaveLength(1);
+        expect(failures[0].value).toBeInstanceOf(Error);
+        expect(failures[0].value).toMatchObject({ code: "ERR_SQLITE_ERROR", errcode: 5 });
+        // Only the full guard's read transaction ran; no identity transaction or
+        // logical write reached SQLite, and the borrowed connection stayed open.
+        expect(exec.mock.calls.map(call => call[0])).toEqual(["BEGIN", "ROLLBACK"]);
+        expect(prepare.mock.calls.some(call => /^(INSERT|UPDATE|DELETE|REPLACE)\b/i.test(call[0].trim()))).toBe(false);
+        expect(close).not.toHaveBeenCalled(); expect(actor.isTransaction).toBe(true);
+      } finally {
+        prepare.mockRestore(); get.mockRestore(); all.mockRestore(); exec.mockRestore(); close.mockRestore();
+      }
+      // Read through the lock-owning fixture actor, including all profile,
+      // session, challenge, identity, owner and financial original rows.
+      expect(snapshot()).toBe(before); expect(readFileSync(f.file).equals(bytes)).toBe(true);
+      actor.exec("ROLLBACK");
+      expect(f.connection.db.isTransaction).toBe(false);
+      expect((await f.port.list(alice)).identities).toEqual([record]);
+      expect((await f.port.list(bob)).identities).toEqual([]);
+      expect((await f.profiles.get(alice, network)).profile?.displayName).toBe("Alice");
+      expect((await f.profiles.get(bob, network)).profile?.displayName).toBe("Bob");
+      expect(f.connection.db.prepare("SELECT data FROM query_runs WHERE id=?").get("original")?.data).toBe('{"question":"retain original"}');
+      expect(snapshot()).toBe(before); expect(readFileSync(f.file).equals(bytes)).toBe(true);
+      expect(readFileSync(f.manifest)).toEqual(manifest);
+    } finally {
+      if (actor.isTransaction) actor.exec("ROLLBACK");
+      actor.close();
+    }
   });
 
   it("a genuine writer held beyond native 5000 ms refuses BEGIN without losing identity/profile/core readers", async () => {
@@ -529,19 +612,174 @@ describe("temporary genuine native profile identities (not final bundle acceptan
     expect((await createEnrolledSqliteProfileIdentities(f.open().db)!.list(alice)).identities).toEqual([]);
   });
 
-  it.each(["manifest", "file", "close"] as const)("%s change revokes WRITE-FIRST old capability permanently", async fault => {
+  it("a complete bundle without trusted full-profile admission cannot qualify", () => {
+    const f = fixture(), connection = f.open(false, false), before = readFileSync(f.file);
+    expect(() => createEnrolledSqliteProfileIdentities(connection.db)).toThrow("identity_unavailable");
+    expect(readFileSync(f.file)).toEqual(before);
+  });
+
+  it("held file replacement is prevented on Windows or permanently revokes the old port", async () => {
+    const f = await saved(), before = originals(f.file);
+    const retained = join(f.directory, "retained-original.sqlite");
+    if (process.platform === "win32") {
+      // Native SQLite holds a Windows handle without delete sharing. The OS
+      // prevents replacement; prove that protection and continued guarded reads.
+      expect(() => renameSync(f.file, retained)).toThrow(expect.objectContaining({ code: "EBUSY" }));
+      expect((await f.port.list(alice)).identities).toEqual([]);
+    } else {
+      renameSync(f.file, retained); copyFileSync(retained, f.file);
+      await expect(f.port.begin(f.challenge("write-first"))).rejects.toThrow("identity_unavailable");
+      await expect(f.port.list(alice)).rejects.toThrow("identity_unavailable");
+      await expect(f.port.unlink(alice, "github")).rejects.toThrow("identity_unavailable");
+    }
+    expect(originals(f.file)).toBe(before);
+  });
+
+  it.each(["manifest", "close"] as const)("%s change revokes WRITE-FIRST old capability permanently", async fault => {
     const f = await saved(), before = originals(f.file);
     if (fault === "manifest") {
       writeFileSync(f.manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity: { ...f.identity, deploymentId: "d".repeat(36) }, backend: { kind: "sqlite", databasePath: f.file } }));
-    }
-    if (fault === "file") {
-      const replacement = join(f.directory, "replacement.sqlite"); copyFileSync(f.file, replacement);
-      renameSync(f.file, join(f.directory, "retained-original.sqlite")); renameSync(replacement, f.file);
     }
     if (fault === "close") f.connection.close();
     await expect(f.port.begin(f.challenge("write-first"))).rejects.toThrow("identity_unavailable");
     await expect(f.port.list(alice)).rejects.toThrow("identity_unavailable");
     await expect(f.port.unlink(alice, "github")).rejects.toThrow("identity_unavailable");
     expect(originals(f.file)).toBe(before);
+  });
+});
+
+describe("selected enrolled facade profile identities (source controls, not production acceptance)", () => {
+  it.each([false, true])("exact BEFORE keeps writer/readonly port absent and authenticated LIST unavailable (archive=%s)", async archive => {
+    const f = fixture({ archive, shape: "absent" }), before = readFileSync(f.file), original = originals(f.file);
+    const { api, facade } = await selectedFacade(f);
+    const readonly = await api.createReadonlyEnrolledSqliteAdapter(); connections.push(readonly);
+    for (const selected of [facade, readonly]) {
+      expect(api.assertEnrolledSqliteAdapter(selected)).toEqual(f.identity);
+      expect(selected.profileIdentities).toBeUndefined();
+      expect(Object.getOwnPropertyDescriptor(selected, "profileIdentities")).toBeUndefined();
+      expect(() => requireProfileIdentities(selected)).toThrow("identity_unavailable");
+      const response = await facadeIdentityGet(selected);
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({ error: "identity_unavailable" });
+      expect(response.headers.get("cache-control")).toBe("no-store");
+    }
+    expect(originals(f.file)).toBe(original); expect(readFileSync(f.file)).toEqual(before);
+  });
+
+  it.each([false, true])("full19 exposes a hidden frozen same-store port and saved-owner LIST lifecycle (archive=%s)", async archive => {
+    const f = await savedFacadeFixture({ archive }), before = readFileSync(f.file), schema = wholeSchema(f.file);
+    const original = originals(f.file), profiles = rows(f.file, "private_profiles"), manifest = readFileSync(f.manifest);
+    const { api, facade } = await selectedFacade(f), port = requireProfileIdentities(facade);
+    expect(api.assertEnrolledSqliteAdapter(facade, "write")).toEqual(f.identity);
+    expect(Object.getPrototypeOf(facade)).toBeNull(); expect(Object.isFrozen(facade)).toBe(true);
+    expect(Object.isFrozen(port)).toBe(true);
+    expect(Object.getOwnPropertyDescriptor(facade, "profileIdentities")).toEqual({
+      value: port, enumerable: false, writable: false, configurable: false,
+    });
+    expect(Object.keys(facade)).not.toContain("profileIdentities");
+    expect(readFileSync(f.file)).toEqual(before); // Factory performs no DDL, seed or ordinary initialization.
+    const empty = await facadeIdentityGet(facade);
+    expect(empty.status).toBe(200); expect(await empty.json()).toEqual({ wallet: alice, identities: [] });
+    const c = f.challenge("selected-lifecycle"); await port.begin(c); await port.consume(c);
+    const pending = await facadeIdentityGet(facade);
+    expect(pending.status).toBe(200); expect(await pending.json()).toEqual({ wallet: alice, identities: [] });
+    await expect(port.consume(c)).rejects.toThrow("identity_expired");
+    const record = await port.complete(c, github);
+    expect(record).toMatchObject({ wallet: alice, ...github });
+    const response = await facadeIdentityGet(facade);
+    expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({ wallet: alice, identities: [record] });
+    const other = await facadeIdentityGet(facade, bob);
+    expect(other.status).toBe(200); expect(await other.json()).toEqual({ wallet: bob, identities: [] });
+    expect((await facadeIdentityGet(facade, alice, bob)).status).toBe(409);
+    expect(await facade.getWebSession(hash(alice))).toMatchObject({ hash: hash(alice), wallet: alice });
+    expect((await facade.listPaymentsByQuery("original")).map(payment => payment.id)).toEqual(["original-payment"]);
+    expect(rows(f.file, "private_profiles")).toEqual(profiles); expect(originals(f.file)).toBe(original);
+    expect(wholeSchema(f.file)).toBe(schema); expect(readFileSync(f.manifest)).toEqual(manifest);
+  });
+
+  it("healthy readonly selected port refuses all mutations before SQL and preserves authenticated GET and file bytes", async () => {
+    const f = await savedFacadeFixture(), { api, facade } = await selectedFacade(f), writer = requireProfileIdentities(facade);
+    const c = f.challenge("selected-readonly"); await writer.begin(c); await writer.consume(c);
+    const record = await writer.complete(c, github);
+    const readonly = await api.createReadonlyEnrolledSqliteAdapter(); connections.push(readonly);
+    const port = requireProfileIdentities(readonly), before = readFileSync(f.file);
+    expect(api.assertEnrolledSqliteAdapter(readonly)).toEqual(f.identity);
+    expect(() => api.assertEnrolledSqliteAdapter(readonly, "write")).toThrow("Enrolled SQLite adapter unavailable");
+    expect(Object.getOwnPropertyDescriptor(readonly, "profileIdentities")).toEqual({
+      value: port, enumerable: false, writable: false, configurable: false,
+    });
+    expect(Object.isFrozen(port)).toBe(true);
+    const prepare = vi.spyOn(DatabaseSync.prototype, "prepare"), exec = vi.spyOn(DatabaseSync.prototype, "exec");
+    try {
+      await expect(port.begin(f.challenge("readonly-denied"))).rejects.toThrow("identity_unavailable");
+      await expect(port.consume(c)).rejects.toThrow("identity_unavailable");
+      await expect(port.complete(c, github)).rejects.toThrow("identity_unavailable");
+      await expect(port.unlink(alice, "github")).rejects.toThrow("identity_unavailable");
+      expect(() => readonly.revokeWebSession(hash(alice), alice)).toThrow("Readonly enrolled SQLite mutation refused");
+      expect(prepare).not.toHaveBeenCalled(); expect(exec).not.toHaveBeenCalled();
+      const response = await facadeIdentityGet(readonly);
+      expect(response.status).toBe(200); expect(await response.json()).toEqual({ wallet: alice, identities: [record] });
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(exec.mock.calls.some(call => call[0] === "BEGIN")).toBe(true);
+      expect(exec.mock.calls.some(call => call[0] === "BEGIN IMMEDIATE")).toBe(false);
+    } finally { prepare.mockRestore(); exec.mockRestore(); }
+    expect(readFileSync(f.file)).toEqual(before);
+  });
+
+  it.each(["partial", "missing-profile", "changed-session", "unknown"] as const)("selected factory refuses %s schema without repair or fallback", async shape => {
+    const f = fixture({ shape: shape === "unknown" ? "present" : shape });
+    if (shape === "unknown") {
+      const raw = new DatabaseSync(f.file);
+      try { raw.exec("CREATE INDEX unreviewed_facade_index ON profile_verified_identities(label)"); } finally { raw.close(); }
+    }
+    const before = readFileSync(f.file), original = originals(f.file), schema = wholeSchema(f.file);
+    await expect(selectedFacade(f)).rejects.toThrow();
+    expect(readFileSync(f.file)).toEqual(before); expect(originals(f.file)).toBe(original); expect(wholeSchema(f.file)).toBe(schema);
+  });
+
+  it.each(["manifest", "schema", "closed-provenance"] as const)("selected port revokes WRITE-FIRST on %s drift and authenticated LIST refuses", async fault => {
+    const f = await savedFacadeFixture(), { api, facade } = await selectedFacade(f), port = requireProfileIdentities(facade);
+    const original = originals(f.file), profiles = rows(f.file, "private_profiles"), manifest = readFileSync(f.manifest);
+    if (fault === "manifest") writeFileSync(f.manifest, canonicalJson({ format: "keryx-storage-deployment-v1",
+      identity: { ...f.identity, deploymentId: "d".repeat(36) }, backend: { kind: "sqlite", databasePath: f.file } }));
+    if (fault === "schema") {
+      const raw = new DatabaseSync(f.file);
+      try { raw.exec("CREATE INDEX selected_facade_drift ON profile_verified_identities(label)"); } finally { raw.close(); }
+    }
+    if (fault === "closed-provenance") facade.close();
+    const beforeRefusal = readFileSync(f.file);
+    await expect(port.begin(f.challenge("selected-write-first"))).rejects.toThrow("identity_unavailable");
+    await expect(port.list(alice)).rejects.toThrow("identity_unavailable");
+    expect(() => api.assertEnrolledSqliteAdapter(facade)).toThrow();
+    const response = await facadeIdentityGet(facade);
+    expect(response.status).toBe(503); expect(await response.json()).toEqual({ error: "identity_unavailable" });
+    expect(readFileSync(f.file)).toEqual(beforeRefusal);
+    expect(originals(f.file)).toBe(original); expect(rows(f.file, "private_profiles")).toEqual(profiles);
+    if (fault === "manifest") writeFileSync(f.manifest, manifest);
+    if (fault === "schema") {
+      const raw = new DatabaseSync(f.file);
+      try { raw.exec("DROP INDEX selected_facade_drift"); } finally { raw.close(); }
+    }
+    await expect(port.list(alice)).rejects.toThrow("identity_unavailable");
+    expect((await facadeIdentityGet(facade)).status).toBe(503);
+  });
+
+  it("selected held file prevents replacement on Windows or refuses the replaced file and authenticated LIST", async () => {
+    const f = await savedFacadeFixture(), { facade } = await selectedFacade(f), port = requireProfileIdentities(facade);
+    const original = originals(f.file), profiles = rows(f.file, "private_profiles"), before = readFileSync(f.file);
+    const retained = join(f.directory, "selected-retained-original.sqlite");
+    if (process.platform === "win32") {
+      expect(() => renameSync(f.file, retained)).toThrow(expect.objectContaining({ code: "EBUSY" }));
+      const response = await facadeIdentityGet(facade);
+      expect(response.status).toBe(200); expect(await response.json()).toEqual({ wallet: alice, identities: [] });
+    } else {
+      renameSync(f.file, retained); copyFileSync(retained, f.file);
+      await expect(port.begin(f.challenge("selected-file-drift"))).rejects.toThrow("identity_unavailable");
+      await expect(port.list(alice)).rejects.toThrow("identity_unavailable");
+      expect((await facadeIdentityGet(facade)).status).toBe(503);
+    }
+    expect(readFileSync(f.file)).toEqual(before);
+    expect(originals(f.file)).toBe(original); expect(rows(f.file, "private_profiles")).toEqual(profiles);
   });
 });

@@ -4,6 +4,7 @@ import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection } from "./sto
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
 import { createEnrolledSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
+import { createEnrolledSqliteProfileIdentities } from "./profile-identities-enrolled-sqlite";
 import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
 
@@ -302,6 +303,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       const acceptance = createEnrolledSqliteDeliverableAcceptance(db);
       if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
     }
+    const identities = createEnrolledSqliteProfileIdentities(db);
+    if (identities) Object.defineProperty(facade, "profileIdentities", { value: identities });
     Object.defineProperty(facade, "init", { value: async () => { assert(); } });
     Object.defineProperty(facade, "close", { value: connection.close });
     Object.freeze(facade);
