@@ -6,10 +6,12 @@ import { refuseStorage, storageIdentityDigest, storagePaymentProfile, validateSt
 import { GATEWAY_FUNDING_TABLES } from "./gateway-funding-ledger-types";
 import { gatewayFundingFenceStatements } from "./gateway-funding-sqlite-schema";
 import { sqliteSchemaMatches } from "./sqlite-schema-match";
+import { NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema-data";
 
 export const STORAGE_IDENTITY_TABLE = "keryx_storage_identity";
 export const STORAGE_APPLICATION_TABLES = Object.freeze([
   ...GATEWAY_FUNDING_TABLES,
+  ...NATIVE_USER_DOMAIN_TABLES,
   "sources", "source_meta", "source_notify", "source_notify_email", "source_items", "article_offers", "gap_intents", "cache_items",
   "payment_events", "browser_authorization_intents", "browser_journal_bindings", "browser_journal_control", "browser_journal_writer",
   "browser_retained_grants", "browser_signer_capacity", "query_runs", "a2a_orders", "a2a_failed_original_fulfillments", "a2a_fulfillment_completions", "activation_events", "withdrawals", "api_keys",
@@ -89,6 +91,11 @@ export function readStorageIdentity(db: DatabaseSync): Readonly<StorageIdentity>
   return canonical;
   } catch (error) {
     if (error instanceof StorageIdentityRefused) throw error;
+    // A failed read under a genuine SQLite lock is not evidence of a malformed
+    // marker. Preserve only these native codes so the caller can refuse this
+    // operation without permanently retiring an otherwise healthy connection.
+    if (error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+      && "errcode" in error && (error.errcode === 5 || error.errcode === 6)) throw error;
     return refuseStorage("malformed_marker");
   }
 }
