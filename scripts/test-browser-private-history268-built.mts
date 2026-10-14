@@ -326,7 +326,16 @@ try {
   const privateHeaders = (response: Response) => {
     for (const [name, value] of [["cache-control", "no-store"], ["referrer-policy", "no-referrer"], ["x-robots-tag", "noindex, nofollow"]]) assert.equal(response.headers.get(name), value);
   };
-  const http = (path: string, init: RequestInit = {}) => fetch(origin + path, { ...init, signal: AbortSignal.timeout(8000) });
+  let httpProbe = 0;
+  const http = async (path: string, init: RequestInit = {}) => {
+    const probe = ++httpProbe;
+    console.log(`Compiled HTTP probe ${probe}: start`);
+    try {
+      const response = await fetch(origin + path, { ...init, signal: AbortSignal.timeout(8000) });
+      console.log(`Compiled HTTP probe ${probe}: response ${response.status}`);
+      return response;
+    } catch (cause) { throw new Error(`Compiled HTTP probe ${probe}: failed`, { cause }); }
+  };
   for (const path of ["/me/private-jobs", "/me/private-jobs?_rsc=private268-built"]) {
     const response = await http(path, path.includes("?") ? { headers: { RSC: "1", "Next-Url": "/me/private-jobs" } } : {});
     assert.equal(response.status, 200); privateHeaders(response);
