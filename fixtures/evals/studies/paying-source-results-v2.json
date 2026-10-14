@@ -303,7 +303,7 @@
     "lib/payments/real-gateway.ts": "0f637e0edc9288c1bd799f444abee19b255e5fcf1b51b9f8a08e91cab24806ea",
     "lib/payments/recipient-exclusion.ts": "447933871c7effaf4aa42bc5d4e072bdee7b49271378c695958d4b59c35bd1f7",
     "lib/payments/server-payment-gateway.ts": "7097466c1ff3f426a73f554d3454403649763b4f327bcbeaa107878d210b3598",
-    "lib/payments/server-x402-client.ts": "f5351e79fa69bf3393f9abe23f176cb39d5c8d67667c85e1fa0de5e888c0ad2b",
+    "lib/payments/server-x402-client.ts": "0ee732607b029d7465f378a193eebc3ec00acf2661a5006a0366f404c8ac7001",
     "lib/payments/session-grant-consent.ts": "e11ede37d2ef9d532c5b81b6d741c01d3359d3b487655ded3b17673586e3a762",
     "lib/payments/session-grants.ts": "ff46bbbdcbdff875648afe48b3e112596392293983757199c2867de896314913",
     "lib/payments/source-claim-payment.ts": "8e7c96cc7960edf1b1108a17e1580856bc4dfd84f874fd03fed32c6d2bd7a36d",
