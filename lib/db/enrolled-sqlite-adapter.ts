@@ -6,6 +6,7 @@ import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
 import { createEnrolledSqlitePrivateBibliographies } from "./private-bibliographies-enrolled-sqlite";
 import { createEnrolledSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
 import { createEnrolledSqliteAccountMembership } from "../accounts/sqlite-store";
+import { createEnrolledSqliteChatAccountLinks } from "./chat-accounts-sqlite";
 import { createEnrolledSqliteDecisionReviews } from "./decision-reviews-sqlite";
 import { createEnrolledSqliteRunClaims } from "./run-claims-sqlite";
 import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
@@ -346,6 +347,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
       const accountMembership = createEnrolledSqliteAccountMembership(db);
       if (accountMembership) Object.defineProperty(facade, "accountMembership", { value: accountMembership });
+      const chatAccountLinks = createEnrolledSqliteChatAccountLinks(db);
+      if (chatAccountLinks) Object.defineProperty(facade, "chatAccountLinks", { value: chatAccountLinks });
       const reviews = createEnrolledSqliteDecisionReviews(db);
       if (reviews) Object.defineProperty(facade, "decisionReviews", { value: reviews });
       Object.defineProperty(facade, "publicUsage", { value: (() => {

@@ -31,6 +31,7 @@ import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { shortAddress } from "@/lib/utils";
 import { createMessages } from "@/lib/i18n/messages";
 import { webHeaderMessages } from "@/locales/en/web-header";
+import { chatAccountMessages } from "@/locales/en/chat-accounts";
 
 const copy = createMessages("en");
 
@@ -156,6 +157,9 @@ export function WalletMenu() {
           {/* The paying side of the same wallet: what it dispatched and what those tolls cost. */}
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/me/profile"><ShieldCheck className="h-3.5 w-3.5" />{copy("walletMenu.privateProfile")}</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
+            <Link href="/me/chat-accounts">{chatAccountMessages["walletMenu.chatAccounts"]}</Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/me/asks">

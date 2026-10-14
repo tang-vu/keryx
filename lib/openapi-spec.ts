@@ -29,6 +29,7 @@ import { personalHistoryOpenApiPaths } from "./history/openapi";
 import { runClaimOpenApiPaths, runClaimOpenApiSchemas, privateRunClaimOpenAiProperties, privateRunClaimOpenAiDescription, privateRunClaimOpenAiStream } from "./run-claims/openapi";
 import { API_KEY_SCOPES } from "./api-key-scopes";
 import { profileIdentityOpenApiPaths } from "./profiles/identity-openapi";
+import { chatAccountOpenApiPaths } from "./chat-accounts/openapi";
 import { decisionReviewOpenApiPaths } from "./research/decision-review-openapi";
 import { sourceClaimOpenApiPaths, sourceClaimOpenApiSchemas, sourceClaimFinancialQueryParameters } from "./sources/public-source-claim-openapi";
 import { registrationSponsorOpenApiPaths, registrationSponsorOpenApiSchemas } from "./sources/registration-sponsor-openapi";
@@ -674,6 +675,7 @@ export const openapiSpec = {
     ...personalHistoryOpenApiPaths,
     ...runClaimOpenApiPaths,
     ...profileIdentityOpenApiPaths,
+    ...chatAccountOpenApiPaths,
     ...paperOpenApiPaths,
     ...sourceClaimOpenApiPaths,
     ...registrationSponsorOpenApiPaths,

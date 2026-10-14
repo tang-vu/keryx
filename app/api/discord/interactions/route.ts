@@ -20,6 +20,10 @@ import { collectRun } from "@/lib/agent";
 import { prepareHostedRunClaim } from "@/lib/run-claims/hosted-delivery";
 import { privateRunClaimText } from "@/lib/run-claims/delivery";
 import { config } from "@/lib/config";
+import { getDb } from "@/lib/db";
+import { chatControlReply, exactChatControl, linkedChatOwner } from "@/lib/chat-accounts/service";
+import { discordChatRecipient } from "@/lib/chat-accounts/provider-recipient";
+import type { ChatRecipient } from "@/lib/chat-accounts/contracts";
 import { botResearchMessages } from "@/lib/bots/research-messages";
 import { botControlResponse } from "@/lib/bots/language";
 import { botAnswerPresentation } from "@/lib/bots/answer-preference";
@@ -66,6 +70,18 @@ export async function POST(req: NextRequest) {
 
   if (interaction.type === InteractionType.Ping) return Response.json(pong());
 
+  // Exact reserved intents refuse before preference, research or sponsored admission.
+  if (interaction.type === InteractionType.ApplicationCommand && /^(?:link|unlink|whoami)(?:\s|$)/u.test(interaction.data?.name ?? "")) {
+    const recipient = discordChatRecipient(interaction), command = exactChatControl(interaction.data?.name ?? "");
+    let text = "Discord account linking is unavailable. This command did not read or change an account binding.";
+    if (recipient && command && (!interaction.data?.options || interaction.data.options.length === 0)) {
+      try { text = await chatControlReply({ command, recipient, db: getDb,
+        binding: { origin: new URL(config.baseUrl).origin, network: config.networkId } }); }
+      catch { /* No token, provider or database error is reflected. */ }
+    }
+    return Response.json({ type: 4, data: { content: text, flags: 68, allowed_mentions: { parse: [] } } });
+  }
+
   const control = parseControlCommand(interaction);
   if (control) {
     const reply = await botControlResponse({ control, platformLocale: interaction.locale,
@@ -94,22 +110,26 @@ export async function POST(req: NextRequest) {
   }
 
   const budget = Math.min(cmd.budget ?? config.defaultBudget, config.anonMaxBudget);
-  after(() => runAndReply(cmd, budget));
+  after(() => runAndReply(cmd, budget, discordChatRecipient(interaction, true)));
   return Response.json(deferredResponse());
 }
 
 /** Runs the agent after the deferred ack is sent, then edits the placeholder with the result. */
-async function runAndReply(cmd: AskCommand, budget: number) {
+async function runAndReply(cmd: AskCommand, budget: number, recipient: ChatRecipient | null) {
   let message: unknown;
   try {
     const queryId = crypto.randomUUID();
-    const privateClaim = await prepareHostedRunClaim(queryId);
+    const owner = recipient ? await linkedChatOwner(await getDb(), recipient,
+      { origin: new URL(config.baseUrl).origin, network: config.networkId }) : undefined;
+    const privateClaim = await prepareHostedRunClaim(queryId, owner);
     const run = await collectRun({
       question: cmd.question,
       ...(cmd.presentationLanguage ? { presentationLanguage: cmd.presentationLanguage } : {}),
       budget,
       queryId,
       origin: "web",
+      ...(owner ? { asker: owner } : {}),
+      fundingOwner: "treasury",
       provenance: { version: 1, surface: "discord", ownershipMethod: "unknown" },
     });
     const packet = await privateClaim?.complete(run);
