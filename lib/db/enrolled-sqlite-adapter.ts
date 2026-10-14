@@ -2,6 +2,7 @@ import { SqliteAdapter } from "./sqlite-adapter";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection } from "./storage-identity-connection";
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
+import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
 import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
 
@@ -290,6 +291,7 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
         );
       } });
     }
+    Object.defineProperty(facade, "personalHistory", { value: createEnrolledSqlitePersonalHistory(db) });
     Object.defineProperty(facade, "init", { value: async () => { assert(); } });
     Object.defineProperty(facade, "close", { value: connection.close });
     Object.freeze(facade);
