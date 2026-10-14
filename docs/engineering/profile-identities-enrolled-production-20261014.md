@@ -169,3 +169,19 @@ artifact; only sqlite-schema-match.ts changes in that map. Earlier study capture
 and all failed observations remain preserved. Import edges and the finite graph
 permit are unchanged. No full suite, provider exchange, production operation or
 package publication was performed by this correction.
+
+## Ordinary main reconciliation after Usage PR486
+
+The corrected identity head a6ff35e passed all41 actual required checks, including
+the original Linux10-second Unit3 lane. PR486 then merged to main7d2f2524; its only
+merge conflict with this focused PR was the generated study JSON. The source
+facade merged automatically. A separate mechanical peer verified whole incoming
+Usage/privacy behavior and only the prior three identity binding lines.
+
+On that actual main composition, the four relevant facade controls passed once
+in57.313s with unchanged bounds; focused TypeScript passed in20.066s. One canonical
+refresh passed in11.287s, binding431 sources: only the two identity modules are
+added relative to incoming429, and only the facade/helper hashes change. All48
+trials and every non-map field remain equal; outbound and unresolved counts are
+zero. No new integration PR, runtime helper change or version allocation is added.
+The same focused PR is updated, and required CI for its new head remains a gate.
