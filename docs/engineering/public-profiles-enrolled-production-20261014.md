@@ -230,3 +230,96 @@ Aggregate CPU establishes neither per-function latency nor its cause; no failure
 or result is inferred for that control. No compiler, test, database, producer,
 CI, merge, activation or release acceptance is supplied by this proposal.
 The sole coordinator retains merge/batch ownership and original delivery gates.
+
+## Proposed bounded selected-original capture — 2026-10-15, OUTPUT ONLY / UNRUN
+
+This successor targets frozen candidate 0a818ea04e60e5194ea2c12296c282788125d3ad
+with current native-test raw SHA-256
+ccb71c79191a3f1d0c4a6ca11d1da332a41ca83b40ef4d95a8116aaa1cd2e7fa.
+It has not been applied to the consumed candidate. The observed complete 50-run
+publish took 15.754 seconds; reads took 5.788 and 5.071 seconds. Those timings
+motivate reducing repeated ownership traversals, but establish no Buffer cause,
+isolated guard cost, or measured improvement for this proposal.
+
+One private native capture hook captures the existing at-most-50 unique selected
+IDs on the same genuine connection, using the exact existing per-ID original
+query. It captures validated privacy rows in a bounded selected-ID query. Missing
+historical sidecars retain their existing unlisted meaning; malformed state or
+erasure refuses. Every present original is validated against its selected ID.
+For exact stored asker equality only, the captured row supplies recorded owner
+authority. JSON asker, payer, payee and funding labels never supply that authority.
+
+The first selected original ALWAYS uses the genuine privacy.owner operation,
+including a directly owned first original. This intentionally preserves a real
+proof-port asynchronous boundary rather than manufacturing a timer/yield, and
+avoids claiming that every recorded-owner proof call has disappeared. Later
+anonymous, foreign and missing originals ALWAYS use the genuine privacy.owner;
+anonymous authority remains its same-connection immutable claim proof, bound to
+the original and actor binding. No generalized batch API or public proof port is
+introduced. Ordinary update retains its entire existing loop.
+
+Every genuine owner await is followed by a full guard and revalidation of ALL
+captured selected originals, their exact data/asker and entire privacy state.
+The private source-created finalizer repeats that guard/revalidation immediately
+after the caller's capture await. It never replaces captured bytes or renews a
+claim. Changed data, asker, existence or privacy state refuses; erased state
+refuses not_owned, malformed state retires through the existing boundary. A
+visibility change is conservatively refused even though selection does not
+promote visibility. Existing transaction session checks, revision/tombstone and
+per-original CAS remain verbatim. No await separates the final capture validation
+from that transaction. The read path and synchronous after-LAST-await public
+finalizer remain whole and unchanged, as do ledger SQL and aggregate arithmetic.
+
+The originalRead observer is unchanged: its exact real get query now observes
+the selected-original capture. Capture of every selected original precedes the
+first genuine owner await, so the peer can mutate while ownership is pending.
+No replacement SQL result, owner/claims port, guard, callback or authority is
+injected. Existing race assertions stay intact. Added cases mutate a later direct
+original, stored asker, existence, erasure, visibility, malformed privacy and
+original bytes at that boundary; revoke/expire/future-date the genuine session;
+exercise unchanged/changed/asker/erased/binding-mismatched genuine immutable
+claims; refuse a previously changed original through the actual immutable-claim
+fallback; and refuse JSON-asker/payer inference. Snapshots bind deliberate peer
+changes and require no additional publication or economic writes.
+
+No connection guard, positive policy, family/fence check, readonly pre-SQL
+refusal, 5000 timeout, rollback/retirement rule, 5/6 classifier, schema, facade,
+helper, dependency implementation, contract, API or flag changes. All original
+50-run, economic snapshot, exact-aggregate, rollback, retirement and timeout
+assertions remain. Native6 still needs actual evidence; it is not synthesized.
+Web/API publication and Desktop/CLI/MCP/extension/bot/A2A public-link roles stay
+unchanged. Selection owns only publication metadata; private profiles own fields,
+privacy owns visibility/erasure, signed sessions own publication authorization,
+and recorded asker/immutable claim owns the original. Payment payTo/registry,
+caps/nonces, custody, settlement, funding, retry and idempotency are unchanged.
+
+Parent applies exact accepted data only after natural closure of its live inputs
+and a different payment/security source review. Affected checks, types, unchanged
+canonical deadlines/studies, focused PR and actual required aggregate/domain CI
+remain mandatory. This worker ran no candidate code, checks, Git, database,
+provider/model, ENV, install, policy, funding or activation operation. No runtime
+speed, passing check, PR, merge, issue closure or delivery is claimed. The existing
+coordinator retains the deployment batch; #264 remains open.
+
+## Parent validation, October 15
+
+The accepted native capture uses one bounded selected-original query at capture
+and after each genuine ownership await. Exact current bytes, stored asker and
+privacy state remain checked; the first genuine owner read, immutable-claim
+fallback, fresh signed session and in-transaction original comparison are retained.
+The ordinary path and public read/finalizer are unchanged. Checksum or uppercase
+JSON askers preserve the existing case-insensitive projection compatibility;
+only the exact stored SQL asker can authorize the direct path.
+
+The 26 affected owner, original, privacy, session and claimed-fallback cases passed
+on Windows. The complete 50-run publication/read/erase/read journey also passed
+after moving only its fresh genuine fixture construction into an existing
+per-case `beforeEach`; its body and canonical hook/test deadlines are unchanged.
+The observed setup cost is separate from the journey, not a runtime speed claim.
+Focused TypeScript passed. The earlier timeout and invalid future-session fixture
+captures remain retained; the latter now keeps the native expiry constraints.
+
+These are local synthetic controls. Current-main composition, canonical input
+binding and required hosted CI still precede admission. Actual current-store
+activation and user acceptance belong to the release coordinator; this outcome
+does not enable publication or close the original issue by itself.

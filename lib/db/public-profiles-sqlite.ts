@@ -57,6 +57,7 @@ function publicProfilesOperations(db: DatabaseSync, privacy: RunPrivacyStore, id
   history: RunOwnershipHistoryStore | undefined, guard: () => void, native?: {
     writeAccess(): void; afterAwait(): void; requireLedgers(): void;
     transaction<T>(operation: () => T): T;
+    captureOriginals(who: PublicProfileActor, ids: string[]): Promise<() => Map<string, { data: string; asker: unknown }>>;
   }): { store: PublicProfilesStore; prepareRead(handle: string): Promise<PublicProfileReadFinalizer> } {
   const profile = (wallet: string) => {
     const row = db.prepare("SELECT * FROM private_profiles WHERE wallet=?").get(wallet);
@@ -81,8 +82,12 @@ function publicProfilesOperations(db: DatabaseSync, privacy: RunPrivacyStore, id
       native?.writeAccess();
       const who = actor(rawActor), input = publicProfileInput.parse(rawInput);
       if (input.published && input.fields.includes("ledgers")) native?.requireLedgers();
-      const originals = new Map<string, { data: string; asker: unknown }>();
-      if (input.published) for (const id of input.runIds) {
+      let originals = new Map<string, { data: string; asker: unknown }>();
+      if (input.published && native) {
+        // The source-owned finalizer runs synchronously after this genuine
+        // capture await, before the unchanged transaction/session/original CAS.
+        originals = (await native.captureOriginals(who, input.runIds))();
+      } else if (input.published) for (const id of input.runIds) {
         const owned = await privacy.owner(id, who); native?.afterAwait(); if (!owned || owned.state.erased) throw new PublicProfileError("not_owned");
         const row = db.prepare("SELECT data,asker FROM query_runs WHERE id=?").get(id);
         if (!row || canonicalJson(JSON.parse(String(row.data))) !== canonicalJson(owned.run)) throw new PublicProfileError("not_owned");
@@ -273,8 +278,65 @@ export function createEnrolledSqlitePublicProfiles(db: DatabaseSync): PublicProf
       const who = publicProfileActor.parse(raw);
       if (who.binding.network !== identity.network) throw new PublicProfileError("unauthenticated");
     };
+    // Private to this genuine same-connection composition. The first selected
+    // original still crosses privacy.owner's real asynchronous proof boundary;
+    // subsequent exact recorded owners avoid repeated proof-port traversals.
+    // Nonmatching askers ALWAYS use that port and its immutable claim authority.
+    const captureOriginals = async (rawWho: PublicProfileActor, rawIds: string[]) => {
+      check();
+      const who = publicProfileActor.parse(rawWho);
+      const ids = publicProfileInput.shape.runIds.parse(rawIds);
+      const originals = new Map<string, { data: string; asker: unknown }>();
+      const privacyState = z.object({ run_id: z.string(), visibility: z.enum(["private", "unlisted", "public"]),
+        revision: z.number().int().min(0), erased: z.union([z.literal(0), z.literal(1)]),
+        retained_owner: z.string().nullable(), retained_digest: z.string().nullable(),
+        retained_binding: z.string().nullable(), updated_at: z.string() }).strict();
+      const states = () => {
+        const result = new Map<string, string>();
+        for (const row of db.prepare(`SELECT * FROM run_privacy
+          WHERE run_id IN (SELECT value FROM json_each(?)) LIMIT 50`).all(JSON.stringify(ids))) {
+          const state = privacyState.parse(row);
+          if (state.erased === 1) throw new PublicProfileError("not_owned");
+          result.set(state.run_id, canonicalJson(state));
+        }
+        // Missing historical sidecars remain missing/unlisted, just as owner().
+        return result;
+      };
+      const selectedOriginals = () => new Map(db.prepare("SELECT id,data,asker FROM query_runs WHERE id IN (SELECT value FROM json_each(?)) LIMIT 50")
+        .all(JSON.stringify(ids)).map(row => [z.string().parse(row.id), { data: String(row.data), asker: row.asker }] as const));
+      const capturedStates = states();
+      for (const [id, row] of selectedOriginals()) {
+        const run = validatePrivacyRun(JSON.parse(row.data), id);
+        if (row.asker === who.wallet && run.asker && run.asker.toLowerCase() !== who.wallet)
+          throw unavailable();
+        originals.set(id, row);
+      }
+      const revalidate = () => {
+        check(); // Full guard after EVERY await; never a cached authority.
+        const currentStates = states(), currentOriginals = selectedOriginals();
+        for (const id of ids) {
+          const original = originals.get(id), current = currentOriginals.get(id);
+          if (current?.data !== original?.data || current?.asker !== original?.asker
+            || currentStates.get(id) !== capturedStates.get(id)) throw new PublicProfileError("conflict");
+        }
+        return originals;
+      };
+      for (const [index, id] of ids.entries()) {
+        const original = originals.get(id);
+        if (index === 0 || !original || original.asker !== who.wallet) {
+          let owned: Awaited<ReturnType<RunPrivacyStore["owner"]>>;
+          try { owned = await privacy.owner(id, who); }
+          finally { revalidate(); } // Also refuse captured drift if owner rejects.
+          if (!owned || owned.state.erased || !original
+            || canonicalJson(JSON.parse(original.data)) !== canonicalJson(owned.run)) throw new PublicProfileError("not_owned");
+        }
+      }
+      // Capture bytes remain fixed across the caller's LAST capture await too.
+      // This closure is constructed here, never supplied by a caller/dependency.
+      return revalidate;
+    };
     const { store: body, prepareRead } = publicProfilesOperations(db, privacy, identities, history, check,
-      { writeAccess, afterAwait: check, requireLedgers, transaction });
+      { writeAccess, afterAwait: check, requireLedgers, transaction, captureOriginals });
     const read = async <T>(operation: () => Promise<T>, validate: () => void): Promise<T> => {
       try { check(); } catch (error) { return fail(error); }
       // Caller validation is distinct from malformed stored data. Invalid input

@@ -1,5 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync, StatementSync } from "node:sqlite";
+import { getAddress } from "viem";
+import { writeSqliteQueryRun } from "./query-run-record";
 import { createHash, randomUUID } from "node:crypto";
 import { copyFileSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -62,13 +64,19 @@ const financialOriginals = (file: string) => raw(file, db => hash(canonicalJson(
 const originalRead = (id: string) => {
   let entered!: () => void;
   const observed = new Promise<void>(done => { entered = done; });
-  const queries = new WeakMap<StatementSync, string>(), prepare = DatabaseSync.prototype.prepare, get = StatementSync.prototype.get;
+  const queries = new WeakMap<StatementSync, string>(), prepare = DatabaseSync.prototype.prepare, get = StatementSync.prototype.get, all = StatementSync.prototype.all;
   vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (this: DatabaseSync, sql) {
     const statement = prepare.call(this, sql); queries.set(statement, sql); return statement;
   });
   vi.spyOn(StatementSync.prototype, "get").mockImplementation(function (this: StatementSync, ...args) {
     const result = Reflect.apply(get, this, args);
     if (queries.get(this) === "SELECT data,asker FROM query_runs WHERE id=?" && typeof args[0] === "string" && args[0] === id) entered();
+    return result;
+  });
+  vi.spyOn(StatementSync.prototype, "all").mockImplementation(function (this: StatementSync, ...args) {
+    const result = Reflect.apply(all, this, args);
+    if (queries.get(this) === "SELECT id,data,asker FROM query_runs WHERE id IN (SELECT value FROM json_each(?)) LIMIT 50"
+      && result.some(row => row.id === id)) entered();
     return result;
   });
   return observed;
@@ -229,10 +237,19 @@ describe("#264 actual selected application publicProfiles facade (authored; UNRU
     expect(hash(readFileSync(f.file))).toBe(bytes); expect(originals(f.file)).toBe(before);
   });
 
-  it.each([false, true])("Full19 attaches hidden frozen ports on the selected store and preserves public-only owner/revision projection (archive=%s)", async archive => {
-    const f = await saved({ archive }); await f.change("public", "public"); await f.change("unlisted", "unlisted");
-    await f.change("foreign", "public", 0, bob); await f.verify();
-    const before = originals(f.file), financial = financialOriginals(f.file), selected = await selectedFacade(f);
+  describe.each([false, true])("Full19 attaches hidden frozen ports on the selected store and preserves public-only owner/revision projection (archive=%s)", archive => {
+    let f: Awaited<ReturnType<typeof saved>>;
+    let before: string, financial: string, selected: Awaited<ReturnType<typeof selectedFacade>>;
+    // Independent real fixture setup and selected application construction retain
+    // the canonical hook deadline. The complete assertion journey stays one test.
+    beforeEach(async () => {
+      f = await saved({ archive }); await f.change("public", "public"); await f.change("unlisted", "unlisted");
+      await f.change("foreign", "public", 0, bob); await f.verify();
+    });
+    beforeEach(async () => {
+      before = originals(f.file); financial = financialOriginals(f.file); selected = await selectedFacade(f);
+    });
+    it("preserves the complete public-only owner and revision journey", async () => {
     for (const db of [selected.writer, selected.reader]) {
       expect(Object.isFrozen(db)).toBe(true); expect(db.runPrivacyActive).toBe(true);
       expect(Object.getOwnPropertyDescriptor(db, "publicProfiles")).toEqual({
@@ -272,6 +289,7 @@ describe("#264 actual selected application publicProfiles facade (authored; UNRU
     await expect(port.update(actor, input([], ["displayName"], 1))).rejects.toMatchObject({ code: "conflict" });
     expect((await port.settings(actor)).revision).toBe(2); expect(originals(f.file)).toBe(afterWithdrawal);
     expect(financialOriginals(f.file)).toBe(financial);
+    });
   });
 
   it("selected readonly genuine ports refuse mutations before SQL and retain healthy publication/owner readers through visibility and erasure", async () => {
@@ -462,8 +480,11 @@ describe("#264 genuine Full19 native publication (dependency composition require
     expect((await f.port.settings(actor)).revision).toBe(2); expect(financialOriginals(f.file)).toBe(financial);
   });
 
+  describe("full fifty-run native publication journey", () => {
+    let f: Awaited<ReturnType<typeof saved>>;
+    beforeEach(async () => { f = await saved({ bulk: true }); });
   it("keeps the full 50-run cap, strict input, owner/session checks and erasure filtering without changing originals", async () => {
-    const f = await saved({ bulk: true }), ids = Array.from({ length: 50 }, (_, index) => `bulk-${String(index).padStart(2, "0")}`);
+    const ids = Array.from({ length: 50 }, (_, index) => `bulk-${String(index).padStart(2, "0")}`);
     const original = originals(f.file), financial = financialOriginals(f.file);
     const payments = raw(f.file, db => db.prepare("SELECT * FROM payment_events ORDER BY id").all());
     for (const invalid of [input([...ids, "private"]), input(["public", "public"]), input([], ["ledgers", "ledgers"]),
@@ -482,6 +503,7 @@ describe("#264 genuine Full19 native publication (dependency composition require
     expect(result.runs).toHaveLength(49); expect(result.runs.some(run => run.id === ids[0])).toBe(false);
     expect(originals(f.file)).toBe(afterErase);
     expect(raw(f.file, db => db.prepare("SELECT * FROM payment_events ORDER BY id").all())).toEqual(payments);
+  });
   });
 
   it("revision0 tombstone survives reconstruction and rejects a pending first publication", async () => {
@@ -502,7 +524,128 @@ describe("#264 genuine Full19 native publication (dependency composition require
     expect(await f.port.read("alice")).toBeNull(); expect(await f.port.sitemap(1000)).toEqual([]); expect(financialOriginals(f.file)).toBe(before);
   });
 
-  it("changed original during a second ownership await conflicts without publishing stale text", async () => {
+  it.each(["uppercase", "checksum"] as const)("native capture preserves genuine recorded %s JSON asker with exact lowercase SQL ownership", async mode => {
+    const f = await saved();
+    const jsonAsker = mode === "uppercase" ? alice.toUpperCase() : getAddress(alice);
+    for (const id of ["public", "private"]) {
+      const run = JSON.parse(String(f.connection.db.prepare("SELECT data FROM query_runs WHERE id=?").get(id)!.data)) as QueryRun;
+      writeSqliteQueryRun(f.connection.db, { ...run, asker: jsonAsker }, true);
+      const stored = f.connection.db.prepare("SELECT data,asker FROM query_runs WHERE id=?").get(id)!;
+      expect(stored.asker).toBe(alice); expect(JSON.parse(String(stored.data)).asker).toBe(jsonAsker);
+    }
+    await f.change("public", "public"); await f.change("private", "public");
+    const before = originals(f.file), financial = financialOriginals(f.file);
+    // Covers both the first genuine owner await and a subsequent recorded owner.
+    await f.port.update(actor, input(["public", "private"]));
+    expect((await f.port.read("alice"))?.runs.map(run => run.id).sort()).toEqual(["private", "public"]);
+    expect((await f.port.settings(actor)).published).toBe(true);
+    expect(() => assertVerifiedSqliteNativeUserDomainPolicy(f.connection.db)).not.toThrow();
+    expect(originals(f.file)).toBe(before); expect(financialOriginals(f.file)).toBe(financial);
+  });
+
+  it.each([null, undefined])("native capture preserves optional JSON asker %s without lending it SQL owner authority", async jsonAsker => {
+    const f = await saved();
+    const run = JSON.parse(String(f.connection.db.prepare("SELECT data FROM query_runs WHERE id='public'").get()!.data));
+    f.connection.db.prepare("UPDATE query_runs SET data=? WHERE id='public'").run(JSON.stringify({ ...run, asker: jsonAsker }));
+    expect(f.connection.db.prepare("SELECT asker FROM query_runs WHERE id='public'").get()?.asker).toBe(alice);
+    await f.change("public", "public"); const before = originals(f.file), financial = financialOriginals(f.file);
+    await f.port.update(actor, input(["public"])); expect((await f.port.read("alice"))?.runs.map(item => item.id)).toEqual(["public"]);
+    expect(originals(f.file)).toBe(before); expect(financialOriginals(f.file)).toBe(financial);
+  });
+
+  it("foreign JSON asker cannot borrow exact recorded SQL ownership and retires only the malformed capability", async () => {
+    const f = await saved();
+    const run = JSON.parse(String(f.connection.db.prepare("SELECT data FROM query_runs WHERE id='private'").get()!.data));
+    f.connection.db.prepare("UPDATE query_runs SET data=? WHERE id='private'").run(JSON.stringify({ ...run, asker: getAddress(bob) }));
+    expect(f.connection.db.prepare("SELECT asker FROM query_runs WHERE id='private'").get()?.asker).toBe(alice);
+    const before = originals(f.file), financial = financialOriginals(f.file);
+    await expect(f.port.update(actor, input(["public", "private"]))).rejects.toMatchObject({ code: "public_profile_unavailable" });
+    await expect(f.port.settings(actor)).rejects.toMatchObject({ code: "public_profile_unavailable" });
+    expect(raw(f.file, db => db.prepare("SELECT count(*) n FROM public_researcher_profiles").get()?.n)).toBe(0);
+    expect(originals(f.file)).toBe(before); expect(financialOriginals(f.file)).toBe(financial);
+  });
+
+  it.each(["original", "asker", "delete", "erasure", "visibility", "malformed-privacy", "malformed-original"] as const)("captured direct originals refuse current %s changes at a genuine owner await", async mutation => {
+    const f = await saved(), observed = originalRead("private");
+    const pending = f.port.update(actor, input(["public", "private"])); await observed;
+    const row = f.connection.db.prepare("SELECT data FROM query_runs WHERE id='private'").get()!;
+    if (mutation === "original") f.connection.db.prepare("UPDATE query_runs SET data=? WHERE id='private'")
+      .run(JSON.stringify({ ...JSON.parse(String(row.data)), question: "Changed captured original" }));
+    if (mutation === "asker") f.connection.db.prepare("UPDATE query_runs SET asker=? WHERE id='private'").run(bob);
+    if (mutation === "delete") f.connection.db.prepare("DELETE FROM query_runs WHERE id='private'").run();
+    if (mutation === "erasure") f.connection.db.prepare("UPDATE run_privacy SET erased=1,visibility='private',revision=revision+1 WHERE run_id='private'").run();
+    if (mutation === "visibility") f.connection.db.prepare("UPDATE run_privacy SET visibility='public',revision=revision+1 WHERE run_id='private'").run();
+    if (mutation === "malformed-privacy") f.connection.db.prepare("UPDATE run_privacy SET revision=? WHERE run_id='private'").run("invalid");
+    if (mutation === "malformed-original") f.connection.db.prepare("UPDATE query_runs SET data='{}' WHERE id='private'").run();
+    const afterPeer = originals(f.file), financial = financialOriginals(f.file);
+    const code = mutation === "erasure" ? "not_owned" : mutation === "malformed-privacy" ? "public_profile_unavailable" : "conflict";
+    await expect(pending).rejects.toMatchObject({ code });
+    expect(raw(f.file, db => db.prepare("SELECT count(*) n FROM public_researcher_profiles").get()?.n)).toBe(0);
+    expect(originals(f.file)).toBe(afterPeer); expect(financialOriginals(f.file)).toBe(financial);
+  });
+
+  it.each(["expired", "revoked", "future"] as const)("capture observer cannot lend a %s session publication authority", async mode => {
+    const f = await saved(), observed = originalRead("private");
+    const pending = f.port.update(actor, input(["public", "private"])); await observed;
+    if (mode === "expired") f.connection.db.prepare("UPDATE web_sessions SET expires_at=? WHERE hash=?").run(Date.now() - 1, actor.sessionHash);
+    if (mode === "future") {
+      const issuedAt = Date.now() + 3_600_000;
+      f.connection.db.prepare("UPDATE web_sessions SET issued_at=?,expires_at=? WHERE hash=?").run(issuedAt, issuedAt + 3_600_000, actor.sessionHash);
+    }
+    if (mode === "revoked") f.connection.db.prepare("DELETE FROM web_sessions WHERE hash=?").run(actor.sessionHash);
+    const afterPeer = originals(f.file), financial = financialOriginals(f.file);
+    await expect(pending).rejects.toMatchObject({ code: "unauthenticated" });
+    expect(await f.port.read("alice")).toBeNull(); expect(originals(f.file)).toBe(afterPeer); expect(financialOriginals(f.file)).toBe(financial);
+  });
+
+  it.each(["unchanged", "changed", "asker", "erased", "foreign-binding"] as const)("genuine immutable claimed fallback remains authoritative (%s)", async mutation => {
+    const f = await saved(), claims = createEnrolledSqliteRunClaims(f.connection.db);
+    const run = JSON.parse(String(f.connection.db.prepare("SELECT data FROM query_runs WHERE id='anonymous'").get()!.data)) as QueryRun;
+    await claims.issue({ runId: run.id, completedAt: run.createdAt, binding, tokenHash: hash("capture-claim") });
+    await claims.claim({ ...actor, tokenHash: hash("capture-claim") }); await f.change(run.id, "public");
+    const observed = originalRead(run.id);
+    const who = mutation === "foreign-binding" ? { ...actor, binding: { ...binding, origin: "https://foreign.example" } } : actor;
+    const pending = f.port.update(who, input([run.id, "public"])); await observed;
+    if (mutation === "changed") f.connection.db.prepare("UPDATE query_runs SET data=? WHERE id=?").run(JSON.stringify({ ...run, question: "Changed claim original" }), run.id);
+    if (mutation === "asker") f.connection.db.prepare("UPDATE query_runs SET asker=? WHERE id=?").run(alice, run.id);
+    if (mutation === "erased") f.connection.db.prepare("UPDATE run_privacy SET erased=1,revision=revision+1 WHERE run_id=?").run(run.id);
+    const afterPeer = originals(f.file), financial = financialOriginals(f.file);
+    if (mutation === "unchanged") {
+      await pending;
+      const result = (await f.port.read("alice"))!;
+      expect(result.runs).toHaveLength(1); expect(result.runs[0]).toMatchObject({ id: run.id, ownership: "claimed", funding: "unknown" });
+      expect(JSON.stringify(result)).not.toContain(hash("capture-claim")); expect(JSON.stringify(result)).not.toContain(alice);
+    } else {
+      await expect(pending).rejects.toMatchObject({ code: mutation === "erased" || mutation === "foreign-binding" ? "not_owned" : "conflict" });
+      expect(await f.port.read("alice")).toBeNull();
+    }
+    expect(originals(f.file)).toBe(afterPeer); expect(financialOriginals(f.file)).toBe(financial);
+  });
+
+  it("genuine claimed fallback refuses a previously changed original instead of refreshing its immutable proof", async () => {
+    const f = await saved(), claims = createEnrolledSqliteRunClaims(f.connection.db);
+    const run = JSON.parse(String(f.connection.db.prepare("SELECT data FROM query_runs WHERE id='anonymous'").get()!.data)) as QueryRun;
+    await claims.issue({ runId: run.id, completedAt: run.createdAt, binding, tokenHash: hash("capture-stale-claim") });
+    await claims.claim({ ...actor, tokenHash: hash("capture-stale-claim") });
+    f.connection.db.prepare("UPDATE query_runs SET data=? WHERE id=?").run(JSON.stringify({ ...run, question: "Changed before capture" }), run.id);
+    const before = originals(f.file), financial = financialOriginals(f.file);
+    expect(await f.privacy.owner(run.id, actor)).toBeNull();
+    await expect(f.port.update(actor, input(["public", run.id]))).rejects.toMatchObject({ code: "not_owned" });
+    expect(await f.port.read("alice")).toBeNull(); expect(originals(f.file)).toBe(before); expect(financialOriginals(f.file)).toBe(financial);
+  });
+
+  it("stored JSON asker and recorded payer cannot replace an exact stored owner or immutable claim", async () => {
+    const f = await saved();
+    const anonymous = JSON.parse(String(f.connection.db.prepare("SELECT data FROM query_runs WHERE id='anonymous'").get()!.data));
+    f.connection.db.prepare("UPDATE query_runs SET data=? WHERE id='anonymous'").run(JSON.stringify({ ...anonymous, asker: alice }));
+    f.connection.db.prepare("INSERT INTO payment_events(id,query_id,kind,payer,payee,network,amount_usdc,settled,settlement_status,tx_hash) VALUES(?,?,?,?,?,?,?,?,?,?)")
+      .run("capture-payer", "anonymous", "fetch", alice, bob, binding.network, 0.000001, 1, "settled", "synthetic-fixture-receipt");
+    const before = originals(f.file), financial = financialOriginals(f.file);
+    for (const id of ["anonymous", "foreign", "absent"]) await expect(f.port.update(actor, input(["public", id]))).rejects.toMatchObject({ code: "not_owned" });
+    expect(await f.port.read("alice")).toBeNull(); expect(originals(f.file)).toBe(before); expect(financialOriginals(f.file)).toBe(financial);
+  });
+
+  it("changed original during the genuine capture ownership await conflicts without publishing stale text", async () => {
     const f = await saved(), observed = originalRead("public");
     const pending = f.port.update(actor, input(["public", "private"])); await observed;
     const original = f.connection.db.prepare("SELECT data FROM query_runs WHERE id='public'").get()!.data;

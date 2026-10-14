@@ -8145,3 +8145,29 @@ unverified. Preserve private/package original bytes, gated briefs, financial
 limits and payment authority. Compact answer formatting accepts the resulting
 levels without relaxing its evidence bindings or notices. See the
 [implementation and surface boundaries](docs/engineering/answer-confidence-2026-10-14.md).
+
+## 2026-10-15 — Proposed native #264 bounded captured-original ownership
+
+OUTPUT-ONLY successor, unapplied and UNRUN. Reduce repeated native ownership-port
+traversals for at most 50 selected originals using one private same-store capture
+hook. Keep the first genuine privacy.owner await and every nonmatching-asker
+fallback; only exact stored asker equality can skip a subsequent proof traversal.
+Immutable receipt claims retain their genuine privacy/history authority. Never
+infer ownership or payer identity from JSON, payment rows or funding labels.
+
+Capture immutable original bytes/asker and validated privacy state before the
+first yield; after every owner await and the final capture await run the full
+guard and compare all captured state. Refuse changes instead of refreshing
+captured authority. Keep live signed-session checks and original CAS in the
+existing transaction; no public API, injectable proof, authority cache, schema or
+dependency policy change. The ordinary path and entire public read/finalizer stay
+unchanged. This trades one retained genuine first proof traversal for bounded
+reuse of validated local originals within a single request, never across requests.
+
+Observed complete publish/read costs motivate the proposal but establish no
+isolated cause or speedup. Genuine race, immutable-claim, economic snapshot,
+50-run, rollback/retirement and canonical deadline acceptance remain required.
+A different payment/security source review and parent changed-source checks,
+types, canonical evidence, focused PR and required CI precede acceptance. There
+is no new spending, custody, provider, retry, schedule or activation authority.
+See [source proposal and boundaries](docs/engineering/public-profiles-enrolled-production-20261014.md).
