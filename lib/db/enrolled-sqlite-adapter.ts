@@ -13,6 +13,7 @@ import { withRunReadProjection } from "../run-privacy/projection";
 import { projectRecordedEvidenceProvenance } from "../research/evidence-provenance";
 import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
+import { createEnrolledSqlitePrivateProfiles } from "./private-profiles-enrolled-sqlite";
 
 /** Explicit behavior inventory, including verifyApiKey's last-used write. New methods require review. */
 export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
@@ -342,6 +343,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     }
     Object.defineProperty(facade, "init", { value: async () => { assert(); } });
     Object.defineProperty(facade, "close", { value: connection.close });
+    const privateProfiles = createEnrolledSqlitePrivateProfiles(db);
+    if (privateProfiles) Object.defineProperty(facade, "privateProfiles", { value: privateProfiles });
     Object.freeze(facade);
     provenance.set(facade, { identity: deployment.identity, readOnly, assert });
     return facade;
