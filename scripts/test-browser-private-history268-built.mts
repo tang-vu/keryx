@@ -323,6 +323,11 @@ try {
   const originalBytes = originals();
   app = (require("next") as NextFactory)({ dev: false, dir: fixture, hostname: "127.0.0.1", port: address.port, httpServer: server });
   await app.prepare();
+  // Production app.prepare() creates the wrapper; await the same actual boot
+  // registration used by Next and by the existing natural cleanup below.
+  const compiledBoot = require(join(fixture, ".next/server/instrumentation.js")) as { register(): Promise<void> };
+  await compiledBoot.register();
+  console.log("Compiled application instrumentation: ready");
   const privateHeaders = (response: Response) => {
     for (const [name, value] of [["cache-control", "no-store"], ["referrer-policy", "no-referrer"], ["x-robots-tag", "noindex, nofollow"]]) assert.equal(response.headers.get(name), value);
   };
