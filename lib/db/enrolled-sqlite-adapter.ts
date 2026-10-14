@@ -12,6 +12,7 @@ import { createEnrolledSqlitePublicUsage } from "./public-usage-sqlite";
 import { runClaimsEnabled } from "../run-claims/contracts";
 import { withRunReadProjection } from "../run-privacy/projection";
 import { projectRecordedEvidenceProvenance } from "../research/evidence-provenance";
+import { createEnrolledSqliteProfileIdentities } from "./profile-identities-enrolled-sqlite";
 import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
 import { createEnrolledSqlitePrivateProfiles } from "./private-profiles-enrolled-sqlite";
@@ -346,6 +347,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
         return createEnrolledSqlitePublicUsage(db);
       })() });
     }
+    const identities = createEnrolledSqliteProfileIdentities(db);
+    if (identities) Object.defineProperty(facade, "profileIdentities", { value: identities });
     Object.defineProperty(facade, "init", { value: async () => { assert(); } });
     Object.defineProperty(facade, "close", { value: connection.close });
     const privateProfiles = createEnrolledSqlitePrivateProfiles(db);

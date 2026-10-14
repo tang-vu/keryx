@@ -113,6 +113,7 @@ describe("dormant Operator funding release", () => {
           || importer === "lib/db/deliverable-acceptance-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/private-profiles-enrolled-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/private-bibliographies-enrolled-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "lib/db/profile-identities-enrolled-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/storage-identity-connection.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts";
         expect(permitted, `Unreviewed storage selector: ${importer} -> ${target}`).toBe(true);
       }
