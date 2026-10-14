@@ -19,6 +19,7 @@ import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, storageIdentityDigest, type StorageIdentity } from "./storage-identity";
 import { insertStorageIdentity, installStorageFences, registerStorageCapability } from "./storage-identity-sqlite";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
+import { PUBLIC_REFERENCE_ARCHIVE_SQL } from "./public-reference-archive";
 
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`, creator = `0x${"c".repeat(40)}`;
 const network = "eip155:5042", input = { displayName: "<script>plain text</script>", handle: "reader_01", bio: "Reader", purpose: "Papers", links: [] };
@@ -236,6 +237,32 @@ describe("verified same-store private profiles", () => {
       expect(response.status).toBe(503); expect(await response.json()).toMatchObject({ error: "profile_unavailable" });
       expect(readFileSync(f.file)).toEqual(before);
     }
+  });
+
+  it("a different supported archive shape permanently revokes the old profile port after restoration", async () => {
+    const f = fixture(true, true, [{ wallet: alice, handle: input.handle }]), connection = f.open();
+    const port = createEnrolledSqlitePrivateProfiles(connection.db)!, before = originals(f);
+    const raw = new DatabaseSync(f.file);
+    try {
+      // Controlled empty-archive fixture change: both complete full19 shapes are
+      // source-known, but an existing port must retain its exact opening shape.
+      raw.exec("DROP TABLE public_reference_article_terms; DROP TABLE public_reference_article_versions; DROP TABLE public_reference_articles");
+    } finally { raw.close(); }
+    const alternate = f.open();
+    expect(assertVerifiedSqliteConnection(alternate.db)).toEqual(f.identity); alternate.close();
+    const drifted = readFileSync(f.file);
+    await expect(port.update(alice, { ...input, bio: "Changed" })).rejects.toThrow("profile_unavailable");
+    expect(readFileSync(f.file)).toEqual(drifted);
+    const restore = new DatabaseSync(f.file);
+    try { restore.exec(PUBLIC_REFERENCE_ARCHIVE_SQL); installStorageFences(restore, f.identity); }
+    finally { restore.close(); }
+    await expect(port.update(alice, input)).rejects.toThrow("profile_unavailable");
+    await expect(port.delete(alice)).rejects.toThrow("profile_unavailable");
+    await expect(port.get(alice, network)).rejects.toThrow("profile_unavailable");
+    expect(() => assertVerifiedSqliteConnection(connection.db)).toThrow();
+    const fresh = createEnrolledSqlitePrivateProfiles(f.open().db)!;
+    expect((await fresh.get(alice, network)).profile?.bio).toBe(input.bio);
+    expect(originals(f)).toBe(before);
   });
 
   it.each(["update", "delete"] as const)("write-first %s manifest drift permanently revokes its port after restoration", async operation => {

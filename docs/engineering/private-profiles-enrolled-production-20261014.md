@@ -5,8 +5,9 @@ acceptance and live delivery. ROOT assigned this repair against
 `76106089a78989d04aeb50f67a9d76241746d6f5` after the deployed app64 AE
 `/me/profile` path returned 503: its selected enrolled SQLite facade omitted
 `privateProfiles`. This source adds that optional domain to the same verified
-mainnet-real store. All new tests, types, review, CI and rollout remain **UNRUN**
-at the author's handoff. Production, main, versions and release64 are unchanged.
+mainnet-real store. All new tests, types, review, CI and rollout were **UNRUN**
+at the original author's handoff. The PR480 correction and its pending validation
+are recorded below; it makes no production, version or release acceptance claim.
 
 ## Runtime and private authority
 
@@ -30,9 +31,11 @@ Every operation validates verified provenance, runtime manifest, held target,
 identity, exact fences and full admitted application/domain shape before and
 after work. Mutations also check actual readonly provenance before any SQL,
 including deletes for absent owners. Reads and writes use the existing native
-transaction boundary. The port pins its initial application shape, checks both
-implicit unique indexes, and excludes only exact independently verified fences
-from the private table comparison. It avoids the ordinary `LIMIT 5` shape trap.
+transaction boundary. Constructor admission checks the exact application shape,
+both implicit unique indexes, and excludes only exact independently verified
+fences from the private table comparison. The genuine Core connection pins that
+complete source-known shape at opening and rechecks it on every full guard.
+It avoids the ordinary `LIMIT 5` shape trap.
 Manifest/file/fence/schema drift or close invalidates retained ports; a failed
 in-transaction guard closes the native connection, rolling back outstanding work.
 A failure after commit returns unavailable and requires observation of the
@@ -95,6 +98,41 @@ protected backup and stopped writers. ROOT must resolve actual target/schema/
 receipt state. Old actors accept the old exact shape, so ROOT must coordinate
 the accepted compatible code and domain change in one stopped-writer rollout;
 restarting old actors against the migrated schema is not supported.
+
+## PR480 guard-cost correction — source only
+
+Required Unit 3 job `115739922200` failed on published HEAD
+`b79c9120a183a0ec001ec2e69b1018a894affd4e`: 4054 tests passed and two
+unchanged 10-second tests timed out. They are the archive-absent native facade
+CRUD/close case and the two-native-port handle collision, loser-field preservation
+and released-handle case. Their assertions, deadlines and async behavior remain
+unchanged. The retained raw failure log remains evidence of failed CI.
+
+The local `schema()` scan used wrapped fence/profile/domain SQL, so each SQL
+primitive invoked the complete Core guard again. This correction keeps the exact
+existing constructor scan once, including healthy BEFORE absence, and requires
+the genuine zero-SQL full19 connection policy only for a present mainnet port.
+Repeated operation checks now use the retirement latch, that fixed policy and
+one full verified-connection guard. Core still rechecks runtime/manifest, held
+file, identity, exact fences and the exact captured source profile; wrapped
+prepare/get/all/run/exec retain their full guard per SQL primitive. This is a
+source-backed reduction in redundant guard calls, not measured production latency.
+
+Readonly denial remains before SQL/full guards. Transaction, rollback, contention,
+handle-conflict, owner/network/activity/economic and permanent-retirement behavior
+is unchanged. A new regression checks that moving to another supported full19
+archive shape refuses the old port permanently even after restoration, while a
+fresh connection accepts the restored shape and originals remain intact.
+
+The optimized source and new regression are **UNRUN** by this author; their first
+focused validation and a different narrow reviewer remain pending with the
+parent. The prior genuine 427-input/48-case artifact is retained but **STALE**
+for this changed factory until the parent performs one genuine final-source
+reproduction. Its historical 48 results do not establish acceptance of this
+delta. The parent owns focused failed-case/refusal checks, types, changed-input
+reproduction and one same-PR480 push; the sole coordinator owns merge and the
+deployment batch. No timeout waiver, blind CI retry, producer run or live issue260
+closure is claimed.
 
 ## Acceptance and delivery still required
 

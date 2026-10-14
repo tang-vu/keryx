@@ -5,7 +5,7 @@ import { PrivateProfileError, privateProfileInputSchema, privateProfileSnapshotS
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { PRIVATE_PROFILES_SQL, PRIVATE_PROFILE_ACTIVITY_SQL, privateProfileFromSqliteRow } from "./private-profiles-sqlite";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
-import { assertVerifiedSqliteConnection, assertVerifiedSqliteWritePolicy } from "./storage-identity-connection";
+import { assertVerifiedSqliteConnection, assertVerifiedSqliteNativeUserDomainPolicy, assertVerifiedSqliteWritePolicy } from "./storage-identity-connection";
 import { assertStorageFences, STORAGE_IDENTITY_TABLE, storageFenceStatements } from "./storage-identity-sqlite";
 
 const unavailable = () => new PrivateProfileError("profile_unavailable");
@@ -37,13 +37,20 @@ export function createEnrolledSqlitePrivateProfiles(db: DatabaseSync): PrivatePr
   const admitted = schema();
   if (!admitted.present) return undefined;
   if (identity.authorityMode !== "mainnet-real") throw unavailable();
+  assertVerifiedSqliteNativeUserDomainPolicy(db);
   let retired = false;
   const retire = () => { retired = true; db.close(); };
   const contention = (error: unknown) => error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
     && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
   const check = () => {
     if (retired) throw unavailable();
-    try { const current = schema(); if (!current.present || current.profile !== admitted.profile) throw unavailable(); }
+    try {
+      // The genuine connection pins the exact source-known full bundle at opening.
+      // Its full guard rechecks it here and before every wrapped SQL primitive;
+      // rescanning through that wrapper would multiply the same full guard.
+      assertVerifiedSqliteNativeUserDomainPolicy(db);
+      assertVerifiedSqliteConnection(db);
+    }
     catch (error) { if (!contention(error)) retire(); throw error; }
   };
   const writeAccess = () => {
