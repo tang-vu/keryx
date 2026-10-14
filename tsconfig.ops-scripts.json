@@ -46,6 +46,7 @@
     "scripts/test-personal-history-mcp-package.mts",
     "scripts/test-browser-owned-history.mts",
     "scripts/test-server-profile-identities-origin.mts",
+    "scripts/test-account-membership-private-built.mts",
     "scripts/test-profile-identities-postgres.mts",
     "scripts/test-browser-profile-identities.mts",
     "scripts/test-private-profiles-postgres.mts",
@@ -124,6 +125,11 @@
     "scripts/test-browser-monthly-selected.mts",
     "scripts/creator-cashout-batch.mts",
     "scripts/creator-cashout-batch-sign.mts",
-    "scripts/creator-cashout-batch-funding.mts"
+    "scripts/creator-cashout-batch-funding.mts",
+    "scripts/test-run-privacy-wanted-built.mts",
+    "scripts/check-purchase-release.mts",
+    "scripts/check-purchase-release.test.mts",
+    "scripts/eval-retained-purchase-skips.mts",
+    "scripts/eval-retained-purchase-skips.test.mts"
   ]
 }

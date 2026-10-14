@@ -1,4 +1,6 @@
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
+import { createSqliteAccountMembership } from "../accounts/sqlite-store";
+import { AccountError, type AccountMembershipStore } from "../accounts/contracts";
 import { createSqlitePrivateProfiles } from "./private-profiles-sqlite";
 import { createSqliteRunPrivacy } from "./run-privacy-sqlite";
 import { createSqlitePublicProfiles } from "./public-profiles-sqlite";
@@ -160,6 +162,7 @@ import { activationWindow, emptyActivationCounts } from "../activation";
 
 
 export class SqliteAdapter implements KeryxDB {
+  declare readonly accountMembership?: AccountMembershipStore;
   declare readonly publicProfiles?: PublicProfilesStore;
   declare readonly runPrivacy?: RunPrivacyStore;
   declare readonly runPrivacyActive: boolean;
@@ -293,6 +296,21 @@ export class SqliteAdapter implements KeryxDB {
       throw new Error("CONTENT_MASTER_KEY is required for paid-content cache access in real mode");
     }
     this.encryptLegacyCacheRows();
+    // Only the completed ordinary assembly can expose this port. Never open a
+    // second connection, install account SQL or change the shared timeout policy.
+    // Admission is lazy: the current 5000ms ordinary timeout deliberately refuses
+    // the account factory's <=1000ms bound until separately admitted by the owner.
+    if (!this.readOnly && !Object.hasOwn(this, "accountMembership")) {
+      const accountConnection = this.db;
+      Object.defineProperty(this, "accountMembership", { get: () => {
+        if (this.readOnly || this.enrolledMode || this.enrolledIdentity || this.db !== accountConnection) return undefined;
+        try { return createSqliteAccountMembership(accountConnection); }
+        catch (error) {
+          if (error instanceof AccountError && error.code === "account_unavailable") return undefined;
+          throw error;
+        }
+      } });
+    }
   }
 
   /** Seal every pre-v1 plaintext cache row in one transaction before the server accepts traffic. */

@@ -1,4 +1,4 @@
-import { demoteSyntheticEvidence } from "../research/evidence-provenance";
+import { demoteSyntheticEvidence, hasKnownSyntheticFingerprint } from "../research/evidence-provenance";
 import { actualReadCheckpoint, type ReadCheck, type PlannedReadAction } from "../research-audit/actual-read-policy";
 import { createReadCheckpointCapture, ordinaryCheckpointCapability } from "./read-checkpoint-capture";
 import { numberOperand } from "../research-audit/actual-read-policy";
@@ -16,6 +16,7 @@ import { finalizeGroundedAnswer } from "./answer-grounding";
 import { compactWordBudgetAnswer, finishWordBudgetAnswer } from "./word-budget-answer";
 import { compactSentenceNoteAnswer, finishSentenceNoteAnswer, withSentenceNoteNotices, type SentenceNoteAnswer } from "./sentence-note-answer";
 import { selectCitedStatements } from "./cited-statements";
+import { reviewedSummaryConfidence } from "./answer-confidence";
 import { deliverDecisionBrief } from "./decision-brief";
 import { discoverPublicReferences } from "./public-reference-evidence";
 import { discoverScholarly } from "../scholarly/discovery";
@@ -1951,9 +1952,13 @@ async function* runAdmittedAgent(
     citedMarkers: [...ledger.acceptedMarkers], sourceMarkers: gathered.map(source => source.marker),
     conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient },
     ordinaryPresentation ? presentation.language : "en");
-  // Coverage estimates describe the excerpt ledger, never a verified complete synthesis.
+  // Confidence follows reviewed delivered sentences, never excerpt coverage alone.
+  // Retained private/package originals keep their historical confidence contract.
   const verdict: Confidence = ordinaryPresentation && !brief
-    ? ordinaryConfidence(presentation.language, unavailableAssessment ? "unavailable" : citedSummary ? "summary" : "excerpts", evidenceVerdict.reason)
+    ? ordinaryConfidence(presentation.language, unavailableAssessment ? "unavailable" : citedSummary ? "summary" : "excerpts", evidenceVerdict.reason,
+      citedSummary ? reviewedSummaryConfidence({ ledger, statements: citedStatements, sources: gathered,
+        hasSyntheticDecision: finalDecisions.some(decision => decision.evidenceProvenance === "synthetic-demo" || hasKnownSyntheticFingerprint(decision)),
+        conflicts: synthesized.conflicts ?? [], finalAssessmentSufficient: finalSufficiency.sufficient && !synthesisFailure }, presentation.language) : undefined)
     : { level: "Low", reason: unavailableAssessment ? (vi
     ? "Bước tổng hợp hoặc kiểm tra bằng chứng chưa hoàn tất; chưa đánh giá được mức hỗ trợ của nguồn hay câu trả lời hữu ích."
     : "Synthesis or evidence review did not complete; source support and a useful answer remain unassessed.") : brief ? (vi
@@ -2455,7 +2460,7 @@ async function* runAdmittedAgent(
       trace,
       createdAt: new Date().toISOString(),
       origin,
-      ...(effects.scope.kind === "public" ? { provenance: newRunProvenance(input) } : {}),
+      provenance: newRunProvenance(input),
       ...(origin === "mcp" && input.mcpClient ? { mcpClient: input.mcpClient } : {}),
       ...(input.asker ? { asker: input.asker.toLowerCase() } : {}),
       fundingOwner: gateway.mode === "offline" ? "offline" : (input.fundingOwner ?? "treasury"),

@@ -26,7 +26,7 @@ export function compactSentenceNoteAnswer(ledger: EvidenceLedger, statements: Ci
     statement.claimIndex === item.claimIndex && statement.marker === item.marker && statement.quote === item.quote;
   // Removing repeated target scaffolding is safe only with complete, already admitted pairs.
   // Otherwise the original renderer must retain its targets, partial assessments and gaps.
-  if (!statements.length || !ledger.claimCoverage.length || confidence.level !== "Low" ||
+  if (!statements.length || !ledger.claimCoverage.length ||
       ledger.claimCoverage.some(claim => !(claim.coverage >= MIN_REWARD_SUPPORT) || !statements.some(row => row.claimIndex === claim.claimIndex)) ||
       statements.some(row => !ledger.claimCoverage.some(claim => claim.claimIndex === row.claimIndex) || !qualifying.some(item => bound(row, item))) ||
       qualifying.some(item => !statements.some(row => bound(row, item))) ||

@@ -80,3 +80,24 @@ it("retains storage writer and marker-guard drift refusals on every read", () =>
     }
   } finally { db.close(); }
 });
+
+it("refuses NULL SQL even for an implicit index or NULL expectation", () => {
+  const db = new DatabaseSync(":memory:");
+  try {
+    db.exec("CREATE TABLE unique_fixture(value TEXT UNIQUE)");
+    const row = db.prepare("SELECT name FROM sqlite_schema WHERE type='index' AND sql IS NULL").get()!;
+    expect(sqliteSchemaMatches(db, [[String(row.name), "index", ""]])).toBe(false);
+    expect(sqliteSchemaMatches(db, [[String(row.name), "index", null as unknown as string]])).toBe(false);
+    expect(sqliteSchemaMatches(db, [["missing", "table", null as unknown as string]])).toBe(false);
+    expect(sqliteSchemaMatches(db, [])).toBe(true);
+  } finally { db.close(); }
+});
+
+it("keeps native schema writing disabled after a writable_schema request", () => {
+  const db = new DatabaseSync(":memory:"), sql = "CREATE TABLE sealed_fixture(id TEXT)";
+  try {
+    db.exec(sql); db.exec("PRAGMA writable_schema=ON");
+    expect(() => db.prepare("INSERT INTO sqlite_schema(type,name,tbl_name,rootpage,sql) VALUES('table','sealed_fixture','sealed_fixture',0,?)").run(sql + " ")).toThrow("may not be modified");
+    expect(sqliteSchemaMatches(db, [["sealed_fixture", "table", sql]])).toBe(true);
+  } finally { db.close(); }
+});

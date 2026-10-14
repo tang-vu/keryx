@@ -34,7 +34,14 @@ read excerpts and author judgments keep their own labels. See the
 [release/source boundary](docs/tameion-submission.md#observed-delivery-and-supported-surfaces)
 for published clients and newer merged features awaiting deployment.
 
-## See a user use it
+## See users use it
+
+**[Hoàng's Face Marker workflow — MCP inside Devin CLI, 1:53](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)**
+shows an independent freelance developer researching app-policy and MediaPipe
+questions while working on his codebase. This October 2 recording has English
+chapter labels and original audio; its partial results, connection error and
+sponsored Arc-testnet payment remain visible. The archived video restores access
+after the original X account was suspended.
 
 **[0xacee's software-design workflow — English video, 3:05](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)**
 shows research for storage and backups in a news-monitoring application. The owner
@@ -42,11 +49,20 @@ confirmed that 0xacee directly operated or supervised the session. The recording
 retains a useful SQLite WAL result alongside partial and unsupported results;
 English narration and captions explain the steps.
 
+**[Trần Minh Hiếu's working paper — 65 reports, 202 research targets](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf)**
+shows a concrete academic output from another documented user. Hiếu conducted
+the research himself using sponsored Keryx Deep requests, with AI-assisted
+analysis and writing. The paper examines payment signals and recorded evidence
+coverage, with methods, tables, figures and a
+[reproducibility package](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.zip).
+See the [research story](docs/tameion-submission.md#research-artifact-trần-minh-hiếu)
+for attribution and the study's scope.
+
 Hoàng, a freelance developer, used Keryx MCP inside Devin CLI for his Face Marker
 app. Academic research and SaaS discovery are also documented in the
 [outside-user stories](docs/tameion-submission.md#named-external-user-hoàng-freelance-developer).
 Four identified outside users are a verified minimum, rather than the total audience.
-The user video is supporting traction evidence; the separate 2:47 video above is
+Both user videos are supporting traction evidence; the separate 2:47 video above is
 the submitted hackathon demo.
 
 ## Try it in two minutes — no wallet

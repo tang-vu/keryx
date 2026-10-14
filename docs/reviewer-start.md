@@ -4,7 +4,7 @@ Start with the **[submitted Tameion demo, 2:47](https://youtu.be/sNonqLPMysg)**:
 English narration and subtitles cover source choices, the stored report/receipt,
 Operator observation, the evidence-procurement prototype and reusable Arc primitives.
 Its stored first-party example and prototype scenes keep their own scope; the
-supporting user recording below is separate traction evidence.
+supporting user recordings below are separate traction evidence.
 
 ## A short review route
 
@@ -13,6 +13,10 @@ supporting user recording below is separate traction evidence.
    confirmed direct user operation/supervision. The [user-story record](tameion-submission.md#recorded-outside-user-workflow-0xacee)
    links all three reports and explains the shortened waits, narration, results
    and separate assistant-run SQLite checks.
+   Also watch [Hoàng using MCP inside Devin CLI, 1:53](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
+   for Face Marker app research, visible errors/evidence gaps and a sponsored
+   Arc-testnet payment. Its [case study](tameion-submission.md#named-external-user-hoàng-freelance-developer)
+   retains the original video scope and later matched payment proof.
 2. **Try the web workflow:** open [keryx.cc](https://keryx.cc), choose Quick and
    submit a shareable question within the displayed sponsored quota/payer/budget.
    Inspect exact excerpts, unmet targets, BUY/SKIP/CACHE reasons and the receipt.
@@ -22,6 +26,11 @@ supporting user recording below is separate traction evidence.
    for paper screening, notes and comparisons, and [evidence drafts](evidence-drafts.md)
    for retained-excerpt writing and reference exports. Metadata and read evidence
    remain distinct.
+   Read [Trần Minh Hiếu's four-page working paper](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf)
+   for a concrete user-created research output: 65 retained reports, 202 targets,
+   methods, quantitative tables and figures. Its
+   [research story and frozen-data reproduction](tameion-submission.md#research-artifact-trần-minh-hiếu)
+   retain user attribution, sponsored funding and AI-assistance scope.
 4. **Inspect task continuity:** [Windows release assets](https://github.com/tang-vu/keryx/releases/tag/v0.27.63)
    and the [desktop](desktop-alpha.md)/[CLI](operator-task-alpha.md) guides show
    shared tasks, explicit buyer handoff, original-job recovery, offline results
@@ -45,14 +54,16 @@ The October 13 mainnet snapshot records 129 questions and 40 settled payment
 records totaling 0.703750 USDC. It includes owner/QA activity. The 2,333 npm
 downloads cover September 27–October 12; website visits and GitHub clones retain
 their own 21/14-day windows. These are distinct from unique people or accepted
-deliverables. The October 14 health recheck still reports production `ec5f39c9`;
-newer merged code awaits its release batch.
+deliverables. An early October 14 health recheck reported production `ec5f39c9`;
+a later check reported operational Arc mainnet at `ae298ff4`. Consult current
+health and release manifests when comparing deployed and merged source.
 
 Hoàng's October 2 MCP/Devin recording was posted on the owner's @tangvu_dev
-account, which is now suspended. Its original video is currently unavailable;
+account, which is now suspended. Its [archived edited video](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
+has been restored from the original local backup;
 the [matched testnet runs and sponsored payment](tameion-submission.md#named-external-user-hoàng-freelance-developer)
-remain documented. The available 0xacee video adds inspectable workflow evidence
-for an existing named user, rather than a new person count.
+remain documented. Both available videos show workflows for existing named users,
+so restoring them does not add to the person count.
 
 ## Read-only receipt inspection
 
