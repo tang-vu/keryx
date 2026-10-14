@@ -598,6 +598,9 @@ jobs:
       - name: Private identity configured Origin behind Next proxy (built, synthetic pre-auth)
         run: node --import tsx scripts/test-server-profile-identities-origin.mts
 
+      - name: Private account page and API boundary (current build, isolated offline refusals)
+        run: node --import tsx scripts/test-account-membership-private-built.mts
+
       - name: Empty evidence (actual minified production orchestrator, no network)
         run: npm run test:built-empty-evidence
 
