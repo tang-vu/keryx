@@ -8202,3 +8202,10 @@ A different payment/security source review and parent changed-source checks,
 types, canonical evidence, focused PR and required CI precede acceptance. There
 is no new spending, custody, provider, retry, schedule or activation authority.
 See [source proposal and boundaries](docs/engineering/public-profiles-enrolled-production-20261014.md).
+
+Parent follow-up to the historical proposal above: the bounded capture is now
+implemented and independently reviewed, including case-insensitive optional JSON
+asker compatibility while retaining exact SQL-asker authority. The affected native
+controls, cap journey, types and current-source433-input canonical evidence pass.
+Required hosted CI, actual-store activation and original issue acceptance remain
+separate gates. No new financial or operational authority was added.

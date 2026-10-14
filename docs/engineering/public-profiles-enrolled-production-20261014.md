@@ -323,3 +323,11 @@ These are local synthetic controls. Current-main composition, canonical input
 binding and required hosted CI still precede admission. Actual current-store
 activation and user acceptance belong to the release coordinator; this outcome
 does not enable publication or close the original issue by itself.
+
+Current-main follow-up: the ordinary d15 composition and actual433-input canonical
+pair passed independent review. Every48-trial/non-source field matches incoming
+main, with zero outbound attempts. The current graph first exceeded its unchanged
+20s Windows bound; one fixed-phase observation then passed at the same bound and
+restored the exact original test bytes. Root walk and selector assertions completed
+at5.331s in that observation; no isolated cause or Ubuntu acceptance is claimed.
+Required exact-head CI remains the admission gate.
