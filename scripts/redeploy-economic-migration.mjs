@@ -15,6 +15,7 @@ const signature = s => [s.dev, s.ino, s.size, s.mtimeNs, s.ctimeNs].join('|');
 const migrationScripts = {
   'keryx-redeploy-economic-migration-v1': '/root/keryx/scripts/mainnet-economic-storage-migrate.mts',
   'keryx-redeploy-original-fulfillment-migration-v1': '/root/keryx/scripts/mainnet-original-fulfillment-storage-migrate.mts',
+  'keryx-redeploy-native-user-domains-migration-v1': '/root/keryx/scripts/private-profile-storage-migrate.mts',
 };
 
 export function validateEconomicMigrationConfig(value) {

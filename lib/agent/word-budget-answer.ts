@@ -13,7 +13,7 @@ export function compactWordBudgetAnswer(ledger: EvidenceLedger, statements: Cite
   const qualifying = ledger.evidence.filter(item => (item.qualifiesForAnswer ?? item.qualifiesForReward) && ledger.acceptedMarkers.has(item.marker));
   const summary = statements.filter(statement => qualifying.some(item => item.claimIndex === statement.claimIndex &&
     item.marker === statement.marker && item.quote === statement.quote));
-  if (!summary.length || confidence.level !== "Low" || !ledger.claimCoverage.length) return undefined;
+  if (!summary.length || !ledger.claimCoverage.length) return undefined;
   const sections = ledger.claimCoverage.map(claim => {
     const quotes = qualifying.filter(item => item.claimIndex === claim.claimIndex);
     const sentences = summary.filter(statement => statement.claimIndex === claim.claimIndex);

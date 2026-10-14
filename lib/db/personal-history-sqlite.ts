@@ -15,20 +15,22 @@ export function createSqlitePersonalHistory(db: DatabaseSync): PersonalHistorySt
 export function createEnrolledSqlitePersonalHistory(db: DatabaseSync): PersonalHistoryStore {
   if (arguments.length !== 1) throw new HistoryError("history_unavailable");
   let refused = false;
+  const contention = (error: unknown) => error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+    && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
   const assertAuthority = () => {
     if (refused) throw new HistoryError("history_unavailable");
     try { assertVerifiedSqliteConnection(db); }
-    catch { refused = true; throw new HistoryError("history_unavailable"); }
+    catch (error) { if (!contention(error)) refused = true; throw new HistoryError("history_unavailable"); }
   };
   assertAuthority();
-  return personalHistoryPort(db, assertAuthority, () => { refused = true; });
+  return personalHistoryPort(db, assertAuthority, error => { if (!contention(error)) refused = true; });
 }
 
 /** The authority callback is private to the two verified constructors above. */
-function personalHistoryPort(db: DatabaseSync, assertAuthority: () => void, refuseNativeRead?: () => void): PersonalHistoryStore {
+function personalHistoryPort(db: DatabaseSync, assertAuthority: () => void, refuseNativeRead?: (error: unknown) => void): PersonalHistoryStore {
   function readRows<T>(read: () => T): T {
     try { return read(); }
-    catch (error) { refuseNativeRead?.(); throw error; }
+    catch (error) { refuseNativeRead?.(error); throw error; }
   }
   return Object.freeze({ async list(owner, query) {
     assertAuthority();

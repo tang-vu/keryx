@@ -1,8 +1,15 @@
 import { SqliteAdapter } from "./sqlite-adapter";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
-import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection } from "./storage-identity-connection";
+import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection, assertVerifiedSqliteNativeUserDomainPolicy } from "./storage-identity-connection";
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
+import { createEnrolledSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
+import { createEnrolledSqliteRunClaims } from "./run-claims-sqlite";
+import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
+import { createEnrolledSqliteRunPrivacy } from "./run-privacy-sqlite";
+import { runClaimsEnabled } from "../run-claims/contracts";
+import { withRunReadProjection } from "../run-privacy/projection";
+import { projectRecordedEvidenceProvenance } from "../research/evidence-provenance";
 import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
 
@@ -258,10 +265,40 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     const db = connection.db;
     const assert = () => {
       try { assertVerifiedSqliteConnection(connection.db); }
-      catch (error) { connection.close(); throw error; }
+      catch (error) {
+        const contention = error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+          && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+        if (!contention) connection.close();
+        throw error;
+      }
     };
     assert();
     const core = SqliteAdapter.assembleConnectionCore(db, deployment.identity, assert);
+    const privacyActive = process.env.KERYX_RUN_PRIVACY_ENABLED === "true", claimsActive = runClaimsEnabled(process.env);
+    Object.defineProperty(core, "runPrivacyActive", { value: privacyActive });
+    if (privacyActive || claimsActive) {
+      assertVerifiedSqliteNativeUserDomainPolicy(db);
+      const ownership = createEnrolledSqliteRunOwnershipHistory(db);
+      Object.defineProperty(core, "runOwnershipHistory", { value: ownership });
+      if (claimsActive) Object.defineProperty(core, "runClaims", { value: createEnrolledSqliteRunClaims(db) });
+      if (privacyActive) {
+        const privacy = createEnrolledSqliteRunPrivacy(db);
+        const projected = withRunReadProjection(privacy, run => projectRecordedEvidenceProvenance(
+          async lookup => {
+            assert();
+            try {
+              const result = await Reflect.apply(Reflect.get(core, "readEvidenceProvenance"), core, [lookup]) as ReadonlySet<string>;
+              assert(); return result;
+            } catch (error) {
+              const contention = error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+                && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+              if (!contention) connection.close();
+              throw error;
+            }
+          }, run));
+        Object.defineProperty(core, "runPrivacy", { value: projected });
+      }
+    }
     const publicNames = Object.getOwnPropertyNames(SqliteAdapter.prototype).filter(name =>
       !["constructor", "encryptLegacyCacheRows", "insertPayment", "assertOrdinaryResearchAuthority", "readEvidenceProvenance", "init", "close"].includes(name));
     const reviewed = Object.keys(ENROLLED_SQLITE_METHOD_ACCESS);
@@ -292,6 +329,14 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       } });
     }
     Object.defineProperty(facade, "personalHistory", { value: createEnrolledSqlitePersonalHistory(db) });
+    Object.defineProperty(facade, "runPrivacyActive", { value: privacyActive });
+    for (const name of ["runClaims", "runOwnershipHistory", "runPrivacy"] as const) {
+      if (core[name]) Object.defineProperty(facade, name, { value: core[name] });
+    }
+    if (deployment.identity.authorityMode === "mainnet-real") {
+      const acceptance = createEnrolledSqliteDeliverableAcceptance(db);
+      if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
+    }
     Object.defineProperty(facade, "init", { value: async () => { assert(); } });
     Object.defineProperty(facade, "close", { value: connection.close });
     Object.freeze(facade);
