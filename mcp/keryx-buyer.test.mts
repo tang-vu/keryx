@@ -4,7 +4,52 @@ import os from "node:os";
 import path from "node:path";
 import { createReadCheckpointCapture } from "../lib/agent/read-checkpoint-capture.ts";
 import { actualReadCheckpoint } from "../lib/research-audit/actual-read-policy.ts";
+import { finalizeAnswerLanguage } from "../lib/research/answer-language-provenance.ts";
 const dirs: string[] = [];
+
+it.each(["en", "vi", "pt", "es"] as const)("%s initial buyer and GET-only recovery sanitize the same completed packet without new calls", async language => {
+  const f = await buyer();
+  vi.stubEnv("KERYX_BUYER_PRIVATE_KEY", `0x${"11".repeat(32)}`);
+  vi.stubEnv("KERYX_BUYER_PAYEE", `0x${"22".repeat(20)}`);
+  vi.resetModules();
+  const payment = await import("./local-payment.mts"), funding = await import("./local-funding.mts");
+  const fund = vi.spyOn(funding, "ensureLocalFunding").mockResolvedValue(undefined);
+  const queryId = `a2a_${"ab".repeat(32)}`, answer = 'Synthetic final café\r\nExact “quotation” 日本語 [S1]';
+  const packet = { ...finalizeAnswerLanguage({ answer, rendererLanguage: language, statements: [], proposals: [] })!, queryId };
+  const result = { status: "completed", queryId, answer, answerLanguage: packet, citations: [{ source: "Original 日本語", reward: 0.000001 }],
+    creatorsPaid: null, totalToCreators: 0.000001, feePaid: 0.05,
+    serviceReceipt: { status: "completed", answerHash: packet.answerSha256, amount: "100000", machineCode: "original_code" } };
+  const pay = vi.spyOn(payment, "payForResearch").mockResolvedValue({ data: result, settlementId: "original-settlement", amountPaid: "0.100000" });
+  const pending = vi.spyOn(payment, "readPending").mockReturnValue(null);
+  const recoveryReceipt = { payment: { queryId }, data: result, httpStatus: 200 } as unknown as Awaited<ReturnType<typeof payment.recoverResearch>>;
+  const recover = vi.spyOn(payment, "recoverResearch").mockResolvedValue(recoveryReceipt);
+  const api = await import("./keryx-buyer.mts");
+  const before = JSON.stringify(result), initial = await api.askKeryx("Synthetic unchanged question", 0.05);
+  expect(initial.answerLanguage).toEqual(packet);
+  expect(initial).toMatchObject({ answer, citations: result.citations, serviceReceipt: result.serviceReceipt,
+    settlementId: "original-settlement", amountPaid: "0.100000" });
+  expect(pay).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ body: {
+    question: "Synthetic unchanged question", budget: 0.05, researchMode: "deep", responseMode: "async" } }));
+  pending.mockReturnValue(recoveryReceipt.payment);
+  const recovered = await api.recoverKeryx();
+  expect(recovered).toMatchObject({ payment: recoveryReceipt.payment, data: { ...result, readCheckpoints: { status: "unavailable" } }, httpStatus: 200 });
+  for (const invalid of [{ ...result, answer: answer + " " }, { ...result, queryId: "foreign-query" },
+    { ...result, status: "queued" }, { ...result, answerLanguage: undefined },
+    { ...result, answerLanguage: { ...packet, queryId: "foreign-query" } },
+    { ...result, answerLanguage: { ...packet, format: "future" } },
+    { ...result, answerLanguage: { ...packet, privateMarker: "PRIVATE" } },
+    { ...result, answerLanguage: [packet, packet] }]) {
+    const projected = api.publicBuyerAnswerLanguage(invalid as unknown as Parameters<typeof api.publicBuyerAnswerLanguage>[0], queryId);
+    expect(projected).not.toHaveProperty("answerLanguage");
+    expect(projected.answer).toBe(invalid.answer);
+    expect(projected).toMatchObject({ citations: result.citations, serviceReceipt: result.serviceReceipt });
+    recover.mockResolvedValue({ ...recoveryReceipt, data: invalid });
+    expect(await api.recoverKeryx()).toMatchObject({ data: projected });
+  }
+  expect(JSON.stringify(result)).toBe(before);
+  expect(fund).toHaveBeenCalledOnce(); expect(pay).toHaveBeenCalledOnce();
+  expect(f.fetcher).not.toHaveBeenCalled(); expect(fs.readdirSync(f.dir)).toEqual([]);
+});
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.resetModules(); for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
 async function buyer(content?: string) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-mcp-custody-")); dirs.push(dir);

@@ -9,8 +9,36 @@ import { livePresentationLocale } from "./presentation-language";
 import { researchPresentationCatalogues } from "./presentation-messages";
 import { presentationQuestions, presentationRun } from "./presentation.test-fixture";
 import { config } from "../config";
+import { finalizeAnswerLanguage } from "./answer-language-provenance";
 const locales = ["en", "vi", "pt", "es"] as const;
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+
+it.each(["en", "vi", "pt", "es"] as const)("%s actual stdio handler binds observed labels and discloses an override", async language => {
+  const run = presentationRun(), queryId = "original-completed-query";
+  const packet = { ...finalizeAnswerLanguage({ answer: run.answer, rendererLanguage: language, statements: [], proposals: [] })!, queryId };
+  const result = { answer: run.answer, citations: [], totalToCreators: 0.000001, amountPaid: "0.100000",
+    settlementId: "original-settlement", status: "completed", queryId, answerLanguage: packet };
+  const before = hash(result), ask = vi.fn(async () => result);
+  const handler = createStdioResearchHandler(ask, "https://example.invalid");
+  const response = await handler({ question: presentationQuestions.en });
+  const locale = livePresentationLocale({ recordedAnswerLanguage: language });
+  expect(response.content[0].text).toBe(stdioResearchText(result, "https://example.invalid", locale));
+  expect(response.structuredContent).toEqual(result);
+  const override = language === "vi" ? "es" : "vi";
+  const mismatch = await handler({ question: presentationQuestions.en, language: override });
+  expect(mismatch.content[0].text).toContain(presentationLocaleNotice(livePresentationLocale({ requestedLanguage: override, recordedAnswerLanguage: language })));
+  expect(mismatch.content[0].text.startsWith(run.answer)).toBe(true);
+  expect(hash(result)).toBe(before);
+  for (const invalid of [{ ...result, answer: result.answer + " " }, { ...result, queryId: "foreign" },
+    { ...result, status: "queued" }, { ...result, answerLanguage: { ...packet, format: "future" } },
+    { ...result, answerLanguage: [packet, packet] }, { ...result, answerLanguage: undefined }]) {
+    const unknown = await createStdioResearchHandler(async () => invalid as typeof result, "https://example.invalid")({ question: presentationQuestions.en, language: "vi" });
+    expect(unknown.structuredContent).not.toHaveProperty("answerLanguage");
+    expect(unknown.content[0].text).toContain(presentationLocaleNotice(livePresentationLocale({ requestedLanguage: "vi" })));
+    expect(unknown.content[0].text.startsWith(invalid.answer)).toBe(true);
+  }
+  expect(ask).toHaveBeenNthCalledWith(1, presentationQuestions.en, undefined);
+});
 afterEach(() => vi.restoreAllMocks());
 
 it.each(locales)("%s API/remote/stdio labels preserve exact answer/excerpt, canonical money and receipt hashes", async language => {

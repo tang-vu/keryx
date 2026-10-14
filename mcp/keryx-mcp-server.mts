@@ -99,7 +99,7 @@ server.registerTool(
       researchMode: z.never().optional(), responseMode: z.never().optional(),
       question: z.string().max(8192).trim().min(3).max(MAX_ASK_QUESTION_CHARS)
         .describe(`The research question to ask Keryx (3–${MAX_ASK_QUESTION_CHARS} characters after trimming).`),
-      language: z.enum(presentationLanguages).optional().describe("Language of generated labels only. Does not change the paid body/hash, original question or answer; answer language is not recorded."),
+      language: z.enum(presentationLanguages).optional().describe("Language of generated labels only. Does not change the paid body/hash, original question or answer. Defaults to verified completed-answer language when available; unknown stays unknown, and a differing override is disclosed."),
       budget: z
         .number()
         .positive()
