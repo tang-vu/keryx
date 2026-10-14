@@ -3,6 +3,7 @@ import { reasoningServingText, surfaceReasoning, type ReasoningSurface } from ".
 import { uniqueOutputLimits } from "../llm/output-limit-diagnostic";
 import type { Confidence } from "../types";
 import { researchPresentationMessages } from "./presentation-messages";
+import { readCompletedAnswerLanguage, type CompletedAnswerLanguageProvenance } from "./answer-language-provenance";
 import { livePresentationLocale, recordedPresentationLocale, type PresentationLanguage, type PresentationLocale, type RequestedPresentationLanguage } from "./presentation-language";
 
 /** The resolution is presentation metadata, never a new response/receipt/answer-language field. */
@@ -75,6 +76,7 @@ export function remoteResearchText(result: RemotePresentationResult, locale: Pre
 }
 
 export interface StdioPresentationResult extends Partial<ReasoningSurface> {
+  status?: string; queryId?: string; answerLanguage?: CompletedAnswerLanguageProvenance;
   answer: string; citations: { source: string; reward: number }[]; totalToCreators: number; settlementId?: string; amountPaid?: string;
 }
 /** The paid request/body/hash/custody path is intentionally not an input to this text renderer. */
@@ -97,7 +99,11 @@ export function createStdioResearchHandler<T extends StdioPresentationResult>(as
     const locale = livePresentationLocale({ requestedLanguage: language, originalQuestion: question });
     try {
       const result = await ask(question, budget);
-      return { content: [{ type: "text" as const, text: stdioResearchText(result, baseUrl, locale) }], structuredContent: { ...result } };
+      const packet = result.status === "completed" ? readCompletedAnswerLanguage(result.answerLanguage, result.queryId, result.answer) : undefined;
+      const completedLocale = livePresentationLocale({ requestedLanguage: language, originalQuestion: question, recordedAnswerLanguage: packet?.language });
+      const { answerLanguage, ...publicResult } = result;
+      return { content: [{ type: "text" as const, text: stdioResearchText(result, baseUrl, completedLocale) }],
+        structuredContent: { ...publicResult, ...(packet ? { answerLanguage: packet } : {}) } };
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       return { isError: true, content: [{ type: "text" as const, text: researchPresentationMessages(locale.language)("stdioFailure", { detail }) }] };
