@@ -547,10 +547,15 @@ describe("ordinary recorded answer language", () => {
     const receipt = buildResearchReceipt(run, payments);
     expect(verifyResearchReceipt(receipt).valid).toBe(true);
     expect(receipt.payload.dispatch.answer).toBe(run.answer);
-    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run), a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"))]) {
+    const completed = a2aResponseFromRun(run, quoteA2aResearch(0.03, "quick"));
+    for (const result of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run), completed]) {
       expect(result.researchExports).toEqual(exportsFromCheckedReceipt(receipt));
       expect(result.evidence.map(row => row.quote)).toEqual([quote]);
-      expect(result).not.toHaveProperty("answerLanguage");
+      if (result === completed) expect(result).toHaveProperty("answerLanguage", {
+        format: "keryx-answer-language-v1", scope: "generated-prose", method: "reviewed-statements-and-renderer",
+        language, queryId: run.id, answerSha256: "0x" + createHash("sha256").update(run.answer, "utf8").digest("hex"),
+      });
+      else expect(result).not.toHaveProperty("answerLanguage");
     }
     expect(researchReportMarkdown(run, null, payments)).toContain(run.answer);
     expect(buildAnswerContent(run)).toContain(run.answer);
