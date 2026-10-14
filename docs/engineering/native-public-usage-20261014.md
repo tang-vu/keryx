@@ -337,3 +337,21 @@ there is no ordinary fallback, schema change or fabricated empty usage. The two
 existing native facade controls for offline absence and testnet installed-schema
 provenance exercise this compatibility seam; their changed-combination acceptance
 is recorded only after execution.
+
+The two existing compatibility controls subsequently passed 2/2 with natural
+exit 0 and both EOFs in 20.547 seconds on composed source `5b42c192`. The
+independent assembly review (`6ff6170d`) confirms the whole incoming facade is
+retained apart from the Usage import and its mainnet-only hidden attachment.
+The actual static input map found exactly two changed runtime inputs (the
+facade and public-usage producer), so one existing offline study ran once and
+passed all 48 trials in 10.464 seconds with zero outbound attempts. Its 429
+physical LF input pins match the finalized candidate; every trial and every
+non-runtime-source field equals the incoming main artifact, including the
+unchanged versioned lock and corpus. Historical v1 and all study controls remain
+unchanged. The generated report is byte-identical to incoming main.
+
+Retained composition, captures and genuine pair verification are under
+`output/resume-release-library-review-20261012/native-public-usage-primary-20261014/`.
+The preparatory obsolete Git path and Windows ESM import failures are retained
+as setup failures before the study; no native checks or producer were replayed.
+Required exact-candidate hosted CI and production delivery remain pending.
