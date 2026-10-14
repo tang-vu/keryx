@@ -17,9 +17,11 @@ const screenshotDir = process.env.KERYX_UX_SCREENSHOT_DIR ?? await mkdtemp(join(
 await mkdir(screenshotDir, { recursive: true });
 
 async function waitForLayout(page: Page) {
-  // The initial 40px feed disappears only after an empty response commits to the DOM.
-  // Fonts and the atlas can be ready while that request is still in flight.
-  await page.getByText("Loading settlements…", { exact: true }).waitFor({ state: "hidden" });
+  // Every mounted feed must leave loading, including frames coexisting during a transition.
+  // An empty response removes its 40px strip only once it commits to the DOM.
+  // Fonts and the atlas can be ready while those requests are still in flight.
+  await page.waitForFunction(() => Array.from(document.querySelectorAll('[aria-live="polite"]'))
+    .every(feed => feed.textContent?.trim() !== "Loading settlements…"));
   await page.evaluate(() => document.fonts.ready);
 }
 
