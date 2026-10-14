@@ -79,7 +79,7 @@ const question = "SYNTHETIC ORIGINAL268 completed owner question";
 const answer = "SYNTHETIC ORIGINAL268 retained answer <img src=x onerror=alert(1)>";
 const hidden = "SYNTHETIC ORIGINAL268 read-only original transport";
 type Notice = { type: "logout"; source: string; sequence: number; pending: boolean; confirmed: boolean };
-type RequestRecord = { id: number; path: string; hookSession: boolean; started: number; ready: boolean; returned: boolean;
+type RequestRecord = { id: number; status: number | null; path: string; hookSession: boolean; started: number; ready: boolean; returned: boolean;
   aborted: boolean; abortAt: number | null; bodyCancelled: boolean; released: boolean; discarded: boolean };
 type Snapshot = { realm: string; requests: RequestRecord[]; events: { value: Notice | string | null; at: number }[];
   messages: { value: Notice | string; at: number }[]; paints: string[]; transportErrors: string[] };
@@ -124,13 +124,14 @@ function observeBuiltPage({ question, answer, owner, jobId }: { question: string
     const hookSession = url.pathname === "/api/auth/session" && init.credentials === undefined;
     const index = plans.findIndex(p => p.path === url.pathname && (p.path !== "/api/auth/session" || hookSession));
     const plan = index < 0 ? null : plans.splice(index, 1)[0];
-    const item: RequestRecord & { release?: () => void } = { id: requests.length, path: url.pathname, hookSession, started: performance.now(), ready: false,
+    const item: RequestRecord & { release?: () => void } = { id: requests.length, status: null, path: url.pathname, hookSession, started: performance.now(), ready: false,
       returned: false, aborted: false, abortAt: null, bodyCancelled: false, released: false, discarded: false };
     requests.push(item);
     const signal = init.signal;
     const aborted = () => { item.aborted = true; item.abortAt ??= performance.now(); };
     signal?.addEventListener("abort", aborted, { once: true }); if (signal?.aborted) aborted();
     const response = await nativeFetch(input, plan ? { ...init, signal: undefined } : init);
+    item.status = response.status;
     if (response.headers.get("cache-control") !== "no-store") refuse("Built API lost private no-store");
     if (privateRead && (response.headers.get("referrer-policy") !== "no-referrer"
       || response.headers.get("x-robots-tag") !== "noindex, nofollow"
@@ -188,7 +189,7 @@ const httpRequests: { method: string; path: string }[] = [], failures: string[] 
 let unavailablePrefetches = 0;
 const transportObservations = { fetchGuardEntries: 0, listenerEntries: 0, connections: 0, undiciCreate: 0, undiciBeforeConnect: 0, undiciConnected: 0, undiciConnectError: 0, undiciHeaders: 0 };
 const transportChannels = [["undici:request:create", "undiciCreate"], ["undici:client:beforeConnect", "undiciBeforeConnect"], ["undici:client:connected", "undiciConnected"], ["undici:client:connectError", "undiciConnectError"], ["undici:request:headers", "undiciHeaders"]].map(([name, key]) => { const observed = channel(name); const listener = () => { transportObservations[key as keyof typeof transportObservations]++; }; observed.subscribe(listener); return { observed, listener }; });
-const results: object[] = [];
+const results: object[] = [], failedBrowserStates: object[] = [];
 let origin = "";
 const server = createServer(async (req, res) => {
   transportObservations.listenerEntries++;
@@ -199,7 +200,7 @@ const server = createServer(async (req, res) => {
     httpRequests.push({ method, path: url.pathname });
     // Incidental public header/locale consumers have no bearing on private history.
     // Explicit unavailable fixtures prevent public-ledger or preference side effects.
-    if (["/api/payments", "/api/me/locale-preference"].includes(url.pathname) && method === "GET") {
+    if (["/api/payments", "/api/me/locale-preference", "/maintenance/status"].includes(url.pathname) && method === "GET") {
       res.writeHead(503, { "Content-Type": "application/json", "Cache-Control": "no-store" }); res.end('{"error":"synthetic incidental consumer unavailable"}'); return;
     }
     if (method === "GET" && req.headers["next-router-prefetch"] === "1"
@@ -431,6 +432,12 @@ try {
       assert.equal(originals(), originalBytes, "All four original private tables stayed byte-identical");
       assert.deepEqual(failures, []); assert.deepEqual(pageErrors, []); assert.deepEqual(externalAttempts, []);
       results.push({ case: name, passed: true });
+    } catch (error) {
+      for (const page of [a, b]) if (!page.isClosed()) {
+        try { failedBrowserStates.push({ case: name, observation: await snapshot(page), mainText: (await workspace(page).innerText()).slice(0, 16384) }); }
+        catch { failedBrowserStates.push({ case: name, observationUnavailable: true }); }
+      }
+      throw error;
     } finally { try { await context.close(); } catch (error) { cleanupFailures.push(error); } }
   }
   await bounded((async () => {
@@ -556,7 +563,7 @@ try {
   try {
     await writeFile(join(run, "natural-close.json"), JSON.stringify({ listenerClosed: !server.listening, browserCloseCompleted: browserClosed,
       mainFailureSummary: mainFailure instanceof Error ? { name: mainFailure.name, message: mainFailure.message, stack: mainFailure.stack } : null,
-      completedCases: results, browserErrors: pageErrors, httpFailures: failures, browserErrorCount: pageErrors.length, httpFailureCount: failures.length,
+      completedCases: results, failedBrowserStates, browserErrors: pageErrors, httpFailures: failures, browserErrorCount: pageErrors.length, httpFailureCount: failures.length,
       transportObservations, instrumentationClosed, appClosed, tracesFlushed, mainFailureObserved: mainFailed, cleanupFailureCount: cleanupFailures.length,
       processExitObserved: null, stdoutEofObserved: null, stderrEofObserved: null,
       note: "Process lifetime/EOF fields belong to the parent's actual capture. Original failure and every cleanup cause/stack are retained in the thrown error/AggregateError; no error payload is serialized here." }, null, 2) + "\n", { flag: "wx" });
