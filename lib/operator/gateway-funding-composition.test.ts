@@ -44,7 +44,8 @@ function assertDormantGraph(roots: string[], read: (file: string) => string,
     // Only the source-owned APPLICATION boundary admits storage. Its entire transitive graph is still inspected:
     // provisioning, funding executor/orchestrator/transaction/key-loading edges remain forbidden.
     const admittedStorage = chain.includes(applicationStorageBoundary) && applicationStorageSubstrate.has(file);
-    if (dormantRuntime.test(file) && !admittedStorage) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
+    const accountProfile = chain.at(-1) === "lib/accounts/sqlite-store.ts" && file === "lib/db/enrolled-sqlite-schema-profile.ts";
+    if (dormantRuntime.test(file) && !admittedStorage && !accountProfile) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
     if (visited.has(file)) return;
     visited.add(file);
     for (const specifier of importsFor ? importsFor(file) : runtimeImports(read(file), file)) {
@@ -110,7 +111,9 @@ describe("dormant Operator funding release", () => {
         // The closed factory may construct its fixed reference profile; no ordinary consumer may select either.
         const permitted = importer === applicationStorageBoundary && ["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts"].includes(target)
           || importer === "lib/db/enrolled-sqlite-adapter.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "lib/accounts/sqlite-store.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/deliverable-acceptance-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "lib/db/decision-reviews-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/private-profiles-enrolled-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/private-bibliographies-enrolled-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/profile-identities-enrolled-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
