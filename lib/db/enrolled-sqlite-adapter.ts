@@ -4,6 +4,7 @@ import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection } from "./sto
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
 import { createEnrolledSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
+import { createEnrolledSqliteDecisionReviews } from "./decision-reviews-sqlite";
 import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
 
@@ -301,6 +302,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     if (deployment.identity.authorityMode === "mainnet-real") {
       const acceptance = createEnrolledSqliteDeliverableAcceptance(db);
       if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
+      const reviews = createEnrolledSqliteDecisionReviews(db);
+      if (reviews) Object.defineProperty(facade, "decisionReviews", { value: reviews });
     }
     Object.defineProperty(facade, "init", { value: async () => { assert(); } });
     Object.defineProperty(facade, "close", { value: connection.close });
