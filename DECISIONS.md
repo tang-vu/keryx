@@ -8146,6 +8146,37 @@ limits and payment authority. Compact answer formatting accepts the resulting
 levels without relaxing its evidence bindings or notices. See the
 [implementation and surface boundaries](docs/engineering/answer-confidence-2026-10-14.md).
 
+### 2026-10-14 — Observe settlement signals without granting settlement authority (#293)
+
+Before implementing the NEXT source contract, choose a passive observer with three
+separate inputs: raw Circle message authentication, retained local SDK receipt hints,
+and owned admitted-request/history/proof reads. SDK 3.5.0 actually exposes
+`BatchFacilitatorClient.onAfterSettle` with payment payload, requirements and result;
+the current seller does not register it. The hook is a local lifecycle callback,
+not a verified asynchronous x402 notification subscription. Current official Gateway
+webhook schemas describe deposits and mints, including multi-attestation transfers;
+their IDs are not established x402 authorization/request joins. Authenticate bounded
+raw bytes using ECDSA/SHA-256 and only an already verified cached public-key reader.
+Refuse unknown event types and do not map known deposit/mint events to x402 payments.
+
+For attribution, reuse `checkPendingTransfer` against an explicit bounded retained
+proof read, additionally requiring `confirmed` or `completed`, one nonce across the
+proof window, one admitted request and an unchanged economic tuple/transfer binding.
+Signals never supply payer, payee, network or payment authority. Duplicate hints are
+data; conflicting hints, admissions or retained bindings remain unresolved. Scan the
+provided bounded admitted window even without hints so missing delivery can be
+noticed without a lookup, retry or schedule. No database/payment/cap/nonce/volume
+write, signing, seller wiring, ingress, subscription or activation is introduced.
+
+Record latency only from independently retained authoritative submission and
+confirmation times; provider envelope/transfer update times and observer execution
+time are not substitutes. The source author adds synthetic failure fixtures but
+runs no tests, compiler, application or Git writer. ROOT owns source peer review,
+focused crypto/failure/type checks and the later focused NEXT PR/CI. Actual caller,
+storage, provider mapping, dropped-delivery recovery and real latency proof remain
+required; original #293 stays OPEN. See
+[the implementation and remaining gates](docs/engineering/settlement-events293-completion-2026-10-14.md).
+
 ## 2026-10-15 — Proposed native #264 bounded captured-original ownership
 
 OUTPUT-ONLY successor, unapplied and UNRUN. Reduce repeated native ownership-port
