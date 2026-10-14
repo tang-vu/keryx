@@ -13,7 +13,10 @@ export function createAccountHistoryProjection(store: AccountMembershipStore, ra
   } });
 }
 
-/** Parent must use the existing owner/privacy-fenced reader, with no streaming.
+/** Legacy orchestration helper, not a final serialization seal: its last awaited
+ * account check can race an earlier privacy proof. Production account history
+ * additionally requires the request-local native synchronous history seal.
+ * Parent must use the existing owner/privacy-fenced reader, with no streaming.
  * Revalidate its row privacy after private IO, then serialize exact account/session
  * authorization in the store. This wrapper supplies no claims or privacy authority. */
 export async function readWithAccountFence<T>(store: AccountMembershipStore, raw: AccountSnapshot,
