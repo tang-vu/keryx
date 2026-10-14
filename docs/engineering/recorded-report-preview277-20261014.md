@@ -120,7 +120,7 @@ its original scope. The receipt is
 All 429 physical LF-normalized files in main's accepted offline study map still
 match; none of these six preview paths is in that import map. Package-lock LF
 content is exact main; CRLF checkout bytes remain distinct from Git LF bytes.
-The existing study is reused and no producer was run. Runtime source, packages,
+The existing study is reused and no producer was run. Retained study runtime-source inputs, packages,
 versions, financial wording and activation are unchanged.
 
 Required exact-candidate CI, including the applicable Next production build,
