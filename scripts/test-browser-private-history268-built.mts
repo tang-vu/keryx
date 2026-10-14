@@ -194,7 +194,8 @@ const httpRequests: { method: string; path: string }[] = [], failures: string[] 
 let unavailablePrefetches = 0;
 const transportObservations = { fetchGuardEntries: 0, listenerEntries: 0, connections: 0, undiciCreate: 0, undiciBeforeConnect: 0, undiciConnected: 0, undiciConnectError: 0, undiciHeaders: 0 };
 const transportChannels = [["undici:request:create", "undiciCreate"], ["undici:client:beforeConnect", "undiciBeforeConnect"], ["undici:client:connected", "undiciConnected"], ["undici:client:connectError", "undiciConnectError"], ["undici:request:headers", "undiciHeaders"]].map(([name, key]) => { const observed = channel(name); const listener = () => { transportObservations[key as keyof typeof transportObservations]++; }; observed.subscribe(listener); return { observed, listener }; });
-const results: object[] = [], failedBrowserStates: object[] = [];
+const results: object[] = [], failedBrowserStates: object[] = [], caseDurations: object[] = [];
+let currentCase = "", currentPhase = "before-browser";
 let origin = "";
 const server = createServer(async (req, res) => {
   transportObservations.listenerEntries++;
@@ -407,6 +408,7 @@ try {
   }
   browser = await chromium.launch({ headless: true, timeout: 15000 });
   async function pair(name: string, test: (a: Page, b: Page, freshSession: () => Promise<void>) => Promise<void>) {
+    const caseStarted = performance.now(); currentCase = name; currentPhase = "create-context";
     const context = await browser!.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } }); context.setDefaultTimeout(8000);
     // tsx/esbuild preserves nested function names using a lexical __name helper.
     // Playwright serializes only the observer function, so retain that helper locally.
@@ -425,12 +427,15 @@ try {
       await context.addCookies([{ name: "keryx_session", value: issued.token, url: origin, httpOnly: true, sameSite: "Lax" }]);
     };
     try {
+      currentPhase = "anonymous-pages";
       await a.goto(`${origin}/me/private-jobs`); await b.goto(`${origin}/me/private-jobs`); await cleared(a); await cleared(b);
       for (const page of [a, b]) assert.equal((await snapshot(page)).requests.filter(r => r.path.startsWith(LIST)).length, 0, "No session means no private IO");
       assert.notEqual((await snapshot(a)).realm, (await snapshot(b)).realm);
       assert.equal(await a.evaluate(() => location.origin), origin); assert.equal(await b.evaluate(() => location.origin), origin);
+      currentPhase = "fresh-session-and-initial-private-read";
       await freshSession();
       for (const page of [a, b]) { await focus(page); await workspace(page).getByText(question, { exact: true }).waitFor(); await saved(page); }
+      currentPhase = "scenario";
       await test(a, b, freshSession);
       for (const page of [a, b]) if (!page.isClosed()) {
         assert.deepEqual((await snapshot(page)).transportErrors, []);
@@ -440,6 +445,7 @@ try {
       }
       assert.equal(originals(), originalBytes, "All four original private tables stayed byte-identical");
       assert.deepEqual(failures, []); assert.deepEqual(pageErrors, []); assert.deepEqual(externalAttempts, []);
+      caseDurations.push({ case: name, elapsedMs: Math.round(performance.now() - caseStarted) });
       results.push({ case: name, passed: true });
     } catch (error) {
       for (const page of [a, b]) if (!page.isClosed()) {
@@ -493,27 +499,34 @@ try {
     results.push({ observation: "logout-abort", elapsedMs: elapsed, lateAckDiscarded: true });
   });
   await pair("vanished-publisher-real-20s-lease-and-fresh-epoch", async (a, b, freshSession) => {
+    currentPhase = "hold-old-detail-and-hook-sessions";
     const db = await pendingDetail(b), sb = await staleHookSessions(b);
     await hold(a, LOGOUT, "transport", true); await logout(a); const start = await received(b); await cleared(b);
     await held(a, LOGOUT, 0); // Actual route completed revocation before publisher disappearance.
     const before = await snapshot(b), first = before.events.find(e => typeof e.value === "object" && e.value?.source === start.source && e.value.pending)!;
     const pb = before.paints.length, lookups = before.requests.filter(r => r.hookSession).length;
+    currentPhase = "close-publisher";
     await a.close(); // Genuine document disappearance, no synthetic terminal/hook substitute.
     await b.evaluate(source => (window as FixtureWindow).__private268Built.storm(source), start.source);
+    currentPhase = "wait-real-receiver-lease";
     await b.waitForFunction(source => (window as FixtureWindow).__private268Built.events.some(e => typeof e.value === "object"
       && e.value?.source === source && !e.value.pending), start.source, { timeout: 23000 }); await flush(b);
     const expired = await snapshot(b), end = expired.events.find(e => typeof e.value === "object" && e.value?.source === start.source && !e.value.pending)!;
     const elapsed = end.at - first.at; assert(elapsed >= 19900 && elapsed <= 22000, "Original first-start 20000ms lease survives 24 higher pending claims");
     assert.equal((end.value as Notice).sequence, 25); assert.equal((end.value as Notice).confirmed, false);
     assert.equal(expired.requests.filter(r => r.hookSession).length, lookups, "Expiry/storm obtains no canonical session authority");
+    currentPhase = "release-old-epoch";
     await post(b, { type: "logout", source: "synthetic-unrelated-no-authority", sequence: 1, pending: false, confirmed: true });
     await release(b, db.id); for (const r of sb) await release(b, r.id); await cleared(b, pb);
+    currentPhase = "revoked-cookie-check";
     await contextNullCheck(b); // Real revoked cookie returns 401 before a fresh local session.
+    currentPhase = "fresh-cookie-epoch";
     await freshSession(); const freshStart = (await snapshot(b)).requests.length;
     await hold(b, SESSION); await hold(b, SESSION); await hold(b, LIST); await focus(b);
     await b.waitForFunction(after => (window as FixtureWindow).__private268Built.requests.filter(r => r.id >= after && r.hookSession && r.ready).length === 2, freshStart);
     const freshReads = (await snapshot(b)).requests.filter(r => r.id >= freshStart && r.hookSession);
     const exhausted = (sequence: number, pending = true): Notice => ({ ...start, sequence, pending, confirmed: true });
+    currentPhase = "exhausted-interval-fresh-reads";
     const eventCount = (await snapshot(b)).events.length; await post(b, exhausted(26)); assert.equal((await snapshot(b)).events.length, eventCount);
     for (const r of freshReads) await release(b, r.id); const newList = await held(b, LIST, freshStart);
     await post(b, exhausted(27)); assert(!(await snapshot(b)).requests[newList.id].aborted, "Exhausted interval cannot cancel fresh HTTP epoch");
@@ -523,10 +536,12 @@ try {
     assert.equal((await snapshot(b)).requests.filter(r => r.hookSession || r.path.startsWith(LIST)).length,
       retained.requests.filter(r => r.hookSession || r.path.startsWith(LIST)).length, "Stale hints start no canonical lookup/private read");
     assert.equal((await snapshot(b)).events.length, retained.events.length);
+    currentPhase = "terminal-new-interval";
     const newDetail = await pendingDetail(b); await post(b, exhausted(29, false)); await cleared(b);
     assert((await snapshot(b)).requests[newDetail.id].aborted); const terminalPaint = (await snapshot(b)).paints.length;
     await release(b, newDetail.id); await cleared(b, terminalPaint);
     await post(b, exhausted(30)); await post(b, exhausted(31, false)); await cleared(b, terminalPaint);
+    currentPhase = "final-fresh-private-read";
     await focus(b); await workspace(b).getByText(question, { exact: true }).waitFor();
     assert.equal((await snapshot(b)).events.filter(e => e.value === "signed-out").length, 0);
     results.push({ observation: "receiver-lease", elapsedMs: elapsed, pendingStormClaims: 24, freshHttpEpoch: true });
@@ -546,6 +561,10 @@ try {
   }, null, 2) + "\n", { flag: "wx" });
 } catch (error) {
   mainFailed = true; mainFailure = error;
+  for (const context of browser?.contexts() ?? []) for (const page of context.pages()) if (!page.isClosed()) {
+    try { failedBrowserStates.push({ case: currentCase, phase: currentPhase, observation: await snapshot(page), mainText: (await workspace(page).innerText()).slice(0, 16384) }); }
+    catch { failedBrowserStates.push({ case: currentCase, phase: currentPhase, observationUnavailable: true }); }
+  }
 } finally {
   // No process exit/kill/unref, fabricated EOF, or time-based teardown. Parent must
   // capture real exit + close + both stream EOFs with its existing capture utility.
@@ -572,7 +591,7 @@ try {
   try {
     await writeFile(join(run, "natural-close.json"), JSON.stringify({ listenerClosed: !server.listening, browserCloseCompleted: browserClosed,
       mainFailureSummary: mainFailure instanceof Error ? { name: mainFailure.name, message: mainFailure.message, stack: mainFailure.stack } : null,
-      completedCases: results, failedBrowserStates, browserErrors: pageErrors, httpFailures: failures, browserErrorCount: pageErrors.length, httpFailureCount: failures.length,
+      completedCases: results, currentCase, currentPhase, caseDurations, failedBrowserStates, browserErrors: pageErrors, httpFailures: failures, browserErrorCount: pageErrors.length, httpFailureCount: failures.length,
       transportObservations, instrumentationClosed, appClosed, tracesFlushed, mainFailureObserved: mainFailed, cleanupFailureCount: cleanupFailures.length,
       processExitObserved: null, stdoutEofObserved: null, stderrEofObserved: null,
       note: "Process lifetime/EOF fields belong to the parent's actual capture. Original failure and every cleanup cause/stack are retained in the thrown error/AggregateError; no error payload is serialized here." }, null, 2) + "\n", { flag: "wx" });

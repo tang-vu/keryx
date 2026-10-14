@@ -1,7 +1,8 @@
 # Private268 compiled browser control — 2026-10-14
 
 Status: **current app and operations types and one production build passed; compiled
-control remains FAILED before the first browser scenario (ROOT update below)**.
+control remains FAILED: three browser cases passed, fourth hit the original 95 s
+aggregate deadline (ROOT update below)**.
 The author handoff and UNRUN statements below describe the earlier source-only stage.
 This adds only [the compiled driver](../../scripts/test-browser-private-history268-built.mts)
 and this document at base HEAD `ae298ff41c239b292a043b3442df33f1701a4b99`.
@@ -267,3 +268,9 @@ reported an undefined `flush` control, and installed tsx/esbuild emits lexical
 exact naming helper in a local IIFE with the unchanged observer and fixture
 arguments. Operations types passed in 32.076 s. The next functional control
 remains pending; no four-case pass is claimed.
+
+The compiled private-header check now validates all mandatory Vary cache-key
+fields while allowing Next routing dimensions. Actual control bf3b4689 passed
+the first three browser cases, including the real 15 s abort (15,001.4 ms), but
+the fourth case exceeded the unchanged 95 s aggregate deadline. The whole run
+is rejected; failure-phase observation is pending. No timeout was extended.
