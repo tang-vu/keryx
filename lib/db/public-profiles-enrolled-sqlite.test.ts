@@ -24,7 +24,9 @@ import { inspectStorageDeploymentManifest } from "./runtime-storage-config";
 import { assertVerifiedSqliteNativeUserDomainPolicy, openVerifiedSqliteStorage } from "./storage-identity-connection";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
-import { insertStorageIdentity, installStorageFences, storageFenceStatements } from "./storage-identity-sqlite";
+import { assertStorageFences, insertStorageIdentity, installStorageFences, storageFenceStatements, STORAGE_IDENTITY_TABLE } from "./storage-identity-sqlite";
+import { PUBLIC_REFERENCE_ARCHIVE_SQL } from "./public-reference-archive";
+import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 const hash = (text: string | Buffer) => createHash("sha256").update(text).digest("hex");
@@ -66,7 +68,7 @@ const originalRead = (id: string) => {
   });
   vi.spyOn(StatementSync.prototype, "get").mockImplementation(function (this: StatementSync, ...args) {
     const result = Reflect.apply(get, this, args);
-    if (queries.get(this) === "SELECT data,asker FROM query_runs WHERE id=?" && args[0] === id) entered();
+    if (queries.get(this) === "SELECT data,asker FROM query_runs WHERE id=?" && typeof args[0] === "string" && args[0] === id) entered();
     return result;
   });
   return observed;
@@ -667,6 +669,48 @@ describe("#264 genuine Full19 native publication (dependency composition require
     if (drift === "fence") raw(f.file, db => db.exec(fenceSql), false);
     await expect(f.port.sitemap(1000)).rejects.toMatchObject({ code: "public_profile_unavailable" });
     expect(() => f.connection.db.prepare("SELECT 1").get()).toThrow();
+  });
+
+  it.each([false, true])("a genuine alternate supported Full19 family permanently retires the opening even after restoration (archive=%s)", async archive => {
+    const f = await saved({ archive }); await f.port.update(actor, input());
+    const before = originals(f.file), financial = financialOriginals(f.file), manifest = readFileSync(f.manifest);
+    const tables = ["public_reference_article_terms", "public_reference_article_versions", "public_reference_articles"];
+    const archiveSql = raw(f.file, db => db.prepare(`SELECT sql FROM sqlite_schema
+      WHERE tbl_name IN (?,?,?) AND sql IS NOT NULL
+      ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 ELSE 2 END,name`).all(...tables).map(row => String(row.sql)));
+    raw(f.file, db => {
+      db.exec("BEGIN IMMEDIATE");
+      try {
+        if (archive) for (const table of tables) db.exec(`DROP TABLE "${table}"`);
+        else { db.exec(PUBLIC_REFERENCE_ARCHIVE_SQL); installStorageFences(db, f.identity); }
+        assertStorageFences(db, f.identity);
+        const excluded = new Set([STORAGE_IDENTITY_TABLE, "storage_identity_no_update", "storage_identity_no_delete",
+          "storage_identity_no_insert", ...Object.keys(storageFenceStatements(db, f.identity))]);
+        expect(sqliteApplicationSchemaProfile(db, excluded)).toBe(supportedSqliteApplicationProfiles(true)[archive ? 1 : 3]);
+        db.exec("COMMIT");
+      } catch (error) { db.exec("ROLLBACK"); throw error; }
+    }, false);
+    try {
+      // The alternate is source-supported, but the old port is bound to its own opening.
+      await expect(f.port.read("alice")).rejects.toMatchObject({ code: "public_profile_unavailable" });
+    } finally {
+      raw(f.file, db => {
+        db.exec("BEGIN IMMEDIATE");
+        try {
+          if (archive) for (const sql of archiveSql) db.exec(sql);
+          else for (const table of tables) db.exec(`DROP TABLE "${table}"`);
+          assertStorageFences(db, f.identity); db.exec("COMMIT");
+        } catch (error) { db.exec("ROLLBACK"); throw error; }
+      }, false);
+    }
+    expect(readFileSync(f.manifest)).toEqual(manifest);
+    expect(originals(f.file)).toBe(before); expect(financialOriginals(f.file)).toBe(financial);
+    await expect(f.port.sitemap(1000)).rejects.toMatchObject({ code: "public_profile_unavailable" });
+    expect(() => assertVerifiedSqliteNativeUserDomainPolicy(f.connection.db)).toThrow();
+    expect(() => f.connection.db.prepare("SELECT 1").get()).toThrow();
+    const fresh = f.open(), rebuilt = createEnrolledSqlitePublicProfiles(fresh.db)!;
+    expect((await rebuilt.read("alice"))?.displayName).toBe("Alice");
+    expect(originals(f.file)).toBe(before); expect(financialOriginals(f.file)).toBe(financial);
   });
 
   it("runtime drift after an awaited genuine identity result refuses and latches revocation", async () => {

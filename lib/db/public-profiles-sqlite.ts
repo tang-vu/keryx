@@ -220,8 +220,11 @@ export function createEnrolledSqlitePublicProfiles(db: DatabaseSync): PublicProf
     if (!identities) throw unavailable();
     const check = () => {
       try {
-        const current = schema();
-        if (!current.present || current.profile !== admitted.profile) throw unavailable();
+        if (revoked) throw unavailable();
+        // Trusted Full19 opening pins the exact admitted family. Its full guard
+        // rechecks manifest, held file, identity, fences and that opening profile.
+        assertVerifiedSqliteNativeUserDomainPolicy(db);
+        assertVerifiedSqliteConnection(db);
       } catch (error) {
         if (nativeContention(error)) throw error; // cleanup/proof belongs to request boundary below
         throw revoke();

@@ -200,3 +200,33 @@ remote/stdio MCP, extensions, A2A and bots retain their established public-link
 handoffs, without private enumeration or new publication/signing/payment ports.
 Original #264 remains **OPEN** until those applicable parent gates and
 actual delivery are established; source authorship does not close the criterion.
+
+## Proposed hot-check successor — output only, UNRUN
+
+Prepared against frozen public source f26ad8468cddf839f25573f2636db906794c850e
+with accepted dependency a6ff35e89d15a34de334bb1f7f8a48a66faf7a36. This proposal
+has not been applied or accepted. Constructor admission retains exact source
+BEFORE/Full19 handling once, before same-store dependency composition. Each hot
+check uses existing positive `assertVerifiedSqliteNativeUserDomainPolicy`
+metadata and one `assertVerifiedSqliteConnection` full runtime guard. The latter
+pins the exact opening family and checks runtime manifest, held file, identity,
+full application schema and fences. Every guarded SQL primitive retains its own
+full guard. No new helper, authority, configuration, cache or timing waiver.
+
+Readonly write-first refusal, irreversible retirement, genuine native5/6 cleanup,
+uncertain-transaction refusal and the synchronous after-LAST-await public
+finalizer remain unchanged. Ordinary constructors and shared operation SQL,
+private journal SQL and public aggregate arithmetic remain unchanged. Existing
+healthy readonly and actual native5 BEGIN/COMMIT controls remain verbatim,
+including every original assertion and deadline; they need no duplicate cases.
+The added UNRUN control switches a disposable fixture between genuine supported
+Full19 archive families, proves the exact alternate profile and fences, and
+requires permanent old-port retirement after restoration while a fresh opening
+remains healthy. It does not invent native6 evidence.
+
+Parent application requires old control19348/worker27896 natural EOF, its actual
+finding, and a different focused changed-source peer. No running input is changed.
+Aggregate CPU establishes neither per-function latency nor its cause; no failure
+or result is inferred for that control. No compiler, test, database, producer,
+CI, merge, activation or release acceptance is supplied by this proposal.
+The sole coordinator retains merge/batch ownership and original delivery gates.
