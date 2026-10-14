@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, type StatementSync } from "node:sqlite";
 import { assertOrdinarySqliteResearchAuthority } from "./research-monthly";
+import { assertVerifiedSqliteConnection, assertVerifiedSqliteWritePolicy } from "./storage-identity-connection";
+import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
+import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
+import { assertStorageFences, STORAGE_IDENTITY_TABLE, storageFenceStatements } from "./storage-identity-sqlite";
 import { parseScopes } from "../api-key-scopes";
 import { exactA2aMicros } from "../a2a/amount-micros";
 import { AcceptanceError, acceptanceAuthoritySchema, acceptanceEntrySchema, acceptanceInputSchema, acceptanceWallet,
@@ -19,11 +23,11 @@ CREATE TRIGGER IF NOT EXISTS deliverable_acceptance_store_no_delete BEFORE DELET
 CREATE TRIGGER IF NOT EXISTS deliverable_acceptance_entries_immutable BEFORE UPDATE ON deliverable_acceptance_entries BEGIN SELECT RAISE(ABORT,'acceptance_unavailable'); END;
 CREATE TRIGGER IF NOT EXISTS deliverable_acceptance_entries_no_delete BEFORE DELETE ON deliverable_acceptance_entries BEGIN SELECT RAISE(ABORT,'acceptance_unavailable'); END;`;
 const names = ["deliverable_acceptance_store", "deliverable_acceptance_entries"];
-const shapes = (db: DatabaseSync) => JSON.stringify(db.prepare(`SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE tbl_name IN (?,?) ORDER BY type,name`).all(...names));
+const shapes = (db: DatabaseSync, excluded: readonly string[] = []) => JSON.stringify(db.prepare(`SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE tbl_name IN (?,?)${excluded.length ? ` AND name NOT IN (${excluded.map(() => "?").join(",")})` : ""} ORDER BY type,name`).all(...names, ...excluded));
 let expectedShape: string | undefined;
-function schema(db: DatabaseSync) {
+function schema(db: DatabaseSync, excluded: readonly string[] = []) {
   if (!expectedShape) { const reference = new DatabaseSync(":memory:"); try { reference.exec(DELIVERABLE_ACCEPTANCE_SQL); expectedShape = shapes(reference); } finally { reference.close(); } }
-  if (shapes(db) !== expectedShape) throw new AcceptanceError("acceptance_unavailable");
+  if (shapes(db, excluded) !== expectedShape) throw new AcceptanceError("acceptance_unavailable");
 }
 function active(db: DatabaseSync, owner: string, raw: AcceptanceAuthority) {
   const authority = acceptanceAuthoritySchema.parse(raw), now = Date.now();
@@ -45,6 +49,65 @@ export function createSqliteDeliverableAcceptance(db: DatabaseSync): Deliverable
     db.exec(DELIVERABLE_ACCEPTANCE_SQL); schema(db);
     db.prepare("INSERT OR IGNORE INTO deliverable_acceptance_store(singleton,id) VALUES(1,?)").run(randomUUID()); db.exec("COMMIT");
   } catch (error) { db.exec("ROLLBACK"); throw error; }
+  return acceptancePort(db, () => assertOrdinarySqliteResearchAuthority(db), () => schema(db));
+}
+
+/** The reviewed domain is installed only by the stopped-writer migration. */
+export function createEnrolledSqliteDeliverableAcceptance(db: DatabaseSync): DeliverableAcceptanceStore | undefined {
+  const unavailable = () => new AcceptanceError("acceptance_unavailable");
+  if (arguments.length !== 1) throw unavailable();
+  const identity = assertVerifiedSqliteConnection(db);
+  if (identity.authorityMode !== "mainnet-real") throw unavailable();
+  const fences = Object.keys(storageFenceStatements(db, identity));
+  const excluded = new Set([STORAGE_IDENTITY_TABLE, "storage_identity_no_update", "storage_identity_no_delete", "storage_identity_no_insert", ...fences]);
+  const admitted = sqliteApplicationSchemaProfile(db, excluded);
+  if (!supportedSqliteApplicationProfiles(true).includes(admitted)) throw unavailable();
+  if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE tbl_name IN (?,?) LIMIT 1").get(...names)) return undefined;
+  schema(db, fences);
+  const seed = db.prepare("SELECT singleton,id FROM deliverable_acceptance_store LIMIT 2").all();
+  if (seed.length !== 1 || seed[0].singleton !== 1 || typeof seed[0].id !== "string"
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(seed[0].id)) throw unavailable();
+  let refused = false;
+  const retire = () => { refused = true; db.close(); };
+  const contention = (error: unknown) => error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+    && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+  const check = () => {
+    if (refused) throw unavailable();
+    try {
+      assertVerifiedSqliteConnection(db); assertStorageFences(db, identity);
+      if (sqliteApplicationSchemaProfile(db, excluded) !== admitted) throw unavailable();
+      schema(db, fences);
+    } catch (error) { if (!contention(error)) retire(); throw unavailable(); }
+  };
+  const authority = (write: boolean) => {
+    // This policy check reads the genuine connection's private metadata only.
+    // A denied readonly write does not retire the reader or execute SQL.
+    if (write) { try { assertVerifiedSqliteWritePolicy(db); } catch { throw unavailable(); } }
+    check();
+  };
+  const sql = <T>(read: () => T): T => {
+    if (refused) throw unavailable();
+    try { return read(); } catch (error) { if (!contention(error)) retire(); throw unavailable(); }
+  };
+  // Catch guards inside prepare/get/all/run/exec even when a public projection
+  // intentionally catches an invalid original binding. No connection escapes.
+  const guarded = new Proxy(db, { get(target, property) {
+    if (property === "exec") return (query: string) => sql(() => target.exec(query));
+    if (property === "prepare") return (query: string) => {
+      const statement = sql(() => target.prepare(query));
+      return new Proxy(statement, { get(value, key) {
+        if (["get", "all", "run"].includes(String(key))) return (...args: unknown[]) => sql(() => Reflect.apply(Reflect.get(value, key), value, args));
+        throw unavailable();
+      } }) as StatementSync;
+    };
+    throw unavailable();
+  } });
+  return acceptancePort(guarded, authority, () => schema(guarded, fences), check);
+}
+
+/** Private composition: callers cannot supply a custom native authority. */
+function acceptancePort(db: DatabaseSync, assertAuthority: (write: boolean) => void,
+  assertSchema: () => void, afterNativeRead?: () => void): DeliverableAcceptanceStore {
   const original = (owner: string, network: string, id: string) => {
     const row = db.prepare("SELECT * FROM a2a_orders WHERE id=? AND lower(payer)=?").get(id, owner);
     if (!row || typeof row.response_data !== "string") throw new AcceptanceError("acceptance_unavailable");
@@ -67,8 +130,8 @@ export function createSqliteDeliverableAcceptance(db: DatabaseSync): Deliverable
   };
   const pending = (id: string) => Boolean(db.prepare("SELECT 1 FROM payment_events WHERE query_id=? AND kind IS NOT 'inbound' AND (settlement_status='pending' OR settlement_status IS NULL) LIMIT 1").get(id));
   const transaction = <T>(write: boolean, fn: () => T): T => {
-    assertOrdinarySqliteResearchAuthority(db); db.exec(write ? "BEGIN IMMEDIATE" : "BEGIN");
-    try { assertOrdinarySqliteResearchAuthority(db); schema(db); const result = fn(); db.exec("COMMIT"); return result; }
+    assertAuthority(write); db.exec(write ? "BEGIN IMMEDIATE" : "BEGIN");
+    try { assertAuthority(write); assertSchema(); const result = fn(); afterNativeRead?.(); db.exec("COMMIT"); afterNativeRead?.(); return result; }
     catch (error) { db.exec("ROLLBACK"); throw error; }
   };
   const args = (owner: string, network: string, id: string) => [acceptanceWallet(owner), networkSchema.parse(network), deliverableIdSchema.parse(id)] as const;
