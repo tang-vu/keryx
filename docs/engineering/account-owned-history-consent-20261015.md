@@ -53,8 +53,11 @@ Tests use disposable enrolled SQLite, source-known
 full19 shape and fences, genuine frozen facades, real JWT/durable sessions and
 public test-key EOA membership proofs. Synthetic payment rows do not prove
 settlement. Distinct runtime source review accepted the required optional-port
-absence correction. Current-main composition, canonical evidence and exact-head
-required CI remain pending; production delivery belongs to the batch
+absence correction. Ordinary composition with actual main `c4a6d7bb` had no
+conflicts. One current-source canonical run passed all 48 offline trials with
+434 physically matched source pins and zero outbound attempts; every field
+other than the runtime source map equals the incoming accepted artifact.
+Exact-head required CI remains pending; production delivery belongs to the batch
 coordinator. Original #267/#268 acceptance remains open beyond this integration.
 The existing Google/Circle embedded user-controlled wallet flow may satisfy the
 no-prior-wallet criterion after real user acceptance; config availability alone

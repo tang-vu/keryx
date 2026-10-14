@@ -8231,6 +8231,8 @@ Distinct source review accepted the runtime with a required ordinary optional-po
 absence correction, now applied. Genuine native 29 cases, request-boundary four
 negatives, corrected ordinary real-session regression, the unchanged named graph
 observation and focused types pass; first failed captures remain recorded.
-Current-main canonical and exact-head CI are still required. This focused
+One genuine current-main canonical run passed all 48 offline trials with 434
+physical source pins, zero outbound attempts and every non-source-map field equal
+to the incoming artifact. Exact-head required CI remains pending. This focused
 integration does not close all #267/#268 criteria or prove real Google/Circle user
 acceptance. See [the implementation boundary](docs/engineering/account-owned-history-consent-20261015.md).
