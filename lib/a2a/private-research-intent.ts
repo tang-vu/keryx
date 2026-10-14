@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requirementSchema } from "../buyer/protocol";
 import { privateMerchantPolicySchema } from "../buyer/private-merchant-policy";
 import { verifyPrivateResearchSubmission } from "./private-request-verification";
+import { privateResearchIdSchema } from "./private-research-identifiers";
+export { privateResearchIdSchema } from "./private-research-identifiers";
 
 /** Private storage only. A reservation is not a paid order or permission to execute. */
 export async function preparePrivateResearchIntent(submission: unknown, expectedRequirement: unknown, trustedMerchants: unknown) {
@@ -20,7 +22,6 @@ export async function preparePrivateResearchIntent(submission: unknown, expected
   };
 }
 export type PrivateResearchIntent = Awaited<ReturnType<typeof preparePrivateResearchIntent>>;
-export const privateResearchIdSchema = z.string().regex(/^prv_[a-f0-9]{64}$/);
 
 /** Revalidate durable data before returning it; never silently repair a corrupt identity. */
 export async function validatePrivateResearchIntent(value: unknown): Promise<PrivateResearchIntent> {

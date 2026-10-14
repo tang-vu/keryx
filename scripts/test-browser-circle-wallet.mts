@@ -69,9 +69,14 @@ try {
   await context.addInitScript(() => {
     window.addEventListener("securitypolicyviolation", event => { (window as unknown as { cspErrors: string[] }).cspErrors.push(event.violatedDirective); });
     (window as unknown as { cspErrors: string[] }).cspErrors = [];
-    const probe = window as unknown as { authEvents: number; resumeError?: string; verificationReceipts: unknown[]; vendorLoginReplies: unknown[] };
-    probe.authEvents = 0; probe.verificationReceipts = []; probe.vendorLoginReplies = [];
-    window.addEventListener("keryx:auth", () => { probe.authEvents++; });
+    const probe = window as unknown as { authEvents: number; confirmedLogouts: number; receivedLogoutTerminals: number; resumeError?: string; verificationReceipts: unknown[]; vendorLoginReplies: unknown[] };
+    probe.authEvents = 0; probe.confirmedLogouts = 0; probe.receivedLogoutTerminals = 0; probe.verificationReceipts = []; probe.vendorLoginReplies = [];
+    window.addEventListener("keryx:auth", event => {
+      probe.authEvents++;
+      const detail = (event as CustomEvent).detail;
+      if (detail === "signed-out") probe.confirmedLogouts++;
+      if (detail?.type === "logout" && detail.pending === false) probe.receivedLogoutTerminals++;
+    });
     window.addEventListener("message", event => {
       if (event.origin === "https://pw-auth.circle.com" && event.data?.syntheticVerification) {
         probe.verificationReceipts.push({ ...event.data.syntheticVerification, rejectedBeforeVendorReply: !!probe.resumeError });
@@ -317,12 +322,19 @@ try {
   await second.locator("#auth").filter({ hasText: "authenticated" }).waitFor();
   await second.locator("#logout").click();
   await page.locator("#auth").filter({ hasText: "signed out" }).waitFor();
-  assert.equal(await page.evaluate(() => (window as unknown as { walletReady(): boolean }).walletReady()), false, "Cross-tab logout must clear original Circle credentials");
+  assert.equal(await page.evaluate(() => (window as unknown as { walletReady(): boolean }).walletReady()), true, "A peer invalidation cannot confirm removal of original Circle credentials");
+  await second.waitForFunction(() => (window as unknown as { confirmedLogouts: number }).confirmedLogouts === 1);
+  await page.waitForFunction(() => (window as unknown as { receivedLogoutTerminals: number }).receivedLogoutTerminals > 0);
+  const completedLogoutOperations = [walletPreparations, walletSessions, initializeChallenges, signChallenges];
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.waitForFunction(() => !(window as unknown as { walletReady(): boolean }).walletReady());
+  assert.equal(await page.evaluate(() => (window as unknown as { walletReady(): boolean }).walletReady()), false, "Fresh server session refusal after confirmed logout clears original Circle credentials");
+  assert.deepEqual([walletPreparations, walletSessions, initializeChallenges, signChallenges], completedLogoutOperations, "Logout recovery adds no wallet, initialization or signing operation");
   violations.push(...await page.evaluate(() => (window as unknown as { cspErrors: string[] }).cspErrors),
     ...await second.evaluate(() => (window as unknown as { cspErrors: string[] }).cspErrors));
   assert.deepEqual(errors, []); assert.deepEqual(violations, []);
   assert(seen.includes("https://pw-auth.circle.com/device-id")); assert(seen.includes("https://pw-auth.circle.com/social/verify-token"));
-  console.log("PASS: actual Circle Web SDK loads under production CSP, device/OAuth/confirmation callbacks work, token credentials stay in memory, new tabs restore only verified public identity, Google skips SIWE and cross-tab logout clears custody. All vendor/API transport synthetic; no real wallets or funds.");
+  console.log("PASS: actual Circle Web SDK loads under production CSP, device/OAuth/confirmation callbacks work, token credentials stay in memory, new tabs restore only verified public identity, Google skips SIWE, cross-tab logout invalidates views and fresh server refusal clears custody. All vendor/API transport synthetic; no real wallets or funds.");
   await context.close();
 
   // The configured Next build is an additional acceptance gate: click the real

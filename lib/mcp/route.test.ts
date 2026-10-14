@@ -121,6 +121,7 @@ describe("/mcp", () => {
       "profile_update",
       "history_read",
       "history_owned_read", "history_export",
+      "history_private_jobs_list", "history_private_jobs_detail", "history_private_jobs_export",
       "run_privacy_read", "run_owner_export",
       "profile_identities_read",
     ]);
