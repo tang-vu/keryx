@@ -1,0 +1,84 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-leaderboard.ts",
+  "sourceSha256": "1a93f5d778fbab8cf395bd9f24151f33c36b763b5b3ac9ac2c0f74c14ebcf8aa",
+  "entries": {
+    "sourceLeaderboard.title": {
+      "source": "{network} source leaderboard",
+      "text": "{network} 来源排行榜"
+    },
+    "sourceLeaderboard.catalog": {
+      "source": "All {count} catalog and settled sources. Each source has its own row, including sources with no payments.",
+      "text": "全部 {count} 个目录来源和已结算来源。每个来源单列一行，包括尚无付款的来源。"
+    },
+    "sourceLeaderboard.feeBoundary": {
+      "source": "Creator rewards go to the creator. Owner fees are Keryx transfers attributed to cited sources; they are not publisher earnings. One transfer may contribute to several rows.",
+      "text": "创作者奖励支付给创作者。所有者费用是归属于被引用来源的 Keryx 转账，不是发布者收入。一笔转账可能计入多行。"
+    },
+    "sourceLeaderboard.catalogUnavailable": {
+      "source": "Retained feed catalog unavailable; this list is incomplete.",
+      "text": "留存订阅源目录不可用；此列表不完整。"
+    },
+    "sourceLeaderboard.feesUnavailable": {
+      "source": "Source fee totals are unavailable: some settlement or public allocation evidence is missing.",
+      "text": "来源费用总额不可用：缺少部分结算或公开分配证据。"
+    },
+    "sourceLeaderboard.searchLabel": {
+      "source": "Search leaderboard sources",
+      "text": "搜索排行榜来源"
+    },
+    "sourceLeaderboard.searchPlaceholder": {
+      "source": "Search sources or wallets",
+      "text": "搜索来源或钱包"
+    },
+    "sourceLeaderboard.rowsLabel": {
+      "source": "All source leaderboard rows",
+      "text": "全部来源排行榜行"
+    },
+    "sourceLeaderboard.empty": {
+      "source": "No matching sources.",
+      "text": "没有匹配来源。"
+    },
+    "sourceLeaderboard.creatorIdentity": {
+      "source": "Creator · {wallet}",
+      "text": "创作者 · {wallet}"
+    },
+    "sourceLeaderboard.walletUnknown": {
+      "source": "Wallet not recorded",
+      "text": "未记录钱包"
+    },
+    "sourceLeaderboard.paper": {
+      "source": "Public paper metadata",
+      "text": "公开论文元数据"
+    },
+    "sourceLeaderboard.publicSource": {
+      "source": "Public source",
+      "text": "公开来源"
+    },
+    "sourceLeaderboard.creatorRewards": {
+      "source": "Creator rewards",
+      "text": "创作者奖励"
+    },
+    "sourceLeaderboard.creatorCounts": {
+      "source": "Cites: {citations} · payments: {payments}",
+      "text": "引用：{citations} · 付款：{payments}"
+    },
+    "sourceLeaderboard.ownerFee": {
+      "source": "Owner fee",
+      "text": "所有者费用"
+    },
+    "sourceLeaderboard.unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "sourceLeaderboard.feeCounts": {
+      "source": "Cites: {citations} · transfers: {payments}",
+      "text": "引用：{citations} · 转账：{payments}"
+    },
+    "sourceLeaderboard.feeRecipient": {
+      "source": "Fee recipient: {wallets}",
+      "text": "费用收款人：{wallets}"
+    }
+  }
+}

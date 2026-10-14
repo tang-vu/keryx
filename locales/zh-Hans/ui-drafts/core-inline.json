@@ -1,0 +1,1556 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "lib/i18n/messages.ts",
+  "sourceSha256": "b502c68d42365207da88c425ef26022f48387ed1ec6903e6409a026c2f0d5902",
+  "entries": {
+    "navigation.home": {
+      "source": "Home",
+      "text": "首页"
+    },
+    "navigation.archive": {
+      "source": "The archive",
+      "text": "归档"
+    },
+    "navigation.newDispatch": {
+      "source": "New dispatch",
+      "text": "新研究"
+    },
+    "locale.label": {
+      "source": "Interface language",
+      "text": "界面语言"
+    },
+    "report.question": {
+      "source": "Question: {question}",
+      "text": "问题：{question}"
+    },
+    "report.citedSources.one": {
+      "source": "{count} source cited",
+      "text": "引用了 {count} 个来源"
+    },
+    "report.citedSources.other": {
+      "source": "{count} sources cited",
+      "text": "引用了 {count} 个来源"
+    },
+    "format.unavailable": {
+      "source": "Unavailable",
+      "text": "不可用"
+    },
+    "researchError.httpFallback": {
+      "source": "Research request failed (HTTP {status}).",
+      "text": "研究请求失败（HTTP {status}）。"
+    },
+    "researchError.unknownOutcome": {
+      "source": "This request may already have been handled. Keep its original recovery record; do not submit or sign again automatically.",
+      "text": "此请求可能已处理。保留原恢复记录；不要自动再次提交或签名。"
+    },
+    "researchError.serviceStatus": {
+      "source": "Check service status",
+      "text": "检查服务状态"
+    },
+    "researchError.checkStatusAfter": {
+      "source": "Check service status again in {seconds}s. Requests will not retry automatically.",
+      "text": "{seconds} 秒后再次检查服务状态。请求不会自动重试。"
+    },
+    "maintenance.upcoming": {
+      "source": "Upcoming planned maintenance",
+      "text": "即将进行计划维护"
+    },
+    "maintenance.held": {
+      "source": "Maintenance status reports new requests held",
+      "text": "维护状态报告新请求暂停"
+    },
+    "maintenance.overrun": {
+      "source": "Expected maintenance end has passed; requests remain held",
+      "text": "预计维护结束时间已过；请求仍暂停"
+    },
+    "maintenance.controlUnavailable": {
+      "source": "Maintenance controls unavailable; requests remain held",
+      "text": "维护控制不可用；请求仍暂停"
+    },
+    "maintenance.statusUnavailable": {
+      "source": "Current maintenance status unavailable",
+      "text": "当前维护状态不可用"
+    },
+    "maintenance.lastObserved": {
+      "source": "Last observed public status: {checkedAt}",
+      "text": "上次观察公开状态：{checkedAt}"
+    },
+    "maintenance.starts": {
+      "source": "Announced start (UTC): {startsAt}",
+      "text": "公布开始时间（UTC）：{startsAt}"
+    },
+    "maintenance.expectedEnd": {
+      "source": "Expected end (UTC), not a reopening guarantee: {endsAt}",
+      "text": "预计结束时间（UTC），不保证重新开放：{endsAt}"
+    },
+    "maintenance.healthUnknown": {
+      "source": "Application health is not probed by this status endpoint.",
+      "text": "此状态端点不探测应用健康。"
+    },
+    "maintenance.refreshEnded": {
+      "source": "Automatic public status refresh has ended. Check service status for a newer observation.",
+      "text": "自动公开状态刷新已结束。检查服务状态以获得较新观察。"
+    },
+    "maintenance.noRetry": {
+      "source": "Research requests and signatures will not retry automatically. Keep existing recovery records.",
+      "text": "研究请求及签名不会自动重试。保留现有恢复记录。"
+    },
+    "account.eyebrow": {
+      "source": "Your Keryx account",
+      "text": "您的 Keryx 账户"
+    },
+    "account.signInTitle": {
+      "source": "Sign in to {brand}",
+      "text": "登录 {brand}"
+    },
+    "account.signInBrand": {
+      "source": "Keryx.",
+      "text": "Keryx。"
+    },
+    "account.introduction": {
+      "source": "Sign in to research, publish sources, and manage your account. Your wallet holds your USDC; you choose how much the agent can spend.",
+      "text": "登录以研究、发布来源及管理账户。钱包持有 USDC；您决定代理能花多少。"
+    },
+    "account.created": {
+      "source": "Account created",
+      "text": "账户已创建"
+    },
+    "account.signedIn": {
+      "source": "Signed in to Keryx",
+      "text": "已登录 Keryx"
+    },
+    "account.role": {
+      "source": "Role: {role}",
+      "text": "角色：{role}"
+    },
+    "account.signInFailed": {
+      "source": "Sign-in failed",
+      "text": "登录失败"
+    },
+    "account.signedOut": {
+      "source": "Signed out",
+      "text": "已退出"
+    },
+    "account.signOutUnconfirmed": {
+      "source": "Sign-out could not be confirmed. Please retry.",
+      "text": "无法确认退出。请重试。"
+    },
+    "account.checkingReturn": {
+      "source": "Checking sign-in return context...",
+      "text": "正在检查登录返回上下文..."
+    },
+    "account.step": {
+      "source": "Step {number}",
+      "text": "第 {number} 步"
+    },
+    "account.wrongNetwork": {
+      "source": "Wrong network",
+      "text": "网络错误"
+    },
+    "account.networkInstruction": {
+      "source": "Keryx runs on {network} (chainId {chainId}). Switch to continue.",
+      "text": "Keryx 运行于 {network}（chainId {chainId}）。切换以继续。"
+    },
+    "account.switchNetwork": {
+      "source": "Switch ▸",
+      "text": "切换 ▸"
+    },
+    "account.connectWallet": {
+      "source": "Connect wallet",
+      "text": "连接钱包"
+    },
+    "account.walletInstruction": {
+      "source": "Choose your browser wallet. {network} will be added automatically if not already configured.",
+      "text": "选择浏览器钱包。若未配置，将自动添加 {network}。"
+    },
+    "account.waitingForSignature": {
+      "source": "Waiting for signature…",
+      "text": "等待签名…"
+    },
+    "account.verifying": {
+      "source": "Verifying…",
+      "text": "正在核验…"
+    },
+    "account.signInWithEthereum": {
+      "source": "Sign in with Ethereum ▸",
+      "text": "使用 Ethereum 登录 ▸"
+    },
+    "account.signIn": {
+      "source": "Sign in",
+      "text": "登录"
+    },
+    "account.signatureInstruction": {
+      "source": "Sign a message in your wallet to prove ownership. No gas required — this is a signature, not a transaction.",
+      "text": "在钱包签署消息以证明所有权。无需 gas；这是签名，不是交易。"
+    },
+    "account.switchFirst": {
+      "source": "Switch to {network} first",
+      "text": "请先切换至 {network}"
+    },
+    "account.useDifferentWallet": {
+      "source": "← Use a different wallet",
+      "text": "← 使用不同钱包"
+    },
+    "account.authenticated": {
+      "source": "Authenticated",
+      "text": "已认证"
+    },
+    "account.registrationWalletMismatch": {
+      "source": "This registration draft belongs to the wallet that started sign-in. Switch back to that wallet or {restartLink}.",
+      "text": "此注册草稿属于开始登录的钱包。切回该钱包或{restartLink}。"
+    },
+    "account.startNewDraft": {
+      "source": "start a new draft",
+      "text": "开始新草稿"
+    },
+    "account.resumeSourceClaim": {
+      "source": "Resume source claim",
+      "text": "恢复来源认领"
+    },
+    "account.resumeSourceRegistration": {
+      "source": "Resume source registration",
+      "text": "恢复来源注册"
+    },
+    "account.issueToll": {
+      "source": "Issue a toll ▸",
+      "text": "设置阅读费 ▸"
+    },
+    "account.askQuestion": {
+      "source": "Ask a question ▸",
+      "text": "提出问题 ▸"
+    },
+    "account.signingOut": {
+      "source": "Signing out…",
+      "text": "正在退出…"
+    },
+    "account.signOut": {
+      "source": "Sign out",
+      "text": "退出"
+    },
+    "accountSessions.title": {
+      "source": "Signed-in sessions",
+      "text": "已登录会话"
+    },
+    "accountSessions.introduction": {
+      "source": "Review account access across browsers. Each sign-in creates a session; device names and locations are not collected.",
+      "text": "审阅跨浏览器账户访问。每次登录创建会话；不收集设备名及位置。"
+    },
+    "accountSessions.signOutBoundary": {
+      "source": "Signing out ends account access. It does not cancel accepted research jobs or already signed payment authorizations.",
+      "text": "退出结束账户访问，不取消已接受研究任务或已签名付款授权。"
+    },
+    "accountSessions.refresh": {
+      "source": "Refresh sessions",
+      "text": "刷新会话"
+    },
+    "accountSessions.signOutOthers": {
+      "source": "Sign out all other sessions",
+      "text": "退出所有其他会话"
+    },
+    "accountSessions.loading": {
+      "source": "Loading sessions…",
+      "text": "正在加载会话…"
+    },
+    "accountSessions.truncated": {
+      "source": "Showing the 100 newest sessions. Sign out all other sessions also includes older sessions.",
+      "text": "显示最新 100 个会话。“退出所有其他会话”也包括较早会话。"
+    },
+    "accountSessions.current": {
+      "source": "This browser session",
+      "text": "此浏览器会话"
+    },
+    "accountSessions.session": {
+      "source": "Session {id}",
+      "text": "会话 {id}"
+    },
+    "accountSessions.issuedAt": {
+      "source": "Signed in {date}",
+      "text": "登录于 {date}"
+    },
+    "accountSessions.expiresAt": {
+      "source": "Expires {date}",
+      "text": "到期于 {date}"
+    },
+    "accountSessions.signOutLabel": {
+      "source": "Sign out session {id}",
+      "text": "退出会话 {id}"
+    },
+    "accountSessions.ended": {
+      "source": "Your session has ended. Sign in again to manage sessions.",
+      "text": "会话已结束。重新登录管理会话。"
+    },
+    "accountSessions.refreshFailed": {
+      "source": "Sessions could not be refreshed. Please retry.",
+      "text": "无法刷新会话。请重试。"
+    },
+    "accountSessions.selectedSignedOut": {
+      "source": "The selected session has been signed out.",
+      "text": "所选会话已退出。"
+    },
+    "accountSessions.othersSignedOut": {
+      "source": "Other sessions have been signed out. This session remains active.",
+      "text": "其他会话已退出。此会话仍有效。"
+    },
+    "accountSessions.signOutUnconfirmed": {
+      "source": "Sign-out could not be confirmed. Refresh the list and retry.",
+      "text": "无法确认退出。刷新列表并重试。"
+    },
+    "researchEntry.ask": {
+      "source": "Ask Keryx",
+      "text": "向 Keryx 提问"
+    },
+    "researchEntry.network": {
+      "source": "USDC on {network}",
+      "text": "{network} 上的 USDC"
+    },
+    "researchEntry.question": {
+      "source": "What do you want to know?",
+      "text": "您想了解什么？"
+    },
+    "researchEntry.placeholder": {
+      "source": "Ask a question worth reading for...",
+      "text": "提出值得阅读以解答的问题..."
+    },
+    "researchEntry.keyboardHint": {
+      "source": "Enter for a new line · Ctrl/⌘ + Enter to ask",
+      "text": "Enter 换行 · Ctrl/⌘ + Enter 提问"
+    },
+    "researchEntry.metadataLookup": {
+      "source": "Look up free paper metadata",
+      "text": "查找免费论文元数据"
+    },
+    "researchEntry.metadataLookupLabel": {
+      "source": "Look up free paper metadata: title, authors or DOI",
+      "text": "查找免费论文元数据：标题、作者或 DOI"
+    },
+    "researchEntry.depth": {
+      "source": "Research depth",
+      "text": "研究深度"
+    },
+    "researchEntry.quick": {
+      "source": "quick",
+      "text": "快速"
+    },
+    "researchEntry.deep": {
+      "source": "deep",
+      "text": "深入"
+    },
+    "researchEntry.quickHint": {
+      "source": "Quick: up to 2 focused reads.",
+      "text": "Quick：最多 2 次聚焦阅读。"
+    },
+    "researchEntry.deepHint": {
+      "source": "Deep: up to 4 reads, including marketplace discovery and a coverage check.",
+      "text": "Deep：最多 4 次阅读，包括市场发现及覆盖检查。"
+    },
+    "researchEntry.sourceCap": {
+      "source": "Source cap: {amount} USDC · {payer}",
+      "text": "来源上限：{amount} USDC · {payer}"
+    },
+    "researchEntry.treasuryPayer": {
+      "source": "Keryx pays",
+      "text": "Keryx 付款"
+    },
+    "researchEntry.sessionPayer": {
+      "source": "Your research budget",
+      "text": "您的研究预算"
+    },
+    "researchEntry.expiredPayer": {
+      "source": "Budget expired",
+      "text": "预算已过期"
+    },
+    "researchEntry.pausedPayer": {
+      "source": "Budget paused",
+      "text": "预算已暂停"
+    },
+    "researchEntry.researching": {
+      "source": "Researching...",
+      "text": "正在研究..."
+    },
+    "researchEntry.paused": {
+      "source": "Research paused",
+      "text": "研究暂停"
+    },
+    "researchEntry.checking": {
+      "source": "Checking research availability…",
+      "text": "正在检查研究可用性…"
+    },
+    "researchEntry.savedReports": {
+      "source": "My saved reports",
+      "text": "我的已保存报告"
+    },
+    "researchEntry.checkAvailability": {
+      "source": "Check availability",
+      "text": "检查可用性"
+    },
+    "researchEntry.sessionNotice": {
+      "source": "Your research budget pays on {network}. This question can use up to {amount} USDC; your remaining total also applies.",
+      "text": "您的研究预算在 {network} 付款。此问题最多可用 {amount} USDC；还受剩余总额限制。"
+    },
+    "researchEntry.unavailableSessionNotice": {
+      "source": "Session status unavailable. Recover your funded session below before another question.",
+      "text": "会话状态不可用。再次提问前恢复下方已注资会话。"
+    },
+    "researchEntry.expiredSessionNotice": {
+      "source": "Session expired. Recover it below before another wallet funded question.",
+      "text": "会话已过期。再次由钱包资助提问前在下方恢复。"
+    },
+    "researchEntry.sponsoredNotice": {
+      "source": "Sponsored trial on {network}. No wallet or deposit required. Usage and spending limits apply.",
+      "text": "{network} 赞助试用。无需钱包或存款。适用使用及支出限制。"
+    },
+    "researchEntry.scholarly": {
+      "source": "Search scholarly papers (Crossref and arXiv)",
+      "text": "搜索学术论文（Crossref 和 arXiv）"
+    },
+    "researchEntry.scholarlyNotice": {
+      "source": "Sends your question to scholarly repositories. DOI lookup works when a DOI is in the question. Public papers cost no source USDC; unavailable papers and abstract-only reads stay visible.",
+      "text": "将问题发送给学术资料库。问题含 DOI 时可查询 DOI。公开论文不花来源 USDC；不可用论文及仅摘要阅读保持可见。"
+    },
+    "researchEntry.paidScholarly": {
+      "source": "Include reviewed paid manuscripts (experimental testnet rights protocol)",
+      "text": "包含已审核付费稿件（实验性测试网权利协议）"
+    },
+    "researchEntry.paidScholarlyMainnetNotice": {
+      "source": "Paid manuscript rights are not yet available on mainnet. Ordinary registered articles remain available.",
+      "text": "主网尚不可用付费稿件权利。普通注册文章仍可用。"
+    },
+    "researchEntry.paidScholarlyNotice": {
+      "source": "Requires your funded browser session. Uses the question budget for access and supported citation rewards. Public scholarly references stay free; only approved exact versions can be paid.",
+      "text": "需已注资浏览器会话。使用问题预算支付访问和获支持引用奖励。公开学术参考仍免费；仅获批确切版本可付款。"
+    },
+    "researchEntry.budgetAndModel": {
+      "source": "Budget and model: ${amount} USDC",
+      "text": "预算及模型：${amount} USDC"
+    },
+    "researchEntry.maximumBudget": {
+      "source": "Maximum budget",
+      "text": "最高预算"
+    },
+    "researchEntry.maximumBudgetLabel": {
+      "source": "Maximum budget in USDC",
+      "text": "最高预算（USDC）"
+    },
+    "researchEntry.budgetNotice": {
+      "source": "The agent cannot spend more than this amount on one question. Choose 0 for free sources without source purchases or creator rewards. Model and search costs remain separate.",
+      "text": "代理对单个问题不能超此金额支出。选择 0 使用免费来源，无来源购买或创作者奖励。模型及搜索成本仍独立。"
+    },
+    "researchEntry.model": {
+      "source": "AI model",
+      "text": "AI 模型"
+    },
+    "researchEntry.defaultModelNote": {
+      "source": "Default reasoning model",
+      "text": "默认推理模型"
+    },
+    "researchEntry.defaultModel": {
+      "source": "Default: DeepSeek",
+      "text": "默认：DeepSeek"
+    },
+    "researchEntry.searchNotice": {
+      "source": "Research may search the public web; your question is sent to our search provider. The USDC source budget is separate from model and search operating costs.",
+      "text": "研究可能搜索公开网络；问题发送给搜索服务商。USDC 来源预算独立于模型及搜索运营成本。"
+    },
+    "researchEntry.examplesLabel": {
+      "source": "Example questions",
+      "text": "示例问题"
+    },
+    "researchEntry.sqliteExample": {
+      "source": "Compare SQLite WAL and rollback journals",
+      "text": "比较 SQLite WAL 与回滚日志"
+    },
+    "researchEntry.educationExample": {
+      "source": "Research children's educational video ideas",
+      "text": "研究儿童教育视频创意"
+    },
+    "ledgerHistory.inspectWallet": {
+      "source": "Inspect original testnet wallet {wallet}",
+      "text": "查看原测试网钱包 {wallet}"
+    },
+    "ledgerHistory.paymentCounts": {
+      "source": "{cites} cites · {payments} payments",
+      "text": "{cites} 次引用 · {payments} 笔付款"
+    },
+    "ledgerHistory.creatorLeaderboard": {
+      "source": "Testnet creator leaderboard",
+      "text": "测试网创作者排行榜"
+    },
+    "ledgerHistory.downloadCreators": {
+      "source": "Download creator data →",
+      "text": "下载创作者数据 →"
+    },
+    "ledgerHistory.rankingNotice": {
+      "source": "Ranked by settled access and citation payments to each original source and wallet. Historical listings do not establish current publisher control.",
+      "text": "按向各原来源及钱包的已结算访问和引用付款排名。历史来源信息不确立当前出版者控制。"
+    },
+    "ledgerHistory.allEntries": {
+      "source": "Show all {count} source / wallet entries",
+      "text": "显示全部 {count} 个来源 / 钱包条目"
+    },
+    "ledgerHistory.emptyCreators": {
+      "source": "No settled creator payments in this snapshot.",
+      "text": "此快照无已结算创作者付款。"
+    },
+    "ledgerHistory.evidenceLabel": {
+      "source": "Historical Arc testnet evidence",
+      "text": "历史 Arc 测试网证据"
+    },
+    "ledgerHistory.trackRecord": {
+      "source": "The track record",
+      "text": "历史记录"
+    },
+    "ledgerHistory.title": {
+      "source": "Arc testnet history",
+      "text": "Arc 测试网历史"
+    },
+    "ledgerHistory.browseQuestions": {
+      "source": "Browse all old questions →",
+      "text": "浏览全部旧问题 →"
+    },
+    "ledgerHistory.period": {
+      "source": "Recorded reading and creator payments from {from} to {to}. Original testnet evidence is retained alongside current mainnet activity.",
+      "text": "{from} 至 {to} 的阅读及创作者付款记录。原测试网证据与当前主网活动并存保留。"
+    },
+    "ledgerHistory.recordedQuestions": {
+      "source": "Recorded questions",
+      "text": "记录问题"
+    },
+    "ledgerHistory.settledCreatorPayments": {
+      "source": "Settled creator payments",
+      "text": "已结算创作者付款"
+    },
+    "ledgerHistory.settledToCreators": {
+      "source": "Settled to creator wallets",
+      "text": "已结算至创作者钱包"
+    },
+    "ledgerHistory.creatorWallets": {
+      "source": "Creator wallets paid",
+      "text": "已获付款创作者钱包"
+    },
+    "ledgerHistory.historicalNotice": {
+      "source": "Testnet USDC, separate from mainnet. Includes owner-operated activity; these totals do not establish independent customers or event-period growth.",
+      "text": "测试网 USDC，独立于主网。含所有者操作活动；总额不确立独立客户或活动期增长。"
+    },
+    "ledgerHistory.creatorUnavailable": {
+      "source": "Testnet creator leaderboard temporarily unavailable.",
+      "text": "测试网创作者排行榜暂不可用。"
+    },
+    "ledgerHistory.retry": {
+      "source": "Open history to retry.",
+      "text": "打开历史记录以重试。"
+    },
+    "ledgerHistory.inspectTotals": {
+      "source": "Inspect archived totals and channels",
+      "text": "查看归档总额及渠道"
+    },
+    "ledgerHistory.paymentRecordsSuffix": {
+      "source": " payment records",
+      "text": " 付款记录"
+    },
+    "ledgerHistory.serviceReceipts": {
+      "source": "Service receipts (separate from creator payments)",
+      "text": "服务收款（独立于创作者付款）"
+    },
+    "ledgerHistory.settledRecordsSuffix": {
+      "source": " records · settled amount",
+      "text": " 条记录 · 已结算金额"
+    },
+    "ledgerHistory.unknownChannel": {
+      "source": "Unknown channel",
+      "text": "未知渠道"
+    },
+    "ledgerHistory.questionsSuffix": {
+      "source": " questions",
+      "text": " 个问题"
+    },
+    "ledgerHistory.snapshotNotice": {
+      "source": "Snapshot captured {capturedAt}. Settlement states are frozen at capture time. Wallets and channels are recorded identities, not independent people.",
+      "text": "快照捕获于 {capturedAt}。结算状态冻结于捕获时间。钱包和渠道是已记录身份，不是独立人数。"
+    },
+    "ledgerHistory.archiveData": {
+      "source": "Archive data",
+      "text": "档案数据"
+    },
+    "ledgerHistory.eventEvidence": {
+      "source": "Event-period evidence",
+      "text": "活动期证据"
+    },
+    "ledger.title": {
+      "source": "Reading activity & creator rewards",
+      "text": "阅读活动及创作者奖励"
+    },
+    "ledger.introduction": {
+      "source": "Follow the questions, explore the sources, and see what reached creator wallets. Browse the retained testnet track record and current mainnet activity, each with its original payment proof.",
+      "text": "跟踪问题、探索来源及查看创作者钱包所得。浏览保留测试网历史及当前主网活动，各自保留原付款凭证。"
+    },
+    "ledger.sectionsLabel": {
+      "source": "Ledger sections",
+      "text": "账本分区"
+    },
+    "ledger.testnetTrackRecord": {
+      "source": "Testnet track record",
+      "text": "测试网历史"
+    },
+    "ledger.activity": {
+      "source": "{network} activity",
+      "text": "{network} 活动"
+    },
+    "ledger.currentCreators": {
+      "source": "Current creator rewards",
+      "text": "当前创作者奖励"
+    },
+    "ledger.paymentEvidence": {
+      "source": "Payment evidence",
+      "text": "付款证据"
+    },
+    "ledger.currentActivityLabel": {
+      "source": "Current network activity",
+      "text": "当前网络活动"
+    },
+    "ledger.creatorLeaderboard": {
+      "source": "{network} creator leaderboard",
+      "text": "{network} 创作者排行榜"
+    },
+    "jobLedger.title": {
+      "source": "Public job transfer ledger",
+      "text": "公开任务转账账本"
+    },
+    "jobLedger.description": {
+      "source": "Inspect recorded public research transfers, their settlement evidence and a balanced export.",
+      "text": "查看公开研究转账记录、结算证据及平衡导出。"
+    },
+    "jobLedger.introduction": {
+      "source": "Recorded transfers for completed public web dispatches, with customer and Keryx funding shown separately. Questions and customer identities are omitted.",
+      "text": "已完成公开网页研究的转账记录，分别显示客户及 Keryx 资助。不含问题和客户身份。"
+    },
+    "jobLedger.boundary": {
+      "source": "This bounded, partial ledger uses separate read snapshots. It is not complete business books, a cash balance or profit. Private invoices, refunds and full purchase revenue remain unavailable.",
+      "text": "此有限部分账本使用独立读取快照。不是完整业务账目、现金余额或利润。私密发票、退款及完整购买收入仍不可用。"
+    },
+    "jobLedger.network": {
+      "source": "Selected network: {network}",
+      "text": "所选网络：{network}"
+    },
+    "jobLedger.window": {
+      "source": "Payment observation window",
+      "text": "付款观察窗口"
+    },
+    "jobLedger.days": {
+      "source": "Past {count} days",
+      "text": "过去 {count} 天"
+    },
+    "jobLedger.loading": {
+      "source": "Reading public transfer evidence…",
+      "text": "正在读取公开转账证据…"
+    },
+    "jobLedger.unavailable": {
+      "source": "Public transfer evidence is unavailable. The sealed read-only store may be unsupported or unavailable.",
+      "text": "公开转账证据不可用。封存只读存储可能不受支持或不可用。"
+    },
+    "jobLedger.retry": {
+      "source": "Read again",
+      "text": "再次读取"
+    },
+    "jobLedger.exportJson": {
+      "source": "Download JSON ledger",
+      "text": "下载 JSON 账本"
+    },
+    "jobLedger.exportCsv": {
+      "source": "Download balanced CSV",
+      "text": "下载平衡 CSV"
+    },
+    "jobLedger.captured": {
+      "source": "Reads from {startedAt} to {completedAt}. Payment window starts {from}.",
+      "text": "读取从 {startedAt} 至 {completedAt}。付款窗口始于 {from}。"
+    },
+    "jobLedger.limits": {
+      "source": "Up to {runs} recent public-domain runs and {payments} payment rows were inspected. Historical testnet archives are not combined with this selected store.",
+      "text": "检查最多 {runs} 次近期公开域运行及 {payments} 条付款行。历史测试网档案不与所选存储合并。"
+    },
+    "jobLedger.limitReached": {
+      "source": "A scan limit was reached. Coverage remains partial.",
+      "text": "已达扫描限制。覆盖仍不完整。"
+    },
+    "jobLedger.browser": {
+      "source": "Customer browser funding",
+      "text": "客户浏览器资助"
+    },
+    "jobLedger.treasury": {
+      "source": "Keryx treasury sponsorship",
+      "text": "Keryx 金库赞助"
+    },
+    "jobLedger.unknown": {
+      "source": "Unknown funding",
+      "text": "未知资助"
+    },
+    "jobLedger.offline": {
+      "source": "Offline records",
+      "text": "离线记录"
+    },
+    "jobLedger.access": {
+      "source": "Source access transfers",
+      "text": "来源访问转账"
+    },
+    "jobLedger.reward": {
+      "source": "Creator reward transfers",
+      "text": "创作者奖励转账"
+    },
+    "jobLedger.sponsoredFee": {
+      "source": "Sponsored operating-fee transfers",
+      "text": "赞助运营费转账"
+    },
+    "jobLedger.fundingBoundary": {
+      "source": "Browser-funded transfers are not Operator expenses. Sponsored fees are not outside-customer revenue. Outside/team customer attribution is unknown.",
+      "text": "浏览器资助转账不是 Operator 开支。赞助费用不是外部客户收入。外部/团队客户归属未知。"
+    },
+    "jobLedger.position": {
+      "source": "Cash position and obligations: unknown. Advisory safe spending: {amount}.",
+      "text": "现金状况及义务：未知。建议安全支出：{amount}。"
+    },
+    "jobLedger.profit": {
+      "source": "Purchase price, provider invoices, refunds and margin: unavailable.",
+      "text": "购买价格、服务商发票、退款及利润率：不可用。"
+    },
+    "jobLedger.balance": {
+      "source": "Transfer-control trial balance: debit {debit}, credit {credit}.",
+      "text": "转账控制试算平衡：借方 {debit}，贷方 {credit}。"
+    },
+    "jobLedger.accounts": {
+      "source": "Debit increases an observed recipient-role transfer account; credit decreases an observed sender-funding-role account. These are transfer control accounts, not revenue or expense accounts.",
+      "text": "借方增加观察到的接收者角色转账账户；贷方减少观察到的发送方资助角色账户。这是转账控制账户，不是收入或费用账户。"
+    },
+    "jobLedger.jobs": {
+      "source": "Observed public jobs",
+      "text": "观察到的公开任务"
+    },
+    "jobLedger.noJobs": {
+      "source": "No eligible public web dispatches were observed in this bounded slice.",
+      "text": "此有限片段未观察到合格公开网页研究。"
+    },
+    "jobLedger.job": {
+      "source": "Dispatch {id}",
+      "text": "研究 {id}"
+    },
+    "jobLedger.created": {
+      "source": "Completed {createdAt}",
+      "text": "完成于 {createdAt}"
+    },
+    "jobLedger.coverage": {
+      "source": "Leg coverage: {coverage}. Finish-time expected recorded legs: {count}.",
+      "text": "环节覆盖：{coverage}。完成时预期记录环节：{count}。"
+    },
+    "jobLedger.coverageMatched": {
+      "source": "matched finish-time count",
+      "text": "匹配完成时计数"
+    },
+    "jobLedger.coverageIncomplete": {
+      "source": "incomplete",
+      "text": "不完整"
+    },
+    "jobLedger.coverageUnknown": {
+      "source": "unknown",
+      "text": "未知"
+    },
+    "jobLedger.receipt": {
+      "source": "Public settlement receipt",
+      "text": "公开结算收据"
+    },
+    "jobLedger.decisions": {
+      "source": "Recorded public decisions",
+      "text": "已记录公开决策"
+    },
+    "jobLedger.source": {
+      "source": "Source identity",
+      "text": "来源身份"
+    },
+    "jobLedger.kind": {
+      "source": "Transfer kind",
+      "text": "转账类型"
+    },
+    "jobLedger.amount": {
+      "source": "Exact amount",
+      "text": "确切金额"
+    },
+    "jobLedger.state": {
+      "source": "State",
+      "text": "状态"
+    },
+    "jobLedger.reference": {
+      "source": "Settlement reference",
+      "text": "结算参考"
+    },
+    "jobLedger.settled": {
+      "source": "Settled record with retained evidence",
+      "text": "有保留证据的已结算记录"
+    },
+    "jobLedger.pending": {
+      "source": "Pending — excluded",
+      "text": "待处理 — 排除"
+    },
+    "jobLedger.failed": {
+      "source": "Failed — excluded",
+      "text": "失败 — 排除"
+    },
+    "jobLedger.simulated": {
+      "source": "Simulated — excluded",
+      "text": "模拟 — 排除"
+    },
+    "jobLedger.uncertain": {
+      "source": "Uncertain — excluded",
+      "text": "不确定 — 排除"
+    },
+    "jobLedger.refusal": {
+      "source": "Evidence gate: {reason}",
+      "text": "证据门槛：{reason}"
+    },
+    "jobLedger.unknownValue": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "jobLedger.referenceBoundary": {
+      "source": "Transfer references are not automatically Arc transaction hashes. The export checksum detects changes; it is not an authenticity signature or independent settlement confirmation.",
+      "text": "转账参考不自动等于 Arc 交易哈希。导出校验和检测变化，不是真实性签名或独立结算确认。"
+    },
+    "jobLedger.back": {
+      "source": "Operator overview",
+      "text": "Operator 概览"
+    },
+    "privateProfile.metadataTitle": {
+      "source": "My private profile — Keryx",
+      "text": "我的私密资料 — Keryx"
+    },
+    "privateProfile.title": {
+      "source": "My private profile",
+      "text": "我的私密资料"
+    },
+    "privateProfile.privacyBoundary": {
+      "source": "Only you and keys you explicitly authorize can access this profile. These fields do not verify your identity or change payment ownership.",
+      "text": "仅您及明确授权的密钥可访问此资料。字段不核验身份，也不更改付款所有权。"
+    },
+    "privateProfile.signInInstruction": {
+      "source": "{signInLink} to edit your private profile.",
+      "text": "{signInLink}以编辑私密资料。"
+    },
+    "privateProfile.signedWallet": {
+      "source": "Signed wallet: {wallet}",
+      "text": "签名钱包：{wallet}"
+    },
+    "privateProfile.firstSeenAndDispatches": {
+      "source": "First seen: {firstSeen} · Attributed dispatches: {questions}",
+      "text": "首次出现：{firstSeen} · 归属研究：{questions}"
+    },
+    "privateProfile.surfacesRecorded": {
+      "source": "Surfaces recorded: {surfaces}",
+      "text": "记录界面：{surfaces}"
+    },
+    "privateProfile.topicsRecorded": {
+      "source": "Recorded topics: {topics}",
+      "text": "记录主题：{topics}"
+    },
+    "privateProfile.creatorsPaid": {
+      "source": "Creator wallets with recorded settled payments in your runs ({network}): {creators}",
+      "text": "您的运行中有已结算付款记录的创作者钱包（{network}）：{creators}"
+    },
+    "privateProfile.checkingSignIn": {
+      "source": "Checking your sign-in…",
+      "text": "正在检查您的登录状态…"
+    },
+    "privateProfile.signIn": {
+      "source": "Sign in with your wallet",
+      "text": "使用钱包登录"
+    },
+    "privateProfile.accessUnavailable": {
+      "source": "Private profile access is unavailable.",
+      "text": "私密资料访问不可用。"
+    },
+    "privateProfile.ownerMismatch": {
+      "source": "Profile owner mismatch.",
+      "text": "资料所有者不匹配。"
+    },
+    "privateProfile.unavailable": {
+      "source": "Profile unavailable.",
+      "text": "个人资料不可用。"
+    },
+    "privateProfile.checkFields": {
+      "source": "Check your profile.",
+      "text": "检查资料。"
+    },
+    "privateProfile.changeFailed": {
+      "source": "Profile could not be changed.",
+      "text": "无法更改资料。"
+    },
+    "privateProfile.deleted": {
+      "source": "Profile fields deleted. Your research and payment history are retained.",
+      "text": "资料字段已删除。研究及付款历史保留。"
+    },
+    "privateProfile.saved": {
+      "source": "Private profile saved.",
+      "text": "私密资料已保存。"
+    },
+    "privateProfile.storeUnavailable": {
+      "source": "Profile fields are available after this deployment enables the private profile store.",
+      "text": "此部署启用私密资料存储后字段可用。"
+    },
+    "privateProfile.displayName": {
+      "source": "Display name",
+      "text": "显示名称"
+    },
+    "privateProfile.handle": {
+      "source": "Handle",
+      "text": "用户名"
+    },
+    "privateProfile.bio": {
+      "source": "Who I am",
+      "text": "我是谁"
+    },
+    "privateProfile.purpose": {
+      "source": "What brings me to Keryx",
+      "text": "我为何来到 Keryx"
+    },
+    "privateProfile.handleRules": {
+      "source": "Handles use 3–32 letters, digits or underscores, begin with a letter, and are case-insensitive. Reserved names are unavailable.",
+      "text": "用户名使用 3–32 个字母、数字或下划线，以字母开头，不区分大小写。保留名称不可用。"
+    },
+    "privateProfile.linksLegend": {
+      "source": "Links (optional HTTPS profile URLs)",
+      "text": "链接（可选 HTTPS 资料 URL）"
+    },
+    "privateProfile.website": {
+      "source": "Personal website",
+      "text": "个人网站"
+    },
+    "privateProfile.saving": {
+      "source": "Saving…",
+      "text": "正在保存…"
+    },
+    "privateProfile.save": {
+      "source": "Save private profile",
+      "text": "保存私密资料"
+    },
+    "privateProfile.deleteConfirmation": {
+      "source": "Delete your private profile fields and links? Research and payment history will remain.",
+      "text": "删除私密资料字段及链接？研究和付款历史仍保留。"
+    },
+    "privateProfile.delete": {
+      "source": "Delete profile fields",
+      "text": "删除资料字段"
+    },
+    "privateProfile.activity": {
+      "source": "Recorded activity",
+      "text": "记录活动"
+    },
+    "privateProfile.unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "privateProfile.noneRecorded": {
+      "source": "None recorded",
+      "text": "无记录"
+    },
+    "privateProfile.unavailableActivity": {
+      "source": "Unavailable",
+      "text": "不可用"
+    },
+    "privateProfile.activityBoundary": {
+      "source": "Derived from dispatches attributed to this wallet in this store, including recorded simulations in dispatch counts. Attribution does not establish who funded a run. Anonymous and historical archive activity are excluded. Up to 12 recorded topics are shown. Creator counts require recorded settlement evidence; they do not independently reconcile Circle.",
+      "text": "源于此存储中归属此钱包的研究，研究计数含记录模拟。归属不确立谁资助运行。排除匿名及历史档案活动。显示最多 12 个记录主题。创作者计数需记录结算证据；不独立与 Circle 对账。"
+    },
+    "walletMenu.welcomeBack": {
+      "source": "Welcome back",
+      "text": "欢迎回来"
+    },
+    "walletMenu.wallet": {
+      "source": "Wallet",
+      "text": "钱包"
+    },
+    "walletMenu.addressCopied": {
+      "source": "Address copied",
+      "text": "地址已复制"
+    },
+    "walletMenu.copyAddress": {
+      "source": " Copy address",
+      "text": " 复制地址"
+    },
+    "walletMenu.ledger": {
+      "source": " Ledger",
+      "text": " 账本"
+    },
+    "walletMenu.mySources": {
+      "source": " My sources",
+      "text": " 我的来源"
+    },
+    "walletMenu.privateProfile": {
+      "source": " Private profile",
+      "text": " 私密资料"
+    },
+    "walletMenu.myDispatches": {
+      "source": " My dispatches",
+      "text": " 我的研究"
+    },
+    "walletMenu.paidJobs": {
+      "source": " Paid jobs",
+      "text": " 付费任务"
+    },
+    "walletMenu.issueToll": {
+      "source": " Issue a toll",
+      "text": " 设置阅读费"
+    },
+    "walletMenu.manageSessions": {
+      "source": " Manage sessions",
+      "text": " 管理会话"
+    },
+    "walletMenu.signing": {
+      "source": "Sign…",
+      "text": "签名…"
+    },
+    "walletMenu.signInWithWallet": {
+      "source": " Sign in with this wallet",
+      "text": " 使用此钱包登录"
+    },
+    "walletMenu.differentWallet": {
+      "source": " Use a different wallet",
+      "text": " 使用其他钱包"
+    },
+    "walletMenu.connectWallet": {
+      "source": "Connect Wallet",
+      "text": "连接钱包"
+    },
+    "walletMenu.chooseWallet": {
+      "source": "Choose a wallet",
+      "text": "选择钱包"
+    },
+    "walletMenu.connectBoundary": {
+      "source": "Connecting creates your account & signs you in.",
+      "text": "连接会创建账户并登录。"
+    },
+    "walletMenu.signedIn": {
+      "source": "Signed in",
+      "text": "已登录"
+    },
+    "walletMenu.signedInAs": {
+      "source": "Signed in as {role}",
+      "text": "已以 {role} 登录"
+    },
+    "walletPicker.connectFailed": {
+      "source": "Could not connect",
+      "text": "无法连接"
+    },
+    "walletPicker.loading": {
+      "source": "Loading wallet options…",
+      "text": "正在加载钱包选项…"
+    },
+    "walletPicker.notDetected": {
+      "source": "No browser wallet detected.",
+      "text": "未检测到浏览器钱包。"
+    },
+    "walletPicker.guidance": {
+      "source": "On mobile: open keryx.cc inside your wallet app's browser (MetaMask, Rabby…). On desktop: install MetaMask or Rabby, then refresh.",
+      "text": "移动端：在钱包应用浏览器（MetaMask、Rabby…）打开 keryx.cc。桌面端：安装 MetaMask 或 Rabby 后刷新。"
+    },
+    "walletPicker.mobileQr": {
+      "source": "mobile · QR",
+      "text": "移动端 · 二维码"
+    },
+    "walletPicker.qrMobile": {
+      "source": "QR · mobile",
+      "text": "二维码 · 移动端"
+    },
+    "googleWallet.startFailed": {
+      "source": "Google wallet sign-in could not start. Please try again.",
+      "text": "无法开始 Google 钱包登录。请重试。"
+    },
+    "googleWallet.reconnect": {
+      "source": "Reconnect Google wallet",
+      "text": "重新连接 Google 钱包"
+    },
+    "googleWallet.continue": {
+      "source": "Continue with Google",
+      "text": "通过 Google 继续"
+    },
+    "googleWallet.connecting": {
+      "source": "Connecting your Google wallet…",
+      "text": "正在连接 Google 钱包…"
+    },
+    "googleWallet.connected": {
+      "source": "Google wallet connected. Choose a research budget to continue.",
+      "text": "Google 钱包已连接。选择研究预算继续。"
+    },
+    "googleWallet.completeFailed": {
+      "source": "Google sign-in could not complete. Please try again.",
+      "text": "Google 登录未完成。请重试。"
+    },
+    "sessionBudget.remaining": {
+      "source": "{budgetKind} — {amount} USDC remaining",
+      "text": "{budgetKind} — 剩余 {amount} USDC"
+    },
+    "sessionBudget.used": {
+      "source": "{amount} USDC {usageKind}",
+      "text": "{amount} USDC {usageKind}"
+    },
+    "sessionBudget.ceiling": {
+      "source": "{amount} USDC ceiling",
+      "text": "{amount} USDC 上限"
+    },
+    "sessionBudget.questionCap": {
+      "source": "Maximum per question: {amount} USDC.{gap}Shared across your conversations.",
+      "text": "每问题最高：{amount} USDC。{gap}跨对话共享。"
+    },
+    "sessionBudget.expired": {
+      "source": "expired",
+      "term": "expired"
+    },
+    "sessionBudget.underAMinute": {
+      "source": "under a minute",
+      "text": "不到一分钟"
+    },
+    "sessionBudget.researchBudget": {
+      "source": "Research budget",
+      "text": "研究预算"
+    },
+    "sessionBudget.sessionActive": {
+      "source": "Session active",
+      "text": "会话有效"
+    },
+    "sessionBudget.addToBudget": {
+      "source": "Add to budget",
+      "text": "增加预算"
+    },
+    "sessionBudget.stopSpending": {
+      "source": "Stop spending",
+      "text": "停止支出"
+    },
+    "sessionBudget.usedOrHeld": {
+      "source": "used or held",
+      "text": "已用或预留"
+    },
+    "sessionBudget.spent": {
+      "source": "spent",
+      "text": "已花费"
+    },
+    "sessionBudget.renewing": {
+      "source": "Renewing…",
+      "text": "正在续期…"
+    },
+    "sessionBudget.renewDuration": {
+      "source": "Renew duration",
+      "text": "续期时长"
+    },
+    "sessionBudget.extendSession": {
+      "source": "Extend session ▸",
+      "text": "延长会话 ▸"
+    },
+    "sessionBudget.renewalFailed": {
+      "source": "Renewal did not complete. Your saved budget and prior payments remain recorded.",
+      "text": "续期未完成。保存预算及先前付款仍保留记录。"
+    },
+    "sessionBudget.pendingBoundary": {
+      "source": "Pending payments count against the remaining budget. Renewal keeps the existing ceiling. Stopping blocks new payments; funds stay in Gateway for your withdrawal.",
+      "text": "待处理付款占用剩余预算。续期保留现有上限。停止会阻止新付款；资金留在 Gateway 供提现。"
+    },
+    "sessionBudget.addLabel": {
+      "source": "Add (USDC)",
+      "text": "增加（USDC）"
+    },
+    "sessionBudget.reviewIncrease": {
+      "source": "Review increase",
+      "text": "审阅增加金额"
+    },
+    "sessionBudget.mainnetIncreaseBoundary": {
+      "source": "Review funding and a new budget confirmation before the ceiling increases. Your per-question maximum stays the same. Native gas is extra.",
+      "text": "上限增加前审阅注资及新预算确认。每问题最高金额不变。原生 gas 另付。"
+    },
+    "sessionBudget.testnetIncreaseBoundary": {
+      "source": "Deposit into your existing testnet session and confirm its new allowance.",
+      "text": "存入现有测试网会话并确认新额度。"
+    },
+    "sessionBudget.minutes": {
+      "source": "{minutes} min",
+      "text": "{minutes} 分钟"
+    },
+    "sessionBudget.hoursMinutes": {
+      "source": "{hours}h {minutes}m",
+      "text": "{hours} 小时 {minutes} 分钟"
+    },
+    "sessionBudget.daysHours": {
+      "source": "{days}d {hours}h",
+      "text": "{days} 天 {hours} 小时"
+    },
+    "sessionBudget.expiresIn": {
+      "source": "expires in {duration}",
+      "text": "{duration} 后到期"
+    },
+    "sessionBudget.expiry": {
+      "source": "Budget {state}",
+      "text": "预算{state}"
+    },
+    "sessionCashout.preparation": {
+      "source": "Original amount {amount} USDC; fee at most {fee} USDC. Recipient {recipient}. Finite burn height {height}.",
+      "text": "原金额 {amount} USDC；费用最多 {fee} USDC。接收者 {recipient}。有限销毁区块高度 {height}。"
+    },
+    "sessionCashout.amountPrecision": {
+      "source": "Enter USDC with at most six decimals",
+      "text": "输入最多六位小数的 USDC 金额"
+    },
+    "sessionCashout.positiveAmount": {
+      "source": "Choose a supported positive amount",
+      "text": "选择受支持的正金额"
+    },
+    "sessionCashout.signInOriginalOwner": {
+      "source": "Sign in as the original owner to recover cashout",
+      "text": "以原所有者身份登录恢复提现"
+    },
+    "sessionCashout.connectOriginalOwner": {
+      "source": "Connect the original owner wallet",
+      "text": "连接原所有者钱包"
+    },
+    "sessionCashout.ownerChanged": {
+      "source": "Cashout owner changed",
+      "text": "提现所有者已更改"
+    },
+    "sessionCashout.unavailable": {
+      "source": "Original cashout unavailable",
+      "text": "原提现不可用"
+    },
+    "sessionCashout.signerMismatch": {
+      "source": "Original retained signer differs",
+      "text": "原保留签名者不同"
+    },
+    "sessionCashout.consentUnavailable": {
+      "source": "Retained owner consent reference unavailable",
+      "text": "保留所有者同意参考不可用"
+    },
+    "sessionCashout.identityMismatch": {
+      "source": "Original cashout identity differs",
+      "text": "原提现身份不同"
+    },
+    "sessionCashout.prepared": {
+      "source": "prepared",
+      "text": "已准备"
+    },
+    "sessionCashout.reviewExceeded": {
+      "source": "Prepared amount or fee exceeds your review. Cancel this unsigned original before preparing again.",
+      "text": "准备金额或费用超出审阅值。再次准备前取消此未签名原请求。"
+    },
+    "sessionCashout.readFirst": {
+      "source": "Read the original cashout first",
+      "text": "先读取原提现"
+    },
+    "sessionCashout.attemptExists": {
+      "source": "An original transfer attempt exists; use recovery",
+      "text": "存在原转账尝试；请使用恢复"
+    },
+    "sessionCashout.transferSubmitted": {
+      "source": "transfer submitted; original recovery required",
+      "text": "转账已提交；需原请求恢复"
+    },
+    "sessionCashout.completedWithFinality": {
+      "source": "completed with original mainnet mint finality",
+      "text": "原主网铸币最终性确认后完成"
+    },
+    "sessionCashout.cancelledBeforeExposure": {
+      "source": "cancelled before exposure; original ID retained",
+      "text": "暴露前已取消；原 ID 保留"
+    },
+    "sessionCashout.interruptedSigningCancelled": {
+      "source": "interrupted signing cancelled; original retained. Prepare a new withdrawal or renew your Session to resume research.",
+      "text": "中断签名已取消；原请求保留。准备新提现或续期会话以恢复研究。"
+    },
+    "sessionCashout.walletUnavailable": {
+      "source": "Original cashout and owner wallet unavailable",
+      "text": "原提现及所有者钱包不可用"
+    },
+    "sessionCashout.mintSubmitted": {
+      "source": "owner mint submitted; finality pending",
+      "text": "所有者铸币已提交；最终性待确认"
+    },
+    "sessionCashout.enterMintHash": {
+      "source": "Enter the original owner mint transaction hash",
+      "text": "输入原始所有者铸造交易哈希"
+    },
+    "sessionCashout.withdraw": {
+      "source": "Withdraw retained session funds",
+      "text": "提取保留会话资金"
+    },
+    "sessionCashout.custodyBoundary": {
+      "source": "Recipient is your original owner wallet. Research pauses while a withdrawal is unresolved. Signed payments and uncertain transfers remain held; gas is paid separately by your owner wallet. Logout and grant expiry retain this browser's recovery key.",
+      "text": "接收者为原所有者钱包。提现未解决期间研究暂停。签名付款及不确定转账仍预留；所有者钱包另付 gas。退出及授权过期保留此浏览器恢复密钥。"
+    },
+    "sessionCashout.recoveryBoundary": {
+      "source": "If signing was interrupted before a burn signature was saved, cancel interrupted signing to unlock recovery. This also works after the original expires. A saved signature or transfer attempt requires original recovery.",
+      "text": "若保存销毁签名前签名中断，取消中断签名以解锁恢复。原请求过期后也适用。保存签名或转账尝试需要原请求恢复。"
+    },
+    "sessionCashout.amountLabel": {
+      "source": "Amount USDC ",
+      "text": "金额 USDC "
+    },
+    "sessionCashout.amountAria": {
+      "source": "Session withdrawal amount",
+      "text": "会话提现金额"
+    },
+    "sessionCashout.feeLabel": {
+      "source": "Maximum fee USDC ",
+      "text": "最高费用 USDC "
+    },
+    "sessionCashout.feeAria": {
+      "source": "Session withdrawal maximum fee",
+      "text": "会话提现最高费用"
+    },
+    "sessionCashout.prepare": {
+      "source": "Prepare reviewed amount and fee ceiling",
+      "text": "准备已审阅金额及费用上限"
+    },
+    "sessionCashout.originals": {
+      "source": "Retained originals ",
+      "text": "保留原请求 "
+    },
+    "sessionCashout.originalsAria": {
+      "source": "Retained session cashouts",
+      "text": "保留会话提现"
+    },
+    "sessionCashout.chooseOriginal": {
+      "source": "Choose an original",
+      "text": "选择原始记录"
+    },
+    "sessionCashout.signingCancellationPending": {
+      "source": "signing cancellation pending",
+      "text": "签名取消待处理"
+    },
+    "sessionCashout.signingCancelled": {
+      "source": "signing cancelled",
+      "text": "签名已取消"
+    },
+    "sessionCashout.completed": {
+      "source": "completed",
+      "text": "已完成"
+    },
+    "sessionCashout.cancelled": {
+      "source": "cancelled",
+      "text": "已取消"
+    },
+    "sessionCashout.recovery": {
+      "source": "recovery",
+      "text": "恢复"
+    },
+    "sessionCashout.requestIdLabel": {
+      "source": "Original request ID ",
+      "text": "原请求 ID "
+    },
+    "sessionCashout.requestIdAria": {
+      "source": "Original session withdrawal request",
+      "text": "原会话提现请求"
+    },
+    "sessionCashout.signBurn": {
+      "source": "Sign and submit original burn",
+      "text": "签署并提交原销毁"
+    },
+    "sessionCashout.readRecovery": {
+      "source": "Read original recovery",
+      "text": "读取原恢复数据"
+    },
+    "sessionCashout.cancelUnexposed": {
+      "source": "Cancel never-exposed preparation",
+      "text": "取消从未暴露的准备"
+    },
+    "sessionCashout.cancelInterrupted": {
+      "source": "Cancel interrupted signing",
+      "text": "取消中断签名"
+    },
+    "sessionCashout.reviewMint": {
+      "source": "Review owner wallet mint and gas",
+      "text": "审阅所有者钱包铸币及 gas"
+    },
+    "sessionCashout.mintHashLabel": {
+      "source": "Original owner mint hash ",
+      "text": "原所有者铸币哈希 "
+    },
+    "sessionCashout.mintHashAria": {
+      "source": "Original session mint hash",
+      "text": "原会话铸币哈希"
+    },
+    "sessionCashout.verifyMint": {
+      "source": "Verify original mint finality",
+      "text": "核验原铸币最终性"
+    },
+    "withdrawalAccount.checkingSignIn": {
+      "source": "Checking sign-in…",
+      "text": "正在检查登录状态…"
+    },
+    "withdrawalAccount.signIn": {
+      "source": "Sign in to manage withdrawals",
+      "text": "登录管理提现"
+    },
+    "withdrawalAccount.connectInstruction": {
+      "source": "Connect the wallet you signed in with to review or sign a withdrawal.",
+      "text": "连接登录所用钱包以审阅或签署提现。"
+    },
+    "withdrawalAccount.connect": {
+      "source": "Connect or change account",
+      "text": "连接或更改账户"
+    },
+    "apiKeys.rawKeyWarning": {
+      "source": "This key will {neverAgain}. Store it in your secrets manager. If it is compromised, revoke it immediately from this dashboard.",
+      "text": "此密钥将{neverAgain}。保存在机密管理器。若泄露，立即从此仪表板撤销。"
+    },
+    "apiKeys.createdAt": {
+      "source": "Created {date}",
+      "text": "创建于 {date}"
+    },
+    "apiKeys.lastUsedAt": {
+      "source": "Last used {date}",
+      "text": "上次使用 {date}"
+    },
+    "apiKeys.introduction": {
+      "source": "Wallet-issued API keys for programmatic access to{endpointGap}{endpoint} and explicitly scoped account operations. Research still requires x402 {signature} per call.",
+      "text": "钱包签发 API 密钥用于程序访问{endpointGap}{endpoint}及明确限定范围的账户操作。研究仍需每次调用提供 x402 {signature}。"
+    },
+    "apiKeys.compatibilityInstruction": {
+      "source": "Any OpenAI SDK or tool works — set the base URL to{urlGap}{url} and model{modelGap}{model}. Free to try with no key; pass a{keyGap}{key} key as the Bearer token for wallet-based limits. All keys for one wallet share 10 sponsored calls per minute across chat and Remote MCP; caller IP and shared service limits also apply. Creating more keys adds no allowance. Every cited creator is paid in USDC on Arc. With{streamGap}{stream} the agent's live buy/skip/trust reasoning arrives as {reasoning}.",
+      "text": "任何 OpenAI SDK 或工具均可使用：设置基础 URL 为{urlGap}{url}，模型为{modelGap}{model}。无需密钥即可免费尝试；以{keyGap}{key}密钥作为 Bearer 令牌获得钱包限额。同一钱包所有密钥在聊天和远程 MCP 间共享每分钟 10 次赞助调用；还受调用者 IP 和共享服务限制。创建更多密钥不增加额度。每个被引用创作者在 Arc 上以 USDC 获付款。使用{streamGap}{stream}时，代理实时购买/跳过/信任推理以 {reasoning} 到达。"
+    },
+    "apiKeys.exportInstruction": {
+      "source": "Every payout across every source your wallet owns, in one ledger — CSV for a spreadsheet, JSON for a script. Signed-in browsers can download it directly; scripts send a {key} key. Deactivated sources are included: retiring a feed does not erase what it earned.",
+      "text": "您的钱包拥有的每个来源的所有付款汇总于一份账本：CSV 用于电子表格，JSON 用于脚本。登录浏览器可直接下载；脚本发送 {key} 密钥。含停用来源：停用订阅源不抹除收益。"
+    },
+    "apiKeys.noCalls": {
+      "source": "No calls yet.",
+      "text": "尚无调用。"
+    },
+    "apiKeys.copyNow": {
+      "source": "— Copy your key now —",
+      "text": "— 立即复制密钥 —"
+    },
+    "apiKeys.neverShownAgain": {
+      "source": "never be shown again",
+      "text": "不再显示"
+    },
+    "apiKeys.copyAria": {
+      "source": "Copy to clipboard",
+      "text": "复制到剪贴板"
+    },
+    "apiKeys.copied": {
+      "source": "Copied!",
+      "text": "已复制！"
+    },
+    "apiKeys.authorityBoundary": {
+      "source": "x402 payment-signature is still required on every /api/agent/ask call. Profile/account scopes do not grant payment or research authority.",
+      "text": "每次 /api/agent/ask 调用仍需 x402 payment-signature。资料/账户范围不授予付款或研究权限。"
+    },
+    "apiKeys.copiedAcknowledgement": {
+      "source": "I have copied my key",
+      "text": "我已复制密钥"
+    },
+    "apiKeys.revoked": {
+      "source": "revoked",
+      "text": "已撤销"
+    },
+    "apiKeys.scopes": {
+      "source": "Scopes",
+      "text": "范围"
+    },
+    "apiKeys.revokeAria": {
+      "source": "Revoke key",
+      "text": "撤销密钥"
+    },
+    "apiKeys.recentCalls": {
+      "source": "Calls (last 14 days)",
+      "text": "调用（最近 14 天）"
+    },
+    "apiKeys.signIn": {
+      "source": "Sign in with your wallet to manage API keys.",
+      "text": "用钱包登录管理 API 密钥。"
+    },
+    "apiKeys.revokeConfirmation": {
+      "source": "Revoke this key? All callers using it will get 401 immediately.",
+      "text": "撤销此密钥？所有使用它的调用者将立即收到 401。"
+    },
+    "apiKeys.title": {
+      "source": "Developer Portal",
+      "text": "开发者门户"
+    },
+    "apiKeys.apiReference": {
+      "source": "API Reference →",
+      "text": "API 参考 →"
+    },
+    "apiKeys.openApi": {
+      "source": "OpenAPI JSON →",
+      "text": "OpenAPI JSON →"
+    },
+    "apiKeys.compatibilityTitle": {
+      "source": "OpenAI-compatible endpoint",
+      "text": "OpenAI 兼容端点"
+    },
+    "apiKeys.playground": {
+      "source": "Try it live in the playground →",
+      "text": "在 playground 实时尝试 →"
+    },
+    "apiKeys.exportTitle": {
+      "source": "Earnings audit export",
+      "text": "收益审计导出"
+    },
+    "apiKeys.downloadLedger": {
+      "source": "Download my ledger (CSV) →",
+      "text": "下载我的账本（CSV）→"
+    },
+    "apiKeys.issue": {
+      "source": " Issue new key",
+      "text": " 签发新密钥"
+    },
+    "apiKeys.labelPlaceholder": {
+      "source": "Label (optional)",
+      "text": "标签（可选）"
+    },
+    "apiKeys.minting": {
+      "source": "Minting…",
+      "text": "正在签发…"
+    },
+    "apiKeys.mint": {
+      "source": "Mint",
+      "text": "签发"
+    },
+    "apiKeys.askScope": {
+      "source": "(run dispatches)",
+      "text": "（运行研究）"
+    },
+    "apiKeys.exportScope": {
+      "source": "(read your earnings)",
+      "text": "（读取收益）"
+    },
+    "apiKeys.profileReadScope": {
+      "source": "(read private profile + activity)",
+      "text": "（读取私密资料及活动）"
+    },
+    "apiKeys.profileWriteScope": {
+      "source": "(replace private profile fields)",
+      "text": "（替换私密资料字段）"
+    },
+    "apiKeys.loading": {
+      "source": "Loading keys…",
+      "text": "正在加载密钥…"
+    },
+    "apiKeys.empty": {
+      "source": "No API keys yet. Issue one above.",
+      "text": "尚无 API 密钥。在上方签发。"
+    },
+    "apiKeys.callsOnDay.one": {
+      "source": "{day}: {count} calls",
+      "text": "{day}：{count} 次调用"
+    },
+    "apiKeys.callsOnDay.other": {
+      "source": "{day}: {count} calls",
+      "text": "{day}：{count} 次调用"
+    },
+    "apiKeys.pinnedSources.one": {
+      "source": " · {count} pinned source(s)",
+      "text": " · {count} 个固定来源"
+    },
+    "apiKeys.pinnedSources.other": {
+      "source": " · {count} pinned source(s)",
+      "text": " · {count} 个固定来源"
+    },
+    "apiKeys.httpError": {
+      "source": "HTTP {status}",
+      "text": "HTTP {status}"
+    }
+  }
+}

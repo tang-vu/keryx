@@ -1,0 +1,2276 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/reports.ts",
+  "sourceSha256": "3ef9c9df446f2d5ea84d314e233d4cdf1c0d8dd5d98c609409b983aec1206408",
+  "entries": {
+    "reportActions.copy": {
+      "source": "Copy report",
+      "text": "Sao chép báo cáo"
+    },
+    "reportActions.download": {
+      "source": "Download report",
+      "text": "Tải báo cáo"
+    },
+    "reportActions.openSaved": {
+      "source": "Open saved report",
+      "text": "Mở báo cáo đã lưu"
+    },
+    "citationExport.title": {
+      "source": "Reference export",
+      "text": "Xuất tài liệu tham khảo"
+    },
+    "citationExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "Tải BibTeX"
+    },
+    "citationExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "Tải CSL-JSON"
+    },
+    "citationExport.ris": {
+      "source": "Download RIS (Zotero)",
+      "text": "Tải RIS (Zotero)"
+    },
+    "bibliographyExport.label": {
+      "source": "Bibliography exports",
+      "text": "Xuất danh mục tài liệu tham khảo"
+    },
+    "bibliographyExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "Tải BibTeX"
+    },
+    "bibliographyExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "Tải CSL-JSON"
+    },
+    "bibliographyExport.ris": {
+      "source": "Download RIS",
+      "text": "Tải RIS"
+    },
+    "portableReceipt.view": {
+      "source": "View JSON ↗",
+      "text": "Xem JSON ↗"
+    },
+    "portableReceipt.download": {
+      "source": "Download",
+      "text": "Tải xuống"
+    },
+    "evidenceMatrix.download": {
+      "source": "Download evidence CSV",
+      "text": "Tải CSV bằng chứng"
+    },
+    "evidenceMatrix.status": {
+      "source": "Inspection status",
+      "text": "Trạng thái kiểm tra"
+    },
+    "evidenceMatrix.notRecorded": {
+      "source": "Not recorded",
+      "text": "Chưa ghi nhận"
+    },
+    "evidenceMatrix.noExcerpt": {
+      "source": "No excerpt recorded",
+      "text": "Chưa ghi nhận trích đoạn"
+    },
+    "evidenceMatrix.published": {
+      "source": "Published: {date}",
+      "text": "Xuất bản: {date}"
+    },
+    "answerDelta.label": {
+      "source": "Re-ask evidence delta",
+      "text": "Thay đổi bằng chứng khi hỏi lại"
+    },
+    "answerDelta.citations": {
+      "source": "Citations",
+      "text": "Trích dẫn"
+    },
+    "answerDelta.coverage": {
+      "source": "Evidence coverage",
+      "text": "Mức độ bao phủ bằng chứng"
+    },
+    "answerDelta.notSampled": {
+      "source": "Not sampled",
+      "text": "Chưa lấy mẫu"
+    },
+    "answerDelta.confidence": {
+      "source": "Confidence",
+      "text": "Độ tin cậy"
+    },
+    "answerDelta.settled": {
+      "source": "Settled to creators",
+      "text": "Đã quyết toán cho tác giả"
+    },
+    "answerDelta.notProvable": {
+      "source": "Not provable",
+      "text": "Không thể chứng minh"
+    },
+    "answerDelta.added": {
+      "source": "Added",
+      "text": "Đã thêm"
+    },
+    "answerDelta.removed": {
+      "source": "Removed",
+      "text": "Đã xóa"
+    },
+    "answerDelta.changedAssets": {
+      "source": "Changed assets",
+      "text": "Tài nguyên đã thay đổi"
+    },
+    "answerDelta.verifiedSpans": {
+      "source": "Verified spans",
+      "text": "Đoạn đã xác minh"
+    },
+    "answerDelta.none": {
+      "source": "none",
+      "text": "không có"
+    },
+    "answerDelta.improved.one": {
+      "source": "{count} improved",
+      "text": "{count} cải thiện"
+    },
+    "answerDelta.regressed.one": {
+      "source": "{count} regressed",
+      "text": "{count} giảm chất lượng"
+    },
+    "answerDelta.improved.other": {
+      "source": "{count} improved",
+      "text": "{count} cải thiện"
+    },
+    "answerDelta.regressed.other": {
+      "source": "{count} regressed",
+      "text": "{count} giảm chất lượng"
+    },
+    "reportMode.live": {
+      "source": "live on {network}",
+      "text": "đang chạy trên {network}"
+    },
+    "reportConfidence.sourceGrounding": {
+      "source": "source grounding",
+      "text": "căn cứ từ nguồn"
+    },
+    "reportConfidence.confidence": {
+      "source": "confidence",
+      "text": "độ tin cậy"
+    },
+    "reportCitation.label": {
+      "source": "Citation {marker}",
+      "text": "Trích dẫn {marker}"
+    },
+    "relatedReports.label": {
+      "source": "Related dispatches",
+      "text": "Bản tin liên quan"
+    },
+    "relatedReports.kicker": {
+      "source": "From the archive",
+      "text": "Từ kho lưu trữ"
+    },
+    "archiveReport.dispatch": {
+      "source": "Dispatch",
+      "text": "Bản tin"
+    },
+    "dispatchHistory.now": {
+      "source": "just now",
+      "text": "vừa xong"
+    },
+    "dispatchHistory.title": {
+      "source": "Recent dispatches",
+      "text": "Bản tin gần đây"
+    },
+    "dispatchHistory.empty": {
+      "source": "No dispatches yet.",
+      "text": "Chưa có bản tin."
+    },
+    "dispatchHistory.minutes.one": {
+      "source": "{count}m ago",
+      "text": "{count} phút trước"
+    },
+    "dispatchHistory.minutes.other": {
+      "source": "{count}m ago",
+      "text": "{count} phút trước"
+    },
+    "dispatchHistory.hours.one": {
+      "source": "{count}h ago",
+      "text": "{count} giờ trước"
+    },
+    "dispatchHistory.hours.other": {
+      "source": "{count}h ago",
+      "text": "{count} giờ trước"
+    },
+    "dispatchHistory.days.one": {
+      "source": "{count}d ago",
+      "text": "{count} ngày trước"
+    },
+    "dispatchHistory.days.other": {
+      "source": "{count}d ago",
+      "text": "{count} ngày trước"
+    },
+    "privateReport.cap": {
+      "source": "Creator cap",
+      "text": "Hạn mức dành cho tác giả"
+    },
+    "privateReport.committed": {
+      "source": "Committed",
+      "text": "Đã cam kết"
+    },
+    "privateReport.unresolved": {
+      "source": "Unresolved",
+      "text": "Chưa giải quyết"
+    },
+    "privateReport.processing": {
+      "source": "Circle processing",
+      "text": "Circle đang xử lý"
+    },
+    "privateReport.confirmed": {
+      "source": "Confirmation evidence",
+      "text": "Bằng chứng xác nhận"
+    },
+    "privateReport.uncommitted": {
+      "source": "Uncommitted",
+      "text": "Chưa cam kết"
+    },
+    "privateReport.answer": {
+      "source": "Research answer",
+      "text": "Câu trả lời nghiên cứu"
+    },
+    "privateReport.decisions": {
+      "source": "Source decisions",
+      "text": "Quyết định về nguồn"
+    },
+    "privateReport.attribution": {
+      "source": "Citation attribution",
+      "text": "Quy nguồn trích dẫn"
+    },
+    "privateReport.claimEvidence": {
+      "source": "Claim evidence",
+      "text": "Bằng chứng cho nhận định"
+    },
+    "privateReport.recipient": {
+      "source": "Recipient: {payee}",
+      "text": "Bên nhận: {payee}"
+    },
+    "reportFeedback.loading": {
+      "source": "Loading feedback…",
+      "text": "Đang tải phản hồi…"
+    },
+    "reportFeedback.sending": {
+      "source": "Sending feedback…",
+      "text": "Đang gửi phản hồi…"
+    },
+    "reportFeedback.confirmed": {
+      "source": "Feedback recorded.",
+      "text": "Đã ghi nhận phản hồi."
+    },
+    "reportFeedback.label": {
+      "source": "Report feedback",
+      "text": "Phản hồi báo cáo"
+    },
+    "reportFeedback.helpful": {
+      "source": "Helpful?",
+      "text": "Có hữu ích không?"
+    },
+    "scholarlyMetadata.journal": {
+      "source": "Journal: {value}",
+      "text": "Tạp chí: {value}"
+    },
+    "scholarlyMetadata.doi": {
+      "source": "DOI: {value}",
+      "text": "DOI: {value}"
+    },
+    "scholarlyMetadata.arxiv": {
+      "source": "arXiv: {value}",
+      "text": "arXiv: {value}"
+    },
+    "reportReading.title": {
+      "source": "The reading",
+      "text": "Việc đọc"
+    },
+    "reportReading.metadataOnly": {
+      "source": "Metadata only",
+      "text": "Chỉ siêu dữ liệu"
+    },
+    "reportReading.evidence": {
+      "source": "Evidence",
+      "text": "Bằng chứng"
+    },
+    "reportReading.simulatedSpend": {
+      "source": "Simulated spend",
+      "text": "Khoản chi mô phỏng"
+    },
+    "reportReading.spent": {
+      "source": "Spent",
+      "text": "Đã chi"
+    },
+    "reportReading.recordedSpend": {
+      "source": "Recorded spend",
+      "text": "Khoản chi đã ghi nhận"
+    },
+    "reportReading.toCreators": {
+      "source": "To creators",
+      "text": "Đến tác giả"
+    },
+    "reportReading.pendingProof": {
+      "source": "Pending proof",
+      "text": "Chờ bằng chứng"
+    },
+    "reportReading.decisions": {
+      "source": "Decisions",
+      "text": "Quyết định"
+    },
+    "reportReading.copied": {
+      "source": "✓ Copied",
+      "text": "✓ Đã sao chép"
+    },
+    "reportReading.share": {
+      "source": "Share",
+      "text": "Chia sẻ"
+    },
+    "reportReading.cited.one": {
+      "source": "{count} cited",
+      "text": "{count} được trích dẫn"
+    },
+    "reportReading.cited.other": {
+      "source": "{count} cited",
+      "text": "{count} được trích dẫn"
+    },
+    "reportReading.mode": {
+      "source": "{mode} research",
+      "text": "Nghiên cứu {mode}"
+    },
+    "reportReading.planned": {
+      "source": "{amount} planned",
+      "text": "{amount} dự kiến"
+    },
+    "reportReading.estimated": {
+      "source": "{coverage}% estimated",
+      "text": "Ước tính {coverage}%"
+    },
+    "reportReading.bought.one": {
+      "source": "{count} bought",
+      "text": "{count} đã mua"
+    },
+    "reportReading.cached.one": {
+      "source": "{count} cached",
+      "text": "{count} từ bộ nhớ đệm"
+    },
+    "reportReading.skipped.one": {
+      "source": "{count} skipped",
+      "text": "{count} đã bỏ qua"
+    },
+    "reportReading.bought.other": {
+      "source": "{count} bought",
+      "text": "{count} đã mua"
+    },
+    "reportReading.cached.other": {
+      "source": "{count} cached",
+      "text": "{count} từ bộ nhớ đệm"
+    },
+    "reportReading.skipped.other": {
+      "source": "{count} skipped",
+      "text": "{count} đã bỏ qua"
+    },
+    "citationEvidence.supporting": {
+      "source": "Supporting evidence",
+      "text": "Bằng chứng hỗ trợ"
+    },
+    "citationEvidence.reward": {
+      "source": "Creator reward",
+      "text": "Thưởng cho tác giả"
+    },
+    "citationEvidence.unverified": {
+      "source": "unverified",
+      "text": "chưa xác minh"
+    },
+    "citationEvidence.viewTransaction": {
+      "source": "View transaction ↗",
+      "text": "Xem giao dịch ↗"
+    },
+    "citationEvidence.openArticle": {
+      "source": "Open source article ↗",
+      "text": "Mở bài viết nguồn ↗"
+    },
+    "citationEvidence.rssExcerpt": {
+      "source": "RSS delivery: excerpt",
+      "text": "RSS cung cấp: trích đoạn"
+    },
+    "citationEvidence.citation": {
+      "source": "Citation {marker}",
+      "text": "Trích dẫn {marker}"
+    },
+    "paperCard.openRecord": {
+      "source": "Open paper record ↗",
+      "text": "Mở hồ sơ bài nghiên cứu ↗"
+    },
+    "paperCard.ask": {
+      "source": "Ask with this paper →",
+      "text": "Hỏi với bài này →"
+    },
+    "paperSave.open": {
+      "source": "Open workspace",
+      "text": "Mở không gian làm việc"
+    },
+    "paperSearch.searching": {
+      "source": "Searching…",
+      "text": "Đang tìm kiếm…"
+    },
+    "paperSearch.search": {
+      "source": "Search repositories",
+      "text": "Tìm kho tài liệu"
+    },
+    "paperSearch.cancel": {
+      "source": "Cancel",
+      "text": "Hủy"
+    },
+    "literatureComparison.label": {
+      "source": "Comparison selection",
+      "text": "Lựa chọn so sánh"
+    },
+    "archivePages.label": {
+      "source": "Archive pages",
+      "text": "Trang lưu trữ"
+    },
+    "archivePages.newer": {
+      "source": "← Newer",
+      "text": "← Mới hơn"
+    },
+    "archivePages.older": {
+      "source": "Older →",
+      "text": "Cũ hơn →"
+    },
+    "archiveTopics.label": {
+      "source": "Answer topics",
+      "text": "Chủ đề câu trả lời"
+    },
+    "archiveTopics.title": {
+      "source": "Topics",
+      "text": "Chủ đề"
+    },
+    "archiveTopics.all": {
+      "source": "← all",
+      "text": "← tất cả"
+    },
+    "archiveTopics.more.one": {
+      "source": "More topics ({count})",
+      "text": "Chủ đề khác ({count})"
+    },
+    "archiveTopics.more.other": {
+      "source": "More topics ({count})",
+      "text": "Chủ đề khác ({count})"
+    },
+    "archiveFilter.placeholder": {
+      "source": "Filter these answers…",
+      "text": "Lọc các câu trả lời này…"
+    },
+    "archiveFilter.label": {
+      "source": "Filter answers",
+      "text": "Lọc câu trả lời"
+    },
+    "archiveFilter.found.one": {
+      "source": "{count} found",
+      "text": "Tìm thấy {count}"
+    },
+    "archiveFilter.found.other": {
+      "source": "{count} found",
+      "text": "Tìm thấy {count}"
+    },
+    "archiveIndex.feed": {
+      "source": "Atom feed ↗",
+      "text": "Nguồn cấp Atom ↗"
+    },
+    "archiveLanguage.label": {
+      "source": "Answer language",
+      "text": "Ngôn ngữ câu trả lời"
+    },
+    "archiveLanguage.all": {
+      "source": "All languages",
+      "text": "Tất cả ngôn ngữ"
+    },
+    "archiveLanguage.undetermined": {
+      "source": "Undetermined",
+      "text": "Chưa xác định"
+    },
+    "archiveLanguage.option": {
+      "source": "{language} ({count})",
+      "text": "{language} ({count})"
+    },
+    "archiveIndex.kicker": {
+      "source": "The archive",
+      "text": "Kho lưu trữ"
+    },
+    "archiveIndex.emphasis": {
+      "source": "with sources.",
+      "text": "kèm nguồn."
+    },
+    "dispatchWire.settled": {
+      "source": "Settled",
+      "term": "settled"
+    },
+    "dispatchWire.citations": {
+      "source": "Settled citations",
+      "text": "Trích dẫn đã quyết toán"
+    },
+    "dispatchWire.loading": {
+      "source": "Loading settlements…",
+      "text": "Đang tải quyết toán…"
+    },
+    "dispatchWire.paid": {
+      "source": "PAID",
+      "text": "ĐÃ THANH TOÁN"
+    },
+    "dispatchWire.retry": {
+      "source": "Retry",
+      "text": "Thử lại"
+    },
+    "reportFreshness.label": {
+      "source": "Answer freshness",
+      "text": "Độ mới của câu trả lời"
+    },
+    "reportFreshness.jsonAudit": {
+      "source": "JSON audit",
+      "text": "Kiểm tra JSON"
+    },
+    "reportFreshness.changedAsset": {
+      "source": "{title} · changed",
+      "text": "{title} · đã thay đổi"
+    },
+    "literatureWorkspace.titleLabel": {
+      "source": "Review title",
+      "text": "Tên bản tổng quan"
+    },
+    "literatureWorkspace.titlePlaceholder": {
+      "source": "My literature review",
+      "text": "Tổng quan tài liệu của tôi"
+    },
+    "literatureWorkspace.loadFocus": {
+      "source": "Load saved focus",
+      "text": "Tải trọng tâm đã lưu"
+    },
+    "literatureWorkspace.saveFocus": {
+      "source": "Save review focus",
+      "text": "Lưu trọng tâm tổng quan"
+    },
+    "literatureWorkspace.loadScreening": {
+      "source": "Load saved screening",
+      "text": "Tải kết quả sàng lọc đã lưu"
+    },
+    "literatureWorkspace.compare": {
+      "source": "Compare",
+      "text": "So sánh"
+    },
+    "literatureWorkspace.open": {
+      "source": "Open paper record ↗",
+      "text": "Mở hồ sơ bài nghiên cứu ↗"
+    },
+    "literatureWorkspace.notes": {
+      "source": "Your screening notes",
+      "text": "Ghi chú sàng lọc của bạn"
+    },
+    "literatureWorkspace.remove": {
+      "source": "Remove saved paper",
+      "text": "Xóa bài đã lưu"
+    },
+    "literatureWorkspace.papers": {
+      "source": "Your papers",
+      "text": "Bài nghiên cứu của bạn"
+    },
+    "literatureWorkspace.filterAll": {
+      "source": "All saved papers",
+      "text": "Tất cả bài đã lưu"
+    },
+    "literatureWorkspace.prepare": {
+      "source": "Prepare comparison →",
+      "text": "Chuẩn bị so sánh →"
+    },
+    "literatureWorkspace.backup": {
+      "source": "Download JSON backup",
+      "text": "Tải bản sao lưu JSON"
+    },
+    "literatureWorkspace.stored": {
+      "source": "Download stored data",
+      "text": "Tải dữ liệu đã lưu"
+    },
+    "literatureWorkspace.untitled": {
+      "source": "Untitled review",
+      "text": "Bản tổng quan chưa đặt tên"
+    },
+    "literatureWorkspace.restoring": {
+      "source": "Restoring workspace…",
+      "text": "Đang khôi phục không gian làm việc…"
+    },
+    "literatureWorkspace.cancelRestore": {
+      "source": "Cancel restore",
+      "text": "Hủy khôi phục"
+    },
+    "literatureWorkspace.clear": {
+      "source": "Clear saved workspace",
+      "text": "Xóa không gian đã lưu"
+    },
+    "literatureWorkspace.compareLabel": {
+      "source": "Compare {title}",
+      "text": "So sánh {title}"
+    },
+    "reportDispatch.fallbackTitle": {
+      "source": "Keryx Dispatch",
+      "text": "Bản tin Keryx"
+    },
+    "reportDispatch.archiveCrumb": {
+      "source": "The Archive",
+      "text": "Kho lưu trữ"
+    },
+    "reportDispatch.archive": {
+      "source": "The archive",
+      "text": "Kho lưu trữ"
+    },
+    "reportDispatch.new": {
+      "source": "← New dispatch",
+      "text": "← Bản tin mới"
+    },
+    "reportDispatch.followedBy": {
+      "source": "Followed by",
+      "text": "Được theo dõi bởi"
+    },
+    "reportDispatch.follows": {
+      "source": "Follows up on",
+      "text": "Tiếp nối"
+    },
+    "reportDispatchView.archived": {
+      "source": "Archived dispatch",
+      "text": "Bản tin đã lưu trữ"
+    },
+    "reportDispatchView.paymentEvidence": {
+      "source": "Payment evidence",
+      "text": "Bằng chứng thanh toán"
+    },
+    "reportSocial.historical": {
+      "source": "Arc testnet archive",
+      "text": "Kho lưu trữ Arc testnet"
+    },
+    "reportSocial.testnetRecorded": {
+      "source": "testnet USDC recorded",
+      "text": "USDC testnet đã ghi nhận"
+    },
+    "reportSocial.recorded": {
+      "source": "USDC recorded",
+      "text": "USDC đã ghi nhận"
+    },
+    "reportSocial.tagline": {
+      "source": "The citation toll — creators paid every time an AI cites them",
+      "text": "Phí trích dẫn — tác giả được trả tiền mỗi khi AI trích dẫn"
+    },
+    "reportSocial.network": {
+      "source": "Keryx · {network}",
+      "text": "Keryx · {network}"
+    },
+    "reportSocial.serial": {
+      "source": "Series 2026 — No. {serial}",
+      "text": "Niên tập 2026 — Số {serial}"
+    },
+    "reportSocial.cited.one": {
+      "source": "sources cited",
+      "text": "nguồn được trích dẫn"
+    },
+    "reportSocial.cited.other": {
+      "source": "sources cited",
+      "text": "nguồn được trích dẫn"
+    },
+    "reportTopic.archiveName": {
+      "source": "Keryx Answer Archive",
+      "text": "Kho câu trả lời Keryx"
+    },
+    "reportTopic.archiveCrumb": {
+      "source": "The Archive",
+      "text": "Kho lưu trữ"
+    },
+    "reportTopic.archive": {
+      "source": "The archive",
+      "text": "Kho lưu trữ"
+    },
+    "reportTopic.fullArchive": {
+      "source": "the full archive",
+      "text": "toàn bộ kho lưu trữ"
+    },
+    "reportTopic.heading": {
+      "source": "Answers about {topic}",
+      "text": "Câu trả lời về {topic}"
+    },
+    "reportArchiveRoute.name": {
+      "source": "Keryx Answer Archive",
+      "text": "Kho câu trả lời Keryx"
+    },
+    "reportArchiveRoute.crumb": {
+      "source": "The Archive",
+      "text": "Kho lưu trữ"
+    },
+    "reportArchiveRoute.pageCrumb": {
+      "source": "Page {page}",
+      "text": "Trang {page}"
+    },
+    "literaturePage.workflowLabel": {
+      "source": "Literature workflow",
+      "text": "Quy trình tài liệu nghiên cứu"
+    },
+    "literaturePage.find": {
+      "source": "Find papers to save →",
+      "text": "Tìm bài để lưu →"
+    },
+    "literaturePage.focus": {
+      "source": "Set your review focus",
+      "text": "Đặt trọng tâm tổng quan"
+    },
+    "reportSourceLens.select": {
+      "source": "Inspect without",
+      "text": "Kiểm tra khi không có"
+    },
+    "reportSourceLens.keepAll": {
+      "source": "Keep every source",
+      "text": "Giữ tất cả nguồn"
+    },
+    "reportSourceLens.restore": {
+      "source": "Restore source",
+      "text": "Khôi phục nguồn"
+    },
+    "reportTestnetHistory.pages": {
+      "source": "Testnet history pages",
+      "text": "Trang lịch sử testnet"
+    },
+    "reportTestnetHistory.older": {
+      "source": "Older questions →",
+      "text": "Câu hỏi cũ hơn →"
+    },
+    "reportTestnetHistory.current": {
+      "source": "← Current ledger",
+      "text": "← Sổ theo dõi hiện tại"
+    },
+    "reportActions.copyUnavailable": {
+      "source": "Copy unavailable. Download the report instead.",
+      "text": "Không thể sao chép. Hãy tải báo cáo xuống."
+    },
+    "reportActions.copied": {
+      "source": "Report copied with citations and payment states.",
+      "text": "Đã sao chép báo cáo kèm trích dẫn và trạng thái thanh toán."
+    },
+    "reportActions.downloaded": {
+      "source": "Report downloaded with citations and payment states.",
+      "text": "Đã tải báo cáo kèm trích dẫn và trạng thái thanh toán."
+    },
+    "reportActions.downloadUnavailable": {
+      "source": "Download unavailable. Open the saved report instead.",
+      "text": "Không thể tải xuống. Hãy mở báo cáo đã lưu."
+    },
+    "citationExport.failed": {
+      "source": "Reference download failed. Try again in this browser.",
+      "text": "Tải tài liệu tham khảo thất bại. Hãy thử lại trong trình duyệt này."
+    },
+    "citationExport.references.one": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "{count} tài liệu tham khảo bài viết. Đã ghi nhận tiêu đề, liên kết và ngày tháng; hồ sơ học thuật quan sát được còn có tác giả, DOI và siêu dữ liệu tạp chí được cung cấp, kèm giới hạn đọc. Xem xét siêu dữ liệu trước khi dùng trong bài nghiên cứu. Nhập RIS vào Zotero qua File → Import."
+    },
+    "citationExport.omitted.one": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "Đã bỏ {count} trích dẫn vì thiếu tiêu đề bài viết hoặc liên kết bài viết dùng được."
+    },
+    "citationExport.references.other": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "{count} tài liệu tham khảo bài viết. Đã ghi nhận tiêu đề, liên kết và ngày tháng; hồ sơ học thuật quan sát được còn có tác giả, DOI và siêu dữ liệu tạp chí được cung cấp, kèm giới hạn đọc. Xem xét siêu dữ liệu trước khi dùng trong bài nghiên cứu. Nhập RIS vào Zotero qua File → Import."
+    },
+    "citationExport.omitted.other": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "Đã bỏ {count} trích dẫn vì thiếu tiêu đề bài viết hoặc liên kết bài viết dùng được."
+    },
+    "bibliographyExport.failed": {
+      "source": "Reference download failed. Try again in this browser.",
+      "text": "Tải tài liệu tham khảo thất bại. Hãy thử lại trong trình duyệt này."
+    },
+    "bibliographyExport.notice": {
+      "source": "Bibliographic metadata · separate from research citations and creator rewards",
+      "text": "Siêu dữ liệu thư mục · tách biệt với trích dẫn nghiên cứu và phần thưởng cho tác giả"
+    },
+    "bibliographyExport.provenance": {
+      "source": "Original metadata and field provenance",
+      "text": "Siêu dữ liệu gốc và nguồn gốc từng trường"
+    },
+    "portableReceipt.label": {
+      "source": "Portable research receipt",
+      "text": "Biên nhận nghiên cứu có thể mang theo"
+    },
+    "portableReceipt.title": {
+      "source": "Take the evidence trail with you",
+      "text": "Mang theo dấu vết bằng chứng"
+    },
+    "portableReceipt.notice": {
+      "source": "One deterministic JSON bundle binds the answer, visible decisions, exact article versions, claim evidence and a Circle-settlement snapshot under SHA-256. Retain the digest to detect later changes; the self-check is not a publisher or Keryx signature.",
+      "text": "Một gói JSON xác định liên kết câu trả lời, quyết định hiển thị, phiên bản bài viết chính xác, bằng chứng cho nhận định và ảnh chụp trạng thái quyết toán Circle bằng SHA-256. Giữ mã băm để phát hiện thay đổi về sau; việc tự kiểm tra không phải chữ ký của nhà xuất bản hay Keryx."
+    },
+    "evidenceMatrix.title": {
+      "source": "Research evidence matrix",
+      "text": "Ma trận bằng chứng nghiên cứu"
+    },
+    "evidenceMatrix.notice": {
+      "source": "Compare unverified research targets with cited sources and inspect recorded excerpts. An empty cell means no inspectable excerpt was recorded; it does not establish whether a claim is true, false, or disputed. Coverage and agent confidence do not prove entailment, measured accuracy or complete synthesis.",
+      "text": "So sánh mục tiêu nghiên cứu chưa xác minh với nguồn được trích dẫn và xem trích đoạn đã ghi nhận. Ô trống nghĩa là không ghi nhận trích đoạn có thể kiểm tra; điều đó không xác lập nhận định là đúng, sai hay còn tranh cãi. Mức độ bao phủ và độ tin cậy của tác nhân không chứng minh quan hệ suy ra, độ chính xác được đo lường hay tính tổng hợp đầy đủ."
+    },
+    "evidenceMatrix.caption": {
+      "source": "Research target by cited source evidence matrix",
+      "text": "Ma trận bằng chứng theo mục tiêu nghiên cứu và nguồn được trích dẫn"
+    },
+    "evidenceMatrix.target": {
+      "source": "Research target (unverified)",
+      "text": "Mục tiêu nghiên cứu (chưa xác minh)"
+    },
+    "evidenceMatrix.unavailable": {
+      "source": "Research claims were not recorded for this dispatch. No evidence matrix is available.",
+      "text": "Chưa ghi nhận nhận định nghiên cứu cho bản tin này. Không có ma trận bằng chứng."
+    },
+    "evidenceMatrix.publication": {
+      "source": "Publication: {publication}",
+      "text": "Ấn phẩm: {publication}"
+    },
+    "evidenceMatrix.inspect.one": {
+      "source": "Inspect {count} excerpt",
+      "text": "Kiểm tra {count} trích đoạn"
+    },
+    "evidenceMatrix.inspect.other": {
+      "source": "Inspect {count} excerpts",
+      "text": "Kiểm tra {count} trích đoạn"
+    },
+    "answerDelta.kicker": {
+      "source": "Living answer · receipt delta",
+      "text": "Câu trả lời được cập nhật · thay đổi biên nhận"
+    },
+    "answerDelta.compareParent": {
+      "source": "Compare parent receipt ↗",
+      "text": "So sánh biên nhận gốc ↗"
+    },
+    "answerDelta.historicalNoCoverage": {
+      "source": "Historical receipt lacks claim coverage",
+      "text": "Biên nhận lịch sử thiếu mức độ bao phủ nhận định"
+    },
+    "answerDelta.verdict": {
+      "source": "Agent verdict, evidence-bounded",
+      "text": "Kết luận của tác nhân, trong phạm vi bằng chứng"
+    },
+    "answerDelta.incompleteLedger": {
+      "source": "Circle-settled ledger rows are incomplete",
+      "text": "Các dòng sổ cái đã quyết toán qua Circle chưa đầy đủ"
+    },
+    "answerDelta.notice": {
+      "source": "Both dispatches remain immutable. This compares cited identities, exact versions, evidence coverage and Circle-settled totals; it does not claim the newer answer is better.",
+      "text": "Cả hai bản tin đều giữ nguyên, không thể sửa đổi. Phép so sánh này đối chiếu định danh được trích dẫn, phiên bản chính xác, mức độ bao phủ bằng chứng và tổng số đã quyết toán qua Circle; không khẳng định câu trả lời mới hơn là tốt hơn."
+    },
+    "answerDelta.retained.one": {
+      "source": "{count} source retained",
+      "text": "Giữ lại {count} nguồn"
+    },
+    "answerDelta.retained.other": {
+      "source": "{count} sources retained",
+      "text": "Giữ lại {count} nguồn"
+    },
+    "reportMode.offline": {
+      "source": "offline preview · simulated",
+      "text": "xem trước ngoại tuyến · mô phỏng"
+    },
+    "reportCitation.title": {
+      "source": "{source} — {weight}% weight",
+      "text": "{source} — trọng số {weight}%"
+    },
+    "reportCitation.articleTitle": {
+      "source": "{article} · {publication} — {weight}% weight",
+      "text": "{article} · {publication} — trọng số {weight}%"
+    },
+    "reportCitation.openEvidence": {
+      "source": "Open evidence for {source}",
+      "text": "Mở bằng chứng cho {source}"
+    },
+    "historicalReport.label": {
+      "source": "Historical dispatch network",
+      "text": "Mạng của bản tin lịch sử"
+    },
+    "historicalReport.kicker": {
+      "source": "Arc testnet · Historical dispatch",
+      "text": "Arc testnet · Bản tin lịch sử"
+    },
+    "historicalReport.notice": {
+      "source": "This answer and its original payment evidence were retained before the mainnet migration. Testnet USDC and settlement records remain on Arc testnet; they are historical evidence, separate from current mainnet spending and creator payout authority.",
+      "text": "Câu trả lời này và bằng chứng thanh toán gốc được lưu giữ trước khi chuyển sang mainnet. USDC testnet và hồ sơ quyết toán vẫn ở Arc testnet; đây là bằng chứng lịch sử, tách biệt với chi tiêu mainnet hiện tại và thẩm quyền chi trả cho tác giả."
+    },
+    "historicalReport.captured": {
+      "source": "Archive captured {capturedAt}. Source and payment states are frozen at that cutoff; source freshness is not checked against today’s catalog.",
+      "text": "Kho lưu trữ được chụp lúc {capturedAt}. Trạng thái nguồn và thanh toán được cố định tại thời điểm đó; độ mới của nguồn không được đối chiếu với danh mục hiện nay."
+    },
+    "relatedReports.browse": {
+      "source": "Browse the full archive ▸",
+      "text": "Duyệt toàn bộ kho lưu trữ ▸"
+    },
+    "archiveReport.historicalDispatch": {
+      "source": "Dispatch · Arc testnet history",
+      "text": "Bản tin · Lịch sử Arc testnet"
+    },
+    "archiveReport.creatorRewards": {
+      "source": "{amount} recorded creator rewards",
+      "text": "{amount} phần thưởng cho tác giả đã ghi nhận"
+    },
+    "dispatchHistory.summary.current.plain.one": {
+      "source": "{time} · {count} citation",
+      "text": "{time} · {count} trích dẫn"
+    },
+    "dispatchHistory.summary.current.financial.one": {
+      "source": "{time} · {count} citation · {amount} to creators",
+      "text": "{time} · {count} trích dẫn · {amount} đến tác giả"
+    },
+    "dispatchHistory.summary.historical.plain.one": {
+      "source": "{time} · {count} citation · Arc testnet history",
+      "text": "{time} · {count} trích dẫn · lịch sử Arc testnet"
+    },
+    "dispatchHistory.summary.historical.financial.one": {
+      "source": "{time} · {count} citation · Arc testnet history · {amount} to creators",
+      "text": "{time} · {count} trích dẫn · lịch sử Arc testnet · {amount} đến tác giả"
+    },
+    "dispatchHistory.summary.current.plain.other": {
+      "source": "{time} · {count} citations",
+      "text": "{time} · {count} trích dẫn"
+    },
+    "dispatchHistory.summary.current.financial.other": {
+      "source": "{time} · {count} citations · {amount} to creators",
+      "text": "{time} · {count} trích dẫn · {amount} đến tác giả"
+    },
+    "dispatchHistory.summary.historical.plain.other": {
+      "source": "{time} · {count} citations · Arc testnet history",
+      "text": "{time} · {count} trích dẫn · lịch sử Arc testnet"
+    },
+    "dispatchHistory.summary.historical.financial.other": {
+      "source": "{time} · {count} citations · Arc testnet history · {amount} to creators",
+      "text": "{time} · {count} trích dẫn · lịch sử Arc testnet · {amount} đến tác giả"
+    },
+    "privateReport.awaitingPayment": {
+      "source": "Payment has not been confirmed. This lookup does not retry payment.",
+      "text": "Thanh toán chưa được xác nhận. Tra cứu này không thử lại thanh toán."
+    },
+    "privateReport.awaitingExecution": {
+      "source": "Payment is confirmed; execution has not been claimed yet.",
+      "text": "Thanh toán đã được xác nhận; chưa có bên nhận thực thi."
+    },
+    "privateReport.executionClaimed": {
+      "source": "Execution was claimed, but no completed result is stored yet. This does not establish that the worker is still running. Refresh later; do not pay again to recover this job.",
+      "text": "Đã có bên nhận thực thi, nhưng chưa lưu kết quả hoàn tất. Điều này không xác lập rằng tiến trình xử lý vẫn đang chạy. Hãy làm mới sau; đừng thanh toán lại để khôi phục tác vụ này."
+    },
+    "privateReport.interrupted": {
+      "source": "Research was interrupted and closed to new creator payments by the operator. No completed answer is stored. Keep your recovery file; do not pay again to recover this job. Existing payments remain subject to their recorded evidence. No refund has been issued by this action.",
+      "text": "Nghiên cứu bị gián đoạn và người vận hành đã chặn các khoản thanh toán mới cho tác giả. Chưa lưu câu trả lời hoàn tất. Giữ tệp khôi phục; đừng thanh toán lại để khôi phục tác vụ này. Các khoản thanh toán hiện có vẫn phụ thuộc vào bằng chứng đã ghi nhận. Thao tác này không thực hiện hoàn tiền."
+    },
+    "privateReport.completed": {
+      "source": "Research completed. Review its evidence and payment status separately.",
+      "text": "Nghiên cứu đã hoàn tất. Xem xét riêng bằng chứng và trạng thái thanh toán."
+    },
+    "privateReport.budgetNotice": {
+      "source": "Uncommitted budget is not a refund. Circle processing and confirmation evidence do not independently verify chain finality. Figures reflect the current stored evidence.",
+      "text": "Ngân sách chưa cam kết không phải tiền hoàn lại. Trạng thái Circle đang xử lý và bằng chứng xác nhận không độc lập xác minh tính chung cuộc trên chuỗi. Các số liệu phản ánh bằng chứng hiện đang lưu."
+    },
+    "privateReport.creatorEvidence": {
+      "source": "Creator payment evidence",
+      "text": "Bằng chứng thanh toán cho tác giả"
+    },
+    "privateReport.evidenceUnavailable": {
+      "source": "Evidence measurements are unavailable.",
+      "text": "Không có số đo bằng chứng."
+    },
+    "privateReport.noRewardEvidence": {
+      "source": "No evidence qualified for creator rewards. Completion does not establish a supported answer.",
+      "text": "Không có bằng chứng đủ điều kiện nhận phần thưởng cho tác giả. Việc hoàn tất không xác lập rằng câu trả lời có căn cứ."
+    },
+    "privateReport.receiptNotice": {
+      "source": "Server-reported research and payment evidence. This view is not a portable verified receipt. Evidence coverage does not certify factual correctness.",
+      "text": "Bằng chứng nghiên cứu và thanh toán do máy chủ báo cáo. Màn hình này không phải biên nhận đã xác minh có thể mang theo. Mức độ bao phủ bằng chứng không chứng nhận tính đúng đắn của thông tin."
+    },
+    "privateReport.interruption": {
+      "source": "Interruption recorded: {recordedAt}. A recovered original result can still appear here after an operator restores its backup.",
+      "text": "Gián đoạn được ghi nhận: {recordedAt}. Kết quả gốc được khôi phục vẫn có thể xuất hiện ở đây sau khi người vận hành phục hồi bản sao lưu."
+    },
+    "privateReport.packagePayment": {
+      "source": "Package payment: {status} · {amount} · retain the original payment network",
+      "text": "Thanh toán gói: {status} · {amount} · giữ nguyên mạng thanh toán ban đầu"
+    },
+    "privateReport.decision": {
+      "source": "{action} · {source} · Toll {price} USDC",
+      "text": "{action} · {source} · Phí truy cập {price} USDC"
+    },
+    "privateReport.contribution": {
+      "source": "{marker} · {source} · {weight}% contribution",
+      "text": "{marker} · {source} · đóng góp {weight}%"
+    },
+    "privateReport.reward": {
+      "source": "Recorded reward: {amount} USDC. See current payment evidence above.",
+      "text": "Phần thưởng đã ghi nhận: {amount} USDC. Xem bằng chứng thanh toán hiện tại ở trên."
+    },
+    "privateReport.coverage": {
+      "source": "{coverage}% evidence coverage",
+      "text": "Mức độ bao phủ bằng chứng {coverage}%"
+    },
+    "reportFeedback.unavailable": {
+      "source": "Feedback counts unavailable.",
+      "text": "Không có số lượng phản hồi."
+    },
+    "reportFeedback.unconfirmed": {
+      "source": "Couldn’t confirm feedback. It may have been recorded.",
+      "text": "Không thể xác nhận phản hồi. Phản hồi có thể đã được ghi nhận."
+    },
+    "reportFeedback.up": {
+      "source": "Mark this answer as helpful",
+      "text": "Đánh dấu câu trả lời này là hữu ích"
+    },
+    "reportFeedback.up.one": {
+      "source": "Mark this answer as helpful; {count} recorded votes",
+      "text": "Đánh dấu câu trả lời này là hữu ích; {count} lượt bình chọn đã ghi nhận"
+    },
+    "reportFeedback.up.other": {
+      "source": "Mark this answer as helpful; {count} recorded votes",
+      "text": "Đánh dấu câu trả lời này là hữu ích; {count} lượt bình chọn đã ghi nhận"
+    },
+    "reportFeedback.down": {
+      "source": "Mark this answer as not helpful",
+      "text": "Đánh dấu câu trả lời này là không hữu ích"
+    },
+    "reportFeedback.down.one": {
+      "source": "Mark this answer as not helpful; {count} recorded votes",
+      "text": "Đánh dấu câu trả lời này là không hữu ích; {count} lượt bình chọn đã ghi nhận"
+    },
+    "reportFeedback.down.other": {
+      "source": "Mark this answer as not helpful; {count} recorded votes",
+      "text": "Đánh dấu câu trả lời này là không hữu ích; {count} lượt bình chọn đã ghi nhận"
+    },
+    "reportFeedback.summary.one": {
+      "source": "{count} vote · {positive}% positive",
+      "text": "{count} lượt bình chọn · {positive}% tích cực"
+    },
+    "reportFeedback.summary.other": {
+      "source": "{count} votes · {positive}% positive",
+      "text": "{count} lượt bình chọn · {positive}% tích cực"
+    },
+    "scholarlyMetadata.preprint": {
+      "source": "Preprint · peer review unknown",
+      "text": "Bản thảo trước xuất bản · chưa rõ bình duyệt"
+    },
+    "scholarlyMetadata.journalArticle": {
+      "source": "Journal article metadata · peer review unknown",
+      "text": "Siêu dữ liệu bài tạp chí · chưa rõ bình duyệt"
+    },
+    "scholarlyMetadata.record": {
+      "source": "Scholarly record · peer review unknown",
+      "text": "Hồ sơ học thuật · chưa rõ bình duyệt"
+    },
+    "scholarlyMetadata.paperText": {
+      "source": "Read: paper PDF text within extraction limits",
+      "text": "Đã đọc: văn bản PDF bài nghiên cứu trong giới hạn trích xuất"
+    },
+    "scholarlyMetadata.abstractOnly": {
+      "source": "Read: abstract page only; full paper unavailable",
+      "text": "Đã đọc: chỉ trang tóm tắt; không có toàn văn bài nghiên cứu"
+    },
+    "scholarlyMetadata.publisherPage": {
+      "source": "Read: publisher page; full paper not established",
+      "text": "Đã đọc: trang nhà xuất bản; chưa xác lập khả năng đọc toàn văn"
+    },
+    "scholarlyMetadata.authors": {
+      "source": "Authors ({provider}): {authors}",
+      "text": "Tác giả ({provider}): {authors}"
+    },
+    "scholarlyMetadata.authorsNotSupplied": {
+      "source": "Authors ({provider}): not supplied",
+      "text": "Tác giả ({provider}): chưa cung cấp"
+    },
+    "scholarlyMetadata.contributors.one": {
+      "source": "Incomplete contributor list: {recorded} names recorded from {count} provider entries.",
+      "text": "Danh sách người đóng góp chưa đầy đủ: ghi nhận {recorded} tên từ {count} mục của nhà cung cấp."
+    },
+    "scholarlyMetadata.contributors.truncated.one": {
+      "source": "Incomplete contributor list: {recorded} names recorded from {count} provider entries; capped at 50.",
+      "text": "Danh sách người đóng góp chưa đầy đủ: ghi nhận {recorded} tên từ {count} mục của nhà cung cấp; giới hạn ở 50."
+    },
+    "scholarlyMetadata.contributors.other": {
+      "source": "Incomplete contributor list: {recorded} names recorded from {count} provider entries.",
+      "text": "Danh sách người đóng góp chưa đầy đủ: ghi nhận {recorded} tên từ {count} mục của nhà cung cấp."
+    },
+    "scholarlyMetadata.contributors.truncated.other": {
+      "source": "Incomplete contributor list: {recorded} names recorded from {count} provider entries; capped at 50.",
+      "text": "Danh sách người đóng góp chưa đầy đủ: ghi nhận {recorded} tên từ {count} mục của nhà cung cấp; giới hạn ở 50."
+    },
+    "scholarlyMetadata.published": {
+      "source": "Publication date: {value}",
+      "text": "Ngày xuất bản: {value}"
+    },
+    "scholarlyMetadata.observed": {
+      "source": "Metadata observed {retrievedAt}; author distribution rights are not verified.",
+      "text": "Siêu dữ liệu được quan sát lúc {retrievedAt}; quyền phân phối của tác giả chưa được xác minh."
+    },
+    "reportReading.bibliographyNotice": {
+      "source": "Original bibliographic metadata · no scientific claim assessment",
+      "text": "Siêu dữ liệu thư mục gốc · không đánh giá nhận định khoa học"
+    },
+    "reportReading.portfolioTitle": {
+      "source": "CACHE costs one attention slot but zero fetch USDC; evidence yield counts selected reads that produced reward-qualifying evidence.",
+      "text": "CACHE dùng một suất chú ý nhưng không tốn USDC để lấy nội dung; hiệu suất bằng chứng đếm các lượt đọc được chọn tạo ra bằng chứng đủ điều kiện nhận thưởng."
+    },
+    "reportReading.sources": {
+      "source": "Cited sources and references",
+      "text": "Nguồn được trích dẫn và tài liệu tham khảo"
+    },
+    "reportReading.synthetic": {
+      "source": "Synthetic demo content ? illustrative only",
+      "text": "Nội dung trình diễn tổng hợp ? chỉ để minh họa"
+    },
+    "reportReading.evidenceLedger": {
+      "source": "Evidence ledger — recorded source excerpts",
+      "text": "Sổ bằng chứng — trích đoạn nguồn đã ghi nhận"
+    },
+    "reportReading.coverageNotice": {
+      "source": "Research targets are unverified topics. Coverage is an estimate of excerpt support, not proof of entailment, factual truth or a complete answer.",
+      "text": "Mục tiêu nghiên cứu là các chủ đề chưa xác minh. Mức độ bao phủ là ước tính mức hỗ trợ từ trích đoạn, không phải bằng chứng về quan hệ suy ra, sự thật hay câu trả lời đầy đủ."
+    },
+    "reportReading.noExcerpt": {
+      "source": "No qualifying excerpt recorded",
+      "text": "Chưa ghi nhận trích đoạn đủ điều kiện"
+    },
+    "reportReading.simulatedShare": {
+      "source": "Simulated creator share",
+      "text": "Phần chia cho tác giả được mô phỏng"
+    },
+    "reportReading.recordedShare": {
+      "source": "Recorded creator share",
+      "text": "Phần chia cho tác giả đã ghi nhận"
+    },
+    "reportReading.preview.one": {
+      "source": "preview plan {covered}/{count} claims",
+      "text": "kế hoạch xem trước {covered}/{count} nhận định"
+    },
+    "reportReading.preview.other": {
+      "source": "preview plan {covered}/{count} claims",
+      "text": "kế hoạch xem trước {covered}/{count} nhận định"
+    },
+    "reportReading.portfolio": {
+      "source": "portfolio {selected}/{eligible}",
+      "text": "danh mục {selected}/{eligible}"
+    },
+    "reportReading.portfolioYield": {
+      "source": "portfolio {selected}/{eligible} · evidence {yield}%",
+      "text": "danh mục {selected}/{eligible} · bằng chứng {yield}%"
+    },
+    "reportReading.rssFeedBody": {
+      "source": "Free public reference · no creator payment · RSS feed body",
+      "text": "Tài liệu tham khảo công khai miễn phí · không thanh toán cho tác giả · nội dung phần thân nguồn cấp RSS"
+    },
+    "reportReading.rssFullText": {
+      "source": "Free public reference · no creator payment · RSS feed full text",
+      "text": "Tài liệu tham khảo công khai miễn phí · không thanh toán cho tác giả · toàn văn từ nguồn cấp RSS"
+    },
+    "reportReading.rssDelivery": {
+      "source": "Free public reference · no creator payment · RSS {delivery}",
+      "text": "Tài liệu tham khảo công khai miễn phí · không thanh toán cho tác giả · RSS {delivery}"
+    },
+    "reportReading.webText": {
+      "source": "Free public reference · no creator payment · extracted {extraction} text",
+      "text": "Tài liệu tham khảo công khai miễn phí · không thanh toán cho tác giả · văn bản {extraction} đã trích xuất"
+    },
+    "reportReading.webBounded": {
+      "source": "Free public reference · no creator payment · extracted {extraction} text (bounded excerpt)",
+      "text": "Tài liệu tham khảo công khai miễn phí · không thanh toán cho tác giả · văn bản {extraction} đã trích xuất (trích đoạn có giới hạn)"
+    },
+    "reportReading.inspectCitation": {
+      "source": "Inspect evidence for citation {marker}",
+      "text": "Kiểm tra bằng chứng cho trích dẫn {marker}"
+    },
+    "reportReading.requestedTopic": {
+      "source": "Requested topic (unverified): “{claim}”",
+      "text": "Chủ đề được yêu cầu (chưa xác minh): “{claim}”"
+    },
+    "reportReading.historical": {
+      "source": "{network} · historical",
+      "text": "{network} · lịch sử"
+    },
+    "citationEvidence.close": {
+      "source": "Close citation evidence",
+      "text": "Đóng bằng chứng trích dẫn"
+    },
+    "citationEvidence.authorNotStored": {
+      "source": "Author name: not stored in this dispatch",
+      "text": "Tên tác giả: không được lưu trong bản tin này"
+    },
+    "citationEvidence.synthetic": {
+      "source": "Synthetic demo content. Measurements and excerpts are illustrative, not factual evidence. Any real settled payments remain recorded below.",
+      "text": "Nội dung trình diễn tổng hợp. Các số đo và trích đoạn chỉ để minh họa, không phải bằng chứng thực tế. Mọi khoản thanh toán thực đã quyết toán vẫn được ghi nhận bên dưới."
+    },
+    "citationEvidence.publicReference": {
+      "source": "Free public reference · no creator payment",
+      "text": "Tài liệu tham khảo công khai miễn phí · không thanh toán cho tác giả"
+    },
+    "citationEvidence.rssNotice": {
+      "source": "Evidence comes from the public RSS feed body. Keryx has not fetched the full article or verified publisher ownership.",
+      "text": "Bằng chứng lấy từ phần thân nguồn cấp RSS công khai. Keryx chưa lấy toàn bộ bài viết hoặc xác minh quyền sở hữu của nhà xuất bản."
+    },
+    "citationEvidence.noExcerpt": {
+      "source": "No supporting excerpt is stored for this citation.",
+      "text": "Không lưu trích đoạn hỗ trợ cho trích dẫn này."
+    },
+    "citationEvidence.noSettledPayment": {
+      "source": "No settled citation payment is recorded.",
+      "text": "Chưa ghi nhận khoản thanh toán trích dẫn nào đã quyết toán."
+    },
+    "citationEvidence.paymentUnavailable": {
+      "source": "Payment detail is unavailable for this citation.",
+      "text": "Không có chi tiết thanh toán cho trích dẫn này."
+    },
+    "citationEvidence.rssFullText": {
+      "source": "RSS delivery: full text supplied by the feed",
+      "text": "RSS cung cấp: toàn văn do nguồn cấp cung cấp"
+    },
+    "citationEvidence.rssAbstract": {
+      "source": "RSS delivery: abstract",
+      "text": "RSS cung cấp: tóm tắt"
+    },
+    "citationEvidence.rssMetadata": {
+      "source": "RSS delivery: metadata only",
+      "text": "RSS cung cấp: chỉ siêu dữ liệu"
+    },
+    "citationEvidence.rssBody": {
+      "source": "RSS delivery: body supplied by the feed",
+      "text": "RSS cung cấp: phần thân do nguồn cấp cung cấp"
+    },
+    "citationEvidence.publication": {
+      "source": "Publication: {publication}",
+      "text": "Ấn phẩm: {publication}"
+    },
+    "citationEvidence.webText": {
+      "source": "Original page: extracted {extraction} text; retrieved {retrievedAt}",
+      "text": "Trang gốc: văn bản {extraction} đã trích xuất; lấy lúc {retrievedAt}"
+    },
+    "citationEvidence.webBounded": {
+      "source": "Original page: extracted {extraction} text (bounded excerpt); retrieved {retrievedAt}",
+      "text": "Trang gốc: văn bản {extraction} đã trích xuất (trích đoạn có giới hạn); lấy lúc {retrievedAt}"
+    },
+    "citationEvidence.groundingNotice": {
+      "source": "Quotes match text extracted from the original public document. This establishes source grounding, not factual verification or guaranteed complete content. Publisher group {publisherGroup} uses a registrable-domain proxy; it does not prove ownership or independent corroboration.",
+      "text": "Các trích dẫn khớp với văn bản trích xuất từ tài liệu công khai gốc. Điều này xác lập căn cứ từ nguồn, không xác minh sự thật hay bảo đảm nội dung đầy đủ. Nhóm nhà xuất bản {publisherGroup} được đại diện gần đúng bằng tên miền có thể đăng ký; điều đó không chứng minh quyền sở hữu hay sự củng cố từ nguồn độc lập."
+    },
+    "citationEvidence.target": {
+      "source": "Research target (unverified): “{claim}”",
+      "text": "Mục tiêu nghiên cứu (chưa xác minh): “{claim}”"
+    },
+    "citationEvidence.contribution": {
+      "source": "{weight}% contribution weight",
+      "text": "Trọng số đóng góp {weight}%"
+    },
+    "citationEvidence.settledUnknown.one": {
+      "source": "Settled amount unavailable across {count} author payment.",
+      "text": "Không có số tiền đã quyết toán của {count} khoản thanh toán cho tác giả."
+    },
+    "citationEvidence.settled.one": {
+      "source": "{amount} settled across {count} author payment.",
+      "text": "{amount} đã quyết toán qua {count} khoản thanh toán cho tác giả."
+    },
+    "citationEvidence.pending.one": {
+      "source": "{count} payment is pending confirmation.",
+      "text": "{count} khoản thanh toán đang chờ xác nhận."
+    },
+    "citationEvidence.failed.one": {
+      "source": "{count} payment failed.",
+      "text": "{count} khoản thanh toán thất bại."
+    },
+    "citationEvidence.simulated.one": {
+      "source": "{count} offline simulated payment.",
+      "text": "{count} khoản thanh toán mô phỏng ngoại tuyến."
+    },
+    "citationEvidence.conflicting.one": {
+      "source": "{count} payment record has conflicting settlement fields; confirmation is unavailable.",
+      "text": "{count} hồ sơ thanh toán có các trường quyết toán mâu thuẫn; không có xác nhận."
+    },
+    "citationEvidence.settledUnknown.other": {
+      "source": "Settled amount unavailable across {count} author payments.",
+      "text": "Không có số tiền đã quyết toán của {count} khoản thanh toán cho tác giả."
+    },
+    "citationEvidence.settled.other": {
+      "source": "{amount} settled across {count} author payments.",
+      "text": "{amount} đã quyết toán qua {count} khoản thanh toán cho tác giả."
+    },
+    "citationEvidence.pending.other": {
+      "source": "{count} payment are pending confirmation.",
+      "text": "{count} khoản thanh toán đang chờ xác nhận."
+    },
+    "citationEvidence.failed.other": {
+      "source": "{count} payment legs failed.",
+      "text": "{count} phần thanh toán thất bại."
+    },
+    "citationEvidence.simulated.other": {
+      "source": "{count} offline simulated payments.",
+      "text": "{count} khoản thanh toán mô phỏng ngoại tuyến."
+    },
+    "citationEvidence.conflicting.other": {
+      "source": "{count} payment record has conflicting settlement fields; confirmation is unavailable.",
+      "text": "{count} hồ sơ thanh toán có các trường quyết toán mâu thuẫn; không có xác nhận."
+    },
+    "citationEvidence.payment": {
+      "source": "{status} · {amount} USDC on {network} · recipient {payee}",
+      "text": "{status} · {amount} USDC trên {network} · bên nhận {payee}"
+    },
+    "citationEvidence.settlementId": {
+      "source": "· Circle settlement ID {reference}",
+      "text": "· ID quyết toán Circle {reference}"
+    },
+    "citationEvidence.planned": {
+      "source": "Planned citation reward: {amount}",
+      "text": "Phần thưởng trích dẫn dự kiến: {amount}"
+    },
+    "paperCard.contributorsUnavailable": {
+      "source": "Contributors unavailable",
+      "text": "Không có thông tin người đóng góp"
+    },
+    "paperCard.kicker": {
+      "source": "Research paper · metadata only",
+      "text": "Bài nghiên cứu · chỉ siêu dữ liệu"
+    },
+    "paperCard.draftNotice": {
+      "source": "Opens an editable question draft. Paper text has not been read here; abstract-only and bounded full-text reads are labelled when research runs.",
+      "text": "Mở bản nháp câu hỏi có thể chỉnh sửa. Văn bản bài nghiên cứu chưa được đọc tại đây; lượt đọc chỉ tóm tắt và toàn văn có giới hạn sẽ được gắn nhãn khi nghiên cứu chạy."
+    },
+    "paperCard.contributors.one": {
+      "source": "Incomplete contributor list: {recorded} of {count} provider entries have names here.",
+      "text": "Danh sách người đóng góp chưa đầy đủ: {recorded} trên {count} mục của nhà cung cấp có tên tại đây."
+    },
+    "paperCard.inspectRecords.one": {
+      "source": "Inspect all {count} observed records",
+      "text": "Kiểm tra toàn bộ {count} hồ sơ đã quan sát"
+    },
+    "paperCard.contributors.other": {
+      "source": "Incomplete contributor list: {recorded} of {count} provider entries have names here.",
+      "text": "Danh sách người đóng góp chưa đầy đủ: {recorded} trên {count} mục của nhà cung cấp có tên tại đây."
+    },
+    "paperCard.inspectRecords.other": {
+      "source": "Inspect all {count} observed records",
+      "text": "Kiểm tra toàn bộ {count} hồ sơ đã quan sát"
+    },
+    "paperCard.observed": {
+      "source": "Metadata observed {date} · {repository}",
+      "text": "Siêu dữ liệu được quan sát {date} · {repository}"
+    },
+    "paperCard.preprint": {
+      "source": "Preprint · Peer review unknown",
+      "text": "Bản thảo trước xuất bản · Chưa rõ bình duyệt"
+    },
+    "paperCard.conference": {
+      "source": "Conference paper · Peer review unknown",
+      "text": "Bài hội nghị · Chưa rõ bình duyệt"
+    },
+    "paperCard.journal": {
+      "source": "Journal article · Peer review unknown",
+      "text": "Bài tạp chí · Chưa rõ bình duyệt"
+    },
+    "paperCard.unknown": {
+      "source": "Publication type unknown · Peer review unknown",
+      "text": "Chưa rõ loại ấn phẩm · Chưa rõ bình duyệt"
+    },
+    "paperSave.saved": {
+      "source": "Saved · Open literature workspace →",
+      "text": "Đã lưu · Mở không gian tài liệu →"
+    },
+    "paperSave.failed": {
+      "source": "Paper could not be saved.",
+      "text": "Không thể lưu bài nghiên cứu."
+    },
+    "paperSave.save": {
+      "source": "Save to literature workspace",
+      "text": "Lưu vào không gian tài liệu"
+    },
+    "paperSave.notice": {
+      "source": "Paper metadata saved on this browser. No sign-in needed.",
+      "text": "Siêu dữ liệu bài nghiên cứu được lưu trên trình duyệt này. Không cần đăng nhập."
+    },
+    "paperSearch.title": {
+      "source": "Search beyond the starter library",
+      "text": "Tìm ngoài thư viện khởi đầu"
+    },
+    "paperSearch.privacy": {
+      "source": "Submitting sends your query or identifier to arXiv and Crossref as applicable. Results are bibliographic previews; metadata search does not read papers, run a model or make payments.",
+      "text": "Khi gửi, truy vấn hoặc định danh của bạn sẽ được chuyển tới arXiv và Crossref tùy trường hợp. Kết quả là bản xem trước thư mục; tìm siêu dữ liệu không đọc bài nghiên cứu, chạy mô hình hay thanh toán."
+    },
+    "paperSearch.busyError": {
+      "source": "Paper search is busy. Wait a minute before another search.",
+      "text": "Tìm bài nghiên cứu đang bận. Hãy chờ một phút trước khi tìm tiếp."
+    },
+    "paperSearch.incomplete": {
+      "source": "Paper search could not be completed. Check the query or try later.",
+      "text": "Không thể hoàn tất tìm bài nghiên cứu. Kiểm tra truy vấn hoặc thử lại sau."
+    },
+    "paperSearch.unsupported": {
+      "source": "Paper search returned an unsupported response.",
+      "text": "Tìm bài nghiên cứu trả về phản hồi không được hỗ trợ."
+    },
+    "paperSearch.unavailable": {
+      "source": "Paper search unavailable.",
+      "text": "Tìm bài nghiên cứu không khả dụng."
+    },
+    "paperSearch.query": {
+      "source": "Title, topic, DOI or versioned arXiv identifier",
+      "text": "Tiêu đề, chủ đề, DOI hoặc định danh arXiv có phiên bản"
+    },
+    "paperSearch.placeholder": {
+      "source": "Retrieval augmented generation",
+      "text": "Sinh nội dung tăng cường bằng truy xuất"
+    },
+    "paperSearch.limits": {
+      "source": "Titles and topics: up to 120 characters. Exact DOI: up to 200. Use at most two exact identifiers per search.",
+      "text": "Tiêu đề và chủ đề: tối đa 120 ký tự. DOI chính xác: tối đa 200. Dùng không quá hai định danh chính xác trong mỗi lượt tìm."
+    },
+    "paperSearch.filters": {
+      "source": "Author/year filters above also filter the returned bibliographic sample.",
+      "text": "Bộ lọc tác giả/năm ở trên cũng lọc mẫu thư mục trả về."
+    },
+    "paperSearch.requesting": {
+      "source": "Requesting bounded bibliographic records…",
+      "text": "Đang yêu cầu các hồ sơ thư mục trong giới hạn…"
+    },
+    "paperSearch.sampleNotice": {
+      "source": "Up to two provider requests and six records per provider response. This is a bounded sample, not a complete literature review. Matching starter records are included; unavailable providers remain explicit.",
+      "text": "Tối đa hai yêu cầu tới nhà cung cấp và sáu hồ sơ cho mỗi phản hồi từ nhà cung cấp. Đây là mẫu có giới hạn, không phải tổng quan tài liệu đầy đủ. Bao gồm hồ sơ khởi đầu phù hợp; nhà cung cấp không khả dụng vẫn được nêu rõ."
+    },
+    "paperSearch.matches.one": {
+      "source": "{count} matching works in this bounded result set.",
+      "text": "{count} công trình phù hợp trong tập kết quả có giới hạn này."
+    },
+    "paperSearch.providerRecords.one": {
+      "source": "{provider}: {count} observed records",
+      "text": "{provider}: {count} hồ sơ đã quan sát"
+    },
+    "paperSearch.matches.other": {
+      "source": "{count} matching works in this bounded result set.",
+      "text": "{count} công trình phù hợp trong tập kết quả có giới hạn này."
+    },
+    "paperSearch.providerRecords.other": {
+      "source": "{provider}: {count} observed records",
+      "text": "{provider}: {count} hồ sơ đã quan sát"
+    },
+    "paperSearch.providerUnavailable": {
+      "source": "{provider}: temporarily unavailable; no empty result inferred",
+      "text": "{provider}: tạm thời không khả dụng; không suy ra kết quả rỗng"
+    },
+    "paperSearch.providerEmpty": {
+      "source": "{provider}: no matching records accepted",
+      "text": "{provider}: không có hồ sơ phù hợp được chấp nhận"
+    },
+    "literatureComparison.title": {
+      "source": "Papers selected for comparison",
+      "text": "Bài nghiên cứu được chọn để so sánh"
+    },
+    "literatureComparison.outsideFilter": {
+      "source": "Outside the current screening filter; still selected.",
+      "text": "Ngoài bộ lọc sàng lọc hiện tại; vẫn được chọn."
+    },
+    "literatureComparison.remove": {
+      "source": "Remove from comparison",
+      "text": "Xóa khỏi so sánh"
+    },
+    "literatureComparison.focus": {
+      "source": "Saved focus used in the draft",
+      "text": "Trọng tâm đã lưu được dùng trong bản nháp"
+    },
+    "literatureComparison.noFocus": {
+      "source": "No saved review focus. The draft uses the general comparison questions.",
+      "text": "Chưa lưu trọng tâm tổng quan. Bản nháp dùng các câu hỏi so sánh chung."
+    },
+    "literatureComparison.reviewQuestion": {
+      "source": "Review prepared question",
+      "text": "Xem xét câu hỏi đã chuẩn bị"
+    },
+    "literatureComparison.preparedQuestion": {
+      "source": "Prepared comparison question",
+      "text": "Câu hỏi so sánh đã chuẩn bị"
+    },
+    "literatureComparison.paper": {
+      "source": "Paper {number} · {screening} · {repository}",
+      "text": "Bài nghiên cứu {number} · {screening} · {repository}"
+    },
+    "literatureComparison.removeLabel": {
+      "source": "Remove paper {number} from comparison",
+      "text": "Xóa bài nghiên cứu {number} khỏi so sánh"
+    },
+    "archiveFilter.elsewhere.one": {
+      "source": "Elsewhere in the archive · {count}",
+      "text": "Nơi khác trong kho lưu trữ · {count}"
+    },
+    "archiveFilter.more.one": {
+      "source": "+ {count} more — narrow the filter",
+      "text": "+ {count} nữa — thu hẹp bộ lọc"
+    },
+    "archiveFilter.elsewhere.other": {
+      "source": "Elsewhere in the archive · {count}",
+      "text": "Nơi khác trong kho lưu trữ · {count}"
+    },
+    "archiveFilter.more.other": {
+      "source": "+ {count} more — narrow the filter",
+      "text": "+ {count} nữa — thu hẹp bộ lọc"
+    },
+    "archiveFilter.empty": {
+      "source": "No answer in the archive matches “{query}” yet — ask it, and Keryx will pay the sources that answer it.",
+      "text": "Chưa có câu trả lời trong kho lưu trữ khớp với “{query}” — hãy đặt câu hỏi, Keryx sẽ trả tiền cho những nguồn trả lời câu hỏi đó."
+    },
+    "archiveLanguage.notice": {
+      "source": "Language labels come from recorded answer evidence. Historical answers without that evidence remain undetermined.",
+      "text": "Nhãn ngôn ngữ lấy từ bằng chứng câu trả lời đã ghi nhận. Câu trả lời lịch sử thiếu bằng chứng đó vẫn chưa xác định được ngôn ngữ."
+    },
+    "archiveIndex.empty": {
+      "source": "No cited answers are available in the archive yet.",
+      "text": "Chưa có câu trả lời kèm trích dẫn trong kho lưu trữ."
+    },
+    "archiveIndex.testnet": {
+      "source": "Browse all testnet questions, including uncited answers →",
+      "text": "Duyệt mọi câu hỏi testnet, kể cả câu trả lời không có trích dẫn →"
+    },
+    "archiveIndex.ask": {
+      "source": "Ask your own question ▸",
+      "text": "Đặt câu hỏi của bạn ▸"
+    },
+    "archiveIndex.page": {
+      "source": "The archive · page {page} of {pages}",
+      "text": "Kho lưu trữ · trang {page} trên {pages}"
+    },
+    "archiveIndex.title": {
+      "source": "Past answers, {emphasis}",
+      "text": "Câu trả lời trước đây, {emphasis}"
+    },
+    "archiveIndex.summary.one": {
+      "source": "{count} cited answer from Keryx research history. Historical testnet entries retain their original network. Individual dispatches show whether payments settled, remain pending, or were simulated.",
+      "text": "{count} câu trả lời kèm trích dẫn từ lịch sử nghiên cứu Keryx. Mục testnet lịch sử giữ nguyên mạng gốc. Từng bản tin cho biết thanh toán đã quyết toán, còn chờ xử lý hay được mô phỏng."
+    },
+    "archiveIndex.summary.other": {
+      "source": "{count} cited answers from Keryx research history. Historical testnet entries retain their original network. Individual dispatches show whether payments settled, remain pending, or were simulated.",
+      "text": "{count} câu trả lời kèm trích dẫn từ lịch sử nghiên cứu Keryx. Mục testnet lịch sử giữ nguyên mạng gốc. Từng bản tin cho biết thanh toán đã quyết toán, còn chờ xử lý hay được mô phỏng."
+    },
+    "dispatchWire.unavailable": {
+      "source": "Payment feed unavailable.",
+      "text": "Luồng thanh toán không khả dụng."
+    },
+    "reportFreshness.moved": {
+      "source": "Exact citation version moved",
+      "text": "Phiên bản trích dẫn chính xác đã thay đổi"
+    },
+    "reportFreshness.partial": {
+      "source": "This audit is partial: some current source, version, or publication metadata was unavailable.",
+      "text": "Kiểm toán này chưa đầy đủ: một số siêu dữ liệu nguồn, phiên bản hoặc ấn phẩm hiện tại không khả dụng."
+    },
+    "reportFreshness.incomplete": {
+      "source": "Version check incomplete",
+      "text": "Kiểm tra phiên bản chưa hoàn tất"
+    },
+    "reportFreshness.incompleteNotice": {
+      "source": "Keryx could not complete every current source, exact-version, and publication-date check. The archived evidence remains intact, but silence here is not proof that the source is unchanged.",
+      "text": "Keryx không thể hoàn tất mọi kiểm tra về nguồn hiện tại, phiên bản chính xác và ngày xuất bản. Bằng chứng lưu trữ vẫn nguyên vẹn, nhưng việc không có thông báo ở đây không chứng minh nguồn chưa thay đổi."
+    },
+    "reportFreshness.current": {
+      "source": "Exact receipt still current",
+      "text": "Biên nhận chính xác vẫn còn hiện hành"
+    },
+    "reportFreshness.new": {
+      "source": "New material since this dispatch",
+      "text": "Tài liệu mới kể từ bản tin này"
+    },
+    "reportFreshness.partialCurrent": {
+      "source": "Audit partial — unavailable checks are not counted as current.",
+      "text": "Kiểm toán chưa đầy đủ — kiểm tra không khả dụng không được tính là còn hiện hành."
+    },
+    "reportFreshness.audit": {
+      "source": "Inspect machine-readable audit",
+      "text": "Kiểm tra bản kiểm toán máy đọc được"
+    },
+    "reportFreshness.reask": {
+      "source": "Re-ask on current sources",
+      "text": "Hỏi lại trên các nguồn hiện tại"
+    },
+    "reportFreshness.superseded.one": {
+      "source": "{changed} of {count} versioned citation no longer match the article asset Keryx currently indexes. The archived quotes and payments remain bound to the exact version bought for this dispatch; Keryx has not bought or judged the replacement.",
+      "text": "{changed} trên {count} trích dẫn có phiên bản không còn khớp với tài nguyên bài viết Keryx hiện lập chỉ mục. Trích đoạn và thanh toán lưu trữ vẫn gắn với phiên bản chính xác đã mua cho bản tin này; Keryx chưa mua hay đánh giá bản thay thế."
+    },
+    "reportFreshness.superseded.other": {
+      "source": "{changed} of {count} versioned citations no longer match the article asset Keryx currently indexes. The archived quotes and payments remain bound to the exact version bought for this dispatch; Keryx has not bought or judged the replacement.",
+      "text": "{changed} trên {count} trích dẫn có phiên bản không còn khớp với tài nguyên bài viết Keryx hiện lập chỉ mục. Trích đoạn và thanh toán lưu trữ vẫn gắn với phiên bản chính xác đã mua cho bản tin này; Keryx chưa mua hay đánh giá bản thay thế."
+    },
+    "reportFreshness.newFeedItems.one": {
+      "source": "The cited feeds also contain {count} newly published post since this dispatch.",
+      "text": "Các nguồn cấp được trích dẫn còn có {count} bài mới xuất bản kể từ bản tin này."
+    },
+    "reportFreshness.newFeedItems.other": {
+      "source": "The cited feeds also contain {count} newly published posts since this dispatch.",
+      "text": "Các nguồn cấp được trích dẫn còn có {count} bài mới xuất bản kể từ bản tin này."
+    },
+    "reportFreshness.currentVersions.one": {
+      "source": "{count} exact cited article version still match Keryx's current index.",
+      "text": "{count} phiên bản bài viết chính xác được trích dẫn vẫn khớp với chỉ mục hiện tại của Keryx."
+    },
+    "reportFreshness.currentVersions.other": {
+      "source": "{count} exact cited article versions still match Keryx's current index.",
+      "text": "{count} phiên bản bài viết chính xác được trích dẫn vẫn khớp với chỉ mục hiện tại của Keryx."
+    },
+    "reportFreshness.quietAll.one": {
+      "source": "The source cited here has published nothing new since this dispatch settled.",
+      "text": "Nguồn được trích dẫn ở đây chưa xuất bản gì mới kể từ khi bản tin này được quyết toán."
+    },
+    "reportFreshness.quietAll.other": {
+      "source": "All {count} sources cited here have published nothing new since this dispatch settled.",
+      "text": "Toàn bộ {count} nguồn được trích dẫn ở đây chưa xuất bản gì mới kể từ khi bản tin này được quyết toán."
+    },
+    "reportFreshness.quietWatched.one": {
+      "source": "The one cited source Keryx follows a feed for has published nothing new since this dispatch settled.",
+      "text": "Nguồn duy nhất được trích dẫn mà Keryx theo dõi qua nguồn cấp chưa xuất bản gì mới kể từ khi bản tin này được quyết toán."
+    },
+    "reportFreshness.quietWatched.other": {
+      "source": "The {watched} of {count} cited sources Keryx follows a feed for have published nothing new since this dispatch settled.",
+      "text": "{watched} trên {count} nguồn được trích dẫn mà Keryx theo dõi qua nguồn cấp chưa xuất bản gì mới kể từ khi bản tin này được quyết toán."
+    },
+    "reportFreshness.newFromOne.one": {
+      "source": "{count} new post has been published by the one source this answer cited. This dispatch never read it — it settled before it existed.",
+      "text": "Nguồn duy nhất được câu trả lời này trích dẫn đã xuất bản {count} bài mới. Bản tin này chưa từng đọc bài đó — bản tin đã được quyết toán trước khi bài đó tồn tại."
+    },
+    "reportFreshness.newFromAll.one": {
+      "source": "{count} new post has been published by all {cited} sources this answer cited. This dispatch never read it — it settled before it existed.",
+      "text": "Toàn bộ {cited} nguồn được câu trả lời này trích dẫn đã xuất bản {count} bài mới. Bản tin này chưa từng đọc bài đó — bản tin đã được quyết toán trước khi bài đó tồn tại."
+    },
+    "reportFreshness.newFromSubset.one": {
+      "source": "{count} new post has been published by {moved} of the {cited} sources this answer cited. This dispatch never read it — it settled before it existed.",
+      "text": "{moved} trên {cited} nguồn được câu trả lời này trích dẫn đã xuất bản {count} bài mới. Bản tin này chưa từng đọc bài đó — bản tin đã được quyết toán trước khi bài đó tồn tại."
+    },
+    "reportFreshness.newFromOne.other": {
+      "source": "{count} new posts have been published by the one source this answer cited. This dispatch never read them — it settled before they existed.",
+      "text": "Nguồn duy nhất được câu trả lời này trích dẫn đã xuất bản {count} bài mới. Bản tin này chưa từng đọc các bài đó — bản tin đã được quyết toán trước khi chúng tồn tại."
+    },
+    "reportFreshness.newFromAll.other": {
+      "source": "{count} new posts have been published by all {cited} sources this answer cited. This dispatch never read them — it settled before they existed.",
+      "text": "Toàn bộ {cited} nguồn được câu trả lời này trích dẫn đã xuất bản {count} bài mới. Bản tin này chưa từng đọc các bài đó — bản tin đã được quyết toán trước khi chúng tồn tại."
+    },
+    "reportFreshness.newFromSubset.other": {
+      "source": "{count} new posts have been published by {moved} of the {cited} sources this answer cited. This dispatch never read them — it settled before they existed.",
+      "text": "{moved} trên {cited} nguồn được câu trả lời này trích dẫn đã xuất bản {count} bài mới. Bản tin này chưa từng đọc các bài đó — bản tin đã được quyết toán trước khi chúng tồn tại."
+    },
+    "reportFreshness.versionSummary.one": {
+      "source": "{current}/{count} exact cited article versions still match the current Keryx index; new posts are separate assets this dispatch never read.",
+      "text": "{current}/{count} phiên bản bài viết chính xác được trích dẫn vẫn khớp với chỉ mục Keryx hiện tại; bài mới là tài nguyên riêng mà bản tin này chưa từng đọc."
+    },
+    "reportFreshness.versionSummary.other": {
+      "source": "{current}/{count} exact cited article versions still match the current Keryx index; new posts are separate assets this dispatch never read.",
+      "text": "{current}/{count} phiên bản bài viết chính xác được trích dẫn vẫn khớp với chỉ mục Keryx hiện tại; bài mới là tài nguyên riêng mà bản tin này chưa từng đọc."
+    },
+    "reportFreshness.reaskNotice": {
+      "source": "Re-asking buys current material and pays its creators again. The archived receipt never changes.  {audit}",
+      "text": "Hỏi lại sẽ mua tài liệu hiện tại và trả tiền cho tác giả lần nữa. Biên nhận lưu trữ không bao giờ thay đổi.  {audit}"
+    },
+    "literatureWorkspace.staleFocusError": {
+      "source": "Your review focus changed in another tab. Load the saved focus before saving again.",
+      "text": "Trọng tâm tổng quan của bạn đã thay đổi trong tab khác. Tải trọng tâm đã lưu trước khi lưu lại."
+    },
+    "literatureWorkspace.focusSaved": {
+      "source": "Review focus saved on this browser.",
+      "text": "Đã lưu trọng tâm tổng quan trên trình duyệt này."
+    },
+    "literatureWorkspace.questionLabel": {
+      "source": "Research question or inclusion criteria",
+      "text": "Câu hỏi nghiên cứu hoặc tiêu chí đưa vào"
+    },
+    "literatureWorkspace.staleFocus": {
+      "source": "The saved review focus changed in another tab or restore. Your unsaved draft is still here.",
+      "text": "Trọng tâm tổng quan đã lưu đã thay đổi trong tab khác hoặc qua khôi phục. Bản nháp chưa lưu của bạn vẫn ở đây."
+    },
+    "literatureWorkspace.stalePaperError": {
+      "source": "This paper changed in another tab. Load its saved screening before saving again.",
+      "text": "Bài nghiên cứu này đã thay đổi trong tab khác. Tải kết quả sàng lọc đã lưu trước khi lưu lại."
+    },
+    "literatureWorkspace.screeningSaved": {
+      "source": "Screening and notes saved on this browser.",
+      "text": "Đã lưu sàng lọc và ghi chú trên trình duyệt này."
+    },
+    "literatureWorkspace.screeningDecision": {
+      "source": "Your screening decision",
+      "text": "Quyết định sàng lọc của bạn"
+    },
+    "literatureWorkspace.notesLabel": {
+      "source": "Why keep or exclude this paper? What needs checking?",
+      "text": "Tại sao giữ hoặc loại bài nghiên cứu này? Cần kiểm tra điều gì?"
+    },
+    "literatureWorkspace.staleScreening": {
+      "source": "Saved screening changed in another tab or restore. Your unsaved notes are still here.",
+      "text": "Kết quả sàng lọc đã lưu đã thay đổi trong tab khác hoặc qua khôi phục. Ghi chú chưa lưu của bạn vẫn ở đây."
+    },
+    "literatureWorkspace.notesNotice": {
+      "source": "These are your own notes. Saving them does not read the paper or verify its findings.",
+      "text": "Đây là ghi chú của riêng bạn. Lưu ghi chú không đọc bài nghiên cứu hay xác minh kết quả của bài."
+    },
+    "literatureWorkspace.saveScreening": {
+      "source": "Save screening and notes",
+      "text": "Lưu sàng lọc và ghi chú"
+    },
+    "literatureWorkspace.contributorsUnavailable": {
+      "source": "Contributors unavailable",
+      "text": "Không có thông tin người đóng góp"
+    },
+    "literatureWorkspace.editNotes": {
+      "source": "Edit screening and notes",
+      "text": "Chỉnh sửa sàng lọc và ghi chú"
+    },
+    "literatureWorkspace.removalDetails": {
+      "source": "Saved record and removal",
+      "text": "Hồ sơ đã lưu và thao tác xóa"
+    },
+    "literatureWorkspace.removeConfirm": {
+      "source": "Remove this paper and its screening notes from this browser?",
+      "text": "Xóa bài nghiên cứu này và ghi chú sàng lọc khỏi trình duyệt này?"
+    },
+    "literatureWorkspace.removeCancelled": {
+      "source": "Removal cancelled. Your paper is still saved.",
+      "text": "Đã hủy xóa. Bài nghiên cứu của bạn vẫn được lưu."
+    },
+    "literatureWorkspace.removed": {
+      "source": "Paper removed from this browser.",
+      "text": "Đã xóa bài nghiên cứu khỏi trình duyệt này."
+    },
+    "literatureWorkspace.actionFailed": {
+      "source": "The workspace action failed.",
+      "text": "Thao tác trong không gian làm việc thất bại."
+    },
+    "literatureWorkspace.privacy": {
+      "source": "Saved only in this browser, without an account or cloud sync. Export a backup before clearing browser data or changing devices. Notes stay here; preparing a comparison uses only your research question and the two paper links.",
+      "text": "Chỉ lưu trong trình duyệt này, không có tài khoản hay đồng bộ đám mây. Xuất bản sao lưu trước khi xóa dữ liệu trình duyệt hoặc đổi thiết bị. Ghi chú vẫn ở đây; việc chuẩn bị so sánh chỉ dùng câu hỏi nghiên cứu và hai liên kết bài nghiên cứu của bạn."
+    },
+    "literatureWorkspace.loading": {
+      "source": "Loading your saved workspace…",
+      "text": "Đang tải không gian làm việc đã lưu của bạn…"
+    },
+    "literatureWorkspace.focusTitle": {
+      "source": "Start with your review question",
+      "text": "Bắt đầu với câu hỏi tổng quan của bạn"
+    },
+    "literatureWorkspace.focusExample": {
+      "source": "Keep a focus for screening. For example: which retrieval methods improve factual grounding, and under what evaluation conditions?",
+      "text": "Giữ một trọng tâm để sàng lọc. Ví dụ: phương pháp truy xuất nào cải thiện căn cứ thực tế, và trong điều kiện đánh giá nào?"
+    },
+    "literatureWorkspace.find": {
+      "source": "Find and save papers →",
+      "text": "Tìm và lưu bài nghiên cứu →"
+    },
+    "literatureWorkspace.filter": {
+      "source": "Show screening decisions",
+      "text": "Hiển thị quyết định sàng lọc"
+    },
+    "literatureWorkspace.ris": {
+      "source": "Download shown references (RIS)",
+      "text": "Tải tài liệu tham khảo đang hiển thị (RIS)"
+    },
+    "literatureWorkspace.csl": {
+      "source": "Download shown references (CSL-JSON)",
+      "text": "Tải tài liệu tham khảo đang hiển thị (CSL-JSON)"
+    },
+    "literatureWorkspace.referencesNotice": {
+      "source": "Reference exports contain only the papers shown by this filter, for a reference manager such as Zotero. They keep saved metadata and exact versions; your review question, screening decisions and personal notes stay out of these files. CSL-JSON reference keys stay the same when you reorder or filter saved papers.",
+      "text": "Tệp xuất tài liệu tham khảo chỉ chứa bài nghiên cứu đang hiển thị theo bộ lọc này, dành cho trình quản lý tài liệu như Zotero. Tệp giữ siêu dữ liệu đã lưu và phiên bản chính xác; câu hỏi tổng quan, quyết định sàng lọc và ghi chú cá nhân của bạn không nằm trong các tệp này. Khóa tài liệu tham khảo CSL-JSON giữ nguyên khi bạn sắp xếp lại hoặc lọc bài nghiên cứu đã lưu."
+    },
+    "literatureWorkspace.compareNotice": {
+      "source": "Select two saved papers to prepare an editable comparison using your saved review question. Deep research can inspect more targets; its existing reading, evidence, availability and budget limits still apply.",
+      "text": "Chọn hai bài nghiên cứu đã lưu để chuẩn bị bản so sánh có thể chỉnh sửa bằng câu hỏi tổng quan đã lưu. Nghiên cứu chuyên sâu có thể kiểm tra nhiều mục tiêu hơn; các giới hạn đọc, bằng chứng, khả dụng và ngân sách hiện có vẫn áp dụng."
+    },
+    "literatureWorkspace.selectTwo": {
+      "source": "Select two papers to compare",
+      "text": "Chọn hai bài nghiên cứu để so sánh"
+    },
+    "literatureWorkspace.clearSelection": {
+      "source": "Clear comparison selection",
+      "text": "Xóa lựa chọn so sánh"
+    },
+    "literatureWorkspace.draftPrivacy": {
+      "source": "Opens the question composer for your review. The question and links enter its URL and browser history. Nothing is submitted automatically; paper text has not been read by this workspace.",
+      "text": "Mở trình soạn câu hỏi để bạn xem xét. Câu hỏi và liên kết sẽ có trong URL và lịch sử trình duyệt. Không tự động gửi gì; không gian làm việc này chưa đọc văn bản bài nghiên cứu."
+    },
+    "literatureWorkspace.emptyTitle": {
+      "source": "Build a review you can return to.",
+      "text": "Tạo một tổng quan để quay lại sau."
+    },
+    "literatureWorkspace.emptyFind": {
+      "source": "Find papers in the starter library or search repositories.",
+      "text": "Tìm bài nghiên cứu trong thư viện khởi đầu hoặc tìm trong các kho."
+    },
+    "literatureWorkspace.emptySave": {
+      "source": "Save an exact paper record, then record why it belongs in your review.",
+      "text": "Lưu hồ sơ bài nghiên cứu chính xác, rồi ghi lại lý do đưa bài vào tổng quan của bạn."
+    },
+    "literatureWorkspace.emptyCompare": {
+      "source": "Compare two papers or export the screening list to continue your work.",
+      "text": "So sánh hai bài nghiên cứu hoặc xuất danh sách sàng lọc để tiếp tục công việc."
+    },
+    "literatureWorkspace.browse": {
+      "source": "Browse research papers →",
+      "text": "Duyệt bài nghiên cứu →"
+    },
+    "literatureWorkspace.filterEmpty": {
+      "source": "No papers have this screening decision. Choose another filter to see your saved list.",
+      "text": "Không có bài nghiên cứu nào có quyết định sàng lọc này. Chọn bộ lọc khác để xem danh sách đã lưu."
+    },
+    "literatureWorkspace.portable": {
+      "source": "Keep your work portable",
+      "text": "Giữ công việc của bạn có thể mang theo"
+    },
+    "literatureWorkspace.portableNotice": {
+      "source": "Screening CSV includes all saved papers, your notes and metadata provenance. JSON backup also restores your review focus and screening. These are personal bibliography records; they contain no paper text, generated answer or settlement receipt.",
+      "text": "CSV sàng lọc bao gồm mọi bài nghiên cứu đã lưu, ghi chú của bạn và nguồn gốc siêu dữ liệu. Bản sao lưu JSON còn khôi phục trọng tâm tổng quan và kết quả sàng lọc. Đây là hồ sơ thư mục cá nhân; không chứa văn bản bài nghiên cứu, câu trả lời được tạo hay biên nhận quyết toán."
+    },
+    "literatureWorkspace.csvPrepared": {
+      "source": "Screening CSV download prepared.",
+      "text": "Đã chuẩn bị tải CSV sàng lọc."
+    },
+    "literatureWorkspace.csv": {
+      "source": "Download screening CSV",
+      "text": "Tải CSV sàng lọc"
+    },
+    "literatureWorkspace.backupPrepared": {
+      "source": "Workspace backup download prepared.",
+      "text": "Đã chuẩn bị tải bản sao lưu không gian làm việc."
+    },
+    "literatureWorkspace.storedPrepared": {
+      "source": "Original stored data download prepared.",
+      "text": "Đã chuẩn bị tải dữ liệu gốc được lưu."
+    },
+    "literatureWorkspace.restoreLabel": {
+      "source": "Restore a workspace backup (JSON, up to 1 MiB)",
+      "text": "Khôi phục bản sao lưu không gian làm việc (JSON, tối đa 1 MiB)"
+    },
+    "literatureWorkspace.tooLarge": {
+      "source": "Backup exceeds the 1 MiB limit. Existing workspace has been kept.",
+      "text": "Bản sao lưu vượt giới hạn 1 MiB. Không gian làm việc hiện có được giữ lại."
+    },
+    "literatureWorkspace.unreadable": {
+      "source": "Backup could not be read.",
+      "text": "Không thể đọc bản sao lưu."
+    },
+    "literatureWorkspace.restoreNotice": {
+      "source": "Restoring replaces this browser’s entire saved list, focus and notes. Download your current backup first. Imported metadata is not checked against repositories.",
+      "text": "Khôi phục sẽ thay thế toàn bộ danh sách đã lưu, trọng tâm và ghi chú trên trình duyệt này. Hãy tải bản sao lưu hiện tại trước. Siêu dữ liệu nhập vào không được đối chiếu với các kho."
+    },
+    "literatureWorkspace.restored": {
+      "source": "Backup restored on this browser.",
+      "text": "Đã khôi phục bản sao lưu trên trình duyệt này."
+    },
+    "literatureWorkspace.restore": {
+      "source": "Replace workspace with this backup",
+      "text": "Thay thế không gian làm việc bằng bản sao lưu này"
+    },
+    "literatureWorkspace.clearDetails": {
+      "source": "Clear this browser’s literature workspace",
+      "text": "Xóa không gian tài liệu trên trình duyệt này"
+    },
+    "literatureWorkspace.clearNotice": {
+      "source": "Clears only this saved bibliography and notes. Export a backup first.",
+      "text": "Chỉ xóa danh mục tài liệu và ghi chú đã lưu này. Hãy xuất bản sao lưu trước."
+    },
+    "literatureWorkspace.clearConfirm": {
+      "source": "Clear all saved papers, review focus and notes on this browser? Export a backup first.",
+      "text": "Xóa toàn bộ bài nghiên cứu đã lưu, trọng tâm tổng quan và ghi chú trên trình duyệt này? Hãy xuất bản sao lưu trước."
+    },
+    "literatureWorkspace.clearCancelled": {
+      "source": "Clear cancelled. Your workspace has been kept.",
+      "text": "Đã hủy xóa. Không gian làm việc của bạn được giữ lại."
+    },
+    "literatureWorkspace.cleared": {
+      "source": "Literature workspace cleared on this browser.",
+      "text": "Đã xóa không gian tài liệu trên trình duyệt này."
+    },
+    "literatureWorkspace.metadata": {
+      "source": "Metadata only · Peer review unknown",
+      "text": "Chỉ siêu dữ liệu · Chưa rõ bình duyệt"
+    },
+    "literatureWorkspace.metadataIncomplete": {
+      "source": "Metadata only · Peer review unknown · Incomplete contributors ({recorded}/{total})",
+      "text": "Chỉ siêu dữ liệu · Chưa rõ bình duyệt · Người đóng góp chưa đầy đủ ({recorded}/{total})"
+    },
+    "literatureWorkspace.observed": {
+      "source": "Metadata observed {date} ↗",
+      "text": "Siêu dữ liệu được quan sát {date} ↗"
+    },
+    "literatureWorkspace.snapshot": {
+      "source": "Saved {date}. Retains the first saved snapshot of this exact paper link; imported records are not revalidated.",
+      "text": "Đã lưu {date}. Giữ ảnh chụp đầu tiên được lưu của liên kết bài nghiên cứu chính xác này; hồ sơ nhập vào không được xác thực lại."
+    },
+    "literatureWorkspace.selection.one": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "Hiển thị {count} · đã chọn {selected}/2 để so sánh"
+    },
+    "literatureWorkspace.risPrepared.one": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "Đã chuẩn bị tải RIS cho {count} bài nghiên cứu đang hiển thị."
+    },
+    "literatureWorkspace.cslPrepared.one": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "Đã chuẩn bị tải CSL-JSON cho {count} bài nghiên cứu đang hiển thị."
+    },
+    "literatureWorkspace.backupSummary.one": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename}: {count} bài nghiên cứu · {title}"
+    },
+    "literatureWorkspace.selection.other": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "Hiển thị {count} · đã chọn {selected}/2 để so sánh"
+    },
+    "literatureWorkspace.risPrepared.other": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "Đã chuẩn bị tải RIS cho {count} bài nghiên cứu đang hiển thị."
+    },
+    "literatureWorkspace.cslPrepared.other": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "Đã chuẩn bị tải CSL-JSON cho {count} bài nghiên cứu đang hiển thị."
+    },
+    "literatureWorkspace.backupSummary.other": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename}: {count} bài nghiên cứu · {title}"
+    },
+    "reportDispatch.notFound": {
+      "source": "Dispatch not found — Keryx",
+      "text": "Không tìm thấy bản tin — Keryx"
+    },
+    "reportDispatch.parentUnavailable": {
+      "source": "The earlier dispatch could not be loaded. This answer and its payment evidence remain available.",
+      "text": "Không thể tải bản tin trước. Câu trả lời này và bằng chứng thanh toán của nó vẫn có sẵn."
+    },
+    "reportDispatch.comparisonUnavailable": {
+      "source": "The earlier payment comparison could not be loaded. This answer and its own payment evidence remain available.",
+      "text": "Không thể tải so sánh thanh toán trước. Câu trả lời này và bằng chứng thanh toán riêng của nó vẫn có sẵn."
+    },
+    "reportDispatch.historicalNetwork": {
+      "source": "Arc testnet · historical",
+      "text": "Arc testnet · lịch sử"
+    },
+    "reportDispatch.followUpsUnavailable": {
+      "source": "Some follow-up links could not be loaded. This answer and its payment evidence remain available.",
+      "text": "Không thể tải một số liên kết tiếp nối. Câu trả lời này và bằng chứng thanh toán của nó vẫn có sẵn."
+    },
+    "reportDispatch.title": {
+      "source": "{question} — Keryx Dispatch",
+      "text": "{question} — Bản tin Keryx"
+    },
+    "reportDispatch.followsHistorical": {
+      "source": "Follows up on · Arc testnet",
+      "text": "Tiếp nối · Arc testnet"
+    },
+    "reportDispatch.historicalFollowUp": {
+      "source": "A new follow-up runs on {network} with today’s sources and budget. Only the historical question supplies context.",
+      "text": "Lượt tiếp nối mới chạy trên {network} với nguồn và ngân sách hiện nay. Chỉ câu hỏi lịch sử được dùng làm ngữ cảnh."
+    },
+    "reportMetadata.current.plain.one": {
+      "source": "{count} source cited · ${spent} spent · {excerpt}…",
+      "text": "Trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.plain.one": {
+      "source": "{count} cited · ${spent} spent · ${creators} to creators",
+      "text": "{count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.current.plain.other": {
+      "source": "{count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "Trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.plain.other": {
+      "source": "{count} cited · ${spent} spent · ${creators} to creators",
+      "text": "{count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.current.confidence.one": {
+      "source": "{confidence} confidence · {count} source cited · ${spent} spent · {excerpt}…",
+      "text": "Độ tin cậy {confidence} · trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.confidence.one": {
+      "source": "{confidence} confidence · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Độ tin cậy {confidence} · {count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.current.confidence.other": {
+      "source": "{confidence} confidence · {count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "Độ tin cậy {confidence} · trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.confidence.other": {
+      "source": "{confidence} confidence · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Độ tin cậy {confidence} · {count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.current.bibliography.one": {
+      "source": "Original bibliographic metadata · {count} source cited · ${spent} spent · {excerpt}…",
+      "text": "Siêu dữ liệu thư mục gốc · trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.bibliography.one": {
+      "source": "Original bibliographic metadata · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Siêu dữ liệu thư mục gốc · {count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.current.bibliography.other": {
+      "source": "Original bibliographic metadata · {count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "Siêu dữ liệu thư mục gốc · trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.bibliography.other": {
+      "source": "Original bibliographic metadata · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Siêu dữ liệu thư mục gốc · {count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.historical.plain.one": {
+      "source": "Arc testnet historical · {count} source cited · ${spent} spent · {excerpt}…",
+      "text": "Lịch sử Arc testnet · trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.plain.one": {
+      "source": "Arc testnet historical · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Lịch sử Arc testnet · {count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.historical.plain.other": {
+      "source": "Arc testnet historical · {count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "Lịch sử Arc testnet · trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.plain.other": {
+      "source": "Arc testnet historical · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Lịch sử Arc testnet · {count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.historical.confidence.one": {
+      "source": "Arc testnet historical · {confidence} confidence · {count} source cited · ${spent} spent · {excerpt}…",
+      "text": "Lịch sử Arc testnet · độ tin cậy {confidence} · trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.confidence.one": {
+      "source": "Arc testnet historical · {confidence} confidence · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Lịch sử Arc testnet · độ tin cậy {confidence} · {count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.historical.confidence.other": {
+      "source": "Arc testnet historical · {confidence} confidence · {count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "Lịch sử Arc testnet · độ tin cậy {confidence} · trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.confidence.other": {
+      "source": "Arc testnet historical · {confidence} confidence · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Lịch sử Arc testnet · độ tin cậy {confidence} · {count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.historical.bibliography.one": {
+      "source": "Arc testnet historical · Original bibliographic metadata · {count} source cited · ${spent} spent · {excerpt}…",
+      "text": "Lịch sử Arc testnet · siêu dữ liệu thư mục gốc · trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.bibliography.one": {
+      "source": "Arc testnet historical · Original bibliographic metadata · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Lịch sử Arc testnet · siêu dữ liệu thư mục gốc · {count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportMetadata.historical.bibliography.other": {
+      "source": "Arc testnet historical · Original bibliographic metadata · {count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "Lịch sử Arc testnet · siêu dữ liệu thư mục gốc · trích dẫn {count} nguồn · đã chi ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.bibliography.other": {
+      "source": "Arc testnet historical · Original bibliographic metadata · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Lịch sử Arc testnet · siêu dữ liệu thư mục gốc · {count} được trích dẫn · đã chi ${spent} · ${creators} đến tác giả"
+    },
+    "reportDispatchView.bibliography": {
+      "source": "Original bibliographic metadata",
+      "text": "Siêu dữ liệu thư mục gốc"
+    },
+    "reportDispatchView.steps.one": {
+      "source": "Decision log · {count} steps",
+      "text": "Nhật ký quyết định · {count} bước"
+    },
+    "reportDispatchView.steps.other": {
+      "source": "Decision log · {count} steps",
+      "text": "Nhật ký quyết định · {count} bước"
+    },
+    "reportSocial.alt": {
+      "source": "Keryx dispatch — question and original payment evidence",
+      "text": "Bản tin Keryx — câu hỏi và bằng chứng thanh toán gốc"
+    },
+    "reportSocial.fallback": {
+      "source": "An autonomous Keryx dispatch",
+      "text": "Một bản tin Keryx tự chủ"
+    },
+    "reportSocial.questionLabel": {
+      "source": "The question it was paid to answer",
+      "text": "Câu hỏi được trả phí để trả lời"
+    },
+    "reportSocial.creators": {
+      "source": "creator rewards recorded",
+      "text": "phần thưởng cho tác giả đã ghi nhận"
+    },
+    "reportTopic.notFound": {
+      "source": "Topic not found — Keryx",
+      "text": "Không tìm thấy chủ đề — Keryx"
+    },
+    "reportTopic.ask": {
+      "source": "Ask your own question ▸",
+      "text": "Đặt câu hỏi của bạn ▸"
+    },
+    "reportTopic.metadataTitle": {
+      "source": "{topic} — cited Keryx answers",
+      "text": "{topic} — câu trả lời Keryx kèm trích dẫn"
+    },
+    "reportTopic.collectionName": {
+      "source": "{topic} — Keryx answers",
+      "text": "{topic} — câu trả lời Keryx"
+    },
+    "reportTopic.filter": {
+      "source": "Filter {topic} answers…",
+      "text": "Lọc câu trả lời về {topic}…"
+    },
+    "reportTopic.description.one": {
+      "source": "{count} question about {topic} answered by Keryx with cited sources. Open a dispatch to inspect its payment states.",
+      "text": "{count} câu hỏi về {topic} được Keryx trả lời với nguồn trích dẫn. Mở bản tin để kiểm tra trạng thái thanh toán."
+    },
+    "reportTopic.description.other": {
+      "source": "{count} questions about {topic} answered by Keryx with cited sources. Open a dispatch to inspect its payment states.",
+      "text": "{count} câu hỏi về {topic} được Keryx trả lời với nguồn trích dẫn. Mở bản tin để kiểm tra trạng thái thanh toán."
+    },
+    "reportTopic.summary.one": {
+      "source": "{count} cited answer on this topic. Each dispatch retains its network and recorded creator rewards. Testnet amounts remain separate from the current ledger; open individual receipts for settlement states.",
+      "text": "{count} câu trả lời kèm trích dẫn về chủ đề này. Mỗi bản tin giữ nguyên mạng và phần thưởng cho tác giả đã ghi nhận. Số tiền testnet tách biệt với sổ cái hiện tại; mở từng biên nhận để xem trạng thái quyết toán."
+    },
+    "reportTopic.summary.other": {
+      "source": "{count} cited answers on this topic. Each dispatch retains its network and recorded creator rewards. Testnet amounts remain separate from the current ledger; open individual receipts for settlement states.",
+      "text": "{count} câu trả lời kèm trích dẫn về chủ đề này. Mỗi bản tin giữ nguyên mạng và phần thưởng cho tác giả đã ghi nhận. Số tiền testnet tách biệt với sổ cái hiện tại; mở từng biên nhận để xem trạng thái quyết toán."
+    },
+    "reportTopic.coverage": {
+      "source": "Showing the {shown} most recent of {total} on this beat — the filter above still searches all of them, and {archive} is paginated end to end.",
+      "text": "Đang hiển thị {shown} mục mới nhất trong tổng số {total} của mảng này — bộ lọc ở trên vẫn tìm trên tất cả, và {archive} được phân trang đầy đủ."
+    },
+    "reportArchiveRoute.title": {
+      "source": "The Archive — cited answers from Keryx",
+      "text": "Kho lưu trữ — câu trả lời kèm trích dẫn từ Keryx"
+    },
+    "reportArchiveRoute.description": {
+      "source": "Browse cited answers from Keryx research history. Open a dispatch to inspect its sources, decisions, and payment states, including settled, pending, or simulated rewards.",
+      "text": "Duyệt câu trả lời kèm trích dẫn từ lịch sử nghiên cứu Keryx. Mở bản tin để kiểm tra nguồn, quyết định và trạng thái thanh toán, gồm phần thưởng đã quyết toán, đang chờ xử lý hoặc được mô phỏng."
+    },
+    "reportArchiveRoute.notFound": {
+      "source": "Archive page not found — Keryx",
+      "text": "Không tìm thấy trang lưu trữ — Keryx"
+    },
+    "reportArchiveRoute.pageTitle": {
+      "source": "The Archive — page {page} of {pages}",
+      "text": "Kho lưu trữ — trang {page} trên {pages}"
+    },
+    "reportArchiveRoute.pageDescription": {
+      "source": "Older cited answers from Keryx research history (page {page}). Open a dispatch to inspect its sources, decisions, and payment states.",
+      "text": "Câu trả lời cũ kèm trích dẫn từ lịch sử nghiên cứu Keryx (trang {page}). Mở bản tin để kiểm tra nguồn, quyết định và trạng thái thanh toán."
+    },
+    "reportArchiveRoute.pageName": {
+      "source": "Keryx Answer Archive — page {page}",
+      "text": "Kho câu trả lời Keryx — trang {page}"
+    },
+    "literaturePage.title": {
+      "source": "Literature workspace — save, screen and compare research papers",
+      "text": "Không gian tài liệu — lưu, sàng lọc và so sánh bài nghiên cứu"
+    },
+    "literaturePage.description": {
+      "source": "Keep a personal paper shortlist, screening notes and a review question. Export your screening list or prepare a cited comparison from two saved papers.",
+      "text": "Giữ danh sách bài nghiên cứu cá nhân, ghi chú sàng lọc và câu hỏi tổng quan. Xuất danh sách sàng lọc hoặc chuẩn bị bản so sánh kèm trích dẫn từ hai bài nghiên cứu đã lưu."
+    },
+    "literaturePage.kicker": {
+      "source": "Your literature review",
+      "text": "Tổng quan tài liệu của bạn"
+    },
+    "literaturePage.heading": {
+      "source": "From a paper list to a focused review.",
+      "text": "Từ danh sách bài nghiên cứu đến tổng quan có trọng tâm."
+    },
+    "literaturePage.intro": {
+      "source": "Save the papers worth checking, record your screening decisions, and return to the question you are trying to answer.",
+      "text": "Lưu bài nghiên cứu đáng kiểm tra, ghi lại quyết định sàng lọc và quay lại câu hỏi bạn đang tìm lời giải."
+    },
+    "literaturePage.noscript": {
+      "source": "Enable JavaScript to access papers saved in this browser. The public paper library remains available through Sources.",
+      "text": "Bật JavaScript để truy cập bài nghiên cứu đã lưu trong trình duyệt này. Thư viện bài nghiên cứu công khai vẫn truy cập được qua Nguồn."
+    },
+    "reportSourceLens.unavailable": {
+      "source": "Source inspection unavailable: this report has no stored excerpt ledger.",
+      "text": "Không thể kiểm tra nguồn: báo cáo này không có sổ trích đoạn đã lưu."
+    },
+    "reportSourceLens.empty": {
+      "source": "No inspectable non-demo excerpts are recorded for source inspection.",
+      "text": "Chưa ghi nhận trích đoạn ngoài nội dung trình diễn có thể kiểm tra để xem xét nguồn."
+    },
+    "reportSourceLens.title": {
+      "source": "What if a source were missing?",
+      "text": "Nếu thiếu một nguồn thì sao?"
+    },
+    "reportSourceLens.intro": {
+      "source": "Temporarily leave out one source to see which research targets retain excerpts in this report.",
+      "text": "Tạm bỏ một nguồn để xem mục tiêu nghiên cứu nào còn trích đoạn trong báo cáo này."
+    },
+    "reportSourceLens.original": {
+      "source": "Showing the original excerpt ledger.",
+      "text": "Đang hiển thị sổ trích đoạn gốc."
+    },
+    "reportSourceLens.missing": {
+      "source": "No inspectable excerpts in the original report.",
+      "text": "Không có trích đoạn có thể kiểm tra trong báo cáo gốc."
+    },
+    "reportSourceLens.lost": {
+      "source": "No excerpts remain in this view.",
+      "text": "Không còn trích đoạn trong chế độ xem này."
+    },
+    "reportSourceLens.inspect": {
+      "source": "Inspect remaining excerpts",
+      "text": "Kiểm tra trích đoạn còn lại"
+    },
+    "reportSourceLens.qualification": {
+      "source": "Targets are requested topics, not verified assertions. Excerpts do not prove truth or independent corroboration. This view keeps the answer, confidence and payments unchanged and makes no new requests.",
+      "text": "Mục tiêu là chủ đề được yêu cầu, không phải khẳng định đã xác minh. Trích đoạn không chứng minh sự thật hay sự củng cố từ nguồn độc lập. Chế độ xem này giữ nguyên câu trả lời, độ tin cậy và thanh toán, đồng thời không gửi yêu cầu mới."
+    },
+    "reportSourceLens.remaining.one": {
+      "source": "{count} recorded excerpt remain.",
+      "text": "Còn {count} trích đoạn đã ghi nhận."
+    },
+    "reportSourceLens.remaining.other": {
+      "source": "{count} recorded excerpts remain.",
+      "text": "Còn {count} trích đoạn đã ghi nhận."
+    },
+    "reportSourceLens.omitted.one": {
+      "source": "{count} research target loses its last recorded excerpt without {source}.",
+      "text": "{count} mục tiêu nghiên cứu mất trích đoạn đã ghi nhận cuối cùng khi thiếu {source}."
+    },
+    "reportSourceLens.omitted.other": {
+      "source": "{count} research targets lose their last recorded excerpt without {source}.",
+      "text": "{count} mục tiêu nghiên cứu mất trích đoạn đã ghi nhận cuối cùng khi thiếu {source}."
+    },
+    "reportSourceLens.alreadyMissing.one": {
+      "source": " {count} target already had no inspectable excerpts.",
+      "text": " {count} mục tiêu vốn đã không có trích đoạn có thể kiểm tra."
+    },
+    "reportSourceLens.alreadyMissing.other": {
+      "source": " {count} targets already had no inspectable excerpts.",
+      "text": " {count} mục tiêu vốn đã không có trích đoạn có thể kiểm tra."
+    },
+    "reportSourceLens.version": {
+      "source": "{marker} · {source} · version {version}",
+      "text": "{marker} · {source} · phiên bản {version}"
+    },
+    "reportSourceLens.versionTitle": {
+      "source": "{marker} · {source} · {title} · version {version}",
+      "text": "{marker} · {source} · {title} · phiên bản {version}"
+    },
+    "reportTestnetHistory.title": {
+      "source": "Arc testnet history — Keryx",
+      "text": "Lịch sử Arc testnet — Keryx"
+    },
+    "reportTestnetHistory.description": {
+      "source": "Original Keryx testnet dispatches, decisions and settlement evidence, retained at their existing URLs.",
+      "text": "Bản tin, quyết định và bằng chứng quyết toán Keryx testnet gốc, được giữ ở URL hiện có."
+    },
+    "reportTestnetHistory.intro": {
+      "source": "Every recorded public question is available here, including runs with no citations or no payment. Open its original dispatch link to read the answer and full trace.",
+      "text": "Mọi câu hỏi công khai đã ghi nhận đều có ở đây, kể cả lượt chạy không có trích dẫn hoặc không thanh toán. Mở liên kết bản tin gốc để đọc câu trả lời và toàn bộ dấu vết."
+    },
+    "reportTestnetHistory.empty": {
+      "source": "No earlier questions on this page.",
+      "text": "Không có câu hỏi trước đó trên trang này."
+    },
+    "reportTestnetHistory.newest": {
+      "source": "Newest testnet questions",
+      "text": "Câu hỏi testnet mới nhất"
+    },
+    "reportTestnetHistory.retry": {
+      "source": "Retry from the first page.",
+      "text": "Thử lại từ trang đầu."
+    },
+    "reportTestnetHistory.heading": {
+      "source": "Original testnet dispatches",
+      "text": "Bản tin testnet gốc"
+    },
+    "reportTestnetHistory.cited.one": {
+      "source": "{count} cited · Arc testnet",
+      "text": "{count} được trích dẫn · Arc testnet"
+    },
+    "reportTestnetHistory.cited.other": {
+      "source": "{count} cited · Arc testnet",
+      "text": "{count} được trích dẫn · Arc testnet"
+    },
+    "reportTestnetHistory.unavailable": {
+      "source": "Testnet history could not be loaded. {retry}",
+      "text": "Không thể tải lịch sử testnet. {retry}"
+    }
+  }
+}

@@ -1,0 +1,192 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/decision-reviews.json",
+  "sourceSha256": "d79ff28614e779b3cb59964e5f76699f13ae03daa309b66dc3f6a1b5610659ab",
+  "entries": {
+    "title": {
+      "source": "Review source decisions",
+      "text": "审阅来源决策"
+    },
+    "mode": {
+      "source": "Review first: wait for my decision before paid or reward-eligible reads",
+      "text": "先审阅：付费阅读或可获奖励的阅读前，等待我的决定"
+    },
+    "modeNotice": {
+      "source": "Requires your authenticated funded browser session. Each live review expires after 60 seconds. Agreement admits this read within your existing cap; it does not sign a payment.",
+      "text": "需要已认证且已注资的浏览器会话。每次实时审阅在 60 秒后过期。同意会在现有支出上限内准入此次阅读；它不会签署付款。"
+    },
+    "signedOut": {
+      "source": "Sign in with the original report owner to review its decisions.",
+      "text": "使用原始报告所有者身份登录以审阅其决策。"
+    },
+    "ownerChanged": {
+      "source": "The signed-in owner changed. This run's private reviews are hidden.",
+      "text": "已登录所有者发生变化。此次研究的私密审阅已隐藏。"
+    },
+    "load": {
+      "source": "Load my decision reviews",
+      "text": "加载我的决策审阅"
+    },
+    "loading": {
+      "source": "Checking recorded reviews…",
+      "text": "正在检查记录的审阅…"
+    },
+    "empty": {
+      "source": "No captured decision reviews are available for this owner and report. Older decisions are not reconstructed.",
+      "text": "此所有者和报告没有可用的已捕获决策审阅。不会重建旧决策。"
+    },
+    "failed": {
+      "source": "Review could not be confirmed. Check the recorded state before trying again.",
+      "text": "无法确认审阅。再次尝试前请检查记录状态。"
+    },
+    "saved": {
+      "source": "Your decision was recorded. An opinion does not reverse or refund a payment.",
+      "text": "您的决定已记录。意见不会撤销付款或退款。"
+    },
+    "waiting": {
+      "source": "Waiting for your decision. No payment for this read has started.",
+      "text": "正在等待您的决定。此次阅读尚未开始付款。"
+    },
+    "closed": {
+      "source": "This live review is closed. A later opinion cannot restart the research.",
+      "text": "此次实时审阅已关闭。之后的意见不能重启研究。"
+    },
+    "agree": {
+      "source": "Agree",
+      "text": "同意"
+    },
+    "disagree": {
+      "source": "Disagree",
+      "text": "不同意"
+    },
+    "reason": {
+      "source": "Optional private reason",
+      "text": "可选的私密理由"
+    },
+    "refresh": {
+      "source": "Check recorded state",
+      "text": "检查记录状态"
+    },
+    "retry": {
+      "source": "Retry the same recorded decision",
+      "text": "重试同一个已记录决定"
+    },
+    "opinionChanged": {
+      "source": "The displayed code snapshot changed. An earlier opinion may remain recorded. Review this state before recording another opinion.",
+      "text": "显示的代码快照发生变化。较早的意见可能仍有记录。记录新意见前请审阅此状态。"
+    },
+    "gateBasis": {
+      "source": "Gate vote on the initial offered code snapshot and terms: {action} ({rule}).",
+      "text": "针对最初提供的代码快照及条款的准入投票：{action}（{rule}）。"
+    },
+    "opinionBasis": {
+      "source": "Later opinion on the code snapshot displayed when voted: {action} ({rule}).",
+      "text": "针对投票时显示的代码快照的后续意见：{action}（{rule}）。"
+    },
+    "heldNotice": {
+      "source": "Cache and creator-free reads can earn citation rewards, so they also need review. Declining, waiting and expiry are not code refusals.",
+      "text": "缓存阅读和创作者免访问费的阅读仍可获得引用奖励，因此也需要审阅。拒绝、等待和过期不属于代码拒绝。"
+    },
+    "terms": {
+      "source": "Access proposal: {price} micro-USDC · list ceiling {listPrice} · citation pool cap {reward} micro-USDC · {network}",
+      "text": "访问提议：{price} micro-USDC · 标价上限 {listPrice} · 引用奖励池上限 {reward} micro-USDC · {network}"
+    },
+    "actions": {
+      "source": "Model proposal: {model} · code decision: {code} ({rule})",
+      "text": "模型提议：{model} · 代码决定：{code}（{rule}）"
+    },
+    "unknownModel": {
+      "source": "unavailable",
+      "text": "不可用"
+    },
+    "payee": {
+      "source": "Authoritative access payee: {payee}",
+      "text": "具有权威依据的访问费收款人：{payee}"
+    },
+    "identity": {
+      "source": "Reviews use the authenticated wallet identity. This is not proof of a unique human or factual correctness. Reasons stay private.",
+      "text": "审阅采用已认证钱包身份。这不证明是独立的真实个人或事实正确。理由保持私密。"
+    },
+    "metrics": {
+      "source": "Public decision review counts",
+      "text": "公开决策审阅计数"
+    },
+    "home": {
+      "source": "Keryx home",
+      "text": "Keryx 首页"
+    },
+    "metricsNotice": {
+      "source": "New captured decisions only. The rate uses the latest recorded verdict per decision. Gate votes concern the initial offered code and terms; later opinions concern the code snapshot shown when voted. A later code change does not rewrite that vote. These counts do not prove useful research, factual accuracy or payment settlement. No verdicts means no agreement rate. Holds, declines and expiry do not count as code refusals; old decisions are not reconstructed.",
+      "text": "仅统计新捕获的决策。比率采用每个决策最新记录的判断。准入投票针对最初提供的代码和条款；后续意见针对投票时显示的代码快照。后来的代码更改不会重写投票。这些计数不证明研究有用、事实准确或付款已结算。没有判断就没有同意率。暂缓、拒绝和过期不计作代码拒绝；不会重建旧决策。"
+    },
+    "metricsCohorts": {
+      "source": "Outside requires a trusted classification. Team and scripted activity are separate; all unclassified identities remain unknown. A wallet does not prove a unique human. Reasons and reviewer identities stay private. Dates use UTC, with the end day excluded.",
+      "text": "外部分类需要可信依据。团队与脚本活动分别统计；所有未分类身份仍为未知。钱包不证明独立的真实个人。理由和审阅者身份保持私密。日期使用 UTC，不包含结束日。"
+    },
+    "metricsCaption": {
+      "source": "Captured owner decisions and latest opinions in the selected complete UTC days.",
+      "text": "所选完整 UTC 日期内捕获的所有者决定及最新意见。"
+    },
+    "metricsUnavailable": {
+      "source": "Decision counts are unavailable. No zero or agreement rate is inferred.",
+      "text": "决策计数不可用。不推断零值或同意率。"
+    },
+    "invalidPeriod": {
+      "source": "Choose complete past UTC days within one year, with the end after the start.",
+      "text": "选择一年内已经结束的完整 UTC 日期，结束日须晚于开始日。"
+    },
+    "since": {
+      "source": "Start day (included)",
+      "text": "开始日（包含）"
+    },
+    "until": {
+      "source": "End day (excluded)",
+      "text": "结束日（不包含）"
+    },
+    "loadMetrics": {
+      "source": "Read public counts",
+      "text": "读取公开计数"
+    },
+    "cohort": {
+      "source": "Classification",
+      "text": "分类"
+    },
+    "decisions": {
+      "source": "Decisions",
+      "text": "决策"
+    },
+    "rate": {
+      "source": "Agreement",
+      "text": "同意率"
+    },
+    "differences": {
+      "source": "Model/code differences",
+      "text": "模型与代码差异"
+    },
+    "refusals": {
+      "source": "Code refusals",
+      "text": "代码拒绝"
+    },
+    "noVerdicts": {
+      "source": "No verdicts",
+      "text": "无判断"
+    },
+    "cohorts.outside": {
+      "source": "Outside",
+      "text": "外部"
+    },
+    "cohorts.team": {
+      "source": "Team",
+      "text": "团队"
+    },
+    "cohorts.scripted": {
+      "source": "Scripted",
+      "text": "脚本"
+    },
+    "cohorts.unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    }
+  }
+}

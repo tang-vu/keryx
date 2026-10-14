@@ -1,0 +1,312 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/walkthrough.ts",
+  "sourceSha256": "92ca53286ef6e6e217bf584eade3b52c40500720bbbae284404eb8c8bab48662",
+  "entries": {
+    "title": {
+      "source": "Follow a recorded research job",
+      "text": "Theo dõi tác vụ nghiên cứu đã ghi nhận"
+    },
+    "description": {
+      "source": "Inspect a stored answer, source decisions and payment receipt in about two minutes.",
+      "text": "Kiểm tra câu trả lời đã lưu, quyết định nguồn và biên nhận thanh toán trong khoảng hai phút."
+    },
+    "landingLink": {
+      "source": "New here? Follow a recorded research job",
+      "text": "Bạn mới đến? Theo tác vụ nghiên cứu đã ghi nhận"
+    },
+    "badge": {
+      "source": "Recorded owner QA · Arc mainnet · October 8, 2026",
+      "text": "QA chủ sở hữu ghi nhận · Arc mainnet · 8 tháng 10 năm 2026"
+    },
+    "introduction": {
+      "source": "Follow an existing public example without a wallet or sign-up. This page opens stored evidence; it does not start research or make a payment.",
+      "text": "Theo ví dụ công khai hiện có không cần ví hay đăng ký. Trang mở bằng chứng đã lưu; không bắt đầu nghiên cứu hay thanh toán."
+    },
+    "limitation": {
+      "source": "This is a partial first-party QA result, not an accepted customer task. The recording and guidance are curated; the answer, decisions and receipt are retained records.",
+      "text": "Đây là kết quả QA nội bộ chưa đầy đủ, không phải tác vụ khách hàng được chấp nhận. Bản ghi và hướng dẫn được chọn lọc; câu trả lời, quyết định và biên nhận là hồ sơ được lưu."
+    },
+    "start": {
+      "source": "Start the recorded walkthrough",
+      "text": "Bắt đầu hướng dẫn ghi sẵn"
+    },
+    "navigation": {
+      "source": "Walkthrough steps",
+      "text": "Các bước hướng dẫn"
+    },
+    "back": {
+      "source": "Previous step",
+      "text": "Bước trước"
+    },
+    "next": {
+      "source": "Next step",
+      "text": "Bước tiếp theo"
+    },
+    "finish": {
+      "source": "Finish the walkthrough",
+      "text": "Hoàn tất hướng dẫn"
+    },
+    "finished": {
+      "source": "You have reached the end of the recorded example.",
+      "text": "Bạn đã đến cuối ví dụ ghi sẵn."
+    },
+    "openReport": {
+      "source": "Open the stored report",
+      "text": "Mở báo cáo đã lưu"
+    },
+    "steps.0.title": {
+      "source": "Read the answer and its limits",
+      "text": "Đọc câu trả lời và giới hạn"
+    },
+    "steps.0.body": {
+      "source": "The QA question asks how source-access tolls differ from citation rewards. The answer cites Keryx Engineering, a first-party source, with exact [S1] excerpts.",
+      "text": "Câu hỏi QA hỏi phí truy cập nguồn khác thưởng trích dẫn thế nào. Câu trả lời trích Keryx Engineering, nguồn nội bộ, với đúng trích đoạn [S1]."
+    },
+    "steps.0.limit": {
+      "source": "The report is marked Low confidence and omits the requested document revision. A cited answer does not mean the complete task was delivered or accepted.",
+      "text": "Báo cáo có nhãn Độ tin cậy thấp và thiếu bản sửa đổi tài liệu được yêu cầu. Câu trả lời có trích dẫn không có nghĩa toàn bộ tác vụ đã cung cấp hoặc chấp nhận."
+    },
+    "steps.0.action": {
+      "source": "Open the report and compare its statements with the quoted source text.",
+      "text": "Mở báo cáo và so phát biểu với văn bản nguồn được trích."
+    },
+    "steps.1.title": {
+      "source": "Inspect the source decisions",
+      "text": "Kiểm tra quyết định nguồn"
+    },
+    "steps.1.body": {
+      "source": "Expand Decision log on the report. Keryx recorded CACHE for the Engineering article and SKIP for unrelated candidates, with its reasons.",
+      "text": "Mở Nhật ký quyết định trên báo cáo. Keryx ghi CACHE cho bài Engineering, SKIP cho ứng viên không liên quan, cùng lý do."
+    },
+    "steps.1.limit": {
+      "source": "This example made no new paid access purchase. CACHE avoided an access toll while a citation reward was still allocated. It does not demonstrate a live BUY or replay a decision against another policy.",
+      "text": "Ví dụ không mua quyền truy cập trả phí mới. CACHE tránh phí truy cập nhưng vẫn phân bổ thưởng trích dẫn. Không minh họa BUY trực tiếp hay phát lại quyết định với chính sách khác."
+    },
+    "steps.1.action": {
+      "source": "Check the recorded reasons, rather than treating a planned purchase as a completed payment.",
+      "text": "Kiểm tra lý do ghi nhận thay vì coi mua dự kiến là thanh toán hoàn tất."
+    },
+    "steps.2.title": {
+      "source": "Check the stored payment receipt",
+      "text": "Kiểm tra biên nhận thanh toán đã lưu"
+    },
+    "steps.2.body": {
+      "source": "The checkpoint records one settled citation reward on Arc mainnet. Its source-access cost is zero. These are creator-payment figures for this QA job, not outside-customer revenue or business profit.",
+      "text": "Mốc lưu ghi một phần thưởng trích dẫn đã quyết toán trên Arc mainnet. Chi phí truy cập nguồn bằng 0. Đây là số thanh toán tác giả cho tác vụ QA này, không phải doanh thu khách hàng bên ngoài hay lợi nhuận kinh doanh."
+    },
+    "steps.2.limit": {
+      "source": "The Circle transfer ID is a batch-payment reference, not an individual Arc transaction hash. The three checks below are separate: receipt integrity, Circle's own transfer record and the Arc registry's current payout wallet. None of them proves chain finality for this individual payment.",
+      "text": "ID chuyển Circle là tham chiếu thanh toán theo lô, không phải hash giao dịch Arc riêng. Ba kiểm tra bên dưới tách biệt: toàn vẹn biên nhận, hồ sơ chuyển riêng của Circle và ví nhận tiền hiện tại của registry Arc. Không kiểm tra nào chứng minh tính cuối cùng trên chuỗi cho thanh toán riêng này."
+    },
+    "steps.2.action": {
+      "source": "Open the receipt, then run each check. The Circle and Arc checks send one request from your browser to those services, not to Keryx.",
+      "text": "Mở biên nhận rồi chạy từng kiểm tra. Kiểm tra Circle và Arc gửi một yêu cầu từ trình duyệt đến các dịch vụ đó, không đến Keryx."
+    },
+    "steps.3.title": {
+      "source": "Follow the money for this job",
+      "text": "Theo dòng tiền tác vụ này"
+    },
+    "steps.3.body": {
+      "source": "These figures come from the same retained receipt: what the question authorised, what was paid to open sources, what was paid to the cited creator, and what is still outstanding.",
+      "text": "Số liệu lấy từ cùng biên nhận được lưu: câu hỏi cho phép bao nhiêu, trả bao nhiêu để mở nguồn, trả bao nhiêu cho tác giả trích dẫn và còn nghĩa vụ gì."
+    },
+    "steps.3.limit": {
+      "source": "This is a creator-payment view of one owner-operated QA job. Inbound service receipts and model or search costs are not in the receipt, so a margin cannot be calculated here.",
+      "text": "Đây là chế độ xem thanh toán tác giả của một tác vụ QA do chủ sở hữu vận hành. Biên nhận dịch vụ đầu vào và chi phí mô hình, tìm kiếm không có trong biên nhận nên không tính được biên lợi nhuận tại đây."
+    },
+    "steps.3.action": {
+      "source": "Compare these figures with the receipt, then open the public job transfer ledger for current observed transfers.",
+      "text": "So số liệu với biên nhận rồi mở sổ khoản chuyển tác vụ công khai cho khoản chuyển quan sát hiện tại."
+    },
+    "accessLabel": {
+      "source": "Recorded settled access toll",
+      "text": "Phí truy cập ghi nhận đã quyết toán"
+    },
+    "citationLabel": {
+      "source": "Recorded settled citation reward",
+      "text": "Phần thưởng trích dẫn ghi nhận đã quyết toán"
+    },
+    "circleLabel": {
+      "source": "Recorded Circle transfer ID",
+      "text": "ID khoản chuyển Circle ghi nhận"
+    },
+    "digestLabel": {
+      "source": "Retained payload SHA-256",
+      "text": "SHA-256 nội dung được lưu"
+    },
+    "openReceipt": {
+      "source": "Open the current receipt JSON",
+      "text": "Mở JSON biên nhận hiện tại"
+    },
+    "openSnapshot": {
+      "source": "Open the retained receipt snapshot",
+      "text": "Mở bản chụp biên nhận được lưu"
+    },
+    "check": {
+      "source": "Check receipt integrity in this browser",
+      "text": "Kiểm tra toàn vẹn biên nhận trong trình duyệt"
+    },
+    "checking": {
+      "source": "Reading and hashing the current receipt…",
+      "text": "Đang đọc và tính hash biên nhận hiện tại…"
+    },
+    "matched": {
+      "source": "The payload matches the retained checkpoint. This checks integrity only; the Circle and Arc checks read independent records.",
+      "text": "Nội dung khớp mốc lưu. Chỉ kiểm tra toàn vẹn; kiểm tra Circle và Arc đọc hồ sơ độc lập."
+    },
+    "changed": {
+      "source": "The current receipt differs from the checkpoint or fails its integrity check. Inspect both copies; a reconciliation or export change needs review.",
+      "text": "Biên nhận hiện tại khác mốc lưu hoặc không đạt toàn vẹn. Kiểm tra cả hai bản; thay đổi đối soát hay bản xuất cần xem xét."
+    },
+    "unavailable": {
+      "source": "The current receipt could not be checked. Use the retained snapshot and recording; no research or payment was requested.",
+      "text": "Không thể kiểm tra biên nhận hiện tại. Dùng bản chụp và ghi hình được lưu; không yêu cầu nghiên cứu hay thanh toán."
+    },
+    "payeeLabel": {
+      "source": "Recorded payee",
+      "text": "Bên nhận đã ghi nhận"
+    },
+    "circleCheck": {
+      "source": "Check Circle's record of this transfer",
+      "text": "Kiểm tra hồ sơ Circle của khoản chuyển"
+    },
+    "circleNote": {
+      "source": "Reads this transfer from Circle's public Gateway API, not from Keryx, and compares its recipient, amount, token and network with the retained receipt.",
+      "text": "Đọc khoản chuyển từ API Gateway công khai Circle, không từ Keryx, rồi so bên nhận, số tiền, token và mạng với biên nhận được lưu."
+    },
+    "circleChecking": {
+      "source": "Reading the transfer record from Circle…",
+      "text": "Đang đọc hồ sơ khoản chuyển từ Circle…"
+    },
+    "circleCompleted": {
+      "source": "Circle's record matches the receipt: same transfer, recipient, amount, token and Arc mainnet network, and Circle reports it completed. This is Circle's API record, not an individual Arc transaction.",
+      "text": "Hồ sơ Circle khớp biên nhận: cùng khoản chuyển, bên nhận, số tiền, token và mạng Arc mainnet; Circle báo hoàn tất. Đây là hồ sơ API Circle, không phải giao dịch Arc riêng."
+    },
+    "circleProgressing": {
+      "source": "Circle's record matches the receipt, but Circle does not report this transfer as completed. Treat the payment as not final.",
+      "text": "Hồ sơ Circle khớp biên nhận nhưng không báo khoản chuyển hoàn tất. Coi thanh toán chưa có tính cuối cùng."
+    },
+    "circleFailed": {
+      "source": "Circle's record matches the receipt but reports this transfer as failed. The stored receipt needs review.",
+      "text": "Hồ sơ Circle khớp biên nhận nhưng báo khoản chuyển thất bại. Biên nhận lưu cần xem xét."
+    },
+    "circleMismatch": {
+      "source": "Circle's record differs from the receipt in its transfer, recipient, amount, token or network. Do not rely on the stored settlement claim.",
+      "text": "Hồ sơ Circle khác biên nhận về khoản chuyển, bên nhận, số tiền, token hoặc mạng. Không dựa vào tuyên bố quyết toán đã lưu."
+    },
+    "circleUnavailable": {
+      "source": "Circle's transfer record could not be read from this browser. Nothing was verified; no research or payment was requested.",
+      "text": "Không thể đọc hồ sơ khoản chuyển Circle từ trình duyệt. Chưa xác minh gì; không yêu cầu nghiên cứu hay thanh toán."
+    },
+    "registryCheck": {
+      "source": "Check the payout wallet on Arc",
+      "text": "Kiểm tra ví nhận tiền trên Arc"
+    },
+    "registryNote": {
+      "source": "Reads the cited source from the SourceRegistry contract through the public Arc mainnet RPC and compares its payout wallet with the recorded payee.",
+      "text": "Đọc nguồn được trích dẫn từ hợp đồng SourceRegistry qua RPC Arc mainnet công khai và so ví nhận tiền với bên nhận ghi nhận."
+    },
+    "registryChecking": {
+      "source": "Reading the source registration from Arc mainnet…",
+      "text": "Đang đọc đăng ký nguồn từ Arc mainnet…"
+    },
+    "registryRegistered": {
+      "source": "Arc mainnet reports this source as active with the recorded payee as its payout wallet. This is the registry's current state, not the state at payment time or a payment transaction.",
+      "text": "Arc mainnet báo nguồn đang hoạt động với ví nhận tiền là bên nhận ghi nhận. Đây là trạng thái registry hiện tại, không phải trạng thái lúc trả tiền hay giao dịch thanh toán."
+    },
+    "registryChanged": {
+      "source": "Arc mainnet now reports a different payout wallet or an inactive source. A creator may have updated the registration since October 8; compare it with the receipt.",
+      "text": "Arc mainnet hiện báo ví nhận khác hoặc nguồn không hoạt động. Tác giả có thể đã cập nhật đăng ký từ 8 tháng 10; so với biên nhận."
+    },
+    "registryUnavailable": {
+      "source": "The Arc registry could not be read from this browser. Nothing was verified; no research or payment was requested.",
+      "text": "Không thể đọc registry Arc từ trình duyệt. Chưa xác minh gì; không yêu cầu nghiên cứu hay thanh toán."
+    },
+    "budgetLabel": {
+      "source": "Budget authorised by the question",
+      "text": "Ngân sách câu hỏi cho phép"
+    },
+    "outstandingLabel": {
+      "source": "Recorded pending or failed payments",
+      "text": "Thanh toán đang chờ hoặc thất bại ghi nhận"
+    },
+    "unspentLabel": {
+      "source": "Authorised budget left unspent",
+      "text": "Ngân sách được cho phép chưa chi"
+    },
+    "costsLabel": {
+      "source": "Service receipts, model and search costs",
+      "text": "Biên nhận dịch vụ, chi phí mô hình và tìm kiếm"
+    },
+    "costsValue": {
+      "source": "Not recorded in this receipt",
+      "text": "Không ghi trong biên nhận này"
+    },
+    "ledgerLink": {
+      "source": "Open the public job transfer ledger",
+      "text": "Mở sổ khoản chuyển tác vụ công khai"
+    },
+    "boundaryTitle": {
+      "source": "What this example leaves open",
+      "text": "Điều ví dụ này chưa giải quyết"
+    },
+    "boundaryBody": {
+      "source": "This recorded path does not start a new sponsored job, show a budget refusal or a human approval threshold, replay a decision, or prove Arc finality for the individual payment. Model/search costs and service receipts are not in this small view, so a job margin cannot be calculated here.",
+      "text": "Luồng ghi sẵn không bắt đầu tác vụ tài trợ mới, hiển thị từ chối ngân sách hay ngưỡng người phê duyệt, phát lại quyết định hoặc chứng minh tính cuối cùng Arc cho thanh toán riêng. Chi phí mô hình/tìm kiếm và biên nhận dịch vụ không có trong chế độ xem nhỏ này nên không tính được biên lợi nhuận tác vụ."
+    },
+    "operatorLink": {
+      "source": "Inspect current Operator status",
+      "text": "Kiểm tra trạng thái Operator hiện tại"
+    },
+    "evidenceLink": {
+      "source": "Read the checkpoint and recording scope",
+      "text": "Đọc phạm vi mốc lưu và ghi hình"
+    },
+    "videoTitle": {
+      "source": "Prefer the recording?",
+      "text": "Bạn thích bản ghi hình hơn?"
+    },
+    "videoBody": {
+      "source": "The silent 2m40s recording reopens this same partial QA report. It was captured on October 8 at app 0.27.43; it is separate from the currently deployed version.",
+      "text": "Bản ghi không tiếng 2m40s mở lại cùng báo cáo QA chưa đầy đủ. Ghi ngày 8 tháng 10 trên app 0.27.43; tách biệt phiên bản đang triển khai."
+    },
+    "videoLink": {
+      "source": "Watch the archived QA recording",
+      "text": "Xem bản ghi QA lưu trữ"
+    },
+    "newQuestionTitle": {
+      "source": "Ask your own question separately",
+      "text": "Đặt câu hỏi riêng của bạn"
+    },
+    "newQuestionBody": {
+      "source": "Open the research composer and check its current availability, displayed payer and budget before submitting. Sponsored admission can be paused or capped. Submitted questions become public reports.",
+      "text": "Mở trình soạn nghiên cứu, kiểm tra khả dụng hiện tại, bên trả hiển thị và ngân sách trước khi gửi. Chấp nhận tài trợ có thể tạm dừng hoặc giới hạn. Câu hỏi gửi trở thành báo cáo công khai."
+    },
+    "composerLink": {
+      "source": "Open the research composer",
+      "text": "Mở trình soạn nghiên cứu"
+    },
+    "liveCheck": {
+      "source": "Check whether new research is open now",
+      "text": "Kiểm tra hiện có mở nghiên cứu mới không"
+    },
+    "liveChecking": {
+      "source": "Reading current research availability…",
+      "text": "Đang đọc khả dụng nghiên cứu hiện tại…"
+    },
+    "liveOpen": {
+      "source": "No global research pause was observed just now. Each question still needs server admission and can be refused when its sponsored allowance is spent; this recorded run stays available either way.",
+      "text": "Vừa rồi không quan sát tạm dừng nghiên cứu toàn cục. Mỗi câu hỏi vẫn cần máy chủ chấp nhận và có thể bị từ chối khi hết hạn mức tài trợ; lượt chạy ghi sẵn này vẫn khả dụng trong cả hai trường hợp."
+    },
+    "livePaused": {
+      "source": "New research is paused right now. This recorded run is the available path; nothing was submitted or retried.",
+      "text": "Nghiên cứu mới hiện tạm dừng. Có thể dùng lượt ghi sẵn này; không gửi hay thử lại gì."
+    },
+    "liveUnknown": {
+      "source": "Research availability could not be read. Continue with this recorded run; nothing was submitted.",
+      "text": "Không thể đọc khả dụng nghiên cứu. Tiếp tục với lượt ghi sẵn; không gửi gì."
+    }
+  }
+}

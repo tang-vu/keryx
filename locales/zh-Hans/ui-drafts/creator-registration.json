@@ -1,0 +1,380 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/creator-registration.ts",
+  "sourceSha256": "01fcb71d46fcbe84714a92ccb12585609c94990f5b38d3a04b24b40ec2d2a788",
+  "entries": {
+    "unifiedHeading": {
+      "source": "Register your source",
+      "text": "注册您的来源"
+    },
+    "unifiedExplanation": {
+      "source": "Verify your RSS feed, review the registration and sign with your creator wallet. Keryx covers gas while its sponsorship wallet has enough funds. You keep control and receive creator payments.",
+      "text": "验证 RSS 订阅源，审阅注册并使用创作者钱包签名。只要赞助钱包资金充足，Keryx 就承担 gas。您保留控制权并接收创作者付款。"
+    },
+    "verificationStep": {
+      "source": "1. Verify your source",
+      "text": "1. 验证您的来源"
+    },
+    "registrationStep": {
+      "source": "2. Review and sign",
+      "text": "2. 审阅并签名"
+    },
+    "permissionStep": {
+      "source": "3. Choose how your source earns",
+      "text": "3. 选择来源的收益方式"
+    },
+    "verificationExplanation": {
+      "source": "Publish a proof on your website or in your RSS feed. Verification alone does not enable paid distribution.",
+      "text": "在网站或 RSS 订阅源中发布证明。仅完成验证不会启用付费分发。"
+    },
+    "feedRequired": {
+      "source": "Include your exact HTTPS RSS feed before creating the ownership proof.",
+      "text": "创建所有权证明前，请填写确切的 HTTPS RSS 订阅源。"
+    },
+    "requiredFeedLabel": {
+      "source": "RSS feed URL (required)",
+      "text": "RSS 订阅源 URL（必填）"
+    },
+    "inlineSourceHeading": {
+      "source": "Source details",
+      "text": "来源详情"
+    },
+    "inlineFileHeading": {
+      "source": "Publish your proof file",
+      "text": "发布证明文件"
+    },
+    "inlineTokenHeading": {
+      "source": "Publish your channel token",
+      "text": "发布频道令牌"
+    },
+    "draftNetworkMismatch": {
+      "source": "This draft belongs to another network. Return to that network or start a new draft.",
+      "text": "此草稿属于其他网络。请返回该网络或开始新草稿。"
+    },
+    "draftOwnerMismatch": {
+      "source": "This draft belongs to another wallet. Sign in with its creator wallet or start a new draft.",
+      "text": "此草稿属于其他钱包。使用其创作者钱包登录或开始新草稿。"
+    },
+    "indexedPolicyUnavailable": {
+      "source": "Your registration is indexed, but its verified ownership link is not yet available. Reload the source policy before continuing.",
+      "text": "注册已建立索引，但经验证的所有权关联尚不可用。继续前请重新加载来源政策。"
+    },
+    "reloadIndexedPolicy": {
+      "source": "Reload verified source policy",
+      "text": "重新加载已验证来源政策"
+    },
+    "policyReviewExplanation": {
+      "source": "Your listing is registered. Choose its earnings policy below; paid distribution still needs your explicit permission.",
+      "text": "条目已注册。在下方选择收益政策；付费分发仍需要您的明确许可。"
+    },
+    "advancedRecovery": {
+      "source": "Advanced: recover a saved registration",
+      "text": "高级：恢复已保存注册"
+    },
+    "savedRecoveryLabel": {
+      "source": "Saved registration recovery",
+      "text": "已保存注册恢复"
+    },
+    "sponsorshipFundsUnavailable": {
+      "source": "New sponsored registrations are paused because available gas funds are insufficient. Existing covered requests can still be completed within their reservation.",
+      "text": "可用 gas 资金不足，因此新的赞助注册已暂停。现有已获覆盖请求仍可在其预留额度内完成。"
+    },
+    "walletFundedExplanation": {
+      "source": "Prefer to pay the transaction gas yourself? Keep this source draft and use wallet-funded registration.",
+      "text": "希望自行支付交易 gas？保留此来源草稿并使用钱包出资注册。"
+    },
+    "startNewDraft": {
+      "source": "Start a new source draft",
+      "text": "开始新的来源草稿"
+    },
+    "pageTitle": {
+      "source": "Sponsored source registration — Keryx",
+      "text": "赞助来源注册 — Keryx"
+    },
+    "pageHeading": {
+      "source": "Publish with sponsored gas",
+      "text": "使用赞助 gas 发布"
+    },
+    "pageExplanation": {
+      "source": "Prove control of your RSS feed, review its terms, then sign the registration. Keryx covers gas while sponsorship funds are available. Your wallet keeps control and receives creator payments.",
+      "text": "证明您对 RSS 订阅源的控制权，审阅条款，然后签署注册。只要赞助资金可用，Keryx 就承担 gas。钱包保留控制权并接收创作者付款。"
+    },
+    "invitationHeading": {
+      "source": "Registration gas covered by Keryx",
+      "text": "注册 gas 由 Keryx 承担"
+    },
+    "invitationExplanation": {
+      "source": "Verify control of your feed, review the source terms and sign. You keep source management and payouts.",
+      "text": "验证订阅源控制权，审阅来源条款并签名。您保留来源管理权和收款权。"
+    },
+    "sponsoredRegistrationLink": {
+      "source": "Use sponsored registration ▸",
+      "text": "使用赞助注册 ▸"
+    },
+    "stateLabels.prepared": {
+      "source": "Review the prepared registration",
+      "text": "审阅已准备注册"
+    },
+    "stateLabels.signing": {
+      "source": "Sponsor submission outcome unknown",
+      "text": "赞助方提交结果未知"
+    },
+    "stateLabels.submitted": {
+      "source": "Original transaction submitted: confirmation pending",
+      "text": "原始交易已提交：等待确认"
+    },
+    "stateLabels.confirmed": {
+      "source": "Registration confirmed: indexing pending",
+      "text": "注册已确认：等待索引"
+    },
+    "stateLabels.reverted": {
+      "source": "Registration reverted",
+      "text": "注册已回滚"
+    },
+    "stateLabels.expired": {
+      "source": "Unsigned registration expired",
+      "text": "未签名注册已过期"
+    },
+    "recoveryUnavailable": {
+      "source": "Original recovery is unavailable. Keep this request; do not register again.",
+      "text": "原始恢复不可用。请保留此请求；不要再次注册。"
+    },
+    "requestUnavailable": {
+      "source": "Registration request unavailable",
+      "text": "注册请求不可用"
+    },
+    "originalWalletMismatch": {
+      "source": "Original registration belongs to another wallet or registry",
+      "text": "原始注册属于其他钱包或注册合约"
+    },
+    "verifyConnectedWallet": {
+      "source": "Verify this source with the connected wallet first",
+      "text": "先使用已连接钱包验证此来源"
+    },
+    "originalClaimMismatch": {
+      "source": "Original registration belongs to another source claim",
+      "text": "原始注册属于其他来源认领"
+    },
+    "savedRecoveryUnavailable": {
+      "source": "Saved original recovery is unavailable; retain its ID.",
+      "text": "已保存原始恢复不可用；请保留其 ID。"
+    },
+    "originalUnavailable": {
+      "source": "Original registration unavailable",
+      "text": "原始注册不可用"
+    },
+    "waitForExpiry": {
+      "source": "Wait until the original unsigned request has conclusively expired.",
+      "text": "等待原始未签名请求明确过期。"
+    },
+    "saveRequestBeforeSigning": {
+      "source": "Save the original request ID below before signing. Browser recovery storage is unavailable.",
+      "text": "签名前请保存下方原始请求 ID。浏览器恢复存储不可用。"
+    },
+    "preparationUnavailable": {
+      "source": "Preparation unavailable",
+      "text": "准备不可用"
+    },
+    "preparedTermsMismatch": {
+      "source": "The prepared registration does not match this source and selected price. Review the original request before signing.",
+      "text": "已准备注册与此来源及所选价格不符。签名前请审阅原始请求。"
+    },
+    "signingAllowanceUnavailable": {
+      "source": "This original has no current signing allowance. Inspect its status; do not register again.",
+      "text": "此原始请求当前没有签名额度。检查其状态；不要再次注册。"
+    },
+    "submissionUnknown": {
+      "source": "Submission unknown. Inspect the original request.",
+      "text": "提交结果未知。请检查原始请求。"
+    },
+    "connectInstructions": {
+      "source": "Connect and sign in with your creator wallet on ${network}.",
+      "text": "在 ${network} 上连接创作者钱包并登录。"
+    },
+    "connectWalletLink": {
+      "source": "Connect wallet ▸",
+      "text": "连接钱包 ▸"
+    },
+    "formLabel": {
+      "source": "Sponsored source registration",
+      "text": "赞助来源注册"
+    },
+    "sponsorshipUnavailable": {
+      "source": "Registration gas sponsorship is currently unavailable for this wallet. Existing requests can still be inspected.",
+      "text": "此钱包目前无法获得注册 gas 赞助。仍可检查现有请求。"
+    },
+    "verifiedFeed": {
+      "source": "Verified feed: ${feedUrl}",
+      "text": "已验证订阅源：${feedUrl}"
+    },
+    "readPriceLabel": {
+      "source": "Price per read (USDC)",
+      "text": "每次阅读价格（USDC）"
+    },
+    "prepareRegistrationButton": {
+      "source": "Prepare sponsored registration",
+      "text": "准备赞助注册"
+    },
+    "verifyFeedInstructions": {
+      "source": "Prove control of your exact feed first. ",
+      "text": "先证明您对确切订阅源的控制权。 "
+    },
+    "verifySourceLink": {
+      "source": "Verify my source ▸",
+      "text": "验证我的来源 ▸"
+    },
+    "indexedHeading": {
+      "source": "Registration confirmed and indexed",
+      "text": "注册已确认并完成索引"
+    },
+    "source": {
+      "source": "Source: ${sourceUrl}",
+      "text": "来源：${sourceUrl}"
+    },
+    "creatorWallet": {
+      "source": "Creator and payout wallet: ${wallet}",
+      "text": "创作者及收款钱包：${wallet}"
+    },
+    "authorRewardsLabel": {
+      "source": "Author rewards:",
+      "text": "作者奖励："
+    },
+    "readPrice": {
+      "source": "Price per read: ${priceUsdc} USDC",
+      "text": "每次阅读价格：${priceUsdc} USDC"
+    },
+    "contentIdentifier": {
+      "source": "Content identifier: ${contentId}",
+      "text": "内容标识符：${contentId}"
+    },
+    "retainedFeedContent": {
+      "source": "Feed content retained by Keryx",
+      "text": "Keryx 留存的订阅源内容"
+    },
+    "tags": {
+      "source": "Tags: ${tags}",
+      "text": "标签：${tags}"
+    },
+    "noTags": {
+      "source": "None",
+      "text": "无"
+    },
+    "networkRegistry": {
+      "source": "Network and registry: ${network}, ${registry}",
+      "text": "网络与注册合约：${network}, ${registry}"
+    },
+    "gasSponsor": {
+      "source": "Gas sponsor: ${wallet}",
+      "text": "gas 赞助方：${wallet}"
+    },
+    "authorizationExpiry": {
+      "source": "Authorization expires: ${expiresAt}",
+      "text": "授权到期时间：${expiresAt}"
+    },
+    "gasReservation": {
+      "source": "Keryx gas reservation: up to ${gasUsdc} USDC. This is separate from creator earnings.",
+      "text": "Keryx gas 预留：最多 ${gasUsdc} USDC。此额度与创作者收入分开。"
+    },
+    "originalRequestLabel": {
+      "source": "Original request",
+      "text": "原始请求"
+    },
+    "originalTransaction": {
+      "source": "Original registration transaction: ${transactionHash}",
+      "text": "原始注册交易：${transactionHash}"
+    },
+    "confirmedGasCost": {
+      "source": "Confirmed sponsor gas cost: ${gasUsdc} USDC",
+      "text": "已确认的赞助方 gas 成本：${gasUsdc} USDC"
+    },
+    "signRegistrationButton": {
+      "source": "Sign reviewed registration",
+      "text": "签署已审阅注册"
+    },
+    "expiredRequestExplanation": {
+      "source": "This original expired before sponsor signing. A new reviewed request uses another sponsorship attempt and retains the original history.",
+      "text": "此原始请求在赞助方签名前已过期。新的已审阅请求使用另一次赞助尝试，并保留原始历史。"
+    },
+    "prepareReplacementButton": {
+      "source": "Prepare new unsigned request",
+      "text": "准备新的未签名请求"
+    },
+    "requestRecoveryUnavailable": {
+      "source": "Original recovery unavailable; retain this request.",
+      "text": "原始恢复不可用；请保留此请求。"
+    },
+    "inspectOriginalButton": {
+      "source": "Inspect original registration",
+      "text": "检查原始注册"
+    },
+    "resumeOriginalButton": {
+      "source": "Resume original sponsored transaction",
+      "text": "继续原始赞助交易"
+    },
+    "resumeOriginalExplanation": {
+      "source": "Resume uses the original creator authorization, transaction nonce and gas limits. A retained signed transaction is sent again unchanged. It does not register a new attempt or increase the gas reservation.",
+      "text": "继续操作使用原始创作者授权、交易 nonce 和 gas 限额。留存的已签名交易将原样再次发送。它不会登记新的尝试或增加 gas 预留额度。"
+    },
+    "resolveExpiredButton": {
+      "source": "Resolve expired original using reserved gas",
+      "text": "使用预留 gas 处理已过期原始交易"
+    },
+    "resolveExpiredExplanation": {
+      "source": "After authorization expires, you may explicitly finish the original transaction. Keryx pays its gas within the existing reservation; the registration must revert. Inspect its receipt before preparing a new attempt. This creates no source and increases no spending limit.",
+      "text": "授权过期后，您可以明确完成原始交易。Keryx 在现有预留额度内支付 gas；注册必须回滚。准备新尝试前请检查凭证。此操作不创建来源，也不增加支出限额。"
+    },
+    "revertedRequestExplanation": {
+      "source": "The original transaction reverted and its actual gas was charged. A new reviewed registration consumes another attempt within the same allowance and retains the original history.",
+      "text": "原始交易已回滚，实际 gas 已收费。新的已审阅注册在同一额度内消耗另一次尝试，并保留原始历史。"
+    },
+    "publisherScope": {
+      "source": "Gas sponsorship is limited to verified publishers at: ${publishers}.",
+      "text": "gas 赞助仅限以下已验证发布者：${publishers}。"
+    },
+    "feedUrlLabel": {
+      "source": "RSS feed URL (optional)",
+      "text": "RSS 订阅源 URL（可选）"
+    },
+    "feedUrlExplanation": {
+      "source": "For sponsored feed registration, include your exact HTTPS feed on the same website before creating the ownership proof.",
+      "text": "使用赞助订阅源注册时，创建所有权证明前请填写同一网站上的确切 HTTPS 订阅源。"
+    },
+    "feedOriginUnavailable": {
+      "source": "Use a full HTTPS feed URL on the same publisher origin.",
+      "text": "使用同一发布者源上的完整 HTTPS 订阅源 URL。"
+    },
+    "lostResponseExplanation": {
+      "source": "A lost response retains this attempt. Inspection sends no new transaction. Registration alone does not activate creator earnings.",
+      "text": "响应丢失时仍保留此次尝试。检查不会发送新交易。仅完成注册不会启用创作者收益。"
+    },
+    "earningsPolicyLink": {
+      "source": "Review this source's earnings policy ▸",
+      "text": "审阅此来源的收益政策 ▸"
+    },
+    "recoverRequestLabel": {
+      "source": "Recover original request",
+      "text": "恢复原始请求"
+    },
+    "idRecoveryUnavailable": {
+      "source": "Original recovery unavailable; retain its ID.",
+      "text": "原始恢复不可用；请保留其 ID。"
+    },
+    "inspectSavedButton": {
+      "source": "Inspect saved request",
+      "text": "检查已保存请求"
+    },
+    "walletFundedRegistrationLink": {
+      "source": "Wallet-funded registration ▸",
+      "text": "钱包出资注册 ▸"
+    },
+    "priceOnlyUpdateExplanation": {
+      "source": "Price updates change only the price. A concurrent edit requires a fresh review before signing.",
+      "text": "价格更新仅更改价格。并发编辑需要在签名前重新审阅。"
+    },
+    "legacyPriceUpdateExplanation": {
+      "source": "Price updates also submit these fields. Avoid editing this source elsewhere while the wallet prompt is open.",
+      "text": "价格更新还会提交这些字段。钱包提示打开期间，请避免在其他地方编辑此来源。"
+    }
+  }
+}

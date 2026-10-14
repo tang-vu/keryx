@@ -1,0 +1,1408 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/operations.ts",
+  "sourceSha256": "6a2db103f1003ae55264ad3969db6e55c281905277c58dfe1b747e6a8b67cdfc",
+  "entries": {
+    "statusRegistry.parityMatch": {
+      "source": "{compared}/{compared} match · {checkedAgo}",
+      "text": "{compared}/{compared} khớp · {checkedAgo}"
+    },
+    "statusRegistry.mismatch.one": {
+      "source": "{count} mismatch · {checkedAgo}",
+      "text": "{count} không khớp · {checkedAgo}"
+    },
+    "statusRegistry.mismatch.other": {
+      "source": "{count} mismatches · {checkedAgo}",
+      "text": "{count} không khớp · {checkedAgo}"
+    },
+    "statusDispatch.partial.one": {
+      "source": " · {count} partial",
+      "text": " · {count} chưa đầy đủ"
+    },
+    "statusDispatch.partial.other": {
+      "source": " · {count} partial",
+      "text": " · {count} chưa đầy đủ"
+    },
+    "statusDispatch.circuitSkips.one": {
+      "source": " · {count} circuit skips",
+      "text": " · {count} lượt bỏ qua do ngắt mạch"
+    },
+    "statusDispatch.circuitSkips.other": {
+      "source": " · {count} circuit skips",
+      "text": " · {count} lượt bỏ qua do ngắt mạch"
+    },
+    "statusSettlement.cashedOutAmount": {
+      "source": " · {amount} cashed out",
+      "text": " · {amount} đã rút"
+    },
+    "statusSettlement.shortWallets.one": {
+      "source": "{count} wallet",
+      "text": "{count} ví"
+    },
+    "statusSettlement.shortWallets.other": {
+      "source": "{count} wallets",
+      "text": "{count} ví"
+    },
+    "statusSettlement.unverified.one": {
+      "source": " · {count} unverified",
+      "text": " · {count} chưa xác minh"
+    },
+    "statusSettlement.unverified.other": {
+      "source": " · {count} unverified",
+      "text": " · {count} chưa xác minh"
+    },
+    "statusReconciliation.terminalFailures.one": {
+      "source": "{failed} ({released} reservations released)",
+      "text": "{failed} ({released} khoản giữ đã giải phóng)"
+    },
+    "statusReconciliation.terminalFailures.other": {
+      "source": "{failed} ({released} reservations released)",
+      "text": "{failed} ({released} khoản giữ đã giải phóng)"
+    },
+    "operatorBusiness.reasonNoOrders": {
+      "source": "No prepaid research order is waiting.",
+      "text": "Không có đơn nghiên cứu trả trước đang chờ."
+    },
+    "operatorBusiness.reasonLiquidityCovered": {
+      "source": "Observed capacity covers unfinished creator budgets inside the original policy.",
+      "text": "Khả năng quan sát được đủ cho ngân sách tác giả chưa hoàn tất trong chính sách ban đầu."
+    },
+    "operatorBusiness.reasonLiquidityUnavailable": {
+      "source": "Original treasury capacity could not be verified. Orders remain queued.",
+      "text": "Chưa thể xác minh khả năng ngân quỹ ban đầu. Đơn vẫn trong hàng chờ."
+    },
+    "operatorBusiness.reasonLiquidityShort": {
+      "source": "Unfinished creator obligations exceed observed capacity. Owner funding review is needed.",
+      "text": "Nghĩa vụ tác giả chưa hoàn tất vượt khả năng quan sát được. Cần chủ sở hữu xem xét nguồn tiền."
+    },
+    "operatorBusiness.reasonPolicyCap": {
+      "source": "An accepted obligation exceeds the original treasury policy. Owner review is needed.",
+      "text": "Nghĩa vụ đã chấp nhận vượt chính sách ngân quỹ ban đầu. Cần chủ sở hữu xem xét."
+    },
+    "operatorBusiness.reasonIncompleteInventory": {
+      "source": "The selected-network obligation inventory is unavailable or inconsistent.",
+      "text": "Danh sách nghĩa vụ mạng đã chọn không khả dụng hoặc không nhất quán."
+    },
+    "operatorBusiness.reasonOriginalJobNeedsReview": {
+      "source": "An original started job needs reconciliation. It will not be purchased again.",
+      "text": "Tác vụ ban đầu đã bắt đầu cần đối soát. Không mua lại."
+    },
+    "operatorBusiness.reasonAnotherJobActive": {
+      "source": "Another accepted job is active. This worker waits without claiming another order.",
+      "text": "Tác vụ đã chấp nhận khác đang hoạt động. Worker này chờ, không nhận đơn khác."
+    },
+    "operatorBusiness.reasonAcceptancePaused": {
+      "source": "A finite acceptance policy is active. Paid originals stay queued.",
+      "text": "Chính sách chấp nhận hữu hạn đang có hiệu lực. Bản gốc đã trả phí vẫn trong hàng chờ."
+    },
+    "businessCalculator.unknownInputs.one": {
+      "source": "{basis} · {count} unknown inputs. These are two alternative views; do not add them together.",
+      "text": "{basis} · {count} đầu vào chưa rõ. Đây là hai cách nhìn thay thế; không cộng chúng."
+    },
+    "businessCalculator.unknownInputs.other": {
+      "source": "{basis} · {count} unknown inputs. These are two alternative views; do not add them together.",
+      "text": "{basis} · {count} đầu vào chưa rõ. Đây là hai cách nhìn thay thế; không cộng chúng."
+    },
+    "businessCalculator.illustrativeScenario": {
+      "source": "Illustrative scenario",
+      "text": "Tình huống minh họa"
+    },
+    "businessCalculator.yourOperatingEstimates": {
+      "source": "Your operating estimates",
+      "text": "Ước tính vận hành của bạn"
+    },
+    "statusObservation.minutesAgo": {
+      "source": "{minutes}m ago",
+      "text": "{minutes} phút trước"
+    },
+    "statusObservation.hoursAgo": {
+      "source": "{hours}h ago",
+      "text": "{hours} giờ trước"
+    },
+    "statusObservation.daysAgo": {
+      "source": "{days}d ago",
+      "text": "{days} ngày trước"
+    },
+    "statusPage.checkedAt": {
+      "source": " · checked {checkedAt}",
+      "text": " · kiểm tra {checkedAt}"
+    },
+    "economicsPage.viewCurrentResearchOffers": {
+      "source": "View current research offers",
+      "text": "Xem đề nghị nghiên cứu hiện tại"
+    },
+    "economicsPage.packageReceiptsAreNotAutomaticallyRecognizedRevenueOr": {
+      "source": "Package receipts are not automatically recognized revenue or profit. Useful research and creator obligations remain part of the service. {link}.",
+      "text": "Biên nhận gói không tự là doanh thu được ghi nhận hay lợi nhuận. Nghiên cứu hữu ích và nghĩa vụ tác giả vẫn là phần dịch vụ. {link}."
+    },
+    "economicsPage.thisCalculatorUsesAssumptionsNotRealizedRevenueIt": {
+      "source": "This calculator uses assumptions, not realized revenue. It does not import testnet activity, change package prices or make payments. The illustrative fees are editable examples.",
+      "text": "Công cụ tính dùng giả định, không phải doanh thu thực hiện. Không nhập hoạt động testnet, đổi giá gói hay thanh toán. Phí minh họa là ví dụ chỉnh sửa được."
+    },
+    "economicsPage.compareServiceFeeContributionAndFixedPackageReserve": {
+      "source": "Compare service-fee contribution and fixed-package reserve retention. Test your costs and demand to understand monthly operating results and the volume needed to break even.",
+      "text": "So sánh đóng góp phí dịch vụ và dự trữ giữ lại của gói giá cố định. Kiểm nghiệm chi phí, nhu cầu để hiểu kết quả vận hành tháng và khối lượng cần hòa vốn."
+    },
+    "economicsPage.whatDoesAResearchJobEarn": {
+      "source": "What does a research job earn?",
+      "text": "Một tác vụ nghiên cứu tạo thu nhập bao nhiêu?"
+    },
+    "economicsPage.businessPlanning": {
+      "source": "Business planning",
+      "text": "Lập kế hoạch kinh doanh"
+    },
+    "statusPage.pendingDeposits": {
+      "source": "Pending deposits",
+      "text": "Khoản nạp đang chờ"
+    },
+    "statusPage.confirmedAllChains": {
+      "source": "Confirmed (all chains)",
+      "text": "Đã xác nhận (mọi chuỗi)"
+    },
+    "statusPage.settlementTreasuryUnifiedBalanceCircleAppKit": {
+      "source": "Settlement treasury — unified balance · Circle App Kit",
+      "text": "Ngân quỹ quyết toán — số dư hợp nhất · Circle App Kit"
+    },
+    "statusPage.unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "statusPage.gatewayAvailableUSDC": {
+      "source": "Gateway available USDC",
+      "text": "USDC khả dụng trong Gateway"
+    },
+    "statusPage.publicResearchTreasuryArcMainnet": {
+      "source": "Public research treasury · Arc mainnet",
+      "text": "Ngân quỹ nghiên cứu công khai · Arc mainnet"
+    },
+    "statusPage.unavailable": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "statusPage.operatingFeeTransfers": {
+      "source": "Operating fee transfers",
+      "text": "Khoản chuyển phí vận hành"
+    },
+    "statusPage.keryxOperatingFees": {
+      "source": "Keryx operating fees",
+      "text": "Phí vận hành Keryx"
+    },
+    "statusPage.creatorsEarning": {
+      "source": "Creators earning",
+      "text": "Tác giả có thu nhập"
+    },
+    "statusPage.creatorRewards": {
+      "source": "Creator rewards",
+      "text": "Thưởng cho tác giả"
+    },
+    "statusPage.settledPayments": {
+      "source": "Settled payments",
+      "text": "Thanh toán đã quyết toán"
+    },
+    "statusPage.totalQueries": {
+      "source": "Total queries",
+      "text": "Tổng câu hỏi"
+    },
+    "statusPage.liveTraction": {
+      "source": "Live traction",
+      "text": "Hoạt động thực tế"
+    },
+    "statusPage.commit": {
+      "source": "Commit",
+      "text": "Commit"
+    },
+    "statusPage.network": {
+      "source": "Network",
+      "text": "Mạng"
+    },
+    "statusPage.reasoning": {
+      "source": "Reasoning",
+      "text": "Suy luận"
+    },
+    "statusPage.settlement": {
+      "source": "Settlement",
+      "text": "Quyết toán"
+    },
+    "statusPage.datastore": {
+      "source": "Datastore",
+      "text": "Kho dữ liệu"
+    },
+    "statusPage.uptime": {
+      "source": "Uptime",
+      "text": "Thời gian hoạt động"
+    },
+    "statusPage.serviceStatus": {
+      "source": "Service status",
+      "text": "Trạng thái dịch vụ"
+    },
+    "statusPage.degraded": {
+      "source": "Degraded",
+      "text": "Suy giảm"
+    },
+    "statusPage.serviceAvailable": {
+      "source": "Service available",
+      "text": "Dịch vụ khả dụng"
+    },
+    "statusPage.checkingService": {
+      "source": "Checking service",
+      "text": "Đang kiểm tra dịch vụ"
+    },
+    "statusPage.unreachable": {
+      "source": "Unreachable",
+      "text": "Không thể kết nối"
+    },
+    "proofPage.circleAndArcIntegrationLedger": {
+      "source": "Circle and Arc integration ledger",
+      "text": "Sổ tích hợp Circle và Arc"
+    },
+    "proofPage.verifyTheDeployedCodeSourceAuthoritySettledPayments": {
+      "source": "Verify the deployed code, source authority, settled payments, and creator cash-outs through the records behind each claim.",
+      "text": "Xác minh mã triển khai, thẩm quyền nguồn, thanh toán đã quyết toán và khoản rút tác giả qua hồ sơ đứng sau từng tuyên bố."
+    },
+    "proofPage.limitsAttached": {
+      "source": "limits attached.",
+      "text": "kèm giới hạn."
+    },
+    "proofPage.publicProof": {
+      "source": "Public proof",
+      "text": "Bằng chứng công khai"
+    },
+    "proofPage.batchedTransfersHaveCircleIDsNotOneArcScan": {
+      "source": "Batched transfers have Circle IDs, not one ArcScan tx per citation.",
+      "text": "Khoản chuyển theo lô có ID Circle, không có một giao dịch ArcScan cho mỗi trích dẫn."
+    },
+    "proofPage.payeeBalancesBackTheSettledLedgerWalletBy": {
+      "source": "Payee balances back the settled ledger, wallet by wallet.",
+      "text": "Số dư từng ví bên nhận bảo đảm sổ đã quyết toán."
+    },
+    "proofPage.circleGatewayAPI": {
+      "source": "Circle Gateway API",
+      "text": "API Circle Gateway"
+    },
+    "proofPage.itDoesNotTurnADatabaseRowInto": {
+      "source": "It does not turn a database row into payout authority.",
+      "text": "Không biến hàng cơ sở dữ liệu thành thẩm quyền nhận tiền."
+    },
+    "proofPage.whoControlsASourceItsPriceCeilingPayout": {
+      "source": "Who controls a source, its price ceiling, payout wallet, and author splits.",
+      "text": "Ai kiểm soát nguồn, trần giá, ví nhận tiền và phần chia tác giả."
+    },
+    "proofPage.arcRPCSourceRegistry": {
+      "source": "Arc RPC + SourceRegistry",
+      "text": "Arc RPC + SourceRegistry"
+    },
+    "proofPage.itDoesNotProveThatAPaymentSettled": {
+      "source": "It does not prove that a payment settled.",
+      "text": "Không chứng minh thanh toán đã quyết toán."
+    },
+    "proofPage.theReviewedSourceIsTheBuildCurrentlyServing": {
+      "source": "The reviewed source is the build currently serving traffic.",
+      "text": "Nguồn đã xem xét là bản dựng đang phục vụ lưu lượng."
+    },
+    "proofPage.gitHubRuntimeCommit": {
+      "source": "GitHub + runtime commit",
+      "text": "GitHub + commit runtime"
+    },
+    "operatorBusiness.localOperatorDesktopAndCLIWorkspacesRetainTheir": {
+      "source": "Local Operator desktop and CLI workspaces retain their existing deliberate purchase and recovery flow. Hosted prepaid orders run on the service worker; this status page grants no execution authority.",
+      "text": "Không gian Operator máy tính và CLI cục bộ giữ luồng mua chủ động và khôi phục hiện có. Đơn trả trước được lưu trữ chạy trên worker dịch vụ; trang trạng thái không cấp thẩm quyền thực thi."
+    },
+    "operatorBusiness.aGeneralOnChainBusinessBudgetWalletAnd": {
+      "source": "A general on-chain business budget wallet and a complete live business acceptance cycle remain separate gates. This page does not certify either.",
+      "text": "Ví ngân sách kinh doanh chung trên chuỗi và chu kỳ chấp nhận kinh doanh trực tiếp đầy đủ vẫn là cổng riêng. Trang này không chứng nhận điều nào."
+    },
+    "operatorBusiness.thisViewReportsTheWorkerSObservedDecisions": {
+      "source": "This view reports the worker's observed decisions and aggregate order states. Private questions, receipts and account details remain with their original owners.",
+      "text": "Chế độ xem báo quyết định quan sát được của worker và trạng thái đơn tổng hợp. Câu hỏi riêng tư, biên nhận và chi tiết tài khoản vẫn thuộc chủ sở hữu ban đầu."
+    },
+    "operatorBusiness.whatThisObservationEstablishes": {
+      "source": "What this observation establishes",
+      "text": "Quan sát này xác lập điều gì"
+    },
+    "operatorBusiness.oneOriginalOrderPreservedObligations": {
+      "source": "One original order · preserved obligations",
+      "text": "Một đơn ban đầu · nghĩa vụ được giữ"
+    },
+    "operatorBusiness.howTheBusinessOperates": {
+      "source": "How the business operates",
+      "text": "Cách hoạt động kinh doanh"
+    },
+    "operatorBusiness.visitTheSourceCatalogContent": {
+      "source": "Visit the source catalog {arrowIcon}",
+      "text": "Đến danh mục nguồn {arrowIcon}"
+    },
+    "operatorBusiness.registrationAloneDoesNotEstablishPayoutEligibilityPurchases": {
+      "source": "Registration alone does not establish payout eligibility, purchases or settled creator earnings.",
+      "text": "Chỉ đăng ký không xác lập điều kiện nhận tiền, lượt mua hay thu nhập tác giả đã quyết toán."
+    },
+    "operatorBusiness.theCatalogCountIsUnknownRegistrationPayoutEligibility": {
+      "source": "The catalog count is unknown. Registration, payout eligibility and settled earnings are separate states.",
+      "text": "Số nguồn trong danh mục chưa rõ. Đăng ký, đủ điều kiện nhận tiền và thu nhập đã quyết toán là trạng thái riêng."
+    },
+    "operatorBusiness.noRegisteredCreatorSourceIsObservedPublicWeb": {
+      "source": "No registered creator source is observed. Public-web research can continue; creator access and reward opportunities depend on eligible sources.",
+      "text": "Không quan sát nguồn tác giả đăng ký nào. Nghiên cứu web công khai có thể tiếp tục; cơ hội truy cập và thưởng tác giả phụ thuộc nguồn đủ điều kiện."
+    },
+    "operatorBusiness.registeredSourcesInTheSelectedCatalog": {
+      "source": "Registered sources in the selected catalog",
+      "text": "Nguồn đăng ký trong danh mục đã chọn"
+    },
+    "operatorBusiness.creatorCatalog": {
+      "source": "Creator catalog",
+      "text": "Danh mục tác giả"
+    },
+    "operatorBusiness.timingDoesNotMeasureTheFirstAnswerOr": {
+      "source": "Timing does not measure the first answer or prove settled payments, customer demand or a completion guarantee.",
+      "text": "Thời gian không đo câu trả lời đầu tiên hay chứng minh thanh toán đã quyết toán, nhu cầu khách hàng hoặc bảo đảm hoàn thành."
+    },
+    "operatorBusiness.completionPathTimingIsUnavailableOnThisStorage": {
+      "source": "Completion-path timing is unavailable on this storage contract. Missing capability is not zero ordinary latency.",
+      "text": "Thời gian luồng hoàn thành không khả dụng trên hợp đồng lưu trữ này. Thiếu khả năng không phải độ trễ thông thường bằng 0."
+    },
+    "operatorBusiness.unknownPath": {
+      "source": "Unknown path",
+      "text": "Luồng chưa rõ"
+    },
+    "operatorBusiness.recovered": {
+      "source": "Recovered",
+      "text": "Đã khôi phục"
+    },
+    "operatorBusiness.ordinary": {
+      "source": "Ordinary",
+      "text": "Thông thường"
+    },
+    "operatorBusiness.median": {
+      "source": "Median",
+      "text": "Trung vị"
+    },
+    "operatorBusiness.timedSamples": {
+      "source": "Timed samples",
+      "text": "Mẫu có ghi thời gian"
+    },
+    "operatorBusiness.completed": {
+      "source": "Completed",
+      "text": "Đã hoàn tất"
+    },
+    "operatorBusiness.path": {
+      "source": "Path",
+      "text": "Đường dẫn"
+    },
+    "operatorBusiness.recordedCompletionLatencyCohortsNotFirstAnswerOr": {
+      "source": "Recorded completion latency cohorts, not first-answer or payment settlement times",
+      "text": "Nhóm độ trễ hoàn thành ghi nhận, không phải thời gian câu trả lời đầu tiên hay quyết toán"
+    },
+    "operatorBusiness.acceptanceToRecordedCompletionUpdateForOrdersRecorded": {
+      "source": "Acceptance to recorded completion/update, for orders recorded as completed and updated in the last 24 hours. Later reconciliation can extend this time. Ordinary means a versioned service receipt with no recorded recovery. Recovered includes saved-result repair and original fulfillment; missing markers stay unknown.",
+      "text": "Từ chấp nhận đến hoàn tất/cập nhật ghi nhận, cho đơn ghi hoàn tất và cập nhật trong 24 giờ qua. Đối soát sau có thể kéo dài thời gian. Thông thường là biên nhận dịch vụ có phiên bản, không ghi khôi phục. Đã khôi phục gồm sửa kết quả lưu và hoàn thành bản gốc; dấu mốc thiếu vẫn chưa rõ."
+    },
+    "operatorBusiness.completionTimingByRecordedPath": {
+      "source": "Completion timing by recorded path",
+      "text": "Thời gian hoàn thành theo luồng ghi nhận"
+    },
+    "operatorBusiness.orderCompletionDescribesDeliveryStateItDoesNot": {
+      "source": "Order completion describes delivery state. It does not prove a useful answer, settled creator payments or independent customer demand.",
+      "text": "Hoàn thành đơn mô tả trạng thái cung cấp. Không chứng minh câu trả lời hữu ích, thanh toán tác giả đã quyết toán hay nhu cầu khách hàng độc lập."
+    },
+    "operatorBusiness.noTerminalOrderOutcomesAreRecordedInThis": {
+      "source": "No terminal order outcomes are recorded in this window. That does not establish demand or a success rate.",
+      "text": "Chưa ghi kết quả đơn cuối cùng trong khoảng này. Không xác lập nhu cầu hay tỷ lệ thành công."
+    },
+    "operatorBusiness.ordersRecordedAsFailed": {
+      "source": "Orders recorded as failed",
+      "text": "Đơn ghi nhận không thành công"
+    },
+    "operatorBusiness.failed": {
+      "source": "Failed",
+      "term": "failed"
+    },
+    "operatorBusiness.ordersWithASavedCompletedResult": {
+      "source": "Orders with a saved completed result",
+      "text": "Đơn có kết quả hoàn tất đã lưu"
+    },
+    "operatorBusiness.terminalOrdersLast24Hours": {
+      "source": "Terminal orders · last 24 hours",
+      "text": "Đơn có kết quả cuối · 24 giờ qua"
+    },
+    "operatorBusiness.recordedDeliveryOutcomes": {
+      "source": "Recorded delivery outcomes",
+      "text": "Kết quả cung cấp ghi nhận"
+    },
+    "operatorBusiness.theQueueIsUnknownMissingRecordsAreNot": {
+      "source": "The queue is unknown. Missing records are not counted as zero.",
+      "text": "Hàng chờ chưa rõ. Không tính hồ sơ thiếu là 0."
+    },
+    "operatorBusiness.queueObservationDegradedWaitingOrReviewNeedsAttention": {
+      "source": "Queue observation degraded · waiting or review needs attention",
+      "text": "Quan sát hàng chờ suy giảm · cần chú ý việc chờ hoặc xem xét"
+    },
+    "operatorBusiness.originalJobsRequiringReconciliation": {
+      "source": "Original jobs requiring reconciliation",
+      "text": "Tác vụ ban đầu cần đối soát"
+    },
+    "operatorBusiness.needsReview": {
+      "source": "Needs review",
+      "text": "Cần xem xét"
+    },
+    "operatorBusiness.originalJobsAlreadyStarted": {
+      "source": "Original jobs already started",
+      "text": "Tác vụ ban đầu đã bắt đầu"
+    },
+    "operatorBusiness.processing": {
+      "source": "Processing",
+      "text": "Đang xử lý"
+    },
+    "operatorBusiness.prepaidOrdersAwaitingExecution": {
+      "source": "Prepaid orders awaiting execution",
+      "text": "Đơn trả trước chờ thực thi"
+    },
+    "operatorBusiness.queued": {
+      "source": "Queued",
+      "text": "Đang chờ xử lý"
+    },
+    "operatorBusiness.selectedNetworkCurrentOrderRecords": {
+      "source": "Selected network · current order records",
+      "text": "Mạng đã chọn · hồ sơ đơn hiện tại"
+    },
+    "operatorBusiness.acceptedResearchQueue": {
+      "source": "Accepted research queue",
+      "text": "Hàng chờ nghiên cứu đã chấp nhận"
+    },
+    "operatorBusiness.thePublicObservationDoesNotConfirmADurable": {
+      "source": "The public observation does not confirm a durable audit entry.",
+      "text": "Quan sát công khai không xác nhận mục kiểm toán bền vững."
+    },
+    "operatorBusiness.unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "operatorBusiness.notRecorded": {
+      "source": "Not recorded",
+      "text": "Chưa ghi nhận"
+    },
+    "operatorBusiness.recorded": {
+      "source": "Recorded",
+      "text": "Đã ghi nhận"
+    },
+    "operatorBusiness.auditRecord": {
+      "source": "Audit record",
+      "text": "Hồ sơ kiểm tra"
+    },
+    "operatorBusiness.decisionObserved": {
+      "source": "Decision observed",
+      "text": "Quyết định đã quan sát"
+    },
+    "operatorBusiness.aDecisionIsShownOnlyAfterItHas": {
+      "source": "A decision is shown only after it has been observed by the service.",
+      "text": "Chỉ hiển thị quyết định sau khi dịch vụ quan sát được."
+    },
+    "operatorBusiness.noDecisionAvailable": {
+      "source": "No decision available",
+      "text": "Chưa có quyết định"
+    },
+    "operatorBusiness.escalateForReview": {
+      "source": "Escalate for review",
+      "text": "Chuyển lên để xem xét"
+    },
+    "operatorBusiness.holdNewWork": {
+      "source": "Hold new work",
+      "text": "Tạm giữ công việc mới"
+    },
+    "operatorBusiness.proceedWithinPolicy": {
+      "source": "Proceed within policy",
+      "text": "Tiếp tục trong chính sách"
+    },
+    "operatorBusiness.waitForAnOrder": {
+      "source": "Wait for an order",
+      "text": "Chờ chỉ thị"
+    },
+    "operatorBusiness.lastObservedDecision": {
+      "source": "Last observed decision",
+      "text": "Quyết định quan sát gần nhất"
+    },
+    "operatorBusiness.theStatusServiceCouldNotBeReadPrevious": {
+      "source": "The status service could not be read. Previous counts are hidden until a fresh response arrives.",
+      "text": "Không thể đọc dịch vụ trạng thái. Ẩn số trước đó cho đến khi có phản hồi mới."
+    },
+    "operatorBusiness.checkingThePublicOperatingSnapshotCountsRemainUnknown": {
+      "source": "Checking the public operating snapshot. Counts remain unknown until the service responds.",
+      "text": "Đang kiểm tra bản chụp vận hành công khai. Số lượng vẫn chưa rõ đến khi dịch vụ phản hồi."
+    },
+    "operatorBusiness.readingStatus": {
+      "source": "Reading status…",
+      "text": "Đang đọc trạng thái…"
+    },
+    "operatorBusiness.currentObservation": {
+      "source": "Current observation",
+      "text": "Quan sát hiện tại"
+    },
+    "operatorBusiness.aWorkerObservationIsNotProofOfSettlement": {
+      "source": "A worker observation is not proof of settlement or business acceptance.",
+      "text": "Quan sát worker không phải bằng chứng quyết toán hay chấp nhận kinh doanh."
+    },
+    "operatorBusiness.prepaidOrdersOriginalBudgetsHumanReviewWhenEvidence": {
+      "source": "Prepaid orders. Original budgets. Human review when evidence or authority is uncertain.",
+      "text": "Đơn trả trước. Ngân sách ban đầu. Người xem xét khi bằng chứng hoặc thẩm quyền chưa rõ."
+    },
+    "operatorBusiness.operatingBoundary": {
+      "source": "Operating boundary",
+      "text": "Phạm vi vận hành"
+    },
+    "operatorBusiness.exploreCreatorSourcesContent": {
+      "source": "Explore creator sources {arrowIcon}",
+      "text": "Khám phá nguồn tác giả {arrowIcon}"
+    },
+    "operatorBusiness.requestResearchContent": {
+      "source": "Request research {arrowIcon}",
+      "text": "Yêu cầu nghiên cứu {arrowIcon}"
+    },
+    "operatorBusiness.followTheServiceFromAPrepaidQuestionTo": {
+      "source": "Follow the service from a prepaid question to evidence, delivery and reconciliation. The Operator handles existing paid orders inside their agreed limits.",
+      "text": "Theo dịch vụ từ câu hỏi trả trước đến bằng chứng, cung cấp và đối soát. Operator xử lý đơn đã trả phí hiện có trong giới hạn thống nhất."
+    },
+    "operatorBusiness.keryxOperatorBusinessOperations": {
+      "source": "Keryx Operator · business operations",
+      "text": "Keryx Operator · vận hành kinh doanh"
+    },
+    "operatorBusiness.networkUnknown": {
+      "source": "Network unknown",
+      "text": "Mạng chưa rõ"
+    },
+    "operatorBusiness.arcTestnet": {
+      "source": "Arc testnet",
+      "text": "Arc testnet"
+    },
+    "operatorBusiness.arcMainnet": {
+      "source": "Arc mainnet",
+      "text": "Arc mainnet"
+    },
+    "operatorBusiness.receiptsPreservePaymentStateUncertainOriginalJobsAre": {
+      "source": "Receipts preserve payment state. Uncertain original jobs are held for review rather than purchased again.",
+      "text": "Biên nhận giữ trạng thái thanh toán. Tác vụ ban đầu chưa rõ được giữ để xem xét, không mua lại."
+    },
+    "operatorBusiness.reconcileOrEscalate": {
+      "source": "Reconcile or escalate",
+      "text": "Đối soát hoặc chuyển xử lý"
+    },
+    "operatorBusiness.evidenceChecksDetermineWhichClaimsCitationsAndLimitations": {
+      "source": "Evidence checks determine which claims, citations and limitations can appear in the saved result.",
+      "text": "Kiểm tra bằng chứng quyết định nhận định, trích dẫn và giới hạn nào được xuất hiện trong kết quả lưu."
+    },
+    "operatorBusiness.deliverReviewedResearch": {
+      "source": "Deliver reviewed research",
+      "text": "Cung cấp nghiên cứu đã xem xét"
+    },
+    "operatorBusiness.theReadingAgentDiscoversSourcesExplainsBUYSKIP": {
+      "source": "The reading agent discovers sources, explains BUY / SKIP / CACHE decisions, and stays inside the purchased creator cap.",
+      "text": "Tác nhân đọc khám phá nguồn, giải thích quyết định BUY / SKIP / CACHE và giữ trong hạn mức tác giả đã mua."
+    },
+    "operatorBusiness.buyReadUnderBudget": {
+      "source": "Buy & read under budget",
+      "text": "Mua và đọc trong ngân sách"
+    },
+    "operatorBusiness.theOperatorChecksUnfinishedObligationsAndAvailableCapacity": {
+      "source": "The Operator checks unfinished obligations and available capacity against the existing policy before taking work.",
+      "text": "Operator kiểm tra nghĩa vụ chưa hoàn tất và khả năng sẵn có theo chính sách hiện có trước khi nhận việc."
+    },
+    "operatorBusiness.assessObligationsCapacity": {
+      "source": "Assess obligations & capacity",
+      "text": "Đánh giá nghĩa vụ và khả năng"
+    },
+    "operatorBusiness.aCustomerChoosesAPricedPackageVerifiedPayment": {
+      "source": "A customer chooses a priced package. Verified payment is bound to the original research order.",
+      "text": "Khách hàng chọn gói có giá. Thanh toán đã xác minh ràng buộc đơn nghiên cứu ban đầu."
+    },
+    "operatorBusiness.receivePrepaidResearch": {
+      "source": "Receive prepaid research",
+      "text": "Nhận nghiên cứu trả trước"
+    },
+    "operatorBusiness.aCurrentWorkerObservationIsUnavailableActivityCannot": {
+      "source": "A current worker observation is unavailable. Activity cannot be confirmed.",
+      "text": "Quan sát worker hiện tại không khả dụng. Không thể xác nhận hoạt động."
+    },
+    "operatorBusiness.theWorkerObservationIsOutOfDateCurrent": {
+      "source": "The worker observation is out of date. Current activity is unknown.",
+      "text": "Quan sát worker đã cũ. Hoạt động hiện tại chưa rõ."
+    },
+    "operatorBusiness.observationStale": {
+      "source": "Observation stale",
+      "text": "Quan sát đã cũ"
+    },
+    "operatorBusiness.anOriginalObligationNeedsHumanReviewBeforeThe": {
+      "source": "An original obligation needs human review before the worker proceeds.",
+      "text": "Nghĩa vụ ban đầu cần người xem xét trước khi worker tiếp tục."
+    },
+    "operatorBusiness.reviewRequired": {
+      "source": "Review required",
+      "text": "Cần xem xét"
+    },
+    "operatorBusiness.newWorkIsHeldAtAnOperatingBoundary": {
+      "source": "New work is held at an operating boundary. Existing obligations remain.",
+      "text": "Giữ công việc mới tại ranh giới vận hành. Nghĩa vụ hiện có vẫn còn."
+    },
+    "operatorBusiness.held": {
+      "source": "Held",
+      "text": "Đang giữ"
+    },
+    "operatorBusiness.theLastObservationShowsAcceptedResearchInProgress": {
+      "source": "The last observation shows accepted research in progress.",
+      "text": "Quan sát gần nhất cho thấy nghiên cứu đã chấp nhận đang thực hiện."
+    },
+    "operatorBusiness.activeWorking": {
+      "source": "Active · working",
+      "text": "Đang hoạt động · đang làm"
+    },
+    "operatorBusiness.theWorkerIsObservingPrepaidOrdersAndWaiting": {
+      "source": "The worker is observing prepaid orders and waiting within its existing policy.",
+      "text": "Worker quan sát đơn trả trước và chờ trong chính sách hiện có."
+    },
+    "operatorBusiness.activeIdle": {
+      "source": "Active · idle",
+      "text": "Đang hoạt động · rảnh"
+    },
+    "operatorBusiness.theOperatorWorkerIsDisabledThisViewDoes": {
+      "source": "The Operator worker is disabled. This view does not start research.",
+      "text": "Worker Operator đã tắt. Chế độ xem này không bắt đầu nghiên cứu."
+    },
+    "operatorBusiness.disabled": {
+      "source": "Disabled",
+      "text": "Đã tắt"
+    },
+    "businessCalculator.fixedAndAcquisitionCosts": {
+      "source": "Fixed and acquisition costs",
+      "text": "Chi phí cố định và thu hút khách hàng"
+    },
+    "businessCalculator.variableOperatingCosts": {
+      "source": "Variable operating costs",
+      "text": "Chi phí vận hành biến đổi"
+    },
+    "businessCalculator.unusedCreatorBudget": {
+      "source": "Unused creator budget",
+      "text": "Ngân sách cho tác giả chưa dùng"
+    },
+    "businessCalculator.creatorPayments": {
+      "source": "Creator payments",
+      "text": "Thanh toán cho tác giả"
+    },
+    "businessCalculator.serviceFeeComponent": {
+      "source": "Service-fee component",
+      "text": "Thành phần phí dịch vụ"
+    },
+    "businessCalculator.monthlyPackageReceipts": {
+      "source": "Monthly package receipts",
+      "text": "Biên nhận gói theo tháng"
+    },
+    "businessCalculator.monthlyResultPaidJobsContributionFixedAndAcquisition": {
+      "source": "Monthly result = paid jobs × contribution − fixed and acquisition costs. Break-even rounds up to whole jobs and requires positive contribution. Taxes and financing are excluded.",
+      "text": "Monthly result = paid jobs × contribution − fixed and acquisition costs. Break-even rounds up to whole jobs and requires positive contribution. Taxes and financing are excluded."
+    },
+    "businessCalculator.unknownCosts": {
+      "source": "Unknown costs",
+      "text": "Chi phí chưa rõ"
+    },
+    "businessCalculator.noPositiveContribution": {
+      "source": "No positive contribution",
+      "text": "Không có đóng góp dương"
+    },
+    "businessCalculator.breakEvenPaidJobsPerMonth": {
+      "source": "Break-even paid jobs per month",
+      "text": "Số tác vụ trả phí mỗi tháng để hòa vốn"
+    },
+    "businessCalculator.monthlyOperatingResultBeforeTax": {
+      "source": "Monthly operating result before tax",
+      "text": "Kết quả vận hành tháng trước thuế"
+    },
+    "businessCalculator.contributionPerJob": {
+      "source": "Contribution per job",
+      "text": "Đóng góp mỗi tác vụ"
+    },
+    "businessCalculator.contributionServiceFeeCreatorBudgetCreatorSpendVariable": {
+      "source": "Contribution = service fee + creator budget − creator spend − variable operating costs",
+      "text": "Đóng góp = phí dịch vụ + ngân sách tác giả − chi cho tác giả − chi phí vận hành biến đổi"
+    },
+    "businessCalculator.fixedPriceReserveRetention": {
+      "source": "Fixed-price reserve retention",
+      "text": "Dự trữ giữ lại của giá cố định"
+    },
+    "businessCalculator.contributionServiceFeeVariableOperatingCosts": {
+      "source": "Contribution = service fee − variable operating costs",
+      "text": "Đóng góp = phí dịch vụ − chi phí vận hành biến đổi"
+    },
+    "businessCalculator.serviceFeeOnly": {
+      "source": "Service fee only",
+      "text": "Chỉ phí dịch vụ"
+    },
+    "businessCalculator.modeledOperatingResults": {
+      "source": "Modeled operating results",
+      "text": "Kết quả vận hành theo mô hình"
+    },
+    "businessCalculator.enterNonnegativeAmountsWithUpToSixDecimal": {
+      "source": "Enter nonnegative amounts with up to six decimal places and whole monthly job counts. Service fee and creator budget are required; creator spend cannot exceed its budget. Results are hidden until the inputs are valid.",
+      "text": "Nhập số tiền không âm tối đa sáu chữ số thập phân và số tác vụ tháng nguyên. Cần phí dịch vụ, ngân sách tác giả; chi tác giả không vượt ngân sách. Ẩn kết quả đến khi đầu vào hợp lệ."
+    },
+    "businessCalculator.calculationsAndImportedFilesStayInThisPage": {
+      "source": "Calculations and imported files stay in this page. Export inputs to keep them; reloading clears your edits. A report includes your inputs, so review it before sharing.",
+      "text": "Phép tính và tệp nhập giữ trên trang này. Xuất đầu vào để giữ; tải lại xóa chỉnh sửa. Báo cáo gồm đầu vào, nên xem trước khi chia sẻ."
+    },
+    "businessCalculator.resetAssumptions": {
+      "source": "Reset assumptions",
+      "text": "Đặt lại giả định"
+    },
+    "businessCalculator.resetToIllustrativeFeesWithUnknownCostsAnd": {
+      "source": "Reset to illustrative fees with unknown costs and demand.",
+      "text": "Đặt lại phí minh họa với chi phí và nhu cầu chưa rõ."
+    },
+    "businessCalculator.couldNotImportInputsUseAKeryxInputs": {
+      "source": "Could not import inputs. Use a Keryx inputs JSON file under 8 KB; your existing values were kept.",
+      "text": "Không thể nhập đầu vào. Dùng tệp JSON đầu vào Keryx dưới 8 KB; giữ giá trị hiện có."
+    },
+    "businessCalculator.scenarioInputsImportedLocally": {
+      "source": "Scenario inputs imported locally.",
+      "text": "Đã nhập đầu vào tình huống cục bộ."
+    },
+    "businessCalculator.importScenarioInputs": {
+      "source": "Import scenario inputs",
+      "text": "Nhập đầu vào tình huống"
+    },
+    "businessCalculator.importInputsContent": {
+      "source": "Import inputs{content}",
+      "text": "Nhập đầu vào{content}"
+    },
+    "businessCalculator.exportScenarioReport": {
+      "source": "Export scenario report",
+      "text": "Xuất báo cáo tình huống"
+    },
+    "businessCalculator.exportInputs": {
+      "source": "Export inputs",
+      "text": "Xuất đầu vào"
+    },
+    "businessCalculator.unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "businessCalculator.required": {
+      "source": "Required",
+      "text": "Bắt buộc"
+    },
+    "businessCalculator.myOperatingEstimates": {
+      "source": "My operating estimates",
+      "text": "Ước tính vận hành của tôi"
+    },
+    "businessCalculator.illustrativeExample": {
+      "source": "Illustrative example",
+      "text": "Ví dụ minh họa"
+    },
+    "businessCalculator.scenarioBasisContent": {
+      "source": "Scenario basis{content}",
+      "text": "Cơ sở tình huống{content}"
+    },
+    "businessCalculator.enterUSDEstimatesLeaveUnknownValuesBlankEnter": {
+      "source": "Enter USD estimates. Leave unknown values blank; enter 0 only when a cost is known to be zero. No live exchange-rate conversion is performed.",
+      "text": "Nhập ước tính USD. Để trống giá trị chưa rõ; chỉ nhập 0 khi biết chi phí bằng 0. Không chuyển đổi tỷ giá trực tiếp."
+    },
+    "businessCalculator.yourAssumptions": {
+      "source": "Your assumptions",
+      "text": "Giả định của bạn"
+    },
+    "businessCalculator.marketingAndAcquisitionCostsWithoutDoubleCounting": {
+      "source": "Marketing and acquisition costs, without double counting.",
+      "text": "Chi phí tiếp thị và thu hút khách hàng, không tính trùng."
+    },
+    "businessCalculator.customerAcquisitionPerMonth": {
+      "source": "Customer acquisition per month",
+      "text": "Thu hút khách hàng mỗi tháng"
+    },
+    "businessCalculator.hostingToolsAndOtherFixedExpenses": {
+      "source": "Hosting, tools and other fixed expenses.",
+      "text": "Lưu trữ, công cụ và chi phí cố định khác."
+    },
+    "businessCalculator.fixedOperatingCostsPerMonth": {
+      "source": "Fixed operating costs per month",
+      "text": "Chi phí vận hành cố định mỗi tháng"
+    },
+    "businessCalculator.expectedLossesRefundsAndServiceRecoveryCosts": {
+      "source": "Expected losses, refunds and service recovery costs.",
+      "text": "Tổn thất, hoàn tiền và chi phí khôi phục dịch vụ dự kiến."
+    },
+    "businessCalculator.refundsAndLossesPerJob": {
+      "source": "Refunds and losses per job",
+      "text": "Hoàn tiền và tổn thất mỗi tác vụ"
+    },
+    "businessCalculator.expectedVariableSupportEffort": {
+      "source": "Expected variable support effort.",
+      "text": "Công sức hỗ trợ biến đổi dự kiến."
+    },
+    "businessCalculator.supportCostPerJob": {
+      "source": "Support cost per job",
+      "text": "Chi phí hỗ trợ mỗi tác vụ"
+    },
+    "businessCalculator.expectedTransactionAndPaymentProcessingCosts": {
+      "source": "Expected transaction and payment processing costs.",
+      "text": "Chi phí giao dịch và xử lý thanh toán dự kiến."
+    },
+    "businessCalculator.paymentAndGasPerJob": {
+      "source": "Payment and gas per job",
+      "text": "Thanh toán và gas mỗi tác vụ"
+    },
+    "businessCalculator.excludeCostsEnteredAsFixedMonthlyExpenses": {
+      "source": "Exclude costs entered as fixed monthly expenses.",
+      "text": "Loại trừ chi phí đã nhập là chi cố định tháng."
+    },
+    "businessCalculator.variableInfrastructurePerJob": {
+      "source": "Variable infrastructure per job",
+      "text": "Hạ tầng biến đổi mỗi tác vụ"
+    },
+    "businessCalculator.includeRetriesAndUnsuccessfulCalls": {
+      "source": "Include retries and unsuccessful calls.",
+      "text": "Gồm thử lại và lệnh gọi không thành công."
+    },
+    "businessCalculator.aiModelCostPerJob": {
+      "source": "AI model cost per job",
+      "text": "Chi phí mô hình AI mỗi tác vụ"
+    },
+    "businessCalculator.includeCreatorObligationsPendingSpendIsNotUnused": {
+      "source": "Include creator obligations; pending spend is not unused reserve.",
+      "text": "Gồm nghĩa vụ tác giả; khoản chi đang chờ không phải dự trữ chưa dùng."
+    },
+    "businessCalculator.creatorSpendPerJob": {
+      "source": "Creator spend per job",
+      "text": "Khoản chi cho tác giả mỗi tác vụ"
+    },
+    "businessCalculator.budgetCollectedForSourceAccessAndCitationRewards": {
+      "source": "Budget collected for source access and citation rewards.",
+      "text": "Ngân sách thu cho truy cập nguồn và thưởng trích dẫn."
+    },
+    "businessCalculator.creatorBudgetPerJob": {
+      "source": "Creator budget per job",
+      "text": "Ngân sách tác giả mỗi tác vụ"
+    },
+    "businessCalculator.theServiceFeePortionOfTheModeledPackage": {
+      "source": "The service-fee portion of the modeled package price.",
+      "text": "Phần phí dịch vụ của giá gói theo mô hình."
+    },
+    "businessCalculator.serviceFeePerJob": {
+      "source": "Service fee per job",
+      "text": "Phí dịch vụ mỗi tác vụ"
+    },
+    "businessCalculator.wholeJobsLeaveBlankWhenDemandIsUnknown": {
+      "source": "Whole jobs; leave blank when demand is unknown.",
+      "text": "Số tác vụ nguyên; để trống khi chưa rõ nhu cầu."
+    },
+    "businessCalculator.paidJobsPerMonth": {
+      "source": "Paid jobs per month",
+      "text": "Tác vụ trả phí mỗi tháng"
+    },
+    "proofDashboard.autoRefreshesEvery30sCheckedValue": {
+      "source": "Auto-refreshes every 30s · checked {checkedAt}",
+      "text": "Tự làm mới mỗi 30s · kiểm tra {checkedAt}"
+    },
+    "proofDashboard.tokenizedRPCPathsStayServerOnlyThisPage": {
+      "source": "Tokenized RPC paths stay server-only. This page publishes the provider label and block evidence, never the URL or access token.",
+      "text": "Đường dẫn RPC có token chỉ giữ trên máy chủ. Trang công bố nhãn nhà cung cấp và bằng chứng khối, không bao giờ URL hay token truy cập."
+    },
+    "proofDashboard.registryIndexed": {
+      "source": "Registry indexed",
+      "text": "Registry đã lập chỉ mục"
+    },
+    "proofDashboard.rpcHead": {
+      "source": "RPC head",
+      "text": "Khối mới nhất qua RPC"
+    },
+    "proofDashboard.rpcProvider": {
+      "source": "RPC provider",
+      "text": "Nhà cung cấp RPC"
+    },
+    "proofDashboard.network": {
+      "source": "Network",
+      "text": "Mạng"
+    },
+    "proofDashboard.rPCProvenanceWithoutTheCredential": {
+      "source": "RPC provenance, without the credential",
+      "text": "Nguồn gốc RPC, không kèm thông tin xác thực"
+    },
+    "proofDashboard.arcReadPath": {
+      "source": "Arc read path",
+      "text": "Luồng đọc Arc"
+    },
+    "proofDashboard.gitHubProvesWhatWasReviewedTheRuntimeCommit": {
+      "source": "GitHub proves what was reviewed. The runtime commit above binds that source to the build currently answering requests.",
+      "text": "GitHub chứng minh nội dung đã xem xét. Commit runtime bên trên ràng buộc nguồn đó với bản dựng đang trả lời yêu cầu."
+    },
+    "proofDashboard.forkablePackage": {
+      "source": "forkable package",
+      "text": "gói có thể fork"
+    },
+    "proofDashboard.reusableArcPrimitives": {
+      "source": "Reusable Arc primitives",
+      "text": "Thành phần Arc có thể dùng lại"
+    },
+    "proofDashboard.applicationSource": {
+      "source": "Application source",
+      "text": "Mã nguồn ứng dụng"
+    },
+    "proofDashboard.testsContractsBuild": {
+      "source": "tests · contracts · build",
+      "text": "kiểm thử · hợp đồng · bản dựng"
+    },
+    "proofDashboard.deployedCommit": {
+      "source": "Deployed commit",
+      "text": "Commit đã triển khai"
+    },
+    "proofDashboard.theDeployedCodeHasAName": {
+      "source": "The deployed code has a name",
+      "text": "Mã triển khai có tên rõ ràng"
+    },
+    "proofDashboard.openSourceBuild": {
+      "source": "Open-source build",
+      "text": "Bản dựng mã nguồn mở"
+    },
+    "proofDashboard.queryCountIncludesAllRecordedUseOnlySettled": {
+      "source": "Query count includes all recorded use. Only settled records count. Keryx operating fees and creator rewards are shown separately.",
+      "text": "Số câu hỏi gồm mọi sử dụng ghi nhận. Chỉ tính hồ sơ đã quyết toán. Phí vận hành Keryx và thưởng tác giả hiển thị riêng."
+    },
+    "proofDashboard.tractionLedgerUnavailable": {
+      "source": "Traction ledger unavailable.",
+      "text": "Sổ hoạt động thực tế không khả dụng."
+    },
+    "proofDashboard.operatingFeeTransfers": {
+      "source": "Operating fee transfers",
+      "text": "Khoản chuyển phí vận hành"
+    },
+    "proofDashboard.unavailable": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "proofDashboard.keryxOperatingFees": {
+      "source": "Keryx operating fees",
+      "text": "Phí vận hành Keryx"
+    },
+    "proofDashboard.creatorsEarning": {
+      "source": "Creators earning",
+      "text": "Tác giả có thu nhập"
+    },
+    "proofDashboard.creatorRewards": {
+      "source": "Creator rewards",
+      "text": "Thưởng cho tác giả"
+    },
+    "proofDashboard.settledPayments": {
+      "source": "Settled payments",
+      "text": "Thanh toán đã quyết toán"
+    },
+    "proofDashboard.totalQueries": {
+      "source": "Total queries",
+      "text": "Tổng câu hỏi"
+    },
+    "proofDashboard.offlineMode": {
+      "source": "offline mode",
+      "text": "chế độ ngoại tuyến"
+    },
+    "proofDashboard.realSettlement": {
+      "source": "real settlement",
+      "text": "quyết toán thực"
+    },
+    "proofDashboard.combinedUsageAndSettledPayments": {
+      "source": "Combined usage and settled payments",
+      "text": "Mức sử dụng và thanh toán đã quyết toán tổng hợp"
+    },
+    "proofDashboard.keryxInNumbers": {
+      "source": "Keryx in numbers",
+      "text": "Keryx qua các con số"
+    },
+    "proofDashboard.evidenceAPIIsTemporarilyUnreachable": {
+      "source": "Evidence API is temporarily unreachable.",
+      "text": "API bằng chứng tạm thời không thể truy cập."
+    },
+    "proofDashboard.readingThePublicEvidenceLedger": {
+      "source": "Reading the public evidence ledger…",
+      "text": "Đang đọc sổ bằng chứng công khai…"
+    },
+    "statusMonitoring.observationServiceAvailabilityAndRecordedChecksAreSeparate": {
+      "source": "{observation}Service availability and recorded checks are separate. A recent observation does not prove that a check passed, that it runs automatically, or that a payment settled. Review the results below where available.",
+      "text": "{observation}Khả dụng dịch vụ và kiểm tra ghi nhận là hai điều riêng. Quan sát gần đây không chứng minh kiểm tra đạt, tự chạy hay thanh toán đã quyết toán. Xem kết quả bên dưới khi khả dụng."
+    },
+    "statusMonitoring.noCurrentObservation": {
+      "source": "No current observation",
+      "text": "Chưa có quan sát hiện tại"
+    },
+    "statusMonitoring.staleObservation": {
+      "source": "Stale observation",
+      "text": "Quan sát đã cũ"
+    },
+    "statusMonitoring.recentObservation": {
+      "source": "Recent observation",
+      "text": "Quan sát gần đây"
+    },
+    "statusMonitoring.recordedMonitoringChecks": {
+      "source": "Recorded monitoring checks",
+      "text": "Kiểm tra giám sát đã ghi nhận"
+    },
+    "statusRegistry.theRecordedSweepReadsEveryRegistryRecordBack": {
+      "source": "The recorded sweep reads every registry record back and compares payout wallet, author splits, price, and active flag against the cache the agent pays from.",
+      "text": "Lượt kiểm tra ghi nhận đọc lại mọi hồ sơ registry và so ví nhận tiền, phần chia tác giả, giá, cờ hoạt động với bộ nhớ đệm mà tác nhân dùng trả tiền."
+    },
+    "statusRegistry.indexedBlock": {
+      "source": "Indexed block",
+      "text": "Khối đã lập chỉ mục"
+    },
+    "statusRegistry.rPCHead": {
+      "source": "RPC head",
+      "text": "Khối mới nhất qua RPC"
+    },
+    "statusRegistry.chainCacheParity": {
+      "source": "Chain ↔ cache parity",
+      "text": "Khớp chuỗi ↔ bộ nhớ đệm"
+    },
+    "statusRegistry.sourcesOnChain": {
+      "source": "Sources on-chain",
+      "text": "Nguồn trên chuỗi"
+    },
+    "statusRegistry.sourceRegistryOnArcScan": {
+      "source": "SourceRegistry on ArcScan",
+      "text": "SourceRegistry trên ArcScan"
+    },
+    "statusRegistry.contract": {
+      "source": "Contract",
+      "text": "Hợp đồng"
+    },
+    "statusRegistry.sourceRegistryOnChain": {
+      "source": "Source registry — on-chain",
+      "text": "Registry nguồn — trên chuỗi"
+    },
+    "statusRegistry.notYetChecked": {
+      "source": "not yet checked",
+      "text": "chưa kiểm tra"
+    },
+    "statusRegistry.justNow": {
+      "source": "just now",
+      "text": "vừa xong"
+    },
+    "statusDispatch.recordedInspectionOfTheAgentSOwnDispatches": {
+      "source": "Recorded inspection of the agent's own dispatches. A failed provider crosses to another configured model before the deterministic heuristic; every attempt and circuit skip is carried on the completed run receipt. Worker and settlement health are monitored separately; requests that fail before saving a receipt are outside this window.",
+      "text": "Kiểm tra ghi nhận các bản tin của chính tác nhân. Khi nhà cung cấp lỗi, chuyển sang mô hình được cấu hình khác trước phương pháp heuristic xác định; mọi lần thử và bỏ qua do ngắt mạch nằm trong biên nhận lượt hoàn tất. Sức khỏe worker và quyết toán giám sát riêng; yêu cầu lỗi trước khi lưu biên nhận nằm ngoài khoảng này."
+    },
+    "statusDispatch.servedStepsGapValue": {
+      "source": "Served steps:{gap}{servedSteps}",
+      "text": "Bước đã phục vụ:{gap}{servedSteps}"
+    },
+    "statusDispatch.idleNoCompletedCallerRequestsInThisWindow": {
+      "source": "Idle: no completed caller requests in this window. Research starts when a caller asks.",
+      "text": "Rảnh: không có yêu cầu người gọi hoàn tất trong khoảng này. Nghiên cứu bắt đầu khi người gọi hỏi."
+    },
+    "statusDispatch.checked": {
+      "source": "Checked",
+      "text": "Đã kiểm tra"
+    },
+    "statusDispatch.lastDispatch": {
+      "source": "Last dispatch",
+      "text": "Bản tin gần nhất"
+    },
+    "statusDispatch.collecting": {
+      "source": "collecting",
+      "text": "đang thu thập"
+    },
+    "statusDispatch.providerFailures": {
+      "source": "Provider failures",
+      "text": "Lỗi nhà cung cấp"
+    },
+    "statusDispatch.crossProviderSaves": {
+      "source": "Cross-provider saves",
+      "text": "Lượt cứu kết quả giữa nhà cung cấp"
+    },
+    "statusDispatch.toCreators": {
+      "source": "To creators",
+      "text": "Đến tác giả"
+    },
+    "statusDispatch.dispatchesThatPaid": {
+      "source": "Dispatches that paid",
+      "text": "Bản tin có thanh toán"
+    },
+    "statusDispatch.modelReasoned": {
+      "source": "Model-reasoned",
+      "text": "Mô hình đã suy luận"
+    },
+    "statusDispatch.dispatchesCompleted": {
+      "source": "Dispatches completed",
+      "text": "Bản tin đã hoàn tất"
+    },
+    "statusDispatch.agentOutputLastWindowHoursH": {
+      "source": "Agent output — last {windowHours}h",
+      "text": "Đầu ra tác nhân — {windowHours}h qua"
+    },
+    "statusDispatch.justNow": {
+      "source": "just now",
+      "text": "vừa xong"
+    },
+    "statusSettlement.thisSavedObservationHasNoRecognizedOriginalNetwork": {
+      "source": "This saved observation has no recognized original network. Confirm its network before querying a current Gateway balance.",
+      "text": "Quan sát lưu này không có mạng ban đầu nhận diện được. Xác nhận mạng trước khi truy vấn số dư Gateway hiện tại."
+    },
+    "statusSettlement.checkACurrentBalanceOnThisObservationS": {
+      "source": "Check a current balance on this observation's original network: {networkLabel}.",
+      "text": "Kiểm tra số dư hiện tại trên mạng ban đầu của quan sát: {networkLabel}."
+    },
+    "statusSettlement.more": {
+      "source": "more",
+      "text": "thêm"
+    },
+    "statusSettlement.gatewaySettlementLeavesNoPerPaymentExplorerHash": {
+      "source": "Gateway settlement leaves no per-payment explorer hash. Keryx compares the payout ledger with observed Circle balances for each payee and publishes both numbers. A wallet holding {emphasis} than Keryx accounts for belongs to that payee and never flags; one holding less is read against its on-chain balance first, because a payee may cash out by any route they like.",
+      "text": "Quyết toán Gateway không để lại hash explorer cho từng thanh toán. Keryx so sánh sổ nhận tiền với số dư Circle quan sát được từng bên nhận và công bố cả hai số. Ví giữ {emphasis} so với sổ Keryx thuộc bên nhận, không bao giờ bị cảnh báo; ví giữ ít hơn được đọc số dư trên chuỗi trước vì bên nhận có thể rút theo bất kỳ cách nào họ muốn."
+    },
+    "statusSettlement.cashedOut": {
+      "source": "cashed out",
+      "text": "đã rút tiền"
+    },
+    "statusSettlement.onchainUsdcInWallet": {
+      "source": " +{onchainUsdc} in wallet",
+      "text": " +{onchainUsdc} trong ví"
+    },
+    "statusSettlement.verdict": {
+      "source": "Verdict",
+      "text": "Kết luận"
+    },
+    "statusSettlement.circleHolds": {
+      "source": "Circle holds",
+      "text": "Circle đang giữ"
+    },
+    "statusSettlement.keryxClaims": {
+      "source": "Keryx claims",
+      "text": "Keryx ghi nhận"
+    },
+    "statusSettlement.payeeWallet": {
+      "source": "Payee wallet",
+      "text": "Ví nhận tiền"
+    },
+    "statusSettlement.none": {
+      "source": "none",
+      "text": "không có"
+    },
+    "statusSettlement.short": {
+      "source": "Short",
+      "text": "Ngắn"
+    },
+    "statusSettlement.shortUnverified": {
+      "source": "Short · unverified",
+      "text": "Thiếu · chưa xác minh"
+    },
+    "statusSettlement.circleConfirms": {
+      "source": "Circle confirms",
+      "text": "Circle xác nhận"
+    },
+    "statusSettlement.ledgerClaimsHeld": {
+      "source": "Ledger claims held",
+      "text": "Sổ theo dõi báo đang giữ"
+    },
+    "statusSettlement.walletsBacked": {
+      "source": "Wallets backed",
+      "text": "Ví được bảo đảm"
+    },
+    "statusSettlement.settlementConfirmedByCircle": {
+      "source": "Settlement — confirmed by Circle",
+      "text": "Quyết toán — Circle xác nhận"
+    },
+    "statusSettlement.checkedCheckedAt": {
+      "source": "Checked {checkedAt}",
+      "text": "Đã kiểm tra {checkedAt}"
+    },
+    "statusSettlement.noSettledOutboundPaymentsWereRecordedAtThis": {
+      "source": "No settled outbound payments were recorded at this check. Circle balances were not queried; this does not prove payment readiness or settlement.",
+      "text": "Không ghi thanh toán đi đã quyết toán tại lần kiểm tra này. Không truy vấn số dư Circle; không chứng minh sẵn sàng thanh toán hay quyết toán."
+    },
+    "statusSettlement.settlementEmptyLedger": {
+      "source": "Settlement — empty ledger",
+      "text": "Quyết toán — sổ trống"
+    },
+    "statusSettlement.justNow": {
+      "source": "just now",
+      "text": "vừa xong"
+    },
+    "statusReconciliation.none": {
+      "source": "none",
+      "text": "không có"
+    },
+    "statusReconciliation.unknown": {
+      "source": "unknown",
+      "text": "chưa rõ"
+    },
+    "statusReconciliation.acceptedTransfersSettleOnlyOnAnExactTuple": {
+      "source": "Accepted transfers settle only on an exact tuple. Circle-terminal failures close without earnings and release capacity only for the same grant generation. Missing or conflicting evidence stays pending. A reviewed legacy treasury ambiguity may be acknowledged to stop a permanent readiness alert, but remains pending, outside earnings, and under reconciliation. Browser reservations can never use this acknowledgement path. Expiry is operational context, never proof that Circle failed or that a browser reservation can be released.",
+      "text": "Khoản chuyển được chấp nhận chỉ quyết toán khi bộ giá trị khớp chính xác. Lỗi kết quả cuối từ Circle đóng mà không tạo thu nhập và chỉ giải phóng khả năng cho cùng thế hệ quyền. Bằng chứng thiếu hoặc xung đột vẫn đang chờ. Khoản ngân quỹ cũ không rõ đã xem xét có thể được xác nhận đã biết để dừng cảnh báo sẵn sàng kéo dài, nhưng vẫn chờ, ngoài thu nhập và đang đối soát. Khoản giữ trình duyệt không bao giờ dùng luồng này. Hết hạn là bối cảnh vận hành, không chứng minh Circle thất bại hay được giải phóng khoản giữ trình duyệt."
+    },
+    "statusReconciliation.lastChecked": {
+      "source": "Last checked",
+      "text": "Lần kiểm tra gần nhất"
+    },
+    "statusReconciliation.oldestPendingAge": {
+      "source": "Oldest pending age",
+      "text": "Thời gian chờ lâu nhất"
+    },
+    "statusReconciliation.tupleMismatches": {
+      "source": "Tuple mismatches",
+      "text": "Bộ giá trị không khớp"
+    },
+    "statusReconciliation.terminalFailures": {
+      "source": "Terminal failures",
+      "text": "Lỗi kết thúc"
+    },
+    "statusReconciliation.earliestSignedExpiry": {
+      "source": "Earliest signed expiry",
+      "text": "Hạn chữ ký sớm nhất"
+    },
+    "statusReconciliation.exactExpiryUnavailable": {
+      "source": "Exact expiry unavailable",
+      "text": "Hạn chính xác không khả dụng"
+    },
+    "statusReconciliation.expiredStillUnresolved": {
+      "source": "Expired, still unresolved",
+      "text": "Đã hết hạn, vẫn chưa giải quyết"
+    },
+    "statusReconciliation.treasuryAttemptsPending": {
+      "source": "Treasury attempts pending",
+      "text": "Lần thử ngân quỹ đang chờ"
+    },
+    "statusReconciliation.submissionAttempted": {
+      "source": "Submission attempted",
+      "text": "Đã thử gửi"
+    },
+    "statusReconciliation.signedNoRecordedSubmission": {
+      "source": "Signed, no recorded submission",
+      "text": "Đã ký, chưa ghi việc gửi"
+    },
+    "statusReconciliation.exposedPossiblyUnsigned": {
+      "source": "Exposed, possibly unsigned",
+      "text": "Đã đưa vào thanh toán, có thể chưa ký"
+    },
+    "statusReconciliation.browserReservationsHeld": {
+      "source": "Browser reservations held",
+      "text": "Khoản giữ trình duyệt đang giữ"
+    },
+    "statusReconciliation.unacknowledgedAlerts": {
+      "source": "Unacknowledged alerts",
+      "text": "Cảnh báo chưa xác nhận"
+    },
+    "statusReconciliation.acknowledgedLegacyTreasury": {
+      "source": "Acknowledged legacy treasury",
+      "text": "Khoản ngân quỹ cũ đã xác nhận đã biết"
+    },
+    "statusReconciliation.stillAwaitingProof": {
+      "source": "Still awaiting proof",
+      "text": "Vẫn đang chờ bằng chứng"
+    },
+    "statusReconciliation.acceptedByCircle": {
+      "source": "Accepted by Circle",
+      "text": "Đã được Circle chấp nhận"
+    },
+    "statusReconciliation.ambiguousPaymentReconciliation": {
+      "source": "Ambiguous payment reconciliation",
+      "text": "Đối soát thanh toán chưa rõ"
+    },
+    "statusReconciliation.reviewRequired": {
+      "source": "review required",
+      "text": "cần xem xét"
+    },
+    "statusReconciliation.criticalPending": {
+      "source": "critical pending",
+      "text": "khoản chờ quan trọng"
+    },
+    "statusReconciliation.stalePending": {
+      "source": "stale pending",
+      "text": "khoản chờ đã quá lâu"
+    },
+    "statusReconciliation.awaitingCircle": {
+      "source": "awaiting Circle",
+      "text": "đang chờ Circle"
+    },
+    "statusReconciliation.acknowledgedLegacy": {
+      "source": "acknowledged legacy",
+      "text": "bản cũ đã xác nhận"
+    },
+    "statusReconciliation.clean": {
+      "source": "clean",
+      "text": "sạch"
+    },
+    "operatorPage.metadataTitle": {
+      "source": "Operator — Keryx",
+      "text": "Operator — Keryx"
+    },
+    "operatorPage.metadataDescription": {
+      "source": "Follow Keryx's prepaid research operations, recorded decisions, delivery queue and review needs.",
+      "text": "Theo vận hành nghiên cứu trả trước Keryx, quyết định ghi nhận, hàng cung cấp và nhu cầu xem xét."
+    },
+    "economicsPage.metadataTitle": {
+      "source": "Business calculator — Keryx",
+      "text": "Công cụ tính kinh doanh — Keryx"
+    },
+    "economicsPage.metadataDescription": {
+      "source": "Model research-package costs, contribution and break-even with explicit assumptions.",
+      "text": "Lập mô hình chi phí gói nghiên cứu, đóng góp và hòa vốn với giả định rõ."
+    },
+    "proofPage.metadataTitle": {
+      "source": "Public proof — Keryx",
+      "text": "Bằng chứng công khai — Keryx"
+    },
+    "proofPage.metadataDescription": {
+      "source": "Live evidence for Keryx's open-source build, Arc registry authority, Circle settlement, and creator cash-outs.",
+      "text": "Bằng chứng trực tiếp cho bản dựng nguồn mở Keryx, thẩm quyền registry Arc, quyết toán Circle và rút tiền tác giả."
+    },
+    "proofPage.title": {
+      "source": "Evidence, with its {emphasis}",
+      "text": "Bằng chứng, cùng {emphasis}"
+    },
+    "proofPage.integrationLedgerInstruction": {
+      "source": "The{beforeLink}{link}{afterLink}links each tool to its code and evidence, including the remaining sponsored testnet proof for gasless user actions.",
+      "text": "{beforeLink}{link}{afterLink}liên kết từng công cụ với mã và bằng chứng, gồm bằng chứng testnet tài trợ còn thiếu cho thao tác người dùng không mất gas."
+    },
+    "proofPage.limit": {
+      "source": "Limit: {limit}",
+      "text": "Giới hạn: {limit}"
+    },
+    "statusPage.rpcProvider": {
+      "source": "RPC provider",
+      "text": "Nhà cung cấp RPC"
+    },
+    "statusPage.refreshNotice": {
+      "source": "Auto-refreshes every 10s{checkedNotice}",
+      "text": "Tự làm mới mỗi 10s{checkedNotice}"
+    },
+    "statusPage.unifiedBalanceObservation": {
+      "source": "Chain-abstracted Gateway balance of the agent's settlement wallet{gap}{addressPrefix}…{addressSuffix}, read via @circle-fin/unified-balance-kit.",
+      "text": "Số dư Gateway trừu tượng hóa chuỗi của ví quyết toán tác nhân{gap}{addressPrefix}…{addressSuffix}, đọc qua @circle-fin/unified-balance-kit."
+    },
+    "statusPage.gatewayBalanceObservation": {
+      "source": "{addressPrefix}…{addressSuffix} · Circle Gateway balance observation. Available balance is checked again before research spending.",
+      "text": "{addressPrefix}…{addressSuffix} · quan sát số dư Circle Gateway. Số dư khả dụng kiểm tra lại trước khi chi nghiên cứu."
+    },
+    "operatorBusiness.title": {
+      "source": "A research business,{lineBreak} with its decisions in view.",
+      "text": "Hoạt động kinh doanh nghiên cứu,{lineBreak} với quyết định rõ ràng."
+    },
+    "operatorBusiness.percentile95": {
+      "source": "95th percentile",
+      "text": "Phân vị 95"
+    },
+    "operatorBusiness.oldestProcessing": {
+      "source": "Oldest processing: {oldestProcessingAgeSeconds}",
+      "text": "Đang xử lý lâu nhất: {oldestProcessingAgeSeconds}"
+    },
+    "operatorBusiness.oldestQueued": {
+      "source": "Oldest queued: {oldestQueuedAgeSeconds}",
+      "text": "Trong hàng chờ lâu nhất: {oldestQueuedAgeSeconds}"
+    },
+    "operatorBusiness.observationRefresh": {
+      "source": "Observed {observedAt} · this view refreshes about every 30 seconds",
+      "text": "Quan sát {observedAt} · chế độ xem làm mới khoảng mỗi 30 giây"
+    },
+    "proofDashboard.ci": {
+      "source": "CI",
+      "text": "CI"
+    },
+    "proofDashboard.repository": {
+      "source": "repository",
+      "text": "kho mã"
+    },
+    "statusMonitoring.missingObservations": {
+      "source": "Some checks have no recent recorded observation. ",
+      "text": "Một số kiểm tra không có quan sát ghi nhận gần đây. "
+    }
+  }
+}

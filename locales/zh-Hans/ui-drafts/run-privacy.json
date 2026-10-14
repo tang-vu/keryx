@@ -1,0 +1,112 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/run-privacy.ts",
+  "sourceSha256": "bf75df0077c82d66c68363521eaccc5d698ffb4e643b36c5130665ebd6c913ec",
+  "entries": {
+    "title": {
+      "source": "Question privacy",
+      "text": "问题隐私"
+    },
+    "metadataTitle": {
+      "source": "Question privacy | Keryx",
+      "text": "问题隐私 | Keryx"
+    },
+    "manage": {
+      "source": "Manage question privacy",
+      "text": "管理问题隐私"
+    },
+    "introduction": {
+      "source": "Private questions are visible to you. Unlisted questions are available through their link. Public questions can appear in the answer archive.",
+      "text": "私密问题仅您可见。不列出的问题可通过链接访问。公开问题可出现在答案归档中。"
+    },
+    "inactive": {
+      "source": "Question privacy controls are unavailable in this deployment. Existing question visibility is unchanged.",
+      "text": "此部署不提供问题隐私控件。现有问题可见性保持不变。"
+    },
+    "retention": {
+      "source": "This original has a retention hold. Its financial proof must be preserved.",
+      "text": "此原始记录受保留限制。其财务证明必须保留。"
+    },
+    "signIn": {
+      "source": "Sign in with your wallet to manage question privacy.",
+      "text": "使用钱包登录以管理问题隐私。"
+    },
+    "admission": {
+      "source": "Question privacy is awaiting storage admission.",
+      "text": "问题隐私正在等待存储准入。"
+    },
+    "retry": {
+      "source": "The request could not be completed. Refresh and retry.",
+      "text": "无法完成请求。请刷新并重试。"
+    },
+    "accountChanged": {
+      "source": "Account changed. Refresh this page to continue.",
+      "text": "账户发生变化。刷新此页面以继续。"
+    },
+    "erased": {
+      "source": "Question and answer erased. Financial records and run ID retained.",
+      "text": "问题和答案已删除。财务记录和研究 ID 已保留。"
+    },
+    "saved": {
+      "source": "Saved.",
+      "text": "已保存。"
+    },
+    "defaultLabel": {
+      "source": "Default for new questions",
+      "text": "新问题的默认设置"
+    },
+    "saveDefault": {
+      "source": "Save default",
+      "text": "保存默认设置"
+    },
+    "runId": {
+      "source": "Run ID",
+      "text": "研究 ID"
+    },
+    "load": {
+      "source": "Load my question",
+      "text": "加载我的问题"
+    },
+    "erasedLabel": {
+      "source": "Text erased",
+      "text": "文本已删除"
+    },
+    "visibility": {
+      "source": "Visibility",
+      "text": "可见性"
+    },
+    "saveVisibility": {
+      "source": "Save visibility",
+      "text": "保存可见性"
+    },
+    "export": {
+      "source": "Export my record",
+      "text": "导出我的记录"
+    },
+    "eraseExplanation": {
+      "source": "Erasure removes this question, answer and derived research text. Run ID, settlement proofs and financial records remain. Copies already downloaded by others cannot be recalled.",
+      "text": "删除会移除此问题、答案和派生研究文本。研究 ID、结算证明和财务记录将保留。其他人已下载的副本无法收回。"
+    },
+    "eraseConsent": {
+      "source": "Erase my question and answer",
+      "text": "删除我的问题和答案"
+    },
+    "erase": {
+      "source": "Erase text",
+      "text": "删除文本"
+    },
+    "choices.private": {
+      "source": "Private",
+      "text": "私密"
+    },
+    "choices.unlisted": {
+      "source": "Unlisted",
+      "text": "不列出"
+    },
+    "choices.public": {
+      "source": "Public",
+      "text": "公开"
+    }
+  }
+}

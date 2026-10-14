@@ -1,0 +1,580 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/wanted.ts",
+  "sourceSha256": "cac2dc3a84a075abe50ba76fd7c09887d71168b50fe55ec81bb57b23821a3bac",
+  "entries": {
+    "wantedBoard.title": {
+      "source": "What the corpus {emphasis}",
+      "text": "语料{emphasis}的内容"
+    },
+    "wantedBoard.titleEmphasis": {
+      "source": "couldn't answer.",
+      "text": "无法回答。"
+    },
+    "wantedBoard.introduction.one": {
+      "source": "Every dispatch breaks its question into claims, buys what looks worth buying, then scores how well it actually covered each one. These {count} claims finished short across the last {window} dispatches — readers paid, and Keryx came back thin. Publish on one and the next agent that asks has somewhere to spend.",
+      "text": "每次研究将问题拆成主张，购买看似值得的内容，再评分实际覆盖程度。最近 {window} 次研究有 {count} 项主张未充分覆盖；读者付款，但 Keryx 证据不足。发布相关内容，让下次提问代理有地方花费。"
+    },
+    "wantedBoard.introduction.other": {
+      "source": "Every dispatch breaks its question into claims, buys what looks worth buying, then scores how well it actually covered each one. These {count} claims finished short across the last {window} dispatches — readers paid, and Keryx came back thin. Publish on one and the next agent that asks has somewhere to spend.",
+      "text": "每次研究将问题拆成主张，购买看似值得的内容，再评分实际覆盖程度。最近 {window} 次研究有 {count} 项主张未充分覆盖；读者付款，但 Keryx 证据不足。发布相关内容，让下次提问代理有地方花费。"
+    },
+    "wantedBoard.empty": {
+      "source": "Nothing on the board: across the last {window} dispatches, the corpus covered every claim it was asked to support. Come back after the next quiet week.",
+      "text": "看板为空：最近 {window} 次研究，语料覆盖了所有请求支持的主张。下个平静周后再来。"
+    },
+    "wantedBoard.coverage": {
+      "source": "{coverage}% covered",
+      "text": "已覆盖 {coverage}%"
+    },
+    "wantedBoard.coverageAsked": {
+      "source": "{coverage}% covered · asked {count}×",
+      "text": "已覆盖 {coverage}% · 提问 {count} 次"
+    },
+    "wantedBoard.asked": {
+      "source": "asked as {question}",
+      "text": "提问为 {question}"
+    },
+    "wantedBoard.offer": {
+      "source": "{source} · {status}",
+      "text": "{source} · {status}"
+    },
+    "wantedBoard.offerWithPost": {
+      "source": "{source} · {status} · {post}",
+      "text": "{source} · {status} · {post}"
+    },
+    "wantedBoard.offeredPost": {
+      "source": "offered post",
+      "text": "提供的文章"
+    },
+    "wantedBoard.filledTitle": {
+      "source": "Filled — and {emphasis}",
+      "text": "已填补，且{emphasis}"
+    },
+    "wantedBoard.filledEmphasis": {
+      "source": "covered now.",
+      "text": "现在已覆盖。"
+    },
+    "wantedBoard.transition": {
+      "source": "{before}% → {after}% covered",
+      "text": "覆盖 {before}% → {after}%"
+    },
+    "wantedBoard.transitionRetry": {
+      "source": "{before}% → {after}% covered · re-asked by Keryx",
+      "text": "覆盖 {before}% → {after}% · Keryx 重新提问"
+    },
+    "wantedBoard.closedWithCitations": {
+      "source": "cited {sources} · {dispatch}",
+      "text": "引用 {sources} · {dispatch}"
+    },
+    "wantedBoard.closedDispatch": {
+      "source": "closed by this dispatch",
+      "text": "由此研究关闭"
+    },
+    "wantedBoard.fulfilled": {
+      "source": "offer fulfilled · {source} received ${reward} settled USDC",
+      "text": "报价已履约 · {source} 收到 ${reward} 已结算 USDC"
+    },
+    "wantedBoard.listingBoundary": {
+      "source": "Listing is permissionless — paste an RSS feed, prove you own it, and every citation pays your wallet directly. See {listed}.",
+      "text": "上架无需许可：粘贴 RSS 订阅源、证明所有权，每次引用直接向钱包付款。查看{listed}。"
+    },
+    "wantedBoard.alreadyListed": {
+      "source": "what is already listed",
+      "text": "已上架内容"
+    },
+    "wantedBoard.metadataTitle": {
+      "source": "Wanted — questions Keryx was paid to answer and couldn't",
+      "text": "Wanted — Keryx 获付款却无法回答的问题"
+    },
+    "wantedBoard.description": {
+      "source": "Real sub-claims from paid dispatches that Keryx's corpus left uncovered. Demand with a receipt: list a source that covers one and every citation pays your wallet in USDC.",
+      "text": "付费研究中语料未覆盖的真实子主张。有收据的需求：上架覆盖某项的来源，每次引用以 USDC 向钱包付款。"
+    },
+    "wantedBoard.eyebrow": {
+      "source": "Wanted",
+      "text": "征集"
+    },
+    "wantedBoard.filledIntroduction": {
+      "source": "Claims the corpus was missing and now covers. When something new lands that might answer an open claim, Keryx puts the question again — a real dispatch that buys the new material. A targeted creator offer is only marked fulfilled when its citation reward also settles.",
+      "text": "语料曾缺失、现在覆盖的主张。当可能回答开放主张的新内容出现，Keryx 再次提问，真实研究购买新材料。定向创作者报价仅在引用奖励也结算后标记履约。"
+    },
+    "wantedBoard.listSource": {
+      "source": "List a source that covers one ▸",
+      "text": "上架覆盖某项的来源 ▸"
+    },
+    "wantedBoard.pending": {
+      "source": "queued until the source is indexed + verified",
+      "text": "排队，直到来源索引并核验"
+    },
+    "wantedBoard.unpaid": {
+      "source": "evidence passed, settlement did not complete",
+      "text": "证据通过，结算未完成"
+    },
+    "wantedBoard.missed": {
+      "source": "retry completed, evidence still fell short",
+      "text": "重试完成，证据仍不足"
+    },
+    "wantedBoard.stale": {
+      "source": "closed without retry because the claim was already filled",
+      "text": "因主张已填补，无需重试即关闭"
+    },
+    "wantedBoard.failed": {
+      "source": "retry stopped after bounded failures",
+      "text": "有限失败次数后重试停止"
+    },
+    "wantedBoard.running": {
+      "source": "targeted retry running · attempt {attempt}/3",
+      "text": "定向重试运行中 · 第 {attempt}/3 次"
+    },
+    "wantedBoard.settled": {
+      "source": "fulfilled · ${reward} settled",
+      "text": "已履约 · ${reward} 已结算"
+    },
+    "wantedClaim.openDescription.one": {
+      "source": "{count} paid dispatch left this claim {coverage}% covered. Check whether your RSS feed can close it.",
+      "text": "{count} 次付费研究仅覆盖此主张 {coverage}%。检查 RSS 订阅源能否填补。"
+    },
+    "wantedClaim.openDescription.other": {
+      "source": "{count} paid dispatches left this claim {coverage}% covered. Check whether your RSS feed can close it.",
+      "text": "{count} 次付费研究仅覆盖此主张 {coverage}%。检查 RSS 订阅源能否填补。"
+    },
+    "wantedClaim.filledDescription": {
+      "source": "This claim moved from {before}% to {after}% coverage. Inspect the dispatch and creator payout receipt.",
+      "text": "此主张覆盖从 {before}% 到 {after}%。查看研究及创作者付款收据。"
+    },
+    "wantedClaim.metadataTitle": {
+      "source": "{claim} — Keryx Wanted",
+      "text": "{claim} — Keryx Wanted"
+    },
+    "wantedClaim.socialTitle": {
+      "source": "{stateLabel} — Keryx",
+      "text": "{stateLabel} — Keryx"
+    },
+    "wantedClaim.state": {
+      "source": "Wanted claim · {state}",
+      "text": "Wanted 主张 · {state}"
+    },
+    "wantedClaim.invitation": {
+      "source": "Offer a post only after Keryx judges its public RSS preview relevant. Once the source is registered, indexed, and ownership-verified, Keryx sponsors one bounded retry with at most $0.05 on {network}. A payout happens only when the paid full text supplies qualifying evidence, the agent cites it, and Circle settlement succeeds.",
+      "text": "仅 Keryx 判断公开 RSS 预览相关后才提供文章。来源注册、索引且所有权核验后，Keryx 在 {network} 赞助一次最多 $0.05 的有限重试。仅付费全文提供合格证据、代理引用且 Circle 结算成功才付款。"
+    },
+    "wantedClaim.transition": {
+      "source": "{before}% → {after}% coverage",
+      "text": "覆盖 {before}% → {after}%"
+    },
+    "wantedClaim.cited": {
+      "source": "Cited and paid: {sources}",
+      "text": "已引用并付款：{sources}"
+    },
+    "wantedClaim.offer": {
+      "source": "{status}",
+      "text": "{status}"
+    },
+    "wantedClaim.offerPost": {
+      "source": "{status} · {post}",
+      "text": "{status} · {post}"
+    },
+    "wantedClaim.offerVersion": {
+      "source": "{status} · exact {version}…",
+      "text": "{status} · 确切版本 {version}…"
+    },
+    "wantedClaim.offerPrice": {
+      "source": "{status} · signed price",
+      "text": "{status} · 签名价格"
+    },
+    "wantedClaim.offerPostVersion": {
+      "source": "{status} · {post} · exact {version}…",
+      "text": "{status} · {post} · 确切版本 {version}…"
+    },
+    "wantedClaim.offerPostPrice": {
+      "source": "{status} · {post} · signed price",
+      "text": "{status} · {post} · 签名价格"
+    },
+    "wantedClaim.offerVersionPrice": {
+      "source": "{status} · exact {version}… · signed price",
+      "text": "{status} · 确切版本 {version}… · 签名价格"
+    },
+    "wantedClaim.offerPostVersionPrice": {
+      "source": "{status} · {post} · exact {version}… · signed price",
+      "text": "{status} · {post} · 确切版本 {version}… · 签名价格"
+    },
+    "wantedClaim.offeredPost": {
+      "source": "offered post",
+      "text": "提供的文章"
+    },
+    "wantedClaim.notFound": {
+      "source": "Wanted claim not found — Keryx",
+      "text": "未找到 Wanted 主张 — Keryx"
+    },
+    "wantedClaim.openLabel": {
+      "source": "Open creator brief",
+      "text": "打开创作者简报"
+    },
+    "wantedClaim.filledLabel": {
+      "source": "Filled creator brief",
+      "text": "已填补创作者简报"
+    },
+    "wantedClaim.fallbackTitle": {
+      "source": "Wanted claim — Keryx",
+      "text": "Wanted 主张 — Keryx"
+    },
+    "wantedClaim.back": {
+      "source": "← All wanted claims",
+      "text": "← 全部 Wanted 主张"
+    },
+    "wantedClaim.receipt": {
+      "source": "Demand with a receipt",
+      "text": "有收据的需求"
+    },
+    "wantedClaim.paidClaim": {
+      "source": "A claim Keryx was paid to support",
+      "text": "Keryx 获付款以支持的主张"
+    },
+    "wantedClaim.coverage": {
+      "source": "Coverage",
+      "text": "覆盖"
+    },
+    "wantedClaim.short": {
+      "source": "finished short",
+      "text": "最终不足"
+    },
+    "wantedClaim.beforeFilled": {
+      "source": "before it was filled",
+      "text": "填补之前"
+    },
+    "wantedClaim.demand": {
+      "source": "Reader demand",
+      "text": "读者需求"
+    },
+    "wantedClaim.retriesExcluded": {
+      "source": "paid dispatches; agent retries excluded",
+      "text": "付费研究；排除代理重试"
+    },
+    "wantedClaim.lastMeasured": {
+      "source": "Last measured",
+      "text": "上次测量"
+    },
+    "wantedClaim.publicReceipt": {
+      "source": "from a public dispatch receipt",
+      "text": "来自公开研究收据"
+    },
+    "wantedClaim.inspectFailed": {
+      "source": "Inspect the failed dispatch ↗",
+      "text": "查看失败研究 ↗"
+    },
+    "wantedClaim.invitationTitle": {
+      "source": "This is an invitation, not a guaranteed bounty.",
+      "text": "这是邀请，不是保证赏金。"
+    },
+    "wantedClaim.covered": {
+      "source": "Covered now",
+      "text": "现在已覆盖"
+    },
+    "wantedClaim.settlementBoundary": {
+      "source": "A later dispatch found qualifying evidence for this claim. The creator offer is only called fulfilled when its citation reward also carries a real settlement receipt.",
+      "text": "后续研究为主张找到合格证据。创作者报价仅在引用奖励也有真实结算收据时称为履约。"
+    },
+    "wantedClaim.inspectClosing": {
+      "source": "Inspect the closing dispatch ↗",
+      "text": "查看关闭主张的研究 ↗"
+    },
+    "wantedClaim.offers": {
+      "source": "Offers against this claim",
+      "text": "针对此主张的报价"
+    },
+    "wantedClaim.inspectRetry": {
+      "source": "inspect autonomous retry ↗",
+      "text": "查看自主重试 ↗"
+    },
+    "wantedFeed.summaryAgent.oneOne": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · decided by the agent",
+      "text": "{title} · 已读 {posts} 篇文章 · 对 {claims} 项开放主张报价 · 代理决策"
+    },
+    "wantedFeed.summaryAgent.oneOther": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · decided by the agent",
+      "text": "{title} · 已读 {posts} 篇文章 · 对 {claims} 项开放主张报价 · 代理决策"
+    },
+    "wantedFeed.summaryAgent.otherOne": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · decided by the agent",
+      "text": "{title} · 已读 {posts} 篇文章 · 对 {claims} 项开放主张报价 · 代理决策"
+    },
+    "wantedFeed.summaryAgent.otherOther": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · decided by the agent",
+      "text": "{title} · 已读 {posts} 篇文章 · 对 {claims} 项开放主张报价 · 代理决策"
+    },
+    "wantedFeed.summaryOffline.oneOne": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · word overlap (reasoning offline)",
+      "text": "{title} · 已读 {posts} 篇文章 · 对 {claims} 项开放主张报价 · 词汇重合（推理离线）"
+    },
+    "wantedFeed.summaryOffline.oneOther": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · word overlap (reasoning offline)",
+      "text": "{title} · 已读 {posts} 篇文章 · 对 {claims} 项开放主张报价 · 词汇重合（推理离线）"
+    },
+    "wantedFeed.summaryOffline.otherOne": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · word overlap (reasoning offline)",
+      "text": "{title} · 已读 {posts} 篇文章 · 对 {claims} 项开放主张报价 · 词汇重合（推理离线）"
+    },
+    "wantedFeed.summaryOffline.otherOther": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · word overlap (reasoning offline)",
+      "text": "{title} · 已读 {posts} 篇文章 · 对 {claims} 项开放主张报价 · 词汇重合（推理离线）"
+    },
+    "wantedFeed.expectedValue": {
+      "source": "expected value {value}%",
+      "text": "预期价值 {value}%"
+    },
+    "wantedFeed.matchesAgent.one": {
+      "source": "It expects your posts to address this open claim — each one left short by a dispatch a reader paid for.",
+      "text": "它预计文章可处理此开放主张，此主张来自读者付款但证据不足的研究。"
+    },
+    "wantedFeed.matchesAgent.other": {
+      "source": "It expects your posts to address these {count} open claims — each one left short by a dispatch a reader paid for.",
+      "text": "它预计文章可处理这 {count} 项开放主张，均来自读者付款但证据不足的研究。"
+    },
+    "wantedFeed.matchesOffline.one": {
+      "source": "Reasoning was unreachable, so this is word overlap only: one claim shares enough vocabulary with a post to be worth your own look.",
+      "text": "推理无法访问，因此仅词汇重合：一项主张与文章共享足够词汇，值得您查看。"
+    },
+    "wantedFeed.matchesOffline.other": {
+      "source": "Reasoning was unreachable, so this is word overlap only: {count} claims share enough vocabulary with a post to be worth your own look.",
+      "text": "推理无法访问，因此仅词汇重合：{count} 项主张与文章共享足够词汇，值得您查看。"
+    },
+    "wantedFeed.coverage": {
+      "source": "{coverage}% covered",
+      "text": "已覆盖 {coverage}%"
+    },
+    "wantedFeed.coverageAsked": {
+      "source": "{coverage}% covered · asked {count}×",
+      "text": "已覆盖 {coverage}% · 提问 {count} 次"
+    },
+    "wantedFeed.postSharedAsked": {
+      "source": "your post {post} · shares {shared} · asked as {question}",
+      "text": "您的文章 {post} · 共享 {shared} · 提问为 {question}"
+    },
+    "wantedFeed.postAsked": {
+      "source": "your post {post} · asked as {question}",
+      "text": "您的文章 {post} · 提问为 {question}"
+    },
+    "wantedFeed.asked": {
+      "source": "asked as {question}",
+      "text": "提问为 {question}"
+    },
+    "wantedFeed.rateLimit": {
+      "source": "That is a few feeds in a row — give it a minute.",
+      "text": "连续处理了多个订阅源，请等待一分钟。"
+    },
+    "wantedFeed.readError": {
+      "source": "Something went wrong reading that feed.",
+      "text": "读取订阅源出错。"
+    },
+    "wantedFeed.unreachable": {
+      "source": "Could not reach Keryx. Try again in a moment.",
+      "text": "无法连接 Keryx。稍后重试。"
+    },
+    "wantedFeed.claimTitle": {
+      "source": "Would Keryx buy your feed for this claim?",
+      "text": "Keryx 会为此主张购买您的订阅源吗？"
+    },
+    "wantedFeed.title": {
+      "source": "Would Keryx buy your feed?",
+      "text": "Keryx 会购买您的订阅源吗？"
+    },
+    "wantedFeed.privacy": {
+      "source": "No wallet · nothing stored",
+      "text": "无需钱包 · 不存储内容"
+    },
+    "wantedFeed.urlLabel": {
+      "source": "Your RSS feed URL",
+      "text": "您的 RSS 订阅源 URL"
+    },
+    "wantedFeed.previewBoundary": {
+      "source": "The agent sees your recent titles and summaries — the same free preview a listed source gets judged on. Takes a few seconds.",
+      "text": "代理查看近期标题及摘要，与已上架来源接受评判的免费预览相同。需数秒。"
+    },
+    "wantedFeed.reading": {
+      "source": "Reading your feed…",
+      "text": "正在读取订阅源…"
+    },
+    "wantedFeed.submit": {
+      "source": "Put it to the agent",
+      "text": "交给代理判断"
+    },
+    "wantedFeed.buy": {
+      "source": "Would buy",
+      "text": "会购买"
+    },
+    "wantedFeed.skip": {
+      "source": "Would skip",
+      "text": "会跳过"
+    },
+    "wantedFeed.offerPost": {
+      "source": "Offer this post for this claim (pay registration gas) ▸",
+      "text": "为此主张提供此文章（支付注册 gas）▸"
+    },
+    "wantedFeed.listWalletFunded": {
+      "source": "List this feed (pay registration gas) ▸",
+      "text": "上架此订阅源（支付注册 gas）▸"
+    },
+    "wantedFeed.sponsoredRegistration": {
+      "source": "Register feed with sponsored gas ▸",
+      "text": "使用赞助 gas 注册订阅源 ▸"
+    },
+    "wantedFeed.sponsoredRegistrationBoundary": {
+      "source": "Registration gas is covered while sponsorship funds are available. This lists the feed without submitting a Wanted offer.",
+      "text": "赞助资金可用时覆盖注册 gas。这仅上架订阅源，不提交 Wanted 报价。"
+    },
+    "wantedFeed.buyWithoutMatches": {
+      "source": "It would pay for this feed, but judged it broadly rather than pointing at particular claims — so there is no shortlist to show you. A listed source is read against every question that arrives, not only the ones open today.",
+      "text": "它愿意为此订阅源付款，但作整体判断，未指向特定主张，因此无候选列表。已上架来源按每个到来的问题阅读，不仅限今日开放问题。"
+    },
+    "wantedFeed.noMatches": {
+      "source": "Nothing on today’s board. That is a statement about the holes currently open, not about your writing — the board turns over as dispatches land, and a listed source is read against every question that arrives.",
+      "text": "今日看板为空。这描述当前缺口，不评价您的作品。看板随研究更新，已上架来源按每个到来的问题阅读。"
+    },
+    "wantedFeed.list": {
+      "source": "List this feed ▸",
+      "text": "上架此订阅源 ▸"
+    },
+    "wantedFeed.listAnyway": {
+      "source": "List it anyway ▸",
+      "text": "仍然上架 ▸"
+    },
+    "wantedFeed.decisionBoundary": {
+      "source": "One decision, on this feed alone — a real dispatch ranks it against every other source competing for the same budget, and scores it again on the full text it pays for.",
+      "text": "仅针对此订阅源的一次决策；真实研究会与竞争同一预算的所有来源排序，并对付费全文再次评分。"
+    },
+    "wantedResponse.loadError": {
+      "source": "Could not load your articles",
+      "text": "无法加载您的文章"
+    },
+    "wantedResponse.creatorRequired": {
+      "source": "Connect the registry creator wallet to sign this discount.",
+      "text": "连接注册表创作者钱包以签署此折扣。"
+    },
+    "wantedResponse.publishError": {
+      "source": "Could not publish the signed article offer",
+      "text": "无法发布签名文章报价"
+    },
+    "wantedResponse.restoreError": {
+      "source": "Could not restore the registry price",
+      "text": "无法恢复注册表价格"
+    },
+    "wantedResponse.queueError": {
+      "source": "Could not queue the response",
+      "text": "无法将响应排队"
+    },
+    "wantedResponse.offerError": {
+      "source": "Could not offer this article",
+      "text": "无法提供此文章"
+    },
+    "wantedResponse.title": {
+      "source": "Already listed? Offer the exact article.",
+      "text": "已经上架？提供确切文章。"
+    },
+    "wantedResponse.authorityBoundary": {
+      "source": "Keryx rechecks your registry authority and public preview, then guarantees this version a place in the retry. The agent still decides BUY or SKIP; only grounded, settled evidence fills the claim.",
+      "text": "Keryx 重新检查注册表权限及公开预览，然后保证此版本进入重试候选。代理仍决定 BUY 或 SKIP；仅有依据且已结算证据填补主张。"
+    },
+    "wantedResponse.signIn": {
+      "source": "Sign in to see your articles",
+      "text": "登录查看文章"
+    },
+    "wantedResponse.connect": {
+      "source": "Connect creator wallet",
+      "text": "连接创作者钱包"
+    },
+    "wantedResponse.noMatches": {
+      "source": "None of your active, verified articles passes this claim's public-preview match yet.",
+      "text": "您已启用且经核验的文章尚无通过此主张公开预览匹配的条目。"
+    },
+    "wantedResponse.matchingArticle": {
+      "source": "Matching article",
+      "text": "匹配文章"
+    },
+    "wantedResponse.readPrice": {
+      "source": "Read price",
+      "text": "阅读价格"
+    },
+    "wantedResponse.signOffer": {
+      "source": "Sign discount + offer",
+      "text": "签署折扣及报价"
+    },
+    "wantedResponse.registryOffer": {
+      "source": "Offer at registry price",
+      "text": "按注册表价格报价"
+    },
+    "wantedResponse.priceRange": {
+      "source": "Price must be ${minimum}–${maximum}.",
+      "text": "价格须为 ${minimum}–${maximum}。"
+    },
+    "wantedResponse.versionCeiling": {
+      "source": "{version}… · registry ceiling ${ceiling}",
+      "text": "{version}… · 注册表上限 ${ceiling}"
+    },
+    "wantedResponse.admitted": {
+      "source": "Response admitted · {receipt}… · waiting for the bounded autonomous retry.",
+      "text": "响应已接受 · {receipt}… · 等待有限自主重试。"
+    },
+    "wantedShare.title": {
+      "source": "Keryx wanted claim",
+      "text": "Keryx Wanted 主张"
+    },
+    "wantedShare.copied": {
+      "source": "Link copied",
+      "text": "链接已复制"
+    },
+    "wantedShare.share": {
+      "source": "Share this brief",
+      "text": "分享此简报"
+    },
+    "wantedShare.text": {
+      "source": "Keryx was paid to answer this claim and its corpus came back short: {claim}",
+      "text": "Keryx 获付款回答此主张，但语料证据不足：{claim}"
+    },
+    "wantedCard.alt": {
+      "source": "Keryx wanted claim — paid demand, missing evidence",
+      "text": "Keryx Wanted 主张 — 付费需求、缺失证据"
+    },
+    "wantedCard.fallbackClaim": {
+      "source": "A claim Keryx was paid to answer — and its corpus left short.",
+      "text": "Keryx 获付款回答、却未被语料充分覆盖的主张。"
+    },
+    "wantedCard.receipt": {
+      "source": "Keryx Wanted · demand with a receipt",
+      "text": "Keryx Wanted · 有收据的需求"
+    },
+    "wantedCard.open": {
+      "source": "Open creator brief",
+      "text": "打开创作者简报"
+    },
+    "wantedCard.filled": {
+      "source": "Claim filled",
+      "text": "主张已填补"
+    },
+    "wantedCard.paidClaim": {
+      "source": "A claim the paid corpus could not support",
+      "text": "付费语料无法支持的主张"
+    },
+    "wantedCard.coverage": {
+      "source": "coverage",
+      "text": "覆盖"
+    },
+    "wantedCard.demand": {
+      "source": "paid demand",
+      "text": "付费需求"
+    },
+    "wantedCard.retry": {
+      "source": "bounded retry",
+      "text": "有限重试"
+    },
+    "wantedCard.coverageNow": {
+      "source": "coverage now",
+      "text": "当前覆盖"
+    },
+    "wantedCard.settlementBoundary": {
+      "source": "Payout only after verified evidence and real citation settlement",
+      "text": "仅证据核验及真实引用结算后付款"
+    }
+  }
+}

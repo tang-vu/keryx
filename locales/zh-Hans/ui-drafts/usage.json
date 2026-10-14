@@ -1,0 +1,220 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/usage.ts",
+  "sourceSha256": "4b8c68f82787d6e99373f93f56512bff9f319f485aa86a9606c4b539809f047e",
+  "entries": {
+    "metadataTitle": {
+      "source": "Who uses Keryx — recorded usage",
+      "text": "谁在使用 Keryx — 使用记录"
+    },
+    "title": {
+      "source": "Who uses Keryx",
+      "text": "谁在使用 Keryx"
+    },
+    "introduction": {
+      "source": "Recorded activity by participant and funding evidence. Historical unknown activity is kept separate from outside use.",
+      "text": "按参与者和资金证据记录的活动。历史未知活动与外部使用分开。"
+    },
+    "network": {
+      "source": "Network",
+      "text": "网络"
+    },
+    "period": {
+      "source": "Period",
+      "text": "时段"
+    },
+    "since": {
+      "source": "Since (UTC date)",
+      "text": "自（UTC 日期）"
+    },
+    "apply": {
+      "source": "Show figures",
+      "text": "显示数据"
+    },
+    "all": {
+      "source": "All time",
+      "text": "全部时间"
+    },
+    "week": {
+      "source": "Last 7 days",
+      "text": "最近 7 天"
+    },
+    "month": {
+      "source": "Last 30 days",
+      "text": "最近 30 天"
+    },
+    "windowEnd": {
+      "source": ") UTC",
+      "text": ") UTC"
+    },
+    "unavailable": {
+      "source": "A complete classified view is unavailable for this storage profile or period. Figures are withheld.",
+      "text": "此存储配置或时段无法提供完整分类视图。数据暂不展示。"
+    },
+    "invalid": {
+      "source": "Choose a valid network, period and UTC date.",
+      "text": "选择有效网络、时段和 UTC 日期。"
+    },
+    "outside": {
+      "source": "Outside users",
+      "text": "外部用户"
+    },
+    "team": {
+      "source": "Team",
+      "text": "团队"
+    },
+    "scripted": {
+      "source": "Scripted tests",
+      "text": "脚本测试"
+    },
+    "unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "figure": {
+      "source": "Figure",
+      "text": "指标"
+    },
+    "rule": {
+      "source": "Counting rule",
+      "text": "计数规则"
+    },
+    "unmeasured": {
+      "source": "Unmeasured",
+      "text": "未衡量"
+    },
+    "history": {
+      "source": "Outside-only run history (JSON)",
+      "text": "仅外部研究历史（JSON）"
+    },
+    "json": {
+      "source": "Usage figures (JSON)",
+      "text": "使用数据（JSON）"
+    },
+    "actorLimit": {
+      "source": "Verified wallet actors are distinct recorded identities, not verified unique humans. Columns are not silently summed.",
+      "text": "已验证钱包参与者是不同的已记录身份，不是经验证的独立真实个人。不会悄然合并各列。"
+    },
+    "fundingLimit": {
+      "source": "Outside participant activity does not prove an outside payer. Independent, sponsored, team-funded and unknown funding are shown separately.",
+      "text": "外部参与者活动不证明付款者来自外部。独立、赞助、团队出资和未知资金来源分别显示。"
+    },
+    "mainnet": {
+      "source": "Arc mainnet",
+      "text": "Arc 主网"
+    },
+    "testnet": {
+      "source": "Arc testnet",
+      "text": "Arc 测试网"
+    },
+    "unattributed": {
+      "source": "Unattributed network runs",
+      "text": "未归属网络的研究"
+    },
+    "proofLink": {
+      "source": "See usage by participant and funding evidence.",
+      "text": "按参与者和资金证据查看使用情况。"
+    },
+    "proofLimit": {
+      "source": "Mixed recorded activity is not independent outside-user traction.",
+      "text": "混合记录活动不是独立外部用户使用业绩。"
+    },
+    "rows.people.0": {
+      "source": "Verified actors",
+      "text": "已验证参与者"
+    },
+    "rows.people.1": {
+      "source": "Distinct recorded verified wallet actors; anonymous/unknown ownership omitted.",
+      "text": "不同的已记录已验证钱包参与者；不含匿名或所有权未知者。"
+    },
+    "rows.runs.0": {
+      "source": "Research runs",
+      "text": "研究次数"
+    },
+    "rows.runs.1": {
+      "source": "Completed recorded runs created in this network and UTC interval.",
+      "text": "在此网络和 UTC 区间创建的已完成记录研究。"
+    },
+    "rows.paying.0": {
+      "source": "Runs with payments",
+      "text": "有付款的研究"
+    },
+    "rows.paying.1": {
+      "source": "Runs with positive recorded settled rows and a settlement reference; not a payer-independence claim.",
+      "text": "具有正金额已记录已结算行及结算参考的研究；不声称付款者独立。"
+    },
+    "rows.independent.0": {
+      "source": "Independent paying runs",
+      "text": "独立付款研究"
+    },
+    "rows.independent.1": {
+      "source": "Outside actor and independent funding evidence, plus qualifying recorded settlement.",
+      "text": "具有外部参与者及独立资金证据，并有符合条件的已记录结算。"
+    },
+    "rows.sponsored.0": {
+      "source": "Sponsored paying runs",
+      "text": "赞助付款研究"
+    },
+    "rows.sponsored.1": {
+      "source": "Outside user, sponsored payment: outside actor and sponsored funding evidence, plus qualifying recorded settlement.",
+      "text": "外部用户、赞助付款：具有外部参与者及赞助资金证据，并有符合条件的已记录结算。"
+    },
+    "rows.teamPaid.0": {
+      "source": "Team-funded paying runs",
+      "text": "团队出资付款研究"
+    },
+    "rows.teamPaid.1": {
+      "source": "Recorded team/treasury funding; never an independent outside payer.",
+      "text": "记录的团队或资金库出资；绝不计作独立外部付款者。"
+    },
+    "rows.unknownPaid.0": {
+      "source": "Unknown-funding paying runs",
+      "text": "资金未知的付款研究"
+    },
+    "rows.unknownPaid.1": {
+      "source": "Recorded settlement with incomplete funding evidence.",
+      "text": "存在已记录结算，但资金证据不完整。"
+    },
+    "rows.payments.0": {
+      "source": "Settled payments",
+      "text": "已结算付款"
+    },
+    "rows.payments.1": {
+      "source": "Unique positive recorded settled payment IDs with settlement reference; no new chain verification.",
+      "text": "具有结算参考的独立正金额已记录已结算付款 ID；没有新的链上验证。"
+    },
+    "rows.usdc.0": {
+      "source": "USDC paid",
+      "text": "支付的 USDC"
+    },
+    "rows.usdc.1": {
+      "source": "Exact sum of admissible integer micro-USDC; pending, simulated and unproved rows excluded.",
+      "text": "符合准入要求的整数 micro-USDC 的精确总和；不含等待确认、模拟和未获证明的行。"
+    },
+    "rows.creators.0": {
+      "source": "Creators paid",
+      "text": "获付款创作者"
+    },
+    "rows.creators.1": {
+      "source": "Distinct fetch/citation payees in qualifying recorded payment rows.",
+      "text": "符合条件的记录付款行中不同的访问费或引用奖励收款人。"
+    },
+    "rows.accepted.0": {
+      "source": "Deliverables accepted",
+      "text": "已接受交付结果"
+    },
+    "rows.accepted.1": {
+      "source": "Unmeasured: not inferred from answer completion or feedback.",
+      "text": "未衡量：不从答案完成或反馈推断。"
+    },
+    "rows.latency.0": {
+      "source": "Median time to first answer",
+      "text": "首个答案耗时中位数"
+    },
+    "rows.latency.1": {
+      "source": "Unmeasured: no recorded first-answer timestamps; completion duration is not substituted.",
+      "text": "未衡量：未记录首个答案时间戳；不以完成耗时替代。"
+    }
+  }
+}

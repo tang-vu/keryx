@@ -1,0 +1,124 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/personal-history.ts",
+  "sourceSha256": "0cac5ddd8a09644deaf691f21787be444aa3c138429893bc25d1aabb47704d8c",
+  "entries": {
+    "browse": {
+      "source": "Browse attributed history",
+      "text": "Duyệt lịch sử được quy thuộc"
+    },
+    "recent": {
+      "source": "Recent creator ledger",
+      "text": "Sổ theo dõi tác giả gần đây"
+    },
+    "title": {
+      "source": "Attributed history",
+      "text": "Lịch sử được quy thuộc"
+    },
+    "scope": {
+      "source": "Current store only. A run attributed to your wallet may have been funded elsewhere. Recorded amounts are not settlement evidence or the price you paid for a research service.",
+      "text": "Chỉ kho hiện tại. Lượt chạy được quy cho ví của bạn có thể có nguồn tiền từ nơi khác. Số tiền ghi nhận không phải bằng chứng quyết toán hay giá bạn trả cho dịch vụ nghiên cứu."
+    },
+    "search": {
+      "source": "Question contains (case sensitive)",
+      "text": "Câu hỏi chứa (phân biệt chữ hoa và thường)"
+    },
+    "surface": {
+      "source": "Surface",
+      "text": "Kênh sử dụng"
+    },
+    "funding": {
+      "source": "Creator funding record",
+      "text": "Hồ sơ nguồn tiền cho tác giả"
+    },
+    "all": {
+      "source": "All",
+      "text": "Tất cả"
+    },
+    "unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "browser": {
+      "source": "Browser wallet recorded",
+      "text": "Ví trình duyệt đã ghi nhận"
+    },
+    "other": {
+      "source": "Other or unknown",
+      "text": "Khác hoặc chưa rõ"
+    },
+    "from": {
+      "source": "From (UTC)",
+      "text": "Từ (UTC)"
+    },
+    "to": {
+      "source": "Through (UTC)",
+      "text": "Đến (UTC)"
+    },
+    "apply": {
+      "source": "Apply filters",
+      "text": "Áp dụng bộ lọc"
+    },
+    "loading": {
+      "source": "Loading history…",
+      "text": "Đang tải lịch sử…"
+    },
+    "checking": {
+      "source": "Checking your sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "empty": {
+      "source": "No matching dispatches attributed to this wallet.",
+      "text": "Không có bản tin khớp được quy cho ví này."
+    },
+    "unavailable": {
+      "source": "History is unavailable on this storage deployment. Use the recent creator ledger or try again later.",
+      "text": "Lịch sử không khả dụng trên triển khai lưu trữ này. Dùng sổ theo dõi tác giả gần đây hoặc thử lại sau."
+    },
+    "changed": {
+      "source": "Your signed-in wallet changed. Reload history.",
+      "text": "Ví đang đăng nhập đã thay đổi. Tải lại lịch sử."
+    },
+    "signedOut": {
+      "source": "Sign in to browse your attributed history.",
+      "text": "Đăng nhập để duyệt lịch sử được quy thuộc cho bạn."
+    },
+    "retry": {
+      "source": "Retry",
+      "text": "Thử lại"
+    },
+    "newer": {
+      "source": "Newer page",
+      "text": "Trang mới hơn"
+    },
+    "older": {
+      "source": "Older page",
+      "text": "Trang cũ hơn"
+    },
+    "report": {
+      "source": "Report",
+      "text": "Báo cáo"
+    },
+    "receipt": {
+      "source": "Receipt",
+      "term": "receipt"
+    },
+    "recorded": {
+      "source": "Recorded spend / creator allocation",
+      "text": "Khoản chi / phân bổ cho tác giả đã ghi nhận"
+    },
+    "usdc": {
+      "source": "USDC",
+      "term": "usdc"
+    },
+    "scopeLabel": {
+      "source": "(read attributed current-store history)",
+      "text": "(đọc lịch sử được quy thuộc trong kho hiện tại)"
+    },
+    "scopeDefaults": {
+      "source": "Empty selection uses ask + export defaults. Profile and history permissions require explicit selection; write does not grant read.",
+      "text": "Không chọn gì thì dùng quyền hỏi và xuất mặc định. Quyền hồ sơ và lịch sử cần chọn rõ; quyền ghi không cấp quyền đọc."
+    }
+  }
+}

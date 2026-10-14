@@ -1,0 +1,84 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-leaderboard.ts",
+  "sourceSha256": "1a93f5d778fbab8cf395bd9f24151f33c36b763b5b3ac9ac2c0f74c14ebcf8aa",
+  "entries": {
+    "sourceLeaderboard.title": {
+      "source": "{network} source leaderboard",
+      "text": "Bảng xếp hạng nguồn {network}"
+    },
+    "sourceLeaderboard.catalog": {
+      "source": "All {count} catalog and settled sources. Each source has its own row, including sources with no payments.",
+      "text": "Toàn bộ {count} nguồn trong danh mục và có quyết toán. Mỗi nguồn có hàng riêng, kể cả nguồn chưa có thanh toán."
+    },
+    "sourceLeaderboard.feeBoundary": {
+      "source": "Creator rewards go to the creator. Owner fees are Keryx transfers attributed to cited sources; they are not publisher earnings. One transfer may contribute to several rows.",
+      "text": "Phần thưởng tác giả đến tác giả. Phí chủ sở hữu là khoản chuyển cho Keryx được quy cho nguồn được trích dẫn; không phải thu nhập nhà xuất bản. Một khoản chuyển có thể góp vào nhiều hàng."
+    },
+    "sourceLeaderboard.catalogUnavailable": {
+      "source": "Retained feed catalog unavailable; this list is incomplete.",
+      "text": "Danh mục nguồn cấp được lưu không khả dụng; danh sách này chưa đầy đủ."
+    },
+    "sourceLeaderboard.feesUnavailable": {
+      "source": "Source fee totals are unavailable: some settlement or public allocation evidence is missing.",
+      "text": "Tổng phí nguồn không khả dụng: thiếu một số bằng chứng quyết toán hoặc phân bổ công khai."
+    },
+    "sourceLeaderboard.searchLabel": {
+      "source": "Search leaderboard sources",
+      "text": "Tìm nguồn trong bảng xếp hạng"
+    },
+    "sourceLeaderboard.searchPlaceholder": {
+      "source": "Search sources or wallets",
+      "text": "Tìm nguồn hoặc ví"
+    },
+    "sourceLeaderboard.rowsLabel": {
+      "source": "All source leaderboard rows",
+      "text": "Tất cả hàng bảng xếp hạng nguồn"
+    },
+    "sourceLeaderboard.empty": {
+      "source": "No matching sources.",
+      "text": "Không có nguồn khớp."
+    },
+    "sourceLeaderboard.creatorIdentity": {
+      "source": "Creator · {wallet}",
+      "text": "Tác giả · {wallet}"
+    },
+    "sourceLeaderboard.walletUnknown": {
+      "source": "Wallet not recorded",
+      "text": "Chưa ghi nhận ví"
+    },
+    "sourceLeaderboard.paper": {
+      "source": "Public paper metadata",
+      "text": "Siêu dữ liệu bài công khai"
+    },
+    "sourceLeaderboard.publicSource": {
+      "source": "Public source",
+      "text": "Nguồn công khai"
+    },
+    "sourceLeaderboard.creatorRewards": {
+      "source": "Creator rewards",
+      "text": "Thưởng cho tác giả"
+    },
+    "sourceLeaderboard.creatorCounts": {
+      "source": "Cites: {citations} · payments: {payments}",
+      "text": "Trích dẫn: {citations} · thanh toán: {payments}"
+    },
+    "sourceLeaderboard.ownerFee": {
+      "source": "Owner fee",
+      "text": "Phí chủ sở hữu"
+    },
+    "sourceLeaderboard.unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "sourceLeaderboard.feeCounts": {
+      "source": "Cites: {citations} · transfers: {payments}",
+      "text": "Trích dẫn: {citations} · khoản chuyển: {payments}"
+    },
+    "sourceLeaderboard.feeRecipient": {
+      "source": "Fee recipient: {wallets}",
+      "text": "Bên nhận phí: {wallets}"
+    }
+  }
+}

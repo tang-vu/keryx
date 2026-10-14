@@ -1,0 +1,84 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/profile-identities.ts",
+  "sourceSha256": "a998f44edb0833e54619837296b15f153a20b4952d9a3110e59de4dbf055acc7",
+  "entries": {
+    "title": {
+      "source": "Verified identity links",
+      "text": "已验证身份关联"
+    },
+    "description": {
+      "source": "Verify control of an ORCID or GitHub account. Verification adds a private identity link; your signed wallet remains your account authority.",
+      "text": "验证您对 ORCID 或 GitHub 账户的控制权。验证会添加私密身份关联；已签名钱包仍是您的账户权限依据。"
+    },
+    "asserted": {
+      "source": "Links typed above are unverified. They do not become verified when their URL matches an account.",
+      "text": "上方输入的链接尚未验证。URL 与账户相符并不会使其成为已验证链接。"
+    },
+    "saveFirst": {
+      "source": "Save your private profile before verifying an identity.",
+      "text": "验证身份前先保存私密个人资料。"
+    },
+    "unavailable": {
+      "source": "Verified identity links are unavailable on this storage deployment.",
+      "text": "此存储部署不提供已验证身份关联。"
+    },
+    "busy": {
+      "source": "Working…",
+      "text": "正在处理…"
+    },
+    "verifyOrcid": {
+      "source": "Verify ORCID",
+      "text": "验证 ORCID"
+    },
+    "verifyGithub": {
+      "source": "Verify GitHub",
+      "text": "验证 GitHub"
+    },
+    "unlink": {
+      "source": "Unlink",
+      "text": "解除关联"
+    },
+    "reverify": {
+      "source": "Verify again",
+      "text": "重新验证"
+    },
+    "failed": {
+      "source": "Identity verification did not complete. Try again from this profile.",
+      "text": "身份验证未完成。请从此个人资料重试。"
+    },
+    "conflict": {
+      "source": "That external account is already linked to another profile.",
+      "text": "该外部账户已关联其他个人资料。"
+    },
+    "verified": {
+      "source": "Verification returned. Your recorded verified links are shown below.",
+      "text": "验证已返回。下方显示记录的已验证关联。"
+    },
+    "unlinked": {
+      "source": "Identity link removed. Pending verification for this provider was cancelled.",
+      "text": "身份关联已移除。已取消此提供方尚未完成的验证。"
+    },
+    "ownership": {
+      "source": "Verification confirms account control on the recorded date. It does not verify affiliation, research, payment eligibility or creator status.",
+      "text": "验证确认在记录日期的账户控制权。它不验证机构归属、研究、付款资格或创作者身份。"
+    },
+    "scope": {
+      "source": "Keryx records only your ORCID iD and name or GitHub public account ID and login. GitHub requests no extra scopes. ORCID authentication permits public record reads; Keryx does not read those records. Provider tokens are discarded.",
+      "text": "Keryx 仅记录您的 ORCID iD 和姓名，或 GitHub 公开账户 ID 和登录名。GitHub 不请求额外权限。ORCID 认证允许读取公开记录；Keryx 不读取这些记录。提供方令牌会被丢弃。"
+    },
+    "changed": {
+      "source": "Your signed-in wallet changed. Reload this profile.",
+      "text": "已登录钱包发生变化。请重新加载此个人资料。"
+    },
+    "invalid": {
+      "source": "Identity verification could not be started.",
+      "text": "无法启动身份验证。"
+    },
+    "date": {
+      "source": "Verified at ${value}",
+      "text": "验证时间 ${value}"
+    }
+  }
+}

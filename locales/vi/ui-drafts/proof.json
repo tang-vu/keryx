@@ -1,0 +1,24 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/proof.ts",
+  "sourceSha256": "5f0a6970b9baa96e113945db98745a4f150a753ea087a3252e708e0cfb9863b9",
+  "entries": {
+    "studyTitle": {
+      "source": "Free and paid sources: offline comparison",
+      "text": "Nguồn miễn phí và trả phí: so sánh ngoại tuyến"
+    },
+    "studyDescription": {
+      "source": "A reproducible study runs Keryx's offline agent on a fixed fictional corpus. Compare source prices and budgets using the retained questions, outputs and scoring rules.",
+      "text": "Nghiên cứu có thể tái lập chạy tác nhân ngoại tuyến Keryx trên tập tài liệu hư cấu cố định. So sánh giá nguồn và ngân sách bằng câu hỏi, đầu ra và quy tắc chấm điểm được lưu."
+    },
+    "studyLimit": {
+      "source": "Payments are simulated. The study does not measure live models, web research, real spending or semantic answer quality.",
+      "text": "Thanh toán được mô phỏng. Nghiên cứu không đo mô hình trực tiếp, nghiên cứu web, khoản chi thực hay chất lượng ngữ nghĩa của câu trả lời."
+    },
+    "studyLink": {
+      "source": "Read the study and reproduce it",
+      "text": "Đọc nghiên cứu và tái lập"
+    }
+  }
+}

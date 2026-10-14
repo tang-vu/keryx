@@ -1,0 +1,172 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/owned-history.ts",
+  "sourceSha256": "a4653faa50065f6deff1e66a13b7f7fd25204bc8abc9a2c0fdb85b6158dff8f2",
+  "entries": {
+    "title": {
+      "source": "Your owned research history",
+      "text": "Lịch sử nghiên cứu thuộc sở hữu của bạn"
+    },
+    "checking": {
+      "source": "Checking your account…",
+      "text": "Đang kiểm tra tài khoản của bạn…"
+    },
+    "signedOut": {
+      "source": "Sign in to read your history.",
+      "text": "Đăng nhập để đọc lịch sử."
+    },
+    "unavailable": {
+      "source": "Owned history is unavailable. Privacy, ownership or storage capabilities may not be admitted on this deployment.",
+      "text": "Lịch sử thuộc sở hữu không khả dụng. Khả năng bảo vệ riêng tư, xác nhận sở hữu hoặc lưu trữ có thể chưa được chấp nhận trên bản triển khai này."
+    },
+    "scope": {
+      "source": "Current store only. Recorded provenance describes the saved run; unknown metadata stays unknown. Settled receipt amounts exclude simulated and pending payments. Missing receipts do not prove zero spend.",
+      "text": "Chỉ kho hiện tại. Thông tin nguồn gốc ghi nhận mô tả lượt chạy đã lưu; siêu dữ liệu chưa rõ vẫn là chưa rõ. Số tiền biên nhận đã quyết toán loại trừ thanh toán mô phỏng và đang chờ. Thiếu biên nhận không chứng minh khoản chi bằng 0."
+    },
+    "walletOnly": {
+      "source": "This deployment supports this verified wallet only; stored multiwallet membership is unavailable.",
+      "text": "Bản triển khai này chỉ hỗ trợ ví đã xác minh này; dữ liệu thành viên nhiều ví không khả dụng."
+    },
+    "claimsMissing": {
+      "source": "Anonymous claimed-run history is unavailable on this deployment.",
+      "text": "Lịch sử lượt chạy ẩn danh được nhận về tài khoản không khả dụng trên bản triển khai này."
+    },
+    "search": {
+      "source": "Question contains (case sensitive)",
+      "text": "Câu hỏi chứa (phân biệt chữ hoa và thường)"
+    },
+    "surface": {
+      "source": "Surface",
+      "text": "Kênh sử dụng"
+    },
+    "network": {
+      "source": "Recorded receipt network",
+      "text": "Mạng biên nhận đã ghi nhận"
+    },
+    "funding": {
+      "source": "Settled funding",
+      "text": "Nguồn tiền đã quyết toán"
+    },
+    "visibility": {
+      "source": "Visibility",
+      "text": "Chế độ hiển thị"
+    },
+    "from": {
+      "source": "From (UTC)",
+      "text": "Từ (UTC)"
+    },
+    "to": {
+      "source": "Through (UTC)",
+      "text": "Đến (UTC)"
+    },
+    "all": {
+      "source": "All",
+      "text": "Tất cả"
+    },
+    "apply": {
+      "source": "Apply filters",
+      "text": "Áp dụng bộ lọc"
+    },
+    "empty": {
+      "source": "No matching runs in this scan page.",
+      "text": "Không có lượt chạy khớp trong trang quét này."
+    },
+    "scanLimited": {
+      "source": "The bounded scan continues. Use Next even when this page is empty.",
+      "text": "Lượt quét có giới hạn vẫn tiếp tục. Dùng Tiếp ngay cả khi trang này trống."
+    },
+    "next": {
+      "source": "Next",
+      "text": "Tiếp"
+    },
+    "previous": {
+      "source": "Previous",
+      "text": "Trước"
+    },
+    "refresh": {
+      "source": "Refresh",
+      "text": "Làm mới"
+    },
+    "exportJson": {
+      "source": "Export history JSON",
+      "text": "Xuất JSON lịch sử"
+    },
+    "exportCsv": {
+      "source": "Export history CSV",
+      "text": "Xuất CSV lịch sử"
+    },
+    "exportScope": {
+      "source": "Exports are bounded to 20 pages / 1,000 rows / 2 MiB and carry explicit completion and continuation metadata.",
+      "text": "Bản xuất giới hạn ở 20 trang / 1.000 hàng / 2 MiB, kèm siêu dữ liệu rõ ràng về hoàn tất và tiếp tục."
+    },
+    "report": {
+      "source": "Read report",
+      "text": "Đọc báo cáo"
+    },
+    "receipts": {
+      "source": "Receipts JSON",
+      "text": "JSON biên nhận"
+    },
+    "references": {
+      "source": "References BibTeX",
+      "text": "BibTeX tài liệu tham khảo"
+    },
+    "own": {
+      "source": "Your settled spend",
+      "text": "Khoản chi đã quyết toán của bạn"
+    },
+    "sponsored": {
+      "source": "Other payer settled spend",
+      "text": "Khoản chi đã quyết toán của bên trả tiền khác"
+    },
+    "unknown": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "private": {
+      "source": "Private",
+      "text": "Riêng tư"
+    },
+    "unlisted": {
+      "source": "Unlisted",
+      "text": "Không niêm yết"
+    },
+    "public": {
+      "source": "Public",
+      "text": "Công khai"
+    },
+    "save": {
+      "source": "Save visibility",
+      "text": "Lưu chế độ hiển thị"
+    },
+    "erase": {
+      "source": "Delete research text",
+      "text": "Xóa văn bản nghiên cứu"
+    },
+    "confirmErase": {
+      "source": "Delete this run's research text? Financial records are retained. This cannot be undone.",
+      "text": "Xóa văn bản nghiên cứu của lượt chạy này? Hồ sơ tài chính được giữ lại. Không thể hoàn tác."
+    },
+    "failed": {
+      "source": "The operation was refused or unavailable. Refresh before retrying a revision change.",
+      "text": "Thao tác bị từ chối hoặc không khả dụng. Làm mới trước khi thử thay đổi bản sửa đổi lần nữa."
+    },
+    "memberReadOnly": {
+      "source": "Changing a member wallet's run requires that wallet's interactive session; history read does not grant mutation authority.",
+      "text": "Thay đổi lượt chạy của ví thành viên cần phiên tương tác của chính ví đó; đọc lịch sử không cấp quyền thay đổi."
+    },
+    "paidCreators": {
+      "source": "Cited creators with recorded settled citation receipts",
+      "text": "Tác giả được trích dẫn có biên nhận trích dẫn đã quyết toán được ghi nhận"
+    },
+    "close": {
+      "source": "Close report",
+      "text": "Đóng báo cáo"
+    },
+    "receiptBound": {
+      "source": "Receipt projection truncated; spend totals unavailable.",
+      "text": "Dữ liệu biên nhận hiển thị bị cắt bớt; tổng chi không khả dụng."
+    }
+  }
+}

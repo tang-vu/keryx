@@ -1,0 +1,172 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/purchase-outcomes.json",
+  "sourceSha256": "6b899080a4639f0d667c8ef6bd7761bea4021d3374768ef7b7792064e8ec92af",
+  "entries": {
+    "title": {
+      "source": "Recorded purchase outcomes",
+      "text": "记录的购买结果"
+    },
+    "intro": {
+      "source": "Did the exact article versions bought for this answer appear in its citations? This view scores retained BUY decisions against payment observations recorded in the same dispatch trace.",
+      "text": "为此答案购买的确切文章版本是否出现在引用中？此视图将留存的 BUY 决策与同一任务过程记录的付款观察进行评分比较。"
+    },
+    "recordedOnly": {
+      "source": "Recorded settlement bookkeeping only; Circle and chain settlement have not been independently rechecked here.",
+      "text": "仅为记录的结算记账；此处没有独立复核 Circle 或链上结算。"
+    },
+    "partialTrace": {
+      "source": "This is a partial retained trace sample, not a full payment ledger. An absent matching payment does not prove that no payment occurred; excluded and unconfirmed costs remain unknown.",
+      "text": "这是部分留存过程样本，不是完整付款账本。缺少匹配付款不证明没有发生付款；被排除及未确认成本仍为未知。"
+    },
+    "unknownCohort": {
+      "source": "Participant cohort: unknown. No outside-customer usage is inferred.",
+      "text": "参与者群体：未知。不推断外部客户使用。"
+    },
+    "counts": {
+      "source": "{scored} scored exact-version purchases from {buys} recorded BUY decisions; {unscored} BUY decisions unscored. {excluded} of {payments} trace payment observations excluded.",
+      "text": "从 {buys} 个已记录 BUY 决策中对 {scored} 次确切版本购买评分；{unscored} 个 BUY 决策未评分。排除 {payments} 个过程付款观察中的 {excluded} 个。"
+    },
+    "countingBasis": {
+      "source": "Each unique source + item + content version with positive matching recorded settled access counts once. Duplicate BUYs, missing identities, zero/unconfirmed access and incompatible payment observations cannot create a scored purchase. CACHE and SKIP decisions are outside this sample.",
+      "text": "每个具有匹配的正金额已记录已结算访问付款的独立来源 + 条目 + 内容版本计数一次。重复 BUYs、缺失身份、零金额或未确认访问及不兼容付款观察不能构成已评分购买。CACHE 和 SKIP 决策不属于此样本。"
+    },
+    "citationHitRate": {
+      "source": "Exact-version citation hit rate",
+      "text": "确切版本引用命中率"
+    },
+    "hitRateBasis": {
+      "source": "{cited} cited purchases / {scored} scored purchases. A citation is an observed use, not an expert support or quality verdict.",
+      "text": "{cited} 次被引用购买 / {scored} 次已评分购买。引用是观察到的使用，不是专家对支持程度或质量的判断。"
+    },
+    "noSample": {
+      "source": "No scored purchases; the hit rate is unmeasured.",
+      "text": "没有已评分购买；命中率未衡量。"
+    },
+    "uncitedCost": {
+      "source": "Recorded access cost of uncited purchases",
+      "text": "未被引用购买的已记录访问成本"
+    },
+    "uncitedBasis": {
+      "source": "Counts only scored purchases. Descriptive access cost, not causal regret or proof that the purchase was useless.",
+      "text": "仅计入已评分购买。这是描述性访问成本，不是因果后悔值，也不证明购买无用。"
+    },
+    "calibration": {
+      "source": "Predicted value and observed citations",
+      "text": "预测价值与观察到的引用"
+    },
+    "calibrationBasis": {
+      "source": "Bins compare the recorded predicted value with citation occurrence in this one dispatch. Small samples do not validate a probability model.",
+      "text": "各区间比较此次任务记录的预测价值与引用出现情况。小样本不能验证概率模型。"
+    },
+    "band": {
+      "source": "Value band",
+      "text": "价值区间"
+    },
+    "samples": {
+      "source": "Purchases",
+      "text": "购买"
+    },
+    "predictedMean": {
+      "source": "Predicted mean (0–1)",
+      "text": "预测均值（0–1）"
+    },
+    "citationRate": {
+      "source": "Citation rate",
+      "text": "引用率"
+    },
+    "unmeasured": {
+      "source": "Unmeasured",
+      "text": "未衡量"
+    },
+    "unknownMeasures": {
+      "source": "Missed value, cost per supported claim, budget alternatives and counterfactual outcomes are unmeasured. No extra reading or learning was performed.",
+      "text": "未衡量错失价值、每个有支持主张的成本、其他预算方案或反事实结果。未执行额外阅读或学习。"
+    },
+    "observations": {
+      "source": "Scored exact-version observations",
+      "text": "已评分的确切版本观察"
+    },
+    "source": {
+      "source": "Source",
+      "text": "来源"
+    },
+    "item": {
+      "source": "Item",
+      "text": "条目"
+    },
+    "version": {
+      "source": "Content version",
+      "text": "内容版本"
+    },
+    "predicted": {
+      "source": "Recorded predicted value (0–1)",
+      "text": "记录的预测价值（0–1）"
+    },
+    "access": {
+      "source": "Recorded settled access",
+      "text": "记录的已结算访问费"
+    },
+    "reward": {
+      "source": "Recorded settled citation rewards",
+      "text": "记录的已结算引用奖励"
+    },
+    "contribution": {
+      "source": "Recorded citation contribution",
+      "text": "记录的引用贡献"
+    },
+    "cited": {
+      "source": "Cited",
+      "text": "已引用"
+    },
+    "uncited": {
+      "source": "Not cited",
+      "text": "未引用"
+    },
+    "network": {
+      "source": "Recorded network",
+      "text": "记录的网络"
+    },
+    "createdAt": {
+      "source": "Dispatch recorded at",
+      "text": "研究任务记录时间"
+    },
+    "archive": {
+      "source": "Frozen testnet archive, captured {capturedAt}. This is historical testnet evidence, separate from current mainnet activity.",
+      "text": "冻结测试网归档，捕获于 {capturedAt}。这是历史测试网证据，与当前主网活动分开。"
+    },
+    "archiveSource": {
+      "source": "Archive source commit",
+      "text": "归档来源提交"
+    },
+    "archiveDigest": {
+      "source": "Archive database SHA-256",
+      "text": "归档数据库 SHA-256"
+    },
+    "usdc": {
+      "source": "USDC",
+      "term": "usdc"
+    },
+    "testUsdc": {
+      "source": "test USDC",
+      "text": "测试 USDC"
+    },
+    "viewJson": {
+      "source": "View outcome JSON",
+      "text": "查看结果 JSON"
+    },
+    "download": {
+      "source": "Download outcomes",
+      "text": "下载结果"
+    },
+    "allReports": {
+      "source": "Purchase outcomes across recent reports",
+      "text": "近期报告的购买结果"
+    },
+    "unavailable": {
+      "source": "Recorded purchase outcomes are unavailable for this retained snapshot. No score or zero-cost success is inferred; the original report and receipt remain available.",
+      "text": "此留存快照的购买结果记录不可用。不推断评分或零成本成功；原始报告和凭证仍可访问。"
+    }
+  }
+}

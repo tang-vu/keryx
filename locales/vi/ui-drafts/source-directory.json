@@ -1,0 +1,812 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-directory.ts",
+  "sourceSha256": "65d55254a6598bc0ae3b73b25bf1d70eb005ef6c7bfcf07ac98c7aaac189abae",
+  "entries": {
+    "sourceFeed.fullText": {
+      "source": "Full text in feed",
+      "text": "Toàn văn trong nguồn cấp"
+    },
+    "sourceFeed.excerpt": {
+      "source": "Excerpt in feed",
+      "text": "Trích đoạn trong nguồn cấp"
+    },
+    "sourceFeed.abstract": {
+      "source": "Abstract in feed",
+      "text": "Tóm tắt trong nguồn cấp"
+    },
+    "sourceFeed.metadata": {
+      "source": "Metadata only",
+      "text": "Chỉ siêu dữ liệu"
+    },
+    "sourceFeed.untitled": {
+      "source": "Untitled feed item",
+      "text": "Mục nguồn cấp chưa đặt tên"
+    },
+    "sourceFeed.dateUnavailable": {
+      "source": "Publication date unavailable",
+      "text": "Ngày xuất bản không khả dụng"
+    },
+    "sourceFeed.kicker": {
+      "source": "Free public reference",
+      "text": "Tài liệu tham khảo công khai miễn phí"
+    },
+    "sourceFeed.topics": {
+      "source": "Topics",
+      "text": "Chủ đề"
+    },
+    "sourceFeed.compactItems": {
+      "source": "From the retained feed",
+      "text": "Từ nguồn cấp được lưu"
+    },
+    "sourceFeed.empty": {
+      "source": "No feed items retained in this snapshot.",
+      "text": "Không giữ mục nguồn cấp trong bản chụp này."
+    },
+    "sourceFeed.collectedUnavailable": {
+      "source": "Feed collection time unavailable",
+      "text": "Thời điểm thu nguồn cấp không khả dụng"
+    },
+    "sourceFeed.paymentNotice": {
+      "source": "No creator payment for this reference. Publisher control is not reported here.",
+      "text": "Không có thanh toán tác giả cho tài liệu tham khảo này. Không báo quyền kiểm soát nhà xuất bản tại đây."
+    },
+    "sourceFeed.claim": {
+      "source": "This is my source ▸",
+      "text": "Đây là nguồn của tôi ▸"
+    },
+    "sourceFeed.published": {
+      "source": "Published {date}",
+      "text": "Xuất bản {date}"
+    },
+    "sourceFeed.matching.one": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "Mục nguồn cấp được lưu khớp · {count} trên {total}"
+    },
+    "sourceFeed.latest.one": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "Mục nguồn cấp được lưu mới nhất · {count} trong bản chụp"
+    },
+    "sourceFeed.matching.other": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "Mục nguồn cấp được lưu khớp · {count} trên {total}"
+    },
+    "sourceFeed.latest.other": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "Mục nguồn cấp được lưu mới nhất · {count} trong bản chụp"
+    },
+    "sourceFeed.more.one": {
+      "source": "Show {count} more retained item",
+      "text": "Hiển thị thêm {count} mục được lưu"
+    },
+    "sourceFeed.more.other": {
+      "source": "Show {count} more retained items",
+      "text": "Hiển thị thêm {count} mục được lưu"
+    },
+    "sourceFeed.collected": {
+      "source": "Feed collected {date}",
+      "text": "Nguồn cấp thu thập {date}"
+    },
+    "sourceCited.kicker": {
+      "source": "Cited public document",
+      "text": "Tài liệu công khai được trích dẫn"
+    },
+    "sourceCited.readUnavailable": {
+      "source": "Read time not recorded",
+      "text": "Chưa ghi thời điểm đọc"
+    },
+    "sourceCited.citationUnavailable": {
+      "source": "Citation date not recorded",
+      "text": "Chưa ghi ngày trích dẫn"
+    },
+    "sourceCited.inspect": {
+      "source": "Inspect cited answer →",
+      "text": "Kiểm tra câu trả lời có trích dẫn →"
+    },
+    "sourceCited.scope.full_text": {
+      "source": "Full text recorded",
+      "text": "Toàn văn đã ghi nhận"
+    },
+    "sourceCited.scopeBounded.full_text": {
+      "source": "Full text recorded · Bounded extraction",
+      "text": "Toàn văn ghi nhận · trích xuất có giới hạn"
+    },
+    "sourceCited.scope.excerpt": {
+      "source": "Excerpt recorded",
+      "text": "Trích đoạn đã ghi nhận"
+    },
+    "sourceCited.scopeBounded.excerpt": {
+      "source": "Excerpt recorded · Bounded extraction",
+      "text": "Trích đoạn ghi nhận · trích xuất có giới hạn"
+    },
+    "sourceCited.scope.abstract": {
+      "source": "Abstract recorded",
+      "text": "Tóm tắt đã ghi nhận"
+    },
+    "sourceCited.scopeBounded.abstract": {
+      "source": "Abstract recorded · Bounded extraction",
+      "text": "Tóm tắt ghi nhận · trích xuất có giới hạn"
+    },
+    "sourceCited.scope.metadata_only": {
+      "source": "Metadata only",
+      "text": "Chỉ siêu dữ liệu"
+    },
+    "sourceCited.scopeBounded.metadata_only": {
+      "source": "Metadata only · Bounded extraction",
+      "text": "Chỉ siêu dữ liệu · trích xuất có giới hạn"
+    },
+    "sourceCited.scope.unrecorded": {
+      "source": "Reading scope not recorded",
+      "text": "Chưa ghi phạm vi đọc"
+    },
+    "sourceCited.scopeBounded.unrecorded": {
+      "source": "Reading scope not recorded · Bounded extraction",
+      "text": "Chưa ghi phạm vi đọc · trích xuất có giới hạn"
+    },
+    "sourceCited.observed": {
+      "source": "Read observed {date}",
+      "text": "Quan sát đọc lúc {date}"
+    },
+    "sourceCited.lastCited": {
+      "source": "Last cited {date}",
+      "text": "Lần trích dẫn gần nhất {date}"
+    },
+    "sourceExplore.kicker": {
+      "source": "Publisher directory · unread link",
+      "text": "Danh bạ nhà xuất bản · liên kết chưa đọc"
+    },
+    "sourceExplore.topics": {
+      "source": "Topics",
+      "text": "Chủ đề"
+    },
+    "sourceExplore.ask": {
+      "source": "Ask with this source →",
+      "text": "Hỏi với nguồn này →"
+    },
+    "sourceExplore.draftNotice": {
+      "source": "Opens a question draft. Available content is read only after you submit; inclusion here creates no creator payment.",
+      "text": "Mở bản nháp câu hỏi. Chỉ đọc nội dung khả dụng sau khi bạn gửi; xuất hiện tại đây không tạo thanh toán tác giả."
+    },
+    "sourceList.empty": {
+      "source": "No sources registered yet — be the first.",
+      "text": "Chưa có nguồn đăng ký — hãy là người đầu tiên."
+    },
+    "sourceList.demo": {
+      "source": "Synthetic demo source ? illustrative only",
+      "text": "Nguồn demo tổng hợp ? chỉ minh họa"
+    },
+    "sourceList.unverifiedTitle": {
+      "source": "Feed ownership not yet proven — listed but the agent won't read, cite, or pay it until verified.",
+      "text": "Sở hữu nguồn cấp chưa được chứng minh — có trong danh sách nhưng tác nhân sẽ không đọc, trích dẫn hay trả tiền đến khi xác minh."
+    },
+    "sourceList.unverified": {
+      "source": "Unverified",
+      "text": "Chưa xác minh"
+    },
+    "sourceList.registeredTitle": {
+      "source": "Registered on-chain — view the register() transaction on ArcScan",
+      "text": "Đã đăng ký trên chuỗi — xem giao dịch register() trên ArcScan"
+    },
+    "sourceList.onchain": {
+      "source": "On-chain",
+      "text": "Trên chuỗi"
+    },
+    "sourcePreview.title": {
+      "source": "Explore the sources",
+      "text": "Khám phá nguồn"
+    },
+    "sourcePreview.browse": {
+      "source": "Browse the source library →",
+      "text": "Duyệt thư viện nguồn →"
+    },
+    "sourcePreview.intro": {
+      "source": "Follow sources cited in public answers, browse retained feeds, or explore creator listings. Publisher control and payment eligibility are recorded separately.",
+      "text": "Theo nguồn được câu trả lời công khai trích dẫn, duyệt nguồn cấp được lưu hoặc khám phá niêm yết tác giả. Quyền kiểm soát nhà xuất bản và điều kiện thanh toán ghi riêng."
+    },
+    "sourcePreview.citationUnavailable": {
+      "source": "Citation history unavailable",
+      "text": "Lịch sử trích dẫn không khả dụng"
+    },
+    "sourcePreview.referenceUnavailable": {
+      "source": "Public reference count unavailable",
+      "text": "Số tài liệu công khai không khả dụng"
+    },
+    "sourcePreview.creatorUnavailable": {
+      "source": "Creator listing count unavailable",
+      "text": "Số niêm yết tác giả không khả dụng"
+    },
+    "sourcePreview.snapshotsUnavailable": {
+      "source": "Public reference snapshots could not be loaded. Reload to retry.",
+      "text": "Không thể tải bản chụp tài liệu tham khảo công khai. Tải lại để thử."
+    },
+    "sourcePreview.empty": {
+      "source": "No retained sources are listed yet. Keryx can still discover supported public documents in response to a question.",
+      "text": "Chưa liệt kê nguồn được lưu. Keryx vẫn có thể khám phá tài liệu công khai được hỗ trợ để trả lời câu hỏi."
+    },
+    "sourcePreview.documents.one": {
+      "source": "{count} recently cited public document",
+      "text": "{count} tài liệu công khai được trích dẫn gần đây"
+    },
+    "sourcePreview.feeds.one": {
+      "source": "{count} public feed",
+      "text": "{count} nguồn cấp công khai"
+    },
+    "sourcePreview.creators.one": {
+      "source": "{count} creator listing",
+      "text": "{count} niêm yết tác giả"
+    },
+    "sourcePreview.documents.other": {
+      "source": "{count} recently cited public documents",
+      "text": "{count} tài liệu công khai được trích dẫn gần đây"
+    },
+    "sourcePreview.feeds.other": {
+      "source": "{count} public feeds",
+      "text": "{count} nguồn cấp công khai"
+    },
+    "sourcePreview.creators.other": {
+      "source": "{count} creator listings",
+      "text": "{count} niêm yết tác giả"
+    },
+    "sourcePreview.control": {
+      "source": "Creator listing · {control}",
+      "text": "Niêm yết tác giả · {control}"
+    },
+    "sourceFilter.title": {
+      "source": "Find a source",
+      "text": "Tìm nguồn"
+    },
+    "sourceFilter.search": {
+      "source": "Search titles, publishers, domains, authors or identifiers",
+      "text": "Tìm tiêu đề, nhà xuất bản, tên miền, tác giả hoặc mã định danh"
+    },
+    "sourceFilter.topic": {
+      "source": "Topic",
+      "text": "Chủ đề"
+    },
+    "sourceFilter.allTopics": {
+      "source": "All topics",
+      "text": "Tất cả chủ đề"
+    },
+    "sourceFilter.collection": {
+      "source": "Collection",
+      "text": "Bộ sưu tập"
+    },
+    "sourceFilter.allCollections": {
+      "source": "All collections",
+      "text": "Tất cả bộ sưu tập"
+    },
+    "sourceFilter.sort": {
+      "source": "Sort",
+      "text": "Sắp xếp"
+    },
+    "sourceFilter.collectionOrder": {
+      "source": "Collection order",
+      "text": "Thứ tự bộ sưu tập"
+    },
+    "sourceFilter.nameOrder": {
+      "source": "Name A–Z",
+      "text": "Tên A–Z"
+    },
+    "sourceFilter.latest": {
+      "source": "Latest recorded observation",
+      "text": "Quan sát ghi nhận mới nhất"
+    },
+    "sourceFilter.paperFilters": {
+      "source": "Paper filters · selects research-paper records",
+      "text": "Bộ lọc bài · chọn hồ sơ bài nghiên cứu"
+    },
+    "sourceFilter.author": {
+      "source": "Author",
+      "text": "Tác giả"
+    },
+    "sourceFilter.authorPlaceholder": {
+      "source": "Author name",
+      "text": "Tên tác giả"
+    },
+    "sourceFilter.year": {
+      "source": "Publication year",
+      "text": "Năm xuất bản"
+    },
+    "sourceFilter.doi": {
+      "source": "Exact DOI",
+      "text": "DOI chính xác"
+    },
+    "sourceFilter.find": {
+      "source": "Find sources",
+      "text": "Tìm nguồn"
+    },
+    "sourceFilter.topicsLabel": {
+      "source": "Browse source topics",
+      "text": "Duyệt chủ đề nguồn"
+    },
+    "sourceFilter.clear": {
+      "source": "Clear filters",
+      "text": "Xóa bộ lọc"
+    },
+    "sourceFilter.notice": {
+      "source": "Topics use catalog tags and document metadata. Domain groups indicate breadth; they do not verify publisher control. Latest observation sorts recorded citations, feed collections, paper metadata and listings; directory links have no reading date.",
+      "text": "Chủ đề dùng thẻ danh mục và siêu dữ liệu tài liệu. Nhóm tên miền chỉ độ rộng, không xác minh kiểm soát nhà xuất bản. Quan sát mới nhất sắp trích dẫn ghi nhận, thu nguồn cấp, siêu dữ liệu bài và niêm yết; liên kết danh bạ không có ngày đọc."
+    },
+    "sourceFilter.placeholder": {
+      "source": "Try {database}, agents or {domain}",
+      "text": "Thử {database}, tác nhân hoặc {domain}"
+    },
+    "sourceFilter.doiPlaceholder": {
+      "source": "{identifier} or {url}",
+      "text": "{identifier} hoặc {url}"
+    },
+    "sourceFilter.summary.one": {
+      "source": "{matched} of {total} available records · {publishers} publisher domain group in these results.",
+      "text": "{matched} trên {total} hồ sơ khả dụng · {publishers} nhóm tên miền nhà xuất bản trong kết quả."
+    },
+    "sourceFilter.summary.other": {
+      "source": "{matched} of {total} available records · {publishers} publisher domain groups in these results.",
+      "text": "{matched} trên {total} hồ sơ khả dụng · {publishers} nhóm tên miền nhà xuất bản trong kết quả."
+    },
+    "sourceRegistry.excerpt": {
+      "source": "excerpt preview",
+      "text": "xem trước trích đoạn"
+    },
+    "sourceRegistry.locked": {
+      "source": "titles-only preview",
+      "text": "bản xem trước chỉ có tiêu đề"
+    },
+    "sourceRegistry.policyUnavailable": {
+      "source": "Claim policy unavailable. New claimed-source payments are withheld.",
+      "text": "Chính sách yêu cầu không khả dụng. Chưa thực hiện thanh toán mới cho nguồn được nhận."
+    },
+    "sourceRegistry.inspectClaim": {
+      "source": "Inspect source claim",
+      "text": "Kiểm tra yêu cầu sở hữu nguồn"
+    },
+    "sourceRegistry.registerTransactionTitle": {
+      "source": "On-chain listing and payout terms; registration does not prove publisher control — opens the register() transaction",
+      "text": "Niêm yết và điều kiện nhận tiền trên chuỗi; đăng ký không chứng minh kiểm soát nhà xuất bản — mở giao dịch register()"
+    },
+    "sourceRegistry.registeredLink": {
+      "source": "Registered on-chain ↗",
+      "text": "Đã đăng ký trên chuỗi ↗"
+    },
+    "sourceRegistry.registeredTitle": {
+      "source": "On-chain listing and payout terms; registration does not prove publisher control",
+      "text": "Niêm yết và điều kiện nhận tiền trên chuỗi; đăng ký không chứng minh kiểm soát nhà xuất bản"
+    },
+    "sourceRegistry.registered": {
+      "source": "Registered on-chain",
+      "text": "Đã đăng ký trên chuỗi"
+    },
+    "sourceRegistry.controlUnavailable": {
+      "source": "Publisher control unavailable",
+      "text": "Kiểm soát nhà xuất bản không khả dụng"
+    },
+    "sourceRegistry.controlTitle": {
+      "source": "Source control does not establish authorship, content accuracy or distribution rights",
+      "text": "Kiểm soát nguồn không xác lập tác quyền, độ chính xác nội dung hay quyền phân phối"
+    },
+    "sourceRegistry.unverifiedTitle": {
+      "source": "This listing has not passed its publisher-control check. It remains visible; creator reading and payment eligibility are withheld.",
+      "text": "Niêm yết chưa đạt kiểm tra kiểm soát nhà xuất bản. Vẫn hiển thị; chưa cho phép đọc từ tác giả và thanh toán."
+    },
+    "sourceRegistry.unverified": {
+      "source": "Publisher control unverified",
+      "text": "Kiểm soát nhà xuất bản chưa xác minh"
+    },
+    "sourceRegistry.earningsUnavailable": {
+      "source": "Settled earnings unavailable",
+      "text": "Thu nhập đã quyết toán không khả dụng"
+    },
+    "sourceRegistry.claimToll": {
+      "source": "Registry toll: ${amount} / read",
+      "text": "Phí registry: ${amount} / lượt đọc"
+    },
+    "sourceRegistry.toll": {
+      "source": "${amount} / read",
+      "text": "${amount} / lượt đọc"
+    },
+    "sourceRegistry.policy.free": {
+      "source": "Free policy · no creator rewards. {inspect}",
+      "text": "Chính sách miễn phí · không thưởng tác giả. {inspect}"
+    },
+    "sourceRegistry.policy.expired": {
+      "source": "Claim control expired · earning eligibility paused. {inspect}",
+      "text": "Kiểm soát yêu cầu hết hạn · điều kiện thu nhập tạm dừng. {inspect}"
+    },
+    "sourceRegistry.policy.noConsent": {
+      "source": "Distribution consent unavailable · earnings disabled. {inspect}",
+      "text": "Đồng ý phân phối không khả dụng · thu nhập tắt. {inspect}"
+    },
+    "sourceRegistry.policy.citation": {
+      "source": "Citation-only policy · zero-price reads and qualified citation rewards. {inspect}",
+      "text": "Chính sách chỉ trích dẫn · đọc giá 0 và thưởng trích dẫn đủ điều kiện. {inspect}"
+    },
+    "sourceRegistry.policy.paid": {
+      "source": "Paid policy · selected paid reads and qualified citation rewards. {inspect}",
+      "text": "Chính sách trả phí · lượt đọc trả phí được chọn và thưởng trích dẫn đủ điều kiện. {inspect}"
+    },
+    "sourceRegistry.earningsUnknown": {
+      "source": "${amount} settled earnings · citation count unavailable",
+      "text": "${amount} thu nhập đã quyết toán · số trích dẫn không khả dụng"
+    },
+    "sourceRegistry.earnings.one": {
+      "source": "${amount} settled earnings · {count} cite",
+      "text": "${amount} thu nhập đã quyết toán · {count} trích dẫn"
+    },
+    "sourceRegistry.earnings.other": {
+      "source": "${amount} settled earnings · {count} cites",
+      "text": "${amount} thu nhập đã quyết toán · {count} trích dẫn"
+    },
+    "sourceCited.unclassifiedBounded": {
+      "source": " · Bounded extraction",
+      "text": " · Trích xuất có giới hạn"
+    },
+    "sourceLibrary.title": {
+      "source": "Sources — research papers, public references and creator listings",
+      "text": "Nguồn — bài nghiên cứu, tài liệu công khai và niêm yết tác giả"
+    },
+    "sourceLibrary.description": {
+      "source": "Explore research papers by title, author, year and DOI alongside publishers, cited documents, retained feeds and creator listings. Bibliography, reading and payments remain separate.",
+      "text": "Khám phá bài theo tiêu đề, tác giả, năm và DOI cùng nhà xuất bản, tài liệu được trích dẫn, nguồn cấp được lưu và niêm yết tác giả. Danh mục tài liệu, đọc và thanh toán vẫn tách biệt."
+    },
+    "sourceLibrary.name": {
+      "source": "Keryx Sources",
+      "text": "Nguồn Keryx"
+    },
+    "sourceLibrary.crumb": {
+      "source": "Sources",
+      "text": "Nguồn"
+    },
+    "sourceLibrary.kicker": {
+      "source": "The reading library",
+      "text": "Thư viện đọc"
+    },
+    "sourceLibrary.intro": {
+      "source": "Explore original research-paper records, publisher documentation and writing, documents cited in public answers, retained feeds and creator listings. Sources remain visible without publisher verification. Reading scope, publisher control and creator payments are separate records.",
+      "text": "Khám phá hồ sơ bài gốc, tài liệu và bài viết nhà xuất bản, tài liệu trích trong câu trả lời công khai, nguồn cấp được lưu và niêm yết tác giả. Nguồn vẫn hiển thị khi chưa xác minh nhà xuất bản. Phạm vi đọc, quyền kiểm soát nhà xuất bản và thanh toán tác giả là hồ sơ riêng."
+    },
+    "sourceLibrary.papers": {
+      "source": "Research papers",
+      "text": "Bài nghiên cứu"
+    },
+    "sourceLibrary.publisherDirectory": {
+      "source": "Publisher directory",
+      "text": "Danh bạ nhà xuất bản"
+    },
+    "sourceLibrary.publisherLinks": {
+      "source": "Original links · read when asked",
+      "text": "Liên kết gốc · đọc khi được hỏi"
+    },
+    "sourceLibrary.citedDocuments": {
+      "source": "Recently cited documents",
+      "text": "Tài liệu được trích gần đây"
+    },
+    "sourceLibrary.unavailable": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "sourceLibrary.publicHistory": {
+      "source": "From public answer history",
+      "text": "Từ lịch sử câu trả lời công khai"
+    },
+    "sourceLibrary.publicReferences": {
+      "source": "Public references",
+      "text": "Tài liệu tham khảo công khai"
+    },
+    "sourceLibrary.creatorListings": {
+      "source": "Creator listings",
+      "text": "Nguồn do tác giả niêm yết"
+    },
+    "sourceLibrary.registrationPolicies": {
+      "source": "Registration and payment policies",
+      "text": "Chính sách đăng ký và thanh toán"
+    },
+    "sourceLibrary.directoryUnavailable": {
+      "source": "Part of the directory could not be loaded. Available records are shown below; a missing count is not an empty catalog.",
+      "text": "Không thể tải một phần danh bạ. Hồ sơ khả dụng hiển thị bên dưới; thiếu số lượng không phải danh mục trống."
+    },
+    "sourceLibrary.reviewQuestion": {
+      "source": "Working on a literature review?",
+      "text": "Bạn đang làm tổng quan tài liệu?"
+    },
+    "sourceLibrary.reviewNotice": {
+      "source": "Save papers, record screening notes and prepare a comparison. Your list stays on this browser.",
+      "text": "Lưu bài, ghi chú sàng lọc và chuẩn bị so sánh. Danh sách giữ trong trình duyệt này."
+    },
+    "sourceLibrary.openWorkspace": {
+      "source": "Open literature workspace →",
+      "text": "Mở không gian tài liệu →"
+    },
+    "sourceLibrary.freeDiscovery": {
+      "source": "Original records · free discovery",
+      "text": "Hồ sơ gốc · khám phá miễn phí"
+    },
+    "sourceLibrary.bibliographyNotice": {
+      "source": "A starter bibliography from arXiv, OpenReview, PMLR and ACL Anthology. Metadata identifies papers and observed versions; it does not establish full-text access, peer review or scientific accuracy. Matching DOI or arXiv work identifiers group records while preserving their original versions.",
+      "text": "Danh mục bài khởi đầu từ arXiv, OpenReview, PMLR và ACL Anthology. Siêu dữ liệu định danh bài và phiên bản quan sát, không xác lập truy cập toàn văn, phản biện hay độ chính xác khoa học. DOI hoặc mã công trình arXiv khớp nhóm hồ sơ, vẫn giữ phiên bản gốc."
+    },
+    "sourceLibrary.papersEmpty": {
+      "source": "No starter paper matches these filters. You can search the repositories below.",
+      "text": "Không có bài khởi đầu khớp bộ lọc. Bạn có thể tìm kho bên dưới."
+    },
+    "sourceLibrary.emptyTitle": {
+      "source": "No sources match these filters",
+      "text": "Không có nguồn khớp bộ lọc"
+    },
+    "sourceLibrary.clear": {
+      "source": "Clear filters",
+      "text": "Xóa bộ lọc"
+    },
+    "sourceLibrary.publisherNotice": {
+      "source": "Starting points for AI and agents, data and infrastructure, payments, and creator research. These are links to original publishers, not retained article evidence. Open the publisher or draft a question with its URL; available content still needs to be read and assessed.",
+      "text": "Điểm khởi đầu cho AI và tác nhân, dữ liệu và hạ tầng, thanh toán và nghiên cứu tác giả. Đây là liên kết nhà xuất bản gốc, không phải bằng chứng bài được lưu. Mở nhà xuất bản hoặc soạn câu hỏi kèm URL; nội dung khả dụng vẫn cần đọc và đánh giá."
+    },
+    "sourceLibrary.citedTitle": {
+      "source": "Cited in past answers",
+      "text": "Được trích dẫn trong câu trả lời cũ"
+    },
+    "sourceLibrary.citationsUnavailable": {
+      "source": "Public citation history is temporarily unavailable. Reload to retry; other source collections remain available.",
+      "text": "Lịch sử trích dẫn công khai tạm không khả dụng. Tải lại để thử; bộ sưu tập nguồn khác vẫn khả dụng."
+    },
+    "sourceLibrary.freeReading": {
+      "source": "Free reading · original publisher links",
+      "text": "Đọc miễn phí · liên kết nhà xuất bản gốc"
+    },
+    "sourceLibrary.feedNotice": {
+      "source": "These are retained feed snapshots. Keryx also discovers supported websites and PDFs when you ask a question; this directory is not a complete index of the web. A feed excerpt, abstract or video description may omit the full work. Listing here does not certify content accuracy.",
+      "text": "Đây là bản chụp nguồn cấp được lưu. Keryx cũng khám phá website và PDF được hỗ trợ khi bạn hỏi; danh bạ không phải chỉ mục toàn bộ web. Trích đoạn nguồn cấp, tóm tắt hoặc mô tả video có thể thiếu toàn bộ công trình. Liệt kê tại đây không chứng nhận nội dung chính xác."
+    },
+    "sourceLibrary.referencesUnavailable": {
+      "source": "Public references are temporarily unavailable. Try this page again to inspect the retained catalog.",
+      "text": "Tài liệu tham khảo công khai tạm không khả dụng. Thử trang lại để kiểm tra danh mục được lưu."
+    },
+    "sourceLibrary.ask": {
+      "source": "ask a question",
+      "text": "đặt câu hỏi"
+    },
+    "sourceLibrary.creatorNotice": {
+      "source": "Listings remain visible while publisher control is unverified. On-chain registration records a listing and its payout terms; it does not prove publisher control or content accuracy. Reading and earning eligibility depend on the applicable verification, policy and evidence checks.",
+      "text": "Niêm yết vẫn hiển thị khi kiểm soát nhà xuất bản chưa xác minh. Đăng ký trên chuỗi ghi niêm yết và điều kiện nhận tiền; không chứng minh kiểm soát nhà xuất bản hay nội dung chính xác. Điều kiện đọc, thu nhập phụ thuộc kiểm tra xác minh, chính sách và bằng chứng áp dụng."
+    },
+    "sourceLibrary.earningsUnavailable": {
+      "source": "Settled earnings could not be loaded. No zero balance is inferred.",
+      "text": "Không thể tải thu nhập đã quyết toán. Không suy ra số dư 0."
+    },
+    "sourceLibrary.creatorsUnavailable": {
+      "source": "Creator listings are temporarily unavailable. Public references have their own availability and free-reading status.",
+      "text": "Niêm yết tác giả tạm không khả dụng. Tài liệu công khai có khả dụng và trạng thái đọc miễn phí riêng."
+    },
+    "sourceLibrary.creatorsEmpty": {
+      "source": "No creator listings are recorded yet.",
+      "text": "Chưa ghi niêm yết tác giả."
+    },
+    "sourceLibrary.referencesPaymentNotice": {
+      "source": "Public references can support answers without generating creator payments.",
+      "text": "Tài liệu công khai có thể hỗ trợ câu trả lời mà không tạo thanh toán tác giả."
+    },
+    "sourceLibrary.claimTitle": {
+      "source": "Is your writing here?",
+      "text": "Đây có phải bài của bạn?"
+    },
+    "sourceLibrary.claimNotice": {
+      "source": "Claim a supported HTTPS source to prove publishing control, or register a creator listing. Verification alone earns nothing. A separate eligible payment policy applies only to new uses; past public reads stay free.",
+      "text": "Nhận nguồn HTTPS được hỗ trợ để chứng minh kiểm soát xuất bản hoặc đăng ký niêm yết tác giả. Chỉ xác minh không tạo thu nhập. Chính sách thanh toán đủ điều kiện riêng chỉ áp dụng sử dụng mới; lượt công khai trước vẫn miễn phí."
+    },
+    "sourceLibrary.claim": {
+      "source": "Claim your source ▸",
+      "text": "Nhận quyền sở hữu nguồn ▸"
+    },
+    "sourceLibrary.register": {
+      "source": "Register a listing ▸",
+      "text": "Đăng ký niêm yết ▸"
+    },
+    "sourceLibrary.unanswered": {
+      "source": "See what the corpus couldn't answer",
+      "text": "Xem điều tập tài liệu chưa trả lời được"
+    },
+    "sourceLibrary.emphasis": {
+      "source": "explore.",
+      "text": "khám phá."
+    },
+    "sourceLibrary.heading": {
+      "source": "Sources to {emphasis}",
+      "text": "Nguồn để {emphasis}"
+    },
+    "sourceLibrary.paperRecords.one": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "Công trình · {count} hồ sơ quan sát · chưa đọc văn bản bài"
+    },
+    "sourceLibrary.feedItems.one": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "Nguồn cấp được lưu · {count} mục nguồn cấp"
+    },
+    "sourceLibrary.paperMatches.one": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "{count} công trình khớp · {total} hồ sơ khởi đầu. Bộ lọc tác giả, năm, DOI áp dụng danh mục này."
+    },
+    "sourceLibrary.documentsMatched.one": {
+      "source": "{count} documents match this view.",
+      "text": "{count} tài liệu khớp chế độ xem."
+    },
+    "sourceLibrary.registered.one": {
+      "source": "{count} registered on-chain",
+      "text": "{count} đăng ký trên chuỗi"
+    },
+    "sourceLibrary.paperRecords.other": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "Công trình · {count} hồ sơ quan sát · chưa đọc văn bản bài"
+    },
+    "sourceLibrary.feedItems.other": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "Nguồn cấp được lưu · {count} mục nguồn cấp"
+    },
+    "sourceLibrary.paperMatches.other": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "{count} công trình khớp · {total} hồ sơ khởi đầu. Bộ lọc tác giả, năm, DOI áp dụng danh mục này."
+    },
+    "sourceLibrary.documentsMatched.other": {
+      "source": "{count} documents match this view.",
+      "text": "{count} tài liệu khớp chế độ xem."
+    },
+    "sourceLibrary.registered.other": {
+      "source": "{count} registered on-chain",
+      "text": "{count} đăng ký trên chuỗi"
+    },
+    "sourceLibrary.feedItemsUnavailable": {
+      "source": "Retained feeds · item count unavailable",
+      "text": "Nguồn cấp được lưu · số mục không khả dụng"
+    },
+    "sourceLibrary.morePapers.one": {
+      "source": "Show {count} more paper references",
+      "text": "Hiển thị thêm {count} tài liệu bài"
+    },
+    "sourceLibrary.publisherCount.one": {
+      "source": "{count} publisher link",
+      "text": "{count} liên kết nhà xuất bản"
+    },
+    "sourceLibrary.morePublishers.one": {
+      "source": "Show {count} more publisher links",
+      "text": "Hiển thị thêm {count} liên kết nhà xuất bản"
+    },
+    "sourceLibrary.citedNotice.one": {
+      "source": "Showing up to 40 public documents from the latest {count} public question record. Open the original document or inspect its cited answer. Past citations do not certify publisher control or content accuracy; past public reads stay free.",
+      "text": "Hiển thị tối đa 40 tài liệu công khai từ {count} hồ sơ câu hỏi công khai mới nhất. Mở tài liệu gốc hoặc kiểm tra câu trả lời trích dẫn. Trích dẫn quá khứ không chứng nhận kiểm soát nhà xuất bản hay nội dung chính xác; lượt công khai trước vẫn miễn phí."
+    },
+    "sourceLibrary.moreCited.one": {
+      "source": "Show {count} more cited documents",
+      "text": "Hiển thị thêm {count} tài liệu được trích"
+    },
+    "sourceLibrary.moreFeeds.one": {
+      "source": "Show {count} more retained feeds",
+      "text": "Hiển thị thêm {count} nguồn cấp được lưu"
+    },
+    "sourceLibrary.morePapers.other": {
+      "source": "Show {count} more paper references",
+      "text": "Hiển thị thêm {count} tài liệu bài"
+    },
+    "sourceLibrary.publisherCount.other": {
+      "source": "{count} publisher links",
+      "text": "{count} liên kết nhà xuất bản"
+    },
+    "sourceLibrary.morePublishers.other": {
+      "source": "Show {count} more publisher links",
+      "text": "Hiển thị thêm {count} liên kết nhà xuất bản"
+    },
+    "sourceLibrary.citedNotice.other": {
+      "source": "Showing up to 40 public documents from the latest {count} public question records. Open the original document or inspect its cited answer. Past citations do not certify publisher control or content accuracy; past public reads stay free.",
+      "text": "Hiển thị tối đa 40 tài liệu công khai từ {count} hồ sơ câu hỏi công khai mới nhất. Mở tài liệu gốc hoặc kiểm tra câu trả lời trích dẫn. Trích dẫn quá khứ không chứng nhận kiểm soát nhà xuất bản hay nội dung chính xác; lượt công khai trước vẫn miễn phí."
+    },
+    "sourceLibrary.moreCited.other": {
+      "source": "Show {count} more cited documents",
+      "text": "Hiển thị thêm {count} tài liệu được trích"
+    },
+    "sourceLibrary.moreFeeds.other": {
+      "source": "Show {count} more retained feeds",
+      "text": "Hiển thị thêm {count} nguồn cấp được lưu"
+    },
+    "sourceLibrary.externalIndexes": {
+      "source": "Explore broader scholarly indexes: {openAlex} · {doaj}. These external links open their indexes; Keryx makes no background queries to them.",
+      "text": "Khám phá chỉ mục học thuật rộng hơn: {openAlex} · {doaj}. Liên kết ngoài mở các chỉ mục đó; Keryx không truy vấn nền đến chúng."
+    },
+    "sourceLibrary.emptyNotice": {
+      "source": "Try a publisher name, a shorter search or another topic. {clear} to browse all available records.",
+      "text": "Thử tên nhà xuất bản, tìm ngắn hơn hoặc chủ đề khác. {clear} để duyệt mọi hồ sơ khả dụng."
+    },
+    "sourceLibrary.feedEmpty": {
+      "source": "No public feed snapshots are retained yet. You can still {ask} with a public source URL.",
+      "text": "Chưa giữ bản chụp nguồn cấp công khai. Bạn vẫn có thể {ask} với URL nguồn công khai."
+    },
+    "sourceLibrary.earnings": {
+      "source": "{amount} in recorded settled creator earnings.",
+      "text": "{amount} thu nhập tác giả ghi nhận đã quyết toán."
+    },
+    "sourceLibrary.wanted": {
+      "source": "Not sure what to list? {wanted}.",
+      "text": "Chưa biết niêm yết gì? {wanted}."
+    },
+    "sourceMarket.title": {
+      "source": "Article market — exact work, visible price",
+      "text": "Chợ bài — đúng công trình, giá rõ ràng"
+    },
+    "sourceMarket.description": {
+      "source": "Browse exact article versions Keryx can buy through x402, including publisher-signed temporary offers.",
+      "text": "Duyệt đúng phiên bản bài Keryx có thể mua qua x402, gồm đề nghị tạm thời nhà xuất bản đã ký."
+    },
+    "sourceMarket.kicker": {
+      "source": "Open article market",
+      "text": "Mở chợ bài viết"
+    },
+    "sourceMarket.heading": {
+      "source": "Exact work. Visible price. No mystery bundle.",
+      "text": "Đúng công trình. Giá rõ ràng. Không có gói bí ẩn."
+    },
+    "sourceMarket.intro": {
+      "source": "Every row names the article version the agent can inspect, its registry ceiling, and any temporary discount the publisher signed. Payment still settles to the registry payee.",
+      "text": "Mỗi hàng nêu phiên bản bài tác nhân có thể kiểm tra, trần registry và giảm giá tạm thời nhà xuất bản ký. Thanh toán vẫn quyết toán cho bên nhận registry."
+    },
+    "sourceMarket.search": {
+      "source": "Search free metadata",
+      "text": "Tìm siêu dữ liệu miễn phí"
+    },
+    "sourceMarket.find": {
+      "source": "Find",
+      "text": "Tìm"
+    },
+    "sourceMarket.empty": {
+      "source": "No payable article metadata matched this search.",
+      "text": "Không có siêu dữ liệu bài trả phí khớp tìm kiếm."
+    },
+    "sourceMarket.fullText": {
+      "source": "signed full text",
+      "text": "toàn văn đã ký"
+    },
+    "sourceMarket.registryPrice": {
+      "source": "registry price",
+      "text": "giá trên registry"
+    },
+    "sourceMarket.placeholder": {
+      "source": "stablecoins, agents, {protocol}…",
+      "text": "stablecoin, tác nhân, {protocol}…"
+    },
+    "sourceMarket.versions.one": {
+      "source": "{count} payable article versions",
+      "text": "{count} phiên bản bài có thể trả phí"
+    },
+    "sourceMarket.offers.one": {
+      "source": "{count} signed offers",
+      "text": "{count} đề nghị đã ký"
+    },
+    "sourceMarket.versions.other": {
+      "source": "{count} payable article versions",
+      "text": "{count} phiên bản bài có thể trả phí"
+    },
+    "sourceMarket.offers.other": {
+      "source": "{count} signed offers",
+      "text": "{count} đề nghị đã ký"
+    },
+    "sourceMarket.matching": {
+      "source": "· matching “{query}”",
+      "text": "· khớp “{query}”"
+    },
+    "sourceMarket.discount": {
+      "source": "signed −{percent}%",
+      "text": "đã ký −{percent}%"
+    },
+    "sourceMarket.listPrice": {
+      "source": "list ${price}",
+      "text": "giá niêm yết ${price}"
+    },
+    "sourceMarket.inspect": {
+      "source": "Inspect {protocol}",
+      "text": "Kiểm tra {protocol}"
+    },
+    "sourceMarket.until": {
+      "source": "until {date}",
+      "text": "đến {date}"
+    },
+    "sourceMarket.signer": {
+      "source": "· signer {signer}",
+      "text": "· bên ký {signer}"
+    }
+  }
+}

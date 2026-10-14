@@ -1,0 +1,64 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/run-claim-research.ts",
+  "sourceSha256": "c5b84858292282bc95634a0757ab67417fc5ab1696c888e573bae630d16973e1",
+  "entries": {
+    "metadataTitle": {
+      "source": "Account claim research — Keryx",
+      "text": "账户认领研究 — Keryx"
+    },
+    "title": {
+      "source": "Private account claim delivery",
+      "text": "私密账户认领交付"
+    },
+    "introduction": {
+      "source": "Ask here to receive a private, single-use account link for a new unowned report. The link changes history ownership only, never who paid, receipts or creator rewards.",
+      "text": "在此提问，可为新的无主报告获取私密、单次使用的账户链接。链接仅更改历史记录所有权，绝不更改付款者、凭证或创作者奖励。"
+    },
+    "visibility": {
+      "source": "Question and report visibility follows ordinary research. This tab protects the account claim link.",
+      "text": "问题和报告可见性遵循普通研究规则。此标签页保护账户认领链接。"
+    },
+    "fullNavigation": {
+      "source": "Open private research in a new page before asking. An in-app transition does not protect an existing document.",
+      "text": "提问前在新页面打开私密研究。应用内跳转不会保护现有文档。"
+    },
+    "unavailable": {
+      "source": "Private account links are unavailable. Open ordinary research to continue without a claim link.",
+      "text": "私密账户链接不可用。打开普通研究以在没有认领链接的情况下继续。"
+    },
+    "limits": {
+      "source": "This private tab allows only same-origin connections. Funded wallet sessions, external wallet connections and card funding are available on ordinary research. Opening another page or a new request discards this tab's previous account link.",
+      "text": "此私密标签页仅允许同源连接。已注资钱包会话、外部钱包连接和银行卡注资可在普通研究中使用。打开其他页面或发起新请求会丢弃此标签页的上一个账户链接。"
+    },
+    "ordinary": {
+      "source": "Open ordinary research and funded-session controls",
+      "text": "打开普通研究及已注资会话控件"
+    },
+    "entry": {
+      "source": "Open private research for an account claim link",
+      "text": "打开私密研究以获取账户认领链接"
+    },
+    "available": {
+      "source": "This completed report has a private account link. Open it once to save the report to your signed-in account. Keep the new tab open while signing in; a lost handoff cannot be reissued.",
+      "text": "此已完成报告有私密账户链接。打开一次即可将报告保存到已登录账户。登录期间请保持新标签页打开；丢失的交接链接无法重新签发。"
+    },
+    "open": {
+      "source": "Open private account claim",
+      "text": "打开私密账户认领"
+    },
+    "failed": {
+      "source": "The report and payment records are unchanged, but this private account link is unavailable. Do not repeat paid research to recover it.",
+      "text": "报告和付款记录保持不变，但此私密账户链接不可用。不要为恢复链接重复付费研究。"
+    },
+    "lost": {
+      "source": "The private delivery could not be confirmed. No link can be recovered or retried. The completed report and existing payment records remain unchanged.",
+      "text": "无法确认私密交付。无法恢复或重试链接。已完成报告和现有付款记录保持不变。"
+    },
+    "opened": {
+      "source": "The private handoff was attempted once. Check the new tab or your account history. This tab cannot submit the link again.",
+      "text": "已尝试私密交接一次。请检查新标签页或账户历史。此标签页无法再次提交链接。"
+    }
+  }
+}

@@ -1,0 +1,484 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-claims.ts",
+  "sourceSha256": "e81e709a2a8acb1f30bd4719906f32afd623b6cec597f79075d0f5815d0baee5",
+  "entries": {
+    "sourceClaimPolicy.saved": {
+      "source": "Saved policy: {policy}. Effective for eligible new uses from {time}. Verification does not collect past rewards or charge for earlier free reads.",
+      "text": "Chính sách đã lưu: {policy}. Có hiệu lực cho sử dụng mới đủ điều kiện từ {time}. Xác minh không nhận thưởng quá khứ hay thu phí lượt đọc miễn phí trước đây."
+    },
+    "sourceClaimPolicy.connected": {
+      "source": "Connected listing: {listingLink}",
+      "text": "Niêm yết đã kết nối: {listingLink}"
+    },
+    "sourceClaimPolicy.listingOption": {
+      "source": "{name} · ${price} per read",
+      "text": "{name} · ${price} mỗi lượt đọc"
+    },
+    "sourceClaimPolicy.readPrice": {
+      "source": "On-chain price per read: {price}. Citation rewards are separately budgeted and require qualifying evidence; their amount is not guaranteed.",
+      "text": "Giá đọc trên chuỗi: {price}. Thưởng trích dẫn có ngân sách riêng, cần bằng chứng đủ điều kiện; không bảo đảm số tiền thưởng."
+    },
+    "sourceClaimPolicy.usdcPrice": {
+      "source": "${price} USDC",
+      "text": "${price} USDC"
+    },
+    "sourceClaimPolicy.newReadPrice": {
+      "source": "New listing read price: ${price} USDC. Registration opens a separate review and may require a wallet transaction and native gas. It does not activate earnings.",
+      "text": "Giá đọc niêm yết mới: ${price} USDC. Đăng ký mở lần xem xét riêng, có thể cần giao dịch ví và gas gốc. Không kích hoạt thu nhập."
+    },
+    "sourceClaimPolicy.invalidReadPrice": {
+      "source": "New listing read price: enter an exact positive USDC amount with at most six decimal places. Registration opens a separate review and may require a wallet transaction and native gas. It does not activate earnings.",
+      "text": "Giá đọc niêm yết mới: nhập đúng số USDC dương tối đa sáu chữ số thập phân. Đăng ký mở lần xem xét riêng, có thể cần giao dịch ví và gas gốc. Không kích hoạt thu nhập."
+    },
+    "sourceClaimPolicy.citationPriceMismatch": {
+      "source": "Citation-only mode requires an on-chain read price of zero. Review your listing's price, then refresh here. A policy update does not change its on-chain toll.",
+      "text": "Chế độ chỉ trích dẫn cần giá đọc trên chuỗi bằng 0. Xem giá niêm yết rồi làm mới tại đây. Cập nhật chính sách không đổi phí trên chuỗi."
+    },
+    "sourceClaimPolicy.paidPriceMismatch": {
+      "source": "Paid mode requires a positive on-chain read price. Review your listing's price, then refresh here. A policy update does not change its on-chain toll.",
+      "text": "Chế độ trả phí cần giá đọc trên chuỗi dương. Xem giá niêm yết rồi làm mới tại đây. Cập nhật chính sách không đổi phí trên chuỗi."
+    },
+    "sourceClaimPolicy.activatePaid": {
+      "source": "Activate paid reads",
+      "text": "Kích hoạt đọc trả phí"
+    },
+    "sourceClaimPolicy.activateCitation": {
+      "source": "Activate citation rewards",
+      "text": "Kích hoạt thưởng trích dẫn"
+    },
+    "sourceClaimPolicy.free": {
+      "source": "Free",
+      "text": "Miễn phí"
+    },
+    "sourceClaimPolicy.freeDetail": {
+      "source": "Free reads with no creator rewards.",
+      "text": "Đọc miễn phí, không thưởng tác giả."
+    },
+    "sourceClaimPolicy.citation": {
+      "source": "Citation rewards",
+      "term": "citation-reward"
+    },
+    "sourceClaimPolicy.citationDetail": {
+      "source": "Free reads. Qualified citations may earn budgeted rewards after activation.",
+      "text": "Đọc miễn phí. Trích dẫn đủ điều kiện có thể nhận thưởng trong ngân sách sau kích hoạt."
+    },
+    "sourceClaimPolicy.paid": {
+      "source": "Paid reads",
+      "text": "Lượt đọc trả phí"
+    },
+    "sourceClaimPolicy.paidDetail": {
+      "source": "Charge the positive on-chain read toll. Qualified citations may receive separate rewards.",
+      "text": "Thu phí đọc dương trên chuỗi. Trích dẫn đủ điều kiện có thể nhận thưởng riêng."
+    },
+    "sourceClaimPolicy.listingsUnavailable": {
+      "source": "Your listings are unavailable.",
+      "text": "Niêm yết của bạn không khả dụng."
+    },
+    "sourceClaimPolicy.loadFailed": {
+      "source": "Could not load listings.",
+      "text": "Không thể tải niêm yết."
+    },
+    "sourceClaimPolicy.savedMismatch": {
+      "source": "The saved policy does not match this source owner and network. Reload its current status.",
+      "text": "Chính sách đã lưu không khớp chủ sở hữu nguồn và mạng này. Tải lại trạng thái hiện tại."
+    },
+    "sourceClaimPolicy.updateUnknown": {
+      "source": "The update could not be confirmed. Reload current status before retrying.",
+      "text": "Chưa thể xác nhận cập nhật. Tải lại trạng thái hiện tại trước khi thử lại."
+    },
+    "sourceClaimPolicy.title": {
+      "source": "3. Choose and activate a policy",
+      "text": "3. Chọn và kích hoạt chính sách"
+    },
+    "sourceClaimPolicy.requested": {
+      "source": "Requested policy",
+      "text": "Chính sách được yêu cầu"
+    },
+    "sourceClaimPolicy.registryListing": {
+      "source": "Your SourceRegistry listing",
+      "text": "Niêm yết SourceRegistry của bạn"
+    },
+    "sourceClaimPolicy.listingRequirement": {
+      "source": "Earnings require a confirmed, indexed listing created by this wallet. Connecting a listing keeps this claim's current policy until you explicitly activate a new one.",
+      "text": "Thu nhập cần niêm yết đã xác nhận, lập chỉ mục do ví này tạo. Kết nối niêm yết giữ chính sách hiện tại của yêu cầu đến khi bạn chủ động kích hoạt chính sách mới."
+    },
+    "sourceClaimPolicy.existingLabel": {
+      "source": "Existing listing for this source",
+      "text": "Niêm yết hiện có cho nguồn này"
+    },
+    "sourceClaimPolicy.choose": {
+      "source": "Choose a listing",
+      "text": "Chọn mục niêm yết"
+    },
+    "sourceClaimPolicy.connect": {
+      "source": "Connect existing listing",
+      "text": "Kết nối niêm yết hiện có"
+    },
+    "sourceClaimPolicy.noMatching": {
+      "source": "No matching indexed listing is available for this wallet.",
+      "text": "Không có niêm yết đã lập chỉ mục khớp cho ví này."
+    },
+    "sourceClaimPolicy.loading": {
+      "source": "Loading your matching listings…",
+      "text": "Đang tải niêm yết khớp của bạn…"
+    },
+    "sourceClaimPolicy.newPriceLabel": {
+      "source": "Price for a new listing (USDC per read)",
+      "text": "Giá niêm yết mới (USDC mỗi lượt đọc)"
+    },
+    "sourceClaimPolicy.register": {
+      "source": "Register a new listing for this claim",
+      "text": "Đăng ký niêm yết mới cho yêu cầu này"
+    },
+    "sourceClaimPolicy.refresh": {
+      "source": "Refresh indexed listings",
+      "text": "Làm mới niêm yết đã lập chỉ mục"
+    },
+    "sourceClaimPolicy.consent": {
+      "source": "I have the rights to distribute the registered content through Keryx and receive payments for it. Website control alone does not establish those rights.",
+      "text": "Tôi có quyền phân phối nội dung đăng ký qua Keryx và nhận tiền cho nội dung đó. Chỉ kiểm soát website không xác lập các quyền này."
+    },
+    "sourceClaimPolicy.freeNotice": {
+      "source": "This policy disables creator rewards for this claim. Public reads remain free.",
+      "text": "Chính sách này tắt thưởng tác giả cho yêu cầu này. Lượt đọc công khai vẫn miễn phí."
+    },
+    "sourceClaimPolicy.citationNotice": {
+      "source": "Future reads remain free. Only new qualified citations after activation can earn rewards.",
+      "text": "Lượt đọc sau vẫn miễn phí. Chỉ trích dẫn mới đủ điều kiện sau kích hoạt có thể nhận thưởng."
+    },
+    "sourceClaimPolicy.paidNotice": {
+      "source": "Only new selected paid reads through this registered listing can incur its toll after activation. Public references and historical free receipts stay free.",
+      "text": "Chỉ lượt đọc trả phí mới được chọn qua niêm yết đăng ký này có thể phát sinh phí sau kích hoạt. Tài liệu tham khảo công khai và biên nhận miễn phí lịch sử vẫn miễn phí."
+    },
+    "sourceClaimPolicy.saving": {
+      "source": "Saving policy…",
+      "text": "Đang lưu chính sách…"
+    },
+    "sourceClaimPolicy.keepFree": {
+      "source": "Keep this claim free",
+      "text": "Giữ yêu cầu này miễn phí"
+    },
+    "sourceClaimPolicy.savedEarning": {
+      "source": "This earning policy is saved. New qualified uses may earn while control proof, permission and live registry authority remain valid; activation does not guarantee selection or settlement.",
+      "text": "Đã lưu chính sách thu nhập. Sử dụng mới đủ điều kiện có thể tạo thu nhập khi bằng chứng kiểm soát, cho phép và thẩm quyền registry trực tiếp còn hiệu lực; kích hoạt không bảo đảm được chọn hay quyết toán."
+    },
+    "sourceClaimPolicy.reload": {
+      "source": "Reload current claim status",
+      "text": "Tải lại trạng thái yêu cầu hiện tại"
+    },
+    "sourceClaimStatus.lastVerified": {
+      "source": "Last verified: {time}.",
+      "text": "Xác minh gần nhất: {time}."
+    },
+    "sourceClaimStatus.deadline": {
+      "source": "Verify again by: {time}. Each control proof lasts 24 hours.",
+      "text": "Xác minh lại trước: {time}. Mỗi bằng chứng kiểm soát có hiệu lực 24 giờ."
+    },
+    "sourceClaimStatus.checking": {
+      "source": "Checking control proof freshness. No earning eligibility is confirmed here yet. Public free reads are unaffected.",
+      "text": "Đang kiểm tra độ mới bằng chứng kiểm soát. Chưa xác nhận điều kiện thu nhập tại đây. Lượt đọc công khai miễn phí không bị ảnh hưởng."
+    },
+    "sourceClaimStatus.current": {
+      "source": "Control proof is current. Earnings also require your saved permission, matching live registry authority and a qualifying new use. Public free reads are unaffected.",
+      "text": "Bằng chứng kiểm soát hiện còn hiệu lực. Thu nhập cũng cần quyền đã lưu, thẩm quyền registry trực tiếp khớp và sử dụng mới đủ điều kiện. Lượt đọc công khai miễn phí không bị ảnh hưởng."
+    },
+    "sourceClaimStatus.expired": {
+      "source": "Control verification expired. Earning eligibility is paused until you publish and check a fresh proof. Your saved policy and past receipts are retained. Public free reads are unaffected.",
+      "text": "Xác minh kiểm soát hết hạn. Tạm dừng điều kiện thu nhập đến khi bạn đăng và kiểm tra bằng chứng mới. Chính sách đã lưu, biên nhận trước được giữ. Lượt đọc công khai miễn phí không bị ảnh hưởng."
+    },
+    "sourceClaims.savedPolicy": {
+      "source": "Saved policy: {policy}.",
+      "text": "Chính sách đã lưu: {policy}."
+    },
+    "sourceClaims.free": {
+      "source": "Free",
+      "text": "Miễn phí"
+    },
+    "sourceClaims.citation": {
+      "source": "Citation rewards",
+      "term": "citation-reward"
+    },
+    "sourceClaims.paid": {
+      "source": "Paid reads",
+      "text": "Lượt đọc trả phí"
+    },
+    "sourceClaims.unavailable": {
+      "source": "Your source claims are unavailable. Reload the list before opening a claim.",
+      "text": "Yêu cầu sở hữu nguồn của bạn không khả dụng. Tải lại danh sách trước khi mở yêu cầu."
+    },
+    "sourceClaims.scopeMismatch": {
+      "source": "The claim list does not match this wallet, network and deployment. Reconnect before reloading it.",
+      "text": "Danh sách yêu cầu không khớp ví, mạng và bản triển khai này. Kết nối lại trước khi tải lại."
+    },
+    "sourceClaims.loadFailed": {
+      "source": "Could not load your source claims.",
+      "text": "Không thể tải yêu cầu sở hữu nguồn."
+    },
+    "sourceClaims.title": {
+      "source": "Your source claims",
+      "text": "Yêu cầu sở hữu nguồn của bạn"
+    },
+    "sourceClaims.introduction": {
+      "source": "Open a saved claim to review its policy or manually renew source control. Loading this list does not publish a proof, activate earnings or make a payment.",
+      "text": "Mở yêu cầu đã lưu để xem chính sách hoặc tự gia hạn kiểm soát nguồn. Tải danh sách không đăng bằng chứng, kích hoạt thu nhập hay thanh toán."
+    },
+    "sourceClaims.loading": {
+      "source": "Loading your claims…",
+      "text": "Đang tải yêu cầu của bạn…"
+    },
+    "sourceClaims.reload": {
+      "source": "Reload my source claims",
+      "text": "Tải lại yêu cầu sở hữu nguồn của tôi"
+    },
+    "sourceClaims.load": {
+      "source": "Load my source claims",
+      "text": "Tải yêu cầu sở hữu nguồn của tôi"
+    },
+    "sourceClaims.empty": {
+      "source": "No source claims are saved for this wallet on this network.",
+      "text": "Chưa lưu yêu cầu sở hữu nguồn cho ví này trên mạng này."
+    },
+    "sourceClaims.review": {
+      "source": "Review or re-verify this source",
+      "text": "Xem xét hoặc xác minh lại nguồn"
+    },
+    "sourceClaimRequest.failed": {
+      "source": "The source check could not finish. Reload its current status before retrying.",
+      "text": "Kiểm tra nguồn chưa hoàn tất. Tải lại trạng thái hiện tại trước khi thử lại."
+    },
+    "sourceClaimForm.publishFile": {
+      "source": "Publish this exact file, then explicitly check ownership. Creating a proof does not change payment policy.",
+      "text": "Đăng đúng tệp này rồi chủ động kiểm tra sở hữu. Tạo bằng chứng không đổi chính sách thanh toán."
+    },
+    "sourceClaimForm.publishToken": {
+      "source": "Publish this exact channel token, then explicitly check ownership. Creating a proof does not change payment policy.",
+      "text": "Đăng đúng mã kênh này rồi chủ động kiểm tra sở hữu. Tạo bằng chứng không đổi chính sách thanh toán."
+    },
+    "sourceClaimForm.draftWallet": {
+      "source": "This claim draft belongs to {owner}. Switch to that wallet or {restartLink}.",
+      "text": "Bản nháp yêu cầu thuộc {owner}. Chuyển sang ví đó hoặc {restartLink}."
+    },
+    "sourceClaimForm.startNew": {
+      "source": "start a new claim",
+      "text": "bắt đầu yêu cầu mới"
+    },
+    "sourceClaimForm.switchWallet": {
+      "source": "Switch your wallet to {network} before changing this claim. {connectionLink}",
+      "text": "Chuyển ví sang {network} trước khi đổi yêu cầu này. {connectionLink}"
+    },
+    "sourceClaimForm.reviewConnection": {
+      "source": "Review wallet connection",
+      "text": "Xem kết nối ví"
+    },
+    "sourceClaimForm.owner": {
+      "source": "Claim owner: {owner} · {network}",
+      "text": "Chủ sở hữu yêu cầu: {owner} · {network}"
+    },
+    "sourceClaimForm.tokenInstructions": {
+      "source": "Place this exact token as a separate word in the feed's publisher-controlled channel title or description, or Atom subtitle. Tokens inside posts, comments and item text do not prove ownership. The feed must be served without redirects. It binds this source, wallet, deployment and network to a single-use challenge.",
+      "text": "Đặt đúng token này thành từ riêng trong tiêu đề hoặc mô tả kênh do nhà xuất bản kiểm soát, hoặc phụ đề Atom. Token trong bài, bình luận và văn bản mục không chứng minh sở hữu. Nguồn cấp phải phục vụ không chuyển hướng. Nó ràng buộc nguồn, ví, bản triển khai và mạng này với thử thách dùng một lần."
+    },
+    "sourceClaimForm.fileInstructions": {
+      "source": "Serve this exact JSON at the address below, directly without redirects. It binds this source, wallet, deployment and network to a single-use challenge.",
+      "text": "Phục vụ đúng JSON này tại địa chỉ bên dưới, trực tiếp không chuyển hướng. Nó ràng buộc nguồn, ví, bản triển khai và mạng này với thử thách dùng một lần."
+    },
+    "sourceClaimForm.expires": {
+      "source": "Proof expires: {time}",
+      "text": "Bằng chứng hết hạn: {time}"
+    },
+    "sourceClaimForm.proofMismatch": {
+      "source": "The proof did not match the reviewed wallet, network and source.",
+      "text": "Bằng chứng không khớp ví, mạng và nguồn đã xem xét."
+    },
+    "sourceClaimForm.tokenUnavailable": {
+      "source": "The RSS proof token is unavailable. Create a fresh challenge.",
+      "text": "Token bằng chứng RSS không khả dụng. Tạo thử thách mới."
+    },
+    "sourceClaimForm.savedMismatch": {
+      "source": "The saved claim does not match this ownership challenge. Reload with the original wallet.",
+      "text": "Yêu cầu đã lưu không khớp thử thách sở hữu này. Tải lại bằng ví ban đầu."
+    },
+    "sourceClaimForm.claimMismatch": {
+      "source": "This claim belongs to another wallet or network. Reload with its original owner.",
+      "text": "Yêu cầu thuộc ví hoặc mạng khác. Tải lại bằng chủ sở hữu ban đầu."
+    },
+    "sourceClaimForm.loadFailed": {
+      "source": "Could not load this claim. Reload before retrying.",
+      "text": "Không thể tải yêu cầu này. Tải lại trước khi thử lại."
+    },
+    "sourceClaimForm.createFailed": {
+      "source": "Could not create a proof.",
+      "text": "Không thể tạo bằng chứng."
+    },
+    "sourceClaimForm.verifiedNotice": {
+      "source": "Source control verified. Your current payment policy is shown below; verification alone earns nothing.",
+      "text": "Đã xác minh kiểm soát nguồn. Chính sách thanh toán hiện tại hiển thị bên dưới; chỉ xác minh không tạo thu nhập."
+    },
+    "sourceClaimForm.verifyFailed": {
+      "source": "Ownership could not be verified. Check the file and retry.",
+      "text": "Chưa thể xác minh sở hữu. Kiểm tra tệp và thử lại."
+    },
+    "sourceClaimForm.copied": {
+      "source": "Proof contents copied.",
+      "text": "Đã sao chép nội dung bằng chứng."
+    },
+    "sourceClaimForm.copyUnavailable": {
+      "source": "Copy is unavailable. Select and copy the proof contents below.",
+      "text": "Không thể sao chép. Chọn và sao chép nội dung bằng chứng bên dưới."
+    },
+    "sourceClaimForm.choose": {
+      "source": "1. Choose your source",
+      "text": "1. Chọn nguồn"
+    },
+    "sourceClaimForm.urlLabel": {
+      "source": "Public source URL",
+      "text": "URL nguồn công khai"
+    },
+    "sourceClaimForm.supportedProof": {
+      "source": "Prove control by publishing a file at this URL's website origin, or a token in the RSS publisher channel. Only publicly reachable HTTPS websites, feeds and documents are supported here. Hosted platform accounts such as YouTube need a separate platform proof and cannot be claimed through this flow.",
+      "text": "Chứng minh kiểm soát bằng đăng tệp tại nguồn gốc website của URL này hoặc token trong kênh nhà xuất bản RSS. Chỉ hỗ trợ website, nguồn cấp và tài liệu HTTPS công khai truy cập được tại đây. Tài khoản nền tảng như YouTube cần bằng chứng nền tảng riêng, không thể nhận qua luồng này."
+    },
+    "sourceClaimForm.proofMethod": {
+      "source": "Ownership proof method",
+      "text": "Phương pháp chứng minh sở hữu"
+    },
+    "sourceClaimForm.websiteMethod": {
+      "source": "Publish a file on the website",
+      "text": "Đăng tệp trên website"
+    },
+    "sourceClaimForm.feedMethod": {
+      "source": "Publish a token in the RSS / Atom channel",
+      "text": "Đăng token trong kênh RSS / Atom"
+    },
+    "sourceClaimForm.feedPair": {
+      "source": "For a new RSS claim, enter the exact feed URL above. A retained public feed uses its recorded source and feed pair. Website-file proof requires both URLs on the same origin.",
+      "text": "Với yêu cầu RSS mới, nhập đúng URL nguồn cấp bên trên. Nguồn cấp công khai được lưu dùng cặp nguồn và nguồn cấp ghi nhận. Bằng chứng tệp website cần cả hai URL cùng nguồn gốc."
+    },
+    "sourceClaimForm.anotherSource": {
+      "source": "Use another source",
+      "text": "Dùng nguồn khác"
+    },
+    "sourceClaimForm.checkingSignIn": {
+      "source": "Checking sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "sourceClaimForm.connect": {
+      "source": "Connect and sign in to claim",
+      "text": "Kết nối và đăng nhập để nhận nguồn"
+    },
+    "sourceClaimForm.urlTooLong": {
+      "source": "The source URL is too long to carry through sign-in. Shorten it and retry.",
+      "text": "URL nguồn quá dài để chuyển qua đăng nhập. Rút ngắn và thử lại."
+    },
+    "sourceClaimForm.createFresh": {
+      "source": "Create fresh ownership proof",
+      "text": "Tạo bằng chứng sở hữu mới"
+    },
+    "sourceClaimForm.replaceFile": {
+      "source": "Replace proof file",
+      "text": "Thay tệp bằng chứng"
+    },
+    "sourceClaimForm.create": {
+      "source": "Create ownership proof",
+      "text": "Tạo bằng chứng sở hữu"
+    },
+    "sourceClaimForm.checkingClaim": {
+      "source": "Checking source claim…",
+      "text": "Đang kiểm tra yêu cầu sở hữu nguồn…"
+    },
+    "sourceClaimForm.reload": {
+      "source": "Reload claim status",
+      "text": "Tải lại trạng thái yêu cầu"
+    },
+    "sourceClaimForm.publishTokenTitle": {
+      "source": "2. Publish your channel token",
+      "text": "2. Đăng mã kênh"
+    },
+    "sourceClaimForm.publishFileTitle": {
+      "source": "2. Publish your proof file",
+      "text": "2. Đăng tệp bằng chứng"
+    },
+    "sourceClaimForm.tokenLabel": {
+      "source": "Channel proof token",
+      "text": "Mã bằng chứng kênh"
+    },
+    "sourceClaimForm.fileLabel": {
+      "source": "Proof file contents",
+      "text": "Nội dung tệp bằng chứng"
+    },
+    "sourceClaimForm.copyToken": {
+      "source": "Copy channel token",
+      "text": "Sao chép mã kênh"
+    },
+    "sourceClaimForm.copyJson": {
+      "source": "Copy proof JSON",
+      "text": "Sao chép JSON bằng chứng"
+    },
+    "sourceClaimForm.download": {
+      "source": "Download proof file",
+      "text": "Tải tệp bằng chứng"
+    },
+    "sourceClaimForm.expired": {
+      "source": "This proof expired. Create a fresh proof above and replace the hosted file before checking again.",
+      "text": "Bằng chứng hết hạn. Tạo bằng chứng mới bên trên và thay tệp được lưu trữ trước khi kiểm tra lại."
+    },
+    "sourceClaimForm.check": {
+      "source": "Check ownership",
+      "text": "Kiểm tra quyền sở hữu"
+    },
+    "sourceClaimForm.needsVerification": {
+      "source": "Source control needs re-verification",
+      "text": "Kiểm soát nguồn cần xác minh lại"
+    },
+    "sourceClaimForm.verifiedTitle": {
+      "source": "Source control verified",
+      "text": "Đã xác minh kiểm soát nguồn"
+    },
+    "sourceClaimForm.renewNotice": {
+      "source": "Create a fresh challenge, replace the hosted file or channel token, then choose Check ownership. Verification keeps your saved policy; review its status below before new earning uses. A failed check requires fixing the proof or explicitly creating another challenge.",
+      "text": "Tạo thử thách mới, thay tệp hoặc token kênh đã đăng rồi chọn Kiểm tra sở hữu. Xác minh giữ chính sách đã lưu; xem trạng thái bên dưới trước sử dụng tạo thu nhập mới. Kiểm tra lỗi cần sửa bằng chứng hoặc chủ động tạo thử thách khác."
+    },
+    "sourceClaimForm.renew": {
+      "source": "Re-verify source control",
+      "text": "Xác minh lại kiểm soát nguồn"
+    },
+    "sourceClaimPage.heading": {
+      "source": "This is {source}",
+      "text": "Đây là {source}"
+    },
+    "sourceClaimPage.mySource": {
+      "source": "my source.",
+      "text": "nguồn của tôi."
+    },
+    "sourceClaimPage.title": {
+      "source": "Claim your public source",
+      "text": "Nhận quyền sở hữu nguồn công khai"
+    },
+    "sourceClaimPage.description": {
+      "source": "Prove control of your website, then separately choose free reads, citation rewards or paid access.",
+      "text": "Chứng minh kiểm soát website rồi chọn riêng đọc miễn phí, thưởng trích dẫn hoặc truy cập trả phí."
+    },
+    "sourceClaimPage.referenceUnavailable": {
+      "source": "This public reference is unavailable. Enter the source's HTTPS URL below.",
+      "text": "Tài liệu tham khảo công khai này không khả dụng. Nhập URL HTTPS nguồn bên dưới."
+    },
+    "sourceClaimPage.loadFailed": {
+      "source": "This source context could not be loaded.",
+      "text": "Không thể tải ngữ cảnh nguồn này."
+    },
+    "sourceClaimPage.publisher": {
+      "source": "For publishers",
+      "text": "Dành cho nhà xuất bản"
+    },
+    "sourceClaimPage.introduction": {
+      "source": "Prove control of a public HTTPS website, RSS feed or PDF. Then choose whether your registered listing stays free, receives citation rewards, or charges per read.",
+      "text": "Chứng minh kiểm soát website HTTPS công khai, nguồn cấp RSS hoặc PDF. Rồi chọn niêm yết đăng ký miễn phí, nhận thưởng trích dẫn hoặc thu phí đọc."
+    },
+    "sourceClaimPage.freeHistory": {
+      "source": "Public web discovery already reads supported sources for free when available. Verification alone earns nothing. Existing public references, cached free reads and historical receipts keep their original free status.",
+      "text": "Khám phá web công khai đã đọc miễn phí nguồn được hỗ trợ khi khả dụng. Chỉ xác minh không tạo thu nhập. Tài liệu công khai hiện có, lượt miễn phí từ bộ nhớ đệm và biên nhận lịch sử giữ trạng thái miễn phí ban đầu."
+    }
+  }
+}

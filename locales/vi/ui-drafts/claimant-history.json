@@ -1,0 +1,124 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/claimant-history.ts",
+  "sourceSha256": "9bc452b72958a3a1bd8fce9c706a4984719c5998c0df4e9bde90f657edba02fe",
+  "entries": {
+    "claimantHistory.open": {
+      "source": "Recorded and claimed runs",
+      "text": "Lượt chạy được ghi nhận và nhận về tài khoản"
+    },
+    "claimantHistory.close": {
+      "source": "Return to dispatch ledger",
+      "text": "Quay lại sổ theo dõi bản tin"
+    },
+    "claimantHistory.title": {
+      "source": "Recorded and claimed runs",
+      "text": "Lượt chạy được ghi nhận và nhận về tài khoản"
+    },
+    "claimantHistory.scope": {
+      "source": "Private current-store history includes runs recorded for your signed-in account and anonymous runs you successfully claimed. Native and historical archive stores may be unavailable here.",
+      "text": "Lịch sử riêng tư trong kho hiện tại gồm lượt chạy ghi nhận cho tài khoản đang đăng nhập và lượt chạy ẩn danh bạn đã nhận thành công. Kho native và kho lịch sử lưu trữ có thể không khả dụng tại đây."
+    },
+    "claimantHistory.authority": {
+      "source": "Claiming grants account access to a saved run. It does not change its original asker, payer, funding, receipts or settlement.",
+      "text": "Nhận lượt chạy cấp quyền truy cập tài khoản vào lượt chạy đã lưu. Không thay đổi người hỏi ban đầu, bên trả tiền, nguồn tiền, biên nhận hoặc quyết toán."
+    },
+    "claimantHistory.checking": {
+      "source": "Checking signed-in account…",
+      "text": "Đang kiểm tra tài khoản đăng nhập…"
+    },
+    "claimantHistory.signedOut": {
+      "source": "Sign in to browse recorded and claimed runs.",
+      "text": "Đăng nhập để duyệt lượt chạy được ghi nhận và nhận về tài khoản."
+    },
+    "claimantHistory.loading": {
+      "source": "Loading recorded and claimed runs…",
+      "text": "Đang tải lượt chạy được ghi nhận và nhận về tài khoản…"
+    },
+    "claimantHistory.changed": {
+      "source": "The signed-in account changed. Return to the ledger and open this history again.",
+      "text": "Tài khoản đang đăng nhập đã thay đổi. Quay lại sổ theo dõi và mở lịch sử này lần nữa."
+    },
+    "claimantHistory.unavailable": {
+      "source": "Recorded and claimed history is unavailable for this account or store. No other history store will be used.",
+      "text": "Lịch sử được ghi nhận và nhận về tài khoản không khả dụng cho tài khoản hoặc kho này. Không dùng kho lịch sử khác."
+    },
+    "claimantHistory.refresh": {
+      "source": "Refresh this history",
+      "text": "Làm mới lịch sử này"
+    },
+    "claimantHistory.empty": {
+      "source": "No recorded or successfully claimed runs are available in this store.",
+      "text": "Kho này không có lượt chạy được ghi nhận hoặc nhận thành công về tài khoản."
+    },
+    "claimantHistory.recorded": {
+      "source": "Recorded account ownership",
+      "text": "Quyền sở hữu tài khoản được ghi nhận"
+    },
+    "claimantHistory.claimed": {
+      "source": "Claimed account ownership",
+      "text": "Quyền sở hữu tài khoản qua nhận lượt chạy"
+    },
+    "claimantHistory.claimedAt": {
+      "source": "Claimed at {date}",
+      "text": "Đã nhận lúc {date}"
+    },
+    "claimantHistory.createdAt": {
+      "source": "Saved at {date}",
+      "text": "Đã lưu lúc {date}"
+    },
+    "claimantHistory.rows.one": {
+      "source": "Showing {count} run on this page.",
+      "text": "Hiển thị {count} lượt chạy trên trang này."
+    },
+    "claimantHistory.rows.other": {
+      "source": "Showing {count} runs on this page.",
+      "text": "Hiển thị {count} lượt chạy trên trang này."
+    },
+    "claimantHistory.newer": {
+      "source": "Newer runs",
+      "text": "Lượt chạy mới hơn"
+    },
+    "claimantHistory.older": {
+      "source": "Older runs",
+      "text": "Lượt chạy cũ hơn"
+    },
+    "claimantHistory.pageLimit": {
+      "source": "This browse is limited to 40 pages of 25 runs. Refresh to start again from the newest page.",
+      "text": "Lượt duyệt này giới hạn ở 40 trang, mỗi trang 25 lượt chạy. Làm mới để bắt đầu lại từ trang mới nhất."
+    },
+    "claimantHistory.read": {
+      "source": "Read saved run",
+      "text": "Đọc lượt chạy đã lưu"
+    },
+    "claimantHistory.detailLoading": {
+      "source": "Loading private saved run…",
+      "text": "Đang tải lượt chạy riêng tư đã lưu…"
+    },
+    "claimantHistory.detailUnavailable": {
+      "source": "This saved run is unavailable or its ownership changed. No public report will be used instead.",
+      "text": "Lượt chạy này không khả dụng hoặc quyền sở hữu đã thay đổi. Không dùng báo cáo công khai để thay thế."
+    },
+    "claimantHistory.closeDetail": {
+      "source": "Close saved run",
+      "text": "Đóng lượt chạy đã lưu"
+    },
+    "claimantHistory.answer": {
+      "source": "Saved answer",
+      "text": "Câu trả lời đã lưu"
+    },
+    "claimantHistory.citations": {
+      "source": "Recorded cited sources",
+      "text": "Nguồn được trích dẫn đã ghi nhận"
+    },
+    "claimantHistory.noCitations": {
+      "source": "No cited sources recorded.",
+      "text": "Chưa ghi nhận nguồn được trích dẫn."
+    },
+    "claimantHistory.plainDetail": {
+      "source": "This private view shows the saved question, answer and cited source names as plain text. It does not establish payment settlement.",
+      "text": "Chế độ xem riêng tư này hiển thị câu hỏi, câu trả lời và tên nguồn được trích dẫn đã lưu dưới dạng văn bản thuần. Không chứng minh thanh toán đã quyết toán."
+    }
+  }
+}
