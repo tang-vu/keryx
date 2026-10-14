@@ -42,9 +42,9 @@ failed rollback and uncertain cleanup permanently revoke and close. Readonly
 writer refusal preserves healthy reads. Repair cannot revive a revoked port.
 The fixed 5000 ms busy policy is unchanged; no retry or authority fallback is added.
 
-## Actual validation
+## Actual validation before the final CI correction
 
-The current composed candidate passed **75 of 75 native cases**, with no failures
+The pre-correction composed candidate passed **75 of 75 native cases**, with no failures
 or skips, including all **13 genuine selected-facade controls**. Its natural child
 exit was 0 with no signal, complete stdout/stderr EOF, no overflow and no outer
 timeout; elapsed time was 529.507 seconds. The selected graph control passed once
@@ -132,3 +132,40 @@ Issue #265 stays open until actual required CI, deployed saved-owner LIST and
 provider/SIWE/key acceptance, public-profile composition and owner-visible behavior
 meet its original criteria. Native source controls do not establish those live
 results and do not delay the already-running release65 deployment.
+
+## Final CI timeout correction
+
+The first hosted PR485 unit shard retained four actual 10000 ms timeouts: both
+selected identity lifecycle variants, the selected readonly identity case, and
+the existing deliverable facade's genuine EXCLUSIVE-lock case. Their official
+annotations are retained; the log endpoint's separate Azure503 response is not
+proof of a CI infrastructure cause. These failures are not accepted as passes.
+
+Two identity fixture comparisons now use Buffer.equals, retaining length and every
+byte. A synthetic full19 native query diagnostic then measured 100 exact271-fence
+checks: 1578.051 ms with the old repeated schema scan, 331.713 ms with statement-local
+materialization. The helper now materializes sqlite_schema within each statement
+so SQLite can use a native covering index. Every call still performs its fresh
+SQL query; exact names, kinds and complete SQL, NULL/missing refusal and physical
+first-row selection remain. No connection/result authority cache, JS copy of
+stored SQL, guard bypass, timeout, busy policy or authorizer change is introduced.
+The benchmark is not a production latency claim or proof of hosted timeout cause.
+
+The four previously failed cases passed locally under their original Windows
+20-second bounds. The existing three helper failure controls and new NULL control
+also passed. One new corrupt-schema fixture was refused by native SQLite; the
+refusal capture is preserved. It was replaced with a test of that native write
+refusal, which passed separately. Native defensive mode was never disabled.
+Thus eight retained passing controls plus the one corrected new control accept
+this focused correction; the initial75-case result stays historical to its inputs.
+Linux's original10-second limits and required aggregate/domain CI remain gates.
+
+Different source peers accepted the two exact Buffer literals and the native SQL
+helper/test delta without findings. Final focused TypeScript passed in20.257s.
+The existing canonical study passed once on the changed helper input in12.175s:
+48 trials, zero outbound, no unresolved inputs,431 physical source entries and
+unchanged0b37 lock. Every non-map artifact field is identical to the prior431
+artifact; only sqlite-schema-match.ts changes in that map. Earlier study captures
+and all failed observations remain preserved. Import edges and the finite graph
+permit are unchanged. No full suite, provider exchange, production operation or
+package publication was performed by this correction.

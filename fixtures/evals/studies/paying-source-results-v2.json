@@ -196,7 +196,7 @@
     "lib/db/sqlite-browser-journal.ts": "de69cb201540437fa6c194042f1c8c7ae7a04775c00bf5ec7fbac5f327c31542",
     "lib/db/sqlite-browser-signing-originals.ts": "35501e9b6867120bc9840bd059e6e017a1e27e14f537c57448526d15891e18c0",
     "lib/db/sqlite-browser-source-context.ts": "aa0d6ba599f1fcab13cfd7cd6a110ec35a97d8bba5bd64d616ceaefda209cce2",
-    "lib/db/sqlite-schema-match.ts": "260096bab96ab01e8d55b3e12c59203e96470453146bdba165263c7cbadfe1b9",
+    "lib/db/sqlite-schema-match.ts": "0d309289adca6d94861578923b8f4f58e4fecf6f170f6d1c775554bcf13a37d3",
     "lib/db/storage-identity-connection.ts": "6ad92d7124f19729706f8d726a9e43bbbeac5786db06c41eaf647194e8b6c621",
     "lib/db/storage-identity-sqlite.ts": "525a5bc28868dabc7038a5ffff1c0c32c2b60e358d7b92fb1071e92b77cab897",
     "lib/db/storage-identity.ts": "0804c3e5b784c7cffa6b687ebb605b2728bf70525d3c006b49667c76c9b312a8",

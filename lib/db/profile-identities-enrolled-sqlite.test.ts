@@ -677,7 +677,7 @@ describe("selected enrolled facade profile identities (source controls, not prod
       value: port, enumerable: false, writable: false, configurable: false,
     });
     expect(Object.keys(facade)).not.toContain("profileIdentities");
-    expect(readFileSync(f.file)).toEqual(before); // Factory performs no DDL, seed or ordinary initialization.
+    expect(readFileSync(f.file).equals(before)).toBe(true); // Factory performs no DDL, seed or ordinary initialization.
     const empty = await facadeIdentityGet(facade);
     expect(empty.status).toBe(200); expect(await empty.json()).toEqual({ wallet: alice, identities: [] });
     const c = f.challenge("selected-lifecycle"); await port.begin(c); await port.consume(c);
@@ -724,7 +724,7 @@ describe("selected enrolled facade profile identities (source controls, not prod
       expect(exec.mock.calls.some(call => call[0] === "BEGIN")).toBe(true);
       expect(exec.mock.calls.some(call => call[0] === "BEGIN IMMEDIATE")).toBe(false);
     } finally { prepare.mockRestore(); exec.mockRestore(); }
-    expect(readFileSync(f.file)).toEqual(before);
+    expect(readFileSync(f.file).equals(before)).toBe(true);
   });
 
   it.each(["partial", "missing-profile", "changed-session", "unknown"] as const)("selected factory refuses %s schema without repair or fallback", async shape => {
