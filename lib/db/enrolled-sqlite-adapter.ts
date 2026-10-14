@@ -9,6 +9,7 @@ import { createEnrolledSqliteAccountMembership } from "../accounts/sqlite-store"
 import { createEnrolledSqliteRunClaims } from "./run-claims-sqlite";
 import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
 import { createEnrolledSqliteRunPrivacy } from "./run-privacy-sqlite";
+import { createEnrolledSqlitePublicUsage } from "./public-usage-sqlite";
 import { runClaimsEnabled } from "../run-claims/contracts";
 import { withRunReadProjection } from "../run-privacy/projection";
 import { projectRecordedEvidenceProvenance } from "../research/evidence-provenance";
@@ -344,6 +345,10 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
       const accountMembership = createEnrolledSqliteAccountMembership(db);
       if (accountMembership) Object.defineProperty(facade, "accountMembership", { value: accountMembership });
+      Object.defineProperty(facade, "publicUsage", { value: (() => {
+        if (privacyActive !== (process.env.KERYX_RUN_PRIVACY_ENABLED === "true")) throw new Error("Enrolled SQLite privacy policy changed during construction");
+        return createEnrolledSqlitePublicUsage(db);
+      })() });
     }
     const identities = createEnrolledSqliteProfileIdentities(db);
     if (identities) Object.defineProperty(facade, "profileIdentities", { value: identities });
