@@ -1,8 +1,8 @@
 # Private268 compiled browser control — 2026-10-14
 
-Status: **current app and operations types and one production build passed; compiled
-control remains FAILED: three browser cases passed, fourth hit the original 95 s
-aggregate deadline (ROOT update below)**.
+Status: **app and operations types, one production build and all four compiled browser
+cases passed. The accepted control naturally closed in152,159ms, with zero cleanup
+failures and the original95s scenario aggregate unchanged (ROOT acceptance below)**.
 The author handoff and UNRUN statements below describe the earlier source-only stage.
 This adds only [the compiled driver](../../scripts/test-browser-private-history268-built.mts)
 and this document at base HEAD `ae298ff41c239b292a043b3442df33f1701a4b99`.
@@ -288,3 +288,11 @@ Actual operations TypeScript for the overlap driver passed in80,577ms (exit0, cl
 The independent last-two overlap control naturally closed214,048ms (child0/fullEOF) but outer acceptance FAILED: original95s aggregate expired at terminal-new-interval. First3 cases passed27,569/17,195/42,431ms; no browser/HTTP errors, cleanupFailureCount1 retained. The next narrowly scoped execution change runs the first two independent contexts together as well, then waits for both before starting the final two. Peak remains two contexts/four pages and every scenario body/assertion/deadline is unchanged. The already accepted random-JTI/cookie/BC isolation proof applies to both stages. No complete compiled pass is claimed.
 
 The staged pair run naturally closed125,005ms (child0/fullEOF) with cleanup0 but FAILED an8s wait: the normal ACK had remained held until its genuine15,008ms abort. Local unmount passed28,371ms; no browser/HTTP errors. A separate four-page local Chromium observation measured two actual animation frames in11–14ms, so frame-throttling is not established as the cause. The next schedule keeps the normal ACK case alone, then runs the three other independently authenticated contexts together. Every case body/deadline remains unchanged; peak is three contexts/six pages, with49,897,140KiB free physical memory observed. No product failure or complete pass is inferred from these harness observations.
+
+## ROOT accepted compiled control — 2026-10-15
+
+The normal-first control at3e5b7ca93cfdfe8d6456e331af6fade300d51023 passed all four uniquely named scenarios and both timer observations. The real abort was15,007.6ms and receiver lease20,001.9ms with24 pending storm claims and a fresh HTTP epoch. Normal ACK passed; actual local navigation remained without peer authority. Original private tables were byte-identical, externalAttempts0, browser/HTTP errors0 and cleanupFailureCount0. All listener/browser/instrumentation/app/trace closure flags were true. Actual capture naturally closed152,159ms, exit0/null, exit+close+separate stdout/stderr EOF, no timeout/overflow, empty stderr.
+
+The existing immutable build atb67796457b5dbd53bee7bf184c485e3352f9bfcd was reused. Only the driver and this document changed afterward; no product auth/session/cookie/storage guard was altered to obtain the result. Scenario bodies and95s/8s/15s/20s deadlines remain unchanged. Independent source peer e2ab023f accepts the normal-first schedule; prior failed captures remain preserved and do not count as accepted runs. Outer acceptance requires exactly four passing case rows plus the two distinct observations, not merely exit0.
+
+This is compiled web/API acceptance with disposable synthetic ArcTestnet originals and genuine local sessions; it is not real settlement, native client, remote MCP, production delivery or closure of original268. Final incoming-main composition, canonical source inputs and required PR CI remain separate gates.
