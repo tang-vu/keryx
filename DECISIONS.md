@@ -8097,3 +8097,20 @@ matching private replies and disclose no account state in groups. This safety
 patch grants no binding, token, sign-in or past-run ownership authority; original
 #263 linking criteria remain open. Explicit `/ask` research and budget limits stay
 unchanged.
+
+### 2026-10-14 — Implement bounded account membership without changing wallet authority (#267)
+
+ROOT authorized the next-batch implementation after the recorded design and R42
+independent design acceptance. Use a new ordinary transactional account domain
+with opaque IDs, stable monotonic revisions, at most eight proven wallets,
+explicit private account/history consent and durable single-use membership
+proofs. Keep the original durable wallet session as the exact credential boundary;
+linking never grants payer, API-key, claim, creator or registry authority. Current
+ordinary adapters expose no raw connection or admitted account producer in this
+partition. Implement the real SQLite store/service and failure controls in new
+paths, refuse the live route until a reviewed caller supplies that authority, and
+keep history projection request-local behind exact interactive consent. No schema
+installation, provider call or activation follows from source. Account profile,
+Supabase parity and existing consumer integration remain explicit parent gates;
+original #267 stays open. See
+[implementation and remaining gates](docs/engineering/account-membership267-implementation-2026-10-14.md).
