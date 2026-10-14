@@ -17,6 +17,19 @@ function retainedProjection() {
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 
 describe("note prose and exact inspection appendix", () => {
+  it.each(["Moderate", "High"] as const)("retains every exact paired sentence and note count at %s confidence", level => {
+    const data = retainedProjection();
+    const compact = compactSentenceNoteAnswer(data.ledger, data.statements, { level, reason: "Reviewed summary support" })!;
+    expect(compact).toBeDefined();
+    const result = finishSentenceNoteAnswer("Canonical target layout", compact, data.statements.length);
+    expect(result).toMatchObject({ outcome: "compact", noteSentenceCount: data.statements.length });
+    expect(result.answer).not.toContain("Confianza baja");
+    for (const statement of data.statements) {
+      expect(result.answer).toContain(statement.text);
+      expect(result.answer).toContain(statement.quote);
+    }
+    expect(result.answer).toContain("sin verificación independiente");
+  });
   it("retains the actual five NASA pairs and original notices, honestly refusing the requested three", () => {
     expect(hash(nasa.question)).toBe("ac2a8909b023a9170cafe622d04539da5557155079d82602708d35cf0e1ccc1f");
     expect(hash(nasa.answer)).toBe("01f930beb5ce0e91061175f2dc94951400c974a62a63b7dc039dbb553acdcf77");
