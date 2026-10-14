@@ -37,19 +37,40 @@ export function createEnrolledSqlitePrivateProfiles(db: DatabaseSync): PrivatePr
   const admitted = schema();
   if (!admitted.present) return undefined;
   if (identity.authorityMode !== "mainnet-real") throw unavailable();
+  let retired = false;
+  const retire = () => { retired = true; db.close(); };
+  const contention = (error: unknown) => error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+    && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
   const check = () => {
+    if (retired) throw unavailable();
     try { const current = schema(); if (!current.present || current.profile !== admitted.profile) throw unavailable(); }
-    catch { db.close(); throw unavailable(); }
+    catch (error) { if (!contention(error)) retire(); throw error; }
   };
   const writeAccess = () => {
     // Fixed WeakMap policy refusal stays pre-SQL and keeps readonly readers usable.
     // Writable ports run the full revoking guard before parsing or native SQL.
     try { assertVerifiedSqliteWritePolicy(db); } catch { throw unavailable(); }
-    check();
+    try { check(); } catch { throw unavailable(); }
   };
   const rollback = () => {
     try { db.exec("ROLLBACK"); check(); return true; }
-    catch { db.close(); return false; }
+    catch { retire(); return false; }
+  };
+  const transaction = <T>(write: boolean, action: () => T): T => {
+    let open = false;
+    try {
+      check(); db.exec(write ? "BEGIN IMMEDIATE" : "BEGIN"); open = true;
+      check(); const result = action(); check(); db.exec("COMMIT"); open = false; check(); return result;
+    } catch (error) {
+      const handleConflict = error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+        && "errcode" in error && error.errcode === 2067 && error.message.includes("UNIQUE constraint failed: private_profiles.handle");
+      const intact = !open || rollback();
+      // A failed BEGIN has no owned transaction to roll back. Native contention
+      // refuses this request; all guard/unclassified failures permanently retire.
+      if (!intact || (!contention(error) && !handleConflict)) retire();
+      if (!retired && handleConflict) throw new PrivateProfileError("handle_conflict");
+      throw unavailable();
+    }
   };
   const record = (wallet: string) => privateProfileFromSqliteRow(db.prepare(`SELECT wallet,handle,display_name,bio,purpose,
     CASE WHEN length(CAST(links AS BLOB))<=8192 THEN links ELSE NULL END AS links,
@@ -60,9 +81,7 @@ export function createEnrolledSqlitePrivateProfiles(db: DatabaseSync): PrivatePr
     async get(owner, network) {
       const wallet = profileWallet(owner);
       if (network !== identity.network) throw unavailable();
-      check(); db.exec("BEGIN");
-      try {
-        check();
+      return transaction(false, () => {
         // Bound malformed source fields before projecting them into JS. The
         // aggregate SQL below remains the existing full owner/network projection.
         if (db.prepare(`SELECT 1 FROM users WHERE wallet_address=? AND length(CAST(first_seen_at AS BLOB))>64
@@ -80,35 +99,25 @@ export function createEnrolledSqlitePrivateProfiles(db: DatabaseSync): PrivatePr
         const result = privateProfileSnapshotSchema.parse({ profile: record(wallet), activity: {
           firstSeenAt: first?.first_seen_at ?? null, questions: Number(questions.n), surfacesUsed: surfaces.map(row => row.origin),
           topics, creatorsPaid: Number(creators.n), scope: "attributed-current-store", network } });
-        check(); db.exec("COMMIT"); check(); return result;
-      } catch { rollback(); throw unavailable(); }
+        return result;
+      });
     },
     async update(owner, raw) {
       writeAccess();
       const wallet = profileWallet(owner), input = privateProfileInputSchema.parse(raw), now = new Date().toISOString();
-      check(); db.exec("BEGIN IMMEDIATE");
-      try {
-        check();
+      return transaction(true, () => {
         db.prepare(`INSERT INTO private_profiles(wallet,handle,display_name,bio,purpose,links,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)
           ON CONFLICT(wallet) DO UPDATE SET handle=excluded.handle,display_name=excluded.display_name,bio=excluded.bio,
           purpose=excluded.purpose,links=excluded.links,updated_at=excluded.updated_at`)
           .run(wallet, input.handle || null, input.displayName, input.bio, input.purpose, JSON.stringify(input.links), now, now);
         const result = record(wallet);
         if (!result) throw unavailable();
-        check(); db.exec("COMMIT"); check(); return result;
-      } catch (error) {
-        const intact = rollback();
-        if (intact && error instanceof Error && error.message.includes("UNIQUE constraint failed: private_profiles.handle")) throw new PrivateProfileError("handle_conflict");
-        throw unavailable();
-      }
+        return result;
+      });
     },
     async delete(owner) {
       writeAccess(); const wallet = profileWallet(owner);
-      check(); db.exec("BEGIN IMMEDIATE");
-      try {
-        check(); db.prepare("DELETE FROM private_profiles WHERE wallet=?").run(wallet);
-        check(); db.exec("COMMIT"); check();
-      } catch { rollback(); throw unavailable(); }
+      transaction(true, () => { db.prepare("DELETE FROM private_profiles WHERE wallet=?").run(wallet); });
     },
   } satisfies PrivateProfilesStore);
 }

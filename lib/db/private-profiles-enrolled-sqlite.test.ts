@@ -93,6 +93,33 @@ function originals(f: ReturnType<typeof fixture>) {
 }
 
 describe("verified same-store private profiles", () => {
+  it.each(["update", "delete"] as const)("genuine native write contention refuses %s without retiring shared readers", async operation => {
+    const f = fixture(true, false, [{ wallet: alice, handle: input.handle }]), connection = f.open();
+    const port = createEnrolledSqlitePrivateProfiles(connection.db)!, before = originals(f), blocker = new DatabaseSync(f.file);
+    try {
+      blocker.exec("BEGIN IMMEDIATE");
+      if (operation === "update") await expect(port.update(alice, { ...input, bio: "Blocked" })).rejects.toThrow("profile_unavailable");
+      else await expect(port.delete(alice)).rejects.toThrow("profile_unavailable");
+      blocker.exec("ROLLBACK");
+    } finally { blocker.close(); }
+    expect(assertVerifiedSqliteConnection(connection.db)).toEqual(f.identity);
+    expect((await port.get(alice, network)).profile?.bio).toBe(input.bio);
+    expect(originals(f)).toBe(before);
+  });
+
+  it("genuine native read-guard contention refuses without retiring the shared connection", async () => {
+    const f = fixture(), connection = f.open(), port = createEnrolledSqlitePrivateProfiles(connection.db)!;
+    const before = originals(f), blocker = new DatabaseSync(f.file);
+    try {
+      blocker.exec("BEGIN EXCLUSIVE");
+      await expect(port.get(alice, network)).rejects.toThrow("profile_unavailable");
+      blocker.exec("ROLLBACK");
+    } finally { blocker.close(); }
+    expect(assertVerifiedSqliteConnection(connection.db)).toEqual(f.identity);
+    expect((await port.get(alice, network)).profile).toBeNull();
+    expect(originals(f)).toBe(before);
+  });
+
   it.each([false, true])("migrated native CRUD/activity and absent-owner isolation retain originals (archive=%s)", async archive => {
     const f = fixture(true, archive), connection = f.open(), before = originals(f);
     const port = createEnrolledSqlitePrivateProfiles(connection.db)!;
@@ -299,7 +326,10 @@ describe("verified same-store private profiles", () => {
     });
     try { await expect(port.get(alice, network)).rejects.toThrow("profile_unavailable"); }
     finally { spy.mockRestore(); }
-    expect((await port.get(alice, network)).profile?.handle).toBe(input.handle);
+    await expect(port.get(alice, network)).rejects.toThrow("profile_unavailable");
+    expect(() => assertVerifiedSqliteConnection(connection.db)).toThrow();
+    const fresh = createEnrolledSqlitePrivateProfiles(f.open().db)!;
+    expect((await fresh.get(alice, network)).profile?.handle).toBe(input.handle);
   });
 
   it("17 distinct attributed surfaces refuse rather than truncate to an accepted 16", async () => {

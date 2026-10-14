@@ -93,6 +93,14 @@ restarting old actors against the migrated schema is not supported.
 
 ## Acceptance and delivery still required
 
+Native `ERR_SQLITE_ERROR` with exact `errcode` 5/6 refuses the affected request
+without retiring a healthy shared connection. A failed BEGIN owns no transaction;
+an acquired transaction requires successful guarded rollback. Guard, fence,
+identity, file, manifest and unclassified internal failures still permanently
+retire the old port, even if their inputs are restored before cleanup. This adds
+no retry or timeout change. Three genuine held-lock regression cases are authored
+and remain UNRUN until their focused parent validation.
+
 The authored fixtures cover native migrated CRUD/full activity, actual readonly
 refusal before SQL, two-owner isolation, unique-handle contention on separate
 native worker connections, deletion preservation, manifest/file/fence/schema/
