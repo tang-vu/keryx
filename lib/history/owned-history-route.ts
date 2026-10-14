@@ -7,6 +7,8 @@ import { historyReceiptSchema, parseOwnedQuery } from "./owned-history";
 import { readOwnedDetail, readOwnedHistory } from "./owned-history-reader";
 import { exportOwnedHistory, historyCsv } from "./owned-history-export";
 import { buildCitationExport, type CitationExportFormat } from "../research-citation-export";
+import { AccountError, type AccountHistoryObservation } from "../accounts/contracts";
+import { accountOwnedHistory, walletOwnedHistoryDb } from "./account-owned-history";
 
 interface Dependencies {
   session(): Promise<{ db: KeryxDB; wallet: string; currentId: string } | Response>;
@@ -46,6 +48,11 @@ export function createOwnedHistoryRoute(deps: Dependencies, action: "list" | "ex
       if (context instanceof Response) return privateRunResponse(context);
       const wallet = historyWallet(context.wallet);
       if (expected !== null && expected.toLowerCase() !== wallet) return json({ error: "history_owner_changed" }, 409);
+      // Only this exact interactive session may resolve explicit account consent.
+      // A bearer key never consults an account port or inherits shared membership.
+      const history = header !== null ? { db: walletOwnedHistoryDb(context.db), account: null }
+        : await accountOwnedHistory({ db: context.db, wallet, currentId: sessionId! }, deps.binding, req.signal);
+      const account = history.account;
       const finish = async (response: Response) => {
         // Fence the exact credential after private IO; another session for this wallet is not a renewal.
         if (req.signal.aborted) throw new HistoryError("history_unavailable");
@@ -61,32 +68,53 @@ export function createOwnedHistoryRoute(deps: Dependencies, action: "list" | "ex
             return json({ error: "history_owner_changed" }, 409);
           }
         }
+        if (req.signal.aborted) throw new HistoryError("history_unavailable");
         return response;
       };
-      if (action === "list") return await finish(json(await readOwnedHistory(context.db, wallet, deps.binding, input, req.signal)));
-      if (action === "export") {
-        const value = await exportOwnedHistory(context.db, wallet, deps.binding, input, req.signal);
-        if (format === "json") return await finish(json(value));
-        return await finish(privateRunResponse(new Response(historyCsv(value), { headers: { "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": 'attachment; filename="keryx-personal-history.csv"', "X-Keryx-History-Truncated": String(value.truncated) } })));
+      let response: Response, selected: AccountHistoryObservation[] = [];
+      if (action === "list") {
+        const value = await readOwnedHistory(history.db, wallet, deps.binding, input, req.signal);
+        selected = account?.selectRows(value.rows) ?? []; response = json(value);
+      } else if (action === "export") {
+        const value = await exportOwnedHistory(history.db, wallet, deps.binding, input, req.signal);
+        selected = account?.selectRows(value.rows) ?? [];
+        response = format === "json" ? json(value) : privateRunResponse(new Response(historyCsv(value), {
+          headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="keryx-personal-history.csv"',
+            "X-Keryx-History-Truncated": String(value.truncated) } }));
+      } else {
+        const parsedId = historyIdSchema.safeParse(rawId); if (!parsedId.success) return json({ error: "invalid_history_query" }, 400);
+        const id = parsedId.data, item = await readOwnedDetail(history.db, wallet, deps.binding, id, req.signal);
+        if (!item) response = json({ error: "not_found" }, 404);
+        else {
+          if (format === "report") response = json(item);
+          else if (format === "receipts") {
+            const port = requirePersonalHistory(history.db); if (!port.receipts) throw new HistoryError("history_unavailable");
+            const payments = (await port.receipts(id, 201)).map(p => historyReceiptSchema.parse(p));
+            if (payments.length > 201 || payments.some(p => p.queryId !== id)) throw new HistoryError("history_unavailable");
+            response = !await readOwnedDetail(history.db, wallet, deps.binding, id, req.signal) ? json({ error: "not_found" }, 404)
+              : json({ version: 2, wallet, id, payments: payments.slice(0, 200), truncated: payments.length > 200, bound: 200 });
+          } else {
+            const references = buildCitationExport(item.run.citations, format as CitationExportFormat);
+            response = privateRunResponse(new Response(references.content, { headers: {
+              "Content-Type": format === "csl-json" ? "application/json" : "text/plain; charset=utf-8",
+              "Content-Disposition": `attachment; filename="keryx-${id}.${format === "bibtex" ? "bib" : format === "csl-json" ? "json" : "ris"}"`,
+              "X-Keryx-References-Omitted": String(references.omitted) } }));
+          }
+          if (response.status === 200) selected = account?.selectDetail(item) ?? [];
+        }
       }
-      const parsedId = historyIdSchema.safeParse(rawId); if (!parsedId.success) return json({ error: "invalid_history_query" }, 400);
-      const id = parsedId.data, item = await readOwnedDetail(context.db, wallet, deps.binding, id, req.signal);
-      if (!item) return json({ error: "not_found" }, 404);
-      if (format === "report") return await finish(json(item));
-      if (format === "receipts") {
-        const port = requirePersonalHistory(context.db); if (!port.receipts) throw new HistoryError("history_unavailable");
-        const payments = (await port.receipts(id, 201)).map(p => historyReceiptSchema.parse(p));
-        if (payments.length > 201 || payments.some(p => p.queryId !== id)) throw new HistoryError("history_unavailable");
-        if (!await readOwnedDetail(context.db, wallet, deps.binding, id, req.signal)) return json({ error: "not_found" }, 404);
-        return await finish(json({ version: 2, wallet, id, payments: payments.slice(0, 200), truncated: payments.length > 200, bound: 200 }));
-      }
-      const references = buildCitationExport(item.run.citations, format as CitationExportFormat);
-      return await finish(privateRunResponse(new Response(references.content, { headers: { "Content-Type": format === "csl-json" ? "application/json" : "text/plain; charset=utf-8",
-        "Content-Disposition": `attachment; filename="keryx-${id}.${format === "bibtex" ? "bib" : format === "csl-json" ? "json" : "ris"}"`,
-        "X-Keryx-References-Omitted": String(references.omitted) } })));
+      // Every body is fully serialized before the final awaited checks. Empty
+      // results still seal the exact consent/session. No streaming authority.
+      const seal = account ? await account.prepare(selected) : null;
+      if (account) await account.privacyFence(selected);
+      const finished = await finish(response);
+      if (finished !== response) return finished;
+      if (account && seal) account.seal(seal);
+      return response; // Deliberately NO await or asynchronous work after seal.
     } catch (error) {
       if (error instanceof HistoryError && error.code === "invalid_history_query") return json({ error: "invalid_history_query" }, 400);
+      if (error instanceof AccountError && error.code === "account_unauthenticated") return json({ error: "unauthenticated" }, 401);
+      if (error instanceof AccountError && error.code === "account_changed") return json({ error: "history_owner_changed" }, 409);
       return json({ error: "history_unavailable" }, 503);
     }
   };
