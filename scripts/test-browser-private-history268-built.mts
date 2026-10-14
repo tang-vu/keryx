@@ -196,6 +196,8 @@ const transportObservations = { fetchGuardEntries: 0, listenerEntries: 0, connec
 const transportChannels = [["undici:request:create", "undiciCreate"], ["undici:client:beforeConnect", "undiciBeforeConnect"], ["undici:client:connected", "undiciConnected"], ["undici:client:connectError", "undiciConnectError"], ["undici:request:headers", "undiciHeaders"]].map(([name, key]) => { const observed = channel(name); const listener = () => { transportObservations[key as keyof typeof transportObservations]++; }; observed.subscribe(listener); return { observed, listener }; });
 const results: object[] = [], failedBrowserStates: object[] = [], caseDurations: object[] = [];
 let currentCase = "", currentPhase = "before-browser";
+// These two independently authenticated contexts own all pages, cookies and BC realms.
+let timedScenarios: Promise<void>[] = [];
 let origin = "";
 const server = createServer(async (req, res) => {
   transportObservations.listenerEntries++;
@@ -485,7 +487,8 @@ try {
     await release(a, da.id); assert.equal(await workspace(a).getByText(answer, { exact: true }).count(), 0);
     assert(!(await snapshot(a)).messages.some(m => typeof m.value === "object" && m.value.type === "logout"));
   });
-  await pair("real-15s-abort-is-not-a-normal-ack", async (a, b) => {
+  // Overlap only the independent real timers; retain every original deadline/assertion.
+  timedScenarios = [pair("real-15s-abort-is-not-a-normal-ack", async (a, b) => {
     const da = await pendingDetail(a), db = await pendingDetail(b), sa = await staleHookSessions(a), sb = await staleHookSessions(b);
     await hold(a, LOGOUT, "transport", true); await logout(a); const start = await received(b); await cleared(a); await cleared(b);
     await a.waitForFunction(() => (window as FixtureWindow).__private268Built.requests.some(r => r.path === "/api/auth/signout" && r.ready && r.aborted), undefined, { timeout: 18000 });
@@ -497,8 +500,8 @@ try {
     await release(a, da.id); await release(b, db.id); for (const r of sa) await release(a, r.id); for (const r of sb) await release(b, r.id);
     await cleared(a, pa); await cleared(b, pb); assert.equal((await snapshot(a)).events.filter(e => e.value === "signed-out").length, 0);
     results.push({ observation: "logout-abort", elapsedMs: elapsed, lateAckDiscarded: true });
-  });
-  await pair("vanished-publisher-real-20s-lease-and-fresh-epoch", async (a, b, freshSession) => {
+  }),
+  pair("vanished-publisher-real-20s-lease-and-fresh-epoch", async (a, b, freshSession) => {
     currentPhase = "hold-old-detail-and-hook-sessions";
     const db = await pendingDetail(b), sb = await staleHookSessions(b);
     await hold(a, LOGOUT, "transport", true); await logout(a); const start = await received(b); await cleared(b);
@@ -545,7 +548,10 @@ try {
     await focus(b); await workspace(b).getByText(question, { exact: true }).waitFor();
     assert.equal((await snapshot(b)).events.filter(e => e.value === "signed-out").length, 0);
     results.push({ observation: "receiver-lease", elapsedMs: elapsed, pendingStormClaims: 24, freshHttpEpoch: true });
-  });
+  })];
+  currentCase = "independent-abort-and-lease-contexts";
+  const timedOutcomes = await Promise.allSettled(timedScenarios);
+  for (const outcome of timedOutcomes) if (outcome.status === "rejected") throw outcome.reason;
   async function contextNullCheck(page: Page) {
     const after = (await snapshot(page)).requests.length; await focus(page);
     await page.waitForFunction(after => (window as FixtureWindow).__private268Built.requests.filter(r => r.id >= after && r.hookSession && r.ready).length === 2, after);
@@ -570,6 +576,8 @@ try {
   // capture real exit + close + both stream EOFs with its existing capture utility.
   let browserClosed = browser === undefined, instrumentationClosed = app === undefined, appClosed = app === undefined, tracesFlushed = app === undefined;
   try { await browser?.close(); browserClosed = true; } catch (error) { cleanupFailures.push(error); }
+  // On aggregate failure browser.close settles owned page operations before DB teardown.
+  await Promise.allSettled(timedScenarios);
   try { if (server.listening) await new Promise<void>((done, fail) => server.close(error => error ? fail(error) : done())); } catch (error) { cleanupFailures.push(error); }
   if (app) {
     try {

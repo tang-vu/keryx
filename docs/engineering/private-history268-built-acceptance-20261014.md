@@ -274,3 +274,13 @@ fields while allowing Next routing dimensions. Actual control bf3b4689 passed
 the first three browser cases, including the real 15 s abort (15,001.4 ms), but
 the fourth case exceeded the unchanged 95 s aggregate deadline. The whole run
 is rejected; failure-phase observation is pending. No timeout was extended.
+
+## ROOT bounded independent timer overlap — 2026-10-15
+
+The phase-observed control naturally closed after169,087ms with child exit0, both EOFs, and outer acceptance FAILED. The first three cases passed in23,998ms,13,730ms and31,675ms; the fourth was still waiting for its genuine20s receiver lease when the original95s aggregate expired. All five teardown completion flags were true, but cleanupFailureCount1 remains a failure. No successful four-case evidence is inferred.
+
+The harness now overlaps only the last two independent BrowserContexts. The first two cases remain sequential. Each pair owns its cookie jar, pages and BroadcastChannel realm; each issueWebSession creates a random32-byte session ID, and signout revokes only that exact hash plus wallet. The shared private originals remain read-only. Every scenario assertion and the95s aggregate,8s ordinary deadline,15s abort and20s lease remain unchanged. Shared diagnostics conservatively fail both cases; results retain unique case names. Both promises settle before a scenario failure is rethrown, and after browser shutdown before database teardown on aggregate failure. No authentication, product runtime or payment change is involved.
+
+This execution change is under independent source review. Operations types and a new finite compiled control will be recorded after actual completion. The same previously accepted build is reused because only the driver and this acceptance document changed. It does not establish final-main composition or production/native/MCP acceptance.
+
+Actual operations TypeScript for the overlap driver passed in80,577ms (exit0, close and both EOFs; no timeout/overflow). Compiled control remains unrun for this delta until the independent source disposition.
