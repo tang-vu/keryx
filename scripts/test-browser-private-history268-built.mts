@@ -185,9 +185,11 @@ type NextFactory = (options: { dev: false; dir: string; hostname: string; port: 
 };
 const httpRequests: { method: string; path: string }[] = [], failures: string[] = [], pageErrors: string[] = [], externalAttempts: string[] = [];
 let unavailablePrefetches = 0;
+const transportObservations = { fetchGuardEntries: 0, listenerEntries: 0, connections: 0 };
 const results: object[] = [];
 let origin = "";
 const server = createServer(async (req, res) => {
+  transportObservations.listenerEntries++;
   try {
     assert.equal(req.headers.host, new URL(origin).host, "Exact loopback host");
     assert(httpRequests.length < 1024, "Finite built HTTP request budget");
@@ -215,6 +217,7 @@ const server = createServer(async (req, res) => {
     console.log(`Compiled listener request ${httpRequests.length}: Next handler returned`);
   } catch { failures.push("Built loopback request refused"); if (!res.headersSent) res.writeHead(500); res.end(); }
 });
+server.on("connection", () => { transportObservations.connections++; });
 server.headersTimeout = 5000; server.requestTimeout = 10000; server.keepAliveTimeout = 500;
 
 const snapshot = (page: Page): Promise<Snapshot> => page.evaluate(() => {
@@ -289,6 +292,7 @@ try {
     if (previousEnvironment[name]) environment[name] = previousEnvironment[name];
   for (const name of Object.keys(process.env)) delete process.env[name]; Object.assign(process.env, environment); process.chdir(fixture);
   globalThis.fetch = (input, init) => {
+    transportObservations.fetchGuardEntries++;
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
     assert.equal(url.origin, origin, "No server external fetch"); return nativeFetch(input, init);
   };
@@ -338,12 +342,12 @@ try {
   let httpProbe = 0;
   const http = async (path: string, init: RequestInit = {}) => {
     const probe = ++httpProbe;
-    console.log(`Compiled HTTP probe ${probe}: start`);
+    console.log(`Compiled HTTP probe ${probe}: start`, { listening: server.listening, exactAddress: JSON.stringify(server.address()) === JSON.stringify(address), requestListeners: server.listenerCount("request"), ...transportObservations });
     try {
       const response = await fetch(origin + path, { ...init, signal: AbortSignal.timeout(8000) });
       console.log(`Compiled HTTP probe ${probe}: response ${response.status}`);
       return response;
-    } catch (cause) { throw new Error(`Compiled HTTP probe ${probe}: failed`, { cause }); }
+    } catch (cause) { console.log("Compiled transport failure observations", { listening: server.listening, requestListeners: server.listenerCount("request"), ...transportObservations }); throw new Error(`Compiled HTTP probe ${probe}: failed`, { cause }); }
   };
   for (const path of ["/me/private-jobs", "/me/private-jobs?_rsc=private268-built"]) {
     const response = await http(path, path.includes("?") ? { headers: { RSC: "1", "Next-Url": "/me/private-jobs" } } : {});
@@ -525,7 +529,7 @@ try {
   } catch (error) { cleanupFailures.push(error); }
   try {
     await writeFile(join(run, "natural-close.json"), JSON.stringify({ listenerClosed: !server.listening, browserCloseCompleted: browserClosed,
-      instrumentationClosed, appClosed, tracesFlushed, mainFailureObserved: mainFailed, cleanupFailureCount: cleanupFailures.length,
+      transportObservations, instrumentationClosed, appClosed, tracesFlushed, mainFailureObserved: mainFailed, cleanupFailureCount: cleanupFailures.length,
       processExitObserved: null, stdoutEofObserved: null, stderrEofObserved: null,
       note: "Process lifetime/EOF fields belong to the parent's actual capture. Original failure and every cleanup cause/stack are retained in the thrown error/AggregateError; no error payload is serialized here." }, null, 2) + "\n", { flag: "wx" });
   } catch (error) { cleanupFailures.push(error); }
