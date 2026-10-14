@@ -181,6 +181,7 @@ let fixtureDb: import("../lib/db/sqlite-adapter").SqliteAdapter | undefined;
 let raw: import("node:sqlite").DatabaseSync | undefined;
 type NextFactory = (options: { dev: false; dir: string; hostname: string; port: number; httpServer: ReturnType<typeof createServer> }) => {
   prepare(): Promise<void>; close(): Promise<void>; getRequestHandler(): (req: IncomingMessage, res: ServerResponse) => Promise<void>;
+  server: { getServer(): Promise<{ prepare(): Promise<void> }> };
 };
 const httpRequests: { method: string; path: string }[] = [], failures: string[] = [], pageErrors: string[] = [], externalAttempts: string[] = [];
 let unavailablePrefetches = 0;
@@ -208,7 +209,10 @@ const server = createServer(async (req, res) => {
       assert.equal(method, "GET");
       assert(["/me/private-jobs", "/about", "/favicon.ico"].includes(url.pathname) || url.pathname.startsWith("/_next/"), "Finite actual page/asset routes");
     }
-    assert(app, "Next was prepared before first request"); await app.getRequestHandler()(req, res);
+    assert(app, "Next was prepared before first request");
+    console.log(`Compiled listener request ${httpRequests.length}: entering Next`);
+    await app.getRequestHandler()(req, res);
+    console.log(`Compiled listener request ${httpRequests.length}: Next handler returned`);
   } catch { failures.push("Built loopback request refused"); if (!res.headersSent) res.writeHead(500); res.end(); }
 });
 server.headersTimeout = 5000; server.requestTimeout = 10000; server.keepAliveTimeout = 500;
@@ -323,11 +327,11 @@ try {
   const originalBytes = originals();
   app = (require("next") as NextFactory)({ dev: false, dir: fixture, hostname: "127.0.0.1", port: address.port, httpServer: server });
   await app.prepare();
-  // Production app.prepare() creates the wrapper; await the same actual boot
-  // registration used by Next and by the existing natural cleanup below.
-  const compiledBoot = require(join(fixture, ".next/server/instrumentation.js")) as { register(): Promise<void> };
-  await compiledBoot.register();
-  console.log("Compiled application instrumentation: ready");
+  // Pinned Next16 production wrapper does not await the underlying preparation.
+  // Await the genuine server promise that its first handleRequest also awaits.
+  const preparedNext = await app.server.getServer();
+  await preparedNext.prepare();
+  console.log("Compiled actual Next server: prepared");
   const privateHeaders = (response: Response) => {
     for (const [name, value] of [["cache-control", "no-store"], ["referrer-policy", "no-referrer"], ["x-robots-tag", "noindex, nofollow"]]) assert.equal(response.headers.get(name), value);
   };
