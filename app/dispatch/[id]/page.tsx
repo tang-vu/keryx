@@ -1,7 +1,8 @@
 import { formatRecordedAmount } from "@/lib/i18n/format";
 import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
-import { closedDispatchMetadata, dispatchMetadataCopy, publicDispatchMetadata } from "@/lib/i18n/report-metadata";
+import { closedDispatchMetadata, publicDispatchMetadata } from "@/lib/i18n/report-metadata";
+import { recordedReportPreview } from "@/lib/i18n/recorded-report-preview";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
@@ -60,17 +61,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const dispatch = await resolveDispatch(id);
     if (!dispatch || dispatch.visibility!=="public") return closedDispatchMetadata();
     const { run, archive } = dispatch;
+    const preview = recordedReportPreview(run);
     const snippet = run.answer.slice(0, 160).replace(/\n/g, " ");
     const cited = run.citations.length;
     const conf = deriveConfidence(run);
-    const descriptions = dispatchMetadataCopy({
+    const descriptions = preview.metadataCopy({
       historical: Boolean(archive), bibliographic: Boolean(projectBibliographicTask(run.bibliography)),
       confidence: conf ? String(conf.level) : undefined, count: cited, spent: formatRecordedAmount(run.totalSpent, { minimumFractionDigits: 4 }),
       creators: formatRecordedAmount(run.totalToCreators, { minimumFractionDigits: 4 }), excerpt: snippet,
     });
-    const metadata = publicDispatchMetadata({ id, title: copy("reportDispatch.title", { question: run.question }),
+    const metadata = publicDispatchMetadata({ id, title: preview.title(run.question),
       description: descriptions.description, openGraphDescription: descriptions.openGraph });
-    return { ...metadata, other: { ...metadata.other, "DC.language": recordedAnswerLanguage(run) ?? "und" } };
+    return { ...metadata, other: { ...metadata.other, "DC.language": preview.answerLanguage } };
   } catch {
     return closedDispatchMetadata();
   }
