@@ -1,5 +1,6 @@
 import type { PaymentSettlementStatus } from "../types";
 import { createHash } from "node:crypto";
+import type { AdmittedSettlementRequest, SettlementReceiptHint } from "../gateway/settlement-events";
 import { config } from "../config";
 import { assertRecipientAllowed, type RecipientExclusion } from "./recipient-exclusion";
 import {
@@ -58,6 +59,20 @@ interface PayWithServerSignerInput extends RecipientExclusion {
   /** Must durably admit this exact attempt or throw. Called before signed HTTP I/O, never retried here. */
   beforeSubmit?: (submission: Readonly<ServerX402Submission>) => Promise<void>;
   beforeSignedSubmit?: (submission: Readonly<ServerX402Submission>, headerHash: string) => Promise<void>;
+  /** Owned retained original only. This port is passive; it never admits or settles a payment. */
+  settlementObserver?: {
+    readonly admittedRequest?: AdmittedSettlementRequest;
+    readonly observe: (signal: ServerX402TransportObservation) => void | Promise<void>;
+  };
+}
+
+/** Private, bounded scalar snapshot. Receipt hints are never independent settlement proof. */
+export interface ServerX402TransportObservation {
+  readonly kind: "server-x402-transport";
+  readonly admittedRequest: AdmittedSettlementRequest | null;
+  readonly receiptHint: SettlementReceiptHint | null;
+  readonly delivered: boolean;
+  readonly httpStatus: number | null;
 }
 
 /** Circle's GatewayClient throws away PAYMENT-RESPONSE on non-2xx paid responses. Keryx needs the
@@ -74,6 +89,7 @@ export async function payWithServerSigner<T>({
   fetchImpl = fetch,
   beforeSubmit,
   beforeSignedSubmit,
+  settlementObserver,
 }: PayWithServerSignerInput): Promise<ServerX402Attempt<T>> {
   assertRecipientAllowed(expectedPayee, deniedRecipient);
   const headers = { "Content-Type": "application/json", Accept: "application/json" };
@@ -113,6 +129,7 @@ export async function payWithServerSigner<T>({
     accepted: requirements,
   })).toString("base64");
 
+  let observedOriginal: AdmittedSettlementRequest | null = null;
   if (beforeSubmit || beforeSignedSubmit) {
     const signedAuthorization = (signed.payload as { authorization?: { from?: unknown; to?: unknown; value?: unknown } } | null)?.authorization;
     const amountMicros = atomicUsdc(expectedAmount);
@@ -125,9 +142,29 @@ export async function payWithServerSigner<T>({
     // Outside the transport catch: a failed journal must never cause a signed request.
     const submission = Object.freeze({ ...authorization, authorizationId: authorization.authorizationId.toLowerCase(),
       payer: payer.toLowerCase(), payee: expectedPayee.toLowerCase(), amountMicros, network, asset: asset.toLowerCase() });
+    // Snapshot before journal callbacks; optional observer input cannot rewrite signed terms.
+    const original = matchingObservedOriginal(settlementObserver, submission, expectedAmount);
     await beforeSubmit?.(submission);
     await beforeSignedSubmit?.(submission, `0x${createHash("sha256").update(paymentHeader).digest("hex")}`);
+    observedOriginal = original;
   }
+
+  const finish = (result: ServerX402Attempt<T>): ServerX402Attempt<T> => {
+    // No raw receipt, header, signature, URL, response body or error is exposed. No observer
+    // promise is awaited: a lost retention acknowledgement cannot retry or delay payment.
+    try {
+      if (settlementObserver) {
+        const transferId = result.transaction;
+        const receiptHint = observedOriginal && transferId && /^[a-zA-Z0-9:_-]{1,128}$/.test(transferId)
+          ? Object.freeze({ requestId: observedOriginal.requestId, transferId }) : null;
+        const signal: ServerX402TransportObservation = Object.freeze({ kind: "server-x402-transport",
+          admittedRequest: observedOriginal, receiptHint, delivered: result.delivered,
+          httpStatus: result.httpStatus ?? null });
+        void Promise.resolve(settlementObserver.observe(signal)).catch(() => {});
+      }
+    } catch { /* Passive observation failures never change a completed transport result. */ }
+    return result;
+  };
 
   let paidResponse: Response;
   try {
@@ -136,14 +173,14 @@ export async function payWithServerSigner<T>({
       headers: { ...headers, "Payment-Signature": paymentHeader },
     });
   } catch (error) {
-    return {
+    return finish({
       delivered: false,
       settlementStatus: "pending",
       transaction: null,
       ...authorization,
       amountUsdc: expectedAmount,
       reason: errorMessage(error),
-    };
+    });
   }
 
   const transaction = settlementReference(
@@ -160,14 +197,37 @@ export async function payWithServerSigner<T>({
   } as const;
 
   if (!paidResponse.ok) {
-    return { ...base, delivered: false, reason: `HTTP ${paidResponse.status}` };
+    return finish({ ...base, delivered: false, reason: `HTTP ${paidResponse.status}` });
   }
 
   try {
-    return { ...base, delivered: true, data: await paidResponse.json() as T };
+    return finish({ ...base, delivered: true, data: await paidResponse.json() as T });
   } catch {
-    return { ...base, delivered: false, reason: "paid route returned invalid JSON" };
+    return finish({ ...base, delivered: false, reason: "paid route returned invalid JSON" });
   }
+}
+
+function matchingObservedOriginal(
+  observer: PayWithServerSignerInput["settlementObserver"],
+  submission: Readonly<ServerX402Submission>,
+  amountUsdc: number,
+): AdmittedSettlementRequest | null {
+  try {
+    const r = observer?.admittedRequest;
+    if (!r) return null;
+    const requestId = r.requestId, submittedAt = r.submittedAt;
+    const { payer, payee, network, authorizationId, createdAt, amountUsdc: originalAmount } = r.payment;
+    if (typeof requestId !== "string" || !/^[a-zA-Z0-9:_-]{1,128}$/.test(requestId)
+      || typeof createdAt !== "string" || createdAt.length > 40 || !Number.isFinite(Date.parse(createdAt))
+      || !(submittedAt === null || (typeof submittedAt === "string" && submittedAt.length <= 40 && Number.isFinite(Date.parse(submittedAt))))
+      || typeof payer !== "string" || !/^0x[0-9a-f]{40}$/i.test(payer) || payer.toLowerCase() !== submission.payer
+      || typeof payee !== "string" || !/^0x[0-9a-f]{40}$/i.test(payee) || payee.toLowerCase() !== submission.payee
+      || typeof authorizationId !== "string" || authorizationId.toLowerCase() !== submission.authorizationId
+      || network !== submission.network || typeof network !== "string" || network.length > 32
+      || originalAmount !== amountUsdc) return null;
+    return Object.freeze({ requestId, submittedAt, payment: Object.freeze({ payer: submission.payer,
+      payee: submission.payee, authorizationId: submission.authorizationId, network, createdAt, amountUsdc }) });
+  } catch { return null; }
 }
 
 function authorizationEvidence(payload: unknown): {
