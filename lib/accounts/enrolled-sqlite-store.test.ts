@@ -1,15 +1,19 @@
-/** AUTHORED, UNRUN. Real temporary SQLite and genuine verified WeakMap handles.
+/** Genuine controls first ran 28 PASS / 17 FAIL; R104 selected 18 PASS / 5 timeouts.
+ * R114 focused types PASS; its measured MAX8 case still timed out at 20 seconds.
+ * The synthetic population transaction correction below is UNRUN.
+ * Real temporary SQLite and genuine verified WeakMap handles.
  * Synthetic identities, public test keys and settled-looking fixture rows are
  * not provider/custody/settlement evidence. ROOT owns isolated execution after
  * composing its full19 migration and fixed metadata policy dependency. */
 import { createHash } from "node:crypto";
-import { copyFileSync, mkdtempSync, renameSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
+import { canonicalJson } from "../canonical-json";
 import { syntheticA2aOriginal } from "../db/a2a-original-fixture";
 import { syntheticStorageIdentity } from "../db/storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "../db/storage-identity";
@@ -54,6 +58,13 @@ function edit(f: Fixture, action: (db: DatabaseSync) => void) {
   const db = new DatabaseSync(f.file);
   // Explicit setup actor for disposable synthetic data. Never native authority.
   try { registerStorageCapability(db, f.identity, () => true); action(db); } finally { db.close(); }
+}
+function syntheticPopulationTransaction(f: Fixture, action: (db: DatabaseSync) => void) {
+  // Only bulk disposable setup uses this wrapper; edit still closes in finally.
+  edit(f, db => {
+    try { db.exec("BEGIN IMMEDIATE"); action(db); db.exec("COMMIT"); }
+    catch (error) { if (db.isTransaction) db.exec("ROLLBACK"); throw error; }
+  });
 }
 function seedOriginal(db: DatabaseSync) {
   const { order, binding: originalBinding } = syntheticA2aOriginal(1, ARC_MAINNET_PROFILE);
@@ -119,10 +130,25 @@ async function link(base: Awaited<ReturnType<typeof bootstrap>>, index = 1) {
   const signature = await wallets[index].signMessage({ message: proof.message });
   return { proof, signature, result: await base.service.completeLink(base.s, proof.nonce, signature, linkConsent) };
 }
+// Temporary diagnostics for the parent's one changed observation. Only fixed
+// public labels and elapsed milliseconds; no rows, paths, wallets or proof data.
+// Call only at the named boundaries below, never per SQL call or fixture row.
+function phaseTiming(journey: "unlink" | "oversized-challenges" | "oversized-sessions" | "max8-retention" | "exclusive-cleanup") {
+  const started = performance.now();
+  let previous = started;
+  const mark = (phase: string) => {
+    const now = performance.now();
+    console.info(`[native-account267-phase] ${journey} ${phase} phaseMs=${Math.round(now - previous)} elapsedMs=${Math.round(now - started)}`);
+    previous = now;
+  };
+  mark("start");
+  return mark;
+}
 beforeEach(() => { directory = mkdtempSync(join(tmpdir(), "keryx-native-account267-")); sequence = 0; });
 afterEach(() => {
   vi.restoreAllMocks();
   for (const connection of opened.splice(0)) connection.close();
+  vi.unstubAllEnvs();
   // All actual tests, including failure paths, preserve every original financial
   // application table, with nonempty payment/order/authorization originals.
   try { for (const original of originals.splice(0)) expect(financialHash(original.file)).toBe(original.hash); }
@@ -130,6 +156,26 @@ afterEach(() => {
 });
 
 describe("genuine enrolled account membership", () => {
+  it("rolls back a failed synthetic population transaction and closes its setup connection", () => {
+    const f = fixture(), before = retained(f.file), original = financialHash(f.file);
+    const exec = vi.spyOn(DatabaseSync.prototype, "exec");
+    let setupDb: DatabaseSync | undefined;
+    expect(() => syntheticPopulationTransaction(f, db => {
+      setupDb = db;
+      const hash = randomAccountValue(), now = Date.now();
+      const insert = db.prepare("INSERT INTO web_sessions(hash,wallet,issued_at,expires_at) VALUES(?,?,?,?)");
+      insert.run(hash, wallets[0].address.toLowerCase(), now, now + 600_000);
+      insert.run(randomAccountValue(), wallets[1].address.toLowerCase(), now, now + 600_000);
+      expect(db.prepare("SELECT count(*) AS n FROM web_sessions").get()?.n).toBe(2);
+      // Actual SQLite uniqueness failure after two successful synthetic inserts.
+      insert.run(hash, wallets[0].address.toLowerCase(), now, now + 600_000);
+    })).toThrow(/UNIQUE constraint failed/);
+    expect(exec.mock.calls).toEqual([["BEGIN IMMEDIATE"], ["ROLLBACK"]]); exec.mockRestore();
+    expect(setupDb).toBeDefined();
+    expect(() => setupDb!.prepare("SELECT 1")).toThrow();
+    expect(retained(f.file)).toEqual(before);
+    expect(financialHash(f.file)).toBe(original);
+  });
   it.each([false, true])("admits the full19 native family with archive=%s, positive FK and fixed policy", archive => {
     const f = fixture({ archive }), store = requiredStore(f.connection.db);
     expect(Object.isFrozen(store)).toBe(true);
@@ -152,6 +198,15 @@ describe("genuine enrolled account membership", () => {
   it("requires trusted source policy even when genuine identity/fences are present", () => {
     const f = fixture({ profiles: false });
     expect(() => createEnrolledSqliteAccountMembership(f.connection.db)).toThrow("account_unavailable");
+  });
+  it("keeps one full guard per hot check and every genuine SQL primitive guard", async () => {
+    let guardCalls = 0;
+    const base = await bootstrap(fixture({ runtimeGuard: () => { guardCalls++; } }));
+    guardCalls = 0;
+    expect(await base.store.resolve(base.s, binding)).toEqual(base.start);
+    // Four hot checks + isTransaction/BEGIN/COMMIT + clock prepare/get +
+    // seven business SELECT prepare/get-or-all pairs. No latency is inferred.
+    expect(guardCalls).toBe(23);
   });
   it.each([false, true])("returns optional absence on exact BEFORE with archive=%s and preserves the same healthy connection", archive => {
     let guardCalls = 0;
@@ -326,12 +381,18 @@ describe("genuine enrolled account membership", () => {
     }, async () => {})).rejects.toThrow("account_changed");
   });
   it("unlink revokes live removed generations, cancels all unconsumed proofs, and preserves dead evidence/last credential", async () => {
-    const base = await bootstrap(), { result } = await link(base), fresh = await freshLogin(base, 1);
+    const mark = phaseTiming("unlink");
+    const base = await bootstrap(); mark("bootstrap");
+    const { result } = await link(base); mark("initial-link");
+    const fresh = await freshLogin(base, 1); mark("fresh-login");
     const target = await base.service.resume(fresh, expectedOf(result.membership), consent);
+    mark("resume");
     const proof = await base.service.prepareLink(base.s, wallets[2].address, expectedOf(result.membership), linkConsent);
+    mark("pending-proof");
     const removed = result.membership.members.find(member => member.wallet === fresh.wallet)!;
     const beforeSession = inspect(base.file, db => db.prepare("SELECT * FROM account267_sessions WHERE session_hash=?").get(fresh.sessionHash)!);
     const after = (await base.store.unlink(result, removed.wallet, removed.generation))!;
+    mark("unlink");
     expect(after.revision).toBe(3); expect(after.members).toHaveLength(1);
     await expect(base.store.resolve(fresh, binding)).rejects.toThrow("account_unauthenticated");
     await expect(base.store.assertCurrent(target)).rejects.toThrow("account_unauthenticated");
@@ -339,12 +400,16 @@ describe("genuine enrolled account membership", () => {
     expect(revoked.revoked_at).not.toBeNull(); expect({ ...revoked, revoked_at: null }).toEqual(beforeSession);
     expect(inspect(base.file, db => db.prepare("SELECT consumed_at FROM account267_challenges WHERE nonce_hash=?").get(membershipNonceHash(proof.nonce))?.consumed_at)).not.toBeNull();
     await expect(base.store.take(base.s, binding, proof.nonce, "link-wallet", randomAccountValue())).rejects.toThrow("invalid_membership_proof");
+    mark("revocation-and-nonce-refusals");
     const current = (await base.service.resolve(base.s))!, before = retained(base.file), last = current.membership.members[0];
     await expect(base.store.unlink(current, last.wallet, last.generation)).rejects.toThrow("last_credential");
     expect(retained(base.file)).toEqual(before);
+    mark("last-credential-refusal");
     const relinked = await link(base, 1);
+    mark("relink");
     expect(relinked.result.membership.members.find(member => member.wallet === fresh.wallet)!.generation).not.toBe(removed.generation);
     await expect(base.service.resume(fresh, expectedOf(relinked.result.membership), consent)).rejects.toThrow("account_unauthenticated");
+    mark("old-session-refusal");
   });
   it("revoke keeps original session expiry immutable and old consent/proofs dead", async () => {
     const base = await bootstrap(), proof = await base.service.prepareLink(base.s, wallets[1].address, expectedOf(base.start.membership), linkConsent);
@@ -392,9 +457,13 @@ describe("genuine enrolled account membership", () => {
     expect(foreign()).toEqual(foreignBefore);
   });
   it.each(["challenges", "sessions"] as const)("oversized retained unlink %s refuses atomically before any journal mutation", async kind => {
-    const base = await bootstrap(), { result } = await link(base), target = result.membership.members.find(member => member.wallet !== base.s.wallet)!;
+    const mark = phaseTiming(kind === "challenges" ? "oversized-challenges" : "oversized-sessions");
+    const base = await bootstrap(); mark("bootstrap");
+    const { result } = await link(base), target = result.membership.members.find(member => member.wallet !== base.s.wallet)!;
+    mark("link");
     const proof = await base.service.prepareLink(base.s, wallets[2].address, expectedOf(result.membership), linkConsent);
-    edit(base, db => {
+    mark("pending-proof");
+    syntheticPopulationTransaction(base, db => {
       const challenge = db.prepare("INSERT INTO account267_challenges(nonce_hash,session_hash,payload,expires_at) VALUES(?,?,?,?)");
       const sessionInsert = db.prepare(`INSERT INTO account267_sessions(session_hash,wallet,account_id,member_generation,credential_generation,
         issued_at,expires_at,origin,network,history_consent,revoked_at) VALUES(?,?,?,?,?,?,?,?,?,1,NULL)`);
@@ -404,43 +473,60 @@ describe("genuine enrolled account membership", () => {
           base.s.issuedAt, base.s.expiresAt, binding.origin, binding.network);
       }
     });
+    mark("populated-1025");
     const before = retained(base.file), prepare = vi.spyOn(DatabaseSync.prototype, "prepare");
+    mark("snapshot");
     await expect(base.store.unlink(result, target.wallet, target.generation)).rejects.toThrow("account_unavailable");
+    mark("unlink-refusal");
     expect(prepare.mock.calls.some(([query]) => /^(INSERT|UPDATE|DELETE)\b/.test(query))).toBe(false); prepare.mockRestore();
     expect(retained(base.file)).toEqual(before); expect((await base.service.resolve(base.s))!.membership).toEqual(result.membership);
+    mark("postconditions");
   });
   it("preserves MAX8, eight live challenges and bounded retained challenge/event refusal", async () => {
+    const mark = phaseTiming("max8-retention");
     const base = await bootstrap();
+    mark("bootstrap");
     for (let i = 1; i < 8; i++) await link(base, i);
+    mark("seven-links");
     const full = (await base.service.resolve(base.s))!;
     await expect(base.service.prepareLink(base.s, wallets[8].address, expectedOf(full.membership), linkConsent)).rejects.toThrow("account_full");
+    mark("full-account-refusal");
     const other = await bootstrap(fixture(), 9);
-    const proofs = [];
+    mark("second-bootstrap");
+    const proofs: Awaited<ReturnType<typeof other.service.prepareLink>>[] = [];
     for (let i = 0; i < 8; i++) proofs.push(await other.service.prepareLink(other.s, wallets[0].address, expectedOf(other.start.membership), linkConsent));
+    mark("eight-live-proofs");
     const before = retained(other.file);
     await expect(other.service.prepareLink(other.s, wallets[0].address, expectedOf(other.start.membership), linkConsent)).rejects.toThrow("account_unavailable");
     expect(retained(other.file)).toEqual(before);
+    mark("live-cap-refusal");
     // Retention capacity is independent from live capacity. Synthetic retained
     // rows preserve exact payload/expiry; no pruning or issuer clock is changed.
-    edit(other, db => {
+    syntheticPopulationTransaction(other, db => {
       db.prepare("UPDATE account267_challenges SET consumed_at=?,lease_hash=? WHERE consumed_at IS NULL").run(Date.now(), randomAccountValue());
       const insert = db.prepare("INSERT INTO account267_challenges(nonce_hash,session_hash,payload,expires_at,consumed_at,lease_hash) VALUES(?,?,?,?,?,?)");
       for (let i = 8; i < 1024; i++) insert.run(membershipNonceHash(randomAccountValue()), other.s.sessionHash,
         JSON.stringify(proofs[0].challenge), proofs[0].challenge.expiresAt, Date.now(), randomAccountValue());
     });
+    mark("retained-challenges-populated");
     const retainedBefore = retained(other.file);
     await expect(other.service.prepareLink(other.s, wallets[0].address, expectedOf(other.start.membership), linkConsent)).rejects.toThrow("account_unavailable");
     expect(retained(other.file)).toEqual(retainedBefore);
-    const eventBase = await bootstrap(fixture(), 8), proof = await eventBase.service.prepareLink(eventBase.s, wallets[0].address, expectedOf(eventBase.start.membership), linkConsent);
+    mark("retained-cap-refusal");
+    const eventBase = await bootstrap(fixture(), 8); mark("event-bootstrap");
+    const proof = await eventBase.service.prepareLink(eventBase.s, wallets[0].address, expectedOf(eventBase.start.membership), linkConsent);
     const taken = await eventBase.store.take(eventBase.s, binding, proof.nonce, "link-wallet", randomAccountValue());
-    edit(eventBase, db => {
+    mark("event-proof-taken");
+    syntheticPopulationTransaction(eventBase, db => {
       const insert = db.prepare(`INSERT INTO account267_events(id,account_id,revision,purpose,lineage_hash,consent_hash,proof_hash,created_at)
         SELECT ?,account_id,revision,purpose,lineage_hash,consent_hash,proof_hash,created_at FROM account267_events LIMIT 1`);
       for (let i = 1; i < 1024; i++) insert.run(randomAccountValue());
     });
+    mark("retained-events-populated");
     const eventsBefore = retained(eventBase.file);
     await expect(eventBase.store.complete(eventBase.s, taken, randomAccountValue())).rejects.toThrow("account_unavailable");
     expect(retained(eventBase.file)).toEqual(eventsBefore);
+    mark("event-cap-refusal");
   });
   it.each(["revoked", "expired", "live"] as const)("counts live bindings rather than cumulative retained %s rows", async kind => {
     const base = await bootstrap(), fresh = await freshLogin(base), now = Date.now();
@@ -566,6 +652,23 @@ describe("genuine enrolled account membership", () => {
     const taken = await base.store.take(base.s, binding, proof.nonce, "link-wallet", randomAccountValue());
     expect((await base.store.complete(base.s, taken, randomAccountValue())).membership.revision).toBe(2);
   }, 15_000);
+  it("permanently latches when an actual EXCLUSIVE lock prevents cleanup inspection", async () => {
+    const mark = phaseTiming("exclusive-cleanup");
+    const base = await bootstrap(), before = retained(base.file);
+    mark("bootstrap-and-snapshot");
+    const blocker = new DatabaseSync(base.file); opened.push(blocker);
+    blocker.exec("BEGIN EXCLUSIVE");
+    try {
+      mark("exclusive-acquired");
+      await expect(base.store.resolve(base.s, binding)).rejects.toThrow("account_unavailable");
+      mark("cleanup-refusal");
+    }
+    finally { blocker.exec("ROLLBACK"); mark("exclusive-released"); }
+    await expect(base.store.resolve(base.s, binding)).rejects.toThrow("account_unavailable");
+    expect(() => assertVerifiedSqliteConnection(base.connection.db)).toThrow();
+    expect(retained(base.file)).toEqual(before);
+    mark("permanent-latch-and-retention");
+  }, 15_000);
   it.each([false, true])("lost final COMMIT acknowledgement (persisted=%s) grants no success and permanently latches the port", async persisted => {
     const f = fixture(), base = setup(f), s = session(f), proof = await base.service.prepareCreate(s, consent);
     const taken = await base.store.take(s, binding, proof.nonce, "create-private-account", randomAccountValue());
@@ -607,17 +710,92 @@ describe("genuine enrolled account membership", () => {
     await expect(base.store.resolve(base.s, binding)).rejects.toThrow("account_unavailable");
     expect(() => assertVerifiedSqliteConnection(base.connection.db)).toThrow();
   });
-  it("file replacement permanently latches after the held original is restored", async () => {
+  it("qualifies actual held-file rename prevention or permanent refusal after real replacement", async () => {
     const base = await bootstrap(), replacement = fixture();
-    const original = join(directory, "held-original.sqlite");
-    // Same inode held by the native port must never be silently rebound by path.
-    // Close no borrowed handle; Windows may reject renaming an open file, which
-    // is an explicit parent platform gate rather than a mocked native pass.
-    renameSync(base.file, original);
+    const original = join(directory, "held-original.sqlite"), db = base.connection.db;
+    const bytes = readFileSync(base.file), identity = statSync(base.file, { bigint: true });
+    const schema = inspect(base.file, raw => raw.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY name").all());
+    // Exactly one actual substitution attempt, with every held handle intact.
+    let renameError: unknown;
+    try { renameSync(base.file, original); } catch (error) { renameError = error; }
+    if (process.platform === "win32") {
+      expect(renameError).toBeInstanceOf(Error);
+      expect(renameError).toMatchObject({ code: "EBUSY", syscall: "rename", path: base.file, dest: original });
+      expect(existsSync(original)).toBe(false); expect(readFileSync(base.file)).toEqual(bytes);
+      const unchanged = statSync(base.file, { bigint: true });
+      expect([unchanged.dev, unchanged.ino, unchanged.birthtimeNs]).toEqual([identity.dev, identity.ino, identity.birthtimeNs]);
+      expect(base.connection.db).toBe(db); expect(assertVerifiedSqliteConnection(db)).toEqual(base.identity);
+      expect(await base.store.resolve(base.s, binding)).toEqual(base.start);
+      expect(inspect(base.file, raw => raw.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY name").all())).toEqual(schema);
+      expect(readFileSync(base.file)).toEqual(bytes);
+      return;
+    }
+    if (renameError) throw renameError;
     try {
       copyFileSync(replacement.file, base.file);
       await expect(base.store.resolve(base.s, binding)).rejects.toThrow("account_unavailable");
     } finally { rmSync(base.file); renameSync(original, base.file); }
     await expect(base.store.resolve(base.s, binding)).rejects.toThrow("account_unavailable");
+    expect(readFileSync(base.file)).toEqual(bytes);
+    expect(inspect(base.file, raw => raw.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY name").all())).toEqual(schema);
+  });
+});
+
+/** Actual selected-facade construction; no mocked factory or supplied authority. */
+async function facadeFixture(f: Fixture) {
+  vi.resetModules();
+  const manifestPath = join(directory, `deployment-${sequence}.json`);
+  const manifest = canonicalJson({ format: "keryx-storage-deployment-v1", identity: f.identity,
+    backend: { kind: "sqlite", databasePath: f.file } });
+  writeFileSync(manifestPath, manifest);
+  vi.stubEnv("KERYX_STORAGE_MANIFEST", manifestPath); vi.stubEnv("KERYX_SQLITE_PATH", f.file);
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("CONTENT_MASTER_KEY", "ab".repeat(32));
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false"); vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false");
+  const api = await import("../db/enrolled-sqlite-adapter");
+  return { api, manifestPath, manifest };
+}
+describe("genuine enrolled account facade", () => {
+  it.each([false, true])("keeps optional account absence on exact BEFORE with archive=%s and a healthy facade", async archive => {
+    const f = fixture({ full: false, archive }), { api } = await facadeFixture(f);
+    const schema = inspect(f.file, raw => raw.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY name").all());
+    const adapter = await api.createEnrolledSqliteAdapter(); opened.push(adapter);
+    expect(Object.isFrozen(adapter)).toBe(true); expect(Object.hasOwn(adapter, "accountMembership")).toBe(false);
+    expect(api.assertEnrolledSqliteAdapter(adapter)).toEqual(f.identity);
+    expect(await adapter.getWebSession(randomAccountValue())).toBeNull();
+    expect(inspect(f.file, raw => raw.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY name").all())).toEqual(schema);
+  });
+  it("publishes a frozen nonenumerable account port and keeps readonly denial ahead of manifest I/O", async () => {
+    const base = await bootstrap(), { api, manifestPath, manifest } = await facadeFixture(base);
+    const adapter = await api.createReadonlyEnrolledSqliteAdapter(); opened.push(adapter);
+    const reader = adapter.accountMembership;
+    if (!reader) throw new Error("Expected selected native account membership");
+    expect(Object.getOwnPropertyDescriptor(adapter, "accountMembership")).toEqual({ value: reader,
+      enumerable: false, writable: false, configurable: false });
+    expect(Object.isFrozen(adapter)).toBe(true); expect(Object.isFrozen(reader)).toBe(true);
+    expect(Object.keys(adapter)).not.toContain("accountMembership");
+    expect(Reflect.get(adapter, "db")).toBeUndefined();
+    const before = retained(base.file);
+    writeFileSync(manifestPath, "{}");
+    const prepare = vi.spyOn(DatabaseSync.prototype, "prepare"), exec = vi.spyOn(DatabaseSync.prototype, "exec");
+    await expect(reader.revokeSession(base.start)).rejects.toThrow("account_unavailable");
+    expect(prepare).not.toHaveBeenCalled(); expect(exec).not.toHaveBeenCalled();
+    prepare.mockRestore(); exec.mockRestore(); writeFileSync(manifestPath, manifest);
+    expect(await reader.resolve(base.s, binding)).toEqual(base.start);
+    expect(retained(base.file)).toEqual(before); expect(api.assertEnrolledSqliteAdapter(adapter)).toEqual(base.identity);
+  });
+  it("retires the selected facade after account manifest failure even when exact configuration is restored", async () => {
+    const base = await bootstrap(), { api, manifestPath, manifest } = await facadeFixture(base);
+    const adapter = await api.createEnrolledSqliteAdapter(); opened.push(adapter);
+    const store = adapter.accountMembership;
+    if (!store) throw new Error("Expected selected native account membership");
+    expect(await store.resolve(base.s, binding)).toEqual(base.start);
+    const before = retained(base.file);
+    writeFileSync(manifestPath, "{}");
+    await expect(store.resolve(base.s, binding)).rejects.toThrow("account_unavailable");
+    writeFileSync(manifestPath, manifest);
+    await expect(store.resolve(base.s, binding)).rejects.toThrow("account_unavailable");
+    expect(() => api.assertEnrolledSqliteAdapter(adapter)).toThrow();
+    expect(() => adapter.getWebSession(base.s.sessionHash)).toThrow();
+    expect(retained(base.file)).toEqual(before);
   });
 });

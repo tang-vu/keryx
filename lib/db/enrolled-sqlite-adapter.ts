@@ -4,6 +4,7 @@ import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection, assertVerifi
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
 import { createEnrolledSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
+import { createEnrolledSqliteAccountMembership } from "../accounts/sqlite-store";
 import { createEnrolledSqliteRunClaims } from "./run-claims-sqlite";
 import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
 import { createEnrolledSqliteRunPrivacy } from "./run-privacy-sqlite";
@@ -336,6 +337,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     if (deployment.identity.authorityMode === "mainnet-real") {
       const acceptance = createEnrolledSqliteDeliverableAcceptance(db);
       if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
+      const accountMembership = createEnrolledSqliteAccountMembership(db);
+      if (accountMembership) Object.defineProperty(facade, "accountMembership", { value: accountMembership });
     }
     Object.defineProperty(facade, "init", { value: async () => { assert(); } });
     Object.defineProperty(facade, "close", { value: connection.close });

@@ -77,26 +77,12 @@ export function createEnrolledSqliteAccountMembership(db: DatabaseSync): Account
     .filter(entry => entry.type === "table").flatMap(entry => ["insert", "update", "delete"]
       .map(operation => `storage_fence_${accountDigest(entry.name).slice(0, 16)}_${operation}`));
   const check = () => {
+    if (refused) throw unavailable();
     assertVerifiedSqliteNativeUserDomainPolicy(db);
     assertVerifiedSqliteForeignKeys(db);
-    const identity = assertVerifiedSqliteConnection(db);
-    if (identity.authorityMode !== "mainnet-real") throw unavailable();
-    assertStorageFences(db, identity);
-    const family = db.prepare(`SELECT name FROM sqlite_schema WHERE type='table'
-      AND name IN (${NATIVE_USER_DOMAIN_TABLES.map(() => "?").join(",")}) ORDER BY name LIMIT 20`)
-      .all(...NATIVE_USER_DOMAIN_TABLES).map(row => row.name);
-    if (JSON.stringify(family) !== JSON.stringify([...NATIVE_USER_DOMAIN_TABLES].sort())) throw unavailable();
-    // Only the three exact identity fences per table are excluded. Full fences
-    // and the trusted full-family source policy have already been verified.
-    const shape = db.prepare(`SELECT type,name,tbl_name AS 'table',substr(sql,1,16385) AS sql FROM sqlite_schema
-      WHERE (lower(tbl_name)='web_sessions' OR lower(name) GLOB 'account267_*' OR lower(tbl_name) GLOB 'account267_*'
-        OR (type='trigger' AND (length(sql)>16384 OR instr(lower(substr(sql,1,16384)),'account267_')>0
-          OR instr(lower(substr(sql,1,16384)),'web_sessions')>0)))
-        AND name NOT IN (${fences.map(() => "?").join(",")}) ORDER BY name LIMIT 64`).all(...fences)
-      .map(row => ({ type: row.type, name: row.name, table: row.table, sql: typeof row.sql === "string" ? normalize(row.sql) : row.sql }));
-    if (JSON.stringify(shape) !== JSON.stringify(expectedShape)) throw unavailable();
-    // busy_timeout is not read through forbidden PRAGMA. Genuine constructor
-    // provenance fixes it at 5000, then its authorizer forbids all later changes.
+    // The full core guard retains the exact admitted source profile, identity,
+    // file, manifest and fences. SQL primitives keep their own full guards.
+    assertVerifiedSqliteConnection(db);
   };
   const sql = <T>(action: () => T): T => {
     if (refused) throw unavailable();
@@ -141,7 +127,20 @@ export function createEnrolledSqliteAccountMembership(db: DatabaseSync): Account
       return undefined;
     }
     assertVerifiedSqliteNativeUserDomainPolicy(db);
-    check();
+    const family = db.prepare(`SELECT name FROM sqlite_schema WHERE type='table'
+      AND name IN (${NATIVE_USER_DOMAIN_TABLES.map(() => "?").join(",")}) ORDER BY name LIMIT 20`)
+      .all(...NATIVE_USER_DOMAIN_TABLES).map(row => row.name);
+    if (JSON.stringify(family) !== JSON.stringify([...NATIVE_USER_DOMAIN_TABLES].sort())) throw unavailable();
+    // Admit the account/session shape once. Only the three exact identity fences
+    // per table are excluded; the full core source-profile guard pins later SQL.
+    const shape = db.prepare(`SELECT type,name,tbl_name AS 'table',substr(sql,1,16385) AS sql FROM sqlite_schema
+      WHERE (lower(tbl_name)='web_sessions' OR lower(name) GLOB 'account267_*' OR lower(tbl_name) GLOB 'account267_*'
+        OR (type='trigger' AND (length(sql)>16384 OR instr(lower(substr(sql,1,16384)),'account267_')>0
+          OR instr(lower(substr(sql,1,16384)),'web_sessions')>0)))
+        AND name NOT IN (${fences.map(() => "?").join(",")}) ORDER BY name LIMIT 64`).all(...fences)
+      .map(row => ({ type: row.type, name: row.name, table: row.table, sql: typeof row.sql === "string" ? normalize(row.sql) : row.sql }));
+    if (JSON.stringify(shape) !== JSON.stringify(expectedShape)) throw unavailable();
+    // Genuine provenance fixes busy_timeout at 5000 before SQL restriction.
   } catch { latch(); throw unavailable(); }
   const transaction = <T>(action: (now: number) => T, write = true): T => {
     if (refused) throw unavailable();

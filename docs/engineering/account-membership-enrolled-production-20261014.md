@@ -1,10 +1,15 @@
 # Enrolled account membership source partition — 2026-10-14
 
 This partition adds `createEnrolledSqliteAccountMembership` beside the ordinary
-constructor in `lib/accounts/sqlite-store.ts`. It changes only that file, the new
-`lib/accounts/enrolled-sqlite-store.test.ts`, and this document. Base is
-`f816d5e0f8c006569a68a0b81f7cbc7f269a71de`. It is an uncommitted, unrun source
-handoff; it is not installed capability or completed #267 delivery.
+constructor in `lib/accounts/sqlite-store.ts`. The current correction also changes
+`lib/accounts/enrolled-sqlite-store.test.ts`, this document, the optional account
+attachment in `lib/db/enrolled-sqlite-adapter.ts`, and the exact account-store
+profile edge in `lib/operator/gateway-funding-composition.test.ts`. Original base
+is `f816d5e0f8c006569a68a0b81f7cbc7f269a71de`; this source-only correction starts
+at `915af0ec6f984cd7bb01b367d45cb538d1098fba`. Its actual R104 validation is recorded
+below. R114 focused types passed on its pinned source; its measured MAX8 case
+still failed. The R116 synthetic population transaction correction is uncommitted
+and **UNRUN**; it is not installed capability or completed #267 delivery.
 
 ## Authority and preserved journal
 
@@ -29,7 +34,7 @@ objects; unknown or partial shapes never become optional absence. The source
 profile helper owns its existing lazy reference generation; no new generator or
 caller-supplied profile authority is introduced here.
 
-Full19 AFTER admission still requires ROOT's fixed positive native policy helper,
+Full19 AFTER constructor admission still requires ROOT's fixed positive native policy helper,
 the entire nineteen-table family, exact existing six account tables and
 web_sessions (including their indexes and immutability triggers), and all identity
 fences. Only the three exact verified identity fences for each of those seven
@@ -37,7 +42,12 @@ tables are excluded from the account shape comparison. No target DDL, file open,
 repair, backfill or fallback occurs in the native constructor or journal. The
 genuine constructor fixes `busy_timeout=5000` before restricting SQL; its
 authorizer forbids later PRAGMA reads/changes to that policy. The ordinary limit
-is not raised and no raw SQL escape is added.
+is not raised and no raw SQL escape is added. Constructor-only fence, full19 and
+account/session catalog admission runs once. Present-store hot checks use the
+private refused latch, the existing zero-SQL native-domain/FK metadata assertions,
+and exactly one full `assertVerifiedSqliteConnection`. That core guard still pins
+the exact admitted profile, identity, held file, manifest and fences. Every wrapped
+SQL primitive retains its unchanged full guard; no new policy or cache is added.
 
 Offer/resolve/assertCurrent use genuine read transactions. Resume/issue/take/
 complete/unlink/revokeSession retain atomic immediate write transactions. The
@@ -53,7 +63,9 @@ or commit a consumed marker after such a failure.
 
 Only exact `ERR_SQLITE_ERROR` with numeric errcode 5/6 can follow the contention
 path. It returns account_unavailable without retiring the connection only after
-successful rollback/no-active-transaction and a valid full guard. Cleanup failure,
+successful rollback/no-active-transaction and a valid full guard. A failed BEGIN
+under a competing writer stays usable only when that cleanup inspection succeeds;
+an EXCLUSIVE lock that prevents inspection stays permanently latched. Cleanup failure,
 uncertain COMMIT acknowledgement and other errors retire admitted authority. There
 is no automatic retry, expiry extension or nonce recreation. Account semantic
 refusals preserve a healthy connection after valid cleanup. No wallet membership
@@ -83,17 +95,33 @@ exact source-profile comparison before that assertion. All failures still throw
 construction failures retire their connection, and raw/foreign arguments are
 never closed.
 
-This worktree's base still lacks those ROOT exports and native family data. No
-ROOT helper, policy, schema or migration was changed or composed by this worker.
-ROOT must compose the reviewed core before the first native/ordinary/type checks.
-No ordinary-only result accepts the new native store. The selected verified
-facade still needs its separately owned nonenumerable accountMembership assembly,
-including healthy optional BEFORE absence. This worker does not change facade,
-authentication, profile, bibliography, identity, privacy or global inventory files.
+At the R95 handoff, the worktree base lacked those ROOT exports and native family
+data. ROOT subsequently composed the dependency before the first real controls;
+the current source contains it. This worker changes no ROOT helper, policy, schema
+or migration. No ordinary-only result accepts the new native store. ROOT's current
+additive partition attaches the truthy frozen account store as a nonenumerable,
+nonwritable, nonconfigurable property before freezing the selected mainnet facade.
+Exact BEFORE leaves the property absent on the same healthy facade. No other port,
+core assembly, constructor, financial wrapper or default configuration changes.
+The graph permit adds only `lib/accounts/sqlite-store.ts` to
+`lib/db/enrolled-sqlite-schema-profile.ts`; funding, enrollment and other selector
+rules remain in force. Authentication, profile, bibliography, identity, privacy
+and global inventory sources remain outside this partition.
 
 ## Authored genuine fixtures and remaining acceptance
 
-All new tests are **AUTHORED, UNRUN**. They provision disposable source-generated
+The original 45 genuine controls actually ran **28 PASS / 17 FAIL**. Sixteen failed
+under the unchanged 15/20-second bounds; one failed on actual Windows `EBUSY` during
+the held-file rename. The exact result and raw stdout/stderr remain in
+`output/resume-distribution63-audit-20261012/native-account267-first-real-controls-20261014/`.
+The `60a8` guard-amplification assessment is static source evidence, not latency
+proof: the old hot check reaches 13 full guards and healthy transactions reach
+57 plus business SQL. This correction reaches one hot guard and nine plus business
+SQL without changing those primitive guards. No milliseconds or corrected pass
+result is inferred. The original result is not relabeled or overwritten.
+
+At the R104 source handoff, correction tests were **AUTHORED, UNRUN**; the subsequent
+actual selective result is recorded below. They provision disposable source-generated
 mainnet-shaped SQLite files, install genuine full19 tables/fences, and open them
 through the actual verified constructor. No WeakMap or native factory is mocked.
 The only method instrumentation observes actual transaction calls or injects a
@@ -119,10 +147,17 @@ application tables outside the native family/web_sessions before and after, with
 nonempty synthetic order/payment/authorization originals. These rows are explicitly
 synthetic and establish no real settlement or funding.
 
-File replacement uses a real pathname replacement with the original held handle;
-if Windows denies that rename, retain the exact parent platform result rather
-than substituting a mocked guard pass. No platform, execution or compiler result
-is claimed. Existing ordinary test files remain unchanged.
+The fixture makes one actual rename attempt with all held handles intact. On
+Windows it requires actual `EBUSY` prevention, unchanged original path/bytes/file
+identity/schema and the same healthy guarded account store. It does not close a
+handle, copy a substitute, retry or claim revocation when substitution was prevented.
+On platforms permitting substitution, the original replacement and permanent
+refusal after restoration remain. Added coverage observes the actual hot-guard
+count, EXCLUSIVE cleanup refusal, selected-facade exact BEFORE absence in both
+archive profiles, frozen hidden readonly account reads with pre-SQL write denial,
+and permanent facade retirement after restored manifest failure. Original economic
+snapshots and existing failure bodies remain intact. No corrected platform,
+execution or compiler result is claimed. Existing ordinary test files remain unchanged.
 
 The parent owns focused genuine native and unchanged ordinary tests, final typing,
 a different security review, coherent PR and required aggregate/domain CI. ROOT
@@ -133,13 +168,296 @@ retry occurred. Raw before/after pins, byte snapshots, minimal patch, full inver
 and handoff were retained in ROOT's assigned round93 worker output directory.
 The bounded R95 correction, its frozen before/after raw files, minimal patch and
 complete inverse are retained in the assigned round96
-`worker-repairNativeAccountOptionalBefore` output. First native, ordinary, final
-types and genuine facade checks remain parent **UNRUN** gates.
+`worker-repairNativeAccountOptionalBefore` output. The current five-file raw
+before/after, minimal patch, whole inverse, pins and body-preservation record are
+retained under round104 `worker-completeNativeAccountGuardAndFacade`. Parent owns
+a different small review, selective failed-risk controls at the original deadlines,
+ordinary focused validation, current-source types and graph/facade checks, then
+the focused PR and required CI. New R114 correction acceptance checks remain **UNRUN**.
 
-Web/API's private account flow, hosted/native desktop, CLI, remote/stdio MCP,
-extension and bots gain no selected producer from this source partition. Actual
-wallet-free stable account/profile, multiwallet owner history, different-target
-signing/custody negatives and composed privacy/session/history acceptance remain
-open until delivered through their genuine surfaces. Original #267 stays open;
+## R104 actual failure and R114 bounded diagnostics
+
+ROOT's first changed validation at HEAD
+`915af0ec6f984cd7bb01b367d45cb538d1098fba` selected 23 native cases: **18 PASS / 5
+timeouts**, with 28 prior passes reused, over 394.044 seconds. The actual reports,
+raw streams, capture receipts and `failure-handoff.json` remain in
+`output/resume-root-release63-20261012/native-account267-r104-first-changed-validation-20261014/`.
+Each capture observed natural exit/close and both EOFs, without an outer timeout.
+The compiler reported TS7034 at old line 430 and two TS7005 uses at old line 441.
+R114 changes only that array declaration to
+`const proofs: Awaited<ReturnType<typeof other.service.prepareLink>>[] = [];`.
+The existing `other` scope, eight-iteration issuance loop, proof payloads and result
+assertions remain. This is a source correction, not a claimed compiler pass.
+
+The graph case also failed its unchanged 20-second deadline (actual case duration
+22.9140967 seconds). No failing selector-edge assertion appeared in its retained
+stderr; that does not establish graph acceptance. It remains open and unchanged.
+Runtime account source SHA256 `da1d8fcaa80c4e6fcffe923d9878b2078d010ffb9433ea40ab4f0918e52db580`,
+facade `3dd11be8127c91d83d0fe0da14182882474c88f1e0c4db07eb60259ea78560d5`,
+and graph test `4264af6b3c57a83cc17fec6b5da6e4696f4e67d3cc8cae737639444014b42703`
+are immutable in this revision; their independent source review is retained.
+
+The following counts trace the complete existing bodies statically. They are
+service/journal transaction **entries**, including refusals, not measured SQL,
+successful BEGIN/COMMIT totals or latency. Internal journal projections and the
+core guard's own transactions are not additional entries in these counts.
+`bootstrap` contributes one read and three writes (resolve, issue, take, complete).
+Each genuine `link` contributes three reads and three writes (fresh resolve,
+prepare's resolve and required-current resolve, issue, take, complete), plus actual
+target EOA signing/verification. A standalone `prepareLink` contributes two reads
+and one write even when issue refuses.
+
+| Remaining journey | Actual R104 case duration / deadline | Static entries and fixture work |
+| --- | --- | --- |
+| Unlink revocation, dead evidence and last credential | 21.6006572s / 20s | 12 reads, 15 writes; one bootstrap, two genuine links, one pending proof, two resume attempts and five expected refusals |
+| Oversized retained unlink challenges | 23.4774284s / 20s | 7 reads, 8 writes; one bootstrap, one genuine link, one pending proof, 1025 synthetic challenge INSERTs, unlink refusal and fresh resolve |
+| Oversized retained unlink sessions | 22.9917943s / 20s | 7 reads, 8 writes; same ceremonies, 1025 synthetic session INSERTs, unlink refusal and fresh resolve |
+| MAX8, live challenges, retained challenges/events | 94.1043846s / 20s | 49 reads, 44 writes; three bootstraps, seven genuine links, eight genuine live proofs, three prepare refusals and final event-cap completion refusal |
+| EXCLUSIVE cleanup refusal | 18.2771748s / 15s | Three read entries, three writes, including bootstrap; one locked resolve and one already-latched resolve; one real blocker BEGIN EXCLUSIVE/ROLLBACK |
+
+Unlink retains four genuine issued nonces, four take attempts and three completion
+calls across bootstrap, initial link, pending proof and relink. After the first
+link it obtains a fresh durable login and consenting resume, captures the removed
+session, then unlinks. It still checks revision/member count, revoked session
+bytes/immutable expiry, stale snapshot refusal, consumed pending nonce and replay
+refusal, fresh initiating-wallet resolution, last-credential refusal with the
+whole retained journal unchanged, a new linked generation and rejection of the
+old session. The credential login-after inspection/wait and two durable session
+INSERTs remain. None of these ceremonies is replaced by seeded link authority.
+
+Each oversized case retains three genuine issued nonces, two take/completion
+pairs and its genuine link. In R114 the 1025-iteration fixture loop used a separate
+synthetic setup connection and performed individual INSERTs without an explicit
+batch transaction. The challenge branch retains the actual pending challenge's
+payload/expiry; the session branch retains live old-generation rows. Two whole
+journal snapshots bracket the refusal, the SQL observer still forbids any
+INSERT/UPDATE/DELETE from unlink, and a fresh native resolve checks the unchanged
+membership. Static INSERT counts cannot attribute the observed duration to those
+inserts or to preparation.
+
+MAX8 stays one case with all three independent fixtures. Seven real EOA links
+fill the first account before its ninth-wallet prepare refusal. The second
+account genuinely issues eight live proofs before the ninth live-proof refusal.
+There are 19 `prepareLink` attempts overall: seven link preparations, the full
+account refusal, eight live issuances, live/retained-cap refusals and the event
+proof. Together with three create challenges, 19 nonces are genuinely issued;
+there are 11 take and 11 complete calls, including the final refused completion.
+Retention setup still consumes the eight live proofs with one UPDATE and inserts
+1016 retained copies (`i = 8; i < 1024`); including the consumed create challenge,
+that fixture retains 1025 challenges. The third fixture takes its genuine event
+proof, then adds 1023 event copies to its existing create event for 1024 events.
+All six retained snapshots and their three refusal comparisons remain. No
+population bound, nonce/lease/revision check or no-resurrection assertion is split
+away or replaced with synthetic positive proof.
+
+EXCLUSIVE cleanup still locks the actual file with all genuine handles intact.
+The wrapped `isTransaction` read runs a full core guard; its failure can reach a
+second guarded `isTransaction` read during mandatory cleanup inspection. Both
+paths retain the fixed 5000 ms policy. That reachable source path is not a claim
+about which waits occurred in R104. ROLLBACK remains in `finally`; post-release
+resolve, verified-connection refusal and exact retained-journal equality still
+assert permanent retirement. No retry, pre-release unlock or healthy-reader
+fallback is introduced.
+
+These counts do not prove unrelated repeated preparation dominates, so R114 makes
+no synthetic preparation substitution. It adds `[native-account267-phase]`
+checkpoints only to these five failed bodies for the parent's **one changed
+observation**. Fixed public journey/phase labels report rounded interval and
+cumulative milliseconds, with at most 11 unlink, eight per oversized case, 13
+MAX8 and six EXCLUSIVE lines (46 total). There are no per-row/per-SQL logs, data
+values, wallets, nonces, paths or timer changes. Boundaries distinguish bootstrap,
+genuine links/live issuance, fresh login/resume, population, snapshots/refusals
+and exclusive acquisition/cleanup/release. Intervals include intervening assertions;
+beforeEach/afterEach and module loading remain outside these phase intervals.
+These were unobserved diagnostics when R114 was authored; the parent's subsequent
+single MAX8 observation is recorded below. All five case failures and graph
+failure remain open at their original 15/20-second bounds.
+
+R114 edits only this document and `lib/accounts/enrolled-sqlite-store.test.ts`.
+Protocol, consent, durable sessions, generations/revisions, retained evidence,
+no-inherited-payer boundaries, readonly denial, uncertain-COMMIT controls and
+financial-original hashes remain asserted. No module, test, compiler, DB, build,
+producer, browser, Git writer, provider, target or operational action ran here.
+The prior 28 and R104 18 source-bound passes are retained without claiming that
+they accept this new revision. ROOT owns the changed observation, focused types,
+unresolved graph acceptance, required PR/CI and serialized merge/release. At that
+handoff new checks were **UNRUN**; the later R114 types result below applies only
+to its pinned source. #267 and product/surface acceptance remain open. R114 before/
+after files, hashes and incremental patch are retained only in the assigned
+`output/resume-root-release63-20261012/refill-successors-20261013-114/worker-repairNativeAccountTypesAndBoundedFixtures/`.
+
+## Measured R114 result and R116 synthetic population correction
+
+ROOT's actual `native-account267-r114-max8-phase-types-20261014/failure-handoff.json`
+and `actual-result.json` record one MAX8 case at 92.1023324 seconds, failing its
+unchanged 20-second deadline: 0 PASS / 1 FAIL / 50 SKIP. The outer capture naturally
+exited 1 after 100.397 seconds with full stdout/stderr EOF and no forced timeout.
+Focused types actually passed in 19.556 seconds on R114's unchanged pins, including
+the explicit `Awaited<ReturnType<typeof other.service.prepareLink>>[]` annotation.
+That compiler pass is retained source-scoped evidence, not acceptance of R116.
+
+The measured retained-challenge and retained-event population phases took
+10.830 + 10.628 = **21.458 seconds**. Seven genuine links took 34.405 seconds;
+eight genuine proof issuances took 16.418 seconds. These phase intervals include
+intervening assertions, so they do not attribute costs to individual SQL calls.
+Even subtracting the entire 21.458-second population interval leaves about
+70.644 seconds arithmetically; this is not a measured new runtime or evidence
+that batching can satisfy the 20-second deadline.
+
+R116 changes only this document and the test file. A separate
+`syntheticPopulationTransaction` wrapper uses the existing disposable raw setup
+actor, explicit `BEGIN IMMEDIATE`/`COMMIT`, rollback on actual failure while a
+transaction remains active, and the existing `edit` helper's `finally` closure.
+Only three existing bulk callbacks use it: the 1025 oversized challenge/session
+loop, the retained-challenge UPDATE plus 1016 copies, and the 1023 event copies.
+Every loop count, payload, expiry, amount and refusal comparison is unchanged;
+the common `edit`, session setup and other fixture cases are unchanged. This
+does not alter native guard/fences, journal/store/service, genuine EOA signing,
+consent, nonce/revision/generation rules, MAX8/eight-live/1024 limits, positive
+ceremonies, no-resurrection or no-inherited-payer checks, or original financial
+and whole-journal comparisons. MAX8 remains one aggregate case at 20 seconds.
+
+One new synchronous control writes two synthetic sessions, then triggers an
+actual SQLite duplicate-key failure. It asserts exact retained-journal rollback,
+unchanged financial-original hash, actual BEGIN/ROLLBACK calls with no COMMIT,
+and closure of the raw setup connection.
+At the R116 source handoff, the control, changed fixture checks and changed-source
+types were **UNRUN**. ROOT subsequently completed the three affected controls and
+focused types on unchanged source pins; the actual results are recorded below.
+ROOT owns a tiny independent peer review, selective oversized/rollback and
+committed-population checks, and the remaining runtime-phase assessment without
+splitting/skipping MAX8 or raising timers. Other four timeout cases, graph,
+original #267, genuine product/surface acceptance and required PR/CI remain open;
+the sole coordinator owns merge/release. No timing improvement or issue closure
+is claimed. Raw before/after files, incremental forward/full inverse patches and
+pins are retained only in the assigned
+`output/resume-root-release63-20261012/refill-successors-20261013-116/worker-completeAccountSyntheticPopulationTransactions/`.
+
+The source now connects the account journal to the existing selected mainnet
+SQLite facade. Web/API's private account flow, hosted/native desktop, CLI,
+remote/stdio MCP, extension and bot delivery remain parent acceptance work.
+Actual wallet-free stable account/profile, multiwallet owner history,
+different-target signing/custody negatives and composed privacy/session/history
+acceptance remain open until delivered through their genuine surfaces. Original #267 stays open;
 App54 UNBOUND, private holds, spending limits and the existing production release
 remain unchanged.
+
+## R120 exact ceremony trace and remaining owned dependency
+
+The R116 independent source review at
+`output/resume-release-library-review-20261012/native-account267-r116-population-independent-source-review-20261014.json`
+(SHA256 `3e2ce67b3bc8e7a53d2463fd44e657f9721f0cf58ef8b3aec6c8ca21e359ea7f`)
+accepted only the synthetic population correction. The actual
+`output/resume-distribution63-audit-20261012/native-account-r116-three-population-controls-20261014/actual-result.json`
+records **3 PASS / 0 FAIL / 49 SKIP**, natural exit 0, both EOFs and unchanged pins.
+The rollback control took 0.3517686 seconds, oversized challenges 12.6743151
+seconds, and oversized sessions 12.9166928 seconds; the outer capture took
+34.429 seconds. `types-result.json` records actual focused types PASS in
+21.020 seconds, natural exit 0 and both EOFs. The two 1025-row population intervals
+were 112 and 81 ms. These accept the selected R116 controls, not MAX8, unlink
+revocation, EXCLUSIVE cleanup or the graph case. MAX8 was not selected or rerun.
+
+R120 inspected HEAD `915af0ec6f984cd7bb01b367d45cb538d1098fba` with account runtime
+`da1d8fcaa80c4e6fcffe923d9878b2078d010ffb9433ea40ab4f0918e52db580` and test
+`0601ac7f31e82bd014582b7af1121957e7f6552d9f4b21f973eefc7301cd7876`, matching
+R116's accepted runtime/test pins. It changes documentation only. The ordinary
+constructor, shared journal, native transaction/cleanup/SQL observer, service,
+fixture bodies, facade and graph source remain byte-identical. No new timing,
+test, compiler, module, DB, producer, Git writer or operational result is claimed.
+
+The reachable chain is `enrolled-sqlite-store.test.ts:link` ->
+`service.ts:prepare/required/completeLink` -> `sqlite-store.ts:accountMembershipJournal`
+-> the native `transaction` and private SQL observer ->
+`storage-identity-connection.ts:wrapped/guardStatement/assert`. The fixture's fresh
+resolve, prepare's initial resolve and required-current resolve are three separate
+read transactions. Issue, take and complete are three write transactions. Take
+commits nonce consumption before awaited EOA verification; complete rechecks the
+durable challenge, initiating session, membership revision and capacity after that
+await. Reusing an earlier service snapshot would change those decision inputs.
+
+For a healthy native transaction, the fixed overhead is **nine full core guards**:
+`isTransaction`, four `check()` calls, BEGIN, clock prepare/get, and COMMIT. Each
+business SQL prepare and each get/all/run adds its own full core guard. These
+are source counts, not observed SQL timings. An authenticated resolve has seven
+business statements: exact web session, account session, initiating member,
+initiating credential, account row, full member rows and full credential rows.
+The cohort credential read also checks cardinality, generations, login times and
+active credentials; it is not replaceable by the initiating credential row.
+
+| Successful path | Business statement executions | Full core guards |
+| --- | ---: | ---: |
+| Unbound resolve | 2 | 13 |
+| Bound resolve | 7 | 23 |
+| Create issue / take / complete | 7 / 4 / 20 | 23 / 17 / 49 |
+| Link issue / take / complete | 13 / 10 / 23 | 35 / 29 / 55 |
+| Bootstrap: one read, three writes | 33 | 102 |
+| Genuine fixture link: three reads, three writes | 67 | 188 |
+| Standalone prepareLink: two reads, one write | 27 | 81 |
+
+Consequently seven successful links reach **1,316** guards and eight successful
+proof issuances **648**. The intact MAX8 body reaches 49 read and 44 write entries,
+914 business statement executions and **2,669** full guards on its intended
+successful/refusal branches. That last count uses nine fixed guards for 89 healthy
+transactions and ten for four semantic refusals inside transactions: full-account
+issue, live-cap issue, retained-cap issue and event-cap completion. The ten include
+the existing guarded rollback and cleanup inspections. A refused event completion
+executes its existing writes before the event cap check, then rolls them back.
+These totals exclude connection opening/admission, raw population/snapshots,
+financial hashes, fixture provisioning, EOA signing/verification and test hooks.
+They are not a profiler result or attribution of the measured 70.644-second
+arithmetic remainder.
+
+Each core `assert()` calls the runtime callback, verifies the held file twice,
+reads and compares the exact identity, regenerates/checks all fences, and compares
+the exact opening application profile. With funding tables absent its healthy
+source path executes eight internal statements: two identity reads, funding-table
+presence, application-table inventory, exact fence match, exact marker match, and
+profile size/shape reads. A present complete funding bundle adds its own exact
+schema match. Thus the above MAX8 path reaches **21,352 internal statement
+executions with funding absent**, plus any funding matches; this count excludes
+the core guard's own BEGIN/COMMIT and application statements. The repeated fence
+and marker matches enter `sqlite-schema-match.ts:sqliteSchemaMatches`, whose
+current materialized expected relation uses a correlated `sqlite_schema` lookup
+for each expected name/type. The account policy helper is already metadata-only;
+replacing it with another zero-SQL helper removes none of this work. Source proves
+this repeated path, not which matcher, file check or profile step dominates latency.
+
+Unlink's `current()` reaches the same seven-statement resolve. The pending proof
+and live session reads must both finish and enforce the original 1024 limits
+before any mutation; its per-row revocation/cancellation statements retain their
+individual guards. The remaining revocation/relink/last-credential journey still
+has two genuine links, a genuine pending proof, fresh-login/resume and stale/dead
+refusals. R116 already accepted the two oversized branches; no replay of them is
+needed for this documentation-only revision.
+
+EXCLUSIVE refusal reaches two potentially blocking core inspections: the first
+guarded `db.isTransaction` before account BEGIN, then the catch body's guarded
+`db.isTransaction` before cleanup qualification. The first core guard's own
+transaction rolls back after its failed identity read; the second inspection can
+fail under the still-held lock and permanently latch the port. Each retains the
+fixed 5000 ms connection policy. This is a reachable wait path, not proof that
+R104 experienced exactly two five-second waits. Skipping the cleanup inspection
+would change an explicitly frozen accepted body; releasing the blocker earlier
+would remove the tested failure. Neither was changed.
+
+No justified native-only implementation within the immutable bodies materially
+addresses the measured gap. Removing duplicated live/session projections would
+require changing the shared journal or substituting a native projection with a
+separate semantic proof. Suppressing SQL through the private proxy would elide
+required primitive guards. No such patch, cache, new batch API or deadline change
+was authored. The smallest concrete external dependency is the existing
+`lib/db/sqlite-schema-match.ts` matcher, owned by the core storage partition:
+evaluate the same exact expected-name/type/SQL predicate against the schema
+without a repeated correlated lookup, retaining every caller and full guard.
+Its equivalence and actual cost need core-owner evidence before claiming a fix;
+this identifies a bounded dependency, not an accepted replacement or speedup.
+
+ROOT retains the original MAX8 aggregate at 20 seconds, unlink at 20 seconds,
+EXCLUSIVE cleanup at 15 seconds and unresolved graph acceptance. A meaningful
+runtime correction must precede changed-source peer review and parent controls;
+no same-source MAX8 repeat is requested. Required coherent PR/aggregate/domain CI
+and sole-coordinator merge remain open. Current65, release/main/version, holds,
+payment/registry/payTo authority and all production state remain untouched.
+R120 raw before/after files, minimal documentation patch, complete inverse, pins
+and remaining criteria are retained only under
+`output/resume-root-release63-20261012/refill-successors-20261013-120/worker-completeNativeAccountMeasuredCeremonyGap/`.
