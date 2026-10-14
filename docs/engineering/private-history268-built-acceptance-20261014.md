@@ -336,3 +336,28 @@ of the seven auth correction paths belongs to that closure. The accepted48-trial
 study and unchanged pair are reused; no study producer was replayed. Fresh hosted
 CI must exercise the changed client runtime, existing build and all four compiled
 cases. Original268 remains open for its broader acceptance criteria.
+
+## Actual hosted production and subsequent copy-gate correction
+
+The corrected auth head `f69a5e24a4d88833d21aaad62888c2d91996a4bb` passed
+production job116109278653/run38638854576 on2026-10-14. The genuine Next build,
+Circle/auth controls and compiled private-history step22 plus retained acceptance
+step23 succeeded; compiled execution occupied21:25:46–21:26:41UTC. This accepts
+that prior runtime only. Its separate checks job failed three existing copy-guard
+cases because the new workspace/page/link still contained uncatalogued literals.
+
+The follow-up uses the existing English ownedHistoryCopy catalogue:70 privateJobs
+leaves preserve the displayed text and typed interpolation. Old41 English leaves
+and all existing VI/ZH translations remain unchanged. Only source binding and
+derived coverage metadata change for those drafts:70 uncovered keys, completefalse;
+no translation, human review or locale activation is claimed. Auth, HTTP, schema,
+CSV, download limits and financial qualifications restore exactly through reviewed
+literal inverses. All eight changed paths are outside the unchanged434 study
+closure; no study producer or local build was repeated.
+
+Actual local copy acceptance passed the three previously failed cases in10,589ms,
+the strict copy guard in3,041ms, and174 namespace/view/workspace cases in17,600ms
+(including all88 private-workspace cases). The baseline and tests were unchanged.
+Fresh required hosted types, build and compiled acceptance still govern the new
+copy candidate; neither the earlier compiled pass nor f69 whole production result
+is presented as acceptance of the new source. Original268 remains open.

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ownedHistoryCopy } from "@/locales/en/owned-history";
 import { useEffect, useRef, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import {
@@ -14,12 +15,14 @@ import {
 import { RUN_SURFACES } from "@/lib/research/run-provenance";
 import { isOwnBrowserAuthChange } from "@/lib/browser-auth-notice";
 
+const copy = ownedHistoryCopy.privateJobs;
+
 const control = "border border-line px-3 py-2 text-sm disabled:opacity-40";
-const unavailable = "Private history is unavailable. No successful empty history is being reported.";
+const unavailable = copy.errors.unavailable;
 const accessMessages: Record<number, string> = {
-  401: "Your sign-in expired or was revoked. Private data has been cleared. Check your sign-in before reading again.",
-  403: "Access to private history was refused. Private data has been cleared.",
-  409: "Your authenticated session changed. Private data has been cleared. Check your sign-in before reading again.",
+  401: copy.errors.unauthorized,
+  403: copy.errors.forbidden,
+  409: copy.errors.changedSession,
 };
 
 /** Session object identity matters: a fresh same-wallet login/focus check is a new boundary.
@@ -64,14 +67,14 @@ export function PrivateJobHistoryWorkspace() {
     };
   }, []);
   const checkSignIn = () => { invalidate(); void refresh(); };
-  if (!mounted || session === undefined) return <p role="status">Checking your sign-in…</p>;
-  if (!session) return <div>{notice && <p role="alert">{notice}</p>}<Link href="/connect" prefetch={false} className="underline">Sign in to view completed private jobs</Link></div>;
+  if (!mounted || session === undefined) return <p role="status">{copy.auth.checking}</p>;
+  if (!session) return <div>{notice && <p role="alert">{notice}</p>}<Link href="/connect" prefetch={false} className="underline">{copy.auth.signIn}</Link></div>;
   const wallet = typeof session.address === "string" ? session.address.toLowerCase() : "";
   if (!/^0x[a-f0-9]{40}$/.test(wallet) || authState !== "idle" || fence.waiting
     || (address !== undefined && address.toLowerCase() !== wallet)) return <div className="space-y-3">
     {notice && <p role="alert">{notice}</p>}
-    <p role="status">Private data cleared. Waiting for a fresh verified sign-in.</p>
-    <button type="button" className={control} disabled={authState !== "idle"} onClick={checkSignIn}>Check sign-in</button>
+    <p role="status">{copy.auth.waiting}</p>
+    <button type="button" className={control} disabled={authState !== "idle"} onClick={checkSignIn}>{copy.auth.check}</button>
   </div>;
   const generation = fence.generation;
   return <History key={generation} wallet={wallet} attach={controller => { lifetime.current = controller; }}
@@ -201,7 +204,7 @@ function History({ wallet, attach, current, accessLost }: {
       }), stopped]);
       check();
       if (!response.ok) throw new PrivateReadError(response.status, accessMessages[response.status]
-        ?? (response.status === 404 ? "This completed private result is no longer available." : unavailable));
+        ?? (response.status === 404 ? copy.errors.missingResult : unavailable));
       const parsed = parse(await readJson(response, action === "export" ? B.exportBytes : action === "detail" ? B.detailBytes : B.pageBytes, controller.signal, check));
       check(); return parsed;
     } finally {
@@ -238,7 +241,7 @@ function History({ wallet, attach, current, accessLost }: {
   function apply() {
     if (busy) return;
     const parsed = privateJobHistoryInputSchema.safeParse({ limit: 25, ...Object.fromEntries(Object.entries(form).filter(([, value]) => value !== "")) });
-    if (!parsed.success) { setError("Check the filters. Dates must be UTC ISO timestamps, in increasing order."); return; }
+    if (!parsed.success) { setError(copy.errors.invalidFilters); return; }
     load(parsed.data, undefined, [undefined]);
   }
   async function open(row: PrivateJobHistoryRow) {
@@ -279,65 +282,65 @@ function History({ wallet, attach, current, accessLost }: {
         const anchor = document.createElement("a"); anchor.href = url; anchor.download = `keryx-private-job-history.${format}`;
         anchor.click(); // Never mount or retain a private download link in the DOM.
       } finally { URL.revokeObjectURL(url); }
-      if (live() && version === actionVersion.current) setDownload(value.truncated ? `Downloaded ${value.rows.length} rows. Export is truncated at its bounds; it is not your whole history.`
-        : `Downloaded ${value.rows.length} rows. This bounded current-store scan finished; archives and linked wallets are excluded.`);
+      if (live() && version === actionVersion.current) setDownload(value.truncated ? copy.download.truncated({ rows: value.rows.length })
+        : copy.download.complete({ rows: value.rows.length }));
     } catch (error) { if (version === actionVersion.current) failed(error); }
     finally { if (live() && version === actionVersion.current) setBusy(null); }
   }
 
   return <div className="space-y-5">
-    <p className="break-all font-mono text-xs">Signed-in payer: {wallet}</p>
+    <p className="break-all font-mono text-xs">{copy.auth.payer({ wallet })}</p>
     <p className="text-sm text-ink-3">{PRIVATE_JOB_HISTORY_QUALIFICATION}</p>
     <form className="grid gap-3 sm:grid-cols-2" onSubmit={event => { event.preventDefault(); apply(); }}>
-      <label className="text-sm">Question contains (case-sensitive)<input className="mt-1 block w-full border border-line bg-paper p-2" maxLength={200} value={form.search} onChange={event => setForm(previous => ({ ...previous, search: event.target.value }))} /></label>
-      <label className="text-sm">Recorded surface<select className="mt-1 block w-full border border-line bg-paper p-2" value={form.surface} onChange={event => setForm(previous => ({ ...previous, surface: event.target.value }))}>
-        <option value="">All recorded surfaces</option>{RUN_SURFACES.map(surface => <option key={surface} value={surface}>{surface === "unknown" ? "UNKNOWN / legacy" : surface}</option>)}
+      <label className="text-sm">{copy.filters.question}<input className="mt-1 block w-full border border-line bg-paper p-2" maxLength={200} value={form.search} onChange={event => setForm(previous => ({ ...previous, search: event.target.value }))} /></label>
+      <label className="text-sm">{copy.filters.surface}<select className="mt-1 block w-full border border-line bg-paper p-2" value={form.surface} onChange={event => setForm(previous => ({ ...previous, surface: event.target.value }))}>
+        <option value="">{copy.filters.allSurfaces}</option>{RUN_SURFACES.map(surface => <option key={surface} value={surface}>{surface === "unknown" ? copy.row.unknownLegacy : surface}</option>)}
       </select></label>
-      <label className="text-sm">Recorded network<select className="mt-1 block w-full border border-line bg-paper p-2" value={form.network} onChange={event => setForm(previous => ({ ...previous, network: event.target.value }))}>
-        <option value="">All recorded networks</option><option value="eip155:5042">eip155:5042</option><option value="eip155:5042002">eip155:5042002</option>
+      <label className="text-sm">{copy.filters.network}<select className="mt-1 block w-full border border-line bg-paper p-2" value={form.network} onChange={event => setForm(previous => ({ ...previous, network: event.target.value }))}>
+        <option value="">{copy.filters.allNetworks}</option><option value="eip155:5042">{copy.filters.arcNetwork}</option><option value="eip155:5042002">{copy.filters.testnetNetwork}</option>
       </select></label>
-      {(["from", "to"] as const).map(name => <label key={name} className="text-sm">{name === "from" ? "From UTC (inclusive)" : "To UTC (inclusive)"}<input className="mt-1 block w-full border border-line bg-paper p-2" placeholder="2026-10-14T00:00:00Z" maxLength={32} value={form[name]} onChange={event => setForm(previous => ({ ...previous, [name]: event.target.value }))} /></label>)}
-      <div className="flex flex-wrap items-end gap-2"><button type="submit" disabled={!!busy} className={control}>Apply filters</button>
-        <button type="button" disabled={!!busy} className={control} onClick={() => load(filters, undefined, [undefined])}>Refresh history</button></div>
+      {(["from", "to"] as const).map(name => <label key={name} className="text-sm">{name === "from" ? copy.filters.from : copy.filters.to}<input className="mt-1 block w-full border border-line bg-paper p-2" placeholder={copy.filters.dateExample} maxLength={32} value={form[name]} onChange={event => setForm(previous => ({ ...previous, [name]: event.target.value }))} /></label>)}
+      <div className="flex flex-wrap items-end gap-2"><button type="submit" disabled={!!busy} className={control}>{copy.actions.apply}</button>
+        <button type="button" disabled={!!busy} className={control} onClick={() => load(filters, undefined, [undefined])}>{copy.actions.refresh}</button></div>
     </form>
-    <p className="text-xs text-ink-3">Dates select intent-list time. Surface and network come from recorded provenance and incoming settlement. Missing legacy surface remains UNKNOWN.</p>
-    {busy && <p role="status">{busy === "list" ? "Loading completed private jobs…" : busy === "detail" ? "Loading saved private result…" : "Preparing bounded private export…"}</p>}
+    <p className="text-xs text-ink-3">{copy.filters.scope}</p>
+    {busy && <p role="status">{busy === "list" ? copy.status.list : busy === "detail" ? copy.status.detail : copy.status.export}</p>}
     {error && <p role="alert">{error}</p>}
-    {page && <section aria-label="Completed jobs" className="space-y-3">
-      <p>Page {cursors.length}: {page.rows.length} completed rows from {page.scannedIntents} scanned intents (maximum 25 per request).</p>
-      <p className="text-sm">{page.nextCursor ? (page.scanLimited ? "This scan reached its bound. More intents remain; an empty page does not mean your history is empty." : "More intents remain. Load the next page manually.") : "This bounded current-store scan is exhausted. This is not an archive or transaction snapshot."}</p>
-      {page.rows.length === 0 && <p>{page.nextCursor ? "No completed jobs matched this scanned page." : "No completed jobs matched this current-store scan."}</p>}
+    {page && <section aria-label={copy.scan.section} className="space-y-3">
+      <p>{copy.scan.summary({ page: cursors.length, rows: page.rows.length, intents: page.scannedIntents })}</p>
+      <p className="text-sm">{page.nextCursor ? (page.scanLimited ? copy.scan.limited : copy.scan.more) : copy.scan.exhausted}</p>
+      {page.rows.length === 0 && <p>{page.nextCursor ? copy.scan.emptyPage : copy.scan.emptyStore}</p>}
       <ul className="divide-y divide-line">{page.rows.map(row => <li key={row.id} className="space-y-2 py-4">
         <p className="break-words font-serif">{row.question}</p><RowFacts row={row} />
-        <button type="button" disabled={!!busy} className={control} onClick={() => { void open(row); }}>View saved result</button>
+        <button type="button" disabled={!!busy} className={control} onClick={() => { void open(row); }}>{copy.actions.view}</button>
       </li>)}</ul>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className={control} disabled={!!busy || cursors.length === 1} onClick={() => { const trail = cursors.slice(0, -1); load(filters, trail[trail.length - 1], trail); }}>Previous page</button>
+        <button type="button" className={control} disabled={!!busy || cursors.length === 1} onClick={() => { const trail = cursors.slice(0, -1); load(filters, trail[trail.length - 1], trail); }}>{copy.actions.previous}</button>
         <button type="button" className={control} disabled={!!busy || !page.nextCursor || cursors.length >= B.exportPages} onClick={() => {
           if (!page.nextCursor || cursors.includes(page.nextCursor)) { failed(new Error(unavailable)); return; }
           load(filters, page.nextCursor, [...cursors, page.nextCursor]);
-        }}>Next page</button>
+        }}>{copy.actions.next}</button>
       </div>
-      {cursors.length >= B.exportPages && page.nextCursor && <p>Reached the 20-page navigation bound. Narrow the filters or refresh to start a new scan.</p>}
-      <div className="flex flex-wrap gap-2"><button type="button" disabled={!!busy} className={control} onClick={() => { void exportHistory("json"); }}>Download JSON</button>
-        <button type="button" disabled={!!busy} className={control} onClick={() => { void exportHistory("csv"); }}>Download CSV</button></div>
-      <p className="text-xs">Manual metadata downloads start at the beginning of the applied filters: at most 20 pages, 500 rows and 2 MiB. They exclude result bodies and payment authorizations. Keep downloads private.</p>
+      {cursors.length >= B.exportPages && page.nextCursor && <p>{copy.scan.navigationBound}</p>}
+      <div className="flex flex-wrap gap-2"><button type="button" disabled={!!busy} className={control} onClick={() => { void exportHistory("json"); }}>{copy.actions.json}</button>
+        <button type="button" disabled={!!busy} className={control} onClick={() => { void exportHistory("csv"); }}>{copy.actions.csv}</button></div>
+      <p className="text-xs">{copy.download.scope}</p>
     </section>}
     {download && <p role="status">{download}</p>}
-    {selected && <section aria-label="Saved private result" className="space-y-4 border-t border-line pt-5">
-      <button type="button" className={control} disabled={!!busy && busy !== "detail"} onClick={() => { actionVersion.current++; requests.current.get("detail")?.abort(); setSelected(null); setDetail(null); setBusy(null); }}>Close result</button>
+    {selected && <section aria-label={copy.detail.section} className="space-y-4 border-t border-line pt-5">
+      <button type="button" className={control} disabled={!!busy && busy !== "detail"} onClick={() => { actionVersion.current++; requests.current.get("detail")?.abort(); setSelected(null); setDetail(null); setBusy(null); }}>{copy.actions.close}</button>
       {detail && <><h2 className="break-words font-serif text-xl">{detail.row.question}</h2><RowFacts row={detail.row} />
-        <p className="text-sm">Recorded engine: {detail.result.engine}. Saved: {detail.result.savedAt}. Incoming payment evidence only; no creator ledger.</p>
+        <p className="text-sm">{copy.detail.introduction({ engine: detail.result.engine, savedAt: detail.result.savedAt })}</p>
         <pre className="whitespace-pre-wrap break-words font-sans text-sm">{detail.result.answer}</pre>
-        {detail.result.subClaims.length > 0 && <div><h3 className="font-serif">Recorded claims</h3><ul className="list-disc pl-5">{detail.result.subClaims.map((claim, index) => <li key={index} className="break-words">{claim}</li>)}</ul></div>}
-        <div><h3 className="font-serif">Recorded citations</h3>{detail.result.citations.length === 0 ? <p>No citations recorded.</p> : <ul className="space-y-2">{detail.result.citations.map((citation, index) => <li key={index} className="break-words">{citation.marker} {citation.sourceName}{citation.itemTitle ? ` — ${citation.itemTitle}` : ""}: {citation.rationale}. Recorded reward attribution: {citation.recordedRewardUsdc} USDC (settlement unavailable).</li>)}</ul>}</div>
-        <div><h3 className="font-serif">Recorded decisions</h3><ul className="space-y-2">{detail.result.decisions.map((decision, index) => <li key={index} className="break-words">{decision.action} {decision.sourceName}: {decision.rationale}. Recorded offer price: {decision.price} USDC; this is not settled own spend.</li>)}</ul></div>
-        <p className="text-sm">Evidence: {detail.result.evidence === null ? "unavailable in this saved legacy result" : `${detail.result.evidence.length} recorded items`}. Claim coverage: {detail.result.claimCoverage === null ? "unavailable in this saved legacy result" : `${detail.result.claimCoverage.length} recorded entries`}.</p>
-        {detail.result.evidence !== null && <details><summary>Saved evidence excerpts</summary><ul className="mt-3 space-y-3">{detail.result.evidence.map((evidence, index) => <li key={index} className="break-words">
+        {detail.result.subClaims.length > 0 && <div><h3 className="font-serif">{copy.detail.claims}</h3><ul className="list-disc pl-5">{detail.result.subClaims.map((claim, index) => <li key={index} className="break-words">{claim}</li>)}</ul></div>}
+        <div><h3 className="font-serif">{copy.detail.citations}</h3>{detail.result.citations.length === 0 ? <p>{copy.detail.noCitations}</p> : <ul className="space-y-2">{detail.result.citations.map((citation, index) => <li key={index} className="break-words">{copy.detail.citation({ marker: citation.marker, sourceName: citation.sourceName, itemTitle: citation.itemTitle, rationale: citation.rationale, recordedRewardUsdc: citation.recordedRewardUsdc })}</li>)}</ul>}</div>
+        <div><h3 className="font-serif">{copy.detail.decisions}</h3><ul className="space-y-2">{detail.result.decisions.map((decision, index) => <li key={index} className="break-words">{copy.detail.decision({ action: decision.action, sourceName: decision.sourceName, rationale: decision.rationale, price: decision.price })}</li>)}</ul></div>
+        <p className="text-sm">{copy.detail.summary({ evidence: detail.result.evidence === null ? copy.detail.unavailableLegacy : copy.detail.evidenceCount({ count: detail.result.evidence.length }), coverage: detail.result.claimCoverage === null ? copy.detail.unavailableLegacy : copy.detail.coverageCount({ count: detail.result.claimCoverage.length }) })}</p>
+        {detail.result.evidence !== null && <details><summary>{copy.detail.evidenceExcerpts}</summary><ul className="mt-3 space-y-3">{detail.result.evidence.map((evidence, index) => <li key={index} className="break-words">
           <p>{evidence.marker} {evidence.sourceName}: {evidence.claim}</p><blockquote className="whitespace-pre-wrap border-l border-line pl-3">{evidence.quote}</blockquote>
-          <p className="text-xs">Recorded support: {evidence.support}; recorded reward eligibility: {String(evidence.qualifiesForReward)} (settlement unavailable).</p>
+          <p className="text-xs">{copy.detail.support({ support: evidence.support, qualifiesForReward: String(evidence.qualifiesForReward) })}</p>
         </li>)}</ul></details>}
-        {detail.result.claimCoverage !== null && <details><summary>Saved claim coverage</summary><ul className="mt-3 space-y-2">{detail.result.claimCoverage.map((coverage, index) => <li key={index} className="break-words">{coverage.claim}: recorded coverage {coverage.coverage}; markers {coverage.coveredBy.join(", ") || "none recorded"}.</li>)}</ul></details>}
+        {detail.result.claimCoverage !== null && <details><summary>{copy.detail.claimCoverage}</summary><ul className="mt-3 space-y-2">{detail.result.claimCoverage.map((coverage, index) => <li key={index} className="break-words">{copy.detail.coverage({ claim: coverage.claim, coverage: coverage.coverage, markers: coverage.coveredBy.join(", ") || copy.detail.noMarkers })}</li>)}</ul></details>}
       </>}
     </section>}
   </div>;
@@ -345,9 +348,9 @@ function History({ wallet, attach, current, accessLost }: {
 
 function RowFacts({ row }: { row: PrivateJobHistoryRow }) {
   return <div className="space-y-1 text-sm text-ink-3">
-    <p>Completed {row.createdAt}; saved {row.savedAt}. Mode: {row.researchMode}; model: {row.model ?? "UNKNOWN / legacy"}.</p>
-    <p>Recorded network: {row.incomingSettlement.network}. Surface: {row.provenance?.surface ?? "UNKNOWN / legacy"}; ownership method: {row.provenance?.ownershipMethod ?? "UNKNOWN / legacy"}.</p>
-    <p>Settled incoming original price: {micros(row.incomingSettlement.amountMicros)}. Evidence: {row.incomingSettlement.evidenceSource}; chain finality independently verified: no.</p>
-    <p>Own settled source spend: unavailable (NULL). Creator rewards: unavailable (NULL). Paid creators: unavailable (NULL).</p>
+    <p>{copy.row.completion({ createdAt: row.createdAt, savedAt: row.savedAt, researchMode: row.researchMode, model: row.model ?? copy.row.unknownLegacy })}</p>
+    <p>{copy.row.provenance({ network: row.incomingSettlement.network, surface: row.provenance?.surface ?? copy.row.unknownLegacy, ownershipMethod: row.provenance?.ownershipMethod ?? copy.row.unknownLegacy })}</p>
+    <p>{copy.row.incoming({ amount: micros(row.incomingSettlement.amountMicros), evidenceSource: row.incomingSettlement.evidenceSource })}</p>
+    <p>{copy.row.unavailableSettlement}</p>
   </div>;
 }
