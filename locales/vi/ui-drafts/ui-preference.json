@@ -1,0 +1,60 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ui-preference.ts",
+  "sourceSha256": "796e9d98f5484ec5ae54906050b0af8d7ad2cb5c46fd969931ecec749e4d9fe7",
+  "entries": {
+    "language": {
+      "source": "Interface language",
+      "text": "Ngôn ngữ giao diện"
+    },
+    "english": {
+      "source": "English",
+      "text": "Tiếng Anh"
+    },
+    "vietnamesePreview": {
+      "source": "Tiếng Việt (preview)",
+      "text": "Tiếng Việt (preview)"
+    },
+    "chinesePreview": {
+      "source": "简体中文 (preview)",
+      "text": "简体中文 (xem trước)"
+    },
+    "previewNotice": {
+      "source": "Preview: machine draft, not human reviewed. Only navigation changes; other text remains English.",
+      "text": "Xem trước: bản nháp máy, chưa được người xem xét. Chỉ điều hướng thay đổi; nội dung khác vẫn bằng tiếng Anh."
+    },
+    "englishOnly": {
+      "source": "English is currently the only offered interface language.",
+      "text": "Hiện chỉ cung cấp giao diện tiếng Anh."
+    },
+    "checking": {
+      "source": "Checking language preference…",
+      "text": "Đang kiểm tra lựa chọn ngôn ngữ…"
+    },
+    "saving": {
+      "source": "Saving account language…",
+      "text": "Đang lưu ngôn ngữ tài khoản…"
+    },
+    "accountSaved": {
+      "source": "Language saved to this account.",
+      "text": "Đã lưu ngôn ngữ vào tài khoản này."
+    },
+    "browserSaved": {
+      "source": "Language saved in this browser.",
+      "text": "Đã lưu ngôn ngữ trong trình duyệt này."
+    },
+    "unavailable": {
+      "source": "Account language is unavailable. Your browser choice still applies.",
+      "text": "Ngôn ngữ tài khoản không khả dụng. Lựa chọn trong trình duyệt vẫn áp dụng."
+    },
+    "memoryOnly": {
+      "source": "Language applies here. Browser storage is unavailable; it may not survive this session.",
+      "text": "Ngôn ngữ áp dụng tại đây. Lưu trữ trình duyệt không khả dụng; lựa chọn có thể không tồn tại sau phiên này."
+    },
+    "loadFailed": {
+      "source": "Translation could not load. English is shown; select the language to retry.",
+      "text": "Không thể tải bản dịch. Đang hiển thị tiếng Anh; chọn ngôn ngữ để thử lại."
+    }
+  }
+}

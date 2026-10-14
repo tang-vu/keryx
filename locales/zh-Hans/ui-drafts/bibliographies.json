@@ -1,0 +1,140 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/bibliographies.json",
+  "sourceSha256": "f790ecae3b08a06150707fdd02efd765a54f0c6ef06697fc04b4be8923372b4f",
+  "entries": {
+    "pageTitle": {
+      "source": "Private synced bibliographies — Keryx",
+      "text": "私密同步参考文献 — Keryx"
+    },
+    "heading": {
+      "source": "Private synced bibliographies",
+      "text": "私密同步参考文献"
+    },
+    "intro": {
+      "source": "Create a private BibTeX link from saved paper metadata, then explicitly replace its references as your review changes. Anyone with the link can download it until you revoke it.",
+      "text": "根据已保存的论文元数据创建私密 BibTeX 链接，然后在审阅内容变化时明确替换其中的参考文献。在您撤销链接之前，任何持有链接的人都能下载。"
+    },
+    "checking": {
+      "source": "Checking your sign-in…",
+      "text": "正在检查您的登录状态…"
+    },
+    "signIn": {
+      "source": "Sign in with your wallet",
+      "text": "使用钱包登录"
+    },
+    "source": {
+      "source": "References come from this browser’s saved literature workspace. Personal notes, screening decisions and your research question are excluded. No paper is read and nothing is sent to a provider.",
+      "text": "参考文献来自此浏览器已保存的文献工作区。不包含个人笔记、筛选决定和研究问题。不读取论文，也不向提供方发送任何内容。"
+    },
+    "titleLabel": {
+      "source": "Private review name",
+      "text": "私密综述名称"
+    },
+    "create": {
+      "source": "Create private BibTeX link",
+      "text": "创建私密 BibTeX 链接"
+    },
+    "reload": {
+      "source": "Reload my bibliographies",
+      "text": "重新加载我的参考文献"
+    },
+    "replace": {
+      "source": "Replace references from this browser",
+      "text": "使用此浏览器的参考文献替换"
+    },
+    "revoke": {
+      "source": "Revoke link and delete snapshot",
+      "text": "撤销链接并删除快照"
+    },
+    "replaceConfirm": {
+      "source": "Replace this bibliography with {count} currently saved papers? Its private link stays the same. Notes and screening decisions are excluded.",
+      "text": "用当前已保存的 {count} 篇论文替换此参考文献列表？私密链接保持不变。不包含笔记和筛选决定。"
+    },
+    "revokeConfirm": {
+      "source": "Revoke this private link and delete its server snapshot? Copies already downloaded elsewhere cannot be recalled.",
+      "text": "撤销此私密链接并删除服务器快照？已在其他地方下载的副本无法收回。"
+    },
+    "created": {
+      "source": "Link created. Copy and save it now; it cannot be retrieved again after leaving this page.",
+      "text": "链接已创建。请立即复制并保存；离开此页面后无法再次获取。"
+    },
+    "updated": {
+      "source": "References replaced. The same link now serves this snapshot. Refresh the linked file in your writing tool to retrieve it.",
+      "text": "参考文献已替换。同一链接现在提供此快照。在写作工具中刷新链接文件即可获取。"
+    },
+    "revoked": {
+      "source": "Link revoked and server snapshot deleted. Existing downloaded copies remain.",
+      "text": "链接已撤销，服务器快照已删除。已下载的副本仍然存在。"
+    },
+    "secretLabel": {
+      "source": "Private bearer URL (shown once; keep it secret)",
+      "text": "私密持有者 URL（仅显示一次；请保密）"
+    },
+    "copy": {
+      "source": "Copy private URL",
+      "text": "复制私密 URL"
+    },
+    "copied": {
+      "source": "Private URL copied to your clipboard.",
+      "text": "私密 URL 已复制到剪贴板。"
+    },
+    "empty": {
+      "source": "No private bibliographies saved for this signed-in owner.",
+      "text": "此已登录所有者尚未保存私密参考文献。"
+    },
+    "papers": {
+      "source": "papers",
+      "text": "篇论文"
+    },
+    "revision": {
+      "source": "Revision",
+      "text": "修订版本"
+    },
+    "ready": {
+      "source": "saved papers ready to publish",
+      "text": "已保存、可发布的论文"
+    },
+    "loading": {
+      "source": "Loading your bibliographies…",
+      "text": "正在加载您的参考文献…"
+    },
+    "unavailable": {
+      "source": "Private bibliographies are unavailable on this deployment. Your browser workspace is unchanged.",
+      "text": "此部署不提供私密参考文献功能。浏览器工作区保持不变。"
+    },
+    "invalid": {
+      "source": "Check the review name and saved paper metadata, or reduce the bibliography size.",
+      "text": "检查综述名称和已保存的论文元数据，或减少参考文献数量。"
+    },
+    "conflict": {
+      "source": "This bibliography or signed-in owner changed. Reload before making another change.",
+      "text": "此参考文献列表或已登录所有者发生变化。再次更改前请重新加载。"
+    },
+    "limit": {
+      "source": "This bibliography exceeds the storage limit. Remove a saved bibliography or reduce the snapshot.",
+      "text": "此参考文献列表超过存储上限。请移除一个已保存的列表或缩小快照。"
+    },
+    "failed": {
+      "source": "The request could not be confirmed. It may already have applied. Reload to inspect the saved state; no request is automatically retried.",
+      "text": "无法确认请求。它可能已经生效。重新加载以检查已保存的状态；任何请求都不会自动重试。"
+    },
+    "clipboardFailed": {
+      "source": "Clipboard access failed. Select and copy the private URL manually.",
+      "text": "无法访问剪贴板。请手动选择并复制私密 URL。"
+    },
+    "boundary": {
+      "source": "This publishes a metadata snapshot only when you choose Create or Replace. It does not automatically track workspace edits or synchronize Zotero. Revocation stops future downloads, not copies already imported.",
+      "text": "只有您选择创建或替换时才会发布元数据快照。它不会自动跟踪工作区编辑，也不会同步 Zotero。撤销会阻止后续下载，但无法收回已导入的副本。"
+    },
+    "workspace": {
+      "source": "Open saved literature workspace",
+      "text": "打开已保存的文献工作区"
+    },
+    "manage": {
+      "source": "Manage private synced BibTeX",
+      "text": "管理私密同步 BibTeX"
+    }
+  }
+}

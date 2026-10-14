@@ -1,0 +1,64 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/run-claim-research.ts",
+  "sourceSha256": "c5b84858292282bc95634a0757ab67417fc5ab1696c888e573bae630d16973e1",
+  "entries": {
+    "metadataTitle": {
+      "source": "Account claim research — Keryx",
+      "text": "Nghiên cứu để nhận về tài khoản — Keryx"
+    },
+    "title": {
+      "source": "Private account claim delivery",
+      "text": "Cung cấp liên kết nhận về tài khoản riêng tư"
+    },
+    "introduction": {
+      "source": "Ask here to receive a private, single-use account link for a new unowned report. The link changes history ownership only, never who paid, receipts or creator rewards.",
+      "text": "Hỏi tại đây để nhận liên kết tài khoản riêng tư dùng một lần cho báo cáo mới chưa có chủ sở hữu. Liên kết chỉ thay đổi quyền sở hữu lịch sử, không đổi bên trả tiền, biên nhận hay phần thưởng tác giả."
+    },
+    "visibility": {
+      "source": "Question and report visibility follows ordinary research. This tab protects the account claim link.",
+      "text": "Câu hỏi và báo cáo có chế độ hiển thị theo nghiên cứu thông thường. Tab này bảo vệ liên kết nhận về tài khoản."
+    },
+    "fullNavigation": {
+      "source": "Open private research in a new page before asking. An in-app transition does not protect an existing document.",
+      "text": "Mở nghiên cứu riêng tư trên trang mới trước khi hỏi. Chuyển trang trong ứng dụng không bảo vệ tài liệu hiện có."
+    },
+    "unavailable": {
+      "source": "Private account links are unavailable. Open ordinary research to continue without a claim link.",
+      "text": "Liên kết tài khoản riêng tư không khả dụng. Mở nghiên cứu thông thường để tiếp tục không có liên kết nhận."
+    },
+    "limits": {
+      "source": "This private tab allows only same-origin connections. Funded wallet sessions, external wallet connections and card funding are available on ordinary research. Opening another page or a new request discards this tab's previous account link.",
+      "text": "Tab riêng tư này chỉ cho phép kết nối cùng nguồn gốc. Phiên ví có nguồn tiền, kết nối ví ngoài và nạp tiền bằng thẻ có trên nghiên cứu thông thường. Mở trang khác hay yêu cầu mới sẽ bỏ liên kết tài khoản trước của tab này."
+    },
+    "ordinary": {
+      "source": "Open ordinary research and funded-session controls",
+      "text": "Mở nghiên cứu thông thường và điều khiển phiên có nguồn tiền"
+    },
+    "entry": {
+      "source": "Open private research for an account claim link",
+      "text": "Mở nghiên cứu riêng tư để lấy liên kết nhận về tài khoản"
+    },
+    "available": {
+      "source": "This completed report has a private account link. Open it once to save the report to your signed-in account. Keep the new tab open while signing in; a lost handoff cannot be reissued.",
+      "text": "Báo cáo hoàn tất này có liên kết tài khoản riêng tư. Mở một lần để lưu báo cáo vào tài khoản đang đăng nhập. Giữ tab mới mở khi đăng nhập; không thể cấp lại liên kết chuyển tiếp đã mất."
+    },
+    "open": {
+      "source": "Open private account claim",
+      "text": "Mở liên kết nhận về tài khoản riêng tư"
+    },
+    "failed": {
+      "source": "The report and payment records are unchanged, but this private account link is unavailable. Do not repeat paid research to recover it.",
+      "text": "Báo cáo và hồ sơ thanh toán không thay đổi, nhưng liên kết tài khoản riêng tư này không khả dụng. Không lặp lại nghiên cứu trả phí để khôi phục liên kết."
+    },
+    "lost": {
+      "source": "The private delivery could not be confirmed. No link can be recovered or retried. The completed report and existing payment records remain unchanged.",
+      "text": "Chưa thể xác nhận việc cung cấp riêng tư. Không thể khôi phục hay thử lại liên kết. Báo cáo hoàn tất và hồ sơ thanh toán hiện có giữ nguyên."
+    },
+    "opened": {
+      "source": "The private handoff was attempted once. Check the new tab or your account history. This tab cannot submit the link again.",
+      "text": "Đã thử chuyển tiếp riêng tư một lần. Kiểm tra tab mới hoặc lịch sử tài khoản. Tab này không thể gửi lại liên kết."
+    }
+  }
+}

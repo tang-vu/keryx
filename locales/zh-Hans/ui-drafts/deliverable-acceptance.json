@@ -1,0 +1,136 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/deliverable-acceptance.ts",
+  "sourceSha256": "03a7a9b5eb583db8b530e65e0c1f82c2b69787c5e0b6bc3b8584271edbfdc611",
+  "entries": {
+    "heading": {
+      "source": "Your prepaid A2A deliverable choice",
+      "text": "您的预付 A2A 交付结果选择"
+    },
+    "publicHeading": {
+      "source": "Customer acceptance",
+      "text": "客户验收"
+    },
+    "scope": {
+      "source": "This journal supports settled ordinary prepaid A2A originals. It records your choice or request; revision and refund execution remain withheld.",
+      "text": "此日志支持已结算的普通预付 A2A 原始任务。它记录您的选择或请求；修订与退款执行仍未开放。"
+    },
+    "loading": {
+      "source": "Loading acceptance…",
+      "text": "正在加载验收信息…"
+    },
+    "unavailable": {
+      "source": "Acceptance is unavailable for this original or storage deployment. Browser-only, Monthly, private v2 and enrolled native originals require their own accepted adapter.",
+      "text": "此原始任务或存储部署不提供验收功能。仅浏览器、Monthly、私密 v2 和已登记原生客户端原始任务需要各自通过验收的适配器。"
+    },
+    "signIn": {
+      "source": "Sign in with the wallet that ordered this job",
+      "text": "使用订购此任务的钱包登录"
+    },
+    "noResponse": {
+      "source": "No response recorded",
+      "text": "未记录回复"
+    },
+    "notShared": {
+      "source": "The customer has not shared an acceptance state.",
+      "text": "客户未共享验收状态。"
+    },
+    "accepted": {
+      "source": "Accepted",
+      "text": "已接受"
+    },
+    "revised": {
+      "source": "Revision requested — awaiting owner review",
+      "text": "已请求修订 — 等待所有者审阅"
+    },
+    "rejected": {
+      "source": "Rejected — awaiting owner review",
+      "text": "已拒绝 — 等待所有者审阅"
+    },
+    "terms": {
+      "source": "Original terms: remedy:none. This historical job has no agreed response window. Silence stays no response. Recording a request does not execute a revision or refund, buy sources again, replenish a reservation or claw back creator rewards.",
+      "text": "原始条款：remedy:none。此历史任务没有约定的回复期限。沉默仍记为未回复。记录请求不会执行修订或退款、再次购买来源、补充预留额度或追回创作者奖励。"
+    },
+    "reason": {
+      "source": "Optional private reason",
+      "text": "可选的私密理由"
+    },
+    "consent": {
+      "source": "Share only my choice and its timestamp on the public report",
+      "text": "仅在公开报告上共享我的选择及其时间戳"
+    },
+    "accept": {
+      "source": "Accept",
+      "text": "接受"
+    },
+    "revise": {
+      "source": "Request revision",
+      "text": "请求修订"
+    },
+    "reject": {
+      "source": "Reject",
+      "text": "拒绝"
+    },
+    "refresh": {
+      "source": "Read current state",
+      "text": "读取当前状态"
+    },
+    "retry": {
+      "source": "Replay the same submission",
+      "text": "重放同一次提交"
+    },
+    "pending": {
+      "source": "A creator payment leg remains pending or unknown. Recording your choice does not reconcile or refund it.",
+      "text": "创作者付款中的一笔仍在等待确认或结果未知。记录您的选择不会对其进行对账或退款。"
+    },
+    "busy": {
+      "source": "Saving your choice…",
+      "text": "正在保存您的选择…"
+    },
+    "failed": {
+      "source": "The submission was refused or its acknowledgement was lost. Read current state, or replay the exact retained submission; no revision or refund was executed.",
+      "text": "提交被拒绝或确认响应丢失。读取当前状态，或重放完全相同的留存提交；未执行修订或退款。"
+    },
+    "conflict": {
+      "source": "The version or current choice changed. Read current state before submitting a new choice.",
+      "text": "版本或当前选择发生变化。提交新选择前请读取当前状态。"
+    },
+    "digest": {
+      "source": "Exact retained delivery digest",
+      "text": "确切的留存交付摘要"
+    },
+    "privateNotice": {
+      "source": "Your reason stays private to the service. MCP clients may retain messages independently.",
+      "text": "您的理由仅对服务方私密可见。MCP 客户端可能独立保留消息。"
+    },
+    "changedAnswer": {
+      "source": "The displayed answer differs from the retained delivery. Reload the report before choosing.",
+      "text": "显示的答案与留存交付结果不同。选择前请重新加载报告。"
+    },
+    "verifyingAnswer": {
+      "source": "The current displayed answer must be verified before choosing.",
+      "text": "选择前必须验证当前显示的答案。"
+    },
+    "publicUnavailable": {
+      "source": "Public acceptance state is currently unavailable.",
+      "text": "公开验收状态目前不可用。"
+    },
+    "discard": {
+      "source": "Clear local retry data",
+      "text": "清除本地重试数据"
+    },
+    "discardNotice": {
+      "source": "Clearing retry data does not erase a recorded choice or cancel a request.",
+      "text": "清除重试数据不会删除已记录的选择或取消请求。"
+    },
+    "readScope": {
+      "source": "(read your deliverable choices)",
+      "text": "（读取您的交付结果选择）"
+    },
+    "writeScope": {
+      "source": "(record your deliverable choice or request)",
+      "text": "（记录您的交付结果选择或请求）"
+    }
+  }
+}

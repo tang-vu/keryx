@@ -1,0 +1,300 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/legal.ts",
+  "sourceSha256": "7eb020ca9e3f9131a5846fc5d2ccf0c9113c0d7fdf15cbf6d15116e857aad65f",
+  "entries": {
+    "legal.privacy.metadataTitle": {
+      "source": "Privacy — Keryx",
+      "text": "Quyền riêng tư — Keryx"
+    },
+    "legal.privacy.metadataDescription": {
+      "source": "What Keryx and its browser extension do — and don't do — with your questions, wallet address, and page data.",
+      "text": "Keryx và tiện ích trình duyệt làm gì — và không làm gì — với câu hỏi, địa chỉ ví và dữ liệu trang của bạn."
+    },
+    "legal.finePrint": {
+      "source": "The fine print",
+      "text": "Thông tin chi tiết"
+    },
+    "legal.privacy.title": {
+      "source": "Privacy policy",
+      "text": "Chính sách quyền riêng tư"
+    },
+    "legal.privacy.updated": {
+      "source": "Last updated {date} · covers keryx.cc and the Keryx browser extension",
+      "text": "Cập nhật lần cuối {date} · áp dụng cho keryx.cc và tiện ích trình duyệt Keryx"
+    },
+    "legal.privacy.shortVersion.heading": {
+      "source": "The short version",
+      "text": "Bản ngắn gọn"
+    },
+    "legal.privacy.shortVersion.publicNotice": {
+      "source": "Public research is published.",
+      "text": "Nghiên cứu công khai được xuất bản."
+    },
+    "legal.privacy.shortVersion.summary": {
+      "source": "Keryx is a reading agent that answers questions and pays the writers it cites, in USDC on {network}. {publishedNotice} The separately labeled private research pilot restricts result access to the paying account, while Keryx and the disclosed AI provider still process the question. Choose the appropriate mode before submitting. We do not sell question or wallet data to data brokers. Hosting and wallet services process operational data as described below.",
+      "text": "Keryx là tác nhân đọc tài liệu, trả lời câu hỏi và trả tiền cho người viết được trích dẫn bằng USDC trên {network}. {publishedNotice} Chương trình thử nghiệm nghiên cứu riêng tư có nhãn riêng giới hạn truy cập kết quả cho tài khoản trả tiền, nhưng Keryx và nhà cung cấp AI được công bố vẫn xử lý câu hỏi. Chọn chế độ phù hợp trước khi gửi. Chúng tôi không bán dữ liệu câu hỏi hay ví cho bên môi giới dữ liệu. Dịch vụ lưu trữ và ví xử lý dữ liệu vận hành như mô tả bên dưới."
+    },
+    "legal.privacy.publicQuestions.heading": {
+      "source": "When you ask a public question",
+      "text": "Khi bạn hỏi câu hỏi công khai"
+    },
+    "legal.privacy.archive": {
+      "source": "archive",
+      "text": "kho lưu trữ"
+    },
+    "legal.privacy.publicQuestions.processing": {
+      "source": "Your question is sent to our server, which sends it to a configured large-language-model provider to plan the research and write the grounded answer. The question, the answer, the agent's reasoning trace, and the payments it triggered are stored and published at a permalink ({dispatchPath}), and canonical questions appear in the public {archiveLink}. Don't put anything in a question you wouldn't put on a public page.",
+      "text": "Câu hỏi được gửi đến máy chủ của chúng tôi, rồi đến nhà cung cấp mô hình ngôn ngữ lớn được cấu hình để lập kế hoạch nghiên cứu và viết câu trả lời dựa trên nguồn. Câu hỏi, câu trả lời, nhật ký suy luận của tác nhân và thanh toán phát sinh được lưu và xuất bản tại liên kết cố định ({dispatchPath}); câu hỏi chuẩn xuất hiện trong {archiveLink} công khai. Không đưa vào câu hỏi thông tin mà bạn không muốn đăng trên trang công khai."
+    },
+    "legal.privacy.publicQuestions.rateLimits": {
+      "source": "The free, no-wallet tier is rate-limited by a one-way bucket derived from the IP address. The raw IP is not written to the database or joined to your questions; expired limiter buckets are deleted automatically.",
+      "text": "Gói miễn phí không cần ví bị giới hạn tần suất bằng nhóm định danh một chiều tạo từ địa chỉ IP. IP gốc không được ghi vào cơ sở dữ liệu hay liên kết với câu hỏi; nhóm giới hạn hết hạn được xóa tự động."
+    },
+    "legal.privacy.literatureWorkspace.heading": {
+      "source": "Personal literature workspace",
+      "text": "Không gian tài liệu cá nhân"
+    },
+    "legal.privacy.literatureWorkspace.link": {
+      "source": "literature workspace",
+      "text": "không gian tài liệu"
+    },
+    "legal.privacy.literatureWorkspace.localData": {
+      "source": "The {literatureLink} stores saved paper metadata, your review question and screening notes on this browser. It requires no account and has no cloud sync. Keryx does not upload these records when you save, screen, export or restore them. Anyone controlling this browser profile or scripts running on this site can access its local data.",
+      "text": "{literatureLink} lưu siêu dữ liệu bài đã lưu, câu hỏi tổng quan và ghi chú sàng lọc trong trình duyệt này. Không cần tài khoản và không đồng bộ đám mây. Keryx không tải các hồ sơ này lên khi bạn lưu, sàng lọc, xuất hay khôi phục. Người kiểm soát hồ sơ trình duyệt hoặc mã chạy trên trang này có thể truy cập dữ liệu cục bộ."
+    },
+    "legal.privacy.literatureWorkspace.comparisonAndDeletion": {
+      "source": "Preparing a comparison puts the saved review question and two paper links in an editable question URL; browser history can retain that URL. Notes and screening decisions are omitted. Submitting the question uses the ordinary research policy described above. Downloaded CSV/JSON files contain your personal notes; keep them in appropriate storage. Clearing the workspace removes its browser record but does not delete exports, browser history or disk remnants.",
+      "text": "Chuẩn bị so sánh đưa câu hỏi tổng quan đã lưu và liên kết hai bài vào URL câu hỏi có thể chỉnh sửa; lịch sử trình duyệt có thể giữ URL đó. Không đưa vào ghi chú và quyết định sàng lọc. Gửi câu hỏi áp dụng chính sách nghiên cứu thông thường bên trên. Tệp CSV/JSON tải xuống chứa ghi chú cá nhân; giữ chúng ở nơi lưu trữ phù hợp. Xóa không gian làm việc chỉ xóa hồ sơ trình duyệt, không xóa bản xuất, lịch sử trình duyệt hay dữ liệu còn sót trên đĩa."
+    },
+    "legal.privacy.privatePilot.heading": {
+      "source": "Private research pilot",
+      "text": "Thử nghiệm nghiên cứu riêng tư"
+    },
+    "legal.privacy.privatePilot.processing": {
+      "source": "Private purchasing requires an authenticated paying wallet and an enabled deployment. The private checkout shows the AI provider, model and endpoint before you buy. Keryx and that provider process your question; this is not end-to-end encryption. The private result and history routes require sign-in as the paying account. Private jobs use separate storage and are excluded from the public research archive and public payment activity. Payment records on the underlying network may still be public.",
+      "text": "Mua riêng tư cần ví trả tiền đã xác thực và bản triển khai được bật. Trang thanh toán riêng tư hiển thị nhà cung cấp AI, mô hình và điểm cuối trước khi mua. Keryx và nhà cung cấp đó xử lý câu hỏi; đây không phải mã hóa đầu cuối. Đường dẫn kết quả và lịch sử riêng tư yêu cầu đăng nhập bằng tài khoản trả tiền. Tác vụ riêng tư dùng kho riêng, không đưa vào kho nghiên cứu công khai và hoạt động thanh toán công khai. Hồ sơ thanh toán trên mạng bên dưới vẫn có thể công khai."
+    },
+    "legal.privacy.privatePilot.localRecovery": {
+      "source": "The browser asks you to accept saving the private question and payment signature locally before purchase. Recovery files also contain the question and signature in plaintext. Keep exports in private storage. Importing a file saves a local recovery copy; it does not send a new payment. Anyone controlling your browser profile or scripts running on this site could access local data.",
+      "text": "Trình duyệt yêu cầu bạn đồng ý lưu cục bộ câu hỏi riêng tư và chữ ký thanh toán trước khi mua. Tệp khôi phục cũng chứa câu hỏi và chữ ký dưới dạng văn bản thuần. Giữ bản xuất trong nơi lưu trữ riêng tư. Nhập tệp lưu bản khôi phục cục bộ; không gửi thanh toán mới. Người kiểm soát hồ sơ trình duyệt hoặc mã chạy trên trang này có thể truy cập dữ liệu cục bộ."
+    },
+    "legal.privacy.privatePilot.researchLink": {
+      "source": "Research",
+      "text": "Nghiên cứu"
+    },
+    "legal.privacy.privatePilot.localDeletion": {
+      "source": "In {researchLink}, choose Delete local private data and confirm to remove a saved question and signature from the browser journal. A minimal account/job marker remains to prevent another submission. An exported file can restore recovery access later. Deletion does not cancel a signed or in-flight payment, refund funds, delete the server result, or remove exports, backups, disk remnants or copies in other open tabs. Close other tabs to clear their displayed copies. This is not secure disk erasure.",
+      "text": "Trong {researchLink}, chọn Xóa dữ liệu riêng tư cục bộ và xác nhận để xóa câu hỏi và chữ ký đã lưu khỏi nhật ký trình duyệt. Một dấu mốc tài khoản/tác vụ tối thiểu được giữ để ngăn gửi lại. Tệp đã xuất có thể khôi phục quyền truy cập sau này. Xóa không hủy thanh toán đã ký hoặc đang xử lý, không hoàn tiền, không xóa kết quả máy chủ, bản xuất, bản sao lưu, dữ liệu còn sót trên đĩa hay bản sao trong tab khác đang mở. Đóng các tab khác để xóa bản đang hiển thị. Đây không phải xóa đĩa an toàn."
+    },
+    "legal.privacy.aggregateCounters.heading": {
+      "source": "Aggregate product counters",
+      "text": "Bộ đếm sản phẩm tổng hợp"
+    },
+    "legal.privacy.aggregateCounters.collection": {
+      "source": "Keryx keeps first-party daily counters so we can see where the product is slow or confusing: for example, how many landing views became accepted asks and completed answers, or how many creator registrations reached verification, a settled citation, and a cash-out. Each row contains only a UTC date, an allowlisted event name, and a count. It contains no wallet, IP, cookie, fingerprint, user agent, referrer, question, source, or payment identifier. Landing counting uses tab-local session storage only to avoid counting the same tab repeatedly that day; it creates no stable user id and sends requests without credentials. These are event totals, never claimed as unique people.",
+      "text": "Keryx giữ bộ đếm hằng ngày của chính mình để nhận biết điểm chậm hoặc gây nhầm lẫn: chẳng hạn có bao nhiêu lượt xem trang trở thành câu hỏi được chấp nhận và câu trả lời hoàn tất, hay bao nhiêu đăng ký tác giả đạt xác minh, trích dẫn đã quyết toán và rút tiền. Mỗi hàng chỉ chứa ngày UTC, tên sự kiện trong danh sách cho phép và số lượng. Không chứa ví, IP, cookie, dấu vân tay thiết bị, user agent, trang giới thiệu, câu hỏi, nguồn hay mã định danh thanh toán. Đếm trang đích chỉ dùng lưu trữ phiên trong tab để tránh đếm lặp cùng tab trong ngày; không tạo ID người dùng ổn định và gửi yêu cầu không kèm thông tin xác thực. Đây là tổng sự kiện, không khẳng định là số người duy nhất."
+    },
+    "legal.privacy.walletAccounts.heading": {
+      "source": "Wallets and accounts",
+      "text": "Ví và tài khoản"
+    },
+    "legal.privacy.walletAccounts.accountData": {
+      "source": "External wallets use Sign-In-With-Ethereum. Keryx stores your wallet address, your role (asker/creator), and a last-seen timestamp. Keryx does not store your email address, Google password, or phone number in its account records. Everything you do on-chain — registrations, payments, withdrawals — is public on Arc by the nature of a blockchain, and Keryx links to it rather than hiding it. Session keys for browser co-signing are generated in your browser and never sent to us.",
+      "text": "Ví ngoài dùng Sign-In-With-Ethereum. Keryx lưu địa chỉ ví, vai trò của bạn (người hỏi/tác giả) và thời điểm xuất hiện gần nhất. Keryx không lưu email, mật khẩu Google hay số điện thoại trong hồ sơ tài khoản. Mọi hành động trên chuỗi — đăng ký, thanh toán, rút tiền — đều công khai trên Arc theo bản chất blockchain; Keryx dẫn liên kết thay vì che giấu. Khóa phiên để đồng ký trong trình duyệt được tạo trong trình duyệt và không bao giờ gửi cho chúng tôi."
+    },
+    "legal.privacy.walletAccounts.mainnetRecovery": {
+      "source": "Mainnet sessions retain an encrypted signing key on this browser. Logout locks it but does not erase funded recovery or refund a Gateway balance. Clearing browser storage or losing this device can lose access; repeating a wallet signature is not a guaranteed backup. This assumes a trusted application origin and browser: compromised same-origin script can use the stored wrapping key to decrypt custody despite its nonexportability, putting deposited funds at risk.",
+      "text": "Phiên mainnet giữ khóa ký được mã hóa trong trình duyệt này. Đăng xuất khóa nó nhưng không xóa dữ liệu khôi phục có nguồn tiền hay hoàn lại số dư Gateway. Xóa lưu trữ trình duyệt hoặc mất thiết bị có thể làm mất quyền truy cập; ký ví lại không bảo đảm là bản sao lưu. Cơ chế này giả định nguồn gốc ứng dụng và trình duyệt đáng tin cậy: mã cùng nguồn gốc bị xâm nhập có thể dùng khóa bọc được lưu để giải mã dữ liệu lưu ký dù khóa không thể xuất, gây rủi ro cho tiền đã nạp."
+    },
+    "legal.privacy.googleSignIn.heading": {
+      "source": "Optional Google wallet sign-in",
+      "text": "Đăng nhập ví bằng Google (tùy chọn)"
+    },
+    "legal.privacy.googleSignIn.processing": {
+      "source": "When Google sign-in is enabled, Google authenticates your account and Circle User-Controlled Wallets handles the linked wallet. Google and Circle process the identity information you consent to share, such as your email and basic profile, under their own privacy policies. Keryx uses the authenticated Circle wallet to sign you in; it does not request access to your Gmail messages, Drive files, or Google password. Google sign-in alone does not authorize spending.",
+      "text": "Khi đăng nhập Google được bật, Google xác thực tài khoản và Circle User-Controlled Wallets xử lý ví liên kết. Google và Circle xử lý thông tin danh tính bạn đồng ý chia sẻ, như email và hồ sơ cơ bản, theo chính sách riêng tư của họ. Keryx dùng ví Circle đã xác thực để đăng nhập; không yêu cầu truy cập thư Gmail, tệp Drive hay mật khẩu Google. Chỉ đăng nhập Google không cho phép chi tiêu."
+    },
+    "legal.privacy.googleSignIn.credentials": {
+      "source": "The browser sends the Circle user-session token to Keryx to verify wallet ownership and request wallet actions. Keryx forwards it to Circle for those operations and does not persist it in account records. After sign-in, the browser keeps the user token and signing encryption key in memory. During the redirect, short-lived device credentials and login state are saved in this tab's session storage. The Circle SDK also saves OAuth state, nonce and provider entries in local storage. The Keryx continuation is valid for five minutes; returning to complete the flow removes its continuation and matching SDK entries. Abandoning the redirect can leave expired login data in browser storage. The Google callback token is removed from the page URL after the return flow. A public wallet identity is remembered locally and checked against a current Keryx session before reconnecting.",
+      "text": "Trình duyệt gửi token phiên người dùng Circle đến Keryx để xác minh sở hữu ví và yêu cầu thao tác ví. Keryx chuyển token cho Circle để thực hiện các thao tác đó và không lưu bền trong hồ sơ tài khoản. Sau đăng nhập, trình duyệt giữ token người dùng và khóa mã hóa ký trong bộ nhớ. Trong khi chuyển hướng, thông tin xác thực thiết bị ngắn hạn và trạng thái đăng nhập được lưu trong lưu trữ phiên của tab này. Circle SDK cũng lưu trạng thái OAuth, nonce và mục nhà cung cấp trong lưu trữ cục bộ. Thông tin tiếp tục của Keryx có hiệu lực năm phút; quay lại hoàn tất luồng sẽ xóa thông tin tiếp tục và mục SDK khớp. Bỏ dở chuyển hướng có thể để lại dữ liệu đăng nhập hết hạn trong lưu trữ trình duyệt. Token callback Google được xóa khỏi URL trang sau luồng quay lại. Danh tính ví công khai được nhớ cục bộ và kiểm tra với phiên Keryx hiện tại trước khi kết nối lại."
+    },
+    "legal.privacy.googleSignIn.recovery": {
+      "source": "Reloading requires reconnecting Google for new owner-wallet signatures. Google account recovery does not automatically restore the separate encrypted research signing key retained on this browser. Signing out clears Google wallet signing credentials but retains funded research-key recovery as described above.",
+      "text": "Tải lại cần kết nối Google lại để có chữ ký mới từ ví chủ sở hữu. Khôi phục tài khoản Google không tự động khôi phục khóa ký nghiên cứu được mã hóa riêng giữ trong trình duyệt này. Đăng xuất xóa thông tin ký ví Google nhưng giữ dữ liệu khôi phục khóa nghiên cứu có nguồn tiền như mô tả bên trên."
+    },
+    "legal.privacy.googleSignIn.googlePolicy": {
+      "source": "Google's privacy policy",
+      "text": "Chính sách riêng tư của Google"
+    },
+    "legal.privacy.googleSignIn.circlePolicy": {
+      "source": "Circle's privacy policy",
+      "text": "Chính sách riêng tư của Circle"
+    },
+    "legal.privacy.googleSignIn.privacyPolicies": {
+      "source": "See {googlePolicyLink} and {circlePolicyLink}.",
+      "text": "Xem {googlePolicyLink} và {circlePolicyLink}."
+    },
+    "legal.privacy.sourceListings.heading": {
+      "source": "If you list a source",
+      "text": "Nếu bạn niêm yết nguồn"
+    },
+    "legal.privacy.sourceListings.publicAndPrivateFields": {
+      "source": "A source's name, URL, description, prices, and payout wallet are public — that is the product. Two things stay private: the webhook URL + signing secret you may register for citation notifications, and your content itself, which is stored encrypted on IPFS and only decrypted after a payment. API keys are shown to you once and stored only as a salted hash; we cannot recover them.",
+      "text": "Tên nguồn, URL, mô tả, giá và ví nhận tiền đều công khai — đó là sản phẩm. Hai thứ giữ riêng tư: URL webhook cùng mã bí mật ký mà bạn có thể đăng ký để nhận thông báo trích dẫn, và chính nội dung của bạn, được lưu mã hóa trên IPFS và chỉ giải mã sau thanh toán. Khóa API chỉ hiển thị cho bạn một lần và chỉ lưu dưới dạng hash có salt; chúng tôi không thể khôi phục chúng."
+    },
+    "legal.privacy.extension.heading": {
+      "source": "The browser extension",
+      "text": "Tiện ích trình duyệt"
+    },
+    "legal.privacy.extension.destinations": {
+      "source": "The extension sends API requests only to {serviceOrigin}. Opening the popup checks research availability before you ask; the service and its hosting provider receive ordinary request metadata such as your IP address. Opening a link navigates to the destination you choose. Specifically:",
+      "text": "Tiện ích chỉ gửi yêu cầu API đến {serviceOrigin}. Mở cửa sổ bật lên kiểm tra khả dụng nghiên cứu trước khi hỏi; dịch vụ và nhà cung cấp lưu trữ nhận siêu dữ liệu yêu cầu thông thường như IP. Mở liên kết đi đến đích bạn chọn. Cụ thể:"
+    },
+    "legal.privacy.extension.asking": {
+      "source": "When you press Ask, it sends your edited question or selected text, source budget, research depth and scholarly-search choice to the Keryx API. If you check Include this page URL as a source, the displayed page URL is appended to the question. Questions, answers, reasoning traces and associated payment records from this public research flow are published and retained. The configured AI provider processes the question; discovery services can receive search queries. Do not submit confidential or personal information you do not want published.",
+      "text": "Khi nhấn Hỏi, tiện ích gửi câu hỏi đã sửa hoặc văn bản đã chọn, ngân sách nguồn, độ sâu nghiên cứu và lựa chọn tìm kiếm học thuật đến API Keryx. Nếu chọn Đưa URL trang này vào làm nguồn, URL trang hiển thị được thêm vào câu hỏi. Câu hỏi, câu trả lời, nhật ký suy luận và hồ sơ thanh toán liên quan từ luồng nghiên cứu công khai này được xuất bản và giữ lại. Nhà cung cấp AI được cấu hình xử lý câu hỏi; dịch vụ khám phá có thể nhận truy vấn tìm kiếm. Không gửi thông tin bí mật hay cá nhân mà bạn không muốn công khai."
+    },
+    "legal.privacy.extension.listAction": {
+      "source": "“List this page as a paid source”",
+      "text": "“Niêm yết trang này làm nguồn trả phí”"
+    },
+    "legal.privacy.extension.listPage": {
+      "source": "When you pick {listAction}, it opens the Keryx register page with the page URL and title pre-filled. Open editable question on web puts the edited question and chosen options in a web URL; it can be retained in browser history and processed by the website. Submitting on web uses the research policy above.",
+      "text": "Khi chọn {listAction}, tiện ích mở trang đăng ký Keryx với URL và tiêu đề trang điền sẵn. Mở câu hỏi có thể chỉnh sửa trên web đưa câu hỏi đã sửa và lựa chọn vào URL web; URL có thể được giữ trong lịch sử trình duyệt và được website xử lý. Gửi trên web áp dụng chính sách nghiên cứu bên trên."
+    },
+    "legal.privacy.extension.selection": {
+      "source": "It reads the current tab URL, title and text selection only on your invocation, to prepare editable controls or the requested creator link. It runs a selection-reading script for this purpose, without collecting full-page text or browsing history in the background.",
+      "text": "Tiện ích chỉ đọc URL tab hiện tại, tiêu đề và văn bản được chọn khi bạn gọi, để chuẩn bị điều khiển chỉnh sửa được hoặc liên kết tác giả yêu cầu. Nó chạy mã đọc vùng chọn cho mục đích này, không thu thập toàn văn trang hay lịch sử duyệt nền."
+    },
+    "legal.privacy.extension.localStorage": {
+      "source": "{storageApi} holds the right-click hand-off, including selected text and page context until the popup consumes it, and at most ten completed public report URLs with timestamps. The recent list stores no questions or answers. Clear device list removes only that list; it does not delete hosted reports, browser history or downloaded exports. The extension has no analytics beacon or advertising telemetry. An eligible anonymous result can return a private, short-lived, single-use account-claim ticket held only in popup memory, excluded from storage, report links and exports. Save this research to your account deliberately opens the hosted claim page with the ticket in a URL fragment; the website processes it with sign-in and ownership checks, and browser history can retain the link. Closing the popup loses the ticket. Claiming a run does not make published research private.",
+      "text": "{storageApi} giữ dữ liệu chuyển tiếp từ nhấp chuột phải, gồm văn bản đã chọn và ngữ cảnh trang cho đến khi cửa sổ bật lên dùng chúng, cùng tối đa mười URL báo cáo công khai hoàn tất kèm thời điểm. Danh sách gần đây không lưu câu hỏi hay câu trả lời. Xóa danh sách thiết bị chỉ xóa danh sách đó; không xóa báo cáo được lưu trữ, lịch sử trình duyệt hay bản xuất đã tải. Tiện ích không có beacon phân tích hay dữ liệu đo quảng cáo. Kết quả ẩn danh đủ điều kiện có thể trả vé nhận về tài khoản riêng tư, ngắn hạn, dùng một lần, chỉ giữ trong bộ nhớ cửa sổ bật lên, không đưa vào lưu trữ, liên kết báo cáo hay bản xuất. Lưu nghiên cứu này vào tài khoản chủ động mở trang nhận được lưu trữ với vé trong phần fragment URL; website xử lý bằng đăng nhập và kiểm tra sở hữu, lịch sử trình duyệt có thể giữ liên kết. Đóng cửa sổ bật lên làm mất vé. Nhận lượt chạy không làm nghiên cứu đã xuất bản trở thành riêng tư."
+    },
+    "legal.privacy.thirdParties.heading": {
+      "source": "Third parties we rely on",
+      "text": "Bên thứ ba chúng tôi sử dụng"
+    },
+    "legal.privacy.thirdParties.workersPolicy": {
+      "source": "Workers AI data usage policy",
+      "text": "Chính sách sử dụng dữ liệu Workers AI"
+    },
+    "legal.privacy.thirdParties.reasoningAndPayments": {
+      "source": "The configured reasoning provider processes question text to produce answers under its API terms. When enabled, the experimental Cloudflare Workers AI fallback can process public research questions and source excerpts after other providers fail, or when you select its model. Cloudflare states that Workers AI customer content is not used to train models without consent; see its {workersPolicyLink}. Private research continues to use only the provider disclosed at checkout. Circle and the Arc network process the on-chain payments. Pinata pins the encrypted IPFS content creators upload. Their processing is governed by their respective service terms.",
+      "text": "Nhà cung cấp suy luận được cấu hình xử lý văn bản câu hỏi để tạo câu trả lời theo điều khoản API của họ. Khi bật, phương án dự phòng Cloudflare Workers AI thử nghiệm có thể xử lý câu hỏi nghiên cứu công khai và trích đoạn nguồn sau khi nhà cung cấp khác lỗi, hoặc khi bạn chọn mô hình đó. Cloudflare cho biết nội dung khách hàng Workers AI không dùng huấn luyện mô hình khi chưa đồng ý; xem {workersPolicyLink}. Nghiên cứu riêng tư tiếp tục chỉ dùng nhà cung cấp công bố tại thanh toán. Circle và mạng Arc xử lý thanh toán trên chuỗi. Pinata ghim nội dung IPFS được mã hóa mà tác giả tải lên. Việc xử lý của họ theo điều khoản dịch vụ tương ứng."
+    },
+    "legal.privacy.thirdParties.collectionLink": {
+      "source": "data collection documentation",
+      "text": "tài liệu thu thập dữ liệu"
+    },
+    "legal.privacy.thirdParties.webServices": {
+      "source": "The website is served through Cloudflare. Its performance beacon can send page-load metrics to Cloudflare; see its {collectionLink}. Wallet connection tools, including MetaMask and WalletConnect when available, also communicate with their service providers. WalletConnect operational telemetry has been observed on the website. These web services are separate from the extension and from Keryx's aggregate product counters.",
+      "text": "Website được phục vụ qua Cloudflare. Beacon hiệu năng có thể gửi số liệu tải trang đến Cloudflare; xem {collectionLink}. Công cụ kết nối ví, gồm MetaMask và WalletConnect khi khả dụng, cũng liên lạc với nhà cung cấp dịch vụ của họ. Đã quan sát dữ liệu đo vận hành WalletConnect trên website. Các dịch vụ web này tách biệt với tiện ích và bộ đếm sản phẩm tổng hợp của Keryx."
+    },
+    "legal.privacy.retentionAndContact.heading": {
+      "source": "Retention, changes, contact",
+      "text": "Lưu giữ, thay đổi và liên hệ"
+    },
+    "legal.privacy.retentionAndContact.records": {
+      "source": "Published dispatches and on-chain records are retained indefinitely — they are the public ledger the product is built on. Expired rate-limit buckets are deleted; aggregate product counters retain only daily totals. Private pilot records are retained for operation and recovery; no automatic server deletion schedule currently applies. Local deletion does not remove server records or operational backups. If this policy changes, the date above changes with it. Questions, corrections, or deletion requests for off-chain data: {contactAddress}. On-chain data cannot be deleted by anyone, including us.",
+      "text": "Bản tin đã xuất bản và hồ sơ trên chuỗi được giữ vô thời hạn — đó là sổ công khai làm nền sản phẩm. Nhóm giới hạn tần suất hết hạn bị xóa; bộ đếm sản phẩm tổng hợp chỉ giữ tổng theo ngày. Hồ sơ thử nghiệm riêng tư được giữ cho vận hành và khôi phục; hiện không áp dụng lịch xóa tự động trên máy chủ. Xóa cục bộ không xóa hồ sơ máy chủ hay bản sao lưu vận hành. Nếu chính sách đổi, ngày bên trên đổi theo. Câu hỏi, sửa sai hoặc yêu cầu xóa dữ liệu ngoài chuỗi: {contactAddress}. Không ai có thể xóa dữ liệu trên chuỗi, kể cả chúng tôi."
+    },
+    "legal.terms.metadataTitle": {
+      "source": "Terms of service — Keryx",
+      "text": "Điều khoản dịch vụ — Keryx"
+    },
+    "legal.terms.metadataDescription": {
+      "source": "Terms for using Keryx research, linked wallets, paid sources and creator payments.",
+      "text": "Điều khoản sử dụng nghiên cứu Keryx, ví liên kết, nguồn trả phí và thanh toán cho tác giả."
+    },
+    "legal.terms.title": {
+      "source": "Terms of service",
+      "text": "Điều khoản dịch vụ"
+    },
+    "legal.terms.effective": {
+      "source": "Effective October 5, 2026 · Keryx services",
+      "text": "Hiệu lực ngày 5 tháng 10 năm 2026 · dịch vụ Keryx"
+    },
+    "legal.terms.usingKeryx.heading": {
+      "source": "Using Keryx",
+      "text": "Sử dụng Keryx"
+    },
+    "legal.terms.usingKeryx.scope": {
+      "source": "These terms apply when you use Keryx's hosted research service, connect a wallet, buy source access, or list content for sale. The browser extension, desktop and agent integrations can connect to the same hosted service. Use Keryx only when you are permitted to use it under the laws that apply to you.",
+      "text": "Điều khoản này áp dụng khi bạn dùng dịch vụ nghiên cứu được lưu trữ của Keryx, kết nối ví, mua quyền truy cập nguồn hoặc niêm yết nội dung bán. Tiện ích trình duyệt, ứng dụng máy tính và tích hợp tác nhân có thể kết nối cùng dịch vụ được lưu trữ. Chỉ dùng Keryx khi pháp luật áp dụng cho bạn cho phép."
+    },
+    "legal.terms.usingKeryx.researchLimitations": {
+      "source": "Keryx produces automated research with citations and visible payment records. Answers can be incomplete or mistaken. Check the cited material and use your own judgment before acting on an answer, especially for medical, legal or financial decisions. Keryx does not guarantee a particular research result or creator income.",
+      "text": "Keryx tạo nghiên cứu tự động với trích dẫn và hồ sơ thanh toán hiển thị. Câu trả lời có thể thiếu hoặc sai. Kiểm tra tài liệu được trích dẫn và tự cân nhắc trước khi hành động theo câu trả lời, đặc biệt với quyết định y tế, pháp lý hay tài chính. Keryx không bảo đảm kết quả nghiên cứu cụ thể hay thu nhập tác giả."
+    },
+    "legal.terms.accountsAndRecovery.heading": {
+      "source": "Accounts, wallets and recovery",
+      "text": "Tài khoản, ví và khôi phục"
+    },
+    "legal.terms.accountsAndRecovery.authorizations": {
+      "source": "You are responsible for the accounts, devices and wallet authorizations you use. Where available, Google sign-in connects to a Circle user-controlled wallet; signing in does not itself approve spending. Review wallet actions and the allowance, duration and question limit before enabling a research budget.",
+      "text": "Bạn chịu trách nhiệm về tài khoản, thiết bị và ủy quyền ví sử dụng. Khi khả dụng, đăng nhập Google kết nối ví Circle do người dùng kiểm soát; đăng nhập không tự phê duyệt chi tiêu. Xem xét thao tác ví, hạn mức, thời hạn và giới hạn câu hỏi trước khi bật ngân sách nghiên cứu."
+    },
+    "legal.terms.accountsAndRecovery.localRecovery": {
+      "source": "A funded browser research key is separate from the linked owner wallet. Signing out locks that key but preserves its local recovery data. Clearing browser data or losing the device can lose access to it. Google account recovery does not automatically restore this research key. Keep any recovery exports private and follow the recovery instructions shown in the product.",
+      "text": "Khóa nghiên cứu trình duyệt có nguồn tiền tách biệt với ví chủ sở hữu liên kết. Đăng xuất khóa khóa đó nhưng giữ dữ liệu khôi phục cục bộ. Xóa dữ liệu trình duyệt hay mất thiết bị có thể làm mất quyền truy cập. Khôi phục tài khoản Google không tự khôi phục khóa nghiên cứu này. Giữ bản xuất khôi phục riêng tư và làm theo hướng dẫn khôi phục hiển thị trong sản phẩm."
+    },
+    "legal.terms.pricesAndDelivery.heading": {
+      "source": "Prices, payments and delivery",
+      "text": "Giá, thanh toán và cung cấp kết quả"
+    },
+    "legal.terms.pricesAndDelivery.charges": {
+      "source": "Review the displayed price or spending limit before authorizing a paid action. Source access tolls, citation rewards, service fees and network fees can be separate charges. A spending allowance permits spending within its limits; it does not guarantee that all of the allowance will be used or that every selected source will be delivered.",
+      "text": "Xem xét giá hoặc hạn mức chi hiển thị trước khi cho phép hành động trả phí. Phí truy cập nguồn, phần thưởng trích dẫn, phí dịch vụ và phí mạng có thể là khoản riêng. Hạn mức cho phép chi trong giới hạn; không bảo đảm sẽ dùng hết hay cung cấp được mọi nguồn đã chọn."
+    },
+    "legal.terms.pricesAndDelivery.uncertainPayments": {
+      "source": "Payment records distinguish settled, pending, failed and simulated actions. A pending action is not proof of payment completion. If an operation is uncertain, use its existing receipt and recovery flow before trying another payment. Completed blockchain payments cannot be reversed by Keryx; signing out or stopping a budget does not refund funds or cancel already exposed payment authorizations. Contact support about an unresolved purchase or delivery problem so its original evidence can be reviewed.",
+      "text": "Hồ sơ thanh toán phân biệt hành động đã quyết toán, đang chờ, không thành công và mô phỏng. Hành động đang chờ không chứng minh thanh toán hoàn tất. Nếu thao tác chưa rõ kết quả, dùng biên nhận và luồng khôi phục hiện có trước khi thử thanh toán khác. Keryx không thể đảo ngược thanh toán blockchain hoàn tất; đăng xuất hoặc dừng ngân sách không hoàn tiền hay hủy ủy quyền thanh toán đã đưa vào xử lý. Liên hệ hỗ trợ về mua hoặc cung cấp chưa giải quyết để xem xét bằng chứng ban đầu."
+    },
+    "legal.terms.pricesAndDelivery.providerTerms": {
+      "source": "Circle, wallet providers and the underlying network have their own terms, availability and fees. Review those providers' terms when using their services.",
+      "text": "Circle, nhà cung cấp ví và mạng bên dưới có điều khoản, mức khả dụng và phí riêng. Xem xét điều khoản của họ khi sử dụng dịch vụ."
+    },
+    "legal.terms.questionsAndContent.heading": {
+      "source": "Questions and creator content",
+      "text": "Câu hỏi và nội dung tác giả"
+    },
+    "legal.terms.questionsAndContent.publication": {
+      "source": "Public research questions, answers, citations and payment activity can be published. Use the separately labeled private research mode where available for information you intend to keep out of the public archive, and review its processing and recovery disclosures before purchase.",
+      "text": "Câu hỏi nghiên cứu công khai, câu trả lời, trích dẫn và hoạt động thanh toán có thể được xuất bản. Dùng chế độ nghiên cứu riêng tư có nhãn riêng khi khả dụng cho thông tin bạn muốn giữ ngoài kho công khai; xem công bố về xử lý và khôi phục trước khi mua."
+    },
+    "legal.terms.questionsAndContent.rightsAndRewards": {
+      "source": "Submit or sell only material you have permission to provide. Listing a source authorizes Keryx to display its listing information and process and deliver the submitted content as needed for the access and citation workflow. It does not transfer ownership of your work. A listing does not guarantee purchases or rewards; reward eligibility depends on the content actually cited and the applicable payment evidence.",
+      "text": "Chỉ gửi hoặc bán tài liệu bạn có quyền cung cấp. Niêm yết nguồn cho phép Keryx hiển thị thông tin niêm yết, xử lý và cung cấp nội dung đã gửi theo nhu cầu luồng truy cập và trích dẫn. Không chuyển quyền sở hữu tác phẩm. Niêm yết không bảo đảm lượt mua hay thưởng; điều kiện nhận thưởng phụ thuộc nội dung thực sự được trích dẫn và bằng chứng thanh toán áp dụng."
+    },
+    "legal.terms.questionsAndContent.prohibitedUse": {
+      "source": "Do not impersonate another person, misrepresent content ownership, manipulate payment evidence, distribute malicious content, or bypass access and spending controls. Respect the rights and access terms of the sources you use.",
+      "text": "Không mạo danh, khai sai quyền sở hữu nội dung, thao túng bằng chứng thanh toán, phát tán nội dung độc hại hay vượt kiểm soát truy cập và chi tiêu. Tôn trọng quyền và điều kiện truy cập của nguồn bạn dùng."
+    },
+    "legal.terms.privacyAndAvailability.heading": {
+      "source": "Privacy and availability",
+      "text": "Quyền riêng tư và khả dụng"
+    },
+    "legal.terms.privacyAndAvailability.policyLink": {
+      "source": "privacy policy",
+      "text": "chính sách quyền riêng tư"
+    },
+    "legal.terms.privacyAndAvailability.processing": {
+      "source": "The {privacyLink} describes the information Keryx and its providers process, public records, browser storage and deletion limits. Read it before submitting information.",
+      "text": "{privacyLink} mô tả thông tin Keryx và nhà cung cấp xử lý, hồ sơ công khai, lưu trữ trình duyệt và giới hạn xóa. Đọc trước khi gửi thông tin."
+    },
+    "legal.terms.privacyAndAvailability.changes": {
+      "source": "Features can change or become unavailable during maintenance, provider outages or safety restrictions. Experimental features are labeled in the product. Changes to these terms will be published here with an updated effective date; they do not create a new wallet signature or increase an existing spending allowance.",
+      "text": "Tính năng có thể thay đổi hoặc không khả dụng khi bảo trì, nhà cung cấp ngừng hoạt động hoặc có hạn chế an toàn. Tính năng thử nghiệm có nhãn trong sản phẩm. Thay đổi điều khoản được xuất bản ở đây kèm ngày hiệu lực mới; không tạo chữ ký ví mới hay tăng hạn mức chi hiện có."
+    },
+    "legal.terms.contact.heading": {
+      "source": "Contact",
+      "text": "Liên hệ"
+    },
+    "legal.terms.contact.support": {
+      "source": "Questions about these terms, content rights, or a purchase: {contactAddress}. Include the relevant source or receipt identifier when available. Do not send passwords, private keys or recovery secrets.",
+      "text": "Câu hỏi về điều khoản, quyền nội dung hoặc giao dịch mua: {contactAddress}. Kèm mã định danh nguồn hay biên nhận liên quan khi có. Không gửi mật khẩu, khóa riêng hay bí mật khôi phục."
+    }
+  }
+}

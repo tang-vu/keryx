@@ -1,0 +1,128 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-archive.ts",
+  "sourceSha256": "68d70227094d71b19e43c483fec9c03f7a482d7005f71cd589c9cb5958043da4",
+  "entries": {
+    "sourceArchive.title": {
+      "source": "The article library",
+      "text": "Thư viện bài viết"
+    },
+    "sourceArchive.description": {
+      "source": "Search retained articles across publishers and publication years. Feed updates add to this library; earlier articles remain available.",
+      "text": "Tìm bài được lưu theo nhà xuất bản và năm xuất bản. Cập nhật nguồn cấp bổ sung thư viện; bài trước đó vẫn khả dụng."
+    },
+    "sourceArchive.search": {
+      "source": "Search articles",
+      "text": "Tìm bài viết"
+    },
+    "sourceArchive.placeholder": {
+      "source": "A topic, technology or article title",
+      "text": "Chủ đề, công nghệ hoặc tiêu đề bài"
+    },
+    "sourceArchive.button": {
+      "source": "Search",
+      "text": "Tìm kiếm"
+    },
+    "sourceArchive.results.one": {
+      "source": "{count} matching article",
+      "text": "{count} bài khớp"
+    },
+    "sourceArchive.results.other": {
+      "source": "{count} matching articles",
+      "text": "{count} bài khớp"
+    },
+    "sourceArchive.total.one": {
+      "source": "{count} retained article",
+      "text": "{count} bài được lưu"
+    },
+    "sourceArchive.total.other": {
+      "source": "{count} retained articles",
+      "text": "{count} bài được lưu"
+    },
+    "sourceArchive.empty": {
+      "source": "No retained articles match this search. Try a broader topic or explore an original publisher link.",
+      "text": "Không có bài được lưu khớp tìm kiếm này. Thử chủ đề rộng hơn hoặc khám phá liên kết nhà xuất bản gốc."
+    },
+    "sourceArchive.unavailable": {
+      "source": "The article library is temporarily unavailable. Publisher links and retained feed previews remain available below.",
+      "text": "Thư viện bài tạm thời không khả dụng. Liên kết nhà xuất bản và bản xem trước nguồn cấp được lưu vẫn có bên dưới."
+    },
+    "sourceArchive.notEnabled": {
+      "source": "The article archive is awaiting activation on this storage profile. Retained feed previews remain available below.",
+      "text": "Kho bài đang chờ kích hoạt trên cấu hình lưu trữ này. Bản xem trước nguồn cấp được lưu vẫn có bên dưới."
+    },
+    "sourceArchive.next": {
+      "source": "Next page",
+      "text": "Trang sau"
+    },
+    "sourceArchive.start": {
+      "source": "First page",
+      "text": "Trang đầu"
+    },
+    "sourceArchive.all": {
+      "source": "All publishers",
+      "text": "Tất cả nhà xuất bản"
+    },
+    "sourceArchive.recent": {
+      "source": "Newest first",
+      "text": "Mới nhất trước"
+    },
+    "sourceArchive.oldest": {
+      "source": "Oldest first",
+      "text": "Cũ nhất trước"
+    },
+    "sourceArchive.relevance": {
+      "source": "Most relevant",
+      "text": "Liên quan nhất"
+    },
+    "sourceArchive.open": {
+      "source": "Read original",
+      "text": "Đọc bản gốc"
+    },
+    "sourceArchive.ask": {
+      "source": "Research this article",
+      "text": "Nghiên cứu bài này"
+    },
+    "sourceArchive.browse": {
+      "source": "Browse all {count} retained articles",
+      "text": "Duyệt toàn bộ {count} bài được lưu"
+    },
+    "sourceArchive.publishedUnknown": {
+      "source": "Publication date unavailable",
+      "text": "Ngày xuất bản không khả dụng"
+    },
+    "sourceArchive.feed": {
+      "source": "Retained feed content",
+      "text": "Nội dung nguồn cấp được lưu"
+    },
+    "sourceArchive.article": {
+      "source": "Extracted original-page text",
+      "text": "Văn bản trích xuất từ trang gốc"
+    },
+    "sourceArchive.scope": {
+      "source": "{scope} · free public reference",
+      "text": "{scope} · tài liệu tham khảo công khai miễn phí"
+    },
+    "sourceArchive.collected": {
+      "source": "Collected {date}",
+      "text": "Đã thu thập {date}"
+    },
+    "sourceArchive.publisher": {
+      "source": "Publisher",
+      "text": "Nhà xuất bản"
+    },
+    "sourceArchive.sort": {
+      "source": "Sort articles",
+      "text": "Sắp xếp bài viết"
+    },
+    "sourceArchive.pages": {
+      "source": "Article pages",
+      "text": "Trang bài viết"
+    },
+    "sourceArchive.feedCount": {
+      "source": "Retained publishers · {count} articles",
+      "text": "Nhà xuất bản được lưu · {count} bài"
+    }
+  }
+}

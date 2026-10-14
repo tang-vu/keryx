@@ -1,0 +1,380 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/product-guide.ts",
+  "sourceSha256": "8f9a10b842280db7fa02502d74d003a2d71f868a66a364a0f1146d5c57c80620",
+  "entries": {
+    "product.heroKicker": {
+      "source": "For researchers",
+      "text": "面向研究者"
+    },
+    "product.heroTitle": {
+      "source": "AI research.",
+      "text": "AI 研究。"
+    },
+    "product.heroBody": {
+      "source": "Cited answers. Visible source choices.",
+      "text": "带引用的答案，可见的来源选择。"
+    },
+    "product.overviewKicker": {
+      "source": "What you get",
+      "text": "您将获得什么"
+    },
+    "product.overviewTitle": {
+      "source": "A research answer you can follow back to its sources.",
+      "text": "可追溯至来源的研究答案。"
+    },
+    "product.overviewBody": {
+      "source": "Keryx is a citation-toll reading agent. Give it a question and a source budget: it discovers material, explains what it reads or skips, and writes an answer with citations. Eligible cited creators can receive separate USDC rewards.",
+      "text": "Keryx 是引用付费阅读代理。给它问题及来源预算，它会发现材料、解释阅读或跳过的内容，并撰写带引用的答案。合格的被引用创作者可获得单独 USDC 奖励。"
+    },
+    "product.briefsAction": {
+      "source": "Prepare a focused research brief",
+      "text": "准备聚焦的研究简报"
+    },
+    "product.researchersTitle": {
+      "source": "For researchers and students",
+      "text": "面向研究者和学生"
+    },
+    "product.researchersBody": {
+      "source": "Find papers, compare evidence and build a literature review. Keep unavailable papers and abstract-only reads visible instead of treating them as full-text evidence.",
+      "text": "查找论文、比较证据并建立文献综述。保持不可用论文及仅摘要阅读可见，不将其视为全文证据。"
+    },
+    "product.researchersAction": {
+      "source": "Open the literature workspace",
+      "text": "打开文献工作区"
+    },
+    "product.buildersTitle": {
+      "source": "For builders and writers",
+      "text": "面向开发者及作者"
+    },
+    "product.buildersBody": {
+      "source": "Investigate a technical question or prepare a brief. Follow the agent's source decisions, inspect supporting citations and reopen the completed report.",
+      "text": "调查技术问题或准备简报。跟踪代理来源决策、检查支持引用并重新打开完成报告。"
+    },
+    "product.buildersAction": {
+      "source": "Explore sources",
+      "text": "探索来源"
+    },
+    "product.agentsTitle": {
+      "source": "For agent developers",
+      "text": "面向代理开发者"
+    },
+    "product.agentsBody": {
+      "source": "Use research through the API or MCP. Prepaid jobs carry a quoted service fee, a creator reserve and recovery records that distinguish a result from a settled payment.",
+      "text": "通过 API 或 MCP 使用研究。预付任务带有报价服务费、创作者储备及恢复记录，区分结果与已结算付款。"
+    },
+    "product.agentsAction": {
+      "source": "Explore developer integrations",
+      "text": "探索开发者集成"
+    },
+    "product.proofKicker": {
+      "source": "Inspect the evidence",
+      "text": "查看证据"
+    },
+    "product.proofTitle": {
+      "source": "Trust comes from what you can check.",
+      "text": "信任来自可检查的内容。"
+    },
+    "product.proofBody": {
+      "source": "Open source decisions and original references. Payment records distinguish settled, pending, failed and simulated states. A saved answer or a registry entry alone does not prove a payment or a useful result.",
+      "text": "打开来源决策及原始参考资料。付款记录区分已结算、待处理、失败及模拟。仅保存答案或注册表条目不能证明付款或结果有用。"
+    },
+    "product.walkthrough": {
+      "source": "Follow a recorded research job",
+      "text": "跟踪已记录研究任务"
+    },
+    "product.proof": {
+      "source": "Inspect public proof",
+      "text": "查看公开凭证"
+    },
+    "product.quality": {
+      "source": "Read quality and evaluation limits",
+      "text": "阅读质量及评估限制"
+    },
+    "product.pricing": {
+      "source": "Pricing & budgets",
+      "text": "价格与预算"
+    },
+    "product.about": {
+      "source": "About & contact",
+      "text": "关于及联系"
+    },
+    "product.navigationPricing": {
+      "source": "Pricing",
+      "text": "定价"
+    },
+    "product.navigationAbout": {
+      "source": "About",
+      "text": "简介"
+    },
+    "product.try": {
+      "source": "Try a research question",
+      "text": "尝试研究问题"
+    },
+    "product.faqTitle": {
+      "source": "Before your first question",
+      "text": "首次提问前"
+    },
+    "product.faqWallet": {
+      "source": "Do I need a wallet to try Keryx?",
+      "text": "尝试 Keryx 需要钱包吗？"
+    },
+    "product.faqWalletBody": {
+      "source": "The sponsored public trial needs no wallet or USDC deposit. Keryx covers approved source spending and operating costs within its usage and spending limits. Check availability in the question form; access can be paused.",
+      "text": "赞助公开试用无需钱包或 USDC 存款。Keryx 在使用及支出限制内承担获批来源支出及运营成本。请在问题表单检查可用性；访问可能暂停。"
+    },
+    "product.faqPublic": {
+      "source": "Can I submit confidential research?",
+      "text": "可以提交机密研究吗？"
+    },
+    "product.faqPublicBody": {
+      "source": "Sponsored trial reports have public links. Use questions you can share publicly. Review the separate private-research flow and privacy terms before submitting confidential material; signing in alone does not make a trial report private.",
+      "text": "赞助试用报告有公开链接。请使用可公开分享的问题。提交机密材料前请审阅独立私密研究流程及隐私条款；仅登录不会使试用报告私密。"
+    },
+    "product.faqPayment": {
+      "source": "Does every citation pay a publisher?",
+      "text": "每次引用都会向出版者付款吗？"
+    },
+    "product.faqPaymentBody": {
+      "source": "No. Public pages can be read without a source access toll. Creator rewards require qualifying evidence and verified payout authority. Sponsored operating fees, when eligible, are recorded separately and are not publisher payments.",
+      "text": "不会。公开页面可免来源访问费阅读。创作者奖励需要合格证据及经核验收款权限。符合条件的赞助运营费单独记录，不是出版者付款。"
+    },
+    "product.faqTrust": {
+      "source": "Are demo reports or AI answers verified facts?",
+      "text": "演示报告或 AI 答案是已核验事实吗？"
+    },
+    "product.faqTrustBody": {
+      "source": "No. Synthetic examples are demonstrations, and historical testnet receipts stay labelled as testnet. AI answers can be incomplete or wrong: inspect the original sources, evidence limitations and payment state before relying on a report.",
+      "text": "不是。合成示例仅作演示，历史测试网收据仍标注测试网。AI 答案可能不完整或错误；依赖报告前请检查原来源、证据限制及付款状态。"
+    },
+    "product.entryLabel": {
+      "source": "About this research service",
+      "text": "关于此研究服务"
+    },
+    "product.entryBody": {
+      "source": "Keryx turns questions into cited research answers with visible source decisions and spending limits. Each saved report keeps its own evidence limitations and payment labels. Open the original sources and receipts to inspect a particular run.",
+      "text": "Keryx 将问题转为带引用研究答案，来源决策及支出限制可见。每份保存报告保留自身证据限制及付款标签。打开原来源和收据以检查特定运行。"
+    },
+    "pricing.title": {
+      "source": "Know what you pay for.",
+      "text": "了解您为何付费。"
+    },
+    "pricing.metadataTitle": {
+      "source": "Pricing & research budgets",
+      "text": "定价及研究预算"
+    },
+    "pricing.description": {
+      "source": "Understand Keryx's sponsored trial, browser-funded source budgets and prepaid Quick/Deep research fees before you start.",
+      "text": "开始前了解 Keryx 赞助试用、浏览器资助来源预算及预付 Quick/Deep 研究费。"
+    },
+    "pricing.currencySuffix": {
+      "source": "· USDC",
+      "text": "· USDC"
+    },
+    "pricing.introduction": {
+      "source": "Choose the research path that fits your task. Source access, eligible creator rewards and the research service are distinct costs. Payment amounts below are in USDC; the configured network is shown above.",
+      "text": "选择适合任务的研究路径。来源访问、合格创作者奖励及研究服务是不同成本。下方金额以 USDC 计；配置网络在上方显示。"
+    },
+    "pricing.trialTitle": {
+      "source": "Sponsored public trial",
+      "text": "赞助公开试用"
+    },
+    "pricing.trialPrice": {
+      "source": "No wallet or deposit",
+      "text": "无需钱包或存款"
+    },
+    "pricing.trialBody": {
+      "source": "Keryx sponsors source purchases, eligible rewards and operating costs within current trial limits. Availability is shown in the question form. This is a limited trial, not an unlimited free plan.",
+      "text": "Keryx 在当前试用限制内赞助来源购买、合格奖励及运营成本。问题表单显示可用性。这是有限试用，不是无限免费方案。"
+    },
+    "pricing.trialPrivacy": {
+      "source": "Trial reports have public links. Use shareable questions.",
+      "text": "试用报告有公开链接。请使用可分享问题。"
+    },
+    "pricing.browserTitle": {
+      "source": "Your browser source budget",
+      "text": "您的浏览器来源预算"
+    },
+    "pricing.browserPrice": {
+      "source": "You set the source cap",
+      "text": "您设置来源上限"
+    },
+    "pricing.browserBody": {
+      "source": "A funded browser session pays for source reads and eligible creator rewards within your approved question and session caps. Pending authorizations count against the cap; unused funds remain in your Gateway balance. Model and search operating costs are separate from the source cap.",
+      "text": "已注资浏览器会话在批准的问题及会话上限内支付来源阅读和合格创作者奖励。待处理授权占用上限；未用资金保留在 Gateway 余额。模型及搜索运营成本独立于来源上限。"
+    },
+    "pricing.browserFee": {
+      "source": "No prepaid research-package service fee is added to the browser's source grant.",
+      "text": "浏览器来源授权不额外收取预付研究套餐服务费。"
+    },
+    "pricing.browserAction": {
+      "source": "Review browser budgets",
+      "text": "审阅浏览器预算"
+    },
+    "pricing.prepaidTitle": {
+      "source": "Prepaid research jobs",
+      "text": "预付研究任务"
+    },
+    "pricing.prepaidBody": {
+      "source": "Quick and Deep packages combine a service fee with your chosen creator reserve. The fee covers the research service; the reserve bounds source purchases and eligible creator rewards. Review the current quote, availability and terms before paying.",
+      "text": "Quick 和 Deep 套餐将服务费与您选择的创作者储备结合。费用涵盖研究服务；储备限制来源购买及合格创作者奖励。付款前请审阅当前报价、可用性及条款。"
+    },
+    "pricing.package": {
+      "source": "Package",
+      "text": "套餐"
+    },
+    "pricing.service": {
+      "source": "Service fee",
+      "text": "服务费"
+    },
+    "pricing.reserve": {
+      "source": "Creator reserve",
+      "text": "创作者储备"
+    },
+    "pricing.total": {
+      "source": "Total prepaid price",
+      "text": "预付总价"
+    },
+    "pricing.quick": {
+      "source": "Quick",
+      "text": "快速"
+    },
+    "pricing.deep": {
+      "source": "Deep",
+      "text": "深入"
+    },
+    "pricing.quoteNotice": {
+      "source": "Illustration using this deployment's default creator reserve. Amounts come from the same pricing function as checkout. This table is not an availability guarantee; checkout can refuse a job or return a different total when you change the reserve.",
+      "text": "使用此部署默认创作者储备的示例。金额来自与结账相同的定价函数。此表不保证可用性；结账可能拒绝任务，或在您更改储备时返回不同总额。"
+    },
+    "pricing.prepaidTerms": {
+      "source": "Prepaid packages are non-refundable under the current policy. An unused creator reserve stays in the package. Targets describe the package's service level, not a promise of correctness or an individual completion time.",
+      "text": "按当前政策，预付套餐不退款。未用创作者储备保留在套餐中。目标描述套餐服务水平，不承诺正确性或单项完成时间。"
+    },
+    "pricing.checkout": {
+      "source": "Review current quote & availability",
+      "text": "审阅当前报价及可用性"
+    },
+    "pricing.monthlyTitle": {
+      "source": "Research Monthly",
+      "text": "Research Monthly"
+    },
+    "pricing.monthlyBody": {
+      "source": "A separate prepaid option covers four manually requested Deep jobs over 30 days, with a 10% discount against four individual packages. It is not an automatic research schedule. Check the live quote and availability in the research workspace.",
+      "text": "独立预付选项涵盖 30 天内手动请求的四次 Deep 任务，较四个单独套餐优惠 10%。不是自动研究计划。请在研究工作区检查实时报价及可用性。"
+    },
+    "pricing.creatorTitle": {
+      "source": "Publishing a source?",
+      "text": "发布来源？"
+    },
+    "pricing.creatorBody": {
+      "source": "Set an access toll for a source you control and prove ownership. A paid read and an eligible citation reward are separate payment legs; listing alone does not guarantee earnings. Public sources and disabled reward policies do not become paid merely by being cited.",
+      "text": "为您控制的来源设置访问费并证明所有权。付费阅读与合格引用奖励是独立付款环节；仅上架不保证收益。公开来源及已禁用奖励政策不会仅因被引用而收费。"
+    },
+    "about.metadataTitle": {
+      "source": "About Keryx & support",
+      "text": "关于 Keryx 及支持"
+    },
+    "about.description": {
+      "source": "What Keryx does, who it is for, how to inspect its evidence and where to get support.",
+      "text": "了解 Keryx 功能、适用人群、证据检查方法及支持渠道。"
+    },
+    "about.title": {
+      "source": "Research with a visible trail.",
+      "text": "有可见轨迹的研究。"
+    },
+    "about.introduction": {
+      "source": "Keryx helps researchers, builders and writers turn a question into a cited answer while seeing what the agent reads, why it chooses each source and how the source budget is used.",
+      "text": "Keryx 帮助研究者、开发者和作者将问题转为带引用答案，同时查看代理阅读什么、为何选择每个来源及来源预算如何使用。"
+    },
+    "about.whyTitle": {
+      "source": "Why Keryx exists",
+      "text": "Keryx 存在的原因"
+    },
+    "about.whyBody": {
+      "source": "Useful research depends on the people who publish the underlying work. Keryx combines source discovery and cited answers with bounded paid access and qualifying creator rewards. Public references remain useful even when there is no publisher payment.",
+      "text": "有效研究依赖发布基础作品的人。Keryx 将来源发现及带引用答案与有边界的付费访问和合格创作者奖励结合。即使没有出版者付款，公开参考资料仍有价值。"
+    },
+    "about.projectTitle": {
+      "source": "An open-source project",
+      "text": "开源项目"
+    },
+    "about.projectBody": {
+      "source": "Keryx's implementation, changes and issue tracker are public on GitHub. Inspect the code, report a problem or follow development there. Public proof and quality pages document evidence and remaining acceptance gates; they do not establish independent customer adoption.",
+      "text": "Keryx 实现、更改和问题跟踪在 GitHub 公开。可查看代码、报告问题或关注开发。公开凭证及质量页面记录证据和剩余接受门槛，不证明独立客户采用。"
+    },
+    "about.github": {
+      "source": "View source code",
+      "text": "查看源码"
+    },
+    "about.issues": {
+      "source": "Report an issue",
+      "text": "报告问题"
+    },
+    "about.contactTitle": {
+      "source": "Contact support",
+      "text": "联系支持"
+    },
+    "about.contactBody": {
+      "source": "For questions about research, creator onboarding, payment recovery or privacy, email support. Include a public report link or a non-sensitive description of the issue. Never send private keys, seed phrases, API keys or private recovery credentials.",
+      "text": "研究、创作者入驻、付款恢复或隐私问题请邮件联系支持。附公开报告链接或不敏感的问题说明。绝不发送私钥、助记词、API 密钥或私密恢复凭据。"
+    },
+    "about.boundariesTitle": {
+      "source": "What to know before using it",
+      "text": "使用前须知"
+    },
+    "about.boundariesBody": {
+      "source": "AI reports need source review. Sponsored reports are public, experimental features keep their own gates, and payment attempts only count as settled when original settlement evidence exists. Historical and synthetic records keep their original labels.",
+      "text": "AI 报告需审阅来源。赞助报告公开，实验功能保留自身门槛，付款尝试仅有原始结算证据才算已结算。历史及合成记录保留原标签。"
+    },
+    "product.support": {
+      "source": "Email support",
+      "text": "邮件联系支持"
+    },
+    "product.privacy": {
+      "source": "Privacy",
+      "text": "隐私"
+    },
+    "product.terms": {
+      "source": "Terms",
+      "text": "条款"
+    },
+    "product.stepsTitle": {
+      "source": "How Keryx researches a question",
+      "text": "Keryx 如何研究问题"
+    },
+    "product.stepsDecide": {
+      "source": "Keryx compares source previews and prices under your cap, then explains what it reads or skips. Unused browser-session funds remain yours; prepaid reserves follow the package terms.",
+      "text": "Keryx 在上限内比较来源预览及价格，再解释阅读或跳过的内容。未用浏览器会话资金仍归您；预付储备遵循套餐条款。"
+    },
+    "product.stepsCite": {
+      "source": "It reads available public or purchased material and writes an answer with citations to supporting sources. Unavailable content and thin evidence remain visible.",
+      "text": "它阅读可用的公开或已购买材料，并以支持来源引用撰写答案。不可用内容及薄弱证据保持可见。"
+    },
+    "product.metaTitle": {
+      "source": "Keryx — AI research with cited evidence",
+      "text": "Keryx — 带引用证据的 AI 研究"
+    },
+    "product.metaDescription": {
+      "source": "For researchers, builders and writers: turn a question into a cited answer with visible source decisions and spending limits. Try Keryx's sponsored public trial; eligibility and usage limits apply.",
+      "text": "面向研究者、开发者及作者：将问题转为带引用答案，来源决策和支出限制可见。尝试 Keryx 赞助公开试用；适用资格及使用限制。"
+    },
+    "product.socialAlt": {
+      "source": "Keryx — cited AI research with visible source decisions",
+      "text": "Keryx — 来源决策可见的带引用 AI 研究"
+    },
+    "product.socialTitle": {
+      "source": "Cited research.\nVisible decisions.",
+      "text": "带引用的研究。\n可见的决策。"
+    },
+    "product.socialSubtitle": {
+      "source": "Inspect sources, spending and creator payment proof",
+      "text": "查看来源、支出及创作者付款凭证"
+    },
+    "product.slogan": {
+      "source": "Cited research. Visible decisions.",
+      "text": "带引用的研究。可见的决策。"
+    }
+  }
+}

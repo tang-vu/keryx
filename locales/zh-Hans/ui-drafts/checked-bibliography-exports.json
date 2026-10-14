@@ -1,0 +1,36 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/checked-bibliography-exports.ts",
+  "sourceSha256": "4dd269e891d0fb05890b30a9c4700476a6e5f7f742fa9cefe8672978f33a41d5",
+  "entries": {
+    "0.label": {
+      "source": "Export bibliography BibTeX",
+      "text": "导出参考文献 BibTeX"
+    },
+    "0.notice": {
+      "source": "Private bibliography BibTeX saved. Metadata only; no read or settlement evidence.",
+      "text": "私密参考文献 BibTeX 已保存。仅含元数据；不构成阅读或结算证据。"
+    },
+    "1.label": {
+      "source": "Export bibliography RIS",
+      "text": "导出参考文献 RIS"
+    },
+    "1.notice": {
+      "source": "Private bibliography RIS saved. Metadata only; no read or settlement evidence.",
+      "text": "私密参考文献 RIS 已保存。仅含元数据；不构成阅读或结算证据。"
+    },
+    "2.label": {
+      "source": "Export bibliography CSL-JSON",
+      "text": "导出参考文献 CSL-JSON"
+    },
+    "2.notice": {
+      "source": "Private bibliography CSL-JSON saved. Metadata only; no read or settlement evidence.",
+      "text": "私密参考文献 CSL-JSON 已保存。仅含元数据；不构成阅读或结算证据。"
+    },
+    "unavailable": {
+      "source": "No reusable bibliography metadata in the checked saved receipt",
+      "text": "已检查的保存凭证中没有可复用的参考文献元数据"
+    }
+  }
+}

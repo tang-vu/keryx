@@ -1,0 +1,220 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/specialist-briefs.ts",
+  "sourceSha256": "2fb57051feb09c896d6ae0ff4a9ee44a29cf2533a1dd1ec6729835161ba6ca90",
+  "entries": {
+    "title": {
+      "source": "Research for a decision.",
+      "text": "为决策进行研究。"
+    },
+    "metadataTitle": {
+      "source": "Focused research briefs",
+      "text": "聚焦研究简报"
+    },
+    "description": {
+      "source": "Prepare a focused API comparison, SaaS market brief or literature overview with an explicit scope and review checklist.",
+      "text": "准备聚焦的 API 比较、SaaS 市场简报或文献概览，并明确范围和审阅清单。"
+    },
+    "kicker": {
+      "source": "Focused research briefs",
+      "text": "聚焦研究简报"
+    },
+    "introduction": {
+      "source": "Choose the work you need done, define one question and decide what a useful answer must show. Prepare a request you can review before starting research.",
+      "text": "选择所需工作，定义一个问题，决定有用答案必须展示什么。准备可在研究开始前审阅的请求。"
+    },
+    "scopeNotice": {
+      "source": "These are request templates. Available evidence may support only a partial answer; check the delivered sources and gaps before accepting a result.",
+      "text": "这些是请求模板。可用证据可能仅支持部分答案；接受结果前请检查交付来源和缺口。"
+    },
+    "selectTrack": {
+      "source": "Choose your brief",
+      "text": "选择简报"
+    },
+    "decision": {
+      "source": "The decision or research question",
+      "text": "决策或研究问题"
+    },
+    "decisionHelp": {
+      "source": "Keep this to one decision. Include the options, audience or topic you want compared.",
+      "text": "聚焦一个决策。包含要比较的选项、受众或主题。"
+    },
+    "context": {
+      "source": "Constraints and context (optional)",
+      "text": "限制与背景（可选）"
+    },
+    "contextPlaceholder": {
+      "source": "Stack, region, use case, research period or requirements",
+      "text": "技术栈、地区、使用场景、研究时段或要求"
+    },
+    "sources": {
+      "source": "Starting source links (optional)",
+      "text": "起始来源链接（可选）"
+    },
+    "sourcesHelp": {
+      "source": "Up to two HTTPS links, one per line. Links are starting points; their contents have not been read or verified.",
+      "text": "最多两个 HTTPS 链接，每行一个。链接是起点；其内容尚未阅读或验证。"
+    },
+    "privacy": {
+      "source": "Use shareable questions. The draft stays in this page until you copy or download it. Public research and sponsored trial reports can have public links; use the separate private-research flow for confidential work.",
+      "text": "使用可共享的问题。草稿保留在此页面，直到您复制或下载。公开研究和赞助试用报告可能具有公开链接；机密工作请使用单独的私密研究流程。"
+    },
+    "prepare": {
+      "source": "Prepare my request",
+      "text": "准备我的请求"
+    },
+    "review": {
+      "source": "Review your request",
+      "text": "审阅请求"
+    },
+    "rubric": {
+      "source": "Review the delivered result against this checklist",
+      "text": "按此清单审阅交付结果"
+    },
+    "rubricNotice": {
+      "source": "This checklist is for your review. Preparing a request or opening a report does not record acceptance.",
+      "text": "此清单供您审阅。准备请求或打开报告不会记录验收。"
+    },
+    "copy": {
+      "source": "Copy request",
+      "text": "复制请求"
+    },
+    "copied": {
+      "source": "Request copied.",
+      "text": "请求已复制。"
+    },
+    "copyFailed": {
+      "source": "Copy is unavailable. Select the request text or download it.",
+      "text": "无法复制。请选择请求文本或下载。"
+    },
+    "download": {
+      "source": "Download API request JSON",
+      "text": "下载 API 请求 JSON"
+    },
+    "checkout": {
+      "source": "Open research checkout",
+      "text": "打开研究结账"
+    },
+    "trial": {
+      "source": "Open the sponsored trial",
+      "text": "打开赞助试用"
+    },
+    "handoff": {
+      "source": "Copy your request into the research form. Review the current price, source budget, availability and terms before submitting. Nothing starts or charges from this page.",
+      "text": "将请求复制到研究表单。提交前审阅当前价格、来源预算、可用性和条款。此页面不会启动任何任务或收费。"
+    },
+    "invalid": {
+      "source": "Enter one question of up to 450 characters, context of up to 250 characters and at most two HTTPS links of up to 160 characters each. The prepared request must fit the research service's question limit.",
+      "text": "输入一个最多 450 字符的问题、最多 250 字符的背景，以及最多两个各不超过 160 字符的 HTTPS 链接。准备的请求必须符合研究服务的问题上限。"
+    },
+    "pricingTitle": {
+      "source": "Price and delivery are reviewed before purchase.",
+      "text": "购买前审阅价格与交付。"
+    },
+    "pricingBody": {
+      "source": "Current Quick and Deep jobs have a service fee plus a creator reserve. A tailored request uses those existing terms; these templates do not create a new fixed-price offer or promise a complete report. Review pricing and checkout for the actual quote. Specialist pricing is being evaluated against full costs and accepted customer outcomes.",
+      "text": "当前 Quick 和 Deep 任务包含服务费与创作者预留额度。定制请求使用这些现有条款；这些模板不会创建新的固定价格报价，也不承诺完整报告。实际报价请查看价格说明和结账。专业研究定价正在根据完整成本及客户接受的结果评估。"
+    },
+    "pricingAction": {
+      "source": "Review pricing & budgets",
+      "text": "审阅价格与预算"
+    },
+    "apiPlatform.title": {
+      "source": "API & platform comparison",
+      "text": "API 与平台比较"
+    },
+    "apiPlatform.audience": {
+      "source": "For freelancers and small engineering teams",
+      "text": "面向自由职业者和小型工程团队"
+    },
+    "apiPlatform.scope": {
+      "source": "Compare up to two named options for one integration decision.",
+      "text": "针对一个集成决策比较最多两个指定选项。"
+    },
+    "apiPlatform.placeholder": {
+      "source": "Which of these two APIs fits our notification workflow?",
+      "text": "这两个 API 中哪个适合我们的通知流程？"
+    },
+    "apiPlatform.instruction": {
+      "source": "Compare up to two named APIs/platforms for this decision. Use primary documentation. Cover requirements, integration effort, published price assumptions, limits and unresolved risks. Give a conditional recommendation only where read evidence supports it.",
+      "text": "针对此决策比较最多两个指定 API 或平台。使用官方一手文档。涵盖要求、集成工作量、公开价格假设、限制和未解决风险。仅在已阅读证据支持时给出有条件的建议。"
+    },
+    "apiPlatform.acceptance.0": {
+      "source": "Both options address the stated constraints, with source-backed trade-offs.",
+      "text": "两个选项均回应已声明限制，并给出有来源依据的取舍。"
+    },
+    "apiPlatform.acceptance.1": {
+      "source": "Prices, limits and versions state their source and observation date; missing information stays unknown.",
+      "text": "价格、限制和版本注明来源与观察日期；缺失信息保持未知。"
+    },
+    "apiPlatform.acceptance.2": {
+      "source": "The next implementation check and reasons that could change the decision are explicit.",
+      "text": "明确下一步实现检查，以及可能改变决策的理由。"
+    },
+    "saasCompetition.title": {
+      "source": "SaaS competitor & niche brief",
+      "text": "SaaS 竞争对手与细分市场简报"
+    },
+    "saasCompetition.audience": {
+      "source": "For founders and small product teams",
+      "text": "面向创始人和小型产品团队"
+    },
+    "saasCompetition.scope": {
+      "source": "Compare up to two named competitors for one audience or positioning question.",
+      "text": "针对一个受众或定位问题比较最多两个指定竞争对手。"
+    },
+    "saasCompetition.placeholder": {
+      "source": "Where could our product fit beside these two competitors?",
+      "text": "在这两个竞争对手旁，我们的产品可以如何定位？"
+    },
+    "saasCompetition.instruction": {
+      "source": "Compare up to two named competitors for one audience/positioning decision. Separate published features and prices from proposed market hypotheses. Do not infer revenue, customer counts or demand. Explain a candidate gap and a concrete customer test, with unsupported claims marked unknown.",
+      "text": "针对一个受众或定位决策比较最多两个指定竞争对手。区分公开功能和价格与提出的市场假设。不推断收入、客户数量或需求。说明候选缺口和具体客户测试，并将无支持主张标为未知。"
+    },
+    "saasCompetition.acceptance.0": {
+      "source": "Competitor claims link to the material actually read and state its date.",
+      "text": "竞争对手主张链接至实际阅读的资料，并注明日期。"
+    },
+    "saasCompetition.acceptance.1": {
+      "source": "The proposed niche is labelled a hypothesis; traffic, revenue and customer demand are not invented.",
+      "text": "提出的细分市场标为假设；不虚构流量、收入或客户需求。"
+    },
+    "saasCompetition.acceptance.2": {
+      "source": "A specific customer experiment can confirm or disprove the proposed positioning.",
+      "text": "具体客户实验能够证实或否定提出的定位。"
+    },
+    "scholarlyLiterature.title": {
+      "source": "Literature evidence overview",
+      "text": "文献证据概览"
+    },
+    "scholarlyLiterature.audience": {
+      "source": "For researchers and students",
+      "text": "面向研究者和学生"
+    },
+    "scholarlyLiterature.scope": {
+      "source": "Review one narrow question and up to three relevant papers within available reading limits.",
+      "text": "在可用阅读限制内审阅一个狭窄问题及最多三篇相关论文。"
+    },
+    "scholarlyLiterature.placeholder": {
+      "source": "What do recent papers say about this specific method?",
+      "text": "近期论文如何论述这一具体方法？"
+    },
+    "scholarlyLiterature.instruction": {
+      "source": "Prepare a bounded literature overview for one narrow question and up to three papers. State each paper's identity/version, publication date and actual read scope. Compare methods, findings and limitations. Distinguish abstracts, preprints and full-text reads. Do not call this a systematic review or invent references.",
+      "text": "为一个狭窄问题及最多三篇论文准备有界文献概览。注明各论文身份或版本、发表日期和实际阅读范围。比较方法、发现和局限。区分摘要、预印本和全文阅读。不称其为系统综述，也不虚构参考文献。"
+    },
+    "scholarlyLiterature.acceptance.0": {
+      "source": "Each paper has an inspectable identity and actual read scope, with unavailable text visible.",
+      "text": "各论文具有可检查的身份和实际阅读范围，不可用文本明确显示。"
+    },
+    "scholarlyLiterature.acceptance.1": {
+      "source": "Findings and limitations are supported by cited passages; disagreements remain visible.",
+      "text": "发现和局限由引用段落支持；分歧仍明确显示。"
+    },
+    "scholarlyLiterature.acceptance.2": {
+      "source": "Coverage limits and the next literature search are explicit; completeness is not assumed.",
+      "text": "明确覆盖局限和下一次文献搜索；不假定完整性。"
+    }
+  }
+}

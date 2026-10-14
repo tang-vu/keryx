@@ -1,0 +1,1300 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/creator.ts",
+  "sourceSha256": "84697add9017a2f9eeffc430bfb33d2569468156fc253738820c10fe6ee2a2e5",
+  "entries": {
+    "sourceLearning.title": {
+      "source": "Recorded source outcomes",
+      "text": "记录的来源结果"
+    },
+    "sourceLearning.unavailable": {
+      "source": "The source outcome record is unavailable. No empty or zero-value record is inferred.",
+      "text": "来源结果记录不可用。不推断空记录或零值记录。"
+    },
+    "sourceLearning.boundary": {
+      "source": "This record counts independently classified and funded outside runs. Source owners, known beneficiaries, unknown history and private jobs cannot improve the estimate. Live learned selection is withheld until the policy and authority checks are accepted.",
+      "text": "本记录统计独立分类且获得资金的外部运行。来源所有者、已知受益人、未知历史和私密任务不能改善估值。在政策及权限检查获认可前，不启用实时学习选择。"
+    },
+    "sourceLearning.window": {
+      "source": "Sample: up to {scan} recent public runs and {sample} eligible observations per source/topic; one attested actor per UTC day. Excluded observations: {excluded}. Historical runs without the required record: {historical}.",
+      "text": "样本：最多 {scan} 次近期公开运行，每个来源/主题最多 {sample} 条合格观察；每个 UTC 日每名经证实的参与者计一次。排除观察：{excluded}。缺少所需记录的历史运行：{historical}。"
+    },
+    "sourceLearning.empty": {
+      "source": "No eligible source/topic observations are recorded in this window. This does not establish poor source value.",
+      "text": "此时间窗口没有合格的来源/主题观察记录。这不表明来源价值低。"
+    },
+    "sourceLearning.topic": {
+      "source": "Public topic",
+      "text": "公开主题"
+    },
+    "sourceLearning.offered": {
+      "source": "Offered",
+      "text": "已提供"
+    },
+    "sourceLearning.read": {
+      "source": "Read",
+      "text": "已阅读"
+    },
+    "sourceLearning.bought": {
+      "source": "Bought",
+      "text": "已购买"
+    },
+    "sourceLearning.cited": {
+      "source": "Cited",
+      "text": "已引用"
+    },
+    "sourceLearning.estimate": {
+      "source": "Citation estimate",
+      "text": "引用估计"
+    },
+    "sourceLearning.contribution": {
+      "source": "Mean contribution",
+      "text": "平均贡献"
+    },
+    "sourceLearning.price": {
+      "source": "Access cost / purchases",
+      "text": "访问成本 / 购买次数"
+    },
+    "sourceLearning.shift": {
+      "source": "Abrupt outcome shift flagged",
+      "text": "已标记结果突变"
+    },
+    "sourceLearning.period": {
+      "source": "Observed {first}–{last} (UTC)",
+      "text": "观察时间 {first}–{last}（UTC）"
+    },
+    "sourceLearning.meaning": {
+      "source": "Bought counts source/run observations, not articles. The estimate uses Beta(1,1) smoothing; ± is a descriptive uncertainty proxy, not a confidence interval or factual accuracy score. Access cost divided by purchases retains an exact rational mean. Settlement is recorded evidence, not a new Circle or chain verification.",
+      "text": "购买数统计来源/运行观察，不是文章数。估值使用 Beta(1,1) 平滑；± 是描述性不确定性近似量，不是置信区间或事实准确性评分。访问成本除以购买次数保留精确有理数均值。结算是已记录证据，不是新的 Circle 或链上核验。"
+    },
+    "sourceLearning.exploration": {
+      "source": "Live exploration allowance: 0% (0 USDC). A tested prospective planner has an explicit bounded partition; it is not active for your budget.",
+      "text": "实时探索额度：0%（0 USDC）。已测试的前瞻规划器具有明确受限的分区；尚未用于您的预算。"
+    },
+    "sourceLearning.change": {
+      "source": "A useful record requires independent eligible purchases followed by citations to retained evidence. In the prospective planner, fewer than five purchases leave value unchanged, later adjustments are limited to ±0.1, and abrupt shifts halve that adjustment. Price, payee and budget rules still govern every purchase.",
+      "text": "有用记录需要独立合格购买及随后对保留证据的引用。在前瞻规划器中，少于五次购买不改变价值；之后调整限于 ±0.1，突变时调整减半。每次购买仍遵循价格、收款人及预算规则。"
+    },
+    "sourceLearning.api": {
+      "source": "View this same record as JSON",
+      "text": "以 JSON 查看同一记录"
+    },
+    "creatorPage.missing": {
+      "source": "Creator not found — Keryx",
+      "text": "未找到创作者 — Keryx"
+    },
+    "creatorPage.fallbackTitle": {
+      "source": "Keryx Creator",
+      "text": "Keryx 创作者"
+    },
+    "creatorPage.sources": {
+      "source": "Sources",
+      "text": "来源"
+    },
+    "creatorPage.back": {
+      "source": "← Back to ledger",
+      "text": "← 返回账本"
+    },
+    "creatorPage.title": {
+      "source": "{name} — Keryx Creator",
+      "text": "{name} — Keryx 创作者"
+    },
+    "creatorPage.description": {
+      "source": "Source listing, citation activity and recorded creator payments for {name} on Keryx.",
+      "text": "{name} 在 Keryx 的来源信息、引用活动和创作者付款记录。"
+    },
+    "creatorPage.profileDescription": {
+      "source": "{name} is listed with Keryx. Citation activity and recorded creator payments are shown separately.",
+      "text": "{name} 已在 Keryx 上架。引用活动和创作者付款记录分别显示。"
+    },
+    "creatorDetail.loadFailed": {
+      "source": "Failed to load",
+      "text": "加载失败"
+    },
+    "creatorDetail.fallbackDescription": {
+      "source": "Registered creator on Keryx.",
+      "text": "Keryx 上的已注册创作者。"
+    },
+    "creatorDetail.synthetic": {
+      "source": "Synthetic demo content. Illustrative; not factual research evidence.",
+      "text": "合成演示内容。仅供说明，不是事实研究证据。"
+    },
+    "creatorDetail.totalEarned": {
+      "source": "Total earned",
+      "text": "累计收入"
+    },
+    "creatorDetail.citations": {
+      "source": "Citations",
+      "text": "引用"
+    },
+    "creatorDetail.activeDays": {
+      "source": "Active days",
+      "text": "活跃天数"
+    },
+    "creatorDetail.last14Days": {
+      "source": "last 14 days",
+      "text": "最近 14 天"
+    },
+    "creatorDetail.rank": {
+      "source": "Rank",
+      "text": "排名"
+    },
+    "creatorDetail.leaderboard": {
+      "source": "creator leaderboard",
+      "text": "创作者排行榜"
+    },
+    "creatorDetail.rightsAria": {
+      "source": "Public scholarly rights status",
+      "text": "公开学术权利状态"
+    },
+    "creatorDetail.rightsBoundary": {
+      "source": "This approval record is separate from peer review, current payable status, wallet payment authority and actual settlement. Current permission and terms are checked at purchase.",
+      "text": "此批准记录独立于同行评审、当前可付款状态、钱包付款权限和实际结算。购买时检查当前许可及条款。"
+    },
+    "creatorDetail.earnings": {
+      "source": "Earnings · last 14 days",
+      "text": "收入 · 最近 14 天"
+    },
+    "creatorDetail.export": {
+      "source": "Export ledger (CSV)",
+      "text": "导出账本（CSV）"
+    },
+    "creatorDetail.empty": {
+      "source": "No payments yet.",
+      "text": "尚无付款。"
+    },
+    "creatorDetail.cited": {
+      "source": "cited",
+      "text": "已引用"
+    },
+    "creatorDetail.read": {
+      "source": "read",
+      "text": "已阅读"
+    },
+    "creatorDetail.pendingProof": {
+      "source": "pending proof",
+      "text": "等待证明"
+    },
+    "creatorDetail.failed": {
+      "source": "failed · not charged",
+      "text": "失败 · 未收费"
+    },
+    "creatorDetail.readPrice": {
+      "source": "${price}/read",
+      "text": "${price}/次阅读"
+    },
+    "creatorDetail.settled": {
+      "source": "${amount} settled",
+      "text": "${amount} 已结算"
+    },
+    "creatorDetail.payments.one": {
+      "source": "{count} payments",
+      "text": "{count} 笔付款"
+    },
+    "creatorDetail.payments.other": {
+      "source": "{count} payments",
+      "text": "{count} 笔付款"
+    },
+    "creatorDetail.declaredRights": {
+      "source": "Declared manuscript rights: {status} (Arc testnet pilot). New paid reads independently check effective rights and fresh registry authority.",
+      "text": "声明的稿件权利：{status}（Arc 测试网试点）。新的付费阅读独立检查有效权利及最新注册表权限。"
+    },
+    "creatorDetail.license": {
+      "source": "Applicable license: {license}",
+      "text": "适用许可：{license}"
+    },
+    "creatorDetail.version": {
+      "source": "Declared version: {version}",
+      "text": "声明版本：{version}"
+    },
+    "creatorDetail.permission": {
+      "source": "Declared permission: {effectiveAt} to {expiresAt}; embargo ends {embargoUntil}.",
+      "text": "声明的许可：{effectiveAt} 至 {expiresAt}；禁运期于 {embargoUntil} 结束。"
+    },
+    "creatorDetail.recentPayments.one": {
+      "source": "Recent payments ({count})",
+      "text": "近期付款（{count}）"
+    },
+    "creatorDetail.recentPayments.other": {
+      "source": "Recent payments ({count})",
+      "text": "近期付款（{count}）"
+    },
+    "creatorDetail.dispatch": {
+      "source": "Dispatch {id}…",
+      "text": "研究任务 {id}…"
+    },
+    "creatorContent.size": {
+      "source": "Full text must be between 200 bytes and 1 MB.",
+      "text": "全文必须介于 200 字节和 1 MB 之间。"
+    },
+    "creatorContent.failed": {
+      "source": "Could not publish full text",
+      "text": "无法发布全文"
+    },
+    "creatorContent.published": {
+      "source": "Signed full text encrypted and published.",
+      "text": "已签名全文已加密并发布。"
+    },
+    "creatorContent.title": {
+      "source": "Signed full-text vault",
+      "text": "已签名全文保险库"
+    },
+    "creatorContent.description": {
+      "source": "Attach the complete article to its RSS entry. Your wallet signs the body hash; Keryx stores only encrypted ciphertext (IPFS when configured, private DB fallback otherwise) and reveals plaintext after payment settles.",
+      "text": "将完整文章附于其 RSS 条目。您的钱包签署正文哈希；Keryx 仅存储加密密文（已配置时使用 IPFS，否则回退到私密数据库），并在付款结算后公开明文。"
+    },
+    "creatorContent.unverified": {
+      "source": "unverified",
+      "text": "未验证"
+    },
+    "creatorContent.placeholder": {
+      "source": "Paste the complete article body here…",
+      "text": "在此粘贴完整文章正文…"
+    },
+    "creatorContent.sign": {
+      "source": "Sign & encrypt",
+      "text": "签名并加密"
+    },
+    "creatorContent.wallet": {
+      "source": "Connect the creator wallet {wallet}.",
+      "text": "连接创作者钱包 {wallet}。"
+    },
+    "creatorContent.publishedBytes.one": {
+      "source": "{count} bytes · signed full text already published",
+      "text": "{count} 字节 · 已签名全文已发布"
+    },
+    "creatorContent.publishedBytes.other": {
+      "source": "{count} bytes · signed full text already published",
+      "text": "{count} 字节 · 已签名全文已发布"
+    },
+    "creatorContent.bytes.one": {
+      "source": "{count} bytes",
+      "text": "{count} 字节"
+    },
+    "creatorContent.bytes.other": {
+      "source": "{count} bytes",
+      "text": "{count} 字节"
+    },
+    "creatorContent.authority": {
+      "source": "Content authority is {wallet}. Switch the connected wallet to sign.",
+      "text": "内容授权钱包为 {wallet}。请切换已连接钱包以签名。"
+    },
+    "creatorOffers.ceiling": {
+      "source": "An article offer cannot exceed the registry list price.",
+      "text": "文章报价不能超过注册合约标价。"
+    },
+    "creatorOffers.publishFailed": {
+      "source": "Could not publish offer",
+      "text": "无法发布报价"
+    },
+    "creatorOffers.published": {
+      "source": "Signed article offer is live in the market.",
+      "text": "已签名文章报价已在市场上线。"
+    },
+    "creatorOffers.revokeFailed": {
+      "source": "Could not revoke offer",
+      "text": "无法撤销报价"
+    },
+    "creatorOffers.revoked": {
+      "source": "Article offer revoked; list price applies again.",
+      "text": "文章报价已撤销；恢复使用标价。"
+    },
+    "creatorOffers.title": {
+      "source": "Article offer desk",
+      "text": "文章报价台"
+    },
+    "creatorOffers.expires": {
+      "source": "expires",
+      "text": "到期"
+    },
+    "creatorOffers.dayExpiry": {
+      "source": "24 hours",
+      "text": "24 小时"
+    },
+    "creatorOffers.threeDayExpiry": {
+      "source": "3 days",
+      "text": "3 天"
+    },
+    "creatorOffers.weekExpiry": {
+      "source": "7 days",
+      "text": "7 天"
+    },
+    "creatorOffers.thirtyDayExpiry": {
+      "source": "30 days",
+      "text": "30 天"
+    },
+    "creatorOffers.inactive": {
+      "source": "This source must be active and feed-verified before it can publish offers.",
+      "text": "此来源须处于启用状态且通过订阅源核验，才能发布报价。"
+    },
+    "creatorOffers.sign": {
+      "source": "Sign offer",
+      "text": "签署报价"
+    },
+    "creatorOffers.wallet": {
+      "source": "Connect the creator wallet {wallet}.",
+      "text": "连接创作者钱包 {wallet}。"
+    },
+    "creatorOffers.minimum": {
+      "source": "Minimum offer is ${price}.",
+      "text": "最低报价为 ${price}。"
+    },
+    "creatorOffers.description": {
+      "source": "Sign a temporary price for one exact article version. The registry's ${price}read price remains the ceiling and payout wallet; the agent verifies this signature again before buying.",
+      "text": "为一篇文章的确切版本签署临时价格。注册表中的 ${price} 阅读价格仍为上限，收款钱包不变；代理购买前会再次核验此签名。"
+    },
+    "creatorOffers.liveVersion": {
+      "source": "{version}… · live at ${price} until {expiresAt}",
+      "text": "{version}… · 现行价格 ${price}，有效至 {expiresAt}"
+    },
+    "creatorOffers.listVersion": {
+      "source": "{version}… · list price",
+      "text": "{version}… · 标价"
+    },
+    "creatorOffers.revokeAria": {
+      "source": "Revoke offer for {title}",
+      "text": "撤销 {title} 的报价"
+    },
+    "creatorOffers.authority": {
+      "source": "Pricing authority is {wallet}. Switch the connected wallet to sign.",
+      "text": "定价授权钱包为 {wallet}。请切换已连接钱包以签名。"
+    },
+    "creatorSocial.alt": {
+      "source": "Keryx creator — paid in USDC every time an AI cites them",
+      "text": "Keryx 创作者 — AI 每次引用时获得 USDC 付款"
+    },
+    "creatorSocial.fallbackName": {
+      "source": "A Keryx creator",
+      "text": "一位 Keryx 创作者"
+    },
+    "creatorSocial.network": {
+      "source": "Keryx Creator · paid on Arc",
+      "text": "Keryx 创作者 · 在 Arc 上获付款"
+    },
+    "creatorSocial.earns": {
+      "source": "Earns USDC every time an AI cites them",
+      "text": "AI 每次引用时赚取 USDC"
+    },
+    "creatorSocial.earned": {
+      "source": "USDC earned",
+      "text": "赚取的 USDC"
+    },
+    "creatorSocial.citations": {
+      "source": "AI citations",
+      "text": "AI 引用"
+    },
+    "creatorSocial.rank": {
+      "source": "on the ledger",
+      "text": "在账本上"
+    },
+    "creatorSocial.tagline": {
+      "source": "The citation toll — creators paid every time an AI cites them",
+      "text": "引用访问费 — AI 每次引用创作者，创作者都获得报酬"
+    },
+    "creatorSocial.serial": {
+      "source": "Series 2026 — No. {serial}",
+      "text": "2026 年系列 — 第 {serial} 期"
+    },
+    "creatorLeaderboard.title": {
+      "source": "Creator leaderboard",
+      "text": "创作者排行榜"
+    },
+    "creatorLeaderboard.empty": {
+      "source": "No creator earnings yet.",
+      "text": "尚无创作者收入。"
+    },
+    "creatorLeaderboard.row.one": {
+      "source": "{wallet} · {citations} cites · {payments} pmts",
+      "text": "{wallet} · {citations} 次引用 · {payments} 笔付款"
+    },
+    "creatorLeaderboard.row.other": {
+      "source": "{wallet} · {citations} cites · {payments} pmts",
+      "text": "{wallet} · {citations} 次引用 · {payments} 笔付款"
+    },
+    "creatorEmail.failed": {
+      "source": "Failed to save email",
+      "text": "保存电子邮件失败"
+    },
+    "creatorEmail.enabled": {
+      "source": "Email alerts on — you'll hear when you're cited.",
+      "text": "邮件提醒已开启 — 被引用时您会收到通知。"
+    },
+    "creatorEmail.disabled": {
+      "source": "Email alerts off.",
+      "text": "邮件提醒已关闭。"
+    },
+    "creatorEmail.title": {
+      "source": "Citation email alerts",
+      "text": "引用邮件提醒"
+    },
+    "creatorEmail.update": {
+      "source": "Update",
+      "text": "更新"
+    },
+    "creatorEmail.save": {
+      "source": "Save",
+      "text": "保存"
+    },
+    "creatorEmail.disableTitle": {
+      "source": "Disable email alerts",
+      "text": "禁用邮件提醒"
+    },
+    "creatorEmail.deliveryHeld": {
+      "source": "Saved addresses are kept, but this deployment hasn't enabled an email provider yet — delivery starts the moment it does.",
+      "text": "已保存地址，但此部署尚未启用邮件服务商；启用后即开始发送。"
+    },
+    "creatorEmail.activeDescription": {
+      "source": "Get a short email when the agent cites you and the payout settles — no webhook server needed. At most one per hour; every payout still shows here. Active.",
+      "text": "代理引用您且付款结算后，会发送简短邮件，无需 webhook 服务器。每小时最多一封；每笔付款仍在此显示。已启用。"
+    },
+    "creatorEmail.unsetDescription": {
+      "source": "Get a short email when the agent cites you and the payout settles — no webhook server needed. At most one per hour; every payout still shows here. Not set.",
+      "text": "代理引用您且付款结算后，会发送简短邮件，无需 webhook 服务器。每小时最多一封；每笔付款仍在此显示。未设置。"
+    },
+    "creatorEmail.manage": {
+      "source": "Manage them all in one place →",
+      "text": "集中管理全部来源 →"
+    },
+    "creatorEmail.portfolio": {
+      "source": "Own several sources? {manageLink}",
+      "text": "拥有多个来源？{manageLink}"
+    },
+    "creatorWebhook.failed": {
+      "source": "Failed to save webhook",
+      "text": "保存 webhook 失败"
+    },
+    "creatorWebhook.saved": {
+      "source": "Webhook saved — signing secret shown once below.",
+      "text": "webhook 已保存 — 签名密钥仅在下方显示一次。"
+    },
+    "creatorWebhook.disabled": {
+      "source": "Webhook disabled.",
+      "text": "webhook 已禁用。"
+    },
+    "creatorWebhook.copied": {
+      "source": "Secret copied.",
+      "text": "密钥已复制。"
+    },
+    "creatorWebhook.copyFailed": {
+      "source": "Couldn't copy — select and copy the secret manually.",
+      "text": "无法复制 — 请手动选择并复制密钥。"
+    },
+    "creatorWebhook.title": {
+      "source": "Citation webhook",
+      "text": "引用 webhook"
+    },
+    "creatorWebhook.rotate": {
+      "source": "Rotate",
+      "text": "轮换"
+    },
+    "creatorWebhook.save": {
+      "source": "Save",
+      "text": "保存"
+    },
+    "creatorWebhook.disableTitle": {
+      "source": "Disable webhook",
+      "text": "禁用 webhook"
+    },
+    "creatorWebhook.secretTitle": {
+      "source": "Signing secret — shown once",
+      "text": "签名密钥 — 仅显示一次"
+    },
+    "creatorWebhook.copyTitle": {
+      "source": "Copy secret",
+      "text": "复制密钥"
+    },
+    "creatorWebhook.activeDescription": {
+      "source": "Get a signed POST the instant the agent cites you and pays — your own agent can react without polling. Active.",
+      "text": "代理引用您并付款时立即发送已签名 POST；您的代理无需轮询即可响应。已启用。"
+    },
+    "creatorWebhook.unsetDescription": {
+      "source": "Get a signed POST the instant the agent cites you and pays — your own agent can react without polling. Not set.",
+      "text": "代理引用您并付款时立即发送已签名 POST；您的代理无需轮询即可响应。未设置。"
+    },
+    "creatorWebhook.verify": {
+      "source": "Verify: {formula} on the {header} header.",
+      "text": "验证：在 {header} 请求头上使用 {formula}。"
+    },
+    "creatorPreview.failed": {
+      "source": "Failed to save",
+      "text": "保存失败"
+    },
+    "creatorPreview.title": {
+      "source": "Free preview depth",
+      "text": "免费预览深度"
+    },
+    "creatorPreview.description": {
+      "source": "How much of each item the agent reads for free before it decides to pay. Reveal more to be found; reveal less to keep the value behind the toll.",
+      "text": "代理决定是否付款前可免费阅读每项内容的数量。展示更多便于被发现；展示更少可将价值保留在付费门槛之后。"
+    },
+    "creatorPreview.saved": {
+      "source": "Preview set to “{label}”.",
+      "text": "预览已设为“{label}”。"
+    },
+    "creatorPreview.fullLabel": {
+      "source": "Full summary",
+      "text": "完整摘要"
+    },
+    "creatorPreview.fullHint": {
+      "source": "Title + full summary — most discoverable",
+      "text": "标题 + 完整摘要 — 最容易被发现"
+    },
+    "creatorPreview.excerptLabel": {
+      "source": "Short excerpt",
+      "text": "简短摘录"
+    },
+    "creatorPreview.excerptHint": {
+      "source": "Title + a brief teaser of each item",
+      "text": "标题 + 各条目的简短介绍"
+    },
+    "creatorPreview.lockedLabel": {
+      "source": "Titles only",
+      "text": "仅标题"
+    },
+    "creatorPreview.lockedHint": {
+      "source": "Headlines only; the summary needs the toll",
+      "text": "仅标题；查看摘要需支付访问费"
+    },
+    "creatorBadge.copyFailed": {
+      "source": "Couldn't copy — select and copy manually.",
+      "text": "无法复制 — 请手动选择并复制。"
+    },
+    "creatorBadge.title": {
+      "source": "Embed your citation badge",
+      "text": "嵌入引用徽章"
+    },
+    "creatorBadge.description": {
+      "source": "Show — on your own site — that agents pay you per citation. The badge is live: it always reflects your real citation count and USDC earned, and links back to your earnings page.",
+      "text": "在您自己的网站展示代理按引用向您付款。徽章实时反映实际引用次数及 USDC 收入，并链接到您的收益页。"
+    },
+    "creatorBadge.alt": {
+      "source": "Cited by Keryx badge preview",
+      "text": "被 Keryx 引用的徽章预览"
+    },
+    "creatorBadge.preview": {
+      "source": "live preview · refreshes every 5 min",
+      "text": "实时预览 · 每 5 分钟刷新"
+    },
+    "creatorBadge.snippetAlt": {
+      "source": "Cited by Keryx",
+      "text": "被 Keryx 引用"
+    },
+    "creatorBadge.copied": {
+      "source": "{label} copied.",
+      "text": "{label} 已复制。"
+    },
+    "creatorBadge.copyTitle": {
+      "source": "Copy {label}",
+      "text": "复制 {label}"
+    },
+    "creatorWidget.copied": {
+      "source": "Widget snippet copied.",
+      "text": "小组件代码片段已复制。"
+    },
+    "creatorWidget.copyFailed": {
+      "source": "Couldn't copy — select and copy manually.",
+      "text": "无法复制 — 请手动选择并复制。"
+    },
+    "creatorWidget.title": {
+      "source": "Put the herald on your site",
+      "text": "将信使放到您的网站"
+    },
+    "creatorWidget.description": {
+      "source": "One line adds a floating “Ask Keryx” button to your own site. Your readers ask for free — no wallet — and every time the herald cites you in an answer, you’re paid for it. Your audience becomes your toll traffic.",
+      "text": "一行代码即可在您的网站添加悬浮“Ask Keryx”按钮。读者可免费提问，无需钱包；每当 herald 在答案中引用您，您便获得付款。您的受众成为付费阅读流量。"
+    },
+    "creatorWidget.copyTitle": {
+      "source": "Copy widget snippet",
+      "text": "复制小组件代码片段"
+    },
+    "creatorWidget.preview": {
+      "source": "Preview the panel ↗",
+      "text": "预览面板 ↗"
+    },
+    "creatorGateway.justNow": {
+      "source": "just now",
+      "text": "刚刚"
+    },
+    "creatorGateway.title": {
+      "source": "Server-reported Circle balance",
+      "text": "服务器报告的 Circle 余额"
+    },
+    "creatorGateway.payee": {
+      "source": "Payee wallet",
+      "text": "收款钱包"
+    },
+    "creatorGateway.claimedHeld": {
+      "source": "Keryx says held",
+      "text": "Keryx 报告暂留"
+    },
+    "creatorGateway.circleHeld": {
+      "source": "Circle holds",
+      "text": "Circle 暂留"
+    },
+    "creatorGateway.verdict": {
+      "source": "Verdict",
+      "text": "判断"
+    },
+    "creatorGateway.surplus": {
+      "source": "backed +extra",
+      "text": "有资金支持 +额外"
+    },
+    "creatorGateway.cashedOut": {
+      "source": "cashed out",
+      "text": "已提现"
+    },
+    "creatorGateway.explanation": {
+      "source": "Citation payouts settle inside Circle’s Gateway, so they carry a Circle transfer id instead of a block-explorer hash. Rather than ask you to take our ledger’s word, Keryx checks it hourly against Circle’s public balance API — and you can run the same request yourself:",
+      "text": "引用付款在 Circle Gateway 内结算，因此带有 Circle 转账 ID 而非区块浏览器哈希。Keryx 每小时通过 Circle 公开余额 API 核对账本，您也可自行执行同一请求："
+    },
+    "creatorGateway.boundary": {
+      "source": "A balance above the claim is your own money — deposits, or payouts from any other x402 service that pays this wallet. If you have already cashed out, the money shows in your own wallet on-chain instead and the row reads “cashed out”. Keryx only flags a balance that neither the Gateway nor your wallet accounts for.",
+      "text": "高于申报额的余额是您自己的资金，来自存款或其他向此钱包付款的 x402 服务。若已提现，资金会出现在您的链上钱包，行状态显示“已提现”。Keryx 仅标记 Gateway 与钱包均无法解释的余额。"
+    },
+    "creatorGateway.minutesAgo.one": {
+      "source": "{count}m ago",
+      "text": "{count} 分钟前"
+    },
+    "creatorGateway.minutesAgo.other": {
+      "source": "{count}m ago",
+      "text": "{count} 分钟前"
+    },
+    "creatorGateway.hoursAgo.one": {
+      "source": "{count}h ago",
+      "text": "{count} 小时前"
+    },
+    "creatorGateway.hoursAgo.other": {
+      "source": "{count}h ago",
+      "text": "{count} 小时前"
+    },
+    "creatorGateway.daysAgo.one": {
+      "source": "{count}d ago",
+      "text": "{count} 天前"
+    },
+    "creatorGateway.daysAgo.other": {
+      "source": "{count}d ago",
+      "text": "{count} 天前"
+    },
+    "creatorGateway.checked": {
+      "source": "checked {ago}",
+      "text": "检查于 {ago}"
+    },
+    "creatorGateway.walletBalance": {
+      "source": " +${amount} in your wallet",
+      "text": " 您的钱包中另有 +${amount}"
+    },
+    "creatorRights.aria": {
+      "source": "Scholarly manuscript opt-in",
+      "text": "自愿加入学术稿件计划"
+    },
+    "creatorRights.mainnetTitle": {
+      "source": "Research manuscript rights",
+      "text": "研究稿件权利"
+    },
+    "creatorRights.mainnetHeld": {
+      "source": "The experimental manuscript distribution-rights protocol is currently testnet only. Paid manuscript enrollment is closed on mainnet until its independent rights and payment migration passes review. Ordinary registered article publishing remains available.",
+      "text": "实验性稿件分发权协议目前仅限测试网。主网付费稿件登记关闭，直到独立权利及付款迁移通过评审。普通已注册文章发布仍可用。"
+    },
+    "creatorRights.loading": {
+      "source": "Loading creator rights status…",
+      "text": "正在加载创作者权利状态…"
+    },
+    "creatorRights.signIn": {
+      "source": "Sign in with the registry creator wallet to prepare manuscript rights.",
+      "text": "使用注册表创作者钱包登录以准备稿件权利。"
+    },
+    "creatorRights.onlyCreator": {
+      "source": "Only this source’s registry creator can submit manuscript rights.",
+      "text": "只有此来源的注册表创作者可提交稿件权利。"
+    },
+    "creatorRights.unavailable": {
+      "source": "Manuscript enrollment is unavailable. It requires a registered source, fresh registry authority, and the supported SQLite pilot datastore.",
+      "text": "稿件登记不可用。需要已注册来源、最新注册表权限及受支持的 SQLite 试点数据存储。"
+    },
+    "creatorRights.temporarilyUnavailable": {
+      "source": "Creator rights status is temporarily unavailable.",
+      "text": "创作者权利状态暂时不可用。"
+    },
+    "creatorRights.title": {
+      "source": "Offer a research manuscript",
+      "text": "提供研究稿件"
+    },
+    "creatorRights.connect": {
+      "source": "Connect and sign in",
+      "text": "连接并登录"
+    },
+    "creatorRights.walletFirst": {
+      "source": "Connect the registry creator wallet first.",
+      "text": "先连接注册合约中的创作者钱包。"
+    },
+    "creatorRights.submitFailed": {
+      "source": "Submission failed",
+      "text": "提交失败"
+    },
+    "creatorRights.saved": {
+      "source": "Signed declaration saved. New paid reads stay blocked until independent review approves this exact version.",
+      "text": "已保存签名声明。在独立审核批准此确切版本前，新的付费阅读仍被阻止。"
+    },
+    "creatorRights.introduction": {
+      "source": "Supervised Arc testnet pilot. Register a dedicated source with one manuscript, verify your feed, begin enrollment here, then publish signed full text in the uploader below. Your wallet controls payment; independent review checks permission to distribute this exact version. DOI metadata does not establish rights.",
+      "text": "受监督的 Arc 测试网试点。为一份稿件注册专用来源、核验订阅源并在此开始登记，然后在下方上传器发布签名全文。钱包控制付款；独立审核检查分发此确切版本的许可。DOI 元数据不能确立权利。"
+    },
+    "creatorRights.draft": {
+      "source": "draft — earning blocked",
+      "text": "草稿 — 收益被阻止"
+    },
+    "creatorRights.notEnrolled": {
+      "source": "not enrolled",
+      "text": "未登记"
+    },
+    "creatorRights.enrollmentBoundary": {
+      "source": "Begin enrollment before uploading your manuscript. This permanently places the dedicated source behind the rights gate; pending drafts cannot earn through ordinary source payments.",
+      "text": "上传稿件前先开始登记。这会永久将专用来源置于权利门控之后；待审草稿不能通过普通来源付款获得收入。"
+    },
+    "creatorRights.enrollmentUnavailable": {
+      "source": "Enrollment unavailable",
+      "text": "登记不可用"
+    },
+    "creatorRights.begin": {
+      "source": "Begin manuscript enrollment",
+      "text": "开始稿件登记"
+    },
+    "creatorRights.statusUnavailable": {
+      "source": "Status unavailable",
+      "text": "状态不可用"
+    },
+    "creatorRights.refresh": {
+      "source": "Refresh after upload or review",
+      "text": "上传或审阅后刷新"
+    },
+    "creatorRights.version": {
+      "source": "Exact version",
+      "text": "确切版本"
+    },
+    "creatorRights.authorManuscript": {
+      "source": "Author manuscript",
+      "text": "作者稿件"
+    },
+    "creatorRights.acceptedManuscript": {
+      "source": "Accepted manuscript",
+      "text": "已接受稿件"
+    },
+    "creatorRights.publisherVersion": {
+      "source": "Publisher-authorized version",
+      "text": "发布者授权版本"
+    },
+    "creatorRights.role": {
+      "source": "Your distribution role",
+      "text": "您的分发角色"
+    },
+    "creatorRights.author": {
+      "source": "Author",
+      "text": "作者"
+    },
+    "creatorRights.publisher": {
+      "source": "Authorized publisher",
+      "text": "获授权发布者"
+    },
+    "creatorRights.doi": {
+      "source": "DOI (optional; metadata only)",
+      "text": "DOI（可选；仅元数据）"
+    },
+    "creatorRights.license": {
+      "source": "Public license / permission summary",
+      "text": "公开许可 / 权限摘要"
+    },
+    "creatorRights.evidence": {
+      "source": "Private evidence reference (agreement or license record)",
+      "text": "私密证据参考（协议或许可记录）"
+    },
+    "creatorRights.scope": {
+      "source": "Commercial redistribution scope",
+      "text": "商业再分发范围"
+    },
+    "creatorRights.attribution": {
+      "source": "Required attribution",
+      "text": "要求的署名"
+    },
+    "creatorRights.revocation": {
+      "source": "Dispute / revocation contact",
+      "text": "争议 / 撤销联系人"
+    },
+    "creatorRights.starts": {
+      "source": "Permission starts",
+      "text": "许可开始时间"
+    },
+    "creatorRights.embargo": {
+      "source": "Embargo ends",
+      "text": "禁运期结束时间"
+    },
+    "creatorRights.expires": {
+      "source": "Permission expires",
+      "text": "许可到期时间"
+    },
+    "creatorRights.attestation": {
+      "source": "I am authorized to commercially distribute these exact bytes under the declared scope. Coauthor or publisher permission is documented where required. Submission does not grant approval.",
+      "text": "我获授权在声明范围内商业分发这些确切字节。需要时已记录共同作者或出版商许可。提交不等于批准。"
+    },
+    "creatorRights.privacy": {
+      "source": "One recipient, browser funded reads only. License summary, approved version and safe review summary are public. Permission evidence and revocation contact are private to the authenticated creator and local reviewer, excluded from public receipts. A public copy remains free. New revisions require review; enrollment cannot revert to ordinary source payment.",
+      "text": "单一接收者，仅限浏览器资助阅读。许可摘要、批准版本及安全审核摘要公开。许可证据和撤销联系方式仅向已认证创作者及本地审核者开放，不纳入公开收据。公开副本仍免费。新修订需审核；登记后不能恢复普通来源付款。"
+    },
+    "creatorRights.saving": {
+      "source": "Signing and saving…",
+      "text": "正在签名并保存…"
+    },
+    "creatorRights.revise": {
+      "source": "Sign a new rights revision",
+      "text": "签署新的权利修订"
+    },
+    "creatorRights.submit": {
+      "source": "Sign and submit for independent review",
+      "text": "签名并提交独立审阅"
+    },
+    "creatorRights.registration": {
+      "source": "creator registration",
+      "text": "创作者注册"
+    },
+    "creatorRights.registrationInstruction": {
+      "source": "Supervised Arc testnet pilot. Independent distribution-rights review is required before earning. Register a dedicated source at {registrationLink}.",
+      "text": "受监督的 Arc 测试网试点。获得收入前须通过独立分发权审核。在 {registrationLink} 注册专用来源。"
+    },
+    "creatorRights.status": {
+      "source": "Rights status: {status}. Approval is separate from settlement.",
+      "text": "权利状态：{status}。批准独立于结算。"
+    },
+    "creatorRights.review": {
+      "source": "Review: {summary}",
+      "text": "审阅：{summary}"
+    },
+    "creatorRights.declarationWithReview": {
+      "source": "Declaration: {declarationId} · Review: {reviewId}",
+      "text": "声明：{declarationId} · 审阅：{reviewId}"
+    },
+    "creatorRights.declaration": {
+      "source": "Declaration: {declarationId}",
+      "text": "声明：{declarationId}"
+    },
+    "creatorRights.prepare.one": {
+      "source": "Prepare one signed full-text item on an active, verified registered source before submitting. Current item count: {count}.",
+      "text": "提交前，在已启用且经核验的注册来源准备一项签名全文。当前条目数：{count}。"
+    },
+    "creatorRights.prepare.other": {
+      "source": "Prepare one signed full-text item on an active, verified registered source before submitting. Current item count: {count}.",
+      "text": "提交前，在已启用且经核验的注册来源准备一项签名全文。当前条目数：{count}。"
+    },
+    "creatorListing.confirmed": {
+      "source": "Transaction confirmed. Refreshing registry state.",
+      "text": "交易已确认。正在刷新注册合约状态。"
+    },
+    "creatorListing.reverted": {
+      "source": "Transaction reverted. Listing changes were not confirmed.",
+      "text": "交易已回滚。条目更改未获确认。"
+    },
+    "creatorListing.authorityUnavailable": {
+      "source": "Listing authority could not be refreshed. No signature requested.",
+      "text": "无法刷新上架权限。未请求签名。"
+    },
+    "creatorListing.identityChanged": {
+      "source": "Wallet or source changed. Refresh before signing.",
+      "text": "钱包或来源发生变化。签名前请刷新。"
+    },
+    "creatorListing.changed": {
+      "source": "Listing changed. Review the refreshed details and choose your change again.",
+      "text": "来源信息已更改。请审阅刷新后的详情并重新选择更改。"
+    },
+    "creatorListing.inactive": {
+      "source": "This source is delisted.",
+      "text": "此来源已下架。"
+    },
+    "creatorListing.waiting": {
+      "source": "Waiting for wallet signature…",
+      "text": "正在等待钱包签名…"
+    },
+    "creatorListing.priceSubmitted": {
+      "source": "Price update submitted — confirming…",
+      "text": "价格更新已提交 — 正在确认…"
+    },
+    "creatorListing.saveFailed": {
+      "source": "Failed to save",
+      "text": "保存失败"
+    },
+    "creatorListing.delistSubmitted": {
+      "source": "Delist submitted — confirming…",
+      "text": "下架请求已提交 — 正在确认…"
+    },
+    "creatorListing.delistFailed": {
+      "source": "Failed to delist",
+      "text": "下架失败"
+    },
+    "creatorListing.delisted": {
+      "source": "Source delisted — the agent will no longer read or cite it.",
+      "text": "来源已下架 — 智能体将不再阅读或引用。"
+    },
+    "creatorListing.title": {
+      "source": "Listing controls",
+      "text": "条目控件"
+    },
+    "creatorListing.price": {
+      "source": "Price per read",
+      "text": "每次阅读价格"
+    },
+    "creatorListing.confirming": {
+      "source": "Confirming…",
+      "text": "正在确认…"
+    },
+    "creatorListing.save": {
+      "source": "Save price",
+      "text": "保存价格"
+    },
+    "creatorListing.details": {
+      "source": "Current registry details",
+      "text": "当前注册合约详情"
+    },
+    "creatorListing.reviewChanged": {
+      "source": "The listing changed. Review these details before choosing your change again.",
+      "text": "来源信息已更改。请审阅这些详情后重新选择更改。"
+    },
+    "creatorListing.payoutWallet": {
+      "source": "Payout wallet",
+      "text": "收款钱包"
+    },
+    "creatorListing.authorSplits": {
+      "source": "Author splits",
+      "text": "作者分成"
+    },
+    "creatorListing.payoutAll": {
+      "source": "Payout wallet receives 100%.",
+      "text": "收款钱包获得 100%。"
+    },
+    "creatorListing.contentReference": {
+      "source": "Content reference",
+      "text": "内容参考"
+    },
+    "creatorListing.none": {
+      "source": "None",
+      "text": "无"
+    },
+    "creatorListing.tags": {
+      "source": "Tags",
+      "text": "标签"
+    },
+    "creatorListing.delistBoundary": {
+      "source": "Delisting is permanent: the agent stops reading and citing this source. Earnings already settled stay yours.",
+      "text": "下架不可逆：代理停止阅读和引用此来源。已结算收益仍归您所有。"
+    },
+    "creatorListing.confirmDelist": {
+      "source": "Click again to confirm — permanent",
+      "text": "再次点击确认 — 永久操作"
+    },
+    "creatorListing.delist": {
+      "source": "Delist source",
+      "text": "下架来源"
+    },
+    "creatorListing.updated": {
+      "source": "Price per read is now ${price}.",
+      "text": "每次阅读价格现为 ${price}。"
+    },
+    "creatorListing.delistedLabel": {
+      "source": "delisted",
+      "text": "已下架"
+    },
+    "creatorListing.inactiveDescription": {
+      "source": "This source is {delisted} — the agent no longer discovers, reads, or cites it. Its earnings history stays on the ledger.",
+      "text": "此来源已{delisted}，代理不再发现、阅读或引用它。收益历史保留在账本上。"
+    },
+    "creatorListing.onchainDescription": {
+      "source": "The toll you charge per read. The agent weighs it against its budget on every dispatch — priced too high, it simply buys elsewhere. Changes are signed by your wallet and written to the on-chain registry.",
+      "text": "每次阅读收取的费用。代理在每次研究中根据预算衡量；价格过高便购买其他来源。更改由您的钱包签署并写入链上注册表。"
+    },
+    "creatorListing.offlineDescription": {
+      "source": "The toll you charge per read. The agent weighs it against its budget on every dispatch — priced too high, it simply buys elsewhere.",
+      "text": "每次阅读收取的费用。代理在每次研究中根据预算衡量；价格过高便购买其他来源。"
+    },
+    "creatorListing.currentPrice": {
+      "source": "now ${price}",
+      "text": "现为 ${price}"
+    },
+    "creatorListing.walletInstruction": {
+      "source": "This source was registered by {wallet} — only that wallet's signature will pass the registry. Switch accounts before signing.",
+      "text": "此来源由 {wallet} 注册，注册表仅接受该钱包签名。签名前请切换账户。"
+    },
+    "creatorListing.networkInstruction": {
+      "source": "Connect your creator wallet on {network} before changing this listing.",
+      "text": "更改此来源信息前，请连接 {network} 上的创作者钱包。"
+    },
+    "creatorPortfolio.metadataTitle": {
+      "source": "My sources — Keryx",
+      "text": "我的来源 — Keryx"
+    },
+    "creatorPortfolio.description": {
+      "source": "Manage every source your wallet owns: citation email alerts, webhooks, earnings.",
+      "text": "管理您的钱包拥有的全部来源：引用邮件提醒、webhook 和收益。"
+    },
+    "creatorPortfolio.title": {
+      "source": "My sources",
+      "text": "我的来源"
+    },
+    "creatorPortfolio.ownership": {
+      "source": "Review sources where this wallet receives payouts or author shares, and listings it registered on Arc. Citation alerts follow payout or author ownership; listing price and active status follow the registry creator.",
+      "text": "查看此钱包收到付款或作者分成的来源，以及它在 Arc 注册的来源。引用提醒遵循收款或作者所有权；价格和启用状态由注册表创作者控制。"
+    },
+    "creatorPortfolio.withdrawals": {
+      "source": "Review and recover withdrawals",
+      "text": "审阅并恢复提现"
+    },
+    "creatorPortfolio.loadFailed": {
+      "source": "Couldn't load your sources — try again.",
+      "text": "无法加载您的来源 — 请重试。"
+    },
+    "creatorPortfolio.applyFailed": {
+      "source": "Failed to apply",
+      "text": "应用失败"
+    },
+    "creatorPortfolio.refreshFailed": {
+      "source": "Refresh failed",
+      "text": "刷新失败"
+    },
+    "creatorPortfolio.loading": {
+      "source": "Loading your sources…",
+      "text": "正在加载您的来源…"
+    },
+    "creatorPortfolio.signIn": {
+      "source": "Sign in with the wallet that owns your sources to manage them.",
+      "text": "使用拥有来源的钱包登录以管理来源。"
+    },
+    "creatorPortfolio.connect": {
+      "source": "Connect wallet →",
+      "text": "连接钱包 →"
+    },
+    "creatorPortfolio.empty": {
+      "source": "This wallet doesn't own any sources yet.",
+      "text": "此钱包尚未拥有来源。"
+    },
+    "creatorPortfolio.register": {
+      "source": "List your feed — issue a toll →",
+      "text": "登记订阅源 — 设置访问费 →"
+    },
+    "creatorPortfolio.listings": {
+      "source": "Listings registered by this wallet",
+      "text": "由此钱包注册的条目"
+    },
+    "creatorPortfolio.listingOwnership": {
+      "source": "Manage price and active status here. Citation alerts belong to the payout or author wallet.",
+      "text": "在此管理价格及启用状态。引用提醒归收款或作者钱包所有。"
+    },
+    "creatorPortfolio.deactivated": {
+      "source": "deactivated",
+      "text": "已停用"
+    },
+    "creatorPortfolio.manageListing": {
+      "source": "Manage listing →",
+      "text": "管理条目 →"
+    },
+    "creatorPortfolio.listingFailed": {
+      "source": "Couldn't verify this page of registry listings. Try again.",
+      "text": "无法验证此页注册条目。请重试。"
+    },
+    "creatorPortfolio.checking": {
+      "source": "Checking registry…",
+      "text": "正在检查注册合约…"
+    },
+    "creatorPortfolio.more": {
+      "source": "Check more listings",
+      "text": "检查更多条目"
+    },
+    "creatorPortfolio.emailTitle": {
+      "source": "Citation email alerts — whole portfolio",
+      "text": "引用邮件提醒 — 全部来源"
+    },
+    "creatorPortfolio.emailDescription": {
+      "source": "One address, every source: get a short email whenever any of your sources is cited and paid. At most one mail per source per hour. Per-source tweaks live on each source's page below.",
+      "text": "一个地址覆盖所有来源：任何来源被引用且付款后即收到简短邮件。每个来源每小时最多一封。各来源设置在下方对应页面。"
+    },
+    "creatorPortfolio.disableAll": {
+      "source": "Disable all",
+      "text": "全部禁用"
+    },
+    "creatorPortfolio.deliveryHeld": {
+      "source": "Addresses are saved, but this deployment hasn't enabled an email provider yet — delivery starts the moment it does.",
+      "text": "地址已保存，但此部署尚未启用邮件服务商；启用后即开始发送。"
+    },
+    "creatorPortfolio.unverified": {
+      "source": "unverified — off the money path",
+      "text": "未验证 — 不进入资金路径"
+    },
+    "creatorPortfolio.noEmail": {
+      "source": "No email alert",
+      "text": "无邮件提醒"
+    },
+    "creatorPortfolio.webhookActive": {
+      "source": "Webhook active",
+      "text": "webhook 已启用"
+    },
+    "creatorPortfolio.noWebhook": {
+      "source": "No webhook",
+      "text": "无 webhook"
+    },
+    "creatorPortfolio.webhookOn": {
+      "source": "on",
+      "text": "开启"
+    },
+    "creatorPortfolio.refreshTitle": {
+      "source": "Re-read the feed and pull in new posts",
+      "text": "重新读取订阅源并获取新文章"
+    },
+    "creatorPortfolio.refresh": {
+      "source": "Refresh feed",
+      "text": "刷新订阅源"
+    },
+    "creatorPortfolio.manage": {
+      "source": "Manage →",
+      "text": "管理 →"
+    },
+    "creatorPortfolio.emailEnabled.one": {
+      "source": "Email alerts on for all {count} source(s).",
+      "text": "已为全部 {count} 个来源开启邮件提醒。"
+    },
+    "creatorPortfolio.emailEnabled.other": {
+      "source": "Email alerts on for all {count} source(s).",
+      "text": "已为全部 {count} 个来源开启邮件提醒。"
+    },
+    "creatorPortfolio.emailDisabled.one": {
+      "source": "Email alerts off for all {count} source(s).",
+      "text": "已为全部 {count} 个来源关闭邮件提醒。"
+    },
+    "creatorPortfolio.emailDisabled.other": {
+      "source": "Email alerts off for all {count} source(s).",
+      "text": "已为全部 {count} 个来源关闭邮件提醒。"
+    },
+    "creatorPortfolio.newPosts.one": {
+      "source": "{name}: {count} new post(s) now purchasable.",
+      "text": "{name}：现可购买 {count} 篇新文章。"
+    },
+    "creatorPortfolio.newPosts.other": {
+      "source": "{name}: {count} new post(s) now purchasable.",
+      "text": "{name}：现可购买 {count} 篇新文章。"
+    },
+    "creatorPortfolio.upToDate": {
+      "source": "{name}: feed checked — already up to date.",
+      "text": "{name}：订阅源已检查 — 已是最新。"
+    },
+    "creatorPortfolio.uncertain.one": {
+      "source": "{count} listing(s) could not be verified. Refresh to retry those registry reads.",
+      "text": "无法核验 {count} 项来源信息。刷新以重试这些注册表读取。"
+    },
+    "creatorPortfolio.uncertain.other": {
+      "source": "{count} listing(s) could not be verified. Refresh to retry those registry reads.",
+      "text": "无法核验 {count} 项来源信息。刷新以重试这些注册表读取。"
+    },
+    "creatorPortfolio.applyAll.one": {
+      "source": "Apply to all {count}",
+      "text": "应用到全部 {count} 个"
+    },
+    "creatorPortfolio.applyAll.other": {
+      "source": "Apply to all {count}",
+      "text": "应用到全部 {count} 个"
+    },
+    "creatorPortfolio.earned": {
+      "source": "{amount} earned",
+      "text": "赚取 {amount}"
+    },
+    "creatorPortfolio.citations.one": {
+      "source": "{count} citation(s)",
+      "text": "{count} 次引用"
+    },
+    "creatorPortfolio.citations.other": {
+      "source": "{count} citation(s)",
+      "text": "{count} 次引用"
+    },
+    "creatorPortfolio.emailTitleWithAddress": {
+      "source": "Email alerts → {email}",
+      "text": "邮件提醒 → {email}"
+    },
+    "creatorDecisions.title": {
+      "source": "How the agent decides on this source",
+      "text": "智能体如何对此来源作出决定"
+    },
+    "creatorDecisions.weighed": {
+      "source": "Weighed",
+      "text": "已权衡"
+    },
+    "creatorDecisions.dispatches": {
+      "source": "dispatches",
+      "text": "研究任务"
+    },
+    "creatorDecisions.chosen": {
+      "source": "Chosen decisions",
+      "text": "选择决策"
+    },
+    "creatorDecisions.citations": {
+      "source": "Citations in answers",
+      "text": "答案中的引用"
+    },
+    "creatorDecisions.passed": {
+      "source": "Passed",
+      "text": "已跳过"
+    },
+    "creatorDecisions.paymentBoundary": {
+      "source": "Decision and answer citation counts do not prove paid reads or settled citation rewards. Check earnings and payment evidence separately.",
+      "text": "决策和答案引用次数不能证明付费阅读或已结算引用奖励。请分别查看收益和付款证据。"
+    },
+    "creatorDecisions.recent": {
+      "source": "Most recent passes, in the agent's words",
+      "text": "智能体说明的最近跳过原因"
+    },
+    "creatorDecisions.window.one": {
+      "source": "Every dispatch weighs this source against the others and records its BUY, CACHE or SKIP decisions. Across the last {window} dispatches, {considered} of them weighed this one.",
+      "text": "每次研究都会将此来源与其他来源比较，并记录 BUY、CACHE 或 SKIP 决策。最近 {window} 次研究中，有 {considered} 次考虑了此来源。"
+    },
+    "creatorDecisions.window.other": {
+      "source": "Every dispatch weighs this source against the others and records its BUY, CACHE or SKIP decisions. Across the last {window} dispatches, {considered} of them weighed this one.",
+      "text": "每次研究都会将此来源与其他来源比较，并记录 BUY、CACHE 或 SKIP 决策。最近 {window} 次研究中，有 {considered} 次考虑了此来源。"
+    },
+    "creatorDecisions.buy.one": {
+      "source": "{count} BUY decisions",
+      "text": "{count} 个 BUY 决策"
+    },
+    "creatorDecisions.buy.other": {
+      "source": "{count} BUY decisions",
+      "text": "{count} 个 BUY 决策"
+    },
+    "creatorDecisions.cache.one": {
+      "source": "{count} CACHE decisions",
+      "text": "{count} 个 CACHE 决策"
+    },
+    "creatorDecisions.cache.other": {
+      "source": "{count} CACHE decisions",
+      "text": "{count} 个 CACHE 决策"
+    },
+    "creatorDecisions.citeThrough.one": {
+      "source": "{percent} of {count} chosen decisions",
+      "text": "{count} 个选择决策中的 {percent}"
+    },
+    "creatorDecisions.citeThrough.other": {
+      "source": "{percent} of {count} chosen decisions",
+      "text": "{count} 个选择决策中的 {percent}"
+    },
+    "creatorDecisions.skipRate": {
+      "source": "{percent} of the time",
+      "text": "时间占比 {percent}"
+    },
+    "creatorDecisions.priceComparison": {
+      "source": "In the dispatches that passed on it, the sources the agent did choose were listed at a median {rivalPrice} per read. This one asks {price}.",
+      "text": "跳过此来源的研究中，代理所选来源的每次阅读价格中位数为 {rivalPrice}。此来源报价 {price}。"
+    },
+    "creatorDecisions.ratedComparison": {
+      "source": "In the dispatches that passed on it, the sources the agent did choose were listed at a median {rivalPrice} per read. This one asks {price}. It rated this source {chosenValue} when it chose to read and {skippedValue} when it passed, on its 0–1 expected-value scale.",
+      "text": "跳过此来源的研究中，代理所选来源的每次阅读价格中位数为 {rivalPrice}。此来源报价 {price}。在 0–1 预期价值尺度上，选择阅读时评分为 {chosenValue}，跳过时为 {skippedValue}。"
+    },
+    "creatorDecisions.skipWithRival": {
+      "source": "expected value {value} · asked ${price} · chose ${rivalPrice} instead · {date}",
+      "text": "预期价值 {value} · 报价 ${price} · 改选 ${rivalPrice} · {date}"
+    },
+    "creatorDecisions.skip": {
+      "source": "expected value {value} · asked ${price} · {date}",
+      "text": "预期价值 {value} · 要价 ${price} · {date}"
+    }
+  }
+}

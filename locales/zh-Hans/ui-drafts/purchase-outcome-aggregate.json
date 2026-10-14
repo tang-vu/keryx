@@ -1,0 +1,304 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/purchase-outcome-aggregate.ts",
+  "sourceSha256": "9f46cda87724686411c73e0bac8c8feac8a2f775c22ca9432c98f13d6df8e407",
+  "entries": {
+    "metadataTitle": {
+      "source": "Were the purchases worth it — recorded purchase outcomes",
+      "text": "购买是否值得 — 记录的购买结果"
+    },
+    "title": {
+      "source": "Were the purchases worth it?",
+      "text": "这些购买值得吗？"
+    },
+    "introduction": {
+      "source": "Keryx pays for sources before it knows whether they will help. This page scores those purchases against what was recorded afterwards: which bought articles the answer actually cited, and what the uncited ones cost.",
+      "text": "Keryx 在知道来源是否有帮助之前就付款。此页根据之后的记录评估这些购买：答案实际引用了哪些已购文章，以及未被引用文章的成本。"
+    },
+    "recordedOnly": {
+      "source": "Recorded bookkeeping only. Settlement is read from each run's retained trace and has not been rechecked against Circle or the chain here. Pending, simulated and failed payments are excluded.",
+      "text": "仅为记录记账。结算读取自每次研究的留存过程，此处未重新核对 Circle 或链上记录。排除等待确认、模拟和失败付款。"
+    },
+    "network": {
+      "source": "Network",
+      "text": "网络"
+    },
+    "period": {
+      "source": "Period",
+      "text": "时段"
+    },
+    "since": {
+      "source": "Since (UTC date)",
+      "text": "自（UTC 日期）"
+    },
+    "apply": {
+      "source": "Show figures",
+      "text": "显示数据"
+    },
+    "all": {
+      "source": "All time",
+      "text": "全部时间"
+    },
+    "week": {
+      "source": "Last 7 days",
+      "text": "最近 7 天"
+    },
+    "month": {
+      "source": "Last 30 days",
+      "text": "最近 30 天"
+    },
+    "mainnet": {
+      "source": "Arc mainnet",
+      "text": "Arc 主网"
+    },
+    "testnet": {
+      "source": "Arc testnet",
+      "text": "Arc 测试网"
+    },
+    "windowEnd": {
+      "source": ") UTC",
+      "text": ") UTC"
+    },
+    "sample": {
+      "source": "Sample: the newest {limit} recorded runs per group that were created on this network in this period. When a group has more runs than that, older ones are outside the sample and the column says so.",
+      "text": "样本：各组在此时段、此网络创建的最新 {limit} 次记录研究。某组研究超过此数量时，较早研究不在样本内，并在该列注明。"
+    },
+    "unavailable": {
+      "source": "A complete classified view is unavailable for this storage profile or period. Figures are withheld; nothing is inferred from the failure.",
+      "text": "此存储配置或时段无法提供完整分类视图。数据暂不展示；不从失败推断任何结果。"
+    },
+    "invalid": {
+      "source": "Choose a valid network, period and UTC date.",
+      "text": "选择有效网络、时段和 UTC 日期。"
+    },
+    "outside": {
+      "source": "Outside users",
+      "text": "外部用户"
+    },
+    "team": {
+      "source": "Team",
+      "text": "团队"
+    },
+    "scripted": {
+      "source": "Scripted tests",
+      "text": "脚本测试"
+    },
+    "unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "cohortLimit": {
+      "source": "Groups come from what was recorded when each run was written. Runs without that record stay Unknown and are never counted as outside use. Columns are not summed.",
+      "text": "分组依据是写入每次研究时的记录。缺少该记录的研究保持未知，绝不计作外部使用。各列不相加。"
+    },
+    "figure": {
+      "source": "Figure",
+      "text": "指标"
+    },
+    "rule": {
+      "source": "Counting rule",
+      "text": "计数规则"
+    },
+    "unmeasured": {
+      "source": "Unmeasured",
+      "text": "未衡量"
+    },
+    "none": {
+      "source": "None in sample",
+      "text": "样本中无"
+    },
+    "ratio": {
+      "source": "{part} of {whole}",
+      "text": "{whole} 中的 {part}"
+    },
+    "percent": {
+      "source": "{value}%",
+      "text": "{value}%"
+    },
+    "usdc": {
+      "source": "USDC",
+      "term": "usdc"
+    },
+    "testUsdc": {
+      "source": "test USDC",
+      "text": "测试 USDC"
+    },
+    "sampleSpan": {
+      "source": "{first} to {last}",
+      "text": "{first} 至 {last}"
+    },
+    "partialSample": {
+      "source": "{sampled} of {total} (newest only)",
+      "text": "{total} 中的 {sampled}（仅最新）"
+    },
+    "rows.windowRuns.0": {
+      "source": "Runs in the period",
+      "text": "时段内研究次数"
+    },
+    "rows.windowRuns.1": {
+      "source": "Recorded runs created on this network in the UTC interval, per group.",
+      "text": "在此网络和 UTC 区间创建的记录研究，按组统计。"
+    },
+    "rows.sampledRuns.0": {
+      "source": "Runs sampled",
+      "text": "抽样研究次数"
+    },
+    "rows.sampledRuns.1": {
+      "source": "Newest runs read for this page, at most the sample limit per group.",
+      "text": "为此页面读取的最新研究，各组不超过样本上限。"
+    },
+    "rows.sampleSpan.0": {
+      "source": "Sample covers",
+      "text": "样本覆盖"
+    },
+    "rows.sampleSpan.1": {
+      "source": "Creation time of the oldest and newest sampled run (UTC).",
+      "text": "样本中最早和最新研究的创建时间（UTC）。"
+    },
+    "rows.unscorable.0": {
+      "source": "Runs that could not be scored",
+      "text": "无法评分的研究"
+    },
+    "rows.unscorable.1": {
+      "source": "Sampled runs whose retained record has no completed answer or fails the bounded public format. They are counted here and add nothing to any score.",
+      "text": "留存记录没有已完成答案或不符合有界公开格式的抽样研究。在此计数，不贡献任何评分。"
+    },
+    "rows.basis.0": {
+      "source": "Decisions with a structured basis",
+      "text": "有结构化依据的决策"
+    },
+    "rows.basis.1": {
+      "source": "Recorded BUY, SKIP and CACHE decisions that carry price, fetch budget left, the alternative considered and the deciding rule, out of all recorded decisions in the sample. Runs written before this record existed have none.",
+      "text": "样本全部记录决策中，带有价格、剩余读取预算、考虑过的替代方案和决定规则的 BUY、SKIP、CACHE 决策。在此记录机制存在之前写入的研究没有这些记录。"
+    },
+    "rows.buys.0": {
+      "source": "BUY decisions",
+      "text": "BUY 决策"
+    },
+    "rows.buys.1": {
+      "source": "Recorded BUY decisions in the scorable sampled runs.",
+      "text": "可评分抽样研究中记录的 BUY 决策。"
+    },
+    "rows.unscoredBuys.0": {
+      "source": "BUY decisions not scored",
+      "text": "未评分的 BUY 决策"
+    },
+    "rows.unscoredBuys.1": {
+      "source": "BUY decisions without a complete article version, without a positive matching settled access payment in the trace, or repeated for the same version.",
+      "text": "缺少完整文章版本、过程记录中没有匹配的正金额已结算访问费付款，或对同一版本重复作出的 BUY 决策。"
+    },
+    "rows.scored.0": {
+      "source": "Scored purchases",
+      "text": "已评分购买"
+    },
+    "rows.scored.1": {
+      "source": "One per run and exact source, article and content version with a BUY decision and a positive matching recorded settled access payment.",
+      "text": "每次研究中，具有 BUY 决策及匹配的正金额已记录已结算访问费付款的确切来源、文章和内容版本各计一次。"
+    },
+    "rows.hitRate.0": {
+      "source": "Purchase hit rate",
+      "text": "购买命中率"
+    },
+    "rows.hitRate.1": {
+      "source": "Scored purchases whose exact version the answer cited, divided by scored purchases. A citation is observed use, not an expert verdict on quality.",
+      "text": "答案引用确切版本的已评分购买数，除以已评分购买数。引用是观察到的使用，不是专家对质量的判断。"
+    },
+    "rows.uncited.0": {
+      "source": "Spent on uncited purchases",
+      "text": "未被引用购买的支出"
+    },
+    "rows.uncited.1": {
+      "source": "Exact sum of recorded settled access for scored purchases the answer did not cite. Descriptive: it does not prove the purchase was useless.",
+      "text": "答案未引用的已评分购买的已记录已结算访问费精确总和。仅具描述性：不证明购买无用。"
+    },
+    "rows.access.0": {
+      "source": "Spent on scored purchases",
+      "text": "已评分购买的支出"
+    },
+    "rows.access.1": {
+      "source": "Exact sum of recorded settled access for all scored purchases.",
+      "text": "全部已评分购买的已记录已结算访问费精确总和。"
+    },
+    "rows.rewards.0": {
+      "source": "Citation rewards recorded",
+      "text": "记录的引用奖励"
+    },
+    "rows.rewards.1": {
+      "source": "Exact sum of recorded settled citation rewards matched to scored purchases.",
+      "text": "与已评分购买匹配的已记录已结算引用奖励精确总和。"
+    },
+    "rows.gap.0": {
+      "source": "Calibration gap",
+      "text": "校准差距"
+    },
+    "rows.gap.1": {
+      "source": "Average distance between predicted value and citation rate across the bands below, weighted by purchases. 0% would mean predictions matched outcomes in every band.",
+      "text": "按购买数加权的下方各区间预测价值与引用率之间的平均距离。0% 表示每个区间预测均与结果相符。"
+    },
+    "rows.missed.0": {
+      "source": "Missed value of skipped sources",
+      "text": "跳过来源的错失价值"
+    },
+    "rows.missed.1": {
+      "source": "Unmeasured. It needs skipped sources to be read afterwards under a separate evaluation allowance, which has not been funded or run.",
+      "text": "未衡量。需要在另行评估额度下事后阅读跳过的来源；尚未注资或运行。"
+    },
+    "rows.perClaim.0": {
+      "source": "Cost per supported claim",
+      "text": "每个有支持主张的成本"
+    },
+    "rows.perClaim.1": {
+      "source": "Unmeasured. It needs an independent review of which claims each source supports.",
+      "text": "未衡量。需要独立审阅各来源支持哪些主张。"
+    },
+    "rows.questionType.0": {
+      "source": "By question type",
+      "text": "按问题类型"
+    },
+    "rows.questionType.1": {
+      "source": "Unmeasured. No question type is recorded when a run is written, and none is inferred.",
+      "text": "未衡量。写入研究时未记录问题类型，也不作推断。"
+    },
+    "calibrationTitle": {
+      "source": "Predicted value and what happened",
+      "text": "预测价值与实际结果"
+    },
+    "calibrationIntro": {
+      "source": "Purchases are grouped by the value the agent predicted before buying. The citation rate is how often purchases in that band were cited. Predicted value is the agent's own score, not a probability, and small samples settle nothing.",
+      "text": "按智能体购买前预测的价值对购买分组。引用率表示该区间购买被引用的频率。预测价值是智能体自身的评分，不是概率；小样本不能确定任何结论。"
+    },
+    "calibrationFor": {
+      "source": "{cohort}: {scored} scored purchases",
+      "text": "{cohort}：{scored} 次已评分购买"
+    },
+    "band": {
+      "source": "Predicted value band",
+      "text": "预测价值区间"
+    },
+    "purchases": {
+      "source": "Purchases",
+      "text": "购买"
+    },
+    "cited": {
+      "source": "Cited",
+      "text": "已引用"
+    },
+    "predictedMean": {
+      "source": "Mean predicted value",
+      "text": "平均预测价值"
+    },
+    "citationRate": {
+      "source": "Citation rate",
+      "text": "引用率"
+    },
+    "json": {
+      "source": "These figures (JSON)",
+      "text": "这些数据（JSON）"
+    },
+    "usage": {
+      "source": "Who uses Keryx",
+      "text": "谁在使用 Keryx"
+    }
+  }
+}

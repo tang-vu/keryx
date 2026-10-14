@@ -1,0 +1,116 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/account-membership.ts",
+  "sourceSha256": "c82feb6a9055ad9269d1f0fc6f1f78b51f02d07876278e913bc884c3dc20c407",
+  "entries": {
+    "title": {
+      "source": "Private account and wallets",
+      "text": "Tài khoản riêng tư và ví"
+    },
+    "authority": {
+      "source": "Link wallets you control to share their owned history in one private account. Funds, research limits, signing, API keys and creator powers stay with each wallet.",
+      "text": "Liên kết các ví bạn kiểm soát để xem chung lịch sử thuộc sở hữu của chúng trong một tài khoản riêng tư. Tiền, hạn mức nghiên cứu, quyền ký, khóa API và quyền của tác giả vẫn thuộc từng ví."
+    },
+    "walletFree": {
+      "source": "New to wallets? The existing Google sign-in can create an unfunded, user-controlled Circle wallet. Account creation requires a separate confirmation here.",
+      "text": "Bạn mới dùng ví? Đăng nhập Google hiện có có thể tạo một ví Circle do bạn kiểm soát, chưa có tiền. Việc tạo tài khoản cần xác nhận riêng tại đây."
+    },
+    "reload": {
+      "source": "Reload account",
+      "text": "Tải lại tài khoản"
+    },
+    "checking": {
+      "source": "Checking your account…",
+      "text": "Đang kiểm tra tài khoản của bạn…"
+    },
+    "currentWallet": {
+      "source": "Current sign-in wallet:",
+      "text": "Ví đang đăng nhập:"
+    },
+    "consentPrefix": {
+      "source": "I consent to",
+      "text": "Tôi đồng ý"
+    },
+    "accessing": {
+      "source": "accessing",
+      "text": "truy cập"
+    },
+    "creating": {
+      "source": "creating",
+      "text": "tạo"
+    },
+    "consentSuffix": {
+      "source": "a private account and sharing my verified wallet's owned history.",
+      "text": "một tài khoản riêng tư và chia sẻ lịch sử thuộc sở hữu của ví đã xác minh của tôi."
+    },
+    "resume": {
+      "source": "Resume private account",
+      "text": "Tiếp tục tài khoản riêng tư"
+    },
+    "reviewCreate": {
+      "source": "Review account creation",
+      "text": "Xem xét tạo tài khoản"
+    },
+    "account": {
+      "source": "Account:",
+      "text": "Tài khoản:"
+    },
+    "revision": {
+      "source": "· revision",
+      "text": "· bản sửa đổi"
+    },
+    "unlinkConsent": {
+      "source": "I confirm removal of the selected wallet's account access. Its own history and financial obligations remain.",
+      "text": "Tôi xác nhận xóa quyền truy cập tài khoản của ví đã chọn. Lịch sử riêng và nghĩa vụ tài chính của ví vẫn giữ nguyên."
+    },
+    "unlink": {
+      "source": "Unlink",
+      "text": "Hủy liên kết"
+    },
+    "walletToProve": {
+      "source": "Wallet to prove",
+      "text": "Ví cần chứng minh"
+    },
+    "walletPlaceholder": {
+      "source": "0x…",
+      "text": "0x…"
+    },
+    "linkConsent": {
+      "source": "I explicitly share this wallet's past and future owned history. Its funds, signing, API keys, claims and creator powers stay separate.",
+      "text": "Tôi chủ động chia sẻ lịch sử thuộc sở hữu của ví này trong quá khứ và tương lai. Tiền, quyền ký, khóa API, yêu cầu sở hữu và quyền của tác giả vẫn tách biệt."
+    },
+    "reviewWallet": {
+      "source": "Review wallet proof",
+      "text": "Xem xét bằng chứng sở hữu ví"
+    },
+    "revoke": {
+      "source": "Revoke this account sign-in",
+      "text": "Thu hồi lần đăng nhập tài khoản này"
+    },
+    "confirmIntent": {
+      "source": "Confirm the exact account, wallet and intent below. This proof expires after five minutes.",
+      "text": "Xác nhận đúng tài khoản, ví và mục đích bên dưới. Bằng chứng này hết hạn sau năm phút."
+    },
+    "targetSignatureHelp": {
+      "source": "Sign these exact message bytes with the target wallet using personal_sign, while keeping the initiating sign-in unchanged. A Circle wallet needs its independently verified signing context; changing this sign-in makes the link stale.",
+      "text": "Ký đúng các byte thông điệp này bằng ví đích qua personal_sign, đồng thời giữ nguyên lần đăng nhập khởi tạo. Ví Circle cần ngữ cảnh ký được xác minh độc lập; thay đổi lần đăng nhập này sẽ làm liên kết mất hiệu lực."
+    },
+    "targetSignature": {
+      "source": "Target wallet signature",
+      "text": "Chữ ký của ví đích"
+    },
+    "confirmLink": {
+      "source": "Confirm wallet link",
+      "text": "Xác nhận liên kết ví"
+    },
+    "confirmCreate": {
+      "source": "Confirm private account creation",
+      "text": "Xác nhận tạo tài khoản riêng tư"
+    },
+    "cancel": {
+      "source": "Cancel and reload",
+      "text": "Hủy và tải lại"
+    }
+  }
+}

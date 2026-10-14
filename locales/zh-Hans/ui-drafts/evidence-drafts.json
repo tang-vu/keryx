@@ -1,0 +1,376 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-drafts.json",
+  "sourceSha256": "b5149b6454955d1a1070de1a860625a932863e4ea739f5d8753a878126864df5",
+  "entries": {
+    "page.metadataTitle": {
+      "source": "Private retained-evidence drafts — Keryx",
+      "text": "私密留存证据草稿 — Keryx"
+    },
+    "page.metadataDescription": {
+      "source": "Assemble exact retained excerpts into private claim assessments and related-work evidence themes. Imported report origin and semantic support remain unverified.",
+      "text": "将确切留存摘录汇集为私密主张评估与相关工作证据主题。导入报告的来源和语义支持仍未验证。"
+    },
+    "page.back": {
+      "source": "Back to your saved review",
+      "text": "返回已保存综述"
+    },
+    "page.heading": {
+      "source": "Build a draft from retained excerpts.",
+      "text": "用留存摘录构建草稿。"
+    },
+    "page.introduction": {
+      "source": "Select exact claim spans, record your own assessments, and organise read excerpts into related-work themes.",
+      "text": "选择确切主张片段，记录自己的评估，并将已阅读摘录整理为相关工作主题。"
+    },
+    "page.noScript": {
+      "source": "Enable JavaScript for this local editor. No passage or report is uploaded automatically.",
+      "text": "请启用 JavaScript 使用此本地编辑器。不会自动上传段落或报告。"
+    },
+    "page.navigation": {
+      "source": "Build a retained-evidence draft",
+      "text": "构建留存证据草稿"
+    },
+    "workspace.label": {
+      "source": "Private evidence draft",
+      "text": "私密证据草稿"
+    },
+    "workspace.privacy": {
+      "source": "This editor uses papers marked Include in your saved review. Passage, imported reports and theme edits stay in this tab’s memory. Reloading or leaving loses them; export first. Nothing is uploaded or saved to public history. Your browser and same-origin scripts can access this page.",
+      "text": "此编辑器使用已保存综述中标为 Include 的论文。段落、导入报告和主题编辑仅保留在此标签页内存中。重新加载或离开会丢失；请先导出。不会上传或保存到公开历史。浏览器和同源脚本能访问此页面。"
+    },
+    "workspace.loading": {
+      "source": "Loading saved review…",
+      "text": "正在加载已保存综述…"
+    },
+    "workspace.includeFirst": {
+      "source": "Mark papers Include in the literature workspace before assembling this draft.",
+      "text": "汇集草稿前，请在文献工作区将论文标记为 Include。"
+    },
+    "workspace.changed": {
+      "source": "A selected excerpt or saved paper changed, or this draft exceeds its limit. Remove that selection or clear the draft; your edits remain below.",
+      "text": "所选摘录或已保存论文发生变化，或此草稿超过上限。移除该选择或清除草稿；编辑内容仍保留在下方。"
+    },
+    "workspace.clear": {
+      "source": "Clear this tab’s draft",
+      "text": "清除此标签页草稿"
+    },
+    "workspace.cleared": {
+      "source": "Draft cleared from this tab. Your saved paper list remains.",
+      "text": "草稿已从此标签页清除。已保存论文列表保留。"
+    },
+    "import.label": {
+      "source": "Retained Keryx report JSON",
+      "text": "留存 Keryx 报告 JSON"
+    },
+    "import.guidance": {
+      "source": "Use a report returned by the API/MCP with its retained citation and excerpt ledger. Bibliography alone cannot describe a paper. Imported bytes are your responsibility; this editor does not authenticate their origin.",
+      "text": "使用 API/MCP 返回且包含留存引用和摘录账本的报告。仅参考文献不能描述论文。导入字节由您负责；此编辑器不认证其来源。"
+    },
+    "import.button": {
+      "source": "Import report in this tab",
+      "text": "在此标签页导入报告"
+    },
+    "import.summary": {
+      "source": "Reports: {reports} · matching retained excerpts: {excerpts}",
+      "text": "报告：{reports} · 匹配留存摘录：{excerpts}"
+    },
+    "import.success": {
+      "source": "Report imported locally. Matching excerpts are available for selection; the report origin and semantic support remain unverified.",
+      "text": "报告已在本地导入。匹配摘录可供选择；报告来源和语义支持仍未验证。"
+    },
+    "import.refused": {
+      "source": "Report not imported. Use a unique retained report with id/queryId, subClaims, citations and evidence; check the 64 KiB draft limit. Your existing draft remains.",
+      "text": "报告未导入。使用具有 id/queryId、subClaims、citations 和 evidence 的独立留存报告；检查 64 KiB 草稿上限。现有草稿保留。"
+    },
+    "claim.label": {
+      "source": "Claim assessment",
+      "text": "主张评估"
+    },
+    "claim.passage": {
+      "source": "Your original passage",
+      "text": "您的原始段落"
+    },
+    "claim.guidance": {
+      "source": "Select a claim in the passage, then add it below. Changing the passage clears its old claim spans and assessments. Text is never rewritten to fit an excerpt.",
+      "text": "在段落中选择主张，再添加到下方。更改段落会清除旧的主张片段和评估。绝不为适应摘录而改写文本。"
+    },
+    "claim.add": {
+      "source": "Add selected claim",
+      "text": "添加所选主张"
+    },
+    "claim.selectFirst": {
+      "source": "Select the exact claim text in your passage first.",
+      "text": "先在段落中选择确切的主张文本。"
+    },
+    "claim.reviewer": {
+      "source": "Your name for an optional assessment",
+      "text": "您为可选评估设置的名称"
+    },
+    "claim.paper": {
+      "source": "Exact cited paper",
+      "text": "确切的被引用论文"
+    },
+    "claim.unavailable": {
+      "source": "Retained source evidence unavailable",
+      "text": "留存来源证据不可用"
+    },
+    "claim.pending": {
+      "source": "Assessment pending",
+      "text": "等待评估"
+    },
+    "claim.assessed": {
+      "source": "Your assessment: {assessment}",
+      "text": "您的评估：{assessment}"
+    },
+    "claim.recordAssessment": {
+      "source": "Record my {assessment} assessment",
+      "text": "记录我的 {assessment} 评估"
+    },
+    "claim.unavailableGuidance": {
+      "source": "An unavailable source is never reported as unsupported.",
+      "text": "不可用来源绝不报告为不支持。"
+    },
+    "claim.excerptVersion": {
+      "source": "{version} · report {report}",
+      "text": "{version} · 报告 {report}"
+    },
+    "claim.verdicts.supported": {
+      "source": "supported",
+      "text": "有支持"
+    },
+    "claim.verdicts.partly-supported": {
+      "source": "partly supported",
+      "text": "部分支持"
+    },
+    "claim.verdicts.not-found": {
+      "source": "not found",
+      "text": "未找到"
+    },
+    "theme.label": {
+      "source": "Related-work themes",
+      "text": "相关工作主题"
+    },
+    "theme.heading": {
+      "source": "Related-work evidence themes",
+      "text": "相关工作证据主题"
+    },
+    "theme.guidance": {
+      "source": "Group exact excerpts before writing. A statement about a paper is exported only with a citation and the retained excerpt you select for it; quotations and your free-form notes stay separate, and notes remain marked as unverified.",
+      "text": "写作前先将确切摘录分组。关于论文的陈述仅在附有引用和您为其选择的留存摘录时导出；引文和自由笔记分别处理，笔记仍标为未验证。"
+    },
+    "theme.assemblyGuidance": {
+      "source": "Build extractive contributions grouped by the original research targets. Each quotes retained text and stays editable. Write agreements, disagreements and gaps only after reviewing the cited excerpts. Regeneration replaces sentences in the chosen theme and preserves its title, notes and all other themes. No model or reading request is started.",
+      "text": "按原始研究目标分组构建摘录式贡献。每项引用留存文本，且仍可编辑。审阅被引用摘录后再写一致、分歧和缺口。重新生成替换所选主题中的句子，并保留标题、笔记和所有其他主题。不启动模型或阅读请求。"
+    },
+    "theme.assemble": {
+      "source": "Assemble retained contributions",
+      "text": "汇集留存贡献"
+    },
+    "theme.regenerate": {
+      "source": "Regenerate this theme from selected excerpts",
+      "text": "使用所选摘录重新生成此主题"
+    },
+    "theme.assembled": {
+      "source": "Retained contributions appended. Existing themes and edits were preserved; review the quotations and write comparisons in the statement editor.",
+      "text": "留存贡献已追加。现有主题和编辑已保留；请审阅引文并在陈述编辑器中撰写比较。"
+    },
+    "theme.regenerated": {
+      "source": "This theme’s sentences were regenerated from its selected excerpts. Titles, notes and other themes were preserved.",
+      "text": "已从所选摘录重新生成此主题的句子。标题、笔记和其他主题已保留。"
+    },
+    "theme.assemblyRefused": {
+      "source": "Assembly refused. Select one to 24 retained excerpts for regeneration, or make room within the 16-theme and 64 KiB limits. Your edits remain.",
+      "text": "汇集被拒绝。重新生成时请选择 1 至 24 条留存摘录，或在 16 个主题和 64 KiB 上限内腾出空间。编辑内容保留。"
+    },
+    "theme.title": {
+      "source": "Theme title",
+      "text": "主题标题"
+    },
+    "theme.notes": {
+      "source": "Your synthesis notes (unverified)",
+      "text": "您的综合笔记（未验证）"
+    },
+    "theme.clearExcerpts": {
+      "source": "Clear this theme’s excerpt selections",
+      "text": "清除此主题所选摘录"
+    },
+    "theme.add": {
+      "source": "Add theme",
+      "text": "添加主题"
+    },
+    "theme.initialTitle": {
+      "source": "Evidence to organise",
+      "text": "待整理证据"
+    },
+    "theme.newTitle": {
+      "source": "New theme",
+      "text": "新主题"
+    },
+    "theme.unreadHeading": {
+      "source": "Included papers without usable retained excerpts",
+      "text": "没有可用留存摘录的已纳入论文"
+    },
+    "theme.unreadPaper": {
+      "source": "{title} — retained excerpt unavailable; not described.",
+      "text": "{title} — 留存摘录不可用；未描述。"
+    },
+    "reading.guidance": {
+      "source": "Missing retained evidence does not tell us whether a paper was read. Record your observation for this exact saved record; it is not a Keryx access check. Unread and unavailable papers export in separate lists and are never described or cited.",
+      "text": "缺少留存证据不能说明论文是否已阅读。请记录对这一确切保存记录的观察；这不是 Keryx 访问检查。未阅读和不可用论文分别导出为列表，绝不描述或引用。"
+    },
+    "reading.prepareGuidance": {
+      "source": "Prepare a reading request in a new tab to keep these edits. Review its question and budget before submitting through the existing reader, then import the retained report here. Preparing the request spends nothing and does not mark the paper as read.",
+      "text": "在新标签页准备阅读请求以保留这些编辑。通过现有阅读流程提交前审阅问题和预算，再将留存报告导入此处。准备请求不花费资金，也不将论文标为已阅读。"
+    },
+    "reading.prepare": {
+      "source": "Prepare reading request in a new tab",
+      "text": "在新标签页准备阅读请求"
+    },
+    "reading.clear": {
+      "source": "Clear reading observations",
+      "text": "清除阅读观察"
+    },
+    "reading.status": {
+      "source": "Your reading observation",
+      "text": "您的阅读观察"
+    },
+    "reading.unknown": {
+      "source": "Reading status not recorded",
+      "text": "未记录阅读状态"
+    },
+    "reading.unread": {
+      "source": "Not read",
+      "text": "未阅读"
+    },
+    "reading.unavailable": {
+      "source": "Unavailable",
+      "text": "不可用"
+    },
+    "reading.reason": {
+      "source": "Your reason (optional)",
+      "text": "您的理由（可选）"
+    },
+    "reading.unreadHeading": {
+      "source": "Unread papers (your observation)",
+      "text": "未阅读论文（您的观察）"
+    },
+    "reading.unavailableHeading": {
+      "source": "Unavailable papers (your observation)",
+      "text": "不可用论文（您的观察）"
+    },
+    "statement.heading": {
+      "source": "Statements in this theme",
+      "text": "此主题的陈述"
+    },
+    "statement.guidance": {
+      "source": "Write one sentence at a time. Choose what it does, the papers it names and the retained excerpt it relies on. Keryx checks that each named paper has a selected excerpt; it does not check that the excerpt supports your wording.",
+      "text": "每次写一个句子。选择其作用、提及的论文和依赖的留存摘录。Keryx 检查每篇提及论文是否有选定摘录；不检查摘录是否支持您的措辞。"
+    },
+    "statement.add": {
+      "source": "Add statement",
+      "text": "添加陈述"
+    },
+    "statement.remove": {
+      "source": "Remove this statement",
+      "text": "移除此陈述"
+    },
+    "statement.kind": {
+      "source": "What this sentence does",
+      "text": "此句的作用"
+    },
+    "statement.kinds.contribution": {
+      "source": "Describes one paper’s contribution",
+      "text": "描述一篇论文的贡献"
+    },
+    "statement.kinds.agreement": {
+      "source": "States where papers agree",
+      "text": "说明论文一致之处"
+    },
+    "statement.kinds.disagreement": {
+      "source": "States where papers disagree",
+      "text": "说明论文分歧之处"
+    },
+    "statement.kinds.gap": {
+      "source": "States a gap",
+      "text": "说明缺口"
+    },
+    "statement.text": {
+      "source": "Your sentence",
+      "text": "您的句子"
+    },
+    "statement.papers": {
+      "source": "Papers this sentence names",
+      "text": "此句提及的论文"
+    },
+    "statement.paperUnread": {
+      "source": "{title} — no retained excerpt; cannot be described",
+      "text": "{title} — 无留存摘录；无法描述"
+    },
+    "statement.excerpts": {
+      "source": "Retained excerpts this sentence relies on",
+      "text": "此句依赖的留存摘录"
+    },
+    "statement.empty": {
+      "source": "Write the sentence to include it in the draft.",
+      "text": "写出句子以将其纳入草稿。"
+    },
+    "statement.bound": {
+      "source": "Will be exported with its citation and excerpt links.",
+      "text": "将连同引用和摘录链接导出。"
+    },
+    "statement.authorGap": {
+      "source": "Will be exported as your own stated gap. It cites no paper and stays marked as unverified.",
+      "text": "将作为您自己声明的缺口导出。不引用论文，仍标为未验证。"
+    },
+    "statement.needsOnePaper": {
+      "source": "Not exported yet: a contribution names exactly one paper.",
+      "text": "尚未导出：一个贡献须恰好提及一篇论文。"
+    },
+    "statement.needsTwoPapers": {
+      "source": "Not exported yet: agreement and disagreement name at least two papers.",
+      "text": "尚未导出：一致和分歧陈述至少需提及两篇论文。"
+    },
+    "statement.needsExcerpt": {
+      "source": "Not exported yet: select a retained excerpt for every paper this sentence names.",
+      "text": "尚未导出：请为此句提及的每篇论文选择留存摘录。"
+    },
+    "download.markdown": {
+      "source": "Download Markdown",
+      "text": "下载 Markdown"
+    },
+    "download.latex": {
+      "source": "Download LaTeX",
+      "text": "下载 LaTeX"
+    },
+    "download.bibtex": {
+      "source": "Download BibTeX",
+      "text": "下载 BibTeX"
+    },
+    "download.ris": {
+      "source": "Download RIS",
+      "text": "下载 RIS"
+    },
+    "download.backup": {
+      "source": "Download private draft JSON",
+      "text": "下载私密草稿 JSON"
+    },
+    "download.success": {
+      "source": "Downloaded your current private draft. Keep the Markdown/LaTeX and reference files together.",
+      "text": "当前私密草稿已下载。请将 Markdown/LaTeX 与参考文献文件保存在一起。"
+    },
+    "download.refused": {
+      "source": "Export refused: an exact record or selected excerpt is unavailable or changed.",
+      "text": "导出被拒绝：某个确切记录或所选摘录不可用或发生变化。"
+    },
+    "download.backupSuccess": {
+      "source": "Downloaded private draft inputs and your assessments. Keep this file private.",
+      "text": "已下载私密草稿输入和您的评估。请将此文件保密。"
+    },
+    "download.backupRefused": {
+      "source": "Backup refused: check the current exact record and excerpt selections.",
+      "text": "备份被拒绝：请检查当前确切记录和摘录选择。"
+    }
+  }
+}

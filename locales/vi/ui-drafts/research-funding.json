@@ -1,0 +1,1440 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-funding.ts",
+  "sourceSha256": "8b736422056a66aba9c554ba9be5addd9ad36e73685dd4547c4c8e669181af77",
+  "entries": {
+    "cardFunding.label": {
+      "source": "Buy USDC on Arc",
+      "text": "Mua USDC trên Arc"
+    },
+    "cardFunding.preparing": {
+      "source": "Preparing…",
+      "text": "Đang chuẩn bị…"
+    },
+    "cardFunding.open": {
+      "source": "Open Arc Onramp",
+      "text": "Mở Arc Onramp"
+    },
+    "budgetFields.duration": {
+      "source": "Budget duration",
+      "text": "Thời hạn ngân sách"
+    },
+    "budgetFields.hours.one": {
+      "source": "{count} hour",
+      "text": "{count} giờ"
+    },
+    "budgetFields.hours.other": {
+      "source": "{count} hours",
+      "text": "{count} giờ"
+    },
+    "budgetFields.days.other": {
+      "source": "{count} days",
+      "text": "{count} ngày"
+    },
+    "budgetFields.days.one": {
+      "source": "{count} day",
+      "text": "{count} ngày"
+    },
+    "researchCheckout.title": {
+      "source": "Buy with your wallet",
+      "text": "Mua bằng ví của bạn"
+    },
+    "researchCheckout.switching": {
+      "source": "Switching…",
+      "text": "Đang chuyển…"
+    },
+    "researchCheckout.purchasing": {
+      "source": "Purchase in progress…",
+      "text": "Đang mua…"
+    },
+    "researchCheckout.switchNetwork": {
+      "source": "Switch to {network}",
+      "text": "Chuyển sang {network}"
+    },
+    "researchCheckout.payee": {
+      "source": "Payee: {payee}",
+      "text": "Bên nhận: {payee}"
+    },
+    "gatewayFunding.readinessTitle": {
+      "source": "Funding readiness",
+      "text": "Mức độ sẵn sàng của nguồn tiền"
+    },
+    "gatewayFunding.addToGateway": {
+      "source": "Add USDC to Gateway",
+      "text": "Thêm USDC vào Gateway"
+    },
+    "gatewayFunding.prepareDeposit": {
+      "source": "Prepare deposit",
+      "text": "Chuẩn bị nạp tiền"
+    },
+    "gatewayFunding.originalTransaction": {
+      "source": "Original transaction",
+      "text": "Giao dịch ban đầu"
+    },
+    "gatewayFunding.transaction": {
+      "source": "Transaction",
+      "text": "Giao dịch"
+    },
+    "gatewayFunding.approvalStatus": {
+      "source": "1. Approve: {status}",
+      "text": "1. Phê duyệt: {status}"
+    },
+    "gatewayFunding.depositStatus": {
+      "source": "2. Deposit: {status}",
+      "text": "2. Nạp tiền: {status}"
+    },
+    "gatewayFunding.approveAmount": {
+      "source": "Approve {amount} USDC",
+      "text": "Phê duyệt {amount} USDC"
+    },
+    "gatewayFunding.depositAmount": {
+      "source": "Deposit {amount} USDC",
+      "text": "Nạp {amount} USDC"
+    },
+    "budgetGrant.working": {
+      "source": "Working…",
+      "text": "Đang xử lý…"
+    },
+    "budgetGrant.mainnetTitle": {
+      "source": "Research budget",
+      "text": "Ngân sách nghiên cứu"
+    },
+    "budgetGrant.testnetTitle": {
+      "source": "Non-custodial session",
+      "text": "Phiên không lưu ký"
+    },
+    "budgetGrant.recovering": {
+      "source": "Recovering…",
+      "text": "Đang khôi phục…"
+    },
+    "budgetGrant.resume": {
+      "source": "Resume session ▸",
+      "text": "Tiếp tục phiên ▸"
+    },
+    "budgetGrant.reviewNew": {
+      "source": "Review new budget",
+      "text": "Xem xét ngân sách mới"
+    },
+    "budgetGrant.activate": {
+      "source": "Activate session ▸",
+      "text": "Kích hoạt phiên ▸"
+    },
+    "budgetGrant.total": {
+      "source": "Total budget (USDC)",
+      "text": "Tổng ngân sách (USDC)"
+    },
+    "walletFunding.unavailable": {
+      "source": "unavailable",
+      "text": "không khả dụng"
+    },
+    "walletFunding.testnetTitle": {
+      "source": "Testnet USDC faucet",
+      "text": "Vòi cấp USDC testnet"
+    },
+    "walletFunding.arcScan": {
+      "source": "View on ArcScan",
+      "text": "Xem trên ArcScan"
+    },
+    "walletFunding.claiming": {
+      "source": "Claiming…",
+      "text": "Đang nhận về tài khoản…"
+    },
+    "walletFunding.claim": {
+      "source": "Claim testnet USDC",
+      "text": "Nhận USDC testnet"
+    },
+    "walletFunding.added": {
+      "source": "USDC added",
+      "text": "Đã thêm USDC"
+    },
+    "walletFunding.addToken": {
+      "source": "Add USDC to wallet",
+      "text": "Thêm USDC vào ví"
+    },
+    "walletFunding.circleFaucet": {
+      "source": "Circle faucet",
+      "text": "Vòi cấp token Circle"
+    },
+    "walletFunding.testnetBalance": {
+      "source": "Balance: {balance}",
+      "text": "Số dư: {balance}"
+    },
+    "walletFunding.dripped": {
+      "source": "Dripped {amount} USDC",
+      "text": "Đã cấp {amount} USDC"
+    },
+    "walletFunding.claimedAt": {
+      "source": "(claimed {time})",
+      "text": "(đã nhận {time})"
+    },
+    "privateCheckout.title": {
+      "source": "Buy private research",
+      "text": "Mua nghiên cứu riêng tư"
+    },
+    "privateCheckout.checkingSignIn": {
+      "source": "Checking sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "privateCheckout.package": {
+      "source": "Private package",
+      "text": "Gói riêng tư"
+    },
+    "privateCheckout.quick": {
+      "source": "Quick",
+      "text": "Nhanh"
+    },
+    "privateCheckout.deep": {
+      "source": "Deep",
+      "text": "Chuyên sâu"
+    },
+    "privateCheckout.maximumTotal": {
+      "source": "Maximum total (USDC)",
+      "text": "Tổng tối đa (USDC)"
+    },
+    "privateCheckout.reviewPrice": {
+      "source": "Review private price",
+      "text": "Xem xét giá riêng tư"
+    },
+    "privateCheckout.newPurchase": {
+      "source": "Review a new purchase",
+      "text": "Xem xét giao dịch mua mới"
+    },
+    "privateCheckout.signingIncomplete": {
+      "source": "Signing incomplete",
+      "text": "Ký chưa hoàn tất"
+    },
+    "privateCheckout.recoveryOnly": {
+      "source": "Recovery only",
+      "text": "Chỉ khôi phục"
+    },
+    "privateCheckout.keep": {
+      "source": "Keep local data",
+      "text": "Giữ dữ liệu cục bộ"
+    },
+    "privateCheckout.switchNetwork": {
+      "source": "Switch to {network}",
+      "text": "Chuyển sang {network}"
+    },
+    "monthlyResearch.walletChanged": {
+      "source": "Wallet changed",
+      "text": "Ví đã thay đổi"
+    },
+    "monthlyResearch.title": {
+      "source": "Research Monthly",
+      "text": "Gói nghiên cứu tháng"
+    },
+    "monthlyResearch.planId": {
+      "source": "Saved plan ID",
+      "text": "ID kế hoạch đã lưu"
+    },
+    "monthlyResearch.checkStatus": {
+      "source": "Check plan status",
+      "text": "Kiểm tra trạng thái kế hoạch"
+    },
+    "monthlyResearch.question": {
+      "source": "Research question",
+      "text": "Câu hỏi nghiên cứu"
+    },
+    "monthlyResearch.useRequest": {
+      "source": "Use one request",
+      "text": "Dùng một yêu cầu"
+    },
+    "monthlyResearch.recoverRequest": {
+      "source": "Recover original request",
+      "text": "Khôi phục yêu cầu ban đầu"
+    },
+    "monthlyResearch.payee": {
+      "source": "Keryx payee: {payee}",
+      "text": "Bên nhận Keryx: {payee}"
+    },
+    "monthlyResearch.followJob": {
+      "source": "Follow job {jobId}",
+      "text": "Theo dõi tác vụ {jobId}"
+    },
+    "researchRequest.question": {
+      "source": "Research question",
+      "text": "Câu hỏi nghiên cứu"
+    },
+    "researchRequest.copy": {
+      "source": "Copy request JSON",
+      "text": "Sao chép JSON yêu cầu"
+    },
+    "researchRequest.download": {
+      "source": "Download request",
+      "text": "Tải yêu cầu"
+    },
+    "researchRequest.buyerGuide": {
+      "source": "buyer-agent guide",
+      "text": "hướng dẫn tác nhân mua"
+    },
+    "paidResearch.pageTitle": {
+      "source": "Research — Keryx",
+      "text": "Nghiên cứu — Keryx"
+    },
+    "paidResearch.package": {
+      "source": "Package",
+      "text": "Gói"
+    },
+    "paidResearch.quick": {
+      "source": "Quick",
+      "text": "Nhanh"
+    },
+    "paidResearch.deep": {
+      "source": "Deep",
+      "text": "Chuyên sâu"
+    },
+    "paidResearch.cap": {
+      "source": "Creator cap (USDC)",
+      "text": "Hạn mức cho tác giả (USDC)"
+    },
+    "paidResearch.updatePrice": {
+      "source": "Update price",
+      "text": "Cập nhật giá"
+    },
+    "paidResearch.serviceFee": {
+      "source": "Service fee",
+      "text": "Phí dịch vụ"
+    },
+    "paidResearch.creatorCap": {
+      "source": "Creator cap",
+      "text": "Hạn mức dành cho tác giả"
+    },
+    "paidResearch.totalPrice": {
+      "source": "Total package price",
+      "text": "Tổng giá gói"
+    },
+    "paidResearch.playground": {
+      "source": "open the playground",
+      "text": "mở khu thử nghiệm"
+    },
+    "researchEvidence.listLoading": {
+      "source": "Loading source list…",
+      "text": "Đang tải danh sách nguồn…"
+    },
+    "researchEvidence.retryList": {
+      "source": "Retry source list",
+      "text": "Thử lại danh sách nguồn"
+    },
+    "researchEvidence.loadMore": {
+      "source": "Load more sources",
+      "text": "Tải thêm nguồn"
+    },
+    "researchEvidence.retryPreview": {
+      "source": "Retry preview",
+      "text": "Thử lại bản xem trước"
+    },
+    "cardFunding.unavailable": {
+      "source": "USDC funding is unavailable right now. No purchase was started by this attempt.",
+      "text": "Nạp USDC hiện không khả dụng. Lần thử này không bắt đầu giao dịch mua nào."
+    },
+    "cardFunding.signIn": {
+      "source": "Sign in with your wallet before buying USDC.",
+      "text": "Đăng nhập bằng ví trước khi mua USDC."
+    },
+    "cardFunding.rateLimited": {
+      "source": "Too many purchase sessions were prepared. Wait a minute, then try again.",
+      "text": "Đã chuẩn bị quá nhiều phiên mua. Chờ một phút rồi thử lại."
+    },
+    "cardFunding.providerReceived": {
+      "source": "The provider received your purchase. USDC reaches your wallet after the provider settles it; refresh your wallet balance to confirm.",
+      "text": "Nhà cung cấp đã nhận giao dịch mua của bạn. USDC đến ví sau khi nhà cung cấp quyết toán; hãy làm mới số dư ví để xác nhận."
+    },
+    "cardFunding.providerSettled": {
+      "source": "The provider reports this purchase as settled. Confirm the USDC in your wallet balance before depositing to Gateway.",
+      "text": "Nhà cung cấp báo giao dịch mua này đã quyết toán. Xác nhận USDC trong số dư ví trước khi nạp vào Gateway."
+    },
+    "cardFunding.windowClosed": {
+      "source": "The purchase window was closed before a purchase was submitted.",
+      "text": "Cửa sổ mua đã đóng trước khi gửi giao dịch mua."
+    },
+    "cardFunding.providerIncomplete": {
+      "source": "The provider did not complete this purchase. Check the provider's own messages before trying again.",
+      "text": "Nhà cung cấp chưa hoàn tất giao dịch mua này. Kiểm tra thông báo của chính nhà cung cấp trước khi thử lại."
+    },
+    "cardFunding.windowUnknown": {
+      "source": "Keryx received no confirmation that the purchase window loaded. If it shows Circle's purchase page, continue there; otherwise prepare a new purchase.",
+      "text": "Keryx chưa nhận được xác nhận cửa sổ mua đã tải. Nếu cửa sổ hiển thị trang mua của Circle, hãy tiếp tục ở đó; nếu không, chuẩn bị giao dịch mua mới."
+    },
+    "cardFunding.expired": {
+      "source": "This purchase session expired. Prepare a new one to continue.",
+      "text": "Phiên mua này đã hết hạn. Chuẩn bị phiên mới để tiếp tục."
+    },
+    "cardFunding.popupBlocked": {
+      "source": "Your browser blocked the purchase window. Allow pop-ups for this site, then select Open again.",
+      "text": "Trình duyệt đã chặn cửa sổ mua. Cho phép cửa sổ bật lên với trang này, rồi chọn Mở lần nữa."
+    },
+    "cardFunding.browserUnsupported": {
+      "source": "This browser cannot open the purchase window. Open Keryx in your device's regular browser.",
+      "text": "Trình duyệt này không thể mở cửa sổ mua. Mở Keryx trong trình duyệt thông thường của thiết bị."
+    },
+    "cardFunding.opened": {
+      "source": "Purchase window opened. Keep this page open until you finish there.",
+      "text": "Đã mở cửa sổ mua. Giữ trang này mở cho đến khi bạn hoàn tất ở đó."
+    },
+    "cardFunding.invalidSession": {
+      "source": "This purchase session is no longer valid. Prepare a new one to continue.",
+      "text": "Phiên mua này không còn hợp lệ. Chuẩn bị phiên mới để tiếp tục."
+    },
+    "cardFunding.title": {
+      "source": "Buy USDC on Arc — bank transfer first",
+      "text": "Mua USDC trên Arc — ưu tiên chuyển khoản ngân hàng"
+    },
+    "cardFunding.providerNotice": {
+      "source": "Bank transfer is offered in select US states and select EU countries without merchant business verification (KYB). Purchasers still complete identity verification (KYC) with Circle's providers. Your eligibility and fees are checked in a separate window. Vietnam is not documented as supported; other unverified regions remain unknown. Debit card, Apple Pay and Google Pay require merchant KYB and are unavailable through this integration; credit cards are not supported.",
+      "text": "Chuyển khoản ngân hàng được cung cấp tại một số bang Hoa Kỳ và một số nước EU mà không yêu cầu xác minh doanh nghiệp của bên bán (KYB). Người mua vẫn phải xác minh danh tính (KYC) với các nhà cung cấp của Circle. Điều kiện đủ tư cách và phí của bạn được kiểm tra trong cửa sổ riêng. Chưa có tài liệu xác nhận hỗ trợ Việt Nam; các khu vực chưa xác minh khác vẫn chưa rõ. Thẻ ghi nợ, Apple Pay và Google Pay yêu cầu KYB của bên bán và không khả dụng qua tích hợp này; thẻ tín dụng không được hỗ trợ."
+    },
+    "cardFunding.deliveryNotice": {
+      "source": "A supported purchase delivers USDC to your signed-in wallet on Arc. Confirm arrival in your wallet balance. Keryx never receives the funds or your bank or identity details. Deposit to Gateway and enable a research budget as separate owner-signed steps.",
+      "text": "Giao dịch mua được hỗ trợ sẽ chuyển USDC tới ví đã đăng nhập của bạn trên Arc. Xác nhận tiền đến trong số dư ví. Keryx không bao giờ nhận tiền hay thông tin ngân hàng hoặc danh tính của bạn. Nạp vào Gateway và bật ngân sách nghiên cứu là các bước riêng do chủ ví ký."
+    },
+    "cardFunding.methodUnavailable": {
+      "source": "The provider offers no eligible payment method for this purchase. Keryx cannot confirm support for your country; check the provider's information before trying again.",
+      "text": "Nhà cung cấp không đưa ra phương thức thanh toán đủ điều kiện nào cho giao dịch mua này. Keryx không thể xác nhận hỗ trợ cho quốc gia của bạn; kiểm tra thông tin nhà cung cấp trước khi thử lại."
+    },
+    "cardFunding.sandboxUnavailable": {
+      "source": "Sandbox uses a separate test key and no real money. Sandbox bank deposits are documented only for Ethereum, so bank funding on Arc is unavailable here. This does not fund your Arc wallet, Gateway or research budget.",
+      "text": "Sandbox dùng khóa thử nghiệm riêng và không có tiền thật. Nạp qua ngân hàng trong sandbox chỉ có tài liệu cho Ethereum, nên nạp qua ngân hàng trên Arc không khả dụng ở đây. Việc này không nạp tiền vào ví Arc, Gateway hay ngân sách nghiên cứu của bạn."
+    },
+    "cardFunding.prepareNew": {
+      "source": "Prepare a new purchase",
+      "text": "Chuẩn bị giao dịch mua mới"
+    },
+    "cardFunding.prepare": {
+      "source": "Check bank transfer eligibility",
+      "text": "Kiểm tra điều kiện chuyển khoản ngân hàng"
+    },
+    "cardFunding.session": {
+      "source": "Delivery wallet: {wallet} · session valid until {expiresAt}",
+      "text": "Ví nhận: {wallet} · phiên hợp lệ đến {expiresAt}"
+    },
+    "budgetFields.questionCap": {
+      "source": "Maximum per question (USDC)",
+      "text": "Tối đa mỗi câu hỏi (USDC)"
+    },
+    "researchCheckout.checking": {
+      "source": "Checking the current price and wallet…",
+      "text": "Đang kiểm tra giá và ví hiện tại…"
+    },
+    "researchCheckout.recoveryReady": {
+      "source": "Recovery file is ready. Check the exact amount and payee in your wallet before signing.",
+      "text": "Tệp khôi phục đã sẵn sàng. Kiểm tra số tiền chính xác và bên nhận trong ví trước khi ký."
+    },
+    "researchCheckout.acknowledged": {
+      "source": "Purchase acknowledged. Following the original job below. Keep your recovery file.",
+      "text": "Giao dịch mua đã được tiếp nhận. Đang theo dõi tác vụ gốc bên dưới. Giữ tệp khôi phục của bạn."
+    },
+    "researchCheckout.uncertain": {
+      "source": "The submission is uncertain. Keep the recovery file and open this job below; do not pay again to recover it.",
+      "text": "Việc gửi chưa chắc chắn. Giữ tệp khôi phục và mở tác vụ này bên dưới; đừng thanh toán lại để khôi phục."
+    },
+    "researchCheckout.acknowledgementNotSaved": {
+      "source": "The seller returned a payment acknowledgement, but it could not be saved locally. Keep this tab and recovery file; use the same job for lookup.",
+      "text": "Bên bán đã trả về thông báo tiếp nhận thanh toán, nhưng không thể lưu cục bộ. Giữ tab này và tệp khôi phục; dùng cùng tác vụ để tra cứu."
+    },
+    "researchCheckout.walletCancelled": {
+      "source": "Wallet request cancelled. No signed purchase request was sent by this attempt.",
+      "text": "Đã hủy yêu cầu trong ví. Lần thử này không gửi yêu cầu mua đã ký nào."
+    },
+    "researchCheckout.quoteChanged": {
+      "source": "The current quote did not match this review. Review the price again before buying.",
+      "text": "Báo giá hiện tại không khớp với lần xem xét này. Xem xét giá lần nữa trước khi mua."
+    },
+    "researchCheckout.insufficient": {
+      "source": "This wallet has insufficient Gateway funds. No signed purchase request was sent.",
+      "text": "Ví này không đủ tiền trong Gateway. Không có yêu cầu mua đã ký nào được gửi."
+    },
+    "researchCheckout.stopped": {
+      "source": "Purchase stopped before submitting a signed request. Check your wallet, balance and browser storage, then review again. Any saved job remains available below.",
+      "text": "Đã dừng mua trước khi gửi yêu cầu đã ký. Kiểm tra ví, số dư và bộ nhớ trình duyệt, rồi xem xét lại. Mọi tác vụ đã lưu vẫn có sẵn bên dưới."
+    },
+    "researchCheckout.consent": {
+      "source": "I accept the fixed, non-refundable price and best-effort research. Unused creator reserve is retained, not refunded. My question and recovery journal will be stored on this device; I will keep a private recovery file in case browser data is lost.",
+      "text": "Tôi chấp nhận giá cố định, không hoàn lại và nghiên cứu theo nỗ lực tốt nhất. Khoản dự trữ cho tác giả chưa dùng được giữ lại, không hoàn trả. Câu hỏi và nhật ký khôi phục của tôi sẽ được lưu trên thiết bị này; tôi sẽ giữ tệp khôi phục riêng tư phòng khi mất dữ liệu trình duyệt."
+    },
+    "researchCheckout.reviewChanged": {
+      "source": "The question, price or wallet changed. Review the purchase again.",
+      "text": "Câu hỏi, giá hoặc ví đã thay đổi. Xem xét lại giao dịch mua."
+    },
+    "researchCheckout.downloadRecovery": {
+      "source": "Download recovery file",
+      "text": "Tải tệp khôi phục"
+    },
+    "researchCheckout.authorization": {
+      "source": "One signature authorizes this fixed-price research job from your wallet’s Gateway balance. {network}. Externally owned accounts (EOAs) are supported.",
+      "text": "Một chữ ký cho phép tác vụ nghiên cứu giá cố định này dùng số dư Gateway của ví bạn. {network}. Hỗ trợ tài khoản sở hữu bên ngoài (EOA)."
+    },
+    "researchCheckout.wallet": {
+      "source": "Buyer wallet: {wallet}",
+      "text": "Ví người mua: {wallet}"
+    },
+    "researchCheckout.switchFailed": {
+      "source": "Network switch was not completed. Choose {network} in your wallet.",
+      "text": "Chuyển mạng chưa hoàn tất. Chọn {network} trong ví của bạn."
+    },
+    "researchCheckout.reviewPrice": {
+      "source": "Review {amount} USDC purchase",
+      "text": "Xem xét giao dịch mua {amount} USDC"
+    },
+    "researchCheckout.quickSummary": {
+      "source": "Quick · {amount} USDC total · {cap} USDC creator cap",
+      "text": "Nhanh · tổng {amount} USDC · hạn mức cho tác giả {cap} USDC"
+    },
+    "researchCheckout.deepSummary": {
+      "source": "Deep · {amount} USDC total · {cap} USDC creator cap",
+      "text": "Chuyên sâu · tổng {amount} USDC · hạn mức cho tác giả {cap} USDC"
+    },
+    "researchCheckout.buy": {
+      "source": "Buy research — {amount} USDC",
+      "text": "Mua nghiên cứu — {amount} USDC"
+    },
+    "fundingActivity.label": {
+      "source": "Previous Gateway deposit",
+      "text": "Lần nạp Gateway trước"
+    },
+    "fundingActivity.title": {
+      "source": "Find a previous deposit",
+      "text": "Tìm lần nạp trước"
+    },
+    "fundingActivity.recoveryNotice": {
+      "source": "Lost this browser's funding records? Copy a deposit transaction hash from your wallet activity to check it here. This lookup sends no transaction and does not restore a signing plan.",
+      "text": "Mất hồ sơ nạp tiền của trình duyệt này? Sao chép mã băm giao dịch nạp từ hoạt động ví để kiểm tra tại đây. Tra cứu này không gửi giao dịch hay khôi phục kế hoạch ký."
+    },
+    "fundingActivity.hash": {
+      "source": "Previous deposit transaction hash",
+      "text": "Mã băm giao dịch nạp trước"
+    },
+    "fundingActivity.checking": {
+      "source": "Checking previous deposit…",
+      "text": "Đang kiểm tra lần nạp trước…"
+    },
+    "fundingActivity.check": {
+      "source": "Check previous deposit",
+      "text": "Kiểm tra lần nạp trước"
+    },
+    "fundingActivity.unknown": {
+      "source": "Could not verify a finalized USDC deposit call for this wallet. This does not mean it failed. Check wallet activity and current Gateway balance before adding funds.",
+      "text": "Không thể xác minh lệnh nạp USDC đã đạt tính chung cuộc cho ví này. Điều đó không có nghĩa là lệnh thất bại. Kiểm tra hoạt động ví và số dư Gateway hiện tại trước khi nạp tiền."
+    },
+    "fundingActivity.pastDeposit": {
+      "source": "This is a past deposit, not your current available balance. Funds may already have been spent or withdrawn; Circle credit may also still be updating.",
+      "text": "Đây là lần nạp trước, không phải số dư khả dụng hiện tại. Tiền có thể đã được chi hoặc rút; khoản ghi có Circle cũng có thể vẫn đang cập nhật."
+    },
+    "fundingActivity.reverted": {
+      "source": "This call did not complete the deposit. Gas may have been charged.",
+      "text": "Lệnh gọi này chưa hoàn tất nạp tiền. Có thể đã tính phí gas."
+    },
+    "fundingActivity.viewTransaction": {
+      "source": "View original deposit transaction",
+      "text": "Xem giao dịch nạp gốc"
+    },
+    "fundingActivity.missingNotice": {
+      "source": "A missing record here does not rule out another pending transaction. This check cannot recover a transaction hash lost from both the browser and wallet activity.",
+      "text": "Thiếu hồ sơ ở đây không loại trừ một giao dịch khác đang chờ xử lý. Kiểm tra này không thể khôi phục mã băm giao dịch đã mất khỏi cả trình duyệt lẫn hoạt động ví."
+    },
+    "fundingActivity.successfulCall": {
+      "source": "Successful deposit call for {amount} USDC, finalized according to the configured RPC.",
+      "text": "Lệnh nạp thành công {amount} USDC, đã đạt tính chung cuộc theo RPC được cấu hình."
+    },
+    "fundingActivity.revertedCall": {
+      "source": "Reverted deposit call for {amount} USDC, finalized according to the configured RPC.",
+      "text": "Lệnh nạp {amount} USDC bị hoàn tác, đã đạt tính chung cuộc theo RPC được cấu hình."
+    },
+    "gatewayFunding.replaced": {
+      "source": "The original transaction was replaced by a different call. This does not confirm the planned deposit. Check wallet activity and Gateway balance before preparing another deposit.",
+      "text": "Giao dịch gốc đã bị thay bằng một lệnh gọi khác. Điều này không xác nhận khoản nạp dự kiến. Kiểm tra hoạt động ví và số dư Gateway trước khi chuẩn bị nạp lần nữa."
+    },
+    "gatewayFunding.reverted": {
+      "source": "The matching transaction reverted. Gas may have been charged; this was not a successful deposit.",
+      "text": "Giao dịch khớp đã bị hoàn tác. Có thể đã tính phí gas; đây không phải lần nạp thành công."
+    },
+    "gatewayFunding.unconfirmed": {
+      "source": "The transaction remains unconfirmed. Check wallet activity; do not send it again.",
+      "text": "Giao dịch vẫn chưa được xác nhận. Kiểm tra hoạt động ví; đừng gửi lại."
+    },
+    "gatewayFunding.finalizedDeposit": {
+      "source": "The matching deposit is finalized according to the configured RPC. Check Gateway balance before buying; credit may still be updating.",
+      "text": "Khoản nạp khớp đã đạt tính chung cuộc theo RPC được cấu hình. Kiểm tra số dư Gateway trước khi mua; khoản ghi có có thể vẫn đang cập nhật."
+    },
+    "gatewayFunding.finalizedApproval": {
+      "source": "The matching approval is finalized according to the configured RPC. Review the deposit separately.",
+      "text": "Chấp thuận khớp đã đạt tính chung cuộc theo RPC được cấu hình. Xem xét riêng khoản nạp."
+    },
+    "gatewayFunding.confirmedDeposit": {
+      "source": "Deposit confirmed on chain. Check Gateway balance before buying; Circle credit may still be updating.",
+      "text": "Đã xác nhận nạp trên chuỗi. Kiểm tra số dư Gateway trước khi mua; khoản ghi có Circle có thể vẫn đang cập nhật."
+    },
+    "gatewayFunding.confirmedApproval": {
+      "source": "Approval confirmed. Review the deposit step separately.",
+      "text": "Đã xác nhận chấp thuận. Xem xét riêng bước nạp."
+    },
+    "gatewayFunding.creditUnknown": {
+      "source": "Gateway balance is unavailable. Refresh the balance; do not deposit based on an unknown balance.",
+      "text": "Số dư Gateway không khả dụng. Làm mới số dư; đừng nạp dựa trên số dư chưa rõ."
+    },
+    "gatewayFunding.recordsUnavailable": {
+      "source": "Funding records could not be read. Check browser storage before depositing.",
+      "text": "Không thể đọc hồ sơ nạp tiền. Kiểm tra bộ nhớ trình duyệt trước khi nạp."
+    },
+    "gatewayFunding.lookupPaused": {
+      "source": "Confirmation lookup paused. Refresh funding status to continue; do not send the transaction again.",
+      "text": "Đã tạm dừng tra cứu xác nhận. Làm mới trạng thái nạp để tiếp tục; đừng gửi lại giao dịch."
+    },
+    "gatewayFunding.stepIncomplete": {
+      "source": "Could not complete this step. Check your wallet, funds, gas and saved funding status. No transaction will be retried automatically.",
+      "text": "Không thể hoàn tất bước này. Kiểm tra ví, tiền, gas và trạng thái nạp đã lưu. Không giao dịch nào được tự động thử lại."
+    },
+    "gatewayFunding.recordsNotRefreshed": {
+      "source": "Could not refresh funding records. Keep this tab and check your wallet activity.",
+      "text": "Không thể làm mới hồ sơ nạp tiền. Giữ tab này và kiểm tra hoạt động ví."
+    },
+    "gatewayFunding.submitted": {
+      "source": "Transaction submitted. Waiting for matching on-chain confirmation.",
+      "text": "Đã gửi giao dịch. Đang chờ xác nhận trên chuỗi khớp với giao dịch."
+    },
+    "gatewayFunding.rejected": {
+      "source": "Your wallet rejected the request. You can review and try this step again.",
+      "text": "Ví đã từ chối yêu cầu. Bạn có thể xem xét và thử lại bước này."
+    },
+    "gatewayFunding.walletUncertain": {
+      "source": "Wallet or storage response is uncertain. Check wallet activity and recover the original transaction hash; do not send it again.",
+      "text": "Phản hồi từ ví hoặc bộ nhớ chưa chắc chắn. Kiểm tra hoạt động ví và khôi phục mã băm giao dịch gốc; đừng gửi lại."
+    },
+    "gatewayFunding.readinessLabel": {
+      "source": "Gateway funding readiness",
+      "text": "Mức sẵn sàng nạp Gateway"
+    },
+    "gatewayFunding.checkingBalance": {
+      "source": "Checking Gateway balance…",
+      "text": "Đang kiểm tra số dư Gateway…"
+    },
+    "gatewayFunding.historyUnknown": {
+      "source": "Funding history unavailable. Inspect your wallet activity before adding funds.",
+      "text": "Không có lịch sử nạp tiền. Kiểm tra hoạt động ví trước khi nạp thêm."
+    },
+    "gatewayFunding.checkPriceCoverage": {
+      "source": "Check Gateway balance to see whether this price is covered. This read sends no transaction.",
+      "text": "Kiểm tra số dư Gateway để biết có đủ cho giá này không. Lượt đọc này không gửi giao dịch."
+    },
+    "gatewayFunding.ready": {
+      "source": "At the last check, enough Gateway USDC was available for this price. Review the purchase terms, then buy. The purchase checks funds again before signing.",
+      "text": "Ở lần kiểm tra gần nhất, có đủ USDC trong Gateway cho giá này. Xem xét điều khoản mua, rồi mua. Giao dịch mua sẽ kiểm tra lại tiền trước khi ký."
+    },
+    "gatewayFunding.unverifiedCredit": {
+      "source": "The latest deposit is confirmed on chain; Gateway credit for this price is not yet verified. Funds may still be updating or may already have been spent. Refresh Gateway balance before buying or adding funds.",
+      "text": "Khoản nạp mới nhất đã được xác nhận trên chuỗi; chưa xác minh khoản ghi có Gateway đủ cho giá này. Tiền có thể vẫn đang cập nhật hoặc đã được chi. Làm mới số dư Gateway trước khi mua hay nạp thêm."
+    },
+    "gatewayFunding.unavailableBalance": {
+      "source": "Gateway balance unavailable. Refresh it before buying or adding funds.",
+      "text": "Số dư Gateway không khả dụng. Làm mới trước khi mua hay nạp thêm."
+    },
+    "gatewayFunding.existingTransaction": {
+      "source": "A funding transaction may already have been sent. Inspect the existing transaction below; do not submit it again.",
+      "text": "Một giao dịch nạp tiền có thể đã được gửi. Kiểm tra giao dịch hiện có bên dưới; đừng gửi lại."
+    },
+    "gatewayFunding.recordsNotRead": {
+      "source": "Funding records could not be read.",
+      "text": "Không thể đọc hồ sơ nạp tiền."
+    },
+    "gatewayFunding.refreshBalance": {
+      "source": "Refresh Gateway balance and funding status",
+      "text": "Làm mới số dư Gateway và trạng thái nạp tiền"
+    },
+    "gatewayFunding.reviewDeposit": {
+      "source": "Review deposit options",
+      "text": "Xem xét tùy chọn nạp"
+    },
+    "gatewayFunding.inspectTransaction": {
+      "source": "Inspect existing transaction",
+      "text": "Kiểm tra giao dịch hiện có"
+    },
+    "gatewayFunding.depositNotice": {
+      "source": "Approve an exact amount, then deposit it into your own Gateway balance. Each transaction needs a wallet confirmation and costs gas. This does not buy research or pay Keryx.",
+      "text": "Chấp thuận số tiền chính xác, rồi nạp vào số dư Gateway của chính bạn. Mỗi giao dịch cần xác nhận trong ví và tốn gas. Việc này không mua nghiên cứu hay trả tiền cho Keryx."
+    },
+    "gatewayFunding.depositConsent": {
+      "source": "I want to add this amount to my own Gateway balance, plus transaction gas. I will keep my wallet transaction hashes for recovery.",
+      "text": "Tôi muốn thêm số tiền này vào số dư Gateway của chính mình, cộng phí gas giao dịch. Tôi sẽ giữ mã băm giao dịch trong ví để khôi phục."
+    },
+    "gatewayFunding.planSaved": {
+      "source": "Funding plan saved. Review the approval step below; no transaction has been sent.",
+      "text": "Đã lưu kế hoạch nạp tiền. Xem xét bước chấp thuận bên dưới; chưa gửi giao dịch nào."
+    },
+    "gatewayFunding.transactionHash": {
+      "source": "Transaction hash from your wallet",
+      "text": "Mã băm giao dịch từ ví của bạn"
+    },
+    "gatewayFunding.checkOriginal": {
+      "source": "Check original transaction",
+      "text": "Kiểm tra giao dịch gốc"
+    },
+    "gatewayFunding.replacementNotice": {
+      "source": "If your wallet sped up or cancelled this transaction, enter the replacement hash. This check sends no transaction and requires finalized evidence from the configured RPC.",
+      "text": "Nếu ví đã tăng tốc hoặc hủy giao dịch này, nhập mã băm thay thế. Kiểm tra này không gửi giao dịch và yêu cầu bằng chứng đạt tính chung cuộc từ RPC được cấu hình."
+    },
+    "gatewayFunding.checkReplacement": {
+      "source": "Check replacement transaction",
+      "text": "Kiểm tra giao dịch thay thế"
+    },
+    "gatewayFunding.viewNetworkTransaction": {
+      "source": "View original network transaction",
+      "text": "Xem giao dịch gốc trên mạng"
+    },
+    "gatewayFunding.planCancelled": {
+      "source": "Local funding plan cancelled. Any confirmed token approval remains on chain.",
+      "text": "Đã hủy kế hoạch nạp cục bộ. Mọi chấp thuận token đã xác nhận vẫn còn trên chuỗi."
+    },
+    "gatewayFunding.cancelPlan": {
+      "source": "Cancel unsubmitted deposit plan",
+      "text": "Hủy kế hoạch nạp chưa gửi"
+    },
+    "gatewayFunding.refreshStatus": {
+      "source": "Refresh funding status",
+      "text": "Làm mới trạng thái nạp tiền"
+    },
+    "gatewayFunding.savedDepositNotice": {
+      "source": "A saved deposit is confirmed on chain. Check the current Gateway balance before buying; previous deposits may already have been spent.",
+      "text": "Một khoản nạp đã lưu được xác nhận trên chuỗi. Kiểm tra số dư Gateway hiện tại trước khi mua; khoản nạp trước có thể đã được chi."
+    },
+    "gatewayFunding.checkApproval": {
+      "source": "Check the exact approval amount and gas in your wallet.",
+      "text": "Kiểm tra số tiền chấp thuận chính xác và gas trong ví."
+    },
+    "gatewayFunding.checkDeposit": {
+      "source": "Check the exact deposit amount and gas in your wallet.",
+      "text": "Kiểm tra số tiền nạp chính xác và gas trong ví."
+    },
+    "gatewayFunding.priceUnknownBalance": {
+      "source": "Price: {price} USDC · Gateway available: unavailable or not checked",
+      "text": "Giá: {price} USDC · Gateway khả dụng: không có thông tin hoặc chưa kiểm tra"
+    },
+    "gatewayFunding.priceBalance": {
+      "source": "Price: {price} USDC · Gateway available: {balance} USDC",
+      "text": "Giá: {price} USDC · Gateway khả dụng: {balance} USDC"
+    },
+    "gatewayFunding.insufficient": {
+      "source": "Gateway funds are below this price. Check any existing transaction before preparing another deposit. Wallet USDC and gas are separate from Gateway credit.",
+      "text": "Tiền trong Gateway thấp hơn giá này. Kiểm tra mọi giao dịch hiện có trước khi chuẩn bị nạp lần nữa. USDC và gas trong ví tách biệt với khoản ghi có Gateway."
+    },
+    "gatewayFunding.insufficientAfterDeposit": {
+      "source": "Gateway funds are below this price. The latest deposit is confirmed on chain, but current Gateway credit is still below the price; it may already have been spent or credit may not yet be visible. Check any existing transaction before preparing another deposit. Wallet USDC and gas are separate from Gateway credit.",
+      "text": "Tiền trong Gateway thấp hơn giá này. Khoản nạp mới nhất đã được xác nhận trên chuỗi, nhưng khoản ghi có Gateway hiện tại vẫn thấp hơn giá; tiền có thể đã được chi hoặc khoản ghi có chưa hiển thị. Kiểm tra mọi giao dịch hiện có trước khi chuẩn bị nạp lần nữa. USDC và gas trong ví tách biệt với khoản ghi có Gateway."
+    },
+    "gatewayFunding.gateway": {
+      "source": "{network} Gateway: {gateway}",
+      "text": "Gateway {network}: {gateway}"
+    },
+    "gatewayFunding.amount": {
+      "source": "Deposit amount ({network} USDC)",
+      "text": "Số tiền nạp (USDC {network})"
+    },
+    "gatewayFunding.testnetGasNotice": {
+      "source": "Up to 1 testnet USDC per deposit. Leave wallet USDC for gas. Browser storage can be lost; wallet activity remains the source for transaction hashes.",
+      "text": "Tối đa 1 USDC testnet mỗi lần nạp. Để lại USDC trong ví cho gas. Bộ nhớ trình duyệt có thể bị mất; hoạt động ví vẫn là nguồn lấy mã băm giao dịch."
+    },
+    "gatewayFunding.mainnetGasNotice": {
+      "source": "Review your chosen mainnet amount before funding. Leave wallet USDC for gas. Browser storage can be lost; wallet activity remains the source for transaction hashes.",
+      "text": "Xem xét số tiền mainnet đã chọn trước khi nạp. Để lại USDC trong ví cho gas. Bộ nhớ trình duyệt có thể bị mất; hoạt động ví vẫn là nguồn lấy mã băm giao dịch."
+    },
+    "gatewayFunding.plannedDeposit": {
+      "source": "Planned deposit: {amount} USDC",
+      "text": "Khoản nạp dự kiến: {amount} USDC"
+    },
+    "gatewayFunding.history.cancelled": {
+      "source": "{amount} USDC · plan cancelled",
+      "text": "{amount} USDC · đã hủy kế hoạch"
+    },
+    "gatewayFunding.history.confirmed": {
+      "source": "{amount} USDC · deposit confirmed",
+      "text": "{amount} USDC · đã xác nhận nạp"
+    },
+    "gatewayFunding.history.replaced": {
+      "source": "{amount} USDC · original replaced by a different call; deposit not confirmed",
+      "text": "{amount} USDC · giao dịch gốc bị thay bằng lệnh gọi khác; chưa xác nhận nạp"
+    },
+    "gatewayFunding.history.reverted": {
+      "source": "{amount} USDC · transaction reverted",
+      "text": "{amount} USDC · giao dịch bị hoàn tác"
+    },
+    "budgetGrant.preparing": {
+      "source": "Preparing your research budget…",
+      "text": "Đang chuẩn bị ngân sách nghiên cứu của bạn…"
+    },
+    "budgetGrant.reviewApproval": {
+      "source": "Review the USDC approval in your wallet…",
+      "text": "Xem xét chấp thuận USDC trong ví của bạn…"
+    },
+    "budgetGrant.reviewDeposit": {
+      "source": "Review the USDC deposit in your wallet…",
+      "text": "Xem xét khoản nạp USDC trong ví của bạn…"
+    },
+    "budgetGrant.checkingCredit": {
+      "source": "Checking your deposit with Circle Gateway…",
+      "text": "Đang kiểm tra khoản nạp với Circle Gateway…"
+    },
+    "budgetGrant.confirmBudget": {
+      "source": "Confirm your research budget in your wallet…",
+      "text": "Xác nhận ngân sách nghiên cứu trong ví của bạn…"
+    },
+    "budgetGrant.recoveringBudget": {
+      "source": "Recovering your saved budget…",
+      "text": "Đang khôi phục ngân sách đã lưu của bạn…"
+    },
+    "budgetGrant.restoring": {
+      "source": "Restoring saved session in this browser…",
+      "text": "Đang khôi phục phiên đã lưu trong trình duyệt này…"
+    },
+    "budgetGrant.stopping": {
+      "source": "Stopping research spending…",
+      "text": "Đang dừng chi tiêu nghiên cứu…"
+    },
+    "budgetGrant.confirmingNotice": {
+      "source": "Your deposit is confirmed on-chain. We are checking available Gateway credit. Keep this browser's saved data; recovery checks the original deposit. Confirm the budget when the credit is available.",
+      "text": "Khoản nạp của bạn đã được xác nhận trên chuỗi. Chúng tôi đang kiểm tra khoản ghi có Gateway khả dụng. Giữ dữ liệu đã lưu của trình duyệt này; việc khôi phục kiểm tra khoản nạp gốc. Xác nhận ngân sách khi khoản ghi có khả dụng."
+    },
+    "budgetGrant.mainnetIntroduction": {
+      "source": "Set a budget once and use it across conversations until it expires or runs out. The agent pays for sources within your limits without asking you to sign each payment.",
+      "text": "Đặt ngân sách một lần và dùng qua nhiều cuộc trò chuyện đến khi hết hạn hoặc hết tiền. Tác nhân trả tiền cho nguồn trong giới hạn của bạn mà không yêu cầu bạn ký từng khoản thanh toán."
+    },
+    "budgetGrant.testnetIntroduction": {
+      "source": "Fund a browser-held session with USDC. The agent pays for sources within your budget.",
+      "text": "Nạp USDC vào phiên được giữ trong trình duyệt. Tác nhân trả tiền cho nguồn trong ngân sách của bạn."
+    },
+    "budgetGrant.continue": {
+      "source": "Continue with saved budget",
+      "text": "Tiếp tục với ngân sách đã lưu"
+    },
+    "budgetGrant.recoveryFailed": {
+      "source": "Recovery did not complete. Keep your saved browser data and retry when your wallet and Gateway are available.",
+      "text": "Khôi phục chưa hoàn tất. Giữ dữ liệu trình duyệt đã lưu và thử lại khi ví cùng Gateway khả dụng."
+    },
+    "budgetGrant.questionCapTooHigh": {
+      "source": "The per-question maximum must fit within the total budget.",
+      "text": "Mức tối đa mỗi câu hỏi phải nằm trong tổng ngân sách."
+    },
+    "budgetGrant.enable": {
+      "source": "Enable research budget",
+      "text": "Bật ngân sách nghiên cứu"
+    },
+    "budgetGrant.recoverSaved": {
+      "source": "Recover a saved budget",
+      "text": "Khôi phục ngân sách đã lưu"
+    },
+    "budgetGrant.recoverFunded": {
+      "source": "Recover funded session ▸",
+      "text": "Khôi phục phiên đã nạp tiền ▸"
+    },
+    "budgetGrant.mainnetFundingNotice": {
+      "source": "First-time funding needs wallet approval and a deposit, followed by budget confirmation. Reloading or opening another conversation keeps your limits. Native gas is extra. Logout retains your encrypted budget; clearing browser data or losing this device can lose access to its funds.",
+      "text": "Nạp lần đầu cần chấp thuận trong ví và một khoản nạp, sau đó xác nhận ngân sách. Tải lại hoặc mở cuộc trò chuyện khác vẫn giữ giới hạn của bạn. Gas gốc của mạng được tính thêm. Đăng xuất giữ lại ngân sách đã mã hóa; xóa dữ liệu trình duyệt hoặc mất thiết bị này có thể làm mất quyền truy cập tiền trong đó."
+    },
+    "budgetGrant.testnetFundingNotice": {
+      "source": "Fund your session and confirm its allowance. Existing testnet recovery remains available.",
+      "text": "Nạp tiền cho phiên và xác nhận hạn mức được phép của phiên. Khôi phục testnet hiện có vẫn khả dụng."
+    },
+    "budgetGrant.switchNetwork": {
+      "source": "Switch to {network} in your wallet…",
+      "text": "Chuyển sang {network} trong ví của bạn…"
+    },
+    "budgetGrant.savedMainnet": {
+      "source": "Your funded budget is saved in this browser. Reuse it to continue. Renewal keeps the existing total ceiling and previously used or pending amounts.",
+      "text": "Ngân sách đã nạp tiền của bạn được lưu trong trình duyệt này. Dùng lại để tiếp tục. Gia hạn giữ nguyên trần tổng hiện có và các khoản đã dùng hoặc đang chờ xử lý."
+    },
+    "budgetGrant.savedTestnet": {
+      "source": "Your funded budget is saved in this browser. Reuse it to continue.",
+      "text": "Ngân sách đã nạp tiền của bạn được lưu trong trình duyệt này. Dùng lại để tiếp tục."
+    },
+    "budgetGrant.newAllowance": {
+      "source": "New budget allowance (USDC)",
+      "text": "Hạn mức ngân sách mới được phép (USDC)"
+    },
+    "budgetGrant.consent": {
+      "source": "Available to authorize: {amount} USDC. Previously used or pending amounts remain counted.",
+      "text": "Có thể cho phép: {amount} USDC. Các khoản đã dùng hoặc đang chờ xử lý trước đó vẫn được tính."
+    },
+    "budgetGrant.consentCap": {
+      "source": "Available to authorize: {amount} USDC. Maximum per question: {cap} USDC. Previously used or pending amounts remain counted.",
+      "text": "Có thể cho phép: {amount} USDC. Tối đa mỗi câu hỏi: {cap} USDC. Các khoản đã dùng hoặc đang chờ xử lý trước đó vẫn được tính."
+    },
+    "budgetGrant.duration.one": {
+      "source": "Duration: {count} hours.",
+      "text": "Thời hạn: {count} giờ."
+    },
+    "budgetGrant.duration.other": {
+      "source": "Duration: {count} hours.",
+      "text": "Thời hạn: {count} giờ."
+    },
+    "budgetGrant.consentDuration": {
+      "source": "Available to authorize: {amount} USDC. {duration} Previously used or pending amounts remain counted.",
+      "text": "Có thể cho phép: {amount} USDC. {duration} Các khoản đã dùng hoặc đang chờ xử lý trước đó vẫn được tính."
+    },
+    "budgetGrant.consentCapDuration": {
+      "source": "Available to authorize: {amount} USDC. Maximum per question: {cap} USDC. {duration} Previously used or pending amounts remain counted.",
+      "text": "Có thể cho phép: {amount} USDC. Tối đa mỗi câu hỏi: {cap} USDC. {duration} Các khoản đã dùng hoặc đang chờ xử lý trước đó vẫn được tính."
+    },
+    "walletFunding.label": {
+      "source": "Creator wallet funding",
+      "text": "Nạp tiền cho ví tác giả"
+    },
+    "walletFunding.checking": {
+      "source": "Checking wallet balance…",
+      "text": "Đang kiểm tra số dư ví…"
+    },
+    "walletFunding.refresh": {
+      "source": "Refresh wallet balance",
+      "text": "Làm mới số dư ví"
+    },
+    "walletFunding.networkError": {
+      "source": "Network error — try the Circle faucet instead.",
+      "text": "Lỗi mạng — hãy thử vòi cấp token Circle."
+    },
+    "walletFunding.testnetNotice": {
+      "source": "One claim per address · Arc Testnet only · covers gas + a session grant",
+      "text": "Mỗi địa chỉ được nhận một lần · chỉ Arc Testnet · đủ cho gas + một quyền chi tiêu phiên"
+    },
+    "walletFunding.title": {
+      "source": "{network} wallet funding",
+      "text": "Nạp tiền cho ví {network}"
+    },
+    "walletFunding.introduction": {
+      "source": "Fund your connected wallet with real USDC on {network} before registering. Leave USDC in the wallet for native gas; Gateway credit cannot pay wallet transaction gas.",
+      "text": "Nạp USDC thật vào ví đã kết nối trên {network} trước khi đăng ký. Để lại USDC trong ví cho gas gốc của mạng; khoản ghi có Gateway không thể trả gas giao dịch ví."
+    },
+    "walletFunding.balance": {
+      "source": "Wallet USDC: {balance}",
+      "text": "USDC trong ví: {balance}"
+    },
+    "walletFunding.networkNotice": {
+      "source": "Select {network} in your wallet. Each registration needs your wallet confirmation and costs gas.",
+      "text": "Chọn {network} trong ví của bạn. Mỗi lần đăng ký cần xác nhận trong ví và tốn gas."
+    },
+    "walletFunding.importManually": {
+      "source": "(import USDC manually: {address}…)",
+      "text": "(nhập USDC thủ công: {address}…)"
+    },
+    "privateCheckout.signIn": {
+      "source": "Sign in to buy private research",
+      "text": "Đăng nhập để mua nghiên cứu riêng tư"
+    },
+    "privateCheckout.localRecoveryUnavailable": {
+      "source": "Local private recovery is unavailable. Check browser storage before buying.",
+      "text": "Khôi phục riêng tư cục bộ không khả dụng. Kiểm tra bộ nhớ trình duyệt trước khi mua."
+    },
+    "privateCheckout.fundingUpdated": {
+      "source": "Funding updated. Your Gateway balance will be checked again before signing.",
+      "text": "Đã cập nhật nạp tiền. Số dư Gateway của bạn sẽ được kiểm tra lại trước khi ký."
+    },
+    "privateCheckout.incomplete": {
+      "source": "This action did not finish. Keep your local job and recover it before starting another purchase. Check sign-in, wallet, quote and browser storage.",
+      "text": "Thao tác này chưa hoàn tất. Giữ tác vụ cục bộ và khôi phục trước khi bắt đầu giao dịch mua khác. Kiểm tra đăng nhập, ví, báo giá và bộ nhớ trình duyệt."
+    },
+    "privateCheckout.loadingTerms": {
+      "source": "Loading private terms…",
+      "text": "Đang tải điều khoản riêng tư…"
+    },
+    "privateCheckout.reviewTerms": {
+      "source": "Review the exact price and AI policy before buying.",
+      "text": "Xem xét giá chính xác và chính sách AI trước khi mua."
+    },
+    "privateCheckout.previewOnly": {
+      "source": "This account can preview terms, but private purchasing is currently unavailable.",
+      "text": "Tài khoản này có thể xem trước điều khoản, nhưng hiện chưa thể mua nghiên cứu riêng tư."
+    },
+    "privateCheckout.recovered": {
+      "source": "Private job recovered. No new payment was sent.",
+      "text": "Đã khôi phục tác vụ riêng tư. Không gửi khoản thanh toán mới nào."
+    },
+    "privateCheckout.unsignedReservation": {
+      "source": "No saved signature is available for this reservation. Keep it and check account history before starting another purchase.",
+      "text": "Không có chữ ký đã lưu cho lượt giữ chỗ này. Giữ lại và kiểm tra lịch sử tài khoản trước khi bắt đầu giao dịch mua khác."
+    },
+    "privateCheckout.noResult": {
+      "source": "The server has no result available for this account yet. This does not prove that a payment failed. Recover the same job later.",
+      "text": "Máy chủ chưa có kết quả cho tài khoản này. Điều đó không chứng minh thanh toán thất bại. Khôi phục cùng tác vụ sau."
+    },
+    "privateCheckout.checkingTerms": {
+      "source": "Checking the reviewed terms and wallet…",
+      "text": "Đang kiểm tra điều khoản đã xem xét và ví…"
+    },
+    "privateCheckout.recoverySaved": {
+      "source": "Recovery saved. Check the exact payee and amount in your wallet before signing.",
+      "text": "Đã lưu dữ liệu khôi phục. Kiểm tra bên nhận và số tiền chính xác trong ví trước khi ký."
+    },
+    "privateCheckout.responseReceived": {
+      "source": "Purchase response received. Reading your private job…",
+      "text": "Đã nhận phản hồi mua. Đang đọc tác vụ riêng tư của bạn…"
+    },
+    "privateCheckout.submissionIncomplete": {
+      "source": "Submission may be incomplete. Recovering the same job without another payment…",
+      "text": "Việc gửi có thể chưa hoàn tất. Đang khôi phục cùng tác vụ mà không thanh toán thêm…"
+    },
+    "privateCheckout.readingJob": {
+      "source": "Reading the original private job…",
+      "text": "Đang đọc tác vụ riêng tư gốc…"
+    },
+    "privateCheckout.imported": {
+      "source": "Private recovery imported. Choose Recover to read the original job; importing never sends payment.",
+      "text": "Đã nhập dữ liệu khôi phục riêng tư. Chọn Khôi phục để đọc tác vụ gốc; nhập dữ liệu không bao giờ gửi thanh toán."
+    },
+    "privateCheckout.deleted": {
+      "source": "Local private data deleted. This does not cancel payment or delete the server result. Account history remains available.",
+      "text": "Đã xóa dữ liệu riêng tư cục bộ. Việc này không hủy thanh toán hay xóa kết quả trên máy chủ. Lịch sử tài khoản vẫn có sẵn."
+    },
+    "privateCheckout.question": {
+      "source": "Private research question",
+      "text": "Câu hỏi nghiên cứu riêng tư"
+    },
+    "privateCheckout.creatorCap": {
+      "source": "Private creator cap (USDC)",
+      "text": "Hạn mức cho tác giả của nghiên cứu riêng tư (USDC)"
+    },
+    "privateCheckout.priceLimits": {
+      "source": "Maximum total must exceed the creator cap and be at most 1 USDC. The difference is your maximum service fee.",
+      "text": "Tổng tối đa phải lớn hơn hạn mức cho tác giả và không vượt 1 USDC. Phần chênh lệch là phí dịch vụ tối đa của bạn."
+    },
+    "privateCheckout.fixedPriceNotice": {
+      "source": "Fixed-price, best-effort research. Unused creator budget is retained, not refunded. A completed job may have insufficient evidence.",
+      "text": "Nghiên cứu giá cố định, theo nỗ lực tốt nhất. Ngân sách cho tác giả chưa dùng được giữ lại, không hoàn trả. Tác vụ hoàn tất vẫn có thể thiếu bằng chứng."
+    },
+    "privateCheckout.consent": {
+      "source": "I accept these terms and storing this private question and payment signature in plaintext in this browser. Exported recovery files also contain them.",
+      "text": "Tôi chấp nhận các điều khoản này và việc lưu câu hỏi riêng tư cùng chữ ký thanh toán dưới dạng văn bản thuần trong trình duyệt này. Tệp khôi phục xuất ra cũng chứa những dữ liệu đó."
+    },
+    "privateCheckout.recoverPurchase": {
+      "source": "Recover private purchase",
+      "text": "Khôi phục giao dịch mua riêng tư"
+    },
+    "privateCheckout.newPurchaseNotice": {
+      "source": "Review a new purchase explicitly. Your previous private job remains in local recovery and account history.",
+      "text": "Chủ động xem xét giao dịch mua mới. Tác vụ riêng tư trước đó vẫn nằm trong dữ liệu khôi phục cục bộ và lịch sử tài khoản."
+    },
+    "privateCheckout.recoveryTitle": {
+      "source": "Local private recovery",
+      "text": "Khôi phục riêng tư cục bộ"
+    },
+    "privateCheckout.recoveryNotice": {
+      "source": "These entries stay in this browser. Export only to private storage: recovery files contain the question and bearer payment signature. Import only a private Keryx recovery file for this paying account.",
+      "text": "Các mục này được giữ trong trình duyệt này. Chỉ xuất tới nơi lưu trữ riêng tư: tệp khôi phục chứa câu hỏi và chữ ký thanh toán trao quyền cho người nắm giữ. Chỉ nhập tệp khôi phục Keryx riêng tư cho tài khoản trả tiền này."
+    },
+    "privateCheckout.import": {
+      "source": "Import private recovery",
+      "text": "Nhập dữ liệu khôi phục riêng tư"
+    },
+    "privateCheckout.refresh": {
+      "source": "Refresh local private jobs",
+      "text": "Làm mới tác vụ riêng tư cục bộ"
+    },
+    "privateCheckout.signatureSaved": {
+      "source": "Signature saved; no submission recorded",
+      "text": "Đã lưu chữ ký; chưa ghi nhận gửi"
+    },
+    "privateCheckout.recoverSaved": {
+      "source": "Recover saved private job",
+      "text": "Khôi phục tác vụ riêng tư đã lưu"
+    },
+    "privateCheckout.export": {
+      "source": "Export private recovery",
+      "text": "Xuất dữ liệu khôi phục riêng tư"
+    },
+    "privateCheckout.delete": {
+      "source": "Delete local private data",
+      "text": "Xóa dữ liệu riêng tư cục bộ"
+    },
+    "privateCheckout.deleteLabel": {
+      "source": "Confirm local private deletion",
+      "text": "Xác nhận xóa dữ liệu riêng tư cục bộ"
+    },
+    "privateCheckout.deleteQuestion": {
+      "source": "Delete the question and signature saved in this browser? Export first if you need recovery on another device. A minimal account/job marker remains to prevent another submission. Importing your saved file later restores recovery only.",
+      "text": "Xóa câu hỏi và chữ ký đã lưu trong trình duyệt này? Hãy xuất trước nếu cần khôi phục trên thiết bị khác. Một dấu mốc tài khoản/tác vụ tối thiểu vẫn được giữ để ngăn gửi lần nữa. Nhập lại tệp đã lưu về sau chỉ khôi phục khả năng phục hồi."
+    },
+    "privateCheckout.deleteBoundary": {
+      "source": "This cannot cancel a signed or in-flight payment, refund funds, or delete server history, exports, backups or copies in other open tabs. It is not secure disk erasure. Close other tabs to clear their displayed copies.",
+      "text": "Thao tác này không thể hủy thanh toán đã ký hoặc đang gửi, hoàn tiền, hay xóa lịch sử máy chủ, tệp xuất, bản sao lưu hoặc bản sao trong tab khác đang mở. Đây không phải xóa an toàn dữ liệu trên đĩa. Đóng tab khác để xóa các bản sao đang hiển thị ở đó."
+    },
+    "privateCheckout.confirmDelete": {
+      "source": "Confirm delete local data",
+      "text": "Xác nhận xóa dữ liệu cục bộ"
+    },
+    "privateCheckout.loadMore": {
+      "source": "Load more local private jobs",
+      "text": "Tải thêm tác vụ riêng tư cục bộ"
+    },
+    "privateCheckout.privacy": {
+      "source": "{network} private research. Only the paying account can open the result. Keryx and the disclosed AI provider process your question; this is not end-to-end encryption.",
+      "text": "Nghiên cứu riêng tư trên {network}. Chỉ tài khoản trả tiền có thể mở kết quả. Keryx và nhà cung cấp AI đã công bố xử lý câu hỏi của bạn; đây không phải mã hóa đầu cuối."
+    },
+    "privateCheckout.payer": {
+      "source": "Paying account: {payer}",
+      "text": "Tài khoản trả tiền: {payer}"
+    },
+    "privateCheckout.walletConnected": {
+      "source": "Wallet connected. Use the signed-in paying account on {network}.",
+      "text": "Đã kết nối ví. Dùng tài khoản trả tiền đã đăng nhập trên {network}."
+    },
+    "privateCheckout.connectPayer": {
+      "source": "Connect this paying account on {network} to buy. Recovery only needs account sign-in.",
+      "text": "Kết nối tài khoản trả tiền này trên {network} để mua. Khôi phục chỉ cần đăng nhập tài khoản."
+    },
+    "privateCheckout.switchInstruction": {
+      "source": "Switch to {network} in your wallet.",
+      "text": "Chuyển sang {network} trong ví của bạn."
+    },
+    "privateCheckout.total": {
+      "source": "Private total: {amount}",
+      "text": "Tổng giá riêng tư: {amount}"
+    },
+    "privateCheckout.pricing": {
+      "source": "Creator cap: {cap} · Service fee: {fee}",
+      "text": "Hạn mức cho tác giả: {cap} · Phí dịch vụ: {fee}"
+    },
+    "privateCheckout.payee": {
+      "source": "Private payee: {payee}",
+      "text": "Bên nhận của nghiên cứu riêng tư: {payee}"
+    },
+    "privateCheckout.aiPolicy": {
+      "source": "AI provider: {provider} · Model: {model}{lineBreak}Endpoint: {endpoint}{lineBreak}Fallback: local heuristic. Redirects are prohibited.",
+      "text": "Nhà cung cấp AI: {provider} · Mô hình: {model}{lineBreak}Điểm cuối: {endpoint}{lineBreak}Dự phòng: suy luận theo quy tắc cục bộ. Cấm chuyển hướng."
+    },
+    "monthlyResearch.storageUnavailable": {
+      "source": "Recovery storage unavailable",
+      "text": "Bộ nhớ khôi phục không khả dụng"
+    },
+    "monthlyResearch.connectPayer": {
+      "source": "Connect the plan payer",
+      "text": "Kết nối bên trả tiền cho gói"
+    },
+    "monthlyResearch.operationUncertain": {
+      "source": "Operation uncertain. Keep the original recovery identity.",
+      "text": "Thao tác chưa chắc chắn. Giữ định danh khôi phục gốc."
+    },
+    "monthlyResearch.consent": {
+      "source": "I accept these terms and this exact price. I will keep my recovery file and original request IDs.",
+      "text": "Tôi chấp nhận các điều khoản này và giá chính xác này. Tôi sẽ giữ tệp khôi phục và ID yêu cầu gốc."
+    },
+    "monthlyResearch.recoveryOnly": {
+      "source": "This purchase is recovery-only",
+      "text": "Giao dịch mua này chỉ cho phép khôi phục"
+    },
+    "monthlyResearch.acknowledged": {
+      "source": "Seller acknowledged the purchase. Check plan status to submit a request.",
+      "text": "Bên bán đã tiếp nhận giao dịch mua. Kiểm tra trạng thái gói để gửi yêu cầu."
+    },
+    "monthlyResearch.purchaseUncertain": {
+      "source": "Purchase is uncertain. Check this original plan ID later; do not buy another plan to recover it.",
+      "text": "Giao dịch mua chưa chắc chắn. Kiểm tra ID gói gốc này sau; đừng mua gói khác để khôi phục."
+    },
+    "monthlyResearch.downloadPurchase": {
+      "source": "Download purchase recovery",
+      "text": "Tải dữ liệu khôi phục giao dịch mua"
+    },
+    "monthlyResearch.importRequest": {
+      "source": "Import request recovery",
+      "text": "Nhập dữ liệu khôi phục yêu cầu"
+    },
+    "monthlyResearch.fileTooLarge": {
+      "source": "Recovery file is too large",
+      "text": "Tệp khôi phục quá lớn"
+    },
+    "monthlyResearch.connectRecoveryPayer": {
+      "source": "Connect the recovery request payer",
+      "text": "Kết nối bên trả tiền của yêu cầu khôi phục"
+    },
+    "monthlyResearch.restored": {
+      "source": "Original request restored. Connect its payer and recover the same request; no new payment was sent.",
+      "text": "Đã khôi phục yêu cầu gốc. Kết nối bên trả tiền của yêu cầu và khôi phục cùng yêu cầu đó; không gửi khoản thanh toán mới nào."
+    },
+    "monthlyResearch.statusRefreshed": {
+      "source": "Status refreshed. Checking status never submits a payment.",
+      "text": "Đã làm mới trạng thái. Kiểm tra trạng thái không bao giờ gửi thanh toán."
+    },
+    "monthlyResearch.savedPlanDisconnected": {
+      "source": "Your saved plan ID remains here. Connect its payer to check status. Existing job IDs below remain recoverable.",
+      "text": "ID gói đã lưu của bạn vẫn ở đây. Kết nối bên trả tiền của gói để kiểm tra trạng thái. Các ID tác vụ hiện có bên dưới vẫn có thể khôi phục."
+    },
+    "monthlyResearch.unresolvedPurchase": {
+      "source": "A submitted purchase remains unresolved. Check the original saved plan ID; a new purchase is disabled until its confirmed plan is recovered.",
+      "text": "Một giao dịch mua đã gửi vẫn chưa được giải quyết. Kiểm tra ID gói gốc đã lưu; mua mới bị vô hiệu hóa cho đến khi khôi phục được gói đã xác nhận của giao dịch đó."
+    },
+    "monthlyResearch.connectOriginalPayer": {
+      "source": "Connect the original plan payer",
+      "text": "Kết nối bên trả tiền cho gói gốc"
+    },
+    "monthlyResearch.requestAdmitted": {
+      "source": "Request admitted. Follow the original job below.",
+      "text": "Đã tiếp nhận yêu cầu. Theo dõi tác vụ gốc bên dưới."
+    },
+    "monthlyResearch.downloadRequest": {
+      "source": "Download request recovery",
+      "text": "Tải dữ liệu khôi phục yêu cầu"
+    },
+    "monthlyResearch.followingJob": {
+      "source": "Following the original job below.",
+      "text": "Đang theo dõi tác vụ gốc bên dưới."
+    },
+    "monthlyResearch.connectPayerNetwork": {
+      "source": "Connect the original plan payer on {network}",
+      "text": "Kết nối bên trả tiền cho gói gốc trên {network}"
+    },
+    "monthlyResearch.renewal": {
+      "source": "{network} · manual renewal",
+      "text": "{network} · gia hạn thủ công"
+    },
+    "monthlyResearch.introduction": {
+      "source": "Four Deep research requests over 30 days for {total} USDC, compared with {separateTotal} USDC separately. Each request keeps a {cap} USDC creator cap. The discount comes from Keryx’s service allocation.",
+      "text": "Bốn yêu cầu nghiên cứu Chuyên sâu trong 30 ngày với giá {total} USDC, so với {separateTotal} USDC khi mua riêng. Mỗi yêu cầu giữ hạn mức cho tác giả {cap} USDC. Khoản giảm giá đến từ phần phân bổ dịch vụ của Keryx."
+    },
+    "monthlyResearch.terms": {
+      "source": "10% off the four-request total, rounded up to equal micro-USDC allocations. Fixed, non-refundable and best effort. Failed or pending jobs use a slot; unused requests expire. No scheduled research, unlimited use or automatic renewal. Your questions use the existing public research service.",
+      "text": "Giảm 10% tổng giá bốn yêu cầu, làm tròn lên thành các phần phân bổ micro-USDC bằng nhau. Giá cố định, không hoàn lại và theo nỗ lực tốt nhất. Tác vụ thất bại hoặc đang chờ xử lý vẫn dùng một lượt; yêu cầu chưa dùng sẽ hết hạn. Không có nghiên cứu theo lịch, sử dụng không giới hạn hay tự động gia hạn. Câu hỏi của bạn dùng dịch vụ nghiên cứu công khai hiện có."
+    },
+    "monthlyResearch.roundedTerms": {
+      "source": "10% off the four-request total, rounded up to equal micro-USDC allocations ({rounding} micro-USDC rounding). Fixed, non-refundable and best effort. Failed or pending jobs use a slot; unused requests expire. No scheduled research, unlimited use or automatic renewal. Your questions use the existing public research service.",
+      "text": "Giảm 10% tổng giá bốn yêu cầu, làm tròn lên thành các phần phân bổ micro-USDC bằng nhau (làm tròn {rounding} micro-USDC). Giá cố định, không hoàn lại và theo nỗ lực tốt nhất. Tác vụ thất bại hoặc đang chờ xử lý vẫn dùng một lượt; yêu cầu chưa dùng sẽ hết hạn. Không có nghiên cứu theo lịch, sử dụng không giới hạn hay tự động gia hạn. Câu hỏi của bạn dùng dịch vụ nghiên cứu công khai hiện có."
+    },
+    "monthlyResearch.chooseNetwork": {
+      "source": "Choose {network} in your wallet.",
+      "text": "Chọn {network} trong ví của bạn."
+    },
+    "monthlyResearch.buy": {
+      "source": "Buy Monthly · {amount} USDC",
+      "text": "Mua gói tháng · {amount} USDC"
+    },
+    "monthlyResearch.expired.one": {
+      "source": "{count} requests remaining · Expired",
+      "text": "Còn {count} yêu cầu · Đã hết hạn"
+    },
+    "monthlyResearch.expires.one": {
+      "source": "{count} requests remaining · Expires {expiresAt}",
+      "text": "Còn {count} yêu cầu · Hết hạn {expiresAt}"
+    },
+    "monthlyResearch.expired.other": {
+      "source": "{count} requests remaining · Expired",
+      "text": "Còn {count} yêu cầu · Đã hết hạn"
+    },
+    "monthlyResearch.expires.other": {
+      "source": "{count} requests remaining · Expires {expiresAt}",
+      "text": "Còn {count} yêu cầu · Hết hạn {expiresAt}"
+    },
+    "monthlyResearch.retainedRequest": {
+      "source": "Retained request {requestId}. Recover this exact question and request ID after a disconnect; it cannot consume another slot.",
+      "text": "Đã giữ yêu cầu {requestId}. Khôi phục chính xác câu hỏi và ID yêu cầu này sau khi mất kết nối; việc đó không thể dùng thêm một lượt."
+    },
+    "researchRequest.placeholder": {
+      "source": "What should your agent research?",
+      "text": "Tác nhân của bạn nên nghiên cứu điều gì?"
+    },
+    "researchRequest.ownAgent": {
+      "source": "Use your own agent or CLI",
+      "text": "Dùng tác nhân hoặc CLI của riêng bạn"
+    },
+    "researchRequest.copied": {
+      "source": "Request copied. No payment was made.",
+      "text": "Đã sao chép yêu cầu. Không thực hiện thanh toán."
+    },
+    "researchRequest.copyUnavailable": {
+      "source": "Copy unavailable. Select the JSON above to copy it.",
+      "text": "Không thể sao chép. Chọn JSON ở trên để sao chép."
+    },
+    "researchRequest.protocolNotice": {
+      "source": "Send this JSON to {endpoint} with your x402 client. Check the challenge against {amount} USDC, {network} and the expected Keryx payee before signing. Keep the returned job ID to open it below.",
+      "text": "Gửi JSON này tới {endpoint} bằng máy khách x402 của bạn. Đối chiếu yêu cầu thanh toán với {amount} USDC, {network} và bên nhận Keryx dự kiến trước khi ký. Giữ ID tác vụ trả về để mở tác vụ bên dưới."
+    },
+    "researchRequest.guideNotice": {
+      "source": "Use the {guideLink} to quote, pay from your own funded {network} wallet, and resume the same job after a disconnect.",
+      "text": "Dùng {guideLink} để lấy báo giá, thanh toán từ ví {network} đã nạp tiền của chính bạn và tiếp tục cùng tác vụ sau khi mất kết nối."
+    },
+    "paidResearch.pageDescription": {
+      "source": "Ask a research question, read a cited report, or prepare a paid agent research package.",
+      "text": "Đặt câu hỏi nghiên cứu, đọc báo cáo kèm trích dẫn hoặc chuẩn bị gói nghiên cứu trả phí cho tác nhân."
+    },
+    "paidResearch.title": {
+      "source": "Give your agent a research budget.",
+      "text": "Cấp ngân sách nghiên cứu cho tác nhân của bạn."
+    },
+    "paidResearch.introduction": {
+      "source": "Know the price before your agent pays. Follow the job, read its evidence, and see what reached creators.",
+      "text": "Biết giá trước khi tác nhân thanh toán. Theo dõi tác vụ, đọc bằng chứng và xem số tiền đã đến tác giả."
+    },
+    "paidResearch.recoveryNotice": {
+      "source": "Buy with a funded Gateway wallet, or prepare a request for your own agent. Keep a private recovery file to follow your job after a disconnect.",
+      "text": "Mua bằng ví Gateway đã nạp tiền, hoặc chuẩn bị yêu cầu cho tác nhân của riêng bạn. Giữ tệp khôi phục riêng tư để theo dõi tác vụ sau khi mất kết nối."
+    },
+    "paidResearch.priceTitle": {
+      "source": "1. Price your research",
+      "text": "1. Định giá nghiên cứu của bạn"
+    },
+    "paidResearch.terms": {
+      "source": "Fixed-price and non-refundable. Unused creator reserve stays in the package. Quality is best effort; the provisional target has no refund or service-credit remedy. The payment challenge at purchase is authoritative.",
+      "text": "Giá cố định và không hoàn lại. Khoản dự trữ cho tác giả chưa dùng vẫn nằm trong gói. Chất lượng theo nỗ lực tốt nhất; mục tiêu tạm thời không có biện pháp khắc phục bằng hoàn tiền hay tín dụng dịch vụ. Yêu cầu thanh toán tại thời điểm mua là căn cứ có thẩm quyền."
+    },
+    "paidResearch.apiReference": {
+      "source": "Read the API reference",
+      "text": "Đọc tài liệu tham chiếu API"
+    },
+    "paidResearch.kicker": {
+      "source": "Paid research · {network}",
+      "text": "Nghiên cứu trả phí · {network}"
+    },
+    "paidResearch.invalidPrice": {
+      "source": "Choose Quick or Deep and a cap between 0.000001 and {maximum} USDC, with at most six decimal places.",
+      "text": "Chọn Nhanh hoặc Chuyên sâu và hạn mức từ 0.000001 đến {maximum} USDC, với tối đa sáu chữ số thập phân."
+    },
+    "paidResearch.sources.one": {
+      "source": "Up to {count} sources considered for synthesis",
+      "text": "Xem xét tối đa {count} nguồn để tổng hợp"
+    },
+    "paidResearch.sources.other": {
+      "source": "Up to {count} sources considered for synthesis",
+      "text": "Xem xét tối đa {count} nguồn để tổng hợp"
+    },
+    "paidResearch.rounds.one": {
+      "source": "{count} re-evaluation rounds",
+      "text": "{count} vòng đánh giá lại"
+    },
+    "paidResearch.rounds.other": {
+      "source": "{count} re-evaluation rounds",
+      "text": "{count} vòng đánh giá lại"
+    },
+    "paidResearch.target": {
+      "source": "{seconds}s provisional completion target.",
+      "text": "Mục tiêu hoàn tất tạm thời {seconds}s."
+    },
+    "paidResearch.paymentIdentity": {
+      "source": "Payment network: {network}{lineBreak}Keryx payee: {payee}",
+      "text": "Mạng thanh toán: {network}{lineBreak}Bên nhận Keryx: {payee}"
+    },
+    "paidResearch.unavailable": {
+      "source": "Paid research on {network} is currently unavailable. Job lookup remains available below.",
+      "text": "Nghiên cứu trả phí trên {network} hiện không khả dụng. Tra cứu tác vụ vẫn có sẵn bên dưới."
+    },
+    "paidResearch.apiHelp": {
+      "source": "New to the API? {referenceLink}. To try a sponsored question, {playgroundLink}.",
+      "text": "Mới dùng API? {referenceLink}. Để thử câu hỏi được tài trợ, {playgroundLink}."
+    },
+    "researchEvidence.title": {
+      "source": "Inspect the evidence before paying",
+      "text": "Kiểm tra bằng chứng trước khi trả tiền"
+    },
+    "researchEvidence.introduction": {
+      "source": "Browse listed creator sources and their public previews to judge whether this corpus fits your question. This does not select sources for your job or guarantee a supported answer.",
+      "text": "Duyệt nguồn tác giả được niêm yết và bản xem trước công khai để đánh giá tập tài liệu này có phù hợp với câu hỏi của bạn không. Việc này không chọn nguồn cho tác vụ hay bảo đảm câu trả lời có căn cứ."
+    },
+    "researchEvidence.registry": {
+      "source": "See the registry and free references",
+      "text": "Xem sổ đăng ký và tài liệu tham khảo miễn phí"
+    },
+    "researchEvidence.search": {
+      "source": "Search loaded source names, descriptions and tags",
+      "text": "Tìm theo tên, mô tả và thẻ của nguồn đã tải"
+    },
+    "researchEvidence.listNotAvailable": {
+      "source": "Source list not yet available.",
+      "text": "Danh sách nguồn chưa có sẵn."
+    },
+    "researchEvidence.chooseSource": {
+      "source": "Choose a source to inspect",
+      "text": "Chọn nguồn để kiểm tra"
+    },
+    "researchEvidence.selectSource": {
+      "source": "Select a listed source",
+      "text": "Chọn một nguồn được niêm yết"
+    },
+    "researchEvidence.emptyList": {
+      "source": "No creator sources are currently listed. Free references may still be available in the registry.",
+      "text": "Hiện không có nguồn tác giả nào được niêm yết. Tài liệu tham khảo miễn phí có thể vẫn có trong sổ đăng ký."
+    },
+    "researchEvidence.noMatch": {
+      "source": "No match in loaded sources. This is not a verdict on whether Keryx can answer your question.",
+      "text": "Không có kết quả khớp trong nguồn đã tải. Điều này không kết luận Keryx có trả lời được câu hỏi của bạn hay không."
+    },
+    "researchEvidence.previewNotice": {
+      "source": "Select a source for up to five public article previews. Previews may be excerpts or titles only; they do not establish full-text availability or current payout eligibility.",
+      "text": "Chọn nguồn để xem tối đa năm bản xem trước bài viết công khai. Bản xem trước có thể chỉ là trích đoạn hoặc tiêu đề; không xác lập khả năng đọc toàn văn hay điều kiện nhận chi trả hiện tại."
+    },
+    "researchEvidence.syntheticSource": {
+      "source": "Synthetic demo content: illustrative only; excluded from factual production research.",
+      "text": "Nội dung trình diễn tổng hợp: chỉ để minh họa; bị loại khỏi nghiên cứu thực tế trong môi trường sản xuất."
+    },
+    "researchEvidence.unverifiedOwnership": {
+      "source": "Ownership unverified: this listing is excluded from the research agent's creator reading and payment path.",
+      "text": "Quyền sở hữu chưa xác minh: mục niêm yết này bị loại khỏi luồng đọc nội dung tác giả và thanh toán của tác nhân nghiên cứu."
+    },
+    "researchEvidence.listingFlags": {
+      "source": "Listing flags can include legacy defaults. An unflagged listing is not independent proof of ownership, live delivery or payout authority.",
+      "text": "Cờ niêm yết có thể chứa giá trị mặc định cũ. Mục không có cờ không phải bằng chứng độc lập về quyền sở hữu, khả năng cung cấp nội dung trực tiếp hay thẩm quyền nhận chi trả."
+    },
+    "researchEvidence.previewLoading": {
+      "source": "Loading public preview…",
+      "text": "Đang tải bản xem trước công khai…"
+    },
+    "researchEvidence.emptyPreview": {
+      "source": "No public article previews are available for this source.",
+      "text": "Không có bản xem trước bài viết công khai cho nguồn này."
+    },
+    "researchEvidence.syntheticArticle": {
+      "source": "Synthetic demo article ? illustrative only",
+      "text": "Bài viết trình diễn tổng hợp ? chỉ để minh họa"
+    },
+    "researchEvidence.register": {
+      "source": "List and verify your source",
+      "text": "Niêm yết và xác minh nguồn của bạn"
+    },
+    "researchEvidence.corpusNotice": {
+      "source": "Research uses registered creator content and free public feed references. It does not browse the whole web or buy external marketplace endpoints. {registryLink}.",
+      "text": "Nghiên cứu dùng nội dung tác giả đã đăng ký và tài liệu tham khảo miễn phí từ nguồn cấp công khai. Không duyệt toàn bộ web hay mua từ điểm cuối của chợ bên ngoài. {registryLink}."
+    },
+    "researchEvidence.loaded.one": {
+      "source": "{loaded} of {count} listed sources loaded. Search covers only these loaded sources.",
+      "text": "Đã tải {loaded} trên {count} nguồn được niêm yết. Tìm kiếm chỉ bao gồm các nguồn đã tải này."
+    },
+    "researchEvidence.loaded.other": {
+      "source": "{loaded} of {count} listed sources loaded. Search covers only these loaded sources.",
+      "text": "Đã tải {loaded} trên {count} nguồn được niêm yết. Tìm kiếm chỉ bao gồm các nguồn đã tải này."
+    },
+    "researchEvidence.listFailed": {
+      "source": "Source list could not be loaded. Its availability is unknown. {retryButton}",
+      "text": "Không thể tải danh sách nguồn. Chưa rõ tính khả dụng của danh sách. {retryButton}"
+    },
+    "researchEvidence.sourceOption.synthetic": {
+      "source": "{name} ? synthetic demo",
+      "text": "{name} ? trình diễn tổng hợp"
+    },
+    "researchEvidence.sourceOption.unverified": {
+      "source": "{name} — ownership unverified",
+      "text": "{name} — quyền sở hữu chưa xác minh"
+    },
+    "researchEvidence.sourceOption.syntheticUnverified": {
+      "source": "{name} ? synthetic demo — ownership unverified",
+      "text": "{name} ? trình diễn tổng hợp — quyền sở hữu chưa xác minh"
+    },
+    "researchEvidence.limit.one": {
+      "source": "This view is limited to {count} sources. Browse the full registry above.",
+      "text": "Chế độ xem này giới hạn ở {count} nguồn. Duyệt sổ đăng ký đầy đủ ở trên."
+    },
+    "researchEvidence.limit.other": {
+      "source": "This view is limited to {count} sources. Browse the full registry above.",
+      "text": "Chế độ xem này giới hạn ở {count} nguồn. Duyệt sổ đăng ký đầy đủ ở trên."
+    },
+    "researchEvidence.previewFailed": {
+      "source": "Public preview unavailable. No content availability has been established. {retryButton}",
+      "text": "Bản xem trước công khai không khả dụng. Chưa xác lập khả năng truy cập nội dung. {retryButton}"
+    },
+    "researchEvidence.titleOnly": {
+      "source": "Title-only public preview · not paid article content",
+      "text": "Bản xem trước công khai chỉ có tiêu đề · không phải nội dung bài viết trả phí"
+    },
+    "researchEvidence.summaries": {
+      "source": "Public preview summaries · not paid article content",
+      "text": "Tóm tắt xem trước công khai · không phải nội dung bài viết trả phí"
+    },
+    "researchEvidence.publisherDate": {
+      "source": "Publisher date: {date}",
+      "text": "Ngày từ nhà xuất bản: {date}"
+    },
+    "researchEvidence.registrationNotice": {
+      "source": "Own a useful feed? {registrationLink}. Listing does not guarantee that an agent will buy or cite it.",
+      "text": "Bạn sở hữu nguồn cấp hữu ích? {registrationLink}. Niêm yết không bảo đảm tác nhân sẽ mua hay trích dẫn nguồn đó."
+    }
+  }
+}

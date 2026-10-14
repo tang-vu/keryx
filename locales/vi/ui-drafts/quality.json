@@ -1,0 +1,340 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/quality.ts",
+  "sourceSha256": "a25a9cdc9e6c89d1d0e473613faae3efe70b492f5fe3130537296d868f6ed59d",
+  "entries": {
+    "metadataTitle": {
+      "source": "Dated answer quality scorecard",
+      "text": "Bảng đánh giá chất lượng câu trả lời theo ngày"
+    },
+    "metadataDescription": {
+      "source": "Frozen answer-quality diagnostics: eight failures, semantic and language judgments unjudged, historical allowance unknown. No release trend established.",
+      "text": "Chẩn đoán chất lượng câu trả lời đóng băng: tám lỗi, chưa đánh giá ngữ nghĩa và ngôn ngữ, hạn mức lịch sử chưa rõ. Chưa xác lập xu hướng bản phát hành."
+    },
+    "eyebrow": {
+      "source": "Retained evidence · issue #287",
+      "text": "Bằng chứng được lưu · issue #287"
+    },
+    "title": {
+      "source": "Answer quality, with its limits",
+      "text": "Chất lượng câu trả lời và giới hạn"
+    },
+    "introduction": {
+      "source": "The latest retained assessment contains eight cases and zero deterministic passes. Every semantic and language criterion remains UNJUDGED. The useful-answer rate is unavailable (null). These archives do not measure the current release or customer success.",
+      "text": "Đánh giá được lưu mới nhất có tám trường hợp, không có lượt đạt kiểm tra xác định. Mọi tiêu chí ngữ nghĩa và ngôn ngữ vẫn là UNJUDGED. Tỷ lệ câu trả lời hữu ích không khả dụng (null). Các bản lưu trữ này không đo bản phát hành hiện tại hay thành công của khách hàng."
+    },
+    "allowance": {
+      "source": "Historical model/search allowance and cost: UNKNOWN. No known allowance is inferred from the offline inspector's zero model, search, payment and database calls.",
+      "text": "Hạn mức và chi phí mô hình/tìm kiếm lịch sử: UNKNOWN. Không suy ra hạn mức đã biết từ việc trình kiểm tra ngoại tuyến không gọi mô hình, tìm kiếm, thanh toán hay cơ sở dữ liệu."
+    },
+    "trend": {
+      "source": "Release trend: NOT_COMPARABLE. The two-, six- and eight-case suites have different denominators. The corrected October 9 assessment reuses the original two captures. Regrading or expanding an archive is not a release improvement.",
+      "text": "Xu hướng phát hành: NOT_COMPARABLE. Bộ hai, sáu và tám trường hợp có mẫu số khác nhau. Đánh giá sửa ngày 9 tháng 10 dùng lại hai bản lưu ban đầu. Chấm lại hay mở rộng kho không phải cải thiện bản phát hành."
+    },
+    "rubricTitle": {
+      "source": "What the rubric measures",
+      "text": "Tiêu chí đo điều gì"
+    },
+    "rubric": {
+      "source": "Deterministic diagnostics check text presence, retained binding identity and any specified bullet, word or target-binding contracts. PASS on text or matching rows does not prove an answered question, factual completeness, entailment or source truth. Language and required facts have no qualified judge; sentence/qualitative format judgments remain unjudged where no deterministic contract exists.",
+      "text": "Chẩn đoán xác định kiểm tra sự hiện diện văn bản, danh tính ràng buộc được lưu và yêu cầu về gạch đầu dòng, từ hay ràng buộc mục tiêu được chỉ định. PASS cho văn bản hay hàng khớp không chứng minh câu hỏi đã được trả lời, thông tin đầy đủ, suy ra ngữ nghĩa hay nguồn đúng. Ngôn ngữ và thông tin bắt buộc chưa có người đánh giá đủ năng lực; câu và định dạng định tính vẫn chưa đánh giá nếu không có hợp đồng xác định."
+    },
+    "provenanceLimit": {
+      "source": "Recorded inspector commits and byte fingerprints describe the assessment source. Recorded answer commits and capture clocks describe the archives, not a clean build, present deployment or fresh release-candidate acceptance. The last two cases were captured October 10 from saved October 7 runs on app 0.27.18; the first six record app 0.27.44. Receipt clocks and digests identify retained projections, without independently verifying settlement.",
+      "text": "Commit trình kiểm tra và dấu vân tay byte ghi nhận mô tả nguồn đánh giá. Commit câu trả lời và thời điểm lưu mô tả kho, không phải bản dựng sạch, triển khai hiện tại hay chấp nhận ứng viên phát hành mới. Hai trường hợp cuối lưu ngày 10 tháng 10 từ lượt chạy ngày 7 tháng 10 trên app 0.27.18; sáu trường hợp đầu ghi app 0.27.44. Thời điểm và digest biên nhận định danh dữ liệu hiển thị được lưu, không xác minh quyết toán độc lập."
+    },
+    "privacy": {
+      "source": "Only reviewed case labels, kinds, requested languages, issue numbers, rubric statuses and artifact provenance are published here. Report links and question, answer, excerpt and identity text are excluded. Previously public reports do not establish consent for this page.",
+      "text": "Chỉ nhãn trường hợp, loại, ngôn ngữ yêu cầu, số issue, trạng thái tiêu chí và nguồn gốc tài nguyên đã xem xét được xuất bản tại đây. Không đưa liên kết báo cáo, câu hỏi, câu trả lời, trích đoạn hay văn bản danh tính. Báo cáo trước đây công khai không xác lập sự đồng ý cho trang này."
+    },
+    "history": {
+      "source": "Earlier frozen assessments",
+      "text": "Đánh giá đóng băng trước đó"
+    },
+    "assessment": {
+      "source": "Assessment completed (UTC)",
+      "text": "Đánh giá hoàn tất (UTC)"
+    },
+    "inspectorCommit": {
+      "source": "Recorded inspector commit",
+      "text": "Commit trình kiểm tra ghi nhận"
+    },
+    "inspectorHash": {
+      "source": "Inspector source fingerprint (SHA256)",
+      "text": "Dấu vân tay nguồn trình kiểm tra (SHA256)"
+    },
+    "artifactHash": {
+      "source": "Frozen assessment (SHA256)",
+      "text": "Đánh giá đóng băng (SHA256)"
+    },
+    "suiteHash": {
+      "source": "Suite definition (SHA256)",
+      "text": "Định nghĩa bộ đánh giá (SHA256)"
+    },
+    "corpusHash": {
+      "source": "Corpus (SHA256)",
+      "text": "Tập dữ liệu (SHA256)"
+    },
+    "captureHash": {
+      "source": "Capture fingerprint (SHA256)",
+      "text": "Dấu vân tay bản lưu (SHA256)"
+    },
+    "inventoryHash": {
+      "source": "Issue inventory (SHA256)",
+      "text": "Danh sách issue (SHA256)"
+    },
+    "coverageHash": {
+      "source": "Coverage registry (SHA256)",
+      "text": "Sổ phạm vi bao phủ (SHA256)"
+    },
+    "runtime": {
+      "source": "Recorded inspector runtime",
+      "text": "Runtime trình kiểm tra ghi nhận"
+    },
+    "totals": {
+      "source": "Sample and diagnostics",
+      "text": "Mẫu và chẩn đoán"
+    },
+    "sample": {
+      "source": "Cases",
+      "text": "Trường hợp"
+    },
+    "passes": {
+      "source": "Deterministic passes",
+      "text": "Lượt đạt kiểm tra xác định"
+    },
+    "failures": {
+      "source": "Deterministic failures",
+      "text": "Lượt không đạt kiểm tra xác định"
+    },
+    "passRate": {
+      "source": "Deterministic pass rate",
+      "text": "Tỷ lệ đạt kiểm tra xác định"
+    },
+    "usefulRate": {
+      "source": "Useful-answer rate",
+      "text": "Tỷ lệ câu trả lời hữu ích"
+    },
+    "unknownRate": {
+      "source": "Unavailable (null)",
+      "text": "Không khả dụng (null)"
+    },
+    "unjudged": {
+      "source": "UNJUDGED",
+      "text": "CHƯA ĐÁNH GIÁ"
+    },
+    "semantic": {
+      "source": "Required facts / semantics",
+      "text": "Thông tin bắt buộc / ngữ nghĩa"
+    },
+    "language": {
+      "source": "Language match",
+      "text": "Khớp ngôn ngữ"
+    },
+    "group": {
+      "source": "Declared group",
+      "text": "Nhóm được khai báo"
+    },
+    "byKind": {
+      "source": "By question kind",
+      "text": "Theo dạng câu hỏi"
+    },
+    "byLanguage": {
+      "source": "By requested language",
+      "text": "Theo ngôn ngữ yêu cầu"
+    },
+    "groupLimit": {
+      "source": "Requested language is recorded metadata, not detected or verified answer language. Empty groups retain a null diagnostic rate.",
+      "text": "Ngôn ngữ yêu cầu là siêu dữ liệu ghi nhận, không phải ngôn ngữ câu trả lời đã phát hiện hay xác minh. Nhóm trống giữ tỷ lệ chẩn đoán null."
+    },
+    "cases": {
+      "source": "Retained failing cases and rubric statuses",
+      "text": "Trường hợp không đạt và trạng thái tiêu chí được lưu"
+    },
+    "captured": {
+      "source": "Report artifact captured (UTC)",
+      "text": "Tài nguyên báo cáo lưu lúc (UTC)"
+    },
+    "recordedCommit": {
+      "source": "Recorded answer commit",
+      "text": "Commit câu trả lời ghi nhận"
+    },
+    "fixtureHash": {
+      "source": "Retained fixture (SHA256)",
+      "text": "Dữ liệu mẫu được lưu (SHA256)"
+    },
+    "rawHash": {
+      "source": "Report capture (SHA256)",
+      "text": "Bản lưu báo cáo (SHA256)"
+    },
+    "receiptCaptured": {
+      "source": "Receipt artifact captured (UTC)",
+      "text": "Tài nguyên biên nhận lưu lúc (UTC)"
+    },
+    "receiptHash": {
+      "source": "Receipt capture (SHA256)",
+      "text": "Bản lưu biên nhận (SHA256)"
+    },
+    "payloadHash": {
+      "source": "Receipt payload (SHA256)",
+      "text": "Nội dung biên nhận (SHA256)"
+    },
+    "failedChecks": {
+      "source": "Failing diagnostics",
+      "text": "Chẩn đoán không đạt"
+    },
+    "issues": {
+      "source": "Original public issues",
+      "text": "Issue công khai ban đầu"
+    },
+    "provenance": {
+      "source": "Artifact provenance",
+      "text": "Nguồn gốc tài nguyên"
+    },
+    "historicalCoverage": {
+      "source": "Historical coverage plan",
+      "text": "Kế hoạch bao phủ lịch sử"
+    },
+    "coverageDate": {
+      "source": "Issue inventory captured (UTC)",
+      "text": "Danh sách issue lưu lúc (UTC)"
+    },
+    "coverageLimit": {
+      "source": "This October 9 inventory and its selected mapping remain historical. They do not report today's open issues. An example does not satisfy an issue's full acceptance criteria. Complete open-failure coverage remains false, including planning and source-selection failures without completed reports.",
+      "text": "Danh sách ngày 9 tháng 10 và ánh xạ chọn vẫn là lịch sử. Không báo issue mở hôm nay. Một ví dụ không đáp ứng toàn bộ tiêu chí chấp nhận issue. Bao phủ đầy đủ lỗi mở vẫn false, kể cả lỗi lập kế hoạch và chọn nguồn không có báo cáo hoàn tất."
+    },
+    "requiredKinds": {
+      "source": "Planned kinds",
+      "text": "Loại dự kiến"
+    },
+    "retainedCases": {
+      "source": "Retained cases",
+      "text": "Trường hợp được lưu"
+    },
+    "missingKinds": {
+      "source": "Kinds without examples",
+      "text": "Loại chưa có ví dụ"
+    },
+    "none": {
+      "source": "None",
+      "text": "Không có"
+    },
+    "removals": {
+      "source": "Removal record: no removals recorded in these frozen assessments. New removals need a dated reason and previous-suite digest; they cannot silently improve a denominator.",
+      "text": "Hồ sơ loại bỏ: chưa ghi nhận việc loại bỏ trong các đánh giá đóng băng này. Loại bỏ mới cần lý do có ngày và digest bộ trước; không được âm thầm cải thiện mẫu số."
+    },
+    "gatesTitle": {
+      "source": "Work still required for issue #287",
+      "text": "Công việc còn cần cho issue #287"
+    },
+    "gates.0": {
+      "source": "Reviewed coverage of every open quality failure class, including planning and source selection.",
+      "text": "Bao phủ đã xem xét cho mọi nhóm lỗi chất lượng mở, kể cả lập kế hoạch và chọn nguồn."
+    },
+    "gates.1": {
+      "source": "Qualified semantic, language and qualitative-format judgments, with human spot checks and explicit consent where private questions are proposed.",
+      "text": "Đánh giá ngữ nghĩa, ngôn ngữ và định dạng định tính đủ năng lực, có người kiểm tra mẫu và đồng ý rõ ràng nếu đề xuất dùng câu hỏi riêng tư."
+    },
+    "gates.2": {
+      "source": "An agreed useful-answer regression margin and comparable release-candidate captures with their exact commit and bounded model/search allowance.",
+      "text": "Biên độ hồi quy câu trả lời hữu ích được thống nhất và bản lưu ứng viên phát hành so sánh được, kèm commit chính xác và hạn mức mô hình/tìm kiếm có giới hạn."
+    },
+    "gates.3": {
+      "source": "Actual source review, CI acceptance and coordinated delivery. This frozen page is not release acceptance.",
+      "text": "Xem xét nguồn thực tế, chấp nhận CI và cung cấp đồng bộ. Trang đóng băng này không phải chấp nhận phát hành."
+    },
+    "issueLink": {
+      "source": "Follow the original quality scorecard issue",
+      "text": "Theo dõi issue bảng chất lượng ban đầu"
+    },
+    "snapshots.oct10-eight": {
+      "source": "October 10 · final eight-case archive",
+      "text": "10 tháng 10 · kho tám trường hợp cuối"
+    },
+    "snapshots.oct10-six": {
+      "source": "October 10 · earlier six-case archive",
+      "text": "10 tháng 10 · kho sáu trường hợp trước"
+    },
+    "snapshots.oct9-corrected": {
+      "source": "October 9 · corrected inspector, same two-case archive",
+      "text": "9 tháng 10 · trình kiểm tra sửa, cùng kho hai trường hợp"
+    },
+    "snapshots.oct9-original": {
+      "source": "October 9 · original two-case archive",
+      "text": "9 tháng 10 · kho hai trường hợp ban đầu"
+    },
+    "kinds.single-page": {
+      "source": "Single page",
+      "text": "Một trang"
+    },
+    "kinds.exact-metadata": {
+      "source": "Exact metadata",
+      "text": "Siêu dữ liệu chính xác"
+    },
+    "kinds.comparison": {
+      "source": "Comparison",
+      "text": "So sánh"
+    },
+    "kinds.teaching-note": {
+      "source": "Teaching note",
+      "text": "Ghi chú giảng dạy"
+    },
+    "kinds.newest-release": {
+      "source": "Newest release",
+      "text": "Bản phát hành mới nhất"
+    },
+    "languages.de": {
+      "source": "German (de)",
+      "text": "Tiếng Đức (de)"
+    },
+    "languages.en": {
+      "source": "English (en)",
+      "text": "Tiếng Anh (en)"
+    },
+    "languages.es": {
+      "source": "Spanish (es)",
+      "text": "Tiếng Tây Ban Nha (es)"
+    },
+    "languages.pt-BR": {
+      "source": "Brazilian Portuguese (pt-BR)",
+      "text": "Tiếng Bồ Đào Nha Brazil (pt-BR)"
+    },
+    "languages.vi": {
+      "source": "Vietnamese (vi)",
+      "text": "Tiếng Việt (vi)"
+    },
+    "checks.nonemptyAnswer": {
+      "source": "Text presence",
+      "text": "Có văn bản"
+    },
+    "checks.retainedBindings": {
+      "source": "Retained binding identity",
+      "text": "Danh tính ràng buộc được lưu"
+    },
+    "checks.bulletCount": {
+      "source": "Bullet count",
+      "text": "Số gạch đầu dòng"
+    },
+    "checks.wordLimit": {
+      "source": "Whitespace word limit",
+      "text": "Giới hạn từ theo khoảng trắng"
+    },
+    "checks.language": {
+      "source": "Language match",
+      "text": "Khớp ngôn ngữ"
+    },
+    "checks.requiredFacts": {
+      "source": "Required facts",
+      "text": "Thông tin bắt buộc"
+    },
+    "checks.retainedTargetBindings": {
+      "source": "Retained target bindings",
+      "text": "Ràng buộc mục tiêu được lưu"
+    },
+    "checks.sentenceCount": {
+      "source": "Sentence count",
+      "text": "Số câu"
+    }
+  }
+}

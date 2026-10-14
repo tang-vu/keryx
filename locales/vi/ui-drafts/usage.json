@@ -1,0 +1,220 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/usage.ts",
+  "sourceSha256": "4b8c68f82787d6e99373f93f56512bff9f319f485aa86a9606c4b539809f047e",
+  "entries": {
+    "metadataTitle": {
+      "source": "Who uses Keryx — recorded usage",
+      "text": "Ai dùng Keryx — mức sử dụng ghi nhận"
+    },
+    "title": {
+      "source": "Who uses Keryx",
+      "text": "Ai sử dụng Keryx"
+    },
+    "introduction": {
+      "source": "Recorded activity by participant and funding evidence. Historical unknown activity is kept separate from outside use.",
+      "text": "Hoạt động ghi nhận theo người tham gia và bằng chứng nguồn tiền. Hoạt động lịch sử chưa rõ được giữ riêng với sử dụng bên ngoài."
+    },
+    "network": {
+      "source": "Network",
+      "text": "Mạng"
+    },
+    "period": {
+      "source": "Period",
+      "text": "Khoảng thời gian"
+    },
+    "since": {
+      "source": "Since (UTC date)",
+      "text": "Từ ngày (UTC)"
+    },
+    "apply": {
+      "source": "Show figures",
+      "text": "Hiển thị số liệu"
+    },
+    "all": {
+      "source": "All time",
+      "text": "Toàn bộ thời gian"
+    },
+    "week": {
+      "source": "Last 7 days",
+      "text": "7 ngày qua"
+    },
+    "month": {
+      "source": "Last 30 days",
+      "text": "30 ngày qua"
+    },
+    "windowEnd": {
+      "source": ") UTC",
+      "text": ") UTC"
+    },
+    "unavailable": {
+      "source": "A complete classified view is unavailable for this storage profile or period. Figures are withheld.",
+      "text": "Chế độ xem phân loại đầy đủ không khả dụng cho cấu hình lưu trữ hoặc khoảng thời gian này. Không hiển thị số liệu."
+    },
+    "invalid": {
+      "source": "Choose a valid network, period and UTC date.",
+      "text": "Chọn mạng, khoảng thời gian và ngày UTC hợp lệ."
+    },
+    "outside": {
+      "source": "Outside users",
+      "text": "Người dùng bên ngoài"
+    },
+    "team": {
+      "source": "Team",
+      "text": "Nhóm"
+    },
+    "scripted": {
+      "source": "Scripted tests",
+      "text": "Kiểm thử theo kịch bản"
+    },
+    "unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "figure": {
+      "source": "Figure",
+      "text": "Số liệu"
+    },
+    "rule": {
+      "source": "Counting rule",
+      "text": "Quy tắc tính"
+    },
+    "unmeasured": {
+      "source": "Unmeasured",
+      "text": "Chưa đo lường"
+    },
+    "history": {
+      "source": "Outside-only run history (JSON)",
+      "text": "Lịch sử lượt chạy chỉ từ bên ngoài (JSON)"
+    },
+    "json": {
+      "source": "Usage figures (JSON)",
+      "text": "Số liệu sử dụng (JSON)"
+    },
+    "actorLimit": {
+      "source": "Verified wallet actors are distinct recorded identities, not verified unique humans. Columns are not silently summed.",
+      "text": "Chủ thể ví đã xác minh là danh tính ghi nhận riêng biệt, không phải người duy nhất đã xác minh. Không ngầm cộng các cột."
+    },
+    "fundingLimit": {
+      "source": "Outside participant activity does not prove an outside payer. Independent, sponsored, team-funded and unknown funding are shown separately.",
+      "text": "Hoạt động của người tham gia bên ngoài không chứng minh bên trả tiền bên ngoài. Nguồn tiền độc lập, được tài trợ, từ nhóm và chưa rõ hiển thị riêng."
+    },
+    "mainnet": {
+      "source": "Arc mainnet",
+      "text": "Arc mainnet"
+    },
+    "testnet": {
+      "source": "Arc testnet",
+      "text": "Arc testnet"
+    },
+    "unattributed": {
+      "source": "Unattributed network runs",
+      "text": "Lượt chạy mạng chưa được quy thuộc"
+    },
+    "proofLink": {
+      "source": "See usage by participant and funding evidence.",
+      "text": "Xem sử dụng theo người tham gia và bằng chứng nguồn tiền."
+    },
+    "proofLimit": {
+      "source": "Mixed recorded activity is not independent outside-user traction.",
+      "text": "Hoạt động ghi nhận hỗn hợp không phải mức sử dụng thực tế của người dùng độc lập bên ngoài."
+    },
+    "rows.people.0": {
+      "source": "Verified actors",
+      "text": "Chủ thể đã xác minh"
+    },
+    "rows.people.1": {
+      "source": "Distinct recorded verified wallet actors; anonymous/unknown ownership omitted.",
+      "text": "Chủ thể ví đã xác minh ghi nhận riêng biệt; loại trừ chủ sở hữu ẩn danh hoặc chưa rõ."
+    },
+    "rows.runs.0": {
+      "source": "Research runs",
+      "text": "Lượt nghiên cứu"
+    },
+    "rows.runs.1": {
+      "source": "Completed recorded runs created in this network and UTC interval.",
+      "text": "Lượt chạy hoàn tất ghi nhận được tạo trên mạng này trong khoảng UTC."
+    },
+    "rows.paying.0": {
+      "source": "Runs with payments",
+      "text": "Lượt chạy có thanh toán"
+    },
+    "rows.paying.1": {
+      "source": "Runs with positive recorded settled rows and a settlement reference; not a payer-independence claim.",
+      "text": "Lượt chạy có hàng dương ghi nhận đã quyết toán và tham chiếu quyết toán; không khẳng định bên trả tiền độc lập."
+    },
+    "rows.independent.0": {
+      "source": "Independent paying runs",
+      "text": "Lượt chạy có bên trả tiền độc lập"
+    },
+    "rows.independent.1": {
+      "source": "Outside actor and independent funding evidence, plus qualifying recorded settlement.",
+      "text": "Chủ thể bên ngoài và bằng chứng nguồn tiền độc lập, cùng quyết toán ghi nhận đủ điều kiện."
+    },
+    "rows.sponsored.0": {
+      "source": "Sponsored paying runs",
+      "text": "Lượt chạy được tài trợ có thanh toán"
+    },
+    "rows.sponsored.1": {
+      "source": "Outside user, sponsored payment: outside actor and sponsored funding evidence, plus qualifying recorded settlement.",
+      "text": "Người dùng bên ngoài, thanh toán được tài trợ: chủ thể bên ngoài và bằng chứng nguồn tiền tài trợ, cùng quyết toán ghi nhận đủ điều kiện."
+    },
+    "rows.teamPaid.0": {
+      "source": "Team-funded paying runs",
+      "text": "Lượt chạy trả phí bằng tiền nhóm"
+    },
+    "rows.teamPaid.1": {
+      "source": "Recorded team/treasury funding; never an independent outside payer.",
+      "text": "Nguồn tiền nhóm hoặc ngân quỹ được ghi nhận; không bao giờ là bên trả tiền độc lập bên ngoài."
+    },
+    "rows.unknownPaid.0": {
+      "source": "Unknown-funding paying runs",
+      "text": "Lượt chạy trả phí chưa rõ nguồn tiền"
+    },
+    "rows.unknownPaid.1": {
+      "source": "Recorded settlement with incomplete funding evidence.",
+      "text": "Quyết toán ghi nhận với bằng chứng nguồn tiền chưa đầy đủ."
+    },
+    "rows.payments.0": {
+      "source": "Settled payments",
+      "text": "Thanh toán đã quyết toán"
+    },
+    "rows.payments.1": {
+      "source": "Unique positive recorded settled payment IDs with settlement reference; no new chain verification.",
+      "text": "ID thanh toán dương duy nhất ghi nhận đã quyết toán kèm tham chiếu quyết toán; không có xác minh chuỗi mới."
+    },
+    "rows.usdc.0": {
+      "source": "USDC paid",
+      "text": "USDC đã trả"
+    },
+    "rows.usdc.1": {
+      "source": "Exact sum of admissible integer micro-USDC; pending, simulated and unproved rows excluded.",
+      "text": "Tổng chính xác micro-USDC nguyên đủ điều kiện; loại trừ hàng đang chờ, mô phỏng và chưa chứng minh."
+    },
+    "rows.creators.0": {
+      "source": "Creators paid",
+      "text": "Tác giả được trả tiền"
+    },
+    "rows.creators.1": {
+      "source": "Distinct fetch/citation payees in qualifying recorded payment rows.",
+      "text": "Bên nhận phí truy cập hoặc trích dẫn riêng biệt trong hàng thanh toán ghi nhận đủ điều kiện."
+    },
+    "rows.accepted.0": {
+      "source": "Deliverables accepted",
+      "text": "Sản phẩm đã được chấp nhận"
+    },
+    "rows.accepted.1": {
+      "source": "Unmeasured: not inferred from answer completion or feedback.",
+      "text": "Chưa đo lường: không suy ra từ việc hoàn tất câu trả lời hay phản hồi."
+    },
+    "rows.latency.0": {
+      "source": "Median time to first answer",
+      "text": "Trung vị thời gian đến câu trả lời đầu tiên"
+    },
+    "rows.latency.1": {
+      "source": "Unmeasured: no recorded first-answer timestamps; completion duration is not substituted.",
+      "text": "Chưa đo lường: không có thời điểm câu trả lời đầu tiên được ghi nhận; không thay bằng thời gian hoàn thành."
+    }
+  }
+}

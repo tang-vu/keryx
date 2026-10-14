@@ -1,0 +1,304 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/purchase-outcome-aggregate.ts",
+  "sourceSha256": "9f46cda87724686411c73e0bac8c8feac8a2f775c22ca9432c98f13d6df8e407",
+  "entries": {
+    "metadataTitle": {
+      "source": "Were the purchases worth it — recorded purchase outcomes",
+      "text": "Các lượt mua có đáng tiền không — kết quả mua đã ghi nhận"
+    },
+    "title": {
+      "source": "Were the purchases worth it?",
+      "text": "Các lượt mua có đáng tiền không?"
+    },
+    "introduction": {
+      "source": "Keryx pays for sources before it knows whether they will help. This page scores those purchases against what was recorded afterwards: which bought articles the answer actually cited, and what the uncited ones cost.",
+      "text": "Keryx trả tiền nguồn trước khi biết chúng có giúp ích không. Trang này chấm điểm lượt mua theo ghi nhận sau đó: bài đã mua nào được câu trả lời trích dẫn và bài không được trích dẫn tốn bao nhiêu."
+    },
+    "recordedOnly": {
+      "source": "Recorded bookkeeping only. Settlement is read from each run's retained trace and has not been rechecked against Circle or the chain here. Pending, simulated and failed payments are excluded.",
+      "text": "Chỉ ghi sổ đã ghi nhận. Quyết toán đọc từ nhật ký được lưu của từng lượt chạy, chưa kiểm tra lại qua Circle hay chuỗi tại đây. Loại trừ thanh toán đang chờ, mô phỏng và không thành công."
+    },
+    "network": {
+      "source": "Network",
+      "text": "Mạng"
+    },
+    "period": {
+      "source": "Period",
+      "text": "Khoảng thời gian"
+    },
+    "since": {
+      "source": "Since (UTC date)",
+      "text": "Từ ngày (UTC)"
+    },
+    "apply": {
+      "source": "Show figures",
+      "text": "Hiển thị số liệu"
+    },
+    "all": {
+      "source": "All time",
+      "text": "Toàn bộ thời gian"
+    },
+    "week": {
+      "source": "Last 7 days",
+      "text": "7 ngày qua"
+    },
+    "month": {
+      "source": "Last 30 days",
+      "text": "30 ngày qua"
+    },
+    "mainnet": {
+      "source": "Arc mainnet",
+      "text": "Arc mainnet"
+    },
+    "testnet": {
+      "source": "Arc testnet",
+      "text": "Arc testnet"
+    },
+    "windowEnd": {
+      "source": ") UTC",
+      "text": ") UTC"
+    },
+    "sample": {
+      "source": "Sample: the newest {limit} recorded runs per group that were created on this network in this period. When a group has more runs than that, older ones are outside the sample and the column says so.",
+      "text": "Mẫu: {limit} lượt chạy ghi nhận mới nhất mỗi nhóm, được tạo trên mạng này trong kỳ này. Khi nhóm có nhiều hơn, lượt cũ nằm ngoài mẫu và cột sẽ nêu rõ."
+    },
+    "unavailable": {
+      "source": "A complete classified view is unavailable for this storage profile or period. Figures are withheld; nothing is inferred from the failure.",
+      "text": "Chế độ xem phân loại đầy đủ không khả dụng cho cấu hình lưu trữ hoặc kỳ này. Không hiển thị số liệu; không suy ra điều gì từ lỗi."
+    },
+    "invalid": {
+      "source": "Choose a valid network, period and UTC date.",
+      "text": "Chọn mạng, khoảng thời gian và ngày UTC hợp lệ."
+    },
+    "outside": {
+      "source": "Outside users",
+      "text": "Người dùng bên ngoài"
+    },
+    "team": {
+      "source": "Team",
+      "text": "Nhóm"
+    },
+    "scripted": {
+      "source": "Scripted tests",
+      "text": "Kiểm thử theo kịch bản"
+    },
+    "unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "cohortLimit": {
+      "source": "Groups come from what was recorded when each run was written. Runs without that record stay Unknown and are never counted as outside use. Columns are not summed.",
+      "text": "Nhóm lấy từ ghi nhận khi từng lượt chạy được lưu. Lượt không có ghi nhận đó vẫn là Chưa rõ, không tính là sử dụng bên ngoài. Không cộng các cột."
+    },
+    "figure": {
+      "source": "Figure",
+      "text": "Số liệu"
+    },
+    "rule": {
+      "source": "Counting rule",
+      "text": "Quy tắc tính"
+    },
+    "unmeasured": {
+      "source": "Unmeasured",
+      "text": "Chưa đo lường"
+    },
+    "none": {
+      "source": "None in sample",
+      "text": "Không có trong mẫu"
+    },
+    "ratio": {
+      "source": "{part} of {whole}",
+      "text": "{part} trên {whole}"
+    },
+    "percent": {
+      "source": "{value}%",
+      "text": "{value}%"
+    },
+    "usdc": {
+      "source": "USDC",
+      "term": "usdc"
+    },
+    "testUsdc": {
+      "source": "test USDC",
+      "text": "USDC thử nghiệm"
+    },
+    "sampleSpan": {
+      "source": "{first} to {last}",
+      "text": "Từ {first} đến {last}"
+    },
+    "partialSample": {
+      "source": "{sampled} of {total} (newest only)",
+      "text": "{sampled} trên {total} (chỉ mới nhất)"
+    },
+    "rows.windowRuns.0": {
+      "source": "Runs in the period",
+      "text": "Lượt chạy trong kỳ"
+    },
+    "rows.windowRuns.1": {
+      "source": "Recorded runs created on this network in the UTC interval, per group.",
+      "text": "Lượt chạy ghi nhận tạo trên mạng này trong khoảng UTC, theo nhóm."
+    },
+    "rows.sampledRuns.0": {
+      "source": "Runs sampled",
+      "text": "Lượt chạy lấy mẫu"
+    },
+    "rows.sampledRuns.1": {
+      "source": "Newest runs read for this page, at most the sample limit per group.",
+      "text": "Lượt mới nhất đọc cho trang này, tối đa giới hạn mẫu mỗi nhóm."
+    },
+    "rows.sampleSpan.0": {
+      "source": "Sample covers",
+      "text": "Phạm vi mẫu"
+    },
+    "rows.sampleSpan.1": {
+      "source": "Creation time of the oldest and newest sampled run (UTC).",
+      "text": "Thời điểm tạo lượt cũ nhất và mới nhất trong mẫu (UTC)."
+    },
+    "rows.unscorable.0": {
+      "source": "Runs that could not be scored",
+      "text": "Lượt chạy không thể chấm điểm"
+    },
+    "rows.unscorable.1": {
+      "source": "Sampled runs whose retained record has no completed answer or fails the bounded public format. They are counted here and add nothing to any score.",
+      "text": "Lượt trong mẫu mà hồ sơ được lưu không có câu trả lời hoàn tất hoặc không đạt định dạng công khai có giới hạn. Chúng được tính tại đây nhưng không cộng vào điểm nào."
+    },
+    "rows.basis.0": {
+      "source": "Decisions with a structured basis",
+      "text": "Quyết định có cơ sở có cấu trúc"
+    },
+    "rows.basis.1": {
+      "source": "Recorded BUY, SKIP and CACHE decisions that carry price, fetch budget left, the alternative considered and the deciding rule, out of all recorded decisions in the sample. Runs written before this record existed have none.",
+      "text": "Quyết định BUY, SKIP và CACHE ghi nhận có giá, ngân sách truy cập còn lại, phương án thay thế được xét và quy tắc quyết định, trên tổng quyết định ghi nhận trong mẫu. Lượt chạy lưu trước khi có hồ sơ này không có dữ liệu đó."
+    },
+    "rows.buys.0": {
+      "source": "BUY decisions",
+      "text": "Quyết định BUY"
+    },
+    "rows.buys.1": {
+      "source": "Recorded BUY decisions in the scorable sampled runs.",
+      "text": "Quyết định BUY ghi nhận trong lượt chạy mẫu chấm điểm được."
+    },
+    "rows.unscoredBuys.0": {
+      "source": "BUY decisions not scored",
+      "text": "Quyết định BUY chưa chấm điểm"
+    },
+    "rows.unscoredBuys.1": {
+      "source": "BUY decisions without a complete article version, without a positive matching settled access payment in the trace, or repeated for the same version.",
+      "text": "Quyết định BUY thiếu phiên bản bài đầy đủ, thiếu phí truy cập dương khớp đã quyết toán trong nhật ký, hoặc lặp lại cùng phiên bản."
+    },
+    "rows.scored.0": {
+      "source": "Scored purchases",
+      "text": "Lượt mua được chấm điểm"
+    },
+    "rows.scored.1": {
+      "source": "One per run and exact source, article and content version with a BUY decision and a positive matching recorded settled access payment.",
+      "text": "Một cho mỗi lượt chạy và đúng nguồn, bài, phiên bản nội dung có quyết định BUY cùng phí truy cập dương khớp ghi nhận đã quyết toán."
+    },
+    "rows.hitRate.0": {
+      "source": "Purchase hit rate",
+      "text": "Tỷ lệ mua được nguồn có trích dẫn"
+    },
+    "rows.hitRate.1": {
+      "source": "Scored purchases whose exact version the answer cited, divided by scored purchases. A citation is observed use, not an expert verdict on quality.",
+      "text": "Lượt mua được chấm điểm mà đúng phiên bản được câu trả lời trích dẫn, chia cho lượt mua được chấm điểm. Trích dẫn là sử dụng quan sát được, không phải kết luận chuyên gia về chất lượng."
+    },
+    "rows.uncited.0": {
+      "source": "Spent on uncited purchases",
+      "text": "Khoản chi cho lượt mua không được trích dẫn"
+    },
+    "rows.uncited.1": {
+      "source": "Exact sum of recorded settled access for scored purchases the answer did not cite. Descriptive: it does not prove the purchase was useless.",
+      "text": "Tổng chính xác phí truy cập ghi nhận đã quyết toán của lượt mua chấm điểm được mà câu trả lời không trích dẫn. Mang tính mô tả: không chứng minh lượt mua vô ích."
+    },
+    "rows.access.0": {
+      "source": "Spent on scored purchases",
+      "text": "Khoản chi cho lượt mua được chấm điểm"
+    },
+    "rows.access.1": {
+      "source": "Exact sum of recorded settled access for all scored purchases.",
+      "text": "Tổng chính xác phí truy cập ghi nhận đã quyết toán cho mọi lượt mua được chấm điểm."
+    },
+    "rows.rewards.0": {
+      "source": "Citation rewards recorded",
+      "text": "Phần thưởng trích dẫn đã ghi nhận"
+    },
+    "rows.rewards.1": {
+      "source": "Exact sum of recorded settled citation rewards matched to scored purchases.",
+      "text": "Tổng chính xác phần thưởng trích dẫn ghi nhận đã quyết toán khớp lượt mua được chấm điểm."
+    },
+    "rows.gap.0": {
+      "source": "Calibration gap",
+      "text": "Độ lệch hiệu chuẩn"
+    },
+    "rows.gap.1": {
+      "source": "Average distance between predicted value and citation rate across the bands below, weighted by purchases. 0% would mean predictions matched outcomes in every band.",
+      "text": "Khoảng cách trung bình giữa giá trị dự đoán và tỷ lệ trích dẫn trong các nhóm bên dưới, theo trọng số lượt mua. 0% nghĩa là dự đoán khớp kết quả ở mọi nhóm."
+    },
+    "rows.missed.0": {
+      "source": "Missed value of skipped sources",
+      "text": "Giá trị bỏ lỡ của nguồn bị bỏ qua"
+    },
+    "rows.missed.1": {
+      "source": "Unmeasured. It needs skipped sources to be read afterwards under a separate evaluation allowance, which has not been funded or run.",
+      "text": "Chưa đo lường. Cần đọc các nguồn bị bỏ qua sau đó bằng hạn mức đánh giá riêng, chưa được cấp tiền hay thực hiện."
+    },
+    "rows.perClaim.0": {
+      "source": "Cost per supported claim",
+      "text": "Chi phí mỗi nhận định được hỗ trợ"
+    },
+    "rows.perClaim.1": {
+      "source": "Unmeasured. It needs an independent review of which claims each source supports.",
+      "text": "Chưa đo lường. Cần xem xét độc lập nguồn nào hỗ trợ nhận định nào."
+    },
+    "rows.questionType.0": {
+      "source": "By question type",
+      "text": "Theo loại câu hỏi"
+    },
+    "rows.questionType.1": {
+      "source": "Unmeasured. No question type is recorded when a run is written, and none is inferred.",
+      "text": "Chưa đo lường. Không ghi loại câu hỏi khi lưu lượt chạy và không suy đoán loại."
+    },
+    "calibrationTitle": {
+      "source": "Predicted value and what happened",
+      "text": "Giá trị dự đoán và kết quả thực tế"
+    },
+    "calibrationIntro": {
+      "source": "Purchases are grouped by the value the agent predicted before buying. The citation rate is how often purchases in that band were cited. Predicted value is the agent's own score, not a probability, and small samples settle nothing.",
+      "text": "Lượt mua được nhóm theo giá trị tác nhân dự đoán trước khi mua. Tỷ lệ trích dẫn là tần suất lượt mua trong nhóm được trích dẫn. Giá trị dự đoán là điểm của tác nhân, không phải xác suất; mẫu nhỏ không xác lập kết luận."
+    },
+    "calibrationFor": {
+      "source": "{cohort}: {scored} scored purchases",
+      "text": "{cohort}: {scored} lượt mua được chấm điểm"
+    },
+    "band": {
+      "source": "Predicted value band",
+      "text": "Nhóm giá trị dự đoán"
+    },
+    "purchases": {
+      "source": "Purchases",
+      "text": "Lượt mua"
+    },
+    "cited": {
+      "source": "Cited",
+      "text": "Đã trích dẫn"
+    },
+    "predictedMean": {
+      "source": "Mean predicted value",
+      "text": "Giá trị dự đoán trung bình"
+    },
+    "citationRate": {
+      "source": "Citation rate",
+      "text": "Tỷ lệ trích dẫn"
+    },
+    "json": {
+      "source": "These figures (JSON)",
+      "text": "Số liệu này (JSON)"
+    },
+    "usage": {
+      "source": "Who uses Keryx",
+      "text": "Ai sử dụng Keryx"
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/job-targets.ts",
+  "sourceSha256": "2ffe8a1899d26f39ba2c3c36eb1a2d3a392c5f18c08f31a0d5ad421032cb6af2",
+  "entries": {
+    "target": {
+      "source": "${tier === \"quick\" ? \"Quick\" : \"Deep\"} completion target: ${seconds} seconds from original job acceptance.",
+      "text": "${tier === \"quick\" ? \"Quick\" : \"Deep\"} — thời gian hoàn thành mục tiêu: ${seconds} giây kể từ khi tác vụ ban đầu được chấp nhận."
+    },
+    "monthly": {
+      "source": "Each Monthly request starts its own target when that original request is accepted, not when the plan is purchased.",
+      "text": "Mỗi yêu cầu Monthly bắt đầu tính mục tiêu riêng khi yêu cầu ban đầu đó được chấp nhận, không phải khi mua gói."
+    },
+    "terms": {
+      "source": "This is a provisional target, not a guaranteed completion time. Existing package terms provide no automatic remedy. Keep the original job; do not pay again for recovery.",
+      "text": "Đây là mục tiêu tạm thời, không bảo đảm thời gian hoàn thành. Điều kiện gói hiện tại không có biện pháp khắc phục tự động. Giữ tác vụ ban đầu; không trả tiền lại để khôi phục."
+    },
+    "unavailable": {
+      "source": "Completion target unavailable for this package version. No timing or refund promise is inferred.",
+      "text": "Phiên bản gói này chưa có mục tiêu hoàn thành. Không suy ra cam kết thời gian hay hoàn tiền."
+    },
+    "localTitle": {
+      "source": "Completion target elapsed since the last status check.",
+      "text": "Đã quá thời gian hoàn thành mục tiêu kể từ lần kiểm tra trạng thái gần nhất."
+    },
+    "localBody": {
+      "source": "The last status had no delivered result. Check the original job for current delivery and payment evidence. This local clock warning does not establish its current state or notify a person.",
+      "text": "Trạng thái gần nhất chưa có kết quả được cung cấp. Kiểm tra tác vụ ban đầu để xem bằng chứng cung cấp và thanh toán hiện tại. Cảnh báo đồng hồ cục bộ này không xác lập trạng thái hiện tại hay thông báo cho một người."
+    },
+    "localObservation": {
+      "source": "This warning uses elapsed browser time after the last server observation. A closed or suspended page cannot guarantee timely display.",
+      "text": "Cảnh báo dùng thời gian đã trôi trong trình duyệt sau quan sát máy chủ gần nhất. Trang đã đóng hoặc tạm ngưng không thể bảo đảm hiển thị kịp thời."
+    },
+    "originalOnly": {
+      "source": "Keep the original job and payment reference. Do not pay again to recover this job. Refund policy and execution require owner confirmation; no refund is offered or recorded here.",
+      "text": "Giữ tác vụ và tham chiếu thanh toán ban đầu. Không trả tiền lại để khôi phục tác vụ. Chính sách và việc thực thi hoàn tiền cần chủ sở hữu xác nhận; tại đây không đề nghị hay ghi nhận hoàn tiền."
+    },
+    "choices": {
+      "source": "Next-step guidance",
+      "text": "Hướng dẫn bước tiếp theo"
+    },
+    "choiceNotice": {
+      "source": "Choosing guidance only changes this page. It does not submit a request, notify support, resume research or move money.",
+      "text": "Chọn hướng dẫn chỉ thay đổi trang này. Không gửi yêu cầu, thông báo hỗ trợ, tiếp tục nghiên cứu hay chuyển tiền."
+    },
+    "wait": {
+      "source": "Wait",
+      "text": "Chờ"
+    },
+    "partial": {
+      "source": "Partial-result guidance",
+      "text": "Hướng dẫn cho kết quả chưa đầy đủ"
+    },
+    "human": {
+      "source": "Human-review guidance",
+      "text": "Hướng dẫn người xem xét"
+    },
+    "waitBody": {
+      "source": "Keep following the original job with its existing status/recovery controls. Waiting does not restart its target or authorize another purchase.",
+      "text": "Tiếp tục theo dõi tác vụ ban đầu bằng các điều khiển trạng thái và khôi phục hiện có. Chờ không khởi động lại thời gian mục tiêu hay cho phép mua thêm."
+    },
+    "partialBody": {
+      "source": "Ask the owner to review any retained output for explicitly incomplete delivery. No partial result or acceptance is promised by this status; pending payment legs remain protected.",
+      "text": "Yêu cầu chủ sở hữu xem xét đầu ra được lưu nếu việc cung cấp được ghi rõ là chưa đầy đủ. Trạng thái này không hứa có kết quả một phần hay sự chấp nhận; các khoản thanh toán đang chờ vẫn được bảo vệ."
+    },
+    "humanBody": {
+      "source": "Share the original job ID, original payment reference and last recorded stage privately with the owner. This page has not contacted a responder. Uncertain legs require original-only review before any remedy.",
+      "text": "Chia sẻ riêng với chủ sở hữu ID tác vụ ban đầu, tham chiếu thanh toán ban đầu và giai đoạn ghi nhận gần nhất. Trang này chưa liên hệ người xử lý. Các khoản chưa rõ cần được xem xét chỉ từ bản gốc trước khi khắc phục."
+    }
+  }
+}

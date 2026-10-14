@@ -1,0 +1,128 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/zotero.json",
+  "sourceSha256": "d4f0391715a286d6e6dc2a8a9219f58706c36ab03bd372014d1df4b76fb17c62",
+  "entries": {
+    "title": {
+      "source": "Send references to Zotero",
+      "text": "发送参考文献到 Zotero"
+    },
+    "intro": {
+      "source": "Connect your personal library, choose a collection and send references when you decide. Nothing is sent automatically.",
+      "text": "连接个人文献库，选择集合，并在您决定时发送参考文献。不会自动发送任何内容。"
+    },
+    "signIn": {
+      "source": "Sign in to manage your reference connection",
+      "text": "登录以管理参考文献连接"
+    },
+    "checking": {
+      "source": "Checking your account…",
+      "text": "正在检查您的账户…"
+    },
+    "scopes": {
+      "source": "Use a dedicated Zotero key with personal library read, note read and library write access. Leave file and group access off. Note read is needed to reconcile notes safely after an interrupted send. This library binds to your Keryx account; disconnecting retains that binding. Account transfer is unavailable.",
+      "text": "使用专用 Zotero 密钥，授予个人文献库读取、笔记读取和文献库写入权限。关闭文件和群组访问。笔记读取用于在发送中断后安全核对笔记。此文献库绑定您的 Keryx 账户；断开连接仍保留绑定。不支持账户转移。"
+    },
+    "keyLabel": {
+      "source": "Dedicated Zotero API key",
+      "text": "专用 Zotero API 密钥"
+    },
+    "connect": {
+      "source": "Connect Zotero",
+      "text": "连接 Zotero"
+    },
+    "connected": {
+      "source": "Personal Zotero library connected",
+      "text": "已连接个人 Zotero 文献库"
+    },
+    "disconnect": {
+      "source": "Disconnect Zotero",
+      "text": "断开 Zotero 连接"
+    },
+    "disconnected": {
+      "source": "Connection revoked in Keryx. You can also delete the dedicated key in Zotero settings.",
+      "text": "已在 Keryx 中撤销连接。您也可在 Zotero 设置中删除专用密钥。"
+    },
+    "load": {
+      "source": "Load collections from Zotero",
+      "text": "从 Zotero 加载集合"
+    },
+    "collection": {
+      "source": "Destination collection",
+      "text": "目标集合"
+    },
+    "choose": {
+      "source": "Choose a collection",
+      "text": "选择集合"
+    },
+    "saved": {
+      "source": "Send saved literature references",
+      "text": "发送已保存文献的参考资料"
+    },
+    "savedScope": {
+      "source": "This sends the saved paper metadata from this browser. Your review title, question, screening decisions and personal notes stay here.",
+      "text": "这会发送此浏览器已保存的论文元数据。综述标题、问题、筛选决定和个人笔记保留在此。"
+    },
+    "reportLabel": {
+      "source": "Report ID from your research history",
+      "text": "研究历史中的报告 ID"
+    },
+    "report": {
+      "source": "Send report references and cited excerpts",
+      "text": "发送报告参考文献与被引用摘录"
+    },
+    "reportScope": {
+      "source": "This sends the owned report's canonical reference fields, public report link and exact recorded cited excerpts. Private originals are unavailable for this action.",
+      "text": "这会发送自己拥有的报告的规范参考文献字段、公开报告链接和确切记录的被引用摘录。此操作不支持私密原始记录。"
+    },
+    "confirm": {
+      "source": "Send these references and any cited excerpts to the selected Zotero collection? Zotero and anyone with access to that library may retain them.",
+      "text": "将这些参考文献及任何被引用摘录发送到所选 Zotero 集合？Zotero 和任何能访问该文献库的人都可能保留这些内容。"
+    },
+    "sent": {
+      "source": "References accepted by Zotero. Repeated sends reconcile existing items and notes.",
+      "text": "Zotero 已接受参考文献。重复发送会核对现有条目和笔记。"
+    },
+    "unavailable": {
+      "source": "Zotero sending is unavailable on this deployment.",
+      "text": "此部署不提供 Zotero 发送功能。"
+    },
+    "failed": {
+      "source": "The operation did not finish. Some references may already have reached Zotero. Reload collections, then explicitly send again to reconcile them.",
+      "text": "操作未完成。部分参考文献可能已到达 Zotero。重新加载集合，然后明确再次发送以进行核对。"
+    },
+    "conflict": {
+      "source": "The send contains overlapping citation identities or the library has conflicting, duplicate or changed references. Review the references before sending again.",
+      "text": "发送内容含有重叠引用身份，或文献库中存在冲突、重复或已更改的参考文献。再次发送前请审阅参考文献。"
+    },
+    "libraryBound": {
+      "source": "This Zotero library is already bound to another Keryx account. Disconnecting does not release that binding. Account transfer is unavailable.",
+      "text": "此 Zotero 文献库已绑定其他 Keryx 账户。断开连接不会释放绑定。不支持账户转移。"
+    },
+    "scopesFailed": {
+      "source": "The key needs only personal library read, note read and write access, with file and group access off. Check the dedicated key in Zotero settings.",
+      "text": "密钥仅需个人文献库读取、笔记读取和写入权限，并关闭文件与群组访问。请在 Zotero 设置中检查专用密钥。"
+    },
+    "backoff": {
+      "source": "Zotero requested a pause. Wait before trying another action.",
+      "text": "Zotero 请求暂停。尝试其他操作前请等待。"
+    },
+    "notFound": {
+      "source": "This report is unavailable for your account or contains a private original.",
+      "text": "此报告对您的账户不可用，或包含私密原始记录。"
+    },
+    "boundary": {
+      "source": "Disconnecting stops future Keryx requests and removes its stored key. It cannot recall items already sent or a request already in flight.",
+      "text": "断开连接会阻止未来的 Keryx 请求，并移除保存的密钥。它无法收回已发送条目或已在途的请求。"
+    },
+    "bib": {
+      "source": "Manage private BibTeX links",
+      "text": "管理私密 BibTeX 链接"
+    },
+    "settings": {
+      "source": "Zotero API key settings",
+      "text": "Zotero API 密钥设置"
+    }
+  }
+}
