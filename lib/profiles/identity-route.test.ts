@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
-import { IncomingMessage } from "node:http";
+import { IncomingMessage, ServerResponse } from "node:http";
 import { Socket } from "node:net";
 import { NextRequestAdapter } from "next/dist/server/web/spec-extension/adapters/next-request";
-import { NodeNextRequest } from "next/dist/server/base-http/node";
+import { NodeNextRequest, NodeNextResponse } from "next/dist/server/base-http/node";
+import { sendResponse } from "next/dist/server/send-response";
+import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
+import nextConfig from "../../next.config";
+import { identityReturnCsp } from "./identity-return-policy";
 import type { KeryxDB } from "../db/keryx-db";
-import { identityCookieName } from "./identity-flow";
+import { identityCookieName, identityContinuationCookieName } from "./identity-flow";
 import { createIdentityRoutes } from "./identity-route";
 import type { ProviderConfiguration } from "./identity-provider";
 import { ProfileIdentityError } from "./verified-identities";
@@ -26,7 +30,33 @@ function fixture(options: { applicationOrigin?: string } = { applicationOrigin: 
   const exchange = vi.fn().mockResolvedValue(identity), provider = vi.fn((p: string): ProviderConfiguration | null => ({ provider: p as "github", clientId: "client", clientSecret: "secret", redirectUri: `https://keryx.cc/api/me/profile/identities/${p}/callback` }));
   const dbGetter = vi.fn(async () => db);
   const routes = createIdentityRoutes({ session, key, db: dbGetter, secret: "s".repeat(48), provider, applicationOrigin: options.applicationOrigin, now: () => now, exchange });
-  return { routes, db, dbGetter, store, session, key, exchange, provider, advance() { now += 300001; } };
+  return { routes, db, dbGetter, store, session, key, exchange, provider, advance(ms = 300001) { now += ms; } };
+}
+// Unit fixtures use injected sessions; genuine signed durable sessions are covered by the hermetic Chromium harness.
+async function staged(f: ReturnType<typeof fixture>, callback: Request, provider = "github"): Promise<Request | Response> {
+  const sessionCalls = f.session.mock.calls.length, exchangeCalls = f.exchange.mock.calls.length, consumeCalls = f.store.consume.mock.calls.length;
+  const response = await f.routes.CALLBACK(callback, provider);
+  expect(f.session).toHaveBeenCalledTimes(sessionCalls); expect(f.exchange).toHaveBeenCalledTimes(exchangeCalls);
+  expect(f.store.consume).toHaveBeenCalledTimes(consumeCalls);
+  const continuation = response.headers.getSetCookie().find(cookie => cookie.startsWith(`${identityContinuationCookieName(provider as "github" | "orcid")}=`) && !cookie.includes("Max-Age=0"));
+  if (!continuation) return response;
+  expect(response.status).toBe(303);
+  expect(response.headers.get("location")).toBe(`${f.provider(provider)!.redirectUri}`);
+  const url = new URL(callback.url); url.search = "";
+  const cookies = `${callback.headers.get("cookie")}; ${continuation.split(";")[0]}`;
+  const document = await f.routes.CALLBACK(new Request(url, { headers: { Cookie: cookies } }), provider);
+  expect(document.status).toBe(200); expect(document.headers.get("cache-control")).toBe("no-store");
+  expect(document.headers.get("referrer-policy")).toBe("no-referrer"); expect(document.headers.get("x-frame-options")).toBe("DENY");
+  expect(document.headers.get("content-security-policy")).toContain("form-action 'self'");
+  const html = await document.text(); expect(html).toContain(`action="${url.pathname}"`); expect(html).toContain('method="post"');
+  expect(html).toContain('<meta name="referrer" content="same-origin">');
+  for (const privateValue of ["secret-code", callback.headers.get("cookie")!, new URL(callback.url).searchParams.get("state")!].filter(Boolean)) expect(html).not.toContain(privateValue);
+  expect(f.session).toHaveBeenCalledTimes(sessionCalls); expect(f.exchange).toHaveBeenCalledTimes(exchangeCalls);
+  return new Request(url, { method: "POST", headers: { Origin: new URL(f.provider(provider)!.redirectUri).origin, Cookie: `${cookies}; keryx_session=unit-injected-session` } });
+}
+async function finishCallback(f: ReturnType<typeof fixture>, callback: Request, provider = "github") {
+  const post = await staged(f, callback, provider);
+  return post instanceof Response ? post : f.routes.CALLBACK_POST(post, provider);
 }
 async function started(f: ReturnType<typeof fixture>) {
   const response = await f.routes.START(request("/github/start", "POST"), "github");
@@ -35,6 +65,102 @@ async function started(f: ReturnType<typeof fixture>) {
   return { cookie, state: url.searchParams.get("state")!, callback: request(`/github/callback?code=secret-code&state=${url.searchParams.get("state")}`, "GET", { Cookie: cookie }) };
 }
 describe("identity owner/OAuth route gates", () => {
+  it("Next header forwarding retains the callback hash policy and queryless meta Origin policy", async () => {
+    const f = fixture(), flow = await started(f), post = await staged(f, flow.callback); expect(post).toBeInstanceOf(Request);
+    const document = await f.routes.CALLBACK(new Request((post as Request).url, { headers: { Cookie: (post as Request).headers.get("cookie")! } }), "github");
+    expect(document.status).toBe(200);
+    const incoming = new IncomingMessage(new Socket()); incoming.method = "HEAD";
+    const outgoing = new ServerResponse(incoming), rules = await nextConfig.headers?.(); expect(rules).toBeDefined();
+    const callback = new URL((post as Request).url).pathname;
+    for (const rule of rules ?? []) if (getPathMatch(rule.source)(callback)) {
+      expect(rule.has).toBeUndefined(); expect(rule.missing).toBeUndefined();
+      for (const header of rule.headers) outgoing.setHeader(header.key, header.value);
+    }
+    // Actual pinned Next forwarding; HEAD skips only body piping, never header handling.
+    await sendResponse(new NodeNextRequest(incoming), new NodeNextResponse(outgoing), document.clone());
+    expect(outgoing.getHeader("content-security-policy")).toBe(identityReturnCsp);
+    expect(outgoing.getHeader("referrer-policy")).toBe("no-referrer");
+    expect(new NodeNextResponse(outgoing).getHeader("cache-control")).toBe("no-store");
+    expect(identityReturnCsp).not.toContain("unsafe-inline"); expect(identityReturnCsp).not.toContain("cloudflare");
+    expect(await document.text()).toContain('<meta name="referrer" content="same-origin">');
+    expect(f.exchange).not.toHaveBeenCalled(); expect(f.store.consume).not.toHaveBeenCalled();
+  });
+  it("refuses JSON-expanded code before publishing an oversized continuation or reading authority", async () => {
+    const f = fixture(), flow = await started(f), code = "\\".repeat(2048);
+    const target = request("/github/callback?code=" + code + "&state=" + flow.state, "GET", { Cookie: flow.cookie });
+    expect(new URL(target.url).search.length).toBeLessThanOrEqual(4096);
+    f.session.mockClear();
+    const response = await f.routes.CALLBACK(target, "github");
+    expect(response.headers.get("location")).toBe("https://keryx.cc/me/profile?identity=failed");
+    expect(response.headers.getSetCookie()).toHaveLength(2);
+    expect(response.headers.getSetCookie().every(cookie => cookie.includes("Max-Age=0") && Buffer.byteLength(cookie, "utf8") <= 4096)).toBe(true);
+    expect(f.session).not.toHaveBeenCalled(); expect(f.dbGetter).not.toHaveBeenCalled(); expect(f.store.begin).toHaveBeenCalledOnce();
+    expect(f.store.consume).not.toHaveBeenCalled(); expect(f.store.complete).not.toHaveBeenCalled(); expect(f.exchange).not.toHaveBeenCalled();
+  });
+  it.each(["duplicate-code", "extra-query", "mixed-denial", "empty-denial", "oversize-code", "duplicate-flow", "tampered-flow", "bearer"])("external GET %s cannot stage or authenticate", async fault => {
+    const f = fixture(), flow = await started(f), target = new Request(flow.callback);
+    const url = new URL(target.url);
+    if (fault === "duplicate-code") url.searchParams.append("code", "other");
+    if (fault === "extra-query") url.searchParams.set("return", "https://evil.invalid");
+    if (fault === "mixed-denial") url.searchParams.set("error", "access_denied");
+    if (fault === "empty-denial") { url.searchParams.delete("code"); url.searchParams.set("error", ""); }
+    if (fault === "oversize-code") url.searchParams.set("code", "x".repeat(2049));
+    if (fault === "duplicate-flow") target.headers.set("cookie", `${flow.cookie}; ${flow.cookie}`);
+    if (fault === "tampered-flow") target.headers.set("cookie", flow.cookie.slice(0, -8) + "tampered");
+    if (fault === "bearer") target.headers.set("authorization", `Bearer ${rawKey}`);
+    f.session.mockClear();
+    const response = await f.routes.CALLBACK(new Request(url, { headers: target.headers }), "github");
+    expect(response.headers.get("location")).toBe("https://keryx.cc/me/profile?identity=failed");
+    expect(response.headers.getSetCookie()).toHaveLength(2); expect(response.headers.getSetCookie().every(cookie => cookie.includes("Max-Age=0"))).toBe(true);
+    expect(f.session).not.toHaveBeenCalled(); expect(f.store.consume).not.toHaveBeenCalled(); expect(f.exchange).not.toHaveBeenCalled();
+  });
+  it.each(["foreign-origin", "missing-origin", "null-origin", "query", "empty-query", "body", "bearer", "missing-session-cookie", "duplicate-session", "duplicate-continuation", "tampered-continuation", "missing-flow", "different-flow", "expired-return", "wrong-provider"])("POST %s refuses before authority/consume/exchange", async fault => {
+    const f = fixture(), flow = await started(f), post = await staged(f, flow.callback); expect(post).toBeInstanceOf(Request);
+    const target = post as Request, url = new URL(target.url), postHeaders = new Headers(target.headers);
+    let body: string | undefined, provider = "github";
+    if (fault === "foreign-origin") postHeaders.set("origin", "https://evil.invalid");
+    if (fault === "missing-origin") postHeaders.delete("origin");
+    if (fault === "null-origin") postHeaders.set("origin", "null");
+    if (fault === "query") url.search = "?code=secret-code";
+    if (fault === "empty-query") url.search = "?";
+    if (fault === "body") body = "code=secret-code";
+    if (fault === "bearer") postHeaders.set("authorization", `Bearer ${rawKey}`);
+    const pairs = postHeaders.get("cookie")!.split("; ");
+    if (fault === "missing-session-cookie") postHeaders.set("cookie", pairs.filter(pair => !pair.startsWith("keryx_session=")).join("; "));
+    if (fault === "duplicate-session") postHeaders.append("cookie", "; keryx_session=other");
+    if (fault === "duplicate-continuation") postHeaders.set("cookie", `${pairs.join("; ")}; ${pairs[1]}`);
+    if (fault === "tampered-continuation") postHeaders.set("cookie", [pairs[0], pairs[1].slice(0, -8) + "tampered", pairs[2]].join("; "));
+    if (fault === "missing-flow") postHeaders.set("cookie", pairs.slice(1).join("; "));
+    if (fault === "different-flow") { const other = await started(f); postHeaders.set("cookie", [other.cookie, ...pairs.slice(1)].join("; ")); }
+    if (fault === "expired-return") f.advance(60001);
+    if (fault === "wrong-provider") { provider = "orcid"; url.pathname = url.pathname.replace("github", "orcid"); postHeaders.set("cookie", postHeaders.get("cookie")!.replaceAll("_github=", "_orcid=")); }
+    f.session.mockClear();
+    const response = await f.routes.CALLBACK_POST(new Request(url, { method: "POST", headers: postHeaders, body }), provider);
+    expect(response.headers.get("location")).toContain("identity=failed"); expect(f.session).not.toHaveBeenCalled();
+    expect(f.store.consume).not.toHaveBeenCalled(); expect(f.exchange).not.toHaveBeenCalled(); expect(f.store.complete).not.toHaveBeenCalled();
+  });
+  it("concurrent POST replay admits exactly one exchange and consumes before it", async () => {
+    const f = fixture(), flow = await started(f), post = await staged(f, flow.callback); expect(post).toBeInstanceOf(Request);
+    const responses = await Promise.all([f.routes.CALLBACK_POST((post as Request).clone(), "github"), f.routes.CALLBACK_POST((post as Request).clone(), "github")]);
+    expect(responses.map(response => response.headers.get("location")).sort()).toEqual(["https://keryx.cc/me/profile?identity=failed", "https://keryx.cc/me/profile?identity=verified"]);
+    expect(f.exchange).toHaveBeenCalledOnce(); expect(f.store.complete).toHaveBeenCalledOnce();
+  });
+  it.each(["replaced", "provider-removed", "abort", "store-outage", "record-mismatch"])("in-flight %s does not report verification", async fault => {
+    const f = fixture(), flow = await started(f), post = await staged(f, flow.callback); expect(post).toBeInstanceOf(Request);
+    const controller = new AbortController();
+    f.exchange.mockImplementation(async () => {
+      if (fault === "replaced") f.session.mockResolvedValue({ db: f.db, wallet, currentId: "d".repeat(64) });
+      if (fault === "provider-removed") f.provider.mockReturnValue(null);
+      if (fault === "abort") controller.abort();
+      if (fault === "store-outage") f.store.complete.mockRejectedValue(new Error("unavailable"));
+      if (fault === "record-mismatch") f.store.complete.mockResolvedValue({ provider: "github", externalId: "456", label: "alice", wallet, verifiedAt: new Date(clock).toISOString() });
+      return { provider: "github", externalId: "123", label: "alice" };
+    });
+    const response = await f.routes.CALLBACK_POST(new Request(post as Request, { signal: controller.signal }), "github");
+    expect(response.headers.get("location")).toContain("identity=failed"); expect(f.exchange).toHaveBeenCalledOnce();
+    if (["replaced", "provider-removed", "abort"].includes(fault)) expect(f.store.complete).not.toHaveBeenCalled();
+    expect(response.headers.getSetCookie().every(cookie => cookie.includes("Max-Age=0"))).toBe(true);
+  });
   it.each(["START", "DELETE"] as const)("%s admits actual Next zero-byte body streams to existing SIWE authentication", async method => {
     const f = fixture(); f.session.mockResolvedValue(Response.json({ error: "Sign in to access your account." }, { status: 401 }));
     const socket = new Socket(), incoming = new IncomingMessage(socket);
@@ -97,7 +223,7 @@ describe("identity owner/OAuth route gates", () => {
   });
   it("internal Next request URL retains the fixed public callback and its owner/state fences", async () => {
     const f = fixture(), flow = await started(f);
-    const response = await f.routes.CALLBACK(internalRequest(`/github/callback?code=secret-code&state=${flow.state}`, "GET", { Cookie: flow.cookie }), "github");
+    const response = await finishCallback(f, internalRequest(`/github/callback?code=secret-code&state=${flow.state}`, "GET", { Cookie: flow.cookie }));
     expect(response.status).toBe(303); expect(response.headers.get("location")).toBe("https://keryx.cc/me/profile?identity=verified");
     expect(f.store.consume).toHaveBeenCalledOnce(); expect(f.exchange).toHaveBeenCalledOnce(); expect(f.store.complete).toHaveBeenCalledOnce();
   });
@@ -222,13 +348,13 @@ describe("identity owner/OAuth route gates", () => {
     expect(f.provider).not.toHaveBeenCalled(); expect(f.exchange).not.toHaveBeenCalled();
   });
   it("valid single-use callback revalidates session and redirects with no secret or identity", async () => {
-    const f = fixture(), flow = await started(f), response = await f.routes.CALLBACK(flow.callback, "github");
+    const f = fixture(), flow = await started(f), response = await finishCallback(f, flow.callback);
     expect(response.status).toBe(303); expect(response.headers.get("location")).toBe("https://keryx.cc/me/profile?identity=verified");
     expect(response.headers.get("cache-control")).toBe("no-store"); expect(response.headers.get("referrer-policy")).toBe("no-referrer");
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
     expect(f.exchange).toHaveBeenCalledOnce(); expect(f.store.consume.mock.invocationCallOrder[0]).toBeLessThan(f.exchange.mock.invocationCallOrder[0]);
     expect(f.store.complete).toHaveBeenCalledOnce(); expect(f.session).toHaveBeenCalledTimes(3);
-    expect((await f.routes.CALLBACK(flow.callback, "github")).headers.get("location")).toContain("identity=failed");
+    expect((await finishCallback(f, flow.callback)).headers.get("location")).toContain("identity=failed");
     expect(f.exchange).toHaveBeenCalledOnce();
   });
   it.each(["wrong-state", "missing-cookie", "wrong-provider", "duplicate-state", "wrong-owner", "wrong-session", "expired", "revoked"])("%s fails before exchange", async fault => {
@@ -241,18 +367,18 @@ describe("identity owner/OAuth route gates", () => {
     if (fault === "wrong-session") f.session.mockResolvedValue({ db: f.db, wallet, currentId: "d".repeat(64) });
     if (fault === "expired") f.advance();
     if (fault === "revoked") f.session.mockResolvedValue(Response.json({}, { status: 401 }));
-    expect((await f.routes.CALLBACK(callback, provider)).headers.get("location")).toContain("identity=failed");
+    expect((await finishCallback(f, callback, provider)).headers.get("location")).toContain("identity=failed");
     expect(f.exchange).not.toHaveBeenCalled(); expect(f.store.complete).not.toHaveBeenCalled();
   });
   it("denial consumes a valid callback without provider I/O or leaking provider error", async () => {
-    const f = fixture(), flow = await started(f), response = await f.routes.CALLBACK(request(`/github/callback?state=${flow.state}&error=access_denied&error_description=private-secret`, "GET", { Cookie: flow.cookie }), "github");
+    const f = fixture(), flow = await started(f), response = await finishCallback(f, request(`/github/callback?state=${flow.state}&error=access_denied&error_description=private-secret`, "GET", { Cookie: flow.cookie }));
     expect(f.store.consume).toHaveBeenCalledOnce(); expect(f.exchange).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe("https://keryx.cc/me/profile?identity=failed");
   });
   it("unlink while provider exchange is in flight prevents completion", async () => {
     const f = fixture(), flow = await started(f); let release!: () => void;
     f.exchange.mockImplementation(async () => { await new Promise<void>(resolve => { release = resolve; }); return { provider: "github", externalId: "123", label: "alice" }; });
-    const completion = f.routes.CALLBACK(flow.callback, "github");
+    const completion = finishCallback(f, flow.callback);
     await vi.waitFor(() => expect(f.exchange).toHaveBeenCalledOnce());
     expect((await f.routes.DELETE(request("/github", "DELETE"), "github")).status).toBe(200);
     release(); expect((await completion).headers.get("location")).toContain("identity=failed");
@@ -265,7 +391,7 @@ describe("identity owner/OAuth route gates", () => {
         if (fault === "expiry") f.advance();
         return { provider: fault === "mismatch" ? "orcid" : "github", externalId: "123", label: "alice" };
       });
-      expect((await f.routes.CALLBACK(flow.callback, "github")).headers.get("location")).toContain("identity=failed");
+      expect((await finishCallback(f, flow.callback)).headers.get("location")).toContain("identity=failed");
       expect(f.store.complete).not.toHaveBeenCalled();
     }
   });

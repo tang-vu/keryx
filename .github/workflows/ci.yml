@@ -672,6 +672,14 @@ jobs:
       - name: Private verified identity UI (production CSS, synthetic consent and owner isolation)
         run: node --import tsx scripts/test-browser-profile-identities.mts
 
+      - name: Identity OAuth cross-site return (hermetic Chromium, genuine temporary sessions)
+        env:
+          KERYX_NETWORK: arcTestnet
+          NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
+          KERYX_FORCE_OFFLINE: "1"
+          KERYX_EXTERNAL_DISCOVERY: "0"
+        run: node --import tsx scripts/test-browser-identity-oauth-return.mts
+
       - name: Report feedback confirmation and response races (built CSS, hermetic Chromium)
         env:
           KERYX_FEEDBACK_SCREENSHOT_DIR: ${{ runner.temp }}/feedback-ux-screenshots
