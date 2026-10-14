@@ -3,6 +3,7 @@
 import type { W3SSdk } from "@circle-fin/w3s-pw-web-sdk";
 import type { ChallengeResult, SignMessageResult, SignTransactionResult } from "@circle-fin/w3s-pw-web-sdk/dist/src/types";
 import { z } from "zod";
+import { notifyBrowserAuthChanged } from "./browser-auth-notice";
 import { circleWalletPublicConfig, circleWalletPublicConfigured } from "./circle-wallet-config";
 import { browserPaymentProfile } from "./browser-payment-profile";
 import { AUTH_CHALLENGE_TTL_MS } from "./auth-time-policy";
@@ -173,8 +174,7 @@ export function resumeGoogleWalletLogin(): Promise<CircleWalletIdentity | null> 
           history.replaceState(history.state, "", `/connect?${params}`);
         }
       }
-      window.dispatchEvent(new Event("keryx:auth"));
-      try { const channel = new BroadcastChannel("keryx-auth-v1"); channel.postMessage("changed"); channel.close(); } catch { /* Same-tab refresh remains available. */ }
+      notifyBrowserAuthChanged();
       return identity;
     } catch (error) {
       clearCircleWalletIdentity(); throw error;

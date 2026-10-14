@@ -475,6 +475,33 @@ describe("header logout with TWO actual independent useSiweAuth instances", () =
   });
   afterEach(() => { window.removeEventListener("keryx:auth", confirmedLogout); vi.doUnmock("wagmi"); });
 
+  it("keeps local callback verification across sibling channels and fences foreign or legacy hints without IO", async () => {
+    const f = realHttp(); await mountReal();
+    const { notifyBrowserAuthChanged } = await import("../browser-auth-notice");
+    const observer = new BroadcastChannel("keryx-auth-v1"), peer = new BroadcastChannel("keryx-auth-v1");
+    const delivered = () => new Promise<void>(done => { observer.onmessage = () => done(); });
+    const drain = () => new Promise<void>(done => setTimeout(done, 0));
+    try {
+      await act(async () => {
+        const notice = delivered(); notifyBrowserAuthChanged(); await notice; await drain();
+      });
+      expect(header.session?.address).toBe(alice);
+      expect(container.textContent).toContain("PRIVATE ALICE QUESTION");
+      for (const hint of [{ type: "changed", source: "foreign-document" }, "changed"]) {
+        const calls = f.authHttp.mock.calls.length, privateCalls = f.fetcher.mock.calls.length;
+        await act(async () => {
+          const notice = delivered(); peer.postMessage(hint); await notice; await drain();
+        });
+        cleared(f); expect(f.authHttp).toHaveBeenCalledTimes(calls);
+        expect(f.fetcher).toHaveBeenCalledTimes(privateCalls);
+        await freshSession();
+        expect(header.session?.address).toBe(alice);
+        expect(container.textContent).toContain("PRIVATE ALICE QUESTION");
+      }
+      expect(confirmations).toEqual([]);
+    } finally { observer.close(); peer.close(); }
+  });
+
   it.each([
     ["list", "transport", "confirmed"], ["list", "body", "unconfirmed"],
     ["detail", "transport", "unconfirmed"], ["detail", "body", "confirmed"],

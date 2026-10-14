@@ -12,6 +12,7 @@ import {
   type PrivateJobHistoryDetail, type PrivateJobHistoryExport,
 } from "@/lib/history/private-job-history-contract";
 import { RUN_SURFACES } from "@/lib/research/run-provenance";
+import { isOwnBrowserAuthChange } from "@/lib/browser-auth-notice";
 
 const control = "border border-line px-3 py-2 text-sm disabled:opacity-40";
 const unavailable = "Private history is unavailable. No successful empty history is being reported.";
@@ -53,7 +54,7 @@ export function PrivateJobHistoryWorkspace() {
     // The real hook orders logout snapshots and relays each accepted boundary
     // synchronously as keryx:auth. Ignore duplicate/late channel snapshots here.
     try { channel = new BroadcastChannel("keryx-auth-v1"); channel.onmessage = event => {
-      if (event?.data?.type !== "logout") changed();
+      if (event?.data?.type !== "logout" && !isOwnBrowserAuthChange(event?.data)) changed();
     }; } catch { /* Local events/focus still invalidate. */ }
     return () => {
       lifetime.current?.abort();

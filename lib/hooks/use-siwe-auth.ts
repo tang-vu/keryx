@@ -1,5 +1,6 @@
 "use client";
 import { parseDatedAuthChallenge } from "../auth-time-policy";
+import { isOwnBrowserAuthChange, notifyBrowserAuthChanged } from "../browser-auth-notice";
 
 /**
  * useSiweAuth — the canonical wallet sign-in / sign-out flow, shared by the
@@ -168,7 +169,9 @@ export function useSiweAuth() {
         else if (event.data === "signed-out") { clearCircleWalletIdentity(); revision.current++; setSession(null); }
         // Anonymous channel hints can only clear state. Focus/manual refresh
         // obtains fresh server authority; a notice never starts private IO.
-        else if (event.data === "changed") { revision.current++; setSession(null); }
+        else if (event.data === "changed" || event.data?.type === "changed") {
+          if (!isOwnBrowserAuthChange(event.data)) { revision.current++; setSession(null); }
+        }
       };
     } catch { /* Focus refresh remains available when browser messaging is disabled. */ }
     return () => {
@@ -237,8 +240,7 @@ export function useSiweAuth() {
       }
       // Notify other hook instances (e.g. the session/faucet panel mounted
       // separately) that auth state changed, so they re-check without a reload.
-      if (typeof window !== "undefined") window.dispatchEvent(new Event("keryx:auth"));
-      channel.current?.postMessage("changed");
+      if (typeof window !== "undefined") notifyBrowserAuthChanged();
       return { ok: true, created: verifyData.created, role };
     } finally {
       if (mounted.current) setAuthState(logoutPending() ? "signing-out" : "idle");

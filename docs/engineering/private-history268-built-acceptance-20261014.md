@@ -1,8 +1,10 @@
 # Private268 compiled browser control — 2026-10-14
 
-Status: **app and operations types, one production build and all four compiled browser
-cases passed. The accepted control naturally closed in152,159ms, with zero cleanup
-failures and the original95s scenario aggregate unchanged (ROOT acceptance below)**.
+Status: **the prior compiled control passed all four cases in152,159ms with zero
+cleanup failures and the original95s scenario aggregate unchanged. The subsequent
+Circle auth correction changes client runtime: it requires fresh hosted build and
+compiled acceptance before merge. The earlier compiled result remains historical
+evidence, not acceptance of that correction.**
 The author handoff and UNRUN statements below describe the earlier source-only stage.
 This adds only [the compiled driver](../../scripts/test-browser-private-history268-built.mts)
 and this document at base HEAD `ae298ff41c239b292a043b3442df33f1701a4b99`.
@@ -302,3 +304,35 @@ The95s timer encloses the four-scenario browser block. The152.159s parent captur
 The existing production CI lane now runs this compiled control against that job's build and verifies the same four unique cases, both timer observations, unchanged originals, zero external requests and completed error-free cleanup. Only the two acceptance JSON files are retained. This explicit predicate accepts the genuine passing report and refuses a retained failed control whose Next exception handler nevertheless exited0; YAML and shell syntax checks passed. Existing jobs, deadlines and other workflow bytes are preserved.
 
 Final composition includes reviewed main c68ffb3a (merged491/493/494). All34 private code paths remain byte-identical at Git-blob level; incoming paths are retained, with only the explicit CI insertion and newly produced canonical pair qualified separately. ONE existing offline48 producer passed in12,939ms with434 exact LF source inputs. Only private-research-intent.ts, private-research-intents.ts and new private-research-identifiers.ts changed relative to incoming map; every trial and non-source field equals incoming, outboundAttempts0. Existing CI-block peer6887f748 accepted. Full final-candidate required hosted CI/build and its compiled-history step remain the merge gates.
+
+## Same-document auth correction after actual required-CI failure
+
+The first PR496 production run built successfully but the Circle browser check
+timed out waiting for authenticated UI. Circle first dispatched the local auth
+event, which started real session reads, then broadcast a legacy changed hint.
+Sibling auth hooks in the same document processed that hint as a peer boundary
+and cancelled or cleared the newly verified session.
+
+A small shared client notifier now labels changed hints with a private document
+identifier. The local event still starts fresh server verification; hooks and the
+private workspace ignore only their own redundant channel hint. Foreign and
+legacy changed hints still clear private state without starting private IO. The
+logout pending, sequence, lease and HTTP/JSON acknowledgement protocol is unchanged.
+The identifier is delivery metadata and grants no session or payment authority.
+
+Real Circle browser controls passed in15,956ms; the auth browser control passed
+in6,794ms, including existing session and account-history scripts. Two older
+fixture expectations were corrected after actual failures: an unconfirmed logout
+clears private views while retaining connection; only a genuine local ACK followed
+by the receiving tab own fresh server refusal clears its Circle credentials. Both
+fixtures observe actual normalized terminal delivery before explicit focus.
+No timer or failure assertion was removed. The workspace suite passed87 cases,
+including the new local-notice positive and foreign/legacy no-IO negatives; its
+one absent-event failure was fixed with optional access and passed separately
+in5,791ms. These are separate captures, not a claimed single88-case passing run.
+
+All434 physical LF-normalized canonical source hashes remain identical and none
+of the seven auth correction paths belongs to that closure. The accepted48-trial
+study and unchanged pair are reused; no study producer was replayed. Fresh hosted
+CI must exercise the changed client runtime, existing build and all four compiled
+cases. Original268 remains open for its broader acceptance criteria.
