@@ -31,13 +31,18 @@ The first migration installs the fixed 19 user-domain tables together. The
 mainnet family remains exactly four shapes: archive absent/present crossed with
 the complete bundle absent/present. The never-deployed private-profile-only
 after-shape is retired. `private-profile-storage-migrate` and its receipt format
-remain compatibility names for this single migration. Its stopped-writer,
+remain compatibility names for this single migration.
+`keryx-redeploy-native-user-domains-migration-v1` selects that fixed command
+through the existing protected six-field redeploy migration pair. Source builds
+first, migration runs before any new role starts, and an attempted migration
+keeps the existing no-automatic-rollback failure hold armed. The stopped-writer,
 typed-original, flushed no-replace backup, EXCLUSIVE admission and uncertain
 post-commit acknowledgement rules remain mandatory. Only the acceptance UUID
 singleton is seeded; no users, ownership, consent or public profiles are seeded.
 Table presence does not enable a feature: native ports and their individual
 verification remain necessary, and existing held flags remain held.
 
-Full-bundle migration and native policy checks have passed. Customer API/facade
-verification, required CI and the next combined production deployment remain
-release gates. The currently deployed acceptance endpoints remain unavailable.
+Full-bundle migration, native policy, customer journal/facade and focused
+TypeScript checks have passed. Required CI and the next combined production
+deployment remain release gates. The currently deployed acceptance endpoints
+remain unavailable.
