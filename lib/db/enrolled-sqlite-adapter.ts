@@ -18,6 +18,7 @@ import { createEnrolledSqliteProfileIdentities } from "./profile-identities-enro
 import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
 import { createEnrolledSqlitePrivateProfiles } from "./private-profiles-enrolled-sqlite";
+import { createEnrolledSqliteTopicWatches } from "./topic-watches-sqlite";
 
 /** Explicit behavior inventory, including verifyApiKey's last-used write. New methods require review. */
 export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
@@ -337,6 +338,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     Object.defineProperty(facade, "personalHistory", { value: createEnrolledSqlitePersonalHistory(db) });
     const bibliographies = createEnrolledSqlitePrivateBibliographies(db);
     if (bibliographies) Object.defineProperty(facade, "privateBibliographies", { value: bibliographies });
+    const topicWatches = createEnrolledSqliteTopicWatches(db);
+    if (topicWatches) Object.defineProperty(facade, "topicWatches", { value: topicWatches });
     Object.defineProperty(facade, "runPrivacyActive", { value: privacyActive });
     for (const name of ["runClaims", "runOwnershipHistory", "runPrivacy"] as const) {
       if (core[name]) Object.defineProperty(facade, name, { value: core[name] });
