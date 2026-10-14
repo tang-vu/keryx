@@ -196,7 +196,7 @@ const transportObservations = { fetchGuardEntries: 0, listenerEntries: 0, connec
 const transportChannels = [["undici:request:create", "undiciCreate"], ["undici:client:beforeConnect", "undiciBeforeConnect"], ["undici:client:connected", "undiciConnected"], ["undici:client:connectError", "undiciConnectError"], ["undici:request:headers", "undiciHeaders"]].map(([name, key]) => { const observed = channel(name); const listener = () => { transportObservations[key as keyof typeof transportObservations]++; }; observed.subscribe(listener); return { observed, listener }; });
 const results: object[] = [], failedBrowserStates: object[] = [], caseDurations: object[] = [];
 let currentCase = "", currentPhase = "before-browser";
-// These two independently authenticated contexts own all pages, cookies and BC realms.
+// These independently authenticated contexts own all pages, cookies and BC realms.
 let timedScenarios: Promise<void>[] = [];
 let origin = "";
 const server = createServer(async (req, res) => {
@@ -474,8 +474,10 @@ try {
     assert.equal((await snapshot(a)).events.filter(e => e.value === "signed-out").length, 1);
     assert.equal((await snapshot(b)).events.filter(e => e.value === "signed-out").length, 0, "Peer confirmation never grants auth authority");
     await cleared(a, pa); await cleared(b, pb);
-  }),
-  pair("local-workspace-unmount-has-no-peer-authority", async (a, b) => {
+  })];
+  const initialOutcomes = await Promise.allSettled(timedScenarios);
+  for (const outcome of initialOutcomes) if (outcome.status === "rejected") throw outcome.reason;
+  timedScenarios = [pair("local-workspace-unmount-has-no-peer-authority", async (a, b) => {
     const da = await pendingDetail(a), db = await pendingDetail(b), before = await snapshot(b);
     // Actual Next client navigation unmounts the actual page/workspace. Removing DOM
     // nodes or calling a test root's unmount would not establish this behavior.
@@ -486,12 +488,9 @@ try {
     await release(b, db.id); await workspace(b).getByText(answer, { exact: true }).waitFor();
     await release(a, da.id); assert.equal(await workspace(a).getByText(answer, { exact: true }).count(), 0);
     assert(!(await snapshot(a)).messages.some(m => typeof m.value === "object" && m.value.type === "logout"));
-  })];
-  currentCase = "independent-normal-and-unmount-contexts";
-  const initialOutcomes = await Promise.allSettled(timedScenarios);
-  for (const outcome of initialOutcomes) if (outcome.status === "rejected") throw outcome.reason;
-  // Overlap only the independent real timers; retain every original deadline/assertion.
-  timedScenarios = [pair("real-15s-abort-is-not-a-normal-ack", async (a, b) => {
+  }),
+  // Overlap independent navigation and real timers; keep normal ACK unopposed.
+  pair("real-15s-abort-is-not-a-normal-ack", async (a, b) => {
     const da = await pendingDetail(a), db = await pendingDetail(b), sa = await staleHookSessions(a), sb = await staleHookSessions(b);
     await hold(a, LOGOUT, "transport", true); await logout(a); const start = await received(b); await cleared(a); await cleared(b);
     await a.waitForFunction(() => (window as FixtureWindow).__private268Built.requests.some(r => r.path === "/api/auth/signout" && r.ready && r.aborted), undefined, { timeout: 18000 });
@@ -552,7 +551,7 @@ try {
     assert.equal((await snapshot(b)).events.filter(e => e.value === "signed-out").length, 0);
     results.push({ observation: "receiver-lease", elapsedMs: elapsed, pendingStormClaims: 24, freshHttpEpoch: true });
   })];
-  currentCase = "independent-abort-and-lease-contexts";
+  currentCase = "independent-unmount-abort-and-lease-contexts";
   const timedOutcomes = await Promise.allSettled(timedScenarios);
   for (const outcome of timedOutcomes) if (outcome.status === "rejected") throw outcome.reason;
   async function contextNullCheck(page: Page) {
