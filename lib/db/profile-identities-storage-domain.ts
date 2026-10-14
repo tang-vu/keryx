@@ -1,5 +1,4 @@
-import { PRIVATE_PROFILES_SQL } from "./private-profiles-sqlite";
-import { PROFILE_IDENTITIES_SQL } from "./profile-identities-sqlite";
+import { PRIVATE_PROFILES_SQL, PROFILE_IDENTITIES_SQL } from "./profile-sqlite-schema-data";
 
 // Declaration for ROOT's single whole-bundle migration, never a domain installer.
 // These existing tables must remain byte-for-byte schema compatible; do not recreate them.

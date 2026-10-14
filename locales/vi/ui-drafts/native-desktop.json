@@ -1,0 +1,516 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/native-desktop.ts",
+  "sourceSha256": "d0e3861976ddc14b2ee076cdc139399bc781c0929672c02970ce4e34dee151e3",
+  "entries": {
+    "nativeDesktop.savedResult.openFailed": {
+      "source": "Saved result cannot be opened: {reason}",
+      "text": "Không thể mở kết quả đã lưu: {reason}"
+    },
+    "nativeDesktop.workspace.openFailed": {
+      "source": "The local workspace could not be opened: {reason}",
+      "text": "Không thể mở không gian làm việc cục bộ: {reason}"
+    },
+    "nativeDesktop.workspace.unavailable": {
+      "source": "The selected workspace is no longer available. Open a workspace to continue.",
+      "text": "Không gian được chọn không còn khả dụng. Mở không gian làm việc để tiếp tục."
+    },
+    "nativeDesktop.task.createdRefreshFailed": {
+      "source": "Task was created, but the workspace view could not be refreshed. Keep that folder and inspect it before retrying: {path}",
+      "text": "Đã tạo nhiệm vụ nhưng không thể làm mới chế độ xem không gian làm việc. Giữ thư mục đó và kiểm tra trước khi thử lại: {path}"
+    },
+    "nativeDesktop.workspace.taskCount.one": {
+      "source": "{count} research tasks",
+      "text": "{count} nhiệm vụ nghiên cứu"
+    },
+    "nativeDesktop.workspace.taskCount.other": {
+      "source": "{count} research tasks",
+      "text": "{count} nhiệm vụ nghiên cứu"
+    },
+    "nativeDesktop.task.createdAt": {
+      "source": "{mode} RESEARCH · {date}",
+      "text": "NGHIÊN CỨU {mode} · {date}"
+    },
+    "nativeDesktop.task.lastChecked": {
+      "source": "Checked {date} · payment {payment}",
+      "text": "Kiểm tra {date} · thanh toán {payment}"
+    },
+    "nativeDesktop.savedResult.verification": {
+      "source": "Saved {date}. Local receipt and original task binding checked. The original server response and settlement cannot be independently rechecked offline.",
+      "text": "Lưu {date}. Đã kiểm tra biên nhận cục bộ và ràng buộc nhiệm vụ ban đầu. Không thể kiểm tra lại độc lập phản hồi máy chủ ban đầu và quyết toán khi ngoại tuyến."
+    },
+    "nativeDesktop.unsavedResult.boundary": {
+      "source": "The original buyer receipt remains in the buyer journal. Retry the original job check to save this answer locally.",
+      "text": "Biên nhận mua ban đầu vẫn trong nhật ký bên mua. Thử kiểm tra lại tác vụ ban đầu để lưu câu trả lời này cục bộ."
+    },
+    "nativeDesktop.unsavedResult.truncatedBoundary": {
+      "source": "Preview truncated at 50,000 characters. The original buyer receipt remains in the buyer journal. Retry the original job check to save this answer locally.",
+      "text": "Bản xem trước cắt ở 50.000 ký tự. Biên nhận mua ban đầu vẫn trong nhật ký bên mua. Thử kiểm tra lại tác vụ ban đầu để lưu câu trả lời này cục bộ."
+    },
+    "nativeDesktop.exports.saved": {
+      "source": "Private {format} export saved.",
+      "text": "Đã lưu bản xuất {format} riêng tư."
+    },
+    "nativeDesktop.task.capBoundary": {
+      "source": "{network} · cap must exceed creator budget · 1 USDC maximum",
+      "text": "{network} · hạn mức phải lớn hơn ngân sách cho tác giả · tối đa 1 USDC"
+    },
+    "nativeDesktop.reference.imported": {
+      "source": "Imported {date} · {bytes} bytes",
+      "text": "Nhập {date} · {bytes} byte"
+    },
+    "nativeDesktop.reference.checksum": {
+      "source": "SHA-256 {sha256}",
+      "text": "SHA-256 {sha256}"
+    },
+    "nativeDesktop.workspace.unrecognized.one": {
+      "source": "{count} folder could not be recognized as valid Operator tasks and were left untouched.",
+      "text": "Không nhận diện được {count} thư mục là nhiệm vụ Operator hợp lệ nên giữ nguyên."
+    },
+    "nativeDesktop.workspace.unrecognized.other": {
+      "source": "{count} folders could not be recognized as valid Operator tasks and were left untouched.",
+      "text": "Không nhận diện được {count} thư mục là nhiệm vụ Operator hợp lệ nên giữ nguyên."
+    },
+    "nativeDesktop.stage.ready": {
+      "source": "Ready to purchase",
+      "text": "Sẵn sàng mua"
+    },
+    "nativeDesktop.stage.buyerJournaled": {
+      "source": "Saved buyer attempt",
+      "text": "Lần mua đã lưu"
+    },
+    "nativeDesktop.stage.incomplete": {
+      "source": "Needs review",
+      "text": "Cần xem xét"
+    },
+    "nativeDesktop.network.mainnet": {
+      "source": "Arc Mainnet",
+      "text": "Arc Mainnet"
+    },
+    "nativeDesktop.network.testnet": {
+      "source": "Arc Testnet",
+      "text": "Arc Testnet"
+    },
+    "nativeDesktop.workspace.none": {
+      "source": "No workspace open",
+      "text": "Chưa mở không gian làm việc"
+    },
+    "nativeDesktop.workspace.chooseFolder": {
+      "source": "Choose a private local folder",
+      "text": "Chọn thư mục cục bộ riêng tư"
+    },
+    "nativeDesktop.workspace.createdVisible": {
+      "source": "Workspace created and visible. Keep a backup of important local work.",
+      "text": "Đã tạo và hiển thị không gian làm việc. Sao lưu công việc cục bộ quan trọng."
+    },
+    "nativeDesktop.workspace.created": {
+      "source": "Private workspace created.",
+      "text": "Đã tạo không gian làm việc riêng tư."
+    },
+    "nativeDesktop.breadcrumb.task": {
+      "source": "TASK DETAIL",
+      "text": "CHI TIẾT NHIỆM VỤ"
+    },
+    "nativeDesktop.breadcrumb.desk": {
+      "source": "RESEARCH DESK",
+      "text": "BÀN NGHIÊN CỨU"
+    },
+    "nativeDesktop.busy.savedResult": {
+      "source": "Opening saved result…",
+      "text": "Đang mở kết quả đã lưu…"
+    },
+    "nativeDesktop.task.title": {
+      "source": "Research task",
+      "text": "Nhiệm vụ nghiên cứu"
+    },
+    "nativeDesktop.desk.title": {
+      "source": "Research desk",
+      "text": "Bàn nghiên cứu"
+    },
+    "nativeDesktop.task.introduction": {
+      "source": "Your question, pinned payee, spending boundary, and recovery state.",
+      "text": "Câu hỏi, bên nhận cố định, giới hạn chi tiêu và trạng thái khôi phục của bạn."
+    },
+    "nativeDesktop.desk.introduction": {
+      "source": "Ask a question. Set a boundary. Keep your evidence together.",
+      "text": "Đặt câu hỏi. Đặt giới hạn. Giữ bằng chứng cùng nhau."
+    },
+    "nativeDesktop.savedResult.previous": {
+      "source": "PREVIOUS SAVED RESULT · LOCAL RECHECK",
+      "text": "KẾT QUẢ ĐÃ LƯU TRƯỚC ĐÓ · KIỂM TRA LẠI CỤC BỘ"
+    },
+    "nativeDesktop.savedResult.current": {
+      "source": "SAVED RESEARCH RESULT · LOCAL RECHECK",
+      "text": "KẾT QUẢ NGHIÊN CỨU ĐÃ LƯU · KIỂM TRA LẠI CỤC BỘ"
+    },
+    "nativeDesktop.savedResult.saveFailed": {
+      "source": "Completed result could not be saved locally.",
+      "text": "Không thể lưu kết quả hoàn tất cục bộ."
+    },
+    "nativeDesktop.task.observationSaveFailed": {
+      "source": "Result checked, but its latest status could not be saved locally. The original buyer journal remains available.",
+      "text": "Đã kiểm tra kết quả nhưng không thể lưu trạng thái mới nhất cục bộ. Nhật ký bên mua ban đầu vẫn khả dụng."
+    },
+    "nativeDesktop.task.checked": {
+      "source": "Result checked. Payment confirmation is shown separately.",
+      "text": "Đã kiểm tra kết quả. Xác nhận thanh toán hiển thị riêng."
+    },
+    "nativeDesktop.exports.briefSaved": {
+      "source": "Private research brief saved.",
+      "text": "Đã lưu bản tóm lược nghiên cứu riêng tư."
+    },
+    "nativeDesktop.exports.statusSaved": {
+      "source": "Private status JSON saved.",
+      "text": "Đã lưu JSON trạng thái riêng tư."
+    },
+    "nativeDesktop.task.createdVisible": {
+      "source": "Research task created and visible. Keep a backup of important local work.",
+      "text": "Đã tạo và hiển thị nhiệm vụ nghiên cứu. Sao lưu công việc cục bộ quan trọng."
+    },
+    "nativeDesktop.task.created": {
+      "source": "Research task created in your workspace.",
+      "text": "Đã tạo nhiệm vụ nghiên cứu trong không gian làm việc."
+    },
+    "nativeDesktop.reference.importedNotice": {
+      "source": "Local reference snapshot imported.",
+      "text": "Đã nhập bản chụp tài liệu tham khảo cục bộ."
+    },
+    "nativeDesktop.brand.mark": {
+      "source": "K",
+      "text": "K"
+    },
+    "nativeDesktop.brand.name": {
+      "source": "Keryx",
+      "text": "Keryx"
+    },
+    "nativeDesktop.brand.tagline": {
+      "source": "THE CITATION TOLL",
+      "text": "PHÍ TRÍCH DẪN"
+    },
+    "nativeDesktop.workspace.section": {
+      "source": "01 / PRIVATE WORKSPACE",
+      "text": "01 / KHÔNG GIAN LÀM VIỆC RIÊNG TƯ"
+    },
+    "nativeDesktop.workspace.open": {
+      "source": "Open workspace",
+      "text": "Mở không gian làm việc"
+    },
+    "nativeDesktop.workspace.new": {
+      "source": "New workspace",
+      "text": "Không gian làm việc mới"
+    },
+    "nativeDesktop.task.new": {
+      "source": "＋ New research task",
+      "text": "＋ Nhiệm vụ nghiên cứu mới"
+    },
+    "nativeDesktop.task.section": {
+      "source": "02 / RESEARCH TASKS ",
+      "text": "02 / NHIỆM VỤ NGHIÊN CỨU "
+    },
+    "nativeDesktop.workspace.empty": {
+      "source": "Your workspace has no tasks yet.",
+      "text": "Không gian làm việc chưa có nhiệm vụ."
+    },
+    "nativeDesktop.workspace.localTasks": {
+      "source": " Local tasks ",
+      "text": " Tác vụ cục bộ "
+    },
+    "nativeDesktop.workspace.localBoundary": {
+      "source": "· local workspace",
+      "text": "· không gian làm việc cục bộ"
+    },
+    "nativeDesktop.breadcrumb.mint": {
+      "source": "THE MINT ",
+      "text": "XƯỞNG PHÁT HÀNH "
+    },
+    "nativeDesktop.breadcrumb.operator": {
+      "source": " OPERATOR ",
+      "text": " OPERATOR "
+    },
+    "nativeDesktop.action.failed": {
+      "source": "Could not complete action",
+      "text": "Không thể hoàn tất thao tác"
+    },
+    "nativeDesktop.desk.opening": {
+      "source": "Opening your research desk…",
+      "text": "Đang mở bàn nghiên cứu của bạn…"
+    },
+    "nativeDesktop.onboarding.eyebrow": {
+      "source": "A PRIVATE DESK FOR PAID RESEARCH",
+      "text": "BÀN RIÊNG CHO NGHIÊN CỨU TRẢ PHÍ"
+    },
+    "nativeDesktop.onboarding.title": {
+      "source": "Your work, in one place.",
+      "text": "Công việc của bạn, cùng một nơi."
+    },
+    "nativeDesktop.onboarding.introduction": {
+      "source": "Prepare bounded research, keep references nearby, and return to the original job when a result needs checking.",
+      "text": "Chuẩn bị nghiên cứu có giới hạn, giữ tài liệu tham khảo bên cạnh và quay lại tác vụ ban đầu khi cần kiểm tra kết quả."
+    },
+    "nativeDesktop.workspace.create": {
+      "source": "Create workspace ",
+      "text": "Tạo không gian làm việc "
+    },
+    "nativeDesktop.workspace.openExisting": {
+      "source": "Open existing",
+      "text": "Mở hiện có"
+    },
+    "nativeDesktop.onboarding.boundary": {
+      "source": "Local preparation only. Purchases happen deliberately through the buyer CLI.",
+      "text": "Chỉ chuẩn bị cục bộ. Giao dịch mua được thực hiện chủ động qua CLI bên mua."
+    },
+    "nativeDesktop.desk.eyebrow": {
+      "source": "OPERATOR / LOCAL WORKSPACE",
+      "text": "OPERATOR / KHÔNG GIAN LÀM VIỆC CỤC BỘ"
+    },
+    "nativeDesktop.workspace.refresh": {
+      "source": "↻ Refresh",
+      "text": "↻ Làm mới"
+    },
+    "nativeDesktop.task.creatorBudget": {
+      "source": "CREATOR BUDGET",
+      "text": "NGÂN SÁCH CHO TÁC GIẢ"
+    },
+    "nativeDesktop.task.totalCap": {
+      "source": "TOTAL JOB CAP",
+      "text": "TỔNG HẠN MỨC TÁC VỤ"
+    },
+    "nativeDesktop.task.payment": {
+      "source": "PAYMENT",
+      "text": "THANH TOÁN"
+    },
+    "nativeDesktop.task.unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "nativeDesktop.task.delivery": {
+      "source": "DELIVERY",
+      "text": "CUNG CẤP"
+    },
+    "nativeDesktop.task.pinnedSeller": {
+      "source": "PINNED SELLER PAYEE",
+      "text": "BÊN BÁN NHẬN TIỀN ĐÃ CỐ ĐỊNH"
+    },
+    "nativeDesktop.task.lastObservation": {
+      "source": "LAST CHECKED RESULT · MAY BE OUT OF DATE",
+      "text": "KẾT QUẢ KIỂM TRA GẦN NHẤT · CÓ THỂ ĐÃ CŨ"
+    },
+    "nativeDesktop.task.sellerReportedBoundary": {
+      "source": "Payment details are reported by the seller. Check again for the latest delivery state.",
+      "text": "Chi tiết thanh toán do bên bán báo cáo. Kiểm tra lại để có trạng thái cung cấp mới nhất."
+    },
+    "nativeDesktop.savedResult.citations": {
+      "source": "Cited sources in saved receipt",
+      "text": "Nguồn được trích dẫn trong biên nhận đã lưu"
+    },
+    "nativeDesktop.savedResult.invalid": {
+      "source": "The saved result file is invalid. Keep the original buyer journal and check the original job again.",
+      "text": "Tệp kết quả đã lưu không hợp lệ. Giữ nhật ký bên mua ban đầu và kiểm tra lại tác vụ ban đầu."
+    },
+    "nativeDesktop.unsavedResult.title": {
+      "source": "ANSWER FROM LATEST CHECK · NOT SAVED LOCALLY",
+      "text": "CÂU TRẢ LỜI TỪ LẦN KIỂM TRA MỚI NHẤT · CHƯA LƯU CỤC BỘ"
+    },
+    "nativeDesktop.task.incompleteBoundary": {
+      "source": "The buyer journal is incomplete. Inspect the original attempt before recovery; preserve this task directory.",
+      "text": "Nhật ký bên mua chưa đầy đủ. Kiểm tra lần thử ban đầu trước khi khôi phục; giữ thư mục nhiệm vụ này."
+    },
+    "nativeDesktop.task.checkOriginal": {
+      "source": "Check original job",
+      "text": "Kiểm tra tác vụ ban đầu"
+    },
+    "nativeDesktop.exports.brief": {
+      "source": "Export private brief",
+      "text": "Xuất bản tóm lược riêng tư"
+    },
+    "nativeDesktop.exports.status": {
+      "source": "Export status JSON",
+      "text": "Xuất JSON trạng thái"
+    },
+    "nativeDesktop.handoff.title": {
+      "source": "Buyer CLI handoff · PowerShell",
+      "text": "Chuyển tiếp CLI bên mua · PowerShell"
+    },
+    "nativeDesktop.handoff.boundary": {
+      "source": "Run this command from the Keryx repository. Before any deliberate purchase, independently confirm the saved network, pinned payee and total cap. Keep the same network for original-job recovery. Run the buyer CLI once for this task. If it becomes uncertain, resume the original journal.",
+      "text": "Chạy lệnh này từ kho Keryx. Trước khi chủ động mua, xác nhận độc lập mạng đã lưu, bên nhận cố định và tổng hạn mức. Giữ cùng mạng để khôi phục tác vụ ban đầu. Chạy CLI bên mua một lần cho nhiệm vụ này. Nếu kết quả chưa rõ, tiếp tục từ nhật ký ban đầu."
+    },
+    "nativeDesktop.handoff.payee": {
+      "source": "PINNED PAYEE",
+      "text": "BÊN NHẬN ĐÃ CỐ ĐỊNH"
+    },
+    "nativeDesktop.task.prepareEyebrow": {
+      "source": "01 / NEW TASK",
+      "text": "01 / NHIỆM VỤ MỚI"
+    },
+    "nativeDesktop.task.prepareTitle": {
+      "source": "Prepare paid research",
+      "text": "Chuẩn bị nghiên cứu trả phí"
+    },
+    "nativeDesktop.task.prepareBoundary": {
+      "source": "Save a question and spending boundary. Creating a task does not make a purchase.",
+      "text": "Lưu câu hỏi và giới hạn chi tiêu. Tạo nhiệm vụ không thực hiện giao dịch mua."
+    },
+    "nativeDesktop.task.question": {
+      "source": "Research question",
+      "text": "Câu hỏi nghiên cứu"
+    },
+    "nativeDesktop.task.network": {
+      "source": "Research network",
+      "text": "Mạng nghiên cứu"
+    },
+    "nativeDesktop.task.networkBoundary": {
+      "source": "The public Keryx service uses Arc Mainnet. Testnet tasks need a separate testnet service. The buyer must use this saved network. Creating a task does not authorize payment.",
+      "text": "Dịch vụ Keryx công khai dùng Arc Mainnet. Nhiệm vụ testnet cần dịch vụ testnet riêng. Bên mua phải dùng mạng đã lưu này. Tạo nhiệm vụ không cho phép thanh toán."
+    },
+    "nativeDesktop.task.depth": {
+      "source": "RESEARCH DEPTH",
+      "text": "ĐỘ SÂU NGHIÊN CỨU"
+    },
+    "nativeDesktop.task.quick": {
+      "source": "Quick",
+      "text": "Nhanh"
+    },
+    "nativeDesktop.task.quickHint": {
+      "source": "A concise first pass",
+      "text": "Lượt đầu ngắn gọn"
+    },
+    "nativeDesktop.task.deep": {
+      "source": "Deep",
+      "text": "Chuyên sâu"
+    },
+    "nativeDesktop.task.deepHint": {
+      "source": "More thorough research",
+      "text": "Nghiên cứu kỹ hơn"
+    },
+    "nativeDesktop.task.creatorBudgetField": {
+      "source": "Creator budget · USDC",
+      "text": "Ngân sách cho tác giả · USDC"
+    },
+    "nativeDesktop.task.totalCapField": {
+      "source": "Total job cap · USDC",
+      "text": "Tổng hạn mức tác vụ · USDC"
+    },
+    "nativeDesktop.task.payeeField": {
+      "source": "Pinned seller payee",
+      "text": "Bên bán nhận tiền đã cố định"
+    },
+    "nativeDesktop.task.payeeHint": {
+      "source": "Verify this address independently before any purchase.",
+      "text": "Xác minh địa chỉ này độc lập trước khi mua."
+    },
+    "nativeDesktop.task.save": {
+      "source": "Save task ",
+      "text": "Lưu nhiệm vụ "
+    },
+    "nativeDesktop.summary.tasks": {
+      "source": "RESEARCH TASKS",
+      "text": "NHIỆM VỤ NGHIÊN CỨU"
+    },
+    "nativeDesktop.summary.tasksHint": {
+      "source": "Saved in this workspace",
+      "text": "Đã lưu trong không gian này"
+    },
+    "nativeDesktop.summary.references": {
+      "source": "LOCAL REFERENCES",
+      "text": "TÀI LIỆU THAM KHẢO CỤC BỘ"
+    },
+    "nativeDesktop.summary.referencesHint": {
+      "source": "Text snapshots only",
+      "text": "Chỉ bản chụp văn bản"
+    },
+    "nativeDesktop.summary.network": {
+      "source": "RESEARCH NETWORK",
+      "text": "MẠNG NGHIÊN CỨU"
+    },
+    "nativeDesktop.summary.networkValue": {
+      "source": "Per saved task",
+      "text": "Theo từng nhiệm vụ đã lưu"
+    },
+    "nativeDesktop.summary.networkHint": {
+      "source": "Task preparation is local",
+      "text": "Chuẩn bị nhiệm vụ là cục bộ"
+    },
+    "nativeDesktop.reference.eyebrow": {
+      "source": "LOCAL LIBRARY",
+      "text": "THƯ VIỆN CỤC BỘ"
+    },
+    "nativeDesktop.reference.title": {
+      "source": "Reference snapshots",
+      "text": "Bản chụp tài liệu tham khảo"
+    },
+    "nativeDesktop.reference.boundary": {
+      "source": "Imported text and Markdown stay in this workspace. They are not uploaded or used in research answers yet.",
+      "text": "Văn bản và Markdown đã nhập giữ trong không gian này. Chưa tải lên hay dùng trong câu trả lời nghiên cứu."
+    },
+    "nativeDesktop.reference.import": {
+      "source": "+ Import file",
+      "text": "+ Nhập tệp"
+    },
+    "nativeDesktop.reference.empty": {
+      "source": "No references imported yet. Choose a .txt or .md file up to 256 KiB.",
+      "text": "Chưa nhập tài liệu tham khảo. Chọn tệp .txt hoặc .md tối đa 256 KiB."
+    },
+    "nativeDesktop.workspace.refreshTasks": {
+      "source": "Refresh tasks",
+      "text": "Làm mới nhiệm vụ"
+    },
+    "nativeDesktop.task.questionPlaceholder": {
+      "source": "What would you like to investigate?",
+      "text": "Bạn muốn tìm hiểu điều gì?"
+    },
+    "nativeDesktop.task.payeePlaceholder": {
+      "source": "0x... independently verified",
+      "text": "0x... được xác minh độc lập"
+    },
+    "nativeDesktop.busy.opening": {
+      "source": "Opening…",
+      "text": "Đang mở…"
+    },
+    "nativeDesktop.busy.creating": {
+      "source": "Creating…",
+      "text": "Đang tạo…"
+    },
+    "nativeDesktop.busy.refreshing": {
+      "source": "Refreshing…",
+      "text": "Đang làm mới…"
+    },
+    "nativeDesktop.busy.resuming": {
+      "source": "Resuming…",
+      "text": "Đang tiếp tục…"
+    },
+    "nativeDesktop.busy.brief": {
+      "source": "Brief…",
+      "text": "Tóm lược…"
+    },
+    "nativeDesktop.busy.exporting": {
+      "source": "Exporting…",
+      "text": "Đang xuất…"
+    },
+    "nativeDesktop.busy.saving": {
+      "source": "Saving…",
+      "text": "Đang lưu…"
+    },
+    "nativeDesktop.busy.importing": {
+      "source": "Importing…",
+      "text": "Đang nhập…"
+    },
+    "nativeDesktop.exports.bibtex": {
+      "source": "Export BibTeX",
+      "text": "Xuất BibTeX"
+    },
+    "nativeDesktop.exports.ris": {
+      "source": "Export RIS",
+      "text": "Xuất RIS"
+    },
+    "nativeDesktop.exports.csl-json": {
+      "source": "Export CSL-JSON",
+      "text": "Xuất CSL-JSON"
+    },
+    "nativeDesktop.exports.evidence-csv": {
+      "source": "Export evidence CSV",
+      "text": "Xuất CSV bằng chứng"
+    }
+  }
+}

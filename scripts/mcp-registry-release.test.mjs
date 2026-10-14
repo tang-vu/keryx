@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 import {
   preflightNpm, preflightRegistry, readNpmPackage, readOfficialEntry, registryVersionUrl, validateNpmReadback,
@@ -114,4 +117,68 @@ test('public reads are fixed HTTPS endpoints with deadline, no redirects, finite
     await assert.rejects(readOfficialEntry(url, async () => response), /^Error: Official MCP Registry readback unavailable; do not republish$/);
   }
   await assert.rejects(readOfficialEntry('https://other.example/server', async () => { throw new Error('must not fetch'); }));
+});
+
+test('immutable MCP asset publication uses exact names without rg and refuses uncertain reads or byte drift', async t => {
+  const workflow = readFileSync(new URL('../.github/workflows/mcp-release.yml', import.meta.url), 'utf8');
+  // Exercise the actual shell branch, never a live gh command or publication.
+  const branch = workflow.slice(workflow.indexOf('          package=$(find mcp-assets'))
+    .split('\n').map(line => line.replace(/^ {10}/, '')).join('\n');
+  assert(branch.startsWith('package=$(find mcp-assets'));
+  const bash = process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : 'bash';
+  const cases = [
+    { name: 'empty release', assets: '', events: ['view', 'upload'] },
+    { name: 'exact existing package', assets: 'other.txt\nkeryx-mcp-0.0.0.tgz\nlast.txt', events: ['view', 'download'] },
+    { name: 'prefix and suffix are different assets', assets: 'prefix-keryx-mcp-0.0.0.tgz\nkeryx-mcp-0.0.0.tgz.source.json', events: ['view', 'upload'] },
+    { name: 'release read fails', failure: 'view', assets: '', events: ['view'], fails: true },
+    { name: 'gh tool unavailable', failure: 'missing', assets: '', events: ['view'], fails: true },
+    { name: 'existing download fails', failure: 'download', assets: 'keryx-mcp-0.0.0.tgz', events: ['view', 'download'], fails: true },
+    { name: 'existing package bytes differ', failure: 'package', assets: 'keryx-mcp-0.0.0.tgz', events: ['view', 'download'], fails: true },
+    { name: 'existing provenance bytes differ', failure: 'manifest', assets: 'keryx-mcp-0.0.0.tgz', events: ['view', 'download'], fails: true },
+  ];
+  for (const scenario of cases) await t.test(scenario.name, () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), 'keryx-mcp-asset-test-'));
+    try {
+      mkdirSync(path.join(root, 'bin')); mkdirSync(path.join(root, 'mcp-assets'));
+      writeFileSync(path.join(root, 'mcp-assets/keryx-mcp-0.0.0.tgz'), 'synthetic immutable archive');
+      writeFileSync(path.join(root, 'mcp-assets/keryx-mcp-0.0.0.tgz.source.json'), 'synthetic exact-source provenance');
+      writeFileSync(path.join(root, 'asset-names.txt'), scenario.assets);
+      writeFileSync(path.join(root, 'branch.sh'), branch);
+      const gh = path.join(root, 'bin/gh'), rg = path.join(root, 'bin/rg');
+      writeFileSync(gh, `#!/bin/bash
+set -e
+[[ "$1" == release ]]
+printf '%s\\n' "$2" >> events.txt
+case "$2" in
+  view) [[ "$MCP_TEST_FAILURE" != view ]] || exit 23
+    [[ "$MCP_TEST_FAILURE" != missing ]] || exit 127
+    cat asset-names.txt ;;
+  download) [[ "$MCP_TEST_FAILURE" != download ]] || exit 24
+    cp mcp-assets/* existing/
+    [[ "$MCP_TEST_FAILURE" != package ]] || printf changed >> existing/keryx-mcp-0.0.0.tgz
+    [[ "$MCP_TEST_FAILURE" != manifest ]] || printf changed >> existing/keryx-mcp-0.0.0.tgz.source.json ;;
+  upload) ;;
+  *) exit 99 ;;
+esac
+`);
+      // Simulate the observed missing-tool exit even if the developer has rg installed.
+      writeFileSync(rg, '#!/bin/bash\nprintf "rg\\n" >> events.txt\nexit 127\n');
+      chmodSync(gh, 0o755); chmodSync(rg, 0o755);
+      const bin = path.join(root, 'bin').replaceAll('\\', '/').replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`);
+      const result = spawnSync(bash, ['--noprofile', '--norc', '-e', '-o', 'pipefail', 'branch.sh'], {
+        cwd: root, encoding: 'utf8', timeout: 10_000,
+        env: { PATH: `${bin}:/usr/bin:/bin`, ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot } : {}),
+          RELEASE_TAG: 'v0.0.0-synthetic', MCP_TEST_FAILURE: scenario.failure ?? '' },
+      });
+      assert.ifError(result.error); assert.equal(result.signal, null);
+      assert.equal(result.status === 0, !scenario.fails, result.stderr);
+      const events = readFileSync(path.join(root, 'events.txt'), 'utf8').trim().split('\n');
+      assert.deepEqual(events, scenario.events);
+      assert(!events.includes('rg'), 'No optional tool participates in publication admission');
+    } finally {
+      assert.equal(path.dirname(path.resolve(root)), path.resolve(os.tmpdir()));
+      assert.match(path.basename(root), /^keryx-mcp-asset-test-/);
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

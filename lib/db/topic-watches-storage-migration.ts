@@ -3,37 +3,58 @@ import { canonicalJson } from "../canonical-json";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
 import { installNativeUserDomainSchema } from "./native-user-domain-schema";
 import { NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema-data";
-import { TOPIC_WATCHES_SQL } from "./topic-watches-schema";
 import { snapshotPublicArchiveStorage } from "./public-reference-archive-migration";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { validateStorageIdentity, type StorageIdentity } from "./storage-identity";
 import { assertStorageFences, assertStorageIdentity, holdStorageTarget, installStorageFences,
   STORAGE_IDENTITY_TABLE, storageFenceStatements } from "./storage-identity-sqlite";
 
-const legacyFull19 = Object.freeze(["private_profiles", "profile_verified_identities", "profile_identity_challenges",
+export const HISTORICAL_NATIVE_USER_DOMAIN_TABLES = Object.freeze(["private_profiles", "profile_verified_identities", "profile_identity_challenges",
   "private_bibliographies", "deliverable_acceptance_store", "deliverable_acceptance_entries", "run_privacy",
   "run_privacy_defaults", "run_privacy_audit", "anonymous_run_claims", "public_researcher_profiles", "decision_review_records",
   "decision_review_verdicts", "account267_accounts", "account267_members", "account267_credentials", "account267_sessions",
   "account267_challenges", "account267_events"]);
 
-/** Explicit full19 -> full20 source reference; NOT extra runtime profiles. ROOT
- * must compose the sibling-domain additions here before the combined migration.
- * Refuse that uncomposed source instead of silently treating full19 as BEFORE. */
-export function topicWatchesMigrationProfiles(): readonly (readonly [string, string])[] {
-  if (canonicalJson([...NATIVE_USER_DOMAIN_TABLES].sort()) !== canonicalJson([...legacyFull19, "topic_watches"].sort()))
-    throw new Error("ROOT must compose the full19-to-complete-bundle migration reference");
+/** Migration-only references, never additional runtime admission. The optional
+ * chat pair is admitted only when both are actually in the compiled source.
+ * Each changed compiled target still needs the release owner's acceptance.
+ * pending_job_owners and arbitrary partial/unknown families are not admitted. */
+function topicWatchesMigrationPlans() {
+  const sourceTables: readonly string[] = NATIVE_USER_DOMAIN_TABLES;
+  const added = sourceTables.filter(table => !HISTORICAL_NATIVE_USER_DOMAIN_TABLES.includes(table));
+  const known = [["topic_watches"], ["chat263_links", "chat263_tokens", "topic_watches"]];
+  if (new Set(NATIVE_USER_DOMAIN_TABLES).size !== NATIVE_USER_DOMAIN_TABLES.length ||
+    HISTORICAL_NATIVE_USER_DOMAIN_TABLES.some(table => !sourceTables.includes(table)) ||
+    !known.some(tables => canonicalJson([...tables].sort()) === canonicalJson([...added].sort())))
+    throw new Error("ROOT must qualify the full19-to-complete-bundle migration reference");
   return Object.freeze([false, true].map(publicReferenceArchive => {
     const reference = new DatabaseSync(":memory:");
     try {
       reference.exec("BEGIN"); installMainnetApplicationSchema(reference, { publicReferenceArchive });
       installNativeUserDomainSchema(reference);
       const after = sqliteApplicationSchemaProfile(reference, new Set());
-      reference.exec("DROP TABLE topic_watches"); // isolated reference only; never the target
+      // DDL is taken ONLY from the isolated, trusted source installer, never
+      // target metadata, a caller table list, an environment value or a file.
+      const objects = reference.prepare(`SELECT type,name,tbl_name,sql FROM sqlite_schema
+        WHERE name NOT LIKE 'sqlite_%' ORDER BY rowid`).all().filter(row => added.includes(String(row.tbl_name)));
+      if (objects.filter(row => row.type === "table").length !== added.length ||
+        objects.some(row => !["table", "index", "trigger"].includes(String(row.type)) || typeof row.sql !== "string"))
+        throw new Error("Metadata migration source DDL differs");
+      for (const table of [...added].reverse()) reference.exec(`DROP TABLE "${table}"`); // isolated reference only
       const before = sqliteApplicationSchemaProfile(reference, new Set());
+      const oldSchema = JSON.parse(before) as unknown[], newSchema = JSON.parse(after) as unknown[];
+      const delta = newSchema.filter(row => !oldSchema.some(old => canonicalJson(old) === canonicalJson(row)));
+      if (oldSchema.some(row => !newSchema.some(next => canonicalJson(next) === canonicalJson(row))) ||
+        canonicalJson(delta.map(canonicalJson).sort()) !== canonicalJson(objects.map(canonicalJson).sort()))
+        throw new Error("Metadata migration changes historical schema");
       reference.exec("ROLLBACK");
-      return Object.freeze([before, after] as const);
+      return Object.freeze({ pair: Object.freeze([before, after] as const),
+        added: Object.freeze([...added]), ddl: Object.freeze(objects.map(row => String(row.sql))) });
     } finally { reference.close(); }
   }));
+}
+export function topicWatchesMigrationProfiles(): readonly (readonly [string, string])[] {
+  return Object.freeze(topicWatchesMigrationPlans().map(plan => plan.pair));
 }
 export const snapshotTopicWatchesStorage = snapshotPublicArchiveStorage;
 function excluded(db: DatabaseSync, identity: StorageIdentity) {
@@ -49,33 +70,34 @@ function backupAdmissionOnly(db: DatabaseSync) {
     return read.has(action) ? constants.SQLITE_OK : constants.SQLITE_DENY;
   });
 }
-/** Reference helper only. ROOT stops all writers and owns the exclusive lease.
+/** Explicit operator helper only. ROOT stops all writers and owns the exclusive lease.
  * Callback admits a flushed no-replace typed backup+manifest under EXCLUSIVE;
  * snapshot comparison includes raw TEXT, rowids, blobs, integer/real/null cells.
- * No startup caller, target execution or signing-resume authority is supplied. */
+ * No startup caller or signing-resume authority is supplied. */
 export function migrateTopicWatchesStorage(file: string, value: StorageIdentity, admitBackup: (db: DatabaseSync) => void) {
   const identity = validateStorageIdentity(value);
   if (identity.authorityMode !== "mainnet-real" || typeof admitBackup !== "function") throw new Error("Watch migration admission required");
-  const pairs = topicWatchesMigrationProfiles(), held = holdStorageTarget(file);
+  const plans = topicWatchesMigrationPlans(), held = holdStorageTarget(file);
   let db: DatabaseSync | undefined;
   try {
     db = new DatabaseSync(file, { allowExtension: false });
     db.exec("PRAGMA busy_timeout=1000; PRAGMA synchronous=FULL; BEGIN EXCLUSIVE");
     held.verify(); assertStorageIdentity(db, identity); assertStorageFences(db, identity);
     const before = sqliteApplicationSchemaProfile(db, excluded(db, identity));
-    const pair = pairs.find(([old, current]) => before === old || before === current);
-    if (!pair) throw new Error("Watch migration full19/current source differs");
+    const plan = plans.find(({ pair: [old, current] }) => before === old || before === current);
+    if (!plan) throw new Error("Watch migration full19/current source differs");
+    const pair = plan.pair;
     const original = snapshotTopicWatchesStorage(db, identity, pair), changes = db.prepare("SELECT total_changes() AS n").get()!.n;
     backupAdmissionOnly(db); admitBackup(db); db.setAuthorizer(null);
     held.verify();
     if (!db.isTransaction || db.prepare("SELECT total_changes() AS n").get()!.n !== changes ||
       canonicalJson(snapshotTopicWatchesStorage(db, identity, pair)) !== canonicalJson(original)) throw new Error("Watch backup admission changed source");
-    if (before === pair[0]) { db.exec(TOPIC_WATCHES_SQL); installStorageFences(db, identity); }
+    if (before === pair[0]) { for (const sql of plan.ddl) db.exec(sql); installStorageFences(db, identity); }
     held.verify(); assertStorageIdentity(db, identity); assertStorageFences(db, identity);
     const after = snapshotTopicWatchesStorage(db, identity, [pair[1]]), retained = { ...after.tables };
-    if (!("topic_watches" in original.tables)) {
-      if (retained.topic_watches?.rows !== 0) throw new Error("Watch migration unexpected seed");
-      delete retained.topic_watches;
+    for (const table of plan.added) if (!(table in original.tables)) {
+      if (retained[table]?.rows !== 0) throw new Error("Watch migration unexpected seed");
+      delete retained[table];
     }
     if (canonicalJson(retained) !== canonicalJson(original.tables)) throw new Error("Watch migration original rows changed");
     const oldSchema = JSON.parse(before) as unknown[];

@@ -1,0 +1,340 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/quality.ts",
+  "sourceSha256": "a25a9cdc9e6c89d1d0e473613faae3efe70b492f5fe3130537296d868f6ed59d",
+  "entries": {
+    "metadataTitle": {
+      "source": "Dated answer quality scorecard",
+      "text": "有日期的答案质量评分表"
+    },
+    "metadataDescription": {
+      "source": "Frozen answer-quality diagnostics: eight failures, semantic and language judgments unjudged, historical allowance unknown. No release trend established.",
+      "text": "冻结的答案质量诊断：八次失败，语义和语言判断尚未评判，历史额度未知。未建立发布趋势。"
+    },
+    "eyebrow": {
+      "source": "Retained evidence · issue #287",
+      "text": "留存证据 · 问题 #287"
+    },
+    "title": {
+      "source": "Answer quality, with its limits",
+      "text": "答案质量及其局限"
+    },
+    "introduction": {
+      "source": "The latest retained assessment contains eight cases and zero deterministic passes. Every semantic and language criterion remains UNJUDGED. The useful-answer rate is unavailable (null). These archives do not measure the current release or customer success.",
+      "text": "最新留存评估包含八个案例，确定性检查通过数为零。所有语义和语言标准仍为 UNJUDGED。有用答案率不可用（null）。这些归档不衡量当前版本或客户成功。"
+    },
+    "allowance": {
+      "source": "Historical model/search allowance and cost: UNKNOWN. No known allowance is inferred from the offline inspector's zero model, search, payment and database calls.",
+      "text": "历史模型与搜索额度及成本：UNKNOWN。不根据离线检查器的零模型、搜索、付款和数据库调用推断已知额度。"
+    },
+    "trend": {
+      "source": "Release trend: NOT_COMPARABLE. The two-, six- and eight-case suites have different denominators. The corrected October 9 assessment reuses the original two captures. Regrading or expanding an archive is not a release improvement.",
+      "text": "发布趋势：NOT_COMPARABLE。两案例、六案例和八案例套件的分母不同。修正后的 10 月 9 日评估复用原始两次捕获。重新评分或扩充归档不代表发布版本改善。"
+    },
+    "rubricTitle": {
+      "source": "What the rubric measures",
+      "text": "评分规则衡量什么"
+    },
+    "rubric": {
+      "source": "Deterministic diagnostics check text presence, retained binding identity and any specified bullet, word or target-binding contracts. PASS on text or matching rows does not prove an answered question, factual completeness, entailment or source truth. Language and required facts have no qualified judge; sentence/qualitative format judgments remain unjudged where no deterministic contract exists.",
+      "text": "确定性诊断检查文本存在、留存绑定身份以及指定的项目符号、字数或目标绑定约束。文本或匹配行的 PASS 不证明问题已回答、事实完整、逻辑蕴含或来源真实。语言和必要事实没有合格评判者；没有确定性约束的句子和定性格式判断仍未评判。"
+    },
+    "provenanceLimit": {
+      "source": "Recorded inspector commits and byte fingerprints describe the assessment source. Recorded answer commits and capture clocks describe the archives, not a clean build, present deployment or fresh release-candidate acceptance. The last two cases were captured October 10 from saved October 7 runs on app 0.27.18; the first six record app 0.27.44. Receipt clocks and digests identify retained projections, without independently verifying settlement.",
+      "text": "记录的检查器提交和字节指纹描述评估来源。记录的答案提交和捕获时钟描述归档，不代表干净构建、当前部署或新的发布候选验收。最后两个案例于 10 月 10 日从 app 0.27.18 上保存的 10 月 7 日研究捕获；前六个记录 app 0.27.44。凭证时钟和摘要标识留存投影，不独立验证结算。"
+    },
+    "privacy": {
+      "source": "Only reviewed case labels, kinds, requested languages, issue numbers, rubric statuses and artifact provenance are published here. Report links and question, answer, excerpt and identity text are excluded. Previously public reports do not establish consent for this page.",
+      "text": "此处仅发布已审阅的案例标签、类型、请求语言、问题编号、评分状态和产物来源。不包含报告链接以及问题、答案、摘录和身份文本。报告先前公开不构成对此页面的同意。"
+    },
+    "history": {
+      "source": "Earlier frozen assessments",
+      "text": "较早的冻结评估"
+    },
+    "assessment": {
+      "source": "Assessment completed (UTC)",
+      "text": "评估完成时间（UTC）"
+    },
+    "inspectorCommit": {
+      "source": "Recorded inspector commit",
+      "text": "记录的检查器提交"
+    },
+    "inspectorHash": {
+      "source": "Inspector source fingerprint (SHA256)",
+      "text": "检查器来源指纹（SHA256）"
+    },
+    "artifactHash": {
+      "source": "Frozen assessment (SHA256)",
+      "text": "冻结评估（SHA256）"
+    },
+    "suiteHash": {
+      "source": "Suite definition (SHA256)",
+      "text": "套件定义（SHA256）"
+    },
+    "corpusHash": {
+      "source": "Corpus (SHA256)",
+      "text": "语料（SHA256）"
+    },
+    "captureHash": {
+      "source": "Capture fingerprint (SHA256)",
+      "text": "捕获指纹（SHA256）"
+    },
+    "inventoryHash": {
+      "source": "Issue inventory (SHA256)",
+      "text": "问题清单（SHA256）"
+    },
+    "coverageHash": {
+      "source": "Coverage registry (SHA256)",
+      "text": "覆盖登记表（SHA256）"
+    },
+    "runtime": {
+      "source": "Recorded inspector runtime",
+      "text": "记录的检查器运行环境"
+    },
+    "totals": {
+      "source": "Sample and diagnostics",
+      "text": "样本与诊断"
+    },
+    "sample": {
+      "source": "Cases",
+      "text": "案例"
+    },
+    "passes": {
+      "source": "Deterministic passes",
+      "text": "确定性通过"
+    },
+    "failures": {
+      "source": "Deterministic failures",
+      "text": "确定性失败"
+    },
+    "passRate": {
+      "source": "Deterministic pass rate",
+      "text": "确定性通过率"
+    },
+    "usefulRate": {
+      "source": "Useful-answer rate",
+      "text": "有用答案率"
+    },
+    "unknownRate": {
+      "source": "Unavailable (null)",
+      "text": "不可用（null）"
+    },
+    "unjudged": {
+      "source": "UNJUDGED",
+      "text": "UNJUDGED"
+    },
+    "semantic": {
+      "source": "Required facts / semantics",
+      "text": "必要事实 / 语义"
+    },
+    "language": {
+      "source": "Language match",
+      "text": "语言匹配"
+    },
+    "group": {
+      "source": "Declared group",
+      "text": "声明的分组"
+    },
+    "byKind": {
+      "source": "By question kind",
+      "text": "按问题类型"
+    },
+    "byLanguage": {
+      "source": "By requested language",
+      "text": "按请求语言"
+    },
+    "groupLimit": {
+      "source": "Requested language is recorded metadata, not detected or verified answer language. Empty groups retain a null diagnostic rate.",
+      "text": "请求语言是记录的元数据，不是检测或验证后的答案语言。空分组保留 null 诊断率。"
+    },
+    "cases": {
+      "source": "Retained failing cases and rubric statuses",
+      "text": "留存失败案例与评分状态"
+    },
+    "captured": {
+      "source": "Report artifact captured (UTC)",
+      "text": "报告产物捕获时间（UTC）"
+    },
+    "recordedCommit": {
+      "source": "Recorded answer commit",
+      "text": "记录的答案提交"
+    },
+    "fixtureHash": {
+      "source": "Retained fixture (SHA256)",
+      "text": "留存样本（SHA256）"
+    },
+    "rawHash": {
+      "source": "Report capture (SHA256)",
+      "text": "报告捕获（SHA256）"
+    },
+    "receiptCaptured": {
+      "source": "Receipt artifact captured (UTC)",
+      "text": "凭证产物捕获时间（UTC）"
+    },
+    "receiptHash": {
+      "source": "Receipt capture (SHA256)",
+      "text": "凭证捕获（SHA256）"
+    },
+    "payloadHash": {
+      "source": "Receipt payload (SHA256)",
+      "text": "凭证载荷（SHA256）"
+    },
+    "failedChecks": {
+      "source": "Failing diagnostics",
+      "text": "失败诊断"
+    },
+    "issues": {
+      "source": "Original public issues",
+      "text": "原始公开问题"
+    },
+    "provenance": {
+      "source": "Artifact provenance",
+      "text": "产物来源"
+    },
+    "historicalCoverage": {
+      "source": "Historical coverage plan",
+      "text": "历史覆盖计划"
+    },
+    "coverageDate": {
+      "source": "Issue inventory captured (UTC)",
+      "text": "问题清单捕获时间（UTC）"
+    },
+    "coverageLimit": {
+      "source": "This October 9 inventory and its selected mapping remain historical. They do not report today's open issues. An example does not satisfy an issue's full acceptance criteria. Complete open-failure coverage remains false, including planning and source-selection failures without completed reports.",
+      "text": "此 10 月 9 日清单及其所选映射仍属历史资料。它们不报告今日未解决问题。一个示例不能满足某问题全部验收标准。完整的未解决失败覆盖仍为 false，包括没有已完成报告的规划和来源选择失败。"
+    },
+    "requiredKinds": {
+      "source": "Planned kinds",
+      "text": "计划类型"
+    },
+    "retainedCases": {
+      "source": "Retained cases",
+      "text": "留存案例"
+    },
+    "missingKinds": {
+      "source": "Kinds without examples",
+      "text": "没有示例的类型"
+    },
+    "none": {
+      "source": "None",
+      "text": "无"
+    },
+    "removals": {
+      "source": "Removal record: no removals recorded in these frozen assessments. New removals need a dated reason and previous-suite digest; they cannot silently improve a denominator.",
+      "text": "移除记录：这些冻结评估中未记录任何移除。新增移除需要注明日期的理由和上一个套件摘要；不能悄然改变分母以改善结果。"
+    },
+    "gatesTitle": {
+      "source": "Work still required for issue #287",
+      "text": "问题 #287 仍需完成的工作"
+    },
+    "gates.0": {
+      "source": "Reviewed coverage of every open quality failure class, including planning and source selection.",
+      "text": "对所有未解决质量失败类别进行经审阅的覆盖，包括规划和来源选择。"
+    },
+    "gates.1": {
+      "source": "Qualified semantic, language and qualitative-format judgments, with human spot checks and explicit consent where private questions are proposed.",
+      "text": "合格的语义、语言和定性格式判断，并进行人工抽查；提议使用私密问题时需明确同意。"
+    },
+    "gates.2": {
+      "source": "An agreed useful-answer regression margin and comparable release-candidate captures with their exact commit and bounded model/search allowance.",
+      "text": "约定有用答案回归幅度，并使用具有确切提交和有界模型与搜索额度的可比发布候选捕获。"
+    },
+    "gates.3": {
+      "source": "Actual source review, CI acceptance and coordinated delivery. This frozen page is not release acceptance.",
+      "text": "实际来源审阅、CI 验收和协同交付。此冻结页面不构成发布验收。"
+    },
+    "issueLink": {
+      "source": "Follow the original quality scorecard issue",
+      "text": "跟踪原始质量评分表问题"
+    },
+    "snapshots.oct10-eight": {
+      "source": "October 10 · final eight-case archive",
+      "text": "10 月 10 日 · 最终八案例归档"
+    },
+    "snapshots.oct10-six": {
+      "source": "October 10 · earlier six-case archive",
+      "text": "10 月 10 日 · 较早六案例归档"
+    },
+    "snapshots.oct9-corrected": {
+      "source": "October 9 · corrected inspector, same two-case archive",
+      "text": "10 月 9 日 · 修正检查器，相同两案例归档"
+    },
+    "snapshots.oct9-original": {
+      "source": "October 9 · original two-case archive",
+      "text": "10 月 9 日 · 原始两案例归档"
+    },
+    "kinds.single-page": {
+      "source": "Single page",
+      "text": "单页面"
+    },
+    "kinds.exact-metadata": {
+      "source": "Exact metadata",
+      "text": "确切元数据"
+    },
+    "kinds.comparison": {
+      "source": "Comparison",
+      "text": "比较"
+    },
+    "kinds.teaching-note": {
+      "source": "Teaching note",
+      "text": "教学笔记"
+    },
+    "kinds.newest-release": {
+      "source": "Newest release",
+      "text": "最新发布"
+    },
+    "languages.de": {
+      "source": "German (de)",
+      "text": "德语（de）"
+    },
+    "languages.en": {
+      "source": "English (en)",
+      "text": "英语（en）"
+    },
+    "languages.es": {
+      "source": "Spanish (es)",
+      "text": "西班牙语（es）"
+    },
+    "languages.pt-BR": {
+      "source": "Brazilian Portuguese (pt-BR)",
+      "text": "巴西葡萄牙语（pt-BR）"
+    },
+    "languages.vi": {
+      "source": "Vietnamese (vi)",
+      "text": "越南语（vi）"
+    },
+    "checks.nonemptyAnswer": {
+      "source": "Text presence",
+      "text": "文本存在"
+    },
+    "checks.retainedBindings": {
+      "source": "Retained binding identity",
+      "text": "留存绑定身份"
+    },
+    "checks.bulletCount": {
+      "source": "Bullet count",
+      "text": "项目符号数量"
+    },
+    "checks.wordLimit": {
+      "source": "Whitespace word limit",
+      "text": "空白分隔字数上限"
+    },
+    "checks.language": {
+      "source": "Language match",
+      "text": "语言匹配"
+    },
+    "checks.requiredFacts": {
+      "source": "Required facts",
+      "text": "必要事实"
+    },
+    "checks.retainedTargetBindings": {
+      "source": "Retained target bindings",
+      "text": "留存目标绑定"
+    },
+    "checks.sentenceCount": {
+      "source": "Sentence count",
+      "text": "句子数量"
+    }
+  }
+}

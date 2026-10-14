@@ -1,0 +1,156 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-audit.ts",
+  "sourceSha256": "4b75cb1fa916ea973364e129e12ea087f2081f52f17726f59c7ab42f3af1e111",
+  "entries": {
+    "title": {
+      "source": "Research evidence audit",
+      "text": "研究证据审计"
+    },
+    "description": {
+      "source": "Check reviewed claim costs and compare captured decisions with a portable receipt using local data.",
+      "text": "使用本地数据检查已审阅主张的成本，并通过便携凭证比较已捕获决策。"
+    },
+    "introduction": {
+      "source": "Measure the cost of claims you have reviewed, then compare the recorded buying terms with the receipt. Missing costs and ambiguous payment links stay visible.",
+      "text": "衡量您已审阅主张的成本，然后比较记录的购买条款与凭证。缺失成本和含糊的付款关联仍会显示。"
+    },
+    "decisionLab": {
+      "source": "Decision Lab",
+      "text": "决策实验室"
+    },
+    "decisionLabLink": {
+      "source": "Audit reviewed claim costs and compare decisions with receipts",
+      "text": "审计已审阅主张的成本，并比较决策与凭证"
+    },
+    "region": {
+      "source": "Local evidence audit",
+      "text": "本地证据审计"
+    },
+    "help": {
+      "source": "Paste a portable receipt with its review, cost records and captured decisions. Checking runs in this browser. Data stays in this tab until you clear it or leave. A downloaded result can contain private cost references.",
+      "text": "粘贴便携凭证及其审阅、成本记录和已捕获决策。检查在此浏览器运行。数据保留在此标签页，直到清除或离开。下载的结果可能包含私密成本参考。"
+    },
+    "sample": {
+      "source": "Load illustrative example",
+      "text": "加载示例"
+    },
+    "clear": {
+      "source": "Clear data",
+      "text": "清除数据"
+    },
+    "instructions": {
+      "source": "Input instructions",
+      "text": "输入说明"
+    },
+    "input": {
+      "source": "Audit input JSON",
+      "text": "审计输入 JSON"
+    },
+    "trust": {
+      "source": "Separately retained digests JSON (optional)",
+      "text": "单独留存的摘要 JSON（可选）"
+    },
+    "trustHelp": {
+      "source": "Use digests retained outside the supplied input to detect later changes. A matching digest alone cannot establish when a decision happened or prove that payment settled.",
+      "text": "使用在所提供输入之外留存的摘要检测后续更改。仅摘要匹配不能确定决策发生时间，也不能证明付款已结算。"
+    },
+    "check": {
+      "source": "Check locally",
+      "text": "本地检查"
+    },
+    "busy": {
+      "source": "Checking…",
+      "text": "正在检查…"
+    },
+    "refused": {
+      "source": "Audit unavailable. Check the JSON, receipt digest, exact evidence references and selected network.",
+      "text": "审计不可用。请检查 JSON、凭证摘要、确切证据参考和所选网络。"
+    },
+    "result": {
+      "source": "Local audit result",
+      "text": "本地审计结果"
+    },
+    "supported": {
+      "source": "Supported claims in supplied review",
+      "text": "所提供审阅中有支持的主张"
+    },
+    "sourceRatio": {
+      "source": "Source cost per supported claim (USDC)",
+      "text": "每个有支持主张的来源成本（USDC）"
+    },
+    "providerRatio": {
+      "source": "LLM + search + other cost per supported claim (USD)",
+      "text": "每个有支持主张的 LLM + 搜索 + 其他成本（USD）"
+    },
+    "providerBasis": {
+      "source": "Provider cost basis",
+      "text": "提供方成本依据"
+    },
+    "component.llm": {
+      "source": "LLM (USD)",
+      "text": "LLM（USD）"
+    },
+    "component.search": {
+      "source": "Search (USD)",
+      "text": "搜索（USD）"
+    },
+    "component.other": {
+      "source": "Other allocated costs (USD)",
+      "text": "其他分配成本（USD）"
+    },
+    "unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "availableWindow": {
+      "source": "available",
+      "text": "可用"
+    },
+    "unknownWindow": {
+      "source": "unknown",
+      "text": "未知"
+    },
+    "comparisons": {
+      "source": "Decision → receipt comparisons",
+      "text": "决策 → 凭证比较"
+    },
+    "noDecisions": {
+      "source": "No captured decisions supplied. Historical records are not reconstructed.",
+      "text": "未提供已捕获决策。不会重建历史记录。"
+    },
+    "download": {
+      "source": "Download local result",
+      "text": "下载本地结果"
+    },
+    "ratio": {
+      "source": "${amount} micro-${unit} / ${count} supported claims",
+      "text": "${amount} micro-${unit} / ${count} 个有支持的主张"
+    },
+    "cost": {
+      "source": "${amount} micro-USD · ${status}",
+      "text": "${amount} micro-USD · ${status}"
+    },
+    "receipt": {
+      "source": "Receipt: ${check} · ${digest}",
+      "text": "凭证：${check} · ${digest}"
+    },
+    "networkReview": {
+      "source": "Network: ${network} · Review: ${review}",
+      "text": "网络：${network} · 审阅：${review}"
+    },
+    "sourceTotals": {
+      "source": "Receipt-recorded settled access: ${access} micro-USDC. Citation rewards: ${citation} micro-USDC. Full source-cost window: ${window}.",
+      "text": "凭证记录的已结算访问费：${access} micro-USDC。引用奖励：${citation} micro-USDC。完整来源成本窗口：${window}。"
+    },
+    "comparison": {
+      "source": "Access: ${access} · Citation: ${citation} · Independent timing proof: ${timing}",
+      "text": "访问：${access} · 引用：${citation} · 独立时间证明：${timing}"
+    },
+    "unmatched": {
+      "source": "Creator payments without an identity match: ${count}.",
+      "text": "没有身份匹配的创作者付款：${count}。"
+    }
+  }
+}

@@ -1,5 +1,26 @@
 # Keryx — Decision Log
 
+## Reuse the protected native-user migration for historical metadata - 2026-10-15
+
+The deployed full19 metadata schema is a migration-only reference, never an extra
+runtime profile. Keep the existing six-field selector and private-profile command.
+Only after the same verified no-replace typed backup, dispatch the exact known
+historical schema digest to the existing metadata helper; retain the original
+private-profile core for legacy baseline and already-current sources.
+
+Additive SQL comes only from the actual compiled source installer in an isolated
+reference database. Admit fixed topic-only full20 or coherent topic/chat full22;
+unknown/partial families and pending_job_owners refuse. New tables are empty with
+three identity fences; all old schema and typed originals, including pending
+liabilities and the existing singleton, remain exact. Runtime admission remains
+four profiles. Changed targets require changed-source acceptance, not a flag or
+caller-supplied table grant. No startup DDL, automatic restore or signing resume.
+
+The source proposal joins the same #284 outcome; parent owns actual current20
+command/failure checks, build, CI and release handoff. The coordinator alone owns
+all-writer drain, protected backup/manifest bindings and eventual batch execution.
+See [the operational contract](docs/engineering/native-metadata-migration263-284-20261015.md).
+
 ## Make installation and integrations discoverable — 2026-10-12
 
 Owner requested complete website guidance for app installation, MCP, API,
@@ -8176,3 +8197,36 @@ focused crypto/failure/type checks and the later focused NEXT PR/CI. Actual call
 storage, provider mapping, dropped-delivery recovery and real latency proof remain
 required; original #293 stays OPEN. See
 [the implementation and remaining gates](docs/engineering/settlement-events293-completion-2026-10-14.md).
+
+## 2026-10-15 — Proposed native #264 bounded captured-original ownership
+
+OUTPUT-ONLY successor, unapplied and UNRUN. Reduce repeated native ownership-port
+traversals for at most 50 selected originals using one private same-store capture
+hook. Keep the first genuine privacy.owner await and every nonmatching-asker
+fallback; only exact stored asker equality can skip a subsequent proof traversal.
+Immutable receipt claims retain their genuine privacy/history authority. Never
+infer ownership or payer identity from JSON, payment rows or funding labels.
+
+Capture immutable original bytes/asker and validated privacy state before the
+first yield; after every owner await and the final capture await run the full
+guard and compare all captured state. Refuse changes instead of refreshing
+captured authority. Keep live signed-session checks and original CAS in the
+existing transaction; no public API, injectable proof, authority cache, schema or
+dependency policy change. The ordinary path and entire public read/finalizer stay
+unchanged. This trades one retained genuine first proof traversal for bounded
+reuse of validated local originals within a single request, never across requests.
+
+Observed complete publish/read costs motivate the proposal but establish no
+isolated cause or speedup. Genuine race, immutable-claim, economic snapshot,
+50-run, rollback/retirement and canonical deadline acceptance remain required.
+A different payment/security source review and parent changed-source checks,
+types, canonical evidence, focused PR and required CI precede acceptance. There
+is no new spending, custody, provider, retry, schedule or activation authority.
+See [source proposal and boundaries](docs/engineering/public-profiles-enrolled-production-20261014.md).
+
+Parent follow-up to the historical proposal above: the bounded capture is now
+implemented and independently reviewed, including case-insensitive optional JSON
+asker compatibility while retaining exact SQL-asker authority. The affected native
+controls, cap journey, types and current-source433-input canonical evidence pass.
+Required hosted CI, actual-store activation and original issue acceptance remain
+separate gates. No new financial or operational authority was added.

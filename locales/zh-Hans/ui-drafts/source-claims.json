@@ -1,0 +1,484 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-claims.ts",
+  "sourceSha256": "e81e709a2a8acb1f30bd4719906f32afd623b6cec597f79075d0f5815d0baee5",
+  "entries": {
+    "sourceClaimPolicy.saved": {
+      "source": "Saved policy: {policy}. Effective for eligible new uses from {time}. Verification does not collect past rewards or charge for earlier free reads.",
+      "text": "已保存政策：{policy}。从 {time} 起对合格新使用生效。核验不追收过去奖励，也不为之前免费阅读收费。"
+    },
+    "sourceClaimPolicy.connected": {
+      "source": "Connected listing: {listingLink}",
+      "text": "已连接来源：{listingLink}"
+    },
+    "sourceClaimPolicy.listingOption": {
+      "source": "{name} · ${price} per read",
+      "text": "{name} · 每次阅读 ${price}"
+    },
+    "sourceClaimPolicy.readPrice": {
+      "source": "On-chain price per read: {price}. Citation rewards are separately budgeted and require qualifying evidence; their amount is not guaranteed.",
+      "text": "链上每次阅读价格：{price}。引用奖励独立预算且需合格证据；金额不保证。"
+    },
+    "sourceClaimPolicy.usdcPrice": {
+      "source": "${price} USDC",
+      "text": "${price} USDC"
+    },
+    "sourceClaimPolicy.newReadPrice": {
+      "source": "New listing read price: ${price} USDC. Registration opens a separate review and may require a wallet transaction and native gas. It does not activate earnings.",
+      "text": "新来源阅读价：${price} USDC。注册打开独立审阅，可能需钱包交易及原生 gas。不启用收益。"
+    },
+    "sourceClaimPolicy.invalidReadPrice": {
+      "source": "New listing read price: enter an exact positive USDC amount with at most six decimal places. Registration opens a separate review and may require a wallet transaction and native gas. It does not activate earnings.",
+      "text": "新来源阅读价：输入最多六位小数的精确正 USDC 金额。注册打开独立审阅，可能需钱包交易及原生 gas。不启用收益。"
+    },
+    "sourceClaimPolicy.citationPriceMismatch": {
+      "source": "Citation-only mode requires an on-chain read price of zero. Review your listing's price, then refresh here. A policy update does not change its on-chain toll.",
+      "text": "仅引用模式需链上阅读价为零。审阅来源价格后在此刷新。政策更新不改变链上阅读费。"
+    },
+    "sourceClaimPolicy.paidPriceMismatch": {
+      "source": "Paid mode requires a positive on-chain read price. Review your listing's price, then refresh here. A policy update does not change its on-chain toll.",
+      "text": "付费模式需正链上阅读价。审阅来源价格后在此刷新。政策更新不改变链上阅读费。"
+    },
+    "sourceClaimPolicy.activatePaid": {
+      "source": "Activate paid reads",
+      "text": "启用付费阅读"
+    },
+    "sourceClaimPolicy.activateCitation": {
+      "source": "Activate citation rewards",
+      "text": "启用引用奖励"
+    },
+    "sourceClaimPolicy.free": {
+      "source": "Free",
+      "text": "免费"
+    },
+    "sourceClaimPolicy.freeDetail": {
+      "source": "Free reads with no creator rewards.",
+      "text": "免费阅读，无创作者奖励。"
+    },
+    "sourceClaimPolicy.citation": {
+      "source": "Citation rewards",
+      "term": "citation-reward"
+    },
+    "sourceClaimPolicy.citationDetail": {
+      "source": "Free reads. Qualified citations may earn budgeted rewards after activation.",
+      "text": "免费阅读。启用后合格引用可能获得预算奖励。"
+    },
+    "sourceClaimPolicy.paid": {
+      "source": "Paid reads",
+      "text": "付费阅读"
+    },
+    "sourceClaimPolicy.paidDetail": {
+      "source": "Charge the positive on-chain read toll. Qualified citations may receive separate rewards.",
+      "text": "收取正链上阅读费。合格引用可能获得独立奖励。"
+    },
+    "sourceClaimPolicy.listingsUnavailable": {
+      "source": "Your listings are unavailable.",
+      "text": "您的来源信息不可用。"
+    },
+    "sourceClaimPolicy.loadFailed": {
+      "source": "Could not load listings.",
+      "text": "无法加载来源信息。"
+    },
+    "sourceClaimPolicy.savedMismatch": {
+      "source": "The saved policy does not match this source owner and network. Reload its current status.",
+      "text": "保存政策不匹配此来源所有者及网络。重新加载当前状态。"
+    },
+    "sourceClaimPolicy.updateUnknown": {
+      "source": "The update could not be confirmed. Reload current status before retrying.",
+      "text": "无法确认更新。重试前重新加载当前状态。"
+    },
+    "sourceClaimPolicy.title": {
+      "source": "3. Choose and activate a policy",
+      "text": "3. 选择并启用政策"
+    },
+    "sourceClaimPolicy.requested": {
+      "source": "Requested policy",
+      "text": "请求的政策"
+    },
+    "sourceClaimPolicy.registryListing": {
+      "source": "Your SourceRegistry listing",
+      "text": "您的 SourceRegistry 来源"
+    },
+    "sourceClaimPolicy.listingRequirement": {
+      "source": "Earnings require a confirmed, indexed listing created by this wallet. Connecting a listing keeps this claim's current policy until you explicitly activate a new one.",
+      "text": "收益需要此钱包创建、已确认且已索引的来源。连接来源保留当前认领政策，直到您明确启用新政策。"
+    },
+    "sourceClaimPolicy.existingLabel": {
+      "source": "Existing listing for this source",
+      "text": "此来源的现有上架信息"
+    },
+    "sourceClaimPolicy.choose": {
+      "source": "Choose a listing",
+      "text": "选择来源信息"
+    },
+    "sourceClaimPolicy.connect": {
+      "source": "Connect existing listing",
+      "text": "连接现有来源"
+    },
+    "sourceClaimPolicy.noMatching": {
+      "source": "No matching indexed listing is available for this wallet.",
+      "text": "此钱包无匹配的已索引来源。"
+    },
+    "sourceClaimPolicy.loading": {
+      "source": "Loading your matching listings…",
+      "text": "正在加载匹配来源…"
+    },
+    "sourceClaimPolicy.newPriceLabel": {
+      "source": "Price for a new listing (USDC per read)",
+      "text": "新来源价格（每次阅读 USDC）"
+    },
+    "sourceClaimPolicy.register": {
+      "source": "Register a new listing for this claim",
+      "text": "为此认领注册新来源"
+    },
+    "sourceClaimPolicy.refresh": {
+      "source": "Refresh indexed listings",
+      "text": "刷新已索引来源"
+    },
+    "sourceClaimPolicy.consent": {
+      "source": "I have the rights to distribute the registered content through Keryx and receive payments for it. Website control alone does not establish those rights.",
+      "text": "我有权通过 Keryx 分发已注册内容并收款。仅网站控制不能确立这些权利。"
+    },
+    "sourceClaimPolicy.freeNotice": {
+      "source": "This policy disables creator rewards for this claim. Public reads remain free.",
+      "text": "此政策禁用该认领的创作者奖励。公开阅读仍免费。"
+    },
+    "sourceClaimPolicy.citationNotice": {
+      "source": "Future reads remain free. Only new qualified citations after activation can earn rewards.",
+      "text": "未来阅读仍免费。仅启用后的新合格引用可获奖励。"
+    },
+    "sourceClaimPolicy.paidNotice": {
+      "source": "Only new selected paid reads through this registered listing can incur its toll after activation. Public references and historical free receipts stay free.",
+      "text": "仅启用后通过此注册来源新选择的付费阅读可产生费用。公开参考及历史免费收据仍免费。"
+    },
+    "sourceClaimPolicy.saving": {
+      "source": "Saving policy…",
+      "text": "正在保存政策…"
+    },
+    "sourceClaimPolicy.keepFree": {
+      "source": "Keep this claim free",
+      "text": "保持此认领免费"
+    },
+    "sourceClaimPolicy.savedEarning": {
+      "source": "This earning policy is saved. New qualified uses may earn while control proof, permission and live registry authority remain valid; activation does not guarantee selection or settlement.",
+      "text": "收益政策已保存。在控制凭证、许可及实时注册表权限有效时，新合格使用可能获收益；启用不保证选择或结算。"
+    },
+    "sourceClaimPolicy.reload": {
+      "source": "Reload current claim status",
+      "text": "重新加载当前认领状态"
+    },
+    "sourceClaimStatus.lastVerified": {
+      "source": "Last verified: {time}.",
+      "text": "上次核验：{time}。"
+    },
+    "sourceClaimStatus.deadline": {
+      "source": "Verify again by: {time}. Each control proof lasts 24 hours.",
+      "text": "请于 {time} 前再次核验。每次控制凭证有效 24 小时。"
+    },
+    "sourceClaimStatus.checking": {
+      "source": "Checking control proof freshness. No earning eligibility is confirmed here yet. Public free reads are unaffected.",
+      "text": "正在检查控制凭证时效。此处尚未确认收益资格。公开免费阅读不受影响。"
+    },
+    "sourceClaimStatus.current": {
+      "source": "Control proof is current. Earnings also require your saved permission, matching live registry authority and a qualifying new use. Public free reads are unaffected.",
+      "text": "控制凭证有效。收益还需保存许可、匹配实时注册表权限及新合格使用。公开免费阅读不受影响。"
+    },
+    "sourceClaimStatus.expired": {
+      "source": "Control verification expired. Earning eligibility is paused until you publish and check a fresh proof. Your saved policy and past receipts are retained. Public free reads are unaffected.",
+      "text": "控制核验过期。发布并检查新凭证前收益资格暂停。保存政策及过去收据保留。公开免费阅读不受影响。"
+    },
+    "sourceClaims.savedPolicy": {
+      "source": "Saved policy: {policy}.",
+      "text": "已保存政策：{policy}。"
+    },
+    "sourceClaims.free": {
+      "source": "Free",
+      "text": "免费"
+    },
+    "sourceClaims.citation": {
+      "source": "Citation rewards",
+      "term": "citation-reward"
+    },
+    "sourceClaims.paid": {
+      "source": "Paid reads",
+      "text": "付费阅读"
+    },
+    "sourceClaims.unavailable": {
+      "source": "Your source claims are unavailable. Reload the list before opening a claim.",
+      "text": "来源认领不可用。打开认领前重新加载列表。"
+    },
+    "sourceClaims.scopeMismatch": {
+      "source": "The claim list does not match this wallet, network and deployment. Reconnect before reloading it.",
+      "text": "认领列表不匹配此钱包、网络和部署。重新连接后加载。"
+    },
+    "sourceClaims.loadFailed": {
+      "source": "Could not load your source claims.",
+      "text": "无法加载来源认领。"
+    },
+    "sourceClaims.title": {
+      "source": "Your source claims",
+      "text": "您的来源认领"
+    },
+    "sourceClaims.introduction": {
+      "source": "Open a saved claim to review its policy or manually renew source control. Loading this list does not publish a proof, activate earnings or make a payment.",
+      "text": "打开保存认领以审阅政策或手动续验来源控制。加载列表不发布凭证、不启用收益，也不付款。"
+    },
+    "sourceClaims.loading": {
+      "source": "Loading your claims…",
+      "text": "正在加载认领…"
+    },
+    "sourceClaims.reload": {
+      "source": "Reload my source claims",
+      "text": "重新加载我的来源认领"
+    },
+    "sourceClaims.load": {
+      "source": "Load my source claims",
+      "text": "加载我的来源认领"
+    },
+    "sourceClaims.empty": {
+      "source": "No source claims are saved for this wallet on this network.",
+      "text": "此钱包在此网络无保存来源认领。"
+    },
+    "sourceClaims.review": {
+      "source": "Review or re-verify this source",
+      "text": "审阅或重新核验此来源"
+    },
+    "sourceClaimRequest.failed": {
+      "source": "The source check could not finish. Reload its current status before retrying.",
+      "text": "来源检查未完成。重试前重新加载当前状态。"
+    },
+    "sourceClaimForm.publishFile": {
+      "source": "Publish this exact file, then explicitly check ownership. Creating a proof does not change payment policy.",
+      "text": "发布此确切文件，再明确检查所有权。创建凭证不更改付款政策。"
+    },
+    "sourceClaimForm.publishToken": {
+      "source": "Publish this exact channel token, then explicitly check ownership. Creating a proof does not change payment policy.",
+      "text": "发布此确切频道令牌，再明确检查所有权。创建凭证不更改付款政策。"
+    },
+    "sourceClaimForm.draftWallet": {
+      "source": "This claim draft belongs to {owner}. Switch to that wallet or {restartLink}.",
+      "text": "此认领草稿属于 {owner}。切换该钱包或{restartLink}。"
+    },
+    "sourceClaimForm.startNew": {
+      "source": "start a new claim",
+      "text": "开始新认领"
+    },
+    "sourceClaimForm.switchWallet": {
+      "source": "Switch your wallet to {network} before changing this claim. {connectionLink}",
+      "text": "更改认领前将钱包切至 {network}。{connectionLink}"
+    },
+    "sourceClaimForm.reviewConnection": {
+      "source": "Review wallet connection",
+      "text": "审阅钱包连接"
+    },
+    "sourceClaimForm.owner": {
+      "source": "Claim owner: {owner} · {network}",
+      "text": "认领所有者：{owner} · {network}"
+    },
+    "sourceClaimForm.tokenInstructions": {
+      "source": "Place this exact token as a separate word in the feed's publisher-controlled channel title or description, or Atom subtitle. Tokens inside posts, comments and item text do not prove ownership. The feed must be served without redirects. It binds this source, wallet, deployment and network to a single-use challenge.",
+      "text": "将此确切令牌作为独立词放在发布者控制的订阅源频道标题、说明或 Atom 副标题。文章、评论及条目正文内令牌不能证明所有权。订阅源须无重定向提供。它将此来源、钱包、部署和网络绑定一次性挑战。"
+    },
+    "sourceClaimForm.fileInstructions": {
+      "source": "Serve this exact JSON at the address below, directly without redirects. It binds this source, wallet, deployment and network to a single-use challenge.",
+      "text": "在下方地址直接提供此确切 JSON，不得重定向。它将此来源、钱包、部署和网络绑定一次性挑战。"
+    },
+    "sourceClaimForm.expires": {
+      "source": "Proof expires: {time}",
+      "text": "凭证到期：{time}"
+    },
+    "sourceClaimForm.proofMismatch": {
+      "source": "The proof did not match the reviewed wallet, network and source.",
+      "text": "凭证不匹配审阅的钱包、网络及来源。"
+    },
+    "sourceClaimForm.tokenUnavailable": {
+      "source": "The RSS proof token is unavailable. Create a fresh challenge.",
+      "text": "RSS 凭证令牌不可用。创建新挑战。"
+    },
+    "sourceClaimForm.savedMismatch": {
+      "source": "The saved claim does not match this ownership challenge. Reload with the original wallet.",
+      "text": "保存认领不匹配此所有权挑战。使用原钱包重新加载。"
+    },
+    "sourceClaimForm.claimMismatch": {
+      "source": "This claim belongs to another wallet or network. Reload with its original owner.",
+      "text": "此认领属于另一钱包或网络。使用原所有者重新加载。"
+    },
+    "sourceClaimForm.loadFailed": {
+      "source": "Could not load this claim. Reload before retrying.",
+      "text": "无法加载认领。重试前重新加载。"
+    },
+    "sourceClaimForm.createFailed": {
+      "source": "Could not create a proof.",
+      "text": "无法创建凭证。"
+    },
+    "sourceClaimForm.verifiedNotice": {
+      "source": "Source control verified. Your current payment policy is shown below; verification alone earns nothing.",
+      "text": "来源控制已核验。当前付款政策显示在下方；仅核验不产生收益。"
+    },
+    "sourceClaimForm.verifyFailed": {
+      "source": "Ownership could not be verified. Check the file and retry.",
+      "text": "无法核验所有权。检查文件并重试。"
+    },
+    "sourceClaimForm.copied": {
+      "source": "Proof contents copied.",
+      "text": "凭证内容已复制。"
+    },
+    "sourceClaimForm.copyUnavailable": {
+      "source": "Copy is unavailable. Select and copy the proof contents below.",
+      "text": "复制不可用。选择并复制下方凭证内容。"
+    },
+    "sourceClaimForm.choose": {
+      "source": "1. Choose your source",
+      "text": "1. 选择来源"
+    },
+    "sourceClaimForm.urlLabel": {
+      "source": "Public source URL",
+      "text": "公开来源 URL"
+    },
+    "sourceClaimForm.supportedProof": {
+      "source": "Prove control by publishing a file at this URL's website origin, or a token in the RSS publisher channel. Only publicly reachable HTTPS websites, feeds and documents are supported here. Hosted platform accounts such as YouTube need a separate platform proof and cannot be claimed through this flow.",
+      "text": "在此 URL 网站源发布文件，或在 RSS 发布者频道发布令牌以证明控制。此处仅支持公开可达 HTTPS 网站、订阅源和文档。YouTube 等托管平台账户需独立平台凭证，不能通过此流程认领。"
+    },
+    "sourceClaimForm.proofMethod": {
+      "source": "Ownership proof method",
+      "text": "所有权证明方式"
+    },
+    "sourceClaimForm.websiteMethod": {
+      "source": "Publish a file on the website",
+      "text": "在网站发布文件"
+    },
+    "sourceClaimForm.feedMethod": {
+      "source": "Publish a token in the RSS / Atom channel",
+      "text": "在 RSS / Atom 频道发布令牌"
+    },
+    "sourceClaimForm.feedPair": {
+      "source": "For a new RSS claim, enter the exact feed URL above. A retained public feed uses its recorded source and feed pair. Website-file proof requires both URLs on the same origin.",
+      "text": "新 RSS 认领请在上方输入确切订阅源 URL。保留公开订阅源使用记录的来源及订阅源配对。网站文件证明要求两个 URL 同源。"
+    },
+    "sourceClaimForm.anotherSource": {
+      "source": "Use another source",
+      "text": "使用另一来源"
+    },
+    "sourceClaimForm.checkingSignIn": {
+      "source": "Checking sign-in…",
+      "text": "正在检查登录状态…"
+    },
+    "sourceClaimForm.connect": {
+      "source": "Connect and sign in to claim",
+      "text": "连接并登录以认领"
+    },
+    "sourceClaimForm.urlTooLong": {
+      "source": "The source URL is too long to carry through sign-in. Shorten it and retry.",
+      "text": "来源 URL 过长，无法通过登录传递。缩短后重试。"
+    },
+    "sourceClaimForm.createFresh": {
+      "source": "Create fresh ownership proof",
+      "text": "创建新所有权凭证"
+    },
+    "sourceClaimForm.replaceFile": {
+      "source": "Replace proof file",
+      "text": "替换凭证文件"
+    },
+    "sourceClaimForm.create": {
+      "source": "Create ownership proof",
+      "text": "创建所有权凭证"
+    },
+    "sourceClaimForm.checkingClaim": {
+      "source": "Checking source claim…",
+      "text": "正在检查来源认领…"
+    },
+    "sourceClaimForm.reload": {
+      "source": "Reload claim status",
+      "text": "重新加载认领状态"
+    },
+    "sourceClaimForm.publishTokenTitle": {
+      "source": "2. Publish your channel token",
+      "text": "2. 发布频道令牌"
+    },
+    "sourceClaimForm.publishFileTitle": {
+      "source": "2. Publish your proof file",
+      "text": "2. 发布凭证文件"
+    },
+    "sourceClaimForm.tokenLabel": {
+      "source": "Channel proof token",
+      "text": "频道凭证令牌"
+    },
+    "sourceClaimForm.fileLabel": {
+      "source": "Proof file contents",
+      "text": "凭证文件内容"
+    },
+    "sourceClaimForm.copyToken": {
+      "source": "Copy channel token",
+      "text": "复制频道令牌"
+    },
+    "sourceClaimForm.copyJson": {
+      "source": "Copy proof JSON",
+      "text": "复制凭证 JSON"
+    },
+    "sourceClaimForm.download": {
+      "source": "Download proof file",
+      "text": "下载凭证文件"
+    },
+    "sourceClaimForm.expired": {
+      "source": "This proof expired. Create a fresh proof above and replace the hosted file before checking again.",
+      "text": "凭证已过期。在上方创建新凭证并替换托管文件，再检查。"
+    },
+    "sourceClaimForm.check": {
+      "source": "Check ownership",
+      "text": "检查所有权"
+    },
+    "sourceClaimForm.needsVerification": {
+      "source": "Source control needs re-verification",
+      "text": "来源控制需重新核验"
+    },
+    "sourceClaimForm.verifiedTitle": {
+      "source": "Source control verified",
+      "text": "来源控制已核验"
+    },
+    "sourceClaimForm.renewNotice": {
+      "source": "Create a fresh challenge, replace the hosted file or channel token, then choose Check ownership. Verification keeps your saved policy; review its status below before new earning uses. A failed check requires fixing the proof or explicitly creating another challenge.",
+      "text": "创建新挑战，替换托管文件或频道令牌，再选择检查所有权。核验保留保存政策；新收益使用前审阅下方状态。检查失败需修复凭证或明确创建其他挑战。"
+    },
+    "sourceClaimForm.renew": {
+      "source": "Re-verify source control",
+      "text": "重新核验来源控制"
+    },
+    "sourceClaimPage.heading": {
+      "source": "This is {source}",
+      "text": "这是{source}"
+    },
+    "sourceClaimPage.mySource": {
+      "source": "my source.",
+      "text": "我的来源。"
+    },
+    "sourceClaimPage.title": {
+      "source": "Claim your public source",
+      "text": "认领公开来源"
+    },
+    "sourceClaimPage.description": {
+      "source": "Prove control of your website, then separately choose free reads, citation rewards or paid access.",
+      "text": "证明网站控制，再分别选择免费阅读、引用奖励或付费访问。"
+    },
+    "sourceClaimPage.referenceUnavailable": {
+      "source": "This public reference is unavailable. Enter the source's HTTPS URL below.",
+      "text": "公开参考不可用。在下方输入来源 HTTPS URL。"
+    },
+    "sourceClaimPage.loadFailed": {
+      "source": "This source context could not be loaded.",
+      "text": "无法加载来源上下文。"
+    },
+    "sourceClaimPage.publisher": {
+      "source": "For publishers",
+      "text": "面向出版者"
+    },
+    "sourceClaimPage.introduction": {
+      "source": "Prove control of a public HTTPS website, RSS feed or PDF. Then choose whether your registered listing stays free, receives citation rewards, or charges per read.",
+      "text": "证明公开 HTTPS 网站、RSS 订阅源或 PDF 控制，再选择已注册来源保持免费、接收引用奖励或按次收费。"
+    },
+    "sourceClaimPage.freeHistory": {
+      "source": "Public web discovery already reads supported sources for free when available. Verification alone earns nothing. Existing public references, cached free reads and historical receipts keep their original free status.",
+      "text": "公开网页发现已在可用时免费阅读受支持来源。仅核验不产生收益。现有公开参考、缓存免费阅读及历史收据保留原免费状态。"
+    }
+  }
+}

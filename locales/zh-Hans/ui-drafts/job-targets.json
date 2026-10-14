@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/job-targets.ts",
+  "sourceSha256": "2ffe8a1899d26f39ba2c3c36eb1a2d3a392c5f18c08f31a0d5ad421032cb6af2",
+  "entries": {
+    "target": {
+      "source": "${tier === \"quick\" ? \"Quick\" : \"Deep\"} completion target: ${seconds} seconds from original job acceptance.",
+      "text": "${tier === \"quick\" ? \"Quick\" : \"Deep\"} 完成目标：从原始任务被接受起 ${seconds} 秒。"
+    },
+    "monthly": {
+      "source": "Each Monthly request starts its own target when that original request is accepted, not when the plan is purchased.",
+      "text": "每次 Monthly 请求都在该原始请求被接受时启动自己的计时目标，而不是在购买方案时。"
+    },
+    "terms": {
+      "source": "This is a provisional target, not a guaranteed completion time. Existing package terms provide no automatic remedy. Keep the original job; do not pay again for recovery.",
+      "text": "这是暂定目标，不是保证完成时间。现有套餐条款不提供自动补救。保留原始任务；不要为恢复而再次付款。"
+    },
+    "unavailable": {
+      "source": "Completion target unavailable for this package version. No timing or refund promise is inferred.",
+      "text": "此套餐版本的完成目标不可用。不推断任何时间或退款承诺。"
+    },
+    "localTitle": {
+      "source": "Completion target elapsed since the last status check.",
+      "text": "自上次状态检查起已超过完成目标。"
+    },
+    "localBody": {
+      "source": "The last status had no delivered result. Check the original job for current delivery and payment evidence. This local clock warning does not establish its current state or notify a person.",
+      "text": "上次状态没有已交付结果。检查原始任务以获取当前交付和付款证据。此本地时钟警告不证明当前状态，也不会通知任何人。"
+    },
+    "localObservation": {
+      "source": "This warning uses elapsed browser time after the last server observation. A closed or suspended page cannot guarantee timely display.",
+      "text": "此警告采用上次服务器观察之后经过的浏览器时间。页面关闭或挂起时无法保证及时显示。"
+    },
+    "originalOnly": {
+      "source": "Keep the original job and payment reference. Do not pay again to recover this job. Refund policy and execution require owner confirmation; no refund is offered or recorded here.",
+      "text": "保留原始任务和付款参考。不为恢复此任务再次付款。退款政策和执行需所有者确认；此处不提供或记录退款。"
+    },
+    "choices": {
+      "source": "Next-step guidance",
+      "text": "后续操作指引"
+    },
+    "choiceNotice": {
+      "source": "Choosing guidance only changes this page. It does not submit a request, notify support, resume research or move money.",
+      "text": "选择指引仅会改变此页面。它不会提交请求、通知支持人员、恢复研究或转移资金。"
+    },
+    "wait": {
+      "source": "Wait",
+      "text": "等待"
+    },
+    "partial": {
+      "source": "Partial-result guidance",
+      "text": "部分结果指引"
+    },
+    "human": {
+      "source": "Human-review guidance",
+      "text": "人工审阅指引"
+    },
+    "waitBody": {
+      "source": "Keep following the original job with its existing status/recovery controls. Waiting does not restart its target or authorize another purchase.",
+      "text": "继续使用原始任务现有的状态和恢复控件跟踪任务。等待不会重启计时目标，也不会授权再次购买。"
+    },
+    "partialBody": {
+      "source": "Ask the owner to review any retained output for explicitly incomplete delivery. No partial result or acceptance is promised by this status; pending payment legs remain protected.",
+      "text": "请所有者审阅任何留存输出，以明确标示不完整交付。此状态不承诺提供部分结果或验收；等待确认的付款仍受保护。"
+    },
+    "humanBody": {
+      "source": "Share the original job ID, original payment reference and last recorded stage privately with the owner. This page has not contacted a responder. Uncertain legs require original-only review before any remedy.",
+      "text": "私下向所有者提供原始任务 ID、原始付款参考和上次记录阶段。此页面未联系响应人员。结果待核实的付款在任何补救前必须仅针对原始记录进行审阅。"
+    }
+  }
+}

@@ -1,0 +1,376 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-drafts.json",
+  "sourceSha256": "b5149b6454955d1a1070de1a860625a932863e4ea739f5d8753a878126864df5",
+  "entries": {
+    "page.metadataTitle": {
+      "source": "Private retained-evidence drafts — Keryx",
+      "text": "Bản nháp bằng chứng được lưu riêng tư — Keryx"
+    },
+    "page.metadataDescription": {
+      "source": "Assemble exact retained excerpts into private claim assessments and related-work evidence themes. Imported report origin and semantic support remain unverified.",
+      "text": "Ghép trích đoạn chính xác được lưu thành đánh giá nhận định riêng tư và chủ đề bằng chứng công trình liên quan. Nguồn gốc báo cáo nhập và mức hỗ trợ ngữ nghĩa vẫn chưa xác minh."
+    },
+    "page.back": {
+      "source": "Back to your saved review",
+      "text": "Quay lại bản tổng quan đã lưu"
+    },
+    "page.heading": {
+      "source": "Build a draft from retained excerpts.",
+      "text": "Tạo bản nháp từ trích đoạn được lưu."
+    },
+    "page.introduction": {
+      "source": "Select exact claim spans, record your own assessments, and organise read excerpts into related-work themes.",
+      "text": "Chọn đúng đoạn nhận định, ghi đánh giá của bạn và sắp xếp trích đoạn đã đọc theo chủ đề công trình liên quan."
+    },
+    "page.noScript": {
+      "source": "Enable JavaScript for this local editor. No passage or report is uploaded automatically.",
+      "text": "Bật JavaScript cho trình soạn cục bộ này. Không tự tải lên đoạn văn hay báo cáo."
+    },
+    "page.navigation": {
+      "source": "Build a retained-evidence draft",
+      "text": "Tạo bản nháp từ bằng chứng được lưu"
+    },
+    "workspace.label": {
+      "source": "Private evidence draft",
+      "text": "Bản nháp bằng chứng riêng tư"
+    },
+    "workspace.privacy": {
+      "source": "This editor uses papers marked Include in your saved review. Passage, imported reports and theme edits stay in this tab’s memory. Reloading or leaving loses them; export first. Nothing is uploaded or saved to public history. Your browser and same-origin scripts can access this page.",
+      "text": "Trình soạn dùng bài đánh dấu Đưa vào trong bản tổng quan đã lưu. Đoạn văn, báo cáo nhập và chỉnh sửa chủ đề giữ trong bộ nhớ tab này. Tải lại hay rời trang làm mất chúng; xuất trước. Không tải lên hay lưu vào lịch sử công khai. Trình duyệt và mã cùng nguồn gốc có thể truy cập trang này."
+    },
+    "workspace.loading": {
+      "source": "Loading saved review…",
+      "text": "Đang tải bản xem xét đã lưu…"
+    },
+    "workspace.includeFirst": {
+      "source": "Mark papers Include in the literature workspace before assembling this draft.",
+      "text": "Đánh dấu Đưa vào cho bài trong không gian tài liệu trước khi ghép bản nháp."
+    },
+    "workspace.changed": {
+      "source": "A selected excerpt or saved paper changed, or this draft exceeds its limit. Remove that selection or clear the draft; your edits remain below.",
+      "text": "Trích đoạn hoặc bài đã lưu được chọn đã thay đổi, hoặc bản nháp vượt giới hạn. Bỏ lựa chọn đó hay xóa bản nháp; chỉnh sửa vẫn ở bên dưới."
+    },
+    "workspace.clear": {
+      "source": "Clear this tab’s draft",
+      "text": "Xóa bản nháp trong tab này"
+    },
+    "workspace.cleared": {
+      "source": "Draft cleared from this tab. Your saved paper list remains.",
+      "text": "Đã xóa bản nháp khỏi tab. Danh sách bài đã lưu vẫn còn."
+    },
+    "import.label": {
+      "source": "Retained Keryx report JSON",
+      "text": "JSON báo cáo Keryx được lưu"
+    },
+    "import.guidance": {
+      "source": "Use a report returned by the API/MCP with its retained citation and excerpt ledger. Bibliography alone cannot describe a paper. Imported bytes are your responsibility; this editor does not authenticate their origin.",
+      "text": "Dùng báo cáo từ API/MCP có sổ trích dẫn và trích đoạn được lưu. Chỉ danh mục tài liệu không thể mô tả bài. Bạn chịu trách nhiệm về byte nhập; trình soạn không xác thực nguồn gốc."
+    },
+    "import.button": {
+      "source": "Import report in this tab",
+      "text": "Nhập báo cáo trong tab này"
+    },
+    "import.summary": {
+      "source": "Reports: {reports} · matching retained excerpts: {excerpts}",
+      "text": "Báo cáo: {reports} · trích đoạn được lưu khớp: {excerpts}"
+    },
+    "import.success": {
+      "source": "Report imported locally. Matching excerpts are available for selection; the report origin and semantic support remain unverified.",
+      "text": "Đã nhập báo cáo cục bộ. Có thể chọn trích đoạn khớp; nguồn gốc báo cáo và mức hỗ trợ ngữ nghĩa vẫn chưa xác minh."
+    },
+    "import.refused": {
+      "source": "Report not imported. Use a unique retained report with id/queryId, subClaims, citations and evidence; check the 64 KiB draft limit. Your existing draft remains.",
+      "text": "Chưa nhập báo cáo. Dùng báo cáo được lưu duy nhất có id/queryId, subClaims, citations và evidence; kiểm tra giới hạn bản nháp 64 KiB. Bản nháp hiện có giữ nguyên."
+    },
+    "claim.label": {
+      "source": "Claim assessment",
+      "text": "Đánh giá nhận định"
+    },
+    "claim.passage": {
+      "source": "Your original passage",
+      "text": "Đoạn văn gốc của bạn"
+    },
+    "claim.guidance": {
+      "source": "Select a claim in the passage, then add it below. Changing the passage clears its old claim spans and assessments. Text is never rewritten to fit an excerpt.",
+      "text": "Chọn nhận định trong đoạn văn rồi thêm bên dưới. Đổi đoạn văn xóa các đoạn nhận định và đánh giá cũ. Không bao giờ viết lại văn bản để khớp trích đoạn."
+    },
+    "claim.add": {
+      "source": "Add selected claim",
+      "text": "Thêm nhận định đã chọn"
+    },
+    "claim.selectFirst": {
+      "source": "Select the exact claim text in your passage first.",
+      "text": "Chọn đúng văn bản nhận định trong đoạn văn trước."
+    },
+    "claim.reviewer": {
+      "source": "Your name for an optional assessment",
+      "text": "Tên bạn đặt cho đánh giá tùy chọn"
+    },
+    "claim.paper": {
+      "source": "Exact cited paper",
+      "text": "Đúng bài được trích dẫn"
+    },
+    "claim.unavailable": {
+      "source": "Retained source evidence unavailable",
+      "text": "Bằng chứng nguồn được lưu không khả dụng"
+    },
+    "claim.pending": {
+      "source": "Assessment pending",
+      "text": "Đang chờ đánh giá"
+    },
+    "claim.assessed": {
+      "source": "Your assessment: {assessment}",
+      "text": "Đánh giá của bạn: {assessment}"
+    },
+    "claim.recordAssessment": {
+      "source": "Record my {assessment} assessment",
+      "text": "Ghi đánh giá {assessment} của tôi"
+    },
+    "claim.unavailableGuidance": {
+      "source": "An unavailable source is never reported as unsupported.",
+      "text": "Nguồn không khả dụng không bao giờ được báo là không hỗ trợ."
+    },
+    "claim.excerptVersion": {
+      "source": "{version} · report {report}",
+      "text": "{version} · báo cáo {report}"
+    },
+    "claim.verdicts.supported": {
+      "source": "supported",
+      "text": "được hỗ trợ"
+    },
+    "claim.verdicts.partly-supported": {
+      "source": "partly supported",
+      "text": "được hỗ trợ một phần"
+    },
+    "claim.verdicts.not-found": {
+      "source": "not found",
+      "text": "không tìm thấy"
+    },
+    "theme.label": {
+      "source": "Related-work themes",
+      "text": "Chủ đề công trình liên quan"
+    },
+    "theme.heading": {
+      "source": "Related-work evidence themes",
+      "text": "Chủ đề bằng chứng công trình liên quan"
+    },
+    "theme.guidance": {
+      "source": "Group exact excerpts before writing. A statement about a paper is exported only with a citation and the retained excerpt you select for it; quotations and your free-form notes stay separate, and notes remain marked as unverified.",
+      "text": "Nhóm trích đoạn chính xác trước khi viết. Phát biểu về bài chỉ được xuất cùng trích dẫn và trích đoạn được lưu bạn chọn; trích dẫn nguyên văn và ghi chú tự do tách riêng, ghi chú vẫn đánh dấu chưa xác minh."
+    },
+    "theme.assemblyGuidance": {
+      "source": "Build extractive contributions grouped by the original research targets. Each quotes retained text and stays editable. Write agreements, disagreements and gaps only after reviewing the cited excerpts. Regeneration replaces sentences in the chosen theme and preserves its title, notes and all other themes. No model or reading request is started.",
+      "text": "Ghép đóng góp trích xuất theo mục tiêu nghiên cứu ban đầu. Mỗi đóng góp trích văn bản được lưu và có thể chỉnh sửa. Chỉ viết điểm đồng thuận, bất đồng và khoảng trống sau khi xem xét trích đoạn được trích dẫn. Tạo lại thay câu trong chủ đề đã chọn, giữ tiêu đề, ghi chú và mọi chủ đề khác. Không bắt đầu yêu cầu mô hình hay đọc tài liệu."
+    },
+    "theme.assemble": {
+      "source": "Assemble retained contributions",
+      "text": "Ghép đóng góp được lưu"
+    },
+    "theme.regenerate": {
+      "source": "Regenerate this theme from selected excerpts",
+      "text": "Tạo lại chủ đề này từ trích đoạn đã chọn"
+    },
+    "theme.assembled": {
+      "source": "Retained contributions appended. Existing themes and edits were preserved; review the quotations and write comparisons in the statement editor.",
+      "text": "Đã thêm đóng góp được lưu. Giữ chủ đề và chỉnh sửa hiện có; xem xét trích dẫn nguyên văn và viết so sánh trong trình soạn phát biểu."
+    },
+    "theme.regenerated": {
+      "source": "This theme’s sentences were regenerated from its selected excerpts. Titles, notes and other themes were preserved.",
+      "text": "Đã tạo lại câu của chủ đề từ trích đoạn đã chọn. Giữ tiêu đề, ghi chú và chủ đề khác."
+    },
+    "theme.assemblyRefused": {
+      "source": "Assembly refused. Select one to 24 retained excerpts for regeneration, or make room within the 16-theme and 64 KiB limits. Your edits remain.",
+      "text": "Từ chối ghép. Chọn 1 đến 24 trích đoạn được lưu để tạo lại, hoặc tạo chỗ trong giới hạn 16 chủ đề và 64 KiB. Chỉnh sửa giữ nguyên."
+    },
+    "theme.title": {
+      "source": "Theme title",
+      "text": "Tên chủ đề"
+    },
+    "theme.notes": {
+      "source": "Your synthesis notes (unverified)",
+      "text": "Ghi chú tổng hợp của bạn (chưa xác minh)"
+    },
+    "theme.clearExcerpts": {
+      "source": "Clear this theme’s excerpt selections",
+      "text": "Xóa lựa chọn trích đoạn của chủ đề"
+    },
+    "theme.add": {
+      "source": "Add theme",
+      "text": "Thêm chủ đề"
+    },
+    "theme.initialTitle": {
+      "source": "Evidence to organise",
+      "text": "Bằng chứng cần sắp xếp"
+    },
+    "theme.newTitle": {
+      "source": "New theme",
+      "text": "Chủ đề mới"
+    },
+    "theme.unreadHeading": {
+      "source": "Included papers without usable retained excerpts",
+      "text": "Bài Đưa vào không có trích đoạn được lưu có thể dùng"
+    },
+    "theme.unreadPaper": {
+      "source": "{title} — retained excerpt unavailable; not described.",
+      "text": "{title} — trích đoạn được lưu không khả dụng; không mô tả."
+    },
+    "reading.guidance": {
+      "source": "Missing retained evidence does not tell us whether a paper was read. Record your observation for this exact saved record; it is not a Keryx access check. Unread and unavailable papers export in separate lists and are never described or cited.",
+      "text": "Thiếu bằng chứng được lưu không cho biết bài đã được đọc chưa. Ghi quan sát của bạn cho đúng hồ sơ đã lưu; không phải kiểm tra truy cập Keryx. Bài chưa đọc và không khả dụng xuất riêng, không bao giờ được mô tả hay trích dẫn."
+    },
+    "reading.prepareGuidance": {
+      "source": "Prepare a reading request in a new tab to keep these edits. Review its question and budget before submitting through the existing reader, then import the retained report here. Preparing the request spends nothing and does not mark the paper as read.",
+      "text": "Chuẩn bị yêu cầu đọc trong tab mới để giữ chỉnh sửa. Xem xét câu hỏi và ngân sách trước khi gửi qua trình đọc hiện có, rồi nhập báo cáo được lưu vào đây. Chuẩn bị yêu cầu không chi tiền và không đánh dấu bài đã đọc."
+    },
+    "reading.prepare": {
+      "source": "Prepare reading request in a new tab",
+      "text": "Chuẩn bị yêu cầu đọc trong tab mới"
+    },
+    "reading.clear": {
+      "source": "Clear reading observations",
+      "text": "Xóa quan sát đọc"
+    },
+    "reading.status": {
+      "source": "Your reading observation",
+      "text": "Quan sát đọc của bạn"
+    },
+    "reading.unknown": {
+      "source": "Reading status not recorded",
+      "text": "Chưa ghi trạng thái đọc"
+    },
+    "reading.unread": {
+      "source": "Not read",
+      "text": "Chưa đọc"
+    },
+    "reading.unavailable": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "reading.reason": {
+      "source": "Your reason (optional)",
+      "text": "Lý do của bạn (không bắt buộc)"
+    },
+    "reading.unreadHeading": {
+      "source": "Unread papers (your observation)",
+      "text": "Bài chưa đọc (quan sát của bạn)"
+    },
+    "reading.unavailableHeading": {
+      "source": "Unavailable papers (your observation)",
+      "text": "Bài không khả dụng (quan sát của bạn)"
+    },
+    "statement.heading": {
+      "source": "Statements in this theme",
+      "text": "Phát biểu trong chủ đề này"
+    },
+    "statement.guidance": {
+      "source": "Write one sentence at a time. Choose what it does, the papers it names and the retained excerpt it relies on. Keryx checks that each named paper has a selected excerpt; it does not check that the excerpt supports your wording.",
+      "text": "Viết từng câu. Chọn chức năng câu, các bài được nêu và trích đoạn được lưu làm căn cứ. Keryx kiểm tra mỗi bài được nêu có trích đoạn được chọn; không kiểm tra trích đoạn có hỗ trợ cách diễn đạt của bạn không."
+    },
+    "statement.add": {
+      "source": "Add statement",
+      "text": "Thêm phát biểu"
+    },
+    "statement.remove": {
+      "source": "Remove this statement",
+      "text": "Xóa phát biểu này"
+    },
+    "statement.kind": {
+      "source": "What this sentence does",
+      "text": "Chức năng của câu này"
+    },
+    "statement.kinds.contribution": {
+      "source": "Describes one paper’s contribution",
+      "text": "Mô tả đóng góp của một bài"
+    },
+    "statement.kinds.agreement": {
+      "source": "States where papers agree",
+      "text": "Nêu điểm các bài đồng thuận"
+    },
+    "statement.kinds.disagreement": {
+      "source": "States where papers disagree",
+      "text": "Nêu điểm các bài bất đồng"
+    },
+    "statement.kinds.gap": {
+      "source": "States a gap",
+      "text": "Nêu khoảng trống"
+    },
+    "statement.text": {
+      "source": "Your sentence",
+      "text": "Câu văn của bạn"
+    },
+    "statement.papers": {
+      "source": "Papers this sentence names",
+      "text": "Bài được câu này nêu"
+    },
+    "statement.paperUnread": {
+      "source": "{title} — no retained excerpt; cannot be described",
+      "text": "{title} — không có trích đoạn được lưu; không thể mô tả"
+    },
+    "statement.excerpts": {
+      "source": "Retained excerpts this sentence relies on",
+      "text": "Trích đoạn được lưu làm căn cứ cho câu"
+    },
+    "statement.empty": {
+      "source": "Write the sentence to include it in the draft.",
+      "text": "Viết câu để đưa vào bản nháp."
+    },
+    "statement.bound": {
+      "source": "Will be exported with its citation and excerpt links.",
+      "text": "Sẽ xuất kèm trích dẫn và liên kết trích đoạn."
+    },
+    "statement.authorGap": {
+      "source": "Will be exported as your own stated gap. It cites no paper and stays marked as unverified.",
+      "text": "Sẽ xuất là khoảng trống do bạn nêu. Không trích bài nào và vẫn đánh dấu chưa xác minh."
+    },
+    "statement.needsOnePaper": {
+      "source": "Not exported yet: a contribution names exactly one paper.",
+      "text": "Chưa xuất: một đóng góp nêu đúng một bài."
+    },
+    "statement.needsTwoPapers": {
+      "source": "Not exported yet: agreement and disagreement name at least two papers.",
+      "text": "Chưa xuất: đồng thuận và bất đồng nêu ít nhất hai bài."
+    },
+    "statement.needsExcerpt": {
+      "source": "Not exported yet: select a retained excerpt for every paper this sentence names.",
+      "text": "Chưa xuất: chọn trích đoạn được lưu cho mọi bài câu này nêu."
+    },
+    "download.markdown": {
+      "source": "Download Markdown",
+      "text": "Tải Markdown"
+    },
+    "download.latex": {
+      "source": "Download LaTeX",
+      "text": "Tải LaTeX"
+    },
+    "download.bibtex": {
+      "source": "Download BibTeX",
+      "text": "Tải BibTeX"
+    },
+    "download.ris": {
+      "source": "Download RIS",
+      "text": "Tải RIS"
+    },
+    "download.backup": {
+      "source": "Download private draft JSON",
+      "text": "Tải JSON bản nháp riêng tư"
+    },
+    "download.success": {
+      "source": "Downloaded your current private draft. Keep the Markdown/LaTeX and reference files together.",
+      "text": "Đã tải bản nháp riêng tư hiện tại. Giữ Markdown/LaTeX và tệp tài liệu tham khảo cùng nhau."
+    },
+    "download.refused": {
+      "source": "Export refused: an exact record or selected excerpt is unavailable or changed.",
+      "text": "Từ chối xuất: hồ sơ chính xác hoặc trích đoạn được chọn không khả dụng hay đã đổi."
+    },
+    "download.backupSuccess": {
+      "source": "Downloaded private draft inputs and your assessments. Keep this file private.",
+      "text": "Đã tải đầu vào bản nháp riêng tư và đánh giá của bạn. Giữ tệp riêng tư."
+    },
+    "download.backupRefused": {
+      "source": "Backup refused: check the current exact record and excerpt selections.",
+      "text": "Từ chối sao lưu: kiểm tra hồ sơ chính xác hiện tại và lựa chọn trích đoạn."
+    }
+  }
+}

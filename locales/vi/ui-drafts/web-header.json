@@ -1,0 +1,16 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/web-header.ts",
+  "sourceSha256": "1b796c3261b4b64ccfaa5bea8279604804785e766b07b78c211ebfd963d8f17e",
+  "entries": {
+    "walletMenu.connecting": {
+      "source": "Connecting…",
+      "text": "Đang kết nối…"
+    },
+    "shellHeader.loadingPage": {
+      "source": "Loading page…",
+      "text": "Đang tải trang…"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ui-preference.ts",
+  "sourceSha256": "796e9d98f5484ec5ae54906050b0af8d7ad2cb5c46fd969931ecec749e4d9fe7",
+  "entries": {
+    "language": {
+      "source": "Interface language",
+      "text": "界面语言"
+    },
+    "english": {
+      "source": "English",
+      "text": "英语"
+    },
+    "vietnamesePreview": {
+      "source": "Tiếng Việt (preview)",
+      "text": "Tiếng Việt（预览）"
+    },
+    "chinesePreview": {
+      "source": "简体中文 (preview)",
+      "text": "简体中文（预览）"
+    },
+    "previewNotice": {
+      "source": "Preview: machine draft, not human reviewed. Only navigation changes; other text remains English.",
+      "text": "预览：机器草稿，未经人工审阅。仅导航会变化；其他文本仍为英文。"
+    },
+    "englishOnly": {
+      "source": "English is currently the only offered interface language.",
+      "text": "目前仅提供英语界面。"
+    },
+    "checking": {
+      "source": "Checking language preference…",
+      "text": "正在检查语言偏好…"
+    },
+    "saving": {
+      "source": "Saving account language…",
+      "text": "正在保存账户语言…"
+    },
+    "accountSaved": {
+      "source": "Language saved to this account.",
+      "text": "语言已保存到此账户。"
+    },
+    "browserSaved": {
+      "source": "Language saved in this browser.",
+      "text": "语言已保存在此浏览器中。"
+    },
+    "unavailable": {
+      "source": "Account language is unavailable. Your browser choice still applies.",
+      "text": "账户语言不可用。浏览器选择仍生效。"
+    },
+    "memoryOnly": {
+      "source": "Language applies here. Browser storage is unavailable; it may not survive this session.",
+      "text": "语言在此生效。浏览器存储不可用；设置可能无法保留到此会话结束后。"
+    },
+    "loadFailed": {
+      "source": "Translation could not load. English is shown; select the language to retry.",
+      "text": "无法加载译文。现显示英文；选择语言以重试。"
+    }
+  }
+}

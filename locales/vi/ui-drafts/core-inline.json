@@ -1,0 +1,1556 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "lib/i18n/messages.ts",
+  "sourceSha256": "35c58250afc3e1f53dbef39a646bfe8f90d2d4c008c0002a5457a7393c4842e1",
+  "entries": {
+    "navigation.home": {
+      "source": "Home",
+      "text": "Trang chủ"
+    },
+    "navigation.archive": {
+      "source": "The archive",
+      "text": "Kho lưu trữ"
+    },
+    "navigation.newDispatch": {
+      "source": "New dispatch",
+      "text": "Bản tin mới"
+    },
+    "locale.label": {
+      "source": "Interface language",
+      "text": "Ngôn ngữ giao diện"
+    },
+    "report.question": {
+      "source": "Question: {question}",
+      "text": "Câu hỏi: {question}"
+    },
+    "report.citedSources.one": {
+      "source": "{count} source cited",
+      "text": "Đã trích dẫn {count} nguồn"
+    },
+    "report.citedSources.other": {
+      "source": "{count} sources cited",
+      "text": "Đã trích dẫn {count} nguồn"
+    },
+    "format.unavailable": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "researchError.httpFallback": {
+      "source": "Research request failed (HTTP {status}).",
+      "text": "Yêu cầu nghiên cứu không thành công (HTTP {status})."
+    },
+    "researchError.unknownOutcome": {
+      "source": "This request may already have been handled. Keep its original recovery record; do not submit or sign again automatically.",
+      "text": "Yêu cầu này có thể đã được xử lý. Giữ hồ sơ khôi phục ban đầu; không tự gửi hay ký lại."
+    },
+    "researchError.serviceStatus": {
+      "source": "Check service status",
+      "text": "Kiểm tra trạng thái dịch vụ"
+    },
+    "researchError.checkStatusAfter": {
+      "source": "Check service status again in {seconds}s. Requests will not retry automatically.",
+      "text": "Kiểm tra trạng thái dịch vụ lại sau {seconds}s. Yêu cầu không tự thử lại."
+    },
+    "maintenance.upcoming": {
+      "source": "Upcoming planned maintenance",
+      "text": "Sắp bảo trì theo kế hoạch"
+    },
+    "maintenance.held": {
+      "source": "Maintenance status reports new requests held",
+      "text": "Trạng thái bảo trì báo đang giữ yêu cầu mới"
+    },
+    "maintenance.overrun": {
+      "source": "Expected maintenance end has passed; requests remain held",
+      "text": "Đã qua thời gian kết thúc bảo trì dự kiến; yêu cầu vẫn được giữ"
+    },
+    "maintenance.controlUnavailable": {
+      "source": "Maintenance controls unavailable; requests remain held",
+      "text": "Điều khiển bảo trì không khả dụng; yêu cầu vẫn được giữ"
+    },
+    "maintenance.statusUnavailable": {
+      "source": "Current maintenance status unavailable",
+      "text": "Trạng thái bảo trì hiện tại không khả dụng"
+    },
+    "maintenance.lastObserved": {
+      "source": "Last observed public status: {checkedAt}",
+      "text": "Trạng thái công khai quan sát gần nhất: {checkedAt}"
+    },
+    "maintenance.starts": {
+      "source": "Announced start (UTC): {startsAt}",
+      "text": "Bắt đầu đã thông báo (UTC): {startsAt}"
+    },
+    "maintenance.expectedEnd": {
+      "source": "Expected end (UTC), not a reopening guarantee: {endsAt}",
+      "text": "Kết thúc dự kiến (UTC), không bảo đảm mở lại: {endsAt}"
+    },
+    "maintenance.healthUnknown": {
+      "source": "Application health is not probed by this status endpoint.",
+      "text": "Điểm cuối trạng thái này không thăm dò sức khỏe ứng dụng."
+    },
+    "maintenance.refreshEnded": {
+      "source": "Automatic public status refresh has ended. Check service status for a newer observation.",
+      "text": "Đã kết thúc làm mới trạng thái công khai tự động. Kiểm tra trạng thái dịch vụ để có quan sát mới hơn."
+    },
+    "maintenance.noRetry": {
+      "source": "Research requests and signatures will not retry automatically. Keep existing recovery records.",
+      "text": "Yêu cầu nghiên cứu và chữ ký không tự thử lại. Giữ hồ sơ khôi phục hiện có."
+    },
+    "account.eyebrow": {
+      "source": "Your Keryx account",
+      "text": "Tài khoản Keryx của bạn"
+    },
+    "account.signInTitle": {
+      "source": "Sign in to {brand}",
+      "text": "Đăng nhập {brand}"
+    },
+    "account.signInBrand": {
+      "source": "Keryx.",
+      "text": "Keryx."
+    },
+    "account.introduction": {
+      "source": "Sign in to research, publish sources, and manage your account. Your wallet holds your USDC; you choose how much the agent can spend.",
+      "text": "Đăng nhập để nghiên cứu, xuất bản nguồn và quản lý tài khoản. Ví giữ USDC của bạn; bạn chọn tác nhân được chi bao nhiêu."
+    },
+    "account.created": {
+      "source": "Account created",
+      "text": "Đã tạo tài khoản"
+    },
+    "account.signedIn": {
+      "source": "Signed in to Keryx",
+      "text": "Đã đăng nhập Keryx"
+    },
+    "account.role": {
+      "source": "Role: {role}",
+      "text": "Vai trò: {role}"
+    },
+    "account.signInFailed": {
+      "source": "Sign-in failed",
+      "text": "Đăng nhập không thành công"
+    },
+    "account.signedOut": {
+      "source": "Signed out",
+      "text": "Đã đăng xuất"
+    },
+    "account.signOutUnconfirmed": {
+      "source": "Sign-out could not be confirmed. Please retry.",
+      "text": "Chưa thể xác nhận đăng xuất. Vui lòng thử lại."
+    },
+    "account.checkingReturn": {
+      "source": "Checking sign-in return context...",
+      "text": "Đang kiểm tra ngữ cảnh quay lại từ đăng nhập..."
+    },
+    "account.step": {
+      "source": "Step {number}",
+      "text": "Bước {number}"
+    },
+    "account.wrongNetwork": {
+      "source": "Wrong network",
+      "text": "Sai mạng"
+    },
+    "account.networkInstruction": {
+      "source": "Keryx runs on {network} (chainId {chainId}). Switch to continue.",
+      "text": "Keryx chạy trên {network} (chainId {chainId}). Chuyển mạng để tiếp tục."
+    },
+    "account.switchNetwork": {
+      "source": "Switch ▸",
+      "text": "Chuyển ▸"
+    },
+    "account.connectWallet": {
+      "source": "Connect wallet",
+      "text": "Kết nối ví"
+    },
+    "account.walletInstruction": {
+      "source": "Choose your browser wallet. {network} will be added automatically if not already configured.",
+      "text": "Chọn ví trình duyệt. {network} được thêm tự động nếu chưa cấu hình."
+    },
+    "account.waitingForSignature": {
+      "source": "Waiting for signature…",
+      "text": "Đang chờ chữ ký…"
+    },
+    "account.verifying": {
+      "source": "Verifying…",
+      "text": "Đang xác minh…"
+    },
+    "account.signInWithEthereum": {
+      "source": "Sign in with Ethereum ▸",
+      "text": "Đăng nhập bằng Ethereum ▸"
+    },
+    "account.signIn": {
+      "source": "Sign in",
+      "text": "Đăng nhập"
+    },
+    "account.signatureInstruction": {
+      "source": "Sign a message in your wallet to prove ownership. No gas required — this is a signature, not a transaction.",
+      "text": "Ký thông điệp trong ví để chứng minh sở hữu. Không cần gas — đây là chữ ký, không phải giao dịch."
+    },
+    "account.switchFirst": {
+      "source": "Switch to {network} first",
+      "text": "Chuyển sang {network} trước"
+    },
+    "account.useDifferentWallet": {
+      "source": "← Use a different wallet",
+      "text": "← Dùng ví khác"
+    },
+    "account.authenticated": {
+      "source": "Authenticated",
+      "text": "Đã xác thực"
+    },
+    "account.registrationWalletMismatch": {
+      "source": "This registration draft belongs to the wallet that started sign-in. Switch back to that wallet or {restartLink}.",
+      "text": "Bản nháp đăng ký này thuộc ví đã bắt đầu đăng nhập. Chuyển về ví đó hoặc {restartLink}."
+    },
+    "account.startNewDraft": {
+      "source": "start a new draft",
+      "text": "bắt đầu bản nháp mới"
+    },
+    "account.resumeSourceClaim": {
+      "source": "Resume source claim",
+      "text": "Tiếp tục nhận nguồn"
+    },
+    "account.resumeSourceRegistration": {
+      "source": "Resume source registration",
+      "text": "Tiếp tục đăng ký nguồn"
+    },
+    "account.issueToll": {
+      "source": "Issue a toll ▸",
+      "text": "Đặt phí truy cập ▸"
+    },
+    "account.askQuestion": {
+      "source": "Ask a question ▸",
+      "text": "Đặt câu hỏi ▸"
+    },
+    "account.signingOut": {
+      "source": "Signing out…",
+      "text": "Đang đăng xuất…"
+    },
+    "account.signOut": {
+      "source": "Sign out",
+      "text": "Đăng xuất"
+    },
+    "accountSessions.title": {
+      "source": "Signed-in sessions",
+      "text": "Phiên đã đăng nhập"
+    },
+    "accountSessions.introduction": {
+      "source": "Review account access across browsers. Each sign-in creates a session; device names and locations are not collected.",
+      "text": "Xem quyền truy cập tài khoản trên các trình duyệt. Mỗi đăng nhập tạo phiên; không thu thập tên thiết bị và vị trí."
+    },
+    "accountSessions.signOutBoundary": {
+      "source": "Signing out ends account access. It does not cancel accepted research jobs or already signed payment authorizations.",
+      "text": "Đăng xuất chấm dứt truy cập tài khoản. Không hủy tác vụ nghiên cứu đã chấp nhận hay ủy quyền thanh toán đã ký."
+    },
+    "accountSessions.refresh": {
+      "source": "Refresh sessions",
+      "text": "Làm mới phiên"
+    },
+    "accountSessions.signOutOthers": {
+      "source": "Sign out all other sessions",
+      "text": "Đăng xuất mọi phiên khác"
+    },
+    "accountSessions.loading": {
+      "source": "Loading sessions…",
+      "text": "Đang tải phiên…"
+    },
+    "accountSessions.truncated": {
+      "source": "Showing the 100 newest sessions. Sign out all other sessions also includes older sessions.",
+      "text": "Hiển thị 100 phiên mới nhất. Đăng xuất mọi phiên khác cũng áp dụng phiên cũ hơn."
+    },
+    "accountSessions.current": {
+      "source": "This browser session",
+      "text": "Phiên trình duyệt này"
+    },
+    "accountSessions.session": {
+      "source": "Session {id}",
+      "text": "Phiên {id}"
+    },
+    "accountSessions.issuedAt": {
+      "source": "Signed in {date}",
+      "text": "Đăng nhập {date}"
+    },
+    "accountSessions.expiresAt": {
+      "source": "Expires {date}",
+      "text": "Hết hạn {date}"
+    },
+    "accountSessions.signOutLabel": {
+      "source": "Sign out session {id}",
+      "text": "Đăng xuất phiên {id}"
+    },
+    "accountSessions.ended": {
+      "source": "Your session has ended. Sign in again to manage sessions.",
+      "text": "Phiên của bạn đã kết thúc. Đăng nhập lại để quản lý phiên."
+    },
+    "accountSessions.refreshFailed": {
+      "source": "Sessions could not be refreshed. Please retry.",
+      "text": "Không thể làm mới phiên. Vui lòng thử lại."
+    },
+    "accountSessions.selectedSignedOut": {
+      "source": "The selected session has been signed out.",
+      "text": "Đã đăng xuất phiên được chọn."
+    },
+    "accountSessions.othersSignedOut": {
+      "source": "Other sessions have been signed out. This session remains active.",
+      "text": "Đã đăng xuất phiên khác. Phiên này vẫn hoạt động."
+    },
+    "accountSessions.signOutUnconfirmed": {
+      "source": "Sign-out could not be confirmed. Refresh the list and retry.",
+      "text": "Chưa thể xác nhận đăng xuất. Làm mới danh sách và thử lại."
+    },
+    "researchEntry.ask": {
+      "source": "Ask Keryx",
+      "text": "Hỏi Keryx"
+    },
+    "researchEntry.network": {
+      "source": "USDC on {network}",
+      "text": "USDC trên {network}"
+    },
+    "researchEntry.question": {
+      "source": "What do you want to know?",
+      "text": "Bạn muốn biết điều gì?"
+    },
+    "researchEntry.placeholder": {
+      "source": "Ask a question worth reading for...",
+      "text": "Đặt câu hỏi đáng để đọc tìm câu trả lời..."
+    },
+    "researchEntry.keyboardHint": {
+      "source": "Enter for a new line · Ctrl/⌘ + Enter to ask",
+      "text": "Enter để xuống dòng · Ctrl/⌘ + Enter để hỏi"
+    },
+    "researchEntry.metadataLookup": {
+      "source": "Look up free paper metadata",
+      "text": "Tra siêu dữ liệu bài miễn phí"
+    },
+    "researchEntry.metadataLookupLabel": {
+      "source": "Look up free paper metadata: title, authors or DOI",
+      "text": "Tra siêu dữ liệu bài miễn phí: tiêu đề, tác giả hoặc DOI"
+    },
+    "researchEntry.depth": {
+      "source": "Research depth",
+      "text": "Độ sâu nghiên cứu"
+    },
+    "researchEntry.quick": {
+      "source": "quick",
+      "text": "nhanh"
+    },
+    "researchEntry.deep": {
+      "source": "deep",
+      "text": "chuyên sâu"
+    },
+    "researchEntry.quickHint": {
+      "source": "Quick: up to 2 focused reads.",
+      "text": "Nhanh: tối đa 2 lượt đọc tập trung."
+    },
+    "researchEntry.deepHint": {
+      "source": "Deep: up to 4 reads, including marketplace discovery and a coverage check.",
+      "text": "Chuyên sâu: tối đa 4 lượt đọc, gồm khám phá chợ và kiểm tra mức bao phủ."
+    },
+    "researchEntry.sourceCap": {
+      "source": "Source cap: {amount} USDC · {payer}",
+      "text": "Hạn mức nguồn: {amount} USDC · {payer}"
+    },
+    "researchEntry.treasuryPayer": {
+      "source": "Keryx pays",
+      "text": "Keryx chi trả"
+    },
+    "researchEntry.sessionPayer": {
+      "source": "Your research budget",
+      "text": "Ngân sách nghiên cứu của bạn"
+    },
+    "researchEntry.expiredPayer": {
+      "source": "Budget expired",
+      "text": "Ngân sách hết hạn"
+    },
+    "researchEntry.pausedPayer": {
+      "source": "Budget paused",
+      "text": "Ngân sách tạm dừng"
+    },
+    "researchEntry.researching": {
+      "source": "Researching...",
+      "text": "Đang nghiên cứu..."
+    },
+    "researchEntry.paused": {
+      "source": "Research paused",
+      "text": "Nghiên cứu tạm dừng"
+    },
+    "researchEntry.checking": {
+      "source": "Checking research availability…",
+      "text": "Đang kiểm tra khả dụng nghiên cứu…"
+    },
+    "researchEntry.savedReports": {
+      "source": "My saved reports",
+      "text": "Báo cáo đã lưu của tôi"
+    },
+    "researchEntry.checkAvailability": {
+      "source": "Check availability",
+      "text": "Kiểm tra khả dụng"
+    },
+    "researchEntry.sessionNotice": {
+      "source": "Your research budget pays on {network}. This question can use up to {amount} USDC; your remaining total also applies.",
+      "text": "Ngân sách nghiên cứu trả tiền trên {network}. Câu hỏi này dùng tối đa {amount} USDC; tổng còn lại cũng áp dụng."
+    },
+    "researchEntry.unavailableSessionNotice": {
+      "source": "Session status unavailable. Recover your funded session below before another question.",
+      "text": "Trạng thái phiên không khả dụng. Khôi phục phiên có nguồn tiền bên dưới trước câu hỏi khác."
+    },
+    "researchEntry.expiredSessionNotice": {
+      "source": "Session expired. Recover it below before another wallet funded question.",
+      "text": "Phiên hết hạn. Khôi phục bên dưới trước câu hỏi khác trả bằng ví."
+    },
+    "researchEntry.sponsoredNotice": {
+      "source": "Sponsored trial on {network}. No wallet or deposit required. Usage and spending limits apply.",
+      "text": "Thử nghiệm được tài trợ trên {network}. Không cần ví hay nạp tiền. Áp dụng giới hạn sử dụng và chi tiêu."
+    },
+    "researchEntry.scholarly": {
+      "source": "Search scholarly papers (Crossref and arXiv)",
+      "text": "Tìm bài học thuật (Crossref và arXiv)"
+    },
+    "researchEntry.scholarlyNotice": {
+      "source": "Sends your question to scholarly repositories. DOI lookup works when a DOI is in the question. Public papers cost no source USDC; unavailable papers and abstract-only reads stay visible.",
+      "text": "Gửi câu hỏi đến kho học thuật. Tra DOI hoạt động khi câu hỏi có DOI. Bài công khai không tốn USDC nguồn; bài không khả dụng và lượt chỉ đọc tóm tắt vẫn hiển thị."
+    },
+    "researchEntry.paidScholarly": {
+      "source": "Include reviewed paid manuscripts (experimental testnet rights protocol)",
+      "text": "Đưa vào bản thảo trả phí đã xem xét (giao thức quyền testnet thử nghiệm)"
+    },
+    "researchEntry.paidScholarlyMainnetNotice": {
+      "source": "Paid manuscript rights are not yet available on mainnet. Ordinary registered articles remain available.",
+      "text": "Quyền bản thảo trả phí chưa khả dụng trên mainnet. Bài đăng ký thông thường vẫn khả dụng."
+    },
+    "researchEntry.paidScholarlyNotice": {
+      "source": "Requires your funded browser session. Uses the question budget for access and supported citation rewards. Public scholarly references stay free; only approved exact versions can be paid.",
+      "text": "Cần phiên trình duyệt có nguồn tiền. Dùng ngân sách câu hỏi cho truy cập và thưởng trích dẫn được hỗ trợ. Tài liệu học thuật công khai vẫn miễn phí; chỉ đúng phiên bản đã phê duyệt mới có thể trả phí."
+    },
+    "researchEntry.budgetAndModel": {
+      "source": "Budget and model: ${amount} USDC",
+      "text": "Ngân sách và mô hình: ${amount} USDC"
+    },
+    "researchEntry.maximumBudget": {
+      "source": "Maximum budget",
+      "text": "Ngân sách tối đa"
+    },
+    "researchEntry.maximumBudgetLabel": {
+      "source": "Maximum budget in USDC",
+      "text": "Ngân sách tối đa bằng USDC"
+    },
+    "researchEntry.budgetNotice": {
+      "source": "The agent cannot spend more than this amount on one question. Choose 0 for free sources without source purchases or creator rewards. Model and search costs remain separate.",
+      "text": "Tác nhân không được chi quá số này cho một câu hỏi. Chọn 0 để dùng nguồn miễn phí không mua nguồn hay thưởng tác giả. Chi phí mô hình và tìm kiếm vẫn tách biệt."
+    },
+    "researchEntry.model": {
+      "source": "AI model",
+      "text": "Mô hình AI"
+    },
+    "researchEntry.defaultModelNote": {
+      "source": "Default reasoning model",
+      "text": "Mô hình suy luận mặc định"
+    },
+    "researchEntry.defaultModel": {
+      "source": "Default: DeepSeek",
+      "text": "Mặc định: DeepSeek"
+    },
+    "researchEntry.searchNotice": {
+      "source": "Research may search the public web; your question is sent to our search provider. The USDC source budget is separate from model and search operating costs.",
+      "text": "Nghiên cứu có thể tìm web công khai; câu hỏi gửi đến nhà cung cấp tìm kiếm. Ngân sách nguồn USDC tách biệt với chi phí vận hành mô hình và tìm kiếm."
+    },
+    "researchEntry.examplesLabel": {
+      "source": "Example questions",
+      "text": "Câu hỏi ví dụ"
+    },
+    "researchEntry.sqliteExample": {
+      "source": "Compare SQLite WAL and rollback journals",
+      "text": "So sánh SQLite WAL và nhật ký rollback"
+    },
+    "researchEntry.educationExample": {
+      "source": "Research children's educational video ideas",
+      "text": "Nghiên cứu ý tưởng video giáo dục cho trẻ"
+    },
+    "ledgerHistory.inspectWallet": {
+      "source": "Inspect original testnet wallet {wallet}",
+      "text": "Kiểm tra ví testnet ban đầu {wallet}"
+    },
+    "ledgerHistory.paymentCounts": {
+      "source": "{cites} cites · {payments} payments",
+      "text": "{cites} trích dẫn · {payments} thanh toán"
+    },
+    "ledgerHistory.creatorLeaderboard": {
+      "source": "Testnet creator leaderboard",
+      "text": "Bảng xếp hạng tác giả testnet"
+    },
+    "ledgerHistory.downloadCreators": {
+      "source": "Download creator data →",
+      "text": "Tải dữ liệu tác giả →"
+    },
+    "ledgerHistory.rankingNotice": {
+      "source": "Ranked by settled access and citation payments to each original source and wallet. Historical listings do not establish current publisher control.",
+      "text": "Xếp theo thanh toán truy cập và trích dẫn đã quyết toán cho từng nguồn, ví ban đầu. Niêm yết lịch sử không xác lập quyền kiểm soát nhà xuất bản hiện tại."
+    },
+    "ledgerHistory.allEntries": {
+      "source": "Show all {count} source / wallet entries",
+      "text": "Hiển thị toàn bộ {count} mục nguồn / ví"
+    },
+    "ledgerHistory.emptyCreators": {
+      "source": "No settled creator payments in this snapshot.",
+      "text": "Không có thanh toán cho tác giả đã quyết toán trong bản chụp này."
+    },
+    "ledgerHistory.evidenceLabel": {
+      "source": "Historical Arc testnet evidence",
+      "text": "Bằng chứng Arc testnet lịch sử"
+    },
+    "ledgerHistory.trackRecord": {
+      "source": "The track record",
+      "text": "Lịch sử hoạt động"
+    },
+    "ledgerHistory.title": {
+      "source": "Arc testnet history",
+      "text": "Lịch sử Arc testnet"
+    },
+    "ledgerHistory.browseQuestions": {
+      "source": "Browse all old questions →",
+      "text": "Duyệt mọi câu hỏi cũ →"
+    },
+    "ledgerHistory.period": {
+      "source": "Recorded reading and creator payments from {from} to {to}. Original testnet evidence is retained alongside current mainnet activity.",
+      "text": "Lượt đọc và thanh toán cho tác giả ghi nhận từ {from} đến {to}. Bằng chứng testnet ban đầu giữ cùng hoạt động mainnet hiện tại."
+    },
+    "ledgerHistory.recordedQuestions": {
+      "source": "Recorded questions",
+      "text": "Câu hỏi đã ghi nhận"
+    },
+    "ledgerHistory.settledCreatorPayments": {
+      "source": "Settled creator payments",
+      "text": "Thanh toán cho tác giả đã quyết toán"
+    },
+    "ledgerHistory.settledToCreators": {
+      "source": "Settled to creator wallets",
+      "text": "Đã quyết toán vào ví tác giả"
+    },
+    "ledgerHistory.creatorWallets": {
+      "source": "Creator wallets paid",
+      "text": "Ví tác giả đã được trả tiền"
+    },
+    "ledgerHistory.historicalNotice": {
+      "source": "Testnet USDC, separate from mainnet. Includes owner-operated activity; these totals do not establish independent customers or event-period growth.",
+      "text": "USDC testnet, tách biệt mainnet. Gồm hoạt động do chủ sở hữu vận hành; tổng không xác lập khách hàng độc lập hay tăng trưởng trong kỳ sự kiện."
+    },
+    "ledgerHistory.creatorUnavailable": {
+      "source": "Testnet creator leaderboard temporarily unavailable.",
+      "text": "Bảng xếp hạng tác giả testnet tạm thời không khả dụng."
+    },
+    "ledgerHistory.retry": {
+      "source": "Open history to retry.",
+      "text": "Mở lịch sử để thử lại."
+    },
+    "ledgerHistory.inspectTotals": {
+      "source": "Inspect archived totals and channels",
+      "text": "Kiểm tra tổng và kênh lưu trữ"
+    },
+    "ledgerHistory.paymentRecordsSuffix": {
+      "source": " payment records",
+      "text": " hồ sơ thanh toán"
+    },
+    "ledgerHistory.serviceReceipts": {
+      "source": "Service receipts (separate from creator payments)",
+      "text": "Biên nhận dịch vụ (tách biệt thanh toán tác giả)"
+    },
+    "ledgerHistory.settledRecordsSuffix": {
+      "source": " records · settled amount",
+      "text": " hồ sơ · số tiền đã quyết toán"
+    },
+    "ledgerHistory.unknownChannel": {
+      "source": "Unknown channel",
+      "text": "Kênh chưa rõ"
+    },
+    "ledgerHistory.questionsSuffix": {
+      "source": " questions",
+      "text": " câu hỏi"
+    },
+    "ledgerHistory.snapshotNotice": {
+      "source": "Snapshot captured {capturedAt}. Settlement states are frozen at capture time. Wallets and channels are recorded identities, not independent people.",
+      "text": "Bản chụp lưu lúc {capturedAt}. Trạng thái quyết toán đóng băng tại thời điểm chụp. Ví và kênh là danh tính ghi nhận, không phải người độc lập."
+    },
+    "ledgerHistory.archiveData": {
+      "source": "Archive data",
+      "text": "Dữ liệu lưu trữ"
+    },
+    "ledgerHistory.eventEvidence": {
+      "source": "Event-period evidence",
+      "text": "Bằng chứng trong kỳ sự kiện"
+    },
+    "ledger.title": {
+      "source": "Reading activity & creator rewards",
+      "text": "Hoạt động đọc và phần thưởng tác giả"
+    },
+    "ledger.introduction": {
+      "source": "Follow the questions, explore the sources, and see what reached creator wallets. Browse the retained testnet track record and current mainnet activity, each with its original payment proof.",
+      "text": "Theo câu hỏi, khám phá nguồn và xem tiền đến ví tác giả. Duyệt lịch sử testnet được lưu và hoạt động mainnet hiện tại, mỗi phần giữ bằng chứng thanh toán ban đầu."
+    },
+    "ledger.sectionsLabel": {
+      "source": "Ledger sections",
+      "text": "Các mục sổ theo dõi"
+    },
+    "ledger.testnetTrackRecord": {
+      "source": "Testnet track record",
+      "text": "Lịch sử testnet"
+    },
+    "ledger.activity": {
+      "source": "{network} activity",
+      "text": "Hoạt động {network}"
+    },
+    "ledger.currentCreators": {
+      "source": "Current creator rewards",
+      "text": "Phần thưởng tác giả hiện tại"
+    },
+    "ledger.paymentEvidence": {
+      "source": "Payment evidence",
+      "text": "Bằng chứng thanh toán"
+    },
+    "ledger.currentActivityLabel": {
+      "source": "Current network activity",
+      "text": "Hoạt động mạng hiện tại"
+    },
+    "ledger.creatorLeaderboard": {
+      "source": "{network} creator leaderboard",
+      "text": "Bảng xếp hạng tác giả {network}"
+    },
+    "jobLedger.title": {
+      "source": "Public job transfer ledger",
+      "text": "Sổ khoản chuyển tác vụ công khai"
+    },
+    "jobLedger.description": {
+      "source": "Inspect recorded public research transfers, their settlement evidence and a balanced export.",
+      "text": "Kiểm tra khoản chuyển nghiên cứu công khai ghi nhận, bằng chứng quyết toán và bản xuất cân bằng."
+    },
+    "jobLedger.introduction": {
+      "source": "Recorded transfers for completed public web dispatches, with customer and Keryx funding shown separately. Questions and customer identities are omitted.",
+      "text": "Khoản chuyển ghi nhận cho bản tin web công khai hoàn tất, với nguồn tiền khách hàng và Keryx hiển thị riêng. Không đưa câu hỏi và danh tính khách hàng vào."
+    },
+    "jobLedger.boundary": {
+      "source": "This bounded, partial ledger uses separate read snapshots. It is not complete business books, a cash balance or profit. Private invoices, refunds and full purchase revenue remain unavailable.",
+      "text": "Sổ có giới hạn, chưa đầy đủ này dùng các bản chụp đọc riêng. Không phải sổ kinh doanh đầy đủ, số dư tiền mặt hay lợi nhuận. Hóa đơn riêng tư, hoàn tiền và doanh thu mua đầy đủ vẫn không khả dụng."
+    },
+    "jobLedger.network": {
+      "source": "Selected network: {network}",
+      "text": "Mạng đã chọn: {network}"
+    },
+    "jobLedger.window": {
+      "source": "Payment observation window",
+      "text": "Khoảng quan sát thanh toán"
+    },
+    "jobLedger.days": {
+      "source": "Past {count} days",
+      "text": "{count} ngày qua"
+    },
+    "jobLedger.loading": {
+      "source": "Reading public transfer evidence…",
+      "text": "Đang đọc bằng chứng khoản chuyển công khai…"
+    },
+    "jobLedger.unavailable": {
+      "source": "Public transfer evidence is unavailable. The sealed read-only store may be unsupported or unavailable.",
+      "text": "Bằng chứng khoản chuyển công khai không khả dụng. Kho chỉ đọc được niêm phong có thể không được hỗ trợ hoặc không khả dụng."
+    },
+    "jobLedger.retry": {
+      "source": "Read again",
+      "text": "Đọc lại"
+    },
+    "jobLedger.exportJson": {
+      "source": "Download JSON ledger",
+      "text": "Tải sổ theo dõi JSON"
+    },
+    "jobLedger.exportCsv": {
+      "source": "Download balanced CSV",
+      "text": "Tải CSV cân đối"
+    },
+    "jobLedger.captured": {
+      "source": "Reads from {startedAt} to {completedAt}. Payment window starts {from}.",
+      "text": "Đọc từ {startedAt} đến {completedAt}. Khoảng thanh toán bắt đầu {from}."
+    },
+    "jobLedger.limits": {
+      "source": "Up to {runs} recent public-domain runs and {payments} payment rows were inspected. Historical testnet archives are not combined with this selected store.",
+      "text": "Đã kiểm tra tối đa {runs} lượt chạy miền công khai gần đây và {payments} hàng thanh toán. Không kết hợp kho testnet lịch sử với kho đã chọn này."
+    },
+    "jobLedger.limitReached": {
+      "source": "A scan limit was reached. Coverage remains partial.",
+      "text": "Đã đạt giới hạn quét. Phạm vi vẫn chưa đầy đủ."
+    },
+    "jobLedger.browser": {
+      "source": "Customer browser funding",
+      "text": "Nguồn tiền từ trình duyệt khách hàng"
+    },
+    "jobLedger.treasury": {
+      "source": "Keryx treasury sponsorship",
+      "text": "Tài trợ ngân quỹ Keryx"
+    },
+    "jobLedger.unknown": {
+      "source": "Unknown funding",
+      "text": "Nguồn tiền chưa rõ"
+    },
+    "jobLedger.offline": {
+      "source": "Offline records",
+      "text": "Hồ sơ ngoại tuyến"
+    },
+    "jobLedger.access": {
+      "source": "Source access transfers",
+      "text": "Khoản chuyển truy cập nguồn"
+    },
+    "jobLedger.reward": {
+      "source": "Creator reward transfers",
+      "text": "Khoản chuyển phần thưởng tác giả"
+    },
+    "jobLedger.sponsoredFee": {
+      "source": "Sponsored operating-fee transfers",
+      "text": "Khoản chuyển phí vận hành được tài trợ"
+    },
+    "jobLedger.fundingBoundary": {
+      "source": "Browser-funded transfers are not Operator expenses. Sponsored fees are not outside-customer revenue. Outside/team customer attribution is unknown.",
+      "text": "Khoản chuyển bằng tiền trình duyệt không phải chi phí Operator. Phí được tài trợ không phải doanh thu khách hàng bên ngoài. Chưa rõ quy thuộc khách hàng bên ngoài/nhóm."
+    },
+    "jobLedger.position": {
+      "source": "Cash position and obligations: unknown. Advisory safe spending: {amount}.",
+      "text": "Vị thế tiền mặt và nghĩa vụ: chưa rõ. Khuyến nghị chi an toàn: {amount}."
+    },
+    "jobLedger.profit": {
+      "source": "Purchase price, provider invoices, refunds and margin: unavailable.",
+      "text": "Giá mua, hóa đơn nhà cung cấp, hoàn tiền và biên lợi nhuận: không khả dụng."
+    },
+    "jobLedger.balance": {
+      "source": "Transfer-control trial balance: debit {debit}, credit {credit}.",
+      "text": "Bảng cân đối thử kiểm soát khoản chuyển: nợ {debit}, có {credit}."
+    },
+    "jobLedger.accounts": {
+      "source": "Debit increases an observed recipient-role transfer account; credit decreases an observed sender-funding-role account. These are transfer control accounts, not revenue or expense accounts.",
+      "text": "Ghi nợ tăng tài khoản khoản chuyển theo vai trò bên nhận quan sát được; ghi có giảm tài khoản theo vai trò nguồn tiền bên gửi quan sát được. Đây là tài khoản kiểm soát khoản chuyển, không phải doanh thu hay chi phí."
+    },
+    "jobLedger.jobs": {
+      "source": "Observed public jobs",
+      "text": "Tác vụ công khai đã quan sát"
+    },
+    "jobLedger.noJobs": {
+      "source": "No eligible public web dispatches were observed in this bounded slice.",
+      "text": "Không quan sát được bản tin web công khai đủ điều kiện trong phần có giới hạn này."
+    },
+    "jobLedger.job": {
+      "source": "Dispatch {id}",
+      "text": "Bản tin {id}"
+    },
+    "jobLedger.created": {
+      "source": "Completed {createdAt}",
+      "text": "Hoàn tất {createdAt}"
+    },
+    "jobLedger.coverage": {
+      "source": "Leg coverage: {coverage}. Finish-time expected recorded legs: {count}.",
+      "text": "Bao phủ khoản thanh toán: {coverage}. Số khoản ghi nhận dự kiến lúc hoàn tất: {count}."
+    },
+    "jobLedger.coverageMatched": {
+      "source": "matched finish-time count",
+      "text": "khớp số lúc hoàn tất"
+    },
+    "jobLedger.coverageIncomplete": {
+      "source": "incomplete",
+      "text": "chưa đầy đủ"
+    },
+    "jobLedger.coverageUnknown": {
+      "source": "unknown",
+      "text": "chưa rõ"
+    },
+    "jobLedger.receipt": {
+      "source": "Public settlement receipt",
+      "text": "Biên nhận quyết toán công khai"
+    },
+    "jobLedger.decisions": {
+      "source": "Recorded public decisions",
+      "text": "Quyết định công khai đã ghi nhận"
+    },
+    "jobLedger.source": {
+      "source": "Source identity",
+      "text": "Danh tính nguồn"
+    },
+    "jobLedger.kind": {
+      "source": "Transfer kind",
+      "text": "Loại chuyển tiền"
+    },
+    "jobLedger.amount": {
+      "source": "Exact amount",
+      "text": "Số tiền chính xác"
+    },
+    "jobLedger.state": {
+      "source": "State",
+      "text": "Trạng thái"
+    },
+    "jobLedger.reference": {
+      "source": "Settlement reference",
+      "text": "Tham chiếu quyết toán"
+    },
+    "jobLedger.settled": {
+      "source": "Settled record with retained evidence",
+      "text": "Hồ sơ đã quyết toán có bằng chứng được lưu"
+    },
+    "jobLedger.pending": {
+      "source": "Pending — excluded",
+      "text": "Đang chờ — loại trừ"
+    },
+    "jobLedger.failed": {
+      "source": "Failed — excluded",
+      "text": "Không thành công — loại trừ"
+    },
+    "jobLedger.simulated": {
+      "source": "Simulated — excluded",
+      "text": "Mô phỏng — loại trừ"
+    },
+    "jobLedger.uncertain": {
+      "source": "Uncertain — excluded",
+      "text": "Chưa rõ kết quả — loại trừ"
+    },
+    "jobLedger.refusal": {
+      "source": "Evidence gate: {reason}",
+      "text": "Cổng bằng chứng: {reason}"
+    },
+    "jobLedger.unknownValue": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "jobLedger.referenceBoundary": {
+      "source": "Transfer references are not automatically Arc transaction hashes. The export checksum detects changes; it is not an authenticity signature or independent settlement confirmation.",
+      "text": "Tham chiếu khoản chuyển không tự là hash giao dịch Arc. Checksum bản xuất phát hiện thay đổi; không phải chữ ký xác thực hay xác nhận quyết toán độc lập."
+    },
+    "jobLedger.back": {
+      "source": "Operator overview",
+      "text": "Tổng quan Operator"
+    },
+    "privateProfile.metadataTitle": {
+      "source": "My private profile — Keryx",
+      "text": "Hồ sơ riêng tư của tôi — Keryx"
+    },
+    "privateProfile.title": {
+      "source": "My private profile",
+      "text": "Hồ sơ riêng tư của tôi"
+    },
+    "privateProfile.privacyBoundary": {
+      "source": "Only you and keys you explicitly authorize can access this profile. These fields do not verify your identity or change payment ownership.",
+      "text": "Chỉ bạn và khóa bạn cho phép rõ ràng truy cập hồ sơ. Các trường không xác minh danh tính hay đổi sở hữu thanh toán."
+    },
+    "privateProfile.signInInstruction": {
+      "source": "{signInLink} to edit your private profile.",
+      "text": "{signInLink} để sửa hồ sơ riêng tư."
+    },
+    "privateProfile.signedWallet": {
+      "source": "Signed wallet: {wallet}",
+      "text": "Ví đã ký: {wallet}"
+    },
+    "privateProfile.firstSeenAndDispatches": {
+      "source": "First seen: {firstSeen} · Attributed dispatches: {questions}",
+      "text": "Xuất hiện đầu tiên: {firstSeen} · Bản tin được quy thuộc: {questions}"
+    },
+    "privateProfile.surfacesRecorded": {
+      "source": "Surfaces recorded: {surfaces}",
+      "text": "Kênh sử dụng ghi nhận: {surfaces}"
+    },
+    "privateProfile.topicsRecorded": {
+      "source": "Recorded topics: {topics}",
+      "text": "Chủ đề ghi nhận: {topics}"
+    },
+    "privateProfile.creatorsPaid": {
+      "source": "Creator wallets with recorded settled payments in your runs ({network}): {creators}",
+      "text": "Ví tác giả có thanh toán ghi nhận đã quyết toán trong lượt chạy của bạn ({network}): {creators}"
+    },
+    "privateProfile.checkingSignIn": {
+      "source": "Checking your sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "privateProfile.signIn": {
+      "source": "Sign in with your wallet",
+      "text": "Đăng nhập bằng ví của bạn"
+    },
+    "privateProfile.accessUnavailable": {
+      "source": "Private profile access is unavailable.",
+      "text": "Truy cập hồ sơ riêng tư không khả dụng."
+    },
+    "privateProfile.ownerMismatch": {
+      "source": "Profile owner mismatch.",
+      "text": "Chủ sở hữu hồ sơ không khớp."
+    },
+    "privateProfile.unavailable": {
+      "source": "Profile unavailable.",
+      "text": "Hồ sơ không khả dụng."
+    },
+    "privateProfile.checkFields": {
+      "source": "Check your profile.",
+      "text": "Kiểm tra hồ sơ của bạn."
+    },
+    "privateProfile.changeFailed": {
+      "source": "Profile could not be changed.",
+      "text": "Không thể thay đổi hồ sơ."
+    },
+    "privateProfile.deleted": {
+      "source": "Profile fields deleted. Your research and payment history are retained.",
+      "text": "Đã xóa trường hồ sơ. Lịch sử nghiên cứu và thanh toán được giữ."
+    },
+    "privateProfile.saved": {
+      "source": "Private profile saved.",
+      "text": "Đã lưu hồ sơ riêng tư."
+    },
+    "privateProfile.storeUnavailable": {
+      "source": "Profile fields are available after this deployment enables the private profile store.",
+      "text": "Trường hồ sơ khả dụng sau khi bản triển khai này bật kho hồ sơ riêng tư."
+    },
+    "privateProfile.displayName": {
+      "source": "Display name",
+      "text": "Tên hiển thị"
+    },
+    "privateProfile.handle": {
+      "source": "Handle",
+      "text": "Tên định danh"
+    },
+    "privateProfile.bio": {
+      "source": "Who I am",
+      "text": "Giới thiệu về tôi"
+    },
+    "privateProfile.purpose": {
+      "source": "What brings me to Keryx",
+      "text": "Điều đưa tôi đến Keryx"
+    },
+    "privateProfile.handleRules": {
+      "source": "Handles use 3–32 letters, digits or underscores, begin with a letter, and are case-insensitive. Reserved names are unavailable.",
+      "text": "Tên định danh dùng 3–32 chữ cái, chữ số hoặc gạch dưới, bắt đầu bằng chữ cái, không phân biệt hoa thường. Tên dành riêng không khả dụng."
+    },
+    "privateProfile.linksLegend": {
+      "source": "Links (optional HTTPS profile URLs)",
+      "text": "Liên kết (URL hồ sơ HTTPS tùy chọn)"
+    },
+    "privateProfile.website": {
+      "source": "Personal website",
+      "text": "Trang web cá nhân"
+    },
+    "privateProfile.saving": {
+      "source": "Saving…",
+      "text": "Đang lưu…"
+    },
+    "privateProfile.save": {
+      "source": "Save private profile",
+      "text": "Lưu hồ sơ riêng tư"
+    },
+    "privateProfile.deleteConfirmation": {
+      "source": "Delete your private profile fields and links? Research and payment history will remain.",
+      "text": "Xóa trường hồ sơ riêng tư và liên kết? Lịch sử nghiên cứu và thanh toán vẫn còn."
+    },
+    "privateProfile.delete": {
+      "source": "Delete profile fields",
+      "text": "Xóa trường hồ sơ"
+    },
+    "privateProfile.activity": {
+      "source": "Recorded activity",
+      "text": "Hoạt động đã ghi nhận"
+    },
+    "privateProfile.unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "privateProfile.noneRecorded": {
+      "source": "None recorded",
+      "text": "Chưa ghi nhận"
+    },
+    "privateProfile.unavailableActivity": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "privateProfile.activityBoundary": {
+      "source": "Derived from dispatches attributed to this wallet in this store, including recorded simulations in dispatch counts. Attribution does not establish who funded a run. Anonymous and historical archive activity are excluded. Up to 12 recorded topics are shown. Creator counts require recorded settlement evidence; they do not independently reconcile Circle.",
+      "text": "Suy ra từ bản tin được quy cho ví này trong kho này, gồm mô phỏng ghi nhận trong số bản tin. Quy thuộc không xác lập bên cấp tiền lượt chạy. Loại trừ hoạt động ẩn danh và kho lịch sử. Hiển thị tối đa 12 chủ đề ghi nhận. Số tác giả cần bằng chứng quyết toán ghi nhận; không đối soát Circle độc lập."
+    },
+    "walletMenu.welcomeBack": {
+      "source": "Welcome back",
+      "text": "Chào mừng trở lại"
+    },
+    "walletMenu.wallet": {
+      "source": "Wallet",
+      "text": "Ví"
+    },
+    "walletMenu.addressCopied": {
+      "source": "Address copied",
+      "text": "Đã sao chép địa chỉ"
+    },
+    "walletMenu.copyAddress": {
+      "source": " Copy address",
+      "text": " Sao chép địa chỉ"
+    },
+    "walletMenu.ledger": {
+      "source": " Ledger",
+      "text": " Sổ theo dõi"
+    },
+    "walletMenu.mySources": {
+      "source": " My sources",
+      "text": " Nguồn của tôi"
+    },
+    "walletMenu.privateProfile": {
+      "source": " Private profile",
+      "text": " Hồ sơ riêng tư"
+    },
+    "walletMenu.myDispatches": {
+      "source": " My dispatches",
+      "text": " Bản tin của tôi"
+    },
+    "walletMenu.paidJobs": {
+      "source": " Paid jobs",
+      "text": " Tác vụ trả phí"
+    },
+    "walletMenu.issueToll": {
+      "source": " Issue a toll",
+      "text": " Đặt phí truy cập"
+    },
+    "walletMenu.manageSessions": {
+      "source": " Manage sessions",
+      "text": " Quản lý phiên"
+    },
+    "walletMenu.signing": {
+      "source": "Sign…",
+      "text": "Ký…"
+    },
+    "walletMenu.signInWithWallet": {
+      "source": " Sign in with this wallet",
+      "text": " Đăng nhập bằng ví này"
+    },
+    "walletMenu.differentWallet": {
+      "source": " Use a different wallet",
+      "text": " Dùng ví khác"
+    },
+    "walletMenu.connectWallet": {
+      "source": "Connect Wallet",
+      "text": "Kết nối ví"
+    },
+    "walletMenu.chooseWallet": {
+      "source": "Choose a wallet",
+      "text": "Chọn ví"
+    },
+    "walletMenu.connectBoundary": {
+      "source": "Connecting creates your account & signs you in.",
+      "text": "Kết nối tạo tài khoản và đăng nhập cho bạn."
+    },
+    "walletMenu.signedIn": {
+      "source": "Signed in",
+      "text": "Đã đăng nhập"
+    },
+    "walletMenu.signedInAs": {
+      "source": "Signed in as {role}",
+      "text": "Đã đăng nhập với vai trò {role}"
+    },
+    "walletPicker.connectFailed": {
+      "source": "Could not connect",
+      "text": "Không thể kết nối"
+    },
+    "walletPicker.loading": {
+      "source": "Loading wallet options…",
+      "text": "Đang tải lựa chọn ví…"
+    },
+    "walletPicker.notDetected": {
+      "source": "No browser wallet detected.",
+      "text": "Không phát hiện ví trình duyệt."
+    },
+    "walletPicker.guidance": {
+      "source": "On mobile: open keryx.cc inside your wallet app's browser (MetaMask, Rabby…). On desktop: install MetaMask or Rabby, then refresh.",
+      "text": "Trên điện thoại: mở keryx.cc trong trình duyệt ứng dụng ví (MetaMask, Rabby…). Trên máy tính: cài MetaMask hoặc Rabby rồi làm mới."
+    },
+    "walletPicker.mobileQr": {
+      "source": "mobile · QR",
+      "text": "điện thoại · QR"
+    },
+    "walletPicker.qrMobile": {
+      "source": "QR · mobile",
+      "text": "QR · điện thoại"
+    },
+    "googleWallet.startFailed": {
+      "source": "Google wallet sign-in could not start. Please try again.",
+      "text": "Không thể bắt đầu đăng nhập ví Google. Vui lòng thử lại."
+    },
+    "googleWallet.reconnect": {
+      "source": "Reconnect Google wallet",
+      "text": "Kết nối lại ví Google"
+    },
+    "googleWallet.continue": {
+      "source": "Continue with Google",
+      "text": "Tiếp tục với Google"
+    },
+    "googleWallet.connecting": {
+      "source": "Connecting your Google wallet…",
+      "text": "Đang kết nối ví Google…"
+    },
+    "googleWallet.connected": {
+      "source": "Google wallet connected. Choose a research budget to continue.",
+      "text": "Đã kết nối ví Google. Chọn ngân sách nghiên cứu để tiếp tục."
+    },
+    "googleWallet.completeFailed": {
+      "source": "Google sign-in could not complete. Please try again.",
+      "text": "Không thể hoàn tất đăng nhập Google. Vui lòng thử lại."
+    },
+    "sessionBudget.remaining": {
+      "source": "{budgetKind} — {amount} USDC remaining",
+      "text": "{budgetKind} — còn {amount} USDC"
+    },
+    "sessionBudget.used": {
+      "source": "{amount} USDC {usageKind}",
+      "text": "{amount} USDC {usageKind}"
+    },
+    "sessionBudget.ceiling": {
+      "source": "{amount} USDC ceiling",
+      "text": "Trần {amount} USDC"
+    },
+    "sessionBudget.questionCap": {
+      "source": "Maximum per question: {amount} USDC.{gap}Shared across your conversations.",
+      "text": "Tối đa mỗi câu hỏi: {amount} USDC.{gap}Dùng chung giữa các hội thoại."
+    },
+    "sessionBudget.expired": {
+      "source": "expired",
+      "term": "expired"
+    },
+    "sessionBudget.underAMinute": {
+      "source": "under a minute",
+      "text": "chưa đến một phút"
+    },
+    "sessionBudget.researchBudget": {
+      "source": "Research budget",
+      "text": "Ngân sách nghiên cứu"
+    },
+    "sessionBudget.sessionActive": {
+      "source": "Session active",
+      "text": "Phiên đang hoạt động"
+    },
+    "sessionBudget.addToBudget": {
+      "source": "Add to budget",
+      "text": "Thêm vào ngân sách"
+    },
+    "sessionBudget.stopSpending": {
+      "source": "Stop spending",
+      "text": "Dừng chi tiêu"
+    },
+    "sessionBudget.usedOrHeld": {
+      "source": "used or held",
+      "text": "đã dùng hoặc đang giữ"
+    },
+    "sessionBudget.spent": {
+      "source": "spent",
+      "text": "đã chi"
+    },
+    "sessionBudget.renewing": {
+      "source": "Renewing…",
+      "text": "Đang gia hạn…"
+    },
+    "sessionBudget.renewDuration": {
+      "source": "Renew duration",
+      "text": "Gia hạn thời gian"
+    },
+    "sessionBudget.extendSession": {
+      "source": "Extend session ▸",
+      "text": "Gia hạn phiên ▸"
+    },
+    "sessionBudget.renewalFailed": {
+      "source": "Renewal did not complete. Your saved budget and prior payments remain recorded.",
+      "text": "Gia hạn chưa hoàn tất. Ngân sách đã lưu và thanh toán trước vẫn được ghi nhận."
+    },
+    "sessionBudget.pendingBoundary": {
+      "source": "Pending payments count against the remaining budget. Renewal keeps the existing ceiling. Stopping blocks new payments; funds stay in Gateway for your withdrawal.",
+      "text": "Thanh toán đang chờ tính vào ngân sách còn lại. Gia hạn giữ trần hiện có. Dừng chặn thanh toán mới; tiền ở Gateway để bạn rút."
+    },
+    "sessionBudget.addLabel": {
+      "source": "Add (USDC)",
+      "text": "Thêm (USDC)"
+    },
+    "sessionBudget.reviewIncrease": {
+      "source": "Review increase",
+      "text": "Xem xét tăng hạn mức"
+    },
+    "sessionBudget.mainnetIncreaseBoundary": {
+      "source": "Review funding and a new budget confirmation before the ceiling increases. Your per-question maximum stays the same. Native gas is extra.",
+      "text": "Xem nguồn tiền và xác nhận ngân sách mới trước khi tăng trần. Tối đa mỗi câu hỏi giữ nguyên. Gas gốc là chi phí thêm."
+    },
+    "sessionBudget.testnetIncreaseBoundary": {
+      "source": "Deposit into your existing testnet session and confirm its new allowance.",
+      "text": "Nạp vào phiên testnet hiện có và xác nhận hạn mức mới."
+    },
+    "sessionBudget.minutes": {
+      "source": "{minutes} min",
+      "text": "{minutes} phút"
+    },
+    "sessionBudget.hoursMinutes": {
+      "source": "{hours}h {minutes}m",
+      "text": "{hours}h {minutes}m"
+    },
+    "sessionBudget.daysHours": {
+      "source": "{days}d {hours}h",
+      "text": "{days}d {hours}h"
+    },
+    "sessionBudget.expiresIn": {
+      "source": "expires in {duration}",
+      "text": "hết hạn sau {duration}"
+    },
+    "sessionBudget.expiry": {
+      "source": "Budget {state}",
+      "text": "Ngân sách {state}"
+    },
+    "sessionCashout.preparation": {
+      "source": "Original amount {amount} USDC; fee at most {fee} USDC. Recipient {recipient}. Finite burn height {height}.",
+      "text": "Số tiền ban đầu {amount} USDC; phí tối đa {fee} USDC. Bên nhận {recipient}. Chiều cao burn hữu hạn {height}."
+    },
+    "sessionCashout.amountPrecision": {
+      "source": "Enter USDC with at most six decimals",
+      "text": "Nhập USDC với tối đa sáu chữ số thập phân"
+    },
+    "sessionCashout.positiveAmount": {
+      "source": "Choose a supported positive amount",
+      "text": "Chọn số tiền dương được hỗ trợ"
+    },
+    "sessionCashout.signInOriginalOwner": {
+      "source": "Sign in as the original owner to recover cashout",
+      "text": "Đăng nhập bằng chủ sở hữu ban đầu để khôi phục rút tiền"
+    },
+    "sessionCashout.connectOriginalOwner": {
+      "source": "Connect the original owner wallet",
+      "text": "Kết nối ví chủ sở hữu ban đầu"
+    },
+    "sessionCashout.ownerChanged": {
+      "source": "Cashout owner changed",
+      "text": "Chủ sở hữu rút tiền đã thay đổi"
+    },
+    "sessionCashout.unavailable": {
+      "source": "Original cashout unavailable",
+      "text": "Bản gốc rút tiền không khả dụng"
+    },
+    "sessionCashout.signerMismatch": {
+      "source": "Original retained signer differs",
+      "text": "Bộ ký được lưu ban đầu khác"
+    },
+    "sessionCashout.consentUnavailable": {
+      "source": "Retained owner consent reference unavailable",
+      "text": "Tham chiếu đồng ý của chủ sở hữu được lưu không khả dụng"
+    },
+    "sessionCashout.identityMismatch": {
+      "source": "Original cashout identity differs",
+      "text": "Danh tính rút tiền ban đầu khác"
+    },
+    "sessionCashout.prepared": {
+      "source": "prepared",
+      "text": "đã chuẩn bị"
+    },
+    "sessionCashout.reviewExceeded": {
+      "source": "Prepared amount or fee exceeds your review. Cancel this unsigned original before preparing again.",
+      "text": "Số tiền hoặc phí đã chuẩn bị vượt mức bạn xem xét. Hủy bản gốc chưa ký này trước khi chuẩn bị lại."
+    },
+    "sessionCashout.readFirst": {
+      "source": "Read the original cashout first",
+      "text": "Đọc bản gốc rút tiền trước"
+    },
+    "sessionCashout.attemptExists": {
+      "source": "An original transfer attempt exists; use recovery",
+      "text": "Đã có lần thử chuyển; dùng khôi phục"
+    },
+    "sessionCashout.transferSubmitted": {
+      "source": "transfer submitted; original recovery required",
+      "text": "đã gửi khoản chuyển; cần khôi phục bản gốc"
+    },
+    "sessionCashout.completedWithFinality": {
+      "source": "completed with original mainnet mint finality",
+      "text": "hoàn tất với tính cuối cùng của mint mainnet ban đầu"
+    },
+    "sessionCashout.cancelledBeforeExposure": {
+      "source": "cancelled before exposure; original ID retained",
+      "text": "đã hủy trước khi đưa vào thanh toán; giữ ID ban đầu"
+    },
+    "sessionCashout.interruptedSigningCancelled": {
+      "source": "interrupted signing cancelled; original retained. Prepare a new withdrawal or renew your Session to resume research.",
+      "text": "đã hủy ký gián đoạn; giữ bản gốc. Chuẩn bị rút mới hoặc gia hạn Phiên để tiếp tục nghiên cứu."
+    },
+    "sessionCashout.walletUnavailable": {
+      "source": "Original cashout and owner wallet unavailable",
+      "text": "Bản gốc rút tiền và ví chủ sở hữu không khả dụng"
+    },
+    "sessionCashout.mintSubmitted": {
+      "source": "owner mint submitted; finality pending",
+      "text": "đã gửi mint của chủ sở hữu; chờ tính cuối cùng"
+    },
+    "sessionCashout.enterMintHash": {
+      "source": "Enter the original owner mint transaction hash",
+      "text": "Nhập hash giao dịch mint của chủ sở hữu ban đầu"
+    },
+    "sessionCashout.withdraw": {
+      "source": "Withdraw retained session funds",
+      "text": "Rút tiền phiên được giữ"
+    },
+    "sessionCashout.custodyBoundary": {
+      "source": "Recipient is your original owner wallet. Research pauses while a withdrawal is unresolved. Signed payments and uncertain transfers remain held; gas is paid separately by your owner wallet. Logout and grant expiry retain this browser's recovery key.",
+      "text": "Bên nhận là ví chủ sở hữu ban đầu. Nghiên cứu tạm dừng khi rút tiền chưa giải quyết. Thanh toán đã ký và khoản chuyển chưa rõ vẫn được giữ; ví chủ sở hữu trả gas riêng. Đăng xuất và hết hạn quyền vẫn giữ khóa khôi phục trình duyệt này."
+    },
+    "sessionCashout.recoveryBoundary": {
+      "source": "If signing was interrupted before a burn signature was saved, cancel interrupted signing to unlock recovery. This also works after the original expires. A saved signature or transfer attempt requires original recovery.",
+      "text": "Nếu ký gián đoạn trước khi lưu chữ ký burn, hủy ký gián đoạn để mở khôi phục. Cũng áp dụng sau khi bản gốc hết hạn. Chữ ký đã lưu hoặc lần thử chuyển cần khôi phục bản gốc."
+    },
+    "sessionCashout.amountLabel": {
+      "source": "Amount USDC ",
+      "text": "Số tiền USDC "
+    },
+    "sessionCashout.amountAria": {
+      "source": "Session withdrawal amount",
+      "text": "Số tiền rút phiên"
+    },
+    "sessionCashout.feeLabel": {
+      "source": "Maximum fee USDC ",
+      "text": "Phí tối đa USDC "
+    },
+    "sessionCashout.feeAria": {
+      "source": "Session withdrawal maximum fee",
+      "text": "Phí rút phiên tối đa"
+    },
+    "sessionCashout.prepare": {
+      "source": "Prepare reviewed amount and fee ceiling",
+      "text": "Chuẩn bị số tiền đã xem xét và trần phí"
+    },
+    "sessionCashout.originals": {
+      "source": "Retained originals ",
+      "text": " Bản gốc được lưu "
+    },
+    "sessionCashout.originalsAria": {
+      "source": "Retained session cashouts",
+      "text": "Khoản rút phiên được lưu"
+    },
+    "sessionCashout.chooseOriginal": {
+      "source": "Choose an original",
+      "text": "Chọn bản gốc"
+    },
+    "sessionCashout.signingCancellationPending": {
+      "source": "signing cancellation pending",
+      "text": "đang chờ hủy ký"
+    },
+    "sessionCashout.signingCancelled": {
+      "source": "signing cancelled",
+      "text": "đã hủy ký"
+    },
+    "sessionCashout.completed": {
+      "source": "completed",
+      "text": "đã hoàn tất"
+    },
+    "sessionCashout.cancelled": {
+      "source": "cancelled",
+      "text": "đã hủy"
+    },
+    "sessionCashout.recovery": {
+      "source": "recovery",
+      "text": "khôi phục"
+    },
+    "sessionCashout.requestIdLabel": {
+      "source": "Original request ID ",
+      "text": "ID yêu cầu ban đầu "
+    },
+    "sessionCashout.requestIdAria": {
+      "source": "Original session withdrawal request",
+      "text": "Yêu cầu rút phiên ban đầu"
+    },
+    "sessionCashout.signBurn": {
+      "source": "Sign and submit original burn",
+      "text": "Ký và gửi burn ban đầu"
+    },
+    "sessionCashout.readRecovery": {
+      "source": "Read original recovery",
+      "text": "Đọc khôi phục bản gốc"
+    },
+    "sessionCashout.cancelUnexposed": {
+      "source": "Cancel never-exposed preparation",
+      "text": "Hủy bước chuẩn bị chưa từng đưa vào thanh toán"
+    },
+    "sessionCashout.cancelInterrupted": {
+      "source": "Cancel interrupted signing",
+      "text": "Hủy ký gián đoạn"
+    },
+    "sessionCashout.reviewMint": {
+      "source": "Review owner wallet mint and gas",
+      "text": "Xem mint và gas ví chủ sở hữu"
+    },
+    "sessionCashout.mintHashLabel": {
+      "source": "Original owner mint hash ",
+      "text": "Hash mint chủ sở hữu ban đầu "
+    },
+    "sessionCashout.mintHashAria": {
+      "source": "Original session mint hash",
+      "text": "Hash mint phiên ban đầu"
+    },
+    "sessionCashout.verifyMint": {
+      "source": "Verify original mint finality",
+      "text": "Xác minh tính cuối cùng của mint ban đầu"
+    },
+    "withdrawalAccount.checkingSignIn": {
+      "source": "Checking sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "withdrawalAccount.signIn": {
+      "source": "Sign in to manage withdrawals",
+      "text": "Đăng nhập để quản lý rút tiền"
+    },
+    "withdrawalAccount.connectInstruction": {
+      "source": "Connect the wallet you signed in with to review or sign a withdrawal.",
+      "text": "Kết nối ví bạn đã đăng nhập để xem xét hoặc ký rút tiền."
+    },
+    "withdrawalAccount.connect": {
+      "source": "Connect or change account",
+      "text": "Kết nối hoặc đổi tài khoản"
+    },
+    "apiKeys.rawKeyWarning": {
+      "source": "This key will {neverAgain}. Store it in your secrets manager. If it is compromised, revoke it immediately from this dashboard.",
+      "text": "Khóa này sẽ {neverAgain}. Lưu trong trình quản lý bí mật. Nếu bị lộ, thu hồi ngay từ bảng này."
+    },
+    "apiKeys.createdAt": {
+      "source": "Created {date}",
+      "text": "Đã tạo {date}"
+    },
+    "apiKeys.lastUsedAt": {
+      "source": "Last used {date}",
+      "text": "Lần dùng gần nhất {date}"
+    },
+    "apiKeys.introduction": {
+      "source": "Wallet-issued API keys for programmatic access to{endpointGap}{endpoint} and explicitly scoped account operations. Research still requires x402 {signature} per call.",
+      "text": "Khóa API do ví cấp để truy cập bằng chương trình vào{endpointGap}{endpoint} và thao tác tài khoản có phạm vi rõ ràng. Nghiên cứu vẫn cần x402 {signature} mỗi lệnh gọi."
+    },
+    "apiKeys.compatibilityInstruction": {
+      "source": "Any OpenAI SDK or tool works — set the base URL to{urlGap}{url} and model{modelGap}{model}. Free to try with no key; pass a{keyGap}{key} key as the Bearer token for wallet-based limits. All keys for one wallet share 10 sponsored calls per minute across chat and Remote MCP; caller IP and shared service limits also apply. Creating more keys adds no allowance. Every cited creator is paid in USDC on Arc. With{streamGap}{stream} the agent's live buy/skip/trust reasoning arrives as {reasoning}.",
+      "text": "Mọi OpenAI SDK hoặc công cụ đều dùng được — đặt URL gốc thành{urlGap}{url} và mô hình{modelGap}{model}. Thử miễn phí không cần khóa; truyền khóa{keyGap}{key} làm Bearer token cho giới hạn theo ví. Mọi khóa của một ví dùng chung 10 lệnh gọi được tài trợ mỗi phút trên chat và MCP từ xa; vẫn áp dụng IP người gọi và giới hạn dịch vụ chung. Tạo thêm khóa không tăng hạn mức. Mỗi tác giả được trích dẫn được trả USDC trên Arc. Với{streamGap}{stream}, suy luận mua/bỏ qua/tin cậy trực tiếp của tác nhân đến dưới dạng {reasoning}."
+    },
+    "apiKeys.exportInstruction": {
+      "source": "Every payout across every source your wallet owns, in one ledger — CSV for a spreadsheet, JSON for a script. Signed-in browsers can download it directly; scripts send a {key} key. Deactivated sources are included: retiring a feed does not erase what it earned.",
+      "text": "Mọi thanh toán từ mọi nguồn ví bạn sở hữu, trong một sổ — CSV cho bảng tính, JSON cho mã. Trình duyệt đã đăng nhập có thể tải trực tiếp; mã gửi khóa {key}. Bao gồm nguồn đã tắt: ngừng nguồn cấp không xóa thu nhập đã có."
+    },
+    "apiKeys.noCalls": {
+      "source": "No calls yet.",
+      "text": "Chưa có lệnh gọi."
+    },
+    "apiKeys.copyNow": {
+      "source": "— Copy your key now —",
+      "text": "— Sao chép khóa ngay —"
+    },
+    "apiKeys.neverShownAgain": {
+      "source": "never be shown again",
+      "text": "không được hiển thị lại"
+    },
+    "apiKeys.copyAria": {
+      "source": "Copy to clipboard",
+      "text": "Sao chép vào bộ nhớ tạm"
+    },
+    "apiKeys.copied": {
+      "source": "Copied!",
+      "text": "Đã sao chép!"
+    },
+    "apiKeys.authorityBoundary": {
+      "source": "x402 payment-signature is still required on every /api/agent/ask call. Profile/account scopes do not grant payment or research authority.",
+      "text": "Vẫn cần x402 payment-signature cho mỗi lệnh gọi /api/agent/ask. Phạm vi hồ sơ/tài khoản không cấp thẩm quyền thanh toán hay nghiên cứu."
+    },
+    "apiKeys.copiedAcknowledgement": {
+      "source": "I have copied my key",
+      "text": "Tôi đã sao chép khóa"
+    },
+    "apiKeys.revoked": {
+      "source": "revoked",
+      "text": "đã thu hồi"
+    },
+    "apiKeys.scopes": {
+      "source": "Scopes",
+      "text": "Phạm vi quyền"
+    },
+    "apiKeys.revokeAria": {
+      "source": "Revoke key",
+      "text": "Thu hồi khóa"
+    },
+    "apiKeys.recentCalls": {
+      "source": "Calls (last 14 days)",
+      "text": "Lệnh gọi (14 ngày qua)"
+    },
+    "apiKeys.signIn": {
+      "source": "Sign in with your wallet to manage API keys.",
+      "text": "Đăng nhập bằng ví để quản lý khóa API."
+    },
+    "apiKeys.revokeConfirmation": {
+      "source": "Revoke this key? All callers using it will get 401 immediately.",
+      "text": "Thu hồi khóa này? Mọi người gọi dùng khóa sẽ nhận 401 ngay."
+    },
+    "apiKeys.title": {
+      "source": "Developer Portal",
+      "text": "Cổng lập trình viên"
+    },
+    "apiKeys.apiReference": {
+      "source": "API Reference →",
+      "text": "Tài liệu API →"
+    },
+    "apiKeys.openApi": {
+      "source": "OpenAPI JSON →",
+      "text": "JSON OpenAPI →"
+    },
+    "apiKeys.compatibilityTitle": {
+      "source": "OpenAI-compatible endpoint",
+      "text": "Điểm cuối tương thích OpenAI"
+    },
+    "apiKeys.playground": {
+      "source": "Try it live in the playground →",
+      "text": "Thử trực tiếp trong khu thử nghiệm →"
+    },
+    "apiKeys.exportTitle": {
+      "source": "Earnings audit export",
+      "text": "Xuất kiểm tra thu nhập"
+    },
+    "apiKeys.downloadLedger": {
+      "source": "Download my ledger (CSV) →",
+      "text": "Tải sổ của tôi (CSV) →"
+    },
+    "apiKeys.issue": {
+      "source": " Issue new key",
+      "text": " Tạo khóa mới"
+    },
+    "apiKeys.labelPlaceholder": {
+      "source": "Label (optional)",
+      "text": "Nhãn (không bắt buộc)"
+    },
+    "apiKeys.minting": {
+      "source": "Minting…",
+      "text": "Đang phát hành…"
+    },
+    "apiKeys.mint": {
+      "source": "Mint",
+      "text": "Phát hành"
+    },
+    "apiKeys.askScope": {
+      "source": "(run dispatches)",
+      "text": "(chạy bản tin)"
+    },
+    "apiKeys.exportScope": {
+      "source": "(read your earnings)",
+      "text": "(đọc thu nhập của bạn)"
+    },
+    "apiKeys.profileReadScope": {
+      "source": "(read private profile + activity)",
+      "text": "(đọc hồ sơ riêng tư và hoạt động)"
+    },
+    "apiKeys.profileWriteScope": {
+      "source": "(replace private profile fields)",
+      "text": "(thay trường hồ sơ riêng tư)"
+    },
+    "apiKeys.loading": {
+      "source": "Loading keys…",
+      "text": "Đang tải khóa…"
+    },
+    "apiKeys.empty": {
+      "source": "No API keys yet. Issue one above.",
+      "text": "Chưa có khóa API. Tạo một khóa bên trên."
+    },
+    "apiKeys.callsOnDay.one": {
+      "source": "{day}: {count} calls",
+      "text": "{day}: {count} lệnh gọi"
+    },
+    "apiKeys.callsOnDay.other": {
+      "source": "{day}: {count} calls",
+      "text": "{day}: {count} lệnh gọi"
+    },
+    "apiKeys.pinnedSources.one": {
+      "source": " · {count} pinned source(s)",
+      "text": " · {count} nguồn cố định"
+    },
+    "apiKeys.pinnedSources.other": {
+      "source": " · {count} pinned source(s)",
+      "text": " · {count} nguồn cố định"
+    },
+    "apiKeys.httpError": {
+      "source": "HTTP {status}",
+      "text": "HTTP {status}"
+    }
+  }
+}

@@ -1,0 +1,380 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/product-guide.ts",
+  "sourceSha256": "8f9a10b842280db7fa02502d74d003a2d71f868a66a364a0f1146d5c57c80620",
+  "entries": {
+    "product.heroKicker": {
+      "source": "For researchers",
+      "text": "Dành cho người nghiên cứu"
+    },
+    "product.heroTitle": {
+      "source": "AI research.",
+      "text": "Nghiên cứu bằng AI."
+    },
+    "product.heroBody": {
+      "source": "Cited answers. Visible source choices.",
+      "text": "Câu trả lời có trích dẫn. Lựa chọn nguồn rõ ràng."
+    },
+    "product.overviewKicker": {
+      "source": "What you get",
+      "text": "Bạn nhận được gì"
+    },
+    "product.overviewTitle": {
+      "source": "A research answer you can follow back to its sources.",
+      "text": "Câu trả lời nghiên cứu mà bạn có thể lần về nguồn."
+    },
+    "product.overviewBody": {
+      "source": "Keryx is a citation-toll reading agent. Give it a question and a source budget: it discovers material, explains what it reads or skips, and writes an answer with citations. Eligible cited creators can receive separate USDC rewards.",
+      "text": "Keryx là tác nhân đọc có phí trích dẫn. Đưa câu hỏi và ngân sách nguồn: Keryx khám phá tài liệu, giải thích việc đọc hay bỏ qua và viết câu trả lời có trích dẫn. Tác giả đủ điều kiện được trích dẫn có thể nhận phần thưởng USDC riêng."
+    },
+    "product.briefsAction": {
+      "source": "Prepare a focused research brief",
+      "text": "Chuẩn bị bản tóm lược nghiên cứu tập trung"
+    },
+    "product.researchersTitle": {
+      "source": "For researchers and students",
+      "text": "Dành cho người nghiên cứu và sinh viên"
+    },
+    "product.researchersBody": {
+      "source": "Find papers, compare evidence and build a literature review. Keep unavailable papers and abstract-only reads visible instead of treating them as full-text evidence.",
+      "text": "Tìm bài, so sánh bằng chứng và tạo tổng quan tài liệu. Hiển thị bài không khả dụng và lượt chỉ đọc tóm tắt, không coi chúng là bằng chứng toàn văn."
+    },
+    "product.researchersAction": {
+      "source": "Open the literature workspace",
+      "text": "Mở không gian tài liệu"
+    },
+    "product.buildersTitle": {
+      "source": "For builders and writers",
+      "text": "Dành cho người xây dựng và người viết"
+    },
+    "product.buildersBody": {
+      "source": "Investigate a technical question or prepare a brief. Follow the agent's source decisions, inspect supporting citations and reopen the completed report.",
+      "text": "Tìm hiểu câu hỏi kỹ thuật hoặc chuẩn bị tóm lược. Theo quyết định nguồn, kiểm tra trích dẫn hỗ trợ và mở lại báo cáo hoàn tất."
+    },
+    "product.buildersAction": {
+      "source": "Explore sources",
+      "text": "Khám phá nguồn"
+    },
+    "product.agentsTitle": {
+      "source": "For agent developers",
+      "text": "Dành cho lập trình viên tác nhân"
+    },
+    "product.agentsBody": {
+      "source": "Use research through the API or MCP. Prepaid jobs carry a quoted service fee, a creator reserve and recovery records that distinguish a result from a settled payment.",
+      "text": "Dùng nghiên cứu qua API hoặc MCP. Tác vụ trả trước có phí dịch vụ báo giá, khoản dự trữ cho tác giả và hồ sơ khôi phục phân biệt kết quả với thanh toán đã quyết toán."
+    },
+    "product.agentsAction": {
+      "source": "Explore developer integrations",
+      "text": "Khám phá tích hợp cho lập trình viên"
+    },
+    "product.proofKicker": {
+      "source": "Inspect the evidence",
+      "text": "Kiểm tra bằng chứng"
+    },
+    "product.proofTitle": {
+      "source": "Trust comes from what you can check.",
+      "text": "Niềm tin đến từ những gì bạn kiểm tra được."
+    },
+    "product.proofBody": {
+      "source": "Open source decisions and original references. Payment records distinguish settled, pending, failed and simulated states. A saved answer or a registry entry alone does not prove a payment or a useful result.",
+      "text": "Mở quyết định nguồn và tài liệu tham khảo gốc. Hồ sơ thanh toán phân biệt đã quyết toán, đang chờ, không thành công và mô phỏng. Chỉ câu trả lời đã lưu hay mục registry không chứng minh thanh toán hoặc kết quả hữu ích."
+    },
+    "product.walkthrough": {
+      "source": "Follow a recorded research job",
+      "text": "Theo dõi tác vụ nghiên cứu đã ghi nhận"
+    },
+    "product.proof": {
+      "source": "Inspect public proof",
+      "text": "Kiểm tra bằng chứng công khai"
+    },
+    "product.quality": {
+      "source": "Read quality and evaluation limits",
+      "text": "Đọc giới hạn chất lượng và đánh giá"
+    },
+    "product.pricing": {
+      "source": "Pricing & budgets",
+      "text": "Giá và ngân sách"
+    },
+    "product.about": {
+      "source": "About & contact",
+      "text": "Giới thiệu và liên hệ"
+    },
+    "product.navigationPricing": {
+      "source": "Pricing",
+      "text": "Giá và ngân sách"
+    },
+    "product.navigationAbout": {
+      "source": "About",
+      "text": "Giới thiệu"
+    },
+    "product.try": {
+      "source": "Try a research question",
+      "text": "Thử một câu hỏi nghiên cứu"
+    },
+    "product.faqTitle": {
+      "source": "Before your first question",
+      "text": "Trước câu hỏi đầu tiên"
+    },
+    "product.faqWallet": {
+      "source": "Do I need a wallet to try Keryx?",
+      "text": "Tôi cần ví để thử Keryx không?"
+    },
+    "product.faqWalletBody": {
+      "source": "The sponsored public trial needs no wallet or USDC deposit. Keryx covers approved source spending and operating costs within its usage and spending limits. Check availability in the question form; access can be paused.",
+      "text": "Thử nghiệm công khai được tài trợ không cần ví hay nạp USDC. Keryx chi trả khoản chi nguồn được chấp nhận và chi phí vận hành trong giới hạn sử dụng, chi tiêu. Kiểm tra khả dụng trong biểu mẫu câu hỏi; truy cập có thể tạm dừng."
+    },
+    "product.faqPublic": {
+      "source": "Can I submit confidential research?",
+      "text": "Tôi gửi nghiên cứu bí mật được không?"
+    },
+    "product.faqPublicBody": {
+      "source": "Sponsored trial reports have public links. Use questions you can share publicly. Review the separate private-research flow and privacy terms before submitting confidential material; signing in alone does not make a trial report private.",
+      "text": "Báo cáo thử nghiệm được tài trợ có liên kết công khai. Dùng câu hỏi có thể chia sẻ. Xem luồng nghiên cứu riêng tư và điều khoản quyền riêng tư trước khi gửi tài liệu bí mật; chỉ đăng nhập không làm báo cáo thử nghiệm thành riêng tư."
+    },
+    "product.faqPayment": {
+      "source": "Does every citation pay a publisher?",
+      "text": "Mỗi trích dẫn có trả tiền nhà xuất bản không?"
+    },
+    "product.faqPaymentBody": {
+      "source": "No. Public pages can be read without a source access toll. Creator rewards require qualifying evidence and verified payout authority. Sponsored operating fees, when eligible, are recorded separately and are not publisher payments.",
+      "text": "Không. Trang công khai có thể đọc không mất phí truy cập nguồn. Phần thưởng tác giả cần bằng chứng đủ điều kiện và thẩm quyền nhận tiền đã xác minh. Phí vận hành tài trợ khi đủ điều kiện ghi nhận riêng, không phải thanh toán nhà xuất bản."
+    },
+    "product.faqTrust": {
+      "source": "Are demo reports or AI answers verified facts?",
+      "text": "Báo cáo demo hoặc câu trả lời AI là thông tin đã xác minh không?"
+    },
+    "product.faqTrustBody": {
+      "source": "No. Synthetic examples are demonstrations, and historical testnet receipts stay labelled as testnet. AI answers can be incomplete or wrong: inspect the original sources, evidence limitations and payment state before relying on a report.",
+      "text": "Không. Ví dụ tổng hợp là minh họa, biên nhận testnet lịch sử giữ nhãn testnet. Câu trả lời AI có thể thiếu hoặc sai: kiểm tra nguồn gốc, giới hạn bằng chứng và trạng thái thanh toán trước khi dựa vào báo cáo."
+    },
+    "product.entryLabel": {
+      "source": "About this research service",
+      "text": "Giới thiệu dịch vụ nghiên cứu"
+    },
+    "product.entryBody": {
+      "source": "Keryx turns questions into cited research answers with visible source decisions and spending limits. Each saved report keeps its own evidence limitations and payment labels. Open the original sources and receipts to inspect a particular run.",
+      "text": "Keryx biến câu hỏi thành câu trả lời nghiên cứu có trích dẫn, quyết định nguồn rõ ràng và giới hạn chi tiêu. Mỗi báo cáo đã lưu giữ giới hạn bằng chứng và nhãn thanh toán riêng. Mở nguồn gốc và biên nhận để kiểm tra một lượt chạy."
+    },
+    "pricing.title": {
+      "source": "Know what you pay for.",
+      "text": "Biết rõ bạn trả tiền cho gì."
+    },
+    "pricing.metadataTitle": {
+      "source": "Pricing & research budgets",
+      "text": "Giá và ngân sách nghiên cứu"
+    },
+    "pricing.description": {
+      "source": "Understand Keryx's sponsored trial, browser-funded source budgets and prepaid Quick/Deep research fees before you start.",
+      "text": "Hiểu thử nghiệm tài trợ, ngân sách nguồn từ trình duyệt và phí nghiên cứu trả trước Nhanh/Chuyên sâu trước khi bắt đầu."
+    },
+    "pricing.currencySuffix": {
+      "source": "· USDC",
+      "text": "· USDC"
+    },
+    "pricing.introduction": {
+      "source": "Choose the research path that fits your task. Source access, eligible creator rewards and the research service are distinct costs. Payment amounts below are in USDC; the configured network is shown above.",
+      "text": "Chọn luồng nghiên cứu phù hợp nhiệm vụ. Truy cập nguồn, phần thưởng tác giả đủ điều kiện và dịch vụ nghiên cứu là chi phí riêng. Số tiền bên dưới bằng USDC; mạng được cấu hình hiển thị bên trên."
+    },
+    "pricing.trialTitle": {
+      "source": "Sponsored public trial",
+      "text": "Thử nghiệm công khai được tài trợ"
+    },
+    "pricing.trialPrice": {
+      "source": "No wallet or deposit",
+      "text": "Không cần ví hay nạp tiền"
+    },
+    "pricing.trialBody": {
+      "source": "Keryx sponsors source purchases, eligible rewards and operating costs within current trial limits. Availability is shown in the question form. This is a limited trial, not an unlimited free plan.",
+      "text": "Keryx tài trợ mua nguồn, phần thưởng đủ điều kiện và chi phí vận hành trong giới hạn thử nghiệm hiện tại. Khả dụng hiển thị ở biểu mẫu câu hỏi. Đây là thử nghiệm có giới hạn, không phải gói miễn phí vô hạn."
+    },
+    "pricing.trialPrivacy": {
+      "source": "Trial reports have public links. Use shareable questions.",
+      "text": "Báo cáo thử nghiệm có liên kết công khai. Dùng câu hỏi có thể chia sẻ."
+    },
+    "pricing.browserTitle": {
+      "source": "Your browser source budget",
+      "text": "Ngân sách nguồn trong trình duyệt"
+    },
+    "pricing.browserPrice": {
+      "source": "You set the source cap",
+      "text": "Bạn đặt hạn mức nguồn"
+    },
+    "pricing.browserBody": {
+      "source": "A funded browser session pays for source reads and eligible creator rewards within your approved question and session caps. Pending authorizations count against the cap; unused funds remain in your Gateway balance. Model and search operating costs are separate from the source cap.",
+      "text": "Phiên trình duyệt có nguồn tiền trả cho lượt đọc nguồn và phần thưởng tác giả đủ điều kiện trong hạn mức câu hỏi, phiên được phê duyệt. Ủy quyền đang chờ tính vào hạn mức; tiền chưa dùng giữ trong số dư Gateway. Chi phí vận hành mô hình và tìm kiếm tách biệt với hạn mức nguồn."
+    },
+    "pricing.browserFee": {
+      "source": "No prepaid research-package service fee is added to the browser's source grant.",
+      "text": "Không thêm phí dịch vụ gói nghiên cứu trả trước vào quyền chi nguồn của trình duyệt."
+    },
+    "pricing.browserAction": {
+      "source": "Review browser budgets",
+      "text": "Xem ngân sách trình duyệt"
+    },
+    "pricing.prepaidTitle": {
+      "source": "Prepaid research jobs",
+      "text": "Tác vụ nghiên cứu trả trước"
+    },
+    "pricing.prepaidBody": {
+      "source": "Quick and Deep packages combine a service fee with your chosen creator reserve. The fee covers the research service; the reserve bounds source purchases and eligible creator rewards. Review the current quote, availability and terms before paying.",
+      "text": "Gói Nhanh và Chuyên sâu kết hợp phí dịch vụ với khoản dự trữ tác giả bạn chọn. Phí chi trả dịch vụ nghiên cứu; dự trữ giới hạn mua nguồn và phần thưởng đủ điều kiện. Xem báo giá, khả dụng và điều kiện hiện tại trước khi trả."
+    },
+    "pricing.package": {
+      "source": "Package",
+      "text": "Gói"
+    },
+    "pricing.service": {
+      "source": "Service fee",
+      "text": "Phí dịch vụ"
+    },
+    "pricing.reserve": {
+      "source": "Creator reserve",
+      "text": "Khoản dự trữ cho tác giả"
+    },
+    "pricing.total": {
+      "source": "Total prepaid price",
+      "text": "Tổng giá trả trước"
+    },
+    "pricing.quick": {
+      "source": "Quick",
+      "text": "Nhanh"
+    },
+    "pricing.deep": {
+      "source": "Deep",
+      "text": "Chuyên sâu"
+    },
+    "pricing.quoteNotice": {
+      "source": "Illustration using this deployment's default creator reserve. Amounts come from the same pricing function as checkout. This table is not an availability guarantee; checkout can refuse a job or return a different total when you change the reserve.",
+      "text": "Minh họa dùng khoản dự trữ tác giả mặc định của bản triển khai này. Số tiền lấy từ cùng hàm tính giá với thanh toán. Bảng không bảo đảm khả dụng; thanh toán có thể từ chối tác vụ hoặc trả tổng khác khi đổi dự trữ."
+    },
+    "pricing.prepaidTerms": {
+      "source": "Prepaid packages are non-refundable under the current policy. An unused creator reserve stays in the package. Targets describe the package's service level, not a promise of correctness or an individual completion time.",
+      "text": "Gói trả trước không hoàn tiền theo chính sách hiện tại. Khoản dự trữ tác giả chưa dùng giữ trong gói. Mục tiêu mô tả mức dịch vụ gói, không hứa tính đúng đắn hay thời gian hoàn thành riêng."
+    },
+    "pricing.checkout": {
+      "source": "Review current quote & availability",
+      "text": "Xem báo giá và khả dụng hiện tại"
+    },
+    "pricing.monthlyTitle": {
+      "source": "Research Monthly",
+      "text": "Gói nghiên cứu tháng"
+    },
+    "pricing.monthlyBody": {
+      "source": "A separate prepaid option covers four manually requested Deep jobs over 30 days, with a 10% discount against four individual packages. It is not an automatic research schedule. Check the live quote and availability in the research workspace.",
+      "text": "Lựa chọn trả trước riêng gồm bốn tác vụ Chuyên sâu yêu cầu thủ công trong 30 ngày, giảm 10% so với bốn gói đơn. Không phải lịch nghiên cứu tự động. Kiểm tra báo giá và khả dụng trực tiếp trong không gian nghiên cứu."
+    },
+    "pricing.creatorTitle": {
+      "source": "Publishing a source?",
+      "text": "Bạn muốn xuất bản nguồn?"
+    },
+    "pricing.creatorBody": {
+      "source": "Set an access toll for a source you control and prove ownership. A paid read and an eligible citation reward are separate payment legs; listing alone does not guarantee earnings. Public sources and disabled reward policies do not become paid merely by being cited.",
+      "text": "Đặt phí truy cập nguồn bạn kiểm soát và chứng minh sở hữu. Lượt đọc trả phí và thưởng trích dẫn đủ điều kiện là hai khoản thanh toán riêng; chỉ niêm yết không bảo đảm thu nhập. Nguồn công khai và chính sách thưởng tắt không thành trả phí chỉ vì được trích dẫn."
+    },
+    "about.metadataTitle": {
+      "source": "About Keryx & support",
+      "text": "Giới thiệu Keryx và hỗ trợ"
+    },
+    "about.description": {
+      "source": "What Keryx does, who it is for, how to inspect its evidence and where to get support.",
+      "text": "Keryx làm gì, dành cho ai, cách kiểm tra bằng chứng và nơi được hỗ trợ."
+    },
+    "about.title": {
+      "source": "Research with a visible trail.",
+      "text": "Nghiên cứu có dấu vết rõ ràng."
+    },
+    "about.introduction": {
+      "source": "Keryx helps researchers, builders and writers turn a question into a cited answer while seeing what the agent reads, why it chooses each source and how the source budget is used.",
+      "text": "Keryx giúp người nghiên cứu, người xây dựng và người viết biến câu hỏi thành câu trả lời có trích dẫn, đồng thời thấy tác nhân đọc gì, vì sao chọn từng nguồn và cách dùng ngân sách nguồn."
+    },
+    "about.whyTitle": {
+      "source": "Why Keryx exists",
+      "text": "Vì sao có Keryx"
+    },
+    "about.whyBody": {
+      "source": "Useful research depends on the people who publish the underlying work. Keryx combines source discovery and cited answers with bounded paid access and qualifying creator rewards. Public references remain useful even when there is no publisher payment.",
+      "text": "Nghiên cứu hữu ích phụ thuộc người xuất bản công trình nền tảng. Keryx kết hợp khám phá nguồn và câu trả lời có trích dẫn với truy cập trả phí có giới hạn, phần thưởng tác giả đủ điều kiện. Tài liệu tham khảo công khai vẫn hữu ích dù không trả tiền nhà xuất bản."
+    },
+    "about.projectTitle": {
+      "source": "An open-source project",
+      "text": "Dự án mã nguồn mở"
+    },
+    "about.projectBody": {
+      "source": "Keryx's implementation, changes and issue tracker are public on GitHub. Inspect the code, report a problem or follow development there. Public proof and quality pages document evidence and remaining acceptance gates; they do not establish independent customer adoption.",
+      "text": "Triển khai, thay đổi và trình theo dõi issue Keryx công khai trên GitHub. Kiểm tra mã, báo lỗi hoặc theo phát triển ở đó. Trang bằng chứng công khai và chất lượng ghi lại bằng chứng, cổng chấp nhận còn lại; không xác lập mức sử dụng độc lập của khách hàng."
+    },
+    "about.github": {
+      "source": "View source code",
+      "text": "Xem mã nguồn"
+    },
+    "about.issues": {
+      "source": "Report an issue",
+      "text": "Báo lỗi"
+    },
+    "about.contactTitle": {
+      "source": "Contact support",
+      "text": "Liên hệ hỗ trợ"
+    },
+    "about.contactBody": {
+      "source": "For questions about research, creator onboarding, payment recovery or privacy, email support. Include a public report link or a non-sensitive description of the issue. Never send private keys, seed phrases, API keys or private recovery credentials.",
+      "text": "Với câu hỏi về nghiên cứu, đăng ký tác giả, khôi phục thanh toán hoặc quyền riêng tư, gửi email hỗ trợ. Kèm liên kết báo cáo công khai hoặc mô tả không nhạy cảm. Không bao giờ gửi khóa riêng, cụm từ khôi phục, khóa API hay thông tin khôi phục riêng tư."
+    },
+    "about.boundariesTitle": {
+      "source": "What to know before using it",
+      "text": "Điều cần biết trước khi dùng"
+    },
+    "about.boundariesBody": {
+      "source": "AI reports need source review. Sponsored reports are public, experimental features keep their own gates, and payment attempts only count as settled when original settlement evidence exists. Historical and synthetic records keep their original labels.",
+      "text": "Báo cáo AI cần xem nguồn. Báo cáo được tài trợ công khai, tính năng thử nghiệm giữ cổng riêng, lần thanh toán chỉ tính đã quyết toán khi có bằng chứng ban đầu. Hồ sơ lịch sử và tổng hợp giữ nhãn gốc."
+    },
+    "product.support": {
+      "source": "Email support",
+      "text": "Gửi email hỗ trợ"
+    },
+    "product.privacy": {
+      "source": "Privacy",
+      "text": "Quyền riêng tư"
+    },
+    "product.terms": {
+      "source": "Terms",
+      "text": "Điều khoản"
+    },
+    "product.stepsTitle": {
+      "source": "How Keryx researches a question",
+      "text": "Keryx nghiên cứu câu hỏi thế nào"
+    },
+    "product.stepsDecide": {
+      "source": "Keryx compares source previews and prices under your cap, then explains what it reads or skips. Unused browser-session funds remain yours; prepaid reserves follow the package terms.",
+      "text": "Keryx so sánh bản xem trước và giá nguồn trong hạn mức, rồi giải thích việc đọc hay bỏ qua. Tiền phiên trình duyệt chưa dùng vẫn là của bạn; dự trữ trả trước theo điều kiện gói."
+    },
+    "product.stepsCite": {
+      "source": "It reads available public or purchased material and writes an answer with citations to supporting sources. Unavailable content and thin evidence remain visible.",
+      "text": "Keryx đọc tài liệu công khai hoặc đã mua khả dụng và viết câu trả lời trích dẫn nguồn hỗ trợ. Nội dung không khả dụng và bằng chứng ít vẫn được hiển thị."
+    },
+    "product.metaTitle": {
+      "source": "Keryx — AI research with cited evidence",
+      "text": "Keryx — nghiên cứu AI có bằng chứng được trích dẫn"
+    },
+    "product.metaDescription": {
+      "source": "For researchers, builders and writers: turn a question into a cited answer with visible source decisions and spending limits. Try Keryx's sponsored public trial; eligibility and usage limits apply.",
+      "text": "Dành cho người nghiên cứu, người xây dựng và người viết: biến câu hỏi thành câu trả lời có trích dẫn, quyết định nguồn rõ ràng và giới hạn chi. Thử nghiệm công khai được tài trợ của Keryx áp dụng điều kiện và giới hạn sử dụng."
+    },
+    "product.socialAlt": {
+      "source": "Keryx — cited AI research with visible source decisions",
+      "text": "Keryx — nghiên cứu AI có trích dẫn và quyết định nguồn rõ ràng"
+    },
+    "product.socialTitle": {
+      "source": "Cited research.\nVisible decisions.",
+      "text": "Nghiên cứu có trích dẫn.\nQuyết định rõ ràng."
+    },
+    "product.socialSubtitle": {
+      "source": "Inspect sources, spending and creator payment proof",
+      "text": "Kiểm tra nguồn, khoản chi và bằng chứng trả tiền tác giả"
+    },
+    "product.slogan": {
+      "source": "Cited research. Visible decisions.",
+      "text": "Nghiên cứu có trích dẫn. Quyết định rõ ràng."
+    }
+  }
+}

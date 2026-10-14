@@ -1,0 +1,464 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-mandates.ts",
+  "sourceSha256": "28f26444c7cf24cc5e054029c7146e5eb4af3fcff261c35a5fff426f317c47c8",
+  "entries": {
+    "en.metaTitle": {
+      "source": "Research mandates",
+      "text": "研究委托"
+    },
+    "en.metaDescription": {
+      "source": "Inspect research spending policies, unpaid obligations and decision bindings. Local assessment with no payment execution.",
+      "text": "查看研究支出政策、未付义务及决策绑定。本地评估，不执行付款。"
+    },
+    "en.language": {
+      "source": "Language",
+      "text": "语言"
+    },
+    "en.eyebrow": {
+      "source": "Research mandates",
+      "text": "研究委托"
+    },
+    "en.title": {
+      "source": "Give research a clear spending boundary.",
+      "text": "为研究设置清晰支出边界。"
+    },
+    "en.intro": {
+      "source": "Inspect a proposed purchase against budgets, recipient rules and unpaid obligations. Keep the decision and the payment permission separate.",
+      "text": "按预算、收款人规则及未付义务检查拟议购买。将决策和付款许可分开。"
+    },
+    "en.workspace": {
+      "source": "Research mandate workspace",
+      "text": "研究授权工作区"
+    },
+    "en.scenarios": {
+      "source": "Try a synthetic scenario",
+      "text": "尝试合成场景"
+    },
+    "en.ready": {
+      "source": "Within budget",
+      "text": "预算内"
+    },
+    "en.overdue": {
+      "source": "Overdue obligation",
+      "text": "逾期义务"
+    },
+    "en.pending": {
+      "source": "Pending exposure",
+      "text": "待处理风险敞口"
+    },
+    "en.recipient": {
+      "source": "Wrong recipient",
+      "text": "收款人错误"
+    },
+    "en.unknown": {
+      "source": "Unknown books",
+      "text": "账目未知"
+    },
+    "en.sample": {
+      "source": "Synthetic example loaded. No live wallet, model decision or chain evidence is being read.",
+      "text": "合成示例已加载。未读取实时钱包、模型决策或链上证据。"
+    },
+    "en.input": {
+      "source": "Policy, books and proposed purchase (JSON)",
+      "text": "政策、账目及拟议购买（JSON）"
+    },
+    "en.amount": {
+      "source": "Proposed purchase (USDC)",
+      "text": "拟议购买（USDC）"
+    },
+    "en.balance": {
+      "source": "Supplied balance (USDC)",
+      "text": "提供余额（USDC）"
+    },
+    "en.assess": {
+      "source": "Assess supplied policy",
+      "text": "评估提供政策"
+    },
+    "en.export": {
+      "source": "Export assessment",
+      "text": "导出评估"
+    },
+    "en.policyExport": {
+      "source": "Export policy",
+      "text": "导出政策"
+    },
+    "en.reset": {
+      "source": "Load an example to begin, or paste your own policy.",
+      "text": "加载示例开始，或粘贴自己的政策。"
+    },
+    "en.invalid": {
+      "source": "Check the JSON schema and exact USDC amounts. Input must be at most 64 KiB.",
+      "text": "检查 JSON 模式及精确 USDC 金额。输入最多 64 KiB。"
+    },
+    "en.result": {
+      "source": "Policy assessment",
+      "text": "政策评估"
+    },
+    "en.within": {
+      "source": "Fits the supplied policy",
+      "text": "符合提供政策"
+    },
+    "en.hold": {
+      "source": "Hold purchase",
+      "text": "暂缓购买"
+    },
+    "en.skip": {
+      "source": "Skip purchase",
+      "text": "跳过购买"
+    },
+    "en.review": {
+      "source": "Needs owner review",
+      "text": "需要所有者审核"
+    },
+    "en.disclaimer": {
+      "source": "This assessment uses supplied data. It does not verify source ownership, model quality or settlement, and does not authorize a payment.",
+      "text": "此评估使用提供数据，不核验来源所有权、模型质量或结算，也不授权付款。"
+    },
+    "en.reserve": {
+      "source": "Protected reserve",
+      "text": "受保护储备"
+    },
+    "en.exposure": {
+      "source": "Unresolved exposure",
+      "text": "未解决风险敞口"
+    },
+    "en.purchase": {
+      "source": "Proposed purchase",
+      "text": "拟议购买"
+    },
+    "en.required": {
+      "source": "Cash required",
+      "text": "所需现金"
+    },
+    "en.trace": {
+      "source": "Inspect the decision binding",
+      "text": "查看决策绑定"
+    },
+    "en.status": {
+      "source": "Contract candidate · not deployed",
+      "text": "合约候选 · 未部署"
+    },
+    "en.timestamp": {
+      "source": "Evaluated at",
+      "text": "评估时间"
+    },
+    "en.identity": {
+      "source": "Decision hash",
+      "text": "决策哈希"
+    },
+    "en.binding": {
+      "source": "Purchase binding",
+      "text": "购买绑定"
+    },
+    "en.calldata": {
+      "source": "Unsigned prepare calldata",
+      "text": "未签名 prepare 调用数据"
+    },
+    "en.explanation": {
+      "source": "Unpaid and unknown obligations remain protected regardless of their due date. Pending purchases count against cash and spend caps. A recipient must match the supplied source mapping.",
+      "text": "未付及未知义务不论到期日均受保护。待处理购买计入现金及支出上限。收款人须匹配提供来源映射。"
+    },
+    "en.agents": {
+      "source": "For your agent",
+      "text": "面向您的代理"
+    },
+    "en.agentText": {
+      "source": "Use the same assessment through the stateless API, dedicated MCP endpoint or local CLI. Inputs are never saved by this workspace.",
+      "text": "通过无状态 API、专用 MCP 端点或本地 CLI 使用相同评估。此工作区从不保存输入。"
+    },
+    "en.docs": {
+      "source": "Read the integration guide",
+      "text": "阅读集成指南"
+    },
+    "en.home": {
+      "source": "Back to Keryx",
+      "text": "返回 Keryx"
+    },
+    "en.privacy": {
+      "source": "Assessment runs locally in this browser. No wallet is connected and no payment is submitted.",
+      "text": "评估在此浏览器本地运行。未连接钱包，未提交付款。"
+    },
+    "vi.metaTitle": {
+      "source": "Ủy quyền nghiên cứu",
+      "text": "研究委托"
+    },
+    "vi.metaDescription": {
+      "source": "Kiểm tra chính sách chi phí nghiên cứu, nghĩa vụ chưa trả và ràng buộc quyết định. Không thực hiện thanh toán.",
+      "text": "查看研究费用政策、未付义务及决策绑定。不执行付款。"
+    },
+    "vi.language": {
+      "source": "Ngôn ngữ",
+      "text": "语言"
+    },
+    "vi.eyebrow": {
+      "source": "Ủy quyền nghiên cứu",
+      "text": "研究委托"
+    },
+    "vi.title": {
+      "source": "Đặt giới hạn rõ ràng cho chi phí nghiên cứu.",
+      "text": "为研究费用设置清晰限制。"
+    },
+    "vi.intro": {
+      "source": "Kiểm tra khoản mua theo ngân sách, người nhận và các nghĩa vụ chưa thanh toán. Tách quyết định nghiên cứu khỏi quyền chi tiền.",
+      "text": "按预算、收款人及未付义务检查购买。将研究决策与支出权限分开。"
+    },
+    "vi.workspace": {
+      "source": "Không gian kiểm tra ủy quyền nghiên cứu",
+      "text": "研究授权检查工作区"
+    },
+    "vi.scenarios": {
+      "source": "Thử tình huống giả lập",
+      "text": "尝试模拟场景"
+    },
+    "vi.ready": {
+      "source": "Trong ngân sách",
+      "text": "预算内"
+    },
+    "vi.overdue": {
+      "source": "Nghĩa vụ quá hạn",
+      "text": "逾期义务"
+    },
+    "vi.pending": {
+      "source": "Khoản đang chờ",
+      "text": "待处理款项"
+    },
+    "vi.recipient": {
+      "source": "Sai người nhận",
+      "text": "收款人错误"
+    },
+    "vi.unknown": {
+      "source": "Sổ sách chưa rõ",
+      "text": "账目不明"
+    },
+    "vi.sample": {
+      "source": "Đã nạp ví dụ giả lập. Không đọc ví thật, quyết định model thật hay bằng chứng trên chuỗi.",
+      "text": "模拟示例已加载。未读取真实钱包、真实模型决策或链上证据。"
+    },
+    "vi.input": {
+      "source": "Chính sách, sổ sách và khoản mua đề xuất (JSON)",
+      "text": "政策、账目及拟议购买（JSON）"
+    },
+    "vi.amount": {
+      "source": "Khoản mua đề xuất (USDC)",
+      "text": "拟议购买（USDC）"
+    },
+    "vi.balance": {
+      "source": "Số dư cung cấp (USDC)",
+      "text": "提供余额（USDC）"
+    },
+    "vi.assess": {
+      "source": "Kiểm tra chính sách",
+      "text": "检查政策"
+    },
+    "vi.export": {
+      "source": "Xuất bản đánh giá",
+      "text": "导出评估"
+    },
+    "vi.policyExport": {
+      "source": "Xuất chính sách",
+      "text": "导出政策"
+    },
+    "vi.reset": {
+      "source": "Nạp ví dụ để bắt đầu hoặc dán chính sách của bạn.",
+      "text": "加载示例开始或粘贴自己的政策。"
+    },
+    "vi.invalid": {
+      "source": "Kiểm tra cấu trúc JSON và số USDC chính xác. Đầu vào tối đa 64 KiB.",
+      "text": "检查 JSON 结构和精确 USDC 金额。输入最多 64 KiB。"
+    },
+    "vi.result": {
+      "source": "Đánh giá chính sách",
+      "text": "政策评估"
+    },
+    "vi.within": {
+      "source": "Phù hợp với chính sách cung cấp",
+      "text": "符合提供政策"
+    },
+    "vi.hold": {
+      "source": "Tạm giữ khoản mua",
+      "text": "暂缓购买"
+    },
+    "vi.skip": {
+      "source": "Bỏ qua khoản mua",
+      "text": "跳过购买"
+    },
+    "vi.review": {
+      "source": "Cần chủ sở hữu xem xét",
+      "text": "需要所有者审核"
+    },
+    "vi.disclaimer": {
+      "source": "Đánh giá dựa trên dữ liệu cung cấp. Không xác minh chủ sở hữu nguồn, chất lượng model hay thanh toán, và không cấp quyền chi tiền.",
+      "text": "评估基于提供数据。不核验来源所有者、模型质量或付款，不授予支出权限。"
+    },
+    "vi.reserve": {
+      "source": "Dự phòng được bảo vệ",
+      "text": "受保护储备"
+    },
+    "vi.exposure": {
+      "source": "Khoản chờ chưa xác định",
+      "text": "未明确待处理款项"
+    },
+    "vi.purchase": {
+      "source": "Khoản mua đề xuất",
+      "text": "拟议购买"
+    },
+    "vi.required": {
+      "source": "Tiền mặt cần có",
+      "text": "所需现金"
+    },
+    "vi.trace": {
+      "source": "Xem dữ liệu ràng buộc quyết định",
+      "text": "查看决策绑定数据"
+    },
+    "vi.status": {
+      "source": "Hợp đồng thử nghiệm · chưa triển khai",
+      "text": "实验合约 · 未部署"
+    },
+    "vi.timestamp": {
+      "source": "Thời điểm đánh giá",
+      "text": "评估时间"
+    },
+    "vi.identity": {
+      "source": "Hash quyết định",
+      "text": "决策哈希"
+    },
+    "vi.binding": {
+      "source": "Ràng buộc khoản mua",
+      "text": "购买绑定"
+    },
+    "vi.calldata": {
+      "source": "Calldata prepare chưa ký",
+      "text": "未签名 prepare 调用数据"
+    },
+    "vi.explanation": {
+      "source": "Nghĩa vụ chưa trả và chưa rõ vẫn được giữ dự phòng bất kể hạn trả. Khoản mua đang chờ tính vào cả tiền mặt và hạn mức. Người nhận phải khớp ánh xạ nguồn cung cấp.",
+      "text": "未付及不明义务不论到期日均保留储备。待处理购买计入现金及上限。收款人须匹配提供来源映射。"
+    },
+    "vi.agents": {
+      "source": "Dành cho agent của bạn",
+      "text": "面向您的代理"
+    },
+    "vi.agentText": {
+      "source": "Dùng cùng bộ đánh giá qua API, MCP riêng hoặc CLI cục bộ. Không gian này không lưu đầu vào.",
+      "text": "通过 API、专用 MCP 或本地 CLI 使用同一评估。此工作区不保存输入。"
+    },
+    "vi.docs": {
+      "source": "Đọc hướng dẫn tích hợp",
+      "text": "阅读集成指南"
+    },
+    "vi.home": {
+      "source": "Về Keryx",
+      "text": "返回 Keryx"
+    },
+    "vi.privacy": {
+      "source": "Đánh giá chạy ngay trong trình duyệt. Không kết nối ví và không gửi thanh toán.",
+      "text": "评估直接在浏览器运行。不连接钱包，不发送付款。"
+    },
+    "english": {
+      "source": "EN",
+      "text": "英语"
+    },
+    "vietnamese": {
+      "source": "VI",
+      "text": "越南语"
+    },
+    "currency": {
+      "source": "USDC",
+      "term": "usdc"
+    },
+    "http": {
+      "source": "HTTP / MCP",
+      "text": "HTTP / MCP"
+    },
+    "cli": {
+      "source": "CLI",
+      "text": "CLI"
+    },
+    "invalid-policy-limits": {
+      "source": "Hạn mức phải dương và tăng dần từ mỗi khoản mua đến ngày, tuần và toàn thời gian.",
+      "text": "上限须为正，并按每次购买、每日、每周、全时段逐级递增。"
+    },
+    "policy-expiry": {
+      "source": "Ủy quyền đã hết hạn hoặc vượt quá thời hạn hỗ trợ.",
+      "text": "授权已过期或超过支持时长。"
+    },
+    "incomplete-books": {
+      "source": "Cần sổ sách đầy đủ và mới cập nhật; thiếu dữ liệu không có nghĩa là không có nghĩa vụ.",
+      "text": "需要完整且最新账目；缺失数据不意味着无义务。"
+    },
+    "per-payment-cap": {
+      "source": "Khoản đề xuất bằng không hoặc vượt quyền mua mỗi lần.",
+      "text": "拟议金额为零或超过单次购买权限。"
+    },
+    "payee-not-allowed": {
+      "source": "Người nhận chưa có trong danh sách được phép cung cấp.",
+      "text": "收款人不在提供的允许列表中。"
+    },
+    "source-payee-mismatch": {
+      "source": "Người nhận phải khớp ánh xạ nguồn đã được chủ sở hữu duyệt; hash nguồn không chứng minh quyền nhận tiền.",
+      "text": "收款人须匹配所有者批准的来源映射；来源哈希不能证明收款权。"
+    },
+    "category-disabled": {
+      "source": "Nhóm chi chưa có hạn mức dương rõ ràng.",
+      "text": "支出组无明确正上限。"
+    },
+    "task-disabled": {
+      "source": "Nhiệm vụ chưa có hạn mức dương rõ ràng.",
+      "text": "任务无明确正上限。"
+    },
+    "task-binding-mismatch": {
+      "source": "Câu hỏi phải khớp chính xác hash nhiệm vụ ban đầu.",
+      "text": "问题须精确匹配原任务哈希。"
+    },
+    "inconsistent-books": {
+      "source": "Các tổng cam kết hoặc khoản đang giữ không nhất quán; chưa thể kết luận còn hạn mức.",
+      "text": "总承诺额或预留额不一致；无法断定剩余额度。"
+    },
+    "daily-cap": {
+      "source": "Tổng khoản đã cam kết và đang chờ sẽ vượt hạn mức ngày.",
+      "text": "已承诺及待处理总额将超每日上限。"
+    },
+    "rolling-week-cap": {
+      "source": "Tổng khoản đã cam kết và đang chờ sẽ vượt hạn mức tuần.",
+      "text": "已承诺及待处理总额将超每周上限。"
+    },
+    "lifetime-cap": {
+      "source": "Tổng khoản đã cam kết và đang chờ sẽ vượt hạn mức toàn thời gian.",
+      "text": "已承诺及待处理总额将超全时段上限。"
+    },
+    "category-books-unknown": {
+      "source": "Chưa biết tổng cam kết của nhóm chi này.",
+      "text": "此支出组总承诺额未知。"
+    },
+    "category-cap": {
+      "source": "Khoản mua sẽ vượt hạn mức nhóm chi.",
+      "text": "购买将超支出组上限。"
+    },
+    "task-books-unknown": {
+      "source": "Chưa biết tổng cam kết của nhiệm vụ này.",
+      "text": "此任务总承诺额未知。"
+    },
+    "task-cap": {
+      "source": "Khoản mua sẽ vượt hạn mức nhiệm vụ.",
+      "text": "购买将超任务上限。"
+    },
+    "liquidity-short": {
+      "source": "Tiền mặt phải đủ cho nghĩa vụ chưa trả, khoản đang giữ và khoản mua này cùng lúc.",
+      "text": "现金须同时覆盖未付义务、预留额及此次购买。"
+    },
+    "purchase-expiry": {
+      "source": "Ủy quyền mua phải còn hạn, hết hạn trước ngày UTC tiếp theo và nằm trong thời hạn chính sách.",
+      "text": "购买授权须未过期，在下个 UTC 日前到期，并在政策时长内。"
+    },
+    "unverified-agency": {
+      "source": "Đề xuất theo luật cục bộ hoặc chưa rõ nguồn gốc không chứng minh model đã quyết định.",
+      "text": "本地规则或来源不明的提议不能证明模型已决策。"
+    },
+    "evidence-needs-review": {
+      "source": "Bằng chứng chưa được duyệt; độ tự tin của model không thay thế việc kiểm tra.",
+      "text": "证据未获批准；模型置信度不能替代检查。"
+    }
+  }
+}

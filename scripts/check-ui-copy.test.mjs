@@ -1,17 +1,260 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { compareBaseline, extractUiCopy, makeBaseline, scanRepository } from "./check-ui-copy.mjs";
+import { compareBaseline, extractUiCopy, makeBaseline, scanRepository, extractNamespaceCopy, uiSourceSha256, validateNamespaceDraft, scanNamespaceDrafts } from "./check-ui-copy.mjs";
 
 const filename = "components/example.tsx";
 const sourceCommit = "a".repeat(40);
 const scan = source => extractUiCopy(filename, source);
 const texts = source => scan(source).map(finding => finding.text);
 const baseline = source => makeBaseline(scan(source), sourceCommit);
+
+const glossary = JSON.parse(readFileSync(new URL("../locales/glossary/en.json", import.meta.url), "utf8"));
+const namespaceSource = 'export const copy = Object.freeze({ title: "Read {count} sources with USDC on Arc", pending: "Pending confirmation" } as const);';
+const namespaceBinding = () => extractNamespaceCopy("locales/en/example.ts", namespaceSource);
+const namespaceDraft = () => ({ status: "machineDraft", review: null, sourcePath: "locales/en/example.ts",
+  sourceSha256: uiSourceSha256(namespaceSource), entries: {
+    title: { source: "Read {count} sources with USDC on Arc", text: "Lire {count} sources avec USDC sur Arc" },
+    pending: { source: "Pending confirmation", term: "pending" },
+  } });
+
+test("namespace extraction uses source AST for nested leaves, arrays, aliases, CJS and core-inline", () => {
+  const extracted = extractNamespaceCopy("locales/en/example.ts", 'export const copy = Object.freeze([{label: "Read", format: "bibtex"}]); export const errors = {empty: helpers["empty"]};',
+    expression => expression === 'helpers["empty"]' ? "Empty" : undefined);
+  assert.deepEqual({ ...extracted.entries }, { "0.label": "Read", "0.format": "bibtex", empty: "Empty" });
+  assert.deepEqual({ ...extracted.aliases }, { empty: 'helpers["empty"]' });
+  assert.deepEqual({ ...extractNamespaceCopy("locales/en/example.cjs", 'const copy = {ready: "Ready"}; module.exports = {copy};').entries }, { ready: "Ready" });
+  assert.deepEqual({ ...extractNamespaceCopy("lib/i18n/messages.ts", 'const unrelated = {x: "Excluded"}; export const englishMessages = Object.freeze({...imported, "core.title": "Title"});').entries }, { "core.title": "Title" });
+  assert.throws(() => extractNamespaceCopy("locales/en/example.ts", 'const copy = {title: runProvider["title"]};'), /unresolved source alias/);
+  assert.throws(() => extractNamespaceCopy("locales/en/example.ts", 'const copy = {title:'), /cannot be parsed/);
+  assert.equal(uiSourceSha256("a\r\nb\rc\n"), uiSourceSha256("a\nb\nc\n"));
+});
+
+test("namespace completeness is derived, and source hashes/leaves/terms/placeholders are exact", () => {
+  assert.deepEqual(validateNamespaceDraft(namespaceDraft(), namespaceBinding(), glossary), { coveredKeys: ["pending", "title"], uncoveredKeys: [] });
+  const partial = namespaceDraft(); delete partial.entries.pending;
+  assert.deepEqual(validateNamespaceDraft(partial, namespaceBinding(), glossary).uncoveredKeys, ["pending"]);
+  for (const mutate of [
+    draft => { draft.sourceSha256 = "0".repeat(64); },
+    draft => { draft.entries.title.source += "!"; },
+    draft => { draft.entries.title.text = "Lire {total} sources avec USDC sur Arc"; },
+    draft => { draft.entries.title.text = "Lire {count} sources avec USD sur Arc"; },
+    draft => { draft.entries.pending.term = "settled"; },
+    draft => { draft.entries.unknown = { source: "Unknown", text: "Unknown" }; },
+    draft => { draft.status = "reviewed"; },
+    draft => { draft.review = { kind: "human" }; },
+    draft => { draft.extra = true; },
+  ]) {
+    const draft = namespaceDraft(); mutate(draft);
+    assert.throws(() => validateNamespaceDraft(draft, namespaceBinding(), glossary));
+  }
+});
+
+test("distinct exported roots qualify colliding leaves, including equal text, without losing unique leaves", () => {
+  const binding = extractNamespaceCopy("locales/en/example.ts", `
+    export const first = { nested: { title: "Same", only: "Only" }, rows: [{label: "One"}] };
+    export const second = { nested: { title: "Same" }, rows: [{label: "Two"}] };
+  `);
+  assert.deepEqual({ ...binding.entries }, {
+    "first.nested.title": "Same", "nested.only": "Only", "first.rows.0.label": "One",
+    "second.nested.title": "Same", "second.rows.0.label": "Two",
+  });
+  const draft = { status: "machineDraft", review: null, sourcePath: binding.sourcePath,
+    sourceSha256: binding.sourceSha256, entries: { "nested.title": { source: "Same", text: "Identique" } } };
+  assert.throws(() => validateNamespaceDraft(draft, binding, glossary), /Unknown namespace key/);
+});
+
+test("root re-export aliases share declaration identity while structural aliases retain their own paths", () => {
+  let resolutions = 0;
+  const binding = extractNamespaceCopy("locales/en/example.ts", `
+    const title = "Title";
+    const alias = original;
+    const frozenAlias = Object.freeze(alias);
+    const original = { title, nested: {ready: helper["ready"]} };
+    export { alias as renamed, frozenAlias, original };
+    export const second = { nested: {ready: helper["ready"]} };
+  `, expression => { resolutions += 1; return expression === 'helper["ready"]' ? "Ready" : undefined; });
+  assert.deepEqual({ ...binding.entries }, { title: "Title", "original.nested.ready": "Ready", "second.nested.ready": "Ready" });
+  assert.deepEqual({ ...binding.aliases }, { "original.nested.ready": 'helper["ready"]', "second.nested.ready": 'helper["ready"]' });
+  assert.equal(resolutions, 2); // Each distinct structural alias once; no re-export traversal.
+  assert.deepEqual({ ...extractNamespaceCopy("locales/en/example.cjs", `
+    const first = {title: "First"}; const renamed = first; const second = {title: "Second"};
+    module.exports = {first, renamed, second}; exports.again = first;
+  `).entries }, { "first.title": "First", "second.title": "Second" });
+  assert.deepEqual({ ...extractNamespaceCopy("locales/en/example.cjs", 'module.exports = {ready: "Ready", nested: ["One"]};').entries }, { ready: "Ready", "nested.0": "One" });
+});
+
+test("duplicate structural and qualified-key collisions refuse even equal text", () => {
+  for (const source of [
+    'export const copy = {title: "Same", title: "Same"};',
+    'export const copy = {"nested.title": "Same", nested: {title: "Same"}};',
+    'export const first = {title: "Same"}; export const second = {title: "Same", "first.title": "Same"};',
+  ]) assert.throws(() => extractNamespaceCopy("locales/en/example.ts", source), /(?:duplicate structural|conflicting) leaf/);
+  assert.throws(() => extractNamespaceCopy("locales/en/example.json", '{"title":"Same","title":"Same"}'), /duplicate structural leaf/);
+  assert.deepEqual({ ...extractNamespaceCopy("locales/en/example.json", '{"nested":{"title":"Title"},"rows":[{"label":"One"}]}').entries },
+    { "nested.title": "Title", "rows.0.label": "One" });
+  assert.throws(() => extractNamespaceCopy("locales/en/example.ts", 'const copy = {nested: copy};'), /cyclic source alias/);
+});
+
+test("actual completed result selection/import exports retain all 23 original source leaves", () => {
+  const file = "locales/en/completed-evidence-draft-selection.ts";
+  const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+  const binding = extractNamespaceCopy(file, source);
+  assert.equal(Object.keys(binding.entries).length, 23);
+  assert.deepEqual(Object.keys(binding.entries).sort(), [
+    ...["label", "guidance", "privacy", "reading", "unavailable", "timedOut", "imported"].flatMap(key =>
+      [`completedEvidenceDraftSelectionCopy.${key}`, `completedEvidenceDraftImportCopy.${key}`]),
+    "jobId", "read", "ready", "signIn", "changed", "invalid", "storage", "empty", "import",
+  ].sort());
+  assert.equal(binding.sourceSha256, "3f5a7137fc8975e7c4b92525c004bec9f332ddb03058c11c45d4c7a638772cd5");
+  assert.equal(binding.entries["completedEvidenceDraftSelectionCopy.imported"], "Completed report and reading observations imported; draft edits are preserved.");
+  assert.equal(binding.entries["completedEvidenceDraftImportCopy.imported"], "Retained report appended. Existing draft edits are preserved. Semantic support is unjudged; downloaded or edited reports have caller-supplied origin.");
+  assert.equal(binding.entries.read, "Read saved metadata");
+  assert(!Object.hasOwn(binding.entries, "imported"));
+  for (const locale of ["vi", "zh-Hans"]) {
+    const draft = JSON.parse(readFileSync(new URL(`../locales/${locale}/ui-drafts/completed-evidence-draft-selection.json`, import.meta.url), "utf8"));
+    assert.deepEqual(validateNamespaceDraft(draft, binding, glossary).uncoveredKeys, []);
+    assert.equal(Object.keys(draft.entries).length, 23);
+  }
+});
+
+test("all 59 existing English namespaces and core-inline are source-extractable without importing them", () => {
+  const directory = new URL("../locales/en/", import.meta.url);
+  const files = readdirSync(directory).filter(file => /\.(ts|json|cjs)$/.test(file));
+  assert.equal(files.length, 59);
+  const helpers = extractNamespaceCopy("locales/en/shared-helpers.ts", readFileSync(new URL("shared-helpers.ts", directory), "utf8"));
+  const resolve = expression => {
+    const match = /^sharedHelperMessages\["([^"]+)"\]$/.exec(expression);
+    return match ? helpers.entries[match[1]] : undefined;
+  };
+  for (const file of files) {
+    const binding = extractNamespaceCopy(`locales/en/${file}`, readFileSync(new URL(file, directory), "utf8"), resolve);
+    assert(Object.keys(binding.entries).length > 0, file);
+  }
+  const core = extractNamespaceCopy("lib/i18n/messages.ts", readFileSync(new URL("../lib/i18n/messages.ts", import.meta.url), "utf8"));
+  assert.equal(core.entries["locale.label"], "Interface language");
+  assert(!Object.hasOwn(core.entries, "shellNavigation.ask"));
+});
+
+test("standalone critical labels reference the existing concept and cannot override it", () => {
+  const binding = extractNamespaceCopy("locales/en/example.ts", 'const copy = {pending: "Pending", reward: "Citation rewards"};');
+  const draft = { status: "machineDraft", review: null, sourcePath: binding.sourcePath, sourceSha256: binding.sourceSha256,
+    entries: { pending: { source: "Pending", term: "pending" }, reward: { source: "Citation rewards", term: "citation-reward" } } };
+  assert.equal(validateNamespaceDraft(draft, binding, glossary).coveredKeys.length, 2);
+  draft.entries.pending.term = "settled";
+  assert.throws(() => validateNamespaceDraft(draft, binding, glossary), /glossary reference/);
+  draft.entries.pending = { source: "Pending", text: "Paid" };
+  assert.throws(() => validateNamespaceDraft(draft, binding, glossary), /requires glossary term/);
+  draft.entries.pending = { source: "Pending", term: "pending" };
+  draft.entries.reward = { source: "Citation rewards", text: "Guaranteed earnings" };
+  assert.throws(() => validateNamespaceDraft(draft, binding, glossary), /requires glossary term/);
+});
+
+test("namespace validation refuses accessors, symbols and inherited draft data without invoking getters", () => {
+  for (const mutate of [
+    draft => Object.defineProperty(draft, "entries", { enumerable: true, get() { throw Error("getter executed"); } }),
+    draft => Object.defineProperty(draft.entries.title, "text", { enumerable: true, get() { throw Error("getter executed"); } }),
+    draft => Object.setPrototypeOf(draft.entries, { inherited: true }),
+    draft => { draft[Symbol("hidden")] = true; },
+  ]) {
+    const draft = namespaceDraft(); mutate(draft);
+    assert.throws(() => validateNamespaceDraft(draft, namespaceBinding(), glossary), /Invalid draft/);
+  }
+});
+
+test("manifest inventory and completeness cannot hide missing namespaces or uncovered leaves", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "keryx-draft-manifest-"));
+  try {
+    for (const directory of ["locales/en", "locales/glossary", "locales/vi/ui-drafts", "locales/zh-Hans/ui-drafts", "lib/i18n"]) mkdirSync(path.join(root, directory), { recursive: true });
+    writeFileSync(path.join(root, "locales/en/shared-helpers.ts"), 'export const helpers = {label: "Label"};');
+    writeFileSync(path.join(root, "lib/i18n/messages.ts"), 'export const englishMessages = {"core.title": "Title"};');
+    writeFileSync(path.join(root, "locales/glossary/en.json"), JSON.stringify(glossary));
+    const rows = ["locales/en/shared-helpers.ts", "lib/i18n/messages.ts"].map(file => ({
+      namespace: file.startsWith("lib/") ? "core-inline" : "shared-helpers",
+      binding: extractNamespaceCopy(file, readFileSync(path.join(root, file), "utf8")),
+    }));
+    for (const locale of ["vi", "zh-Hans"]) {
+      const namespaces = rows.map(({ namespace, binding }) => {
+        const draftPath = `locales/${locale}/ui-drafts/${namespace}.json`;
+        writeFileSync(path.join(root, draftPath), JSON.stringify({ status: "machineDraft", review: null,
+          sourcePath: binding.sourcePath, sourceSha256: binding.sourceSha256, entries: {} }));
+        return { namespace, sourcePath: binding.sourcePath, sourceSha256: binding.sourceSha256, draftPath,
+          extractedLeaves: 1, authoredEntries: 0, coveredKeys: [], nonTranslatableMachineIdentifiers: [],
+          uncoveredKeys: Object.keys(binding.entries), sourceAliases: {} };
+      });
+      writeFileSync(path.join(root, `locales/${locale}/ui-drafts/manifest.json`), JSON.stringify({ locale, status: "machineDraft", review: null, authority: "en", complete: false, namespaces,
+        totals: { englishNamespaceFiles: 1, coreInlineSources: 1, extractedLeaves: 2, authoredEntries: 0, nonTranslatableMachineIdentifiers: 0, uncoveredEntries: 2, completeNamespaces: 0 } }));
+    }
+    assert.equal(scanNamespaceDrafts(root)[0].uncoveredEntries, 2);
+    const file = path.join(root, "locales/vi/ui-drafts/manifest.json"), manifest = JSON.parse(readFileSync(file, "utf8"));
+    manifest.complete = true; writeFileSync(file, JSON.stringify(manifest));
+    assert.throws(() => scanNamespaceDrafts(root), /dishonest completeness/);
+    manifest.complete = false;
+    manifest.namespaces[0].nonTranslatableMachineIdentifiers = [{ key: "label", value: "Label", reason: "pretend machine identifier" }];
+    writeFileSync(file, JSON.stringify(manifest));
+    assert.throws(() => scanNamespaceDrafts(root), /preserved identifier/);
+    manifest.namespaces[0].nonTranslatableMachineIdentifiers = [];
+    manifest.complete = false; manifest.namespaces.pop(); writeFileSync(file, JSON.stringify(manifest));
+    assert.throws(() => scanNamespaceDrafts(root), /inventory/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("only the three exact source-bound CSS, HTTP and CLI identifiers are preserved", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "keryx-draft-fixed-identifiers-"));
+  const css = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
+  const api = "POST /api/research/mandates", command = "node --import tsx scripts/research-mandate.mts --input policy.json";
+  const fixed = { operations: ["businessCalculator.borderBorderInkPx4Py2Font"], "research-mandates": ["api", "command"] };
+  const sources = {
+    "locales/en/shared-helpers.ts": { label: "Label" },
+    "locales/en/operations.ts": { "businessCalculator.borderBorderInkPx4Py2Font": css, title: "Operations preview" },
+    "locales/en/research-mandates.ts": { api, command, other: command },
+    "lib/i18n/messages.ts": { "core.title": "Title" },
+  };
+  try {
+    for (const directory of ["locales/en", "locales/glossary", "locales/vi/ui-drafts", "locales/zh-Hans/ui-drafts", "lib/i18n"])
+      mkdirSync(path.join(root, directory), { recursive: true });
+    for (const [file, entries] of Object.entries(sources)) writeFileSync(path.join(root, file),
+      `export const ${file.startsWith("lib/") ? "englishMessages" : "copy"} = ${JSON.stringify(entries)};`);
+    writeFileSync(path.join(root, "locales/glossary/en.json"), JSON.stringify(glossary));
+    for (const locale of ["vi", "zh-Hans"]) {
+      const namespaces = Object.keys(sources).map(file => {
+        const namespace = file.startsWith("lib/") ? "core-inline" : path.basename(file, ".ts");
+        const binding = extractNamespaceCopy(file, readFileSync(path.join(root, file), "utf8"));
+        const ids = fixed[namespace] ?? [], draftPath = `locales/${locale}/ui-drafts/${namespace}.json`;
+        writeFileSync(path.join(root, draftPath), JSON.stringify({ status: "machineDraft", review: null,
+          sourcePath: file, sourceSha256: binding.sourceSha256, entries: {} }));
+        return { namespace, sourcePath: file, sourceSha256: binding.sourceSha256, draftPath,
+          extractedLeaves: Object.keys(binding.entries).length, authoredEntries: 0, coveredKeys: [],
+          nonTranslatableMachineIdentifiers: ids.map(key => ({ key, value: binding.entries[key], reason: "source-owned machine syntax" })),
+          uncoveredKeys: Object.keys(binding.entries).filter(key => !ids.includes(key)), sourceAliases: {} };
+      });
+      writeFileSync(path.join(root, `locales/${locale}/ui-drafts/manifest.json`), JSON.stringify({ locale, status: "machineDraft", review: null,
+        authority: "en", complete: false, namespaces, totals: { englishNamespaceFiles: 3, coreInlineSources: 1, extractedLeaves: 7,
+          authoredEntries: 0, nonTranslatableMachineIdentifiers: 3, uncoveredEntries: 4, completeNamespaces: 0 } }));
+    }
+    assert.equal(scanNamespaceDrafts(root)[0].nonTranslatableMachineIdentifiers, 3);
+    const file = path.join(root, "locales/vi/ui-drafts/manifest.json"), manifest = JSON.parse(readFileSync(file, "utf8"));
+    const mandates = manifest.namespaces.find(row => row.namespace === "research-mandates");
+    mandates.nonTranslatableMachineIdentifiers.push({ key: "other", value: command, reason: "same command at an unadmitted key" });
+    writeFileSync(file, JSON.stringify(manifest));
+    assert.throws(() => scanNamespaceDrafts(root), /preserved identifier/);
+    mandates.nonTranslatableMachineIdentifiers.pop();
+    const operations = manifest.namespaces.find(row => row.namespace === "operations");
+    const changedSource = `export const copy = ${JSON.stringify({ ...sources["locales/en/operations.ts"],
+      "businessCalculator.borderBorderInkPx4Py2Font": "Unreviewed consent" })};`;
+    writeFileSync(path.join(root, operations.sourcePath), changedSource);
+    operations.sourceSha256 = uiSourceSha256(changedSource);
+    operations.nonTranslatableMachineIdentifiers[0].value = "Unreviewed consent";
+    writeFileSync(path.join(root, operations.draftPath), JSON.stringify({ status: "machineDraft", review: null,
+      sourcePath: operations.sourcePath, sourceSha256: operations.sourceSha256, entries: {} }));
+    writeFileSync(file, JSON.stringify(manifest));
+    assert.throws(() => scanNamespaceDrafts(root), /preserved identifier/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
 
 test("JSX text, accessibility and visible attribute copy are detected", () => {
   const values = texts('<><h1>Sources</h1><img src="/logo.png" alt="Keryx logo"/><input placeholder={ready ? "Ask a question" : "Wait"} aria-label="Research question" title="Start research"/><span>→</span></>');

@@ -1,0 +1,1300 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/creator.ts",
+  "sourceSha256": "84697add9017a2f9eeffc430bfb33d2569468156fc253738820c10fe6ee2a2e5",
+  "entries": {
+    "sourceLearning.title": {
+      "source": "Recorded source outcomes",
+      "text": "Kết quả nguồn đã ghi nhận"
+    },
+    "sourceLearning.unavailable": {
+      "source": "The source outcome record is unavailable. No empty or zero-value record is inferred.",
+      "text": "Hồ sơ kết quả nguồn không khả dụng. Không suy ra hồ sơ trống hay giá trị 0."
+    },
+    "sourceLearning.boundary": {
+      "source": "This record counts independently classified and funded outside runs. Source owners, known beneficiaries, unknown history and private jobs cannot improve the estimate. Live learned selection is withheld until the policy and authority checks are accepted.",
+      "text": "Hồ sơ tính lượt bên ngoài được phân loại và cấp tiền độc lập. Chủ nguồn, bên hưởng lợi đã biết, lịch sử chưa rõ và tác vụ riêng tư không cải thiện ước tính. Chưa bật lựa chọn học trực tiếp đến khi kiểm tra chính sách và thẩm quyền được chấp nhận."
+    },
+    "sourceLearning.window": {
+      "source": "Sample: up to {scan} recent public runs and {sample} eligible observations per source/topic; one attested actor per UTC day. Excluded observations: {excluded}. Historical runs without the required record: {historical}.",
+      "text": "Mẫu: tối đa {scan} lượt công khai gần đây và {sample} quan sát đủ điều kiện mỗi nguồn/chủ đề; một chủ thể chứng thực mỗi ngày UTC. Quan sát loại trừ: {excluded}. Lượt lịch sử thiếu hồ sơ bắt buộc: {historical}."
+    },
+    "sourceLearning.empty": {
+      "source": "No eligible source/topic observations are recorded in this window. This does not establish poor source value.",
+      "text": "Chưa ghi quan sát nguồn/chủ đề đủ điều kiện trong khoảng này. Không xác lập nguồn có giá trị thấp."
+    },
+    "sourceLearning.topic": {
+      "source": "Public topic",
+      "text": "Chủ đề công khai"
+    },
+    "sourceLearning.offered": {
+      "source": "Offered",
+      "text": "Được đề xuất"
+    },
+    "sourceLearning.read": {
+      "source": "Read",
+      "text": "Đọc"
+    },
+    "sourceLearning.bought": {
+      "source": "Bought",
+      "text": "Đã mua"
+    },
+    "sourceLearning.cited": {
+      "source": "Cited",
+      "text": "Đã trích dẫn"
+    },
+    "sourceLearning.estimate": {
+      "source": "Citation estimate",
+      "text": "Ước tính trích dẫn"
+    },
+    "sourceLearning.contribution": {
+      "source": "Mean contribution",
+      "text": "Đóng góp trung bình"
+    },
+    "sourceLearning.price": {
+      "source": "Access cost / purchases",
+      "text": "Chi phí truy cập / lượt mua"
+    },
+    "sourceLearning.shift": {
+      "source": "Abrupt outcome shift flagged",
+      "text": "Đã đánh dấu chuyển dịch kết quả đột ngột"
+    },
+    "sourceLearning.period": {
+      "source": "Observed {first}–{last} (UTC)",
+      "text": "Quan sát {first}–{last} (UTC)"
+    },
+    "sourceLearning.meaning": {
+      "source": "Bought counts source/run observations, not articles. The estimate uses Beta(1,1) smoothing; ± is a descriptive uncertainty proxy, not a confidence interval or factual accuracy score. Access cost divided by purchases retains an exact rational mean. Settlement is recorded evidence, not a new Circle or chain verification.",
+      "text": "Số đã mua tính quan sát nguồn/lượt chạy, không tính bài. Ước tính làm trơn Beta(1,1); ± là chỉ số bất định mô tả, không phải khoảng tin cậy hay điểm chính xác thông tin. Chi phí truy cập chia lượt mua giữ trung bình hữu tỷ chính xác. Quyết toán là bằng chứng ghi nhận, không phải xác minh Circle hay chuỗi mới."
+    },
+    "sourceLearning.exploration": {
+      "source": "Live exploration allowance: 0% (0 USDC). A tested prospective planner has an explicit bounded partition; it is not active for your budget.",
+      "text": "Hạn mức khám phá trực tiếp: 0% (0 USDC). Bộ lập kế hoạch tương lai đã kiểm thử có phần ngân sách giới hạn rõ; không hoạt động cho ngân sách của bạn."
+    },
+    "sourceLearning.change": {
+      "source": "A useful record requires independent eligible purchases followed by citations to retained evidence. In the prospective planner, fewer than five purchases leave value unchanged, later adjustments are limited to ±0.1, and abrupt shifts halve that adjustment. Price, payee and budget rules still govern every purchase.",
+      "text": "Hồ sơ hữu ích cần lượt mua độc lập đủ điều kiện, sau đó trích dẫn bằng chứng được lưu. Trong bộ lập kế hoạch tương lai, dưới năm lượt mua giữ giá trị không đổi, điều chỉnh sau giới hạn ±0.1 và chuyển dịch đột ngột giảm một nửa điều chỉnh. Quy tắc giá, bên nhận và ngân sách vẫn áp dụng mọi mua."
+    },
+    "sourceLearning.api": {
+      "source": "View this same record as JSON",
+      "text": "Xem cùng hồ sơ dưới dạng JSON"
+    },
+    "creatorPage.missing": {
+      "source": "Creator not found — Keryx",
+      "text": "Không tìm thấy tác giả — Keryx"
+    },
+    "creatorPage.fallbackTitle": {
+      "source": "Keryx Creator",
+      "text": "Tác giả Keryx"
+    },
+    "creatorPage.sources": {
+      "source": "Sources",
+      "text": "Nguồn"
+    },
+    "creatorPage.back": {
+      "source": "← Back to ledger",
+      "text": "← Quay lại sổ theo dõi"
+    },
+    "creatorPage.title": {
+      "source": "{name} — Keryx Creator",
+      "text": "{name} — Tác giả Keryx"
+    },
+    "creatorPage.description": {
+      "source": "Source listing, citation activity and recorded creator payments for {name} on Keryx.",
+      "text": "Niêm yết nguồn, hoạt động trích dẫn và thanh toán tác giả ghi nhận cho {name} trên Keryx."
+    },
+    "creatorPage.profileDescription": {
+      "source": "{name} is listed with Keryx. Citation activity and recorded creator payments are shown separately.",
+      "text": "{name} có niêm yết trên Keryx. Hoạt động trích dẫn và thanh toán tác giả ghi nhận hiển thị riêng."
+    },
+    "creatorDetail.loadFailed": {
+      "source": "Failed to load",
+      "text": "Tải không thành công"
+    },
+    "creatorDetail.fallbackDescription": {
+      "source": "Registered creator on Keryx.",
+      "text": "Tác giả đã đăng ký trên Keryx."
+    },
+    "creatorDetail.synthetic": {
+      "source": "Synthetic demo content. Illustrative; not factual research evidence.",
+      "text": "Nội dung demo tổng hợp. Chỉ minh họa, không phải bằng chứng nghiên cứu thực tế."
+    },
+    "creatorDetail.totalEarned": {
+      "source": "Total earned",
+      "text": "Tổng thu nhập"
+    },
+    "creatorDetail.citations": {
+      "source": "Citations",
+      "text": "Trích dẫn"
+    },
+    "creatorDetail.activeDays": {
+      "source": "Active days",
+      "text": "Ngày hoạt động"
+    },
+    "creatorDetail.last14Days": {
+      "source": "last 14 days",
+      "text": "14 ngày qua"
+    },
+    "creatorDetail.rank": {
+      "source": "Rank",
+      "text": "Xếp hạng"
+    },
+    "creatorDetail.leaderboard": {
+      "source": "creator leaderboard",
+      "text": "bảng xếp hạng tác giả"
+    },
+    "creatorDetail.rightsAria": {
+      "source": "Public scholarly rights status",
+      "text": "Trạng thái quyền học thuật công khai"
+    },
+    "creatorDetail.rightsBoundary": {
+      "source": "This approval record is separate from peer review, current payable status, wallet payment authority and actual settlement. Current permission and terms are checked at purchase.",
+      "text": "Hồ sơ phê duyệt tách biệt với phản biện, trạng thái có thể trả tiền hiện tại, thẩm quyền thanh toán ví và quyết toán thực tế. Quyền và điều kiện hiện tại kiểm tra lúc mua."
+    },
+    "creatorDetail.earnings": {
+      "source": "Earnings · last 14 days",
+      "text": "Thu nhập · 14 ngày qua"
+    },
+    "creatorDetail.export": {
+      "source": "Export ledger (CSV)",
+      "text": "Xuất sổ theo dõi (CSV)"
+    },
+    "creatorDetail.empty": {
+      "source": "No payments yet.",
+      "text": "Chưa có thanh toán."
+    },
+    "creatorDetail.cited": {
+      "source": "cited",
+      "text": "đã trích dẫn"
+    },
+    "creatorDetail.read": {
+      "source": "read",
+      "text": "đọc"
+    },
+    "creatorDetail.pendingProof": {
+      "source": "pending proof",
+      "text": "chờ bằng chứng"
+    },
+    "creatorDetail.failed": {
+      "source": "failed · not charged",
+      "text": "không thành công · không thu phí"
+    },
+    "creatorDetail.readPrice": {
+      "source": "${price}/read",
+      "text": "${price}/lượt đọc"
+    },
+    "creatorDetail.settled": {
+      "source": "${amount} settled",
+      "text": "${amount} đã quyết toán"
+    },
+    "creatorDetail.payments.one": {
+      "source": "{count} payments",
+      "text": "{count} thanh toán"
+    },
+    "creatorDetail.payments.other": {
+      "source": "{count} payments",
+      "text": "{count} thanh toán"
+    },
+    "creatorDetail.declaredRights": {
+      "source": "Declared manuscript rights: {status} (Arc testnet pilot). New paid reads independently check effective rights and fresh registry authority.",
+      "text": "Quyền bản thảo khai báo: {status} (thử nghiệm Arc testnet). Lượt đọc trả phí mới kiểm tra độc lập quyền có hiệu lực và thẩm quyền registry mới."
+    },
+    "creatorDetail.license": {
+      "source": "Applicable license: {license}",
+      "text": "Giấy phép áp dụng: {license}"
+    },
+    "creatorDetail.version": {
+      "source": "Declared version: {version}",
+      "text": "Phiên bản khai báo: {version}"
+    },
+    "creatorDetail.permission": {
+      "source": "Declared permission: {effectiveAt} to {expiresAt}; embargo ends {embargoUntil}.",
+      "text": "Quyền khai báo: {effectiveAt} đến {expiresAt}; cấm công bố kết thúc {embargoUntil}."
+    },
+    "creatorDetail.recentPayments.one": {
+      "source": "Recent payments ({count})",
+      "text": "Thanh toán gần đây ({count})"
+    },
+    "creatorDetail.recentPayments.other": {
+      "source": "Recent payments ({count})",
+      "text": "Thanh toán gần đây ({count})"
+    },
+    "creatorDetail.dispatch": {
+      "source": "Dispatch {id}…",
+      "text": "Bản tin {id}…"
+    },
+    "creatorContent.size": {
+      "source": "Full text must be between 200 bytes and 1 MB.",
+      "text": "Toàn văn phải từ 200 byte đến 1 MB."
+    },
+    "creatorContent.failed": {
+      "source": "Could not publish full text",
+      "text": "Không thể xuất bản toàn văn"
+    },
+    "creatorContent.published": {
+      "source": "Signed full text encrypted and published.",
+      "text": "Đã mã hóa và xuất bản toàn văn có chữ ký."
+    },
+    "creatorContent.title": {
+      "source": "Signed full-text vault",
+      "text": "Kho toàn văn có chữ ký"
+    },
+    "creatorContent.description": {
+      "source": "Attach the complete article to its RSS entry. Your wallet signs the body hash; Keryx stores only encrypted ciphertext (IPFS when configured, private DB fallback otherwise) and reveals plaintext after payment settles.",
+      "text": "Gắn bài đầy đủ vào mục RSS. Ví ký hash nội dung; Keryx chỉ lưu bản mã (IPFS khi cấu hình, nếu không dùng cơ sở dữ liệu riêng dự phòng) và cung cấp văn bản thuần sau khi thanh toán quyết toán."
+    },
+    "creatorContent.unverified": {
+      "source": "unverified",
+      "text": "chưa xác minh"
+    },
+    "creatorContent.placeholder": {
+      "source": "Paste the complete article body here…",
+      "text": "Dán toàn bộ nội dung bài tại đây…"
+    },
+    "creatorContent.sign": {
+      "source": "Sign & encrypt",
+      "text": "Ký và mã hóa"
+    },
+    "creatorContent.wallet": {
+      "source": "Connect the creator wallet {wallet}.",
+      "text": "Kết nối ví tác giả {wallet}."
+    },
+    "creatorContent.publishedBytes.one": {
+      "source": "{count} bytes · signed full text already published",
+      "text": "{count} byte · đã xuất bản toàn văn có chữ ký"
+    },
+    "creatorContent.publishedBytes.other": {
+      "source": "{count} bytes · signed full text already published",
+      "text": "{count} byte · đã xuất bản toàn văn có chữ ký"
+    },
+    "creatorContent.bytes.one": {
+      "source": "{count} bytes",
+      "text": "{count} byte"
+    },
+    "creatorContent.bytes.other": {
+      "source": "{count} bytes",
+      "text": "{count} byte"
+    },
+    "creatorContent.authority": {
+      "source": "Content authority is {wallet}. Switch the connected wallet to sign.",
+      "text": "Thẩm quyền nội dung là {wallet}. Đổi ví kết nối để ký."
+    },
+    "creatorOffers.ceiling": {
+      "source": "An article offer cannot exceed the registry list price.",
+      "text": "Đề nghị bài không được vượt giá niêm yết registry."
+    },
+    "creatorOffers.publishFailed": {
+      "source": "Could not publish offer",
+      "text": "Không thể xuất bản đề nghị"
+    },
+    "creatorOffers.published": {
+      "source": "Signed article offer is live in the market.",
+      "text": "Đề nghị bài có chữ ký đang hoạt động trên chợ."
+    },
+    "creatorOffers.revokeFailed": {
+      "source": "Could not revoke offer",
+      "text": "Không thể thu hồi đề nghị"
+    },
+    "creatorOffers.revoked": {
+      "source": "Article offer revoked; list price applies again.",
+      "text": "Đã thu hồi đề nghị bài; áp dụng giá niêm yết lại."
+    },
+    "creatorOffers.title": {
+      "source": "Article offer desk",
+      "text": "Bàn đề nghị bài viết"
+    },
+    "creatorOffers.expires": {
+      "source": "expires",
+      "text": "hết hạn"
+    },
+    "creatorOffers.dayExpiry": {
+      "source": "24 hours",
+      "text": "24 giờ"
+    },
+    "creatorOffers.threeDayExpiry": {
+      "source": "3 days",
+      "text": "3 ngày"
+    },
+    "creatorOffers.weekExpiry": {
+      "source": "7 days",
+      "text": "7 ngày"
+    },
+    "creatorOffers.thirtyDayExpiry": {
+      "source": "30 days",
+      "text": "30 ngày"
+    },
+    "creatorOffers.inactive": {
+      "source": "This source must be active and feed-verified before it can publish offers.",
+      "text": "Nguồn phải hoạt động và xác minh nguồn cấp trước khi xuất bản đề nghị."
+    },
+    "creatorOffers.sign": {
+      "source": "Sign offer",
+      "text": "Ký đề nghị"
+    },
+    "creatorOffers.wallet": {
+      "source": "Connect the creator wallet {wallet}.",
+      "text": "Kết nối ví tác giả {wallet}."
+    },
+    "creatorOffers.minimum": {
+      "source": "Minimum offer is ${price}.",
+      "text": "Đề nghị tối thiểu là ${price}."
+    },
+    "creatorOffers.description": {
+      "source": "Sign a temporary price for one exact article version. The registry's ${price}read price remains the ceiling and payout wallet; the agent verifies this signature again before buying.",
+      "text": "Ký giá tạm thời cho đúng một phiên bản bài. Giá đọc ${price} của registry vẫn là trần và giữ ví nhận tiền; tác nhân xác minh chữ ký lại trước khi mua."
+    },
+    "creatorOffers.liveVersion": {
+      "source": "{version}… · live at ${price} until {expiresAt}",
+      "text": "{version}… · đang áp dụng ${price} đến {expiresAt}"
+    },
+    "creatorOffers.listVersion": {
+      "source": "{version}… · list price",
+      "text": "{version}… · giá niêm yết"
+    },
+    "creatorOffers.revokeAria": {
+      "source": "Revoke offer for {title}",
+      "text": "Thu hồi đề nghị cho {title}"
+    },
+    "creatorOffers.authority": {
+      "source": "Pricing authority is {wallet}. Switch the connected wallet to sign.",
+      "text": "Thẩm quyền giá là {wallet}. Đổi ví kết nối để ký."
+    },
+    "creatorSocial.alt": {
+      "source": "Keryx creator — paid in USDC every time an AI cites them",
+      "text": "Tác giả Keryx — nhận USDC mỗi khi AI trích dẫn"
+    },
+    "creatorSocial.fallbackName": {
+      "source": "A Keryx creator",
+      "text": "Một tác giả Keryx"
+    },
+    "creatorSocial.network": {
+      "source": "Keryx Creator · paid on Arc",
+      "text": "Tác giả Keryx · được trả tiền trên Arc"
+    },
+    "creatorSocial.earns": {
+      "source": "Earns USDC every time an AI cites them",
+      "text": "Nhận USDC mỗi khi AI trích dẫn"
+    },
+    "creatorSocial.earned": {
+      "source": "USDC earned",
+      "text": "USDC kiếm được"
+    },
+    "creatorSocial.citations": {
+      "source": "AI citations",
+      "text": "Trích dẫn từ AI"
+    },
+    "creatorSocial.rank": {
+      "source": "on the ledger",
+      "text": "trên sổ theo dõi"
+    },
+    "creatorSocial.tagline": {
+      "source": "The citation toll — creators paid every time an AI cites them",
+      "text": "Phí trích dẫn — tác giả được trả tiền mỗi khi AI trích dẫn"
+    },
+    "creatorSocial.serial": {
+      "source": "Series 2026 — No. {serial}",
+      "text": "Niên tập 2026 — Số {serial}"
+    },
+    "creatorLeaderboard.title": {
+      "source": "Creator leaderboard",
+      "text": "Bảng xếp hạng tác giả"
+    },
+    "creatorLeaderboard.empty": {
+      "source": "No creator earnings yet.",
+      "text": "Chưa có thu nhập tác giả."
+    },
+    "creatorLeaderboard.row.one": {
+      "source": "{wallet} · {citations} cites · {payments} pmts",
+      "text": "{wallet} · {citations} trích dẫn · {payments} thanh toán"
+    },
+    "creatorLeaderboard.row.other": {
+      "source": "{wallet} · {citations} cites · {payments} pmts",
+      "text": "{wallet} · {citations} trích dẫn · {payments} thanh toán"
+    },
+    "creatorEmail.failed": {
+      "source": "Failed to save email",
+      "text": "Lưu email không thành công"
+    },
+    "creatorEmail.enabled": {
+      "source": "Email alerts on — you'll hear when you're cited.",
+      "text": "Cảnh báo email bật — bạn sẽ được báo khi được trích dẫn."
+    },
+    "creatorEmail.disabled": {
+      "source": "Email alerts off.",
+      "text": "Đã tắt cảnh báo email."
+    },
+    "creatorEmail.title": {
+      "source": "Citation email alerts",
+      "text": "Cảnh báo trích dẫn qua email"
+    },
+    "creatorEmail.update": {
+      "source": "Update",
+      "text": "Cập nhật"
+    },
+    "creatorEmail.save": {
+      "source": "Save",
+      "text": "Lưu"
+    },
+    "creatorEmail.disableTitle": {
+      "source": "Disable email alerts",
+      "text": "Tắt cảnh báo email"
+    },
+    "creatorEmail.deliveryHeld": {
+      "source": "Saved addresses are kept, but this deployment hasn't enabled an email provider yet — delivery starts the moment it does.",
+      "text": "Địa chỉ được giữ nhưng triển khai chưa bật nhà cung cấp email — bắt đầu gửi ngay khi bật."
+    },
+    "creatorEmail.activeDescription": {
+      "source": "Get a short email when the agent cites you and the payout settles — no webhook server needed. At most one per hour; every payout still shows here. Active.",
+      "text": "Nhận email ngắn khi tác nhân trích dẫn và thanh toán quyết toán — không cần máy chủ webhook. Tối đa một email mỗi giờ; mọi thanh toán vẫn hiển thị tại đây. Đang bật."
+    },
+    "creatorEmail.unsetDescription": {
+      "source": "Get a short email when the agent cites you and the payout settles — no webhook server needed. At most one per hour; every payout still shows here. Not set.",
+      "text": "Nhận email ngắn khi tác nhân trích dẫn và thanh toán quyết toán — không cần máy chủ webhook. Tối đa một email mỗi giờ; mọi thanh toán vẫn hiển thị tại đây. Chưa thiết lập."
+    },
+    "creatorEmail.manage": {
+      "source": "Manage them all in one place →",
+      "text": "Quản lý tất cả cùng nơi →"
+    },
+    "creatorEmail.portfolio": {
+      "source": "Own several sources? {manageLink}",
+      "text": "Bạn sở hữu nhiều nguồn? {manageLink}"
+    },
+    "creatorWebhook.failed": {
+      "source": "Failed to save webhook",
+      "text": "Lưu webhook không thành công"
+    },
+    "creatorWebhook.saved": {
+      "source": "Webhook saved — signing secret shown once below.",
+      "text": "Đã lưu webhook — mã bí mật ký chỉ hiển thị một lần bên dưới."
+    },
+    "creatorWebhook.disabled": {
+      "source": "Webhook disabled.",
+      "text": "Đã tắt webhook."
+    },
+    "creatorWebhook.copied": {
+      "source": "Secret copied.",
+      "text": "Đã sao chép mã bí mật."
+    },
+    "creatorWebhook.copyFailed": {
+      "source": "Couldn't copy — select and copy the secret manually.",
+      "text": "Không thể sao chép — chọn và sao chép mã bí mật thủ công."
+    },
+    "creatorWebhook.title": {
+      "source": "Citation webhook",
+      "text": "Webhook trích dẫn"
+    },
+    "creatorWebhook.rotate": {
+      "source": "Rotate",
+      "text": "Đổi khóa"
+    },
+    "creatorWebhook.save": {
+      "source": "Save",
+      "text": "Lưu"
+    },
+    "creatorWebhook.disableTitle": {
+      "source": "Disable webhook",
+      "text": "Tắt webhook"
+    },
+    "creatorWebhook.secretTitle": {
+      "source": "Signing secret — shown once",
+      "text": "Mã bí mật ký — chỉ hiển thị một lần"
+    },
+    "creatorWebhook.copyTitle": {
+      "source": "Copy secret",
+      "text": "Sao chép mã bí mật"
+    },
+    "creatorWebhook.activeDescription": {
+      "source": "Get a signed POST the instant the agent cites you and pays — your own agent can react without polling. Active.",
+      "text": "Nhận POST có chữ ký ngay khi tác nhân trích dẫn và trả tiền — tác nhân của bạn phản ứng không cần thăm dò. Đang bật."
+    },
+    "creatorWebhook.unsetDescription": {
+      "source": "Get a signed POST the instant the agent cites you and pays — your own agent can react without polling. Not set.",
+      "text": "Nhận POST có chữ ký ngay khi tác nhân trích dẫn và trả tiền — tác nhân của bạn phản ứng không cần thăm dò. Chưa thiết lập."
+    },
+    "creatorWebhook.verify": {
+      "source": "Verify: {formula} on the {header} header.",
+      "text": "Xác minh: {formula} trên header {header}."
+    },
+    "creatorPreview.failed": {
+      "source": "Failed to save",
+      "text": "Lưu không thành công"
+    },
+    "creatorPreview.title": {
+      "source": "Free preview depth",
+      "text": "Độ dài bản xem trước miễn phí"
+    },
+    "creatorPreview.description": {
+      "source": "How much of each item the agent reads for free before it decides to pay. Reveal more to be found; reveal less to keep the value behind the toll.",
+      "text": "Phần mỗi mục tác nhân đọc miễn phí trước khi quyết định trả tiền. Cho xem nhiều để dễ được tìm; cho xem ít để giữ giá trị sau phí truy cập."
+    },
+    "creatorPreview.saved": {
+      "source": "Preview set to “{label}”.",
+      "text": "Đã đặt bản xem trước thành “{label}”."
+    },
+    "creatorPreview.fullLabel": {
+      "source": "Full summary",
+      "text": "Bản tóm tắt đầy đủ"
+    },
+    "creatorPreview.fullHint": {
+      "source": "Title + full summary — most discoverable",
+      "text": "Tiêu đề + tóm tắt đầy đủ — dễ khám phá nhất"
+    },
+    "creatorPreview.excerptLabel": {
+      "source": "Short excerpt",
+      "text": "Trích đoạn ngắn"
+    },
+    "creatorPreview.excerptHint": {
+      "source": "Title + a brief teaser of each item",
+      "text": "Tiêu đề + giới thiệu ngắn từng mục"
+    },
+    "creatorPreview.lockedLabel": {
+      "source": "Titles only",
+      "text": "Chỉ tiêu đề"
+    },
+    "creatorPreview.lockedHint": {
+      "source": "Headlines only; the summary needs the toll",
+      "text": "Chỉ tiêu đề; tóm tắt cần trả phí"
+    },
+    "creatorBadge.copyFailed": {
+      "source": "Couldn't copy — select and copy manually.",
+      "text": "Không thể sao chép — chọn và sao chép thủ công."
+    },
+    "creatorBadge.title": {
+      "source": "Embed your citation badge",
+      "text": "Nhúng huy hiệu trích dẫn"
+    },
+    "creatorBadge.description": {
+      "source": "Show — on your own site — that agents pay you per citation. The badge is live: it always reflects your real citation count and USDC earned, and links back to your earnings page.",
+      "text": "Hiển thị ngay trên website của bạn rằng tác nhân trả tiền theo trích dẫn. Huy hiệu trực tiếp luôn phản ánh số trích dẫn và USDC thu được thực tế, liên kết về trang thu nhập."
+    },
+    "creatorBadge.alt": {
+      "source": "Cited by Keryx badge preview",
+      "text": "Xem trước huy hiệu Được Keryx trích dẫn"
+    },
+    "creatorBadge.preview": {
+      "source": "live preview · refreshes every 5 min",
+      "text": "xem trước trực tiếp · làm mới mỗi 5 phút"
+    },
+    "creatorBadge.snippetAlt": {
+      "source": "Cited by Keryx",
+      "text": "Được Keryx trích dẫn"
+    },
+    "creatorBadge.copied": {
+      "source": "{label} copied.",
+      "text": "Đã sao chép {label}."
+    },
+    "creatorBadge.copyTitle": {
+      "source": "Copy {label}",
+      "text": "Sao chép {label}"
+    },
+    "creatorWidget.copied": {
+      "source": "Widget snippet copied.",
+      "text": "Đã sao chép mã tiện ích."
+    },
+    "creatorWidget.copyFailed": {
+      "source": "Couldn't copy — select and copy manually.",
+      "text": "Không thể sao chép — chọn và sao chép thủ công."
+    },
+    "creatorWidget.title": {
+      "source": "Put the herald on your site",
+      "text": "Đưa sứ giả lên website"
+    },
+    "creatorWidget.description": {
+      "source": "One line adds a floating “Ask Keryx” button to your own site. Your readers ask for free — no wallet — and every time the herald cites you in an answer, you’re paid for it. Your audience becomes your toll traffic.",
+      "text": "Một dòng thêm nút “Hỏi Keryx” nổi vào website. Người đọc hỏi miễn phí không cần ví; mỗi khi sứ giả trích dẫn bạn trong câu trả lời, bạn được trả tiền. Độc giả trở thành lưu lượng trả phí của bạn."
+    },
+    "creatorWidget.copyTitle": {
+      "source": "Copy widget snippet",
+      "text": "Sao chép mã tiện ích"
+    },
+    "creatorWidget.preview": {
+      "source": "Preview the panel ↗",
+      "text": "Xem trước bảng ↗"
+    },
+    "creatorGateway.justNow": {
+      "source": "just now",
+      "text": "vừa xong"
+    },
+    "creatorGateway.title": {
+      "source": "Server-reported Circle balance",
+      "text": "Số dư Circle do máy chủ báo"
+    },
+    "creatorGateway.payee": {
+      "source": "Payee wallet",
+      "text": "Ví nhận tiền"
+    },
+    "creatorGateway.claimedHeld": {
+      "source": "Keryx says held",
+      "text": "Keryx báo đang giữ"
+    },
+    "creatorGateway.circleHeld": {
+      "source": "Circle holds",
+      "text": "Circle đang giữ"
+    },
+    "creatorGateway.verdict": {
+      "source": "Verdict",
+      "text": "Kết luận"
+    },
+    "creatorGateway.surplus": {
+      "source": "backed +extra",
+      "text": "được bảo đảm +phần thêm"
+    },
+    "creatorGateway.cashedOut": {
+      "source": "cashed out",
+      "text": "đã rút tiền"
+    },
+    "creatorGateway.explanation": {
+      "source": "Citation payouts settle inside Circle’s Gateway, so they carry a Circle transfer id instead of a block-explorer hash. Rather than ask you to take our ledger’s word, Keryx checks it hourly against Circle’s public balance API — and you can run the same request yourself:",
+      "text": "Thanh toán trích dẫn quyết toán trong Gateway của Circle nên có ID chuyển Circle thay cho hash explorer khối. Thay vì yêu cầu tin sổ của chúng tôi, Keryx kiểm tra hằng giờ với API số dư công khai Circle; bạn cũng có thể chạy cùng yêu cầu:"
+    },
+    "creatorGateway.boundary": {
+      "source": "A balance above the claim is your own money — deposits, or payouts from any other x402 service that pays this wallet. If you have already cashed out, the money shows in your own wallet on-chain instead and the row reads “cashed out”. Keryx only flags a balance that neither the Gateway nor your wallet accounts for.",
+      "text": "Số dư vượt số công bố là tiền riêng của bạn — tiền nạp hoặc thanh toán từ dịch vụ x402 khác trả cho ví. Nếu đã rút, tiền hiện trong ví trên chuỗi và hàng ghi “đã rút tiền”. Keryx chỉ cảnh báo số dư mà cả Gateway lẫn ví không giải thích được."
+    },
+    "creatorGateway.minutesAgo.one": {
+      "source": "{count}m ago",
+      "text": "{count} phút trước"
+    },
+    "creatorGateway.minutesAgo.other": {
+      "source": "{count}m ago",
+      "text": "{count} phút trước"
+    },
+    "creatorGateway.hoursAgo.one": {
+      "source": "{count}h ago",
+      "text": "{count} giờ trước"
+    },
+    "creatorGateway.hoursAgo.other": {
+      "source": "{count}h ago",
+      "text": "{count} giờ trước"
+    },
+    "creatorGateway.daysAgo.one": {
+      "source": "{count}d ago",
+      "text": "{count} ngày trước"
+    },
+    "creatorGateway.daysAgo.other": {
+      "source": "{count}d ago",
+      "text": "{count} ngày trước"
+    },
+    "creatorGateway.checked": {
+      "source": "checked {ago}",
+      "text": "đã kiểm tra {ago}"
+    },
+    "creatorGateway.walletBalance": {
+      "source": " +${amount} in your wallet",
+      "text": " +${amount} trong ví"
+    },
+    "creatorRights.aria": {
+      "source": "Scholarly manuscript opt-in",
+      "text": "Đăng ký tự nguyện bản thảo học thuật"
+    },
+    "creatorRights.mainnetTitle": {
+      "source": "Research manuscript rights",
+      "text": "Quyền bản thảo nghiên cứu"
+    },
+    "creatorRights.mainnetHeld": {
+      "source": "The experimental manuscript distribution-rights protocol is currently testnet only. Paid manuscript enrollment is closed on mainnet until its independent rights and payment migration passes review. Ordinary registered article publishing remains available.",
+      "text": "Giao thức quyền phân phối bản thảo thử nghiệm hiện chỉ trên testnet. Đăng ký bản thảo trả phí đóng trên mainnet đến khi việc chuyển đổi quyền và thanh toán độc lập được xem xét đạt. Xuất bản bài đăng ký thông thường vẫn khả dụng."
+    },
+    "creatorRights.loading": {
+      "source": "Loading creator rights status…",
+      "text": "Đang tải trạng thái quyền tác giả…"
+    },
+    "creatorRights.signIn": {
+      "source": "Sign in with the registry creator wallet to prepare manuscript rights.",
+      "text": "Đăng nhập bằng ví tác giả trong registry để chuẩn bị quyền bản thảo."
+    },
+    "creatorRights.onlyCreator": {
+      "source": "Only this source’s registry creator can submit manuscript rights.",
+      "text": "Chỉ tác giả nguồn trong registry được gửi quyền bản thảo."
+    },
+    "creatorRights.unavailable": {
+      "source": "Manuscript enrollment is unavailable. It requires a registered source, fresh registry authority, and the supported SQLite pilot datastore.",
+      "text": "Đăng ký tham gia bản thảo không khả dụng. Cần nguồn đăng ký, thẩm quyền registry mới và kho dữ liệu SQLite thử nghiệm được hỗ trợ."
+    },
+    "creatorRights.temporarilyUnavailable": {
+      "source": "Creator rights status is temporarily unavailable.",
+      "text": "Trạng thái quyền tác giả tạm không khả dụng."
+    },
+    "creatorRights.title": {
+      "source": "Offer a research manuscript",
+      "text": "Đề nghị bản thảo nghiên cứu"
+    },
+    "creatorRights.connect": {
+      "source": "Connect and sign in",
+      "text": "Kết nối và đăng nhập"
+    },
+    "creatorRights.walletFirst": {
+      "source": "Connect the registry creator wallet first.",
+      "text": "Kết nối ví tác giả trong registry trước."
+    },
+    "creatorRights.submitFailed": {
+      "source": "Submission failed",
+      "text": "Gửi không thành công"
+    },
+    "creatorRights.saved": {
+      "source": "Signed declaration saved. New paid reads stay blocked until independent review approves this exact version.",
+      "text": "Đã lưu khai báo có chữ ký. Lượt đọc trả phí mới vẫn chặn đến khi xem xét độc lập phê duyệt đúng phiên bản."
+    },
+    "creatorRights.introduction": {
+      "source": "Supervised Arc testnet pilot. Register a dedicated source with one manuscript, verify your feed, begin enrollment here, then publish signed full text in the uploader below. Your wallet controls payment; independent review checks permission to distribute this exact version. DOI metadata does not establish rights.",
+      "text": "Thử nghiệm Arc testnet có giám sát. Đăng ký nguồn riêng với một bản thảo, xác minh nguồn cấp, bắt đầu tham gia tại đây rồi xuất bản toàn văn có chữ ký trong công cụ tải bên dưới. Ví kiểm soát thanh toán; xem xét độc lập kiểm tra quyền phân phối đúng phiên bản. Siêu dữ liệu DOI không xác lập quyền."
+    },
+    "creatorRights.draft": {
+      "source": "draft — earning blocked",
+      "text": "bản nháp — chặn thu nhập"
+    },
+    "creatorRights.notEnrolled": {
+      "source": "not enrolled",
+      "text": "chưa đăng ký tham gia"
+    },
+    "creatorRights.enrollmentBoundary": {
+      "source": "Begin enrollment before uploading your manuscript. This permanently places the dedicated source behind the rights gate; pending drafts cannot earn through ordinary source payments.",
+      "text": "Bắt đầu tham gia trước khi tải bản thảo. Việc này đặt nguồn riêng sau cổng quyền vĩnh viễn; bản nháp đang chờ không thể có thu nhập qua thanh toán nguồn thông thường."
+    },
+    "creatorRights.enrollmentUnavailable": {
+      "source": "Enrollment unavailable",
+      "text": "Đăng ký tham gia không khả dụng"
+    },
+    "creatorRights.begin": {
+      "source": "Begin manuscript enrollment",
+      "text": "Bắt đầu tham gia bản thảo"
+    },
+    "creatorRights.statusUnavailable": {
+      "source": "Status unavailable",
+      "text": "Trạng thái không khả dụng"
+    },
+    "creatorRights.refresh": {
+      "source": "Refresh after upload or review",
+      "text": "Làm mới sau tải lên hoặc xem xét"
+    },
+    "creatorRights.version": {
+      "source": "Exact version",
+      "text": "Phiên bản chính xác"
+    },
+    "creatorRights.authorManuscript": {
+      "source": "Author manuscript",
+      "text": "Bản thảo tác giả"
+    },
+    "creatorRights.acceptedManuscript": {
+      "source": "Accepted manuscript",
+      "text": "Bản thảo đã được chấp nhận"
+    },
+    "creatorRights.publisherVersion": {
+      "source": "Publisher-authorized version",
+      "text": "Phiên bản được nhà xuất bản cho phép"
+    },
+    "creatorRights.role": {
+      "source": "Your distribution role",
+      "text": "Vai trò phân phối của bạn"
+    },
+    "creatorRights.author": {
+      "source": "Author",
+      "text": "Tác giả"
+    },
+    "creatorRights.publisher": {
+      "source": "Authorized publisher",
+      "text": "Nhà xuất bản được ủy quyền"
+    },
+    "creatorRights.doi": {
+      "source": "DOI (optional; metadata only)",
+      "text": "DOI (tùy chọn; chỉ siêu dữ liệu)"
+    },
+    "creatorRights.license": {
+      "source": "Public license / permission summary",
+      "text": "Tóm tắt giấy phép / quyền công khai"
+    },
+    "creatorRights.evidence": {
+      "source": "Private evidence reference (agreement or license record)",
+      "text": "Tham chiếu bằng chứng riêng tư (thỏa thuận hoặc hồ sơ giấy phép)"
+    },
+    "creatorRights.scope": {
+      "source": "Commercial redistribution scope",
+      "text": "Phạm vi tái phân phối thương mại"
+    },
+    "creatorRights.attribution": {
+      "source": "Required attribution",
+      "text": "Ghi công bắt buộc"
+    },
+    "creatorRights.revocation": {
+      "source": "Dispute / revocation contact",
+      "text": "Liên hệ tranh chấp / thu hồi"
+    },
+    "creatorRights.starts": {
+      "source": "Permission starts",
+      "text": "Quyền bắt đầu có hiệu lực"
+    },
+    "creatorRights.embargo": {
+      "source": "Embargo ends",
+      "text": "Hết thời gian cấm công bố"
+    },
+    "creatorRights.expires": {
+      "source": "Permission expires",
+      "text": "Quyền hết hạn"
+    },
+    "creatorRights.attestation": {
+      "source": "I am authorized to commercially distribute these exact bytes under the declared scope. Coauthor or publisher permission is documented where required. Submission does not grant approval.",
+      "text": "Tôi được phép phân phối thương mại đúng các byte này trong phạm vi khai báo. Quyền từ đồng tác giả hoặc nhà xuất bản được ghi lại khi cần. Gửi không cấp phê duyệt."
+    },
+    "creatorRights.privacy": {
+      "source": "One recipient, browser funded reads only. License summary, approved version and safe review summary are public. Permission evidence and revocation contact are private to the authenticated creator and local reviewer, excluded from public receipts. A public copy remains free. New revisions require review; enrollment cannot revert to ordinary source payment.",
+      "text": "Một bên nhận, chỉ lượt đọc bằng tiền trình duyệt. Tóm tắt giấy phép, phiên bản phê duyệt và tóm tắt xem xét an toàn công khai. Bằng chứng quyền và liên hệ thu hồi riêng cho tác giả xác thực, người xem xét cục bộ; không vào biên nhận công khai. Bản công khai vẫn miễn phí. Bản sửa mới cần xem xét; tham gia không thể quay lại thanh toán nguồn thông thường."
+    },
+    "creatorRights.saving": {
+      "source": "Signing and saving…",
+      "text": "Đang ký và lưu…"
+    },
+    "creatorRights.revise": {
+      "source": "Sign a new rights revision",
+      "text": "Ký bản sửa quyền mới"
+    },
+    "creatorRights.submit": {
+      "source": "Sign and submit for independent review",
+      "text": "Ký và gửi để xem xét độc lập"
+    },
+    "creatorRights.registration": {
+      "source": "creator registration",
+      "text": "đăng ký tác giả"
+    },
+    "creatorRights.registrationInstruction": {
+      "source": "Supervised Arc testnet pilot. Independent distribution-rights review is required before earning. Register a dedicated source at {registrationLink}.",
+      "text": "Thử nghiệm Arc testnet có giám sát. Cần xem xét quyền phân phối độc lập trước khi thu nhập. Đăng ký nguồn riêng tại {registrationLink}."
+    },
+    "creatorRights.status": {
+      "source": "Rights status: {status}. Approval is separate from settlement.",
+      "text": "Trạng thái quyền: {status}. Phê duyệt tách biệt quyết toán."
+    },
+    "creatorRights.review": {
+      "source": "Review: {summary}",
+      "text": "Xem xét: {summary}"
+    },
+    "creatorRights.declarationWithReview": {
+      "source": "Declaration: {declarationId} · Review: {reviewId}",
+      "text": "Khai báo: {declarationId} · Xem xét: {reviewId}"
+    },
+    "creatorRights.declaration": {
+      "source": "Declaration: {declarationId}",
+      "text": "Khai báo: {declarationId}"
+    },
+    "creatorRights.prepare.one": {
+      "source": "Prepare one signed full-text item on an active, verified registered source before submitting. Current item count: {count}.",
+      "text": "Chuẩn bị một mục toàn văn có chữ ký trên nguồn đăng ký hoạt động, đã xác minh trước khi gửi. Số mục hiện tại: {count}."
+    },
+    "creatorRights.prepare.other": {
+      "source": "Prepare one signed full-text item on an active, verified registered source before submitting. Current item count: {count}.",
+      "text": "Chuẩn bị một mục toàn văn có chữ ký trên nguồn đăng ký hoạt động, đã xác minh trước khi gửi. Số mục hiện tại: {count}."
+    },
+    "creatorListing.confirmed": {
+      "source": "Transaction confirmed. Refreshing registry state.",
+      "text": "Đã xác nhận giao dịch. Đang làm mới trạng thái registry."
+    },
+    "creatorListing.reverted": {
+      "source": "Transaction reverted. Listing changes were not confirmed.",
+      "text": "Giao dịch bị revert. Chưa xác nhận thay đổi niêm yết."
+    },
+    "creatorListing.authorityUnavailable": {
+      "source": "Listing authority could not be refreshed. No signature requested.",
+      "text": "Không thể làm mới thẩm quyền niêm yết. Chưa yêu cầu chữ ký."
+    },
+    "creatorListing.identityChanged": {
+      "source": "Wallet or source changed. Refresh before signing.",
+      "text": "Ví hoặc nguồn đổi. Làm mới trước khi ký."
+    },
+    "creatorListing.changed": {
+      "source": "Listing changed. Review the refreshed details and choose your change again.",
+      "text": "Niêm yết đổi. Xem chi tiết mới rồi chọn thay đổi lại."
+    },
+    "creatorListing.inactive": {
+      "source": "This source is delisted.",
+      "text": "Nguồn này đã gỡ niêm yết."
+    },
+    "creatorListing.waiting": {
+      "source": "Waiting for wallet signature…",
+      "text": "Đang chờ chữ ký ví…"
+    },
+    "creatorListing.priceSubmitted": {
+      "source": "Price update submitted — confirming…",
+      "text": "Đã gửi cập nhật giá — đang xác nhận…"
+    },
+    "creatorListing.saveFailed": {
+      "source": "Failed to save",
+      "text": "Lưu không thành công"
+    },
+    "creatorListing.delistSubmitted": {
+      "source": "Delist submitted — confirming…",
+      "text": "Đã gửi gỡ niêm yết — đang xác nhận…"
+    },
+    "creatorListing.delistFailed": {
+      "source": "Failed to delist",
+      "text": "Gỡ niêm yết không thành công"
+    },
+    "creatorListing.delisted": {
+      "source": "Source delisted — the agent will no longer read or cite it.",
+      "text": "Đã gỡ nguồn — tác nhân không còn đọc hoặc trích dẫn."
+    },
+    "creatorListing.title": {
+      "source": "Listing controls",
+      "text": "Quản lý niêm yết"
+    },
+    "creatorListing.price": {
+      "source": "Price per read",
+      "text": "Giá mỗi lượt đọc"
+    },
+    "creatorListing.confirming": {
+      "source": "Confirming…",
+      "text": "Đang xác nhận…"
+    },
+    "creatorListing.save": {
+      "source": "Save price",
+      "text": "Lưu giá"
+    },
+    "creatorListing.details": {
+      "source": "Current registry details",
+      "text": "Chi tiết registry hiện tại"
+    },
+    "creatorListing.reviewChanged": {
+      "source": "The listing changed. Review these details before choosing your change again.",
+      "text": "Niêm yết đổi. Xem chi tiết này trước khi chọn thay đổi lại."
+    },
+    "creatorListing.payoutWallet": {
+      "source": "Payout wallet",
+      "text": "Ví nhận thanh toán"
+    },
+    "creatorListing.authorSplits": {
+      "source": "Author splits",
+      "text": "Phần chia cho tác giả"
+    },
+    "creatorListing.payoutAll": {
+      "source": "Payout wallet receives 100%.",
+      "text": "Ví nhận tiền nhận 100%."
+    },
+    "creatorListing.contentReference": {
+      "source": "Content reference",
+      "text": "Tham chiếu nội dung"
+    },
+    "creatorListing.none": {
+      "source": "None",
+      "text": "Không có"
+    },
+    "creatorListing.tags": {
+      "source": "Tags",
+      "text": "Thẻ"
+    },
+    "creatorListing.delistBoundary": {
+      "source": "Delisting is permanent: the agent stops reading and citing this source. Earnings already settled stay yours.",
+      "text": "Gỡ niêm yết là vĩnh viễn: tác nhân dừng đọc và trích nguồn. Thu nhập đã quyết toán vẫn của bạn."
+    },
+    "creatorListing.confirmDelist": {
+      "source": "Click again to confirm — permanent",
+      "text": "Nhấp lại để xác nhận — vĩnh viễn"
+    },
+    "creatorListing.delist": {
+      "source": "Delist source",
+      "text": "Gỡ niêm yết nguồn"
+    },
+    "creatorListing.updated": {
+      "source": "Price per read is now ${price}.",
+      "text": "Giá mỗi lượt đọc hiện là ${price}."
+    },
+    "creatorListing.delistedLabel": {
+      "source": "delisted",
+      "text": "đã gỡ niêm yết"
+    },
+    "creatorListing.inactiveDescription": {
+      "source": "This source is {delisted} — the agent no longer discovers, reads, or cites it. Its earnings history stays on the ledger.",
+      "text": "Nguồn này {delisted} — tác nhân không còn khám phá, đọc hay trích dẫn. Lịch sử thu nhập vẫn trong sổ."
+    },
+    "creatorListing.onchainDescription": {
+      "source": "The toll you charge per read. The agent weighs it against its budget on every dispatch — priced too high, it simply buys elsewhere. Changes are signed by your wallet and written to the on-chain registry.",
+      "text": "Phí bạn thu mỗi lượt đọc. Tác nhân cân nhắc với ngân sách mỗi bản tin — giá quá cao sẽ mua nơi khác. Thay đổi được ví ký và ghi vào registry trên chuỗi."
+    },
+    "creatorListing.offlineDescription": {
+      "source": "The toll you charge per read. The agent weighs it against its budget on every dispatch — priced too high, it simply buys elsewhere.",
+      "text": "Phí bạn thu mỗi lượt đọc. Tác nhân cân nhắc với ngân sách mỗi bản tin — giá quá cao sẽ mua nơi khác."
+    },
+    "creatorListing.currentPrice": {
+      "source": "now ${price}",
+      "text": "hiện tại ${price}"
+    },
+    "creatorListing.walletInstruction": {
+      "source": "This source was registered by {wallet} — only that wallet's signature will pass the registry. Switch accounts before signing.",
+      "text": "Nguồn đăng ký bởi {wallet} — chỉ chữ ký ví đó được registry chấp nhận. Đổi tài khoản trước khi ký."
+    },
+    "creatorListing.networkInstruction": {
+      "source": "Connect your creator wallet on {network} before changing this listing.",
+      "text": "Kết nối ví tác giả trên {network} trước khi đổi niêm yết."
+    },
+    "creatorPortfolio.metadataTitle": {
+      "source": "My sources — Keryx",
+      "text": "Nguồn của tôi — Keryx"
+    },
+    "creatorPortfolio.description": {
+      "source": "Manage every source your wallet owns: citation email alerts, webhooks, earnings.",
+      "text": "Quản lý mọi nguồn ví sở hữu: email trích dẫn, webhook, thu nhập."
+    },
+    "creatorPortfolio.title": {
+      "source": "My sources",
+      "text": "Nguồn của tôi"
+    },
+    "creatorPortfolio.ownership": {
+      "source": "Review sources where this wallet receives payouts or author shares, and listings it registered on Arc. Citation alerts follow payout or author ownership; listing price and active status follow the registry creator.",
+      "text": "Xem nguồn ví nhận thanh toán hoặc phần chia tác giả và niêm yết ví đăng ký trên Arc. Cảnh báo trích dẫn theo sở hữu bên nhận/tác giả; giá và hoạt động niêm yết theo tác giả registry."
+    },
+    "creatorPortfolio.withdrawals": {
+      "source": "Review and recover withdrawals",
+      "text": "Xem xét và khôi phục rút tiền"
+    },
+    "creatorPortfolio.loadFailed": {
+      "source": "Couldn't load your sources — try again.",
+      "text": "Không thể tải nguồn — thử lại."
+    },
+    "creatorPortfolio.applyFailed": {
+      "source": "Failed to apply",
+      "text": "Áp dụng không thành công"
+    },
+    "creatorPortfolio.refreshFailed": {
+      "source": "Refresh failed",
+      "text": "Làm mới không thành công"
+    },
+    "creatorPortfolio.loading": {
+      "source": "Loading your sources…",
+      "text": "Đang tải nguồn của bạn…"
+    },
+    "creatorPortfolio.signIn": {
+      "source": "Sign in with the wallet that owns your sources to manage them.",
+      "text": "Đăng nhập bằng ví sở hữu nguồn để quản lý."
+    },
+    "creatorPortfolio.connect": {
+      "source": "Connect wallet →",
+      "text": "Kết nối ví →"
+    },
+    "creatorPortfolio.empty": {
+      "source": "This wallet doesn't own any sources yet.",
+      "text": "Ví này chưa sở hữu nguồn."
+    },
+    "creatorPortfolio.register": {
+      "source": "List your feed — issue a toll →",
+      "text": "Niêm yết nguồn cấp — đặt phí truy cập →"
+    },
+    "creatorPortfolio.listings": {
+      "source": "Listings registered by this wallet",
+      "text": "Niêm yết ví này đăng ký"
+    },
+    "creatorPortfolio.listingOwnership": {
+      "source": "Manage price and active status here. Citation alerts belong to the payout or author wallet.",
+      "text": "Quản lý giá và trạng thái hoạt động tại đây. Cảnh báo trích dẫn thuộc ví nhận tiền hoặc tác giả."
+    },
+    "creatorPortfolio.deactivated": {
+      "source": "deactivated",
+      "text": "đã ngừng kích hoạt"
+    },
+    "creatorPortfolio.manageListing": {
+      "source": "Manage listing →",
+      "text": "Quản lý niêm yết →"
+    },
+    "creatorPortfolio.listingFailed": {
+      "source": "Couldn't verify this page of registry listings. Try again.",
+      "text": "Không thể xác minh trang niêm yết registry này. Thử lại."
+    },
+    "creatorPortfolio.checking": {
+      "source": "Checking registry…",
+      "text": "Đang kiểm tra registry…"
+    },
+    "creatorPortfolio.more": {
+      "source": "Check more listings",
+      "text": "Kiểm tra thêm mục niêm yết"
+    },
+    "creatorPortfolio.emailTitle": {
+      "source": "Citation email alerts — whole portfolio",
+      "text": "Cảnh báo email trích dẫn — toàn danh mục"
+    },
+    "creatorPortfolio.emailDescription": {
+      "source": "One address, every source: get a short email whenever any of your sources is cited and paid. At most one mail per source per hour. Per-source tweaks live on each source's page below.",
+      "text": "Một địa chỉ, mọi nguồn: nhận email ngắn khi bất kỳ nguồn nào được trích dẫn và trả tiền. Tối đa một email mỗi nguồn mỗi giờ. Tùy chỉnh từng nguồn trên trang nguồn bên dưới."
+    },
+    "creatorPortfolio.disableAll": {
+      "source": "Disable all",
+      "text": "Tắt tất cả"
+    },
+    "creatorPortfolio.deliveryHeld": {
+      "source": "Addresses are saved, but this deployment hasn't enabled an email provider yet — delivery starts the moment it does.",
+      "text": "Đã lưu địa chỉ nhưng triển khai chưa bật nhà cung cấp email — bắt đầu gửi ngay khi bật."
+    },
+    "creatorPortfolio.unverified": {
+      "source": "unverified — off the money path",
+      "text": "chưa xác minh — ngoài luồng thanh toán"
+    },
+    "creatorPortfolio.noEmail": {
+      "source": "No email alert",
+      "text": "Không có cảnh báo email"
+    },
+    "creatorPortfolio.webhookActive": {
+      "source": "Webhook active",
+      "text": "Webhook đang hoạt động"
+    },
+    "creatorPortfolio.noWebhook": {
+      "source": "No webhook",
+      "text": "Không có webhook"
+    },
+    "creatorPortfolio.webhookOn": {
+      "source": "on",
+      "text": "bật"
+    },
+    "creatorPortfolio.refreshTitle": {
+      "source": "Re-read the feed and pull in new posts",
+      "text": "Đọc lại nguồn cấp và lấy bài mới"
+    },
+    "creatorPortfolio.refresh": {
+      "source": "Refresh feed",
+      "text": "Làm mới nguồn cấp"
+    },
+    "creatorPortfolio.manage": {
+      "source": "Manage →",
+      "text": "Quản lý →"
+    },
+    "creatorPortfolio.emailEnabled.one": {
+      "source": "Email alerts on for all {count} source(s).",
+      "text": "Đã bật email cho toàn bộ {count} nguồn."
+    },
+    "creatorPortfolio.emailEnabled.other": {
+      "source": "Email alerts on for all {count} source(s).",
+      "text": "Đã bật email cho toàn bộ {count} nguồn."
+    },
+    "creatorPortfolio.emailDisabled.one": {
+      "source": "Email alerts off for all {count} source(s).",
+      "text": "Đã tắt email cho toàn bộ {count} nguồn."
+    },
+    "creatorPortfolio.emailDisabled.other": {
+      "source": "Email alerts off for all {count} source(s).",
+      "text": "Đã tắt email cho toàn bộ {count} nguồn."
+    },
+    "creatorPortfolio.newPosts.one": {
+      "source": "{name}: {count} new post(s) now purchasable.",
+      "text": "{name}: hiện có thể mua {count} bài mới."
+    },
+    "creatorPortfolio.newPosts.other": {
+      "source": "{name}: {count} new post(s) now purchasable.",
+      "text": "{name}: hiện có thể mua {count} bài mới."
+    },
+    "creatorPortfolio.upToDate": {
+      "source": "{name}: feed checked — already up to date.",
+      "text": "{name}: đã kiểm tra nguồn cấp — đã cập nhật."
+    },
+    "creatorPortfolio.uncertain.one": {
+      "source": "{count} listing(s) could not be verified. Refresh to retry those registry reads.",
+      "text": "Không thể xác minh {count} niêm yết. Làm mới để thử lại lượt đọc registry đó."
+    },
+    "creatorPortfolio.uncertain.other": {
+      "source": "{count} listing(s) could not be verified. Refresh to retry those registry reads.",
+      "text": "Không thể xác minh {count} niêm yết. Làm mới để thử lại lượt đọc registry đó."
+    },
+    "creatorPortfolio.applyAll.one": {
+      "source": "Apply to all {count}",
+      "text": "Áp dụng cho cả {count}"
+    },
+    "creatorPortfolio.applyAll.other": {
+      "source": "Apply to all {count}",
+      "text": "Áp dụng cho cả {count}"
+    },
+    "creatorPortfolio.earned": {
+      "source": "{amount} earned",
+      "text": "{amount} kiếm được"
+    },
+    "creatorPortfolio.citations.one": {
+      "source": "{count} citation(s)",
+      "text": "{count} trích dẫn"
+    },
+    "creatorPortfolio.citations.other": {
+      "source": "{count} citation(s)",
+      "text": "{count} trích dẫn"
+    },
+    "creatorPortfolio.emailTitleWithAddress": {
+      "source": "Email alerts → {email}",
+      "text": "Cảnh báo email → {email}"
+    },
+    "creatorDecisions.title": {
+      "source": "How the agent decides on this source",
+      "text": "Cách tác nhân quyết định với nguồn này"
+    },
+    "creatorDecisions.weighed": {
+      "source": "Weighed",
+      "text": "Đã phân bổ trọng số"
+    },
+    "creatorDecisions.dispatches": {
+      "source": "dispatches",
+      "text": "bản tin"
+    },
+    "creatorDecisions.chosen": {
+      "source": "Chosen decisions",
+      "text": "Quyết định đã chọn"
+    },
+    "creatorDecisions.citations": {
+      "source": "Citations in answers",
+      "text": "Trích dẫn trong câu trả lời"
+    },
+    "creatorDecisions.passed": {
+      "source": "Passed",
+      "text": "Đạt"
+    },
+    "creatorDecisions.paymentBoundary": {
+      "source": "Decision and answer citation counts do not prove paid reads or settled citation rewards. Check earnings and payment evidence separately.",
+      "text": "Số quyết định và trích dẫn câu trả lời không chứng minh lượt đọc trả phí hay thưởng trích dẫn đã quyết toán. Kiểm tra thu nhập và bằng chứng thanh toán riêng."
+    },
+    "creatorDecisions.recent": {
+      "source": "Most recent passes, in the agent's words",
+      "text": "Lần bỏ qua gần nhất, theo lời tác nhân"
+    },
+    "creatorDecisions.window.one": {
+      "source": "Every dispatch weighs this source against the others and records its BUY, CACHE or SKIP decisions. Across the last {window} dispatches, {considered} of them weighed this one.",
+      "text": "Mỗi bản tin cân nhắc nguồn với nguồn khác và ghi BUY, CACHE hoặc SKIP. Trong {window} bản tin gần nhất, {considered} bản cân nhắc nguồn này."
+    },
+    "creatorDecisions.window.other": {
+      "source": "Every dispatch weighs this source against the others and records its BUY, CACHE or SKIP decisions. Across the last {window} dispatches, {considered} of them weighed this one.",
+      "text": "Mỗi bản tin cân nhắc nguồn với nguồn khác và ghi BUY, CACHE hoặc SKIP. Trong {window} bản tin gần nhất, {considered} bản cân nhắc nguồn này."
+    },
+    "creatorDecisions.buy.one": {
+      "source": "{count} BUY decisions",
+      "text": "{count} quyết định BUY"
+    },
+    "creatorDecisions.buy.other": {
+      "source": "{count} BUY decisions",
+      "text": "{count} quyết định BUY"
+    },
+    "creatorDecisions.cache.one": {
+      "source": "{count} CACHE decisions",
+      "text": "{count} quyết định CACHE"
+    },
+    "creatorDecisions.cache.other": {
+      "source": "{count} CACHE decisions",
+      "text": "{count} quyết định CACHE"
+    },
+    "creatorDecisions.citeThrough.one": {
+      "source": "{percent} of {count} chosen decisions",
+      "text": "{percent} trên {count} quyết định đã chọn"
+    },
+    "creatorDecisions.citeThrough.other": {
+      "source": "{percent} of {count} chosen decisions",
+      "text": "{percent} trên {count} quyết định đã chọn"
+    },
+    "creatorDecisions.skipRate": {
+      "source": "{percent} of the time",
+      "text": "{percent} số lần"
+    },
+    "creatorDecisions.priceComparison": {
+      "source": "In the dispatches that passed on it, the sources the agent did choose were listed at a median {rivalPrice} per read. This one asks {price}.",
+      "text": "Trong bản tin bỏ qua nguồn này, nguồn tác nhân chọn có giá niêm yết trung vị {rivalPrice} mỗi lượt đọc. Nguồn này yêu cầu {price}."
+    },
+    "creatorDecisions.ratedComparison": {
+      "source": "In the dispatches that passed on it, the sources the agent did choose were listed at a median {rivalPrice} per read. This one asks {price}. It rated this source {chosenValue} when it chose to read and {skippedValue} when it passed, on its 0–1 expected-value scale.",
+      "text": "Trong bản tin bỏ qua nguồn này, nguồn tác nhân chọn có giá niêm yết trung vị {rivalPrice} mỗi lượt đọc. Nguồn này yêu cầu {price}. Tác nhân chấm nguồn {chosenValue} khi chọn đọc và {skippedValue} khi bỏ qua, trên thang giá trị kỳ vọng 0–1."
+    },
+    "creatorDecisions.skipWithRival": {
+      "source": "expected value {value} · asked ${price} · chose ${rivalPrice} instead · {date}",
+      "text": "giá trị kỳ vọng {value} · yêu cầu ${price} · thay vào đó chọn ${rivalPrice} · {date}"
+    },
+    "creatorDecisions.skip": {
+      "source": "expected value {value} · asked ${price} · {date}",
+      "text": "giá trị kỳ vọng {value} · yêu cầu ${price} · {date}"
+    }
+  }
+}

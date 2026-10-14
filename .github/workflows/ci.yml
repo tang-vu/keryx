@@ -275,7 +275,9 @@ jobs:
           node --import tsx scripts/creator-cashout-batch-funding.mts --help
 
       - name: Synthetic research provenance (isolated PostgreSQL 17, synthetic data)
-        run: node --import tsx scripts/test-synthetic-provenance-postgres.mts
+        run: |
+          docker pull postgres:17-alpine
+          node --import tsx scripts/test-synthetic-provenance-postgres.mts
 
       - name: Decision review owner admission (isolated PostgreSQL17, no payments)
         run: node --import tsx scripts/test-decision-reviews-postgres.mts
@@ -641,6 +643,14 @@ jobs:
 
       - name: Private verified identity UI (production CSS, synthetic consent and owner isolation)
         run: node --import tsx scripts/test-browser-profile-identities.mts
+
+      - name: Identity OAuth cross-site return (hermetic Chromium, genuine temporary sessions)
+        env:
+          KERYX_NETWORK: arcTestnet
+          NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
+          KERYX_FORCE_OFFLINE: "1"
+          KERYX_EXTERNAL_DISCOVERY: "0"
+        run: node --import tsx scripts/test-browser-identity-oauth-return.mts
 
       - name: Report feedback confirmation and response races (built CSS, hermetic Chromium)
         env:

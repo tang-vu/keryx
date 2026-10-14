@@ -1,0 +1,136 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/deliverable-acceptance.ts",
+  "sourceSha256": "03a7a9b5eb583db8b530e65e0c1f82c2b69787c5e0b6bc3b8584271edbfdc611",
+  "entries": {
+    "heading": {
+      "source": "Your prepaid A2A deliverable choice",
+      "text": "Lựa chọn sản phẩm A2A trả trước của bạn"
+    },
+    "publicHeading": {
+      "source": "Customer acceptance",
+      "text": "Chấp nhận của khách hàng"
+    },
+    "scope": {
+      "source": "This journal supports settled ordinary prepaid A2A originals. It records your choice or request; revision and refund execution remain withheld.",
+      "text": "Nhật ký này hỗ trợ bản gốc A2A trả trước thông thường đã quyết toán. Nhật ký ghi nhận lựa chọn hoặc yêu cầu; chưa thực thi sửa đổi hay hoàn tiền."
+    },
+    "loading": {
+      "source": "Loading acceptance…",
+      "text": "Đang tải trạng thái chấp nhận…"
+    },
+    "unavailable": {
+      "source": "Acceptance is unavailable for this original or storage deployment. Browser-only, Monthly, private v2 and enrolled native originals require their own accepted adapter.",
+      "text": "Trạng thái chấp nhận không khả dụng cho bản gốc hoặc triển khai lưu trữ này. Bản chỉ qua trình duyệt, Monthly, riêng tư v2 và native đã đăng ký cần bộ chuyển đổi được chấp nhận riêng."
+    },
+    "signIn": {
+      "source": "Sign in with the wallet that ordered this job",
+      "text": "Đăng nhập bằng ví đã đặt tác vụ này"
+    },
+    "noResponse": {
+      "source": "No response recorded",
+      "text": "Chưa ghi nhận phản hồi"
+    },
+    "notShared": {
+      "source": "The customer has not shared an acceptance state.",
+      "text": "Khách hàng chưa chia sẻ trạng thái chấp nhận."
+    },
+    "accepted": {
+      "source": "Accepted",
+      "text": "Đã chấp nhận"
+    },
+    "revised": {
+      "source": "Revision requested — awaiting owner review",
+      "text": "Đã yêu cầu sửa đổi — chờ chủ sở hữu xem xét"
+    },
+    "rejected": {
+      "source": "Rejected — awaiting owner review",
+      "text": "Đã từ chối — chờ chủ sở hữu xem xét"
+    },
+    "terms": {
+      "source": "Original terms: remedy:none. This historical job has no agreed response window. Silence stays no response. Recording a request does not execute a revision or refund, buy sources again, replenish a reservation or claw back creator rewards.",
+      "text": "Điều kiện ban đầu: remedy:none. Tác vụ lịch sử này không có thời hạn phản hồi được thỏa thuận. Im lặng vẫn là chưa phản hồi. Ghi nhận yêu cầu không thực thi sửa đổi hoặc hoàn tiền, không mua lại nguồn, không bổ sung khoản giữ hay thu hồi phần thưởng tác giả."
+    },
+    "reason": {
+      "source": "Optional private reason",
+      "text": "Lý do riêng tư (không bắt buộc)"
+    },
+    "consent": {
+      "source": "Share only my choice and its timestamp on the public report",
+      "text": "Chỉ chia sẻ lựa chọn và thời điểm của tôi trên báo cáo công khai"
+    },
+    "accept": {
+      "source": "Accept",
+      "text": "Chấp nhận"
+    },
+    "revise": {
+      "source": "Request revision",
+      "text": "Yêu cầu sửa đổi"
+    },
+    "reject": {
+      "source": "Reject",
+      "text": "Từ chối"
+    },
+    "refresh": {
+      "source": "Read current state",
+      "text": "Đọc trạng thái hiện tại"
+    },
+    "retry": {
+      "source": "Replay the same submission",
+      "text": "Gửi lại đúng nội dung đã gửi"
+    },
+    "pending": {
+      "source": "A creator payment leg remains pending or unknown. Recording your choice does not reconcile or refund it.",
+      "text": "Một khoản thanh toán cho tác giả còn chờ hoặc chưa rõ. Ghi nhận lựa chọn không đối soát hay hoàn tiền khoản đó."
+    },
+    "busy": {
+      "source": "Saving your choice…",
+      "text": "Đang lưu lựa chọn…"
+    },
+    "failed": {
+      "source": "The submission was refused or its acknowledgement was lost. Read current state, or replay the exact retained submission; no revision or refund was executed.",
+      "text": "Nội dung gửi bị từ chối hoặc mất phản hồi xác nhận. Đọc trạng thái hiện tại hoặc gửi lại đúng nội dung đã giữ; chưa thực hiện sửa đổi hay hoàn tiền."
+    },
+    "conflict": {
+      "source": "The version or current choice changed. Read current state before submitting a new choice.",
+      "text": "Phiên bản hoặc lựa chọn hiện tại đã thay đổi. Đọc trạng thái hiện tại trước khi gửi lựa chọn mới."
+    },
+    "digest": {
+      "source": "Exact retained delivery digest",
+      "text": "Digest chính xác của nội dung cung cấp được lưu"
+    },
+    "privateNotice": {
+      "source": "Your reason stays private to the service. MCP clients may retain messages independently.",
+      "text": "Lý do của bạn chỉ được giữ riêng tại dịch vụ. Ứng dụng MCP có thể lưu thông điệp độc lập."
+    },
+    "changedAnswer": {
+      "source": "The displayed answer differs from the retained delivery. Reload the report before choosing.",
+      "text": "Câu trả lời hiển thị khác với nội dung cung cấp được lưu. Tải lại báo cáo trước khi chọn."
+    },
+    "verifyingAnswer": {
+      "source": "The current displayed answer must be verified before choosing.",
+      "text": "Phải xác minh câu trả lời đang hiển thị trước khi chọn."
+    },
+    "publicUnavailable": {
+      "source": "Public acceptance state is currently unavailable.",
+      "text": "Trạng thái chấp nhận công khai hiện không khả dụng."
+    },
+    "discard": {
+      "source": "Clear local retry data",
+      "text": "Xóa dữ liệu thử lại cục bộ"
+    },
+    "discardNotice": {
+      "source": "Clearing retry data does not erase a recorded choice or cancel a request.",
+      "text": "Xóa dữ liệu thử lại không xóa lựa chọn đã ghi nhận hay hủy yêu cầu."
+    },
+    "readScope": {
+      "source": "(read your deliverable choices)",
+      "text": "(đọc lựa chọn sản phẩm của bạn)"
+    },
+    "writeScope": {
+      "source": "(record your deliverable choice or request)",
+      "text": "(ghi nhận lựa chọn sản phẩm hoặc yêu cầu của bạn)"
+    }
+  }
+}
