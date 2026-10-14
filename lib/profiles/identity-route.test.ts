@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { IncomingMessage } from "node:http";
+import { IncomingMessage, ServerResponse } from "node:http";
 import { Socket } from "node:net";
 import { NextRequestAdapter } from "next/dist/server/web/spec-extension/adapters/next-request";
-import { NodeNextRequest } from "next/dist/server/base-http/node";
+import { NodeNextRequest, NodeNextResponse } from "next/dist/server/base-http/node";
+import { sendResponse } from "next/dist/server/send-response";
+import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
+import nextConfig from "../../next.config";
+import { identityReturnCsp } from "./identity-return-policy";
 import type { KeryxDB } from "../db/keryx-db";
 import { identityCookieName, identityContinuationCookieName } from "./identity-flow";
 import { createIdentityRoutes } from "./identity-route";
@@ -42,7 +46,7 @@ async function staged(f: ReturnType<typeof fixture>, callback: Request, provider
   const cookies = `${callback.headers.get("cookie")}; ${continuation.split(";")[0]}`;
   const document = await f.routes.CALLBACK(new Request(url, { headers: { Cookie: cookies } }), provider);
   expect(document.status).toBe(200); expect(document.headers.get("cache-control")).toBe("no-store");
-  expect(document.headers.get("referrer-policy")).toBe("same-origin"); expect(document.headers.get("x-frame-options")).toBe("DENY");
+  expect(document.headers.get("referrer-policy")).toBe("no-referrer"); expect(document.headers.get("x-frame-options")).toBe("DENY");
   expect(document.headers.get("content-security-policy")).toContain("form-action 'self'");
   const html = await document.text(); expect(html).toContain(`action="${url.pathname}"`); expect(html).toContain('method="post"');
   expect(html).toContain('<meta name="referrer" content="same-origin">');
@@ -61,6 +65,26 @@ async function started(f: ReturnType<typeof fixture>) {
   return { cookie, state: url.searchParams.get("state")!, callback: request(`/github/callback?code=secret-code&state=${url.searchParams.get("state")}`, "GET", { Cookie: cookie }) };
 }
 describe("identity owner/OAuth route gates", () => {
+  it("Next header forwarding retains the callback hash policy and queryless meta Origin policy", async () => {
+    const f = fixture(), flow = await started(f), post = await staged(f, flow.callback); expect(post).toBeInstanceOf(Request);
+    const document = await f.routes.CALLBACK(new Request((post as Request).url, { headers: { Cookie: (post as Request).headers.get("cookie")! } }), "github");
+    expect(document.status).toBe(200);
+    const incoming = new IncomingMessage(new Socket()); incoming.method = "HEAD";
+    const outgoing = new ServerResponse(incoming), rules = await nextConfig.headers?.(); expect(rules).toBeDefined();
+    const callback = new URL((post as Request).url).pathname;
+    for (const rule of rules ?? []) if (getPathMatch(rule.source)(callback)) {
+      expect(rule.has).toBeUndefined(); expect(rule.missing).toBeUndefined();
+      for (const header of rule.headers) outgoing.setHeader(header.key, header.value);
+    }
+    // Actual pinned Next forwarding; HEAD skips only body piping, never header handling.
+    await sendResponse(new NodeNextRequest(incoming), new NodeNextResponse(outgoing), document.clone());
+    expect(outgoing.getHeader("content-security-policy")).toBe(identityReturnCsp);
+    expect(outgoing.getHeader("referrer-policy")).toBe("no-referrer");
+    expect(new NodeNextResponse(outgoing).getHeader("cache-control")).toBe("no-store");
+    expect(identityReturnCsp).not.toContain("unsafe-inline"); expect(identityReturnCsp).not.toContain("cloudflare");
+    expect(await document.text()).toContain('<meta name="referrer" content="same-origin">');
+    expect(f.exchange).not.toHaveBeenCalled(); expect(f.store.consume).not.toHaveBeenCalled();
+  });
   it("refuses JSON-expanded code before publishing an oversized continuation or reading authority", async () => {
     const f = fixture(), flow = await started(f), code = "\\".repeat(2048);
     const target = request("/github/callback?code=" + code + "&state=" + flow.state, "GET", { Cookie: flow.cookie });

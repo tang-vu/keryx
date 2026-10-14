@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { identityReturnCsp, identityReturnScript } from "./identity-return-policy";
 import { hasScope, parseScopes } from "../api-key-scopes";
 import { authJson } from "../auth-challenge";
 import type { KeryxDB } from "../db/keryx-db";
@@ -31,18 +31,16 @@ function safeResponse(response: Response): Response {
 }
 const callbackPath = (provider: IdentityProvider) => `/api/me/profile/identities/${provider}/callback`;
 // Static navigation only. The load event occurs after this queryless document commits.
-const continueScript = 'window.addEventListener("load",function(){setTimeout(function(){document.getElementById("continue").requestSubmit();},0);},{once:true});';
+const continueScript = identityReturnScript;
 function continuationDocument(provider: IdentityProvider): Response {
   const response = new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="same-origin"><title>Continue identity verification</title></head><body><main><h1>Continue identity verification</h1><p>Continue using your signed-in Keryx session.</p><form id="continue" method="post" action="${callbackPath(provider)}"><button type="submit">Continue</button></form></main><script>${continueScript}</script></body></html>`, {
     headers: { "Content-Type": "text/html; charset=utf-8",
-      "Content-Security-Policy": `default-src 'none'; script-src 'sha256-${createHash("sha256").update(continueScript).digest("base64")}'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
+      "Content-Security-Policy": identityReturnCsp,
       "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff" },
   });
-  safeResponse(response);
-  // A no-referrer form policy serializes Origin as null. This document is already
-  // queryless: same-origin preserves exact POST Origin and exposes no provider query.
-  response.headers.set("Referrer-Policy", "same-origin");
-  return response;
+  // HTTP stays no-referrer at the framework boundary. The committed queryless
+  // document meta policy preserves exact form Origin and only its clean referrer.
+  return safeResponse(response);
 }
 function clearIdentityCookies(response: Response, provider: IdentityProvider) {
   response.headers.append("Set-Cookie", identityCookie(provider));

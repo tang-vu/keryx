@@ -27,8 +27,9 @@ duplicates, unknown query fields and malformed values refuse admission.
 
 A 303 returns to the same configured callback path with no query. That redirect
 does not restore or establish Strict authority. Queryless GET validates both
-encrypted cookies and serves an actual no-store HTML document with a same-origin
-referrer policy. The query-bearing redirect still uses no-referrer. A no-referrer
+encrypted cookies and serves an actual no-store/no-referrer HTTP document. Its
+queryless HTML meta policy is same-origin; the query-bearing and terminal redirects
+retain no-referrer. A no-referrer
 form policy would make Chromium serialize Origin as null; the queryless document
 permits only its clean same-origin callback URL as referrer, preserving the exact
 POST Origin guard without sending any referrer to another origin. Its
@@ -100,6 +101,18 @@ TypeScript passed in 22.497 seconds, and all fourteen browser scenarios passed i
 The initial failed browser captures are retained: user routing omitted redirected
 requests, then the corrected transport exposed no-referrer turning form Origin
 into null. No assertions or deadlines were relaxed to obtain the final result.
+
+A subsequent source inspection found that Next configured headers take precedence
+over handler headers. The exact callback configuration uses the
+same pure hash-only CSP constant as the inline document, while all HTTP identity
+responses retain no-referrer and only the committed queryless meta policy permits
+its clean same-origin form referrer. A new actual Next header-forwarding control
+and the browser transport model this precedence. Four affected route controls
+passed, including the actual Next forwarding assertion; refreshed relevant types
+passed in 22.663 seconds and all fourteen Chromium modes passed in 12.033 seconds,
+with natural exit 0, no signal and both EOF. The first TSX config-export interop
+failure is retained; the harness now unwraps only that actual module boundary.
+The earlier direct-handler fourteen-case result remains separately qualified.
 
 The existing production CI now invokes this hermetic harness beside the identity UI
 checks with explicit testnet/offline settings and reuses its existing Next build.

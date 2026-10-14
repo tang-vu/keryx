@@ -7,6 +7,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { chromium } from "playwright";
+import { IncomingMessage, ServerResponse } from "node:http";
+import { Socket } from "node:net";
+import { NodeNextRequest, NodeNextResponse } from "next/dist/server/base-http/node";
+import { sendResponse } from "next/dist/server/send-response";
+import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
+import nextConfig from "../next.config";
 import { SqliteAdapter } from "../lib/db/sqlite-adapter";
 import { issueWebSession, parseWebSession, isWebSessionActive, webSessionHash } from "../lib/auth-session";
 import { createIdentityRoutes } from "../lib/profiles/identity-route";
@@ -29,6 +35,9 @@ globalThis.fetch = async () => { forbiddenFetches++; throw new Error("Hermetic h
 const results: unknown[] = [];
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 try {
+  // TSX ESM imports this .ts config through the project CommonJS boundary.
+  const config = "default" in nextConfig ? nextConfig.default as typeof nextConfig : nextConfig;
+  const headerRules = await config.headers?.(); assert(headerRules);
   await db.init();
   assert(db.privateProfiles && db.profileIdentities, "Actual ordinary stores required; no fallback");
   await db.privateProfiles.update(wallet, { displayName: "Return Reader", handle: "", bio: "", purpose: "Papers", links: [] });
@@ -75,11 +84,18 @@ try {
       const page = await context.newPage(), transport = await context.newCDPSession(page);
       let transportFailure: unknown;
       const fulfill = async (route: ReturnTransport, response: Response) => {
-        const responseHeaders: Record<string, string> = {};
-        response.headers.forEach((value, name) => { if (name !== "set-cookie") responseHeaders[name] = value; });
-        const cookies = response.headers.getSetCookie();
-        if (cookies.length) responseHeaders["set-cookie"] = cookies.join("\n");
-        await route.fulfill({ status: response.status, headers: responseHeaders, body: await response.text() });
+        const incoming = new IncomingMessage(new Socket()); incoming.method = "HEAD";
+        const outgoing = new ServerResponse(incoming), pathname = new URL(route.request().url()).pathname;
+        for (const rule of headerRules) if (getPathMatch(rule.source)(pathname)) {
+          assert(!rule.has && !rule.missing, "No unmodelled conditional header rule");
+          for (const header of rule.headers) outgoing.setHeader(header.key, header.value);
+        }
+        // Reuse actual Next header precedence and cookie forwarding. HEAD suppresses
+        // only body piping; the original actual handler body is fulfilled unchanged.
+        await sendResponse(new NodeNextRequest(incoming), new NodeNextResponse(outgoing), response.clone());
+        const responseHeaders = Object.fromEntries(Object.entries(outgoing.getHeaders()).map(([name, value]) =>
+          [name, Array.isArray(value) ? value.join(name.toLowerCase() === "set-cookie" ? "\n" : ", ") : String(value)]));
+        await route.fulfill({ status: outgoing.statusCode, headers: responseHeaders, body: await response.text() });
       };
       const handle = async (route: ReturnTransport) => {
         const incoming = route.request(), url = new URL(incoming.url());
@@ -121,7 +137,7 @@ try {
             assert(response.headers.getSetCookie()[0].includes("HttpOnly; Secure; SameSite=Lax; Max-Age=60"));
           } else {
             documents++; assert.equal(response.status, 200); assert(hasFlow && hasContinuation);
-            assert.equal(response.headers.get("cache-control"), "no-store"); assert.equal(response.headers.get("referrer-policy"), "same-origin");
+            assert.equal(response.headers.get("cache-control"), "no-store"); assert.equal(response.headers.get("referrer-policy"), "no-referrer");
             assert.equal(response.headers.get("x-frame-options"), "DENY"); assert(response.headers.get("content-security-policy")?.includes("frame-ancestors 'none'"));
             const html = await response.clone().text(); assert(html.includes(`method="post" action="${path}"`));
             for (const privateValue of ["hermetic-code", state, issued.token, originalFlow, continuation, "hermetic-private-detail"]) assert(!html.includes(privateValue));
