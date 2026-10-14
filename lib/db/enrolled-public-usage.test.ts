@@ -3,19 +3,22 @@
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { copyFileSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, lstatSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { canonicalJson } from "../canonical-json";
 import type { QueryRun } from "../types";
 import { createTrustedUsageContext, newRunUsage, type RunUsage } from "../research/usage-provenance";
-import { MAX_USAGE_BYTES, MAX_USAGE_PAYMENTS, MAX_USAGE_RUNS, UsageUnavailable, usageWindow } from "../usage/contracts";
+import { MAX_USAGE_BYTES, MAX_USAGE_PAYMENTS, MAX_USAGE_RUNS, UsageUnavailable, projectUsageCorpus, publishedUsageHistory, usageWindow } from "../usage/contracts";
+import { PrivacyError } from "../run-privacy/contracts";
+import * as nativePrivacy from "./run-privacy-sqlite";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
 import { installNativeUserDomainSchema } from "./native-user-domain-schema";
-import { insertStorageIdentity, installStorageFences, registerStorageCapability } from "./storage-identity-sqlite";
-import { openVerifiedSqliteStorage } from "./storage-identity-connection";
+import { insertStorageIdentity, installStorageFences, registerStorageCapability, storageFenceStatements, STORAGE_IDENTITY_TABLE } from "./storage-identity-sqlite";
+import { assertVerifiedSqliteConnection, openVerifiedSqliteStorage } from "./storage-identity-connection";
+import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { inspectStorageDeploymentManifest } from "./runtime-storage-config";
 import { createEnrolledSqlitePublicUsage, createSqlitePublicUsage } from "./public-usage-sqlite";
@@ -91,17 +94,21 @@ function fixture(seed: (db: DatabaseSync) => void = () => {}, bundle = true, wal
     const raw = new DatabaseSync(file);
     try { registerStorageCapability(raw, identity, () => true); action(raw); } finally { raw.close(); }
   };
-  const native = (readOnly = true, runtimeGuard?: () => void) => {
-    const connection = openVerifiedSqliteStorage(file, identity, { readOnly,
-      runtimeGuard: () => {
-        if (canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: manifestPath })) !== manifest)
-          throw Error("Synthetic manifest guard changed");
-        runtimeGuard?.();
-      }, applicationProfiles: supportedSqliteApplicationProfiles(true) });
+  const selectedRuntimeGuard = () => {
+    if (canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: manifestPath })) !== manifest)
+      throw Error("Synthetic manifest guard changed");
+  };
+  const open = (options: NonNullable<Parameters<typeof openVerifiedSqliteStorage>[2]>) => {
+    const connection = openVerifiedSqliteStorage(file, identity, options);
     opened.push(connection);
+    return connection;
+  };
+  const native = (readOnly = true, runtimeGuard?: () => void) => {
+    const connection = open({ readOnly, runtimeGuard: () => { selectedRuntimeGuard(); runtimeGuard?.(); },
+      applicationProfiles: supportedSqliteApplicationProfiles(true) });
     return { connection, port: createEnrolledSqlitePublicUsage(connection.db) };
   };
-  return { file, identity, manifestPath, manifest, edit, native };
+  return { file, identity, manifestPath, manifest, edit, open, selectedRuntimeGuard, native };
 }
 function originals(file: string) {
   const db = new DatabaseSync(file, { readOnly: true });
@@ -112,23 +119,36 @@ function originals(file: string) {
 async function select(f: ReturnType<typeof fixture>, active = false) {
   vi.resetModules();
   vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
+  // Matched nonzero import metadata only: never registry/provider calls or payout authority.
+  const registry = `0x${"3".repeat(40)}`;
+  vi.stubEnv("KERYX_REGISTRY_ADDRESS", registry); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS", registry);
   vi.stubEnv("KERYX_STORAGE_MANIFEST", f.manifestPath); vi.stubEnv("KERYX_SQLITE_PATH", f.file);
   vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("CONTENT_MASTER_KEY", "11".repeat(32));
   vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", active ? "true" : "false");
   (await import("./enrolled-sqlite-schema-profile")).supportedSqliteApplicationProfiles(true);
   const api = await import("./enrolled-sqlite-adapter");
-  return { api, db: await import("./index"), figures: await import("../../app/api/usage/route"), history: await import("../../app/api/runs/route") };
+  return { api, db: await import("./index"), figures: await import("../../app/api/usage/route"), history: await import("../../app/api/runs/route"),
+    UsageUnavailable: (await import("../usage/contracts")).UsageUnavailable };
 }
-function observeSql() {
+function observeSql(referenceSql?: string) {
   // Spies delegate every call to the real DatabaseSync methods. No output or
   // authority is mocked; compare constructor/request calls to mutation verbs.
-  const exec = vi.spyOn(DatabaseSync.prototype, "exec"), prepare = vi.spyOn(DatabaseSync.prototype, "prepare");
-  const writes = () => [...exec.mock.calls, ...prepare.mock.calls].map(call => call[0])
+  const originalExec = DatabaseSync.prototype.exec, references = new Set<number>();
+  let calls = 0;
+  const exec = vi.spyOn(DatabaseSync.prototype, "exec").mockImplementation(function (this: DatabaseSync, query: string) {
+    const index = calls++;
+    // Only the exact canonical acceptance reference on a real :memory: DB is
+    // outside selected-file observation. Identical selected-file DDL still fails.
+    if (referenceSql !== undefined && query === referenceSql && this.location("main") === null)
+      references.add(index);
+    return Reflect.apply(originalExec, this, [query]);
+  }), prepare = vi.spyOn(DatabaseSync.prototype, "prepare");
+  const writes = () => [...exec.mock.calls.filter((_, index) => !references.has(index)), ...prepare.mock.calls].map(call => call[0])
     .filter(sql => /(?:^|;)\s*(?:CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|REPLACE|VACUUM|REINDEX|ATTACH|DETACH)\b/i.test(sql));
-  return { exec, prepare, writes };
+  return { exec, prepare, writes, references: () => references.size };
 }
-function afterPublicSelection(effect: () => void) {
-  let scheduled = false;
+function afterPublicSelection(effect: () => void, selection = 1) {
+  let scheduled = false, batches = 0;
   const original = DatabaseSync.prototype.prepare;
   vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (this: DatabaseSync, query: string) {
     const statement = Reflect.apply(original, this, [query]);
@@ -136,7 +156,7 @@ function afterPublicSelection(effect: () => void) {
     return new Proxy(statement, { get(target, key) {
       if (key === "all") return (...args: unknown[]) => {
         const rows = Reflect.apply(target.all, target, args);
-        if (rows.length && !scheduled) { scheduled = true; queueMicrotask(effect); }
+        if (rows.length && ++batches === selection && !scheduled) { scheduled = true; queueMicrotask(effect); }
         return rows;
       };
       const value = Reflect.get(target, key, target); return typeof value === "function" ? value.bind(target) : value;
@@ -152,9 +172,49 @@ it("rejects raw/spoof/extra configuration without invoking spoof callbacks and k
   expect(() => Reflect.apply(createEnrolledSqlitePublicUsage, undefined, [connection.db, { privacy: false }])).toThrow(UsageUnavailable);
   expect(() => createSqlitePublicUsage(raw)).toThrow(); expect(() => createSqlitePublicUsage(connection.db)).toThrow();
 });
+it.each(["both", "runtimeGuard", "applicationProfiles"] as const)("rejects a genuine verified opening missing %s before constructor SQL", missing => {
+  const f = fixture(), connection = f.open({ readOnly: true,
+    ...(missing === "both" || missing === "runtimeGuard" ? {} : { runtimeGuard: f.selectedRuntimeGuard }),
+    ...(missing === "both" || missing === "applicationProfiles" ? {} : { applicationProfiles: supportedSqliteApplicationProfiles(true) }) });
+  expect(assertVerifiedSqliteConnection(connection.db)).toEqual(f.identity);
+  const sql = observeSql();
+  expect(() => createEnrolledSqlitePublicUsage(connection.db)).toThrow(UsageUnavailable);
+  expect(sql.exec).not.toHaveBeenCalled(); expect(sql.prepare).not.toHaveBeenCalled();
+});
+it.each(["unknown", "partial"] as const)("rejects a genuine verified %s profile even when the opener admits its actual shape", shape => {
+  // A new index changes the source profile without introducing an unsupported/unfenced table.
+  const f = fixture(db => db.exec(shape === "unknown" ? "CREATE INDEX unreviewed_usage ON query_runs(created_at)" : "DROP TABLE run_privacy_defaults"));
+  const retained = shape === "unknown" ? { original: originals(f.file), bytes: readFileSync(f.file) } : undefined;
+  let actual = "";
+  f.edit(db => { actual = sqliteApplicationSchemaProfile(db, new Set([STORAGE_IDENTITY_TABLE,
+    "storage_identity_no_update", "storage_identity_no_delete", "storage_identity_no_insert",
+    ...Object.keys(storageFenceStatements(db, f.identity))])); });
+  expect(supportedSqliteApplicationProfiles(true)).not.toContain(actual);
+  const connection = f.open({ readOnly: true, runtimeGuard: f.selectedRuntimeGuard, applicationProfiles: [actual] });
+  expect(assertVerifiedSqliteConnection(connection.db)).toEqual(f.identity);
+  const sql = observeSql();
+  expect(() => createEnrolledSqlitePublicUsage(connection.db)).toThrow(UsageUnavailable);
+  expect(sql.exec).not.toHaveBeenCalled(); expect(sql.prepare).not.toHaveBeenCalled();
+  if (retained) {
+    sql.exec.mockRestore(); sql.prepare.mockRestore();
+    expect(originals(f.file)).toBe(retained.original); expect(readFileSync(f.file)).toEqual(retained.bytes);
+  }
+});
+it("keeps valid exact BEFORE summary and OFF history but pins that captured source profile", async () => {
+  const f = fixture(db => save(db, "before", "outside"), false), { port } = f.native();
+  expect(createEnrolledSqlitePublicUsage.length).toBe(1);
+  expect((await port.summary(window)).columns[0].researchRuns).toBe(1);
+  expect((await port.history(window, "outside", 1)).map(row => row.id)).toEqual(["before"]);
+  f.edit(db => { db.exec("BEGIN IMMEDIATE"); installNativeUserDomainSchema(db); installStorageFences(db, f.identity); db.exec("COMMIT"); });
+  await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
+  expect((await f.native().port.summary(window)).columns[0].researchRuns).toBe(1);
+  await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
+});
 it("restores the actual selected writable/readonly frozen facade and API200 without DDL/DML or original byte changes", async () => {
   const f = fixture(db => { save(db, "outside", "outside"); payment(db, "recorded", "outside"); });
-  const actual = await select(f), bytes = readFileSync(f.file), original = originals(f.file), sql = observeSql();
+  const actual = await select(f), bytes = readFileSync(f.file), original = originals(f.file);
+  const { DELIVERABLE_ACCEPTANCE_SQL } = await import("./deliverable-acceptance-sqlite");
+  const sql = observeSql(DELIVERABLE_ACCEPTANCE_SQL);
   const writer = await actual.db.getDb(); opened.push({ close: () => { if ("close" in writer && typeof writer.close === "function") writer.close(); } });
   const reader = await actual.api.createReadonlyEnrolledSqliteAdapter(); opened.push(reader);
   expect(actual.api.assertEnrolledSqliteAdapter(writer)).toEqual(f.identity);
@@ -171,7 +231,7 @@ it("restores the actual selected writable/readonly frozen facade and API200 with
   expect(history.status).toBe(200); expect((await history.json()).map((row: { id: string }) => row.id)).toEqual(["outside"]);
   expect((await actual.figures.GET(new Request("https://synthetic.example/api/usage?network=invalid"))).status).toBe(400);
   expect((await actual.history.GET(new Request("https://synthetic.example/api/runs?cohort=invalid"))).status).toBe(400);
-  expect(sql.writes()).toEqual([]); sql.exec.mockRestore(); sql.prepare.mockRestore();
+  expect(sql.references()).toBe(1); expect(sql.writes()).toEqual([]); sql.exec.mockRestore(); sql.prepare.mockRestore();
   expect(originals(f.file)).toBe(original); expect(readFileSync(f.file)).toEqual(bytes);
 });
 it("accounts for all four privacy cohorts with exact micros and excludes pending/unproved/nonpositive records and private identifiers", async () => {
@@ -241,11 +301,69 @@ it("counts the full published population beyond100 using genuine readonly privac
     save(db, "hidden", "outside", "private"); payment(db, "private-money", "hidden");
   });
   vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native(), saved = originals(f.file), bytes = readFileSync(f.file);
+  const rawExec = DatabaseSync.prototype.exec, rawPrepare = DatabaseSync.prototype.prepare, sql = observeSql();
+  let transaction = 0;
+  const rechecks: Array<{ transaction: number; ids: number; take: unknown; inTransaction: boolean }> = [];
+  sql.exec.mockImplementation(function (this: DatabaseSync, query: string) {
+    if (query === "BEGIN") transaction++;
+    return Reflect.apply(rawExec, this, [query]);
+  });
+  sql.prepare.mockImplementation(function (this: DatabaseSync, query: string) {
+    const statement = Reflect.apply(rawPrepare, this, [query]);
+    if (!/SELECT q\.data,q\.id,q\.created_at,p\.visibility,p\.revision,p\.erased/.test(query)) return statement;
+    const snapshot = { transaction, inTransaction: this.isTransaction };
+    return new Proxy(statement, { get(target, key) {
+      if (key === "all") return (...args: unknown[]) => {
+        rechecks.push({ ...snapshot, ids: JSON.parse(String(args[0])).length, take: args[1] });
+        return Reflect.apply(target.all, target, args);
+      };
+      const value = Reflect.get(target, key, target); return typeof value === "function" ? value.bind(target) : value;
+    } });
+  });
   const result = await port.publishedHistory!(window, "outside", 3);
   expect(result.windowRuns).toBe(105); expect(result.runs.map(row => row.id)).toEqual(["public-104", "public-103", "public-102"]);
+  expect(rechecks.map(row => [row.ids, row.take, row.inTransaction])).toEqual([[100, 100, true], [5, 5, true]]);
+  expect(new Set(rechecks.map(row => row.transaction)).size).toBe(1);
+  expect(JSON.stringify(result)).not.toContain("hidden");
   expect((await port.summary(window)).columns[0]).toMatchObject({ researchRuns: 106, settledMicros: "3" });
+  expect(sql.writes()).toEqual([]); sql.exec.mockRestore(); sql.prepare.mockRestore();
   expect(originals(f.file)).toBe(saved); expect(readFileSync(f.file)).toEqual(bytes);
-});
+}, 20000);
+it("preserves the generic published mixed-ID tie sample at limit1 with full population and bounded native revalidation", async () => {
+  const rows = [run("a", "outside"), run("Z", "outside"), run("hidden-tie", "outside"), run("script-tie", "scripted")];
+  const f = fixture(db => {
+    for (const row of rows) save(db, row.id, row.usage!.cohort, row.id === "hidden-tie" ? "private" : "public", row.createdAt);
+  });
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { connection, port } = f.native();
+  const saved = originals(f.file), bytes = readFileSync(f.file);
+  const view = projectUsageCorpus({ complete: true, window, runs: rows.map(row => ({ id: row.id, createdAt: row.createdAt,
+    usage: row.usage, provenance: row.provenance, actorId: wallet })), payments: [] }, window);
+  const expected = await publishedUsageHistory(view, nativePrivacy.createEnrolledSqliteRunPrivacy(connection.db), "outside", 1);
+  expect(expected).toEqual({ windowRuns: 2, runs: [rows[1]] });
+  const rawPrepare = DatabaseSync.prototype.prepare, sql = observeSql();
+  const rechecks: Array<{ ids: number; take: unknown; inTransaction: boolean }> = [];
+  sql.prepare.mockImplementation(function (this: DatabaseSync, query: string) {
+    const statement = Reflect.apply(rawPrepare, this, [query]);
+    if (!/SELECT q\.data,q\.id,q\.created_at,p\.visibility,p\.revision,p\.erased/.test(query)) return statement;
+    const inTransaction = this.isTransaction;
+    return new Proxy(statement, { get(target, key) {
+      if (key === "all") return (...args: unknown[]) => {
+        rechecks.push({ ids: JSON.parse(String(args[0])).length, take: args[1], inTransaction });
+        return Reflect.apply(target.all, target, args);
+      };
+      const value = Reflect.get(target, key, target); return typeof value === "function" ? value.bind(target) : value;
+    } });
+  });
+  const result = await port.publishedHistory!(window, "outside", 1);
+  expect(result).toEqual(expected);
+  expect(rechecks).toEqual([{ ids: 2, take: 2, inTransaction: true }]);
+  expect(sql.prepare.mock.calls.map(call => call[0]).filter(query => /SELECT q\.data\b/.test(query))
+    .every(query => /p\.visibility='public'/.test(query))).toBe(true);
+  expect(JSON.stringify(result)).not.toContain("hidden-tie"); expect(JSON.stringify(result)).not.toContain("script-tie");
+  expect((await port.history(window, "outside", 1)).map(row => row.id)).toEqual(["a"]);
+  expect(sql.writes()).toEqual([]); sql.exec.mockRestore(); sql.prepare.mockRestore();
+  expect(originals(f.file)).toBe(saved); expect(readFileSync(f.file)).toEqual(bytes);
+}, 20000);
 it.each(["history", "publishedHistory"] as const)("%s rechecks a real WAL revocation after awaited public selection", async method => {
   const f = fixture(db => save(db, "candidate", "outside"), true, true);
   vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native();
@@ -264,13 +382,72 @@ it.each(["createdAt", "cohort"] as const)("refuses a real %s change after awaite
   await expect(port.publishedHistory!(window, "outside", 1)).rejects.toThrow(UsageUnavailable); expect(changed()).toBe(true);
   await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
 });
-it("admits an empty full19 public window but refuses active BEFORE history even when empty", async () => {
+it.each(["history", "publishedHistory"] as const)("%s rechecks after-await erasure without refilling the selected page", async method => {
+  const f = fixture(db => { save(db, "z-selected", "outside"); save(db, "a-spare", "outside"); payment(db, "retained", "z-selected"); }, true, true);
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native();
+  const erased = afterPublicSelection(() => f.edit(db => db.prepare("UPDATE run_privacy SET erased=1,revision=revision+1 WHERE run_id='z-selected'").run()));
+  const result = await port[method]!(window, "outside", 1); expect(erased()).toBe(true);
+  expect(result).toEqual(method === "history" ? [] : { windowRuns: 1, runs: [run("a-spare", "outside")] });
+  expect((await port.summary(window)).columns[0]).toMatchObject({ researchRuns: 2, settledMicros: "3" });
+}, 20000);
+it.each(["private", "unlisted", "erased"] as const)("last awaited population batch excludes an earlier %s candidate before counting and sampling", async state => {
+  const f = fixture(db => {
+    for (let i = 0; i < 105; i++) save(db, `public-${String(i).padStart(3, "0")}`, "outside");
+    payment(db, "retained", "public-104");
+  }, true, true);
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native();
+  const changed = afterPublicSelection(() => f.edit(db => {
+    if (state === "erased") db.prepare("UPDATE run_privacy SET erased=1,revision=revision+1 WHERE run_id='public-104'").run();
+    else db.prepare("UPDATE run_privacy SET visibility=?,revision=revision+1 WHERE run_id='public-104'").run(state);
+  }), 2);
+  const result = await port.publishedHistory!(window, "outside", 3); expect(changed()).toBe(true);
+  expect(result).toEqual({ windowRuns: 104, runs: [run("public-103", "outside"), run("public-102", "outside"), run("public-101", "outside")] });
+  expect((await port.summary(window)).columns[0]).toMatchObject({ researchRuns: 105, settledMicros: "3" });
+}, 20000);
+it.each(["identity", "createdAt", "metadataTime", "cohort"] as const)("last awaited population batch permanently refuses earlier %s drift", async field => {
+  const f = fixture(db => {
+    for (let i = 0; i < 105; i++) save(db, `public-${String(i).padStart(3, "0")}`, "outside");
+  }, true, true);
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native();
+  const changed = afterPublicSelection(() => f.edit(db => {
+    if (field === "identity") db.prepare("UPDATE query_runs SET data=json_set(data,'$.id','public-103') WHERE id='public-104'").run();
+    else if (field === "createdAt") db.prepare("UPDATE query_runs SET data=json_set(data,'$.createdAt',?) WHERE id='public-104'").run("2026-10-09T00:00:00.000Z");
+    else if (field === "metadataTime") db.prepare("UPDATE query_runs SET created_at=? WHERE id='public-104'").run("2026-10-09T00:00:00.000Z");
+    else db.prepare("UPDATE query_runs SET data=json_set(data,'$.usage.cohort','unknown','$.usage.payment','unknown') WHERE id='public-104'").run();
+  }), 2);
+  await expect(port.publishedHistory!(window, "outside", 3)).rejects.toThrow(UsageUnavailable); expect(changed()).toBe(true);
+  // Restoring exact metadata cannot revive the old port after integrity refusal.
+  f.edit(db => db.prepare("UPDATE query_runs SET created_at=?,data=? WHERE id='public-104'").run(date, JSON.stringify(run("public-104", "outside"))));
+  await expect(port.publishedHistory!(window, "outside", 3)).rejects.toThrow(UsageUnavailable);
+  await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
+}, 20000);
+it.each(["history", "publishedHistory"] as const)("empty %s still permanently refuses an after-await full schema guard drift", async method => {
+  const f = fixture(() => {}, true, true); vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native();
+  const rawPrepare = DatabaseSync.prototype.prepare; let scheduled = false;
+  vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (this: DatabaseSync, query: string) {
+    const statement = Reflect.apply(rawPrepare, this, [query]);
+    if (!/SELECT q\.data FROM query_runs q JOIN run_privacy p/.test(query)) return statement;
+    return new Proxy(statement, { get(target, key) {
+      if (key === "all") return (...args: unknown[]) => {
+        const rows = Reflect.apply(target.all, target, args);
+        if (!scheduled) { scheduled = true; queueMicrotask(() => f.edit(db => db.exec("CREATE INDEX unreviewed_usage ON query_runs(created_at)"))); }
+        return rows;
+      };
+      const value = Reflect.get(target, key, target); return typeof value === "function" ? value.bind(target) : value;
+    } });
+  });
+  await expect(port[method]!(window, "outside", 1)).rejects.toThrow(UsageUnavailable); expect(scheduled).toBe(true);
+  f.edit(db => db.exec("DROP INDEX unreviewed_usage"));
+  await expect(port[method]!(window, "outside", 1)).rejects.toThrow(UsageUnavailable);
+  await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
+}, 20000);
+it.each(["history", "publishedHistory"] as const)("admits an empty full19 public window but independently refuses active BEFORE %s even when empty", async method => {
   const complete = fixture(); vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const fullPort = complete.native().port;
   expect(await fullPort.publishedHistory!(window, "outside", 1)).toEqual({ windowRuns: 0, runs: [] });
   expect(await fullPort.history(window, "outside", 1)).toEqual([]);
   const absent = fixture(() => {}, false); vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const absentPort = absent.native().port;
   expect((await absentPort.summary(window)).complete).toBe(true);
-  await expect(absentPort.publishedHistory!(window, "outside", 1)).rejects.toThrow(UsageUnavailable);
+  await expect(absentPort[method]!(window, "outside", 1)).rejects.toThrow(UsageUnavailable);
   await expect(absentPort.summary(window)).rejects.toThrow(UsageUnavailable);
 });
 it("an OFF native history port refuses later activation instead of selecting stale broad bodies", async () => {
@@ -328,6 +505,101 @@ it("preserves actual SQLITE_LOCKED numeric6 from a genuine disposable SQLite gua
   block = true; await expect(port.summary(window)).rejects.toThrow(UsageUnavailable); expect(nativeCode).toBe(6);
   block = false; iterator.return?.(); expect((await port.summary(window)).columns[3].researchRuns).toBe(1);
 });
+it.each(["history", "publishedHistory"] as const)("active %s refuses branded after-await SQLITE_BUSY and recovers the same shared connection", async method => {
+  const f = fixture(db => save(db, "public", "outside")); vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");
+  const { port, connection } = f.native(), lock = new DatabaseSync(f.file); opened.push(lock);
+  const close = vi.spyOn(DatabaseSync.prototype, "close"), classified = vi.spyOn(nativePrivacy, "isEnrolledSqlitePrivacyContention");
+  const blocked = afterPublicSelection(() => lock.exec("BEGIN EXCLUSIVE"));
+  try {
+    await expect(port[method]!(window, "outside", 1)).rejects.toThrow(UsageUnavailable);
+    expect(blocked()).toBe(true); expect(classified.mock.results.some(result => result.type === "return" && result.value === true)).toBe(true);
+    expect(close).not.toHaveBeenCalled();
+  } finally { if (blocked()) lock.exec("ROLLBACK"); }
+  const result = await port[method]!(window, "outside", 1);
+  expect(result).toEqual(method === "history" ? [run("public", "outside")] : { windowRuns: 1, runs: [run("public", "outside")] });
+  expect((await port.summary(window)).columns[0].researchRuns).toBe(1); expect(connection.db.isTransaction).toBe(false);
+  expect(close).not.toHaveBeenCalled();
+});
+it.each(["history", "publishedHistory"] as const)("active %s refuses branded after-await SQLITE_LOCKED numeric6 and recovers", async method => {
+  const f = fixture(db => save(db, "public", "outside")), locked = new DatabaseSync(":memory:"); opened.push(locked);
+  locked.exec("CREATE TABLE locked(value TEXT); INSERT INTO locked VALUES('synthetic'),('other')");
+  const iterator = locked.prepare("SELECT * FROM locked").iterate(); iterator.next(); let block = false, nativeCode: unknown;
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");
+  const { port, connection } = f.native(true, () => { if (block) {
+    try { locked.exec("DROP TABLE locked"); } catch (error) { nativeCode = error instanceof Error && "errcode" in error ? error.errcode : undefined; throw error; }
+  } });
+  const close = vi.spyOn(DatabaseSync.prototype, "close"), classified = vi.spyOn(nativePrivacy, "isEnrolledSqlitePrivacyContention");
+  const blocked = afterPublicSelection(() => { block = true; });
+  try {
+    await expect(port[method]!(window, "outside", 1)).rejects.toThrow(UsageUnavailable);
+    expect(blocked()).toBe(true); expect(nativeCode).toBe(6);
+    expect(classified.mock.results.some(result => result.type === "return" && result.value === true)).toBe(true);
+    expect(close).not.toHaveBeenCalled();
+  } finally { block = false; iterator.return?.(); }
+  const result = await port[method]!(window, "outside", 1);
+  expect(result).toEqual(method === "history" ? [run("public", "outside")] : { windowRuns: 1, runs: [run("public", "outside")] });
+  expect((await port.summary(window)).columns[0].researchRuns).toBe(1); expect(connection.db.isTransaction).toBe(false);
+  expect(close).not.toHaveBeenCalled();
+});
+it("does not brand arbitrary privacy errors, causes, properties or strings as recoverable contention", () => {
+  const numeric = Object.assign(new Error("Synthetic numeric property"), { code: "ERR_SQLITE_ERROR", errcode: 5 });
+  const fake = Object.assign(new PrivacyError("privacy_unavailable"), { cause: numeric, errcode: 6, nativePrivacyContention: true });
+  for (const error of [new PrivacyError("privacy_unavailable"), fake, numeric, { cause: numeric }, "SQLITE_BUSY", null])
+    expect(nativePrivacy.isEnrolledSqlitePrivacyContention(error)).toBe(false);
+  expect(Reflect.apply(nativePrivacy.isEnrolledSqlitePrivacyContention, undefined, [fake, true])).toBe(false);
+});
+it.each(["history", "publishedHistory"] as const)("active %s permanently refuses an unbranded fake privacy guard failure after await", async method => {
+  const f = fixture(db => save(db, "public", "outside")); let block = false, calls = 0;
+  const fake = Object.assign(new PrivacyError("privacy_unavailable"), { errcode: 5,
+    cause: Object.assign(new Error("Synthetic cause"), { code: "ERR_SQLITE_ERROR", errcode: 6 }), nativePrivacyContention: true });
+  expect(nativePrivacy.isEnrolledSqlitePrivacyContention(fake)).toBe(false);
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native(true, () => { calls++; if (block) throw fake; });
+  const close = vi.spyOn(DatabaseSync.prototype, "close"), blocked = afterPublicSelection(() => { block = true; });
+  await expect(port[method]!(window, "outside", 1)).rejects.toThrow(UsageUnavailable);
+  expect(blocked()).toBe(true); expect(close).toHaveBeenCalled(); block = false; const stopped = calls;
+  await expect(port[method]!(window, "outside", 1)).rejects.toThrow(UsageUnavailable);
+  await expect(port.summary(window)).rejects.toThrow(UsageUnavailable); expect(calls).toBe(stopped);
+});
+it.each(["history", "publishedHistory"] as const)("active %s observes a pending native rejection when synchronous snapshot and rollback guards fail before await", async method => {
+  const f = fixture(db => save(db, "public", "outside")), saved = originals(f.file), locked = new DatabaseSync(":memory:"); opened.push(locked);
+  locked.exec("CREATE TABLE locked(value TEXT); INSERT INTO locked VALUES('synthetic'),('other')");
+  const iterator = locked.prepare("SELECT * FROM locked").iterate(); iterator.next(); let block = false, nativeCode: unknown;
+  let catchesBeforeSelection = 0, observedBeforeGuardFailure = false;
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");
+  const { port } = f.native(true, () => { if (block) {
+    observedBeforeGuardFailure ||= catches.mock.calls.length > catchesBeforeSelection;
+    throw Error("Synthetic persistent post-selection cleanup guard failure");
+  } });
+  const original = DatabaseSync.prototype.prepare;
+  vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (this: DatabaseSync, query: string) {
+    const statement = Reflect.apply(original, this, [query]);
+    if (!/SELECT q\.data FROM query_runs q JOIN run_privacy p/.test(query)) return statement;
+    return new Proxy(statement, { get(target, key) {
+      if (key === "all") return (...args: unknown[]) => {
+        Reflect.apply(target.all, target, args);
+        try { locked.exec("DROP TABLE locked"); } catch (error) {
+          nativeCode = error instanceof Error && "errcode" in error ? error.errcode : undefined;
+          catchesBeforeSelection = catches.mock.calls.length; block = true; throw error;
+        }
+        throw Error("Expected genuine disposable SQLITE_LOCKED");
+      };
+      const value = Reflect.get(target, key, target); return typeof value === "function" ? value.bind(target) : value;
+    } });
+  });
+  const unhandled: unknown[] = [], recordUnhandled = (error: unknown) => { unhandled.push(error); };
+  process.on("unhandledRejection", recordUnhandled);
+  const close = vi.spyOn(DatabaseSync.prototype, "close"), catches = vi.spyOn(Promise.prototype, "catch");
+  try {
+    const pending = port[method]!(window, "outside", 1);
+    // Count observers after the rejected public selection, so publishedHistory's
+    // earlier empty-window admission cannot satisfy this assertion.
+    await expect(pending).rejects.toThrow(UsageUnavailable); expect(nativeCode).toBe(6); expect(close).toHaveBeenCalled();
+    expect(observedBeforeGuardFailure).toBe(true); catches.mockRestore();
+    await new Promise<void>(resolve => setImmediate(resolve)); expect(unhandled).toEqual([]);
+    block = false; await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
+  } finally { catches.mockRestore(); process.off("unhandledRejection", recordUnhandled); iterator.return?.(); }
+  expect(originals(f.file)).toBe(saved);
+});
 it("permanently retires an internal guard failure even after its source is restored", async () => {
   const f = fixture(), guard = { calls: 0, failAt: Infinity };
   const { port } = f.native(true, () => { if (++guard.calls === guard.failAt) throw Error("Synthetic internal guard failure"); });
@@ -362,19 +634,32 @@ it("permanently retires full schema drift after restoration and preserves origin
   f.edit(db => db.exec("CREATE TABLE unreviewed_usage(value TEXT)")); await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
   f.edit(db => db.exec("DROP TABLE unreviewed_usage")); await expect(port.summary(window)).rejects.toThrow(UsageUnavailable); expect(originals(f.file)).toBe(original);
 });
-it("permanently retires file replacement even if the exact original file is restored", async () => {
-  const f = fixture(), { port } = f.native();
-  const saved = `${f.file}.original`, replacement = `${f.file}.replacement`; copyFileSync(f.file, replacement);
-  renameSync(f.file, saved); renameSync(replacement, f.file);
-  await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
-  renameSync(f.file, replacement); renameSync(saved, f.file); await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
+it("prevents held-file replacement on Windows or permanently retires actual replacement after exact restoration", async () => {
+  const f = fixture(db => { save(db, "original"); payment(db, "original-money", "original"); }), { port, connection } = f.native();
+  const original = originals(f.file), bytes = readFileSync(f.file), saved = `${f.file}.original`;
+  const fileIdentity = () => { const stat = lstatSync(f.file, { bigint: true }); return `${stat.dev}:${stat.ino}:${stat.birthtimeNs}`; };
+  const identity = fileIdentity();
+  if (process.platform === "win32") {
+    // One real attempt while both genuine handles remain held. Prevention is not revocation.
+    expect(() => renameSync(f.file, saved)).toThrow(expect.objectContaining({ code: "EBUSY" }));
+    expect(existsSync(saved)).toBe(false); expect(fileIdentity()).toBe(identity);
+    expect(assertVerifiedSqliteConnection(connection.db)).toEqual(f.identity);
+    expect((await port.summary(window)).columns[3]).toMatchObject({ researchRuns: 1, settledMicros: "3" });
+  } else {
+    const replacement = `${f.file}.replacement`; copyFileSync(f.file, replacement);
+    renameSync(f.file, saved); renameSync(replacement, f.file);
+    await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
+    renameSync(f.file, replacement); renameSync(saved, f.file); await expect(port.summary(window)).rejects.toThrow(UsageUnavailable);
+    expect(fileIdentity()).toBe(identity);
+  }
+  expect(originals(f.file)).toBe(original); expect(readFileSync(f.file)).toEqual(bytes);
 });
 it("selected API503 gives no fabricated figures and manifest restoration cannot revive the old native port", async () => {
   const f = fixture(db => save(db, "one")), actual = await select(f), selected = await actual.db.getDb();
   opened.push({ close: () => { if ("close" in selected && typeof selected.close === "function") selected.close(); } });
   writeFileSync(f.manifestPath, "{}"); const response = await actual.figures.GET(new Request("https://synthetic.example/api/usage"));
   expect(response.status).toBe(503); expect(await response.json()).toMatchObject({ complete: false, figures: null, error: "usage_unavailable" });
-  writeFileSync(f.manifestPath, f.manifest); await expect(selected.publicUsage!.summary(window)).rejects.toThrow(UsageUnavailable);
+  writeFileSync(f.manifestPath, f.manifest); await expect(selected.publicUsage!.summary(window)).rejects.toThrow(actual.UsageUnavailable);
   expect((await actual.history.GET(new Request("https://synthetic.example/api/runs?cohort=outside"))).status).toBe(503);
 });
 it("a genuine malformed metadata corpus yields API503 complete:false/figures:null without partial history", async () => {
