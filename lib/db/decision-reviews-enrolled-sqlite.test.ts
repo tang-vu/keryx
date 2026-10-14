@@ -249,7 +249,7 @@ describe("genuine selected-native decision reviews", () => {
           expect(() => f.api.assertEnrolledSqliteAdapter(readonly, "write")).toThrow();
           expect(lstatSync(f.file, { bigint: true })).toMatchObject({ dev: fileSnapshot!.stat.dev,
             ino: fileSnapshot!.stat.ino, birthtimeNs: fileSnapshot!.stat.birthtimeNs });
-          expect(readFileSync(f.file)).toEqual(fileSnapshot!.bytes); expect(schemaRows(f.file)).toBe(fileSnapshot!.schema);
+          expect(readFileSync(f.file).equals(fileSnapshot!.bytes)).toBe(true); expect(schemaRows(f.file)).toBe(fileSnapshot!.schema);
           expect(originals(f.file)).toBe(fileSnapshot!.financial);
           expect(journalCount(f.file)).toBe(1); expect(journalCount(f.file, "decision_review_verdicts")).toBe(0);
           return;
@@ -281,7 +281,7 @@ describe("genuine selected-native decision reviews", () => {
     if (fileSnapshot) {
       expect(lstatSync(f.file, { bigint: true })).toMatchObject({ dev: fileSnapshot.stat.dev,
         ino: fileSnapshot.stat.ino, birthtimeNs: fileSnapshot.stat.birthtimeNs });
-      expect(readFileSync(f.file)).toEqual(fileSnapshot.bytes); expect(schemaRows(f.file)).toBe(fileSnapshot.schema);
+      expect(readFileSync(f.file).equals(fileSnapshot.bytes)).toBe(true); expect(schemaRows(f.file)).toBe(fileSnapshot.schema);
       expect(originals(f.file)).toBe(fileSnapshot.financial);
     }
   });
