@@ -1,167 +1,134 @@
 # Same-store enrolled profile identities — 2026-10-14
 
-The candidate supplies `createEnrolledSqliteProfileIdentities(db)` for the selected
-native database. The enrolled facade now calls that actual factory on its own
-verified connection and attaches a truthy optional `profileIdentities` port before
-freezing. The property is nonenumerable, nonwritable and nonconfigurable; the
-factory freezes the port. Exact BEFORE leaves the property absent, while exact
-full19 admits it. Partial, unknown or drifted stores still refuse. This source
-wiring repairs the selected-store availability gap seen by VerifiedIdentityPanel
-after a saved profile; changed-source execution and deployment remain unverified.
-It preserves existing contracts, Core, ordinary SQL, other ports and all financial
-wrappers. It installs no tables, opens no second database and makes no provider calls.
+The selected enrolled facade now exposes the native `profileIdentities` port on
+its own verified connection. Exact BEFORE leaves the optional port absent; the
+actual full19 family admits it. The port is frozen and the facade property is
+nonenumerable, nonwritable and nonconfigurable. Partial, unknown or drifted stores
+refuse without repair. This closes the selected-store availability gap that the
+VerifiedIdentityPanel could encounter after saving a profile.
 
-## Source and admission
+The candidate is composed with main `6ce450e851420e955caf67a2b2a4469f8c9389b6`.
+Merged Core, private-profile and bibliography implementations are preserved whole.
+The private-profile binding is present from merged PR480; no diagnostic copy or
+fabricated binding is used. The only facade additions are the identity factory
+import, construction on that connection and the optional hidden property. The
+finite graph permit adds the actual identity factory's schema-profile edge;
+existing funding, enrollment, executor and incoming private-profile rules remain.
+No tables, second database, provider call or financial authority are introduced.
 
-The original identities source is checkpoint `e965ae01310ba9164e9adb8ad822a41bcdc44f6d`,
-based on `5136a4a10a34230e1eceb6bac2f7a60b8252e9e5`. Its R91 review and R94
-contention correction review remain applicable to unchanged behavior. The R94
-factory pin is `ef33edec3fec9360baec9e5e9a1de2c2b12f37524b42fbc36487370dc3aa373e`.
-The external guard successor is pinned at
-`c95d7f085f9ecf70fd49ade15e68fd24621971688b5002ba797835a83af2b57c`.
-This facade worker preserves its bytes. That successor, platform changes and the
-new facade/graph delta require the parent's different focused review and actual
-changed controls before publication; the older review does not accept changed code.
-
-Core #477 is merged at `b54710b0585e5398070e8da87092a72ce856ceed`. Its four
-fixed mainnet profiles represent archive absent/present × the complete user-domain
-bundle absent/present. Tests use that actual family without replacing its generator.
-`profile-identities-storage-domain.ts` remains the unchanged reviewed declaration.
-The private-profile implementation belongs to the separate #260 outcome; a local
-diagnostic copy is not identities implementation or dependency merge evidence.
-The facade controls save profiles through the actual declared native #260 helper
-on the same disposable file, then obtain identities solely from the genuine
-selected facade. They do not fabricate a `privateProfiles` binding. The current
-source still omits that separate binding; its reviewed composition belongs to the
-parent. Core uses the existing `SqliteAdapter.assembleConnectionCore` API.
-
-The existing finite graph permit adds only the actual executable edge
-`profile-identities-enrolled-sqlite.ts` → `enrolled-sqlite-schema-profile.ts`.
-All negative funding, enrollment and executor rules remain. The incoming
-`private-profiles-enrolled-sqlite.ts` diagnostic helper also imports that closed
-profile, but this worker grants it no permit. The parent must resolve that edge
-through its own reviewed dependency composition; graph success is not claimed.
+## Admission and identity behavior
 
 Construction checks genuine native provenance, positive sealed foreign-key policy,
-exact profile/session/identity schemas and fences, and the supported whole profile.
-An absent domain returns no port; partial or changed domains refuse without repair.
-A present port also requires Core #477’s immutable full-bundle admission metadata.
-Repeated operations use the trusted connection runtime guard and that metadata.
-The guard continues to check the exact admitted whole schema, all writer fences,
-storage identity, held file and manifest before every SQL operation. This avoids
-repeatedly scanning the same full schema through an already guarded proxy. A
-complete schema on a connection without trusted full-profile admission refuses.
-
-## Identity and failure behavior
+exact profile/session/identity schemas and fences, and supported whole-profile
+admission. An absent domain returns no port. A complete domain without trusted
+Core full-bundle metadata refuses. Each SQL operation retains the exact whole
+schema, all writer fences, storage identity, held-file and manifest guards.
 
 LIST is an owner-specific read transaction with bounded validated rows. Asserted
 profile URLs and pending links never become verified identities. Writers refuse
-readonly capability before parsing or SQL, then use `BEGIN IMMEDIATE` and SQLite
-time. They recheck the saved owner profile, live durable session, exact
-wallet/provider/session/state/deadline and current nonce inside the transaction.
-Consume is single use. Replacement preserves old verification until completion.
-Unique provider IDs cannot be owned by two profiles. Unlink/profile deletion
-invalidate in-flight callbacks through the existing cascades.
+readonly capability before parsing or SQL, then use BEGIN IMMEDIATE and SQLite
+time. They recheck the saved owner profile, live durable session, exact wallet,
+provider, session, state, deadline and nonce inside the transaction. Consume is
+single use; replacement preserves previous verification until completion. Native
+UNIQUE authority prevents two profiles owning the same provider ID. Unlink and
+profile deletion invalidate in-flight callbacks through existing cascades.
 
-Only native `ERR_SQLITE_ERROR` with numeric code 5 or 6 is recoverable contention,
-and only after proving intact guards and no owned transaction. An acquired
-transaction requires a successful guarded rollback. The external-ID conflict
-requires native UNIQUE code 2067 and the exact constraint. Generic errors, guard
-drift and failed rollback permanently revoke the port and close its connection.
-No retry, authority fallback or busy-timeout change is introduced. Readonly writer
-refusal preserves reads. Repair never revives a revoked port.
+Only an actual native ERR_SQLITE_ERROR with numeric code 5 or 6 can be recoverable
+contention. Leading full-guard contention refuses that request without revoking
+the connection; every later operation still requires the full guard. An acquired
+transaction requires a successful guarded rollback. External-ID conflict requires
+native UNIQUE code 2067 and the exact constraint. Generic errors, guard drift,
+failed rollback and uncertain cleanup permanently revoke and close. Readonly
+writer refusal preserves healthy reads. Repair cannot revive a revoked port.
+The fixed 5000 ms busy policy is unchanged; no retry or authority fallback is added.
 
-## Verification and remaining gates
+## Actual validation
 
-The first genuine native fixture run retained **13 actual passing admission
-cases** at `output/resume-distribution63-audit-20261012/first-core-native-checks-20261014/identity`.
-The corrected dependency run separately reports **59 total, 11 passed, 35 failed
-and 13 unselected**, natural exit 1, no signal and complete output, at
-`output/resume-distribution63-audit-20261012/native-first-dependency-recovery-20261014/identityfailed`.
-Its outer timeout flag is retained; it is failed evidence. Those separate 13+11
-observations are historical input-specific results, not full19 facade acceptance.
-The first-fixture/full19 context is retained at
-`output/resume-distribution63-audit-20261012/full19-native-first-fixture-composition-20261014`.
-A representative lifecycle refresh confirmed a 20-second
-test timeout, with 54.93 seconds of execution. The scoped guard correction passed
-that same case in 14.25 seconds under the unchanged deadline; this is one case,
-not acceptance of the remaining changed cases. The later external actor's
-changed49 attempt has no retained terminal evidence in the accepted handback and
-cannot establish a pass. Its guard successor remains subject to parent review.
-Windows file-replacement coverage asserts native `EBUSY` prevention
-and continued guarded reads; Linux retains actual replacement and permanent
-revocation assertions, matching the existing enrolled-adapter platform contract.
+The current composed candidate passed **75 of 75 native cases**, with no failures
+or skips, including all **13 genuine selected-facade controls**. Its natural child
+exit was 0 with no signal, complete stdout/stderr EOF, no overflow and no outer
+timeout; elapsed time was 529.507 seconds. The selected graph control passed once
+in 6.921 seconds with the same natural completion. Focused TypeScript passed in
+20.693 seconds and is reused: the subsequent six main web changes are outside its
+consumed type roots. Original assertions and deadlines remain intact.
 
-The 13 newly authored disposable selected-facade controls are **UNRUN**. They
-cover both archive variants for optional BEFORE and the full19 hidden frozen port,
-authenticated saved-owner LIST, begin/consume/complete and owner isolation,
-healthy readonly pre-SQL mutation refusal with GET survival, partial/unknown
-admission refusal, manifest/schema/closed-provenance revocation, platform-specific
-held-file replacement, and original profile/domain/financial data retention.
-They use actual fixed schema installers, native factories and Core session reads;
-route sessions and all payment/provider values remain synthetic fixture input.
-No provenance mock, injected runtime clock, timeout increase, build, study or test
-execution accompanies this source-only worker. Existing assertions and deadlines
-remain intact. Raw before/after, minimal patch, whole inverse and pins are in
-`output/resume-root-release63-20261012/refill-successors-20261013-107/worker-completeNativeIdentityFacadeAndGraph`.
+The facade cases cover both archive variants for optional BEFORE and hidden
+full19 admission, authenticated saved-owner LIST, begin/consume/complete and owner
+isolation, healthy readonly refusal before mutation with GET survival, partial and
+unknown admission, manifest/schema/closed-provenance revocation, held-file
+replacement, and retention of original profile, domain and financial data. The
+EXCLUSIVE controls use a real separate native actor on the same disposable file,
+observe numeric-5 refusal without logical writes or close, and prove healthy reads
+after unlock. Windows asserts native EBUSY replacement prevention and continued
+reads; Linux retains actual replacement and permanent revocation coverage.
+All profiles, sessions, provider values and payment records are synthetic fixtures.
+These results establish storage acceptance, not live OAuth or settled payments.
 
-Publication requires the actual reviewed #260 dependency and selected binding,
-parent review of this identity binding, actual selected-facade LIST evidence,
-focused changed controls/TypeScript/graph, final-input reproduction of the
-existing offline 48-trial study with zero outbound and exact source/lock binding,
-and actual required aggregate/domain CI. No study has been run before final
-composition. The parent owns current-main PR and required CI; the sole coordinator
-owns serialized merges and the combined deployment. This partial repair does not
-hold or delay the already-ready release65 batch.
+Actual reports, captures and 16 stable source pins are retained under
+`output/resume-root-release63-20261012/native-identities-root-completion-20261014/current-main-full-domain`.
+The outer runner incorrectly expected 69 collected tests and exited 1 after both
+successful children. Its original result is preserved. The separate
+`metadata-corrected-acceptance.json` derives acceptance from the retained actual
+75-case report and child events; no check was rerun to correct that bookkeeping.
 
-Web/API and desktop’s hosted panel consume the selected port. CLI and remote/stdio
-MCP reads retain explicit `profile:read`; OAuth consent and mutations remain
-interactive SIWE. Extensions, bots and A2A gain no identity authority. No provider
-activation, production migration, keys, spending, custody, schedules, version or
-deployment change is part of this worker outcome. Issue #265 remains open for
-real provider/SIWE/key acceptance, public-profile composition and deployed
-owner-visible acceptance. OAuth/social verification, vendor human gates and
-original #265 remain OPEN. Source controls do not satisfy those original gates.
+Independent reviews of the runtime contention change, exact facade/graph wiring,
+measured fixture assertions and current-main composition are retained under
+`output/resume-release-library-review-20261012`. Their accepted source behavior
+and source pins are unchanged. The final canonical study passed once in 11.995 seconds: 48 actual synthetic
+trials, zero outbound attempts and no unresolved input. All non-source-map fields
+are deeply equal to the incoming artifact. The map moves from 429 to 431 entries
+with only the identity factory/domain added and the facade hash changed; the
+canonical lock remains 0b37a58ac918b81931559041f55976f5d67c7e5cf44c1bec0c836bbd6db8e4ad.
+The generated pair receives a narrow output/map review. Actual
+required aggregate and domain CI remain merge gates; the existing coordinator
+serializes the merge and owns the batched deployment.
 
-## Narrow pre-transaction contention correction — R111
+## Retained failed observations
 
-The separate c95 runtime review found one inherited P2: EXCLUSIVE contention in
-the leading full guard made `check()` close the borrowed connection permanently.
-Its immutable failure assessment remains at
-`output/resume-release-library-review-20261012/native-profile-identities-hotguard-independent-source-review-20261014.json`
-(SHA-256 `09d9190d6af6e618c9b4014be535543bc8a14375da4c5431dc0218543dc904cf`).
-Historical failures and R107 facade/graph source acceptance remain unchanged.
+Historical results are preserved rather than relabeled as current acceptance:
 
-The only runtime change is that `check()` now uses the existing private
-`nativeContention` classifier: an actual Error with `code === "ERR_SQLITE_ERROR"`
-and numeric `errcode` 5 or 6 refuses this request as `identity_unavailable` without
-closing or revoking the connection. Each subsequent request still needs the full
-guard. Every other failure permanently revokes. Constructor/metadata admission,
-business SQL, fixed 5000 ms busy policy, readonly pre-SQL refusal and GET survival
-are unchanged. Rollback, failed-BEGIN cleanup and uncertain-COMMIT handling retain
-their strict latch, including permanent revocation if cleanup cannot pass its full
-guard while a lock persists.
+- The first genuine native fixture run passed 13 admission cases. The later
+  dependency run recorded 11 passed, 35 failed and 13 unselected, natural exit 1
+  and full output; its outer timeout flag remains. Thirty-four failures exposed
+  STACK_TRACE_ERROR without an established common cause, and one exposed the
+  earlier Windows replacement fixture. They are not a full19 pass.
+- The original two EXCLUSIVE fixtures timed out under their unchanged 20-second
+  deadlines. A measured LIST refresh also failed: its exact-byte comparisons took
+  4.511 and 4.708 seconds, and two profile readers took 6.788 seconds. The reviewed
+  successor uses Buffer.equals for those two comparisons, preserving length and
+  every byte, and the independently reviewed merged profile helper. The two
+  corrected controls subsequently passed in 39.602 seconds with types in 20.397
+  seconds; the final 75-case run includes them.
+- ROOT's first current-main launch ran zero native cases because its fixture
+  environment enabled an offline bypass with mainnet metadata. Its graph attempt
+  timed out at the original 20-second case limit. Both captures remain failed.
+  The final run sets the mainnet-shaped fixture environment before process start
+  and refreshes the graph for the actual current main. No timer was increased.
+- A historical changed49 attempt has no accepted retained terminal result and
+  supplies no pass evidence.
 
-Two new disposable full19 controls for LIST/write-first BEGIN are **UNRUN**. A
-separate raw fixture actor confirms the same storage identity and holds real
-`BEGIN EXCLUSIVE`. Observation-only spies assert actual native numeric-5 refusal,
-guard-only BEGIN/ROLLBACK, no logical writes and no close. After unlock the same
-port/provenance must read the original synthetic identity, owner-isolated profiles
-and unrelated core record. Whole-schema/all-row snapshots and file/manifest bytes
-remain asserted. Existing negative classes, all R107 cases and deadlines are
-untouched. Actual platform lock reproduction remains pending, without property mocks.
+The historical source checkpoint is
+`e965ae01310ba9164e9adb8ad822a41bcdc44f6d`; final runtime SHA-256 is
+`49e4884efe5a968aa24c708918578547956ea02b281c8dc69e67ae27aaec61c3`.
+Raw source, inverses and earlier failure captures remain in their original output
+paths. Temporary phase instrumentation was removed after its capture was retained.
 
-Raw before/after, minimal patch, whole inverse and pins are retained at
-`output/resume-root-release63-20261012/refill-successors-20261013-111/worker-repairNativeIdentityPretransactionContention`.
-Parent owns tiny changed-source peer review, affected EXCLUSIVE controls, unchanged
-negative classes if needed, types/graph and current-main required CI. Reuse unchanged
-evidence; no repeated old49/full-family/study run merely for this fixture. A runtime
-input change needs final canonical acceptance once after source freeze. Original
-#265/provider/production gates stay OPEN; credentials do not establish native acceptance.
+## Delivery and original issue gates
 
+Web/API and the desktop hosted panel consume this selected port. CLI and
+remote/stdio MCP reads retain explicit profile:read authority; OAuth consent and
+mutations remain interactive SIWE. Extensions, bots and A2A gain no identity
+mutation authority. This source outcome changes no spending, custody, schedules,
+Operator holds, production ENV, shared version or deployment state.
 
-## Measured first EXCLUSIVE fixture successor
+The owner-approved GitHub OAuth app and client secret have been created and stored
+privately; no secret is in this source or its evidence. The sole release owner
+installs the three identity ENV keys only with the ready identity code in a batch.
+Creation alone is not provider activation or end-to-end verification. ORCID public
+API commercial-use terms require a separate suitability decision; existing member
+rights have not been established, and no purchase is authorized.
 
-The first two R111 controls timed out at the unchanged 20-second bound; neither is accepted. One changed LIST-only phase observation also retained a timeout (37.221-second case, 45.154-second outer capture, natural exit1/null/exit-close/both EOF). Measured phases: saved fixture 10.195s; original verification 2.012s; pending lineage 0.804s; native refusal 7.473s; first exact-byte assertion 4.511s; healthy identity readers 0.694s; two profile readers 6.788s; second exact-byte assertion 4.708s. These are observed intervals, not a production latency claim.
-
-This successor replaces only the two generic recursive Buffer equality assertions in those new callbacks with Buffer.equals(...).toBe(true), preserving exact length and every byte. The temporary fixed phase labels are removed only after retaining their full source/capture/inverse. The copied private-profile dependency is now byte-exact independently reviewed hot-guard source5eb5 from merged PR480, rather than the older accepted dependency. Identity runtime49e488, genuine5000 contention, all20s limits, snapshots, spy/result checks, SQL, owner records and same healthy-after-unlock assertions remain. No guard/timer relaxation or runtime authority change is made here. New two-case/types acceptance is UNRUN; the old failures, separate facade thirteen authored cases and original issue gates remain open.
+Issue #265 stays open until actual required CI, deployed saved-owner LIST and
+provider/SIWE/key acceptance, public-profile composition and owner-visible behavior
+meet its original criteria. Native source controls do not establish those live
+results and do not delay the already-running release65 deployment.
