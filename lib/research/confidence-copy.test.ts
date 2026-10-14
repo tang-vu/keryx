@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 import { confidenceBanner, evidenceConfidenceReason, ordinaryConfidence } from "./confidence-copy";
 
 describe("ordinary confidence copy", () => {
+  it.each(["en", "vi", "pt", "es"] as const)("uses reviewed summary confidence only for summary delivery in %s", language => {
+    for (const level of ["Low", "Moderate", "High"] as const) {
+      const reviewed = { level, reason: "Assessment of delivered sentences" };
+      expect(ordinaryConfidence(language, "summary", "Excerpt assessment", reviewed)).toMatchObject({
+        level, reason: expect.stringContaining(reviewed.reason) });
+      for (const delivery of ["unavailable", "excerpts"] as const)
+        expect(ordinaryConfidence(language, delivery, "Excerpt assessment", reviewed).level).toBe("Low");
+    }
+  });
   it.each([
     ["en", "Low confidence", "Evidence assessment"],
     ["vi", "Độ tin cậy thấp", "Đánh giá bằng chứng"],

@@ -8131,3 +8131,17 @@ installation, provider call or activation follows from source. Account profile,
 Supabase parity and existing consumer integration remain explicit parent gates;
 original #267 stays open. See
 [implementation and remaining gates](docs/engineering/account-membership267-implementation-2026-10-14.md).
+
+## Assess delivered reviewed summaries — 2026-10-14
+
+The owner requested an improvement to answers that all show Low confidence.
+Ordinary public summaries now use their delivered reviewed sentence/excerpt
+bindings and final target assessment to distinguish Low, Moderate and High.
+Hidden citations and excerpt-only coverage cannot promote a summary. High needs
+strong paired evidence from two distinct publisher/work groups for every target;
+gaps, unresolved conflicts, failed assessment and synthetic delivery remain Low.
+This is bounded source support, with factual correctness and full synthesis still
+unverified. Preserve private/package original bytes, gated briefs, financial
+limits and payment authority. Compact answer formatting accepts the resulting
+levels without relaxing its evidence bindings or notices. See the
+[implementation and surface boundaries](docs/engineering/answer-confidence-2026-10-14.md).
