@@ -37,7 +37,8 @@ const applicationStorageSubstrate = new Set(["lib/db/enrolled-sqlite-adapter.ts"
   "lib/db/storage-identity-sqlite.ts", "lib/db/gateway-funding-ledger-types.ts", "lib/db/gateway-funding-sqlite-schema.ts"]);
 
 function assertDormantGraph(roots: string[], read: (file: string) => string,
-  resolveImport: (file: string, specifier: string) => string | null): Set<string> {
+  resolveImport: (file: string, specifier: string) => string | null,
+  importsFor?: (file: string) => string[]): Set<string> {
   const visited = new Set<string>();
   const walk = (file: string, chain: string[]) => {
     // Only the source-owned APPLICATION boundary admits storage. Its entire transitive graph is still inspected:
@@ -46,7 +47,7 @@ function assertDormantGraph(roots: string[], read: (file: string) => string,
     if (dormantRuntime.test(file) && !admittedStorage) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
     if (visited.has(file)) return;
     visited.add(file);
-    for (const specifier of runtimeImports(read(file), file)) {
+    for (const specifier of importsFor ? importsFor(file) : runtimeImports(read(file), file)) {
       const dependency = resolveImport(file, specifier);
       if (dependency) walk(dependency, [...chain, file]);
     }
@@ -76,29 +77,42 @@ describe("dormant Operator funding release", () => {
     });
     const cwd = process.cwd();
     const name = (file: string) => relative(cwd, file).replaceAll("\\", "/");
+    // Both inspections use the same frozen checkout. Parse each physical source
+    // and resolve each physical target once, retaining every role/edge check.
+    const parsedImports = new Map<string, string[]>();
+    const importsFor = (file: string) => {
+      let imports = parsedImports.get(file);
+      if (!imports) { imports = runtimeImports(readFileSync(join(cwd, file), "utf8"), file); parsedImports.set(file, imports); }
+      return imports;
+    };
+    const targets = new Map<string, string | null>();
     const roots = files(join(cwd, "app")).filter(file => !/(?:\.test\.|-fixture\.)/.test(file)).map(name);
     const resolveImport = (file: string, specifier: string) => {
       if (!specifier.startsWith(".") && !specifier.startsWith("@/")) return null;
       const base = specifier.startsWith("@/") ? join(cwd, specifier.slice(2)) : resolve(cwd, dirname(file), specifier);
+      if (targets.has(base)) return targets.get(base)!;
       // Node ESM .mjs specifiers in TypeScript scripts resolve to their .mts source.
       // Follow that source edge too; ignoring it would omit its authority graph.
       const target = [base, ...(base.endsWith(".mjs") ? [base.slice(0, -4) + ".mts"] : []),
         `${base}.ts`, `${base}.tsx`, `${base}.mts`, join(base, "index.ts"), join(base, "index.tsx")]
         .find(candidate => existsSync(candidate) && /\.(?:ts|tsx|mts)$/.test(candidate));
       if (!target && !existsSync(base)) throw new Error(`Unresolved application import: ${file}: ${specifier}`);
-      return target ? name(target) : null;
+      const result = target ? name(target) : null; targets.set(base, result); return result;
     };
-    const visited = assertDormantGraph(roots, file => readFileSync(join(cwd, file), "utf8"), resolveImport);
+    const visited = assertDormantGraph(roots, file => readFileSync(join(cwd, file), "utf8"), resolveImport, importsFor);
     const closedModules = new Set(["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts", "lib/db/enrolled-sqlite-schema-profile.ts"]);
     for (const file of [...files(join(cwd, "lib")), ...files(join(cwd, "scripts"))]) {
       const importer = name(file);
       if (/(?:\.test\.|-fixture\.|\/fixtures\/|^scripts\/test-)/.test(importer)) continue;
-      for (const specifier of runtimeImports(readFileSync(file, "utf8"), importer)) {
+      for (const specifier of importsFor(importer)) {
         const target = resolveImport(importer, specifier);
         if (!target || !closedModules.has(target)) continue;
         // The closed factory may construct its fixed reference profile; no ordinary consumer may select either.
         const permitted = importer === applicationStorageBoundary && ["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts"].includes(target)
-          || importer === "lib/db/enrolled-sqlite-adapter.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts";
+          || importer === "lib/db/enrolled-sqlite-adapter.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "lib/db/deliverable-acceptance-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "lib/db/private-profiles-enrolled-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "lib/db/storage-identity-connection.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts";
         expect(permitted, `Unreviewed storage selector: ${importer} -> ${target}`).toBe(true);
       }
     }

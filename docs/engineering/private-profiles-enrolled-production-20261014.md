@@ -19,8 +19,10 @@ methods are separate from the unchanged core/financial method inventory.
 
 The factory performs no target DDL. Exact source schema references are built in
 isolated memory by the existing schema-profile mechanism. Mainnet profiles are
-archive absent/present × private profiles absent/present: four, preserving the
-connection's existing maximum of four. Legacy/testnet profiles retain their old
+archive absent/present × the entire native user-metadata bundle absent/present:
+four, preserving the connection's existing maximum of four. The initial private-only
+after-shape was never deployed and is retired by the reviewed Core477 family.
+Legacy/testnet profiles retain their old
 shapes. Missing domain leaves the port absent and the existing route returns
 honest 503. Partial/unknown schema refuses without repair or fallback.
 
@@ -50,8 +52,9 @@ Owner selection, SIWE revocation, explicit key scopes, same-origin cookie writes
 expected-wallet comparison, field validators and private/public separation are
 the existing contracts. CRUD touches the owner's profile row only. Deletion
 releases the handle while preserving account, research and financial originals.
-Public profile publication and personalHistory are separate domains. This repair
-does not install them or grant financial authority.
+Public profile publication and personalHistory remain separate capabilities. This
+factory installs no domain and grants no financial authority; the shared explicit
+Core477 migration installs the reviewed metadata bundle once.
 
 ## Explicit migration and compatible rollout
 
@@ -65,8 +68,10 @@ fsync, exact manifest/identity rechecks, mandatory backup admission inside
 `BEGIN EXCLUSIVE`, commit and positive postflight readback. It supports only the
 two known mainnet source pairs, with the public archive absent or present.
 
-The only new schema is exact `PRIVATE_PROFILES_SQL`, its two implicit indexes
-and the three existing INSERT/UPDATE/DELETE writer-identity fences. Existing
+The reviewed Core477 installer supplies the entire nineteen-table native metadata
+bundle, including exact `PRIVATE_PROFILES_SQL`, its two implicit indexes and the
+three existing INSERT/UPDATE/DELETE writer-identity fences. There is no independent
+private-only rollout or historical privacy backfill. Existing
 identity/provenance markers, old rows, old schema and economic policies are
 compared and preserved. Backup admission normally permits only snapshot reads;
 callback mutation also refuses on transaction, changes, schema and typed-snapshot
@@ -98,8 +103,10 @@ without retiring a healthy shared connection. A failed BEGIN owns no transaction
 an acquired transaction requires successful guarded rollback. Guard, fence,
 identity, file, manifest and unclassified internal failures still permanently
 retire the old port, even if their inputs are restored before cleanup. This adds
-no retry or timeout change. Three genuine held-lock regression cases are authored
-and remain UNRUN until their focused parent validation.
+no retry or timeout change. Parent validation observed genuine writer contention
+for update/delete and genuine EXCLUSIVE read-guard contention on the corrected
+Core477 dependency. Numeric 6 remains an exact classifier branch rather than an
+observed positive lock result.
 
 The authored fixtures cover native migrated CRUD/full activity, actual readonly
 refusal before SQL, two-owner isolation, unique-handle contention on separate
@@ -108,7 +115,12 @@ close drift, malformed activity and SQL failures. Migration fixtures cover both
 archive variants, typed old rows/schema/backup equality, idempotence with rows,
 middle-DDL rollback, unknown/partial schema and identity refusal, admission SQL
 scope, stopped-writer/digest prerequisites, manifest drift and postcommit
-acknowledgement uncertainty. All are **UNRUN** at this checkpoint.
+acknowledgement uncertainty. Those execution gates were **UNRUN** at the original
+author checkpoint. Parent retains matching successful focused scopes and the
+failed captures, with the current Core477 exclusive case and focused types passing.
+The changed one-table-DROP fixture must refuse partial full19; its old-port,
+unchanged-byte and unavailable-route assertions are preserved. Shared full-bundle
+migration acceptance comes from Core477, not the archived private-only fixtures.
 
 ROOT carries focused Vitest acceptance for the two new suites and changed
 enrolled facade suite, existing ordinary-profile and owner/auth/scope regressions,

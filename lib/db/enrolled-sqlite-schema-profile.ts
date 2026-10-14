@@ -3,7 +3,7 @@ import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { GATEWAY_FUNDING_SCHEMA, GATEWAY_FUNDING_INDEXES } from "./gateway-funding-sqlite-schema";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
-import { PRIVATE_PROFILES_SQL } from "./private-profiles-sqlite";
+import { installNativeUserDomainSchema } from "./native-user-domain-schema";
 
 let expectedProfiles: readonly string[] | undefined;
 let mainnetProfiles: readonly string[] | undefined;
@@ -15,10 +15,12 @@ export function supportedSqliteApplicationProfiles(mainnet = false): readonly st
       for (const publicReferenceArchive of [false, true]) {
         const reference = new DatabaseSync(":memory:");
         try {
+          reference.exec("BEGIN");
           installMainnetApplicationSchema(reference, { publicReferenceArchive });
           profiles.push(sqliteApplicationSchemaProfile(reference, new Set()));
-          reference.exec(PRIVATE_PROFILES_SQL);
+          installNativeUserDomainSchema(reference);
           profiles.push(sqliteApplicationSchemaProfile(reference, new Set()));
+          reference.exec("COMMIT");
         } finally { reference.close(); }
       }
       mainnetProfiles = Object.freeze(profiles);

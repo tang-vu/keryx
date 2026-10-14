@@ -216,21 +216,26 @@ describe("verified same-store private profiles", () => {
   ])("old port refuses full schema/fence drift without repair: %s", async sql => {
     const f = fixture(), connection = f.open(), port = createEnrolledSqlitePrivateProfiles(connection.db)!;
     await port.update(alice, input);
-    const raw = new DatabaseSync(f.file); try { raw.exec(sql); } finally { raw.close(); }
+    const raw = new DatabaseSync(f.file);
+    try {
+      // Controlled fixture DDL may cascade through existing identity-fenced child tables.
+      if (sql === "DROP TABLE private_profiles") registerStorageCapability(raw, f.identity, () => true);
+      raw.exec(sql);
+    } finally { raw.close(); }
     const before = readFileSync(f.file);
     await expect(port.delete(alice)).rejects.toThrow("profile_unavailable");
     await expect(port.get(alice, network)).rejects.toThrow("profile_unavailable");
     expect(readFileSync(f.file)).toEqual(before);
+    // Removing one table from the admitted full19 bundle is partial drift, not BEFORE absence.
+    expect(() => f.open()).toThrow();
     if (sql === "DROP TABLE private_profiles") {
-      const fresh = f.open();
-      expect(createEnrolledSqlitePrivateProfiles(fresh.db)).toBeUndefined();
       const absent = {} as KeryxDB;
       const routes = createProfileRoutes({ session: async () => ({ db: absent, wallet: alice }),
         db: async () => absent, key: async () => null, network });
       const response = await routes.GET(new Request("https://keryx.example/api/me/profile"));
       expect(response.status).toBe(503); expect(await response.json()).toMatchObject({ error: "profile_unavailable" });
       expect(readFileSync(f.file)).toEqual(before);
-    } else expect(() => f.open()).toThrow();
+    }
   });
 
   it.each(["update", "delete"] as const)("write-first %s manifest drift permanently revokes its port after restoration", async operation => {

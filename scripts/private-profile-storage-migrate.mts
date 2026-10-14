@@ -10,6 +10,7 @@ import { assertStorageCreationParent, holdStorageTarget } from "../lib/db/storag
 import { STORAGE_SNAPSHOT_LIMITS as limits } from "../lib/db/storage-identity-snapshot";
 import { migratePrivateProfilesStorage, privateProfilesMigrationProfiles,
   snapshotPrivateProfilesStorage } from "../lib/db/private-profiles-storage-migration";
+import { NATIVE_USER_DOMAIN_TABLES } from "../lib/db/native-user-domain-schema-data";
 
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 function fail(): never { throw new Error("Private profile storage migration refused; preserve originals, backup and stopped writers"); }
@@ -94,9 +95,9 @@ export async function migratePrivateProfileStorage(options: PrivateProfileMigrat
       recheck(); outputHeld.verify();
       if (after.held.identity !== source.held.identity) fail();
       const retained = { ...after.value.tables };
-      if (!("private_profiles" in source.value.tables)) {
-        if (retained.private_profiles?.rows !== 0) fail();
-        delete retained.private_profiles;
+      for (const table of NATIVE_USER_DOMAIN_TABLES) if (!(table in source.value.tables)) {
+        if (retained[table]?.rows !== (table === "deliverable_acceptance_store" ? 1 : 0)) fail();
+        delete retained[table];
       }
       if (canonicalJson(retained) !== canonicalJson(source.value.tables)) fail();
       const retainedBackup = openSnapshot(options.backup, manifest.identity, profiles);

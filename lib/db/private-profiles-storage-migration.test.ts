@@ -13,6 +13,7 @@ import { assertStorageFences, assertStorageIdentity, insertStorageIdentity, inst
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
+import { NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema-data";
 import { inspectPrivateProfileStorage, migratePrivateProfileStorage, runPrivateProfileStorageCli } from "../../scripts/private-profile-storage-migrate.mjs";
 
 const directories: string[] = [];
@@ -48,7 +49,7 @@ function schema(file: string) {
 }
 const digest = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex");
 
-describe("explicit additive private profile storage migration", () => {
+describe("explicit additive native user-domain storage migration", () => {
   it("the exact mainnet archive/profile cross-product remains four; legacy profiles are unchanged", () => {
     const pairs = privateProfilesMigrationProfiles(); expect(pairs).toHaveLength(2);
     expect(new Set(pairs.flat()).size).toBe(4);
@@ -57,7 +58,7 @@ describe("explicit additive private profile storage migration", () => {
     expect(supportedSqliteApplicationProfiles(false).some(profile => profile.includes('"tbl_name":"private_profiles"'))).toBe(false);
   });
 
-  it.each([false, true])("installs only the table/two autoindexes/three identity fences and preserves old typed schema/rows (archive=%s)", archive => {
+  it.each([false, true])("installs the complete fixed bundle and preserves every old typed schema/row (archive=%s)", archive => {
     const f = fixture(archive), before = snapshot(f), oldSchema = schema(f.file), backup = join(f.directory, "backup.sqlite");
     copyFileSync(f.file, backup); const backupDigest = digest(backup);
     let admitted = 0;
@@ -66,16 +67,26 @@ describe("explicit additive private profile storage migration", () => {
       expect(snapshotPrivateProfilesStorage(db, f.identity, privateProfilesMigrationProfiles().flat())).toEqual(snapshot(f, backup));
     });
     expect(admitted).toBe(1); expect(result).toMatchObject({ status: "migrated", originalRowsPreserved: true, signingResumeAuthorized: false });
-    const after = snapshot(f), retained = { ...after.tables }; expect(retained.private_profiles.rows).toBe(0); delete retained.private_profiles;
+    const after = snapshot(f), retained = { ...after.tables };
+    for (const table of NATIVE_USER_DOMAIN_TABLES) {
+      expect(retained[table].rows).toBe(table === "deliverable_acceptance_store" ? 1 : 0);
+      delete retained[table];
+    }
     expect(retained).toEqual(before.tables); expect(digest(backup)).toBe(backupDigest);
     const newSchema = schema(f.file), oldNames = new Set(oldSchema.map(row => row.name));
     expect(newSchema.filter(row => oldNames.has(row.name))).toEqual(oldSchema);
     const added = newSchema.filter(row => !oldNames.has(row.name));
-    expect(added.map(row => row.type).sort()).toEqual(["index", "index", "table", "trigger", "trigger", "trigger"]);
-    expect(added.every(row => row.tbl_name === "private_profiles")).toBe(true);
+    expect(added.filter(row => row.type === "table").map(row => String(row.name)).sort()).toEqual([...NATIVE_USER_DOMAIN_TABLES].sort());
+    expect(added.every(row => NATIVE_USER_DOMAIN_TABLES.includes(String(row.tbl_name) as typeof NATIVE_USER_DOMAIN_TABLES[number])
+      || ["query_runs", "query_memories"].includes(String(row.tbl_name)))).toBe(true);
     const db = new DatabaseSync(f.file, { readOnly: true });
     try { assertStorageIdentity(db, f.identity); assertStorageFences(db, f.identity);
       expect(Object.entries(storageFenceStatements(db, f.identity)).filter(([, sql]) => sql.includes('ON "private_profiles"'))).toHaveLength(3);
+      for (const table of NATIVE_USER_DOMAIN_TABLES) expect(Object.entries(storageFenceStatements(db, f.identity))
+        .filter(([, sql]) => sql.includes(`ON "${table}"`))).toHaveLength(3);
+      expect(db.prepare("SELECT singleton,id FROM deliverable_acceptance_store").all()).toEqual([
+        { singleton: 1, id: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i) },
+      ]);
       expect(db.prepare("SELECT settled,settlement_status,amount_usdc,hex(rationale) AS blob FROM payment_events").get())
         .toMatchObject({ settled: 0, settlement_status: "pending", amount_usdc: 0.001, blob: "00FF80" });
     } finally { db.close(); }
@@ -203,7 +214,8 @@ describe("explicit additive private profile storage migration", () => {
     });
     try { expect(() => migratePrivateProfilesStorage(f.file, f.identity, () => {})).toThrow("Injected postcommit acknowledgement failure"); }
     finally { spy.mockRestore(); }
-    const after = snapshot(f), retained = { ...after.tables }; delete retained.private_profiles;
+    const after = snapshot(f), retained = { ...after.tables };
+    for (const table of NATIVE_USER_DOMAIN_TABLES) delete retained[table];
     expect(retained).toEqual(before.tables); expect(after.tables.private_profiles.rows).toBe(0);
     expect(migratePrivateProfilesStorage(f.file, f.identity, () => {})).toMatchObject({ status: "already-current" });
   });

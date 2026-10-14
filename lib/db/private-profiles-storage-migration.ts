@@ -1,23 +1,26 @@
 import { DatabaseSync, constants } from "node:sqlite";
 import { canonicalJson } from "../canonical-json";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
-import { PRIVATE_PROFILES_SQL } from "./private-profiles-sqlite";
+import { installNativeUserDomainSchema, NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema";
 import { snapshotPublicArchiveStorage } from "./public-reference-archive-migration";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { validateStorageIdentity, type StorageIdentity } from "./storage-identity";
 import { assertStorageFences, assertStorageIdentity, holdStorageTarget, installStorageFences,
   STORAGE_IDENTITY_TABLE, storageFenceStatements } from "./storage-identity-sqlite";
 
-/** Only the two exact mainnet source pairs: archive absent/present. No legacy,
- * testnet, funding, unknown or partially installed domain is adopted. */
+/** Two exact mainnet pairs: archive absent/present, each moving from the
+ * original whole schema to the fixed complete native-user bundle. */
 export function privateProfilesMigrationProfiles(): readonly (readonly [string, string])[] {
   return Object.freeze([false, true].map(publicReferenceArchive => {
     const db = new DatabaseSync(":memory:");
     try {
+      db.exec("BEGIN");
       installMainnetApplicationSchema(db, { publicReferenceArchive });
       const before = sqliteApplicationSchemaProfile(db, new Set());
-      db.exec(PRIVATE_PROFILES_SQL);
-      return Object.freeze([before, sqliteApplicationSchemaProfile(db, new Set())] as const);
+      installNativeUserDomainSchema(db);
+      const after = sqliteApplicationSchemaProfile(db, new Set());
+      db.exec("COMMIT");
+      return Object.freeze([before, after] as const);
     } finally { db.close(); }
   }));
 }
@@ -68,16 +71,17 @@ export function migratePrivateProfilesStorage(file: string, value: StorageIdenti
       || canonicalJson(snapshotPrivateProfilesStorage(db, identity, pair)) !== canonicalJson(originals))
       throw new Error("Private profile migration admission changed");
     if (before === pair[0]) {
-      db.exec(PRIVATE_PROFILES_SQL);
-      // Existing fences are compared, never replaced. Only the new table's three
-      // identity fences are absent from this exact known source schema.
+      installNativeUserDomainSchema(db);
+      // Existing fences are compared, never replaced. Only the fixed new
+      // domain fences are absent from this known complete source schema.
       installStorageFences(db, identity);
     }
     assertStorageIdentity(db, identity); assertStorageFences(db, identity); held.verify();
     const after = snapshotPrivateProfilesStorage(db, identity, [pair[1]]), retained = { ...after.tables };
-    if (!("private_profiles" in originals.tables)) {
-      if (after.tables.private_profiles?.rows !== 0) throw new Error("Private profile migration new domain not empty");
-      delete retained.private_profiles;
+    for (const table of NATIVE_USER_DOMAIN_TABLES) if (!(table in originals.tables)) {
+      const expectedRows = table === "deliverable_acceptance_store" ? 1 : 0;
+      if (after.tables[table]?.rows !== expectedRows) throw new Error("Native user-domain migration unexpected new rows");
+      delete retained[table];
     }
     if (canonicalJson(retained) !== canonicalJson(originals.tables)) throw new Error("Private profile migration original rows differ");
     db.exec("COMMIT");
