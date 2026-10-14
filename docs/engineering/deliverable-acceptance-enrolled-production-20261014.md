@@ -22,6 +22,22 @@ Temporary SQLite BUSY/LOCKED errors return unavailable without closing the
 borrowed application connection. A subsequent operation must pass the same
 provenance checks again; transaction failure still rolls back.
 
-This source increment is pending its genuine native fixture checks, independent
-review, required CI and the next combined production deployment. It does not
-claim that the currently deployed acceptance endpoints have become available.
+The native application facade exposes the admitted port as a frozen,
+nonenumerable capability on writable and readonly stores. An original store
+without the complete bundle retains no acceptance capability; startup performs
+no DDL. Session/key and HTTP/MCP contracts remain the existing shared contracts.
+
+The first migration installs the fixed 19 user-domain tables together. The
+mainnet family remains exactly four shapes: archive absent/present crossed with
+the complete bundle absent/present. The never-deployed private-profile-only
+after-shape is retired. `private-profile-storage-migrate` and its receipt format
+remain compatibility names for this single migration. Its stopped-writer,
+typed-original, flushed no-replace backup, EXCLUSIVE admission and uncertain
+post-commit acknowledgement rules remain mandatory. Only the acceptance UUID
+singleton is seeded; no users, ownership, consent or public profiles are seeded.
+Table presence does not enable a feature: native ports and their individual
+verification remain necessary, and existing held flags remain held.
+
+Full-bundle migration and native policy checks have passed. Customer API/facade
+verification, required CI and the next combined production deployment remain
+release gates. The currently deployed acceptance endpoints remain unavailable.
