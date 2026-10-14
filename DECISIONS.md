@@ -8114,3 +8114,20 @@ as the sole funds evidence. Synthetic controls are source changes awaiting ROOT'
 checks/review/CI; no credentials, activation, purchase or deploy occurred. Real eligible
 bank purchase, integrated Arc sandbox proof, country/provider UI and original #256
 CCTP/sponsorship/passkey gates remain open. See [bank-first funding](docs/arc-card-onramp.md).
+
+### 2026-10-14 — Implement bounded account membership without changing wallet authority (#267)
+
+ROOT authorized the next-batch implementation after the recorded design and R42
+independent design acceptance. Use a new ordinary transactional account domain
+with opaque IDs, stable monotonic revisions, at most eight proven wallets,
+explicit private account/history consent and durable single-use membership
+proofs. Keep the original durable wallet session as the exact credential boundary;
+linking never grants payer, API-key, claim, creator or registry authority. Current
+ordinary adapters expose no raw connection or admitted account producer in this
+partition. Implement the real SQLite store/service and failure controls in new
+paths, refuse the live route until a reviewed caller supplies that authority, and
+keep history projection request-local behind exact interactive consent. No schema
+installation, provider call or activation follows from source. Account profile,
+Supabase parity and existing consumer integration remain explicit parent gates;
+original #267 stays open. See
+[implementation and remaining gates](docs/engineering/account-membership267-implementation-2026-10-14.md).

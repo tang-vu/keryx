@@ -2,6 +2,8 @@ import { SqliteAdapter } from "./sqlite-adapter";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection } from "./storage-identity-connection";
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
+import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
+import { createEnrolledSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
 import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
 
@@ -257,7 +259,12 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     const db = connection.db;
     const assert = () => {
       try { assertVerifiedSqliteConnection(connection.db); }
-      catch (error) { connection.close(); throw error; }
+      catch (error) {
+        const contention = error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+          && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+        if (!contention) connection.close();
+        throw error;
+      }
     };
     assert();
     const core = SqliteAdapter.assembleConnectionCore(db, deployment.identity, assert);
@@ -289,6 +296,11 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
           (error: unknown) => { assert(); throw error; }
         );
       } });
+    }
+    Object.defineProperty(facade, "personalHistory", { value: createEnrolledSqlitePersonalHistory(db) });
+    if (deployment.identity.authorityMode === "mainnet-real") {
+      const acceptance = createEnrolledSqliteDeliverableAcceptance(db);
+      if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
     }
     Object.defineProperty(facade, "init", { value: async () => { assert(); } });
     Object.defineProperty(facade, "close", { value: connection.close });
