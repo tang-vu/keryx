@@ -1,4 +1,10 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
+import { assertVerifiedSqliteConnection, assertVerifiedSqliteForeignKeys, assertVerifiedSqliteWritePolicy,
+  assertVerifiedSqliteNativeUserDomainPolicy } from "../db/storage-identity-connection";
+import { assertStorageFences, storageFenceStatements, STORAGE_IDENTITY_TABLE } from "../db/storage-identity-sqlite";
+import { supportedSqliteApplicationProfiles } from "../db/enrolled-sqlite-schema-profile";
+import { sqliteApplicationSchemaProfile } from "../db/sqlite-application-schema-profile";
+import { NATIVE_USER_DOMAIN_TABLES } from "../db/native-user-domain-schema-data";
 import { AccountError, MAX_ACCOUNT_WALLETS, accountConsentSchema, bindingSchema, challengeSchema, digestSchema, interactiveSessionSchema,
   membershipSchema, preconditionSchema, snapshotSchema, timeSchema, walletInputSchema, type AccountBinding, type AccountMembershipStore,
   type AccountSnapshot, type InteractiveSession, type MembershipChallenge, type TakenMembershipChallenge } from "./contracts";
@@ -31,7 +37,7 @@ export function assertAccountSqliteSchema(db: DatabaseSync) {
 
 export function createSqliteAccountMembership(db: DatabaseSync): AccountMembershipStore {
   assertAccountSqliteSchema(db);
-  function transaction<T>(action: (now: number) => T): T {
+  function transaction<T>(action: (now: number) => T, _write = true): T {
     let begun = false;
     try {
       assertAccountSqliteSchema(db);
@@ -45,6 +51,138 @@ export function createSqliteAccountMembership(db: DatabaseSync): AccountMembersh
       throw unavailable();
     }
   }
+  return accountMembershipJournal(db, transaction);
+}
+
+/** Native admission uses ONE genuine registered connection. The fixed policy
+ * helper is supplied by the separately reviewed ROOT full19 dependency: it must
+ * prove trusted source-profile admission without opening a reference database.
+ * No caller authority, mode, raw connection override or repair is accepted. */
+export function createEnrolledSqliteAccountMembership(db: DatabaseSync): AccountMembershipStore | undefined {
+  if (arguments.length !== 1) throw unavailable();
+  let refused = false;
+  let admitted = false;
+  let sqlFailure: unknown;
+  let sqlFailed = false;
+  const contention = (error: unknown) => error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+    && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+  const latch = () => {
+    if (refused) return;
+    refused = true;
+    // Only a constructor that qualified genuine connection metadata may retire
+    // its failed connection. A rejected raw/foreign argument is never closed.
+    if (admitted) { try { db.close(); } catch { /* No failed authority is revived. */ } }
+  };
+  const fences = [...ACCOUNT_MEMBERSHIP_SCHEMA_DATA, ...ACCOUNT_WEB_SESSION_SCHEMA_DATA]
+    .filter(entry => entry.type === "table").flatMap(entry => ["insert", "update", "delete"]
+      .map(operation => `storage_fence_${accountDigest(entry.name).slice(0, 16)}_${operation}`));
+  const check = () => {
+    assertVerifiedSqliteNativeUserDomainPolicy(db);
+    assertVerifiedSqliteForeignKeys(db);
+    const identity = assertVerifiedSqliteConnection(db);
+    if (identity.authorityMode !== "mainnet-real") throw unavailable();
+    assertStorageFences(db, identity);
+    const family = db.prepare(`SELECT name FROM sqlite_schema WHERE type='table'
+      AND name IN (${NATIVE_USER_DOMAIN_TABLES.map(() => "?").join(",")}) ORDER BY name LIMIT 20`)
+      .all(...NATIVE_USER_DOMAIN_TABLES).map(row => row.name);
+    if (JSON.stringify(family) !== JSON.stringify([...NATIVE_USER_DOMAIN_TABLES].sort())) throw unavailable();
+    // Only the three exact identity fences per table are excluded. Full fences
+    // and the trusted full-family source policy have already been verified.
+    const shape = db.prepare(`SELECT type,name,tbl_name AS 'table',substr(sql,1,16385) AS sql FROM sqlite_schema
+      WHERE (lower(tbl_name)='web_sessions' OR lower(name) GLOB 'account267_*' OR lower(tbl_name) GLOB 'account267_*'
+        OR (type='trigger' AND (length(sql)>16384 OR instr(lower(substr(sql,1,16384)),'account267_')>0
+          OR instr(lower(substr(sql,1,16384)),'web_sessions')>0)))
+        AND name NOT IN (${fences.map(() => "?").join(",")}) ORDER BY name LIMIT 64`).all(...fences)
+      .map(row => ({ type: row.type, name: row.name, table: row.table, sql: typeof row.sql === "string" ? normalize(row.sql) : row.sql }));
+    if (JSON.stringify(shape) !== JSON.stringify(expectedShape)) throw unavailable();
+    // busy_timeout is not read through forbidden PRAGMA. Genuine constructor
+    // provenance fixes it at 5000, then its authorizer forbids all later changes.
+  };
+  const sql = <T>(action: () => T): T => {
+    if (refused) throw unavailable();
+    try { return action(); }
+    catch (error) {
+      sqlFailed = true; sqlFailure = error;
+      if (!contention(error)) latch();
+      throw error;
+    }
+  };
+  // Observe guard failures even inside take's intentionally swallowed invalid-
+  // proof branch. The private proxy never leaves this same-file journal.
+  const guarded = new Proxy(db, { get(target, property) {
+    if (property === "exec") return (query: string) => sql(() => target.exec(query));
+    if (property === "prepare") return (query: string) => {
+      const statement = sql(() => target.prepare(query));
+      return new Proxy(statement, { get(value, key) {
+        if (["get", "all", "run"].includes(String(key)))
+          return (...args: unknown[]) => sql(() => Reflect.apply(Reflect.get(value, key), value, args));
+        throw unavailable();
+      } }) as StatementSync;
+    };
+    throw unavailable();
+  } });
+  try {
+    // Qualify genuine metadata before touching a raw/forwarded argument. The
+    // general runtime guard also covers supported BEFORE connections; failures
+    // retire qualified authority rather than masquerading as optional absence.
+    assertVerifiedSqliteForeignKeys(db);
+    admitted = true;
+    const identity = assertVerifiedSqliteConnection(db);
+    if (identity.authorityMode !== "mainnet-real" || db.isTransaction) throw unavailable();
+    assertStorageFences(db, identity);
+    if (!db.prepare(`SELECT 1 FROM sqlite_schema WHERE type='table'
+      AND name IN (${NATIVE_USER_DOMAIN_TABLES.map(() => "?").join(",")}) LIMIT 1`).get(...NATIVE_USER_DOMAIN_TABLES)) {
+      const excluded = new Set([STORAGE_IDENTITY_TABLE, "storage_identity_no_update", "storage_identity_no_delete",
+        "storage_identity_no_insert", ...Object.keys(storageFenceStatements(db, identity))]);
+      const profile = sqliteApplicationSchemaProfile(db, excluded), source = supportedSqliteApplicationProfiles(true);
+      // Only exact archive-absent/present BEFORE profiles qualify. Partial or
+      // unknown schema objects, and every guard failure, still throw and latch.
+      if (profile !== source[0] && profile !== source[2]) throw unavailable();
+      return undefined;
+    }
+    assertVerifiedSqliteNativeUserDomainPolicy(db);
+    check();
+  } catch { latch(); throw unavailable(); }
+  const transaction = <T>(action: (now: number) => T, write = true): T => {
+    if (refused) throw unavailable();
+    // Genuine private metadata only: readonly denial precedes *all* request SQL
+    // and does not poison a healthy reader or run its runtime guard.
+    if (write) { try { assertVerifiedSqliteWritePolicy(db); } catch { throw unavailable(); } }
+    let begun = false;
+    sqlFailed = false; sqlFailure = undefined;
+    try {
+      if (sql(() => db.isTransaction)) { latch(); throw unavailable(); }
+      try { check(); } catch (error) { if (!contention(error)) latch(); throw error; }
+      guarded.exec(write ? "BEGIN IMMEDIATE" : "BEGIN"); begun = true;
+      try { check(); } catch (error) { if (!contention(error)) latch(); throw error; }
+      const now = timeSchema.parse(guarded.prepare("SELECT CAST(unixepoch('subsec')*1000 AS INTEGER) AS now").get()?.now);
+      const value = action(now);
+      if (sqlFailed) throw sqlFailure;
+      try { check(); } catch (error) { if (!contention(error)) latch(); throw error; }
+      guarded.exec("COMMIT"); begun = false;
+      try { check(); } catch (error) { latch(); throw error; }
+      return value;
+    } catch (error) {
+      // Cleanup stays on the genuine guarded connection. A lock is recoverable
+      // only after rollback/no-active-transaction AND a valid full runtime guard.
+      // A lost COMMIT acknowledgement grants no success or automatic retry.
+      let clean = false;
+      try {
+        if (begun && db.isTransaction) db.exec("ROLLBACK");
+        if (!db.isTransaction) { check(); clean = true; }
+      } catch { latch(); }
+      if (!clean || (sqlFailed && !contention(sqlFailure)) || (!(error instanceof AccountError) && !contention(error))) latch();
+      if (refused || sqlFailed || contention(error)) throw unavailable();
+      if (error instanceof AccountError) throw error;
+      throw unavailable();
+    }
+  };
+  return accountMembershipJournal(guarded, transaction);
+}
+
+/** Private factoring only: the exported constructors fix their own authority. */
+function accountMembershipJournal(db: DatabaseSync,
+  transaction: <T>(action: (now: number) => T, write?: boolean) => T): AccountMembershipStore {
   function live(raw: InteractiveSession, now: number) {
     const s = interactiveSessionSchema.parse(raw);
     const row = db.prepare("SELECT hash,wallet,issued_at,expires_at FROM web_sessions WHERE hash=?").get(s.sessionHash);
@@ -108,9 +246,9 @@ export function createSqliteAccountMembership(db: DatabaseSync): AccountMembersh
         const a = membership(m.account_id as string);
         // No other wallet or private activity is exposed before account-read consent.
         return { accountId: a.accountId, revision: a.revision };
-      });
+      }, false);
     },
-    async resolve(s, b) { return transaction(now => resolve(s, b, now)); },
+    async resolve(s, b) { return transaction(now => resolve(s, b, now), false); },
     async resume(raw, rawBinding, rawExpected, rawConsent) {
       const expected = preconditionSchema.parse(rawExpected), b = bindingSchema.parse(rawBinding); accountConsentSchema.parse(rawConsent);
       return transaction(now => {
@@ -239,6 +377,6 @@ export function createSqliteAccountMembership(db: DatabaseSync): AccountMembersh
     async revokeSession(raw) {
       transaction(now => { const a = current(raw, now); db.prepare("UPDATE account267_sessions SET revoked_at=? WHERE session_hash=?").run(now, a.session.sessionHash); });
     },
-    async assertCurrent(raw) { transaction(now => { current(raw, now); }); },
+    async assertCurrent(raw) { transaction(now => { current(raw, now); }, false); },
   } satisfies AccountMembershipStore);
 }
