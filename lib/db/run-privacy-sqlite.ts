@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, type StatementSync } from "node:sqlite";
+import { assertVerifiedSqliteConnection, assertVerifiedSqliteNativeUserDomainPolicy, assertVerifiedSqliteWritePolicy } from "./storage-identity-connection";
+import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
 import { z } from "zod";
 import { assertOrdinarySqliteResearchAuthority, initializeSqliteResearchMonthly } from "./research-monthly";
 import { sqliteSchemaMatches, type SqliteSchemaExpectation } from "./sqlite-schema-match";
@@ -86,11 +88,83 @@ const stateOf = (row: Record<string, unknown>): PrivacyState => ({ visibility: v
 export function createSqliteRunPrivacy(db: DatabaseSync, claims?: RunOwnershipHistoryStore): RunPrivacyStore {
   assertRunPrivacySchema(db);
   const guard = () => assertRunPrivacySchema(db);
+  return privacyPort(db, guard, claims);
+}
+
+const nativePrivacyContentionErrors = new WeakSet<PrivacyError>();
+/** Only errors actually classified inside this native privacy port qualify.
+ * Caller properties, causes and arbitrary privacy refusals grant no recovery. */
+export function isEnrolledSqlitePrivacyContention(error: unknown): boolean {
+  return arguments.length === 1 && error instanceof PrivacyError && nativePrivacyContentionErrors.has(error);
+}
+
+/** Complete native source policy, same connection and private ownership port.
+ * No caller claims/guard, schema repair, history backfill or function install. */
+export function createEnrolledSqliteRunPrivacy(db: DatabaseSync): RunPrivacyStore {
+  const unavailable = () => new PrivacyError("privacy_unavailable");
+  if (arguments.length !== 1) throw unavailable();
+  assertVerifiedSqliteNativeUserDomainPolicy(db);
+  const identity = assertVerifiedSqliteConnection(db);
+  if (identity.authorityMode !== "mainnet-real") throw unavailable();
+  const claims = createEnrolledSqliteRunOwnershipHistory(db);
+  let refused = false;
+  const contention = (error: unknown) => error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+    && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+  const nativeUnavailable = (error: unknown) => {
+    const refusal = unavailable();
+    if (contention(error)) nativePrivacyContentionErrors.add(refusal);
+    return refusal;
+  };
+  const retire = () => { refused = true; db.close(); };
+  const check = (write = false) => {
+    if (refused) throw unavailable();
+    if (write) { try { assertVerifiedSqliteWritePolicy(db); } catch { throw unavailable(); } }
+    try { assertVerifiedSqliteNativeUserDomainPolicy(db); assertVerifiedSqliteConnection(db); }
+    catch (error) { if (!contention(error)) retire(); throw nativeUnavailable(error); }
+  };
+  const sql = <T>(action: () => T): T => {
+    if (refused) throw unavailable();
+    try { return action(); } catch (error) { if (!contention(error)) retire(); throw nativeUnavailable(error); }
+  };
+  const guarded = new Proxy(db, { get(target, property) {
+    if (property === "exec") return (query: string) => sql(() => target.exec(query));
+    if (property === "prepare") return (query: string) => {
+      const statement = sql(() => target.prepare(query));
+      return new Proxy(statement, { get(value, key) {
+        if (["get", "all", "run"].includes(String(key))) return (...args: unknown[]) => sql(() => Reflect.apply(Reflect.get(value, key), value, args));
+        throw unavailable();
+      } }) as StatementSync;
+    };
+    throw unavailable();
+  } });
+  const port = privacyPort(guarded, check, claims, () => check());
+  const actorPositions: Partial<Record<keyof RunPrivacyStore, number>> = {
+    read: 1, owner: 1, defaults: 0, setDefault: 0, change: 1, erase: 1, export: 1,
+  };
+  const wrapped = Object.create(null) as RunPrivacyStore;
+  for (const name of Object.keys(port) as Array<keyof RunPrivacyStore>) {
+    Object.defineProperty(wrapped, name, { enumerable: true, value: async (...args: unknown[]) => {
+      check(["setDefault", "change", "erase", "export"].includes(name));
+      const position = actorPositions[name], input = position === undefined ? undefined : args[position];
+      if (input !== undefined) {
+        try {
+          if (!input || typeof input !== "object" || runClaimBindingSchema.parse(Reflect.get(input, "binding")).network !== identity.network) throw unavailable();
+        } catch { throw unavailable(); }
+      }
+      const result = await Reflect.apply(port[name], port, args); check(); return result;
+    } });
+  }
+  return Object.freeze(wrapped);
+}
+
+/** Original privacy journal and projections, privately composed by constructors. */
+function privacyPort(db: DatabaseSync, guard: (write?: boolean) => void, claims?: RunOwnershipHistoryStore,
+  afterNative?: () => void): RunPrivacyStore {
   const row = (id: string) => db.prepare(`SELECT q.data,q.asker,p.visibility,p.revision,p.erased,p.retained_owner,p.retained_digest,p.retained_binding
     FROM query_runs q LEFT JOIN run_privacy p ON p.run_id=q.id WHERE q.id=?`).get(privacyId.parse(id));
   function transaction<T>(action: () => T): T {
-    guard(); db.exec("BEGIN IMMEDIATE");
-    try { guard(); const value = action(); db.exec("COMMIT"); return value; }
+    guard(true); db.exec("BEGIN IMMEDIATE");
+    try { guard(true); const value = action(); afterNative?.(); db.exec("COMMIT"); afterNative?.(); return value; }
     catch (error) { db.exec("ROLLBACK"); throw error; }
   }
   function actor(raw: PrivacyActor, write = false) {

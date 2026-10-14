@@ -1,5 +1,17 @@
 # Owner-edited private profiles — source capability
 
+October 14 source amendment: the
+[same-store enrolled SQLite repair](private-profiles-enrolled-production-20261014.md)
+adds an optional frozen private port for an exactly admitted mainnet profile
+domain, plus an explicit identity-preserving migration/verified-backup operator
+source. Missing domain still leaves the port absent with honest 503. The
+ordinary-storage baseline described below is preserved. This amendment's native
+fixtures, types, independent review, required CI, compatible stopped-writer
+rollout and actual deployed owner/scoped-key CRUD remain **UNRUN** at the source
+author handoff. It changes no production data, identity/provenance, auth/public
+publication, financial authority, version or release64 state. ROOT owns those
+remaining acceptance and delivery actions; #260 is not closed by this source.
+
 Issue [260](https://github.com/tang-vu/keryx/issues/260) remains open. This additive
 implementation enables ordinary SQLite and migrated ordinary Supabase development
 stores. The current enrolled/native production store intentionally has no profile

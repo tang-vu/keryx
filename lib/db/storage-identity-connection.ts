@@ -3,9 +3,11 @@ import { StorageIdentityRefused, refuseStorage, validateStorageIdentity, type St
 import { assertStorageFences, assertStorageIdentity, holdStorageTarget, registerStorageCapability, restrictStorageApplicationSql, storageFenceStatements, STORAGE_IDENTITY_TABLE } from "./storage-identity-sqlite";
 import { assertSqliteApplicationSchemaProfile, sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
+import { installRunOwnershipFunctions } from "./run-ownership-functions";
 
 const verifiedConnections = new WeakMap<DatabaseSync, { identity: Readonly<StorageIdentity>; readOnly: boolean;
   readonly foreignKeys: true; readonly busyTimeout: 5000; readonly nativeUserDomainProfile?: string;
+  readonly selectedApplicationProfile?: string;
   closed: boolean; assert(): void }>();
 
 /** Internal composition verifies native connection provenance; an ordinary DB cannot qualify. */
@@ -39,6 +41,15 @@ export function assertVerifiedSqliteNativeUserDomainPolicy(db: DatabaseSync): vo
     || record.busyTimeout !== 5000 || !record.nativeUserDomainProfile) return refuseStorage("storage_unavailable");
 }
 
+/** Source-known mainnet BEFORE or complete user bundle, with the captured runtime
+ * guard. Metadata only: operation callers still assert the full connection. */
+export function assertVerifiedSqliteSelectedApplicationPolicy(db: DatabaseSync): void {
+  const record = verifiedConnections.get(db);
+  if (arguments.length !== 1 || !record || record.closed || record.identity.authorityMode !== "mainnet-real"
+    || record.foreignKeys !== true || record.busyTimeout !== 5000 || !record.selectedApplicationProfile)
+    return refuseStorage("storage_unavailable");
+}
+
 /** Guarded application SQL access, not provisioning, migration, or a read-only provenance inspector. */
 export function openVerifiedSqliteStorage(file: string, expected: StorageIdentity, options: { readOnly?: boolean; runtimeGuard?: () => void; applicationProfiles?: readonly string[] } = {}): { db: DatabaseSync; close(): void } {
   const runtimeGuard = options.runtimeGuard;
@@ -61,6 +72,7 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
   let db: DatabaseSync | undefined, closed = false;
   let excluded: Set<string> | undefined;
   let nativeUserDomainProfile: string | undefined;
+  let selectedApplicationProfile: string | undefined;
   try {
     runtimeGuard?.();
     db = new DatabaseSync(file, { readOnly, allowExtension: false });
@@ -73,12 +85,14 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
         const actual = sqliteApplicationSchemaProfile(db, excluded);
         const source = supportedSqliteApplicationProfiles(true);
         if (actual === source[1] || actual === source[3]) nativeUserDomainProfile = actual;
+        if (typeof runtimeGuard === "function" && source.includes(actual)) selectedApplicationProfile = actual;
       }
     }
     // Connection settings follow identity admission and precede SQL restriction. They are not schema repair.
     db.exec("PRAGMA busy_timeout=5000");
     db.exec("PRAGMA foreign_keys=ON");
     if (db.prepare("PRAGMA foreign_keys").get()?.foreign_keys !== 1) return refuseStorage("storage_unavailable");
+    if (identity.authorityMode === "mainnet-real") installRunOwnershipFunctions(db);
     if (!readOnly) db.exec("PRAGMA synchronous=FULL");
     registerStorageCapability(db, identity, () => !closed);
     restrictStorageApplicationSql(db);
@@ -97,8 +111,9 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     if (ownTransaction) native.exec("BEGIN");
     try {
       held.verify(); assertStorageIdentity(native, identity); assertStorageFences(native, identity);
+      const fixedProfile = nativeUserDomainProfile ?? selectedApplicationProfile;
       if (profiles && excluded) assertSqliteApplicationSchemaProfile(native, excluded,
-        nativeUserDomainProfile ? [nativeUserDomainProfile] : profiles);
+        fixedProfile ? [fixedProfile] : profiles);
       held.verify();
       if (ownTransaction) native.exec("COMMIT");
     } catch (error) {
@@ -131,7 +146,7 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     throw new Error("Unsupported verified storage operation");
   } });
   const record = { identity, readOnly, foreignKeys: true as const, busyTimeout: 5000 as const,
-    nativeUserDomainProfile, closed: false, assert };
+    nativeUserDomainProfile, selectedApplicationProfile, closed: false, assert };
   verifiedConnections.set(wrapped, record);
   return { db: wrapped, close };
 }
