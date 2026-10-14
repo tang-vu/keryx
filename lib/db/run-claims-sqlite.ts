@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, type StatementSync } from "node:sqlite";
+import { assertVerifiedSqliteConnection, assertVerifiedSqliteNativeUserDomainPolicy, assertVerifiedSqliteWritePolicy } from "./storage-identity-connection";
 import { assertOrdinarySqliteResearchAuthority } from "./research-monthly";
 import { RUN_CLAIM_TTL_MS, RunClaimError, runClaimAttemptSchema, runClaimIssueSchema, runClaimIssuanceSchema,
   runClaimReceiptSchema, type RunClaimsStore } from "../run-claims/contracts";
@@ -77,16 +78,68 @@ export function createSqliteRunClaims(db: DatabaseSync, options: { fixtureClock?
   assertSqliteRunClaimsSchema(db);
   if (options.fixtureClock) db.function("keryx_run_claim_fixture_clock", options.fixtureClock);
   const clock = options.fixtureClock ? "keryx_run_claim_fixture_clock()" : "CAST(unixepoch('subsec')*1000 AS INTEGER)";
+  return claimsPort(db, clock, () => assertSqliteRunClaimsSchema(db));
+}
+
+/** Genuine complete native bundle only. No fixture clock, DDL or caller guard. */
+export function createEnrolledSqliteRunClaims(db: DatabaseSync): RunClaimsStore {
+  const unavailable = () => new RunClaimError("claims_unavailable");
+  if (arguments.length !== 1) throw unavailable();
+  assertVerifiedSqliteNativeUserDomainPolicy(db);
+  const identity = assertVerifiedSqliteConnection(db);
+  if (identity.authorityMode !== "mainnet-real") throw unavailable();
+  let refused = false;
+  const contention = (error: unknown) => error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+    && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+  const retire = () => { refused = true; db.close(); };
+  const check = (write = false) => {
+    if (refused) throw unavailable();
+    if (write) { try { assertVerifiedSqliteWritePolicy(db); } catch { throw unavailable(); } }
+    try { assertVerifiedSqliteNativeUserDomainPolicy(db); assertVerifiedSqliteConnection(db); }
+    catch (error) { if (!contention(error)) retire(); throw unavailable(); }
+  };
+  const sql = <T>(action: () => T): T => {
+    if (refused) throw unavailable();
+    try { return action(); } catch (error) { if (!contention(error)) retire(); throw unavailable(); }
+  };
+  const guarded = new Proxy(db, { get(target, property) {
+    if (property === "exec") return (query: string) => sql(() => target.exec(query));
+    if (property === "prepare") return (query: string) => {
+      const statement = sql(() => target.prepare(query));
+      return new Proxy(statement, { get(value, key) {
+        if (["get", "all", "run"].includes(String(key))) return (...args: unknown[]) => sql(() => Reflect.apply(Reflect.get(value, key), value, args));
+        throw unavailable();
+      } }) as StatementSync;
+    };
+    throw unavailable();
+  } });
+  const port = claimsPort(guarded, "CAST(unixepoch('subsec')*1000 AS INTEGER)", check, () => check());
+  return Object.freeze({ ...port,
+    async issue(input) {
+      try { if (runClaimIssueSchema.parse(input).binding.network !== identity.network) throw unavailable(); }
+      catch { throw new RunClaimError("claim_unavailable"); }
+      return port.issue(input);
+    },
+    async claim(input) {
+      try { if (runClaimAttemptSchema.parse(input).binding.network !== identity.network) throw unavailable(); }
+      catch { throw new RunClaimError("claim_unavailable"); }
+      return port.claim(input);
+    },
+  } satisfies RunClaimsStore);
+}
+
+/** Same journal bodies; authority callbacks never leave constructor composition. */
+function claimsPort(db: DatabaseSync, clock: string, guard: (write?: boolean) => void, afterNative?: () => void): RunClaimsStore {
   function transaction<T>(action: (now: number) => T): T {
-    assertSqliteRunClaimsSchema(db);
+    guard(true);
     let started = false;
     try {
       db.exec("BEGIN IMMEDIATE"); started = true;
-      assertSqliteRunClaimsSchema(db);
+      guard(true);
       const now = db.prepare(`SELECT ${clock} AS now`).get()?.now;
       if (typeof now !== "number" || !Number.isSafeInteger(now) || now < 0 || now > 8640000000000000 - RUN_CLAIM_TTL_MS)
         throw new RunClaimError("claims_unavailable");
-      const result = action(now); db.exec("COMMIT"); return result;
+      const result = action(now); afterNative?.(); db.exec("COMMIT"); afterNative?.(); return result;
     } catch (error) {
       if (started) { try { db.exec("ROLLBACK"); } catch { /* Keep the fixed public refusal. */ } }
       if (error instanceof RunClaimError) throw error;
@@ -94,7 +147,7 @@ export function createSqliteRunClaims(db: DatabaseSync, options: { fixtureClock?
     }
   }
   return Object.freeze({
-    async assertAvailable() { assertSqliteRunClaimsSchema(db); },
+    async assertAvailable() { guard(); },
     async issue(raw) {
       let input;
       try { input = runClaimIssueSchema.parse(raw); } catch { throw new RunClaimError("claim_unavailable"); }
