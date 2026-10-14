@@ -3,19 +3,27 @@ import { StorageIdentityRefused, refuseStorage, validateStorageIdentity, type St
 import { assertStorageFences, assertStorageIdentity, holdStorageTarget, registerStorageCapability, restrictStorageApplicationSql, storageFenceStatements, STORAGE_IDENTITY_TABLE } from "./storage-identity-sqlite";
 import { assertSqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 
-const verifiedConnections = new WeakMap<DatabaseSync, { identity: Readonly<StorageIdentity>; assert(): void }>();
+const verifiedConnections = new WeakMap<DatabaseSync, { identity: Readonly<StorageIdentity>; readOnly: boolean; assert(): void }>();
 
 /** Internal composition verifies native connection provenance; an ordinary DB cannot qualify. */
-export function assertVerifiedSqliteConnection(db: DatabaseSync): Readonly<StorageIdentity> {
+export function assertVerifiedSqliteConnection(db: DatabaseSync, access: "read" | "write" = "read"): Readonly<StorageIdentity> {
   const record = verifiedConnections.get(db);
-  if (!record) return refuseStorage("storage_unavailable");
+  if (arguments.length > 2 || !record || !["read", "write"].includes(access)
+    || access === "write" && record.readOnly) return refuseStorage("storage_unavailable");
   record.assert();
   return record.identity;
+}
+
+/** Metadata-only native write policy; callers must still run the full runtime guard. */
+export function assertVerifiedSqliteWritePolicy(db: DatabaseSync): void {
+  const record = verifiedConnections.get(db);
+  if (arguments.length !== 1 || !record || record.readOnly) return refuseStorage("storage_unavailable");
 }
 
 /** Guarded application SQL access, not provisioning, migration, or a read-only provenance inspector. */
 export function openVerifiedSqliteStorage(file: string, expected: StorageIdentity, options: { readOnly?: boolean; runtimeGuard?: () => void; applicationProfiles?: readonly string[] } = {}): { db: DatabaseSync; close(): void } {
   const runtimeGuard = options.runtimeGuard;
+  const readOnly = options.readOnly ?? false;
   const suppliedProfiles = options.applicationProfiles;
   if (suppliedProfiles !== undefined && (!Array.isArray(suppliedProfiles) || suppliedProfiles.length < 1
     || suppliedProfiles.length > 4)) return refuseStorage("storage_unavailable");
@@ -35,7 +43,7 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
   let excluded: Set<string> | undefined;
   try {
     runtimeGuard?.();
-    db = new DatabaseSync(file, { readOnly: options.readOnly ?? false, allowExtension: false });
+    db = new DatabaseSync(file, { readOnly, allowExtension: false });
     held.verify(); assertStorageIdentity(db, identity); assertStorageFences(db, identity); held.verify();
     if (profiles) {
       excluded = new Set([STORAGE_IDENTITY_TABLE, "storage_identity_no_update", "storage_identity_no_delete",
@@ -44,7 +52,7 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     }
     // Connection settings follow identity admission and precede SQL restriction. They are not schema repair.
     db.exec("PRAGMA busy_timeout=5000");
-    if (!options.readOnly) db.exec("PRAGMA synchronous=FULL");
+    if (!readOnly) db.exec("PRAGMA synchronous=FULL");
     registerStorageCapability(db, identity, () => !closed);
     restrictStorageApplicationSql(db);
   } catch (error) {
@@ -94,6 +102,6 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     // Do not expose registration/extension/changeset entrypoints as an app capability.
     throw new Error("Unsupported verified storage operation");
   } });
-  verifiedConnections.set(wrapped, { identity, assert });
+  verifiedConnections.set(wrapped, { identity, readOnly, assert });
   return { db: wrapped, close };
 }

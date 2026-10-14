@@ -3,6 +3,7 @@ import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { GATEWAY_FUNDING_SCHEMA, GATEWAY_FUNDING_INDEXES } from "./gateway-funding-sqlite-schema";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
+import { PRIVATE_PROFILES_SQL } from "./private-profiles-sqlite";
 
 let expectedProfiles: readonly string[] | undefined;
 let mainnetProfiles: readonly string[] | undefined;
@@ -15,6 +16,8 @@ export function supportedSqliteApplicationProfiles(mainnet = false): readonly st
         const reference = new DatabaseSync(":memory:");
         try {
           installMainnetApplicationSchema(reference, { publicReferenceArchive });
+          profiles.push(sqliteApplicationSchemaProfile(reference, new Set()));
+          reference.exec(PRIVATE_PROFILES_SQL);
           profiles.push(sqliteApplicationSchemaProfile(reference, new Set()));
         } finally { reference.close(); }
       }
