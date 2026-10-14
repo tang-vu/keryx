@@ -91,6 +91,13 @@ export function createSqliteRunPrivacy(db: DatabaseSync, claims?: RunOwnershipHi
   return privacyPort(db, guard, claims);
 }
 
+const nativePrivacyContentionErrors = new WeakSet<PrivacyError>();
+/** Only errors actually classified inside this native privacy port qualify.
+ * Caller properties, causes and arbitrary privacy refusals grant no recovery. */
+export function isEnrolledSqlitePrivacyContention(error: unknown): boolean {
+  return arguments.length === 1 && error instanceof PrivacyError && nativePrivacyContentionErrors.has(error);
+}
+
 /** Complete native source policy, same connection and private ownership port.
  * No caller claims/guard, schema repair, history backfill or function install. */
 export function createEnrolledSqliteRunPrivacy(db: DatabaseSync): RunPrivacyStore {
@@ -103,16 +110,21 @@ export function createEnrolledSqliteRunPrivacy(db: DatabaseSync): RunPrivacyStor
   let refused = false;
   const contention = (error: unknown) => error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
     && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+  const nativeUnavailable = (error: unknown) => {
+    const refusal = unavailable();
+    if (contention(error)) nativePrivacyContentionErrors.add(refusal);
+    return refusal;
+  };
   const retire = () => { refused = true; db.close(); };
   const check = (write = false) => {
     if (refused) throw unavailable();
     if (write) { try { assertVerifiedSqliteWritePolicy(db); } catch { throw unavailable(); } }
     try { assertVerifiedSqliteNativeUserDomainPolicy(db); assertVerifiedSqliteConnection(db); }
-    catch (error) { if (!contention(error)) retire(); throw unavailable(); }
+    catch (error) { if (!contention(error)) retire(); throw nativeUnavailable(error); }
   };
   const sql = <T>(action: () => T): T => {
     if (refused) throw unavailable();
-    try { return action(); } catch (error) { if (!contention(error)) retire(); throw unavailable(); }
+    try { return action(); } catch (error) { if (!contention(error)) retire(); throw nativeUnavailable(error); }
   };
   const guarded = new Proxy(db, { get(target, property) {
     if (property === "exec") return (query: string) => sql(() => target.exec(query));

@@ -22,6 +22,14 @@ function recordedProjection() {
 }
 
 describe("complete-answer word-budget projection", () => {
+  it.each(["Moderate", "High"] as const)("keeps paired compact output available at %s confidence", level => {
+    const data = recordedProjection();
+    const compact = compactWordBudgetAnswer(data.ledger, data.statements, { level, reason: "Reviewed summary support" })!;
+    expect(compact).toBeDefined();
+    expect(compact).not.toContain("Low confidence");
+    for (const statement of data.statements) expect(compact).toContain(statement.quote.replace(/[\r\n]+/g, " "));
+    expect(compact).toContain("Grounding proves neither truth nor entailment");
+  });
   it("fits the retained three RFC pairs plus confidence and original status within180, keeping evidence bytes/flags", () => {
     const data = recordedProjection();
     const snapshot = () => JSON.stringify(data, (_key, value) => value instanceof Set ? [...value] : value);
