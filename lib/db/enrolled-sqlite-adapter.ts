@@ -3,6 +3,7 @@ import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-pro
 import { openVerifiedSqliteStorage, assertVerifiedSqliteConnection, assertVerifiedSqliteNativeUserDomainPolicy } from "./storage-identity-connection";
 import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
+import { createEnrolledSqlitePrivateBibliographies } from "./private-bibliographies-enrolled-sqlite";
 import { createEnrolledSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
 import { createEnrolledSqliteRunClaims } from "./run-claims-sqlite";
 import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
@@ -330,6 +331,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       } });
     }
     Object.defineProperty(facade, "personalHistory", { value: createEnrolledSqlitePersonalHistory(db) });
+    const bibliographies = createEnrolledSqlitePrivateBibliographies(db);
+    if (bibliographies) Object.defineProperty(facade, "privateBibliographies", { value: bibliographies });
     Object.defineProperty(facade, "runPrivacyActive", { value: privacyActive });
     for (const name of ["runClaims", "runOwnershipHistory", "runPrivacy"] as const) {
       if (core[name]) Object.defineProperty(facade, name, { value: core[name] });
