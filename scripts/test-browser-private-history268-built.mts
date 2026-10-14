@@ -5,6 +5,7 @@
  * No build, installer, provider, real wallet, production selector or runner fallback.
  */
 import assert from "node:assert/strict";
+import { channel } from "node:diagnostics_channel";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { cp, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -185,7 +186,8 @@ type NextFactory = (options: { dev: false; dir: string; hostname: string; port: 
 };
 const httpRequests: { method: string; path: string }[] = [], failures: string[] = [], pageErrors: string[] = [], externalAttempts: string[] = [];
 let unavailablePrefetches = 0;
-const transportObservations = { fetchGuardEntries: 0, listenerEntries: 0, connections: 0 };
+const transportObservations = { fetchGuardEntries: 0, listenerEntries: 0, connections: 0, undiciCreate: 0, undiciBeforeConnect: 0, undiciConnected: 0, undiciConnectError: 0, undiciHeaders: 0 };
+const transportChannels = [["undici:request:create", "undiciCreate"], ["undici:client:beforeConnect", "undiciBeforeConnect"], ["undici:client:connected", "undiciConnected"], ["undici:client:connectError", "undiciConnectError"], ["undici:request:headers", "undiciHeaders"]].map(([name, key]) => { const observed = channel(name); const listener = () => { transportObservations[key as keyof typeof transportObservations]++; }; observed.subscribe(listener); return { observed, listener }; });
 const results: object[] = [];
 let origin = "";
 const server = createServer(async (req, res) => {
@@ -341,13 +343,13 @@ try {
   };
   let httpProbe = 0;
   const http = async (path: string, init: RequestInit = {}) => {
-    const probe = ++httpProbe;
+    const probe = ++httpProbe, probeStarted = performance.now();
     console.log(`Compiled HTTP probe ${probe}: start`, { listening: server.listening, exactAddress: JSON.stringify(server.address()) === JSON.stringify(address), requestListeners: server.listenerCount("request"), ...transportObservations });
     try {
       const response = await fetch(origin + path, { ...init, signal: AbortSignal.timeout(8000) });
       console.log(`Compiled HTTP probe ${probe}: response ${response.status}`);
       return response;
-    } catch (cause) { console.log("Compiled transport failure observations", { listening: server.listening, requestListeners: server.listenerCount("request"), ...transportObservations }); throw new Error(`Compiled HTTP probe ${probe}: failed`, { cause }); }
+    } catch (cause) { console.log("Compiled transport failure observations", { elapsedMs: Math.round(performance.now() - probeStarted), listening: server.listening, requestListeners: server.listenerCount("request"), ...transportObservations }); throw new Error(`Compiled HTTP probe ${probe}: failed`, { cause }); }
   };
   for (const path of ["/me/private-jobs", "/me/private-jobs?_rsc=private268-built"]) {
     const response = await http(path, path.includes("?") ? { headers: { RSC: "1", "Next-Url": "/me/private-jobs" } } : {});
@@ -522,6 +524,7 @@ try {
   }
   try { raw?.close(); } catch (error) { cleanupFailures.push(error); }
   try { fixtureDb?.close(); } catch (error) { cleanupFailures.push(error); }
+  for (const { observed, listener } of transportChannels) observed.unsubscribe(listener);
   try { globalThis.fetch = nativeFetch; } catch (error) { cleanupFailures.push(error); }
   try { process.chdir(previousCwd); } catch (error) { cleanupFailures.push(error); }
   try {
