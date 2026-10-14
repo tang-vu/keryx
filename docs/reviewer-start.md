@@ -4,7 +4,7 @@ Start with the **[submitted Tameion demo, 2:47](https://youtu.be/sNonqLPMysg)**:
 English narration and subtitles cover source choices, the stored report/receipt,
 Operator observation, the evidence-procurement prototype and reusable Arc primitives.
 Its stored first-party example and prototype scenes keep their own scope; the
-supporting user recording below is separate traction evidence.
+supporting user recordings below are separate traction evidence.
 
 ## A short review route
 
@@ -13,6 +13,10 @@ supporting user recording below is separate traction evidence.
    confirmed direct user operation/supervision. The [user-story record](tameion-submission.md#recorded-outside-user-workflow-0xacee)
    links all three reports and explains the shortened waits, narration, results
    and separate assistant-run SQLite checks.
+   Also watch [Hoàng using MCP inside Devin CLI, 1:53](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
+   for Face Marker app research, visible errors/evidence gaps and a sponsored
+   Arc-testnet payment. Its [case study](tameion-submission.md#named-external-user-hoàng-freelance-developer)
+   retains the original video scope and later matched payment proof.
 2. **Try the web workflow:** open [keryx.cc](https://keryx.cc), choose Quick and
    submit a shareable question within the displayed sponsored quota/payer/budget.
    Inspect exact excerpts, unmet targets, BUY/SKIP/CACHE reasons and the receipt.
@@ -49,10 +53,11 @@ deliverables. The October 14 health recheck still reports production `ec5f39c9`;
 newer merged code awaits its release batch.
 
 Hoàng's October 2 MCP/Devin recording was posted on the owner's @tangvu_dev
-account, which is now suspended. Its original video is currently unavailable;
+account, which is now suspended. Its [archived edited video](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
+has been restored from the original local backup;
 the [matched testnet runs and sponsored payment](tameion-submission.md#named-external-user-hoàng-freelance-developer)
-remain documented. The available 0xacee video adds inspectable workflow evidence
-for an existing named user, rather than a new person count.
+remain documented. Both available videos show workflows for existing named users,
+so restoring them does not add to the person count.
 
 ## Read-only receipt inspection
 
