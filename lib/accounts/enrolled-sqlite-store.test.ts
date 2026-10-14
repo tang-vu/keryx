@@ -204,9 +204,36 @@ describe("genuine enrolled account membership", () => {
     const base = await bootstrap(fixture({ runtimeGuard: () => { guardCalls++; } }));
     guardCalls = 0;
     expect(await base.store.resolve(base.s, binding)).toEqual(base.start);
-    // Four hot checks + isTransaction/BEGIN/COMMIT + current clock execution +
-    // one fused current read execution. Every execution retains its full guard.
-    expect(guardCalls).toBe(9);
+    // Final post-COMMIT check + isTransaction/BEGIN/COMMIT + current clock execution
+    // + one fused current read. Each primitive still runs its genuine full guard.
+    expect(guardCalls).toBe(6);
+  });
+  it.each(["after BEGIN IMMEDIATE", "after the final fused read"] as const)("keeps the genuine full guard at the next primitive %s", async phase => {
+    let failure = false;
+    const base = await bootstrap(fixture({ runtimeGuard: () => { if (failure) throw new Error("Synthetic changed runtime guard"); } }));
+    const before = retained(base.file), original = financialHash(base.file);
+    let changed = 0;
+    const exec = DatabaseSync.prototype.exec, get = StatementSync.prototype.get;
+    const execSpy = vi.spyOn(DatabaseSync.prototype, "exec").mockImplementation(function (this: DatabaseSync, query: string) {
+      const result = Reflect.apply(exec, this, [query]);
+      if (phase === "after BEGIN IMMEDIATE" && query === "BEGIN IMMEDIATE") { changed++; failure = true; }
+      return result;
+    });
+    const getSpy = vi.spyOn(StatementSync.prototype, "get").mockImplementation(function (this: StatementSync, ...args: Parameters<StatementSync["get"]>) {
+      const result = Reflect.apply(get, this, args);
+      if (phase === "after the final fused read" && this.sourceSQL.startsWith("WITH account_read AS")) { changed++; failure = true; }
+      return result;
+    });
+    try {
+      const operation = phase === "after BEGIN IMMEDIATE"
+        ? base.service.prepareLink(base.s, wallets[1].address, expectedOf(base.start.membership), linkConsent)
+        : base.store.resolve(base.s, binding);
+      await expect(operation).rejects.toThrow("account_unavailable");
+    } finally { execSpy.mockRestore(); getSpy.mockRestore(); failure = false; }
+    expect(changed).toBe(1);
+    await expect(base.store.resolve(base.s, binding)).rejects.toThrow("account_unavailable");
+    expect(() => assertVerifiedSqliteConnection(base.connection.db)).toThrow();
+    expect(retained(base.file)).toEqual(before); expect(financialHash(base.file)).toBe(original);
   });
   it("reuses only guarded statements and rechecks current session rows on every read", async () => {
     const base = await bootstrap();

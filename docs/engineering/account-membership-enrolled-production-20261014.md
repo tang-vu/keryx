@@ -565,3 +565,26 @@ trials and every field except the two changed runtime source hashes match the
 incoming main artifact. All 431 physical source hashes match, with zero outbound
 attempts. Required exact-head hosted CI, coordinator merge and the next deployment
 batch remain pending; this record does not claim production Account activation.
+
+Exact-head PR489's first Linux unit run passed 3,733 tests but failed the existing
+combined MAX8/retention case at its unchanged 10-second limit. Its retained phases
+show seven genuine links at 4.650 seconds and eight live proofs at 2.848 seconds;
+the full journey still exceeded the Linux bound. No authority assertion failed.
+The native transaction successor removes three redundant explicit full scans:
+each is followed by a genuine guarded BEGIN, clock read or COMMIT. Positive
+metadata policy is checked at entry; every primitive still checks the full pinned
+domain/profile, identity, file, manifest and fences. The final post-COMMIT full
+check and complete failure/cleanup paths remain. New genuine fault controls
+change the runtime guard after actual BEGIN or the final fused read and require
+the next guarded primitive to refuse, permanently retire and preserve originals.
+This correction is UNRUN pending different source review; all original deadlines,
+MAX8/eight-live/retention assertions and ordinary journal bodies are retained.
+
+The three-scan successor passed different source review `83363d89`, focused types
+in 20.032 seconds, and all nine affected native controls in 56.142 seconds with
+natural exit 0 and both EOFs. Both new boundary faults reached their real SQL
+hooks and permanently refused after restoration. EXCLUSIVE passed in 8.981 seconds
+and BEGIN contention in 8.168 seconds at their unchanged 15-second limits. The
+full MAX8 case passed on Windows in 17.331 seconds at 20 seconds; this does not
+qualify the unresolved Linux 10-second gate. Required refreshed exact-head CI
+will determine Linux acceptance; the original failure remains retained.

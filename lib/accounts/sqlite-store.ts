@@ -80,12 +80,15 @@ export function createEnrolledSqliteAccountMembership(db: DatabaseSync): Account
   const fences = [...ACCOUNT_MEMBERSHIP_SCHEMA_DATA, ...ACCOUNT_WEB_SESSION_SCHEMA_DATA]
     .filter(entry => entry.type === "table").flatMap(entry => ["insert", "update", "delete"]
       .map(operation => `storage_fence_${accountDigest(entry.name).slice(0, 16)}_${operation}`));
-  const check = () => {
+  const policy = () => {
     if (refused) throw unavailable();
     assertVerifiedSqliteNativeUserDomainPolicy(db);
     assertVerifiedSqliteForeignKeys(db);
-    // The full core guard retains the exact admitted source profile, identity,
-    // file, manifest and fences. SQL primitives keep their own full guards.
+  };
+  const check = () => {
+    policy();
+    // Every genuine primitive already checks the exact admitted source profile,
+    // identity, file, manifest and fences. Keep this explicit final/cleanup guard.
     assertVerifiedSqliteConnection(db);
   };
   const sql = <T>(action: () => T): T => {
@@ -160,16 +163,14 @@ export function createEnrolledSqliteAccountMembership(db: DatabaseSync): Account
     let stateInspected = false;
     sqlFailed = false; sqlFailure = undefined;
     try {
+      policy();
       const inTransaction = sql(() => db.isTransaction);
       stateInspected = true;
       if (inTransaction) { latch(); throw unavailable(); }
-      try { check(); } catch (error) { if (!contention(error)) latch(); throw error; }
       guarded.exec(write ? "BEGIN IMMEDIATE" : "BEGIN"); begun = true;
-      try { check(); } catch (error) { if (!contention(error)) latch(); throw error; }
       const now = timeSchema.parse(guarded.prepare("SELECT CAST(unixepoch('subsec')*1000 AS INTEGER) AS now").get()?.now);
       const value = action(now);
       if (sqlFailed) throw sqlFailure;
-      try { check(); } catch (error) { if (!contention(error)) latch(); throw error; }
       guarded.exec("COMMIT"); begun = false;
       try { check(); } catch (error) { latch(); throw error; }
       return value;
