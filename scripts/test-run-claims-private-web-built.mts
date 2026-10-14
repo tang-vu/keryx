@@ -140,8 +140,8 @@ try {
   await page.goto(origin + "/research");
   assert.equal(await page.getByRole("link", { name: copy.entry }).getAttribute("href"), "/research/private");
   await Promise.all([page.waitForNavigation(), page.getByRole("link", { name: copy.entry }).click()]);
-  await page.locator("textarea").fill("Synthetic private research");
-  await page.locator("[data-tour='dispatch-btn']").click();
+  await page.getByRole("textbox", { name: "What do you want to know?", exact: true }).fill("Synthetic private research");
+  await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
   await page.getByRole("button", { name: copy.open, exact: true }).waitFor();
   assert((await page.content()).includes("Synthetic completed answer")); assert(!(await page.content()).includes(token));
   assert.equal(await page.locator("a[href*='#" + token + "']").count(), 0);
@@ -156,18 +156,18 @@ try {
   // Reload loses the credential. A failed request and unavailable delivery do
   // not automatically rerun research or discard a completed answer.
   await page.reload(); assert.equal(await page.getByRole("button", { name: copy.open, exact: true }).count(), 0);
-  mode = "abort"; await page.locator("textarea").fill("Synthetic failed transport"); await page.locator("[data-tour='dispatch-btn']").click();
+  mode = "abort"; await page.getByRole("textbox", { name: "What do you want to know?", exact: true }).fill("Synthetic failed transport"); await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
   await page.getByText(copy.lost, { exact: true }).waitFor(); assert.equal(asks, 2);
-  mode = "unavailable"; await page.locator("textarea").fill("Synthetic unavailable delivery"); await page.locator("[data-tour='dispatch-btn']").click();
+  mode = "unavailable"; await page.getByRole("textbox", { name: "What do you want to know?", exact: true }).fill("Synthetic unavailable delivery"); await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
   await page.getByText(copy.failed, { exact: true }).waitFor(); assert((await page.content()).includes("Synthetic completed answer")); assert.equal(asks, 3);
   tests.push("reload/request abort/unavailable completion: no recovery, no auto retry, completed answer preserved");
 
   inject = true; await page.reload();
-  await page.locator("textarea").fill("Nonce still hydrated");
+  await page.getByRole("textbox", { name: "What do you want to know?", exact: true }).fill("Nonce still hydrated");
   assert.equal(await page.evaluate(() => Reflect.get(window, "__unapproved")), undefined);
   const refused = await page.evaluate(async () => (await fetch("/research/private", { headers: { RSC: "1" } })).status);
   assert.equal(refused, 409);
-  await page.locator("[data-tour='dispatch-btn']").click(); await page.getByText(copy.failed, { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Ask Keryx", exact: true }).click(); await page.getByText(copy.failed, { exact: true }).waitFor();
   tests.push("actual nonce permits Next hydration while blocking unapproved inline/Cloudflare injection and SPA/RSC issuance");
   // Playwright's privileged fixture transport injects a reader error after the
   // real built hook has received done + packet, but before clean EOF. This does
@@ -183,7 +183,7 @@ try {
       } }), { headers: { "content-type": "text/event-stream" } }));
     };
   }, wire("complete"));
-  await page.locator("textarea").fill("Synthetic lost acknowledgement"); await page.locator("[data-tour='dispatch-btn']").click();
+  await page.getByRole("textbox", { name: "What do you want to know?", exact: true }).fill("Synthetic lost acknowledgement"); await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
   await page.getByText(copy.lost, { exact: true }).waitFor();
   assert((await page.content()).includes("Synthetic completed answer"));
   assert.equal(await page.getByRole("button", { name: copy.open, exact: true }).count(), 0); assert.equal(asks, 4);
