@@ -205,8 +205,8 @@ afterEach(() => {
 
 async function enumeration() {
   const archive = await getArchiveCached();
-  const index = await AnswersPage();
-  const older = await AnswersPageN({ params: Promise.resolve({ n: "2" }) });
+  const index = await AnswersPage({ searchParams: Promise.resolve({}) });
+  const older = await AnswersPageN({ params: Promise.resolve({ n: "2" }), searchParams: Promise.resolve({}) });
   const topic = await TopicPage({ params: Promise.resolve({ slug: "astronomy" }) });
   const ordinary = await runs(request("/api/runs"));
   const classified = await runs(request(`/api/runs?network=${network}&period=all`));

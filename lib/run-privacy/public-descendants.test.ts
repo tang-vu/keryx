@@ -10,7 +10,7 @@ import { act, createElement, isValidElement, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createConfig, WagmiProvider } from "wagmi";
+import { createConfig, createStorage, WagmiProvider } from "wagmi";
 import { custom } from "viem";
 import { NextRequest } from "next/server";
 import { AppRouterContext, type AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
@@ -213,7 +213,7 @@ beforeEach(async () => {
   boundary.db.mockResolvedValue(db); setViewer(); boundary.key.mockResolvedValue(null);
   boundary.account.mockResolvedValue({ db, wallet: alice, currentId: sessionHash });
   queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } });
-  walletConfig = createConfig({ chains: [arcTestnet], connectors: [], storage: null, ssr: true,
+  walletConfig = createConfig({ chains: [arcTestnet], connectors: [], storage: createStorage({ storage: { getItem: () => null, setItem: () => {}, removeItem: () => {} } }), ssr: true,
     multiInjectedProviderDiscovery: false, transports: { [arcTestnet.id]: custom({ request: async () => forbidden() }) } });
 });
 afterEach(async () => {

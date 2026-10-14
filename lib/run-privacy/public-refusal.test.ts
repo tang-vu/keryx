@@ -119,9 +119,9 @@ it.each(["missing capability","storage read failure","database acquisition failu
       const params={params:Promise.resolve({id})};
       const result=await metadata.generateMetadata(params);metadataResults.push(result);
       // Unavailable metadata has its own catch contract, distinct from a missing ID.
-      expect(result.robots).toEqual({index:false});
-      expect(result.description).toBeUndefined();expect(result.openGraph).toBeUndefined();
-      expect(result.alternates).toBeUndefined();
+      expect(result.robots).toEqual({index:false,follow:false});
+      expect(result.description).toBeNull();expect(result.openGraph).toBeNull();
+      expect(result.alternates).toEqual({canonical:null,languages:{},types:{}});
       const response=await dispatch.GET(new NextRequest(`https://synthetic-privacy.example/api/dispatch/${id}`),params);
       expect(response.status).toBe(503);expect(response.headers.get("cache-control")).toContain("no-store");
       expect(await response.json()).toEqual({error:"dispatch unavailable"});
