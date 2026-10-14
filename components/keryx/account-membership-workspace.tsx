@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { accountMembershipCopy as copy } from "@/locales/en/account-membership";
 import { accountIdSchema, canonicalWalletSchema, digestSchema, membershipSchema, preconditionSchema, type AccountPrecondition,
   type IssuedMembershipChallenge, type Membership } from "@/lib/accounts/contracts";
 
@@ -85,39 +86,39 @@ export function AccountMembershipWorkspace() {
   }
   const expected = membership ? { accountId: membership.accountId, revision: membership.revision } : offer;
   return <section className="mx-auto max-w-3xl space-y-6 p-6">
-    <h1 className="text-2xl font-semibold">Private account and wallets</h1>
-    <p>Link wallets you control to share their owned history in one private account. Funds, research limits, signing, API keys and creator powers stay with each wallet.</p>
-    <p>New to wallets? The existing Google sign-in can create an unfunded, user-controlled Circle wallet. Account creation requires a separate confirmation here.</p>
-    <button type="button" disabled={busy} onClick={() => void load()} className="rounded border px-4 py-2">Reload account</button>
-    <p role="status" aria-live="polite">{busy ? "Checking your account…" : message}</p>
-    {sessionWallet && <p className="break-all">Current sign-in wallet: {sessionWallet}</p>}
+    <h1 className="text-2xl font-semibold">{copy.title}</h1>
+    <p>{copy.authority}</p>
+    <p>{copy.walletFree}</p>
+    <button type="button" disabled={busy} onClick={() => void load()} className="rounded border px-4 py-2">{copy.reload}</button>
+    <p role="status" aria-live="polite">{busy ? copy.checking : message}</p>
+    {sessionWallet && <p className="break-all">{copy.currentWallet} {sessionWallet}</p>}
     {available && !membership && <div className="space-y-3">
-      <label className="block"><input type="checkbox" checked={accountAccepted} onChange={e => setAccountAccepted(e.target.checked)} /> I consent to {offer ? "accessing" : "creating"} a private account and sharing my verified wallet&apos;s owned history.</label>
+      <label className="block"><input type="checkbox" checked={accountAccepted} onChange={e => setAccountAccepted(e.target.checked)} /> {copy.consentPrefix} {offer ? copy.accessing : copy.creating} {copy.consentSuffix}</label>
       <button type="button" disabled={busy || !accountAccepted || !!pending} onClick={() => void action(offer
-        ? { action: "resume", expected: offer, consent: accountConsent } : { action: "prepare-create", consent: accountConsent })} className="rounded border px-4 py-2">{offer ? "Resume private account" : "Review account creation"}</button>
+        ? { action: "resume", expected: offer, consent: accountConsent } : { action: "prepare-create", consent: accountConsent })} className="rounded border px-4 py-2">{offer ? copy.resume : copy.reviewCreate}</button>
     </div>}
     {membership && <div className="space-y-4">
-      <p className="break-all">Account: {membership.accountId} · revision {membership.revision}</p>
-      <label className="block"><input type="checkbox" checked={unlinkAccepted} onChange={e => setUnlinkAccepted(e.target.checked)} /> I confirm removal of the selected wallet&apos;s account access. Its own history and financial obligations remain.</label>
+      <p className="break-all">{copy.account} {membership.accountId} {copy.revision} {membership.revision}</p>
+      <label className="block"><input type="checkbox" checked={unlinkAccepted} onChange={e => setUnlinkAccepted(e.target.checked)} /> {copy.unlinkConsent}</label>
       <ul className="space-y-2">{membership.members.map(member => <li key={member.generation} className="break-all">
-        {member.wallet} <button type="button" disabled={busy || !unlinkAccepted || !!pending} onClick={() => void action({ action: "unlink", expected, wallet: member.wallet, generation: member.generation, consent: true })} className="rounded border px-2 py-1">Unlink</button>
+        {member.wallet} <button type="button" disabled={busy || !unlinkAccepted || !!pending} onClick={() => void action({ action: "unlink", expected, wallet: member.wallet, generation: member.generation, consent: true })} className="rounded border px-2 py-1">{copy.unlink}</button>
       </li>)}</ul>
-      <label className="block">Wallet to prove <input className="ml-2 rounded border p-2" value={wallet} onChange={e => setWallet(e.target.value)} maxLength={42} disabled={busy || !!pending} placeholder="0x…" /></label>
-      <label className="block"><input type="checkbox" checked={linkAccepted} onChange={e => setLinkAccepted(e.target.checked)} /> I explicitly share this wallet&apos;s past and future owned history. Its funds, signing, API keys, claims and creator powers stay separate.</label>
-      <button type="button" disabled={busy || !linkAccepted || !!pending || membership.members.length >= 8 || !/^0x[a-fA-F0-9]{40}$/.test(wallet)} onClick={() => void action({ action: "prepare-link", expected, wallet, consent: linkConsent })} className="rounded border px-4 py-2">Review wallet proof</button>
-      <button type="button" disabled={busy || !!pending} onClick={() => void action({ action: "revoke-session", expected, consent: true })} className="ml-2 rounded border px-4 py-2">Revoke this account sign-in</button>
+      <label className="block">{copy.walletToProve} <input className="ml-2 rounded border p-2" value={wallet} onChange={e => setWallet(e.target.value)} maxLength={42} disabled={busy || !!pending} placeholder={copy.walletPlaceholder} /></label>
+      <label className="block"><input type="checkbox" checked={linkAccepted} onChange={e => setLinkAccepted(e.target.checked)} /> {copy.linkConsent}</label>
+      <button type="button" disabled={busy || !linkAccepted || !!pending || membership.members.length >= 8 || !/^0x[a-fA-F0-9]{40}$/.test(wallet)} onClick={() => void action({ action: "prepare-link", expected, wallet, consent: linkConsent })} className="rounded border px-4 py-2">{copy.reviewWallet}</button>
+      <button type="button" disabled={busy || !!pending} onClick={() => void action({ action: "revoke-session", expected, consent: true })} className="ml-2 rounded border px-4 py-2">{copy.revoke}</button>
     </div>}
     {pending && <div className="space-y-3 rounded border p-4">
-      <p>Confirm the exact account, wallet and intent below. This proof expires after five minutes.</p>
+      <p>{copy.confirmIntent}</p>
       <pre className="whitespace-pre-wrap break-all text-xs">{pending.message}</pre>
       {pending.challenge.purpose === "link-wallet" && <>
-        <p>Sign these exact message bytes with the target wallet using personal_sign, while keeping the initiating sign-in unchanged. A Circle wallet needs its independently verified signing context; changing this sign-in makes the link stale.</p>
-        <label className="block">Target wallet signature <textarea className="block w-full rounded border p-2" value={signature} onChange={e => setSignature(e.target.value)} maxLength={132} disabled={busy} /></label>
+        <p>{copy.targetSignatureHelp}</p>
+        <label className="block">{copy.targetSignature} <textarea className="block w-full rounded border p-2" value={signature} onChange={e => setSignature(e.target.value)} maxLength={132} disabled={busy} /></label>
       </>}
       <button type="button" disabled={busy || pending.challenge.expiresAt <= Date.now() || (pending.challenge.purpose === "link-wallet" ? !linkAccepted || !/^0x[a-fA-F0-9]{130}$/.test(signature) : !accountAccepted)} onClick={() => void action(pending.challenge.purpose === "link-wallet"
         ? { action: "complete-link", nonce: pending.nonce, signature, consent: linkConsent }
-        : { action: "complete-create", nonce: pending.nonce, consent: accountConsent })} className="rounded border px-4 py-2">{pending.challenge.purpose === "link-wallet" ? "Confirm wallet link" : "Confirm private account creation"}</button>
-      <button type="button" disabled={busy} onClick={() => void load()} className="ml-2 rounded border px-4 py-2">Cancel and reload</button>
+        : { action: "complete-create", nonce: pending.nonce, consent: accountConsent })} className="rounded border px-4 py-2">{pending.challenge.purpose === "link-wallet" ? copy.confirmLink : copy.confirmCreate}</button>
+      <button type="button" disabled={busy} onClick={() => void load()} className="ml-2 rounded border px-4 py-2">{copy.cancel}</button>
     </div>}
   </section>;
 }
