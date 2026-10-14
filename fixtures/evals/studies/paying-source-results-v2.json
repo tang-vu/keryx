@@ -50,7 +50,7 @@
     "lib/accounts/contracts.ts": "0d334eb8bc3a6ee2bd06e241f1417bd5b24f664335a212d96bb68f014cd4eae3",
     "lib/accounts/protocol.ts": "b27c6ab0b1c36a8d821134fb8214fc065b0ffbcf0c252994c610077bbb2b1b96",
     "lib/accounts/sqlite-schema-data.ts": "b83e5822bf34ceb32dc60ae1ef5dc85a0aad97d56956535b003933819da7bd5d",
-    "lib/accounts/sqlite-store.ts": "9bdfb8294039edc282b9c99ad742e4bb995aec55b8343a31478503c81f194485",
+    "lib/accounts/sqlite-store.ts": "a468b47d4c15abb1f96d1912490c89cf1b30fb41a4d1cc8c8ce6586f77274dd2",
     "lib/activation.ts": "c201dbf1ac8785e706902238b44c8c03b1b072bd08b697d4904c1993a0aba031",
     "lib/agent/answer-confidence.ts": "d369f5c9b14547ca44baeef625ff1247512e85c14378dd3a893402573cd44791",
     "lib/agent/answer-grounding.ts": "b61f266bdfa5cd047d43adbcff92089fdd70d4b06a128f7be05a49e749749a4e",

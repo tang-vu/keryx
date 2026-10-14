@@ -588,3 +588,8 @@ and BEGIN contention in 8.168 seconds at their unchanged 15-second limits. The
 full MAX8 case passed on Windows in 17.331 seconds at 20 seconds; this does not
 qualify the unresolved Linux 10-second gate. Required refreshed exact-head CI
 will determine Linux acceptance; the original failure remains retained.
+
+The corrected source's one canonical refresh passed naturally in 11.681 seconds:
+all 431 physical source hashes and all 48 trials match the declared inputs, with
+zero outbound attempts. Every non-source field equals actual incoming main5213;
+relative to failed6b only the Account runtime hash changed. The report is unchanged.
