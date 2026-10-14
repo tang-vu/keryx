@@ -1,10 +1,11 @@
+import { createHash } from "node:crypto";
 import { hasScope, parseScopes } from "../api-key-scopes";
 import { authJson } from "../auth-challenge";
 import type { KeryxDB } from "../db/keryx-db";
 import { profileWallet } from "./private-profile";
 import { authorizationUrl, exchangeIdentity, type ProviderConfiguration } from "./identity-provider";
 import { ProfileIdentityError, identityProviderSchema, identityRecordSchema, identitySnapshotSchema, requireProfileIdentities, type IdentityProvider, type ProviderIdentity } from "./verified-identities";
-import { flowChallenge, identityCookie, identityCookieValue, newIdentityFlow, readIdentityFlow, sealIdentityFlow, stateMatches } from "./identity-flow";
+import { flowChallenge, identityCookie, identityCookieValue, identityContinuationCookie, identityContinuationCookieName, newIdentityFlow, readIdentityContinuation, readIdentityFlow, sealIdentityContinuation, sealIdentityFlow, stateMatches, uniqueIdentityCookieValue } from "./identity-flow";
 import { emptyIdentityRequestBody } from "./identity-request-body";
 
 interface Context { db: KeryxDB; wallet: string; currentId: string }
@@ -27,6 +28,26 @@ function safeResponse(response: Response): Response {
   response.headers.set("Cache-Control", "no-store");
   response.headers.set("Referrer-Policy", "no-referrer");
   return response;
+}
+const callbackPath = (provider: IdentityProvider) => `/api/me/profile/identities/${provider}/callback`;
+// Static navigation only. The load event occurs after this queryless document commits.
+const continueScript = 'window.addEventListener("load",function(){setTimeout(function(){document.getElementById("continue").requestSubmit();},0);},{once:true});';
+function continuationDocument(provider: IdentityProvider): Response {
+  const response = new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="same-origin"><title>Continue identity verification</title></head><body><main><h1>Continue identity verification</h1><p>Continue using your signed-in Keryx session.</p><form id="continue" method="post" action="${callbackPath(provider)}"><button type="submit">Continue</button></form></main><script>${continueScript}</script></body></html>`, {
+    headers: { "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": `default-src 'none'; script-src 'sha256-${createHash("sha256").update(continueScript).digest("base64")}'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'`,
+      "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff" },
+  });
+  safeResponse(response);
+  // A no-referrer form policy serializes Origin as null. This document is already
+  // queryless: same-origin preserves exact POST Origin and exposes no provider query.
+  response.headers.set("Referrer-Policy", "same-origin");
+  return response;
+}
+function clearIdentityCookies(response: Response, provider: IdentityProvider) {
+  response.headers.append("Set-Cookie", identityCookie(provider));
+  response.headers.append("Set-Cookie", identityContinuationCookie(provider));
+  return safeResponse(response);
 }
 /** Server configuration only. Never infer browser authority from Next's internal URL or proxy headers. */
 function configuredApplicationOrigin(value: string | undefined): string | null {
@@ -96,6 +117,7 @@ export function createIdentityRoutes(deps: Dependencies) {
         await store.begin(flowChallenge(flow));
         const response = authJson({ authorizationUrl: url });
         response.headers.set("Set-Cookie", identityCookie(parsed.data, token));
+        response.headers.append("Set-Cookie", identityContinuationCookie(parsed.data));
         return safeResponse(response);
       } catch (error) { return safeResponse(failure(error)); }
     },
@@ -107,14 +129,13 @@ export function createIdentityRoutes(deps: Dependencies) {
         if (context instanceof Response) return safeResponse(context);
         await requireProfileIdentities(context.db).unlink(context.wallet, provider.data);
         const response = authJson({ unlinked: true });
-        response.headers.set("Set-Cookie", identityCookie(provider.data));
-        return safeResponse(response);
+        return clearIdentityCookies(response, provider.data);
       } catch (error) { return safeResponse(failure(error)); }
     },
     async CALLBACK(request: Request, providerValue: string): Promise<Response> {
       const provider = identityProviderSchema.safeParse(providerValue);
       if (!provider.success) return safeResponse(authJson({ error: "invalid_identity_request" }, 400));
-      let result: "verified" | "conflict" | "failed" = "failed";
+      const result = "failed";
       let returnOrigin: string | undefined;
       try {
         if (!applicationOrigin) throw new ProfileIdentityError("identity_unavailable");
@@ -123,21 +144,67 @@ export function createIdentityRoutes(deps: Dependencies) {
           || config.redirectUri !== `${applicationOrigin}/api/me/profile/identities/${provider.data}/callback`) throw new ProfileIdentityError("identity_unavailable");
         returnOrigin = applicationOrigin;
         const url = new URL(request.url);
+        if (request.method !== "GET" || request.headers.has("authorization") || request.signal.aborted) throw new ProfileIdentityError("identity_expired");
+        const flowToken = identityCookieValue(request, provider.data);
+        const flow = await readIdentityFlow(flowToken, deps.secret, now());
+        if (!flow || !flowToken || flow.provider !== provider.data) throw new ProfileIdentityError("identity_expired");
+        if (!url.search) {
+          const continuation = await readIdentityContinuation(uniqueIdentityCookieValue(request, identityContinuationCookieName(provider.data)), flow, flowToken, deps.secret, now());
+          if (!continuation) throw new ProfileIdentityError("identity_expired");
+          // Neither this document nor its preceding redirect proves a Strict session.
+          return continuationDocument(provider.data);
+        }
         if (url.search.length > 4096 || [...url.searchParams.keys()].some(key => !["code", "state", "error", "error_description", "error_uri"].includes(key))
           || [...new Set(url.searchParams.keys())].some(key => url.searchParams.getAll(key).length !== 1)) throw new ProfileIdentityError("identity_expired");
-        const flow = await readIdentityFlow(identityCookieValue(request, provider.data), deps.secret, now());
-        const state = url.searchParams.get("state");
-        if (!flow || flow.provider !== provider.data || !state || !stateMatches(state, flow)) throw new ProfileIdentityError("identity_expired");
+        const state = url.searchParams.get("state"), code = url.searchParams.get("code"), denied = url.searchParams.has("error");
+        if (!state || !stateMatches(state, flow)) throw new ProfileIdentityError("identity_expired");
+        if (denied) {
+          const error = url.searchParams.get("error")!;
+          if (code !== null || !error || error.length > 256 || /[\p{Cc}\p{Cf}\s]/u.test(error)
+            || (url.searchParams.get("error_description")?.length ?? 0) > 1024 || (url.searchParams.get("error_uri")?.length ?? 0) > 1024) throw new ProfileIdentityError("identity_expired");
+        } else if (!code || code.length > 2048 || /[\p{Cc}\p{Cf}\s]/u.test(code)
+          || url.searchParams.has("error_description") || url.searchParams.has("error_uri")) throw new ProfileIdentityError("identity_expired");
+        const token = await sealIdentityContinuation(flow, flowToken, { denied, ...(denied ? {} : { code: code! }) }, deps.secret, now());
+        const response = new Response(null, { status: 303, headers: { Location: config.redirectUri } });
+        response.headers.set("Set-Cookie", identityContinuationCookie(provider.data, token));
+        return safeResponse(response);
+      } catch {}
+      const response = returnOrigin ? new Response(null, { status: 303, headers: { Location: `${returnOrigin}/me/profile?identity=${result}` } })
+        : authJson({ error: "identity_unavailable" }, 503);
+      return clearIdentityCookies(response, provider.data);
+    },
+    async CALLBACK_POST(request: Request, providerValue: string): Promise<Response> {
+      const provider = identityProviderSchema.safeParse(providerValue);
+      if (!provider.success) return safeResponse(authJson({ error: "invalid_identity_request" }, 400));
+      let result: "verified" | "conflict" | "failed" = "failed";
+      let returnOrigin: string | undefined;
+      try {
+        if (!applicationOrigin) throw new ProfileIdentityError("identity_unavailable");
+        const config = deps.provider(provider.data);
+        if (!config || config.provider !== provider.data || config.redirectUri !== `${applicationOrigin}${callbackPath(provider.data)}`) throw new ProfileIdentityError("identity_unavailable");
+        returnOrigin = applicationOrigin;
+        if (request.method !== "POST" || request.url.includes("?") || request.headers.get("origin") !== applicationOrigin
+          || request.headers.has("authorization") || !uniqueIdentityCookieValue(request, "keryx_session")
+          || !await emptyIdentityRequestBody(request)) throw new ProfileIdentityError("identity_expired");
+        const flowToken = identityCookieValue(request, provider.data);
+        const flow = await readIdentityFlow(flowToken, deps.secret, now());
+        if (!flow || !flowToken || flow.provider !== provider.data) throw new ProfileIdentityError("identity_expired");
+        const continuation = await readIdentityContinuation(uniqueIdentityCookieValue(request, identityContinuationCookieName(provider.data)), flow, flowToken, deps.secret, now());
+        if (!continuation) throw new ProfileIdentityError("identity_expired");
         const context = await session(request, false);
         if (context instanceof Response || profileWallet(context.wallet) !== flow.wallet || context.currentId !== flow.sessionHash) throw new ProfileIdentityError("identity_expired");
         const store = requireProfileIdentities(context.db), challenge = flowChallenge(flow);
+        if (request.signal.aborted || now() >= Date.parse(continuation.expiresAt) || now() >= Date.parse(flow.expiresAt)) throw new ProfileIdentityError("identity_expired");
         await store.consume(challenge); // Consume before any provider call, including denial/error callbacks.
-        const code = url.searchParams.get("code");
-        if (url.searchParams.has("error") || !code || code.length > 2048 || /[\p{Cc}\p{Cf}\s]/u.test(code)) throw new ProfileIdentityError("identity_expired");
-        const identity = await (deps.exchange ?? exchangeIdentity)(config, { code, ...(flow.codeVerifier ? { codeVerifier: flow.codeVerifier } : {}) });
+        if (continuation.denied || !continuation.code || request.signal.aborted || now() >= Date.parse(continuation.expiresAt)) throw new ProfileIdentityError("identity_expired");
+        const identity = await (deps.exchange ?? exchangeIdentity)(config, { code: continuation.code, ...(flow.codeVerifier ? { codeVerifier: flow.codeVerifier } : {}) });
         if (identity.provider !== provider.data || now() >= Date.parse(flow.expiresAt)) throw new ProfileIdentityError("identity_expired");
         const fresh = await deps.session();
         if (fresh instanceof Response || profileWallet(fresh.wallet) !== flow.wallet || fresh.currentId !== flow.sessionHash) throw new ProfileIdentityError("identity_expired");
+        const finalConfig = deps.provider(provider.data);
+        if (!finalConfig || finalConfig.provider !== config.provider || finalConfig.redirectUri !== config.redirectUri
+          || finalConfig.clientId !== config.clientId || finalConfig.clientSecret !== config.clientSecret
+          || request.signal.aborted || now() >= Date.parse(flow.expiresAt) || now() >= Date.parse(continuation.expiresAt)) throw new ProfileIdentityError("identity_expired");
         const record = identityRecordSchema.parse(await store.complete(challenge, identity));
         if (record.wallet !== flow.wallet || record.provider !== provider.data || record.externalId !== identity.externalId || record.label !== identity.label)
           throw new ProfileIdentityError("identity_unavailable");
@@ -146,8 +213,7 @@ export function createIdentityRoutes(deps: Dependencies) {
       // No request-selected return URL and no provider code/token/identity/error detail in redirects.
       const response = returnOrigin ? new Response(null, { status: 303, headers: { Location: `${returnOrigin}/me/profile?identity=${result}` } })
         : authJson({ error: "identity_unavailable" }, 503);
-      response.headers.set("Set-Cookie", identityCookie(provider.data));
-      return safeResponse(response);
+      return clearIdentityCookies(response, provider.data);
     },
   };
 }
