@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { addressSchema } from "../buyer/protocol";
 import { privateResearchIdSchema, samePrivateResearchIntent, validatePrivateResearchIntent, type PrivateResearchIntent } from "../a2a/private-research-intent";
+import { privateHistoryCursorSchema } from "../a2a/private-research-identifiers";
+export { privateHistoryCursorSchema } from "../a2a/private-research-identifiers";
 
 export const PRIVATE_RESEARCH_INTENTS_SQL = `
 CREATE TABLE IF NOT EXISTS private_research_intents (
@@ -18,7 +20,6 @@ CREATE TRIGGER IF NOT EXISTS private_research_intents_immutable BEFORE UPDATE ON
 BEGIN SELECT RAISE(ABORT, 'private research intents are immutable'); END;
 `;
 
-export const privateHistoryCursorSchema = z.object({ createdAt: z.string().datetime({ offset: true }), id: privateResearchIdSchema }).strict();
 export type PrivateHistoryCursor = z.infer<typeof privateHistoryCursorSchema>;
 export type PrivateHistoryEntry = { intent: PrivateResearchIntent; createdAt: string };
 

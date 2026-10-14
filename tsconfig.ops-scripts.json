@@ -85,6 +85,7 @@
     "scripts/test-browser-operator-business.mts",
     "scripts/ask.mts",
     "scripts/history.mts",
+    "scripts/private-job-history.mts",
     "scripts/private-cli-claims.mts",
     "scripts/private-cli-claims.test-fixture.mts",
     "scripts/private-cli-claims.test.mts",

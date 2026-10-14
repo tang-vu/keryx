@@ -33,6 +33,8 @@ import { createHistoryClient } from "../lib/history/personal-history-client.ts";
 import { registerHistoryTool } from "../lib/history/personal-history-mcp.ts";
 import { registerOwnedHistoryTools } from "../lib/history/owned-history-mcp.ts";
 import { createOwnedHistoryClient } from "../lib/history/owned-history-client.ts";
+import { createPrivateJobHistoryClient } from "../lib/history/private-job-history-client.ts";
+import { registerPrivateJobHistoryTools } from "../lib/history/private-job-history-mcp.ts";
 import { registerRunPrivacyRead } from "../lib/run-privacy/mcp.ts";
 import { createRunPrivacyClient } from "../lib/run-privacy/client.ts";
 import { registerAcceptanceTools } from "../lib/deliverable-acceptance/mcp.ts";
@@ -50,6 +52,14 @@ registerProfileTools(server, { read: () => profileClient().read(), update: input
 registerHistoryTool(server, input => createHistoryClient(meta.baseUrl, () => process.env.KERYX_API_KEY).read(input));
 const ownedHistoryClient = () => createOwnedHistoryClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
 registerOwnedHistoryTools(server, input => ownedHistoryClient().read(input), input => ownedHistoryClient().export(input));
+let privateJobHistoryClient: ReturnType<typeof createPrivateJobHistoryClient> | undefined;
+const privateHistoryClient = () => privateJobHistoryClient ??= createPrivateJobHistoryClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
+registerPrivateJobHistoryTools(server, {
+  list: (input, options) => privateHistoryClient().list(input, options),
+  detail: (input, options) => privateHistoryClient().detail(input, options),
+  export: (input, options) => privateHistoryClient().export(input, options),
+  current: () => privateJobHistoryClient?.current(),
+});
 registerRunPrivacyRead(server,(id,requestId)=>createRunPrivacyClient(meta.baseUrl,()=>process.env.KERYX_API_KEY).read(id,requestId));
 registerIdentityReadTool(server, () => profileClient().readIdentities());
 server.registerTool("paper_lookup", paperLookupToolOptions,

@@ -23,6 +23,7 @@ export function ResearchPrivateJobs() {
     <h2 id="private-jobs-heading" className="font-display text-3xl">{message("privateResearchJobs.title")}</h2>
     <p className="mt-3 font-serif text-sm text-ink-2">{message("privateResearchJobs.introduction")}</p>
     <p className="mt-2 font-serif text-sm text-ink-3">{message(browserPaymentProfile().testnet ? "privateResearchJobs.pilotNotice" : "privateResearchJobs.capacityNotice")}</p>
+    <Link href="/me/private-jobs" prefetch={false} className="mt-3 inline-block text-sm underline">Completed private jobs and downloads</Link>
     {session === undefined ? <p role="status" className="mt-4">{message("privateResearchJobs.checkingSignIn")}</p> : session
       ? <PrivateJobs key={session.address.toLowerCase()} wallet={session.address.toLowerCase()} />
       : <Link href="/connect" className="mt-4 inline-block underline">{message("privateResearchJobs.signIn")}</Link>}
