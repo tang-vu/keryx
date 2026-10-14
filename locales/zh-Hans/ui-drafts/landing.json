@@ -1,0 +1,272 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/landing.ts",
+  "sourceSha256": "bbb8e59e258b528307825f64934b2bdc18d4f254048733c43edd006cbca4b5a3",
+  "entries": {
+    "landingSteps.decide": {
+      "source": "Decide",
+      "text": "决定"
+    },
+    "landingSteps.decideBody": {
+      "source": "Given a spending cap, Keryx compares public previews and prices, then explains which sources it buys or skips. Unspent budget stays with the buyer.",
+      "text": "在支出上限内，Keryx 比较公开预览与价格，然后说明购买或跳过哪些来源。未花费的预算仍属于买方。"
+    },
+    "landingSteps.cite": {
+      "source": "Cite",
+      "text": "引用"
+    },
+    "landingSteps.citeBody": {
+      "source": "It reads purchased content and writes an answer with citations to sources that support its claims. It can also say when evidence is thin.",
+      "text": "它阅读已购买内容，并撰写引用支持其主张的来源的答案。证据不足时也可以明确说明。"
+    },
+    "landingSteps.settle": {
+      "source": "Settle",
+      "text": "结算"
+    },
+    "landingSteps.title": {
+      "source": "The minting",
+      "text": "铸造"
+    },
+    "landingSteps.creators": {
+      "source": "For creators",
+      "text": "创作者专区"
+    },
+    "landingSteps.listFeed": {
+      "source": "List your feed ▸",
+      "text": "登记您的订阅源 ▸"
+    },
+    "landingSteps.ledger": {
+      "source": "See the ledger",
+      "text": "查看账本"
+    },
+    "landingSteps.settleBody": {
+      "source": "Eligible cited creators receive weighted USDC rewards on {network}. The answer and public ledger distinguish settled, pending, and simulated payments.",
+      "text": "符合条件的被引用创作者在 {network} 上获得按权重分配的 USDC 奖励。答案和公开账本区分已结算、等待确认及模拟付款。"
+    },
+    "landingCreators.title": {
+      "source": "Your words are the answer. {emphasis}",
+      "text": "您的文字构成答案。{emphasis}"
+    },
+    "landingCreators.titleEmphasis": {
+      "source": "Be paid like it.",
+      "text": "也应因此获得报酬。"
+    },
+    "landingCreators.introduction": {
+      "source": "Add an RSS feed you control, choose its access toll, and prove ownership. Keryx can pay for a read when it buys an article, then send a separate weighted reward if that article supports a cited answer. See each payment and its state in the public ledger. Payments use {network} USDC.",
+      "text": "添加您控制的 RSS 订阅源，选择访问费并证明所有权。Keryx 购买文章时可以支付阅读费用；如文章支持带引用的答案，还可另行发送按权重分配的奖励。在公开账本查看每笔付款及其状态。付款使用 {network} USDC。"
+    },
+    "landingTotals.unavailable": {
+      "source": "Settled totals unavailable.",
+      "text": "已结算总额不可用。"
+    },
+    "landingTotals.payments": {
+      "source": "Settled payments · lifetime",
+      "text": "已结算付款 · 历史累计"
+    },
+    "landingTotals.loading": {
+      "source": "Loading settled {network} totals…",
+      "text": "正在加载 {network} 已结算总额…"
+    },
+    "landingTotals.paid": {
+      "source": "Paid to creators · lifetime · {network}",
+      "text": "支付给创作者 · 历史累计 · {network}"
+    },
+    "landingActivity.loading": {
+      "source": "Loading recent settled citations…",
+      "text": "正在加载近期已结算引用…"
+    },
+    "landingActivity.unavailable": {
+      "source": "Recent citation activity unavailable.",
+      "text": "近期引用活动不可用。"
+    },
+    "landingActivity.cited": {
+      "source": "cited",
+      "text": "已引用"
+    },
+    "landingActivity.play": {
+      "source": "Play",
+      "text": "播放"
+    },
+    "landingActivity.pause": {
+      "source": "Pause",
+      "text": "暂停"
+    },
+    "landingActivity.questionTitle": {
+      "source": "cited for: {question}",
+      "text": "引用用于：{question}"
+    },
+    "landingActivity.seconds.one": {
+      "source": "{count}s ago",
+      "text": "{count} 秒前"
+    },
+    "landingActivity.seconds.other": {
+      "source": "{count}s ago",
+      "text": "{count} 秒前"
+    },
+    "landingActivity.minutes.one": {
+      "source": "{count}m ago",
+      "text": "{count} 分钟前"
+    },
+    "landingActivity.minutes.other": {
+      "source": "{count}m ago",
+      "text": "{count} 分钟前"
+    },
+    "landingActivity.hours.one": {
+      "source": "{count}h ago",
+      "text": "{count} 小时前"
+    },
+    "landingActivity.hours.other": {
+      "source": "{count}h ago",
+      "text": "{count} 小时前"
+    },
+    "landingActivity.days.one": {
+      "source": "{count}d ago",
+      "text": "{count} 天前"
+    },
+    "landingActivity.days.other": {
+      "source": "{count}d ago",
+      "text": "{count} 天前"
+    },
+    "routeError.eyebrow": {
+      "source": "Dispatch interrupted",
+      "text": "研究任务中断"
+    },
+    "routeError.title": {
+      "source": "The press jammed.",
+      "text": "页面卡住了。"
+    },
+    "routeError.body": {
+      "source": "Something went wrong rendering this page. Your funds are untouched — nothing settles on a failed render.",
+      "text": "渲染此页面时发生错误。您的资金未受影响 — 渲染失败不会发生结算。"
+    },
+    "routeError.retry": {
+      "source": "⟳ Try again",
+      "text": "⟳ 重试"
+    },
+    "routeError.home": {
+      "source": "◂ Masthead",
+      "text": "◂ 首页"
+    },
+    "globalError.eyebrow": {
+      "source": "Dispatch interrupted",
+      "text": "研究任务中断"
+    },
+    "globalError.title": {
+      "source": "The mint is down.",
+      "text": "系统暂时无法运作。"
+    },
+    "globalError.body": {
+      "source": "Something went wrong at the root. Your funds are untouched — nothing settles on a failed render.",
+      "text": "根级别发生错误。您的资金未受影响 — 渲染失败不会发生结算。"
+    },
+    "globalError.retry": {
+      "source": "⟳ Try again",
+      "text": "⟳ 重试"
+    },
+    "pageNotFound.eyebrow": {
+      "source": "Dispatch № 404",
+      "text": "研究任务 № 404"
+    },
+    "pageNotFound.body": {
+      "source": "No dispatch by that name — the herald has no record of this page.",
+      "text": "没有该名称的研究任务 — 信使没有此页面的记录。"
+    },
+    "pageNotFound.home": {
+      "source": "◂ Return to the masthead",
+      "text": "◂ 返回首页"
+    },
+    "brandPresentation.tagline": {
+      "source": "The citation toll",
+      "text": "引用访问费"
+    },
+    "brandPresentation.sealLegend": {
+      "source": "★ {brand} ★ THE HERALD IS PAID ★ {greekBrand} ",
+      "text": "★ {brand} ★ 信使获得报酬 ★ {greekBrand} "
+    },
+    "launchBadge.aria": {
+      "source": "Keryx on Product Hunt (opens in a new tab)",
+      "text": "Product Hunt 上的 Keryx（在新标签页打开）"
+    },
+    "launchBadge.brand": {
+      "source": "Product Hunt",
+      "text": "Product Hunt"
+    },
+    "launchBadge.alt": {
+      "source": "Keryx — AI research with verifiable sources and creator rewards | Product Hunt",
+      "text": "Keryx — 具有可验证来源和创作者奖励的 AI 研究 | Product Hunt"
+    },
+    "dialog.close": {
+      "source": "Close",
+      "text": "关闭"
+    },
+    "landingMetadata.title": {
+      "source": "Keryx — citations are currency",
+      "text": "Keryx — 引用即货币"
+    },
+    "landingMetadata.citationToll": {
+      "source": "citation toll",
+      "text": "引用访问费"
+    },
+    "landingMetadata.nanopayments": {
+      "source": "nanopayments",
+      "text": "微额付款"
+    },
+    "landingMetadata.agentPayments": {
+      "source": "AI agent payments",
+      "text": "AI 智能体付款"
+    },
+    "landingMetadata.agentCommerce": {
+      "source": "autonomous agent commerce",
+      "text": "自主智能体商业"
+    },
+    "landingMetadata.stablecoinSettlement": {
+      "source": "stablecoin settlement",
+      "text": "稳定币结算"
+    },
+    "landingMetadata.creatorsPaid": {
+      "source": "creators paid",
+      "text": "创作者获付款"
+    },
+    "landingMetadata.payPerCitation": {
+      "source": "pay per citation",
+      "text": "按引用付费"
+    },
+    "landingMetadata.readingAgent": {
+      "source": "reading agent",
+      "text": "阅读智能体"
+    },
+    "landingMetadata.archiveFeed": {
+      "source": "Keryx Answer Archive",
+      "text": "Keryx 答案归档"
+    },
+    "landingMetadata.slogan": {
+      "source": "Citations are currency.",
+      "text": "引用即货币。"
+    },
+    "landingMetadata.description": {
+      "source": "Keryx researches questions using cited evidence, pays verified creators for qualifying paid citations, and includes free public references with no publisher payout. List your writing, prove feed ownership, and earn USDC rewards on {network}.",
+      "text": "Keryx 通过被引用证据研究问题，为符合条件的付费引用向已验证创作者付款，并纳入不向发布者付款的免费公开参考资料。登记您的写作、证明订阅源所有权，在 {network} 上赚取 USDC 奖励。"
+    },
+    "landingCard.alt": {
+      "source": "Keryx — citations are currency",
+      "text": "Keryx — 引用即货币"
+    },
+    "landingCard.creatorRewards": {
+      "source": "The citation toll — creators paid every time an AI cites them",
+      "text": "引用访问费 — AI 每次引用创作者，创作者都获得报酬"
+    },
+    "landingCard.title": {
+      "source": "Citations are\ncurrency.",
+      "text": "引用即\n货币。"
+    },
+    "landingCard.settlement": {
+      "source": "{protocol} · {asset} · settled on {network}",
+      "text": "{protocol} · {asset} · 在 {network} 结算"
+    },
+    "landingCard.series": {
+      "source": "Series {year} — No. {number}",
+      "text": "{year} 年系列 — 第 {number} 期"
+    }
+  }
+}

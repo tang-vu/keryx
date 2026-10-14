@@ -1,0 +1,180 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/my-history.ts",
+  "sourceSha256": "8335b800347cfc9efeeaacdc14fe8c62dfbeb48ccb8d71de176a7b5c6cd6121b",
+  "entries": {
+    "myHistory.metadataTitle": {
+      "source": "My dispatches — Keryx",
+      "text": "我的研究任务 — Keryx"
+    },
+    "myHistory.metadataDescription": {
+      "source": "Every question this wallet dispatched, what it spent, and which creators it paid.",
+      "text": "此钱包发起的每个问题、支出和获付款的创作者。"
+    },
+    "myHistory.title": {
+      "source": "My dispatches",
+      "text": "我的研究任务"
+    },
+    "myHistory.introduction": {
+      "source": "Questions you dispatched while signed in with this wallet — the toll each one paid, and the creators it reached. Every row opens its full reasoning trace.",
+      "text": "使用此钱包登录时发起的问题 — 各问题支付的来源访问费及对应创作者。每行可打开完整推理过程。"
+    },
+    "myHistory.justNow": {
+      "source": "just now",
+      "text": "刚刚"
+    },
+    "myHistory.minutesAgo": {
+      "source": "{minutes}m ago",
+      "text": "{minutes} 分钟前"
+    },
+    "myHistory.hoursAgo": {
+      "source": "{hours}h ago",
+      "text": "{hours} 小时前"
+    },
+    "myHistory.daysAgo": {
+      "source": "{days}d ago",
+      "text": "{days} 天前"
+    },
+    "myHistory.networkLabel": {
+      "source": "Dispatch history network",
+      "text": "研究任务历史网络"
+    },
+    "myHistory.currentNetwork": {
+      "source": "Current network",
+      "text": "当前网络"
+    },
+    "myHistory.testnetHistory": {
+      "source": "Arc testnet history",
+      "text": "Arc 测试网历史"
+    },
+    "myHistory.testnetScope": {
+      "source": "Original testnet dispatches attributed to this wallet. These test USDC amounts are separate from current mainnet spend; archived source names do not grant current payout rights.",
+      "text": "归属于此钱包的原始测试网研究任务。这些测试 USDC 金额与当前主网支出分开；归档来源名称不授予当前收款权。"
+    },
+    "myHistory.loadFailed": {
+      "source": "Couldn't load your dispatches — try again.",
+      "text": "无法加载您的研究任务 — 请重试。"
+    },
+    "myHistory.loading": {
+      "source": "Loading your dispatches…",
+      "text": "正在加载您的研究任务…"
+    },
+    "myHistory.retry": {
+      "source": "Retry",
+      "text": "重试"
+    },
+    "myHistory.unavailable": {
+      "source": "Your dispatch history is unavailable. {action}",
+      "text": "您的研究任务历史不可用。{action}"
+    },
+    "myHistory.signInInstruction": {
+      "source": "Sign in with the wallet you ask from to see its dispatches.",
+      "text": "使用提问的钱包登录，以查看其研究任务。"
+    },
+    "myHistory.connect": {
+      "source": "Connect wallet →",
+      "text": "连接钱包 →"
+    },
+    "myHistory.emptyTestnet": {
+      "source": "No testnet dispatches attributed to this wallet. ",
+      "text": "没有归属于此钱包的测试网研究任务。 "
+    },
+    "myHistory.emptyCurrent": {
+      "source": "No dispatches from this wallet yet. ",
+      "text": "此钱包尚未发起研究任务。 "
+    },
+    "myHistory.attributionInstruction": {
+      "source": "Dispatches you ran signed out aren't attributed to anyone — sign in first and the next one lands here.",
+      "text": "未登录时执行的研究任务不归属于任何人 — 先登录，下一次任务就会显示在此。"
+    },
+    "myHistory.ask": {
+      "source": "Ask a question →",
+      "text": "提出问题 →"
+    },
+    "myHistory.testnetTolls": {
+      "source": "Your recorded testnet tolls",
+      "text": "记录的测试网来源访问费"
+    },
+    "myHistory.tolls": {
+      "source": "Your tolls",
+      "text": "您的来源访问费"
+    },
+    "myHistory.dispatchLabel.one": {
+      "source": "dispatches",
+      "text": "研究任务"
+    },
+    "myHistory.dispatchLabel.other": {
+      "source": "dispatches",
+      "text": "研究任务"
+    },
+    "myHistory.walletCreatorSpend": {
+      "source": "creator spend from your wallet",
+      "text": "由您钱包承担的创作者支出"
+    },
+    "myHistory.toCreators": {
+      "source": "of it to creators",
+      "text": "其中支付给创作者的部分"
+    },
+    "myHistory.citationsLabel.one": {
+      "source": "citations paid",
+      "text": "已支付引用"
+    },
+    "myHistory.citationsLabel.other": {
+      "source": "citations paid",
+      "text": "已支付引用"
+    },
+    "myHistory.otherFunding.one": {
+      "source": "{count} of these have no recorded browser-wallet creator funding:{fundingGap}${amount} recorded to creators.{separateGap}Original purchases, service fees and gas are separate.",
+      "text": "其中 {count} 次未记录浏览器钱包为创作者提供资金：{fundingGap}${amount} 记录为支付给创作者。{separateGap}原始购买、服务费和 gas 费用另计。"
+    },
+    "myHistory.otherFunding.other": {
+      "source": "{count} of these have no recorded browser-wallet creator funding:{fundingGap}${amount} recorded to creators.{separateGap}Original purchases, service fees and gas are separate.",
+      "text": "其中 {count} 次未记录浏览器钱包为创作者提供资金：{fundingGap}${amount} 记录为支付给创作者。{separateGap}原始购买、服务费和 gas 费用另计。"
+    },
+    "myHistory.browserFundingNotRecorded": {
+      "source": " · creator funding not recorded from your browser wallet",
+      "text": " · 未记录由浏览器钱包为创作者提供资金"
+    },
+    "myHistory.cited.one": {
+      "source": "{count} cited",
+      "text": "引用 {count} 个"
+    },
+    "myHistory.cited.other": {
+      "source": "{count} cited",
+      "text": "引用 {count} 个"
+    },
+    "myHistory.confidence": {
+      "source": "{level} confidence",
+      "text": "置信度 {level}"
+    },
+    "myHistory.followUp": {
+      "source": "follow-up",
+      "text": "追问"
+    },
+    "myHistory.newMaterialTitle": {
+      "source": "A source this dispatch cited has published since — re-asking buys the new material",
+      "text": "此任务引用的来源后来发布了新内容 — 再次提问会购买新资料"
+    },
+    "myHistory.reask": {
+      "source": "new material · re-ask",
+      "text": "新资料 · 再次提问"
+    },
+    "myHistory.testnetCreatorRecord": {
+      "source": "{creator} · {amount} test USDC recorded",
+      "text": "{creator} · 记录 {amount} 测试 USDC"
+    },
+    "myHistory.citationPaymentTitle": {
+      "source": "Paid ${amount} for this citation",
+      "text": "为此引用支付 ${amount}"
+    },
+    "myHistory.recentLimit.one": {
+      "source": "Showing your most recent {count} dispatches.",
+      "text": "显示您最近的 {count} 次研究任务。"
+    },
+    "myHistory.recentLimit.other": {
+      "source": "Showing your most recent {count} dispatches.",
+      "text": "显示您最近的 {count} 次研究任务。"
+    }
+  }
+}

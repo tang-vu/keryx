@@ -1,0 +1,192 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/decision-reviews.json",
+  "sourceSha256": "d79ff28614e779b3cb59964e5f76699f13ae03daa309b66dc3f6a1b5610659ab",
+  "entries": {
+    "title": {
+      "source": "Review source decisions",
+      "text": "Xem xét quyết định về nguồn"
+    },
+    "mode": {
+      "source": "Review first: wait for my decision before paid or reward-eligible reads",
+      "text": "Xem xét trước: chờ quyết định của tôi trước khi đọc trả phí hoặc đọc đủ điều kiện nhận thưởng"
+    },
+    "modeNotice": {
+      "source": "Requires your authenticated funded browser session. Each live review expires after 60 seconds. Agreement admits this read within your existing cap; it does not sign a payment.",
+      "text": "Cần phiên trình duyệt đã xác thực và có nguồn tiền của bạn. Mỗi lần xem xét trực tiếp hết hạn sau 60 giây. Đồng ý cho phép đọc trong hạn mức hiện có; không ký thanh toán."
+    },
+    "signedOut": {
+      "source": "Sign in with the original report owner to review its decisions.",
+      "text": "Đăng nhập bằng chủ sở hữu báo cáo ban đầu để xem xét quyết định."
+    },
+    "ownerChanged": {
+      "source": "The signed-in owner changed. This run's private reviews are hidden.",
+      "text": "Chủ sở hữu đang đăng nhập đã thay đổi. Các lần xem xét riêng tư của lượt chạy này được ẩn."
+    },
+    "load": {
+      "source": "Load my decision reviews",
+      "text": "Tải lần xem xét quyết định của tôi"
+    },
+    "loading": {
+      "source": "Checking recorded reviews…",
+      "text": "Đang kiểm tra lần xem xét đã ghi nhận…"
+    },
+    "empty": {
+      "source": "No captured decision reviews are available for this owner and report. Older decisions are not reconstructed.",
+      "text": "Không có lần xem xét quyết định được lưu cho chủ sở hữu và báo cáo này. Không tái tạo quyết định cũ."
+    },
+    "failed": {
+      "source": "Review could not be confirmed. Check the recorded state before trying again.",
+      "text": "Chưa thể xác nhận lần xem xét. Kiểm tra trạng thái ghi nhận trước khi thử lại."
+    },
+    "saved": {
+      "source": "Your decision was recorded. An opinion does not reverse or refund a payment.",
+      "text": "Đã ghi nhận quyết định của bạn. Ý kiến không đảo ngược hay hoàn tiền thanh toán."
+    },
+    "waiting": {
+      "source": "Waiting for your decision. No payment for this read has started.",
+      "text": "Đang chờ quyết định của bạn. Chưa bắt đầu thanh toán cho lượt đọc này."
+    },
+    "closed": {
+      "source": "This live review is closed. A later opinion cannot restart the research.",
+      "text": "Lần xem xét trực tiếp này đã đóng. Ý kiến sau đó không thể khởi động lại nghiên cứu."
+    },
+    "agree": {
+      "source": "Agree",
+      "text": "Đồng ý"
+    },
+    "disagree": {
+      "source": "Disagree",
+      "text": "Không đồng ý"
+    },
+    "reason": {
+      "source": "Optional private reason",
+      "text": "Lý do riêng tư (không bắt buộc)"
+    },
+    "refresh": {
+      "source": "Check recorded state",
+      "text": "Kiểm tra trạng thái ghi nhận"
+    },
+    "retry": {
+      "source": "Retry the same recorded decision",
+      "text": "Thử lại đúng quyết định đã ghi nhận"
+    },
+    "opinionChanged": {
+      "source": "The displayed code snapshot changed. An earlier opinion may remain recorded. Review this state before recording another opinion.",
+      "text": "Bản chụp mã hiển thị đã thay đổi. Ý kiến trước có thể vẫn được ghi nhận. Xem xét trạng thái này trước khi ghi nhận ý kiến khác."
+    },
+    "gateBasis": {
+      "source": "Gate vote on the initial offered code snapshot and terms: {action} ({rule}).",
+      "text": "Biểu quyết tại cổng cho bản chụp mã và điều kiện được đề nghị ban đầu: {action} ({rule})."
+    },
+    "opinionBasis": {
+      "source": "Later opinion on the code snapshot displayed when voted: {action} ({rule}).",
+      "text": "Ý kiến sau đó về bản chụp mã hiển thị lúc biểu quyết: {action} ({rule})."
+    },
+    "heldNotice": {
+      "source": "Cache and creator-free reads can earn citation rewards, so they also need review. Declining, waiting and expiry are not code refusals.",
+      "text": "Lượt đọc từ bộ nhớ đệm và lượt đọc miễn phí từ tác giả có thể được thưởng trích dẫn nên cũng cần xem xét. Từ chối, chờ và hết hạn không phải quyết định từ chối của mã."
+    },
+    "terms": {
+      "source": "Access proposal: {price} micro-USDC · list ceiling {listPrice} · citation pool cap {reward} micro-USDC · {network}",
+      "text": "Đề xuất truy cập: {price} micro-USDC · trần niêm yết {listPrice} · hạn mức quỹ trích dẫn {reward} micro-USDC · {network}"
+    },
+    "actions": {
+      "source": "Model proposal: {model} · code decision: {code} ({rule})",
+      "text": "Đề xuất mô hình: {model} · quyết định của mã: {code} ({rule})"
+    },
+    "unknownModel": {
+      "source": "unavailable",
+      "text": "không khả dụng"
+    },
+    "payee": {
+      "source": "Authoritative access payee: {payee}",
+      "text": "Bên nhận phí truy cập có thẩm quyền: {payee}"
+    },
+    "identity": {
+      "source": "Reviews use the authenticated wallet identity. This is not proof of a unique human or factual correctness. Reasons stay private.",
+      "text": "Lần xem xét dùng danh tính ví đã xác thực. Không chứng minh một người duy nhất hay tính đúng đắn của thông tin. Lý do được giữ riêng tư."
+    },
+    "metrics": {
+      "source": "Public decision review counts",
+      "text": "Số lần xem xét quyết định công khai"
+    },
+    "home": {
+      "source": "Keryx home",
+      "text": "Trang chủ Keryx"
+    },
+    "metricsNotice": {
+      "source": "New captured decisions only. The rate uses the latest recorded verdict per decision. Gate votes concern the initial offered code and terms; later opinions concern the code snapshot shown when voted. A later code change does not rewrite that vote. These counts do not prove useful research, factual accuracy or payment settlement. No verdicts means no agreement rate. Holds, declines and expiry do not count as code refusals; old decisions are not reconstructed.",
+      "text": "Chỉ tính quyết định mới được lưu. Tỷ lệ dùng kết luận ghi nhận gần nhất cho mỗi quyết định. Biểu quyết tại cổng xét mã và điều kiện đề nghị ban đầu; ý kiến sau xét bản chụp mã hiển thị lúc biểu quyết. Thay đổi mã sau đó không sửa lại biểu quyết. Số liệu không chứng minh nghiên cứu hữu ích, thông tin chính xác hay thanh toán đã quyết toán. Chưa có kết luận thì chưa có tỷ lệ đồng thuận. Giữ, từ chối và hết hạn không tính là quyết định từ chối của mã; không tái tạo quyết định cũ."
+    },
+    "metricsCohorts": {
+      "source": "Outside requires a trusted classification. Team and scripted activity are separate; all unclassified identities remain unknown. A wallet does not prove a unique human. Reasons and reviewer identities stay private. Dates use UTC, with the end day excluded.",
+      "text": "Nhóm bên ngoài cần phân loại đáng tin cậy. Hoạt động của nhóm và hoạt động theo kịch bản tách biệt; danh tính chưa phân loại luôn là chưa rõ. Một ví không chứng minh một người duy nhất. Lý do và danh tính người xem xét được giữ riêng tư. Ngày theo UTC, không tính ngày kết thúc."
+    },
+    "metricsCaption": {
+      "source": "Captured owner decisions and latest opinions in the selected complete UTC days.",
+      "text": "Quyết định của chủ sở hữu được lưu và ý kiến gần nhất trong các ngày UTC đầy đủ đã chọn."
+    },
+    "metricsUnavailable": {
+      "source": "Decision counts are unavailable. No zero or agreement rate is inferred.",
+      "text": "Số lượng quyết định không khả dụng. Không suy ra số 0 hay tỷ lệ đồng thuận."
+    },
+    "invalidPeriod": {
+      "source": "Choose complete past UTC days within one year, with the end after the start.",
+      "text": "Chọn các ngày UTC đầy đủ trong quá khứ, trong vòng một năm, với ngày kết thúc sau ngày bắt đầu."
+    },
+    "since": {
+      "source": "Start day (included)",
+      "text": "Ngày bắt đầu (có tính)"
+    },
+    "until": {
+      "source": "End day (excluded)",
+      "text": "Ngày kết thúc (không tính)"
+    },
+    "loadMetrics": {
+      "source": "Read public counts",
+      "text": "Đọc số lượng công khai"
+    },
+    "cohort": {
+      "source": "Classification",
+      "text": "Phân loại"
+    },
+    "decisions": {
+      "source": "Decisions",
+      "text": "Quyết định"
+    },
+    "rate": {
+      "source": "Agreement",
+      "text": "Mức độ đồng thuận"
+    },
+    "differences": {
+      "source": "Model/code differences",
+      "text": "Khác biệt giữa mô hình và mã"
+    },
+    "refusals": {
+      "source": "Code refusals",
+      "text": "Quyết định từ chối của mã"
+    },
+    "noVerdicts": {
+      "source": "No verdicts",
+      "text": "Chưa có kết luận"
+    },
+    "cohorts.outside": {
+      "source": "Outside",
+      "text": "Người dùng bên ngoài"
+    },
+    "cohorts.team": {
+      "source": "Team",
+      "text": "Nhóm"
+    },
+    "cohorts.scripted": {
+      "source": "Scripted",
+      "text": "Kiểm thử theo kịch bản"
+    },
+    "cohorts.unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    }
+  }
+}

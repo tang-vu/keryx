@@ -1,0 +1,180 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/my-history.ts",
+  "sourceSha256": "8335b800347cfc9efeeaacdc14fe8c62dfbeb48ccb8d71de176a7b5c6cd6121b",
+  "entries": {
+    "myHistory.metadataTitle": {
+      "source": "My dispatches — Keryx",
+      "text": "Bản tin của tôi — Keryx"
+    },
+    "myHistory.metadataDescription": {
+      "source": "Every question this wallet dispatched, what it spent, and which creators it paid.",
+      "text": "Mọi câu hỏi ví này đã gửi, khoản chi và tác giả được trả tiền."
+    },
+    "myHistory.title": {
+      "source": "My dispatches",
+      "text": "Bản tin của tôi"
+    },
+    "myHistory.introduction": {
+      "source": "Questions you dispatched while signed in with this wallet — the toll each one paid, and the creators it reached. Every row opens its full reasoning trace.",
+      "text": "Câu hỏi bạn gửi khi đăng nhập ví này — phí truy cập từng câu và tác giả nhận được tiền. Mỗi hàng mở nhật ký suy luận đầy đủ."
+    },
+    "myHistory.justNow": {
+      "source": "just now",
+      "text": "vừa xong"
+    },
+    "myHistory.minutesAgo": {
+      "source": "{minutes}m ago",
+      "text": "{minutes} phút trước"
+    },
+    "myHistory.hoursAgo": {
+      "source": "{hours}h ago",
+      "text": "{hours} giờ trước"
+    },
+    "myHistory.daysAgo": {
+      "source": "{days}d ago",
+      "text": "{days} ngày trước"
+    },
+    "myHistory.networkLabel": {
+      "source": "Dispatch history network",
+      "text": "Mạng lịch sử bản tin"
+    },
+    "myHistory.currentNetwork": {
+      "source": "Current network",
+      "text": "Mạng hiện tại"
+    },
+    "myHistory.testnetHistory": {
+      "source": "Arc testnet history",
+      "text": "Lịch sử Arc testnet"
+    },
+    "myHistory.testnetScope": {
+      "source": "Original testnet dispatches attributed to this wallet. These test USDC amounts are separate from current mainnet spend; archived source names do not grant current payout rights.",
+      "text": "Bản tin testnet ban đầu được quy cho ví này. Số USDC thử nghiệm tách biệt với khoản chi mainnet hiện tại; tên nguồn lưu trữ không cấp quyền nhận tiền hiện tại."
+    },
+    "myHistory.loadFailed": {
+      "source": "Couldn't load your dispatches — try again.",
+      "text": "Không thể tải bản tin của bạn — thử lại."
+    },
+    "myHistory.loading": {
+      "source": "Loading your dispatches…",
+      "text": "Đang tải bản tin của bạn…"
+    },
+    "myHistory.retry": {
+      "source": "Retry",
+      "text": "Thử lại"
+    },
+    "myHistory.unavailable": {
+      "source": "Your dispatch history is unavailable. {action}",
+      "text": "Lịch sử bản tin của bạn không khả dụng. {action}"
+    },
+    "myHistory.signInInstruction": {
+      "source": "Sign in with the wallet you ask from to see its dispatches.",
+      "text": "Đăng nhập bằng ví bạn dùng để hỏi để xem bản tin của ví."
+    },
+    "myHistory.connect": {
+      "source": "Connect wallet →",
+      "text": "Kết nối ví →"
+    },
+    "myHistory.emptyTestnet": {
+      "source": "No testnet dispatches attributed to this wallet. ",
+      "text": "Không có bản tin testnet được quy cho ví này. "
+    },
+    "myHistory.emptyCurrent": {
+      "source": "No dispatches from this wallet yet. ",
+      "text": "Ví này chưa có bản tin. "
+    },
+    "myHistory.attributionInstruction": {
+      "source": "Dispatches you ran signed out aren't attributed to anyone — sign in first and the next one lands here.",
+      "text": "Bản tin chạy khi đăng xuất không được quy cho ai — đăng nhập trước để bản tiếp theo xuất hiện tại đây."
+    },
+    "myHistory.ask": {
+      "source": "Ask a question →",
+      "text": "Đặt câu hỏi →"
+    },
+    "myHistory.testnetTolls": {
+      "source": "Your recorded testnet tolls",
+      "text": "Phí truy cập testnet của bạn đã ghi nhận"
+    },
+    "myHistory.tolls": {
+      "source": "Your tolls",
+      "text": "Phí truy cập của bạn"
+    },
+    "myHistory.dispatchLabel.one": {
+      "source": "dispatches",
+      "text": "bản tin"
+    },
+    "myHistory.dispatchLabel.other": {
+      "source": "dispatches",
+      "text": "bản tin"
+    },
+    "myHistory.walletCreatorSpend": {
+      "source": "creator spend from your wallet",
+      "text": "khoản chi cho tác giả từ ví của bạn"
+    },
+    "myHistory.toCreators": {
+      "source": "of it to creators",
+      "text": "trong đó đến tác giả"
+    },
+    "myHistory.citationsLabel.one": {
+      "source": "citations paid",
+      "text": "trích dẫn đã trả tiền"
+    },
+    "myHistory.citationsLabel.other": {
+      "source": "citations paid",
+      "text": "trích dẫn đã trả tiền"
+    },
+    "myHistory.otherFunding.one": {
+      "source": "{count} of these have no recorded browser-wallet creator funding:{fundingGap}${amount} recorded to creators.{separateGap}Original purchases, service fees and gas are separate.",
+      "text": "{count} bản trong số này không ghi nhận nguồn tiền cho tác giả từ ví trình duyệt:{fundingGap}${amount} ghi nhận cho tác giả.{separateGap}Giao dịch mua ban đầu, phí dịch vụ và gas tách biệt."
+    },
+    "myHistory.otherFunding.other": {
+      "source": "{count} of these have no recorded browser-wallet creator funding:{fundingGap}${amount} recorded to creators.{separateGap}Original purchases, service fees and gas are separate.",
+      "text": "{count} bản trong số này không ghi nhận nguồn tiền cho tác giả từ ví trình duyệt:{fundingGap}${amount} ghi nhận cho tác giả.{separateGap}Giao dịch mua ban đầu, phí dịch vụ và gas tách biệt."
+    },
+    "myHistory.browserFundingNotRecorded": {
+      "source": " · creator funding not recorded from your browser wallet",
+      "text": " · chưa ghi nhận nguồn tiền cho tác giả từ ví trình duyệt"
+    },
+    "myHistory.cited.one": {
+      "source": "{count} cited",
+      "text": "{count} được trích dẫn"
+    },
+    "myHistory.cited.other": {
+      "source": "{count} cited",
+      "text": "{count} được trích dẫn"
+    },
+    "myHistory.confidence": {
+      "source": "{level} confidence",
+      "text": "Độ tin cậy {level}"
+    },
+    "myHistory.followUp": {
+      "source": "follow-up",
+      "text": "tiếp nối"
+    },
+    "myHistory.newMaterialTitle": {
+      "source": "A source this dispatch cited has published since — re-asking buys the new material",
+      "text": "Nguồn được bản tin này trích dẫn đã xuất bản thêm — hỏi lại sẽ mua nội dung mới"
+    },
+    "myHistory.reask": {
+      "source": "new material · re-ask",
+      "text": "nội dung mới · hỏi lại"
+    },
+    "myHistory.testnetCreatorRecord": {
+      "source": "{creator} · {amount} test USDC recorded",
+      "text": "{creator} · {amount} USDC thử nghiệm đã ghi nhận"
+    },
+    "myHistory.citationPaymentTitle": {
+      "source": "Paid ${amount} for this citation",
+      "text": "Đã trả ${amount} cho trích dẫn này"
+    },
+    "myHistory.recentLimit.one": {
+      "source": "Showing your most recent {count} dispatches.",
+      "text": "Hiển thị {count} bản tin gần nhất của bạn."
+    },
+    "myHistory.recentLimit.other": {
+      "source": "Showing your most recent {count} dispatches.",
+      "text": "Hiển thị {count} bản tin gần nhất của bạn."
+    }
+  }
+}

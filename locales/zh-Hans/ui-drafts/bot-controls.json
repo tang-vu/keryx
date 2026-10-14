@@ -1,0 +1,64 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/bot-controls.ts",
+  "sourceSha256": "96779e5901639da0bedbc73c2fbd8129bf0f3e45ede8e3c93c276bffc0a89728",
+  "entries": {
+    "introduction": {
+      "source": "Ask a question to receive an answer with citations.",
+      "text": "提出问题，获取附有引用的答案。"
+    },
+    "usage": {
+      "source": "Usage:",
+      "text": "用法："
+    },
+    "exampleQuestion": {
+      "source": "what is x402?",
+      "text": "什么是 x402？"
+    },
+    "reviewBoundary": {
+      "source": "Review-first is available only in the authenticated live browser; review mode flags are refused here.",
+      "text": "先审阅模式仅可在已认证的实时浏览器中使用；此处拒绝审阅模式标志。"
+    },
+    "privateQuestion": {
+      "source": "In this private chat you can also just type the question.",
+      "text": "在此私密聊天中，您也可以直接输入问题。"
+    },
+    "status": {
+      "source": "Status:",
+      "text": "状态："
+    },
+    "financialDetails": {
+      "source": "Financial details (English):",
+      "text": "财务详情（英文）："
+    },
+    "languageHelp": {
+      "source": "Use /language en|vi|pt|es|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
+      "text": "使用 /language en|vi|pt|es|auto 设置回答和帮助的语言。原始问题中明确的输出语言指令优先；auto 跟随问题语言。"
+    },
+    "languageCurrent": {
+      "source": "Answer language preference: {preference}.",
+      "text": "回答语言偏好：{preference}。"
+    },
+    "languageSaved": {
+      "source": "Saved answer and help language preference: {preference}.",
+      "text": "已保存回答和帮助语言偏好：{preference}。"
+    },
+    "languageUnavailable": {
+      "source": "The language preference could not be read or confirmed as saved. No successful save is claimed.",
+      "text": "无法读取语言偏好或确认已保存。不宣称保存成功。"
+    },
+    "languageInvalid": {
+      "source": "Supported values: en, vi, pt (also pt-BR), es, auto.",
+      "text": "支持的值：en、vi、pt（也支持 pt-BR）、es、auto。"
+    },
+    "languagePrivate": {
+      "source": "Set or inspect your language preference in a private chat with Keryx.",
+      "text": "在与 Keryx 的私密聊天中设置或查看语言偏好。"
+    },
+    "privatePreparing": {
+      "source": "Keryx is preparing your private research reply…",
+      "text": "Keryx 正在准备您的私密研究回复…"
+    }
+  }
+}

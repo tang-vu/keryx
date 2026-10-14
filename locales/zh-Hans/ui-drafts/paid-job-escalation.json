@@ -1,0 +1,104 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/paid-job-escalation.json",
+  "sourceSha256": "283ecf76060ff29a81c64287ab46e35b24bc28d811a48c8d97f68126d0f1f101",
+  "entries": {
+    "overdueTitle": {
+      "source": "Completion target exceeded. Review the original job.",
+      "text": "已超过完成目标。请审阅原始任务。"
+    },
+    "overdueBody": {
+      "source": "The accepted provisional target has passed without delivery. Human review is needed; this alert does not mean that a person has been notified or that support is staffed.",
+      "text": "已接受的暂定目标时间已过，仍未交付。需要人工审阅；此提醒不表示已通知任何人或有支持人员值守。"
+    },
+    "unavailable": {
+      "source": "Completion timing is unavailable for this recorded job. No target or refund promise is inferred.",
+      "text": "此记录任务的完成时间不可用。不推断任何目标或退款承诺。"
+    },
+    "paymentPending": {
+      "source": "An original creator payment is still recorded as pending. Expiry or delay does not prove that it failed.",
+      "text": "一笔原始创作者付款仍被记录为等待确认。过期或延迟不证明失败。"
+    },
+    "paymentBoundary": {
+      "source": "The job crossed a creator-payment boundary. Missing or definitive recorded legs do not prove that every call is resolved.",
+      "text": "任务已越过创作者付款边界。缺失或已明确的记录付款不能证明每次调用都已解决。"
+    },
+    "paymentUnknown": {
+      "source": "Original creator-payment evidence is unavailable or inconsistent.",
+      "text": "原始创作者付款证据不可用或不一致。"
+    },
+    "originalOnly": {
+      "source": "Keep the original job and payment reference. Do not pay again to recover this job. Waiting, partial delivery and refund requests require manual owner review. This alert does not submit a choice or refund request.",
+      "text": "保留原始任务和付款参考。不要为恢复此任务再次付款。等待、部分交付和退款请求需要所有者手动审阅。此提醒不提交选择或退款请求。"
+    },
+    "observation": {
+      "source": "This state was calculated when status was checked. There is no new background alert or notification service.",
+      "text": "此状态在检查状态时计算。没有新增后台提醒或通知服务。"
+    },
+    "orderLabel": {
+      "source": "Original order",
+      "text": "原始订单"
+    },
+    "referenceLabel": {
+      "source": "Original payment reference",
+      "text": "原始付款参考"
+    },
+    "monthlyReferenceLabel": {
+      "source": "Original plan payment reference (prepaid allocation)",
+      "text": "原始方案付款参考（预付分配）"
+    },
+    "networkLabel": {
+      "source": "Recorded original network",
+      "text": "记录的原始网络"
+    },
+    "amountLabel": {
+      "source": "Original order amount (micro-USDC)",
+      "text": "原始订单金额（micro-USDC）"
+    },
+    "unknown": {
+      "source": "Unavailable",
+      "text": "不可用"
+    },
+    "stageLabel": {
+      "source": "Last recorded stage",
+      "text": "上次记录阶段"
+    },
+    "stage.queued": {
+      "source": "Waiting to start",
+      "text": "等待开始"
+    },
+    "stage.research_started": {
+      "source": "Research start recorded",
+      "text": "已记录研究开始"
+    },
+    "stage.creator_payment_boundary": {
+      "source": "Creator payment boundary recorded",
+      "text": "已记录创作者付款边界"
+    },
+    "stage.result_save_boundary": {
+      "source": "Result save boundary recorded",
+      "text": "已记录结果保存边界"
+    },
+    "stage.unknown": {
+      "source": "Stage unavailable",
+      "text": "阶段不可用"
+    },
+    "failure.research_failed": {
+      "source": "Research execution failure recorded",
+      "text": "已记录研究执行失败"
+    },
+    "failure.invalid_order_data": {
+      "source": "Original job data failed validation",
+      "text": "原始任务数据未通过验证"
+    },
+    "failure.operator_reviewed_no_result": {
+      "source": "Original job closed without a saved result",
+      "text": "原始任务已关闭，未保存结果"
+    },
+    "failure.unknown": {
+      "source": "Failure details unavailable",
+      "text": "失败详情不可用"
+    }
+  }
+}

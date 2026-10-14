@@ -1,0 +1,716 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-procurement.json",
+  "sourceSha256": "60bce9d5cc1191504845b2f34d8ea1f1d909e38d8ec23b1bf177b6332f7f9b0f",
+  "entries": {
+    "page.metadataTitle": {
+      "source": "Request missing evidence | Keryx",
+      "text": "Yêu cầu bằng chứng còn thiếu | Keryx"
+    },
+    "page.metadataDescription": {
+      "source": "Prepare a private evidence request, compare signed provider quotations, and review exact supplied excerpts under a bounded quote budget.",
+      "text": "Chuẩn bị yêu cầu bằng chứng riêng tư, so sánh báo giá có chữ ký nhà cung cấp và xem xét đúng trích đoạn cung cấp trong ngân sách báo giá có giới hạn."
+    },
+    "page.back": {
+      "source": "Back to Operator",
+      "text": "Quay lại Operator"
+    },
+    "page.kicker": {
+      "source": "Private evidence procurement · proposal workspace",
+      "text": "Thu thập bằng chứng riêng tư · không gian đề xuất"
+    },
+    "page.heading": {
+      "source": "When the evidence you need is missing",
+      "text": "Khi bằng chứng bạn cần còn thiếu"
+    },
+    "page.introduction": {
+      "source": "Turn a gap in your research into a bounded request for new evidence.",
+      "text": "Biến khoảng trống nghiên cứu thành yêu cầu bằng chứng mới có giới hạn."
+    },
+    "page.noScript": {
+      "source": "JavaScript is required for this tab-memory workspace. No request is submitted on this page.",
+      "text": "Cần JavaScript cho không gian dùng bộ nhớ tab này. Không gửi yêu cầu trên trang này."
+    },
+    "workspace.privateEvidenceProcurementWorkspace": {
+      "source": "Private evidence procurement workspace",
+      "text": "Không gian thu thập bằng chứng riêng tư"
+    },
+    "workspace.prepareAnEvidenceRequestCompareProviderQuotationsAndInspect": {
+      "source": "Prepare an evidence request, compare provider quotations, and inspect the exact evidence supplied for your decision.",
+      "text": "Chuẩn bị yêu cầu bằng chứng, so sánh báo giá nhà cung cấp và kiểm tra đúng bằng chứng được cung cấp cho quyết định của bạn."
+    },
+    "workspace.workStaysInThisTabSMemoryAndIs": {
+      "source": "Work stays in this tab's memory and is lost on reload. Exports are private plaintext files: they contain your question, provider details and supplied text.",
+      "text": "Công việc giữ trong bộ nhớ tab này và mất khi tải lại. Bản xuất là tệp văn bản thuần riêng tư: chứa câu hỏi, chi tiết nhà cung cấp và văn bản được cung cấp."
+    },
+    "workspace.procurementSteps": {
+      "source": "Procurement steps",
+      "text": "Các bước thu thập bằng chứng"
+    },
+    "workspace.steps.0": {
+      "source": "1 · Define what is missing",
+      "text": "1 · Xác định phần còn thiếu"
+    },
+    "workspace.steps.1": {
+      "source": "2 · Collect quotations",
+      "text": "2 · Thu thập báo giá"
+    },
+    "workspace.steps.2": {
+      "source": "3 · Inspect evidence",
+      "text": "3 · Kiểm tra bằng chứng"
+    },
+    "workspace.steps.3": {
+      "source": "4 · Record your decision",
+      "text": "4 · Ghi quyết định"
+    },
+    "workspace.step1DefineTheEvidenceYouNeed": {
+      "source": "1. Define the evidence you need",
+      "text": "1. Xác định bằng chứng cần có"
+    },
+    "workspace.nameADecisionAndTheMissingFactsThatCould": {
+      "source": "Name a decision and the missing facts that could change it. Priority is your declaration, from 1 to 10.",
+      "text": "Nêu quyết định và thông tin thiếu có thể làm đổi quyết định. Ưu tiên do bạn khai báo, từ 1 đến 10."
+    },
+    "workspace.requestIdentifier": {
+      "source": "Request identifier",
+      "text": "Mã định danh yêu cầu"
+    },
+    "workspace.networkForQuotationContext": {
+      "source": "Network for quotation context",
+      "text": "Mạng cho ngữ cảnh báo giá"
+    },
+    "workspace.arcMainnetQuotationOnly": {
+      "source": "Arc mainnet — quotation only",
+      "text": "Arc mainnet — chỉ báo giá"
+    },
+    "workspace.arcTestnetQuotationOnly": {
+      "source": "Arc testnet — quotation only",
+      "text": "Arc testnet — chỉ báo giá"
+    },
+    "workspace.whatDecisionAreYouTryingToMake": {
+      "source": "What decision are you trying to make?",
+      "text": "Bạn đang muốn quyết định điều gì?"
+    },
+    "workspace.maximumQuoteBudgetUSDC": {
+      "source": "Maximum quote budget (USDC)",
+      "text": "Ngân sách báo giá tối đa (USDC)"
+    },
+    "workspace.requestExpiryUTC": {
+      "source": "Request expiry (UTC)",
+      "text": "Hạn yêu cầu (UTC)"
+    },
+    "workspace.requirement": {
+      "source": "Requirement ",
+      "text": "Yêu cầu "
+    },
+    "workspace.missingRequestNewEvidence": {
+      "source": "Missing — request new evidence",
+      "text": "Còn thiếu — yêu cầu bằng chứng mới"
+    },
+    "workspace.alreadyCoveredYourDeclaration": {
+      "source": "Already covered — your declaration",
+      "text": "Đã bao phủ — do bạn khai báo"
+    },
+    "workspace.addEvidenceRequirement": {
+      "source": "Add evidence requirement",
+      "text": "Thêm yêu cầu bằng chứng"
+    },
+    "workspace.replaceRequestAndClearQuotations": {
+      "source": "Replace request and clear quotations",
+      "text": "Thay yêu cầu và xóa báo giá"
+    },
+    "workspace.prepareEvidenceRequest": {
+      "source": "Prepare evidence request",
+      "text": "Chuẩn bị yêu cầu bằng chứng"
+    },
+    "workspace.replacingTheRequestClearsAllQuotationsDeliveriesSelectionsAnd": {
+      "source": "Replacing the request clears all quotations, deliveries, selections and reviews, because their signatures bind the original request.",
+      "text": "Thay yêu cầu xóa mọi báo giá, nội dung cung cấp, lựa chọn và lần xem xét vì chữ ký của chúng ràng buộc yêu cầu ban đầu."
+    },
+    "workspace.preparedRequest": {
+      "source": "Prepared request",
+      "text": "Yêu cầu đã chuẩn bị"
+    },
+    "workspace.step2CollectProviderQuotations": {
+      "source": "2. Collect provider quotations",
+      "text": "2. Thu thập báo giá nhà cung cấp"
+    },
+    "workspace.aProviderPromisesADeliverableAndCoverageAValid": {
+      "source": "A provider promises a deliverable and coverage. A valid provider signature authenticates that promise; it does not prove ownership of the linked source.",
+      "text": "Nhà cung cấp hứa cung cấp sản phẩm và mức bao phủ. Chữ ký nhà cung cấp hợp lệ xác thực lời hứa đó; không chứng minh sở hữu nguồn liên kết."
+    },
+    "workspace.offerIdentifier": {
+      "source": "Offer identifier",
+      "text": "Mã định danh đề nghị"
+    },
+    "workspace.providerWallet": {
+      "source": "Provider wallet",
+      "text": "Ví nhà cung cấp"
+    },
+    "workspace.sourceOrDeliveryURLHTTPS": {
+      "source": "Source or delivery URL (HTTPS)",
+      "text": "URL nguồn hoặc nội dung cung cấp (HTTPS)"
+    },
+    "workspace.whatWillTheProviderDeliver": {
+      "source": "What will the provider deliver?",
+      "text": "Nhà cung cấp sẽ cung cấp gì?"
+    },
+    "workspace.quotedPriceUSDC": {
+      "source": "Quoted price (USDC)",
+      "text": "Giá báo (USDC)"
+    },
+    "workspace.offerExpiryUTC": {
+      "source": "Offer expiry (UTC)",
+      "text": "Hạn đề nghị (UTC)"
+    },
+    "workspace.providerNonceUniqueForThisWallet": {
+      "source": "Provider nonce (unique for this wallet)",
+      "text": "Nonce nhà cung cấp (duy nhất cho ví này)"
+    },
+    "workspace.requirementsTheProviderPromisesToAddress": {
+      "source": "Requirements the provider promises to address",
+      "text": "Yêu cầu nhà cung cấp hứa xử lý"
+    },
+    "workspace.offerSignatureOptionalForADraft": {
+      "source": "Offer signature (optional for a draft)",
+      "text": "Chữ ký đề nghị (tùy chọn cho bản nháp)"
+    },
+    "workspace.addProviderQuotation": {
+      "source": "Add provider quotation",
+      "text": "Thêm báo giá nhà cung cấp"
+    },
+    "workspace.downloadOfferSigningMessage": {
+      "source": "Download offer signing message",
+      "text": "Tải thông điệp ký đề nghị"
+    },
+    "workspace.downloadProviderOfferJSON": {
+      "source": "Download provider offer JSON",
+      "text": "Tải JSON đề nghị nhà cung cấp"
+    },
+    "workspace.signOfferMessage": {
+      "source": "Sign offer message",
+      "text": "Ký thông điệp đề nghị"
+    },
+    "workspace.importAProviderSOfferJSONInstead": {
+      "source": "Import a provider's offer JSON instead",
+      "text": "Hoặc nhập JSON đề nghị của nhà cung cấp"
+    },
+    "workspace.providerOfferJSON": {
+      "source": "Provider offer JSON",
+      "text": "JSON đề nghị nhà cung cấp"
+    },
+    "workspace.importProviderOffer": {
+      "source": "Import provider offer",
+      "text": "Nhập đề nghị nhà cung cấp"
+    },
+    "workspace.quotationComparison": {
+      "source": "Quotation comparison",
+      "text": "So sánh báo giá"
+    },
+    "workspace.compareBeforeSelecting": {
+      "source": "Compare before selecting",
+      "text": "So sánh trước khi chọn"
+    },
+    "workspace.compareCurrentQuotations": {
+      "source": "Compare current quotations",
+      "text": "So sánh báo giá hiện tại"
+    },
+    "workspace.noQuotationsYetAddOneAboveOrImportA": {
+      "source": "No quotations yet. Add one above or import a signed provider offer.",
+      "text": "Chưa có báo giá. Thêm bên trên hoặc nhập đề nghị có chữ ký nhà cung cấp."
+    },
+    "workspace.compareToInspectSignaturesRemainingBudgetAndTheNext": {
+      "source": "Compare to inspect signatures, remaining budget and the next recommendation.",
+      "text": "So sánh để kiểm tra chữ ký, ngân sách còn lại và khuyến nghị tiếp theo."
+    },
+    "workspace.quotationOfferId": {
+      "source": "Quotation {offerId}",
+      "text": "Báo giá {offerId}"
+    },
+    "workspace.provider": {
+      "source": "Provider ",
+      "text": "Nhà cung cấp "
+    },
+    "workspace.recommendedNextHighestDeclaredMissingPriorityPerMicroUSDC": {
+      "source": "Recommended next: highest declared missing priority per micro-USDC. This compares promises, not delivered quality.",
+      "text": "Khuyến nghị tiếp theo: ưu tiên thiếu được khai báo cao nhất trên mỗi micro-USDC. So sánh lời hứa, không phải chất lượng đã cung cấp."
+    },
+    "workspace.removeSelectionOfferId": {
+      "source": "Remove selection {offerId}",
+      "text": "Bỏ lựa chọn đề xuất {offerId}"
+    },
+    "workspace.selectProposalOfferId": {
+      "source": "Select proposal {offerId}",
+      "text": "Chọn đề xuất {offerId}"
+    },
+    "workspace.none": {
+      "source": "none",
+      "text": "không có"
+    },
+    "workspace.paymentNotObservedNoFundsReservedOrSpent": {
+      "source": "Payment: not observed. No funds reserved or spent.",
+      "text": "Thanh toán: chưa quan sát. Chưa giữ hay chi tiền."
+    },
+    "workspace.step3InspectDeliveredEvidence": {
+      "source": "3. Inspect delivered evidence",
+      "text": "3. Kiểm tra bằng chứng được cung cấp"
+    },
+    "workspace.pasteSuppliedTextHighlightAnExactPassageThenAttach": {
+      "source": "Paste supplied text, highlight an exact passage, then attach its provider-declared stance to a requirement. Changing the text clears its excerpts and signature.",
+      "text": "Dán văn bản được cung cấp, chọn đúng đoạn rồi gắn lập trường do nhà cung cấp khai báo vào yêu cầu. Đổi văn bản xóa trích đoạn và chữ ký của nó."
+    },
+    "workspace.deliveryForQuotation": {
+      "source": "Delivery for quotation",
+      "text": "Nội dung cung cấp cho báo giá"
+    },
+    "workspace.chooseAQuotation": {
+      "source": "Choose a quotation",
+      "text": "Chọn báo giá"
+    },
+    "workspace.suppliedDeliveryText": {
+      "source": "Supplied delivery text",
+      "text": "Văn bản được cung cấp"
+    },
+    "workspace.requirementForHighlightedPassage": {
+      "source": "Requirement for highlighted passage",
+      "text": "Yêu cầu cho đoạn được chọn"
+    },
+    "workspace.chooseARequirement": {
+      "source": "Choose a requirement",
+      "text": "Chọn yêu cầu"
+    },
+    "workspace.providerDeclaredStance": {
+      "source": "Provider-declared stance",
+      "text": "Lập trường do nhà cung cấp khai báo"
+    },
+    "workspace.supports": {
+      "source": "Supports",
+      "text": "Hỗ trợ"
+    },
+    "workspace.refutes": {
+      "source": "Refutes",
+      "text": "Bác bỏ"
+    },
+    "workspace.inconclusive": {
+      "source": "Inconclusive",
+      "text": "Chưa thể kết luận"
+    },
+    "workspace.attachHighlightedPassage": {
+      "source": "Attach highlighted passage",
+      "text": "Gắn đoạn được chọn"
+    },
+    "workspace.deliverySignatureOptionalForADraft": {
+      "source": "Delivery signature (optional for a draft)",
+      "text": "Chữ ký nội dung cung cấp (tùy chọn cho bản nháp)"
+    },
+    "workspace.addSuppliedDelivery": {
+      "source": "Add supplied delivery",
+      "text": "Thêm nội dung được cung cấp"
+    },
+    "workspace.downloadDeliverySigningMessage": {
+      "source": "Download delivery signing message",
+      "text": "Tải thông điệp ký nội dung cung cấp"
+    },
+    "workspace.downloadProviderDeliveryJSON": {
+      "source": "Download provider delivery JSON",
+      "text": "Tải JSON nội dung nhà cung cấp"
+    },
+    "workspace.signDeliveryMessage": {
+      "source": "Sign delivery message",
+      "text": "Ký thông điệp cung cấp"
+    },
+    "workspace.importAProviderSDeliveryJSONInstead": {
+      "source": "Import a provider's delivery JSON instead",
+      "text": "Hoặc nhập JSON nội dung của nhà cung cấp"
+    },
+    "workspace.providerDeliveryJSON": {
+      "source": "Provider delivery JSON",
+      "text": "JSON nội dung nhà cung cấp"
+    },
+    "workspace.importProviderDelivery": {
+      "source": "Import provider delivery",
+      "text": "Nhập nội dung nhà cung cấp"
+    },
+    "workspace.callerEvidenceReview": {
+      "source": "Caller evidence review",
+      "text": "Xem xét bằng chứng của người gọi"
+    },
+    "workspace.step4RecordYourEvidenceReview": {
+      "source": "4. Record your evidence review",
+      "text": "4. Ghi lần xem xét bằng chứng"
+    },
+    "workspace.readEachExactExcerptYouMayDeclareASupporting": {
+      "source": "Read each exact excerpt. You may declare a supporting or refuting passage useful to your decision. This is your review, not independent truth validation, customer acceptance or payment authority.",
+      "text": "Đọc từng trích đoạn chính xác. Bạn có thể khai báo đoạn hỗ trợ hay bác bỏ hữu ích cho quyết định. Đây là lần xem xét của bạn, không xác minh sự thật độc lập, chấp nhận của khách hàng hay thẩm quyền thanh toán."
+    },
+    "workspace.reviewerNameOrIdentifier": {
+      "source": "Reviewer name or identifier",
+      "text": "Tên hoặc mã định danh người xem xét"
+    },
+    "workspace.compareTheCurrentPacketToInspectAndReviewDeliveries": {
+      "source": "Compare the current packet to inspect and review deliveries.",
+      "text": "So sánh gói hiện tại để kiểm tra và xem xét nội dung cung cấp."
+    },
+    "workspace.deliveryReviewDeliveryOfferId": {
+      "source": "Delivery review {deliveryOfferId}",
+      "text": "Xem xét nội dung cung cấp {deliveryOfferId}"
+    },
+    "workspace.deliveryFor": {
+      "source": "Delivery for ",
+      "text": "Cung cấp cho "
+    },
+    "workspace.privatePacketExportAndRestore": {
+      "source": "Private packet export and restore",
+      "text": "Xuất và khôi phục gói riêng tư"
+    },
+    "workspace.keepOrRestoreThisWork": {
+      "source": "Keep or restore this work",
+      "text": "Giữ hoặc khôi phục công việc này"
+    },
+    "workspace.downloadThePacketToContinueLaterOrShareSelected": {
+      "source": "Download the packet to continue later or share selected private fields deliberately. Only the packet can be restored; a decision receipt is a dated inspection result.",
+      "text": "Tải gói để tiếp tục sau hoặc chủ động chia sẻ trường riêng tư đã chọn. Chỉ gói có thể khôi phục; biên nhận quyết định là kết quả kiểm tra có ngày."
+    },
+    "workspace.downloadPrivatePlaintextPacket": {
+      "source": "Download private plaintext packet",
+      "text": "Tải gói văn bản thuần riêng tư"
+    },
+    "workspace.downloadDecisionReceipt": {
+      "source": "Download decision receipt",
+      "text": "Tải biên nhận quyết định"
+    },
+    "workspace.clearTabPacket": {
+      "source": "Clear tab packet",
+      "text": "Xóa gói trong tab"
+    },
+    "workspace.restorePrivatePacketFileJSONUpTo64KiB": {
+      "source": "Restore private packet file (JSON, up to 64 KiB)",
+      "text": "Khôi phục tệp gói riêng tư (JSON, tối đa 64 KiB)"
+    },
+    "workspace.pastePrivatePacketJSON": {
+      "source": "Paste private packet JSON",
+      "text": "Dán JSON gói riêng tư"
+    },
+    "workspace.privatePacketJSON": {
+      "source": "Private packet JSON",
+      "text": "JSON gói riêng tư"
+    },
+    "workspace.validatePacketForRestore": {
+      "source": "Validate packet for restore",
+      "text": "Kiểm tra gói để khôi phục"
+    },
+    "workspace.validatedRestorePreview": {
+      "source": "Validated restore preview",
+      "text": "Bản xem trước khôi phục đã kiểm tra"
+    },
+    "workspace.replaceTabWithValidatedPacket": {
+      "source": "Replace tab with validated packet",
+      "text": "Thay nội dung tab bằng gói đã kiểm tra"
+    },
+    "workspace.cancelPacketRestore": {
+      "source": "Cancel packet restore",
+      "text": "Hủy khôi phục gói"
+    },
+    "messages.amountFormat": {
+      "source": "Use a USDC amount with at most six decimal places.",
+      "text": "Dùng số USDC có tối đa sáu chữ số thập phân."
+    },
+    "messages.validationFailed": {
+      "source": "Could not validate this change. Check the bounded fields, identifiers, signatures and exact excerpt positions. Your packet has been kept.",
+      "text": "Không thể kiểm tra thay đổi này. Kiểm tra trường có giới hạn, mã định danh, chữ ký và vị trí trích đoạn chính xác. Gói được giữ nguyên."
+    },
+    "messages.selectionRemoved": {
+      "source": "Proposal selection removed. Compare again to inspect the remaining quotations.",
+      "text": "Đã bỏ lựa chọn đề xuất. So sánh lại để kiểm tra báo giá còn lại."
+    },
+    "messages.selectionRefused": {
+      "source": "Quotation cannot be selected now. It expired or no longer adds eligible coverage. Compare again.",
+      "text": "Hiện không thể chọn báo giá. Báo giá hết hạn hoặc không còn bổ sung mức bao phủ đủ điều kiện. So sánh lại."
+    },
+    "messages.selectionChanged": {
+      "source": "Proposal selection changed. Compare again before selecting another quotation.",
+      "text": "Lựa chọn đề xuất đã đổi. So sánh lại trước khi chọn báo giá khác."
+    },
+    "messages.restoreValidated": {
+      "source": "Packet validated. Inspect the summary before replacing this tab's work.",
+      "text": "Gói đã được kiểm tra. Xem tóm tắt trước khi thay công việc trong tab."
+    },
+    "messages.restoreRefused": {
+      "source": "Unsupported or invalid packet. Existing work has been kept.",
+      "text": "Gói không được hỗ trợ hoặc không hợp lệ. Công việc hiện có được giữ."
+    },
+    "messages.offerSignatureAdded": {
+      "source": "Matching unsigned quotation upgraded with its provider signature. Compare to verify it.",
+      "text": "Đã bổ sung chữ ký nhà cung cấp vào báo giá chưa ký khớp. So sánh để xác minh."
+    },
+    "messages.offerAdded": {
+      "source": "Quotation added. Compare to verify its signature and proposed coverage.",
+      "text": "Đã thêm báo giá. So sánh để xác minh chữ ký và mức bao phủ đề xuất."
+    },
+    "messages.deliverySignatureAdded": {
+      "source": "Matching unsigned delivery upgraded with its provider signature. Compare to authenticate its bytes.",
+      "text": "Đã bổ sung chữ ký nhà cung cấp vào nội dung chưa ký khớp. So sánh để xác thực byte."
+    },
+    "messages.deliveryAdded": {
+      "source": "Delivery added. Compare to authenticate supplied bytes before recording a review.",
+      "text": "Đã thêm nội dung cung cấp. So sánh để xác thực byte cung cấp trước khi ghi lần xem xét."
+    },
+    "messages.providerDataDownloaded": {
+      "source": "Private provider fields downloaded. The provider must sign the matching canonical message; importing a signature authenticates no payment.",
+      "text": "Đã tải trường riêng tư của nhà cung cấp. Nhà cung cấp phải ký thông điệp chuẩn khớp; nhập chữ ký không xác thực thanh toán nào."
+    },
+    "messages.signingMessageDownloaded": {
+      "source": "Downloaded the exact signing message. This message authorizes no payment. Keep its matching unsigned packet fields unchanged.",
+      "text": "Đã tải đúng thông điệp ký. Thông điệp không cho phép thanh toán. Giữ nguyên các trường gói chưa ký khớp."
+    },
+    "messages.messageSigned": {
+      "source": "Provider message signed. Add it to the packet, then compare to verify the signature.",
+      "text": "Đã ký thông điệp nhà cung cấp. Thêm vào gói rồi so sánh để xác minh chữ ký."
+    },
+    "messages.messageRefused": {
+      "source": "Message was not signed. Use the provider's matching wallet and unchanged fields.",
+      "text": "Chưa ký thông điệp. Dùng đúng ví nhà cung cấp và trường không đổi."
+    },
+    "messages.restored": {
+      "source": "Restored the validated private packet. Compare again to inspect current expiry and signatures.",
+      "text": "Đã khôi phục gói riêng tư được kiểm tra. So sánh lại để kiểm tra thời hạn và chữ ký hiện tại."
+    },
+    "messages.requestPrepared": {
+      "source": "Request prepared. Export it for providers or add a quotation below.",
+      "text": "Đã chuẩn bị yêu cầu. Xuất cho nhà cung cấp hoặc thêm báo giá bên dưới."
+    },
+    "messages.compared": {
+      "source": "Comparison recomputed from the current packet. Selection remains a proposal only.",
+      "text": "Đã tính lại so sánh từ gói hiện tại. Lựa chọn vẫn chỉ là đề xuất."
+    },
+    "messages.offerRemoved": {
+      "source": "Quotation and its dependent delivery/review removed.",
+      "text": "Đã xóa báo giá cùng nội dung cung cấp và lần xem xét phụ thuộc."
+    },
+    "messages.selectExcerpt": {
+      "source": "Highlight an exact passage in the supplied delivery text first.",
+      "text": "Chọn đúng đoạn trong văn bản được cung cấp trước."
+    },
+    "messages.reviewRecorded": {
+      "source": "Caller review recorded. Compare again to build an updated decision receipt.",
+      "text": "Đã ghi lần xem xét của người gọi. So sánh lại để tạo biên nhận quyết định cập nhật."
+    },
+    "messages.deliveryRemoved": {
+      "source": "Delivery and its dependent review removed.",
+      "text": "Đã xóa nội dung cung cấp và lần xem xét phụ thuộc."
+    },
+    "messages.packetDownloaded": {
+      "source": "Private plaintext packet downloaded. Store it securely; this tab has no persistent save.",
+      "text": "Đã tải gói văn bản thuần riêng tư. Lưu an toàn; tab này không lưu bền."
+    },
+    "messages.receiptDownloaded": {
+      "source": "Private plaintext decision receipt downloaded. Its caller reviews and unobserved payment status remain explicit.",
+      "text": "Đã tải biên nhận quyết định văn bản thuần riêng tư. Lần xem xét của người gọi và trạng thái thanh toán chưa quan sát vẫn được nêu rõ."
+    },
+    "messages.cleared": {
+      "source": "Packet and private form text cleared from this tab. Downloaded files are unchanged.",
+      "text": "Đã xóa gói và văn bản biểu mẫu riêng tư khỏi tab. Tệp tải xuống không đổi."
+    },
+    "messages.fileTooLarge": {
+      "source": "Packet file exceeds the supported limit. Existing work has been kept.",
+      "text": "Tệp gói vượt giới hạn hỗ trợ. Công việc hiện có được giữ."
+    },
+    "messages.fileReadFailed": {
+      "source": "Could not read this packet file. Existing work has been kept.",
+      "text": "Không thể đọc tệp gói này. Công việc hiện có được giữ."
+    },
+    "messages.restoreCancelled": {
+      "source": "Restore cancelled. Existing work has been kept.",
+      "text": "Đã hủy khôi phục. Công việc hiện có được giữ."
+    },
+    "reasons.eligible": {
+      "source": "Signed quotation eligible for this proposal",
+      "text": "Báo giá đã ký đủ điều kiện cho đề xuất này"
+    },
+    "reasons.unsigned-offer": {
+      "source": "Unsigned quotation — provider identity unverified",
+      "text": "Báo giá chưa ký — danh tính nhà cung cấp chưa xác minh"
+    },
+    "reasons.invalid-offer-signature": {
+      "source": "Offer signature does not authenticate this quotation",
+      "text": "Chữ ký đề nghị không xác thực báo giá này"
+    },
+    "reasons.expired-offer": {
+      "source": "Quotation expired",
+      "text": "Báo giá hết hạn"
+    },
+    "reasons.outside-quote-budget": {
+      "source": "Exceeds the remaining quote budget",
+      "text": "Vượt ngân sách báo giá còn lại"
+    },
+    "reasons.no-new-proposed-coverage": {
+      "source": "Adds no currently missing proposed coverage",
+      "text": "Không bổ sung mức bao phủ đề xuất hiện còn thiếu"
+    },
+    "reasons.different-request": {
+      "source": "Quotation is bound to another request",
+      "text": "Báo giá ràng buộc với yêu cầu khác"
+    },
+    "reasons.request-expired": {
+      "source": "Request expired",
+      "text": "Yêu cầu hết hạn"
+    },
+    "reasons.attributed-bytes": {
+      "source": "Signature authenticates these exact supplied bytes",
+      "text": "Chữ ký xác thực đúng các byte được cung cấp này"
+    },
+    "reasons.unsigned-delivery": {
+      "source": "Unsigned delivery — withheld from review",
+      "text": "Nội dung chưa ký — chưa cho xem xét"
+    },
+    "reasons.invalid-delivery-signature": {
+      "source": "Delivery signature is invalid",
+      "text": "Chữ ký nội dung cung cấp không hợp lệ"
+    },
+    "reasons.body-hash-mismatch": {
+      "source": "Delivered text changed after hashing",
+      "text": "Văn bản cung cấp đổi sau khi tính hash"
+    },
+    "reasons.invalid-excerpt": {
+      "source": "Excerpt does not bind an exact usable slice",
+      "text": "Trích đoạn không ràng buộc đúng phần có thể dùng"
+    },
+    "reasons.different-offer": {
+      "source": "Delivery is bound to another quotation",
+      "text": "Nội dung cung cấp ràng buộc báo giá khác"
+    },
+    "reasons.caller-reviewed": {
+      "source": "Caller review recorded — a declaration",
+      "text": "Đã ghi lần xem xét người gọi — một khai báo"
+    },
+    "reasons.unbound-review": {
+      "source": "Review is not bound to an authenticated delivery",
+      "text": "Lần xem xét không ràng buộc nội dung cung cấp đã xác thực"
+    },
+    "links.commission": {
+      "source": "Commission missing evidence",
+      "text": "Đặt thu thập bằng chứng còn thiếu"
+    },
+    "templates.requirement": {
+      "source": "Requirement {number} · {id}",
+      "text": "Yêu cầu {number} · {id}"
+    },
+    "templates.question": {
+      "source": "Evidence question {number}",
+      "text": "Câu hỏi bằng chứng {number}"
+    },
+    "templates.priority": {
+      "source": "Priority {number}",
+      "text": "Ưu tiên {number}"
+    },
+    "templates.status": {
+      "source": "Evidence status {number}",
+      "text": "Trạng thái bằng chứng {number}"
+    },
+    "templates.removeRequirement": {
+      "source": "Remove requirement {number}",
+      "text": "Xóa yêu cầu {number}"
+    },
+    "templates.preparedHeading": {
+      "source": "Prepared request: {id}",
+      "text": "Yêu cầu đã chuẩn bị: {id}"
+    },
+    "templates.requestSummary": {
+      "source": "Quote cap {amount} · {network} · expires {expiresAt}",
+      "text": "Hạn mức báo giá {amount} · {network} · hết hạn {expiresAt}"
+    },
+    "templates.requestHashLine": {
+      "source": "Request hash {hash}",
+      "text": "Hash yêu cầu {hash}"
+    },
+    "templates.requirementStatus": {
+      "source": "· {status}, priority {priority}",
+      "text": "· {status}, ưu tiên {priority}"
+    },
+    "templates.providerLine": {
+      "source": "Provider {wallet}",
+      "text": "Nhà cung cấp {wallet}"
+    },
+    "templates.sourceLink": {
+      "source": "Supplied link: {url}",
+      "text": "Liên kết được cung cấp: {url}"
+    },
+    "templates.coverage": {
+      "source": "Proposed coverage: {requirements} · expires {expiresAt}",
+      "text": "Mức bao phủ đề xuất: {requirements} · hết hạn {expiresAt}"
+    },
+    "templates.removeQuotation": {
+      "source": "Remove quotation {id}",
+      "text": "Xóa báo giá {id}"
+    },
+    "templates.state": {
+      "source": "Current proposal state: {state}",
+      "text": "Trạng thái đề xuất hiện tại: {state}"
+    },
+    "templates.budgetSummary": {
+      "source": "Planned quote total: {planned} · remaining: {remaining}",
+      "text": "Tổng báo giá dự kiến: {planned} · còn lại: {remaining}"
+    },
+    "templates.missingRequirements": {
+      "source": "Still missing according to caller review: {requirements}",
+      "text": "Vẫn thiếu theo lần xem xét người gọi: {requirements}"
+    },
+    "templates.deliveryExcerpt": {
+      "source": "{requirement} · provider declares {stance} · characters {start}–{end}",
+      "text": "{requirement} · nhà cung cấp khai báo {stance} · ký tự {start}–{end}"
+    },
+    "templates.reviewHeading": {
+      "source": "Delivery for {id}",
+      "text": "Cung cấp cho {id}"
+    },
+    "templates.reviewExcerpt": {
+      "source": "{requirement} · provider declares {stance} · exact supplied slice",
+      "text": "{requirement} · nhà cung cấp khai báo {stance} · đúng phần được cung cấp"
+    },
+    "templates.reviewDeclaration": {
+      "source": "I reviewed {requirement} as useful {stance} evidence",
+      "text": "Tôi đã xem xét {requirement} là bằng chứng {stance} hữu ích"
+    },
+    "templates.reviewNote": {
+      "source": "Review note for {id}",
+      "text": "Ghi chú xem xét cho {id}"
+    },
+    "templates.recordReview": {
+      "source": "Record caller review {id}",
+      "text": "Ghi lần xem xét người gọi {id}"
+    },
+    "templates.removeDelivery": {
+      "source": "Remove delivery {id}",
+      "text": "Xóa nội dung cung cấp {id}"
+    },
+    "templates.reviewedRequirements": {
+      "source": "Caller-reviewed requirements: {requirements}",
+      "text": "Yêu cầu đã được người gọi xem xét: {requirements}"
+    },
+    "templates.restoreHeading": {
+      "source": "Replace this tab with request {id}: {decision}",
+      "text": "Thay tab này bằng yêu cầu {id}: {decision}"
+    },
+    "templates.restoreSummary": {
+      "source": "{offers} quotations · {deliveries} deliveries · {reviews} caller reviews · quote cap {amount}",
+      "text": "{offers} báo giá · {deliveries} nội dung cung cấp · {reviews} lần xem xét người gọi · hạn mức báo giá {amount}"
+    },
+    "templates.amount": {
+      "source": "{whole}.{fraction} USDC",
+      "text": "{whole}.{fraction} USDC"
+    },
+    "reviewStances.supports": {
+      "source": "supporting",
+      "text": "hỗ trợ"
+    },
+    "reviewStances.refutes": {
+      "source": "refuting",
+      "text": "bác bỏ"
+    },
+    "reviewStances.inconclusive": {
+      "source": "inconclusive",
+      "text": "chưa thể kết luận"
+    }
+  }
+}

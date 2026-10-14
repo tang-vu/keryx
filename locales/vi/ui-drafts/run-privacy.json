@@ -1,0 +1,112 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/run-privacy.ts",
+  "sourceSha256": "bf75df0077c82d66c68363521eaccc5d698ffb4e643b36c5130665ebd6c913ec",
+  "entries": {
+    "title": {
+      "source": "Question privacy",
+      "text": "Quyền riêng tư câu hỏi"
+    },
+    "metadataTitle": {
+      "source": "Question privacy | Keryx",
+      "text": "Quyền riêng tư câu hỏi | Keryx"
+    },
+    "manage": {
+      "source": "Manage question privacy",
+      "text": "Quản lý quyền riêng tư câu hỏi"
+    },
+    "introduction": {
+      "source": "Private questions are visible to you. Unlisted questions are available through their link. Public questions can appear in the answer archive.",
+      "text": "Câu hỏi riêng tư chỉ bạn thấy. Câu hỏi không niêm yết có thể truy cập qua liên kết. Câu hỏi công khai có thể xuất hiện trong kho câu trả lời."
+    },
+    "inactive": {
+      "source": "Question privacy controls are unavailable in this deployment. Existing question visibility is unchanged.",
+      "text": "Điều khiển quyền riêng tư câu hỏi không khả dụng trên bản triển khai này. Chế độ hiển thị câu hỏi hiện có giữ nguyên."
+    },
+    "retention": {
+      "source": "This original has a retention hold. Its financial proof must be preserved.",
+      "text": "Bản gốc này đang được giữ theo yêu cầu lưu trữ. Phải bảo toàn bằng chứng tài chính."
+    },
+    "signIn": {
+      "source": "Sign in with your wallet to manage question privacy.",
+      "text": "Đăng nhập bằng ví để quản lý quyền riêng tư câu hỏi."
+    },
+    "admission": {
+      "source": "Question privacy is awaiting storage admission.",
+      "text": "Quyền riêng tư câu hỏi đang chờ chấp nhận lưu trữ."
+    },
+    "retry": {
+      "source": "The request could not be completed. Refresh and retry.",
+      "text": "Không thể hoàn tất yêu cầu. Làm mới và thử lại."
+    },
+    "accountChanged": {
+      "source": "Account changed. Refresh this page to continue.",
+      "text": "Tài khoản đã thay đổi. Làm mới trang để tiếp tục."
+    },
+    "erased": {
+      "source": "Question and answer erased. Financial records and run ID retained.",
+      "text": "Đã xóa câu hỏi và câu trả lời. Giữ lại hồ sơ tài chính và ID lượt chạy."
+    },
+    "saved": {
+      "source": "Saved.",
+      "text": "Đã lưu."
+    },
+    "defaultLabel": {
+      "source": "Default for new questions",
+      "text": "Mặc định cho câu hỏi mới"
+    },
+    "saveDefault": {
+      "source": "Save default",
+      "text": "Lưu mặc định"
+    },
+    "runId": {
+      "source": "Run ID",
+      "text": "ID lượt chạy"
+    },
+    "load": {
+      "source": "Load my question",
+      "text": "Tải câu hỏi của tôi"
+    },
+    "erasedLabel": {
+      "source": "Text erased",
+      "text": "Đã xóa văn bản"
+    },
+    "visibility": {
+      "source": "Visibility",
+      "text": "Chế độ hiển thị"
+    },
+    "saveVisibility": {
+      "source": "Save visibility",
+      "text": "Lưu chế độ hiển thị"
+    },
+    "export": {
+      "source": "Export my record",
+      "text": "Xuất hồ sơ của tôi"
+    },
+    "eraseExplanation": {
+      "source": "Erasure removes this question, answer and derived research text. Run ID, settlement proofs and financial records remain. Copies already downloaded by others cannot be recalled.",
+      "text": "Xóa sẽ gỡ câu hỏi, câu trả lời và văn bản nghiên cứu phát sinh này. ID lượt chạy, bằng chứng quyết toán và hồ sơ tài chính vẫn còn. Không thể thu hồi bản người khác đã tải xuống."
+    },
+    "eraseConsent": {
+      "source": "Erase my question and answer",
+      "text": "Xóa câu hỏi và câu trả lời của tôi"
+    },
+    "erase": {
+      "source": "Erase text",
+      "text": "Xóa văn bản"
+    },
+    "choices.private": {
+      "source": "Private",
+      "text": "Riêng tư"
+    },
+    "choices.unlisted": {
+      "source": "Unlisted",
+      "text": "Không niêm yết"
+    },
+    "choices.public": {
+      "source": "Public",
+      "text": "Công khai"
+    }
+  }
+}

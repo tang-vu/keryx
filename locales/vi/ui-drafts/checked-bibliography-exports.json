@@ -1,0 +1,36 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/checked-bibliography-exports.ts",
+  "sourceSha256": "4dd269e891d0fb05890b30a9c4700476a6e5f7f742fa9cefe8672978f33a41d5",
+  "entries": {
+    "0.label": {
+      "source": "Export bibliography BibTeX",
+      "text": "Xuất danh mục tài liệu BibTeX"
+    },
+    "0.notice": {
+      "source": "Private bibliography BibTeX saved. Metadata only; no read or settlement evidence.",
+      "text": "Đã lưu danh mục tài liệu BibTeX riêng tư. Chỉ siêu dữ liệu; không có bằng chứng đọc hoặc quyết toán."
+    },
+    "1.label": {
+      "source": "Export bibliography RIS",
+      "text": "Xuất danh mục tài liệu RIS"
+    },
+    "1.notice": {
+      "source": "Private bibliography RIS saved. Metadata only; no read or settlement evidence.",
+      "text": "Đã lưu danh mục tài liệu RIS riêng tư. Chỉ siêu dữ liệu; không có bằng chứng đọc hoặc quyết toán."
+    },
+    "2.label": {
+      "source": "Export bibliography CSL-JSON",
+      "text": "Xuất danh mục tài liệu CSL-JSON"
+    },
+    "2.notice": {
+      "source": "Private bibliography CSL-JSON saved. Metadata only; no read or settlement evidence.",
+      "text": "Đã lưu danh mục tài liệu CSL-JSON riêng tư. Chỉ siêu dữ liệu; không có bằng chứng đọc hoặc quyết toán."
+    },
+    "unavailable": {
+      "source": "No reusable bibliography metadata in the checked saved receipt",
+      "text": "Không có siêu dữ liệu danh mục tài liệu có thể dùng lại trong biên nhận đã lưu được kiểm tra"
+    }
+  }
+}

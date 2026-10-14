@@ -1,0 +1,128 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/zotero.json",
+  "sourceSha256": "d4f0391715a286d6e6dc2a8a9219f58706c36ab03bd372014d1df4b76fb17c62",
+  "entries": {
+    "title": {
+      "source": "Send references to Zotero",
+      "text": "Gửi tài liệu tham khảo đến Zotero"
+    },
+    "intro": {
+      "source": "Connect your personal library, choose a collection and send references when you decide. Nothing is sent automatically.",
+      "text": "Kết nối thư viện cá nhân, chọn bộ sưu tập và gửi tài liệu tham khảo khi bạn quyết định. Không tự động gửi gì."
+    },
+    "signIn": {
+      "source": "Sign in to manage your reference connection",
+      "text": "Đăng nhập để quản lý kết nối tài liệu tham khảo"
+    },
+    "checking": {
+      "source": "Checking your account…",
+      "text": "Đang kiểm tra tài khoản của bạn…"
+    },
+    "scopes": {
+      "source": "Use a dedicated Zotero key with personal library read, note read and library write access. Leave file and group access off. Note read is needed to reconcile notes safely after an interrupted send. This library binds to your Keryx account; disconnecting retains that binding. Account transfer is unavailable.",
+      "text": "Dùng khóa Zotero riêng có quyền đọc thư viện cá nhân, đọc ghi chú và ghi thư viện. Tắt quyền tệp và nhóm. Quyền đọc ghi chú cần để đối soát an toàn sau khi gửi bị gián đoạn. Thư viện ràng buộc với tài khoản Keryx của bạn; ngắt kết nối vẫn giữ ràng buộc. Không hỗ trợ chuyển tài khoản."
+    },
+    "keyLabel": {
+      "source": "Dedicated Zotero API key",
+      "text": "Khóa API Zotero dành riêng"
+    },
+    "connect": {
+      "source": "Connect Zotero",
+      "text": "Kết nối Zotero"
+    },
+    "connected": {
+      "source": "Personal Zotero library connected",
+      "text": "Đã kết nối thư viện Zotero cá nhân"
+    },
+    "disconnect": {
+      "source": "Disconnect Zotero",
+      "text": "Ngắt kết nối Zotero"
+    },
+    "disconnected": {
+      "source": "Connection revoked in Keryx. You can also delete the dedicated key in Zotero settings.",
+      "text": "Đã thu hồi kết nối trong Keryx. Bạn cũng có thể xóa khóa dành riêng trong cài đặt Zotero."
+    },
+    "load": {
+      "source": "Load collections from Zotero",
+      "text": "Tải bộ sưu tập từ Zotero"
+    },
+    "collection": {
+      "source": "Destination collection",
+      "text": "Bộ sưu tập đích"
+    },
+    "choose": {
+      "source": "Choose a collection",
+      "text": "Chọn bộ sưu tập"
+    },
+    "saved": {
+      "source": "Send saved literature references",
+      "text": "Gửi tài liệu tham khảo đã lưu"
+    },
+    "savedScope": {
+      "source": "This sends the saved paper metadata from this browser. Your review title, question, screening decisions and personal notes stay here.",
+      "text": "Gửi siêu dữ liệu bài đã lưu từ trình duyệt này. Tên bản tổng quan, câu hỏi, quyết định sàng lọc và ghi chú cá nhân giữ tại đây."
+    },
+    "reportLabel": {
+      "source": "Report ID from your research history",
+      "text": "ID báo cáo từ lịch sử nghiên cứu"
+    },
+    "report": {
+      "source": "Send report references and cited excerpts",
+      "text": "Gửi tài liệu tham khảo và trích đoạn được trích dẫn của báo cáo"
+    },
+    "reportScope": {
+      "source": "This sends the owned report's canonical reference fields, public report link and exact recorded cited excerpts. Private originals are unavailable for this action.",
+      "text": "Gửi trường tham khảo chuẩn của báo cáo thuộc sở hữu, liên kết báo cáo công khai và trích đoạn được trích dẫn chính xác đã ghi nhận. Không dùng bản gốc riêng tư cho thao tác này."
+    },
+    "confirm": {
+      "source": "Send these references and any cited excerpts to the selected Zotero collection? Zotero and anyone with access to that library may retain them.",
+      "text": "Gửi các tài liệu tham khảo và trích đoạn được trích dẫn này đến bộ sưu tập Zotero đã chọn? Zotero và người có quyền truy cập thư viện đó có thể giữ chúng."
+    },
+    "sent": {
+      "source": "References accepted by Zotero. Repeated sends reconcile existing items and notes.",
+      "text": "Zotero đã chấp nhận tài liệu tham khảo. Gửi lại sẽ đối soát các mục và ghi chú hiện có."
+    },
+    "unavailable": {
+      "source": "Zotero sending is unavailable on this deployment.",
+      "text": "Gửi đến Zotero không khả dụng trên bản triển khai này."
+    },
+    "failed": {
+      "source": "The operation did not finish. Some references may already have reached Zotero. Reload collections, then explicitly send again to reconcile them.",
+      "text": "Thao tác chưa hoàn tất. Một số tài liệu tham khảo có thể đã đến Zotero. Tải lại bộ sưu tập, rồi chủ động gửi lại để đối soát."
+    },
+    "conflict": {
+      "source": "The send contains overlapping citation identities or the library has conflicting, duplicate or changed references. Review the references before sending again.",
+      "text": "Nội dung gửi có danh tính trích dẫn chồng lấn, hoặc thư viện có tài liệu tham khảo xung đột, trùng hay đã thay đổi. Xem xét tài liệu tham khảo trước khi gửi lại."
+    },
+    "libraryBound": {
+      "source": "This Zotero library is already bound to another Keryx account. Disconnecting does not release that binding. Account transfer is unavailable.",
+      "text": "Thư viện Zotero này đã ràng buộc với tài khoản Keryx khác. Ngắt kết nối không gỡ ràng buộc. Không hỗ trợ chuyển tài khoản."
+    },
+    "scopesFailed": {
+      "source": "The key needs only personal library read, note read and write access, with file and group access off. Check the dedicated key in Zotero settings.",
+      "text": "Khóa chỉ cần quyền đọc thư viện cá nhân, đọc ghi chú và ghi, với quyền tệp và nhóm tắt. Kiểm tra khóa dành riêng trong cài đặt Zotero."
+    },
+    "backoff": {
+      "source": "Zotero requested a pause. Wait before trying another action.",
+      "text": "Zotero yêu cầu tạm dừng. Chờ trước khi thử thao tác khác."
+    },
+    "notFound": {
+      "source": "This report is unavailable for your account or contains a private original.",
+      "text": "Báo cáo này không khả dụng cho tài khoản của bạn hoặc chứa bản gốc riêng tư."
+    },
+    "boundary": {
+      "source": "Disconnecting stops future Keryx requests and removes its stored key. It cannot recall items already sent or a request already in flight.",
+      "text": "Ngắt kết nối ngăn yêu cầu Keryx sau này và xóa khóa được lưu. Không thể thu hồi mục đã gửi hay yêu cầu đang xử lý."
+    },
+    "bib": {
+      "source": "Manage private BibTeX links",
+      "text": "Quản lý liên kết BibTeX riêng tư"
+    },
+    "settings": {
+      "source": "Zotero API key settings",
+      "text": "Cài đặt khóa API Zotero"
+    }
+  }
+}

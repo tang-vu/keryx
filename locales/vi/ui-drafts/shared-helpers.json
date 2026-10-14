@@ -1,0 +1,300 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/shared-helpers.ts",
+  "sourceSha256": "abbd0f90681948fe923c0125bddbc9d380288258f8b8243d28d2c4ccad3c6f5d",
+  "entries": {
+    "signingAmount.exactDetails": {
+      "source": "({micros} micro-USDC; decimal point, no grouping)",
+      "text": "({micros} micro-USDC; dấu chấm thập phân, không phân nhóm)"
+    },
+    "displayTime.unavailable": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "paymentAuthorization.prepared": {
+      "source": "reserved, not exposed",
+      "text": "đã giữ, chưa đưa vào thanh toán"
+    },
+    "paymentAuthorization.exposed": {
+      "source": "reserved, possibly unsigned",
+      "text": "đã giữ, có thể chưa ký"
+    },
+    "paymentAuthorization.signed": {
+      "source": "signed, pending proof",
+      "text": "đã ký, chờ bằng chứng"
+    },
+    "paymentAuthorization.submitted": {
+      "source": "submitted, pending proof",
+      "text": "đã gửi, chờ bằng chứng"
+    },
+    "paymentAuthorization.pending": {
+      "source": "pending proof",
+      "text": "chờ bằng chứng"
+    },
+    "reportExport.title": {
+      "source": "# Keryx research report",
+      "text": "# Báo cáo nghiên cứu Keryx"
+    },
+    "reportExport.sourceCap": {
+      "source": "Source cap: {budget} USDC. Mode: {mode}.",
+      "text": "Hạn mức nguồn: {budget} USDC. Chế độ: {mode}."
+    },
+    "reportExport.bibliography": {
+      "source": "## Bibliography exports (metadata only)",
+      "text": "## Xuất thư mục tham khảo (chỉ siêu dữ liệu)"
+    },
+    "reportExport.citedSources": {
+      "source": "## Cited sources",
+      "text": "## Nguồn được trích dẫn"
+    },
+    "reportExport.documentVersion": {
+      "source": "Document version: {version}",
+      "text": "Phiên bản tài liệu: {version}"
+    },
+    "reportExport.freeAccess": {
+      "source": "Access: creator-authorized free read; no access-settlement receipt.",
+      "text": "Truy cập: lượt đọc miễn phí được tác giả cho phép; không có biên nhận quyết toán truy cập."
+    },
+    "reportExport.creatorPolicy": {
+      "source": "Captured creator policy: {policy}. This is historical context, not current payout authority.",
+      "text": "Chính sách tác giả đã lưu: {policy}. Đây là bối cảnh lịch sử, không phải thẩm quyền nhận tiền hiện tại."
+    },
+    "reportExport.provenance": {
+      "source": "Observed provenance: {provenance}",
+      "text": "Xuất xứ đã quan sát: {provenance}"
+    },
+    "reportExport.originalScope": {
+      "source": "Supplied original scope: {scope}",
+      "text": "Phạm vi nguồn được yêu cầu ban đầu: {scope}"
+    },
+    "reportExport.scholarly": {
+      "source": "Observed scholarly metadata and read scope (peer review unknown): {metadata}",
+      "text": "Siêu dữ liệu học thuật và phạm vi đọc đã quan sát (chưa biết tình trạng phản biện): {metadata}"
+    },
+    "reportExport.evidence": {
+      "source": "## Evidence and limitations",
+      "text": "## Bằng chứng và giới hạn"
+    },
+    "reportExport.evidenceNotice": {
+      "source": "Research targets are unverified topics. Recorded excerpt support and coverage are estimates, not proof of entailment, factual truth or complete synthesis.",
+      "text": "Mục tiêu nghiên cứu là chủ đề chưa được xác minh. Hỗ trợ từ đoạn trích và độ bao phủ đã ghi nhận là ước tính, không phải bằng chứng về suy ra kết luận, tính đúng thực tế hay tổng hợp đầy đủ."
+    },
+    "reportExport.target": {
+      "source": "{marker} · Research target (unverified): {claim}",
+      "text": "{marker} yêu cầu nghiên cứu (chưa xác minh): {claim}"
+    },
+    "reportExport.quote": {
+      "source": "Quote: {quote}",
+      "text": "Trích đoạn: {quote}"
+    },
+    "reportExport.admission": {
+      "source": "Source excerpt admitted: {admitted}. Reward eligible: {eligible}.",
+      "text": "Trích đoạn nguồn được chấp nhận: {admitted}. Đủ điều kiện nhận thưởng: {eligible}."
+    },
+    "reportExport.coverage": {
+      "source": "Research target (unverified): {claim}: {coverage} recorded coverage estimate; {sources}",
+      "text": "Yêu cầu nghiên cứu (chưa xác minh): {claim}: ước lượng độ bao phủ đã ghi nhận {coverage}; {sources}"
+    },
+    "reportExport.noAdmittedSources": {
+      "source": "no admitted sources",
+      "text": "chưa có nguồn đủ điều kiện"
+    },
+    "reportExport.payments": {
+      "source": "## Payment evidence",
+      "text": "## Bằng chứng thanh toán"
+    },
+    "reportExport.paymentNotice": {
+      "source": "A citation alone does not prove settlement. Keryx operating fees and creator rewards are recorded separately. Search and model operating costs are separate from the source cap.",
+      "text": "Chỉ trích dẫn không chứng minh quyết toán. Phí vận hành Keryx và phần thưởng tác giả ghi nhận riêng. Chi phí vận hành tìm kiếm và mô hình tách biệt với hạn mức nguồn."
+    },
+    "reportExport.noPayments": {
+      "source": "No payment records received in this conversation.",
+      "text": "Chưa nhận hồ sơ thanh toán trong hội thoại này."
+    },
+    "reportExport.payment": {
+      "source": "{source}: {amount} USDC · {kind} · {status}",
+      "text": "{source}: {amount} USDC · {kind} · {status}"
+    },
+    "reportExport.paymentReference": {
+      "source": "{source}: {amount} USDC · {kind} · {status} · reference {reference}",
+      "text": "{source}: {amount} USDC · {kind} · {status} · tham chiếu {reference}"
+    },
+    "evidenceMatrix.statusIllustrative": {
+      "source": "Illustrative demo excerpt",
+      "text": "Trích đoạn demo minh họa"
+    },
+    "evidenceMatrix.statusRecorded": {
+      "source": "Recorded excerpt",
+      "text": "Trích đoạn đã ghi nhận"
+    },
+    "evidenceMatrix.statusMissing": {
+      "source": "No inspectable excerpt recorded",
+      "text": "Chưa ghi nhận trích đoạn có thể kiểm tra"
+    },
+    "evidenceMatrix.statusUnavailable": {
+      "source": "Evidence ledger unavailable",
+      "text": "Sổ bằng chứng không khả dụng"
+    },
+    "evidenceMatrix.syntheticExport": {
+      "source": "Synthetic demo; illustrative only, not factual evidence",
+      "text": "Demo tổng hợp; chỉ minh họa, không phải bằng chứng thực tế"
+    },
+    "evidenceMatrix.unclassifiedExport": {
+      "source": "Not classified as synthetic",
+      "text": "Chưa được phân loại là tổng hợp"
+    },
+    "paperWorkspace.screening.unscreened": {
+      "source": "To screen",
+      "text": "Cần sàng lọc"
+    },
+    "paperWorkspace.screening.include": {
+      "source": "Include",
+      "text": "Đưa vào"
+    },
+    "paperWorkspace.screening.exclude": {
+      "source": "Exclude",
+      "text": "Loại ra"
+    },
+    "paperWorkspace.screening.undecided": {
+      "source": "Undecided",
+      "text": "Chưa quyết định"
+    },
+    "paperWorkspace.duplicateRecords": {
+      "source": "Duplicate exact paper records are not supported",
+      "text": "Không hỗ trợ hồ sơ trùng của cùng bài chính xác"
+    },
+    "paperWorkspace.backupLimit": {
+      "source": "Workspace exceeds the 1 MiB backup limit.",
+      "text": "Không gian vượt giới hạn sao lưu 1 MiB."
+    },
+    "paperWorkspace.unsupportedBackup": {
+      "source": "Unsupported workspace backup. Existing data has been kept.",
+      "text": "Bản sao lưu không gian không được hỗ trợ. Dữ liệu hiện có được giữ."
+    },
+    "paperWorkspace.capacity": {
+      "source": "Your list has 50 papers. Export a backup and remove a paper before adding another.",
+      "text": "Danh sách có 50 bài. Xuất bản sao lưu và xóa một bài trước khi thêm."
+    },
+    "paperWorkspace.selectTwo": {
+      "source": "Select exactly two saved papers to prepare a comparison.",
+      "text": "Chọn đúng hai bài đã lưu để chuẩn bị so sánh."
+    },
+    "paperWorkspace.selectionMissing": {
+      "source": "A selected paper is no longer saved. Select again.",
+      "text": "Một bài đã chọn không còn được lưu. Chọn lại."
+    },
+    "paperWorkspace.questionLimit": {
+      "source": "These links and research question exceed the question limit. Shorten the research question or draft your comparison manually.",
+      "text": "Các liên kết và câu hỏi nghiên cứu này vượt giới hạn câu hỏi. Rút ngắn câu hỏi hoặc tự soạn so sánh."
+    },
+    "paperWorkspace.storageUnavailable": {
+      "source": "Browser storage is unavailable. Saving is disabled; existing data has not been cleared.",
+      "text": "Lưu trữ trình duyệt không khả dụng. Không cho phép lưu; dữ liệu hiện có chưa bị xóa."
+    },
+    "paperWorkspace.readFailed": {
+      "source": "Saved workspace could not be read. Download the stored backup before replacing or clearing it.",
+      "text": "Không thể đọc không gian đã lưu. Tải bản sao lưu được lưu trước khi thay thế hay xóa."
+    },
+    "paperWorkspace.coordinationUnavailable": {
+      "source": "This browser cannot coordinate safe saves across tabs. Use a browser with Web Locks on HTTPS or download your stored data here.",
+      "text": "Trình duyệt này không thể phối hợp lưu an toàn giữa các tab. Dùng trình duyệt có Web Locks trên HTTPS hoặc tải dữ liệu đã lưu tại đây."
+    },
+    "paperWorkspace.lockUnavailable": {
+      "source": "This browser does not support safe workspace saves across tabs.",
+      "text": "Trình duyệt này không hỗ trợ lưu không gian an toàn giữa các tab."
+    },
+    "paperWorkspace.saveUnverified": {
+      "source": "Could not verify the browser save. Export your work and check browser storage before continuing.",
+      "text": "Không thể xác minh bản lưu trình duyệt. Xuất công việc và kiểm tra lưu trữ trình duyệt trước khi tiếp tục."
+    },
+    "paperWorkspace.restoreCancelled": {
+      "source": "Restore cancelled before saving. Existing workspace has been kept.",
+      "text": "Đã hủy khôi phục trước khi lưu. Không gian hiện có được giữ."
+    },
+    "paperWorkspace.clearFailed": {
+      "source": "Could not clear this workspace. Check browser storage and try again.",
+      "text": "Không thể xóa không gian này. Kiểm tra lưu trữ trình duyệt và thử lại."
+    },
+    "publisherControl.verified": {
+      "source": "Publisher control verified",
+      "text": "Đã xác minh quyền kiểm soát nhà xuất bản"
+    },
+    "publisherControl.expired": {
+      "source": "Publisher control expired",
+      "text": "Quyền kiểm soát nhà xuất bản hết hạn"
+    },
+    "publisherControl.proofMissing": {
+      "source": "Current publisher proof not shown",
+      "text": "Chưa hiển thị bằng chứng nhà xuất bản hiện tại"
+    },
+    "sourceBrowse.kind.feed": {
+      "source": "Retained feeds",
+      "text": "Nguồn cấp được lưu"
+    },
+    "sourceBrowse.kind.cited": {
+      "source": "Cited documents",
+      "text": "Tài liệu được trích dẫn"
+    },
+    "sourceBrowse.topic.agents": {
+      "source": "AI & agents",
+      "text": "AI và tác nhân"
+    },
+    "sourceBrowse.topic.infrastructure": {
+      "source": "Data & infrastructure",
+      "text": "Dữ liệu và hạ tầng"
+    },
+    "sourceBrowse.topic.payments": {
+      "source": "Payments",
+      "text": "Thanh toán"
+    },
+    "sourceBrowse.topic.creators": {
+      "source": "Creators & research",
+      "text": "Tác giả và nghiên cứu"
+    },
+    "sourceBrowse.topic.other": {
+      "source": "Other topics",
+      "text": "Chủ đề khác"
+    },
+    "reasoningServing.unavailable": {
+      "source": "Per-step serving tiers: unavailable in this recorded result.",
+      "text": "Cấp phục vụ từng bước: không có trong kết quả đã ghi nhận này."
+    },
+    "reasoningServing.noSteps": {
+      "source": "Per-step serving tiers: no recorded steps ({telemetry} attempt telemetry).",
+      "text": "Cấp phục vụ từng bước: không có bước đã ghi nhận (dữ liệu lần thử: {telemetry})."
+    },
+    "reasoningServing.summary": {
+      "source": "Per-step serving tiers ({telemetry} attempt telemetry): {steps}",
+      "text": "Cấp phục vụ từng bước (dữ liệu lần thử: {telemetry}): {steps}"
+    },
+    "reasoningServing.noneRecorded": {
+      "source": "none recorded",
+      "text": "chưa ghi nhận"
+    },
+    "reasoningServing.fallbackServed": {
+      "source": "fallback served",
+      "text": "đã dùng phương án dự phòng"
+    },
+    "reasoningServing.requestedServed": {
+      "source": "requested tier served",
+      "text": "đã dùng cấp được yêu cầu"
+    },
+    "reasoningServing.fallbackUnknown": {
+      "source": "fallback use unknown",
+      "text": "chưa rõ việc dùng phương án dự phòng"
+    },
+    "reasoningServing.step": {
+      "source": "{step}: {engines} ({state}; {fallback})",
+      "text": "{step}: {engines} ({state}; {fallback})"
+    },
+    "reasoningServing.stepMore.one": {
+      "source": "{step}: {engines} + {count} more ({state}; {fallback})",
+      "text": "{step}: {engines} + thêm {count} ({state}; {fallback})"
+    },
+    "reasoningServing.stepMore.other": {
+      "source": "{step}: {engines} + {count} more ({state}; {fallback})",
+      "text": "{step}: {engines} + thêm {count} ({state}; {fallback})"
+    }
+  }
+}

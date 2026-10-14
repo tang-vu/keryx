@@ -1,0 +1,104 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/paid-job-escalation.json",
+  "sourceSha256": "283ecf76060ff29a81c64287ab46e35b24bc28d811a48c8d97f68126d0f1f101",
+  "entries": {
+    "overdueTitle": {
+      "source": "Completion target exceeded. Review the original job.",
+      "text": "Đã vượt thời gian hoàn thành mục tiêu. Xem xét tác vụ ban đầu."
+    },
+    "overdueBody": {
+      "source": "The accepted provisional target has passed without delivery. Human review is needed; this alert does not mean that a person has been notified or that support is staffed.",
+      "text": "Đã qua mục tiêu tạm thời được chấp nhận mà chưa cung cấp kết quả. Cần người xem xét; cảnh báo này không có nghĩa đã thông báo cho một người hay có nhân sự hỗ trợ trực."
+    },
+    "unavailable": {
+      "source": "Completion timing is unavailable for this recorded job. No target or refund promise is inferred.",
+      "text": "Thời gian hoàn thành không khả dụng cho tác vụ đã ghi nhận này. Không suy ra mục tiêu hay cam kết hoàn tiền."
+    },
+    "paymentPending": {
+      "source": "An original creator payment is still recorded as pending. Expiry or delay does not prove that it failed.",
+      "text": "Một khoản thanh toán ban đầu cho tác giả vẫn được ghi nhận là đang chờ. Hết hạn hay chậm trễ không chứng minh khoản đó thất bại."
+    },
+    "paymentBoundary": {
+      "source": "The job crossed a creator-payment boundary. Missing or definitive recorded legs do not prove that every call is resolved.",
+      "text": "Tác vụ đã đi qua ranh giới thanh toán cho tác giả. Khoản ghi nhận bị thiếu hoặc có kết quả rõ ràng không chứng minh mọi lệnh gọi đều đã giải quyết."
+    },
+    "paymentUnknown": {
+      "source": "Original creator-payment evidence is unavailable or inconsistent.",
+      "text": "Bằng chứng thanh toán ban đầu cho tác giả không khả dụng hoặc không nhất quán."
+    },
+    "originalOnly": {
+      "source": "Keep the original job and payment reference. Do not pay again to recover this job. Waiting, partial delivery and refund requests require manual owner review. This alert does not submit a choice or refund request.",
+      "text": "Giữ tác vụ và tham chiếu thanh toán ban đầu. Không trả tiền lại để khôi phục tác vụ. Chờ, cung cấp một phần và yêu cầu hoàn tiền cần chủ sở hữu xem xét thủ công. Cảnh báo này không gửi lựa chọn hay yêu cầu hoàn tiền."
+    },
+    "observation": {
+      "source": "This state was calculated when status was checked. There is no new background alert or notification service.",
+      "text": "Trạng thái này được tính khi kiểm tra trạng thái. Không có dịch vụ cảnh báo hay thông báo nền mới."
+    },
+    "orderLabel": {
+      "source": "Original order",
+      "text": "Thứ tự ban đầu"
+    },
+    "referenceLabel": {
+      "source": "Original payment reference",
+      "text": "Tham chiếu thanh toán ban đầu"
+    },
+    "monthlyReferenceLabel": {
+      "source": "Original plan payment reference (prepaid allocation)",
+      "text": "Tham chiếu thanh toán gói ban đầu (phân bổ trả trước)"
+    },
+    "networkLabel": {
+      "source": "Recorded original network",
+      "text": "Mạng ban đầu được ghi nhận"
+    },
+    "amountLabel": {
+      "source": "Original order amount (micro-USDC)",
+      "text": "Số tiền đơn hàng ban đầu (micro-USDC)"
+    },
+    "unknown": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "stageLabel": {
+      "source": "Last recorded stage",
+      "text": "Giai đoạn ghi nhận gần nhất"
+    },
+    "stage.queued": {
+      "source": "Waiting to start",
+      "text": "Đang chờ bắt đầu"
+    },
+    "stage.research_started": {
+      "source": "Research start recorded",
+      "text": "Đã ghi nhận bắt đầu nghiên cứu"
+    },
+    "stage.creator_payment_boundary": {
+      "source": "Creator payment boundary recorded",
+      "text": "Đã ghi nhận ranh giới thanh toán cho tác giả"
+    },
+    "stage.result_save_boundary": {
+      "source": "Result save boundary recorded",
+      "text": "Đã ghi nhận ranh giới lưu kết quả"
+    },
+    "stage.unknown": {
+      "source": "Stage unavailable",
+      "text": "Giai đoạn không khả dụng"
+    },
+    "failure.research_failed": {
+      "source": "Research execution failure recorded",
+      "text": "Đã ghi nhận lỗi thực thi nghiên cứu"
+    },
+    "failure.invalid_order_data": {
+      "source": "Original job data failed validation",
+      "text": "Dữ liệu tác vụ ban đầu không đạt kiểm tra"
+    },
+    "failure.operator_reviewed_no_result": {
+      "source": "Original job closed without a saved result",
+      "text": "Tác vụ ban đầu đã đóng mà không có kết quả đã lưu"
+    },
+    "failure.unknown": {
+      "source": "Failure details unavailable",
+      "text": "Chi tiết lỗi không khả dụng"
+    }
+  }
+}

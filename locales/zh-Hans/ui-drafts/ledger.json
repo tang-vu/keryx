@@ -1,0 +1,380 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ledger.ts",
+  "sourceSha256": "7e51c82e2538ae69cd529d33564e7ed44e37c4fb5f2e3a2192b0049b3a91b4d8",
+  "entries": {
+    "ledgerResource.loading": {
+      "source": "Loading {label}…",
+      "text": "正在加载{label}…"
+    },
+    "ledgerResource.unavailableWithObservation": {
+      "source": "{label} unavailable. Showing the last successful read from {observed} UTC. {retry}",
+      "text": "{label}不可用。显示 {observed} UTC 最后一次成功读取。{retry}"
+    },
+    "ledgerResource.unavailable": {
+      "source": "{label} unavailable. {retry}",
+      "text": "{label}不可用。{retry}"
+    },
+    "ledgerResource.retry": {
+      "source": "Retry",
+      "text": "重试"
+    },
+    "ledgerRecorded.questions.current.one": {
+      "source": "{count} recorded questions",
+      "text": "{count} 个已记录问题"
+    },
+    "ledgerRecorded.questions.current.other": {
+      "source": "{count} recorded questions",
+      "text": "{count} 个已记录问题"
+    },
+    "ledgerRecorded.questions.stale.one": {
+      "source": "{count} recorded questions · last successful read",
+      "text": "{count} 个已记录问题 · 上次成功读取"
+    },
+    "ledgerRecorded.questions.stale.other": {
+      "source": "{count} recorded questions · last successful read",
+      "text": "{count} 个已记录问题 · 上次成功读取"
+    },
+    "ledgerRecorded.accounts.current.one": {
+      "source": "{count} recorded accounts",
+      "text": "{count} 个已记录账户"
+    },
+    "ledgerRecorded.accounts.current.other": {
+      "source": "{count} recorded accounts",
+      "text": "{count} 个已记录账户"
+    },
+    "ledgerRecorded.accounts.stale.one": {
+      "source": "{count} recorded accounts · last successful read",
+      "text": "{count} 个已记录账户 · 上次成功读取"
+    },
+    "ledgerRecorded.accounts.stale.other": {
+      "source": "{count} recorded accounts · last successful read",
+      "text": "{count} 个已记录账户 · 上次成功读取"
+    },
+    "ledgerRecorded.guests.current.one": {
+      "source": "{count} guest questions",
+      "text": "{count} 个访客问题"
+    },
+    "ledgerRecorded.guests.current.other": {
+      "source": "{count} guest questions",
+      "text": "{count} 个访客问题"
+    },
+    "ledgerRecorded.guests.stale.one": {
+      "source": "{count} guest questions · last successful read",
+      "text": "{count} 个访客问题 · 上次成功读取"
+    },
+    "ledgerRecorded.guests.stale.other": {
+      "source": "{count} guest questions · last successful read",
+      "text": "{count} 个访客问题 · 上次成功读取"
+    },
+    "ledgerPresentation.eyebrow": {
+      "source": "The ledger",
+      "text": "账本"
+    },
+    "ledgerPresentation.questionsUnavailable": {
+      "source": "Question total unavailable",
+      "text": "问题总数不可用"
+    },
+    "ledgerPresentation.questionsLoading": {
+      "source": "Loading question total…",
+      "text": "正在加载问题总数…"
+    },
+    "ledgerPresentation.accountsUnavailable": {
+      "source": "Account total unavailable",
+      "text": "账户总数不可用"
+    },
+    "ledgerPresentation.accountsLoading": {
+      "source": "Loading account total…",
+      "text": "正在加载账户总数…"
+    },
+    "ledgerPresentation.guestsUnavailable": {
+      "source": "Guest question total unavailable",
+      "text": "访客问题总数不可用"
+    },
+    "ledgerPresentation.guestsLoading": {
+      "source": "Loading guest question total…",
+      "text": "正在加载访客问题总数…"
+    },
+    "ledgerPresentation.ask": {
+      "source": "Ask a question →",
+      "text": "提出问题 →"
+    },
+    "ledgerPresentation.accountBoundary": {
+      "source": "Account totals include verified Google and wallet sign-ins. Each wallet is counted once; one person may use several wallets.",
+      "text": "账户总数包括经核验的 Google 和钱包登录。每个钱包计一次；一个人可能使用多个钱包。"
+    },
+    "ledgerPresentation.guestBoundary": {
+      "source": "Guest questions are included in recorded questions: completed web questions with no signed-in wallet recorded. This counts questions, not visits or unique people.",
+      "text": "访客问题包含在已记录问题中：没有记录登录钱包的已完成网页问题。这统计问题数，不是访问量或独立人数。"
+    },
+    "ledgerPresentation.activityAria": {
+      "source": "Recorded research activity",
+      "text": "已记录研究活动"
+    },
+    "ledgerPresentation.questionRecords": {
+      "source": "Question records",
+      "text": "问题记录"
+    },
+    "ledgerPresentation.recent": {
+      "source": "Recent questions",
+      "text": "近期问题"
+    },
+    "ledgerPresentation.more": {
+      "source": "More questions",
+      "text": "更多问题"
+    },
+    "ledgerPresentation.earlier": {
+      "source": "Earlier questions",
+      "text": "更早的问题"
+    },
+    "ledgerPresentation.pastAnswers": {
+      "source": "Browse past answers →",
+      "text": "浏览以往答案 →"
+    },
+    "ledgerPresentation.proofEyebrow": {
+      "source": "Payment proof",
+      "text": "付款凭证"
+    },
+    "ledgerPresentation.records": {
+      "source": "Settlement records",
+      "text": "结算记录"
+    },
+    "ledgerPresentation.settlements": {
+      "source": "Research settlements",
+      "text": "研究结算"
+    },
+    "ledgerPresentation.awaitingProof": {
+      "source": "Awaiting settlement proof",
+      "text": "等待结算凭证"
+    },
+    "ledgerPresentation.noSettledPayments": {
+      "source": "No settled payments yet",
+      "text": "尚无已结算付款"
+    },
+    "ledgerPresentation.settlementBoundary": {
+      "source": "Research settlements include creator rewards and Keryx operating fees, shown separately. Public citations and planned allocations require payment settlement evidence before they count in these totals.",
+      "text": "研究结算包括分别显示的创作者奖励和 Keryx 运营费。公开引用和计划分配需有付款结算证据才计入总额。"
+    },
+    "ledgerPresentation.totals": {
+      "source": "Settlement totals",
+      "text": "结算总额"
+    },
+    "ledgerPresentation.inspectTotals": {
+      "source": "Inspect recorded totals",
+      "text": "查看已记录总额"
+    },
+    "ledgerPresentation.settledPayments": {
+      "source": "Settled payments",
+      "text": "已结算付款"
+    },
+    "ledgerPresentation.settledVolume": {
+      "source": "Settled volume",
+      "text": "已结算金额"
+    },
+    "ledgerPresentation.creatorRewards": {
+      "source": "Creator rewards",
+      "text": "创作者奖励"
+    },
+    "ledgerPresentation.creatorsEarning": {
+      "source": "Creators earning",
+      "text": "获收入创作者"
+    },
+    "ledgerPresentation.operatingFees": {
+      "source": "Keryx operating fees",
+      "text": "Keryx 运营费用"
+    },
+    "ledgerPresentation.unavailable": {
+      "source": "Unavailable",
+      "text": "不可用"
+    },
+    "ledgerPresentation.operatingTransfers": {
+      "source": "Operating fee transfers",
+      "text": "运营费转账"
+    },
+    "ledgerPresentation.totalsBoundary": {
+      "source": "Amounts in USDC. Settled volume includes the separately listed operating fees. Only settled records count.",
+      "text": "金额以 USDC 计。已结算金额包括单独列出的运营费。仅计入已结算记录。"
+    },
+    "ledgerPresentation.verifyRecords": {
+      "source": "How these records are verified →",
+      "text": "如何核验这些记录 →"
+    },
+    "ledgerPresentation.claimSource": {
+      "source": "Publish work? Claim your source →",
+      "text": "发布作品？认领您的来源 →"
+    },
+    "ledgerPresentation.cashouts": {
+      "source": "Cash-out records",
+      "text": "提现记录"
+    },
+    "ledgerPresentation.paymentRecords": {
+      "source": "Payment records",
+      "text": "付款记录"
+    },
+    "ledgerPresentation.inspectPayments": {
+      "source": "Inspect payment evidence",
+      "text": "查看付款证据"
+    },
+    "ledgerPresentation.referencesBoundary": {
+      "source": "Individual payment references identify Circle Gateway batch settlements. Creator cash-outs link to their own Arc transactions. Each record retains its original network.",
+      "text": "各付款参考标识 Circle Gateway 批次结算。创作者提现链接到其 Arc 交易。每条记录保留原始网络。"
+    },
+    "ledgerPresentation.pending.one": {
+      "source": "{count} signed authorization(s), ${amount} USDC, await settlement proof and are excluded from settled totals.",
+      "text": "{count} 项签名授权，${amount} USDC，等待结算凭证，未计入已结算总额。"
+    },
+    "ledgerPresentation.pending.other": {
+      "source": "{count} signed authorization(s), ${amount} USDC, await settlement proof and are excluded from settled totals.",
+      "text": "{count} 项签名授权，${amount} USDC，等待结算凭证，未计入已结算总额。"
+    },
+    "ledgerPresentation.failed.one": {
+      "source": "{count} Circle-terminal attempt(s) failed and were not charged; ${amount} USDC is excluded from settled totals.",
+      "text": "{count} 次 Circle 终态尝试失败且未收费；${amount} USDC 未计入已结算总额。"
+    },
+    "ledgerPresentation.failed.other": {
+      "source": "{count} Circle-terminal attempt(s) failed and were not charged; ${amount} USDC is excluded from settled totals.",
+      "text": "{count} 次 Circle 终态尝试失败且未收费；${amount} USDC 未计入已结算总额。"
+    },
+    "ledgerPage.loadingHistory": {
+      "source": "Loading testnet history…",
+      "text": "正在加载测试网历史…"
+    },
+    "ledgerPage.loadingSources": {
+      "source": "Loading the source library…",
+      "text": "正在加载来源库…"
+    },
+    "paymentRecords.title": {
+      "source": "Payment records",
+      "text": "付款记录"
+    },
+    "paymentRecords.recorded": {
+      "source": "recorded",
+      "text": "已记录"
+    },
+    "paymentRecords.emptyCompact": {
+      "source": "No payments yet.",
+      "text": "尚无付款。"
+    },
+    "paymentRecords.operatingKind": {
+      "source": "Keryx operating fee",
+      "text": "Keryx 运营费"
+    },
+    "paymentRecords.settledCompact": {
+      "source": "settled in batch",
+      "text": "批量结算"
+    },
+    "paymentRecords.failedCompact": {
+      "source": "failed, not charged",
+      "text": "失败，未收费"
+    },
+    "paymentRecords.simulated": {
+      "source": "simulated",
+      "term": "simulated"
+    },
+    "paymentRecords.batchBoundary": {
+      "source": "Settlement IDs are Circle Gateway references (batched on-chain on Arc), not per-tx EVM hashes — verify via the settlement wallet linked above.",
+      "text": "结算 ID 是 Circle Gateway 参考标识（在 Arc 链上批量处理），不是每笔交易的 EVM 哈希；可通过上方结算钱包核验。"
+    },
+    "paymentRecords.time": {
+      "source": "Time",
+      "text": "时间"
+    },
+    "paymentRecords.kind": {
+      "source": "Kind",
+      "text": "类型"
+    },
+    "paymentRecords.source": {
+      "source": "Source",
+      "text": "来源"
+    },
+    "paymentRecords.amount": {
+      "source": "Amount",
+      "text": "金额"
+    },
+    "paymentRecords.flow": {
+      "source": "Flow",
+      "text": "流向"
+    },
+    "paymentRecords.settled": {
+      "source": "Settled",
+      "term": "settled"
+    },
+    "paymentRecords.empty": {
+      "source": "No payments yet — run a query on the Ask page.",
+      "text": "尚无付款，请在提问页运行查询。"
+    },
+    "paymentRecords.operatingBoundary": {
+      "source": "Operating fee for research; recorded separately from creator rewards.",
+      "text": "研究运营费，与创作者奖励分开记录。"
+    },
+    "paymentRecords.batched": {
+      "source": "batched",
+      "text": "批量处理"
+    },
+    "paymentRecords.failed": {
+      "source": "failed · not charged",
+      "text": "失败 · 未收费"
+    },
+    "paymentRecords.operatingBadge": {
+      "source": "operating fee",
+      "text": "运营费"
+    },
+    "paymentRecords.compact": {
+      "source": "{age} · {network} · {kind} · {status}",
+      "text": "{age} · {network} · {kind} · {status}"
+    },
+    "paymentRecords.settlementTitle": {
+      "source": "Circle Gateway settlement ID {reference} — batched on-chain on Arc (not a per-tx EVM hash)",
+      "text": "Circle Gateway 结算 ID {reference}，在 Arc 链上批量处理（不是每笔交易的 EVM 哈希）"
+    },
+    "paymentRecords.transferTitle": {
+      "source": "Circle transfer {reference}",
+      "text": "Circle 转账 {reference}"
+    },
+    "paymentRecords.authorizationTitle": {
+      "source": "Authorization {reference}",
+      "text": "授权 {reference}"
+    },
+    "paymentRecords.recordedReference": {
+      "source": "Recorded reference: {reference}",
+      "text": "已记录参考标识：{reference}"
+    },
+    "paymentRecords.authorizationReference": {
+      "source": "Authorization: {reference}",
+      "text": "授权：{reference}"
+    },
+    "paymentRecords.seconds.one": {
+      "source": "{count}s",
+      "text": "{count} 秒"
+    },
+    "paymentRecords.seconds.other": {
+      "source": "{count}s",
+      "text": "{count} 秒"
+    },
+    "paymentRecords.minutes.one": {
+      "source": "{count}m",
+      "text": "{count} 分钟"
+    },
+    "paymentRecords.minutes.other": {
+      "source": "{count}m",
+      "text": "{count} 分钟"
+    },
+    "paymentRecords.hours.one": {
+      "source": "{count}h",
+      "text": "{count} 小时"
+    },
+    "paymentRecords.hours.other": {
+      "source": "{count}h",
+      "text": "{count} 小时"
+    },
+    "paymentRecords.days.one": {
+      "source": "{count}d",
+      "text": "{count} 天"
+    },
+    "paymentRecords.days.other": {
+      "source": "{count}d",
+      "text": "{count} 天"
+    }
+  }
+}

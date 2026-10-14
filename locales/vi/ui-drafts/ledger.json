@@ -1,0 +1,380 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ledger.ts",
+  "sourceSha256": "7e51c82e2538ae69cd529d33564e7ed44e37c4fb5f2e3a2192b0049b3a91b4d8",
+  "entries": {
+    "ledgerResource.loading": {
+      "source": "Loading {label}…",
+      "text": "Đang tải {label}…"
+    },
+    "ledgerResource.unavailableWithObservation": {
+      "source": "{label} unavailable. Showing the last successful read from {observed} UTC. {retry}",
+      "text": "{label} không khả dụng. Hiển thị lần đọc thành công gần nhất lúc {observed} UTC. {retry}"
+    },
+    "ledgerResource.unavailable": {
+      "source": "{label} unavailable. {retry}",
+      "text": "{label} không khả dụng. {retry}"
+    },
+    "ledgerResource.retry": {
+      "source": "Retry",
+      "text": "Thử lại"
+    },
+    "ledgerRecorded.questions.current.one": {
+      "source": "{count} recorded questions",
+      "text": "{count} câu hỏi đã ghi nhận"
+    },
+    "ledgerRecorded.questions.current.other": {
+      "source": "{count} recorded questions",
+      "text": "{count} câu hỏi đã ghi nhận"
+    },
+    "ledgerRecorded.questions.stale.one": {
+      "source": "{count} recorded questions · last successful read",
+      "text": "{count} câu hỏi đã ghi nhận · lần đọc thành công gần nhất"
+    },
+    "ledgerRecorded.questions.stale.other": {
+      "source": "{count} recorded questions · last successful read",
+      "text": "{count} câu hỏi đã ghi nhận · lần đọc thành công gần nhất"
+    },
+    "ledgerRecorded.accounts.current.one": {
+      "source": "{count} recorded accounts",
+      "text": "{count} tài khoản đã ghi nhận"
+    },
+    "ledgerRecorded.accounts.current.other": {
+      "source": "{count} recorded accounts",
+      "text": "{count} tài khoản đã ghi nhận"
+    },
+    "ledgerRecorded.accounts.stale.one": {
+      "source": "{count} recorded accounts · last successful read",
+      "text": "{count} tài khoản đã ghi nhận · lần đọc thành công gần nhất"
+    },
+    "ledgerRecorded.accounts.stale.other": {
+      "source": "{count} recorded accounts · last successful read",
+      "text": "{count} tài khoản đã ghi nhận · lần đọc thành công gần nhất"
+    },
+    "ledgerRecorded.guests.current.one": {
+      "source": "{count} guest questions",
+      "text": "{count} câu hỏi của khách"
+    },
+    "ledgerRecorded.guests.current.other": {
+      "source": "{count} guest questions",
+      "text": "{count} câu hỏi của khách"
+    },
+    "ledgerRecorded.guests.stale.one": {
+      "source": "{count} guest questions · last successful read",
+      "text": "{count} câu hỏi của khách · lần đọc thành công gần nhất"
+    },
+    "ledgerRecorded.guests.stale.other": {
+      "source": "{count} guest questions · last successful read",
+      "text": "{count} câu hỏi của khách · lần đọc thành công gần nhất"
+    },
+    "ledgerPresentation.eyebrow": {
+      "source": "The ledger",
+      "text": "Sổ theo dõi"
+    },
+    "ledgerPresentation.questionsUnavailable": {
+      "source": "Question total unavailable",
+      "text": "Tổng câu hỏi không khả dụng"
+    },
+    "ledgerPresentation.questionsLoading": {
+      "source": "Loading question total…",
+      "text": "Đang tải tổng câu hỏi…"
+    },
+    "ledgerPresentation.accountsUnavailable": {
+      "source": "Account total unavailable",
+      "text": "Tổng tài khoản không khả dụng"
+    },
+    "ledgerPresentation.accountsLoading": {
+      "source": "Loading account total…",
+      "text": "Đang tải tổng tài khoản…"
+    },
+    "ledgerPresentation.guestsUnavailable": {
+      "source": "Guest question total unavailable",
+      "text": "Tổng câu hỏi của khách không khả dụng"
+    },
+    "ledgerPresentation.guestsLoading": {
+      "source": "Loading guest question total…",
+      "text": "Đang tải tổng câu hỏi của khách…"
+    },
+    "ledgerPresentation.ask": {
+      "source": "Ask a question →",
+      "text": "Đặt câu hỏi →"
+    },
+    "ledgerPresentation.accountBoundary": {
+      "source": "Account totals include verified Google and wallet sign-ins. Each wallet is counted once; one person may use several wallets.",
+      "text": "Tổng tài khoản gồm đăng nhập Google và ví đã xác minh. Mỗi ví tính một lần; một người có thể dùng nhiều ví."
+    },
+    "ledgerPresentation.guestBoundary": {
+      "source": "Guest questions are included in recorded questions: completed web questions with no signed-in wallet recorded. This counts questions, not visits or unique people.",
+      "text": "Câu hỏi của khách được tính trong câu hỏi ghi nhận: câu hỏi web đã hoàn tất không ghi nhận ví đăng nhập. Đây là số câu hỏi, không phải lượt truy cập hay người duy nhất."
+    },
+    "ledgerPresentation.activityAria": {
+      "source": "Recorded research activity",
+      "text": "Hoạt động nghiên cứu đã ghi nhận"
+    },
+    "ledgerPresentation.questionRecords": {
+      "source": "Question records",
+      "text": "Hồ sơ câu hỏi"
+    },
+    "ledgerPresentation.recent": {
+      "source": "Recent questions",
+      "text": "Câu hỏi gần đây"
+    },
+    "ledgerPresentation.more": {
+      "source": "More questions",
+      "text": "Câu hỏi khác"
+    },
+    "ledgerPresentation.earlier": {
+      "source": "Earlier questions",
+      "text": "Câu hỏi trước đây"
+    },
+    "ledgerPresentation.pastAnswers": {
+      "source": "Browse past answers →",
+      "text": "Duyệt câu trả lời cũ →"
+    },
+    "ledgerPresentation.proofEyebrow": {
+      "source": "Payment proof",
+      "text": "Bằng chứng thanh toán"
+    },
+    "ledgerPresentation.records": {
+      "source": "Settlement records",
+      "text": "Hồ sơ quyết toán"
+    },
+    "ledgerPresentation.settlements": {
+      "source": "Research settlements",
+      "text": "Quyết toán nghiên cứu"
+    },
+    "ledgerPresentation.awaitingProof": {
+      "source": "Awaiting settlement proof",
+      "text": "Đang chờ bằng chứng quyết toán"
+    },
+    "ledgerPresentation.noSettledPayments": {
+      "source": "No settled payments yet",
+      "text": "Chưa có thanh toán đã quyết toán"
+    },
+    "ledgerPresentation.settlementBoundary": {
+      "source": "Research settlements include creator rewards and Keryx operating fees, shown separately. Public citations and planned allocations require payment settlement evidence before they count in these totals.",
+      "text": "Quyết toán nghiên cứu gồm phần thưởng tác giả và phí vận hành Keryx, hiển thị riêng. Trích dẫn công khai và phân bổ dự kiến cần bằng chứng thanh toán đã quyết toán trước khi tính vào các tổng này."
+    },
+    "ledgerPresentation.totals": {
+      "source": "Settlement totals",
+      "text": "Tổng quyết toán"
+    },
+    "ledgerPresentation.inspectTotals": {
+      "source": "Inspect recorded totals",
+      "text": "Kiểm tra tổng đã ghi nhận"
+    },
+    "ledgerPresentation.settledPayments": {
+      "source": "Settled payments",
+      "text": "Thanh toán đã quyết toán"
+    },
+    "ledgerPresentation.settledVolume": {
+      "source": "Settled volume",
+      "text": "Khối lượng đã quyết toán"
+    },
+    "ledgerPresentation.creatorRewards": {
+      "source": "Creator rewards",
+      "text": "Thưởng cho tác giả"
+    },
+    "ledgerPresentation.creatorsEarning": {
+      "source": "Creators earning",
+      "text": "Tác giả có thu nhập"
+    },
+    "ledgerPresentation.operatingFees": {
+      "source": "Keryx operating fees",
+      "text": "Phí vận hành Keryx"
+    },
+    "ledgerPresentation.unavailable": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
+    },
+    "ledgerPresentation.operatingTransfers": {
+      "source": "Operating fee transfers",
+      "text": "Khoản chuyển phí vận hành"
+    },
+    "ledgerPresentation.totalsBoundary": {
+      "source": "Amounts in USDC. Settled volume includes the separately listed operating fees. Only settled records count.",
+      "text": "Số tiền bằng USDC. Khối lượng đã quyết toán gồm phí vận hành liệt kê riêng. Chỉ tính hồ sơ đã quyết toán."
+    },
+    "ledgerPresentation.verifyRecords": {
+      "source": "How these records are verified →",
+      "text": "Cách xác minh các hồ sơ này →"
+    },
+    "ledgerPresentation.claimSource": {
+      "source": "Publish work? Claim your source →",
+      "text": "Bạn xuất bản nội dung? Nhận quyền sở hữu nguồn →"
+    },
+    "ledgerPresentation.cashouts": {
+      "source": "Cash-out records",
+      "text": "Hồ sơ rút tiền"
+    },
+    "ledgerPresentation.paymentRecords": {
+      "source": "Payment records",
+      "text": "Hồ sơ thanh toán"
+    },
+    "ledgerPresentation.inspectPayments": {
+      "source": "Inspect payment evidence",
+      "text": "Kiểm tra bằng chứng thanh toán"
+    },
+    "ledgerPresentation.referencesBoundary": {
+      "source": "Individual payment references identify Circle Gateway batch settlements. Creator cash-outs link to their own Arc transactions. Each record retains its original network.",
+      "text": "Tham chiếu thanh toán riêng định danh quyết toán theo lô Circle Gateway. Khoản rút của tác giả liên kết giao dịch Arc riêng. Mỗi hồ sơ giữ mạng ban đầu."
+    },
+    "ledgerPresentation.pending.one": {
+      "source": "{count} signed authorization(s), ${amount} USDC, await settlement proof and are excluded from settled totals.",
+      "text": "{count} ủy quyền đã ký, ${amount} USDC, đang chờ bằng chứng quyết toán và không tính vào tổng đã quyết toán."
+    },
+    "ledgerPresentation.pending.other": {
+      "source": "{count} signed authorization(s), ${amount} USDC, await settlement proof and are excluded from settled totals.",
+      "text": "{count} ủy quyền đã ký, ${amount} USDC, đang chờ bằng chứng quyết toán và không tính vào tổng đã quyết toán."
+    },
+    "ledgerPresentation.failed.one": {
+      "source": "{count} Circle-terminal attempt(s) failed and were not charged; ${amount} USDC is excluded from settled totals.",
+      "text": "{count} lần thử có kết quả cuối từ Circle không thành công và không thu phí; ${amount} USDC không tính vào tổng đã quyết toán."
+    },
+    "ledgerPresentation.failed.other": {
+      "source": "{count} Circle-terminal attempt(s) failed and were not charged; ${amount} USDC is excluded from settled totals.",
+      "text": "{count} lần thử có kết quả cuối từ Circle không thành công và không thu phí; ${amount} USDC không tính vào tổng đã quyết toán."
+    },
+    "ledgerPage.loadingHistory": {
+      "source": "Loading testnet history…",
+      "text": "Đang tải lịch sử testnet…"
+    },
+    "ledgerPage.loadingSources": {
+      "source": "Loading the source library…",
+      "text": "Đang tải thư viện nguồn…"
+    },
+    "paymentRecords.title": {
+      "source": "Payment records",
+      "text": "Hồ sơ thanh toán"
+    },
+    "paymentRecords.recorded": {
+      "source": "recorded",
+      "text": "đã ghi nhận"
+    },
+    "paymentRecords.emptyCompact": {
+      "source": "No payments yet.",
+      "text": "Chưa có thanh toán."
+    },
+    "paymentRecords.operatingKind": {
+      "source": "Keryx operating fee",
+      "text": "Phí vận hành Keryx"
+    },
+    "paymentRecords.settledCompact": {
+      "source": "settled in batch",
+      "text": "đã quyết toán theo lô"
+    },
+    "paymentRecords.failedCompact": {
+      "source": "failed, not charged",
+      "text": "không thành công, không thu phí"
+    },
+    "paymentRecords.simulated": {
+      "source": "simulated",
+      "term": "simulated"
+    },
+    "paymentRecords.batchBoundary": {
+      "source": "Settlement IDs are Circle Gateway references (batched on-chain on Arc), not per-tx EVM hashes — verify via the settlement wallet linked above.",
+      "text": "ID quyết toán là tham chiếu Circle Gateway (theo lô trên chuỗi Arc), không phải hash EVM từng giao dịch — xác minh qua ví quyết toán liên kết bên trên."
+    },
+    "paymentRecords.time": {
+      "source": "Time",
+      "text": "Thời gian"
+    },
+    "paymentRecords.kind": {
+      "source": "Kind",
+      "text": "Loại"
+    },
+    "paymentRecords.source": {
+      "source": "Source",
+      "text": "Nguồn"
+    },
+    "paymentRecords.amount": {
+      "source": "Amount",
+      "text": "Số tiền"
+    },
+    "paymentRecords.flow": {
+      "source": "Flow",
+      "text": "Luồng"
+    },
+    "paymentRecords.settled": {
+      "source": "Settled",
+      "term": "settled"
+    },
+    "paymentRecords.empty": {
+      "source": "No payments yet — run a query on the Ask page.",
+      "text": "Chưa có thanh toán — chạy câu hỏi trên trang Hỏi."
+    },
+    "paymentRecords.operatingBoundary": {
+      "source": "Operating fee for research; recorded separately from creator rewards.",
+      "text": "Phí vận hành nghiên cứu; ghi nhận riêng với phần thưởng tác giả."
+    },
+    "paymentRecords.batched": {
+      "source": "batched",
+      "text": "theo lô"
+    },
+    "paymentRecords.failed": {
+      "source": "failed · not charged",
+      "text": "không thành công · không thu phí"
+    },
+    "paymentRecords.operatingBadge": {
+      "source": "operating fee",
+      "text": "phí vận hành"
+    },
+    "paymentRecords.compact": {
+      "source": "{age} · {network} · {kind} · {status}",
+      "text": "{age} · {network} · {kind} · {status}"
+    },
+    "paymentRecords.settlementTitle": {
+      "source": "Circle Gateway settlement ID {reference} — batched on-chain on Arc (not a per-tx EVM hash)",
+      "text": "ID quyết toán Circle Gateway {reference} — theo lô trên chuỗi Arc (không phải hash EVM từng giao dịch)"
+    },
+    "paymentRecords.transferTitle": {
+      "source": "Circle transfer {reference}",
+      "text": "Khoản chuyển Circle {reference}"
+    },
+    "paymentRecords.authorizationTitle": {
+      "source": "Authorization {reference}",
+      "text": "Ủy quyền {reference}"
+    },
+    "paymentRecords.recordedReference": {
+      "source": "Recorded reference: {reference}",
+      "text": "Tham chiếu ghi nhận: {reference}"
+    },
+    "paymentRecords.authorizationReference": {
+      "source": "Authorization: {reference}",
+      "text": "Ủy quyền: {reference}"
+    },
+    "paymentRecords.seconds.one": {
+      "source": "{count}s",
+      "text": "{count}s"
+    },
+    "paymentRecords.seconds.other": {
+      "source": "{count}s",
+      "text": "{count}s"
+    },
+    "paymentRecords.minutes.one": {
+      "source": "{count}m",
+      "text": "{count}m"
+    },
+    "paymentRecords.minutes.other": {
+      "source": "{count}m",
+      "text": "{count}m"
+    },
+    "paymentRecords.hours.one": {
+      "source": "{count}h",
+      "text": "{count}h"
+    },
+    "paymentRecords.hours.other": {
+      "source": "{count}h",
+      "text": "{count}h"
+    },
+    "paymentRecords.days.one": {
+      "source": "{count}d",
+      "text": "{count}d"
+    },
+    "paymentRecords.days.other": {
+      "source": "{count}d",
+      "text": "{count}d"
+    }
+  }
+}

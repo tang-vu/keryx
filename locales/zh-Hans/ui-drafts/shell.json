@@ -1,0 +1,212 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/shell.ts",
+  "sourceSha256": "98de613c0f20357e8d901f40f221f5e183141096b6713f44c0c02baa5d0c1e5a",
+  "entries": {
+    "shellNavigation.ask": {
+      "source": "Ask a question",
+      "text": "提出问题"
+    },
+    "shellNavigation.activity": {
+      "source": "Activity & proof",
+      "text": "活动与证明"
+    },
+    "shellNavigation.operator": {
+      "source": "Operator",
+      "text": "Operator"
+    },
+    "shellNavigation.answers": {
+      "source": "Past answers",
+      "text": "历史答案"
+    },
+    "shellNavigation.sources": {
+      "source": "Sources",
+      "text": "来源"
+    },
+    "shellNavigation.literature": {
+      "source": "Literature workspace",
+      "text": "文献工作区"
+    },
+    "shellNavigation.market": {
+      "source": "Market",
+      "text": "市场"
+    },
+    "shellNavigation.wanted": {
+      "source": "Wanted",
+      "text": "征集"
+    },
+    "shellNavigation.creators": {
+      "source": "For creators",
+      "text": "创作者专区"
+    },
+    "shellNavigation.mySources": {
+      "source": "My sources",
+      "text": "我的来源"
+    },
+    "shellNavigation.myDispatches": {
+      "source": "My dispatches",
+      "text": "我的研究任务"
+    },
+    "shellNavigation.playground": {
+      "source": "Playground",
+      "text": "试验区"
+    },
+    "shellNavigation.research": {
+      "source": "Paid research",
+      "text": "付费研究"
+    },
+    "shellNavigation.developer": {
+      "source": "Dev portal",
+      "text": "开发者门户"
+    },
+    "shellHeader.creatorAction": {
+      "source": "For creators ▸",
+      "text": "创作者专区 ▸"
+    },
+    "shellHeader.closeMenu": {
+      "source": "Close menu",
+      "text": "关闭菜单"
+    },
+    "shellHeader.openMenu": {
+      "source": "Open menu",
+      "text": "打开菜单"
+    },
+    "shellHeader.mobileNavigation": {
+      "source": "Mobile navigation",
+      "text": "移动端导航"
+    },
+    "shellHeader.explore": {
+      "source": "Explore",
+      "text": "探索"
+    },
+    "shellHeader.moreTools": {
+      "source": "More tools",
+      "text": "更多工具"
+    },
+    "shellFooter.publicProof": {
+      "source": "Public proof",
+      "text": "公开证明"
+    },
+    "shellFooter.businessCalculator": {
+      "source": "Business calculator",
+      "text": "业务计算器"
+    },
+    "shellFooter.remoteMcp": {
+      "source": "Remote MCP",
+      "text": "远程 MCP"
+    },
+    "shellFooter.agentApi": {
+      "source": "API for agents ↗",
+      "text": "智能体 API ↗"
+    },
+    "shellFooter.github": {
+      "source": "GitHub ↗",
+      "text": "GitHub ↗"
+    },
+    "shellFooter.registryContract": {
+      "source": "Registry contract ↗",
+      "text": "注册合约 ↗"
+    },
+    "shellFooter.usdcOnArc": {
+      "source": "USDC on Arc ↗",
+      "text": "Arc 上的 USDC ↗"
+    },
+    "shellFooter.x402Gateway": {
+      "source": "x402 + Gateway ↗",
+      "text": "x402 + Gateway ↗"
+    },
+    "shellFooter.arcNetwork": {
+      "source": "Arc network ↗",
+      "text": "Arc 网络 ↗"
+    },
+    "shellFooter.privacy": {
+      "source": "Privacy",
+      "text": "隐私"
+    },
+    "shellFooter.terms": {
+      "source": "Terms",
+      "text": "条款"
+    },
+    "shellFooter.etymology": {
+      "source": "From the Greek{gap}{word} — a herald: the one sent to carry a message, and paid for the carrying.",
+      "text": "源自希腊语{gap}{word} — 信使：被派去传递消息，并因传递而获得报酬的人。"
+    },
+    "shellFooter.house": {
+      "source": "The house",
+      "text": "关于我们"
+    },
+    "shellFooter.docsAndProof": {
+      "source": "Docs & proof",
+      "text": "文档与证明"
+    },
+    "shellFooter.copyright": {
+      "source": "© {year} Keryx — legal tender for attention",
+      "text": "© {year} Keryx — 为注意力提供法定支付方式"
+    },
+    "shellFooter.originalEvidence": {
+      "source": "{network} · inspect original settlement evidence",
+      "text": "{network} · 检查原始结算证据"
+    },
+    "cashouts.title": {
+      "source": "Creator cash-outs",
+      "text": "创作者提现"
+    },
+    "cashouts.onchain": {
+      "source": "on-chain",
+      "text": "链上"
+    },
+    "cashouts.compactEmpty": {
+      "source": "No cash-outs yet.",
+      "text": "尚无提现。"
+    },
+    "cashouts.empty": {
+      "source": "No cash-outs yet. They appear here the moment a creator withdraws.",
+      "text": "尚无提现。创作者提现时会立即显示在此。"
+    },
+    "cashouts.when": {
+      "source": "When",
+      "text": "时间"
+    },
+    "cashouts.creator": {
+      "source": "Creator",
+      "text": "创作者"
+    },
+    "cashouts.amount": {
+      "source": "Amount",
+      "text": "金额"
+    },
+    "cashouts.onchainColumn": {
+      "source": "On-chain",
+      "text": "链上"
+    },
+    "cashouts.recordedObservation": {
+      "source": "{time} · {network} · on-chain cash-out",
+      "text": "{time} · {network} · 链上提现"
+    },
+    "cashouts.viewTransaction": {
+      "source": "View Arc transaction {hash}",
+      "text": "查看 Arc 交易 {hash}"
+    },
+    "cashouts.evidenceExplanation": {
+      "source": "Creators minting earned USDC out of Circle Gateway to their own wallet. Each row is a real EVM tx that opens at{gap}{transactionPath} on ArcScan — the per-tx proof the batched settlement IDs above can't give.",
+      "text": "创作者从 Circle Gateway 将赚取的 USDC 铸造到自己的钱包。每行都是一笔真实 EVM 交易，可在 ArcScan 的{gap}{transactionPath}打开 — 这是上方批量结算 ID 无法提供的逐笔交易证明。"
+    },
+    "cashouts.viewMint": {
+      "source": "View the on-chain mint tx for ${amount} → {recipient}",
+      "text": "查看 ${amount} → {recipient} 的链上铸造交易"
+    },
+    "historyObservation.title": {
+      "source": "Arc testnet history",
+      "text": "Arc 测试网历史"
+    },
+    "historyObservation.openHistory": {
+      "source": "Open history to retry.",
+      "text": "打开历史记录以重试。"
+    },
+    "historyObservation.unavailable": {
+      "source": "Historical evidence is temporarily unavailable. {link}",
+      "text": "历史证据暂时不可用。{link}"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/report-presentation.ts",
+  "sourceSha256": "a771b6694a3f35b5e23b35894dafc01601f4ce97d3cfe670d8c02db610dbcbd7",
+  "entries": {
+    "target": {
+      "source": "{marker} · Research target (unverified): {claim}",
+      "text": "{marker} yêu cầu nghiên cứu (chưa xác minh): {claim}"
+    },
+    "coverage": {
+      "source": "Research target (unverified): {claim}: {coverage} recorded coverage estimate; {sources}",
+      "text": "Yêu cầu nghiên cứu (chưa xác minh): {claim}: ước lượng độ bao phủ đã ghi nhận {coverage}; {sources}"
+    },
+    "noSources": {
+      "source": "no admitted sources",
+      "text": "chưa có nguồn đủ điều kiện"
+    },
+    "documentVersion": {
+      "source": "Document version: {version}",
+      "text": "Phiên bản tài liệu: {version}"
+    },
+    "provenance": {
+      "source": "Observed provenance: {provenance}",
+      "text": "Xuất xứ đã quan sát: {provenance}"
+    },
+    "scope": {
+      "source": "Supplied original scope: {scope}",
+      "text": "Phạm vi nguồn được yêu cầu ban đầu: {scope}"
+    },
+    "scholarly": {
+      "source": "Observed scholarly metadata and read scope (peer review unknown): {metadata}",
+      "text": "Siêu dữ liệu học thuật và phạm vi đọc đã quan sát (chưa biết tình trạng phản biện): {metadata}"
+    }
+  }
+}

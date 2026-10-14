@@ -1,0 +1,128 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-archive.ts",
+  "sourceSha256": "68d70227094d71b19e43c483fec9c03f7a482d7005f71cd589c9cb5958043da4",
+  "entries": {
+    "sourceArchive.title": {
+      "source": "The article library",
+      "text": "文章库"
+    },
+    "sourceArchive.description": {
+      "source": "Search retained articles across publishers and publication years. Feed updates add to this library; earlier articles remain available.",
+      "text": "跨发布者和发表年份搜索留存文章。订阅源更新会扩充此文章库；早期文章仍可访问。"
+    },
+    "sourceArchive.search": {
+      "source": "Search articles",
+      "text": "搜索文章"
+    },
+    "sourceArchive.placeholder": {
+      "source": "A topic, technology or article title",
+      "text": "主题、技术或文章标题"
+    },
+    "sourceArchive.button": {
+      "source": "Search",
+      "text": "搜索"
+    },
+    "sourceArchive.results.one": {
+      "source": "{count} matching article",
+      "text": "{count} 篇匹配文章"
+    },
+    "sourceArchive.results.other": {
+      "source": "{count} matching articles",
+      "text": "{count} 篇匹配文章"
+    },
+    "sourceArchive.total.one": {
+      "source": "{count} retained article",
+      "text": "{count} 篇留存文章"
+    },
+    "sourceArchive.total.other": {
+      "source": "{count} retained articles",
+      "text": "{count} 篇留存文章"
+    },
+    "sourceArchive.empty": {
+      "source": "No retained articles match this search. Try a broader topic or explore an original publisher link.",
+      "text": "没有留存文章匹配此搜索。尝试更宽泛的主题，或浏览原始发布者链接。"
+    },
+    "sourceArchive.unavailable": {
+      "source": "The article library is temporarily unavailable. Publisher links and retained feed previews remain available below.",
+      "text": "文章库暂时不可用。下方的发布者链接和留存订阅源预览仍可访问。"
+    },
+    "sourceArchive.notEnabled": {
+      "source": "The article archive is awaiting activation on this storage profile. Retained feed previews remain available below.",
+      "text": "文章归档正在等待此存储配置启用。下方的留存订阅源预览仍可访问。"
+    },
+    "sourceArchive.next": {
+      "source": "Next page",
+      "text": "下一页"
+    },
+    "sourceArchive.start": {
+      "source": "First page",
+      "text": "第一页"
+    },
+    "sourceArchive.all": {
+      "source": "All publishers",
+      "text": "全部发布者"
+    },
+    "sourceArchive.recent": {
+      "source": "Newest first",
+      "text": "最新优先"
+    },
+    "sourceArchive.oldest": {
+      "source": "Oldest first",
+      "text": "最早优先"
+    },
+    "sourceArchive.relevance": {
+      "source": "Most relevant",
+      "text": "最相关"
+    },
+    "sourceArchive.open": {
+      "source": "Read original",
+      "text": "阅读原文"
+    },
+    "sourceArchive.ask": {
+      "source": "Research this article",
+      "text": "研究此文章"
+    },
+    "sourceArchive.browse": {
+      "source": "Browse all {count} retained articles",
+      "text": "浏览全部 {count} 篇留存文章"
+    },
+    "sourceArchive.publishedUnknown": {
+      "source": "Publication date unavailable",
+      "text": "发表日期不可用"
+    },
+    "sourceArchive.feed": {
+      "source": "Retained feed content",
+      "text": "留存订阅源内容"
+    },
+    "sourceArchive.article": {
+      "source": "Extracted original-page text",
+      "text": "提取的原始页面文本"
+    },
+    "sourceArchive.scope": {
+      "source": "{scope} · free public reference",
+      "text": "{scope} · 免费公开参考资料"
+    },
+    "sourceArchive.collected": {
+      "source": "Collected {date}",
+      "text": "收集时间 {date}"
+    },
+    "sourceArchive.publisher": {
+      "source": "Publisher",
+      "text": "发布者"
+    },
+    "sourceArchive.sort": {
+      "source": "Sort articles",
+      "text": "文章排序"
+    },
+    "sourceArchive.pages": {
+      "source": "Article pages",
+      "text": "文章页"
+    },
+    "sourceArchive.feedCount": {
+      "source": "Retained publishers · {count} articles",
+      "text": "留存发布者 · {count} 篇文章"
+    }
+  }
+}
