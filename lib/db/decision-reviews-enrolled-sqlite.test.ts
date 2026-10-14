@@ -204,7 +204,7 @@ describe("genuine selected-native decision reviews", () => {
     expect(typeof readonly.personalHistory!.receipts).toBe("function");
     expect(await readonly.personalHistory!.receipts!(synthetic.order.id, 10)).toHaveLength(1);
     expect(f.api.assertEnrolledSqliteAdapter(readonly)).toEqual(identity);
-    expect(ownerRunRows(f.file)).toBe(rows); expect(readFileSync(f.file)).toEqual(before); expect(schemaRows(f.file)).toBe(schema);
+    expect(ownerRunRows(f.file)).toBe(rows); expect(readFileSync(f.file).equals(before)).toBe(true); expect(schemaRows(f.file)).toBe(schema);
   });
 
   it("actual facade refuses a partial full19 family without repairing or publishing it", async () => {

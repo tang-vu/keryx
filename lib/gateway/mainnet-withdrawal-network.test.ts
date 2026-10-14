@@ -58,11 +58,11 @@ it("uses fixed original mainnet estimate/transfer endpoints without retrying a s
 
 it("attests mainnet chain and metadata both before and after a pinned fresh block", async () => {
   const { policy } = await fixture();
-  const state = { chain: 5042, hash: `0x${"ab".repeat(32)}` as Hex, network: "Mainnet", reads: 0, drift: false };
+  const state = { chain: 5042, hash: `0x${"ab".repeat(32)}` as Hex, timestamp: Math.floor(Date.now() / 1000), network: "Mainnet", reads: 0, drift: false };
   const client = createPublicClient({ transport: custom({ request: async ({ method }) => {
     if (method === "eth_chainId") return toHex(state.chain);
     if (method === "eth_getBlockByNumber") { state.reads++;
-      return { number: toHex(10000), timestamp: toHex(Math.floor(Date.now() / 1000)),
+      return { number: toHex(10000), timestamp: toHex(state.timestamp),
         hash: state.drift && state.reads > 1 ? `0x${"cd".repeat(32)}` : state.hash, transactions: [] }; }
     throw new Error("Unexpected synthetic RPC");
   } }, { retryCount: 0 }) });
