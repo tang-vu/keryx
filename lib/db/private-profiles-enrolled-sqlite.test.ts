@@ -226,7 +226,7 @@ describe("verified same-store private profiles", () => {
     const before = readFileSync(f.file);
     await expect(port.delete(alice)).rejects.toThrow("profile_unavailable");
     await expect(port.get(alice, network)).rejects.toThrow("profile_unavailable");
-    expect(readFileSync(f.file)).toEqual(before);
+    expect(readFileSync(f.file).equals(before)).toBe(true);
     // Removing one table from the admitted full19 bundle is partial drift, not BEFORE absence.
     expect(() => f.open()).toThrow();
     if (sql === "DROP TABLE private_profiles") {
@@ -235,7 +235,7 @@ describe("verified same-store private profiles", () => {
         db: async () => absent, key: async () => null, network });
       const response = await routes.GET(new Request("https://keryx.example/api/me/profile"));
       expect(response.status).toBe(503); expect(await response.json()).toMatchObject({ error: "profile_unavailable" });
-      expect(readFileSync(f.file)).toEqual(before);
+      expect(readFileSync(f.file).equals(before)).toBe(true);
     }
   });
 
