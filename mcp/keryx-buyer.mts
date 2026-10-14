@@ -14,6 +14,7 @@ import { ensureLocalFunding, readFunding, recoverFunding } from "./local-funding
 import type { ReasoningSurface } from "../lib/llm/reasoning-telemetry.ts";
 import { parseAskQuestion } from "../lib/ask-input.ts";
 import { projectReadCheckpointCapture } from "../lib/research-audit/actual-read-projection.ts";
+import { readCompletedAnswerLanguage, type CompletedAnswerLanguageProvenance } from "../lib/research/answer-language-provenance.ts";
 
 const RPC = callerConfig.rpcUrl;
 const BASE_URL = (process.env.KERYX_BASE_URL ?? "https://keryx.cc").replace(/\/$/, "");
@@ -103,6 +104,7 @@ export async function getStatus(): Promise<WalletStatus> {
 
 export type KeryxCitation = { source: string; reward: number; weight?: number };
 export type KeryxAnswer = Partial<ReasoningSurface> & { answer: string; citations: KeryxCitation[]; creatorsPaid: number | null; totalToCreators: number; feePaid: number;
+  status?: string; queryId?: string; answerLanguage?: CompletedAnswerLanguageProvenance;
   /** Optional recorded roles, never body evidence, settlement or purchase authority. */
   bibliography?: import("../lib/types").QueryRun["bibliography"];
   bibliographyExports?: import("../lib/research/bibliographic-task").BibliographicTaskResult["bibliographyExports"] & { cslJson?: { count: number; content: string } };
@@ -116,6 +118,14 @@ export type KeryxAnswer = Partial<ReasoningSurface> & { answer: string; citation
 export function publicBuyerReadCheckpoints(answer: KeryxAnswer): KeryxAnswer {
   const { readCheckpoints, ...result } = answer;
   return { ...result, readCheckpoints: projectReadCheckpointCapture(readCheckpoints) ?? { status: "unavailable" } };
+}
+
+/** Same optional projection for initial verified delivery and original GET-only recovery. */
+export function publicBuyerAnswerLanguage(answer: KeryxAnswer, queryId: unknown): KeryxAnswer {
+  const { answerLanguage, ...result } = answer;
+  const packet = answer.status === "completed" && answer.queryId === queryId
+    ? readCompletedAnswerLanguage(answerLanguage, queryId, answer.answer) : undefined;
+  return { ...result, ...(packet ? { answerLanguage: packet } : {}) };
 }
 
 export async function askKeryx(question: string, budget?: number): Promise<KeryxAnswer> {
@@ -135,7 +145,8 @@ export async function askKeryx(question: string, budget?: number): Promise<Keryx
     const r = await payForResearch<KeryxAnswer>({ url: `${BASE_URL}/api/agent/ask`, account, journalFile: JOURNAL_FILE,
       rpcUrl: RPC, maxAmountUsdc: MAX_TOTAL_USDC, expectedPayee: payee, expectedAmountMicros: required.toString(), waitForCompletionMs: 90000,
       body: { question: parsedQuestion.question, budget: budget ?? DEFAULT_BUDGET_USDC, researchMode: "deep", responseMode: "async" } });
-    return { ...publicBuyerReadCheckpoints(r.data), settlementId: r.settlementId, amountPaid: r.amountPaid };
+    // local-payment has already verified this exact completed query against its original journal.
+    return { ...publicBuyerReadCheckpoints(publicBuyerAnswerLanguage(r.data, r.data.queryId)), settlementId: r.settlementId, amountPaid: r.amountPaid };
   } catch (error) {
     if (error instanceof GuardedArcSubmissionUnknownError) throw new Error(`Funding outcome unknown for original transaction ${error.transactionHash}. Use keryx_recover; do not deposit again`);
     throw error;
@@ -145,7 +156,7 @@ export async function askKeryx(question: string, budget?: number): Promise<Keryx
 export async function recoverKeryx() {
   if (readPending(JOURNAL_FILE)) {
     const recovered = await recoverResearch<KeryxAnswer>(BASE_URL, JOURNAL_FILE);
-    return { ...recovered, data: recovered.data ? publicBuyerReadCheckpoints(recovered.data) : null };
+    return { ...recovered, data: recovered.data ? publicBuyerReadCheckpoints(publicBuyerAnswerLanguage(recovered.data, recovered.payment.queryId)) : null };
   }
   return recoverFunding(FUNDING_FILE, RPC);
 }
