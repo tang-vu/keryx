@@ -1,4 +1,4 @@
-import { afterEach, expect, it, onTestFailed, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFailed, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { requirePrivateProfiles } from "../profiles/private-profile";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, renameSync, copyFileSync } from "node:fs";
@@ -7,6 +7,9 @@ import { join } from "node:path";
 import { canonicalJson } from "../canonical-json";
 import { randomBytes, createHash } from "node:crypto";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
+import { installMainnetApplicationSchema } from "./mainnet-application-schema";
+import { insertStorageIdentity, installStorageFences, registerStorageCapability } from "./storage-identity-sqlite";
+import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { inspectSqliteEnrollment, enrollSqliteStorage } from "./storage-identity-provision";
 import type { SqliteAdapter } from "./sqlite-adapter";
@@ -102,6 +105,72 @@ it("private-profile capability is absent on the actual enrolled facade and refus
     expect(() => requirePrivateProfiles(adapter)).toThrow("profile_unavailable");
     expect(prepare).not.toHaveBeenCalled(); expect(exec).not.toHaveBeenCalled();
   } finally { prepare.mockRestore(); exec.mockRestore(); }
+});
+
+async function mainnetProfileFixture(migrated: boolean, archive = false) {
+  vi.resetModules();
+  const folder = mkdtempSync(join(tmpdir(), "keryx-enrolled-profile-facade-"));
+  const file = join(folder, "synthetic.sqlite"), manifestPath = join(folder, "deployment.json");
+  const identity: StorageIdentity = { ...syntheticStorageIdentity("testnet-real"), format: "keryx-mainnet-storage-identity-v1",
+    authorityMode: "mainnet-real", network: "eip155:5042", profileDigest: STORAGE_MAINNET_PROFILE_DIGEST };
+  const adapters: SqliteAdapter[] = []; fixtures.push({ folder, adapters, phase: () => {} });
+  const native = new DatabaseSync(file);
+  try {
+    native.exec("BEGIN IMMEDIATE"); installMainnetApplicationSchema(native, { publicReferenceArchive: archive });
+    insertStorageIdentity(native, identity); installStorageFences(native, identity); native.exec("COMMIT");
+  } finally { native.close(); }
+  if (migrated) {
+    const { migratePrivateProfilesStorage } = await import("./private-profiles-storage-migration");
+    migratePrivateProfilesStorage(file, identity, () => {});
+  }
+  writeFileSync(manifestPath, canonicalJson({ format: "keryx-storage-deployment-v1", identity, backend: { kind: "sqlite", databasePath: file } }));
+  vi.stubEnv("KERYX_STORAGE_MANIFEST", manifestPath); vi.stubEnv("KERYX_SQLITE_PATH", file); vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
+  vi.stubEnv("CONTENT_MASTER_KEY", randomBytes(32).toString("hex"));
+  return { file, manifestPath, identity, adapters, api: await import("./enrolled-sqlite-adapter") };
+}
+
+it("mainnet without an installed profile domain preserves the honest absent-capability branch and zero startup DDL", async () => {
+  const f = await mainnetProfileFixture(false), before = readFileSync(f.file);
+  const adapter = await f.api.createEnrolledSqliteAdapter(); f.adapters.push(adapter);
+  expect(adapter.privateProfiles).toBeUndefined(); expect(Object.hasOwn(adapter, "privateProfiles")).toBe(false);
+  expect(() => requirePrivateProfiles(adapter)).toThrow("profile_unavailable");
+  expect(await adapter.getUser(`0x${"a".repeat(40)}`)).toBeNull(); expect(readFileSync(f.file)).toEqual(before);
+});
+
+describe.each([false, true])("actual migrated mainnet profile facade (archive=%s)", archive => {
+  let f: Awaited<ReturnType<typeof mainnetProfileFixture>>;
+  // Pure module loading and authentic temporary-schema preparation are setup, not
+  // a sequence of independent application requests inside one 20-second deadline.
+  beforeEach(async () => { f = await mainnetProfileFixture(true, archive); });
+
+  it("attaches one frozen non-enumerable port and preserves native writer CRUD and close", async () => {
+    const before = readFileSync(f.file), adapter = await f.api.createEnrolledSqliteAdapter(); f.adapters.push(adapter);
+    const port = requirePrivateProfiles(adapter), wallet = `0x${"a".repeat(40)}`;
+    expect(Object.isFrozen(adapter)).toBe(true); expect(Object.isFrozen(port)).toBe(true);
+    expect(Object.getOwnPropertyDescriptor(adapter, "privateProfiles")).toMatchObject({ enumerable: false, writable: false, configurable: false });
+    expect(Object.keys(adapter)).not.toContain("privateProfiles"); expect(Object.keys(f.api.ENROLLED_SQLITE_METHOD_ACCESS)).not.toContain("privateProfiles");
+    expect(Reflect.get(adapter, "db")).toBeUndefined(); expect(readFileSync(f.file)).toEqual(before);
+    await port.update(wallet, { displayName: "Reader", handle: "native_reader", bio: "", purpose: "", links: [] });
+    expect((await port.get(wallet, f.identity.network)).profile?.handle).toBe("native_reader");
+    await port.delete(wallet); expect((await port.get(wallet, f.identity.network)).profile).toBeNull();
+    adapter.close(); await expect(port.get(wallet, f.identity.network)).rejects.toThrow("profile_unavailable");
+  });
+
+  it("denies readonly deletion without losing the genuine native reader or changing stored bytes", async () => {
+    const wallet = `0x${"a".repeat(40)}`, seed = new DatabaseSync(f.file);
+    // Fixed synthetic input precedes the application facade; no genuine mutation is mocked.
+    try {
+      registerStorageCapability(seed, f.identity, () => true);
+      seed.exec("BEGIN IMMEDIATE");
+      seed.prepare("INSERT INTO private_profiles(wallet,handle,display_name,bio,purpose,links,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)")
+        .run(wallet, "native_reader", "Reader", "", "", "[]", "2026-10-01T00:00:00.000Z", "2026-10-01T00:00:00.000Z");
+      seed.exec("COMMIT");
+    } finally { seed.close(); }
+    const before = readFileSync(f.file), readonly = await f.api.createReadonlyEnrolledSqliteAdapter(); f.adapters.push(readonly);
+    await expect(requirePrivateProfiles(readonly).delete(wallet)).rejects.toThrow("profile_unavailable");
+    expect((await requirePrivateProfiles(readonly).get(wallet, f.identity.network)).profile?.handle).toBe("native_reader");
+    expect(readFileSync(f.file)).toEqual(before);
+  });
 });
 
 it("uses the exact installed application schema without startup migration and retains enrolled provenance", async () => {
