@@ -21,6 +21,10 @@ that port; there is no retry through an ordinary connection or recreated UUID.
 Temporary SQLite BUSY/LOCKED errors return unavailable without closing the
 borrowed application connection. A subsequent operation must pass the same
 provenance checks again; transaction failure still rolls back.
+The marker reader preserves those exact native lock codes instead of labeling a
+failed read as malformed identity. The facade also refuses temporary contention
+without closing the borrowed connection. Identity, manifest and fence failures
+still permanently revoke access; no new retry or fallback is introduced.
 
 The native application facade exposes the admitted port as a frozen,
 nonenumerable capability on writable and readonly stores. An original store

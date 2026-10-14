@@ -11,13 +11,14 @@ import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
 import { installNativeUserDomainSchema } from "./native-user-domain-schema";
 import { insertStorageIdentity, installStorageFences, registerStorageCapability } from "./storage-identity-sqlite";
-import { assertVerifiedSqliteConnection, openVerifiedSqliteStorage } from "./storage-identity-connection";
+import { assertVerifiedSqliteConnection, assertVerifiedSqliteNativeUserDomainPolicy, openVerifiedSqliteStorage } from "./storage-identity-connection";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { createEnrolledSqliteDeliverableAcceptance, createSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
 import { originalBinding } from "../deliverable-acceptance/original";
 import type { AcceptanceInput } from "../deliverable-acceptance/contracts";
 import { canonicalJson } from "../canonical-json";
 import { createEnrolledSqliteAdapter, createReadonlyEnrolledSqliteAdapter } from "./enrolled-sqlite-adapter";
+import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
 
 const synthetic = syntheticA2aOriginal(1, ARC_MAINNET_PROFILE);
 const { order, binding } = synthetic;
@@ -107,6 +108,19 @@ it("a supported original schema leaves the missing native port unavailable witho
   try { expect(raw.prepare("SELECT name FROM sqlite_schema WHERE name LIKE 'deliverable_acceptance_%'").all()).toEqual([]); }
   finally { raw.close(); }
 });
+it("native user policy rejects raw or original-only stores and extra arguments", () => {
+  const f = native(false), raw = new DatabaseSync(":memory:"); opened.push(raw);
+  Object.assign(raw, { nativeUserDomainProfile: "invented", foreignKeys: true, busyTimeout: 5000 });
+  expect(() => assertVerifiedSqliteNativeUserDomainPolicy(raw)).toThrow();
+  expect(() => assertVerifiedSqliteNativeUserDomainPolicy(f.connection.db)).toThrow();
+  expect(() => Reflect.apply(assertVerifiedSqliteNativeUserDomainPolicy, undefined, [f.connection.db, true])).toThrow();
+});
+it("complete native user policy is zero SQL, readonly-compatible and closed-aware", () => {
+  let guards = 0; const f = native(true, true, () => { guards++; }), before = guards;
+  for (let i = 0; i < 3; i++) expect(() => assertVerifiedSqliteNativeUserDomainPolicy(f.connection.db)).not.toThrow();
+  expect(guards).toBe(before); f.connection.close();
+  expect(() => assertVerifiedSqliteNativeUserDomainPolicy(f.connection.db)).toThrow();
+});
 it("reads genuine native retained delivery with no inferred remedy or public consent", async () => {
   const f = native(), before = originalRows(f.file);
   expect(Object.isFrozen(f.port)).toBe(true);
@@ -185,6 +199,23 @@ it("an internal SQL guard failure permanently retires the borrowed port after th
   expect(() => assertVerifiedSqliteConnection(f.connection.db)).toThrow();
   expect(entries(f.file)).toBe(0); expect(originalRows(f.file)).toBe(before);
 });
+it("real EXCLUSIVE read contention preserves the native port and unrelated reader after the lock is released", async () => {
+  const f = native(), before = originalRows(f.file), blocker = new DatabaseSync(f.file); opened.push(blocker);
+  blocker.exec("BEGIN EXCLUSIVE");
+  await expect(f.port!.read(order.payer, binding.network, order.id)).rejects.toThrow("acceptance_unavailable");
+  blocker.exec("ROLLBACK");
+  expect((await f.port!.read(order.payer, binding.network, order.id)).state).toBe("no_response");
+  expect(f.connection.db.prepare("SELECT count(*) AS n FROM api_keys").get()?.n).toBe(1);
+  expect(entries(f.file)).toBe(0); expect(originalRows(f.file)).toBe(before);
+});
+it("the native personal-history reader also survives real EXCLUSIVE read contention", async () => {
+  const f = native(), history = createEnrolledSqlitePersonalHistory(f.connection.db), before = originalRows(f.file);
+  const blocker = new DatabaseSync(f.file); opened.push(blocker); blocker.exec("BEGIN EXCLUSIVE");
+  await expect(history.list(order.payer, { filters: {}, take: 1 })).rejects.toThrow("history_unavailable");
+  blocker.exec("ROLLBACK");
+  expect(await history.list(order.payer, { filters: {}, take: 1 })).toEqual([]);
+  expect(originalRows(f.file)).toBe(before);
+});
 it("schema drift permanently retires the old port even after the exact schema is restored", async () => {
   const f = native(), raw = new DatabaseSync(f.file); opened.push(raw);
   raw.exec("CREATE TABLE synthetic_unknown_namespace(id TEXT)");
@@ -206,6 +237,9 @@ it("the actual frozen native application facade composes the port on writable an
     expect(Object.getOwnPropertyDescriptor(adapter, "deliverableAcceptance")?.enumerable).toBe(false);
   }
   await expect(reader.deliverableAcceptance!.submit(order.payer, binding.network, order.id, input, authority)).rejects.toThrow("acceptance_unavailable");
+  const blocker = new DatabaseSync(file); opened.push(blocker); blocker.exec("BEGIN EXCLUSIVE");
+  expect(() => writer.getSyncState("synthetic-missing")).toThrow(); blocker.exec("ROLLBACK");
+  expect(await writer.getSyncState("synthetic-missing")).toBeNull();
   expect((await writer.deliverableAcceptance!.read(order.payer, binding.network, order.id)).state).toBe("no_response");
   expect(originalRows(file)).toBe(before); expect(entries(file)).toBe(0);
 });

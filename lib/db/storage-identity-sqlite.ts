@@ -91,6 +91,11 @@ export function readStorageIdentity(db: DatabaseSync): Readonly<StorageIdentity>
   return canonical;
   } catch (error) {
     if (error instanceof StorageIdentityRefused) throw error;
+    // A failed read under a genuine SQLite lock is not evidence of a malformed
+    // marker. Preserve only these native codes so the caller can refuse this
+    // operation without permanently retiring an otherwise healthy connection.
+    if (error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+      && "errcode" in error && (error.errcode === 5 || error.errcode === 6)) throw error;
     return refuseStorage("malformed_marker");
   }
 }

@@ -259,7 +259,12 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     const db = connection.db;
     const assert = () => {
       try { assertVerifiedSqliteConnection(connection.db); }
-      catch (error) { connection.close(); throw error; }
+      catch (error) {
+        const contention = error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+          && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+        if (!contention) connection.close();
+        throw error;
+      }
     };
     assert();
     const core = SqliteAdapter.assembleConnectionCore(db, deployment.identity, assert);
