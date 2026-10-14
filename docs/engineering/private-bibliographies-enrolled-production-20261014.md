@@ -82,13 +82,12 @@ The immutable declarative descriptor from the helper commit still imports the
 exact ordinary SQL. Partial subsets remain inadmissible; this outcome adds no
 separate installer, production profile family or bibliography seed.
 
-1. Wait for profile260's actual required CI and merge into `origin/main`, then
-   compose normally. Its changed source belongs to its own focused PR.
-2. ROOT must bind the optional non-enumerable `privateBibliographies` port to the
-   same selected native connection in `lib/db/enrolled-sqlite-adapter.ts` and
-   establish its provenance. The current composed facade has no such binding.
-   Genuine facade and mounted-caller acceptance remains open; helper/route
-   fixtures alone do not establish it.
+1. Compose current accepted `origin/main` with Core477's complete native bundle.
+   Profile260's separate factory is not a runtime dependency of this helper.
+2. ROOT has bound the optional non-enumerable `privateBibliographies` port to the
+   same selected native connection in `lib/db/enrolled-sqlite-adapter.ts`.
+   The focused controls establish genuine writable/readonly facade CRUD; live
+   mounted and delivered acceptance remains a release gate.
 3. Refresh relevant failed cases and changed-input checks, reusing applicable
    unchanged helper review and native/type evidence. Any new composition delta
    needs independent review, and required aggregate/domain CI must actually pass.
@@ -127,10 +126,10 @@ exited 1 with 28 passes and 8 failures in 740,518 ms. Both captures observed nat
 exit/close, complete stdout/stderr and no outer timeout or overflow. Neither is
 a passing suite.
 
-All five corrected-run raw SHA-256 pins still match the current helper, test,
-connection, fence and profile source. The helper pin is
+The five corrected-run raw SHA-256 pins bind that historical invocation, not
+the later ROOT correction and current-main composition. Its helper pin was
 `035962fd8e054e9c8e2e24f03e1bcedb452b6a4b58ec77e8cf93b25eff24eb7b`;
-the corrected test pin is
+the corrected test pin was
 `1267aca886a1e59676ed6eeb867ddf5f64ae7d0a4d4278b536ccbb0aa33bbe7e`.
 The accepted R94 source review covers the R91/P2 helper correction; it does not
 accept the later fixture composition or replace actual required CI.
@@ -200,3 +199,11 @@ healthy recovery, and writable/readonly facade CRUD with original typed bytes.
 Prior failures remain retained; refreshed checks must establish acceptance using
 the existing deadlines before publication. This enables no provider, funding,
 custody or scheduling operation; the coordinator owns the batched release.
+
+The delegated focused run passed 22 controls, including all eight previously
+failed classes and the new native policy, EXCLUSIVE and facade cases; 17 unchanged
+cases were skipped. It exited naturally 0 with both EOFs in 152,331 ms. Focused
+types passed naturally 0 in 20,455 ms. The one changed graph case initially hit
+the unchanged 20-second deadline; one unchanged verbose diagnostic then passed
+that case with 11 skips in 7,212 ms. Both captures remain retained. These results
+do not claim full hosted CI, production activation or live issue acceptance.
