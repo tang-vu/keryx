@@ -164,7 +164,7 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
 
       <section id="current-creators" aria-label={message("ledger.currentCreators")} className="mt-8">
         <ResourceNotice resource={withdrawalsResource} label={uiCopy("ledgerPresentation.cashouts")} />
-        {(leaderboard.length > 0 || withdrawals.length > 0) && <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        {(!!metricsResource.data?.sourceLeaderboard?.rows.length || leaderboard.length > 0 || withdrawals.length > 0) && <div className={`mt-5 grid gap-5 ${withdrawals.length > 0 ? "lg:grid-cols-2" : ""}`}>
           {metricsResource.data?.sourceLeaderboard
             ? <SourceLeaderboard data={metricsResource.data.sourceLeaderboard} network={currentArcLabel} />
             : leaderboard.length > 0 && <CreatorLeaderboard rows={leaderboard} title={message("ledger.creatorLeaderboard", { network: currentArcLabel })} />}
