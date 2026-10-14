@@ -26,11 +26,8 @@ const uiRichCopy = createRichMessages("en");
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
-export const revalidate = 600;
-
-export function generateStaticParams(): { id: string }[] {
-  return [];
-}
+// Recheck publication for each detail and metadata request.
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
