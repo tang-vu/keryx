@@ -1,17 +1,22 @@
 # Same-store native private bibliography source — 2026-10-14
 
-This four-file outcome adds `createEnrolledSqlitePrivateBibliographies(db)` for
-internal composition on the already selected verified SQLite connection. It is
-source preparation awaiting parent checks and ROOT's complete native-user-domain
-bundle. No production migration, facade attachment, feature activation, issue
+This outcome adds `createEnrolledSqlitePrivateBibliographies(db)` for internal
+composition on the already selected verified SQLite connection. The reviewed
+helper source is committed at `1ca0c6bf91b46721270ce45c816611cbd5f70285`.
+Core477 is merged on `origin/main` at
+`b54710b0585e5398070e8da87092a72ce856ceed`; the pending local merge parent is
+its reviewed source commit `f2fa7d3ff82203e32e560adac73d6206910c1e48`.
+The profile260 merge and ROOT-owned facade binding remain necessary before this
+becomes a coherent feature candidate. No production migration, activation, issue
 closure, publication or delivery is established by this document.
 
 ## Admission and lifetime
 
 The factory requires the reviewed profile R87/P2 WeakMap APIs:
 `assertVerifiedSqliteConnection(db)` and `assertVerifiedSqliteWritePolicy(db)` in
-`lib/db/storage-identity-connection.ts`. They are missing from base
-`5136a4a10a34230e1eceb6bac2f7a60b8252e9e5`. The factory has exactly one argument;
+`lib/db/storage-identity-connection.ts`. They were missing from the original base
+`5136a4a10a34230e1eceb6bac2f7a60b8252e9e5` and are present in Core477's
+current local composition. The factory has exactly one argument;
 raw/ordinary connections, extra arguments and supplied callbacks cannot issue
 this native port. There is no connection registration or raw capability escape.
 
@@ -68,41 +73,76 @@ gain no private management authority. Existing deliberate bearer downloads retai
 their fixed filename and privacy/cache/referrer headers. No auth or route file is
 changed here. The new port writes only `private_bibliographies`.
 
-## ROOT integration prerequisites
+## Remaining composition and publication gates
 
-1. Adopt the reviewed profile connection API/source dependency coherently; do not
-   invent a local guard shim or treat base 5136 as compiling this outcome.
-2. Add `private_bibliographies` to the shared storage table inventory. Its three
-   fence definitions must come from the current `storageFenceStatements` authority.
-   This is needed even for the scoped fixture's first native checks.
-3. Compose `PRIVATE_BIBLIOGRAPHIES_STORAGE_DOMAIN` into ROOT's ONE fixed complete
-   bundle target and migration. It imports the exact existing SQL and exposes
-   deeply frozen schema/fence descriptors. It neither installs SQL nor generates
-   another Boolean production schema family. No seed is required for this domain.
-4. Replace the profile-only target with the complete bundle in the shared profile
-   owner. Keep exactly four production mainnet profiles: archive absent/present
-   crossed with entire bundle absent/present. Do not admit arbitrary partial subsets.
-5. Attach the optional non-enumerable `privateBibliographies` port using the same
-   selected native connection. Verify genuine facade and existing mounted callers;
-   the scoped fixture does not establish final bundle/facade acceptance.
-6. Parent carries first native tests, TypeScript, review, checkpoint and required
-   PR CI. ROOT serializes merge and the one batched migration/delivery after final
-   main acceptance. Original issues remain open until deployed owner-visible
-   criteria pass. No independent deploy, production CLI or activation is added.
+Core477 supplies the genuine connection APIs, shared table/fence inventory,
+complete native-user-domain bundle and migration, and the fixed four mainnet
+profiles: archive absent/present crossed with the entire bundle absent/present.
+The immutable declarative descriptor from the helper commit still imports the
+exact ordinary SQL. Partial subsets remain inadmissible; this outcome adds no
+separate installer, production profile family or bibliography seed.
+
+1. Wait for profile260's actual required CI and merge into `origin/main`, then
+   compose normally. Its changed source belongs to its own focused PR.
+2. ROOT must bind the optional non-enumerable `privateBibliographies` port to the
+   same selected native connection in `lib/db/enrolled-sqlite-adapter.ts` and
+   establish its provenance. The current composed facade has no such binding.
+   Genuine facade and mounted-caller acceptance remains open; helper/route
+   fixtures alone do not establish it.
+3. Refresh relevant failed cases and changed-input checks, reusing applicable
+   unchanged helper review and native/type evidence. Any new composition delta
+   needs independent review, and required aggregate/domain CI must actually pass.
+4. Only after dependency and facade composition is final, run the existing
+   offline48 study once on that input source. Retain its actual zero outbound
+   result and precise source/lock binding. The current archived study omits this
+   helper from its runtime-source graph and cannot accept this feature.
+5. Publish one conventional focused outcome PR. ROOT serializes the merge and
+   owns final-main acceptance and the one combined deployment. Original deployed
+   owner-visible criteria remain open. Broader #285, Zotero account linking and
+   sync acceptance are not established by this bibliography increment.
+
+Web/API session management and deliberate bearer downloads use the existing
+optional database port. Desktop, CLI, remote/stdio MCP, extension and bots retain
+their established metadata/export or web handoff roles; they gain no private
+enumeration or management authority. Deployment and package/installer acceptance
+belong to ROOT's release batch.
 
 No additional immutable helper extraction is required for this outcome. The
 existing schema constant, contracts and formatter are imported directly. The
 private ordinary helper logic for hash/snapshot/metadata is reproduced locally
 with the same contract; the ordinary factory and its enrollment refusal stay intact.
 
-## Authored acceptance fixtures; not executed by this author
+## Actual retained native results
 
-`private-bibliographies-enrolled-sqlite.test.ts` builds four fixed, scoped reference
-profiles for this isolated domain (archive absent/present, bibliography absent/
-present). Only the supported source-profile list is substituted in the test;
-provenance/WeakMap policy, manifest/file/identity checks and fence generation/
-validation are genuine. The fixtures are not a production family or a final-bundle
-proof. Historical synthetic economic/original rows are seeded before enrollment.
+`private-bibliographies-enrolled-sqlite.test.ts` now uses Core477's actual fixed
+four-profile full19 family without a profile mock. Historical synthetic originals
+precede explicit bundle installation and enrollment; the corrected A2A original
+carries the required network in `request_data`. There is no privacy backfill.
+
+The original first native invocation at
+`output/resume-distribution63-audit-20261012/first-core-native-checks-20261014/bibliography`
+exited 1 with 0 passes and 36 failures in 10,092 ms. The corrected invocation at
+`output/resume-distribution63-audit-20261012/native-first-dependency-recovery-20261014/bibseed`
+exited 1 with 28 passes and 8 failures in 740,518 ms. Both captures observed natural
+exit/close, complete stdout/stderr and no outer timeout or overflow. Neither is
+a passing suite.
+
+All five corrected-run raw SHA-256 pins still match the current helper, test,
+connection, fence and profile source. The helper pin is
+`035962fd8e054e9c8e2e24f03e1bcedb452b6a4b58ec77e8cf93b25eff24eb7b`;
+the corrected test pin is
+`1267aca886a1e59676ed6eeb867ddf5f64ae7d0a4d4278b536ccbb0aa33bbe7e`.
+The accepted R94 source review covers the R91/P2 helper correction; it does not
+accept the later fixture composition or replace actual required CI.
+
+Eight failures cover CRUD with both archive variants, malformed inputs,
+two-connection CAS/revoke/caps, foreign fence/deleted domain, held BUSY at BEGIN
+and COMMIT, and session management/bearer routes. Recorded durations range from
+20,558.886 to 132,506.410 ms under unchanged 20,000 ms test/hook deadlines.
+JSON failure messages contain `STACK_TRACE_ERROR`; the retained capture alone
+does not establish a more specific cause. Retain these failures and timing
+qualifiers until actual refreshed checks resolve them; preserve assertions and
+deadlines.
 
 The authored cases cover native CRUD and routes, owner isolation, token hashing/
 revocation and metadata privacy, actual readonly pre-SQL refusal with healthy reads,
@@ -129,10 +169,10 @@ exercise refusal/recovery through the complete domain port. Final bundle/facade
 contention acceptance remains ROOT-owned; numeric LOCKED (6) is classified in
 source but is not established by the BUSY fixtures.
 
-Tests, imports/module execution, compiler, build, app, producers, DB/DDL/target
-operations, Git writes, ENV, providers and financial calls were prohibited for this
-source author and were not run. Read-only source/status/hash inspection is not a
-test pass. Parent must resolve the explicit missing dependencies before first checks.
+The original source author did not run tests, modules, compiler, build, app,
+producers or target operations under its source-only assignment. Parent native
+invocations above are subsequent evidence with their failures retained. No new
+compiler/build/study pass is claimed by this documentation refresh.
 
 The original R89 capture retains its additive patches and deletion inverses. The
 R92 correction capture records raw before/after source, the minimum correction
@@ -140,3 +180,23 @@ patch and whole-file restoration inverses, old-authority byte equality, and exac
 next actions in `source-handoff.md`. Shared instructions, facade, schema, inventory,
 migration, ordinary factory, auth, financial code and foreign worktrees stay owned
 by their existing coordinators.
+
+## ROOT delegated native correction, October 14
+
+The observed CRUD path repeatedly scanned the complete schema through a connection
+that already guards every SQL operation. Constructor admission and genuine BEFORE
+absence remain unchanged. Present ports now require the existing full user-domain
+policy captured at opening; each subsequent check uses that metadata and one full
+connection guard. SQL proxy guards, journals, transaction boundaries and readonly
+pre-SQL denial remain intact. Exact native 5/6 guard contention becomes a privately
+branded fixed bibliography refusal; arbitrary failures still retire the port.
+Rollback or uncertain transaction cleanup retains its permanent refusal rules.
+
+The genuine frozen facade now attaches an optional, non-enumerable native
+`privateBibliographies` port. Its one legitimate closed-schema import edge is
+explicit in the existing graph assertion; all negative/funding checks remain.
+New controls cover missing captured full policy, actual EXCLUSIVE contention and
+healthy recovery, and writable/readonly facade CRUD with original typed bytes.
+Prior failures remain retained; refreshed checks must establish acceptance using
+the existing deadlines before publication. This enables no provider, funding,
+custody or scheduling operation; the coordinator owns the batched release.

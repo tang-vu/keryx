@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync, StatementSync } from "node:sqlite";
 import { copyFileSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,46 +15,24 @@ import { createEnrolledSqlitePrivateBibliographies } from "./private-bibliograph
 import { createSqlitePrivateBibliographies, PRIVATE_BIBLIOGRAPHIES_SQL } from "./private-bibliographies-sqlite";
 import { PRIVATE_BIBLIOGRAPHIES_STORAGE_DOMAIN as domain } from "./private-bibliographies-storage-domain";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
+import { installNativeUserDomainSchema } from "./native-user-domain-schema";
+import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { inspectStorageDeploymentManifest } from "./runtime-storage-config";
+import { createEnrolledSqliteAdapter, createReadonlyEnrolledSqliteAdapter } from "./enrolled-sqlite-adapter";
 import { assertVerifiedSqliteConnection, openVerifiedSqliteStorage } from "./storage-identity-connection";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
 import { insertStorageIdentity, installStorageFences } from "./storage-identity-sqlite";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 
-// A scoped reference family, NOT a replacement production schema generator.
-// Only the source-profile list is substituted; native provenance, file/identity/
-// manifest guards, fence SQL and readonly policy remain the real implementations.
-// ROOT must first admit the table in STORAGE_APPLICATION_TABLES. On base 5136 the
-// reviewed WeakMap APIs are absent; this file deliberately cannot claim acceptance.
-const admission = vi.hoisted(() => ({ profiles: [] as readonly string[] }));
-vi.mock("./enrolled-sqlite-schema-profile", async importOriginal => {
-  const original = await importOriginal<typeof import("./enrolled-sqlite-schema-profile")>();
-  return { ...original, supportedSqliteApplicationProfiles(mainnet = false) {
-    return mainnet ? admission.profiles : original.supportedSqliteApplicationProfiles(false);
-  } };
-});
-beforeAll(() => {
-  const profiles: string[] = [];
-  // Exactly four fixed references: archive absent/present, bibliography absent/present.
-  for (const archive of [false, true]) {
-    const db = new DatabaseSync(":memory:");
-    try {
-      installMainnetApplicationSchema(db, { publicReferenceArchive: archive });
-      profiles.push(sqliteApplicationSchemaProfile(db, new Set()));
-      db.exec(PRIVATE_BIBLIOGRAPHIES_SQL);
-      profiles.push(sqliteApplicationSchemaProfile(db, new Set()));
-    } finally { db.close(); }
-  }
-  admission.profiles = Object.freeze(profiles);
-});
-
+// Actual ROOT-reviewed four-profile full19 family; no schema-profile mock.
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 const network = "eip155:5042", now = "2026-10-01T00:00:00.000Z";
 const input = { title: "Private owner title", papers: [PAPER_CATALOG[0]] };
 const directories: string[] = [], connections: { close(): void }[] = [], workers: Worker[] = [];
 afterEach(async () => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   await Promise.all(workers.splice(0).map(worker => worker.terminate()));
   for (const connection of connections.splice(0)) connection.close();
   for (const directory of directories.splice(0)) {
@@ -70,7 +48,6 @@ function fixture(present = true, archive = false) {
   const raw = new DatabaseSync(file);
   try {
     raw.exec("BEGIN IMMEDIATE"); installMainnetApplicationSchema(raw, { publicReferenceArchive: archive });
-    if (present) raw.exec(PRIVATE_BIBLIOGRAPHIES_SQL);
     // Explicit historical synthetic fixture bytes, BEFORE enrollment. Never live
     // provider activity, fabricated real settlement or application writer authority.
     raw.prepare("INSERT INTO users VALUES(?,?,?,?,?)").run(alice, "asker", "Reader", now, now);
@@ -87,15 +64,17 @@ function fixture(present = true, archive = false) {
     raw.prepare("INSERT INTO api_keys(id,prefix,key_hash,wallet,created_at,scopes) VALUES(?,?,?,?,?,?)")
       .run("original-key", "kx_fixture", "d".repeat(64), alice, now, "profile:read");
     raw.prepare(`INSERT INTO a2a_orders(id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,
-      service_fee_usdc,research_mode,status,transaction_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .run("original-order", "original", "original-authorization", "e".repeat(64), alice, bob, 0.02, 0.017, 0.003, "standard", "completed", "synthetic-a2a-reference", now, now);
+      service_fee_usdc,research_mode,status,transaction_id,created_at,updated_at,request_data) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .run("original-order", "original", "original-authorization", "e".repeat(64), alice, bob, 0.02, 0.017, 0.003, "standard", "completed", "synthetic-a2a-reference", now, now, canonicalJson({ network }));
+    // Retained historical originals precede explicit bundle installation; no privacy backfill.
+    if (present) installNativeUserDomainSchema(raw);
     insertStorageIdentity(raw, identity); installStorageFences(raw, identity); raw.exec("COMMIT");
   } finally { raw.close(); }
   writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity, backend: { kind: "sqlite", databasePath: file } }));
   const pinned = canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: manifest }));
   const open = (readOnly = false, enforceProfile = true) => {
     const connection = openVerifiedSqliteStorage(file, identity, { readOnly,
-      ...(enforceProfile ? { applicationProfiles: admission.profiles } : {}),
+      ...(enforceProfile ? { applicationProfiles: supportedSqliteApplicationProfiles(true) } : {}),
       runtimeGuard() {
         if (canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: manifest })) !== pinned) throw new Error("Manifest drift");
       } });
@@ -171,6 +150,53 @@ describe("same-selected-store verified native private bibliographies", () => {
     expect(await port.list(alice)).toEqual([created.bibliography]);
     expect(await port.read(created.token)).toEqual({ content: paperReferencesBibtex(input.papers).content });
     expect(readFileSync(f.file)).toEqual(before);
+  });
+
+  it("present bibliography requires the complete policy captured at genuine opening", () => {
+    const f = fixture(), connection = f.open(false, false), before = originals(f);
+    expect(() => createEnrolledSqlitePrivateBibliographies(connection.db)).toThrow("bibliography_unavailable");
+    expect(originals(f)).toBe(before);
+  });
+
+  it("an actual EXCLUSIVE reader lock refuses temporarily without retiring the healthy port", async () => {
+    const f = fixture(), connection = f.open(), port = createEnrolledSqlitePrivateBibliographies(connection.db)!;
+    const created = await port.create(alice, input), before = originals(f), blocker = new DatabaseSync(f.file);
+    connections.push(blocker); blocker.exec("BEGIN EXCLUSIVE");
+    const originalPrepare = DatabaseSync.prototype.prepare, originalGet = StatementSync.prototype.get;
+    let nativeFailure: unknown;
+    const prepare = vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (this: DatabaseSync, sql) {
+      try { return Reflect.apply(originalPrepare, this, [sql]); } catch (error) { nativeFailure = error; throw error; }
+    });
+    const get = vi.spyOn(StatementSync.prototype, "get").mockImplementation(function (this: StatementSync, ...args) {
+      try { return Reflect.apply(originalGet, this, args); } catch (error) { nativeFailure = error; throw error; }
+    });
+    try {
+      await expect(port.list(alice)).rejects.toThrow("bibliography_unavailable");
+      expect(nativeFailure).toMatchObject({ code: "ERR_SQLITE_ERROR", errcode: 5 });
+    } finally { prepare.mockRestore(); get.mockRestore(); blocker.exec("ROLLBACK"); }
+    expect(await port.list(alice)).toEqual([created.bibliography]);
+    expect(await port.read(created.token)).toEqual({ content: paperReferencesBibtex(input.papers).content });
+    expect(() => assertVerifiedSqliteConnection(connection.db)).not.toThrow();
+    expect(originals(f)).toBe(before);
+  });
+
+  it("the actual frozen writable and readonly facades attach the native bibliography port", async () => {
+    const f = fixture(), before = originals(f);
+    vi.stubEnv("KERYX_STORAGE_MANIFEST", f.manifest); vi.stubEnv("KERYX_SQLITE_PATH", f.file);
+    vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
+    vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("CONTENT_MASTER_KEY", "11".repeat(32));
+    const writer = await createEnrolledSqliteAdapter(); connections.push(writer);
+    const reader = await createReadonlyEnrolledSqliteAdapter(); connections.push(reader);
+    for (const db of [writer, reader]) {
+      expect(Object.isFrozen(db)).toBe(true);
+      expect(Object.getOwnPropertyDescriptor(db, "privateBibliographies")?.enumerable).toBe(false);
+      expect(db.privateBibliographies).toBeDefined();
+    }
+    const created = await writer.privateBibliographies!.create(alice, input);
+    expect(await reader.privateBibliographies!.read(created.token)).toEqual({ content: paperReferencesBibtex(input.papers).content });
+    await expect(reader.privateBibliographies!.create(alice, input)).rejects.toThrow("bibliography_unavailable");
+    expect(await reader.privateBibliographies!.list(alice)).toEqual([created.bibliography]);
+    expect(originals(f)).toBe(before);
   });
 
   it("absent domain stays absent without target DDL; raw, ordinary, fake and callback connections refuse pre-SQL", () => {
@@ -264,7 +290,7 @@ describe("same-selected-store verified native private bibliographies", () => {
       const worker = new Worker(source, { eval: true, execArgv: [], workerData: {
         loader: import.meta.resolve("tsx/cjs/api"), connectionModule: new URL("./storage-identity-connection.ts", import.meta.url).href,
         manifestModule: new URL("./runtime-storage-config.ts", import.meta.url).href, canonicalModule: new URL("../canonical-json.ts", import.meta.url).href,
-        file: f.file, manifest: f.manifest, identity: f.identity, profiles: admission.profiles,
+        file: f.file, manifest: f.manifest, identity: f.identity, profiles: supportedSqliteApplicationProfiles(true),
         pinned: canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: f.manifest })),
         barrier, operation, now, id: created.bibliography.id, wallet: alice,
       } }); workers.push(worker);

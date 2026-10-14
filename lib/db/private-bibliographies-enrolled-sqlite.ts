@@ -8,7 +8,7 @@ import { bibliographyIdSchema, bibliographyInputSchema, bibliographyMetadataSche
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { PRIVATE_BIBLIOGRAPHIES_STORAGE_DOMAIN as domain } from "./private-bibliographies-storage-domain";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
-import { assertVerifiedSqliteConnection, assertVerifiedSqliteWritePolicy } from "./storage-identity-connection";
+import { assertVerifiedSqliteConnection, assertVerifiedSqliteNativeUserDomainPolicy, assertVerifiedSqliteWritePolicy } from "./storage-identity-connection";
 import { assertStorageFences, STORAGE_IDENTITY_TABLE, storageFenceStatements } from "./storage-identity-sqlite";
 
 const unavailable = () => new PrivateBibliographyError("bibliography_unavailable");
@@ -34,6 +34,9 @@ export function createEnrolledSqlitePrivateBibliographies(db: DatabaseSync): Pri
   let identity: ReturnType<typeof assertVerifiedSqliteConnection>;
   try { identity = assertVerifiedSqliteConnection(db); } catch { throw unavailable(); }
   let revoked = false;
+  const contention = (error: unknown) => error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+    && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+  const temporaryRefusals = new WeakSet<PrivateBibliographyError>();
   const revokeConnection = () => {
     revoked = true;
     try { db.close(); } catch { /* the port remains permanently revoked */ }
@@ -59,11 +62,19 @@ export function createEnrolledSqlitePrivateBibliographies(db: DatabaseSync): Pri
   let admitted: ReturnType<typeof schema>;
   try { admitted = schema(); } catch { revokeConnection(); throw unavailable(); }
   if (!admitted.present) return undefined;
+  try { assertVerifiedSqliteNativeUserDomainPolicy(db); } catch { revokeConnection(); throw unavailable(); }
   const check = () => {
+    if (revoked) throw unavailable();
     try {
-      const current = schema();
-      if (!current.present || current.profile !== admitted.profile) throw unavailable();
-    } catch { revokeConnection(); throw unavailable(); }
+      // Trusted opening already pins the exact complete source profile. Keep
+      // its full guard, without rescanning it through the guarded SQL proxy.
+      assertVerifiedSqliteNativeUserDomainPolicy(db); assertVerifiedSqliteConnection(db);
+    } catch (error) {
+      if (!contention(error)) revokeConnection();
+      const refusal = unavailable();
+      if (contention(error)) temporaryRefusals.add(refusal);
+      throw refusal;
+    }
   };
   const writeAccess = () => {
     // This WeakMap-only check performs NO SQL. Healthy actual readonly ports
@@ -85,11 +96,10 @@ export function createEnrolledSqlitePrivateBibliographies(db: DatabaseSync): Pri
     } catch (error) {
       const benign = error instanceof PrivateBibliographyError && (error.code === "bibliography_not_found"
         || error.code === "bibliography_conflict" || error.code === "bibliography_limit");
-      const contention = error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
-        && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+      const temporary = contention(error) || error instanceof PrivateBibliographyError && temporaryRefusals.has(error);
       // Classify the originating failure before cleanup can observe restored guards.
       // Closing rolls back an acquired transaction and permanently latches refusal.
-      if (!benign && !contention) { revokeConnection(); throw unavailable(); }
+      if (!benign && !temporary) { revokeConnection(); throw unavailable(); }
       let intact = false;
       if (started) intact = rollback();
       else { try { check(); intact = true; } catch { /* already revoked */ } }
