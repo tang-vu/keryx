@@ -556,3 +556,12 @@ The final different source review is `4d328eb5`; the initial JSONB P2, both fail
 EXCLUSIVE captures and temporary diagnostic source/inverse remain retained.
 Current-main composition, applicable canonical provenance, required exact-head
 hosted CI, merge and deployment still remain separate pending delivery steps.
+
+The candidate now includes actual main `5213bdf6`, retaining its complete Decision,
+Core, profile, bibliography, identity and Usage source. The facade adds only the
+previously reviewed Account import and hidden port; no migration or flag changed.
+One existing canonical study completed naturally in 11.325 seconds: all 48 offline
+trials and every field except the two changed runtime source hashes match the
+incoming main artifact. All 431 physical source hashes match, with zero outbound
+attempts. Required exact-head hosted CI, coordinator merge and the next deployment
+batch remain pending; this record does not claim production Account activation.
