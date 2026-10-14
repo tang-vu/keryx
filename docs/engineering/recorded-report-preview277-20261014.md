@@ -90,3 +90,41 @@ web permalink head and shared OG image; desktop, CLI, remote/stdio MCP, API,
 extensions and bots retain their contracts and benefit through the existing public
 link after web delivery. No package/version, activation, policy, environment,
 custody, spending or original-worktree change is included.
+
+## Focused acceptance on actual main, October 14
+
+ROOT checkpoint `260b40ad` was ordinarily composed with actual main
+`7f797700f8cc644e010aaf7fd5d6ebe87379a3a7` as
+`cf64d7c95d0d22fc57a99af309a7bb947d941217`. All six reviewed source bytes and
+23 reviewed repository inputs remained unchanged. The existing different-source
+review is reused.
+
+The two affected test files actually passed **67 tests**, with no failures or skips,
+in 23.988 seconds. Focused TypeScript passed in 38.190 seconds. Both processes
+exited naturally with code 0 and separate stdout/stderr EOF; source pins stayed
+unchanged. These replace the source-authoring UNRUN status for this checked scope.
+
+One different-owner actual `next/og` run produced seven 1200×630 PNGs: public
+en/vi/pt/es previews use immutable recorded answer packets, and private, unlisted
+and unknown visibility produce byte-identical generic cards without reading
+hidden question getters. Five cases passed in 7.904 seconds with natural code 0,
+exit/close and both EOFs, and zero remote requests. The actual local fonts and
+renderer were used. All four public images and the generic output were visually
+inspected: Vietnamese/Portuguese/Spanish accents and ordinals are legible, with
+no clipping or overlap. Their shared question was English; this capture makes
+no new Chinese pixel claim. Existing unchanged CJK/font/layout evidence retains
+its original scope. The receipt is
+`output/resume-pr440-recovery-20261012/recorded-report-preview277-real-png-20261014/actual-png-visual-acceptance.json`
+(SHA256 `6381a2a53cbb50d6f380d399e0e269e3fbe3515fbcda57beb9396b7683f17965`).
+
+All 429 physical LF-normalized files in main's accepted offline study map still
+match; none of these six preview paths is in that import map. Package-lock LF
+content is exact main; CRLF checkout bytes remain distinct from Git LF bytes.
+The existing study is reused and no producer was run. Runtime source, packages,
+versions, financial wording and activation are unchanged.
+
+Required exact-candidate CI, including the applicable Next production build,
+remains pending before the coordinator may merge. Deployment is a later batch;
+this outcome is not added to the already frozen app0.27.65 release. Original
+#277's broader localized interfaces, human terminology and actual published
+locale/readback criteria remain open.
