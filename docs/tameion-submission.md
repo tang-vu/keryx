@@ -8,6 +8,7 @@ settlement on Arc.
 **[Submitted demo — 2:47, English narration and subtitles](https://youtu.be/sNonqLPMysg)** ·
 **[Live product](https://keryx.cc)** · **[Reviewer route](reviewer-start.md)** ·
 **[Windows/MCP release](https://github.com/tang-vu/keryx/releases/tag/v0.27.63)** ·
+**[User workflow video — Hoàng](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)** ·
 **[User workflow video — 0xacee](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)**
 
 The owner confirmed submitting the Google Form on **October 13, 2026**. The
@@ -100,14 +101,23 @@ facial-analysis methods, privacy and app-platform policies, and MediaPipe Face
 Landmarker. He is outside the Keryx team. His identity and workflow were published
 by the owner with a screen recording on X ([@tangvu_dev](https://x.com/tangvu_dev),
 October 2) and in the October 3 Canteen traction update. The owner confirmed on
-October 14 that the X account is suspended, so its video is currently unavailable.
-The matched runs and payment evidence below remain independently inspectable.
+October 14 that the X account is suspended. The retained edited MP4 has now been
+restored from the original local archive:
+[watch the 1:53 recording](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4) ·
+[recording scope and SHA-256](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.txt).
+
+The edit uses chronological cuts at normal speed, enlarges the terminal, adds
+English chapter labels and retains original audio. Unsupported policy answers,
+the connection error/retry and partial low-confidence MediaPipe result remain
+visible. The original October 2 edit reported the CLI's payment state; the later
+October 3 Circle and chain verification below is separate evidence.
 
 | Field | Value |
 | --- | --- |
 | Participant | Hoàng — [GitHub](https://github.com/Hoang130203), [LinkedIn](https://linkedin.com/in/ho%C3%A0ng-mai-minh-93a5852aa/) |
 | Origin | Independent freelancer; his own app and his own questions |
 | Surface | Keryx MCP in Devin CLI, Arc testnet |
+| Video | 113-second archived recording, restored October 14; original X publication remains unavailable |
 | Runs | Three research runs: `3a43c6c2-fddf-40ce-98a1-701a2a58b439`, `fe7c06fd-65da-41a6-867c-0597a63304df`, `2405a2ea-7ee3-4f0d-88b9-f221df791070` |
 | Payment | One source-access payment of 0.002 USDC to the Conzit Labs source; the other two runs bought nothing |
 | Payer | Keryx treasury. The run was sponsored; Hoàng did not fund a wallet |

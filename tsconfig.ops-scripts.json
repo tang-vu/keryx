@@ -126,6 +126,7 @@
     "scripts/creator-cashout-batch.mts",
     "scripts/creator-cashout-batch-sign.mts",
     "scripts/creator-cashout-batch-funding.mts",
+    "scripts/test-run-privacy-wanted-built.mts",
     "scripts/check-purchase-release.mts",
     "scripts/check-purchase-release.test.mts",
     "scripts/eval-retained-purchase-skips.mts",

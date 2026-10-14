@@ -9,6 +9,9 @@ import {
 
 const uiCopy = createMessages("en");
 
+// Recheck publication for every generated image request.
+export const dynamic = "force-dynamic";
+
 export const alt = uiCopy("wantedCard.alt");
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
