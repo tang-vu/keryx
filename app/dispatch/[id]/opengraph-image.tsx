@@ -4,6 +4,7 @@ import { ImageResponse } from "next/og";
 import { config } from "@/lib/config";
 import { resolveDispatch } from "@/lib/history/read-dispatch";
 import { publicPreviewFonts, publicPreviewFontFamily } from "@/lib/og-fonts";
+import { recordedReportPreview } from "@/lib/i18n/recorded-report-preview";
 
 const copy = createMessages("en");
 
@@ -29,18 +30,27 @@ export default async function DispatchOgImage({
   let dateLabel = "";
   let networkLabel = config.profile.testnet ? "Arc testnet" : "Arc mainnet";
   let historical = false;
+  let preview: ReturnType<typeof recordedReportPreview> | undefined;
 
   try {
     const dispatch = await resolveDispatch(id);
     if (dispatch?.visibility==="public") {
       const { run, archive } = dispatch;
+      // Prepare the full public projection before replacing generic output. A
+      // refused read must not leave a partly populated question or language.
+      const publicPreview = recordedReportPreview(run);
+      const publicQuestion = run.question;
+      const publicCited = run.citations.length;
+      const publicSpent = run.totalSpent;
+      const publicCreators = run.totalToCreators;
+      const date = formatDate(run.createdAt, "en", "UTC", { timeStyle: undefined });
+      preview = publicPreview;
       historical = Boolean(archive);
       if (archive) networkLabel = copy("reportSocial.historical");
-      question = run.question;
-      cited = run.citations.length;
-      spent = run.totalSpent;
-      toCreators = run.totalToCreators;
-      const date = formatDate(run.createdAt, "en", "UTC", { timeStyle: undefined });
+      question = publicQuestion;
+      cited = publicCited;
+      spent = publicSpent;
+      toCreators = publicCreators;
       dateLabel = date ? `${date.text} UTC` : "Unavailable";
     }
   } catch {
@@ -81,7 +91,7 @@ export default async function DispatchOgImage({
           }}
         >
           <span>{copy("reportSocial.network", { network: networkLabel })}</span>
-          <span>{copy("reportSocial.serial", { serial: serialLabel })}</span>
+          <span>{preview ? preview.serial(serialLabel) : copy("reportSocial.serial", { serial: serialLabel })}</span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -102,7 +112,7 @@ export default async function DispatchOgImage({
         </div>
 
         <div style={{ display: "flex", gap: 56 }}>
-          <Denomination value={String(cited)} label={copy(selectPlural(cited) === "one" ? "reportSocial.cited.one" : "reportSocial.cited.other")} />
+          <Denomination value={String(cited)} label={preview ? preview.citedLabel(cited) : copy(selectPlural(cited) === "one" ? "reportSocial.cited.one" : "reportSocial.cited.other")} />
           <Denomination value={`$${formatRecordedAmount(spent, { minimumFractionDigits: 4 })}`} label={historical ? copy("reportSocial.testnetRecorded") : copy("reportSocial.recorded")} />
           <Denomination
             value={`$${formatRecordedAmount(toCreators, { minimumFractionDigits: 4 })}`}

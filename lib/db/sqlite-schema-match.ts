@@ -7,15 +7,17 @@ export type SqliteSchemaExpectation = readonly [name: string, type: "table" | "i
  * authority, and untrusted stored SQL is not materialized into the JS heap.
  */
 export function sqliteSchemaMatches(db: DatabaseSync, expected: readonly SqliteSchemaExpectation[]): boolean {
-  return db.prepare(`WITH expected AS MATERIALIZED (
+  return db.prepare(`WITH actual AS MATERIALIZED (
+    SELECT rowid, name, type, sql FROM sqlite_schema
+  ), expected AS MATERIALIZED (
     SELECT json_extract(value,'$[0]') AS name,
       json_extract(value,'$[1]') AS type,
       json_extract(value,'$[2]') AS sql FROM json_each(?)
   ) SELECT NOT EXISTS (
     SELECT 1 FROM expected WHERE (
-      SELECT actual.sql=expected.sql FROM sqlite_schema AS actual
+      SELECT actual.sql=expected.sql FROM actual
       WHERE actual.name=expected.name AND actual.type=expected.type
-      LIMIT 1
+      ORDER BY actual.rowid LIMIT 1
     ) IS NOT 1
   ) AS matches`).get(JSON.stringify(expected))?.matches === 1;
 }
