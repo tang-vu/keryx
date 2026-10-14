@@ -1,7 +1,8 @@
 # Private268 compiled browser control — 2026-10-14
 
-Status: **source repairs authored, UNRUN; awaiting different focused source review,
-meaningful TypeScript checks and parent compiled acceptance**.
+Status: **current app and operations types and one production build passed; compiled
+control remains FAILED before the first browser scenario (ROOT update below)**.
+The author handoff and UNRUN statements below describe the earlier source-only stage.
 This adds only [the compiled driver](../../scripts/test-browser-private-history268-built.mts)
 and this document at base HEAD `ae298ff41c239b292a043b3442df33f1701a4b99`.
 Both files were absent at the initial R117 assignment start. Existing runtime, source controls,
@@ -219,3 +220,42 @@ This author executed no module, build, compiler/test, DB/browser/producer,
 Git writer, provider/target, ENV mutation, DDL or install, and used no policy
 workaround. Current auth/model/tier/effort, custody, spending limits and holds
 remain unchanged. **Source alone does not complete Original268.**
+
+
+## ROOT actual acceptance update — October 15 local
+
+ROOT composed the focused outcome with main d98e22b3 and preserved the delegated
+source. The current app typecheck passed with a 6 GiB compiler limit (89.565 s);
+operations types passed separately. One genuine production build passed in
+60.211 s at source b67796457b5dbd53bee7bf184c485e3352f9bfcd, BUILD_ID
+`9GSSqSyMy3vXr7uiGN-gA`. Later driver-only observations reuse that unchanged
+compiled runtime; they do not establish a newer runtime build.
+
+The initial compiled run and subsequent narrowly instrumented controls failed
+before any browser case. Cleanup completed naturally, but the driver failure
+was reported by Next as an uncaught exception with child exit zero. The parent
+correctly refused acceptance because the four-result report was absent and
+`mainFailureObserved` was true. Exit zero alone is insufficient.
+
+The boundary control recorded a listening exact loopback address and one request
+listener, one guarded native fetch, zero TCP accepts and zero HTTP listener
+entries. Native undici observation recorded one request/create and beforeConnect,
+no connected/headers event; an eight-second abort was observed after 38.820 s.
+A separate native loopback echo passed. One native CPU profile was captured to
+identify the delayed event loop; no transport fallback or timeout relaxation
+was introduced. Actual current cause and the four compiled scenarios remain open.
+
+Captures, raw streams and result JSON are retained under
+`output/resume-root-release63-20261012/private268-root-completion-20261014/`
+in the canonical checkout. The seven failed compiled controls and their cleanup
+records remain retained. Packed MCP, native/both-store, live authentication,
+required PR CI, deployment and whole original-issue acceptance are not implied.
+
+The retained native profile shows 39.497 s inclusive in Next
+`unstable_preloadEntries` and 37.258 s self time in synchronous file reads; these
+are weighted wall-time samples, not CPU utilization. Pinned Next starts this
+preload once from its constructor without retaining its promise. The driver now
+observes that genuine call and exact returned promise, restores the original
+prototype descriptor in `finally`, and awaits the captured promise for the exact
+selected server. It neither invokes a second preload nor changes compiled
+configuration. Functional acceptance of this correction is pending.

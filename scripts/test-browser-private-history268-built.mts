@@ -331,13 +331,31 @@ try {
   const originals = () => JSON.stringify([raw!.prepare("SELECT * FROM private_research_intents").all(), raw!.prepare("SELECT * FROM private_research_payment_attempts").all(),
     raw!.prepare("SELECT * FROM private_research_executions").all(), raw!.prepare("SELECT * FROM private_research_results").all()]);
   const originalBytes = originals();
-  app = (require("next") as NextFactory)({ dev: false, dir: fixture, hostname: "127.0.0.1", port: address.port, httpServer: server });
-  await app.prepare();
-  // Pinned Next16 production wrapper does not await the underlying preparation.
-  // Await the genuine server promise that its first handleRequest also awaits.
-  const preparedNext = await app.server.getServer();
+  // Next16 starts one entry preload in its constructor without retaining its promise.
+  // Observe that exact call: do not invoke it again or alter the compiled config.
+  const nextPrototype = (require("next/dist/server/next-server").default as { prototype: object }).prototype;
+  const preloadDescriptor = Object.getOwnPropertyDescriptor(nextPrototype, "unstable_preloadEntries");
+  assert(preloadDescriptor && typeof preloadDescriptor.value === "function" && preloadDescriptor.configurable);
+  const actualPreloads = new WeakMap<object, { promise: Promise<void>; calls: number }>();
+  Object.defineProperty(nextPrototype, "unstable_preloadEntries", { ...preloadDescriptor,
+    value: function (this: object, ...args: unknown[]) {
+      const promise = Reflect.apply(preloadDescriptor.value, this, args) as Promise<void>;
+      actualPreloads.set(this, { promise, calls: (actualPreloads.get(this)?.calls ?? 0) + 1 });
+      return promise;
+    } });
+  let preparedNext: Awaited<ReturnType<ReturnType<NextFactory>["server"]["getServer"]>>;
+  try {
+    app = (require("next") as NextFactory)({ dev: false, dir: fixture, hostname: "127.0.0.1", port: address.port, httpServer: server });
+    await app.prepare();
+    preparedNext = await app.server.getServer();
+  } finally {
+    Object.defineProperty(nextPrototype, "unstable_preloadEntries", preloadDescriptor);
+  }
   await preparedNext.prepare();
-  console.log("Compiled actual Next server: prepared");
+  const actualPreload = actualPreloads.get(preparedNext);
+  assert(actualPreload && actualPreload.calls === 1, "Observe exactly one genuine preload for the selected Next instance");
+  await actualPreload.promise;
+  console.log("Compiled actual Next server: prepared and original entry preload completed");
   const privateHeaders = (response: Response) => {
     for (const [name, value] of [["cache-control", "no-store"], ["referrer-policy", "no-referrer"], ["x-robots-tag", "noindex, nofollow"]]) assert.equal(response.headers.get(name), value);
   };
