@@ -550,6 +550,8 @@ try {
   } catch (error) { cleanupFailures.push(error); }
   try {
     await writeFile(join(run, "natural-close.json"), JSON.stringify({ listenerClosed: !server.listening, browserCloseCompleted: browserClosed,
+      mainFailureSummary: mainFailure instanceof Error ? { name: mainFailure.name, message: mainFailure.message, stack: mainFailure.stack } : null,
+      completedCases: results, browserErrorCount: pageErrors.length, httpFailureCount: failures.length,
       transportObservations, instrumentationClosed, appClosed, tracesFlushed, mainFailureObserved: mainFailed, cleanupFailureCount: cleanupFailures.length,
       processExitObserved: null, stdoutEofObserved: null, stderrEofObserved: null,
       note: "Process lifetime/EOF fields belong to the parent's actual capture. Original failure and every cleanup cause/stack are retained in the thrown error/AggregateError; no error payload is serialized here." }, null, 2) + "\n", { flag: "wx" });
