@@ -275,7 +275,9 @@ jobs:
           node --import tsx scripts/creator-cashout-batch-funding.mts --help
 
       - name: Synthetic research provenance (isolated PostgreSQL 17, synthetic data)
-        run: node --import tsx scripts/test-synthetic-provenance-postgres.mts
+        run: |
+          docker pull postgres:17-alpine
+          node --import tsx scripts/test-synthetic-provenance-postgres.mts
 
       - name: Decision review owner admission (isolated PostgreSQL17, no payments)
         run: node --import tsx scripts/test-decision-reviews-postgres.mts
