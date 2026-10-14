@@ -217,7 +217,7 @@ const server = createServer(async (req, res) => {
     console.log(`Compiled listener request ${httpRequests.length}: entering Next`);
     await app.getRequestHandler()(req, res);
     console.log(`Compiled listener request ${httpRequests.length}: Next handler returned`);
-  } catch { failures.push("Built loopback request refused"); if (!res.headersSent) res.writeHead(500); res.end(); }
+  } catch { failures.push(`Built loopback request refused: ${(req.method ?? "unknown").slice(0, 16)} ${(req.url ?? "/").split("?")[0].slice(0, 256)}`); if (!res.headersSent) res.writeHead(500); res.end(); }
 });
 server.on("connection", () => { transportObservations.connections++; });
 server.headersTimeout = 5000; server.requestTimeout = 10000; server.keepAliveTimeout = 500;
@@ -398,13 +398,18 @@ try {
   browser = await chromium.launch({ headless: true, timeout: 15000 });
   async function pair(name: string, test: (a: Page, b: Page, freshSession: () => Promise<void>) => Promise<void>) {
     const context = await browser!.newContext({ serviceWorkers: "block", viewport: { width: 1440, height: 900 } }); context.setDefaultTimeout(8000);
-    await context.addInitScript(observeBuiltPage, { question, answer, owner, jobId });
+    // tsx/esbuild preserves nested function names using a lexical __name helper.
+    // Playwright serializes only the observer function, so retain that helper locally.
+    await context.addInitScript({ content: `(() => {
+      const __name = (target, value) => Object.defineProperty(target, "name", { value, configurable: true });
+      (${observeBuiltPage.toString()})(${JSON.stringify({ question, answer, owner, jobId })});
+    })();` });
     await context.route("**/*", route => {
       if (new URL(route.request().url()).origin === origin) return route.continue();
       externalAttempts.push("External browser request refused"); return route.abort("blockedbyclient");
     });
     const a = await context.newPage(), b = await context.newPage();
-    for (const page of [a, b]) page.on("pageerror", () => pageErrors.push(`${name}: browser exception`));
+    for (const page of [a, b]) page.on("pageerror", error => pageErrors.push(`${name}: ${error.message}`));
     const freshSession = async () => {
       const issued = await issueWebSession(fixtureDb!, environment.JWT_SECRET!, owner, "asker");
       await context.addCookies([{ name: "keryx_session", value: issued.token, url: origin, httpOnly: true, sameSite: "Lax" }]);
@@ -551,7 +556,7 @@ try {
   try {
     await writeFile(join(run, "natural-close.json"), JSON.stringify({ listenerClosed: !server.listening, browserCloseCompleted: browserClosed,
       mainFailureSummary: mainFailure instanceof Error ? { name: mainFailure.name, message: mainFailure.message, stack: mainFailure.stack } : null,
-      completedCases: results, browserErrorCount: pageErrors.length, httpFailureCount: failures.length,
+      completedCases: results, browserErrors: pageErrors, httpFailures: failures, browserErrorCount: pageErrors.length, httpFailureCount: failures.length,
       transportObservations, instrumentationClosed, appClosed, tracesFlushed, mainFailureObserved: mainFailed, cleanupFailureCount: cleanupFailures.length,
       processExitObserved: null, stdoutEofObserved: null, stderrEofObserved: null,
       note: "Process lifetime/EOF fields belong to the parent's actual capture. Original failure and every cleanup cause/stack are retained in the thrown error/AggregateError; no error payload is serialized here." }, null, 2) + "\n", { flag: "wx" });

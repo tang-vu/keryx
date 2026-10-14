@@ -259,3 +259,11 @@ observes that genuine call and exact returned promise, restores the original
 prototype descriptor in `finally`, and awaits the captured promise for the exact
 selected server. It neither invokes a second preload nor changes compiled
 configuration. Functional acceptance of this correction is pending.
+
+The captured-preload correction subsequently reached real HTTP and browser
+startup. The next failure occurred before the observer was installed: Playwright
+reported an undefined `flush` control, and installed tsx/esbuild emits lexical
+`__name` calls inside the serialized observer. The driver now supplies that
+exact naming helper in a local IIFE with the unchanged observer and fixture
+arguments. Operations types passed in 32.076 s. The next functional control
+remains pending; no four-case pass is claimed.
