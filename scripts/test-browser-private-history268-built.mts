@@ -79,7 +79,7 @@ const question = "SYNTHETIC ORIGINAL268 completed owner question";
 const answer = "SYNTHETIC ORIGINAL268 retained answer <img src=x onerror=alert(1)>";
 const hidden = "SYNTHETIC ORIGINAL268 read-only original transport";
 type Notice = { type: "logout"; source: string; sequence: number; pending: boolean; confirmed: boolean };
-type RequestRecord = { id: number; status: number | null; path: string; hookSession: boolean; started: number; ready: boolean; returned: boolean;
+type RequestRecord = { id: number; status: number | null; responseHeaders?: Record<string, string | null>; path: string; hookSession: boolean; started: number; ready: boolean; returned: boolean;
   aborted: boolean; abortAt: number | null; bodyCancelled: boolean; released: boolean; discarded: boolean };
 type Snapshot = { realm: string; requests: RequestRecord[]; events: { value: Notice | string | null; at: number }[];
   messages: { value: Notice | string; at: number }[]; paints: string[]; transportErrors: string[] };
@@ -133,9 +133,14 @@ function observeBuiltPage({ question, answer, owner, jobId }: { question: string
     const response = await nativeFetch(input, plan ? { ...init, signal: undefined } : init);
     item.status = response.status;
     if (response.headers.get("cache-control") !== "no-store") refuse("Built API lost private no-store");
-    if (privateRead && (response.headers.get("referrer-policy") !== "no-referrer"
-      || response.headers.get("x-robots-tag") !== "noindex, nofollow"
-      || response.headers.get("vary") !== "Cookie, Authorization, X-Keryx-Expected-Wallet")) refuse("Built API lost private response headers");
+    if (privateRead) {
+      item.responseHeaders = Object.fromEntries(["cache-control", "referrer-policy", "x-robots-tag", "vary"].map(name => [name, response.headers.get(name)?.slice(0, 512) ?? null]));
+      if (response.headers.get("referrer-policy") !== "no-referrer") refuse("Built API lost referrer-policy");
+      if (response.headers.get("x-robots-tag") !== "noindex, nofollow") refuse("Built API lost x-robots-tag");
+      // Next appends RSC routing dimensions; retain every private cache-key field.
+      const vary = new Set((response.headers.get("vary") ?? "").split(",").map(value => value.trim().toLowerCase()));
+      if (!["cookie", "authorization", "x-keryx-expected-wallet"].every(name => vary.has(name))) refuse("Built API lost private Vary fields");
+    }
     if (!plan) { item.ready = item.returned = true; return response; }
     if (plan.mode === "body") {
       const bytes = new Uint8Array(await response.arrayBuffer()); if (bytes.length > 1_500_000) refuse("Private response cap");
@@ -367,6 +372,10 @@ try {
     try {
       const response = await fetch(origin + path, { ...init, signal: AbortSignal.timeout(8000) });
       console.log(`Compiled HTTP probe ${probe}: response ${response.status}`);
+      if (path.startsWith(LIST)) {
+        const vary = new Set((response.headers.get("vary") ?? "").split(",").map(value => value.trim().toLowerCase()));
+        assert(["cookie", "authorization", "x-keryx-expected-wallet"].every(name => vary.has(name)), "All private Vary fields remain present through Next");
+      }
       return response;
     } catch (cause) { console.log("Compiled transport failure observations", { elapsedMs: Math.round(performance.now() - probeStarted), listening: server.listening, requestListeners: server.listenerCount("request"), ...transportObservations }); throw new Error(`Compiled HTTP probe ${probe}: failed`, { cause }); }
   };
