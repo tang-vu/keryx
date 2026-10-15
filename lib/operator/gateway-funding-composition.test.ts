@@ -113,6 +113,7 @@ describe("dormant Operator funding release", () => {
         const permitted = importer === applicationStorageBoundary && ["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts"].includes(target)
           || importer === "lib/db/enrolled-sqlite-adapter.ts" && target === "lib/db/chat-accounts-sqlite.ts"
           || importer === "lib/db/enrolled-sqlite-adapter.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          || importer === "lib/a2a/pending-owner-session.ts" && target === "lib/db/enrolled-sqlite-adapter.ts"
           || importer === "lib/accounts/sqlite-store.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/deliverable-acceptance-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/decision-reviews-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
@@ -129,6 +130,7 @@ describe("dormant Operator funding release", () => {
     expect(visited.has("scripts/owner-run-assignment.mts")).toBe(false);
     // These shared bridges carry immutable identity/AAD data, not factory or enrollment selection.
     expect(visited.has("lib/db/sqlite-adapter.ts")).toBe(true);
+    expect(visited.has("lib/a2a/pending-owner-session.ts")).toBe(true);
     expect(visited.has("lib/sources/enrolled-content-cache.ts")).toBe(true);
     expect(visited.has("lib/db/storage-identity.ts")).toBe(true);
     expect(visited.has("scripts/restore-public-research.mts")).toBe(false);
