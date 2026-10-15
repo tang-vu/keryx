@@ -144,7 +144,7 @@ export function createEnrolledSqliteRunPrivacy(db: DatabaseSync): RunPrivacyStor
   const wrapped = Object.create(null) as RunPrivacyStore;
   for (const name of Object.keys(port) as Array<keyof RunPrivacyStore>) {
     Object.defineProperty(wrapped, name, { enumerable: true, value: async (...args: unknown[]) => {
-      check(["setDefault", "change", "erase", "export"].includes(name));
+      check(["creationReady", "setDefault", "change", "erase", "export"].includes(name));
       const position = actorPositions[name], input = position === undefined ? undefined : args[position];
       if (input !== undefined) {
         try {
@@ -284,7 +284,20 @@ function privacyPort(db: DatabaseSync, guard: (write?: boolean) => void, claims?
           retryRunId:row.retry_run_id==null?undefined:String(row.retry_run_id),coverage:row.coverage==null?undefined:Number(row.coverage),rewardUsdc:row.reward_usdc==null?undefined:Number(row.reward_usdc),
           createdAt:String(row.created_at),updatedAt:String(row.updated_at)}));
     },
-    async defaults(input) { guard(); return visibilitySchema.parse(db.prepare("SELECT visibility FROM run_privacy_defaults WHERE wallet=?").get(actor(input).wallet)?.visibility ?? "private"); },
+    async creationReady() {
+      try {
+        guard(true);
+        // Schema admission also accepts read-only connections. Prove actual
+        // write permission without changing a row, a preference or the schema.
+        db.prepare("UPDATE run_privacy_defaults SET visibility=visibility WHERE 0").run();
+        afterNative?.(); guard(true);
+      } catch (error) { if (error instanceof PrivacyError) throw error; throw new PrivacyError("privacy_unavailable"); }
+    },
+    async defaults(input) {
+      guard();
+      const saved = db.prepare("SELECT visibility FROM run_privacy_defaults WHERE wallet=?").get(actor(input).wallet);
+      return visibilitySchema.parse(saved === undefined ? "public" : saved.visibility);
+    },
     async setDefault(input,rawVisibility,requestId) {
       const visibility=visibilitySchema.parse(rawVisibility);
       return transaction(() => { const who=actor(input,true), prior=audit(who.wallet,"","default",requestId,{visibility});

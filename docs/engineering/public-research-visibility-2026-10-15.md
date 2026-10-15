@@ -61,3 +61,19 @@ the guarded browser UI. Existing public readers and revocation checks remain the
 authority on every surface. `/api/ask/visibility` returns the verified browser
 context and `/api/runs/summary` supplies the complete bounded public population;
 the recent question page supplies examples rather than a total.
+
+Release source reserves app/OpenAPI 0.27.68, stdio/npm/Registry MCP 0.4.23 and
+Desktop 0.4.21. Hosted MCP retains protocol identity 0.3.18; extension 0.1.4.2
+retains its shipped inputs. These are source identities, pending final-main
+acceptance and verified deployment/publication. They do not assert owner installation.
+
+| Surface | Publication behavior |
+| --- | --- |
+| Web and desktop browser | Show creation visibility before submission; bind hidden drafts and results to the verified owner. |
+| Embed | Require a deliberate Public choice; hand hidden research to the full app. |
+| Browser API | Validate requested visibility, expected owner and hidden-parent restriction before inference; verify active writer readiness. |
+| Paid agent/OpenAI/A2A API | Preserve request/payment contracts; ordinary first saves consume the shared saved-default/Public policy. Internal insert-only recovery retains its separate trigger policy. |
+| Remote and stdio MCP | Preserve tool inputs/scopes and guarded public/owner readers; ordinary persistence uses the shared policy. |
+| CLI and bots | Preserve caller authentication, payment and private delivery roles; ordinary persistence uses the shared policy. |
+| Extension | Existing browser handoffs expose the web choice; paid API requests retain their current contract. Verify unchanged shipped bytes before retaining its version. |
+| Private jobs and Operator custody | Existing private stores, funding limits, execution holds and custody authority remain authoritative. |

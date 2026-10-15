@@ -1,5 +1,29 @@
 # Supported-surface release parity
 
+## App68 public-research source candidate — October 15
+
+Production readback is app **0.27.67 /708f2621**. This source reserves app/OpenAPI
+**0.27.68**, stdio/npm/Registry **0.4.23** and Desktop **0.4.21**. Hosted MCP
+**0.3.18** and extension **0.1.4.2** retain their roles and require final readback
+and shipped-input verification. Source preparation is separate from publication,
+deployment and owner installation.
+
+Web and desktop browser research show creation visibility and bind hidden drafts
+and results to the verified owner. The embed requires a deliberate Public choice
+and hands hidden research to the full app. Browser API preflight validates intent,
+owner, hidden-parent context and admitted write readiness before research. Paid
+agent/OpenAI/A2A APIs, remote/stdio MCP, CLI and bots preserve their input and
+payment contracts while ordinary persistence consumes the shared saved-default
+or Public policy. Internal insert-only recovery and private jobs retain their
+separate authority. Public lists and owner exports keep their guarded readers.
+Extension browser handoffs expose the web selection; unchanged paid API requests
+retain their existing contracts.
+
+ROOT owns final-main acceptance, exact-source distribution and one combined
+deployment/restoration. No funding, custody, schedules or private-pilot authority
+is added. See [the policy and surface audit](engineering/public-research-visibility-2026-10-15.md).
+Older candidate sections below preserve historical preparation only.
+
 ## App64 release batch in preparation — October 13
 
 Delivered production is app **0.27.63 /ec5f39c9**. Local preparation reserves

@@ -308,14 +308,43 @@ it("native schema drift refuses instead of selecting ordinary authority or repai
   expect(snapshot(f.db)).toBe(before);
 });
 
-it.each([false, true])("Supabase active=%s refuses unsupported publication before any RPC/table write", async active => {
+it("inactive Supabase refuses explicit publication before any RPC/table write", async () => {
   const from = vi.fn(() => { throw Error("Unexpected REST access"); }), rpc = vi.fn(() => { throw Error("Unexpected RPC access"); });
-  supabase.client.mockReturnValue({ from, rpc }); vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", active ? "true" : "false");
+  supabase.client.mockReturnValue({ from, rpc }); vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false");
   vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false"); const db = new SupabaseAdapter();
   for (const input of [...modes.map(visibility => ({ visibility })), null, {}, { visibility: "invalid" }])
     await expect(db.saveQueryRun(run("supabase"), input as { visibility: RunVisibility })).rejects.toThrow("privacy_unavailable");
-  if (active) await expect(db.saveQueryRun(run("supabase-default"))).rejects.toThrow("privacy_unavailable");
   expect(from).not.toHaveBeenCalled(); expect(rpc).not.toHaveBeenCalled();
+});
+it("ordinary active Supabase sends one atomic publication RPC and preserves original input", async () => {
+  const from = vi.fn(() => { throw Error("Unexpected REST access"); });
+  const rpc = vi.fn((_name: string, args: { p_action: string; p_input: { row: { id: string } } }) => ({
+    abortSignal: async () => ({ data: { version: 1, action: args.p_action, id: args.p_input.row.id, result: { saved: true } }, error: null }),
+  }));
+  supabase.client.mockReturnValue({ from, rpc }); vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");
+  vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false"); const db = new SupabaseAdapter();
+  for (const visibility of modes) {
+    const value = run(`supabase-${visibility}`, wallet), before = JSON.stringify(value);
+    await db.saveQueryRun(value, { visibility });
+    expect(rpc).toHaveBeenLastCalledWith("research_publication_v1", { p_action: "save", p_input: {
+      row: expect.objectContaining({ id: value.id, asker: wallet, data: value }), publication: { visibility },
+    } });
+    expect(JSON.stringify(value)).toBe(before);
+  }
+  await db.saveQueryRun(run("supabase-default"));
+  expect(rpc.mock.calls.at(-1)?.[1].p_input).not.toHaveProperty("publication");
+  expect(rpc).toHaveBeenCalledTimes(4); expect(from).not.toHaveBeenCalled();
+});
+it("active Supabase refuses malformed intent and never falls back after atomic RPC failure", async () => {
+  const from = vi.fn(() => { throw Error("Unexpected REST access"); });
+  const rpc = vi.fn(() => ({ abortSignal: async () => ({ data: null, error: { message: "privacy_unavailable" } }) }));
+  supabase.client.mockReturnValue({ from, rpc }); vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");
+  vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false"); const db = new SupabaseAdapter();
+  for (const input of [null, {}, { visibility: "invalid" }])
+    await expect(db.saveQueryRun(run("invalid"), input as { visibility: RunVisibility })).rejects.toThrow("privacy_unavailable");
+  expect(rpc).not.toHaveBeenCalled();
+  await expect(db.saveQueryRun(run("refused"), { visibility: "public" })).rejects.toThrow("privacy_unavailable");
+  expect(rpc).toHaveBeenCalledOnce(); expect(from).not.toHaveBeenCalled();
 });
 it("keeps Supabase's captured OFF omitted-option mapping without inventing a publication RPC", async () => {
   const upsert = vi.fn(async () => ({ data: null, error: null })), from = vi.fn(() => ({ upsert })), rpc = vi.fn();
