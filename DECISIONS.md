@@ -8325,3 +8325,19 @@ recorded scripted runs stay excluded from the default public population. Unavail
 reads are unavailable, without a fabricated zero. ROOT owns the reviewed restoration
 and one combined release after source review and required CI. See
 [the implementation and operator boundary](docs/engineering/public-research-visibility-2026-10-15.md).
+
+## 2026-10-16: #257 exact native25 metadata migration
+
+Extend the existing protected stock command with migration-only exact full24-to25
+source pairs, retaining old19/full20/chat22 predecessors and four runtime profiles.
+Only the fixed pending-job ownership table/index/immutable triggers and its fences
+are new for old24. Existing owner occupancy guards, financial schema/originals,
+typed verified backups, EXCLUSIVE identity checks and uncertain-COMMIT holds stay
+unchanged. Cache only deeply frozen pure source plans, never target authority.
+
+Pending ownership is empty after historical migration: no historical owner proof
+is inferred or backfilled. Already-current25 preserves genuine retained cells.
+Parent independent source review, 48 affected migration controls, 18 mounted
+controls and changed TypeScript checks passed. Exact-head required CI and sole
+ROOT batch/target authority remain; no production migration was performed here.
+See [the fixed native25 stock migration boundary](docs/engineering/job257-native25-stock-migration-20261016.md).

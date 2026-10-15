@@ -233,3 +233,34 @@ types/copy checks, performs ONE needed current sterile testnet build with read-o
 source/input/profile proof, then executes actual compiled controls and separately
 qualified native acceptance. Required CI, serialized merge, batched delivery and
 final-main/surface gates remain. No present PASS or original257 completion claimed.
+
+## Parent acceptance — October 16 local time
+
+The parent completed one current native-25 offline/testnet build, build ID
+`uMOXtCGhE1wUtct0AppbT`, and one fresh stock qualification. The final strict
+selection passed all 17 compiled consent, session-currentness, credit-refusal and
+GET-only recovery cases. The outer process closed naturally with exit 0 and both
+output streams at EOF; the browser reported no page errors, unknown API failures,
+external attempts or cleanup errors. The other 37 cases were not run in this
+selection, and this is not whole-54 acceptance.
+
+The fixture explicitly supplies the current same-origin visibility GET and a
+bounded, exact zero-USDC balance response for the synthetic unfunded wallet.
+Unknown RPC methods, signatures, transactions and external destinations remain
+refused. These responses do not establish real payment or settlement. The earlier
+strict failure from missing read fixtures and the earlier React hydration failures
+remain retained as failed evidence; neither was relabelled as a passing run.
+
+Separate current controls passed the native owned-pagination representative,
+45-input focused TypeScript check, strict copy guard and namespace cardinality
+case. The inherited native-publication smoke test now checks the genuine full-25
+facade and passed its named case with the existing schema, fence, visibility and
+other-domain preservation assertions unchanged. The actual 459-source study has
+independent data review and retains all 48 results and non-source fields from
+the incoming main study.
+
+Required exact-head PR CI, serialized merge and the release owner's eventual
+combined deployment remain separate gates. Original #257 and #268 retain their
+remaining production, customer, provider and delivery criteria. No production
+DDL, real purchase, financial activation or scheduled remedy was performed by
+these controls.

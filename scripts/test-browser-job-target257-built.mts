@@ -30,6 +30,10 @@ const parentEnvNames = new Set(["PATH", "Path", "SystemRoot", "SYSTEMROOT", "WIN
   ...(process.platform === "win32" ? ["HOMEDRIVE", "HOMEPATH", "LOGONSERVER", "SYSTEMDRIVE", "USERDOMAIN", "USERNAME"] : [])]);
 assert(Object.keys(process.env).every(name => parentEnvNames.has(name)), "Parent must launch with only documented system/temp/cache variables; no inherited credentials or runtime flags");
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
+// Actual sole fc30/d1 native25 build; Q and parent finalization still required.
+const finalizedBuildId = "uMOXtCGhE1wUtct0AppbT" as string | null;
+assert(typeof finalizedBuildId === "string" && finalizedBuildId.length > 0 && finalizedBuildId.length <= 128, "UNRUN until parent finalizes actual new BID");
+assert.notEqual(finalizedBuildId, "Hppnnv0aKVNS5HY8yB1k8", "Historical BID refused");
 const flags = ["dist", "output", "port", "admission", "selection"] as const;
 const args = process.argv.slice(2);
 assert.equal(args.length, flags.length, "Parent supplies --dist=ABS --output=ABS --port=OWNED --admission=ABS --selection=FIXED");
@@ -98,10 +102,6 @@ const allExpectedResults: string[] = [
 ];
 const selectionRanges = {
   "remaining17": [37, 54],
-  "diagnostic-deep-opted-in-360": [43, 44],
-  "refresh-detail360": [0, 16],
-  "refresh-detail1366": [16, 32],
-  "refresh-timeout-auth5": [32, 37],
 } as const;
 assert(Object.prototype.hasOwnProperty.call(selectionRanges, selectionId), "One fixed finite selection only");
 const [selectionStart, selectionEnd] = selectionRanges[selectionId as keyof typeof selectionRanges];
@@ -148,10 +148,36 @@ async function pins(base: string, paths: string[]) {
 }
 async function pinSources() { return pins(root, pinnedPaths); }
 const sourcePins = await pinSources();
-type Admission = { selection: typeof selection; stockQualificationSha256: string; readOnlyDistProofSha256: string; owner: "ROOT"; buildEvidence: string; readOnlyDistProof: string; publicNetwork: "arcTestnet"; dist: string; output: string; port: number; buildId: string;
+type Checkpoint = { sourceHead: string; mergeHead: null; mainAncestor: string; currentCompiledNativeUserDomainTables: number;
+  buildId: string; buildReceiptSha256: string; sourceReceiptSha256: string };
+type Admission = { checkpoint: Checkpoint; selection: typeof selection; stockQualificationSha256: string; readOnlyDistProofSha256: string; owner: "ROOT"; buildEvidence: string; readOnlyDistProof: string; publicNetwork: "arcTestnet"; dist: string; output: string; port: number; buildId: string;
   sourcePins: { path: string; sha256: string }[]; compiledPins: { path: string; sha256: string }[] };
 const admission = JSON.parse(await readFile(admissionPath, "utf8")) as Admission;
 assert.deepEqual(admission.selection, selection, "Parent binds selected scope and ordered expected results");
+assert.equal(admission.checkpoint.sourceHead, "fc30ff3fb0ecbc18aa796255d85ccdb15ab91fc9");
+assert.equal(admission.checkpoint.mergeHead, null);
+assert.equal(admission.checkpoint.mainAncestor, "d1b3aff65318fecdf17f8e6f6bcf5e8e0e5ae5b7");
+assert.equal(admission.checkpoint.currentCompiledNativeUserDomainTables, 25);
+assert.equal(admission.checkpoint.buildId, finalizedBuildId);
+assert.equal(resolve(admission.buildEvidence), resolve("D:/repos/server/Github/Hackathon/keryx/output/resume-distribution63-audit-20261012/job257-one-final-native25-build-20261015/actual-build-result.json"));
+assert.equal(sha(await readFile(admission.buildEvidence)), admission.checkpoint.buildReceiptSha256);
+const sourceReceiptPath = "D:/repos/server/Github/Hackathon/keryx/output/resume-distribution63-audit-20261012/job257-one-final-native25-build-20261015/all-source-before.json";
+assert.equal(sha(await readFile(sourceReceiptPath)), admission.checkpoint.sourceReceiptSha256);
+const sourceReceipt = JSON.parse(await readFile(sourceReceiptPath, "utf8"));
+assert.equal(sourceReceipt.sourceHead, "fc30ff3fb0ecbc18aa796255d85ccdb15ab91fc9");
+assert.equal(sourceReceipt.sourceNativeFamily, 25);
+assert.equal(sourceReceipt.stock25Migration, "UNQUALIFIED");
+assert.equal(sourceReceipt.pins.length, 3996);
+assert.equal(new Set(sourceReceipt.pins.map((p: { path: string }) => p.path)).size, 3996);
+const actualBuild = JSON.parse(await readFile(admission.buildEvidence, "utf8"));
+assert.equal(actualBuild.passed, true);
+assert.equal(actualBuild.sourceHead, "fc30ff3fb0ecbc18aa796255d85ccdb15ab91fc9");
+assert.equal(actualBuild.sourceNativeFamily, 25);
+assert.equal(actualBuild.stock25Migration, "UNQUALIFIED");
+assert.equal(actualBuild.sourceCount, 3996);
+assert.equal(actualBuild.targetOperations, 0);
+assert.equal(actualBuild.buildId, finalizedBuildId);
+assert.equal(actualBuild.allSourceBeforeSha256, admission.checkpoint.sourceReceiptSha256);
 assert.equal(admission.owner, "ROOT"); assert(admission.buildEvidence?.trim(), "Actual current source/input build evidence required");
 assert.equal(admission.publicNetwork, "arcTestnet", "Parent build evidence must bind public/server testnet twins; runtime ENV cannot change a compiled public rail");
 assert(admission.readOnlyDistProof?.trim(), "Parent's actual read-only dist provenance is mandatory, not an old source review");
@@ -162,7 +188,8 @@ assert.deepEqual(admission.sourcePins, sourcePins, "Current full runtime/product
 // while copying; it does not pretend a metadata-only check is a fresh hash.
 const distProofBytes = await readFile(admission.readOnlyDistProof);
 assert.equal(sha(distProofBytes), admission.readOnlyDistProofSha256);
-const distProof = JSON.parse(distProofBytes.toString("utf8")) as { stockQualification: StockQualification; stockQualificationSha256: string; dist: string; compiledPins: { path: string; sha256: string }[] };
+const distProof = JSON.parse(distProofBytes.toString("utf8")) as { checkpoint: Checkpoint; stockQualification: StockQualification; stockQualificationSha256: string; dist: string; compiledPins: { path: string; sha256: string }[] };
+assert.deepEqual(distProof.checkpoint, admission.checkpoint);
 assert.equal(distProof.stockQualificationSha256, admission.stockQualificationSha256);
 assert.equal(resolve(distProof.dist), resolve(dist));
 assert.deepEqual(distProof.compiledPins, admission.compiledPins);
@@ -175,6 +202,8 @@ const compiledPins = stockPins(stockQualification);
 assert.deepEqual(admission.compiledPins, compiledPins, "Parent binds every emitted file, not just a page manifest");
 const buildId = (await readFile(join(dist, "BUILD_ID"), "utf8")).trim(); assert(buildId && buildId.length <= 128);
 assert.equal(admission.buildId, buildId);
+assert.equal(buildId, finalizedBuildId);
+assert.equal(admission.checkpoint.buildId, buildId);
 const appPaths = JSON.parse(await readFile(join(dist, "server/app-paths-manifest.json"), "utf8"));
 assert.equal(appPaths["/research/page"], "app/research/page.js");
 const references = await readFile(join(dist, "server/app/research/page_client-reference-manifest.js"), "utf8");
@@ -343,6 +372,7 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
   const price = mode === "quick" ? "50000" : "80000"; // Existing .03 cap plus unchanged .02/.05 service fee.
   const signedFixtures: { typed: any; signature: Hex; queryId: string; dispatchedAuthorization?: unknown }[] = [];
   const providerMethods: string[] = [];
+  let fixtureBalanceReads = 0;
   const recoveryIds = new Set<string>();
   let releaseSign: (() => void) | undefined, signWaiting = false;
   let fixtureWalletConnected = false; // Synthetic EIP-1193 stays disconnected until the real connector requests accounts.
@@ -427,6 +457,23 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
   }
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
+    // Only the observed synthetic actor's unfunded USDC balance read is fulfilled locally.
+    // No provider contact, signature, transaction, allowance, settlement or other RPC is admitted.
+    if (url.href === "https://rpc.testnet.arc.network/") {
+      try {
+        assert.equal(request.method(), "POST");
+        const body = request.postData(); assert(body !== null && Buffer.byteLength(body) <= 2048);
+        const rpc = JSON.parse(body);
+        assert.deepEqual(Object.keys(rpc).sort(), ["id", "jsonrpc", "method", "params"]);
+        assert.equal(rpc.jsonrpc, "2.0"); assert(Number.isSafeInteger(rpc.id) && rpc.id >= 0 && rpc.id <= 2048);
+        assert.equal(rpc.method, "eth_call");
+        assert.deepEqual(rpc.params, [{ data: "0x70a08231" + "0".repeat(24) + address.slice(2).toLowerCase(), to: "0x3600000000000000000000000000000000000000" }, "latest"]);
+        assert(++fixtureBalanceReads <= 16, "Bounded synthetic balance reads only");
+        observations.push({ fixture: "unfunded-usdc-balance-read", context: contextSerial, count: fixtureBalanceReads });
+        await route.fulfill({ status: 200, contentType: "application/json", headers: { "Cache-Control": "no-store" }, body: JSON.stringify({ jsonrpc: "2.0", id: rpc.id, result: "0x" + "0".repeat(64) }) });
+      } catch (error) { failures.push(String(error)); await route.abort("blockedbyclient"); }
+      return;
+    }
     if (url.origin !== origin && !(checkout?.external && url.origin === loopback)) {
       assert(externalAttempts.length < 256); externalAttempts.push(`${request.method()} ${url.origin}`); await route.abort("blockedbyclient"); return;
     }
@@ -436,6 +483,11 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
       if (url.pathname === "/api/models" || url.pathname === "/api/research/availability") {
         assert.equal(request.method(), "GET"); assert.equal(url.search, ""); assert.equal(request.postData(), null);
         await json({ error: "Synthetic incidental consumer unavailable" }, 503); return;
+      }
+      if (url.pathname === "/api/ask/visibility") {
+        assert.equal(url.origin, displayOrigin); assert.equal(request.method(), "GET");
+        assert.equal(url.search, ""); assert.equal(request.postData(), null);
+        await json({ wallet: signedIn ? address : null, defaultVisibility: "public", privacyActive: true }); return;
       }
       if (url.pathname === session) {
         assert.equal(request.method(), "GET"); assert.equal(url.search, "");
@@ -597,58 +649,7 @@ async function waitConsent(page: Page, enabled: boolean) {
 }
 async function openCheckout(s: Awaited<ReturnType<typeof scenario>>, mode: "quick" | "deep") {
   const page = await s.context.newPage(); page.setDefaultTimeout(10000); page.setDefaultNavigationTimeout(10000);
-  if (selectionId === "diagnostic-deep-opted-in-360") {
-    // One original failed body, unchanged build bytes. A false-condition logpoint
-    // observes the mismatch before React recovers; React still throws/reports it.
-    assert.equal(buildId, "6tync7_8Do5m2VVUVIhf8");
-    const chunk = "static/chunks/2_zz1raqk76q6.js", bytes = await readFile(join(dist, chunk));
-    assert.equal(sha(bytes), "4d8c15e736be169ae9afa2bfea20ef77f0485faf555a703ada61c9ef8b9b4d89");
-    const line = bytes.toString("utf8").split("\n")[30], needle = "function rJ(e){var t=Error(u(418,";
-    assert.equal(line.split(needle).length, 2, "Exactly the pinned hydration mismatch function");
-    const columnNumber = line.indexOf(needle) + "function rJ(e){".length;
-    assert.equal(columnNumber, 45774);
-    const cdp = await s.context.newCDPSession(page);
-    cdp.on("Runtime.bindingCalled", event => {
-      if (event.name === "job257HydrationMismatch") observations.push(JSON.parse(event.payload));
-    });
-    cdp.on("Debugger.breakpointResolved", event => observations.push({
-      kind: "hydration-breakpoint-resolved", location: event.location,
-    }));
-    await cdp.send("Runtime.enable");
-    await cdp.send("Runtime.addBinding", { name: "job257HydrationMismatch" });
-    await cdp.send("Debugger.enable");
-    await cdp.send("Debugger.setBreakpointByUrl", {
-      url: `${s.displayOrigin}/_next/${chunk}`, lineNumber: 30, columnNumber,
-      condition: `(() => {
-        if (globalThis.__job257HydrationCaptured) return false;
-        globalThis.__job257HydrationCaptured = true;
-        const keys = ["class", "role", "aria-busy", "d", "viewBox", "xmlns", "type"];
-        const props = p => Object.fromEntries(["className", "role", "aria-busy", "d", "viewBox"].filter(k =>
-          p && (typeof p[k] === "string" || typeof p[k] === "boolean")).map(k => [k, String(p[k]).slice(0, 240)]));
-        const type = f => typeof f?.type === "string" ? f.type : f?.type?.displayName || f?.type?.name || null;
-        const node = n => n?.nodeType ? {
-          nodeType: n.nodeType, nodeName: n.nodeName, namespace: n.namespaceURI,
-          attrs: Object.fromEntries(keys.filter(k => n.getAttribute?.(k) !== null && n.getAttribute?.(k) !== undefined)
-            .map(k => [k, n.getAttribute(k).slice(0, 240)])),
-          children: Array.from(n.childNodes || []).slice(0, 12).map(c => ({ nodeType: c.nodeType,
-            nodeName: c.nodeName, namespace: c.namespaceURI,
-            text: c.nodeType === 3 ? (/^(Wallet|Connecting[.\u2026]*)$/.test(c.data) ? c.data : "[text length=" + c.data.length + "]") : null })),
-          path: (() => { const p = []; for (let c = n; c && p.length < 8; c = c.parentNode)
-            p.push(c.nodeName + ":" + (c.parentNode ? Array.prototype.indexOf.call(c.parentNode.childNodes, c) : 0)); return p; })(),
-        } : null;
-        const parents = [], children = [];
-        for (let f = e; f && parents.length < 16; f = f.return) parents.push({ tag: f.tag, type: type(f) });
-        for (let f = e.child; f && children.length < 12; f = f.sibling)
-          children.push({ tag: f.tag, type: type(f), props: props(f.pendingProps) });
-        globalThis.job257HydrationMismatch(JSON.stringify({ kind: "hydration-mismatch-node",
-          buildId: "6tync7_8Do5m2VVUVIhf8", at: performance.now(),
-          expected: { tag: e.tag, type: type(e), props: props(e.pendingProps), children },
-          actualParent: node(e.stateNode), nextHydratable: node(rq),
-          hydrationParent: { tag: rQ?.tag, type: type(rQ) }, parents }));
-        return false;
-      })()`,
-    });
-  }
+  // Original strict17 checkout path; no diagnostic instrumentation.
   const response = await page.goto(`${s.displayOrigin}/research?mode=${mode}&budget=0.03`); assert.equal(response?.status(), 200);
   assert.equal(new URL(page.url()).origin, s.displayOrigin);
   assert.equal(await page.evaluate(() => window.isSecureContext && !!crypto.subtle), true);
