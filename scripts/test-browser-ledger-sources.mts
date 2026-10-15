@@ -130,7 +130,7 @@ try {
       mode = "empty-history";
       await open("/dashboard");
       await page.getByText("28 recorded questions", { exact: true }).waitFor();
-      await page.getByRole("heading", { name: "Recent public questions", exact: true }).waitFor();
+      await page.getByText("Recent public questions", { exact: true }).waitFor();
       await page.getByText("No public questions to display.", { exact: true }).waitFor();
       await page.getByText(/Recorded totals include all recorded questions/).waitFor();
       assert.equal(await page.getByText("No dispatches yet.", { exact: true }).count(), 0);
