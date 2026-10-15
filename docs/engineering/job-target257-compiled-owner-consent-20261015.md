@@ -292,3 +292,26 @@ strict draft guard and actual 64-namespace case also passed. All 459 mapped stud
 inputs remain exact; none of the 29 incoming paths intersect them, and no producer
 was repeated. Required exact-head CI, serialized merge, the reviewed live24-to-25
 metadata transition and genuine production/provider criteria remain separate gates.
+
+## Native signed-POST fixture lifetime and DOM readiness
+
+The native signed-POST tests now share one fixed synthetic deployment manifest
+for the file lifetime. Each case rebuilds only its isolated database after the
+prior genuine facade has closed; same-case revocation reopens retain the original
+database, session and debit. Payment assertions read the complete local retained
+ledger instead of the citation-only adapter query. No runtime storage snapshot,
+authentication, settlement or ownership guard was changed.
+
+The owned-details case waits for the genuine asynchronous session and owned-row
+observation to paint, using a captured real clock and scheduler with a five-second
+bound. Its original positive assertion and later payer, replaced-query, anonymous,
+two-second poll, financial and cleanup checks remain unchanged. The corrected
+case passed under the canonical test deadline; changed-file types also passed.
+
+The preceding whole-file capture reported 63 passing cases and one DOM failure,
+and exceeded its aggregate command budget; it remains failed evidence. Only that
+failed case was refreshed after the two insertion-only readiness changes. This
+is not a claim of a single successful local whole-64 run. Required exact-head CI
+retains whole-file acceptance. The existing application build, fresh stock data,
+selected 17 compiled cases and 459-input study remain scoped to their unchanged
+application inputs; no build, stock scan, compiled run or producer was repeated.

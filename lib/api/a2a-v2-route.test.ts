@@ -2,8 +2,8 @@ import { NextRequest } from "next/server";
 import { beforeEach, afterEach, beforeAll, afterAll, describe, expect, it, vi } from "vitest";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { DatabaseSync } from "node:sqlite";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, lstatSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { privateKeyToAccount } from "viem/accounts";
@@ -90,6 +90,73 @@ const run = {
   paymentMode: "real",
 };
 
+type NativeFixtureDeployment = Readonly<{
+  folder: string; file: string; manifest: string; contentKey: string;
+  identity: Parameters<typeof installStorageFences>[1];
+}>;
+let nativeFixtureDeployment: NativeFixtureDeployment | undefined;
+let nativeFixtureHandle: Awaited<ReturnType<typeof createEnrolledSqliteAdapter>> | undefined;
+function resetNativeFixture() {
+  // The real runtime pins deployment identity/path for the module lifetime.
+  // Only disposable case data changes, after its genuine prior handle closed.
+  expect(nativeFixtureHandle).toBeUndefined();
+  if (!nativeFixtureDeployment) {
+    const folder = mkdtempSync(join(tmpdir(), "keryx-owned-real-post-"));
+    const identity = Object.freeze({ ...syntheticStorageIdentity("mainnet-real"), format: "keryx-mainnet-storage-identity-v1" as const,
+      network: "eip155:5042" as const, profileDigest: STORAGE_MAINNET_PROFILE_DIGEST });
+    nativeFixtureDeployment = Object.freeze({ folder, file: join(folder, "synthetic.sqlite"), manifest: join(folder, "deployment.json"),
+      contentKey: randomBytes(32).toString("hex"), identity });
+    writeFileSync(nativeFixtureDeployment.manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity,
+      backend: { kind: "sqlite", databasePath: nativeFixtureDeployment.file } }), { flag: "wx" });
+  }
+  const deployment = nativeFixtureDeployment;
+  expect(dirname(resolve(deployment.folder))).toBe(resolve(tmpdir()));
+  expect(lstatSync(deployment.folder).isSymbolicLink()).toBe(false);
+  expect(readFileSync(deployment.manifest, "utf8")).toBe(canonicalJson({ format: "keryx-storage-deployment-v1", identity: deployment.identity,
+    backend: { kind: "sqlite", databasePath: deployment.file } }));
+  // Fixed owned database and SQLite sidecars only; never remove/rewrite manifest.
+  for (const suffix of ["", "-journal", "-wal", "-shm"]) {
+    const target = deployment.file + suffix;
+    if (existsSync(target)) {
+      const stat = lstatSync(target); expect(stat.isFile() && !stat.isSymbolicLink()).toBe(true);
+      rmSync(target);
+    }
+  }
+  const setup = new DatabaseSync(deployment.file);
+  try {
+    setup.exec("BEGIN IMMEDIATE"); installMainnetApplicationSchema(setup); installNativeUserDomainSchema(setup);
+    insertStorageIdentity(setup, deployment.identity); installStorageFences(setup, deployment.identity); setup.exec("COMMIT");
+  } finally { setup.close(); }
+  return deployment;
+}
+async function openNativeFixture() {
+  expect(nativeFixtureHandle).toBeUndefined();
+  const native = await createEnrolledSqliteAdapter(); nativeFixtureHandle = native;
+  return native;
+}
+function closeNativeFixture() {
+  if (nativeFixtureHandle) {
+    nativeFixtureHandle.close(); // Genuine terminal close, including an already-retired facade.
+    nativeFixtureHandle = undefined; // A thrown/uncertain close prevents the next destructive reset.
+  }
+}
+afterAll(() => {
+  closeNativeFixture();
+  if (nativeFixtureDeployment) {
+    expect(dirname(resolve(nativeFixtureDeployment.folder))).toBe(resolve(tmpdir()));
+    expect(lstatSync(nativeFixtureDeployment.folder).isSymbolicLink()).toBe(false);
+    rmSync(nativeFixtureDeployment.folder, { recursive: true, force: true });
+  }
+});
+// Observe the full fixture ledger: listPaymentsByQuery is citation-only.
+// This raw synthetic readback does not establish financial settlement.
+function paymentRows(id: string) {
+  expect(nativeFixtureDeployment).toBeDefined();
+  const inspect = new DatabaseSync(nativeFixtureDeployment!.file, { readOnly: true });
+  try { return inspect.prepare("SELECT * FROM payment_events WHERE query_id=? ORDER BY created_at,id").all(id); }
+  finally { inspect.close(); }
+}
+
 /** UNRUN F1/F2 actual POST + real seller helper + genuine native original producer.
  * Only vendor transport/readiness and framework request selection are synthetic.
  * No settlement/session/owner proof or native facade is mocked. */
@@ -97,7 +164,7 @@ describe("authenticated NEW original through actual signed POST", () => {
   const cookies = new AsyncLocalStorage<string | undefined>();
   const owner = `0x${"a".repeat(40)}`, foreign = `0x${"d".repeat(40)}`;
   const payer = privateKeyToAccount(`0x${"3".repeat(64)}`), secret = "unfunded-native-post-test-secret";
-  let folder: string, native: Awaited<ReturnType<typeof createEnrolledSqliteAdapter>>;
+  let native: Awaited<ReturnType<typeof createEnrolledSqliteAdapter>>;
   let actualSeller: typeof import("../x402-server"), nonceSequence = 0;
   const savedConfig = { ...config };
   beforeAll(async () => { actualSeller = await vi.importActual("../x402-server"); });
@@ -106,18 +173,9 @@ describe("authenticated NEW original through actual signed POST", () => {
       usdcAddress: ARC_MAINNET_PROFILE.usdcAddress, gatewayWallet: ARC_MAINNET_PROFILE.gatewayWallet, maxTimeoutSeconds: 691200, jwtSecret: secret });
     vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
     vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false"); vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false");
-    folder = mkdtempSync(join(tmpdir(), "keryx-owned-real-post-"));
-    const file = join(folder, "synthetic.sqlite"), manifest = join(folder, "deployment.json");
-    const identity = { ...syntheticStorageIdentity("mainnet-real"), format: "keryx-mainnet-storage-identity-v1" as const,
-      network: "eip155:5042" as const, profileDigest: STORAGE_MAINNET_PROFILE_DIGEST };
-    const setup = new DatabaseSync(file);
-    try {
-      setup.exec("BEGIN IMMEDIATE"); installMainnetApplicationSchema(setup); installNativeUserDomainSchema(setup);
-      insertStorageIdentity(setup, identity); installStorageFences(setup, identity); setup.exec("COMMIT");
-    } finally { setup.close(); }
-    writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity, backend: { kind: "sqlite", databasePath: file } }));
-    vi.stubEnv("KERYX_STORAGE_MANIFEST", manifest); vi.stubEnv("KERYX_SQLITE_PATH", file); vi.stubEnv("CONTENT_MASTER_KEY", randomBytes(32).toString("hex"));
-    native = await createEnrolledSqliteAdapter();
+    const { file, manifest, contentKey } = resetNativeFixture();
+    vi.stubEnv("KERYX_STORAGE_MANIFEST", manifest); vi.stubEnv("KERYX_SQLITE_PATH", file); vi.stubEnv("CONTENT_MASTER_KEY", contentKey);
+    native = await openNativeFixture();
     mocks.getDb.mockResolvedValue(native); mocks.getAgentDeps.mockResolvedValue({ db: native, gateway: {}, engine: {} });
     mocks.cookies.mockImplementation(async () => ({ get: (name: string) => name === "keryx_session" && cookies.getStore() ? { value: cookies.getStore() } : undefined }));
     mocks.checkRateLimit.mockResolvedValue(null); mocks.collectRun.mockClear();
@@ -132,9 +190,9 @@ describe("authenticated NEW original through actual signed POST", () => {
     mocks.vendorSettle.mockReset().mockImplementation(async payload => ({ success: true, network: "eip155:5042", payer: payer.address,
       transaction: `unfunded-vendor-fixture-${payload.payload.authorization.nonce}` }));
   });
-  afterEach(() => { try { native?.close(); } catch {} if (folder) rmSync(folder, { recursive: true, force: true }); vi.restoreAllMocks(); vi.unstubAllEnvs();
+  afterEach(() => { try { closeNativeFixture(); } finally { vi.restoreAllMocks(); vi.unstubAllEnvs();
     for (const key of Object.keys(config)) if (!Object.prototype.hasOwnProperty.call(savedConfig, key)) Reflect.deleteProperty(config, key);
-    Object.assign(config, savedConfig); });
+    Object.assign(config, savedConfig); } });
   afterAll(() => Object.assign(config, savedConfig));
   function typed(a: { from: string; to: string; value: string; validAfter: string; validBefore: string; nonce: string }) {
     return { domain: { name: "GatewayWalletBatched", version: "1", chainId: 5042, verifyingContract: ARC_MAINNET_PROFILE.gatewayWallet as `0x${string}` },
@@ -172,7 +230,7 @@ describe("authenticated NEW original through actual signed POST", () => {
     expect((await (await history(await token(payer.address), original.id)).json()).jobs).toEqual([]);
     expect((await (await history(await token(foreign), original.id)).json()).jobs).toEqual([]);
     expect(mocks.vendorSettle).toHaveBeenCalledOnce(); expect(mocks.collectRun).not.toHaveBeenCalled();
-    expect((await native.listPaymentsByQuery(original.id)).filter(p => p.kind === "inbound")).toHaveLength(1);
+    expect((paymentRows(original.id)).filter(p => p.kind === "inbound")).toHaveLength(1);
     for (const fact of [null, "malformed", JSON.stringify({ workerId: "foreign", status: "recovery_pending", orderId: original.id, updatedAt: started }),
       JSON.stringify({ workerId: worker, status: "processing", orderId: original.id, updatedAt: started }), "x".repeat(2049)]) {
       await native.setSyncState("a2aWorker", fact ?? "null");
@@ -192,13 +250,13 @@ describe("authenticated NEW original through actual signed POST", () => {
     if (reason === "foreign-origin") headers.origin = "https://foreign.test";
     const response = await cookies.run(jwt, () => POST(original.req(headers)));
     expect(response.status).toBe(401); expect(mocks.vendorSettle).not.toHaveBeenCalled();
-    expect(await native.getA2aOrder(original.id)).toBeNull(); expect(await native.listPaymentsByQuery(original.id)).toEqual([]);
+    expect(await native.getA2aOrder(original.id)).toBeNull(); expect(paymentRows(original.id)).toEqual([]);
   });
   it("actual details mounts genuine owned route state; foreign/replaced/missing selectors have no financial effect", async () => {
     const jwt = await token(), original = await signed();
     expect((await cookies.run(jwt, () => POST(original.req()))).status).toBe(202);
     await native.failA2aOrder(original.id, "research_failed", new Date().toISOString());
-    const financialBefore = await native.listPaymentsByQuery(original.id);
+    const financialBefore = paymentRows(original.id);
     const { JSDOM } = await import("jsdom"), { createElement, act } = await import("react"), { createRoot } = await import("react-dom/client");
     const { ResearchJobDetails } = await import("../../components/keryx/research-job-details");
     const route = await import("../../app/api/me/jobs/route"), sessionRoute = await import("../../app/api/auth/sessions/route");
@@ -210,10 +268,20 @@ describe("authenticated NEW original through actual signed POST", () => {
       return cookies.run(current, () => String(url) === "/api/auth/sessions" ? sessionRoute.GET()
         : route.GET(new Request(`https://keryx.cc${url}`)));
     });
+    // Capture native functions before fake timers; readiness never advances the hook clock.
+    const realNow = Date.now, realSetTimeout = globalThis.setTimeout;
     vi.stubGlobal("fetch", intercepted); vi.useFakeTimers();
     const host = dom.window.document.getElementById("fixture")!, root = createRoot(host);
     try {
       await act(async () => { root.render(createElement(ResearchJobDetails, { job: { queryId: original.id, status: "processing" } })); });
+      // The real async session/owned-row read may finish after mount act resolves.
+      // Observe its genuine DOM only: no request, timer advancement or state injection.
+      const readinessUntil = realNow() + 5000;
+      for (let attempt = 0; attempt < 200 && !host.textContent?.includes("NeedsReview"); attempt++) {
+        const remaining = readinessUntil - realNow();
+        if (remaining <= 0) break;
+        await act(async () => { await new Promise<void>(done => realSetTimeout(done, Math.min(25, remaining))); });
+      }
       expect(host.textContent).toContain("NeedsReview");
       current = await token(payer.address);
       await act(async () => { dom.window.dispatchEvent(new dom.window.Event("keryx:auth")); });
@@ -226,7 +294,7 @@ describe("authenticated NEW original through actual signed POST", () => {
       current = undefined;
       await act(async () => { dom.window.dispatchEvent(new dom.window.Event("keryx:auth")); await vi.advanceTimersByTimeAsync(2000); });
       expect(host.textContent).not.toContain("NeedsReview");
-      expect(await native.listPaymentsByQuery(original.id)).toEqual(financialBefore);
+      expect(paymentRows(original.id)).toEqual(financialBefore);
       expect(mocks.vendorSettle).toHaveBeenCalledOnce(); expect(mocks.collectRun).not.toHaveBeenCalled();
     } finally { await act(async () => root.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); dom.window.close(); }
   });
@@ -242,9 +310,9 @@ describe("authenticated NEW original through actual signed POST", () => {
     expect(mocks.vendorSettle).toHaveBeenCalledTimes(phase === "before-settlement" ? 0 : 1);
     expect(!!response.headers.get("payment-response")).toBe(phase === "during-settlement");
     // Guard refusal may close the facade; reopen the same exact namespace to inspect retained debit.
-    try { native.close(); } catch {} native = await createEnrolledSqliteAdapter(); mocks.getDb.mockResolvedValue(native);
+    closeNativeFixture(); native = await openNativeFixture(); mocks.getDb.mockResolvedValue(native);
     expect(await native.getA2aOrder(original.id)).toBeNull();
-    expect((await native.listPaymentsByQuery(original.id)).filter(p => p.kind === "inbound")).toHaveLength(phase === "during-settlement" ? 1 : 0);
+    expect((paymentRows(original.id)).filter(p => p.kind === "inbound")).toHaveLength(phase === "during-settlement" ? 1 : 0);
     expect(mocks.collectRun).not.toHaveBeenCalled(); expect((await history(jwt, original.id)).status).toBe(401);
   });
 });
@@ -773,22 +841,10 @@ describe("signed POST NEW owner-admission controls", () => {
       usdcAddress: ARC_MAINNET_PROFILE.usdcAddress, gatewayWallet: ARC_MAINNET_PROFILE.gatewayWallet, maxTimeoutSeconds: 691200, jwtSecret: secret });
     vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
     vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false"); vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false");
-    if (!folder) {
-      folder = mkdtempSync(join(tmpdir(), "keryx-owned-real-post-"));
-      file = join(folder, "synthetic.sqlite"); manifest = join(folder, "deployment.json");
-      const identity = { ...syntheticStorageIdentity("mainnet-real"), format: "keryx-mainnet-storage-identity-v1" as const,
-        network: "eip155:5042" as const, profileDigest: STORAGE_MAINNET_PROFILE_DIGEST };
-      fixtureIdentity = identity;
-      const setup = new DatabaseSync(file);
-      try {
-        setup.exec("BEGIN IMMEDIATE"); installMainnetApplicationSchema(setup); installNativeUserDomainSchema(setup);
-        insertStorageIdentity(setup, identity); installStorageFences(setup, identity); setup.exec("COMMIT");
-      } finally { setup.close(); }
-      writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity, backend: { kind: "sqlite", databasePath: file } }));
-      contentKey = randomBytes(32).toString("hex");
-    }
+    const deployment = resetNativeFixture();
+    ({ folder, file, manifest, contentKey } = deployment); fixtureIdentity = deployment.identity;
     vi.stubEnv("KERYX_STORAGE_MANIFEST", manifest); vi.stubEnv("KERYX_SQLITE_PATH", file); vi.stubEnv("CONTENT_MASTER_KEY", contentKey);
-    native = await createEnrolledSqliteAdapter();
+    native = await openNativeFixture();
     mocks.getDb.mockResolvedValue(native); mocks.getAgentDeps.mockResolvedValue({ db: native, gateway: {}, engine: {} });
     mocks.cookies.mockImplementation(async () => ({ get: (name: string) => name === "keryx_session" && cookies.getStore() ? { value: cookies.getStore() } : undefined }));
     mocks.checkRateLimit.mockResolvedValue(null); mocks.collectRun.mockClear();
@@ -803,10 +859,10 @@ describe("signed POST NEW owner-admission controls", () => {
     mocks.vendorSettle.mockReset().mockImplementation(async payload => ({ success: true, network: "eip155:5042", payer: payer.address,
       transaction: `unfunded-vendor-fixture-${payload.payload.authorization.nonce}` }));
   });
-  afterEach(() => { try { native?.close(); } catch {} vi.restoreAllMocks(); vi.unstubAllEnvs();
+  afterEach(() => { try { closeNativeFixture(); } finally { vi.restoreAllMocks(); vi.unstubAllEnvs();
     for (const key of Object.keys(config)) if (!Object.prototype.hasOwnProperty.call(savedConfig, key)) Reflect.deleteProperty(config, key);
-    Object.assign(config, savedConfig); });
-  afterAll(() => { Object.assign(config, savedConfig); if (folder) rmSync(folder, { recursive: true, force: true }); });
+    Object.assign(config, savedConfig); } });
+  afterAll(() => Object.assign(config, savedConfig));
   function typed(a: { from: string; to: string; value: string; validAfter: string; validBefore: string; nonce: string }) {
     return { domain: { name: "GatewayWalletBatched", version: "1", chainId: 5042, verifyingContract: ARC_MAINNET_PROFILE.gatewayWallet as `0x${string}` },
       types: { TransferWithAuthorization: [{ name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" },
@@ -843,13 +899,6 @@ describe("signed POST NEW owner-admission controls", () => {
   function ownerRows(id: string) {
     const inspect = new DatabaseSync(join(folder, "synthetic.sqlite"), { readOnly: true });
     try { return inspect.prepare("SELECT job_id,query_id,request_hash,network,wallet,session_hash,issued_at,expires_at,admitted_at FROM pending_job_owners WHERE job_id=?").all(id); }
-    finally { inspect.close(); }
-  }
-  // Observe the full fixture ledger: listPaymentsByQuery is citation-only.
-  // This raw synthetic readback does not establish financial settlement.
-  function paymentRows(id: string) {
-    const inspect = new DatabaseSync(file, { readOnly: true });
-    try { return inspect.prepare("SELECT * FROM payment_events WHERE query_id=? ORDER BY created_at,id").all(id); }
     finally { inspect.close(); }
   }
   async function noOriginal(id: string) {
@@ -1040,7 +1089,7 @@ describe("signed POST NEW owner-admission controls", () => {
     expect(mocks.vendorSettle).toHaveBeenCalledTimes(phase === "before-settlement" ? 0 : 1);
     expect(!!response.headers.get("payment-response")).toBe(phase === "during-settlement");
     // Guard refusal may close the facade; reopen the same exact namespace to inspect retained debit.
-    try { native.close(); } catch {} native = await createEnrolledSqliteAdapter(); mocks.getDb.mockResolvedValue(native);
+    closeNativeFixture(); native = await openNativeFixture(); mocks.getDb.mockResolvedValue(native);
     expect(ownerRows(original.id)).toEqual([]);
     expect(await native.getA2aOrder(original.id)).toBeNull();
     expect((paymentRows(original.id)).filter(p => p.kind === "inbound")).toHaveLength(phase === "during-settlement" ? 1 : 0);
