@@ -1,18 +1,36 @@
 # MCP package distribution
 
-## App68 public-research source candidate — October 15
+## App68 public-research distribution delivered — October 15
 
-Source reserves app/OpenAPI **0.27.68**, stdio/npm/official Registry **0.4.23** and
-Desktop **0.4.21**. Hosted MCP keeps **0.3.18** because tool input and transport
-contracts are unchanged. Ordinary persistence uses the saved visibility default
-or Public when absent; guarded public/owner readers and private jobs retain their
-existing roles. No per-question visibility argument is added to MCP tools.
+App/OpenAPI **0.27.68**, published stdio/npm/official Registry **0.4.23** and
+Desktop **0.4.21** bind source
+**d1b3aff65318fecdf17f8e6f6bcf5e8e0e5ae5b7**. All applicable exact-main workflows
+passed, including [CI](https://github.com/tang-vu/keryx/actions/runs/38731364014)
+and [Desktop](https://github.com/tang-vu/keryx/actions/runs/38731364070).
+The [v0.27.68 assets](https://github.com/tang-vu/keryx/releases/tag/v0.27.68)
+were downloaded and checked against their source manifests, sizes and hashes.
+Public npm bytes and Sigstore provenance were accepted, as were official Registry
+exact/latest readbacks. The npm tarball SHA-256 is
+`4848901cfde827da0ff1c7e04beaddc12c0febb95261c5b50fa5fdaecbcaee86`.
+This establishes publication; owner Desktop installation remains unknown.
 
-The existing exact-main CI and package/installer provenance gates remain required
-before publication. New versions are not yet published or installed by this source
-change. ROOT owns one combined deployment and surface readback. Extension **0.1.4.2**
-is retained only after comparing its unchanged shipped inputs and hosted handoffs.
-Older preparation sections below do not allocate another release or deployment.
+Hosted MCP initialize returned HTTP 200 at **0.3.18** after the single combined
+deployment; tool input and transport contracts retain that version. Ordinary
+persistence uses the saved visibility default or Public when absent. Guarded
+public/owner readers, private jobs and existing paid contracts remain authoritative;
+no per-question visibility argument is added to MCP tools. Extension **0.1.4.2**
+retains its verified unchanged shipped inputs and existing hosted handoffs.
+
+The reviewed historical restoration completed once for 156 original questions
+without relabeling network evidence. Public Arc questions total 99 in the complete
+bounded window; a 50-row API page is a sample, and the archive's 115 cited answers
+are a separate population. Public history/default-selection browser checks passed
+within their scope; [#513](https://github.com/tang-vu/keryx/issues/513) records the
+remaining mobile Dashboard leaderboard overflow. See [live acceptance](mainnet-status.md)
+and [surface roles](surface-parity.md). Four existing #274 cases and one acknowledged
+Canteen update completed after clear; #266 is closed. No new funding, custody,
+schedules or private activation was added. Older sections preserve historical
+preparation and do not allocate another publication or deployment.
 
 ## App64 release batch in preparation — October 13
 

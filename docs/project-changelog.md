@@ -1,6 +1,6 @@
 # Keryx Project Changelog
 
-### App0.27.68 public-research source candidate — October 15
+### App0.27.68 public-research delivery — October 15
 
 - Default ordinary research to Public when no account preference is saved. Show
   Public/Unlisted/Private before submission; preserve saved preferences, hidden
@@ -9,11 +9,23 @@
   ordinary Supabase storage. Refuse unsupported active creation before inference.
 - Count the complete bounded public question population separately from recorded
   activity and recent examples. Unknown network/cohort metadata remains unknown.
-- Add an explicit reviewed, insert-only historical restoration tool. The production
-  restoration and one combined release remain ROOT operations after acceptance.
-- Reserve stdio/npm/Registry MCP0.4.23 and Desktop0.4.21; retain hosted MCP0.3.18
-  and extension0.1.4.2 within their verified roles. No new funding or private-pilot
-  activation is introduced. These are source changes awaiting verified delivery.
+- Restore all 156 reviewed historical questions missing visibility sidecars once,
+  preserving original content and financial data. Of these, 99 have verified Arc
+  evidence and 57 retain unknown network attribution. The complete Arc public
+  count, a bounded 50-row API sample and the archive's 115 cited answers are
+  separate measures.
+- Deliver one combined app0.27.68 release at `d1b3aff6`, with public health,
+  OpenAPI and homepage HTTP 200 after maintenance clear. Publish
+  stdio/npm/Registry MCP0.4.23 and Desktop0.4.21 from that same accepted source;
+  verify downloaded assets and npm provenance. Owner Desktop installation remains
+  unknown. Hosted MCP0.3.18 and extension0.1.4.2 retain their verified roles.
+- Verify populated public history, restored answer links, default Public selection
+  and numeric Owner fee values in the browser. Track the remaining 390px source
+  leaderboard overflow separately in [#513](https://github.com/tang-vu/keryx/issues/513).
+- Pass the existing four #274 cases after clear and receive acknowledgment for one
+  Arc Canteen update. Close [#266](https://github.com/tang-vu/keryx/issues/266#issuecomment-6193908274).
+  Preserve custody, spending limits, private holds and separate #269 acceptance;
+  no new funding, allowance renewal or private-pilot activation.
 
 ### App0.27.64 release preparation — October 13
 
