@@ -255,7 +255,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
           {researchPaused && availabilityPanel}
 
           <div className="mt-1 border-t border-line pt-1 sm:mt-2 sm:pt-3">
-            <ResearchVisibilityPicker preference={visibility} disabled={disabled} parentVisibility={parentVisibility} compact />
+            <ResearchVisibilityPicker preference={visibility} disabled={disabled} parentVisibility={parentVisibility} compact showContextHint={false} />
             <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
               {message("researchEntry.sourceCap", { amount: formatRecordedAmount(effectiveBudget, { minimumFractionDigits: 6, useGrouping: false }), payer: message(payer === "treasury" ? "researchEntry.treasuryPayer" : payer === "session" ? "researchEntry.sessionPayer" : payer === "expired" ? "researchEntry.expiredPayer" : "researchEntry.pausedPayer") })}
             </p>
@@ -264,6 +264,8 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
               className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
               {message(disabled ? "researchEntry.researching" : researchPaused ? "researchEntry.paused" : "researchEntry.ask")}
             </button>
+            {visibility.ready && <p className="mt-1 text-xs leading-4 text-ink-3">{parentVisibility && parentVisibility !== "public"
+              ? message("researchVisibility.followUp") : !visibility.wallet ? message("researchVisibility.signIn") : message("researchVisibility.questionOnly")}</p>}
           <fieldset className="mt-1">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">{message("researchEntry.depth")}</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
