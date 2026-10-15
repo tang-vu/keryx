@@ -212,6 +212,8 @@ export interface FeedbackStats {
 }
 
 export interface KeryxDB extends PublicReferenceArchiveDb {
+  /** Qualified recipient-only assignment metadata; no owner capability or private-run authority. */
+  readonly ownerRunAssignments?: import("../owner-run-assignments/contracts").OwnerRunAssignmentsPort;
   /** Exact pre-existing ordinary account namespace only. No install, fallback or pooled financial authority.
    * Absent on unsupported/native/enrolled/archive facades; interactive callers authenticate the durable login first. */
   readonly accountMembership?: AccountMembershipStore;

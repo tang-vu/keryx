@@ -31,6 +31,7 @@ import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { shortAddress } from "@/lib/utils";
 import { createMessages } from "@/lib/i18n/messages";
 import { webHeaderMessages } from "@/locales/en/web-header";
+import { ownerRunAssignmentMessages } from "@/locales/en/owner-run-assignments";
 
 const copy = createMessages("en");
 
@@ -155,6 +156,9 @@ export function WalletMenu() {
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/me/watches"><BookOpen className="h-3.5 w-3.5" />{copy("topicWatch.menu")}</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
+            <Link href="/me/run-assignments"><Receipt className="h-3.5 w-3.5" />{ownerRunAssignmentMessages.menu}</Link>
           </DropdownMenuItem>
           {/* The paying side of the same wallet: what it dispatched and what those tolls cost. */}
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
