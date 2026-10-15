@@ -10,10 +10,9 @@
 - Count the complete bounded public question population separately from recorded
   activity and recent examples. Unknown network/cohort metadata remains unknown.
 - Restore all 156 reviewed historical questions missing visibility sidecars once,
-  preserving original content and financial data. Of these, 99 have verified Arc
-  evidence and 57 retain unknown network attribution. The complete Arc public
-  count, a bounded 50-row API sample and the archive's 115 cited answers are
-  separate measures.
+  preserving original content, financial data and network evidence. Separately,
+  the complete Arc public count is 99. A bounded 50-row API sample and the
+  archive's 115 cited answers are separate measures.
 - Deliver one combined app0.27.68 release at `d1b3aff6`, with public health,
   OpenAPI and homepage HTTP 200 after maintenance clear. Publish
   stdio/npm/Registry MCP0.4.23 and Desktop0.4.21 from that same accepted source;

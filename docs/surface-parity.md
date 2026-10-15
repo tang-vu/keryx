@@ -21,9 +21,9 @@ separate authority. Public lists and owner exports keep their guarded readers.
 Extension browser handoffs expose the web selection; unchanged paid API requests
 retain their existing contracts.
 
-The insert-only restoration completed once for all 156 reviewed original questions:
-99 retain verified Arc mainnet evidence and 57 remain network-unattributed. The
-complete Arc public-question count is 99, distinct from a 50-row API sample and
+The insert-only restoration completed once for all 156 reviewed original questions,
+preserving their original network evidence. Separately, the complete Arc
+public-question count is 99, distinct from a 50-row API sample and
 the archive's 115 cited answers across research history. Browser readback confirmed
 populated recent questions, a restored public permalink, default Public selection
 and numeric Owner fee values. The count/recent cards and chooser fit 390px;

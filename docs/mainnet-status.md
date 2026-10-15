@@ -13,9 +13,9 @@ passed before delivery.
 The reviewed insert-only restoration completed once for **156/156** historical
 questions missing visibility sidecars, with no stale or blocked records. Original
 content, financial records, custody, limits, Operator and private holds were
-preserved. Their original network evidence remains intact: **99** have verified
-Arc mainnet evidence; **57** remain network-unattributed. The complete bounded
-Arc public-question population is 99; a 50-row API sample is a separate page
+preserved. Their original network evidence remains intact across the restored
+records. Separately, the complete bounded Arc public-question population is **99**;
+a 50-row API sample is a separate page
 bound. The archive's observed **115 cited answers** spans research history and
 is a different measure from questions on Arc.
 
