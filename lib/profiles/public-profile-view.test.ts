@@ -1,9 +1,37 @@
-import { describe, expect, it } from "vitest";
-import { createElement } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { JSDOM } from "jsdom";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { PublicResearcherProfile } from "../../components/keryx/public-researcher-profile";
 import type { PublicProfileSnapshot } from "./public-profile";
+import * as fontHelpers from "../og-fonts";
+import { publicProfileCopy as copy } from "@/locales/en/public-profiles";
+
+type ImageOptions = NonNullable<ConstructorParameters<typeof import("next/og").ImageResponse>[1]>;
+const fixture = vi.hoisted(() => ({
+  snapshot: null as PublicProfileSnapshot | null,
+  read: vi.fn<(handle: string) => Promise<PublicProfileSnapshot | null>>(),
+  image: vi.fn<(element: ReactElement, options: ImageOptions) => void>(),
+  renderPng: false,
+}));
+vi.mock("@/lib/db", () => ({ getDb: async () => ({ runPrivacyActive: true, publicProfiles: { read: fixture.read } }) }));
+vi.mock("@/components/keryx/site-header", () => ({ SiteHeader: () => null }));
+vi.mock("next/navigation", () => ({ notFound: () => { throw Error("404"); } }));
+vi.mock("next/og", async importOriginal => {
+  const actual = await importOriginal<typeof import("next/og")>();
+  return { ...actual, ImageResponse: class extends Response {
+    constructor(element: ReactElement, options: ImageOptions) {
+      super(null, { headers: options.headers });
+      fixture.image(element, options);
+      if (fixture.renderPng) return new actual.ImageResponse(element, options);
+    }
+  } };
+});
+import ProfilePage, { generateMetadata } from "@/app/u/[handle]/page";
+import profileImage, { contentType, dynamic, revalidate, size } from "@/app/u/[handle]/opengraph-image";
 
 const profile: PublicProfileSnapshot = { version: 1, handle: "alice", displayName: "<script>owner text</script>",
   publishedAt: "2026-10-12T00:00:00.000Z", ownershipBasis: "signed-wallet-publication-existing-run-proof",
@@ -11,6 +39,19 @@ const profile: PublicProfileSnapshot = { version: 1, handle: "alice", displayNam
     { network: "eip155:5042002", readerPaidMicros: null, creatorEarnedMicros: "0", sponsoredCreatorPaymentsMicros: "2000000" }],
   ledgerBasis: "wallet-wide-recorded-settled-creator-events", runs: [{ id: "run", question: "Which report?", createdAt: "2026-10-12T00:00:00.000Z", surface: "stdio-mcp",
     network: "eip155:5042002", funding: "sponsored", ownership: "claimed", citations: [{ marker: "S1", sourceName: "Source" }], reportPath: "/dispatch/run", receiptsPath: "/api/dispatch/run/receipt" }] };
+
+const params = () => ({ params: Promise.resolve({ handle: "alice" }) });
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.stubEnv("BASE_URL", "https://synthetic-profile.example");
+  vi.stubEnv("KERYX_PUBLIC_PROFILES_ENABLED", "true");
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");
+  fixture.snapshot = { ...profile, displayName: "Tên chủ hồ sơ", about: "原文简介", purpose: "Mục đích nghiên cứu" };
+  fixture.read.mockImplementation(async () => fixture.snapshot);
+  fixture.renderPng = false;
+  vi.stubGlobal("fetch", vi.fn(async () => { throw Error("Profile fixture forbids network access"); }));
+});
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 describe("#264 public view semantics (SSR, not compiled phone evidence)", () => {
   it("escapes owner text, uses accessible named regions, keeps exact amounts and truthful ownership/funding labels", () => {
     const dom = new JSDOM(renderToStaticMarkup(createElement(PublicResearcherProfile, { profile }))), document = dom.window.document;
@@ -23,4 +64,130 @@ describe("#264 public view semantics (SSR, not compiled phone evidence)", () => 
       expect(document.querySelector("time")?.getAttribute("datetime")).toBe(profile.runs[0].createdAt);
     } finally { dom.window.close(); }
   });
+});
+
+describe("actual public profile metadata and preview consumers", () => {
+  it("keeps original owner metadata and the JSON link on one canonical with shipped English alternates", async () => {
+    const before = JSON.stringify(fixture.snapshot);
+    const metadata = await generateMetadata(params());
+    expect(metadata.alternates).toEqual({ canonical: "/u/alice", languages: { en: "/u/alice", "x-default": "/u/alice" },
+      types: { "application/json": "/api/u/alice" } });
+    expect(metadata.title).toBe(fixture.snapshot!.displayName);
+    expect(metadata.description).toBe(fixture.snapshot!.purpose);
+    expect(metadata.openGraph).toMatchObject({ type: "profile", url: "/u/alice", images: ["/u/alice/opengraph-image"] });
+    expect(metadata.twitter).toMatchObject({ card: "summary_large_image", images: ["/u/alice/opengraph-image"] });
+    expect(JSON.stringify(fixture.snapshot)).toBe(before);
+  });
+
+  it("declares English only on the ProfilePage wrapper, preserving original biography and report text", async () => {
+    const dom = new JSDOM(renderToStaticMarkup(await ProfilePage(params())));
+    try {
+      const data = JSON.parse(dom.window.document.querySelector('script[type="application/ld+json"]')!.textContent!);
+      expect(data).toMatchObject({ "@type": "ProfilePage", inLanguage: "en", url: "https://synthetic-profile.example/u/alice" });
+      expect(data.mainEntity).toEqual({ "@type": "Person", name: fixture.snapshot!.displayName, description: fixture.snapshot!.about });
+      expect(JSON.stringify(data).match(/"inLanguage"/g)).toHaveLength(1);
+      expect(dom.window.document.body.textContent).toContain(profile.runs[0].question);
+      expect(dom.window.document.querySelectorAll('[lang="en"]')).toHaveLength(0);
+    } finally { dom.window.close(); }
+  });
+
+  it.each(["unpublished", "profiles disabled", "privacy disabled", "storage refusal"])("refuses %s across head, page and image", async state => {
+    const fonts = vi.spyOn(fontHelpers, "publicPreviewFonts");
+    if (state === "unpublished") fixture.snapshot = null;
+    if (state === "profiles disabled") vi.stubEnv("KERYX_PUBLIC_PROFILES_ENABLED", "false");
+    if (state === "privacy disabled") vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false");
+    if (state === "storage refusal") fixture.read.mockRejectedValue(Error("private storage sentinel"));
+    expect(await generateMetadata(params())).toEqual({ title: copy.unavailableTitle, robots: { index: false, follow: false } });
+    await expect(ProfilePage(params())).rejects.toThrow("404");
+    const response = await profileImage(params());
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.text()).toBe("");
+    expect(fonts).not.toHaveBeenCalled();
+    expect(fixture.image).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: "Vietnamese", displayName: "Tiếng Việt: Nguyễn Ánh", purpose: "Nghiên cứu nguồn đáng tin cậy", about: "UNDISPLAYED 中文", faces: ["Keryx Sans"] },
+    { name: "Han display name", displayName: "中文研究者", purpose: "Original purpose", about: "UNDISPLAYED", faces: ["Keryx Sans", "Keryx Sans SC"] },
+    { name: "Han purpose", displayName: "Original name", purpose: "研究来源与引用证据", about: "UNDISPLAYED", faces: ["Keryx Sans", "Keryx Sans SC"] },
+    { name: "Han biography fallback", displayName: "Original name", purpose: "", about: "研究来源与引用证据", faces: ["Keryx Sans", "Keryx Sans SC"] },
+  ])("selects bundled faces over every displayed string for $name", async ({ name: _name, faces, ...text }) => {
+    fixture.snapshot = { ...profile, ...text };
+    const fonts = vi.spyOn(fontHelpers, "publicPreviewFonts");
+    const before = JSON.stringify(fixture.snapshot);
+    const response = await profileImage(params());
+    const [element, options] = fixture.image.mock.calls[0];
+    expect(fonts).toHaveBeenCalledExactlyOnceWith([`${copy.brand} · @alice`, text.displayName, text.purpose || text.about, copy.imageOwnership].join("\n"));
+    expect(options.fonts?.map(font => font.name)).toEqual(faces);
+    expect(renderToStaticMarkup(element)).toContain(fontHelpers.publicPreviewFontFamily);
+    const dom = new JSDOM(renderToStaticMarkup(element));
+    try { expect(Array.from(dom.window.document.body.firstElementChild!.children).map(node => node.textContent))
+      .toEqual([`${copy.brand} · @alice`, text.displayName, text.purpose || text.about, copy.imageOwnership]); }
+    finally { dom.window.close(); }
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(fixture.read).toHaveBeenCalledTimes(2);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(JSON.stringify(fixture.snapshot)).toBe(before);
+    expect({ contentType, dynamic, revalidate, size }).toEqual({ contentType: "image/png", dynamic: "force-dynamic", revalidate: 0, size: { width: 1200, height: 630 } });
+  });
+
+  it.each(["unpublished", "displayed text removed", "final read refused"])("refuses the old public card when %s during held font I/O", async change => {
+    let release!: (fonts: Awaited<ReturnType<typeof fontHelpers.publicPreviewFonts>>) => void;
+    const fonts = vi.spyOn(fontHelpers, "publicPreviewFonts").mockReturnValue(new Promise(resolve => { release = resolve; }));
+    const pending = profileImage(params());
+    await vi.waitFor(() => expect(fonts).toHaveBeenCalledTimes(1));
+    expect(fixture.read).toHaveBeenCalledTimes(1);
+    expect(fixture.image).not.toHaveBeenCalled();
+    if (change === "unpublished") fixture.snapshot = null;
+    if (change === "displayed text removed") fixture.snapshot = { ...profile };
+    if (change === "final read refused") fixture.read.mockRejectedValue(Error("erased/private storage sentinel"));
+    release([]);
+    const response = await pending;
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.text()).toBe("");
+    expect(fixture.read).toHaveBeenCalledTimes(2);
+    expect(fixture.image).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("propagates local font failure without a provider fallback or an image", async () => {
+    vi.spyOn(fontHelpers, "publicPreviewFonts").mockRejectedValue(Error("bundled font unavailable"));
+    await expect(profileImage(params())).rejects.toThrow("bundled font unavailable");
+    expect(fixture.image).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  // Same local-only ImageResponse/WASM adapter and optional capture convention as og-fonts.test.ts.
+  it.each([
+    ["vi", "Nguyễn Ánh", "Vì sao nghiên cứu cần nguồn đáng tin cậy?"],
+    ["han", "中文研究者", "人工智能为什么需要可靠的来源与引用证据？"],
+  ])("renders the actual %s profile ImageResponse with bundled fonts", async (language, displayName, purpose) => {
+    fixture.snapshot = { ...profile, displayName, purpose };
+    fixture.renderPng = true;
+    const localFetch = vi.fn(async (input: string | URL | Request) => {
+      const value = input instanceof Request ? input.url : String(input);
+      if (value.startsWith("data:application/octet-stream;base64,")) {
+        return new Response(Buffer.from(value.split(",")[1], "base64"), { headers: { "Content-Type": "application/wasm" } });
+      }
+      const url = new URL(value);
+      if (url.protocol !== "file:") throw Error("Profile fixture forbids network access");
+      return new Response(await readFile(fileURLToPath(url)), { headers: { "Content-Type": "application/wasm" } });
+    });
+    vi.stubGlobal("fetch", localFetch);
+    const response = await profileImage(params());
+    const bytes = Buffer.from(await response.arrayBuffer());
+    expect([...bytes.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+    expect(bytes.readUInt32BE(16)).toBe(1200);
+    expect(bytes.readUInt32BE(20)).toBe(630);
+    expect(bytes.byteLength).toBeGreaterThan(10_000);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(localFetch.mock.calls.map(([input]) => new URL(input instanceof Request ? input.url : String(input)).protocol)
+      .filter(protocol => protocol !== "file:" && protocol !== "data:")).toEqual([]);
+    if (process.env.KERYX_PREVIEW_CAPTURE_DIR) {
+      await mkdir(process.env.KERYX_PREVIEW_CAPTURE_DIR, { recursive: true });
+      await writeFile(join(process.env.KERYX_PREVIEW_CAPTURE_DIR, `profile-${language}.png`), bytes);
+    }
+  }, 30_000);
 });
