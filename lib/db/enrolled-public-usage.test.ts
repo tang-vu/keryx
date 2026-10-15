@@ -232,7 +232,7 @@ it("restores the actual selected writable/readonly frozen facade and API200 with
   expect((await actual.figures.GET(new Request("https://synthetic.example/api/usage?network=invalid"))).status).toBe(400);
   expect((await actual.history.GET(new Request("https://synthetic.example/api/runs?cohort=invalid"))).status).toBe(400);
   expect(sql.references()).toBe(1); expect(sql.writes()).toEqual([]); sql.exec.mockRestore(); sql.prepare.mockRestore();
-  expect(originals(f.file)).toBe(original); expect(readFileSync(f.file)).toEqual(bytes);
+  expect(originals(f.file)).toBe(original); expect(readFileSync(f.file).equals(bytes)).toBe(true);
 });
 it("accounts for all four privacy cohorts with exact micros and excludes pending/unproved/nonpositive records and private identifiers", async () => {
   const f = fixture(db => {

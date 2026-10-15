@@ -315,3 +315,14 @@ is not a claim of a single successful local whole-64 run. Required exact-head CI
 retains whole-file acceptance. The existing application build, fresh stock data,
 selected 17 compiled cases and 459-input study remain scoped to their unchanged
 application inputs; no build, stock scan, compiled run or producer was repeated.
+
+## Exact whole-file preservation assertion
+
+The selected native public-usage facade/API test now compares its two genuine
+file Buffers with native Buffer.equals and requires true. This preserves equal
+length and every byte while avoiding a recursive matcher over the database.
+All schema/original, no-DDL/DML, frozen facade, API200/400 and time-limit checks
+remain unchanged. Only the failed case and changed-file types were refreshed
+and passed; the other 61 cases retain their prior CI results. The original
+Linux timeout and the fixed-label diagnostic remain retained as failed evidence.
+No application, storage authority, build, stock or study input changed.
