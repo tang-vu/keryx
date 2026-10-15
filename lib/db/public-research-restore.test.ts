@@ -1,7 +1,8 @@
 import { afterEach, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { basename, join, resolve, sep } from "node:path";
 import { canonicalJson } from "../canonical-json";
@@ -51,7 +52,7 @@ function fixture(readOnly = false) {
       decision: row.id.startsWith("prv_") ? "exclude" : "public", reason: "Synthetic operator-reviewed fixture" })));
   };
   const states = () => connection.db.prepare("SELECT run_id,visibility FROM run_privacy ORDER BY run_id").all();
-  return { ...connection, file, edit, review, plan, states };
+  return { ...connection, file, folder, identity, edit, review, plan, states };
 }
 afterEach(() => {
   for (const connection of opened.splice(0)) connection.close();
@@ -181,5 +182,20 @@ it("refuses unverified handles, read-only mutation, edited plans and incomplete 
   const plan = f.plan(); expect(() => applyLegacyRestorePlan(f.db, plan, sha(plan))).toThrow();
   expect(() => applyLegacyRestorePlan(f.db, { ...plan, reviewSha256: "a".repeat(64) }, sha(plan))).toThrow("digest changed");
   expect(() => makeLegacyRestorePlan(f.review(), [])).toThrow("every candidate");
+  expect(f.states()).toEqual([]);
+});
+
+it("sanitizes actual operator decoder failures so private stored text never reaches stderr", () => {
+  const f = fixture(), marker = "SYNTHETIC_PRIVATE_DECODER_CANARY";
+  f.edit(db => db.prepare("UPDATE query_runs SET data=? WHERE id='legacy-a'").run(`{"question":"${marker}",`));
+  const manifest = join(f.folder, "deployment.json"), output = join(f.folder, "protected-review.json");
+  writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity: f.identity,
+    backend: { kind: "sqlite", databasePath: f.file } }));
+  const child = spawnSync(process.execPath, ["--import", "tsx", "scripts/restore-public-research.mts", "export", "--out", output], {
+    cwd: process.cwd(), env: { ...process.env, KERYX_STORAGE_MANIFEST: manifest, NODE_OPTIONS: "--max-old-space-size=2048" },
+    encoding: "utf8", timeout: 30000,
+  });
+  expect(child.status).toBe(1); expect(child.stderr).toContain('"code":"protected_review_refused"');
+  expect(child.stderr + child.stdout).not.toContain(marker); expect(child.stderr).not.toContain("SyntaxError");
   expect(f.states()).toEqual([]);
 });

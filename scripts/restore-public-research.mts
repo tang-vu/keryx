@@ -60,4 +60,15 @@ try {
   const bytes = canonicalJson(result);
   writeFileSync(descriptor, bytes);
   console.log(JSON.stringify({ ...summary as object, output, sha256: createHash("sha256").update(bytes).digest("hex") }));
-} finally { connection?.close(); closeSync(descriptor); }
+} catch {
+  // A DB decoder can include stored question text in its error. Never emit that
+  // message/stack; a post-COMMIT output failure also must not imply safe retry.
+  console.error(JSON.stringify({ command, accepted: false,
+    code: command === "apply" ? "restore_outcome_unverified" : "protected_review_refused", automaticRetry: false }));
+  process.exitCode = 1;
+} finally {
+  let cleanupFailed = false;
+  try { connection?.close(); } catch { cleanupFailed = true; }
+  try { closeSync(descriptor); } catch { cleanupFailed = true; }
+  if (cleanupFailed) { console.error(JSON.stringify({ accepted: false, code: "operator_cleanup_unverified", automaticRetry: false })); process.exitCode = 1; }
+}
