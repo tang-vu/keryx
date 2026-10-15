@@ -264,3 +264,31 @@ combined deployment remain separate gates. Original #257 and #268 retain their
 remaining production, customer, provider and delivery criteria. No production
 DDL, real purchase, financial activation or scheduled remedy was performed by
 these controls.
+
+## Current main519 quote-first checkout acceptance
+
+After composing actual main `6cabdc92`, the fixture follows the unsigned quote
+before checkout and wallet selection. Changing or restoring the question removes
+the prior checkout and consent; each question requires a fresh preparation and
+unchecked financial and optional account consent. The signed request retains the
+exact original body, merchant, amount, authorization and nonce checks. Recovery
+still performs GET requests without another quote, signature or purchase.
+
+One current build passed in 44.043 seconds with build ID
+`RSmINzvub8NDPRm5Kz4WB` and no source drift. One fresh stock qualification passed
+in 109.337 seconds. The application/configuration/dependency inputs remain exactly
+build-bound; only the separately reviewed fixture/preflight and fixed private-copy
+destination differ after the build. Their changed-script types passed.
+
+The current selected 17 cases passed, including the eight quote/consent journeys,
+post-sign session loss, unavailable credit and genuine CSP refusal before checkout.
+The outer process naturally exited 0 with both streams at EOF in 933.378 seconds;
+all browser/server/instrumentation/trace cleanup completed, with zero page errors,
+external attempts, post-check errors or cleanup failures. The other 37 cases remain
+unrun in this selection, so this does not establish whole-54 or real-paid acceptance.
+
+The complete incoming hermetic quote/reset/checkout journey, current focused types,
+strict draft guard and actual 64-namespace case also passed. All 459 mapped study
+inputs remain exact; none of the 29 incoming paths intersect them, and no producer
+was repeated. Required exact-head CI, serialized merge, the reviewed live24-to-25
+metadata transition and genuine production/provider criteria remain separate gates.

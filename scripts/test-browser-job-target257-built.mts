@@ -19,6 +19,7 @@ import { researchFlowMessages as words } from "../locales/en/research-flow";
 import { pendingOwner257Copy as ownerCopy } from "../locales/en/pending-owner257";
 import { jobTargetCopy as targetCopy } from "../locales/en/job-targets";
 import { researchFundingMessages as checkoutCopy } from "../locales/en/research-funding";
+import { productGuideMessages as entryCopy } from "../locales/en/product-guide";
 import { privateKeyToAccount } from "viem/accounts";
 import { recoverTypedDataAddress, type Hex } from "viem";
 
@@ -30,8 +31,8 @@ const parentEnvNames = new Set(["PATH", "Path", "SystemRoot", "SYSTEMROOT", "WIN
   ...(process.platform === "win32" ? ["HOMEDRIVE", "HOMEPATH", "LOGONSERVER", "SYSTEMDRIVE", "USERDOMAIN", "USERNAME"] : [])]);
 assert(Object.keys(process.env).every(name => parentEnvNames.has(name)), "Parent must launch with only documented system/temp/cache variables; no inherited credentials or runtime flags");
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
-// Actual sole fc30/d1 native25 build; Q and parent finalization still required.
-const finalizedBuildId = "uMOXtCGhE1wUtct0AppbT" as string | null;
+// Actual sole main519/6cab native25 build; Q and parent finalization still required.
+const finalizedBuildId = "RSmINzvub8NDPRm5Kz4WB" as string | null;
 assert(typeof finalizedBuildId === "string" && finalizedBuildId.length > 0 && finalizedBuildId.length <= 128, "UNRUN until parent finalizes actual new BID");
 assert.notEqual(finalizedBuildId, "Hppnnv0aKVNS5HY8yB1k8", "Historical BID refused");
 const flags = ["dist", "output", "port", "admission", "selection"] as const;
@@ -154,27 +155,27 @@ type Admission = { checkpoint: Checkpoint; selection: typeof selection; stockQua
   sourcePins: { path: string; sha256: string }[]; compiledPins: { path: string; sha256: string }[] };
 const admission = JSON.parse(await readFile(admissionPath, "utf8")) as Admission;
 assert.deepEqual(admission.selection, selection, "Parent binds selected scope and ordered expected results");
-assert.equal(admission.checkpoint.sourceHead, "fc30ff3fb0ecbc18aa796255d85ccdb15ab91fc9");
+assert.equal(admission.checkpoint.sourceHead, "1a7484b9c282ea3244fdc271a5ac7292442369ab");
 assert.equal(admission.checkpoint.mergeHead, null);
-assert.equal(admission.checkpoint.mainAncestor, "d1b3aff65318fecdf17f8e6f6bcf5e8e0e5ae5b7");
+assert.equal(admission.checkpoint.mainAncestor, "6cabdc9299773bdc28d6e68e142c4dc558470ab4");
 assert.equal(admission.checkpoint.currentCompiledNativeUserDomainTables, 25);
 assert.equal(admission.checkpoint.buildId, finalizedBuildId);
-assert.equal(resolve(admission.buildEvidence), resolve("D:/repos/server/Github/Hackathon/keryx/output/resume-distribution63-audit-20261012/job257-one-final-native25-build-20261015/actual-build-result.json"));
+assert.equal(resolve(admission.buildEvidence), resolve("D:/repos/server/Github/Hackathon/keryx/output/resume-distribution63-audit-20261012/job257-one-current-main519-build-20261016/actual-build-result.json"));
 assert.equal(sha(await readFile(admission.buildEvidence)), admission.checkpoint.buildReceiptSha256);
-const sourceReceiptPath = "D:/repos/server/Github/Hackathon/keryx/output/resume-distribution63-audit-20261012/job257-one-final-native25-build-20261015/all-source-before.json";
+const sourceReceiptPath = "D:/repos/server/Github/Hackathon/keryx/output/resume-distribution63-audit-20261012/job257-one-current-main519-build-20261016/all-source-before.json";
 assert.equal(sha(await readFile(sourceReceiptPath)), admission.checkpoint.sourceReceiptSha256);
 const sourceReceipt = JSON.parse(await readFile(sourceReceiptPath, "utf8"));
-assert.equal(sourceReceipt.sourceHead, "fc30ff3fb0ecbc18aa796255d85ccdb15ab91fc9");
+assert.equal(sourceReceipt.sourceHead, "1a7484b9c282ea3244fdc271a5ac7292442369ab");
 assert.equal(sourceReceipt.sourceNativeFamily, 25);
-assert.equal(sourceReceipt.stock25Migration, "UNQUALIFIED");
-assert.equal(sourceReceipt.pins.length, 3996);
-assert.equal(new Set(sourceReceipt.pins.map((p: { path: string }) => p.path)).size, 3996);
+assert.equal(sourceReceipt.stock25Migration, "FOCUSED_66_CONTROLS_QUALIFIED_NO_TARGET_DDL");
+assert.equal(sourceReceipt.pins.length, 4021);
+assert.equal(new Set(sourceReceipt.pins.map((p: { path: string }) => p.path)).size, 4021);
 const actualBuild = JSON.parse(await readFile(admission.buildEvidence, "utf8"));
 assert.equal(actualBuild.passed, true);
-assert.equal(actualBuild.sourceHead, "fc30ff3fb0ecbc18aa796255d85ccdb15ab91fc9");
+assert.equal(actualBuild.sourceHead, "1a7484b9c282ea3244fdc271a5ac7292442369ab");
 assert.equal(actualBuild.sourceNativeFamily, 25);
-assert.equal(actualBuild.stock25Migration, "UNQUALIFIED");
-assert.equal(actualBuild.sourceCount, 3996);
+assert.equal(actualBuild.stock25Migration, "FOCUSED_66_CONTROLS_QUALIFIED_NO_TARGET_DDL");
+assert.equal(actualBuild.sourceCount, 4021);
 assert.equal(actualBuild.targetOperations, 0);
 assert.equal(actualBuild.buildId, finalizedBuildId);
 assert.equal(actualBuild.allSourceBeforeSha256, admission.checkpoint.sourceReceiptSha256);
@@ -369,7 +370,9 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
   const fixture = fixtureCase(mode, kind), calls: Call[] = [];
   const displayOrigin = checkout?.external ? loopback : origin;
   const requestBody = JSON.stringify({ question: "Explain isolated durable recovery", budget: 0.03, researchMode: mode, packageVersion: "1.0.0", responseMode: "async" });
+  const changedQuestionRequestBody = JSON.stringify({ question: "A separately reviewed new question", budget: 0.03, researchMode: mode, packageVersion: "1.0.0", responseMode: "async" });
   const price = mode === "quick" ? "50000" : "80000"; // Existing .03 cap plus unchanged .02/.05 service fee.
+  let unsignedQuotes = 0;
   const signedFixtures: { typed: any; signature: Hex; queryId: string; dispatchedAuthorization?: unknown }[] = [];
   const providerMethods: string[] = [];
   let fixtureBalanceReads = 0;
@@ -499,16 +502,21 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
       }
       if (url.pathname === "/api/agent/ask") {
         if (checkout && request.method() === "POST") {
-          assert.equal(url.href, `${origin}/api/agent/ask`); assert.equal(request.postData(), requestBody);
+          assert.equal(url.href, `${origin}/api/agent/ask`);
           const payment = request.headers()["payment-signature"];
           if (!payment) {
+            assert(request.postData() === requestBody || request.postData() === changedQuestionRequestBody,
+              "Only the two authored question bodies can request an unsigned preparation");
+            assert(++unsignedQuotes <= 4, "At most three explicit preparations plus the original purchase quote");
             assert.equal(request.headers()["x-keryx-account-job"], undefined); assert.equal(request.headers().cookie, undefined);
+            assert.equal(request.headers().authorization, undefined);
             await route.fulfill({ status: 402, contentType: "application/json", headers: { "Cache-Control": "no-store",
               "payment-required": Buffer.from(JSON.stringify({ x402Version: 2, resource: { url: "/api/agent/ask" }, accepts: [{
                 scheme: "exact", network: "eip155:5042002", asset, amount: price, payTo: seller, maxTimeoutSeconds: 691200,
                 extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: gateway },
               }] })).toString("base64") }, body: "{}" }); return;
           }
+          assert.equal(request.postData(), requestBody, "The signed dispatch retains the exact original request");
           assert.equal(signedFixtures.length, 1); assert(payment.length < 4096);
           const decoded = JSON.parse(Buffer.from(payment, "base64").toString("utf8")), signed = signedFixtures[0];
           assert.deepEqual(Object.keys(decoded).sort(), ["authorization", "signature"]);
@@ -516,7 +524,8 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
           assert.deepEqual({ ...decoded.authorization, from: decoded.authorization.from.toLowerCase(), to: decoded.authorization.to.toLowerCase() }, { ...signed.typed.message,
             value: String(signed.typed.message.value), validAfter: String(signed.typed.message.validAfter), validBefore: String(signed.typed.message.validBefore) });
           signed.dispatchedAuthorization = decoded.authorization;
-          assert.equal(calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 2, "Exactly one unsigned quote and one signed synthetic dispatch");
+          assert.equal(unsignedQuotes, 4, "Three explicit preparations and the unchanged purchase quote precede dispatch");
+          assert.equal(calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 5, "Exactly four unsigned quotes and one signed synthetic dispatch");
           await json({ error: "Synthetic seller unavailable; no settlement, receipt or owner association" }, 503); return;
         }
         assert.equal(request.method(), "GET", "No synthetic signed POST is fabricated");
@@ -596,7 +605,7 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
       await route.fulfill({ status: response.status, headers: responseHeaders, body: Buffer.concat(chunks) });
     } catch (error) { failures.push(error instanceof Error ? error.message : String(error)); await route.abort("failed"); }
   });
-  return { context, fixture, calls, signedFixtures, providerMethods, requestBody, price, displayOrigin,
+  return { context, fixture, calls, signedFixtures, providerMethods, requestBody, changedQuestionRequestBody, price, displayOrigin,
     signWaiting() { return signWaiting; }, releaseSigner() { assert(releaseSign, "Actual injected sign request pending"); releaseSign(); },
     cleanupSigner() { releaseSign?.(); },
     logout() { signedIn = false; }, replace() { sessionId = "b".repeat(64); }, foreign() { address = `0x${"b".repeat(40)}`; },
@@ -647,15 +656,24 @@ async function waitConsent(page: Page, enabled: boolean) {
     const input = node.querySelector("input"); return node.textContent?.trim() === label && input?.disabled === !enabled;
   }), { label: ownerCopy.consent, enabled });
 }
-async function openCheckout(s: Awaited<ReturnType<typeof scenario>>, mode: "quick" | "deep") {
+async function openPreparation(s: Awaited<ReturnType<typeof scenario>>, mode: "quick" | "deep") {
   const page = await s.context.newPage(); page.setDefaultTimeout(10000); page.setDefaultNavigationTimeout(10000);
-  // Original strict17 checkout path; no diagnostic instrumentation.
+  // The real main519 entry requires an unsigned quote before checkout exists.
   const response = await page.goto(`${s.displayOrigin}/research?mode=${mode}&budget=0.03`); assert.equal(response?.status(), 200);
   assert.equal(new URL(page.url()).origin, s.displayOrigin);
   assert.equal(await page.evaluate(() => window.isSecureContext && !!crypto.subtle), true);
-  const panel = checkoutPanel(page);
-  await panel.getByRole("button", { name: "Isolated 257 test wallet", exact: true }).click();
+  assert.equal(await checkoutPanel(page).count(), 0, "No checkout or wallet selection before an explicit preparation");
+  assert.equal(await ownerConsent(page).count(), 0);
   await page.locator("#research-question").fill("Explain isolated durable recovery");
+  await page.getByRole("button", { name: entryCopy["pricing.checkout"], exact: true }).click();
+  return page;
+}
+async function openCheckout(s: Awaited<ReturnType<typeof scenario>>, mode: "quick" | "deep") {
+  assert.equal(s.displayOrigin, origin, "External-origin case exercises preparation refusal without mounting checkout");
+  const page = await openPreparation(s, mode);
+  const panel = checkoutPanel(page);
+  await panel.waitFor();
+  await panel.getByRole("button", { name: "Isolated 257 test wallet", exact: true }).click();
   const review = panel.getByRole("button", { name: checkoutCopy["researchCheckout.reviewPrice"].replace("{amount}", mode === "quick" ? "0.05" : "0.08"), exact: true });
   await review.click();
   await waitConsent(page, s.displayOrigin === origin);
@@ -854,20 +872,39 @@ try {
       await waitConsent(page, true); assert.equal(await ownerConsent(page).isChecked(), false, "Refreshing durable session clears consent");
       await ownerConsent(page).check();
       await page.locator("#research-question").fill("A separately reviewed new question");
-      await review.click(); assert.equal(await ownerConsent(page).isChecked(), false, "New request never inherits prior checked consent");
-      await page.locator("#research-question").fill("Explain isolated durable recovery"); await review.click();
+      await panel.waitFor({ state: "detached" });
+      assert.equal(await ownerConsent(page).count(), 0, "A changed question unmounts the prior ownership consent");
+      assert.equal(await review.count(), 0, "A changed question cannot reuse its prior checkout review");
+      await page.getByRole("button", { name: entryCopy["pricing.checkout"], exact: true }).click();
+      await panel.waitFor(); await review.click(); await waitConsent(page, true);
+      assert.equal(await ownerConsent(page).isChecked(), false, "New request never inherits prior checked consent");
+      assert.equal(await panel.getByRole("checkbox", { name: checkoutCopy["researchCheckout.consent"], exact: true }).isChecked(), false);
+      await page.locator("#research-question").fill("Explain isolated durable recovery");
+      await panel.waitFor({ state: "detached" });
+      assert.equal(await ownerConsent(page).count(), 0, "Restoring question text cannot restore an accepted quote or consent");
+      assert.equal(await review.count(), 0);
+      await page.getByRole("button", { name: entryCopy["pricing.checkout"], exact: true }).click();
+      await panel.waitFor(); await review.click(); await waitConsent(page, true);
+      assert.equal(await ownerConsent(page).isChecked(), false, "Restored original request requires fresh ownership consent");
+      assert.equal(await panel.getByRole("checkbox", { name: checkoutCopy["researchCheckout.consent"], exact: true }).isChecked(), false);
       const before = s.calls.length;
       await finishPurchase(page, s, associate, mode);
       await panel.getByRole("status").getByText(checkoutCopy["researchCheckout.uncertain"], { exact: true }).waitFor();
       assert.equal(s.signedFixtures.length, 1);
       const calls = await page.evaluate(() => (window as FixtureWindow).job257.state.calls);
       const posts = calls.filter(call => call.destination === "https://keryx.cc/api/agent/ask" && call.method === "POST");
-      assert.equal(posts.length, 2); // Unsigned quote + ONE intercepted signed request.
-      for (const post of posts) { assert.equal(post.body, s.requestBody); assert.equal(post.redirect, "error"); }
-      assert.equal(new Headers(posts[0].headers).has("payment-signature"), false);
-      assert.equal(new Headers(posts[0].headers).has("x-keryx-account-job"), false); assert.equal(posts[0].credentials, "omit");
-      assert.equal(posts[1].credentials, associate ? "same-origin" : "omit");
-      assert.equal(new Headers(posts[1].headers).get("x-keryx-account-job"), associate ? "associate" : null);
+      assert.equal(posts.length, 5); // Three preparations + original purchase quote + ONE intercepted signed request.
+      assert.deepEqual(posts.map(post => post.body), [s.requestBody, s.changedQuestionRequestBody, s.requestBody, s.requestBody, s.requestBody]);
+      for (const post of posts) assert.equal(post.redirect, "error");
+      for (const post of posts.slice(0, 4)) {
+        assert.equal(new Headers(post.headers).has("payment-signature"), false);
+        assert.equal(new Headers(post.headers).has("x-keryx-account-job"), false);
+        assert.equal(new Headers(post.headers).has("authorization"), false);
+        assert.equal(post.credentials, "omit");
+      }
+      assert.equal(new Headers(posts[4].headers).has("payment-signature"), true);
+      assert.equal(posts[4].credentials, associate ? "same-origin" : "omit");
+      assert.equal(new Headers(posts[4].headers).get("x-keryx-account-job"), associate ? "associate" : null);
       const paid = s.calls.slice(before).filter(call => call.method === "POST" && call.path === "/api/agent/ask");
       assert.equal(paid.length, 2);
       if (associate) assert(s.calls.slice(before).filter(call => call.path === "/api/auth/sessions").length >= 8,
@@ -882,12 +919,13 @@ try {
       assert.equal(await ownerConsent(page).count(), 0, "Purchase review clears after consumed uncertain dispatch");
       await page.getByRole("button", { name: words["savedResearch.refreshJob"], exact: true }).click();
       await page.getByText(words["savedResearch.notFoundUncertain"], { exact: true }).waitFor();
-      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 2);
+      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 5);
       await page.reload();
-      await checkoutPanel(page).waitFor();
+      assert.equal(await checkoutPanel(page).count(), 0, "Reload never restores a prepared checkout without a fresh quote");
+      assert.equal(await ownerConsent(page).count(), 0);
       await page.getByRole("button", { name: /Explain isolated durable recovery/ }).click();
       await page.getByText(words["savedResearch.notFoundUncertain"], { exact: true }).waitFor();
-      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 2, "Reload/recovery never sign or repay");
+      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 5, "Reload/recovery never quote, sign or repay");
       assert.equal(s.signedFixtures.length, 1);
       const recovered = await page.evaluate(() => (window as FixtureWindow).job257.state.calls);
       for (const get of recovered.filter(call => call.path === `/api/agent/ask?queryId=${signed.queryId}`)) {
@@ -911,8 +949,15 @@ try {
       s.releaseSigner(); // No auth notice: the ORIGINAL post-sign durable check must reject changed authority.
       await panel.getByRole("status").getByText(checkoutCopy["researchCheckout.stopped"], { exact: true }).waitFor();
       assert.equal(s.signedFixtures.length, 1);
-      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 1,
-        "Only unsigned quote; opt-in refusal never falls back to anonymous signed dispatch");
+      const posts = await page.evaluate(() => (window as FixtureWindow).job257.state.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask"));
+      assert.equal(posts.length, 2, "Only preparation and purchase quotes; opt-in refusal never falls back to anonymous signed dispatch");
+      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 2);
+      for (const post of posts) {
+        assert.equal(post.body, s.requestBody); assert.equal(post.credentials, "omit"); assert.equal(post.redirect, "error");
+        assert.equal(new Headers(post.headers).has("payment-signature"), false);
+        assert.equal(new Headers(post.headers).has("x-keryx-account-job"), false);
+        assert.equal(new Headers(post.headers).has("authorization"), false);
+      }
       const row = await inspectJournal(page, s.signedFixtures[0].queryId);
       assert.equal(row.submission, "prepared"); assert.equal(row.acknowledgement, undefined);
       results.push(`${loss}:compiled-post-sign-durable-refusal-without-anonymous-fallback`);
@@ -928,19 +973,36 @@ try {
       await panel.getByRole("button", { name: checkoutCopy["researchCheckout.buy"].replace("{amount}", "0.050000"), exact: true }).click();
       await panel.getByRole("status").getByText(checkoutCopy[credit === "unknown" ? "researchCheckout.stopped" : "researchCheckout.insufficient"], { exact: true }).waitFor();
       assert.equal(s.signedFixtures.length, 0); assert(!s.providerMethods.includes("eth_signTypedData_v4"));
-      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 1);
+      const posts = await page.evaluate(() => (window as FixtureWindow).job257.state.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask"));
+      assert.equal(posts.length, 2, "Preparation and purchase quotes cannot authorize a paid request when credit is unavailable");
+      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 2);
+      for (const post of posts) {
+        assert.equal(post.body, s.requestBody); assert.equal(post.credentials, "omit"); assert.equal(post.redirect, "error");
+        assert.equal(new Headers(post.headers).has("payment-signature"), false);
+        assert.equal(new Headers(post.headers).has("x-keryx-account-job"), false);
+        assert.equal(new Headers(post.headers).has("authorization"), false);
+      }
       results.push(`${credit}:compiled-credit-refusal-before-sign-or-paid-dispatch`);
     });
   }
   if (selected("external-loopback:compiled-fixed-origin-consent-unavailable-no-purchase")) {
     const s = await scenario(1366, "quick", "failed", { external: true });
     await using(s, async () => {
-      const { page } = await openCheckout(s, "quick");
-      assert.equal(await ownerConsent(page).isEnabled(), false); assert.equal(await ownerConsent(page).isChecked(), false);
-      assert.equal(s.signedFixtures.length, 0);
+      const page = await openPreparation(s, "quick");
+      await page.getByRole("status").getByText(checkoutCopy["researchCheckout.quoteChanged"], { exact: true }).waitFor();
+      assert.equal(await checkoutPanel(page).count(), 0, "CSP-refused preparation never mounts checkout");
+      assert.equal(await ownerConsent(page).count(), 0, "No owner consent UI exists before successful preparation");
+      assert.equal(s.signedFixtures.length, 0); assert(!s.providerMethods.includes("eth_signTypedData_v4"));
       assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 0);
-      // Original CSP disallows cross-origin BUYER_ENDPOINT on loopback. Do not
-      // relax it to manufacture external paid dispatch or generic unit evidence.
+      const attempts = await page.evaluate(() => (window as FixtureWindow).job257.state.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask"));
+      assert.equal(attempts.length, 1, "One genuine fetch attempt is blocked by CSP before any intercepted network POST");
+      assert.equal(attempts[0].destination, `${origin}/api/agent/ask`); assert.equal(attempts[0].body, s.requestBody);
+      assert.equal(attempts[0].credentials, "omit"); assert.equal(attempts[0].redirect, "error");
+      assert.equal(new Headers(attempts[0].headers).has("payment-signature"), false);
+      assert.equal(new Headers(attempts[0].headers).has("x-keryx-account-job"), false);
+      assert.equal(new Headers(attempts[0].headers).has("authorization"), false);
+      // Original CSP now refuses cross-origin BUYER_ENDPOINT at preparation.
+      // Do not relax it or inject a quote to manufacture checkout/paid dispatch.
       results.push("external-loopback:compiled-fixed-origin-consent-unavailable-no-purchase");
     });
   }

@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 const wt=path.resolve('D:/repos/server/Github/Hackathon/.keryx-worktrees/cli-job-target257-owner-association-20261015');
 const distPath=path.join(wt,'.next');
-const copyPaths=new Set([path.join(wt,'output/final-native25-built-consent-parent-execution-remaining17-v2/runtime/.next')]);
+const copyPaths=new Set([path.join(wt,'output/main519-built-consent-parent-execution-remaining17/runtime/.next')]);
 const stock=new Map([
   ['node_modules/@circle-fin/unified-balance-kit-0c69b7e99b232cac',path.join(wt,'node_modules/@circle-fin/unified-balance-kit')],
   ['node_modules/parse5-6a112f640792b72b',path.join(wt,'node_modules/parse5')],
