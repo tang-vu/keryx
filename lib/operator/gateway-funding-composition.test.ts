@@ -30,11 +30,11 @@ function runtimeImports(source: string, file: string): string[] {
   return imports;
 }
 
-const dormantRuntime = /(?:^|\/)(?:gateway-funding-[^/]+|enrolled-sqlite-adapter|enrolled-supabase-adapter|enrolled-sqlite-schema-profile|runtime-storage-config|storage-identity-(?:connection|sqlite|provision))\.(?:ts|tsx|mts)$/;
+const dormantRuntime = /(?:^|\/)(?:gateway-funding-[^/]+|chat-accounts-sqlite|enrolled-sqlite-adapter|enrolled-supabase-adapter|enrolled-sqlite-schema-profile|runtime-storage-config|storage-identity-(?:connection|sqlite|provision))\.(?:ts|tsx|mts)$/;
 const applicationStorageBoundary = "lib/db/application-storage.ts";
 const applicationStorageSubstrate = new Set(["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts",
   "lib/db/enrolled-sqlite-schema-profile.ts", "lib/db/runtime-storage-config.ts", "lib/db/storage-identity-connection.ts",
-  "lib/db/storage-identity-sqlite.ts", "lib/db/gateway-funding-ledger-types.ts", "lib/db/gateway-funding-sqlite-schema.ts"]);
+  "lib/db/storage-identity-sqlite.ts", "lib/db/chat-accounts-sqlite.ts", "lib/db/gateway-funding-ledger-types.ts", "lib/db/gateway-funding-sqlite-schema.ts"]);
 
 function assertDormantGraph(roots: string[], read: (file: string) => string,
   resolveImport: (file: string, specifier: string) => string | null,
@@ -102,7 +102,7 @@ describe("dormant Operator funding release", () => {
       const result = target ? name(target) : null; targets.set(base, result); return result;
     };
     const visited = assertDormantGraph(roots, file => readFileSync(join(cwd, file), "utf8"), resolveImport, importsFor);
-    const closedModules = new Set(["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts", "lib/db/enrolled-sqlite-schema-profile.ts"]);
+    const closedModules = new Set(["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts", "lib/db/enrolled-sqlite-schema-profile.ts", "lib/db/chat-accounts-sqlite.ts"]);
     for (const file of [...files(join(cwd, "lib")), ...files(join(cwd, "scripts"))]) {
       const importer = name(file);
       if (/(?:\.test\.|-fixture\.|\/fixtures\/|^scripts\/test-)/.test(importer)) continue;
@@ -111,6 +111,7 @@ describe("dormant Operator funding release", () => {
         if (!target || !closedModules.has(target)) continue;
         // The closed factory may construct its fixed reference profile; no ordinary consumer may select either.
         const permitted = importer === applicationStorageBoundary && ["lib/db/enrolled-sqlite-adapter.ts", "lib/db/enrolled-supabase-adapter.ts"].includes(target)
+          || importer === "lib/db/enrolled-sqlite-adapter.ts" && target === "lib/db/chat-accounts-sqlite.ts"
           || importer === "lib/db/enrolled-sqlite-adapter.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/accounts/sqlite-store.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/deliverable-acceptance-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
@@ -155,6 +156,15 @@ describe("dormant Operator funding release", () => {
     expect(() => assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
       posix.resolve("/", posix.dirname(file), specifier).slice(1) + ".ts")).toThrow("Dormant runtime reachable");
     expect(runtimeImports("import type { Authority } from './helper'; type Other = import('./helper').Authority;", "types.ts")).toEqual([]);
+  });
+
+  it("keeps the chat-link native factory behind its exact application storage edge", () => {
+    const sources: Record<string, string> = {
+      "app/entry.ts": "import '../lib/db/chat-accounts-sqlite';",
+      "lib/db/chat-accounts-sqlite.ts": "",
+    };
+    expect(() => assertDormantGraph(["app/entry.ts"], file => sources[file], (file, specifier) =>
+      posix.resolve("/", posix.dirname(file), specifier).slice(1) + ".ts")).toThrow("Dormant runtime reachable");
   });
 
   it.each(["export { createEnrolledSupabaseAdapter } from '../lib/db/enrolled-supabase-adapter';",

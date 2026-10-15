@@ -1,6 +1,19 @@
 # Circle and Arc integration ledger
 
 This is an inventory of demonstrated Keryx integration, not a list of vendor capabilities.
+
+Current proof-link observations: October 15, 2026 UTC, source baseline
+`1476962c3ca68c1e0614aaf0352c69ae90f09fac`. The bounded unauthenticated
+read attempted 12 exact public proof/reference URLs; all returned **UNKNOWN**
+because the configured local proxy failed before any public HTTP response.
+Current working-link verification remains **UNKNOWN**. The five existing `Live`
+statuses preserve their dated, narrow demonstrated use; local transport failure
+does not establish an outage or a change in implementation/activation. See the
+[current observations, source pins and open criteria](circle-arc304-current-proof-refs-20261015.md).
+Parent public-document reads at `2026-10-15T07:37:26.327Z` supplement the retained
+official references below for Arc connection parameters and Gateway contracts.
+They provide vendor reference facts, not raw runtime HTTP or transaction proof.
+
 Inventory reviewed in the retained `ec5f39c9750dfc9e80e66edd41348ca6034c01c3`
 worktree; relevant source compared with main `133f31465598499745215eacc655267ded9a5588`
 on October 14, 2026 (Asia/Saigon; October 13 UTC). Original payment/contract public
@@ -19,8 +32,8 @@ and [remaining sponsored-action proof gate](#remaining-end-to-end-proof-gate).
 
 `Live` preserves the narrow use demonstrated by the dated public evidence below. It does not
 establish every caller surface, customer adoption, independent audit or withdrawal.
-Current working-link acceptance remains pending the root read-only request; a local
-HTTPS failure does not establish that a public service is down.
+Current working-link verification remains **UNKNOWN**; the original working-link
+criterion is open. A local transport failure does not establish a public outage.
 `Testnet only` preserves historical test-USDC evidence. `Planned` includes implemented
 paths whose activation or end-to-end proof is missing. `Not used` gives the reason.
 Code links are relative to this document; an em dash means no implementation was found.
@@ -29,9 +42,9 @@ Every row has a tracking issue, including deliberate exclusions.
 <!-- circle-arc-ledger:start -->
 | Tool | What Keryx uses it for | Code | Network | Status | Proof | Tracking |
 | --- | --- | --- | --- | --- | --- | --- |
-| Circle Gateway | Read the selected public role's available USDC balance without signing or probing payment readiness. | [treasury observer](../../lib/gateway/unified-balance.ts), [HTTP projection](../../app/api/treasury/route.ts) | Arc mainnet | Live | [Treasury observation](https://keryx.cc/api/treasury): `via=circle-gateway-api`, `observation.network=eip155:5042`, `paymentReadiness=not-probed`. | [#304](https://github.com/tang-vu/keryx/issues/304) |
-| Gateway nanopayments | Offchain authorized access tolls and citation rewards, settled through the batch facilitator. | [buyer](../../lib/payments/server-x402-client.ts), [citation route](../../app/api/cite/[id]/route.ts), [settlement evidence](../../lib/payments/x402-payment-evidence.ts) | Arc mainnet | Live | [Exact citation receipt](https://keryx.cc/api/dispatch/3d91fed3-dbaa-42b4-9970-db218b9f3f8a/receipt): 0.025 USDC, Circle reference `19e49c04-93eb-4ddd-b9f2-b4a6be7c155e`. | [#252](https://github.com/tang-vu/keryx/issues/252) |
-| x402 batch facilitator | Seller verification and buyer payment headers using `@circle-fin/x402-batching`; this is Gateway Nanopayments, rather than the separate Facilitator Service. | [seller](../../lib/x402-server.ts), [batch signer](../../lib/payments/pinned-arc-batch-signer.ts) | Arc mainnet | Live | [Exact access receipt](https://keryx.cc/api/dispatch/9d6d9d80-79b4-460e-bf0d-6f9c5e220c3f/receipt): 0.002 USDC, Circle reference `ed41ddfb-5967-4b24-8064-dc0c6a2d9fd9`. | [#304](https://github.com/tang-vu/keryx/issues/304) |
+| Circle Gateway | Read the selected public role's available USDC balance without signing or probing payment readiness. | [treasury observer](../../lib/gateway/unified-balance.ts), [HTTP projection](../../app/api/treasury/route.ts) | Arc mainnet | Live | Current working-link verification **UNKNOWN** (U05); retained [Treasury observation](https://keryx.cc/api/treasury): `via=circle-gateway-api`, `observation.network=eip155:5042`, `paymentReadiness=not-probed`. | [#304](https://github.com/tang-vu/keryx/issues/304) |
+| Gateway nanopayments | Offchain authorized access tolls and citation rewards, settled through the batch facilitator. | [buyer](../../lib/payments/server-x402-client.ts), [citation route](../../app/api/cite/[id]/route.ts), [settlement evidence](../../lib/payments/x402-payment-evidence.ts) | Arc mainnet | Live | Current working-link verification **UNKNOWN** (U06); retained [Exact citation receipt](https://keryx.cc/api/dispatch/3d91fed3-dbaa-42b4-9970-db218b9f3f8a/receipt): 0.025 USDC, Circle reference `19e49c04-93eb-4ddd-b9f2-b4a6be7c155e`. | [#252](https://github.com/tang-vu/keryx/issues/252) |
+| x402 batch facilitator | Seller verification and buyer payment headers using `@circle-fin/x402-batching`; this is Gateway Nanopayments, rather than the separate Facilitator Service. | [seller](../../lib/x402-server.ts), [batch signer](../../lib/payments/pinned-arc-batch-signer.ts) | Arc mainnet | Live | Current working-link verification **UNKNOWN** (U07); retained [Exact access receipt](https://keryx.cc/api/dispatch/9d6d9d80-79b4-460e-bf0d-6f9c5e220c3f/receipt): 0.002 USDC, Circle reference `ed41ddfb-5967-4b24-8064-dc0c6a2d9fd9`. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Circle Facilitator Service | Not used: current sellers select Gateway batching; no separate per-payment onchain facilitator integration. | — | None | Not used | No Keryx proof claimed; [vendor distinction](https://developers.circle.com/x402-facilitators). | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Gateway withdrawal and mint | Retained owner authorization, Circle attestation and exact original mint recovery. Production user activation is a separate gate. | [attestation service](../../lib/gateway/withdrawal-transfer-service.ts), [mint boundary](../../lib/gateway/withdrawal-mint-transaction.ts), [owner service](../../lib/gateway/creator-owner-withdrawal-service.ts) | Arc testnet rehearsal | Testnet only | [Exact finalized mint](https://explorer.testnet.arc.io/tx/0x5cee615d7a5ffac3ae7caf4257343483b8a7c08315b4276a727cea3c14a4e257), [dated owner-operated drill](creator-funded-withdrawal-drill.md): 0.002 test USDC; this is not Gas Station proof. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | CCTP | Planned crosschain funding; current Gateway domain configuration is not direct TokenMessenger or MessageTransmitter usage. | [funding plan](../tameion-2026.md) | Future, profile-specific | Planned | No direct Keryx CCTP transaction claimed. | [#256](https://github.com/tang-vu/keryx/issues/256) |
@@ -45,7 +58,7 @@ Every row has a tracking issue, including deliberate exclusions.
 | Gas Station | Evaluated below; no enabled sponsored user action or compatible SCA flow established. | — | Proposed Arc testnet pilot only | Planned | [Official Arc support](https://developers.circle.com/wallets/gas-station), not Keryx proof; sponsored testnet receipt missing. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Keryx creator-registration gas relay | Distinct sponsor EOA pays exact V3 registration gas; creator signs intent and keeps source/payout authority. Controlled-publisher financial rehearsal is retained; actual user admission remains open. | [registration service](../../lib/sources/registration-sponsor-service.ts), [native reservations](../../lib/db/registration-sponsor.ts), [funded driver](../../scripts/test-registration-sponsor-funded.mts) | Arc testnet evidence; separate bounded mainnet policy | Testnet only | [Retained normal registration](https://explorer.testnet.arc.io/tx/0x4b29ca0be1b7379abf28f9ea942f07ed097493bf8d1ee5283d2d2af9b660f966), [dated financial results and limits](registration-sponsor-funded-acceptance-20261012.md). This is Keryx relay gas, not Circle Gas Station or verified user/browser acceptance. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Permissionless Circle Paymaster | Not used: current official supported-network list does not include Arc; paying gas in USDC also does not mean Keryx sponsors it. | — | None for Keryx | Not used | [Official overview](https://developers.circle.com/paymaster); no Keryx UserOperation. | [#304](https://github.com/tang-vu/keryx/issues/304) |
-| Arc contracts: SourceRegistry | Retained V1 listing authority for source control, pricing and payouts; V3 registration uses separate origins. Database entries remain a cache/fallback. | [V1 contract](../../contracts/source-registry.sol), [V3 contract](../../contracts/source-registry-v3.sol), [origin authority](../../lib/registry/source-registry-authority.ts), [client](../../lib/registry/registry-client.ts), [parity](../../lib/registry/parity.ts) | Arc mainnet | Live | [Exact retained V1 contract](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb), [health registry projection](https://keryx.cc/api/health). V3 deployment is separate from a sponsored registration receipt. | [#304](https://github.com/tang-vu/keryx/issues/304) |
+| Arc contracts: SourceRegistry | Retained V1 listing authority for source control, pricing and payouts; V3 registration uses separate origins. Database entries remain a cache/fallback. | [V1 contract](../../contracts/source-registry.sol), [V3 contract](../../contracts/source-registry-v3.sol), [origin authority](../../lib/registry/source-registry-authority.ts), [client](../../lib/registry/registry-client.ts), [parity](../../lib/registry/parity.ts) | Arc mainnet | Live | Current working-link verification **UNKNOWN** (U08/U01); retained [Exact retained V1 contract](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb), [health registry projection](https://keryx.cc/api/health). V3 deployment is separate from a sponsored registration receipt. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Circle Contracts / Smart Contract Platform | Not used: registry deployment, reads and writes use Keryx's viem/Hardhat paths, not Circle's contract platform. | — | None | Not used | No Keryx proof claimed. | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | Circle CLI | Optional marketplace metadata discovery is implemented; no production search, purchase or CLI-managed custody proof established by this ledger. | [discovery adapter](../../lib/agent/external-discovery.ts) | Vendor catalog, optional | Planned | Source invokes `circle services search`; dependency/command presence alone is not live usage proof. | [#292](https://github.com/tang-vu/keryx/issues/292) |
 | Circle Agent Wallet | Not used: Keryx caller wallets and journals do not use the Agent Wallet service. | — | None | Not used | No Keryx proof claimed. | [#304](https://github.com/tang-vu/keryx/issues/304) |
@@ -53,7 +66,7 @@ Every row has a tracking issue, including deliberate exclusions.
 | ERC-8004 | Planned agent identity/reputation integration; no registry registration or feedback writer implemented. | — | Future, profile-specific | Planned | No Keryx registration transaction claimed. | [#289](https://github.com/tang-vu/keryx/issues/289) |
 | ERC-8183 | Planned agentic-commerce assessment; existing Keryx paid jobs are not ERC-8183 escrow jobs. | — | Future Arc testnet assessment | Planned | No Keryx escrow job transaction claimed. | [#290](https://github.com/tang-vu/keryx/issues/290) |
 | Arc memos / sender-preserving batched transactions | Planned exact-settlement metadata and bounded batch withdrawals; existing Circle nanopayment batching is a separate integration. | — | Future, profile-specific | Planned | No Keryx Memo or Multicall3From call claimed. | [#291](https://github.com/tang-vu/keryx/issues/291) |
-| USDC | Integer micro-USDC pricing, tolls and rewards; native gas uses a separate 18-decimal unit. | [network profiles](../../lib/arc-network-profile.ts), [allocation](../../lib/payments/split-allocation.ts) | Arc mainnet | Live | [Exact access receipt](https://keryx.cc/api/dispatch/9d6d9d80-79b4-460e-bf0d-6f9c5e220c3f/receipt), [USDC contract](https://explorer.arc.io/address/0x3600000000000000000000000000000000000000). | [#304](https://github.com/tang-vu/keryx/issues/304) |
+| USDC | Integer micro-USDC pricing, tolls and rewards; native gas uses a separate 18-decimal unit. | [network profiles](../../lib/arc-network-profile.ts), [allocation](../../lib/payments/split-allocation.ts) | Arc mainnet | Live | Current working-link verification **UNKNOWN** (U07/U09); retained [Exact access receipt](https://keryx.cc/api/dispatch/9d6d9d80-79b4-460e-bf0d-6f9c5e220c3f/receipt), [USDC contract](https://explorer.arc.io/address/0x3600000000000000000000000000000000000000). | [#304](https://github.com/tang-vu/keryx/issues/304) |
 | EURC | Planned localized quotes/FX assessment; current payment contract remains USDC only. | — | Future, profile-specific | Planned | No Keryx EURC quote, swap or payment claimed. | [#294](https://github.com/tang-vu/keryx/issues/294) |
 <!-- circle-arc-ledger:end -->
 
@@ -84,7 +97,7 @@ Read-only observations at approximately `2026-10-08T17:54Z` also found:
   not a new Gas Station sponsorship or customer withdrawal.
 
 Dynamic endpoints may later change or become unavailable. Recheck each Live proof
-when changing its claim; remove the Live label if exact evidence cannot be recovered.
+when changing its claim; current transport UNKNOWN does not change its dated demonstration.
 CI verifies ledger structure, tracking links and existing source paths offline. It
 does not call vendors or pretend to verify settlement or public availability.
 
@@ -97,11 +110,20 @@ health and normal maintenance. Its selected registry is mainnet V3
 `0x2217250019ab614dae7391d346d05c3fc4d71ae1`; the older V1 proof keeps its own origin.
 ROOT separately binds the installed full ec5 commit/build. Registry parity and
 other monitoring timestamps in that health body are stale, not fresh chain proof.
-No new Keryx GET was made here. Proof-page HTML, the remaining Live proof URLs
-and retained testnet transactions still need the coordinator's readback. The
-[acceptance map](circle-arc-304-acceptance-2026-10-13.md) names every URL and the
-retained report hashes. Neither this failure nor offline CI supplies fresh HTTP,
-vendor, chain or deployment acceptance.
+That earlier review made no new Keryx GET. The October 15 bounded read attempted
+the proof-page HTML, exact proof URLs and two retained testnet transactions; each
+remains UNKNOWN without a public response. The
+[earlier acceptance map](circle-arc-304-acceptance-2026-10-13.md) retains its original
+dates/report hashes; the [current readback](circle-arc304-current-proof-refs-20261015.md)
+records the new attempts. Neither local failure nor offline CI supplies fresh
+HTTP, vendor, chain or deployment acceptance.
+
+At `2026-10-15T07:37:26.327Z`, the parent web reader obtained the public
+[proof page](https://keryx.cc/proof) with a two-day-old cache crawl. This is reachable
+document evidence, not current raw HTTP, served-link or transaction acceptance.
+The parent's [treasury](https://keryx.cc/api/treasury) read returned an internal
+reader error; runtime treasury availability remains **UNKNOWN**. Neither result
+changes the dated integration statuses or closes the original working-link criterion.
 
 ## Official network and service references
 
@@ -114,6 +136,16 @@ The October 13 web-tool projections confirmed the network-specific chain/domain,
 USDC and Gateway contract rows below. These are primary-reference readbacks, not
 RPC code/hash verification or raw native HTTP captures.
 
+Parent public-document reads at `2026-10-15T07:37:26.327Z` confirmed the chain IDs,
+18-decimal native USDC gas, primary RPCs and explorers in the
+[Arc connection reference](https://docs.arc.io/arc/references/connect-to-arc),
+which also lists Blockdaemon separately. The parent also confirmed both networks'
+Gateway Wallet, Minter and domain 26 in the
+[Circle Gateway contract reference](https://developers.circle.com/gateway/references/contract-addresses).
+These October 15 vendor reference facts supplement the earlier dated observations;
+other reference scopes retain their earlier dates. No Keryx runtime, RPC code,
+transaction, service-base or Wallets key/environment acceptance follows from them.
+
 | Parameter | Arc mainnet | Arc testnet |
 | --- | --- | --- |
 | Chain ID / x402 network | `5042` / `eip155:5042` | `5042002` / `eip155:5042002` |
@@ -122,8 +154,8 @@ RPC code/hash verification or raw native HTTP captures.
 | Native gas asset | USDC, 18 decimals | Test USDC, 18 decimals |
 | Gateway Wallet | `0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE` | `0x0077777d7EBA4688BDeF3E311b846F25870A19B9` |
 | Gateway Minter | `0x2222222d7164433c4C09B0b0D809a9b52C04C205` | `0x0022222ABE238Cc2C7Bb1f21003F0a260052475B` |
-| Official current public RPC | `https://rpc.mainnet.arc.io` | `https://rpc.testnet.arc.io` |
-| Official current explorer | `https://explorer.arc.io` | `https://explorer.testnet.arc.io` |
+| Official public RPC (October 15 parent reference read) | `https://rpc.mainnet.arc.io` | `https://rpc.testnet.arc.io` |
+| Official explorer (October 15 parent reference read) | `https://explorer.arc.io` | `https://explorer.testnet.arc.io` |
 | Keryx Gateway API base | `https://gateway-api.circle.com` | `https://gateway-api-testnet.circle.com` |
 
 Gateway APIs above are the pinned batch SDK/profile bases; balances use `/v1/balances`.

@@ -142,7 +142,7 @@ export function createEnrolledSqliteAccountMembership(db: DatabaseSync): Account
     }
     assertVerifiedSqliteNativeUserDomainPolicy(db);
     const family = db.prepare(`SELECT name FROM sqlite_schema WHERE type='table'
-      AND name IN (${NATIVE_USER_DOMAIN_TABLES.map(() => "?").join(",")}) ORDER BY name LIMIT 20`)
+      AND name IN (${NATIVE_USER_DOMAIN_TABLES.map(() => "?").join(",")}) ORDER BY name LIMIT ${NATIVE_USER_DOMAIN_TABLES.length + 1}`)
       .all(...NATIVE_USER_DOMAIN_TABLES).map(row => row.name);
     if (JSON.stringify(family) !== JSON.stringify([...NATIVE_USER_DOMAIN_TABLES].sort())) throw unavailable();
     // Admit the account/session shape once. Only the three exact identity fences
