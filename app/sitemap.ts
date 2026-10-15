@@ -87,6 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // must not inherit an English hreflang from the surrounding archive interface.
   const interfaces = [...staticRoutes, ...pageRoutes, ...topicRoutes, ...wantedRoutes]
     .map(route => ({ ...route, alternates: englishSitemapAlternates(new URL(route.url).pathname, BASE) }));
-  const profiles = (await publicProfileSitemap()).map(profile=>({url:`${BASE}/u/${profile.handle}`,lastModified:new Date(profile.updatedAt),changeFrequency:"weekly" as const,priority:0.6}));
+  const profiles = (await publicProfileSitemap()).map(profile=>({url:`${BASE}/u/${profile.handle}`,lastModified:new Date(profile.updatedAt),changeFrequency:"weekly" as const,priority:0.6,
+    alternates:englishSitemapAlternates(`/u/${profile.handle}`,BASE)}));
   return [...interfaces, ...answerRoutes, ...profiles];
 }
