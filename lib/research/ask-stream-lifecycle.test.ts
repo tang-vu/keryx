@@ -53,7 +53,7 @@ it("cleans up a cancelled reader and an already aborted request", () => {
 });
 
 it("offers only a same-origin original report path for explicit link-readable visibility", () => {
-  const reportId = "4eb87a1b-1d33-4381-956c-ce83c8640d2b";
+  const reportId = "11111111-2222-4333-8444-555555555555";
   for (const visibility of ["public", "unlisted"]) expect(savedReportRecoveryPath({ reportId, visibility })).toBe(`/dispatch/${reportId}`);
   for (const visibility of [undefined, "private", "unknown"]) expect(savedReportRecoveryPath({ reportId, visibility })).toBeNull();
   for (const id of [null, "../../me", "https://example.com", `${reportId}?publish=1`, ""]) expect(savedReportRecoveryPath({ reportId: id, visibility: "public" })).toBeNull();

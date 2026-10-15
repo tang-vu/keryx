@@ -11,7 +11,7 @@ vi.mock("@/components/keryx/reasoning-console", () => ({ ReasoningConsole: () =>
 vi.mock("@/components/keryx/creators-paid-panel", () => ({ CreatorsPaidPanel: () => null }));
 vi.mock("@/components/keryx/decision-reviews", () => ({ DecisionReviews: () => null }));
 
-const reportId = "4eb87a1b-1d33-4381-956c-ce83c8640d2b";
+const reportId = "11111111-2222-4333-8444-555555555555";
 let root: Root, container: HTMLDivElement;
 let hook: ReturnType<typeof useAskStream>;
 let streams: ReadableStreamDefaultController<Uint8Array>[];
