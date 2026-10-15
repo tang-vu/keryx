@@ -16,7 +16,7 @@ export function LanguageSwitcher() {
       {enabledLocales.map(value => <option key={value} value={value} lang={value}>{uiPreferenceCopy(value === "en" ? "english" : value === "vi" ? "vietnamesePreview" : "chinesePreview")}</option>)}
     </select>
     <p id={`${id}-notice`} className={preview ? "mt-1 max-w-[32ch] text-[10px] normal-case lg:sr-only" : "sr-only"}>
-      {uiPreferenceCopy(preview ? "previewNotice" : "englishOnly")}
+      {preview ? uiPreferenceCopy("previewNotice") : enabledLocales.length === 1 ? uiPreferenceCopy("englishOnly") : ""}
     </p>
     <p id={`${id}-status`} role="status" aria-live="polite" className="sr-only">{status ? uiPreferenceCopy(status) : ""}</p>
   </div>;

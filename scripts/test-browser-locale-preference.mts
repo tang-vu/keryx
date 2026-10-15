@@ -240,6 +240,7 @@ try {
       value: (option as HTMLOptionElement).value, label: option.textContent,
     }))), [{ value: "en", label: "English" }, { value: "vi", label: "Tiếng Việt (preview)" },
       { value: "zh-Hans", label: "简体中文 (preview)" }]);
+    assert.equal(await page.locator('footer [id$="-notice"]').textContent(), "", "English must not announce that it is the only offered option");
     await page.getByLabel("Draft question").fill("Preserve this offered-language draft");
     await page.getByLabel("Unsaved editor").fill("Retain offered editor text");
     if (width < 1024) await page.getByRole("button", { name: "Open menu", exact: true }).click();
