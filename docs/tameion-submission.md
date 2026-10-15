@@ -226,6 +226,13 @@ This is another documented workflow for an already identified user, not a fifth 
 
 ### Return task from 0xacee on October 15
 
+[Watch the English recording, 2:23](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.mp4)
+· [Recording scope and SHA-256](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.txt)
+
+[Read the short case study: problem, useful evidence and application](case-studies/voiceready-2026-10-15.md).
+It connects this return task to the earlier session and keeps research outcomes,
+companion measurements and customer acceptance distinct.
+
 On **October 15, 2026**, the owner identified an additional VoiceTake/VoiceReady
 project as 0xacee's work and supplied its retained local package. Together with
 the October 12 session above, this records **owner-confirmed return use on a new
@@ -251,13 +258,14 @@ describe VoiceReady's output, separately from Keryx's research result. Human
 listening review and use of the output in a finished customer deliverable remain
 unconfirmed.
 
-The retained **2:23 English video** uses actual browser captures, shortened waits,
+The **2:23 English video** uses actual browser captures, shortened waits,
 held views, AI narration and burned captions. It preserves the failed research
 attempts and the useful narrower answer. Its SHA-256 is
 `9b4b8b1994841fecb2ea08ad195cf08d6c1bd67d87d0e909a38936a353d05e0d`.
 The local package includes the companion source, measurements, audio and browser
-checks. Video/package publication is still open; these report references do not
-replace the unpublished recording. Anonymous report readback returned HTTP 503
+checks. The owner approved video publication on October 15; the downloaded
+published video matches the retained hash. The complete project/audio package
+remains local. Anonymous report readback returned HTTP 503
 during the existing October 15 production maintenance window, so public answer
 availability was not established by this check.
 
