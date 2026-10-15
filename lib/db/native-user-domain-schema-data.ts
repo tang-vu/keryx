@@ -9,4 +9,5 @@ export const NATIVE_USER_DOMAIN_TABLES = Object.freeze([
   "account267_sessions", "account267_challenges", "account267_events",
   "topic_watches",
   "chat263_links", "chat263_tokens",
+  "owner269_operations", "owner269_associations",
 ] as const);

@@ -547,7 +547,7 @@ describe("genuine enrolled account membership", () => {
     expect(retained(base.file)).toEqual(before); expect((await base.service.resolve(base.s))!.membership).toEqual(result.membership);
     mark("postconditions");
   });
-  it("preserves MAX8, eight live challenges and bounded retained challenge/event refusal", async () => {
+  it("preserves MAX8 and refuses a ninth wallet before preparing a proof", async () => {
     const mark = phaseTiming("max8-retention");
     const base = await bootstrap();
     mark("bootstrap");
@@ -556,6 +556,9 @@ describe("genuine enrolled account membership", () => {
     const full = (await base.service.resolve(base.s))!;
     await expect(base.service.prepareLink(base.s, wallets[8].address, expectedOf(full.membership), linkConsent)).rejects.toThrow("account_full");
     mark("full-account-refusal");
+  });
+  it("bounds eight live challenges and retained challenge capacity", async () => {
+    const mark = phaseTiming("max8-retention");
     const other = await bootstrap(fixture(), 9);
     mark("second-bootstrap");
     const proofs: Awaited<ReturnType<typeof other.service.prepareLink>>[] = [];
@@ -578,6 +581,9 @@ describe("genuine enrolled account membership", () => {
     await expect(other.service.prepareLink(other.s, wallets[0].address, expectedOf(other.start.membership), linkConsent)).rejects.toThrow("account_unavailable");
     expect(retained(other.file)).toEqual(retainedBefore);
     mark("retained-cap-refusal");
+  });
+  it("refuses retained event capacity before completing a taken proof", async () => {
+    const mark = phaseTiming("max8-retention");
     const eventBase = await bootstrap(fixture(), 8); mark("event-bootstrap");
     const proof = await eventBase.service.prepareLink(eventBase.s, wallets[0].address, expectedOf(eventBase.start.membership), linkConsent);
     const taken = await eventBase.store.take(eventBase.s, binding, proof.nonce, "link-wallet", randomAccountValue());

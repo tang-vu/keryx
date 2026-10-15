@@ -8266,6 +8266,34 @@ Use separate default-off interactive account-history consent for a NEW browser p
 Compose the reviewed predeadline observer without changing its single lock/channel/reservation or original 180/300-second clock. Project only bounded existing exact-original recovery facts after genuine current owner/session proof; missing/ambiguous facts stay unknown. Actual job details mount a metadata reader by validated job ID as selector only. Separate finite request deadlines and active body cancellation prevent stale/stalled mounted observation; no payment/recovery action or new external scheduler is added.
 
 SOURCE AUTHORED, tests/types/build/CI UNRUN. Original257 stays open through independent payment review, real focused controls and remaining paid/vendor/product acceptance. Parent263 owns the future compiled native-family bound, and ROOT retains sole merge/release coordination and batched delivery. See [the source correction and remaining gates](docs/engineering/job-target257-authenticated-pending-owner-20261015.md).
+## 2026-10-15 - Bounded original269 assignment source, acceptance OPEN
+
+Keep owner-assigned attribution in a separate revocable metadata domain, never
+an anonymous claim ticket or financial owner. Reuse current durable #267 account,
+member and credential/session generations for independently authenticated explicit
+recipient consent. Apply/confirm use fresh positive admission; reject/withdraw use
+the genuine current recipient generation even after suppression. One bounded
+operation event and historical receipt commit with every member transition;
+consent withdrawal is joint with removal, and undo is compensating audited removal.
+
+The source adds a readonly-default, digest-bound local owner CLI, recipient-only
+same-origin route and private inbox/profile-count/JSON projection. Native methods
+require the genuine selected connection, fixed guards and pre-SQL readonly denial;
+no factory DDL, ordinary fallback, provider, key, daemon, payment writer or native
+policy expansion is introduced. Original network requires retained provenance.
+The POSIX-root local owner capability is proposed for peer review; no live use or
+new credential is authorized. Existing ownership/history/private/public consumers
+remain outside the new contract and gain no assignment authority.
+
+Fresh apply is held pending separately allocated shared ticket/original/A2A
+occupancy guards. Current #267 LIMIT20 cannot admit the new fixed22 metadata
+family without a narrow owner-reviewed correction; existing migration references
+also need a separate exact20-to22 acceptance path. Profile deletion semantics,
+consumer integration, Supabase/archive/testnet, peer review, focused failure/type/
+build checks, required CI and production gates remain OPEN. Source and synthetic
+fixture text only were authored; the author ran no modules/tests/compiler/browser/
+database/Git writer and made no commit. See
+[the implementation and exact seams](docs/engineering/owner-run-assignment269-20261015.md).
 
 ## 2026-10-15 - Public ordinary research with explicit creation visibility
 

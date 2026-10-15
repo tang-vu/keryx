@@ -12,6 +12,8 @@ import { PUBLIC_PROFILES_SQL } from "./public-profiles-sqlite";
 import { DECISION_REVIEWS_SQL } from "./decision-reviews-sqlite";
 import { TOPIC_WATCHES_SQL } from "./topic-watches-schema";
 import { PENDING_JOB_OWNERS_SQL } from "./pending-job-owners-schema";
+import { OWNER_RUN_ASSIGNMENTS_SQL } from "../owner-run-assignments/schema";
+import { OWNER269_OCCUPANCY_PROPOSAL } from "../owner-run-assignments/occupancy-proposal";
 
 export { NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema-data";
 
@@ -25,5 +27,7 @@ export function installNativeUserDomainSchema(db: DatabaseSync): void {
     PENDING_JOB_OWNERS_SQL]) db.exec(sql);
   for (const entry of ACCOUNT_MEMBERSHIP_SCHEMA_DATA) if (entry.sql !== null) db.exec(entry.sql);
   db.exec(CHAT_ACCOUNT_SQL);
+  db.exec(OWNER_RUN_ASSIGNMENTS_SQL);
+  for (const entry of OWNER269_OCCUPANCY_PROPOSAL) db.exec(entry.sql + ";");
   db.prepare("INSERT INTO deliverable_acceptance_store(singleton,id) VALUES(1,?)").run(randomUUID());
 }
