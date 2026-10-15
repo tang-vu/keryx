@@ -253,6 +253,17 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
             {message("researchEntry.metadataLookup")}
           </a>
           {researchPaused && availabilityPanel}
+
+          <div className="mt-1 border-t border-line pt-1 sm:mt-2 sm:pt-3">
+            <ResearchVisibilityPicker preference={visibility} disabled={disabled} parentVisibility={parentVisibility} compact />
+            <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
+              {message("researchEntry.sourceCap", { amount: formatRecordedAmount(effectiveBudget, { minimumFractionDigits: 6, useGrouping: false }), payer: message(payer === "treasury" ? "researchEntry.treasuryPayer" : payer === "session" ? "researchEntry.sessionPayer" : payer === "expired" ? "researchEntry.expiredPayer" : "researchEntry.pausedPayer") })}
+            </p>
+            <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || !visibility.ready || question.trim().length === 0}
+              data-tour="dispatch-btn"
+              className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
+              {message(disabled ? "researchEntry.researching" : researchPaused ? "researchEntry.paused" : "researchEntry.ask")}
+            </button>
           <fieldset className="mt-1">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">{message("researchEntry.depth")}</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
@@ -270,16 +281,6 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
                 : message("researchEntry.deepHint")}
             </p>
           </fieldset>
-          <div className="mt-2 border-t border-line pt-3">
-            <ResearchVisibilityPicker preference={visibility} disabled={disabled} parentVisibility={parentVisibility} />
-            <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
-              {message("researchEntry.sourceCap", { amount: formatRecordedAmount(effectiveBudget, { minimumFractionDigits: 6, useGrouping: false }), payer: message(payer === "treasury" ? "researchEntry.treasuryPayer" : payer === "session" ? "researchEntry.sessionPayer" : payer === "expired" ? "researchEntry.expiredPayer" : "researchEntry.pausedPayer") })}
-            </p>
-            <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || !visibility.ready || question.trim().length === 0}
-              data-tour="dispatch-btn"
-              className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
-              {message(disabled ? "researchEntry.researching" : researchPaused ? "researchEntry.paused" : "researchEntry.ask")}
-            </button>
             {showLaunchBadge && <div className="mt-3 flex justify-center sm:justify-start"><ProductHuntBadge /></div>}
             <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
               {payer === "session"
