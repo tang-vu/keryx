@@ -18,6 +18,8 @@ export const HISTORICAL_NATIVE_USER_DOMAIN_TABLES = Object.freeze(["private_prof
 /** Migration-only references, never additional runtime admission. The optional
  * chat pair is admitted only when both are actually in the compiled source.
  * Each changed compiled target still needs the release owner's acceptance.
+ * The known topic-only full20 predecessor is migration-only when the compiled
+ * source also contains the complete chat pair. It is never runtime admission.
  * pending_job_owners and arbitrary partial/unknown families are not admitted. */
 function topicWatchesMigrationPlans() {
   const sourceTables: readonly string[] = NATIVE_USER_DOMAIN_TABLES;
@@ -27,7 +29,9 @@ function topicWatchesMigrationPlans() {
     HISTORICAL_NATIVE_USER_DOMAIN_TABLES.some(table => !sourceTables.includes(table)) ||
     !known.some(tables => canonicalJson([...tables].sort()) === canonicalJson([...added].sort())))
     throw new Error("ROOT must qualify the full19-to-complete-bundle migration reference");
-  return Object.freeze([false, true].map(publicReferenceArchive => {
+  const missingFamilies = added.includes("chat263_links")
+    ? [added, ["chat263_links", "chat263_tokens"]] : [added];
+  return Object.freeze([false, true].flatMap(publicReferenceArchive => missingFamilies.map(missing => {
     const reference = new DatabaseSync(":memory:");
     try {
       reference.exec("BEGIN"); installMainnetApplicationSchema(reference, { publicReferenceArchive });
@@ -36,11 +40,11 @@ function topicWatchesMigrationPlans() {
       // DDL is taken ONLY from the isolated, trusted source installer, never
       // target metadata, a caller table list, an environment value or a file.
       const objects = reference.prepare(`SELECT type,name,tbl_name,sql FROM sqlite_schema
-        WHERE name NOT LIKE 'sqlite_%' ORDER BY rowid`).all().filter(row => added.includes(String(row.tbl_name)));
-      if (objects.filter(row => row.type === "table").length !== added.length ||
+        WHERE name NOT LIKE 'sqlite_%' ORDER BY rowid`).all().filter(row => missing.includes(String(row.tbl_name)));
+      if (objects.filter(row => row.type === "table").length !== missing.length ||
         objects.some(row => !["table", "index", "trigger"].includes(String(row.type)) || typeof row.sql !== "string"))
         throw new Error("Metadata migration source DDL differs");
-      for (const table of [...added].reverse()) reference.exec(`DROP TABLE "${table}"`); // isolated reference only
+      for (const table of [...missing].reverse()) reference.exec(`DROP TABLE "${table}"`); // isolated reference only
       const before = sqliteApplicationSchemaProfile(reference, new Set());
       const oldSchema = JSON.parse(before) as unknown[], newSchema = JSON.parse(after) as unknown[];
       const delta = newSchema.filter(row => !oldSchema.some(old => canonicalJson(old) === canonicalJson(row)));
@@ -49,9 +53,9 @@ function topicWatchesMigrationPlans() {
         throw new Error("Metadata migration changes historical schema");
       reference.exec("ROLLBACK");
       return Object.freeze({ pair: Object.freeze([before, after] as const),
-        added: Object.freeze([...added]), ddl: Object.freeze(objects.map(row => String(row.sql))) });
+        added: Object.freeze([...missing]), ddl: Object.freeze(objects.map(row => String(row.sql))) });
     } finally { reference.close(); }
-  }));
+  })));
 }
 export function topicWatchesMigrationProfiles(): readonly (readonly [string, string])[] {
   return Object.freeze(topicWatchesMigrationPlans().map(plan => plan.pair));

@@ -40,9 +40,11 @@ function fixture(archive = false) {
 }
 const hash = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex");
 describe("explicit stopped-writer full19 to compiled22 metadata migration (authored, UNRUN)", () => {
-  it("keeps runtime profile family exact four; historical full19 is migration-only", () => {
+  it("keeps runtime profile family exact four; historical full19/full20 are migration-only", () => {
     const runtime = supportedSqliteApplicationProfiles(true), pairs = topicWatchesMigrationProfiles();
-    expect(runtime).toHaveLength(4); expect(new Set(runtime).size).toBe(4); expect(pairs).toHaveLength(2);
+    expect(runtime).toHaveLength(4); expect(new Set(runtime).size).toBe(4); expect(pairs).toHaveLength(4);
+    expect(new Set(pairs.map(([before]) => before)).size).toBe(4);
+    expect(new Set(pairs.map(([, after]) => after)).size).toBe(2);
     for (const [before, after] of pairs) { expect(runtime).not.toContain(before); expect(runtime).toContain(after); }
   });
   it.each([false, true])("preserves every historical typed original and backup (archive=%s)", archive => {

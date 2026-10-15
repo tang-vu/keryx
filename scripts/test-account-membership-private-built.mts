@@ -28,7 +28,7 @@ const listener = createListener();
 await new Promise<void>((accept, reject) => { listener.once("error", reject); listener.listen(0, "127.0.0.1", accept); });
 const address = listener.address(); assert(address && typeof address !== "string"); const port = address.port;
 await new Promise<void>((accept, reject) => listener.close(error => error ? reject(error) : accept()));
-const origin = `http://127.0.0.1:${port}`, secret = "synthetic-account-private-built-not-a-live-secret";
+const origin = `http://localhost:${port}`, secret = "synthetic-account-private-built-not-a-live-secret";
 const environment: NodeJS.ProcessEnv = { NODE_ENV: "production" };
 for (const key of ["PATH", "SystemRoot", "WINDIR", "ComSpec", "PATHEXT"])
   if (process.env[key]) environment[key] = process.env[key];
@@ -58,7 +58,7 @@ function call(path: "/account" | "/account?_rsc=" | "/api/account/membership", m
   return new Promise<Reply>((accept, reject) => {
     let reply: Reply | undefined, failure: unknown;
     const outgoing = request({ hostname: "127.0.0.1", port, path, method, agent: false,
-      headers: { Connection: "close", ...headers }, signal: AbortSignal.timeout(10_000) }, response => {
+      headers: { Host: new URL(origin).host, Connection: "close", ...headers }, signal: AbortSignal.timeout(10_000) }, response => {
       const parts: Buffer[] = []; let bytes = 0;
       response.on("data", (part: Buffer) => {
         bytes += part.length;
@@ -120,7 +120,7 @@ let failure: unknown; const cleanupFailures: unknown[] = [];
 let initialStorage: ReturnType<typeof storageSnapshot> | undefined;
 try {
   const next = require("next") as (options: { dev: boolean; dir: string; hostname: string; port: number }) => NonNullable<typeof app>;
-  app = next({ dev: false, dir: fixture, hostname: "127.0.0.1", port });
+  app = next({ dev: false, dir: fixture, hostname: "localhost", port });
   await app.prepare();
   await new Promise<void>((accept, reject) => { server.once("error", reject); server.listen(port, "127.0.0.1", accept); });
   const pageVary = ["RSC", "Next-Router-State-Tree", "Next-Router-Prefetch", "Next-Router-Segment-Prefetch"];
@@ -194,8 +194,11 @@ finally {
   for (const name of Object.keys(process.env)) if (!(name in previousEnvironment)) delete process.env[name];
   Object.assign(process.env, previousEnvironment);
 }
-if (failure || handlerFailures.length || cleanupFailures.length) throw new AggregateError([...(failure ? [failure] : []), ...handlerFailures, ...cleanupFailures],
-  `Built private account acceptance failed; owned fixture retained at ${fixture}`, { cause: failure });
+if (failure || handlerFailures.length || cleanupFailures.length) {
+  process.exitCode = 1; // Next may install an uncaught-exception listener; failure must still refuse CI.
+  throw new AggregateError([...(failure ? [failure] : []), ...handlerFailures, ...cleanupFailures],
+    `Built private account acceptance failed; owned fixture retained at ${fixture}`, { cause: failure });
+}
 console.log(JSON.stringify({ gate: "account-membership-private-built", buildId, requests: requestCount, paths: ["/account", "/api/account/membership"],
   ordinaryAndRsc: true, privateHeadersAndSecurity: true, unauthenticated401: true, invalidOrigin403: true, unsupported503: true,
   recordedPrivateEffects: false, durableLoginCreated: false, walletSignatures: false, paymentActions: false, naturallyClosed: true, fixture }));

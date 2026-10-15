@@ -9,6 +9,7 @@ export const ORDINARY_BROWSER_FIXTURE_EXTENSIONS = Object.freeze({
   "0090_run_privacy.sql": "privacy_unavailable",
   // Native storage refused0090, so its ordinary guard is absent before0091.
   "0091_public_researcher_profiles.sql": "run_privacy_guard_v1\\(\\) does not exist",
+  "0093_research_publication.sql": "anonymous_run_claims_guard_v1\\(\\) does not exist",
 });
 export function postgresBrowserMigrationProfiles(files: readonly string[]) {
   const migrations = files.filter(file => /^\d{4}.*\.sql$/.test(file)).sort();

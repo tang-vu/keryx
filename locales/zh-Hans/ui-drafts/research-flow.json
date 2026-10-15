@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/research-flow.ts",
-  "sourceSha256": "b23cae7bd717df2f90968e5e9f08414aed07bb05d41a39c0737ef3a777dfb827",
+  "sourceSha256": "188fce0014756dde2b237f3f1db91111930066a115d3f454eab4c21352c40f5f",
   "entries": {
     "creatorPayments.stampRing": {
       "source": "★ PAID IN FULL ★ KERYX ★ USDC ON ARC ",
@@ -1147,6 +1147,34 @@
     "privateResearchJobs.jobSummary": {
       "source": "{mode} · {date} · Package price {amount}",
       "text": "{mode} · {date} · 套餐价格 {amount}"
+    },
+    "researchVisibility.label": {
+      "source": "Visibility",
+      "text": "可见性"
+    },
+    "researchVisibility.public": {
+      "source": "Public",
+      "text": "公开"
+    },
+    "researchVisibility.unlisted": {
+      "source": "Unlisted",
+      "text": "不公开列出"
+    },
+    "researchVisibility.private": {
+      "source": "Private",
+      "text": "私密"
+    },
+    "researchVisibility.loading": {
+      "source": "Loading your visibility preference…",
+      "text": "正在加载你的可见性偏好…"
+    },
+    "researchVisibility.retry": {
+      "source": "Retry visibility settings",
+      "text": "重试可见性设置"
+    },
+    "researchVisibility.openResearch": {
+      "source": "Open research on Keryx",
+      "text": "在 Keryx 上打开研究"
     }
   }
 }

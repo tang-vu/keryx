@@ -40,10 +40,14 @@ import { parseAskHttpError, type MaintenanceRefusal } from "./ask-error-response
 import { PRIVATE_DOCUMENT_HEADER } from "../run-claims/web-contract";
 import type { PrivateClaimHandoff } from "../run-claims/web-handoff";
 import { privateResearchCopy } from "../../locales/en/run-claim-research";
+import type { ResearchPublicationSelection } from "./use-research-visibility";
+import type { RunVisibility } from "../run-privacy/contracts";
 
 export type StreamMode = "real" | "offline";
 
 export interface AskMeta {
+  visibility?: RunVisibility;
+  visibilityOwner?: string;
   reviewOwner?: string | null;
   engine: string;
   mode: StreamMode;
@@ -388,6 +392,7 @@ export function useAskStream(opts?: AskStreamOpts) {
       scholarly = false,
       paidScholarly = false,
       reviewFirst = false,
+      publication?: ResearchPublicationSelection,
     ) => {
       reset();
       const privateDocument = privateClaimHandoff?.begin();
@@ -421,7 +426,8 @@ export function useAskStream(opts?: AskStreamOpts) {
       try {
         const res = await fetch("/api/ask", {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...(privateDocument ? { [PRIVATE_DOCUMENT_HEADER]: privateDocument } : {}) },
+          headers: { "Content-Type": "application/json", ...(privateDocument ? { [PRIVATE_DOCUMENT_HEADER]: privateDocument } : {}),
+            ...(publication ? { "X-Keryx-Expected-Wallet": publication.expectedWallet ?? "anonymous" } : {}) },
           ...(privateDocument ? { cache: "no-store", credentials: "same-origin", referrerPolicy: "no-referrer", redirect: "error" } as const : {}),
           body: JSON.stringify({
             question,
@@ -437,6 +443,7 @@ export function useAskStream(opts?: AskStreamOpts) {
             ...(scholarly ? { scholarly: true } : {}),
             ...(paidScholarly ? { paidScholarly: true } : {}),
             ...(reviewFirst ? { reviewFirst: true } : {}),
+            ...(publication ? { visibility: publication.visibility } : {}),
           }),
           signal: controller.signal,
         });

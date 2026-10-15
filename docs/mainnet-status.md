@@ -1,5 +1,23 @@
 # Current Arc mainnet deployment
 
+## October 15 readback and public-research source candidate
+
+Public health and OpenAPI readback on October 15 confirm production app **0.27.67**,
+Arc, source **708f2621** (`708f26218c4e31977ad3c52b755798d4eac54bfd`).
+The public-research source candidate reserves app/OpenAPI **0.27.68**,
+stdio/npm/Registry MCP **0.4.23** and Desktop **0.4.21**; deployment and publication
+are pending final-main acceptance. Hosted MCP retains **0.3.18** and extension
+**0.1.4.2**, subject to their role and shipped-input checks.
+
+The candidate exposes creation visibility, separates public and recorded question
+totals and supplies an explicit reviewed historical restoration tool. The 156
+reviewed production originals remain a separate guarded operator action; source
+preparation does not assert that their sidecars have been restored. ROOT owns the
+single combined deployment and restoration, preserving original financial data,
+custody, limits and private holds. Earlier deployment records below are historical.
+
+## October 13 deployment record
+
 October 13, 2026: application **0.27.63**, source `ec5f39c9750dfc9e80e66edd41348ca6034c01c3`,
 is live on Arc mainnet after one combined deploy and the owned maintenance clear.
 Public health, OpenAPI and `/` returned HTTP 200; health reported `ec5f39c9`, OpenAPI **0.27.63**.

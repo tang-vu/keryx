@@ -68,6 +68,7 @@ try {
       }
       if (url.pathname === "/api/activation") return route.fulfill({ json: {} });
       assert.equal(request.method(), "GET", `Unexpected write/payment: ${url.pathname}`);
+      if (url.pathname === "/api/ask/visibility") return route.fulfill({ json: { wallet: null, defaultVisibility: "public", privacyActive: true } });
       if (url.pathname === "/api/models") return route.fulfill({ json: { models: [] } });
       if (url.pathname === "/api/research/availability") return route.fulfill({ json: { state: "not-paused" } });
       if (url.pathname === "/api/auth/session") return route.fulfill({ json: { authenticated: false } });
