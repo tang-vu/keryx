@@ -91,7 +91,13 @@ try {
         if (pathname.startsWith("/api/")) {
           if (mode === "error" && pathname === "/api/metrics") return route.fulfill({ status: 503, json: { error: "unavailable" } });
           if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "account-unavailable" ? { recordedAccounts: null } : mode === "account-malformed" ? { recordedAccounts: 1.5 } : mode === "account-zero" ? { recordedAccounts: 0 } : mode === "account-legacy" ? { recordedAccounts: undefined } : {}), ...(Object.hasOwn(guestModes, mode) ? { guestQuestions: guestModes[mode] } : {}), ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [] } });
-          if (pathname === "/api/runs") return route.fulfill({ json: mode === "archive" ? [run, { ...run, id: "old-testnet-run", question: "Archived testnet question stays in history", archive: archiveInfo }] : [run] });
+          if (pathname === "/api/runs") {
+            assert.equal(requested.searchParams.get("network"), network === "arc" ? "eip155:5042" : "eip155:5042002");
+            assert.equal(requested.searchParams.get("period"), "all");
+            assert.equal(requested.searchParams.has("archive"), false);
+            if (mode === "history-unavailable") return route.fulfill({ status: 503, json: { error: "unavailable" } });
+            return route.fulfill({ json: mode === "empty-history" ? [] : mode === "archive" ? [run, { ...run, id: "old-testnet-run", question: "Archived testnet question stays in history", archive: archiveInfo }] : [run] });
+          }
           if (pathname === "/api/payments") return route.fulfill({ json: { payments: mode === "pending" ? [{ id: "fixture-payment", sourceName: "Pending creator fixture", queryId: "fixture-run", sourceId: "fixture-creator", kind: "citation", payer: "buyer", payee: "creator", amountUsdc: 0.02, network: "eip155:5042002", authorizationId: "fixture-authorization", settled: false, settlementStatus: "pending", createdAt: "2026-10-05T00:00:00.000Z" }] : [] } });
           if (pathname === "/api/withdrawals") return route.fulfill({ json: { withdrawals: [] } });
           throw new Error(`Unexpected API ${pathname}`);
@@ -120,6 +126,21 @@ try {
       assert.equal(await page.locator("dd").first().textContent(), "0");
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `Dashboard overflow ${width}`);
       await page.screenshot({ path: path.join(screenshots, `ledger-${network}-${width}.png`), fullPage: true });
+
+      mode = "empty-history";
+      await open("/dashboard");
+      await page.getByText("28 recorded questions", { exact: true }).waitFor();
+      await page.getByText("Recent public questions", { exact: true }).waitFor();
+      await page.getByText("No public questions to display.", { exact: true }).waitFor();
+      await page.getByText(/Recorded totals include all recorded questions/).waitFor();
+      assert.equal(await page.getByText("No dispatches yet.", { exact: true }).count(), 0);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `Empty public history overflow ${width}`);
+      await page.screenshot({ path: path.join(screenshots, `ledger-empty-public-${network}-${width}.png`), fullPage: true });
+
+      mode = "history-unavailable";
+      await open("/dashboard");
+      await page.getByText(/Question records unavailable/).waitFor();
+      assert.equal(await page.getByText("No public questions to display.", { exact: true }).count(), 0);
 
       mode = "error";
       await open("/dashboard");
