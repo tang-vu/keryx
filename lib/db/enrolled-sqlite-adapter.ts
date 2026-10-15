@@ -21,6 +21,7 @@ import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
 import { createEnrolledSqlitePrivateProfiles } from "./private-profiles-enrolled-sqlite";
 import { createEnrolledSqliteTopicWatches } from "./topic-watches-sqlite";
+import { createEnrolledSqliteOwnerRunAssignments } from "./owner-run-assignments-sqlite";
 
 /** Explicit behavior inventory, including verifyApiKey's last-used write. New methods require review. */
 export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
@@ -342,6 +343,12 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     if (bibliographies) Object.defineProperty(facade, "privateBibliographies", { value: bibliographies });
     const topicWatches = createEnrolledSqliteTopicWatches(db);
     if (topicWatches) Object.defineProperty(facade, "topicWatches", { value: topicWatches });
+    if (deployment.identity.authorityMode === "mainnet-real") {
+      const ownerAssignments = createEnrolledSqliteOwnerRunAssignments(db);
+      if (ownerAssignments) Object.defineProperty(facade, "ownerRunAssignments", { value: Object.freeze({
+        act: ownerAssignments.act, reply: ownerAssignments.reply,
+      }) });
+    }
     Object.defineProperty(facade, "runPrivacyActive", { value: privacyActive });
     for (const name of ["runClaims", "runOwnershipHistory", "runPrivacy"] as const) {
       if (core[name]) Object.defineProperty(facade, name, { value: core[name] });
