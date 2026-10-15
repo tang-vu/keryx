@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, onTestFailed, vi } from "vitest";
+import { botControlResponse, botControlsCatalogues, botPreferenceKey, readBotHelpPreference,
+  type BotRecipient } from "../bots/language";
 import { DatabaseSync } from "node:sqlite";
 import { requirePrivateProfiles } from "../profiles/private-profile";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, renameSync, copyFileSync } from "node:fs";
@@ -770,3 +772,80 @@ it("admits, exposes and canonically acknowledges a real v3 original through the 
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
 });
+
+it("persists explicit private bot language on the genuine enrolled facade across reopen with recipient isolation and group no-write", async () => {
+  const f = await mainnetProfileFixture(false), manifestBefore = readFileSync(f.manifestPath);
+  const recipient: BotRecipient = { platform: "discord", scope: "123", userId: "789" };
+  const helpKey = botPreferenceKey(recipient);
+  if (!helpKey) throw new Error("Synthetic recipient was refused");
+  const answerKey = helpKey.replace("keryx:bot-help-language:v1:", "keryx:bot-answer-language:v1:");
+  // Only the two explicit preference rows may change. Preserve every other raw
+  // row, including storage identity, financial records and signing originals.
+  const retained = () => {
+    const raw = new DatabaseSync(f.file, { readOnly: true });
+    try {
+      return {
+        schema: raw.prepare("SELECT type,name,tbl_name,rootpage,sql FROM sqlite_schema ORDER BY type,name").all(),
+        tables: raw.prepare("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name").all().map(({ name }) => ({
+          name,
+          rows: name === "sync_state"
+            ? raw.prepare("SELECT * FROM sync_state WHERE key<>? AND key<>? ORDER BY key").all(helpKey, answerKey)
+            : raw.prepare(`SELECT * FROM "${String(name).replaceAll('"', '""')}"`).all(),
+        })),
+      };
+    } finally { raw.close(); }
+  };
+  const adapter = await f.api.createEnrolledSqliteAdapter(); f.adapters.push(adapter);
+  expect(f.api.assertEnrolledSqliteAdapter(adapter)).toEqual(f.identity);
+  expect(Object.isFrozen(adapter)).toBe(true); expect(Reflect.get(adapter, "db")).toBeUndefined();
+  expect(f.api.ENROLLED_SQLITE_METHOD_ACCESS.getSyncState).toBe("read");
+  expect(f.api.ENROLLED_SQLITE_METHOD_ACCESS.setSyncState).toBe("write");
+  await adapter.setSyncState("native-bot-retained-control", "unchanged");
+  const before = retained(), copy = botControlsCatalogues.pt;
+  // The collaborator returns the actual typed facade; neither native method nor
+  // its runtime/metadata guard is replaced with a mock or an ordinary adapter.
+  const saved = await botControlResponse({ control: { action: "language", value: "pt-BR" }, recipient,
+    platformLocale: "en-US" }, async () => adapter);
+  expect(saved).toEqual({ language: "pt",
+    text: copy.languageSaved.replace("{preference}", "pt") + "\n" + copy.languageHelp });
+  adapter.close();
+  const reopened = await f.api.createEnrolledSqliteAdapter(); f.adapters.push(reopened);
+  expect(reopened).not.toBe(adapter);
+  expect(f.api.assertEnrolledSqliteAdapter(reopened)).toEqual(f.identity);
+  const store = async () => reopened, afterSave = readFileSync(f.file);
+  expect(await reopened.getSyncState(answerKey)).toBe("pt");
+  expect(await reopened.getSyncState(helpKey)).toBe("pt");
+  expect(await readBotHelpPreference(recipient, store)).toEqual({ available: true, preference: "pt" });
+  // /language inspection reads the answer preference; /help reads its own key.
+  expect(await botControlResponse({ control: { action: "language" }, recipient, platformLocale: "en-US" }, store))
+    .toEqual({ language: "pt", text: copy.languageCurrent.replace("{preference}", "pt") + "\n" + copy.languageHelp });
+  expect(await botControlResponse({ control: { action: "help" }, recipient, platformLocale: "en-US" }, store))
+    .toEqual({ language: "pt", text: "" });
+  const others: BotRecipient[] = [{ ...recipient, userId: "790" }, { ...recipient, scope: "124" },
+    { platform: "telegram", scope: "telegram", userId: "789" },
+    { platform: "slack", scope: "T123", userId: "U789" }, { platform: "slack", scope: "T124", userId: "U789" }];
+  const english = botControlsCatalogues.en;
+  for (const other of others) {
+    expect(await readBotHelpPreference(other, store)).toEqual({ available: true, preference: "auto" });
+    expect(await botControlResponse({ control: { action: "language" }, recipient: other, platformLocale: "en-US" }, store))
+      .toEqual({ language: "en", text: english.languageCurrent.replace("{preference}", "auto") + "\n" + english.languageHelp });
+  }
+  // Observe collaborator calls without substituting storage. The same recipient
+  // in a group cannot open the store or overwrite either private preference.
+  const groupStore = vi.fn(async () => reopened);
+  expect(await botControlResponse({ control: { action: "language", value: "es" }, recipient,
+    privateOnly: true, platformLocale: "en-US" }, groupStore)).toEqual({ language: "en", text: english.languagePrivate });
+  expect(groupStore).not.toHaveBeenCalled();
+  expect(await botControlResponse({ control: { action: "help", value: "vi" }, recipient }, store))
+    .toEqual({ language: "vi", text: "" });
+  expect(readFileSync(f.file).equals(afterSave)).toBe(true);
+  expect(retained()).toEqual(before); expect(readFileSync(f.manifestPath)).toEqual(manifestBefore);
+  // Genuine runtime-mode drift must refuse a later save, never acknowledge it
+  // from cached preferences or replace the native storage authority.
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "1");
+  expect(await botControlResponse({ control: { action: "language", value: "es" }, recipient,
+    platformLocale: "en-US" }, store)).toEqual({ language: "en", text: english.languageUnavailable + "\n" + english.languageHelp });
+  expect(() => f.api.assertEnrolledSqliteAdapter(reopened)).toThrow();
+  expect(readFileSync(f.file).equals(afterSave)).toBe(true);
+  expect(retained()).toEqual(before); expect(readFileSync(f.manifestPath)).toEqual(manifestBefore);
+}, 20_000);

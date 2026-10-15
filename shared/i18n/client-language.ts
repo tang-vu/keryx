@@ -18,10 +18,10 @@ export const clientLanguageNames = Object.freeze({
 } as const satisfies Readonly<Record<PresentationLanguage, string>>);
 
 export const clientLanguageControls = {
-  en: { language: "Presentation language", auto: "System language", answer: "Answer", savedAnswer: "Saved answer", unsavedAnswer: "Unsaved answer", citations: "Citations" },
-  vi: { language: "Ngôn ngữ trình bày", auto: "Ngôn ngữ hệ thống", answer: "Câu trả lời", savedAnswer: "Câu trả lời đã lưu", unsavedAnswer: "Câu trả lời chưa lưu", citations: "Trích dẫn" },
-  pt: { language: "Idioma da apresentação", auto: "Idioma do sistema", answer: "Resposta", savedAnswer: "Resposta salva", unsavedAnswer: "Resposta não salva", citations: "Citações" },
-  es: { language: "Idioma de presentación", auto: "Idioma del sistema", answer: "Respuesta", savedAnswer: "Respuesta guardada", unsavedAnswer: "Respuesta sin guardar", citations: "Citas" },
+  en: { language: "Presentation language", auto: "System language", answer: "Answer", savedAnswer: "Saved answer", unsavedAnswer: "Unsaved answer", citations: "Citations", engine: "engine", sourceCap: "source cap", question: "question", runId: "run id" },
+  vi: { language: "Ngôn ngữ trình bày", auto: "Ngôn ngữ hệ thống", answer: "Câu trả lời", savedAnswer: "Câu trả lời đã lưu", unsavedAnswer: "Câu trả lời chưa lưu", citations: "Trích dẫn", engine: "bộ suy luận", sourceCap: "hạn mức nguồn", question: "câu hỏi", runId: "mã lượt chạy" },
+  pt: { language: "Idioma da apresentação", auto: "Idioma do sistema", answer: "Resposta", savedAnswer: "Resposta salva", unsavedAnswer: "Resposta não salva", citations: "Citações", engine: "motor", sourceCap: "limite para fontes", question: "pergunta", runId: "id da execução" },
+  es: { language: "Idioma de presentación", auto: "Idioma del sistema", answer: "Respuesta", savedAnswer: "Respuesta guardada", unsavedAnswer: "Respuesta sin guardar", citations: "Citas", engine: "motor", sourceCap: "límite para fuentes", question: "pregunta", runId: "id de ejecución" },
 } as const;
 
 export function clientPresentationMessages(language: PresentationLanguage) {
