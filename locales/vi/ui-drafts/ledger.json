@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ledger.ts",
-  "sourceSha256": "e944e80db5ebdc3b319cc8fb68fc232dfc1865525d184428803fb18c250d8f05",
+  "sourceSha256": "f72696cced220e11978636eb93d52336a68c81971ee0901a42663b0f9498f736",
   "entries": {
     "ledgerResource.loading": {
       "source": "Loading {label}…",
@@ -377,12 +377,32 @@
       "text": "{count}d"
     },
     "ledgerPresentation.publicHistoryBoundary": {
-      "source": "Recorded totals include all recorded questions. This list shows only questions made public and excludes scripted runs.",
-      "text": "Tổng số đã ghi nhận bao gồm mọi câu hỏi đã lưu. Danh sách này chỉ hiển thị câu hỏi được công khai và loại trừ các lượt chạy theo kịch bản."
+      "source": "The public count and this list use verified {network} records and exclude recorded scripted runs. Browse past answers for public research across the archive.",
+      "text": "B? ??m c?ng khai v? danh s?ch n?y d?ng c?c b?n ghi {network} ?? x?c minh v? lo?i tr? c?c l??t ch?y ???c ghi nh?n l? theo k?ch b?n. Xem c?c c?u tr? l?i tr??c ?? ??c nghi?n c?u c?ng khai trong kho l?u tr?."
     },
     "ledgerPresentation.noPublicQuestions": {
       "source": "No public questions to display.",
       "text": "Chưa có câu hỏi công khai để hiển thị."
+    },
+    "ledgerPresentation.publicQuestionCount": {
+      "source": "Public question count",
+      "text": "Số câu hỏi công khai"
+    },
+    "ledgerRecorded.public.current.one": {
+      "source": "{count} public question on {network}",
+      "text": "{count} câu hỏi công khai trên {network}"
+    },
+    "ledgerRecorded.public.current.other": {
+      "source": "{count} public questions on {network}",
+      "text": "{count} câu hỏi công khai trên {network}"
+    },
+    "ledgerRecorded.public.stale.one": {
+      "source": "{count} public question on {network} · last successful read",
+      "text": "{count} câu hỏi công khai trên {network} · lần đọc thành công gần nhất"
+    },
+    "ledgerRecorded.public.stale.other": {
+      "source": "{count} public questions on {network} · last successful read",
+      "text": "{count} câu hỏi công khai trên {network} · lần đọc thành công gần nhất"
     }
   }
 }

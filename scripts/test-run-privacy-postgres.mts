@@ -1,5 +1,6 @@
 /** Explicit network-none synthetic PG17 acceptance. No ambient database/credentials/provider use. */
-import {execFileSync} from "node:child_process";
+import {execFile,execFileSync} from "node:child_process";
+import {promisify} from "node:util";
 import {randomUUID} from "node:crypto";
 import {readFileSync} from "node:fs";
 import {resolve} from "node:path";
@@ -8,15 +9,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabasePersonalHistory } from "../lib/db/personal-history-supabase";
 import { createSupabaseRunOwnershipHistory } from "../lib/db/run-ownership-history-supabase";
 import { createSupabaseRunPrivacy } from "../lib/db/run-privacy-supabase";
+import { createSupabaseResearchPublication } from "../lib/db/research-publication-supabase";
 import { exportOwnedHistory } from "../lib/history/owned-history-export";
 import { readOwnedDetail, readOwnedHistory, type OwnedHistoryDB } from "../lib/history/owned-history-reader";
 import type { RunClaimBinding } from "../lib/run-claims/contracts";
-assert.deepEqual(process.argv.slice(2),["--acceptance"],"Explicit isolated acceptance required");
-const name=`keryx-run-privacy-${randomUUID()}`,label="keryx.run-privacy.fixture",wallet=`0x${"a".repeat(40)}`,other=`0x${"b".repeat(40)}`,session="a".repeat(64);
+const args=process.argv.slice(2);
+assert(args[0]==="--acceptance" && (args.length===1 || args.length===2 && /^--fixture-name=keryx-run-privacy-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(args[1])),"Explicit isolated acceptance and bounded owned fixture required");
+const name=args[1]?.slice("--fixture-name=".length)??`keryx-run-privacy-${randomUUID()}`,label="keryx.run-privacy.fixture",wallet=`0x${"a".repeat(40)}`,other=`0x${"b".repeat(40)}`,session="a".repeat(64);
 const docker=(args:string[],input?:string)=>execFileSync("docker",args,{input,encoding:"utf8",timeout:30000,maxBuffer:2*1024*1024,windowsHide:true});
 const sql=(input:string)=>docker(["exec","-i",name,"psql","-X","-h","127.0.0.1","-U","postgres","-d","postgres","-v","ON_ERROR_STOP=1","-qAt"],input).trim();
 const literal=(value:unknown)=>`'${JSON.stringify(value).replaceAll("'","''")}'::jsonb`;
-const now=Date.now(),date=new Date(now-1000).toISOString(), actor={wallet,sessionHash:session,binding:{network:"eip155:5042002",origin:"https://synthetic-privacy.example"}};
+const now=Date.now(),date=new Date(now-1000).toISOString(), actor={wallet,sessionHash:session,binding:{network:"eip155:5042002" as const,origin:"https://synthetic-privacy.example"}};
 const call=(action:string,id:string|null,input:unknown={},who:unknown=actor,claims=false,role="service_role")=>JSON.parse(sql(`set role ${role};select public.run_privacy_v1('${action}',${id?`'${id}'`:"null"},${literal(input)},${who?literal(who):"null"},${claims});`).split("\n").at(-1)!).result;
 const run=(id:string,asker:string|null=wallet)=>({id,createdAt:date,question:`SECRET ${id}`,answer:"SECRET answer",budget:0.1,engine:"fixture",totalSpent:0.012345,totalToCreators:0.000001,subClaims:[],decisions:[],citations:[],trace:[],...(asker?{asker}:{})});
 const save=(id:string,asker:string|null=wallet)=>sql(`insert into query_runs(id,created_at,asker,question,answer,budget,engine,total_spent,total_to_creators,data)values('${id}','${date}',${asker?`'${asker}'`:"null"},'SECRET','SECRET',0.1,'fixture',0.012345,0.000001,${literal(run(id,asker))});`);
@@ -26,6 +29,9 @@ try {
   for(let attempt=0;;attempt++){try{sql("select 1;");break;}catch(error){if(attempt>=30)throw error;await new Promise(done=>setTimeout(done,200));}}
   sql(`create role anon;create role authenticated;create role service_role bypassrls;
     create table query_runs(id text primary key,created_at timestamptz not null,asker text,question text,answer text,budget numeric,engine text,total_spent numeric,total_to_creators numeric,parent_id text,data jsonb not null);
+    alter table query_runs add column origin text,add column mcp_client text,add column duration_ms bigint,add column payment_mode text,
+      add column payment_attempts integer,add column settled_payments integer,add column confidence_level text,add column evidence_claim_count integer,
+      add column grounded_claim_count integer,add column rewarded_citation_count integer,add column economics_data jsonb;
     create table web_sessions(hash text primary key check(hash ~ '^[a-f0-9]{64}$'),wallet text not null check(wallet ~ '^0x[a-f0-9]{40}$'),issued_at bigint not null check(issued_at>=0),expires_at bigint not null check(expires_at>issued_at and expires_at<=issued_at+604800000));
     create table a2a_orders(query_id text not null unique,status text not null,created_at timestamptz not null,started_at timestamptz,
       amount_usdc double precision not null,creator_budget_usdc double precision not null,service_fee_usdc double precision not null,transaction_id text not null,
@@ -48,6 +54,12 @@ try {
     select anonymous_run_claim_consume_v1('${"c".repeat(64)}','${wallet}','${session}','${actor.binding.network}','${actor.binding.origin}');`);
   const originalClaim=sql("select md5(string_agg(row_to_json(c)::text,'' order by run_id)) from anonymous_run_claims c;");
   sql(readFileSync(resolve("supabase/migrations/0090_run_privacy.sql"),"utf8"));
+  const predecessorSeals=sql("select jsonb_build_array((select snapshot from anonymous_run_claims_catalog_seal),(select snapshot from run_privacy_catalog_seal))::text;");
+  sql("create table research_publication_unadmitted(value text);");
+  assert.throws(()=>sql(readFileSync(resolve("supabase/migrations/0093_research_publication.sql"),"utf8")),/privacy_unavailable/);
+  sql("drop table research_publication_unadmitted;");
+  sql(readFileSync(resolve("supabase/migrations/0093_research_publication.sql"),"utf8"));
+  assert.equal(sql("select jsonb_build_array((select snapshot from anonymous_run_claims_catalog_seal),(select snapshot from run_privacy_catalog_seal))::text;"),predecessorSeals,"0093 must not reseal old catalogs");
   sql("set role service_role;select anonymous_run_claims_guard_v1();");
   assert.equal(sql("select md5(string_agg(row_to_json(c)::text,'' order by run_id)) from anonymous_run_claims c;"),originalClaim);
   assert.equal(call("owner","claimed",{},actor,true).run.asker,undefined);
@@ -105,7 +117,8 @@ try {
   const rpc=(method:string,args:Record<string,unknown>)=>{
     const query=method==="anonymous_run_claim_history_list_v1"
       ? `anonymous_run_claim_history_list_v1(${textLiteral(args.p_wallet)},${textLiteral(args.p_network)},${textLiteral(args.p_origin)},${literal(args.p_filters)},${Number(args.p_take)},${positionLiteral(args.p_upper)},${positionLiteral(args.p_before)})`
-      : method==="run_privacy_v1" ? `run_privacy_v1(${textLiteral(args.p_action)},${textLiteral(args.p_id)},${literal(args.p_input)},${literal(args.p_actor)},${args.p_claims===true})` : null;
+      : method==="run_privacy_v1" ? `run_privacy_v1(${textLiteral(args.p_action)},${textLiteral(args.p_id)},${literal(args.p_input)},${literal(args.p_actor)},${args.p_claims===true})`
+      : method==="research_publication_v1" ? `research_publication_v1(${textLiteral(args.p_action)},${literal(args.p_input)})` : null;
     assert(query,"No additional RPC authority in fixture");
     try{return{data:JSON.parse(sql(`set role service_role;select public.${query};`).split("\n").at(-1)!),error:null};}
     catch{return{data:null,error:{message:"isolated RPC refused"}};}
@@ -148,7 +161,72 @@ try {
   await assert.rejects(pendingHistory,/history_unavailable/);
   assert.equal(sql("select md5(string_agg(row_to_json(p)::text,'' order by id)) from payment_events p;"),originalFinances);
   assert(!(await exportOwnedHistory(historyDB,wallet,historyBinding,{search:"history_"})).rows.some(row=>row.id==="history_current"));
+  // 0093 shares this existing isolated fixture. The real client/helper exercises
+  // only the new fixed RPC, never REST, and leaves old source/seals unchanged.
+  const publication=createSupabaseResearchPublication(bridge),publicationBefore=sql("select coalesce(jsonb_agg(to_jsonb(p) order by id),'[]'::jsonb)::text from payment_events p;");
+  const publicationCall=(action:string,input:unknown,role="service_role")=>JSON.parse(sql(`set role ${role};select public.research_publication_v1('${action}',${literal(input)});`).split("\n").at(-1)!).result;
+  const state=(id:string)=>JSON.parse(sql(`select row_to_json(p)::text from run_privacy p where run_id=${textLiteral(id)};`));
+  const publicationRun=(id:string,asker:string|null=wallet)=>({...run(id,asker),question:`Synthetic publication ${id}`,answer:"Synthetic publication answer"});
+  await publication.creationReady();
+  assert.equal(await publication.defaults({...actor,wallet:other}),"public");
+  assert.equal(await publication.defaults(actor),"private");
+  for(const mode of ["private","unlisted","public"] as const){
+    const id=`publication_${mode}`;await publication.saveQueryRun(publicationRun(id),{visibility:mode});
+    assert.equal(state(id).visibility,mode);assert.equal(state(id).revision,0);
+    assert.equal(call("read",id,{},null).item!==null,mode!=="private");
+    assert.equal(call("list",null,{take:2500},null).some((item:{run:{id:string}})=>item.run.id===id),mode==="public");
+  }
+  await publication.saveQueryRun(publicationRun("publication_missing_default",other));assert.equal(state("publication_missing_default").visibility,"public");
+  await publication.saveQueryRun(publicationRun("publication_saved_default"));assert.equal(state("publication_saved_default").visibility,"private");
+  await publication.saveQueryRun(publicationRun("publication_anonymous",null));assert.equal(state("publication_anonymous").visibility,"public");
+  const hidden=state("demo");await publication.saveQueryRun(publicationRun("demo"),{visibility:"public"});assert.deepEqual(state("demo"),hidden);
+  await publication.saveQueryRun(publicationRun("historical"),{visibility:"public"});assert.equal(state("historical").visibility,"unlisted");
+  sql(`insert into run_privacy(run_id,visibility,updated_at) values('publication_orphan','private','${date}');`);
+  await publication.saveQueryRun(publicationRun("publication_orphan"),{visibility:"public"});assert.equal(state("publication_orphan").visibility,"private");
+  const erasedBefore=sql("select data::text from query_runs where id='owned';");
+  await assert.rejects(publication.saveQueryRun(publicationRun("owned"),{visibility:"public"}),/privacy_unavailable/);
+  assert.equal(sql("select data::text from query_runs where id='owned';"),erasedBefore);
+  sql(`insert into run_privacy(run_id,visibility,revision,erased,updated_at) values('publication_tombstone','private',1,true,'${date}');`);
+  await assert.rejects(publication.saveQueryRun(publicationRun("publication_tombstone"),{visibility:"public"}),/privacy_unavailable/);
+  assert.equal(sql("select count(*) from query_runs where id='publication_tombstone';"),"0");
+  for(const role of ["anon","authenticated"]){
+    assert.throws(()=>publicationCall("ready",{},role));assert.throws(()=>publicationCall("defaults",{wallet,binding:actor.binding},role));
+    for(const permission of ["insert","update","delete","truncate"])assert.equal(sql(`select has_table_privilege('${role}','research_publication_catalog_seal','${permission}');`),"f");
+  }
+  for(const permission of ["insert","update","delete","truncate"])assert.equal(sql(`select has_table_privilege('service_role','research_publication_catalog_seal','${permission}');`),"f");
+  assert.throws(()=>sql(`begin read only;set role service_role;select research_publication_v1('ready','{}');commit;`));
+  const saveInput=(await (async()=>{
+    let input:unknown;const capture={rpc:(_method:string,args:Record<string,unknown>)=>({abortSignal:async()=>{input=args.p_input;return{data:{version:1,action:"save",id:"publication_rollback",result:{saved:true}},error:null};}})} as unknown as SupabaseClient;
+    await createSupabaseResearchPublication(capture).saveQueryRun(publicationRun("publication_rollback"),{visibility:"private"});return input;
+  })()) as {row:Record<string,unknown>;publication:{visibility:string}};
+  assert.throws(()=>sql(`begin;set role service_role;select research_publication_v1('save',${literal(saveInput)});select 1/0;commit;`));
+  assert.equal(sql("select (select count(*) from query_runs where id='publication_rollback')+(select count(*) from run_privacy where run_id='publication_rollback');"),"0");
+  for(const invalid of [{},{...saveInput,extra:true},{...saveInput,publication:{visibility:"invalid"}},
+    {...saveInput,row:{...saveInput.row,id:`prv_${"a".repeat(64)}`,data:{...publicationRun(`prv_${"a".repeat(64)}`)}}}])assert.throws(()=>publicationCall("save",invalid));
+  // Two real connections: first save is uncommitted before the second starts.
+  const raceRun=publicationRun("publication_first_race");
+  const raceInput={...saveInput,row:{...saveInput.row,id:raceRun.id,question:raceRun.question,data:raceRun}};
+  const concurrentSql=(input:string)=>promisify(execFile)("docker",["exec","-i",name,"psql","-X","-h","127.0.0.1","-U","postgres","-d","postgres","-v","ON_ERROR_STOP=1","-qAt","-c",input],{encoding:"utf8",timeout:30000,maxBuffer:2*1024*1024,windowsHide:true});
+  const first=concurrentSql(`set application_name='publication0093_first';begin;set role service_role;select research_publication_v1('save',${literal(raceInput)});select pg_sleep(1);commit;`);
+  // It is awaited below after the second connection starts. Observe an early
+  // rejection now so a fixture failure still reaches the owned finally cleanup.
+  void first.catch(()=>{});
+  let sleeping=false;for(let attempt=0;attempt<30;attempt++){if(sql("select count(*) from pg_stat_activity where application_name='publication0093_first' and wait_event='PgSleep';")==="1"){sleeping=true;break;}await new Promise(done=>setTimeout(done,25));}
+  assert(sleeping,"First actual transaction must be held before race");
+  const second=concurrentSql(`set role service_role;select research_publication_v1('save',${literal({...raceInput,publication:{visibility:"public"}})});`);
+  await Promise.all([first,second]);assert.equal(state("publication_first_race").visibility,"private");
+  // Catalog/schema failures are transactional controls: rollback restores the
+  // genuine admitted source; no runtime reseal or schema repair is exercised.
+  for(const change of ["truncate research_publication_catalog_seal", "alter table research_publication_catalog_seal add column unexpected text",
+    "grant update on research_publication_catalog_seal to service_role", "truncate anonymous_run_claims_catalog_seal",
+    "truncate run_privacy_catalog_seal", "alter table query_runs add column publication_unexpected text"]){
+    assert.throws(()=>sql(`begin;${change};set role service_role;select research_publication_v1('ready','{}');commit;`));await publication.creationReady();
+  }
+  assert.equal(sql("select coalesce(jsonb_agg(to_jsonb(p) order by id),'[]'::jsonb)::text from payment_events p;"),publicationBefore);
+  assert.equal(sql("select jsonb_build_array((select snapshot from anonymous_run_claims_catalog_seal),(select snapshot from run_privacy_catalog_seal))::text;"),predecessorSeals);
+  console.log("Publication0093 actual PostgreSQL: fixed RPC/helper; roles, no-row/saved defaults, all modes, original/sidecar atomic rollback, first-save race, legacy/hidden/erased/orphan preservation, own/predecessor seals and exact financial equality. Synthetic only.");
   sql("create schema keryx_storage;create table keryx_storage.identity(id integer);insert into keryx_storage.identity values(1);");
+  await assert.rejects(publication.creationReady(),/privacy_unavailable/);
   await assert.rejects(readOwnedHistory(historyDB,wallet,historyBinding,{search:"history_"}),/history_unavailable|privacy_unavailable/);
   sql("drop schema keryx_storage cascade;");
   console.log("#268 real PostgreSQL v2 composition: recorded/claimed ownership, paging/export, exact micros, receipt-I/O erase and financial retention, enrolled refusal. No membership producer or delivery claim.");

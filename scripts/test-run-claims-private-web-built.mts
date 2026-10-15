@@ -117,6 +117,10 @@ try {
         return route.fulfill({ status: 200, contentType: "text/event-stream", body: wire(mode), headers: { "cache-control": "no-store" } });
       }
       if (url.pathname === "/api/research/availability") return route.fulfill({ json: { state: "not-paused" } });
+      if (url.pathname === "/api/ask/visibility") {
+        assert.equal(request.method(), "GET", "Visibility context is read-only");
+        return route.fulfill({ json: { wallet: null, defaultVisibility: "public", privacyActive: true } });
+      }
       if (url.pathname.startsWith("/api/auth/")) return route.fulfill({ status: 401, json: {} });
       if (url.pathname.startsWith("/api/")) return route.fulfill({ json: {} });
       if (url.pathname === "/claim-run") { claimGets++; assert(!url.hash && !url.search); assert.equal(request.headers()["referer"], undefined); }

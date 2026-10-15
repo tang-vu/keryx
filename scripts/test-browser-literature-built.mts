@@ -34,6 +34,10 @@ try {
       const request = route.request(), url = new URL(request.url());
       if (url.origin !== base) return route.abort();
       if (url.pathname.startsWith("/api/")) {
+        if (url.pathname === "/api/ask/visibility") {
+          assert.equal(request.method(), "GET", "Visibility context is read-only");
+          return route.fulfill({ json: { wallet: null, defaultVisibility: "public", privacyActive: true } });
+        }
         if (url.pathname === "/api/papers") metadataRequests.push(url.search);
         if (/\/ask(?:\/|$)|\/source(?:\/|$)|\/cite(?:\/|$)/.test(url.pathname)) researchRequests.push(url.pathname);
         return route.fulfill({ json: url.pathname === "/api/models" ? { models: [] } : {} });

@@ -26,6 +26,7 @@ import { evidenceDraftOpenApiPath } from "./research/evidence-draft-openapi";
 import { draftCheckOpenApiPath } from "./research/draft-check-openapi";
 import { evidenceProcurementOpenApiPath } from "./evidence-procurement/openapi";
 import { personalHistoryOpenApiPaths } from "./history/openapi";
+import { researchPublicationOpenApiPaths } from "./run-privacy/publication-openapi";
 import { runClaimOpenApiPaths, runClaimOpenApiSchemas, privateRunClaimOpenAiProperties, privateRunClaimOpenAiDescription, privateRunClaimOpenAiStream } from "./run-claims/openapi";
 import { API_KEY_SCOPES } from "./api-key-scopes";
 import { profileIdentityOpenApiPaths } from "./profiles/identity-openapi";
@@ -675,6 +676,7 @@ export const openapiSpec = {
     ...evidenceProcurementOpenApiPath,
     ...privateProfileOpenApiPaths,
     ...personalHistoryOpenApiPaths,
+    ...researchPublicationOpenApiPaths,
     ...runClaimOpenApiPaths,
     ...profileIdentityOpenApiPaths,
     ...chatAccountOpenApiPaths,

@@ -110,6 +110,7 @@ it("renders a maintenance refusal in the real conversation, restores its draft a
       if(url==='/api/ask')return new Response(window.refusal,{status:503,headers:{'Retry-After':'600'}});
       if(url==='/api/sources')return Response.json({sources:[]});
       if(url==='/api/models')return Response.json({models:[]});
+      if(url==='/api/ask/visibility')return Response.json({wallet:null,defaultVisibility:'public',privacyActive:true});
       if(url==='/api/research/availability')return Response.json({state:'not-paused'});
       throw Error('Unexpected synthetic endpoint: '+url);
     };

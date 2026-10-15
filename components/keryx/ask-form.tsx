@@ -3,7 +3,7 @@ import { formatRecordedAmount } from "@/lib/i18n/format";
 
 /** Reader question form. A bounded budget and model remain available after the primary ask. */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 // Pure data module (no env imports), so the picker and the server agree on which id is the default.
 import { DEFAULT_MODEL_ID } from "@/lib/llm/model-catalog";
 import { MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
@@ -16,6 +16,9 @@ import { paperLibraryHref } from "@/lib/papers/handoff";
 import { createMessages } from "@/lib/i18n/messages";
 import { ProductHuntBadge } from "./product-hunt-badge";
 import { decisionReviewCopy as reviewCopy } from "@/lib/research/decision-review-copy";
+import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/hooks/use-research-visibility";
+import type { RunVisibility } from "@/lib/run-privacy/contracts";
+import { ResearchVisibilityPicker } from "./research-visibility-picker";
 
 // Catalogue adoption only. Interface locale and request data remain unchanged.
 const message = createMessages("en");
@@ -25,6 +28,8 @@ interface AskFormProps {
   disabled?: boolean;
   questionCapUsdc?: number;
   parentId?: string | null;
+  parentVisibility?: RunVisibility;
+  publicationPreference?: ReturnType<typeof useResearchVisibility>;
   conversation?: boolean;
   clearOnSubmit?: boolean;
   restoreQuestion?: { id: number; question: string; researchPaused?: boolean };
@@ -38,6 +43,7 @@ interface AskFormProps {
     scholarly?: boolean,
     paidScholarly?: boolean,
     reviewFirst?: boolean,
+    publication?: ResearchPublicationSelection,
   ) => void;
 }
 
@@ -94,8 +100,19 @@ const SUGGESTIONS = [
   },
 ];
 
-export function AskForm({ disabled, onAsk, payer = "treasury", parentId, conversation = false, clearOnSubmit = false, questionCapUsdc, restoreQuestion, showLaunchBadge = false }: AskFormProps) {
-  const [question, setQuestion] = useState("");
+export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, questionCapUsdc, restoreQuestion, showLaunchBadge = false }: AskFormProps) {
+  const ownVisibility = useResearchVisibility(parentVisibility, { enabled: !publicationPreference });
+  const visibility = publicationPreference ?? ownVisibility;
+  const [draft, setDraft] = useState<{ question: string; wallet: string | null; revision: number } | null>(null);
+  const question = visibility.ready && draft?.wallet === visibility.wallet && draft.revision === visibility.identityRevision ? draft.question : "";
+  const setQuestion = useCallback((next: string | ((current: string) => string)) => {
+    const publication = visibility.getSelection();
+    if (!publication) return;
+    const revision = visibility.getIdentityRevision();
+    setDraft(previous => ({ question: typeof next === "string" ? next : next(previous?.wallet === publication.expectedWallet && previous.revision === revision ? previous.question : ""),
+      wallet: publication.expectedWallet, revision }));
+  }, [visibility.getSelection, visibility.getIdentityRevision]);
+  useEffect(() => { setDraft(previous => previous && previous.revision !== visibility.identityRevision ? null : previous); }, [visibility.identityRevision]);
   const { availability, checking, refresh } = useResearchAvailability();
   const [dismissedRejection, setDismissedRejection] = useState<number | null>(null);
   const researchPaused = availability?.state === "paused" ||
@@ -106,11 +123,14 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
   };
   const restored = useRef<number | null>(null);
   useEffect(() => {
-    if (!restoreQuestion || restored.current === restoreQuestion.id) return;
-    restored.current = restoreQuestion.id;
-    const timer = window.setTimeout(() => setQuestion(current => current.trim() ? current : restoreQuestion.question), 0);
+    if (!restoreQuestion || restored.current === restoreQuestion.id || !visibility.ready) return;
+    const timer = window.setTimeout(() => {
+      if (!visibility.getSelection()) return;
+      restored.current = restoreQuestion.id;
+      setQuestion(current => current.trim() ? current : restoreQuestion.question);
+    }, 0);
     return () => window.clearTimeout(timer);
-  }, [restoreQuestion]);
+  }, [restoreQuestion, setQuestion, visibility.ready, visibility.getSelection]);
   const [budget, setBudget] = useState(0.05);
   const maximumBudget = payer === "session" && questionCapUsdc !== undefined && Number.isFinite(questionCapUsdc) && questionCapUsdc > 0
     ? Math.min(0.08, questionCapUsdc) : 0.08;
@@ -144,12 +164,13 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
   // dispatch still threads onto the parent.
   const parentRef = useRef<string | undefined>(undefined);
   const sharedAutoRef = useRef<ReturnType<typeof readSharedAsk> | null>(null);
+  const [sharedQuestion, setSharedQuestion] = useState<string | null>(null);
   useEffect(() => {
     if (prefilled.current) return;
     prefilled.current = true;
     const timer = window.setTimeout(() => {
       const { q, budget: b, run, parent, model: m, mode } = readSharedAsk();
-      if (q) setQuestion(q);
+      if (q) setSharedQuestion(q);
       if (b !== null) setBudget(b);
       if (m) setModel(m);
       setResearchMode(mode);
@@ -160,24 +181,35 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+  useEffect(() => {
+    if (!visibility.ready || sharedQuestion === null) return;
+    setQuestion(sharedQuestion); setSharedQuestion(null);
+  }, [visibility.ready, sharedQuestion, setQuestion]);
 
   useEffect(() => {
     const shared = sharedAutoRef.current;
-    if (!shared || checking) return;
+    if (!shared || sharedQuestion !== null || checking || !visibility.ready) return;
+    const publication = visibility.getSelection();
+    if (!publication) return;
+    const revision = visibility.getIdentityRevision();
     sharedAutoRef.current = null;
     if (availability?.state !== "not-paused" || researchPaused || disabled || payer === "paused") return;
     const timer = window.setTimeout(() => {
+      const current = visibility.getSelection();
+      if (!current || revision !== visibility.getIdentityRevision() || current.expectedWallet !== publication.expectedWallet || current.visibility !== publication.visibility) return;
       onAsk(shared.q!, Math.min(shared.budget ?? 0.05, maximumBudget), shared.parent ?? undefined,
-        shared.model ?? undefined, shared.mode);
+        shared.model ?? undefined, shared.mode, undefined, undefined, undefined, publication);
       if (clearOnSubmit) setQuestion("");
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [availability, checking, question, researchPaused, disabled, payer, onAsk, maximumBudget, clearOnSubmit]);
+  }, [availability, checking, question, sharedQuestion, researchPaused, disabled, payer, onAsk, maximumBudget, clearOnSubmit, visibility.ready, visibility.getSelection, visibility.getIdentityRevision, setQuestion]);
 
   const submit = () => {
     const q = question.trim();
     if (!q || disabled || payer === "paused" || checking || researchPaused) return;
-    onAsk(q, effectiveBudget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly, paidScholarly && payer === "session", ...(reviewFirst ? [true] as const : []));
+    const publication = visibility.getSelection();
+    if (!publication || !draft || draft.revision !== visibility.getIdentityRevision() || draft.wallet !== publication.expectedWallet) return;
+    onAsk(q, effectiveBudget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly, paidScholarly && payer === "session", reviewFirst, publication);
     if (clearOnSubmit) setQuestion("");
   };
 
@@ -213,7 +245,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             placeholder={message("researchEntry.placeholder")}
             rows={2}
             maxLength={MAX_ASK_QUESTION_CHARS}
-            disabled={disabled}
+            disabled={disabled || !visibility.ready}
             className="mt-2 min-h-[76px] w-full resize-y border border-ink bg-paper px-3 py-2 font-serif text-[17px] leading-snug text-ink outline-none placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50"
           />
           <p className="mt-1 text-xs text-ink-3">{message("researchEntry.keyboardHint")}</p>
@@ -221,6 +253,19 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
             {message("researchEntry.metadataLookup")}
           </a>
           {researchPaused && availabilityPanel}
+
+          <div className="mt-1 border-t border-line pt-1 sm:mt-2 sm:pt-3">
+            <ResearchVisibilityPicker preference={visibility} disabled={disabled} parentVisibility={parentVisibility} compact showContextHint={false} />
+            <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
+              {message("researchEntry.sourceCap", { amount: formatRecordedAmount(effectiveBudget, { minimumFractionDigits: 6, useGrouping: false }), payer: message(payer === "treasury" ? "researchEntry.treasuryPayer" : payer === "session" ? "researchEntry.sessionPayer" : payer === "expired" ? "researchEntry.expiredPayer" : "researchEntry.pausedPayer") })}
+            </p>
+            <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || !visibility.ready || question.trim().length === 0}
+              data-tour="dispatch-btn"
+              className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
+              {message(disabled ? "researchEntry.researching" : researchPaused ? "researchEntry.paused" : "researchEntry.ask")}
+            </button>
+            {visibility.ready && <p className="mt-1 text-xs leading-4 text-ink-3">{parentVisibility && parentVisibility !== "public"
+              ? message("researchVisibility.followUp") : !visibility.wallet ? message("researchVisibility.signIn") : message("researchVisibility.questionOnly")}</p>}
           <fieldset className="mt-1">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">{message("researchEntry.depth")}</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
@@ -238,15 +283,6 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, convers
                 : message("researchEntry.deepHint")}
             </p>
           </fieldset>
-          <div className="mt-2 border-t border-line pt-3">
-            <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
-              {message("researchEntry.sourceCap", { amount: formatRecordedAmount(effectiveBudget, { minimumFractionDigits: 6, useGrouping: false }), payer: message(payer === "treasury" ? "researchEntry.treasuryPayer" : payer === "session" ? "researchEntry.sessionPayer" : payer === "expired" ? "researchEntry.expiredPayer" : "researchEntry.pausedPayer") })}
-            </p>
-            <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || question.trim().length === 0}
-              data-tour="dispatch-btn"
-              className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
-              {message(disabled ? "researchEntry.researching" : researchPaused ? "researchEntry.paused" : "researchEntry.ask")}
-            </button>
             {showLaunchBadge && <div className="mt-3 flex justify-center sm:justify-start"><ProductHuntBadge /></div>}
             <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
               {payer === "session"

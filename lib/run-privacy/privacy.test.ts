@@ -51,12 +51,12 @@ describe("#266 ordinary privacy and financial retention",()=>{
     expect((await projected.export(original.id,actor(),randomUUID())).run.answer).toBe(original.answer);
     expect(JSON.parse(String(f.db.prepare("SELECT data FROM query_runs WHERE id=?").get(original.id)?.data)).answer).toBe(original.answer);
   });
-  it("preserves every historical link unlisted; captures authenticated private and anonymous unlisted defaults",async()=>{
+  it("retains raw recovery private/unlisted triggers and exposes Public when no account default is saved",async()=>{
     const f=fixture();f.save("owned",alice);f.save("anonymous");f.save("foreign",bob);
     for(const id of ["historical","historical-unowned","anonymous"])expect((await f.store.read(id)).item?.state.visibility).toBe("unlisted");
     expect((await f.store.read("owned")).item).toBeNull();expect((await f.store.read("owned",actor())).item?.run.question).toContain("SECRET");
     expect((await f.store.read("foreign",actor())).item).toBeNull();expect((await f.store.read("absent",actor())).item).toBeNull();
-    expect(await f.store.list({take:50})).toEqual([]);expect(await f.store.defaults(actor())).toBe("private");
+    expect(await f.store.list({take:50})).toEqual([]);expect(await f.store.defaults(actor())).toBe("public");
     f.save("historical",alice);expect((await f.store.read("historical")).item?.state.visibility).toBe("unlisted");
     const requestId=randomUUID();expect(await f.store.setDefault(actor(),"public",requestId)).toBe("public");
     expect(await f.store.setDefault(actor(),"public",requestId)).toBe("public");f.save("demo",alice);f.save("still-private",bob);f.save("still-unowned");

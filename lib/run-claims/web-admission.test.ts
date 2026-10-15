@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ deps: vi.fn(), run: vi.fn(), activation: vi.fn(), prepare: vi.fn(), complete: vi.fn(), save: vi.fn(), session: vi.fn() }));
+const mocks = vi.hoisted(() => ({ db: vi.fn(), deps: vi.fn(), run: vi.fn(), activation: vi.fn(), prepare: vi.fn(), complete: vi.fn(), save: vi.fn(), session: vi.fn() }));
+vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
 vi.mock("@/lib/auth", () => ({ getSession: mocks.session }));
 vi.mock("@/lib/agent", () => ({ getAgentDeps: mocks.deps }));
 vi.mock("@/lib/agent/run-agent", () => ({ runAgent: mocks.run }));
@@ -14,6 +15,7 @@ import { createPrivateClaimHandoff } from "./web-handoff";
 const originalSecret = Object.getOwnPropertyDescriptor(config, "jwtSecret")!, originalBaseUrl = Object.getOwnPropertyDescriptor(config, "baseUrl")!;
 beforeEach(() => {
   vi.clearAllMocks(); mocks.session.mockResolvedValue(null); mocks.save.mockResolvedValue(undefined);
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false"); mocks.db.mockResolvedValue({ runPrivacyActive: false });
   mocks.activation.mockResolvedValue(undefined); mocks.prepare.mockResolvedValue({ complete: mocks.complete });
   Object.defineProperty(config, "jwtSecret", { ...originalSecret, value: "synthetic-document-session-key-1234567890" });
   Object.defineProperty(config, "baseUrl", { ...originalBaseUrl, value: "http://localhost:3939" });
@@ -24,11 +26,13 @@ beforeEach(() => {
 });
 afterEach(() => { Object.defineProperty(config, "jwtSecret", originalSecret); Object.defineProperty(config, "baseUrl", originalBaseUrl); });
 afterEach(() => vi.unstubAllEnvs());
-it("enabled anonymous web cannot start research on an analytics-allowed document without protected-document admission", async () => {
+it("ordinary anonymous public research needs no protected-document credential and emits no claim secret", async () => {
   vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "true");
   const response = await POST(new NextRequest("https://synthetic.example/api/ask", { method: "POST", body: JSON.stringify({ question: "Synthetic private web", budget: 0 }) }));
-  expect(response.status).toBe(503); expect(await response.json()).toEqual({ error: "private_research_document_required" });
-  expect(mocks.deps).not.toHaveBeenCalled(); expect(mocks.run).not.toHaveBeenCalled(); expect(mocks.activation).not.toHaveBeenCalled();
+  expect(response.status).toBe(200); const text = await response.text();
+  expect(text).toContain("event: done"); expect(text).not.toContain("event: private-run-claim");
+  expect(mocks.prepare).not.toHaveBeenCalled(); expect(mocks.complete).not.toHaveBeenCalled();
+  expect(mocks.save).toHaveBeenCalledOnce(); expect(mocks.run).toHaveBeenCalledOnce();
 });
 const request = () => new NextRequest(config.baseUrl + "/api/ask", { method: "POST", headers: { Origin: config.baseUrl, "Sec-Fetch-Site": "same-origin",
   "X-Keryx-Private-Document": issuePrivateDocument("n".repeat(43), { origin: config.baseUrl, network: config.networkId }, config.jwtSecret) },

@@ -86,6 +86,10 @@ try {
         const request = route.request(), url = new URL(request.url());
         if (url.origin !== origin) return route.abort();
         if (url.pathname.startsWith("/api/")) {
+          if (url.pathname === "/api/ask/visibility") {
+            assert.equal(request.method(), "GET", "Visibility context is read-only");
+            return route.fulfill({ status: 503, json: { error: "Read-only product fixture" } });
+          }
           if (/\/api\/(?:ask(?:\/|$)|agent\/ask|research\/.*checkout|source\/|cite\/)/u.test(url.pathname)) forbidden.push(url.pathname);
           return route.fulfill({ status: 503, json: { error: "Read-only product fixture" } });
         }
