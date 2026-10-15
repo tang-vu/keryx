@@ -82,6 +82,7 @@ it("puts receiving, budget and withdrawal together without starting a financial 
     expect(await page.getByRole("navigation", { name: "Wallet & budget" }).getByRole("link").allTextContents()).toEqual(["Add money", "Agent budget", "Withdraw"]);
     expect(await page.getByText(owner, { exact: true }).count()).toBe(1);
     expect(await page.getByRole("button", { name: "Review withdrawal", exact: true }).isVisible()).toBe(true);
+    expect(await page.getByText("Other ways to add USDC", { exact: true }).count()).toBe(0);
     expect(await page.getByRole("button", { name: "Confirm withdrawal", exact: true }).count()).toBe(0);
     expect(await page.getByLabel("Original session withdrawal request", { exact: true }).isVisible()).toBe(false);
     expect((await page.evaluate(() => (window as unknown as Fixture).actions)).every(action => action.type === "restore")).toBe(true);

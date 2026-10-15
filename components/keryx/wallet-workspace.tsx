@@ -34,10 +34,7 @@ function ReceivingWallet({ address }: { address: string }) {
       <p className="text-xs leading-relaxed text-ink-3">{copy.receiveNotice}</p>
     </div>
     <FaucetPanel />
-    {!profile.testnet && <details className="border-t border-line pt-3">
-      <summary className="min-h-11 cursor-pointer py-3 text-sm underline underline-offset-4">{copy.bankOptions}</summary>
-      <ArcCardOnrampPanel />
-    </details>}
+    {!profile.testnet && <ArcCardOnrampPanel />}
   </section>;
 }
 
