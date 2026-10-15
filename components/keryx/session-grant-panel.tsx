@@ -18,7 +18,9 @@ import { CircleGoogleWalletButton } from "./circle-google-wallet";
 import { FaucetPanel } from "@/components/keryx/faucet-panel";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { SessionCashoutPanel } from "./session-cashout-panel";
-import { ArcCardOnrampPanel } from "./arc-card-onramp-panel";
+import Link from "next/link";
+import { formatAmount, recordedUsdcMicros } from "@/lib/i18n/format";
+import { walletWorkspaceMessages as copy } from "@/locales/en/wallet-workspace";
 
 export interface SessionGrantBinding {
   /** Retained sessionId for active, expired or paused grants; never fall back implicitly. */
@@ -44,10 +46,11 @@ export interface SessionGrantBinding {
 
 interface Props {
   /** Called whenever the grant binding changes (auth state or grant activation). */
-  onBindingChange: (binding: SessionGrantBinding) => void;
+  onBindingChange?: (binding: SessionGrantBinding) => void;
+  variant?: "chat" | "wallet";
 }
 
-export function SessionGrantPanel({ onBindingChange }: Props) {
+export function SessionGrantPanel({ onBindingChange, variant = "chat" }: Props) {
   const [authed, setAuthed] = useState(false);
   const { state, tryRecover, recoverViaSignature, generateAndFund, topUp, extend, revoke, getSessionWalletClient, markExpired, authorizeSessionPayment } =
     useSessionGrant();
@@ -93,20 +96,17 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
       markExpired,
     };
     bindingRef.current = binding;
-    onBindingChange(binding);
+    onBindingChange?.(binding);
   }, [state.status, state.sessionId, state.cap, state.researchBudget?.questionCapUsdc, getSessionWalletClient, markExpired, authorizeSessionPayment, onBindingChange]);
 
   if (!authed) return null;
 
-  return (
-    <div className="space-y-2">
+  const budgetControls = <>
       <CircleGoogleWalletButton reconnectOnly />
       {/* Faucet drip panel — shown when session grant is idle/revoked (user may need USDC first) */}
-      {browserPaymentProfile().testnet && (state.status === "idle" || state.status === "revoked" || state.status === "error") && (
+      {variant === "chat" && browserPaymentProfile().testnet && (state.status === "idle" || state.status === "revoked" || state.status === "error") && (
         <FaucetPanel />
       )}
-      {/* Optional mainnet card purchase into the owner wallet; hidden unless the server enables it. */}
-      {!browserPaymentProfile().testnet && <ArcCardOnrampPanel />}
       <GrantSpendDialog
         grantState={state}
         onActivate={(amount, options) => generateAndFund(amount, false, options)}
@@ -116,7 +116,39 @@ export function SessionGrantPanel({ onBindingChange }: Props) {
         onTryRecover={tryRecover}
         onRecoverViaSignature={recoverViaSignature}
       />
-      {!browserPaymentProfile().testnet && <SessionCashoutPanel sessAddr={state.sessAddr}/>}
+  </>;
+
+  if (variant === "wallet") return <div className="space-y-6">
+    <section id="agent-budget" className="scroll-mt-6 space-y-4 border border-line bg-paper-2 p-4 sm:p-6">
+      <div><h2 className="font-display text-2xl">{copy.budget}</h2>
+        <p className="mt-1 text-sm leading-relaxed text-ink-2">{copy.budgetDescription}</p></div>
+      {budgetControls}
+    </section>
+    {!browserPaymentProfile().testnet && <section id="withdraw" className="scroll-mt-6 space-y-4 border border-line bg-paper-2 p-4 sm:p-6">
+      <div><h2 className="font-display text-2xl">{copy.withdraw}</h2>
+        <p className="mt-1 text-sm leading-relaxed text-ink-2">{copy.withdrawDescription}</p></div>
+      <SessionCashoutPanel sessAddr={state.sessAddr} expanded/>
+    </section>}
+  </div>;
+
+  const active = state.status === "active";
+  const cap = recordedUsdcMicros(state.cap), spent = recordedUsdcMicros(state.spent);
+  const remaining = cap === null || spent === null ? null : cap > spent ? cap - spent : BigInt(0);
+  const label = active ? copy.ready : state.status === "expired" ? copy.expired
+    : state.status === "paused" || state.status === "error" ? copy.paused
+    : ["restoring", "recovering", "registering", "funding", "depositing", "confirming", "switching", "generating", "revoking"].includes(state.status) ? copy.checkingBudget : copy.noBudget;
+  return <section aria-label={copy.walletAndBudget} className="space-y-2 border border-line bg-paper px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+        <span className={active ? "text-paid" : "text-ink-2"}>{label}</span>
+        {active && <span className="font-mono text-ink" aria-label={copy.remaining}>{formatAmount(remaining, { minimumFractionDigits: 6, useGrouping: false })} {copy.usdc}</span>}
+      </div>
+      <Link href="/me/wallet" className="inline-flex min-h-11 items-center text-xs underline underline-offset-4">{copy.walletAndBudget}</Link>
     </div>
-  );
+    {active && <p className="text-[11px] leading-relaxed text-ink-3">{copy.budgetBoundary}</p>}
+    <details>
+      <summary className="min-h-11 cursor-pointer py-3 text-xs text-ink-2 underline underline-offset-4">{active ? copy.manageBudget : copy.budgetSetup}</summary>
+      <div className="space-y-2 pt-2">{budgetControls}</div>
+    </details>
+  </section>;
 }
