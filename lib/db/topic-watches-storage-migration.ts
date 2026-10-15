@@ -47,8 +47,10 @@ function topicWatchesMigrationPlans() {
       for (const table of [...missing].reverse()) reference.exec(`DROP TABLE "${table}"`); // isolated reference only
       const before = sqliteApplicationSchemaProfile(reference, new Set());
       const oldSchema = JSON.parse(before) as unknown[], newSchema = JSON.parse(after) as unknown[];
-      const delta = newSchema.filter(row => !oldSchema.some(old => canonicalJson(old) === canonicalJson(row)));
-      if (oldSchema.some(row => !newSchema.some(next => canonicalJson(next) === canonicalJson(row))) ||
+      const oldKeys = new Set(oldSchema.map(row => canonicalJson(row)));
+      const newKeys = new Set(newSchema.map(row => canonicalJson(row)));
+      const delta = newSchema.filter(row => !oldKeys.has(canonicalJson(row)));
+      if (oldSchema.some(row => !newKeys.has(canonicalJson(row))) ||
         canonicalJson(delta.map(canonicalJson).sort()) !== canonicalJson(objects.map(canonicalJson).sort()))
         throw new Error("Metadata migration changes historical schema");
       reference.exec("ROLLBACK");
