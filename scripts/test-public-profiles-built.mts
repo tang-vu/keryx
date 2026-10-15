@@ -120,7 +120,7 @@ try {
   const head = documentHtml.match(/<head\b[^>]*>([\s\S]*?)<\/head>/)?.[1]; assert(head, "Actual compiled head is required");
   // Same bounded double-quoted tag-attribute pattern as the existing wanted built harness.
   // These generated URLs are ASCII; no owner text is interpreted as markup or executed.
-  const attributes = (tag: string) => Object.fromEntries([...tag.matchAll(/([\w:-]+)="([^"]*)"/g)].map(match => [match[1], match[2]]));
+  const attributes = (tag: string) => Object.fromEntries([...tag.matchAll(/([\w:-]+)="([^"]*)"/g)].map(match => [match[1].toLowerCase(), match[2]]));
   const links = [...head.matchAll(/<link\b[^>]*>/g)].map(match => attributes(match[0]));
   const canonical = `${origin}/u/fixture_researcher`;
   const languages = [["en", canonical], ["x-default", canonical]];
