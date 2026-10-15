@@ -9,6 +9,7 @@
 
 import { Loader2, ShieldCheck, LogOut, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { walletWorkspaceMessages as walletCopy } from "@/locales/en/wallet-workspace";
 import { WalletPicker } from "@/components/keryx/wallet-picker";
 import type { ArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
@@ -196,6 +197,7 @@ export function SignedInStep({
         </Link>
       )}
 
+      <Link href="/me/wallet" className="flex min-h-11 items-center justify-center border border-ink px-4 py-3 text-sm hover:bg-paper-2">{walletCopy.walletAndBudget}</Link>
       <button
         type="button"
         onClick={onSignOut}
