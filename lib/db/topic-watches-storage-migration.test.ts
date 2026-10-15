@@ -6,10 +6,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
 import { installNativeUserDomainSchema } from "./native-user-domain-schema";
-import { migrateTopicWatchesStorage, snapshotTopicWatchesStorage, topicWatchesMigrationProfiles, ownerRunAssignmentsMigrationProfiles } from "./topic-watches-storage-migration";
+import { migrateTopicWatchesStorage, snapshotTopicWatchesStorage, topicWatchesMigrationProfiles, ownerRunAssignmentsMigrationProfiles,
+  pendingJobOwnersMigrationProfiles } from "./topic-watches-storage-migration";
 import { OWNER269_OCCUPANCY_PROPOSAL } from "../owner-run-assignments/occupancy-proposal";
 import { CHAT_ACCOUNT_TABLES } from "./chat-accounts-schema";
-import { insertStorageIdentity, installStorageFences } from "./storage-identity-sqlite";
+import { insertStorageIdentity, installStorageFences, registerStorageCapability } from "./storage-identity-sqlite";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
@@ -31,7 +32,7 @@ function seedChatRows(db: DatabaseSync, identity: StorageIdentity) {
     VALUES(?,'chat-account-link-v1','telegram','synthetic','7','7','https://keryx.example',?,0,300000,NULL)`)
     .run("d".repeat(64), identity.network);
 }
-function fixture(archive = false, oldFamily: 19 | 20 | 22 = 19) {
+function fixture(archive = false, oldFamily: 19 | 20 | 22 | 24 = 19) {
   const directory = mkdtempSync(join(tmpdir(), "keryx-watch-migration-")); directories.push(directory);
   const file = join(directory, "full19.sqlite"), backup = join(directory, "backup.sqlite");
   const identity: StorageIdentity = { ...syntheticStorageIdentity("testnet-real"), format: "keryx-mainnet-storage-identity-v1",
@@ -39,12 +40,16 @@ function fixture(archive = false, oldFamily: 19 | 20 | 22 = 19) {
   const db = new DatabaseSync(file);
   try {
     db.exec("BEGIN"); installMainnetApplicationSchema(db, { publicReferenceArchive: archive }); installNativeUserDomainSchema(db);
-    // Disposable exact old19/old20/pre-owner chat22, distinct from current24.
-    for (const guard of OWNER269_OCCUPANCY_PROPOSAL) db.exec(`DROP TRIGGER "${guard.name}"`);
-    db.exec("DROP TABLE owner269_associations; DROP TABLE owner269_operations");
-    if (oldFamily !== 22) for (const table of [...CHAT_ACCOUNT_TABLES].reverse()) db.exec(`DROP TABLE "${table}"`);
-    if (oldFamily === 19) db.exec("DROP TABLE topic_watches");
-    if (oldFamily === 22) seedChatRows(db, identity);
+    // Fixed synthetic setup actor only; strip the new table before identity fences.
+    registerStorageCapability(db, identity, () => true); db.exec("DROP TABLE pending_job_owners");
+    // Disposable exact old19/old20/pre-owner chat22/pre-pending24, distinct from current25.
+    if (oldFamily !== 24) {
+      for (const guard of OWNER269_OCCUPANCY_PROPOSAL) db.exec(`DROP TRIGGER "${guard.name}"`);
+      db.exec("DROP TABLE owner269_associations; DROP TABLE owner269_operations");
+      if (oldFamily !== 22) for (const table of [...CHAT_ACCOUNT_TABLES].reverse()) db.exec(`DROP TABLE "${table}"`);
+      if (oldFamily === 19) db.exec("DROP TABLE topic_watches");
+    }
+    if (oldFamily === 22 || oldFamily === 24) seedChatRows(db, identity);
     if (oldFamily !== 19) db.prepare("INSERT INTO topic_watches(wallet,id,revision,state) VALUES(?,?,?,?)")
       .run(`0x${"a".repeat(40)}`, "retained-watch", 7, '{"retained":true}');
     db.exec("INSERT INTO sync_state(key,value,updated_at) VALUES('raw-text',CAST(X'fffe00' AS TEXT),NULL)");
@@ -54,31 +59,35 @@ function fixture(archive = false, oldFamily: 19 | 20 | 22 = 19) {
   } finally { db.close(); }
   const snapshot = (target = file) => {
     const connection = new DatabaseSync(target, { readOnly: true });
-    try { return snapshotTopicWatchesStorage(connection, identity, [...topicWatchesMigrationProfiles(), ...ownerRunAssignmentsMigrationProfiles()].flat()); }
+    try { return snapshotTopicWatchesStorage(connection, identity,
+      [...topicWatchesMigrationProfiles(), ...ownerRunAssignmentsMigrationProfiles(), ...pendingJobOwnersMigrationProfiles()].flat()); }
     finally { connection.close(); }
   };
   return { file, backup, identity, snapshot };
 }
 const hash = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex");
-describe("explicit stopped-writer old19/old20/chat22 to compiled24 metadata migration (authored, UNRUN)", () => {
+describe("explicit stopped-writer old19/old20/chat22/pre-pending24 to compiled25 metadata migration (authored, UNRUN)", () => {
   it("keeps runtime profile family exact four; historical full19 is migration-only", () => {
-    const runtime = supportedSqliteApplicationProfiles(true), pairs = [...topicWatchesMigrationProfiles(), ...ownerRunAssignmentsMigrationProfiles()];
-    expect(runtime).toHaveLength(4); expect(new Set(runtime).size).toBe(4); expect(pairs).toHaveLength(6);
+    const runtime = supportedSqliteApplicationProfiles(true), pairs = [...topicWatchesMigrationProfiles(), ...ownerRunAssignmentsMigrationProfiles(), ...pendingJobOwnersMigrationProfiles()];
+    expect(runtime).toHaveLength(4); expect(new Set(runtime).size).toBe(4); expect(pairs).toHaveLength(8);
     for (const [before, after] of pairs) { expect(runtime).not.toContain(before); expect(runtime).toContain(after); }
   });
-  it.each([[false, 19], [true, 19], [false, 20], [true, 20], [false, 22], [true, 22]] as const)("preserves every historical typed original and backup (archive=%s, oldFamily=%s)", (archive, oldFamily) => {
+  it.each([[false, 19], [true, 19], [false, 20], [true, 20], [false, 22], [true, 22], [false, 24], [true, 24]] as const)("preserves every historical typed original and backup (archive=%s, oldFamily=%s)", (archive, oldFamily) => {
     const f = fixture(archive, oldFamily), before = f.snapshot();
     if (oldFamily !== 19) expect(before.tables.topic_watches.rows).toBe(1);
-    if (oldFamily === 22) for (const table of CHAT_ACCOUNT_TABLES) expect(before.tables[table].rows).toBe(1);
+    if (oldFamily === 22 || oldFamily === 24) for (const table of CHAT_ACCOUNT_TABLES) expect(before.tables[table].rows).toBe(1);
+    expect(before.tables.pending_job_owners).toBeUndefined();
     copyFileSync(f.file, f.backup); const backupHash = hash(f.backup);
     let admissions = 0;
     const result = migrateTopicWatchesStorage(f.file, f.identity, connection => {
       admissions++; expect(connection.isTransaction).toBe(true);
-      expect(snapshotTopicWatchesStorage(connection, f.identity, [...topicWatchesMigrationProfiles(), ...ownerRunAssignmentsMigrationProfiles()].flat())).toEqual(f.snapshot(f.backup));
+      expect(snapshotTopicWatchesStorage(connection, f.identity,
+        [...topicWatchesMigrationProfiles(), ...ownerRunAssignmentsMigrationProfiles(), ...pendingJobOwnersMigrationProfiles()].flat())).toEqual(f.snapshot(f.backup));
     });
     expect(admissions).toBe(1); expect(result).toMatchObject({ status: "migrated", originalRowsPreserved: true, signingResumeAuthorized: false });
     const after = f.snapshot(), retained = { ...after.tables };
-    for (const table of ["topic_watches", ...CHAT_ACCOUNT_TABLES, "owner269_operations", "owner269_associations"]) if (!(table in before.tables)) {
+    expect(after.tables.pending_job_owners.rows).toBe(0);
+    for (const table of ["topic_watches", ...CHAT_ACCOUNT_TABLES, "owner269_operations", "owner269_associations", "pending_job_owners"]) if (!(table in before.tables)) {
       expect(retained[table].rows).toBe(0); delete retained[table];
     }
     expect(retained).toEqual(before.tables); expect(hash(f.backup)).toBe(backupHash);

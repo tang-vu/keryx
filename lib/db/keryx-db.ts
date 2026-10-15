@@ -223,6 +223,9 @@ export interface KeryxDB extends PublicReferenceArchiveDb {
   readonly publicProfiles?: import("../profiles/public-profile").PublicProfilesStore;
   /** Explicitly admitted ordinary run text privacy. Public callers must never fall back to raw originals. */
   readonly runPrivacy?: import("../run-privacy/contracts").RunPrivacyStore;
+  /** Optional native owner-filtered metadata reader; no ordinary fallback. */
+  readonly pendingJobOwners?: import("./pending-job-owners-sqlite").PendingJobOwnersStore;
+  createOwnedA2aOrder?(order: A2aOrder, proof: import("../a2a/pending-owner-session").PendingOwnerSessionProof): Promise<{ created: boolean; order: A2aOrder }>;
   /** Captured staged activation; false preserves existing admitted readers, true requires the privacy port. */
   readonly runPrivacyActive?: boolean;
   /** Optional ordinary-storage classified usage. Enrolled/native profiles expose no fallback. */

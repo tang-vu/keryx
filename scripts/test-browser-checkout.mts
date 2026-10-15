@@ -11,6 +11,7 @@ import { a2aResearchPackageForVersion } from "../lib/a2a/research-package-defini
 import { researchReceiptDigest, sha256 } from "../lib/research-receipt-integrity";
 import { decodeFunctionData, erc20Abi } from "viem";
 import { GATEWAY_DEPOSIT_ABI } from "../lib/buyer/funding-policy";
+import { researchFundingMessages } from "../locales/en/research-funding";
 import { assertSignedOutBrowserFixtureGraph, signedOutResearchAuthFixture } from "../test-support/research-browser-auth-fixture";
 
 const account = privateKeyToAccount(`0x${"1".repeat(64)}`);
@@ -176,7 +177,7 @@ try {
   const buy = page.getByRole("button", { name: "Buy research — 0.050000 USDC", exact: true });
   await page.getByText("(50000 micro-USDC; decimal point, no grouping)", { exact: true }).first().waitFor();
   assert(await buy.isDisabled());
-  await page.getByRole("checkbox").check();
+  await page.getByRole("checkbox", { name: researchFundingMessages["researchCheckout.consent"], exact: true }).check();
   await page.getByLabel("Research question", { exact: true }).fill("Changed question");
   assert.equal(await buy.count(), 0, "Changing the question removes the old purchase review");
   assert.equal(await page.getByRole("button", { name: "Refresh Gateway balance and funding status", exact: true }).count(), 0);
@@ -188,8 +189,8 @@ try {
   await page.getByText("At the last check, enough Gateway USDC was available for this price.", { exact: false }).waitFor();
   await page.getByRole("button", { name: "Review 0.05 USDC purchase", exact: true }).click();
   assert(await buy.isDisabled());
-  assert.equal(await page.getByRole("checkbox").isChecked(), false, "A new quote requires fresh purchase consent");
-  await page.getByRole("checkbox").check();
+  assert.equal(await page.getByRole("checkbox", { name: researchFundingMessages["researchCheckout.consent"], exact: true }).isChecked(), false, "A new quote requires fresh purchase consent");
+  await page.getByRole("checkbox", { name: researchFundingMessages["researchCheckout.consent"], exact: true }).check();
   const downloadPromise = page.waitForEvent("download");
   await buy.click();
   const download = await downloadPromise;

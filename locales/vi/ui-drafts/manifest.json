@@ -6,18 +6,41 @@
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
-  "scope": "All 62 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
+  "scope": "All 64 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
   "financialLegalConsent": "Unreviewed; English-authoritative fallback until actual named-human review. No runtime integration or activation supplied.",
   "totals": {
-    "englishNamespaceFiles": 63,
+    "englishNamespaceFiles": 64,
     "coreInlineSources": 1,
-    "extractedLeaves": 5815,
+    "extractedLeaves": 5829,
     "authoredEntries": 5571,
     "nonTranslatableMachineIdentifiers": 21,
-    "uncoveredEntries": 223,
-    "completeNamespaces": 57
+    "uncoveredEntries": 237,
+    "completeNamespaces": 56
   },
   "namespaces": [
+    {
+      "namespace": "pending-owner257",
+      "sourcePath": "locales/en/pending-owner257.ts",
+      "sourceSha256": "57f905d1d84b7f2886c0eb3c7124dbc87a03a0bf9a78bd1e7123ff970c56eed3",
+      "draftPath": "locales/vi/ui-drafts/pending-owner257.json",
+      "extractedLeaves": 10,
+      "authoredEntries": 0,
+      "coveredKeys": [],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [
+        "account",
+        "checking",
+        "consent",
+        "failed",
+        "held",
+        "paymentUnknown",
+        "recoveryUnknown",
+        "refresh",
+        "signIn",
+        "title"
+      ],
+      "sourceAliases": {}
+    },
     {
       "namespace": "account-membership",
       "sourcePath": "locales/en/account-membership.ts",
@@ -1632,9 +1655,9 @@
     {
       "namespace": "job-targets",
       "sourcePath": "locales/en/job-targets.ts",
-      "sourceSha256": "2ffe8a1899d26f39ba2c3c36eb1a2d3a392c5f18c08f31a0d5ad421032cb6af2",
+      "sourceSha256": "b028fcfbf9125dda9097ef29db736072be20dd2d3798eaf11d5356ea4b2134c3",
       "draftPath": "locales/vi/ui-drafts/job-targets.json",
-      "extractedLeaves": 16,
+      "extractedLeaves": 20,
       "authoredEntries": 16,
       "coveredKeys": [
         "choiceNotice",
@@ -1655,7 +1678,12 @@
         "waitBody"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [],
+      "uncoveredKeys": [
+        "reviewBody",
+        "reviewObservation",
+        "reviewTerms",
+        "reviewTitle"
+      ],
       "sourceAliases": {}
     },
     {

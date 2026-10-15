@@ -70,7 +70,7 @@ function WalletHistory({ wallet }: { wallet: string }) {
         <p className="break-words font-serif text-ink">{row.question ?? message("walletResearch.questionUnavailable")}</p>
         <p className="mt-1 text-sm text-ink-3">{row.mode} · {row.status.replaceAll("_", " ")} · {<DisplayTime value={row.createdAt} />}</p>
         <p className="mt-1 text-sm text-ink-2">{message(row.funding ? "walletResearch.monthlyPrice" : "walletResearch.packagePrice", { amount: row.packagePriceUsdc === null ? message("walletResearch.unknown") : `${row.packagePriceUsdc} USDC` })}</p>
-        <ResearchJobEscalation escalation={row.escalation} original={row.originalPayment ? { orderId: row.id, payment: row.originalPayment } : undefined} />
+        <ResearchJobEscalation escalation={row.escalation} status={row.status} original={row.originalPayment ? { orderId: row.id, payment: row.originalPayment } : undefined} />
         <button className={`${control} mt-2`} onClick={() => setSelected(row.id)}>{message("walletResearch.followJob")}</button>
       </li>)}
     </ul>

@@ -8258,6 +8258,14 @@ to the incoming artifact. Exact-head required CI remains pending. This focused
 integration does not close all #267/#268 criteria or prove real Google/Circle user
 acceptance. See [the implementation boundary](docs/engineering/account-owned-history-consent-20261015.md).
 
+
+## 2026-10-15 — #257 explicit new-purchase account ownership and finite mounted reads
+
+Use separate default-off interactive account-history consent for a NEW browser purchase, bound to the current authenticated durable session selector and invalidated on auth/logout/BroadcastChannel/focus. Only the fixed same-origin signed POST may carry the optional cookie/header seam; generic credential omission, exact payment/request/nonce/journal authority and all recovery/replay paths remain unchanged. R140 atomic original admission and server proof remain protected.
+
+Compose the reviewed predeadline observer without changing its single lock/channel/reservation or original 180/300-second clock. Project only bounded existing exact-original recovery facts after genuine current owner/session proof; missing/ambiguous facts stay unknown. Actual job details mount a metadata reader by validated job ID as selector only. Separate finite request deadlines and active body cancellation prevent stale/stalled mounted observation; no payment/recovery action or new external scheduler is added.
+
+SOURCE AUTHORED, tests/types/build/CI UNRUN. Original257 stays open through independent payment review, real focused controls and remaining paid/vendor/product acceptance. Parent263 owns the future compiled native-family bound, and ROOT retains sole merge/release coordination and batched delivery. See [the source correction and remaining gates](docs/engineering/job-target257-authenticated-pending-owner-20261015.md).
 ## 2026-10-15 - Bounded original269 assignment source, acceptance OPEN
 
 Keep owner-assigned attribution in a separate revocable metadata domain, never
@@ -8340,3 +8348,19 @@ other target gates remain with the production owner after writer stop. The ordin
 deploy path retains its prior behavior. Original #164 still needs actual intended-host
 staged delivery, compatibility/retention evidence and matched availability measurements;
 ordinary release67 and synthetic ordering checks cannot close those criteria.
+
+## 2026-10-16: #257 exact native25 metadata migration
+
+Extend the existing protected stock command with migration-only exact full24-to25
+source pairs, retaining old19/full20/chat22 predecessors and four runtime profiles.
+Only the fixed pending-job ownership table/index/immutable triggers and its fences
+are new for old24. Existing owner occupancy guards, financial schema/originals,
+typed verified backups, EXCLUSIVE identity checks and uncertain-COMMIT holds stay
+unchanged. Cache only deeply frozen pure source plans, never target authority.
+
+Pending ownership is empty after historical migration: no historical owner proof
+is inferred or backfilled. Already-current25 preserves genuine retained cells.
+Parent independent source review, 48 affected migration controls, 18 mounted
+controls and changed TypeScript checks passed. Exact-head required CI and sole
+ROOT batch/target authority remain; no production migration was performed here.
+See [the fixed native25 stock migration boundary](docs/engineering/job257-native25-stock-migration-20261016.md).

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { buyBrowserResearch, resumeBrowserResearch, type BrowserBuyerStorage, type BrowserBuyerWallet } from "./browser-client";
 import { buyerFetch } from "./transport";
+import { readAccountPurchaseSession, consentToAccountPurchase, invalidateAccountPurchaseConsent } from "./account-owned-transport";
 import { BUYER_ENDPOINT, BUYER_NETWORK, BUYER_USDC, BUYER_GATEWAY, buyerTypedData, type BuyerIntentEnvelope, type BuyerRequest, type BuyerRequirement } from "./protocol";
 import type { BrowserJournal } from "./browser-journal";
 import { a2aResearchPackageForVersion } from "../a2a/research-package-definition";
@@ -34,6 +35,37 @@ function setup() {
   const http = vi.fn<typeof fetch>().mockResolvedValueOnce(quote()).mockResolvedValueOnce(new Response("{}", { headers: { "payment-response": encode(acknowledgement) } }));
   return { storage, input, http };
 }
+
+// UNRUN F1 one-shot caller controls, including the committed uncertainty boundary.
+it.each(["new", "replay", "changed-before-sign", "changed-after-claim"])("optional owned browser purchase preserves original boundaries: %s", async kind => {
+  const { input, storage, http } = setup();
+  let current = true;
+  const session = { address: account.address.toLowerCase(), id: "c".repeat(64), issuedAt: 1, expiresAt: Date.now() + 300000 };
+  const nativeFetch = vi.fn<typeof fetch>().mockImplementation(async (url, init) => {
+    if (init?.method === "POST") return new Response("{}", { headers: { "payment-response": encode(acknowledgement) } });
+    return Response.json(String(url).endsWith("/sessions") ? { sessions: [{ ...session, current: true }], truncated: false } : { session: { address: session.address, role: "asker" } });
+  });
+  vi.stubGlobal("window", { location: { origin: "https://keryx.cc" } }); vi.stubGlobal("fetch", nativeFetch);
+  try {
+    const consent = consentToAccountPurchase(await readAccountPurchaseSession(), () => current);
+    if (kind === "changed-before-sign") input.onPrepared.mockImplementation(() => { current = false; invalidateAccountPurchaseConsent(consent); });
+    if (kind === "replay") vi.mocked(storage.claim).mockResolvedValue(false);
+    if (kind === "changed-after-claim") vi.mocked(storage.claim).mockImplementation(async () => { current = false; invalidateAccountPurchaseConsent(consent); return true; });
+    const result = buyBrowserResearch({ ...input, accountConsent: consent }, { storage, http });
+    if (kind === "changed-before-sign" || kind === "replay") await expect(result).rejects.toThrow();
+    else expect(await result).toMatchObject({ status: kind === "new" ? "submitted" : "submission_uncertain" });
+    const posts = nativeFetch.mock.calls.filter(([, init]) => init?.method === "POST");
+    expect(posts).toHaveLength(kind === "new" ? 1 : 0);
+    expect(input.sign).toHaveBeenCalledTimes(kind === "changed-before-sign" ? 0 : 1);
+    expect(http.mock.calls.filter(([, init]) => init?.method === "POST" && new Headers(init.headers).has("payment-signature"))).toHaveLength(0);
+    if (posts.length) {
+      expect(posts[0][1]!.body).toBe(JSON.stringify(request));
+      expect(new Headers(posts[0][1]!.headers).get("x-keryx-account-job")).toBe("associate");
+      expect(posts[0][1]!.credentials).toBe("same-origin");
+    }
+    expect(JSON.stringify(await storage.read(input.onPrepared.mock.calls[0][0].queryId))).not.toContain('"accountConsent"');
+  } finally { vi.unstubAllGlobals(); }
+});
 
 describe("one-shot browser buyer", () => {
   it.each([{ amount: "49999" }, { amount: "50001" }, { network: "eip155:1" }, { payTo: account.address }])("refuses a changed quote before storage/signing: %j", async patch => {

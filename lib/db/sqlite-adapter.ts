@@ -70,6 +70,10 @@ import { saveSqlitePrivateResult, getSqlitePrivateResult } from "./private-resea
 import { reserveSqlitePrivateTreasury, getSqlitePrivateTreasury, type PrivateTreasuryPolicy } from "./private-treasury-capacity";
 import { claimSqlitePrivateExecution, getSqlitePrivateExecution } from "./private-research-executions";
 import { DatabaseSync } from "node:sqlite";
+import { assertVerifiedSqliteConnection, assertVerifiedSqliteNativeUserDomainPolicy, assertVerifiedSqliteWritePolicy } from "./storage-identity-connection";
+import { assertPendingOwnerSessionRow, createEnrolledSqlitePendingJobOwners } from "./pending-job-owners-sqlite";
+import { retainedPendingOwnerSession, type PendingOwnerSessionProof } from "../a2a/pending-owner-session";
+import { PendingOwnerAdmissionError } from "../a2a/pending-owner-association";
 import { sqliteJournalActive, sqliteJournalTransaction, activateSqliteBrowserJournal, upsertSqliteJournalGrant, admitSqliteBrowserJournal, getSqliteBrowserJournal, transitionSqliteBrowserJournal, signSqliteBrowserJournal, cancelSqlitePreparedJournal, terminalSqliteJournalPayment } from "./sqlite-browser-journal";
 import type { BrowserJournalAdmission, BrowserSignedMetadata } from "./browser-authorization-journal";
 import { admitSqliteBrowserQueryPolicy, admitSqliteBrowserSigningOriginal, readSqliteBrowserSigningSnapshot, readExposedSqliteBrowserSigningSnapshotForSigner, signSqliteBrowserSigningOriginal } from "./sqlite-browser-signing-originals";
@@ -165,6 +169,7 @@ export class SqliteAdapter implements KeryxDB {
   declare readonly accountMembership?: AccountMembershipStore;
   declare readonly publicProfiles?: PublicProfilesStore;
   declare readonly runPrivacy?: RunPrivacyStore;
+  declare readonly pendingJobOwners?: import("./pending-job-owners-sqlite").PendingJobOwnersStore;
   declare readonly runPrivacyActive: boolean;
   declare readonly runClaims?: RunClaimsStore;
   declare readonly runOwnershipHistory?: RunOwnershipHistoryStore;
@@ -1781,6 +1786,12 @@ export class SqliteAdapter implements KeryxDB {
   async redeemResearchMonthly(input: MonthlyRedemptionInput) { this.assertOrdinaryResearchAuthority(); return redeemSqliteResearchMonthly(this.db, input, rowToA2aOrder,this.paymentProfile); }
 
   async createA2aOrder(order: A2aOrder): Promise<{ created: boolean; order: A2aOrder }> {
+    return this.insertA2aOriginal(order);
+  }
+
+  /** Original insertion and readback are synchronous and byte-for-byte unchanged.
+   * Private: no callback or connection capability is exposed to consumers. */
+  private insertA2aOriginal(order: A2aOrder): { created: boolean; order: A2aOrder } {
     const result = this.db
       .prepare(
         `INSERT OR IGNORE INTO a2a_orders
@@ -1819,6 +1830,54 @@ export class SqliteAdapter implements KeryxDB {
     const row = this.db.prepare(`SELECT * FROM a2a_orders WHERE id=?`).get(order.id);
     if (!row) throw new Error("A2A order insert could not be read back");
     return { created: result.changes === 1, order: rowToA2aOrder(row) };
+  }
+
+  async createOwnedA2aOrder(order: A2aOrder, proof: PendingOwnerSessionProof): Promise<{ created: boolean; order: A2aOrder }> {
+    // Actual readonly mutation refuses using WeakMap metadata before any SQL.
+    assertVerifiedSqliteWritePolicy(this.db);
+    const check = () => {
+      try {
+        assertVerifiedSqliteNativeUserDomainPolicy(this.db);
+        const identity = assertVerifiedSqliteConnection(this.db);
+        if (identity.authorityMode !== "mainnet-real") throw new PendingOwnerAdmissionError("owner_association_unavailable");
+        return identity;
+      } catch (error) {
+        const temporary = error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+          && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+        if (!temporary) { try { this.db.close(); } catch { /* revoked */ } }
+        throw error;
+      }
+    };
+    const identity = check();
+    let session: ReturnType<typeof retainedPendingOwnerSession>;
+    try { session = retainedPendingOwnerSession(proof, identity, order, true); }
+    catch (error) {
+      if (!(error instanceof PendingOwnerAdmissionError)) { try { this.db.close(); } catch { /* source guard revoked */ } }
+      throw error;
+    }
+    if (!createEnrolledSqlitePendingJobOwners(this.db)) throw new PendingOwnerAdmissionError("owner_association_unavailable");
+    let started = false, committing = false;
+    try {
+      check(); this.db.exec("BEGIN IMMEDIATE"); started = true; check();
+      assertPendingOwnerSessionRow(this.db, session);
+      const claimed = this.insertA2aOriginal(order);
+      if (claimed.created) {
+        this.db.prepare(`INSERT INTO pending_job_owners
+          (job_id,query_id,request_hash,network,wallet,session_hash,issued_at,expires_at,admitted_at)
+          VALUES(?,?,?,?,?,?,?,?,?)`).run(order.id, order.queryId, order.requestHash, session.network,
+            session.wallet, session.hash, session.issuedAt, session.expiresAt, order.createdAt);
+      }
+      assertPendingOwnerSessionRow(this.db, session); check();
+      committing = true; this.db.exec("COMMIT"); started = false;
+      check(); return claimed;
+    } catch (error) {
+      const temporary = error instanceof Error && "code" in error && error.code === "ERR_SQLITE_ERROR"
+        && "errcode" in error && (error.errcode === 5 || error.errcode === 6);
+      if (!committing && temporary) {
+        try { if (started) this.db.exec("ROLLBACK"); check(); } catch { try { this.db.close(); } catch { /* retired */ } }
+      } else { try { this.db.close(); } catch { /* no ACK after uncertain commit */ } }
+      throw error;
+    }
   }
 
   async getA2aOrder(id: string): Promise<A2aOrder | null> {

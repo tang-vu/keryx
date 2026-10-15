@@ -1,9 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { a2aResearchPackage } from "../a2a/research-package-definition";
 import { paidJobEscalation } from "../a2a/overdue-status";
 import type { A2aOrder } from "../a2a/order";
 import type { PaymentRecord } from "../types";
-import { jobAlertDeliveryObservation, jobCompletionMetrics, jobCompletionTarget, jobTargetCustomerState, jobTargetWarningDelay } from "./job-targets";
+import { jobAlertDeliveryObservation, jobCompletionMetrics, jobCompletionTarget, jobTargetCustomerState, jobTargetNeedsReview, jobTargetWarningDelay } from "./job-targets";
+import { paidJobEscalationQueue } from "../a2a/overdue-escalation-queue";
+import { createPaidJobAlertObserver, type PaidJobAlert } from "../a2a/paid-job-alert-observer";
+import { paidJobAlertChannel } from "../notify/paid-job-alert";
+import { sendAlert } from "../notify/alert";
+
+vi.mock("../notify/alert", () => ({ operationalAlertChannelsReady: () => true, sendAlert: vi.fn(async () => true) }));
 import { summarizeA2aOperations } from "../a2a/operations";
 import { COMPLETION_FIXTURE_NOW, completionFixtureRows, ordinaryCompletion } from "../a2a/completion-latency.test-support";
 
@@ -23,6 +29,207 @@ const uncertain: PaymentRecord = {
   settled: false, settlementStatus: "pending",
   authorizationExpiresAt: new Date(accepted + 3000).toISOString(),
 };
+
+/** In-memory originals/retained metadata only; unexpected storage/financial calls fail. */
+function attentionFixture(status: A2aOrder["status"] = "running") {
+  const id = `a2a_${"d".repeat(64)}`;
+  const row: A2aOrder = { ...original, id, queryId: id, status, workerId: "PRIVATE_WORKER",
+    errorCode: status === "failed" ? "research_failed" : null, transaction: "synthetic-original-reference",
+    amountUsdc: 0.05, updatedAt: new Date(accepted + 3000).toISOString() };
+  const leg = { ...uncertain, queryId: id };
+  const state = new Map<string, string>();
+  const held = { workerId: row.workerId, status: "recovery_pending", orderId: id, updatedAt: new Date(accepted + 4000).toISOString() };
+  const rows = [row];
+  const methods = {
+    listUnfinishedA2aOrders: vi.fn(async (_limit: number) => ({ orders: rows.filter(order => order.status !== "completed"), unreadable: 0, truncated: false })),
+    listCreatorPaymentAttemptsByQuery: vi.fn(async (_id: string) => [leg]),
+    getSyncState: vi.fn(async (key: string) => state.get(key) ?? null),
+    setSyncState: vi.fn(async (key: string, value: string) => {
+      expect(key).toMatch(/^paidJobDeadlineAlert:[a-f0-9]{64}$/);
+      state.set(key, value);
+    }),
+  };
+  const db = new Proxy(methods, { get(target, key) {
+    if (key in target) return Reflect.get(target, key);
+    throw new Error(`Unauthorized fixture operation: ${String(key)}`);
+  } });
+  const channel = { ready: vi.fn(() => true), send: vi.fn(async (_alert: PaidJobAlert) => true) };
+  const scope = { network: "eip155:5042002", payee: provider };
+  let now = accepted + 60_000;
+  return { row, rows, leg, held, state, methods, db, channel, scope,
+    setNow: (value: number) => { now = value; },
+    observer: () => createPaidJobAlertObserver({ db, channel, ...scope, enabled: true, clock: () => now }) };
+}
+
+describe("reachable predeadline original attention", () => {
+  it.each(["failed", "held"])("queues and privately observes a genuine %s original before its unchanged target", async kind => {
+    const f = attentionFixture(kind === "failed" ? "failed" : "running");
+    if (kind === "held") f.state.set("a2aWorker", JSON.stringify(f.held));
+    const before = JSON.stringify([f.row, f.leg, f.state.get("a2aWorker")]);
+    const queue = await paidJobEscalationQueue(f.db, accepted + 60_000, 50, f.scope);
+    expect(queue).toMatchObject({ scanned: 1, withinTarget: 0, overdue: [], attentionNeeded: true });
+    expect(queue.predeadlineAttention).toHaveLength(1);
+    expect(queue.predeadlineAttention[0]).toMatchObject({ operationalState: kind === "failed" ? "failed" : "review_required",
+      escalation: { state: "within_target", escalationNeeded: false, elapsedMs: 60_000,
+        targetCompletionAt: new Date(accepted + 180_000).toISOString(), creatorPaymentState: "pending_recorded" } });
+    const result = await f.observer().observe();
+    expect(result).toMatchObject({ status: "observed", overdue: 0, acknowledged: 0, suppressed: 0, unknown: 0,
+      predeadlineAttention: { needsReview: 1, acknowledged: 1, suppressed: 0, unknown: 0, deferred: 0 } });
+    expect(f.methods.listUnfinishedA2aOrders).toHaveBeenLastCalledWith(50);
+    expect(f.channel.send).toHaveBeenCalledOnce();
+    expect(JSON.stringify([result, f.channel.send.mock.calls])).not.toMatch(/PRIVATE_|workerId|authorizationId|requestHash|question/);
+    expect(JSON.stringify([f.row, f.leg, f.state.get("a2aWorker")])).toBe(before);
+    expect(jobAlertDeliveryObservation(result)).toMatchObject({ overdue: 0, transportAcknowledged: 0,
+      predeadlineAttention: result.predeadlineAttention, responderReceived: null, customerStateDelivered: null, targetWindowMet: null });
+  });
+
+  it.each(["quick", "deep"] as const)("keeps %s review distinct at the exact deadline and suppresses the later overdue incident", async mode => {
+    const f = attentionFixture("failed");
+    f.row.researchMode = mode; f.row.researchPackage = a2aResearchPackage(mode);
+    const target = mode === "quick" ? 180_000 : 300_000;
+    f.setNow(accepted + target);
+    const observer = f.observer();
+    expect(await observer.observe()).toMatchObject({ overdue: 0, predeadlineAttention: { needsReview: 1, acknowledged: 1 } });
+    f.setNow(accepted + target + 1);
+    const late = await observer.observe();
+    expect(late).toMatchObject({ overdue: 1, acknowledged: 0, suppressed: 1,
+      predeadlineAttention: { needsReview: 0, acknowledged: 0, suppressed: 0 } });
+    expect(f.channel.send).toHaveBeenCalledOnce();
+    expect(jobAlertDeliveryObservation(late)).toMatchObject({ overdue: 1, suppressed: 1, transportAcknowledged: 0 });
+  });
+
+  it.each(["missing", "malformed", "foreign-order", "foreign-worker", "future", "before-update", "processing", "unreadable", "invalid-start", "missing-worker"])(
+    "does not turn %s recovery evidence or uncertain creator metrics into a hold", async kind => {
+      const f = attentionFixture();
+      const record = { ...f.held };
+      if (kind === "foreign-order") record.orderId = `a2a_${"e".repeat(64)}`;
+      if (kind === "foreign-worker") record.workerId = "FOREIGN_WORKER";
+      if (kind === "future") record.updatedAt = new Date(accepted + 60_001).toISOString();
+      if (kind === "before-update") record.updatedAt = new Date(accepted + 2000).toISOString();
+      if (kind === "processing") record.status = "processing";
+      if (kind === "invalid-start") f.row.startedAt = "invalid";
+      if (kind === "missing-worker") f.row.workerId = null;
+      if (kind !== "missing") f.state.set("a2aWorker", kind === "malformed" ? "{" : JSON.stringify(record));
+      if (kind === "unreadable") f.methods.getSyncState.mockRejectedValue(new Error("PRIVATE_READ_FAILURE"));
+      f.row.executionJournalVersion = null; // Missing stage/payment capability never proves a hold.
+      const queue = await paidJobEscalationQueue(f.db, accepted + 60_000, 50, f.scope);
+      expect(queue).toMatchObject({ withinTarget: 1, predeadlineAttention: [], overdue: [], attentionNeeded: false });
+      const result = await f.observer().observe();
+      expect(result).toMatchObject({ overdue: 0, predeadlineAttention: { needsReview: 0, acknowledged: 0 } });
+      expect(f.methods.listCreatorPaymentAttemptsByQuery).not.toHaveBeenCalled();
+      expect(f.methods.setSyncState).not.toHaveBeenCalled(); expect(f.channel.send).not.toHaveBeenCalled();
+      expect(jobTargetNeedsReview(paidJobEscalation(f.row, accepted + 60_000), "processing")).toBe(false);
+    });
+
+  it.each(["profile", "payee", "missing-profile"])("refuses a foreign %s original before creator reads or private sends", async kind => {
+    const f = attentionFixture(); f.state.set("a2aWorker", JSON.stringify(f.held));
+    f.row.request = { ...f.row.request! };
+    if (kind === "profile") f.row.request.network = "eip155:5042";
+    if (kind === "payee") f.row.payee = `0x${"a".repeat(40)}`;
+    if (kind === "missing-profile") delete f.row.request.network;
+    expect(await f.observer().observe()).toMatchObject({ overdue: 0, predeadlineAttention: { needsReview: 0 } });
+    expect(f.methods.listCreatorPaymentAttemptsByQuery).not.toHaveBeenCalled();
+    expect(f.methods.getSyncState).not.toHaveBeenCalled(); expect(f.channel.send).not.toHaveBeenCalled();
+  });
+
+  it.each(["createdAt", "startedAt", "updatedAt", "heldAt"] as const)(
+    "refuses date-only, unqualified, invalid-calendar and submillisecond %s before reserving an incident", async field => {
+      for (const value of ["2026-10-12", "2026-10-12T00:00:00", "2026-02-30T00:00:00.000Z",
+        `2026-10-12T00:00:${field === "createdAt" ? "00" : field === "startedAt" ? "01" : field === "updatedAt" ? "03" : "04"}.0001Z`]) {
+        const f = attentionFixture();
+        if (field === "heldAt") f.held.updatedAt = value; else f.row[field] = value;
+        f.state.set("a2aWorker", JSON.stringify(f.held));
+        expect((await paidJobEscalationQueue(f.db, accepted + 60_000, 50, f.scope)).predeadlineAttention).toEqual([]);
+        await f.observer().observe();
+        expect(f.methods.setSyncState).not.toHaveBeenCalled(); expect(f.channel.send).not.toHaveBeenCalled();
+      }
+    });
+
+  it.each(["accept-after-start", "start-after-update", "update-after-hold", "future-hold", "fraction-reversed", "fraction-future", "unknown-offset"])(
+    "refuses %s chronology without consuming the original incident", async kind => {
+      const f = attentionFixture();
+      if (kind === "accept-after-start") f.row.createdAt = new Date(accepted + 2000).toISOString();
+      if (kind === "start-after-update") f.row.startedAt = new Date(accepted + 3500).toISOString();
+      if (kind === "update-after-hold") f.row.updatedAt = new Date(accepted + 4500).toISOString();
+      if (kind === "future-hold") f.held.updatedAt = new Date(accepted + 60_001).toISOString();
+      if (kind === "fraction-reversed") {
+        f.row.updatedAt = "2026-10-12T00:00:04.0009Z"; f.held.updatedAt = "2026-10-12T00:00:04.0001Z";
+      }
+      if (kind === "fraction-future") f.held.updatedAt = "2026-10-12T00:01:00.0001Z";
+      if (kind === "unknown-offset") f.row.startedAt = "2026-10-12T00:00:01-00:00";
+      f.state.set("a2aWorker", JSON.stringify(f.held));
+      expect((await paidJobEscalationQueue(f.db, accepted + 60_000, 50, f.scope)).predeadlineAttention).toEqual([]);
+      await f.observer().observe();
+      expect(f.methods.setSyncState).not.toHaveBeenCalled(); expect(f.channel.send).not.toHaveBeenCalled();
+    });
+
+  it.each(["offset", "leap-day", "equal"])("accepts valid %s chronology without changing original amounts", async kind => {
+    const f = attentionFixture(); let now = accepted + 60_000;
+    if (kind === "offset") {
+      f.row.createdAt = "2026-10-12T07:00:00+07:00"; f.row.startedAt = "2026-10-12T07:00:01.1+07:00";
+      f.row.updatedAt = "2026-10-12T07:00:03.12+07:00"; f.held.updatedAt = "2026-10-12T07:00:04.123+07:00";
+    }
+    if (kind === "leap-day") {
+      f.row.createdAt = "2028-02-29T00:00:00.000Z"; f.row.startedAt = "2028-02-29T00:00:01.000Z";
+      f.row.updatedAt = "2028-02-29T00:00:03.000Z"; f.held.updatedAt = "2028-02-29T00:00:04.000Z";
+      now = Date.parse("2028-02-29T00:01:00.000Z");
+    }
+    if (kind === "equal") f.row.startedAt = f.row.updatedAt = f.held.updatedAt = f.row.createdAt;
+    f.state.set("a2aWorker", JSON.stringify(f.held));
+    const before = JSON.stringify([f.row, f.leg, f.held]);
+    expect((await paidJobEscalationQueue(f.db, now, 50, f.scope)).predeadlineAttention[0]).toMatchObject({ operationalState: "review_required" });
+    expect(JSON.stringify([f.row, f.leg, f.held])).toBe(before);
+  });
+
+  it("preserves unknown-transport suppression and one shared four-attempt bound across both queues", async () => {
+    const f = attentionFixture("failed");
+    f.channel.send.mockResolvedValue(false);
+    expect(await f.observer().observe()).toMatchObject({ predeadlineAttention: { needsReview: 1, unknown: 1 } });
+    expect(await f.observer().observe()).toMatchObject({ predeadlineAttention: { needsReview: 1, suppressed: 1, unknown: 1 } });
+    expect(f.channel.send).toHaveBeenCalledOnce();
+    const bounded = attentionFixture("failed");
+    for (let i = 1; i <= 4; i++) {
+      const id = `a2a_${i.toString(16).padStart(64, "0")}`;
+      bounded.rows.push({ ...bounded.row, id, queryId: id,
+        createdAt: new Date(accepted - (i <= 2 ? 180_000 : 0)).toISOString() });
+    }
+    const result = await bounded.observer().observe();
+    expect(result).toMatchObject({ overdue: 2, acknowledged: 2, coverage: "partial",
+      predeadlineAttention: { needsReview: 3, acknowledged: 2, deferred: 1 } });
+    expect(bounded.channel.send).toHaveBeenCalledTimes(4);
+    expect(jobAlertDeliveryObservation(result).status).toBe("observed");
+  });
+
+  it("uses the actual notifier's separate truthful review and late titles without leaking the private worker", async () => {
+    const f = attentionFixture(); f.state.set("a2aWorker", JSON.stringify(f.held));
+    const channel = paidJobAlertChannel();
+    const review = (await paidJobEscalationQueue(f.db, accepted + 60_000, 50, f.scope)).predeadlineAttention[0];
+    vi.mocked(sendAlert).mockClear();
+    await channel.send({ incidentId: "a".repeat(64), original: review });
+    expect(sendAlert).toHaveBeenLastCalledWith("Paid job needs review before its completion target", expect.stringContaining("timing: within_target"), { logDetail: false });
+    const late = (await paidJobEscalationQueue(f.db, accepted + 180_001, 50, f.scope)).overdue[0];
+    await channel.send({ incidentId: "b".repeat(64), original: late });
+    expect(sendAlert).toHaveBeenLastCalledWith("Paid job completion target exceeded", expect.stringContaining("timing: overdue"), { logDetail: false });
+    expect(JSON.stringify(vi.mocked(sendAlert).mock.calls)).not.toMatch(/PRIVATE_|workerId|question|authorizationId/);
+  });
+
+  it("keeps completed originals out of attention and unobserved/missing capability counters null", async () => {
+    const f = attentionFixture("completed"); f.state.set("a2aWorker", JSON.stringify(f.held));
+    expect(await f.observer().observe()).toMatchObject({ overdue: 0, predeadlineAttention: { needsReview: 0 } });
+    expect(f.channel.send).not.toHaveBeenCalled();
+    const counters = { needsReview: 0, acknowledged: 0, suppressed: 0, unknown: 0, deferred: 0 };
+    const zero = { status: "observed", coverage: "complete", overdue: 0, acknowledged: 0, suppressed: 0, unknown: 0, deferred: 0 };
+    expect(jobAlertDeliveryObservation(zero).predeadlineAttention).toBeNull();
+    expect(jobAlertDeliveryObservation({ ...zero, predeadlineAttention: counters }).predeadlineAttention).toEqual(counters);
+    for (const status of ["disabled", "unbound", "unavailable"]) {
+      expect(jobAlertDeliveryObservation({ ...zero, status, coverage: "not-observed", predeadlineAttention: counters }).predeadlineAttention).toBeNull();
+    }
+    for (const invalid of [{ ...counters, needsReview: null }, { ...counters, needsReview: 1 },
+      { ...counters, needsReview: 1, unknown: 1, deferred: 1 }, { ...counters, needsReview: 1, deferred: 1 }]) {
+      expect(jobAlertDeliveryObservation({ ...zero, predeadlineAttention: invalid })).toMatchObject({ status: "unavailable", predeadlineAttention: null });
+    }
+  });
+});
 
 describe("original job completion targets", () => {
   it("reads supported tier/version terms without mutating the accepted registry", () => {
@@ -299,7 +506,7 @@ describe("customer and alert observation adapters", () => {
     const known = { status: "observed", coverage: "complete", overdue: 1, acknowledged: 1, suppressed: 0, unknown: 0, deferred: 0 };
     expect(jobAlertDeliveryObservation(known)).toEqual({ status: "observed", coverage: "complete", overdue: 1,
       transportAcknowledged: 1, suppressed: 0, transportUnknown: 0, deferred: 0,
-      responderReceived: null, customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized" });
+      predeadlineAttention: null, responderReceived: null, customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized" });
     const ambiguous = { ...known, acknowledged: 0, suppressed: 1, unknown: 1 };
     expect(jobAlertDeliveryObservation(ambiguous)).toMatchObject({ transportAcknowledged: 0, transportUnknown: 1,
       suppressed: 1, customerStateDelivered: null, automaticResend: "not_authorized" });
@@ -320,7 +527,7 @@ describe("customer and alert observation adapters", () => {
   ])("refuses producer-impossible accounting: $name", ({ name, ...packet }) => {
     expect(jobAlertDeliveryObservation({ status: "observed", ...packet }), name).toEqual({
       status: "unavailable", coverage: "not-observed", overdue: null, transportAcknowledged: null,
-      suppressed: null, transportUnknown: null, deferred: null, responderReceived: null,
+      suppressed: null, transportUnknown: null, deferred: null, predeadlineAttention: null, responderReceived: null,
       customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized",
     });
   });
@@ -332,7 +539,7 @@ describe("customer and alert observation adapters", () => {
     const before = JSON.stringify(packet);
     expect(jobAlertDeliveryObservation(packet)).toEqual({
       status: "observed", coverage: "partial", overdue: 6, transportAcknowledged: 1,
-      suppressed: 2, transportUnknown: unknown, deferred: 1, responderReceived: null,
+      suppressed: 2, transportUnknown: unknown, deferred: 1, predeadlineAttention: null, responderReceived: null,
       customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized",
     });
     expect(JSON.stringify(packet)).toBe(before);
@@ -350,7 +557,7 @@ describe("customer and alert observation adapters", () => {
       expect(jobAlertDeliveryObservation({ status: "observed", coverage, overdue: 0,
         acknowledged: 0, suppressed: 0, unknown: 0, deferred: 0 })).toEqual({
         status: "observed", coverage, overdue: 0, transportAcknowledged: 0,
-        suppressed: 0, transportUnknown: 0, deferred: 0, responderReceived: null,
+        suppressed: 0, transportUnknown: 0, deferred: 0, predeadlineAttention: null, responderReceived: null,
         customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized",
       });
     }
@@ -372,7 +579,7 @@ describe("customer and alert observation adapters", () => {
     expect(jobAlertDeliveryObservation(input), name).toEqual({
       status: "observed", coverage: packet.coverage, overdue: M, transportAcknowledged: packet.acknowledged,
       suppressed: packet.suppressed, transportUnknown: packet.unknown, deferred: packet.deferred,
-      responderReceived: null, customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized",
+      predeadlineAttention: null, responderReceived: null, customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized",
     });
     expect(input).toEqual(before);
     expect(JSON.stringify(input)).toBe(bytes);
@@ -390,7 +597,7 @@ describe("customer and alert observation adapters", () => {
     const before = structuredClone(input), bytes = JSON.stringify(input);
     expect(jobAlertDeliveryObservation(input), name).toEqual({
       status: "unavailable", coverage: "not-observed", overdue: null, transportAcknowledged: null,
-      suppressed: null, transportUnknown: null, deferred: null, responderReceived: null,
+      suppressed: null, transportUnknown: null, deferred: null, predeadlineAttention: null, responderReceived: null,
       customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized",
     });
     expect(input).toEqual(before);
@@ -403,7 +610,7 @@ describe("customer and alert observation adapters", () => {
       const input = { ...packet, [key]: invalid }, before = structuredClone({ ...packet, [key]: invalid });
       expect(jobAlertDeliveryObservation(input)).toEqual({
         status: "unavailable", coverage: "not-observed", overdue: null, transportAcknowledged: null,
-        suppressed: null, transportUnknown: null, deferred: null, responderReceived: null,
+        suppressed: null, transportUnknown: null, deferred: null, predeadlineAttention: null, responderReceived: null,
         customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized",
       });
       expect(input).toEqual(before);
@@ -416,7 +623,7 @@ describe("customer and alert observation adapters", () => {
       const input = { ...packet, [field]: 1 }, before = structuredClone({ ...packet, [field]: 1 });
       expect(jobAlertDeliveryObservation(input)).toEqual({
         status: "unavailable", coverage: "not-observed", overdue: null, transportAcknowledged: null,
-        suppressed: null, transportUnknown: null, deferred: null, responderReceived: null,
+        suppressed: null, transportUnknown: null, deferred: null, predeadlineAttention: null, responderReceived: null,
         customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized",
       });
       expect(input).toEqual(before);
@@ -428,7 +635,7 @@ describe("customer and alert observation adapters", () => {
     for (const status of ["disabled", "unbound", "unavailable"]) {
       expect(jobAlertDeliveryObservation({ ...unobserved, status })).toEqual({
         status, coverage: "not-observed", overdue: null, transportAcknowledged: null,
-        suppressed: null, transportUnknown: null, deferred: null, responderReceived: null,
+        suppressed: null, transportUnknown: null, deferred: null, predeadlineAttention: null, responderReceived: null,
         customerStateDelivered: null, targetWindowMet: null, automaticResend: "not_authorized",
       });
     }

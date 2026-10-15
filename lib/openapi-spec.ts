@@ -17,6 +17,7 @@ import { sourceLearningOpenApiPath } from "./research/source-learning-openapi";
 import { purchaseOutcomeAggregateOpenApiPath } from "./research/purchase-outcome-aggregate-openapi";
 import { monthlyOpenApiPath } from "./monthly/openapi";
 import { paidJobEscalationOpenApiProperty, paidJobEscalationOpenApiSchemas } from "./a2a/overdue-openapi";
+import { pendingJobOwnerHeader, pendingJobOwnerDescription, pendingJobOwnerOpenApiPaths, pendingJobOwnerOpenApiSchemas } from "./a2a/pending-job-owner-openapi";
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
 import { actualReadOpenApiSchemas } from "./research-audit/actual-read-openapi";
 
@@ -105,6 +106,7 @@ export const openapiSpec = {
     schemas: {
       ...actualReadOpenApiSchemas,
       ...paidJobEscalationOpenApiSchemas,
+      ...pendingJobOwnerOpenApiSchemas,
       ...paperOpenApiSchemas,
       ...sourceClaimOpenApiSchemas,
       ...registrationSponsorOpenApiSchemas,
@@ -861,6 +863,7 @@ export const openapiSpec = {
     "/api/operator/status": operatorStatusOpenApiPath,
     "/api/operator/obligations": operatorObligationOpenApiPath,
     "/api/operator/ledger": publicJobLedgerOpenApiPath,
+    ...pendingJobOwnerOpenApiPaths,
     "/api/agent/ask": {
       get: {
         operationId: "inspectOrPollAgentAsk",
@@ -907,8 +910,9 @@ export const openapiSpec = {
           "a versioned execution contract and returns provisional latency/evidence-quality measurements; " +
           "these objectives have no contractual remedy. New completed public runs are attributed to the " +
           "verified original payer, with agent-to-agent ingress recorded separately from payment origin. " +
-          "Client names cannot establish stdio, desktop, CLI or extension identity; ownership grants no new budget.",
-        security: [{ X402Payment: [] }, { ApiKeyAuth: [], X402Payment: [] }],
+          "Client names cannot establish stdio, desktop, CLI or extension identity; ownership grants no new budget." + pendingJobOwnerDescription,
+        security: [{ X402Payment: [] }, { ApiKeyAuth: [], X402Payment: [] }, { WebSession: [], X402Payment: [] }],
+        parameters: [pendingJobOwnerHeader],
         requestBody: {
           required: true,
           content: { "application/json": { schema: { $ref: "#/components/schemas/AskRequest" } } },
@@ -960,7 +964,7 @@ export const openapiSpec = {
             },
           },
           "401": {
-            description: "Invalid or revoked API key.",
+            description: "Invalid or revoked API key, or authenticated account-job admission/session unavailable.",
             content: {
               "application/json": { schema: { $ref: "#/components/schemas/Error" } },
             },

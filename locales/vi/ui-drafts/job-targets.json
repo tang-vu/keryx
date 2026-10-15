@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/job-targets.ts",
-  "sourceSha256": "2ffe8a1899d26f39ba2c3c36eb1a2d3a392c5f18c08f31a0d5ad421032cb6af2",
+  "sourceSha256": "b028fcfbf9125dda9097ef29db736072be20dd2d3798eaf11d5356ea4b2134c3",
   "entries": {
     "target": {
       "source": "${tier === \"quick\" ? \"Quick\" : \"Deep\"} completion target: ${seconds} seconds from original job acceptance.",

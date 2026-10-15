@@ -7,6 +7,7 @@ import { ResearchDecisions } from "./research-decisions";
 import { ResearchJobEscalation } from "./research-job-escalation";
 import { DeliverableAcceptance } from "./deliverable-acceptance";
 import type { BuyerJob } from "@/lib/a2a/buyer-workspace";
+import { AccountJobs } from "./account-jobs";
 
 const message = createMessages("en");
 const usdc = (value: number | null | undefined) => value == null ? message("researchJobDetails.unknown") : `${formatRecordedAmount(value, { minimumFractionDigits: 6 })} USDC`;
@@ -14,7 +15,8 @@ const usdc = (value: number | null | undefined) => value == null ? message("rese
 export function ResearchJobDetails({ job, onDownloadReceipt }: { job: BuyerJob; onDownloadReceipt?: () => void }) {
   return (
     <div className="mt-5 space-y-6">
-      <ResearchJobEscalation escalation={job.escalation} />
+      <AccountJobs orderId={job.queryId} />
+      <ResearchJobEscalation escalation={job.escalation} status={job.status} />
       {job.funding && <p className="font-serif text-sm">{message("researchJobDetails.monthlyAllocation", { amount: usdc(job.funding.allocationUsdc) })}</p>}
       {(job.message || job.error) && <p className="border-l-2 border-seal pl-4 font-serif">{job.message ?? job.error}</p>}
       {job.status === "review_required" && <p className="font-serif">{message("researchJobDetails.reviewRequired")}</p>}

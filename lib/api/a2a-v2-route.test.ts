@@ -1,5 +1,22 @@
 import { NextRequest } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, beforeAll, afterAll, describe, expect, it, vi } from "vitest";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { DatabaseSync } from "node:sqlite";
+import { existsSync, lstatSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { randomBytes } from "node:crypto";
+import { privateKeyToAccount } from "viem/accounts";
+import { recoverTypedDataAddress } from "viem";
+import { syntheticStorageIdentity } from "../db/storage-identity-fixture";
+import { STORAGE_MAINNET_PROFILE_DIGEST } from "../db/storage-identity";
+import { installMainnetApplicationSchema } from "../db/mainnet-application-schema";
+import { installNativeUserDomainSchema } from "../db/native-user-domain-schema";
+import { insertStorageIdentity, installStorageFences, registerStorageCapability } from "../db/storage-identity-sqlite";
+import { createEnrolledSqliteAdapter } from "../db/enrolled-sqlite-adapter";
+import { canonicalJson } from "../canonical-json";
+import { issueWebSession, parseWebSession, webSessionHash } from "../auth-session";
+import { a2aOrderId } from "../a2a/order";
 
 const mocks = vi.hoisted(() => ({
   collectRun: vi.fn(),
@@ -7,7 +24,10 @@ const mocks = vi.hoisted(() => ({
   getDb: vi.fn(),
   settleThenServe: vi.fn(),
   checkRateLimit: vi.fn(),
+  cookies: vi.fn(), vendorVerify: vi.fn(), vendorSettle: vi.fn(),
 }));
+vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
+vi.mock("@circle-fin/x402-batching/server", () => ({ BatchFacilitatorClient: class { verify = mocks.vendorVerify; settle = mocks.vendorSettle; } }));
 
 vi.mock("@/lib/config", async () => ({
   config: {
@@ -39,6 +59,7 @@ vi.mock("@/lib/x402-server", () => ({
 
 import { GET, POST } from "@/app/api/agent/ask/route";
 import { config } from "@/lib/config";
+import { verifyApiKey } from "@/lib/api-keys";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile";
 import { a2aResearchPackage } from "../a2a/research-package";
 
@@ -68,6 +89,233 @@ const run = {
   engine: "heuristic",
   paymentMode: "real",
 };
+
+type NativeFixtureDeployment = Readonly<{
+  folder: string; file: string; manifest: string; contentKey: string;
+  identity: Parameters<typeof installStorageFences>[1];
+}>;
+let nativeFixtureDeployment: NativeFixtureDeployment | undefined;
+let nativeFixtureHandle: Awaited<ReturnType<typeof createEnrolledSqliteAdapter>> | undefined;
+function resetNativeFixture() {
+  // The real runtime pins deployment identity/path for the module lifetime.
+  // Only disposable case data changes, after its genuine prior handle closed.
+  expect(nativeFixtureHandle).toBeUndefined();
+  if (!nativeFixtureDeployment) {
+    const folder = mkdtempSync(join(tmpdir(), "keryx-owned-real-post-"));
+    const identity = Object.freeze({ ...syntheticStorageIdentity("mainnet-real"), format: "keryx-mainnet-storage-identity-v1" as const,
+      network: "eip155:5042" as const, profileDigest: STORAGE_MAINNET_PROFILE_DIGEST });
+    nativeFixtureDeployment = Object.freeze({ folder, file: join(folder, "synthetic.sqlite"), manifest: join(folder, "deployment.json"),
+      contentKey: randomBytes(32).toString("hex"), identity });
+    writeFileSync(nativeFixtureDeployment.manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity,
+      backend: { kind: "sqlite", databasePath: nativeFixtureDeployment.file } }), { flag: "wx" });
+  }
+  const deployment = nativeFixtureDeployment;
+  expect(dirname(resolve(deployment.folder))).toBe(resolve(tmpdir()));
+  expect(lstatSync(deployment.folder).isSymbolicLink()).toBe(false);
+  expect(readFileSync(deployment.manifest, "utf8")).toBe(canonicalJson({ format: "keryx-storage-deployment-v1", identity: deployment.identity,
+    backend: { kind: "sqlite", databasePath: deployment.file } }));
+  // Fixed owned database and SQLite sidecars only; never remove/rewrite manifest.
+  for (const suffix of ["", "-journal", "-wal", "-shm"]) {
+    const target = deployment.file + suffix;
+    if (existsSync(target)) {
+      const stat = lstatSync(target); expect(stat.isFile() && !stat.isSymbolicLink()).toBe(true);
+      rmSync(target);
+    }
+  }
+  const setup = new DatabaseSync(deployment.file);
+  try {
+    setup.exec("BEGIN IMMEDIATE"); installMainnetApplicationSchema(setup); installNativeUserDomainSchema(setup);
+    insertStorageIdentity(setup, deployment.identity); installStorageFences(setup, deployment.identity); setup.exec("COMMIT");
+  } finally { setup.close(); }
+  return deployment;
+}
+async function openNativeFixture() {
+  expect(nativeFixtureHandle).toBeUndefined();
+  const native = await createEnrolledSqliteAdapter(); nativeFixtureHandle = native;
+  return native;
+}
+function closeNativeFixture() {
+  if (nativeFixtureHandle) {
+    nativeFixtureHandle.close(); // Genuine terminal close, including an already-retired facade.
+    nativeFixtureHandle = undefined; // A thrown/uncertain close prevents the next destructive reset.
+  }
+}
+afterAll(() => {
+  closeNativeFixture();
+  if (nativeFixtureDeployment) {
+    expect(dirname(resolve(nativeFixtureDeployment.folder))).toBe(resolve(tmpdir()));
+    expect(lstatSync(nativeFixtureDeployment.folder).isSymbolicLink()).toBe(false);
+    rmSync(nativeFixtureDeployment.folder, { recursive: true, force: true });
+  }
+});
+// Observe the full fixture ledger: listPaymentsByQuery is citation-only.
+// This raw synthetic readback does not establish financial settlement.
+function paymentRows(id: string) {
+  expect(nativeFixtureDeployment).toBeDefined();
+  const inspect = new DatabaseSync(nativeFixtureDeployment!.file, { readOnly: true });
+  try { return inspect.prepare("SELECT * FROM payment_events WHERE query_id=? ORDER BY created_at,id").all(id); }
+  finally { inspect.close(); }
+}
+
+/** UNRUN F1/F2 actual POST + real seller helper + genuine native original producer.
+ * Only vendor transport/readiness and framework request selection are synthetic.
+ * No settlement/session/owner proof or native facade is mocked. */
+describe("authenticated NEW original through actual signed POST", () => {
+  const cookies = new AsyncLocalStorage<string | undefined>();
+  const owner = `0x${"a".repeat(40)}`, foreign = `0x${"d".repeat(40)}`;
+  const payer = privateKeyToAccount(`0x${"3".repeat(64)}`), secret = "unfunded-native-post-test-secret";
+  let native: Awaited<ReturnType<typeof createEnrolledSqliteAdapter>>;
+  let actualSeller: typeof import("../x402-server"), nonceSequence = 0;
+  const savedConfig = { ...config };
+  beforeAll(async () => { actualSeller = await vi.importActual("../x402-server"); });
+  beforeEach(async () => {
+    Object.assign(config, { profile: ARC_MAINNET_PROFILE, networkId: ARC_MAINNET_PROFILE.networkId,
+      usdcAddress: ARC_MAINNET_PROFILE.usdcAddress, gatewayWallet: ARC_MAINNET_PROFILE.gatewayWallet, maxTimeoutSeconds: 691200, jwtSecret: secret });
+    vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
+    vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false"); vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false");
+    const { file, manifest, contentKey } = resetNativeFixture();
+    vi.stubEnv("KERYX_STORAGE_MANIFEST", manifest); vi.stubEnv("KERYX_SQLITE_PATH", file); vi.stubEnv("CONTENT_MASTER_KEY", contentKey);
+    native = await openNativeFixture();
+    mocks.getDb.mockResolvedValue(native); mocks.getAgentDeps.mockResolvedValue({ db: native, gateway: {}, engine: {} });
+    mocks.cookies.mockImplementation(async () => ({ get: (name: string) => name === "keryx_session" && cookies.getStore() ? { value: cookies.getStore() } : undefined }));
+    mocks.checkRateLimit.mockResolvedValue(null); mocks.collectRun.mockClear();
+    vi.mocked(verifyApiKey).mockResolvedValue({ keyId: "synthetic-ownerless-key", scopes: "ask" } as never);
+    mocks.settleThenServe.mockImplementation(actualSeller.settleThenServe);
+    mocks.vendorVerify.mockReset().mockImplementation(async (payload, requirements) => {
+      const authorization = payload.payload.authorization;
+      const recovered = await recoverTypedDataAddress({ ...typed(authorization), signature: payload.payload.signature });
+      return { isValid: recovered.toLowerCase() === payer.address.toLowerCase() && authorization.to === requirements.payTo
+        && authorization.value === requirements.amount, payer: recovered };
+    });
+    mocks.vendorSettle.mockReset().mockImplementation(async payload => ({ success: true, network: "eip155:5042", payer: payer.address,
+      transaction: `unfunded-vendor-fixture-${payload.payload.authorization.nonce}` }));
+  });
+  afterEach(() => { try { closeNativeFixture(); } finally { vi.restoreAllMocks(); vi.unstubAllEnvs();
+    for (const key of Object.keys(config)) if (!Object.prototype.hasOwnProperty.call(savedConfig, key)) Reflect.deleteProperty(config, key);
+    Object.assign(config, savedConfig); } });
+  afterAll(() => Object.assign(config, savedConfig));
+  function typed(a: { from: string; to: string; value: string; validAfter: string; validBefore: string; nonce: string }) {
+    return { domain: { name: "GatewayWalletBatched", version: "1", chainId: 5042, verifyingContract: ARC_MAINNET_PROFILE.gatewayWallet as `0x${string}` },
+      types: { TransferWithAuthorization: [{ name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" },
+        { name: "validAfter", type: "uint256" }, { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" }] }, primaryType: "TransferWithAuthorization",
+      message: { from: a.from as `0x${string}`, to: a.to as `0x${string}`, value: BigInt(a.value), validAfter: BigInt(a.validAfter), validBefore: BigInt(a.validBefore), nonce: a.nonce as `0x${string}` } } as const;
+  }
+  async function signed(mode: "quick" | "deep" = "quick", extra: Record<string, unknown> = {}) {
+    const authorization = { from: payer.address, to: config.sellerAddress!, value: mode === "quick" ? "50000" : "80000",
+      validAfter: String(Math.floor(Date.now() / 1000) - 600), validBefore: String(Math.floor(Date.now() / 1000) + 691200), nonce: `0x${(++nonceSequence).toString(16).padStart(64, "0")}` };
+    const signature = await payer.signTypedData(typed(authorization));
+    const header = Buffer.from(JSON.stringify({ authorization, signature })).toString("base64");
+    const body = JSON.stringify({ question: "Unfunded owned original fixture", budget: .03, researchMode: mode, packageVersion: "1.0.0", responseMode: "async", ...extra });
+    const id = a2aOrderId({ network: "eip155:5042", payer: payer.address, payee: config.sellerAddress!, authorizationId: authorization.nonce });
+    return { id, header, body, authorization, req: (headers: Record<string, string> = {}) => new NextRequest("https://keryx.cc/api/agent/ask", {
+      method: "POST", headers: { "content-type": "application/json", origin: "https://keryx.cc", "payment-signature": header, "x-keryx-account-job": "associate", ...headers }, body }) };
+  }
+  const token = async (wallet = owner) => (await issueWebSession(native, secret, wallet, "asker")).token;
+  async function history(jwt: string | undefined, id: string) {
+    const route = await import("../../app/api/me/jobs/route");
+    return cookies.run(jwt, () => route.GET(new Request(`https://keryx.cc/api/me/jobs?pending=owned&id=${id}`)));
+  }
+  it.each(["quick", "deep"] as const)("actual %s producer associates only cookie owner and projects exact retained hold before target", async mode => {
+    const jwt = await token(), original = await signed(mode);
+    const response = await cookies.run(jwt, () => POST(original.req()));
+    expect(response.status).toBe(202); expect(response.headers.get("payment-response")).toBeTruthy();
+    const saved = (await native.getA2aOrder(original.id))!;
+    expect(saved.payer.toLowerCase()).toBe(payer.address.toLowerCase()); expect(saved.amountUsdc).toBe(mode === "quick" ? .05 : .08);
+    const worker = "unfunded-fixture-worker", started = new Date().toISOString();
+    expect((await native.claimNextA2aOrder(worker, started))?.id).toBe(original.id);
+    await native.setSyncState("a2aWorker", JSON.stringify({ workerId: worker, status: "recovery_pending", orderId: original.id, updatedAt: new Date().toISOString() }));
+    const packet = await (await history(jwt, original.id)).json();
+    expect(packet.jobs[0]).toMatchObject({ attention: "needs_review", recoveryState: "held", status: "review_required", escalation: { state: "within_target" } });
+    expect(JSON.stringify(packet)).not.toContain(worker); expect(JSON.stringify(packet)).not.toContain(saved.request!.question);
+    expect((await (await history(await token(payer.address), original.id)).json()).jobs).toEqual([]);
+    expect((await (await history(await token(foreign), original.id)).json()).jobs).toEqual([]);
+    expect(mocks.vendorSettle).toHaveBeenCalledOnce(); expect(mocks.collectRun).not.toHaveBeenCalled();
+    expect((paymentRows(original.id)).filter(p => p.kind === "inbound")).toHaveLength(1);
+    for (const fact of [null, "malformed", JSON.stringify({ workerId: "foreign", status: "recovery_pending", orderId: original.id, updatedAt: started }),
+      JSON.stringify({ workerId: worker, status: "processing", orderId: original.id, updatedAt: started }), "x".repeat(2049)]) {
+      await native.setSyncState("a2aWorker", fact ?? "null");
+      const refused = await (await history(jwt, original.id)).json();
+      expect(refused.jobs[0]).toMatchObject({ attention: "unknown", recoveryState: "unknown" });
+    }
+    await native.failA2aOrder(original.id, "research_failed", new Date().toISOString());
+    expect((await (await history(jwt, original.id)).json()).jobs[0]).toMatchObject({ attention: "needs_review", recoveryState: "unknown", escalation: { state: "within_target" } });
+    expect(mocks.vendorSettle).toHaveBeenCalledOnce();
+  });
+  it.each(["missing", "forged", "api-key", "foreign-origin", "payer-worker-body"])("actual POST refuses %s as owner authority before settlement", async reason => {
+    let jwt: string | undefined = await token(); const original = await signed("quick", { wallet: owner, payer: owner, workerId: owner });
+    const headers: Record<string, string> = {};
+    if (reason === "missing" || reason === "payer-worker-body") jwt = undefined;
+    if (reason === "forged") { const parts = jwt!.split("."); const claims = JSON.parse(Buffer.from(parts[1], "base64url").toString()); claims.address = foreign; parts[1] = Buffer.from(JSON.stringify(claims)).toString("base64url"); jwt = parts.join("."); }
+    if (reason === "api-key") headers.authorization = "Bearer caller-api-key";
+    if (reason === "foreign-origin") headers.origin = "https://foreign.test";
+    const response = await cookies.run(jwt, () => POST(original.req(headers)));
+    expect(response.status).toBe(401); expect(mocks.vendorSettle).not.toHaveBeenCalled();
+    expect(await native.getA2aOrder(original.id)).toBeNull(); expect(paymentRows(original.id)).toEqual([]);
+  });
+  it("actual details mounts genuine owned route state; foreign/replaced/missing selectors have no financial effect", async () => {
+    const jwt = await token(), original = await signed();
+    expect((await cookies.run(jwt, () => POST(original.req()))).status).toBe(202);
+    await native.failA2aOrder(original.id, "research_failed", new Date().toISOString());
+    const financialBefore = paymentRows(original.id);
+    const { JSDOM } = await import("jsdom"), { createElement, act } = await import("react"), { createRoot } = await import("react-dom/client");
+    const { ResearchJobDetails } = await import("../../components/keryx/research-job-details");
+    const route = await import("../../app/api/me/jobs/route"), sessionRoute = await import("../../app/api/auth/sessions/route");
+    const dom = new JSDOM('<div id="fixture"></div>', { url: "https://keryx.cc" });
+    vi.stubGlobal("window", dom.window); vi.stubGlobal("document", dom.window.document); vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    let current: string | undefined = jwt;
+    const intercepted = vi.fn<typeof fetch>().mockImplementation(async (url, init) => {
+      expect(init?.method ?? "GET").toBe("GET");
+      return cookies.run(current, () => String(url) === "/api/auth/sessions" ? sessionRoute.GET()
+        : route.GET(new Request(`https://keryx.cc${url}`)));
+    });
+    // Capture native functions before fake timers; readiness never advances the hook clock.
+    const realNow = Date.now, realSetTimeout = globalThis.setTimeout;
+    vi.stubGlobal("fetch", intercepted); vi.useFakeTimers();
+    const host = dom.window.document.getElementById("fixture")!, root = createRoot(host);
+    try {
+      await act(async () => { root.render(createElement(ResearchJobDetails, { job: { queryId: original.id, status: "processing" } })); });
+      // The real async session/owned-row read may finish after mount act resolves.
+      // Observe its genuine DOM only: no request, timer advancement or state injection.
+      const readinessUntil = realNow() + 5000;
+      for (let attempt = 0; attempt < 200 && !host.textContent?.includes("NeedsReview"); attempt++) {
+        const remaining = readinessUntil - realNow();
+        if (remaining <= 0) break;
+        await act(async () => { await new Promise<void>(done => realSetTimeout(done, Math.min(25, remaining))); });
+      }
+      expect(host.textContent).toContain("NeedsReview");
+      current = await token(payer.address);
+      await act(async () => { dom.window.dispatchEvent(new dom.window.Event("keryx:auth")); });
+      expect(host.textContent).not.toContain("NeedsReview");
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+      expect(host.textContent).not.toContain("NeedsReview");
+      current = jwt;
+      await act(async () => { root.render(createElement(ResearchJobDetails, { job: { queryId: `a2a_${"f".repeat(64)}`, status: "processing" } })); });
+      expect(host.textContent).not.toContain("NeedsReview");
+      current = undefined;
+      await act(async () => { dom.window.dispatchEvent(new dom.window.Event("keryx:auth")); await vi.advanceTimersByTimeAsync(2000); });
+      expect(host.textContent).not.toContain("NeedsReview");
+      expect(paymentRows(original.id)).toEqual(financialBefore);
+      expect(mocks.vendorSettle).toHaveBeenCalledOnce(); expect(mocks.collectRun).not.toHaveBeenCalled();
+    } finally { await act(async () => root.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); dom.window.close(); }
+  });
+  it.each(["before-settlement", "during-settlement"])("session revocation %s preserves original financial boundary and never retries", async phase => {
+    const jwt = await token(), original = await signed(); const claims = (await parseWebSession(jwt, secret))!;
+    const revoke = () => native.revokeWebSession(webSessionHash(claims.jti), owner);
+    if (phase === "before-settlement") {
+      const verify = mocks.vendorVerify.getMockImplementation()!;
+      mocks.vendorVerify.mockImplementation(async (...args) => { const result = await verify(...args); await revoke(); return result; });
+    } else mocks.vendorSettle.mockImplementation(async () => { await revoke(); return { success: true, payer: payer.address, network: "eip155:5042", transaction: "unfunded-debit-before-owner-refusal" }; });
+    const response = await cookies.run(jwt, () => POST(original.req()));
+    expect(response.status).toBe(phase === "before-settlement" ? 401 : 500);
+    expect(mocks.vendorSettle).toHaveBeenCalledTimes(phase === "before-settlement" ? 0 : 1);
+    expect(!!response.headers.get("payment-response")).toBe(phase === "during-settlement");
+    // Guard refusal may close the facade; reopen the same exact namespace to inspect retained debit.
+    closeNativeFixture(); native = await openNativeFixture(); mocks.getDb.mockResolvedValue(native);
+    expect(await native.getA2aOrder(original.id)).toBeNull();
+    expect((paymentRows(original.id)).filter(p => p.kind === "inbound")).toHaveLength(phase === "during-settlement" ? 1 : 0);
+    expect(mocks.collectRun).not.toHaveBeenCalled(); expect((await history(jwt, original.id)).status).toBe(401);
+  });
+});
 
 describe("A2A v2 route", () => {
   it.each([{ reviewFirst: true }, { mode: "review-first" }, { researchMode: "review-first" }, { responseMode: "reviewFirst" }])("refuses review intent before provider, payment or job admission: %j", async intent => {
@@ -563,5 +811,288 @@ describe("A2A v2 route", () => {
     expect(response.status).toBe(500);
     expect(mocks.collectRun).toHaveBeenCalledOnce();
     expect(db.failA2aOrder).not.toHaveBeenCalled();
+  });
+});
+
+/** UNRUN route-consumer controls. The genuine existing signed-route fixture is
+ * copied locally below so every original body/helper/mock stays byte-identical.
+ * Circle verifier/delivery responses are synthetic UNFUNDED fixtures, never
+ * financial settlement proof. Native owner/session/admission methods are real;
+ * readonly SQL readback observes their output, not a mocked atomicity assertion.
+ * Native atomic pair/rollback qualification remains the separate R143 gate. */
+describe("signed POST NEW owner-admission controls", () => {
+  const shared = Object.values(mocks);
+  let previousImplementations: Array<ReturnType<(typeof shared)[number]["getMockImplementation"]>>;
+  let previousApiKeyImplementation: typeof verifyApiKey | undefined;
+  beforeEach(() => {
+    previousImplementations = shared.map(mock => mock.getMockImplementation());
+    previousApiKeyImplementation = vi.mocked(verifyApiKey).getMockImplementation();
+  });
+  const cookies = new AsyncLocalStorage<string | undefined>();
+  const owner = `0x${"a".repeat(40)}`, foreign = `0x${"d".repeat(40)}`;
+  const payer = privateKeyToAccount(`0x${"3".repeat(64)}`), secret = "unfunded-native-post-test-secret";
+  let folder: string, file: string, manifest: string, contentKey: string, native: Awaited<ReturnType<typeof createEnrolledSqliteAdapter>>;
+  let actualSeller: typeof import("../x402-server"), nonceSequence = 0;
+  const savedConfig = { ...config };
+  let fixtureIdentity: Parameters<typeof installStorageFences>[1];
+  beforeAll(async () => { actualSeller = await vi.importActual("../x402-server"); });
+  beforeEach(async () => {
+    Object.assign(config, { profile: ARC_MAINNET_PROFILE, networkId: ARC_MAINNET_PROFILE.networkId,
+      usdcAddress: ARC_MAINNET_PROFILE.usdcAddress, gatewayWallet: ARC_MAINNET_PROFILE.gatewayWallet, maxTimeoutSeconds: 691200, jwtSecret: secret });
+    vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
+    vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false"); vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false");
+    const deployment = resetNativeFixture();
+    ({ folder, file, manifest, contentKey } = deployment); fixtureIdentity = deployment.identity;
+    vi.stubEnv("KERYX_STORAGE_MANIFEST", manifest); vi.stubEnv("KERYX_SQLITE_PATH", file); vi.stubEnv("CONTENT_MASTER_KEY", contentKey);
+    native = await openNativeFixture();
+    mocks.getDb.mockResolvedValue(native); mocks.getAgentDeps.mockResolvedValue({ db: native, gateway: {}, engine: {} });
+    mocks.cookies.mockImplementation(async () => ({ get: (name: string) => name === "keryx_session" && cookies.getStore() ? { value: cookies.getStore() } : undefined }));
+    mocks.checkRateLimit.mockResolvedValue(null); mocks.collectRun.mockClear();
+    vi.mocked(verifyApiKey).mockResolvedValue({ keyId: "synthetic-ownerless-key", scopes: "ask" } as never);
+    mocks.settleThenServe.mockImplementation(actualSeller.settleThenServe);
+    mocks.vendorVerify.mockReset().mockImplementation(async (payload, requirements) => {
+      const authorization = payload.payload.authorization;
+      const recovered = await recoverTypedDataAddress({ ...typed(authorization), signature: payload.payload.signature });
+      return { isValid: recovered.toLowerCase() === payer.address.toLowerCase() && authorization.to === requirements.payTo
+        && authorization.value === requirements.amount, payer: recovered };
+    });
+    mocks.vendorSettle.mockReset().mockImplementation(async payload => ({ success: true, network: "eip155:5042", payer: payer.address,
+      transaction: `unfunded-vendor-fixture-${payload.payload.authorization.nonce}` }));
+  });
+  afterEach(() => { try { closeNativeFixture(); } finally { vi.restoreAllMocks(); vi.unstubAllEnvs();
+    for (const key of Object.keys(config)) if (!Object.prototype.hasOwnProperty.call(savedConfig, key)) Reflect.deleteProperty(config, key);
+    Object.assign(config, savedConfig); } });
+  afterAll(() => Object.assign(config, savedConfig));
+  function typed(a: { from: string; to: string; value: string; validAfter: string; validBefore: string; nonce: string }) {
+    return { domain: { name: "GatewayWalletBatched", version: "1", chainId: 5042, verifyingContract: ARC_MAINNET_PROFILE.gatewayWallet as `0x${string}` },
+      types: { TransferWithAuthorization: [{ name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" },
+        { name: "validAfter", type: "uint256" }, { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" }] }, primaryType: "TransferWithAuthorization",
+      message: { from: a.from as `0x${string}`, to: a.to as `0x${string}`, value: BigInt(a.value), validAfter: BigInt(a.validAfter), validBefore: BigInt(a.validBefore), nonce: a.nonce as `0x${string}` } } as const;
+  }
+  async function signed(mode: "quick" | "deep" = "quick", extra: Record<string, unknown> = {}) {
+    const authorization = { from: payer.address, to: config.sellerAddress!, value: mode === "quick" ? "50000" : "80000",
+      validAfter: String(Math.floor(Date.now() / 1000) - 600), validBefore: String(Math.floor(Date.now() / 1000) + 691200), nonce: `0x${(++nonceSequence).toString(16).padStart(64, "0")}` };
+    const signature = await payer.signTypedData(typed(authorization));
+    const header = Buffer.from(JSON.stringify({ authorization, signature })).toString("base64");
+    const body = JSON.stringify({ question: "Unfunded owned original fixture", budget: .03, researchMode: mode, packageVersion: "1.0.0", responseMode: "async", ...extra });
+    const id = a2aOrderId({ network: "eip155:5042", payer: payer.address, payee: config.sellerAddress!, authorizationId: authorization.nonce });
+    return { id, header, body, authorization, req: (headers: Record<string, string> = {}) => new NextRequest("https://keryx.cc/api/agent/ask", {
+      method: "POST", headers: { "content-type": "application/json", origin: "https://keryx.cc", "payment-signature": header, "x-keryx-account-job": "associate", ...headers }, body }) };
+  }
+  const token = async (wallet = owner) => (await issueWebSession(native, secret, wallet, "asker")).token;
+  async function history(jwt: string | undefined, id: string) {
+    const route = await import("../../app/api/me/jobs/route");
+    return cookies.run(jwt, () => route.GET(new Request(`https://keryx.cc/api/me/jobs?pending=owned&id=${id}`)));
+  }
+  // Restore the inherited mock implementations after this block's local fixture
+  // cleanup; do not reset/replace any original global helper or mock definition.
+  afterEach(() => {
+    vi.useRealTimers();
+    shared.forEach((mock, index) => {
+      mock.mockReset();
+      const implementation = previousImplementations[index];
+      if (implementation) mock.mockImplementation(implementation);
+    });
+    vi.mocked(verifyApiKey).mockReset();
+    if (previousApiKeyImplementation) vi.mocked(verifyApiKey).mockImplementation(previousApiKeyImplementation);
+  });
+  function ownerRows(id: string) {
+    const inspect = new DatabaseSync(join(folder, "synthetic.sqlite"), { readOnly: true });
+    try { return inspect.prepare("SELECT job_id,query_id,request_hash,network,wallet,session_hash,issued_at,expires_at,admitted_at FROM pending_job_owners WHERE job_id=?").all(id); }
+    finally { inspect.close(); }
+  }
+  async function noOriginal(id: string) {
+    expect(ownerRows(id)).toEqual([]);
+    expect(await native.getA2aOrder(id)).toBeNull();
+    expect(paymentRows(id)).toEqual([]);
+    expect(mocks.collectRun).not.toHaveBeenCalled();
+  }
+  function without(original: Awaited<ReturnType<typeof signed>>, ...names: string[]) {
+    const req = original.req();
+    for (const name of names) req.headers.delete(name);
+    return req;
+  }
+  it.each(["quick", "deep"] as const)("admits NEW %s with exact real cookie/durable tuple and unchanged signed economics", async mode => {
+    const jwt = await token(), claims = (await parseWebSession(jwt, secret))!;
+    const original = await signed(mode), req = original.req();
+    expect(req.url).toBe("https://keryx.cc/api/agent/ask");
+    expect(req.headers.get("origin")).toBe("https://keryx.cc");
+    expect(req.headers.get("x-keryx-account-job")).toBe("associate");
+    expect(await req.clone().text()).toBe(original.body);
+    expect(req.headers.get("payment-signature")).toBe(original.header);
+    expect((await cookies.run(jwt, () => POST(req))).status).toBe(202);
+    const saved = (await native.getA2aOrder(original.id))!;
+    expect(saved).toMatchObject({ id: original.id, queryId: original.id, payer: payer.address,
+      authorizationId: original.authorization.nonce, amountUsdc: mode === "quick" ? .05 : .08,
+      creatorBudgetUsdc: .03, serviceFeeUsdc: mode === "quick" ? .02 : .05,
+      researchMode: mode, status: "running", startedAt: null, workerId: null,
+      request: { question: JSON.parse(original.body).question, network: "eip155:5042" } });
+    expect(ownerRows(original.id)).toEqual([{
+      job_id: original.id, query_id: original.id, request_hash: saved.requestHash, network: "eip155:5042",
+      wallet: owner, session_hash: webSessionHash(claims.jti), issued_at: claims.iat * 1000,
+      expires_at: claims.exp * 1000, admitted_at: saved.createdAt,
+    }]);
+    expect(owner.toLowerCase()).not.toBe(payer.address.toLowerCase());
+    const projected = await (await history(jwt, original.id)).json();
+    expect(projected.jobs).toHaveLength(1);
+    expect(projected.jobs[0]).toMatchObject({ attention: "unknown", recoveryState: "unknown" });
+    expect((await (await history(await token(payer.address), original.id)).json()).jobs).toEqual([]);
+    const payload = mocks.vendorVerify.mock.calls[0][0];
+    expect(payload.payload.authorization).toEqual(original.authorization);
+    expect(mocks.vendorVerify.mock.calls[0][1].amount).toBe(original.authorization.value);
+    expect(mocks.vendorSettle).toHaveBeenCalledOnce();
+    expect(mocks.vendorSettle.mock.calls[0][0].payload.authorization).toEqual(original.authorization);
+    expect((paymentRows(original.id)).filter(row => row.kind === "inbound")).toHaveLength(1);
+    expect(mocks.collectRun).not.toHaveBeenCalled();
+  });
+  it.each(["missing-cookie", "false-header", "foreign-origin", "missing-origin", "api-key-opt-in", "wrong-cookie", "revoked-original", "expired-cookie", "wrong-durable-wallet", "wrong-durable-issued", "wrong-durable-expiry"])(
+    "refuses %s without owner/original/payment insertion", async reason => {
+      let jwt: string | undefined = await token();
+      const original = await signed(), headers: Record<string, string> = {};
+      if (reason === "missing-cookie") jwt = undefined;
+      if (reason === "false-header") headers["x-keryx-account-job"] = "false";
+      if (reason === "foreign-origin") headers.origin = "https://foreign.test";
+      if (reason === "api-key-opt-in") headers.authorization = "Bearer caller-api-key";
+      if (reason === "wrong-cookie") jwt = (await issueWebSession(native, "different-unfunded-test-secret", owner, "asker")).token;
+      if (reason === "revoked-original") {
+        const claims = (await parseWebSession(jwt, secret))!;
+        await native.revokeWebSession(webSessionHash(claims.jti), owner);
+        await token(); // A genuine active replacement cannot revive the revoked presented token.
+      }
+      if (reason === "expired-cookie") {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        jwt = (await issueWebSession(native, secret, owner, "asker", new Date(Date.now() + 2000).toISOString())).token;
+        vi.setSystemTime(Date.now() + 3000);
+      }
+      if (reason.startsWith("wrong-durable-")) {
+        const claims = (await parseWebSession(jwt, secret))!;
+        const edit = new DatabaseSync(join(folder, "synthetic.sqlite"));
+        try {
+          registerStorageCapability(edit, fixtureIdentity, () => true);
+          // Corrupt only the isolated fixture row; the signed JWT is untouched.
+          if (reason === "wrong-durable-wallet") edit.prepare("UPDATE web_sessions SET wallet=? WHERE hash=?").run(foreign, webSessionHash(claims.jti));
+          if (reason === "wrong-durable-issued") edit.prepare("UPDATE web_sessions SET issued_at=issued_at+1000 WHERE hash=?").run(webSessionHash(claims.jti));
+          if (reason === "wrong-durable-expiry") edit.prepare("UPDATE web_sessions SET expires_at=expires_at-1000 WHERE hash=?").run(webSessionHash(claims.jti));
+        } finally { edit.close(); }
+      }
+      const req = original.req(headers);
+      if (reason === "missing-origin") req.headers.delete("origin");
+      const response = await cookies.run(jwt, () => POST(req));
+      expect(response.status).toBe(401); expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(mocks.vendorVerify).not.toHaveBeenCalled(); expect(mocks.vendorSettle).not.toHaveBeenCalled();
+      await noOriginal(original.id);
+    });
+  it.each(["cookie-without-header", "anonymous", "api-key", "cli", "generic-transport"])(
+    "keeps ordinary signed %s ownerless with original body, budget and nonce", async actor => {
+      const original = await signed("quick", { wallet: owner, payer: owner, workerId: owner });
+      const req = without(original, "x-keryx-account-job");
+      if (actor !== "cookie-without-header") req.headers.delete("origin");
+      if (actor === "api-key") req.headers.set("authorization", "Bearer caller-api-key");
+      if (actor === "cli") req.headers.set("user-agent", "keryx-cli-unfunded-fixture");
+      const response = await cookies.run(actor === "cookie-without-header" ? await token() : undefined, () => POST(req));
+      expect(response.status).toBe(202); expect(ownerRows(original.id)).toEqual([]);
+      expect(await native.getA2aOrder(original.id)).toMatchObject({ authorizationId: original.authorization.nonce,
+        payer: payer.address, amountUsdc: .05, creatorBudgetUsdc: .03, serviceFeeUsdc: .02,
+        request: { question: JSON.parse(original.body).question }, startedAt: null, workerId: null });
+      expect(mocks.vendorSettle).toHaveBeenCalledOnce();
+      expect(mocks.vendorSettle.mock.calls[0][0].payload.authorization).toEqual(original.authorization);
+      expect((paymentRows(original.id)).filter(row => row.kind === "inbound")).toHaveLength(1);
+      expect((await (await history(await token(), original.id)).json()).jobs).toEqual([]);
+      expect(mocks.collectRun).not.toHaveBeenCalled();
+    });
+  it("refuses unsigned opt-in before verifier/payment instead of dispatching an anonymous purchase", async () => {
+    const original = await signed();
+    const response = await cookies.run(await token(), () => POST(without(original, "payment-signature")));
+    expect(response.status).toBe(401);
+    expect(mocks.vendorVerify).not.toHaveBeenCalled(); expect(mocks.vendorSettle).not.toHaveBeenCalled();
+    await noOriginal(original.id);
+  });
+  it.each(["signature", "payment", "receipt"] as const)("failed %s never inserts owner/original or runs research", async failure => {
+    const original = await signed(), req = original.req();
+    if (failure === "signature") {
+      const wrongSigner = privateKeyToAccount(`0x${"4".repeat(64)}`);
+      const signature = await wrongSigner.signTypedData(typed(original.authorization));
+      req.headers.set("payment-signature", Buffer.from(JSON.stringify({ authorization: original.authorization, signature })).toString("base64"));
+    } else if (failure === "payment") mocks.vendorSettle.mockResolvedValue({ success: false, errorReason: "explicit synthetic vendor refusal" });
+    else mocks.vendorSettle.mockResolvedValue({ success: true, network: "eip155:5042", payer: payer.address });
+    const response = await cookies.run(await token(), () => POST(req));
+    expect(response.status).toBe(failure === "receipt" ? 503 : 402); expect(response.headers.get("payment-response")).toBeNull();
+    // The real seller retains its discovery-extension-to-bare soft-refusal fallback.
+    expect(mocks.vendorVerify).toHaveBeenCalledTimes(failure === "signature" ? 2 : 1);
+    expect(mocks.vendorSettle).toHaveBeenCalledTimes(failure === "signature" ? 0 : 1);
+    await noOriginal(original.id);
+  });
+  it.each(["unowned-history", "owned-history"] as const)("idempotent replay/recovery cannot attach or replace %s owner", async kind => {
+    const jwt = await token(), original = await signed();
+    const first = kind === "owned-history" ? original.req() : without(original, "x-keryx-account-job");
+    expect((await cookies.run(jwt, () => POST(first))).status).toBe(202);
+    const before = (await native.getA2aOrder(original.id))!, ownersBefore = ownerRows(original.id);
+    const paymentsBefore = paymentRows(original.id);
+    const replacement = await token(), foreignToken = await token(foreign);
+    for (const presented of [replacement, foreignToken]) {
+      const replay = await cookies.run(presented, () => POST(original.req()));
+      expect(replay.status).toBe(200); expect((await replay.json()).replayed).toBe(true);
+      expect(ownerRows(original.id)).toEqual(ownersBefore);
+      expect(await native.getA2aOrder(original.id)).toEqual(before);
+      expect(paymentRows(original.id)).toEqual(paymentsBefore);
+    }
+    // Delivery replay still traverses the unchanged synthetic vendor boundary;
+    // do not claim these three fixture calls prove vendor nonce deduplication.
+    expect(mocks.vendorSettle).toHaveBeenCalledTimes(3);
+    for (const [payload] of mocks.vendorSettle.mock.calls) expect(payload.payload.authorization).toEqual(original.authorization);
+    const callsBeforeRead = mocks.vendorSettle.mock.calls.length;
+    expect((await (await history(foreignToken, original.id)).json()).jobs).toEqual([]);
+    const historyResult = await (await history(replacement, original.id)).json();
+    if (kind === "unowned-history") expect(historyResult.jobs).toEqual([]);
+    else {
+      expect(historyResult.jobs[0]).toMatchObject({ attention: "unknown", recoveryState: "unknown" });
+      expect(ownersBefore).toHaveLength(1);
+      expect(ownersBefore[0].session_hash).toBe(webSessionHash((await parseWebSession(jwt, secret))!.jti));
+    }
+    // The inherited fixture explicitly disables privacy reads; its actual bearer
+    // GET retains ordinary pending delivery without creating owner authority.
+    const publicRead = await GET(new NextRequest(`https://keryx.cc/api/agent/ask?queryId=${original.id}`));
+    expect(publicRead.status).toBe(200);
+    expect(ownerRows(original.id)).toEqual(ownersBefore);
+    expect(await native.getA2aOrder(original.id)).toEqual(before);
+    expect(paymentRows(original.id)).toEqual(paymentsBefore);
+    expect(mocks.vendorSettle).toHaveBeenCalledTimes(callsBeforeRead);
+    expect(mocks.collectRun).not.toHaveBeenCalled();
+  });
+  it.each(["question", "budget"] as const)("changed %s cannot use an old nonce to attach an owner", async field => {
+    const original = await signed();
+    expect((await POST(without(original, "x-keryx-account-job"))).status).toBe(202);
+    const before = (await native.getA2aOrder(original.id))!, payments = paymentRows(original.id);
+    const body = JSON.parse(original.body);
+    if (field === "question") body.question = "Different unfunded research question";
+    else body.budget = .04;
+    const template = original.req();
+    const altered = new NextRequest(template.url, { method: "POST", headers: template.headers, body: JSON.stringify(body) });
+    const response = await cookies.run(await token(), () => POST(altered));
+    expect(response.status).toBe(field === "budget" ? 402 : 500);
+    expect(response.headers.get("payment-response")).toBeNull();
+    expect(ownerRows(original.id)).toEqual([]);
+    expect(await native.getA2aOrder(original.id)).toEqual(before);
+    expect(paymentRows(original.id)).toEqual(payments);
+    expect(mocks.vendorSettle).toHaveBeenCalledOnce();
+    expect(mocks.collectRun).not.toHaveBeenCalled();
+  });
+  it.each(["before-settlement", "during-settlement"])("session revocation %s preserves original financial boundary and never retries", async phase => {
+    const jwt = await token(), original = await signed(); const claims = (await parseWebSession(jwt, secret))!;
+    const revoke = () => native.revokeWebSession(webSessionHash(claims.jti), owner);
+    if (phase === "before-settlement") {
+      const verify = mocks.vendorVerify.getMockImplementation()!;
+      mocks.vendorVerify.mockImplementation(async (...args) => { const result = await verify(...args); await revoke(); return result; });
+    } else mocks.vendorSettle.mockImplementation(async () => { await revoke(); return { success: true, payer: payer.address, network: "eip155:5042", transaction: "unfunded-debit-before-owner-refusal" }; });
+    const response = await cookies.run(jwt, () => POST(original.req()));
+    expect(response.status).toBe(phase === "before-settlement" ? 401 : 500);
+    expect(mocks.vendorSettle).toHaveBeenCalledTimes(phase === "before-settlement" ? 0 : 1);
+    expect(!!response.headers.get("payment-response")).toBe(phase === "during-settlement");
+    // Guard refusal may close the facade; reopen the same exact namespace to inspect retained debit.
+    closeNativeFixture(); native = await openNativeFixture(); mocks.getDb.mockResolvedValue(native);
+    expect(ownerRows(original.id)).toEqual([]);
+    expect(await native.getA2aOrder(original.id)).toBeNull();
+    expect((paymentRows(original.id)).filter(p => p.kind === "inbound")).toHaveLength(phase === "during-settlement" ? 1 : 0);
+    expect(mocks.collectRun).not.toHaveBeenCalled(); expect((await history(jwt, original.id)).status).toBe(401);
   });
 });

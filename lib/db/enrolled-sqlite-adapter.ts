@@ -21,6 +21,7 @@ import { canonicalJson } from "../canonical-json";
 import type { StorageIdentity } from "./storage-identity";
 import { createEnrolledSqlitePrivateProfiles } from "./private-profiles-enrolled-sqlite";
 import { createEnrolledSqliteTopicWatches } from "./topic-watches-sqlite";
+import { createEnrolledSqlitePendingJobOwners } from "./pending-job-owners-sqlite";
 import { createEnrolledSqliteOwnerRunAssignments } from "./owner-run-assignments-sqlite";
 
 /** Explicit behavior inventory, including verifyApiKey's last-used write. New methods require review. */
@@ -191,6 +192,7 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   getResearchMonthly: "mainnet-read",
   redeemResearchMonthly: "mainnet-write",
   createA2aOrder: "write",
+  createOwnedA2aOrder: "write",
   getA2aOrder: "read",
   listA2aOrdersByPayer: "read",
   listUnfinishedA2aOrders: "read", // Private operator observation; grants no claim or resolution authority.
@@ -310,7 +312,7 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       }
     }
     const publicNames = Object.getOwnPropertyNames(SqliteAdapter.prototype).filter(name =>
-      !["constructor", "encryptLegacyCacheRows", "insertPayment", "assertOrdinaryResearchAuthority", "readEvidenceProvenance", "init", "close"].includes(name));
+      !["constructor", "encryptLegacyCacheRows", "insertPayment", "insertA2aOriginal", "assertOrdinaryResearchAuthority", "readEvidenceProvenance", "init", "close"].includes(name));
     const reviewed = Object.keys(ENROLLED_SQLITE_METHOD_ACCESS);
     if (canonicalJson(publicNames.sort()) !== canonicalJson(reviewed.sort()))
       throw new Error("Enrolled SQLite method inventory requires review");
@@ -354,6 +356,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       if (core[name]) Object.defineProperty(facade, name, { value: core[name] });
     }
     if (deployment.identity.authorityMode === "mainnet-real") {
+      const pendingOwners = createEnrolledSqlitePendingJobOwners(db);
+      if (pendingOwners) Object.defineProperty(facade, "pendingJobOwners", { value: pendingOwners });
       const acceptance = createEnrolledSqliteDeliverableAcceptance(db);
       if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
       if (process.env.KERYX_PUBLIC_PROFILES_ENABLED === "true" && privacyActive) {

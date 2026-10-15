@@ -116,8 +116,8 @@ export function WalletMenu() {
   if (!hydrated || ((status === "reconnecting" || status === "connecting") && !session)) {
     return (
       <span className={`${CHIP} cursor-default opacity-70`} role="status" aria-busy>
-        {status === "connecting" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wallet className="h-3.5 w-3.5" />}
-        {status === "connecting" ? webHeaderMessages["walletMenu.connecting"] : copy("walletMenu.wallet")}</span>
+        {hydrated && status === "connecting" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wallet className="h-3.5 w-3.5" />}
+        {hydrated && status === "connecting" ? webHeaderMessages["walletMenu.connecting"] : copy("walletMenu.wallet")}</span>
     );
   }
 

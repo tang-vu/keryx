@@ -224,12 +224,21 @@ it("schema drift permanently retires the old port even after the exact schema is
   await expect(f.port!.read(order.payer, binding.network, order.id)).rejects.toThrow("acceptance_unavailable");
   expect(entries(f.file)).toBe(0);
 });
-it("the actual frozen native application facade composes the port on writable and readonly stores without DDL", async () => {
-  const file = join(folder, "facade.sqlite"), manifest = join(folder, "deployment.json"); copyFileSync(complete, file);
-  writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity,
-    backend: { kind: "sqlite", databasePath: file } }));
-  vi.stubEnv("KERYX_STORAGE_MANIFEST", manifest); vi.stubEnv("KERYX_SQLITE_PATH", file);
+// One immutable selected deployment tuple per module; each case opens fresh genuine facades.
+let facadeFixture: Readonly<{ file: string; manifest: string }> | undefined;
+function selectedFacadeFixture() {
+  if (!facadeFixture) {
+    const file = join(folder, "facade.sqlite"), manifest = join(folder, "deployment.json"); copyFileSync(complete, file);
+    writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity,
+      backend: { kind: "sqlite", databasePath: file } }));
+    facadeFixture = Object.freeze({ file, manifest });
+  }
+  vi.stubEnv("KERYX_STORAGE_MANIFEST", facadeFixture.manifest); vi.stubEnv("KERYX_SQLITE_PATH", facadeFixture.file);
   vi.stubEnv("KERYX_FORCE_OFFLINE", "0"); vi.stubEnv("CONTENT_MASTER_KEY", "11".repeat(32));
+  return facadeFixture;
+}
+it("the actual frozen native application facade composes the port on writable and readonly stores without DDL", async () => {
+  const { file } = selectedFacadeFixture();
   const before = originalRows(file), writer = await createEnrolledSqliteAdapter(); opened.push(writer);
   const reader = await createReadonlyEnrolledSqliteAdapter(); opened.push(reader);
   for (const adapter of [writer, reader]) {
@@ -237,6 +246,12 @@ it("the actual frozen native application facade composes the port on writable an
     expect(Object.getOwnPropertyDescriptor(adapter, "deliverableAcceptance")?.enumerable).toBe(false);
   }
   await expect(reader.deliverableAcceptance!.submit(order.payer, binding.network, order.id, input, authority)).rejects.toThrow("acceptance_unavailable");
+  expect((await writer.deliverableAcceptance!.read(order.payer, binding.network, order.id)).state).toBe("no_response");
+  expect(originalRows(file)).toBe(before); expect(entries(file)).toBe(0);
+});
+it("the actual native application facade survives EXCLUSIVE contention on the same writer without changing originals", async () => {
+  const { file } = selectedFacadeFixture();
+  const before = originalRows(file), writer = await createEnrolledSqliteAdapter(); opened.push(writer);
   const blocker = new DatabaseSync(file); opened.push(blocker); blocker.exec("BEGIN EXCLUSIVE");
   expect(() => writer.getSyncState("synthetic-missing")).toThrow(); blocker.exec("ROLLBACK");
   expect(await writer.getSyncState("synthetic-missing")).toBeNull();

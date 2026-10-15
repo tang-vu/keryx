@@ -8,6 +8,7 @@ export function ResearchJobTarget({ mode, version, monthly = false }: {
   return <div className="space-y-2 font-serif text-sm" data-job-completion-target>
     <p>{target ? jobTargetCopy.target(target.tier, target.seconds) : jobTargetCopy.unavailable}</p>
     {target && <p className="text-ink-3">{jobTargetCopy.terms}</p>}
+    {target && <p className="text-ink-3">{jobTargetCopy.reviewTerms}</p>}
     {target && monthly && <p className="text-ink-3">{jobTargetCopy.monthly}</p>}
   </div>;
 }

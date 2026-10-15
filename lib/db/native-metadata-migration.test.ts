@@ -9,10 +9,12 @@ import { installMainnetApplicationSchema } from "./mainnet-application-schema";
 import { installNativeUserDomainSchema } from "./native-user-domain-schema";
 import { CHAT_ACCOUNT_TABLES } from "./chat-accounts-schema";
 import { NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema-data";
+import { PENDING_JOB_OWNERS_SQL } from "./pending-job-owners-schema";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { privateProfilesMigrationProfiles } from "./private-profiles-storage-migration";
-import { HISTORICAL_NATIVE_USER_DOMAIN_TABLES, PRE_OWNER_NATIVE_USER_DOMAIN_TABLES, snapshotTopicWatchesStorage,
-  topicWatchesMigrationProfiles, ownerRunAssignmentsMigrationProfiles } from "./topic-watches-storage-migration";
+import { HISTORICAL_NATIVE_USER_DOMAIN_TABLES, PRE_OWNER_NATIVE_USER_DOMAIN_TABLES,
+  PRE_PENDING_JOB_OWNERS_NATIVE_USER_DOMAIN_TABLES, snapshotTopicWatchesStorage,
+  topicWatchesMigrationProfiles, ownerRunAssignmentsMigrationProfiles, pendingJobOwnersMigrationProfiles } from "./topic-watches-storage-migration";
 import { OWNER269_OCCUPANCY_PROPOSAL } from "../owner-run-assignments/occupancy-proposal";
 import { OWNER_RUN_ASSIGNMENTS_SQL } from "../owner-run-assignments/schema";
 import { assertStorageFences, insertStorageIdentity, installStorageFences, registerStorageCapability,
@@ -39,7 +41,19 @@ function seedChatRows(db: DatabaseSync, identity: StorageIdentity) {
     VALUES(?,'chat-account-link-v1','telegram','synthetic','7','7','https://keryx.example',?,0,300000,NULL)`)
     .run("d".repeat(64), identity.network);
 }
-const metadataTables = ["topic_watches", ...CHAT_ACCOUNT_TABLES, "owner269_operations", "owner269_associations"] as const;
+function seedRetainedPendingRow(db: DatabaseSync, identity: StorageIdentity) {
+  // Typed expired synthetic retention cells only, not a session/admission proof,
+  // successful payment, historical owner inference or live pending-job claim.
+  const wallet = `0x${"a".repeat(40)}`, requestHash = "d".repeat(64), date = "2026-10-01T00:00:00.000Z";
+  db.prepare(`INSERT INTO a2a_orders(id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,
+    service_fee_usdc,research_mode,status,transaction_id,request_data,created_at,updated_at)
+    VALUES('original','original','synthetic-retained-authorization',?,?,?,0.000001,0,0.000001,'quick','failed','synthetic',?,?,?)`)
+    .run(requestHash, wallet, `0x${"9".repeat(40)}`, canonicalJson({ network: identity.network }), date, date);
+  db.prepare(`INSERT INTO pending_job_owners(job_id,query_id,request_hash,network,wallet,session_hash,issued_at,expires_at,admitted_at)
+    VALUES('original','original',?,?,?,?,1,2,?)`)
+    .run(requestHash, identity.network, wallet, "e".repeat(64), date);
+}
+const metadataTables = ["topic_watches", ...CHAT_ACCOUNT_TABLES, "owner269_operations", "owner269_associations", "pending_job_owners"] as const;
 function fixture(archive = false, oldFamily: 19 | 20 | 22 | 24 = 20) {
   const directory = mkdtempSync(join(tmpdir(), "keryx-native-metadata-")); directories.push(directory);
   const file = join(directory, "historical19.sqlite"), manifest = join(directory, "deployment.json");
@@ -48,7 +62,9 @@ function fixture(archive = false, oldFamily: 19 | 20 | 22 | 24 = 20) {
   const db = new DatabaseSync(file);
   try {
     db.exec("BEGIN IMMEDIATE"); installMainnetApplicationSchema(db, { publicReferenceArchive: archive }); installNativeUserDomainSchema(db);
-    // Source-built exact predecessor families; current24 is only for corruption controls.
+    // Fixed synthetic setup actor only; strip pending ownership before installing fences.
+    registerStorageCapability(db, identity, () => true); db.exec("DROP TABLE pending_job_owners");
+    // Source-built exact old19/old20/chat22/pre-pending24 predecessor families.
     if (oldFamily !== 24) {
       for (const guard of OWNER269_OCCUPANCY_PROPOSAL) db.exec(`DROP TRIGGER "${guard.name}"`);
       db.exec("DROP TABLE owner269_associations; DROP TABLE owner269_operations");
@@ -56,7 +72,7 @@ function fixture(archive = false, oldFamily: 19 | 20 | 22 | 24 = 20) {
       if (oldFamily === 19) db.exec("DROP TABLE topic_watches");
     }
     if (oldFamily === 22 || oldFamily === 24) seedChatRows(db, identity);
-    if (oldFamily === 20 || oldFamily === 22) db.prepare("INSERT INTO topic_watches(wallet,id,revision,state) VALUES(?,?,?,?)")
+    if (oldFamily !== 19) db.prepare("INSERT INTO topic_watches(wallet,id,revision,state) VALUES(?,?,?,?)")
       .run(`0x${"a".repeat(40)}`, "retained-watch", 7, '{"retained":true}');
     db.exec("INSERT INTO sync_state(key,value,updated_at) VALUES('raw-text',CAST(X'fffe00c3' AS TEXT),NULL)");
     db.exec("INSERT INTO query_runs(id,question,budget,duration_ms,data,created_at) VALUES('original','Retained',0.03125,9007199254740993,'{}','2026-10-01T00:00:00.000Z')");
@@ -69,7 +85,8 @@ function fixture(archive = false, oldFamily: 19 | 20 | 22 | 24 = 20) {
   writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity, backend: { kind: "sqlite", databasePath: file } }));
   const snapshot = (target = file) => {
     const connection = new DatabaseSync(target, { readOnly: true });
-    try { return snapshotTopicWatchesStorage(connection, identity, [...topicWatchesMigrationProfiles(), ...ownerRunAssignmentsMigrationProfiles()].flat()); }
+    try { return snapshotTopicWatchesStorage(connection, identity,
+      [...topicWatchesMigrationProfiles(), ...ownerRunAssignmentsMigrationProfiles(), ...pendingJobOwnersMigrationProfiles()].flat()); }
     finally { connection.close(); }
   };
   const options = (suffix = "") => {
@@ -94,36 +111,45 @@ function retainedOld(after: ReturnType<ReturnType<typeof fixture>["snapshot"]>, 
   expect(retained).toEqual(before.tables);
 }
 
-describe("stock protected command: exact old19/old20/pre-owner chat22 to compiled24 (UNRUN)", () => {
+describe("stock protected command: exact old19/old20/pre-owner chat22/pre-pending24 to compiled25 (UNRUN)", () => {
   it("adds migration-only references without widening the four runtime profiles", () => {
     expect(PRE_OWNER_NATIVE_USER_DOMAIN_TABLES).toEqual([...HISTORICAL_NATIVE_USER_DOMAIN_TABLES, "topic_watches"]);
-    expect([...NATIVE_USER_DOMAIN_TABLES].sort()).toEqual([...PRE_OWNER_NATIVE_USER_DOMAIN_TABLES, ...CHAT_ACCOUNT_TABLES, "owner269_operations", "owner269_associations"].sort());
+    expect(PRE_PENDING_JOB_OWNERS_NATIVE_USER_DOMAIN_TABLES).toEqual([...PRE_OWNER_NATIVE_USER_DOMAIN_TABLES, ...CHAT_ACCOUNT_TABLES, "owner269_operations", "owner269_associations"]);
+    expect([...NATIVE_USER_DOMAIN_TABLES].sort()).toEqual([...PRE_PENDING_JOB_OWNERS_NATIVE_USER_DOMAIN_TABLES, "pending_job_owners"].sort());
     const runtime = supportedSqliteApplicationProfiles(true);
     expect(runtime).toHaveLength(4);
     expect(new Set(runtime)).toEqual(new Set(privateProfilesMigrationProfiles().flat()));
-    for (const [before, current] of [...topicWatchesMigrationProfiles(), ...ownerRunAssignmentsMigrationProfiles()]) {
+    const pairs = [...topicWatchesMigrationProfiles(), ...ownerRunAssignmentsMigrationProfiles(), ...pendingJobOwnersMigrationProfiles()];
+    expect(pairs).toHaveLength(8); expect(pendingJobOwnersMigrationProfiles()).toHaveLength(2);
+    for (const [before, current] of pairs) {
       expect(runtime).not.toContain(before); expect(runtime).toContain(current);
     }
   });
 
-  it.each([[false, 19], [true, 19], [false, 20], [true, 20], [false, 22], [true, 22]] as const)("uses the existing CLI and verified backup, retaining all old typed cells/schema (archive=%s, oldFamily=%s)", async (archive, oldFamily) => {
+  it.each([[false, 19], [true, 19], [false, 20], [true, 20], [false, 22], [true, 22], [false, 24], [true, 24]] as const)("uses the existing CLI and verified backup, retaining all old typed cells/schema (archive=%s, oldFamily=%s)", async (archive, oldFamily) => {
     const f = fixture(archive, oldFamily), before = f.snapshot(), oldSchema = schema(f.file), args = f.options();
     if (oldFamily !== 19) expect(before.tables.topic_watches.rows).toBe(1);
-    if (oldFamily === 22) for (const table of CHAT_ACCOUNT_TABLES) expect(before.tables[table].rows).toBe(1);
+    if (oldFamily === 22 || oldFamily === 24) for (const table of CHAT_ACCOUNT_TABLES) expect(before.tables[table].rows).toBe(1);
+    expect(before.tables.pending_job_owners).toBeUndefined();
     const result = await runPrivateProfileStorageCli(args);
     expect(result).toMatchObject({ phase: "migration-verified", status: "migrated", originalRowsPreserved: true, signingResumeAuthorized: false });
     expect(f.snapshot(args[8])).toEqual(before);
     const after = f.snapshot(); retainedOld(after, before);
+    expect(after.tables.pending_job_owners.rows).toBe(0);
     const names = new Set(oldSchema.map(row => row.name));
     expect(schema(f.file).filter(row => names.has(row.name))).toEqual(oldSchema);
     const added = schema(f.file).filter(row => !names.has(row.name));
     expect(added.filter(row => row.type === "table").map(row => row.name).sort())
-      .toEqual([...(oldFamily === 19 ? ["topic_watches"] : []), ...(oldFamily === 22 ? [] : CHAT_ACCOUNT_TABLES), "owner269_associations", "owner269_operations"].sort());
+      .toEqual([...(oldFamily === 24 ? [] : [...(oldFamily === 19 ? ["topic_watches"] : []),
+        ...(oldFamily === 22 ? [] : CHAT_ACCOUNT_TABLES), "owner269_associations", "owner269_operations"]), "pending_job_owners"].sort());
     expect(added.every(row => metadataTables.some(table => table === row.tbl_name)
       || row.type === "trigger" && OWNER269_OCCUPANCY_PROPOSAL.some(guard => guard.name === row.name && guard.sql === row.sql))).toBe(true);
-    for (const guard of OWNER269_OCCUPANCY_PROPOSAL)
+    for (const guard of oldFamily === 24 ? [] : OWNER269_OCCUPANCY_PROPOSAL)
       expect(added).toContainEqual({ type: "trigger", name: guard.name, tbl_name: guard.sql.match(/ ON ([a-z0-9_]+)\n/)![1], sql: guard.sql });
-    expect(added.filter(row => OWNER269_OCCUPANCY_PROPOSAL.some(guard => guard.name === row.name))).toHaveLength(6);
+    expect(added.filter(row => OWNER269_OCCUPANCY_PROPOSAL.some(guard => guard.name === row.name))).toHaveLength(oldFamily === 24 ? 0 : 6);
+    if (oldFamily === 24) expect(added.every(row => row.tbl_name === "pending_job_owners")).toBe(true);
+    expect(added.filter(row => row.type === "trigger" && ["pending_job_owners_no_update", "pending_job_owners_no_delete"].includes(String(row.name))))
+      .toHaveLength(2);
     const db = new DatabaseSync(f.file, { readOnly: true });
     try {
       assertStorageFences(db, f.identity);
@@ -141,19 +167,53 @@ describe("stock protected command: exact old19/old20/pre-owner chat22 to compile
     expect(digest(args[8])).toBe(backupHash); expect(f.snapshot()).toEqual(after);
   });
 
-  it("already-current preserves populated metadata and private domains", async () => {
-    const f = fixture(); await runPrivateProfileStorageCli(f.options());
+  it.each([false, true])("already-current preserves populated metadata, retained pending cells and private domains (archive=%s)", async archive => {
+    const f = fixture(archive); await runPrivateProfileStorageCli(f.options());
     const db = new DatabaseSync(f.file);
     try {
       registerStorageCapability(db, f.identity, () => true); db.exec("BEGIN");
       // The populated historical topic row is already retained by the migration.
       seedChatRows(db, f.identity);
+      seedRetainedPendingRow(db, f.identity);
       db.exec("COMMIT");
     } finally { db.close(); }
     const before = f.snapshot(), result = await runPrivateProfileStorageCli(f.options("-current"));
     for (const table of ["topic_watches", ...CHAT_ACCOUNT_TABLES]) expect(before.tables[table].rows).toBe(1);
+    expect(before.tables.pending_job_owners.rows).toBe(1);
     expect(result).toMatchObject({ status: "already-current", signingResumeAuthorized: false });
     expect(f.snapshot()).toEqual(before);
+  });
+
+  it.each(["missing index", "missing immutable trigger", "wrong columns"] as const)("refuses partial/count-equivalent pending25 with complete identity fences: %s", async shape => {
+    const f = fixture(false, 24), args = f.options(), db = new DatabaseSync(f.file);
+    try {
+      registerStorageCapability(db, f.identity, () => true); db.exec("BEGIN IMMEDIATE");
+      db.exec(shape === "wrong columns" ? "CREATE TABLE pending_job_owners(value TEXT)" : PENDING_JOB_OWNERS_SQL);
+      if (shape === "missing index") db.exec("DROP INDEX pending_job_owners_wallet");
+      if (shape === "missing immutable trigger") db.exec("DROP TRIGGER pending_job_owners_no_update");
+      installStorageFences(db, f.identity); db.exec("COMMIT");
+    } finally { db.close(); }
+    const before = digest(f.file), oldSchema = schema(f.file);
+    expect(() => inspectPrivateProfileStorage(f.manifest)).toThrow();
+    await expect(runPrivateProfileStorageCli(args)).rejects.toThrow();
+    expect(digest(f.file)).toBe(before); expect(schema(f.file)).toEqual(oldSchema);
+    expect(existsSync(args[8])).toBe(false); expect(existsSync(args[10])).toBe(false);
+  });
+
+  it("old24 pending-fence refusal rolls back only the new domain and retains the verified backup", async () => {
+    const f = fixture(false, 24), before = f.snapshot(), oldSchema = schema(f.file), args = f.options();
+    const original = DatabaseSync.prototype.exec; let target: DatabaseSync | undefined, fences = 0;
+    const spy = vi.spyOn(DatabaseSync.prototype, "exec").mockImplementation(function (this: DatabaseSync, sql) {
+      if (sql.includes("BEGIN EXCLUSIVE")) target = this;
+      if (this === target && sql.startsWith("CREATE TRIGGER storage_fence_") && sql.includes('ON "pending_job_owners"') && ++fences === 2)
+        throw new Error("Injected middle pending fence refusal");
+      return Reflect.apply(original, this, [sql]);
+    });
+    try { await expect(runPrivateProfileStorageCli(args)).rejects.toThrow("Injected middle pending fence refusal"); }
+    finally { spy.mockRestore(); }
+    expect(fences).toBe(2); expect(f.snapshot()).toEqual(before); expect(schema(f.file)).toEqual(oldSchema);
+    expect(f.snapshot(args[8])).toEqual(before);
+    expect(readFileSync(args[10], "utf8").trim().split("\n").map(line => JSON.parse(line).phase)).toEqual(["backup-verified"]);
   });
 
   it("middle new-fence refusal rolls back all new DDL; keeps the genuine backup and old typed source", async () => {
@@ -250,8 +310,8 @@ describe("stock protected command: exact old19/old20/pre-owner chat22 to compile
     expect(digest(f.file)).toBe(before); expect(existsSync(args[8])).toBe(false); expect(existsSync(args[10])).toBe(false);
   });
 
-  it("post-COMMIT acknowledgement refusal never restores the retained old backup over the new source", async () => {
-    const f = fixture(), before = f.snapshot(), args = f.options();
+  it.each([20, 24] as const)("post-COMMIT acknowledgement refusal never restores the retained old backup over the new source (oldFamily=%s)", async oldFamily => {
+    const f = fixture(false, oldFamily), before = f.snapshot(), args = f.options();
     const original = DatabaseSync.prototype.exec; let target: DatabaseSync | undefined, committed = false;
     const spy = vi.spyOn(DatabaseSync.prototype, "exec").mockImplementation(function (this: DatabaseSync, sql) {
       if (sql.includes("BEGIN EXCLUSIVE")) target = this;
