@@ -1,20 +1,43 @@
 # Current Arc mainnet deployment
 
-## October 15 readback and public-research source candidate
+## October 15 public-research release delivered
 
-Public health and OpenAPI readback on October 15 confirm production app **0.27.67**,
-Arc, source **708f2621** (`708f26218c4e31977ad3c52b755798d4eac54bfd`).
-The public-research source candidate reserves app/OpenAPI **0.27.68**,
-stdio/npm/Registry MCP **0.4.23** and Desktop **0.4.21**; deployment and publication
-are pending final-main acceptance. Hosted MCP retains **0.3.18** and extension
-**0.1.4.2**, subject to their role and shipped-input checks.
+Production app/OpenAPI **0.27.68** is live on Arc at source
+**d1b3aff65318fecdf17f8e6f6bcf5e8e0e5ae5b7**. After one combined deployment and
+the exact owned maintenance clear at about `13:40Z`, public health, OpenAPI and
+`/` returned HTTP 200 with maintenance disabled. Exact-source
+[main CI](https://github.com/tang-vu/keryx/actions/runs/38731364014) and
+[Desktop acceptance](https://github.com/tang-vu/keryx/actions/runs/38731364070)
+passed before delivery.
 
-The candidate exposes creation visibility, separates public and recorded question
-totals and supplies an explicit reviewed historical restoration tool. The 156
-reviewed production originals remain a separate guarded operator action; source
-preparation does not assert that their sidecars have been restored. ROOT owns the
-single combined deployment and restoration, preserving original financial data,
-custody, limits and private holds. Earlier deployment records below are historical.
+The reviewed insert-only restoration completed once for **156/156** historical
+questions missing visibility sidecars, with no stale or blocked records. Original
+content, financial records, custody, limits, Operator and private holds were
+preserved. Their original network evidence remains intact across the restored
+records. Separately, the complete bounded Arc public-question population is **99**;
+a 50-row API sample is a separate page
+bound. The archive's observed **115 cited answers** spans research history and
+is a different measure from questions on Arc.
+
+Ordinary research now defaults to Public when no saved preference exists, with
+Public/Unlisted/Private shown before submission. Saved preferences and protected
+research remain authoritative. Read-only browser checks verified populated recent
+questions, a restored public answer, the default chooser and numeric Owner fee
+values. The count/recent cards and chooser fit 390px; the Dashboard source
+leaderboard still causes horizontal overflow, tracked in
+[#513](https://github.com/tang-vu/keryx/issues/513).
+
+Published stdio/npm/official Registry MCP **0.4.23** and Desktop **0.4.21** bind
+the same `d1b3aff6` source; downloaded assets, hashes and npm Sigstore provenance
+were accepted. Owner Desktop installation is unknown. Hosted MCP initialize
+returned HTTP 200 at **0.3.18**; extension **0.1.4.2** retains its verified unchanged
+shipped inputs and existing role. See [distribution](mcp-distribution.md) and
+[surface boundaries](surface-parity.md).
+
+The existing four #274 cases passed after clear, and one Arc Canteen update was
+acknowledged. [#266 is closed](https://github.com/tang-vu/keryx/issues/266#issuecomment-6193908274);
+separate #269 acceptance and other private activation holds remain open. No new
+funding or allowance renewal occurred. Earlier records below remain historical.
 
 ## October 13 deployment record
 

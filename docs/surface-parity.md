@@ -1,12 +1,14 @@
 # Supported-surface release parity
 
-## App68 public-research source candidate — October 15
+## App68 public-research delivery — October 15
 
-Production readback is app **0.27.67 /708f2621**. This source reserves app/OpenAPI
-**0.27.68**, stdio/npm/Registry **0.4.23** and Desktop **0.4.21**. Hosted MCP
-**0.3.18** and extension **0.1.4.2** retain their roles and require final readback
-and shipped-input verification. Source preparation is separate from publication,
-deployment and owner installation.
+Production app/OpenAPI **0.27.68 /d1b3aff6** is live after one combined deployment
+and the exact maintenance clear. Public health, OpenAPI and homepage returned
+HTTP 200. Published stdio/npm/Registry **0.4.23** and Desktop **0.4.21** bind that
+same source, with exact-main acceptance, downloaded asset/hash checks and npm
+Sigstore provenance accepted. Owner Desktop installation remains unknown.
+Hosted MCP initialize returned HTTP 200 at **0.3.18**; extension **0.1.4.2** retains
+verified unchanged shipped inputs. See [distribution evidence](mcp-distribution.md).
 
 Web and desktop browser research show creation visibility and bind hidden drafts
 and results to the verified owner. The embed requires a deliberate Public choice
@@ -19,9 +21,21 @@ separate authority. Public lists and owner exports keep their guarded readers.
 Extension browser handoffs expose the web selection; unchanged paid API requests
 retain their existing contracts.
 
-ROOT owns final-main acceptance, exact-source distribution and one combined
-deployment/restoration. No funding, custody, schedules or private-pilot authority
-is added. See [the policy and surface audit](engineering/public-research-visibility-2026-10-15.md).
+The insert-only restoration completed once for all 156 reviewed original questions,
+preserving their original network evidence. Separately, the complete Arc
+public-question count is 99, distinct from a 50-row API sample and
+the archive's 115 cited answers across research history. Browser readback confirmed
+populated recent questions, a restored public permalink, default Public selection
+and numeric Owner fee values. The count/recent cards and chooser fit 390px;
+the whole Dashboard still has source-leaderboard horizontal overflow, tracked in
+[#513](https://github.com/tang-vu/keryx/issues/513).
+
+The four existing #274 cases passed after clear and one Canteen update was
+acknowledged. [#266 is closed](https://github.com/tang-vu/keryx/issues/266#issuecomment-6193908274);
+separate #269 acceptance remains open. Financial originals, custody, limits,
+Operator and private holds were preserved without new funding, allowance renewal,
+schedules or private-pilot activation. See
+[the policy and surface audit](engineering/public-research-visibility-2026-10-15.md).
 Older candidate sections below preserve historical preparation only.
 
 ## App64 release batch in preparation — October 13
