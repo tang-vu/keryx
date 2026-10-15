@@ -134,9 +134,10 @@ function fixture(session: Session = { address: wallet, role: "asker" }) {
     },
     control<T extends HTMLInputElement | HTMLTextAreaElement>(text: string): T {
       const label = [...container.querySelectorAll("label")].find(value => value.textContent?.trim().startsWith(text));
-      const input = label?.querySelector<T>("input, textarea");
-      if (!input) throw new Error(`Missing actual inbox control: ${text}`);
-      return input;
+      const input = label?.control;
+      if (!(input instanceof window.HTMLInputElement || input instanceof window.HTMLTextAreaElement))
+        throw new Error(`Missing actual inbox control: ${text}`);
+      return input as T;
     },
     async click(text: string) { await ui.act(() => { f.button(text).click(); }); },
     async check(text: string) { await ui.act(() => { f.control<HTMLInputElement>(text).click(); }); },
@@ -256,6 +257,15 @@ describe("compiled owner269 recipient inbox DOM controls (SOURCE UNRUN)", () => 
     expect(f.calls).toHaveLength(2); // Consent response never triggers owner apply, funding or an automatic retry.
   });
 
+  it.each(["accountId", "accountCreatedAt", "memberGeneration", "wallet"] as const)("refuses a proposal for a different %s before allocating an intent", async key => {
+    const f = fixture(); await ready(f);
+    const wrong = { ...manifest, recipient: { ...recipient, [key]: key === "wallet" ? otherWallet : replacement[key] } };
+    await f.paste(JSON.stringify(wrong)); await f.check(copy.acknowledgement); await f.check(copy.financialAcknowledgement);
+    expect(f.button(copy.consent).disabled).toBe(true);
+    await f.act(() => { f.container.querySelector("form")!.dispatchEvent(new f.window.Event("submit", { bubbles: true, cancelable: true })); });
+    expect(f.calls).toHaveLength(1); expect(f.uuid).not.toHaveBeenCalled();
+  });
+
   it("uses the latest full recipient generation from a new qualified GET as the consent precondition", async () => {
     const f = fixture(); await ready(f); await f.click(copy.refresh);
     await f.respond(1, inbox([], replacement)); const proposal = { ...manifest, recipient: replacement };
@@ -285,6 +295,7 @@ describe("compiled owner269 recipient inbox DOM controls (SOURCE UNRUN)", () => 
     const f = fixture(); await ready(f); await consentReady(f); await f.click(copy.consent);
     const original = f.calls[1].init.body; expect(original).toBe(JSON.stringify(consentBody()));
     await f.reject(1); expect(f.status()).toBe(copy.unknown); expect(recoveryJson(f)).toBe(original);
+    expect([...f.control<HTMLTextAreaElement>(copy.recovery).labels!].map(label => label.textContent)).toEqual([copy.recovery]);
     expect(f.container.querySelector("form")).toBeNull(); expect(f.calls).toHaveLength(2);
     await f.render(); expect(recoveryJson(f)).toBe(original); expect(f.calls).toHaveLength(2);
     await f.click(copy.resolve); expect(f.calls[2].init.body).toBe(original);

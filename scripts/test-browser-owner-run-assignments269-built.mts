@@ -118,6 +118,7 @@ type FixtureWindow = Window & typeof globalThis & { owner269: Observation };
 // Literal JS intentionally avoids tsx/esbuild's captured __name helper. Do not
 // serialize a function closing over imports, helpers or a test auth implementation.
 const observerScript = String.raw`(() => {
+  if (location.origin !== ${JSON.stringify(origin)}) return;
   const native = window.fetch.bind(window), plans = [], releases = new Map();
   const state = { realm: crypto.randomUUID(), requests: [], errors: [], events: [], messages: [], paints: [] };
   let markers = [], guarded = false;

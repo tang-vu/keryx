@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { formatLocalizedInstant } from "@/lib/i18n/format";
 import { ownerRunAssignmentMessages as copy } from "@/locales/en/owner-run-assignments";
@@ -20,6 +20,7 @@ export function OwnerRunAssignmentInbox() {
   return <Editor key={session.address.toLowerCase()} wallet={session.address.toLowerCase()} />;
 }
 function Editor({ wallet }: { wallet: string }) {
+  const recoveryId = useId();
   const [inbox, setInbox] = useState<AssignmentInbox | null>(null), [message, setMessage] = useState("");
   const [proposal, setProposal] = useState<Manifest | null>(null), [busy, setBusy] = useState(false);
   const [recovery, setRecovery] = useState<Recovery | null>(null);
@@ -83,7 +84,7 @@ function Editor({ wallet }: { wallet: string }) {
     finally { if (epoch.current === attempt) { locked.current = false; setBusy(false); } }
   }
   function consent(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (!inbox || !proposal || pendingRecovery.current) return;
+    event.preventDefault(); if (!inbox || !proposal || !sameRecipient(proposal.recipient, inbox.recipient) || pendingRecovery.current) return;
     void mutate({ expected: inbox.recipient, input: { action: "consent", requestId: crypto.randomUUID(), manifest: proposal,
       acknowledgeAssignedLabel: true, noFinancialAuthority: true } });
   }
@@ -94,7 +95,7 @@ function Editor({ wallet }: { wallet: string }) {
   return <section className="space-y-5" aria-label={copy.title}>
     <p>{copy.scope}</p><button className={button} disabled={busy} onClick={() => { void refresh(); }}>{copy.refresh}</button>
     {message && <p role="status">{message}</p>}
-    {recovery && <div><label>{copy.recovery}<textarea readOnly className="block w-full border border-line" value={JSON.stringify(recovery)} /></label>
+    {recovery && <div><label htmlFor={recoveryId}>{copy.recovery}</label><textarea id={recoveryId} readOnly className="block w-full border border-line" value={JSON.stringify(recovery)} />
       <button className={button} disabled={busy} onClick={() => { void mutate(recovery); }}>{copy.resolve}</button></div>}
     {inbox && <><div aria-label={copy.profile}><p>{copy.assignedCount}: {inbox.profile.assignedByOwner}</p>
       <p>{copy.claimedCount}: {inbox.profile.claimedFromOwnerAssignment}</p></div>
@@ -113,7 +114,9 @@ function Editor({ wallet }: { wallet: string }) {
       <form onSubmit={consent} className="space-y-3 border border-line p-4">
         <label>{copy.consentManifest}<textarea maxLength={16384} className="block w-full border border-line" required onChange={event => {
           try { const text = event.target.value; if (new TextEncoder().encode(text).length > 16_384) throw new Error();
-            setProposal(manifestSchema.parse(JSON.parse(text))); } catch { setProposal(null); }
+            const parsed = manifestSchema.parse(JSON.parse(text));
+            if (!inbox || !sameRecipient(parsed.recipient, inbox.recipient)) throw new Error();
+            setProposal(parsed); } catch { setProposal(null); }
         }} /></label>
         {proposal && <div><p>{copy.proposalSummary}</p><ul>{proposal.members.map(member => <li key={member.assignmentId}>{member.runId} · {proposal.binding.network}</li>)}</ul></div>}
         <label className="block"><input type="checkbox" required /> {copy.acknowledgement}</label>
