@@ -37,6 +37,15 @@ try {
   buildId = (await readFile(join(dist, "BUILD_ID"), "utf8")).trim();
   assert(buildId, "A successful stock Next build is required");
   await copyNextConfigFixture(source, fixture);
+  // The compiled OG route reads the same bundled assets from its isolated CWD.
+  // Copy only these fixed local font files, retaining their complete bytes.
+  await mkdir(join(fixture, "app/fonts/og"), { recursive: true });
+  for (const name of ["noto-sans-regular.ttf", "noto-sans-math-regular.ttf", "noto-sans-sc-regular.otf"]) {
+    const original = await readFile(join(source, "app/fonts/og", name));
+    const target = join(fixture, "app/fonts/og", name);
+    await writeFile(target, original, { flag: "wx" });
+    assert((await readFile(target)).equals(original), "Retain exact bundled OG font bytes");
+  }
   // Reuse the actual build on Linux. Dependencies resolve through the unchanged
   // repository ancestry; do not add/alter node_modules links, loaders or config.
   await symlink(dist, join(fixture, ".next"), "dir");
