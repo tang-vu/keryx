@@ -3,34 +3,36 @@ export const ASK_STREAM_HEARTBEAT_MS = 15_000;
 
 export function askStreamWriter(controller: ReadableStreamDefaultController<Uint8Array>, signal: AbortSignal) {
   const encoder = new TextEncoder();
-  let stopped = false;
+  let closed = false;
   let heartbeat: ReturnType<typeof setInterval> | undefined;
-  const stop = () => {
-    stopped = true;
+  const stopHeartbeat = () => {
     if (heartbeat !== undefined) clearInterval(heartbeat);
-    signal.removeEventListener("abort", stop);
+    signal.removeEventListener("abort", stopHeartbeat);
   };
   const write = (frame: string) => {
-    if (stopped) return;
+    if (closed) return;
     try { controller.enqueue(encoder.encode(frame)); }
-    catch { stop(); }
+    catch { closed = true; stopHeartbeat(); }
   };
-  if (signal.aborted) stop();
-  else {
-    signal.addEventListener("abort", stop, { once: true });
+  if (!signal.aborted) {
+    signal.addEventListener("abort", stopHeartbeat, { once: true });
     write(": connected\n\n");
-    if (!stopped) {
+    if (!closed && !signal.aborted) {
       heartbeat = setInterval(() => write(": keepalive\n\n"), ASK_STREAM_HEARTBEAT_MS);
       heartbeat.unref?.();
     }
   }
   return {
     send(event: string, data: unknown) {
+      // Retain the route's existing terminal cancellation error while its reader
+      // remains open. Abort still stops normal events, signing and heartbeats.
+      if (signal.aborted && event !== "error") return;
       try { write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); }
       catch { /* Serialization/delivery cannot reopen a disconnected stream. */ }
     },
     close() {
-      stop();
+      closed = true;
+      stopHeartbeat();
       try { controller.close(); } catch { /* A cancelled reader is already closed. */ }
     },
   };

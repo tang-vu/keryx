@@ -29,7 +29,7 @@ it("sends comments through long inference waits without extra agent events and s
   expect(vi.getTimerCount()).toBe(0);
 });
 
-it("stops delivery and clears heartbeat when the caller disconnects", () => {
+it("stops normal delivery and heartbeat on disconnect while preserving the terminal cancellation error", () => {
   vi.useFakeTimers();
   const f = fixture();
   f.abort.abort();
@@ -37,6 +37,11 @@ it("stops delivery and clears heartbeat when the caller disconnects", () => {
   vi.advanceTimersByTime(ASK_STREAM_HEARTBEAT_MS * 2);
   expect(f.frames).toEqual([": connected\n\n"]);
   expect(vi.getTimerCount()).toBe(0);
+  f.writer.send("error", { message: "Research cancelled" });
+  expect(f.frames.at(-1)).toBe('event: error\ndata: {"message":"Research cancelled"}\n\n');
+  f.writer.close();
+  f.writer.send("error", { message: "late" });
+  expect(f.frames).toHaveLength(2);
 });
 
 it("cleans up a cancelled reader and an already aborted request", () => {
