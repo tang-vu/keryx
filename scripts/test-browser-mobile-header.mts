@@ -13,7 +13,7 @@ type FixtureWindow = Window & {
   googleStarts: { reject(error: Error): void }[];
 };
 const mocks: Record<string, string> = {
-  "next/link": `import React from 'react';export default function Link({href,onNavigate,children,...props}){return <a {...props} href={href} onClick={e=>{if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;e.preventDefault();onNavigate?.({preventDefault(){}});window.pendingNavigation=href;}}>{children}</a>}`,
+  "next/link": `import React from 'react';export const useLinkStatus=()=>({pending:false});export default function Link({href,onNavigate,children,...props}){return <a {...props} href={href} onClick={e=>{if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;e.preventDefault();onNavigate?.({preventDefault(){}});window.pendingNavigation=href;}}>{children}</a>}`,
   "next/navigation": `export const usePathname=()=>'/';`,
   "next/image": `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`,
   "wagmi": `import{useSyncExternalStore}from'react';

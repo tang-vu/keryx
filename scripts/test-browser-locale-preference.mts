@@ -89,7 +89,7 @@ const bundle = await build({ stdin: { sourcefile: "locale-fixture.tsx", loader: 
     builder.onResolve({ filter: /^(next\/link|next\/navigation)$/ }, args => ({ path: args.path, namespace: "locale-fixture" }));
     builder.onResolve({ filter: /\/(wallet-menu|dispatch-wire)$/ }, args => ({ path: args.path, namespace: "locale-fixture" }));
     builder.onLoad({ filter: /.*/, namespace: "locale-fixture" }, args => ({ loader: "js", resolveDir: process.cwd(), contents:
-      args.path === "next/link" ? `import React from'react';export default function Link({href,children,onNavigate,...props}){return React.createElement('a',{...props,href},children)}` :
+      args.path === "next/link" ? `import React from'react';export const useLinkStatus=()=>({pending:false});export default function Link({href,children,onNavigate,...props}){return React.createElement('a',{...props,href},children)}` :
       args.path === "next/navigation" ? `export const usePathname=()=>location.pathname;` :
       args.path.endsWith("wallet-menu") ? `import React from'react';export const WalletMenu=()=>React.createElement('button',null,'Fixture wallet session');` :
       `export const DispatchWire=()=>null;` }));

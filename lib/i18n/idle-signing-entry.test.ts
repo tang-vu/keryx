@@ -11,6 +11,7 @@ import { signingDisplayPrefetchPath } from "../../test-support/signing-display-p
 // Observe the Next Link contract without loading another route or wallet SDK.
 // This is SSR source coverage, not the real compiled signing-screen observation.
 vi.mock("next/link", () => ({
+  useLinkStatus: () => ({ pending: false }),
   default: ({ prefetch, onNavigate, ...props }: ComponentProps<"a"> & {
     prefetch?: boolean | null; onNavigate?: () => void;
   }) => {
