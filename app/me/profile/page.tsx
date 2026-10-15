@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { PrivateProfileView } from "./private-profile-view";
+import { OwnerRunAssignmentInbox } from "@/components/keryx/owner-run-assignment-inbox";
 import { createMessages } from "@/lib/i18n/messages";
 
 const copy = createMessages("en");
@@ -11,5 +12,6 @@ export default function ProfilePage() {
     <h1 className="font-serif text-2xl text-ink">{copy("privateProfile.title")}</h1>
     <p className="mt-2 mb-6 text-sm text-ink-3">{copy("privateProfile.privacyBoundary")}</p>
     <PrivateProfileView />
+    <div className="mt-10 border-t border-line pt-8"><OwnerRunAssignmentInbox readOnlyView /></div>
   </main></>;
 }
