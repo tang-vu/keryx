@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - "lib/db/**"
+      - "lib/owner-run-assignments/**"
+      - "scripts/owner-run-assignment.mts"
+      - "vitest.config.mts"
       - "lib/operator/gateway-funding-composition.test.ts"
       - "lib/sources/enrolled-content-cache*"
       - "lib/sources/content-cache*"
@@ -38,6 +41,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: "24.21.0"
@@ -49,6 +54,108 @@ jobs:
         run: npx vitest run lib/db/enrolled-sqlite-adapter.test.ts lib/sources/enrolled-content-cache.test.ts lib/ipfs/content-crypto.test.ts lib/sources/content-cache.test.ts lib/operator/gateway-funding-composition.test.ts
       - name: Existing guarded storage boundaries
         run: npx vitest run lib/db/storage-browser-schema.test.ts lib/db/storage-provenance.test.ts lib/db/storage-provenance-snapshot.test.ts
+      - name: Owner269 ordinary Windows/non-root refusal (synthetic)
+        shell: bash
+        run: |
+          node <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs'), path = require('node:path');
+          const { createHash } = require('node:crypto'), { spawnSync } = require('node:child_process');
+          assert(process.platform === 'win32' || (process.getuid?.() > 0 && process.geteuid?.() > 0), 'ordinary lane requires Windows or actual non-root POSIX');
+          const file = 'lib/db/owner-run-assignments-owner.test.ts';
+          const sourcePins = [[file, 'c8c9dbabeda8f1b39115647319648727b59b4348c9e7195a101d93b20736b462'], ['scripts/owner-run-assignment.mts', '042ada7198fc53e8891d875ed7c13bd0209f5a275d61252fb1173b0446d7f6a2']].map(([p, hash]) => {
+            const bytes = fs.readFileSync(p), digest = data => createHash('sha256').update(data).digest('hex');
+            // Compare canonical checkout text only; execute and retain the actual unchanged raw bytes.
+            assert.equal(digest(bytes.toString('utf8').replace(/\r\n/g, '\n')), hash, `reviewed source changed: ${p}`);
+            return { path: p, sha256: digest(bytes), bytes: bytes.length, canonicalLfSha256: hash };
+          });
+          const out = path.join(process.env.RUNNER_TEMP, 'owner269-evidence'); fs.mkdirSync(out, { recursive: true });
+          const home = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP, 'owner269-refusal-'));
+          try {
+            const env = { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, HOME: home, USERPROFILE: home, TEMP: home, TMP: home, TMPDIR: home, CI: '1', KERYX_NETWORK: 'arcTestnet', NEXT_PUBLIC_KERYX_NETWORK: 'arcTestnet', KERYX_FORCE_OFFLINE: '1' };
+            const r = spawnSync(process.execPath, ['node_modules/vitest/vitest.mjs', 'run', file, '--reporter=verbose', '--reporter=json', `--outputFile.json=${path.join(out, 'ordinary.json')}`], { env, encoding: 'utf8', timeout: 360000, maxBuffer: 16 * 1024 * 1024 });
+            fs.writeFileSync(path.join(out, 'ordinary.stdout.txt'), r.stdout || ''); fs.writeFileSync(path.join(out, 'ordinary.stderr.txt'), r.stderr || '');
+            fs.writeFileSync(path.join(out, 'ordinary-process.json'), JSON.stringify({ sourcePins, platform: process.platform, uid: process.getuid?.(), euid: process.geteuid?.(), status: r.status, signal: r.signal, error: r.error?.message }, null, 2));
+            process.stdout.write(r.stdout || ''); process.stderr.write(r.stderr || '');
+            assert(!r.error && !r.signal && r.status === 0, 'ordinary named test failed');
+            const report = JSON.parse(fs.readFileSync(path.join(out, 'ordinary.json'), 'utf8'));
+            assert.equal(report.success, true); assert.equal(report.numTotalTests, 12); assert.equal(report.numPassedTests, 2); assert.equal(report.numPendingTests, 10); assert.equal(report.numFailedTests, 0); assert.equal(report.numTodoTests, 0);
+            assert.equal(report.testResults.length, 1); assert.equal(path.resolve(report.testResults[0].name), path.resolve(file));
+            const cases = report.testResults[0].assertionResults; assert.equal(cases.length, 12);
+            for (const title of ['executes the unchanged CLI on Windows/non-root and refuses owner access without mutation', 'refuses readonly owner mutation before parsing/capability and retires unknown native schemas on every platform'])
+              assert.equal(cases.filter(c => c.title === title && c.status === 'passed').length, 1);
+            assert.equal(cases.filter(c => c.ancestorTitles.join(' ') === 'fresh owner269 POSIX uid0 acceptance, exact local CLI (SOURCE UNRUN)' && c.status === 'skipped').length, 10);
+          } finally { fs.rmSync(home, { recursive: true, force: true }); }
+          NODE
+      - name: Owner269 genuine POSIX uid0 positive acceptance (synthetic file only)
+        if: runner.os == 'Linux'
+        shell: bash
+        timeout-minutes: 8
+        run: |
+          # Proposed narrow privilege scope: independent source/security review required before application.
+          # No container is configured in this lane. Only this named synthetic test runs via sudo.
+          node_bin="$(command -v node)"
+          owner_test_root="$(mktemp -d "$RUNNER_TEMP/owner269-ci.XXXXXX")"
+          mkdir -p "$owner_test_root/source/scripts" "$owner_test_root/home" "$owner_test_root/tmp" "$RUNNER_TEMP/owner269-evidence"
+          find lib -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.mts' -o -name '*.mjs' -o -name '*.json' \) -exec cp --parents --target-directory="$owner_test_root/source" -- {} +
+          cp -- scripts/owner-run-assignment.mts "$owner_test_root/source/scripts/"
+          cp -- package.json package-lock.json tsconfig.json vitest.config.mts "$owner_test_root/source/"
+          cp -a -- node_modules "$owner_test_root/source/"
+          umask 022
+          sudo -n -- /usr/bin/env -i PATH="$(dirname "$node_bin"):/usr/bin:/bin" HOME="$owner_test_root/home" TMPDIR="$owner_test_root/tmp" CI=1 KERYX_NETWORK=arcTestnet NEXT_PUBLIC_KERYX_NETWORK=arcTestnet KERYX_FORCE_OFFLINE=1 "$node_bin" - "$owner_test_root" "$RUNNER_TEMP/owner269-evidence" "$RUNNER_TEMP" <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs'), path = require('node:path');
+          const { createHash } = require('node:crypto'), { spawnSync } = require('node:child_process');
+          assert.equal(process.platform, 'linux'); assert.equal(process.getuid?.(), 0); assert.equal(process.geteuid?.(), 0);
+          const base = fs.realpathSync(process.argv[2]), out = fs.realpathSync(process.argv[3]);
+          assert.equal(path.dirname(base), fs.realpathSync(process.argv[4])); assert.match(path.basename(base), /^owner269-ci\.[A-Za-z0-9]+$/);
+          assert.equal(out, path.join(fs.realpathSync(process.argv[4]), 'owner269-evidence'));
+          const source = path.join(base, 'source'), file = 'lib/db/owner-run-assignments-owner.test.ts';
+          try {
+            process.chdir(source);
+            const hash = p => createHash('sha256').update(fs.readFileSync(p)).digest('hex');
+            assert.equal(hash(file), 'c8c9dbabeda8f1b39115647319648727b59b4348c9e7195a101d93b20736b462');
+            assert.equal(hash('scripts/owner-run-assignment.mts'), '042ada7198fc53e8891d875ed7c13bd0209f5a275d61252fb1173b0446d7f6a2');
+            const pins = [];
+            const pin = p => pins.push({ path: p, sha256: hash(p), bytes: fs.statSync(p).size });
+            function walk(dir) { for (const d of fs.readdirSync(dir, { withFileTypes: true })) { const p = path.join(dir, d.name); assert(!d.isSymbolicLink(), `unexpected source symlink: ${p}`); if (d.isDirectory()) walk(p); else { assert(d.isFile()); pin(p); } } }
+            walk('lib'); walk('scripts'); for (const p of ['package.json', 'package-lock.json', 'tsconfig.json', 'vitest.config.mts']) pin(p);
+            fs.writeFileSync(path.join(out, 'posix-source-pins.json'), JSON.stringify({ node: process.version, vitest: JSON.parse(fs.readFileSync('node_modules/vitest/package.json', 'utf8')).version, files: pins }, null, 2));
+            const r = spawnSync(process.execPath, ['node_modules/vitest/vitest.mjs', 'run', file, '--reporter=verbose', '--reporter=json', `--outputFile.json=${path.join(out, 'posix.json')}`], { cwd: source, env: process.env, encoding: 'utf8', timeout: 360000, maxBuffer: 16 * 1024 * 1024 });
+            fs.writeFileSync(path.join(out, 'posix.stdout.txt'), r.stdout || ''); fs.writeFileSync(path.join(out, 'posix.stderr.txt'), r.stderr || '');
+            fs.writeFileSync(path.join(out, 'posix-process.json'), JSON.stringify({ platform: process.platform, uid: process.getuid(), euid: process.geteuid(), status: r.status, signal: r.signal, error: r.error?.message }, null, 2));
+            process.stdout.write(r.stdout || ''); process.stderr.write(r.stderr || '');
+            for (const p of pins) assert.equal(hash(p.path), p.sha256, `source changed during named test: ${p.path}`);
+            assert(!r.error && !r.signal && r.status === 0, 'genuine owner named test failed');
+            const report = JSON.parse(fs.readFileSync(path.join(out, 'posix.json'), 'utf8'));
+            assert.equal(report.success, true); assert.equal(report.numTotalTests, 12); assert.equal(report.numPassedTests, 11); assert.equal(report.numPendingTests, 1); assert.equal(report.numFailedTests, 0); assert.equal(report.numTodoTests, 0);
+            assert.equal(report.testResults.length, 1); assert.equal(path.resolve(report.testResults[0].name), path.resolve(file));
+            const cases = report.testResults[0].assertionResults; assert.equal(cases.length, 12);
+            const suite = 'fresh owner269 POSIX uid0 acceptance, exact local CLI (SOURCE UNRUN)';
+            const expected = [
+              'atomically applies two fresh members, resolves a discarded response, undoes, and replays historical receipt without restoration',
+              'rolls back the first member and operation audit when the second original changed after genuine consent',
+              ...['member', 'credential', 'account'].map(m => `refuses fresh apply after current ${m} lineage changed without recording an assignment`),
+              'races the unchanged native ticket issuer against the owner CLI on two real connections; only one can occupy',
+              ...['original', 'a2a'].map(m => `serializes an existing ${m} writer held on a second connection, then refuses the changed original`),
+              'guards occupied originals on both UPDATE keys, REPLACE, DELETE, A2A association and ticket issue; undo releases only metadata occupancy',
+              'refuses changed manifests and missing fences through the genuine owner CLI',
+            ];
+            const positives = cases.filter(c => c.ancestorTitles.join(' ') === suite);
+            assert.equal(expected.length, 10); assert.deepEqual(positives.map(c => c.title).sort(), expected.sort());
+            for (const c of positives) { assert.equal(c.status, 'passed', c.fullName); assert.equal(c.failureMessages.length, 0); assert.equal(typeof c.duration, 'number'); }
+            for (const [title, status] of [['refuses readonly owner mutation before parsing/capability and retires unknown native schemas on every platform', 'passed'], ['executes the unchanged CLI on Windows/non-root and refuses owner access without mutation', 'skipped']])
+              assert.equal(cases.filter(c => c.title === title && c.status === status).length, 1);
+          } finally { process.chdir(path.dirname(base)); fs.rmSync(base, { recursive: true, force: true }); }
+          NODE
+      - name: Retain named synthetic owner269 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: owner269-synthetic-${{ matrix.os }}-${{ github.sha }}
+          path: ${{ runner.temp }}/owner269-evidence/
+          if-no-files-found: error
+          retention-days: 7
       - name: Project TypeScript
         run: npx tsc --noEmit
       - name: Scoped lint

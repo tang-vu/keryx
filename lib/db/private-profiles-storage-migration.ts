@@ -8,10 +8,13 @@ import { validateStorageIdentity, type StorageIdentity } from "./storage-identit
 import { assertStorageFences, assertStorageIdentity, holdStorageTarget, installStorageFences,
   STORAGE_IDENTITY_TABLE, storageFenceStatements } from "./storage-identity-sqlite";
 
+let expectedMigrationProfiles: readonly (readonly [string, string])[] | undefined;
+
 /** Two exact mainnet pairs: archive absent/present, each moving from the
  * original whole schema to the fixed complete native-user bundle. */
 export function privateProfilesMigrationProfiles(): readonly (readonly [string, string])[] {
-  return Object.freeze([false, true].map(publicReferenceArchive => {
+  if (expectedMigrationProfiles) return expectedMigrationProfiles;
+  const profiles = Object.freeze([false, true].map(publicReferenceArchive => {
     const db = new DatabaseSync(":memory:");
     try {
       db.exec("BEGIN");
@@ -23,6 +26,9 @@ export function privateProfilesMigrationProfiles(): readonly (readonly [string, 
       return Object.freeze([before, after] as const);
     } finally { db.close(); }
   }));
+  // Only immutable source-reference strings; publish after both variants succeed.
+  expectedMigrationProfiles = profiles;
+  return profiles;
 }
 function excluded(db: DatabaseSync, identity: StorageIdentity) {
   return new Set([STORAGE_IDENTITY_TABLE, "storage_identity_no_update", "storage_identity_no_delete",
