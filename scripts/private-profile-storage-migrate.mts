@@ -11,6 +11,7 @@ import { STORAGE_SNAPSHOT_LIMITS as limits } from "../lib/db/storage-identity-sn
 import { migratePrivateProfilesStorage, privateProfilesMigrationProfiles,
   snapshotPrivateProfilesStorage } from "../lib/db/private-profiles-storage-migration";
 import { NATIVE_USER_DOMAIN_TABLES } from "../lib/db/native-user-domain-schema-data";
+import { migrateTopicWatchesStorage, topicWatchesMigrationProfiles } from "../lib/db/topic-watches-storage-migration";
 
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 function fail(): never { throw new Error("Private profile storage migration refused; preserve originals, backup and stopped writers"); }
@@ -36,7 +37,7 @@ function syncDirectory(file: string): void {
 export function inspectPrivateProfileStorage(manifestFile: string) {
   const manifest = inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: manifestFile });
   if (manifest.backend.kind !== "sqlite" || manifest.identity.authorityMode !== "mainnet-real") fail();
-  const pairs = privateProfilesMigrationProfiles();
+  const pairs = [...privateProfilesMigrationProfiles(), ...topicWatchesMigrationProfiles()];
   const snapshot = openSnapshot(manifest.backend.databasePath, manifest.identity, pairs.flat());
   try { return { format: "keryx-private-profile-storage-inspection-v1", manifestDigest: sha(canonicalJson(manifest)),
     identityDigest: storageIdentityDigest(manifest.identity), targetDigest: snapshot.held.identity,
@@ -56,7 +57,8 @@ export async function migratePrivateProfileStorage(options: PrivateProfileMigrat
   if (manifest.backend.kind !== "sqlite" || manifest.identity.authorityMode !== "mainnet-real" || sha(canonicalJson(manifest)) !== options.expectedManifestDigest
     || storageIdentityDigest(manifest.identity) !== options.expectedIdentityDigest) fail();
   const recheck = () => { if (canonicalJson(inspectStorageDeploymentManifest({ KERYX_STORAGE_MANIFEST: options.manifest })) !== canonicalJson(manifest)) fail(); };
-  const pairs = privateProfilesMigrationProfiles(), profiles = pairs.flat();
+  const historicalPairs = topicWatchesMigrationProfiles();
+  const pairs = [...privateProfilesMigrationProfiles(), ...historicalPairs], profiles = pairs.flat();
   const source = openSnapshot(manifest.backend.databasePath, manifest.identity, profiles);
   let receiptFd: number | undefined, outputFd: number | undefined, outputHeld: ReturnType<typeof holdStorageTarget> | undefined, sourceClosed = false;
   const append = (record: unknown) => {
@@ -83,7 +85,11 @@ export async function migratePrivateProfileStorage(options: PrivateProfileMigrat
     let result: ReturnType<typeof migratePrivateProfilesStorage>;
     try {
       if (migrationTarget.identity !== source.held.identity) fail();
-      result = migratePrivateProfilesStorage(manifest.backend.databasePath, manifest.identity, db => {
+      // Dispatch only after this same verified backup. The helper rechecks the
+      // exact profile under EXCLUSIVE and the callback compares the full source.
+      const migrate = historicalPairs.some(([before, after]) => before !== after && sha(before) === source.value.schemaDigest)
+        ? migrateTopicWatchesStorage : migratePrivateProfilesStorage;
+      result = migrate(manifest.backend.databasePath, manifest.identity, db => {
         migrationTarget.verify(); recheck(); outputHeld!.verify();
         if (canonicalJson(snapshotPrivateProfilesStorage(db, manifest.identity, profiles)) !== canonicalJson(source.value)) fail();
         const retained = openSnapshot(options.backup, manifest.identity, profiles);

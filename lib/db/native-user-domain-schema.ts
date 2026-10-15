@@ -9,6 +9,7 @@ import { RUN_CLAIMS_SQL } from "./run-claims-sqlite";
 import { RUN_PRIVACY_SQL } from "./run-privacy-sqlite";
 import { PUBLIC_PROFILES_SQL } from "./public-profiles-sqlite";
 import { DECISION_REVIEWS_SQL } from "./decision-reviews-sqlite";
+import { TOPIC_WATCHES_SQL } from "./topic-watches-schema";
 
 export { NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema-data";
 
@@ -18,7 +19,7 @@ export { NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema-data";
 export function installNativeUserDomainSchema(db: DatabaseSync): void {
   if (!db.isTransaction) throw new Error("Native user-domain installation requires an owned transaction");
   for (const sql of [PRIVATE_PROFILES_SQL, PROFILE_IDENTITIES_SQL, PRIVATE_BIBLIOGRAPHIES_SQL,
-    DELIVERABLE_ACCEPTANCE_SQL, RUN_CLAIMS_SQL, RUN_PRIVACY_SQL, PUBLIC_PROFILES_SQL, DECISION_REVIEWS_SQL]) db.exec(sql);
+    DELIVERABLE_ACCEPTANCE_SQL, RUN_CLAIMS_SQL, RUN_PRIVACY_SQL, PUBLIC_PROFILES_SQL, DECISION_REVIEWS_SQL, TOPIC_WATCHES_SQL]) db.exec(sql);
   for (const entry of ACCOUNT_MEMBERSHIP_SCHEMA_DATA) if (entry.sql !== null) db.exec(entry.sql);
   db.prepare("INSERT INTO deliverable_acceptance_store(singleton,id) VALUES(1,?)").run(randomUUID());
 }

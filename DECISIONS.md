@@ -1,5 +1,26 @@
 # Keryx — Decision Log
 
+## Reuse the protected native-user migration for historical metadata - 2026-10-15
+
+The deployed full19 metadata schema is a migration-only reference, never an extra
+runtime profile. Keep the existing six-field selector and private-profile command.
+Only after the same verified no-replace typed backup, dispatch the exact known
+historical schema digest to the existing metadata helper; retain the original
+private-profile core for legacy baseline and already-current sources.
+
+Additive SQL comes only from the actual compiled source installer in an isolated
+reference database. Admit fixed topic-only full20 or coherent topic/chat full22;
+unknown/partial families and pending_job_owners refuse. New tables are empty with
+three identity fences; all old schema and typed originals, including pending
+liabilities and the existing singleton, remain exact. Runtime admission remains
+four profiles. Changed targets require changed-source acceptance, not a flag or
+caller-supplied table grant. No startup DDL, automatic restore or signing resume.
+
+The source proposal joins the same #284 outcome; parent owns actual current20
+command/failure checks, build, CI and release handoff. The coordinator alone owns
+all-writer drain, protected backup/manifest bindings and eventual batch execution.
+See [the operational contract](docs/engineering/native-metadata-migration263-284-20261015.md).
+
 ## Make installation and integrations discoverable — 2026-10-12
 
 Owner requested complete website guidance for app installation, MCP, API,
