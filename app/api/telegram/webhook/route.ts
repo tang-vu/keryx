@@ -24,6 +24,10 @@ import { hostedRunClaimsEnabled, prepareHostedRunClaim } from "@/lib/run-claims/
 import { privateRunClaimText, type PrivateRunClaimPacket } from "@/lib/run-claims/delivery";
 import { prepareTelegramPrivateReply, type TelegramPrivatePlaceholder } from "@/lib/run-claims/telegram-private";
 import { config } from "@/lib/config";
+import { getDb } from "@/lib/db";
+import { chatControlReply, exactChatControl, linkedChatOwner } from "@/lib/chat-accounts/service";
+import { telegramChatRecipient } from "@/lib/chat-accounts/provider-recipient";
+import type { ChatRecipient } from "@/lib/chat-accounts/contracts";
 import { botResearchMessages } from "@/lib/bots/research-messages";
 import { botControlResponse, parseBotControl } from "@/lib/bots/language";
 import { botAnswerPresentation } from "@/lib/bots/answer-preference";
@@ -80,7 +84,15 @@ export async function POST(req: NextRequest) {
       return Response.json({ ok: true });
     }
     const privateChat = update.message?.chat?.type === "private" && chatId === userId;
-    return Response.json({ method: "sendMessage", chat_id: chatId, text: telegramAccountLinkingUnavailable,
+    const recipient = telegramChatRecipient(update), command = exactChatControl(update.message?.text ?? "");
+    let text = telegramAccountLinkingUnavailable;
+    if (recipient && command) {
+      try { text = await chatControlReply({ command, recipient, db: getDb,
+        binding: { origin: new URL(config.baseUrl).origin, network: config.networkId } }); }
+      catch { /* Never echo arguments, credentials or storage/provider errors. */ }
+    }
+    return Response.json({ method: "sendMessage", chat_id: chatId, text,
+      ...(text === telegramAccountLinkingUnavailable ? {} : { link_preview_options: { is_disabled: true } }),
       ...(privateChat ? { protect_content: true } : {}) });
   }
   const control = parseBotControl(update.message?.text ?? "");
@@ -120,7 +132,7 @@ export async function POST(req: NextRequest) {
   }
 
   const budget = Math.min(config.defaultBudget, config.anonMaxBudget);
-  after(() => runAndReply(cmd, budget));
+  after(() => runAndReply(cmd, budget, telegramChatRecipient(update, true)));
   return Response.json({ ok: true });
 }
 
@@ -132,10 +144,14 @@ function secretMatches(presented: string, expected: string): boolean {
 }
 
 /** Posts a placeholder, runs the agent, then edits the placeholder into the answer. */
-async function runAndReply(cmd: AskMessage, budget: number) {
+async function runAndReply(cmd: AskMessage, budget: number, recipient: ChatRecipient | null) {
   const queryId = crypto.randomUUID();
-  let privateClaim;
-  try { privateClaim = await prepareHostedRunClaim(queryId); }
+  let privateClaim, owner: string | undefined;
+  try {
+    // Default-OFF research keeps its storage-free anonymous admission contract.
+    if (hostedRunClaimsEnabled() && recipient) owner = await linkedChatOwner(await getDb(), recipient, { origin: new URL(config.baseUrl).origin, network: config.networkId });
+    privateClaim = await prepareHostedRunClaim(queryId, owner);
+  }
   catch { return; } // Gated ordinary admission must fail before research/providers.
   const privateReply = hostedRunClaimsEnabled()
     ? await prepareTelegramPrivateReply(cmd, body => callTelegram<TelegramPrivatePlaceholder>("sendMessage", body)) : null;
@@ -158,6 +174,7 @@ async function runAndReply(cmd: AskMessage, budget: number) {
       budget,
       queryId,
       origin: "web",
+      ...(owner ? { asker: owner, fundingOwner: "treasury" as const } : {}),
       provenance: { version: 1, surface: "telegram", ownershipMethod: "unknown" },
     });
     packet = await privateClaim?.complete(run);
