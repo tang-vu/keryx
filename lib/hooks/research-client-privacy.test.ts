@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement } from "react";
+import { act, createElement, useLayoutEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AskForm } from "@/components/keryx/ask-form";
@@ -40,8 +40,9 @@ class Channel {
   postMessage() { /* No peer or real browser transport. */ }
 }
 function Probe({ parent }: { parent?: "public" | "unlisted" | "private" }) {
-  preference = useResearchVisibility(parent);
-  return createElement("output", null, preference.status);
+  const value = useResearchVisibility(parent);
+  useLayoutEffect(() => { preference = value; });
+  return createElement("output", null, value.status);
 }
 async function flush() { await act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); }); }
 async function render(node: Parameters<Root["render"]>[0]) {
