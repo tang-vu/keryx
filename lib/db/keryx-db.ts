@@ -3,6 +3,7 @@ import type { PublicReference } from "../public-references/catalog";
 import type { PublicReferenceArchiveDb } from "../public-references/archive";
 import type { PrivateProfilesStore } from "../profiles/private-profile";
 import type { PrivateBibliographiesStore } from "../bibliographies/private-bibliography";
+import type { TopicWatchesPort } from "./topic-watches-sqlite";
 import type { ZoteroStore } from "../references/zotero-contract";
 import type { ProfileIdentitiesStore } from "../profiles/verified-identities";
 import type { SourceClaim, SourceClaimChallenge, IssueSourceClaimChallenge, VerifySourceClaim, BindSourceClaim, UpdateSourceClaimPolicy } from "../sources/public-source-claim";
@@ -235,6 +236,8 @@ export interface KeryxDB extends PublicReferenceArchiveDb {
   readonly privateProfiles?: PrivateProfilesStore;
   /** Explicit owner-controlled metadata snapshots; absent on unsupported/enrolled adapters. */
   readonly privateBibliographies?: PrivateBibliographiesStore;
+  /** Hidden selected-native manual metadata port; no ordinary or remote fallback. */
+  readonly topicWatches?: TopicWatchesPort;
   /** Explicitly enabled ordinary encrypted reference integration only. */
   readonly zotero?: ZoteroStore;
   /** Bounded ordinary current-store attribution only; absent on sealed/native/archive readers. */

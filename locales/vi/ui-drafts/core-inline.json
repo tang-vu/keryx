@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "lib/i18n/messages.ts",
-  "sourceSha256": "b502c68d42365207da88c425ef26022f48387ed1ec6903e6409a026c2f0d5902",
+  "sourceSha256": "35c58250afc3e1f53dbef39a646bfe8f90d2d4c008c0002a5457a7393c4842e1",
   "entries": {
     "navigation.home": {
       "source": "Home",
