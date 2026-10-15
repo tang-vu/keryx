@@ -138,7 +138,15 @@ describe.runIf(genuineOwnerRunner)("fresh owner269 POSIX uid0 acceptance, exact 
         raw.prepare("UPDATE account267_members SET generation=? WHERE wallet=?").run("8".repeat(64), wallet);
         raw.prepare("UPDATE account267_credentials SET member_generation=? WHERE wallet=?").run("8".repeat(64), wallet);
       } else if (mode === "credential") raw.prepare("UPDATE account267_credentials SET generation=? WHERE wallet=?").run("8".repeat(64), wallet);
-      else raw.prepare("UPDATE account267_accounts SET created_at=created_at+1 WHERE account_id=?").run(f.recipient.accountId);
+      else {
+        // Creation time is immutable. Move only the synthetic current member and
+        // credential to a distinct account; retain the old account/session as stale evidence.
+        const nextAccountId = `acct_${"8".repeat(64)}`;
+        raw.prepare("INSERT INTO account267_accounts(account_id,revision,created_at) VALUES(?,1,?)")
+          .run(nextAccountId, f.recipient.accountCreatedAt + 1);
+        raw.prepare("UPDATE account267_members SET account_id=? WHERE wallet=?").run(nextAccountId, wallet);
+        raw.prepare("UPDATE account267_credentials SET account_id=? WHERE wallet=?").run(nextAccountId, wallet);
+      }
     });
     const before = f.oldTyped(), apply: OwnerAction = { action: "apply", requestId: randomUUID(), manifest: f.manifest, consentId };
     await expect(f.invoke("apply", apply)).rejects.toThrow();

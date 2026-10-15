@@ -63,7 +63,7 @@ jobs:
           const { createHash } = require('node:crypto'), { spawnSync } = require('node:child_process');
           assert(process.platform === 'win32' || (process.getuid?.() > 0 && process.geteuid?.() > 0), 'ordinary lane requires Windows or actual non-root POSIX');
           const file = 'lib/db/owner-run-assignments-owner.test.ts';
-          const sourcePins = [[file, '8d4aaea5165b10325da1909d7552d5b9a229aa5e795a64217e53fb2b6453a725'], ['scripts/owner-run-assignment.mts', '042ada7198fc53e8891d875ed7c13bd0209f5a275d61252fb1173b0446d7f6a2']].map(([p, hash]) => {
+          const sourcePins = [[file, 'c8c9dbabeda8f1b39115647319648727b59b4348c9e7195a101d93b20736b462'], ['scripts/owner-run-assignment.mts', '042ada7198fc53e8891d875ed7c13bd0209f5a275d61252fb1173b0446d7f6a2']].map(([p, hash]) => {
             const bytes = fs.readFileSync(p), digest = data => createHash('sha256').update(data).digest('hex');
             // Compare canonical checkout text only; execute and retain the actual unchanged raw bytes.
             assert.equal(digest(bytes.toString('utf8').replace(/\r\n/g, '\n')), hash, `reviewed source changed: ${p}`);
@@ -114,7 +114,7 @@ jobs:
           try {
             process.chdir(source);
             const hash = p => createHash('sha256').update(fs.readFileSync(p)).digest('hex');
-            assert.equal(hash(file), '8d4aaea5165b10325da1909d7552d5b9a229aa5e795a64217e53fb2b6453a725');
+            assert.equal(hash(file), 'c8c9dbabeda8f1b39115647319648727b59b4348c9e7195a101d93b20736b462');
             assert.equal(hash('scripts/owner-run-assignment.mts'), '042ada7198fc53e8891d875ed7c13bd0209f5a275d61252fb1173b0446d7f6a2');
             const pins = [];
             const pin = p => pins.push({ path: p, sha256: hash(p), bytes: fs.statSync(p).size });
