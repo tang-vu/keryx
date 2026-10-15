@@ -91,6 +91,12 @@ try {
         if (pathname.startsWith("/api/")) {
           if (mode === "error" && pathname === "/api/metrics") return route.fulfill({ status: 503, json: { error: "unavailable" } });
           if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "account-unavailable" ? { recordedAccounts: null } : mode === "account-malformed" ? { recordedAccounts: 1.5 } : mode === "account-zero" ? { recordedAccounts: 0 } : mode === "account-legacy" ? { recordedAccounts: undefined } : {}), ...(Object.hasOwn(guestModes, mode) ? { guestQuestions: guestModes[mode] } : {}), ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [] } });
+          if (pathname === "/api/runs/summary") {
+            assert.equal(requested.searchParams.get("network"), network === "arc" ? "eip155:5042" : "eip155:5042002");
+            assert.equal(requested.searchParams.get("period"), "all");
+            if (mode === "count-unavailable") return route.fulfill({ status: 503, json: { error: "unavailable" } });
+            return route.fulfill({ json: { complete: true, network: requested.searchParams.get("network"), period: "all", cohort: "default", publicQuestions: mode === "empty-history" ? 0 : 18 } });
+          }
           if (pathname === "/api/runs") {
             assert.equal(requested.searchParams.get("network"), network === "arc" ? "eip155:5042" : "eip155:5042002");
             assert.equal(requested.searchParams.get("period"), "all");
@@ -132,7 +138,8 @@ try {
       await page.getByText("28 recorded questions", { exact: true }).waitFor();
       await page.getByText("Recent public questions", { exact: true }).waitFor();
       await page.getByText("No public questions to display.", { exact: true }).waitFor();
-      await page.getByText(/Recorded totals include all recorded questions/).waitFor();
+      await page.getByText(/Recorded totals cover all saved activity in this database/).waitFor();
+      await page.getByText(`0 public questions on ${network === "arc" ? "Arc mainnet" : "Arc Testnet"}`, { exact: true }).waitFor();
       assert.equal(await page.getByText("No dispatches yet.", { exact: true }).count(), 0);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, `Empty public history overflow ${width}`);
       await page.screenshot({ path: path.join(screenshots, `ledger-empty-public-${network}-${width}.png`), fullPage: true });
@@ -141,6 +148,12 @@ try {
       await open("/dashboard");
       await page.getByText(/Question records unavailable/).waitFor();
       assert.equal(await page.getByText("No public questions to display.", { exact: true }).count(), 0);
+
+      mode = "count-unavailable";
+      await open("/dashboard");
+      await page.getByText(/Public question count unavailable/).waitFor();
+      assert.equal(await page.getByText(/^0 public questions on /).count(), 0);
+      await page.getByText(run.question).waitFor();
 
       mode = "error";
       await open("/dashboard");

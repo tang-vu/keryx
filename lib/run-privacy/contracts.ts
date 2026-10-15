@@ -26,6 +26,8 @@ export const pendingPollSchema=z.object({queryId:z.string().regex(/^a2a_[a-f0-9]
 export type PendingPoll=z.infer<typeof pendingPollSchema>;
 export type PrivacyOffer=Pick<import("../types").GapIntent,"id"|"gapId"|"sourceId"|"sourceItemLink"|"itemId"|"contentVersion"|"articleOfferId"|"ownerWallet"|"status"|"attempts"|"retryRunId"|"coverage"|"rewardUsdc"|"createdAt"|"updatedAt">;
 export interface RunPrivacyStore {
+  /** Admitted, writable creation storage; call before provider or payment effects. */
+  creationReady(): Promise<void>;
   /** Filters in storage before retrieving any text; hidden and erased originals never leave this port. */
   read(id: string, actor?: PrivacyActor): Promise<PrivacyRead>;
   list(query: PrivacyList): Promise<QueryRun[]>;

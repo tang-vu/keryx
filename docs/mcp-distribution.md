@@ -1,5 +1,19 @@
 # MCP package distribution
 
+## App68 public-research source candidate — October 15
+
+Source reserves app/OpenAPI **0.27.68**, stdio/npm/official Registry **0.4.23** and
+Desktop **0.4.21**. Hosted MCP keeps **0.3.18** because tool input and transport
+contracts are unchanged. Ordinary persistence uses the saved visibility default
+or Public when absent; guarded public/owner readers and private jobs retain their
+existing roles. No per-question visibility argument is added to MCP tools.
+
+The existing exact-main CI and package/installer provenance gates remain required
+before publication. New versions are not yet published or installed by this source
+change. ROOT owns one combined deployment and surface readback. Extension **0.1.4.2**
+is retained only after comparing its unchanged shipped inputs and hosted handoffs.
+Older preparation sections below do not allocate another release or deployment.
+
 ## App64 release batch in preparation — October 13
 
 Production app **0.27.63 /ec5f39c9** is delivered and operational. The next

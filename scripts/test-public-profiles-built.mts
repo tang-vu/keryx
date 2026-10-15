@@ -58,7 +58,7 @@ try {
   const publicId = randomUUID(), privateId = randomUUID(), question = `Public question ${"longword".repeat(30)}`;
   for (const [id, text] of [[publicId, question], [privateId, "UNSELECTED PRIVATE QUESTION"]]) {
     await database.saveQueryRun({ id, question: text, asker: alice, createdAt: new Date().toISOString(), answer: "UNEXPORTED PRIVATE ANSWER",
-      budget: 0, totalSpent: 0, totalToCreators: 0, engine: "heuristic", paymentMode: "offline", subClaims: [], decisions: [], trace: [], citations: [] });
+      budget: 0, totalSpent: 0, totalToCreators: 0, engine: "heuristic", paymentMode: "offline", subClaims: [], decisions: [], trace: [], citations: [] }, { visibility: "private" });
   }
   const listener = createServer();
   await new Promise<void>((done, reject) => { listener.once("error", reject); listener.listen(0, "127.0.0.1", done); });

@@ -6,7 +6,7 @@ const wallet=`0x${"a".repeat(40)}`,actor:PrivacyActor={wallet,sessionHash:"a".re
 const run={id:"owned",createdAt:"2026-10-11T00:00:00.000Z",asker:wallet,question:"SECRET",answer:"SECRET answer",budget:0.1,engine:"heuristic",totalSpent:0.01,totalToCreators:0.001,subClaims:[],decisions:[],citations:[],trace:[]};
 function fixture() {
   const from=vi.fn(),abortSignal=vi.fn(),rpc=vi.fn((_name:string,args:Record<string,unknown>)=>({abortSignal:(signal:AbortSignal)=>abortSignal(signal,args)}));
-  const result=(value:unknown)=>abortSignal.mockImplementation(async(_signal,args)=>({data:{version:1,action:args.p_action,id:args.p_id,result:value},error:null}));
+  const result=(value:unknown)=>abortSignal.mockImplementation(async(_signal,args)=>({data:{version:1,action:args.p_action,id:args.p_id??null,result:value},error:null}));
   return {store:createSupabaseRunPrivacy({rpc,from} as unknown as SupabaseClient),rpc,from,abortSignal,result};
 }
 describe("#266 Supabase bounded service-role privacy boundary",()=>{
@@ -43,9 +43,11 @@ describe("#266 Supabase bounded service-role privacy boundary",()=>{
     expect(f.rpc).toHaveBeenLastCalledWith("run_privacy_v1",{p_action:"export",p_id:run.id,p_input:{requestId},p_actor:{...actor,sessionHash:null},p_claims:false});
     expect(f.abortSignal.mock.calls.every(call=>call[0] instanceof AbortSignal)).toBe(true);expect(f.from).not.toHaveBeenCalled();
   });
-  it("requires interactive session hashes for defaults/visibility/erase and preserves idempotency inputs",async()=>{
+  it("reads presence-aware defaults and requires interactive session hashes for default/visibility/erase writes",async()=>{
     const f=fixture(),requestId="ee408752-6d6b-4b22-ad57-ece762c638a5";
-    f.result("private");expect(await f.store.defaults(actor)).toBe("private");f.result("public");expect(await f.store.setDefault(actor,"public",requestId)).toBe("public");
+    f.result("private");expect(await f.store.defaults(actor)).toBe("private");
+    expect(f.rpc).toHaveBeenLastCalledWith("research_publication_v1",{p_action:"defaults",p_input:{wallet,binding:actor.binding}});
+    f.result("public");expect(await f.store.setDefault(actor,"public",requestId)).toBe("public");
     const mutation={visibility:"unlisted" as const,revision:2,requestId};f.result({visibility:"unlisted",revision:3,erased:false});expect(await f.store.change(run.id,actor,mutation)).toMatchObject({revision:3});
     expect(f.rpc).toHaveBeenLastCalledWith("run_privacy_v1",expect.objectContaining({p_actor:actor,p_input:mutation}));
     f.result({visibility:"private",revision:4,erased:true});expect(await f.store.erase(run.id,actor,{revision:3,requestId})).toMatchObject({erased:true});

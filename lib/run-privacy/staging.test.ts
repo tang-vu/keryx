@@ -39,7 +39,8 @@ it("keeps default-OFF SQLite selectors/link/receipt inputs/history/memory unchan
 it("never falls back to SQLite originals when captured ON lacks an admitted schema, including defaults/exports",async()=>{
   vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED","true");const db=new SqliteAdapter(":memory:");
   try {
-    await db.init();await db.saveQueryRun(run);expect(db.runPrivacy).toBeUndefined();
+    await db.init();await expect(db.saveQueryRun(run)).rejects.toThrow("privacy_unavailable");expect(db.runPrivacy).toBeUndefined();
+    expect((db as unknown as {db:DatabaseSync}).db.prepare("SELECT COUNT(*) AS n FROM query_runs").get()?.n).toBe(0);
     vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED","");expect(privacyReadsActive(db)).toBe(true);
     for(const read of [()=>db.listRecentQueries(1),()=>db.listFollowUps(run.id),()=>db.loadQueryMemories(1),()=>Array.fromAsync(db.iterateRecentQueries(1)),()=>resolveDispatch(run.id,db),()=>listedQuestion(db,run.id),()=>publicWantedOffers(db,1)])
       await expect(read()).rejects.toThrow("privacy_unavailable");
@@ -51,10 +52,8 @@ it("enforces ON visibility in admitted SQLite selectors while preserving exact f
   try {
     await db.init();const connection=(db as unknown as {db:DatabaseSync}).db;connection.exec(RUN_PRIVACY_SQL);await db.init();
     for(const id of ["private","linked","demo"]) {
-      await db.saveQueryRun({...run,id,asker:`0x${"a".repeat(40)}`});await db.saveQueryMemory({...memory,id});
+      await db.saveQueryRun({...run,id,asker:`0x${"a".repeat(40)}`},{visibility:id==="private"?"private":id==="linked"?"unlisted":"public"});await db.saveQueryMemory({...memory,id});
     }
-    connection.prepare("UPDATE run_privacy SET visibility='unlisted' WHERE run_id='linked'").run();
-    connection.prepare("UPDATE run_privacy SET visibility='public' WHERE run_id='demo'").run();
     expect((await db.listRecentQueries(10)).map(row=>row.id)).toEqual(["demo"]);
     expect((await Array.fromAsync(db.iterateRecentQueries(10))).map(row=>row.id)).toEqual(["demo"]);
     expect((await db.loadQueryMemories(10)).map(row=>row.id)).toEqual(["demo"]);

@@ -13,6 +13,7 @@ import { createSupabasePrivateProfiles } from "./private-profiles-supabase";
 import { createSupabaseRunClaims } from "./run-claims-supabase";
 import { runClaimsEnabled, type RunClaimsStore } from "../run-claims/contracts";
 import { createSupabaseRunPrivacy } from "./run-privacy-supabase";
+import { createSupabaseResearchPublication } from "./research-publication-supabase";
 import { createSupabasePublicProfiles } from "./public-profiles-supabase";
 import type { PublicProfilesStore } from "../profiles/public-profile";
 import { withRunReadProjection } from "../run-privacy/projection";
@@ -945,7 +946,16 @@ export class SupabaseAdapter implements KeryxDB {
     return listSupabasePrivateResearchHistory(this.helperRpcClient(), payer, before);
   }
 
-  async saveQueryRun(run: QueryRun): Promise<void> {
+  async saveQueryRun(run: QueryRun, publication?: { visibility: import("../run-privacy/contracts").RunVisibility }): Promise<void> {
+    if (publication !== undefined || this.runPrivacyActive) {
+      if (!this.runPrivacyActive || this.#enrolled) {
+        const { PrivacyError } = await import("../run-privacy/contracts");
+        throw new PrivacyError("privacy_unavailable");
+      }
+      requirePrivacy(this);
+      await createSupabaseResearchPublication(this.#sb).saveQueryRun(run, publication);
+      return;
+    }
     run = recordedRunProvenance(run);
     const evidenceTelemetry = runEvidenceMetrics(run);
     await this.domainCall("save_query_run", { p_row: {

@@ -45,6 +45,8 @@ function fixture(archive = false, oldFamily: 19 | 20 | 22 = 19) {
     if (oldFamily !== 22) for (const table of [...CHAT_ACCOUNT_TABLES].reverse()) db.exec(`DROP TABLE "${table}"`);
     if (oldFamily === 19) db.exec("DROP TABLE topic_watches");
     if (oldFamily === 22) seedChatRows(db, identity);
+    if (oldFamily !== 19) db.prepare("INSERT INTO topic_watches(wallet,id,revision,state) VALUES(?,?,?,?)")
+      .run(`0x${"a".repeat(40)}`, "retained-watch", 7, '{"retained":true}');
     db.exec("INSERT INTO sync_state(key,value,updated_at) VALUES('raw-text',CAST(X'fffe00' AS TEXT),NULL)");
     db.exec("INSERT INTO query_runs(id,question,budget,duration_ms,data,created_at) VALUES('retained','Original',0.03125,9007199254740993,'{}','2026-10-15T00:00:00.000Z')");
     db.exec("INSERT INTO payment_events(id,query_id,network,amount_usdc,kind,rationale) VALUES('original','retained','eip155:5042',0.007,'fetch',X'00ff80')");
@@ -66,6 +68,7 @@ describe("explicit stopped-writer old19/old20/chat22 to compiled24 metadata migr
   });
   it.each([[false, 19], [true, 19], [false, 20], [true, 20], [false, 22], [true, 22]] as const)("preserves every historical typed original and backup (archive=%s, oldFamily=%s)", (archive, oldFamily) => {
     const f = fixture(archive, oldFamily), before = f.snapshot();
+    if (oldFamily !== 19) expect(before.tables.topic_watches.rows).toBe(1);
     if (oldFamily === 22) for (const table of CHAT_ACCOUNT_TABLES) expect(before.tables[table].rows).toBe(1);
     copyFileSync(f.file, f.backup); const backupHash = hash(f.backup);
     let admissions = 0;

@@ -3,6 +3,7 @@ import {NextRequest} from "next/server";
 import {afterEach,beforeEach,expect,it,vi} from "vitest";
 import {SqliteAdapter} from "../db/sqlite-adapter";
 import {RUN_PRIVACY_SQL} from "../db/run-privacy-sqlite";
+import {writeSqliteQueryRun} from "../db/query-run-record";
 import type {QueryRun} from "../types";
 import type {TestnetArchiveStore} from "../history/testnet-archive";
 
@@ -48,7 +49,12 @@ async function ordinary(active:boolean,admitted=false) {
   vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED",active?"true":"");
   const adapter=new SqliteAdapter(":memory:");connections.push(adapter);await adapter.init();
   if(admitted) {connection(adapter).exec(RUN_PRIVACY_SQL);await adapter.init();}
-  for(const original of originals)await adapter.saveQueryRun(original);
+  for(const original of originals) {
+    // Retained pre-admission originals are fixture data, not new active creation.
+    if(active&&!admitted)writeSqliteQueryRun(connection(adapter),original,false);
+    else if(active)await adapter.saveQueryRun(original,{visibility:original.id==="private"?"private":"unlisted"});
+    else await adapter.saveQueryRun(original);
+  }
   connection(adapter).prepare(`INSERT INTO payment_events
     (id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,network,settled,settlement_status,rationale)
     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).run("synthetic-payment",createdAt,"citation","private","fixture-source","Fixture",

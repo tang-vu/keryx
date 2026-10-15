@@ -56,6 +56,8 @@ function fixture(archive = false, oldFamily: 19 | 20 | 22 | 24 = 20) {
       if (oldFamily === 19) db.exec("DROP TABLE topic_watches");
     }
     if (oldFamily === 22 || oldFamily === 24) seedChatRows(db, identity);
+    if (oldFamily === 20 || oldFamily === 22) db.prepare("INSERT INTO topic_watches(wallet,id,revision,state) VALUES(?,?,?,?)")
+      .run(`0x${"a".repeat(40)}`, "retained-watch", 7, '{"retained":true}');
     db.exec("INSERT INTO sync_state(key,value,updated_at) VALUES('raw-text',CAST(X'fffe00c3' AS TEXT),NULL)");
     db.exec("INSERT INTO query_runs(id,question,budget,duration_ms,data,created_at) VALUES('original','Retained',0.03125,9007199254740993,'{}','2026-10-01T00:00:00.000Z')");
     db.prepare(`INSERT INTO payment_events(id,query_id,network,settled,settlement_status,amount_usdc,kind,rationale,created_at)
@@ -106,6 +108,7 @@ describe("stock protected command: exact old19/old20/pre-owner chat22 to compile
 
   it.each([[false, 19], [true, 19], [false, 20], [true, 20], [false, 22], [true, 22]] as const)("uses the existing CLI and verified backup, retaining all old typed cells/schema (archive=%s, oldFamily=%s)", async (archive, oldFamily) => {
     const f = fixture(archive, oldFamily), before = f.snapshot(), oldSchema = schema(f.file), args = f.options();
+    if (oldFamily !== 19) expect(before.tables.topic_watches.rows).toBe(1);
     if (oldFamily === 22) for (const table of CHAT_ACCOUNT_TABLES) expect(before.tables[table].rows).toBe(1);
     const result = await runPrivateProfileStorageCli(args);
     expect(result).toMatchObject({ phase: "migration-verified", status: "migrated", originalRowsPreserved: true, signingResumeAuthorized: false });

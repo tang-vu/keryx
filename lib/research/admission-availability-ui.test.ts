@@ -14,6 +14,7 @@ beforeAll(async () => {
     window.fetch=async(url,init)=>{
       if(url==='/api/research/availability')return Response.json({state:window.nextAvailability,message:'private operator instruction'});
       if(url==='/api/models')return Response.json({models:[]});
+      if(url==='/api/ask/visibility')return Response.json({wallet:null,defaultVisibility:'public',privacyActive:true});
       if(url==='/api/metrics'){if(new URLSearchParams(location.search).get('metrics')==='fail')throw Error('Synthetic metrics unavailable');return Response.json({metrics:{}});}
       if(url==='/mcp?client=other')return Response.json({result:{serverInfo:{name:'keryx',version:'0.3.3'}}});
       if(url==='/api/ask'){window.asks.push(JSON.parse(init.body));const refused=Response.json({error:'research_paused',message:'private operator instruction'},{status:503});
@@ -61,7 +62,7 @@ it("shows a held composer before submission, preserves shared prefill and never 
     expect(await page.getByRole("button", { name: "Research paused", exact: true }).isDisabled()).toBe(true);
     await page.getByLabel("What do you want to know?").press("Control+Enter");
     expect(await asks(page)).toEqual([]);
-    expect(await page.getByRole("status").textContent()).toContain("Increasing the source budget");
+    expect(await page.getByRole("status").filter({ hasText: "Increasing the source budget" }).textContent()).toContain("Increasing the source budget");
     expect(await page.locator("body").textContent()).not.toContain("private operator instruction");
   } finally { await context.close(); }
 });

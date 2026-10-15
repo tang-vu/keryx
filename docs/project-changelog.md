@@ -1,5 +1,20 @@
 # Keryx Project Changelog
 
+### App0.27.68 public-research source candidate — October 15
+
+- Default ordinary research to Public when no account preference is saved. Show
+  Public/Unlisted/Private before submission; preserve saved preferences, hidden
+  parent restrictions and owner access.
+- Save the original and initial visibility atomically on admitted SQLite and
+  ordinary Supabase storage. Refuse unsupported active creation before inference.
+- Count the complete bounded public question population separately from recorded
+  activity and recent examples. Unknown network/cohort metadata remains unknown.
+- Add an explicit reviewed, insert-only historical restoration tool. The production
+  restoration and one combined release remain ROOT operations after acceptance.
+- Reserve stdio/npm/Registry MCP0.4.23 and Desktop0.4.21; retain hosted MCP0.3.18
+  and extension0.1.4.2 within their verified roles. No new funding or private-pilot
+  activation is introduced. These are source changes awaiting verified delivery.
+
 ### App0.27.64 release preparation — October 13
 
 - Prepare bank-first USDC funding through Arc AppKit/BVNK with buyer KYC and
