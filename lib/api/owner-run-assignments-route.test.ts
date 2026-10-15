@@ -159,7 +159,7 @@ beforeEach(async () => {
     }
   };
   protectedBefore = snapshot(protectedTables); schemaBefore = schema();
-  expect(NATIVE_USER_DOMAIN_TABLES).toHaveLength(22);
+  expect(NATIVE_USER_DOMAIN_TABLES).toHaveLength(24);
   expect(supportedSqliteApplicationProfiles(true)).toHaveLength(4);
   const { createEnrolledSqliteAdapter, assertEnrolledSqliteAdapter } = await import("../db/enrolled-sqlite-adapter");
   db = await createEnrolledSqliteAdapter();
