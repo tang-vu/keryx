@@ -142,7 +142,7 @@ try {
     assert.equal(await balanceButton.count(), 0, "Funding stays unmounted before an accepted quote");
     const before = { signed, paid, fundingTransactions, unsignedQuotes };
     await page.getByLabel("Research question", { exact: true }).fill(question);
-    await page.getByRole("button", { name: "Check availability and price", exact: true }).click();
+    await page.getByRole("button", { name: "Review current quote & availability", exact: true }).click();
     await balanceButton.waitFor();
     assert.deepEqual({ signed, paid, fundingTransactions, unsignedQuotes }, { ...before, unsignedQuotes: before.unsignedQuotes + 1 }, "Preparation obtains only an unsigned quote");
     assert(await balanceButton.isDisabled(), "Credit lookup must wait for the wallet client");
@@ -183,7 +183,7 @@ try {
   assert.equal(signed, 0); assert.equal(paid, 0); assert.equal(fundingTransactions, 2);
   await page.getByLabel("Research question", { exact: true }).fill(question);
   assert.equal(await buy.count(), 0, "Restoring text cannot restore an accepted quote or consent");
-  await page.getByRole("button", { name: "Check availability and price", exact: true }).click();
+  await page.getByRole("button", { name: "Review current quote & availability", exact: true }).click();
   await page.getByRole("button", { name: "Refresh Gateway balance and funding status", exact: true }).click();
   await page.getByText("At the last check, enough Gateway USDC was available for this price.", { exact: false }).waitFor();
   await page.getByRole("button", { name: "Review 0.05 USDC purchase", exact: true }).click();

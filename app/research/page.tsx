@@ -21,7 +21,7 @@ import { monthlyAdmissionQuote } from "@/lib/monthly/readiness";
 import { ResearchMonthly } from "@/components/keryx/research-monthly";
 import { getDb } from "@/lib/db";
 import { assertMainnetHostedResearchReady } from "@/lib/payments/mainnet-hosted-gateway";
-import { paidResearchAvailabilityCopy } from "@/locales/en/paid-research-availability";
+import { RESEARCH_AVAILABILITY_UNKNOWN } from "@/lib/research/availability-contract";
 
 const copy = createMessages("en");
 const richCopy = createRichMessages("en");
@@ -92,7 +92,7 @@ export default async function ResearchPage({ searchParams }: {
             <p className="mt-4 font-serif text-ink-2">{[copy(quote.researchPackage.execution.attentionLimit === 1 ? "paidResearch.sources.one" : "paidResearch.sources.other", { count: quote.researchPackage.execution.attentionLimit }), copy(quote.researchPackage.execution.reevaluateRounds === 1 ? "paidResearch.rounds.one" : "paidResearch.rounds.other", { count: quote.researchPackage.execution.reevaluateRounds }), copy("paidResearch.target", { seconds: quote.researchPackage.serviceLevel.targetCompletionMs / 1000 })].join(" · ")}</p>
             <p className="mt-2 font-serif text-sm text-ink-3">{copy("paidResearch.terms")}</p>
             {configured ? <>
-              {!available && <p role="status" className="mt-4 text-seal">{paidResearchAvailabilityCopy.observationUnknown}</p>}
+              {!available && <p role="status" className="mt-4 text-seal">{RESEARCH_AVAILABILITY_UNKNOWN}</p>}
               <p className="mt-4 break-all font-mono text-xs">{richCopy("paidResearch.paymentIdentity", { network: config.networkId, payee: config.sellerAddress, lineBreak: <br /> })}</p>
               <ResearchRequest key={`${mode}:${quote.creatorBudgetUsdc}`} mode={mode} budget={quote.creatorBudgetUsdc} version={quote.researchPackage.version} total={quote.totalPriceUsdc} payee={config.sellerAddress} />
             </> : <p role="status" className="mt-4 text-seal">{copy("paidResearch.unavailable", { network: config.profile.label })}</p>}

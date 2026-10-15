@@ -49,7 +49,7 @@ it.each(["public", "unlisted"])("keeps a manual original GET link after a %s str
   const link = container.querySelector("a")!;
   expect(link.getAttribute("href")).toBe(`/dispatch/${reportId}`);
   expect(link.getAttribute("referrerpolicy")).toBe("no-referrer");
-  expect(container.textContent).toContain("never starts another research request or payment");
+  expect(link.textContent).toBe("Open saved report");
   expect(hook.state.run).toBeNull();
   expect(fetch).toHaveBeenCalledOnce();
 });

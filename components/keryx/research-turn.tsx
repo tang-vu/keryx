@@ -12,7 +12,6 @@ import { SelectionFailureDownload } from "./selection-failure-download";
 import { DecisionReviews } from "./decision-reviews";
 import { createMessages } from "@/lib/i18n/messages";
 import { savedReportRecoveryPath } from "@/lib/research/ask-stream-lifecycle";
-import { researchRecoveryCopy } from "@/locales/en/research-recovery";
 
 const message = createMessages("en");
 
@@ -51,9 +50,7 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
         <p>{state.error ?? message("researchTurn.failed")}</p>
         {recoveryPath && <div className="mt-3 space-y-2">
-          <p>{researchRecoveryCopy.explanation}</p>
-          <a href={recoveryPath} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="break-all underline underline-offset-4">{researchRecoveryCopy.open}</a>
-          <p>{researchRecoveryCopy.notReady}</p>
+          <a href={recoveryPath} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="break-all underline underline-offset-4">{message("reportActions.openSaved")}</a>
         </div>}
         {state.errorKind === "maintenance" && state.maintenance && <div className="mt-2">
           <a href="/maintenance/status" className="underline underline-offset-4">{message("researchError.serviceStatus")}</a>

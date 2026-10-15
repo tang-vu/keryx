@@ -3,7 +3,13 @@ import { build } from "esbuild";
 import { chromium, type Browser, type Page } from "playwright";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement, type ReactNode } from "react";
-import { paidResearchAvailabilityCopy as copy } from "../../locales/en/paid-research-availability";
+import { productGuideCopy } from "../../locales/en/product-guide";
+import { createMessages } from "../i18n/messages";
+import { RESEARCH_AVAILABILITY_UNKNOWN } from "./availability-contract";
+
+const message = createMessages("en");
+const copy = { checkQuote: productGuideCopy("pricing.checkout"), checking: message("researchEntry.checking"),
+  unavailable: message("researchCheckout.quoteChanged") };
 
 const server = vi.hoisted(() => ({
   config: { sellerAddress: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", funderKey: "", networkId: "eip155:5042",
@@ -34,7 +40,7 @@ it("keeps configured question preparation visible when the SSR capacity observat
     const html = renderToStaticMarkup(await ResearchPage({ searchParams: Promise.resolve({}) }));
     expect(server.ready).toHaveBeenCalledWith({}, "50000");
     expect(html).toContain('id="server-preparation"');
-    expect(html).toContain(copy.observationUnknown);
+    expect(html).toContain(RESEARCH_AVAILABILITY_UNKNOWN);
   } finally { vi.unstubAllEnvs(); }
 });
 

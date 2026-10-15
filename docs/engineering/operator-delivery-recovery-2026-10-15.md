@@ -22,7 +22,8 @@ After a stream failure, the browser offers a manual link to that same saved
 report. Opening it performs the existing GET read; it never resubmits research
 or payment. A reference is not a queued order, a completion promise or proof of
 settlement. Unsaved or cancelled work can still be unavailable. The UI keeps the
-original error and warns that a report may not yet exist.
+original error. The link uses the existing saved-report action; an unsaved
+original still returns the existing unavailable/not-found response.
 
 Private owner research and protected claim-document transports receive no such
 link-readable reference. Existing authenticated recovery and private-claim rules

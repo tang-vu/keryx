@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
 import { buyerRequestSchema } from "@/lib/buyer/protocol";
 import { quoteBuyer } from "@/lib/buyer/quote";
-import { paidResearchAvailabilityCopy as availabilityCopy } from "@/locales/en/paid-research-availability";
+import { productGuideCopy } from "@/locales/en/product-guide";
 import { ResearchCheckout } from "./research-checkout";
 import { currentArcLabel } from "@/lib/arc-network-display";
 
@@ -39,7 +39,7 @@ function ResearchRequestForm({ mode, budget, version, total, payee }: ResearchRe
   async function checkQuote() {
     if (!parsed.success || operation.current) return;
     const controller = new AbortController(); operation.current = controller;
-    setVerifiedRequest(null); setChecking(true); setStatus(availabilityCopy.checking);
+    setVerifiedRequest(null); setChecking(true); setStatus(copy("researchEntry.checking"));
     try {
       const amount = String(Math.round(total * 1e6));
       const requirement = await quoteBuyer(parsed.data, payee, amount, undefined, controller.signal);
@@ -47,9 +47,9 @@ function ResearchRequestForm({ mode, budget, version, total, payee }: ResearchRe
       // price is still a changed review, so require the displayed total exactly.
       if (requirement.amount !== amount) throw new Error("Quote price changed");
       if (controller.signal.aborted || operation.current !== controller) return;
-      setVerifiedRequest(requestKey); setStatus(availabilityCopy.ready);
+      setVerifiedRequest(requestKey); setStatus("");
     } catch {
-      if (!controller.signal.aborted && operation.current === controller) setStatus(availabilityCopy.unavailable);
+      if (!controller.signal.aborted && operation.current === controller) setStatus(copy("researchCheckout.quoteChanged"));
     } finally {
       if (operation.current === controller) { operation.current = null; setChecking(false); }
     }
@@ -62,8 +62,8 @@ function ResearchRequestForm({ mode, budget, version, total, payee }: ResearchRe
       setVerifiedRequest(null); setChecking(false); setStatus("");
       setQuestion(event.target.value); setCopied("");
     }} maxLength={MAX_ASK_QUESTION_CHARS} rows={3} placeholder={copy("researchRequest.placeholder")} className="mt-2 w-full border border-line bg-paper-2 p-3 font-serif" />
-    <p className="mt-3 font-serif text-sm text-ink-2">{availabilityCopy.preparation}</p>
-    {!ready && <button type="button" disabled={!parsed.success || checking} onClick={() => { void checkQuote(); }} className="mt-3 border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40">{checking ? availabilityCopy.checking : availabilityCopy.checkQuote}</button>}
+    <p className="mt-3 font-serif text-sm text-ink-2">{productGuideCopy("pricing.prepaidBody")}</p>
+    {!ready && <button type="button" disabled={!parsed.success || checking} onClick={() => { void checkQuote(); }} className="mt-3 border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40">{checking ? copy("researchEntry.checking") : productGuideCopy("pricing.checkout")}</button>}
     <p role="status" aria-live="polite" className="mt-3 font-serif text-sm">{status}</p>
     {ready && <ResearchCheckout question={question} mode={mode} budget={budget} version={version} total={total} payee={payee} />}
     <details className="mt-5"><summary className="cursor-pointer font-mono text-xs">{copy("researchRequest.ownAgent")}</summary>
