@@ -128,7 +128,7 @@ describe("chat263 native durable journal (UNRUN)", () => {
   it("starts the real application facade with the expanded full family and resolves accountMembership before using chat links", async () => {
     const f = fixture(), owner = seedAccount(f), financial = untouchedFinancial(f);
     const before = f.edit(db => db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema ORDER BY name").all());
-    expect(NATIVE_USER_DOMAIN_TABLES).toHaveLength(21); expect(supportedSqliteApplicationProfiles(true)).toHaveLength(4);
+    expect(NATIVE_USER_DOMAIN_TABLES).toHaveLength(22); expect(supportedSqliteApplicationProfiles(true)).toHaveLength(4);
     const exec = vi.spyOn(DatabaseSync.prototype, "exec");
     const db = await application(f), account = db.accountMembership, chat = db.chatAccountLinks;
     expect(exec.mock.calls.some(([sql]) => sql === "PRAGMA busy_timeout=5000")).toBe(true);
