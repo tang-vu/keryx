@@ -20,12 +20,13 @@ const fixture = await build({ stdin: { contents: `
  createRoot(document.getElementById('root')).render(<Probe/>);
 `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife",
   define: { "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arcTestnet"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' }, plugins: [circleSdkBrowserPlugin(), { name: "synthetic-clock-boundaries", setup(b) {
-    b.onResolve({ filter: /^(wagmi)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
+    b.onResolve({ filter: /^(wagmi|next\/link)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /^@\/lib\/config$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /^@\/components\/keryx\/(grant-spend-dialog|faucet-panel)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onResolve({ filter: /(session-signer-client|session-storage|gateway-deposit|gateway\/read-credit)$/ }, args => ({ path: args.path, namespace: "synthetic" }));
     b.onLoad({ filter: /.*/, namespace: "synthetic" }, args => ({ loader: "jsx", resolveDir: process.cwd(), contents:
-      args.path === "wagmi" ? `export const useConnect=()=>({connectors:[],isPending:false,connectAsync:async()=>{throw Error("Unexpected Google connector in external-wallet fixture")}});export const useAccount=()=>({address:'${owner}',isConnected:true});export const useWalletClient=()=>({data:window.fixtureWallet});export const usePublicClient=()=>null;export const useSwitchChain=()=>({switchChainAsync:async()=>{throw Error('Network switch forbidden')}});export const useSignMessage=()=>({signMessageAsync:async({message})=>{window.loginMessages.push(message);return 'synthetic-login-signature'}});`
+      args.path === "next/link" ? `import React from 'react';export default function Link({href,children}){return <a href={href}>{children}</a>}`
+      : args.path === "wagmi" ? `export const useConnect=()=>({connectors:[],isPending:false,connectAsync:async()=>{throw Error("Unexpected Google connector in external-wallet fixture")}});export const useAccount=()=>({address:'${owner}',isConnected:true});export const useWalletClient=()=>({data:window.fixtureWallet});export const usePublicClient=()=>null;export const useSwitchChain=()=>({switchChainAsync:async()=>{throw Error('Network switch forbidden')}});export const useSignMessage=()=>({signMessageAsync:async({message})=>{window.loginMessages.push(message);return 'synthetic-login-signature'}});`
       : args.path.endsWith("grant-spend-dialog") ? `import React from 'react';export const GrantSpendDialog=({grantState,onTryRecover,onRecoverViaSignature})=><><output id="state">{JSON.stringify(grantState)}</output><button onClick={()=>{void onTryRecover()}}>Recover</button><button onClick={()=>{void onRecoverViaSignature()}}>Signature recovery</button></>;`
       : args.path.endsWith("faucet-panel") ? `export const FaucetPanel=()=>null;`
       : args.path === "@/lib/config" ? `export const config={sessionGrantTtlSeconds:3600,rpcUrl:'https://rpc.invalid'};`
@@ -80,6 +81,7 @@ try {
     await page.waitForTimeout(20);
     const login = new SiweMessage(await page.evaluate(() => (window as unknown as { loginMessages: string[] }).loginMessages[0]));
     assert.equal(login.issuedAt, authDates.issuedAt); assert.equal(login.expirationTime, authDates.sessionExpiresAt); assert.equal(verifyCount, 1);
+    await page.getByText("Set up agent budget", { exact: true }).click();
     await page.getByRole("button", { name: "Recover", exact: true }).click();
     const state = async () => JSON.parse((await page.locator("#state").textContent())!) as { status: string; grantEpoch: string; sessAddr: string; sessionId: string };
     await page.waitForFunction(() => JSON.parse(document.querySelector("#state")!.textContent!).status === "active");
