@@ -3,6 +3,7 @@ import { canonicalJson } from "../canonical-json";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
 import { installNativeUserDomainSchema } from "./native-user-domain-schema";
 import { NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema-data";
+import { OWNER269_OCCUPANCY_PROPOSAL } from "../owner-run-assignments/occupancy-proposal";
 import { snapshotPublicArchiveStorage } from "./public-reference-archive-migration";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { validateStorageIdentity, type StorageIdentity } from "./storage-identity";
@@ -15,18 +16,25 @@ export const HISTORICAL_NATIVE_USER_DOMAIN_TABLES = Object.freeze(["private_prof
   "decision_review_verdicts", "account267_accounts", "account267_members", "account267_credentials", "account267_sessions",
   "account267_challenges", "account267_events"]);
 
-/** Migration-only references, never additional runtime admission. The optional
- * chat pair is admitted only when both are actually in the compiled source.
- * Each changed compiled target still needs the release owner's acceptance.
- * pending_job_owners and arbitrary partial/unknown families are not admitted. */
-function topicWatchesMigrationPlans() {
+/** Exact pre-269 full20, distinct from the older pre-watch full19. These are
+ * migration-only names; no old/partial family becomes a runtime profile. */
+export const PRE_OWNER_NATIVE_USER_DOMAIN_TABLES = Object.freeze([...HISTORICAL_NATIVE_USER_DOMAIN_TABLES, "topic_watches"]);
+const OWNER269_TABLES = Object.freeze(["owner269_operations", "owner269_associations"]);
+
+/** One compiled fixed22 target, two archive variants, separate old19/old20
+ * references. Never infer a family from its count or accept future chat/pending
+ * additions. The parent must qualify any later combined source separately. */
+function topicWatchesMigrationPlans(historical19: boolean) {
   const sourceTables: readonly string[] = NATIVE_USER_DOMAIN_TABLES;
-  const added = sourceTables.filter(table => !HISTORICAL_NATIVE_USER_DOMAIN_TABLES.includes(table));
-  const known = [["topic_watches"], ["chat263_links", "chat263_tokens", "topic_watches"]];
+  const expected = [...PRE_OWNER_NATIVE_USER_DOMAIN_TABLES, ...OWNER269_TABLES];
+  const added = historical19 ? ["topic_watches", ...OWNER269_TABLES] : [...OWNER269_TABLES];
+  const guardNames = OWNER269_OCCUPANCY_PROPOSAL.map(entry => entry.name);
+  const expectedGuards = ["owner269_ticket_occupancy", "owner269_original_insert", "owner269_original_update",
+    "owner269_original_delete", "owner269_a2a_insert", "owner269_a2a_update"];
   if (new Set(NATIVE_USER_DOMAIN_TABLES).size !== NATIVE_USER_DOMAIN_TABLES.length ||
-    HISTORICAL_NATIVE_USER_DOMAIN_TABLES.some(table => !sourceTables.includes(table)) ||
-    !known.some(tables => canonicalJson([...tables].sort()) === canonicalJson([...added].sort())))
-    throw new Error("ROOT must qualify the full19-to-complete-bundle migration reference");
+    canonicalJson([...sourceTables].sort()) !== canonicalJson(expected.sort()) ||
+    canonicalJson([...guardNames].sort()) !== canonicalJson(expectedGuards.sort()))
+    throw new Error("ROOT must qualify the exact full19/full20-to-owner269 full22 source reference");
   return Object.freeze([false, true].map(publicReferenceArchive => {
     const reference = new DatabaseSync(":memory:");
     try {
@@ -36,10 +44,15 @@ function topicWatchesMigrationPlans() {
       // DDL is taken ONLY from the isolated, trusted source installer, never
       // target metadata, a caller table list, an environment value or a file.
       const objects = reference.prepare(`SELECT type,name,tbl_name,sql FROM sqlite_schema
-        WHERE name NOT LIKE 'sqlite_%' ORDER BY rowid`).all().filter(row => added.includes(String(row.tbl_name)));
+        WHERE name NOT LIKE 'sqlite_%' ORDER BY rowid`).all().filter(row => added.includes(String(row.tbl_name)) || guardNames.includes(String(row.name)));
       if (objects.filter(row => row.type === "table").length !== added.length ||
-        objects.some(row => !["table", "index", "trigger"].includes(String(row.type)) || typeof row.sql !== "string"))
+        objects.some(row => !["table", "index", "trigger"].includes(String(row.type)) || typeof row.sql !== "string") ||
+        OWNER269_OCCUPANCY_PROPOSAL.some(guard => !objects.some(row => row.type === "trigger" && row.name === guard.name && row.sql === guard.sql)))
         throw new Error("Metadata migration source DDL differs");
+      // Shared-table triggers are the ONLY delta outside the fixed added tables.
+      // Drop them before the isolated-reference tables they read. No target DDL
+      // or supplied table/SQL list can enter this source-built plan.
+      for (const name of guardNames) reference.exec(`DROP TRIGGER "${name}"`);
       for (const table of [...added].reverse()) reference.exec(`DROP TABLE "${table}"`); // isolated reference only
       const before = sqliteApplicationSchemaProfile(reference, new Set());
       const oldSchema = JSON.parse(before) as unknown[], newSchema = JSON.parse(after) as unknown[];
@@ -54,7 +67,10 @@ function topicWatchesMigrationPlans() {
   }));
 }
 export function topicWatchesMigrationProfiles(): readonly (readonly [string, string])[] {
-  return Object.freeze(topicWatchesMigrationPlans().map(plan => plan.pair));
+  return Object.freeze(topicWatchesMigrationPlans(true).map(plan => plan.pair));
+}
+export function ownerRunAssignmentsMigrationProfiles(): readonly (readonly [string, string])[] {
+  return Object.freeze(topicWatchesMigrationPlans(false).map(plan => plan.pair));
 }
 export const snapshotTopicWatchesStorage = snapshotPublicArchiveStorage;
 function excluded(db: DatabaseSync, identity: StorageIdentity) {
@@ -77,7 +93,7 @@ function backupAdmissionOnly(db: DatabaseSync) {
 export function migrateTopicWatchesStorage(file: string, value: StorageIdentity, admitBackup: (db: DatabaseSync) => void) {
   const identity = validateStorageIdentity(value);
   if (identity.authorityMode !== "mainnet-real" || typeof admitBackup !== "function") throw new Error("Watch migration admission required");
-  const plans = topicWatchesMigrationPlans(), held = holdStorageTarget(file);
+  const plans = [...topicWatchesMigrationPlans(true), ...topicWatchesMigrationPlans(false)], held = holdStorageTarget(file);
   let db: DatabaseSync | undefined;
   try {
     db = new DatabaseSync(file, { allowExtension: false });
@@ -85,7 +101,7 @@ export function migrateTopicWatchesStorage(file: string, value: StorageIdentity,
     held.verify(); assertStorageIdentity(db, identity); assertStorageFences(db, identity);
     const before = sqliteApplicationSchemaProfile(db, excluded(db, identity));
     const plan = plans.find(({ pair: [old, current] }) => before === old || before === current);
-    if (!plan) throw new Error("Watch migration full19/current source differs");
+    if (!plan) throw new Error("Watch migration full19/full20/current owner269 source differs");
     const pair = plan.pair;
     const original = snapshotTopicWatchesStorage(db, identity, pair), changes = db.prepare("SELECT total_changes() AS n").get()!.n;
     backupAdmissionOnly(db); admitBackup(db); db.setAuthorizer(null);

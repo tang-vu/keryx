@@ -96,7 +96,7 @@ describe("owner269 genuine native metadata (authored UNRUN)", () => {
     const changed = { ...input, manifest: { ...f.manifest, members: f.manifest.members.map((m, i) => i === 1 ? { ...m, originalSha256: "0".repeat(64) } : m) } };
     expect(() => first.act(f.session, f.recipient, changed, origin)).toThrow("assignment_conflict");
     expect(f.events()).toBe(1); expect(f.snapshot()).toBe(financial);
-    expect(first.stage(f.manifest, result.requestId)).toMatchObject({ applicable: false, holds: ["assignment_arbitration_unavailable"] });
+    expect(first.stage(f.manifest, result.requestId)).toMatchObject({ applicable: true, holds: [] });
   });
   it("confirms imported pending attribution without manufacturing a claim and preserves original/economic rows", async () => {
     const f = fixture(true), store = f.open(), before = f.snapshot();
