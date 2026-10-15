@@ -111,6 +111,42 @@ test(`${format} runs only its fixed clean Node after positively reviewed roles a
 });
 }
 
+for (const [format, script] of migrations) {
+test(`staged ${format} uses only the artifact-verified candidate and rechecks before and after DDL`, () => {
+  const calls = [], commit = 'e'.repeat(40), cohort = `/root/.local/share/keryx-releases/${commit}/source`;
+  const result = runEconomicDeployMigration('migrate', config(format), rolesFile, 'c'.repeat(64),
+    (...args) => { calls.push(args); return 'migration receipt'; }, () => calls.push(['recheck']),
+    { staged: '1', expectedCommit: commit });
+  assert.equal(result, 'migration receipt');
+  const role = name => ['/usr/bin/env', ['-i', 'PATH=/usr/bin:/bin', 'NODE_ENV=production',
+    '/usr/bin/node', '/root/keryx/scripts/redeploy-reviewed-roles.mjs', rolesFile, 'c'.repeat(64), name, '1', commit]];
+  assert.deepEqual(calls.slice(0, 3), [role('artifact'), role('validate'), ['recheck']]);
+  assert.deepEqual(calls[3], ['/usr/bin/env', ['-i', 'PATH=/usr/bin:/bin', 'NODE_ENV=production',
+    '/usr/bin/node', '--import', `${cohort}/node_modules/tsx/dist/loader.mjs`,
+    cohort + script.slice('/root/keryx'.length), 'migrate', '--manifest', config(format).manifest,
+    '--expected-manifest', 'a'.repeat(64), '--expected-identity', 'b'.repeat(64),
+    '--backup', config(format).backup, '--receipt', config(format).receipt, '--writers-stopped']]);
+  assert.deepEqual(calls.slice(4), [['recheck'], role('artifact'), role('validate')]);
+  const validation = [];
+  runEconomicDeployMigration('validate', config(format), rolesFile, 'c'.repeat(64),
+    (...args) => validation.push(args), () => validation.push(['recheck']), { staged: '1', expectedCommit: commit });
+  assert.deepEqual(validation, [role('artifact'), role('validate'), ['recheck']]);
+  for (const options of [{ staged: '1' }, { staged: 'yes', expectedCommit: commit },
+    { staged: '1', expectedCommit: 'A'.repeat(40) }, { staged: '1', expectedCommit: '../candidate' }])
+    assert.throws(() => runEconomicDeployMigration('migrate', config(format), rolesFile, 'c'.repeat(64),
+      () => assert.fail('unbound candidate executed'), () => assert.fail(), options));
+  // Every pre/post artifact, role and protected-byte refusal must stop the one
+  // sequence; no alternate script, automatic replay or predecessor restart.
+  for (let failure = 0; failure < calls.length; failure++) {
+    let at = 0; const observed = [];
+    const step = entry => { observed.push(entry); if (at++ === failure) throw Error('refused boundary'); return 'receipt'; };
+    assert.throws(() => runEconomicDeployMigration('migrate', config(format), rolesFile, 'c'.repeat(64),
+      (...args) => step(args), () => step(['recheck']), { staged: '1', expectedCommit: commit }));
+    assert.deepEqual(observed, calls.slice(0, failure + 1));
+  }
+});
+}
+
 test('failure hold stops both fixed roles even if the first stop fails; never starts or touches builds', () => {
   for (const broken of [false, true]) {
     const calls = [], rows = ['keryx', 'keryx-a2a-worker'].map(name => ({ name, pid: 4, pm2_env: { status: 'online' } }));
@@ -150,7 +186,10 @@ fi
 case "$args" in
   *'npm run typecheck'*) [[ "$ECONOMIC_TEST_FAILURE" != build ]] || exit 1 ;;
   *'git rev-parse --short HEAD'*) echo abc1234 ;;
-  *'curl -fsS '*) [[ "$ECONOMIC_TEST_FAILURE" != health ]] || exit 1; echo '{"commit":"abc1234"}' ;;
+  *'curl -fsS '*) [[ "$ECONOMIC_TEST_FAILURE" != health ]] || exit 1
+    if [[ "\${KERYX_REDEPLOY_STAGED_RELEASE:-0}" == 1 ]]; then
+      printf '{"commit":"%s"}\\n' "$KERYX_REDEPLOY_EXPECTED_COMMIT"
+    else echo '{"commit":"abc1234"}'; fi ;;
 esac
 `, { mode: 0o700 });
   fs.writeFileSync(path.join(directory, 'sleep'), '#!/usr/bin/env bash\nexit 0\n', { mode: 0o700 });
@@ -193,4 +232,25 @@ esac
     { KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG: '/tmp/untrusted.json' }]) {
     const result = execute('', extra); assert.notEqual(result.status, 0); assert.equal(result.trace, '');
   }
+  const staged = { KERYX_REDEPLOY_STAGED_RELEASE: '1' }, prepared = execute('', staged);
+  assert.equal(prepared.status, 0, prepared.stdout + prepared.stderr);
+  const stagedAt = text => prepared.trace.indexOf(text);
+  assert.ok(stagedAt(' artifact 1 ' + 'e'.repeat(40)) >= 0);
+  assert.ok(stagedAt(' artifact 1 ' + 'e'.repeat(40)) < stagedAt('- migrate ' + configFile));
+  assert.ok(stagedAt('- validate ' + configFile) < stagedAt('- migrate ' + configFile));
+  assert.ok(stagedAt('- migrate ' + configFile) < stagedAt(rolesFile + ' ' + 'c'.repeat(64) + ' a2a 1 '));
+  assert.match(prepared.trace, new RegExp('- migrate ' + configFile + ' ' + 'd'.repeat(64) +
+    ' ' + rolesFile + ' ' + 'c'.repeat(64) + ' 1 ' + 'e'.repeat(40)));
+  assert.doesNotMatch(prepared.trace, /git (fetch|reset)|npm (ci|run)|dependency-state|NEXT_DIST_DIR|mv \.next|rm -rf|pm2 (reload|restart)|bash -s -- (resume|stop)|crontab/);
+  assert.doesNotMatch(prepared.trace, / - hold\n/);
+  for (const failure of ['migration', 'a2a', 'web', 'health', 'config']) {
+    const result = execute(failure, staged);
+    assert.notEqual(result.status, 0, 'staged ' + failure);
+    assert.match(result.trace, / - hold\n/);
+    assert.match(result.stderr, /No automatic rollback/);
+    assert.doesNotMatch(result.trace, /git (fetch|reset)|npm (ci|run)|mv \.next|rm -rf|pm2 (reload|restart)|bash -s -- resume|crontab/);
+  }
+  const refusedArtifact = execute('artifact', staged);
+  assert.notEqual(refusedArtifact.status, 0);
+  assert.doesNotMatch(refusedArtifact.trace, / - (migrate|hold)/);
 });

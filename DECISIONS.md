@@ -8257,3 +8257,26 @@ physical source pins, zero outbound attempts and every non-source-map field equa
 to the incoming artifact. Exact-head required CI remains pending. This focused
 integration does not close all #267/#268 criteria or prove real Google/Circle user
 acceptance. See [the implementation boundary](docs/engineering/account-owned-history-consent-20261015.md).
+
+
+## Immutable preparation before a reviewed economic migration - 2026-10-15
+
+Keep candidate preparation separate from production admission. The existing preparation
+command now accepts one explicit mainnet-public-build option; its build embeds the
+existing Arc mainnet public constants while version/type checks and tests retain
+arcTestnet/offline isolation. Both profiles use a fresh keyless allowlist environment
+and independent source/dependency copies. Preparation still records productionAdmitted
+and writerHoldStarted as false and cannot load runtime ENV or grant target readiness.
+
+An explicitly reviewed staged deployment may use the existing protected economic
+migration configuration. Verify the bound artifact and stopped roles before calling
+only its fixed migration entry point and tsx loader from the same immutable cohort.
+Keep operational cwd, protected manifest/identity/backup/receipt bindings and native
+EXCLUSIVE/rollback/uncertain-ACK behavior unchanged. Arm the existing failure hold
+before possible DDL and recheck protected inputs/artifact/stopped roles afterward;
+no automatic replay, predecessor restart or source/dependency/build mutation occurs
+in this staged stopped-writer phase. Normal/TWO-original, ENV/custody, Operator and
+other target gates remain with the production owner after writer stop. The ordinary
+deploy path retains its prior behavior. Original #164 still needs actual intended-host
+staged delivery, compatibility/retention evidence and matched availability measurements;
+ordinary release67 and synthetic ordering checks cannot close those criteria.
