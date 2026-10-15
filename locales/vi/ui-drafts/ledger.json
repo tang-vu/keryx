@@ -118,7 +118,7 @@
     },
     "ledgerPresentation.recent": {
       "source": "Recent public questions",
-      "text": "C?u h?i c?ng khai g?n ??y"
+      "text": "Câu hỏi công khai gần đây"
     },
     "ledgerPresentation.more": {
       "source": "More questions",
@@ -378,11 +378,11 @@
     },
     "ledgerPresentation.publicHistoryBoundary": {
       "source": "Recorded totals include all recorded questions. This list shows only questions made public and excludes scripted runs.",
-      "text": "T?ng s? ?? ghi nh?n bao g?m m?i c?u h?i ?? l?u. Danh s?ch n?y ch? hi?n th? c?u h?i ???c c?ng khai v? lo?i tr? c?c l??t ch?y theo k?ch b?n."
+      "text": "Tổng số đã ghi nhận bao gồm mọi câu hỏi đã lưu. Danh sách này chỉ hiển thị câu hỏi được công khai và loại trừ các lượt chạy theo kịch bản."
     },
     "ledgerPresentation.noPublicQuestions": {
       "source": "No public questions to display.",
-      "text": "Ch?a c? c?u h?i c?ng khai ?? hi?n th?."
+      "text": "Chưa có câu hỏi công khai để hiển thị."
     }
   }
 }
