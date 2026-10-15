@@ -67,7 +67,7 @@ try {
   const origin = `http://127.0.0.1:${port}`;
   await database.runPrivacy.change(publicId, { wallet: alice, sessionHash: record.hash, binding: { network: "eip155:5042002", origin } },
     { visibility: "public", revision: 0, requestId: randomUUID() });
-  const environment = { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: "production", JWT_SECRET: secret, BASE_URL: origin,
+  const environment: NodeJS.ProcessEnv = { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: "production", JWT_SECRET: secret, BASE_URL: origin,
     KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1", KERYX_EXTERNAL_DISCOVERY: "0",
     KERYX_WEB_RESEARCH: "0", KERYX_PUBLIC_PROFILES_ENABLED: "true", KERYX_RUN_PRIVACY_ENABLED: "true",
     NEXT_PUBLIC_SUPABASE_URL: "", NEXT_PUBLIC_SUPABASE_ANON_KEY: "", SUPABASE_SERVICE_ROLE_KEY: "" };
