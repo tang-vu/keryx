@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import Link from "next/link";
+import { NavigationLink as Link } from "./navigation-link";
 import { usePathname } from "next/navigation";
 import { KeryxWordmark } from "./keryx-mark";
 import { DispatchWire } from "./dispatch-wire";
