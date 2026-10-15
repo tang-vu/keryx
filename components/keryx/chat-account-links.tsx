@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DisplayTime } from "@/components/keryx/display-time";
 import type { ChatRecipient } from "@/lib/chat-accounts/contracts";
 import { takeChatAccountFragment } from "@/lib/chat-accounts/fragment-intake";
 import { isOwnBrowserAuthChange } from "@/lib/browser-auth-notice";
@@ -176,7 +177,7 @@ export function ChatAccountLinks() {
     {preview && <div className="rounded border p-4 space-y-3">
       <p>{chatAccountMessages["preview.chatLabel"]}{preview.recipient.platform} / {preview.recipient.scope} / {preview.recipient.userId}</p>
       <p className="break-all">{chatAccountMessages["preview.accountLabel"]}{preview.account.accountId}</p>
-      <p>{chatAccountMessages["preview.expiresLabel"]}{new Date(preview.expiresAt).toLocaleTimeString()}</p>
+      <p>{chatAccountMessages["preview.expiresLabel"]}<DisplayTime value={preview.expiresAt} /></p>
       <label className="flex gap-2"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} disabled={busy} />
         <span>{chatAccountMessages["consent.statement"]}</span></label>
       <button type="button" onClick={() => void confirm()} disabled={!consent || busy} className="rounded border px-4 py-2">{chatAccountMessages["action.confirm"]}</button>
