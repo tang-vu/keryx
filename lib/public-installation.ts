@@ -20,7 +20,7 @@ export const setupExamples = Object.freeze({
   apiBase: "https://keryx.cc/api/v1",
   model: "keryx",
   remoteEndpoint: "https://keryx.cc/mcp",
-  stdio: JSON.stringify({ mcpServers: { keryx: { command: "npx", args: ["-y", "keryx-mcp@0.4.19"] } } }, null, 2),
+  stdio: JSON.stringify({ mcpServers: { keryx: { command: "npx", args: ["-y", "keryx-mcp@0.4.22"] } } }, null, 2),
   models: "curl https://keryx.cc/api/v1/models",
   chat: `curl https://keryx.cc/api/v1/chat/completions \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer keryx" \\\n  -d '{"model":"keryx","messages":[{"role":"user","content":"How do source tolls differ from citation rewards?"}],"stream":true}'`,
   cli: `git clone https://github.com/tang-vu/keryx.git\ncd keryx\nnpm install --global npm@11.19.0\nnpm install\nnpm run operator -- --help\nnpm run buyer -- --help`,
