@@ -11,8 +11,8 @@
   "totals": {
     "englishNamespaceFiles": 60,
     "coreInlineSources": 1,
-    "extractedLeaves": 5689,
-    "authoredEntries": 5556,
+    "extractedLeaves": 5692,
+    "authoredEntries": 5559,
     "nonTranslatableMachineIdentifiers": 21,
     "uncoveredEntries": 112,
     "completeNamespaces": 59
@@ -5468,10 +5468,10 @@
     {
       "namespace": "source-leaderboard",
       "sourcePath": "locales/en/source-leaderboard.ts",
-      "sourceSha256": "1a93f5d778fbab8cf395bd9f24151f33c36b763b5b3ac9ac2c0f74c14ebcf8aa",
+      "sourceSha256": "d0b561cc0e9f6e6e0112293fcdbda9a83e23ba7d35e0c1dc374421fe8a994a5d",
       "draftPath": "locales/zh-Hans/ui-drafts/source-leaderboard.json",
-      "extractedLeaves": 19,
-      "authoredEntries": 19,
+      "extractedLeaves": 22,
+      "authoredEntries": 22,
       "coveredKeys": [
         "sourceLeaderboard.catalog",
         "sourceLeaderboard.catalogUnavailable",
@@ -5482,6 +5482,7 @@
         "sourceLeaderboard.feeBoundary",
         "sourceLeaderboard.feeCounts",
         "sourceLeaderboard.feeRecipient",
+        "sourceLeaderboard.feesIncomplete",
         "sourceLeaderboard.feesUnavailable",
         "sourceLeaderboard.ownerFee",
         "sourceLeaderboard.paper",
@@ -5490,7 +5491,9 @@
         "sourceLeaderboard.searchLabel",
         "sourceLeaderboard.searchPlaceholder",
         "sourceLeaderboard.title",
-        "sourceLeaderboard.unknown",
+        "sourceLeaderboard.unattributed",
+        "sourceLeaderboard.unavailable",
+        "sourceLeaderboard.viewSettledFees",
         "sourceLeaderboard.walletUnknown"
       ],
       "nonTranslatableMachineIdentifiers": [],
