@@ -11,8 +11,8 @@
   "totals": {
     "englishNamespaceFiles": 60,
     "coreInlineSources": 1,
-    "extractedLeaves": 5687,
-    "authoredEntries": 5554,
+    "extractedLeaves": 5692,
+    "authoredEntries": 5559,
     "nonTranslatableMachineIdentifiers": 21,
     "uncoveredEntries": 112,
     "completeNamespaces": 59
@@ -1700,10 +1700,10 @@
     {
       "namespace": "ledger",
       "sourcePath": "locales/en/ledger.ts",
-      "sourceSha256": "7e51c82e2538ae69cd529d33564e7ed44e37c4fb5f2e3a2192b0049b3a91b4d8",
+      "sourceSha256": "e944e80db5ebdc3b319cc8fb68fc232dfc1865525d184428803fb18c250d8f05",
       "draftPath": "locales/vi/ui-drafts/ledger.json",
-      "extractedLeaves": 93,
-      "authoredEntries": 93,
+      "extractedLeaves": 95,
+      "authoredEntries": 95,
       "coveredKeys": [
         "ledgerPage.loadingHistory",
         "ledgerPage.loadingSources",
@@ -1727,6 +1727,7 @@
         "ledgerPresentation.inspectPayments",
         "ledgerPresentation.inspectTotals",
         "ledgerPresentation.more",
+        "ledgerPresentation.noPublicQuestions",
         "ledgerPresentation.noSettledPayments",
         "ledgerPresentation.operatingFees",
         "ledgerPresentation.operatingTransfers",
@@ -1735,6 +1736,7 @@
         "ledgerPresentation.pending.one",
         "ledgerPresentation.pending.other",
         "ledgerPresentation.proofEyebrow",
+        "ledgerPresentation.publicHistoryBoundary",
         "ledgerPresentation.questionRecords",
         "ledgerPresentation.questionsLoading",
         "ledgerPresentation.questionsUnavailable",
@@ -5466,10 +5468,10 @@
     {
       "namespace": "source-leaderboard",
       "sourcePath": "locales/en/source-leaderboard.ts",
-      "sourceSha256": "1a93f5d778fbab8cf395bd9f24151f33c36b763b5b3ac9ac2c0f74c14ebcf8aa",
+      "sourceSha256": "d0b561cc0e9f6e6e0112293fcdbda9a83e23ba7d35e0c1dc374421fe8a994a5d",
       "draftPath": "locales/vi/ui-drafts/source-leaderboard.json",
-      "extractedLeaves": 19,
-      "authoredEntries": 19,
+      "extractedLeaves": 22,
+      "authoredEntries": 22,
       "coveredKeys": [
         "sourceLeaderboard.catalog",
         "sourceLeaderboard.catalogUnavailable",
@@ -5480,6 +5482,7 @@
         "sourceLeaderboard.feeBoundary",
         "sourceLeaderboard.feeCounts",
         "sourceLeaderboard.feeRecipient",
+        "sourceLeaderboard.feesIncomplete",
         "sourceLeaderboard.feesUnavailable",
         "sourceLeaderboard.ownerFee",
         "sourceLeaderboard.paper",
@@ -5488,7 +5491,9 @@
         "sourceLeaderboard.searchLabel",
         "sourceLeaderboard.searchPlaceholder",
         "sourceLeaderboard.title",
-        "sourceLeaderboard.unknown",
+        "sourceLeaderboard.unattributed",
+        "sourceLeaderboard.unavailable",
+        "sourceLeaderboard.viewSettledFees",
         "sourceLeaderboard.walletUnknown"
       ],
       "nonTranslatableMachineIdentifiers": [],

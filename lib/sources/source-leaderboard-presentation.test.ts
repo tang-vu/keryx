@@ -24,9 +24,15 @@ it("renders all source rows, distinct accounting labels and source links for a s
   expect(html).toContain("Zero");
 });
 
-it("renders unavailable fee evidence as unknown rather than a fabricated zero", () => {
-  const html = renderToStaticMarkup(createElement(SourceLeaderboard, { data: { ...data, operatingFeesStatus: "incomplete",
+it.each([
+  ["incomplete", "Not publicly attributed", "Settled owner fees can exist without public source attribution."],
+  ["unavailable", "Unavailable", "Per-source owner fee records are temporarily unavailable."],
+] as const)("distinguishes %s attribution from settled fee totals without inventing a zero", (operatingFeesStatus, label, explanation) => {
+  const html = renderToStaticMarkup(createElement(SourceLeaderboard, { data: { ...data, operatingFeesStatus,
     rows: [{ ...row, operatingFeeUsdc: null, operatingFeePaymentCount: null, operatingFeeCitationCount: null }] }, network: "Arc mainnet" }));
-  expect(html).toContain("Unknown");
-  expect(html).toContain("Source fee totals are unavailable");
+  expect(html).toContain(label);
+  expect(html).toContain(explanation);
+  expect(html).not.toContain("Unknown");
+  expect(html).toContain('href="#payment-proof-title"');
+  expect(html).toContain("View settled operating fee totals");
 });
