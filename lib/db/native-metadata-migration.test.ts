@@ -146,7 +146,7 @@ describe("stock protected command: exact old19/old20/pre-owner chat22 to compile
     const db = new DatabaseSync(f.file);
     try {
       registerStorageCapability(db, f.identity, () => true); db.exec("BEGIN");
-      db.prepare("INSERT INTO topic_watches(wallet,id,revision,state) VALUES(?,?,?,?)").run(`0x${"a".repeat(40)}`, "kept", 1, "{}");
+      // The populated historical topic row is already retained by the migration.
       seedChatRows(db, f.identity);
       db.exec("COMMIT");
     } finally { db.close(); }
