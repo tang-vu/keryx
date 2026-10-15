@@ -1,0 +1,64 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/bot-controls.ts",
+  "sourceSha256": "96779e5901639da0bedbc73c2fbd8129bf0f3e45ede8e3c93c276bffc0a89728",
+  "entries": {
+    "introduction": {
+      "source": "Ask a question to receive an answer with citations.",
+      "text": "Đặt câu hỏi để nhận câu trả lời có trích dẫn."
+    },
+    "usage": {
+      "source": "Usage:",
+      "text": "Cách dùng:"
+    },
+    "exampleQuestion": {
+      "source": "what is x402?",
+      "text": "x402 là gì?"
+    },
+    "reviewBoundary": {
+      "source": "Review-first is available only in the authenticated live browser; review mode flags are refused here.",
+      "text": "Review-first chỉ khả dụng trong trình duyệt trực tiếp đã xác thực; cờ chế độ xem xét không được hỗ trợ ở đây."
+    },
+    "privateQuestion": {
+      "source": "In this private chat you can also just type the question.",
+      "text": "Trong cuộc trò chuyện riêng này, bạn cũng có thể nhập trực tiếp câu hỏi."
+    },
+    "status": {
+      "source": "Status:",
+      "text": "Trạng thái:"
+    },
+    "financialDetails": {
+      "source": "Financial details (English):",
+      "text": "Thông tin tài chính (tiếng Anh):"
+    },
+    "languageHelp": {
+      "source": "Use /language en|vi|pt|es|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
+      "text": "Dùng /language en|vi|pt|es|auto để chọn ngôn ngữ câu trả lời và trợ giúp. Yêu cầu ngôn ngữ rõ ràng trong câu hỏi gốc được ưu tiên; auto theo ngôn ngữ câu hỏi."
+    },
+    "languageCurrent": {
+      "source": "Answer language preference: {preference}.",
+      "text": "Ngôn ngữ câu trả lời đã chọn: {preference}."
+    },
+    "languageSaved": {
+      "source": "Saved answer and help language preference: {preference}.",
+      "text": "Đã lưu ngôn ngữ câu trả lời và trợ giúp: {preference}."
+    },
+    "languageUnavailable": {
+      "source": "The language preference could not be read or confirmed as saved. No successful save is claimed.",
+      "text": "Không thể đọc hoặc xác nhận việc lưu lựa chọn ngôn ngữ. Không xác nhận đã lưu thành công."
+    },
+    "languageInvalid": {
+      "source": "Supported values: en, vi, pt (also pt-BR), es, auto.",
+      "text": "Các giá trị hỗ trợ: en, vi, pt (hoặc pt-BR), es, auto."
+    },
+    "languagePrivate": {
+      "source": "Set or inspect your language preference in a private chat with Keryx.",
+      "text": "Chọn hoặc xem ngôn ngữ trong cuộc trò chuyện riêng với Keryx."
+    },
+    "privatePreparing": {
+      "source": "Keryx is preparing your private research reply…",
+      "text": "Keryx đang chuẩn bị câu trả lời nghiên cứu riêng cho bạn…"
+    }
+  }
+}

@@ -1,0 +1,1152 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-flow.ts",
+  "sourceSha256": "b23cae7bd717df2f90968e5e9f08414aed07bb05d41a39c0737ef3a777dfb827",
+  "entries": {
+    "creatorPayments.stampRing": {
+      "source": "★ PAID IN FULL ★ KERYX ★ USDC ON ARC ",
+      "text": "★ ĐÃ THANH TOÁN ĐẦY ĐỦ ★ KERYX ★ USDC TRÊN ARC "
+    },
+    "creatorPayments.stampPaid": {
+      "source": "PAID",
+      "text": "ĐÃ THANH TOÁN"
+    },
+    "creatorPayments.stampSettled": {
+      "source": "SETTLED · ARC",
+      "text": "ĐÃ QUYẾT TOÁN · ARC"
+    },
+    "creatorPayments.contractTitle": {
+      "source": "Circle Gateway contract on {network}; inspect the original receipt for payment evidence",
+      "text": "Hợp đồng Circle Gateway trên {network}; kiểm tra biên nhận ban đầu để có bằng chứng thanh toán"
+    },
+    "creatorPayments.contractLink": {
+      "source": "Gateway · {network} ↗",
+      "text": "Gateway · {network} ↗"
+    },
+    "decisionLog.deciding": {
+      "source": "deciding",
+      "text": "đang quyết định"
+    },
+    "decisionLog.title": {
+      "source": "The decision",
+      "text": "Quyết định"
+    },
+    "decisionLog.label": {
+      "source": "Decision log",
+      "text": "Nhật ký quyết định"
+    },
+    "decisionLog.connecting": {
+      "source": "Contacting the herald…",
+      "text": "Đang liên hệ sứ giả…"
+    },
+    "decisionLog.jumpToLatest": {
+      "source": "Jump to latest",
+      "text": "Đến mục mới nhất"
+    },
+    "decisionLog.settledAmount": {
+      "source": "${amount} settled",
+      "text": "${amount} đã quyết toán"
+    },
+    "decisionLog.pendingAmount": {
+      "source": "${amount} confirmation pending",
+      "text": "${amount} chờ xác nhận"
+    },
+    "decisionLog.simulatedAmount": {
+      "source": "${amount} offline simulated",
+      "text": "${amount} mô phỏng ngoại tuyến"
+    },
+    "decisionLog.unverifiedAmount": {
+      "source": "${amount} conflicting payment state",
+      "text": "${amount} trạng thái thanh toán xung đột"
+    },
+    "decisionLog.steps.one": {
+      "source": "{count} steps",
+      "text": "{count} bước"
+    },
+    "decisionLog.steps.other": {
+      "source": "{count} steps",
+      "text": "{count} bước"
+    },
+    "sourceDecision.refused": {
+      "source": "Source selection refused",
+      "text": "Chọn nguồn bị từ chối"
+    },
+    "sourceDecision.partiallyWithheld": {
+      "source": "Source selection partially withheld",
+      "text": "Một phần lựa chọn nguồn chưa được cung cấp"
+    },
+    "sourceDecision.marketplace": {
+      "source": "x402 market",
+      "text": "Chợ x402"
+    },
+    "sourceDecision.candidateCount.one": {
+      "source": "{count} candidates",
+      "text": "{count} ứng viên"
+    },
+    "sourceDecision.candidateCount.other": {
+      "source": "{count} candidates",
+      "text": "{count} ứng viên"
+    },
+    "sourceDecision.targetCount.one": {
+      "source": "{count} targets",
+      "text": "{count} mục tiêu"
+    },
+    "sourceDecision.targetCount.other": {
+      "source": "{count} targets",
+      "text": "{count} mục tiêu"
+    },
+    "sourceDecision.proposalCount.one": {
+      "source": "{count} proposal rows",
+      "text": "{count} hàng đề xuất"
+    },
+    "sourceDecision.proposalCount.other": {
+      "source": "{count} proposal rows",
+      "text": "{count} hàng đề xuất"
+    },
+    "sourceDecision.matchedCount.one": {
+      "source": "{count} matched",
+      "text": "{count} khớp"
+    },
+    "sourceDecision.matchedCount.other": {
+      "source": "{count} matched",
+      "text": "{count} khớp"
+    },
+    "sourceDecision.actionableCount.one": {
+      "source": "{count} actionable",
+      "text": "{count} có thể thực hiện"
+    },
+    "sourceDecision.actionableCount.other": {
+      "source": "{count} actionable",
+      "text": "{count} có thể thực hiện"
+    },
+    "sourceDecision.withheldCount.one": {
+      "source": "{count} withheld",
+      "text": "{count} không hiển thị"
+    },
+    "sourceDecision.withheldCount.other": {
+      "source": "{count} withheld",
+      "text": "{count} không hiển thị"
+    },
+    "sourceDecision.invalidCount.one": {
+      "source": "{count} invalid rows",
+      "text": "{count} hàng không hợp lệ"
+    },
+    "sourceDecision.invalidCount.other": {
+      "source": "{count} invalid rows",
+      "text": "{count} hàng không hợp lệ"
+    },
+    "sourceDecision.reasons": {
+      "source": "Reasons: {reasons}",
+      "text": "Lý do: {reasons}"
+    },
+    "sourceDecision.truncatedReasons": {
+      "source": "Reasons: {reasons} (additional reasons omitted)",
+      "text": "Lý do: {reasons} (bỏ bớt lý do khác)"
+    },
+    "sourceDecision.priceAndValue": {
+      "source": "${price} · EV {value}%",
+      "text": "${price} · giá trị kỳ vọng {value}%"
+    },
+    "decisionPhase.decompose": {
+      "source": "Decompose",
+      "text": "Phân tách"
+    },
+    "decisionPhase.discover": {
+      "source": "Discover",
+      "text": "Khám phá"
+    },
+    "decisionPhase.precheck": {
+      "source": "Pre-check",
+      "text": "Kiểm tra trước"
+    },
+    "decisionPhase.decide": {
+      "source": "Decide",
+      "text": "Quyết định"
+    },
+    "decisionPhase.fetch": {
+      "source": "Fetch",
+      "text": "Tải"
+    },
+    "decisionPhase.sufficiency": {
+      "source": "Sufficiency",
+      "text": "Kiểm tra đủ bằng chứng"
+    },
+    "decisionPhase.reevaluate": {
+      "source": "Re-evaluate",
+      "text": "Đánh giá lại"
+    },
+    "decisionPhase.synthesize": {
+      "source": "Synthesize",
+      "text": "Tổng hợp"
+    },
+    "decisionPhase.evidence": {
+      "source": "Evidence",
+      "text": "Bằng chứng"
+    },
+    "decisionPhase.adjudicate": {
+      "source": "Adjudicate",
+      "text": "Đánh giá"
+    },
+    "decisionPhase.verdict": {
+      "source": "Verdict",
+      "text": "Kết luận"
+    },
+    "decisionPhase.attribute": {
+      "source": "Attribute",
+      "text": "Quy nguồn trích dẫn"
+    },
+    "decisionPhase.settle": {
+      "source": "Settle",
+      "text": "Quyết toán"
+    },
+    "decisionPhase.done": {
+      "source": "Done",
+      "text": "Xong"
+    },
+    "sourceDecision.buy": {
+      "source": "BUY",
+      "term": "buy"
+    },
+    "sourceDecision.cache": {
+      "source": "CACHE",
+      "term": "cache"
+    },
+    "sourceDecision.skip": {
+      "source": "SKIP",
+      "term": "skip"
+    },
+    "decisionBudget.underCap": {
+      "source": "${amount} under cap",
+      "text": "${amount} trong hạn mức"
+    },
+    "researchChat.sessionPayer": {
+      "source": "your funded session",
+      "text": "phiên có nguồn tiền của bạn"
+    },
+    "researchChat.expiredPayer": {
+      "source": "your expired funded session (recovery required)",
+      "text": "phiên có nguồn tiền đã hết hạn của bạn (cần khôi phục)"
+    },
+    "researchChat.treasuryPayer": {
+      "source": "Keryx treasury",
+      "text": "Ngân quỹ Keryx"
+    },
+    "researchChat.label": {
+      "source": "Research conversation",
+      "text": "Hội thoại nghiên cứu"
+    },
+    "researchChat.kicker": {
+      "source": "Research with Keryx",
+      "text": "Nghiên cứu cùng Keryx"
+    },
+    "researchChat.title": {
+      "source": "Ask Keryx",
+      "text": "Hỏi Keryx"
+    },
+    "researchChat.introduction": {
+      "source": "Get a cited answer. Inspect source decisions.",
+      "text": "Nhận câu trả lời có trích dẫn. Kiểm tra quyết định nguồn."
+    },
+    "researchChat.turnsLabel": {
+      "source": "Conversation turns",
+      "text": "Lượt hội thoại"
+    },
+    "researchChat.followUpContext": {
+      "source": "Follow-ups use the previous question only, not its answer or the full chat. Include the details you want researched.",
+      "text": "Câu hỏi tiếp nối chỉ dùng câu hỏi trước, không dùng câu trả lời hay toàn bộ chat. Thêm chi tiết bạn muốn nghiên cứu."
+    },
+    "researchChat.newQuestionContext": {
+      "source": "Start a new research question. Each request has its own source cap.",
+      "text": "Bắt đầu câu hỏi nghiên cứu mới. Mỗi yêu cầu có hạn mức nguồn riêng."
+    },
+    "researchChat.newResearch": {
+      "source": "New research",
+      "text": "Nghiên cứu mới"
+    },
+    "researchChat.stopResearch": {
+      "source": "Stop research",
+      "text": "Dừng nghiên cứu"
+    },
+    "researchChat.historyNotice": {
+      "source": "Conversation stays in this tab while the page is open. Completed reports have a saved link; signed-in reports appear in My saved reports. Download a report to keep a local copy.",
+      "text": "Hội thoại giữ trong tab khi trang mở. Báo cáo hoàn tất có liên kết lưu; báo cáo đã đăng nhập xuất hiện trong Báo cáo đã lưu của tôi. Tải báo cáo để giữ bản cục bộ."
+    },
+    "researchChat.toolsLabel": {
+      "source": "Research tools",
+      "text": "Công cụ nghiên cứu"
+    },
+    "researchChat.savedReports": {
+      "source": "My saved reports",
+      "text": "Báo cáo đã lưu của tôi"
+    },
+    "researchChat.paidResearch": {
+      "source": "Paid agent research & recovery",
+      "text": "Nghiên cứu tác nhân trả phí và khôi phục"
+    },
+    "researchChat.publishSource": {
+      "source": "Publish a paid source",
+      "text": "Xuất bản nguồn trả phí"
+    },
+    "researchTurn.inProgress": {
+      "source": "Keryx · Research in progress",
+      "text": "Keryx · Đang nghiên cứu"
+    },
+    "researchTurn.findingSources": {
+      "source": "Finding sources worth reading…",
+      "text": "Đang tìm nguồn đáng đọc…"
+    },
+    "researchTurn.stoppedNotice": {
+      "source": "Stopped waiting for this research. Payments already signed may still settle; stopping does not refund them.",
+      "text": "Đã dừng chờ nghiên cứu này. Thanh toán đã ký vẫn có thể quyết toán; dừng không hoàn tiền."
+    },
+    "researchTurn.failed": {
+      "source": "Research could not finish. Try another question.",
+      "text": "Nghiên cứu chưa thể hoàn tất. Thử câu hỏi khác."
+    },
+    "researchTurn.label": {
+      "source": "Research: {question}",
+      "text": "Nghiên cứu: {question}"
+    },
+    "researchTurn.requestSummary": {
+      "source": "You · {payer} · source cap {amount} USDC",
+      "text": "Bạn · {payer} · hạn mức nguồn {amount} USDC"
+    },
+    "researchTurn.retryAfter": {
+      "source": "Try again in {seconds}s. Your saved reports remain available.",
+      "text": "Thử lại sau {seconds}s. Báo cáo đã lưu vẫn khả dụng."
+    },
+    "researchTurn.retryShortly": {
+      "source": "Try again shortly. Your saved reports remain available.",
+      "text": "Thử lại sau một lát. Báo cáo đã lưu vẫn khả dụng."
+    },
+    "researchTurn.paymentPending": {
+      "source": "{amount} pending",
+      "text": "{amount} đang chờ"
+    },
+    "researchTurn.paymentSimulated": {
+      "source": "{amount} simulated",
+      "text": "{amount} mô phỏng"
+    },
+    "researchTurn.paymentUnverified": {
+      "source": "{amount} unverified",
+      "text": "{amount} chưa xác minh"
+    },
+    "researchTurn.paymentFailed": {
+      "source": "{amount} failed",
+      "text": "{amount} không thành công"
+    },
+    "researchTurn.summary.one": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap",
+      "text": "Nhật ký quyết định và thanh toán · {count} bước · {settled} USDC đã quyết toán trong hạn mức {cap}"
+    },
+    "researchTurn.summaryWithUnsettled.one": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · {unsettled}",
+      "text": "Nhật ký quyết định và thanh toán · {count} bước · {settled} USDC đã quyết toán trong hạn mức {cap} · {unsettled}"
+    },
+    "researchTurn.offlineSummary.one": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · offline simulation",
+      "text": "Nhật ký quyết định và thanh toán · {count} bước · {settled} USDC đã quyết toán trong hạn mức {cap} · mô phỏng ngoại tuyến"
+    },
+    "researchTurn.offlineSummaryWithUnsettled.one": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · {unsettled} · offline simulation",
+      "text": "Nhật ký quyết định và thanh toán · {count} bước · {settled} USDC đã quyết toán trong hạn mức {cap} · {unsettled} · mô phỏng ngoại tuyến"
+    },
+    "researchTurn.summary.other": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap",
+      "text": "Nhật ký quyết định và thanh toán · {count} bước · {settled} USDC đã quyết toán trong hạn mức {cap}"
+    },
+    "researchTurn.summaryWithUnsettled.other": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · {unsettled}",
+      "text": "Nhật ký quyết định và thanh toán · {count} bước · {settled} USDC đã quyết toán trong hạn mức {cap} · {unsettled}"
+    },
+    "researchTurn.offlineSummary.other": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · offline simulation",
+      "text": "Nhật ký quyết định và thanh toán · {count} bước · {settled} USDC đã quyết toán trong hạn mức {cap} · mô phỏng ngoại tuyến"
+    },
+    "researchTurn.offlineSummaryWithUnsettled.other": {
+      "source": "Decision log and payments · {count} steps · {settled} USDC settled of {cap} cap · {unsettled} · offline simulation",
+      "text": "Nhật ký quyết định và thanh toán · {count} bước · {settled} USDC đã quyết toán trong hạn mức {cap} · {unsettled} · mô phỏng ngoại tuyến"
+    },
+    "researchDecisions.boundary": {
+      "source": "Why the agent chose BUY, SKIP or CACHE. A decision is a plan, not proof of a completed read or payment.",
+      "text": "Vì sao tác nhân chọn BUY, SKIP hoặc CACHE. Quyết định là kế hoạch, không chứng minh đã đọc hay thanh toán xong."
+    },
+    "researchDecisions.integrityNotice": {
+      "source": "Receipt integrity checked in this browser. Matches the displayed job and answer. Settlement remains server-reported; original request verification requires the buyer journal.",
+      "text": "Đã kiểm tra toàn vẹn biên nhận trong trình duyệt. Khớp tác vụ và câu trả lời hiển thị. Quyết toán vẫn do máy chủ báo; xác minh yêu cầu ban đầu cần nhật ký bên mua."
+    },
+    "researchDecisions.failed": {
+      "source": "Source decisions could not be loaded or verified. Your answer is still available.",
+      "text": "Không thể tải hoặc xác minh quyết định nguồn. Câu trả lời vẫn khả dụng."
+    },
+    "researchDecisions.retry": {
+      "source": "Retry loading decisions",
+      "text": "Thử tải quyết định lại"
+    },
+    "researchDecisions.loading": {
+      "source": "Loading source decisions…",
+      "text": "Đang tải quyết định nguồn…"
+    },
+    "researchDecisions.empty": {
+      "source": "No source decisions were recorded for this job.",
+      "text": "Chưa ghi quyết định nguồn cho tác vụ này."
+    },
+    "researchDecisions.title": {
+      "source": "Source decisions",
+      "text": "Quyết định về nguồn"
+    },
+    "researchDecisions.count.one": {
+      "source": "Source decisions ({count})",
+      "text": "Quyết định nguồn ({count})"
+    },
+    "researchDecisions.count.other": {
+      "source": "Source decisions ({count})",
+      "text": "Quyết định nguồn ({count})"
+    },
+    "researchDecisions.quotedPrice": {
+      "source": "{action} · quoted access price {amount} USDC",
+      "text": "{action} · giá truy cập báo {amount} USDC"
+    },
+    "researchDecisions.unavailableTarget": {
+      "source": "Research target {number} (text unavailable)",
+      "text": "Mục tiêu nghiên cứu {number} (văn bản không khả dụng)"
+    },
+    "followUp.title": {
+      "source": "Ask a follow-up",
+      "text": "Đặt câu hỏi tiếp nối"
+    },
+    "followUp.paymentNotice": {
+      "source": "New dispatch · creators paid again",
+      "text": "Bản tin mới · trả tiền tác giả lần nữa"
+    },
+    "followUp.questionLabel": {
+      "source": "Your follow-up question",
+      "text": "Câu hỏi tiếp nối của bạn"
+    },
+    "followUp.placeholder": {
+      "source": "How does that compare to…?",
+      "text": "So với… thì thế nào?"
+    },
+    "followUp.contextNotice": {
+      "source": "Carries this dispatch’s question as context — never its answer. The next dispatch is read from sources bought for it.",
+      "text": "Mang câu hỏi bản tin này làm bối cảnh — không bao giờ mang câu trả lời. Bản tin sau đọc từ nguồn mua cho nó."
+    },
+    "followUp.submit": {
+      "source": "Dispatch follow-up",
+      "text": "Bản tin tiếp nối"
+    },
+    "researchTrial.label": {
+      "source": "Sponsored research trial",
+      "text": "Thử nghiệm nghiên cứu được tài trợ"
+    },
+    "researchTrial.title": {
+      "source": "Research trial, sponsored by Keryx",
+      "text": "Thử nghiệm nghiên cứu do Keryx tài trợ"
+    },
+    "researchTrial.limits": {
+      "source": "No wallet or USDC deposit required. Keryx covers source purchases, eligible creator rewards and operating fees within its trial usage and spending limits.",
+      "text": "Không cần ví hay nạp USDC. Keryx chi trả mua nguồn, thưởng tác giả đủ điều kiện và phí vận hành trong giới hạn sử dụng, chi tiêu thử nghiệm."
+    },
+    "researchTrial.prepareQuestion": {
+      "source": "Prepare a research question →",
+      "text": "Chuẩn bị câu hỏi nghiên cứu →"
+    },
+    "researchTrial.literatureLink": {
+      "source": "Working on a literature review? Save and compare papers →",
+      "text": "Làm tổng quan tài liệu? Lưu và so bài →"
+    },
+    "researchTrial.publicNotice": {
+      "source": "Trial reports have public links. Use questions you can share publicly.",
+      "text": "Báo cáo thử nghiệm có liên kết công khai. Dùng câu hỏi có thể chia sẻ công khai."
+    },
+    "researchTrial.publicAndPayerNotice": {
+      "source": "Trial reports have public links. Use questions you can share publicly. Check who pays in the question composer; an active research budget uses your USDC.",
+      "text": "Báo cáo thử nghiệm có liên kết công khai. Dùng câu hỏi có thể chia sẻ. Kiểm tra bên trả trong trình soạn; ngân sách nghiên cứu đang hoạt động dùng USDC của bạn."
+    },
+    "researchTour.budgetTitle": {
+      "source": "Research with a budget",
+      "text": "Nghiên cứu với ngân sách"
+    },
+    "researchTour.budgetBody": {
+      "source": "Keryx finds sources, explains what it buys or skips, and cites evidence in its answer.",
+      "text": "Keryx tìm nguồn, giải thích mua hay bỏ qua và trích bằng chứng trong câu trả lời."
+    },
+    "researchTour.questionTitle": {
+      "source": "Ask a question",
+      "text": "Đặt câu hỏi"
+    },
+    "researchTour.questionBody": {
+      "source": "Enter the research question you want answered. You can inspect decisions as the answer streams.",
+      "text": "Nhập câu hỏi nghiên cứu cần trả lời. Kiểm tra quyết định khi câu trả lời truyền trực tiếp."
+    },
+    "researchTour.capTitle": {
+      "source": "Choose a spending cap",
+      "text": "Chọn hạn mức chi tiêu"
+    },
+    "researchTour.capBody": {
+      "source": "Set the most this request may spend. A cap is permission, not a promise to spend it all.",
+      "text": "Đặt tối đa yêu cầu được chi. Hạn mức là quyền, không hứa dùng hết."
+    },
+    "researchTour.startTitle": {
+      "source": "Start research",
+      "text": "Bắt đầu nghiên cứu"
+    },
+    "researchTour.open": {
+      "source": "How it works",
+      "text": "Cách hoạt động"
+    },
+    "researchTour.label": {
+      "source": "How Keryx works",
+      "text": "Keryx hoạt động thế nào"
+    },
+    "researchTour.closeLabel": {
+      "source": "Close tour",
+      "text": "Đóng hướng dẫn"
+    },
+    "researchTour.close": {
+      "source": "Close",
+      "text": "Đóng"
+    },
+    "researchTour.back": {
+      "source": "Back",
+      "text": "Quay lại"
+    },
+    "researchTour.done": {
+      "source": "Done",
+      "text": "Xong"
+    },
+    "researchTour.next": {
+      "source": "Next",
+      "text": "Tiếp"
+    },
+    "researchTour.startBody": {
+      "source": "Submit to see source decisions, payment state, citations, and creator rewards on {network}.",
+      "text": "Gửi để xem quyết định nguồn, trạng thái thanh toán, trích dẫn và thưởng tác giả trên {network}."
+    },
+    "researchTour.step": {
+      "source": "Step {number} of {total}",
+      "text": "Bước {number} trên {total}"
+    },
+    "creatorPayments.title": {
+      "source": "The settlement",
+      "text": "Việc quyết toán"
+    },
+    "creatorPayments.currentNetwork": {
+      "source": "weighted · USDC on Arc",
+      "text": "theo trọng số · USDC trên Arc"
+    },
+    "creatorPayments.operatingFees": {
+      "source": "Keryx operating fees",
+      "text": "Phí vận hành Keryx"
+    },
+    "creatorPayments.operatingFeeNotice": {
+      "source": "Research operating fees are recorded separately from creator rewards.",
+      "text": "Phí vận hành nghiên cứu ghi riêng với thưởng tác giả."
+    },
+    "creatorPayments.waiting": {
+      "source": "Waiting on the herald to pay…",
+      "text": "Đang chờ sứ giả trả tiền…"
+    },
+    "creatorPayments.empty": {
+      "source": "Payouts to cited creators appear here.",
+      "text": "Thanh toán cho tác giả trích dẫn xuất hiện tại đây."
+    },
+    "creatorPayments.batched": {
+      "source": "batched",
+      "text": "theo lô"
+    },
+    "creatorPayments.failed": {
+      "source": "failed · not charged",
+      "text": "không thành công · không thu phí"
+    },
+    "creatorPayments.pending": {
+      "source": "confirmation pending",
+      "text": "đang chờ xác nhận"
+    },
+    "creatorPayments.offline": {
+      "source": "Offline — simulated",
+      "text": "Ngoại tuyến — mô phỏng"
+    },
+    "creatorPayments.recordedStates": {
+      "source": "Recorded payment states",
+      "text": "Trạng thái thanh toán ghi nhận"
+    },
+    "creatorPayments.recordedNetwork": {
+      "source": "{network} · recorded USDC",
+      "text": "{network} · USDC ghi nhận"
+    },
+    "creatorPayments.settlementTitle": {
+      "source": "Circle Gateway settlement ID {reference} — batched on-chain on Arc (not a per-tx EVM hash)",
+      "text": "ID quyết toán Circle Gateway {reference} — theo lô trên chuỗi Arc (không phải hash EVM từng giao dịch)"
+    },
+    "creatorPayments.settledWithoutReference": {
+      "source": "{payee} · recorded settled · transfer ID unavailable",
+      "text": "{payee} · ghi nhận đã quyết toán · ID chuyển không khả dụng"
+    },
+    "creatorPayments.simulated": {
+      "source": "{payee} · simulated",
+      "text": "{payee} · mô phỏng"
+    },
+    "creatorPayments.pendingTotal.one": {
+      "source": "{count} pending · confirmed total",
+      "text": "{count} đang chờ · tổng đã xác nhận"
+    },
+    "creatorPayments.failedTotal.one": {
+      "source": "{count} failed · not charged",
+      "text": "{count} không thành công · không thu phí"
+    },
+    "creatorPayments.pendingTotal.other": {
+      "source": "{count} pending · confirmed total",
+      "text": "{count} đang chờ · tổng đã xác nhận"
+    },
+    "creatorPayments.failedTotal.other": {
+      "source": "{count} failed · not charged",
+      "text": "{count} không thành công · không thu phí"
+    },
+    "creatorPayments.operatingPayment": {
+      "source": "${amount} USDC · {state}",
+      "text": "${amount} USDC · {state}"
+    },
+    "creatorPayments.operatingPaymentWithReference": {
+      "source": "${amount} USDC · {state} · Circle reference {reference}",
+      "text": "${amount} USDC · {state} · tham chiếu Circle {reference}"
+    },
+    "sourceDecision.diagnosticNotice": {
+      "source": "This diagnostic records why source selection was blocked. It is not a completed report or payment receipt.",
+      "text": "Chẩn đoán ghi lý do chọn nguồn bị chặn. Không phải báo cáo hoàn tất hay biên nhận thanh toán."
+    },
+    "sourceDecision.downloadDiagnostic": {
+      "source": "Download failure diagnostic",
+      "text": "Tải chẩn đoán lỗi"
+    },
+    "embedResearch.tagline": {
+      "source": "citations are currency",
+      "text": "trích dẫn là tiền tệ"
+    },
+    "embedResearch.trial": {
+      "source": "Free · no wallet",
+      "text": "Miễn phí · không cần ví"
+    },
+    "embedResearch.checking": {
+      "source": "Checking research availability…",
+      "text": "Đang kiểm tra khả dụng nghiên cứu…"
+    },
+    "embedResearch.savedReports": {
+      "source": "Saved reports",
+      "text": "Báo cáo đã lưu"
+    },
+    "embedResearch.checkAvailability": {
+      "source": "Check availability",
+      "text": "Kiểm tra khả dụng"
+    },
+    "embedResearch.placeholder": {
+      "source": "Ask a question…",
+      "text": "Đặt câu hỏi…"
+    },
+    "embedResearch.submit": {
+      "source": "Ask ▸",
+      "text": "Hỏi ▸"
+    },
+    "embedResearch.limitReached": {
+      "source": "Free trial · limit reached",
+      "text": "Thử miễn phí · đã đạt giới hạn"
+    },
+    "embedResearch.continueWithWallet": {
+      "source": "keep going on keryx.cc with your own wallet",
+      "text": "tiếp tục trên keryx.cc bằng ví riêng"
+    },
+    "embedResearch.failed": {
+      "source": "Something went wrong — please try again.",
+      "text": "Có lỗi — vui lòng thử lại."
+    },
+    "embedResearch.fullDispatch": {
+      "source": "Full dispatch",
+      "text": "Bản tin đầy đủ"
+    },
+    "embedResearch.footer": {
+      "source": "Powered by Keryx — paid citations reward verified creators ↗",
+      "text": "Vận hành bởi Keryx — trích dẫn trả phí thưởng tác giả đã xác minh ↗"
+    },
+    "embedResearch.sourceDesk": {
+      "source": "You’re asking from {source}’s desk — if the herald cites them, they’re paid for it, instantly.",
+      "text": "Bạn hỏi từ bàn của {source} — nếu sứ giả trích dẫn họ, họ được trả tiền ngay."
+    },
+    "embedResearch.retryAfter": {
+      "source": "Try again in {seconds}s — or {continueLink}.",
+      "text": "Thử lại sau {seconds}s — hoặc {continueLink}."
+    },
+    "embedResearch.retryShortly": {
+      "source": "Try again shortly — or {continueLink}.",
+      "text": "Thử lại sau một lát — hoặc {continueLink}."
+    },
+    "embedResearch.recordedRewards": {
+      "source": "Citations and planned rewards · ${amount} USDC recorded ({mode})",
+      "text": "Trích dẫn và thưởng dự kiến · ${amount} USDC ghi nhận ({mode})"
+    },
+    "embedResearch.pageTitle": {
+      "source": "Ask Keryx",
+      "text": "Hỏi Keryx"
+    },
+    "agentIntegration.title": {
+      "source": "Call Keryx from your own agent",
+      "text": "Gọi Keryx từ tác nhân của bạn"
+    },
+    "agentIntegration.packageNotice": {
+      "source": "Keryx is itself a paid x402 endpoint. The request prepays a fixed Quick/Deep service fee plus its hard creator-spend cap; the receipt itemizes what reached creators and what reserve stayed unused. Package v1 pins the execution contract and returns measured latency and evidence quality; its initial SLO is provisional, not a refund-backed SLA.",
+      "text": "Keryx là điểm cuối x402 trả phí. Yêu cầu trả trước phí dịch vụ Nhanh/Chuyên sâu cố định cộng hạn mức chi tác giả cứng; biên nhận tách tiền đến tác giả và dự trữ chưa dùng. Gói v1 ghim hợp đồng thực thi, trả độ trễ và chất lượng bằng chứng đo được; SLO đầu tiên tạm thời, không phải SLA bảo đảm hoàn tiền."
+    },
+    "agentIntegration.copyTitle": {
+      "source": "Copy to clipboard",
+      "text": "Sao chép vào bộ nhớ tạm"
+    },
+    "agentIntegration.copied": {
+      "source": "copied",
+      "text": "đã sao chép"
+    },
+    "agentIntegration.copy": {
+      "source": "copy",
+      "text": "sao chép"
+    },
+    "agentIntegration.remoteTools": {
+      "source": "Remote MCP service tools:",
+      "text": "Công cụ dịch vụ MCP từ xa:"
+    },
+    "agentIntegration.setupLink": {
+      "source": "setup and tool roles ↗",
+      "text": "thiết lập và vai trò công cụ ↗"
+    },
+    "agentIntegration.payerNotice": {
+      "source": "Remote research uses the service budget; local stdio pays from your configured wallet.",
+      "text": "Nghiên cứu từ xa dùng ngân sách dịch vụ; stdio cục bộ trả từ ví cấu hình."
+    },
+    "agentIntegration.schemaLinkNotice": {
+      "source": "Full schema, response shape, and buyer integration →",
+      "text": "Lược đồ đầy đủ, dạng phản hồi và tích hợp bên mua →"
+    },
+    "agentIntegration.endpoint": {
+      "source": "{endpoint} · dynamic fixed price · {network}",
+      "text": "{endpoint} · giá cố định động · {network}"
+    },
+    "researchJob.responseUnverified": {
+      "source": "The job response could not be verified. Keep your job ID and refresh later.",
+      "text": "Chưa thể xác minh phản hồi tác vụ. Giữ ID và làm mới sau."
+    },
+    "researchJob.refreshPaused": {
+      "source": "Automatic refresh paused after ten minutes. Refresh to keep following this job.",
+      "text": "Tự làm mới tạm dừng sau mười phút. Làm mới để tiếp tục theo tác vụ."
+    },
+    "researchJob.failed": {
+      "source": "Could not load this job.",
+      "text": "Không thể tải tác vụ này."
+    },
+    "researchJob.lookupStopped": {
+      "source": "Lookup stopped. Refresh to try again; no new payment is needed.",
+      "text": "Đã dừng tra cứu. Làm mới để thử lại; không cần thanh toán mới."
+    },
+    "researchJob.invalidId": {
+      "source": "Enter the complete a2a_ job ID returned by your paid request.",
+      "text": "Nhập đầy đủ ID tác vụ a2a_ mà yêu cầu trả phí trả về."
+    },
+    "researchJob.title": {
+      "source": "Follow a paid job",
+      "text": "Theo dõi tác vụ trả phí"
+    },
+    "researchJob.privacyNotice": {
+      "source": "Your job ID grants access to its result. Keep it private. This page does not save it to browser storage or the address bar.",
+      "text": "ID tác vụ cấp quyền truy cập kết quả. Giữ riêng tư. Trang không lưu ID vào lưu trữ trình duyệt hay thanh địa chỉ."
+    },
+    "researchJob.idLabel": {
+      "source": "Paid job ID",
+      "text": "ID tác vụ trả phí"
+    },
+    "researchJob.open": {
+      "source": "Open / refresh",
+      "text": "Mở / làm mới"
+    },
+    "researchJob.clear": {
+      "source": "Clear job",
+      "text": "Xóa tác vụ"
+    },
+    "researchJob.loading": {
+      "source": "Looking up job…",
+      "text": "Đang tra cứu tác vụ…"
+    },
+    "researchJob.httpFailure": {
+      "source": "Job lookup failed ({status}). Keep your job ID and refresh; this does not buy another job.",
+      "text": "Tra cứu tác vụ không thành công ({status}). Giữ ID và làm mới; không mua tác vụ khác."
+    },
+    "researchJob.updated": {
+      "source": "{status} · updated {time}",
+      "text": "{status} · cập nhật {time}"
+    },
+    "researchJobDetails.unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "researchJobDetails.reviewRequired": {
+      "source": "Operator review is required. Automatic polling has stopped. Refresh this job after review; do not submit a new payment to recover it.",
+      "text": "Cần Operator xem xét. Đã dừng thăm dò tự động. Làm mới tác vụ sau xem xét; không gửi thanh toán mới để khôi phục."
+    },
+    "researchJobDetails.unsupported": {
+      "source": "No supported answer. The job finished, but none of its research targets reached the evidence threshold. Review the interpretation and evidence before buying again. The fixed package remains paid; unused creator reserve is not a refund.",
+      "text": "Không có câu trả lời được hỗ trợ. Tác vụ hoàn tất nhưng không mục tiêu nào đạt ngưỡng bằng chứng. Xem diễn giải và bằng chứng trước khi mua lại. Gói cố định vẫn đã trả tiền; dự trữ tác giả chưa dùng không phải hoàn tiền."
+    },
+    "researchJobDetails.qualityUnverified": {
+      "source": "Research quality is unverified. Job completion and a valid receipt do not establish a supported answer.",
+      "text": "Chất lượng nghiên cứu chưa xác minh. Tác vụ hoàn tất và biên nhận hợp lệ không xác lập câu trả lời được hỗ trợ."
+    },
+    "researchJobDetails.targetExceeded": {
+      "source": "target exceeded",
+      "text": "vượt thời gian mục tiêu"
+    },
+    "researchJobDetails.inProgress": {
+      "source": "in progress",
+      "text": "đang thực hiện"
+    },
+    "researchJobDetails.targetMet": {
+      "source": "target met",
+      "text": "đạt mục tiêu"
+    },
+    "researchJobDetails.targetNotMet": {
+      "source": "target not met",
+      "text": "chưa đạt mục tiêu"
+    },
+    "researchJobDetails.packagePaid": {
+      "source": "Package paid",
+      "text": "Đã thanh toán gói"
+    },
+    "researchJobDetails.serviceFee": {
+      "source": "Service fee",
+      "text": "Phí dịch vụ"
+    },
+    "researchJobDetails.creatorCap": {
+      "source": "Creator cap",
+      "text": "Hạn mức dành cho tác giả"
+    },
+    "researchJobDetails.settled": {
+      "source": "Settled to creators",
+      "text": "Đã quyết toán cho tác giả"
+    },
+    "researchJobDetails.pending": {
+      "source": "Pending creator spend",
+      "text": "Khoản chi cho tác giả đang chờ"
+    },
+    "researchJobDetails.unusedReserve": {
+      "source": "Unused reserve (not a refund)",
+      "text": "Dự trữ chưa dùng (không phải hoàn tiền)"
+    },
+    "researchJobDetails.accountingIncomplete": {
+      "source": "Incomplete accounting: recorded creator payments are a lower bound. Unused reserve is unknown.",
+      "text": "Hạch toán chưa đầy đủ: thanh toán tác giả ghi nhận là giới hạn dưới. Dự trữ chưa dùng chưa rõ."
+    },
+    "researchJobDetails.settlementUnavailable": {
+      "source": "Creator settlement totals are not available in this response yet.",
+      "text": "Tổng quyết toán tác giả chưa có trong phản hồi này."
+    },
+    "researchJobDetails.answer": {
+      "source": "Research answer",
+      "text": "Câu trả lời nghiên cứu"
+    },
+    "researchJobDetails.claimEvidence": {
+      "source": "Claim evidence",
+      "text": "Bằng chứng cho nhận định"
+    },
+    "researchJobDetails.downloadReceipt": {
+      "source": "Download verified receipt",
+      "text": "Tải biên nhận đã xác minh"
+    },
+    "researchJobDetails.openReceipt": {
+      "source": "Open portable receipt JSON",
+      "text": "Mở JSON biên nhận di động"
+    },
+    "researchJobDetails.receiptBoundary": {
+      "source": "USDC; retain the original receipt network. Evidence coverage measures grounding; it does not certify factual correctness. This view displays server-reported settlement; downloading a receipt does not independently verify it.",
+      "text": "USDC; giữ mạng biên nhận ban đầu. Bao phủ bằng chứng đo căn cứ, không chứng nhận thông tin chính xác. Hiển thị quyết toán máy chủ báo; tải biên nhận không xác minh độc lập."
+    },
+    "researchJobDetails.monthlyAllocation": {
+      "source": "This job uses a {amount} allocation from prepaid Research Monthly. It creates no new inbound payment. Failed or pending execution keeps its request slot.",
+      "text": "Tác vụ dùng phân bổ {amount} từ Research Monthly trả trước. Không tạo thanh toán đầu vào mới. Thực thi lỗi hoặc đang chờ giữ suất yêu cầu."
+    },
+    "researchJobDetails.timing": {
+      "source": "{elapsed}s elapsed · {target}s provisional target · {state}. No SLA remedy.",
+      "text": "Đã qua {elapsed}s · mục tiêu tạm thời {target}s · {state}. Không có khắc phục SLA."
+    },
+    "researchJobDetails.groundedRate": {
+      "source": "Grounded claims: {rate}%.",
+      "text": "Nhận định có căn cứ: {rate}%."
+    },
+    "researchJobDetails.groundedUnavailable": {
+      "source": "Grounded claims: measurement unavailable.",
+      "text": "Nhận định có căn cứ: đo lường không khả dụng."
+    },
+    "researchJobDetails.coverage": {
+      "source": "{rate}% evidence coverage",
+      "text": "Bao phủ bằng chứng {rate}%"
+    },
+    "savedResearch.storageUnavailable": {
+      "source": "Saved jobs could not be read. Check browser storage or import your private recovery file. No payment was made.",
+      "text": "Không thể đọc tác vụ đã lưu. Kiểm tra lưu trữ trình duyệt hoặc nhập tệp khôi phục riêng tư. Không thanh toán."
+    },
+    "savedResearch.lookupPaused": {
+      "source": "Automatic lookup paused. Refresh the same job to continue; no payment is needed.",
+      "text": "Tra cứu tự động tạm dừng. Làm mới cùng tác vụ để tiếp tục; không cần trả tiền."
+    },
+    "savedResearch.lookupFailed": {
+      "source": "Could not load or verify this job and receipt. Keep the recovery file and retry this job; do not submit another payment to recover it.",
+      "text": "Không thể tải hoặc xác minh tác vụ và biên nhận. Giữ tệp khôi phục và thử lại tác vụ này; không gửi thanh toán khác để khôi phục."
+    },
+    "savedResearch.title": {
+      "source": "Saved research jobs",
+      "text": "Tác vụ nghiên cứu đã lưu"
+    },
+    "savedResearch.privacyNotice": {
+      "source": "Private recovery data is stored in this browser. Anyone using this browser profile can read it. A recovery file grants access to the job; keep it private. This is local history, not an account backup.",
+      "text": "Dữ liệu khôi phục riêng tư lưu trong trình duyệt. Người dùng hồ sơ trình duyệt này có thể đọc. Tệp khôi phục cấp quyền truy cập tác vụ; giữ riêng tư. Đây là lịch sử cục bộ, không phải sao lưu tài khoản."
+    },
+    "savedResearch.acknowledgementNotice": {
+      "source": "Exports include any saved payment acknowledgement. Importing restores access without paying again. Copied acknowledgements are seller assertions, not independent settlement proof.",
+      "text": "Bản xuất gồm xác nhận thanh toán đã lưu nếu có. Nhập khôi phục truy cập không trả lại. Xác nhận sao chép là khẳng định bên bán, không phải bằng chứng quyết toán độc lập."
+    },
+    "savedResearch.refresh": {
+      "source": "Refresh saved jobs",
+      "text": "Làm mới tác vụ đã lưu"
+    },
+    "savedResearch.import": {
+      "source": "Import recovery file",
+      "text": "Nhập tệp khôi phục"
+    },
+    "savedResearch.importFailed": {
+      "source": "Recovery file could not be imported. It must be an unmodified Keryx recovery file under 64 KB. If already saved, open the existing job below.",
+      "text": "Không thể nhập tệp khôi phục. Phải là tệp Keryx chưa sửa dưới 64 KB. Nếu đã lưu, mở tác vụ hiện có bên dưới."
+    },
+    "savedResearch.empty": {
+      "source": "No jobs saved here yet. Buy a job or import a CLI recovery file.",
+      "text": "Chưa lưu tác vụ tại đây. Mua tác vụ hoặc nhập tệp khôi phục CLI."
+    },
+    "savedResearch.imported": {
+      "source": "imported recovery",
+      "text": "dữ liệu khôi phục đã nhập"
+    },
+    "savedResearch.prepared": {
+      "source": "prepared locally",
+      "text": "đã chuẩn bị cục bộ"
+    },
+    "savedResearch.submissionRecorded": {
+      "source": "submission recorded",
+      "text": "đã ghi nhận việc gửi"
+    },
+    "savedResearch.refreshJob": {
+      "source": "Refresh this job",
+      "text": "Làm mới tác vụ này"
+    },
+    "savedResearch.exportFailed": {
+      "source": "Recovery export failed. Keep this tab and try again.",
+      "text": "Xuất khôi phục không thành công. Giữ tab và thử lại."
+    },
+    "savedResearch.export": {
+      "source": "Export recovery file",
+      "text": "Xuất tệp khôi phục"
+    },
+    "savedResearch.remove": {
+      "source": "Remove local record",
+      "text": "Xóa hồ sơ cục bộ"
+    },
+    "savedResearch.close": {
+      "source": "Close job",
+      "text": "Đóng tác vụ"
+    },
+    "savedResearch.removalBoundary": {
+      "source": "Removal only deletes this browser record. It does not cancel work, revoke payment, create a refund or delete server data. Export the recovery file first if you need access later.",
+      "text": "Xóa chỉ xóa hồ sơ trình duyệt này. Không hủy công việc, thu hồi thanh toán, tạo hoàn tiền hay xóa dữ liệu máy chủ. Xuất tệp khôi phục trước nếu cần truy cập sau."
+    },
+    "savedResearch.removalFailed": {
+      "source": "Local removal failed. Try again.",
+      "text": "Xóa cục bộ không thành công. Thử lại."
+    },
+    "savedResearch.confirmRemoval": {
+      "source": "Confirm local removal",
+      "text": "Xác nhận xóa cục bộ"
+    },
+    "savedResearch.loading": {
+      "source": "Looking up the original job…",
+      "text": "Đang tra cứu tác vụ ban đầu…"
+    },
+    "savedResearch.sellerAcknowledged": {
+      "source": "Saved data reports a seller payment acknowledgement; this is not independent settlement verification.",
+      "text": "Dữ liệu lưu báo bên bán xác nhận thanh toán; không phải xác minh quyết toán độc lập."
+    },
+    "savedResearch.noAcknowledgement": {
+      "source": "No saved payment acknowledgement. This does not prove the payment failed.",
+      "text": "Chưa lưu xác nhận thanh toán. Không chứng minh thanh toán thất bại."
+    },
+    "savedResearch.notFoundUncertain": {
+      "source": "No order was found. A missing order does not prove no debit. Keep the recovery file for review; do not buy again to recover.",
+      "text": "Không tìm thấy đơn. Thiếu đơn không chứng minh chưa ghi nợ. Giữ tệp khôi phục để xem xét; không mua lại để khôi phục."
+    },
+    "savedResearch.integrityNotice": {
+      "source": "Receipt integrity and original-request binding verified locally. This does not certify research truth or independently verify settlement.",
+      "text": "Đã xác minh cục bộ toàn vẹn biên nhận và ràng buộc yêu cầu ban đầu. Không chứng nhận sự thật nghiên cứu hay xác minh quyết toán độc lập."
+    },
+    "walletResearch.title": {
+      "source": "Paid jobs for your wallet",
+      "text": "Tác vụ trả phí của ví bạn"
+    },
+    "walletResearch.introduction": {
+      "source": "Find browser and agent purchases paid by your signed-in wallet, including jobs missing from this browser's saved files. Sponsored playground dispatches are separate.",
+      "text": "Tìm giao dịch mua trình duyệt và tác nhân do ví đăng nhập trả, kể cả tác vụ thiếu trong tệp đã lưu của trình duyệt. Bản tin khu thử nghiệm được tài trợ tách biệt."
+    },
+    "walletResearch.privacyBoundary": {
+      "source": "This account list requires sign-in. Existing job results still use link-based access and may appear in the public archive; signing in does not make past research private.",
+      "text": "Danh sách tài khoản cần đăng nhập. Kết quả tác vụ hiện có vẫn dùng truy cập qua liên kết và có thể trong kho công khai; đăng nhập không làm nghiên cứu trước thành riêng tư."
+    },
+    "walletResearch.checkingSignIn": {
+      "source": "Checking sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "walletResearch.signIn": {
+      "source": "Sign in with the wallet that paid",
+      "text": "Đăng nhập bằng ví trả tiền"
+    },
+    "walletResearch.sessionEnded": {
+      "source": "Sign in again to view paid jobs.",
+      "text": "Đăng nhập lại để xem tác vụ trả phí."
+    },
+    "walletResearch.loadFailed": {
+      "source": "Paid job history could not be loaded. Refresh to retry.",
+      "text": "Không thể tải lịch sử tác vụ trả phí. Làm mới để thử lại."
+    },
+    "walletResearch.verificationFailed": {
+      "source": "Paid job history could not be verified. Refresh to retry.",
+      "text": "Không thể xác minh lịch sử tác vụ trả phí. Làm mới để thử lại."
+    },
+    "walletResearch.walletMismatch": {
+      "source": "The history response did not match your wallet.",
+      "text": "Phản hồi lịch sử không khớp ví."
+    },
+    "walletResearch.timeout": {
+      "source": "History lookup timed out. Refresh to retry.",
+      "text": "Tra lịch sử hết thời gian chờ. Làm mới để thử lại."
+    },
+    "walletResearch.refresh": {
+      "source": "Refresh paid jobs",
+      "text": "Làm mới tác vụ trả phí"
+    },
+    "walletResearch.loading": {
+      "source": "Loading paid jobs…",
+      "text": "Đang tải tác vụ trả phí…"
+    },
+    "walletResearch.empty": {
+      "source": "No paid jobs found for this wallet. Purchases made by a separate agent wallet belong to that wallet.",
+      "text": "Không thấy tác vụ trả phí cho ví này. Mua bằng ví tác nhân riêng thuộc ví đó."
+    },
+    "walletResearch.questionUnavailable": {
+      "source": "Question unavailable for this historical job",
+      "text": "Câu hỏi không khả dụng cho tác vụ lịch sử này"
+    },
+    "walletResearch.unknown": {
+      "source": "unknown",
+      "text": "chưa rõ"
+    },
+    "walletResearch.followJob": {
+      "source": "Follow this job",
+      "text": "Theo dõi tác vụ này"
+    },
+    "walletResearch.loadOlder": {
+      "source": "Load older jobs",
+      "text": "Tải tác vụ cũ hơn"
+    },
+    "walletResearch.serverRecordNotice": {
+      "source": "This lookup uses the server record. Import your original recovery file to verify the receipt against the request saved before payment.",
+      "text": "Tra cứu dùng hồ sơ máy chủ. Nhập tệp khôi phục ban đầu để xác minh biên nhận với yêu cầu lưu trước thanh toán."
+    },
+    "walletResearch.close": {
+      "source": "Close job",
+      "text": "Đóng tác vụ"
+    },
+    "walletResearch.payingWallet": {
+      "source": "Paying wallet: {wallet}",
+      "text": "Ví trả tiền: {wallet}"
+    },
+    "walletResearch.monthlyPrice": {
+      "source": "Prepaid Monthly allocation: {amount} · retain the original payment network",
+      "text": "Phân bổ Monthly trả trước: {amount} · giữ mạng thanh toán ban đầu"
+    },
+    "walletResearch.packagePrice": {
+      "source": "Package price: {amount} · retain the original payment network",
+      "text": "Giá gói: {amount} · giữ mạng thanh toán ban đầu"
+    },
+    "privateResearchJobs.title": {
+      "source": "Private research for your wallet",
+      "text": "Nghiên cứu riêng tư cho ví bạn"
+    },
+    "privateResearchJobs.introduction": {
+      "source": "Find existing private jobs from your account, even on a new device. Opening a job never submits another payment.",
+      "text": "Tìm tác vụ riêng tư hiện có từ tài khoản, kể cả trên thiết bị mới. Mở tác vụ không bao giờ gửi thanh toán khác."
+    },
+    "privateResearchJobs.checkingSignIn": {
+      "source": "Checking sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "privateResearchJobs.signIn": {
+      "source": "Sign in to view private jobs",
+      "text": "Đăng nhập để xem tác vụ riêng tư"
+    },
+    "privateResearchJobs.historyUnavailable": {
+      "source": "Private history is unavailable. Check sign-in and refresh to retry.",
+      "text": "Lịch sử riêng tư không khả dụng. Kiểm tra đăng nhập, làm mới để thử lại."
+    },
+    "privateResearchJobs.resultUnavailable": {
+      "source": "Private result is unavailable. Check sign-in and refresh this job to retry.",
+      "text": "Kết quả riêng tư không khả dụng. Kiểm tra đăng nhập và làm mới tác vụ để thử lại."
+    },
+    "privateResearchJobs.refresh": {
+      "source": "Refresh private jobs",
+      "text": "Làm mới tác vụ riêng tư"
+    },
+    "privateResearchJobs.loading": {
+      "source": "Loading private jobs…",
+      "text": "Đang tải tác vụ riêng tư…"
+    },
+    "privateResearchJobs.empty": {
+      "source": "No private jobs found for this wallet. Jobs paid by a separate agent wallet belong to that account.",
+      "text": "Không thấy tác vụ riêng tư cho ví này. Tác vụ ví tác nhân riêng trả thuộc tài khoản đó."
+    },
+    "privateResearchJobs.viewJob": {
+      "source": "View private job",
+      "text": "Xem tác vụ riêng tư"
+    },
+    "privateResearchJobs.loadOlder": {
+      "source": "Load older private jobs",
+      "text": "Tải tác vụ riêng tư cũ hơn"
+    },
+    "privateResearchJobs.refreshJob": {
+      "source": "Refresh this job",
+      "text": "Làm mới tác vụ này"
+    },
+    "privateResearchJobs.close": {
+      "source": "Close private job",
+      "text": "Đóng tác vụ riêng tư"
+    },
+    "privateResearchJobs.loadingResult": {
+      "source": "Loading private result…",
+      "text": "Đang tải kết quả riêng tư…"
+    },
+    "privateResearchJobs.pilotNotice": {
+      "source": "Private purchasing is limited to configured pilot accounts. This view does not change access to past public research. Results are restricted to the paying account; this is not end-to-end encryption.",
+      "text": "Mua riêng tư giới hạn cho tài khoản thử nghiệm được cấu hình. Không đổi truy cập nghiên cứu công khai trước. Kết quả giới hạn cho tài khoản trả tiền; không phải mã hóa đầu cuối."
+    },
+    "privateResearchJobs.capacityNotice": {
+      "source": "Private purchasing is available when the service has capacity. This view does not change access to past public research. Results are restricted to the paying account; this is not end-to-end encryption.",
+      "text": "Mua riêng tư khả dụng khi dịch vụ còn khả năng. Không đổi truy cập nghiên cứu công khai trước. Kết quả giới hạn cho tài khoản trả tiền; không phải mã hóa đầu cuối."
+    },
+    "privateResearchJobs.account": {
+      "source": "Account: {wallet}",
+      "text": "Tài khoản: {wallet}"
+    },
+    "privateResearchJobs.jobSummary": {
+      "source": "{mode} · {date} · Package price {amount}",
+      "text": "{mode} · {date} · Giá gói {amount}"
+    }
+  }
+}

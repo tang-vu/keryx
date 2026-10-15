@@ -5,7 +5,7 @@ import { completionSchema, recipientSchema, ChatAccountError } from "./contracts
 import { createChatAccountRoutes } from "./http";
 import { chatAccountOpenApiPaths } from "./openapi";
 
-const path = "/api/me/chat-accounts", finish = path + "/complete";
+const path = "/api/me/chat-accounts", finish = "/api/me/chat-accounts/complete";
 const list = chatAccountOpenApiPaths[path].get, post = chatAccountOpenApiPaths[path].post;
 const complete = chatAccountOpenApiPaths[finish].post;
 const binding = { origin: "https://chat-contract.invalid", network: "eip155:5042" as const };

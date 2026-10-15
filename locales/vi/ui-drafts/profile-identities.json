@@ -1,0 +1,84 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/profile-identities.ts",
+  "sourceSha256": "a998f44edb0833e54619837296b15f153a20b4952d9a3110e59de4dbf055acc7",
+  "entries": {
+    "title": {
+      "source": "Verified identity links",
+      "text": "Liên kết danh tính đã xác minh"
+    },
+    "description": {
+      "source": "Verify control of an ORCID or GitHub account. Verification adds a private identity link; your signed wallet remains your account authority.",
+      "text": "Xác minh quyền kiểm soát tài khoản ORCID hoặc GitHub. Việc xác minh thêm liên kết danh tính riêng tư; ví đã ký vẫn là thẩm quyền tài khoản của bạn."
+    },
+    "asserted": {
+      "source": "Links typed above are unverified. They do not become verified when their URL matches an account.",
+      "text": "Liên kết nhập bên trên chưa được xác minh. URL khớp một tài khoản không làm chúng được xác minh."
+    },
+    "saveFirst": {
+      "source": "Save your private profile before verifying an identity.",
+      "text": "Lưu hồ sơ riêng tư trước khi xác minh danh tính."
+    },
+    "unavailable": {
+      "source": "Verified identity links are unavailable on this storage deployment.",
+      "text": "Liên kết danh tính đã xác minh không khả dụng trên triển khai lưu trữ này."
+    },
+    "busy": {
+      "source": "Working…",
+      "text": "Đang xử lý…"
+    },
+    "verifyOrcid": {
+      "source": "Verify ORCID",
+      "text": "Xác minh ORCID"
+    },
+    "verifyGithub": {
+      "source": "Verify GitHub",
+      "text": "Xác minh GitHub"
+    },
+    "unlink": {
+      "source": "Unlink",
+      "text": "Hủy liên kết"
+    },
+    "reverify": {
+      "source": "Verify again",
+      "text": "Xác minh lại"
+    },
+    "failed": {
+      "source": "Identity verification did not complete. Try again from this profile.",
+      "text": "Xác minh danh tính chưa hoàn tất. Thử lại từ hồ sơ này."
+    },
+    "conflict": {
+      "source": "That external account is already linked to another profile.",
+      "text": "Tài khoản ngoài đó đã liên kết với hồ sơ khác."
+    },
+    "verified": {
+      "source": "Verification returned. Your recorded verified links are shown below.",
+      "text": "Đã quay lại từ xác minh. Liên kết được ghi nhận là đã xác minh hiển thị bên dưới."
+    },
+    "unlinked": {
+      "source": "Identity link removed. Pending verification for this provider was cancelled.",
+      "text": "Đã xóa liên kết danh tính. Xác minh đang chờ cho nhà cung cấp này đã hủy."
+    },
+    "ownership": {
+      "source": "Verification confirms account control on the recorded date. It does not verify affiliation, research, payment eligibility or creator status.",
+      "text": "Xác minh xác nhận quyền kiểm soát tài khoản vào ngày ghi nhận. Không xác minh tổ chức liên kết, nghiên cứu, điều kiện nhận thanh toán hay tư cách tác giả."
+    },
+    "scope": {
+      "source": "Keryx records only your ORCID iD and name or GitHub public account ID and login. GitHub requests no extra scopes. ORCID authentication permits public record reads; Keryx does not read those records. Provider tokens are discarded.",
+      "text": "Keryx chỉ ghi nhận ORCID iD và tên, hoặc ID tài khoản công khai và tên đăng nhập GitHub. GitHub không yêu cầu phạm vi quyền thêm. Xác thực ORCID cho phép đọc hồ sơ công khai; Keryx không đọc các hồ sơ đó. Token nhà cung cấp bị loại bỏ."
+    },
+    "changed": {
+      "source": "Your signed-in wallet changed. Reload this profile.",
+      "text": "Ví đang đăng nhập đã thay đổi. Tải lại hồ sơ này."
+    },
+    "invalid": {
+      "source": "Identity verification could not be started.",
+      "text": "Không thể bắt đầu xác minh danh tính."
+    },
+    "date": {
+      "source": "Verified at ${value}",
+      "text": "Xác minh lúc ${value}"
+    }
+  }
+}

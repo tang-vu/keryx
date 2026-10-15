@@ -1,0 +1,124 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/claimant-history.ts",
+  "sourceSha256": "9bc452b72958a3a1bd8fce9c706a4984719c5998c0df4e9bde90f657edba02fe",
+  "entries": {
+    "claimantHistory.open": {
+      "source": "Recorded and claimed runs",
+      "text": "已记录与已认领的研究"
+    },
+    "claimantHistory.close": {
+      "source": "Return to dispatch ledger",
+      "text": "返回研究任务账本"
+    },
+    "claimantHistory.title": {
+      "source": "Recorded and claimed runs",
+      "text": "已记录与已认领的研究"
+    },
+    "claimantHistory.scope": {
+      "source": "Private current-store history includes runs recorded for your signed-in account and anonymous runs you successfully claimed. Native and historical archive stores may be unavailable here.",
+      "text": "当前存储中的私密历史记录包括为已登录账户记录的研究，以及您成功认领的匿名研究。此处可能无法访问原生客户端和历史归档存储。"
+    },
+    "claimantHistory.authority": {
+      "source": "Claiming grants account access to a saved run. It does not change its original asker, payer, funding, receipts or settlement.",
+      "text": "认领授予账户访问已保存研究的权限。它不会更改原始提问者、付款者、资金来源、凭证或结算。"
+    },
+    "claimantHistory.checking": {
+      "source": "Checking signed-in account…",
+      "text": "正在检查已登录账户…"
+    },
+    "claimantHistory.signedOut": {
+      "source": "Sign in to browse recorded and claimed runs.",
+      "text": "登录以浏览已记录与已认领的研究。"
+    },
+    "claimantHistory.loading": {
+      "source": "Loading recorded and claimed runs…",
+      "text": "正在加载已记录与已认领的研究…"
+    },
+    "claimantHistory.changed": {
+      "source": "The signed-in account changed. Return to the ledger and open this history again.",
+      "text": "已登录账户发生变化。返回账本并重新打开此历史记录。"
+    },
+    "claimantHistory.unavailable": {
+      "source": "Recorded and claimed history is unavailable for this account or store. No other history store will be used.",
+      "text": "此账户或存储不提供已记录与已认领的历史记录。不会使用其他历史存储。"
+    },
+    "claimantHistory.refresh": {
+      "source": "Refresh this history",
+      "text": "刷新此历史记录"
+    },
+    "claimantHistory.empty": {
+      "source": "No recorded or successfully claimed runs are available in this store.",
+      "text": "此存储中没有已记录或成功认领的研究。"
+    },
+    "claimantHistory.recorded": {
+      "source": "Recorded account ownership",
+      "text": "已记录的账户所有权"
+    },
+    "claimantHistory.claimed": {
+      "source": "Claimed account ownership",
+      "text": "已认领的账户所有权"
+    },
+    "claimantHistory.claimedAt": {
+      "source": "Claimed at {date}",
+      "text": "认领时间 {date}"
+    },
+    "claimantHistory.createdAt": {
+      "source": "Saved at {date}",
+      "text": "保存时间 {date}"
+    },
+    "claimantHistory.rows.one": {
+      "source": "Showing {count} run on this page.",
+      "text": "此页显示 {count} 次研究。"
+    },
+    "claimantHistory.rows.other": {
+      "source": "Showing {count} runs on this page.",
+      "text": "此页显示 {count} 次研究。"
+    },
+    "claimantHistory.newer": {
+      "source": "Newer runs",
+      "text": "较新的研究"
+    },
+    "claimantHistory.older": {
+      "source": "Older runs",
+      "text": "较早的研究"
+    },
+    "claimantHistory.pageLimit": {
+      "source": "This browse is limited to 40 pages of 25 runs. Refresh to start again from the newest page.",
+      "text": "此次浏览最多包含 40 页，每页 25 次研究。刷新可重新从最新一页开始。"
+    },
+    "claimantHistory.read": {
+      "source": "Read saved run",
+      "text": "阅读已保存研究"
+    },
+    "claimantHistory.detailLoading": {
+      "source": "Loading private saved run…",
+      "text": "正在加载私密已保存研究…"
+    },
+    "claimantHistory.detailUnavailable": {
+      "source": "This saved run is unavailable or its ownership changed. No public report will be used instead.",
+      "text": "此已保存研究不可用或其所有权发生变化。不会改用公开报告。"
+    },
+    "claimantHistory.closeDetail": {
+      "source": "Close saved run",
+      "text": "关闭已保存研究"
+    },
+    "claimantHistory.answer": {
+      "source": "Saved answer",
+      "text": "已保存答案"
+    },
+    "claimantHistory.citations": {
+      "source": "Recorded cited sources",
+      "text": "记录的被引用来源"
+    },
+    "claimantHistory.noCitations": {
+      "source": "No cited sources recorded.",
+      "text": "未记录被引用来源。"
+    },
+    "claimantHistory.plainDetail": {
+      "source": "This private view shows the saved question, answer and cited source names as plain text. It does not establish payment settlement.",
+      "text": "此私密视图以纯文本显示已保存的问题、答案和被引用来源名称。它不证明付款已结算。"
+    }
+  }
+}

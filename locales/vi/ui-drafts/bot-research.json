@@ -1,0 +1,116 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/bot-research.ts",
+  "sourceSha256": "dab5fbd5bcebb1beadc33337cad8f4edc051589fe37926ce275179a9f2a89d84",
+  "entries": {
+    "citationHeading": {
+      "source": "Citations and planned rewards (USDC)",
+      "text": "Trích dẫn và phần thưởng dự kiến (USDC)"
+    },
+    "slackCitationHeading": {
+      "source": "Citations and planned rewards — weighted USDC citation rewards",
+      "text": "Trích dẫn và phần thưởng dự kiến — phần thưởng trích dẫn USDC theo trọng số"
+    },
+    "weight": {
+      "source": "weight {weight}",
+      "text": "trọng số {weight}"
+    },
+    "sourcesOne": {
+      "source": "{count} source cited",
+      "text": "Đã trích dẫn {count} nguồn"
+    },
+    "sourcesOther": {
+      "source": "{count} sources cited",
+      "text": "Đã trích dẫn {count} nguồn"
+    },
+    "recordedCreators": {
+      "source": "{amount} recorded to creators",
+      "text": "Đã ghi nhận {amount} cho người sáng tạo"
+    },
+    "recordedCreatorTotal": {
+      "source": "{amount} recorded creator-payment total",
+      "text": "Tổng thanh toán cho người sáng tạo được ghi nhận: {amount}"
+    },
+    "settlementNotice": {
+      "source": "Recorded amounts are not settlement proof; check the full trace receipts.",
+      "text": "Số tiền được ghi nhận không phải bằng chứng thanh toán hoàn tất; hãy kiểm tra biên nhận trong toàn bộ vết thực thi."
+    },
+    "slackSettlementNotice": {
+      "source": "Planned rewards are not settlement evidence. See the trace for settled, pending, failed or simulated payments.",
+      "text": "Phần thưởng dự kiến không phải bằng chứng thanh toán hoàn tất. Xem vết thực thi để biết các khoản thanh toán đã hoàn tất, đang chờ, thất bại hoặc được mô phỏng."
+    },
+    "discordSettlementNotice": {
+      "source": "Recorded amounts are not settlement proof; check full trace receipts at the title link",
+      "text": "Số tiền được ghi nhận không phải bằng chứng thanh toán hoàn tất; hãy kiểm tra biên nhận qua liên kết ở tiêu đề"
+    },
+    "fullTrace": {
+      "source": "Full trace: {url}",
+      "text": "Toàn bộ vết thực thi: {url}"
+    },
+    "failure": {
+      "source": "⚠️ Keryx could not finish this dispatch: {detail}",
+      "text": "⚠️ Keryx không thể hoàn thành lượt nghiên cứu này: {detail}"
+    },
+    "paused": {
+      "source": "New research is temporarily paused while an earlier delivery is reviewed. You can still inspect saved reports. Increasing the source budget or connecting a wallet will not remove this pause. Your question has not been retried.",
+      "text": "Nghiên cứu mới tạm dừng trong khi một lần giao kết quả trước đó được xem xét. Bạn vẫn có thể xem báo cáo đã lưu. Tăng ngân sách nguồn hoặc kết nối ví không gỡ bỏ việc tạm dừng này. Câu hỏi của bạn chưa được thử lại."
+    },
+    "treasuryUnavailable": {
+      "source": "Keryx's treasury wallet is not configured on this deployment.",
+      "text": "Ví ngân quỹ của Keryx chưa được cấu hình trên bản triển khai này."
+    },
+    "sponsoredLimited": {
+      "source": "Sponsored dispatches are temporarily limited or unavailable — try again in a minute.",
+      "text": "Các lượt nghiên cứu được tài trợ tạm thời bị giới hạn hoặc không khả dụng — hãy thử lại sau một phút."
+    },
+    "dispatching": {
+      "source": "⏳ Keryx is dispatching — buying sources and settling citations…",
+      "text": "⏳ Keryx đang nghiên cứu — mua nguồn và thanh toán cho các trích dẫn…"
+    },
+    "discordUsage": {
+      "source": "Only `/ask question:<text>` is wired up here.",
+      "text": "Ở đây chỉ hỗ trợ `/ask question:<text>`."
+    },
+    "herald": {
+      "source": "Keryx",
+      "text": "Keryx"
+    },
+    "tagline": {
+      "source": "the citation-toll research herald.",
+      "text": "sứ giả nghiên cứu có phí trích dẫn."
+    },
+    "telegramExplanation": {
+      "source": "Ask a question and Keryx reads selected sources, returns cited evidence, and records planned USDC creator rewards. Open the full trace to check payment mode and settlement receipts.",
+      "text": "Đặt câu hỏi để Keryx đọc các nguồn đã chọn, trả về bằng chứng có trích dẫn và ghi nhận phần thưởng USDC dự kiến cho tác giả. Mở nhật ký đầy đủ để kiểm tra chế độ thanh toán và biên nhận quyết toán."
+    },
+    "slackExplanation": {
+      "source": "Ask a question and Keryx selects sources within a budget, answers with citations, and attempts weighted USDC rewards for eligible cited creators. The dispatch trace shows payment outcomes.",
+      "text": "Đặt câu hỏi để Keryx chọn nguồn trong ngân sách, trả lời kèm trích dẫn và thử trả phần thưởng USDC theo trọng số cho các tác giả đủ điều kiện được trích dẫn. Nhật ký bản tin cho biết kết quả thanh toán."
+    },
+    "telegramUsage": {
+      "source": "Usage: <code>/ask what is x402?</code>",
+      "text": "Cách dùng: <code>/ask x402 là gì?</code>"
+    },
+    "slackUsage": {
+      "source": "Usage: `/keryx what is x402?`",
+      "text": "Cách dùng: `/keryx x402 là gì?`"
+    },
+    "reviewBoundary": {
+      "source": "Review-first is available only in the authenticated live browser; review mode flags are refused here.",
+      "text": "Review-first chỉ khả dụng trong trình duyệt trực tiếp đã xác thực; cờ chế độ xem xét không được hỗ trợ ở đây."
+    },
+    "privateQuestion": {
+      "source": "In this private chat you can also just type the question.",
+      "text": "Trong cuộc trò chuyện riêng này, bạn cũng có thể nhập trực tiếp câu hỏi."
+    },
+    "telegramStatus": {
+      "source": "Creators keep 100%. Live traction:",
+      "text": "Tác giả giữ 100%. Hoạt động thực tế:"
+    },
+    "slackStatus": {
+      "source": "Creator payments and service charges are recorded separately. Live status:",
+      "text": "Thanh toán cho tác giả và phí dịch vụ được ghi nhận riêng. Trạng thái trực tiếp:"
+    }
+  }
+}

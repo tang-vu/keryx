@@ -1,0 +1,212 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/shell.ts",
+  "sourceSha256": "98de613c0f20357e8d901f40f221f5e183141096b6713f44c0c02baa5d0c1e5a",
+  "entries": {
+    "shellNavigation.ask": {
+      "source": "Ask a question",
+      "text": "Đặt câu hỏi"
+    },
+    "shellNavigation.activity": {
+      "source": "Activity & proof",
+      "text": "Hoạt động và bằng chứng"
+    },
+    "shellNavigation.operator": {
+      "source": "Operator",
+      "text": "Operator"
+    },
+    "shellNavigation.answers": {
+      "source": "Past answers",
+      "text": "Câu trả lời trước đây"
+    },
+    "shellNavigation.sources": {
+      "source": "Sources",
+      "text": "Nguồn"
+    },
+    "shellNavigation.literature": {
+      "source": "Literature workspace",
+      "text": "Không gian tài liệu"
+    },
+    "shellNavigation.market": {
+      "source": "Market",
+      "text": "Chợ nguồn"
+    },
+    "shellNavigation.wanted": {
+      "source": "Wanted",
+      "text": "Nhu cầu nghiên cứu"
+    },
+    "shellNavigation.creators": {
+      "source": "For creators",
+      "text": "Dành cho tác giả"
+    },
+    "shellNavigation.mySources": {
+      "source": "My sources",
+      "text": "Nguồn của tôi"
+    },
+    "shellNavigation.myDispatches": {
+      "source": "My dispatches",
+      "text": "Bản tin của tôi"
+    },
+    "shellNavigation.playground": {
+      "source": "Playground",
+      "text": "Khu thử nghiệm"
+    },
+    "shellNavigation.research": {
+      "source": "Paid research",
+      "text": "Nghiên cứu trả phí"
+    },
+    "shellNavigation.developer": {
+      "source": "Dev portal",
+      "text": "Cổng lập trình viên"
+    },
+    "shellHeader.creatorAction": {
+      "source": "For creators ▸",
+      "text": "Dành cho tác giả ▸"
+    },
+    "shellHeader.closeMenu": {
+      "source": "Close menu",
+      "text": "Đóng menu"
+    },
+    "shellHeader.openMenu": {
+      "source": "Open menu",
+      "text": "Mở menu"
+    },
+    "shellHeader.mobileNavigation": {
+      "source": "Mobile navigation",
+      "text": "Điều hướng trên điện thoại"
+    },
+    "shellHeader.explore": {
+      "source": "Explore",
+      "text": "Khám phá"
+    },
+    "shellHeader.moreTools": {
+      "source": "More tools",
+      "text": "Công cụ khác"
+    },
+    "shellFooter.publicProof": {
+      "source": "Public proof",
+      "text": "Bằng chứng công khai"
+    },
+    "shellFooter.businessCalculator": {
+      "source": "Business calculator",
+      "text": "Công cụ tính toán kinh doanh"
+    },
+    "shellFooter.remoteMcp": {
+      "source": "Remote MCP",
+      "text": "MCP từ xa"
+    },
+    "shellFooter.agentApi": {
+      "source": "API for agents ↗",
+      "text": "API cho tác nhân ↗"
+    },
+    "shellFooter.github": {
+      "source": "GitHub ↗",
+      "text": "GitHub ↗"
+    },
+    "shellFooter.registryContract": {
+      "source": "Registry contract ↗",
+      "text": "Hợp đồng registry ↗"
+    },
+    "shellFooter.usdcOnArc": {
+      "source": "USDC on Arc ↗",
+      "text": "USDC trên Arc ↗"
+    },
+    "shellFooter.x402Gateway": {
+      "source": "x402 + Gateway ↗",
+      "text": "x402 + Gateway ↗"
+    },
+    "shellFooter.arcNetwork": {
+      "source": "Arc network ↗",
+      "text": "Mạng Arc ↗"
+    },
+    "shellFooter.privacy": {
+      "source": "Privacy",
+      "text": "Quyền riêng tư"
+    },
+    "shellFooter.terms": {
+      "source": "Terms",
+      "text": "Điều khoản"
+    },
+    "shellFooter.etymology": {
+      "source": "From the Greek{gap}{word} — a herald: the one sent to carry a message, and paid for the carrying.",
+      "text": "Từ tiếng Hy Lạp{gap}{word} — sứ giả: người được cử đi mang thông điệp, và được trả công cho việc đó."
+    },
+    "shellFooter.house": {
+      "source": "The house",
+      "text": "Keryx"
+    },
+    "shellFooter.docsAndProof": {
+      "source": "Docs & proof",
+      "text": "Tài liệu và bằng chứng"
+    },
+    "shellFooter.copyright": {
+      "source": "© {year} Keryx — legal tender for attention",
+      "text": "© {year} Keryx — phương tiện thanh toán cho sự chú ý"
+    },
+    "shellFooter.originalEvidence": {
+      "source": "{network} · inspect original settlement evidence",
+      "text": "{network} · kiểm tra bằng chứng quyết toán ban đầu"
+    },
+    "cashouts.title": {
+      "source": "Creator cash-outs",
+      "text": "Khoản rút của tác giả"
+    },
+    "cashouts.onchain": {
+      "source": "on-chain",
+      "text": "trên chuỗi"
+    },
+    "cashouts.compactEmpty": {
+      "source": "No cash-outs yet.",
+      "text": "Chưa có khoản rút."
+    },
+    "cashouts.empty": {
+      "source": "No cash-outs yet. They appear here the moment a creator withdraws.",
+      "text": "Chưa có khoản rút. Khoản rút xuất hiện ở đây ngay khi tác giả rút tiền."
+    },
+    "cashouts.when": {
+      "source": "When",
+      "text": "Thời điểm"
+    },
+    "cashouts.creator": {
+      "source": "Creator",
+      "text": "Tác giả"
+    },
+    "cashouts.amount": {
+      "source": "Amount",
+      "text": "Số tiền"
+    },
+    "cashouts.onchainColumn": {
+      "source": "On-chain",
+      "text": "Trên chuỗi"
+    },
+    "cashouts.recordedObservation": {
+      "source": "{time} · {network} · on-chain cash-out",
+      "text": "{time} · {network} · rút tiền trên chuỗi"
+    },
+    "cashouts.viewTransaction": {
+      "source": "View Arc transaction {hash}",
+      "text": "Xem giao dịch Arc {hash}"
+    },
+    "cashouts.evidenceExplanation": {
+      "source": "Creators minting earned USDC out of Circle Gateway to their own wallet. Each row is a real EVM tx that opens at{gap}{transactionPath} on ArcScan — the per-tx proof the batched settlement IDs above can't give.",
+      "text": "Tác giả nhận USDC kiếm được từ Circle Gateway vào ví của mình qua mint. Mỗi hàng là giao dịch EVM thực, mở tại{gap}{transactionPath} trên ArcScan — bằng chứng từng giao dịch mà các ID quyết toán theo lô bên trên không cung cấp được."
+    },
+    "cashouts.viewMint": {
+      "source": "View the on-chain mint tx for ${amount} → {recipient}",
+      "text": "Xem giao dịch mint trên chuỗi cho ${amount} → {recipient}"
+    },
+    "historyObservation.title": {
+      "source": "Arc testnet history",
+      "text": "Lịch sử Arc testnet"
+    },
+    "historyObservation.openHistory": {
+      "source": "Open history to retry.",
+      "text": "Mở lịch sử để thử lại."
+    },
+    "historyObservation.unavailable": {
+      "source": "Historical evidence is temporarily unavailable. {link}",
+      "text": "Bằng chứng lịch sử tạm thời không khả dụng. {link}"
+    }
+  }
+}

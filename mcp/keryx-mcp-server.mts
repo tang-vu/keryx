@@ -33,6 +33,8 @@ import { createHistoryClient } from "../lib/history/personal-history-client.ts";
 import { registerHistoryTool } from "../lib/history/personal-history-mcp.ts";
 import { registerOwnedHistoryTools } from "../lib/history/owned-history-mcp.ts";
 import { createOwnedHistoryClient } from "../lib/history/owned-history-client.ts";
+import { createPrivateJobHistoryClient } from "../lib/history/private-job-history-client.ts";
+import { registerPrivateJobHistoryTools } from "../lib/history/private-job-history-mcp.ts";
 import { registerRunPrivacyRead } from "../lib/run-privacy/mcp.ts";
 import { createRunPrivacyClient } from "../lib/run-privacy/client.ts";
 import { registerAcceptanceTools } from "../lib/deliverable-acceptance/mcp.ts";
@@ -50,6 +52,14 @@ registerProfileTools(server, { read: () => profileClient().read(), update: input
 registerHistoryTool(server, input => createHistoryClient(meta.baseUrl, () => process.env.KERYX_API_KEY).read(input));
 const ownedHistoryClient = () => createOwnedHistoryClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
 registerOwnedHistoryTools(server, input => ownedHistoryClient().read(input), input => ownedHistoryClient().export(input));
+let privateJobHistoryClient: ReturnType<typeof createPrivateJobHistoryClient> | undefined;
+const privateHistoryClient = () => privateJobHistoryClient ??= createPrivateJobHistoryClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
+registerPrivateJobHistoryTools(server, {
+  list: (input, options) => privateHistoryClient().list(input, options),
+  detail: (input, options) => privateHistoryClient().detail(input, options),
+  export: (input, options) => privateHistoryClient().export(input, options),
+  current: () => privateJobHistoryClient?.current(),
+});
 registerRunPrivacyRead(server,(id,requestId)=>createRunPrivacyClient(meta.baseUrl,()=>process.env.KERYX_API_KEY).read(id,requestId));
 registerIdentityReadTool(server, () => profileClient().readIdentities());
 server.registerTool("paper_lookup", paperLookupToolOptions,
@@ -89,7 +99,7 @@ server.registerTool(
       researchMode: z.never().optional(), responseMode: z.never().optional(),
       question: z.string().max(8192).trim().min(3).max(MAX_ASK_QUESTION_CHARS)
         .describe(`The research question to ask Keryx (3–${MAX_ASK_QUESTION_CHARS} characters after trimming).`),
-      language: z.enum(presentationLanguages).optional().describe("Language of generated labels only. Does not change the paid body/hash, original question or answer; answer language is not recorded."),
+      language: z.enum(presentationLanguages).optional().describe("Language of generated labels only. Does not change the paid body/hash, original question or answer. Defaults to verified completed-answer language when available; unknown stays unknown, and a differing override is disclosed."),
       budget: z
         .number()
         .positive()

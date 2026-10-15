@@ -4,6 +4,165 @@ import { describe, expect, it, vi } from "vitest";
 import type { QueryRun } from "../types";
 import { createRemoteMcpServer } from "./remote-server";
 import { mdnModelReplay } from "../agent/fixtures/mdn-model-replay";
+import * as privateJobHistoryReader from "../history/private-job-history";
+import * as historyDb from "../db";
+import type { RemoteMcpAccess } from "./remote-server";
+import { PRIVATE_JOB_HISTORY_QUALIFICATION, privateJobHistoryCapabilities } from "../history/private-job-history-contract";
+import { PRIVATE_JOB_HISTORY_REFUSAL } from "../history/private-job-history-client";
+
+// New partition fixtures spy only on its established Db/reader bindings. They invoke
+// real remote registration via in-memory MCP; no real Db/research/provider is allowed.
+describe("remote completed-private-history caller wiring (UNRUN)", () => {
+  const actor = `0x${"a".repeat(40)}`, foreign = `0x${"b".repeat(40)}`, id = `prv_${"1".repeat(64)}`;
+  const envelope = { format: "private-job-history-v1" as const, wallet: actor, scope: "exact-payer-private-current-store" as const,
+    capabilities: privateJobHistoryCapabilities, qualification: PRIVATE_JOB_HISTORY_QUALIFICATION } as const;
+  const page = () => ({ ...envelope, rows: [], nextCursor: null, scannedIntents: 0, scanLimited: false });
+  const exported = () => ({ ...envelope, rows: [], nextCursor: null, complete: true, truncated: false, pages: 1,
+    bounds: { maxPages: 20 as const, maxRows: 500 as const, maxBytes: 2097152 as const } });
+  const access = (): RemoteMcpAccess => ({ budgetCap: 0.03, clientChannel: "other", actor, historyScopes: ["history:read"],
+    keyId: "original", revalidateHistoryAccess: vi.fn(async () => undefined) });
+  async function connect(rights: RemoteMcpAccess) {
+    const research = vi.fn(async () => { throw new Error("Forbidden research"); });
+    const server = createRemoteMcpServer(rights, research), client = new Client({ name: "private-history", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const sent = vi.spyOn(serverTransport, "send");
+    await server.connect(serverTransport); await client.connect(clientTransport);
+    return { client, research, sent, close: async () => { await client.close(); await server.close(); } };
+  }
+  function ports() {
+    const getDb = vi.spyOn(historyDb, "getDb").mockResolvedValue({} as Awaited<ReturnType<typeof historyDb.getDb>>);
+    const list = vi.spyOn(privateJobHistoryReader, "readPrivateJobHistory").mockResolvedValue(page());
+    const detail = vi.spyOn(privateJobHistoryReader, "readPrivateJobHistoryDetail").mockResolvedValue(null);
+    const exportHistory = vi.spyOn(privateJobHistoryReader, "exportPrivateJobHistory").mockResolvedValue(exported());
+    const network = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Forbidden provider/payment IO"));
+    return { getDb, list, detail, exportHistory, network,
+      restore: () => { getDb.mockRestore(); list.mockRestore(); detail.mockRestore(); exportHistory.mockRestore(); network.mockRestore(); } };
+  }
+  it("actual registration dispatches list/detail/export to the exact reader under original three fences", async () => {
+    const p = ports(), rights = access(), link = await connect(rights);
+    try {
+      expect((await link.client.callTool({ name: "history_private_jobs_list", arguments: {} })).structuredContent).toEqual(page());
+      const absent = await link.client.callTool({ name: "history_private_jobs_detail", arguments: { id } });
+      expect(absent).toMatchObject({ isError: true, content: [{ text: PRIVATE_JOB_HISTORY_REFUSAL }] });
+      expect((await link.client.callTool({ name: "history_private_jobs_export", arguments: {} })).structuredContent).toEqual(exported());
+      expect(p.list).toHaveBeenCalledWith(expect.anything(), actor, { limit: 25 }, expect.objectContaining({ signal: expect.any(AbortSignal), deadline: expect.any(Number) }));
+      expect(p.detail).toHaveBeenCalledWith(expect.anything(), actor, id, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+      expect(p.exportHistory).toHaveBeenCalledWith(expect.anything(), actor, { limit: 25 }, expect.objectContaining({ signal: expect.any(AbortSignal) }));
+      expect(rights.revalidateHistoryAccess).toHaveBeenCalledTimes(9); expect(p.getDb).toHaveBeenCalledTimes(3);
+      expect(link.research).not.toHaveBeenCalled(); expect(p.network).not.toHaveBeenCalled();
+    } finally { await link.close(); p.restore(); }
+  });
+  it.each(["actor", "scope", "revalidator", "revoked", "aborted"])("actual remote %s refusal has zero Db/private read/forbidden IO", async missing => {
+    const p = ports(), rights = access();
+    if (missing === "actor") rights.actor = undefined;
+    if (missing === "scope") rights.historyScopes = ["ask"];
+    if (missing === "revalidator") rights.revalidateHistoryAccess = undefined;
+    if (missing === "revoked") rights.revalidateHistoryAccess = async () => { throw new Error("PRIVATE revoked"); };
+    if (missing === "aborted") { const controller = new AbortController(); controller.abort(); rights.signal = controller.signal; }
+    const link = await connect(rights);
+    try {
+      const result = await link.client.callTool({ name: "history_private_jobs_list", arguments: {} });
+      expect(result).toMatchObject({ isError: true, content: [{ text: PRIVATE_JOB_HISTORY_REFUSAL }] }); expect(result.structuredContent).toBeUndefined();
+      expect(p.getDb).not.toHaveBeenCalled(); expect(p.list).not.toHaveBeenCalled(); expect(p.detail).not.toHaveBeenCalled();
+      expect(p.exportHistory).not.toHaveBeenCalled(); expect(link.research).not.toHaveBeenCalled(); expect(p.network).not.toHaveBeenCalled();
+    } finally { await link.close(); p.restore(); }
+  });
+  it("actual remote revocation during Db await refuses before private reader", async () => {
+    const p = ports(), rights = access(); let finish!: (db: Awaited<ReturnType<typeof historyDb.getDb>>) => void;
+    let started!: () => void; const beginning = new Promise<void>(done => { started = done; }); let revoked = false;
+    rights.revalidateHistoryAccess = vi.fn(async () => { if (revoked) throw new Error("PRIVATE revoked"); });
+    p.getDb.mockImplementation(async () => { started(); return new Promise(done => { finish = done; }); });
+    const link = await connect(rights);
+    try {
+      const pending = link.client.callTool({ name: "history_private_jobs_list", arguments: {} });
+      await beginning; revoked = true; finish({} as Awaited<ReturnType<typeof historyDb.getDb>>);
+      const result = await pending; expect(result.isError).toBe(true); expect(result.structuredContent).toBeUndefined();
+      expect(p.list).not.toHaveBeenCalled(); expect(rights.revalidateHistoryAccess).toHaveBeenCalledTimes(2);
+      expect(link.research).not.toHaveBeenCalled(); expect(p.network).not.toHaveBeenCalled();
+    } finally { await link.close(); p.restore(); }
+  });
+  it("actual remote revocation during reader IO suppresses the already computed private output", async () => {
+    const p = ports(), rights = access(); let finish!: (value: ReturnType<typeof page>) => void;
+    let started!: () => void; const beginning = new Promise<void>(done => { started = done; }); let revoked = false;
+    rights.revalidateHistoryAccess = vi.fn(async () => { if (revoked) throw new Error("PRIVATE revoked"); });
+    p.list.mockImplementation(async () => { started(); return new Promise(done => { finish = done; }); });
+    const link = await connect(rights);
+    try {
+      const pending = link.client.callTool({ name: "history_private_jobs_list", arguments: {} });
+      await beginning; revoked = true; finish(page()); const result = await pending;
+      expect(result).toMatchObject({ isError: true, content: [{ text: PRIVATE_JOB_HISTORY_REFUSAL }] }); expect(result.structuredContent).toBeUndefined();
+      expect(p.list).toHaveBeenCalledTimes(1); expect(rights.revalidateHistoryAccess).toHaveBeenCalledTimes(3);
+      expect(link.research).not.toHaveBeenCalled(); expect(p.network).not.toHaveBeenCalled();
+    } finally { await link.close(); p.restore(); }
+  });
+  it("actual caller rejects internally consistent foreign-owner and extra private fields", async () => {
+    const p = ports(), link = await connect(access());
+    try {
+      p.list.mockResolvedValueOnce({ ...page(), wallet: foreign });
+      p.list.mockResolvedValueOnce({ ...page(), privateToken: "SECRET" } as ReturnType<typeof page>);
+      for (let n = 0; n < 2; n++) {
+        const result = await link.client.callTool({ name: "history_private_jobs_list", arguments: {} });
+        expect(result).toMatchObject({ isError: true, content: [{ text: PRIVATE_JOB_HISTORY_REFUSAL }] });
+        expect(result.structuredContent).toBeUndefined(); expect(JSON.stringify(result)).not.toContain("SECRET");
+      }
+      expect(link.research).not.toHaveBeenCalled(); expect(p.network).not.toHaveBeenCalled();
+    } finally { await link.close(); p.restore(); }
+  });
+  it.each(["before-db", "db", "after-db", "after-read"] as const)("SDK cancellation during %s stops the original remote pipeline and suppresses private output", async stage => {
+    const p = ports(), rights = access(), http = new AbortController(), call = new AbortController(); rights.signal = http.signal;
+    const scopes = rights.historyScopes; let finish!: () => void, started!: () => void, checks = 0;
+    const beginning = new Promise<void>(done => { started = done; });
+    const pause = () => { started(); return new Promise<void>(done => { finish = done; }); };
+    const verifier = vi.fn(async () => {
+      checks++;
+      if (stage === "before-db" && checks === 1 || stage === "after-db" && checks === 2 || stage === "after-read" && checks === 3) await pause();
+    });
+    rights.revalidateHistoryAccess = verifier;
+    if (stage === "db") p.getDb.mockImplementation(async () => { await pause(); return {} as Awaited<ReturnType<typeof historyDb.getDb>>; });
+    const link = await connect(rights);
+    try {
+      const result = expect(link.client.callTool({ name: "history_private_jobs_list", arguments: {} }, undefined,
+        { signal: call.signal })).rejects.toThrow();
+      await beginning; call.abort(); await result;
+      await new Promise<void>(done => setTimeout(done, 0));
+      finish(); await new Promise<void>(done => setTimeout(done, 0));
+      expect(p.getDb).toHaveBeenCalledTimes(stage === "before-db" ? 0 : 1);
+      expect(p.list).toHaveBeenCalledTimes(stage === "after-read" ? 1 : 0);
+      expect(verifier).toHaveBeenCalledTimes(stage === "before-db" || stage === "db" ? 1 : stage === "after-db" ? 2 : 3);
+      expect(rights.signal).toBe(http.signal); expect(http.signal.aborted).toBe(false);
+      expect(rights.historyScopes).toBe(scopes); expect(rights.keyId).toBe("original"); expect(rights.actor).toBe(actor);
+      expect(rights.revalidateHistoryAccess).toBe(verifier);
+      expect(JSON.stringify(link.sent.mock.calls)).not.toContain("structuredContent");
+      expect(p.detail).not.toHaveBeenCalled(); expect(p.exportHistory).not.toHaveBeenCalled();
+      expect(link.research).not.toHaveBeenCalled(); expect(p.network).not.toHaveBeenCalled();
+    } finally { await link.close(); p.restore(); }
+  });
+  it.each(["sdk", "http"] as const)("%s cancellation aborts remote export IO while preserving both signals and original authority", async source => {
+    const p = ports(), rights = access(), http = new AbortController(), call = new AbortController(); rights.signal = http.signal;
+    const scopes = rights.historyScopes, verifier = rights.revalidateHistoryAccess;
+    let started!: () => void, stopped!: () => void, finish!: (value: ReturnType<typeof exported>) => void, signal!: AbortSignal;
+    const beginning = new Promise<void>(done => { started = done; }), aborted = new Promise<void>(done => { stopped = done; });
+    p.exportHistory.mockImplementation(async (_db, _owner, _input, options) => {
+      signal = options!.signal!; signal.addEventListener("abort", stopped, { once: true }); started();
+      return new Promise(done => { finish = done; });
+    });
+    const link = await connect(rights);
+    try {
+      const pending = link.client.callTool({ name: "history_private_jobs_export", arguments: {} }, undefined, { signal: call.signal });
+      const result = source === "sdk" ? expect(pending).rejects.toThrow()
+        : expect(pending).resolves.toMatchObject({ isError: true, content: [{ text: PRIVATE_JOB_HISTORY_REFUSAL }] });
+      await beginning; (source === "sdk" ? call : http).abort(); await aborted; await result;
+      finish(exported()); await new Promise<void>(done => setTimeout(done, 0));
+      expect(signal.aborted).toBe(true); expect(rights.signal).toBe(http.signal); expect(rights.historyScopes).toBe(scopes);
+      expect(rights.actor).toBe(actor); expect(rights.keyId).toBe("original"); expect(rights.revalidateHistoryAccess).toBe(verifier);
+      expect(call.signal.aborted).toBe(source === "sdk"); expect(http.signal.aborted).toBe(source === "http");
+      expect(verifier).toHaveBeenCalledTimes(2); expect(p.getDb).toHaveBeenCalledTimes(1); expect(p.exportHistory).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(link.sent.mock.calls)).not.toContain("structuredContent");
+      expect(p.list).not.toHaveBeenCalled(); expect(p.detail).not.toHaveBeenCalled();
+      expect(link.research).not.toHaveBeenCalled(); expect(p.network).not.toHaveBeenCalled();
+    } finally { await link.close(); p.restore(); }
+  });
+});
 
 function completedRun(): QueryRun {
   return {
@@ -183,7 +342,7 @@ describe("remote MCP server", () => {
     await server.connect(serverTransport);
     await client.connect(clientTransport);
     const tools = await client.listTools();
-    expect(tools.tools.map((tool) => tool.name)).toEqual(["evidence_draft", "draft_check", "evidence_procurement", "deliverable_acceptance_read", "deliverable_acceptance_submit", "operator_obligations_read", "paper_lookup", "research", "keryx_status", "research_monthly", "keryx_operator_status", "keryx_public_job_ledger", "keryx_purchase_outcomes", "keryx_source_learning", "profile_read", "profile_update", "history_read", "history_owned_read", "history_export", "run_privacy_read", "run_owner_export", "profile_identities_read"]);
+    expect(tools.tools.map((tool) => tool.name)).toEqual(["evidence_draft", "draft_check", "evidence_procurement", "deliverable_acceptance_read", "deliverable_acceptance_submit", "operator_obligations_read", "paper_lookup", "research", "keryx_status", "research_monthly", "keryx_operator_status", "keryx_public_job_ledger", "keryx_purchase_outcomes", "keryx_source_learning", "profile_read", "profile_update", "history_read", "history_owned_read", "history_export", "history_private_jobs_list", "history_private_jobs_detail", "history_private_jobs_export", "run_privacy_read", "run_owner_export", "profile_identities_read"]);
 
     const result = await client.callTool({
       name: "research",

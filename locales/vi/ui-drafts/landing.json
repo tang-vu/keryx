@@ -1,0 +1,272 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/landing.ts",
+  "sourceSha256": "bbb8e59e258b528307825f64934b2bdc18d4f254048733c43edd006cbca4b5a3",
+  "entries": {
+    "landingSteps.decide": {
+      "source": "Decide",
+      "text": "Quyết định"
+    },
+    "landingSteps.decideBody": {
+      "source": "Given a spending cap, Keryx compares public previews and prices, then explains which sources it buys or skips. Unspent budget stays with the buyer.",
+      "text": "Với hạn mức chi tiêu, Keryx so sánh bản xem trước công khai và giá, rồi giải thích nguồn nào được mua hoặc bỏ qua. Ngân sách chưa dùng vẫn thuộc bên mua."
+    },
+    "landingSteps.cite": {
+      "source": "Cite",
+      "text": "Trích dẫn"
+    },
+    "landingSteps.citeBody": {
+      "source": "It reads purchased content and writes an answer with citations to sources that support its claims. It can also say when evidence is thin.",
+      "text": "Keryx đọc nội dung đã mua và viết câu trả lời trích dẫn nguồn hỗ trợ nhận định. Keryx cũng có thể nêu rõ khi bằng chứng còn ít."
+    },
+    "landingSteps.settle": {
+      "source": "Settle",
+      "text": "Quyết toán"
+    },
+    "landingSteps.title": {
+      "source": "The minting",
+      "text": "Việc phát hành"
+    },
+    "landingSteps.creators": {
+      "source": "For creators",
+      "text": "Dành cho tác giả"
+    },
+    "landingSteps.listFeed": {
+      "source": "List your feed ▸",
+      "text": "Niêm yết nguồn cấp ▸"
+    },
+    "landingSteps.ledger": {
+      "source": "See the ledger",
+      "text": "Xem sổ theo dõi"
+    },
+    "landingSteps.settleBody": {
+      "source": "Eligible cited creators receive weighted USDC rewards on {network}. The answer and public ledger distinguish settled, pending, and simulated payments.",
+      "text": "Tác giả đủ điều kiện được trích dẫn nhận phần thưởng USDC theo trọng số trên {network}. Câu trả lời và sổ công khai phân biệt thanh toán đã quyết toán, đang chờ và mô phỏng."
+    },
+    "landingCreators.title": {
+      "source": "Your words are the answer. {emphasis}",
+      "text": "Lời bạn viết là câu trả lời. {emphasis}"
+    },
+    "landingCreators.titleEmphasis": {
+      "source": "Be paid like it.",
+      "text": "Được trả tiền xứng đáng."
+    },
+    "landingCreators.introduction": {
+      "source": "Add an RSS feed you control, choose its access toll, and prove ownership. Keryx can pay for a read when it buys an article, then send a separate weighted reward if that article supports a cited answer. See each payment and its state in the public ledger. Payments use {network} USDC.",
+      "text": "Thêm nguồn cấp RSS bạn kiểm soát, chọn phí truy cập và chứng minh sở hữu. Keryx có thể trả phí đọc khi mua bài, rồi gửi phần thưởng theo trọng số riêng nếu bài hỗ trợ câu trả lời được trích dẫn. Xem từng thanh toán và trạng thái trong sổ công khai. Thanh toán dùng USDC trên {network}."
+    },
+    "landingTotals.unavailable": {
+      "source": "Settled totals unavailable.",
+      "text": "Tổng đã quyết toán không khả dụng."
+    },
+    "landingTotals.payments": {
+      "source": "Settled payments · lifetime",
+      "text": "Thanh toán đã quyết toán · toàn bộ thời gian"
+    },
+    "landingTotals.loading": {
+      "source": "Loading settled {network} totals…",
+      "text": "Đang tải tổng đã quyết toán trên {network}…"
+    },
+    "landingTotals.paid": {
+      "source": "Paid to creators · lifetime · {network}",
+      "text": "Đã trả cho tác giả · toàn bộ thời gian · {network}"
+    },
+    "landingActivity.loading": {
+      "source": "Loading recent settled citations…",
+      "text": "Đang tải trích dẫn đã quyết toán gần đây…"
+    },
+    "landingActivity.unavailable": {
+      "source": "Recent citation activity unavailable.",
+      "text": "Hoạt động trích dẫn gần đây không khả dụng."
+    },
+    "landingActivity.cited": {
+      "source": "cited",
+      "text": "đã trích dẫn"
+    },
+    "landingActivity.play": {
+      "source": "Play",
+      "text": "Phát"
+    },
+    "landingActivity.pause": {
+      "source": "Pause",
+      "text": "Tạm dừng"
+    },
+    "landingActivity.questionTitle": {
+      "source": "cited for: {question}",
+      "text": "được trích dẫn cho: {question}"
+    },
+    "landingActivity.seconds.one": {
+      "source": "{count}s ago",
+      "text": "{count} giây trước"
+    },
+    "landingActivity.seconds.other": {
+      "source": "{count}s ago",
+      "text": "{count} giây trước"
+    },
+    "landingActivity.minutes.one": {
+      "source": "{count}m ago",
+      "text": "{count} phút trước"
+    },
+    "landingActivity.minutes.other": {
+      "source": "{count}m ago",
+      "text": "{count} phút trước"
+    },
+    "landingActivity.hours.one": {
+      "source": "{count}h ago",
+      "text": "{count} giờ trước"
+    },
+    "landingActivity.hours.other": {
+      "source": "{count}h ago",
+      "text": "{count} giờ trước"
+    },
+    "landingActivity.days.one": {
+      "source": "{count}d ago",
+      "text": "{count} ngày trước"
+    },
+    "landingActivity.days.other": {
+      "source": "{count}d ago",
+      "text": "{count} ngày trước"
+    },
+    "routeError.eyebrow": {
+      "source": "Dispatch interrupted",
+      "text": "Bản tin bị gián đoạn"
+    },
+    "routeError.title": {
+      "source": "The press jammed.",
+      "text": "Quá trình xử lý bị kẹt."
+    },
+    "routeError.body": {
+      "source": "Something went wrong rendering this page. Your funds are untouched — nothing settles on a failed render.",
+      "text": "Có lỗi khi hiển thị trang này. Tiền của bạn không bị ảnh hưởng — lỗi hiển thị không thực hiện quyết toán."
+    },
+    "routeError.retry": {
+      "source": "⟳ Try again",
+      "text": "⟳ Thử lại"
+    },
+    "routeError.home": {
+      "source": "◂ Masthead",
+      "text": "◂ Đầu trang"
+    },
+    "globalError.eyebrow": {
+      "source": "Dispatch interrupted",
+      "text": "Bản tin bị gián đoạn"
+    },
+    "globalError.title": {
+      "source": "The mint is down.",
+      "text": "Xưởng phát hành đang ngừng hoạt động."
+    },
+    "globalError.body": {
+      "source": "Something went wrong at the root. Your funds are untouched — nothing settles on a failed render.",
+      "text": "Có lỗi ở gốc ứng dụng. Tiền của bạn không bị ảnh hưởng — lỗi hiển thị không thực hiện quyết toán."
+    },
+    "globalError.retry": {
+      "source": "⟳ Try again",
+      "text": "⟳ Thử lại"
+    },
+    "pageNotFound.eyebrow": {
+      "source": "Dispatch № 404",
+      "text": "Bản tin № 404"
+    },
+    "pageNotFound.body": {
+      "source": "No dispatch by that name — the herald has no record of this page.",
+      "text": "Không có bản tin mang tên đó — sứ giả không có hồ sơ trang này."
+    },
+    "pageNotFound.home": {
+      "source": "◂ Return to the masthead",
+      "text": "◂ Quay lại đầu trang"
+    },
+    "brandPresentation.tagline": {
+      "source": "The citation toll",
+      "text": "Phí trích dẫn"
+    },
+    "brandPresentation.sealLegend": {
+      "source": "★ {brand} ★ THE HERALD IS PAID ★ {greekBrand} ",
+      "text": "★ {brand} ★ SỨ GIẢ ĐƯỢC TRẢ CÔNG ★ {greekBrand} "
+    },
+    "launchBadge.aria": {
+      "source": "Keryx on Product Hunt (opens in a new tab)",
+      "text": "Keryx trên Product Hunt (mở tab mới)"
+    },
+    "launchBadge.brand": {
+      "source": "Product Hunt",
+      "text": "Product Hunt"
+    },
+    "launchBadge.alt": {
+      "source": "Keryx — AI research with verifiable sources and creator rewards | Product Hunt",
+      "text": "Keryx — nghiên cứu AI với nguồn kiểm chứng được và phần thưởng tác giả | Product Hunt"
+    },
+    "dialog.close": {
+      "source": "Close",
+      "text": "Đóng"
+    },
+    "landingMetadata.title": {
+      "source": "Keryx — citations are currency",
+      "text": "Keryx — trích dẫn là tiền tệ"
+    },
+    "landingMetadata.citationToll": {
+      "source": "citation toll",
+      "text": "phí trích dẫn"
+    },
+    "landingMetadata.nanopayments": {
+      "source": "nanopayments",
+      "text": "Thanh toán giá trị nhỏ"
+    },
+    "landingMetadata.agentPayments": {
+      "source": "AI agent payments",
+      "text": "Thanh toán của tác nhân AI"
+    },
+    "landingMetadata.agentCommerce": {
+      "source": "autonomous agent commerce",
+      "text": "thương mại của tác nhân tự chủ"
+    },
+    "landingMetadata.stablecoinSettlement": {
+      "source": "stablecoin settlement",
+      "text": "quyết toán bằng stablecoin"
+    },
+    "landingMetadata.creatorsPaid": {
+      "source": "creators paid",
+      "text": "tác giả được trả tiền"
+    },
+    "landingMetadata.payPerCitation": {
+      "source": "pay per citation",
+      "text": "trả tiền theo trích dẫn"
+    },
+    "landingMetadata.readingAgent": {
+      "source": "reading agent",
+      "text": "tác nhân đọc tài liệu"
+    },
+    "landingMetadata.archiveFeed": {
+      "source": "Keryx Answer Archive",
+      "text": "Kho câu trả lời Keryx"
+    },
+    "landingMetadata.slogan": {
+      "source": "Citations are currency.",
+      "text": "Trích dẫn là tiền tệ."
+    },
+    "landingMetadata.description": {
+      "source": "Keryx researches questions using cited evidence, pays verified creators for qualifying paid citations, and includes free public references with no publisher payout. List your writing, prove feed ownership, and earn USDC rewards on {network}.",
+      "text": "Keryx nghiên cứu câu hỏi bằng bằng chứng được trích dẫn, trả tiền cho tác giả đã xác minh với trích dẫn trả phí đủ điều kiện, và đưa vào tài liệu tham khảo công khai miễn phí không trả tiền nhà xuất bản. Niêm yết bài viết, chứng minh sở hữu nguồn cấp và kiếm phần thưởng USDC trên {network}."
+    },
+    "landingCard.alt": {
+      "source": "Keryx — citations are currency",
+      "text": "Keryx — trích dẫn là tiền tệ"
+    },
+    "landingCard.creatorRewards": {
+      "source": "The citation toll — creators paid every time an AI cites them",
+      "text": "Phí trích dẫn — tác giả được trả tiền mỗi khi AI trích dẫn"
+    },
+    "landingCard.title": {
+      "source": "Citations are\ncurrency.",
+      "text": "Trích dẫn là\ntiền tệ."
+    },
+    "landingCard.settlement": {
+      "source": "{protocol} · {asset} · settled on {network}",
+      "text": "{protocol} · {asset} · quyết toán trên {network}"
+    },
+    "landingCard.series": {
+      "source": "Series {year} — No. {number}",
+      "text": "Niên tập {year} — Số {number}"
+    }
+  }
+}

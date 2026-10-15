@@ -65,6 +65,8 @@ Review payment, consent and legal copy under the
 [translation instructions](translation-instructions.md); an agent review or
 baseline entry cannot mark it human-approved.
 
+For native-speaker reports, see [how to report a wrong UI translation](ui-language-previews.md).
+
 During each area migration, remove its retired allowances in the same PR so old
 inline copy cannot be reintroduced under a stale allowance. Preserve the actual
 rendered English, accessibility labels, toasts and metadata with appropriate

@@ -1,0 +1,196 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-presentation.ts",
+  "sourceSha256": "35f3c417fe299c01f8aed2857cac0ef44f2df03a93807b776a6020ea7e4bb362",
+  "entries": {
+    "citations": {
+      "source": "Citations and planned creator rewards",
+      "text": "引用与计划创作者奖励"
+    },
+    "apiAllocations": {
+      "source": "weighted USDC allocations:",
+      "text": "按权重分配的 USDC："
+    },
+    "weight": {
+      "source": "weight {weight}",
+      "text": "权重 {weight}"
+    },
+    "apiTotal": {
+      "source": "Recorded to creators: {amount} · payment mode: {mode}.",
+      "text": "记录支付给创作者：{amount} · 付款模式：{mode}。"
+    },
+    "noRewards": {
+      "source": "No source reward was allocated.",
+      "text": "未分配来源奖励。"
+    },
+    "evidence": {
+      "source": "Evidence: {covered}/{total} research targets meet the recorded excerpt-support threshold; this does not verify entailment or complete synthesis",
+      "text": "证据：{covered}/{total} 个研究目标达到记录的摘录支持阈值；这不验证逻辑蕴含或综合是否完整"
+    },
+    "selection": {
+      "source": "Recorded source selection: {state} · {engines}{more} · {fallback} ({telemetry} attempt telemetry)",
+      "text": "记录的来源选择：{state} · {engines}{more} · {fallback}（{telemetry} 尝试遥测）"
+    },
+    "noneRecorded": {
+      "source": "none recorded",
+      "text": "未记录"
+    },
+    "more": {
+      "source": " + {count} more",
+      "text": " + 另有 {count} 个"
+    },
+    "fallbackServed": {
+      "source": "fallback served",
+      "text": "已采用回退服务"
+    },
+    "requestedServed": {
+      "source": "requested tier served",
+      "text": "已采用请求的服务档位"
+    },
+    "fallbackUnknown": {
+      "source": "fallback use unknown",
+      "text": "回退使用情况未知"
+    },
+    "remoteTotal": {
+      "source": "Total recorded to creators:",
+      "text": "记录支付给创作者的总额："
+    },
+    "confidence": {
+      "source": "Confidence:",
+      "text": "置信度："
+    },
+    "dispatch": {
+      "source": "dispatch:",
+      "text": "研究任务："
+    },
+    "financialDetails": {
+      "source": "Financial details (English):",
+      "text": "财务详情（英文）："
+    },
+    "remoteFailure": {
+      "source": "Keryx research failed: {detail}",
+      "text": "Keryx 研究失败：{detail}"
+    },
+    "stdioFailure": {
+      "source": "Keryx call failed: {detail}",
+      "text": "Keryx 调用失败：{detail}"
+    },
+    "selectionDiagnostic": {
+      "source": "Source-selection diagnostic (not a completed report or payment receipt):",
+      "text": "来源选择诊断（不是已完成报告或付款凭证）："
+    },
+    "requestedUnknown": {
+      "source": "Label language: {language}. The answer language was not recorded; its original text is unchanged.",
+      "text": "标签语言：{language}。未记录答案语言；原始文本保持不变。"
+    },
+    "requestedMismatch": {
+      "source": "Label language: {language}; recorded answer language: {answerLanguage}. The original answer is unchanged.",
+      "text": "标签语言：{language}；记录的答案语言：{answerLanguage}。原始答案保持不变。"
+    },
+    "recordedUnknown": {
+      "source": "The stored answer language is unknown. English labels are used; the original answer and evidence are unchanged.",
+      "text": "已存储答案语言未知。使用英文标签；原始答案和证据保持不变。"
+    },
+    "unsupported": {
+      "source": "The requested label language is unsupported. English labels are used; the original answer is unchanged.",
+      "text": "不支持请求的标签语言。使用英文标签；原始答案保持不变。"
+    },
+    "servingUnavailable": {
+      "source": "Per-step serving tiers: unavailable in this recorded result.",
+      "text": "各步骤服务档位：此记录结果中不可用。"
+    },
+    "servingNoSteps": {
+      "source": "Per-step serving tiers: no recorded steps ({telemetry} attempt telemetry).",
+      "text": "各步骤服务档位：没有已记录步骤（{telemetry} 尝试遥测）。"
+    },
+    "servingSummary": {
+      "source": "Per-step serving tiers ({telemetry} attempt telemetry): {steps}",
+      "text": "各步骤服务档位（{telemetry} 尝试遥测）：{steps}"
+    },
+    "servingStep": {
+      "source": "{step}: {engines} ({state}; {fallback})",
+      "text": "{step}：{engines}（{state}；{fallback}）"
+    },
+    "servingStepMore": {
+      "source": "{step}: {engines} + {count} more ({state}; {fallback})",
+      "text": "{step}：{engines} + 另有 {count} 个（{state}；{fallback}）"
+    },
+    "limitPlanning": {
+      "source": "planning",
+      "text": "规划"
+    },
+    "limitSelection": {
+      "source": "source selection",
+      "text": "来源选择"
+    },
+    "limitCoverage": {
+      "source": "coverage check",
+      "text": "覆盖检查"
+    },
+    "limitReassessment": {
+      "source": "evidence reassessment",
+      "text": "证据重新评估"
+    },
+    "limitAnswer": {
+      "source": "answer preparation",
+      "text": "答案准备"
+    },
+    "limitAttribution": {
+      "source": "citation attribution",
+      "text": "引用归属"
+    },
+    "limitReview": {
+      "source": ", evidence review",
+      "text": "，证据审阅"
+    },
+    "limitGeneration": {
+      "source": ", generation",
+      "text": "，生成"
+    },
+    "limitMore": {
+      "source": "; {count} other limits in telemetry",
+      "text": "；遥测中另有 {count} 个限制"
+    },
+    "limitPartial": {
+      "source": "Output-limit history is partial: {count} earlier trace steps were not inspected.",
+      "text": "输出限制历史不完整：未检查之前的 {count} 个过程步骤。"
+    },
+    "limitNotice": {
+      "source": "Model output limit reached: {limits}. Review the saved evidence; if the result is incomplete, narrow the question before making a new request.",
+      "text": "达到模型输出限制：{limits}。请审阅已保存证据；如结果不完整，在发起新请求前缩小问题范围。"
+    },
+    "reportTitle": {
+      "source": "# Keryx research report",
+      "text": "# Keryx 研究报告"
+    },
+    "reportBibliography": {
+      "source": "## Bibliography exports (metadata only)",
+      "text": "## 参考文献导出（仅元数据）"
+    },
+    "reportSources": {
+      "source": "## Cited sources",
+      "text": "## 被引用来源"
+    },
+    "reportEvidence": {
+      "source": "## Evidence and limitations",
+      "text": "## 证据与局限"
+    },
+    "reportEvidenceNotice": {
+      "source": "Research targets are unverified topics. Recorded excerpt support and coverage are estimates, not proof of entailment, factual truth or complete synthesis.",
+      "text": "研究目标是未验证的主题。记录的摘录支持与覆盖是估计，不是逻辑蕴含、事实真实性或完整综合的证明。"
+    },
+    "reportQuote": {
+      "source": "Quote:",
+      "text": "引文："
+    },
+    "reportConfidence": {
+      "source": "Confidence:",
+      "text": "置信度："
+    },
+    "reportPayments": {
+      "source": "## Payment evidence",
+      "text": "## 付款证据"
+    }
+  }
+}

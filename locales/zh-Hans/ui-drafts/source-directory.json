@@ -1,0 +1,812 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-directory.ts",
+  "sourceSha256": "65d55254a6598bc0ae3b73b25bf1d70eb005ef6c7bfcf07ac98c7aaac189abae",
+  "entries": {
+    "sourceFeed.fullText": {
+      "source": "Full text in feed",
+      "text": "订阅源含全文"
+    },
+    "sourceFeed.excerpt": {
+      "source": "Excerpt in feed",
+      "text": "订阅源含摘录"
+    },
+    "sourceFeed.abstract": {
+      "source": "Abstract in feed",
+      "text": "订阅源含摘要"
+    },
+    "sourceFeed.metadata": {
+      "source": "Metadata only",
+      "text": "仅元数据"
+    },
+    "sourceFeed.untitled": {
+      "source": "Untitled feed item",
+      "text": "无标题订阅源条目"
+    },
+    "sourceFeed.dateUnavailable": {
+      "source": "Publication date unavailable",
+      "text": "发表日期不可用"
+    },
+    "sourceFeed.kicker": {
+      "source": "Free public reference",
+      "text": "免费公开参考"
+    },
+    "sourceFeed.topics": {
+      "source": "Topics",
+      "text": "主题"
+    },
+    "sourceFeed.compactItems": {
+      "source": "From the retained feed",
+      "text": "来自保留订阅源"
+    },
+    "sourceFeed.empty": {
+      "source": "No feed items retained in this snapshot.",
+      "text": "此快照无保留订阅源条目。"
+    },
+    "sourceFeed.collectedUnavailable": {
+      "source": "Feed collection time unavailable",
+      "text": "订阅源收集时间不可用"
+    },
+    "sourceFeed.paymentNotice": {
+      "source": "No creator payment for this reference. Publisher control is not reported here.",
+      "text": "此参考无创作者付款。此处未报告出版者控制。"
+    },
+    "sourceFeed.claim": {
+      "source": "This is my source ▸",
+      "text": "这是我的来源 ▸"
+    },
+    "sourceFeed.published": {
+      "source": "Published {date}",
+      "text": "发布于 {date}"
+    },
+    "sourceFeed.matching.one": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "匹配的留存订阅源条目 · {total} 中的 {count}"
+    },
+    "sourceFeed.latest.one": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "最新留存订阅源条目 · 快照中 {count} 个"
+    },
+    "sourceFeed.matching.other": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "匹配的留存订阅源条目 · {total} 中的 {count}"
+    },
+    "sourceFeed.latest.other": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "最新留存订阅源条目 · 快照中 {count} 个"
+    },
+    "sourceFeed.more.one": {
+      "source": "Show {count} more retained item",
+      "text": "显示另外 {count} 个保留条目"
+    },
+    "sourceFeed.more.other": {
+      "source": "Show {count} more retained items",
+      "text": "显示另外 {count} 个保留条目"
+    },
+    "sourceFeed.collected": {
+      "source": "Feed collected {date}",
+      "text": "订阅源收集于 {date}"
+    },
+    "sourceCited.kicker": {
+      "source": "Cited public document",
+      "text": "被引用公开文档"
+    },
+    "sourceCited.readUnavailable": {
+      "source": "Read time not recorded",
+      "text": "未记录阅读时间"
+    },
+    "sourceCited.citationUnavailable": {
+      "source": "Citation date not recorded",
+      "text": "未记录引用日期"
+    },
+    "sourceCited.inspect": {
+      "source": "Inspect cited answer →",
+      "text": "查看带引用答案 →"
+    },
+    "sourceCited.scope.full_text": {
+      "source": "Full text recorded",
+      "text": "已记录全文"
+    },
+    "sourceCited.scopeBounded.full_text": {
+      "source": "Full text recorded · Bounded extraction",
+      "text": "已记录全文 · 有限提取"
+    },
+    "sourceCited.scope.excerpt": {
+      "source": "Excerpt recorded",
+      "text": "已记录摘录"
+    },
+    "sourceCited.scopeBounded.excerpt": {
+      "source": "Excerpt recorded · Bounded extraction",
+      "text": "已记录摘录 · 有限提取"
+    },
+    "sourceCited.scope.abstract": {
+      "source": "Abstract recorded",
+      "text": "已记录摘要"
+    },
+    "sourceCited.scopeBounded.abstract": {
+      "source": "Abstract recorded · Bounded extraction",
+      "text": "已记录摘要 · 有限提取"
+    },
+    "sourceCited.scope.metadata_only": {
+      "source": "Metadata only",
+      "text": "仅元数据"
+    },
+    "sourceCited.scopeBounded.metadata_only": {
+      "source": "Metadata only · Bounded extraction",
+      "text": "仅元数据 · 有限提取"
+    },
+    "sourceCited.scope.unrecorded": {
+      "source": "Reading scope not recorded",
+      "text": "未记录阅读范围"
+    },
+    "sourceCited.scopeBounded.unrecorded": {
+      "source": "Reading scope not recorded · Bounded extraction",
+      "text": "未记录阅读范围 · 有限提取"
+    },
+    "sourceCited.observed": {
+      "source": "Read observed {date}",
+      "text": "阅读观察于 {date}"
+    },
+    "sourceCited.lastCited": {
+      "source": "Last cited {date}",
+      "text": "最近引用于 {date}"
+    },
+    "sourceExplore.kicker": {
+      "source": "Publisher directory · unread link",
+      "text": "出版者目录 · 未读链接"
+    },
+    "sourceExplore.topics": {
+      "source": "Topics",
+      "text": "主题"
+    },
+    "sourceExplore.ask": {
+      "source": "Ask with this source →",
+      "text": "使用此来源提问 →"
+    },
+    "sourceExplore.draftNotice": {
+      "source": "Opens a question draft. Available content is read only after you submit; inclusion here creates no creator payment.",
+      "text": "打开问题草稿。提交后才阅读可用内容；此处收录不产生创作者付款。"
+    },
+    "sourceList.empty": {
+      "source": "No sources registered yet — be the first.",
+      "text": "尚无注册来源，成为第一位。"
+    },
+    "sourceList.demo": {
+      "source": "Synthetic demo source ? illustrative only",
+      "text": "合成演示来源 ? 仅供说明"
+    },
+    "sourceList.unverifiedTitle": {
+      "source": "Feed ownership not yet proven — listed but the agent won't read, cite, or pay it until verified.",
+      "text": "订阅源所有权尚未证明；已上架，但核验前代理不阅读、引用或付款。"
+    },
+    "sourceList.unverified": {
+      "source": "Unverified",
+      "text": "未核验"
+    },
+    "sourceList.registeredTitle": {
+      "source": "Registered on-chain — view the register() transaction on ArcScan",
+      "text": "已链上注册，查看 ArcScan 上 register() 交易"
+    },
+    "sourceList.onchain": {
+      "source": "On-chain",
+      "text": "链上"
+    },
+    "sourcePreview.title": {
+      "source": "Explore the sources",
+      "text": "探索来源"
+    },
+    "sourcePreview.browse": {
+      "source": "Browse the source library →",
+      "text": "浏览来源库 →"
+    },
+    "sourcePreview.intro": {
+      "source": "Follow sources cited in public answers, browse retained feeds, or explore creator listings. Publisher control and payment eligibility are recorded separately.",
+      "text": "跟踪公开答案引用来源、浏览保留订阅源或探索创作者信息。出版者控制及付款资格分别记录。"
+    },
+    "sourcePreview.citationUnavailable": {
+      "source": "Citation history unavailable",
+      "text": "引用历史不可用"
+    },
+    "sourcePreview.referenceUnavailable": {
+      "source": "Public reference count unavailable",
+      "text": "公开参考数量不可用"
+    },
+    "sourcePreview.creatorUnavailable": {
+      "source": "Creator listing count unavailable",
+      "text": "创作者来源数量不可用"
+    },
+    "sourcePreview.snapshotsUnavailable": {
+      "source": "Public reference snapshots could not be loaded. Reload to retry.",
+      "text": "无法加载公开参考快照。重新加载重试。"
+    },
+    "sourcePreview.empty": {
+      "source": "No retained sources are listed yet. Keryx can still discover supported public documents in response to a question.",
+      "text": "尚无列出的保留来源。Keryx 仍可按问题发现受支持公开文档。"
+    },
+    "sourcePreview.documents.one": {
+      "source": "{count} recently cited public document",
+      "text": "{count} 个近期引用公开文档"
+    },
+    "sourcePreview.feeds.one": {
+      "source": "{count} public feed",
+      "text": "{count} 个公开订阅源"
+    },
+    "sourcePreview.creators.one": {
+      "source": "{count} creator listing",
+      "text": "{count} 个创作者来源"
+    },
+    "sourcePreview.documents.other": {
+      "source": "{count} recently cited public documents",
+      "text": "{count} 个近期引用公开文档"
+    },
+    "sourcePreview.feeds.other": {
+      "source": "{count} public feeds",
+      "text": "{count} 个公开订阅源"
+    },
+    "sourcePreview.creators.other": {
+      "source": "{count} creator listings",
+      "text": "{count} 个创作者来源"
+    },
+    "sourcePreview.control": {
+      "source": "Creator listing · {control}",
+      "text": "创作者来源 · {control}"
+    },
+    "sourceFilter.title": {
+      "source": "Find a source",
+      "text": "查找来源"
+    },
+    "sourceFilter.search": {
+      "source": "Search titles, publishers, domains, authors or identifiers",
+      "text": "搜索标题、出版者、域名、作者或标识"
+    },
+    "sourceFilter.topic": {
+      "source": "Topic",
+      "text": "主题"
+    },
+    "sourceFilter.allTopics": {
+      "source": "All topics",
+      "text": "全部主题"
+    },
+    "sourceFilter.collection": {
+      "source": "Collection",
+      "text": "集合"
+    },
+    "sourceFilter.allCollections": {
+      "source": "All collections",
+      "text": "全部集合"
+    },
+    "sourceFilter.sort": {
+      "source": "Sort",
+      "text": "排序"
+    },
+    "sourceFilter.collectionOrder": {
+      "source": "Collection order",
+      "text": "集合顺序"
+    },
+    "sourceFilter.nameOrder": {
+      "source": "Name A–Z",
+      "text": "名称 A–Z"
+    },
+    "sourceFilter.latest": {
+      "source": "Latest recorded observation",
+      "text": "最新记录观察"
+    },
+    "sourceFilter.paperFilters": {
+      "source": "Paper filters · selects research-paper records",
+      "text": "论文过滤 · 选择研究论文记录"
+    },
+    "sourceFilter.author": {
+      "source": "Author",
+      "text": "作者"
+    },
+    "sourceFilter.authorPlaceholder": {
+      "source": "Author name",
+      "text": "作者姓名"
+    },
+    "sourceFilter.year": {
+      "source": "Publication year",
+      "text": "出版年份"
+    },
+    "sourceFilter.doi": {
+      "source": "Exact DOI",
+      "text": "确切 DOI"
+    },
+    "sourceFilter.find": {
+      "source": "Find sources",
+      "text": "查找来源"
+    },
+    "sourceFilter.topicsLabel": {
+      "source": "Browse source topics",
+      "text": "浏览来源主题"
+    },
+    "sourceFilter.clear": {
+      "source": "Clear filters",
+      "text": "清除筛选"
+    },
+    "sourceFilter.notice": {
+      "source": "Topics use catalog tags and document metadata. Domain groups indicate breadth; they do not verify publisher control. Latest observation sorts recorded citations, feed collections, paper metadata and listings; directory links have no reading date.",
+      "text": "主题使用目录标签及文档元数据。域名分组表示广度，不核验出版者控制。最新观察排序记录引用、订阅源收集、论文元数据及来源信息；目录链接无阅读日期。"
+    },
+    "sourceFilter.placeholder": {
+      "source": "Try {database}, agents or {domain}",
+      "text": "尝试 {database}、代理或 {domain}"
+    },
+    "sourceFilter.doiPlaceholder": {
+      "source": "{identifier} or {url}",
+      "text": "{identifier} 或 {url}"
+    },
+    "sourceFilter.summary.one": {
+      "source": "{matched} of {total} available records · {publishers} publisher domain group in these results.",
+      "text": "{matched}/{total} 条可用记录 · 结果含 {publishers} 个出版者域名组。"
+    },
+    "sourceFilter.summary.other": {
+      "source": "{matched} of {total} available records · {publishers} publisher domain groups in these results.",
+      "text": "{matched}/{total} 条可用记录 · 结果含 {publishers} 个出版者域名组。"
+    },
+    "sourceRegistry.excerpt": {
+      "source": "excerpt preview",
+      "text": "摘录预览"
+    },
+    "sourceRegistry.locked": {
+      "source": "titles-only preview",
+      "text": "仅标题预览"
+    },
+    "sourceRegistry.policyUnavailable": {
+      "source": "Claim policy unavailable. New claimed-source payments are withheld.",
+      "text": "认领政策不可用。暂缓新认领来源付款。"
+    },
+    "sourceRegistry.inspectClaim": {
+      "source": "Inspect source claim",
+      "text": "查看来源认领"
+    },
+    "sourceRegistry.registerTransactionTitle": {
+      "source": "On-chain listing and payout terms; registration does not prove publisher control — opens the register() transaction",
+      "text": "链上来源及收款条款；注册不证明出版者控制，打开 register() 交易"
+    },
+    "sourceRegistry.registeredLink": {
+      "source": "Registered on-chain ↗",
+      "text": "已链上注册 ↗"
+    },
+    "sourceRegistry.registeredTitle": {
+      "source": "On-chain listing and payout terms; registration does not prove publisher control",
+      "text": "链上来源及收款条款；注册不证明出版者控制"
+    },
+    "sourceRegistry.registered": {
+      "source": "Registered on-chain",
+      "text": "已链上注册"
+    },
+    "sourceRegistry.controlUnavailable": {
+      "source": "Publisher control unavailable",
+      "text": "出版者控制不可用"
+    },
+    "sourceRegistry.controlTitle": {
+      "source": "Source control does not establish authorship, content accuracy or distribution rights",
+      "text": "来源控制不确立作者身份、内容准确性或分发权"
+    },
+    "sourceRegistry.unverifiedTitle": {
+      "source": "This listing has not passed its publisher-control check. It remains visible; creator reading and payment eligibility are withheld.",
+      "text": "此来源未通过出版者控制检查。仍可见；暂缓创作者阅读及付款资格。"
+    },
+    "sourceRegistry.unverified": {
+      "source": "Publisher control unverified",
+      "text": "出版者控制未核验"
+    },
+    "sourceRegistry.earningsUnavailable": {
+      "source": "Settled earnings unavailable",
+      "text": "已结算收益不可用"
+    },
+    "sourceRegistry.claimToll": {
+      "source": "Registry toll: ${amount} / read",
+      "text": "注册表费用：${amount} / 次阅读"
+    },
+    "sourceRegistry.toll": {
+      "source": "${amount} / read",
+      "text": "${amount} / 次阅读"
+    },
+    "sourceRegistry.policy.free": {
+      "source": "Free policy · no creator rewards. {inspect}",
+      "text": "免费政策 · 无创作者奖励。{inspect}"
+    },
+    "sourceRegistry.policy.expired": {
+      "source": "Claim control expired · earning eligibility paused. {inspect}",
+      "text": "认领控制过期 · 收益资格暂停。{inspect}"
+    },
+    "sourceRegistry.policy.noConsent": {
+      "source": "Distribution consent unavailable · earnings disabled. {inspect}",
+      "text": "分发同意不可用 · 收益禁用。{inspect}"
+    },
+    "sourceRegistry.policy.citation": {
+      "source": "Citation-only policy · zero-price reads and qualified citation rewards. {inspect}",
+      "text": "仅引用政策 · 零价阅读及合格引用奖励。{inspect}"
+    },
+    "sourceRegistry.policy.paid": {
+      "source": "Paid policy · selected paid reads and qualified citation rewards. {inspect}",
+      "text": "付费政策 · 所选付费阅读及合格引用奖励。{inspect}"
+    },
+    "sourceRegistry.earningsUnknown": {
+      "source": "${amount} settled earnings · citation count unavailable",
+      "text": "已结算收益 ${amount} · 引用次数不可用"
+    },
+    "sourceRegistry.earnings.one": {
+      "source": "${amount} settled earnings · {count} cite",
+      "text": "已结算收益 ${amount} · {count} 次引用"
+    },
+    "sourceRegistry.earnings.other": {
+      "source": "${amount} settled earnings · {count} cites",
+      "text": "已结算收益 ${amount} · {count} 次引用"
+    },
+    "sourceCited.unclassifiedBounded": {
+      "source": " · Bounded extraction",
+      "text": " · 有限提取"
+    },
+    "sourceLibrary.title": {
+      "source": "Sources — research papers, public references and creator listings",
+      "text": "来源 — 研究论文、公开参考及创作者信息"
+    },
+    "sourceLibrary.description": {
+      "source": "Explore research papers by title, author, year and DOI alongside publishers, cited documents, retained feeds and creator listings. Bibliography, reading and payments remain separate.",
+      "text": "按标题、作者、年份及 DOI 探索论文，以及出版者、被引用文档、保留订阅源和创作者信息。文献、阅读及付款保持独立。"
+    },
+    "sourceLibrary.name": {
+      "source": "Keryx Sources",
+      "text": "Keryx 来源"
+    },
+    "sourceLibrary.crumb": {
+      "source": "Sources",
+      "text": "来源"
+    },
+    "sourceLibrary.kicker": {
+      "source": "The reading library",
+      "text": "阅读资料库"
+    },
+    "sourceLibrary.intro": {
+      "source": "Explore original research-paper records, publisher documentation and writing, documents cited in public answers, retained feeds and creator listings. Sources remain visible without publisher verification. Reading scope, publisher control and creator payments are separate records.",
+      "text": "探索原始研究论文记录、出版者文档及文章、公开答案引用文档、保留订阅源和创作者信息。无出版者核验来源仍可见。阅读范围、出版者控制及创作者付款独立记录。"
+    },
+    "sourceLibrary.papers": {
+      "source": "Research papers",
+      "text": "研究论文"
+    },
+    "sourceLibrary.publisherDirectory": {
+      "source": "Publisher directory",
+      "text": "出版者目录"
+    },
+    "sourceLibrary.publisherLinks": {
+      "source": "Original links · read when asked",
+      "text": "原始链接 · 提问时阅读"
+    },
+    "sourceLibrary.citedDocuments": {
+      "source": "Recently cited documents",
+      "text": "近期引用文档"
+    },
+    "sourceLibrary.unavailable": {
+      "source": "Unavailable",
+      "text": "不可用"
+    },
+    "sourceLibrary.publicHistory": {
+      "source": "From public answer history",
+      "text": "来自公开答案历史"
+    },
+    "sourceLibrary.publicReferences": {
+      "source": "Public references",
+      "text": "公开参考"
+    },
+    "sourceLibrary.creatorListings": {
+      "source": "Creator listings",
+      "text": "创作者信息"
+    },
+    "sourceLibrary.registrationPolicies": {
+      "source": "Registration and payment policies",
+      "text": "注册及付款政策"
+    },
+    "sourceLibrary.directoryUnavailable": {
+      "source": "Part of the directory could not be loaded. Available records are shown below; a missing count is not an empty catalog.",
+      "text": "部分目录无法加载。可用记录显示在下方；缺少计数不代表空目录。"
+    },
+    "sourceLibrary.reviewQuestion": {
+      "source": "Working on a literature review?",
+      "text": "正在做文献综述？"
+    },
+    "sourceLibrary.reviewNotice": {
+      "source": "Save papers, record screening notes and prepare a comparison. Your list stays on this browser.",
+      "text": "保存论文、记录筛选笔记并准备比较。列表保留在此浏览器。"
+    },
+    "sourceLibrary.openWorkspace": {
+      "source": "Open literature workspace →",
+      "text": "打开文献工作区 →"
+    },
+    "sourceLibrary.freeDiscovery": {
+      "source": "Original records · free discovery",
+      "text": "原始记录 · 免费发现"
+    },
+    "sourceLibrary.bibliographyNotice": {
+      "source": "A starter bibliography from arXiv, OpenReview, PMLR and ACL Anthology. Metadata identifies papers and observed versions; it does not establish full-text access, peer review or scientific accuracy. Matching DOI or arXiv work identifiers group records while preserving their original versions.",
+      "text": "来自 arXiv、OpenReview、PMLR 及 ACL Anthology 的初始参考文献。元数据标识论文及观察版本，不确立全文访问、同行评审或科学准确性。匹配 DOI 或 arXiv 作品标识分组记录，并保留原版本。"
+    },
+    "sourceLibrary.papersEmpty": {
+      "source": "No starter paper matches these filters. You can search the repositories below.",
+      "text": "无初始论文匹配过滤器。可搜索下方资料库。"
+    },
+    "sourceLibrary.emptyTitle": {
+      "source": "No sources match these filters",
+      "text": "无来源匹配过滤器"
+    },
+    "sourceLibrary.clear": {
+      "source": "Clear filters",
+      "text": "清除筛选"
+    },
+    "sourceLibrary.publisherNotice": {
+      "source": "Starting points for AI and agents, data and infrastructure, payments, and creator research. These are links to original publishers, not retained article evidence. Open the publisher or draft a question with its URL; available content still needs to be read and assessed.",
+      "text": "AI 及代理、数据及基础设施、付款和创作者研究的起点。这些是原出版者链接，不是保留文章证据。打开出版者或以其 URL 草拟问题；仍需阅读及评估可用内容。"
+    },
+    "sourceLibrary.citedTitle": {
+      "source": "Cited in past answers",
+      "text": "曾在答案中引用"
+    },
+    "sourceLibrary.citationsUnavailable": {
+      "source": "Public citation history is temporarily unavailable. Reload to retry; other source collections remain available.",
+      "text": "公开引用历史暂不可用。重新加载重试；其他来源集合仍可用。"
+    },
+    "sourceLibrary.freeReading": {
+      "source": "Free reading · original publisher links",
+      "text": "免费阅读 · 原出版者链接"
+    },
+    "sourceLibrary.feedNotice": {
+      "source": "These are retained feed snapshots. Keryx also discovers supported websites and PDFs when you ask a question; this directory is not a complete index of the web. A feed excerpt, abstract or video description may omit the full work. Listing here does not certify content accuracy.",
+      "text": "这些是保留订阅源快照。提问时 Keryx 还发现受支持网站及 PDF；目录不是完整网络索引。订阅源摘录、摘要或视频说明可能缺少完整作品。收录不认证内容准确性。"
+    },
+    "sourceLibrary.referencesUnavailable": {
+      "source": "Public references are temporarily unavailable. Try this page again to inspect the retained catalog.",
+      "text": "公开参考暂不可用。请重试此页查看保留目录。"
+    },
+    "sourceLibrary.ask": {
+      "source": "ask a question",
+      "text": "提出问题"
+    },
+    "sourceLibrary.creatorNotice": {
+      "source": "Listings remain visible while publisher control is unverified. On-chain registration records a listing and its payout terms; it does not prove publisher control or content accuracy. Reading and earning eligibility depend on the applicable verification, policy and evidence checks.",
+      "text": "出版者控制未核验时来源仍可见。链上注册记录信息及收款条款，不证明出版者控制或内容准确性。阅读及收益资格取决于适用核验、政策和证据检查。"
+    },
+    "sourceLibrary.earningsUnavailable": {
+      "source": "Settled earnings could not be loaded. No zero balance is inferred.",
+      "text": "无法加载已结算收益。不推断零余额。"
+    },
+    "sourceLibrary.creatorsUnavailable": {
+      "source": "Creator listings are temporarily unavailable. Public references have their own availability and free-reading status.",
+      "text": "创作者信息暂不可用。公开参考有独立可用性及免费阅读状态。"
+    },
+    "sourceLibrary.creatorsEmpty": {
+      "source": "No creator listings are recorded yet.",
+      "text": "尚无创作者来源记录。"
+    },
+    "sourceLibrary.referencesPaymentNotice": {
+      "source": "Public references can support answers without generating creator payments.",
+      "text": "公开参考可支持答案，而不产生创作者付款。"
+    },
+    "sourceLibrary.claimTitle": {
+      "source": "Is your writing here?",
+      "text": "您的作品在此吗？"
+    },
+    "sourceLibrary.claimNotice": {
+      "source": "Claim a supported HTTPS source to prove publishing control, or register a creator listing. Verification alone earns nothing. A separate eligible payment policy applies only to new uses; past public reads stay free.",
+      "text": "认领受支持 HTTPS 来源以证明发布控制，或注册创作者来源。仅核验不产生收益。独立合格付款政策仅适用于新使用；过去公开阅读仍免费。"
+    },
+    "sourceLibrary.claim": {
+      "source": "Claim your source ▸",
+      "text": "认领您的来源 ▸"
+    },
+    "sourceLibrary.register": {
+      "source": "Register a listing ▸",
+      "text": "注册来源 ▸"
+    },
+    "sourceLibrary.unanswered": {
+      "source": "See what the corpus couldn't answer",
+      "text": "查看语料无法回答的问题"
+    },
+    "sourceLibrary.emphasis": {
+      "source": "explore.",
+      "text": "探索。"
+    },
+    "sourceLibrary.heading": {
+      "source": "Sources to {emphasis}",
+      "text": "可供{emphasis}的来源"
+    },
+    "sourceLibrary.paperRecords.one": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "作品 · {count} 条观察记录 · 未阅读论文文本"
+    },
+    "sourceLibrary.feedItems.one": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "留存订阅源 · {count} 个订阅源条目"
+    },
+    "sourceLibrary.paperMatches.one": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "{count} 项匹配作品 · {total} 条初始记录。作者、年份及 DOI 过滤适用于此参考文献。"
+    },
+    "sourceLibrary.documentsMatched.one": {
+      "source": "{count} documents match this view.",
+      "text": "{count} 个文档匹配此视图。"
+    },
+    "sourceLibrary.registered.one": {
+      "source": "{count} registered on-chain",
+      "text": "{count} 个已链上注册"
+    },
+    "sourceLibrary.paperRecords.other": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "作品 · {count} 条观察记录 · 未阅读论文文本"
+    },
+    "sourceLibrary.feedItems.other": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "留存订阅源 · {count} 个订阅源条目"
+    },
+    "sourceLibrary.paperMatches.other": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "{count} 项匹配作品 · {total} 条初始记录。作者、年份及 DOI 过滤适用于此参考文献。"
+    },
+    "sourceLibrary.documentsMatched.other": {
+      "source": "{count} documents match this view.",
+      "text": "{count} 个文档匹配此视图。"
+    },
+    "sourceLibrary.registered.other": {
+      "source": "{count} registered on-chain",
+      "text": "{count} 个已链上注册"
+    },
+    "sourceLibrary.feedItemsUnavailable": {
+      "source": "Retained feeds · item count unavailable",
+      "text": "保留订阅源 · 条目数不可用"
+    },
+    "sourceLibrary.morePapers.one": {
+      "source": "Show {count} more paper references",
+      "text": "再显示 {count} 条论文参考文献"
+    },
+    "sourceLibrary.publisherCount.one": {
+      "source": "{count} publisher link",
+      "text": "{count} 个出版者链接"
+    },
+    "sourceLibrary.morePublishers.one": {
+      "source": "Show {count} more publisher links",
+      "text": "再显示 {count} 个发布者链接"
+    },
+    "sourceLibrary.citedNotice.one": {
+      "source": "Showing up to 40 public documents from the latest {count} public question record. Open the original document or inspect its cited answer. Past citations do not certify publisher control or content accuracy; past public reads stay free.",
+      "text": "显示最新 {count} 条公开问题记录中最多 40 个公开文档。打开原文档或查看引用答案。过去引用不认证出版者控制或内容准确性；过去公开阅读仍免费。"
+    },
+    "sourceLibrary.moreCited.one": {
+      "source": "Show {count} more cited documents",
+      "text": "再显示 {count} 个被引用文档"
+    },
+    "sourceLibrary.moreFeeds.one": {
+      "source": "Show {count} more retained feeds",
+      "text": "再显示 {count} 个留存订阅源"
+    },
+    "sourceLibrary.morePapers.other": {
+      "source": "Show {count} more paper references",
+      "text": "再显示 {count} 条论文参考文献"
+    },
+    "sourceLibrary.publisherCount.other": {
+      "source": "{count} publisher links",
+      "text": "{count} 个出版者链接"
+    },
+    "sourceLibrary.morePublishers.other": {
+      "source": "Show {count} more publisher links",
+      "text": "再显示 {count} 个发布者链接"
+    },
+    "sourceLibrary.citedNotice.other": {
+      "source": "Showing up to 40 public documents from the latest {count} public question records. Open the original document or inspect its cited answer. Past citations do not certify publisher control or content accuracy; past public reads stay free.",
+      "text": "显示最新 {count} 条公开问题记录中最多 40 个公开文档。打开原文档或查看引用答案。过去引用不认证出版者控制或内容准确性；过去公开阅读仍免费。"
+    },
+    "sourceLibrary.moreCited.other": {
+      "source": "Show {count} more cited documents",
+      "text": "再显示 {count} 个被引用文档"
+    },
+    "sourceLibrary.moreFeeds.other": {
+      "source": "Show {count} more retained feeds",
+      "text": "再显示 {count} 个留存订阅源"
+    },
+    "sourceLibrary.externalIndexes": {
+      "source": "Explore broader scholarly indexes: {openAlex} · {doaj}. These external links open their indexes; Keryx makes no background queries to them.",
+      "text": "探索更广学术索引：{openAlex} · {doaj}。外部链接打开其索引；Keryx 不向其后台查询。"
+    },
+    "sourceLibrary.emptyNotice": {
+      "source": "Try a publisher name, a shorter search or another topic. {clear} to browse all available records.",
+      "text": "尝试出版者名称、更短搜索或其他主题。{clear}以浏览全部可用记录。"
+    },
+    "sourceLibrary.feedEmpty": {
+      "source": "No public feed snapshots are retained yet. You can still {ask} with a public source URL.",
+      "text": "尚无保留公开订阅源快照。仍可使用公开来源 URL {ask}。"
+    },
+    "sourceLibrary.earnings": {
+      "source": "{amount} in recorded settled creator earnings.",
+      "text": "已记录已结算创作者收益 {amount}。"
+    },
+    "sourceLibrary.wanted": {
+      "source": "Not sure what to list? {wanted}.",
+      "text": "不确定上架什么？{wanted}。"
+    },
+    "sourceMarket.title": {
+      "source": "Article market — exact work, visible price",
+      "text": "文章市场 — 确切作品、可见价格"
+    },
+    "sourceMarket.description": {
+      "source": "Browse exact article versions Keryx can buy through x402, including publisher-signed temporary offers.",
+      "text": "浏览 Keryx 可通过 x402 购买的确切文章版本，包括出版者签名临时报价。"
+    },
+    "sourceMarket.kicker": {
+      "source": "Open article market",
+      "text": "打开文章市场"
+    },
+    "sourceMarket.heading": {
+      "source": "Exact work. Visible price. No mystery bundle.",
+      "text": "确切作品，可见价格，无不明内容包。"
+    },
+    "sourceMarket.intro": {
+      "source": "Every row names the article version the agent can inspect, its registry ceiling, and any temporary discount the publisher signed. Payment still settles to the registry payee.",
+      "text": "每行标明代理可查看文章版本、注册表上限及出版者签名临时折扣。付款仍结算给注册表收款人。"
+    },
+    "sourceMarket.search": {
+      "source": "Search free metadata",
+      "text": "搜索免费元数据"
+    },
+    "sourceMarket.find": {
+      "source": "Find",
+      "text": "查找"
+    },
+    "sourceMarket.empty": {
+      "source": "No payable article metadata matched this search.",
+      "text": "无可付款文章元数据匹配此搜索。"
+    },
+    "sourceMarket.fullText": {
+      "source": "signed full text",
+      "text": "签名全文"
+    },
+    "sourceMarket.registryPrice": {
+      "source": "registry price",
+      "text": "注册表价格"
+    },
+    "sourceMarket.placeholder": {
+      "source": "stablecoins, agents, {protocol}…",
+      "text": "稳定币、代理、{protocol}…"
+    },
+    "sourceMarket.versions.one": {
+      "source": "{count} payable article versions",
+      "text": "{count} 个可付款文章版本"
+    },
+    "sourceMarket.offers.one": {
+      "source": "{count} signed offers",
+      "text": "{count} 个已签名报价"
+    },
+    "sourceMarket.versions.other": {
+      "source": "{count} payable article versions",
+      "text": "{count} 个可付款文章版本"
+    },
+    "sourceMarket.offers.other": {
+      "source": "{count} signed offers",
+      "text": "{count} 个已签名报价"
+    },
+    "sourceMarket.matching": {
+      "source": "· matching “{query}”",
+      "text": "· 匹配“{query}”"
+    },
+    "sourceMarket.discount": {
+      "source": "signed −{percent}%",
+      "text": "签名折扣 −{percent}%"
+    },
+    "sourceMarket.listPrice": {
+      "source": "list ${price}",
+      "text": "标价 ${price}"
+    },
+    "sourceMarket.inspect": {
+      "source": "Inspect {protocol}",
+      "text": "查看 {protocol}"
+    },
+    "sourceMarket.until": {
+      "source": "until {date}",
+      "text": "截至 {date}"
+    },
+    "sourceMarket.signer": {
+      "source": "· signer {signer}",
+      "text": "· 签名者 {signer}"
+    }
+  }
+}

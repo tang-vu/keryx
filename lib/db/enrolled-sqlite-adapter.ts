@@ -5,6 +5,7 @@ import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { createEnrolledSqlitePersonalHistory } from "./personal-history-sqlite";
 import { createEnrolledSqlitePrivateBibliographies } from "./private-bibliographies-enrolled-sqlite";
 import { createEnrolledSqliteDeliverableAcceptance } from "./deliverable-acceptance-sqlite";
+import { createEnrolledSqlitePublicProfiles } from "./public-profiles-sqlite";
 import { createEnrolledSqliteAccountMembership } from "../accounts/sqlite-store";
 import { createEnrolledSqliteChatAccountLinks } from "./chat-accounts-sqlite";
 import { createEnrolledSqliteDecisionReviews } from "./decision-reviews-sqlite";
@@ -345,6 +346,10 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     if (deployment.identity.authorityMode === "mainnet-real") {
       const acceptance = createEnrolledSqliteDeliverableAcceptance(db);
       if (acceptance) Object.defineProperty(facade, "deliverableAcceptance", { value: acceptance });
+      if (process.env.KERYX_PUBLIC_PROFILES_ENABLED === "true" && privacyActive) {
+        const publicProfiles = createEnrolledSqlitePublicProfiles(db);
+        if (publicProfiles) Object.defineProperty(facade, "publicProfiles", { value: publicProfiles });
+      }
       const accountMembership = createEnrolledSqliteAccountMembership(db);
       if (accountMembership) Object.defineProperty(facade, "accountMembership", { value: accountMembership });
       const chatAccountLinks = createEnrolledSqliteChatAccountLinks(db);

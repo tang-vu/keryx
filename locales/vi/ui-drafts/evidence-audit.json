@@ -1,0 +1,156 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-audit.ts",
+  "sourceSha256": "4b75cb1fa916ea973364e129e12ea087f2081f52f17726f59c7ab42f3af1e111",
+  "entries": {
+    "title": {
+      "source": "Research evidence audit",
+      "text": "Kiểm tra bằng chứng nghiên cứu"
+    },
+    "description": {
+      "source": "Check reviewed claim costs and compare captured decisions with a portable receipt using local data.",
+      "text": "Kiểm tra chi phí nhận định đã được xem xét và so sánh quyết định đã lưu với biên nhận di động bằng dữ liệu cục bộ."
+    },
+    "introduction": {
+      "source": "Measure the cost of claims you have reviewed, then compare the recorded buying terms with the receipt. Missing costs and ambiguous payment links stay visible.",
+      "text": "Đo chi phí nhận định bạn đã xem xét, rồi so sánh điều kiện mua đã ghi nhận với biên nhận. Chi phí thiếu và liên kết thanh toán không rõ vẫn được hiển thị."
+    },
+    "decisionLab": {
+      "source": "Decision Lab",
+      "text": "Phòng thử nghiệm quyết định"
+    },
+    "decisionLabLink": {
+      "source": "Audit reviewed claim costs and compare decisions with receipts",
+      "text": "Kiểm tra chi phí nhận định đã xem xét và so sánh quyết định với biên nhận"
+    },
+    "region": {
+      "source": "Local evidence audit",
+      "text": "Kiểm tra bằng chứng cục bộ"
+    },
+    "help": {
+      "source": "Paste a portable receipt with its review, cost records and captured decisions. Checking runs in this browser. Data stays in this tab until you clear it or leave. A downloaded result can contain private cost references.",
+      "text": "Dán biên nhận di động cùng bản xem xét, hồ sơ chi phí và quyết định đã lưu. Việc kiểm tra chạy trong trình duyệt này. Dữ liệu giữ trong tab cho đến khi bạn xóa hoặc rời đi. Kết quả tải xuống có thể chứa tham chiếu chi phí riêng tư."
+    },
+    "sample": {
+      "source": "Load illustrative example",
+      "text": "Tải ví dụ minh họa"
+    },
+    "clear": {
+      "source": "Clear data",
+      "text": "Xóa dữ liệu"
+    },
+    "instructions": {
+      "source": "Input instructions",
+      "text": "Hướng dẫn nhập liệu"
+    },
+    "input": {
+      "source": "Audit input JSON",
+      "text": "JSON đầu vào kiểm tra"
+    },
+    "trust": {
+      "source": "Separately retained digests JSON (optional)",
+      "text": "JSON các digest được lưu riêng (không bắt buộc)"
+    },
+    "trustHelp": {
+      "source": "Use digests retained outside the supplied input to detect later changes. A matching digest alone cannot establish when a decision happened or prove that payment settled.",
+      "text": "Dùng digest được lưu ngoài đầu vào cung cấp để phát hiện thay đổi sau này. Digest khớp không tự chứng minh thời điểm quyết định hay thanh toán đã quyết toán."
+    },
+    "check": {
+      "source": "Check locally",
+      "text": "Kiểm tra cục bộ"
+    },
+    "busy": {
+      "source": "Checking…",
+      "text": "Đang kiểm tra…"
+    },
+    "refused": {
+      "source": "Audit unavailable. Check the JSON, receipt digest, exact evidence references and selected network.",
+      "text": "Kiểm tra không khả dụng. Kiểm tra JSON, digest biên nhận, tham chiếu bằng chứng chính xác và mạng đã chọn."
+    },
+    "result": {
+      "source": "Local audit result",
+      "text": "Kết quả kiểm tra cục bộ"
+    },
+    "supported": {
+      "source": "Supported claims in supplied review",
+      "text": "Nhận định được hỗ trợ trong bản xem xét đã cung cấp"
+    },
+    "sourceRatio": {
+      "source": "Source cost per supported claim (USDC)",
+      "text": "Chi phí nguồn cho mỗi nhận định được hỗ trợ (USDC)"
+    },
+    "providerRatio": {
+      "source": "LLM + search + other cost per supported claim (USD)",
+      "text": "Chi phí LLM + tìm kiếm + chi phí khác cho mỗi nhận định được hỗ trợ (USD)"
+    },
+    "providerBasis": {
+      "source": "Provider cost basis",
+      "text": "Cơ sở tính chi phí nhà cung cấp"
+    },
+    "component.llm": {
+      "source": "LLM (USD)",
+      "text": "LLM (USD)"
+    },
+    "component.search": {
+      "source": "Search (USD)",
+      "text": "Tìm kiếm (USD)"
+    },
+    "component.other": {
+      "source": "Other allocated costs (USD)",
+      "text": "Chi phí khác được phân bổ (USD)"
+    },
+    "unknown": {
+      "source": "Unknown",
+      "text": "Chưa rõ"
+    },
+    "availableWindow": {
+      "source": "available",
+      "text": "có sẵn"
+    },
+    "unknownWindow": {
+      "source": "unknown",
+      "text": "chưa rõ"
+    },
+    "comparisons": {
+      "source": "Decision → receipt comparisons",
+      "text": "So sánh quyết định → biên nhận"
+    },
+    "noDecisions": {
+      "source": "No captured decisions supplied. Historical records are not reconstructed.",
+      "text": "Chưa cung cấp quyết định được lưu. Không tái tạo hồ sơ lịch sử."
+    },
+    "download": {
+      "source": "Download local result",
+      "text": "Tải kết quả cục bộ"
+    },
+    "ratio": {
+      "source": "${amount} micro-${unit} / ${count} supported claims",
+      "text": "${amount} micro-${unit} / ${count} nhận định được hỗ trợ"
+    },
+    "cost": {
+      "source": "${amount} micro-USD · ${status}",
+      "text": "${amount} micro-USD · ${status}"
+    },
+    "receipt": {
+      "source": "Receipt: ${check} · ${digest}",
+      "text": "Biên nhận: ${check} · ${digest}"
+    },
+    "networkReview": {
+      "source": "Network: ${network} · Review: ${review}",
+      "text": "Mạng: ${network} · Xem xét: ${review}"
+    },
+    "sourceTotals": {
+      "source": "Receipt-recorded settled access: ${access} micro-USDC. Citation rewards: ${citation} micro-USDC. Full source-cost window: ${window}.",
+      "text": "Phí truy cập đã quyết toán ghi trong biên nhận: ${access} micro-USDC. Phần thưởng trích dẫn: ${citation} micro-USDC. Khoảng ghi nhận toàn bộ chi phí nguồn: ${window}."
+    },
+    "comparison": {
+      "source": "Access: ${access} · Citation: ${citation} · Independent timing proof: ${timing}",
+      "text": "Truy cập: ${access} · Trích dẫn: ${citation} · Bằng chứng thời điểm độc lập: ${timing}"
+    },
+    "unmatched": {
+      "source": "Creator payments without an identity match: ${count}.",
+      "text": "Thanh toán cho tác giả không khớp danh tính: ${count}."
+    }
+  }
+}

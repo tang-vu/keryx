@@ -1,0 +1,692 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/withdrawal.ts",
+  "sourceSha256": "f3e27a218e592f26cd5bc90ca3846748c815372c7f278962ffc7a8c769fecee6",
+  "entries": {
+    "withdrawalWorkspace.connect": {
+      "source": "Connect your wallet to manage withdrawals.",
+      "text": "连接钱包以管理提现。"
+    },
+    "withdrawalWorkspace.unavailable": {
+      "source": "New withdrawals are unavailable. You can still recover saved requests.",
+      "text": "新提现不可用。仍可恢复保存请求。"
+    },
+    "withdrawalWorkspace.amountInvalid": {
+      "source": "Enter a positive USDC amount within the limit, with at most 6 decimal places.",
+      "text": "输入限制内正 USDC 金额，最多 6 位小数。"
+    },
+    "withdrawalWorkspace.draftSaved": {
+      "source": "Unsigned draft saved. Review it before signing.",
+      "text": "未签名草稿已保存。签名前请审阅。"
+    },
+    "withdrawalWorkspace.prepareUncertain": {
+      "source": "Preparation did not finish. Refresh saved requests before preparing again; a draft may already be saved.",
+      "text": "准备未完成。再次准备前刷新保存请求；草稿可能已保存。"
+    },
+    "withdrawalWorkspace.prepare": {
+      "source": "Prepare withdrawal",
+      "text": "准备提现"
+    },
+    "withdrawalWorkspace.title": {
+      "source": "Withdraw USDC",
+      "text": "提取 USDC"
+    },
+    "withdrawalWorkspace.networkInstruction": {
+      "source": "Arc Testnet · Funds go to your connected wallet.",
+      "text": "Arc 测试网 · 资金发送到已连接钱包。"
+    },
+    "withdrawalWorkspace.amount": {
+      "source": "Amount to receive (USDC)",
+      "text": "接收金额（USDC）"
+    },
+    "withdrawalWorkspace.prepareBoundary": {
+      "source": "Preparation saves an unsigned draft. Review, signing and sending are separate steps.",
+      "text": "准备保存未签名草稿。审阅、签名及发送是独立步骤。"
+    },
+    "withdrawalWorkspace.separateRequest": {
+      "source": "Preparing another withdrawal creates a separate request. Use saved requests to resume this one.",
+      "text": "准备另一提现会创建独立请求。使用保存请求恢复此项。"
+    },
+    "withdrawalWorkspace.prepareAnother": {
+      "source": "Prepare another withdrawal",
+      "text": "准备另一提现"
+    },
+    "withdrawalWorkspace.preparing": {
+      "source": "Preparing and saving unsigned terms…",
+      "text": "正在准备并保存未签名条款…"
+    },
+    "withdrawalWorkspace.recipient": {
+      "source": "Recipient: {owner}",
+      "text": "接收者：{owner}"
+    },
+    "withdrawalWorkspace.limits": {
+      "source": "Amount limit: {amount} USDC. Maximum Circle fee: {fee} USDC, charged in addition to the amount.",
+      "text": "金额限制：{amount} USDC。最高 Circle 费：{fee} USDC，金额之外另收。"
+    },
+    "withdrawalReview.connect": {
+      "source": "Connect the original wallet to review this withdrawal.",
+      "text": "连接原钱包审阅提现。"
+    },
+    "withdrawalReview.unavailable": {
+      "source": "The saved original is unavailable. Keep your recovery file; do not create another request as a retry.",
+      "text": "保存原请求不可用。保留恢复文件；不要创建另一请求重试。"
+    },
+    "withdrawalReview.signed": {
+      "source": "Signature saved. Review the details again before sending.",
+      "text": "签名已保存。发送前再次审阅详情。"
+    },
+    "withdrawalReview.submitted": {
+      "source": "Submission attempt saved. Check recovery status for the original request.",
+      "text": "提交尝试已保存。检查原请求恢复状态。"
+    },
+    "withdrawalReview.uncertain": {
+      "source": "The operation did not finish. Your saved original is retained; use recovery to check its state.",
+      "text": "操作未完成。保存原请求保留；使用恢复检查状态。"
+    },
+    "withdrawalReview.aria": {
+      "source": "Review withdrawal",
+      "text": "审阅提现"
+    },
+    "withdrawalReview.title": {
+      "source": "Review your withdrawal",
+      "text": "审阅您的提现"
+    },
+    "withdrawalReview.amount": {
+      "source": "Amount received",
+      "text": "收到金额"
+    },
+    "withdrawalReview.fee": {
+      "source": "Maximum Circle fee",
+      "text": "最高 Circle 费"
+    },
+    "withdrawalReview.debit": {
+      "source": "Maximum Gateway debit",
+      "text": "最高 Gateway 扣款"
+    },
+    "withdrawalReview.recipient": {
+      "source": "Recipient",
+      "text": "接收者"
+    },
+    "withdrawalReview.expiry": {
+      "source": "Authorization expires at source block",
+      "text": "授权到期来源区块"
+    },
+    "withdrawalReview.noExpiry": {
+      "source": "No finite expiry — recovery only",
+      "text": "无有限到期时间 · 仅恢复"
+    },
+    "withdrawalReview.signingBoundary": {
+      "source": "Signing saves this authorization locally. Sending is a separate step. The server checks its expiry again before transfer.",
+      "text": "签名将授权保存在本地。发送为独立步骤。转账前服务器再次检查到期。"
+    },
+    "withdrawalReview.sign": {
+      "source": "Sign reviewed withdrawal",
+      "text": "签署已审阅提现"
+    },
+    "withdrawalReview.send": {
+      "source": "Send signed withdrawal",
+      "text": "发送已签名提现"
+    },
+    "withdrawalReview.recoveryOnly": {
+      "source": "This request is recovery-only. Check its status in withdrawal recovery.",
+      "text": "此请求仅可恢复。在提现恢复检查状态。"
+    },
+    "withdrawalReview.waiting": {
+      "source": "Waiting for this operation…",
+      "text": "等待此操作…"
+    },
+    "withdrawalReview.loading": {
+      "source": "Loading saved original…",
+      "text": "正在加载保存原请求…"
+    },
+    "withdrawalHistory.signIn": {
+      "source": "Sign in to view withdrawal history.",
+      "text": "登录查看提现历史。"
+    },
+    "withdrawalHistory.signInAgain": {
+      "source": "Sign in again to view withdrawal history.",
+      "text": "重新登录查看提现历史。"
+    },
+    "withdrawalHistory.loadFailed": {
+      "source": "History could not be loaded. Try again; your saved requests have not been changed.",
+      "text": "无法加载历史。重试；保存请求未更改。"
+    },
+    "withdrawalHistory.aria": {
+      "source": "Server withdrawal history",
+      "text": "服务器提现历史"
+    },
+    "withdrawalHistory.title": {
+      "source": "Withdrawal request history",
+      "text": "提现请求历史"
+    },
+    "withdrawalHistory.boundary": {
+      "source": "Find requests saved to your account, including from another browser. These records do not confirm that funds reached your wallet.",
+      "text": "查找保存到账户的请求，包括来自其他浏览器的请求。这些记录不确认资金已到钱包。"
+    },
+    "withdrawalHistory.refresh": {
+      "source": "Refresh account history",
+      "text": "刷新账户历史"
+    },
+    "withdrawalHistory.load": {
+      "source": "Load account history",
+      "text": "加载账户历史"
+    },
+    "withdrawalHistory.connect": {
+      "source": "Sign in",
+      "text": "登录"
+    },
+    "withdrawalHistory.checking": {
+      "source": "Checking request progress…",
+      "text": "正在检查请求进度…"
+    },
+    "withdrawalHistory.loading": {
+      "source": "Loading account history…",
+      "text": "正在加载账户历史…"
+    },
+    "withdrawalHistory.empty": {
+      "source": "No withdrawal requests have been saved to this account.",
+      "text": "此账户未保存提现请求。"
+    },
+    "withdrawalHistory.check": {
+      "source": "Check progress",
+      "text": "检查进度"
+    },
+    "withdrawalHistory.older": {
+      "source": "Load older requests",
+      "text": "加载较早请求"
+    },
+    "withdrawalHistory.amount": {
+      "source": "Requested: {amount} USDC",
+      "text": "请求金额：{amount} USDC"
+    },
+    "withdrawalHistory.fee": {
+      "source": "Maximum Circle fee: {fee} USDC",
+      "text": "最高 Circle 费：{fee} USDC"
+    },
+    "withdrawalHistory.recipient": {
+      "source": "Recipient: {recipient}",
+      "text": "接收者：{recipient}"
+    },
+    "withdrawalHistory.saved": {
+      "source": "Saved: {time}",
+      "text": "保存于：{time}"
+    },
+    "withdrawalHistory.request": {
+      "source": "Request ID: {id}",
+      "text": "请求 ID：{id}"
+    },
+    "withdrawalProgress.unchecked": {
+      "source": "Server record · Settlement not checked",
+      "text": "服务器记录 · 未检查结算"
+    },
+    "withdrawalProgress.readFailed": {
+      "source": "Progress could not be read. This does not mean the withdrawal failed.",
+      "text": "无法读取进度。这不意味着提现失败。"
+    },
+    "withdrawalProgress.unavailable": {
+      "source": "The server could not find this request. Keep its ID and any recovery file; do not treat it as cancelled.",
+      "text": "服务器未找到请求。保留 ID 及恢复文件；不要视为已取消。"
+    },
+    "withdrawalProgress.signIn": {
+      "source": "Sign in again to check progress.",
+      "text": "重新登录检查进度。"
+    },
+    "withdrawalProgress.rpcBoundary": {
+      "source": "Observation uses the operator's RPC; this browser has not independently verified settlement.",
+      "text": "观察使用运营者 RPC；此浏览器未独立核验结算。"
+    },
+    "withdrawalProgress.transaction": {
+      "source": "View reported mint transaction",
+      "text": "查看报告的铸币交易"
+    },
+    "withdrawalProgress.requestSaved": {
+      "source": "Request saved. No transfer attempt is recorded.",
+      "text": "请求已保存。未记录转账尝试。"
+    },
+    "withdrawalProgress.transferPending": {
+      "source": "Transfer evidence is still pending. Do not create a replacement request to retry it.",
+      "text": "转账证据仍待处理。不要创建替代请求来重试。"
+    },
+    "withdrawalProgress.attestationSaved": {
+      "source": "Transfer attestation saved. This alone does not confirm receipt in your wallet.",
+      "text": "转账证明已保存。仅此不能确认钱包到账。"
+    },
+    "withdrawalProgress.mintUnchecked": {
+      "source": "Mint settlement has not been checked.",
+      "text": "未检查铸币结算。"
+    },
+    "withdrawalProgress.notQueued": {
+      "source": "No mint queue entry is reported.",
+      "text": "未报告铸币队列条目。"
+    },
+    "withdrawalProgress.queued": {
+      "source": "Mint is queued; settlement is not confirmed.",
+      "text": "铸币已排队；结算未确认。"
+    },
+    "withdrawalProgress.prepared": {
+      "source": "Mint transaction is prepared; settlement is not confirmed.",
+      "text": "铸币交易已准备；结算未确认。"
+    },
+    "withdrawalProgress.title": {
+      "source": "Server-reported progress",
+      "text": "服务器报告进度"
+    },
+    "withdrawalProgress.observedMint": {
+      "source": "Server reports an observed mint on {network}.",
+      "text": "服务器报告在 {network} 观察到铸币。"
+    },
+    "withdrawalProgress.observedAt": {
+      "source": "Observed: {time}",
+      "text": "观察于：{time}"
+    },
+    "withdrawalPage.metadataTitle": {
+      "source": "My withdrawals — Keryx",
+      "text": "我的提现 — Keryx"
+    },
+    "withdrawalPage.description": {
+      "source": "Review and recover your original USDC withdrawal requests.",
+      "text": "审阅并恢复原 USDC 提现请求。"
+    },
+    "withdrawalPage.title": {
+      "source": "My withdrawals",
+      "text": "我的提现"
+    },
+    "withdrawalPage.introduction": {
+      "source": "Review your USDC withdrawal and recover the same request after a disconnect.",
+      "text": "审阅 USDC 提现，并在断线后恢复同一请求。"
+    },
+    "withdrawalPage.back": {
+      "source": "Back to my sources",
+      "text": "返回我的来源"
+    },
+    "withdrawalPage.historyBoundary": {
+      "source": "{network}. Account history shows requests saved on the server, including from other browsers. Local drafts and private recovery files retain the original signing terms. Check pending requests before starting another withdrawal.",
+      "text": "{network}。账户历史显示服务器保存请求，包括其他浏览器请求。本地草稿及私密恢复文件保留原签名条款。开始另一提现前检查待处理请求。"
+    },
+    "withdrawalRecovery.connect": {
+      "source": "Connect your wallet to recover withdrawals.",
+      "text": "连接钱包以恢复提现。"
+    },
+    "withdrawalRecovery.unavailable": {
+      "source": "Recovery is unavailable. Keep your original request or recovery file and try checking again.",
+      "text": "恢复不可用。保留原请求或恢复文件，再尝试检查。"
+    },
+    "withdrawalRecovery.imported": {
+      "source": "Recovery file imported. It can check the original withdrawal, but cannot send it again.",
+      "text": "恢复文件已导入。可检查原提现，但不能再次发送。"
+    },
+    "withdrawalRecovery.aria": {
+      "source": "Withdrawal recovery",
+      "text": "提现恢复"
+    },
+    "withdrawalRecovery.title": {
+      "source": "Recover a withdrawal",
+      "text": "恢复提现"
+    },
+    "withdrawalRecovery.privacy": {
+      "source": "Check a saved request or import its recovery file. Keep recovery files private: they contain a signed authorization.",
+      "text": "检查保存请求或导入恢复文件。请私密保管恢复文件，其中含签名授权。"
+    },
+    "withdrawalRecovery.refresh": {
+      "source": "Refresh saved requests",
+      "text": "刷新保存请求"
+    },
+    "withdrawalRecovery.import": {
+      "source": "Import recovery file",
+      "text": "导入恢复文件"
+    },
+    "withdrawalRecovery.importAria": {
+      "source": "Import withdrawal recovery file",
+      "text": "导入提现恢复文件"
+    },
+    "withdrawalRecovery.checking": {
+      "source": "Checking saved withdrawal…",
+      "text": "正在检查保存提现…"
+    },
+    "withdrawalRecovery.empty": {
+      "source": "No withdrawal requests saved for this wallet in this browser. Import a recovery file if you have one.",
+      "text": "此浏览器无此钱包保存提现请求。如有恢复文件可导入。"
+    },
+    "withdrawalRecovery.draft": {
+      "source": "Unsigned draft",
+      "text": "未签名草稿"
+    },
+    "withdrawalRecovery.recoveryOnly": {
+      "source": "Imported for recovery only",
+      "text": "仅导入用于恢复"
+    },
+    "withdrawalRecovery.signed": {
+      "source": "Signed original saved",
+      "text": "已保存签名原请求"
+    },
+    "withdrawalRecovery.review": {
+      "source": "Review saved request",
+      "text": "审阅保存请求"
+    },
+    "withdrawalRecovery.check": {
+      "source": "Check status",
+      "text": "检查状态"
+    },
+    "withdrawalRecovery.download": {
+      "source": "Download private recovery file",
+      "text": "下载私密恢复文件"
+    },
+    "withdrawalRecovery.more": {
+      "source": "Load more saved requests",
+      "text": "加载更多保存请求"
+    },
+    "withdrawalRecovery.signIn": {
+      "source": "Sign in with this wallet to check the withdrawal.",
+      "text": "使用此钱包登录检查提现。"
+    },
+    "withdrawalRecovery.serverUnavailable": {
+      "source": "No server record is available. Keep the original request; this does not mean it was never submitted.",
+      "text": "无服务器记录。保留原请求；这不意味着从未提交。"
+    },
+    "withdrawalRecovery.unreadable.one": {
+      "source": "{count} saved request(s) could not be read. Other requests remain available. Keep your recovery files; unreadable records have not been deleted.",
+      "text": "无法读取 {count} 个保存请求。其他请求仍可用。保留恢复文件；未删除不可读记录。"
+    },
+    "withdrawalRecovery.unreadable.other": {
+      "source": "{count} saved request(s) could not be read. Other requests remain available. Keep your recovery files; unreadable records have not been deleted.",
+      "text": "无法读取 {count} 个保存请求。其他请求仍可用。保留恢复文件；未删除不可读记录。"
+    },
+    "withdrawalRecovery.request": {
+      "source": "Request {id}",
+      "text": "请求 {id}"
+    },
+    "withdrawalRecovery.transaction": {
+      "source": "View transaction",
+      "text": "查看交易"
+    },
+    "withdrawalRecovery.finalized": {
+      "source": "Mint observed as finalized on Arc Testnet. {transactionLink}",
+      "text": "观察到铸币在 Arc 测试网已最终确认。{transactionLink}"
+    },
+    "withdrawalRecoveryStatus.attestation.unchecked": {
+      "source": "Transfer evidence is saved. Mint has not been checked.",
+      "text": "转账证据已保存。未检查铸币。"
+    },
+    "withdrawalRecoveryStatus.attestation.notQueued": {
+      "source": "Transfer evidence is saved. No mint is queued yet.",
+      "text": "转账证据已保存。尚无铸币排队。"
+    },
+    "withdrawalRecoveryStatus.attestation.queued": {
+      "source": "Transfer evidence is saved. Mint is queued.",
+      "text": "转账证据已保存。铸币已排队。"
+    },
+    "withdrawalRecoveryStatus.attestation.prepared": {
+      "source": "Transfer evidence is saved. Mint transaction is prepared; confirmation is not available yet.",
+      "text": "转账证据已保存。铸币交易已准备；确认尚不可用。"
+    },
+    "withdrawalRecoveryStatus.attestation.unknown": {
+      "source": "Transfer evidence is saved. ",
+      "text": "转账证据已保存。 "
+    },
+    "withdrawalRecoveryStatus.transferPending.unchecked": {
+      "source": "Waiting for transfer evidence. Mint has not been checked.",
+      "text": "等待转账证据。未检查铸币。"
+    },
+    "withdrawalRecoveryStatus.transferPending.notQueued": {
+      "source": "Waiting for transfer evidence. No mint is queued yet.",
+      "text": "等待转账证据。尚无铸币排队。"
+    },
+    "withdrawalRecoveryStatus.transferPending.queued": {
+      "source": "Waiting for transfer evidence. Mint is queued.",
+      "text": "等待转账证据。铸币已排队。"
+    },
+    "withdrawalRecoveryStatus.transferPending.prepared": {
+      "source": "Waiting for transfer evidence. Mint transaction is prepared; confirmation is not available yet.",
+      "text": "等待转账证据。铸币交易已准备；确认尚不可用。"
+    },
+    "withdrawalRecoveryStatus.transferPending.unknown": {
+      "source": "Waiting for transfer evidence. ",
+      "text": "等待转账证据。 "
+    },
+    "withdrawalRecoveryStatus.request.unchecked": {
+      "source": "Request is saved. Mint has not been checked.",
+      "text": "请求已保存。未检查铸币。"
+    },
+    "withdrawalRecoveryStatus.request.notQueued": {
+      "source": "Request is saved. No mint is queued yet.",
+      "text": "请求已保存。尚无铸币排队。"
+    },
+    "withdrawalRecoveryStatus.request.queued": {
+      "source": "Request is saved. Mint is queued.",
+      "text": "请求已保存。铸币已排队。"
+    },
+    "withdrawalRecoveryStatus.request.prepared": {
+      "source": "Request is saved. Mint transaction is prepared; confirmation is not available yet.",
+      "text": "请求已保存。铸币交易已准备；确认尚不可用。"
+    },
+    "withdrawalRecoveryStatus.request.unknown": {
+      "source": "Request is saved. ",
+      "text": "请求已保存。 "
+    },
+    "withdrawEarnings.connect": {
+      "source": "Connect your wallet to withdraw.",
+      "text": "连接钱包以提现。"
+    },
+    "withdrawEarnings.signing": {
+      "source": "Sign the withdrawal in your wallet…",
+      "text": "在钱包签署提现…"
+    },
+    "withdrawEarnings.settling": {
+      "source": "Settling on-chain…",
+      "text": "正在链上结算…"
+    },
+    "withdrawEarnings.failed": {
+      "source": "withdraw failed",
+      "text": "提现失败"
+    },
+    "withdrawEarnings.minted": {
+      "source": "Minted on-chain — view the tx on ArcScan.",
+      "text": "已链上铸币，查看 ArcScan 交易。"
+    },
+    "withdrawEarnings.rejected": {
+      "source": "Signature rejected.",
+      "text": "签名被拒绝。"
+    },
+    "withdrawEarnings.title": {
+      "source": "Withdrawable earnings",
+      "text": "可提现收益"
+    },
+    "withdrawEarnings.description": {
+      "source": "Citation tolls accrue to your wallet's Circle Gateway balance. Pull them on-chain into your own wallet — one signature, no gas. A small network fee is reserved from the balance.",
+      "text": "引用费用累计到钱包 Circle Gateway 余额。一个签名即可提取到自己的链上钱包，无 gas。余额预留少量网络费。"
+    },
+    "withdrawEarnings.withdrawing": {
+      "source": "Withdrawing…",
+      "text": "正在提现…"
+    },
+    "withdrawEarnings.unavailable": {
+      "source": "Balance unavailable",
+      "text": "余额不可用"
+    },
+    "withdrawEarnings.checking": {
+      "source": "Checking balance…",
+      "text": "正在检查余额…"
+    },
+    "withdrawEarnings.belowFee": {
+      "source": "Balance below the withdraw fee",
+      "text": "余额低于提现费"
+    },
+    "withdrawEarnings.empty": {
+      "source": "Nothing to withdraw yet",
+      "text": "尚无可提现金额"
+    },
+    "withdrawEarnings.retry": {
+      "source": "Retry balance check",
+      "text": "重试余额检查"
+    },
+    "withdrawEarnings.transaction": {
+      "source": "View the on-chain mint on ArcScan",
+      "text": "在 ArcScan 查看链上铸币"
+    },
+    "withdrawEarnings.success": {
+      "source": "Withdrew ${amount} to your wallet",
+      "text": "已向钱包提取 ${amount}"
+    },
+    "withdrawEarnings.withdraw": {
+      "source": "Withdraw ${amount} to my wallet ▸",
+      "text": "提取 ${amount} 到我的钱包 ▸"
+    },
+    "withdrawEarnings.balanceFailed": {
+      "source": "Gateway balance could not be read. This does not mean your earnings are zero. {retryButton}",
+      "text": "无法读取 Gateway 余额。这不意味着收益为零。{retryButton}"
+    },
+    "creatorWithdrawal.precision": {
+      "source": "Enter USDC with at most six decimals",
+      "text": "输入最多六位小数的 USDC 金额"
+    },
+    "creatorWithdrawal.positive": {
+      "source": "Choose a supported positive amount",
+      "text": "选择受支持的正金额"
+    },
+    "creatorWithdrawal.signIn": {
+      "source": "Sign in as the original creator to continue recovery",
+      "text": "以原创作者身份登录以继续恢复"
+    },
+    "creatorWithdrawal.connect": {
+      "source": "Connect the original creator wallet",
+      "text": "连接原创作者钱包"
+    },
+    "creatorWithdrawal.unavailable": {
+      "source": "Original creator withdrawal unavailable",
+      "text": "原创作者提现不可用"
+    },
+    "creatorWithdrawal.ownerChanged": {
+      "source": "Creator owner changed",
+      "text": "创作者所有者已更改"
+    },
+    "creatorWithdrawal.prepared": {
+      "source": "Unsigned original saved. Review its amount, fee and recipient before signing.",
+      "text": "未签名原请求已保存。签名前审阅金额、费用及接收者。"
+    },
+    "creatorWithdrawal.walletUnavailable": {
+      "source": "Creator wallet unavailable",
+      "text": "创作者钱包不可用"
+    },
+    "creatorWithdrawal.signed": {
+      "source": "Original burn signature saved; sending remains a separate step.",
+      "text": "原销毁签名已保存；发送仍为独立步骤。"
+    },
+    "creatorWithdrawal.submitted": {
+      "source": "Original transfer attempt retained. Read its recovery status; do not send another burn.",
+      "text": "原转账尝试已保留。读取恢复状态；不要发送另一次销毁。"
+    },
+    "creatorWithdrawal.completed": {
+      "source": "Original owner mint finality verified",
+      "text": "原所有者铸币最终性已核验"
+    },
+    "creatorWithdrawal.gasUnavailable": {
+      "source": "Original creator wallet and gas RPC unavailable",
+      "text": "原创作者钱包及 gas RPC 不可用"
+    },
+    "creatorWithdrawal.minted": {
+      "source": "Owner mint submitted; original finality remains pending.",
+      "text": "所有者铸币已提交；原最终性仍待确认。"
+    },
+    "creatorWithdrawal.hashInvalid": {
+      "source": "Enter the original owner mint transaction hash",
+      "text": "输入原始所有者铸造交易哈希"
+    },
+    "creatorWithdrawal.aria": {
+      "source": "Creator owner withdrawal",
+      "text": "创作者所有者提现"
+    },
+    "creatorWithdrawal.title": {
+      "source": "Withdraw creator earnings",
+      "text": "提取创作者收益"
+    },
+    "creatorWithdrawal.introduction": {
+      "source": "Arc mainnet USDC returns to your connected creator wallet. Review the Circle fee, then sign and send the original burn. Minting needs a separate owner wallet transaction and native gas.",
+      "text": "Arc 主网 USDC 返回已连接创作者钱包。审阅 Circle 费，再签署并发送原销毁。铸币需独立所有者钱包交易及原生 gas。"
+    },
+    "creatorWithdrawal.amount": {
+      "source": "Amount USDC",
+      "text": "金额 USDC"
+    },
+    "creatorWithdrawal.amountAria": {
+      "source": "Creator withdrawal amount",
+      "text": "创作者提现金额"
+    },
+    "creatorWithdrawal.fee": {
+      "source": "Maximum fee USDC",
+      "text": "最高费用 USDC"
+    },
+    "creatorWithdrawal.feeAria": {
+      "source": "Creator withdrawal maximum fee",
+      "text": "创作者提现最高费用"
+    },
+    "creatorWithdrawal.prepare": {
+      "source": "Prepare creator withdrawal",
+      "text": "准备创作者提现"
+    },
+    "creatorWithdrawal.originals": {
+      "source": "Saved originals",
+      "text": "保存的原请求"
+    },
+    "creatorWithdrawal.originalsAria": {
+      "source": "Saved creator withdrawals",
+      "text": "已保存创作者提现"
+    },
+    "creatorWithdrawal.choose": {
+      "source": "Choose an original",
+      "text": "选择原始记录"
+    },
+    "creatorWithdrawal.request": {
+      "source": "Original request",
+      "text": "原始请求"
+    },
+    "creatorWithdrawal.requestAria": {
+      "source": "Original creator withdrawal request",
+      "text": "原创作者提现请求"
+    },
+    "creatorWithdrawal.sign": {
+      "source": "Sign reviewed creator burn",
+      "text": "签署已审阅创作者销毁"
+    },
+    "creatorWithdrawal.send": {
+      "source": "Send signed creator burn",
+      "text": "发送已签名创作者销毁"
+    },
+    "creatorWithdrawal.recover": {
+      "source": "Read creator recovery",
+      "text": "读取创作者恢复"
+    },
+    "creatorWithdrawal.mint": {
+      "source": "Review creator mint and gas",
+      "text": "审阅创作者铸币及 gas"
+    },
+    "creatorWithdrawal.hash": {
+      "source": "Original owner mint hash",
+      "text": "原所有者铸币哈希"
+    },
+    "creatorWithdrawal.hashAria": {
+      "source": "Original creator mint hash",
+      "text": "原创作者铸币哈希"
+    },
+    "creatorWithdrawal.complete": {
+      "source": "Verify creator mint finality",
+      "text": "核验创作者铸币最终性"
+    },
+    "creatorWithdrawal.recoveryBoundary": {
+      "source": "A lost response or interrupted wallet prompt retains the original attempt. Saved requests can be read after reload; browser data loss does not grant retry permission. Keep wallet transaction hashes for recovery.",
+      "text": "丢失响应或钱包提示中断时保留原尝试。重新加载后可读取保存请求；浏览器数据丢失不授予重试许可。保留钱包交易哈希用于恢复。"
+    },
+    "creatorWithdrawal.statusAria": {
+      "source": "Creator withdrawal status",
+      "text": "创作者提现状态"
+    },
+    "creatorWithdrawal.pending": {
+      "source": "Transfer pending: {status}",
+      "text": "转账待处理：{status}"
+    },
+    "creatorWithdrawal.terms": {
+      "source": "Amount {amount} USDC, fee at most {fee} USDC; recipient {recipient}.",
+      "text": "金额 {amount} USDC，费用最多 {fee} USDC；接收者 {recipient}。"
+    }
+  }
+}

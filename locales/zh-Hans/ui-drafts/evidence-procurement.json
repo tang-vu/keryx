@@ -1,0 +1,716 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-procurement.json",
+  "sourceSha256": "60bce9d5cc1191504845b2f34d8ea1f1d909e38d8ec23b1bf177b6332f7f9b0f",
+  "entries": {
+    "page.metadataTitle": {
+      "source": "Request missing evidence | Keryx",
+      "text": "请求缺失证据 | Keryx"
+    },
+    "page.metadataDescription": {
+      "source": "Prepare a private evidence request, compare signed provider quotations, and review exact supplied excerpts under a bounded quote budget.",
+      "text": "准备私密证据请求，在有界报价预算内比较已签名提供方报价并审阅确切提供的摘录。"
+    },
+    "page.back": {
+      "source": "Back to Operator",
+      "text": "返回 Operator"
+    },
+    "page.kicker": {
+      "source": "Private evidence procurement · proposal workspace",
+      "text": "私密证据采购 · 提议工作区"
+    },
+    "page.heading": {
+      "source": "When the evidence you need is missing",
+      "text": "当所需证据缺失时"
+    },
+    "page.introduction": {
+      "source": "Turn a gap in your research into a bounded request for new evidence.",
+      "text": "将研究缺口转化为获取新证据的有界请求。"
+    },
+    "page.noScript": {
+      "source": "JavaScript is required for this tab-memory workspace. No request is submitted on this page.",
+      "text": "此标签页内存工作区需要 JavaScript。此页面不会提交请求。"
+    },
+    "workspace.privateEvidenceProcurementWorkspace": {
+      "source": "Private evidence procurement workspace",
+      "text": "私密证据采购工作区"
+    },
+    "workspace.prepareAnEvidenceRequestCompareProviderQuotationsAndInspect": {
+      "source": "Prepare an evidence request, compare provider quotations, and inspect the exact evidence supplied for your decision.",
+      "text": "准备证据请求、比较提供方报价，并检查用于决策的确切提供证据。"
+    },
+    "workspace.workStaysInThisTabSMemoryAndIs": {
+      "source": "Work stays in this tab's memory and is lost on reload. Exports are private plaintext files: they contain your question, provider details and supplied text.",
+      "text": "工作保留在此标签页内存中，重新加载会丢失。导出是私密明文文件，包含问题、提供方详情和提供的文本。"
+    },
+    "workspace.procurementSteps": {
+      "source": "Procurement steps",
+      "text": "采购步骤"
+    },
+    "workspace.steps.0": {
+      "source": "1 · Define what is missing",
+      "text": "1 · 定义缺失内容"
+    },
+    "workspace.steps.1": {
+      "source": "2 · Collect quotations",
+      "text": "2 · 收集报价"
+    },
+    "workspace.steps.2": {
+      "source": "3 · Inspect evidence",
+      "text": "3 · 检查证据"
+    },
+    "workspace.steps.3": {
+      "source": "4 · Record your decision",
+      "text": "4 · 记录决定"
+    },
+    "workspace.step1DefineTheEvidenceYouNeed": {
+      "source": "1. Define the evidence you need",
+      "text": "1. 定义所需证据"
+    },
+    "workspace.nameADecisionAndTheMissingFactsThatCould": {
+      "source": "Name a decision and the missing facts that could change it. Priority is your declaration, from 1 to 10.",
+      "text": "说明决策及可能改变决策的缺失事实。优先级由您声明，范围为 1 至 10。"
+    },
+    "workspace.requestIdentifier": {
+      "source": "Request identifier",
+      "text": "请求标识符"
+    },
+    "workspace.networkForQuotationContext": {
+      "source": "Network for quotation context",
+      "text": "报价上下文网络"
+    },
+    "workspace.arcMainnetQuotationOnly": {
+      "source": "Arc mainnet — quotation only",
+      "text": "Arc 主网 — 仅报价"
+    },
+    "workspace.arcTestnetQuotationOnly": {
+      "source": "Arc testnet — quotation only",
+      "text": "Arc 测试网 — 仅报价"
+    },
+    "workspace.whatDecisionAreYouTryingToMake": {
+      "source": "What decision are you trying to make?",
+      "text": "您想作出什么决定？"
+    },
+    "workspace.maximumQuoteBudgetUSDC": {
+      "source": "Maximum quote budget (USDC)",
+      "text": "最高报价预算（USDC）"
+    },
+    "workspace.requestExpiryUTC": {
+      "source": "Request expiry (UTC)",
+      "text": "请求到期时间（UTC）"
+    },
+    "workspace.requirement": {
+      "source": "Requirement ",
+      "text": "要求 "
+    },
+    "workspace.missingRequestNewEvidence": {
+      "source": "Missing — request new evidence",
+      "text": "缺失 — 请求新证据"
+    },
+    "workspace.alreadyCoveredYourDeclaration": {
+      "source": "Already covered — your declaration",
+      "text": "已覆盖 — 您的声明"
+    },
+    "workspace.addEvidenceRequirement": {
+      "source": "Add evidence requirement",
+      "text": "添加证据要求"
+    },
+    "workspace.replaceRequestAndClearQuotations": {
+      "source": "Replace request and clear quotations",
+      "text": "替换请求并清除报价"
+    },
+    "workspace.prepareEvidenceRequest": {
+      "source": "Prepare evidence request",
+      "text": "准备证据请求"
+    },
+    "workspace.replacingTheRequestClearsAllQuotationsDeliveriesSelectionsAnd": {
+      "source": "Replacing the request clears all quotations, deliveries, selections and reviews, because their signatures bind the original request.",
+      "text": "替换请求会清除所有报价、交付、选择和审阅，因为其签名绑定原始请求。"
+    },
+    "workspace.preparedRequest": {
+      "source": "Prepared request",
+      "text": "已准备请求"
+    },
+    "workspace.step2CollectProviderQuotations": {
+      "source": "2. Collect provider quotations",
+      "text": "2. 收集提供方报价"
+    },
+    "workspace.aProviderPromisesADeliverableAndCoverageAValid": {
+      "source": "A provider promises a deliverable and coverage. A valid provider signature authenticates that promise; it does not prove ownership of the linked source.",
+      "text": "提供方承诺交付内容和覆盖范围。有效提供方签名认证此承诺；不证明其拥有链接来源。"
+    },
+    "workspace.offerIdentifier": {
+      "source": "Offer identifier",
+      "text": "报价标识符"
+    },
+    "workspace.providerWallet": {
+      "source": "Provider wallet",
+      "text": "提供方钱包"
+    },
+    "workspace.sourceOrDeliveryURLHTTPS": {
+      "source": "Source or delivery URL (HTTPS)",
+      "text": "来源或交付 URL（HTTPS）"
+    },
+    "workspace.whatWillTheProviderDeliver": {
+      "source": "What will the provider deliver?",
+      "text": "提供方将交付什么？"
+    },
+    "workspace.quotedPriceUSDC": {
+      "source": "Quoted price (USDC)",
+      "text": "报价（USDC）"
+    },
+    "workspace.offerExpiryUTC": {
+      "source": "Offer expiry (UTC)",
+      "text": "报价到期时间（UTC）"
+    },
+    "workspace.providerNonceUniqueForThisWallet": {
+      "source": "Provider nonce (unique for this wallet)",
+      "text": "提供方 nonce（此钱包内唯一）"
+    },
+    "workspace.requirementsTheProviderPromisesToAddress": {
+      "source": "Requirements the provider promises to address",
+      "text": "提供方承诺回应的要求"
+    },
+    "workspace.offerSignatureOptionalForADraft": {
+      "source": "Offer signature (optional for a draft)",
+      "text": "报价签名（草稿可选）"
+    },
+    "workspace.addProviderQuotation": {
+      "source": "Add provider quotation",
+      "text": "添加提供方报价"
+    },
+    "workspace.downloadOfferSigningMessage": {
+      "source": "Download offer signing message",
+      "text": "下载报价签名消息"
+    },
+    "workspace.downloadProviderOfferJSON": {
+      "source": "Download provider offer JSON",
+      "text": "下载提供方报价 JSON"
+    },
+    "workspace.signOfferMessage": {
+      "source": "Sign offer message",
+      "text": "签署报价消息"
+    },
+    "workspace.importAProviderSOfferJSONInstead": {
+      "source": "Import a provider's offer JSON instead",
+      "text": "改为导入提供方报价 JSON"
+    },
+    "workspace.providerOfferJSON": {
+      "source": "Provider offer JSON",
+      "text": "提供方报价 JSON"
+    },
+    "workspace.importProviderOffer": {
+      "source": "Import provider offer",
+      "text": "导入提供方报价"
+    },
+    "workspace.quotationComparison": {
+      "source": "Quotation comparison",
+      "text": "报价比较"
+    },
+    "workspace.compareBeforeSelecting": {
+      "source": "Compare before selecting",
+      "text": "选择前比较"
+    },
+    "workspace.compareCurrentQuotations": {
+      "source": "Compare current quotations",
+      "text": "比较当前报价"
+    },
+    "workspace.noQuotationsYetAddOneAboveOrImportA": {
+      "source": "No quotations yet. Add one above or import a signed provider offer.",
+      "text": "尚无报价。在上方添加，或导入已签名提供方报价。"
+    },
+    "workspace.compareToInspectSignaturesRemainingBudgetAndTheNext": {
+      "source": "Compare to inspect signatures, remaining budget and the next recommendation.",
+      "text": "通过比较检查签名、剩余预算和下一项建议。"
+    },
+    "workspace.quotationOfferId": {
+      "source": "Quotation {offerId}",
+      "text": "报价 {offerId}"
+    },
+    "workspace.provider": {
+      "source": "Provider ",
+      "text": "提供方 "
+    },
+    "workspace.recommendedNextHighestDeclaredMissingPriorityPerMicroUSDC": {
+      "source": "Recommended next: highest declared missing priority per micro-USDC. This compares promises, not delivered quality.",
+      "text": "下一项建议：每 micro-USDC 对应的已声明缺失优先级最高者。这比较的是承诺，不是交付质量。"
+    },
+    "workspace.removeSelectionOfferId": {
+      "source": "Remove selection {offerId}",
+      "text": "移除选择 {offerId}"
+    },
+    "workspace.selectProposalOfferId": {
+      "source": "Select proposal {offerId}",
+      "text": "选择提议 {offerId}"
+    },
+    "workspace.none": {
+      "source": "none",
+      "text": "无"
+    },
+    "workspace.paymentNotObservedNoFundsReservedOrSpent": {
+      "source": "Payment: not observed. No funds reserved or spent.",
+      "text": "付款：未观察到。没有资金预留或支出。"
+    },
+    "workspace.step3InspectDeliveredEvidence": {
+      "source": "3. Inspect delivered evidence",
+      "text": "3. 检查已交付证据"
+    },
+    "workspace.pasteSuppliedTextHighlightAnExactPassageThenAttach": {
+      "source": "Paste supplied text, highlight an exact passage, then attach its provider-declared stance to a requirement. Changing the text clears its excerpts and signature.",
+      "text": "粘贴所提供文本，突出显示确切段落，然后将提供方声明的立场附到要求上。更改文本会清除摘录和签名。"
+    },
+    "workspace.deliveryForQuotation": {
+      "source": "Delivery for quotation",
+      "text": "报价对应交付"
+    },
+    "workspace.chooseAQuotation": {
+      "source": "Choose a quotation",
+      "text": "选择报价"
+    },
+    "workspace.suppliedDeliveryText": {
+      "source": "Supplied delivery text",
+      "text": "提供的交付文本"
+    },
+    "workspace.requirementForHighlightedPassage": {
+      "source": "Requirement for highlighted passage",
+      "text": "突出显示段落对应的要求"
+    },
+    "workspace.chooseARequirement": {
+      "source": "Choose a requirement",
+      "text": "选择要求"
+    },
+    "workspace.providerDeclaredStance": {
+      "source": "Provider-declared stance",
+      "text": "提供方声明的立场"
+    },
+    "workspace.supports": {
+      "source": "Supports",
+      "text": "支持"
+    },
+    "workspace.refutes": {
+      "source": "Refutes",
+      "text": "反驳"
+    },
+    "workspace.inconclusive": {
+      "source": "Inconclusive",
+      "text": "无定论"
+    },
+    "workspace.attachHighlightedPassage": {
+      "source": "Attach highlighted passage",
+      "text": "附加突出显示的段落"
+    },
+    "workspace.deliverySignatureOptionalForADraft": {
+      "source": "Delivery signature (optional for a draft)",
+      "text": "交付签名（草稿可选）"
+    },
+    "workspace.addSuppliedDelivery": {
+      "source": "Add supplied delivery",
+      "text": "添加所提供交付"
+    },
+    "workspace.downloadDeliverySigningMessage": {
+      "source": "Download delivery signing message",
+      "text": "下载交付签名消息"
+    },
+    "workspace.downloadProviderDeliveryJSON": {
+      "source": "Download provider delivery JSON",
+      "text": "下载提供方交付 JSON"
+    },
+    "workspace.signDeliveryMessage": {
+      "source": "Sign delivery message",
+      "text": "签署交付消息"
+    },
+    "workspace.importAProviderSDeliveryJSONInstead": {
+      "source": "Import a provider's delivery JSON instead",
+      "text": "改为导入提供方交付 JSON"
+    },
+    "workspace.providerDeliveryJSON": {
+      "source": "Provider delivery JSON",
+      "text": "提供方交付 JSON"
+    },
+    "workspace.importProviderDelivery": {
+      "source": "Import provider delivery",
+      "text": "导入提供方交付"
+    },
+    "workspace.callerEvidenceReview": {
+      "source": "Caller evidence review",
+      "text": "调用者证据审阅"
+    },
+    "workspace.step4RecordYourEvidenceReview": {
+      "source": "4. Record your evidence review",
+      "text": "4. 记录证据审阅"
+    },
+    "workspace.readEachExactExcerptYouMayDeclareASupporting": {
+      "source": "Read each exact excerpt. You may declare a supporting or refuting passage useful to your decision. This is your review, not independent truth validation, customer acceptance or payment authority.",
+      "text": "阅读每条确切摘录。您可声明支持或反驳段落对决策有用。这是您的审阅，不是独立真相验证、客户验收或付款授权。"
+    },
+    "workspace.reviewerNameOrIdentifier": {
+      "source": "Reviewer name or identifier",
+      "text": "审阅者姓名或标识符"
+    },
+    "workspace.compareTheCurrentPacketToInspectAndReviewDeliveries": {
+      "source": "Compare the current packet to inspect and review deliveries.",
+      "text": "比较当前数据包以检查和审阅交付。"
+    },
+    "workspace.deliveryReviewDeliveryOfferId": {
+      "source": "Delivery review {deliveryOfferId}",
+      "text": "交付审阅 {deliveryOfferId}"
+    },
+    "workspace.deliveryFor": {
+      "source": "Delivery for ",
+      "text": "交付对应 "
+    },
+    "workspace.privatePacketExportAndRestore": {
+      "source": "Private packet export and restore",
+      "text": "私密数据包导出与恢复"
+    },
+    "workspace.keepOrRestoreThisWork": {
+      "source": "Keep or restore this work",
+      "text": "保留或恢复此工作"
+    },
+    "workspace.downloadThePacketToContinueLaterOrShareSelected": {
+      "source": "Download the packet to continue later or share selected private fields deliberately. Only the packet can be restored; a decision receipt is a dated inspection result.",
+      "text": "下载数据包以稍后继续，或有意共享所选私密字段。只有数据包可恢复；决策凭证是注明日期的检查结果。"
+    },
+    "workspace.downloadPrivatePlaintextPacket": {
+      "source": "Download private plaintext packet",
+      "text": "下载私密明文数据包"
+    },
+    "workspace.downloadDecisionReceipt": {
+      "source": "Download decision receipt",
+      "text": "下载决策凭证"
+    },
+    "workspace.clearTabPacket": {
+      "source": "Clear tab packet",
+      "text": "清除标签页数据包"
+    },
+    "workspace.restorePrivatePacketFileJSONUpTo64KiB": {
+      "source": "Restore private packet file (JSON, up to 64 KiB)",
+      "text": "恢复私密数据包文件（JSON，最多 64 KiB）"
+    },
+    "workspace.pastePrivatePacketJSON": {
+      "source": "Paste private packet JSON",
+      "text": "粘贴私密数据包 JSON"
+    },
+    "workspace.privatePacketJSON": {
+      "source": "Private packet JSON",
+      "text": "私密数据包 JSON"
+    },
+    "workspace.validatePacketForRestore": {
+      "source": "Validate packet for restore",
+      "text": "验证待恢复数据包"
+    },
+    "workspace.validatedRestorePreview": {
+      "source": "Validated restore preview",
+      "text": "已验证恢复预览"
+    },
+    "workspace.replaceTabWithValidatedPacket": {
+      "source": "Replace tab with validated packet",
+      "text": "使用已验证数据包替换标签页"
+    },
+    "workspace.cancelPacketRestore": {
+      "source": "Cancel packet restore",
+      "text": "取消数据包恢复"
+    },
+    "messages.amountFormat": {
+      "source": "Use a USDC amount with at most six decimal places.",
+      "text": "使用最多六位小数的 USDC 金额。"
+    },
+    "messages.validationFailed": {
+      "source": "Could not validate this change. Check the bounded fields, identifiers, signatures and exact excerpt positions. Your packet has been kept.",
+      "text": "无法验证此更改。请检查有界字段、标识符、签名和确切摘录位置。数据包已保留。"
+    },
+    "messages.selectionRemoved": {
+      "source": "Proposal selection removed. Compare again to inspect the remaining quotations.",
+      "text": "提议选择已移除。再次比较以检查剩余报价。"
+    },
+    "messages.selectionRefused": {
+      "source": "Quotation cannot be selected now. It expired or no longer adds eligible coverage. Compare again.",
+      "text": "现在无法选择此报价。它已过期或不再补充符合条件的覆盖。请再次比较。"
+    },
+    "messages.selectionChanged": {
+      "source": "Proposal selection changed. Compare again before selecting another quotation.",
+      "text": "提议选择发生变化。选择其他报价前请再次比较。"
+    },
+    "messages.restoreValidated": {
+      "source": "Packet validated. Inspect the summary before replacing this tab's work.",
+      "text": "数据包已验证。替换此标签页工作前请检查摘要。"
+    },
+    "messages.restoreRefused": {
+      "source": "Unsupported or invalid packet. Existing work has been kept.",
+      "text": "不支持或无效的数据包。现有工作已保留。"
+    },
+    "messages.offerSignatureAdded": {
+      "source": "Matching unsigned quotation upgraded with its provider signature. Compare to verify it.",
+      "text": "匹配的未签名报价已补充提供方签名。请通过比较验证。"
+    },
+    "messages.offerAdded": {
+      "source": "Quotation added. Compare to verify its signature and proposed coverage.",
+      "text": "报价已添加。请通过比较验证签名和提议覆盖。"
+    },
+    "messages.deliverySignatureAdded": {
+      "source": "Matching unsigned delivery upgraded with its provider signature. Compare to authenticate its bytes.",
+      "text": "匹配的未签名交付已补充提供方签名。请通过比较认证字节。"
+    },
+    "messages.deliveryAdded": {
+      "source": "Delivery added. Compare to authenticate supplied bytes before recording a review.",
+      "text": "交付已添加。记录审阅前请通过比较认证所提供字节。"
+    },
+    "messages.providerDataDownloaded": {
+      "source": "Private provider fields downloaded. The provider must sign the matching canonical message; importing a signature authenticates no payment.",
+      "text": "私密提供方字段已下载。提供方必须签署匹配的规范消息；导入签名不认证任何付款。"
+    },
+    "messages.signingMessageDownloaded": {
+      "source": "Downloaded the exact signing message. This message authorizes no payment. Keep its matching unsigned packet fields unchanged.",
+      "text": "确切签名消息已下载。此消息不授权任何付款。请保持匹配的未签名数据包字段不变。"
+    },
+    "messages.messageSigned": {
+      "source": "Provider message signed. Add it to the packet, then compare to verify the signature.",
+      "text": "提供方消息已签名。将其添加到数据包，再通过比较验证签名。"
+    },
+    "messages.messageRefused": {
+      "source": "Message was not signed. Use the provider's matching wallet and unchanged fields.",
+      "text": "消息未签名。使用提供方匹配的钱包和未更改字段。"
+    },
+    "messages.restored": {
+      "source": "Restored the validated private packet. Compare again to inspect current expiry and signatures.",
+      "text": "已恢复经验证的私密数据包。再次比较以检查当前有效期和签名。"
+    },
+    "messages.requestPrepared": {
+      "source": "Request prepared. Export it for providers or add a quotation below.",
+      "text": "请求已准备。导出给提供方，或在下方添加报价。"
+    },
+    "messages.compared": {
+      "source": "Comparison recomputed from the current packet. Selection remains a proposal only.",
+      "text": "已根据当前数据包重新计算比较结果。选择仍仅为提议。"
+    },
+    "messages.offerRemoved": {
+      "source": "Quotation and its dependent delivery/review removed.",
+      "text": "报价及依赖它的交付和审阅已移除。"
+    },
+    "messages.selectExcerpt": {
+      "source": "Highlight an exact passage in the supplied delivery text first.",
+      "text": "先在提供的交付文本中突出显示确切段落。"
+    },
+    "messages.reviewRecorded": {
+      "source": "Caller review recorded. Compare again to build an updated decision receipt.",
+      "text": "调用者审阅已记录。再次比较以生成更新的决策凭证。"
+    },
+    "messages.deliveryRemoved": {
+      "source": "Delivery and its dependent review removed.",
+      "text": "交付及依赖它的审阅已移除。"
+    },
+    "messages.packetDownloaded": {
+      "source": "Private plaintext packet downloaded. Store it securely; this tab has no persistent save.",
+      "text": "私密明文数据包已下载。请安全保存；此标签页没有持久保存。"
+    },
+    "messages.receiptDownloaded": {
+      "source": "Private plaintext decision receipt downloaded. Its caller reviews and unobserved payment status remain explicit.",
+      "text": "私密明文决策凭证已下载。其中明确保留调用者审阅和未观察到付款的状态。"
+    },
+    "messages.cleared": {
+      "source": "Packet and private form text cleared from this tab. Downloaded files are unchanged.",
+      "text": "数据包和私密表单文本已从此标签页清除。下载文件保持不变。"
+    },
+    "messages.fileTooLarge": {
+      "source": "Packet file exceeds the supported limit. Existing work has been kept.",
+      "text": "数据包文件超过支持上限。现有工作已保留。"
+    },
+    "messages.fileReadFailed": {
+      "source": "Could not read this packet file. Existing work has been kept.",
+      "text": "无法读取此数据包文件。现有工作已保留。"
+    },
+    "messages.restoreCancelled": {
+      "source": "Restore cancelled. Existing work has been kept.",
+      "text": "恢复已取消。现有工作已保留。"
+    },
+    "reasons.eligible": {
+      "source": "Signed quotation eligible for this proposal",
+      "text": "已签名报价符合此提议条件"
+    },
+    "reasons.unsigned-offer": {
+      "source": "Unsigned quotation — provider identity unverified",
+      "text": "未签名报价 — 提供方身份未验证"
+    },
+    "reasons.invalid-offer-signature": {
+      "source": "Offer signature does not authenticate this quotation",
+      "text": "报价签名不能认证此报价"
+    },
+    "reasons.expired-offer": {
+      "source": "Quotation expired",
+      "text": "报价已过期"
+    },
+    "reasons.outside-quote-budget": {
+      "source": "Exceeds the remaining quote budget",
+      "text": "超过剩余报价预算"
+    },
+    "reasons.no-new-proposed-coverage": {
+      "source": "Adds no currently missing proposed coverage",
+      "text": "未补充当前缺失的提议覆盖"
+    },
+    "reasons.different-request": {
+      "source": "Quotation is bound to another request",
+      "text": "报价绑定其他请求"
+    },
+    "reasons.request-expired": {
+      "source": "Request expired",
+      "text": "请求已过期"
+    },
+    "reasons.attributed-bytes": {
+      "source": "Signature authenticates these exact supplied bytes",
+      "text": "签名认证这些确切的所提供字节"
+    },
+    "reasons.unsigned-delivery": {
+      "source": "Unsigned delivery — withheld from review",
+      "text": "未签名交付 — 暂不进入审阅"
+    },
+    "reasons.invalid-delivery-signature": {
+      "source": "Delivery signature is invalid",
+      "text": "交付签名无效"
+    },
+    "reasons.body-hash-mismatch": {
+      "source": "Delivered text changed after hashing",
+      "text": "交付文本在计算哈希后发生变化"
+    },
+    "reasons.invalid-excerpt": {
+      "source": "Excerpt does not bind an exact usable slice",
+      "text": "摘录未绑定确切的可用片段"
+    },
+    "reasons.different-offer": {
+      "source": "Delivery is bound to another quotation",
+      "text": "交付绑定其他报价"
+    },
+    "reasons.caller-reviewed": {
+      "source": "Caller review recorded — a declaration",
+      "text": "调用者审阅已记录 — 属于声明"
+    },
+    "reasons.unbound-review": {
+      "source": "Review is not bound to an authenticated delivery",
+      "text": "审阅未绑定已认证交付"
+    },
+    "links.commission": {
+      "source": "Commission missing evidence",
+      "text": "委托获取缺失证据"
+    },
+    "templates.requirement": {
+      "source": "Requirement {number} · {id}",
+      "text": "要求 {number} · {id}"
+    },
+    "templates.question": {
+      "source": "Evidence question {number}",
+      "text": "证据问题 {number}"
+    },
+    "templates.priority": {
+      "source": "Priority {number}",
+      "text": "优先级 {number}"
+    },
+    "templates.status": {
+      "source": "Evidence status {number}",
+      "text": "证据状态 {number}"
+    },
+    "templates.removeRequirement": {
+      "source": "Remove requirement {number}",
+      "text": "移除要求 {number}"
+    },
+    "templates.preparedHeading": {
+      "source": "Prepared request: {id}",
+      "text": "已准备请求：{id}"
+    },
+    "templates.requestSummary": {
+      "source": "Quote cap {amount} · {network} · expires {expiresAt}",
+      "text": "报价上限 {amount} · {network} · 于 {expiresAt} 到期"
+    },
+    "templates.requestHashLine": {
+      "source": "Request hash {hash}",
+      "text": "请求哈希 {hash}"
+    },
+    "templates.requirementStatus": {
+      "source": "· {status}, priority {priority}",
+      "text": "· {status}，优先级 {priority}"
+    },
+    "templates.providerLine": {
+      "source": "Provider {wallet}",
+      "text": "提供方 {wallet}"
+    },
+    "templates.sourceLink": {
+      "source": "Supplied link: {url}",
+      "text": "提供的链接：{url}"
+    },
+    "templates.coverage": {
+      "source": "Proposed coverage: {requirements} · expires {expiresAt}",
+      "text": "提议覆盖：{requirements} · 于 {expiresAt} 到期"
+    },
+    "templates.removeQuotation": {
+      "source": "Remove quotation {id}",
+      "text": "移除报价 {id}"
+    },
+    "templates.state": {
+      "source": "Current proposal state: {state}",
+      "text": "当前提议状态：{state}"
+    },
+    "templates.budgetSummary": {
+      "source": "Planned quote total: {planned} · remaining: {remaining}",
+      "text": "计划报价总额：{planned} · 剩余：{remaining}"
+    },
+    "templates.missingRequirements": {
+      "source": "Still missing according to caller review: {requirements}",
+      "text": "根据调用者审阅仍缺失：{requirements}"
+    },
+    "templates.deliveryExcerpt": {
+      "source": "{requirement} · provider declares {stance} · characters {start}–{end}",
+      "text": "{requirement} · 提供方声明 {stance} · 字符 {start}–{end}"
+    },
+    "templates.reviewHeading": {
+      "source": "Delivery for {id}",
+      "text": "{id} 的交付"
+    },
+    "templates.reviewExcerpt": {
+      "source": "{requirement} · provider declares {stance} · exact supplied slice",
+      "text": "{requirement} · 提供方声明 {stance} · 确切提供片段"
+    },
+    "templates.reviewDeclaration": {
+      "source": "I reviewed {requirement} as useful {stance} evidence",
+      "text": "我已审阅 {requirement}，认为是有用的 {stance} 证据"
+    },
+    "templates.reviewNote": {
+      "source": "Review note for {id}",
+      "text": "{id} 的审阅备注"
+    },
+    "templates.recordReview": {
+      "source": "Record caller review {id}",
+      "text": "记录调用者审阅 {id}"
+    },
+    "templates.removeDelivery": {
+      "source": "Remove delivery {id}",
+      "text": "移除交付 {id}"
+    },
+    "templates.reviewedRequirements": {
+      "source": "Caller-reviewed requirements: {requirements}",
+      "text": "调用者已审阅要求：{requirements}"
+    },
+    "templates.restoreHeading": {
+      "source": "Replace this tab with request {id}: {decision}",
+      "text": "使用请求 {id} 替换此标签页：{decision}"
+    },
+    "templates.restoreSummary": {
+      "source": "{offers} quotations · {deliveries} deliveries · {reviews} caller reviews · quote cap {amount}",
+      "text": "{offers} 个报价 · {deliveries} 个交付 · {reviews} 项调用者审阅 · 报价上限 {amount}"
+    },
+    "templates.amount": {
+      "source": "{whole}.{fraction} USDC",
+      "text": "{whole}.{fraction} USDC"
+    },
+    "reviewStances.supports": {
+      "source": "supporting",
+      "text": "支持"
+    },
+    "reviewStances.refutes": {
+      "source": "refuting",
+      "text": "反驳"
+    },
+    "reviewStances.inconclusive": {
+      "source": "inconclusive",
+      "text": "无定论"
+    }
+  }
+}

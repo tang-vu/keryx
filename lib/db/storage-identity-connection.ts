@@ -4,6 +4,7 @@ import { assertStorageFences, assertStorageIdentity, holdStorageTarget, register
 import { assertSqliteApplicationSchemaProfile, sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { installRunOwnershipFunctions } from "./run-ownership-functions";
+import { installPublicProfileFunctions } from "./public-profile-functions";
 
 const verifiedConnections = new WeakMap<DatabaseSync, { identity: Readonly<StorageIdentity>; readOnly: boolean;
   readonly foreignKeys: true; readonly busyTimeout: 5000; readonly nativeUserDomainProfile?: string;
@@ -93,6 +94,7 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     db.exec("PRAGMA foreign_keys=ON");
     if (db.prepare("PRAGMA foreign_keys").get()?.foreign_keys !== 1) return refuseStorage("storage_unavailable");
     if (identity.authorityMode === "mainnet-real") installRunOwnershipFunctions(db);
+    if (identity.authorityMode === "mainnet-real") installPublicProfileFunctions(db);
     if (!readOnly) db.exec("PRAGMA synchronous=FULL");
     registerStorageCapability(db, identity, () => !closed);
     restrictStorageApplicationSql(db);

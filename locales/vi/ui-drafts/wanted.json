@@ -1,0 +1,580 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/wanted.ts",
+  "sourceSha256": "cac2dc3a84a075abe50ba76fd7c09887d71168b50fe55ec81bb57b23821a3bac",
+  "entries": {
+    "wantedBoard.title": {
+      "source": "What the corpus {emphasis}",
+      "text": "Điều tập tài liệu {emphasis}"
+    },
+    "wantedBoard.titleEmphasis": {
+      "source": "couldn't answer.",
+      "text": "không thể trả lời."
+    },
+    "wantedBoard.introduction.one": {
+      "source": "Every dispatch breaks its question into claims, buys what looks worth buying, then scores how well it actually covered each one. These {count} claims finished short across the last {window} dispatches — readers paid, and Keryx came back thin. Publish on one and the next agent that asks has somewhere to spend.",
+      "text": "Mỗi bản tin tách câu hỏi thành nhận định, mua thứ có vẻ đáng mua rồi chấm mức bao phủ thực tế. {count} nhận định này còn thiếu trong {window} bản tin gần nhất — người đọc đã trả tiền nhưng Keryx trả bằng chứng ít. Xuất bản về một nhận định để tác nhân hỏi lần sau có nguồn đáng chi."
+    },
+    "wantedBoard.introduction.other": {
+      "source": "Every dispatch breaks its question into claims, buys what looks worth buying, then scores how well it actually covered each one. These {count} claims finished short across the last {window} dispatches — readers paid, and Keryx came back thin. Publish on one and the next agent that asks has somewhere to spend.",
+      "text": "Mỗi bản tin tách câu hỏi thành nhận định, mua thứ có vẻ đáng mua rồi chấm mức bao phủ thực tế. {count} nhận định này còn thiếu trong {window} bản tin gần nhất — người đọc đã trả tiền nhưng Keryx trả bằng chứng ít. Xuất bản về một nhận định để tác nhân hỏi lần sau có nguồn đáng chi."
+    },
+    "wantedBoard.empty": {
+      "source": "Nothing on the board: across the last {window} dispatches, the corpus covered every claim it was asked to support. Come back after the next quiet week.",
+      "text": "Bảng trống: trong {window} bản tin gần nhất, tập tài liệu bao phủ mọi nhận định được yêu cầu hỗ trợ. Quay lại sau tuần yên ắng tiếp theo."
+    },
+    "wantedBoard.coverage": {
+      "source": "{coverage}% covered",
+      "text": "Đã bao phủ {coverage}%"
+    },
+    "wantedBoard.coverageAsked": {
+      "source": "{coverage}% covered · asked {count}×",
+      "text": "{coverage}% covered · asked {count}×"
+    },
+    "wantedBoard.asked": {
+      "source": "asked as {question}",
+      "text": "được hỏi dưới dạng {question}"
+    },
+    "wantedBoard.offer": {
+      "source": "{source} · {status}",
+      "text": "{source} · {status}"
+    },
+    "wantedBoard.offerWithPost": {
+      "source": "{source} · {status} · {post}",
+      "text": "{source} · {status} · {post}"
+    },
+    "wantedBoard.offeredPost": {
+      "source": "offered post",
+      "text": "bài viết được đề nghị"
+    },
+    "wantedBoard.filledTitle": {
+      "source": "Filled — and {emphasis}",
+      "text": "Đã đáp ứng — và {emphasis}"
+    },
+    "wantedBoard.filledEmphasis": {
+      "source": "covered now.",
+      "text": "đã được bao phủ."
+    },
+    "wantedBoard.transition": {
+      "source": "{before}% → {after}% covered",
+      "text": "Bao phủ {before}% → {after}%"
+    },
+    "wantedBoard.transitionRetry": {
+      "source": "{before}% → {after}% covered · re-asked by Keryx",
+      "text": "Bao phủ {before}% → {after}% · Keryx đã hỏi lại"
+    },
+    "wantedBoard.closedWithCitations": {
+      "source": "cited {sources} · {dispatch}",
+      "text": "Trích dẫn {sources} · {dispatch}"
+    },
+    "wantedBoard.closedDispatch": {
+      "source": "closed by this dispatch",
+      "text": "được đóng bởi bản tin này"
+    },
+    "wantedBoard.fulfilled": {
+      "source": "offer fulfilled · {source} received ${reward} settled USDC",
+      "text": "đề nghị được hoàn thành · {source} nhận ${reward} USDC đã quyết toán"
+    },
+    "wantedBoard.listingBoundary": {
+      "source": "Listing is permissionless — paste an RSS feed, prove you own it, and every citation pays your wallet directly. See {listed}.",
+      "text": "Niêm yết không cần xin phép — dán nguồn cấp RSS, chứng minh sở hữu để mỗi trích dẫn trả trực tiếp vào ví. Xem {listed}."
+    },
+    "wantedBoard.alreadyListed": {
+      "source": "what is already listed",
+      "text": "những nguồn đã niêm yết"
+    },
+    "wantedBoard.metadataTitle": {
+      "source": "Wanted — questions Keryx was paid to answer and couldn't",
+      "text": "Nhu cầu nghiên cứu — câu hỏi Keryx đã được trả tiền nhưng chưa trả lời được"
+    },
+    "wantedBoard.description": {
+      "source": "Real sub-claims from paid dispatches that Keryx's corpus left uncovered. Demand with a receipt: list a source that covers one and every citation pays your wallet in USDC.",
+      "text": "Nhận định phụ thực từ bản tin trả phí mà tập tài liệu Keryx chưa bao phủ. Nhu cầu có biên nhận: niêm yết nguồn hỗ trợ một nhận định để mỗi trích dẫn trả USDC vào ví."
+    },
+    "wantedBoard.eyebrow": {
+      "source": "Wanted",
+      "text": "Nhu cầu nghiên cứu"
+    },
+    "wantedBoard.filledIntroduction": {
+      "source": "Claims the corpus was missing and now covers. When something new lands that might answer an open claim, Keryx puts the question again — a real dispatch that buys the new material. A targeted creator offer is only marked fulfilled when its citation reward also settles.",
+      "text": "Nhận định từng thiếu nay được tập tài liệu bao phủ. Khi có nội dung mới có thể trả lời yêu cầu mở, Keryx hỏi lại — bản tin thực mua nội dung mới. Đề nghị tác giả có mục tiêu chỉ đánh dấu hoàn thành khi thưởng trích dẫn cũng quyết toán."
+    },
+    "wantedBoard.listSource": {
+      "source": "List a source that covers one ▸",
+      "text": "Niêm yết nguồn bao phủ một nhận định ▸"
+    },
+    "wantedBoard.pending": {
+      "source": "queued until the source is indexed + verified",
+      "text": "xếp hàng đến khi nguồn lập chỉ mục và xác minh"
+    },
+    "wantedBoard.unpaid": {
+      "source": "evidence passed, settlement did not complete",
+      "text": "bằng chứng đạt, quyết toán chưa hoàn tất"
+    },
+    "wantedBoard.missed": {
+      "source": "retry completed, evidence still fell short",
+      "text": "đã thử lại xong, bằng chứng vẫn thiếu"
+    },
+    "wantedBoard.stale": {
+      "source": "closed without retry because the claim was already filled",
+      "text": "đóng không thử lại vì nhận định đã được đáp ứng"
+    },
+    "wantedBoard.failed": {
+      "source": "retry stopped after bounded failures",
+      "text": "dừng thử lại sau số lỗi có giới hạn"
+    },
+    "wantedBoard.running": {
+      "source": "targeted retry running · attempt {attempt}/3",
+      "text": "đang thử lại có mục tiêu · lần {attempt}/3"
+    },
+    "wantedBoard.settled": {
+      "source": "fulfilled · ${reward} settled",
+      "text": "đã hoàn thành · ${reward} đã quyết toán"
+    },
+    "wantedClaim.openDescription.one": {
+      "source": "{count} paid dispatch left this claim {coverage}% covered. Check whether your RSS feed can close it.",
+      "text": "{count} bản tin trả phí chỉ bao phủ {coverage}% nhận định này. Kiểm tra nguồn cấp RSS của bạn có thể bổ sung không."
+    },
+    "wantedClaim.openDescription.other": {
+      "source": "{count} paid dispatches left this claim {coverage}% covered. Check whether your RSS feed can close it.",
+      "text": "{count} bản tin trả phí chỉ bao phủ {coverage}% nhận định này. Kiểm tra nguồn cấp RSS của bạn có thể bổ sung không."
+    },
+    "wantedClaim.filledDescription": {
+      "source": "This claim moved from {before}% to {after}% coverage. Inspect the dispatch and creator payout receipt.",
+      "text": "Nhận định chuyển từ bao phủ {before}% sang {after}%. Kiểm tra bản tin và biên nhận thanh toán tác giả."
+    },
+    "wantedClaim.metadataTitle": {
+      "source": "{claim} — Keryx Wanted",
+      "text": "{claim} — Nhu cầu nghiên cứu Keryx"
+    },
+    "wantedClaim.socialTitle": {
+      "source": "{stateLabel} — Keryx",
+      "text": "{stateLabel} — Keryx"
+    },
+    "wantedClaim.state": {
+      "source": "Wanted claim · {state}",
+      "text": "Yêu cầu nghiên cứu · {state}"
+    },
+    "wantedClaim.invitation": {
+      "source": "Offer a post only after Keryx judges its public RSS preview relevant. Once the source is registered, indexed, and ownership-verified, Keryx sponsors one bounded retry with at most $0.05 on {network}. A payout happens only when the paid full text supplies qualifying evidence, the agent cites it, and Circle settlement succeeds.",
+      "text": "Chỉ đề nghị bài sau khi Keryx đánh giá bản xem trước RSS công khai liên quan. Khi nguồn đăng ký, lập chỉ mục và xác minh sở hữu, Keryx tài trợ một lần thử lại có giới hạn tối đa $0.05 trên {network}. Chỉ trả tiền khi toàn văn trả phí cung cấp bằng chứng đủ điều kiện, tác nhân trích dẫn và quyết toán Circle thành công."
+    },
+    "wantedClaim.transition": {
+      "source": "{before}% → {after}% coverage",
+      "text": "Bao phủ {before}% → {after}%"
+    },
+    "wantedClaim.cited": {
+      "source": "Cited and paid: {sources}",
+      "text": "Đã trích dẫn và trả tiền: {sources}"
+    },
+    "wantedClaim.offer": {
+      "source": "{status}",
+      "text": "{status}"
+    },
+    "wantedClaim.offerPost": {
+      "source": "{status} · {post}",
+      "text": "{status} · {post}"
+    },
+    "wantedClaim.offerVersion": {
+      "source": "{status} · exact {version}…",
+      "text": "{status} · đúng {version}…"
+    },
+    "wantedClaim.offerPrice": {
+      "source": "{status} · signed price",
+      "text": "{status} · giá đã ký"
+    },
+    "wantedClaim.offerPostVersion": {
+      "source": "{status} · {post} · exact {version}…",
+      "text": "{status} · {post} · đúng {version}…"
+    },
+    "wantedClaim.offerPostPrice": {
+      "source": "{status} · {post} · signed price",
+      "text": "{status} · {post} · giá đã ký"
+    },
+    "wantedClaim.offerVersionPrice": {
+      "source": "{status} · exact {version}… · signed price",
+      "text": "{status} · đúng {version}… · giá đã ký"
+    },
+    "wantedClaim.offerPostVersionPrice": {
+      "source": "{status} · {post} · exact {version}… · signed price",
+      "text": "{status} · {post} · đúng {version}… · giá đã ký"
+    },
+    "wantedClaim.offeredPost": {
+      "source": "offered post",
+      "text": "bài viết được đề nghị"
+    },
+    "wantedClaim.notFound": {
+      "source": "Wanted claim not found — Keryx",
+      "text": "Không tìm thấy yêu cầu nghiên cứu — Keryx"
+    },
+    "wantedClaim.openLabel": {
+      "source": "Open creator brief",
+      "text": "Mở bản tóm lược cho tác giả"
+    },
+    "wantedClaim.filledLabel": {
+      "source": "Filled creator brief",
+      "text": "Bản tóm lược cho tác giả đã đáp ứng"
+    },
+    "wantedClaim.fallbackTitle": {
+      "source": "Wanted claim — Keryx",
+      "text": "Yêu cầu nghiên cứu — Keryx"
+    },
+    "wantedClaim.back": {
+      "source": "← All wanted claims",
+      "text": "← Tất cả yêu cầu nghiên cứu"
+    },
+    "wantedClaim.receipt": {
+      "source": "Demand with a receipt",
+      "text": "Nhu cầu kèm biên nhận"
+    },
+    "wantedClaim.paidClaim": {
+      "source": "A claim Keryx was paid to support",
+      "text": "Nhận định Keryx được trả tiền để hỗ trợ"
+    },
+    "wantedClaim.coverage": {
+      "source": "Coverage",
+      "text": "Mức độ bao phủ"
+    },
+    "wantedClaim.short": {
+      "source": "finished short",
+      "text": "hoàn tất nhưng chưa đủ"
+    },
+    "wantedClaim.beforeFilled": {
+      "source": "before it was filled",
+      "text": "trước khi được đáp ứng"
+    },
+    "wantedClaim.demand": {
+      "source": "Reader demand",
+      "text": "Nhu cầu người đọc"
+    },
+    "wantedClaim.retriesExcluded": {
+      "source": "paid dispatches; agent retries excluded",
+      "text": "bản tin trả phí; loại trừ lần thử lại của tác nhân"
+    },
+    "wantedClaim.lastMeasured": {
+      "source": "Last measured",
+      "text": "Lần đo gần nhất"
+    },
+    "wantedClaim.publicReceipt": {
+      "source": "from a public dispatch receipt",
+      "text": "từ biên nhận bản tin công khai"
+    },
+    "wantedClaim.inspectFailed": {
+      "source": "Inspect the failed dispatch ↗",
+      "text": "Kiểm tra bản tin chưa đạt ↗"
+    },
+    "wantedClaim.invitationTitle": {
+      "source": "This is an invitation, not a guaranteed bounty.",
+      "text": "Đây là lời mời, không bảo đảm tiền thưởng."
+    },
+    "wantedClaim.covered": {
+      "source": "Covered now",
+      "text": "Đã bao phủ"
+    },
+    "wantedClaim.settlementBoundary": {
+      "source": "A later dispatch found qualifying evidence for this claim. The creator offer is only called fulfilled when its citation reward also carries a real settlement receipt.",
+      "text": "Bản tin sau tìm được bằng chứng đủ điều kiện cho nhận định. Đề nghị tác giả chỉ gọi là hoàn thành khi thưởng trích dẫn có biên nhận quyết toán thực."
+    },
+    "wantedClaim.inspectClosing": {
+      "source": "Inspect the closing dispatch ↗",
+      "text": "Kiểm tra bản tin đóng yêu cầu ↗"
+    },
+    "wantedClaim.offers": {
+      "source": "Offers against this claim",
+      "text": "Đề nghị cho yêu cầu này"
+    },
+    "wantedClaim.inspectRetry": {
+      "source": "inspect autonomous retry ↗",
+      "text": "kiểm tra lần thử lại tự chủ ↗"
+    },
+    "wantedFeed.summaryAgent.oneOne": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · decided by the agent",
+      "text": "{title} · đã đọc {posts} bài · đề nghị cho {claims} nhận định mở · tác nhân quyết định"
+    },
+    "wantedFeed.summaryAgent.oneOther": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · decided by the agent",
+      "text": "{title} · đã đọc {posts} bài · đề nghị cho {claims} nhận định mở · tác nhân quyết định"
+    },
+    "wantedFeed.summaryAgent.otherOne": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · decided by the agent",
+      "text": "{title} · đã đọc {posts} bài · đề nghị cho {claims} nhận định mở · tác nhân quyết định"
+    },
+    "wantedFeed.summaryAgent.otherOther": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · decided by the agent",
+      "text": "{title} · đã đọc {posts} bài · đề nghị cho {claims} nhận định mở · tác nhân quyết định"
+    },
+    "wantedFeed.summaryOffline.oneOne": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · word overlap (reasoning offline)",
+      "text": "{title} · đã đọc {posts} bài · đề nghị cho {claims} nhận định mở · trùng từ (suy luận ngoại tuyến)"
+    },
+    "wantedFeed.summaryOffline.oneOther": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · word overlap (reasoning offline)",
+      "text": "{title} · đã đọc {posts} bài · đề nghị cho {claims} nhận định mở · trùng từ (suy luận ngoại tuyến)"
+    },
+    "wantedFeed.summaryOffline.otherOne": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · word overlap (reasoning offline)",
+      "text": "{title} · đã đọc {posts} bài · đề nghị cho {claims} nhận định mở · trùng từ (suy luận ngoại tuyến)"
+    },
+    "wantedFeed.summaryOffline.otherOther": {
+      "source": "{title} · {posts} posts read · {claims} open claims offered · word overlap (reasoning offline)",
+      "text": "{title} · đã đọc {posts} bài · đề nghị cho {claims} nhận định mở · trùng từ (suy luận ngoại tuyến)"
+    },
+    "wantedFeed.expectedValue": {
+      "source": "expected value {value}%",
+      "text": "giá trị kỳ vọng {value}%"
+    },
+    "wantedFeed.matchesAgent.one": {
+      "source": "It expects your posts to address this open claim — each one left short by a dispatch a reader paid for.",
+      "text": "Tác nhân kỳ vọng bài của bạn xử lý nhận định mở này — từng bị thiếu trong bản tin người đọc trả tiền."
+    },
+    "wantedFeed.matchesAgent.other": {
+      "source": "It expects your posts to address these {count} open claims — each one left short by a dispatch a reader paid for.",
+      "text": "Tác nhân kỳ vọng bài của bạn xử lý {count} nhận định mở này — mỗi nhận định từng bị thiếu trong bản tin người đọc trả tiền."
+    },
+    "wantedFeed.matchesOffline.one": {
+      "source": "Reasoning was unreachable, so this is word overlap only: one claim shares enough vocabulary with a post to be worth your own look.",
+      "text": "Không thể truy cập suy luận nên chỉ khớp từ: một nhận định chia sẻ đủ từ với bài để bạn tự xem."
+    },
+    "wantedFeed.matchesOffline.other": {
+      "source": "Reasoning was unreachable, so this is word overlap only: {count} claims share enough vocabulary with a post to be worth your own look.",
+      "text": "Không thể truy cập suy luận nên chỉ khớp từ: {count} nhận định chia sẻ đủ từ với bài để bạn tự xem."
+    },
+    "wantedFeed.coverage": {
+      "source": "{coverage}% covered",
+      "text": "Đã bao phủ {coverage}%"
+    },
+    "wantedFeed.coverageAsked": {
+      "source": "{coverage}% covered · asked {count}×",
+      "text": "{coverage}% covered · asked {count}×"
+    },
+    "wantedFeed.postSharedAsked": {
+      "source": "your post {post} · shares {shared} · asked as {question}",
+      "text": "bài của bạn {post} · cùng {shared} · được hỏi dưới dạng {question}"
+    },
+    "wantedFeed.postAsked": {
+      "source": "your post {post} · asked as {question}",
+      "text": "bài của bạn {post} · được hỏi dưới dạng {question}"
+    },
+    "wantedFeed.asked": {
+      "source": "asked as {question}",
+      "text": "được hỏi dưới dạng {question}"
+    },
+    "wantedFeed.rateLimit": {
+      "source": "That is a few feeds in a row — give it a minute.",
+      "text": "Bạn đã gửi vài nguồn cấp liên tiếp — chờ một phút."
+    },
+    "wantedFeed.readError": {
+      "source": "Something went wrong reading that feed.",
+      "text": "Có lỗi khi đọc nguồn cấp đó."
+    },
+    "wantedFeed.unreachable": {
+      "source": "Could not reach Keryx. Try again in a moment.",
+      "text": "Không thể kết nối Keryx. Thử lại sau một lát."
+    },
+    "wantedFeed.claimTitle": {
+      "source": "Would Keryx buy your feed for this claim?",
+      "text": "Keryx có mua nguồn cấp của bạn cho nhận định này không?"
+    },
+    "wantedFeed.title": {
+      "source": "Would Keryx buy your feed?",
+      "text": "Keryx có mua nguồn cấp của bạn không?"
+    },
+    "wantedFeed.privacy": {
+      "source": "No wallet · nothing stored",
+      "text": "Không cần ví · không lưu gì"
+    },
+    "wantedFeed.urlLabel": {
+      "source": "Your RSS feed URL",
+      "text": "URL nguồn cấp RSS của bạn"
+    },
+    "wantedFeed.previewBoundary": {
+      "source": "The agent sees your recent titles and summaries — the same free preview a listed source gets judged on. Takes a few seconds.",
+      "text": "Tác nhân xem tiêu đề và tóm tắt gần đây — cùng bản xem trước miễn phí dùng đánh giá nguồn niêm yết. Mất vài giây."
+    },
+    "wantedFeed.reading": {
+      "source": "Reading your feed…",
+      "text": "Đang đọc nguồn cấp của bạn…"
+    },
+    "wantedFeed.submit": {
+      "source": "Put it to the agent",
+      "text": "Đưa cho tác nhân"
+    },
+    "wantedFeed.buy": {
+      "source": "Would buy",
+      "text": "Sẽ mua"
+    },
+    "wantedFeed.skip": {
+      "source": "Would skip",
+      "text": "Sẽ bỏ qua"
+    },
+    "wantedFeed.offerPost": {
+      "source": "Offer this post for this claim (pay registration gas) ▸",
+      "text": "Đề nghị bài cho yêu cầu này (trả gas đăng ký) ▸"
+    },
+    "wantedFeed.listWalletFunded": {
+      "source": "List this feed (pay registration gas) ▸",
+      "text": "Niêm yết nguồn cấp này (trả gas đăng ký) ▸"
+    },
+    "wantedFeed.sponsoredRegistration": {
+      "source": "Register feed with sponsored gas ▸",
+      "text": "Đăng ký nguồn cấp với gas tài trợ ▸"
+    },
+    "wantedFeed.sponsoredRegistrationBoundary": {
+      "source": "Registration gas is covered while sponsorship funds are available. This lists the feed without submitting a Wanted offer.",
+      "text": "Gas đăng ký được chi trả khi tiền tài trợ khả dụng. Thao tác niêm yết nguồn cấp, không gửi đề nghị Wanted."
+    },
+    "wantedFeed.buyWithoutMatches": {
+      "source": "It would pay for this feed, but judged it broadly rather than pointing at particular claims — so there is no shortlist to show you. A listed source is read against every question that arrives, not only the ones open today.",
+      "text": "Tác nhân sẽ trả tiền nguồn cấp nhưng đánh giá tổng quát, không chỉ nhận định cụ thể nên không có danh sách ngắn. Nguồn niêm yết được xét với mọi câu hỏi đến, không chỉ yêu cầu mở hôm nay."
+    },
+    "wantedFeed.noMatches": {
+      "source": "Nothing on today’s board. That is a statement about the holes currently open, not about your writing — the board turns over as dispatches land, and a listed source is read against every question that arrives.",
+      "text": "Bảng hôm nay trống. Điều đó nói về khoảng trống hiện mở, không phải bài của bạn — bảng đổi theo bản tin mới, nguồn niêm yết được xét với mọi câu hỏi đến."
+    },
+    "wantedFeed.list": {
+      "source": "List this feed ▸",
+      "text": "Niêm yết nguồn cấp này ▸"
+    },
+    "wantedFeed.listAnyway": {
+      "source": "List it anyway ▸",
+      "text": "Vẫn niêm yết ▸"
+    },
+    "wantedFeed.decisionBoundary": {
+      "source": "One decision, on this feed alone — a real dispatch ranks it against every other source competing for the same budget, and scores it again on the full text it pays for.",
+      "text": "Một quyết định chỉ cho nguồn cấp này — bản tin thực xếp hạng với mọi nguồn cạnh tranh cùng ngân sách, rồi chấm lại trên toàn văn được trả tiền."
+    },
+    "wantedResponse.loadError": {
+      "source": "Could not load your articles",
+      "text": "Không thể tải bài của bạn"
+    },
+    "wantedResponse.creatorRequired": {
+      "source": "Connect the registry creator wallet to sign this discount.",
+      "text": "Kết nối ví tác giả trong registry để ký giảm giá."
+    },
+    "wantedResponse.publishError": {
+      "source": "Could not publish the signed article offer",
+      "text": "Không thể xuất bản đề nghị bài có chữ ký"
+    },
+    "wantedResponse.restoreError": {
+      "source": "Could not restore the registry price",
+      "text": "Không thể khôi phục giá registry"
+    },
+    "wantedResponse.queueError": {
+      "source": "Could not queue the response",
+      "text": "Không thể xếp phản hồi vào hàng chờ"
+    },
+    "wantedResponse.offerError": {
+      "source": "Could not offer this article",
+      "text": "Không thể đề nghị bài này"
+    },
+    "wantedResponse.title": {
+      "source": "Already listed? Offer the exact article.",
+      "text": "Đã niêm yết? Đề nghị đúng bài."
+    },
+    "wantedResponse.authorityBoundary": {
+      "source": "Keryx rechecks your registry authority and public preview, then guarantees this version a place in the retry. The agent still decides BUY or SKIP; only grounded, settled evidence fills the claim.",
+      "text": "Keryx kiểm tra lại thẩm quyền registry và bản xem trước công khai, rồi bảo đảm phiên bản này có chỗ trong lần thử lại. Tác nhân vẫn quyết định BUY hoặc SKIP; chỉ bằng chứng có căn cứ, đã quyết toán mới đáp ứng nhận định."
+    },
+    "wantedResponse.signIn": {
+      "source": "Sign in to see your articles",
+      "text": "Đăng nhập để xem bài của bạn"
+    },
+    "wantedResponse.connect": {
+      "source": "Connect creator wallet",
+      "text": "Kết nối ví tác giả"
+    },
+    "wantedResponse.noMatches": {
+      "source": "None of your active, verified articles passes this claim's public-preview match yet.",
+      "text": "Chưa bài hoạt động, đã xác minh nào của bạn vượt kiểm tra khớp bản xem trước công khai cho yêu cầu này."
+    },
+    "wantedResponse.matchingArticle": {
+      "source": "Matching article",
+      "text": "Bài viết khớp"
+    },
+    "wantedResponse.readPrice": {
+      "source": "Read price",
+      "text": "Giá đọc"
+    },
+    "wantedResponse.signOffer": {
+      "source": "Sign discount + offer",
+      "text": "Ký giảm giá và đề nghị"
+    },
+    "wantedResponse.registryOffer": {
+      "source": "Offer at registry price",
+      "text": "Đề nghị theo giá registry"
+    },
+    "wantedResponse.priceRange": {
+      "source": "Price must be ${minimum}–${maximum}.",
+      "text": "Giá phải trong ${minimum}–${maximum}."
+    },
+    "wantedResponse.versionCeiling": {
+      "source": "{version}… · registry ceiling ${ceiling}",
+      "text": "{version}… · trần registry ${ceiling}"
+    },
+    "wantedResponse.admitted": {
+      "source": "Response admitted · {receipt}… · waiting for the bounded autonomous retry.",
+      "text": "Phản hồi được chấp nhận · {receipt}… · chờ lần thử lại tự chủ có giới hạn."
+    },
+    "wantedShare.title": {
+      "source": "Keryx wanted claim",
+      "text": "Yêu cầu nghiên cứu Keryx"
+    },
+    "wantedShare.copied": {
+      "source": "Link copied",
+      "text": "Đã sao chép liên kết"
+    },
+    "wantedShare.share": {
+      "source": "Share this brief",
+      "text": "Chia sẻ bản tóm lược"
+    },
+    "wantedShare.text": {
+      "source": "Keryx was paid to answer this claim and its corpus came back short: {claim}",
+      "text": "Keryx được trả tiền trả lời nhận định này nhưng tập tài liệu còn thiếu: {claim}"
+    },
+    "wantedCard.alt": {
+      "source": "Keryx wanted claim — paid demand, missing evidence",
+      "text": "Yêu cầu nghiên cứu Keryx — nhu cầu trả phí, bằng chứng thiếu"
+    },
+    "wantedCard.fallbackClaim": {
+      "source": "A claim Keryx was paid to answer — and its corpus left short.",
+      "text": "Nhận định Keryx được trả tiền để trả lời — nhưng tập tài liệu còn thiếu."
+    },
+    "wantedCard.receipt": {
+      "source": "Keryx Wanted · demand with a receipt",
+      "text": "Nhu cầu nghiên cứu Keryx · nhu cầu có biên nhận"
+    },
+    "wantedCard.open": {
+      "source": "Open creator brief",
+      "text": "Mở bản tóm lược cho tác giả"
+    },
+    "wantedCard.filled": {
+      "source": "Claim filled",
+      "text": "Yêu cầu đã được đáp ứng"
+    },
+    "wantedCard.paidClaim": {
+      "source": "A claim the paid corpus could not support",
+      "text": "Nhận định tập tài liệu trả phí không thể hỗ trợ"
+    },
+    "wantedCard.coverage": {
+      "source": "coverage",
+      "text": "mức độ bao phủ"
+    },
+    "wantedCard.demand": {
+      "source": "paid demand",
+      "text": "nhu cầu trả phí"
+    },
+    "wantedCard.retry": {
+      "source": "bounded retry",
+      "text": "thử lại có giới hạn"
+    },
+    "wantedCard.coverageNow": {
+      "source": "coverage now",
+      "text": "mức độ bao phủ hiện tại"
+    },
+    "wantedCard.settlementBoundary": {
+      "source": "Payout only after verified evidence and real citation settlement",
+      "text": "Chỉ trả tiền sau bằng chứng xác minh và quyết toán trích dẫn thực"
+    }
+  }
+}

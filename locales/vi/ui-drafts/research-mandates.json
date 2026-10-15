@@ -1,0 +1,464 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-mandates.ts",
+  "sourceSha256": "28f26444c7cf24cc5e054029c7146e5eb4af3fcff261c35a5fff426f317c47c8",
+  "entries": {
+    "en.metaTitle": {
+      "source": "Research mandates",
+      "text": "Ủy nhiệm nghiên cứu"
+    },
+    "en.metaDescription": {
+      "source": "Inspect research spending policies, unpaid obligations and decision bindings. Local assessment with no payment execution.",
+      "text": "Kiểm tra chính sách chi nghiên cứu, nghĩa vụ chưa trả và ràng buộc quyết định. Đánh giá cục bộ, không thực thi thanh toán."
+    },
+    "en.language": {
+      "source": "Language",
+      "text": "Ngôn ngữ"
+    },
+    "en.eyebrow": {
+      "source": "Research mandates",
+      "text": "Ủy nhiệm nghiên cứu"
+    },
+    "en.title": {
+      "source": "Give research a clear spending boundary.",
+      "text": "Đặt giới hạn chi rõ ràng cho nghiên cứu."
+    },
+    "en.intro": {
+      "source": "Inspect a proposed purchase against budgets, recipient rules and unpaid obligations. Keep the decision and the payment permission separate.",
+      "text": "Kiểm tra giao dịch mua đề xuất với ngân sách, quy tắc bên nhận và nghĩa vụ chưa trả. Giữ quyết định và quyền thanh toán tách biệt."
+    },
+    "en.workspace": {
+      "source": "Research mandate workspace",
+      "text": "Không gian ủy nhiệm nghiên cứu"
+    },
+    "en.scenarios": {
+      "source": "Try a synthetic scenario",
+      "text": "Thử tình huống tổng hợp"
+    },
+    "en.ready": {
+      "source": "Within budget",
+      "text": "Trong ngân sách"
+    },
+    "en.overdue": {
+      "source": "Overdue obligation",
+      "text": "Nghĩa vụ quá hạn"
+    },
+    "en.pending": {
+      "source": "Pending exposure",
+      "text": "Khoản có thể phải trả đang chờ"
+    },
+    "en.recipient": {
+      "source": "Wrong recipient",
+      "text": "Sai bên nhận"
+    },
+    "en.unknown": {
+      "source": "Unknown books",
+      "text": "Sổ theo dõi chưa rõ"
+    },
+    "en.sample": {
+      "source": "Synthetic example loaded. No live wallet, model decision or chain evidence is being read.",
+      "text": "Đã tải ví dụ tổng hợp. Không đọc ví trực tiếp, quyết định mô hình hay bằng chứng chuỗi."
+    },
+    "en.input": {
+      "source": "Policy, books and proposed purchase (JSON)",
+      "text": "Chính sách, sổ theo dõi và giao dịch mua đề xuất (JSON)"
+    },
+    "en.amount": {
+      "source": "Proposed purchase (USDC)",
+      "text": "Giao dịch mua đề xuất (USDC)"
+    },
+    "en.balance": {
+      "source": "Supplied balance (USDC)",
+      "text": "Số dư được cung cấp (USDC)"
+    },
+    "en.assess": {
+      "source": "Assess supplied policy",
+      "text": "Đánh giá chính sách được cung cấp"
+    },
+    "en.export": {
+      "source": "Export assessment",
+      "text": "Xuất đánh giá"
+    },
+    "en.policyExport": {
+      "source": "Export policy",
+      "text": "Xuất chính sách"
+    },
+    "en.reset": {
+      "source": "Load an example to begin, or paste your own policy.",
+      "text": "Tải ví dụ để bắt đầu hoặc dán chính sách của bạn."
+    },
+    "en.invalid": {
+      "source": "Check the JSON schema and exact USDC amounts. Input must be at most 64 KiB.",
+      "text": "Kiểm tra lược đồ JSON và số USDC chính xác. Đầu vào tối đa 64 KiB."
+    },
+    "en.result": {
+      "source": "Policy assessment",
+      "text": "Đánh giá chính sách"
+    },
+    "en.within": {
+      "source": "Fits the supplied policy",
+      "text": "Phù hợp chính sách được cung cấp"
+    },
+    "en.hold": {
+      "source": "Hold purchase",
+      "text": "Giữ giao dịch mua"
+    },
+    "en.skip": {
+      "source": "Skip purchase",
+      "text": "Bỏ qua giao dịch mua"
+    },
+    "en.review": {
+      "source": "Needs owner review",
+      "text": "Cần chủ sở hữu xem xét"
+    },
+    "en.disclaimer": {
+      "source": "This assessment uses supplied data. It does not verify source ownership, model quality or settlement, and does not authorize a payment.",
+      "text": "Đánh giá này dùng dữ liệu cung cấp. Không xác minh sở hữu nguồn, chất lượng mô hình hay quyết toán, và không cho phép thanh toán."
+    },
+    "en.reserve": {
+      "source": "Protected reserve",
+      "text": "Khoản dự trữ được bảo vệ"
+    },
+    "en.exposure": {
+      "source": "Unresolved exposure",
+      "text": "Khoản có thể phải trả chưa rõ"
+    },
+    "en.purchase": {
+      "source": "Proposed purchase",
+      "text": "Giao dịch mua đề xuất"
+    },
+    "en.required": {
+      "source": "Cash required",
+      "text": "Tiền mặt cần có"
+    },
+    "en.trace": {
+      "source": "Inspect the decision binding",
+      "text": "Kiểm tra ràng buộc quyết định"
+    },
+    "en.status": {
+      "source": "Contract candidate · not deployed",
+      "text": "Ứng viên hợp đồng · chưa triển khai"
+    },
+    "en.timestamp": {
+      "source": "Evaluated at",
+      "text": "Đánh giá lúc"
+    },
+    "en.identity": {
+      "source": "Decision hash",
+      "text": "Hash quyết định"
+    },
+    "en.binding": {
+      "source": "Purchase binding",
+      "text": "Ràng buộc giao dịch mua"
+    },
+    "en.calldata": {
+      "source": "Unsigned prepare calldata",
+      "text": "Calldata chuẩn bị chưa ký"
+    },
+    "en.explanation": {
+      "source": "Unpaid and unknown obligations remain protected regardless of their due date. Pending purchases count against cash and spend caps. A recipient must match the supplied source mapping.",
+      "text": "Nghĩa vụ chưa trả và chưa rõ luôn được bảo vệ dù đến hạn lúc nào. Giao dịch mua đang chờ tính vào hạn mức tiền mặt và chi tiêu. Bên nhận phải khớp ánh xạ nguồn được cung cấp."
+    },
+    "en.agents": {
+      "source": "For your agent",
+      "text": "Dành cho tác nhân của bạn"
+    },
+    "en.agentText": {
+      "source": "Use the same assessment through the stateless API, dedicated MCP endpoint or local CLI. Inputs are never saved by this workspace.",
+      "text": "Dùng cùng đánh giá qua API không trạng thái, điểm cuối MCP riêng hoặc CLI cục bộ. Không gian này không bao giờ lưu đầu vào."
+    },
+    "en.docs": {
+      "source": "Read the integration guide",
+      "text": "Đọc hướng dẫn tích hợp"
+    },
+    "en.home": {
+      "source": "Back to Keryx",
+      "text": "Quay lại Keryx"
+    },
+    "en.privacy": {
+      "source": "Assessment runs locally in this browser. No wallet is connected and no payment is submitted.",
+      "text": "Đánh giá chạy cục bộ trong trình duyệt này. Không kết nối ví và không gửi thanh toán."
+    },
+    "vi.metaTitle": {
+      "source": "Ủy quyền nghiên cứu",
+      "text": "Ủy quyền nghiên cứu"
+    },
+    "vi.metaDescription": {
+      "source": "Kiểm tra chính sách chi phí nghiên cứu, nghĩa vụ chưa trả và ràng buộc quyết định. Không thực hiện thanh toán.",
+      "text": "Kiểm tra chính sách chi phí nghiên cứu, nghĩa vụ chưa trả và ràng buộc quyết định. Không thực hiện thanh toán."
+    },
+    "vi.language": {
+      "source": "Ngôn ngữ",
+      "text": "Ngôn ngữ"
+    },
+    "vi.eyebrow": {
+      "source": "Ủy quyền nghiên cứu",
+      "text": "Ủy quyền nghiên cứu"
+    },
+    "vi.title": {
+      "source": "Đặt giới hạn rõ ràng cho chi phí nghiên cứu.",
+      "text": "Đặt giới hạn rõ ràng cho chi phí nghiên cứu."
+    },
+    "vi.intro": {
+      "source": "Kiểm tra khoản mua theo ngân sách, người nhận và các nghĩa vụ chưa thanh toán. Tách quyết định nghiên cứu khỏi quyền chi tiền.",
+      "text": "Kiểm tra khoản mua theo ngân sách, người nhận và các nghĩa vụ chưa thanh toán. Tách quyết định nghiên cứu khỏi quyền chi tiền."
+    },
+    "vi.workspace": {
+      "source": "Không gian kiểm tra ủy quyền nghiên cứu",
+      "text": "Không gian kiểm tra ủy quyền nghiên cứu"
+    },
+    "vi.scenarios": {
+      "source": "Thử tình huống giả lập",
+      "text": "Thử tình huống giả lập"
+    },
+    "vi.ready": {
+      "source": "Trong ngân sách",
+      "text": "Trong ngân sách"
+    },
+    "vi.overdue": {
+      "source": "Nghĩa vụ quá hạn",
+      "text": "Nghĩa vụ quá hạn"
+    },
+    "vi.pending": {
+      "source": "Khoản đang chờ",
+      "text": "Khoản đang chờ"
+    },
+    "vi.recipient": {
+      "source": "Sai người nhận",
+      "text": "Sai người nhận"
+    },
+    "vi.unknown": {
+      "source": "Sổ sách chưa rõ",
+      "text": "Sổ sách chưa rõ"
+    },
+    "vi.sample": {
+      "source": "Đã nạp ví dụ giả lập. Không đọc ví thật, quyết định model thật hay bằng chứng trên chuỗi.",
+      "text": "Đã nạp ví dụ giả lập. Không đọc ví thật, quyết định model thật hay bằng chứng trên chuỗi."
+    },
+    "vi.input": {
+      "source": "Chính sách, sổ sách và khoản mua đề xuất (JSON)",
+      "text": "Chính sách, sổ sách và khoản mua đề xuất (JSON)"
+    },
+    "vi.amount": {
+      "source": "Khoản mua đề xuất (USDC)",
+      "text": "Khoản mua đề xuất (USDC)"
+    },
+    "vi.balance": {
+      "source": "Số dư cung cấp (USDC)",
+      "text": "Số dư cung cấp (USDC)"
+    },
+    "vi.assess": {
+      "source": "Kiểm tra chính sách",
+      "text": "Kiểm tra chính sách"
+    },
+    "vi.export": {
+      "source": "Xuất bản đánh giá",
+      "text": "Xuất bản đánh giá"
+    },
+    "vi.policyExport": {
+      "source": "Xuất chính sách",
+      "text": "Xuất chính sách"
+    },
+    "vi.reset": {
+      "source": "Nạp ví dụ để bắt đầu hoặc dán chính sách của bạn.",
+      "text": "Nạp ví dụ để bắt đầu hoặc dán chính sách của bạn."
+    },
+    "vi.invalid": {
+      "source": "Kiểm tra cấu trúc JSON và số USDC chính xác. Đầu vào tối đa 64 KiB.",
+      "text": "Kiểm tra cấu trúc JSON và số USDC chính xác. Đầu vào tối đa 64 KiB."
+    },
+    "vi.result": {
+      "source": "Đánh giá chính sách",
+      "text": "Đánh giá chính sách"
+    },
+    "vi.within": {
+      "source": "Phù hợp với chính sách cung cấp",
+      "text": "Phù hợp với chính sách cung cấp"
+    },
+    "vi.hold": {
+      "source": "Tạm giữ khoản mua",
+      "text": "Tạm giữ khoản mua"
+    },
+    "vi.skip": {
+      "source": "Bỏ qua khoản mua",
+      "text": "Bỏ qua khoản mua"
+    },
+    "vi.review": {
+      "source": "Cần chủ sở hữu xem xét",
+      "text": "Cần chủ sở hữu xem xét"
+    },
+    "vi.disclaimer": {
+      "source": "Đánh giá dựa trên dữ liệu cung cấp. Không xác minh chủ sở hữu nguồn, chất lượng model hay thanh toán, và không cấp quyền chi tiền.",
+      "text": "Đánh giá dựa trên dữ liệu cung cấp. Không xác minh chủ sở hữu nguồn, chất lượng model hay thanh toán, và không cấp quyền chi tiền."
+    },
+    "vi.reserve": {
+      "source": "Dự phòng được bảo vệ",
+      "text": "Dự phòng được bảo vệ"
+    },
+    "vi.exposure": {
+      "source": "Khoản chờ chưa xác định",
+      "text": "Khoản chờ chưa xác định"
+    },
+    "vi.purchase": {
+      "source": "Khoản mua đề xuất",
+      "text": "Khoản mua đề xuất"
+    },
+    "vi.required": {
+      "source": "Tiền mặt cần có",
+      "text": "Tiền mặt cần có"
+    },
+    "vi.trace": {
+      "source": "Xem dữ liệu ràng buộc quyết định",
+      "text": "Xem dữ liệu ràng buộc quyết định"
+    },
+    "vi.status": {
+      "source": "Hợp đồng thử nghiệm · chưa triển khai",
+      "text": "Hợp đồng thử nghiệm · chưa triển khai"
+    },
+    "vi.timestamp": {
+      "source": "Thời điểm đánh giá",
+      "text": "Thời điểm đánh giá"
+    },
+    "vi.identity": {
+      "source": "Hash quyết định",
+      "text": "Hash quyết định"
+    },
+    "vi.binding": {
+      "source": "Ràng buộc khoản mua",
+      "text": "Ràng buộc khoản mua"
+    },
+    "vi.calldata": {
+      "source": "Calldata prepare chưa ký",
+      "text": "Calldata prepare chưa ký"
+    },
+    "vi.explanation": {
+      "source": "Nghĩa vụ chưa trả và chưa rõ vẫn được giữ dự phòng bất kể hạn trả. Khoản mua đang chờ tính vào cả tiền mặt và hạn mức. Người nhận phải khớp ánh xạ nguồn cung cấp.",
+      "text": "Nghĩa vụ chưa trả và chưa rõ vẫn được giữ dự phòng bất kể hạn trả. Khoản mua đang chờ tính vào cả tiền mặt và hạn mức. Người nhận phải khớp ánh xạ nguồn cung cấp."
+    },
+    "vi.agents": {
+      "source": "Dành cho agent của bạn",
+      "text": "Dành cho agent của bạn"
+    },
+    "vi.agentText": {
+      "source": "Dùng cùng bộ đánh giá qua API, MCP riêng hoặc CLI cục bộ. Không gian này không lưu đầu vào.",
+      "text": "Dùng cùng bộ đánh giá qua API, MCP riêng hoặc CLI cục bộ. Không gian này không lưu đầu vào."
+    },
+    "vi.docs": {
+      "source": "Đọc hướng dẫn tích hợp",
+      "text": "Đọc hướng dẫn tích hợp"
+    },
+    "vi.home": {
+      "source": "Về Keryx",
+      "text": "Về Keryx"
+    },
+    "vi.privacy": {
+      "source": "Đánh giá chạy ngay trong trình duyệt. Không kết nối ví và không gửi thanh toán.",
+      "text": "Đánh giá chạy ngay trong trình duyệt. Không kết nối ví và không gửi thanh toán."
+    },
+    "english": {
+      "source": "EN",
+      "text": "EN"
+    },
+    "vietnamese": {
+      "source": "VI",
+      "text": "VI"
+    },
+    "currency": {
+      "source": "USDC",
+      "term": "usdc"
+    },
+    "http": {
+      "source": "HTTP / MCP",
+      "text": "HTTP / MCP"
+    },
+    "cli": {
+      "source": "CLI",
+      "text": "CLI"
+    },
+    "invalid-policy-limits": {
+      "source": "Hạn mức phải dương và tăng dần từ mỗi khoản mua đến ngày, tuần và toàn thời gian.",
+      "text": "Hạn mức phải dương và tăng dần từ mỗi khoản mua đến ngày, tuần và toàn thời gian."
+    },
+    "policy-expiry": {
+      "source": "Ủy quyền đã hết hạn hoặc vượt quá thời hạn hỗ trợ.",
+      "text": "Ủy quyền đã hết hạn hoặc vượt quá thời hạn hỗ trợ."
+    },
+    "incomplete-books": {
+      "source": "Cần sổ sách đầy đủ và mới cập nhật; thiếu dữ liệu không có nghĩa là không có nghĩa vụ.",
+      "text": "Cần sổ sách đầy đủ và mới cập nhật; thiếu dữ liệu không có nghĩa là không có nghĩa vụ."
+    },
+    "per-payment-cap": {
+      "source": "Khoản đề xuất bằng không hoặc vượt quyền mua mỗi lần.",
+      "text": "Khoản đề xuất bằng không hoặc vượt quyền mua mỗi lần."
+    },
+    "payee-not-allowed": {
+      "source": "Người nhận chưa có trong danh sách được phép cung cấp.",
+      "text": "Người nhận chưa có trong danh sách được phép cung cấp."
+    },
+    "source-payee-mismatch": {
+      "source": "Người nhận phải khớp ánh xạ nguồn đã được chủ sở hữu duyệt; hash nguồn không chứng minh quyền nhận tiền.",
+      "text": "Người nhận phải khớp ánh xạ nguồn đã được chủ sở hữu duyệt; hash nguồn không chứng minh quyền nhận tiền."
+    },
+    "category-disabled": {
+      "source": "Nhóm chi chưa có hạn mức dương rõ ràng.",
+      "text": "Nhóm chi chưa có hạn mức dương rõ ràng."
+    },
+    "task-disabled": {
+      "source": "Nhiệm vụ chưa có hạn mức dương rõ ràng.",
+      "text": "Nhiệm vụ chưa có hạn mức dương rõ ràng."
+    },
+    "task-binding-mismatch": {
+      "source": "Câu hỏi phải khớp chính xác hash nhiệm vụ ban đầu.",
+      "text": "Câu hỏi phải khớp chính xác hash nhiệm vụ ban đầu."
+    },
+    "inconsistent-books": {
+      "source": "Các tổng cam kết hoặc khoản đang giữ không nhất quán; chưa thể kết luận còn hạn mức.",
+      "text": "Các tổng cam kết hoặc khoản đang giữ không nhất quán; chưa thể kết luận còn hạn mức."
+    },
+    "daily-cap": {
+      "source": "Tổng khoản đã cam kết và đang chờ sẽ vượt hạn mức ngày.",
+      "text": "Tổng khoản đã cam kết và đang chờ sẽ vượt hạn mức ngày."
+    },
+    "rolling-week-cap": {
+      "source": "Tổng khoản đã cam kết và đang chờ sẽ vượt hạn mức tuần.",
+      "text": "Tổng khoản đã cam kết và đang chờ sẽ vượt hạn mức tuần."
+    },
+    "lifetime-cap": {
+      "source": "Tổng khoản đã cam kết và đang chờ sẽ vượt hạn mức toàn thời gian.",
+      "text": "Tổng khoản đã cam kết và đang chờ sẽ vượt hạn mức toàn thời gian."
+    },
+    "category-books-unknown": {
+      "source": "Chưa biết tổng cam kết của nhóm chi này.",
+      "text": "Chưa biết tổng cam kết của nhóm chi này."
+    },
+    "category-cap": {
+      "source": "Khoản mua sẽ vượt hạn mức nhóm chi.",
+      "text": "Khoản mua sẽ vượt hạn mức nhóm chi."
+    },
+    "task-books-unknown": {
+      "source": "Chưa biết tổng cam kết của nhiệm vụ này.",
+      "text": "Chưa biết tổng cam kết của nhiệm vụ này."
+    },
+    "task-cap": {
+      "source": "Khoản mua sẽ vượt hạn mức nhiệm vụ.",
+      "text": "Khoản mua sẽ vượt hạn mức nhiệm vụ."
+    },
+    "liquidity-short": {
+      "source": "Tiền mặt phải đủ cho nghĩa vụ chưa trả, khoản đang giữ và khoản mua này cùng lúc.",
+      "text": "Tiền mặt phải đủ cho nghĩa vụ chưa trả, khoản đang giữ và khoản mua này cùng lúc."
+    },
+    "purchase-expiry": {
+      "source": "Ủy quyền mua phải còn hạn, hết hạn trước ngày UTC tiếp theo và nằm trong thời hạn chính sách.",
+      "text": "Ủy quyền mua phải còn hạn, hết hạn trước ngày UTC tiếp theo và nằm trong thời hạn chính sách."
+    },
+    "unverified-agency": {
+      "source": "Đề xuất theo luật cục bộ hoặc chưa rõ nguồn gốc không chứng minh model đã quyết định.",
+      "text": "Đề xuất theo luật cục bộ hoặc chưa rõ nguồn gốc không chứng minh model đã quyết định."
+    },
+    "evidence-needs-review": {
+      "source": "Bằng chứng chưa được duyệt; độ tự tin của model không thay thế việc kiểm tra.",
+      "text": "Bằng chứng chưa được duyệt; độ tự tin của model không thay thế việc kiểm tra."
+    }
+  }
+}

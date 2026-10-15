@@ -8176,3 +8176,63 @@ focused crypto/failure/type checks and the later focused NEXT PR/CI. Actual call
 storage, provider mapping, dropped-delivery recovery and real latency proof remain
 required; original #293 stays OPEN. See
 [the implementation and remaining gates](docs/engineering/settlement-events293-completion-2026-10-14.md).
+
+## 2026-10-15 — Proposed native #264 bounded captured-original ownership
+
+OUTPUT-ONLY successor, unapplied and UNRUN. Reduce repeated native ownership-port
+traversals for at most 50 selected originals using one private same-store capture
+hook. Keep the first genuine privacy.owner await and every nonmatching-asker
+fallback; only exact stored asker equality can skip a subsequent proof traversal.
+Immutable receipt claims retain their genuine privacy/history authority. Never
+infer ownership or payer identity from JSON, payment rows or funding labels.
+
+Capture immutable original bytes/asker and validated privacy state before the
+first yield; after every owner await and the final capture await run the full
+guard and compare all captured state. Refuse changes instead of refreshing
+captured authority. Keep live signed-session checks and original CAS in the
+existing transaction; no public API, injectable proof, authority cache, schema or
+dependency policy change. The ordinary path and entire public read/finalizer stay
+unchanged. This trades one retained genuine first proof traversal for bounded
+reuse of validated local originals within a single request, never across requests.
+
+Observed complete publish/read costs motivate the proposal but establish no
+isolated cause or speedup. Genuine race, immutable-claim, economic snapshot,
+50-run, rollback/retirement and canonical deadline acceptance remain required.
+A different payment/security source review and parent changed-source checks,
+types, canonical evidence, focused PR and required CI precede acceptance. There
+is no new spending, custody, provider, retry, schedule or activation authority.
+See [source proposal and boundaries](docs/engineering/public-profiles-enrolled-production-20261014.md).
+
+Parent follow-up to the historical proposal above: the bounded capture is now
+implemented and independently reviewed, including case-insensitive optional JSON
+asker compatibility while retaining exact SQL-asker authority. The affected native
+controls, cap journey, types and current-source433-input canonical evidence pass.
+Required hosted CI, actual-store activation and original issue acceptance remain
+separate gates. No new financial or operational authority was added.
+
+## 2026-10-15 - Request-local account-consented owned history
+
+Connect the existing explicit account/history consent only to the authenticated
+interactive session that admitted it. Preserve wallet-only bearer/API-key scope
+and unconsented-session behavior. The selected DB is never given global history
+membership. Unsupported native account-history capability refuses rather than
+claiming ordinary/Supabase parity or inheriting another session's consent.
+
+Keep the first genuine private owner proof for each observed original. Bind its
+full semantic payload to the actual raw record, then capture typed raw ownership,
+privacy and claim/A2A inputs in the native journal's guarded read transaction.
+After all response serialization and awaited privacy/session checks, a one-use
+synchronous seal rechecks current membership/session generations and that exact
+witness. No await follows it. Bounds are 1,000 IDs, 4 MB per original, 16 MB total
+and the existing 25-second read deadline; overflow refuses. There is no new schema,
+financial operation, owner grant, provider or enduring authority cache.
+
+Distinct source review accepted the runtime with a required ordinary optional-port
+absence correction, now applied. Genuine native 29 cases, request-boundary four
+negatives, corrected ordinary real-session regression, the unchanged named graph
+observation and focused types pass; first failed captures remain recorded.
+One genuine current-main canonical run passed all 48 offline trials with 434
+physical source pins, zero outbound attempts and every non-source-map field equal
+to the incoming artifact. Exact-head required CI remains pending. This focused
+integration does not close all #267/#268 criteria or prove real Google/Circle user
+acceptance. See [the implementation boundary](docs/engineering/account-owned-history-consent-20261015.md).

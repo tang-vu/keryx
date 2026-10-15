@@ -1,0 +1,100 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/completed-evidence-draft-selection.ts",
+  "sourceSha256": "3f5a7137fc8975e7c4b92525c004bec9f332ddb03058c11c45d4c7a638772cd5",
+  "entries": {
+    "completedEvidenceDraftImportCopy.label": {
+      "source": "Import an owned completed private result",
+      "text": "导入自己拥有的已完成私密结果"
+    },
+    "completedEvidenceDraftImportCopy.guidance": {
+      "source": "Import retained excerpts from the selected completed private result. This action reads your saved result and starts no new research or purchase.",
+      "text": "从所选的已完成私密结果导入留存摘录。此操作读取已保存结果，不启动新研究或购买。"
+    },
+    "completedEvidenceDraftImportCopy.privacy": {
+      "source": "The result stays in this tab. Exact saved-ledger provenance is separate from semantic support and creator payment authority. An editable or downloaded report cannot authenticate itself when reimported.",
+      "text": "结果保留在此标签页中。确切的已保存账本来源记录与语义支持、创作者付款权限分别处理。可编辑或已下载的报告重新导入时不能自行证明真实性。"
+    },
+    "jobId": {
+      "source": "Existing private job ID",
+      "text": "现有私密任务 ID"
+    },
+    "read": {
+      "source": "Read saved metadata",
+      "text": "读取已保存元数据"
+    },
+    "completedEvidenceDraftImportCopy.reading": {
+      "source": "Reading saved result…",
+      "text": "正在读取已保存结果…"
+    },
+    "ready": {
+      "source": "Saved metadata checked. Import is now available for this exact saved result and current Include papers.",
+      "text": "已检查已保存元数据。现在可导入这一确切的已保存结果，并使用当前标记为 Include 的论文。"
+    },
+    "signIn": {
+      "source": "Sign in to read an owned completed result. Your draft edits are preserved.",
+      "text": "登录以读取自己拥有的已完成结果。草稿编辑将保留。"
+    },
+    "changed": {
+      "source": "The owner, selection, or Include papers changed. Read saved metadata again. Your draft edits are preserved.",
+      "text": "所有者、选择或标记为 Include 的论文发生变化。请重新读取已保存元数据。草稿编辑将保留。"
+    },
+    "invalid": {
+      "source": "Enter a complete existing private job ID and mark at least one paper Include.",
+      "text": "输入完整的现有私密任务 ID，并至少将一篇论文标记为 Include。"
+    },
+    "completedEvidenceDraftImportCopy.unavailable": {
+      "source": "Completed private result unavailable or changed. Your draft is preserved.",
+      "text": "已完成私密结果不可用或发生变化。草稿将保留。"
+    },
+    "storage": {
+      "source": "The current backend cannot provide this retained completed result. Your draft edits are preserved; retry is an explicit action.",
+      "text": "当前后端无法提供此留存的已完成结果。草稿编辑将保留；重试需要明确操作。"
+    },
+    "completedEvidenceDraftImportCopy.timedOut": {
+      "source": "Private read timed out. Your draft is preserved; retry is an explicit action.",
+      "text": "私密读取超时。草稿将保留；重试需要明确操作。"
+    },
+    "completedEvidenceDraftImportCopy.imported": {
+      "source": "Retained report appended. Existing draft edits are preserved. Semantic support is unjudged; downloaded or edited reports have caller-supplied origin.",
+      "text": "留存报告已追加。现有草稿编辑将保留。语义支持尚未评判；下载或编辑的报告采用调用者提供的来源信息。"
+    },
+    "empty": {
+      "source": "This completed result has no usable exact retained excerpts. Reading observations imported; unavailable and unknown remain separate. Existing draft edits are preserved.",
+      "text": "此已完成结果没有可用的确切留存摘录。已导入阅读观察记录；不可用与未知仍分别处理。现有草稿编辑将保留。"
+    },
+    "import": {
+      "source": "Import selected completed result",
+      "text": "导入所选已完成结果"
+    },
+    "completedEvidenceDraftSelectionCopy.label": {
+      "source": "Select an owned completed result",
+      "text": "选择自己拥有的已完成结果"
+    },
+    "completedEvidenceDraftSelectionCopy.guidance": {
+      "source": "Enter an existing private job ID. Read its saved metadata, then explicitly import its retained excerpts. No new research or purchase is started.",
+      "text": "输入现有私密任务 ID。读取其已保存的元数据，然后明确导入其留存摘录。不启动新研究或购买。"
+    },
+    "completedEvidenceDraftSelectionCopy.privacy": {
+      "source": "Saved metadata and imported excerpts stay in this tab. They are not saved to the literature workspace or uploaded elsewhere.",
+      "text": "已保存的元数据和导入的摘录保留在此标签页中。它们不会保存到文献工作区，也不会上传到其他地方。"
+    },
+    "completedEvidenceDraftSelectionCopy.reading": {
+      "source": "Reading saved metadata…",
+      "text": "正在读取已保存元数据…"
+    },
+    "completedEvidenceDraftSelectionCopy.unavailable": {
+      "source": "This completed result or its exact saved URL and version identities are unavailable. Your draft edits are preserved.",
+      "text": "此已完成结果或其确切的已保存 URL 和版本标识不可用。草稿编辑将保留。"
+    },
+    "completedEvidenceDraftSelectionCopy.timedOut": {
+      "source": "The saved metadata read timed out. Your draft edits are preserved; retry is an explicit action.",
+      "text": "读取已保存元数据超时。草稿编辑将保留；重试需要明确操作。"
+    },
+    "completedEvidenceDraftSelectionCopy.imported": {
+      "source": "Completed report and reading observations imported; draft edits are preserved.",
+      "text": "已导入已完成报告和阅读观察记录；草稿编辑将保留。"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/operator-obligations.ts",
+  "sourceSha256": "be311b64b6731cdb8ff5c7bd5ceb2228f6e96cf7698c4ac9ddd1efa407e37a95",
+  "entries": {
+    "scopeLabel": {
+      "source": "(delegated Operator inspection)",
+      "text": "(kiểm tra Operator được ủy quyền)"
+    }
+  }
+}

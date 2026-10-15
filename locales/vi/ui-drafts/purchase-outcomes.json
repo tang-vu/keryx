@@ -1,0 +1,172 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/purchase-outcomes.json",
+  "sourceSha256": "6b899080a4639f0d667c8ef6bd7761bea4021d3374768ef7b7792064e8ec92af",
+  "entries": {
+    "title": {
+      "source": "Recorded purchase outcomes",
+      "text": "Kết quả mua đã ghi nhận"
+    },
+    "intro": {
+      "source": "Did the exact article versions bought for this answer appear in its citations? This view scores retained BUY decisions against payment observations recorded in the same dispatch trace.",
+      "text": "Các phiên bản bài chính xác được mua cho câu trả lời này có xuất hiện trong trích dẫn không? Chế độ xem chấm điểm quyết định BUY được lưu so với quan sát thanh toán ghi trong cùng nhật ký bản tin."
+    },
+    "recordedOnly": {
+      "source": "Recorded settlement bookkeeping only; Circle and chain settlement have not been independently rechecked here.",
+      "text": "Chỉ ghi sổ quyết toán đã được ghi nhận; tại đây chưa kiểm tra lại độc lập quyết toán qua Circle và chuỗi."
+    },
+    "partialTrace": {
+      "source": "This is a partial retained trace sample, not a full payment ledger. An absent matching payment does not prove that no payment occurred; excluded and unconfirmed costs remain unknown.",
+      "text": "Đây là mẫu nhật ký được lưu chưa đầy đủ, không phải sổ thanh toán đầy đủ. Không thấy thanh toán khớp không chứng minh chưa thanh toán; chi phí bị loại trừ và chưa xác nhận vẫn chưa rõ."
+    },
+    "unknownCohort": {
+      "source": "Participant cohort: unknown. No outside-customer usage is inferred.",
+      "text": "Nhóm người tham gia: chưa rõ. Không suy ra mức sử dụng của khách hàng bên ngoài."
+    },
+    "counts": {
+      "source": "{scored} scored exact-version purchases from {buys} recorded BUY decisions; {unscored} BUY decisions unscored. {excluded} of {payments} trace payment observations excluded.",
+      "text": "{scored} lượt mua đúng phiên bản được chấm điểm từ {buys} quyết định BUY đã ghi nhận; {unscored} quyết định BUY chưa chấm điểm. Loại trừ {excluded} trong {payments} quan sát thanh toán của nhật ký."
+    },
+    "countingBasis": {
+      "source": "Each unique source + item + content version with positive matching recorded settled access counts once. Duplicate BUYs, missing identities, zero/unconfirmed access and incompatible payment observations cannot create a scored purchase. CACHE and SKIP decisions are outside this sample.",
+      "text": "Mỗi bộ nguồn + mục + phiên bản nội dung duy nhất có phí truy cập dương khớp và được ghi nhận đã quyết toán tính một lần. BUYs trùng, thiếu danh tính, truy cập bằng 0 hoặc chưa xác nhận và quan sát thanh toán không tương thích không tạo lượt mua được chấm điểm. Quyết định CACHE và SKIP nằm ngoài mẫu này."
+    },
+    "citationHitRate": {
+      "source": "Exact-version citation hit rate",
+      "text": "Tỷ lệ trích dẫn đúng phiên bản đã mua"
+    },
+    "hitRateBasis": {
+      "source": "{cited} cited purchases / {scored} scored purchases. A citation is an observed use, not an expert support or quality verdict.",
+      "text": "{cited} lượt mua được trích dẫn / {scored} lượt mua được chấm điểm. Trích dẫn là việc sử dụng đã quan sát, không phải kết luận của chuyên gia về hỗ trợ hay chất lượng."
+    },
+    "noSample": {
+      "source": "No scored purchases; the hit rate is unmeasured.",
+      "text": "Chưa có lượt mua được chấm điểm; tỷ lệ chưa đo lường."
+    },
+    "uncitedCost": {
+      "source": "Recorded access cost of uncited purchases",
+      "text": "Chi phí truy cập ghi nhận của lượt mua không được trích dẫn"
+    },
+    "uncitedBasis": {
+      "source": "Counts only scored purchases. Descriptive access cost, not causal regret or proof that the purchase was useless.",
+      "text": "Chỉ tính lượt mua được chấm điểm. Chi phí truy cập mang tính mô tả, không phải tổn thất nhân quả hay bằng chứng lượt mua vô ích."
+    },
+    "calibration": {
+      "source": "Predicted value and observed citations",
+      "text": "Giá trị dự đoán và trích dẫn quan sát được"
+    },
+    "calibrationBasis": {
+      "source": "Bins compare the recorded predicted value with citation occurrence in this one dispatch. Small samples do not validate a probability model.",
+      "text": "Các nhóm so sánh giá trị dự đoán ghi nhận với việc xuất hiện trích dẫn trong một bản tin này. Mẫu nhỏ không xác nhận mô hình xác suất."
+    },
+    "band": {
+      "source": "Value band",
+      "text": "Nhóm giá trị"
+    },
+    "samples": {
+      "source": "Purchases",
+      "text": "Lượt mua"
+    },
+    "predictedMean": {
+      "source": "Predicted mean (0–1)",
+      "text": "Trung bình dự đoán (0–1)"
+    },
+    "citationRate": {
+      "source": "Citation rate",
+      "text": "Tỷ lệ trích dẫn"
+    },
+    "unmeasured": {
+      "source": "Unmeasured",
+      "text": "Chưa đo lường"
+    },
+    "unknownMeasures": {
+      "source": "Missed value, cost per supported claim, budget alternatives and counterfactual outcomes are unmeasured. No extra reading or learning was performed.",
+      "text": "Giá trị bị bỏ lỡ, chi phí mỗi nhận định được hỗ trợ, phương án ngân sách và kết quả giả định chưa được đo. Không thực hiện đọc thêm hay học thêm."
+    },
+    "observations": {
+      "source": "Scored exact-version observations",
+      "text": "Quan sát đúng phiên bản được chấm điểm"
+    },
+    "source": {
+      "source": "Source",
+      "text": "Nguồn"
+    },
+    "item": {
+      "source": "Item",
+      "text": "Mục"
+    },
+    "version": {
+      "source": "Content version",
+      "text": "Phiên bản nội dung"
+    },
+    "predicted": {
+      "source": "Recorded predicted value (0–1)",
+      "text": "Giá trị dự đoán đã ghi nhận (0–1)"
+    },
+    "access": {
+      "source": "Recorded settled access",
+      "text": "Phí truy cập đã quyết toán ghi nhận"
+    },
+    "reward": {
+      "source": "Recorded settled citation rewards",
+      "text": "Phần thưởng trích dẫn đã quyết toán ghi nhận"
+    },
+    "contribution": {
+      "source": "Recorded citation contribution",
+      "text": "Đóng góp trích dẫn đã ghi nhận"
+    },
+    "cited": {
+      "source": "Cited",
+      "text": "Đã trích dẫn"
+    },
+    "uncited": {
+      "source": "Not cited",
+      "text": "Không được trích dẫn"
+    },
+    "network": {
+      "source": "Recorded network",
+      "text": "Mạng đã ghi nhận"
+    },
+    "createdAt": {
+      "source": "Dispatch recorded at",
+      "text": "Bản tin ghi nhận lúc"
+    },
+    "archive": {
+      "source": "Frozen testnet archive, captured {capturedAt}. This is historical testnet evidence, separate from current mainnet activity.",
+      "text": "Kho testnet đóng băng, chụp lúc {capturedAt}. Đây là bằng chứng testnet lịch sử, tách biệt với hoạt động mainnet hiện tại."
+    },
+    "archiveSource": {
+      "source": "Archive source commit",
+      "text": "Commit nguồn lưu trữ"
+    },
+    "archiveDigest": {
+      "source": "Archive database SHA-256",
+      "text": "SHA-256 cơ sở dữ liệu lưu trữ"
+    },
+    "usdc": {
+      "source": "USDC",
+      "term": "usdc"
+    },
+    "testUsdc": {
+      "source": "test USDC",
+      "text": "USDC thử nghiệm"
+    },
+    "viewJson": {
+      "source": "View outcome JSON",
+      "text": "Xem JSON kết quả"
+    },
+    "download": {
+      "source": "Download outcomes",
+      "text": "Tải kết quả"
+    },
+    "allReports": {
+      "source": "Purchase outcomes across recent reports",
+      "text": "Kết quả mua trong các báo cáo gần đây"
+    },
+    "unavailable": {
+      "source": "Recorded purchase outcomes are unavailable for this retained snapshot. No score or zero-cost success is inferred; the original report and receipt remain available.",
+      "text": "Kết quả mua ghi nhận không khả dụng cho bản chụp được lưu này. Không suy ra điểm hay thành công không tốn phí; báo cáo và biên nhận ban đầu vẫn khả dụng."
+    }
+  }
+}
