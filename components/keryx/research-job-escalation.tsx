@@ -6,20 +6,31 @@ import type { originalOrderPaymentSchema, PaidJobEscalation } from "@/lib/a2a/ov
 import copy from "@/locales/en/paid-job-escalation.json";
 import { jobTargetCopy } from "@/locales/en/job-targets";
 import { useJobTargetWarning } from "@/lib/operator/job-target-observation";
-import { jobTargetCustomerState } from "@/lib/operator/job-targets";
+import { jobTargetCustomerState, type JobTargetStatus } from "@/lib/operator/job-targets";
+import { AccountJobs } from "./account-jobs";
 
-export function ResearchJobEscalation({ escalation, original }: {
+export function ResearchJobEscalation({ escalation, original, status }: {
   escalation?: PaidJobEscalation;
+  status?: JobTargetStatus;
   original?: { orderId: string; payment: z.infer<typeof originalOrderPaymentSchema> };
 }) {
-  const localWarning = useJobTargetWarning(escalation);
-  const customerState = jobTargetCustomerState(escalation, localWarning);
+  return <>{original && <AccountJobs orderId={original.orderId} />}<ObservedJobEscalation escalation={escalation} original={original} status={status} /></>;
+}
+
+function ObservedJobEscalation({ escalation, original, status }: {
+  escalation?: PaidJobEscalation;
+  status?: JobTargetStatus;
+  original?: { orderId: string; payment: z.infer<typeof originalOrderPaymentSchema> };
+}) {
+  const localWarning = useJobTargetWarning(escalation, status);
+  const customerState = jobTargetCustomerState(escalation, localWarning, status);
   const [choice, setChoice] = useState<"wait" | "partial" | "human" | null>(null);
   if (!escalation || customerState === "within_target_on_observation" || customerState === "completed_on_observation") return null;
   if (customerState === "unavailable") return <p role="status" className="mt-3 text-sm text-ink-3">{copy.unavailable}</p>;
-  return <div role="alert" className="mt-4 space-y-3 border-l-2 border-seal pl-4 font-serif text-sm">
-    <p className="font-semibold text-seal">{localWarning ? jobTargetCopy.localTitle : copy.overdueTitle}</p>
-    <p>{localWarning ? jobTargetCopy.localBody : copy.overdueBody}</p>
+  const needsReview = customerState === "needs_review_on_observation";
+  return <div role="alert" data-job-target-state={customerState} className="mt-4 space-y-3 border-l-2 border-seal pl-4 font-serif text-sm">
+    <p className="font-semibold text-seal">{needsReview ? jobTargetCopy.reviewTitle : localWarning ? jobTargetCopy.localTitle : copy.overdueTitle}</p>
+    <p>{needsReview ? jobTargetCopy.reviewBody : localWarning ? jobTargetCopy.localBody : copy.overdueBody}</p>
     <p>{copy.stageLabel}: {copy.stage[escalation.lastRecordedStage]}</p>
     {escalation.failureCode && <p>{copy.failure[escalation.failureCode]}</p>}
     {escalation.creatorPaymentState === "pending_recorded" && <p>{copy.paymentPending}</p>}
@@ -39,6 +50,6 @@ export function ResearchJobEscalation({ escalation, original }: {
         <button key={value} type="button" aria-pressed={choice === value} onClick={() => setChoice(value)} className="border border-ink px-3 py-2 font-mono text-xs">{jobTargetCopy[value]}</button>)}</div>
       {choice && <p role="status">{jobTargetCopy[`${choice}Body`]}</p>}
     </fieldset>
-    <p className="text-xs text-ink-3">{localWarning ? jobTargetCopy.localObservation : copy.observation}</p>
+    <p className="text-xs text-ink-3">{needsReview ? jobTargetCopy.reviewObservation : localWarning ? jobTargetCopy.localObservation : copy.observation}</p>
   </div>;
 }

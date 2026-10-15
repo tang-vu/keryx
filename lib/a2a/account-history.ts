@@ -17,11 +17,11 @@ export function encodeHistoryCursor(order: A2aOrder) {
 }
 
 /** Allowlisted owner projection. No worker input object, payment nonce or raw receipt. */
-export function accountHistoryItem(order: A2aOrder, now: number, attempts: PaymentRecord[] | null = null) {
+export function accountHistoryItem(order: A2aOrder, now: number, attempts: PaymentRecord[] | null = null, recoveryPending = false) {
   if (order.id !== order.queryId) throw new Error("History original identity mismatch");
   const started = order.startedAt ? Date.parse(order.startedAt) : NaN;
   const status = order.status !== "running" ? order.status : order.startedAt
-    ? (!Number.isFinite(started) || now - started >= A2A_REVIEW_AFTER_MS ? "review_required" : "processing") : "queued";
+    ? (recoveryPending || !Number.isFinite(started) || now - started >= A2A_REVIEW_AFTER_MS ? "review_required" : "processing") : "queued";
   return {
     id: a2aQueryIdSchema.parse(order.id),
     question: typeof order.request?.question === "string" ? order.request.question : null,

@@ -33,9 +33,12 @@ export interface PaidJobAlertObservation {
   suppressed: number;
   unknown: number;
   deferred: number;
+  /** Separate outcomes; existing top-level transport counters still count only overdue originals. */
+  predeadlineAttention: { needsReview: number; acknowledged: number; suppressed: number; unknown: number; deferred: number };
 }
 const empty = (status: PaidJobAlertObservation["status"]): PaidJobAlertObservation => ({
   status, coverage: "not-observed", overdue: 0, acknowledged: 0, suppressed: 0, unknown: 0, deferred: 0,
+  predeadlineAttention: { needsReview: 0, acknowledged: 0, suppressed: 0, unknown: 0, deferred: 0 },
 });
 
 /** Call ONLY under the existing A2A worker's single-host writer lock. No timer, claim,
@@ -54,7 +57,7 @@ export function createPaidJobAlertObserver(options: {
       return empty("unavailable");
     // The original storage scan remains bounded/truncation-aware. Do not export or read
     // creator legs for another profile/provider, or infer a missing recorded network.
-    const scopedDb: Pick<ObserverDb, "listUnfinishedA2aOrders" | "listCreatorPaymentAttemptsByQuery"> = {
+    const scopedDb: Pick<ObserverDb, "listUnfinishedA2aOrders" | "listCreatorPaymentAttemptsByQuery" | "getSyncState"> = {
       listUnfinishedA2aOrders: async limit => {
         if (!options.db.listUnfinishedA2aOrders) throw new Error("Unfinished observation unavailable");
         const read = await options.db.listUnfinishedA2aOrders(limit);
@@ -67,13 +70,18 @@ export function createPaidJobAlertObserver(options: {
         return { ...read, orders, unreadable: read.unreadable + unscoped };
       },
       listCreatorPaymentAttemptsByQuery: queryId => options.db.listCreatorPaymentAttemptsByQuery(queryId),
+      getSyncState: key => options.db.getSyncState(key),
     };
-    const queue = await paidJobEscalationQueue(scopedDb, nowMs, PAID_JOB_ALERT_SCAN_LIMIT);
+    const queue = await paidJobEscalationQueue(scopedDb, nowMs, PAID_JOB_ALERT_SCAN_LIMIT, { network: options.network, payee: options.payee });
     const result: PaidJobAlertObservation = { ...empty("observed"),
-      coverage: queue.truncated || queue.unreadable || queue.timingUnavailable.length ? "partial" : "complete",
-      overdue: queue.overdue.length };
+      coverage: queue.truncated || queue.unreadable || queue.timingUnavailable.length || queue.recoveryObservation === "unavailable" ? "partial" : "complete",
+      overdue: queue.overdue.length,
+      predeadlineAttention: { needsReview: queue.predeadlineAttention.length, acknowledged: 0, suppressed: 0, unknown: 0, deferred: 0 } };
     let attempts = 0;
-    for (const original of queue.overdue) {
+    const originals = [...queue.overdue, ...queue.predeadlineAttention]
+      .sort((a, b) => Date.parse(a.escalation.acceptedAt!) - Date.parse(b.escalation.acceptedAt!));
+    for (const original of originals) {
+      const counts = original.escalation.state === "within_target" ? result.predeadlineAttention : result;
       // One incident for this original/network, even if its retained stage or timestamps change.
       const incidentId = createHash("sha256").update(`${options.network}/${original.orderId}/completion-target`).digest("hex");
       const key = prefix + incidentId;
@@ -86,12 +94,12 @@ export function createPaidJobAlertObserver(options: {
             state.acknowledgedAt !== null && Date.parse(state.acknowledgedAt) >= Date.parse(state.observedAt) &&
             Date.parse(state.acknowledgedAt) <= nowMs;
         } catch { /* A corrupt, empty or crashed reservation is held, never replayed. */ }
-        result.suppressed++;
-        if (!acknowledged) result.unknown++;
+        counts.suppressed++;
+        if (!acknowledged) counts.unknown++;
         continue;
       }
       if (!original.payment.reference || original.payment.amountMicros === null || attempts >= PAID_JOB_ALERT_ATTEMPT_LIMIT) {
-        result.deferred++; result.coverage = "partial"; continue;
+        counts.deferred++; result.coverage = "partial"; continue;
       }
       const reservation = { schema: "keryx-paid-job-alert-v1" as const, incidentId,
         phase: "attempted" as const, observedAt: queue.observedAt, acknowledgedAt: null };
@@ -107,7 +115,7 @@ export function createPaidJobAlertObserver(options: {
       await options.db.setSyncState(key, JSON.stringify({ ...reservation,
         phase: acknowledged ? "acknowledged" : "unknown",
         acknowledgedAt: acknowledged ? new Date(ackMs).toISOString() : null }));
-      if (acknowledged) result.acknowledged++; else result.unknown++;
+      if (acknowledged) counts.acknowledged++; else counts.unknown++;
     }
     return result;
   }

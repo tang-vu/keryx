@@ -1,5 +1,6 @@
 /** Data only: safe for the identity inventory without schema/module cycles. */
 export const NATIVE_USER_DOMAIN_TABLES = Object.freeze([
+  "pending_job_owners",
   "private_profiles", "profile_verified_identities", "profile_identity_challenges",
   "private_bibliographies", "deliverable_acceptance_store", "deliverable_acceptance_entries",
   "run_privacy", "run_privacy_defaults", "run_privacy_audit", "anonymous_run_claims",

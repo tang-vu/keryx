@@ -8176,3 +8176,12 @@ focused crypto/failure/type checks and the later focused NEXT PR/CI. Actual call
 storage, provider mapping, dropped-delivery recovery and real latency proof remain
 required; original #293 stays OPEN. See
 [the implementation and remaining gates](docs/engineering/settlement-events293-completion-2026-10-14.md).
+
+
+## 2026-10-15 — #257 explicit new-purchase account ownership and finite mounted reads
+
+Use separate default-off interactive account-history consent for a NEW browser purchase, bound to the current authenticated durable session selector and invalidated on auth/logout/BroadcastChannel/focus. Only the fixed same-origin signed POST may carry the optional cookie/header seam; generic credential omission, exact payment/request/nonce/journal authority and all recovery/replay paths remain unchanged. R140 atomic original admission and server proof remain protected.
+
+Compose the reviewed predeadline observer without changing its single lock/channel/reservation or original 180/300-second clock. Project only bounded existing exact-original recovery facts after genuine current owner/session proof; missing/ambiguous facts stay unknown. Actual job details mount a metadata reader by validated job ID as selector only. Separate finite request deadlines and active body cancellation prevent stale/stalled mounted observation; no payment/recovery action or new external scheduler is added.
+
+SOURCE AUTHORED, tests/types/build/CI UNRUN. Original257 stays open through independent payment review, real focused controls and remaining paid/vendor/product acceptance. Parent263 owns the future compiled native-family bound, and ROOT retains sole merge/release coordination and batched delivery. See [the source correction and remaining gates](docs/engineering/job-target257-authenticated-pending-owner-20261015.md).

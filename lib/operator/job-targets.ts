@@ -2,6 +2,16 @@ import { a2aResearchPackageForVersion } from "../a2a/research-package-definition
 import { paidJobEscalationSchema, type PaidJobEscalation } from "../a2a/overdue-types";
 import { z } from "zod";
 
+export type JobTargetStatus = "queued" | "processing" | "review_required" | "completed" | "failed";
+
+/** Explicit retained failure/review only; missing checkpoints, pending legs and age
+ * alone are not hold evidence. Callers supply their existing validated job status. */
+export function jobTargetNeedsReview(escalation: PaidJobEscalation | undefined, status?: JobTargetStatus): boolean {
+  const parsed = paidJobEscalationSchema.safeParse(escalation);
+  return parsed.success && parsed.data.state !== "completed" && status !== "completed" &&
+    (status === "failed" || status === "review_required" || parsed.data.failureCode !== null);
+}
+
 /** Read the existing accepted package registry; never invent or amend its terms. */
 export function jobCompletionTarget(mode: "quick" | "deep", version: string) {
   if (mode !== "quick" && mode !== "deep") return null;
@@ -31,7 +41,7 @@ export function jobTargetWarningDelay(escalation: PaidJobEscalation | undefined,
 
 /** Customer display state only. Completion, ops transport and human/customer receipt
  * are separate facts; a browser timeout cannot turn a retained snapshot into a new read. */
-export function jobTargetCustomerState(escalation: PaidJobEscalation | undefined, localWarning = false) {
+export function jobTargetCustomerState(escalation: PaidJobEscalation | undefined, localWarning = false, status?: JobTargetStatus) {
   if (escalation === undefined) return "not_observed";
   const parsed = paidJobEscalationSchema.safeParse(escalation);
   if (!parsed.success || parsed.data.state === "unavailable") return "unavailable";
@@ -42,8 +52,10 @@ export function jobTargetCustomerState(escalation: PaidJobEscalation | undefined
   if (![accepted, observed, deadline].every(Number.isSafeInteger) || observed < accepted ||
     observed - accepted !== value.elapsedMs || deadline - accepted !== value.targetCompletionMs) return "unavailable";
   if (value.state === "completed") return "completed_on_observation";
+  if (status === "completed") return "unavailable"; // A conflicting old snapshot cannot revive attention.
   if (value.state === "overdue") return observed > deadline ? "overdue_on_observation" : "unavailable";
   if (observed > deadline) return "unavailable";
+  if (jobTargetNeedsReview(value, status)) return "needs_review_on_observation";
   return localWarning ? "target_elapsed_since_observation" : "within_target_on_observation";
 }
 
@@ -82,20 +94,31 @@ export function jobCompletionMetrics(snapshot: unknown) {
   };
 }
 
+const alertCounts = z.object({
+  needsReview: count, acknowledged: count, suppressed: count, unknown: count, deferred: count,
+}).strict().refine(value => validAlertCounts(value.needsReview, value));
+
+function validAlertCounts(total: number, value: { acknowledged: number; suppressed: number; unknown: number; deferred: number }) {
+  const remaining = total - value.acknowledged - value.suppressed - value.deferred;
+  return [value.acknowledged, value.suppressed, value.unknown, value.deferred].every(n => n <= total) &&
+    remaining >= 0 && value.unknown >= remaining && value.unknown <= remaining + value.suppressed;
+}
+
 const alertObservation = z.object({
   status: z.enum(["disabled", "unbound", "observed", "unavailable"]),
   coverage: z.enum(["not-observed", "complete", "partial"]),
   overdue: count, acknowledged: count, suppressed: count, unknown: count, deferred: count,
+  predeadlineAttention: alertCounts.optional(),
 }).strict().refine(value => {
+  const predeadline = value.predeadlineAttention;
   if (value.status !== "observed") return value.coverage === "not-observed" &&
-    [value.overdue, value.acknowledged, value.suppressed, value.unknown, value.deferred].every(n => n === 0);
+    [value.overdue, value.acknowledged, value.suppressed, value.unknown, value.deferred,
+      ...Object.values(predeadline ?? {})].every(n => n === 0);
   // Each overdue original is suppressed, deferred, or newly attempted. Only a
   // suppressed reservation can overlap unknown; deferred originals cannot.
-  const newUnknownAttempts = value.overdue - value.acknowledged - value.suppressed - value.deferred;
-  return value.coverage !== "not-observed" && (value.deferred === 0 || value.coverage === "partial") &&
-    [value.acknowledged, value.suppressed, value.unknown, value.deferred].every(n => n <= value.overdue) &&
-    newUnknownAttempts >= 0 && value.unknown >= newUnknownAttempts &&
-    value.unknown <= newUnknownAttempts + value.suppressed;
+  return value.coverage !== "not-observed" &&
+    ((value.deferred === 0 && (predeadline?.deferred ?? 0) === 0) || value.coverage === "partial") &&
+    validAlertCounts(value.overdue, value);
 });
 
 /** Aggregate observer evidence only: it cannot identify a particular original,
@@ -112,6 +135,8 @@ export function jobAlertDeliveryObservation(observation: unknown) {
     suppressed: measured ? measured.suppressed : null,
     transportUnknown: measured ? measured.unknown : null,
     deferred: measured ? measured.deferred : null,
+    // Legacy packets have no predeadline capability, including legacy measured zero scans.
+    predeadlineAttention: measured?.predeadlineAttention ?? null,
     responderReceived: null,
     customerStateDelivered: null,
     targetWindowMet: null,

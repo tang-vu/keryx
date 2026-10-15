@@ -1,8 +1,16 @@
 import { accountSessionContext } from "@/lib/account-sessions";
 import { authJson } from "@/lib/auth-challenge";
-import { accountHistoryItem, decodeHistoryCursor, encodeHistoryCursor } from "@/lib/a2a/account-history";
+import { accountHistoryItem, decodeHistoryCursor, encodeHistoryCursor, type HistoryCursor } from "@/lib/a2a/account-history";
+import { pendingOwnerRequestSession } from "@/lib/a2a/pending-owner-session";
 
 export const runtime = "nodejs";
+
+// Owned rows contain the cursor facts, not the original payment authority.
+function encodeOwnedHistoryCursor(job: HistoryCursor) {
+  const cursor = Buffer.from(JSON.stringify({ createdAt: job.createdAt, id: job.id })).toString("base64url");
+  decodeHistoryCursor(cursor);
+  return cursor;
+}
 
 export async function GET(req: Request) {
   const context = await accountSessionContext();
@@ -11,6 +19,18 @@ export async function GET(req: Request) {
   try { before = decodeHistoryCursor(new URL(req.url).searchParams.get("cursor")); }
   catch { return authJson({ error: "Invalid history cursor. Refresh history to start again." }, 400); }
   try {
+    if (context.db.pendingJobOwners) {
+      const proof = await pendingOwnerRequestSession(req);
+      const url = new URL(req.url), owned = url.searchParams.get("pending") === "owned";
+      const id = owned ? url.searchParams.get("id") ?? undefined : undefined;
+      const rows = await context.db.pendingJobOwners.list(proof, before, id);
+      const page = rows.slice(0, 25);
+      return authJson({ wallet: context.wallet, jobs: owned ? page : page.map(({ attention, recoveryState, ...job }) => {
+        void attention; void recoveryState; return job;
+      }), nextCursor: rows.length > 25 ? encodeOwnedHistoryCursor(page[24]) : null,
+        ...(owned ? { ownership: "authenticated_original", recoveryState: "unknown" } : {}) });
+    }
+    if (new URL(req.url).searchParams.get("pending") === "owned") return authJson({ error: "Authenticated pending jobs unavailable" }, 503);
     const rows = await context.db.listA2aOrdersByPayer(context.wallet, before);
     if (rows.some(row => row.payer.toLowerCase() !== context.wallet)) throw new Error("History owner mismatch");
     const page = rows.slice(0, 25);

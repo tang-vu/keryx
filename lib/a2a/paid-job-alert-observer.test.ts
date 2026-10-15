@@ -48,13 +48,14 @@ it("observes a failed original crossing its own target without a customer GET or
   const f = fixture(), before = structuredClone({ orders: f.orders, pending: f.pending });
   const observer = f.create(true);
   f.setNow(accepted + 180_000);
-  expect(await observer.observe()).toMatchObject({ overdue: 0, acknowledged: 0 });
+  expect(await observer.observe()).toMatchObject({ overdue: 0, acknowledged: 0,
+    predeadlineAttention: { needsReview: 1, acknowledged: 1 } });
   f.setNow(accepted + 180_001);
-  expect(await observer.observe()).toMatchObject({ status: "observed", overdue: 1, acknowledged: 1, unknown: 0 });
+  expect(await observer.observe()).toMatchObject({ status: "observed", overdue: 1, acknowledged: 0, suppressed: 1, unknown: 0 });
   expect(f.channel.send).toHaveBeenCalledOnce();
   const alert = f.channel.send.mock.calls[0][0];
   expect(alert.original).toMatchObject({ operationalState: "failed", payment: { network, reference: f.orders[0].transaction },
-    escalation: { state: "overdue", creatorPaymentState: "pending_recorded", failureCode: "research_failed", remedy: "none" } });
+    escalation: { state: "within_target", creatorPaymentState: "pending_recorded", failureCode: "research_failed", remedy: "none" } });
   expect(JSON.stringify(alert)).not.toMatch(/synthetic-private|authorizationId|workerId|requestHash|question|response/);
   expect({ orders: f.orders, pending: f.pending }).toEqual(before);
   expect([...f.state.keys()][0]).toMatch(/^paidJobDeadlineAlert:[a-f0-9]{64}$/);

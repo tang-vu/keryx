@@ -8,6 +8,7 @@ import { quoteBuyer } from "./quote";
 import { buyerFetch, readBuyerJson, type BuyerFetch } from "./transport";
 import { sellerPaymentEvidence, validateSellerEvidence } from "./result-binding";
 import { verifyBrowserBuyerJob, verifyBrowserBuyerReceipt } from "./browser-result";
+import { accountOwnedPurchaseFetch, assertAccountPurchaseConsent, type AccountPurchaseConsent } from "./account-owned-transport";
 
 const walletSchema = z.object({ address: addressSchema, chainId: z.literal(browserPaymentProfile().chainId),
   gatewayBalanceMicros: z.string().regex(/^(0|[1-9]\d{0,77})$/) });
@@ -22,12 +23,14 @@ export async function buyBrowserResearch(input: {
   sign: (authorization: BuyerAuthorization) => Promise<Hex>;
   onPrepared: (intent: BuyerIntentEnvelope) => void | Promise<void>;
   signal?: AbortSignal;
+  accountConsent?: AccountPurchaseConsent;
 }, dependencies: { http?: BuyerFetch; storage?: BrowserBuyerStorage } = {}) {
   const { http = buyerFetch, storage = journal } = dependencies;
   const request = buyerRequestSchema.parse(input.request);
   const payer = addressSchema.parse(input.payer);
   const acceptedTotalMicros = input.acceptedTotalMicros;
   input.signal?.throwIfAborted();
+  if (input.accountConsent) await assertAccountPurchaseConsent(input.accountConsent, input.signal);
   const requirement = await quoteBuyer(request, input.payee, acceptedTotalMicros, http, input.signal);
   // A lower price is also a changed review: never silently sign a different total.
   if (requirement.amount !== acceptedTotalMicros) throw new Error("Price changed; review a fresh quote before buying");
@@ -45,18 +48,21 @@ export async function buyBrowserResearch(input: {
   // Expose the private recovery file before a wallet prompt can create a signature.
   await input.onPrepared(structuredClone(intent));
   await checkWallet();
+  if (input.accountConsent) await assertAccountPurchaseConsent(input.accountConsent, input.signal);
   const signature = await input.sign(structuredClone(authorization));
   if (!/^0x[a-fA-F0-9]{130}$/.test(signature)
     || (await recoverTypedDataAddress({ ...buyerTypedData(authorization), signature })).toLowerCase() !== payer.toLowerCase()) {
     throw new Error("Signature does not match the reviewed wallet and authorization");
   }
   await checkWallet();
+  if (input.accountConsent) await assertAccountPurchaseConsent(input.accountConsent, input.signal);
   if (!await storage.claim(intent)) throw new Error("This job is recovery-only; do not submit payment again");
   // Every failure after the committed boundary is uncertain, even if no POST reached the seller.
   let evidence: ReturnType<typeof sellerPaymentEvidence> = null;
   let acknowledgementPersisted = false;
   try {
-    const response = await http(BUYER_ENDPOINT, { method: "POST", headers: { "content-type": "application/json",
+    const submit: BuyerFetch = input.accountConsent ? (url, init) => accountOwnedPurchaseFetch(input.accountConsent!, url, init!) : http;
+    const response = await submit(BUYER_ENDPOINT, { method: "POST", headers: { "content-type": "application/json",
       "payment-signature": encodeBrowserPayment({ signature, authorization }) }, body: JSON.stringify(request), signal: input.signal });
     try {
       evidence = sellerPaymentEvidence(response.headers.get("payment-response"), intent);

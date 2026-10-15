@@ -48,6 +48,7 @@ import {
 import type { KeryxDB } from "@/lib/db/keryx-db";
 import { authorizationSchema, decodeHeader } from "@/lib/buyer/protocol";
 import { paidJobEscalation } from "@/lib/a2a/overdue-status";
+import { pendingOwnerRequestSession, type PendingOwnerSessionProof } from "@/lib/a2a/pending-owner-session";
 import {
   A2A_RESEARCH_PACKAGE_VERSION,
   acceptsA2aPackageVersion,
@@ -258,6 +259,7 @@ export async function GET(req: NextRequest) {
       researchMode: "quick | deep (optional; default deep)",
       packageVersion: `${A2A_RESEARCH_PACKAGE_VERSION} (optional; pins the execution contract)`,
       responseMode: "wait | async (optional; mainnet always returns 202 + original poll URL)",
+      accountJobHeader: "X-Keryx-Account-Job: associate (optional; same-origin signed account cookie; new originals only)",
     },
     response: "cited answer + itemized service fee, creator spend, and unused reserve",
     docs: "/api/docs",
@@ -374,6 +376,19 @@ export async function POST(req: NextRequest) {
   // This only selects the hash after proving the exact old request economics;
   // Circle still verifies the signature before any claim or settlement.
   const signatureHeader = req.headers.get("payment-signature");
+  let ownerProof: PendingOwnerSessionProof | undefined;
+  let ownerDb: KeryxDB | undefined;
+  if (req.headers.has("x-keryx-account-job")) {
+    try {
+      if (!signatureHeader) throw new Error("Exact original authorization required");
+      const raw = decodeHeader(signatureHeader) as { payload?: unknown };
+      const authorization = authorizationSchema.parse(((raw.payload ?? raw) as { authorization?: unknown }).authorization);
+      ownerProof = await pendingOwnerRequestSession(req, { id: a2aOrderId({ network: config.networkId,
+        payer: authorization.from, payee: treasury, authorizationId: authorization.nonce }), requestHash });
+      ownerDb = await getDb();
+      if (!ownerDb.createOwnedA2aOrder || !ownerDb.pendingJobOwners) throw new Error("Native owner admission unavailable");
+    } catch { return Response.json({ error: "Authenticated account job admission unavailable" }, { status: 401, headers: { "Cache-Control": "no-store" } }); }
+  }
   if (signatureHeader) {
     try {
       const raw = decodeHeader(signatureHeader) as { payload?: unknown };
@@ -388,7 +403,13 @@ export async function POST(req: NextRequest) {
   }
   return settleThenServe(req, { ...requirements(quote.totalPriceUsdc, treasury),
     admissionCheck: checkCanaryAdmission,
-    beforeSettlement: () => businessCanaryPaidAdmission({ ...canaryInput, reserveSettlement: true }),
+    beforeSettlement: () => {
+      if (ownerProof) {
+        try { ownerDb!.pendingJobOwners!.assertAdmission(ownerProof); }
+        catch { return Response.json({ error: "Original account session unavailable" }, { status: 401, headers: { "Cache-Control": "no-store" } }); }
+      }
+      return businessCanaryPaidAdmission({ ...canaryInput, reserveSettlement: true });
+    },
     singleSettlementAttempt: canaryExecutionPaused(),
     purchasePurpose: "a2a", purchaseRequestHash: admissionHash }, async (settle) => {
     const db = await getDb();
@@ -453,7 +474,9 @@ export async function POST(req: NextRequest) {
       }),
     );
 
-    const claimed = await db.createA2aOrder(proposedOrder);
+    const claimed = ownerProof
+      ? await db.createOwnedA2aOrder!(proposedOrder, ownerProof)
+      : await db.createA2aOrder(proposedOrder);
     if (!sameA2aOrder(claimed.order, proposedOrder)) {
       throw new Error("A2A authorization replay disagrees with its original economic tuple");
     }

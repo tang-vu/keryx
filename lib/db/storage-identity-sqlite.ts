@@ -154,6 +154,9 @@ export function storageFenceStatements(db: DatabaseSync, identity: Readonly<Stor
         result[name] = `CREATE TRIGGER ${name} BEFORE ${operation} ON ${quote(table)} WHEN NEW.network IS NOT '${network}'${extra} BEGIN SELECT RAISE(ABORT,'storage authority profile mismatch'); END`;
       }
     }
+    if (table === "pending_job_owners") {
+      result.storage_profile_pending_owner_insert = `CREATE TRIGGER storage_profile_pending_owner_insert BEFORE INSERT ON pending_job_owners WHEN NEW.network IS NOT '${network}' BEGIN SELECT RAISE(ABORT,'pending owner profile mismatch'); END`;
+    }
     if (identity.authorityMode === "mainnet-real" && table === "research_purchase_authorizations") {
       for (const operation of ["INSERT", "UPDATE"]) {
         const name = `storage_profile_research_claim_${operation.toLowerCase()}`;
