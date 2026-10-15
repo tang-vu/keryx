@@ -1,8 +1,46 @@
-# Private assignment association view — source handoff, 2026-10-15
+# Private assignment association view — captured qualification, 2026-10-15
+
+Current qualification: **actual compiled synthetic 28/28 PASS**, with the original
+17 controls and all 11 private-consumer controls passing. The parent captured the
+original invocation's natural exit/close code 0, both stream EOFs and no
+`postErrors`. The [compiled qualification record](owner269-private-association-compiled-20261015.md)
+identifies the actual result, run outcome, emitted consumer chunks and retained
+build/source/Q receipts. No validation was rerun for this documentation update.
+
+The retained source boundary is checkpoint
+`ac5cad3b446cfe3a3527d1d403836973e147ec59` composed on main
+`d1b3aff65318fecdf17f8e6f6bcf5e8e0e5ae5b7`. Existing focused DOM controls remain
+**95 PASS** and types remain **PASS, 25.124s**. The one UI build passed in
+**67.160s**, BUILD_ID `gV6BywAO1JAB7sJ394YSY`; the one fresh postbuild Q passed in
+**77.704s**. These retained observations add no new source authority. The
+owner-reported later main `262fe` has docs/ops changes outside the seven follow-up
+paths; it was not fetched or composed here, and no whole-current-main build
+acceptance is claimed.
+
+The compiled run exercises the real manage/profile/asks UI and canonical browser
+hooks with **synthetic HTTP, auth-session and inbox replies**, including exact
+private consumer GET seams, held/late bodies, no assignment POST in readonly
+cases, and preserved ordinary owned rows, counts and JSON. It establishes no
+backend durable, payment, native POSIX, production or public-scope acceptance.
+
+Native PR #503 backend delivery is separately merged and delivered with
+app0.27.68, per the owner delivery record. **Readonly profile/history positive-view
+delivery remains the NEXT focused PR**, pending parent direct documentation
+readback, publication and required CI, then the existing coordinator's merge
+slot. No additional source peer or replay is requested. Original #269 retains
+remaining criteria: public association, explicit consent/archive and production
+acceptance are **OPEN**. Deployment remains owned and batched by ROOT.
+
+## Historical source-phase handoff
+
+The following is the source worker's pre-execution record. Its UNRUN status,
+dependency timing and parent actions describe that phase, not the qualification
+above. Earlier failed attempts remain failed historical evidence; raw receipts
+and provisional metadata are preserved unchanged.
 
 Source only, **UNRUN**. This follow-up is based on local reviewed PR #503 source
 `fc572ee8f7475030d8d7131d83226845cce7e531`; that dependency was not merged when
-this work was assigned. It neither accepts nor closes the original #269 outcome.
+this work was assigned. Original #269 retains remaining criteria.
 PR #503 delivery does not wait for this consumer.
 
 `OwnerRunAssignmentInbox` and its editor accept `readOnlyView`, defaulting to

@@ -1,5 +1,62 @@
 # Private association compiled controls — 2026-10-15
 
+## Actual captured qualification
+
+**COMPILED_SYNTHETIC_28_PASSED**: all original 17 and appended 11 case results are
+PASS. The original parent tool invocation `81955` naturally
+reached exit/close code 0 in **159.992s**, with both stream EOFs, no timeout,
+overflow, capture errors or `postErrors`. Outcome failures, page errors and
+cleanup failures are empty. Browser, HTTP, instrumentation, app and trace cleanup
+are recorded complete. No new check or execution was performed for this update.
+
+Retained actual evidence, at its original paths:
+
+- Parent result: `D:/repos/server/Github/Hackathon/.keryx-worktrees/cli-owner269-private-association-view-20261015/output/current-main503-private-consumer-compiled-caller/actual28-current-main503-capture/actual-result.json`.
+- Parent process/EOF capture: `D:/repos/server/Github/Hackathon/.keryx-worktrees/cli-owner269-private-association-view-20261015/output/current-main503-private-consumer-compiled-caller/actual28-current-main503-capture/current-compiled-owner.capture.json`.
+- Run outcome: `D:/repos/server/Github/Hackathon/.keryx-worktrees/cli-owner269-private-association-view-20261015/output/current-main503-private-consumer-compiled-caller/actual28-current-main503-output/run/synthetic-outcome.json`.
+- One UI build, **PASS, 67.160s**, BUILD_ID `gV6BywAO1JAB7sJ394YSY`: `D:/repos/server/Github/Hackathon/keryx/output/resume-distribution63-audit-20261012/owner269-private-view-one-current-main503-build-20261015/actual-build-result.json`; its source/input record remains `all-source-before.json` in that same directory.
+- One fresh Q, **PASS, 77.704s**, with `actualNewQualificationCount: 1` and `oldQualificationReused: false`: `D:/repos/server/Github/Hackathon/keryx/output/resume-distribution63-audit-20261012/owner269-private-view-fresh-stock-capture-main503-20261015/actual-result.json`. Its bound observation remains `D:/repos/server/Github/Hackathon/.keryx-worktrees/cli-owner269-private-association-view-20261015/output/current-main503-compiled-stock/stock-observation.json`.
+
+The actual result and admission bind checkpoint
+`ac5cad3b446cfe3a3527d1d403836973e147ec59`, main
+`d1b3aff65318fecdf17f8e6f6bcf5e8e0e5ae5b7`, the BUILD_ID above, source pins,
+compiled pins and manifest-bound consumer entries/chunks. Both `/me/profile/page`
+entries (`owner-run-assignment-inbox`, `private-profile-view`) retain 20 chunk
+references each; both `/me/asks/page` entries (`owner-run-assignment-inbox`,
+`my-asks-view`) retain 22 each. These are recorded manifest references, not a new
+chunk scan or source-to-build inference from BUILD_ID alone. Existing **95 DOM
+PASS** and **types PASS, 25.124s** are retained at the accepted source boundary.
+The owner-reported later main `262fe` has docs/ops changes outside the seven
+follow-up paths. No fetch, later-main composition or new whole-build acceptance
+is performed or claimed.
+
+The pass covers **real compiled UI/canonical hooks plus synthetic HTTP,
+auth-session and inbox replies**. It retains all 17 manage controls and the 11
+consumer cases below: exact private GET contracts, positive/suppressed rendering,
+retired-handler isolation, held/late-body refusal, zero assignment POST attempts
+in readonly cases, and ordinary owned rows/counts/JSON preservation. It supplies
+no backend durable, payment, native POSIX, production or public-scope acceptance.
+Native PR #503 backend delivery is separately merged and delivered with
+app0.27.68, per the owner delivery record.
+
+**NEXT: the focused readonly profile/history positive-view PR.** Parent directly
+reads back these two docs, publishes the focused candidate and completes required
+CI and the coordinator's merge workflow; no extra source peer or replay is
+requested. Original #269 retains remaining public-association, explicit
+consent/archive and production criteria **OPEN**. Public/API/MCP/CLI/extension/bot
+and financial authority are unchanged; standalone desktop delivery is not
+accepted by this browser evidence. Deployment remains owned and batched by ROOT.
+
+## Historical source phase and provisional metadata
+
+The source-extension record below describes its original UNRUN phase. Earlier
+failed attempts remain failed historical evidence. The build receipt's
+`compiledCases28: "UNRUN"`, source proof's `executionStatus: "UNRUN"`, and child
+outcome's null process-exit/EOF fields remain stage-local/provisional metadata;
+the actual parent result and process capture above supply the completed compiled
+qualification. No raw source/build/Q/run receipt or historical metadata was
+rewritten or promoted into broader acceptance.
+
 Source extension only, **UNRUN**. The existing
 [compiled driver](../../scripts/test-browser-owner-run-assignments269-built.mts)
 now includes the actual emitted `/me/profile` and `/me/asks` consumers. The
