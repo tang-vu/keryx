@@ -11,6 +11,7 @@ import { a2aResearchPackageForVersion } from "../lib/a2a/research-package-defini
 import { researchReceiptDigest, sha256 } from "../lib/research-receipt-integrity";
 import { decodeFunctionData, erc20Abi } from "viem";
 import { GATEWAY_DEPOSIT_ABI } from "../lib/buyer/funding-policy";
+import { researchFundingMessages } from "../locales/en/research-funding";
 import { assertSignedOutBrowserFixtureGraph, signedOutResearchAuthFixture } from "../test-support/research-browser-auth-fixture";
 
 const account = privateKeyToAccount(`0x${"1".repeat(64)}`);
@@ -170,7 +171,7 @@ try {
   const buy = page.getByRole("button", { name: "Buy research — 0.050000 USDC", exact: true });
   await page.getByText("(50000 micro-USDC; decimal point, no grouping)", { exact: true }).first().waitFor();
   assert(await buy.isDisabled());
-  await page.getByRole("checkbox").check();
+  await page.getByRole("checkbox", { name: researchFundingMessages["researchCheckout.consent"], exact: true }).check();
   await page.getByLabel("Research question", { exact: true }).fill("Changed question");
   assert(await buy.isDisabled()); assert.equal(signed, 0);
   await page.getByLabel("Research question", { exact: true }).fill(question);
