@@ -76,3 +76,55 @@ it("never calls unknown recovery a hold and clears stale owner observations on r
   expect(jobReads).toBe(2);
   expect(host.textContent).toBe("");
 });
+
+
+// UNRUN current-main498 reader composition control. Synthetic metadata transport
+// and structured notice delivery only; actual AccountJobs parser/lifecycle run
+// when PRIMARY applies and executes this existing test file.
+it.each(["local", "broadcast"] as const)("invalidates on structured %s logout and requires a fresh current-session read", async delivery => {
+  vi.useFakeTimers(); vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  const id = `a2a_${"f".repeat(64)}`, now = Date.now();
+  const original = { id, queryId: id, status: "failed", createdAt: new Date(now - 1000).toISOString(),
+    updatedAt: new Date(now - 500).toISOString(), startedAt: null, paymentStartedAt: null, resultSavingAt: null,
+    executionJournalVersion: null, errorCode: "research_failed", researchMode: "quick", researchPackage: a2aResearchPackage("quick"),
+    amountUsdc: .05, creatorBudgetUsdc: .03, serviceFeeUsdc: .02, transaction: "", request: null } as A2aOrder;
+  const packet = { wallet: `0x${"a".repeat(40)}`, ownership: "authenticated_original", recoveryState: "unknown", nextCursor: null,
+    jobs: [{ ...accountHistoryItem(original, now, null), attention: "needs_review", recoveryState: "unknown" }] };
+  const current = { id: "a".repeat(64), issuedAt: now - 2000, expiresAt: now + 300000, current: true };
+  let broadcast: ((event: MessageEvent) => void) | undefined;
+  vi.stubGlobal("BroadcastChannel", class {
+    set onmessage(value: (event: MessageEvent) => void) { broadcast = value; }
+    close() {}
+  });
+  let sessionAvailable = true;
+  const fetch = vi.fn<typeof globalThis.fetch>().mockImplementation(async url => {
+    if (url === "/api/auth/sessions") return sessionAvailable
+      ? Response.json({ sessions: [current], truncated: false }) : Response.json({}, { status: 401 });
+    if (url === `/api/me/jobs?pending=owned&id=${id}`) return Response.json(packet);
+    throw new Error("Unexpected mounted metadata endpoint");
+  });
+  vi.stubGlobal("fetch", fetch);
+  host = document.createElement("div"); document.body.append(host); root = createRoot(host);
+  await act(async () => { root!.render(createElement(AccountJobs, { orderId: id })); });
+  expect(host.textContent).toContain("NeedsReview");
+  const initialReads = fetch.mock.calls.length;
+  // Literal incoming use-siwe-auth LogoutNotice wire shape, not the old string.
+  // The hint invalidates observation; it cannot authenticate a replacement.
+  const notice = { type: "logout", source: "synthetic-peer", sequence: 1, pending: true, confirmed: false };
+  sessionAvailable = false;
+  await act(async () => {
+    if (delivery === "local") window.dispatchEvent(new CustomEvent("keryx:auth", { detail: notice }));
+    else broadcast!(new MessageEvent("message", { data: notice }));
+  });
+  expect(host.textContent).toBe(""); expect(fetch).toHaveBeenCalledTimes(initialReads);
+  await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+  expect(fetch.mock.calls.slice(initialReads).map(([url]) => url)).toEqual(["/api/auth/sessions"]);
+  expect(host.textContent).toBe("");
+  sessionAvailable = true;
+  await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+  expect(fetch.mock.calls.slice(initialReads + 1).map(([url]) => url)).toEqual([
+    "/api/auth/sessions", `/api/me/jobs?pending=owned&id=${id}`, "/api/auth/sessions",
+  ]);
+  expect(host.textContent).toContain("NeedsReview");
+  expect(fetch.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
+});

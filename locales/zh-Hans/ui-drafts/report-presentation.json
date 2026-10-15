@@ -1,0 +1,36 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/report-presentation.ts",
+  "sourceSha256": "a771b6694a3f35b5e23b35894dafc01601f4ce97d3cfe670d8c02db610dbcbd7",
+  "entries": {
+    "target": {
+      "source": "{marker} · Research target (unverified): {claim}",
+      "text": "{marker} · 研究目标（未验证）：{claim}"
+    },
+    "coverage": {
+      "source": "Research target (unverified): {claim}: {coverage} recorded coverage estimate; {sources}",
+      "text": "研究目标（未验证）：{claim}：{coverage} 记录的覆盖估计；{sources}"
+    },
+    "noSources": {
+      "source": "no admitted sources",
+      "text": "无准入来源"
+    },
+    "documentVersion": {
+      "source": "Document version: {version}",
+      "text": "文档版本：{version}"
+    },
+    "provenance": {
+      "source": "Observed provenance: {provenance}",
+      "text": "观察到的来源信息：{provenance}"
+    },
+    "scope": {
+      "source": "Supplied original scope: {scope}",
+      "text": "提供的原始范围：{scope}"
+    },
+    "scholarly": {
+      "source": "Observed scholarly metadata and read scope (peer review unknown): {metadata}",
+      "text": "观察到的学术元数据与阅读范围（同行评审未知）：{metadata}"
+    }
+  }
+}

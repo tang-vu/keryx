@@ -1,0 +1,172 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/owned-history.ts",
+  "sourceSha256": "0f9e1ab3348c6a159e6ba00899cc7163c13163e5c8c7ec43211e714bf67ebd8b",
+  "entries": {
+    "title": {
+      "source": "Your owned research history",
+      "text": "您拥有的研究历史"
+    },
+    "checking": {
+      "source": "Checking your account…",
+      "text": "正在检查您的账户…"
+    },
+    "signedOut": {
+      "source": "Sign in to read your history.",
+      "text": "登录以读取您的历史记录。"
+    },
+    "unavailable": {
+      "source": "Owned history is unavailable. Privacy, ownership or storage capabilities may not be admitted on this deployment.",
+      "text": "自己拥有的历史记录不可用。此部署可能尚未准入隐私、所有权或存储能力。"
+    },
+    "scope": {
+      "source": "Current store only. Recorded provenance describes the saved run; unknown metadata stays unknown. Settled receipt amounts exclude simulated and pending payments. Missing receipts do not prove zero spend.",
+      "text": "仅限当前存储。记录的来源信息描述已保存研究；未知元数据仍为未知。已结算凭证金额不含模拟和等待确认的付款。缺少凭证不证明支出为零。"
+    },
+    "walletOnly": {
+      "source": "This deployment supports this verified wallet only; stored multiwallet membership is unavailable.",
+      "text": "此部署仅支持此已验证钱包；存储中的多钱包成员关系不可用。"
+    },
+    "claimsMissing": {
+      "source": "Anonymous claimed-run history is unavailable on this deployment.",
+      "text": "此部署不提供匿名已认领研究历史。"
+    },
+    "search": {
+      "source": "Question contains (case sensitive)",
+      "text": "问题包含（区分大小写）"
+    },
+    "surface": {
+      "source": "Surface",
+      "text": "使用渠道"
+    },
+    "network": {
+      "source": "Recorded receipt network",
+      "text": "记录的凭证网络"
+    },
+    "funding": {
+      "source": "Settled funding",
+      "text": "已结算资金来源"
+    },
+    "visibility": {
+      "source": "Visibility",
+      "text": "可见性"
+    },
+    "from": {
+      "source": "From (UTC)",
+      "text": "起始（UTC）"
+    },
+    "to": {
+      "source": "Through (UTC)",
+      "text": "截至（UTC）"
+    },
+    "all": {
+      "source": "All",
+      "text": "全部"
+    },
+    "apply": {
+      "source": "Apply filters",
+      "text": "应用筛选"
+    },
+    "empty": {
+      "source": "No matching runs in this scan page.",
+      "text": "此扫描页没有匹配的研究。"
+    },
+    "scanLimited": {
+      "source": "The bounded scan continues. Use Next even when this page is empty.",
+      "text": "有界扫描仍在继续。即使此页为空，也请使用下一页。"
+    },
+    "next": {
+      "source": "Next",
+      "text": "下一页"
+    },
+    "previous": {
+      "source": "Previous",
+      "text": "上一页"
+    },
+    "refresh": {
+      "source": "Refresh",
+      "text": "刷新"
+    },
+    "exportJson": {
+      "source": "Export history JSON",
+      "text": "导出历史记录 JSON"
+    },
+    "exportCsv": {
+      "source": "Export history CSV",
+      "text": "导出历史记录 CSV"
+    },
+    "exportScope": {
+      "source": "Exports are bounded to 20 pages / 1,000 rows / 2 MiB and carry explicit completion and continuation metadata.",
+      "text": "导出最多包含 20 页 / 1,000 行 / 2 MiB，并附带明确的完成和继续读取元数据。"
+    },
+    "report": {
+      "source": "Read report",
+      "text": "阅读报告"
+    },
+    "receipts": {
+      "source": "Receipts JSON",
+      "text": "凭证 JSON"
+    },
+    "references": {
+      "source": "References BibTeX",
+      "text": "参考文献 BibTeX"
+    },
+    "own": {
+      "source": "Your settled spend",
+      "text": "您的已结算支出"
+    },
+    "sponsored": {
+      "source": "Other payer settled spend",
+      "text": "其他付款者的已结算支出"
+    },
+    "unknown": {
+      "source": "Unavailable",
+      "text": "不可用"
+    },
+    "private": {
+      "source": "Private",
+      "text": "私密"
+    },
+    "unlisted": {
+      "source": "Unlisted",
+      "text": "不列出"
+    },
+    "public": {
+      "source": "Public",
+      "text": "公开"
+    },
+    "save": {
+      "source": "Save visibility",
+      "text": "保存可见性"
+    },
+    "erase": {
+      "source": "Delete research text",
+      "text": "删除研究文本"
+    },
+    "confirmErase": {
+      "source": "Delete this run's research text? Financial records are retained. This cannot be undone.",
+      "text": "删除此次研究的研究文本？财务记录将保留。此操作无法撤销。"
+    },
+    "failed": {
+      "source": "The operation was refused or unavailable. Refresh before retrying a revision change.",
+      "text": "操作被拒绝或不可用。重试修订更改前请刷新。"
+    },
+    "memberReadOnly": {
+      "source": "Changing a member wallet's run requires that wallet's interactive session; history read does not grant mutation authority.",
+      "text": "更改成员钱包的研究需要该钱包的交互会话；读取历史记录不授予更改权限。"
+    },
+    "paidCreators": {
+      "source": "Cited creators with recorded settled citation receipts",
+      "text": "具有记录在案的已结算引用凭证的被引用创作者"
+    },
+    "close": {
+      "source": "Close report",
+      "text": "关闭报告"
+    },
+    "receiptBound": {
+      "source": "Receipt projection truncated; spend totals unavailable.",
+      "text": "凭证投影已截断；支出总额不可用。"
+    }
+  }
+}

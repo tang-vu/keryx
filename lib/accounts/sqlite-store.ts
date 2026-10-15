@@ -7,9 +7,11 @@ import { sqliteApplicationSchemaProfile } from "../db/sqlite-application-schema-
 import { NATIVE_USER_DOMAIN_TABLES } from "../db/native-user-domain-schema-data";
 import { AccountError, MAX_ACCOUNT_WALLETS, accountConsentSchema, bindingSchema, challengeSchema, digestSchema, interactiveSessionSchema,
   membershipSchema, preconditionSchema, snapshotSchema, timeSchema, walletInputSchema, type AccountBinding, type AccountMembershipStore,
-  type AccountSnapshot, type InteractiveSession, type MembershipChallenge, type TakenMembershipChallenge } from "./contracts";
+  type AccountSnapshot, type InteractiveSession, type MembershipChallenge, type TakenMembershipChallenge,
+  type AccountHistoryObservation, type AccountHistorySeal } from "./contracts";
 import { accountConsentHash, accountDigest, membershipNonceHash, randomAccountValue, sessionCommitment } from "./protocol";
 import { ACCOUNT_MEMBERSHIP_SCHEMA_DATA, ACCOUNT_WEB_SESSION_SCHEMA_DATA } from "./sqlite-schema-data";
+import { ACCOUNT_HISTORY_DEADLINE_MS, MAX_ACCOUNT_HISTORY_ITEMS, prepareSqliteHistoryEvidence, assertSqliteHistoryEvidence } from "./sqlite-history-fence";
 
 const unavailable = () => new AccountError("account_unavailable");
 const MAX_RETAINED_ACCOUNT_ROWS = 1024;
@@ -476,5 +478,29 @@ function accountMembershipJournal(db: DatabaseSync,
       transaction(now => { const a = current(raw, now); db.prepare("UPDATE account267_sessions SET revoked_at=? WHERE session_hash=?").run(now, a.session.sessionHash); });
     },
     async assertCurrent(raw) { transaction(now => { current(raw, now); }, false); },
+    ...(nativeReads ? {
+      async prepareHistoryFence(raw: AccountSnapshot, observed: readonly AccountHistoryObservation[], deadline: number): Promise<AccountHistorySeal> {
+        const start = snapshotSchema.parse(raw);
+        const checkDeadline = (now: number) => {
+          if (!Number.isSafeInteger(deadline) || deadline <= now || deadline > now + ACCOUNT_HISTORY_DEADLINE_MS) throw unavailable();
+        };
+        const before = transaction(now => {
+          checkDeadline(now); const account = current(start, now);
+          const wallets = new Set(account.membership.members.map(member => member.wallet));
+          if (!Array.isArray(observed) || observed.length > MAX_ACCOUNT_HISTORY_ITEMS
+            || observed.some(item => !wallets.has(item.ownerWallet))) throw unavailable();
+          const value = prepareSqliteHistoryEvidence(db, start.binding, observed); checkDeadline(Date.now()); return value;
+        }, false);
+        let unused = true;
+        return () => {
+          if (!unused) throw unavailable();
+          unused = false;
+          transaction(now => {
+            checkDeadline(now); current(start, now);
+            assertSqliteHistoryEvidence(db, start.binding, before); checkDeadline(Date.now());
+          }, false);
+        };
+      },
+    } : {}),
   } satisfies AccountMembershipStore);
 }

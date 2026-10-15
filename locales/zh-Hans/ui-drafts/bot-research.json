@@ -1,0 +1,116 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/bot-research.ts",
+  "sourceSha256": "dab5fbd5bcebb1beadc33337cad8f4edc051589fe37926ce275179a9f2a89d84",
+  "entries": {
+    "citationHeading": {
+      "source": "Citations and planned rewards (USDC)",
+      "text": "引用与计划奖励（USDC）"
+    },
+    "slackCitationHeading": {
+      "source": "Citations and planned rewards — weighted USDC citation rewards",
+      "text": "引用与计划奖励 — 按权重分配的 USDC 引用奖励"
+    },
+    "weight": {
+      "source": "weight {weight}",
+      "text": "权重 {weight}"
+    },
+    "sourcesOne": {
+      "source": "{count} source cited",
+      "text": "引用了 {count} 个来源"
+    },
+    "sourcesOther": {
+      "source": "{count} sources cited",
+      "text": "引用了 {count} 个来源"
+    },
+    "recordedCreators": {
+      "source": "{amount} recorded to creators",
+      "text": "记录向创作者支付 {amount}"
+    },
+    "recordedCreatorTotal": {
+      "source": "{amount} recorded creator-payment total",
+      "text": "记录的创作者付款总额 {amount}"
+    },
+    "settlementNotice": {
+      "source": "Recorded amounts are not settlement proof; check the full trace receipts.",
+      "text": "记录金额不是结算证明；请检查完整过程中的凭证。"
+    },
+    "slackSettlementNotice": {
+      "source": "Planned rewards are not settlement evidence. See the trace for settled, pending, failed or simulated payments.",
+      "text": "计划奖励不是结算证据。请查看过程记录中的已结算、等待确认、失败或模拟付款。"
+    },
+    "discordSettlementNotice": {
+      "source": "Recorded amounts are not settlement proof; check full trace receipts at the title link",
+      "text": "记录金额不是结算证明；请通过标题链接检查完整过程凭证"
+    },
+    "fullTrace": {
+      "source": "Full trace: {url}",
+      "text": "完整过程：{url}"
+    },
+    "failure": {
+      "source": "⚠️ Keryx could not finish this dispatch: {detail}",
+      "text": "⚠️ Keryx 未能完成此次研究任务：{detail}"
+    },
+    "paused": {
+      "source": "New research is temporarily paused while an earlier delivery is reviewed. You can still inspect saved reports. Increasing the source budget or connecting a wallet will not remove this pause. Your question has not been retried.",
+      "text": "在审阅先前交付期间，新研究暂时暂停。您仍可查看已保存的报告。增加来源预算或连接钱包不会解除暂停。您的问题未被重试。"
+    },
+    "treasuryUnavailable": {
+      "source": "Keryx's treasury wallet is not configured on this deployment.",
+      "text": "此部署未配置 Keryx 的资金库钱包。"
+    },
+    "sponsoredLimited": {
+      "source": "Sponsored dispatches are temporarily limited or unavailable — try again in a minute.",
+      "text": "赞助研究任务暂时受限或不可用 — 请一分钟后再试。"
+    },
+    "dispatching": {
+      "source": "⏳ Keryx is dispatching — buying sources and settling citations…",
+      "text": "⏳ Keryx 正在执行研究任务 — 购买来源并结算引用奖励…"
+    },
+    "discordUsage": {
+      "source": "Only `/ask question:<text>` is wired up here.",
+      "text": "此处仅接入了 `/ask question:<text>`。"
+    },
+    "herald": {
+      "source": "Keryx",
+      "text": "Keryx"
+    },
+    "tagline": {
+      "source": "the citation-toll research herald.",
+      "text": "收取来源访问费的研究信使。"
+    },
+    "telegramExplanation": {
+      "source": "Ask a question and Keryx reads selected sources, returns cited evidence, and records planned USDC creator rewards. Open the full trace to check payment mode and settlement receipts.",
+      "text": "提出问题后，Keryx 会阅读所选来源，返回带引用的证据，并记录计划向创作者支付的 USDC 奖励。打开完整过程以检查付款模式和结算凭证。"
+    },
+    "slackExplanation": {
+      "source": "Ask a question and Keryx selects sources within a budget, answers with citations, and attempts weighted USDC rewards for eligible cited creators. The dispatch trace shows payment outcomes.",
+      "text": "提出问题后，Keryx 会在预算内选择来源，给出附引用的答案，并尝试向符合条件的被引用创作者支付按权重分配的 USDC 奖励。研究任务过程记录会显示付款结果。"
+    },
+    "telegramUsage": {
+      "source": "Usage: <code>/ask what is x402?</code>",
+      "text": "用法：<code>/ask what is x402?</code>"
+    },
+    "slackUsage": {
+      "source": "Usage: `/keryx what is x402?`",
+      "text": "用法：`/keryx what is x402?`"
+    },
+    "reviewBoundary": {
+      "source": "Review-first is available only in the authenticated live browser; review mode flags are refused here.",
+      "text": "先审阅模式仅可在已认证的实时浏览器中使用；此处拒绝审阅模式标志。"
+    },
+    "privateQuestion": {
+      "source": "In this private chat you can also just type the question.",
+      "text": "在此私密聊天中，您也可以直接输入问题。"
+    },
+    "telegramStatus": {
+      "source": "Creators keep 100%. Live traction:",
+      "text": "创作者保留 100%。实时使用业绩："
+    },
+    "slackStatus": {
+      "source": "Creator payments and service charges are recorded separately. Live status:",
+      "text": "创作者付款和服务费用分别记录。实时状态："
+    }
+  }
+}

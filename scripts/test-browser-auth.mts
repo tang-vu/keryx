@@ -8,7 +8,8 @@ const session = { address: account, role: "asker" };
 const bundle = await build({ stdin: { contents: `
   import React from 'react';import{createRoot}from'react-dom/client';
   import{WalletMenu}from'./components/keryx/wallet-menu';import{useSiweAuth}from'./lib/hooks/use-siwe-auth';
-  window.notices=[];window.disconnects=0;
+  window.notices=[];window.disconnects=0;window.logoutTerminals=0;
+  window.addEventListener("keryx:auth",event=>{if(event.detail?.type==='logout'&&event.detail.pending===false)window.logoutTerminals++;});
   function Probe(){const auth=useSiweAuth();return <section><output data-testid="probe">{auth.session?'authenticated':'signed out'}</output><button onClick={()=>{void auth.refresh();}}>Refresh probe</button></section>}
   createRoot(document.getElementById('root')).render(<><WalletMenu/><Probe/></>);
 `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife",
@@ -48,8 +49,16 @@ try {
   await page.getByRole("button", { name: /asker/ }).click();
   await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
   await page.waitForFunction(() => (window as unknown as { notices: { kind: string }[] }).notices.some(notice => notice.kind === "error"));
-  assert.equal(await page.locator('[data-testid="probe"]').textContent(), "authenticated");
+  assert.equal(await page.locator('[data-testid="probe"]').textContent(), "signed out", "Unconfirmed logout still fences the private view");
   assert.equal(await page.evaluate(() => (window as unknown as { disconnects: number }).disconnects), 0);
+  await otherTab.waitForFunction(() => document.querySelector('[data-testid="probe"]')?.textContent === "signed out");
+  await otherTab.waitForFunction(() => (window as unknown as { logoutTerminals: number }).logoutTerminals > 0);
+  // A refused logout does not prove cookie revocation. Explicit fresh server
+  // checks may recover the view; a peer notice cannot restore authority.
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await otherTab.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.waitForFunction(() => document.querySelector('[data-testid="probe"]')?.textContent === "authenticated");
+  await otherTab.waitForFunction(() => document.querySelector('[data-testid="probe"]')?.textContent === "authenticated");
   failLogout = false; delayLookup = true;
   await page.getByRole("button", { name: "Refresh probe", exact: true }).click();
   await page.waitForTimeout(100); assert(held, "Expected a delayed session response");
@@ -61,9 +70,10 @@ try {
   await held.fulfill({ json: { session } });
   await page.waitForTimeout(100);
   assert.equal(await page.locator('[data-testid="probe"]').textContent(), "signed out", "A stale lookup must not resurrect the signed-out UI");
+  await page.waitForFunction(() => (window as unknown as { disconnects: number }).disconnects === 1);
   assert.equal(await page.evaluate(() => (window as unknown as { disconnects: number }).disconnects), 1);
   assert.deepEqual(errors, []);
-  console.log("PASS: real wallet-menu logout failure retains sign-in/connection, confirmed logout clears both hook instances, and a delayed lookup cannot resurrect session UI. All HTTP intercepted; no signing or payments.");
+  console.log("PASS: real wallet-menu unconfirmed logout clears private views and retains connection, explicit fresh session checks recover them, confirmed logout clears both hook instances, and a delayed lookup cannot resurrect session UI. All HTTP intercepted; no signing or payments.");
 } finally { await browser.close(); }
 
 await import("./test-browser-sessions.mts");

@@ -1,0 +1,24 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/proof.ts",
+  "sourceSha256": "5f0a6970b9baa96e113945db98745a4f150a753ea087a3252e708e0cfb9863b9",
+  "entries": {
+    "studyTitle": {
+      "source": "Free and paid sources: offline comparison",
+      "text": "免费与付费来源：离线比较"
+    },
+    "studyDescription": {
+      "source": "A reproducible study runs Keryx's offline agent on a fixed fictional corpus. Compare source prices and budgets using the retained questions, outputs and scoring rules.",
+      "text": "可复现研究使用固定的虚构语料运行 Keryx 的离线智能体。通过留存的问题、输出和评分规则比较来源价格和预算。"
+    },
+    "studyLimit": {
+      "source": "Payments are simulated. The study does not measure live models, web research, real spending or semantic answer quality.",
+      "text": "付款为模拟。此研究不衡量实时模型、网络研究、真实支出或答案语义质量。"
+    },
+    "studyLink": {
+      "source": "Read the study and reproduce it",
+      "text": "阅读并复现此研究"
+    }
+  }
+}

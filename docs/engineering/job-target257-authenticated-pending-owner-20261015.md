@@ -105,3 +105,72 @@ Actual ResearchJobDetails mounts cookie-authenticated metadata observation with 
 Authored controls include actual POST with real unfunded EIP-712 signature verification, genuine signed cookies/durable rows, the real seller helper and native producer; only external vendor transport/readiness/framework selection are synthetic. They cover cookie owner distinct from payer, valid API-key/forged/payer-worker/foreign refusal, before/during-settlement revocation with retained debit/no retry, failed/held/unknown projections and an actual parent-mounted native-route bridge. Additional mounted controls cover both targets, invalid/missing/foreign references, stalled fetch/body recovery and late bodies after logout/same-wallet replacement/unmount. Browser client controls retain price, journal claim, request bytes, no-replay and uncertain-after-claim outcomes. All UNRUN; no real vendor payment or delivery is demonstrated.
 
 Parent gates: distinct payment/source review; execute focused native/crypto/auth/mounted failure controls and all retained atomic rollback/replay/two-connection/readonly/exact 5-6/permanent-drift/uncertain-COMMIT controls; types and one applicable build/current canonical acceptance if inputs change; one focused PR, required aggregate/domain CI and sole-coordinator serialized merge/batched delivery. The unchanged older lib/a2a/pending-owner-session.test.ts uses the pre-successor loose packet/fetch fixture: parent must reconcile that fixture with the now bounded session/packet contract under its authority; it was outside this successor claim and remains whole. Current native family is 20; future >20 composition needs the parent263 finite compiled-inventory constructor bound, with max-four and Library partition preserved. Original latency/first-answer/remedy/paid/vendor/actual delivery acceptance remains open. No production, spend, schedule, App54, Git writer, compiler/check/DB/browser or repository module execution occurred here.
+
+
+## 2026-10-15 — Current-main498 pending reader controls proposal
+
+SOURCE ONLY / AUTHOR UNRUN. The immutable output/current-main498-pending-reader-controls-proposal
+contains append-only afterimages for the existing account-history route, genuine
+native owner reader/admission and mounted pending reader test files. Every original
+test block/assertion and 5000ms/2000ms/180000ms/300000ms deadline remains literal.
+No source file was changed or test/module/compiler/DB/browser/provider executed.
+
+The controls target the frozen composition route afterimage, not this d15 worktree
+runtime: default history with a genuine port still uses payer history; only
+pending=owned selects proof plus native list. They cover port absence, no payer
+fallback on proof/SQL refusal, real owned equal-time pagination and exclusion,
+and structured logout invalidation followed by fresh server currentness checks.
+The structured notice is a clearly synthetic transport fixture matching immutable
+incoming use-siwe-auth, not a mounted auth-hook/provider acceptance claim. Existing
+real JWT/native controls and actual mounted parser are reused. Older loose mounted
+fixtures remain whole and retain their previously recorded parent reconciliation gate.
+
+Pins and full raw restoration bind the original inputs, all three frozen composition
+afterimages and new test afterimages. Existing signed POST new28 and historical
+198 plus corrected6 evidence remain unchanged and retain their original scope;
+none accepts this proposal or current composed main. PRIMARY owns application,
+different-peer source review, actual changed/new tests, types, ordinary composition
+build, required PR/CI and serialized merge. No PRIMARY outcome or original #257
+latency/vendor/financial/remedy/delivery acceptance is completed by this proposal.
+
+## 2026-10-15 - Honest pending-owner257 draft metadata proposal
+
+Output-only proposal; not applied, reviewed, accepted or activated. Incoming manifest
+baseline is exact Git commit 17e68540f1f8c1403543c0d9368b0770d771c812, read with absolute Git show.
+The actual local English source is locales/en/pending-owner257.ts with ten unique flat literal leaves.
+Normalized UTF-8/LF sourceSha256: 57f905d1d84b7f2886c0eb3c7124dbc87a03a0bf9a78bd1e7123ff970c56eed3.
+English is absent from HEAD d15de1a0d6de394bc63d14324220e5a93f6ba3a5 and incoming 17e; its computed local Git
+blob identity is not an available object. No Git-show English provenance is claimed.
+The current local file bytes and all ten English leaves are retained in the handoff.
+The existing checker source was inspected without executing its AST extractor.
+
+The current account-jobs and research-checkout components import this English object
+directly. As with the existing #263 direct web-only namespace proposal, this proposes
+only empty vi/zh-Hans drafts (machineDraft, review null, entries {}) and the two
+existing incoming manifest corrections. Each new row has 10 extracted leaves,
+0 authored entries, no covered keys, no identifiers or aliases, all ten keys uncovered.
+Namespace count 60 -> 61; English file count 59 -> 60; extracted leaves 5645 -> 5655;
+uncovered entries 70 -> 80. All 5554 translations, 21 identifiers, 59 complete
+namespaces and every existing row/source binding/coverage remain unchanged.
+Top-level complete remains false and authority remains en. This does not compose
+unapplied sibling #263 rows; parent must compose disjoint accepted additions if needed.
+
+English critical consent/payment/custody fallback and legal copy stay unchanged.
+No central messages import, formatter, framework, loader, default locale activation,
+ChatGPT auth/model/native policy, schema or financial authority changes are proposed.
+Web-only metadata has no CLI/MCP/API/desktop/extension/bot runtime behavior change.
+
+Only output/honest-pending-copy-preview-proposal was written. This full document
+is an afterimage with this truthful append, not an applied source documentation edit.
+Whole raw before/after and complete hash-bound unique inverses are retained.
+Canonical/local AGENTS and override, pilot common-rules, local/current incoming
+workflow/development guidance and installed Next internationalization/use-client docs
+were read. Local keryx-review was absent from worktree and session catalog; its
+canonical SKILL.md and demo-critical-path reference were read explicitly.
+
+Strict copy, compiler, tests, build, compiled controls and CI are UNRUN. No PASS or
+named-human/independent approval is supplied by this source author. No application
+module, DB, browser, network, Git writer, dependency or .next operation occurred.
+Parent owns application after 17e merge and exact-input reconciliation. Parent runs
+the existing no-argument strict-copy check ONCE before ONE current build; remaining
+review/CI/delivery gates stay with parent and existing batched release ownership.

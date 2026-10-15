@@ -1,14 +1,9 @@
 import { DatabaseSync } from "node:sqlite";
 import { assertOrdinarySqliteResearchAuthority } from "./research-monthly";
-import { PrivateProfileError, RESERVED_PROFILE_HANDLES, privateProfileInputSchema, privateProfileRecordSchema, privateProfileSnapshotSchema, profileWallet, type PrivateProfilesStore } from "../profiles/private-profile";
+import { PrivateProfileError, privateProfileInputSchema, privateProfileRecordSchema, privateProfileSnapshotSchema, profileWallet, type PrivateProfilesStore } from "../profiles/private-profile";
 
-export const PRIVATE_PROFILES_SQL = `CREATE TABLE IF NOT EXISTS private_profiles (
-  wallet TEXT PRIMARY KEY CHECK(length(wallet)=42 AND wallet=lower(wallet) AND substr(wallet,1,2)='0x' AND substr(wallet,3) NOT GLOB '*[^0-9a-f]*'),
-  handle TEXT UNIQUE CHECK(handle IS NULL OR (length(handle) BETWEEN 3 AND 32 AND handle=lower(handle) AND substr(handle,1,1) GLOB '[a-z]' AND handle NOT GLOB '*[^a-z0-9_]*' AND handle NOT IN (${RESERVED_PROFILE_HANDLES.map(value => `'${value}'`).join(",")}))),
-  display_name TEXT NOT NULL CHECK(length(display_name)<=80), bio TEXT NOT NULL CHECK(length(bio)<=160), purpose TEXT NOT NULL CHECK(length(purpose)<=160),
-  links TEXT NOT NULL CHECK(json_valid(links) AND json_type(links)='array' AND json_array_length(links)<=6),
-  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
-);`;
+import { PRIVATE_PROFILES_SQL } from "./profile-sqlite-schema-data";
+export { PRIVATE_PROFILES_SQL } from "./profile-sqlite-schema-data";
 
 /** Immutable owner-bound projection SQL shared by ordinary and verified enrolled stores.
  * These statements confer no connection, constructor, callback or writer authority. */

@@ -1,0 +1,2276 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/reports.ts",
+  "sourceSha256": "3ef9c9df446f2d5ea84d314e233d4cdf1c0d8dd5d98c609409b983aec1206408",
+  "entries": {
+    "reportActions.copyUnavailable": {
+      "source": "Copy unavailable. Download the report instead.",
+      "text": "复制不可用。请改为下载报告。"
+    },
+    "reportActions.copied": {
+      "source": "Report copied with citations and payment states.",
+      "text": "报告已复制，含引用及付款状态。"
+    },
+    "reportActions.copy": {
+      "source": "Copy report",
+      "text": "复制报告"
+    },
+    "reportActions.downloaded": {
+      "source": "Report downloaded with citations and payment states.",
+      "text": "报告已下载，含引用及付款状态。"
+    },
+    "reportActions.downloadUnavailable": {
+      "source": "Download unavailable. Open the saved report instead.",
+      "text": "下载不可用。请改为打开已保存报告。"
+    },
+    "reportActions.download": {
+      "source": "Download report",
+      "text": "下载报告"
+    },
+    "reportActions.openSaved": {
+      "source": "Open saved report",
+      "text": "打开已保存报告"
+    },
+    "citationExport.failed": {
+      "source": "Reference download failed. Try again in this browser.",
+      "text": "参考文献下载失败。请在此浏览器重试。"
+    },
+    "citationExport.title": {
+      "source": "Reference export",
+      "text": "参考资料导出"
+    },
+    "citationExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "下载 BibTeX"
+    },
+    "citationExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "下载 CSL-JSON"
+    },
+    "citationExport.ris": {
+      "source": "Download RIS (Zotero)",
+      "text": "下载 RIS（Zotero）"
+    },
+    "citationExport.references.one": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "{count} 篇文章参考资料。包含已记录标题、链接及日期；观察到的学术记录还含提供的作者、DOI、期刊元数据及阅读限制。用于论文前请审阅元数据。通过文件 → 导入将 RIS 导入 Zotero。"
+    },
+    "citationExport.omitted.one": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "因缺少文章标题或可用文章链接，省略 {count} 项引用。"
+    },
+    "citationExport.references.other": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "{count} 篇文章参考资料。包含已记录标题、链接及日期；观察到的学术记录还含提供的作者、DOI、期刊元数据及阅读限制。用于论文前请审阅元数据。通过文件 → 导入将 RIS 导入 Zotero。"
+    },
+    "citationExport.omitted.other": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "因缺少文章标题或可用文章链接，省略 {count} 项引用。"
+    },
+    "bibliographyExport.failed": {
+      "source": "Reference download failed. Try again in this browser.",
+      "text": "参考文献下载失败。请在此浏览器重试。"
+    },
+    "bibliographyExport.label": {
+      "source": "Bibliography exports",
+      "text": "参考文献导出"
+    },
+    "bibliographyExport.notice": {
+      "source": "Bibliographic metadata · separate from research citations and creator rewards",
+      "text": "文献元数据 · 独立于研究引用及创作者奖励"
+    },
+    "bibliographyExport.provenance": {
+      "source": "Original metadata and field provenance",
+      "text": "原始元数据及字段溯源"
+    },
+    "bibliographyExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "下载 BibTeX"
+    },
+    "bibliographyExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "下载 CSL-JSON"
+    },
+    "bibliographyExport.ris": {
+      "source": "Download RIS",
+      "text": "下载 RIS"
+    },
+    "portableReceipt.label": {
+      "source": "Portable research receipt",
+      "text": "可携带研究收据"
+    },
+    "portableReceipt.title": {
+      "source": "Take the evidence trail with you",
+      "text": "带走证据轨迹"
+    },
+    "portableReceipt.notice": {
+      "source": "One deterministic JSON bundle binds the answer, visible decisions, exact article versions, claim evidence and a Circle-settlement snapshot under SHA-256. Retain the digest to detect later changes; the self-check is not a publisher or Keryx signature.",
+      "text": "一个确定性 JSON 包通过 SHA-256 绑定答案、可见决策、确切文章版本、主张证据及 Circle 结算快照。保留摘要以检测后续变化；自检不是出版者或 Keryx 签名。"
+    },
+    "portableReceipt.view": {
+      "source": "View JSON ↗",
+      "text": "查看 JSON ↗"
+    },
+    "portableReceipt.download": {
+      "source": "Download",
+      "text": "下载"
+    },
+    "evidenceMatrix.title": {
+      "source": "Research evidence matrix",
+      "text": "研究证据矩阵"
+    },
+    "evidenceMatrix.notice": {
+      "source": "Compare unverified research targets with cited sources and inspect recorded excerpts. An empty cell means no inspectable excerpt was recorded; it does not establish whether a claim is true, false, or disputed. Coverage and agent confidence do not prove entailment, measured accuracy or complete synthesis.",
+      "text": "将未核验研究目标与引用来源比较并检查记录摘录。空单元格表示未记录可检查摘录，不能确定主张为真、为假或有争议。覆盖率及代理置信度不证明蕴含关系、实测准确性或完整综合。"
+    },
+    "evidenceMatrix.download": {
+      "source": "Download evidence CSV",
+      "text": "下载证据 CSV"
+    },
+    "evidenceMatrix.caption": {
+      "source": "Research target by cited source evidence matrix",
+      "text": "按引用来源的研究目标证据矩阵"
+    },
+    "evidenceMatrix.target": {
+      "source": "Research target (unverified)",
+      "text": "研究目标（未核验）"
+    },
+    "evidenceMatrix.status": {
+      "source": "Inspection status",
+      "text": "检查状态"
+    },
+    "evidenceMatrix.notRecorded": {
+      "source": "Not recorded",
+      "text": "未记录"
+    },
+    "evidenceMatrix.noExcerpt": {
+      "source": "No excerpt recorded",
+      "text": "未记录摘录"
+    },
+    "evidenceMatrix.unavailable": {
+      "source": "Research claims were not recorded for this dispatch. No evidence matrix is available.",
+      "text": "此研究未记录研究主张。无可用证据矩阵。"
+    },
+    "evidenceMatrix.publication": {
+      "source": "Publication: {publication}",
+      "text": "出版物：{publication}"
+    },
+    "evidenceMatrix.published": {
+      "source": "Published: {date}",
+      "text": "发布于：{date}"
+    },
+    "evidenceMatrix.inspect.one": {
+      "source": "Inspect {count} excerpt",
+      "text": "检查 {count} 条摘录"
+    },
+    "evidenceMatrix.inspect.other": {
+      "source": "Inspect {count} excerpts",
+      "text": "检查 {count} 条摘录"
+    },
+    "answerDelta.label": {
+      "source": "Re-ask evidence delta",
+      "text": "重新提问证据差异"
+    },
+    "answerDelta.kicker": {
+      "source": "Living answer · receipt delta",
+      "text": "持续更新答案 · 收据差异"
+    },
+    "answerDelta.compareParent": {
+      "source": "Compare parent receipt ↗",
+      "text": "比较父收据 ↗"
+    },
+    "answerDelta.citations": {
+      "source": "Citations",
+      "text": "引用"
+    },
+    "answerDelta.coverage": {
+      "source": "Evidence coverage",
+      "text": "证据覆盖"
+    },
+    "answerDelta.notSampled": {
+      "source": "Not sampled",
+      "text": "未采样"
+    },
+    "answerDelta.historicalNoCoverage": {
+      "source": "Historical receipt lacks claim coverage",
+      "text": "历史收据缺少主张覆盖"
+    },
+    "answerDelta.confidence": {
+      "source": "Confidence",
+      "text": "置信度"
+    },
+    "answerDelta.verdict": {
+      "source": "Agent verdict, evidence-bounded",
+      "text": "代理判断，受证据约束"
+    },
+    "answerDelta.settled": {
+      "source": "Settled to creators",
+      "text": "已结算给创作者"
+    },
+    "answerDelta.notProvable": {
+      "source": "Not provable",
+      "text": "无法证明"
+    },
+    "answerDelta.incompleteLedger": {
+      "source": "Circle-settled ledger rows are incomplete",
+      "text": "Circle 已结算账本行不完整"
+    },
+    "answerDelta.added": {
+      "source": "Added",
+      "text": "已添加"
+    },
+    "answerDelta.removed": {
+      "source": "Removed",
+      "text": "已移除"
+    },
+    "answerDelta.changedAssets": {
+      "source": "Changed assets",
+      "text": "已更改资产"
+    },
+    "answerDelta.verifiedSpans": {
+      "source": "Verified spans",
+      "text": "经核验文本片段"
+    },
+    "answerDelta.notice": {
+      "source": "Both dispatches remain immutable. This compares cited identities, exact versions, evidence coverage and Circle-settled totals; it does not claim the newer answer is better.",
+      "text": "两次研究均保持不可变。此比较引用身份、确切版本、证据覆盖及 Circle 已结算总额，不宣称新答案更好。"
+    },
+    "answerDelta.none": {
+      "source": "none",
+      "text": "无"
+    },
+    "answerDelta.retained.one": {
+      "source": "{count} source retained",
+      "text": "保留 {count} 个来源"
+    },
+    "answerDelta.retained.other": {
+      "source": "{count} sources retained",
+      "text": "保留 {count} 个来源"
+    },
+    "answerDelta.improved.one": {
+      "source": "{count} improved",
+      "text": "{count} 个改善"
+    },
+    "answerDelta.regressed.one": {
+      "source": "{count} regressed",
+      "text": "{count} 个退步"
+    },
+    "answerDelta.improved.other": {
+      "source": "{count} improved",
+      "text": "{count} 个改善"
+    },
+    "answerDelta.regressed.other": {
+      "source": "{count} regressed",
+      "text": "{count} 个退步"
+    },
+    "reportMode.offline": {
+      "source": "offline preview · simulated",
+      "text": "离线预览 · 模拟"
+    },
+    "reportMode.live": {
+      "source": "live on {network}",
+      "text": "{network} 实时运行"
+    },
+    "reportConfidence.sourceGrounding": {
+      "source": "source grounding",
+      "text": "来源依据"
+    },
+    "reportConfidence.confidence": {
+      "source": "confidence",
+      "text": "置信度"
+    },
+    "reportCitation.title": {
+      "source": "{source} — {weight}% weight",
+      "text": "{source} — 权重 {weight}%"
+    },
+    "reportCitation.articleTitle": {
+      "source": "{article} · {publication} — {weight}% weight",
+      "text": "{article} · {publication} — 权重 {weight}%"
+    },
+    "reportCitation.openEvidence": {
+      "source": "Open evidence for {source}",
+      "text": "打开 {source} 的证据"
+    },
+    "reportCitation.label": {
+      "source": "Citation {marker}",
+      "text": "引用 {marker}"
+    },
+    "historicalReport.label": {
+      "source": "Historical dispatch network",
+      "text": "历史研究网络"
+    },
+    "historicalReport.kicker": {
+      "source": "Arc testnet · Historical dispatch",
+      "text": "Arc 测试网 · 历史研究"
+    },
+    "historicalReport.notice": {
+      "source": "This answer and its original payment evidence were retained before the mainnet migration. Testnet USDC and settlement records remain on Arc testnet; they are historical evidence, separate from current mainnet spending and creator payout authority.",
+      "text": "此答案及原付款证据在主网迁移前保留。测试网 USDC 和结算记录仍在 Arc 测试网，是独立于当前主网支出及创作者付款权限的历史证据。"
+    },
+    "historicalReport.captured": {
+      "source": "Archive captured {capturedAt}. Source and payment states are frozen at that cutoff; source freshness is not checked against today’s catalog.",
+      "text": "档案捕获于 {capturedAt}。来源及付款状态冻结于该截止点；未按当前目录检查来源时效。"
+    },
+    "relatedReports.label": {
+      "source": "Related dispatches",
+      "text": "相关研究"
+    },
+    "relatedReports.kicker": {
+      "source": "From the archive",
+      "text": "来自档案"
+    },
+    "relatedReports.browse": {
+      "source": "Browse the full archive ▸",
+      "text": "浏览完整档案 ▸"
+    },
+    "archiveReport.dispatch": {
+      "source": "Dispatch",
+      "text": "研究"
+    },
+    "archiveReport.historicalDispatch": {
+      "source": "Dispatch · Arc testnet history",
+      "text": "研究 · Arc 测试网历史"
+    },
+    "archiveReport.creatorRewards": {
+      "source": "{amount} recorded creator rewards",
+      "text": "{amount} 已记录创作者奖励"
+    },
+    "dispatchHistory.now": {
+      "source": "just now",
+      "text": "刚刚"
+    },
+    "dispatchHistory.title": {
+      "source": "Recent dispatches",
+      "text": "近期研究"
+    },
+    "dispatchHistory.empty": {
+      "source": "No dispatches yet.",
+      "text": "尚无研究。"
+    },
+    "dispatchHistory.minutes.one": {
+      "source": "{count}m ago",
+      "text": "{count} 分钟前"
+    },
+    "dispatchHistory.minutes.other": {
+      "source": "{count}m ago",
+      "text": "{count} 分钟前"
+    },
+    "dispatchHistory.hours.one": {
+      "source": "{count}h ago",
+      "text": "{count} 小时前"
+    },
+    "dispatchHistory.hours.other": {
+      "source": "{count}h ago",
+      "text": "{count} 小时前"
+    },
+    "dispatchHistory.days.one": {
+      "source": "{count}d ago",
+      "text": "{count} 天前"
+    },
+    "dispatchHistory.days.other": {
+      "source": "{count}d ago",
+      "text": "{count} 天前"
+    },
+    "dispatchHistory.summary.current.plain.one": {
+      "source": "{time} · {count} citation",
+      "text": "{time} · {count} 项引用"
+    },
+    "dispatchHistory.summary.current.financial.one": {
+      "source": "{time} · {count} citation · {amount} to creators",
+      "text": "{time} · {count} 项引用 · 创作者获得 {amount}"
+    },
+    "dispatchHistory.summary.historical.plain.one": {
+      "source": "{time} · {count} citation · Arc testnet history",
+      "text": "{time} · {count} 项引用 · Arc 测试网历史"
+    },
+    "dispatchHistory.summary.historical.financial.one": {
+      "source": "{time} · {count} citation · Arc testnet history · {amount} to creators",
+      "text": "{time} · {count} 项引用 · Arc 测试网历史 · 创作者获得 {amount}"
+    },
+    "dispatchHistory.summary.current.plain.other": {
+      "source": "{time} · {count} citations",
+      "text": "{time} · {count} 项引用"
+    },
+    "dispatchHistory.summary.current.financial.other": {
+      "source": "{time} · {count} citations · {amount} to creators",
+      "text": "{time} · {count} 项引用 · 创作者获得 {amount}"
+    },
+    "dispatchHistory.summary.historical.plain.other": {
+      "source": "{time} · {count} citations · Arc testnet history",
+      "text": "{time} · {count} 项引用 · Arc 测试网历史"
+    },
+    "dispatchHistory.summary.historical.financial.other": {
+      "source": "{time} · {count} citations · Arc testnet history · {amount} to creators",
+      "text": "{time} · {count} 项引用 · Arc 测试网历史 · 创作者获得 {amount}"
+    },
+    "privateReport.awaitingPayment": {
+      "source": "Payment has not been confirmed. This lookup does not retry payment.",
+      "text": "付款尚未确认。此查询不会重试付款。"
+    },
+    "privateReport.awaitingExecution": {
+      "source": "Payment is confirmed; execution has not been claimed yet.",
+      "text": "付款已确认；执行尚未认领。"
+    },
+    "privateReport.executionClaimed": {
+      "source": "Execution was claimed, but no completed result is stored yet. This does not establish that the worker is still running. Refresh later; do not pay again to recover this job.",
+      "text": "执行已认领，但尚无已完成结果存储。这不能确定工作进程仍在运行。稍后刷新；不要再次付款来恢复任务。"
+    },
+    "privateReport.interrupted": {
+      "source": "Research was interrupted and closed to new creator payments by the operator. No completed answer is stored. Keep your recovery file; do not pay again to recover this job. Existing payments remain subject to their recorded evidence. No refund has been issued by this action.",
+      "text": "研究被中断，运营者已关闭新的创作者付款。没有保存完成答案。保留恢复文件；不要再次付款来恢复任务。现有付款仍依其记录证据处理。此操作未退款。"
+    },
+    "privateReport.completed": {
+      "source": "Research completed. Review its evidence and payment status separately.",
+      "text": "研究已完成。请分别审阅证据及付款状态。"
+    },
+    "privateReport.cap": {
+      "source": "Creator cap",
+      "text": "创作者支出上限"
+    },
+    "privateReport.committed": {
+      "source": "Committed",
+      "text": "已承诺"
+    },
+    "privateReport.unresolved": {
+      "source": "Unresolved",
+      "text": "未解决"
+    },
+    "privateReport.processing": {
+      "source": "Circle processing",
+      "text": "Circle 处理中"
+    },
+    "privateReport.confirmed": {
+      "source": "Confirmation evidence",
+      "text": "确认证据"
+    },
+    "privateReport.uncommitted": {
+      "source": "Uncommitted",
+      "text": "未承诺"
+    },
+    "privateReport.budgetNotice": {
+      "source": "Uncommitted budget is not a refund. Circle processing and confirmation evidence do not independently verify chain finality. Figures reflect the current stored evidence.",
+      "text": "未承诺预算不是退款。Circle 处理及确认证据不能独立核验链上最终性。数字反映当前存储证据。"
+    },
+    "privateReport.creatorEvidence": {
+      "source": "Creator payment evidence",
+      "text": "创作者付款证据"
+    },
+    "privateReport.answer": {
+      "source": "Research answer",
+      "text": "研究答案"
+    },
+    "privateReport.evidenceUnavailable": {
+      "source": "Evidence measurements are unavailable.",
+      "text": "证据测量不可用。"
+    },
+    "privateReport.noRewardEvidence": {
+      "source": "No evidence qualified for creator rewards. Completion does not establish a supported answer.",
+      "text": "没有证据符合创作者奖励条件。完成不证明答案获得支持。"
+    },
+    "privateReport.decisions": {
+      "source": "Source decisions",
+      "text": "来源决策"
+    },
+    "privateReport.attribution": {
+      "source": "Citation attribution",
+      "text": "引用归属"
+    },
+    "privateReport.claimEvidence": {
+      "source": "Claim evidence",
+      "text": "主张证据"
+    },
+    "privateReport.receiptNotice": {
+      "source": "Server-reported research and payment evidence. This view is not a portable verified receipt. Evidence coverage does not certify factual correctness.",
+      "text": "服务器报告的研究及付款证据。此视图不是可携带的经核验收据。证据覆盖不认证事实正确性。"
+    },
+    "privateReport.interruption": {
+      "source": "Interruption recorded: {recordedAt}. A recovered original result can still appear here after an operator restores its backup.",
+      "text": "中断记录于：{recordedAt}。运营者恢复备份后，恢复的原结果仍可在此出现。"
+    },
+    "privateReport.packagePayment": {
+      "source": "Package payment: {status} · {amount} · retain the original payment network",
+      "text": "套餐付款：{status} · {amount} · 保留原付款网络"
+    },
+    "privateReport.recipient": {
+      "source": "Recipient: {payee}",
+      "text": "接收者：{payee}"
+    },
+    "privateReport.decision": {
+      "source": "{action} · {source} · Toll {price} USDC",
+      "text": "{action} · {source} · 费用 {price} USDC"
+    },
+    "privateReport.contribution": {
+      "source": "{marker} · {source} · {weight}% contribution",
+      "text": "{marker} · {source} · 贡献 {weight}%"
+    },
+    "privateReport.reward": {
+      "source": "Recorded reward: {amount} USDC. See current payment evidence above.",
+      "text": "记录奖励：{amount} USDC。参见上方当前付款证据。"
+    },
+    "privateReport.coverage": {
+      "source": "{coverage}% evidence coverage",
+      "text": "{coverage}% 证据覆盖"
+    },
+    "reportFeedback.loading": {
+      "source": "Loading feedback…",
+      "text": "正在加载反馈…"
+    },
+    "reportFeedback.unavailable": {
+      "source": "Feedback counts unavailable.",
+      "text": "反馈计数不可用。"
+    },
+    "reportFeedback.sending": {
+      "source": "Sending feedback…",
+      "text": "正在发送反馈…"
+    },
+    "reportFeedback.confirmed": {
+      "source": "Feedback recorded.",
+      "text": "反馈已记录。"
+    },
+    "reportFeedback.unconfirmed": {
+      "source": "Couldn’t confirm feedback. It may have been recorded.",
+      "text": "无法确认反馈。可能已记录。"
+    },
+    "reportFeedback.label": {
+      "source": "Report feedback",
+      "text": "报告反馈"
+    },
+    "reportFeedback.helpful": {
+      "source": "Helpful?",
+      "text": "有帮助吗？"
+    },
+    "reportFeedback.up": {
+      "source": "Mark this answer as helpful",
+      "text": "标记此答案有帮助"
+    },
+    "reportFeedback.up.one": {
+      "source": "Mark this answer as helpful; {count} recorded votes",
+      "text": "标记此答案有帮助；已记录 {count} 票"
+    },
+    "reportFeedback.up.other": {
+      "source": "Mark this answer as helpful; {count} recorded votes",
+      "text": "标记此答案有帮助；已记录 {count} 票"
+    },
+    "reportFeedback.down": {
+      "source": "Mark this answer as not helpful",
+      "text": "标记此答案无帮助"
+    },
+    "reportFeedback.down.one": {
+      "source": "Mark this answer as not helpful; {count} recorded votes",
+      "text": "标记此答案无帮助；已记录 {count} 票"
+    },
+    "reportFeedback.down.other": {
+      "source": "Mark this answer as not helpful; {count} recorded votes",
+      "text": "标记此答案无帮助；已记录 {count} 票"
+    },
+    "reportFeedback.summary.one": {
+      "source": "{count} vote · {positive}% positive",
+      "text": "{count} 票 · {positive}% 正面"
+    },
+    "reportFeedback.summary.other": {
+      "source": "{count} votes · {positive}% positive",
+      "text": "{count} 票 · {positive}% 正面"
+    },
+    "scholarlyMetadata.preprint": {
+      "source": "Preprint · peer review unknown",
+      "text": "预印本 · 同行评审未知"
+    },
+    "scholarlyMetadata.journalArticle": {
+      "source": "Journal article metadata · peer review unknown",
+      "text": "期刊文章元数据 · 同行评审未知"
+    },
+    "scholarlyMetadata.record": {
+      "source": "Scholarly record · peer review unknown",
+      "text": "学术记录 · 同行评审未知"
+    },
+    "scholarlyMetadata.paperText": {
+      "source": "Read: paper PDF text within extraction limits",
+      "text": "已读：提取限制内的论文 PDF 文本"
+    },
+    "scholarlyMetadata.abstractOnly": {
+      "source": "Read: abstract page only; full paper unavailable",
+      "text": "已读：仅摘要页；完整论文不可用"
+    },
+    "scholarlyMetadata.publisherPage": {
+      "source": "Read: publisher page; full paper not established",
+      "text": "已读：出版者页面；未确立完整论文"
+    },
+    "scholarlyMetadata.authors": {
+      "source": "Authors ({provider}): {authors}",
+      "text": "作者（{provider}）：{authors}"
+    },
+    "scholarlyMetadata.authorsNotSupplied": {
+      "source": "Authors ({provider}): not supplied",
+      "text": "作者（{provider}）：未提供"
+    },
+    "scholarlyMetadata.contributors.one": {
+      "source": "Incomplete contributor list: {recorded} names recorded from {count} provider entries.",
+      "text": "贡献者列表不完整：从 {count} 项服务商条目记录 {recorded} 个姓名。"
+    },
+    "scholarlyMetadata.contributors.truncated.one": {
+      "source": "Incomplete contributor list: {recorded} names recorded from {count} provider entries; capped at 50.",
+      "text": "贡献者列表不完整：从 {count} 项服务商条目记录 {recorded} 个姓名；上限 50。"
+    },
+    "scholarlyMetadata.contributors.other": {
+      "source": "Incomplete contributor list: {recorded} names recorded from {count} provider entries.",
+      "text": "贡献者列表不完整：从 {count} 项服务商条目记录 {recorded} 个姓名。"
+    },
+    "scholarlyMetadata.contributors.truncated.other": {
+      "source": "Incomplete contributor list: {recorded} names recorded from {count} provider entries; capped at 50.",
+      "text": "贡献者列表不完整：从 {count} 项服务商条目记录 {recorded} 个姓名；上限 50。"
+    },
+    "scholarlyMetadata.journal": {
+      "source": "Journal: {value}",
+      "text": "期刊：{value}"
+    },
+    "scholarlyMetadata.published": {
+      "source": "Publication date: {value}",
+      "text": "发布日期：{value}"
+    },
+    "scholarlyMetadata.doi": {
+      "source": "DOI: {value}",
+      "text": "DOI：{value}"
+    },
+    "scholarlyMetadata.arxiv": {
+      "source": "arXiv: {value}",
+      "text": "arXiv：{value}"
+    },
+    "scholarlyMetadata.observed": {
+      "source": "Metadata observed {retrievedAt}; author distribution rights are not verified.",
+      "text": "元数据观察于 {retrievedAt}；作者分发权未核验。"
+    },
+    "reportReading.title": {
+      "source": "The reading",
+      "text": "阅读内容"
+    },
+    "reportReading.metadataOnly": {
+      "source": "Metadata only",
+      "text": "仅元数据"
+    },
+    "reportReading.bibliographyNotice": {
+      "source": "Original bibliographic metadata · no scientific claim assessment",
+      "text": "原始文献元数据 · 无科学主张评估"
+    },
+    "reportReading.portfolioTitle": {
+      "source": "CACHE costs one attention slot but zero fetch USDC; evidence yield counts selected reads that produced reward-qualifying evidence.",
+      "text": "CACHE 占用一个注意力名额但不花费获取 USDC；证据产出统计生成奖励合格证据的所选阅读。"
+    },
+    "reportReading.sources": {
+      "source": "Cited sources and references",
+      "text": "引用来源及参考资料"
+    },
+    "reportReading.synthetic": {
+      "source": "Synthetic demo content ? illustrative only",
+      "text": "合成演示内容 ? 仅供说明"
+    },
+    "reportReading.evidence": {
+      "source": "Evidence",
+      "text": "证据"
+    },
+    "reportReading.evidenceLedger": {
+      "source": "Evidence ledger — recorded source excerpts",
+      "text": "证据账本 — 已记录来源摘录"
+    },
+    "reportReading.coverageNotice": {
+      "source": "Research targets are unverified topics. Coverage is an estimate of excerpt support, not proof of entailment, factual truth or a complete answer.",
+      "text": "研究目标是未核验主题。覆盖率是摘录支持的估算，不证明蕴含关系、事实真伪或答案完整性。"
+    },
+    "reportReading.noExcerpt": {
+      "source": "No qualifying excerpt recorded",
+      "text": "未记录合格摘录"
+    },
+    "reportReading.simulatedSpend": {
+      "source": "Simulated spend",
+      "text": "模拟支出"
+    },
+    "reportReading.spent": {
+      "source": "Spent",
+      "text": "已花费"
+    },
+    "reportReading.recordedSpend": {
+      "source": "Recorded spend",
+      "text": "记录支出"
+    },
+    "reportReading.simulatedShare": {
+      "source": "Simulated creator share",
+      "text": "模拟创作者份额"
+    },
+    "reportReading.toCreators": {
+      "source": "To creators",
+      "text": "支付给创作者"
+    },
+    "reportReading.recordedShare": {
+      "source": "Recorded creator share",
+      "text": "记录创作者份额"
+    },
+    "reportReading.pendingProof": {
+      "source": "Pending proof",
+      "text": "待凭证"
+    },
+    "reportReading.decisions": {
+      "source": "Decisions",
+      "text": "决策"
+    },
+    "reportReading.copied": {
+      "source": "✓ Copied",
+      "text": "✓ 已复制"
+    },
+    "reportReading.share": {
+      "source": "Share",
+      "text": "分享"
+    },
+    "reportReading.cited.one": {
+      "source": "{count} cited",
+      "text": "引用 {count} 个"
+    },
+    "reportReading.cited.other": {
+      "source": "{count} cited",
+      "text": "引用 {count} 个"
+    },
+    "reportReading.mode": {
+      "source": "{mode} research",
+      "text": "{mode}研究"
+    },
+    "reportReading.preview.one": {
+      "source": "preview plan {covered}/{count} claims",
+      "text": "预览计划 {covered}/{count} 个主张"
+    },
+    "reportReading.preview.other": {
+      "source": "preview plan {covered}/{count} claims",
+      "text": "预览计划 {covered}/{count} 个主张"
+    },
+    "reportReading.portfolio": {
+      "source": "portfolio {selected}/{eligible}",
+      "text": "组合 {selected}/{eligible}"
+    },
+    "reportReading.portfolioYield": {
+      "source": "portfolio {selected}/{eligible} · evidence {yield}%",
+      "text": "组合 {selected}/{eligible} · 证据 {yield}%"
+    },
+    "reportReading.rssFeedBody": {
+      "source": "Free public reference · no creator payment · RSS feed body",
+      "text": "免费公开参考 · 无创作者付款 · RSS 订阅源正文"
+    },
+    "reportReading.rssFullText": {
+      "source": "Free public reference · no creator payment · RSS feed full text",
+      "text": "免费公开参考 · 无创作者付款 · RSS 订阅源全文"
+    },
+    "reportReading.rssDelivery": {
+      "source": "Free public reference · no creator payment · RSS {delivery}",
+      "text": "免费公开参考 · 无创作者付款 · RSS {delivery}"
+    },
+    "reportReading.webText": {
+      "source": "Free public reference · no creator payment · extracted {extraction} text",
+      "text": "免费公开参考 · 无创作者付款 · 提取的 {extraction} 文本"
+    },
+    "reportReading.webBounded": {
+      "source": "Free public reference · no creator payment · extracted {extraction} text (bounded excerpt)",
+      "text": "免费公开参考 · 无创作者付款 · 提取的 {extraction} 文本（有限摘录）"
+    },
+    "reportReading.inspectCitation": {
+      "source": "Inspect evidence for citation {marker}",
+      "text": "检查引用 {marker} 的证据"
+    },
+    "reportReading.planned": {
+      "source": "{amount} planned",
+      "text": "计划 {amount}"
+    },
+    "reportReading.requestedTopic": {
+      "source": "Requested topic (unverified): “{claim}”",
+      "text": "请求主题（未核验）：“{claim}”"
+    },
+    "reportReading.estimated": {
+      "source": "{coverage}% estimated",
+      "text": "估计 {coverage}%"
+    },
+    "reportReading.bought.one": {
+      "source": "{count} bought",
+      "text": "购买 {count} 个"
+    },
+    "reportReading.cached.one": {
+      "source": "{count} cached",
+      "text": "缓存 {count} 个"
+    },
+    "reportReading.skipped.one": {
+      "source": "{count} skipped",
+      "text": "跳过 {count} 个"
+    },
+    "reportReading.bought.other": {
+      "source": "{count} bought",
+      "text": "购买 {count} 个"
+    },
+    "reportReading.cached.other": {
+      "source": "{count} cached",
+      "text": "缓存 {count} 个"
+    },
+    "reportReading.skipped.other": {
+      "source": "{count} skipped",
+      "text": "跳过 {count} 个"
+    },
+    "reportReading.historical": {
+      "source": "{network} · historical",
+      "text": "{network} · 历史"
+    },
+    "citationEvidence.close": {
+      "source": "Close citation evidence",
+      "text": "关闭引用证据"
+    },
+    "citationEvidence.authorNotStored": {
+      "source": "Author name: not stored in this dispatch",
+      "text": "作者姓名：此研究未存储"
+    },
+    "citationEvidence.synthetic": {
+      "source": "Synthetic demo content. Measurements and excerpts are illustrative, not factual evidence. Any real settled payments remain recorded below.",
+      "text": "合成演示内容。测量及摘录仅供说明，不是事实证据。任何真实已结算付款仍在下方记录。"
+    },
+    "citationEvidence.publicReference": {
+      "source": "Free public reference · no creator payment",
+      "text": "免费公开参考 · 无创作者付款"
+    },
+    "citationEvidence.rssNotice": {
+      "source": "Evidence comes from the public RSS feed body. Keryx has not fetched the full article or verified publisher ownership.",
+      "text": "证据来自公开 RSS 订阅源正文。Keryx 未获取完整文章或核验出版者所有权。"
+    },
+    "citationEvidence.supporting": {
+      "source": "Supporting evidence",
+      "text": "支持证据"
+    },
+    "citationEvidence.noExcerpt": {
+      "source": "No supporting excerpt is stored for this citation.",
+      "text": "此引用未存储支持摘录。"
+    },
+    "citationEvidence.reward": {
+      "source": "Creator reward",
+      "text": "创作者奖励"
+    },
+    "citationEvidence.noSettledPayment": {
+      "source": "No settled citation payment is recorded.",
+      "text": "未记录已结算引用付款。"
+    },
+    "citationEvidence.paymentUnavailable": {
+      "source": "Payment detail is unavailable for this citation.",
+      "text": "此引用付款详情不可用。"
+    },
+    "citationEvidence.unverified": {
+      "source": "unverified",
+      "text": "未验证"
+    },
+    "citationEvidence.viewTransaction": {
+      "source": "View transaction ↗",
+      "text": "查看交易 ↗"
+    },
+    "citationEvidence.openArticle": {
+      "source": "Open source article ↗",
+      "text": "打开来源文章 ↗"
+    },
+    "citationEvidence.rssFullText": {
+      "source": "RSS delivery: full text supplied by the feed",
+      "text": "RSS 交付：订阅源提供全文"
+    },
+    "citationEvidence.rssExcerpt": {
+      "source": "RSS delivery: excerpt",
+      "text": "RSS 交付：摘录"
+    },
+    "citationEvidence.rssAbstract": {
+      "source": "RSS delivery: abstract",
+      "text": "RSS 交付：摘要"
+    },
+    "citationEvidence.rssMetadata": {
+      "source": "RSS delivery: metadata only",
+      "text": "RSS 交付：仅元数据"
+    },
+    "citationEvidence.rssBody": {
+      "source": "RSS delivery: body supplied by the feed",
+      "text": "RSS 交付：订阅源提供正文"
+    },
+    "citationEvidence.citation": {
+      "source": "Citation {marker}",
+      "text": "引用 {marker}"
+    },
+    "citationEvidence.publication": {
+      "source": "Publication: {publication}",
+      "text": "出版物：{publication}"
+    },
+    "citationEvidence.webText": {
+      "source": "Original page: extracted {extraction} text; retrieved {retrievedAt}",
+      "text": "原页面：提取的 {extraction} 文本；获取于 {retrievedAt}"
+    },
+    "citationEvidence.webBounded": {
+      "source": "Original page: extracted {extraction} text (bounded excerpt); retrieved {retrievedAt}",
+      "text": "原页面：提取的 {extraction} 文本（有限摘录）；获取于 {retrievedAt}"
+    },
+    "citationEvidence.groundingNotice": {
+      "source": "Quotes match text extracted from the original public document. This establishes source grounding, not factual verification or guaranteed complete content. Publisher group {publisherGroup} uses a registrable-domain proxy; it does not prove ownership or independent corroboration.",
+      "text": "引文匹配从原公开文档提取的文本。这确立来源依据，不是事实核验或完整内容保证。出版者组 {publisherGroup} 使用可注册域名近似，不能证明所有权或独立佐证。"
+    },
+    "citationEvidence.target": {
+      "source": "Research target (unverified): “{claim}”",
+      "text": "研究目标（未核验）：“{claim}”"
+    },
+    "citationEvidence.contribution": {
+      "source": "{weight}% contribution weight",
+      "text": "{weight}% 贡献权重"
+    },
+    "citationEvidence.settledUnknown.one": {
+      "source": "Settled amount unavailable across {count} author payment.",
+      "text": "{count} 笔作者付款的已结算金额不可用。"
+    },
+    "citationEvidence.settled.one": {
+      "source": "{amount} settled across {count} author payment.",
+      "text": "{count} 笔作者付款已结算 {amount}。"
+    },
+    "citationEvidence.pending.one": {
+      "source": "{count} payment is pending confirmation.",
+      "text": "{count} 笔付款待确认。"
+    },
+    "citationEvidence.failed.one": {
+      "source": "{count} payment failed.",
+      "text": "{count} 笔付款失败。"
+    },
+    "citationEvidence.simulated.one": {
+      "source": "{count} offline simulated payment.",
+      "text": "{count} 笔离线模拟付款。"
+    },
+    "citationEvidence.conflicting.one": {
+      "source": "{count} payment record has conflicting settlement fields; confirmation is unavailable.",
+      "text": "{count} 条付款记录结算字段冲突；确认不可用。"
+    },
+    "citationEvidence.settledUnknown.other": {
+      "source": "Settled amount unavailable across {count} author payments.",
+      "text": "{count} 笔作者付款的已结算金额不可用。"
+    },
+    "citationEvidence.settled.other": {
+      "source": "{amount} settled across {count} author payments.",
+      "text": "{count} 笔作者付款已结算 {amount}。"
+    },
+    "citationEvidence.pending.other": {
+      "source": "{count} payment are pending confirmation.",
+      "text": "{count} 笔付款待确认。"
+    },
+    "citationEvidence.failed.other": {
+      "source": "{count} payment legs failed.",
+      "text": "{count} 个付款环节失败。"
+    },
+    "citationEvidence.simulated.other": {
+      "source": "{count} offline simulated payments.",
+      "text": "{count} 笔离线模拟付款。"
+    },
+    "citationEvidence.conflicting.other": {
+      "source": "{count} payment record has conflicting settlement fields; confirmation is unavailable.",
+      "text": "{count} 条付款记录结算字段冲突；确认不可用。"
+    },
+    "citationEvidence.payment": {
+      "source": "{status} · {amount} USDC on {network} · recipient {payee}",
+      "text": "{status} · {network} 上 {amount} USDC · 接收者 {payee}"
+    },
+    "citationEvidence.settlementId": {
+      "source": "· Circle settlement ID {reference}",
+      "text": "· Circle 结算 ID {reference}"
+    },
+    "citationEvidence.planned": {
+      "source": "Planned citation reward: {amount}",
+      "text": "计划引用奖励：{amount}"
+    },
+    "paperCard.contributorsUnavailable": {
+      "source": "Contributors unavailable",
+      "text": "贡献者不可用"
+    },
+    "paperCard.kicker": {
+      "source": "Research paper · metadata only",
+      "text": "研究论文 · 仅元数据"
+    },
+    "paperCard.openRecord": {
+      "source": "Open paper record ↗",
+      "text": "打开论文记录 ↗"
+    },
+    "paperCard.ask": {
+      "source": "Ask with this paper →",
+      "text": "使用此论文提问 →"
+    },
+    "paperCard.draftNotice": {
+      "source": "Opens an editable question draft. Paper text has not been read here; abstract-only and bounded full-text reads are labelled when research runs.",
+      "text": "打开可编辑问题草稿。此处未阅读论文文本；研究运行时标注仅摘要及有限全文阅读。"
+    },
+    "paperCard.contributors.one": {
+      "source": "Incomplete contributor list: {recorded} of {count} provider entries have names here.",
+      "text": "贡献者列表不完整：{count} 项服务商条目中，{recorded} 项在此有姓名。"
+    },
+    "paperCard.inspectRecords.one": {
+      "source": "Inspect all {count} observed records",
+      "text": "检查全部 {count} 条观察记录"
+    },
+    "paperCard.contributors.other": {
+      "source": "Incomplete contributor list: {recorded} of {count} provider entries have names here.",
+      "text": "贡献者列表不完整：{count} 项服务商条目中，{recorded} 项在此有姓名。"
+    },
+    "paperCard.inspectRecords.other": {
+      "source": "Inspect all {count} observed records",
+      "text": "检查全部 {count} 条观察记录"
+    },
+    "paperCard.observed": {
+      "source": "Metadata observed {date} · {repository}",
+      "text": "元数据观察于 {date} · {repository}"
+    },
+    "paperCard.preprint": {
+      "source": "Preprint · Peer review unknown",
+      "text": "预印本 · 同行评审未知"
+    },
+    "paperCard.conference": {
+      "source": "Conference paper · Peer review unknown",
+      "text": "会议论文 · 同行评审未知"
+    },
+    "paperCard.journal": {
+      "source": "Journal article · Peer review unknown",
+      "text": "期刊文章 · 同行评审未知"
+    },
+    "paperCard.unknown": {
+      "source": "Publication type unknown · Peer review unknown",
+      "text": "出版类型未知 · 同行评审未知"
+    },
+    "paperSave.saved": {
+      "source": "Saved · Open literature workspace →",
+      "text": "已保存 · 打开文献工作区 →"
+    },
+    "paperSave.failed": {
+      "source": "Paper could not be saved.",
+      "text": "无法保存论文。"
+    },
+    "paperSave.save": {
+      "source": "Save to literature workspace",
+      "text": "保存到文献工作区"
+    },
+    "paperSave.notice": {
+      "source": "Paper metadata saved on this browser. No sign-in needed.",
+      "text": "论文元数据已保存在此浏览器。无需登录。"
+    },
+    "paperSave.open": {
+      "source": "Open workspace",
+      "text": "打开工作区"
+    },
+    "paperSearch.title": {
+      "source": "Search beyond the starter library",
+      "text": "搜索初始资料库以外的内容"
+    },
+    "paperSearch.privacy": {
+      "source": "Submitting sends your query or identifier to arXiv and Crossref as applicable. Results are bibliographic previews; metadata search does not read papers, run a model or make payments.",
+      "text": "提交按需向 arXiv 和 Crossref 发送查询或标识。结果为文献预览；元数据搜索不阅读论文、不运行模型，也不付款。"
+    },
+    "paperSearch.busyError": {
+      "source": "Paper search is busy. Wait a minute before another search.",
+      "text": "论文搜索繁忙。再次搜索前请等待一分钟。"
+    },
+    "paperSearch.incomplete": {
+      "source": "Paper search could not be completed. Check the query or try later.",
+      "text": "无法完成论文搜索。检查查询或稍后重试。"
+    },
+    "paperSearch.unsupported": {
+      "source": "Paper search returned an unsupported response.",
+      "text": "论文搜索返回不支持的响应。"
+    },
+    "paperSearch.unavailable": {
+      "source": "Paper search unavailable.",
+      "text": "论文搜索不可用。"
+    },
+    "paperSearch.query": {
+      "source": "Title, topic, DOI or versioned arXiv identifier",
+      "text": "标题、主题、DOI 或带版本 arXiv 标识"
+    },
+    "paperSearch.placeholder": {
+      "source": "Retrieval augmented generation",
+      "text": "检索增强生成"
+    },
+    "paperSearch.searching": {
+      "source": "Searching…",
+      "text": "正在搜索…"
+    },
+    "paperSearch.search": {
+      "source": "Search repositories",
+      "text": "搜索资料库"
+    },
+    "paperSearch.cancel": {
+      "source": "Cancel",
+      "text": "取消"
+    },
+    "paperSearch.limits": {
+      "source": "Titles and topics: up to 120 characters. Exact DOI: up to 200. Use at most two exact identifiers per search.",
+      "text": "标题及主题：最多 120 字符。确切 DOI：最多 200。每次搜索最多两个确切标识。"
+    },
+    "paperSearch.filters": {
+      "source": "Author/year filters above also filter the returned bibliographic sample.",
+      "text": "上方作者/年份筛选也应用于返回的文献样本。"
+    },
+    "paperSearch.requesting": {
+      "source": "Requesting bounded bibliographic records…",
+      "text": "正在请求有限文献记录…"
+    },
+    "paperSearch.sampleNotice": {
+      "source": "Up to two provider requests and six records per provider response. This is a bounded sample, not a complete literature review. Matching starter records are included; unavailable providers remain explicit.",
+      "text": "最多两次服务商请求，每次响应六条记录。这是有限样本，不是完整文献综述。包含匹配的初始记录；不可用服务商明确显示。"
+    },
+    "paperSearch.matches.one": {
+      "source": "{count} matching works in this bounded result set.",
+      "text": "此有界结果集包含 {count} 部匹配作品。"
+    },
+    "paperSearch.providerRecords.one": {
+      "source": "{provider}: {count} observed records",
+      "text": "{provider}：{count} 条观察记录"
+    },
+    "paperSearch.matches.other": {
+      "source": "{count} matching works in this bounded result set.",
+      "text": "此有界结果集包含 {count} 部匹配作品。"
+    },
+    "paperSearch.providerRecords.other": {
+      "source": "{provider}: {count} observed records",
+      "text": "{provider}：{count} 条观察记录"
+    },
+    "paperSearch.providerUnavailable": {
+      "source": "{provider}: temporarily unavailable; no empty result inferred",
+      "text": "{provider}：暂不可用；不推断空结果"
+    },
+    "paperSearch.providerEmpty": {
+      "source": "{provider}: no matching records accepted",
+      "text": "{provider}：无匹配记录被接受"
+    },
+    "literatureComparison.label": {
+      "source": "Comparison selection",
+      "text": "比较选择"
+    },
+    "literatureComparison.title": {
+      "source": "Papers selected for comparison",
+      "text": "已选择比较的论文"
+    },
+    "literatureComparison.outsideFilter": {
+      "source": "Outside the current screening filter; still selected.",
+      "text": "不在当前筛选过滤内；仍已选中。"
+    },
+    "literatureComparison.remove": {
+      "source": "Remove from comparison",
+      "text": "从比较中移除"
+    },
+    "literatureComparison.focus": {
+      "source": "Saved focus used in the draft",
+      "text": "草稿使用已保存焦点"
+    },
+    "literatureComparison.noFocus": {
+      "source": "No saved review focus. The draft uses the general comparison questions.",
+      "text": "无已保存综述焦点。草稿使用通用比较问题。"
+    },
+    "literatureComparison.reviewQuestion": {
+      "source": "Review prepared question",
+      "text": "审阅准备的问题"
+    },
+    "literatureComparison.preparedQuestion": {
+      "source": "Prepared comparison question",
+      "text": "准备的比较问题"
+    },
+    "literatureComparison.paper": {
+      "source": "Paper {number} · {screening} · {repository}",
+      "text": "论文 {number} · {screening} · {repository}"
+    },
+    "literatureComparison.removeLabel": {
+      "source": "Remove paper {number} from comparison",
+      "text": "从比较移除论文 {number}"
+    },
+    "archivePages.label": {
+      "source": "Archive pages",
+      "text": "档案页面"
+    },
+    "archivePages.newer": {
+      "source": "← Newer",
+      "text": "← 较新"
+    },
+    "archivePages.older": {
+      "source": "Older →",
+      "text": "较旧 →"
+    },
+    "archiveTopics.label": {
+      "source": "Answer topics",
+      "text": "答案主题"
+    },
+    "archiveTopics.title": {
+      "source": "Topics",
+      "text": "主题"
+    },
+    "archiveTopics.all": {
+      "source": "← all",
+      "text": "← 全部"
+    },
+    "archiveTopics.more.one": {
+      "source": "More topics ({count})",
+      "text": "更多主题（{count}）"
+    },
+    "archiveTopics.more.other": {
+      "source": "More topics ({count})",
+      "text": "更多主题（{count}）"
+    },
+    "archiveFilter.placeholder": {
+      "source": "Filter these answers…",
+      "text": "筛选这些答案…"
+    },
+    "archiveFilter.label": {
+      "source": "Filter answers",
+      "text": "筛选答案"
+    },
+    "archiveFilter.found.one": {
+      "source": "{count} found",
+      "text": "找到 {count} 个"
+    },
+    "archiveFilter.elsewhere.one": {
+      "source": "Elsewhere in the archive · {count}",
+      "text": "归档中的其他内容 · {count}"
+    },
+    "archiveFilter.more.one": {
+      "source": "+ {count} more — narrow the filter",
+      "text": "+ 另有 {count} 个 — 请缩小筛选范围"
+    },
+    "archiveFilter.found.other": {
+      "source": "{count} found",
+      "text": "找到 {count} 个"
+    },
+    "archiveFilter.elsewhere.other": {
+      "source": "Elsewhere in the archive · {count}",
+      "text": "归档中的其他内容 · {count}"
+    },
+    "archiveFilter.more.other": {
+      "source": "+ {count} more — narrow the filter",
+      "text": "+ 另有 {count} 个 — 请缩小筛选范围"
+    },
+    "archiveFilter.empty": {
+      "source": "No answer in the archive matches “{query}” yet — ask it, and Keryx will pay the sources that answer it.",
+      "text": "档案尚无匹配“{query}”的答案；提出问题，Keryx 将向回答它的来源付款。"
+    },
+    "archiveIndex.feed": {
+      "source": "Atom feed ↗",
+      "text": "Atom 订阅 ↗"
+    },
+    "archiveLanguage.label": {
+      "source": "Answer language",
+      "text": "答案语言"
+    },
+    "archiveLanguage.all": {
+      "source": "All languages",
+      "text": "全部语言"
+    },
+    "archiveLanguage.undetermined": {
+      "source": "Undetermined",
+      "text": "未确定"
+    },
+    "archiveLanguage.option": {
+      "source": "{language} ({count})",
+      "text": "{language}（{count}）"
+    },
+    "archiveLanguage.notice": {
+      "source": "Language labels come from recorded answer evidence. Historical answers without that evidence remain undetermined.",
+      "text": "语言标签来自已记录答案证据。缺少该证据的历史答案保持未确定。"
+    },
+    "archiveIndex.empty": {
+      "source": "No cited answers are available in the archive yet.",
+      "text": "档案尚无带引用答案。"
+    },
+    "archiveIndex.testnet": {
+      "source": "Browse all testnet questions, including uncited answers →",
+      "text": "浏览全部测试网问题，包括无引用答案 →"
+    },
+    "archiveIndex.ask": {
+      "source": "Ask your own question ▸",
+      "text": "提出自己的问题 ▸"
+    },
+    "archiveIndex.kicker": {
+      "source": "The archive",
+      "text": "归档"
+    },
+    "archiveIndex.page": {
+      "source": "The archive · page {page} of {pages}",
+      "text": "档案 · 第 {page} 页，共 {pages} 页"
+    },
+    "archiveIndex.title": {
+      "source": "Past answers, {emphasis}",
+      "text": "以往答案，{emphasis}"
+    },
+    "archiveIndex.emphasis": {
+      "source": "with sources.",
+      "text": "附有来源。"
+    },
+    "archiveIndex.summary.one": {
+      "source": "{count} cited answer from Keryx research history. Historical testnet entries retain their original network. Individual dispatches show whether payments settled, remain pending, or were simulated.",
+      "text": "Keryx 研究历史中 {count} 个带引用答案。历史测试网条目保留原网络。各研究显示付款已结算、待处理或模拟。"
+    },
+    "archiveIndex.summary.other": {
+      "source": "{count} cited answers from Keryx research history. Historical testnet entries retain their original network. Individual dispatches show whether payments settled, remain pending, or were simulated.",
+      "text": "Keryx 研究历史中 {count} 个带引用答案。历史测试网条目保留原网络。各研究显示付款已结算、待处理或模拟。"
+    },
+    "dispatchWire.settled": {
+      "source": "Settled",
+      "term": "settled"
+    },
+    "dispatchWire.citations": {
+      "source": "Settled citations",
+      "text": "已结算引用"
+    },
+    "dispatchWire.loading": {
+      "source": "Loading settlements…",
+      "text": "正在加载结算…"
+    },
+    "dispatchWire.unavailable": {
+      "source": "Payment feed unavailable.",
+      "text": "付款订阅不可用。"
+    },
+    "dispatchWire.paid": {
+      "source": "PAID",
+      "text": "已付款"
+    },
+    "dispatchWire.retry": {
+      "source": "Retry",
+      "text": "重试"
+    },
+    "reportFreshness.label": {
+      "source": "Answer freshness",
+      "text": "答案时效"
+    },
+    "reportFreshness.moved": {
+      "source": "Exact citation version moved",
+      "text": "确切引用版本已变化"
+    },
+    "reportFreshness.partial": {
+      "source": "This audit is partial: some current source, version, or publication metadata was unavailable.",
+      "text": "此审计不完整：部分当前来源、版本或发布元数据不可用。"
+    },
+    "reportFreshness.incomplete": {
+      "source": "Version check incomplete",
+      "text": "版本检查不完整"
+    },
+    "reportFreshness.incompleteNotice": {
+      "source": "Keryx could not complete every current source, exact-version, and publication-date check. The archived evidence remains intact, but silence here is not proof that the source is unchanged.",
+      "text": "Keryx 无法完成所有当前来源、确切版本及发布日期检查。归档证据保持完整，但此处无提示不证明来源未变化。"
+    },
+    "reportFreshness.current": {
+      "source": "Exact receipt still current",
+      "text": "确切收据仍当前有效"
+    },
+    "reportFreshness.new": {
+      "source": "New material since this dispatch",
+      "text": "此研究之后的新材料"
+    },
+    "reportFreshness.partialCurrent": {
+      "source": "Audit partial — unavailable checks are not counted as current.",
+      "text": "审计不完整，不可用检查不计为当前有效。"
+    },
+    "reportFreshness.audit": {
+      "source": "Inspect machine-readable audit",
+      "text": "查看机器可读审计"
+    },
+    "reportFreshness.jsonAudit": {
+      "source": "JSON audit",
+      "text": "JSON 审计"
+    },
+    "reportFreshness.reask": {
+      "source": "Re-ask on current sources",
+      "text": "使用当前来源重新提问"
+    },
+    "reportFreshness.superseded.one": {
+      "source": "{changed} of {count} versioned citation no longer match the article asset Keryx currently indexes. The archived quotes and payments remain bound to the exact version bought for this dispatch; Keryx has not bought or judged the replacement.",
+      "text": "{count} 个带版本引用中，{changed} 个不再匹配 Keryx 当前索引的文章资产。归档引文及付款仍绑定此次研究购买的确切版本；Keryx 未购买或评判替代版本。"
+    },
+    "reportFreshness.superseded.other": {
+      "source": "{changed} of {count} versioned citations no longer match the article asset Keryx currently indexes. The archived quotes and payments remain bound to the exact version bought for this dispatch; Keryx has not bought or judged the replacement.",
+      "text": "{count} 个带版本引用中，{changed} 个不再匹配 Keryx 当前索引的文章资产。归档引文及付款仍绑定此次研究购买的确切版本；Keryx 未购买或评判替代版本。"
+    },
+    "reportFreshness.changedAsset": {
+      "source": "{title} · changed",
+      "text": "{title} · 已变化"
+    },
+    "reportFreshness.newFeedItems.one": {
+      "source": "The cited feeds also contain {count} newly published post since this dispatch.",
+      "text": "所引用订阅源还包含此研究之后新发布的 {count} 篇文章。"
+    },
+    "reportFreshness.newFeedItems.other": {
+      "source": "The cited feeds also contain {count} newly published posts since this dispatch.",
+      "text": "所引用订阅源还包含此研究之后新发布的 {count} 篇文章。"
+    },
+    "reportFreshness.currentVersions.one": {
+      "source": "{count} exact cited article version still match Keryx's current index.",
+      "text": "{count} 个确切引用文章版本仍匹配 Keryx 当前索引。"
+    },
+    "reportFreshness.currentVersions.other": {
+      "source": "{count} exact cited article versions still match Keryx's current index.",
+      "text": "{count} 个确切引用文章版本仍匹配 Keryx 当前索引。"
+    },
+    "reportFreshness.quietAll.one": {
+      "source": "The source cited here has published nothing new since this dispatch settled.",
+      "text": "此处引用来源自研究结算以来未发布新内容。"
+    },
+    "reportFreshness.quietAll.other": {
+      "source": "All {count} sources cited here have published nothing new since this dispatch settled.",
+      "text": "此处引用的全部 {count} 个来源自研究结算以来未发布新内容。"
+    },
+    "reportFreshness.quietWatched.one": {
+      "source": "The one cited source Keryx follows a feed for has published nothing new since this dispatch settled.",
+      "text": "Keryx 跟踪订阅源的一个引用来源自研究结算以来未发布新内容。"
+    },
+    "reportFreshness.quietWatched.other": {
+      "source": "The {watched} of {count} cited sources Keryx follows a feed for have published nothing new since this dispatch settled.",
+      "text": "{count} 个引用来源中，Keryx 跟踪订阅源的 {watched} 个自研究结算以来未发布新内容。"
+    },
+    "reportFreshness.newFromOne.one": {
+      "source": "{count} new post has been published by the one source this answer cited. This dispatch never read it — it settled before it existed.",
+      "text": "此答案引用的一个来源发布了 {count} 篇新文章。此研究从未阅读它；结算早于其出现。"
+    },
+    "reportFreshness.newFromAll.one": {
+      "source": "{count} new post has been published by all {cited} sources this answer cited. This dispatch never read it — it settled before it existed.",
+      "text": "此答案引用的全部 {cited} 个来源发布了 {count} 篇新文章。此研究从未阅读它；结算早于其出现。"
+    },
+    "reportFreshness.newFromSubset.one": {
+      "source": "{count} new post has been published by {moved} of the {cited} sources this answer cited. This dispatch never read it — it settled before it existed.",
+      "text": "此答案引用的 {cited} 个来源中，{moved} 个发布了 {count} 篇新文章。此研究从未阅读它；结算早于其出现。"
+    },
+    "reportFreshness.newFromOne.other": {
+      "source": "{count} new posts have been published by the one source this answer cited. This dispatch never read them — it settled before they existed.",
+      "text": "此答案引用的一个来源发布了 {count} 篇新文章。此研究从未阅读它们；结算早于其出现。"
+    },
+    "reportFreshness.newFromAll.other": {
+      "source": "{count} new posts have been published by all {cited} sources this answer cited. This dispatch never read them — it settled before they existed.",
+      "text": "此答案引用的全部 {cited} 个来源发布了 {count} 篇新文章。此研究从未阅读它们；结算早于其出现。"
+    },
+    "reportFreshness.newFromSubset.other": {
+      "source": "{count} new posts have been published by {moved} of the {cited} sources this answer cited. This dispatch never read them — it settled before they existed.",
+      "text": "此答案引用的 {cited} 个来源中，{moved} 个发布了 {count} 篇新文章。此研究从未阅读它们；结算早于其出现。"
+    },
+    "reportFreshness.versionSummary.one": {
+      "source": "{current}/{count} exact cited article versions still match the current Keryx index; new posts are separate assets this dispatch never read.",
+      "text": "{current}/{count} 个确切引用文章版本仍匹配当前 Keryx 索引；新文章是此研究从未阅读的独立资产。"
+    },
+    "reportFreshness.versionSummary.other": {
+      "source": "{current}/{count} exact cited article versions still match the current Keryx index; new posts are separate assets this dispatch never read.",
+      "text": "{current}/{count} 个确切引用文章版本仍匹配当前 Keryx 索引；新文章是此研究从未阅读的独立资产。"
+    },
+    "reportFreshness.reaskNotice": {
+      "source": "Re-asking buys current material and pays its creators again. The archived receipt never changes.  {audit}",
+      "text": "重新提问会购买当前材料并再次向创作者付款。归档收据永不更改。  {audit}"
+    },
+    "literatureWorkspace.staleFocusError": {
+      "source": "Your review focus changed in another tab. Load the saved focus before saving again.",
+      "text": "综述焦点在另一标签页更改。再次保存前加载已保存焦点。"
+    },
+    "literatureWorkspace.focusSaved": {
+      "source": "Review focus saved on this browser.",
+      "text": "综述焦点已保存在此浏览器。"
+    },
+    "literatureWorkspace.titleLabel": {
+      "source": "Review title",
+      "text": "综述标题"
+    },
+    "literatureWorkspace.titlePlaceholder": {
+      "source": "My literature review",
+      "text": "我的文献综述"
+    },
+    "literatureWorkspace.questionLabel": {
+      "source": "Research question or inclusion criteria",
+      "text": "研究问题或纳入标准"
+    },
+    "literatureWorkspace.staleFocus": {
+      "source": "The saved review focus changed in another tab or restore. Your unsaved draft is still here.",
+      "text": "已保存综述焦点在其他标签页或恢复中更改。未保存草稿仍在此。"
+    },
+    "literatureWorkspace.loadFocus": {
+      "source": "Load saved focus",
+      "text": "加载已保存焦点"
+    },
+    "literatureWorkspace.saveFocus": {
+      "source": "Save review focus",
+      "text": "保存综述焦点"
+    },
+    "literatureWorkspace.stalePaperError": {
+      "source": "This paper changed in another tab. Load its saved screening before saving again.",
+      "text": "论文在另一标签页更改。再次保存前加载已保存筛选。"
+    },
+    "literatureWorkspace.screeningSaved": {
+      "source": "Screening and notes saved on this browser.",
+      "text": "筛选及笔记已保存在此浏览器。"
+    },
+    "literatureWorkspace.screeningDecision": {
+      "source": "Your screening decision",
+      "text": "您的筛选决定"
+    },
+    "literatureWorkspace.notesLabel": {
+      "source": "Why keep or exclude this paper? What needs checking?",
+      "text": "为何保留或排除此论文？哪些内容需检查？"
+    },
+    "literatureWorkspace.staleScreening": {
+      "source": "Saved screening changed in another tab or restore. Your unsaved notes are still here.",
+      "text": "已保存筛选在其他标签页或恢复中更改。未保存笔记仍在此。"
+    },
+    "literatureWorkspace.loadScreening": {
+      "source": "Load saved screening",
+      "text": "加载已保存筛选"
+    },
+    "literatureWorkspace.notesNotice": {
+      "source": "These are your own notes. Saving them does not read the paper or verify its findings.",
+      "text": "这些是您的个人笔记。保存不阅读论文，也不核验发现。"
+    },
+    "literatureWorkspace.saveScreening": {
+      "source": "Save screening and notes",
+      "text": "保存筛选及笔记"
+    },
+    "literatureWorkspace.compare": {
+      "source": "Compare",
+      "text": "比较"
+    },
+    "literatureWorkspace.contributorsUnavailable": {
+      "source": "Contributors unavailable",
+      "text": "贡献者不可用"
+    },
+    "literatureWorkspace.open": {
+      "source": "Open paper record ↗",
+      "text": "打开论文记录 ↗"
+    },
+    "literatureWorkspace.notes": {
+      "source": "Your screening notes",
+      "text": "您的筛选笔记"
+    },
+    "literatureWorkspace.editNotes": {
+      "source": "Edit screening and notes",
+      "text": "编辑筛选及笔记"
+    },
+    "literatureWorkspace.removalDetails": {
+      "source": "Saved record and removal",
+      "text": "保存记录及移除"
+    },
+    "literatureWorkspace.removeConfirm": {
+      "source": "Remove this paper and its screening notes from this browser?",
+      "text": "从此浏览器移除此论文及筛选笔记？"
+    },
+    "literatureWorkspace.removeCancelled": {
+      "source": "Removal cancelled. Your paper is still saved.",
+      "text": "已取消移除。论文仍已保存。"
+    },
+    "literatureWorkspace.removed": {
+      "source": "Paper removed from this browser.",
+      "text": "论文已从此浏览器移除。"
+    },
+    "literatureWorkspace.remove": {
+      "source": "Remove saved paper",
+      "text": "移除已保存论文"
+    },
+    "literatureWorkspace.actionFailed": {
+      "source": "The workspace action failed.",
+      "text": "工作区操作失败。"
+    },
+    "literatureWorkspace.privacy": {
+      "source": "Saved only in this browser, without an account or cloud sync. Export a backup before clearing browser data or changing devices. Notes stay here; preparing a comparison uses only your research question and the two paper links.",
+      "text": "仅保存在此浏览器，无账户或云同步。清除浏览器数据或更换设备前导出备份。笔记留在此处；准备比较仅使用研究问题及两篇论文链接。"
+    },
+    "literatureWorkspace.loading": {
+      "source": "Loading your saved workspace…",
+      "text": "正在加载已保存工作区…"
+    },
+    "literatureWorkspace.focusTitle": {
+      "source": "Start with your review question",
+      "text": "从综述问题开始"
+    },
+    "literatureWorkspace.focusExample": {
+      "source": "Keep a focus for screening. For example: which retrieval methods improve factual grounding, and under what evaluation conditions?",
+      "text": "保留筛选焦点。例如：哪些检索方法改善事实依据，在什么评估条件下？"
+    },
+    "literatureWorkspace.papers": {
+      "source": "Your papers",
+      "text": "您的论文"
+    },
+    "literatureWorkspace.find": {
+      "source": "Find and save papers →",
+      "text": "查找并保存论文 →"
+    },
+    "literatureWorkspace.filter": {
+      "source": "Show screening decisions",
+      "text": "显示筛选决定"
+    },
+    "literatureWorkspace.filterAll": {
+      "source": "All saved papers",
+      "text": "全部已保存论文"
+    },
+    "literatureWorkspace.ris": {
+      "source": "Download shown references (RIS)",
+      "text": "下载显示的参考资料（RIS）"
+    },
+    "literatureWorkspace.csl": {
+      "source": "Download shown references (CSL-JSON)",
+      "text": "下载显示的参考资料（CSL-JSON）"
+    },
+    "literatureWorkspace.referencesNotice": {
+      "source": "Reference exports contain only the papers shown by this filter, for a reference manager such as Zotero. They keep saved metadata and exact versions; your review question, screening decisions and personal notes stay out of these files. CSL-JSON reference keys stay the same when you reorder or filter saved papers.",
+      "text": "参考导出仅包含此过滤器显示的论文，可用于 Zotero 等参考管理器。保留已保存元数据及确切版本，不包含综述问题、筛选决定或个人笔记。重排或筛选论文时，CSL-JSON 参考键保持不变。"
+    },
+    "literatureWorkspace.compareNotice": {
+      "source": "Select two saved papers to prepare an editable comparison using your saved review question. Deep research can inspect more targets; its existing reading, evidence, availability and budget limits still apply.",
+      "text": "选择两篇已保存论文，用已保存综述问题准备可编辑比较。Deep 研究可检查更多目标；仍适用现有阅读、证据、可用性及预算限制。"
+    },
+    "literatureWorkspace.prepare": {
+      "source": "Prepare comparison →",
+      "text": "准备比较 →"
+    },
+    "literatureWorkspace.selectTwo": {
+      "source": "Select two papers to compare",
+      "text": "选择两篇论文比较"
+    },
+    "literatureWorkspace.clearSelection": {
+      "source": "Clear comparison selection",
+      "text": "清除比较选择"
+    },
+    "literatureWorkspace.draftPrivacy": {
+      "source": "Opens the question composer for your review. The question and links enter its URL and browser history. Nothing is submitted automatically; paper text has not been read by this workspace.",
+      "text": "打开问题编辑器供您审阅。问题及链接进入 URL 和浏览器历史。不会自动提交；此工作区未阅读论文文本。"
+    },
+    "literatureWorkspace.emptyTitle": {
+      "source": "Build a review you can return to.",
+      "text": "建立可再次访问的综述。"
+    },
+    "literatureWorkspace.emptyFind": {
+      "source": "Find papers in the starter library or search repositories.",
+      "text": "在初始资料库查找论文或搜索资料库。"
+    },
+    "literatureWorkspace.emptySave": {
+      "source": "Save an exact paper record, then record why it belongs in your review.",
+      "text": "保存确切论文记录，再记录为何纳入综述。"
+    },
+    "literatureWorkspace.emptyCompare": {
+      "source": "Compare two papers or export the screening list to continue your work.",
+      "text": "比较两篇论文或导出筛选列表以继续工作。"
+    },
+    "literatureWorkspace.browse": {
+      "source": "Browse research papers →",
+      "text": "浏览研究论文 →"
+    },
+    "literatureWorkspace.filterEmpty": {
+      "source": "No papers have this screening decision. Choose another filter to see your saved list.",
+      "text": "无论文采用此筛选决定。选择其他过滤器查看已保存列表。"
+    },
+    "literatureWorkspace.portable": {
+      "source": "Keep your work portable",
+      "text": "让工作可携带"
+    },
+    "literatureWorkspace.portableNotice": {
+      "source": "Screening CSV includes all saved papers, your notes and metadata provenance. JSON backup also restores your review focus and screening. These are personal bibliography records; they contain no paper text, generated answer or settlement receipt.",
+      "text": "筛选 CSV 包含全部保存论文、笔记及元数据溯源。JSON 备份还可恢复综述焦点和筛选。这些是个人参考文献记录，不包含论文文本、生成答案或结算收据。"
+    },
+    "literatureWorkspace.csvPrepared": {
+      "source": "Screening CSV download prepared.",
+      "text": "筛选 CSV 下载已准备。"
+    },
+    "literatureWorkspace.csv": {
+      "source": "Download screening CSV",
+      "text": "下载筛选 CSV"
+    },
+    "literatureWorkspace.backupPrepared": {
+      "source": "Workspace backup download prepared.",
+      "text": "工作区备份下载已准备。"
+    },
+    "literatureWorkspace.backup": {
+      "source": "Download JSON backup",
+      "text": "下载 JSON 备份"
+    },
+    "literatureWorkspace.storedPrepared": {
+      "source": "Original stored data download prepared.",
+      "text": "原始存储数据下载已准备。"
+    },
+    "literatureWorkspace.stored": {
+      "source": "Download stored data",
+      "text": "下载存储数据"
+    },
+    "literatureWorkspace.restoreLabel": {
+      "source": "Restore a workspace backup (JSON, up to 1 MiB)",
+      "text": "恢复工作区备份（JSON，最多 1 MiB）"
+    },
+    "literatureWorkspace.tooLarge": {
+      "source": "Backup exceeds the 1 MiB limit. Existing workspace has been kept.",
+      "text": "备份超过 1 MiB 上限。现有工作区已保留。"
+    },
+    "literatureWorkspace.unreadable": {
+      "source": "Backup could not be read.",
+      "text": "无法读取备份。"
+    },
+    "literatureWorkspace.untitled": {
+      "source": "Untitled review",
+      "text": "无标题综述"
+    },
+    "literatureWorkspace.restoreNotice": {
+      "source": "Restoring replaces this browser’s entire saved list, focus and notes. Download your current backup first. Imported metadata is not checked against repositories.",
+      "text": "恢复会替换此浏览器全部保存列表、焦点及笔记。请先下载当前备份。导入元数据不与资料库核对。"
+    },
+    "literatureWorkspace.restored": {
+      "source": "Backup restored on this browser.",
+      "text": "备份已在此浏览器恢复。"
+    },
+    "literatureWorkspace.restoring": {
+      "source": "Restoring workspace…",
+      "text": "正在恢复工作区…"
+    },
+    "literatureWorkspace.restore": {
+      "source": "Replace workspace with this backup",
+      "text": "用此备份替换工作区"
+    },
+    "literatureWorkspace.cancelRestore": {
+      "source": "Cancel restore",
+      "text": "取消恢复"
+    },
+    "literatureWorkspace.clearDetails": {
+      "source": "Clear this browser’s literature workspace",
+      "text": "清除此浏览器文献工作区"
+    },
+    "literatureWorkspace.clearNotice": {
+      "source": "Clears only this saved bibliography and notes. Export a backup first.",
+      "text": "仅清除此保存参考文献及笔记。请先导出备份。"
+    },
+    "literatureWorkspace.clearConfirm": {
+      "source": "Clear all saved papers, review focus and notes on this browser? Export a backup first.",
+      "text": "清除此浏览器全部保存论文、综述焦点及笔记？请先导出备份。"
+    },
+    "literatureWorkspace.clearCancelled": {
+      "source": "Clear cancelled. Your workspace has been kept.",
+      "text": "已取消清除。工作区已保留。"
+    },
+    "literatureWorkspace.cleared": {
+      "source": "Literature workspace cleared on this browser.",
+      "text": "此浏览器文献工作区已清除。"
+    },
+    "literatureWorkspace.clear": {
+      "source": "Clear saved workspace",
+      "text": "清除已保存工作区"
+    },
+    "literatureWorkspace.compareLabel": {
+      "source": "Compare {title}",
+      "text": "比较 {title}"
+    },
+    "literatureWorkspace.metadata": {
+      "source": "Metadata only · Peer review unknown",
+      "text": "仅元数据 · 同行评审未知"
+    },
+    "literatureWorkspace.metadataIncomplete": {
+      "source": "Metadata only · Peer review unknown · Incomplete contributors ({recorded}/{total})",
+      "text": "仅元数据 · 同行评审未知 · 贡献者不完整（{recorded}/{total}）"
+    },
+    "literatureWorkspace.observed": {
+      "source": "Metadata observed {date} ↗",
+      "text": "元数据观察于 {date} ↗"
+    },
+    "literatureWorkspace.snapshot": {
+      "source": "Saved {date}. Retains the first saved snapshot of this exact paper link; imported records are not revalidated.",
+      "text": "保存于 {date}。保留此确切论文链接的首个保存快照；导入记录未重新核验。"
+    },
+    "literatureWorkspace.selection.one": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "显示 {count} 个 · 已选 {selected}/2 个用于比较"
+    },
+    "literatureWorkspace.risPrepared.one": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "已为显示的 {count} 篇论文准备 RIS 下载。"
+    },
+    "literatureWorkspace.cslPrepared.one": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "已为显示的 {count} 篇论文准备 CSL-JSON 下载。"
+    },
+    "literatureWorkspace.backupSummary.one": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename}：{count} 篇论文 · {title}"
+    },
+    "literatureWorkspace.selection.other": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "显示 {count} 个 · 已选 {selected}/2 个用于比较"
+    },
+    "literatureWorkspace.risPrepared.other": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "已为显示的 {count} 篇论文准备 RIS 下载。"
+    },
+    "literatureWorkspace.cslPrepared.other": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "已为显示的 {count} 篇论文准备 CSL-JSON 下载。"
+    },
+    "literatureWorkspace.backupSummary.other": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename}：{count} 篇论文 · {title}"
+    },
+    "reportDispatch.notFound": {
+      "source": "Dispatch not found — Keryx",
+      "text": "未找到研究 — Keryx"
+    },
+    "reportDispatch.fallbackTitle": {
+      "source": "Keryx Dispatch",
+      "text": "Keryx 研究"
+    },
+    "reportDispatch.archiveCrumb": {
+      "source": "The Archive",
+      "text": "归档"
+    },
+    "reportDispatch.archive": {
+      "source": "The archive",
+      "text": "归档"
+    },
+    "reportDispatch.new": {
+      "source": "← New dispatch",
+      "text": "← 新研究"
+    },
+    "reportDispatch.parentUnavailable": {
+      "source": "The earlier dispatch could not be loaded. This answer and its payment evidence remain available.",
+      "text": "无法加载较早研究。此答案及付款证据仍可用。"
+    },
+    "reportDispatch.comparisonUnavailable": {
+      "source": "The earlier payment comparison could not be loaded. This answer and its own payment evidence remain available.",
+      "text": "无法加载较早付款比较。此答案及自身付款证据仍可用。"
+    },
+    "reportDispatch.followedBy": {
+      "source": "Followed by",
+      "text": "后续研究"
+    },
+    "reportDispatch.historicalNetwork": {
+      "source": "Arc testnet · historical",
+      "text": "Arc 测试网 · 历史"
+    },
+    "reportDispatch.followUpsUnavailable": {
+      "source": "Some follow-up links could not be loaded. This answer and its payment evidence remain available.",
+      "text": "部分后续链接无法加载。此答案及付款证据仍可用。"
+    },
+    "reportDispatch.title": {
+      "source": "{question} — Keryx Dispatch",
+      "text": "{question} — Keryx 研究"
+    },
+    "reportDispatch.follows": {
+      "source": "Follows up on",
+      "text": "接续研究"
+    },
+    "reportDispatch.followsHistorical": {
+      "source": "Follows up on · Arc testnet",
+      "text": "接续研究 · Arc 测试网"
+    },
+    "reportDispatch.historicalFollowUp": {
+      "source": "A new follow-up runs on {network} with today’s sources and budget. Only the historical question supplies context.",
+      "text": "新的后续研究在 {network} 使用当前来源和预算。仅历史问题提供上下文。"
+    },
+    "reportMetadata.current.plain.one": {
+      "source": "{count} source cited · ${spent} spent · {excerpt}…",
+      "text": "引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.plain.one": {
+      "source": "{count} cited · ${spent} spent · ${creators} to creators",
+      "text": "引用 {count} 个 · 支出 ${spent} · 支付给创作者 ${creators}"
+    },
+    "reportMetadata.current.plain.other": {
+      "source": "{count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.plain.other": {
+      "source": "{count} cited · ${spent} spent · ${creators} to creators",
+      "text": "引用 {count} 个 · 支出 ${spent} · 支付给创作者 ${creators}"
+    },
+    "reportMetadata.current.confidence.one": {
+      "source": "{confidence} confidence · {count} source cited · ${spent} spent · {excerpt}…",
+      "text": "置信度 {confidence} · 引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.confidence.one": {
+      "source": "{confidence} confidence · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "置信度 {confidence} · 引用 {count} 项 · 花费 ${spent} · 创作者获得 ${creators}"
+    },
+    "reportMetadata.current.confidence.other": {
+      "source": "{confidence} confidence · {count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "置信度 {confidence} · 引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.confidence.other": {
+      "source": "{confidence} confidence · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "置信度 {confidence} · 引用 {count} 项 · 花费 ${spent} · 创作者获得 ${creators}"
+    },
+    "reportMetadata.current.bibliography.one": {
+      "source": "Original bibliographic metadata · {count} source cited · ${spent} spent · {excerpt}…",
+      "text": "原始文献元数据 · 引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.bibliography.one": {
+      "source": "Original bibliographic metadata · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "原始文献元数据 · 引用 {count} 项 · 花费 ${spent} · 创作者获得 ${creators}"
+    },
+    "reportMetadata.current.bibliography.other": {
+      "source": "Original bibliographic metadata · {count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "原始文献元数据 · 引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.current.bibliography.other": {
+      "source": "Original bibliographic metadata · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "原始文献元数据 · 引用 {count} 项 · 花费 ${spent} · 创作者获得 ${creators}"
+    },
+    "reportMetadata.historical.plain.one": {
+      "source": "Arc testnet historical · {count} source cited · ${spent} spent · {excerpt}…",
+      "text": "Arc 测试网历史 · 引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.plain.one": {
+      "source": "Arc testnet historical · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Arc 测试网历史 · 引用 {count} 项 · 花费 ${spent} · 创作者获得 ${creators}"
+    },
+    "reportMetadata.historical.plain.other": {
+      "source": "Arc testnet historical · {count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "Arc 测试网历史 · 引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.plain.other": {
+      "source": "Arc testnet historical · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Arc 测试网历史 · 引用 {count} 项 · 花费 ${spent} · 创作者获得 ${creators}"
+    },
+    "reportMetadata.historical.confidence.one": {
+      "source": "Arc testnet historical · {confidence} confidence · {count} source cited · ${spent} spent · {excerpt}…",
+      "text": "Arc 测试网历史 · 置信度 {confidence} · 引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.confidence.one": {
+      "source": "Arc testnet historical · {confidence} confidence · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Arc 测试网历史 · 置信度 {confidence} · 引用 {count} 项 · 花费 ${spent} · 创作者获得 ${creators}"
+    },
+    "reportMetadata.historical.confidence.other": {
+      "source": "Arc testnet historical · {confidence} confidence · {count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "Arc 测试网历史 · 置信度 {confidence} · 引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.confidence.other": {
+      "source": "Arc testnet historical · {confidence} confidence · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Arc 测试网历史 · 置信度 {confidence} · 引用 {count} 项 · 花费 ${spent} · 创作者获得 ${creators}"
+    },
+    "reportMetadata.historical.bibliography.one": {
+      "source": "Arc testnet historical · Original bibliographic metadata · {count} source cited · ${spent} spent · {excerpt}…",
+      "text": "Arc 测试网历史 · 原始文献元数据 · 引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.bibliography.one": {
+      "source": "Arc testnet historical · Original bibliographic metadata · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Arc 测试网历史 · 原始文献元数据 · 引用 {count} 项 · 花费 ${spent} · 创作者获得 ${creators}"
+    },
+    "reportMetadata.historical.bibliography.other": {
+      "source": "Arc testnet historical · Original bibliographic metadata · {count} sources cited · ${spent} spent · {excerpt}…",
+      "text": "Arc 测试网历史 · 原始文献元数据 · 引用 {count} 个来源 · 花费 ${spent} · {excerpt}…"
+    },
+    "reportMetadata.og.historical.bibliography.other": {
+      "source": "Arc testnet historical · Original bibliographic metadata · {count} cited · ${spent} spent · ${creators} to creators",
+      "text": "Arc 测试网历史 · 原始文献元数据 · 引用 {count} 项 · 花费 ${spent} · 创作者获得 ${creators}"
+    },
+    "reportDispatchView.archived": {
+      "source": "Archived dispatch",
+      "text": "已归档研究"
+    },
+    "reportDispatchView.bibliography": {
+      "source": "Original bibliographic metadata",
+      "text": "原始文献元数据"
+    },
+    "reportDispatchView.paymentEvidence": {
+      "source": "Payment evidence",
+      "text": "付款证据"
+    },
+    "reportDispatchView.steps.one": {
+      "source": "Decision log · {count} steps",
+      "text": "决策日志 · {count} 个步骤"
+    },
+    "reportDispatchView.steps.other": {
+      "source": "Decision log · {count} steps",
+      "text": "决策日志 · {count} 个步骤"
+    },
+    "reportSocial.alt": {
+      "source": "Keryx dispatch — question and original payment evidence",
+      "text": "Keryx 研究 — 问题及原付款证据"
+    },
+    "reportSocial.fallback": {
+      "source": "An autonomous Keryx dispatch",
+      "text": "一次自主 Keryx 研究"
+    },
+    "reportSocial.historical": {
+      "source": "Arc testnet archive",
+      "text": "Arc 测试网档案"
+    },
+    "reportSocial.questionLabel": {
+      "source": "The question it was paid to answer",
+      "text": "付费要求回答的问题"
+    },
+    "reportSocial.testnetRecorded": {
+      "source": "testnet USDC recorded",
+      "text": "已记录测试网 USDC"
+    },
+    "reportSocial.recorded": {
+      "source": "USDC recorded",
+      "text": "已记录 USDC"
+    },
+    "reportSocial.creators": {
+      "source": "creator rewards recorded",
+      "text": "已记录创作者奖励"
+    },
+    "reportSocial.tagline": {
+      "source": "The citation toll — creators paid every time an AI cites them",
+      "text": "引用访问费 — AI 每次引用创作者，创作者都获得报酬"
+    },
+    "reportSocial.network": {
+      "source": "Keryx · {network}",
+      "text": "Keryx · {network}"
+    },
+    "reportSocial.serial": {
+      "source": "Series 2026 — No. {serial}",
+      "text": "2026 年系列 — 第 {serial} 期"
+    },
+    "reportSocial.cited.one": {
+      "source": "sources cited",
+      "text": "被引用来源"
+    },
+    "reportSocial.cited.other": {
+      "source": "sources cited",
+      "text": "被引用来源"
+    },
+    "reportTopic.notFound": {
+      "source": "Topic not found — Keryx",
+      "text": "未找到主题 — Keryx"
+    },
+    "reportTopic.archiveName": {
+      "source": "Keryx Answer Archive",
+      "text": "Keryx 答案归档"
+    },
+    "reportTopic.archiveCrumb": {
+      "source": "The Archive",
+      "text": "归档"
+    },
+    "reportTopic.archive": {
+      "source": "The archive",
+      "text": "归档"
+    },
+    "reportTopic.fullArchive": {
+      "source": "the full archive",
+      "text": "完整档案"
+    },
+    "reportTopic.ask": {
+      "source": "Ask your own question ▸",
+      "text": "提出自己的问题 ▸"
+    },
+    "reportTopic.metadataTitle": {
+      "source": "{topic} — cited Keryx answers",
+      "text": "{topic} — 带引用 Keryx 答案"
+    },
+    "reportTopic.collectionName": {
+      "source": "{topic} — Keryx answers",
+      "text": "{topic} — Keryx 答案"
+    },
+    "reportTopic.filter": {
+      "source": "Filter {topic} answers…",
+      "text": "筛选 {topic} 答案…"
+    },
+    "reportTopic.description.one": {
+      "source": "{count} question about {topic} answered by Keryx with cited sources. Open a dispatch to inspect its payment states.",
+      "text": "Keryx 已以引用来源回答 {count} 个关于 {topic} 的问题。打开研究以检查付款状态。"
+    },
+    "reportTopic.description.other": {
+      "source": "{count} questions about {topic} answered by Keryx with cited sources. Open a dispatch to inspect its payment states.",
+      "text": "Keryx 已以引用来源回答 {count} 个关于 {topic} 的问题。打开研究以检查付款状态。"
+    },
+    "reportTopic.heading": {
+      "source": "Answers about {topic}",
+      "text": "关于 {topic} 的答案"
+    },
+    "reportTopic.summary.one": {
+      "source": "{count} cited answer on this topic. Each dispatch retains its network and recorded creator rewards. Testnet amounts remain separate from the current ledger; open individual receipts for settlement states.",
+      "text": "此主题有 {count} 个带引用答案。每次研究保留网络及创作者奖励记录。测试网金额独立于当前账本；打开各收据查看结算状态。"
+    },
+    "reportTopic.summary.other": {
+      "source": "{count} cited answers on this topic. Each dispatch retains its network and recorded creator rewards. Testnet amounts remain separate from the current ledger; open individual receipts for settlement states.",
+      "text": "此主题有 {count} 个带引用答案。每次研究保留网络及创作者奖励记录。测试网金额独立于当前账本；打开各收据查看结算状态。"
+    },
+    "reportTopic.coverage": {
+      "source": "Showing the {shown} most recent of {total} on this beat — the filter above still searches all of them, and {archive} is paginated end to end.",
+      "text": "显示此主题 {total} 项中最新 {shown} 项；上方过滤仍搜索全部，{archive}完整分页。"
+    },
+    "reportArchiveRoute.title": {
+      "source": "The Archive — cited answers from Keryx",
+      "text": "档案 — Keryx 带引用答案"
+    },
+    "reportArchiveRoute.description": {
+      "source": "Browse cited answers from Keryx research history. Open a dispatch to inspect its sources, decisions, and payment states, including settled, pending, or simulated rewards.",
+      "text": "浏览 Keryx 研究历史带引用答案。打开研究查看来源、决策及付款状态，包括已结算、待处理或模拟奖励。"
+    },
+    "reportArchiveRoute.name": {
+      "source": "Keryx Answer Archive",
+      "text": "Keryx 答案归档"
+    },
+    "reportArchiveRoute.crumb": {
+      "source": "The Archive",
+      "text": "归档"
+    },
+    "reportArchiveRoute.notFound": {
+      "source": "Archive page not found — Keryx",
+      "text": "未找到档案页 — Keryx"
+    },
+    "reportArchiveRoute.pageTitle": {
+      "source": "The Archive — page {page} of {pages}",
+      "text": "档案 — 第 {page} 页，共 {pages} 页"
+    },
+    "reportArchiveRoute.pageDescription": {
+      "source": "Older cited answers from Keryx research history (page {page}). Open a dispatch to inspect its sources, decisions, and payment states.",
+      "text": "Keryx 研究历史较早带引用答案（第 {page} 页）。打开研究查看来源、决策及付款状态。"
+    },
+    "reportArchiveRoute.pageName": {
+      "source": "Keryx Answer Archive — page {page}",
+      "text": "Keryx 答案档案 — 第 {page} 页"
+    },
+    "reportArchiveRoute.pageCrumb": {
+      "source": "Page {page}",
+      "text": "第 {page} 页"
+    },
+    "literaturePage.title": {
+      "source": "Literature workspace — save, screen and compare research papers",
+      "text": "文献工作区 — 保存、筛选及比较研究论文"
+    },
+    "literaturePage.description": {
+      "source": "Keep a personal paper shortlist, screening notes and a review question. Export your screening list or prepare a cited comparison from two saved papers.",
+      "text": "保留个人论文候选列表、筛选笔记和综述问题。导出筛选列表，或用两篇已保存论文准备带引用比较。"
+    },
+    "literaturePage.kicker": {
+      "source": "Your literature review",
+      "text": "您的文献综述"
+    },
+    "literaturePage.heading": {
+      "source": "From a paper list to a focused review.",
+      "text": "从论文列表到聚焦综述。"
+    },
+    "literaturePage.intro": {
+      "source": "Save the papers worth checking, record your screening decisions, and return to the question you are trying to answer.",
+      "text": "保存值得检查的论文，记录筛选决定，并返回您希望回答的问题。"
+    },
+    "literaturePage.workflowLabel": {
+      "source": "Literature workflow",
+      "text": "文献工作流程"
+    },
+    "literaturePage.find": {
+      "source": "Find papers to save →",
+      "text": "查找待保存论文 →"
+    },
+    "literaturePage.focus": {
+      "source": "Set your review focus",
+      "text": "设置综述焦点"
+    },
+    "literaturePage.noscript": {
+      "source": "Enable JavaScript to access papers saved in this browser. The public paper library remains available through Sources.",
+      "text": "启用 JavaScript 以访问此浏览器保存的论文。公开论文库仍可通过“来源”访问。"
+    },
+    "reportSourceLens.unavailable": {
+      "source": "Source inspection unavailable: this report has no stored excerpt ledger.",
+      "text": "来源检查不可用：此报告无存储摘录账本。"
+    },
+    "reportSourceLens.empty": {
+      "source": "No inspectable non-demo excerpts are recorded for source inspection.",
+      "text": "来源检查未记录可查看的非演示摘录。"
+    },
+    "reportSourceLens.title": {
+      "source": "What if a source were missing?",
+      "text": "如果缺少一个来源呢？"
+    },
+    "reportSourceLens.intro": {
+      "source": "Temporarily leave out one source to see which research targets retain excerpts in this report.",
+      "text": "暂时排除一个来源，查看此报告中哪些研究目标仍有摘录。"
+    },
+    "reportSourceLens.select": {
+      "source": "Inspect without",
+      "text": "排除后检查"
+    },
+    "reportSourceLens.keepAll": {
+      "source": "Keep every source",
+      "text": "保留全部来源"
+    },
+    "reportSourceLens.restore": {
+      "source": "Restore source",
+      "text": "恢复来源"
+    },
+    "reportSourceLens.original": {
+      "source": "Showing the original excerpt ledger.",
+      "text": "显示原摘录账本。"
+    },
+    "reportSourceLens.missing": {
+      "source": "No inspectable excerpts in the original report.",
+      "text": "原报告无可检查摘录。"
+    },
+    "reportSourceLens.lost": {
+      "source": "No excerpts remain in this view.",
+      "text": "此视图无剩余摘录。"
+    },
+    "reportSourceLens.inspect": {
+      "source": "Inspect remaining excerpts",
+      "text": "检查剩余摘录"
+    },
+    "reportSourceLens.qualification": {
+      "source": "Targets are requested topics, not verified assertions. Excerpts do not prove truth or independent corroboration. This view keeps the answer, confidence and payments unchanged and makes no new requests.",
+      "text": "目标是请求主题，不是已核验断言。摘录不证明真伪或独立佐证。此视图不更改答案、置信度及付款，不发送新请求。"
+    },
+    "reportSourceLens.remaining.one": {
+      "source": "{count} recorded excerpt remain.",
+      "text": "剩余 {count} 条记录摘录。"
+    },
+    "reportSourceLens.remaining.other": {
+      "source": "{count} recorded excerpts remain.",
+      "text": "剩余 {count} 条记录摘录。"
+    },
+    "reportSourceLens.omitted.one": {
+      "source": "{count} research target loses its last recorded excerpt without {source}.",
+      "text": "排除 {source} 后，{count} 个研究目标失去最后一条记录摘录。"
+    },
+    "reportSourceLens.omitted.other": {
+      "source": "{count} research targets lose their last recorded excerpt without {source}.",
+      "text": "排除 {source} 后，{count} 个研究目标失去最后一条记录摘录。"
+    },
+    "reportSourceLens.alreadyMissing.one": {
+      "source": " {count} target already had no inspectable excerpts.",
+      "text": " {count} 个目标原本无可检查摘录。"
+    },
+    "reportSourceLens.alreadyMissing.other": {
+      "source": " {count} targets already had no inspectable excerpts.",
+      "text": " {count} 个目标原本无可检查摘录。"
+    },
+    "reportSourceLens.version": {
+      "source": "{marker} · {source} · version {version}",
+      "text": "{marker} · {source} · 版本 {version}"
+    },
+    "reportSourceLens.versionTitle": {
+      "source": "{marker} · {source} · {title} · version {version}",
+      "text": "{marker} · {source} · {title} · 版本 {version}"
+    },
+    "reportTestnetHistory.title": {
+      "source": "Arc testnet history — Keryx",
+      "text": "Arc 测试网历史 — Keryx"
+    },
+    "reportTestnetHistory.description": {
+      "source": "Original Keryx testnet dispatches, decisions and settlement evidence, retained at their existing URLs.",
+      "text": "原始 Keryx 测试网研究、决策和结算证据，保留于现有 URL。"
+    },
+    "reportTestnetHistory.intro": {
+      "source": "Every recorded public question is available here, including runs with no citations or no payment. Open its original dispatch link to read the answer and full trace.",
+      "text": "此处可查看每个已记录公开问题，包括无引用或无付款运行。打开原研究链接阅读答案及完整轨迹。"
+    },
+    "reportTestnetHistory.empty": {
+      "source": "No earlier questions on this page.",
+      "text": "此页无更早问题。"
+    },
+    "reportTestnetHistory.pages": {
+      "source": "Testnet history pages",
+      "text": "测试网历史页面"
+    },
+    "reportTestnetHistory.newest": {
+      "source": "Newest testnet questions",
+      "text": "最新测试网问题"
+    },
+    "reportTestnetHistory.older": {
+      "source": "Older questions →",
+      "text": "较早问题 →"
+    },
+    "reportTestnetHistory.retry": {
+      "source": "Retry from the first page.",
+      "text": "从第一页重试。"
+    },
+    "reportTestnetHistory.current": {
+      "source": "← Current ledger",
+      "text": "← 当前账本"
+    },
+    "reportTestnetHistory.heading": {
+      "source": "Original testnet dispatches",
+      "text": "原始测试网研究"
+    },
+    "reportTestnetHistory.cited.one": {
+      "source": "{count} cited · Arc testnet",
+      "text": "引用 {count} 个 · Arc 测试网"
+    },
+    "reportTestnetHistory.cited.other": {
+      "source": "{count} cited · Arc testnet",
+      "text": "引用 {count} 个 · Arc 测试网"
+    },
+    "reportTestnetHistory.unavailable": {
+      "source": "Testnet history could not be loaded. {retry}",
+      "text": "无法加载测试网历史。{retry}"
+    }
+  }
+}

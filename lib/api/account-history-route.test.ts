@@ -103,3 +103,32 @@ it("shows original owner references and overdue uncertainty using read-only evid
   attempts.mockRejectedValue(new Error("unsupported read"));
   expect((await (await read(token)).json()).jobs[0].escalation).toMatchObject({ state: "overdue", creatorPaymentState: "payment_boundary_crossed" });
 });
+
+
+// UNRUN current-main498 composition controls. Reuse real cookie/session parsing;
+// this existing ordinary adapter deliberately has no native pending-owner port.
+it("refuses explicit owned reads without a native port, with no payer fallback", async () => {
+  const owner = `0x${"e".repeat(40)}`;
+  await db.createA2aOrder(order(498, owner));
+  const { token } = await issueWebSession(db, secret, owner, "asker");
+  expect(db.pendingJobOwners).toBeUndefined();
+  const payerRead = vi.spyOn(db, "listA2aOrdersByPayer");
+  const ordinary = await read(token);
+  expect(ordinary.status).toBe(200);
+  const body = accountHistorySchema.parse(await ordinary.json());
+  expect(body.jobs.map(row => row.id)).toEqual([order(498, owner).id]);
+  expect(body).not.toHaveProperty("ownership");
+  payerRead.mockClear();
+  for (const query of ["?pending=owned", `?pending=owned&id=${order(498, owner).id}`]) {
+    const response = await read(token, query);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "Authenticated pending jobs unavailable" });
+  }
+  expect((await read(token, "?pending=owned&cursor=bad!")).status).toBe(400);
+  expect((await read(undefined, "?pending=owned")).status).toBe(401);
+  const claims = (await parseWebSession(token, secret))!;
+  await db.revokeWebSession(webSessionHash(claims.jti), owner);
+  expect((await read(token, "?pending=owned")).status).toBe(401);
+  expect(payerRead).not.toHaveBeenCalled();
+});

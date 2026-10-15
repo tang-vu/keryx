@@ -1,0 +1,1440 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-funding.ts",
+  "sourceSha256": "8b736422056a66aba9c554ba9be5addd9ad36e73685dd4547c4c8e669181af77",
+  "entries": {
+    "cardFunding.unavailable": {
+      "source": "USDC funding is unavailable right now. No purchase was started by this attempt.",
+      "text": "USDC 注资当前不可用。此次尝试未开始购买。"
+    },
+    "cardFunding.signIn": {
+      "source": "Sign in with your wallet before buying USDC.",
+      "text": "购买 USDC 前先用钱包登录。"
+    },
+    "cardFunding.rateLimited": {
+      "source": "Too many purchase sessions were prepared. Wait a minute, then try again.",
+      "text": "准备的购买会话过多。等待一分钟后重试。"
+    },
+    "cardFunding.providerReceived": {
+      "source": "The provider received your purchase. USDC reaches your wallet after the provider settles it; refresh your wallet balance to confirm.",
+      "text": "服务商收到购买。服务商结算后 USDC 到达钱包；刷新钱包余额确认。"
+    },
+    "cardFunding.providerSettled": {
+      "source": "The provider reports this purchase as settled. Confirm the USDC in your wallet balance before depositing to Gateway.",
+      "text": "服务商报告购买已结算。存入 Gateway 前请确认钱包余额中的 USDC。"
+    },
+    "cardFunding.windowClosed": {
+      "source": "The purchase window was closed before a purchase was submitted.",
+      "text": "提交购买前购买窗口已关闭。"
+    },
+    "cardFunding.providerIncomplete": {
+      "source": "The provider did not complete this purchase. Check the provider's own messages before trying again.",
+      "text": "服务商未完成购买。重试前请检查服务商自身消息。"
+    },
+    "cardFunding.windowUnknown": {
+      "source": "Keryx received no confirmation that the purchase window loaded. If it shows Circle's purchase page, continue there; otherwise prepare a new purchase.",
+      "text": "Keryx 未收到购买窗口已加载的确认。若显示 Circle 购买页，请在那里继续；否则准备新购买。"
+    },
+    "cardFunding.expired": {
+      "source": "This purchase session expired. Prepare a new one to continue.",
+      "text": "此购买会话已过期。准备新会话以继续。"
+    },
+    "cardFunding.popupBlocked": {
+      "source": "Your browser blocked the purchase window. Allow pop-ups for this site, then select Open again.",
+      "text": "浏览器阻止购买窗口。允许本站弹窗，再选择重新打开。"
+    },
+    "cardFunding.browserUnsupported": {
+      "source": "This browser cannot open the purchase window. Open Keryx in your device's regular browser.",
+      "text": "此浏览器无法打开购买窗口。请在设备普通浏览器打开 Keryx。"
+    },
+    "cardFunding.opened": {
+      "source": "Purchase window opened. Keep this page open until you finish there.",
+      "text": "购买窗口已打开。完成前保持此页打开。"
+    },
+    "cardFunding.invalidSession": {
+      "source": "This purchase session is no longer valid. Prepare a new one to continue.",
+      "text": "此购买会话已失效。准备新会话以继续。"
+    },
+    "cardFunding.label": {
+      "source": "Buy USDC on Arc",
+      "text": "在 Arc 购买 USDC"
+    },
+    "cardFunding.title": {
+      "source": "Buy USDC on Arc — bank transfer first",
+      "text": "在 Arc 购买 USDC — 银行转账优先"
+    },
+    "cardFunding.providerNotice": {
+      "source": "Bank transfer is offered in select US states and select EU countries without merchant business verification (KYB). Purchasers still complete identity verification (KYC) with Circle's providers. Your eligibility and fees are checked in a separate window. Vietnam is not documented as supported; other unverified regions remain unknown. Debit card, Apple Pay and Google Pay require merchant KYB and are unavailable through this integration; credit cards are not supported.",
+      "text": "美国部分州和欧盟部分国家提供银行转账，无需商户企业核验（KYB）。购买者仍须向 Circle 服务商完成身份核验（KYC）。资格和费用在独立窗口检查。文档未注明支持越南；其他未经核验地区仍未知。借记卡、Apple Pay 和 Google Pay 需商户 KYB，此集成不可用；不支持信用卡。"
+    },
+    "cardFunding.deliveryNotice": {
+      "source": "A supported purchase delivers USDC to your signed-in wallet on Arc. Confirm arrival in your wallet balance. Keryx never receives the funds or your bank or identity details. Deposit to Gateway and enable a research budget as separate owner-signed steps.",
+      "text": "受支持购买将 USDC 交付到 Arc 上已登录钱包。请在钱包余额确认到账。Keryx 不接收资金、银行或身份详情。存入 Gateway 和启用研究预算是独立所有者签名步骤。"
+    },
+    "cardFunding.methodUnavailable": {
+      "source": "The provider offers no eligible payment method for this purchase. Keryx cannot confirm support for your country; check the provider's information before trying again.",
+      "text": "服务商对此购买未提供合格付款方式。Keryx 无法确认支持您的国家；重试前请检查服务商信息。"
+    },
+    "cardFunding.sandboxUnavailable": {
+      "source": "Sandbox uses a separate test key and no real money. Sandbox bank deposits are documented only for Ethereum, so bank funding on Arc is unavailable here. This does not fund your Arc wallet, Gateway or research budget.",
+      "text": "沙盒使用独立测试密钥，无真实资金。文档仅说明 Ethereum 沙盒银行存款，因此此处 Arc 银行注资不可用。这不会资助 Arc 钱包、Gateway 或研究预算。"
+    },
+    "cardFunding.preparing": {
+      "source": "Preparing…",
+      "text": "正在准备…"
+    },
+    "cardFunding.prepareNew": {
+      "source": "Prepare a new purchase",
+      "text": "准备新购买"
+    },
+    "cardFunding.prepare": {
+      "source": "Check bank transfer eligibility",
+      "text": "检查银行转账资格"
+    },
+    "cardFunding.open": {
+      "source": "Open Arc Onramp",
+      "text": "打开 Arc Onramp"
+    },
+    "cardFunding.session": {
+      "source": "Delivery wallet: {wallet} · session valid until {expiresAt}",
+      "text": "交付钱包：{wallet} · 会话有效至 {expiresAt}"
+    },
+    "budgetFields.questionCap": {
+      "source": "Maximum per question (USDC)",
+      "text": "每个问题最高金额（USDC）"
+    },
+    "budgetFields.duration": {
+      "source": "Budget duration",
+      "text": "预算时长"
+    },
+    "budgetFields.hours.one": {
+      "source": "{count} hour",
+      "text": "{count} 小时"
+    },
+    "budgetFields.hours.other": {
+      "source": "{count} hours",
+      "text": "{count} 小时"
+    },
+    "budgetFields.days.other": {
+      "source": "{count} days",
+      "text": "{count} 天"
+    },
+    "budgetFields.days.one": {
+      "source": "{count} day",
+      "text": "{count} 天"
+    },
+    "researchCheckout.checking": {
+      "source": "Checking the current price and wallet…",
+      "text": "正在检查当前价格及钱包…"
+    },
+    "researchCheckout.recoveryReady": {
+      "source": "Recovery file is ready. Check the exact amount and payee in your wallet before signing.",
+      "text": "恢复文件已就绪。签名前请在钱包检查确切金额及收款人。"
+    },
+    "researchCheckout.acknowledged": {
+      "source": "Purchase acknowledged. Following the original job below. Keep your recovery file.",
+      "text": "购买已确认。下方跟踪原任务。请保留恢复文件。"
+    },
+    "researchCheckout.uncertain": {
+      "source": "The submission is uncertain. Keep the recovery file and open this job below; do not pay again to recover it.",
+      "text": "提交不确定。保留恢复文件并在下方打开此任务；不要为恢复再次付款。"
+    },
+    "researchCheckout.acknowledgementNotSaved": {
+      "source": "The seller returned a payment acknowledgement, but it could not be saved locally. Keep this tab and recovery file; use the same job for lookup.",
+      "text": "卖方返回付款确认，但无法本地保存。保留标签页和恢复文件；查询同一任务。"
+    },
+    "researchCheckout.walletCancelled": {
+      "source": "Wallet request cancelled. No signed purchase request was sent by this attempt.",
+      "text": "钱包请求已取消。此次尝试未发送签名购买请求。"
+    },
+    "researchCheckout.quoteChanged": {
+      "source": "The current quote did not match this review. Review the price again before buying.",
+      "text": "当前报价不匹配此审阅。购买前再次审阅价格。"
+    },
+    "researchCheckout.insufficient": {
+      "source": "This wallet has insufficient Gateway funds. No signed purchase request was sent.",
+      "text": "此钱包 Gateway 资金不足。未发送签名购买请求。"
+    },
+    "researchCheckout.stopped": {
+      "source": "Purchase stopped before submitting a signed request. Check your wallet, balance and browser storage, then review again. Any saved job remains available below.",
+      "text": "购买在提交签名请求前停止。检查钱包、余额和浏览器存储，再次审阅。已保存任务仍在下方可用。"
+    },
+    "researchCheckout.title": {
+      "source": "Buy with your wallet",
+      "text": "使用钱包购买"
+    },
+    "researchCheckout.switching": {
+      "source": "Switching…",
+      "text": "正在切换…"
+    },
+    "researchCheckout.consent": {
+      "source": "I accept the fixed, non-refundable price and best-effort research. Unused creator reserve is retained, not refunded. My question and recovery journal will be stored on this device; I will keep a private recovery file in case browser data is lost.",
+      "text": "我接受固定、不退款价格及尽力研究服务。未用创作者储备保留，不退款。问题及恢复日志将存于此设备；我会保留私密恢复文件以防浏览器数据丢失。"
+    },
+    "researchCheckout.reviewChanged": {
+      "source": "The question, price or wallet changed. Review the purchase again.",
+      "text": "问题、价格或钱包已变更。再次审阅购买。"
+    },
+    "researchCheckout.purchasing": {
+      "source": "Purchase in progress…",
+      "text": "购买进行中…"
+    },
+    "researchCheckout.downloadRecovery": {
+      "source": "Download recovery file",
+      "text": "下载恢复文件"
+    },
+    "researchCheckout.authorization": {
+      "source": "One signature authorizes this fixed-price research job from your wallet’s Gateway balance. {network}. Externally owned accounts (EOAs) are supported.",
+      "text": "一个签名从钱包 Gateway 余额授权此固定价格研究任务。{network}。支持外部拥有账户（EOA）。"
+    },
+    "researchCheckout.wallet": {
+      "source": "Buyer wallet: {wallet}",
+      "text": "买方钱包：{wallet}"
+    },
+    "researchCheckout.switchFailed": {
+      "source": "Network switch was not completed. Choose {network} in your wallet.",
+      "text": "网络切换未完成。在钱包选择 {network}。"
+    },
+    "researchCheckout.switchNetwork": {
+      "source": "Switch to {network}",
+      "text": "切换到 {network}"
+    },
+    "researchCheckout.reviewPrice": {
+      "source": "Review {amount} USDC purchase",
+      "text": "审阅 {amount} USDC 购买"
+    },
+    "researchCheckout.quickSummary": {
+      "source": "Quick · {amount} USDC total · {cap} USDC creator cap",
+      "text": "Quick · 总额 {amount} USDC · 创作者上限 {cap} USDC"
+    },
+    "researchCheckout.deepSummary": {
+      "source": "Deep · {amount} USDC total · {cap} USDC creator cap",
+      "text": "Deep · 总额 {amount} USDC · 创作者上限 {cap} USDC"
+    },
+    "researchCheckout.payee": {
+      "source": "Payee: {payee}",
+      "text": "收款人：{payee}"
+    },
+    "researchCheckout.buy": {
+      "source": "Buy research — {amount} USDC",
+      "text": "购买研究 — {amount} USDC"
+    },
+    "fundingActivity.label": {
+      "source": "Previous Gateway deposit",
+      "text": "先前 Gateway 存款"
+    },
+    "fundingActivity.title": {
+      "source": "Find a previous deposit",
+      "text": "查找先前存款"
+    },
+    "fundingActivity.recoveryNotice": {
+      "source": "Lost this browser's funding records? Copy a deposit transaction hash from your wallet activity to check it here. This lookup sends no transaction and does not restore a signing plan.",
+      "text": "丢失此浏览器注资记录？从钱包活动复制存款交易哈希在此检查。查询不发送交易，也不恢复签名计划。"
+    },
+    "fundingActivity.hash": {
+      "source": "Previous deposit transaction hash",
+      "text": "先前存款交易哈希"
+    },
+    "fundingActivity.checking": {
+      "source": "Checking previous deposit…",
+      "text": "正在检查先前存款…"
+    },
+    "fundingActivity.check": {
+      "source": "Check previous deposit",
+      "text": "检查先前存款"
+    },
+    "fundingActivity.unknown": {
+      "source": "Could not verify a finalized USDC deposit call for this wallet. This does not mean it failed. Check wallet activity and current Gateway balance before adding funds.",
+      "text": "无法核验此钱包已最终确认的 USDC 存款调用。这不意味着失败。添加资金前检查钱包活动和当前 Gateway 余额。"
+    },
+    "fundingActivity.pastDeposit": {
+      "source": "This is a past deposit, not your current available balance. Funds may already have been spent or withdrawn; Circle credit may also still be updating.",
+      "text": "这是过去存款，不是当前可用余额。资金可能已花费或提取；Circle 入账也可能仍在更新。"
+    },
+    "fundingActivity.reverted": {
+      "source": "This call did not complete the deposit. Gas may have been charged.",
+      "text": "此调用未完成存款。可能已收取 gas。"
+    },
+    "fundingActivity.viewTransaction": {
+      "source": "View original deposit transaction",
+      "text": "查看原存款交易"
+    },
+    "fundingActivity.missingNotice": {
+      "source": "A missing record here does not rule out another pending transaction. This check cannot recover a transaction hash lost from both the browser and wallet activity.",
+      "text": "此处缺少记录不排除另一待处理交易。此检查无法恢复浏览器及钱包活动均丢失的哈希。"
+    },
+    "fundingActivity.successfulCall": {
+      "source": "Successful deposit call for {amount} USDC, finalized according to the configured RPC.",
+      "text": "{amount} USDC 存款调用成功，按配置 RPC 已最终确认。"
+    },
+    "fundingActivity.revertedCall": {
+      "source": "Reverted deposit call for {amount} USDC, finalized according to the configured RPC.",
+      "text": "{amount} USDC 存款调用回滚，按配置 RPC 已最终确认。"
+    },
+    "gatewayFunding.replaced": {
+      "source": "The original transaction was replaced by a different call. This does not confirm the planned deposit. Check wallet activity and Gateway balance before preparing another deposit.",
+      "text": "原交易被不同调用替换。这不确认计划存款。准备其他存款前检查钱包活动和 Gateway 余额。"
+    },
+    "gatewayFunding.reverted": {
+      "source": "The matching transaction reverted. Gas may have been charged; this was not a successful deposit.",
+      "text": "匹配交易已回滚。可能已收取 gas；存款未成功。"
+    },
+    "gatewayFunding.unconfirmed": {
+      "source": "The transaction remains unconfirmed. Check wallet activity; do not send it again.",
+      "text": "交易仍未确认。检查钱包活动；不要再次发送。"
+    },
+    "gatewayFunding.finalizedDeposit": {
+      "source": "The matching deposit is finalized according to the configured RPC. Check Gateway balance before buying; credit may still be updating.",
+      "text": "匹配存款按配置 RPC 已最终确认。购买前检查 Gateway 余额；入账可能仍在更新。"
+    },
+    "gatewayFunding.finalizedApproval": {
+      "source": "The matching approval is finalized according to the configured RPC. Review the deposit separately.",
+      "text": "匹配授权按配置 RPC 已最终确认。请单独审阅存款。"
+    },
+    "gatewayFunding.confirmedDeposit": {
+      "source": "Deposit confirmed on chain. Check Gateway balance before buying; Circle credit may still be updating.",
+      "text": "存款已链上确认。购买前检查 Gateway 余额；Circle 入账可能仍在更新。"
+    },
+    "gatewayFunding.confirmedApproval": {
+      "source": "Approval confirmed. Review the deposit step separately.",
+      "text": "授权已确认。单独审阅存款步骤。"
+    },
+    "gatewayFunding.creditUnknown": {
+      "source": "Gateway balance is unavailable. Refresh the balance; do not deposit based on an unknown balance.",
+      "text": "Gateway 余额不可用。刷新余额；不要依据未知余额存款。"
+    },
+    "gatewayFunding.recordsUnavailable": {
+      "source": "Funding records could not be read. Check browser storage before depositing.",
+      "text": "无法读取注资记录。存款前检查浏览器存储。"
+    },
+    "gatewayFunding.lookupPaused": {
+      "source": "Confirmation lookup paused. Refresh funding status to continue; do not send the transaction again.",
+      "text": "确认查询暂停。刷新注资状态以继续；不要再次发送交易。"
+    },
+    "gatewayFunding.stepIncomplete": {
+      "source": "Could not complete this step. Check your wallet, funds, gas and saved funding status. No transaction will be retried automatically.",
+      "text": "无法完成此步骤。检查钱包、资金、gas 和保存注资状态。不会自动重试交易。"
+    },
+    "gatewayFunding.recordsNotRefreshed": {
+      "source": "Could not refresh funding records. Keep this tab and check your wallet activity.",
+      "text": "无法刷新注资记录。保留标签页并检查钱包活动。"
+    },
+    "gatewayFunding.submitted": {
+      "source": "Transaction submitted. Waiting for matching on-chain confirmation.",
+      "text": "交易已提交。等待匹配链上确认。"
+    },
+    "gatewayFunding.rejected": {
+      "source": "Your wallet rejected the request. You can review and try this step again.",
+      "text": "钱包拒绝请求。可以审阅并重试此步骤。"
+    },
+    "gatewayFunding.walletUncertain": {
+      "source": "Wallet or storage response is uncertain. Check wallet activity and recover the original transaction hash; do not send it again.",
+      "text": "钱包或存储响应不确定。检查钱包活动并恢复原交易哈希；不要再次发送。"
+    },
+    "gatewayFunding.readinessLabel": {
+      "source": "Gateway funding readiness",
+      "text": "Gateway 注资就绪状态"
+    },
+    "gatewayFunding.readinessTitle": {
+      "source": "Funding readiness",
+      "text": "注资就绪状态"
+    },
+    "gatewayFunding.checkingBalance": {
+      "source": "Checking Gateway balance…",
+      "text": "正在检查 Gateway 余额…"
+    },
+    "gatewayFunding.historyUnknown": {
+      "source": "Funding history unavailable. Inspect your wallet activity before adding funds.",
+      "text": "注资历史不可用。添加资金前查看钱包活动。"
+    },
+    "gatewayFunding.checkPriceCoverage": {
+      "source": "Check Gateway balance to see whether this price is covered. This read sends no transaction.",
+      "text": "检查 Gateway 余额是否覆盖此价格。此读取不发送交易。"
+    },
+    "gatewayFunding.ready": {
+      "source": "At the last check, enough Gateway USDC was available for this price. Review the purchase terms, then buy. The purchase checks funds again before signing.",
+      "text": "上次检查 Gateway USDC 足够覆盖此价格。审阅购买条款后购买。签名前购买流程再次检查资金。"
+    },
+    "gatewayFunding.unverifiedCredit": {
+      "source": "The latest deposit is confirmed on chain; Gateway credit for this price is not yet verified. Funds may still be updating or may already have been spent. Refresh Gateway balance before buying or adding funds.",
+      "text": "最新存款已链上确认；尚未核验覆盖此价格的 Gateway 入账。资金可能仍在更新或已花费。购买或添加资金前刷新 Gateway 余额。"
+    },
+    "gatewayFunding.unavailableBalance": {
+      "source": "Gateway balance unavailable. Refresh it before buying or adding funds.",
+      "text": "Gateway 余额不可用。购买或添加资金前刷新。"
+    },
+    "gatewayFunding.existingTransaction": {
+      "source": "A funding transaction may already have been sent. Inspect the existing transaction below; do not submit it again.",
+      "text": "注资交易可能已发送。查看下方现有交易；不要再次提交。"
+    },
+    "gatewayFunding.recordsNotRead": {
+      "source": "Funding records could not be read.",
+      "text": "无法读取注资记录。"
+    },
+    "gatewayFunding.refreshBalance": {
+      "source": "Refresh Gateway balance and funding status",
+      "text": "刷新 Gateway 余额及注资状态"
+    },
+    "gatewayFunding.reviewDeposit": {
+      "source": "Review deposit options",
+      "text": "审阅存款选项"
+    },
+    "gatewayFunding.inspectTransaction": {
+      "source": "Inspect existing transaction",
+      "text": "查看现有交易"
+    },
+    "gatewayFunding.addToGateway": {
+      "source": "Add USDC to Gateway",
+      "text": "向 Gateway 添加 USDC"
+    },
+    "gatewayFunding.depositNotice": {
+      "source": "Approve an exact amount, then deposit it into your own Gateway balance. Each transaction needs a wallet confirmation and costs gas. This does not buy research or pay Keryx.",
+      "text": "授权确切金额，再存入您自己的 Gateway 余额。每笔交易需钱包确认并花费 gas。这不购买研究或向 Keryx 付款。"
+    },
+    "gatewayFunding.depositConsent": {
+      "source": "I want to add this amount to my own Gateway balance, plus transaction gas. I will keep my wallet transaction hashes for recovery.",
+      "text": "我希望将此金额添加到自己的 Gateway 余额，并支付交易 gas。我将保留钱包交易哈希用于恢复。"
+    },
+    "gatewayFunding.planSaved": {
+      "source": "Funding plan saved. Review the approval step below; no transaction has been sent.",
+      "text": "注资计划已保存。审阅下方授权步骤；未发送交易。"
+    },
+    "gatewayFunding.prepareDeposit": {
+      "source": "Prepare deposit",
+      "text": "准备存款"
+    },
+    "gatewayFunding.transactionHash": {
+      "source": "Transaction hash from your wallet",
+      "text": "钱包中的交易哈希"
+    },
+    "gatewayFunding.checkOriginal": {
+      "source": "Check original transaction",
+      "text": "检查原交易"
+    },
+    "gatewayFunding.replacementNotice": {
+      "source": "If your wallet sped up or cancelled this transaction, enter the replacement hash. This check sends no transaction and requires finalized evidence from the configured RPC.",
+      "text": "若钱包加速或取消交易，输入替代哈希。此检查不发送交易，需配置 RPC 的最终确认证据。"
+    },
+    "gatewayFunding.checkReplacement": {
+      "source": "Check replacement transaction",
+      "text": "检查替代交易"
+    },
+    "gatewayFunding.viewNetworkTransaction": {
+      "source": "View original network transaction",
+      "text": "查看原网络交易"
+    },
+    "gatewayFunding.originalTransaction": {
+      "source": "Original transaction",
+      "text": "原交易"
+    },
+    "gatewayFunding.planCancelled": {
+      "source": "Local funding plan cancelled. Any confirmed token approval remains on chain.",
+      "text": "本地注资计划已取消。已确认代币授权仍在链上。"
+    },
+    "gatewayFunding.cancelPlan": {
+      "source": "Cancel unsubmitted deposit plan",
+      "text": "取消未提交存款计划"
+    },
+    "gatewayFunding.refreshStatus": {
+      "source": "Refresh funding status",
+      "text": "刷新注资状态"
+    },
+    "gatewayFunding.savedDepositNotice": {
+      "source": "A saved deposit is confirmed on chain. Check the current Gateway balance before buying; previous deposits may already have been spent.",
+      "text": "一笔保存存款已链上确认。购买前检查当前 Gateway 余额；先前存款可能已花费。"
+    },
+    "gatewayFunding.transaction": {
+      "source": "Transaction",
+      "text": "交易"
+    },
+    "gatewayFunding.checkApproval": {
+      "source": "Check the exact approval amount and gas in your wallet.",
+      "text": "在钱包检查确切授权金额及 gas。"
+    },
+    "gatewayFunding.checkDeposit": {
+      "source": "Check the exact deposit amount and gas in your wallet.",
+      "text": "在钱包检查确切存款金额及 gas。"
+    },
+    "gatewayFunding.priceUnknownBalance": {
+      "source": "Price: {price} USDC · Gateway available: unavailable or not checked",
+      "text": "价格：{price} USDC · Gateway 可用：不可用或未检查"
+    },
+    "gatewayFunding.priceBalance": {
+      "source": "Price: {price} USDC · Gateway available: {balance} USDC",
+      "text": "价格：{price} USDC · Gateway 可用：{balance} USDC"
+    },
+    "gatewayFunding.insufficient": {
+      "source": "Gateway funds are below this price. Check any existing transaction before preparing another deposit. Wallet USDC and gas are separate from Gateway credit.",
+      "text": "Gateway 资金低于价格。准备其他存款前检查现有交易。钱包 USDC 和 gas 独立于 Gateway 入账。"
+    },
+    "gatewayFunding.insufficientAfterDeposit": {
+      "source": "Gateway funds are below this price. The latest deposit is confirmed on chain, but current Gateway credit is still below the price; it may already have been spent or credit may not yet be visible. Check any existing transaction before preparing another deposit. Wallet USDC and gas are separate from Gateway credit.",
+      "text": "Gateway 资金低于价格。最新存款已链上确认，但当前 Gateway 入账仍低于价格；可能已花费或尚未可见。准备其他存款前检查现有交易。钱包 USDC 和 gas 独立于 Gateway 入账。"
+    },
+    "gatewayFunding.gateway": {
+      "source": "{network} Gateway: {gateway}",
+      "text": "{network} Gateway：{gateway}"
+    },
+    "gatewayFunding.amount": {
+      "source": "Deposit amount ({network} USDC)",
+      "text": "存款金额（{network} USDC）"
+    },
+    "gatewayFunding.testnetGasNotice": {
+      "source": "Up to 1 testnet USDC per deposit. Leave wallet USDC for gas. Browser storage can be lost; wallet activity remains the source for transaction hashes.",
+      "text": "每次存款最多 1 测试网 USDC。保留钱包 USDC 支付 gas。浏览器存储可能丢失；钱包活动仍是交易哈希来源。"
+    },
+    "gatewayFunding.mainnetGasNotice": {
+      "source": "Review your chosen mainnet amount before funding. Leave wallet USDC for gas. Browser storage can be lost; wallet activity remains the source for transaction hashes.",
+      "text": "注资前审阅主网金额。保留钱包 USDC 支付 gas。浏览器存储可能丢失；钱包活动仍是交易哈希来源。"
+    },
+    "gatewayFunding.plannedDeposit": {
+      "source": "Planned deposit: {amount} USDC",
+      "text": "计划存款：{amount} USDC"
+    },
+    "gatewayFunding.approvalStatus": {
+      "source": "1. Approve: {status}",
+      "text": "1. 授权：{status}"
+    },
+    "gatewayFunding.depositStatus": {
+      "source": "2. Deposit: {status}",
+      "text": "2. 存款：{status}"
+    },
+    "gatewayFunding.approveAmount": {
+      "source": "Approve {amount} USDC",
+      "text": "授权 {amount} USDC"
+    },
+    "gatewayFunding.depositAmount": {
+      "source": "Deposit {amount} USDC",
+      "text": "存入 {amount} USDC"
+    },
+    "gatewayFunding.history.cancelled": {
+      "source": "{amount} USDC · plan cancelled",
+      "text": "{amount} USDC · 计划已取消"
+    },
+    "gatewayFunding.history.confirmed": {
+      "source": "{amount} USDC · deposit confirmed",
+      "text": "{amount} USDC · 存款已确认"
+    },
+    "gatewayFunding.history.replaced": {
+      "source": "{amount} USDC · original replaced by a different call; deposit not confirmed",
+      "text": "{amount} USDC · 原交易被不同调用替换；存款未确认"
+    },
+    "gatewayFunding.history.reverted": {
+      "source": "{amount} USDC · transaction reverted",
+      "text": "{amount} USDC · 交易回滚"
+    },
+    "budgetGrant.preparing": {
+      "source": "Preparing your research budget…",
+      "text": "正在准备研究预算…"
+    },
+    "budgetGrant.reviewApproval": {
+      "source": "Review the USDC approval in your wallet…",
+      "text": "请在钱包审阅 USDC 授权…"
+    },
+    "budgetGrant.reviewDeposit": {
+      "source": "Review the USDC deposit in your wallet…",
+      "text": "请在钱包审阅 USDC 存款…"
+    },
+    "budgetGrant.checkingCredit": {
+      "source": "Checking your deposit with Circle Gateway…",
+      "text": "正在通过 Circle Gateway 检查存款…"
+    },
+    "budgetGrant.confirmBudget": {
+      "source": "Confirm your research budget in your wallet…",
+      "text": "请在钱包确认研究预算…"
+    },
+    "budgetGrant.recoveringBudget": {
+      "source": "Recovering your saved budget…",
+      "text": "正在恢复保存预算…"
+    },
+    "budgetGrant.restoring": {
+      "source": "Restoring saved session in this browser…",
+      "text": "正在此浏览器恢复保存会话…"
+    },
+    "budgetGrant.stopping": {
+      "source": "Stopping research spending…",
+      "text": "正在停止研究支出…"
+    },
+    "budgetGrant.working": {
+      "source": "Working…",
+      "text": "正在处理…"
+    },
+    "budgetGrant.confirmingNotice": {
+      "source": "Your deposit is confirmed on-chain. We are checking available Gateway credit. Keep this browser's saved data; recovery checks the original deposit. Confirm the budget when the credit is available.",
+      "text": "存款已链上确认。正在检查可用 Gateway 入账。保留浏览器保存数据；恢复检查原存款。入账可用时确认预算。"
+    },
+    "budgetGrant.mainnetTitle": {
+      "source": "Research budget",
+      "text": "研究预算"
+    },
+    "budgetGrant.testnetTitle": {
+      "source": "Non-custodial session",
+      "text": "非托管会话"
+    },
+    "budgetGrant.mainnetIntroduction": {
+      "source": "Set a budget once and use it across conversations until it expires or runs out. The agent pays for sources within your limits without asking you to sign each payment.",
+      "text": "一次设置预算，跨对话使用直至过期或耗尽。代理在限制内为来源付款，无需每次签名。"
+    },
+    "budgetGrant.testnetIntroduction": {
+      "source": "Fund a browser-held session with USDC. The agent pays for sources within your budget.",
+      "text": "用 USDC 资助浏览器持有会话。代理在预算内向来源付款。"
+    },
+    "budgetGrant.recovering": {
+      "source": "Recovering…",
+      "text": "正在恢复…"
+    },
+    "budgetGrant.continue": {
+      "source": "Continue with saved budget",
+      "text": "使用保存预算继续"
+    },
+    "budgetGrant.resume": {
+      "source": "Resume session ▸",
+      "text": "恢复会话 ▸"
+    },
+    "budgetGrant.recoveryFailed": {
+      "source": "Recovery did not complete. Keep your saved browser data and retry when your wallet and Gateway are available.",
+      "text": "恢复未完成。保留浏览器保存数据，在钱包及 Gateway 可用时重试。"
+    },
+    "budgetGrant.questionCapTooHigh": {
+      "source": "The per-question maximum must fit within the total budget.",
+      "text": "每问题最高金额须在总预算内。"
+    },
+    "budgetGrant.reviewNew": {
+      "source": "Review new budget",
+      "text": "审阅新预算"
+    },
+    "budgetGrant.enable": {
+      "source": "Enable research budget",
+      "text": "启用研究预算"
+    },
+    "budgetGrant.activate": {
+      "source": "Activate session ▸",
+      "text": "激活会话 ▸"
+    },
+    "budgetGrant.recoverSaved": {
+      "source": "Recover a saved budget",
+      "text": "恢复保存预算"
+    },
+    "budgetGrant.recoverFunded": {
+      "source": "Recover funded session ▸",
+      "text": "恢复已注资会话 ▸"
+    },
+    "budgetGrant.mainnetFundingNotice": {
+      "source": "First-time funding needs wallet approval and a deposit, followed by budget confirmation. Reloading or opening another conversation keeps your limits. Native gas is extra. Logout retains your encrypted budget; clearing browser data or losing this device can lose access to its funds.",
+      "text": "首次注资需钱包授权及存款，再确认预算。重新加载或打开其他对话保留限制。原生 gas 额外支付。退出保留加密预算；清除浏览器数据或丢失设备可能失去资金访问。"
+    },
+    "budgetGrant.testnetFundingNotice": {
+      "source": "Fund your session and confirm its allowance. Existing testnet recovery remains available.",
+      "text": "资助会话并确认额度。现有测试网恢复仍可用。"
+    },
+    "budgetGrant.switchNetwork": {
+      "source": "Switch to {network} in your wallet…",
+      "text": "在钱包切换至 {network}…"
+    },
+    "budgetGrant.savedMainnet": {
+      "source": "Your funded budget is saved in this browser. Reuse it to continue. Renewal keeps the existing total ceiling and previously used or pending amounts.",
+      "text": "已注资预算保存在此浏览器。复用以继续。续期保留现有总上限及先前已用或待处理金额。"
+    },
+    "budgetGrant.savedTestnet": {
+      "source": "Your funded budget is saved in this browser. Reuse it to continue.",
+      "text": "已注资预算保存在此浏览器。复用以继续。"
+    },
+    "budgetGrant.newAllowance": {
+      "source": "New budget allowance (USDC)",
+      "text": "新预算额度（USDC）"
+    },
+    "budgetGrant.total": {
+      "source": "Total budget (USDC)",
+      "text": "总预算（USDC）"
+    },
+    "budgetGrant.consent": {
+      "source": "Available to authorize: {amount} USDC. Previously used or pending amounts remain counted.",
+      "text": "可授权：{amount} USDC。先前已用或待处理金额仍计入。"
+    },
+    "budgetGrant.consentCap": {
+      "source": "Available to authorize: {amount} USDC. Maximum per question: {cap} USDC. Previously used or pending amounts remain counted.",
+      "text": "可授权：{amount} USDC。每问题最高：{cap} USDC。先前已用或待处理金额仍计入。"
+    },
+    "budgetGrant.duration.one": {
+      "source": "Duration: {count} hours.",
+      "text": "时长：{count} 小时。"
+    },
+    "budgetGrant.duration.other": {
+      "source": "Duration: {count} hours.",
+      "text": "时长：{count} 小时。"
+    },
+    "budgetGrant.consentDuration": {
+      "source": "Available to authorize: {amount} USDC. {duration} Previously used or pending amounts remain counted.",
+      "text": "可授权：{amount} USDC。{duration}先前已用或待处理金额仍计入。"
+    },
+    "budgetGrant.consentCapDuration": {
+      "source": "Available to authorize: {amount} USDC. Maximum per question: {cap} USDC. {duration} Previously used or pending amounts remain counted.",
+      "text": "可授权：{amount} USDC。每问题最高：{cap} USDC。{duration}先前已用或待处理金额仍计入。"
+    },
+    "walletFunding.label": {
+      "source": "Creator wallet funding",
+      "text": "创作者钱包注资"
+    },
+    "walletFunding.unavailable": {
+      "source": "unavailable",
+      "text": "不可用"
+    },
+    "walletFunding.checking": {
+      "source": "Checking wallet balance…",
+      "text": "正在检查钱包余额…"
+    },
+    "walletFunding.refresh": {
+      "source": "Refresh wallet balance",
+      "text": "刷新钱包余额"
+    },
+    "walletFunding.networkError": {
+      "source": "Network error — try the Circle faucet instead.",
+      "text": "网络错误，请改用 Circle 水龙头。"
+    },
+    "walletFunding.testnetTitle": {
+      "source": "Testnet USDC faucet",
+      "text": "测试网 USDC 水龙头"
+    },
+    "walletFunding.arcScan": {
+      "source": "View on ArcScan",
+      "text": "在 ArcScan 查看"
+    },
+    "walletFunding.claiming": {
+      "source": "Claiming…",
+      "text": "正在领取…"
+    },
+    "walletFunding.claim": {
+      "source": "Claim testnet USDC",
+      "text": "领取测试网 USDC"
+    },
+    "walletFunding.added": {
+      "source": "USDC added",
+      "text": "USDC 已添加"
+    },
+    "walletFunding.addToken": {
+      "source": "Add USDC to wallet",
+      "text": "向钱包添加 USDC"
+    },
+    "walletFunding.circleFaucet": {
+      "source": "Circle faucet",
+      "text": "Circle 水龙头"
+    },
+    "walletFunding.testnetNotice": {
+      "source": "One claim per address · Arc Testnet only · covers gas + a session grant",
+      "text": "每地址一次 · 仅 Arc 测试网 · 覆盖 gas 及会话授权"
+    },
+    "walletFunding.title": {
+      "source": "{network} wallet funding",
+      "text": "{network} 钱包注资"
+    },
+    "walletFunding.introduction": {
+      "source": "Fund your connected wallet with real USDC on {network} before registering. Leave USDC in the wallet for native gas; Gateway credit cannot pay wallet transaction gas.",
+      "text": "注册前，用真实 USDC 资助 {network} 上已连接钱包。保留钱包 USDC 支付原生 gas；Gateway 入账不能支付钱包交易 gas。"
+    },
+    "walletFunding.balance": {
+      "source": "Wallet USDC: {balance}",
+      "text": "钱包 USDC：{balance}"
+    },
+    "walletFunding.networkNotice": {
+      "source": "Select {network} in your wallet. Each registration needs your wallet confirmation and costs gas.",
+      "text": "在钱包选择 {network}。每项注册需钱包确认并花费 gas。"
+    },
+    "walletFunding.testnetBalance": {
+      "source": "Balance: {balance}",
+      "text": "余额：{balance}"
+    },
+    "walletFunding.dripped": {
+      "source": "Dripped {amount} USDC",
+      "text": "已发放 {amount} USDC"
+    },
+    "walletFunding.claimedAt": {
+      "source": "(claimed {time})",
+      "text": "（领取于 {time}）"
+    },
+    "walletFunding.importManually": {
+      "source": "(import USDC manually: {address}…)",
+      "text": "（手动导入 USDC：{address}…）"
+    },
+    "privateCheckout.title": {
+      "source": "Buy private research",
+      "text": "购买私密研究"
+    },
+    "privateCheckout.checkingSignIn": {
+      "source": "Checking sign-in…",
+      "text": "正在检查登录状态…"
+    },
+    "privateCheckout.signIn": {
+      "source": "Sign in to buy private research",
+      "text": "登录购买私密研究"
+    },
+    "privateCheckout.localRecoveryUnavailable": {
+      "source": "Local private recovery is unavailable. Check browser storage before buying.",
+      "text": "本地私密恢复不可用。购买前检查浏览器存储。"
+    },
+    "privateCheckout.fundingUpdated": {
+      "source": "Funding updated. Your Gateway balance will be checked again before signing.",
+      "text": "注资已更新。签名前再次检查 Gateway 余额。"
+    },
+    "privateCheckout.incomplete": {
+      "source": "This action did not finish. Keep your local job and recover it before starting another purchase. Check sign-in, wallet, quote and browser storage.",
+      "text": "操作未完成。开始其他购买前保留并恢复本地任务。检查登录、钱包、报价和浏览器存储。"
+    },
+    "privateCheckout.loadingTerms": {
+      "source": "Loading private terms…",
+      "text": "正在加载私密条款…"
+    },
+    "privateCheckout.reviewTerms": {
+      "source": "Review the exact price and AI policy before buying.",
+      "text": "购买前审阅确切价格及 AI 政策。"
+    },
+    "privateCheckout.previewOnly": {
+      "source": "This account can preview terms, but private purchasing is currently unavailable.",
+      "text": "此账户可预览条款，但私密购买目前不可用。"
+    },
+    "privateCheckout.recovered": {
+      "source": "Private job recovered. No new payment was sent.",
+      "text": "私密任务已恢复。未发送新付款。"
+    },
+    "privateCheckout.unsignedReservation": {
+      "source": "No saved signature is available for this reservation. Keep it and check account history before starting another purchase.",
+      "text": "此预留无保存签名。开始其他购买前保留它并检查账户历史。"
+    },
+    "privateCheckout.noResult": {
+      "source": "The server has no result available for this account yet. This does not prove that a payment failed. Recover the same job later.",
+      "text": "服务器尚无此账户可用结果。这不证明付款失败。稍后恢复同一任务。"
+    },
+    "privateCheckout.checkingTerms": {
+      "source": "Checking the reviewed terms and wallet…",
+      "text": "正在检查已审阅条款及钱包…"
+    },
+    "privateCheckout.recoverySaved": {
+      "source": "Recovery saved. Check the exact payee and amount in your wallet before signing.",
+      "text": "恢复数据已保存。签名前在钱包检查确切收款人及金额。"
+    },
+    "privateCheckout.responseReceived": {
+      "source": "Purchase response received. Reading your private job…",
+      "text": "已收到购买响应。正在读取私密任务…"
+    },
+    "privateCheckout.submissionIncomplete": {
+      "source": "Submission may be incomplete. Recovering the same job without another payment…",
+      "text": "提交可能不完整。正在恢复同一任务，不另付款…"
+    },
+    "privateCheckout.readingJob": {
+      "source": "Reading the original private job…",
+      "text": "正在读取原私密任务…"
+    },
+    "privateCheckout.imported": {
+      "source": "Private recovery imported. Choose Recover to read the original job; importing never sends payment.",
+      "text": "私密恢复已导入。选择“恢复”读取原任务；导入绝不付款。"
+    },
+    "privateCheckout.deleted": {
+      "source": "Local private data deleted. This does not cancel payment or delete the server result. Account history remains available.",
+      "text": "本地私密数据已删除。这不取消付款或删除服务器结果。账户历史仍可用。"
+    },
+    "privateCheckout.question": {
+      "source": "Private research question",
+      "text": "私密研究问题"
+    },
+    "privateCheckout.package": {
+      "source": "Private package",
+      "text": "私密套餐"
+    },
+    "privateCheckout.quick": {
+      "source": "Quick",
+      "text": "快速"
+    },
+    "privateCheckout.deep": {
+      "source": "Deep",
+      "text": "深入"
+    },
+    "privateCheckout.creatorCap": {
+      "source": "Private creator cap (USDC)",
+      "text": "私密创作者上限（USDC）"
+    },
+    "privateCheckout.maximumTotal": {
+      "source": "Maximum total (USDC)",
+      "text": "最高总额（USDC）"
+    },
+    "privateCheckout.priceLimits": {
+      "source": "Maximum total must exceed the creator cap and be at most 1 USDC. The difference is your maximum service fee.",
+      "text": "最高总额须高于创作者上限且不超过 1 USDC。差额是最高服务费。"
+    },
+    "privateCheckout.reviewPrice": {
+      "source": "Review private price",
+      "text": "审阅私密价格"
+    },
+    "privateCheckout.fixedPriceNotice": {
+      "source": "Fixed-price, best-effort research. Unused creator budget is retained, not refunded. A completed job may have insufficient evidence.",
+      "text": "固定价格、尽力研究。未用创作者预算保留，不退款。已完成任务可能证据不足。"
+    },
+    "privateCheckout.consent": {
+      "source": "I accept these terms and storing this private question and payment signature in plaintext in this browser. Exported recovery files also contain them.",
+      "text": "我接受这些条款，并同意将此私密问题及付款签名以明文存储在此浏览器。导出恢复文件也包含它们。"
+    },
+    "privateCheckout.recoverPurchase": {
+      "source": "Recover private purchase",
+      "text": "恢复私密购买"
+    },
+    "privateCheckout.newPurchaseNotice": {
+      "source": "Review a new purchase explicitly. Your previous private job remains in local recovery and account history.",
+      "text": "明确审阅新购买。先前私密任务仍保留于本地恢复及账户历史。"
+    },
+    "privateCheckout.newPurchase": {
+      "source": "Review a new purchase",
+      "text": "审阅新购买"
+    },
+    "privateCheckout.recoveryTitle": {
+      "source": "Local private recovery",
+      "text": "本地私密恢复"
+    },
+    "privateCheckout.recoveryNotice": {
+      "source": "These entries stay in this browser. Export only to private storage: recovery files contain the question and bearer payment signature. Import only a private Keryx recovery file for this paying account.",
+      "text": "这些条目留在此浏览器。仅导出到私密存储：恢复文件包含问题及持票即授权的付款签名。仅导入属于此付款账户的私密 Keryx 恢复文件。"
+    },
+    "privateCheckout.import": {
+      "source": "Import private recovery",
+      "text": "导入私密恢复"
+    },
+    "privateCheckout.refresh": {
+      "source": "Refresh local private jobs",
+      "text": "刷新本地私密任务"
+    },
+    "privateCheckout.signingIncomplete": {
+      "source": "Signing incomplete",
+      "text": "签名不完整"
+    },
+    "privateCheckout.signatureSaved": {
+      "source": "Signature saved; no submission recorded",
+      "text": "签名已保存；无提交记录"
+    },
+    "privateCheckout.recoveryOnly": {
+      "source": "Recovery only",
+      "text": "仅恢复"
+    },
+    "privateCheckout.recoverSaved": {
+      "source": "Recover saved private job",
+      "text": "恢复保存的私密任务"
+    },
+    "privateCheckout.export": {
+      "source": "Export private recovery",
+      "text": "导出私密恢复"
+    },
+    "privateCheckout.delete": {
+      "source": "Delete local private data",
+      "text": "删除本地私密数据"
+    },
+    "privateCheckout.deleteLabel": {
+      "source": "Confirm local private deletion",
+      "text": "确认本地私密删除"
+    },
+    "privateCheckout.deleteQuestion": {
+      "source": "Delete the question and signature saved in this browser? Export first if you need recovery on another device. A minimal account/job marker remains to prevent another submission. Importing your saved file later restores recovery only.",
+      "text": "删除此浏览器保存的问题及签名？若需在其他设备恢复，请先导出。保留最小账户/任务标记以防再次提交。以后导入保存文件仅恢复访问。"
+    },
+    "privateCheckout.deleteBoundary": {
+      "source": "This cannot cancel a signed or in-flight payment, refund funds, or delete server history, exports, backups or copies in other open tabs. It is not secure disk erasure. Close other tabs to clear their displayed copies.",
+      "text": "这无法取消已签名或进行中的付款、退款，或删除服务器历史、导出、备份及其他打开标签页副本。不是安全磁盘擦除。关闭其他标签页以清除显示副本。"
+    },
+    "privateCheckout.confirmDelete": {
+      "source": "Confirm delete local data",
+      "text": "确认删除本地数据"
+    },
+    "privateCheckout.keep": {
+      "source": "Keep local data",
+      "text": "保留本地数据"
+    },
+    "privateCheckout.loadMore": {
+      "source": "Load more local private jobs",
+      "text": "加载更多本地私密任务"
+    },
+    "privateCheckout.privacy": {
+      "source": "{network} private research. Only the paying account can open the result. Keryx and the disclosed AI provider process your question; this is not end-to-end encryption.",
+      "text": "{network} 私密研究。仅付款账户可打开结果。Keryx 及披露 AI 服务商处理问题；不是端到端加密。"
+    },
+    "privateCheckout.payer": {
+      "source": "Paying account: {payer}",
+      "text": "付款账户：{payer}"
+    },
+    "privateCheckout.walletConnected": {
+      "source": "Wallet connected. Use the signed-in paying account on {network}.",
+      "text": "钱包已连接。使用 {network} 上已登录付款账户。"
+    },
+    "privateCheckout.connectPayer": {
+      "source": "Connect this paying account on {network} to buy. Recovery only needs account sign-in.",
+      "text": "在 {network} 连接此付款账户以购买。恢复仅需账户登录。"
+    },
+    "privateCheckout.switchInstruction": {
+      "source": "Switch to {network} in your wallet.",
+      "text": "在钱包切换至 {network}。"
+    },
+    "privateCheckout.switchNetwork": {
+      "source": "Switch to {network}",
+      "text": "切换到 {network}"
+    },
+    "privateCheckout.total": {
+      "source": "Private total: {amount}",
+      "text": "私密总额：{amount}"
+    },
+    "privateCheckout.pricing": {
+      "source": "Creator cap: {cap} · Service fee: {fee}",
+      "text": "创作者上限：{cap} · 服务费：{fee}"
+    },
+    "privateCheckout.payee": {
+      "source": "Private payee: {payee}",
+      "text": "私密收款人：{payee}"
+    },
+    "privateCheckout.aiPolicy": {
+      "source": "AI provider: {provider} · Model: {model}{lineBreak}Endpoint: {endpoint}{lineBreak}Fallback: local heuristic. Redirects are prohibited.",
+      "text": "AI 服务商：{provider} · 模型：{model}{lineBreak}端点：{endpoint}{lineBreak}回退：本地启发式。禁止重定向。"
+    },
+    "monthlyResearch.storageUnavailable": {
+      "source": "Recovery storage unavailable",
+      "text": "恢复存储不可用"
+    },
+    "monthlyResearch.connectPayer": {
+      "source": "Connect the plan payer",
+      "text": "连接方案付款人"
+    },
+    "monthlyResearch.walletChanged": {
+      "source": "Wallet changed",
+      "text": "钱包已更改"
+    },
+    "monthlyResearch.operationUncertain": {
+      "source": "Operation uncertain. Keep the original recovery identity.",
+      "text": "操作不确定。保留原恢复身份。"
+    },
+    "monthlyResearch.title": {
+      "source": "Research Monthly",
+      "text": "Research Monthly"
+    },
+    "monthlyResearch.consent": {
+      "source": "I accept these terms and this exact price. I will keep my recovery file and original request IDs.",
+      "text": "我接受这些条款及此确切价格。我会保留恢复文件和原请求 ID。"
+    },
+    "monthlyResearch.recoveryOnly": {
+      "source": "This purchase is recovery-only",
+      "text": "此购买仅可恢复"
+    },
+    "monthlyResearch.acknowledged": {
+      "source": "Seller acknowledged the purchase. Check plan status to submit a request.",
+      "text": "卖方已确认购买。检查方案状态以提交请求。"
+    },
+    "monthlyResearch.purchaseUncertain": {
+      "source": "Purchase is uncertain. Check this original plan ID later; do not buy another plan to recover it.",
+      "text": "购买不确定。稍后检查此原方案 ID；不要为恢复购买另一方案。"
+    },
+    "monthlyResearch.downloadPurchase": {
+      "source": "Download purchase recovery",
+      "text": "下载购买恢复数据"
+    },
+    "monthlyResearch.planId": {
+      "source": "Saved plan ID",
+      "text": "已保存方案 ID"
+    },
+    "monthlyResearch.importRequest": {
+      "source": "Import request recovery",
+      "text": "导入请求恢复数据"
+    },
+    "monthlyResearch.fileTooLarge": {
+      "source": "Recovery file is too large",
+      "text": "恢复文件过大"
+    },
+    "monthlyResearch.connectRecoveryPayer": {
+      "source": "Connect the recovery request payer",
+      "text": "连接恢复请求付款人"
+    },
+    "monthlyResearch.restored": {
+      "source": "Original request restored. Connect its payer and recover the same request; no new payment was sent.",
+      "text": "原请求已恢复。连接其付款人并恢复同一请求；未发送新付款。"
+    },
+    "monthlyResearch.statusRefreshed": {
+      "source": "Status refreshed. Checking status never submits a payment.",
+      "text": "状态已刷新。检查状态绝不提交付款。"
+    },
+    "monthlyResearch.checkStatus": {
+      "source": "Check plan status",
+      "text": "检查方案状态"
+    },
+    "monthlyResearch.savedPlanDisconnected": {
+      "source": "Your saved plan ID remains here. Connect its payer to check status. Existing job IDs below remain recoverable.",
+      "text": "保存方案 ID 仍在此。连接付款人检查状态。下方现有任务 ID 仍可恢复。"
+    },
+    "monthlyResearch.unresolvedPurchase": {
+      "source": "A submitted purchase remains unresolved. Check the original saved plan ID; a new purchase is disabled until its confirmed plan is recovered.",
+      "text": "已提交购买仍未解决。检查原保存方案 ID；确认方案恢复前禁用新购买。"
+    },
+    "monthlyResearch.question": {
+      "source": "Research question",
+      "text": "研究问题"
+    },
+    "monthlyResearch.connectOriginalPayer": {
+      "source": "Connect the original plan payer",
+      "text": "连接原方案付款人"
+    },
+    "monthlyResearch.requestAdmitted": {
+      "source": "Request admitted. Follow the original job below.",
+      "text": "请求已接受。在下方跟踪原任务。"
+    },
+    "monthlyResearch.useRequest": {
+      "source": "Use one request",
+      "text": "使用一个请求"
+    },
+    "monthlyResearch.downloadRequest": {
+      "source": "Download request recovery",
+      "text": "下载请求恢复数据"
+    },
+    "monthlyResearch.followingJob": {
+      "source": "Following the original job below.",
+      "text": "正在下方跟踪原任务。"
+    },
+    "monthlyResearch.recoverRequest": {
+      "source": "Recover original request",
+      "text": "恢复原始请求"
+    },
+    "monthlyResearch.connectPayerNetwork": {
+      "source": "Connect the original plan payer on {network}",
+      "text": "在 {network} 连接原方案付款人"
+    },
+    "monthlyResearch.renewal": {
+      "source": "{network} · manual renewal",
+      "text": "{network} · 手动续期"
+    },
+    "monthlyResearch.introduction": {
+      "source": "Four Deep research requests over 30 days for {total} USDC, compared with {separateTotal} USDC separately. Each request keeps a {cap} USDC creator cap. The discount comes from Keryx’s service allocation.",
+      "text": "30 天内四次 Deep 研究请求，共 {total} USDC；单独购买为 {separateTotal} USDC。每次请求保留 {cap} USDC 创作者上限。折扣来自 Keryx 服务分配。"
+    },
+    "monthlyResearch.terms": {
+      "source": "10% off the four-request total, rounded up to equal micro-USDC allocations. Fixed, non-refundable and best effort. Failed or pending jobs use a slot; unused requests expire. No scheduled research, unlimited use or automatic renewal. Your questions use the existing public research service.",
+      "text": "四次请求总额优惠 10%，向上取整为相等微 USDC 分配。固定、不退款、尽力服务。失败或待处理任务占名额；未用请求到期失效。无定时研究、无限使用或自动续期。问题使用现有公开研究服务。"
+    },
+    "monthlyResearch.roundedTerms": {
+      "source": "10% off the four-request total, rounded up to equal micro-USDC allocations ({rounding} micro-USDC rounding). Fixed, non-refundable and best effort. Failed or pending jobs use a slot; unused requests expire. No scheduled research, unlimited use or automatic renewal. Your questions use the existing public research service.",
+      "text": "四次请求总额优惠 10%，向上取整为相等微 USDC 分配（舍入 {rounding} 微 USDC）。固定、不退款、尽力服务。失败或待处理任务占名额；未用请求到期失效。无定时研究、无限使用或自动续期。问题使用现有公开研究服务。"
+    },
+    "monthlyResearch.payee": {
+      "source": "Keryx payee: {payee}",
+      "text": "Keryx 收款人：{payee}"
+    },
+    "monthlyResearch.chooseNetwork": {
+      "source": "Choose {network} in your wallet.",
+      "text": "在钱包选择 {network}。"
+    },
+    "monthlyResearch.buy": {
+      "source": "Buy Monthly · {amount} USDC",
+      "text": "购买 Monthly · {amount} USDC"
+    },
+    "monthlyResearch.expired.one": {
+      "source": "{count} requests remaining · Expired",
+      "text": "剩余 {count} 次请求 · 已过期"
+    },
+    "monthlyResearch.expires.one": {
+      "source": "{count} requests remaining · Expires {expiresAt}",
+      "text": "剩余 {count} 次请求 · 于 {expiresAt} 过期"
+    },
+    "monthlyResearch.expired.other": {
+      "source": "{count} requests remaining · Expired",
+      "text": "剩余 {count} 次请求 · 已过期"
+    },
+    "monthlyResearch.expires.other": {
+      "source": "{count} requests remaining · Expires {expiresAt}",
+      "text": "剩余 {count} 次请求 · 于 {expiresAt} 过期"
+    },
+    "monthlyResearch.followJob": {
+      "source": "Follow job {jobId}",
+      "text": "跟踪任务 {jobId}"
+    },
+    "monthlyResearch.retainedRequest": {
+      "source": "Retained request {requestId}. Recover this exact question and request ID after a disconnect; it cannot consume another slot.",
+      "text": "保留请求 {requestId}。断线后恢复此确切问题及请求 ID；不会占用另一名额。"
+    },
+    "researchRequest.question": {
+      "source": "Research question",
+      "text": "研究问题"
+    },
+    "researchRequest.placeholder": {
+      "source": "What should your agent research?",
+      "text": "您的代理应研究什么？"
+    },
+    "researchRequest.ownAgent": {
+      "source": "Use your own agent or CLI",
+      "text": "使用自己的代理或 CLI"
+    },
+    "researchRequest.copied": {
+      "source": "Request copied. No payment was made.",
+      "text": "请求已复制。未付款。"
+    },
+    "researchRequest.copyUnavailable": {
+      "source": "Copy unavailable. Select the JSON above to copy it.",
+      "text": "复制不可用。选择上方 JSON 复制。"
+    },
+    "researchRequest.copy": {
+      "source": "Copy request JSON",
+      "text": "复制请求 JSON"
+    },
+    "researchRequest.download": {
+      "source": "Download request",
+      "text": "下载请求"
+    },
+    "researchRequest.buyerGuide": {
+      "source": "buyer-agent guide",
+      "text": "买方代理指南"
+    },
+    "researchRequest.protocolNotice": {
+      "source": "Send this JSON to {endpoint} with your x402 client. Check the challenge against {amount} USDC, {network} and the expected Keryx payee before signing. Keep the returned job ID to open it below.",
+      "text": "用 x402 客户端将此 JSON 发送至 {endpoint}。签名前核对挑战的 {amount} USDC、{network} 及预期 Keryx 收款人。保留返回任务 ID 在下方打开。"
+    },
+    "researchRequest.guideNotice": {
+      "source": "Use the {guideLink} to quote, pay from your own funded {network} wallet, and resume the same job after a disconnect.",
+      "text": "使用{guideLink}报价、从自己的已注资 {network} 钱包付款，并在断线后恢复同一任务。"
+    },
+    "paidResearch.pageTitle": {
+      "source": "Research — Keryx",
+      "text": "研究 — Keryx"
+    },
+    "paidResearch.pageDescription": {
+      "source": "Ask a research question, read a cited report, or prepare a paid agent research package.",
+      "text": "提出研究问题、阅读带引用报告，或准备付费代理研究套餐。"
+    },
+    "paidResearch.title": {
+      "source": "Give your agent a research budget.",
+      "text": "给您的代理研究预算。"
+    },
+    "paidResearch.introduction": {
+      "source": "Know the price before your agent pays. Follow the job, read its evidence, and see what reached creators.",
+      "text": "代理付款前了解价格。跟踪任务、阅读证据并查看创作者所得。"
+    },
+    "paidResearch.recoveryNotice": {
+      "source": "Buy with a funded Gateway wallet, or prepare a request for your own agent. Keep a private recovery file to follow your job after a disconnect.",
+      "text": "使用已注资 Gateway 钱包购买，或为自己的代理准备请求。保留私密恢复文件以在断线后跟踪任务。"
+    },
+    "paidResearch.priceTitle": {
+      "source": "1. Price your research",
+      "text": "1. 为研究定价"
+    },
+    "paidResearch.package": {
+      "source": "Package",
+      "text": "套餐"
+    },
+    "paidResearch.quick": {
+      "source": "Quick",
+      "text": "快速"
+    },
+    "paidResearch.deep": {
+      "source": "Deep",
+      "text": "深入"
+    },
+    "paidResearch.cap": {
+      "source": "Creator cap (USDC)",
+      "text": "创作者上限（USDC）"
+    },
+    "paidResearch.updatePrice": {
+      "source": "Update price",
+      "text": "更新价格"
+    },
+    "paidResearch.serviceFee": {
+      "source": "Service fee",
+      "text": "服务费"
+    },
+    "paidResearch.creatorCap": {
+      "source": "Creator cap",
+      "text": "创作者支出上限"
+    },
+    "paidResearch.totalPrice": {
+      "source": "Total package price",
+      "text": "套餐总价"
+    },
+    "paidResearch.terms": {
+      "source": "Fixed-price and non-refundable. Unused creator reserve stays in the package. Quality is best effort; the provisional target has no refund or service-credit remedy. The payment challenge at purchase is authoritative.",
+      "text": "固定价格，不退款。未用创作者储备留在套餐。质量为尽力服务；暂定目标无退款或服务抵扣补救。购买时付款挑战具权威性。"
+    },
+    "paidResearch.apiReference": {
+      "source": "Read the API reference",
+      "text": "阅读 API 参考"
+    },
+    "paidResearch.playground": {
+      "source": "open the playground",
+      "text": "打开 playground"
+    },
+    "paidResearch.kicker": {
+      "source": "Paid research · {network}",
+      "text": "付费研究 · {network}"
+    },
+    "paidResearch.invalidPrice": {
+      "source": "Choose Quick or Deep and a cap between 0.000001 and {maximum} USDC, with at most six decimal places.",
+      "text": "选择 Quick 或 Deep，上限在 0.000001 至 {maximum} USDC 之间，最多六位小数。"
+    },
+    "paidResearch.sources.one": {
+      "source": "Up to {count} sources considered for synthesis",
+      "text": "综合时最多考虑 {count} 个来源"
+    },
+    "paidResearch.sources.other": {
+      "source": "Up to {count} sources considered for synthesis",
+      "text": "综合时最多考虑 {count} 个来源"
+    },
+    "paidResearch.rounds.one": {
+      "source": "{count} re-evaluation rounds",
+      "text": "{count} 轮重新评估"
+    },
+    "paidResearch.rounds.other": {
+      "source": "{count} re-evaluation rounds",
+      "text": "{count} 轮重新评估"
+    },
+    "paidResearch.target": {
+      "source": "{seconds}s provisional completion target.",
+      "text": "暂定完成目标 {seconds} 秒。"
+    },
+    "paidResearch.paymentIdentity": {
+      "source": "Payment network: {network}{lineBreak}Keryx payee: {payee}",
+      "text": "付款网络：{network}{lineBreak}Keryx 收款人：{payee}"
+    },
+    "paidResearch.unavailable": {
+      "source": "Paid research on {network} is currently unavailable. Job lookup remains available below.",
+      "text": "{network} 上付费研究目前不可用。下方任务查询仍可用。"
+    },
+    "paidResearch.apiHelp": {
+      "source": "New to the API? {referenceLink}. To try a sponsored question, {playgroundLink}.",
+      "text": "初次使用 API？{referenceLink}。尝试赞助问题请{playgroundLink}。"
+    },
+    "researchEvidence.title": {
+      "source": "Inspect the evidence before paying",
+      "text": "付款前检查证据"
+    },
+    "researchEvidence.introduction": {
+      "source": "Browse listed creator sources and their public previews to judge whether this corpus fits your question. This does not select sources for your job or guarantee a supported answer.",
+      "text": "浏览已上架创作者来源及公开预览，判断语料是否适合问题。这不为任务选择来源，也不保证获支持答案。"
+    },
+    "researchEvidence.registry": {
+      "source": "See the registry and free references",
+      "text": "查看注册表及免费参考资料"
+    },
+    "researchEvidence.search": {
+      "source": "Search loaded source names, descriptions and tags",
+      "text": "搜索已加载来源名称、说明及标签"
+    },
+    "researchEvidence.listNotAvailable": {
+      "source": "Source list not yet available.",
+      "text": "来源列表尚不可用。"
+    },
+    "researchEvidence.listLoading": {
+      "source": "Loading source list…",
+      "text": "正在加载来源列表…"
+    },
+    "researchEvidence.retryList": {
+      "source": "Retry source list",
+      "text": "重试来源列表"
+    },
+    "researchEvidence.chooseSource": {
+      "source": "Choose a source to inspect",
+      "text": "选择来源查看"
+    },
+    "researchEvidence.selectSource": {
+      "source": "Select a listed source",
+      "text": "选择已上架来源"
+    },
+    "researchEvidence.emptyList": {
+      "source": "No creator sources are currently listed. Free references may still be available in the registry.",
+      "text": "当前无上架创作者来源。注册表可能仍有免费参考资料。"
+    },
+    "researchEvidence.noMatch": {
+      "source": "No match in loaded sources. This is not a verdict on whether Keryx can answer your question.",
+      "text": "已加载来源无匹配。这不是对 Keryx 能否回答问题的判断。"
+    },
+    "researchEvidence.loadMore": {
+      "source": "Load more sources",
+      "text": "加载更多来源"
+    },
+    "researchEvidence.previewNotice": {
+      "source": "Select a source for up to five public article previews. Previews may be excerpts or titles only; they do not establish full-text availability or current payout eligibility.",
+      "text": "选择来源查看最多五项公开文章预览。预览可能仅摘录或标题，不能确立全文可用性或当前付款资格。"
+    },
+    "researchEvidence.syntheticSource": {
+      "source": "Synthetic demo content: illustrative only; excluded from factual production research.",
+      "text": "合成演示内容：仅供说明；排除于事实性生产研究。"
+    },
+    "researchEvidence.unverifiedOwnership": {
+      "source": "Ownership unverified: this listing is excluded from the research agent's creator reading and payment path.",
+      "text": "所有权未核验：此来源排除于研究代理创作者阅读及付款路径。"
+    },
+    "researchEvidence.listingFlags": {
+      "source": "Listing flags can include legacy defaults. An unflagged listing is not independent proof of ownership, live delivery or payout authority.",
+      "text": "来源标志可能含旧默认值。未标记来源不是所有权、实时交付或收款权限的独立凭证。"
+    },
+    "researchEvidence.previewLoading": {
+      "source": "Loading public preview…",
+      "text": "正在加载公开预览…"
+    },
+    "researchEvidence.retryPreview": {
+      "source": "Retry preview",
+      "text": "重试预览"
+    },
+    "researchEvidence.emptyPreview": {
+      "source": "No public article previews are available for this source.",
+      "text": "此来源无公开文章预览。"
+    },
+    "researchEvidence.syntheticArticle": {
+      "source": "Synthetic demo article ? illustrative only",
+      "text": "合成演示文章 ? 仅供说明"
+    },
+    "researchEvidence.register": {
+      "source": "List and verify your source",
+      "text": "上架并核验来源"
+    },
+    "researchEvidence.corpusNotice": {
+      "source": "Research uses registered creator content and free public feed references. It does not browse the whole web or buy external marketplace endpoints. {registryLink}.",
+      "text": "研究使用已注册创作者内容及免费公开订阅源参考资料。不浏览整个网络或购买外部市场端点。{registryLink}。"
+    },
+    "researchEvidence.loaded.one": {
+      "source": "{loaded} of {count} listed sources loaded. Search covers only these loaded sources.",
+      "text": "已加载 {count} 个上架来源中的 {loaded} 个。搜索仅覆盖已加载来源。"
+    },
+    "researchEvidence.loaded.other": {
+      "source": "{loaded} of {count} listed sources loaded. Search covers only these loaded sources.",
+      "text": "已加载 {count} 个上架来源中的 {loaded} 个。搜索仅覆盖已加载来源。"
+    },
+    "researchEvidence.listFailed": {
+      "source": "Source list could not be loaded. Its availability is unknown. {retryButton}",
+      "text": "无法加载来源列表。可用性未知。{retryButton}"
+    },
+    "researchEvidence.sourceOption.synthetic": {
+      "source": "{name} ? synthetic demo",
+      "text": "{name} ? 合成演示"
+    },
+    "researchEvidence.sourceOption.unverified": {
+      "source": "{name} — ownership unverified",
+      "text": "{name} — 所有权未核验"
+    },
+    "researchEvidence.sourceOption.syntheticUnverified": {
+      "source": "{name} ? synthetic demo — ownership unverified",
+      "text": "{name} ? 合成演示 — 所有权未核验"
+    },
+    "researchEvidence.limit.one": {
+      "source": "This view is limited to {count} sources. Browse the full registry above.",
+      "text": "此视图限 {count} 个来源。浏览上方完整注册表。"
+    },
+    "researchEvidence.limit.other": {
+      "source": "This view is limited to {count} sources. Browse the full registry above.",
+      "text": "此视图限 {count} 个来源。浏览上方完整注册表。"
+    },
+    "researchEvidence.previewFailed": {
+      "source": "Public preview unavailable. No content availability has been established. {retryButton}",
+      "text": "公开预览不可用。未确立内容可用性。{retryButton}"
+    },
+    "researchEvidence.titleOnly": {
+      "source": "Title-only public preview · not paid article content",
+      "text": "仅标题公开预览 · 不是付费文章内容"
+    },
+    "researchEvidence.summaries": {
+      "source": "Public preview summaries · not paid article content",
+      "text": "公开预览摘要 · 不是付费文章内容"
+    },
+    "researchEvidence.publisherDate": {
+      "source": "Publisher date: {date}",
+      "text": "出版者日期：{date}"
+    },
+    "researchEvidence.registrationNotice": {
+      "source": "Own a useful feed? {registrationLink}. Listing does not guarantee that an agent will buy or cite it.",
+      "text": "拥有有用订阅源？{registrationLink}。上架不保证代理购买或引用。"
+    }
+  }
+}

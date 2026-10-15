@@ -1,5 +1,6 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { surfaceResearch } from "../research/surface-result";
+import { projectCompletedAnswerLanguage } from "../research/answer-language-provenance";
 import { a2aReceiptEconomics, type A2aQuote } from "./pricing";
 import type { A2aOrder } from "./order";
 import type { QueryRun } from "../types";
@@ -34,6 +35,7 @@ export function a2aResponseFromRun(
     throw new Error("paid A2A research did not use the real treasury gateway");
   }
   const researchPackage = quote.researchPackage;
+  const answerLanguage = projectCompletedAnswerLanguage(run);
   const packageReceipt =
     timing && isSupportedA2aResearchPackage(researchPackage, quote.researchMode)
       ? {
@@ -51,6 +53,7 @@ export function a2aResponseFromRun(
     status: "completed",
     queryId: run.id,
     answer: run.answer,
+    ...(answerLanguage ? { answerLanguage } : {}),
     ...surfaceResearch(run),
     totalToCreators: run.totalToCreators,
     feePaid: quote.serviceFeeUsdc,

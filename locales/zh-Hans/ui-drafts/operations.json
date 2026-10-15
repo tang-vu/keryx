@@ -1,0 +1,1408 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/operations.ts",
+  "sourceSha256": "6a2db103f1003ae55264ad3969db6e55c281905277c58dfe1b747e6a8b67cdfc",
+  "entries": {
+    "statusRegistry.parityMatch": {
+      "source": "{compared}/{compared} match · {checkedAgo}",
+      "text": "{compared}/{compared} 匹配 · {checkedAgo}"
+    },
+    "statusRegistry.mismatch.one": {
+      "source": "{count} mismatch · {checkedAgo}",
+      "text": "{count} 项不匹配 · {checkedAgo}"
+    },
+    "statusRegistry.mismatch.other": {
+      "source": "{count} mismatches · {checkedAgo}",
+      "text": "{count} 项不匹配 · {checkedAgo}"
+    },
+    "statusDispatch.partial.one": {
+      "source": " · {count} partial",
+      "text": " · {count} 个不完整"
+    },
+    "statusDispatch.partial.other": {
+      "source": " · {count} partial",
+      "text": " · {count} 个不完整"
+    },
+    "statusDispatch.circuitSkips.one": {
+      "source": " · {count} circuit skips",
+      "text": " · {count} 次熔断跳过"
+    },
+    "statusDispatch.circuitSkips.other": {
+      "source": " · {count} circuit skips",
+      "text": " · {count} 次熔断跳过"
+    },
+    "statusSettlement.cashedOutAmount": {
+      "source": " · {amount} cashed out",
+      "text": " · 已提现 {amount}"
+    },
+    "statusSettlement.shortWallets.one": {
+      "source": "{count} wallet",
+      "text": "{count} 个钱包"
+    },
+    "statusSettlement.shortWallets.other": {
+      "source": "{count} wallets",
+      "text": "{count} 个钱包"
+    },
+    "statusSettlement.unverified.one": {
+      "source": " · {count} unverified",
+      "text": " · {count} 个未验证"
+    },
+    "statusSettlement.unverified.other": {
+      "source": " · {count} unverified",
+      "text": " · {count} 个未验证"
+    },
+    "statusReconciliation.terminalFailures.one": {
+      "source": "{failed} ({released} reservations released)",
+      "text": "{failed}（已释放 {released} 个预留）"
+    },
+    "statusReconciliation.terminalFailures.other": {
+      "source": "{failed} ({released} reservations released)",
+      "text": "{failed}（已释放 {released} 个预留）"
+    },
+    "operatorBusiness.reasonNoOrders": {
+      "source": "No prepaid research order is waiting.",
+      "text": "没有等待处理的预付研究订单。"
+    },
+    "operatorBusiness.reasonLiquidityCovered": {
+      "source": "Observed capacity covers unfinished creator budgets inside the original policy.",
+      "text": "观察到的容量覆盖原政策内未完成的创作者预算。"
+    },
+    "operatorBusiness.reasonLiquidityUnavailable": {
+      "source": "Original treasury capacity could not be verified. Orders remain queued.",
+      "text": "无法核验原金库容量。订单仍排队。"
+    },
+    "operatorBusiness.reasonLiquidityShort": {
+      "source": "Unfinished creator obligations exceed observed capacity. Owner funding review is needed.",
+      "text": "未完成创作者义务超过观察到的容量。需要所有者审核注资。"
+    },
+    "operatorBusiness.reasonPolicyCap": {
+      "source": "An accepted obligation exceeds the original treasury policy. Owner review is needed.",
+      "text": "一项已接受义务超出原金库政策。需要所有者审核。"
+    },
+    "operatorBusiness.reasonIncompleteInventory": {
+      "source": "The selected-network obligation inventory is unavailable or inconsistent.",
+      "text": "所选网络义务清单不可用或不一致。"
+    },
+    "operatorBusiness.reasonOriginalJobNeedsReview": {
+      "source": "An original started job needs reconciliation. It will not be purchased again.",
+      "text": "原已启动任务需对账。不会再次购买。"
+    },
+    "operatorBusiness.reasonAnotherJobActive": {
+      "source": "Another accepted job is active. This worker waits without claiming another order.",
+      "text": "另一个已接受任务正在进行。此工作进程等待，不认领其他订单。"
+    },
+    "operatorBusiness.reasonAcceptancePaused": {
+      "source": "A finite acceptance policy is active. Paid originals stay queued.",
+      "text": "有限接受政策已启用。已付款原订单仍排队。"
+    },
+    "businessCalculator.unknownInputs.one": {
+      "source": "{basis} · {count} unknown inputs. These are two alternative views; do not add them together.",
+      "text": "{basis} · {count} 项未知输入。这是两种替代视图；不要相加。"
+    },
+    "businessCalculator.unknownInputs.other": {
+      "source": "{basis} · {count} unknown inputs. These are two alternative views; do not add them together.",
+      "text": "{basis} · {count} 项未知输入。这是两种替代视图；不要相加。"
+    },
+    "businessCalculator.illustrativeScenario": {
+      "source": "Illustrative scenario",
+      "text": "示例场景"
+    },
+    "businessCalculator.yourOperatingEstimates": {
+      "source": "Your operating estimates",
+      "text": "您的运营估算"
+    },
+    "statusObservation.minutesAgo": {
+      "source": "{minutes}m ago",
+      "text": "{minutes} 分钟前"
+    },
+    "statusObservation.hoursAgo": {
+      "source": "{hours}h ago",
+      "text": "{hours} 小时前"
+    },
+    "statusObservation.daysAgo": {
+      "source": "{days}d ago",
+      "text": "{days} 天前"
+    },
+    "statusPage.checkedAt": {
+      "source": " · checked {checkedAt}",
+      "text": " · 检查于 {checkedAt}"
+    },
+    "economicsPage.viewCurrentResearchOffers": {
+      "source": "View current research offers",
+      "text": "查看当前研究报价"
+    },
+    "economicsPage.packageReceiptsAreNotAutomaticallyRecognizedRevenueOr": {
+      "source": "Package receipts are not automatically recognized revenue or profit. Useful research and creator obligations remain part of the service. {link}.",
+      "text": "套餐收款不自动认定为收入或利润。有效研究及创作者义务仍属于服务。{link}。"
+    },
+    "economicsPage.thisCalculatorUsesAssumptionsNotRealizedRevenueIt": {
+      "source": "This calculator uses assumptions, not realized revenue. It does not import testnet activity, change package prices or make payments. The illustrative fees are editable examples.",
+      "text": "此计算器使用假设，不是已实现收入。不导入测试网活动、不更改套餐价格，也不付款。示例费用可编辑。"
+    },
+    "economicsPage.compareServiceFeeContributionAndFixedPackageReserve": {
+      "source": "Compare service-fee contribution and fixed-package reserve retention. Test your costs and demand to understand monthly operating results and the volume needed to break even.",
+      "text": "比较服务费贡献与固定套餐储备留存。测试成本及需求以了解月度运营结果及盈亏平衡所需业务量。"
+    },
+    "economicsPage.whatDoesAResearchJobEarn": {
+      "source": "What does a research job earn?",
+      "text": "一个研究任务赚多少？"
+    },
+    "economicsPage.businessPlanning": {
+      "source": "Business planning",
+      "text": "业务规划"
+    },
+    "statusPage.pendingDeposits": {
+      "source": "Pending deposits",
+      "text": "待处理存款"
+    },
+    "statusPage.confirmedAllChains": {
+      "source": "Confirmed (all chains)",
+      "text": "已确认（所有链）"
+    },
+    "statusPage.settlementTreasuryUnifiedBalanceCircleAppKit": {
+      "source": "Settlement treasury — unified balance · Circle App Kit",
+      "text": "结算金库 — 统一余额 · Circle App Kit"
+    },
+    "statusPage.unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "statusPage.gatewayAvailableUSDC": {
+      "source": "Gateway available USDC",
+      "text": "Gateway 可用 USDC"
+    },
+    "statusPage.publicResearchTreasuryArcMainnet": {
+      "source": "Public research treasury · Arc mainnet",
+      "text": "公开研究金库 · Arc 主网"
+    },
+    "statusPage.unavailable": {
+      "source": "Unavailable",
+      "text": "不可用"
+    },
+    "statusPage.operatingFeeTransfers": {
+      "source": "Operating fee transfers",
+      "text": "运营费转账"
+    },
+    "statusPage.keryxOperatingFees": {
+      "source": "Keryx operating fees",
+      "text": "Keryx 运营费用"
+    },
+    "statusPage.creatorsEarning": {
+      "source": "Creators earning",
+      "text": "获收入创作者"
+    },
+    "statusPage.creatorRewards": {
+      "source": "Creator rewards",
+      "text": "创作者奖励"
+    },
+    "statusPage.settledPayments": {
+      "source": "Settled payments",
+      "text": "已结算付款"
+    },
+    "statusPage.totalQueries": {
+      "source": "Total queries",
+      "text": "查询总数"
+    },
+    "statusPage.liveTraction": {
+      "source": "Live traction",
+      "text": "实时业务数据"
+    },
+    "statusPage.commit": {
+      "source": "Commit",
+      "text": "提交"
+    },
+    "statusPage.network": {
+      "source": "Network",
+      "text": "网络"
+    },
+    "statusPage.reasoning": {
+      "source": "Reasoning",
+      "text": "推理"
+    },
+    "statusPage.settlement": {
+      "source": "Settlement",
+      "text": "结算"
+    },
+    "statusPage.datastore": {
+      "source": "Datastore",
+      "text": "数据存储"
+    },
+    "statusPage.uptime": {
+      "source": "Uptime",
+      "text": "运行时间"
+    },
+    "statusPage.serviceStatus": {
+      "source": "Service status",
+      "text": "服务状态"
+    },
+    "statusPage.degraded": {
+      "source": "Degraded",
+      "text": "降级"
+    },
+    "statusPage.serviceAvailable": {
+      "source": "Service available",
+      "text": "服务可用"
+    },
+    "statusPage.checkingService": {
+      "source": "Checking service",
+      "text": "正在检查服务"
+    },
+    "statusPage.unreachable": {
+      "source": "Unreachable",
+      "text": "无法访问"
+    },
+    "proofPage.circleAndArcIntegrationLedger": {
+      "source": "Circle and Arc integration ledger",
+      "text": "Circle 和 Arc 集成账本"
+    },
+    "proofPage.verifyTheDeployedCodeSourceAuthoritySettledPayments": {
+      "source": "Verify the deployed code, source authority, settled payments, and creator cash-outs through the records behind each claim.",
+      "text": "通过每项声明背后的记录核验部署代码、来源权限、已结算付款和创作者提现。"
+    },
+    "proofPage.limitsAttached": {
+      "source": "limits attached.",
+      "text": "附有限制。"
+    },
+    "proofPage.publicProof": {
+      "source": "Public proof",
+      "text": "公开证明"
+    },
+    "proofPage.batchedTransfersHaveCircleIDsNotOneArcScan": {
+      "source": "Batched transfers have Circle IDs, not one ArcScan tx per citation.",
+      "text": "批量转账有 Circle ID，而非每次引用一个 ArcScan 交易。"
+    },
+    "proofPage.payeeBalancesBackTheSettledLedgerWalletBy": {
+      "source": "Payee balances back the settled ledger, wallet by wallet.",
+      "text": "收款人余额逐钱包支持已结算账本。"
+    },
+    "proofPage.circleGatewayAPI": {
+      "source": "Circle Gateway API",
+      "text": "Circle Gateway API"
+    },
+    "proofPage.itDoesNotTurnADatabaseRowInto": {
+      "source": "It does not turn a database row into payout authority.",
+      "text": "这不会使数据库行成为付款权限依据。"
+    },
+    "proofPage.whoControlsASourceItsPriceCeilingPayout": {
+      "source": "Who controls a source, its price ceiling, payout wallet, and author splits.",
+      "text": "谁控制来源、价格上限、收款钱包及作者分成。"
+    },
+    "proofPage.arcRPCSourceRegistry": {
+      "source": "Arc RPC + SourceRegistry",
+      "text": "Arc RPC + SourceRegistry"
+    },
+    "proofPage.itDoesNotProveThatAPaymentSettled": {
+      "source": "It does not prove that a payment settled.",
+      "text": "这不能证明付款已结算。"
+    },
+    "proofPage.theReviewedSourceIsTheBuildCurrentlyServing": {
+      "source": "The reviewed source is the build currently serving traffic.",
+      "text": "已审核来源是当前提供服务的构建。"
+    },
+    "proofPage.gitHubRuntimeCommit": {
+      "source": "GitHub + runtime commit",
+      "text": "GitHub + 运行时提交"
+    },
+    "operatorBusiness.localOperatorDesktopAndCLIWorkspacesRetainTheir": {
+      "source": "Local Operator desktop and CLI workspaces retain their existing deliberate purchase and recovery flow. Hosted prepaid orders run on the service worker; this status page grants no execution authority.",
+      "text": "本地 Operator 桌面及 CLI 工作区保留现有主动购买和恢复流程。托管预付订单在服务工作进程运行；此状态页不授予执行权限。"
+    },
+    "operatorBusiness.aGeneralOnChainBusinessBudgetWalletAnd": {
+      "source": "A general on-chain business budget wallet and a complete live business acceptance cycle remain separate gates. This page does not certify either.",
+      "text": "通用链上业务预算钱包和完整实时业务接受周期仍是独立门槛。此页不认证任一项。"
+    },
+    "operatorBusiness.thisViewReportsTheWorkerSObservedDecisions": {
+      "source": "This view reports the worker's observed decisions and aggregate order states. Private questions, receipts and account details remain with their original owners.",
+      "text": "此视图报告工作进程观察到的决策及订单汇总状态。私密问题、收据及账户详情保留给原所有者。"
+    },
+    "operatorBusiness.whatThisObservationEstablishes": {
+      "source": "What this observation establishes",
+      "text": "此观察能证明什么"
+    },
+    "operatorBusiness.oneOriginalOrderPreservedObligations": {
+      "source": "One original order · preserved obligations",
+      "text": "一个原始订单 · 保留义务"
+    },
+    "operatorBusiness.howTheBusinessOperates": {
+      "source": "How the business operates",
+      "text": "业务如何运作"
+    },
+    "operatorBusiness.visitTheSourceCatalogContent": {
+      "source": "Visit the source catalog {arrowIcon}",
+      "text": "访问来源目录 {arrowIcon}"
+    },
+    "operatorBusiness.registrationAloneDoesNotEstablishPayoutEligibilityPurchases": {
+      "source": "Registration alone does not establish payout eligibility, purchases or settled creator earnings.",
+      "text": "仅注册不能证明付款资格、购买或已结算创作者收益。"
+    },
+    "operatorBusiness.theCatalogCountIsUnknownRegistrationPayoutEligibility": {
+      "source": "The catalog count is unknown. Registration, payout eligibility and settled earnings are separate states.",
+      "text": "目录数量未知。注册、付款资格及已结算收益是不同状态。"
+    },
+    "operatorBusiness.noRegisteredCreatorSourceIsObservedPublicWeb": {
+      "source": "No registered creator source is observed. Public-web research can continue; creator access and reward opportunities depend on eligible sources.",
+      "text": "未观察到已注册创作者来源。公开网页研究可继续；创作者访问和奖励机会取决于合格来源。"
+    },
+    "operatorBusiness.registeredSourcesInTheSelectedCatalog": {
+      "source": "Registered sources in the selected catalog",
+      "text": "所选目录中的已注册来源"
+    },
+    "operatorBusiness.creatorCatalog": {
+      "source": "Creator catalog",
+      "text": "创作者目录"
+    },
+    "operatorBusiness.timingDoesNotMeasureTheFirstAnswerOr": {
+      "source": "Timing does not measure the first answer or prove settled payments, customer demand or a completion guarantee.",
+      "text": "计时不衡量首次答案，也不证明已结算付款、客户需求或完成保证。"
+    },
+    "operatorBusiness.completionPathTimingIsUnavailableOnThisStorage": {
+      "source": "Completion-path timing is unavailable on this storage contract. Missing capability is not zero ordinary latency.",
+      "text": "此存储合约无法提供完成路径计时。能力缺失不等于普通延迟为零。"
+    },
+    "operatorBusiness.unknownPath": {
+      "source": "Unknown path",
+      "text": "未知路径"
+    },
+    "operatorBusiness.recovered": {
+      "source": "Recovered",
+      "text": "已恢复"
+    },
+    "operatorBusiness.ordinary": {
+      "source": "Ordinary",
+      "text": "普通"
+    },
+    "operatorBusiness.median": {
+      "source": "Median",
+      "text": "中位数"
+    },
+    "operatorBusiness.timedSamples": {
+      "source": "Timed samples",
+      "text": "计时样本"
+    },
+    "operatorBusiness.completed": {
+      "source": "Completed",
+      "text": "已完成"
+    },
+    "operatorBusiness.path": {
+      "source": "Path",
+      "text": "路径"
+    },
+    "operatorBusiness.recordedCompletionLatencyCohortsNotFirstAnswerOr": {
+      "source": "Recorded completion latency cohorts, not first-answer or payment settlement times",
+      "text": "已记录完成延迟分组，不是首次答案或付款结算时间"
+    },
+    "operatorBusiness.acceptanceToRecordedCompletionUpdateForOrdersRecorded": {
+      "source": "Acceptance to recorded completion/update, for orders recorded as completed and updated in the last 24 hours. Later reconciliation can extend this time. Ordinary means a versioned service receipt with no recorded recovery. Recovered includes saved-result repair and original fulfillment; missing markers stay unknown.",
+      "text": "统计过去 24 小时内标记完成且更新的订单，从接受到记录完成/更新的时间。之后对账可能延长此时间。普通指版本化服务收据且无恢复记录；已恢复包括保存结果修复及原始履约；缺少标记仍为未知。"
+    },
+    "operatorBusiness.completionTimingByRecordedPath": {
+      "source": "Completion timing by recorded path",
+      "text": "按记录路径统计完成时间"
+    },
+    "operatorBusiness.orderCompletionDescribesDeliveryStateItDoesNot": {
+      "source": "Order completion describes delivery state. It does not prove a useful answer, settled creator payments or independent customer demand.",
+      "text": "订单完成描述交付状态，不能证明答案有用、创作者付款已结算或存在独立客户需求。"
+    },
+    "operatorBusiness.noTerminalOrderOutcomesAreRecordedInThis": {
+      "source": "No terminal order outcomes are recorded in this window. That does not establish demand or a success rate.",
+      "text": "此窗口未记录终态订单结果。这不能确立需求或成功率。"
+    },
+    "operatorBusiness.ordersRecordedAsFailed": {
+      "source": "Orders recorded as failed",
+      "text": "记录为失败的订单"
+    },
+    "operatorBusiness.failed": {
+      "source": "Failed",
+      "term": "failed"
+    },
+    "operatorBusiness.ordersWithASavedCompletedResult": {
+      "source": "Orders with a saved completed result",
+      "text": "有已保存完成结果的订单"
+    },
+    "operatorBusiness.terminalOrdersLast24Hours": {
+      "source": "Terminal orders · last 24 hours",
+      "text": "终态订单 · 最近 24 小时"
+    },
+    "operatorBusiness.recordedDeliveryOutcomes": {
+      "source": "Recorded delivery outcomes",
+      "text": "已记录交付结果"
+    },
+    "operatorBusiness.theQueueIsUnknownMissingRecordsAreNot": {
+      "source": "The queue is unknown. Missing records are not counted as zero.",
+      "text": "队列未知。缺失记录不按零计。"
+    },
+    "operatorBusiness.queueObservationDegradedWaitingOrReviewNeedsAttention": {
+      "source": "Queue observation degraded · waiting or review needs attention",
+      "text": "队列观察降级 · 等待或审核需关注"
+    },
+    "operatorBusiness.originalJobsRequiringReconciliation": {
+      "source": "Original jobs requiring reconciliation",
+      "text": "需要对账的原任务"
+    },
+    "operatorBusiness.needsReview": {
+      "source": "Needs review",
+      "text": "需要审阅"
+    },
+    "operatorBusiness.originalJobsAlreadyStarted": {
+      "source": "Original jobs already started",
+      "text": "已启动的原任务"
+    },
+    "operatorBusiness.processing": {
+      "source": "Processing",
+      "text": "处理中"
+    },
+    "operatorBusiness.prepaidOrdersAwaitingExecution": {
+      "source": "Prepaid orders awaiting execution",
+      "text": "等待执行的预付订单"
+    },
+    "operatorBusiness.queued": {
+      "source": "Queued",
+      "text": "已排队"
+    },
+    "operatorBusiness.selectedNetworkCurrentOrderRecords": {
+      "source": "Selected network · current order records",
+      "text": "所选网络 · 当前订单记录"
+    },
+    "operatorBusiness.acceptedResearchQueue": {
+      "source": "Accepted research queue",
+      "text": "已接受研究队列"
+    },
+    "operatorBusiness.thePublicObservationDoesNotConfirmADurable": {
+      "source": "The public observation does not confirm a durable audit entry.",
+      "text": "公开观察未确认持久审计条目。"
+    },
+    "operatorBusiness.unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "operatorBusiness.notRecorded": {
+      "source": "Not recorded",
+      "text": "未记录"
+    },
+    "operatorBusiness.recorded": {
+      "source": "Recorded",
+      "text": "已记录"
+    },
+    "operatorBusiness.auditRecord": {
+      "source": "Audit record",
+      "text": "审计记录"
+    },
+    "operatorBusiness.decisionObserved": {
+      "source": "Decision observed",
+      "text": "已观察决策"
+    },
+    "operatorBusiness.aDecisionIsShownOnlyAfterItHas": {
+      "source": "A decision is shown only after it has been observed by the service.",
+      "text": "仅在服务观察到决策后显示。"
+    },
+    "operatorBusiness.noDecisionAvailable": {
+      "source": "No decision available",
+      "text": "暂无决策"
+    },
+    "operatorBusiness.escalateForReview": {
+      "source": "Escalate for review",
+      "text": "升级审核"
+    },
+    "operatorBusiness.holdNewWork": {
+      "source": "Hold new work",
+      "text": "暂停新工作"
+    },
+    "operatorBusiness.proceedWithinPolicy": {
+      "source": "Proceed within policy",
+      "text": "在政策内继续"
+    },
+    "operatorBusiness.waitForAnOrder": {
+      "source": "Wait for an order",
+      "text": "等待订单"
+    },
+    "operatorBusiness.lastObservedDecision": {
+      "source": "Last observed decision",
+      "text": "上次观察到的决策"
+    },
+    "operatorBusiness.theStatusServiceCouldNotBeReadPrevious": {
+      "source": "The status service could not be read. Previous counts are hidden until a fresh response arrives.",
+      "text": "无法读取状态服务。收到新响应前隐藏先前计数。"
+    },
+    "operatorBusiness.checkingThePublicOperatingSnapshotCountsRemainUnknown": {
+      "source": "Checking the public operating snapshot. Counts remain unknown until the service responds.",
+      "text": "正在检查公开运营快照。服务响应前计数仍未知。"
+    },
+    "operatorBusiness.readingStatus": {
+      "source": "Reading status…",
+      "text": "正在读取状态…"
+    },
+    "operatorBusiness.currentObservation": {
+      "source": "Current observation",
+      "text": "当前观察"
+    },
+    "operatorBusiness.aWorkerObservationIsNotProofOfSettlement": {
+      "source": "A worker observation is not proof of settlement or business acceptance.",
+      "text": "工作进程观察不证明结算或业务接受。"
+    },
+    "operatorBusiness.prepaidOrdersOriginalBudgetsHumanReviewWhenEvidence": {
+      "source": "Prepaid orders. Original budgets. Human review when evidence or authority is uncertain.",
+      "text": "预付订单、原始预算；证据或权限不确定时由人工审核。"
+    },
+    "operatorBusiness.operatingBoundary": {
+      "source": "Operating boundary",
+      "text": "运营边界"
+    },
+    "operatorBusiness.exploreCreatorSourcesContent": {
+      "source": "Explore creator sources {arrowIcon}",
+      "text": "探索创作者来源 {arrowIcon}"
+    },
+    "operatorBusiness.requestResearchContent": {
+      "source": "Request research {arrowIcon}",
+      "text": "请求研究 {arrowIcon}"
+    },
+    "operatorBusiness.followTheServiceFromAPrepaidQuestionTo": {
+      "source": "Follow the service from a prepaid question to evidence, delivery and reconciliation. The Operator handles existing paid orders inside their agreed limits.",
+      "text": "跟踪服务从预付问题到证据、交付及对账。Operator 在约定限制内处理现有已付订单。"
+    },
+    "operatorBusiness.keryxOperatorBusinessOperations": {
+      "source": "Keryx Operator · business operations",
+      "text": "Keryx Operator · 业务运营"
+    },
+    "operatorBusiness.networkUnknown": {
+      "source": "Network unknown",
+      "text": "网络未知"
+    },
+    "operatorBusiness.arcTestnet": {
+      "source": "Arc testnet",
+      "text": "Arc 测试网"
+    },
+    "operatorBusiness.arcMainnet": {
+      "source": "Arc mainnet",
+      "text": "Arc 主网"
+    },
+    "operatorBusiness.receiptsPreservePaymentStateUncertainOriginalJobsAre": {
+      "source": "Receipts preserve payment state. Uncertain original jobs are held for review rather than purchased again.",
+      "text": "收据保留付款状态。不确定的原任务暂停待审，不会再次购买。"
+    },
+    "operatorBusiness.reconcileOrEscalate": {
+      "source": "Reconcile or escalate",
+      "text": "对账或升级处理"
+    },
+    "operatorBusiness.evidenceChecksDetermineWhichClaimsCitationsAndLimitations": {
+      "source": "Evidence checks determine which claims, citations and limitations can appear in the saved result.",
+      "text": "证据检查决定哪些主张、引用及限制可出现在已保存结果中。"
+    },
+    "operatorBusiness.deliverReviewedResearch": {
+      "source": "Deliver reviewed research",
+      "text": "交付已审核研究"
+    },
+    "operatorBusiness.theReadingAgentDiscoversSourcesExplainsBUYSKIP": {
+      "source": "The reading agent discovers sources, explains BUY / SKIP / CACHE decisions, and stays inside the purchased creator cap.",
+      "text": "阅读代理发现来源，解释 BUY / SKIP / CACHE 决策，并保持在已购买创作者上限内。"
+    },
+    "operatorBusiness.buyReadUnderBudget": {
+      "source": "Buy & read under budget",
+      "text": "在预算内购买及阅读"
+    },
+    "operatorBusiness.theOperatorChecksUnfinishedObligationsAndAvailableCapacity": {
+      "source": "The Operator checks unfinished obligations and available capacity against the existing policy before taking work.",
+      "text": "Operator 接受工作前，按现有政策检查未完成义务及可用容量。"
+    },
+    "operatorBusiness.assessObligationsCapacity": {
+      "source": "Assess obligations & capacity",
+      "text": "评估义务及容量"
+    },
+    "operatorBusiness.aCustomerChoosesAPricedPackageVerifiedPayment": {
+      "source": "A customer chooses a priced package. Verified payment is bound to the original research order.",
+      "text": "客户选择定价套餐。经核验付款绑定原研究订单。"
+    },
+    "operatorBusiness.receivePrepaidResearch": {
+      "source": "Receive prepaid research",
+      "text": "接收预付研究"
+    },
+    "operatorBusiness.aCurrentWorkerObservationIsUnavailableActivityCannot": {
+      "source": "A current worker observation is unavailable. Activity cannot be confirmed.",
+      "text": "当前工作进程观察不可用。无法确认活动。"
+    },
+    "operatorBusiness.theWorkerObservationIsOutOfDateCurrent": {
+      "source": "The worker observation is out of date. Current activity is unknown.",
+      "text": "工作进程观察已过时。当前活动未知。"
+    },
+    "operatorBusiness.observationStale": {
+      "source": "Observation stale",
+      "text": "观察过时"
+    },
+    "operatorBusiness.anOriginalObligationNeedsHumanReviewBeforeThe": {
+      "source": "An original obligation needs human review before the worker proceeds.",
+      "text": "工作进程继续前，一项原义务需人工审核。"
+    },
+    "operatorBusiness.reviewRequired": {
+      "source": "Review required",
+      "text": "需要审核"
+    },
+    "operatorBusiness.newWorkIsHeldAtAnOperatingBoundary": {
+      "source": "New work is held at an operating boundary. Existing obligations remain.",
+      "text": "新工作在运营边界暂停。现有义务保留。"
+    },
+    "operatorBusiness.held": {
+      "source": "Held",
+      "text": "已暂停"
+    },
+    "operatorBusiness.theLastObservationShowsAcceptedResearchInProgress": {
+      "source": "The last observation shows accepted research in progress.",
+      "text": "最近观察显示已接受研究正在进行。"
+    },
+    "operatorBusiness.activeWorking": {
+      "source": "Active · working",
+      "text": "已启用 · 工作中"
+    },
+    "operatorBusiness.theWorkerIsObservingPrepaidOrdersAndWaiting": {
+      "source": "The worker is observing prepaid orders and waiting within its existing policy.",
+      "text": "工作进程观察预付订单，并在现有政策内等待。"
+    },
+    "operatorBusiness.activeIdle": {
+      "source": "Active · idle",
+      "text": "已启用 · 空闲"
+    },
+    "operatorBusiness.theOperatorWorkerIsDisabledThisViewDoes": {
+      "source": "The Operator worker is disabled. This view does not start research.",
+      "text": "Operator 工作进程已禁用。此视图不会启动研究。"
+    },
+    "operatorBusiness.disabled": {
+      "source": "Disabled",
+      "text": "已禁用"
+    },
+    "businessCalculator.fixedAndAcquisitionCosts": {
+      "source": "Fixed and acquisition costs",
+      "text": "固定及获客成本"
+    },
+    "businessCalculator.variableOperatingCosts": {
+      "source": "Variable operating costs",
+      "text": "可变运营成本"
+    },
+    "businessCalculator.unusedCreatorBudget": {
+      "source": "Unused creator budget",
+      "text": "未用创作者预算"
+    },
+    "businessCalculator.creatorPayments": {
+      "source": "Creator payments",
+      "text": "创作者付款"
+    },
+    "businessCalculator.serviceFeeComponent": {
+      "source": "Service-fee component",
+      "text": "服务费部分"
+    },
+    "businessCalculator.monthlyPackageReceipts": {
+      "source": "Monthly package receipts",
+      "text": "每月套餐收款"
+    },
+    "businessCalculator.monthlyResultPaidJobsContributionFixedAndAcquisition": {
+      "source": "Monthly result = paid jobs × contribution − fixed and acquisition costs. Break-even rounds up to whole jobs and requires positive contribution. Taxes and financing are excluded.",
+      "text": "月度结果 = 付费任务数 × 贡献 − 固定及获客成本。盈亏平衡向上取整到完整任务数，且需正贡献。不含税及融资。"
+    },
+    "businessCalculator.unknownCosts": {
+      "source": "Unknown costs",
+      "text": "成本未知"
+    },
+    "businessCalculator.noPositiveContribution": {
+      "source": "No positive contribution",
+      "text": "没有正贡献"
+    },
+    "businessCalculator.breakEvenPaidJobsPerMonth": {
+      "source": "Break-even paid jobs per month",
+      "text": "每月盈亏平衡付费任务数"
+    },
+    "businessCalculator.monthlyOperatingResultBeforeTax": {
+      "source": "Monthly operating result before tax",
+      "text": "每月税前运营结果"
+    },
+    "businessCalculator.contributionPerJob": {
+      "source": "Contribution per job",
+      "text": "每任务贡献"
+    },
+    "businessCalculator.contributionServiceFeeCreatorBudgetCreatorSpendVariable": {
+      "source": "Contribution = service fee + creator budget − creator spend − variable operating costs",
+      "text": "贡献 = 服务费 + 创作者预算 − 创作者支出 − 可变运营成本"
+    },
+    "businessCalculator.fixedPriceReserveRetention": {
+      "source": "Fixed-price reserve retention",
+      "text": "固定价格储备留存"
+    },
+    "businessCalculator.contributionServiceFeeVariableOperatingCosts": {
+      "source": "Contribution = service fee − variable operating costs",
+      "text": "贡献 = 服务费 − 可变运营成本"
+    },
+    "businessCalculator.serviceFeeOnly": {
+      "source": "Service fee only",
+      "text": "仅服务费"
+    },
+    "businessCalculator.modeledOperatingResults": {
+      "source": "Modeled operating results",
+      "text": "建模运营结果"
+    },
+    "businessCalculator.enterNonnegativeAmountsWithUpToSixDecimal": {
+      "source": "Enter nonnegative amounts with up to six decimal places and whole monthly job counts. Service fee and creator budget are required; creator spend cannot exceed its budget. Results are hidden until the inputs are valid.",
+      "text": "请输入最多六位小数的非负金额及整数月任务数。服务费和创作者预算必填；创作者支出不得超过预算。输入有效前隐藏结果。"
+    },
+    "businessCalculator.calculationsAndImportedFilesStayInThisPage": {
+      "source": "Calculations and imported files stay in this page. Export inputs to keep them; reloading clears your edits. A report includes your inputs, so review it before sharing.",
+      "text": "计算及导入文件保留在此页面。导出输入以保留；重新加载清除编辑。报告包含您的输入，分享前请审阅。"
+    },
+    "businessCalculator.resetAssumptions": {
+      "source": "Reset assumptions",
+      "text": "重置假设"
+    },
+    "businessCalculator.resetToIllustrativeFeesWithUnknownCostsAnd": {
+      "source": "Reset to illustrative fees with unknown costs and demand.",
+      "text": "重置为示例费用，成本及需求未知。"
+    },
+    "businessCalculator.couldNotImportInputsUseAKeryxInputs": {
+      "source": "Could not import inputs. Use a Keryx inputs JSON file under 8 KB; your existing values were kept.",
+      "text": "无法导入输入。请使用小于 8 KB 的 Keryx 输入 JSON 文件；现有值已保留。"
+    },
+    "businessCalculator.scenarioInputsImportedLocally": {
+      "source": "Scenario inputs imported locally.",
+      "text": "场景输入已在本地导入。"
+    },
+    "businessCalculator.importScenarioInputs": {
+      "source": "Import scenario inputs",
+      "text": "导入场景输入"
+    },
+    "businessCalculator.importInputsContent": {
+      "source": "Import inputs{content}",
+      "text": "导入输入{content}"
+    },
+    "businessCalculator.exportScenarioReport": {
+      "source": "Export scenario report",
+      "text": "导出场景报告"
+    },
+    "businessCalculator.exportInputs": {
+      "source": "Export inputs",
+      "text": "导出输入"
+    },
+    "businessCalculator.unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "businessCalculator.required": {
+      "source": "Required",
+      "text": "必填"
+    },
+    "businessCalculator.myOperatingEstimates": {
+      "source": "My operating estimates",
+      "text": "我的运营估算"
+    },
+    "businessCalculator.illustrativeExample": {
+      "source": "Illustrative example",
+      "text": "示例"
+    },
+    "businessCalculator.scenarioBasisContent": {
+      "source": "Scenario basis{content}",
+      "text": "场景依据{content}"
+    },
+    "businessCalculator.enterUSDEstimatesLeaveUnknownValuesBlankEnter": {
+      "source": "Enter USD estimates. Leave unknown values blank; enter 0 only when a cost is known to be zero. No live exchange-rate conversion is performed.",
+      "text": "输入美元估算。未知值留空；仅确定成本为零时输入 0。不进行实时汇率换算。"
+    },
+    "businessCalculator.yourAssumptions": {
+      "source": "Your assumptions",
+      "text": "您的假设"
+    },
+    "businessCalculator.marketingAndAcquisitionCostsWithoutDoubleCounting": {
+      "source": "Marketing and acquisition costs, without double counting.",
+      "text": "营销及获客成本，避免重复计算。"
+    },
+    "businessCalculator.customerAcquisitionPerMonth": {
+      "source": "Customer acquisition per month",
+      "text": "每月获客成本"
+    },
+    "businessCalculator.hostingToolsAndOtherFixedExpenses": {
+      "source": "Hosting, tools and other fixed expenses.",
+      "text": "托管、工具及其他固定开支。"
+    },
+    "businessCalculator.fixedOperatingCostsPerMonth": {
+      "source": "Fixed operating costs per month",
+      "text": "每月固定运营成本"
+    },
+    "businessCalculator.expectedLossesRefundsAndServiceRecoveryCosts": {
+      "source": "Expected losses, refunds and service recovery costs.",
+      "text": "预期损失、退款及服务恢复成本。"
+    },
+    "businessCalculator.refundsAndLossesPerJob": {
+      "source": "Refunds and losses per job",
+      "text": "每任务退款及损失"
+    },
+    "businessCalculator.expectedVariableSupportEffort": {
+      "source": "Expected variable support effort.",
+      "text": "预期可变支持投入。"
+    },
+    "businessCalculator.supportCostPerJob": {
+      "source": "Support cost per job",
+      "text": "每任务支持成本"
+    },
+    "businessCalculator.expectedTransactionAndPaymentProcessingCosts": {
+      "source": "Expected transaction and payment processing costs.",
+      "text": "预期交易及付款处理成本。"
+    },
+    "businessCalculator.paymentAndGasPerJob": {
+      "source": "Payment and gas per job",
+      "text": "每任务付款及 gas 成本"
+    },
+    "businessCalculator.excludeCostsEnteredAsFixedMonthlyExpenses": {
+      "source": "Exclude costs entered as fixed monthly expenses.",
+      "text": "排除已列为每月固定开支的成本。"
+    },
+    "businessCalculator.variableInfrastructurePerJob": {
+      "source": "Variable infrastructure per job",
+      "text": "每任务可变基础设施成本"
+    },
+    "businessCalculator.includeRetriesAndUnsuccessfulCalls": {
+      "source": "Include retries and unsuccessful calls.",
+      "text": "包括重试及失败调用。"
+    },
+    "businessCalculator.aiModelCostPerJob": {
+      "source": "AI model cost per job",
+      "text": "每任务 AI 模型成本"
+    },
+    "businessCalculator.includeCreatorObligationsPendingSpendIsNotUnused": {
+      "source": "Include creator obligations; pending spend is not unused reserve.",
+      "text": "包括创作者义务；待处理支出不是未用储备。"
+    },
+    "businessCalculator.creatorSpendPerJob": {
+      "source": "Creator spend per job",
+      "text": "每任务创作者支出"
+    },
+    "businessCalculator.budgetCollectedForSourceAccessAndCitationRewards": {
+      "source": "Budget collected for source access and citation rewards.",
+      "text": "为来源访问及引用奖励收取的预算。"
+    },
+    "businessCalculator.creatorBudgetPerJob": {
+      "source": "Creator budget per job",
+      "text": "每任务创作者预算"
+    },
+    "businessCalculator.theServiceFeePortionOfTheModeledPackage": {
+      "source": "The service-fee portion of the modeled package price.",
+      "text": "建模套餐价格中的服务费部分。"
+    },
+    "businessCalculator.serviceFeePerJob": {
+      "source": "Service fee per job",
+      "text": "每任务服务费"
+    },
+    "businessCalculator.wholeJobsLeaveBlankWhenDemandIsUnknown": {
+      "source": "Whole jobs; leave blank when demand is unknown.",
+      "text": "整数任务数；需求未知时留空。"
+    },
+    "businessCalculator.paidJobsPerMonth": {
+      "source": "Paid jobs per month",
+      "text": "每月付费任务数"
+    },
+    "proofDashboard.autoRefreshesEvery30sCheckedValue": {
+      "source": "Auto-refreshes every 30s · checked {checkedAt}",
+      "text": "每 30 秒自动刷新 · 检查于 {checkedAt}"
+    },
+    "proofDashboard.tokenizedRPCPathsStayServerOnlyThisPage": {
+      "source": "Tokenized RPC paths stay server-only. This page publishes the provider label and block evidence, never the URL or access token.",
+      "text": "含令牌的 RPC 路径仅在服务器端保留。此页发布服务商标签及区块证据，绝不发布 URL 或访问令牌。"
+    },
+    "proofDashboard.registryIndexed": {
+      "source": "Registry indexed",
+      "text": "注册表已索引"
+    },
+    "proofDashboard.rpcHead": {
+      "source": "RPC head",
+      "text": "RPC 最新区块"
+    },
+    "proofDashboard.rpcProvider": {
+      "source": "RPC provider",
+      "text": "RPC 提供方"
+    },
+    "proofDashboard.network": {
+      "source": "Network",
+      "text": "网络"
+    },
+    "proofDashboard.rPCProvenanceWithoutTheCredential": {
+      "source": "RPC provenance, without the credential",
+      "text": "RPC 溯源，不含凭据"
+    },
+    "proofDashboard.arcReadPath": {
+      "source": "Arc read path",
+      "text": "Arc 读取路径"
+    },
+    "proofDashboard.gitHubProvesWhatWasReviewedTheRuntimeCommit": {
+      "source": "GitHub proves what was reviewed. The runtime commit above binds that source to the build currently answering requests.",
+      "text": "GitHub 证明审核了什么。上方运行时提交将该来源绑定到当前响应请求的构建。"
+    },
+    "proofDashboard.forkablePackage": {
+      "source": "forkable package",
+      "text": "可派生的软件包"
+    },
+    "proofDashboard.reusableArcPrimitives": {
+      "source": "Reusable Arc primitives",
+      "text": "可复用 Arc 基础组件"
+    },
+    "proofDashboard.applicationSource": {
+      "source": "Application source",
+      "text": "应用源码"
+    },
+    "proofDashboard.testsContractsBuild": {
+      "source": "tests · contracts · build",
+      "text": "测试 · 合约 · 构建"
+    },
+    "proofDashboard.deployedCommit": {
+      "source": "Deployed commit",
+      "text": "已部署提交"
+    },
+    "proofDashboard.theDeployedCodeHasAName": {
+      "source": "The deployed code has a name",
+      "text": "已部署代码有明确标识"
+    },
+    "proofDashboard.openSourceBuild": {
+      "source": "Open-source build",
+      "text": "开源构建"
+    },
+    "proofDashboard.queryCountIncludesAllRecordedUseOnlySettled": {
+      "source": "Query count includes all recorded use. Only settled records count. Keryx operating fees and creator rewards are shown separately.",
+      "text": "查询数包括全部记录使用。仅已结算记录计入。Keryx 运营费与创作者奖励分别显示。"
+    },
+    "proofDashboard.tractionLedgerUnavailable": {
+      "source": "Traction ledger unavailable.",
+      "text": "业务数据账本不可用。"
+    },
+    "proofDashboard.operatingFeeTransfers": {
+      "source": "Operating fee transfers",
+      "text": "运营费转账"
+    },
+    "proofDashboard.unavailable": {
+      "source": "Unavailable",
+      "text": "不可用"
+    },
+    "proofDashboard.keryxOperatingFees": {
+      "source": "Keryx operating fees",
+      "text": "Keryx 运营费用"
+    },
+    "proofDashboard.creatorsEarning": {
+      "source": "Creators earning",
+      "text": "获收入创作者"
+    },
+    "proofDashboard.creatorRewards": {
+      "source": "Creator rewards",
+      "text": "创作者奖励"
+    },
+    "proofDashboard.settledPayments": {
+      "source": "Settled payments",
+      "text": "已结算付款"
+    },
+    "proofDashboard.totalQueries": {
+      "source": "Total queries",
+      "text": "查询总数"
+    },
+    "proofDashboard.offlineMode": {
+      "source": "offline mode",
+      "text": "离线模式"
+    },
+    "proofDashboard.realSettlement": {
+      "source": "real settlement",
+      "text": "真实结算"
+    },
+    "proofDashboard.combinedUsageAndSettledPayments": {
+      "source": "Combined usage and settled payments",
+      "text": "汇总使用及已结算付款"
+    },
+    "proofDashboard.keryxInNumbers": {
+      "source": "Keryx in numbers",
+      "text": "Keryx 数据"
+    },
+    "proofDashboard.evidenceAPIIsTemporarilyUnreachable": {
+      "source": "Evidence API is temporarily unreachable.",
+      "text": "证据 API 暂时无法访问。"
+    },
+    "proofDashboard.readingThePublicEvidenceLedger": {
+      "source": "Reading the public evidence ledger…",
+      "text": "正在读取公开证据账本…"
+    },
+    "statusMonitoring.observationServiceAvailabilityAndRecordedChecksAreSeparate": {
+      "source": "{observation}Service availability and recorded checks are separate. A recent observation does not prove that a check passed, that it runs automatically, or that a payment settled. Review the results below where available.",
+      "text": "{observation}服务可用性和已记录检查是不同事项。近期观察不能证明检查通过、自动运行或付款结算。请查看下方可用结果。"
+    },
+    "statusMonitoring.noCurrentObservation": {
+      "source": "No current observation",
+      "text": "没有当前观察"
+    },
+    "statusMonitoring.staleObservation": {
+      "source": "Stale observation",
+      "text": "过时观察"
+    },
+    "statusMonitoring.recentObservation": {
+      "source": "Recent observation",
+      "text": "近期观察"
+    },
+    "statusMonitoring.recordedMonitoringChecks": {
+      "source": "Recorded monitoring checks",
+      "text": "已记录监控检查"
+    },
+    "statusRegistry.theRecordedSweepReadsEveryRegistryRecordBack": {
+      "source": "The recorded sweep reads every registry record back and compares payout wallet, author splits, price, and active flag against the cache the agent pays from.",
+      "text": "已记录巡检逐条回读注册表，将收款钱包、作者分成、价格及启用标志与代理付款所用缓存比较。"
+    },
+    "statusRegistry.indexedBlock": {
+      "source": "Indexed block",
+      "text": "索引区块"
+    },
+    "statusRegistry.rPCHead": {
+      "source": "RPC head",
+      "text": "RPC 最新区块"
+    },
+    "statusRegistry.chainCacheParity": {
+      "source": "Chain ↔ cache parity",
+      "text": "链 ↔ 缓存一致性"
+    },
+    "statusRegistry.sourcesOnChain": {
+      "source": "Sources on-chain",
+      "text": "链上来源"
+    },
+    "statusRegistry.sourceRegistryOnArcScan": {
+      "source": "SourceRegistry on ArcScan",
+      "text": "ArcScan 上的 SourceRegistry"
+    },
+    "statusRegistry.contract": {
+      "source": "Contract",
+      "text": "合约"
+    },
+    "statusRegistry.sourceRegistryOnChain": {
+      "source": "Source registry — on-chain",
+      "text": "来源注册表 — 链上"
+    },
+    "statusRegistry.notYetChecked": {
+      "source": "not yet checked",
+      "text": "尚未检查"
+    },
+    "statusRegistry.justNow": {
+      "source": "just now",
+      "text": "刚刚"
+    },
+    "statusDispatch.recordedInspectionOfTheAgentSOwnDispatches": {
+      "source": "Recorded inspection of the agent's own dispatches. A failed provider crosses to another configured model before the deterministic heuristic; every attempt and circuit skip is carried on the completed run receipt. Worker and settlement health are monitored separately; requests that fail before saving a receipt are outside this window.",
+      "text": "对代理自身研究的已记录检查。服务商失败时，在确定性启发式前切换其他已配置模型；每次尝试及熔断跳过均记入完成运行收据。工作进程和结算健康单独监控；保存收据前失败的请求不在此窗口内。"
+    },
+    "statusDispatch.servedStepsGapValue": {
+      "source": "Served steps:{gap}{servedSteps}",
+      "text": "已服务步骤：{gap}{servedSteps}"
+    },
+    "statusDispatch.idleNoCompletedCallerRequestsInThisWindow": {
+      "source": "Idle: no completed caller requests in this window. Research starts when a caller asks.",
+      "text": "空闲：此窗口没有已完成调用请求。调用者提问时开始研究。"
+    },
+    "statusDispatch.checked": {
+      "source": "Checked",
+      "text": "已检查"
+    },
+    "statusDispatch.lastDispatch": {
+      "source": "Last dispatch",
+      "text": "上次研究"
+    },
+    "statusDispatch.collecting": {
+      "source": "collecting",
+      "text": "收集中"
+    },
+    "statusDispatch.providerFailures": {
+      "source": "Provider failures",
+      "text": "服务商失败"
+    },
+    "statusDispatch.crossProviderSaves": {
+      "source": "Cross-provider saves",
+      "text": "跨服务商恢复"
+    },
+    "statusDispatch.toCreators": {
+      "source": "To creators",
+      "text": "支付给创作者"
+    },
+    "statusDispatch.dispatchesThatPaid": {
+      "source": "Dispatches that paid",
+      "text": "发生付款的研究"
+    },
+    "statusDispatch.modelReasoned": {
+      "source": "Model-reasoned",
+      "text": "模型推理"
+    },
+    "statusDispatch.dispatchesCompleted": {
+      "source": "Dispatches completed",
+      "text": "已完成研究"
+    },
+    "statusDispatch.agentOutputLastWindowHoursH": {
+      "source": "Agent output — last {windowHours}h",
+      "text": "代理输出 — 最近 {windowHours} 小时"
+    },
+    "statusDispatch.justNow": {
+      "source": "just now",
+      "text": "刚刚"
+    },
+    "statusSettlement.thisSavedObservationHasNoRecognizedOriginalNetwork": {
+      "source": "This saved observation has no recognized original network. Confirm its network before querying a current Gateway balance.",
+      "text": "此已保存观察没有可识别的原始网络。查询当前 Gateway 余额前请确认网络。"
+    },
+    "statusSettlement.checkACurrentBalanceOnThisObservationS": {
+      "source": "Check a current balance on this observation's original network: {networkLabel}.",
+      "text": "在此观察的原始网络检查当前余额：{networkLabel}。"
+    },
+    "statusSettlement.more": {
+      "source": "more",
+      "text": "更多"
+    },
+    "statusSettlement.gatewaySettlementLeavesNoPerPaymentExplorerHash": {
+      "source": "Gateway settlement leaves no per-payment explorer hash. Keryx compares the payout ledger with observed Circle balances for each payee and publishes both numbers. A wallet holding {emphasis} than Keryx accounts for belongs to that payee and never flags; one holding less is read against its on-chain balance first, because a payee may cash out by any route they like.",
+      "text": "Gateway 结算不产生每笔付款的浏览器哈希。Keryx 将付款账本与逐收款人观察的 Circle 余额比较，并公布两者。钱包持有金额{emphasis} Keryx 账目时，差额归收款人且不标记；低于账目时先查看链上余额，因为收款人可通过任意方式提现。"
+    },
+    "statusSettlement.cashedOut": {
+      "source": "cashed out",
+      "text": "已提现"
+    },
+    "statusSettlement.onchainUsdcInWallet": {
+      "source": " +{onchainUsdc} in wallet",
+      "text": " 钱包内 +{onchainUsdc}"
+    },
+    "statusSettlement.verdict": {
+      "source": "Verdict",
+      "text": "判断"
+    },
+    "statusSettlement.circleHolds": {
+      "source": "Circle holds",
+      "text": "Circle 暂留"
+    },
+    "statusSettlement.keryxClaims": {
+      "source": "Keryx claims",
+      "text": "Keryx 申报"
+    },
+    "statusSettlement.payeeWallet": {
+      "source": "Payee wallet",
+      "text": "收款钱包"
+    },
+    "statusSettlement.none": {
+      "source": "none",
+      "text": "无"
+    },
+    "statusSettlement.short": {
+      "source": "Short",
+      "text": "不足"
+    },
+    "statusSettlement.shortUnverified": {
+      "source": "Short · unverified",
+      "text": "不足 · 未核验"
+    },
+    "statusSettlement.circleConfirms": {
+      "source": "Circle confirms",
+      "text": "Circle 确认"
+    },
+    "statusSettlement.ledgerClaimsHeld": {
+      "source": "Ledger claims held",
+      "text": "账本申报余额"
+    },
+    "statusSettlement.walletsBacked": {
+      "source": "Wallets backed",
+      "text": "有资金支持的钱包"
+    },
+    "statusSettlement.settlementConfirmedByCircle": {
+      "source": "Settlement — confirmed by Circle",
+      "text": "结算 — Circle 已确认"
+    },
+    "statusSettlement.checkedCheckedAt": {
+      "source": "Checked {checkedAt}",
+      "text": "检查于 {checkedAt}"
+    },
+    "statusSettlement.noSettledOutboundPaymentsWereRecordedAtThis": {
+      "source": "No settled outbound payments were recorded at this check. Circle balances were not queried; this does not prove payment readiness or settlement.",
+      "text": "此次检查没有已结算对外付款记录。未查询 Circle 余额；这不证明付款就绪或结算。"
+    },
+    "statusSettlement.settlementEmptyLedger": {
+      "source": "Settlement — empty ledger",
+      "text": "结算 — 空账本"
+    },
+    "statusSettlement.justNow": {
+      "source": "just now",
+      "text": "刚刚"
+    },
+    "statusReconciliation.none": {
+      "source": "none",
+      "text": "无"
+    },
+    "statusReconciliation.unknown": {
+      "source": "unknown",
+      "text": "未知"
+    },
+    "statusReconciliation.acceptedTransfersSettleOnlyOnAnExactTuple": {
+      "source": "Accepted transfers settle only on an exact tuple. Circle-terminal failures close without earnings and release capacity only for the same grant generation. Missing or conflicting evidence stays pending. A reviewed legacy treasury ambiguity may be acknowledged to stop a permanent readiness alert, but remains pending, outside earnings, and under reconciliation. Browser reservations can never use this acknowledgement path. Expiry is operational context, never proof that Circle failed or that a browser reservation can be released.",
+      "text": "已接受转账仅在精确元组匹配时结算。Circle 终态失败关闭且不产生收益，仅为相同授权代次释放容量。缺失或冲突证据仍待处理。经审核的旧金库歧义可确认以停止永久就绪提醒，但仍待处理、不计收益且继续对账。浏览器预留不能使用此确认路径。过期仅是运营背景，绝不证明 Circle 失败或可释放浏览器预留。"
+    },
+    "statusReconciliation.lastChecked": {
+      "source": "Last checked",
+      "text": "上次检查"
+    },
+    "statusReconciliation.oldestPendingAge": {
+      "source": "Oldest pending age",
+      "text": "最早待处理时长"
+    },
+    "statusReconciliation.tupleMismatches": {
+      "source": "Tuple mismatches",
+      "text": "元组不匹配"
+    },
+    "statusReconciliation.terminalFailures": {
+      "source": "Terminal failures",
+      "text": "终态失败"
+    },
+    "statusReconciliation.earliestSignedExpiry": {
+      "source": "Earliest signed expiry",
+      "text": "最早签名到期时间"
+    },
+    "statusReconciliation.exactExpiryUnavailable": {
+      "source": "Exact expiry unavailable",
+      "text": "确切到期时间不可用"
+    },
+    "statusReconciliation.expiredStillUnresolved": {
+      "source": "Expired, still unresolved",
+      "text": "已过期，仍未解决"
+    },
+    "statusReconciliation.treasuryAttemptsPending": {
+      "source": "Treasury attempts pending",
+      "text": "待处理金库尝试"
+    },
+    "statusReconciliation.submissionAttempted": {
+      "source": "Submission attempted",
+      "text": "已尝试提交"
+    },
+    "statusReconciliation.signedNoRecordedSubmission": {
+      "source": "Signed, no recorded submission",
+      "text": "已签名，无提交记录"
+    },
+    "statusReconciliation.exposedPossiblyUnsigned": {
+      "source": "Exposed, possibly unsigned",
+      "text": "已暴露，可能未签名"
+    },
+    "statusReconciliation.browserReservationsHeld": {
+      "source": "Browser reservations held",
+      "text": "浏览器预留保持"
+    },
+    "statusReconciliation.unacknowledgedAlerts": {
+      "source": "Unacknowledged alerts",
+      "text": "未确认提醒"
+    },
+    "statusReconciliation.acknowledgedLegacyTreasury": {
+      "source": "Acknowledged legacy treasury",
+      "text": "已确认旧金库项"
+    },
+    "statusReconciliation.stillAwaitingProof": {
+      "source": "Still awaiting proof",
+      "text": "仍等待凭证"
+    },
+    "statusReconciliation.acceptedByCircle": {
+      "source": "Accepted by Circle",
+      "text": "Circle 已接受"
+    },
+    "statusReconciliation.ambiguousPaymentReconciliation": {
+      "source": "Ambiguous payment reconciliation",
+      "text": "歧义付款对账"
+    },
+    "statusReconciliation.reviewRequired": {
+      "source": "review required",
+      "text": "需要审核"
+    },
+    "statusReconciliation.criticalPending": {
+      "source": "critical pending",
+      "text": "关键待处理项"
+    },
+    "statusReconciliation.stalePending": {
+      "source": "stale pending",
+      "text": "过时待处理项"
+    },
+    "statusReconciliation.awaitingCircle": {
+      "source": "awaiting Circle",
+      "text": "等待 Circle"
+    },
+    "statusReconciliation.acknowledgedLegacy": {
+      "source": "acknowledged legacy",
+      "text": "已确认旧项"
+    },
+    "statusReconciliation.clean": {
+      "source": "clean",
+      "text": "无异常"
+    },
+    "operatorPage.metadataTitle": {
+      "source": "Operator — Keryx",
+      "text": "Operator — Keryx"
+    },
+    "operatorPage.metadataDescription": {
+      "source": "Follow Keryx's prepaid research operations, recorded decisions, delivery queue and review needs.",
+      "text": "跟踪 Keryx 预付研究运营、已记录决策、交付队列及审核需求。"
+    },
+    "economicsPage.metadataTitle": {
+      "source": "Business calculator — Keryx",
+      "text": "业务计算器 — Keryx"
+    },
+    "economicsPage.metadataDescription": {
+      "source": "Model research-package costs, contribution and break-even with explicit assumptions.",
+      "text": "用明确假设建模研究套餐成本、贡献及盈亏平衡。"
+    },
+    "proofPage.metadataTitle": {
+      "source": "Public proof — Keryx",
+      "text": "公开凭证 — Keryx"
+    },
+    "proofPage.metadataDescription": {
+      "source": "Live evidence for Keryx's open-source build, Arc registry authority, Circle settlement, and creator cash-outs.",
+      "text": "Keryx 开源构建、Arc 注册表权限、Circle 结算及创作者提现的实时证据。"
+    },
+    "proofPage.title": {
+      "source": "Evidence, with its {emphasis}",
+      "text": "证据及其{emphasis}"
+    },
+    "proofPage.integrationLedgerInstruction": {
+      "source": "The{beforeLink}{link}{afterLink}links each tool to its code and evidence, including the remaining sponsored testnet proof for gasless user actions.",
+      "text": "{beforeLink}{link}{afterLink}将每项工具链接到代码及证据，包括无 gas 用户操作仍需的赞助测试网凭证。"
+    },
+    "proofPage.limit": {
+      "source": "Limit: {limit}",
+      "text": "限制：{limit}"
+    },
+    "statusPage.rpcProvider": {
+      "source": "RPC provider",
+      "text": "RPC 提供方"
+    },
+    "statusPage.refreshNotice": {
+      "source": "Auto-refreshes every 10s{checkedNotice}",
+      "text": "每 10 秒自动刷新{checkedNotice}"
+    },
+    "statusPage.unifiedBalanceObservation": {
+      "source": "Chain-abstracted Gateway balance of the agent's settlement wallet{gap}{addressPrefix}…{addressSuffix}, read via @circle-fin/unified-balance-kit.",
+      "text": "通过 @circle-fin/unified-balance-kit 读取代理结算钱包{gap}{addressPrefix}…{addressSuffix}的链抽象 Gateway 余额。"
+    },
+    "statusPage.gatewayBalanceObservation": {
+      "source": "{addressPrefix}…{addressSuffix} · Circle Gateway balance observation. Available balance is checked again before research spending.",
+      "text": "{addressPrefix}…{addressSuffix} · Circle Gateway 余额观察。研究支出前再次检查可用余额。"
+    },
+    "operatorBusiness.title": {
+      "source": "A research business,{lineBreak} with its decisions in view.",
+      "text": "研究业务，{lineBreak}决策清晰可见。"
+    },
+    "operatorBusiness.percentile95": {
+      "source": "95th percentile",
+      "text": "第 95 百分位"
+    },
+    "operatorBusiness.oldestProcessing": {
+      "source": "Oldest processing: {oldestProcessingAgeSeconds}",
+      "text": "最早处理中：{oldestProcessingAgeSeconds}"
+    },
+    "operatorBusiness.oldestQueued": {
+      "source": "Oldest queued: {oldestQueuedAgeSeconds}",
+      "text": "最早排队中：{oldestQueuedAgeSeconds}"
+    },
+    "operatorBusiness.observationRefresh": {
+      "source": "Observed {observedAt} · this view refreshes about every 30 seconds",
+      "text": "观察于 {observedAt} · 此视图约每 30 秒刷新"
+    },
+    "proofDashboard.ci": {
+      "source": "CI",
+      "text": "CI"
+    },
+    "proofDashboard.repository": {
+      "source": "repository",
+      "text": "仓库"
+    },
+    "statusMonitoring.missingObservations": {
+      "source": "Some checks have no recent recorded observation. ",
+      "text": "部分检查没有近期观察记录。 "
+    }
+  }
+}

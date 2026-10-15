@@ -286,3 +286,135 @@ it("source-guard failure stays revoked after exact manifest restoration", async 
   expect(counts(original.id)).toEqual([1, 1]);
   await expect(Promise.resolve().then(() => old.createOwnedA2aOrder(original, opaque))).rejects.toThrow("Verified storage connection closed");
 });
+
+
+// UNRUN current-main498 composition controls. Extend this existing genuine
+// enrolled/JWT/native-reader fixture; no substitute proof or owner port.
+it("keeps default payer history distinct with a genuine pending port present", async () => {
+  const owner = `0x${"d".repeat(40)}`, token = await session(owner), owned = order();
+  expect(db.pendingJobOwners).toBeDefined();
+  expect((await db.createOwnedA2aOrder(owned, await proof(token, owned))).created).toBe(true);
+  const legacy = { ...order(), payer: owner };
+  legacy.id = legacy.queryId = a2aOrderId({ network: "eip155:5042", payer: owner, payee, authorizationId: legacy.authorizationId });
+  await db.createA2aOrder(legacy);
+  const prepare = DatabaseSync.prototype.prepare, sql: string[] = [];
+  const trace = vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function(this: DatabaseSync, statement: string) {
+    sql.push(statement); return prepare.call(this, statement);
+  });
+  try {
+    // id remains only a selector for the explicit owned path. Other pending
+    // values retain incoming payer history rather than implicitly opting in.
+    for (const query of ["", `?id=${owned.id}`, "?pending=other"]) {
+      sql.length = 0;
+      const response = await cookie.run(token, () => GET(new Request(`https://keryx.test/api/me/jobs${query}`)));
+      expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
+      const raw = await response.json(), packet = accountHistorySchema.parse(raw);
+      expect(packet.jobs.map(row => row.id)).toEqual([legacy.id]);
+      expect(raw).not.toHaveProperty("ownership"); expect(raw).not.toHaveProperty("recoveryState");
+      expect(sql.some(value => /SELECT \* FROM a2a_orders WHERE LOWER\(payer\)/.test(value))).toBe(true);
+      expect(sql.some(value => /FROM pending_job_owners p JOIN/.test(value))).toBe(false);
+    }
+    sql.length = 0;
+    const response = await jobs(token);
+    expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
+    const packet = await response.json();
+    expect(packet).toMatchObject({ ownership: "authenticated_original", recoveryState: "unknown" });
+    expect(packet.jobs.map((row: { id: string }) => row.id)).toEqual([owned.id]);
+    expect(packet.jobs[0]).toMatchObject({ question: null, recoveryState: "unknown" });
+    expect(sql.some(value => /FROM pending_job_owners p JOIN/.test(value))).toBe(true);
+    expect(sql.some(value => /SELECT \* FROM a2a_orders WHERE LOWER\(payer\)/.test(value))).toBe(false);
+    expect(JSON.stringify(packet)).not.toContain("private-worker-input");
+    expect(JSON.stringify(packet)).not.toContain(owned.authorizationId);
+  } finally { trace.mockRestore(); }
+});
+
+it("pages native owned rows at equal timestamps without payer-only or foreign originals", async () => {
+  const owner = `0x${"e".repeat(40)}`, token = await session(owner), timestamp = new Date().toISOString();
+  const originals = Array.from({ length: 27 }, () => ({ ...order(), createdAt: timestamp, updatedAt: timestamp }));
+  const seed = originals[0];
+  expect((await db.createOwnedA2aOrder(seed, await proof(token, seed))).created).toBe(true);
+  // Pagination fixture only: one genuine atomic admission, then equivalent
+  // synthetic retained rows in this isolated database. This does not exercise
+  // or claim 27 authenticated producer admissions; their controls stay separate.
+  const fixtureWriter = new DatabaseSync(file);
+  try {
+    registerStorageCapability(fixtureWriter, JSON.parse(readFileSync(manifestPath, "utf8")).identity, () => true);
+    fixtureWriter.exec("BEGIN IMMEDIATE");
+    const copyOriginal = fixtureWriter.prepare(`INSERT INTO a2a_orders
+      (id,query_id,authorization_id,request_hash,payer,payee,amount_usdc,creator_budget_usdc,
+       service_fee_usdc,research_mode,package_data,status,transaction_id,request_data,started_at,worker_id,
+       execution_journal_version,payment_started_at,result_saving_at,response_data,error_code,resolution_data,
+       created_at,updated_at)
+      SELECT ?,?,?,request_hash,payer,payee,amount_usdc,creator_budget_usdc,
+       service_fee_usdc,research_mode,package_data,status,?,request_data,started_at,worker_id,
+       execution_journal_version,payment_started_at,result_saving_at,response_data,error_code,resolution_data,
+       created_at,updated_at FROM a2a_orders WHERE id=?`);
+    const copyOwner = fixtureWriter.prepare(`INSERT INTO pending_job_owners
+      (job_id,query_id,request_hash,network,wallet,session_hash,issued_at,expires_at,admitted_at)
+      SELECT ?,?,request_hash,network,wallet,session_hash,issued_at,expires_at,admitted_at
+      FROM pending_job_owners WHERE job_id=?`);
+    for (const original of originals.slice(1)) {
+      expect(copyOriginal.run(original.id, original.queryId, original.authorizationId, original.transaction, seed.id).changes).toBe(1);
+      expect(copyOwner.run(original.id, original.queryId, seed.id).changes).toBe(1);
+    }
+    fixtureWriter.exec("COMMIT");
+  } finally { fixtureWriter.close(); }
+  const unowned = order(); await db.createA2aOrder(unowned);
+  const foreignToken = await session(payee), foreignOriginal = order();
+  await db.createOwnedA2aOrder(foreignOriginal, await proof(foreignToken, foreignOriginal));
+  const readPage = (query: string) => cookie.run(token, () => GET(new Request(`https://keryx.test/api/me/jobs?pending=owned${query}`)));
+  const firstResponse = await readPage("");
+  expect(firstResponse.status).toBe(200);
+  const first = await firstResponse.json();
+  expect(first.jobs).toHaveLength(25); expect(typeof first.nextCursor).toBe("string");
+  // Decode the actual route cursor using the existing real parser below.
+  const { decodeHistoryCursor } = await import("../a2a/account-history");
+  expect(decodeHistoryCursor(first.nextCursor)).toEqual({ createdAt: timestamp, id: first.jobs[24].id });
+  const secondResponse = await readPage(`&cursor=${encodeURIComponent(first.nextCursor)}`);
+  expect(secondResponse.status).toBe(200);
+  const second = await secondResponse.json();
+  expect(second.jobs).toHaveLength(2); expect(second.nextCursor).toBeNull();
+  const ids = [...first.jobs, ...second.jobs].map((row: { id: string }) => row.id);
+  expect(ids).toEqual(originals.map(row => row.id).sort().reverse());
+  expect(new Set(ids).size).toBe(27);
+  expect(ids).not.toContain(unowned.id); expect(ids).not.toContain(foreignOriginal.id);
+  for (const id of [unowned.id, foreignOriginal.id]) {
+    const response = await readPage(`&id=${id}`);
+    expect(response.status).toBe(200); expect((await response.json()).jobs).toEqual([]);
+  }
+  expect((await readPage("&cursor=bad!")).status).toBe(400);
+  expect((await readPage("&id=caller-controlled")).status).toBe(503);
+});
+
+it.each(["cookie-lost", "native-read-fault"] as const)("refuses %s during owned composition without falling back to payer history", async failure => {
+  const token = await session(), original = order();
+  await db.createOwnedA2aOrder(original, await proof(token, original));
+  const cookieImplementation = mocks.cookies.getMockImplementation()!;
+  let cookieReads = 0, payerReads = 0, ownedReads = 0;
+  if (failure === "cookie-lost") {
+    // Only request-local framework selection changes; both verifier passes
+    // otherwise use the real signed cookie and durable session implementation.
+    mocks.cookies.mockImplementation(async (...args) => ++cookieReads === 1
+      ? cookieImplementation(...args) : { get: () => undefined });
+  }
+  const prepare = DatabaseSync.prototype.prepare;
+  const fault = vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function(this: DatabaseSync, sql: string) {
+    if (/SELECT \* FROM a2a_orders WHERE LOWER\(payer\)/.test(sql)) payerReads++;
+    if (/FROM pending_job_owners p JOIN/.test(sql)) {
+      ownedReads++;
+      if (failure === "native-read-fault") throw new Error("synthetic owned-reader SQL failure");
+    }
+    return prepare.call(this, sql);
+  });
+  try {
+    const response = await jobs(token, original.id);
+    expect(response.status).toBe(503); expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({ error: "Paid job history is unavailable. Please retry." });
+    expect(payerReads).toBe(0); expect(ownedReads).toBe(failure === "cookie-lost" ? 0 : 1);
+  } finally {
+    fault.mockRestore(); mocks.cookies.mockImplementation(cookieImplementation);
+    // A genuine native SQL failure retires the reader; preserve that refusal.
+    if (failure === "native-read-fault") { db = await createEnrolledSqliteAdapter(); adapters.push(db); }
+  }
+  expect(counts(original.id)).toEqual([1, 1]);
+});

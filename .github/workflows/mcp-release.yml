@@ -93,7 +93,14 @@ jobs:
           package=$(find mcp-assets -name '*.tgz' -type f)
           manifest="$package.source.json"
           # Existing bytes are immutable. A repeat must verify provenance and package bytes.
-          if gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' | rg --fixed-strings --line-regexp --quiet "$(basename "$package")"; then
+          # Read errors must stop publication; a failed command inside `if` is not absence.
+          asset_names=$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')
+          package_name=$(basename "$package")
+          package_exists=false
+          while IFS= read -r asset_name; do
+            if [[ "$asset_name" == "$package_name" ]]; then package_exists=true; fi
+          done <<< "$asset_names"
+          if [[ "$package_exists" == true ]]; then
             mkdir existing
             gh release download "$RELEASE_TAG" --pattern "$(basename "$package")*" --dir existing
             cmp "$manifest" "existing/$(basename "$manifest")"

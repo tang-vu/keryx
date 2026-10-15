@@ -1,10 +1,11 @@
 /** Parent-run compiled Next UI control. Synthetic same-origin session/API responses
  * qualify actual emitted detail UI + canonical hooks only, never native store/HTTP ownership.
- * Offline route omits checkout. This driver reports INCOMPLETE, never compiled consent acceptance.
- * No build, install, envfile, provider, paid request, scheduler or shipped auth seam.
+ * Disposable unfunded testnet setup reaches the unchanged checkout and signer.
+ * Synthetic dispatch is intercepted, never payment/native/owner-admission acceptance.
+ * No build, install, envfile, real provider/paid request, scheduler or shipped auth seam.
  */
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { cp, mkdir, readFile, readdir, realpath, symlink, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { createRequire } from "node:module";
@@ -16,9 +17,16 @@ import { copyNextConfigFixture, nextConfigFixtureFiles } from "../test-support/n
 import { researchFlowMessages as words } from "../locales/en/research-flow";
 import { pendingOwner257Copy as ownerCopy } from "../locales/en/pending-owner257";
 import { jobTargetCopy as targetCopy } from "../locales/en/job-targets";
+import { researchFundingMessages as checkoutCopy } from "../locales/en/research-funding";
+import { privateKeyToAccount } from "viem/accounts";
+import { recoverTypedDataAddress, type Hex } from "viem";
 
 let failureOutput: string | undefined;
 async function main() {
+// Enumerate names before touching inherited values. Parent must launch this
+// process sterile; never snapshot/read a production credential for restoration.
+const parentEnvNames = new Set(["PATH", "Path", "SystemRoot", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE", "TEMP", "TMP", "TSX_CACHE_DIR"]);
+assert(Object.keys(process.env).every(name => parentEnvNames.has(name)), "Parent must launch with only documented system/temp/cache variables; no inherited credentials or runtime flags");
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
 const flags = ["dist", "output", "port", "admission"] as const;
 const args = process.argv.slice(2);
@@ -67,14 +75,16 @@ async function pins(base: string, paths: string[]) {
 }
 async function pinSources() { return pins(root, pinnedPaths); }
 const sourcePins = await pinSources();
-type Admission = { owner: "ROOT"; buildEvidence: string; readOnlyDistProof: string; dist: string; output: string; port: number; buildId: string;
+type Admission = { owner: "ROOT"; buildEvidence: string; readOnlyDistProof: string; publicNetwork: "arcTestnet"; dist: string; output: string; port: number; buildId: string;
   sourcePins: { path: string; sha256: string }[]; compiledPins: { path: string; sha256: string }[] };
 const admission = JSON.parse(await readFile(admissionPath, "utf8")) as Admission;
 assert.equal(admission.owner, "ROOT"); assert(admission.buildEvidence?.trim(), "Actual current source/input build evidence required");
+assert.equal(admission.publicNetwork, "arcTestnet", "Parent build evidence must bind public/server testnet twins; runtime ENV cannot change a compiled public rail");
 assert(admission.readOnlyDistProof?.trim(), "Parent's actual read-only dist provenance is mandatory, not an old source review");
 assert.equal(resolve(admission.dist), resolve(dist)); assert.equal(resolve(admission.output), resolve(output)); assert.equal(admission.port, port);
 assert.deepEqual(admission.sourcePins, sourcePins, "Current full runtime/product graph, driver and old driver bound by parent");
 const compiledPaths = await filesUnder(dist, "");
+assert(compiledPaths.every(path => !/(^|\/)\.env($|\.)/.test(path)), "No runtime ENV file may be copied from admitted dist");
 const compiledPins = await pins(dist, compiledPaths);
 assert.deepEqual(admission.compiledPins, compiledPins, "Parent binds every emitted file, not just a page manifest");
 const buildId = (await readFile(join(dist, "BUILD_ID"), "utf8")).trim(); assert(buildId && buildId.length <= 128);
@@ -83,21 +93,36 @@ const appPaths = JSON.parse(await readFile(join(dist, "server/app-paths-manifest
 assert.equal(appPaths["/research/page"], "app/research/page.js");
 const references = await readFile(join(dist, "server/app/research/page_client-reference-manifest.js"), "utf8");
 assert(references.includes("research-job"), "Actual emitted page references authored client manager");
-assert(references.includes("research-request"), "Current emitted route retains real checkout entry, even though offline render omits it");
+assert(references.includes("research-request"), "Current emitted route retains real checkout entry");
 const emittedClient = (await Promise.all(compiledPaths.filter(path => path.startsWith("static/") && path.endsWith(".js"))
   .map(path => readFile(join(dist, path), "utf8")))).join("\n");
 for (const marker of [ownerCopy.consent, ownerCopy.held, ownerCopy.failed, "data-owned-job", "pending=owned&id=", "/api/auth/sessions"])
   assert(emittedClient.includes(marker), `Actual current emitted checkout/detail/transport marker: ${marker}`);
 
-const run = join(output, "run"), fixture = join(output, "runtime"), origin = `http://127.0.0.1:${port}`;
-const wallet = `0x${"a".repeat(40)}`, list = "/api/me/jobs";
+const run = join(output, "run"), fixture = join(output, "runtime"), loopback = `http://127.0.0.1:${port}`;
+const origin = "https://keryx.cc";
+// Keys exist only in this disposable process. They are never read from custody,
+// written to ENV/files, funded, sent to a provider or used to submit a transaction.
+const testWallet = privateKeyToAccount(`0x${randomBytes(32).toString("hex")}`);
+const sellerKey = `0x${randomBytes(32).toString("hex")}` as Hex;
+const seller = privateKeyToAccount(sellerKey).address;
+const wallet = testWallet.address.toLowerCase(), list = "/api/me/jobs";
+const gateway = "0x0077777d7EBA4688BDeF3E311b846F25870A19B9";
+const asset = "0x3600000000000000000000000000000000000000";
+const pageQueries = new Set(["", "?mode=quick&budget=0.03", "?mode=deep&budget=0.03"]);
+const assetPaths = new Set([
+  ...compiledPaths.filter(path => path.startsWith("static/")).map(path => `/_next/${path}`),
+  ...runtimeFiles.filter(path => path.startsWith("public/")).map(path => `/${path.slice(7)}`),
+  "/favicon.ico",
+]);
+let fixtureSignatures = 0;
 const session = "/api/auth/session", failures: string[] = [], externalAttempts: string[] = [], pageErrors: string[] = [];
 const results: string[] = [], httpRequests: string[] = [];
 const observations: unknown[] = [];
 let contextSerial = 0;
 const tracePaths = new WeakMap<BrowserContext, string>();
 let app: ReturnType<NextFactory> | undefined, browser: Browser | undefined, mainFailure: unknown;
-let mainFailed = false, acceptanceIncomplete = false, browserClosed = false, httpDrained = false, appClosed = false, instrumentationClosed = false, tracesFlushed = false;
+let mainFailed = false, browserClosed = false, httpDrained = false, appClosed = false, instrumentationClosed = false, tracesFlushed = false;
 const cleanupFailures: unknown[] = [], previousEnvironment = { ...process.env }, previousCwd = process.cwd();
 const nativeFetch = globalThis.fetch, nativeConnect = Socket.prototype.connect;
 type NextFactory = (options: { dev: false; dir: string; hostname: string; port: number; httpServer: ReturnType<typeof createServer> }) => {
@@ -106,15 +131,13 @@ type NextFactory = (options: { dev: false; dir: string; hostname: string; port: 
 };
 const server = createServer(async (req, res) => {
   try {
-    assert.equal(req.headers.host, new URL(origin).host); assert(httpRequests.length < 2048);
-    const url = new URL(req.url!, origin); httpRequests.push(`${req.method} ${url.pathname}`);
+    assert.equal(req.headers.host, new URL(loopback).host); assert(httpRequests.length < 2048);
+    const url = new URL(req.url!, loopback); httpRequests.push(`${req.method} ${url.pathname}`);
     assert.equal(req.method, "GET");
     // No API reaches compiled server handlers: all are intercepted in the browser.
     assert(!url.pathname.startsWith("/api/"), "API interception missing");
-    if (req.headers["next-router-prefetch"] === "1" && url.pathname !== "/research" && !url.pathname.startsWith("/_next/")) {
-      res.writeHead(503, { "Cache-Control": "no-store" }); res.end(); return;
-    }
-    assert(url.pathname === "/research" || url.pathname === "/favicon.ico" || url.pathname.startsWith("/_next/"), "Finite compiled page/assets only");
+    assert(url.pathname === "/research" ? pageQueries.has(url.search) : assetPaths.has(url.pathname) && url.search === "",
+      "Finite compiled page query and exact pinned assets only");
     assert(app); await app.getRequestHandler()(req, res);
   } catch (error) {
     failures.push(error instanceof Error ? error.message : String(error));
@@ -124,10 +147,11 @@ const server = createServer(async (req, res) => {
 server.headersTimeout = 5000; server.requestTimeout = 10000; server.keepAliveTimeout = 500;
 
 const coverage = {
-  checkout: "UNREACHABLE: current /research excludes ResearchRequest when KERYX_FORCE_OFFLINE=1",
-  signedPost: "UNRUN: no supported browser wallet signing control; existing transport unit proof is separate",
-  fixedOrigin: "UNRUN: account consent requires https://keryx.cc; loopback does not confer that authority",
-  externalGenericAnonymousResubmit: "UNRUN: no reachable real paid UI control in this boot; no fabricated POST",
+  checkout: "AUTHORED UNRUN: existing testnet seller/funder availability branch; ordinary EIP-6963 injected fixture",
+  signedPost: "AUTHORED UNRUN: unchanged compiled signer/journal/price/budget/nonce policy; synthetic intercepted POST returns 503, no receipt",
+  fixedOrigin: "AUTHORED UNRUN: literal https://keryx.cc, every page/asset fulfilled exclusively from owned loopback; no external continue",
+  externalGenericAnonymousResubmit: "AUTHORED UNRUN: anonymous generic transport, native GET recovery/reload and external-origin disabled consent; external signed dispatch unreachable under original CSP and separately requires existing transport-unit evidence",
+  new28: "SEPARATE UNRUN: native signed-cookie/route original-owner admission fixtures belong to R166/ROOT; browser intercepts do not execute or qualify them",
   root496: "OPEN final-main structured auth-notice coupling gate; no unmerged protocol copied",
 };
 type JobCase = "failed" | "held" | "unknown" | "missing" | "historical" | "unowned" | "overdue" | "stale";
@@ -159,7 +183,8 @@ function fixtureCase(mode: "quick" | "deep", kind: JobCase) {
 function observePage() {
   const native = window.fetch.bind(window);
   const state = { hold: "" as string, held: 0, cancelled: 0, released: 0, reads: 0, sessionRows: 0,
-    afterClear: false, paints: [] as string[], calls: [] as { path: string; method: string; credentials: string; started: number }[] };
+    afterClear: false, paints: [] as string[], calls: [] as { path: string; method: string; credentials: string; redirect: string;
+      destination: string; body: string | null; headers: [string, string][]; started: number }[] };
   let release: (() => void) | undefined;
   const observer = new MutationObserver(() => {
     if (state.afterClear && document.querySelector("[data-owned-job]")) {
@@ -168,20 +193,22 @@ function observePage() {
     }
   });
   observer.observe(document, { subtree: true, childList: true, characterData: true });
-  window.fetch = async (input, init) => {
+  window.fetch = [async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : undefined;
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, location.href);
     const owned = url.pathname === "/api/me/jobs" && url.searchParams.get("pending") === "owned";
     if (state.calls.length >= 256) throw Error("Fetch observation cap");
     state.calls.push({ path: url.pathname + url.search, method: init?.method ?? request?.method ?? "GET",
-      credentials: init?.credentials ?? request?.credentials ?? "same-origin", started: performance.now() });
+      credentials: init?.credentials ?? request?.credentials ?? "same-origin", redirect: init?.redirect ?? request?.redirect ?? "follow",
+      destination: url.href, body: typeof init?.body === "string" ? init.body : null,
+      headers: [...new Headers(init?.headers ?? request?.headers).entries()], started: performance.now() });
     if (url.pathname === "/api/auth/sessions") state.sessionRows++;
     if (owned) state.reads++;
     const hold = owned ? state.hold : "";
     if (hold) state.hold = "";
     if (hold === "fetch") {
       state.held++;
-      await new Promise<void>(done => { release = () => { state.released++; release = undefined; done(); }; });
+      await new Promise<void>(done => { release = [() => { state.released++; release = undefined; done(); }][0]; });
       // Returning after actual abort must remain ineffective in the mounted hook.
     }
     const response = await native(input, init);
@@ -192,11 +219,11 @@ function observePage() {
     return new Response(new ReadableStream<Uint8Array>({
       start(controller) {
         state.held++;
-        release = () => { state.released++; release = undefined; if (!cancelled) { controller.enqueue(bytes); controller.close(); } };
+        release = [() => { state.released++; release = undefined; if (!cancelled) { controller.enqueue(bytes); controller.close(); } }][0];
       },
       cancel() { cancelled = true; state.cancelled++; },
     }), { status: response.status, headers: response.headers });
-  };
+  }][0];
   (window as unknown as { job257: unknown }).job257 = { state,
     hold(value: "fetch" | "body") { if (state.hold || release) throw Error("One held response only"); state.hold = value; },
     cleared() { state.afterClear = true; },
@@ -206,7 +233,8 @@ function observePage() {
 }
 type FixtureWindow = Window & typeof globalThis & { job257: {
   state: { reads: number; held: number; cancelled: number; released: number; sessionRows: number; paints: string[];
-    calls: { path: string; method: string; credentials: string; started: number }[] };
+    calls: { path: string; method: string; credentials: string; redirect: string; destination: string; body: string | null;
+      headers: [string, string][]; started: number }[] };
   hold(value: "fetch" | "body"): void; cleared(): void; release(): void; close(): void;
 } };
 const flush = (page: Page) => page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
@@ -214,7 +242,7 @@ const region = (page: Page) => page.getByRole("region", { name: words["researchJ
 const owned = (page: Page) => region(page).locator("[data-owned-job]");
 const warning = (page: Page, value: string) => region(page).locator(`[data-job-target-state="${value}"]`);
 type Call = { method: string; path: string; body: string | null };
-async function scenario(width: number, mode: "quick" | "deep", kind: JobCase) {
+async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, checkout?: { external?: boolean; credit?: "unknown" | "insufficient"; holdSign?: boolean }) {
   assert(browser);
   const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce", serviceWorkers: "block" });
   tracePaths.set(context, join(run, `context-${++contextSerial}.zip`));
@@ -223,13 +251,95 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase) {
     externalAttempts.push(`WEBSOCKET ${socket.url()}`); socket.close({ code: 1008, reason: "Synthetic fixture admits no WebSocket" });
   });
   const fixture = fixtureCase(mode, kind), calls: Call[] = [];
+  const displayOrigin = checkout?.external ? loopback : origin;
+  const requestBody = JSON.stringify({ question: "Explain isolated durable recovery", budget: 0.03, researchMode: mode, packageVersion: "1.0.0", responseMode: "async" });
+  const price = mode === "quick" ? "50000" : "80000"; // Existing .03 cap plus unchanged .02/.05 service fee.
+  const signedFixtures: { typed: any; signature: Hex; queryId: string; dispatchedAuthorization?: unknown }[] = [];
+  const providerMethods: string[] = [];
+  const recoveryIds = new Set<string>();
+  let releaseSign: (() => void) | undefined, signWaiting = false;
   let signedIn = true, sessionId = "a".repeat(64), address = wallet;
   const issuedAt = Date.now() - 1000, expiresAt = issuedAt + 3600000;
   context.on("page", page => page.on("pageerror", error => pageErrors.push(error.message)));
   await context.addInitScript(observePage);
+  if (checkout) {
+    await context.exposeBinding("job257FixtureRequest", async (_source, packet: { method: string; params?: unknown[] }) => {
+      try {
+        assert(providerMethods.length < 64); providerMethods.push(packet.method);
+        if (packet.method === "wallet_requestPermissions") {
+          assert.deepEqual(packet.params, [{ eth_accounts: {} }]);
+          // Installed injected connector probes this optional API before the
+          // ordinary eth_requestAccounts path. Explicit unsupported response;
+          // no granted permission, provider forwarding or connector override.
+          return Promise.reject(Object.assign(new Error("Optional wallet permissions unsupported in isolated fixture"), { code: 4200 }));
+        }
+        if (["eth_accounts", "eth_requestAccounts"].includes(packet.method)) {
+          assert(!packet.params || packet.params.length === 0); return [wallet];
+        }
+        if (packet.method === "eth_chainId") { assert(!packet.params || packet.params.length === 0); return "0x4cef52"; }
+        assert.equal(packet.method, "eth_signTypedData_v4", "No raw transaction, personal sign, send, provider RPC or chain-switch API");
+        assert.equal(packet.params?.length, 2); assert.equal(String(packet.params![0]).toLowerCase(), wallet);
+        const raw = packet.params![1]; assert.equal(typeof raw, "string"); assert((raw as string).length <= 4096);
+        const typed = JSON.parse(raw as string);
+        assert.deepEqual(Object.keys(typed).sort(), ["domain", "message", "primaryType", "types"]);
+        assert.deepEqual(typed.domain, { name: "GatewayWalletBatched", version: "1", chainId: 5042002, verifyingContract: gateway.toLowerCase() });
+        assert.equal(typed.primaryType, "TransferWithAuthorization");
+        assert.deepEqual(typed.types, {
+          EIP712Domain: [{ name: "name", type: "string" }, { name: "version", type: "string" }, { name: "chainId", type: "uint256" }, { name: "verifyingContract", type: "address" }],
+          TransferWithAuthorization: [{ name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" }, { name: "validAfter", type: "uint256" }, { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" }],
+        });
+        const message = typed.message;
+        assert.deepEqual(Object.keys(message).sort(), ["from", "nonce", "to", "validAfter", "validBefore", "value"]);
+        assert.equal(message.from.toLowerCase(), wallet); assert.equal(message.to.toLowerCase(), seller.toLowerCase());
+        assert.equal(String(message.value), price); assert(BigInt(message.value) <= BigInt(1_000_000));
+        assert(/^0x[a-f0-9]{64}$/.test(message.nonce));
+        assert(/^\d+$/.test(String(message.validAfter)) && /^\d+$/.test(String(message.validBefore)));
+        const now = Math.floor(Date.now() / 1000);
+        assert(Number(message.validAfter) >= now - 610 && Number(message.validAfter) <= now - 590);
+        assert(Number(message.validBefore) >= now + 691190 && Number(message.validBefore) <= now + 691200);
+        const queryId = `a2a_${sha(["keryx-a2a-v2", "eip155:5042002", wallet, seller.toLowerCase(), message.nonce].join("|"))}`;
+        assert(!recoveryIds.has(queryId)); recoveryIds.add(queryId);
+        assert(signedFixtures.length < 1 && fixtureSignatures < 16, "One isolated signature per context, sixteen overall");
+        // Real request remains pending while a synthetic durable account tuple changes.
+        // Cleanup always releases it. No hook, original nonce or transaction substitution.
+        if (checkout.holdSign) {
+          signWaiting = true;
+          await _source.page.evaluate(() => { (window as unknown as { job257Wallet: { signWaiting: boolean } }).job257Wallet.signWaiting = true; });
+          await new Promise<void>(done => { releaseSign = done; });
+          signWaiting = false; releaseSign = undefined;
+        }
+        const signInput = { ...typed, message: { ...message, value: BigInt(message.value), validAfter: BigInt(message.validAfter), validBefore: BigInt(message.validBefore) } };
+        const signature = await testWallet.signTypedData(signInput);
+        assert.equal((await recoverTypedDataAddress({ ...signInput, signature })).toLowerCase(), wallet);
+        fixtureSignatures++; signedFixtures.push({ typed, signature, queryId }); return signature;
+      } catch (error) { failures.push(error instanceof Error ? error.message : String(error)); throw error; }
+    });
+    // Ordinary provider discovery, not connected state, cookies, React hooks or
+    // a replaced wallet module. All requests use the capped fixture binding.
+    await context.addInitScript(() => {
+      const listeners = new Map<string, Set<(...args: unknown[]) => void>>();
+      (window as unknown as { job257Wallet: unknown }).job257Wallet = { signWaiting: false };
+      const provider = {
+        async request(packet: { method: string; params?: unknown[] }) {
+          return (window as unknown as { job257FixtureRequest(packet: unknown): Promise<unknown> }).job257FixtureRequest(packet);
+        },
+        on(name: string, handler: (...args: unknown[]) => void) {
+          if (!listeners.has(name)) listeners.set(name, new Set()); listeners.get(name)!.add(handler);
+        },
+        removeListener(name: string, handler: (...args: unknown[]) => void) { listeners.get(name)?.delete(handler); },
+      };
+      const detail = { info: { uuid: "0f07a231-28a1-4e37-91f8-89d11e501257", name: "Isolated 257 test wallet",
+        icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>", rdns: "test.keryx.isolated257" }, provider };
+      Object.defineProperty(window, "ethereum", { value: provider, configurable: true });
+      window.addEventListener("eip6963:requestProvider", () => window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail })));
+      window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail }));
+    });
+  }
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
-    if (url.origin !== origin) { externalAttempts.push(`${request.method()} ${url.origin}`); await route.abort("blockedbyclient"); return; }
+    if (url.origin !== origin && !(checkout?.external && url.origin === loopback)) {
+      assert(externalAttempts.length < 256); externalAttempts.push(`${request.method()} ${url.origin}`); await route.abort("blockedbyclient"); return;
+    }
     try {
       const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "no-store" }, body: JSON.stringify(body) });
       assert(calls.length < 256); calls.push({ method: request.method(), path: url.pathname + url.search, body: request.postData() });
@@ -242,7 +352,33 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase) {
         await json({ sessions: signedIn ? [{ id: sessionId, issuedAt, expiresAt, current: true }] : [], truncated: false }); return;
       }
       if (url.pathname === "/api/agent/ask") {
+        if (checkout && request.method() === "POST") {
+          assert.equal(url.href, `${origin}/api/agent/ask`); assert.equal(request.postData(), requestBody);
+          const payment = request.headers()["payment-signature"];
+          if (!payment) {
+            assert.equal(request.headers()["x-keryx-account-job"], undefined); assert.equal(request.headers().cookie, undefined);
+            await route.fulfill({ status: 402, contentType: "application/json", headers: { "Cache-Control": "no-store",
+              "payment-required": Buffer.from(JSON.stringify({ x402Version: 2, resource: { url: "/api/agent/ask" }, accepts: [{
+                scheme: "exact", network: "eip155:5042002", asset, amount: price, payTo: seller, maxTimeoutSeconds: 691200,
+                extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: gateway },
+              }] })).toString("base64") }, body: "{}" }); return;
+          }
+          assert.equal(signedFixtures.length, 1); assert(payment.length < 4096);
+          const decoded = JSON.parse(Buffer.from(payment, "base64").toString("utf8")), signed = signedFixtures[0];
+          assert.deepEqual(Object.keys(decoded).sort(), ["authorization", "signature"]);
+          assert.equal(decoded.signature, signed.signature);
+          assert.deepEqual({ ...decoded.authorization, from: decoded.authorization.from.toLowerCase(), to: decoded.authorization.to.toLowerCase() }, { ...signed.typed.message,
+            value: String(signed.typed.message.value), validAfter: String(signed.typed.message.validAfter), validBefore: String(signed.typed.message.validBefore) });
+          signed.dispatchedAuthorization = decoded.authorization;
+          assert.equal(calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 2, "Exactly one unsigned quote and one signed synthetic dispatch");
+          await json({ error: "Synthetic seller unavailable; no settlement, receipt or owner association" }, 503); return;
+        }
         assert.equal(request.method(), "GET", "No synthetic signed POST is fabricated");
+        if (checkout && recoveryIds.has(url.searchParams.get("queryId") ?? "")) {
+          assert.equal(url.search, `?queryId=${url.searchParams.get("queryId")}`);
+          assert.equal(request.headers()["x-keryx-account-job"], undefined); assert.equal(request.headers().cookie, undefined);
+          await json({ error: "Synthetic unknown original; never repay" }, 404); return;
+        }
         assert.equal(url.search, `?queryId=${fixture.id}`);
         assert.equal(request.headers()["x-keryx-account-job"], undefined);
         assert.equal(request.headers().cookie, undefined, "Public bearer lookup omits account cookie");
@@ -256,6 +392,13 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase) {
         if (!signedIn) { await json({ error: "Synthetic session ended" }, 401); return; }
         await json(address === wallet ? fixture.packet : { ...fixture.packet, wallet: address, jobs: [] }); return;
       }
+      if (checkout && url.pathname === "/api/session/credit") {
+        assert.equal(request.method(), "GET"); assert.equal(url.search, `?address=${url.searchParams.get("address")}`); assert.equal(url.searchParams.get("address")?.toLowerCase(), wallet);
+        assert.equal(request.headers()["x-keryx-account-job"], undefined); assert.equal(request.headers().cookie, undefined);
+        if (checkout.credit === "unknown") await json({ error: "Synthetic credit unknown" }, 503);
+        else await json({ status: "known", address: wallet, network: "eip155:5042002", available: checkout.credit === "insufficient" ? "0" : price });
+        return;
+      }
       if (url.pathname === "/api/me/private-jobs/history") {
         assert.equal(request.method(), "POST"); assert.deepEqual(request.postDataJSON(), { cursor: null });
         await json({ error: "Synthetic incidental history unavailable" }, 503); return;
@@ -267,10 +410,32 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase) {
         await json({ error: "Synthetic incidental consumer unavailable" }, 503); return;
       }
       assert(!url.pathname.startsWith("/api/"), `Unknown API blocked: ${url.pathname}`);
-      assert.equal(request.method(), "GET"); await route.continue();
+      assert.equal(request.method(), "GET");
+      // Incidental link prefetch is refused locally, never forwarded or rendered.
+      if (request.headers()["next-router-prefetch"] === "1" && url.pathname !== "/research" && !assetPaths.has(url.pathname)) {
+        await route.fulfill({ status: 503, body: "Synthetic prefetch unavailable" }); return;
+      }
+      assert.equal(url.origin, displayOrigin);
+      assert(url.pathname === "/research" ? pageQueries.has(url.search) : assetPaths.has(url.pathname) && url.search === "",
+        `Unknown page/asset blocked: ${url.pathname}${url.search}`);
+      const headers = new Headers();
+      for (const name of ["accept", "rsc", "next-router-state-tree", "next-router-prefetch", "next-url"])
+        if (request.headers()[name]) headers.set(name, request.headers()[name]);
+      const response = await nativeFetch(`${loopback}${url.pathname}${url.search}`, { headers, redirect: "error", signal: AbortSignal.timeout(10000) });
+      assert(Number(response.headers.get("content-length") ?? 0) <= 8_388_608);
+      const reader = response.body?.getReader(); assert(reader);
+      const chunks: Uint8Array[] = []; let size = 0;
+      try { while (true) { const next = await reader.read(); if (next.done) break;
+        size += next.value.length; assert(size <= 8_388_608); chunks.push(next.value);
+      } } finally { await reader.cancel(); reader.releaseLock(); }
+      const responseHeaders = Object.fromEntries(response.headers.entries());
+      delete responseHeaders["content-encoding"]; delete responseHeaders["content-length"]; // fetch decoded body; ship CSP/auth headers unchanged.
+      await route.fulfill({ status: response.status, headers: responseHeaders, body: Buffer.concat(chunks) });
     } catch (error) { failures.push(error instanceof Error ? error.message : String(error)); await route.abort("failed"); }
   });
-  return { context, fixture, calls,
+  return { context, fixture, calls, signedFixtures, providerMethods, requestBody, price, displayOrigin,
+    signWaiting() { return signWaiting; }, releaseSigner() { assert(releaseSign, "Actual injected sign request pending"); releaseSign(); },
+    cleanupSigner() { releaseSign?.(); },
     logout() { signedIn = false; }, replace() { sessionId = "b".repeat(64); }, foreign() { address = `0x${"b".repeat(40)}`; },
   };
 }
@@ -307,9 +472,57 @@ async function guidance(page: Page, state: string, calls: Call[]) {
 async function using(s: Awaited<ReturnType<typeof scenario>>, control: () => Promise<void>) {
   let failed = false, original: unknown;
   try { await control(); } catch (error) { process.exitCode = 1; failed = true; original = error; }
+  s.cleanupSigner();
   try { await closeContext(s.context); }
   catch (error) { process.exitCode = 1; throw failed ? new AggregateError([original, error], "Control and context cleanup failed") : error; }
   if (failed) throw original;
+}
+const checkoutPanel = (page: Page) => page.getByRole("heading", { name: checkoutCopy["researchCheckout.title"], exact: true }).locator("..");
+const ownerConsent = (page: Page) => checkoutPanel(page).getByRole("checkbox", { name: ownerCopy.consent, exact: true });
+async function waitConsent(page: Page, enabled: boolean) {
+  await page.waitForFunction(({ label, enabled }) => [...document.querySelectorAll("label")].some(node => {
+    const input = node.querySelector("input"); return node.textContent?.trim() === label && input?.disabled === !enabled;
+  }), { label: ownerCopy.consent, enabled });
+}
+async function openCheckout(s: Awaited<ReturnType<typeof scenario>>, mode: "quick" | "deep") {
+  const page = await s.context.newPage(); page.setDefaultTimeout(10000); page.setDefaultNavigationTimeout(10000);
+  const response = await page.goto(`${s.displayOrigin}/research?mode=${mode}&budget=0.03`); assert.equal(response?.status(), 200);
+  assert.equal(new URL(page.url()).origin, s.displayOrigin);
+  assert.equal(await page.evaluate(() => window.isSecureContext && !!crypto.subtle), true);
+  const panel = checkoutPanel(page);
+  await panel.getByRole("button", { name: "Isolated 257 test wallet", exact: true }).click();
+  await page.locator("#research-question").fill("Explain isolated durable recovery");
+  const review = panel.getByRole("button", { name: checkoutCopy["researchCheckout.reviewPrice"].replace("{amount}", mode === "quick" ? "0.05" : "0.08"), exact: true });
+  await review.click();
+  await waitConsent(page, s.displayOrigin === origin);
+  assert.equal(await ownerConsent(page).isChecked(), false, "Separate ownership consent defaults false for each fresh request");
+  assert.equal(await panel.getByRole("checkbox", { name: checkoutCopy["researchCheckout.consent"], exact: true }).isChecked(), false);
+  return { page, panel, review };
+}
+async function inspectJournal(page: Page, id: string) {
+  // Observe the real unchanged browser journal. No inserted row, storage shim,
+  // claim override or signature persistence. Self-contained unnamed callbacks.
+  return page.evaluate(id => new Promise<any>((done, fail) => {
+    const opened = indexedDB.open("keryx-buyer-jobs-v1");
+    opened.onerror = [() => fail(opened.error)][0];
+    opened.onsuccess = [() => {
+      const db = opened.result, transaction = db.transaction("jobs", "readonly"), request = transaction.objectStore("jobs").get(id);
+      let row: unknown;
+      request.onsuccess = [() => { row = request.result; }][0];
+      transaction.oncomplete = [() => { db.close(); done(row); }][0];
+      transaction.onabort = [() => { db.close(); fail(transaction.error); }][0];
+    }][0];
+  }), id);
+}
+async function finishPurchase(page: Page, s: Awaited<ReturnType<typeof scenario>>, ownedPurchase: boolean, mode: "quick" | "deep") {
+  const panel = checkoutPanel(page);
+  if (ownedPurchase) await ownerConsent(page).check();
+  await panel.getByRole("checkbox", { name: checkoutCopy["researchCheckout.consent"], exact: true }).check();
+  const downloaded = page.waitForEvent("download", { timeout: 10000 });
+  await panel.getByRole("button", { name: checkoutCopy["researchCheckout.buy"].replace("{amount}", mode === "quick" ? "0.050000" : "0.080000"), exact: true }).click();
+  const recovery = await downloaded; // Original onPrepared download occurs before original sign policy.
+  assert.equal(await recovery.failure(), null);
+  return recovery;
 }
 try {
   await mkdir(run); await mkdir(fixture); // Exclusive runtime, never overwrite old captures.
@@ -321,16 +534,14 @@ try {
   await symlink(join(root, "node_modules"), join(fixture, "node_modules"), process.platform === "win32" ? "junction" : "dir");
   await mkdir(join(fixture, "data"));
   const environment: NodeJS.ProcessEnv = { NODE_ENV: "production", NODE_OPTIONS: "", BASE_URL: origin,
-    NEXT_TELEMETRY_DISABLED: "1", KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1",
+    NEXT_TELEMETRY_DISABLED: "1", KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "0",
+    SELLER_ADDRESS: seller, AGENT_FUNDER_PRIVATE_KEY: sellerKey,
     KERYX_EXTERNAL_DISCOVERY: "0", KERYX_WEB_RESEARCH: "0", KERYX_REGISTRY_ADDRESS: "", NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: "",
     KERYX_RPC_WS_URL: "", TEMP: join(output, "temp"), TMP: join(output, "temp"), TSX_CACHE_DIR: join(output, "tsx-cache") };
   for (const name of ["PATH", "Path", "SystemRoot", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE"])
     if (previousEnvironment[name]) environment[name] = previousEnvironment[name];
   for (const name of Object.keys(process.env)) delete process.env[name]; Object.assign(process.env, environment); process.chdir(fixture);
-  globalThis.fetch = (input, init) => {
-    const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
-    assert.equal(url.origin, origin, "No server outbound fetch"); return nativeFetch(input, init);
-  };
+  globalThis.fetch = () => { throw new Error("No compiled-server outbound fetch, including loopback/provider/search/payment"); };
   // Cover non-fetch HTTP/TLS too. Only the explicit loopback listener is admitted;
   // inherited RPC/provider/DB origins and Unix/Windows pipe paths are refused.
   Socket.prototype.connect = function (this: Socket, ...args: any[]) {
@@ -386,7 +597,7 @@ try {
           if (kind === "historical") await region(page).getByRole("status").getByText("Completion timing is unavailable for this recorded job. No target or refund promise is inferred.", { exact: true }).waitFor();
         }
         assert.equal(await page.getByRole("checkbox", { name: ownerCopy.consent, exact: true }).count(), 0,
-          "Offline current route cannot mount purchase consent; never treat this absence as opt-in acceptance");
+          "Unconnected detail context has no reviewed checkout; absence is separate from consent controls");
         const calls = await page.evaluate(() => (window as FixtureWindow).job257.state.calls);
         for (const call of calls.filter(call => call.path.startsWith("/api/me/jobs?pending=owned"))) {
           assert.equal(call.credentials, "same-origin"); assert.equal(call.method, "GET");
@@ -460,12 +671,108 @@ try {
       results.push("exact-durable-tuple-rechecked-after-body-without-auth-hint");
     });
   }
+  // Separate actual-route controls. Detail results above are never purchase,
+  // native signed-cookie, new28 route-admission or financial acceptance.
+  for (const width of [360, 1366]) for (const mode of ["quick", "deep"] as const) for (const associate of [false, true]) {
+    const s = await scenario(width, mode, "failed", {});
+    await using(s, async () => {
+      const { page, panel, review } = await openCheckout(s, mode);
+      await ownerConsent(page).check(); assert.equal(await ownerConsent(page).isChecked(), true);
+      await review.click(); assert.equal(await ownerConsent(page).isChecked(), false, "Fresh price review clears one-shot consent");
+      await ownerConsent(page).check();
+      await panel.getByRole("button", { name: ownerCopy.refresh, exact: true }).click();
+      await waitConsent(page, true); assert.equal(await ownerConsent(page).isChecked(), false, "Refreshing durable session clears consent");
+      await ownerConsent(page).check();
+      await page.locator("#research-question").fill("A separately reviewed new question");
+      await review.click(); assert.equal(await ownerConsent(page).isChecked(), false, "New request never inherits prior checked consent");
+      await page.locator("#research-question").fill("Explain isolated durable recovery"); await review.click();
+      const before = s.calls.length;
+      await finishPurchase(page, s, associate, mode);
+      await panel.getByRole("status").getByText(checkoutCopy["researchCheckout.uncertain"], { exact: true }).waitFor();
+      assert.equal(s.signedFixtures.length, 1);
+      const calls = await page.evaluate(() => (window as FixtureWindow).job257.state.calls);
+      const posts = calls.filter(call => call.destination === "https://keryx.cc/api/agent/ask" && call.method === "POST");
+      assert.equal(posts.length, 2); // Unsigned quote + ONE intercepted signed request.
+      for (const post of posts) { assert.equal(post.body, s.requestBody); assert.equal(post.redirect, "error"); }
+      assert.equal(new Headers(posts[0].headers).has("payment-signature"), false);
+      assert.equal(new Headers(posts[0].headers).has("x-keryx-account-job"), false); assert.equal(posts[0].credentials, "omit");
+      assert.equal(posts[1].credentials, associate ? "same-origin" : "omit");
+      assert.equal(new Headers(posts[1].headers).get("x-keryx-account-job"), associate ? "associate" : null);
+      const paid = s.calls.slice(before).filter(call => call.method === "POST" && call.path === "/api/agent/ask");
+      assert.equal(paid.length, 2);
+      if (associate) assert(s.calls.slice(before).filter(call => call.path === "/api/auth/sessions").length >= 8,
+        "Unchanged four durable tuple assertions run before/after signing and immediately before ownership dispatch");
+      const signed = s.signedFixtures[0], row = await inspectJournal(page, signed.queryId);
+      assert.equal(row.origin, "created"); assert.equal(row.submission, "submission_possible");
+      assert.equal(JSON.stringify(row.intent.request), s.requestBody);
+      assert.equal(row.intent.authorization.nonce, signed.typed.message.nonce);
+      assert.deepEqual(row.intent.authorization, signed.dispatchedAuthorization, "Byte-value original authorization is unchanged from actual journal to intercepted dispatch");
+      assert.equal(JSON.stringify(row).includes('"signature"'), false); assert.equal(JSON.stringify(row).includes("accountConsent"), false);
+      assert.equal(row.acknowledgement.httpStatus, 503); assert.equal(row.acknowledgement.evidence, null, "Unavailable synthetic seller never creates settlement evidence");
+      assert.equal(await ownerConsent(page).count(), 0, "Purchase review clears after consumed uncertain dispatch");
+      await page.getByRole("button", { name: words["savedResearch.refreshJob"], exact: true }).click();
+      await page.getByText(words["savedResearch.notFoundUncertain"], { exact: true }).waitFor();
+      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 2);
+      await page.reload();
+      await checkoutPanel(page).waitFor();
+      await page.getByRole("button", { name: /Explain isolated durable recovery/ }).click();
+      await page.getByText(words["savedResearch.notFoundUncertain"], { exact: true }).waitFor();
+      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 2, "Reload/recovery never sign or repay");
+      assert.equal(s.signedFixtures.length, 1);
+      const recovered = await page.evaluate(() => (window as FixtureWindow).job257.state.calls);
+      for (const get of recovered.filter(call => call.path === `/api/agent/ask?queryId=${signed.queryId}`)) {
+        assert.equal(get.method, "GET"); assert.equal(get.credentials, "omit"); assert.equal(get.redirect, "error");
+        assert.equal(new Headers(get.headers).has("x-keryx-account-job"), false); assert.equal(new Headers(get.headers).has("payment-signature"), false);
+      }
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await page.screenshot({ path: join(run, `${mode}-${associate ? "opted-in" : "anonymous"}-${width}-checkout.png`), fullPage: true });
+      results.push(`${mode}-${associate ? "opted-in" : "anonymous"}-${width}:compiled-synthetic-consent-and-get-only-recovery`);
+    });
+  }
+  for (const loss of ["logout", "replacement", "foreign"] as const) {
+    const s = await scenario(1366, "quick", "failed", { holdSign: true });
+    await using(s, async () => {
+      const { page, panel } = await openCheckout(s, "quick");
+      await finishPurchase(page, s, true, "quick");
+      await page.waitForFunction(() => (window as unknown as { job257Wallet: { signWaiting: boolean } }).job257Wallet.signWaiting);
+      assert(s.signWaiting());
+      if (loss === "logout") s.logout(); else if (loss === "replacement") s.replace(); else s.foreign();
+      s.releaseSigner(); // No auth notice: the ORIGINAL post-sign durable check must reject changed authority.
+      await panel.getByRole("status").getByText(checkoutCopy["researchCheckout.stopped"], { exact: true }).waitFor();
+      assert.equal(s.signedFixtures.length, 1);
+      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 1,
+        "Only unsigned quote; opt-in refusal never falls back to anonymous signed dispatch");
+      const row = await inspectJournal(page, s.signedFixtures[0].queryId);
+      assert.equal(row.submission, "prepared"); assert.equal(row.acknowledgement, undefined);
+      results.push(`${loss}:compiled-post-sign-durable-refusal-without-anonymous-fallback`);
+    });
+  }
+  for (const credit of ["unknown", "insufficient"] as const) {
+    const s = await scenario(360, "quick", "failed", { credit });
+    await using(s, async () => {
+      const { page, panel } = await openCheckout(s, "quick");
+      await ownerConsent(page).check();
+      await panel.getByRole("checkbox", { name: checkoutCopy["researchCheckout.consent"], exact: true }).check();
+      await panel.getByRole("button", { name: checkoutCopy["researchCheckout.buy"].replace("{amount}", "0.050000"), exact: true }).click();
+      await panel.getByRole("status").getByText(checkoutCopy[credit === "unknown" ? "researchCheckout.stopped" : "researchCheckout.insufficient"], { exact: true }).waitFor();
+      assert.equal(s.signedFixtures.length, 0); assert(!s.providerMethods.includes("eth_signTypedData_v4"));
+      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 1);
+      results.push(`${credit}:compiled-credit-refusal-before-sign-or-paid-dispatch`);
+    });
+  }
+  {
+    const s = await scenario(1366, "quick", "failed", { external: true });
+    await using(s, async () => {
+      const { page } = await openCheckout(s, "quick");
+      assert.equal(await ownerConsent(page).isEnabled(), false); assert.equal(await ownerConsent(page).isChecked(), false);
+      assert.equal(s.signedFixtures.length, 0);
+      assert.equal(s.calls.filter(call => call.method === "POST" && call.path === "/api/agent/ask").length, 0);
+      // Original CSP disallows cross-origin BUYER_ENDPOINT on loopback. Do not
+      // relax it to manufacture external paid dispatch or generic unit evidence.
+      results.push("external-loopback:compiled-fixed-origin-consent-unavailable-no-purchase");
+    });
+  }
   assert.deepEqual(await pinSources(), sourcePins); assert.deepEqual(await pins(dist, await filesUnder(dist, "")), compiledPins); assert.deepEqual(failures, []); assert.deepEqual(pageErrors, []);
-  // Global public analytics can attempt outbound delivery; refusal is retained.
-  // No external request is continued, including provider/search/payment traffic.
-  // A successful partial suite must NEVER signal original257 compiled consent PASS.
-  acceptanceIncomplete = true;
-  throw new Error("INCOMPLETE compiled owner-consent acceptance: permitted offline current route omits checkout; signed purchase and fixed-origin controls remain OPEN. See outcome coverage.");
 } catch (error) { process.exitCode = 1; mainFailed = true; mainFailure = error; }
 finally {
   try { await browser?.close(); browserClosed = true; } catch (error) { process.exitCode = 1; cleanupFailures.push(error); }
@@ -487,8 +794,10 @@ finally {
   try { process.chdir(previousCwd); for (const name of Object.keys(process.env)) delete process.env[name]; Object.assign(process.env, previousEnvironment); }
   catch (error) { process.exitCode = 1; cleanupFailures.push(error); }
   try {
-    await writeFile(join(run, "outcome.json"), JSON.stringify({ status: cleanupFailures.length || (mainFailed && !acceptanceIncomplete) ? "FAILED" : "INCOMPLETE",
-      scope: "Actual compiled Next detail UI/hooks; synthetic metadata only. No checkout, native, payment or settlement acceptance.",
+    await writeFile(join(run, "outcome.json"), JSON.stringify({ status: cleanupFailures.length || mainFailed ? "FAILED" : "COMPILED_SYNTHETIC_CONTROLS_PASSED",
+      scope: "Actual compiled Next detail and consent UI/hooks with unchanged signer/journal policy; synthetic APIs and isolated typed signatures only. Native new28, genuine auth/owner admission, paid latency and settlement remain OPEN.",
+      containment: { externalContinued: 0, realProviderCalls: 0, realSearchCalls: 0, realPaidApiCalls: 0, realFundingCalls: 0,
+        fixtureSignatures, maximumFixtureSignatures: 16 },
       buildId, sourcePins, compiledPins, admissionPath, buildEvidence: admission.buildEvidence, readOnlyDistProof: admission.readOnlyDistProof, coverage, results, observations, httpRequests, failures, pageErrors, externalAttempts,
       naturalClose: { browserClosed, httpDrained, instrumentationClosed, appClosed, tracesFlushed,
         processExitObserved: null, stdoutEofObserved: null, stderrEofObserved: null },
@@ -499,7 +808,7 @@ finally {
   if (cleanupFailures.length) throw new AggregateError(mainFailed ? [mainFailure, ...cleanupFailures] : cleanupFailures, "Compiled job257 natural close failed");
   if (mainFailed) throw mainFailure;
 }
-console.log("Compiled job257 detail controls completed; checkout and signed purchase remain OPEN.");
+console.log("Compiled job257 synthetic detail/consent controls completed; native new28 and original257 financial/customer acceptance remain OPEN.");
 }
 await main().catch(async error => {
   process.exitCode = 1;

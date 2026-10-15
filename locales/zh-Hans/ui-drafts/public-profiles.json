@@ -1,0 +1,284 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/public-profiles.ts",
+  "sourceSha256": "1578750a13bc9300f7dbc209403ae55e10c8e4ad27969956c55ce4b16509b2f9",
+  "entries": {
+    "title": {
+      "source": "Publish your research profile",
+      "text": "发布您的研究个人资料"
+    },
+    "introduction": {
+      "source": "Your profile stays invisible until you publish. Choose fields and run IDs; only currently PUBLIC runs with your existing ownership proof appear.",
+      "text": "在您发布之前，个人资料保持不可见。选择字段和研究 ID；仅显示当前为 PUBLIC 且已有您所有权证明的研究。"
+    },
+    "editPrivate": {
+      "source": "Edit your private profile and verified accounts",
+      "text": "编辑私密个人资料与已验证账户"
+    },
+    "manageVisibility": {
+      "source": "Manage run visibility",
+      "text": "管理研究可见性"
+    },
+    "checking": {
+      "source": "Checking sign-in…",
+      "text": "正在检查登录状态…"
+    },
+    "signIn": {
+      "source": "Sign in with your wallet",
+      "text": "使用钱包登录"
+    },
+    "signInPurpose": {
+      "source": "to control publication.",
+      "text": "以控制发布。"
+    },
+    "publication": {
+      "source": "Profile publication",
+      "text": "个人资料发布"
+    },
+    "handle": {
+      "source": "Handle:",
+      "text": "用户名："
+    },
+    "missingHandle": {
+      "source": "Save a handle in your private profile first.",
+      "text": "请先在私密个人资料中保存用户名。"
+    },
+    "published": {
+      "source": "Published",
+      "text": "已发布"
+    },
+    "unpublished": {
+      "source": "Not published",
+      "text": "未发布"
+    },
+    "fieldsLegend": {
+      "source": "Fields to publish",
+      "text": "要发布的字段"
+    },
+    "fields.displayName": {
+      "source": "Display name",
+      "text": "显示名称"
+    },
+    "fields.about": {
+      "source": "About",
+      "text": "简介"
+    },
+    "fields.purpose": {
+      "source": "Research purpose",
+      "text": "研究目的"
+    },
+    "fields.verifiedLinks": {
+      "source": "Verified account links",
+      "text": "已验证账户链接"
+    },
+    "fields.ledgers": {
+      "source": "Wallet-wide settled creator ledger totals",
+      "text": "钱包范围内已结算创作者账本总额"
+    },
+    "ledgerConsent": {
+      "source": "Ledger totals cover the wallet's recorded settled creator events, including amounts associated with private runs without exposing their identifiers. Treasury sponsorship is separate. Do not select this field unless you want those aggregate amounts public.",
+      "text": "账本总额包含该钱包记录的已结算创作者事件，包括与私密研究相关的金额，但不暴露其标识符。资金库赞助单独列示。只有希望公开这些汇总金额时才选择此字段。"
+    },
+    "selectedIds": {
+      "source": "Selected owned run IDs (one per line, at most 50)",
+      "text": "所选自己拥有的研究 ID（每行一个，最多 50 个）"
+    },
+    "publicationBoundary": {
+      "source": "Publication never makes a run PUBLIC. Change visibility separately. Private, unlisted, erased and no-longer-owned runs remain absent.",
+      "text": "发布绝不会将研究设为 PUBLIC。请单独更改可见性。私密、不列出、已删除和不再拥有的研究仍不会出现。"
+    },
+    "saving": {
+      "source": "Saving…",
+      "text": "正在保存…"
+    },
+    "updateSelection": {
+      "source": "Update published selection",
+      "text": "更新已发布选择"
+    },
+    "publish": {
+      "source": "Publish profile",
+      "text": "发布个人资料"
+    },
+    "unpublish": {
+      "source": "Unpublish",
+      "text": "取消发布"
+    },
+    "viewPublic": {
+      "source": "View public profile",
+      "text": "查看公开个人资料"
+    },
+    "unavailable": {
+      "source": "Public profile publishing is unavailable for this account.",
+      "text": "此账户不提供公开个人资料发布功能。"
+    },
+    "profileUnavailable": {
+      "source": "Profile unavailable.",
+      "text": "个人资料不可用。"
+    },
+    "invalidSelection": {
+      "source": "Choose at most 50 unique run IDs and valid fields.",
+      "text": "选择最多 50 个不重复研究 ID 及有效字段。"
+    },
+    "changed": {
+      "source": "The profile changed. Reload before publishing.",
+      "text": "个人资料发生变化。发布前请重新加载。"
+    },
+    "notOwned": {
+      "source": "One or more runs lack your ownership proof.",
+      "text": "一个或多个研究缺少您的所有权证明。"
+    },
+    "unconfirmed": {
+      "source": "Publication could not be confirmed. Inspect the profile before trying again.",
+      "text": "无法确认发布。重试前请检查个人资料。"
+    },
+    "unpublishedNotice": {
+      "source": "Unpublished. The page, JSON and sitemap no longer list your profile.",
+      "text": "已取消发布。页面、JSON 和站点地图不再列出您的个人资料。"
+    },
+    "publishedNotice": {
+      "source": "Published. Only selected fields and PUBLIC owned runs are visible.",
+      "text": "已发布。仅所选字段和 PUBLIC 的自有研究可见。"
+    },
+    "unconfirmedNotice": {
+      "source": "Publication unconfirmed.",
+      "text": "发布未确认。"
+    },
+    "unavailableTitle": {
+      "source": "Profile unavailable",
+      "text": "个人资料不可用"
+    },
+    "metadataDescription": {
+      "source": "Selected public research on Keryx.",
+      "text": "Keryx 上精选的公开研究。"
+    },
+    "imageAlt": {
+      "source": "Opt-in Keryx researcher profile",
+      "text": "自愿公开的 Keryx 研究者个人资料"
+    },
+    "brand": {
+      "source": "KERYX",
+      "text": "KERYX"
+    },
+    "selectedResearch": {
+      "source": "Selected public research",
+      "text": "精选公开研究"
+    },
+    "imageOwnership": {
+      "source": "Owner-published research profile",
+      "text": "所有者发布的研究个人资料"
+    },
+    "purposeLabel": {
+      "source": "Research purpose:",
+      "text": "研究目的："
+    },
+    "ownerAssertion": {
+      "source": "Published by the signed wallet that controls this handle. Profile text is an owner assertion, not verified affiliation.",
+      "text": "由控制此用户名的签名钱包发布。个人资料文本是所有者声明，不是已验证的机构归属。"
+    },
+    "verifiedAccount": {
+      "source": "Verified account link",
+      "text": "已验证账户链接"
+    },
+    "json": {
+      "source": "Profile JSON",
+      "text": "个人资料 JSON"
+    },
+    "ledgerTitle": {
+      "source": "Recorded settled creator payments",
+      "text": "记录的已结算创作者付款"
+    },
+    "ledgerBasis": {
+      "source": "Wallet-wide totals, explicitly published by this owner. Includes amounts without exposing private run identifiers. Pending and simulated payments are excluded. These are stored settlement records, not a new chain reconciliation.",
+      "text": "钱包范围内的总额，由此所有者明确公开。包含金额，但不暴露私密研究标识符。排除等待确认和模拟付款。这些是已存储结算记录，不是新的链上对账。"
+    },
+    "ledgerLabels.reader": {
+      "source": "Paid to creators as reader",
+      "text": "作为读者支付给创作者"
+    },
+    "ledgerLabels.creator": {
+      "source": "Earned as creator (recorded payee)",
+      "text": "作为创作者赚取（记录的收款人）"
+    },
+    "ledgerLabels.sponsored": {
+      "source": "Treasury-sponsored creator payments",
+      "text": "资金库赞助的创作者付款"
+    },
+    "selectedBoundary": {
+      "source": "Only selected, currently PUBLIC runs with an existing ownership proof appear. Private, unlisted and erased runs are omitted.",
+      "text": "仅显示所选、当前为 PUBLIC 且已有所有权证明的研究。不显示私密、不列出和已删除研究。"
+    },
+    "emptyRuns": {
+      "source": "No selected public runs.",
+      "text": "未选择公开研究。"
+    },
+    "funding.sponsored": {
+      "source": "Treasury sponsored",
+      "text": "资金库赞助"
+    },
+    "funding.recorded": {
+      "source": "Recorded sponsorship; treasury payer unproved",
+      "text": "已记录赞助；资金库付款者未获证明"
+    },
+    "funding.simulation": {
+      "source": "Offline simulation",
+      "text": "离线模拟"
+    },
+    "funding.reader": {
+      "source": "Recorded reader funding",
+      "text": "已记录读者资金来源"
+    },
+    "funding.unknown": {
+      "source": "Funding unrecorded",
+      "text": "未记录资金来源"
+    },
+    "ownershipLabel": {
+      "source": "Ownership:",
+      "text": "所有权："
+    },
+    "ownership.session": {
+      "source": "Signed in",
+      "text": "已登录"
+    },
+    "ownership.api-key": {
+      "source": "Verified API key",
+      "text": "已验证 API 密钥"
+    },
+    "ownership.verified-payer": {
+      "source": "Verified original payer",
+      "text": "已验证原始付款者"
+    },
+    "ownership.claimed": {
+      "source": "Claimed through the original receipt",
+      "text": "通过原始凭证认领"
+    },
+    "ownership.recorded-unknown": {
+      "source": "Recorded owner; original method unrecorded",
+      "text": "已记录所有者；未记录原始方式"
+    },
+    "report": {
+      "source": "Report",
+      "text": "报告"
+    },
+    "receipts": {
+      "source": "Stored receipts",
+      "text": "已存储凭证"
+    },
+    "amountUnavailable": {
+      "source": "Unavailable",
+      "text": "不可用"
+    },
+    "network.mainnet": {
+      "source": "Arc mainnet",
+      "text": "Arc 主网"
+    },
+    "network.testnet": {
+      "source": "Arc testnet",
+      "text": "Arc 测试网"
+    },
+    "network.unknown": {
+      "source": "Network unrecorded or conflicting",
+      "text": "网络未记录或存在冲突"
+    }
+  }
+}

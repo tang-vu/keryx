@@ -1,0 +1,516 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/native-desktop.ts",
+  "sourceSha256": "d0e3861976ddc14b2ee076cdc139399bc781c0929672c02970ce4e34dee151e3",
+  "entries": {
+    "nativeDesktop.savedResult.openFailed": {
+      "source": "Saved result cannot be opened: {reason}",
+      "text": "无法打开已保存结果：{reason}"
+    },
+    "nativeDesktop.workspace.openFailed": {
+      "source": "The local workspace could not be opened: {reason}",
+      "text": "无法打开本地工作区：{reason}"
+    },
+    "nativeDesktop.workspace.unavailable": {
+      "source": "The selected workspace is no longer available. Open a workspace to continue.",
+      "text": "所选工作区已不可用。打开工作区以继续。"
+    },
+    "nativeDesktop.task.createdRefreshFailed": {
+      "source": "Task was created, but the workspace view could not be refreshed. Keep that folder and inspect it before retrying: {path}",
+      "text": "任务已创建，但无法刷新工作区视图。请保留该文件夹并在重试前检查：{path}"
+    },
+    "nativeDesktop.workspace.taskCount.one": {
+      "source": "{count} research tasks",
+      "text": "{count} 项研究任务"
+    },
+    "nativeDesktop.workspace.taskCount.other": {
+      "source": "{count} research tasks",
+      "text": "{count} 项研究任务"
+    },
+    "nativeDesktop.task.createdAt": {
+      "source": "{mode} RESEARCH · {date}",
+      "text": "{mode}研究 · {date}"
+    },
+    "nativeDesktop.task.lastChecked": {
+      "source": "Checked {date} · payment {payment}",
+      "text": "已检查 {date} · 付款 {payment}"
+    },
+    "nativeDesktop.savedResult.verification": {
+      "source": "Saved {date}. Local receipt and original task binding checked. The original server response and settlement cannot be independently rechecked offline.",
+      "text": "保存于 {date}。已核对本地收据及原任务绑定。离线无法独立复核原服务器响应和结算。"
+    },
+    "nativeDesktop.unsavedResult.boundary": {
+      "source": "The original buyer receipt remains in the buyer journal. Retry the original job check to save this answer locally.",
+      "text": "原买方收据仍在买方日志中。重试原任务检查以将答案保存在本地。"
+    },
+    "nativeDesktop.unsavedResult.truncatedBoundary": {
+      "source": "Preview truncated at 50,000 characters. The original buyer receipt remains in the buyer journal. Retry the original job check to save this answer locally.",
+      "text": "预览在 50,000 字符处截断。原买方收据仍在买方日志中。重试原任务检查以将答案保存在本地。"
+    },
+    "nativeDesktop.exports.saved": {
+      "source": "Private {format} export saved.",
+      "text": "私密 {format} 导出已保存。"
+    },
+    "nativeDesktop.task.capBoundary": {
+      "source": "{network} · cap must exceed creator budget · 1 USDC maximum",
+      "text": "{network} · 上限须高于创作者预算 · 最高 1 USDC"
+    },
+    "nativeDesktop.reference.imported": {
+      "source": "Imported {date} · {bytes} bytes",
+      "text": "导入于 {date} · {bytes} 字节"
+    },
+    "nativeDesktop.reference.checksum": {
+      "source": "SHA-256 {sha256}",
+      "text": "SHA-256 {sha256}"
+    },
+    "nativeDesktop.workspace.unrecognized.one": {
+      "source": "{count} folder could not be recognized as valid Operator tasks and were left untouched.",
+      "text": "{count} 个文件夹无法识别为有效 Operator 任务，未作改动。"
+    },
+    "nativeDesktop.workspace.unrecognized.other": {
+      "source": "{count} folders could not be recognized as valid Operator tasks and were left untouched.",
+      "text": "{count} 个文件夹无法识别为有效 Operator 任务，未作改动。"
+    },
+    "nativeDesktop.stage.ready": {
+      "source": "Ready to purchase",
+      "text": "可以购买"
+    },
+    "nativeDesktop.stage.buyerJournaled": {
+      "source": "Saved buyer attempt",
+      "text": "已保存买方尝试"
+    },
+    "nativeDesktop.stage.incomplete": {
+      "source": "Needs review",
+      "text": "需要审阅"
+    },
+    "nativeDesktop.network.mainnet": {
+      "source": "Arc Mainnet",
+      "text": "Arc 主网"
+    },
+    "nativeDesktop.network.testnet": {
+      "source": "Arc Testnet",
+      "text": "Arc 测试网"
+    },
+    "nativeDesktop.workspace.none": {
+      "source": "No workspace open",
+      "text": "未打开工作区"
+    },
+    "nativeDesktop.workspace.chooseFolder": {
+      "source": "Choose a private local folder",
+      "text": "选择私密本地文件夹"
+    },
+    "nativeDesktop.workspace.createdVisible": {
+      "source": "Workspace created and visible. Keep a backup of important local work.",
+      "text": "工作区已创建并可见。请备份重要本地工作。"
+    },
+    "nativeDesktop.workspace.created": {
+      "source": "Private workspace created.",
+      "text": "私密工作区已创建。"
+    },
+    "nativeDesktop.breadcrumb.task": {
+      "source": "TASK DETAIL",
+      "text": "任务详情"
+    },
+    "nativeDesktop.breadcrumb.desk": {
+      "source": "RESEARCH DESK",
+      "text": "研究工作台"
+    },
+    "nativeDesktop.busy.savedResult": {
+      "source": "Opening saved result…",
+      "text": "正在打开已保存结果…"
+    },
+    "nativeDesktop.task.title": {
+      "source": "Research task",
+      "text": "研究任务"
+    },
+    "nativeDesktop.desk.title": {
+      "source": "Research desk",
+      "text": "研究工作台"
+    },
+    "nativeDesktop.task.introduction": {
+      "source": "Your question, pinned payee, spending boundary, and recovery state.",
+      "text": "您的问题、固定收款人、支出边界及恢复状态。"
+    },
+    "nativeDesktop.desk.introduction": {
+      "source": "Ask a question. Set a boundary. Keep your evidence together.",
+      "text": "提出问题，设定边界，将证据集中保存。"
+    },
+    "nativeDesktop.savedResult.previous": {
+      "source": "PREVIOUS SAVED RESULT · LOCAL RECHECK",
+      "text": "先前已保存结果 · 本地复核"
+    },
+    "nativeDesktop.savedResult.current": {
+      "source": "SAVED RESEARCH RESULT · LOCAL RECHECK",
+      "text": "已保存研究结果 · 本地复核"
+    },
+    "nativeDesktop.savedResult.saveFailed": {
+      "source": "Completed result could not be saved locally.",
+      "text": "无法在本地保存已完成结果。"
+    },
+    "nativeDesktop.task.observationSaveFailed": {
+      "source": "Result checked, but its latest status could not be saved locally. The original buyer journal remains available.",
+      "text": "结果已检查，但最新状态无法保存到本地。原买方日志仍可用。"
+    },
+    "nativeDesktop.task.checked": {
+      "source": "Result checked. Payment confirmation is shown separately.",
+      "text": "结果已检查。付款确认单独显示。"
+    },
+    "nativeDesktop.exports.briefSaved": {
+      "source": "Private research brief saved.",
+      "text": "私密研究简报已保存。"
+    },
+    "nativeDesktop.exports.statusSaved": {
+      "source": "Private status JSON saved.",
+      "text": "私密状态 JSON 已保存。"
+    },
+    "nativeDesktop.task.createdVisible": {
+      "source": "Research task created and visible. Keep a backup of important local work.",
+      "text": "研究任务已创建并可见。请备份重要本地工作。"
+    },
+    "nativeDesktop.task.created": {
+      "source": "Research task created in your workspace.",
+      "text": "研究任务已在工作区创建。"
+    },
+    "nativeDesktop.reference.importedNotice": {
+      "source": "Local reference snapshot imported.",
+      "text": "本地参考快照已导入。"
+    },
+    "nativeDesktop.brand.mark": {
+      "source": "K",
+      "text": "K"
+    },
+    "nativeDesktop.brand.name": {
+      "source": "Keryx",
+      "text": "Keryx"
+    },
+    "nativeDesktop.brand.tagline": {
+      "source": "THE CITATION TOLL",
+      "text": "引用付费"
+    },
+    "nativeDesktop.workspace.section": {
+      "source": "01 / PRIVATE WORKSPACE",
+      "text": "01 / 私密工作区"
+    },
+    "nativeDesktop.workspace.open": {
+      "source": "Open workspace",
+      "text": "打开工作区"
+    },
+    "nativeDesktop.workspace.new": {
+      "source": "New workspace",
+      "text": "新建工作区"
+    },
+    "nativeDesktop.task.new": {
+      "source": "＋ New research task",
+      "text": "＋ 新建研究任务"
+    },
+    "nativeDesktop.task.section": {
+      "source": "02 / RESEARCH TASKS ",
+      "text": "02 / 研究任务 "
+    },
+    "nativeDesktop.workspace.empty": {
+      "source": "Your workspace has no tasks yet.",
+      "text": "工作区尚无任务。"
+    },
+    "nativeDesktop.workspace.localTasks": {
+      "source": " Local tasks ",
+      "text": " 本地任务 "
+    },
+    "nativeDesktop.workspace.localBoundary": {
+      "source": "· local workspace",
+      "text": "· 本地工作区"
+    },
+    "nativeDesktop.breadcrumb.mint": {
+      "source": "THE MINT ",
+      "text": "铸币厂 "
+    },
+    "nativeDesktop.breadcrumb.operator": {
+      "source": " OPERATOR ",
+      "text": " OPERATOR "
+    },
+    "nativeDesktop.action.failed": {
+      "source": "Could not complete action",
+      "text": "无法完成操作"
+    },
+    "nativeDesktop.desk.opening": {
+      "source": "Opening your research desk…",
+      "text": "正在打开研究工作台…"
+    },
+    "nativeDesktop.onboarding.eyebrow": {
+      "source": "A PRIVATE DESK FOR PAID RESEARCH",
+      "text": "付费研究的私密工作台"
+    },
+    "nativeDesktop.onboarding.title": {
+      "source": "Your work, in one place.",
+      "text": "将工作集中一处。"
+    },
+    "nativeDesktop.onboarding.introduction": {
+      "source": "Prepare bounded research, keep references nearby, and return to the original job when a result needs checking.",
+      "text": "准备有边界的研究，将参考资料放在附近，并在结果需检查时返回原任务。"
+    },
+    "nativeDesktop.workspace.create": {
+      "source": "Create workspace ",
+      "text": "创建工作区 "
+    },
+    "nativeDesktop.workspace.openExisting": {
+      "source": "Open existing",
+      "text": "打开现有工作区"
+    },
+    "nativeDesktop.onboarding.boundary": {
+      "source": "Local preparation only. Purchases happen deliberately through the buyer CLI.",
+      "text": "仅本地准备。购买通过买方 CLI 主动进行。"
+    },
+    "nativeDesktop.desk.eyebrow": {
+      "source": "OPERATOR / LOCAL WORKSPACE",
+      "text": "OPERATOR / 本地工作区"
+    },
+    "nativeDesktop.workspace.refresh": {
+      "source": "↻ Refresh",
+      "text": "↻ 刷新"
+    },
+    "nativeDesktop.task.creatorBudget": {
+      "source": "CREATOR BUDGET",
+      "text": "创作者预算"
+    },
+    "nativeDesktop.task.totalCap": {
+      "source": "TOTAL JOB CAP",
+      "text": "任务总上限"
+    },
+    "nativeDesktop.task.payment": {
+      "source": "PAYMENT",
+      "text": "付款"
+    },
+    "nativeDesktop.task.unknown": {
+      "source": "Unknown",
+      "text": "未知"
+    },
+    "nativeDesktop.task.delivery": {
+      "source": "DELIVERY",
+      "text": "交付"
+    },
+    "nativeDesktop.task.pinnedSeller": {
+      "source": "PINNED SELLER PAYEE",
+      "text": "固定卖方收款人"
+    },
+    "nativeDesktop.task.lastObservation": {
+      "source": "LAST CHECKED RESULT · MAY BE OUT OF DATE",
+      "text": "上次检查结果 · 可能过时"
+    },
+    "nativeDesktop.task.sellerReportedBoundary": {
+      "source": "Payment details are reported by the seller. Check again for the latest delivery state.",
+      "text": "付款详情由卖方报告。再次检查以获取最新交付状态。"
+    },
+    "nativeDesktop.savedResult.citations": {
+      "source": "Cited sources in saved receipt",
+      "text": "已保存收据中的引用来源"
+    },
+    "nativeDesktop.savedResult.invalid": {
+      "source": "The saved result file is invalid. Keep the original buyer journal and check the original job again.",
+      "text": "已保存结果文件无效。保留原买方日志，并重新检查原任务。"
+    },
+    "nativeDesktop.unsavedResult.title": {
+      "source": "ANSWER FROM LATEST CHECK · NOT SAVED LOCALLY",
+      "text": "最新检查的答案 · 未保存到本地"
+    },
+    "nativeDesktop.task.incompleteBoundary": {
+      "source": "The buyer journal is incomplete. Inspect the original attempt before recovery; preserve this task directory.",
+      "text": "买方日志不完整。恢复前请检查原尝试；保留此任务目录。"
+    },
+    "nativeDesktop.task.checkOriginal": {
+      "source": "Check original job",
+      "text": "检查原任务"
+    },
+    "nativeDesktop.exports.brief": {
+      "source": "Export private brief",
+      "text": "导出私密简报"
+    },
+    "nativeDesktop.exports.status": {
+      "source": "Export status JSON",
+      "text": "导出状态 JSON"
+    },
+    "nativeDesktop.handoff.title": {
+      "source": "Buyer CLI handoff · PowerShell",
+      "text": "买方 CLI 交接 · PowerShell"
+    },
+    "nativeDesktop.handoff.boundary": {
+      "source": "Run this command from the Keryx repository. Before any deliberate purchase, independently confirm the saved network, pinned payee and total cap. Keep the same network for original-job recovery. Run the buyer CLI once for this task. If it becomes uncertain, resume the original journal.",
+      "text": "从 Keryx 仓库运行此命令。任何主动购买前，独立确认已保存网络、固定收款人和总上限。原任务恢复须保持同一网络。每个任务运行一次买方 CLI。不确定时恢复原日志。"
+    },
+    "nativeDesktop.handoff.payee": {
+      "source": "PINNED PAYEE",
+      "text": "固定收款人"
+    },
+    "nativeDesktop.task.prepareEyebrow": {
+      "source": "01 / NEW TASK",
+      "text": "01 / 新任务"
+    },
+    "nativeDesktop.task.prepareTitle": {
+      "source": "Prepare paid research",
+      "text": "准备付费研究"
+    },
+    "nativeDesktop.task.prepareBoundary": {
+      "source": "Save a question and spending boundary. Creating a task does not make a purchase.",
+      "text": "保存问题及支出边界。创建任务不会购买。"
+    },
+    "nativeDesktop.task.question": {
+      "source": "Research question",
+      "text": "研究问题"
+    },
+    "nativeDesktop.task.network": {
+      "source": "Research network",
+      "text": "研究网络"
+    },
+    "nativeDesktop.task.networkBoundary": {
+      "source": "The public Keryx service uses Arc Mainnet. Testnet tasks need a separate testnet service. The buyer must use this saved network. Creating a task does not authorize payment.",
+      "text": "公开 Keryx 服务使用 Arc 主网。测试网任务需要独立测试网服务。买方必须使用此已保存网络。创建任务不授权付款。"
+    },
+    "nativeDesktop.task.depth": {
+      "source": "RESEARCH DEPTH",
+      "text": "研究深度"
+    },
+    "nativeDesktop.task.quick": {
+      "source": "Quick",
+      "text": "快速"
+    },
+    "nativeDesktop.task.quickHint": {
+      "source": "A concise first pass",
+      "text": "简洁初步研究"
+    },
+    "nativeDesktop.task.deep": {
+      "source": "Deep",
+      "text": "深入"
+    },
+    "nativeDesktop.task.deepHint": {
+      "source": "More thorough research",
+      "text": "更深入研究"
+    },
+    "nativeDesktop.task.creatorBudgetField": {
+      "source": "Creator budget · USDC",
+      "text": "创作者预算 · USDC"
+    },
+    "nativeDesktop.task.totalCapField": {
+      "source": "Total job cap · USDC",
+      "text": "任务总上限 · USDC"
+    },
+    "nativeDesktop.task.payeeField": {
+      "source": "Pinned seller payee",
+      "text": "固定卖方收款人"
+    },
+    "nativeDesktop.task.payeeHint": {
+      "source": "Verify this address independently before any purchase.",
+      "text": "任何购买前请独立核验此地址。"
+    },
+    "nativeDesktop.task.save": {
+      "source": "Save task ",
+      "text": "保存任务 "
+    },
+    "nativeDesktop.summary.tasks": {
+      "source": "RESEARCH TASKS",
+      "text": "研究任务"
+    },
+    "nativeDesktop.summary.tasksHint": {
+      "source": "Saved in this workspace",
+      "text": "保存在此工作区"
+    },
+    "nativeDesktop.summary.references": {
+      "source": "LOCAL REFERENCES",
+      "text": "本地参考资料"
+    },
+    "nativeDesktop.summary.referencesHint": {
+      "source": "Text snapshots only",
+      "text": "仅文本快照"
+    },
+    "nativeDesktop.summary.network": {
+      "source": "RESEARCH NETWORK",
+      "text": "研究网络"
+    },
+    "nativeDesktop.summary.networkValue": {
+      "source": "Per saved task",
+      "text": "按已保存任务"
+    },
+    "nativeDesktop.summary.networkHint": {
+      "source": "Task preparation is local",
+      "text": "任务准备在本地进行"
+    },
+    "nativeDesktop.reference.eyebrow": {
+      "source": "LOCAL LIBRARY",
+      "text": "本地资料库"
+    },
+    "nativeDesktop.reference.title": {
+      "source": "Reference snapshots",
+      "text": "参考快照"
+    },
+    "nativeDesktop.reference.boundary": {
+      "source": "Imported text and Markdown stay in this workspace. They are not uploaded or used in research answers yet.",
+      "text": "导入文本和 Markdown 保留在此工作区。尚不上传，也不用于研究答案。"
+    },
+    "nativeDesktop.reference.import": {
+      "source": "+ Import file",
+      "text": "+ 导入文件"
+    },
+    "nativeDesktop.reference.empty": {
+      "source": "No references imported yet. Choose a .txt or .md file up to 256 KiB.",
+      "text": "尚未导入参考资料。选择不超过 256 KiB 的 .txt 或 .md 文件。"
+    },
+    "nativeDesktop.workspace.refreshTasks": {
+      "source": "Refresh tasks",
+      "text": "刷新任务"
+    },
+    "nativeDesktop.task.questionPlaceholder": {
+      "source": "What would you like to investigate?",
+      "text": "您想研究什么？"
+    },
+    "nativeDesktop.task.payeePlaceholder": {
+      "source": "0x... independently verified",
+      "text": "0x... 已独立核验"
+    },
+    "nativeDesktop.busy.opening": {
+      "source": "Opening…",
+      "text": "正在打开…"
+    },
+    "nativeDesktop.busy.creating": {
+      "source": "Creating…",
+      "text": "正在创建…"
+    },
+    "nativeDesktop.busy.refreshing": {
+      "source": "Refreshing…",
+      "text": "正在刷新…"
+    },
+    "nativeDesktop.busy.resuming": {
+      "source": "Resuming…",
+      "text": "正在恢复…"
+    },
+    "nativeDesktop.busy.brief": {
+      "source": "Brief…",
+      "text": "正在生成简报…"
+    },
+    "nativeDesktop.busy.exporting": {
+      "source": "Exporting…",
+      "text": "正在导出…"
+    },
+    "nativeDesktop.busy.saving": {
+      "source": "Saving…",
+      "text": "正在保存…"
+    },
+    "nativeDesktop.busy.importing": {
+      "source": "Importing…",
+      "text": "正在导入…"
+    },
+    "nativeDesktop.exports.bibtex": {
+      "source": "Export BibTeX",
+      "text": "导出 BibTeX"
+    },
+    "nativeDesktop.exports.ris": {
+      "source": "Export RIS",
+      "text": "导出 RIS"
+    },
+    "nativeDesktop.exports.csl-json": {
+      "source": "Export CSL-JSON",
+      "text": "导出 CSL-JSON"
+    },
+    "nativeDesktop.exports.evidence-csv": {
+      "source": "Export evidence CSV",
+      "text": "导出证据 CSV"
+    }
+  }
+}

@@ -1,0 +1,376 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/draft-check.json",
+  "sourceSha256": "27ad4deabacee156da36fdf89ef22248454b2eac41ff4e5d1302644cfb4e8649",
+  "entries": {
+    "page.metadataTitle": {
+      "source": "Check a draft's citations — Keryx",
+      "text": "检查草稿引用 — Keryx"
+    },
+    "page.metadataDescription": {
+      "source": "Compare each cited sentence of a private draft with source text you supply. Every result quotes that text exactly or says no supporting passage was found.",
+      "text": "将私密草稿中每个带引用的句子与您提供的来源文本比较。每项结果精确引用该文本，或说明未找到支持段落。"
+    },
+    "page.back": {
+      "source": "Back to your saved review",
+      "text": "返回已保存综述"
+    },
+    "page.heading": {
+      "source": "Check a draft against the sources it cites.",
+      "text": "根据草稿引用的来源检查草稿。"
+    },
+    "page.introduction": {
+      "source": "Paste a passage, its reference list and the source text you hold. Each cited sentence gets a result with the exact passage it rests on.",
+      "text": "粘贴段落、参考文献列表和您持有的来源文本。每个带引用的句子都有结果，并显示其依赖的确切段落。"
+    },
+    "page.noScript": {
+      "source": "Enable JavaScript for this local checker. No passage, reference or source text is uploaded.",
+      "text": "请启用 JavaScript 使用此本地检查器。不会上传段落、参考文献或来源文本。"
+    },
+    "page.navigation": {
+      "source": "Check a draft's citations",
+      "text": "检查草稿引用"
+    },
+    "workspace.label": {
+      "source": "Private draft check",
+      "text": "私密草稿检查"
+    },
+    "workspace.privacy": {
+      "source": "By default your passage, references and source text stay in this tab’s memory and are compared in your browser. Nothing is uploaded or added to public history. Nothing is saved unless you choose Save on this device or download a private file. Your browser and same-origin scripts can access this page and saved drafts.",
+      "text": "默认情况下，段落、参考文献和来源文本仅保留在此标签页内存中，并在浏览器比较。不会上传或添加到公开历史。只有选择保存在此设备或下载私密文件时才会保存。浏览器和同源脚本能访问此页面及已保存草稿。"
+    },
+    "workspace.check": {
+      "source": "Check cited sentences",
+      "text": "检查带引用的句子"
+    },
+    "workspace.clear": {
+      "source": "Clear this tab’s check",
+      "text": "清除此标签页的检查"
+    },
+    "workspace.cleared": {
+      "source": "Check cleared from this tab.",
+      "text": "已从此标签页清除检查。"
+    },
+    "workspace.refused": {
+      "source": "This check could not run. Keep the passage, references and source text within 64 KiB in total, with at most 64 references and 128 sentences. Your text remains below.",
+      "text": "无法运行此次检查。请将段落、参考文献和来源文本总大小保持在 64 KiB 内，最多 64 条参考文献和 128 个句子。文本仍保留在下方。"
+    },
+    "workspace.stale": {
+      "source": "Your text changed. Run the check again to update the results.",
+      "text": "文本发生变化。再次运行检查以更新结果。"
+    },
+    "workspace.done": {
+      "source": "Check complete. Read each excerpt before relying on a result.",
+      "text": "检查完成。依赖结果前请阅读每条摘录。"
+    },
+    "workspace.download": {
+      "source": "Download results as private JSON",
+      "text": "以私密 JSON 下载结果"
+    },
+    "workspace.downloaded": {
+      "source": "Download started. It contains your passage and excerpts; keep it private.",
+      "text": "下载已开始。内容含有段落和摘录；请保密。"
+    },
+    "passage.label": {
+      "source": "Your passage",
+      "text": "您的段落"
+    },
+    "passage.guidance": {
+      "source": "Sentences are checked as written and never reworded. Citations may be written as [3], \\cite{key}, [@key], Smith et al. (2020) or (Smith, 2020). A sentence without a citation is listed but not checked.",
+      "text": "按原文检查句子，绝不改写。引用可写为 [3]、\\cite{key}、[@key]、Smith et al. (2020) 或 (Smith, 2020)。没有引用的句子会列出，但不检查。"
+    },
+    "retention.heading": {
+      "source": "Optional private retention",
+      "text": "可选私密保留"
+    },
+    "retention.notice": {
+      "source": "Save only when you choose. A device save contains the passage, references and source text in this browser’s local storage. Expired saves cannot be restored and are removed on the next restore attempt; closing the page does not schedule deletion. Browser backups and downloaded files follow your own retention settings. Clearing this tab does not delete a device save.",
+      "text": "仅在您选择时保存。设备保存将段落、参考文献和来源文本放在此浏览器本地存储中。过期保存无法恢复，会在下次恢复尝试时移除；关闭页面不会安排删除。浏览器备份和下载文件遵循您自己的保留设置。清除此标签页不会删除设备保存。"
+    },
+    "retention.lifetime": {
+      "source": "Allow restore for",
+      "text": "允许恢复的期限"
+    },
+    "retention.hour": {
+      "source": "One hour",
+      "text": "一小时"
+    },
+    "retention.day": {
+      "source": "One day",
+      "text": "一天"
+    },
+    "retention.week": {
+      "source": "One week",
+      "text": "一周"
+    },
+    "retention.save": {
+      "source": "Save on this device",
+      "text": "保存在此设备"
+    },
+    "retention.restore": {
+      "source": "Restore device save",
+      "text": "恢复设备保存"
+    },
+    "retention.clear": {
+      "source": "Delete device save",
+      "text": "删除设备保存"
+    },
+    "retention.saved": {
+      "source": "Private input saved on this device for the selected period.",
+      "text": "私密输入已在此设备保存，保留所选期限。"
+    },
+    "retention.restored": {
+      "source": "Private input restored. Results were checked again using the current method.",
+      "text": "私密输入已恢复。已使用当前方法重新检查结果。"
+    },
+    "retention.absent": {
+      "source": "No current device save is available; expired saves were removed.",
+      "text": "没有当前可用的设备保存；已移除过期保存。"
+    },
+    "retention.cleared": {
+      "source": "Device save deleted. Text currently in this tab remains until you clear it.",
+      "text": "设备保存已删除。此标签页当前文本仍保留，直到您清除。"
+    },
+    "retention.unavailable": {
+      "source": "Device retention could not be verified. Your current text remains in this tab.",
+      "text": "无法验证设备保留。当前文本仍保留在此标签页。"
+    },
+    "retention.downloadInput": {
+      "source": "Download private input for restore",
+      "text": "下载用于恢复的私密输入"
+    },
+    "retention.importInput": {
+      "source": "Restore private input file",
+      "text": "恢复私密输入文件"
+    },
+    "references.label": {
+      "source": "Reference list",
+      "text": "参考文献列表"
+    },
+    "references.guidance": {
+      "source": "Paste BibTeX, RIS, or one DOI, https link or formatted reference per line. Numbered citations follow the order of this list. References are read as written; no DOI or link is looked up.",
+      "text": "粘贴 BibTeX、RIS，或每行一个 DOI、https 链接或格式化参考文献。编号引用遵循此列表顺序。参考文献按原文读取；不查询 DOI 或链接。"
+    },
+    "references.format": {
+      "source": "Read as {format}",
+      "text": "按 {format} 读取"
+    },
+    "references.formats.bibtex": {
+      "source": "BibTeX",
+      "text": "BibTeX"
+    },
+    "references.formats.ris": {
+      "source": "RIS",
+      "text": "RIS"
+    },
+    "references.formats.list": {
+      "source": "one reference per line",
+      "text": "每行一条参考文献"
+    },
+    "references.heading": {
+      "source": "Source text for each reference",
+      "text": "每条参考文献的来源文本"
+    },
+    "references.sourceGuidance": {
+      "source": "Paste the text you hold for each cited work. A cited work without text is reported as unavailable, never as unsupported.",
+      "text": "粘贴您持有的各被引用作品文本。没有文本的被引用作品记为不可用，绝不记为不支持。"
+    },
+    "references.entry": {
+      "source": "[{number}] {key}",
+      "text": "[{number}] {key}"
+    },
+    "references.untitled": {
+      "source": "No title, DOI or link was read from this entry.",
+      "text": "未从此条目读取标题、DOI 或链接。"
+    },
+    "references.status.identified": {
+      "source": "DOI or link written",
+      "text": "已填写 DOI 或链接"
+    },
+    "references.status.described": {
+      "source": "Described, but no DOI or link",
+      "text": "已描述，但无 DOI 或链接"
+    },
+    "references.status.unresolved": {
+      "source": "Could not be identified",
+      "text": "无法识别"
+    },
+    "references.sourceLabel": {
+      "source": "Source text for {key}",
+      "text": "{key} 的来源文本"
+    },
+    "references.complete": {
+      "source": "This is the complete text of the work",
+      "text": "这是作品全文"
+    },
+    "references.unreadable": {
+      "source": "The reference list could not be read. Use at most 64 references.",
+      "text": "无法读取参考文献列表。最多使用 64 条参考文献。"
+    },
+    "results.label": {
+      "source": "Check results",
+      "text": "检查结果"
+    },
+    "results.heading": {
+      "source": "Results",
+      "text": "结果"
+    },
+    "results.summary": {
+      "source": "Sentences: {claims} · supported: {supported} · partly supported: {partlySupported} · not found: {notFound} · source unavailable: {sourceUnavailable} · not checked: {notChecked}",
+      "text": "句子：{claims} · 有支持：{supported} · 部分支持：{partlySupported} · 未找到：{notFound} · 来源不可用：{sourceUnavailable} · 未检查：{notChecked}"
+    },
+    "results.verdicts.supported": {
+      "source": "Wording supported by the quoted passage",
+      "text": "引述段落支持此表述"
+    },
+    "results.verdicts.partly-supported": {
+      "source": "Partly supported by the quoted passage",
+      "text": "引述段落部分支持此表述"
+    },
+    "results.verdicts.not-found": {
+      "source": "No supporting passage found in the supplied text",
+      "text": "所提供文本中未找到支持段落"
+    },
+    "results.verdicts.source-unavailable": {
+      "source": "Source unavailable — not checked",
+      "text": "来源不可用 — 未检查"
+    },
+    "results.verdicts.not-checked": {
+      "source": "Not checked",
+      "text": "未检查"
+    },
+    "results.notChecked.no-citation": {
+      "source": "This sentence has no citation.",
+      "text": "此句没有引用。"
+    },
+    "results.notChecked.script-without-word-spacing": {
+      "source": "This check compares words separated by spaces and cannot read this sentence’s script.",
+      "text": "此检查比较空格分隔的词语，无法读取此句使用的文字系统。"
+    },
+    "results.citation": {
+      "source": "Cited as {token} · {reference}",
+      "text": "引用为 {token} · {reference}"
+    },
+    "results.citationUnbound": {
+      "source": "Cited as {token}",
+      "text": "引用为 {token}"
+    },
+    "results.unavailable.source-text-not-supplied": {
+      "source": "No text was supplied for this work, so it was not checked.",
+      "text": "未提供此作品的文本，因此未检查。"
+    },
+    "results.unavailable.reference-unresolved": {
+      "source": "This citation could not be bound to a readable reference in the list.",
+      "text": "无法将此引用绑定到列表中可读取的参考文献。"
+    },
+    "results.unavailable.reference-ambiguous": {
+      "source": "This citation matches more than one listed work.",
+      "text": "此引用匹配列表中多部作品。"
+    },
+    "results.unavailable.reference-year-differs": {
+      "source": "The list has this author with a different year.",
+      "text": "列表中有此作者，但年份不同。"
+    },
+    "results.unavailable.different-work": {
+      "source": "The supplied text identifies a different work. The cited work was not checked.",
+      "text": "所提供文本标识的是另一部作品。未检查被引用作品。"
+    },
+    "results.unavailable.source-identity-unresolved": {
+      "source": "The recorded source identity cannot be matched to this reference. The cited work was not checked.",
+      "text": "无法将记录的来源身份与此参考文献匹配。未检查被引用作品。"
+    },
+    "results.unavailable.source-read-incomplete": {
+      "source": "No supporting passage was found in this partial read. The rest of the cited work is unavailable, so this is not an unsupported verdict.",
+      "text": "在此部分阅读中未找到支持段落。被引用作品其余部分不可用，因此这不是不支持的判断。"
+    },
+    "results.unavailable.synthetic-source": {
+      "source": "Synthetic demonstration text cannot support a factual draft verdict.",
+      "text": "合成演示文本不能支持对事实草稿的判断。"
+    },
+    "results.partialCoverage": {
+      "source": "Only part of this work was supplied; the rest was not searched.",
+      "text": "仅提供了此作品的部分内容；其余内容未搜索。"
+    },
+    "results.version": {
+      "source": "Recorded source version (caller asserted)",
+      "text": "记录的来源版本（调用者声明）"
+    },
+    "results.suggestions": {
+      "source": "Suggested alternative sources",
+      "text": "建议的替代来源"
+    },
+    "results.suggestionNotice": {
+      "source": "Suggestions are separate wording matches. They do not change your claims, written citations, verdicts or creator rewards. Read these works before changing your references.",
+      "text": "建议是独立的措辞匹配。它们不会更改主张、已写引用、判断或创作者奖励。更改参考文献前请阅读这些作品。"
+    },
+    "results.noPassage": {
+      "source": "No supporting passage found in the text you supplied.",
+      "text": "您提供的文本中未找到支持段落。"
+    },
+    "results.missingTerms": {
+      "source": "Not in the quoted passage: {terms}",
+      "text": "引述段落中没有：{terms}"
+    },
+    "results.missingEverywhere": {
+      "source": "Not in the supplied text: {terms}",
+      "text": "所提供文本中没有：{terms}"
+    },
+    "results.tentative": {
+      "source": "The quoted passage is tentative where your sentence is not.",
+      "text": "您的句子作出确定陈述，而引述段落带有试探性。"
+    },
+    "results.closestHeading": {
+      "source": "Closest passage, not counted as support",
+      "text": "最接近的段落，不计作支持"
+    },
+    "results.difference.negation": {
+      "source": "It differs in negation.",
+      "text": "否定表述不同。"
+    },
+    "results.difference.opposite-term": {
+      "source": "It uses an opposite term.",
+      "text": "使用了相反术语。"
+    },
+    "results.difference.different-number": {
+      "source": "It states a different figure.",
+      "text": "陈述的数值不同。"
+    },
+    "results.difference.reversed-comparison": {
+      "source": "It reverses the subjects of the comparison.",
+      "text": "颠倒了比较对象。"
+    },
+    "flags.heading": {
+      "source": "Reference and citation flags",
+      "text": "参考文献与引用标记"
+    },
+    "flags.none": {
+      "source": "No reference or citation flags.",
+      "text": "无参考文献或引用标记。"
+    },
+    "flags.reference-unresolved": {
+      "source": "Reference {reference} could not be identified from the list.",
+      "text": "无法从列表识别参考文献 {reference}。"
+    },
+    "flags.reference-not-cited": {
+      "source": "Reference {reference} is listed but not cited in the passage.",
+      "text": "参考文献 {reference} 已列出，但未在段落中引用。"
+    },
+    "flags.citation-unresolved": {
+      "source": "{claim}: citation {token} could not be matched to one listed work.",
+      "text": "{claim}：无法将引用 {token} 匹配到列表中的一部作品。"
+    },
+    "flags.possible-different-work": {
+      "source": "{claim}: the text names {author}, who is not an author of {reference}. Check that the citation points to the intended work.",
+      "text": "{claim}：文本提及 {author}，但该人不是 {reference} 的作者。检查引用是否指向预期作品。"
+    },
+    "flags.source-different-work": {
+      "source": "{claim}: the supplied source for {reference} identifies a different work ({url}). This citation remains unavailable.",
+      "text": "{claim}：为 {reference} 提供的来源标识另一部作品（{url}）。此引用仍不可用。"
+    },
+    "flags.claim": {
+      "source": "Sentence {number}",
+      "text": "第 {number} 句"
+    }
+  }
+}

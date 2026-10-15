@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { identityReturnCsp } from "./lib/profiles/identity-return-policy";
 import { runClaimLandingCsp } from "./lib/run-claims/landing-assets.cjs";
 import { runClaimPrivateHeaders } from "./lib/run-claims/private-headers.cjs";
 import {
@@ -52,6 +53,8 @@ const nextConfig: NextConfig = {
       { source: "/register/sponsored", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       // OAuth callback queries must retain the private handler's referrer policy.
       { source: "/api/me/profile/identities/:path*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      // A standalone callback document must not inherit the broader app script policy.
+      { source: "/api/me/profile/identities/:provider/callback", headers: [{ key: "Content-Security-Policy", value: identityReturnCsp }] },
       { source: "/api/me/decision-reviews", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       { source: "/api/ask", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
       // Keep the standalone claim shell outside the global analytics policy.
@@ -64,7 +67,7 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
         ],
       },
-      ...["/api/me/run-claims", "/api/me/run-history/:path*", "/api/me/run-privacy/:path*", "/me/run-privacy", "/api/me/asks/:path*", "/me/asks", "/api/me/public-profile", "/me/public-profile", "/account", "/api/account/membership",
+      ...["/api/me/run-claims", "/api/me/run-history/:path*", "/api/me/private-jobs/:path*", "/me/private-jobs", "/api/me/run-privacy/:path*", "/me/run-privacy", "/api/me/asks/:path*", "/me/asks", "/api/me/public-profile", "/me/public-profile", "/account", "/api/account/membership",
         ...(process.env.KERYX_RUN_PRIVACY_ENABLED==="true"?["/dispatch/:path*", "/api/dispatch/:path*"]:[])].map(source => ({
         source, headers: [...runClaimPrivateHeaders],
       })),
