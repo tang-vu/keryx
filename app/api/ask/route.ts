@@ -25,6 +25,7 @@ import { assertDecisionReviewAuthority } from "@/lib/research/decision-review-au
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
 import { researchFailureMessage } from "@/lib/llm/research-plan";
+import { askStreamWriter } from "@/lib/research/ask-stream-lifecycle";
 import { ResearchSelectionError } from "@/lib/llm/research-selection";
 import { config } from "@/lib/config";
 import { checkRateLimit, clientIp } from "@/lib/rate-limit";
@@ -264,8 +265,6 @@ export async function POST(req: NextRequest) {
     await recordActivationEvent(await getDb(), "reader_ask_started");
   }
 
-  const encoder = new TextEncoder();
-
   // AbortController tied to the client connection so sign-request promises are
   // cancelled when the browser disconnects mid-run.
   const abort = new AbortController();
@@ -283,15 +282,8 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (event: string, data: unknown) => {
-        try {
-          controller.enqueue(
-            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-          );
-        } catch {
-          // Controller already closed (client disconnected) — ignore.
-        }
-      };
+      const writer = askStreamWriter(controller, abort.signal);
+      const send = writer.send;
       const reviewAdapter = asker && reviewStore ? createLiveDecisionReviews({
         owner: asker, store: reviewStore, reviewFirst: body.reviewFirst === true, signal: abort.signal, send, sessionHash: reviewSession?.currentId ?? null,
         cohort: isBot ? "scripted" : config.devWallets.includes(asker) ? "team" : "unknown",
@@ -348,6 +340,7 @@ export async function POST(req: NextRequest) {
 
         if (agentAbort.signal.aborted) throw new DOMException("Research cancelled", "AbortError");
         send("meta", { engine: deps.engine.name, mode: deps.gateway.mode, researchMode, visibility: publication.visibility,
+          ...(!privateClaimRequested && (publication.visibility === "public" || publication.visibility === "unlisted") ? { reportId: queryId } : {}),
           ...(publication.visibility === "private" ? { visibilityOwner: asker } : {}), ...(reviewAdapter ? { reviewOwner: asker } : {}) });
         // Preserve the execution origin for audit. A manual internal client with the bot key
         // can be tagged `engine`; ordinary requests through this route are tagged `web`.
@@ -425,9 +418,10 @@ export async function POST(req: NextRequest) {
       } finally {
         await reviewAdapter?.close(queryId).catch(() => undefined);
         req.signal.removeEventListener("abort", disconnect);
-        try { controller.close(); } catch { /* The disconnected reader may have cancelled it. */ }
+          writer.close();
       }
     },
+    cancel() { disconnect(); },
   });
 
   return new Response(stream, {

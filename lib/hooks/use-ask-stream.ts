@@ -46,6 +46,8 @@ import type { RunVisibility } from "../run-privacy/contracts";
 export type StreamMode = "real" | "offline";
 
 export interface AskMeta {
+  /** Original report reference only; does not imply completion or authorize a retry. */
+  reportId?: string;
   visibility?: RunVisibility;
   visibilityOwner?: string;
   reviewOwner?: string | null;

@@ -419,6 +419,7 @@ it.each([false, true, "liveness", "creator", "funding", "cashout"] as const)("co
     const next = await reader.read(); if (next.done) break; buffer += decoder.decode(next.value, { stream: true });
     while (buffer.includes("\n\n")) {
       const end = buffer.indexOf("\n\n"), packet = buffer.slice(0, end); buffer = buffer.slice(end+2);
+      if (packet.split("\n").every(line => line.startsWith(":"))) continue;
       const event = /^event: (.+)$/m.exec(packet)?.[1], data = JSON.parse(/^data: (.+)$/m.exec(packet)![1]);
       if (event === "error") throw new Error(JSON.stringify(data));
       if (event === "sign-request") {

@@ -53,6 +53,12 @@ function packets(wire: string) {
   return wire.trim().split("\n\n").map(packet => ({ event: /^event: (.+)$/m.exec(packet)?.[1],
     data: JSON.parse(/^data: (.+)$/m.exec(packet)![1]) as Record<string, unknown> }));
 }
+function askPackets(wire: string) {
+  // /api/ask emits connection/heartbeat comments; malformed non-comment frames
+  // still reach the strict event/data parser. OpenAI streams keep their parser.
+  return packets(wire.trim().split("\n\n")
+    .filter(packet => !packet.split("\n").every(line => line.startsWith(":"))).join("\n\n"));
+}
 
 async function refusal(surface: Surface, question: string,
   mcpFailurePrefix: "Keryx research failed: " | "Nghiên cứu Keryx thất bại: " = "Keryx research failed: ",
@@ -82,7 +88,7 @@ async function refusal(surface: Surface, question: string,
   expect(response.status).toBe(200); expect(response.headers.get("content-type")).toContain("text/event-stream");
   const wire = await response.text();
   expect(wire).not.toContain("data: [DONE]");
-  const events = packets(wire);
+  const events = surface === "web" ? askPackets(wire) : packets(wire);
   if (surface === "web") {
     expect(events.map(event => event.event)).toEqual(["meta", "step", "error"]);
     expect(events[1].data).toEqual(step);

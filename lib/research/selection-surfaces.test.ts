@@ -60,7 +60,9 @@ describe("terminal source-selection failure on hosted callers", () => {
     const response = await ask(request("/api/ask", { question: SQLITE_SELECTION_QUESTION, budget: 0 }));
     expect(response.status).toBe(200);
     const wire = await response.text();
-    const packets = wire.trim().split("\n\n").map(packet => ({ event: /^event: (.+)$/m.exec(packet)?.[1],
+    const packets = wire.trim().split("\n\n")
+      .filter(packet => !packet.split("\n").every(line => line.startsWith(":")))
+      .map(packet => ({ event: /^event: (.+)$/m.exec(packet)?.[1],
       data: JSON.parse(/^data: (.+)$/m.exec(packet)![1]) }));
     expect(packets.map(packet => packet.event)).toEqual(["meta", "step", "error"]);
     expect(packets[2].data).toEqual({ message: expect.any(String), code: "research_source_selection_invalid", selectionDiagnostic: diagnostic });

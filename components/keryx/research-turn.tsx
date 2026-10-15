@@ -11,6 +11,7 @@ import { ReportActions } from "./report-actions";
 import { SelectionFailureDownload } from "./selection-failure-download";
 import { DecisionReviews } from "./decision-reviews";
 import { createMessages } from "@/lib/i18n/messages";
+import { savedReportRecoveryPath } from "@/lib/research/ask-stream-lifecycle";
 
 const message = createMessages("en");
 
@@ -26,6 +27,7 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const { state, stopped } = turn;
   const streaming = !stopped && state.status === "streaming";
+  const recoveryPath = !stopped && state.status === "error" && !state.run ? savedReportRecoveryPath(state.meta) : null;
   const totals = stepPaymentTotals(state.steps);
   const unsettled = (["pending", "simulated", "unverified", "failed"] as const)
     .filter(status => totals[status] > 0)
@@ -47,6 +49,9 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
       {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2">{message("researchTurn.stoppedNotice")}</p>}
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
         <p>{state.error ?? message("researchTurn.failed")}</p>
+        {recoveryPath && <div className="mt-3 space-y-2">
+          <a href={recoveryPath} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="break-all underline underline-offset-4">{message("reportActions.openSaved")}</a>
+        </div>}
         {state.errorKind === "maintenance" && state.maintenance && <div className="mt-2">
           <a href="/maintenance/status" className="underline underline-offset-4">{message("researchError.serviceStatus")}</a>
           {state.retryAfter !== null && <p>{message("researchError.checkStatusAfter", { seconds: state.retryAfter })}</p>}
