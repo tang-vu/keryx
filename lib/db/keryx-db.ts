@@ -538,7 +538,7 @@ export interface KeryxDB extends PublicReferenceArchiveDb {
   getPrivatePaymentState(id: string, payer: string): Promise<PrivatePaymentState | null>;
   /** Internal trusted facilitator evidence only, never a caller-provided confirmation body. */
   confirmPrivatePayment(id: string, payer: string, confirmation: PrivatePaymentConfirmation): Promise<PrivatePaymentState>;
-  saveQueryRun(run: QueryRun): Promise<void>;
+  saveQueryRun(run: QueryRun, publication?: { visibility: import("../run-privacy/contracts").RunVisibility }): Promise<void>;
   getQueryRun(id: string): Promise<QueryRun | null>;
   listRecentQueries(limit: number): Promise<QueryRun[]>;
   /** Bounded-memory read, newest first with id as timestamp tie-breaker. */

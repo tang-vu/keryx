@@ -1,11 +1,16 @@
 # Run privacy (#266): source contract and rollout holds
 
-Root's owner-delegated policy is recorded in [DECISIONS](../DECISIONS.md): every
-historical run is unlisted; new authenticated-owned runs default private; new
-unowned runs are unlisted. An owner may opt a run or future default into public.
+The owner revised the product policy on October 15: ordinary research defaults
+public, with Public/Unlisted/Private shown before browser submission. Existing
+saved preferences, explicit per-run choices and erasure remain authoritative.
+Private creation requires a verified owner. Hidden-parent follow-ups inherit
+their parent's restriction. Signing in alone does not make research private.
+Historical missing sidecars require the separate reviewed restoration described
+in [public research visibility](engineering/public-research-visibility-2026-10-15.md);
+neither startup nor a resave publishes historical records implicitly.
 No requester-supplied wallet, payee, question or creator record establishes ownership.
 
-`KeryxDB.runPrivacy` is an additive **ordinary-only, default-off** port. SQLite
+`KeryxDB.runPrivacy` is a separately admitted privacy port. SQLite
 requires the exact preinstalled [source schema](../lib/db/run-privacy-sqlite.ts).
 Supabase uses only the fixed service-role `run_privacy_v1` RPC and its immutable
 source-created catalog seal in [0090 source](../supabase/migrations/0090_run_privacy.sql).
@@ -17,14 +22,16 @@ Each ordinary adapter captures an immutable `runPrivacyActive` at construction.
 **Default OFF preserves the existing admitted ordinary readers**, including public
 archives, shared memory, follow-ups, publicUsage history, dispatch/receipt links
 and paid GET polling. Existing profile/domain authority checks still apply.
-The selected historical/new-run policy is not delivered or applied while OFF;
+With privacy OFF, ordinary public creation retains the admitted legacy writer;
+nonpublic choices refuse before research starts. While OFF,
 owner visibility/default/export/erase controls return `privacy_unavailable` and
 the owner page does not mount the controls.
 
 **ON requires the admitted privacy port** on every affected reader. Unknown schema,
 ownership or unavailable port fails closed, even if the process flag later changes.
 There is no active legacy, raw REST, native or stale-text fallback. Enrolled,
-native, archive and private research facades acquire no new capability. Changing
+archive and private research facades acquire no new capability. Native privacy
+uses only explicitly admitted adapter authority, never the flag alone. Changing
 the activation setting requires a reviewed process/build restart and the rollout
 gates below; an environment change inside a live adapter cannot switch its authority.
 Internal canonical `getQueryRun` remains an original/financial reader, never a
@@ -39,7 +46,7 @@ ordinary erasure removes the snapshot with the other question-derived JSON.
 When activated, public lists select only `public` and unerased rows **before body retrieval and
 paging**. PublicUsage keeps its complete bounded financial metadata corpus and
 all cohorts; only its question-body page is filtered for visibility. The public
-archive enumerates no historical questions. Existing unlisted links still read
+archive enumerates only explicitly public historical questions. Existing unlisted links still read
 historical originals. Current hidden/erased IDs cannot fall back to an older
 archive duplicate. Follow-up enumeration and shared agent memory use public rows;
 stream publication rechecks visibility. Metadata/OG/structured data omit nonpublic

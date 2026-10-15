@@ -1637,8 +1637,8 @@ export class SqliteAdapter implements KeryxDB {
     return listSqlitePrivateResearchHistory(this.db, payer, before);
   }
 
-  async saveQueryRun(run: QueryRun): Promise<void> {
-    writeSqliteQueryRun(this.db, run, true);
+  async saveQueryRun(run: QueryRun, publication?: { visibility: import("../run-privacy/contracts").RunVisibility }): Promise<void> {
+    writeSqliteQueryRun(this.db, run, true, { publication, privacy: this, enrolled: this.enrolledMode !== undefined });
   }
 
   private async readEvidenceProvenance(lookup: EvidenceProvenanceLookup): Promise<ReadonlySet<string>> {

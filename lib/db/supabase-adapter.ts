@@ -945,7 +945,14 @@ export class SupabaseAdapter implements KeryxDB {
     return listSupabasePrivateResearchHistory(this.helperRpcClient(), payer, before);
   }
 
-  async saveQueryRun(run: QueryRun): Promise<void> {
+  async saveQueryRun(run: QueryRun, publication?: { visibility: import("../run-privacy/contracts").RunVisibility }): Promise<void> {
+    // The sealed RPC has no atomic creation-publication operation. Refuse before
+    // either REST upsert or enrolled dispatch; a reviewed catalog migration is
+    // required. Never publish first and change visibility in a second request.
+    if (publication !== undefined || this.runPrivacyActive) {
+      const { PrivacyError } = await import("../run-privacy/contracts");
+      throw new PrivacyError("privacy_unavailable");
+    }
     run = recordedRunProvenance(run);
     const evidenceTelemetry = runEvidenceMetrics(run);
     await this.domainCall("save_query_run", { p_row: {
