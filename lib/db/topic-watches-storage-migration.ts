@@ -19,6 +19,8 @@ export const HISTORICAL_NATIVE_USER_DOMAIN_TABLES = Object.freeze(["private_prof
 /** Exact pre-269 full20, distinct from the older pre-watch full19. These are
  * migration-only names; no old/partial family becomes a runtime profile. */
 export const PRE_OWNER_NATIVE_USER_DOMAIN_TABLES = Object.freeze([...HISTORICAL_NATIVE_USER_DOMAIN_TABLES, "topic_watches"]);
+const CHAT263_TABLES = Object.freeze(["chat263_links", "chat263_tokens"]);
+export const PRE_OWNER_CHAT_NATIVE_USER_DOMAIN_TABLES = Object.freeze([...PRE_OWNER_NATIVE_USER_DOMAIN_TABLES, ...CHAT263_TABLES]);
 const OWNER269_TABLES = Object.freeze(["owner269_operations", "owner269_associations"]);
 
 type SourceMigrationPlan = Readonly<{
@@ -28,22 +30,24 @@ type SourceMigrationPlan = Readonly<{
 }>;
 let historical19Plans: readonly SourceMigrationPlan[] | undefined;
 let preOwner20Plans: readonly SourceMigrationPlan[] | undefined;
+let preOwnerChat22Plans: readonly SourceMigrationPlan[] | undefined;
 
-/** One compiled fixed22 target, two archive variants, separate old19/old20
- * references. Never infer a family from its count or accept future chat/pending
- * additions. The parent must qualify any later combined source separately. */
-function topicWatchesMigrationPlans(historical19: boolean) {
+/** One compiled fixed24 target, two archive variants, and exact old19/old20/
+ * pre-owner chat22 references. These labels select fixed source sets, never an
+ * observed table count. Unknown/partial/future families remain refused. */
+function topicWatchesMigrationPlans(sourceFamily: 19 | 20 | 22) {
   const sourceTables: readonly string[] = NATIVE_USER_DOMAIN_TABLES;
-  const expected = [...PRE_OWNER_NATIVE_USER_DOMAIN_TABLES, ...OWNER269_TABLES];
-  const added = historical19 ? ["topic_watches", ...OWNER269_TABLES] : [...OWNER269_TABLES];
+  const expected = [...PRE_OWNER_CHAT_NATIVE_USER_DOMAIN_TABLES, ...OWNER269_TABLES];
+  const added = [...(sourceFamily === 19 ? ["topic_watches"] : []),
+    ...(sourceFamily === 22 ? [] : CHAT263_TABLES), ...OWNER269_TABLES];
   const guardNames = OWNER269_OCCUPANCY_PROPOSAL.map(entry => entry.name);
   const expectedGuards = ["owner269_ticket_occupancy", "owner269_original_insert", "owner269_original_update",
     "owner269_original_delete", "owner269_a2a_insert", "owner269_a2a_update"];
   if (new Set(NATIVE_USER_DOMAIN_TABLES).size !== NATIVE_USER_DOMAIN_TABLES.length ||
     canonicalJson([...sourceTables].sort()) !== canonicalJson(expected.sort()) ||
     canonicalJson([...guardNames].sort()) !== canonicalJson(expectedGuards.sort()))
-    throw new Error("ROOT must qualify the exact full19/full20-to-owner269 full22 source reference");
-  const cached = historical19 ? historical19Plans : preOwner20Plans;
+    throw new Error("ROOT must qualify the exact old19/old20/chat22-to-owner269 full24 source reference");
+  const cached = sourceFamily === 19 ? historical19Plans : sourceFamily === 20 ? preOwner20Plans : preOwnerChat22Plans;
   if (cached) return cached;
   const plans = Object.freeze([false, true].map(publicReferenceArchive => {
     const reference = new DatabaseSync(":memory:");
@@ -77,15 +81,16 @@ function topicWatchesMigrationPlans(historical19: boolean) {
   }));
   // Frozen plans contain only compiled source profiles/DDL, never target state.
   // A failed assembly is not published and can be attempted again normally.
-  if (historical19) historical19Plans = plans;
-  else preOwner20Plans = plans;
+  if (sourceFamily === 19) historical19Plans = plans;
+  else if (sourceFamily === 20) preOwner20Plans = plans;
+  else preOwnerChat22Plans = plans;
   return plans;
 }
 export function topicWatchesMigrationProfiles(): readonly (readonly [string, string])[] {
-  return Object.freeze(topicWatchesMigrationPlans(true).map(plan => plan.pair));
+  return Object.freeze(topicWatchesMigrationPlans(19).map(plan => plan.pair));
 }
 export function ownerRunAssignmentsMigrationProfiles(): readonly (readonly [string, string])[] {
-  return Object.freeze(topicWatchesMigrationPlans(false).map(plan => plan.pair));
+  return Object.freeze([...topicWatchesMigrationPlans(20), ...topicWatchesMigrationPlans(22)].map(plan => plan.pair));
 }
 export const snapshotTopicWatchesStorage = snapshotPublicArchiveStorage;
 function excluded(db: DatabaseSync, identity: StorageIdentity) {
@@ -108,7 +113,7 @@ function backupAdmissionOnly(db: DatabaseSync) {
 export function migrateTopicWatchesStorage(file: string, value: StorageIdentity, admitBackup: (db: DatabaseSync) => void) {
   const identity = validateStorageIdentity(value);
   if (identity.authorityMode !== "mainnet-real" || typeof admitBackup !== "function") throw new Error("Watch migration admission required");
-  const plans = [...topicWatchesMigrationPlans(true), ...topicWatchesMigrationPlans(false)], held = holdStorageTarget(file);
+  const plans = [...topicWatchesMigrationPlans(19), ...topicWatchesMigrationPlans(20), ...topicWatchesMigrationPlans(22)], held = holdStorageTarget(file);
   let db: DatabaseSync | undefined;
   try {
     db = new DatabaseSync(file, { allowExtension: false });
@@ -116,7 +121,7 @@ export function migrateTopicWatchesStorage(file: string, value: StorageIdentity,
     held.verify(); assertStorageIdentity(db, identity); assertStorageFences(db, identity);
     const before = sqliteApplicationSchemaProfile(db, excluded(db, identity));
     const plan = plans.find(({ pair: [old, current] }) => before === old || before === current);
-    if (!plan) throw new Error("Watch migration full19/full20/current owner269 source differs");
+    if (!plan) throw new Error("Watch migration old19/old20/pre-owner chat22/current24 source differs");
     const pair = plan.pair;
     const original = snapshotTopicWatchesStorage(db, identity, pair), changes = db.prepare("SELECT total_changes() AS n").get()!.n;
     backupAdmissionOnly(db); admitBackup(db); db.setAuthorizer(null);

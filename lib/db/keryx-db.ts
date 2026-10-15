@@ -212,6 +212,8 @@ export interface FeedbackStats {
 }
 
 export interface KeryxDB extends PublicReferenceArchiveDb {
+  /** Private hidden explicit chat consent port. Ownership only; no financial grants. */
+  readonly chatAccountLinks?: import("../chat-accounts/contracts").ChatAccountLinksStore;
   /** Qualified recipient-only assignment metadata; no owner capability or private-run authority. */
   readonly ownerRunAssignments?: import("../owner-run-assignments/contracts").OwnerRunAssignmentsPort;
   /** Exact pre-existing ordinary account namespace only. No install, fallback or pooled financial authority.

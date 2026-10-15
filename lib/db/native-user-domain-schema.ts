@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { ACCOUNT_MEMBERSHIP_SCHEMA_DATA } from "../accounts/sqlite-schema-data";
+import { CHAT_ACCOUNT_SQL } from "./chat-accounts-schema";
 import { PRIVATE_PROFILES_SQL } from "./private-profiles-sqlite";
 import { PROFILE_IDENTITIES_SQL } from "./profile-identities-sqlite";
 import { PRIVATE_BIBLIOGRAPHIES_SQL } from "./private-bibliographies-sqlite";
@@ -23,6 +24,7 @@ export function installNativeUserDomainSchema(db: DatabaseSync): void {
   for (const sql of [PRIVATE_PROFILES_SQL, PROFILE_IDENTITIES_SQL, PRIVATE_BIBLIOGRAPHIES_SQL,
     DELIVERABLE_ACCEPTANCE_SQL, RUN_CLAIMS_SQL, RUN_PRIVACY_SQL, PUBLIC_PROFILES_SQL, DECISION_REVIEWS_SQL, TOPIC_WATCHES_SQL]) db.exec(sql);
   for (const entry of ACCOUNT_MEMBERSHIP_SCHEMA_DATA) if (entry.sql !== null) db.exec(entry.sql);
+  db.exec(CHAT_ACCOUNT_SQL);
   db.exec(OWNER_RUN_ASSIGNMENTS_SQL);
   for (const entry of OWNER269_OCCUPANCY_PROPOSAL) db.exec(entry.sql + ";");
   db.prepare("INSERT INTO deliverable_acceptance_store(singleton,id) VALUES(1,?)").run(randomUUID());
