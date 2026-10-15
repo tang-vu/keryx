@@ -28,11 +28,14 @@ vi.mock("@/components/keryx/research-evidence-browser", () => ({ ResearchEvidenc
 vi.mock("@/components/keryx/research-monthly", () => ({ ResearchMonthly: () => null }));
 
 it("keeps configured question preparation visible when the SSR capacity observation fails", async () => {
-  const { default: ResearchPage } = await import("../../app/research/page");
-  const html = renderToStaticMarkup(await ResearchPage({ searchParams: Promise.resolve({}) }));
-  expect(server.ready).toHaveBeenCalledWith({}, "50000");
-  expect(html).toContain('id="server-preparation"');
-  expect(html).toContain(copy.observationUnknown);
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
+  try {
+    const { default: ResearchPage } = await import("../../app/research/page");
+    const html = renderToStaticMarkup(await ResearchPage({ searchParams: Promise.resolve({}) }));
+    expect(server.ready).toHaveBeenCalledWith({}, "50000");
+    expect(html).toContain('id="server-preparation"');
+    expect(html).toContain(copy.observationUnknown);
+  } finally { vi.unstubAllEnvs(); }
 });
 
 type QuoteFixture = { status?: number; header?: string; amount?: string; payee?: string; network?: string; pending?: boolean };

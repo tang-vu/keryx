@@ -53,7 +53,7 @@ const browser = await chromium.launch({ headless: true });
 try {
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 390, height: 844 } });
   context.setDefaultTimeout(15_000);
-  let signed = 0; let paid = 0; let lookups = 0;
+  let signed = 0; let paid = 0; let lookups = 0; let unsignedQuotes = 0;
   let fundingTransactions = 0; let fundingNonce = 7; let head = 100; let gatewayAvailable = "0";
   const funding = new Map<string, { tx: object; receipt: object }>();
   await context.exposeFunction("syntheticFundingState", (kind: string, hash?: string) => {
@@ -123,6 +123,8 @@ try {
         paidId = buyerJobId(JSON.parse(Buffer.from(request.headers()["payment-signature"], "base64").toString()).authorization);
         await route.fulfill({ status: 500, headers: { "payment-response": encode({ success: true, payer: account.address, network: "eip155:5042002", transaction: "synthetic-payment" }) }, body: "delivery interrupted" }); return;
       }
+      unsignedQuotes++;
+      assert.equal(JSON.parse(request.postData()!).question, question);
       await route.fulfill({ status: 402, headers: { "payment-required": encode({ x402Version: 2, resource: { url: "/api/agent/ask" }, accepts: [requirement] }) }, body: "{}" }); return;
     }
     if (url.pathname === `/api/dispatch/${paidId}/receipt`) {
@@ -136,12 +138,17 @@ try {
     if (process.env.BUYER_UI_CSS) await page.addStyleTag({ content: await readFile(process.env.BUYER_UI_CSS, "utf8") });
     await page.addScriptTag({ content: bundle.outputFiles[0].text });
     const balanceButton = page.getByRole("button", { name: "Refresh Gateway balance and funding status", exact: true });
+    await page.getByLabel("Research question", { exact: true }).waitFor();
+    assert.equal(await balanceButton.count(), 0, "Funding stays unmounted before an accepted quote");
+    const before = { signed, paid, fundingTransactions, unsignedQuotes };
+    await page.getByLabel("Research question", { exact: true }).fill(question);
+    await page.getByRole("button", { name: "Check availability and price", exact: true }).click();
     await balanceButton.waitFor();
+    assert.deepEqual({ signed, paid, fundingTransactions, unsignedQuotes }, { ...before, unsignedQuotes: before.unsignedQuotes + 1 }, "Preparation obtains only an unsigned quote");
     assert(await balanceButton.isDisabled(), "Credit lookup must wait for the wallet client");
     await page.evaluate(() => { Object.assign(window, { testWalletReady: true }); window.dispatchEvent(new Event("test-wallet-ready")); });
   }
   await mount();
-  await page.getByLabel("Research question", { exact: true }).fill(question);
   await page.locator("summary").filter({ hasText: "Add USDC to Gateway" }).click();
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Prepare deposit", exact: true }).click();
@@ -155,7 +162,6 @@ try {
   await page.getByText("Wallet or storage response is uncertain.", { exact: false }).waitFor();
   assert.equal(fundingTransactions, 2);
   await mount();
-  await page.getByLabel("Research question", { exact: true }).fill(question);
   await page.locator("summary").filter({ hasText: "Add USDC to Gateway" }).click();
   await page.getByText("2. Deposit: possible", { exact: true }).waitFor();
   assert.equal(await page.getByRole("button", { name: "Deposit 0.050000 USDC", exact: true }).count(), 0);
@@ -172,8 +178,18 @@ try {
   assert(await buy.isDisabled());
   await page.getByRole("checkbox").check();
   await page.getByLabel("Research question", { exact: true }).fill("Changed question");
-  assert(await buy.isDisabled()); assert.equal(signed, 0);
+  assert.equal(await buy.count(), 0, "Changing the question removes the old purchase review");
+  assert.equal(await page.getByRole("button", { name: "Refresh Gateway balance and funding status", exact: true }).count(), 0);
+  assert.equal(signed, 0); assert.equal(paid, 0); assert.equal(fundingTransactions, 2);
   await page.getByLabel("Research question", { exact: true }).fill(question);
+  assert.equal(await buy.count(), 0, "Restoring text cannot restore an accepted quote or consent");
+  await page.getByRole("button", { name: "Check availability and price", exact: true }).click();
+  await page.getByRole("button", { name: "Refresh Gateway balance and funding status", exact: true }).click();
+  await page.getByText("At the last check, enough Gateway USDC was available for this price.", { exact: false }).waitFor();
+  await page.getByRole("button", { name: "Review 0.05 USDC purchase", exact: true }).click();
+  assert(await buy.isDisabled());
+  assert.equal(await page.getByRole("checkbox").isChecked(), false, "A new quote requires fresh purchase consent");
+  await page.getByRole("checkbox").check();
   const downloadPromise = page.waitForEvent("download");
   await buy.click();
   const download = await downloadPromise;
@@ -187,6 +203,7 @@ try {
   assert.equal(signed, 1); assert.equal(paid, 1); assert(lookups >= 1);
   assert.equal(new URL(page.url()).search, ""); assert(!page.url().includes(intent.queryId));
   await mount();
+  const recoveryQuotes = unsignedQuotes;
   await page.getByRole("button", { name: new RegExp(question) }).click();
   await page.getByText("No order was found.", { exact: false }).waitFor();
   await page.getByText("Saved data reports a seller payment acknowledgement", { exact: false }).waitFor();
@@ -226,6 +243,6 @@ try {
   await page.getByRole("button", { name: "Refresh this job", exact: true }).click();
   await page.getByText("Could not load or verify this job and receipt.", { exact: false }).waitFor();
   assert.equal(await page.getByRole("button", { name: "Download verified receipt", exact: true }).count(), 0);
-  assert.equal(signed, 1); assert.equal(paid, 1); assert.equal(fundingTransactions, 2); assert.deepEqual(errors, []);
-  console.log("PASS: React two-step Gateway funding, lost deposit response and reload/hash recovery without replay, checkout review, changed question refusal, durable recovery, one signature/POST, HTTP-500 uncertainty, reload/import GET-only recovery, verified completed receipt and tamper refusal. Synthetic RPC/wallet; all HTTP intercepted.");
+  assert.equal(signed, 1); assert.equal(paid, 1); assert.equal(fundingTransactions, 2); assert.equal(unsignedQuotes, recoveryQuotes); assert.deepEqual(errors, []);
+  console.log("PASS: unsigned quote before wallet/funding, React two-step Gateway funding, lost deposit response and reload/hash recovery without replay, changed-question quote/review/consent reset, durable recovery, one signature/paid POST, HTTP-500 uncertainty, reload/import GET-only recovery, verified completed receipt and tamper refusal. Synthetic RPC/wallet; all HTTP intercepted.");
 } finally { await browser.close(); }
