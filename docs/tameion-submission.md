@@ -226,6 +226,10 @@ This is another documented workflow for an already identified user, not a fifth 
 
 ### Return task from 0xacee on October 15
 
+[Read the short case study: problem, useful evidence and application](case-studies/voiceready-2026-10-15.md).
+It connects this return task to the earlier session and keeps research outcomes,
+companion measurements and customer acceptance distinct.
+
 On **October 15, 2026**, the owner identified an additional VoiceTake/VoiceReady
 project as 0xacee's work and supplied its retained local package. Together with
 the October 12 session above, this records **owner-confirmed return use on a new

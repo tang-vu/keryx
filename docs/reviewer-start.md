@@ -65,6 +65,9 @@ Keryx's MDN excerpts informed a local audio-preview review, while FFmpeg researc
 remained unsuccessful. A 2:23 edited video and measured prototype output are
 retained locally, with publication still open. This records return use with a
 zero-source-cap sponsored session; it adds neither a fifth user nor paid demand.
+The [short case study](case-studies/voiceready-2026-10-15.md) follows the problem,
+the useful MDN evidence and its application to the preview lifecycle, with the
+failed FFmpeg research and unconfirmed finished-customer use kept visible.
 
 [Trần Minh Hiếu's working paper](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf)
 uses 65 retained reports and 202 research targets. The
