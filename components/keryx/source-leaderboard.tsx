@@ -22,7 +22,10 @@ export function SourceLeaderboard({ data, network }: { data: SourceLeaderboardDa
       <p className="text-xs text-muted-foreground">{copy("sourceLeaderboard.catalog", { count: data.rows.length })}</p>
       <p className="text-xs text-muted-foreground">{copy("sourceLeaderboard.feeBoundary")}</p>
       {data.catalogStatus !== "ready" && <p role="status" className="text-xs text-muted-foreground">{copy("sourceLeaderboard.catalogUnavailable")}</p>}
-      {data.operatingFeesStatus !== "ready" && <p role="status" className="text-xs text-muted-foreground">{copy("sourceLeaderboard.feesUnavailable")}</p>}
+      {data.operatingFeesStatus !== "ready" && <div role="status" className="space-y-2 text-xs text-muted-foreground">
+        <p>{copy(data.operatingFeesStatus === "incomplete" ? "sourceLeaderboard.feesIncomplete" : "sourceLeaderboard.feesUnavailable")}</p>
+        <a href="#payment-proof-title" className="inline-block min-h-11 py-3 text-seal underline">{copy("sourceLeaderboard.viewSettledFees")}</a>
+      </div>}
       <input aria-label={copy("sourceLeaderboard.searchLabel")} placeholder={copy("sourceLeaderboard.searchPlaceholder")} value={query} onChange={event => setQuery(event.target.value)} className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm" />
     </CardHeader>
     <CardContent>
@@ -33,7 +36,7 @@ export function SourceLeaderboard({ data, network }: { data: SourceLeaderboardDa
           <p className="mt-1 text-[11px] text-ink-3">{row.kind === "creator" ? copy("sourceLeaderboard.creatorIdentity", { wallet: row.walletAddress ? shortAddr(row.walletAddress) : copy("sourceLeaderboard.walletUnknown") }) : row.kind === "paper" ? copy("sourceLeaderboard.paper") : copy("sourceLeaderboard.publicSource")}</p>
           <div className="mt-1 flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs">
             <span>{copy("sourceLeaderboard.creatorRewards")} <strong className="font-mono text-paid">{formatRecordedUsdc(row.creatorEarnedUsdc)}</strong> · {copy("sourceLeaderboard.creatorCounts", { citations: row.citationCount, payments: row.paymentCount })}</span>
-            <span>{copy("sourceLeaderboard.ownerFee")} <strong className="font-mono text-paid">{row.operatingFeeUsdc === null ? copy("sourceLeaderboard.unknown") : formatRecordedUsdc(row.operatingFeeUsdc)}</strong>{row.operatingFeeCitationCount !== null && <> · {copy("sourceLeaderboard.feeCounts", { citations: row.operatingFeeCitationCount, payments: row.operatingFeePaymentCount! })}</>}</span>
+            <span>{copy("sourceLeaderboard.ownerFee")} <strong className={row.operatingFeeUsdc === null ? "font-normal text-ink-3" : "font-mono text-paid"}>{row.operatingFeeUsdc === null ? copy(data.operatingFeesStatus === "incomplete" ? "sourceLeaderboard.unattributed" : "sourceLeaderboard.unavailable") : formatRecordedUsdc(row.operatingFeeUsdc)}</strong>{row.operatingFeeCitationCount !== null && <> · {copy("sourceLeaderboard.feeCounts", { citations: row.operatingFeeCitationCount, payments: row.operatingFeePaymentCount! })}</>}</span>
           </div>
           {row.feeBeneficiaries.length > 0 && <p className="mt-1 font-mono text-[11px] text-ink-3">{copy("sourceLeaderboard.feeRecipient", { wallets: row.feeBeneficiaries.map(shortAddr).join(", ") })}</p>}
         </div>)}

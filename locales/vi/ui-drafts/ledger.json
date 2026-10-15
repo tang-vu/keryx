@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ledger.ts",
-  "sourceSha256": "7e51c82e2538ae69cd529d33564e7ed44e37c4fb5f2e3a2192b0049b3a91b4d8",
+  "sourceSha256": "e944e80db5ebdc3b319cc8fb68fc232dfc1865525d184428803fb18c250d8f05",
   "entries": {
     "ledgerResource.loading": {
       "source": "Loading {label}…",
@@ -117,8 +117,8 @@
       "text": "Hồ sơ câu hỏi"
     },
     "ledgerPresentation.recent": {
-      "source": "Recent questions",
-      "text": "Câu hỏi gần đây"
+      "source": "Recent public questions",
+      "text": "Câu hỏi công khai gần đây"
     },
     "ledgerPresentation.more": {
       "source": "More questions",
@@ -375,6 +375,14 @@
     "paymentRecords.days.other": {
       "source": "{count}d",
       "text": "{count}d"
+    },
+    "ledgerPresentation.publicHistoryBoundary": {
+      "source": "Recorded totals include all recorded questions. This list shows only questions made public and excludes scripted runs.",
+      "text": "Tổng số đã ghi nhận bao gồm mọi câu hỏi đã lưu. Danh sách này chỉ hiển thị câu hỏi được công khai và loại trừ các lượt chạy theo kịch bản."
+    },
+    "ledgerPresentation.noPublicQuestions": {
+      "source": "No public questions to display.",
+      "text": "Chưa có câu hỏi công khai để hiển thị."
     }
   }
 }
