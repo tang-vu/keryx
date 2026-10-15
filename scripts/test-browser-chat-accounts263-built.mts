@@ -14,7 +14,7 @@ import { copyNextConfigFixture, nextConfigFixtureFiles } from "../test-support/n
 import { chatAccountMessages as words } from "../locales/en/chat-accounts";
 
 type Pin = { path: string; sha256: string };
-type Admission = { owner: "ROOT"; currentMainCompositionEvidence: string; buildEvidence: string;
+type Admission = { selection: { id: string; universeCount: number; selectedCount: number; expectedResults: string[]; notRun: string[]; whole34Acceptance: false }; owner: "ROOT"; currentMainCompositionEvidence: string; buildEvidence: string;
   dist: string; output: string; port: number; buildId: string; sourcePins: Pin[]; compiledPins: Pin[] };
 type NextFactory = (options: { dev: false; dir: string; hostname: string; port: number;
   httpServer: ReturnType<typeof createServer> }) => { prepare(): Promise<void>; close(): Promise<void>;
@@ -97,16 +97,75 @@ const button = (page: Page, key: "action.load" | "action.confirm" | "action.unli
 const checkbox = (page: Page) => region(page).getByRole("checkbox", { name: words["consent.statement"], exact: true });
 const notice = (page: Page, key: keyof typeof words) => region(page).getByRole("status").getByText(words[key], { exact: true });
 const flush = (page: Page) => page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
+// Whole-page IO includes LocaleProvider; the pinned canonical hook's no-IO
+// contract is checked independently, not inferred from a global fetch count.
+async function readOnlyBoundaryIo(page: Page, since: number, allowChatList: boolean) {
+  const io = await page.evaluate(since => (window as FixtureWindow).chat263.state.io.slice(since), since);
+  assert(io.every(call => call.method === "GET" && (
+    call.path === "/api/auth/session" || call.path === "/api/me/locale-preference" ||
+    allowChatList && call.path === "/api/me/chat-accounts")),
+  "Only fresh read-only locale/session lookups and an explicitly permitted chat list; no mutations or other IO");
+}
 
 async function main() {
   const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
-  const flags = ["dist", "output", "port", "admission"] as const, args = process.argv.slice(2);
-  assert.equal(args.length, flags.length, "--dist=ABS --output=ABS --port=OWNED --admission=ABS");
+  const flags = ["dist", "output", "port", "admission", "selection"] as const, args = process.argv.slice(2);
+  assert.equal(args.length, flags.length, "--dist=ABS --output=ABS --port=OWNED --admission=ABS --selection=FIXED");
   const values = Object.fromEntries(flags.map(flag => {
     const matches = args.filter(arg => arg.startsWith(`--${flag}=`)); assert.equal(matches.length, 1);
     return [flag, matches[0].slice(flag.length + 3)];
   })) as Record<typeof flags[number], string>;
-  const { dist, output, admission: admissionPath } = values, port = Number(values.port);
+  const { dist, output, admission: admissionPath, selection: selectionId } = values, port = Number(values.port);
+  // Fixed allocation only: all34 original bodies remain below, byte-identical.
+  // No default/all, arbitrary names, indices, ranges, filters or retries.
+  const allExpectedResults: string[] = [
+    "consent-list-unlink-360",
+    "consent-list-unlink-1366",
+    "same-wallet-channel-fresh-consent",
+    "same-wallet-structured-change-fresh-consent",
+    "same-wallet-logout-pending-fresh-consent",
+    "same-wallet-logout-terminal-fresh-consent",
+    "same-wallet-focus-fresh-consent",
+    "same-wallet-logout-fresh-consent",
+    "same-wallet-replacement-fresh-consent",
+    "late-load-channel",
+    "late-load-focus",
+    "late-load-logout",
+    "late-preview-channel",
+    "late-preview-focus",
+    "late-preview-logout",
+    "late-complete-channel",
+    "late-complete-focus",
+    "late-complete-logout",
+    "late-completion-refresh-channel",
+    "late-completion-refresh-focus",
+    "late-completion-refresh-logout",
+    "late-unlink-channel",
+    "late-unlink-focus",
+    "late-unlink-logout",
+    "late-unlink-refresh-channel",
+    "late-unlink-refresh-focus",
+    "late-unlink-refresh-logout",
+    "anonymous-token-free-enrollment-fresh-preview-checkbox",
+    "private-reload-refusal-401",
+    "private-reload-refusal-409",
+    "private-reload-refusal-503",
+    "preview-static-refusal-410",
+    "preview-static-refusal-503",
+    "unknown-fragment-refused"
+];
+  const selectionRanges = {
+    remaining16: [18, 34],
+    "refresh-initial9": [0, 9],
+    "refresh-late9": [9, 18],
+  } as const;
+  assert(Object.prototype.hasOwnProperty.call(selectionRanges, selectionId), "One fixed finite selection only");
+  const [selectionStart, selectionEnd] = selectionRanges[selectionId as keyof typeof selectionRanges];
+  const expectedResults = allExpectedResults.slice(selectionStart, selectionEnd);
+  const selection = { id: selectionId, universeCount: 34, selectedCount: expectedResults.length, expectedResults,
+    notRun: allExpectedResults.filter(id => !expectedResults.includes(id)), whole34Acceptance: false };
+  assert.equal(allExpectedResults.length, 34); assert.equal(new Set(allExpectedResults).size, 34);
+  const selected = (id: string) => { assert(allExpectedResults.includes(id), "Unknown original scenario"); return expectedResults.includes(id); };
   assert(isAbsolute(dist) && isAbsolute(output) && isAbsolute(admissionPath));
   assert(Number.isInteger(port) && port >= 1024 && port <= 65535);
   const actualRoot = await realpath(root), actualDist = await realpath(dist), actualOutput = await realpath(output);
@@ -145,7 +204,7 @@ async function main() {
   }
   const beforeSources = await sourcePins(), beforeCompiled = await compiledPins();
   const admission = JSON.parse(await readFile(admissionPath, "utf8")) as Admission;
-  assert.equal(admission.owner, "ROOT"); assert(admission.buildEvidence?.trim()); assert(admission.currentMainCompositionEvidence?.trim());
+  assert.deepEqual(admission.selection, selection, "Parent binds selected scope and ordered expected results"); assert.equal(admission.owner, "ROOT"); assert(admission.buildEvidence?.trim()); assert(admission.currentMainCompositionEvidence?.trim());
   assert.equal(resolve(admission.dist), resolve(dist)); assert.equal(resolve(admission.output), resolve(output)); assert.equal(admission.port, port);
   assert.deepEqual(admission.sourcePins, beforeSources); assert.deepEqual(admission.compiledPins, beforeCompiled);
   const buildId = (await readFile(join(dist, "BUILD_ID"), "utf8")).trim(); assert(buildId && buildId.length <= 128); assert.equal(admission.buildId, buildId);
@@ -359,6 +418,7 @@ async function main() {
     } finally { Object.defineProperty(prototype, "unstable_preloadEntries", descriptor); }
     browser = await chromium.launch({ headless: true });
     for (const width of [360, 1366]) {
+      if (!selected(`consent-list-unlink-${width}`)) continue;
       const s = await scenario(width), bodyErrors: unknown[] = [];
       try {
         const page = await open(s.context); await preview(page);
@@ -374,23 +434,26 @@ async function main() {
     }
     // Native two-page notice + direct focus/logout/replacement, including same wallet.
     for (const boundary of ["channel", "structured-change", "logout-pending", "logout-terminal", "focus", "logout", "replacement"] as const) {
+      if (!selected(`same-wallet-${boundary}-fresh-consent`)) continue;
       const s = await scenario(1366), bodyErrors: unknown[] = [];
       try {
         const page = await open(s.context), peer = await open(s.context, ""); await preview(page); await notice(peer, "notice.listed").waitFor();
         await checkbox(page).check(); const before = s.previews(); s.gate();
-        const ioBefore = await page.evaluate(() => (window as FixtureWindow).chat263.state.io.filter(io => io.path === "/api/auth/session").length);
+        const ioBefore = await page.evaluate(() => (window as FixtureWindow).chat263.state.io.length);
         await invalidate(page, peer, boundary);
         if (["channel", "structured-change", "logout-pending", "logout-terminal"].includes(boundary)) {
           await flush(page);
-          assert.equal(await page.evaluate(() => (window as FixtureWindow).chat263.state.io.filter(io => io.path === "/api/auth/session").length), ioBefore,
-            "Canonical hook foreign hints clear only, never start session IO; chat component's separate reload remains server-authorized");
+          await readOnlyBoundaryIo(page, ioBefore, boundary === "channel" || boundary === "structured-change");
         }
         if (boundary === "logout-pending" || boundary === "logout-terminal") {
           assert.deepEqual(await page.evaluate(() => (window as FixtureWindow).chat263.state.logoutHints),
             [{ pending: boundary === "logout-pending", confirmed: false }], "Peer confirmation is normalized to unconfirmed");
           if (boundary === "logout-pending") {
+            const pendingIoBefore = await page.evaluate(() => (window as FixtureWindow).chat263.state.io.length);
+            const pendingCallsBefore = s.calls.length;
             await page.evaluate(() => window.dispatchEvent(new Event("focus"))); await flush(page);
-            assert.equal(await page.evaluate(() => (window as FixtureWindow).chat263.state.io.filter(io => io.path === "/api/auth/session").length), ioBefore, "Pending peer logout fences canonical session refresh");
+            await readOnlyBoundaryIo(page, pendingIoBefore, false);
+            assert.equal(s.calls.length, pendingCallsBefore, "Pending peer logout fences chat IO, including on focus; LocaleProvider may perform read-only lookups");
             await peer.evaluate(() => {
               const channel = new BroadcastChannel("keryx-auth-v1");
               channel.postMessage({ type: "logout", source: "chat263-synthetic-foreign", sequence: 2, pending: false, confirmed: true }); channel.close();
@@ -401,8 +464,11 @@ async function main() {
         }
         s.releaseReads();
         if (boundary === "logout-pending" || boundary === "logout-terminal") {
+          const recoveryIoBefore = await page.evaluate(() => (window as FixtureWindow).chat263.state.io.length);
           await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-          await page.waitForFunction(before => (window as FixtureWindow).chat263.state.io.filter(io => io.path === "/api/auth/session").length > before, ioBefore);
+          // A new lookup after this focus; its consumer is not inferred from the endpoint.
+          await page.waitForFunction(before => (window as FixtureWindow).chat263.state.io.slice(before)
+            .some(io => io.path === "/api/auth/session" && io.method === "GET"), recoveryIoBefore);
         }
         if (boundary === "logout") await button(page, "action.load").click();
         await notice(page, "notice.listed").waitFor(); await privateCleared(page); assert.equal(s.previews(), before);
@@ -417,6 +483,7 @@ async function main() {
     }
     for (const phase of ["load", "preview", "complete", "completion-refresh", "unlink", "unlink-refresh"] as const) {
       for (const boundary of ["channel", "focus", "logout"] as const) {
+        if (!selected(`late-${phase}-${boundary}`)) continue;
         const s = await scenario(1366), bodyErrors: unknown[] = [];
         try {
           const page = await open(s.context), peer = await open(s.context, ""); await preview(page); await notice(peer, "notice.listed").waitFor();
@@ -442,6 +509,7 @@ async function main() {
         } catch (error) { bodyErrors.push(error); throw error; } finally { await finishScenario(s, bodyErrors); }
       }
     }
+    if (selected("anonymous-token-free-enrollment-fresh-preview-checkbox")) {
     const anonymous = await scenario(360, 401), anonymousErrors: unknown[] = [];
     try {
       const page = await open(anonymous.context); await notice(page, "error.signIn").waitFor(); await privateCleared(page);
@@ -460,7 +528,9 @@ async function main() {
       await checkbox(page).check(); await button(page, "action.confirm").click(); await notice(page, "notice.linked").waitFor();
       await safePage(page); results.push("anonymous-token-free-enrollment-fresh-preview-checkbox");
     } catch (error) { anonymousErrors.push(error); throw error; } finally { await finishScenario(anonymous, anonymousErrors); }
+    }
     for (const status of [401, 409, 503]) {
+      if (!selected(`private-reload-refusal-${status}`)) continue;
       const s = await scenario(360), bodyErrors: unknown[] = [];
       try {
         const page = await open(s.context); await preview(page); await checkbox(page).check(); s.authority(status);
@@ -470,13 +540,17 @@ async function main() {
       } catch (error) { bodyErrors.push(error); throw error; } finally { await finishScenario(s, bodyErrors); }
     }
     for (const status of [410, 503]) {
+      if (!selected(`preview-static-refusal-${status}`)) continue;
       const s = await scenario(360, 200, status), bodyErrors: unknown[] = [];
       try { const page = await open(s.context); await notice(page, status === 410 ? "error.expired" : "error.unconfirmed").waitFor(); await privateCleared(page); results.push(`preview-static-refusal-${status}`); }
       catch (error) { bodyErrors.push(error); throw error; } finally { await finishScenario(s, bodyErrors); }
     }
+    if (selected("unknown-fragment-refused")) {
     const unknown = await scenario(360), unknownErrors: unknown[] = [];
     try { const page = await open(unknown.context, "token=unknown"); await notice(page, "notice.listed").waitFor(); assert.equal(unknown.previews(), 0); await privateCleared(page); results.push("unknown-fragment-refused"); }
     catch (error) { unknownErrors.push(error); throw error; } finally { await finishScenario(unknown, unknownErrors); }
+    }
+    assert.deepEqual(results, expectedResults, "Every selected original control in order; no skip-as-PASS");
     assert.deepEqual(await sourcePins(), beforeSources); assert.deepEqual(await compiledPins(), beforeCompiled);
     assert.deepEqual(failures, []); assert.deepEqual(pageErrors, []);
   } catch (error) { process.exitCode = 1; mainFailed = true; mainFailure = error; }
@@ -506,8 +580,8 @@ async function main() {
     try { process.chdir(previousCwd); for (const name of Object.keys(process.env)) delete process.env[name]; Object.assign(process.env, previousEnvironment); }
     catch (error) { cleanupFailures.push(error); }
     if (mainFailed || cleanupFailures.length) process.exitCode = 1;
-    try { await writeFile(join(run, "outcome.json"), JSON.stringify({ status: mainFailed || cleanupFailures.length ? "FAILED" : "PASS",
-      scope: "Compiled Next UI/canonical hook; all session/account/chat responses and credentials SYNTHETIC; no server cookie/native DB/provider authority",
+    try { await writeFile(join(run, "outcome.json"), JSON.stringify({ status: mainFailed || cleanupFailures.length ? "FAILED" : "COMPILED_SYNTHETIC_SELECTED_CONTROLS_PASSED", selection, whole34Acceptance: false,
+      scope: "Selected original compiled controls only; unselected controls NOT RUN. All session/account/chat responses and credentials SYNTHETIC; no server cookie/native DB/provider authority; no whole34 acceptance",
       admissionPath, buildEvidence: admission.buildEvidence, currentMainCompositionEvidence: admission.currentMainCompositionEvidence,
       buildId, sourcePins: beforeSources, compiledPins: beforeCompiled, results, httpRequests, failures, pageErrors, externalAttempts,
       naturalClose: { browserClosed, httpDrained, privateHttpDrained, appClosed, instrumentationClosed, tracesFlushed,
@@ -518,7 +592,7 @@ async function main() {
     if (cleanupFailures.length) throw new AggregateError(mainFailed ? [mainFailure, ...cleanupFailures] : cleanupFailures, "Compiled chat263 cleanup/evidence failure");
     if (mainFailed) throw mainFailure;
   }
-  console.log("PASS: compiled chat263 synthetic UI controls and owned natural cleanup; original native/provider/history/CI/production gates separate.");
+  console.log("Selected compiled chat263 synthetic controls completed with owned natural cleanup; no whole34 acceptance. Native/provider/history/CI/production gates separate.");
 }
 await main().catch(async error => {
   process.exitCode = 1; // FIRST, before awaited failure IO: Next handlers may swallow rethrows.

@@ -2,23 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChatRecipient } from "@/lib/chat-accounts/contracts";
+import { takeChatAccountFragment } from "@/lib/chat-accounts/fragment-intake";
+import { isOwnBrowserAuthChange } from "@/lib/browser-auth-notice";
 import { chatAccountMessages } from "@/locales/en/chat-accounts";
 
 interface Account { accountId: string; revision: number }
 interface Preview { recipient: ChatRecipient; account: Account; expiresAt: number; consentProof: string }
 interface ListedLink extends ChatRecipient { linkedAt: number }
+class ChatAccountRequestError extends Error {
+  constructor(message: string, readonly retainInitialIntake: boolean) { super(message); }
+}
 
 export function ChatAccountLinks() {
   // Credential stays in component memory, never query/server props/local storage.
   const token = useRef<string | null>(null), started = useRef(false);
   const epoch = useRef(0), pending = useRef<AbortController | null>(null), mounted = useRef(false);
-  const established = useRef(false);
+  const established = useRef(false), retainForSignIn = useRef(false);
+  const logoutSources = useRef(new Map<string, boolean>());
+  const logoutPending = () => [...logoutSources.current.values()].some(Boolean);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null), [account, setAccount] = useState<Account | null>(null);
   const [links, setLinks] = useState<ListedLink[]>([]), [consent, setConsent] = useState(false);
   const [notice, setNotice] = useState(chatAccountMessages["notice.initial"] as string), [busy, setBusy] = useState(false);
   function invalidate(clearToken: boolean) {
     epoch.current++; pending.current?.abort(); pending.current = null;
-    if (clearToken) token.current = null;
+    if (clearToken) { token.current = null; retainForSignIn.current = false; }
     setAccount(null); setLinks([]); setPreview(null); setConsent(false); setBusy(false);
   }
   function begin() {
@@ -28,15 +36,15 @@ export function ChatAccountLinks() {
     return { epoch: epoch.current, controller };
   }
   type Attempt = ReturnType<typeof begin>;
-  const current = (attempt: Attempt) => mounted.current && epoch.current === attempt.epoch && !attempt.controller.signal.aborted;
+  const current = (attempt: Attempt) => mounted.current && epoch.current === attempt.epoch && !attempt.controller.signal.aborted && !logoutPending();
   async function request(attempt: Attempt, path: string, body?: unknown) {
     if (!current(attempt)) throw new Error("Stale chat request");
     const response = await fetch(path, { method: body === undefined ? "GET" : "POST", credentials: "same-origin",
       signal: attempt.controller.signal, mode: "same-origin", redirect: "error",
       cache: "no-store", referrerPolicy: "no-referrer", ...(body === undefined ? {} : { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }) });
     if (!current(attempt)) throw new Error("Stale chat request");
-    if (response.status === 401) throw new Error(chatAccountMessages["error.signIn"]);
-    if (response.status === 409) throw new Error(chatAccountMessages["error.accountChanged"]);
+    if (response.status === 401) throw new ChatAccountRequestError(chatAccountMessages["error.signIn"], body === undefined);
+    if (response.status === 409) throw new ChatAccountRequestError(chatAccountMessages["error.accountChanged"], body === undefined);
     if (response.status === 410) { token.current = null; throw new Error(chatAccountMessages["error.expired"]); }
     if (!response.ok) throw new Error(chatAccountMessages["error.unconfirmed"]);
     const data = await response.json();
@@ -45,15 +53,17 @@ export function ChatAccountLinks() {
   }
   function failed(attempt: Attempt, error: unknown) {
     if (!current(attempt)) return;
-    invalidate(established.current);
+    const retain = !established.current && error instanceof ChatAccountRequestError && error.retainInitialIntake;
+    retainForSignIn.current = retain; invalidate(!retain);
     setNotice(error instanceof Error ? error.message : chatAccountMessages["error.unavailable"]);
   }
   async function load() {
+    if (logoutPending()) return;
     const attempt = begin(); setAccount(null); setLinks([]);
     try {
       const data = await request(attempt, "/api/me/chat-accounts");
       if (!current(attempt)) return;
-      established.current = true; setAccount(data.account); setLinks(data.links);
+      established.current = true; retainForSignIn.current = false; setAccount(data.account); setLinks(data.links);
       if (token.current) {
         const next = await request(attempt, "/api/me/chat-accounts", { action: "preview", token: token.current });
         if (!current(attempt)) return;
@@ -66,19 +76,36 @@ export function ChatAccountLinks() {
     mounted.current = true;
     if (!started.current) {
       started.current = true;
-      const params = new URLSearchParams(window.location.hash.slice(1));
-      const candidate = params.getAll("token");
-      // Remove before any request or navigation. No credential reaches a referrer.
-      window.history.replaceState(null, "", window.location.pathname);
-      if (candidate.length === 1 && [...params.keys()].length === 1 && /^[a-f0-9]{64}$/.test(candidate[0])) token.current = candidate[0];
+      const intake = takeChatAccountFragment();
+      token.current = intake.token;
+      for (const source of intake.pendingLogouts) logoutSources.current.set(source, true);
+      setLoggingOut(logoutPending());
     }
     const changed = (event?: Event) => {
-      const signedOut = event instanceof CustomEvent && event.detail === "signed-out";
-      // Retain only an initial, as-yet unauthenticated/enrolling credential for
-      // deliberate in-place sign-in. An established consent session never survives.
-      invalidate(signedOut || established.current);
+      const detail: unknown = event instanceof CustomEvent ? event.detail : undefined;
+      // Consume the existing canonical LogoutNotice shape. Source/sequence values
+      // are privacy hints only; they never authenticate a wallet or permit IO.
+      const logout = detail && typeof detail === "object" && "type" in detail && detail.type === "logout"
+        ? detail as { source?: unknown; sequence?: unknown; pending?: unknown; confirmed?: unknown } : null;
+      if (logout) {
+        invalidate(true);
+        if (typeof logout.source === "string" && logout.source.length > 0 && logout.source.length <= 128
+          && typeof logout.sequence === "number" && Number.isSafeInteger(logout.sequence) && logout.sequence >= 1
+          && typeof logout.pending === "boolean" && typeof logout.confirmed === "boolean") {
+          if (logout.pending) logoutSources.current.set(logout.source, true);
+          else logoutSources.current.delete(logout.source);
+          setLoggingOut(logoutPending());
+        }
+        setNotice(chatAccountMessages["notice.authChanged"]);
+        return; // Neither pending nor terminal hints may reload private state.
+      }
+      const signedOut = detail === "signed-out";
+      const reload = !signedOut && (event?.type === "focus" || !(event instanceof CustomEvent) || detail === "changed");
+      // Only known in-place sign-in/enrollment revalidation may retain an initial
+      // unauthenticated intake. Unknown events and established consent revoke it.
+      invalidate(signedOut || !reload || !retainForSignIn.current || established.current || logoutPending());
       setNotice(chatAccountMessages["notice.authChanged"]);
-      if (!signedOut) void load();
+      if (reload && !logoutPending()) void load();
     };
     const departed = () => { invalidate(true); };
     window.addEventListener("keryx:auth", changed); window.addEventListener("focus", changed);
@@ -86,7 +113,19 @@ export function ChatAccountLinks() {
     let channel: BroadcastChannel | undefined;
     try {
       channel = new BroadcastChannel("keryx-auth-v1");
-      channel.onmessage = event => changed(new CustomEvent("keryx:auth", { detail: event.data }));
+      channel.onmessage = event => {
+        if (isOwnBrowserAuthChange(event.data)) return;
+        // The canonical hook validates/orders peer logout and dispatches its
+        // normalized local notice, including lease expiry. Never trust raw peer
+        // pending/confirmed values to update that boundary or grant private IO.
+        if (event.data?.type === "logout") {
+          invalidate(true); setNotice(chatAccountMessages["notice.authChanged"]); return;
+        }
+        if (event.data === "changed" || event.data?.type === "changed") {
+          invalidate(true); setNotice(chatAccountMessages["notice.authChanged"]);
+          if (!logoutPending()) void load(); // A fresh server-authorized list only.
+        } else changed(new CustomEvent("keryx:auth", { detail: event.data }));
+      };
     } catch { /* Direct focus invalidation also handles unavailable messaging. */ }
     void load();
     return () => {
@@ -101,7 +140,7 @@ export function ChatAccountLinks() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   async function confirm() {
-    if (!preview || !token.current || !consent || busy) return;
+    if (!preview || !token.current || !consent || busy || logoutPending()) return;
     const attempt = begin();
     try {
       await request(attempt, "/api/me/chat-accounts/complete", { token: token.current, accountId: preview.account.accountId,
@@ -117,7 +156,7 @@ export function ChatAccountLinks() {
     finally { if (current(attempt)) setBusy(false); }
   }
   async function unlink(recipient: ListedLink) {
-    if (!account || busy) return;
+    if (!account || busy || logoutPending()) return;
     const attempt = begin();
     try {
       const { platform, scope, userId, channel } = recipient;
@@ -132,7 +171,7 @@ export function ChatAccountLinks() {
   }
   return <section className="space-y-4" aria-label={chatAccountMessages["consent.sectionLabel"]}>
     <p role="status">{notice}</p>
-    <button type="button" onClick={() => void load()} disabled={busy} className="rounded border px-4 py-2">{chatAccountMessages["action.load"]}</button>
+    <button type="button" onClick={() => void load()} disabled={busy || loggingOut} className="rounded border px-4 py-2">{chatAccountMessages["action.load"]}</button>
     <p>{chatAccountMessages["account.enrollPrompt"]}<a href="/account" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="underline">{chatAccountMessages["account.openWorkspace"]}</a>{chatAccountMessages["account.returnInstructions"]}</p>
     {preview && <div className="rounded border p-4 space-y-3">
       <p>{chatAccountMessages["preview.chatLabel"]}{preview.recipient.platform} / {preview.recipient.scope} / {preview.recipient.userId}</p>

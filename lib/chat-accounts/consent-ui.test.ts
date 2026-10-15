@@ -4,6 +4,7 @@ import { act, createElement, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatAccountLinks } from "../../components/keryx/chat-account-links";
+import { CHAT_ACCOUNT_FRAGMENT_SLOT, chatAccountFragmentBootstrap } from "./fragment-intake";
 
 const token = "a".repeat(64), account = { accountId: `acct_${"b".repeat(64)}`, revision: 1 };
 const recipient = { platform: "slack", scope: "TPRIVATE", userId: "UPRIVATE", channel: "DPRIVATE" };
@@ -30,7 +31,9 @@ let calls: Array<{ path: string; init: RequestInit; result: ReturnType<typeof de
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   AuthChannel.instances = []; vi.stubGlobal("BroadcastChannel", AuthChannel); calls = [];
+  Reflect.deleteProperty(window, Symbol.for(CHAT_ACCOUNT_FRAGMENT_SLOT));
   window.history.replaceState(null, "", `/me/chat-accounts#token=${token}`);
+  window.eval(chatAccountFragmentBootstrap); // Emulate initial beforeInteractive execution, not component intake.
   vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL, init: RequestInit = {}) => {
     expect(window.location.hash).toBe("");
     const path = String(input); expect(path).not.toContain(token);
@@ -42,7 +45,10 @@ beforeEach(() => {
 });
 afterEach(async () => {
   if (root) await act(async () => root!.unmount());
-  root = undefined; container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals();
+  root = undefined; container.remove();
+  const take = Reflect.get(window, Symbol.for(CHAT_ACCOUNT_FRAGMENT_SLOT)); if (typeof take === "function") take();
+  Reflect.deleteProperty(window, Symbol.for(CHAT_ACCOUNT_FRAGMENT_SLOT));
+  vi.restoreAllMocks(); vi.unstubAllGlobals();
 });
 const data = (links = [listed]) => ({ account, links });
 const button = (text: string) => Array.from(container.querySelectorAll("button")).find(value => value.textContent === text)!;
@@ -145,5 +151,83 @@ describe("chat263 mounted consent boundaries (UNRUN)", () => {
     vi.stubGlobal("BroadcastChannel", class { constructor() { throw new Error("Unavailable"); } });
     await ready(); await invalidate("focus"); privateCleared(); await reply(2, data([]));
     await act(async () => { window.dispatchEvent(new Event("pagehide")); }); privateCleared();
+  });
+});
+
+// New observed-failure controls. Source only; all execution remains UNRUN.
+describe("chat263 structured canonical logout boundaries (UNRUN)", () => {
+  const logout = async (pending: boolean, source = "canonical-document", sequence = pending ? 1 : 2) => {
+    await act(async () => { window.dispatchEvent(new CustomEvent("keryx:auth", { detail: {
+      type: "logout", source, sequence, pending, confirmed: false,
+    } })); });
+  };
+  it("does not auto-reload on pending or terminal logout, blocks focus/manual IO while pending, then accepts only a new server read", async () => {
+    await ready(); const count = calls.length;
+    await logout(true); privateCleared();
+    expect(calls[1].init.signal?.aborted).toBe(true);
+    await invalidate("focus"); await click("Load account and chat links"); expect(calls).toHaveLength(count);
+    await logout(false); privateCleared(); expect(calls).toHaveLength(count);
+    await click("Load account and chat links"); await reply(count, {}, 503); privateCleared();
+    await click("Load account and chat links"); await reply(count + 1, data([]));
+    expect(calls).toHaveLength(count + 2); expect(check()).toBeNull();
+  });
+  for (const phase of ["load", "preview", "complete", "completion-refresh", "unlink", "unlink-refresh"] as const) {
+    it.each([true, false])(`fences the old ${phase} body without follow-up IO on structured logout pending=%s`, async pending => {
+      await ready();
+      if (phase === "load" || phase === "preview") {
+        await click("Load account and chat links"); if (phase === "preview") await reply(2, data());
+      } else if (phase === "complete" || phase === "completion-refresh") {
+        await click("Confirm chat link"); if (phase === "completion-refresh") await reply(2, { linked: true });
+      } else { await click("Unlink"); if (phase === "unlink-refresh") await reply(2, { unlinked: true }); }
+      const index = calls.length - 1, body = deferred<unknown>(), response = new Response(null);
+      vi.spyOn(response, "json").mockImplementation(() => body.promise);
+      await act(async () => { calls[index].result.resolve(response); });
+      const count = calls.length; await logout(pending); privateCleared();
+      expect(calls[index].init.signal?.aborted).toBe(true);
+      await act(async () => { body.resolve(phase === "preview" ? view : data()); });
+      privateCleared(); expect(calls).toHaveLength(count);
+      if (pending) await logout(false);
+      await click("Load account and chat links"); await reply(count, data([]));
+      expect(calls).toHaveLength(count + 1); expect(check()).toBeNull();
+    });
+  }
+  it("retains the canonical pending boundary until each normalized source ends, without treating a source as identity authority", async () => {
+    await ready(); const count = calls.length;
+    await logout(true, "one"); await logout(true, "two"); await logout(false, "one");
+    await invalidate("focus"); await click("Load account and chat links"); expect(calls).toHaveLength(count);
+    await logout(false, "two"); expect(calls).toHaveLength(count);
+    await click("Load account and chat links"); await reply(count, data([])); expect(check()).toBeNull();
+  });
+  it("revokes initial unauthenticated intake on logout", async () => {
+    await mount(); await reply(0, {}, 401);
+    await logout(true); await logout(false);
+    await click("Load account and chat links"); await reply(1, data([]));
+    expect(calls).toHaveLength(2); expect(check()).toBeNull();
+  });
+  it("does not start the initial private load when canonical logout was already pending before component mount", async () => {
+    await logout(true); await mount(); privateCleared(); expect(calls).toHaveLength(0);
+    await logout(false); expect(calls).toHaveLength(0);
+    await click("Load account and chat links"); await reply(0, data([]));
+    expect(calls).toHaveLength(1); expect(check()).toBeNull();
+  });
+  it("does not retain an unclassified initial intake across a session change before any 401/409 enrollment refusal", async () => {
+    await mount(); await invalidate("replacement"); privateCleared();
+    expect(calls[0].init.signal?.aborted).toBe(true);
+    await reply(1, data([])); await reply(0, data());
+    expect(calls).toHaveLength(2); expect(check()).toBeNull();
+  });
+  it("does not turn unknown local or channel notices into private IO", async () => {
+    await ready(); const count = calls.length;
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("keryx:auth", { detail: { type: "unknown" } }));
+      const peer = new AuthChannel("keryx-auth-v1"); peer.postMessage({ type: "unknown" }); peer.close();
+    });
+    privateCleared(); expect(calls).toHaveLength(count);
+    await click("Load account and chat links"); await reply(count, data([])); expect(check()).toBeNull();
+  });
+  it("revokes initial intake after an unknown server failure instead of retaining it for later sign-in", async () => {
+    await mount(); await reply(0, {}, 503);
+    await invalidate("replacement"); await reply(1, data([]));
+    expect(calls).toHaveLength(2); expect(check()).toBeNull();
   });
 });

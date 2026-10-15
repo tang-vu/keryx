@@ -301,3 +301,10 @@ copy, ordinary current-main composition, one current build with provenance,
 compiled acceptance and natural exit/close/separate EOF, required CI/review and
 coordinator merge, then one deployment batch. No current-source/runtime or
 delivery PASS is inferred. Original #263 remains OPEN.
+## Current compiled acceptance — 2026-10-15
+
+The current708/full22 build `4qiVXEMFJDmAfQPdYLvdl` passed once with no runtime source drift. Its 34 original synthetic browser controls now pass in three fixed disjoint captures: remaining16, refresh-initial9 and refresh-late9. Each actual invocation retained the original page-error, private-IO, fragment/session/consent, late-body, request-cap, deadline and natural-cleanup assertions. No selected invocation claims the unselected cases passed. The three clean captures together cover each original name exactly once. Prior attribution/cap failures remain retained.
+
+The shipped harness now uses the same independently reviewed locale/session read attribution and fixed-selection protocol demonstrated by those captures. This is an external test-driver change after the build; the application, emitted UI and canonical auth-hook bytes used by the browser proof are unchanged. No rebuild is inferred or performed for this harness-only correction. Local server/native/route controls and focused types retain their separate qualified captures; production, real chat-provider messages and historical ownership remain unaccepted. Original #263 stays open.
+
+Use all three fixed selection IDs with fresh owned outputs and exact parent admissions. The original per-invocation 2,048 HTTP cap is preserved. Required exact-head PR CI and the coordinator's release checks remain gates. The captured stock DATA is an immutable observation, with fresh metadata checks at execution boundaries; it is never described as a new hash scan.
