@@ -266,3 +266,57 @@ describe("Telegram research and language compatibility", () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 });
+
+describe("Telegram linked research compatibility successor (UNRUN)", () => {
+  it.each(["linked", "unlinked", "uncertain", "private-refused", "claim-refused"] as const)
+    ("keeps enabled ownership and private delivery admission exact: %s", async state => {
+      Object.assign(mocks.config, { networkId: "eip155:5042" });
+      mocks.enabled.mockReturnValue(true);
+      const wallet = "0x" + "b".repeat(40), question = "What is x402?";
+      const lookup = state === "uncertain" ? vi.fn().mockRejectedValue(new Error("Uncertain membership"))
+        : vi.fn().mockResolvedValue(state === "linked" ? { wallet, accountId: "fixture-confirmed-account" } : null);
+      const forbidden = vi.fn(() => { throw new Error("Research must not mutate chat links"); });
+      const db = Object.defineProperty({}, "chatAccountLinks", { value: {
+        lookup, issue: forbidden, preview: forbidden, complete: forbidden, unlink: forbidden, list: forbidden, unlinkAccount: forbidden,
+      }, enumerable: false });
+      mocks.db.mockResolvedValue(db);
+      const complete = vi.fn().mockResolvedValue(null);
+      if (state === "claim-refused") mocks.claim.mockRejectedValue(new Error("Private claim refused"));
+      else mocks.claim.mockResolvedValue(state === "linked" ? null : { complete });
+      mocks.privateReply.mockResolvedValue(state === "private-refused" ? null : { chatId: 789, placeholderId: 100 });
+      const run: QueryRun = { id: "fixture-run", question, budget: 0.025, engine: "heuristic", subClaims: [], decisions: [], citations: [],
+        answer: "Synthetic fixture answer", totalSpent: 0, totalToCreators: 0, trace: [], createdAt: "2026-10-13T00:00:00.000Z", paymentMode: "offline" };
+      mocks.collect.mockResolvedValue(run);
+      fetchMock.mockImplementation(async () => Response.json({ ok: true, result: { message_id: 100 } }));
+      await POST(request(update(`/ask ${question}`)));
+      expect(mocks.db).not.toHaveBeenCalled();
+      expect(mocks.claim).not.toHaveBeenCalled();
+      await mocks.after.mock.calls[0]![0]();
+      expect(mocks.db).toHaveBeenCalledTimes(1);
+      expect(lookup).toHaveBeenCalledExactlyOnceWith({ platform: "telegram", scope: "telegram", userId: "789", channel: "789" },
+        { origin: "https://telegram-controls.example", network: "eip155:5042" });
+      expect(forbidden).not.toHaveBeenCalled();
+      if (state === "uncertain") expect(mocks.claim).not.toHaveBeenCalled();
+      else expect(mocks.claim).toHaveBeenCalledExactlyOnceWith(expect.any(String), state === "linked" ? wallet : undefined);
+      if (state === "uncertain" || state === "claim-refused") expect(mocks.privateReply).not.toHaveBeenCalled();
+      else expect(mocks.privateReply).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ question, chatId: 789, userId: 789 }), expect.any(Function));
+      if (state === "uncertain" || state === "private-refused" || state === "claim-refused") {
+        expect(mocks.presentation).not.toHaveBeenCalled();
+        expect(mocks.collect).not.toHaveBeenCalled();
+        expect(complete).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
+      } else {
+        expect(mocks.collect).toHaveBeenCalledExactlyOnceWith({ question, presentationLanguage: "en", budget: 0.025,
+          queryId: mocks.claim.mock.calls[0]![0], origin: "web",
+          ...(state === "linked" ? { asker: wallet, fundingOwner: "treasury" } : {}),
+          provenance: { version: 1, surface: "telegram", ownershipMethod: "unknown" } });
+        expect(mocks.db.mock.invocationCallOrder[0]).toBeLessThan(mocks.claim.mock.invocationCallOrder[0]!);
+        expect(mocks.claim.mock.invocationCallOrder[0]).toBeLessThan(mocks.privateReply.mock.invocationCallOrder[0]!);
+        expect(mocks.privateReply.mock.invocationCallOrder[0]).toBeLessThan(mocks.presentation.mock.invocationCallOrder[0]!);
+        if (state === "unlinked") expect(complete).toHaveBeenCalledExactlyOnceWith(run);
+        else expect(complete).not.toHaveBeenCalled();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toMatchObject({ chat_id: 789, message_id: 100 });
+      }
+    });
+});

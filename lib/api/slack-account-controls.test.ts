@@ -199,3 +199,53 @@ describe("signed Slack account-control refusal", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("Slack linked research compatibility successor (UNRUN)", () => {
+  it.each(["linked", "unlinked", "uncertain"] as const)("keeps enabled ownership admission exact: %s", async state => {
+    Object.assign(mocks.config, { networkId: "eip155:5042" });
+    mocks.enabled.mockReturnValue(true);
+    const wallet = "0x" + "a".repeat(40), question = "Explain x402 citations.";
+    const lookup = state === "uncertain" ? vi.fn().mockRejectedValue(new Error("Uncertain membership"))
+      : vi.fn().mockResolvedValue(state === "linked" ? { wallet, accountId: "fixture-confirmed-account" } : null);
+    const forbidden = vi.fn(() => { throw new Error("Research must not mutate chat links"); });
+    const db = Object.defineProperty({}, "chatAccountLinks", { value: {
+      lookup, issue: forbidden, preview: forbidden, complete: forbidden, unlink: forbidden, list: forbidden, unlinkAccount: forbidden,
+    }, enumerable: false });
+    mocks.db.mockResolvedValue(db);
+    const complete = vi.fn().mockResolvedValue(null);
+    mocks.claim.mockResolvedValue(state === "unlinked" ? { complete } : null);
+    const run = { id: "fixture-run", question, budget: 0.025, engine: "heuristic", subClaims: [], decisions: [], citations: [],
+      answer: "Synthetic fixture answer", totalSpent: 0, totalToCreators: 0, trace: [], createdAt: "2026-10-13T00:00:00.000Z", paymentMode: "offline" };
+    mocks.collect.mockResolvedValue(run);
+    fetchMock.mockImplementation(async () => new Response("", { status: 200 }));
+    await POST(signedRequest({ text: question }));
+    expect(mocks.db).not.toHaveBeenCalled();
+    expect(mocks.claim).not.toHaveBeenCalled();
+    await mocks.after.mock.calls[0]![0]();
+    expect(mocks.db).toHaveBeenCalledTimes(1);
+    expect(lookup).toHaveBeenCalledExactlyOnceWith({ platform: "slack", scope: "T123", userId: "U123", channel: "C456" },
+      { origin: "https://slack-controls.example", network: "eip155:5042" });
+    expect(forbidden).not.toHaveBeenCalled();
+    if (state === "uncertain") {
+      expect(mocks.claim).not.toHaveBeenCalled();
+      expect(mocks.presentation).not.toHaveBeenCalled();
+      expect(mocks.collect).not.toHaveBeenCalled();
+      expect(complete).not.toHaveBeenCalled();
+    } else {
+      expect(mocks.claim).toHaveBeenCalledExactlyOnceWith(expect.any(String), state === "linked" ? wallet : undefined);
+      expect(mocks.collect).toHaveBeenCalledExactlyOnceWith({ question, presentationLanguage: "en", budget: 0.025,
+        queryId: mocks.claim.mock.calls[0]![0], origin: "web",
+        ...(state === "linked" ? { asker: wallet, fundingOwner: "treasury" } : {}),
+        provenance: { version: 1, surface: "slack", ownershipMethod: "unknown" } });
+      expect(mocks.db.mock.invocationCallOrder[0]).toBeLessThan(mocks.claim.mock.invocationCallOrder[0]!);
+      expect(mocks.claim.mock.invocationCallOrder[0]).toBeLessThan(mocks.presentation.mock.invocationCallOrder[0]!);
+      if (state === "unlinked") expect(complete).toHaveBeenCalledExactlyOnceWith(run);
+      else expect(complete).not.toHaveBeenCalled();
+    }
+    // On uncertainty Slack may send its existing private error, never a claim or research answer.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body.response_type).toBe("ephemeral");
+    expect(body.text).not.toContain("Private account claim");
+  });
+});

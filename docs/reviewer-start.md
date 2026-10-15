@@ -1,46 +1,73 @@
-# Reviewer guide: product, user workflows and proof
+# Reviewer guide: follow the decisions, check the payment, see real use
 
-Start with the **[submitted Tameion demo, 2:47](https://youtu.be/sNonqLPMysg)**:
-English narration and subtitles cover source choices, the stored report/receipt,
-Operator observation, the evidence-procurement prototype and reusable Arc primitives.
-Its stored first-party example and prototype scenes keep their own scope; the
-supporting user recordings below are separate traction evidence.
+Keryx researches a question under a budget, explains which sources it buys,
+skips or reuses, and rewards eligible creators for the evidence it actually
+cites. The business use is research for developers and researchers: a cited
+deliverable with the source choices and money trail available for inspection.
+
+**[Watch the submitted demo — 2:47](https://youtu.be/sNonqLPMysg)** ·
+**[Open the recorded walkthrough — no wallet](https://keryx.cc/walkthrough)** ·
+**[See an outside user — 1:53](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)**
+
+The demo has English narration and subtitles. The interactive walkthrough
+reopens a real, partial owner-QA result; it starts no research or payment.
+The outside-user recording is separate evidence of genuine sponsored use.
 
 ## A short review route
 
-1. **Watch someone use Keryx:** [0xacee's software-design session, 3:05](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)
-   shows actual research, source inspection and a prototype design note. The owner
-   confirmed direct user operation/supervision. The [user-story record](tameion-submission.md#recorded-outside-user-workflow-0xacee)
-   links all three reports and explains the shortened waits, narration, results
-   and separate assistant-run SQLite checks.
-   Also watch [Hoàng using MCP inside Devin CLI, 1:53](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
-   for Face Marker app research, visible errors/evidence gaps and a sponsored
-   Arc-testnet payment. Its [case study](tameion-submission.md#named-external-user-hoàng-freelance-developer)
-   retains the original video scope and later matched payment proof.
-2. **Try the web workflow:** open [keryx.cc](https://keryx.cc), choose Quick and
-   submit a shareable question within the displayed sponsored quota/payer/budget.
-   Inspect exact excerpts, unmet targets, BUY/SKIP/CACHE reasons and the receipt.
-   The [dated quality scorecard](engineering/public-quality-scorecard-287-2026-10-11.md)
-   retains its frozen diagnostics and unjudged semantic/language outcomes.
-3. **Explore researcher outputs:** follow [literature workspace](literature-workspace.md)
-   for paper screening, notes and comparisons, and [evidence drafts](evidence-drafts.md)
-   for retained-excerpt writing and reference exports. Metadata and read evidence
-   remain distinct.
-   Read [Trần Minh Hiếu's four-page working paper](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf)
-   for a concrete user-created research output: 65 retained reports, 202 targets,
-   methods, quantitative tables and figures. Its
-   [research story and frozen-data reproduction](tameion-submission.md#research-artifact-trần-minh-hiếu)
-   retain user attribution, sponsored funding and AI-assistance scope.
-4. **Inspect task continuity:** [Windows release assets](https://github.com/tang-vu/keryx/releases/tag/v0.27.63)
-   and the [desktop](desktop-alpha.md)/[CLI](operator-task-alpha.md) guides show
-   shared tasks, explicit buyer handoff, original-job recovery, offline results
-   and private exports.
-5. **Inspect economic agency and reuse:** source routes include
-   `/operator/decisions`, `/research-audit` and the [procurement workspace](evidence-procurement.md).
-   Compare [source versus deployment](tameion-submission.md#observed-delivery-and-supported-surfaces)
-   before treating newer merged tools as live. The separate
-   [MIT Arc primitives](https://github.com/tang-vu/keryx-arc-primitives) offer reusable
-   payment, allocation, registry and recovery components.
+1. **Follow one job:** open [the walkthrough](https://keryx.cc/walkthrough) and
+   select **Start the recorded walkthrough**. Its four steps show the answer and
+   exact excerpts, CACHE/SKIP reasons, the stored payment receipt, and a small job
+   ledger. The example records zero access tolls and a 0.025 USDC mainnet citation
+   reward to a first-party creator. It omits a requested document revision and
+   retains its Low confidence label.
+2. **Check the payment:** in the receipt step, use the integrity, Circle transfer
+   and Arc payout-wallet controls. The latter two read Circle and Arc directly.
+   Their [verification scope](engineering/recorded-walkthrough-305.md) distinguishes
+   Circle's completed transfer, current registry authority and individual chain
+   finality. A blocked or unavailable check is shown as such. The job ledger
+   separates the unspent cap from expenditure; missing provider costs prevent a
+   margin claim.
+3. **See an outside person's task:** [Hoàng's 1:53 MCP/Devin recording](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
+   shows a freelancer researching app-policy and MediaPipe questions for Face
+   Marker. It retains errors, partial results and a sponsored Arc-testnet payment.
+   His [case study](tameion-submission.md#named-external-user-hoàng-freelance-developer)
+   supplies the participant, task, original runs and separately matched payment.
+
+To ask your own question, open [the composer](https://keryx.cc), check its current
+availability, payer, budget and visibility, then choose Quick. Sponsored admission
+can be paused or capped. The recorded route above remains available without a
+fresh-job allowance. The route's "about two minutes" describes the recorded
+inspection; a new job or complete live business cycle has no accepted
+under-three-minute benchmark here.
+
+## Evidence by judging criterion
+
+The [official event guidance](https://tameion.thecanteenapp.com/) recommends these
+weights; judges retain the final say. Each row points to an inspectable example.
+
+| Criterion | Inspect | Evidence and boundary |
+| --- | --- | --- |
+| Agentic sophistication — 30% | [Recorded decisions](https://keryx.cc/walkthrough), [Decision Lab](https://keryx.cc/operator/decisions), [business Operator](operator-business.md) | Source choices and reasons, allocation/replay tools, and obligation/liquidity checks. Distinguish a model proposal from policy enforcement and an observed action. The recorded example demonstrates CACHE/SKIP, with no new BUY. |
+| Traction — 30% | [Named users and their tasks](tameion-submission.md#event-period-usage-testnet-week-then-mainnet), [recorded usage by cohort](https://keryx.cc/usage) | At least four identified outside users in the retained submission evidence. Sponsored use, owner/QA, testnet and mainnet keep their own labels; accepted paid fulfillment and independently verified repeat demand remain open. |
+| Circle tool usage — 20% | [Walkthrough payment checks](https://keryx.cc/walkthrough), [Circle/Arc integration ledger](engineering/circle-arc-integration-ledger.md) | Circle Gateway/x402, USDC and Arc source/payout authority, with exact receipt references. The ledger separates live, testnet, planned and unused integrations. A Circle reference is not an individual Arc transaction hash. |
+| Innovation — 20% | [Two-toll design](research-receipts.md), [user research paper](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf), [reusable Arc primitives](https://github.com/tang-vu/keryx-arc-primitives) | Separate access purchases from evidence-gated citation rewards, then inspect which evidence supported the result. The working paper and MIT components are concrete outputs; the [procurement prototype](evidence-procurement.md) keeps funded execution as a future gate. |
+
+For another user workflow, [0xacee's 3:05 software-design recording](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)
+shows storage/backup research with useful, partial and unsupported results. The
+owner confirmed direct operation or supervision; the
+[story](tameion-submission.md#recorded-outside-user-workflow-0xacee) separates the
+user session from later assistant-run prototype checks. It is supporting footage,
+separate from the submitted 2:47 demo.
+
+[Trần Minh Hiếu's working paper](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf)
+uses 65 retained reports and 202 research targets. The
+[research story and reproduction](tameion-submission.md#research-artifact-trần-minh-hiếu)
+record his own sponsored research, AI-assisted writing and the study's scope.
+Explore [literature tools](literature-workspace.md) and
+[retained-excerpt drafts](evidence-drafts.md) for that workflow, or the
+[Windows release assets](https://github.com/tang-vu/keryx/releases/tag/v0.27.67)
+and [CLI guide](operator-task-alpha.md) for durable tasks and original-job recovery.
 
 ## Submission and counting scope
 
@@ -54,9 +81,27 @@ The October 13 mainnet snapshot records 129 questions and 40 settled payment
 records totaling 0.703750 USDC. It includes owner/QA activity. The 2,333 npm
 downloads cover September 27–October 12; website visits and GitHub clones retain
 their own 21/14-day windows. These are distinct from unique people or accepted
-deliverables. An early October 14 health recheck reported production `ec5f39c9`;
-a later check reported operational Arc mainnet at `ae298ff4`. Consult current
-health and release manifests when comparing deployed and merged source.
+deliverables. [Live cohort accounting](https://keryx.cc/usage) publishes its own
+period, network and outside/team/scripted/unknown rules; unknown callers are not
+automatically counted as outside people.
+
+A read-only check on **October 15 at 08:50 UTC** found
+[health](https://keryx.cc/api/health) operational on Arc mainnet at `708f2621`.
+The walkthrough, stored report, receipt, Decision Lab and usage page returned
+HTTP 200. The [v0.27.67 release](https://github.com/tang-vu/keryx/releases/tag/v0.27.67)
+lists MCP 0.4.22 and Windows assets. These are availability and discovery checks,
+with fresh research/payment admission still unprobed. Read each client manifest
+for its own source identity; this check does not establish a fresh install or
+synchronized client behavior. The October 13 submission snapshot stays unchanged.
+
+During the same day's browser inspection, all four recorded steps opened.
+Circle's transfer check and Arc's payout-wallet check matched. **The current
+receipt integrity check reported a mismatch:** the endpoint returned a
+`settlement-receipt:1` projection rather than the retained `research-receipt:1`
+payload. Compare the [retained snapshot](../fixtures/walkthrough/recorded-mainnet-receipt.json)
+and the original digest below; the shorter live projection is not a replacement
+checkpoint. Public-history recovery and a fresh deployed readback remain with
+the [existing recovery work](https://github.com/tang-vu/keryx/pull/504).
 
 Hoàng's October 2 MCP/Devin recording was posted on the owner's @tangvu_dev
 account, which is now suspended. Its [archived edited video](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
@@ -69,8 +114,11 @@ so restoring them does not add to the person count.
 
 The [README](../README.md#try-it-in-two-minutes--no-wallet) also links a stored
 first-party QA example. Opening its public report/receipt submits no new research
-or payment. The October 8–9 digests and recording scope below are frozen historical
-checks; they remain unchanged by the newer demo, user recording and metrics.
+or payment. Expand the historical checks below for its exact digests, recording
+scope and original limitations.
+
+<details>
+<summary>October 8–9 receipt checkpoints and archived recording scope</summary>
 
 ## Verify the example
 
@@ -211,6 +259,8 @@ The original October 8 snapshot is retained rather than relabelled as a new one.
 The wallet-free path still opens these existing artifacts. Reading them does not
 prove fresh-query availability or revalidate independent chain finality. This
 documentation/publication changes no runtime, release version or payment state.
+
+</details>
 
 ## Surface boundary
 

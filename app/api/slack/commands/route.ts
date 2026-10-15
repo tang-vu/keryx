@@ -22,6 +22,10 @@ import { hostedRunClaimsEnabled, prepareHostedRunClaim } from "@/lib/run-claims/
 import { privateRunClaimText } from "@/lib/run-claims/delivery";
 import { privateSlackResponseUrl } from "@/lib/run-claims/slack-private";
 import { config } from "@/lib/config";
+import { getDb } from "@/lib/db";
+import { chatControlReply, exactChatControl, linkedChatOwner } from "@/lib/chat-accounts/service";
+import { slackChatRecipient } from "@/lib/chat-accounts/provider-recipient";
+import type { ChatRecipient } from "@/lib/chat-accounts/contracts";
 import { botResearchMessages } from "@/lib/bots/research-messages";
 import { botControlResponse, parseBotControl } from "@/lib/bots/language";
 import { botAnswerPresentation } from "@/lib/bots/answer-preference";
@@ -57,7 +61,18 @@ export async function POST(req: NextRequest) {
 
   const params = new URLSearchParams(rawBody), command = params.get("command"), text = params.get("text")?.trim() ?? "";
   // Authenticate first, then refuse unavailable account controls privately before storage or research.
-  if (isSlackAccountControl(params)) return Response.json(ephemeral(slackAccountLinkingUnavailable));
+  if (isSlackAccountControl(params)) {
+    const recipient = slackChatRecipient(params);
+    const verb = command === "/keryx" ? exactChatControl(text) : !text && params.getAll("command").length === 1 ? exactChatControl(command ?? "") : null;
+    let reply = slackAccountLinkingUnavailable;
+    if (recipient && verb && params.getAll("text").length <= 1 && params.getAll("command").length === 1) {
+      try { reply = await chatControlReply({ command: verb, recipient, db: getDb,
+        binding: { origin: new URL(config.baseUrl).origin, network: config.networkId } }); }
+      catch { /* Static private refusal only; no credential/error reflection. */ }
+    }
+    return Response.json(reply === slackAccountLinkingUnavailable ? ephemeral(reply)
+      : { ...ephemeral(reply), unfurl_links: false, unfurl_media: false });
+  }
   const control = command === "/language" ? { action: "language" as const, ...(text ? { value: text } : {}) }
     : command === "/help" ? { action: "help" as const, ...(text ? { value: text } : {}) }
     : command === "/keryx" && !text ? { action: "help" as const } : parseBotControl(text);
@@ -80,7 +95,7 @@ export async function POST(req: NextRequest) {
   }
 
   const budget = Math.min(config.defaultBudget, config.anonMaxBudget);
-  after(() => runAndReply(cmd, budget, { platform: "slack", scope: params.get("team_id") ?? "", userId: cmd.userId }));
+  after(() => runAndReply(cmd, budget, { platform: "slack", scope: params.get("team_id") ?? "", userId: cmd.userId }, slackChatRecipient(params, true)));
   return Response.json(ephemeral(botResearchMessages(cmd.question, cmd.presentationLanguage)("dispatching")));
 }
 
@@ -90,12 +105,15 @@ function ephemeral(text: string) {
 }
 
 /** Runs the agent after the ack, then posts the answer (or a failure note) to the response_url. */
-async function runAndReply(cmd: SlashCommand, budget: number, recipient: Parameters<typeof botAnswerPresentation>[1]) {
+async function runAndReply(cmd: SlashCommand, budget: number, recipient: Parameters<typeof botAnswerPresentation>[1], chatRecipient: ChatRecipient | null) {
   if (hostedRunClaimsEnabled() && !privateSlackResponseUrl(cmd.responseUrl)) return;
   let text: string;
   try {
     const queryId = crypto.randomUUID();
-    const privateClaim = await prepareHostedRunClaim(queryId);
+    // Default-OFF research keeps its storage-free anonymous admission contract.
+    const owner = hostedRunClaimsEnabled() && chatRecipient ? await linkedChatOwner(await getDb(), chatRecipient,
+      { origin: new URL(config.baseUrl).origin, network: config.networkId }) : undefined;
+    const privateClaim = await prepareHostedRunClaim(queryId, owner);
     // Resolve stored generation intent only after the owned reply path is admitted.
     cmd.presentationLanguage = (await botAnswerPresentation(cmd.question, recipient)).language;
     const run = await collectRun({
@@ -104,6 +122,7 @@ async function runAndReply(cmd: SlashCommand, budget: number, recipient: Paramet
       budget,
       queryId,
       origin: "web",
+      ...(owner ? { asker: owner, fundingOwner: "treasury" as const } : {}),
       provenance: { version: 1, surface: "slack", ownershipMethod: "unknown" },
     });
     const packet = await privateClaim?.complete(run);

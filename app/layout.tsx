@@ -1,6 +1,8 @@
 import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
+import { chatAccountFragmentBootstrap } from "@/lib/chat-accounts/fragment-intake";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import { PaperGrain } from "@/components/keryx/paper-grain";
@@ -165,6 +167,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: safeInlineJson(JSON_LD) }}
         />
+        <Script id="keryx-chat-account-fragment" strategy="beforeInteractive">{chatAccountFragmentBootstrap}</Script>
         <MintEngravings />
         <PaperGrain />
         <InkBleedCursor />
