@@ -15,9 +15,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { makeConfig } from "@/lib/wagmi-config";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 
+// Explicitly offer the existing navigation previews. This does not publish
+// translated pages or approve payment, consent, onboarding or legal prose.
+const shellPreviewLocales = ["en", "vi", "zh-Hans"] as const;
+
 function LocaleBoundary({ children }: { children: React.ReactNode }) {
   const { address, isConnected } = useAccount();
-  return <LocaleProvider connectedWallet={isConnected ? address ?? null : null}>{children}</LocaleProvider>;
+  return <LocaleProvider enabledLocales={shellPreviewLocales} connectedWallet={isConnected ? address ?? null : null}>{children}</LocaleProvider>;
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
