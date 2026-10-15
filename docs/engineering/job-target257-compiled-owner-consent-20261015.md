@@ -326,3 +326,22 @@ remain unchanged. Only the failed case and changed-file types were refreshed
 and passed; the other 61 cases retain their prior CI results. The original
 Linux timeout and the fixed-label diagnostic remain retained as failed evidence.
 No application, storage authority, build, stock or study input changed.
+
+## Native facade composition and lock recovery
+
+The observed deliverable-facade timeout combined two criteria: frozen writable
+and readonly port composition, and actual EXCLUSIVE-lock recovery on the same
+writer. A diagnostic measured 8.8 seconds through both facade constructions
+and another 7.5 seconds in the held-lock read on Windows. The source fixture now
+checks these criteria separately under the unchanged canonical per-test limits.
+Both cases use one fixed module-lifetime synthetic deployment tuple, open genuine
+fresh handles and preserve every original assertion. The composition case also
+checks the healthy writer after readonly refusal; the contention case retains
+the same writer before and after unlock. No database overwrite or module reset
+is used between cases.
+
+Only the two affected cases and changed-file types were refreshed and passed.
+The other 24 cases retain their prior CI results. The original Linux timeout
+and whole original-case Windows diagnostic remain retained. Required corrected
+exact-head CI is separate; no runtime, timeout, authority, application build,
+stock qualification, compiled selection or study input was changed or repeated.
