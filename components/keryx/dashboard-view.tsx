@@ -68,6 +68,13 @@ function runBody(body: unknown): RunSummary[] {
   if (!Array.isArray(body)) throw new Error("Invalid question records");
   return body;
 }
+function publicCountBody(body: unknown): { publicQuestions: number } {
+  const value = objectBody(body);
+  if (value.complete !== true || value.network !== browserPaymentProfile().networkId || value.period !== "all" || value.cohort !== "default"
+    || typeof value.publicQuestions !== "number" || !Number.isSafeInteger(value.publicQuestions) || value.publicQuestions < 0)
+    throw new Error("Invalid public question count");
+  return { publicQuestions: value.publicQuestions };
+}
 
 function ResourceNotice({ resource, label }: { resource: LedgerResource<unknown> & { retry: () => void }; label: string }) {
   if (resource.status === "ready") return null;
@@ -90,6 +97,7 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
   const paymentsResource = useLedgerResource("/api/payments?limit=200", paymentBody);
   const withdrawalsResource = useLedgerResource("/api/withdrawals?limit=25", withdrawalBody);
   const runsResource = useLedgerResource(`/api/runs?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all`, runBody);
+  const publicCountResource = useLedgerResource(`/api/runs/summary?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all`, publicCountBody);
   const metrics = metricsResource.data?.metrics;
   const leaderboard = metricsResource.data?.leaderboard ?? [];
   const creatorNames = new Map(leaderboard.map(row => [row.sourceId, row.sourceName]));
@@ -119,12 +127,21 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
 
       <section id="current-activity" aria-label={message("ledger.currentActivityLabel")} className="mt-8 border-t border-line pt-6">
         <h2 className="font-display text-2xl text-ink">{message("ledger.activity", { network: currentArcLabel })}</h2>
+        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div className="font-mono text-sm text-ink">
+            <ResourceNotice resource={publicCountResource} label={uiCopy("ledgerPresentation.publicQuestionCount")} />
+            {publicCountResource.data && uiRichCopy(publicCountResource.status === "error"
+              ? publicCountResource.data.publicQuestions === 1 ? "ledgerRecorded.public.stale.one" : "ledgerRecorded.public.stale.other"
+              : publicCountResource.data.publicQuestions === 1 ? "ledgerRecorded.public.current.one" : "ledgerRecorded.public.current.other",
+            { count: <span className="font-display text-2xl">{publicCountResource.data.publicQuestions}</span>, network: currentArcLabel })}
+          </div>
+          <Link href="/" className="min-h-11 border border-ink bg-ink px-4 py-3 font-mono text-xs text-paper hover:underline">{uiCopy("ledgerPresentation.ask")}</Link>
+        </div>
+        <p className="mt-4 max-w-2xl text-xs leading-relaxed text-ink-3">{uiCopy("ledgerPresentation.recordedBoundary")}</p>
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
           <span className="font-mono text-sm text-ink">{metrics ? recordedTotal("questions", metrics.totalQueries, metricsResource.status === "error") : metricsResource.status === "error" ? uiCopy("ledgerPresentation.questionsUnavailable") : uiCopy("ledgerPresentation.questionsLoading")}</span>
           <span className="font-mono text-sm text-ink">{metrics?.recordedAccounts != null ? recordedTotal("accounts", metrics.recordedAccounts, metricsResource.status === "error") : metrics || metricsResource.status === "error" ? uiCopy("ledgerPresentation.accountsUnavailable") : uiCopy("ledgerPresentation.accountsLoading")}</span>
           <span className="font-mono text-sm text-ink">{metrics?.guestQuestions != null ? recordedTotal("guests", metrics.guestQuestions, metricsResource.status === "error") : metrics || metricsResource.status === "error" ? uiCopy("ledgerPresentation.guestsUnavailable") : uiCopy("ledgerPresentation.guestsLoading")}</span>
-          <span className="font-mono text-xs text-paid">{currentArcLabel}</span>
-          <Link href="/" className="min-h-11 border border-ink bg-ink px-4 py-3 font-mono text-xs text-paper hover:underline">{uiCopy("ledgerPresentation.ask")}</Link>
         </div>
         <p className="mt-3 max-w-2xl text-xs leading-relaxed text-ink-3">{uiCopy("ledgerPresentation.accountBoundary")}</p>
         <p className="mt-2 max-w-2xl text-xs leading-relaxed text-ink-3">{uiCopy("ledgerPresentation.guestBoundary")}</p>
@@ -133,7 +150,7 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
       <div className="mt-8 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section aria-label={uiCopy("ledgerPresentation.activityAria")} className="min-w-0">
           <ResourceNotice resource={runsResource} label={uiCopy("ledgerPresentation.questionRecords")} />
-          {runsResource.data !== null && <DispatchHistory runs={runs.slice(0, 4)} title={uiCopy("ledgerPresentation.recent")} description={uiCopy("ledgerPresentation.publicHistoryBoundary")} emptyMessage={uiCopy("ledgerPresentation.noPublicQuestions")} showFinancials={false} />}
+          {runsResource.data !== null && <DispatchHistory runs={runs.slice(0, 4)} title={uiCopy("ledgerPresentation.recent")} description={uiCopy("ledgerPresentation.publicHistoryBoundary", { network: currentArcLabel })} emptyMessage={uiCopy("ledgerPresentation.noPublicQuestions")} showFinancials={false} />}
           {runs.length > 4 && <details className="mt-4 border border-line bg-paper-2/30"><summary className="cursor-pointer px-5 py-4 font-display text-lg text-ink">{uiCopy("ledgerPresentation.more")}</summary><div className="px-4 pb-4"><DispatchHistory runs={runs.slice(4, 25)} title={uiCopy("ledgerPresentation.earlier")} showFinancials={false} /></div></details>}
           <Link href="/answers" className="mt-3 inline-block min-h-11 py-2 font-mono text-xs text-seal underline">{uiCopy("ledgerPresentation.pastAnswers")}</Link>
         </section>

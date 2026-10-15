@@ -1,30 +1,46 @@
 # Run privacy (#266): source contract and rollout holds
 
-Root's owner-delegated policy is recorded in [DECISIONS](../DECISIONS.md): every
-historical run is unlisted; new authenticated-owned runs default private; new
-unowned runs are unlisted. An owner may opt a run or future default into public.
+The owner revised the product policy on October 15: ordinary research defaults
+public, with Public/Unlisted/Private shown before browser submission. Existing
+saved preferences, explicit per-run choices and erasure remain authoritative.
+Private creation requires a verified owner. Hidden-parent follow-ups inherit
+their parent's restriction. Signing in alone does not make research private.
+Historical missing sidecars require the separate reviewed restoration described
+in [public research visibility](engineering/public-research-visibility-2026-10-15.md);
+neither startup nor a resave publishes historical records implicitly.
 No requester-supplied wallet, payee, question or creator record establishes ownership.
 
-`KeryxDB.runPrivacy` is an additive **ordinary-only, default-off** port. SQLite
+`KeryxDB.runPrivacy` is a separately admitted privacy port. SQLite
 requires the exact preinstalled [source schema](../lib/db/run-privacy-sqlite.ts).
-Supabase uses only the fixed service-role `run_privacy_v1` RPC and its immutable
-source-created catalog seal in [0090 source](../supabase/migrations/0090_run_privacy.sql).
+Supabase reads and owner mutations use the fixed service-role `run_privacy_v1` RPC
+and its immutable source-created catalog seal in [0090 source](../supabase/migrations/0090_run_privacy.sql).
 That migration requires an already admitted 0088 original/session catalog; it
 refuses a missing predecessor and does not activate claim/history capabilities.
+Ordinary creation, write readiness and presence-aware default reads use the fixed
+`research_publication_v1` RPC in [0093 source](../supabase/migrations/0093_research_publication.sql).
+Its separate immutable catalog seal validates the unchanged 0088 and 0090 seals;
+it neither re-seals predecessors nor installs anything at runtime. New original
+and initial sidecar visibility commit together. Existing originals and sidecars
+retain their policy. A missing account preference means Public; a malformed read
+or missing RPC is unavailable. Active native Supabase creation remains unsupported
+and refuses without selecting ordinary authority. Native SQLite creation uses
+only its existing verified full-user write authority; no schema change is needed.
 `KERYX_RUN_PRIVACY_ENABLED=true` is a separately approved rollout setting, not
 enabled by this change. Neither adapter installs this domain at startup.
 Each ordinary adapter captures an immutable `runPrivacyActive` at construction.
 **Default OFF preserves the existing admitted ordinary readers**, including public
 archives, shared memory, follow-ups, publicUsage history, dispatch/receipt links
 and paid GET polling. Existing profile/domain authority checks still apply.
-The selected historical/new-run policy is not delivered or applied while OFF;
+With privacy OFF, ordinary public creation retains the admitted legacy writer;
+nonpublic choices refuse before research starts. While OFF,
 owner visibility/default/export/erase controls return `privacy_unavailable` and
 the owner page does not mount the controls.
 
 **ON requires the admitted privacy port** on every affected reader. Unknown schema,
 ownership or unavailable port fails closed, even if the process flag later changes.
 There is no active legacy, raw REST, native or stale-text fallback. Enrolled,
-native, archive and private research facades acquire no new capability. Changing
+archive and private research facades acquire no new capability. Native privacy
+uses only explicitly admitted adapter authority, never the flag alone. Changing
 the activation setting requires a reviewed process/build restart and the rollout
 gates below; an environment change inside a live adapter cannot switch its authority.
 Internal canonical `getQueryRun` remains an original/financial reader, never a
@@ -39,7 +55,7 @@ ordinary erasure removes the snapshot with the other question-derived JSON.
 When activated, public lists select only `public` and unerased rows **before body retrieval and
 paging**. PublicUsage keeps its complete bounded financial metadata corpus and
 all cohorts; only its question-body page is filtered for visibility. The public
-archive enumerates no historical questions. Existing unlisted links still read
+archive enumerates only explicitly public historical questions. Existing unlisted links still read
 historical originals. Current hidden/erased IDs cannot fall back to an older
 archive duplicate. Follow-up enumeration and shared agent memory use public rows;
 stream publication rechecks visibility. Metadata/OG/structured data omit nonpublic
@@ -134,19 +150,13 @@ unlisted archive receipt links retain their original v1 proof/network.
   view / realtime inventory, verified claim compatibility, deletion retention
   decisions, old cache/CDN/OG purge, and publication quiescence. No such target
   operations, flags, backfill, providers, payments or schedules were touched.
-- The activation boundary has synthetic OFF/ON checks for both adapters, ordinary
-  routes/history/cache, pending polling and exact financial equality. The isolated
-  PostgreSQL acceptance script includes service/anon pending-reader role checks,
-  but has not executed here. Mocks and SQLite fixtures do not qualify real PG17.
-- Exact-head full CI, APP TypeScript, production Next build and applicable domain /
-  platform SUCCESS remain merge gates. Source fixtures alone are not production
-  acceptance. Root owns PR review gate, release, deployment and closure; #266 stays OPEN.
-- The source-accepted core `aca230f` is integrated on this same focused branch by
-  normal merge, preserving its modes/payloads. Its actual CI/ordered main merges
-  and this combined head's acceptance are separate pending gates. Canonical offline48
-  is not replayed or written here; root reserves the final combined selector epoch.
-  Prior canonical metadata/report bodies remain inherited evidence, not new-head
-  acceptance. Real PG17 is unexecuted locally; the known Next dependency-junction
-  failure is retained without retry/install/cache repair. Root whole-source peer
-  review is required before ONE266PR. No migration/bootstrap/flag/data operation
-  is performed or newly authorized by this integration.
+- Source acceptance requires the existing OFF/ON, owner/export/erase, exact financial
+  retention and creation failure-path checks, independent review, TypeScript,
+  production build and applicable required CI. The isolated PostgreSQL harness
+  exercises real role/catalog/rollback and first-save race behavior; mock results
+  do not substitute for that acceptance.
+- Release and restoration are separate operations owned by ROOT. Final-main and
+  applicable package/desktop provenance gates precede one combined deployment.
+  A fresh protected export and exact content-review decisions precede the guarded
+  historical sidecar restoration. Verify public history and counts after clearing
+  the exact owned maintenance window; preserve private holds and payment authority.

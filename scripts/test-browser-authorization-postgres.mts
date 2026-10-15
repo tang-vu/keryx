@@ -185,6 +185,12 @@ try {
     if (extension.file === "0090_run_privacy.sql")
       assert.equal(sql("select to_regprocedure('public.run_privacy_v1(text,text,jsonb,jsonb,boolean)') is null;"), "t",
         "Native installation refusal must not publish an ordinary privacy RPC");
+    if (extension.file === "0093_research_publication.sql") {
+      assert.equal(sql("select to_regprocedure('public.research_publication_v1(text,jsonb)') is null;"), "t",
+        "Native installation refusal must not publish an ordinary creation RPC");
+      assert.equal(sql("select to_regclass('public.research_publication_catalog_seal') is null;"), "t",
+        "Native installation refusal must not install an ordinary publication seal");
+    }
     if (extension.file === "0091_public_researcher_profiles.sql") {
       assert.equal(sql("select to_regclass('public.public_researcher_profiles') is null;"), "t",
         "Native installation refusal must not publish ordinary profile rows");
@@ -230,6 +236,13 @@ try {
         assert.throws(() => postgres.sql(`set role ${role};select * from public.query_runs;`, ordinary), /permission denied/);
       }
       assert.equal(postgres.sql("select to_regprocedure('public.anonymous_run_claims_guard_v1()') is not null;", ordinary), "t");
+    } else if (extension.file === "0093_research_publication.sql") {
+      assert.deepEqual(JSON.parse(postgres.sql("set role service_role;select public.research_publication_v1('ready','{}'::jsonb);", ordinary)),
+        { version: 1, action: "ready", id: null, result: { ready: true } });
+      for (const role of ["anon", "authenticated"]) {
+        assert.throws(() => postgres.sql(`set role ${role};select public.research_publication_v1('ready','{}'::jsonb);`, ordinary), /permission denied/);
+        assert.throws(() => postgres.sql(`set role ${role};select * from public.research_publication_catalog_seal;`, ordinary), /permission denied/);
+      }
     } else assert.fail(`Missing ordinary fixture observations for ${extension.file}`);
   }
   console.log(`PASS actual migration profiles: ${migrations.length} accepted native inputs preserved; ${profiles.extensions.map(extension => extension.file).join(', ')} refuse native and install separately on fresh ordinary storage`);

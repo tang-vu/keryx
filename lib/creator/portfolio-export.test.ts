@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { DatabaseSync } from "node:sqlite";
 import { SqliteAdapter } from "../db/sqlite-adapter";
+import { writeSqliteQueryRun } from "../db/query-run-record";
 import { RUN_PRIVACY_SQL } from "../db/run-privacy-sqlite";
 import { summariseEarnings } from "./earnings-export";
 import type { PaymentRecord } from "../types";
@@ -133,8 +134,11 @@ describe("actual creator portfolio export privacy boundary",()=>{
     if(active&&admitted){connection.exec(RUN_PRIVACY_SQL);await db.init();}
     for(const id of ["s1","s2"])await db.upsertSource({id,name:`Fixture ${id}`,walletAddress:wallet,authors:[],url:`${baseUrl}/${id}`,description:"Fixture",fetchPrice:0,tags:[],createdAt:"2026-10-12T00:00:00.000Z",active:id==="s1"});
     for(const [index,id] of ["private","unlisted","public"].entries()) {
-      await db.saveQueryRun({id,asker:`0x${"a".repeat(40)}`,createdAt:`2026-10-12T00:00:0${index}.000Z`,question:`QUESTION ${id}`,answer:`ANSWER ${id}`,
-        engine:"fixture",budget:0,totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[]});
+      const original = {id,asker:`0x${"a".repeat(40)}`,createdAt:`2026-10-12T00:00:0${index}.000Z`,question:`QUESTION ${id}`,answer:`ANSWER ${id}`,
+        engine:"fixture",budget:0,totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[]};
+      // Seed the retained original before privacy admission; the reader must still refuse.
+      if(active&&!admitted)writeSqliteQueryRun(connection,original,false);
+      else await db.saveQueryRun(original);
       if(active&&admitted)connection.prepare("UPDATE run_privacy SET visibility=? WHERE run_id=?").run(id,id);
       await db.recordPayment(payment({id:`payment-${id}`,queryId:id,sourceId:index===2?"s2":"s1",sourceName:index===2?"Fixture s2":"Fixture s1",payer:`0x${"a".repeat(40)}`,payee:wallet,
         amountUsdc:[0.000001,0.012345,0.300003][index],settled:index===0,settlementStatus:["settled","pending","failed"][index] as PaymentRecord["settlementStatus"],

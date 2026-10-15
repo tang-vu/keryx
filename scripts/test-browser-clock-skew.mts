@@ -49,6 +49,10 @@ try {
       const request = route.request(), path = new URL(request.url()).pathname;
       if (request.url() === "https://clock.test/") return route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' });
       if (path === "/api/auth/session") return route.fulfill({ json: { session: { address: owner, role: "asker" } } });
+      if (path === "/api/ask/visibility") {
+        assert.equal(request.method(), "GET", "Visibility context is read-only");
+        return route.fulfill({ json: { wallet: owner, defaultVisibility: "public", privacyActive: true } });
+      }
       if (path === "/api/models") return route.fulfill({ json: { models: [] } });
       if (path === "/api/research/availability") {
         assert.equal(request.method(), "GET", "Availability is read-only");

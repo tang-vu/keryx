@@ -3,12 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, expect, it, vi } from "vitest";
 import { calculateDashboardMetrics } from "../db/dashboard-metrics";
 
-const state = vi.hoisted(() => ({ metrics: null as unknown, history: [] as unknown[] | null, historyStatus: "ready", requests: [] as string[] }));
+const state = vi.hoisted(() => ({ metrics: null as unknown, history: [] as unknown[] | null, historyStatus: "ready",
+  publicCount: 0 as number | null, publicCountStatus: "ready", requests: [] as string[] }));
 vi.mock("@/lib/hooks/use-ledger-resource", () => ({ useLedgerResource: (url: string) => {
   state.requests.push(url);
-  const history = url.startsWith("/api/runs");
-  return { status: history ? state.historyStatus : "ready", observedAt: "2026-10-14T00:00:00Z", retry: () => {},
-    data: url === "/api/metrics" ? state.metrics : history ? state.history : [] };
+  const summary = url.startsWith("/api/runs/summary"), history = url.startsWith("/api/runs?");
+  return { status: summary ? state.publicCountStatus : history ? state.historyStatus : "ready", observedAt: "2026-10-14T00:00:00Z", retry: () => {},
+    data: url === "/api/metrics" ? state.metrics : summary ? state.publicCount === null ? null : { publicQuestions: state.publicCount } : history ? state.history : [] };
 } }));
 // Site navigation/custody providers are outside this dashboard rendering regression.
 vi.mock("@/components/keryx/site-header", () => ({ SiteHeader: () => null }));
@@ -19,19 +20,34 @@ import { browserPaymentProfile } from "../browser-payment-profile";
 beforeEach(() => {
   state.metrics = { metrics: { ...calculateDashboardMetrics([], []), totalQueries: 156 }, leaderboard: [] };
   state.history = []; state.historyStatus = "ready"; state.requests = [];
+  state.publicCount = 0; state.publicCountStatus = "ready";
 });
 
 it("distinguishes recorded activity from an empty current-network public listing", () => {
   const html = renderToStaticMarkup(createElement(DashboardView, { sourcePreview: null }));
   expect(html).toContain("156");
   expect(html).toContain("Recent public questions");
-  expect(html).toContain("Recorded totals include all recorded questions.");
+  expect(html).toContain("Recorded totals cover all saved activity in this database");
+  expect(html).toContain("public questions on");
   expect(html).toContain("No public questions to display.");
   expect(html).not.toContain("No dispatches yet");
   const url = new URL(state.requests.find(url => url.startsWith("/api/runs"))!, "https://keryx.invalid");
   expect(url.searchParams.get("network")).toBe(browserPaymentProfile().networkId);
   expect(url.searchParams.get("period")).toBe("all");
   expect(url.searchParams.has("archive")).toBe(false);
+});
+
+it("uses the complete public population and refuses to turn an unavailable count into zero", () => {
+  state.publicCount = 123;
+  state.history = [{ id: "one-row", question: "One row in this public page", createdAt: "2026-10-14T00:00:00Z", citationCount: 0, totalSpent: 0, totalToCreators: 0 }];
+  const ready = renderToStaticMarkup(createElement(DashboardView, { sourcePreview: null }));
+  expect(ready).toContain(">123</span> public questions on");
+  expect(ready).toContain(">156</span> recorded questions");
+  state.publicCount = null; state.publicCountStatus = "error";
+  const failed = renderToStaticMarkup(createElement(DashboardView, { sourcePreview: null }));
+  expect(failed).toContain("Public question count unavailable");
+  expect(failed).not.toContain(">0</span> public questions on");
+  expect(failed).toContain("One row in this public page");
 });
 
 it("shows available public questions and distinguishes a failed history read from an empty one", () => {
