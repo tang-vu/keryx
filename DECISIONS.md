@@ -8230,3 +8230,30 @@ asker compatibility while retaining exact SQL-asker authority. The affected nati
 controls, cap journey, types and current-source433-input canonical evidence pass.
 Required hosted CI, actual-store activation and original issue acceptance remain
 separate gates. No new financial or operational authority was added.
+
+## 2026-10-15 - Request-local account-consented owned history
+
+Connect the existing explicit account/history consent only to the authenticated
+interactive session that admitted it. Preserve wallet-only bearer/API-key scope
+and unconsented-session behavior. The selected DB is never given global history
+membership. Unsupported native account-history capability refuses rather than
+claiming ordinary/Supabase parity or inheriting another session's consent.
+
+Keep the first genuine private owner proof for each observed original. Bind its
+full semantic payload to the actual raw record, then capture typed raw ownership,
+privacy and claim/A2A inputs in the native journal's guarded read transaction.
+After all response serialization and awaited privacy/session checks, a one-use
+synchronous seal rechecks current membership/session generations and that exact
+witness. No await follows it. Bounds are 1,000 IDs, 4 MB per original, 16 MB total
+and the existing 25-second read deadline; overflow refuses. There is no new schema,
+financial operation, owner grant, provider or enduring authority cache.
+
+Distinct source review accepted the runtime with a required ordinary optional-port
+absence correction, now applied. Genuine native 29 cases, request-boundary four
+negatives, corrected ordinary real-session regression, the unchanged named graph
+observation and focused types pass; first failed captures remain recorded.
+One genuine current-main canonical run passed all 48 offline trials with 434
+physical source pins, zero outbound attempts and every non-source-map field equal
+to the incoming artifact. Exact-head required CI remains pending. This focused
+integration does not close all #267/#268 criteria or prove real Google/Circle user
+acceptance. See [the implementation boundary](docs/engineering/account-owned-history-consent-20261015.md).

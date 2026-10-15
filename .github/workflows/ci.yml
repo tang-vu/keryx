@@ -566,6 +566,36 @@ jobs:
           path: ${{ runner.temp }}/private-run-claim-built.json
           if-no-files-found: ignore
 
+      - name: Completed private history (compiled, isolated synthetic originals)
+        run: |
+          owned="$PWD/output/private-history268-built"
+          mkdir -p "$owned/temp" "$owned/tsx-cache"
+          env -i PATH="$PATH" HOME="$HOME" TEMP="$owned/temp" TMP="$owned/temp" TMPDIR="$owned/temp" TSX_CACHE_DIR="$owned/tsx-cache" KERYX_NETWORK=arcTestnet NEXT_PUBLIC_KERYX_NETWORK=arcTestnet KERYX_FORCE_OFFLINE=1 node --import tsx scripts/test-browser-private-history268-built.mts --dist="$PWD/.next" --output="$owned"
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFile } from "node:fs/promises";
+          const base = "output/private-history268-built/run/";
+          const evidence = JSON.parse(await readFile(base + "synthetic-evidence.json", "utf8"));
+          const closed = JSON.parse(await readFile(base + "natural-close.json", "utf8"));
+          const cases = ["normal-json-ack-and-two-tab-stale-fences", "local-workspace-unmount-has-no-peer-authority", "real-15s-abort-is-not-a-normal-ack", "vanished-publisher-real-20s-lease-and-fresh-epoch"];
+          assert.equal(evidence.results.length, 6);
+          for (const name of cases) assert.equal(evidence.results.filter(row => row.case === name && row.passed === true).length, 1);
+          for (const name of ["logout-abort", "receiver-lease"]) assert.equal(evidence.results.filter(row => row.observation === name).length, 1);
+          assert.equal(evidence.privateOriginalsUnchanged, true); assert.equal(evidence.externalAttempts, 0);
+          assert.equal(closed.mainFailureObserved, false); assert.equal(closed.cleanupFailureCount, 0);
+          for (const flag of ["listenerClosed", "browserCloseCompleted", "instrumentationClosed", "appClosed", "tracesFlushed"]) assert.equal(closed[flag], true);
+          NODE
+
+      - name: Retain compiled private history acceptance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: private-history268-built-${{ github.sha }}
+          path: |
+            output/private-history268-built/run/synthetic-evidence.json
+            output/private-history268-built/run/natural-close.json
+          if-no-files-found: ignore
+
       - name: Public transfer ledger (built API, sealed offline SQLite and production CSS)
         run: node --import tsx scripts/test-public-job-ledger-built.mts
 

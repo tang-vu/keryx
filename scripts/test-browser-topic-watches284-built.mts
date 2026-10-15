@@ -106,13 +106,12 @@ function observePage() {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, location.href);
     if (!hold || url.pathname !== "/api/me/topic-watches" || init?.method !== "POST") return response;
     hold = false; const bytes = new Uint8Array(await response.arrayBuffer());
-    assertNeverLarge(bytes.length);
+    if (bytes.length > 262144) throw Error("Synthetic body cap");
     return new Response(new ReadableStream<Uint8Array>({ start(controller) {
-      release = () => { controller.enqueue(bytes); controller.close(); state.released++; release = undefined; };
+      release = [() => { controller.enqueue(bytes); controller.close(); state.released++; release = undefined; }][0];
       state.held++;
     } }), { status: response.status, headers: response.headers });
   };
-  function assertNeverLarge(length: number) { if (length > 262144) throw Error("Synthetic body cap"); }
   observer = new MutationObserver(() => {
     const text = document.querySelector("main")?.textContent ?? "";
     if (state.afterClear && (text.includes(state.marker) || text.includes("created. Paid requests: 0."))) {
@@ -145,7 +144,8 @@ async function scenario(width: number, signedIn = true, heldSession = false) {
   assert(browser);
   const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce", serviceWorkers: "block" });
   const rows: Row[] = [], calls: Call[] = [];
-  let releaseSession!: () => void, sessionReads = 0;
+  let releaseSession!: () => void, sessionReads = 0, markSessionRequested!: () => void;
+  const sessionRequested = new Promise<void>(done => { markSessionRequested = done; });
   const sessionGate = new Promise<void>(done => { releaseSession = done; });
   if (!heldSession) releaseSession();
   context.on("page", page => page.on("pageerror", error => pageErrors.push(error.message)));
@@ -155,7 +155,7 @@ async function scenario(width: number, signedIn = true, heldSession = false) {
     if (url.origin !== origin) { externalAttempts.push(`${request.method()} ${url.origin}`); await route.abort("blockedbyclient"); return; }
     try {
       const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "no-store" }, body: JSON.stringify(body) });
-      if (url.pathname === session) { sessionReads++; await sessionGate; await json({ session: signedIn ? { address: wallet, role: "asker" } : null }); return; }
+      if (url.pathname === session) { sessionReads++; markSessionRequested(); await sessionGate; await json({ session: signedIn ? { address: wallet, role: "asker" } : null }); return; }
       if (["/api/me/locale-preference", "/api/payments", "/maintenance/status"].includes(url.pathname)) {
         assert.equal(request.method(), "GET"); await json({ error: "Synthetic incidental consumer unavailable" }, 503); return;
       }
@@ -187,7 +187,7 @@ async function scenario(width: number, signedIn = true, heldSession = false) {
       assert.equal(request.method(), "GET"); await route.continue();
     } catch (error) { failures.push(error instanceof Error ? error.message : String(error)); await route.abort("failed"); }
   });
-  return { context, rows, calls, releaseSession, sessionReads: () => sessionReads };
+  return { context, rows, calls, releaseSession, sessionRequested, sessionReads: () => sessionReads };
 }
 async function closeContext(context: BrowserContext) {
   const errors: unknown[] = [];
@@ -206,6 +206,17 @@ async function open(context: BrowserContext) {
 async function draft(page: Page, title: string) {
   await question(page).fill(title);
   await region(page).getByLabel(words["topicWatch.keywords"], { exact: true }).fill("transformer");
+}
+async function broadcastCleared(page: Page, privateTitle: string) {
+  // Actual foreign hints clear canonical session, unmounting the whole private editor.
+  const main = page.locator("main");
+  const signIn = main.getByRole("link", { name: words["topicWatch.signIn"], exact: true });
+  await signIn.waitFor(); assert.equal(await signIn.getAttribute("href"), "/connect");
+  assert.equal(await region(page).count(), 0); assert.equal(await main.locator("input").count(), 0);
+  assert.equal(await main.getByRole("heading", { name: words["topicWatch.editTitle"], exact: true }).count(), 0);
+  assert.equal(await main.getByText("created. Paid requests: 0.", { exact: true }).count(), 0);
+  assert(!(await main.textContent())?.includes(privateTitle));
+  assert(!(await main.textContent())?.includes("BROADCAST PRIVATE DRAFT"));
 }
 async function cleared(page: Page) {
   await region(page).getByRole("alert").getByText(words["topicWatch.accountChanged"], { exact: true }).waitFor();
@@ -262,6 +273,7 @@ try {
     try {
       const page = await open(s.context); await region(page).getByText(words["topicWatch.empty"], { exact: true }).waitFor();
       assert(s.calls.every(call => call.method === "GET"));
+      if (width < 1024) await page.locator('header button[aria-controls="mobile-site-menu"]').click();
       await page.locator("header").getByRole("button", { name: /asker/ }).click();
       const anchor = page.getByRole("menuitem", { name: words["topicWatch.menu"], exact: true });
       assert.equal(await anchor.getAttribute("href"), "/me/watches"); await page.keyboard.press("Escape");
@@ -284,8 +296,8 @@ try {
       await page.screenshot({ path: join(run, `manual-${width}.png`), fullPage: true }); results.push(`manual-${width}`);
     } finally { s.releaseSession(); await closeContext(s.context); }
   }
-  // Native same-origin peer clears drafts/results/editor; no private re-read until
-  // explicit Refresh. Canonical hooks may revalidate the synthetic same session.
+  // Foreign peer hints clear the entire canonical session/private editor without IO.
+  // Focus retains the editor invalidation path. Recovery requires explicit user action.
   for (const mode of ["draft-broadcast", "late-broadcast", "late-focus"] as const) {
     const s = await scenario(1366);
     try {
@@ -305,17 +317,28 @@ try {
       const privateReads = s.calls.filter(call => call.method === "GET").length;
       if (mode === "late-focus") await page.evaluate(() => window.dispatchEvent(new Event("focus")));
       else await peer.evaluate(() => { const channel = new BroadcastChannel("keryx-auth-v1"); channel.postMessage("changed"); channel.close(); });
-      await cleared(page); assert.equal(await region(page).getByRole("heading", { name: title, exact: true }).count(), 0);
-      assert.equal(await region(page).getByRole("checkbox", { name: words["topicWatch.heartbeat"], exact: true }).isChecked(), false);
-      assert.equal(await region(page).getByLabel(words["topicWatch.keywords"], { exact: true }).inputValue(), "");
+      if (mode === "late-focus") {
+        await cleared(page); assert.equal(await region(page).getByRole("heading", { name: title, exact: true }).count(), 0);
+        assert.equal(await region(page).getByRole("checkbox", { name: words["topicWatch.heartbeat"], exact: true }).isChecked(), false);
+        assert.equal(await region(page).getByLabel(words["topicWatch.keywords"], { exact: true }).inputValue(), "");
+      } else await broadcastCleared(page, title);
       if (mode !== "draft-broadcast") {
         await page.evaluate(() => { (window as FixtureWindow).watch284.cleared(); (window as FixtureWindow).watch284.release(); });
-        await button(page, words["topicWatch.refresh"]).and(page.locator(":enabled")).waitFor(); await flush(page); await cleared(page);
+        if (mode === "late-focus") await button(page, words["topicWatch.refresh"]).and(page.locator(":enabled")).waitFor();
+        await flush(page);
+        if (mode === "late-focus") await cleared(page); else await broadcastCleared(page, title);
         assert.deepEqual(await page.evaluate(() => (window as FixtureWindow).watch284.state.paints), []);
         assert.equal(await page.evaluate(() => (window as FixtureWindow).watch284.state.released), 1);
       }
       assert.equal(s.calls.filter(call => call.method === "GET").length, privateReads, "No private list refresh from hint/focus/late body");
-      await button(page, words["topicWatch.refresh"]).click(); await region(page).getByRole("heading", { name: title, exact: true }).waitFor();
+      if (mode === "late-focus") await button(page, words["topicWatch.refresh"]).click();
+      else {
+        const beforeReloadSessionReads = s.sessionReads();
+        const reloaded = await page.reload(); assert.equal(reloaded?.status(), 200);
+        await region(page).getByRole("heading", { name: title, exact: true }).waitFor();
+        assert(s.sessionReads() > beforeReloadSessionReads, "Explicit reload obtains fresh server session");
+      }
+      await region(page).getByRole("heading", { name: title, exact: true }).waitFor();
       assert.equal(await consent(page).isChecked(), false); assert.equal(await region(page).getByText("created. Paid requests: 0.", { exact: true }).count(), 0);
       results.push(mode);
     } finally { s.releaseSession(); await closeContext(s.context); }
@@ -324,6 +347,12 @@ try {
   try {
     const page = await open(anonymous.context);
     await page.locator("main").getByText(words["topicWatch.checking"], { exact: true }).waitFor();
+    let sessionRequestDeadline: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([anonymous.sessionRequested, new Promise<never>((_done, fail) => {
+        sessionRequestDeadline = setTimeout(() => fail(new Error("Initial synthetic session request did not arrive within existing 10000ms bound")), 10000);
+      })]);
+    } finally { if (sessionRequestDeadline !== undefined) clearTimeout(sessionRequestDeadline); }
     assert(anonymous.sessionReads() > 0); assert.equal(await region(page).count(), 0);
     assert.equal(await page.locator("main input").count(), 0); assert.equal(anonymous.calls.length, 0);
     anonymous.releaseSession();

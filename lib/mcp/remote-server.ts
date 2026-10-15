@@ -33,6 +33,9 @@ import { registerObligationInspection } from "../operator-obligations/mcp";
 import { readDelegatedOperatorObligations } from "../operator-obligations/delegated";
 import { registerHistoryTool } from "../history/personal-history-mcp";
 import { registerOwnedHistoryTools } from "../history/owned-history-mcp";
+import { createPrivateJobHistoryRead, registerPrivateJobHistoryTools } from "../history/private-job-history-mcp";
+import { readPrivateJobHistory, readPrivateJobHistoryDetail, exportPrivateJobHistory } from "../history/private-job-history";
+import { guardPrivateJobHistoryPage, guardPrivateJobHistoryDetail, guardPrivateJobHistoryExport } from "../history/private-job-history-client";
 import { readOwnedHistory } from "../history/owned-history-reader";
 import { exportOwnedHistory } from "../history/owned-history-export";
 import { requirePersonalHistory } from "../history/personal-history";
@@ -250,6 +253,18 @@ export function createRemoteMcpServer(
   };
   registerOwnedHistoryTools(server, input => ownedHistoryRead(db => readOwnedHistory(db, access.actor!, privacyBinding(), input, access.signal)),
     input => ownedHistoryRead(db => exportOwnedHistory(db, access.actor!, privacyBinding(), input, access.signal)));
+  const privateHistoryRead = createPrivateJobHistoryRead(access, getDb);
+  registerPrivateJobHistoryTools(server, {
+    current: privateHistoryRead.current,
+    list: (input, call) => privateHistoryRead.read(async (db, owner, options) =>
+      guardPrivateJobHistoryPage(await readPrivateJobHistory(db, owner, input, options), input, owner), false, call?.signal),
+    detail: ({ id }, call) => privateHistoryRead.read(async (db, owner, options) => {
+      const value = await readPrivateJobHistoryDetail(db, owner, id, options);
+      return value === null ? null : guardPrivateJobHistoryDetail(value, id, owner);
+    }, false, call?.signal),
+    export: (input, call) => privateHistoryRead.read(async (db, owner, options) =>
+      guardPrivateJobHistoryExport(await exportPrivateJobHistory(db, owner, input, options), input, owner), true, call?.signal),
+  });
   registerRunPrivacyRead(server,async(id,requestId)=>{
     if(!access.actor||!access.historyScopes?.includes("history:read"))throw new Error("Explicit history scope required");
     const db=await getDb(),actor={wallet:privacyWallet.parse(access.actor),binding:privacyBinding()},store=requirePrivacy(db);

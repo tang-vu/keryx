@@ -6,6 +6,7 @@ import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messag
 import { createMessages } from "@/lib/i18n/messages";
 
 import Link from "next/link";
+import { ownedHistoryCopy } from "@/locales/en/owned-history";
 import { useEffect, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { readBoundedJson } from "@/lib/read-bounded-json";
@@ -23,6 +24,7 @@ export function ResearchPrivateJobs() {
     <h2 id="private-jobs-heading" className="font-display text-3xl">{message("privateResearchJobs.title")}</h2>
     <p className="mt-3 font-serif text-sm text-ink-2">{message("privateResearchJobs.introduction")}</p>
     <p className="mt-2 font-serif text-sm text-ink-3">{message(browserPaymentProfile().testnet ? "privateResearchJobs.pilotNotice" : "privateResearchJobs.capacityNotice")}</p>
+    <Link href="/me/private-jobs" prefetch={false} className="mt-3 inline-block text-sm underline">{ownedHistoryCopy.privateJobs.page.link}</Link>
     {session === undefined ? <p role="status" className="mt-4">{message("privateResearchJobs.checkingSignIn")}</p> : session
       ? <PrivateJobs key={session.address.toLowerCase()} wallet={session.address.toLowerCase()} />
       : <Link href="/connect" className="mt-4 inline-block underline">{message("privateResearchJobs.signIn")}</Link>}

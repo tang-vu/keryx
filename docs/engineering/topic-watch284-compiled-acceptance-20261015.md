@@ -114,3 +114,23 @@ through required CI and merge, then include it in the existing deployment batch.
 The raw before/after/whole inverses, closure inputs and protected pins are recorded
 in `output/compiled-catalogue-handoff.json`; no output-only proposal is silently
 presented as applied source.
+
+
+## Actual current-main first compiled observation
+
+Current ae0eae source built once successfully (94dT2my0lyGmB9oShzBUv). The first compiled control exited 1 naturally after 91.692s with all five owned cleanup facts true, no external request continued, and no scenario accepted. It timed out at the first phone header account lookup; the actual responsive header keeps that account control in the collapsed mobile menu. Two page errors also recorded `__name is not defined`. An isolated definition-only fragment through the same installed Node/tsx confirmed that the named inner body-cap helper and assigned release callback escaped into serialized browser code; inlining the identical cap and retaining an unnamed release callback remove only those naming-helper dependencies. The successor opens the existing mobile header menu and retains the exact wallet/menuitem assertion. No shipped UI, guard, request/body cap, deadline or canonical auth implementation changes.
+
+The corrected driver/browser cases and required CI remain UNRUN. The existing successful build is eligible only after physical comparison proves that these driver/document changes do not change compiled application inputs; no runtime speed or Linux/production acceptance is inferred.
+
+
+Observed current-main foreign BroadcastChannel hint: canonical useSiweAuth clears the session, removing the entire private editor. The first diagnostic retained the original 10-second failure, zero page errors and unchanged private GET count (3 to 3); the old editor alert was absent because the whole region was absent. The external driver now requires the exact /connect sign-in affordance, no private region/input/draft/result and no hint-triggered private reads. A held late response must still produce no stale paint. Recovery uses an explicit browser reload and a fresh synthetic server session/list; the focus case retains its original editor/alert/Refresh assertions. This changes only the external acceptance driver/documentation, with actual affected compiled acceptance still pending. The previously qualified build remains reusable only while application/configuration/dependency/compiled inputs stay exact.
+
+
+The remaining anonymous compiled case observed its checking text before hydration started the first session request. It now awaits a fixture acknowledgment raised only at the actual intercepted session-route entry, bounded by the existing 10000ms deadline with the timer cleared in finally. The response remains held, all prior no-private-markup/no-private-IO/sign-in assertions remain, and the real browser hook must issue the request. No auth state is fabricated. The earlier two manual and three authentication classes remain separately qualified; this tiny external-driver correction still requires the one affected anonymous class and changed types.
+
+
+## Qualified focused acceptance, 2026-10-15
+
+The single retained build `94dT2my0lyGmB9oShzBUv` passed in 62.659s. All six distinct compiled scenarios are now qualified: the two manual journeys at 360px and 1366px, the three BroadcastChannel/late-body/focus scenarios, and the held anonymous-session scenario. The final anonymous-only successor passed naturally in 73.613s after acknowledging actual session-route entry. Earlier failures and their original captures remain retained; the successful classes were reused rather than replayed. All owned cleanup checks completed and no external request continued.
+
+These are synthetic browser API/session controls of the real compiled watch UI and canonical auth hooks. The later OpenAPI additions are outside that build claim; exact-head required CI must build the complete final source. Native/storage, 11 migration controls, mounted contract controls and financial refusals remain separately qualified. This increment supplies manual zero-spend metadata management only. Scheduling, funded discovery and original issue completion are not claimed; merge and one batch deployment remain coordinator-owned.

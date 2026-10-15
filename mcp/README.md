@@ -1,5 +1,44 @@
 # Keryx MCP
 
+The ORIGINAL268 **NEXT source candidate** adds `history_private_jobs_list`,
+`history_private_jobs_detail` and `history_private_jobs_export` to both MCP
+registrations. **Current published 0.4.20 does not contain these tools.** No new
+package/version, artifact URL, installed availability or production delivery is
+claimed. Parent review, focused checks, required CI and exact-source packed MCP
+acceptance/publication remain required.
+
+In this source checkout, the stdio registration uses an explicit `KERYX_API_KEY`
+whose live server key has `history:read`. It calls only the existing HTTPS POST
+`/api/me/private-jobs`, `/detail` and `/export` JSON contracts. No wallet private
+key, buyer wallet, cookie, chat/client label or expected-wallet precondition grants
+history ownership. The expected wallet can only refuse a mismatch. The remote
+registration uses the verified request actor and original request-local history
+revalidator before Db acquisition, after it and after private reading.
+
+These are owner-private responses; an MCP desktop/agent client may retain tool
+messages. List is a finite exact-payer completed-job scan; detail is an explicit
+private answer read without public report/share links or automatic research/model
+submission; export returns bounded JSON metadata with `complete`, `truncated`
+and continuation. Own settled spend, creator rewards and paid creators remain
+NULL, and missing recorded provenance stays unknown. No research, source fetch,
+signer, purchase, database mutation, retry or alternate credential is used by these
+tools. Existing paid tools retain their separate roles.
+
+The source-only CLI adapter is available at `scripts/private-job-history.mts`:
+
+```sh
+node --import tsx scripts/private-job-history.mts --help
+node --import tsx scripts/private-job-history.mts list --limit 25
+node --import tsx scripts/private-job-history.mts detail --id 'prv_<64-lowercase-hex>'
+node --import tsx scripts/private-job-history.mts export --format csv
+```
+
+The last three commands print private data for the authenticated caller. Supply
+the history key through the caller's existing private environment; never paste it
+into flags, URLs or a model prompt. The CLI loads no envfile and uses fixed
+`https://keryx.cc`; metadata CSV protects formula-leading text. See [source roles,
+UNRUN fixtures and original268 remaining gates](../docs/engineering/private-job-history268-client-surfaces-2026-10-14.md).
+
 `evidence_procurement` prepares private missing-evidence requests, compares signed
 provider quotations within an integer quote budget, checks separately signed
 delivered bytes and retains explicit supporting/refuting reviews. Exported packets

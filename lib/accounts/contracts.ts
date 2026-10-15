@@ -1,4 +1,7 @@
 import { z } from "zod";
+import type { QueryRun } from "../types";
+import type { PrivacyState } from "../run-privacy/contracts";
+import type { RunOwnership } from "../run-claims/history";
 
 export const MEMBERSHIP_TTL_MS = 300_000;
 export const MAX_ACCOUNT_WALLETS = 8;
@@ -46,6 +49,17 @@ export const snapshotSchema = z.object({ membership: membershipSchema, session: 
   memberGeneration: digestSchema, credentialGeneration: digestSchema, binding: bindingSchema,
 }).strict();
 export type AccountSnapshot = z.infer<typeof snapshotSchema>;
+/** Private request-local observations from the genuine owner port, never JSON input. */
+export interface AccountHistoryObservation {
+  id: string;
+  ownerWallet: string;
+  run: QueryRun;
+  state: PrivacyState;
+  /** Present only when that attribution is part of a returned list/export row. */
+  ownership?: RunOwnership;
+}
+/** One-use native synchronous check. No IO may be awaited after invoking it. */
+export type AccountHistorySeal = () => void;
 export const preconditionSchema = z.object({ accountId: accountIdSchema, revision: revisionSchema }).strict();
 export type AccountPrecondition = z.infer<typeof preconditionSchema>;
 
@@ -74,4 +88,6 @@ export interface AccountMembershipStore {
   unlink(snapshot: AccountSnapshot, wallet: string, generation: string): Promise<Membership | null>;
   revokeSession(snapshot: AccountSnapshot): Promise<void>;
   assertCurrent(snapshot: AccountSnapshot): Promise<void>;
+  /** Optional native capability only; absence cannot authorize account history. */
+  prepareHistoryFence?(snapshot: AccountSnapshot, observed: readonly AccountHistoryObservation[], deadline: number): Promise<AccountHistorySeal>;
 }
