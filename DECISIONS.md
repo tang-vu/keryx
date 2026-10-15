@@ -8266,3 +8266,34 @@ Use separate default-off interactive account-history consent for a NEW browser p
 Compose the reviewed predeadline observer without changing its single lock/channel/reservation or original 180/300-second clock. Project only bounded existing exact-original recovery facts after genuine current owner/session proof; missing/ambiguous facts stay unknown. Actual job details mount a metadata reader by validated job ID as selector only. Separate finite request deadlines and active body cancellation prevent stale/stalled mounted observation; no payment/recovery action or new external scheduler is added.
 
 SOURCE AUTHORED, tests/types/build/CI UNRUN. Original257 stays open through independent payment review, real focused controls and remaining paid/vendor/product acceptance. Parent263 owns the future compiled native-family bound, and ROOT retains sole merge/release coordination and batched delivery. See [the source correction and remaining gates](docs/engineering/job-target257-authenticated-pending-owner-20261015.md).
+
+## 2026-10-15 - Public ordinary research with explicit creation visibility
+
+The owner approved ordinary research as public by default, with Public, Unlisted
+and Private visible before browser submission. This supersedes the October 12
+blanket policy that historical and unowned runs are unlisted and newly owned runs
+default private. Preserve every explicit saved account preference, per-run choice,
+visibility audit and erasure. Signing in alone does not make research private.
+Private creation requires a verified owner; a follow-up cannot publish a hidden
+parent's context under a more public setting. The separate private-job pilot and
+its financial and custody authority remain unchanged.
+
+Capture and validate creation intent before inference or payment. Persist the
+unchanged original and its first visibility sidecar atomically; resaving cannot
+reinterpret retained visibility or publish a historical record missing metadata.
+Unsupported active writers refuse before research starts. With privacy inactive,
+ordinary Public creation retains its admitted legacy writer and hidden choices
+are unavailable. Browser account changes invalidate hidden drafts and history.
+
+Restore historically public ordinary research only through explicit content review
+bound to exact originals and related public projections. Insert missing sidecars
+in one guarded transaction, preserving originals, financial journals, saved
+defaults, explicit choices and excluded/private records. Application startup,
+reads, resaves and deployment do not implicitly approve a backfill.
+
+Report the complete bounded public question population separately from all recorded
+activity and recent examples. Keep absent network/cohort provenance unknown;
+recorded scripted runs stay excluded from the default public population. Unavailable
+reads are unavailable, without a fabricated zero. ROOT owns the reviewed restoration
+and one combined release after source review and required CI. See
+[the implementation and operator boundary](docs/engineering/public-research-visibility-2026-10-15.md).

@@ -11,11 +11,11 @@
   "totals": {
     "englishNamespaceFiles": 62,
     "coreInlineSources": 1,
-    "extractedLeaves": 5733,
-    "authoredEntries": 5559,
+    "extractedLeaves": 5754,
+    "authoredEntries": 5571,
     "nonTranslatableMachineIdentifiers": 21,
-    "uncoveredEntries": 153,
-    "completeNamespaces": 58
+    "uncoveredEntries": 162,
+    "completeNamespaces": 56
   },
   "namespaces": [
     {
@@ -1774,10 +1774,10 @@
     {
       "namespace": "ledger",
       "sourcePath": "locales/en/ledger.ts",
-      "sourceSha256": "e944e80db5ebdc3b319cc8fb68fc232dfc1865525d184428803fb18c250d8f05",
+      "sourceSha256": "f72696cced220e11978636eb93d52336a68c81971ee0901a42663b0f9498f736",
       "draftPath": "locales/vi/ui-drafts/ledger.json",
-      "extractedLeaves": 95,
-      "authoredEntries": 95,
+      "extractedLeaves": 101,
+      "authoredEntries": 100,
       "coveredKeys": [
         "ledgerPage.loadingHistory",
         "ledgerPage.loadingSources",
@@ -1811,6 +1811,7 @@
         "ledgerPresentation.pending.other",
         "ledgerPresentation.proofEyebrow",
         "ledgerPresentation.publicHistoryBoundary",
+        "ledgerPresentation.publicQuestionCount",
         "ledgerPresentation.questionRecords",
         "ledgerPresentation.questionsLoading",
         "ledgerPresentation.questionsUnavailable",
@@ -1833,6 +1834,10 @@
         "ledgerRecorded.guests.current.other",
         "ledgerRecorded.guests.stale.one",
         "ledgerRecorded.guests.stale.other",
+        "ledgerRecorded.public.current.one",
+        "ledgerRecorded.public.current.other",
+        "ledgerRecorded.public.stale.one",
+        "ledgerRecorded.public.stale.other",
         "ledgerRecorded.questions.current.one",
         "ledgerRecorded.questions.current.other",
         "ledgerRecorded.questions.stale.one",
@@ -1876,7 +1881,9 @@
         "paymentRecords.transferTitle"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [],
+      "uncoveredKeys": [
+        "ledgerPresentation.recordedBoundary"
+      ],
       "sourceAliases": {}
     },
     {
@@ -4035,10 +4042,10 @@
     {
       "namespace": "research-flow",
       "sourcePath": "locales/en/research-flow.ts",
-      "sourceSha256": "b23cae7bd717df2f90968e5e9f08414aed07bb05d41a39c0737ef3a777dfb827",
+      "sourceSha256": "188fce0014756dde2b237f3f1db91111930066a115d3f454eab4c21352c40f5f",
       "draftPath": "locales/vi/ui-drafts/research-flow.json",
-      "extractedLeaves": 286,
-      "authoredEntries": 286,
+      "extractedLeaves": 301,
+      "authoredEntries": 293,
       "coveredKeys": [
         "agentIntegration.copied",
         "agentIntegration.copy",
@@ -4253,6 +4260,13 @@
         "researchTurn.summary.other",
         "researchTurn.summaryWithUnsettled.one",
         "researchTurn.summaryWithUnsettled.other",
+        "researchVisibility.label",
+        "researchVisibility.loading",
+        "researchVisibility.openResearch",
+        "researchVisibility.private",
+        "researchVisibility.public",
+        "researchVisibility.retry",
+        "researchVisibility.unlisted",
         "savedResearch.acknowledgementNotice",
         "savedResearch.close",
         "savedResearch.confirmRemoval",
@@ -4328,7 +4342,16 @@
         "walletResearch.walletMismatch"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [],
+      "uncoveredKeys": [
+        "researchVisibility.embedNotice",
+        "researchVisibility.followUp",
+        "researchVisibility.privateNotice",
+        "researchVisibility.publicNotice",
+        "researchVisibility.questionOnly",
+        "researchVisibility.signIn",
+        "researchVisibility.unavailable",
+        "researchVisibility.unlistedNotice"
+      ],
       "sourceAliases": {}
     },
     {

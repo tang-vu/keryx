@@ -69,6 +69,8 @@ async function checkSigningDisplay() {
         apiGets.push(url.pathname);
         if (url.pathname === "/api/auth/session") return route.fulfill({ status: 200,
           json: { session: { address: `0x${"11".repeat(20)}`, role: "reader" } } });
+        if (url.pathname === "/api/ask/visibility") return route.fulfill({ json: {
+          wallet: `0x${"11".repeat(20)}`, defaultVisibility: "public", privacyActive: true } });
         if (url.pathname === "/api/models") return route.fulfill({ json: { models: [] } });
         if (url.pathname === "/api/research/availability") return route.fulfill({ json: { state: "not-paused" } });
         if (url.pathname === "/api/onramp/session") return route.fulfill({ json: { available: false } });
@@ -171,6 +173,7 @@ try {
       }
       if (url.pathname === "/api/activation") return route.fulfill({ json: {} });
       assert.equal(request.method(), "GET", `Unexpected write: ${url.pathname}`);
+      if (url.pathname === "/api/ask/visibility") return route.fulfill({ json: { wallet: null, defaultVisibility: "public", privacyActive: true } });
       if (url.pathname === "/api/models") return route.fulfill({ json: { models: [{ id: "deepseek", label: "DeepSeek", note: "Default" }, { id: "fixture-model", label: "Fixture model", note: "Synthetic" }] } });
       if (url.pathname === "/api/research/availability") return route.fulfill({ json: { state: "not-paused" } });
       if (url.pathname === "/api/auth/session") return route.fulfill({ json: { authenticated: false } });

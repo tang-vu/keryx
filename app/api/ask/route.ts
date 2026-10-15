@@ -31,8 +31,10 @@ import { checkRateLimit, clientIp } from "@/lib/rate-limit";
 import { checkSponsoredResearchAdmission } from "@/lib/sponsored-admission";
 import { getDb } from "@/lib/db";
 import { resolveDispatch } from "@/lib/history/read-dispatch";
-import { privacyReadsActive } from "@/lib/run-privacy/contracts";
+import { privacyReadsActive, type RunVisibility } from "@/lib/run-privacy/contracts";
 import { privacyBinding } from "@/lib/run-privacy/auth";
+import { prepareAskPublication } from "@/lib/run-privacy/ask-publication";
+import { PublicationError } from "@/lib/run-privacy/publication";
 import { buildFollowUpQuestion } from "@/lib/agent/follow-up-question";
 import { getGrant } from "@/lib/payments/session-grants";
 import { isPaymentRecord } from "@/lib/payments/payment-state";
@@ -53,7 +55,7 @@ import { isConfiguredSameOrigin } from "@/lib/auth-origin";
 import { createLiveDecisionReviews } from "@/lib/research/decision-review-live";
 import { unsupportedDecisionReviewIntent, type DecisionReviewsStore } from "@/lib/research/decision-review-types";
 import { hostedRunClaimsEnabled, prepareHostedRunClaim } from "@/lib/run-claims/hosted-delivery";
-import { admitsPrivateAsk } from "@/lib/run-claims/web-document";
+import { admitsPrivateAsk, PRIVATE_DOCUMENT_HEADER } from "@/lib/run-claims/web-document";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -114,18 +116,20 @@ export async function POST(req: NextRequest) {
   // unknown parent id degrades to a standalone ask rather than failing the dispatch.
   const asker = (await getSession())?.address?.toLowerCase();
   let parentId: string | undefined;
+  let parentVisibility: RunVisibility | undefined;
   let askQuestion = question;
   const requestedParentId =
     typeof body.parentId === "string" && body.parentId.trim() && body.parentId.trim().length <= 256 ? body.parentId.trim() : undefined;
   if (requestedParentId) {
     const parentDb=await getDb();
-    const parent = (await resolveDispatch(requestedParentId,parentDb,asker&&privacyReadsActive(parentDb) ? {wallet:asker,binding:privacyBinding()} : undefined))?.run;
+    const parent = await resolveDispatch(requestedParentId,parentDb,asker&&privacyReadsActive(parentDb) ? {wallet:asker,binding:privacyBinding()} : undefined);
     if (parent) {
-      parentId = parent.id;
+      parentId = parent.run.id;
+      parentVisibility = parent.visibility;
       // Historical rows predate the input bound. Keep one old dispatch from expanding a new model
       // prompt without limit while preserving enough context for a useful follow-up.
       askQuestion = buildFollowUpQuestion(
-        parent.question.slice(0, MAX_ASK_QUESTION_CHARS),
+        parent.run.question.slice(0, MAX_ASK_QUESTION_CHARS),
         question,
       );
     }
@@ -189,6 +193,13 @@ export async function POST(req: NextRequest) {
   const reviewSession = body.reviewFirst === true ? await accountSessionContext() : undefined;
   if (reviewSession instanceof Response) return reviewSession;
   if (reviewSession && reviewSession.wallet !== asker) return Response.json({ error: "review_owner_changed" }, { status: 409 });
+  let publication: Awaited<ReturnType<typeof prepareAskPublication>>;
+  try { publication = await prepareAskPublication(req, body.visibility, asker, parentVisibility); }
+  catch (error) {
+    return Response.json({ error: error instanceof PublicationError ? error.code : "visibility_unavailable",
+      message: error instanceof PublicationError ? error.message : "Question visibility is unavailable. Please try again." },
+    { status: error instanceof PublicationError ? error.status : 503, headers: { "Cache-Control": "private, no-store", "Vary": "Cookie, X-Keryx-Expected-Wallet" } });
+  }
   let questionCapUsdc = config.sessionAskMaxBudget;
   if (useBrowserCoSign && grant && config.profile.name === "arc") {
     try {
@@ -240,9 +251,12 @@ export async function POST(req: NextRequest) {
   const isBot = !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
   const queryId = crypto.randomUUID();
   let privateClaim: Awaited<ReturnType<typeof prepareHostedRunClaim>> | undefined;
-  if (hostedRunClaimsEnabled() && !asker && !isBot) {
-    if (!admitsPrivateAsk(req, { origin: config.baseUrl, network: config.networkId }, config.jwtSecret))
-      return Response.json({ error: "private_research_document_required" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  const privateClaimRequested = req.headers.has(PRIVATE_DOCUMENT_HEADER);
+  if (privateClaimRequested && !hostedRunClaimsEnabled())
+    return Response.json({ error: "claims_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  if (privateClaimRequested && !admitsPrivateAsk(req, { origin: config.baseUrl, network: config.networkId }, config.jwtSecret))
+    return Response.json({ error: "private_research_document_required" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  if (privateClaimRequested && !asker && !isBot) {
     try { privateClaim = await prepareHostedRunClaim(queryId); }
     catch { return Response.json({ error: "claims_unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } }); }
   }
@@ -333,7 +347,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (agentAbort.signal.aborted) throw new DOMException("Research cancelled", "AbortError");
-        send("meta", { engine: deps.engine.name, mode: deps.gateway.mode, researchMode, ...(reviewAdapter ? { reviewOwner: asker } : {}) });
+        send("meta", { engine: deps.engine.name, mode: deps.gateway.mode, researchMode, visibility: publication.visibility,
+          ...(publication.visibility === "private" ? { visibilityOwner: asker } : {}), ...(reviewAdapter ? { reviewOwner: asker } : {}) });
         // Preserve the execution origin for audit. A manual internal client with the bot key
         // can be tagged `engine`; ordinary requests through this route are tagged `web`.
         const gen = runAgent(
@@ -389,7 +404,8 @@ export async function POST(req: NextRequest) {
             // never let it total up as the user's spend.
             run.askerFunded = useBrowserCoSign;
           }
-          await deps.db.saveQueryRun(run);
+          if (publication.privacyActive) await deps.db.saveQueryRun(run, { visibility: publication.visibility });
+          else await deps.db.saveQueryRun(run);
           // Saved original and payment state remain separate from the one-shot
           // caller-private transport. A late claim failure preserves the answer.
           const claimPacket = await privateClaim?.complete(run);
@@ -417,8 +433,8 @@ export async function POST(req: NextRequest) {
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": reviewStore || privateClaim ? "private, no-store, no-transform" : "no-cache, no-transform",
-      ...(reviewStore || privateClaim ? { "Vary": "Cookie", "Referrer-Policy": "no-referrer" } : {}),
+      "Cache-Control": reviewStore || privateClaim || publication.visibility !== "public" ? "private, no-store, no-transform" : "no-cache, no-transform",
+      ...(reviewStore || privateClaim || publication.visibility !== "public" ? { "Vary": "Cookie, X-Keryx-Expected-Wallet", "Referrer-Policy": "no-referrer" } : {}),
       Connection: "keep-alive",
       // Disable proxy response buffering so the live reasoning trace streams token-by-token
       // instead of arriving in one batch at the end. Honored by nginx and by the Cloudflare

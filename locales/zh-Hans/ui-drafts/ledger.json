@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ledger.ts",
-  "sourceSha256": "e944e80db5ebdc3b319cc8fb68fc232dfc1865525d184428803fb18c250d8f05",
+  "sourceSha256": "f72696cced220e11978636eb93d52336a68c81971ee0901a42663b0f9498f736",
   "entries": {
     "ledgerResource.loading": {
       "source": "Loading {label}…",
@@ -377,12 +377,32 @@
       "text": "{count} 天"
     },
     "ledgerPresentation.publicHistoryBoundary": {
-      "source": "Recorded totals include all recorded questions. This list shows only questions made public and excludes scripted runs.",
-      "text": "记录总数包含所有已记录的问题。此列表仅显示已公开的问题，并排除脚本运行。"
+      "source": "The public count and this list use verified {network} records and exclude recorded scripted runs. Browse past answers for public research across the archive.",
+      "text": "???????????????? {network} ?????????????????????????????????"
     },
     "ledgerPresentation.noPublicQuestions": {
       "source": "No public questions to display.",
       "text": "暂无可显示的公开问题。"
+    },
+    "ledgerPresentation.publicQuestionCount": {
+      "source": "Public question count",
+      "text": "公开问题数"
+    },
+    "ledgerRecorded.public.current.one": {
+      "source": "{count} public question on {network}",
+      "text": "{count} 个公开问题，位于 {network}"
+    },
+    "ledgerRecorded.public.current.other": {
+      "source": "{count} public questions on {network}",
+      "text": "{count} 个公开问题，位于 {network}"
+    },
+    "ledgerRecorded.public.stale.one": {
+      "source": "{count} public question on {network} · last successful read",
+      "text": "{count} 个公开问题，位于 {network} · 最近一次成功读取"
+    },
+    "ledgerRecorded.public.stale.other": {
+      "source": "{count} public questions on {network} · last successful read",
+      "text": "{count} 个公开问题，位于 {network} · 最近一次成功读取"
     }
   }
 }

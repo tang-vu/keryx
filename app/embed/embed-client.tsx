@@ -1,4 +1,6 @@
 "use client";
+import { useResearchVisibility } from "@/lib/hooks/use-research-visibility";
+import { ResearchVisibilityPicker } from "@/components/keryx/research-visibility-picker";
 
 /**
  * Compact ask UI meant to live inside a ~380px iframe on a creator's own site
@@ -54,6 +56,8 @@ export function EmbedClient() {
   }, [sourceId]);
 
   const { state, ask } = useAskStream();
+  const visibility = useResearchVisibility();
+  const publicReady = visibility.ready && visibility.visibility === "public";
   const { availability, checking, refresh } = useResearchAvailability();
   const [question, setQuestion] = useState("");
   const [dismissedPause, setDismissedPause] = useState(false);
@@ -76,7 +80,10 @@ export function EmbedClient() {
     e.preventDefault();
     const q = question.trim();
     // budget 0 → the server applies its default, clamped to the anonymous cap
-    if (q && !streaming && !checking && !researchPaused) { setDismissedPause(false); void ask(q, 0); }
+    const publication = visibility.getSelection();
+    if (q && !streaming && !checking && !researchPaused && publication?.visibility === "public") {
+      setDismissedPause(false); void ask(q, 0, undefined, undefined, undefined, undefined, undefined, undefined, publication);
+    }
   };
 
   return (
@@ -116,17 +123,19 @@ export function EmbedClient() {
           <a href={`${origin}/me/asks`} target="_blank" rel="noopener noreferrer" className="mr-3 underline">{message("embedResearch.savedReports")}</a>
           <button type="button" onClick={() => void checkAvailability()} disabled={checking} className="min-h-11 underline">{message("embedResearch.checkAvailability")}</button>
         </div>
+        <ResearchVisibilityPicker preference={visibility} disabled={streaming} allowedVisibilities={["public"]} />
+        <p className="text-xs text-ink-2">{message("researchVisibility.embedNotice")} <a href={`${origin}/research`} target="_blank" rel="noopener noreferrer" className="underline">{message("researchVisibility.openResearch")}</a></p>
         <form onSubmit={submit} className="flex gap-2">
           <input
-            value={question}
+            value={publicReady ? question : ""}
             onChange={(e) => setQuestion(e.target.value)}
             placeholder={message("embedResearch.placeholder")}
-            disabled={streaming}
+            disabled={streaming || !publicReady}
             className="min-w-0 flex-1 border border-ink bg-paper px-3 py-2 font-serif text-[14px] text-ink placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-seal disabled:opacity-60"
           />
           <button
             type="submit"
-            disabled={streaming || checking || researchPaused || !question.trim()}
+            disabled={streaming || checking || researchPaused || !publicReady || !question.trim()}
             className="shrink-0 border border-ink bg-ink px-3.5 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-paper transition-opacity disabled:opacity-50"
           >
             {streaming ? "…" : message("embedResearch.submit")}

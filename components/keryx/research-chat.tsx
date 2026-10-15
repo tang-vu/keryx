@@ -4,7 +4,7 @@ import { createMessages } from "@/lib/i18n/messages";
 
 const message = createMessages("en");
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { buildSourceIndex, type SourceIndex } from "@/lib/payments/client-payto-allowlist";
 import { useAskStream } from "@/lib/hooks/use-ask-stream";
 import { AskForm } from "./ask-form";
@@ -17,6 +17,12 @@ import { createPrivateClaimHandoff, type PrivateClaimStatus } from "@/lib/run-cl
 import { readPrivateDocument } from "@/lib/run-claims/web-bootstrap";
 import { privateResearchCopy } from "@/locales/en/run-claim-research";
 import { productGuideCopy } from "@/locales/en/product-guide";
+import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/hooks/use-research-visibility";
+import type { AskStreamState } from "@/lib/hooks/use-ask-stream";
+
+type ScopedTurn = ResearchTurnData & { publication: ResearchPublicationSelection; ownerRevision: number };
+type ScopedRequest = Omit<ScopedTurn, "state">;
+const hidden = (turn: ScopedRequest, state: AskStreamState) => turn.publication.visibility !== "public" || !!state.meta?.visibility && state.meta.visibility !== "public";
 
 export function ResearchChat({ paidHref = "/research#paid-research", showLaunchBadge = false, privateClaims = false, introduceProduct = false }: { paidHref?: string; showLaunchBadge?: boolean; privateClaims?: boolean; introduceProduct?: boolean }) {
   const [privateHandoff] = useState(() => createPrivateClaimHandoff({ origin: () => window.location.origin,
@@ -36,8 +42,8 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
   }, [privateClaims, privateHandoff]);
   const [grantBinding, setGrantBinding] = useState<SessionGrantBinding>({ sessionId: null, getSessionWalletClient: () => null });
   const [sourceIndex, setSourceIndex] = useState<SourceIndex>(new Map());
-  const [history, setHistory] = useState<ResearchTurnData[]>([]);
-  const [request, setRequest] = useState<Omit<ResearchTurnData, "state"> | null>(null);
+  const [history, setHistory] = useState<ScopedTurn[]>([]);
+  const [request, setRequest] = useState<ScopedRequest | null>(null);
   const [rootRequest, setRootRequest] = useState(false);
   const [anchor, setAnchor] = useState<string | undefined>();
   const sequence = useRef(0);
@@ -67,13 +73,42 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
   const streaming = state.status === "streaming";
   const payer = grantBinding.paused ? "paused" : grantBinding.expired ? "expired" : grantBinding.sessionId ? "session" : "treasury";
   const parentId = rootRequest ? null : state.run?.id ?? anchor;
-  const submit: Parameters<typeof AskForm>[0]["onAsk"] = (question, budget, sharedParent, model, mode, scholarly, paidScholarly, reviewFirst) => {
+  const activeRequest = useRef<ScopedRequest | null>(null), activeState = useRef(state);
+  useLayoutEffect(() => { activeRequest.current = request; activeState.current = state; }, [request, state]);
+  const clearOwnedTurns = useCallback(() => {
+    setHistory(previous => previous.filter(turn => !hidden(turn, turn.state)));
+    if (activeRequest.current && hidden(activeRequest.current, activeState.current)) {
+      activeRequest.current = null; setRequest(null); reset();
+    }
+    setAnchor(undefined); setRootRequest(true); privateHandoff.clear();
+  }, [reset, privateHandoff]);
+  const inheritedTurn = history.find(turn => turn.state.run?.id === parentId);
+  const parentVisibility = parentId ? state.meta?.visibility ?? request?.publication.visibility
+    ?? inheritedTurn?.state.meta?.visibility ?? inheritedTurn?.publication.visibility : undefined;
+  const publicationPreference = useResearchVisibility(parentVisibility, { onOwnerBoundary: clearOwnedTurns });
+  useEffect(() => () => reset(), [reset]);
+  useEffect(() => {
+    if (request && state.meta?.visibility === "private" && (!state.meta.visibilityOwner
+      || state.meta.visibilityOwner.toLowerCase() !== request.publication.expectedWallet)) clearOwnedTurns();
+  }, [request, state.meta, clearOwnedTurns]);
+  const canDisplay = (turn: ScopedRequest, captured: AskStreamState) => !hidden(turn, captured)
+    || publicationPreference.ready && turn.ownerRevision === publicationPreference.identityRevision
+      && turn.publication.expectedWallet === publicationPreference.wallet
+      && (captured.meta?.visibility !== "private" || !!captured.meta.visibilityOwner
+        && captured.meta.visibilityOwner.toLowerCase() === publicationPreference.wallet);
+  const visibleHistory = history.filter(turn => canDisplay(turn, turn.state));
+  const visibleRequest = request && canDisplay(request, state) ? request : null;
+  const submit: Parameters<typeof AskForm>[0]["onAsk"] = (question, budget, sharedParent, model, mode, scholarly, paidScholarly, reviewFirst, publication) => {
     if (streaming) return;
+    const selected = publicationPreference.getSelection();
+    if (!selected || !publication || selected.expectedWallet !== publication.expectedWallet || selected.visibility !== publication.visibility) return;
     if (request) setHistory(previous => [...previous, { ...request, state }]);
     setAnchor(rootRequest ? undefined : parentId ?? undefined);
-    setRequest({ id: ++sequence.current, question, payer: payer === "session" ? message("researchChat.sessionPayer") : payer === "expired" ? message("researchChat.expiredPayer") : message("researchChat.treasuryPayer") });
+    const next = { id: ++sequence.current, question, publication: selected, ownerRevision: publicationPreference.getIdentityRevision(),
+      payer: payer === "session" ? message("researchChat.sessionPayer") : payer === "expired" ? message("researchChat.expiredPayer") : message("researchChat.treasuryPayer") };
+    activeRequest.current = next; setRequest(next);
     setRootRequest(false);
-    void ask(question, budget, rootRequest ? undefined : parentId ?? sharedParent, model, mode, scholarly, paidScholarly, reviewFirst);
+    void ask(question, budget, rootRequest ? undefined : parentId ?? sharedParent, model, mode, scholarly, paidScholarly, reviewFirst, publication);
   };
   const stop = () => {
     if (!request || !streaming) return;
@@ -81,7 +116,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
     setRequest(null);
     reset();
   };
-  const hasTurns = history.length > 0 || request !== null;
+  const hasTurns = visibleHistory.length > 0 || visibleRequest !== null;
   return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-tour="hero" aria-label={message("researchChat.label")}>
     <header className="relative mb-2 min-h-[100px] sm:mb-4 sm:min-h-[140px]">
       <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute right-0 top-[44px] h-[56px] w-[56px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
@@ -95,8 +130,8 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
       <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:mt-2 sm:max-w-[64ch] sm:text-base sm:leading-normal">{introduceProduct ? productGuideCopy("product.heroBody") : message("researchChat.introduction")}</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label={message("researchChat.turnsLabel")}>
-      {history.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
-      {request && <div ref={activeTurnRef} className="scroll-mt-24"><ResearchTurn key={request.id} turn={{ ...request, state }} /></div>}
+      {visibleHistory.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
+      {visibleRequest && <div ref={activeTurnRef} className="scroll-mt-24"><ResearchTurn key={visibleRequest.id} turn={{ ...visibleRequest, state }} /></div>}
     </div>}
     <div id="dispatch" className="scroll-mt-24">
       {hasTurns && <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -106,9 +141,10 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
       </div>}
       {privateClaims && !protectedDocument && <p role="status" className="mt-3 text-seal">{privateResearchCopy.fullNavigation}</p>}
       <AskForm disabled={streaming || privateClaims && !protectedDocument} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
+        parentVisibility={parentVisibility} publicationPreference={publicationPreference}
         showLaunchBadge={showLaunchBadge && !hasTurns}
-        restoreQuestion={request && (state.errorKind === "research-paused" || state.errorKind === "rate-limit" || state.errorKind === "maintenance")
-          ? { ...request, researchPaused: state.errorKind === "research-paused" } : undefined} />
+        restoreQuestion={visibleRequest && (state.errorKind === "research-paused" || state.errorKind === "rate-limit" || state.errorKind === "maintenance")
+          ? { ...visibleRequest, researchPaused: state.errorKind === "research-paused" } : undefined} />
       {payer === "treasury" && !hasTurns && <div className="mt-3"><SponsoredTrialNotice /></div>}
       {!privateClaims && <div className="mt-3"><SessionGrantPanel onBindingChange={handleBindingChange} /></div>}
       {privateClaims && claimStatus !== "none" && claimStatus !== "waiting" && <div className="mt-3 border border-line p-4" role="status">

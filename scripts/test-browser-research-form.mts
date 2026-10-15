@@ -40,6 +40,10 @@ try {
       return route.fulfill({ json: { state: "not-paused" } });
     }
     const path = new URL(route.request().url()).pathname;
+    if (path === "/api/ask/visibility") {
+      assert.equal(route.request().method(), "GET", "Visibility context is read-only");
+      return route.fulfill({ json: { wallet: null, defaultVisibility: "public", privacyActive: true } });
+    }
     if (path === "/api/models") return route.fulfill({ json: { models: [
       { id: "deepseek", label: "DeepSeek", note: "Default" },
       { id: "other", label: "Other model", note: "Alternate" },

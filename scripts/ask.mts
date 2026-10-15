@@ -66,10 +66,11 @@ const [{ collectRun }, { getReasoningEngine }, { ResearchPlanningError, research
   import("../lib/llm/research-selection.ts"), import("../lib/llm/reasoning-telemetry.ts"),
 ]);
 
+const clientCopy = clientPresentationMessages(clientLanguage);
 console.log(c.bold(`\n🏛  Keryx — citation-toll reading agent`));
-console.log(`${c.dim("engine:")} ${getReasoningEngine(model).name}`);
-console.log(`${c.dim("source cap:")} ${budget ?? 0.05} USDC`);
-console.log(`${c.dim("question:")} ${question}\n`);
+console.log(`${c.dim(`${clientCopy.controls.engine}:`)} ${getReasoningEngine(model).name}`);
+console.log(`${c.dim(`${clientCopy.controls.sourceCap}:`)} ${budget ?? 0.05} USDC`);
+console.log(`${c.dim(`${clientCopy.controls.question}:`)} ${question}\n`);
 if (allowExternalWeb) console.log("Public web search may send this question to the configured search provider. The source USDC budget is separate from model and search operating costs.");
 console.log(c.dim("─".repeat(72)));
 
@@ -113,7 +114,7 @@ console.log(
 console.log(c.dim(`Payment mode: ${run.paymentMode === "offline" ? "offline simulation" : run.paymentMode ?? "unknown"}. Allocations and recorded totals do not prove settlement; inspect the original per-payment receipts.`));
 console.log(c.dim("Model and search operating costs are separate from the source cap and recorded source total."));
 if (run.operatingFee) console.log(`Keryx operating fee allocation: ${formatRecordedUsdc(run.operatingFee.amountUsdc, { denomination: "USDC" })} · ${run.operatingFee.status}. Separate from creator rewards; inspect the original payment ledger for settlement evidence.`);
-console.log(c.dim(`\nrun id: ${run.id}\n`));
+console.log(c.dim(`\n${resultCopy.controls.runId}: ${run.id}\n`));
 if (privateClaimStatus === "written") console.log(c.dim("Private account claim written once to the dedicated private pipe. Keep it private; lost delivery cannot be reissued."));
 if (privateClaimStatus === "unavailable") console.log(c.dim("The completed answer is saved, but its private account claim is unavailable. Do not repeat paid research to recover it."));
 process.exit(0);
