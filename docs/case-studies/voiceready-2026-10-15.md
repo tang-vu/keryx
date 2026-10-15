@@ -47,12 +47,13 @@ is separate supporting footage.
 
 ## Reader follow-up on October 15
 
-A later local check at source `262fe131` fetched the FFmpeg original successfully,
-but its HTML exceeded the reader's existing 20,000-element limit. That check
-establishes a present extraction limit, not the cause of the earlier report's
+A later local read at source `262fe131` fetched the FFmpeg original but returned
+`html-extraction-unavailable`. Separately, extraction of the retained
+1,726,689-byte original hit the reader's existing 20,000-element limit. These
+observations do not establish the cause of the earlier report's
 `transport-unavailable` result. The supplied `#loudnorm` fragment does not select
 a section in the current reader. No limit was raised and no new research,
-provider purchase or payment was started for this check.
+provider purchase or payment was started for these checks.
 
 Fresh terminal reads of the two report URLs timed out during this follow-up.
 Their current public availability is therefore unverified here; the retained
