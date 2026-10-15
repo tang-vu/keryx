@@ -64,17 +64,35 @@ const cleanNode = ['-i', 'PATH=/usr/bin:/bin', 'NODE_ENV=production', '/usr/bin/
 
 /** Requires positively exited reviewed web/A2A definitions immediately before DDL.
  * The operator separately drains private workers and all other scheduled writers. */
-export function runEconomicDeployMigration(mode, config, reviewedFile, reviewedSha, run, recheck) {
+export function runEconomicDeployMigration(mode, config, reviewedFile, reviewedSha, run, recheck,
+  { staged = '0', expectedCommit = '' } = {}) {
   validateEconomicMigrationConfig(config); reviewedInputs(reviewedFile, reviewedSha);
-  if (!['validate', 'migrate'].includes(mode)) refuse();
-  run('/usr/bin/env', [...cleanNode, '/root/keryx/scripts/redeploy-reviewed-roles.mjs', reviewedFile, reviewedSha, 'validate']);
+  if (!['validate', 'migrate'].includes(mode) || !['0', '1'].includes(staged) ||
+      expectedCommit !== '' && !/^[a-f0-9]{40}$/.test(expectedCommit) ||
+      staged === '1' && !expectedCommit) refuse();
+  // The fixed role verifier binds the protected release config, full commit,
+  // preparation, immutable artifact and compatibility review. A caller supplies
+  // no migration path; only a known entry point below that verified cohort runs.
+  const role = name => run('/usr/bin/env', [...cleanNode,
+    '/root/keryx/scripts/redeploy-reviewed-roles.mjs', reviewedFile, reviewedSha, name,
+    ...(staged === '1' ? ['1', expectedCommit] : [])]);
+  if (staged === '1') role('artifact');
+  role('validate');
   recheck();
   if (mode === 'validate') return;
-  return run('/usr/bin/env', [...cleanNode, '--import', '/root/keryx/node_modules/tsx/dist/loader.mjs',
-    migrationScripts[config.format], 'migrate',
+  const source = staged === '1' ? `/root/.local/share/keryx-releases/${expectedCommit}/source` : '/root/keryx';
+  const script = source + migrationScripts[config.format].slice('/root/keryx'.length);
+  const result = run('/usr/bin/env', [...cleanNode, '--import', `${source}/node_modules/tsx/dist/loader.mjs`,
+    script, 'migrate',
     '--manifest', config.manifest, '--expected-manifest', config.expectedManifestDigest,
     '--expected-identity', config.expectedIdentityDigest, '--backup', config.backup,
     '--receipt', config.receipt, '--writers-stopped']);
+  if (staged === '1') {
+    // DDL may already have committed. Any refusal propagates to the armed
+    // deployment hold; never restart a predecessor or try another migration.
+    recheck(); role('artifact'); role('validate');
+  }
+  return result;
 }
 
 /** Failure containment must work even when a config/hash became unreadable after
@@ -105,11 +123,12 @@ if (process.argv[1] === '-' || process.argv[1] && path.resolve(process.argv[1]) 
       holdEconomicDeployRoles({ list: () => JSON.parse(pm2(['jlist'])), run: pm2 });
       console.log('Economic migration failure hold verified: public web and A2A stopped; builds retained.');
     } else {
-      if (args.length !== 5) refuse();
-      const [mode, file, expected, reviewedFile, reviewedSha] = args;
+      if (![5, 7].includes(args.length)) refuse();
+      const [mode, file, expected, reviewedFile, reviewedSha, staged = '0', expectedCommit = ''] = args;
       const config = readEconomicMigrationConfig(file, expected);
       const result = runEconomicDeployMigration(mode, config, reviewedFile, reviewedSha, run,
-        () => { if (JSON.stringify(readEconomicMigrationConfig(file, expected)) !== JSON.stringify(config)) refuse(); });
+        () => { if (JSON.stringify(readEconomicMigrationConfig(file, expected)) !== JSON.stringify(config)) refuse(); },
+        { staged, expectedCommit });
       if (mode === 'migrate') process.stdout.write(result);
       else console.log('Economic migration protected configuration and stopped public roles verified.');
     }

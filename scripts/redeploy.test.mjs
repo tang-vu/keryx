@@ -29,14 +29,18 @@ test('economic migration controls travel unchanged and require a complete review
   assert.equal(env.KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG, extra.KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG);
   assert.throws(() => redeployEnvironment(extra), /complete reviewed/);
 });
-test('staged release transports only an explicit reviewed code-only transition', () => {
+test('staged release transports an explicit reviewed transition with complete migration controls', () => {
   const extra = { KERYX_REDEPLOY_STAGED_RELEASE: '1' };
   const env = redeployEnvironment({ ...reviewed, ...extra }, 'win32');
   assert.equal(env.KERYX_REDEPLOY_STAGED_RELEASE, '1');
   assert.throws(() => redeployEnvironment(extra), /requires complete/);
-  assert.throws(() => redeployEnvironment({ ...reviewed, ...extra,
+  const migration = redeployEnvironment({ ...reviewed, ...extra,
     KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG: '/root/.local/share/reviewed/economic.json',
-    KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256: 'a'.repeat(64) }), /code-only/);
+    KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256: 'a'.repeat(64) });
+  assert.equal(migration.KERYX_REDEPLOY_STAGED_RELEASE, '1');
+  assert.equal(migration.KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256, 'a'.repeat(64));
+  assert.throws(() => redeployEnvironment({ ...reviewed, ...extra,
+    KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG: '/root/.local/share/reviewed/economic.json' }), /complete reviewed/);
   assert.throws(() => redeployEnvironment({ ...reviewed, KERYX_REDEPLOY_STAGED_RELEASE: 'yes' }));
 });
 test('lost WSL controls refuse before the deployment launcher', async () => {
@@ -64,4 +68,19 @@ test('explicit preparation never probes SSH, holds writers or enters the deploym
     await assert.rejects(runRedeployCommand(args, seams));
   assert.equal(deployed, false);
   assert.equal(await runRedeployCommand([], seams), 0); assert.equal(deployed, true);
+});
+
+test('mainnet public compilation is one explicit keyless preparation option, not deployment', async () => {
+  const root = path.resolve('.'), calls = [];
+  const seams = { prepare: options => { calls.push(options); return { productionAdmitted: false }; },
+    deploy: () => assert.fail('preparation entered deploy') };
+  const args = ['--prepare-release', root, root, 'a'.repeat(40), root, root];
+  await runRedeployCommand(args, seams);
+  assert.equal(Object.hasOwn(calls[0], 'mainnetPublicBuild'), false);
+  const result = await runRedeployCommand([...args, '--mainnet-public-build'], seams);
+  assert.equal(calls[1].mainnetPublicBuild, true);
+  assert.equal(result.productionAdmitted, false);
+  for (const suffix of [['arc'], ['--mainnet-public-build', '--mainnet-public-build'], ['--runtime-env=/funded']])
+    await assert.rejects(runRedeployCommand([...args, ...suffix], seams));
+  assert.equal(calls.length, 2);
 });

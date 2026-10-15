@@ -126,6 +126,10 @@ slash spelling is normalized before the staging API's canonical-root checks.
 The production redeploy command without arguments retains its existing behavior.
 An unknown or incomplete preparation command refuses rather than falling through
 to a deployment. Preparation grants no production admission or writer-hold authority.
+Append the single explicit `--mainnet-public-build` option when preparing an
+intended mainnet browser artifact. Omitting it retains the testnet default;
+unknown profile options refuse. Preparation must finish and its exact artifact
+be reviewed before the operator starts the writer hold.
 
 The builder materializes the exact full Git commit using the existing staging
 boundary, then copies independently installed dependencies into its own candidate.
@@ -145,8 +149,12 @@ temporary files live in a new isolated scratch directory outside the source
 cohort. Testnet's ordinary SQLite fallback uses a fresh working directory; no
 funded storage manifest or unused SQLite-path override is inherited. Next's
 automatic ENV loading cannot select `.env.local` because
-source staging excludes it. The exact browser settings are recorded; **this
-testnet/offline artifact cannot be promoted to mainnet**.
+source staging excludes it. With `--mainnet-public-build`, only the build command
+selects the existing `arc` server/public network constants; npm version,
+typechecking and tests remain explicitly arcTestnet/offline. The mainnet public
+build still has forced offline mode and no runtime storage, provider or signing
+credentials. The exact browser settings are recorded; **a default testnet
+artifact cannot be promoted to mainnet**. Neither profile is production admission.
 
 Each command retains its real exit/signal/error, elapsed time, tool arguments and
 diagnostic-output digest alongside the actual log, including failures. A failed
@@ -240,9 +248,10 @@ silently select whichever generation is current.
 
 ## Reviewed staged role adapter (production acceptance pending)
 
-`KERYX_REDEPLOY_STAGED_RELEASE=1` is an explicit code-only branch of the existing
-reviewed redeploy shell. It requires all four reviewed maintenance controls,
-held schedules and no economic migration. Its protected PM2 config must contain
+`KERYX_REDEPLOY_STAGED_RELEASE=1` is an explicit prebuilt branch of the existing
+reviewed redeploy shell. It requires all four reviewed maintenance controls and
+held schedules. A migration additionally requires the existing paired protected
+economic configuration and digest. Its protected PM2 config must contain
 `apps` and a `release` object with the exact full expected commit and
 source-manifest, artifact-inspection, preparation and runtime-ENV digests, plus
 the protected compatibility review path/digest. Config and flag must agree;
@@ -265,8 +274,10 @@ bounds remain intact. The adapter still refuses any reintroduced cwd caller;
 intended-host trace/startup acceptance of the complete candidate remains required.
 
 The protected preparation receipt must record actual successful typecheck,
-tests and build, pinned Node/npm, Linux and mainnet public settings. The new
-testnet/offline builder's receipts therefore **refuse** production admission.
+tests and build, pinned Node/npm, Linux and mainnet public settings. Default
+testnet builder receipts therefore **refuse** production admission. Selecting
+mainnet public compilation supplies only that preparation input, not the
+independent compatibility review or target acceptance.
 The protected compatibility review format is
 `keryx-reviewed-release-compatibility-v1`; it binds full commit/tree/build ID,
 source/inspection/artifact digests, the unchanged runtime-ENV digest, accepted
@@ -283,8 +294,24 @@ its dependencies, rewrites ENV, swaps `.next` or deletes recovery builds. Actual
 post-start PM2 arguments/PID/policy and full-commit health must match. Private,
 withdrawal, scheduled and maintenance roles remain under their existing explicit
 authority; no additional role starts or cron/systemd changes occur. There is no
-automatic rollback, retry of economic work, migration or release cleanup command.
+automatic rollback, retry of economic work, migration selection or release cleanup command.
 Failure keeps the cohorts and stopped references for operator review.
+
+For an explicitly reviewed staged economic transition, the already prepared
+cohort is verified before the migration and again before role startup. The
+existing six-field economic configuration still selects only a fixed known
+migration basename. Its tsx loader and migration code come from that same exact
+immutable cohort; operational cwd, protected manifest/identity/backup/receipt
+arguments and stopped-writer requirements remain unchanged. Serving source,
+dependencies and ENV are not synchronized or rebuilt in this stopped phase.
+The existing failure hold is armed before possible DDL, including a lost ACK:
+any migration or later refusal keeps public roles stopped and retains all builds,
+without replay or predecessor restart. Target normal/TWO-original, backup,
+identity/schema/EXCLUSIVE, ENV/custody and Operator checks still belong to the
+owner's stopped-writer acceptance. This source path does not perform them early
+or declare the candidate production-ready. Actual intended-host staged rollout,
+rollback/off-box evidence and matched availability measurements remain open for
+original #164; the successful ordinary app67 release does not replace them.
 
 ## Compatibility, rollback, retention and surface gates
 

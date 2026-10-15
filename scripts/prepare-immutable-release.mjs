@@ -20,12 +20,13 @@ export const preparationCommands = Object.freeze([
 
 /** Fresh environment, not a denylist over potentially funded runtime settings.
  * A testnet browser bundle is deliberately not a mainnet production artifact. */
-export function preparationEnvironment({ commit, scratch, inherited = process.env }) {
-  if (!/^[a-f0-9]{40}$/.test(commit) || !path.isAbsolute(scratch) || path.resolve(scratch) !== scratch) refuse();
+export function preparationEnvironment({ commit, scratch, inherited = process.env, publicNetwork = 'arcTestnet' }) {
+  if (!/^[a-f0-9]{40}$/.test(commit) || !path.isAbsolute(scratch) || path.resolve(scratch) !== scratch ||
+      !['arcTestnet', 'arc'].includes(publicNetwork)) refuse();
   const env = {
     PATH: inherited.PATH ?? '',
     NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1', CI: '1',
-    KERYX_NETWORK: 'arcTestnet', NEXT_PUBLIC_KERYX_NETWORK: 'arcTestnet',
+    KERYX_NETWORK: publicNetwork, NEXT_PUBLIC_KERYX_NETWORK: publicNetwork,
     KERYX_FORCE_OFFLINE: '1', KERYX_COMMIT: commit,
     SUPABASE_URL: '', SUPABASE_ANON_KEY: '', SUPABASE_SERVICE_ROLE_KEY: '',
     NEXT_PUBLIC_SUPABASE_URL: '', NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
@@ -180,13 +181,15 @@ export function copyPreparationDependencies({ source, dependencies }) {
 
 /** Commands are fixed and run sequentially, before artifact recording and any hold.
  * The process seam lets tests prove failure ordering without pretending a build passed. */
-export function runPreparationChecks({ staged, scratch, npmCli, run = spawnSync }) {
+export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBuild = false, run = spawnSync }) {
   if (process.versions.node !== pinnedNode || !path.isAbsolute(npmCli) ||
-      !fs.lstatSync(npmCli).isFile()) refuse();
+      !fs.lstatSync(npmCli).isFile() || typeof mainnetPublicBuild !== 'boolean') refuse();
   const env = preparationEnvironment({ commit: staged.commit, scratch });
+  const publicNetwork = mainnetPublicBuild ? 'arc' : 'arcTestnet';
+  const buildEnv = preparationEnvironment({ commit: staged.commit, scratch, publicNetwork });
   const toolchain = { nodeSha256: hash(fs.readFileSync(process.execPath)), npmCliSha256: hash(fs.readFileSync(npmCli)) };
-  const call = (args, heap, outputFd, nodeEnv = 'production') => run(process.execPath, [npmCli, ...args], {
-    cwd: staged.source, env: { ...env, NODE_ENV: nodeEnv, NODE_OPTIONS: `--max-old-space-size=${heap}` },
+  const call = (args, heap, outputFd, nodeEnv = 'production', publicBuild = false) => run(process.execPath, [npmCli, ...args], {
+    cwd: staged.source, env: { ...(publicBuild ? buildEnv : env), NODE_ENV: nodeEnv, NODE_OPTIONS: `--max-old-space-size=${heap}` },
     encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, timeout: 30 * 60 * 1000, windowsHide: true,
     ...(outputFd !== undefined ? { stdio: ['ignore', outputFd, outputFd] } : {}),
   });
@@ -207,7 +210,7 @@ export function runPreparationChecks({ staged, scratch, npmCli, run = spawnSync 
     const logFile = path.join(staged.candidate, `${name}.log`), fd = fs.openSync(logFile, 'wx', 0o600);
     let result;
     try {
-      result = call(args, name === 'typecheck' ? 2560 : 1536, fd, nodeEnv);
+      result = call(args, name === 'typecheck' ? 2560 : 1536, fd, nodeEnv, name === 'build');
       // Injectable processes may return captured output; native processes write
       // directly to the retained log even if the controller exits mid-check.
       fs.writeSync(fd, (result.stdout ?? '') + (result.stderr ?? ''));
@@ -224,18 +227,18 @@ export function runPreparationChecks({ staged, scratch, npmCli, run = spawnSync 
   }
   if (hash(fs.readFileSync(process.execPath)) !== toolchain.nodeSha256 || hash(fs.readFileSync(npmCli)) !== toolchain.npmCliSha256) refuse();
   return { node: process.versions.node, npm: pinnedNpm, platform: process.platform, ...toolchain,
-    arch: process.arch, publicBuildSettings: { network: 'arcTestnet', forceOffline: true }, results };
+    arch: process.arch, publicBuildSettings: { network: publicNetwork, forceOffline: true }, results };
 }
 
-export function prepareImmutableRelease({ repo, releasesDir, commit, dependencies, npmCli }) {
-  if (process.versions.node !== pinnedNode) refuse();
+export function prepareImmutableRelease({ repo, releasesDir, commit, dependencies, npmCli, mainnetPublicBuild = false }) {
+  if (process.versions.node !== pinnedNode || typeof mainnetPublicBuild !== 'boolean') refuse();
   const startedAt = new Date().toISOString(), started = performance.now();
   const staged = stageImmutableSource({ repo, releasesDir, commit });
   // Scratch is deliberately outside source. Keep it on failure; never erase storage evidence.
   const scratch = path.join(staged.candidate, 'preparation-scratch');
   fs.mkdirSync(scratch, { mode: 0o700 });
   const inputs = copyPreparationDependencies({ source: staged.source, dependencies });
-  const checks = runPreparationChecks({ staged, scratch, npmCli });
+  const checks = runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBuild });
   const buildAliases = materializePreparationBuildAliases({ source: staged.source, dependencies: path.join(staged.source, 'node_modules') });
   const protectedBuildEntries = protectPreparationCopy(path.join(staged.source, '.next'));
   if (process.platform !== 'win32') for (const file of ['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo']) {
