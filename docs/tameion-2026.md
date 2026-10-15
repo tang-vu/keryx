@@ -1,5 +1,12 @@
 # Keryx at Tameion 2026 — planned direction
 
+**Deadline checked October 15:** the [official event page](https://tameion.thecanteenapp.com/)
+now gives **October 17, 11:59 PM ET** (October 18, 10:59 AM in Vietnam).
+Earlier October 10 references below retain their historical planning context.
+The existing October 13 submission stays recorded separately from later updates.
+The immediate submission work prioritizes a useful complete business outcome,
+documented return use and a reviewer path through actual decisions and payments.
+
 October 12 direction: the owner authorized ranked delivery of demand-driven
 [evidence procurement](evidence-procurement.md): commission missing evidence first,
 compare quotation value, retain useful counter-evidence, then inspect decision

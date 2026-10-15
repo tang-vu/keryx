@@ -11,10 +11,12 @@ import type { PresentationLanguage } from "@/shared/i18n/presentation-language";
 
 const fixture = vi.hoisted(() => {
   vi.stubEnv("BASE_URL", "https://synthetic-language.example");
-  return { entries: [] as ArchiveEntry[], reader: null as DispatchReader | null };
+  return { entries: [] as ArchiveEntry[], reader: null as DispatchReader | null,
+    profileStore: false, profiles: vi.fn<(take: number) => Promise<Array<{ handle: string; updatedAt: string }>>>() };
 });
 vi.mock("@/lib/answers-archive-cache", () => ({ getArchiveCached: async () => fixture.entries }));
-vi.mock("@/lib/db", () => ({ getDb: async () => fixture.reader }));
+vi.mock("@/lib/db", () => ({ getDb: async () => fixture.profileStore
+  ? { runPrivacyActive: true, publicProfiles: { sitemap: fixture.profiles } } : fixture.reader }));
 vi.mock("@/lib/history/testnet-archive", () => ({ getTestnetArchive: async () => null }));
 vi.mock("@/lib/run-privacy/auth", () => ({ pagePrivacyActor: async () => undefined }));
 vi.mock("@/lib/answers-freshness", () => ({ loadFreshness: async () => null }));
@@ -48,7 +50,8 @@ function entry(id: string, answerLanguage?: string): ArchiveEntry {
   return { id, answerLanguage, question: `${id} question sentinel`, answerSnippet: `${id} answer sentinel`, citationCount: 1,
     totalSpent: 0, toCreators: 0, sourceNames: [], createdAt: "2026-10-12T00:00:00Z", confidence: null };
 }
-beforeEach(() => { fixture.entries = [entry("vi", "vi"), entry("zh", "zh-Hans"), entry("unknown")]; fixture.reader = null; });
+beforeEach(() => { fixture.entries = [entry("vi", "vi"), entry("zh", "zh-Hans"), entry("unknown")]; fixture.reader = null;
+  fixture.profileStore = false; fixture.profiles.mockReset(); });
 afterAll(() => vi.unstubAllEnvs());
 
 describe("actual public language surfaces", () => {
@@ -82,6 +85,39 @@ describe("actual public language surfaces", () => {
     const routes = await sitemap();
     expect(routes.filter(row => row.url.includes("/dispatch/")).map(row => row.url)).toHaveLength(3);
     expect(routes.every(row => !row.url.includes("?language=") && !/^\/(vi|zh-Hans)(\/|$)/.test(new URL(row.url).pathname))).toBe(true);
+  });
+
+  it("adds only English/x-default to freshly admitted profile sitemap URLs and drops withdrawn profiles on the next read", async () => {
+    const previousProfiles = process.env.KERYX_PUBLIC_PROFILES_ENABLED;
+    const previousPrivacy = process.env.KERYX_RUN_PRIVACY_ENABLED;
+    vi.stubEnv("KERYX_PUBLIC_PROFILES_ENABLED", "true");
+    vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");
+    fixture.profileStore = true;
+    try {
+      fixture.profiles.mockResolvedValue([]);
+      const baseline = await sitemap();
+      const updatedAt = "2026-10-15T00:00:00.000Z";
+      fixture.profiles.mockResolvedValue([{ handle: "alice", updatedAt }]);
+      const admitted = await sitemap();
+      expect(fixture.profiles).toHaveBeenLastCalledWith(1000);
+      expect(admitted.filter(row => new URL(row.url).pathname.startsWith("/u/"))).toEqual([{
+        url: "https://synthetic-language.example/u/alice", lastModified: new Date(updatedAt), changeFrequency: "weekly", priority: 0.6,
+        alternates: { languages: { en: "https://synthetic-language.example/u/alice", "x-default": "https://synthetic-language.example/u/alice" } },
+      }]);
+      expect(admitted.filter(row => !new URL(row.url).pathname.startsWith("/u/"))).toEqual(baseline);
+      expect(admitted.filter(row => row.url.includes("/dispatch/")).every(row => row.alternates === undefined)).toBe(true);
+      fixture.profiles.mockResolvedValue([]);
+      expect(await sitemap()).toEqual(baseline);
+      fixture.profiles.mockRejectedValue(Error("private profile storage refusal"));
+      expect(await sitemap()).toEqual(baseline);
+      expect(fixture.profiles).toHaveBeenCalledTimes(4);
+      vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false");
+      expect(await sitemap()).toEqual(baseline);
+      expect(fixture.profiles).toHaveBeenCalledTimes(4);
+    } finally {
+      vi.stubEnv("KERYX_PUBLIC_PROFILES_ENABLED", previousProfiles);
+      vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", previousPrivacy);
+    }
   });
 
   it("retains page-one route continuity and language selection without a redirect loop", async () => {

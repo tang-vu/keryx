@@ -7,10 +7,13 @@ import { chromium, type Page } from "playwright";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
+import postcss from "postcss";
+import tailwind from "@tailwindcss/postcss";
 
 const option = process.argv.indexOf("--output-dir");
 assert(option >= 0 && process.argv[option + 1], "Explicit --output-dir in the admitted resource is required");
 const output = resolve(process.argv[option + 1]);
+const offeredCss = (await postcss([tailwind()]).process(await readFile("app/globals.css", "utf8"), { from: "app/globals.css" })).css;
 const base = "https://locale-fixture.test", alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 const originalPacket = { question: "Retain original request", budget: 0.05, payer: alice, sessionId: "original-session", signature: "0x1234", nonce: "retained-original-nonce" };
 // Bind to current English bytes, never to a draft's claimed source/hash or manifest counts.
@@ -19,6 +22,7 @@ const sourceHashes = Object.fromEntries(await Promise.all(["shell", "legal"].map
 const bundle = await build({ stdin: { sourcefile: "locale-fixture.tsx", loader: "tsx", resolveDir: process.cwd(), contents: `
   import React,{useEffect,useState}from'react';import{createRoot}from'react-dom/client';
   import{LocaleProvider,useLocale}from'./lib/i18n/locale-context';
+  import{Providers}from'./app/providers';
   import{SiteHeader}from'./components/keryx/site-header';import{SiteFooter}from'./components/keryx/site-footer';
   import{preparedLocales}from'./lib/i18n/locales';
   import{loadUiNamespaceCatalogue}from'./lib/i18n/ui-shell-catalogue';
@@ -80,16 +84,21 @@ const bundle = await build({ stdin: { sourcefile: "locale-fixture.tsx", loader: 
       <NamespacePreview/>
     </main>}
   const props=location.pathname==='/preview'?{enabledLocales:preparedLocales}:{};
-  createRoot(document.getElementById('root')).render(<LocaleProvider {...props} network="eip155:5042"><SiteHeader/><Draft/><SiteFooter/></LocaleProvider>);
+  const children=<><SiteHeader/><Draft/><SiteFooter/></>;
+  createRoot(document.getElementById('root')).render(location.pathname==='/offered'
+    ?<Providers>{children}</Providers>:<LocaleProvider {...props} network="eip155:5042">{children}</LocaleProvider>);
 ` }, bundle: true, write: false, splitting: true, format: "esm", platform: "browser", outdir: "locale-fixture-build",
   entryNames: "entry", chunkNames: "chunks/[name]-[hash]", metafile: true,
   define: { "process.env.NODE_ENV": '"production"', "process.env.CI": '"false"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"',
     "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": '"0x1111111111111111111111111111111111111111"', "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
   plugins: [{ name: "fixture-navigation-and-wallet-boundaries", setup(builder) {
     builder.onResolve({ filter: /^(next\/link|next\/navigation)$/ }, args => ({ path: args.path, namespace: "locale-fixture" }));
+    builder.onResolve({ filter: /^(wagmi|@\/lib\/wagmi-config)$/ }, args => ({ path: args.path, namespace: "locale-fixture" }));
     builder.onResolve({ filter: /\/(wallet-menu|dispatch-wire)$/ }, args => ({ path: args.path, namespace: "locale-fixture" }));
     builder.onLoad({ filter: /.*/, namespace: "locale-fixture" }, args => ({ loader: "js", resolveDir: process.cwd(), contents:
-      args.path === "next/link" ? `import React from'react';export default function Link({href,children,onNavigate,...props}){return React.createElement('a',{...props,href},children)}` :
+      args.path === "wagmi" ? `export const WagmiProvider=({children})=>children;export const useAccount=()=>({isConnected:false});` :
+      args.path === "@/lib/wagmi-config" ? `export const makeConfig=()=>({});` :
+      args.path === "next/link" ? `import React from'react';export const useLinkStatus=()=>({pending:false});export default function Link({href,children,onNavigate,...props}){return React.createElement('a',{...props,href},children)}` :
       args.path === "next/navigation" ? `export const usePathname=()=>location.pathname;` :
       args.path.endsWith("wallet-menu") ? `import React from'react';export const WalletMenu=()=>React.createElement('button',null,'Fixture wallet session');` :
       `export const DispatchWire=()=>null;` }));
@@ -204,8 +213,8 @@ try {
           owner, origin: base, network: "eip155:5042", acceptLanguage: "en-US" } });
       }
       if (url.pathname === "/api/ask") { packets.push(req.postDataJSON()); return route.fulfill({ json: { fixtureOnly: true } }); }
-      assert(["/", "/preview"].includes(url.pathname), `Unexpected fixture route ${url.pathname}`);
-      return route.fulfill({ contentType: "text/html", body: `<html lang="en" dir="ltr"><head><style>${css}</style></head><body><div id="root"></div><script type="module" src="${entry}"></script></body></html>` });
+      assert(["/", "/preview", "/offered"].includes(url.pathname), `Unexpected fixture route ${url.pathname}`);
+      return route.fulfill({ contentType: "text/html", body: `<html lang="en" dir="ltr"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${url.pathname === "/offered" ? offeredCss : css}</style></head><body><div id="root"></div><script type="module" src="${entry}"></script></body></html>` });
     });
     const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
     await page.goto(base); await page.locator('[data-language-switcher] select').last().waitFor();
@@ -222,6 +231,54 @@ try {
       assert.equal(result.calls, 0, `${locale}/${mode} must not invoke a namespace loader`); assert.deepEqual(result.selected, {});
     }
     assert(!seen.some(path => namespaceUrls.includes(path)), "Default/disabled/unrequested namespaces must not fetch assets");
+    // Exercise the actual app composition, rather than supplying an enabled list
+    // to a fixture provider. Wallet/auth remain synthetic; CSS is the real app stylesheet.
+    owner = null;
+    await page.goto(`${base}/offered?draft=retain#proof`);
+    await page.waitForFunction(() => !document.querySelector<HTMLSelectElement>('footer select')!.disabled);
+    assert.deepEqual(await page.locator('footer select option').evaluateAll(options => options.map(option => ({
+      value: (option as HTMLOptionElement).value, label: option.textContent,
+    }))), [{ value: "en", label: "English" }, { value: "vi", label: "Tiếng Việt (preview)" },
+      { value: "zh-Hans", label: "简体中文 (preview)" }]);
+    assert.equal(await page.locator('footer [id$="-notice"]').textContent(), "", "English must not announce that it is the only offered option");
+    await page.getByLabel("Draft question").fill("Preserve this offered-language draft");
+    await page.getByLabel("Unsaved editor").fill("Retain offered editor text");
+    if (width < 1024) await page.getByRole("button", { name: "Open menu", exact: true }).click();
+    await page.locator('header select:visible').first().selectOption("vi");
+    await page.waitForFunction(() => document.documentElement.lang === "vi");
+    assert((await page.locator('header select:visible').first().getAttribute("title"))?.includes("machine draft, not human reviewed"));
+    if (width < 1024) assert(await page.locator('header [id$="-notice"]').last().isVisible(), "Phone menu retains the full preview notice");
+    assert(await page.locator('header').getByText("Đặt câu hỏi", { exact: true }).count() > 0);
+    assert.equal(await page.getByLabel("Draft question").inputValue(), "Preserve this offered-language draft");
+    assert.equal(await page.getByLabel("Unsaved editor").inputValue(), "Retain offered editor text");
+    assert.equal(await page.evaluate(() => (window as unknown as { mounts: number }).mounts), 1);
+    assert.equal(page.url(), `${base}/offered?draft=retain#proof`);
+    assert.equal(await page.locator('main').getAttribute('lang'), "en");
+    await mkdir(output, { recursive: true });
+    await page.screenshot({ path: resolve(output, `offered-vi-${width}.png`), fullPage: true });
+    const offeredLayout = await page.evaluate(() => ({
+      horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
+      headerHeight: document.querySelector('header')!.getBoundingClientRect().height,
+      controls: [...document.querySelectorAll<HTMLElement>('header [data-language-switcher] select,header [data-language-switcher] p')]
+        .filter(element => element.getClientRects().length && getComputedStyle(element).position !== 'absolute')
+        .map(element => ({ top: element.getBoundingClientRect().top, bottom: element.getBoundingClientRect().bottom })),
+    }));
+    assert(!offeredLayout.horizontalOverflow, `Offered preview must fit the actual ${width}px stylesheet: ${JSON.stringify(offeredLayout)}`);
+    if (width >= 1024) assert(offeredLayout.controls.every(control => control.top >= 0 && control.bottom <= offeredLayout.headerHeight),
+      `Preview controls must fit the desktop header: ${JSON.stringify(offeredLayout)}`);
+    await page.waitForFunction(() => document.querySelector('footer [role="status"]')?.textContent?.includes("saved in this browser"));
+    await page.reload(); await page.waitForFunction(() => document.documentElement.lang === "vi");
+    await page.locator('footer select').selectOption("zh-Hans");
+    await page.waitForFunction(() => document.documentElement.lang === "zh-Hans");
+    assert(await page.locator('footer').getByText("提出问题", { exact: true }).count() > 0);
+    await page.waitForFunction(() => document.querySelector('footer [role="status"]')?.textContent?.includes("saved in this browser"));
+    await page.reload(); await page.waitForFunction(() => document.documentElement.lang === "zh-Hans");
+    await page.screenshot({ path: resolve(output, `offered-zh-Hans-${width}.png`), fullPage: true });
+    assert.equal(await page.locator('footer a[href="/privacy"]').textContent(), "Privacy");
+    assert.equal(await page.locator('footer a[href="/terms"]').textContent(), "Terms");
+    assert(!seen.some(path => namespaceUrls.includes(path)), "App composition must not load unrequested namespace drafts");
+    await page.evaluate(() => localStorage.clear());
+    owner = alice;
     await page.goto(`${base}/preview`);
     await page.waitForFunction(() => !document.querySelector<HTMLSelectElement>('footer select')!.disabled);
     await page.getByLabel("Draft question").fill("Preserve this unsent question"); await page.getByLabel("Unsaved editor").fill("Retain edited source text");
@@ -280,7 +337,9 @@ try {
     assert((await page.locator("footer select").boundingBox())!.height >= 44);
     await page.locator("footer select").focus(); await page.keyboard.press("ArrowUp"); await page.keyboard.press("Enter");
     await mkdir(output, { recursive: true }); await page.screenshot({ path: resolve(output, `preview-${width}.png`), fullPage: true });
-    assert.deepEqual(errors, []); outcomes.push({ width, transport: "synthetic", actualCompiledShell: true, targetChunks: 2,
+    assert.deepEqual(errors, []); outcomes.push({ width, transport: "synthetic", actualCompiledShell: true,
+      actualAppProviders: true, offeredActualStylesheet: true, offeredBrowserPersistence: ["vi", "zh-Hans"], offeredLayout,
+      targetChunks: 2,
       namespaceChunks: 4, namespacePreviewOnly: true, sourceHashes, namespaceReview: "machineDraft/review:null",
       criticalEnglishFallback: true, namespaceRefusals: true, namespaceNoApi: true,
       draftAndEditorPreserved: true, childMounts: 1, capturedPacketUnchanged: true, realSigningOrDevicePersistence: "UNPERFORMED" });

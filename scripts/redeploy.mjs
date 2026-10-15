@@ -28,8 +28,8 @@ export function redeployEnvironment(environment, platform = process.platform) {
     !/^\/root\/\.local\/share\/[a-zA-Z0-9_./-]+\.json$/.test(economic[0]) || economic[0].includes('..') ||
     !/^[a-f0-9]{64}$/.test(economic[1]))) throw new Error('Economic migration requires complete reviewed controls');
   const staged = env.KERYX_REDEPLOY_STAGED_RELEASE ?? '0';
-  if (!['0', '1'].includes(staged) || staged === '1' && (!reviewed || economic.some(Boolean)))
-    throw new Error('Staged release requires complete reviewed controls and a separate code-only transition');
+  if (!['0', '1'].includes(staged) || staged === '1' && !reviewed)
+    throw new Error('Staged release requires complete reviewed controls');
   if (platform === 'win32') {
     const previous = (env.WSLENV ?? '').split(':').filter(Boolean)
       .filter(entry => !TRANSPORT_CONTROLS.includes(entry.split('/')[0]));
@@ -56,15 +56,17 @@ export async function runRedeploy(environment = process.env, launch = spawn, pro
 }
 export async function runRedeployCommand(args, { prepare = prepareImmutableRelease, deploy = runRedeploy } = {}) {
   if (args.length === 0) return deploy();
-  if (args[0] !== '--prepare-release' || args.length !== 6)
-    throw Error('Expected --prepare-release REPO RELEASES FULL_COMMIT DEPENDENCIES NPM_CLI');
+  if (args[0] !== '--prepare-release' || ![6, 7].includes(args.length) ||
+      args.length === 7 && args[6] !== '--mainnet-public-build')
+    throw Error('Expected --prepare-release REPO RELEASES FULL_COMMIT DEPENDENCIES NPM_CLI [--mainnet-public-build]');
   const [repo, releasesDir, commit, dependencies, npmCli] = args.slice(1);
   for (const directory of [repo, releasesDir, dependencies, npmCli])
     if (!path.isAbsolute(directory)) throw Error('Preparation requires absolute native paths');
   // Accept portable absolute Windows spelling; the staging API still verifies
   // canonical roots, nonsymlink ancestors and source/release separation.
   return prepare({ repo: path.resolve(repo), releasesDir: path.resolve(releasesDir), commit,
-    dependencies: path.resolve(dependencies), npmCli: path.resolve(npmCli) });
+    dependencies: path.resolve(dependencies), npmCli: path.resolve(npmCli),
+    ...(args.length === 7 ? { mainnetPublicBuild: true } : {}) });
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   runRedeployCommand(process.argv.slice(2)).then(result => {

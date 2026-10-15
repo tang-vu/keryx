@@ -529,6 +529,8 @@ jobs:
         run: |
           node --import tsx scripts/test-browser-navigation-latency.mts
           node --import tsx scripts/test-browser-navigation-latency.mts --webkit
+          node --import tsx scripts/test-browser-header-feedback.mts
+          node --import tsx scripts/test-browser-header-feedback.mts --webkit
 
       - name: Product discovery, pricing and support (built, offline, no research or payment)
         env:

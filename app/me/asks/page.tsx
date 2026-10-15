@@ -7,6 +7,7 @@
 import type { Metadata } from "next";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { MyAsksView } from "./my-asks-view";
+import { OwnerRunAssignmentInbox } from "@/components/keryx/owner-run-assignment-inbox";
 import { createMessages } from "@/lib/i18n/messages";
 
 const message = createMessages("en");
@@ -29,6 +30,7 @@ export default function MyAsksPage() {
           </p>
         </div>
         <MyAsksView />
+        <div className="mt-10 border-t border-line pt-8"><OwnerRunAssignmentInbox readOnlyView /></div>
       </main>
     </>
   );

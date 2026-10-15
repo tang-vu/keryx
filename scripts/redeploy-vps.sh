@@ -10,7 +10,8 @@
 # and has automatic rollback. It is not the current mainnet operating procedure.
 # See docs/mainnet-update-flow.md and docs/deployment-guide.md for reviewed inputs.
 # Keyless --prepare-release belongs to redeploy.mjs and never enters this shell.
-# Its testnet/offline cohort is not production admission; retain the early drain.
+# Keyless preparation is not production admission. An explicitly reviewed staged
+# cohort skips shared-source compilation; migration still requires stopped writers.
 #
 # Use this for code-only changes. Changes to successful-install inputs trigger an
 # `npm ci`; for first-time provisioning (Node, pm2, swap, cloudflared) use deploy-vps.sh.
@@ -34,8 +35,8 @@ ECONOMIC_SHA=${KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256:-}
 STAGED_RELEASE=${KERYX_REDEPLOY_STAGED_RELEASE:-0}
 case "$STAGED_RELEASE" in 0|1) ;; *) echo "Invalid staged release input" >&2; exit 1 ;; esac
 if [[ "$STAGED_RELEASE" == 1 ]]; then
-  [[ "$PRESERVE_HELD" == 1 && -n "$REVIEWED_CONFIG" && -z "$ECONOMIC_CONFIG$ECONOMIC_SHA" ]] \
-    || { echo "Staged release requires reviewed roles, held schedulers and no migration" >&2; exit 1; }
+  [[ "$PRESERVE_HELD" == 1 && -n "$REVIEWED_CONFIG" ]] \
+    || { echo "Staged release requires reviewed roles and held schedulers" >&2; exit 1; }
 fi
 case "$PRESERVE_HELD" in 0|1) ;; *) echo "Invalid scheduler preservation input" >&2; exit 1 ;; esac
 if [[ -n "$REVIEWED_CONFIG" || -n "$REVIEWED_SHA" ]]; then
@@ -95,6 +96,7 @@ economic_migration() {
   else
     run_ssh "$SSH" /usr/bin/env -i PATH=/usr/bin:/bin /usr/bin/node --input-type=module - \
       "$1" "$ECONOMIC_CONFIG" "$ECONOMIC_SHA" "$REVIEWED_CONFIG" "$REVIEWED_SHA" \
+      "$STAGED_RELEASE" "$EXPECTED_COMMIT" \
       < "$SCRIPT_DIR/redeploy-economic-migration.mjs"
   fi
 }
@@ -230,6 +232,13 @@ fi
 else
   COMMIT=$EXPECTED_COMMIT
   say "1-3/5 using the exact prebuilt cohort; serving source, dependencies and ENV retained"
+  if [[ -n "$ECONOMIC_CONFIG" ]]; then
+    # Reverify the exact candidate before executing its fixed migration entry
+    # point. As in the ordinary path, arm failure containment before possible DDL.
+    reviewed_role artifact
+    MIGRATION_ATTEMPTED=1
+    economic_migration migrate
+  fi
 fi
 
 # 4. Start/restart the new durable worker before exposing the async route, then swap the web build.

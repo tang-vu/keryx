@@ -32,6 +32,48 @@ test('fresh builder environment cannot inherit funded storage, keys, providers o
   assert.equal(Object.hasOwn(env, 'KERYX_SQLITE_PATH'), false);
 });
 
+test('explicit mainnet public constants keep the same secret-free offline environment', () => {
+  const options = { commit: 'a'.repeat(40), scratch: path.resolve(os.tmpdir()), inherited: {
+    PATH: 'toolchain', OPENAI_API_KEY: 'synthetic', KERYX_STORAGE_MANIFEST: '/funded.json',
+    KERYX_SQLITE_PATH: '/funded.sqlite', FUNDER_PRIVATE_KEY: 'synthetic', NODE_OPTIONS: '--import=/unsafe',
+  } };
+  const previous = preparationEnvironment(options), mainnet = preparationEnvironment({ ...options, publicNetwork: 'arc' });
+  assert.deepEqual(mainnet, { ...previous, KERYX_NETWORK: 'arc', NEXT_PUBLIC_KERYX_NETWORK: 'arc' });
+  assert.equal(mainnet.KERYX_FORCE_OFFLINE, '1');
+  for (const publicNetwork of ['mainnet', 'arc;echo', '', null, ['arc']])
+    assert.throws(() => preparationEnvironment({ ...options, publicNetwork }));
+});
+
+test('mainnet preparation changes only the public build profile; tests stay testnet and failures retain refusal', t => {
+  const f = fixture(t), calls = [];
+  const checks = runPreparationChecks({ ...f, mainnetPublicBuild: true, run(_command, args, options) {
+    const name = args.at(-1); calls.push({ name, env: options.env });
+    assert.equal(options.cwd, f.source);
+    assert.equal(options.env.KERYX_FORCE_OFFLINE, '1');
+    assert.equal(options.env.KERYX_NETWORK, name === 'build' ? 'arc' : 'arcTestnet');
+    assert.equal(options.env.NEXT_PUBLIC_KERYX_NETWORK, name === 'build' ? 'arc' : 'arcTestnet');
+    assert.equal(options.env.NODE_ENV, name === 'test' ? 'test' : 'production');
+    assert.equal(options.env.SUPABASE_URL, '');
+    for (const key of ['KERYX_STORAGE_MANIFEST', 'KERYX_SQLITE_PATH', 'FUNDER_PRIVATE_KEY', 'OPENAI_API_KEY'])
+      assert.equal(Object.hasOwn(options.env, key), false);
+    return { status: 0, stdout: name === '--version' ? '11.19.0\n' : 'synthetic checked command output', stderr: '' };
+  } });
+  assert.deepEqual(calls.map(x => x.name), ['--version', 'typecheck', 'test', 'build']);
+  assert.deepEqual(checks.publicBuildSettings, { network: 'arc', forceOffline: true });
+  assert.equal(checks.results.length, 3);
+  for (const mainnetPublicBuild of ['true', 1, null])
+    assert.throws(() => runPreparationChecks({ ...fixture(t), mainnetPublicBuild,
+      run: () => assert.fail('invalid profile executed a command') }));
+  const failed = fixture(t), seen = [];
+  assert.throws(() => runPreparationChecks({ ...failed, mainnetPublicBuild: true, run(_command, args) {
+    const name = args.at(-1); seen.push(name);
+    return { status: name === 'test' ? 9 : 0, stdout: name === '--version' ? '11.19.0\n' : '', stderr: '' };
+  } }));
+  assert.deepEqual(seen, ['--version', 'typecheck', 'test']);
+  assert.equal(fs.existsSync(path.join(failed.root, 'build.json')), false);
+  assert.equal(fs.existsSync(path.join(failed.root, 'preparation.json')), false);
+});
+
 test('failed typecheck/test/build retains the real failure and cannot reach later checks', t => {
   for (const failed of ['typecheck', 'test', 'build']) {
     const f = fixture(t), commands = [];

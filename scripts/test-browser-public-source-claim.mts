@@ -6,7 +6,7 @@ import { build } from "esbuild";
 import { circleSdkBrowserPlugin } from "./circle-sdk-browser-plugin.mts";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
-import { chromium, type Route } from "playwright";
+import { chromium, type Route, type Response } from "playwright";
 import { encodeAbiParameters, encodeEventTopics, keccak256, toBytes } from "viem";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../lib/arc-network-profile";
 import { sourceClaimProof, type SourceClaim, type SourceClaimChallenge } from "../lib/sources/public-source-claim";
@@ -369,7 +369,30 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       assert.equal(sponsorPosts.length, 2); assert.equal(await page.evaluate(() => (window as unknown as { walletWrites: unknown[] }).walletWrites.length), 0);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Unified registration fits the viewport");
       await page.screenshot({ path: path.join(artifacts, `${profile.name}-${viewport.width}-unified-indexed-policy.png`), fullPage: true });
-      const indexedUrl = page.url(); await page.reload(); await page.getByText("Registration confirmed and indexed", { exact: true }).waitFor();
+      const indexedUrl = page.url();
+      const reloadResponses: { operation: string; status: number }[] = [];
+      const observeReload = (response: Response) => {
+        const pathname = new URL(response.url()).pathname;
+        const operation = pathname === "/api/auth/session" ? "session" : pathname === "/api/source-claims" ? "claim" : pathname === "/api/sources/sponsor" ? "sponsor" : pathname.endsWith("/listing") ? "listing" : null;
+        if (operation && reloadResponses.length < 32) reloadResponses.push({ operation, status: response.status() });
+      };
+      page.on("response", observeReload);
+      try { await page.reload(); await page.getByText("Registration confirmed and indexed", { exact: true }).waitFor(); }
+      catch (error) {
+        console.error(JSON.stringify({ fixture: "public-source-claim-indexed-reload", profile: profile.name, viewport,
+          sameIndexedUrl: page.url() === indexedUrl, authenticated, sessionOwnerMatches: sessionOwner === owner,
+          sponsorIndex, originalState: (sponsorRow as SponsoredRegistration | null)?.state, sourceControlPresent: !!(stored as SourceClaim | null)?.verifiedAt,
+          responseLimit: 32, reloadResponses, pageErrors: errors.slice(-4).map(message => message.slice(0, 160)),
+          renderedState: await page.evaluate(() => ({
+            connectedOwner: (window as unknown as { wallet: { address: string; isConnected: boolean } }).wallet.isConnected && (window as unknown as { wallet: { address: string } }).wallet.address === "0x1111111111111111111111111111111111111111",
+            registrationStep: !!document.getElementById("creator-register-title"), policyStep: !!document.getElementById("creator-policy-title"),
+            savedRecovery: !!document.querySelector('section[aria-label="Saved registration recovery"]'),
+            claimHeading: document.getElementById("claim-verified-title")?.textContent?.slice(0, 80) ?? null,
+            headings: Array.from(document.querySelectorAll("main h1, main h2, main h3")).slice(0, 12).map(node => node.textContent?.slice(0, 80) ?? ""),
+          })).catch(() => ({ unavailable: true })),
+        }));
+        throw error;
+      } finally { page.off("response", observeReload); }
       await page.getByText(/This earning policy is saved/).waitFor(); assert.equal(sponsorPosts.length, 2); assert.equal(policies.length, count + 1);
       assert.equal(await page.evaluate(() => (window as unknown as { typedSigns: unknown[] }).typedSigns.length), 0, "Reload inspects the same original without signing again");
       await page.goto("https://claim.test/register");

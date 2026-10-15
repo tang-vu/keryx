@@ -78,8 +78,10 @@ organizer relationships, product discussions, event invitations and service
 offers across periods; conversion to paying use is unestablished. Arc Office Hours,
 the Arc Discord Builder/Arc House Architect roles and a Canteen fireside/showcase
 invitation provided feedback and collaboration opportunities. They are community
-participation, not endorsements. Repeat use and accepted outcomes remain the
-next validation targets.
+participation, not endorsements. Repeat use and accepted outcomes remained the
+next validation targets at that checkpoint. The separately dated
+[October 15 return task](#return-task-from-0xacee-on-october-15) adds an
+owner-confirmed further use by an existing participant.
 
 ## Event-period usage: testnet week, then mainnet
 
@@ -148,7 +150,7 @@ agreed to be named.
 | --- | --- | --- | --- |
 | [@JamWaveX](https://t.me/JamWaveX) (Telegram) | International student in China preparing for a master's programme | Scientific research for the master's application | Not recorded |
 | [Trần Minh Hiếu](https://www.linkedin.com/in/tr%E1%BA%A7n-minh-hi%E1%BA%BFu-667915335/) | Fourth-year university student | Undergraduate research for a scholarship application; a later 65-report working paper is linked below | Sponsored Deep research for the working paper |
-| [0xacee](https://github.com/0xacee) | Builder working on a SaaS product | Finding a product niche; a later storage/backup design session is recorded below | Keryx API; later web session |
+| [0xacee](https://github.com/0xacee) | Builder working on a SaaS product | Finding a product niche; later storage/backup and VoiceReady documentation tasks are recorded below | Keryx API; later web sessions |
 
 Limits of these records:
 
@@ -221,6 +223,58 @@ data; they establish those prototype checks, not Keryx execution or independent
 human validation of research quality. The recording's closing label retains that
 validation limit. The owner-confirmed participant involvement is distinct from it.
 This is another documented workflow for an already identified user, not a fifth user.
+
+### Return task from 0xacee on October 15
+
+[Watch the English recording, 2:23](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.mp4)
+· [Recording scope and SHA-256](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.txt)
+
+[Read the short case study: problem, useful evidence and application](case-studies/voiceready-2026-10-15.md).
+It connects this return task to the earlier session and keeps research outcomes,
+companion measurements and customer acceptance distinct.
+
+On **October 15, 2026**, the owner identified an additional VoiceTake/VoiceReady
+project as 0xacee's work and supplied its retained local package. Together with
+the October 12 session above, this records **owner-confirmed return use on a new
+task**. The package records assistant-assisted implementation and validation;
+participant attribution comes from the owner, rather than from the stored runs.
+The identified outside-user minimum stays four.
+
+VoiceReady is a local companion that normalizes a VoiceTake narration export
+and previews the original and processed files. Keryx was used to research its
+documentation contracts:
+
+| Question | Retained report reference | Recorded outcome |
+| --- | --- | --- |
+| FFmpeg loudness-normalization contract | [b48df208](https://keryx.cc/dispatch/b48df208-76ac-4f42-94c3-beb36c2dc730) | Earlier ordinary-page admission and default-model selection attempts were refused. An optional Pro-model run saved this report but delivered no supported answer because the supplied original could not be read. |
+| Browser object-URL cleanup, with the original MDN page supplied | [c2febd88](https://keryx.cc/dispatch/c2febd88-a367-432a-8b90-4214f1f82e44) | Retained passages support what revocation does and when to release a reference. The result retains its Moderate source-grounding boundary. |
+
+The MDN evidence informed review of the audio-preview lifecycle. Detaching the
+player and releasing URLs on replacement/clear, normalization code and behavioral
+checks were performed separately by an assistant. The companion's retained
+measurement records a change from **−29.07 to −16.41 LUFS**, with the original
+**153.667-second**, 48 kHz mono PCM16 duration/format preserved. Those measurements
+describe VoiceReady's output, separately from Keryx's research result. Human
+listening review and use of the output in a finished customer deliverable remain
+unconfirmed.
+
+The **2:23 English video** uses actual browser captures, shortened waits,
+held views, AI narration and burned captions. It preserves the failed research
+attempts and the useful narrower answer. Its SHA-256 is
+`9b4b8b1994841fecb2ea08ad195cf08d6c1bd67d87d0e909a38936a353d05e0d`.
+The local package includes the companion source, measurements, audio and browser
+checks. The owner approved video publication on October 15; the downloaded
+published video matches the retained hash. The complete project/audio package
+remains local. Anonymous report readback returned HTTP 503
+during the existing October 15 production maintenance window, so public answer
+availability was not established by this check.
+
+The technical questions used a **0 USDC source cap** and sponsored model/search
+usage. The retained settlement projections record zero spend and no payment rows.
+The audio was an existing catalog-voice inference export and was processed locally;
+no audio was sent to Keryx. This adds a documented return task without changing
+the dated payment totals or establishing paid repeat demand, a customer testimonial
+or an independently accepted complete business workflow.
 
 ## Observed delivery and supported surfaces
 
