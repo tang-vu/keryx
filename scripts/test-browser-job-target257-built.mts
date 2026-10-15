@@ -5,6 +5,7 @@
  * No build, install, envfile, real provider/paid request, scheduler or shipped auth seam.
  */
 import assert from "node:assert/strict";
+import { assertStockUnchanged, qualificationHash, stockPins, copyStock, type CompiledCopyProof, type StockQualification } from "../test-support/stock-built-links.mjs";
 import { createHash, randomBytes } from "node:crypto";
 import { cp, mkdir, readFile, readdir, realpath, symlink, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -25,18 +26,90 @@ let failureOutput: string | undefined;
 async function main() {
 // Enumerate names before touching inherited values. Parent must launch this
 // process sterile; never snapshot/read a production credential for restoration.
-const parentEnvNames = new Set(["PATH", "Path", "SystemRoot", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE", "TEMP", "TMP", "TSX_CACHE_DIR"]);
+const parentEnvNames = new Set(["PATH", "Path", "SystemRoot", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT", "USERPROFILE", "TEMP", "TMP", "TSX_CACHE_DIR",
+  ...(process.platform === "win32" ? ["HOMEDRIVE", "HOMEPATH", "LOGONSERVER", "SYSTEMDRIVE", "USERDOMAIN", "USERNAME"] : [])]);
 assert(Object.keys(process.env).every(name => parentEnvNames.has(name)), "Parent must launch with only documented system/temp/cache variables; no inherited credentials or runtime flags");
 const root = resolve(fileURLToPath(new URL("../", import.meta.url)));
-const flags = ["dist", "output", "port", "admission"] as const;
+const flags = ["dist", "output", "port", "admission", "selection"] as const;
 const args = process.argv.slice(2);
-assert.equal(args.length, flags.length, "Parent supplies --dist=ABS --output=ABS --port=OWNED --admission=ABS");
+assert.equal(args.length, flags.length, "Parent supplies --dist=ABS --output=ABS --port=OWNED --admission=ABS --selection=FIXED");
 const values = Object.fromEntries(flags.map(flag => {
   const matches = args.filter(value => value.startsWith(`--${flag}=`));
   assert.equal(matches.length, 1, `Exactly one ${flag}`);
   return [flag, matches[0].slice(flag.length + 3)];
 })) as Record<typeof flags[number], string>;
-const { dist, output, admission: admissionPath } = values, port = Number(values.port);
+const { dist, output, admission: admissionPath, selection: selectionId } = values, port = Number(values.port);
+// Finite batching changes allocation only. Unselected controls have no result/PASS.
+const allExpectedResults: string[] = [
+    "quick-failed-360:detail-control",
+    "quick-held-360:detail-control",
+    "quick-unknown-360:detail-control",
+    "quick-missing-360:detail-control",
+    "quick-historical-360:detail-control",
+    "quick-unowned-360:detail-control",
+    "quick-overdue-360:detail-control",
+    "quick-stale-360:detail-control",
+    "deep-failed-360:detail-control",
+    "deep-held-360:detail-control",
+    "deep-unknown-360:detail-control",
+    "deep-missing-360:detail-control",
+    "deep-historical-360:detail-control",
+    "deep-unowned-360:detail-control",
+    "deep-overdue-360:detail-control",
+    "deep-stale-360:detail-control",
+    "quick-failed-1366:detail-control",
+    "quick-held-1366:detail-control",
+    "quick-unknown-1366:detail-control",
+    "quick-missing-1366:detail-control",
+    "quick-historical-1366:detail-control",
+    "quick-unowned-1366:detail-control",
+    "quick-overdue-1366:detail-control",
+    "quick-stale-1366:detail-control",
+    "deep-failed-1366:detail-control",
+    "deep-held-1366:detail-control",
+    "deep-unknown-1366:detail-control",
+    "deep-missing-1366:detail-control",
+    "deep-historical-1366:detail-control",
+    "deep-unowned-1366:detail-control",
+    "deep-overdue-1366:detail-control",
+    "deep-stale-1366:detail-control",
+    "five-second-fetch-bound-and-next-read",
+    "five-second-body-bound-and-next-read",
+    "logout-native-auth-loss-late-body",
+    "replacement-native-auth-loss-late-body",
+    "foreign-native-auth-loss-late-body",
+    "focus-native-auth-loss-late-body",
+    "unmount-native-auth-loss-late-body",
+    "exact-durable-tuple-rechecked-after-body-without-auth-hint",
+    "quick-anonymous-360:compiled-synthetic-consent-and-get-only-recovery",
+    "quick-opted-in-360:compiled-synthetic-consent-and-get-only-recovery",
+    "deep-anonymous-360:compiled-synthetic-consent-and-get-only-recovery",
+    "deep-opted-in-360:compiled-synthetic-consent-and-get-only-recovery",
+    "quick-anonymous-1366:compiled-synthetic-consent-and-get-only-recovery",
+    "quick-opted-in-1366:compiled-synthetic-consent-and-get-only-recovery",
+    "deep-anonymous-1366:compiled-synthetic-consent-and-get-only-recovery",
+    "deep-opted-in-1366:compiled-synthetic-consent-and-get-only-recovery",
+    "logout:compiled-post-sign-durable-refusal-without-anonymous-fallback",
+    "replacement:compiled-post-sign-durable-refusal-without-anonymous-fallback",
+    "foreign:compiled-post-sign-durable-refusal-without-anonymous-fallback",
+    "unknown:compiled-credit-refusal-before-sign-or-paid-dispatch",
+    "insufficient:compiled-credit-refusal-before-sign-or-paid-dispatch",
+    "external-loopback:compiled-fixed-origin-consent-unavailable-no-purchase"
+];
+const selectionRanges = {
+  "remaining17": [37, 54],
+  "diagnostic-deep-opted-in-360": [43, 44],
+  "refresh-detail360": [0, 16],
+  "refresh-detail1366": [16, 32],
+  "refresh-timeout-auth5": [32, 37],
+} as const;
+assert(Object.prototype.hasOwnProperty.call(selectionRanges, selectionId), "One fixed finite selection only");
+const [selectionStart, selectionEnd] = selectionRanges[selectionId as keyof typeof selectionRanges];
+const expectedResults = allExpectedResults.slice(selectionStart, selectionEnd);
+const selection = { id: selectionId, universeCount: 54, selectedCount: expectedResults.length, expectedResults,
+  notRun: allExpectedResults.filter(id => !expectedResults.includes(id)), whole54Acceptance: false };
+assert.equal(allExpectedResults.length, 54); assert.equal(new Set(allExpectedResults).size, 54);
+const selected = (id: string) => { assert(allExpectedResults.includes(id), "Unknown original scenario"); return expectedResults.includes(id); };
 assert(isAbsolute(dist) && isAbsolute(output) && isAbsolute(admissionPath));
 assert(Number.isInteger(port) && port >= 1024 && port <= 65535);
 function inside(path: string, parent: string) {
@@ -69,23 +142,36 @@ const runtimeFiles = (await Promise.all(["app", "components", "lib", "locales", 
   .filter(path => !/\.(test|spec)\.[^.]+$/.test(path));
 const pinnedPaths = [...new Set([...runtimeFiles, ...nextConfigFixtureFiles, "instrumentation.ts", "package-lock.json",
   "scripts/a2a-research-worker.mts", "test-support/next-config-fixture.ts", "scripts/test-browser-job-target257.mts",
-  "scripts/test-browser-job-target257-built.mts"])].sort();
+  "scripts/test-browser-job-target257-built.mts", "test-support/stock-built-links.mjs", "test-support/stock-built-links.d.mts"])].sort();
 async function pins(base: string, paths: string[]) {
   return Promise.all(paths.map(async path => ({ path, sha256: sha(await readFile(join(base, path))) })));
 }
 async function pinSources() { return pins(root, pinnedPaths); }
 const sourcePins = await pinSources();
-type Admission = { owner: "ROOT"; buildEvidence: string; readOnlyDistProof: string; publicNetwork: "arcTestnet"; dist: string; output: string; port: number; buildId: string;
+type Admission = { selection: typeof selection; stockQualificationSha256: string; readOnlyDistProofSha256: string; owner: "ROOT"; buildEvidence: string; readOnlyDistProof: string; publicNetwork: "arcTestnet"; dist: string; output: string; port: number; buildId: string;
   sourcePins: { path: string; sha256: string }[]; compiledPins: { path: string; sha256: string }[] };
 const admission = JSON.parse(await readFile(admissionPath, "utf8")) as Admission;
+assert.deepEqual(admission.selection, selection, "Parent binds selected scope and ordered expected results");
 assert.equal(admission.owner, "ROOT"); assert(admission.buildEvidence?.trim(), "Actual current source/input build evidence required");
 assert.equal(admission.publicNetwork, "arcTestnet", "Parent build evidence must bind public/server testnet twins; runtime ENV cannot change a compiled public rail");
 assert(admission.readOnlyDistProof?.trim(), "Parent's actual read-only dist provenance is mandatory, not an old source review");
 assert.equal(resolve(admission.dist), resolve(dist)); assert.equal(resolve(admission.output), resolve(output)); assert.equal(admission.port, port);
 assert.deepEqual(admission.sourcePins, sourcePins, "Current full runtime/product graph, driver and old driver bound by parent");
-const compiledPaths = await filesUnder(dist, "");
+// Reuse the parent's real initial content qualification DATA, pinned as bytes.
+// This child freshly checks the full source metadata and verifies content once
+// while copying; it does not pretend a metadata-only check is a fresh hash.
+const distProofBytes = await readFile(admission.readOnlyDistProof);
+assert.equal(sha(distProofBytes), admission.readOnlyDistProofSha256);
+const distProof = JSON.parse(distProofBytes.toString("utf8")) as { stockQualification: StockQualification; stockQualificationSha256: string; dist: string; compiledPins: { path: string; sha256: string }[] };
+assert.equal(distProof.stockQualificationSha256, admission.stockQualificationSha256);
+assert.equal(resolve(distProof.dist), resolve(dist));
+assert.deepEqual(distProof.compiledPins, admission.compiledPins);
+const stockQualification = distProof.stockQualification;
+assertStockUnchanged(dist, stockQualification);
+assert.equal(admission.stockQualificationSha256, qualificationHash(stockQualification));
+const compiledPaths = stockPins(stockQualification).map(pin => pin.path);
 assert(compiledPaths.every(path => !/(^|\/)\.env($|\.)/.test(path)), "No runtime ENV file may be copied from admitted dist");
-const compiledPins = await pins(dist, compiledPaths);
+const compiledPins = stockPins(stockQualification);
 assert.deepEqual(admission.compiledPins, compiledPins, "Parent binds every emitted file, not just a page manifest");
 const buildId = (await readFile(join(dist, "BUILD_ID"), "utf8")).trim(); assert(buildId && buildId.length <= 128);
 assert.equal(admission.buildId, buildId);
@@ -122,6 +208,7 @@ const observations: unknown[] = [];
 let contextSerial = 0;
 const tracePaths = new WeakMap<BrowserContext, string>();
 let app: ReturnType<NextFactory> | undefined, browser: Browser | undefined, mainFailure: unknown;
+let compiledCopyProof: CompiledCopyProof | undefined;
 let mainFailed = false, browserClosed = false, httpDrained = false, appClosed = false, instrumentationClosed = false, tracesFlushed = false;
 const cleanupFailures: unknown[] = [], previousEnvironment = { ...process.env }, previousCwd = process.cwd();
 const nativeFetch = globalThis.fetch, nativeConnect = Socket.prototype.connect;
@@ -258,6 +345,7 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
   const providerMethods: string[] = [];
   const recoveryIds = new Set<string>();
   let releaseSign: (() => void) | undefined, signWaiting = false;
+  let fixtureWalletConnected = false; // Synthetic EIP-1193 stays disconnected until the real connector requests accounts.
   let signedIn = true, sessionId = "a".repeat(64), address = wallet;
   const issuedAt = Date.now() - 1000, expiresAt = issuedAt + 3600000;
   context.on("page", page => page.on("pageerror", error => pageErrors.push(error.message)));
@@ -274,7 +362,9 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
           return Promise.reject(Object.assign(new Error("Optional wallet permissions unsupported in isolated fixture"), { code: 4200 }));
         }
         if (["eth_accounts", "eth_requestAccounts"].includes(packet.method)) {
-          assert(!packet.params || packet.params.length === 0); return [wallet];
+          assert(!packet.params || packet.params.length === 0);
+          if (packet.method === "eth_requestAccounts") fixtureWalletConnected = true;
+          return fixtureWalletConnected ? [wallet] : [];
         }
         if (packet.method === "eth_chainId") { assert(!packet.params || packet.params.length === 0); return "0x4cef52"; }
         assert.equal(packet.method, "eth_signTypedData_v4", "No raw transaction, personal sign, send, provider RPC or chain-switch API");
@@ -343,6 +433,10 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
     try {
       const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Cache-Control": "no-store" }, body: JSON.stringify(body) });
       assert(calls.length < 256); calls.push({ method: request.method(), path: url.pathname + url.search, body: request.postData() });
+      if (url.pathname === "/api/models" || url.pathname === "/api/research/availability") {
+        assert.equal(request.method(), "GET"); assert.equal(url.search, ""); assert.equal(request.postData(), null);
+        await json({ error: "Synthetic incidental consumer unavailable" }, 503); return;
+      }
       if (url.pathname === session) {
         assert.equal(request.method(), "GET"); assert.equal(url.search, "");
         await json({ session: signedIn ? { address, role: "asker" } : null }); return;
@@ -405,9 +499,26 @@ async function scenario(width: number, mode: "quick" | "deep", kind: JobCase, ch
       }
       if (["/api/me/locale-preference", "/api/payments", "/api/sources", "/maintenance/status"].includes(url.pathname)) {
         assert.equal(request.method(), "GET");
-        if (url.pathname === "/api/sources") assert(["", "?limit=20"].includes(url.search));
+        if (url.pathname === "/api/payments") assert(["", "?limit=50"].includes(url.search));
+        else if (url.pathname === "/api/sources") assert(["", "?limit=20"].includes(url.search));
         else assert.equal(url.search, "");
         await json({ error: "Synthetic incidental consumer unavailable" }, 503); return;
+      }
+      // Only the two actually observed incidental prefetch tuples are added.
+      // Different query/token/header variants remain failures, never API/page fallback.
+      if (url.pathname === "/api/docs" || (url.pathname === "/research" && url.search === "?_rsc=6he08rOtjDm7z2VJ")) {
+        assert.equal(request.method(), "GET"); assert.equal(request.postData(), null);
+        assert.equal(url.origin, displayOrigin);
+        const h = request.headers();
+        assert.equal(h["rsc"], "1"); assert.equal(h["next-router-prefetch"], "1"); assert.equal(h["next-url"], "/research");
+        if (url.pathname === "/api/docs") {
+          assert.equal(url.search, "?_rsc=fcIHXZ5rsQhtphpf");
+          assert.equal(h["next-router-segment-prefetch"], "/_tree"); assert.equal(h["next-router-state-tree"], undefined);
+        } else {
+          assert.equal(h["next-router-state-tree"], "%5B%22%22%2C%7B%7D%2Cnull%2C%22metadata-only%22%5D");
+          assert.equal(h["next-router-segment-prefetch"], undefined);
+        }
+        await route.fulfill({ status: 503, headers: { "Cache-Control": "no-store" }, body: "Synthetic prefetch unavailable" }); return;
       }
       assert(!url.pathname.startsWith("/api/"), `Unknown API blocked: ${url.pathname}`);
       assert.equal(request.method(), "GET");
@@ -486,6 +597,58 @@ async function waitConsent(page: Page, enabled: boolean) {
 }
 async function openCheckout(s: Awaited<ReturnType<typeof scenario>>, mode: "quick" | "deep") {
   const page = await s.context.newPage(); page.setDefaultTimeout(10000); page.setDefaultNavigationTimeout(10000);
+  if (selectionId === "diagnostic-deep-opted-in-360") {
+    // One original failed body, unchanged build bytes. A false-condition logpoint
+    // observes the mismatch before React recovers; React still throws/reports it.
+    assert.equal(buildId, "6tync7_8Do5m2VVUVIhf8");
+    const chunk = "static/chunks/2_zz1raqk76q6.js", bytes = await readFile(join(dist, chunk));
+    assert.equal(sha(bytes), "4d8c15e736be169ae9afa2bfea20ef77f0485faf555a703ada61c9ef8b9b4d89");
+    const line = bytes.toString("utf8").split("\n")[30], needle = "function rJ(e){var t=Error(u(418,";
+    assert.equal(line.split(needle).length, 2, "Exactly the pinned hydration mismatch function");
+    const columnNumber = line.indexOf(needle) + "function rJ(e){".length;
+    assert.equal(columnNumber, 45774);
+    const cdp = await s.context.newCDPSession(page);
+    cdp.on("Runtime.bindingCalled", event => {
+      if (event.name === "job257HydrationMismatch") observations.push(JSON.parse(event.payload));
+    });
+    cdp.on("Debugger.breakpointResolved", event => observations.push({
+      kind: "hydration-breakpoint-resolved", location: event.location,
+    }));
+    await cdp.send("Runtime.enable");
+    await cdp.send("Runtime.addBinding", { name: "job257HydrationMismatch" });
+    await cdp.send("Debugger.enable");
+    await cdp.send("Debugger.setBreakpointByUrl", {
+      url: `${s.displayOrigin}/_next/${chunk}`, lineNumber: 30, columnNumber,
+      condition: `(() => {
+        if (globalThis.__job257HydrationCaptured) return false;
+        globalThis.__job257HydrationCaptured = true;
+        const keys = ["class", "role", "aria-busy", "d", "viewBox", "xmlns", "type"];
+        const props = p => Object.fromEntries(["className", "role", "aria-busy", "d", "viewBox"].filter(k =>
+          p && (typeof p[k] === "string" || typeof p[k] === "boolean")).map(k => [k, String(p[k]).slice(0, 240)]));
+        const type = f => typeof f?.type === "string" ? f.type : f?.type?.displayName || f?.type?.name || null;
+        const node = n => n?.nodeType ? {
+          nodeType: n.nodeType, nodeName: n.nodeName, namespace: n.namespaceURI,
+          attrs: Object.fromEntries(keys.filter(k => n.getAttribute?.(k) !== null && n.getAttribute?.(k) !== undefined)
+            .map(k => [k, n.getAttribute(k).slice(0, 240)])),
+          children: Array.from(n.childNodes || []).slice(0, 12).map(c => ({ nodeType: c.nodeType,
+            nodeName: c.nodeName, namespace: c.namespaceURI,
+            text: c.nodeType === 3 ? (/^(Wallet|Connecting[.\u2026]*)$/.test(c.data) ? c.data : "[text length=" + c.data.length + "]") : null })),
+          path: (() => { const p = []; for (let c = n; c && p.length < 8; c = c.parentNode)
+            p.push(c.nodeName + ":" + (c.parentNode ? Array.prototype.indexOf.call(c.parentNode.childNodes, c) : 0)); return p; })(),
+        } : null;
+        const parents = [], children = [];
+        for (let f = e; f && parents.length < 16; f = f.return) parents.push({ tag: f.tag, type: type(f) });
+        for (let f = e.child; f && children.length < 12; f = f.sibling)
+          children.push({ tag: f.tag, type: type(f), props: props(f.pendingProps) });
+        globalThis.job257HydrationMismatch(JSON.stringify({ kind: "hydration-mismatch-node",
+          buildId: "6tync7_8Do5m2VVUVIhf8", at: performance.now(),
+          expected: { tag: e.tag, type: type(e), props: props(e.pendingProps), children },
+          actualParent: node(e.stateNode), nextHydratable: node(rq),
+          hydrationParent: { tag: rQ?.tag, type: type(rQ) }, parents }));
+        return false;
+      })()`,
+    });
+  }
   const response = await page.goto(`${s.displayOrigin}/research?mode=${mode}&budget=0.03`); assert.equal(response?.status(), 200);
   assert.equal(new URL(page.url()).origin, s.displayOrigin);
   assert.equal(await page.evaluate(() => window.isSecureContext && !!crypto.subtle), true);
@@ -526,15 +689,17 @@ async function finishPurchase(page: Page, s: Awaited<ReturnType<typeof scenario>
 }
 try {
   await mkdir(run); await mkdir(fixture); // Exclusive runtime, never overwrite old captures.
-  await cp(dist, join(fixture, ".next"), { recursive: true, dereference: true, force: false, errorOnExist: true });
+  compiledCopyProof = copyStock(dist, join(fixture, ".next"), stockQualification);
   await cp(join(root, "public"), join(fixture, "public"), { recursive: true, dereference: true, force: false, errorOnExist: true });
-  assert.deepEqual(await pins(join(fixture, ".next"), await filesUnder(join(fixture, ".next"), "")), compiledPins,
+  assert.deepEqual(compiledCopyProof.compiledPins, compiledPins,
     "Owned runtime copy begins as exact admitted current compiled bytes");
   await copyNextConfigFixture(root, fixture);
   await symlink(join(root, "node_modules"), join(fixture, "node_modules"), process.platform === "win32" ? "junction" : "dir");
   await mkdir(join(fixture, "data"));
   const environment: NodeJS.ProcessEnv = { NODE_ENV: "production", NODE_OPTIONS: "", BASE_URL: origin,
     NEXT_TELEMETRY_DISABLED: "1", KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "0",
+    // Fixed public content-encryption fixture key; never account or payment authority.
+    CONTENT_MASTER_KEY: "11".repeat(32),
     SELLER_ADDRESS: seller, AGENT_FUNDER_PRIVATE_KEY: sellerKey,
     KERYX_EXTERNAL_DISCOVERY: "0", KERYX_WEB_RESEARCH: "0", KERYX_REGISTRY_ADDRESS: "", NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: "",
     KERYX_RPC_WS_URL: "", TEMP: join(output, "temp"), TMP: join(output, "temp"), TSX_CACHE_DIR: join(output, "tsx-cache") };
@@ -569,6 +734,7 @@ try {
   browser = await chromium.launch({ headless: true });
   for (const width of [360, 1366]) for (const mode of ["quick", "deep"] as const) {
     for (const kind of ["failed", "held", "unknown", "missing", "historical", "unowned", "overdue", "stale"] as const) {
+      if (!selected(`${mode}-${kind}-${width}:detail-control`)) continue;
       const s = await scenario(width, mode, kind);
       await using(s, async () => {
         const page = await open(s.context, s.fixture.id);
@@ -612,6 +778,7 @@ try {
   // Real mounted per-request timeout covers BOTH fetch and body consumption.
   // Do not inflate the canonical five-second bound or substitute hook timers.
   for (const hold of ["fetch", "body"] as const) {
+    if (!selected(`five-second-${hold}-bound-and-next-read`)) continue;
     const s = await scenario(1366, "quick", "failed");
     await using(s, async () => {
       const page = await open(s.context, s.fixture.id);
@@ -629,6 +796,7 @@ try {
   // Native same-origin two-page broadcast/focus, fresh synthetic durable tuples.
   // Auth notices are current contracts; Root496 coupling remains a final-main gate.
   for (const loss of ["logout", "replacement", "foreign", "focus", "unmount"] as const) {
+    if (!selected(`${loss}-native-auth-loss-late-body`)) continue;
     const s = await scenario(1366, "deep", "held");
     await using(s, async () => {
       const page = await open(s.context, s.fixture.id), peer = await s.context.newPage();
@@ -656,7 +824,7 @@ try {
       results.push(`${loss}-native-auth-loss-late-body`);
     });
   }
-  {
+  if (selected("exact-durable-tuple-rechecked-after-body-without-auth-hint")) {
     const s = await scenario(1366, "quick", "failed");
     await using(s, async () => {
       const page = await open(s.context, s.fixture.id);
@@ -674,6 +842,7 @@ try {
   // Separate actual-route controls. Detail results above are never purchase,
   // native signed-cookie, new28 route-admission or financial acceptance.
   for (const width of [360, 1366]) for (const mode of ["quick", "deep"] as const) for (const associate of [false, true]) {
+    if (!selected(`${mode}-${associate ? "opted-in" : "anonymous"}-${width}:compiled-synthetic-consent-and-get-only-recovery`)) continue;
     const s = await scenario(width, mode, "failed", {});
     await using(s, async () => {
       const { page, panel, review } = await openCheckout(s, mode);
@@ -730,6 +899,7 @@ try {
     });
   }
   for (const loss of ["logout", "replacement", "foreign"] as const) {
+    if (!selected(`${loss}:compiled-post-sign-durable-refusal-without-anonymous-fallback`)) continue;
     const s = await scenario(1366, "quick", "failed", { holdSign: true });
     await using(s, async () => {
       const { page, panel } = await openCheckout(s, "quick");
@@ -748,6 +918,7 @@ try {
     });
   }
   for (const credit of ["unknown", "insufficient"] as const) {
+    if (!selected(`${credit}:compiled-credit-refusal-before-sign-or-paid-dispatch`)) continue;
     const s = await scenario(360, "quick", "failed", { credit });
     await using(s, async () => {
       const { page, panel } = await openCheckout(s, "quick");
@@ -760,7 +931,7 @@ try {
       results.push(`${credit}:compiled-credit-refusal-before-sign-or-paid-dispatch`);
     });
   }
-  {
+  if (selected("external-loopback:compiled-fixed-origin-consent-unavailable-no-purchase")) {
     const s = await scenario(1366, "quick", "failed", { external: true });
     await using(s, async () => {
       const { page } = await openCheckout(s, "quick");
@@ -772,7 +943,8 @@ try {
       results.push("external-loopback:compiled-fixed-origin-consent-unavailable-no-purchase");
     });
   }
-  assert.deepEqual(await pinSources(), sourcePins); assert.deepEqual(await pins(dist, await filesUnder(dist, "")), compiledPins); assert.deepEqual(failures, []); assert.deepEqual(pageErrors, []);
+  assert.deepEqual(results, expectedResults, "Only every selected original control, in order; no skip-as-PASS");
+  assert.deepEqual(await pinSources(), sourcePins); assertStockUnchanged(dist, stockQualification); assert.deepEqual(stockPins(stockQualification), compiledPins); assert.deepEqual(failures, []); assert.deepEqual(pageErrors, []);
 } catch (error) { process.exitCode = 1; mainFailed = true; mainFailure = error; }
 finally {
   try { await browser?.close(); browserClosed = true; } catch (error) { process.exitCode = 1; cleanupFailures.push(error); }
@@ -788,17 +960,18 @@ finally {
   } else { instrumentationClosed = appClosed = tracesFlushed = true; }
   try {
     assert.deepEqual(await pinSources(), sourcePins, "Consumed current sources unchanged even on failed controls");
-    assert.deepEqual(await pins(dist, await filesUnder(dist, "")), compiledPins, "Parent dist remains unchanged even on failed controls");
+    assertStockUnchanged(dist, stockQualification);
+    assert.deepEqual(stockPins(stockQualification), compiledPins, "Parent dist remains unchanged even on failed controls");
   } catch (error) { process.exitCode = 1; cleanupFailures.push(error); }
   Socket.prototype.connect = nativeConnect; globalThis.fetch = nativeFetch;
   try { process.chdir(previousCwd); for (const name of Object.keys(process.env)) delete process.env[name]; Object.assign(process.env, previousEnvironment); }
   catch (error) { process.exitCode = 1; cleanupFailures.push(error); }
   try {
-    await writeFile(join(run, "outcome.json"), JSON.stringify({ status: cleanupFailures.length || mainFailed ? "FAILED" : "COMPILED_SYNTHETIC_CONTROLS_PASSED",
-      scope: "Actual compiled Next detail and consent UI/hooks with unchanged signer/journal policy; synthetic APIs and isolated typed signatures only. Native new28, genuine auth/owner admission, paid latency and settlement remain OPEN.",
+    await writeFile(join(run, "outcome.json"), JSON.stringify({ status: cleanupFailures.length || mainFailed ? "FAILED" : "COMPILED_SYNTHETIC_SELECTED_CONTROLS_PASSED", selection, whole54Acceptance: false,
+      scope: "Selected original controls only; other cases NOT RUN in this invocation. Actual compiled Next detail and consent UI/hooks with unchanged signer/journal policy; synthetic APIs and isolated typed signatures only. Native new28, genuine auth/owner admission, paid latency and settlement remain OPEN.",
       containment: { externalContinued: 0, realProviderCalls: 0, realSearchCalls: 0, realPaidApiCalls: 0, realFundingCalls: 0,
         fixtureSignatures, maximumFixtureSignatures: 16 },
-      buildId, sourcePins, compiledPins, admissionPath, buildEvidence: admission.buildEvidence, readOnlyDistProof: admission.readOnlyDistProof, coverage, results, observations, httpRequests, failures, pageErrors, externalAttempts,
+      buildId, sourcePins, compiledPins, compiledCopyProof, admissionPath, buildEvidence: admission.buildEvidence, readOnlyDistProof: admission.readOnlyDistProof, coverage, results, observations, httpRequests, failures, pageErrors, externalAttempts,
       naturalClose: { browserClosed, httpDrained, instrumentationClosed, appClosed, tracesFlushed,
         processExitObserved: null, stdoutEofObserved: null, stderrEofObserved: null },
       error: mainFailure instanceof Error ? { name: mainFailure.name, message: mainFailure.message, stack: mainFailure.stack } : mainFailed ? String(mainFailure) : null,
@@ -808,7 +981,7 @@ finally {
   if (cleanupFailures.length) throw new AggregateError(mainFailed ? [mainFailure, ...cleanupFailures] : cleanupFailures, "Compiled job257 natural close failed");
   if (mainFailed) throw mainFailure;
 }
-console.log("Compiled job257 synthetic detail/consent controls completed; native new28 and original257 financial/customer acceptance remain OPEN.");
+console.log("Selected compiled job257 synthetic controls completed; no whole54 acceptance. Native new28 and original257 financial/customer gates remain OPEN.");
 }
 await main().catch(async error => {
   process.exitCode = 1;

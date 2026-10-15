@@ -44,8 +44,9 @@ function assertDormantGraph(roots: string[], read: (file: string) => string,
     // Only the source-owned APPLICATION boundary admits storage. Its entire transitive graph is still inspected:
     // provisioning, funding executor/orchestrator/transaction/key-loading edges remain forbidden.
     const admittedStorage = chain.includes(applicationStorageBoundary) && applicationStorageSubstrate.has(file);
+    const watchConnection = chain.at(-1) === "lib/db/topic-watches-sqlite.ts" && file === "lib/db/storage-identity-connection.ts";
     const accountProfile = chain.at(-1) === "lib/accounts/sqlite-store.ts" && file === "lib/db/enrolled-sqlite-schema-profile.ts";
-    if (dormantRuntime.test(file) && !admittedStorage && !accountProfile) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
+    if (dormantRuntime.test(file) && !admittedStorage && !accountProfile && !watchConnection) throw new Error(`Dormant runtime reachable: ${[...chain, file].join(" -> ")}`);
     if (visited.has(file)) return;
     visited.add(file);
     for (const specifier of importsFor ? importsFor(file) : runtimeImports(read(file), file)) {

@@ -114,8 +114,8 @@ export function WalletMenu() {
   if (!hydrated || ((status === "reconnecting" || status === "connecting") && !session)) {
     return (
       <span className={`${CHIP} cursor-default opacity-70`} role="status" aria-busy>
-        {status === "connecting" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wallet className="h-3.5 w-3.5" />}
-        {status === "connecting" ? webHeaderMessages["walletMenu.connecting"] : copy("walletMenu.wallet")}</span>
+        {hydrated && status === "connecting" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wallet className="h-3.5 w-3.5" />}
+        {hydrated && status === "connecting" ? webHeaderMessages["walletMenu.connecting"] : copy("walletMenu.wallet")}</span>
     );
   }
 
@@ -152,6 +152,9 @@ export function WalletMenu() {
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
             <Link href="/me/sources">
               <Library className="h-3.5 w-3.5" />{copy("walletMenu.mySources")}</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">
+            <Link href="/me/watches"><BookOpen className="h-3.5 w-3.5" />{copy("topicWatch.menu")}</Link>
           </DropdownMenuItem>
           {/* The paying side of the same wallet: what it dispatched and what those tolls cost. */}
           <DropdownMenuItem asChild className="cursor-pointer rounded-none text-ink-2 focus:bg-paper-2 focus:text-ink">

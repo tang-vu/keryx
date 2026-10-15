@@ -1,3 +1,4 @@
+import { topicWatchMessages } from "../../locales/en/topic-watches";
 import { legalMessages } from "../../locales/en/legal";
 import type { UiLocale } from "./locales";
 import { myHistoryMessages } from "../../locales/en/my-history";
@@ -23,6 +24,7 @@ import { sourceLeaderboardMessages } from "../../locales/en/source-leaderboard";
 
 /** English source keys. Payment/legal prose remains in its separate review gate. */
 export const englishMessages = Object.freeze({
+  ...topicWatchMessages,
   ...sourceLeaderboardMessages,
   ...sourceArchiveMessages,
   ...ledgerMessages,
