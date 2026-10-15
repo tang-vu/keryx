@@ -119,3 +119,13 @@ CLI/MCP history, local desktop, extensions, bots/A2A/chat and public/export cons
 no assignment, private-content, erasure, publication or spending authority. Account/profile
 deletion/recreation, explicit assignment-consuming adapters, archive/testnet, paired storage,
 production originals and original issue criteria remain separately qualified work.
+
+## Main reconciliation on 2026-10-15
+
+The branch now includes main `faaea576` (PR505 chat consent) by an ordinary merge. The fixed native family is 24 tables: the existing20, chat links/tokens, and owner assignment associations/events. The explicit migration profiles accept the exact historical19,20 and chat22 families with/without the archive and preserve their typed originals; runtime still admits four exact current profiles.
+
+The combined source passed85 retained native/migration/gateway cases,18 mounted API cases after correcting their fixture table count, four focused account-cap/facade cases, and TypeScript. Ten genuine POSIX owner positives remain for Linux CI. Copy checks reuse47 unchanged passing cases plus the corrected62-namespace case; the strict guard passed. These are scoped reused results rather than a claim of one fresh whole-suite pass.
+
+One actual offline study run produced449 source bindings; all48 trials and every non-source-map field equal accepted main, with zero outbound attempts. The current production build passed in42.186 seconds with3940 source pins and no drift. All17 compiled browser cases passed against this new build with zero page/cleanup errors and natural complete capture. The earlier zero-case stale caller-checkpoint failure is retained separately. Required exact-head CI and deployment remain outstanding. Original269 remains open for its separately documented acceptance criteria.
+
+Main `a4568d68` (PR508) was then merged normally. Its nine CLI/Desktop/docs/test paths leave all449 current study inputs and the compiled owner-page closure unchanged; accepted evidence is reused. A concrete CI timeout on the same retained-session fixture was corrected by changing only its bulk setup call to the existing transaction wrapper. Its three row-cap cases and the existing rollback case passed with unchanged deadlines and assertions.
