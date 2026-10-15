@@ -49,7 +49,7 @@ weights; judges retain the final say. Each row points to an inspectable example.
 | Criterion | Inspect | Evidence and boundary |
 | --- | --- | --- |
 | Agentic sophistication — 30% | [Recorded decisions](https://keryx.cc/walkthrough), [Decision Lab](https://keryx.cc/operator/decisions), [business Operator](operator-business.md) | Source choices and reasons, allocation/replay tools, and obligation/liquidity checks. Distinguish a model proposal from policy enforcement and an observed action. The recorded example demonstrates CACHE/SKIP, with no new BUY. |
-| Traction — 30% | [Named users and their tasks](tameion-submission.md#event-period-usage-testnet-week-then-mainnet), [recorded usage by cohort](https://keryx.cc/usage) | At least four identified outside users in the retained submission evidence. Sponsored use, owner/QA, testnet and mainnet keep their own labels; accepted paid fulfillment and independently verified repeat demand remain open. |
+| Traction — 30% | [Named users and their tasks](tameion-submission.md#event-period-usage-testnet-week-then-mainnet), [0xacee's return task](tameion-submission.md#return-task-from-0xacee-on-october-15), [recorded usage by cohort](https://keryx.cc/usage) | At least four identified outside users, now including an owner-confirmed October 15 return task by an existing participant. Sponsored use, owner/QA, testnet and mainnet keep their own labels; accepted paid fulfillment and paid repeat demand remain open. |
 | Circle tool usage — 20% | [Walkthrough payment checks](https://keryx.cc/walkthrough), [Circle/Arc integration ledger](engineering/circle-arc-integration-ledger.md) | Circle Gateway/x402, USDC and Arc source/payout authority, with exact receipt references. The ledger separates live, testnet, planned and unused integrations. A Circle reference is not an individual Arc transaction hash. |
 | Innovation — 20% | [Two-toll design](research-receipts.md), [user research paper](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf), [reusable Arc primitives](https://github.com/tang-vu/keryx-arc-primitives) | Separate access purchases from evidence-gated citation rewards, then inspect which evidence supported the result. The working paper and MIT components are concrete outputs; the [procurement prototype](evidence-procurement.md) keeps funded execution as a future gate. |
 
@@ -59,6 +59,12 @@ owner confirmed direct operation or supervision; the
 [story](tameion-submission.md#recorded-outside-user-workflow-0xacee) separates the
 user session from later assistant-run prototype checks. It is supporting footage,
 separate from the submitted 2:47 demo.
+
+The owner confirmed a further [VoiceReady task by 0xacee on October 15](tameion-submission.md#return-task-from-0xacee-on-october-15):
+Keryx's MDN excerpts informed a local audio-preview review, while FFmpeg research
+remained unsuccessful. A 2:23 edited video and measured prototype output are
+retained locally, with publication still open. This records return use with a
+zero-source-cap sponsored session; it adds neither a fifth user nor paid demand.
 
 [Trần Minh Hiếu's working paper](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf)
 uses 65 retained reports and 202 research targets. The
