@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ledger.ts",
-  "sourceSha256": "7e51c82e2538ae69cd529d33564e7ed44e37c4fb5f2e3a2192b0049b3a91b4d8",
+  "sourceSha256": "e944e80db5ebdc3b319cc8fb68fc232dfc1865525d184428803fb18c250d8f05",
   "entries": {
     "ledgerResource.loading": {
       "source": "Loading {label}…",
@@ -117,8 +117,8 @@
       "text": "问题记录"
     },
     "ledgerPresentation.recent": {
-      "source": "Recent questions",
-      "text": "近期问题"
+      "source": "Recent public questions",
+      "text": "???????"
     },
     "ledgerPresentation.more": {
       "source": "More questions",
@@ -375,6 +375,14 @@
     "paymentRecords.days.other": {
       "source": "{count}d",
       "text": "{count} 天"
+    },
+    "ledgerPresentation.publicHistoryBoundary": {
+      "source": "Recorded totals include all recorded questions. This list shows only questions made public and excludes scripted runs.",
+      "text": "????????????????????????????????????"
+    },
+    "ledgerPresentation.noPublicQuestions": {
+      "source": "No public questions to display.",
+      "text": "???????????"
     }
   }
 }

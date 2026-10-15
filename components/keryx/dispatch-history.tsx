@@ -32,7 +32,7 @@ function timeAgo(iso: string) {
   return <DisplayTime value={iso} relative />;
 }
 
-export function DispatchHistory({ runs, title = copy("dispatchHistory.title"), showFinancials = true }: { runs: RunSummary[]; title?: string; showFinancials?: boolean }) {
+export function DispatchHistory({ runs, title = copy("dispatchHistory.title"), showFinancials = true, emptyMessage = copy("dispatchHistory.empty"), description }: { runs: RunSummary[]; title?: string; showFinancials?: boolean; emptyMessage?: string; description?: string }) {
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-2 space-y-0 pb-4">
@@ -42,9 +42,10 @@ export function DispatchHistory({ runs, title = copy("dispatchHistory.title"), s
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5">
+        {description && <p className="pb-3 text-sm leading-relaxed text-ink-2">{description}</p>}
         {runs.length === 0 && (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            {copy("dispatchHistory.empty")}
+            {emptyMessage}
           </p>
         )}
         {runs.map((r) => (
