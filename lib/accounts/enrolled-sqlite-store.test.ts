@@ -596,7 +596,7 @@ describe("genuine enrolled account membership", () => {
   it.each(["revoked", "expired", "live"] as const)("counts live bindings rather than cumulative retained %s rows", async kind => {
     const base = await bootstrap(), fresh = await freshLogin(base), now = Date.now();
     if (kind !== "live") await base.store.revokeSession(base.start);
-    edit(base, db => {
+    syntheticPopulationTransaction(base, db => {
       const insert = db.prepare(`INSERT INTO account267_sessions(session_hash,wallet,account_id,member_generation,credential_generation,
         issued_at,expires_at,origin,network,history_consent,revoked_at) VALUES(?,?,?,?,?,?,?,?,?,1,?)`);
       for (let i = 0; i < (kind === "live" ? 1023 : 1024); i++) insert.run(randomAccountValue(), base.s.wallet,
