@@ -16,7 +16,7 @@ export function SourceLeaderboard({ data, network }: { data: SourceLeaderboardDa
   const [query, setQuery] = useState("");
   const needle = query.trim().toLocaleLowerCase();
   const rows = data.rows.filter(row => !needle || `${row.sourceName} ${row.sourceId} ${row.walletAddress ?? ""} ${row.feeBeneficiaries.join(" ")}`.toLocaleLowerCase().includes(needle));
-  return <Card>
+  return <Card className="min-w-0 [overflow-wrap:anywhere]">
     <CardHeader className="space-y-2 pb-4">
       <CardTitle className="flex items-center gap-2 font-serif text-lg font-normal"><Trophy className="h-4 w-4 text-seal" />{copy("sourceLeaderboard.title", { network })}</CardTitle>
       <p className="text-xs text-muted-foreground">{copy("sourceLeaderboard.catalog", { count: data.rows.length })}</p>

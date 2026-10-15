@@ -1,13 +1,17 @@
 /** Real presentation components with synthetic records; every request is intercepted and read-only. */
 import assert from "node:assert/strict";
 import { build, type Plugin } from "esbuild";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { chromium } from "playwright";
 import { PAPER_CATALOG } from "../lib/papers/catalog";
 import { groupPaperWorks } from "../lib/papers/work-groups";
+import type { SourceLeaderboard } from "../lib/sources/source-leaderboard";
+
+const focusedLeaderboard = process.argv.slice(2).includes("--source-leaderboard-only");
+assert(process.argv.slice(2).every(arg => arg === "--source-leaderboard-only"), "Unknown ledger browser selection");
 
 // This component harness also renders the async server page. Compute its Node-only
 // bibliography helper in Node, as Next does, rather than polyfilling crypto in a browser.
@@ -20,6 +24,20 @@ const source = { id: "fixture-creator", name: "Unverified creator fixture", url:
 const citedEntry = { url: "https://docs.publisher.example/service", title: "A previously cited service manual", publisher: "docs.publisher.example", runId: "fixture-run", citedAt: "2026-10-05T00:00:00.000Z", deliveryKind: "excerpt", truncated: true, retrievedAt: "2026-10-04T23:00:00.000Z", extraction: "html" };
 const directory = { registry: { status: "ready", entries: [{ source, totalEarnedUsdc: 0, citationCount: 0, claim: null, claimPolicyUnavailable: false, controlFresh: false }] }, publicReferences: { status: "ready", entries: [reference] }, citedSources: { status: "ready", entries: [citedEntry], runCount: 28 }, earningsStatus: "ready" };
 const metrics = { totalQueries: 28, recordedAccounts: 7, guestQuestions: 12, totalPayments: 0, totalVolumeUsdc: 0, totalCreatorPayoutsUsdc: 0, creatorsEarning: 0, pendingPaymentConfirmations: 0, pendingPaymentVolumeUsdc: 0, failedPaymentAttempts: 0, failedPaymentVolumeUsdc: 0 };
+// Exercise the actual populated card: empty/legacy metrics never mount it.
+const sourceLeaderboard: SourceLeaderboard = {
+  catalogStatus: "ready", operatingFeesStatus: "ready", operatingFeeNetwork: "eip155:5042002",
+  rows: [
+    { sourceId: `creator:${"long-source-identifier-".repeat(8)}`, sourceName: "Independent creator documentation and research notes for distributed systems ".repeat(4), kind: "creator" as const },
+    { sourceId: `public:${"publisher-identifier-".repeat(8)}`, sourceName: `PublisherDocumentation${"UnbrokenSourceLabel".repeat(16)}`, kind: "public-reference" as const },
+    { sourceId: `paper:10.1234/${"retained-paper-identifier-".repeat(8)}`, sourceName: "A long paper title about source attribution, reproducible evidence and ledger presentation ".repeat(3), kind: "paper" as const },
+  ].map((row, index) => ({
+    ...row, href: `/sources?q=${encodeURIComponent(row.sourceId)}`,
+    walletAddress: index === 0 ? `0x${"a".repeat(40)}` : undefined,
+    creatorEarnedUsdc: 0, paymentCount: 0, citationCount: 0,
+    operatingFeeUsdc: 0, operatingFeePaymentCount: 0, operatingFeeCitationCount: 0, feeBeneficiaries: [],
+  })),
+};
 const archivedCreators = Array.from({ length: 7 }, (_, index) => ({
   sourceId: `historical-source-${index}`, sourceName: `Original testnet publisher ${index}`,
   walletAddress: `0x${String(index + 1).repeat(40)}`, totalEarnedMicroUsdc: (7 - index) * 100001,
@@ -71,7 +89,7 @@ try {
       }
       else root.render(<DashboardView historyPreview={mode==='archive'?<TestnetHistorySummary info={${JSON.stringify(archiveInfo)}} summary={${JSON.stringify(archiveSummary)}} creators={${JSON.stringify(archivedCreators)}}/>:undefined} sourcePreview={<SourceDirectoryPreview directory={directory}/>}/>);
     `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife", plugins: [chrome], define: { "process.env": "{}", "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(network), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' } });
-    for (const width of [320, 768, 1440]) {
+    for (const width of focusedLeaderboard ? [390, 1440] : [320, 390, 768, 1440]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
       await page.clock.install();
       const errors: string[] = [];
@@ -90,7 +108,7 @@ try {
         if (pathname === "/api/papers") paperRequests.push(requested.href);
         if (pathname.startsWith("/api/")) {
           if (mode === "error" && pathname === "/api/metrics") return route.fulfill({ status: 503, json: { error: "unavailable" } });
-          if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "account-unavailable" ? { recordedAccounts: null } : mode === "account-malformed" ? { recordedAccounts: 1.5 } : mode === "account-zero" ? { recordedAccounts: 0 } : mode === "account-legacy" ? { recordedAccounts: undefined } : {}), ...(Object.hasOwn(guestModes, mode) ? { guestQuestions: guestModes[mode] } : {}), ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [] } });
+          if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "account-unavailable" ? { recordedAccounts: null } : mode === "account-malformed" ? { recordedAccounts: 1.5 } : mode === "account-zero" ? { recordedAccounts: 0 } : mode === "account-legacy" ? { recordedAccounts: undefined } : {}), ...(Object.hasOwn(guestModes, mode) ? { guestQuestions: guestModes[mode] } : {}), ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [], ...(mode === "source-leaderboard" ? { sourceLeaderboard: { ...sourceLeaderboard, operatingFeeNetwork: network === "arc" ? "eip155:5042" : "eip155:5042002" } } : {}) } });
           if (pathname === "/api/runs/summary") {
             assert.equal(requested.searchParams.get("network"), network === "arc" ? "eip155:5042" : "eip155:5042002");
             assert.equal(requested.searchParams.get("period"), "all");
@@ -115,6 +133,75 @@ try {
         await page.addStyleTag({ content: css });
         await page.addScriptTag({ content: bundle.outputFiles[0].text });
       }
+      if (width === 390 || width === 1440) {
+        mode = "source-leaderboard";
+        await open("/dashboard");
+        const card = page.locator("#current-creators > .grid > div").first();
+        const rows = card.locator("[data-source-id]");
+        await rows.last().waitFor();
+        assert.equal(await rows.count(), sourceLeaderboard.rows.length, "Keep every populated source row");
+        for (const [index, row] of sourceLeaderboard.rows.entries()) {
+          assert.equal(await rows.nth(index).getByRole("link").textContent(), row.sourceName, "Retain the full source label");
+          assert.equal(await rows.nth(index).getAttribute("data-source-id"), row.sourceId);
+          await rows.nth(index).getByText(/Creator rewards/).waitFor();
+          await rows.nth(index).getByText(/Owner fee/).waitFor();
+        }
+        const bounds = await card.evaluate(element => {
+          const [rect] = [(node: Element) => {
+            const box = node.getBoundingClientRect();
+            return { left: box.left, right: box.right, width: box.width, height: box.height, clientWidth: node.clientWidth, scrollWidth: node.scrollWidth };
+          }];
+          return {
+            viewport: innerWidth, documentWidth: document.documentElement.scrollWidth,
+            bodyOverflowX: getComputedStyle(document.body).overflowX,
+            main: rect(document.querySelector("main")!), card: rect(element),
+            gridColumns: getComputedStyle(element.parentElement!).gridTemplateColumns,
+            search: rect(element.querySelector("input")!),
+            rows: Array.from(element.querySelectorAll("[data-source-id]")).map(row => ({
+              ...rect(row), link: rect(row.querySelector("a")!),
+              textOverflow: getComputedStyle(row.querySelector("a")!).textOverflow,
+              fontSize: getComputedStyle(row.querySelector("a")!).fontSize,
+            })),
+          };
+        });
+        const artifact = path.join(screenshots, `ledger-populated-sources-${network}-${width}`);
+        await writeFile(`${artifact}.json`, JSON.stringify(bounds, null, 2) + "\n");
+        await page.screenshot({ path: `${artifact}.png`, fullPage: true });
+        assert.equal(bounds.documentWidth, width, `Populated source leaderboard overflows ${network}/${width}: ${JSON.stringify(bounds)}`);
+        assert(!["hidden", "clip"].includes(bounds.bodyOverflowX), "Do not conceal page overflow");
+        assert(bounds.card.left >= bounds.main.left && bounds.card.right <= bounds.main.right + 1, "Card must fit the dashboard");
+        assert(bounds.card.width >= 280 && bounds.card.scrollWidth <= bounds.card.clientWidth + 1, "Card must remain readable without horizontal scrolling");
+        assert(bounds.search.width >= 200 && bounds.search.right <= bounds.card.right, "Search must fit and remain usable");
+        for (const row of bounds.rows) {
+          assert(row.width >= 200 && row.scrollWidth <= row.clientWidth + 1, "Row metadata must fit without clipping");
+          assert(row.link.width >= 200 && row.link.height >= 18 && row.link.right <= bounds.card.right, "Source link must remain readable and clickable");
+          assert.equal(row.textOverflow, "ellipsis", "Keep established source-title truncation");
+          assert(parseFloat(row.fontSize) >= 15, "Do not shrink source text to force a fit");
+        }
+        const search = card.getByRole("textbox", { name: "Search leaderboard sources" });
+        // A suffix beyond the visible title and the full identifier remain searchable.
+        for (const query of ["research notes for distributed systems", sourceLeaderboard.rows[0].sourceId, `0x${"a".repeat(40)}`]) {
+          await search.fill(query);
+          assert.equal(await rows.count(), 1);
+          assert.equal(await rows.first().getAttribute("data-source-id"), sourceLeaderboard.rows[0].sourceId);
+        }
+        await search.fill("no-matching-leaderboard-source");
+        await card.getByText("No matching sources.", { exact: true }).waitFor();
+        assert.equal(await rows.count(), 0);
+        await search.fill("");
+        assert.equal(await rows.count(), sourceLeaderboard.rows.length);
+        const sourceLink = rows.first().getByRole("link");
+        assert.equal(await sourceLink.getAttribute("href"), sourceLeaderboard.rows[0].href);
+        await Promise.all([
+          page.waitForURL(url => url.pathname === "/sources" && url.searchParams.get("q") === sourceLeaderboard.rows[0].sourceId),
+          sourceLink.click(),
+        ]);
+        assert.deepEqual(errors, [], `Populated leaderboard browser errors at ${network}/${width}`);
+        assert.deepEqual(paperRequests, [], "Leaderboard search must not start repository lookups");
+        console.log(`Populated source leaderboard passed ${network}/${width}`);
+        mode = "zero";
+      }
+      if (focusedLeaderboard || width === 390) { await page.close(); continue; }
       await open("/dashboard");
       await page.getByRole("heading", { name: "No settled payments yet" }).waitFor().catch(async error => { console.error({ errors, text: await page.locator("body").innerText() }); throw error; });
       await page.getByText(run.question).waitFor();
@@ -300,4 +387,4 @@ try {
     }
   }
 } finally { await browser.close(); }
-console.log(`Ledger and source-library browser acceptance passed; screenshots: ${screenshots}`);
+console.log(`${focusedLeaderboard ? "Populated source-leaderboard" : "Ledger and source-library"} browser acceptance passed; screenshots: ${screenshots}`);
