@@ -21,6 +21,14 @@ export const HISTORICAL_NATIVE_USER_DOMAIN_TABLES = Object.freeze(["private_prof
 export const PRE_OWNER_NATIVE_USER_DOMAIN_TABLES = Object.freeze([...HISTORICAL_NATIVE_USER_DOMAIN_TABLES, "topic_watches"]);
 const OWNER269_TABLES = Object.freeze(["owner269_operations", "owner269_associations"]);
 
+type SourceMigrationPlan = Readonly<{
+  pair: readonly [string, string];
+  added: readonly string[];
+  ddl: readonly string[];
+}>;
+let historical19Plans: readonly SourceMigrationPlan[] | undefined;
+let preOwner20Plans: readonly SourceMigrationPlan[] | undefined;
+
 /** One compiled fixed22 target, two archive variants, separate old19/old20
  * references. Never infer a family from its count or accept future chat/pending
  * additions. The parent must qualify any later combined source separately. */
@@ -35,7 +43,9 @@ function topicWatchesMigrationPlans(historical19: boolean) {
     canonicalJson([...sourceTables].sort()) !== canonicalJson(expected.sort()) ||
     canonicalJson([...guardNames].sort()) !== canonicalJson(expectedGuards.sort()))
     throw new Error("ROOT must qualify the exact full19/full20-to-owner269 full22 source reference");
-  return Object.freeze([false, true].map(publicReferenceArchive => {
+  const cached = historical19 ? historical19Plans : preOwner20Plans;
+  if (cached) return cached;
+  const plans = Object.freeze([false, true].map(publicReferenceArchive => {
     const reference = new DatabaseSync(":memory:");
     try {
       reference.exec("BEGIN"); installMainnetApplicationSchema(reference, { publicReferenceArchive });
@@ -65,6 +75,11 @@ function topicWatchesMigrationPlans(historical19: boolean) {
         added: Object.freeze([...added]), ddl: Object.freeze(objects.map(row => String(row.sql))) });
     } finally { reference.close(); }
   }));
+  // Frozen plans contain only compiled source profiles/DDL, never target state.
+  // A failed assembly is not published and can be attempted again normally.
+  if (historical19) historical19Plans = plans;
+  else preOwner20Plans = plans;
+  return plans;
 }
 export function topicWatchesMigrationProfiles(): readonly (readonly [string, string])[] {
   return Object.freeze(topicWatchesMigrationPlans(true).map(plan => plan.pair));
