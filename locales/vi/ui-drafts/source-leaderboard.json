@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/source-leaderboard.ts",
-  "sourceSha256": "1a93f5d778fbab8cf395bd9f24151f33c36b763b5b3ac9ac2c0f74c14ebcf8aa",
+  "sourceSha256": "d0b561cc0e9f6e6e0112293fcdbda9a83e23ba7d35e0c1dc374421fe8a994a5d",
   "entries": {
     "sourceLeaderboard.title": {
       "source": "{network} source leaderboard",
@@ -21,8 +21,8 @@
       "text": "Danh mục nguồn cấp được lưu không khả dụng; danh sách này chưa đầy đủ."
     },
     "sourceLeaderboard.feesUnavailable": {
-      "source": "Source fee totals are unavailable: some settlement or public allocation evidence is missing.",
-      "text": "Tổng phí nguồn không khả dụng: thiếu một số bằng chứng quyết toán hoặc phân bổ công khai."
+      "source": "Per-source owner fee records are temporarily unavailable.",
+      "text": "Dữ liệu phí owner theo nguồn hiện không khả dụng."
     },
     "sourceLeaderboard.searchLabel": {
       "source": "Search leaderboard sources",
@@ -68,10 +68,6 @@
       "source": "Owner fee",
       "text": "Phí chủ sở hữu"
     },
-    "sourceLeaderboard.unknown": {
-      "source": "Unknown",
-      "text": "Chưa rõ"
-    },
     "sourceLeaderboard.feeCounts": {
       "source": "Cites: {citations} · transfers: {payments}",
       "text": "Trích dẫn: {citations} · khoản chuyển: {payments}"
@@ -79,6 +75,22 @@
     "sourceLeaderboard.feeRecipient": {
       "source": "Fee recipient: {wallets}",
       "text": "Bên nhận phí: {wallets}"
+    },
+    "sourceLeaderboard.feesIncomplete": {
+      "source": "Settled owner fees can exist without public source attribution. Per-source totals require complete public allocation evidence; private or unlisted questions do not supply that evidence.",
+      "text": "Phí owner đã thanh toán có thể chưa có phân bổ công khai theo nguồn. Tổng phí của từng nguồn cần đủ bằng chứng phân bổ công khai; câu hỏi riêng tư hoặc không được liệt kê không cung cấp bằng chứng đó."
+    },
+    "sourceLeaderboard.viewSettledFees": {
+      "source": "View settled operating fee totals →",
+      "text": "Xem tổng phí vận hành đã thanh toán →"
+    },
+    "sourceLeaderboard.unattributed": {
+      "source": "Not publicly attributed",
+      "text": "Chưa có phân bổ công khai"
+    },
+    "sourceLeaderboard.unavailable": {
+      "source": "Unavailable",
+      "text": "Không khả dụng"
     }
   }
 }

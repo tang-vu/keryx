@@ -17,6 +17,7 @@ import type { SourceLeaderboard as SourceLeaderboardData } from "@/lib/sources/s
 import { CreatorCashoutsPanel } from "./creator-cashouts-panel";
 import { fmtUsdc } from "./phase-style";
 import { currentArcLabel } from "@/lib/arc-network-display";
+import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { useLedgerResource, type LedgerResource } from "@/lib/hooks/use-ledger-resource";
 import type { DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
 
@@ -88,7 +89,7 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
   const metricsResource = useLedgerResource("/api/metrics", metricBody);
   const paymentsResource = useLedgerResource("/api/payments?limit=200", paymentBody);
   const withdrawalsResource = useLedgerResource("/api/withdrawals?limit=25", withdrawalBody);
-  const runsResource = useLedgerResource("/api/runs", runBody);
+  const runsResource = useLedgerResource(`/api/runs?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all`, runBody);
   const metrics = metricsResource.data?.metrics;
   const leaderboard = metricsResource.data?.leaderboard ?? [];
   const creatorNames = new Map(leaderboard.map(row => [row.sourceId, row.sourceName]));
@@ -132,7 +133,7 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
       <div className="mt-8 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section aria-label={uiCopy("ledgerPresentation.activityAria")} className="min-w-0">
           <ResourceNotice resource={runsResource} label={uiCopy("ledgerPresentation.questionRecords")} />
-          {runsResource.data !== null && <DispatchHistory runs={runs.slice(0, 4)} title={uiCopy("ledgerPresentation.recent")} showFinancials={false} />}
+          {runsResource.data !== null && <DispatchHistory runs={runs.slice(0, 4)} title={uiCopy("ledgerPresentation.recent")} description={uiCopy("ledgerPresentation.publicHistoryBoundary")} emptyMessage={uiCopy("ledgerPresentation.noPublicQuestions")} showFinancials={false} />}
           {runs.length > 4 && <details className="mt-4 border border-line bg-paper-2/30"><summary className="cursor-pointer px-5 py-4 font-display text-lg text-ink">{uiCopy("ledgerPresentation.more")}</summary><div className="px-4 pb-4"><DispatchHistory runs={runs.slice(4, 25)} title={uiCopy("ledgerPresentation.earlier")} showFinancials={false} /></div></details>}
           <Link href="/answers" className="mt-3 inline-block min-h-11 py-2 font-mono text-xs text-seal underline">{uiCopy("ledgerPresentation.pastAnswers")}</Link>
         </section>
