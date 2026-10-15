@@ -14,6 +14,7 @@ import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema-data";
+import { OWNER269_OCCUPANCY_PROPOSAL } from "../owner-run-assignments/occupancy-proposal";
 import { inspectPrivateProfileStorage, migratePrivateProfileStorage, runPrivateProfileStorageCli } from "../../scripts/private-profile-storage-migrate.mjs";
 
 const directories: string[] = [];
@@ -78,7 +79,11 @@ describe("explicit additive native user-domain storage migration", () => {
     const added = newSchema.filter(row => !oldNames.has(row.name));
     expect(added.filter(row => row.type === "table").map(row => String(row.name)).sort()).toEqual([...NATIVE_USER_DOMAIN_TABLES].sort());
     expect(added.every(row => NATIVE_USER_DOMAIN_TABLES.includes(String(row.tbl_name) as typeof NATIVE_USER_DOMAIN_TABLES[number])
-      || ["query_runs", "query_memories"].includes(String(row.tbl_name)))).toBe(true);
+      || ["query_runs", "query_memories"].includes(String(row.tbl_name))
+      || row.type === "trigger" && OWNER269_OCCUPANCY_PROPOSAL.some(guard => guard.name === row.name
+        && guard.sql === row.sql && guard.sql.includes(` ON ${String(row.tbl_name)}\n`)))).toBe(true);
+    for (const guard of OWNER269_OCCUPANCY_PROPOSAL)
+      expect(added).toContainEqual({ type: "trigger", name: guard.name, tbl_name: guard.sql.match(/ ON ([a-z0-9_]+)\n/)![1], sql: guard.sql });
     const db = new DatabaseSync(f.file, { readOnly: true });
     try { assertStorageIdentity(db, f.identity); assertStorageFences(db, f.identity);
       expect(Object.entries(storageFenceStatements(db, f.identity)).filter(([, sql]) => sql.includes('ON "private_profiles"'))).toHaveLength(3);

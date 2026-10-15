@@ -231,8 +231,8 @@ it("keeps insert-only internal recovery on the existing trigger/default policy a
   expect(snapshot(f.db)).toBe(before);
 });
 
-it("uses the genuine frozen native compiled full22 facade for explicit/default modes without schema, fence or other-domain mutation", async () => {
-  const f = await native(); expect(Object.isFrozen(f.adapter)).toBe(true); expect(NATIVE_USER_DOMAIN_TABLES).toHaveLength(22);
+it("uses the genuine frozen native compiled full24 facade for explicit/default modes without schema, fence or other-domain mutation", async () => {
+  const f = await native(); expect(Object.isFrozen(f.adapter)).toBe(true); expect(NATIVE_USER_DOMAIN_TABLES).toHaveLength(24);
   const schema = canonicalJson(f.db.prepare("SELECT * FROM sqlite_schema ORDER BY type,name").all());
   expect(row(f.db, "legacy")).toBeUndefined();
   for (const visibility of modes) {
