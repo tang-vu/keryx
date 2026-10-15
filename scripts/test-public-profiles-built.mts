@@ -111,13 +111,46 @@ try {
   assert.match(json.headers.get("cache-control") ?? "", /no-store/);
   const packet = await json.json(); assert.deepEqual(packet.runs.map((run: { id: string }) => run.id), [publicId]);
   assert.doesNotMatch(JSON.stringify(packet), /UNSELECTED|UNEXPORTED|0xaaaa/);
-  const html = await request("/u/fixture_researcher"); assert.equal(html.status, 200);
+  // Next blocks metadata for this HTML-limited crawler, exposing the actual head.
+  // Keep ordinary Chromium navigation below unchanged, including its rendering gates.
+  const html = await request("/u/fixture_researcher", { headers: { "User-Agent": "facebookexternalhit/1.1" } }); assert.equal(html.status, 200);
   const documentHtml = await html.text(); assert.match(documentHtml, /application\/ld\+json/);
   assert.match(documentHtml, /og:title/); assert.match(documentHtml, /Profile JSON/); assert.doesNotMatch(documentHtml, /UNSELECTED|UNEXPORTED/);
+  assert(Buffer.byteLength(documentHtml) <= 1024 * 1024, "Synthetic profile HTML exceeds the metadata parsing bound");
+  const head = documentHtml.match(/<head\b[^>]*>([\s\S]*?)<\/head>/)?.[1]; assert(head, "Actual compiled head is required");
+  // Same bounded double-quoted tag-attribute pattern as the existing wanted built harness.
+  // These generated URLs are ASCII; no owner text is interpreted as markup or executed.
+  const attributes = (tag: string) => Object.fromEntries([...tag.matchAll(/([\w:-]+)="([^"]*)"/g)].map(match => [match[1], match[2]]));
+  const links = [...head.matchAll(/<link\b[^>]*>/g)].map(match => attributes(match[0]));
+  const canonical = `${origin}/u/fixture_researcher`;
+  const languages = [["en", canonical], ["x-default", canonical]];
+  assert.deepEqual(links.filter(link => link.rel === "canonical").map(link => link.href), [canonical]);
+  assert.deepEqual(links.filter(link => link.rel === "alternate" && link.hreflang)
+    .map(link => [link.hreflang, link.href]).sort(), languages);
+  assert.deepEqual(links.filter(link => link.rel === "alternate" && link.type === "application/json")
+    .map(link => link.href), [`${origin}/api/u/fixture_researcher`]);
+  const schemas = [...documentHtml.matchAll(/<script\b[^>]*\btype="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)]
+    .map(match => JSON.parse(match[1])).filter(schema => schema?.["@type"] === "ProfilePage");
+  assert.equal(schemas.length, 1);
+  const schema = schemas[0]; assert.equal(schema.url, canonical); assert.equal(schema.inLanguage, "en");
+  assert.equal(schema.mainEntity["@type"], "Person"); assert.equal(schema.mainEntity.name, packet.displayName);
+  assert.equal(packet.about, undefined); assert.equal(schema.mainEntity.description, undefined); // Unselected owner bio stays private.
+  assert.equal((JSON.stringify(schema).match(/"inLanguage"\s*:/g) ?? []).length, 1, "Only the ProfilePage wrapper declares English");
+  assert.doesNotMatch(JSON.stringify(packet), /"inLanguage"\s*:/, "Profile JSON and selected originals gain no language declaration");
   const image = await request("/u/fixture_researcher/opengraph-image"); assert.equal(image.status, 200);
   assert.match(image.headers.get("content-type") ?? "", /image\/png/);
+  assert.match(image.headers.get("cache-control") ?? "", /no-store/);
   assert.deepEqual(Array.from(new Uint8Array(await image.arrayBuffer()).slice(0, 8)), [137, 80, 78, 71, 13, 10, 26, 10]);
-  assert.match(await (await request("/sitemap.xml")).text(), /\/u\/fixture_researcher/);
+  const sitemap = await request("/sitemap.xml"); assert.equal(sitemap.status, 200);
+  const sitemapXml = await sitemap.text(); assert.match(sitemapXml, /\/u\/fixture_researcher/);
+  assert(Buffer.byteLength(sitemapXml) <= 1024 * 1024, "Synthetic sitemap exceeds the metadata parsing bound");
+  const profileRows = [...sitemapXml.matchAll(/<url>([\s\S]*?)<\/url>/g)]
+    .map(match => match[1]).filter(row => row.includes(`<loc>${canonical}</loc>`));
+  assert.equal(profileRows.length, 1, "Only the admitted profile row supplies its alternates");
+  const sitemapLinks = [...profileRows[0].matchAll(/<xhtml:link\b[^>]*>/g)].map(match => attributes(match[0]));
+  assert(sitemapLinks.every(link => link.rel === "alternate"));
+  assert.deepEqual(sitemapLinks.map(link => [link.hreflang, link.href]).sort(), languages);
+  checks.push("actual compiled head canonical/en/x-default/JSON; English ProfilePage wrapper only; admitted sitemap alternates; PNG no-store");
   checks.push("actual stock-built owner authorization/publication; selected PUBLIC JSON/HTML/PNG/sitemap; no private projection");
   browser = await chromium.launch({ headless: true });
   for (const width of [320, 390, 768, 1366]) {
@@ -194,6 +227,7 @@ try {
       assert.equal(await page.getByRole("link", { name: "Stored receipts", exact: true }).getAttribute("href"), `/api/dispatch/${publicId}/receipt`);
       assert.equal(await page.getByRole("link", { name: "Profile JSON", exact: true }).getAttribute("href"), "/api/u/fixture_researcher");
       assert.doesNotMatch(await page.locator("main").innerText(), /UNSELECTED|UNEXPORTED/);
+      assert.equal(await page.locator("main article[lang], main article [lang]").count(), 0, "Selected originals receive no UI-language label");
       const geometry = await page.locator("main").evaluate(element => {
         const rect = element.getBoundingClientRect(), style = getComputedStyle(element);
         return { left: rect.left, right: rect.right, padding: parseFloat(style.paddingLeft), width: innerWidth,
