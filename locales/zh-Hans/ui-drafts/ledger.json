@@ -118,7 +118,7 @@
     },
     "ledgerPresentation.recent": {
       "source": "Recent public questions",
-      "text": "???????"
+      "text": "最近的公开问题"
     },
     "ledgerPresentation.more": {
       "source": "More questions",
@@ -378,11 +378,11 @@
     },
     "ledgerPresentation.publicHistoryBoundary": {
       "source": "Recorded totals include all recorded questions. This list shows only questions made public and excludes scripted runs.",
-      "text": "????????????????????????????????????"
+      "text": "记录总数包含所有已记录的问题。此列表仅显示已公开的问题，并排除脚本运行。"
     },
     "ledgerPresentation.noPublicQuestions": {
       "source": "No public questions to display.",
-      "text": "???????????"
+      "text": "暂无可显示的公开问题。"
     }
   }
 }
