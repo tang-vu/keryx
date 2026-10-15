@@ -1,5 +1,8 @@
 # A builder returned: Keryx in the VoiceReady workflow
 
+[Watch the 2:23 English recording](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.mp4)
+· [Recording scope and SHA-256](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.txt)
+
 0xacee returned to Keryx for another software task on October 15, after the
 [October 12 storage and backup session](../tameion-submission.md#recorded-outside-user-workflow-0xacee).
 The owner confirmed both the participant and the additional VoiceTake/VoiceReady
@@ -38,10 +41,11 @@ Their retained settlement projections record zero spend and no payment rows.
 This task adds no paying customer, creator payment, testimonial or independently
 accepted complete business workflow. No audio was uploaded to Keryx.
 
-The retained 2:23 English recording contains actual browser captures, shortened
+The published 2:23 English recording contains actual browser captures, shortened
 waits, held views, AI narration and burned captions. It keeps both failed and
-useful research outcomes. Publication is still pending; this page does not imply
-that the recording or local package is publicly downloadable. The existing
+useful research outcomes. The unchanged video was published on October 15 after
+owner approval; its downloaded SHA-256 matches the retained original. The
+complete project/audio package remains local. The existing
 [October 12 user recording](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)
 is separate supporting footage.
 

@@ -62,8 +62,9 @@ separate from the submitted 2:47 demo.
 
 The owner confirmed a further [VoiceReady task by 0xacee on October 15](tameion-submission.md#return-task-from-0xacee-on-october-15):
 Keryx's MDN excerpts informed a local audio-preview review, while FFmpeg research
-remained unsuccessful. A 2:23 edited video and measured prototype output are
-retained locally, with publication still open. This records return use with a
+remained unsuccessful. The [2:23 edited video](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.mp4)
+is now public with its [scope and hash](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.txt);
+the project/audio package remains local. This records return use with a
 zero-source-cap sponsored session; it adds neither a fifth user nor paid demand.
 The [short case study](case-studies/voiceready-2026-10-15.md) follows the problem,
 the useful MDN evidence and its application to the preview lifecycle, with the
