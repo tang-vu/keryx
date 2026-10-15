@@ -1,4 +1,4 @@
-# Owner269 compiled inbox controls: applied source, browser acceptance pending
+# Owner269 compiled inbox controls: 17 compiled synthetic controls passed
 
 Updated 2026-10-15. The reviewed driver, actual page/header composition and recovery
 correction are applied in the current isolated source. Earlier output-only bundles are
@@ -12,14 +12,26 @@ copy. It neither rebuilds a donor nor substitutes a page, auth hook, WalletMenu 
 BroadcastChannel. Source/build/dependency provenance must bind the parent's new actual
 build. BUILD_ID/client-reference presence alone is not that attestation.
 
-## Current evidence and pending cases
+## Actual compiled evidence
 
-All **17 compiled cases are UNRUN** at this update. The earlier static mismatched-recipient,
-recovery-erasure and missing-header findings are addressed in the applied source; they are
-not described as still-unfixed defects. The driver keeps their strict assertions. The
-retained 90 focused passes, corrected mounted 18 passes and focused types qualify their
-own scopes, not compiled browser behavior. The 48 passing copy/CLI guards likewise do not
-replace this new build or the compiled cases.
+All **17 compiled cases passed** on the current corrected build, BUILD_ID
+jGWvXQ1WsPv993EZWwR2X, from checkpoint `3a68769d13332de12b26dba78cf81e836b0ad077`.
+The build passed in 56.543s with 3910 exact source pins and no source drift. The parent
+capture ended naturally with exit 0, null signal and both EOFs; all source, dependency
+and compiled post-checks passed. There were no page errors, failures or cleanup failures.
+
+The retained earlier run was12 PASS / 5 FAIL with 19 initial blank-origin observer errors.
+It exposed four foreign-recipient proposals reaching POST and the recovery label including
+its JSON value. The component now checks the complete recipient tuple at parse and consent,
+and uses an explicit label association. The observer returns before effects outside its
+exact owned origin; its error gate and all 17 case bodies remain intact. Focused UI and
+migration controls passed 74/74; changed TypeScript also passed. Existing 90 focused passes,
+18 corrected mounted passes and 48 copy/CLI passes retain their separate scopes.
+
+The actual outcome is retained under
+output/finite-compiled-recipient-caller-proposal/actual17-ui-corrected-output/run/
+synthetic-outcome.json, with parent capture and post-checks in the sibling
+actual17-ui-corrected-capture/actual-result.json. This documents synthetic UI acceptance.
 
 | Control | Required observable behavior |
 | --- | --- |
@@ -61,8 +73,8 @@ driver. Web/hosted desktop share its page; other clients gain no new assignment 
 
 ## Parent continuation
 
-Finish the already-prepared **one exact current-source build**, then run all 17 cases with
-its source/input/dependency binding and fresh owned outputs. Preserve any actual failure.
-Complete genuine Linux owner positives and required focused PR/domain CI before serialized
+The corrected exact-source build and all 17 compiled cases are complete. Reuse that bound
+evidence while runtime inputs remain unchanged; retain the earlier failures.
+Complete genuine Linux owner positives and required exact-head PR/domain CI before serialized
 merge. Only deployment is batched; production and original269 remain open. Do not apply
 old proposal/inverse stages again or substitute a donor predating the page/recovery fixes.

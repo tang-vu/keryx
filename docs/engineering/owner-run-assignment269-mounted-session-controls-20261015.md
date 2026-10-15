@@ -60,7 +60,8 @@ the old constructor-bound prerequisite is resolved. The suite still uses ordinar
 and unchanged canonical Windows 20s / other 10s test/hook deadlines, without a fake clock,
 native wait change or construction bypass.
 
-Genuine Linux POSIX UID-zero owner acceptance, the new build/17 compiled cases and required
-PR/domain CI remain pending. These mounted controls grant no SIWE/enrollment, OS owner,
+The corrected build and all 17 compiled synthetic cases have separately passed; see the
+compiled note for their exact source/input binding. Genuine Linux POSIX UID-zero owner
+acceptance and required exact-head PR/domain CI remain pending. These mounted controls grant no SIWE/enrollment, OS owner,
 payment, spend, schedule, public association, deletion or production authority. Hosted
 desktop shares the API; other clients receive no new authority. Original269 remains OPEN.

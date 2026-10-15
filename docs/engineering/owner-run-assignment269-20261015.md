@@ -104,8 +104,11 @@ source review is retained separately; see the mounted and compiled notes for the
 
 ## Remaining acceptance and supported surfaces
 
-The new exact-source build and all **17 compiled browser cases remain UNRUN** at this
-update. The dedicated genuine Linux UID-zero CI positives and required exact-head
+The corrected exact-source build and all **17 compiled browser cases passed**, with no
+page errors or cleanup failures and natural parent exit 0/null/both EOFs. Focused changed
+UI/migration controls also passed 74/74 plus TypeScript. The compiled note records the
+current build/source binding and retained earlier failures. The genuine Linux UID-zero
+CI positives and required exact-head
 aggregate/domain CI also remain pending. Ordinary skips are not a substitute. No live
 consent, owner apply/undo, target migration, assignment, provider call, funding or settlement
 is claimed. The existing coordinator owns merge serialization and batched delivery.
