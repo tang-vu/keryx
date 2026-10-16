@@ -4155,7 +4155,7 @@ describe("free evidence sufficiency and exhausted-budget cache expansion", () =>
         action: candidate.cached ? "CACHE" : "BUY",
       })) });
       engine.decompose = async () => ["Evidence supports this research claim"];
-      engine.sufficiency = vi.fn(async input => {
+      engine.sufficiency = vi.fn(async (input: SufficiencyInput) => {
         assessedReads.push(input.gathered.map(({ sourceId, text }) => ({ sourceId, text })));
         const result = await heuristic.sufficiency(input);
         assessments.push(result.sufficient);
