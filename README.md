@@ -61,9 +61,12 @@ for attribution and the study's scope.
 Hoàng, a freelance developer, used Keryx MCP inside Devin CLI for his Face Marker
 app. Academic research and SaaS discovery are also documented in the
 [outside-user stories](docs/tameion-submission.md#named-external-user-hoàng-freelance-developer).
-Four identified outside users are a verified minimum, rather than the total audience.
-Both user videos are supporting traction evidence; the separate 2:47 video above is
-the submitted hackathon demo.
+Four identified outside people are a verified minimum. One is a freelance
+business with a matched sponsored testnet payment: Hoàng, for his own Face Marker
+app. 0xacee is a SaaS builder with recorded sessions. Trần Minh Hiếu and
+@JamWaveX are students, and JamWaveX has no matched run in the pack. That is not
+four onboarded businesses. Both user videos are supporting evidence; the 2:47
+video above is the submitted hackathon demo.
 
 ## Try it in two minutes — no wallet
 
@@ -492,7 +495,8 @@ documents checked upstream patterns and their Keryx acceptance gates. Use
 [`$keryx-oss-adoption`](.agents/skills/keryx-oss-adoption/SKILL.md) for future
 OSS learning and adaptation tasks in supporting development agents.
 
-**One command — the full cycle (~90s).** Decide → pay the x402 toll → read → synthesize → settle
+**One local developer command (~90s).** This is not the submitted 2:47 demo.
+Decide → pay the x402 toll → read → synthesize → settle
 weighted citation rewards, then report payments on the explicitly configured network.
 The checked-in environment example is for isolated testnet development; mainnet
 operations require the reviewed configuration and a finite authorized budget:
