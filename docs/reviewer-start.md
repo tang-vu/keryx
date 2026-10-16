@@ -44,13 +44,29 @@ under-three-minute benchmark here.
 
 ## Evidence by judging criterion
 
-The [official event guidance](https://tameion.thecanteenapp.com/) recommends these
+The [official event guidance](https://tameion.thecanteonapp.com/) recommends these
 weights; judges retain the final say. Each row points to an inspectable example.
+Test USDC during the event window counts. An outside customer paying on mainnet
+counts more. The figures below are not added together.
+
+The event-window testnet record is September 27 00:00 through October 2 17:01 UTC:
+258 completed runs, 304 settled payment records, and 2.086750 test USDC, including
+internal activity. The June 15–October 2 archive of 56.748064 test USDC includes
+pre-event history and is not that window. The October 13 mainnet snapshot is 40
+settled records totaling 0.703750 USDC, including owner/QA.
+
+Hoàng, a freelance developer, is the outside business use with a matched payment:
+one sponsored 0.002 test-USDC source payment for his Face Marker app, Circle
+transfer `09ab0e57-bb5e-43a0-90e4-194e181de1be`, and the 1:53 recording. He did
+not pay from his own wallet. 0xacee is a SaaS builder with recorded sessions,
+including an October 15 return; those sessions are not an outside wallet paying.
+Trần Minh Hiếu and @JamWaveX are students, and JamWaveX has no matched run in
+this pack. That is one freelance business use, not four onboarded businesses.
 
 | Criterion | Inspect | Evidence and boundary |
 | --- | --- | --- |
 | Agentic sophistication — 30% | [Recorded decisions](https://keryx.cc/walkthrough), [Decision Lab](https://keryx.cc/operator/decisions), [business Operator](operator-business.md) | Source choices and reasons, allocation/replay tools, and obligation/liquidity checks. Distinguish a model proposal from policy enforcement and an observed action. The recorded example demonstrates CACHE/SKIP, with no new BUY. |
-| Traction — 30% | [Named users and their tasks](tameion-submission.md#event-period-usage-testnet-week-then-mainnet), [0xacee's return task](tameion-submission.md#return-task-from-0xacee-on-october-15), [recorded usage by cohort](https://keryx.cc/usage) | At least four identified outside users, now including an owner-confirmed October 15 return task by an existing participant. Sponsored use, owner/QA, testnet and mainnet keep their own labels; accepted paid fulfillment and paid repeat demand remain open. |
+| Traction — 30% | [Named users and their tasks](tameion-submission.md#event-period-usage-testnet-week-then-mainnet), [0xacee's return task](tameion-submission.md#return-task-from-0xacee-on-october-15), [recorded usage by cohort](https://keryx.cc/usage) | One freelance business use with a matched sponsored testnet payment (Hoàng). A SaaS builder and two students are separate named people. Event-window test USDC and the October 13 mainnet snapshot stay separate above. Accepted paid fulfillment and paid repeat demand remain open. |
 | Circle tool usage — 20% | [Walkthrough payment checks](https://keryx.cc/walkthrough), [Circle/Arc integration ledger](engineering/circle-arc-integration-ledger.md) | Circle Gateway/x402, USDC and Arc source/payout authority, with exact receipt references. The ledger separates live, testnet, planned and unused integrations. A Circle reference is not an individual Arc transaction hash. |
 | Innovation — 20% | [Two-toll design](research-receipts.md), [user research paper](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf), [reusable Arc primitives](https://github.com/tang-vu/keryx-arc-primitives) | Separate access purchases from evidence-gated citation rewards, then inspect which evidence supported the result. The working paper and MIT components are concrete outputs; the [procurement prototype](evidence-procurement.md) keeps funded execution as a future gate. |
 
