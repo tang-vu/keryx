@@ -23,9 +23,10 @@ The outside-user recording is separate evidence of genuine sponsored use.
    retains its Low confidence label.
 2. **Check the payment:** in the receipt step, use the integrity, Circle transfer
    and Arc payout-wallet controls. The latter two read Circle and Arc directly.
-   Their [verification scope](engineering/recorded-walkthrough-305.md) distinguishes
-   Circle's completed transfer, current registry authority and individual chain
-   finality. A blocked or unavailable check is shown as such. The job ledger
+   The payout control reads retained SourceRegistry V1, not the V3 address in
+   current health. Their [verification scope](engineering/recorded-walkthrough-305.md)
+   distinguishes Circle's completed transfer, that registry read, and individual
+   chain finality. A blocked or unavailable check is shown as such. The job ledger
    separates the unspent cap from expenditure; missing provider costs prevent a
    margin claim.
 3. **See an outside person's task:** [Hoàng's 1:53 MCP/Devin recording](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
