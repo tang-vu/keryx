@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/walkthrough.ts",
-  "sourceSha256": "92ca53286ef6e6e217bf584eade3b52c40500720bbbae284404eb8c8bab48662",
+  "sourceSha256": "5d75890065060a0188c0f2b259af97e0167fd2d3c37e59a9e5faab9b51f0483f",
   "entries": {
     "title": {
       "source": "Follow a recorded research job",
@@ -25,7 +25,7 @@
       "text": "Theo ví dụ công khai hiện có không cần ví hay đăng ký. Trang mở bằng chứng đã lưu; không bắt đầu nghiên cứu hay thanh toán."
     },
     "limitation": {
-      "source": "This is a partial first-party QA result, not an accepted customer task. The recording and guidance are curated; the answer, decisions and receipt are retained records.",
+      "source": "This is a partial first-party QA result, not an accepted customer task. The recording and guidance are curated; the answer, decisions and receipt are retained records. The stored question speaks as a Kenya-based operations engineer. That is a test persona in this owner QA prompt, not an identified customer.",
       "text": "Đây là kết quả QA nội bộ chưa đầy đủ, không phải tác vụ khách hàng được chấp nhận. Bản ghi và hướng dẫn được chọn lọc; câu trả lời, quyết định và biên nhận là hồ sơ được lưu."
     },
     "start": {
@@ -97,7 +97,7 @@
       "text": "Mốc lưu ghi một phần thưởng trích dẫn đã quyết toán trên Arc mainnet. Chi phí truy cập nguồn bằng 0. Đây là số thanh toán tác giả cho tác vụ QA này, không phải doanh thu khách hàng bên ngoài hay lợi nhuận kinh doanh."
     },
     "steps.2.limit": {
-      "source": "The Circle transfer ID is a batch-payment reference, not an individual Arc transaction hash. The three checks below are separate: receipt integrity, Circle's own transfer record and the Arc registry's current payout wallet. None of them proves chain finality for this individual payment.",
+      "source": "The Circle transfer ID is a batch-payment reference, not an individual Arc transaction hash. The three checks below are separate: receipt integrity, Circle's own transfer record and the retained V1 registry's current payout wallet on Arc. None of them proves chain finality for this individual payment.",
       "text": "ID chuyển Circle là tham chiếu thanh toán theo lô, không phải hash giao dịch Arc riêng. Ba kiểm tra bên dưới tách biệt: toàn vẹn biên nhận, hồ sơ chuyển riêng của Circle và ví nhận tiền hiện tại của registry Arc. Không kiểm tra nào chứng minh tính cuối cùng trên chuỗi cho thanh toán riêng này."
     },
     "steps.2.action": {
@@ -205,7 +205,7 @@
       "text": "Kiểm tra ví nhận tiền trên Arc"
     },
     "registryNote": {
-      "source": "Reads the cited source from the SourceRegistry contract through the public Arc mainnet RPC and compares its payout wallet with the recorded payee.",
+      "source": "Reads retained SourceRegistry V1, 0x42a64061b6cd84067bb660b2a9b8aa881fd225bb, through the public Arc mainnet RPC. Current health reports V3, which has no active record for this source. The check compares V1's payout wallet with the recorded payee.",
       "text": "Đọc nguồn được trích dẫn từ hợp đồng SourceRegistry qua RPC Arc mainnet công khai và so ví nhận tiền với bên nhận ghi nhận."
     },
     "registryChecking": {
@@ -213,7 +213,7 @@
       "text": "Đang đọc đăng ký nguồn từ Arc mainnet…"
     },
     "registryRegistered": {
-      "source": "Arc mainnet reports this source as active with the recorded payee as its payout wallet. This is the registry's current state, not the state at payment time or a payment transaction.",
+      "source": "Retained SourceRegistry V1 on Arc reports this source as active with the recorded payee as its payout wallet. This is V1's current record, not the V3 registry in health, not the state at payment time, and not a payment transaction.",
       "text": "Arc mainnet báo nguồn đang hoạt động với ví nhận tiền là bên nhận ghi nhận. Đây là trạng thái registry hiện tại, không phải trạng thái lúc trả tiền hay giao dịch thanh toán."
     },
     "registryChanged": {
