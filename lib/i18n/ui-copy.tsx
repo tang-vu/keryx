@@ -1,33 +1,12 @@
 "use client";
 
-import { createElement, createContext, useContext, useMemo, type JSX, type ReactNode } from "react";
-import { useLocale } from "./locale-context";
-import { createMessages, englishMessages, type MessageCatalogue, type MessageKey } from "./messages";
-import { createRichMessages } from "./rich-messages";
-import { emptyUiPreview, getUiPreview, previewCopy, previewMessage, previewText } from "./ui-preview";
+import { createElement, useContext, useMemo, type JSX, type ReactNode } from "react";
+import { englishMessages, type MessageKey } from "./messages";
+import { previewCopy, previewMessage, previewText } from "./ui-preview";
+import { UiCopyContext, englishUiCopy as english } from "./ui-copy-context";
 
-const english = { preview: emptyUiPreview, message: createMessages("en"), richMessage: createRichMessages("en") };
-const UiCopyContext = createContext<typeof english | null>(null);
-
-export function UiCopyProvider({ children }: { children: ReactNode }) {
-  const { locale } = useLocale();
-  // LocaleProvider prepares both shell and page chunks before committing a
-  // preference. Reading that snapshot avoids a mixed-language intermediate UI.
-  const preview = getUiPreview(locale);
-  const value = useMemo(() => {
-    const catalogue: MessageCatalogue = {};
-    for (const [key, source] of Object.entries(englishMessages)) {
-      const text = previewMessage(preview, key, source);
-      if (text !== source) catalogue[key as keyof MessageCatalogue] = text;
-    }
-    return { preview, message: createMessages(locale, catalogue), richMessage: createRichMessages(locale, catalogue) };
-  }, [locale, preview]);
-  return <UiCopyContext.Provider value={value}>{children}</UiCopyContext.Provider>;
-}
-
-export function useUiMessages() {
-  const selected = useContext(UiCopyContext), shell = useLocale();
-  return selected?.message ?? shell.message;
+export function useUiMessages(fallback = english.message) {
+  return useContext(UiCopyContext)?.message ?? fallback;
 }
 export function useUiRichMessages() { return (useContext(UiCopyContext) ?? english).richMessage; }
 
@@ -43,7 +22,7 @@ export function useUiCopyFunction<T extends (...args: never[]) => string>(namesp
 
 /** Explicit authored-copy leaf for Server Components. Never wrap original report/user data. */
 export function UiText({ source, namespaces, plain = false }: { source: string | number | null; namespaces?: readonly string[]; plain?: boolean }) {
-  const { preview } = useContext(UiCopyContext) ?? english, { locale } = useLocale();
+  const { preview, locale } = useContext(UiCopyContext) ?? english;
   if (typeof source !== "string") return source;
   const text = previewText(preview, source, namespaces);
   if (plain) return text;
@@ -52,7 +31,7 @@ export function UiText({ source, namespaces, plain = false }: { source: string |
 
 export function UiMessage({ messageKey, values, plain = false }: { messageKey: MessageKey; values?: Record<string, string | number>; plain?: boolean }) {
   const message = useUiMessages() as (key: MessageKey, values?: Record<string, string | number>) => string;
-  const { locale } = useLocale();
+  const { locale } = useContext(UiCopyContext) ?? english;
   const text = message(messageKey, values);
   const original = (english.message as typeof message)(messageKey, values);
   if (plain) return text;
@@ -61,7 +40,7 @@ export function UiMessage({ messageKey, values, plain = false }: { messageKey: M
 
 export function UiRichMessage({ messageKey, values, plain = false }: { messageKey: MessageKey; values?: Record<string, ReactNode>; plain?: boolean }) {
   const rich = useUiRichMessages() as (key: MessageKey, values?: Record<string, ReactNode>) => ReactNode[];
-  const { preview } = useContext(UiCopyContext) ?? english, { locale } = useLocale();
+  const { preview, locale } = useContext(UiCopyContext) ?? english;
   const source = englishMessages[messageKey];
   if (plain) return rich(messageKey, values);
   return <span lang={previewMessage(preview, messageKey, source) === source ? "en" : locale}>{rich(messageKey, values)}</span>;

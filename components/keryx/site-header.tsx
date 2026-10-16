@@ -45,7 +45,7 @@ function navigation(message: ReturnType<typeof createMessages>, guide = productG
 ]; }
 
 export function SiteHeader() {
-  const { locale } = useLocale(), message = useUiMessages();
+  const shell = useLocale(), { locale } = shell, message = useUiMessages(shell.message);
   const guide = useUiCopyFunction("product-guide", productGuideCopy), setup = useUiCopy("get-started", setupCopy);
   const NAV = navigation(message, guide, setup);
   const pathname = usePathname();

@@ -95,7 +95,7 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
 
 export function SiteFooter() {
   const richMessage = useUiRichMessages();
-  const { locale } = useLocale(), message = useUiMessages();
+  const shell = useLocale(), { locale } = shell, message = useUiMessages(shell.message);
   const guide = useUiCopyFunction("product-guide", productGuideCopy), setup = useUiCopy("get-started", setupCopy);
   return (
     <footer lang={locale} className="border-t border-ink bg-panel">

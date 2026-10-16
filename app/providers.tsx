@@ -14,8 +14,8 @@ import { WagmiProvider, useAccount } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { makeConfig } from "@/lib/wagmi-config";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
-import { UiCopyProvider } from "@/lib/i18n/ui-copy";
-import { loadUiPreview } from "@/lib/i18n/ui-preview";
+import { UiCopyProvider } from "@/lib/i18n/ui-copy-provider";
+import { loadUiPreview } from "@/lib/i18n/ui-preview-catalogues";
 
 // Explicit machine-draft interface previews. Critical payment, consent and
 // legal copy retains its English authority and existing review requirements.

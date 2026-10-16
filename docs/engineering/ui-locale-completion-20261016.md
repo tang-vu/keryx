@@ -13,6 +13,9 @@ source titles, receipts, URLs, identifiers and submitted arguments are not fed
 through a DOM translator. Existing component state is retained across a switch.
 Native attribute boundaries own their native element and leave Server Component
 children opaque. SVG and option leaves return plain text to preserve valid markup.
+Display hooks and leaves import a pure copy context. Catalogue loading and wallet
+locale negotiation stay in the application provider, so isolated maintenance and
+other display-only consumers acquire no wallet/network environment dependency.
 
 Both targets now cover all 66 extracted namespaces: 5,858 machine-draft entries
 and 29 preserved identifiers out of 5,887 structural leaves. `complete` means

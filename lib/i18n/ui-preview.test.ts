@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { emptyUiPreview, getUiPreview, loadUiPreview, previewCopy, previewMessage, previewText } from "./ui-preview";
+import { emptyUiPreview, previewCopy, previewMessage, previewText } from "./ui-preview";
+import { getUiPreview, loadUiPreview } from "./ui-preview-catalogues";
 import { englishMessages, createMessages } from "./messages";
 import { setupCopy } from "@/locales/en/get-started";
 
