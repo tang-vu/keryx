@@ -7,7 +7,6 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
 import type { QueryRun } from "../lib/types";
-import { parseResearchAvailability } from "../lib/research/availability-contract";
 
 const require = createRequire(import.meta.url);
 const target = new URL(process.env.KERYX_UX_BASE_URL ?? "http://127.0.0.1:3964");
@@ -28,8 +27,6 @@ const fixture = spawn(process.execPath, ["scripts/test-built-empty-evidence.cjs"
 assert.equal(await new Promise((resolve, reject) => { fixture.once("exit", resolve); fixture.once("error", reject); }), 0);
 const runs = JSON.parse(await readFile(runFile, "utf8")) as QueryRun[];
 assert.equal(runs.length, 2);
-const available = parseResearchAvailability({ state: "not-paused" });
-assert(available);
 const server = process.env.KERYX_UX_BASE_URL ? null : spawn(process.execPath,
   [require.resolve("next/dist/bin/next"), "start", "-H", "127.0.0.1", "-p", "3964"],
   { cwd: process.cwd(), env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
@@ -76,9 +73,9 @@ try {
     });
     const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
     await page.goto(base, { waitUntil: "domcontentloaded" });
-    // This effect-driven copy proves React consumed availability. Filling the SSR
-    // textarea before hydration can lose the draft while leaving dispatch disabled.
-    await page.getByText(available.message, { exact: true }).waitFor();
+    // This effect-driven notice proves React consumed the publication context.
+    // Fill after hydration, then verify admission through the enabled dispatch.
+    await page.getByTestId("composer-publication-notice").waitFor();
     const question = page.getByLabel("What do you want to know?");
     const dispatch = page.locator('[data-tour="dispatch-btn"]');
     await question.fill(run.question);
