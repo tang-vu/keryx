@@ -5,7 +5,9 @@ import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
-import { claimSqliteSourceUpkeep, finishSqliteSourceUpkeep } from "./source-upkeep";
+import { claimSqliteSourceUpkeep, finishSqliteSourceUpkeep, SOURCE_UPKEEP_BATCH,
+  type SourceUpkeepSummary } from "./source-upkeep";
+import { PUBLIC_FEED_BATCH_ITEMS } from "../public-references/limits";
 
 const hour = 3_600_000;
 function setup(file = ":memory:") {
@@ -77,6 +79,70 @@ describe("atomic scheduled source allowance", () => {
       expect(next.sourceIds).toEqual(["one"]);
       finishSqliteSourceUpkeep(db, first, { attempted: 1, added: 1, failed: 0, skipped: 0 }, hour + 130_000);
       expect(JSON.parse(String(db.prepare("SELECT value FROM sync_state").get()!.value)).slot).toBe(next.slot);
+    } finally { db.close(); }
+  });
+
+  it.each([453, SOURCE_UPKEEP_BATCH * PUBLIC_FEED_BATCH_ITEMS])
+    ("retains %i public additions without renewing the hourly allowance or blocking fair progress", (added: number) => {
+      const db = setup();
+      try {
+        for (const id of ["public:a", "public:b", "public:c", "public:d"])
+          db.prepare("INSERT INTO public_references VALUES (?,1,?)").run(id, "https://public.test/feed");
+        const claim = claimSqliteSourceUpkeep(db, hour)!;
+        expect(claim.sourceIds).toEqual(["public:a", "public:b"]);
+        const summary = { attempted: 2, added, failed: 0, skipped: 0 };
+        finishSqliteSourceUpkeep(db, claim, summary, hour + 10);
+        expect(JSON.parse(String(db.prepare("SELECT value FROM sync_state").get()!.value)).summary).toEqual(summary);
+        expect(claimSqliteSourceUpkeep(db, hour + 20)).toBeNull();
+        expect(claimSqliteSourceUpkeep(db, hour * 2)?.sourceIds).toEqual(["public:c", "public:d"]);
+      } finally { db.close(); }
+    });
+
+  const invalidSummaries: SourceUpkeepSummary[] = [
+    { attempted: 2, added: SOURCE_UPKEEP_BATCH * PUBLIC_FEED_BATCH_ITEMS + 1, failed: 0, skipped: 0 },
+    { attempted: SOURCE_UPKEEP_BATCH + 1, added: 0, failed: 0, skipped: 0 },
+    { attempted: 2, added: Number.NaN, failed: 0, skipped: 0 },
+    { attempted: 2, added: -1, failed: 0, skipped: 0 },
+    { attempted: 2, added: 0.5, failed: 0, skipped: 0 },
+    { attempted: 2, added: 0, failed: SOURCE_UPKEEP_BATCH + 1, skipped: 0 },
+    { attempted: 2, added: 0, failed: 0, skipped: SOURCE_UPKEEP_BATCH + 1 },
+  ];
+
+  it.each(invalidSummaries)("refuses an invalid completion without corrupting the prior journal: %j", (summary: SourceUpkeepSummary) => {
+    const db = setup();
+    try {
+      for (const id of ["a", "b", "c"]) add(db, id);
+      const claim = claimSqliteSourceUpkeep(db, hour)!;
+      const before = db.prepare("SELECT value,updated_at FROM sync_state").get();
+      expect(() => finishSqliteSourceUpkeep(db, claim, summary, hour + 10)).toThrow("Invalid upkeep journal");
+      expect(db.prepare("SELECT value,updated_at FROM sync_state").get()).toEqual(before);
+      expect(claimSqliteSourceUpkeep(db, hour + 20)).toBeNull();
+      expect(claimSqliteSourceUpkeep(db, hour * 2)?.sourceIds).toEqual(["c", "a"]);
+    } finally { db.close(); }
+  });
+
+  it("ignores an invalid stale completion without validating or changing the current claim", () => {
+    const db = setup();
+    try {
+      add(db, "one");
+      const stale = claimSqliteSourceUpkeep(db, hour)!;
+      claimSqliteSourceUpkeep(db, hour * 2);
+      const before = db.prepare("SELECT value,updated_at FROM sync_state").get();
+      expect(() => finishSqliteSourceUpkeep(db, stale, invalidSummaries[0], hour * 2 + 10)).not.toThrow();
+      expect(db.prepare("SELECT value,updated_at FROM sync_state").get()).toEqual(before);
+    } finally { db.close(); }
+  });
+
+  it.each(invalidSummaries)("fails closed with a corrupt persisted summary without overwriting it: %j", (summary: SourceUpkeepSummary) => {
+    const db = setup();
+    try {
+      add(db, "a");
+      const value = JSON.stringify({ slot: 1, cursor: "a", leaseUntil: 0, summary });
+      db.prepare("INSERT INTO sync_state VALUES ('sourceUpkeep',?,NULL)").run(value);
+      expect(() => claimSqliteSourceUpkeep(db, hour * 2)).toThrow("Invalid upkeep journal");
+      expect(() => finishSqliteSourceUpkeep(db, { slot: 1, sourceIds: ["a"] },
+        { attempted: 1, added: 1, failed: 0, skipped: 0 }, hour + 10)).toThrow("Invalid upkeep journal");
+      expect(db.prepare("SELECT value FROM sync_state").get()!.value).toBe(value);
     } finally { db.close(); }
   });
 

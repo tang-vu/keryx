@@ -6,10 +6,9 @@ import { ingestRssXml, type IngestedFeed } from "../ingest/rss";
 import { ingestYoutubeMetadata, isApprovedYoutubeFeed } from "./youtube-feed";
 import { canonicalUrl } from "../web-research/url-identity";
 import type { PublicReferenceArchiveDb } from "./archive";
+import { PUBLIC_FEED_MAX_BYTES, PUBLIC_FEED_BATCH_ITEMS } from "./limits";
 
-// These bound one transport/parse batch, never the lifetime size of the library.
-export const PUBLIC_FEED_MAX_BYTES = 5_000_000;
-export const PUBLIC_FEED_BATCH_ITEMS = 1000;
+export { PUBLIC_FEED_MAX_BYTES, PUBLIC_FEED_BATCH_ITEMS } from "./limits";
 export const canonicalPublicArticleUrl = canonicalUrl;
 export function publicReferenceItemId(referenceId: string, link: string): string {
   const canonical = canonicalPublicArticleUrl(link);

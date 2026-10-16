@@ -23,9 +23,21 @@ it("retains distinct publisher/observed-work diversity and never increases exist
   expect(verdict(different).level).toBe("High");
   expect(verdict([source("S1", "arxiv.org", "10.1234/one"), source("S2", "arxiv.org", "10.1234/two")]).level).toBe("Moderate");
 });
+it("merges a known publisher's distinct domains without requiring scholarly work metadata", () => {
+  const sources = [source("S1", "publisher.example"), source("S2", "publisher-news.example")]
+    .map(source => ({ ...source, sourceId: "same-publisher", scholarly: undefined }));
+  const cited = new Set(["S1", "S2"]);
+  expect(Object.fromEntries(scholarlyWorkGroups(sources, cited))).toEqual({ S1: "publisher-news.example", S2: "publisher-news.example" });
+  expect(Object.fromEntries(scholarlyWorkGroups([...sources].reverse(), cited))).toEqual(Object.fromEntries(scholarlyWorkGroups(sources, cited)));
+});
+it.each(["", " \t"])("does not infer shared publisher identity from a blank source ID (%j)", sourceId => {
+  const sources = [source("S1", "publisher-one.example"), source("S2", "publisher-two.example")].map(source => ({ ...source, sourceId }));
+  expect(new Set(scholarlyWorkGroups(sources, new Set(["S1", "S2"])).values()).size).toBe(2);
+});
 it("is order invariant and conservatively merges transitive publisher/DOI relationships", () => {
   const sources = [source("S1", "arxiv.org", "10.1234/one"), source("S2", "journal-one.example", "10.1234/one"),
-    source("S3", "journal-one.example", "10.1234/two"), source("S4", "journal-two.example", "10.1234/two")];
+    source("S3", "journal-one.example", "10.1234/two"), source("S4", "journal-two.example", "10.1234/two"),
+    { ...source("S5", "publisher.example"), sourceId: "public:scholarly:S1" }];
   const cited = new Set(sources.map(source => source.marker));
   expect(Object.fromEntries(scholarlyWorkGroups(sources, cited))).toEqual(Object.fromEntries(scholarlyWorkGroups([...sources].reverse(), cited)));
   expect(new Set(scholarlyWorkGroups(sources, cited).values()).size).toBe(1);
