@@ -162,6 +162,15 @@ Limits of these records:
 - Participant attribution comes from the owner-confirmed stories. A matched
   research record and an outside wallet funding that record are separate facts.
 
+### Feedback reported on October 16
+
+The owner confirmed useful outcomes from **0xacee, Hoàng and Trần Minh Hiếu**,
+summarizing their common feedback as research that helped solve their tasks,
+quickly and at low cost. The [dated feedback record](case-studies/user-feedback-2026-10-16.md)
+connects that qualitative owner-relayed feedback to their documented work. These
+are already identified participants; no new user or payment total, measured
+speed/cost comparison or accepted paid business cycle is inferred.
+
 Other people have contacted the owner through X, LinkedIn and Product Hunt and are
 added here as their use is recorded.
 

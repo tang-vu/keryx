@@ -6,6 +6,8 @@ import { config } from "@/lib/config";
 import { getDb } from "@/lib/db";
 import { usageWindow, type PublicUsageSummary } from "@/lib/usage/contracts";
 import { usageMessages as copy } from "@/locales/en/usage";
+import Link from "next/link";
+import { aboutStory } from "@/locales/en/about-story";
 export const dynamic = "force-dynamic";
 export const metadata = { title: copy.metadataTitle, alternates: englishPublicAlternates("/usage") };
 function usdc(micros: string) { return formatAmount(micros, { denomination: "USDC", minimumFractionDigits: 6 }); }
@@ -33,6 +35,11 @@ export default async function UsagePage({ searchParams }: { searchParams: Promis
   const query = new URLSearchParams(params); query.delete("cohort");
   return <div className="min-h-screen bg-paper-2"><SiteHeader /><main className="mx-auto max-w-6xl px-4 py-12 text-ink">
     <h1 className="font-display text-4xl">{copy.title}</h1><p className="mt-4 max-w-3xl">{copy.introduction}</p>
+    <aside lang="en" aria-labelledby="usage-stories-title" className="mt-6 max-w-3xl border-l-2 border-paid bg-paper p-5">
+      <h2 id="usage-stories-title" className="font-display text-xl">{aboutStory.usageTitle}</h2>
+      <p className="mt-2 text-sm leading-relaxed text-ink-2">{aboutStory.usageBody}</p>
+      <Link href="/about#in-practice" className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm text-paid underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-paid">{aboutStory.usageLink}<span aria-hidden="true">→</span></Link>
+    </aside>
     <form method="get" className="my-6 flex flex-wrap items-end gap-4">
       <label>{copy.network}<select name="network" defaultValue={params.get("network") ?? config.profile.networkId} className="block border border-line p-2"><option value="eip155:5042">{copy.mainnet}</option><option value="eip155:5042002">{copy.testnet}</option></select></label>
       <label>{copy.period}<select name="period" defaultValue={params.get("period") ?? "all"} className="block border border-line p-2"><option value="all">{copy.all}</option><option value="7d">{copy.week}</option><option value="30d">{copy.month}</option></select></label>
