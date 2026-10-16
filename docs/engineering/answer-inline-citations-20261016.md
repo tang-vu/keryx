@@ -23,8 +23,9 @@ retain their labelled, focusable evidence buttons and original trigger callback.
   an inspection callback.
 - Existing quote-fidelity, answer-grounding and public-language DOM tests remain
   part of focused acceptance. Required hosted CI is the merge gate.
-- Web research, saved web reports and the web embed share this renderer. The
-  desktop application uses the hosted web experience for these reports.
+- Web research, saved web reports and the web embed share this renderer.
+- The native desktop keeps its separate local receipt reader and recorded exports;
+  it does not use this React renderer and needs no UI or package change here.
 - CLI, API, remote/stdio MCP, extension and bot payloads and contracts do not use
   this React renderer and require no adapter or distribution changes here.
 
