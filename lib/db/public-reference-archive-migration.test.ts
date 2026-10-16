@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -15,7 +15,8 @@ import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-prof
 import { publicReferenceItemId, type PublicReference } from "../public-references/catalog";
 import { hasPublicReferenceArchive } from "./public-reference-archive";
 import { migratePublicReferenceArchiveStorage, publicReferenceArchiveMigrationProfiles,
-  snapshotPublicArchiveStorage } from "./public-reference-archive-migration";
+  snapshotPublicArchiveStorage, MIGRATION_FRAMED_BYTE_LIMIT } from "./public-reference-archive-migration";
+import { scanFullStorageSnapshot, STORAGE_SNAPSHOT_LIMITS } from "./storage-identity-snapshot";
 import { inspectPublicArchiveStorage, migratePublicArchiveStorage, runPublicArchiveStorageCli } from "../../scripts/source-archive-storage-migrate.mjs";
 
 const directories: string[] = [];
@@ -52,8 +53,61 @@ function profile(file: string, identity: StorageIdentity): string {
     "storage_identity_no_insert", ...Object.keys(storageFenceStatements(db, identity))])); }
   finally { db.close(); }
 }
+function largeMetadata(f: ReturnType<typeof fixture>, value: string | Uint8Array) {
+  const db = new DatabaseSync(f.file);
+  try {
+    registerStorageCapability(db, f.identity, () => true);
+    db.exec("BEGIN IMMEDIATE");
+    const insert = db.prepare("INSERT INTO sync_state(key,value,updated_at) VALUES (?,?,?)");
+    for (let index = 0; index < 33; index++) insert.run(`large-original-${index}`, value, reference.refreshedAt!);
+    db.exec("COMMIT");
+  } finally { db.close(); }
+  expect(statSync(f.file).size).toBeLessThan(STORAGE_SNAPSHOT_LIMITS.fileBytes);
+}
 
 describe("explicit public archive storage activation", () => {
+  it("preserves streamed originals above 32 MiB without raising enrollment's encoded limit", () => {
+    const f = fixture(), value = "x".repeat(1024 * 1024), pair = publicReferenceArchiveMigrationProfiles(true)[0]!;
+    largeMetadata(f, value);
+    const beforeDb = new DatabaseSync(f.file, { readOnly: true });
+    let before;
+    try { before = snapshotPublicArchiveStorage(beforeDb, f.identity, [pair[0]]); }
+    finally { beforeDb.close(); }
+    expect(33 * Buffer.byteLength(value)).toBeGreaterThan(STORAGE_SNAPSHOT_LIMITS.encodedBytes);
+    expect(33 * Buffer.byteLength(value)).toBeLessThan(MIGRATION_FRAMED_BYTE_LIMIT);
+    expect(migratePublicReferenceArchiveStorage(f.file, f.identity, () => {}))
+      .toMatchObject({ status: "migrated", originalRowsPreserved: true, signingResumeAuthorized: false });
+    const afterDb = new DatabaseSync(f.file, { readOnly: true });
+    try {
+      const after = snapshotPublicArchiveStorage(afterDb, f.identity, [pair[1]]);
+      for (const [table, original] of Object.entries(before.tables)) expect(after.tables[table]).toEqual(original);
+    } finally { afterDb.close(); }
+    const enrollment = new DatabaseSync(":memory:");
+    try {
+      enrollment.exec("CREATE TABLE sync_state(key TEXT PRIMARY KEY,value TEXT)");
+      const insert = enrollment.prepare("INSERT INTO sync_state VALUES (?,?)");
+      for (let index = 0; index < 33; index++) insert.run(String(index), value);
+      expect(STORAGE_SNAPSHOT_LIMITS.encodedBytes).toBe(32 * 1024 * 1024);
+      expect(() => scanFullStorageSnapshot(enrollment)).toThrow("encoded_byte_limit");
+    } finally { enrollment.close(); }
+  });
+
+  it("refuses framed expansion above 64 MiB even when file, raw bytes and fields fit", () => {
+    const f = fixture(), value = new Uint8Array(1024 * 1024);
+    largeMetadata(f, value);
+    expect(value.length).toBeLessThan(STORAGE_SNAPSHOT_LIMITS.fieldBytes);
+    expect(33 * value.length).toBeLessThan(STORAGE_SNAPSHOT_LIMITS.totalBytes);
+    // Typed blob encoding doubles payload bytes; framing crosses 64 MiB in a <64 MiB file.
+    expect(33 * value.length * 2).toBeGreaterThan(MIGRATION_FRAMED_BYTE_LIMIT);
+    const db = new DatabaseSync(f.file, { readOnly: true });
+    try {
+      expect(() => snapshotPublicArchiveStorage(db, f.identity, [publicReferenceArchiveMigrationProfiles(true)[0]![0]]))
+        .toThrow("Public archive migration framed byte limit");
+      assertStorageIdentity(db, f.identity); assertStorageFences(db, f.identity);
+      expect(hasPublicReferenceArchive(db)).toBe(false);
+    } finally { db.close(); }
+  });
+
   it("adds archive under the original identity/fences while retaining every old row exactly", () => {
     const f = fixture(), pair = publicReferenceArchiveMigrationProfiles(true)[0]!;
     expect(profile(f.file, f.identity)).toBe(pair[0]);

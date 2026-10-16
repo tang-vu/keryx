@@ -1,5 +1,16 @@
 # MCP package distribution
 
+## App70 migration recovery cohort in preparation — October 16
+
+App/OpenAPI **0.27.70** separates the migration's streamed 64 MiB framed-byte
+budget from enrollment's 32 MiB encoded-row budget. File, raw-byte, field, row,
+deadline, schema, identity and financial checks retain their existing limits.
+Stdio **0.4.25** and Desktop **0.4.23** prepare the same corrected source cohort;
+hosted MCP **0.3.18** and extension **0.1.4.2** keep their established contracts.
+Exact-source CI, publication readback and VPS verification remain required before
+delivery is claimed. This preparation grants no spending, custody or scheduling
+authority.
+
 ## App69 coordinated release in preparation — October 16
 
 App/OpenAPI **0.27.69** prepares the latest merged batch: clearer wallet funding

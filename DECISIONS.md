@@ -1,5 +1,13 @@
 # Keryx — Decision Log
 
+## Separate migration streaming from enrollment encoding limits — 2026-10-16
+
+Migration snapshots stream typed, length-framed cells into per-row hashes. Give
+that stream its own 64 MiB framed-byte budget; enrollment retains encoded rows
+in memory and keeps its 32 MiB encoded-byte limit. The migration's 64 MiB file,
+128 MiB raw-byte, 2 MiB field, 100,000-row, 15-second, schema, identity and fence
+checks remain in force. This changes no storage profile or financial authority.
+
 ## Reuse the protected native-user migration for historical metadata - 2026-10-15
 
 The deployed full19 metadata schema is a migration-only reference, never an extra
