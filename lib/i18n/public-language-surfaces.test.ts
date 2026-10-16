@@ -143,7 +143,7 @@ describe("actual public language surfaces", () => {
 
   it("keeps verbatim quotation outside recorded generated-prose language without changing bytes", () => {
     const text = 'Generated sentence. Source text: “Original “nested” quotation” [S1]';
-    const html = renderToStaticMarkup(createElement(AnswerMarkdown, { text, citations: [], language: "vi" }));
+    const html = renderToStaticMarkup(createElement(AnswerMarkdown, { text, citations: [], language: "vi", onCitationClick: () => {} }));
     expect(html).toContain('<div lang="vi"');
     expect(html).toContain('<span lang="und">“Original');
     expect(html).toContain('Original “nested” quotation');
