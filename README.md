@@ -67,20 +67,22 @@ the submitted hackathon demo.
 
 ## Try it in two minutes — no wallet
 
-1. Open [keryx.cc](https://keryx.cc), choose Quick and enter a shareable question.
-   The sponsored trial composer shows the payer and budget. Submitted questions
-   become public reports; availability depends on current quota, capacity and caps.
-2. Inspect the answer's source excerpts and **Decision log**, including unmet
-   research targets and confidence boundaries.
-3. Open **Portable research receipt** to inspect recorded payment states and exact
-   source versions. A citation alone does not establish settlement.
+The path below does not submit a question, ask for a signature, or spend anything.
 
-For a read-only tour, open this [stored cited report](https://keryx.cc/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913)
-and its [receipt](https://keryx.cc/api/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913/receipt).
-It is an archived owner-operated QA example with CACHE/SKIP choices, zero access
-USDC and a recorded 0.025 USDC mainnet citation reward to Keryx Engineering.
-The [reviewer guide](docs/reviewer-start.md#verify-the-example) retains its original
-partial-result boundary, digest and verification scope. Opening it submits no new job.
+1. Open the [recorded walkthrough](https://keryx.cc/walkthrough). It follows one
+   stored owner QA job from October 8: the answer, its CACHE/SKIP reasons, and
+   the receipt. Run the three checks separately. The payout check reads retained
+   SourceRegistry V1, not the V3 address reported by current health.
+2. The same example is the [stored report](https://keryx.cc/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913)
+   and its [receipt](https://keryx.cc/api/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913/receipt):
+   zero access USDC and a recorded 0.025 USDC mainnet citation reward to Keryx
+   Engineering. The [reviewer guide](docs/reviewer-start.md#verify-the-example)
+   keeps the digest, the partial-result boundary, and the October 16 readback.
+3. To ask a new question, open [keryx.cc](https://keryx.cc), choose Quick, and
+   read the displayed payer and budget before submitting. Sponsored admission
+   can be paused or capped. Submitted questions become public reports. Then
+   inspect the source excerpts, **Decision log**, and **Portable research receipt**.
+   A citation alone does not establish settlement.
 
 ## Usage so far
 

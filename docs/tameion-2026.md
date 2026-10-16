@@ -4,8 +4,14 @@
 now gives **October 17, 11:59 PM ET** (October 18, 10:59 AM in Vietnam).
 Earlier October 10 references below retain their historical planning context.
 The existing October 13 submission stays recorded separately from later updates.
-The immediate submission work prioritizes a useful complete business outcome,
-documented return use and a reviewer path through actual decisions and payments.
+
+**Where to look on October 16.** Production web is app **0.27.70** at commit
+`2dda3717` ([health](https://keryx.cc/api/health),
+[release](https://github.com/tang-vu/keryx/releases/tag/v0.27.70)). Follow the
+[recorded walkthrough](https://keryx.cc/walkthrough) without a wallet, then the
+[reviewer guide](reviewer-start.md) and the [submission pack](tameion-submission.md).
+This file is the planning history. The October 13 form comparison stays as submitted.
+Sections below are dated records, including the October 4 status.
 
 October 12 direction: the owner authorized ranked delivery of demand-driven
 [evidence procurement](evidence-procurement.md): commission missing evidence first,

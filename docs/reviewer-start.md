@@ -23,9 +23,10 @@ The outside-user recording is separate evidence of genuine sponsored use.
    retains its Low confidence label.
 2. **Check the payment:** in the receipt step, use the integrity, Circle transfer
    and Arc payout-wallet controls. The latter two read Circle and Arc directly.
-   Their [verification scope](engineering/recorded-walkthrough-305.md) distinguishes
-   Circle's completed transfer, current registry authority and individual chain
-   finality. A blocked or unavailable check is shown as such. The job ledger
+   The payout control reads retained SourceRegistry V1, not the V3 address in
+   current health. Their [verification scope](engineering/recorded-walkthrough-305.md)
+   distinguishes Circle's completed transfer, that registry read, and individual
+   chain finality. A blocked or unavailable check is shown as such. The job ledger
    separates the unspent cap from expenditure; missing provider costs prevent a
    margin claim.
 3. **See an outside person's task:** [Hoàng's 1:53 MCP/Devin recording](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
@@ -135,8 +136,11 @@ research outcomes, settlement parity, and payment reconciliation were last
 recorded on October 6. The settlement block said `empty-ledger` while traction
 on the same payload reported 100 payments. Those projections are separate.
 This check started no research, signature, or payment. Fresh sponsored admission
-was not probed. MCP, desktop, and extension identities stay on their own
-manifests. The October 13 submission snapshot stays unchanged.
+was not probed. The [v0.27.70 release](https://github.com/tang-vu/keryx/releases/tag/v0.27.70)
+publishes this web source with MCP 0.4.25 and Operator Desktop 0.4.23 assets.
+Hosted MCP stays 0.3.18 and the extension stays 0.1.4.2. That release note does
+not record an owner Desktop installation, and this walkthrough check did not
+re-download the packages. The October 13 submission snapshot stays unchanged.
 
 Hoàng's October 2 MCP/Devin recording was posted on the owner's @tangvu_dev
 account, which is now suspended. Its [archived edited video](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
