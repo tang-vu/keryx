@@ -2,20 +2,20 @@
   "locale": "zh-Hans",
   "status": "machineDraft",
   "review": null,
-  "complete": false,
+  "complete": true,
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
   "scope": "All 65 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
-  "financialLegalConsent": "Unreviewed; English-authoritative fallback until actual named-human review. No runtime integration or activation supplied.",
+  "financialLegalConsent": "Unreviewed; critical English-authoritative fallback until actual named-human review. Neutral machine-draft UI is integrated only in explicit previews.",
   "totals": {
     "englishNamespaceFiles": 65,
     "coreInlineSources": 1,
     "extractedLeaves": 5887,
-    "authoredEntries": 5571,
+    "authoredEntries": 5858,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 287,
-    "completeNamespaces": 56
+    "uncoveredEntries": 0,
+    "completeNamespaces": 66
   },
   "namespaces": [
     {
@@ -24,10 +24,8 @@
       "sourceSha256": "57f905d1d84b7f2886c0eb3c7124dbc87a03a0bf9a78bd1e7123ff970c56eed3",
       "draftPath": "locales/zh-Hans/ui-drafts/pending-owner257.json",
       "extractedLeaves": 10,
-      "authoredEntries": 0,
-      "coveredKeys": [],
-      "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [
+      "authoredEntries": 10,
+      "coveredKeys": [
         "account",
         "checking",
         "consent",
@@ -39,6 +37,8 @@
         "signIn",
         "title"
       ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     },
     {
@@ -200,10 +200,8 @@
       "sourceSha256": "45230a5b912efcd378f8a1d24d94b4a5dc918e2c75af5e6d615b10148be9b648",
       "draftPath": "locales/zh-Hans/ui-drafts/chat-accounts.json",
       "extractedLeaves": 27,
-      "authoredEntries": 0,
-      "coveredKeys": [],
-      "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [
+      "authoredEntries": 27,
+      "coveredKeys": [
         "account.enrollPrompt",
         "account.openWorkspace",
         "account.returnInstructions",
@@ -232,6 +230,8 @@
         "preview.expiresLabel",
         "walletMenu.chatAccounts"
       ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     },
     {
@@ -1658,7 +1658,7 @@
       "sourceSha256": "b028fcfbf9125dda9097ef29db736072be20dd2d3798eaf11d5356ea4b2134c3",
       "draftPath": "locales/zh-Hans/ui-drafts/job-targets.json",
       "extractedLeaves": 20,
-      "authoredEntries": 16,
+      "authoredEntries": 20,
       "coveredKeys": [
         "choiceNotice",
         "choices",
@@ -1671,6 +1671,10 @@
         "originalOnly",
         "partial",
         "partialBody",
+        "reviewBody",
+        "reviewObservation",
+        "reviewTerms",
+        "reviewTitle",
         "target",
         "terms",
         "unavailable",
@@ -1678,12 +1682,7 @@
         "waitBody"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [
-        "reviewBody",
-        "reviewObservation",
-        "reviewTerms",
-        "reviewTitle"
-      ],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     },
     {
@@ -1771,7 +1770,7 @@
       "sourceSha256": "24d48c22fe8027ef7da6909013f062937174786acc03147787aad0903adb3459",
       "draftPath": "locales/zh-Hans/ui-drafts/ledger.json",
       "extractedLeaves": 101,
-      "authoredEntries": 100,
+      "authoredEntries": 101,
       "coveredKeys": [
         "ledgerPage.loadingHistory",
         "ledgerPage.loadingSources",
@@ -1810,6 +1809,7 @@
         "ledgerPresentation.questionsLoading",
         "ledgerPresentation.questionsUnavailable",
         "ledgerPresentation.recent",
+        "ledgerPresentation.recordedBoundary",
         "ledgerPresentation.records",
         "ledgerPresentation.referencesBoundary",
         "ledgerPresentation.settledPayments",
@@ -1875,9 +1875,7 @@
         "paymentRecords.transferTitle"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [
-        "ledgerPresentation.recordedBoundary"
-      ],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     },
     {
@@ -2551,7 +2549,7 @@
       "sourceSha256": "0f9e1ab3348c6a159e6ba00899cc7163c13163e5c8c7ec43211e714bf67ebd8b",
       "draftPath": "locales/zh-Hans/ui-drafts/owned-history.json",
       "extractedLeaves": 111,
-      "authoredEntries": 41,
+      "authoredEntries": 111,
       "coveredKeys": [
         "all",
         "apply",
@@ -2574,29 +2572,6 @@
         "paidCreators",
         "previous",
         "private",
-        "public",
-        "receiptBound",
-        "receipts",
-        "references",
-        "refresh",
-        "report",
-        "save",
-        "scanLimited",
-        "scope",
-        "search",
-        "signedOut",
-        "sponsored",
-        "surface",
-        "title",
-        "to",
-        "unavailable",
-        "unknown",
-        "unlisted",
-        "visibility",
-        "walletOnly"
-      ],
-      "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [
         "privateJobs.actions.apply",
         "privateJobs.actions.close",
         "privateJobs.actions.csv",
@@ -2666,8 +2641,30 @@
         "privateJobs.scan.summary",
         "privateJobs.status.detail",
         "privateJobs.status.export",
-        "privateJobs.status.list"
+        "privateJobs.status.list",
+        "public",
+        "receiptBound",
+        "receipts",
+        "references",
+        "refresh",
+        "report",
+        "save",
+        "scanLimited",
+        "scope",
+        "search",
+        "signedOut",
+        "sponsored",
+        "surface",
+        "title",
+        "to",
+        "unavailable",
+        "unknown",
+        "unlisted",
+        "visibility",
+        "walletOnly"
       ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     },
     {
@@ -2676,10 +2673,8 @@
       "sourceSha256": "e371c237cf4a9bfcec31f78c77752c3a92126a6b6361a5a77a688b39e207d663",
       "draftPath": "locales/zh-Hans/ui-drafts/owner-run-assignments.json",
       "extractedLeaves": 31,
-      "authoredEntries": 0,
-      "coveredKeys": [],
-      "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [
+      "authoredEntries": 31,
+      "coveredKeys": [
         "acknowledgement",
         "assigned",
         "assignedAt",
@@ -2712,6 +2707,8 @@
         "unknown",
         "withdraw"
       ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     },
     {
@@ -4083,7 +4080,7 @@
       "sourceSha256": "188fce0014756dde2b237f3f1db91111930066a115d3f454eab4c21352c40f5f",
       "draftPath": "locales/zh-Hans/ui-drafts/research-flow.json",
       "extractedLeaves": 301,
-      "authoredEntries": 293,
+      "authoredEntries": 301,
       "coveredKeys": [
         "agentIntegration.copied",
         "agentIntegration.copy",
@@ -4298,13 +4295,21 @@
         "researchTurn.summary.other",
         "researchTurn.summaryWithUnsettled.one",
         "researchTurn.summaryWithUnsettled.other",
+        "researchVisibility.embedNotice",
+        "researchVisibility.followUp",
         "researchVisibility.label",
         "researchVisibility.loading",
         "researchVisibility.openResearch",
         "researchVisibility.private",
+        "researchVisibility.privateNotice",
         "researchVisibility.public",
+        "researchVisibility.publicNotice",
+        "researchVisibility.questionOnly",
         "researchVisibility.retry",
+        "researchVisibility.signIn",
+        "researchVisibility.unavailable",
         "researchVisibility.unlisted",
+        "researchVisibility.unlistedNotice",
         "savedResearch.acknowledgementNotice",
         "savedResearch.close",
         "savedResearch.confirmRemoval",
@@ -4380,16 +4385,7 @@
         "walletResearch.walletMismatch"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [
-        "researchVisibility.embedNotice",
-        "researchVisibility.followUp",
-        "researchVisibility.privateNotice",
-        "researchVisibility.publicNotice",
-        "researchVisibility.questionOnly",
-        "researchVisibility.signIn",
-        "researchVisibility.unavailable",
-        "researchVisibility.unlistedNotice"
-      ],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     },
     {
@@ -5707,10 +5703,8 @@
       "sourceSha256": "da619acd121f4e293b428684dc8d402443b4ac2c578719dc67f7374a7fc447a2",
       "draftPath": "locales/zh-Hans/ui-drafts/topic-watches.json",
       "extractedLeaves": 42,
-      "authoredEntries": 0,
-      "coveredKeys": [],
-      "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [
+      "authoredEntries": 42,
+      "coveredKeys": [
         "topicWatch.accountChanged",
         "topicWatch.authors",
         "topicWatch.cadence",
@@ -5754,12 +5748,14 @@
         "topicWatch.unavailable",
         "topicWatch.venues"
       ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     },
     {
       "namespace": "ui-preference",
       "sourcePath": "locales/en/ui-preference.ts",
-      "sourceSha256": "796e9d98f5484ec5ae54906050b0af8d7ad2cb5c46fd969931ecec749e4d9fe7",
+      "sourceSha256": "71a28873f12c58e26700933278be179753094d6eac945c464729443d488a1f96",
       "draftPath": "locales/zh-Hans/ui-drafts/ui-preference.json",
       "extractedLeaves": 13,
       "authoredEntries": 13,
@@ -6741,9 +6737,8 @@
       "sourceSha256": "9cee452922b68c72cc51575367d5b82000c8ad6280fa424c9106832600e77f1f",
       "draftPath": "locales/zh-Hans/ui-drafts/wallet-workspace.json",
       "extractedLeaves": 44,
-      "authoredEntries": 0,
-      "coveredKeys": [],
-      "uncoveredKeys": [
+      "authoredEntries": 44,
+      "coveredKeys": [
         "addMoney",
         "addMoneyDescription",
         "address",
@@ -6789,6 +6784,7 @@
         "withdrawDescription",
         "withdrawalSteps"
       ],
+      "uncoveredKeys": [],
       "nonTranslatableMachineIdentifiers": [],
       "sourceAliases": {}
     },
@@ -6798,51 +6794,8 @@
       "sourceSha256": "5f834afb936d0341fd818ed2f2efe7d2c629dd9bd882eadd36b322d8c3cd17a9",
       "draftPath": "locales/zh-Hans/ui-drafts/about-story.json",
       "extractedLeaves": 58,
-      "authoredEntries": 0,
-      "coveredKeys": [],
-      "nonTranslatableMachineIdentifiers": [
-        {
-          "key": "inspect.0.href",
-          "value": "/walkthrough",
-          "reason": "Published destination or internal route; preserve exact navigation target."
-        },
-        {
-          "key": "inspect.1.href",
-          "value": "/operator/decisions",
-          "reason": "Published destination or internal route; preserve exact navigation target."
-        },
-        {
-          "key": "inspect.2.href",
-          "value": "/proof",
-          "reason": "Published destination or internal route; preserve exact navigation target."
-        },
-        {
-          "key": "aboutStoryLinks.demo",
-          "value": "https://youtu.be/sNonqLPMysg",
-          "reason": "Published destination or internal route; preserve exact navigation target."
-        },
-        {
-          "key": "returnVideo",
-          "value": "https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.mp4",
-          "reason": "Published destination or internal route; preserve exact navigation target."
-        },
-        {
-          "key": "aboutStoryLinks.report",
-          "value": "/dispatch/c2febd88-a367-432a-8b90-4214f1f82e44",
-          "reason": "Published destination or internal route; preserve exact navigation target."
-        },
-        {
-          "key": "aboutStoryLinks.caseStudy",
-          "value": "https://github.com/tang-vu/keryx/blob/main/docs/case-studies/voiceready-2026-10-15.md",
-          "reason": "Published destination or internal route; preserve exact navigation target."
-        },
-        {
-          "key": "feedback",
-          "value": "https://github.com/tang-vu/keryx/blob/main/docs/case-studies/user-feedback-2026-10-16.md",
-          "reason": "Published destination or internal route; preserve exact navigation target."
-        }
-      ],
-      "uncoveredKeys": [
+      "authoredEntries": 50,
+      "coveredKeys": [
         "aboutStory.caseStudy",
         "aboutStory.demo",
         "aboutStory.report",
@@ -6894,6 +6847,49 @@
         "videoSeries",
         "walkthrough"
       ],
+      "nonTranslatableMachineIdentifiers": [
+        {
+          "key": "inspect.0.href",
+          "value": "/walkthrough",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "inspect.1.href",
+          "value": "/operator/decisions",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "inspect.2.href",
+          "value": "/proof",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "aboutStoryLinks.demo",
+          "value": "https://youtu.be/sNonqLPMysg",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "returnVideo",
+          "value": "https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.mp4",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "aboutStoryLinks.report",
+          "value": "/dispatch/c2febd88-a367-432a-8b90-4214f1f82e44",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "aboutStoryLinks.caseStudy",
+          "value": "https://github.com/tang-vu/keryx/blob/main/docs/case-studies/voiceready-2026-10-15.md",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "feedback",
+          "value": "https://github.com/tang-vu/keryx/blob/main/docs/case-studies/user-feedback-2026-10-16.md",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        }
+      ],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     }
   ]

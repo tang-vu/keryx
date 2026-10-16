@@ -1,16 +1,20 @@
 "use client";
 import { formatAmount } from "@/lib/i18n/format";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useRef, useState } from "react";
 import { type PublicClient } from "viem";
 import { inspectPastGatewayDeposit, type PastGatewayDeposit } from "@/lib/buyer/funding-activity";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 /** Parent keys this panel by payer so an account switch discards old observations. */
 export function ResearchFundingActivity({ payer, chain }: { payer: string; chain?: PublicClient }) {
+  const copy = useUiMessages();
   const [hash, setHash] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState(false);
   const [observed, setObserved] = useState<PastGatewayDeposit | null>(null);
   const operation = useRef<AbortController | null>(null);

@@ -1,15 +1,19 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useState } from "react";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord, QueryRun } from "@/lib/types";
 import { researchReportFilename, researchReportMarkdown } from "@/lib/research-report-export";
 import { evidenceProcurementCopy } from "@/lib/evidence-procurement/copy";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 export function ReportActions({ run, meta, payments }: { run: QueryRun; meta: AskMeta | null; payments: PaymentRecord[] }) {
+  const copy = useUiMessages();
   const [message, setMessage] = useState("");
   const text = () => researchReportMarkdown(run, meta, payments);
   const buttonClass = "min-h-11 border border-line bg-paper px-3 py-2 font-mono text-xs hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal";

@@ -1,5 +1,5 @@
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import type { Metadata } from "next";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { getDb } from "@/lib/db";
@@ -7,9 +7,12 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { PublicSourceClaimForm } from "@/components/keryx/public-source-claim-form";
 import { sourceClaimDraft } from "@/lib/registration-return";
+import { UiMessage, UiRichMessage } from "@/lib/i18n/ui-copy";
+
+
 
 const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: uiCopy("sourceClaimPage.title"), description: uiCopy("sourceClaimPage.description"), alternates: englishPublicAlternates("/claim-source") };
@@ -32,10 +35,10 @@ export default async function ClaimSourcePage({ searchParams }: { searchParams: 
   return <div className="min-h-screen bg-paper">
     <SiteHeader />
     <main className="mx-auto max-w-3xl px-4 py-10 sm:px-8">
-      <p className="font-mono text-xs uppercase tracking-[0.16em] text-seal">{uiCopy("sourceClaimPage.publisher")}</p>
-      <h1 className="mt-3 font-display text-[clamp(34px,6vw,58px)] leading-tight text-ink">{uiRichCopy("sourceClaimPage.heading", { source: <em className="text-paid">{uiCopy("sourceClaimPage.mySource")}</em> })}</h1>
-      <p className="mt-4 max-w-[62ch] text-lg leading-relaxed text-ink-2">{uiCopy("sourceClaimPage.introduction")}</p>
-      <p className="mt-3 text-sm leading-relaxed text-ink-2">{uiCopy("sourceClaimPage.freeHistory")}</p>
+      <p className="font-mono text-xs uppercase tracking-[0.16em] text-seal"><UiMessage messageKey={"sourceClaimPage.publisher"} /></p>
+      <h1 className="mt-3 font-display text-[clamp(34px,6vw,58px)] leading-tight text-ink"><UiRichMessage messageKey={"sourceClaimPage.heading"} values={{ source: <em className="text-paid"><UiMessage messageKey={"sourceClaimPage.mySource"} /></em> }} /></h1>
+      <p className="mt-4 max-w-[62ch] text-lg leading-relaxed text-ink-2"><UiMessage messageKey={"sourceClaimPage.introduction"} /></p>
+      <p className="mt-3 text-sm leading-relaxed text-ink-2"><UiMessage messageKey={"sourceClaimPage.freeHistory"} /></p>
       <PublicSourceClaimForm initial={initial} initialError={initialError} />
     </main>
     <SiteFooter />

@@ -13,15 +13,18 @@ import { walletWorkspaceMessages as walletCopy } from "@/locales/en/wallet-works
 import { WalletPicker } from "@/components/keryx/wallet-picker";
 import type { ArcChainGuard } from "@/lib/hooks/use-arc-chain-guard";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+
+
+
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 import type { AuthState } from "@/lib/hooks/use-siwe-auth";
+import { useUiCopy, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_walletCopy = walletCopy;
+
 export type { AuthState } from "@/lib/hooks/use-siwe-auth";
 
 // ── StepDot ───────────────────────────────────────────────────────────────────
@@ -46,6 +49,8 @@ export function StepDot({ active, done, label }: { active: boolean; done: boolea
 // ── ChainBanner — shown whenever connected wallet is on the wrong chain ────────
 
 export function ChainBanner({ guard }: { guard: ArcChainGuard }) {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   if (guard.isOnArc) return null;
   return (
     <div className="flex items-start gap-3 border border-amber-500/40 bg-amber-500/[0.08] px-3 py-2.5">
@@ -73,6 +78,8 @@ export function ChainBanner({ guard }: { guard: ArcChainGuard }) {
 // ── ConnectStep ───────────────────────────────────────────────────────────────
 
 export function ConnectStep({ isBusy }: { isBusy: boolean }) {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   return (
     <div className="space-y-5">
       <div>
@@ -103,6 +110,7 @@ export function SignInStep({
   authState: AuthState;
   chainGuard: ArcChainGuard;
 }) {
+  const message = useUiMessages();
   const label =
     authState === "signing"
       ? message("account.waitingForSignature")
@@ -165,6 +173,9 @@ export function SignedInStep({
   returnTo?: string | null;
   returnBlocked?: boolean;
 }) {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
+  const walletCopy = useUiCopy("wallet-workspace", uiEnglish_walletCopy);
   return (
     <div className="space-y-5">
       <div>

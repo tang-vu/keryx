@@ -14,8 +14,8 @@ import { ResearchVisibilityPicker } from "@/components/keryx/research-visibility
  * only on merit, same as every other dispatch.
  */
 
-import { createRichMessages } from "@/lib/i18n/rich-messages";
-import { createMessages } from "@/lib/i18n/messages";
+
+
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -29,13 +29,18 @@ import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
 import { RESEARCH_AVAILABILITY_UNKNOWN, RESEARCH_PAUSED_MESSAGE } from "@/lib/research/availability-contract";
 import { SelectionFailureDownload } from "@/components/keryx/selection-failure-download";
 import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+
+
+
 
 const CANONICAL = "https://keryx.cc";
 
 export function EmbedClient() {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const params = useSearchParams();
   const sourceId = params.get("source");
 

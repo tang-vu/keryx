@@ -19,13 +19,14 @@ import { productGuideCopy } from "@/locales/en/product-guide";
 import { setupCopy } from "@/locales/en/get-started";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LanguageSwitcher } from "./language-switcher";
+import { useUiCopy, useUiCopyFunction, useUiMessages } from "@/lib/i18n/ui-copy";
 
-function navigation(message: ReturnType<typeof createMessages>) { return [
+function navigation(message: ReturnType<typeof createMessages>, guide = productGuideCopy, setup = setupCopy) { return [
   { href: "/", label: message("shellNavigation.ask") },
   { href: "/sources", label: message("shellNavigation.sources") },
-  { href: "/pricing", label: productGuideCopy("product.navigationPricing") },
-  { href: "/about", label: productGuideCopy("product.navigationAbout") },
-  { href: "/get-started", label: setupCopy.navigation.start },
+  { href: "/pricing", label: guide("product.navigationPricing") },
+  { href: "/about", label: guide("product.navigationAbout") },
+  { href: "/get-started", label: setup.navigation.start },
   { href: "/dashboard", label: message("shellNavigation.activity") },
   { href: "/operator", label: message("shellNavigation.operator") },
   { href: "/answers", label: message("shellNavigation.answers") },
@@ -39,13 +40,14 @@ function navigation(message: ReturnType<typeof createMessages>) { return [
   { href: "/playground", label: message("shellNavigation.playground") },
   { href: "/research", label: message("shellNavigation.research") },
   { href: "/dev", label: message("shellNavigation.developer") },
-  { href: "/download", label: setupCopy.navigation.download },
-  { href: "/integrations", label: setupCopy.navigation.integrations },
+  { href: "/download", label: setup.navigation.download },
+  { href: "/integrations", label: setup.navigation.integrations },
 ]; }
 
 export function SiteHeader() {
-  const { message, locale } = useLocale();
-  const NAV = navigation(message);
+  const shell = useLocale(), { locale } = shell, message = useUiMessages(shell.message);
+  const guide = useUiCopyFunction("product-guide", productGuideCopy), setup = useUiCopy("get-started", setupCopy);
+  const NAV = navigation(message, guide, setup);
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);

@@ -2,11 +2,14 @@
 import { DisplayTime } from "@/components/keryx/display-time";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
+
 
 interface SessionRow { id: string; issuedAt: number; expiresAt: number; current: boolean }
 interface SessionList { sessions: SessionRow[]; truncated: boolean }
@@ -15,6 +18,8 @@ const date = (ms: number) => <DisplayTime value={ms} />;
 
 /** Parent keys this view by account so account changes cannot retain another wallet's list. */
 export function AccountSessions() {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const [data, setData] = useState<SessionList | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");

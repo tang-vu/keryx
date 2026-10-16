@@ -6,6 +6,9 @@ import { evidenceDraftWorkspace } from "@/lib/research/evidence-draft";
 import type { LiteratureWorkspace } from "@/lib/papers/literature-workspace";
 import type { CompletedEvidenceDraftSelectionPacket } from "@/lib/research/completed-evidence-draft-selection";
 import { completedEvidenceDraftSelectionCopy as copy } from "@/locales/en/completed-evidence-draft-selection";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 const field = "mt-2 block w-full min-w-0 rounded-none border border-line bg-paper px-3 py-2 font-serif text-sm text-ink";
 const button = "inline-flex min-h-11 items-center border border-ink px-3 py-2 font-mono text-xs text-ink disabled:opacity-50";
@@ -32,6 +35,7 @@ async function readJson(response: Response, limit: number) {
 export function CompletedEvidenceDraftSelector({ workspace, onImport, disabled = false }: {
   workspace: LiteratureWorkspace; onImport: CompletedEvidenceDraftImportProps["onImport"]; disabled?: boolean;
 }) {
+  const copy = useUiCopy("completed-evidence-draft-selection", uiEnglish_copy);
   const [id, setId] = useState(""), [busy, setBusy] = useState(false), [message, setMessage] = useState<string>("");
   const [bound, setBound] = useState<{ key: string; revision: number; packet: CompletedEvidenceDraftSelectionPacket } | null>(null);
   const pending = useRef<AbortController | null>(null), revision = useRef(0), mounted = useRef(false);

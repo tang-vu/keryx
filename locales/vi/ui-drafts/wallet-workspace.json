@@ -3,5 +3,182 @@
   "review": null,
   "sourcePath": "locales/en/wallet-workspace.ts",
   "sourceSha256": "9cee452922b68c72cc51575367d5b82000c8ad6280fa424c9106832600e77f1f",
-  "entries": {}
+  "entries": {
+    "addMoney": {
+      "source": "Add money",
+      "text": "Thêm tiền"
+    },
+    "addMoneyDescription": {
+      "source": "Receive USDC in your wallet, then review the budget you want the agent to use below.",
+      "text": "Nhận USDC vào ví, rồi xem xét ngân sách muốn cấp cho tác nhân bên dưới."
+    },
+    "address": {
+      "source": "Your receiving address",
+      "text": "Địa chỉ nhận của bạn"
+    },
+    "backToChat": {
+      "source": "Ask Keryx",
+      "text": "Hỏi Keryx"
+    },
+    "bankOptions": {
+      "source": "Other ways to add USDC",
+      "text": "Các cách khác để thêm USDC"
+    },
+    "browserRecovery": {
+      "source": "Your agent budget uses a separate signer saved in this browser. Signing in with Google on another device does not restore it. Keep this browser’s data until you have withdrawn its remaining funds.",
+      "text": "Ngân sách tác nhân dùng khóa ký riêng lưu trong trình duyệt này. Đăng nhập Google trên thiết bị khác không khôi phục khóa đó. Giữ dữ liệu trình duyệt này cho đến khi rút hết tiền còn lại."
+    },
+    "budget": {
+      "source": "Agent budget",
+      "text": "Ngân sách tác nhân"
+    },
+    "budgetBoundary": {
+      "source": "Pending payments count against this allowance. It is not your wallet balance.",
+      "text": "Thanh toán đang chờ được tính vào hạn mức này. Đây không phải số dư ví."
+    },
+    "budgetDescription": {
+      "source": "Choose a total limit, a maximum per question and a duration. Once approved, the agent handles source payments within those limits across your conversations.",
+      "text": "Chọn tổng hạn mức, mức tối đa mỗi câu hỏi và thời hạn. Sau khi được chấp thuận, tác nhân xử lý thanh toán nguồn trong các giới hạn đó xuyên suốt các cuộc trò chuyện."
+    },
+    "budgetSetup": {
+      "source": "Set up agent budget",
+      "text": "Thiết lập ngân sách tác nhân"
+    },
+    "checkWithdrawal": {
+      "source": "Check withdrawal status",
+      "text": "Kiểm tra trạng thái rút tiền"
+    },
+    "checkingBudget": {
+      "source": "Checking your budget…",
+      "text": "Đang kiểm tra ngân sách…"
+    },
+    "confirmWithdrawal": {
+      "source": "Confirm withdrawal",
+      "text": "Xác nhận rút tiền"
+    },
+    "copied": {
+      "source": "Address copied",
+      "text": "Đã sao chép địa chỉ"
+    },
+    "copyAddress": {
+      "source": "Copy address",
+      "text": "Sao chép địa chỉ"
+    },
+    "copyFailed": {
+      "source": "Copy was unavailable. Select and copy the receiving address below.",
+      "text": "Không sao chép được. Chọn và sao chép địa chỉ nhận bên dưới."
+    },
+    "description": {
+      "source": "Add USDC, choose an agent budget, and withdraw unused research funds in one place.",
+      "text": "Thêm USDC, chọn ngân sách tác nhân và rút tiền nghiên cứu chưa dùng ở cùng một nơi."
+    },
+    "expired": {
+      "source": "Budget expired — review to continue",
+      "text": "Ngân sách đã hết hạn — xem xét để tiếp tục"
+    },
+    "externalKeys": {
+      "source": "Manage your private key and account recovery in your connected wallet app.",
+      "text": "Quản lý khóa riêng và khôi phục tài khoản trong ứng dụng ví đã kết nối."
+    },
+    "googleKeys": {
+      "source": "Private-key export for the Google wallet is not available in Keryx. Use your Google account to reconnect to that wallet.",
+      "text": "Keryx chưa hỗ trợ xuất khóa riêng của ví Google. Dùng tài khoản Google để kết nối lại ví đó."
+    },
+    "keysAndRecovery": {
+      "source": "Keys & recovery",
+      "text": "Khóa và phục hồi"
+    },
+    "loading": {
+      "source": "Checking your account…",
+      "text": "Đang kiểm tra tài khoản…"
+    },
+    "manageBudget": {
+      "source": "Manage budget",
+      "text": "Quản lý ngân sách"
+    },
+    "noBudget": {
+      "source": "Choose an agent budget",
+      "text": "Chọn ngân sách tác nhân"
+    },
+    "otherWallet": {
+      "source": "Connect a wallet",
+      "text": "Kết nối ví"
+    },
+    "paused": {
+      "source": "Budget paused — review to continue",
+      "text": "Ngân sách tạm dừng — xem xét để tiếp tục"
+    },
+    "ready": {
+      "source": "Budget ready",
+      "text": "Ngân sách sẵn sàng"
+    },
+    "receiveNotice": {
+      "source": "Send USDC on the network shown here. Receiving funds does not enable agent spending.",
+      "text": "Gửi USDC trên mạng hiển thị tại đây. Nhận tiền không bật quyền chi tiêu của tác nhân."
+    },
+    "receiveWithdrawal": {
+      "source": "Receive in my wallet",
+      "text": "Nhận trong ví của tôi"
+    },
+    "reconnect": {
+      "source": "Reconnect wallet",
+      "text": "Kết nối lại ví"
+    },
+    "reconnectDescription": {
+      "source": "Connect the same wallet you signed in with to manage its funds and budget.",
+      "text": "Kết nối đúng ví đã dùng để đăng nhập nhằm quản lý tiền và ngân sách của ví đó."
+    },
+    "reconnectTitle": {
+      "source": "Reconnect your account wallet",
+      "text": "Kết nối lại ví tài khoản"
+    },
+    "recoveryDetails": {
+      "source": "Recovery details",
+      "text": "Thông tin phục hồi"
+    },
+    "remaining": {
+      "source": "Remaining allowance",
+      "text": "Hạn mức còn lại"
+    },
+    "reviewWithdrawal": {
+      "source": "Review withdrawal",
+      "text": "Xem xét rút tiền"
+    },
+    "signInDescription": {
+      "source": "Continue with Google or connect a wallet. Choose an agent budget once, then reuse it across your conversations while it remains active.",
+      "text": "Tiếp tục bằng Google hoặc kết nối ví. Chọn ngân sách tác nhân một lần, rồi dùng lại qua các cuộc trò chuyện khi còn hiệu lực."
+    },
+    "signInTitle": {
+      "source": "One account. Your wallet. Your budget.",
+      "text": "Một tài khoản. Ví của bạn. Ngân sách của bạn."
+    },
+    "title": {
+      "source": "Your wallet",
+      "text": "Ví của bạn"
+    },
+    "usdc": {
+      "source": "USDC",
+      "term": "usdc"
+    },
+    "verifyWithdrawal": {
+      "source": "Verify arrival",
+      "text": "Xác minh tiền đã đến"
+    },
+    "walletAndBudget": {
+      "source": "Wallet & budget",
+      "text": "Ví và ngân sách"
+    },
+    "withdraw": {
+      "source": "Withdraw",
+      "text": "Rút tiền"
+    },
+    "withdrawDescription": {
+      "source": "Return unused research funds to your account wallet. Review the amount and fee before signing; network gas is separate.",
+      "text": "Chuyển tiền nghiên cứu chưa dùng về ví tài khoản. Xem xét số tiền và phí trước khi ký; phí gas mạng tính riêng."
+    },
+    "withdrawalSteps": {
+      "source": "Review amount → confirm withdrawal → receive in your wallet",
+      "text": "Xem xét số tiền → xác nhận rút tiền → nhận trong ví"
+    }
+  }
 }

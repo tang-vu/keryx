@@ -11,10 +11,13 @@ import {
 } from "@/lib/business-operator/contracts";
 import { cn } from "@/lib/utils";
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
 const REASON_MESSAGE = {
   "no-orders": "operatorBusiness.reasonNoOrders",
   "liquidity-covered": "operatorBusiness.reasonLiquidityCovered",
@@ -106,6 +109,8 @@ export function OperatorBusinessSnapshot({ status, readState = "ready" }: {
   status: OperatorBusinessStatus | null;
   readState?: "loading" | "ready" | "unavailable";
 }) {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const state = status?.operator.state ?? "unavailable";
   const appearance = STATE[state];
   const jobs = status?.jobs;

@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createMessages } from "@/lib/i18n/messages";
-import { formatDate, formatCalendarDate, formatRelativeTime, resolveViewerTimeZone, type DisplayLocale } from "@/lib/i18n/format";
 
-const copy = createMessages("en");
+import { formatDate, formatCalendarDate, formatRelativeTime, resolveViewerTimeZone, type DisplayLocale } from "@/lib/i18n/format";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
 
 /** UTC first render matches SSR. Resolve the viewer zone only after hydration. */
 function useViewerTimeZone(): string {
@@ -16,6 +19,7 @@ function useViewerTimeZone(): string {
 export function DisplayTime({ value, locale = "en", dateOnly = false, now, timeZone, relative = false, timeStyle = "short" }: {
   value: string | number; locale?: DisplayLocale; dateOnly?: boolean; now?: string | number; timeZone?: string; relative?: boolean; timeStyle?: "short" | "medium";
 }) {
+  const copy = useUiMessages();
   const viewerZone = useViewerTimeZone();
   const [observedNow, setObservedNow] = useState<number | undefined>(undefined);
   useEffect(() => { if (relative) setObservedNow(Date.now()); }, [relative, value]);

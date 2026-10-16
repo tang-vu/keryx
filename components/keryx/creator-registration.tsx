@@ -13,6 +13,9 @@ import { PublicSourceClaimForm } from "./public-source-claim-form";
 import { PublicSourceClaimPolicy } from "./public-source-claim-policy";
 import { SponsoredRegistrationForm } from "./sponsored-registration-form";
 import { claimRequest } from "./public-source-claim-api";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 function proofDraft(initial: RegistrationDraft) {
   const params = new URLSearchParams();
@@ -27,6 +30,7 @@ function proofDraft(initial: RegistrationDraft) {
 
 /** Draft URL state is public context. Only verified API/chain responses advance the workflow. */
 export function CreatorRegistration({ initial = {}, initialError = "" }: { initial?: RegistrationDraft; initialError?: string }) {
+  const copy = useUiCopy("creator-registration", uiEnglish_copy);
   const wallet = useAccount(), { session } = useSiweAuth(), profile = browserPaymentProfile();
   const owner = wallet.address?.toLowerCase();
   const authenticated = wallet.isConnected && !!owner && session?.address.toLowerCase() === owner && wallet.chainId === profile.chainId;

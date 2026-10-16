@@ -8,8 +8,12 @@ import { RUN_SURFACES } from "@/lib/research/run-provenance";
 import { ownedInputSchema, ownedPageSchema, type OwnedHistoryInput, type OwnedHistoryPage, type OwnedHistoryRow } from "@/lib/history/owned-history";
 import { formatUsdcMicros } from "@/lib/display/recorded-usdc";
 import { ownedHistoryCopy as copy } from "@/locales/en/owned-history";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 export function OwnedHistoryPane() {
+  const copy = useUiCopy("owned-history", uiEnglish_copy);
   const { session } = useSiweAuth();
   return session === undefined ? <p role="status">{copy.checking}</p> : session
     ? <OwnedHistoryView key={session.address.toLowerCase()} owner={session.address.toLowerCase()} /> : <p>{copy.signedOut}</p>;
@@ -17,6 +21,7 @@ export function OwnedHistoryPane() {
 const queryString = (input: OwnedHistoryInput) => new URLSearchParams(Object.entries(ownedInputSchema.parse(input)).filter(([,v]) => v !== undefined).map(([k,v]) => [k,String(v)])).toString();
 /** Unmount/abort and owner precondition fence late reads, downloads and mutations. */
 export function OwnedHistoryView({ owner }: { owner: string }) {
+  const copy = useUiCopy("owned-history", uiEnglish_copy);
   const formId = useId(), controller = useRef<AbortController | null>(null);
   // Each effect controller identifies one owner/filter/revision generation.
   const isCurrent = useCallback((abort: AbortController | null): abort is AbortController =>

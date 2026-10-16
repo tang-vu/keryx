@@ -167,6 +167,286 @@
     "receiptBound": {
       "source": "Receipt projection truncated; spend totals unavailable.",
       "text": "凭证投影已截断；支出总额不可用。"
+    },
+    "privateJobs.actions.apply": {
+      "source": "Apply filters",
+      "text": "应用筛选"
+    },
+    "privateJobs.actions.close": {
+      "source": "Close result",
+      "text": "关闭结果"
+    },
+    "privateJobs.actions.csv": {
+      "source": "Download CSV",
+      "text": "下载 CSV"
+    },
+    "privateJobs.actions.json": {
+      "source": "Download JSON",
+      "text": "下载 JSON"
+    },
+    "privateJobs.actions.next": {
+      "source": "Next page",
+      "text": "下一页"
+    },
+    "privateJobs.actions.previous": {
+      "source": "Previous page",
+      "text": "上一页"
+    },
+    "privateJobs.actions.refresh": {
+      "source": "Refresh history",
+      "text": "刷新历史记录"
+    },
+    "privateJobs.actions.view": {
+      "source": "View saved result",
+      "text": "查看已保存结果"
+    },
+    "privateJobs.auth.check": {
+      "source": "Check sign-in",
+      "text": "检查登录"
+    },
+    "privateJobs.auth.checking": {
+      "source": "Checking your sign-in…",
+      "text": "正在检查登录…"
+    },
+    "privateJobs.auth.payer": {
+      "source": "Signed-in payer: ${wallet}",
+      "text": "已登录付款方：${wallet}"
+    },
+    "privateJobs.auth.signIn": {
+      "source": "Sign in to view completed private jobs",
+      "text": "登录以查看已完成的私人任务"
+    },
+    "privateJobs.auth.waiting": {
+      "source": "Private data cleared. Waiting for a fresh verified sign-in.",
+      "text": "私人数据已清除。正在等待新的已验证登录。"
+    },
+    "privateJobs.detail.citation": {
+      "source": "${marker} ${sourceName}${itemTitle ? ` — ${itemTitle}` : \"\"}: ${rationale}. Recorded reward attribution: ${recordedRewardUsdc} USDC (settlement unavailable).",
+      "text": "${marker} ${sourceName}${itemTitle ? ` — ${itemTitle}` : \"\"}：${rationale}。记录的奖励分配：${recordedRewardUsdc} USDC（结算信息不可用）。"
+    },
+    "privateJobs.detail.citations": {
+      "source": "Recorded citations",
+      "text": "记录的引用"
+    },
+    "privateJobs.detail.claimCoverage": {
+      "source": "Saved claim coverage",
+      "text": "已保存的论点覆盖情况"
+    },
+    "privateJobs.detail.claims": {
+      "source": "Recorded claims",
+      "text": "记录的论点"
+    },
+    "privateJobs.detail.coverage": {
+      "source": "${claim}: recorded coverage ${coverage}; markers ${markers}.",
+      "text": "${claim}：记录的覆盖情况 ${coverage}；引用标记 ${markers}。"
+    },
+    "privateJobs.detail.coverageCount": {
+      "source": "${count} recorded entries",
+      "text": "${count} 条记录"
+    },
+    "privateJobs.detail.decision": {
+      "source": "${action} ${sourceName}: ${rationale}. Recorded offer price: ${price} USDC; this is not settled own spend.",
+      "text": "${action} ${sourceName}：${rationale}。记录的报价：${price} USDC；这不是你已结算的支出。"
+    },
+    "privateJobs.detail.decisions": {
+      "source": "Recorded decisions",
+      "text": "记录的决策"
+    },
+    "privateJobs.detail.evidenceCount": {
+      "source": "${count} recorded items",
+      "text": "${count} 个记录项目"
+    },
+    "privateJobs.detail.evidenceExcerpts": {
+      "source": "Saved evidence excerpts",
+      "text": "已保存的证据摘录"
+    },
+    "privateJobs.detail.introduction": {
+      "source": "Recorded engine: ${engine}. Saved: ${savedAt}. Incoming payment evidence only; no creator ledger.",
+      "text": "记录的引擎：${engine}。保存时间：${savedAt}。仅有收款证据；无创作者账本。"
+    },
+    "privateJobs.detail.noCitations": {
+      "source": "No citations recorded.",
+      "text": "未记录引用。"
+    },
+    "privateJobs.detail.noMarkers": {
+      "source": "none recorded",
+      "text": "未记录"
+    },
+    "privateJobs.detail.section": {
+      "source": "Saved private result",
+      "text": "已保存的私人结果"
+    },
+    "privateJobs.detail.summary": {
+      "source": "Evidence: ${evidence}. Claim coverage: ${coverage}.",
+      "text": "证据：${evidence}。论点覆盖情况：${coverage}。"
+    },
+    "privateJobs.detail.support": {
+      "source": "Recorded support: ${support}; recorded reward eligibility: ${qualifiesForReward} (settlement unavailable).",
+      "text": "记录的支持情况：${support}；记录的奖励资格：${qualifiesForReward}（结算信息不可用）。"
+    },
+    "privateJobs.detail.unavailableLegacy": {
+      "source": "unavailable in this saved legacy result",
+      "text": "此已保存的旧结果中不可用"
+    },
+    "privateJobs.download.complete": {
+      "source": "Downloaded ${rows} rows. This bounded current-store scan finished; archives and linked wallets are excluded.",
+      "text": "已下载 ${rows} 行。此次有界当前存储扫描已完成；不包括归档和关联钱包。"
+    },
+    "privateJobs.download.scope": {
+      "source": "Manual metadata downloads start at the beginning of the applied filters: at most 20 pages, 500 rows and 2 MiB. They exclude result bodies and payment authorizations. Keep downloads private.",
+      "text": "手动元数据下载从已应用筛选的起点开始：最多 20 页、500 行和 2 MiB。不包含结果正文和付款授权。请妥善保密下载文件。"
+    },
+    "privateJobs.download.truncated": {
+      "source": "Downloaded ${rows} rows. Export is truncated at its bounds; it is not your whole history.",
+      "text": "已下载 ${rows} 行。导出已按边界截断；这不是你的全部历史记录。"
+    },
+    "privateJobs.errors.changedSession": {
+      "source": "Your authenticated session changed. Private data has been cleared. Check your sign-in before reading again.",
+      "text": "你的已验证会话已更改。私人数据已清除。再次读取前请检查登录。"
+    },
+    "privateJobs.errors.forbidden": {
+      "source": "Access to private history was refused. Private data has been cleared.",
+      "text": "访问私人历史记录被拒绝。私人数据已清除。"
+    },
+    "privateJobs.errors.invalidFilters": {
+      "source": "Check the filters. Dates must be UTC ISO timestamps, in increasing order.",
+      "text": "请检查筛选条件。日期必须是按先后顺序排列的 UTC ISO 时间戳。"
+    },
+    "privateJobs.errors.missingResult": {
+      "source": "This completed private result is no longer available.",
+      "text": "此已完成的私人结果已不可用。"
+    },
+    "privateJobs.errors.unauthorized": {
+      "source": "Your sign-in expired or was revoked. Private data has been cleared. Check your sign-in before reading again.",
+      "text": "登录已过期或被撤销。私人数据已清除。再次读取前请检查登录。"
+    },
+    "privateJobs.errors.unavailable": {
+      "source": "Private history is unavailable. No successful empty history is being reported.",
+      "text": "私人历史记录不可用。这不表示已成功读取到空历史记录。"
+    },
+    "privateJobs.filters.allNetworks": {
+      "source": "All recorded networks",
+      "text": "所有记录的网络"
+    },
+    "privateJobs.filters.allSurfaces": {
+      "source": "All recorded surfaces",
+      "text": "所有记录的渠道"
+    },
+    "privateJobs.filters.arcNetwork": {
+      "source": "eip155:5042",
+      "text": "eip155:5042"
+    },
+    "privateJobs.filters.dateExample": {
+      "source": "2026-10-14T00:00:00Z",
+      "text": "2026-10-14T00:00:00Z"
+    },
+    "privateJobs.filters.from": {
+      "source": "From UTC (inclusive)",
+      "text": "起始 UTC（包含）"
+    },
+    "privateJobs.filters.network": {
+      "source": "Recorded network",
+      "text": "记录的网络"
+    },
+    "privateJobs.filters.question": {
+      "source": "Question contains (case-sensitive)",
+      "text": "问题包含（区分大小写）"
+    },
+    "privateJobs.filters.scope": {
+      "source": "Dates select intent-list time. Surface and network come from recorded provenance and incoming settlement. Missing legacy surface remains UNKNOWN.",
+      "text": "日期按意图列表时间筛选。渠道和网络来自记录的来源与收款结算。旧记录缺失的渠道仍为 UNKNOWN。"
+    },
+    "privateJobs.filters.surface": {
+      "source": "Recorded surface",
+      "text": "记录的渠道"
+    },
+    "privateJobs.filters.testnetNetwork": {
+      "source": "eip155:5042002",
+      "text": "eip155:5042002"
+    },
+    "privateJobs.filters.to": {
+      "source": "To UTC (inclusive)",
+      "text": "结束 UTC（包含）"
+    },
+    "privateJobs.page.introduction": {
+      "source": "Read saved private results for your signed-in payer wallet. This history covers the current store, with bounded scans and downloads.",
+      "text": "读取已登录付款钱包保存的私人结果。此历史涵盖当前存储，扫描和下载均有边界。"
+    },
+    "privateJobs.page.link": {
+      "source": "Completed private jobs and downloads",
+      "text": "已完成的私人任务与下载"
+    },
+    "privateJobs.page.metadataTitle": {
+      "source": "Completed private jobs | Keryx",
+      "text": "已完成的私人任务 · Keryx"
+    },
+    "privateJobs.page.title": {
+      "source": "Completed private jobs",
+      "text": "已完成的私人任务"
+    },
+    "privateJobs.row.completion": {
+      "source": "Completed ${createdAt}; saved ${savedAt}. Mode: ${researchMode}; model: ${model}.",
+      "text": "完成于 ${createdAt}；保存于 ${savedAt}。模式：${researchMode}；模型：${model}。"
+    },
+    "privateJobs.row.incoming": {
+      "source": "Settled incoming original price: ${amount}. Evidence: ${evidenceSource}; chain finality independently verified: no.",
+      "text": "已结算的原始收款价格：${amount}。证据：${evidenceSource}；链上最终性已独立验证：否。"
+    },
+    "privateJobs.row.provenance": {
+      "source": "Recorded network: ${network}. Surface: ${surface}; ownership method: ${ownershipMethod}.",
+      "text": "记录的网络：${network}。渠道：${surface}；所有权归属方式：${ownershipMethod}。"
+    },
+    "privateJobs.row.unavailableSettlement": {
+      "source": "Own settled source spend: unavailable (NULL). Creator rewards: unavailable (NULL). Paid creators: unavailable (NULL).",
+      "text": "你已结算的来源支出：不可用（NULL）。创作者奖励：不可用（NULL）。已获付款的创作者：不可用（NULL）。"
+    },
+    "privateJobs.row.unknownLegacy": {
+      "source": "UNKNOWN / legacy",
+      "text": "UNKNOWN / 旧记录"
+    },
+    "privateJobs.scan.emptyPage": {
+      "source": "No completed jobs matched this scanned page.",
+      "text": "此扫描页中没有匹配的已完成任务。"
+    },
+    "privateJobs.scan.emptyStore": {
+      "source": "No completed jobs matched this current-store scan.",
+      "text": "此次当前存储扫描中没有匹配的已完成任务。"
+    },
+    "privateJobs.scan.exhausted": {
+      "source": "This bounded current-store scan is exhausted. This is not an archive or transaction snapshot.",
+      "text": "此次有界当前存储扫描已结束。这不是归档或交易快照。"
+    },
+    "privateJobs.scan.limited": {
+      "source": "This scan reached its bound. More intents remain; an empty page does not mean your history is empty.",
+      "text": "扫描已达边界。仍有更多意图；空页不代表历史记录为空。"
+    },
+    "privateJobs.scan.more": {
+      "source": "More intents remain. Load the next page manually.",
+      "text": "仍有更多意图。请手动加载下一页。"
+    },
+    "privateJobs.scan.navigationBound": {
+      "source": "Reached the 20-page navigation bound. Narrow the filters or refresh to start a new scan.",
+      "text": "已达 20 页浏览边界。请缩小筛选范围或刷新以开始新扫描。"
+    },
+    "privateJobs.scan.section": {
+      "source": "Completed jobs",
+      "text": "已完成任务"
+    },
+    "privateJobs.scan.summary": {
+      "source": "Page ${page}: ${rows} completed rows from ${intents} scanned intents (maximum 25 per request).",
+      "text": "第 ${page} 页：从 ${intents} 个已扫描意图中得到 ${rows} 行已完成记录（每次请求最多 25 个）。"
+    },
+    "privateJobs.status.detail": {
+      "source": "Loading saved private result…",
+      "text": "正在加载已保存的私人结果…"
+    },
+    "privateJobs.status.export": {
+      "source": "Preparing bounded private export…",
+      "text": "正在准备有界私人导出…"
+    },
+    "privateJobs.status.list": {
+      "source": "Loading completed private jobs…",
+      "text": "正在加载已完成的私人任务…"
     }
   }
 }

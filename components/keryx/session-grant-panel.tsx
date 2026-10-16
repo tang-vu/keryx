@@ -21,6 +21,9 @@ import { SessionCashoutPanel } from "./session-cashout-panel";
 import Link from "next/link";
 import { formatAmount, recordedUsdcMicros } from "@/lib/i18n/format";
 import { walletWorkspaceMessages as copy } from "@/locales/en/wallet-workspace";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 export interface SessionGrantBinding {
   /** Retained sessionId for active, expired or paused grants; never fall back implicitly. */
@@ -51,6 +54,7 @@ interface Props {
 }
 
 export function SessionGrantPanel({ onBindingChange, variant = "chat" }: Props) {
+  const copy = useUiCopy("wallet-workspace", uiEnglish_copy);
   const [authed, setAuthed] = useState(false);
   const { state, tryRecover, recoverViaSignature, generateAndFund, topUp, extend, revoke, getSessionWalletClient, markExpired, authorizeSessionPayment } =
     useSessionGrant();

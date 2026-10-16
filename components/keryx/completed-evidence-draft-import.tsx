@@ -6,6 +6,9 @@ import { buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, 
 import type { LiteratureWorkspace } from "@/lib/papers/literature-workspace";
 import type { CompletedEvidenceDraftPacket, CompletedReadSelection } from "@/lib/research/completed-evidence-draft";
 import { completedEvidenceDraftImportCopy as copy } from "@/locales/en/completed-evidence-draft-selection";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 export interface CompletedEvidenceDraftImportProps {
   currentOwner: string | null;
@@ -58,6 +61,7 @@ const selectionKey = (value: CompletedReadSelection) => JSON.stringify([value.id
 /** An explicit action only. No history polling, automatic paid read, persistence,
  * telemetry, URL selector, engine dispatch or private answer rendering. */
 export function CompletedEvidenceDraftImport(props: CompletedEvidenceDraftImportProps) {
+  const copy = useUiCopy("completed-evidence-draft-selection", uiEnglish_copy);
   const { currentOwner, selection, workspace, baseUrl, network } = props;
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const pending = useRef<AbortController | null>(null), mounted = useRef(false);

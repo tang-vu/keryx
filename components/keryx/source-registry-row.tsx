@@ -6,7 +6,7 @@
  */
 
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import Link from "next/link";
 import { Link2, ShieldAlert, ShieldCheck } from "lucide-react";
 import { fmtUsdc } from "./phase-style";
@@ -14,9 +14,12 @@ import type { Source } from "@/lib/types";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import type { SourceClaim } from "@/lib/sources/public-source-claim";
 import { publisherControlLabel, safePublisherUrl } from "@/lib/sources/source-display";
+import { UiElement, UiMessage, UiRichMessage, UiText } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
 
 const EXPLORER = browserPaymentProfile().explorerUrl;
 
@@ -70,7 +73,7 @@ export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount, c
           )}
         </div>
         <span className="shrink-0 rounded-md bg-seal/10 px-2 py-0.5 font-mono text-xs font-semibold text-seal">
-          {copy(claim ? "sourceRegistry.claimToll" : "sourceRegistry.toll", { amount: fmtUsdc(s.fetchPrice) })}
+          <UiMessage messageKey={claim ? "sourceRegistry.claimToll" : "sourceRegistry.toll"} values={{ amount: fmtUsdc(s.fetchPrice) }} />
         </span>
       </div>
 
@@ -79,56 +82,44 @@ export function SourceRegistryRow({ source: s, totalEarnedUsdc, citationCount, c
           {s.description}
         </p>
       )}
-      {claimPolicyUnavailable ? <p className="mt-3 text-sm text-seal">{copy("sourceRegistry.policyUnavailable")}</p> : claim && <p className="mt-3 text-sm text-ink-2">
-        {richCopy(claim.mode === "free" ? "sourceRegistry.policy.free" : !controlFresh ? "sourceRegistry.policy.expired" : !claim.distributionPermission ? "sourceRegistry.policy.noConsent" : claim.mode === "citation-only" ? "sourceRegistry.policy.citation" : "sourceRegistry.policy.paid", { inspect: <Link href={`/claim-source?claimId=${encodeURIComponent(claim.id)}`} className="underline">{copy("sourceRegistry.inspectClaim")}</Link> })}
+      {claimPolicyUnavailable ? <p className="mt-3 text-sm text-seal"><UiMessage messageKey={"sourceRegistry.policyUnavailable"} /></p> : claim && <p className="mt-3 text-sm text-ink-2">
+        <UiRichMessage messageKey={claim.mode === "free" ? "sourceRegistry.policy.free" : !controlFresh ? "sourceRegistry.policy.expired" : !claim.distributionPermission ? "sourceRegistry.policy.noConsent" : claim.mode === "citation-only" ? "sourceRegistry.policy.citation" : "sourceRegistry.policy.paid"} values={{ inspect: <Link href={`/claim-source?claimId=${encodeURIComponent(claim.id)}`} className="underline"><UiMessage messageKey={"sourceRegistry.inspectClaim"} /></Link> }} />
       </p>}
 
       <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 font-mono text-[10.5px] uppercase tracking-[0.06em] text-ink-3">
         {s.onchainId &&
           (s.registerTx ? (
-            <a
-              href={`${EXPLORER}/tx/${s.registerTx}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={copy("sourceRegistry.registerTransactionTitle")}
-              className="inline-flex items-center gap-1 transition-colors hover:underline"
-            >
+            <UiElement as="a" names={["title"]} attributes={{ "href": `${EXPLORER}/tx/${s.registerTx}`, "target": "_blank", "rel": "noopener noreferrer", "title": copy("sourceRegistry.registerTransactionTitle"), "className": "inline-flex items-center gap-1 transition-colors hover:underline" }}>
               <Link2 className="h-3 w-3" />
-              {copy("sourceRegistry.registeredLink")}
-            </a>
+              <UiMessage messageKey={"sourceRegistry.registeredLink"} />
+            </UiElement>
           ) : (
-            <span
-              title={copy("sourceRegistry.registeredTitle")}
-              className="inline-flex items-center gap-1"
-            >
+            <UiElement as="span" names={["title"]} attributes={{ "title": copy("sourceRegistry.registeredTitle"), "className": "inline-flex items-center gap-1" }}>
               <Link2 className="h-3 w-3" />
-              {copy("sourceRegistry.registered")}
-            </span>
+              <UiMessage messageKey={"sourceRegistry.registered"} />
+            </UiElement>
           ))}
         {claimPolicyUnavailable ? (
-          <span className="inline-flex items-center gap-1 text-ink-3"><ShieldAlert className="h-3 w-3" />{copy("sourceRegistry.controlUnavailable")}</span>
+          <span className="inline-flex items-center gap-1 text-ink-3"><ShieldAlert className="h-3 w-3" /><UiMessage messageKey={"sourceRegistry.controlUnavailable"} /></span>
         ) : claim ? (
-          <span className={`inline-flex items-center gap-1 ${controlFresh ? "text-paid" : "text-amber-700"}`} title={copy("sourceRegistry.controlTitle")}>
+          <UiElement as="span" names={["title"]} attributes={{ "className": `inline-flex items-center gap-1 ${controlFresh ? "text-paid" : "text-amber-700"}`, "title": copy("sourceRegistry.controlTitle") }}>
             {controlFresh ? <ShieldCheck className="h-3 w-3" /> : <ShieldAlert className="h-3 w-3" />}
             {controlLabel}
-          </span>
+          </UiElement>
         ) : s.verified === false ? (
-          <span
-            title={copy("sourceRegistry.unverifiedTitle")}
-            className="inline-flex items-center gap-1 text-amber-700"
-          >
+          <UiElement as="span" names={["title"]} attributes={{ "title": copy("sourceRegistry.unverifiedTitle"), "className": "inline-flex items-center gap-1 text-amber-700" }}>
             <ShieldAlert className="h-3 w-3" />
-            {copy("sourceRegistry.unverified")}
-          </span>
+            <UiMessage messageKey={"sourceRegistry.unverified"} />
+          </UiElement>
         ) : (
           <span>{controlLabel}</span>
         )}
         {totalEarnedUsdc !== null && totalEarnedUsdc > 0 && (
           <span className="text-paid">
-            {citationCount !== null ? copy(citationCount === 1 ? "sourceRegistry.earnings.one" : "sourceRegistry.earnings.other", { amount: fmtUsdc(totalEarnedUsdc), count: citationCount }) : copy("sourceRegistry.earningsUnknown", { amount: fmtUsdc(totalEarnedUsdc) })}
+            {citationCount !== null ? <UiMessage messageKey={citationCount === 1 ? "sourceRegistry.earnings.one" : "sourceRegistry.earnings.other"} values={{ amount: fmtUsdc(totalEarnedUsdc), count: citationCount }} /> : <UiMessage messageKey={"sourceRegistry.earningsUnknown"} values={{ amount: fmtUsdc(totalEarnedUsdc) }} />}
           </span>
         )}
-        {totalEarnedUsdc === null && <span>{copy("sourceRegistry.earningsUnavailable")}</span>}
+        {totalEarnedUsdc === null && <span><UiMessage messageKey={"sourceRegistry.earningsUnavailable"} /></span>}
         {previewNote && <span>{previewNote}</span>}
         {s.tags.slice(0, 3).map((t) => (
           <span key={t} className="rounded border border-line bg-paper-2 px-1.5 py-0.5 normal-case tracking-normal">

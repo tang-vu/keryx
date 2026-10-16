@@ -6,13 +6,17 @@ import { formatNumber, formatRecordedAmount } from "@/lib/i18n/format";
  * payouts and payment counts, with explicit loading and unavailable states.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useState } from "react";
 import { currentArcLabel } from "@/lib/arc-network-display";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 export function HeroStats() {
+  const uiCopy = useUiMessages();
   const [m, setM] = useState<{ paid: number; cites: number } | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 

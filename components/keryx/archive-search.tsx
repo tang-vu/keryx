@@ -17,12 +17,15 @@
  * exactly as it did before this existed.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { Children, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 /** One entry that exists in the archive but isn't rendered as a card on this page. */
 export interface ArchiveSearchEntry {
@@ -39,7 +42,7 @@ export function ArchiveSearch({
   children,
   filters,
   others = [],
-  placeholder = copy("archiveFilter.placeholder"),
+  placeholder,
 }: {
   /** Lowercase searchable text per card, in the same order as `children`. */
   terms: string[];
@@ -50,6 +53,7 @@ export function ArchiveSearch({
   others?: ArchiveSearchEntry[];
   placeholder?: string;
 }) {
+  const copy = useUiMessages();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const cards = Children.toArray(children);
@@ -73,7 +77,7 @@ export function ArchiveSearch({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={placeholder}
+          placeholder={placeholder ?? copy("archiveFilter.placeholder")}
           aria-label={copy("archiveFilter.label")}
           className="w-full bg-transparent font-mono text-[13px] text-ink outline-none placeholder:text-ink-3"
         />

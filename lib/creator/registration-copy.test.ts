@@ -10,6 +10,9 @@ import { creatorRegistrationCopy as copy } from "../../locales/en/creator-regist
 import * as displayFormat from "../i18n/format";
 import * as signingAmount from "../../components/keryx/signing-amount";
 import * as displayTime from "../../components/keryx/display-time";
+import * as uiCopy from "../i18n/ui-copy";
+import { createMessages } from "../i18n/messages";
+import { createRichMessages } from "../i18n/rich-messages";
 import * as registrationReturn from "../registration-return";
 import * as sourceClaimContract from "../sources/public-source-claim";
 import fixtures from "./fixtures/registration-copy-english.json";
@@ -38,6 +41,11 @@ function component(source: string, states: unknown[], authenticated = true, over
     "@/lib/sources/registration-sponsor-protocol": { registrationIntentDigest: forbidden, registrationTypedData: forbidden, sponsoredRegistrationSchema: { parse: forbidden } },
     "@/lib/registry/registry-version": { getBrowserRegistryVersion: forbidden },
     "@/locales/en/creator-registration": { creatorRegistrationCopy: copy },
+    // This VM fixture fixes English and manually supplies React hook state.
+    // Keep its no-I/O boundary and all original markup/control assertions.
+    "@/lib/i18n/ui-copy": { ...uiCopy, useUiCopy: <T>(_namespace: string, value: T) => value,
+      useUiCopyFunction: <T>(_namespace: string, value: T) => value,
+      useUiMessages: () => createMessages("en"), useUiRichMessages: () => createRichMessages("en") },
     "@/lib/i18n/format": displayFormat,
     "@/lib/registration-return": registrationReturn,
     "@/lib/sources/public-source-claim": sourceClaimContract,

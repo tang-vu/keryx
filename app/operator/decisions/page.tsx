@@ -6,6 +6,9 @@ import { DecisionLab } from "@/components/keryx/decision-lab";
 import { decisionLabCopy as copy } from "@/lib/research-audit/decision-lab-copy";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { evidenceAuditCopy } from "@/locales/en/evidence-audit";
+import { UiText } from "@/lib/i18n/ui-copy";
+
+
 
 export const metadata: Metadata = {
   title: copy.title,
@@ -21,7 +24,7 @@ export default function DecisionLabPage() {
       <h1 className="mt-6 font-display text-4xl sm:text-5xl">{copy.title}</h1>
       <p className="mt-3 max-w-3xl font-serif text-lg text-ink-2">{copy.description}</p>
       <DecisionLab />
-      <Link href="/research-audit" className="mt-8 inline-block text-sm underline">{evidenceAuditCopy.decisionLabLink}</Link>
+      <Link href="/research-audit" className="mt-8 inline-block text-sm underline"><UiText source={evidenceAuditCopy.decisionLabLink} namespaces={["evidence-audit"]} /></Link>
     </main>
     <SiteFooter />
   </div>;

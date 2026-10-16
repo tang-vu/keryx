@@ -3,5 +3,130 @@
   "review": null,
   "sourcePath": "locales/en/owner-run-assignments.ts",
   "sourceSha256": "e371c237cf4a9bfcec31f78c77752c3a92126a6b6361a5a77a688b39e207d663",
-  "entries": {}
+  "entries": {
+    "acknowledgement": {
+      "source": "I consent to associating these exact runs with my account, labelled Assigned by owner, and to confirming or rejecting them later.",
+      "text": "我同意将这些确切的运行关联到我的账户，标记为所有者指派，并在之后确认或拒绝。"
+    },
+    "assigned": {
+      "source": "Assigned by owner — awaiting confirmation",
+      "text": "所有者指派 — 等待确认"
+    },
+    "assignedAt": {
+      "source": "Assigned",
+      "text": "已指派"
+    },
+    "assignedCount": {
+      "source": "Assigned by owner",
+      "text": "所有者指派"
+    },
+    "changed": {
+      "source": "Your account session changed. Refresh before continuing.",
+      "text": "账户会话已更改。继续前请刷新。"
+    },
+    "checking": {
+      "source": "Checking sign-in…",
+      "text": "正在检查登录…"
+    },
+    "claimed": {
+      "source": "Claimed — originally assigned by owner",
+      "text": "已认领 — 最初由所有者指派"
+    },
+    "claimedCount": {
+      "source": "Claimed from owner assignment",
+      "text": "从所有者指派中认领"
+    },
+    "confirm": {
+      "source": "Confirm attribution",
+      "text": "确认归属"
+    },
+    "confirmedAt": {
+      "source": "Confirmed",
+      "text": "已确认"
+    },
+    "consent": {
+      "source": "Record consent to this proposal",
+      "text": "记录对此提案的同意"
+    },
+    "consentManifest": {
+      "source": "Paste the exact proposal supplied by the owner",
+      "text": "粘贴所有者提供的确切提案"
+    },
+    "empty": {
+      "source": "No active assignments for this account generation.",
+      "text": "此账户代次没有有效指派。"
+    },
+    "financialAcknowledgement": {
+      "source": "This consent gives no payment, spending, settlement, or publication permission.",
+      "text": "此同意不授予付款、支出、结算或发布权限。"
+    },
+    "historical": {
+      "source": "Historical committed result; this receipt gives no current assignment authority.",
+      "text": "历史已提交结果；此收据不提供当前指派权限。"
+    },
+    "invalid": {
+      "source": "The proposal or response is invalid. Keep the original proposal and refresh your account.",
+      "text": "提案或响应无效。请保留原始提案并刷新账户。"
+    },
+    "menu": {
+      "source": "Run assignments",
+      "text": "运行指派"
+    },
+    "pendingConsent": {
+      "source": "Consent recorded. The owner must separately apply the reviewed proposal.",
+      "text": "同意已记录。所有者必须另行应用已审查的提案。"
+    },
+    "profile": {
+      "source": "Assignment attribution counts",
+      "text": "指派归属计数"
+    },
+    "proposalSummary": {
+      "source": "Proposal run IDs and original networks",
+      "text": "提案中的运行 ID 和原始网络"
+    },
+    "recovery": {
+      "source": "Recovery request JSON",
+      "text": "恢复请求 JSON"
+    },
+    "refresh": {
+      "source": "Refresh assignments",
+      "text": "刷新指派"
+    },
+    "reject": {
+      "source": "Reject assignment",
+      "text": "拒绝指派"
+    },
+    "resolve": {
+      "source": "Resolve the same request",
+      "text": "处理同一请求"
+    },
+    "scope": {
+      "source": "Review attribution to your current private account. Assignment does not change who paid, creator rewards, or a report’s audience.",
+      "text": "审查对当前私人账户的归属。指派不会改变付款方、创作者奖励或报告的受众。"
+    },
+    "signIn": {
+      "source": "Sign in to review assignments",
+      "text": "登录以审查指派"
+    },
+    "suppressed": {
+      "source": "Association inactive. You can still reject or withdraw it.",
+      "text": "关联已失效。你仍可拒绝或撤回。"
+    },
+    "title": {
+      "source": "Owner-assigned research",
+      "text": "所有者指派的研究"
+    },
+    "unavailable": {
+      "source": "Assignments are unavailable for this account or storage profile.",
+      "text": "此账户或存储配置中的指派不可用。"
+    },
+    "unknown": {
+      "source": "This operation’s outcome is unresolved. Keep the recovery JSON below. Resolve the same request before starting another operation.",
+      "text": "此操作的结果尚未确定。请保留下方恢复 JSON。在开始其他操作前，先处理同一请求。"
+    },
+    "withdraw": {
+      "source": "Withdraw attribution",
+      "text": "撤回归属"
+    }
+  }
 }

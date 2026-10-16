@@ -2,7 +2,7 @@
 import { formatNumber, selectPlural } from "@/lib/i18n/format";
 
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileLock2, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -10,8 +10,11 @@ import { useAccount, useSignTypedData } from "wagmi";
 
 import { shortAddr } from "@/components/keryx/phase-style";
 import { articleContentManifestTypedData } from "@/lib/sources/article-content-manifest-schema";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 interface ContentItem {
   itemId: string;
@@ -46,6 +49,7 @@ async function sha256Hex(value: string): Promise<`0x${string}`> {
 }
 
 export function ArticleContentPanel({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
   const [data, setData] = useState<ContentData | null>(null);
   const [selectedId, setSelectedId] = useState("");
   const [content, setContent] = useState("");

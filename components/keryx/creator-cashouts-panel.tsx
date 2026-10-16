@@ -21,11 +21,14 @@ import {
 import { fmtUsdc, shortAddr } from "./phase-style";
 import { DisplayTime } from "./display-time";
 import { recordedArcTransactionUrl,recordedArcLabel } from "@/lib/arc-network-display";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
+
 
 function timeAgo(iso: string) {
   return <DisplayTime value={iso} relative />;
@@ -38,6 +41,8 @@ export function CreatorCashoutsPanel({
   withdrawals: WithdrawalRecord[];
   compact?: boolean;
 }) {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">

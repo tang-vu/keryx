@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { getTestnetArchive, type TestnetArchiveInfo, type TestnetArchiveSummary, type TestnetCreatorEntry } from "@/lib/history/testnet-archive";
 import { TestnetHistorySummary } from "./testnet-history-view";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+import { UiMessage, UiRichMessage } from "@/lib/i18n/ui-copy";
+
+
+
+
+
 
 export { TestnetHistorySummary } from "./testnet-history-view";
 
@@ -20,6 +23,6 @@ export async function HistoricalHistorySection() {
       data = { info: archive.info, summary, creators };
     }
   } catch { unavailable = true; }
-  if (unavailable) return <section id="testnet-history" className="mt-8 border border-line p-5"><h2 className="font-display text-xl">{message("historyObservation.title")}</h2><p role="status" className="mt-2 text-sm">{richMessage("historyObservation.unavailable", { link: <Link href="/history/testnet" className="underline">{message("historyObservation.openHistory")}</Link> })}</p></section>;
+  if (unavailable) return <section id="testnet-history" className="mt-8 border border-line p-5"><h2 className="font-display text-xl"><UiMessage messageKey={"historyObservation.title"} /></h2><p role="status" className="mt-2 text-sm"><UiRichMessage messageKey={"historyObservation.unavailable"} values={{ link: <Link href="/history/testnet" className="underline"><UiMessage messageKey={"historyObservation.openHistory"} /></Link> }} /></p></section>;
   return data ? <TestnetHistorySummary {...data} /> : null;
 }

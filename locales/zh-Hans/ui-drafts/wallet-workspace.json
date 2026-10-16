@@ -3,5 +3,182 @@
   "review": null,
   "sourcePath": "locales/en/wallet-workspace.ts",
   "sourceSha256": "9cee452922b68c72cc51575367d5b82000c8ad6280fa424c9106832600e77f1f",
-  "entries": {}
+  "entries": {
+    "addMoney": {
+      "source": "Add money",
+      "text": "充值"
+    },
+    "addMoneyDescription": {
+      "source": "Receive USDC in your wallet, then review the budget you want the agent to use below.",
+      "text": "在钱包中接收 USDC，然后在下方审查希望交给代理使用的预算。"
+    },
+    "address": {
+      "source": "Your receiving address",
+      "text": "你的收款地址"
+    },
+    "backToChat": {
+      "source": "Ask Keryx",
+      "text": "询问 Keryx"
+    },
+    "bankOptions": {
+      "source": "Other ways to add USDC",
+      "text": "其他充值 USDC 的方式"
+    },
+    "browserRecovery": {
+      "source": "Your agent budget uses a separate signer saved in this browser. Signing in with Google on another device does not restore it. Keep this browser’s data until you have withdrawn its remaining funds.",
+      "text": "代理预算使用保存在此浏览器中的独立签名器。在其他设备上登录 Google 不会恢复它。提取剩余资金前，请保留此浏览器的数据。"
+    },
+    "budget": {
+      "source": "Agent budget",
+      "text": "代理预算"
+    },
+    "budgetBoundary": {
+      "source": "Pending payments count against this allowance. It is not your wallet balance.",
+      "text": "待确认付款计入此额度。这不是你的钱包余额。"
+    },
+    "budgetDescription": {
+      "source": "Choose a total limit, a maximum per question and a duration. Once approved, the agent handles source payments within those limits across your conversations.",
+      "text": "选择总限额、每个问题的最高额度和有效期。批准后，代理会在这些限额内处理各次对话的来源付款。"
+    },
+    "budgetSetup": {
+      "source": "Set up agent budget",
+      "text": "设置代理预算"
+    },
+    "checkWithdrawal": {
+      "source": "Check withdrawal status",
+      "text": "检查提现状态"
+    },
+    "checkingBudget": {
+      "source": "Checking your budget…",
+      "text": "正在检查预算…"
+    },
+    "confirmWithdrawal": {
+      "source": "Confirm withdrawal",
+      "text": "确认提现"
+    },
+    "copied": {
+      "source": "Address copied",
+      "text": "地址已复制"
+    },
+    "copyAddress": {
+      "source": "Copy address",
+      "text": "复制地址"
+    },
+    "copyFailed": {
+      "source": "Copy was unavailable. Select and copy the receiving address below.",
+      "text": "无法复制。请选中并复制下方收款地址。"
+    },
+    "description": {
+      "source": "Add USDC, choose an agent budget, and withdraw unused research funds in one place.",
+      "text": "在同一处充值 USDC、选择代理预算并提取未使用的研究资金。"
+    },
+    "expired": {
+      "source": "Budget expired — review to continue",
+      "text": "预算已过期 — 审查后继续"
+    },
+    "externalKeys": {
+      "source": "Manage your private key and account recovery in your connected wallet app.",
+      "text": "请在已连接的钱包应用中管理私钥和账户恢复。"
+    },
+    "googleKeys": {
+      "source": "Private-key export for the Google wallet is not available in Keryx. Use your Google account to reconnect to that wallet.",
+      "text": "Keryx 尚不支持导出 Google 钱包的私钥。请使用 Google 账户重新连接该钱包。"
+    },
+    "keysAndRecovery": {
+      "source": "Keys & recovery",
+      "text": "密钥与恢复"
+    },
+    "loading": {
+      "source": "Checking your account…",
+      "text": "正在检查账户…"
+    },
+    "manageBudget": {
+      "source": "Manage budget",
+      "text": "管理预算"
+    },
+    "noBudget": {
+      "source": "Choose an agent budget",
+      "text": "选择代理预算"
+    },
+    "otherWallet": {
+      "source": "Connect a wallet",
+      "text": "连接钱包"
+    },
+    "paused": {
+      "source": "Budget paused — review to continue",
+      "text": "预算已暂停 — 审查后继续"
+    },
+    "ready": {
+      "source": "Budget ready",
+      "text": "预算已就绪"
+    },
+    "receiveNotice": {
+      "source": "Send USDC on the network shown here. Receiving funds does not enable agent spending.",
+      "text": "请在此处显示的网络发送 USDC。收到资金不会启用代理支出权限。"
+    },
+    "receiveWithdrawal": {
+      "source": "Receive in my wallet",
+      "text": "在我的钱包中收款"
+    },
+    "reconnect": {
+      "source": "Reconnect wallet",
+      "text": "重新连接钱包"
+    },
+    "reconnectDescription": {
+      "source": "Connect the same wallet you signed in with to manage its funds and budget.",
+      "text": "请连接登录时使用的同一钱包，以管理其资金和预算。"
+    },
+    "reconnectTitle": {
+      "source": "Reconnect your account wallet",
+      "text": "重新连接账户钱包"
+    },
+    "recoveryDetails": {
+      "source": "Recovery details",
+      "text": "恢复详情"
+    },
+    "remaining": {
+      "source": "Remaining allowance",
+      "text": "剩余额度"
+    },
+    "reviewWithdrawal": {
+      "source": "Review withdrawal",
+      "text": "审查提现"
+    },
+    "signInDescription": {
+      "source": "Continue with Google or connect a wallet. Choose an agent budget once, then reuse it across your conversations while it remains active.",
+      "text": "通过 Google 继续或连接钱包。一次选择代理预算，并在有效期内跨对话重复使用。"
+    },
+    "signInTitle": {
+      "source": "One account. Your wallet. Your budget.",
+      "text": "一个账户。你的钱包。你的预算。"
+    },
+    "title": {
+      "source": "Your wallet",
+      "text": "你的钱包"
+    },
+    "usdc": {
+      "source": "USDC",
+      "term": "usdc"
+    },
+    "verifyWithdrawal": {
+      "source": "Verify arrival",
+      "text": "验证到账"
+    },
+    "walletAndBudget": {
+      "source": "Wallet & budget",
+      "text": "钱包与预算"
+    },
+    "withdraw": {
+      "source": "Withdraw",
+      "text": "提现"
+    },
+    "withdrawDescription": {
+      "source": "Return unused research funds to your account wallet. Review the amount and fee before signing; network gas is separate.",
+      "text": "将未使用的研究资金退回账户钱包。签名前请审查金额和手续费；网络 gas 费另计。"
+    },
+    "withdrawalSteps": {
+      "source": "Review amount → confirm withdrawal → receive in your wallet",
+      "text": "审查金额 → 确认提现 → 在钱包中收款"
+    }
+  }
 }

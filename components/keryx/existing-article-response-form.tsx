@@ -1,7 +1,7 @@
 "use client";
 import { SigningAmount } from "./signing-amount";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,8 +11,11 @@ import { useAccount, useSignTypedData } from "wagmi";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { articleOfferTypedData } from "@/lib/offers/article-offer";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 interface ResponseSource {
   sourceId: string;
@@ -43,6 +46,7 @@ function nonce(): `0x${string}` {
 }
 
 export function ExistingArticleResponseForm({ gapId }: { gapId: string }) {
+  const uiCopy = useUiMessages();
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { session, authState, signIn } = useSiweAuth();

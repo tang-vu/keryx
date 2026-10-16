@@ -2,14 +2,17 @@
 import { SigningAmount } from "./signing-amount";
 import { formatAmount } from "@/lib/i18n/format";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useRef, useState } from "react";
 import { maxUint256 } from "viem";
 import { readWithdrawalBrowserJournal } from "@/lib/gateway/withdrawal-browser-journal";
 import { signWithdrawalBrowserDraft, submitWithdrawalBrowserHttpOnce } from "@/lib/gateway/withdrawal-browser-flow";
 import { withdrawalIdSchema, withdrawalOwnerSchema } from "@/lib/gateway/withdrawal-request";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 type Wallet = Parameters<typeof signWithdrawalBrowserDraft>[2];
 type Row = Awaited<ReturnType<typeof readWithdrawalBrowserJournal>>;
@@ -18,12 +21,14 @@ const button = "rounded border border-current px-4 py-2 text-sm disabled:opacity
 /** Review only an already-reserved original. This component never generates salts,
  * replaces drafts or grants imported files permission to submit a payment. */
 export function WithdrawalReviewPanel({ id, address, wallet }: { id: string; address: string; wallet: Wallet }) {
+  const uiCopy = useUiMessages();
   const owner = withdrawalOwnerSchema.safeParse(address), selected = withdrawalIdSchema.safeParse(id);
   if (!owner.success || !selected.success || wallet.account?.address.toLowerCase() !== owner.data)
     return <p>{uiCopy("withdrawalReview.connect")}</p>;
   return <ReviewOriginal key={`${owner.data}:${selected.data}`} id={selected.data} owner={owner.data} wallet={wallet} />;
 }
 function ReviewOriginal({ id, owner, wallet }: { id: string; owner: string; wallet: Wallet }) {
+  const uiCopy = useUiMessages();
   const [row, setRow] = useState<Row | null>(null), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const active = useRef<AbortController | null>(null), gate = useRef(false);
   useEffect(() => {

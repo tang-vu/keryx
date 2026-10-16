@@ -17,7 +17,7 @@ import { formatAmount } from "@/lib/i18n/format";
  * can see their Arc USDC balance without manually importing the token address.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, useReadContract, useConnectorClient } from "wagmi";
@@ -25,9 +25,12 @@ import { erc20Abi, formatUnits } from "viem";
 import { Loader2, Droplets, ExternalLink, PlusCircle } from "lucide-react";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { currentArcLabel } from "@/lib/arc-network-display";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
+
+
+
 
 const CIRCLE_FAUCET = "https://faucet.circle.com/";
 const EXPLORER = "https://testnet.arcscan.app";
@@ -46,6 +49,7 @@ export function FaucetPanel() {
 }
 
 function MainnetFundingPanel() {
+  const copy = useUiMessages();
   const { address, isConnected } = useAccount();
   const profile = browserPaymentProfile();
   const { data: rawBalance, isError, isFetching, refetch } = useReadContract({
@@ -67,6 +71,8 @@ function MainnetFundingPanel() {
 }
 
 function TestnetFaucetPanel() {
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
   const profile = browserPaymentProfile();
   const { address, isConnected } = useAccount();
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");

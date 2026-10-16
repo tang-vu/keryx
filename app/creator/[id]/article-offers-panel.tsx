@@ -3,7 +3,7 @@ import { SigningAmount } from "@/components/keryx/signing-amount";
 import { DisplayTime } from "@/components/keryx/display-time";
 import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messages";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useCallback, useEffect, useState } from "react";
 import { BadgeDollarSign, Loader2, ShieldCheck, TimerReset, X } from "lucide-react";
 import { toast } from "sonner";
@@ -11,8 +11,11 @@ import { useAccount, useSignTypedData } from "wagmi";
 
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { articleOfferTypedData } from "@/lib/offers/article-offer";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 interface OfferRow {
   id: string;
@@ -47,6 +50,7 @@ function nonce(): `0x${string}` {
 }
 
 export function ArticleOffersPanel({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
   const [data, setData] = useState<OfferData | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [working, setWorking] = useState<string | null>(null);

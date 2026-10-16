@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { runPrivacyCopy as copy } from "@/locales/en/run-privacy";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 type Visibility="private"|"unlisted"|"public";
 type Snapshot={wallet:string;state:{visibility:Visibility;revision:number;erased:boolean};run:{id:string;question:string}};
 const choices:Visibility[]=["private","unlisted","public"];
@@ -11,6 +14,7 @@ function ownerDefaults(data:unknown):{wallet:string;visibility:Visibility} {
 }
 const button="border border-line px-3 py-2 disabled:opacity-50";
 export function RunPrivacyControls() {
+  const copy = useUiCopy("run-privacy", uiEnglish_copy);
   const [wallet,setWallet]=useState(""),[id,setId]=useState(""),[defaults,setDefaults]=useState<Visibility>("private"),[visibility,setVisibility]=useState<Visibility>("private");
   const [snapshot,setSnapshot]=useState<Snapshot|null>(null),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false),[confirmErase,setConfirmErase]=useState(false);
   const generation=useRef(0), pending=useRef<{key:string;id:string}|null>(null);

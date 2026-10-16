@@ -14,14 +14,16 @@ import { WagmiProvider, useAccount } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { makeConfig } from "@/lib/wagmi-config";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
+import { UiCopyProvider } from "@/lib/i18n/ui-copy-provider";
+import { loadUiPreview } from "@/lib/i18n/ui-preview-catalogues";
 
-// Explicitly offer the existing navigation previews. This does not publish
-// translated pages or approve payment, consent, onboarding or legal prose.
+// Explicit machine-draft interface previews. Critical payment, consent and
+// legal copy retains its English authority and existing review requirements.
 const shellPreviewLocales = ["en", "vi", "zh-Hans"] as const;
 
 function LocaleBoundary({ children }: { children: React.ReactNode }) {
   const { address, isConnected } = useAccount();
-  return <LocaleProvider enabledLocales={shellPreviewLocales} connectedWallet={isConnected ? address ?? null : null}>{children}</LocaleProvider>;
+  return <LocaleProvider enabledLocales={shellPreviewLocales} prepareLocale={loadUiPreview} connectedWallet={isConnected ? address ?? null : null}><UiCopyProvider>{children}</UiCopyProvider></LocaleProvider>;
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

@@ -1,8 +1,8 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
 
-const message = createMessages("en");
+
+
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { buildSourceIndex, type SourceIndex } from "@/lib/payments/client-payto-allowlist";
@@ -19,12 +19,19 @@ import { privateResearchCopy } from "@/locales/en/run-claim-research";
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/hooks/use-research-visibility";
 import type { AskStreamState } from "@/lib/hooks/use-ask-stream";
+import { useUiCopy, useUiCopyFunction, useUiMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_privateResearchCopy = privateResearchCopy;
+const uiEnglish_productGuideCopy = productGuideCopy;
+
 
 type ScopedTurn = ResearchTurnData & { publication: ResearchPublicationSelection; ownerRevision: number };
 type ScopedRequest = Omit<ScopedTurn, "state">;
 const hidden = (turn: ScopedRequest, state: AskStreamState) => turn.publication.visibility !== "public" || !!state.meta?.visibility && state.meta.visibility !== "public";
 
 export function ResearchChat({ paidHref = "/research#paid-research", showLaunchBadge = false, privateClaims = false, introduceProduct = false }: { paidHref?: string; showLaunchBadge?: boolean; privateClaims?: boolean; introduceProduct?: boolean }) {
+  const message = useUiMessages();
+  const privateResearchCopy = useUiCopy("run-claim-research", uiEnglish_privateResearchCopy);
+  const productGuideCopy = useUiCopyFunction("product-guide", uiEnglish_productGuideCopy);
   const [privateHandoff] = useState(() => createPrivateClaimHandoff({ origin: () => window.location.origin,
     documentProof: readPrivateDocument, open: url => { window.open(url, "_blank", "noopener,noreferrer"); } }));
   const [claimStatus, setClaimStatus] = useState<PrivateClaimStatus>("none");

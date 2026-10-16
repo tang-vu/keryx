@@ -8,12 +8,15 @@ import { DisplayTime } from "@/components/keryx/display-time";
  * Confirmed empty activity is hidden. Loading and unavailable activity stay distinct.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmtUsdc } from "./phase-style";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 interface ActivityItem {
   sourceId: string;
@@ -29,6 +32,7 @@ function timeAgo(iso: string) {
 }
 
 export function ActivityTicker() {
+  const uiCopy = useUiMessages();
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "empty" | "error">("loading");
   const [paused, setPaused] = useState(false);

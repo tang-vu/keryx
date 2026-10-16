@@ -9,16 +9,20 @@
  * sources and pays creators again; only the question's context comes from the parent.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
 
-const message = createMessages("en");
+
+
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const MAX_Q = 500;
 
 export function FollowUpForm({ parentId }: { parentId: string }) {
+  const message = useUiMessages();
   const router = useRouter();
   const [question, setQuestion] = useState("");
 

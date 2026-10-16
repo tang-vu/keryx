@@ -1,15 +1,19 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import Link from "next/link";
 import { useState } from "react";
 import type { PaperRecord } from "@/lib/papers/types";
 import { saveLiteraturePaper } from "@/lib/papers/literature-workspace";
 import { changeLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 export function PaperSaveButton({ paper }: { paper: PaperRecord }) {
+  const copy = useUiMessages();
   const { ready, workspace, error: storageError } = useLiteratureWorkspace();
   const [error, setError] = useState("");
   const saved = workspace.entries.some(entry => entry.paper.url === paper.url);

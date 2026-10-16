@@ -3,5 +3,174 @@
   "review": null,
   "sourcePath": "locales/en/topic-watches.ts",
   "sourceSha256": "da619acd121f4e293b428684dc8d402443b4ac2c578719dc67f7374a7fc447a2",
-  "entries": {}
+  "entries": {
+    "topicWatch.accountChanged": {
+      "source": "Account changed. Refresh to verify this session.",
+      "text": "账户已更改。请刷新以验证此会话。"
+    },
+    "topicWatch.authors": {
+      "source": "Authors, comma separated (optional, up to 4)",
+      "text": "作者，以逗号分隔（可选，最多 4 个）"
+    },
+    "topicWatch.cadence": {
+      "source": "Minimum minutes between manual check slots",
+      "text": "手动检查时段之间的最少分钟数"
+    },
+    "topicWatch.cancel": {
+      "source": "Cancel watch",
+      "text": "取消监测"
+    },
+    "topicWatch.cancelled": {
+      "source": "Cancellation is retained. This watch ID cannot be reused.",
+      "text": "取消记录已保留。此监测 ID 无法再次使用。"
+    },
+    "topicWatch.check": {
+      "source": "Check local metadata now",
+      "text": "立即检查本地元数据"
+    },
+    "topicWatch.checking": {
+      "source": "Checking account…",
+      "text": "正在检查账户…"
+    },
+    "topicWatch.checks": {
+      "source": "Maximum checks per period",
+      "text": "每个周期的最大检查次数"
+    },
+    "topicWatch.close": {
+      "source": "Close editor",
+      "text": "关闭编辑器"
+    },
+    "topicWatch.consent": {
+      "source": "I consent to manual local metadata checks with zero spending. No scheduled operation is enabled.",
+      "text": "我同意以零支出手动检查本地元数据。不会启用任何定时操作。"
+    },
+    "topicWatch.create": {
+      "source": "Create watch",
+      "text": "创建监测"
+    },
+    "topicWatch.createTitle": {
+      "source": "Create a private watch",
+      "text": "创建私人监测"
+    },
+    "topicWatch.edit": {
+      "source": "Edit settings",
+      "text": "编辑设置"
+    },
+    "topicWatch.editTitle": {
+      "source": "Edit unchecked watch",
+      "text": "编辑尚未检查的监测"
+    },
+    "topicWatch.empty": {
+      "source": "No private watches saved.",
+      "text": "尚未保存私人监测。"
+    },
+    "topicWatch.expiry": {
+      "source": "Expires in days",
+      "text": "到期天数"
+    },
+    "topicWatch.heartbeat": {
+      "source": "Show a quiet line when nothing changes",
+      "text": "没有变化时显示一行简短状态"
+    },
+    "topicWatch.history": {
+      "source": "Check history ({count})",
+      "text": "检查历史（{count}）"
+    },
+    "topicWatch.keywordValues": {
+      "source": "Keywords: {keywords}",
+      "text": "关键词：{keywords}"
+    },
+    "topicWatch.keywords": {
+      "source": "Title keywords, comma separated (up to 8)",
+      "text": "标题关键词，以逗号分隔（最多 8 个）"
+    },
+    "topicWatch.listUnavailable": {
+      "source": "Watch list unavailable",
+      "text": "监测列表不可用"
+    },
+    "topicWatch.menu": {
+      "source": "Private topic watches",
+      "text": "私人主题监测"
+    },
+    "topicWatch.metadataTitle": {
+      "source": "Private topic watches | Keryx",
+      "text": "私人主题监测 · Keryx"
+    },
+    "topicWatch.missed": {
+      "source": "{count} missed slots retained; no catch-up was run.",
+      "text": "已保留 {count} 个错过的时段；未执行补查。"
+    },
+    "topicWatch.missedHistory": {
+      "source": "Missed slots {fromSlot}–{toSlot}; no catch-up",
+      "text": "错过的时段 {fromSlot}–{toSlot}；未执行补查"
+    },
+    "topicWatch.newMatches": {
+      "source": "; {count} new lexical matches",
+      "text": "；{count} 个新的词汇匹配"
+    },
+    "topicWatch.pause": {
+      "source": "Pause",
+      "text": "暂停"
+    },
+    "topicWatch.period": {
+      "source": "Period in days",
+      "text": "周期天数"
+    },
+    "topicWatch.question": {
+      "source": "Review question",
+      "text": "审查问题"
+    },
+    "topicWatch.refresh": {
+      "source": "Refresh watches",
+      "text": "刷新监测"
+    },
+    "topicWatch.requestUnavailable": {
+      "source": "Watch request unavailable",
+      "text": "监测请求不可用"
+    },
+    "topicWatch.result": {
+      "source": "{status}{code}. Paid requests: {paidRequests}.",
+      "text": "{status}{code}。付费请求：{paidRequests}。"
+    },
+    "topicWatch.resume": {
+      "source": "Resume",
+      "text": "继续"
+    },
+    "topicWatch.retry": {
+      "source": "{message}. Refresh before retrying; an unconfirmed write may have completed.",
+      "text": "{message}。重试前请刷新；尚未确认的写入可能已经完成。"
+    },
+    "topicWatch.save": {
+      "source": "Save settings",
+      "text": "保存设置"
+    },
+    "topicWatch.scope": {
+      "source": "Manual checks compare the local curated scholarly catalog. They do not search for newly published papers or read paper bodies. Spend: 0 USDC; spending capacity: 0. Scheduling and funded watches are unavailable.",
+      "text": "手动检查对比本地精选学术目录，不搜索新发表论文，也不读取论文正文。支出：0 USDC；支出能力：0。定时监测和有资金的监测不可用。"
+    },
+    "topicWatch.signIn": {
+      "source": "Sign in to manage private watches",
+      "text": "登录以管理私人监测"
+    },
+    "topicWatch.slotHistory": {
+      "source": "Slot {slot}: {status}{reason}{matches}",
+      "text": "时段 {slot}：{status}{reason}{matches}"
+    },
+    "topicWatch.state": {
+      "source": "{status} · revision {revision} · expires {expires} · spend 0 USDC",
+      "text": "{status} · 修订 {revision} · 到期 {expires} · 支出 0 USDC"
+    },
+    "topicWatch.title": {
+      "source": "Private topic watches",
+      "text": "私人主题监测"
+    },
+    "topicWatch.unavailable": {
+      "source": "Request unavailable",
+      "text": "请求不可用"
+    },
+    "topicWatch.venues": {
+      "source": "Venues, comma separated (optional, up to 4)",
+      "text": "发表场所，以逗号分隔（可选，最多 4 个）"
+    }
+  }
 }

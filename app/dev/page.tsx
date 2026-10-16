@@ -20,12 +20,17 @@ import { API_KEY_SCOPES, LEGACY_API_KEY_SCOPES, type ApiKeyScope } from "@/lib/a
 import { deliverableAcceptanceCopy } from "@/locales/en/deliverable-acceptance";
 import { personalHistoryCopy } from "@/locales/en/personal-history";
 import { operatorObligationsCopy } from "@/locales/en/operator-obligations";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
-import { selectPlural } from "@/lib/i18n/format";
 
-const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
+import { selectPlural } from "@/lib/i18n/format";
+import { useUiCopy, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_deliverableAcceptanceCopy = deliverableAcceptanceCopy;
+const uiEnglish_personalHistoryCopy = personalHistoryCopy;
+const uiEnglish_operatorObligationsCopy = operatorObligationsCopy;
+
+
+
+
 
 
 /** GET /api/keys parses the stored scope columns before returning them, so a pre-scopes key
@@ -50,6 +55,7 @@ function fmtDate(iso: string | null) {
 // ── Mini usage bar chart ──────────────────────────────────────────────────────
 
 function UsageBar({ usage }: { usage: ApiKeyUsage[] }) {
+  const copy = useUiMessages();
   if (!usage.length) {
     return <p className="font-mono text-xs text-ink-3">{copy("apiKeys.noCalls")}</p>;
   }
@@ -74,6 +80,8 @@ function UsageBar({ usage }: { usage: ApiKeyUsage[] }) {
 // ── Raw-key modal (shown once at mint) ───────────────────────────────────────
 
 function RawKeyModal({ rawKey, onClose }: { rawKey: string; onClose: () => void }) {
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -134,6 +142,8 @@ function KeyCard({
   apiKey: KeyWithUsage;
   onRevoke: (id: string) => void;
 }) {
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
   const isRevoked = Boolean(apiKey.revokedAt);
 
   return (
@@ -192,6 +202,11 @@ function KeyCard({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function DevPage() {
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
+  const deliverableAcceptanceCopy = useUiCopy("deliverable-acceptance", uiEnglish_deliverableAcceptanceCopy);
+  const personalHistoryCopy = useUiCopy("personal-history", uiEnglish_personalHistoryCopy);
+  const operatorObligationsCopy = useUiCopy("operator-obligations", uiEnglish_operatorObligationsCopy);
   const [keys, setKeys] = useState<KeyWithUsage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

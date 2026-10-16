@@ -1,17 +1,22 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useEffect, useRef, useState } from "react";
 import {
   EVIDENCE_PAGE_SIZE, EVIDENCE_SOURCE_LIMIT, evidencePageSchema, evidencePreviewSchema,
   filterEvidenceSources, mergeEvidenceSources, type EvidencePreview, type EvidenceSource,
 } from "@/lib/research/evidence-browser";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
+
+
+
 
 export function ResearchEvidenceBrowser() {
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
   const [sources, setSources] = useState<EvidenceSource[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [cursor, setCursor] = useState<string>();

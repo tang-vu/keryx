@@ -7,17 +7,22 @@
  * session owns this source — non-owners never see it (and never see a flash while it resolves).
  */
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useEffect, useState } from "react";
 import { Webhook, Copy, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 export function NotifyWebhookPanel({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const [owner, setOwner] = useState(false); // stays false (renders nothing) until proven owner
   const [url, setUrl] = useState("");
   const [configured, setConfigured] = useState(false);

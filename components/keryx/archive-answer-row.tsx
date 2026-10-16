@@ -6,14 +6,17 @@ import { DisplayTime } from "@/components/keryx/display-time";
  * and the client-side filter matches against exactly this rendered text.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import Link from "next/link";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 import { ConfidenceBadge } from "./confidence-badge";
 import { archiveAnswerLanguage } from "@/lib/answers-language";
 import { quotedOriginalParts } from "@/lib/i18n/quoted-originals";
+import { UiMessage } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 function fmtDate(iso: string) {
   return <DisplayTime value={iso} dateOnly />;
@@ -29,7 +32,7 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
         <div className="flex items-baseline justify-between gap-4">
           <span className="flex items-baseline gap-2.5">
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-seal">
-              {copy(entry.archivedNetwork ? "archiveReport.historicalDispatch" : "archiveReport.dispatch")}
+              <UiMessage messageKey={entry.archivedNetwork ? "archiveReport.historicalDispatch" : "archiveReport.dispatch"} />
             </span>
             {entry.confidence ? <ConfidenceBadge confidence={entry.confidence} /> : null}
           </span>
@@ -47,9 +50,9 @@ export function ArchiveAnswerRow({ entry }: { entry: ArchiveEntry }) {
         )}
         <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.06em] text-ink-3">
           <span>
-            {copy(selectPlural(entry.citationCount) === "one" ? "report.citedSources.one" : "report.citedSources.other", { count: entry.citationCount })}
+            <UiMessage messageKey={selectPlural(entry.citationCount) === "one" ? "report.citedSources.one" : "report.citedSources.other"} values={{ count: entry.citationCount }} />
           </span>
-          <span className="text-paid">{copy("archiveReport.creatorRewards", { amount: formatRecordedUsdc(entry.toCreators, { minimumFractionDigits: 4, denomination: entry.archivedNetwork ? "test USDC" : "$" }) })}</span>
+          <span className="text-paid"><UiMessage messageKey={"archiveReport.creatorRewards"} values={{ amount: formatRecordedUsdc(entry.toCreators, { minimumFractionDigits: 4, denomination: entry.archivedNetwork ? "test USDC" : "$" }) }} /></span>
           {entry.sourceNames.length > 0 && (
             <span className="normal-case tracking-normal text-ink-3">
               {entry.sourceNames.slice(0, 4).join(" · ")}

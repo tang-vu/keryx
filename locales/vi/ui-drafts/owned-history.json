@@ -167,6 +167,286 @@
     "receiptBound": {
       "source": "Receipt projection truncated; spend totals unavailable.",
       "text": "Dữ liệu biên nhận hiển thị bị cắt bớt; tổng chi không khả dụng."
+    },
+    "privateJobs.actions.apply": {
+      "source": "Apply filters",
+      "text": "Áp dụng bộ lọc"
+    },
+    "privateJobs.actions.close": {
+      "source": "Close result",
+      "text": "Đóng kết quả"
+    },
+    "privateJobs.actions.csv": {
+      "source": "Download CSV",
+      "text": "Tải CSV"
+    },
+    "privateJobs.actions.json": {
+      "source": "Download JSON",
+      "text": "Tải JSON"
+    },
+    "privateJobs.actions.next": {
+      "source": "Next page",
+      "text": "Trang sau"
+    },
+    "privateJobs.actions.previous": {
+      "source": "Previous page",
+      "text": "Trang trước"
+    },
+    "privateJobs.actions.refresh": {
+      "source": "Refresh history",
+      "text": "Làm mới lịch sử"
+    },
+    "privateJobs.actions.view": {
+      "source": "View saved result",
+      "text": "Xem kết quả đã lưu"
+    },
+    "privateJobs.auth.check": {
+      "source": "Check sign-in",
+      "text": "Kiểm tra đăng nhập"
+    },
+    "privateJobs.auth.checking": {
+      "source": "Checking your sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "privateJobs.auth.payer": {
+      "source": "Signed-in payer: ${wallet}",
+      "text": "Bên trả tiền đã đăng nhập: ${wallet}"
+    },
+    "privateJobs.auth.signIn": {
+      "source": "Sign in to view completed private jobs",
+      "text": "Đăng nhập để xem công việc riêng tư đã hoàn thành"
+    },
+    "privateJobs.auth.waiting": {
+      "source": "Private data cleared. Waiting for a fresh verified sign-in.",
+      "text": "Đã xóa dữ liệu riêng tư khỏi giao diện. Đang chờ đăng nhập mới được xác minh."
+    },
+    "privateJobs.detail.citation": {
+      "source": "${marker} ${sourceName}${itemTitle ? ` — ${itemTitle}` : \"\"}: ${rationale}. Recorded reward attribution: ${recordedRewardUsdc} USDC (settlement unavailable).",
+      "text": "${marker} ${sourceName}${itemTitle ? ` — ${itemTitle}` : \"\"}: ${rationale}. Phân bổ thưởng được ghi nhận: ${recordedRewardUsdc} USDC (chưa có thông tin quyết toán)."
+    },
+    "privateJobs.detail.citations": {
+      "source": "Recorded citations",
+      "text": "Trích dẫn được ghi nhận"
+    },
+    "privateJobs.detail.claimCoverage": {
+      "source": "Saved claim coverage",
+      "text": "Mức bao phủ nhận định đã lưu"
+    },
+    "privateJobs.detail.claims": {
+      "source": "Recorded claims",
+      "text": "Nhận định được ghi nhận"
+    },
+    "privateJobs.detail.coverage": {
+      "source": "${claim}: recorded coverage ${coverage}; markers ${markers}.",
+      "text": "${claim}: mức bao phủ được ghi nhận ${coverage}; dấu trích dẫn ${markers}."
+    },
+    "privateJobs.detail.coverageCount": {
+      "source": "${count} recorded entries",
+      "text": "${count} mục được ghi nhận"
+    },
+    "privateJobs.detail.decision": {
+      "source": "${action} ${sourceName}: ${rationale}. Recorded offer price: ${price} USDC; this is not settled own spend.",
+      "text": "${action} ${sourceName}: ${rationale}. Giá chào được ghi nhận: ${price} USDC; đây không phải khoản chi của bạn đã quyết toán."
+    },
+    "privateJobs.detail.decisions": {
+      "source": "Recorded decisions",
+      "text": "Quyết định được ghi nhận"
+    },
+    "privateJobs.detail.evidenceCount": {
+      "source": "${count} recorded items",
+      "text": "${count} mục được ghi nhận"
+    },
+    "privateJobs.detail.evidenceExcerpts": {
+      "source": "Saved evidence excerpts",
+      "text": "Đoạn bằng chứng đã lưu"
+    },
+    "privateJobs.detail.introduction": {
+      "source": "Recorded engine: ${engine}. Saved: ${savedAt}. Incoming payment evidence only; no creator ledger.",
+      "text": "Bộ máy được ghi nhận: ${engine}. Đã lưu: ${savedAt}. Chỉ có bằng chứng thanh toán đầu vào; không có sổ trả tiền tác giả."
+    },
+    "privateJobs.detail.noCitations": {
+      "source": "No citations recorded.",
+      "text": "Không có trích dẫn được ghi nhận."
+    },
+    "privateJobs.detail.noMarkers": {
+      "source": "none recorded",
+      "text": "không được ghi nhận"
+    },
+    "privateJobs.detail.section": {
+      "source": "Saved private result",
+      "text": "Kết quả riêng tư đã lưu"
+    },
+    "privateJobs.detail.summary": {
+      "source": "Evidence: ${evidence}. Claim coverage: ${coverage}.",
+      "text": "Bằng chứng: ${evidence}. Mức bao phủ nhận định: ${coverage}."
+    },
+    "privateJobs.detail.support": {
+      "source": "Recorded support: ${support}; recorded reward eligibility: ${qualifiesForReward} (settlement unavailable).",
+      "text": "Mức hỗ trợ được ghi nhận: ${support}; điều kiện nhận thưởng được ghi nhận: ${qualifiesForReward} (chưa có thông tin quyết toán)."
+    },
+    "privateJobs.detail.unavailableLegacy": {
+      "source": "unavailable in this saved legacy result",
+      "text": "không có trong kết quả cũ đã lưu này"
+    },
+    "privateJobs.download.complete": {
+      "source": "Downloaded ${rows} rows. This bounded current-store scan finished; archives and linked wallets are excluded.",
+      "text": "Đã tải ${rows} dòng. Đã hoàn thành lượt quét giới hạn kho hiện tại; không bao gồm kho lưu trữ và ví được liên kết."
+    },
+    "privateJobs.download.scope": {
+      "source": "Manual metadata downloads start at the beginning of the applied filters: at most 20 pages, 500 rows and 2 MiB. They exclude result bodies and payment authorizations. Keep downloads private.",
+      "text": "Tải siêu dữ liệu thủ công bắt đầu từ đầu bộ lọc đã áp dụng: tối đa 20 trang, 500 dòng và 2 MiB. Không bao gồm nội dung kết quả và ủy quyền thanh toán. Giữ bản tải xuống riêng tư."
+    },
+    "privateJobs.download.truncated": {
+      "source": "Downloaded ${rows} rows. Export is truncated at its bounds; it is not your whole history.",
+      "text": "Đã tải ${rows} dòng. Bản xuất bị cắt theo giới hạn; đây không phải toàn bộ lịch sử của bạn."
+    },
+    "privateJobs.errors.changedSession": {
+      "source": "Your authenticated session changed. Private data has been cleared. Check your sign-in before reading again.",
+      "text": "Phiên xác thực của bạn đã đổi. Dữ liệu riêng tư đã được xóa khỏi giao diện. Kiểm tra đăng nhập trước khi đọc lại."
+    },
+    "privateJobs.errors.forbidden": {
+      "source": "Access to private history was refused. Private data has been cleared.",
+      "text": "Quyền truy cập lịch sử riêng tư bị từ chối. Dữ liệu riêng tư đã được xóa khỏi giao diện."
+    },
+    "privateJobs.errors.invalidFilters": {
+      "source": "Check the filters. Dates must be UTC ISO timestamps, in increasing order.",
+      "text": "Kiểm tra bộ lọc. Ngày phải là dấu thời gian UTC ISO theo thứ tự tăng dần."
+    },
+    "privateJobs.errors.missingResult": {
+      "source": "This completed private result is no longer available.",
+      "text": "Kết quả riêng tư đã hoàn thành này không còn khả dụng."
+    },
+    "privateJobs.errors.unauthorized": {
+      "source": "Your sign-in expired or was revoked. Private data has been cleared. Check your sign-in before reading again.",
+      "text": "Đăng nhập đã hết hạn hoặc bị thu hồi. Dữ liệu riêng tư đã được xóa khỏi giao diện. Kiểm tra đăng nhập trước khi đọc lại."
+    },
+    "privateJobs.errors.unavailable": {
+      "source": "Private history is unavailable. No successful empty history is being reported.",
+      "text": "Lịch sử riêng tư không khả dụng. Đây không phải thông báo đã đọc thành công một lịch sử trống."
+    },
+    "privateJobs.filters.allNetworks": {
+      "source": "All recorded networks",
+      "text": "Mọi mạng được ghi nhận"
+    },
+    "privateJobs.filters.allSurfaces": {
+      "source": "All recorded surfaces",
+      "text": "Mọi kênh được ghi nhận"
+    },
+    "privateJobs.filters.arcNetwork": {
+      "source": "eip155:5042",
+      "text": "eip155:5042"
+    },
+    "privateJobs.filters.dateExample": {
+      "source": "2026-10-14T00:00:00Z",
+      "text": "2026-10-14T00:00:00Z"
+    },
+    "privateJobs.filters.from": {
+      "source": "From UTC (inclusive)",
+      "text": "Từ UTC (bao gồm)"
+    },
+    "privateJobs.filters.network": {
+      "source": "Recorded network",
+      "text": "Mạng được ghi nhận"
+    },
+    "privateJobs.filters.question": {
+      "source": "Question contains (case-sensitive)",
+      "text": "Câu hỏi có chứa (phân biệt hoa thường)"
+    },
+    "privateJobs.filters.scope": {
+      "source": "Dates select intent-list time. Surface and network come from recorded provenance and incoming settlement. Missing legacy surface remains UNKNOWN.",
+      "text": "Ngày lọc theo thời gian liệt kê ý định. Kênh và mạng lấy từ nguồn gốc được ghi nhận và quyết toán đầu vào. Kênh bị thiếu trong bản ghi cũ vẫn là UNKNOWN."
+    },
+    "privateJobs.filters.surface": {
+      "source": "Recorded surface",
+      "text": "Kênh được ghi nhận"
+    },
+    "privateJobs.filters.testnetNetwork": {
+      "source": "eip155:5042002",
+      "text": "eip155:5042002"
+    },
+    "privateJobs.filters.to": {
+      "source": "To UTC (inclusive)",
+      "text": "Đến UTC (bao gồm)"
+    },
+    "privateJobs.page.introduction": {
+      "source": "Read saved private results for your signed-in payer wallet. This history covers the current store, with bounded scans and downloads.",
+      "text": "Đọc kết quả riêng tư đã lưu của ví trả tiền đã đăng nhập. Lịch sử bao gồm kho hiện tại, với lượt quét và tải xuống có giới hạn."
+    },
+    "privateJobs.page.link": {
+      "source": "Completed private jobs and downloads",
+      "text": "Công việc riêng tư đã hoàn thành và bản tải xuống"
+    },
+    "privateJobs.page.metadataTitle": {
+      "source": "Completed private jobs | Keryx",
+      "text": "Công việc riêng tư đã hoàn thành · Keryx"
+    },
+    "privateJobs.page.title": {
+      "source": "Completed private jobs",
+      "text": "Công việc riêng tư đã hoàn thành"
+    },
+    "privateJobs.row.completion": {
+      "source": "Completed ${createdAt}; saved ${savedAt}. Mode: ${researchMode}; model: ${model}.",
+      "text": "Hoàn thành ${createdAt}; lưu ${savedAt}. Chế độ: ${researchMode}; mô hình: ${model}."
+    },
+    "privateJobs.row.incoming": {
+      "source": "Settled incoming original price: ${amount}. Evidence: ${evidenceSource}; chain finality independently verified: no.",
+      "text": "Giá gốc đầu vào đã quyết toán: ${amount}. Bằng chứng: ${evidenceSource}; đã xác minh độc lập tính hoàn tất trên chuỗi: chưa."
+    },
+    "privateJobs.row.provenance": {
+      "source": "Recorded network: ${network}. Surface: ${surface}; ownership method: ${ownershipMethod}.",
+      "text": "Mạng được ghi nhận: ${network}. Kênh: ${surface}; cách xác định sở hữu: ${ownershipMethod}."
+    },
+    "privateJobs.row.unavailableSettlement": {
+      "source": "Own settled source spend: unavailable (NULL). Creator rewards: unavailable (NULL). Paid creators: unavailable (NULL).",
+      "text": "Chi phí nguồn của bạn đã quyết toán: không có (NULL). Thưởng tác giả: không có (NULL). Tác giả đã được trả tiền: không có (NULL)."
+    },
+    "privateJobs.row.unknownLegacy": {
+      "source": "UNKNOWN / legacy",
+      "text": "UNKNOWN / bản ghi cũ"
+    },
+    "privateJobs.scan.emptyPage": {
+      "source": "No completed jobs matched this scanned page.",
+      "text": "Không có công việc đã hoàn thành phù hợp trong trang được quét này."
+    },
+    "privateJobs.scan.emptyStore": {
+      "source": "No completed jobs matched this current-store scan.",
+      "text": "Không có công việc đã hoàn thành phù hợp trong lượt quét kho hiện tại này."
+    },
+    "privateJobs.scan.exhausted": {
+      "source": "This bounded current-store scan is exhausted. This is not an archive or transaction snapshot.",
+      "text": "Đã quét hết phạm vi giới hạn trong kho hiện tại. Đây không phải ảnh chụp kho lưu trữ hay giao dịch."
+    },
+    "privateJobs.scan.limited": {
+      "source": "This scan reached its bound. More intents remain; an empty page does not mean your history is empty.",
+      "text": "Lượt quét đã chạm giới hạn. Vẫn còn ý định; một trang trống không có nghĩa là lịch sử trống."
+    },
+    "privateJobs.scan.more": {
+      "source": "More intents remain. Load the next page manually.",
+      "text": "Vẫn còn ý định. Hãy tải trang sau theo cách thủ công."
+    },
+    "privateJobs.scan.navigationBound": {
+      "source": "Reached the 20-page navigation bound. Narrow the filters or refresh to start a new scan.",
+      "text": "Đã chạm giới hạn điều hướng 20 trang. Thu hẹp bộ lọc hoặc làm mới để bắt đầu lượt quét mới."
+    },
+    "privateJobs.scan.section": {
+      "source": "Completed jobs",
+      "text": "Công việc đã hoàn thành"
+    },
+    "privateJobs.scan.summary": {
+      "source": "Page ${page}: ${rows} completed rows from ${intents} scanned intents (maximum 25 per request).",
+      "text": "Trang ${page}: ${rows} dòng đã hoàn thành từ ${intents} ý định được quét (tối đa 25 mỗi yêu cầu)."
+    },
+    "privateJobs.status.detail": {
+      "source": "Loading saved private result…",
+      "text": "Đang tải kết quả riêng tư đã lưu…"
+    },
+    "privateJobs.status.export": {
+      "source": "Preparing bounded private export…",
+      "text": "Đang chuẩn bị bản xuất riêng tư có giới hạn…"
+    },
+    "privateJobs.status.list": {
+      "source": "Loading completed private jobs…",
+      "text": "Đang tải công việc riêng tư đã hoàn thành…"
     }
   }
 }

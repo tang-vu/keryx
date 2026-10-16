@@ -3,5 +3,114 @@
   "review": null,
   "sourcePath": "locales/en/chat-accounts.ts",
   "sourceSha256": "45230a5b912efcd378f8a1d24d94b4a5dc918e2c75af5e6d615b10148be9b648",
-  "entries": {}
+  "entries": {
+    "account.enrollPrompt": {
+      "source": "Need to enroll or resume your private account? ",
+      "text": "Cần đăng ký hoặc tiếp tục tài khoản riêng tư của bạn? "
+    },
+    "account.openWorkspace": {
+      "source": "Open account workspace in a separate tab",
+      "text": "Mở không gian tài khoản trong thẻ riêng"
+    },
+    "account.returnInstructions": {
+      "source": ", then return here and load a fresh preview before checking consent.",
+      "text": ", rồi quay lại đây và tải bản xem trước mới trước khi kiểm tra chấp thuận."
+    },
+    "action.confirm": {
+      "source": "Confirm chat link",
+      "text": "Xác nhận liên kết trò chuyện"
+    },
+    "action.load": {
+      "source": "Load account and chat links",
+      "text": "Tải tài khoản và liên kết trò chuyện"
+    },
+    "action.unlink": {
+      "source": "Unlink",
+      "text": "Hủy liên kết"
+    },
+    "consent.sectionLabel": {
+      "source": "Private chat account consent",
+      "text": "Chấp thuận liên kết tài khoản trò chuyện riêng tư"
+    },
+    "consent.statement": {
+      "source": "I consent to attach future questions from this chat to this Keryx account. Payment, wallet and custody authority stay separate.",
+      "text": "Tôi đồng ý gắn các câu hỏi sau này từ cuộc trò chuyện này vào tài khoản Keryx này. Quyền thanh toán, ví và lưu ký vẫn tách biệt."
+    },
+    "error.accountChanged": {
+      "source": "Account changed, no explicit account consent exists, or this chat is already linked. Reload and check the account.",
+      "text": "Tài khoản đã đổi, chưa có chấp thuận tài khoản rõ ràng hoặc cuộc trò chuyện này đã được liên kết. Hãy tải lại và kiểm tra tài khoản."
+    },
+    "error.expired": {
+      "source": "Link expired or already used. Send /link again in your private chat.",
+      "text": "Liên kết đã hết hạn hoặc đã được dùng. Gửi lại /link trong cuộc trò chuyện riêng tư của bạn."
+    },
+    "error.signIn": {
+      "source": "Sign in to Keryx using the account menu, then load this private link again.",
+      "text": "Đăng nhập Keryx qua trình đơn tài khoản, rồi tải lại liên kết riêng tư này."
+    },
+    "error.unavailable": {
+      "source": "Chat linking is unavailable.",
+      "text": "Tính năng liên kết trò chuyện không khả dụng."
+    },
+    "error.unconfirmed": {
+      "source": "Chat linking is unavailable. Your binding was not confirmed; reload to inspect it.",
+      "text": "Liên kết trò chuyện không khả dụng. Chưa xác nhận được liên kết của bạn; tải lại để kiểm tra."
+    },
+    "history.unavailable": {
+      "source": "Past-run attachment is unavailable because earlier runs lack verified retained chat-user provenance.",
+      "text": "Chưa thể gắn các lượt chạy cũ vì thiếu bằng chứng nguồn gốc người dùng trò chuyện đã được xác minh và lưu giữ."
+    },
+    "notice.authChanged": {
+      "source": "Authentication changed. Load and review your account again.",
+      "text": "Thông tin xác thực đã đổi. Hãy tải và kiểm tra lại tài khoản."
+    },
+    "notice.initial": {
+      "source": "Sign in, then load your chat links.",
+      "text": "Đăng nhập, rồi tải các liên kết trò chuyện của bạn."
+    },
+    "notice.linked": {
+      "source": "Chat linked. Future questions use this account history. No historical runs were attached.",
+      "text": "Đã liên kết trò chuyện. Câu hỏi sau này dùng lịch sử tài khoản này. Không gắn lượt chạy cũ nào."
+    },
+    "notice.listed": {
+      "source": "Your linked chat accounts are listed below. Start /link in a private bot chat to add one.",
+      "text": "Các tài khoản trò chuyện đã liên kết được liệt kê bên dưới. Bắt đầu bằng /link trong cuộc trò chuyện riêng với bot để thêm tài khoản."
+    },
+    "notice.preview": {
+      "source": "Check the chat and account below before confirming.",
+      "text": "Kiểm tra cuộc trò chuyện và tài khoản bên dưới trước khi xác nhận."
+    },
+    "notice.unlinked": {
+      "source": "Chat unlinked. Existing owned history stays in your account.",
+      "text": "Đã hủy liên kết trò chuyện. Lịch sử hiện thuộc tài khoản vẫn được giữ lại."
+    },
+    "page.description": {
+      "source": "Link a verified private chat to your signed-in Keryx account to keep future questions in your history.",
+      "text": "Liên kết cuộc trò chuyện riêng tư đã xác minh với tài khoản Keryx đã đăng nhập để lưu các câu hỏi sau này vào lịch sử."
+    },
+    "page.heading": {
+      "source": "Chat accounts",
+      "text": "Tài khoản trò chuyện"
+    },
+    "page.title": {
+      "source": "Chat accounts — Keryx",
+      "text": "Tài khoản trò chuyện — Keryx"
+    },
+    "preview.accountLabel": {
+      "source": "Keryx account: ",
+      "text": "Tài khoản Keryx: "
+    },
+    "preview.chatLabel": {
+      "source": "Chat: ",
+      "text": "Trò chuyện: "
+    },
+    "preview.expiresLabel": {
+      "source": "Expires: ",
+      "text": "Hết hạn: "
+    },
+    "walletMenu.chatAccounts": {
+      "source": "Chat accounts",
+      "text": "Tài khoản trò chuyện"
+    }
+  }
 }

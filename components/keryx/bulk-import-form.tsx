@@ -14,7 +14,7 @@ import { SigningRecordedAmount } from "./signing-amount";
  * Offline dev (registry unset): the bulk POST writes rows directly, so feeds land "done" with no tx.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { selectPlural } from "@/lib/i18n/format";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Wallet, Upload, ListPlus } from "lucide-react";
@@ -33,8 +33,11 @@ import {
   type BulkFeed,
   type BulkPhase,
 } from "./bulk-import-results";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 interface OnchainRegisterParams {
   urlHash: `0x${string}`;
@@ -52,6 +55,7 @@ type PreparedFeed = BulkFeed & {
 };
 
 export function BulkImportForm({ onRegistered }: { onRegistered?: () => void }) {
+  const uiCopy = useUiMessages();
   const [input, setInput] = useState("");
   const [price, setPrice] = useState("0.016");
   const [preparing, setPreparing] = useState(false);

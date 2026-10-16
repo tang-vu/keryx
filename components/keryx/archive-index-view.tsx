@@ -7,7 +7,7 @@
  */
 
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import Link from "next/link";
 import type { ArchiveEntry } from "@/lib/answers-archive";
 import { searchTerm } from "@/lib/answers-archive";
@@ -19,9 +19,12 @@ import { ArchivePagination } from "./archive-pagination";
 import { ArchiveTopicChips } from "./archive-topic-chips";
 import { ProductEntryNote } from "./product-guide";
 import { ArchiveLanguageFilter } from "./archive-language-filter";
+import { UiMessage, UiRichMessage, UiText } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
 
 export function ArchiveIndexView({
   slice,
@@ -41,28 +44,28 @@ export function ArchiveIndexView({
     <main className="mx-auto max-w-[860px] px-4 pb-20 pt-12 sm:px-[30px]">
       <div className="mb-2 flex items-baseline justify-between gap-4">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          {slice.page > 1 ? copy("archiveIndex.page", { page: slice.page, pages: slice.totalPages }) : copy("archiveIndex.kicker")}
+          {slice.page > 1 ? <UiMessage messageKey={"archiveIndex.page"} values={{ page: slice.page, pages: slice.totalPages }} /> : <UiMessage messageKey={"archiveIndex.kicker"} />}
         </span>
         <a
           href={language ? `/answers/feed.xml?${new URLSearchParams({ language })}` : "/answers/feed.xml"}
           className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-3 underline decoration-dotted underline-offset-4 transition-colors hover:text-seal"
         >
-          {copy("archiveIndex.feed")}
+          <UiMessage messageKey={"archiveIndex.feed"} />
         </a>
       </div>
       <h1 className="font-display text-[clamp(30px,5vw,46px)] font-medium leading-[1.05] tracking-tight text-ink">
-        {richCopy("archiveIndex.title", { emphasis: <em className="italic text-paid">{copy("archiveIndex.emphasis")}</em> })}
+        <UiRichMessage messageKey={"archiveIndex.title"} values={{ emphasis: <em className="italic text-paid"><UiMessage messageKey={"archiveIndex.emphasis"} /></em> }} />
       </h1>
       <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
         {totalEntries > 0 ? (
           <>
-            {copy(totalEntries === 1 ? "archiveIndex.summary.one" : "archiveIndex.summary.other", { count: totalEntries })}
+            <UiMessage messageKey={totalEntries === 1 ? "archiveIndex.summary.one" : "archiveIndex.summary.other"} values={{ count: totalEntries }} />
           </>
         ) : (
-          <>{copy("archiveIndex.empty")}</>
+          <><UiMessage messageKey={"archiveIndex.empty"} /></>
         )}
       </p>
-      <Link href="/history/testnet" className="mt-3 inline-block text-sm text-seal underline underline-offset-4">{copy("archiveIndex.testnet")}</Link>
+      <Link href="/history/testnet" className="mt-3 inline-block text-sm text-seal underline underline-offset-4"><UiMessage messageKey={"archiveIndex.testnet"} /></Link>
       <div className="mt-6"><ProductEntryNote /></div>
       <ArchiveLanguageFilter languages={languages} selected={language} />
 
@@ -85,7 +88,7 @@ export function ArchiveIndexView({
           href="/"
           className="inline-block border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
         >
-          {copy("archiveIndex.ask")}
+          <UiMessage messageKey={"archiveIndex.ask"} />
         </Link>
       </div>
     </main>

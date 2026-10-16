@@ -1,14 +1,19 @@
 "use client";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useEffect, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { FeedVerificationPanel, type VerificationSource } from "./feed-verification-panel";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 export function OwnerFeedVerification({ sourceId, onVerified }: { sourceId: string; onVerified?: () => void }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const { session } = useSiweAuth();
   const sessionAddress = session?.address;
   const [source, setSource] = useState<VerificationSource | null>(null);

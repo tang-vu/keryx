@@ -2,17 +2,21 @@
 
 import { DisplayTime } from "@/components/keryx/display-time";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
-import { createMessages } from "@/lib/i18n/messages";
+
 
 import { useEffect, useId, useState } from "react";
 import { ResearchJobDetails } from "./research-job-details";
 import { a2aQueryIdSchema, buyerJobSchema, shouldPollBuyerJob, type BuyerJob } from "@/lib/a2a/buyer-workspace";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const message = createMessages("en");
+
+
+
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 
 export function ResearchJob({ initialId }: { initialId?: string } = {}) {
+  const message = useUiMessages();
   const fieldId = useId();
   const initial = a2aQueryIdSchema.safeParse(initialId);
   const [input, setInput] = useState(initial.success ? initial.data : "");

@@ -4,15 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { PROFILE_LINK_KINDS, privateProfileInputSchema, privateProfileSnapshotSchema, privateProfileRecordSchema, type PrivateProfileInput, type PrivateProfileSnapshot } from "@/lib/profiles/private-profile";
 import { VerifiedIdentityPanel } from "./verified-identity-panel";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
 
-const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
+
 
 
 const empty: PrivateProfileInput = { displayName: "", handle: "", bio: "", purpose: "", links: [] };
 export function PrivateProfileView() {
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
   const { session } = useSiweAuth();
   if (session === undefined) return <p role="status">{copy("privateProfile.checkingSignIn")}</p>;
   if (!session) return <p>{richCopy("privateProfile.signInInstruction", { signInLink: <Link className="underline" href="/connect">{copy("privateProfile.signIn")}</Link> })}</p>;
@@ -20,6 +25,8 @@ export function PrivateProfileView() {
 }
 /** Remount on owner change: no old private fields survive a wallet switch or sign-out. */
 function ProfileEditor({ wallet }: { wallet: string }) {
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
   const [snapshot, setSnapshot] = useState<PrivateProfileSnapshot | null>(null), [form, setForm] = useState(empty);
   const [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true), [readAttempt, setReadAttempt] = useState(0);

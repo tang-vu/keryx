@@ -5,12 +5,16 @@ import { auditResearchEvidence, type ResearchEvidenceAudit } from "@/lib/researc
 import { MAX_EVIDENCE_AUDIT_BYTES, evidenceAuditTrust } from "@/lib/research-audit/evidence-audit-contract";
 import sample from "@/docs/research-evidence-audit-example.json";
 import { evidenceAuditCopy as copy } from "@/locales/en/evidence-audit";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 const ratioText = (value: { numeratorMicros: string; denominatorSupportedClaims: number } | null, unit: string) =>
   value ? copy.ratio({ amount: value.numeratorMicros, unit, count: value.denominatorSupportedClaims }) : copy.unknown;
 
 /** Local memory only. Inputs are never uploaded, placed in a URL or saved to browser storage. */
 export function ResearchEvidenceAuditWorkspace() {
+  const copy = useUiCopy("evidence-audit", uiEnglish_copy);
   const [input, setInput] = useState("");
   const [trust, setTrust] = useState("");
   const [result, setResult] = useState<ResearchEvidenceAudit | null>(null);

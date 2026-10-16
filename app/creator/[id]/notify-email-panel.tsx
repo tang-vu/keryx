@@ -7,17 +7,22 @@
  * panel still saves the address but says delivery is dark, so nobody is silently promised mail.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useEffect, useState } from "react";
 import { Mail, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 export function NotifyEmailPanel({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const [owner, setOwner] = useState(false); // stays false (renders nothing) until proven owner
   const [email, setEmail] = useState("");
   const [configured, setConfigured] = useState(false);

@@ -6,11 +6,19 @@ import { ArrowDownToLine, ArrowLeft, ArrowUpRight, LockKeyhole, ShieldCheck } fr
 import { evaluateMandate, type MandateAssessment, type MandateInput } from "@/lib/research-mandate/evaluate";
 import { mandateExample } from "@/lib/research-mandate/example";
 import { mandateCopy, mandateReasonsVi, mandateProtocolCopy as protocol } from "@/locales/en/research-mandates";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_mandateCopy = mandateCopy;
+const uiEnglish_mandateReasonsVi = mandateReasonsVi;
+const uiEnglish_protocol = protocol;
+
 
 const button = "rounded-md border border-current/20 px-4 py-2 text-sm transition-colors hover:bg-current/5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#176247]";
 const primaryButton = button.replace("hover:bg-current/5", "hover:bg-[#114b36]") + " bg-[#176247] text-white disabled:opacity-40";
 type Scenario = "ready" | "overdue" | "pending" | "recipient" | "unknown";
 export function ResearchMandateWorkspace() {
+  const mandateCopy = useUiCopy("research-mandates", uiEnglish_mandateCopy);
+  const mandateReasonsVi = useUiCopy("research-mandates", uiEnglish_mandateReasonsVi);
+  const protocol = useUiCopy("research-mandates", uiEnglish_protocol);
   const [language, setLanguage] = useState<"en" | "vi">("en");
   const [text, setText] = useState("");
   const [sample, setSample] = useState(false);

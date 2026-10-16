@@ -30,11 +30,14 @@ import {
   PendingReconciliationSection,
   type PendingReconciliationHealth,
 } from "@/components/keryx/pending-reconciliation-section";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
+
 
 interface Health {
   ok: boolean;
@@ -84,6 +87,8 @@ function fmtUptime(s: number): string {
 }
 
 export default function StatusPage() {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const [health, setHealth] = useState<Health | null>(null);
   const [treasury, setTreasury] = useState<Treasury | null>(null);
   const [reachable, setReachable] = useState(true);

@@ -5,10 +5,13 @@ import { DisplayTime } from "@/components/keryx/display-time";
 
 
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
 
 /**
  * /status section for what the agent has actually been doing lately: how many dispatches completed in
@@ -47,6 +50,8 @@ function ago(iso: string) {
 }
 
 export function DispatchHealthSection({ dispatches: d }: { dispatches: DispatchHealth }) {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const unreasoned = d.heuristic > 0;
   // Partial fallbacks still produced a real answer, so they read as a caveat, not a failure.
   const reasonedLabel =

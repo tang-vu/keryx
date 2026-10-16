@@ -9,7 +9,7 @@
  * item the free preview reveals to the agent before it decides to pay the toll.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useState } from "react";
 import { Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,10 +18,14 @@ import {
   PREVIEW_DEPTHS,
   type PreviewDepth,
 } from "@/lib/sources/preview-depth";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 export function PreviewDepthPanel({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
   const [owner, setOwner] = useState(false); // stays false (renders nothing) until proven owner
   const [depth, setDepth] = useState<PreviewDepth>("full");
   const [saving, setSaving] = useState<PreviewDepth | null>(null);

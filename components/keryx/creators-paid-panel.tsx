@@ -8,9 +8,9 @@
  * not per-tx EVM hashes — the verifiable on-chain link is the settlement wallet, in the footer.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
 
-const message = createMessages("en");
+
+
 
 import { Check, CircleX, Clock3 } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
@@ -25,6 +25,9 @@ import { SectionHeading } from "./banknote";
 import { PaidStamp } from "./paid-stamp";
 import { GatewayContractReferences } from "./gateway-contract-references";
 import { recordedArcLabel } from "@/lib/arc-network-display";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 interface CreatorsPaidPanelProps {
   payments: PaymentRecord[];
@@ -39,6 +42,7 @@ export function CreatorsPaidPanel({
   streaming,
   historicalNetwork,
 }: CreatorsPaidPanelProps) {
+  const message = useUiMessages();
   const operatingPayments = payments.filter(payment => payment.kind === "operating-fee");
   payments = payments.filter(isCreatorPayment);
   const total = payments

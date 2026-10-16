@@ -20,6 +20,9 @@ import { AskQuestionSchema, MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
 
 import { BUYER_PROFILE } from "@/lib/buyer/protocol";
 import { monthlyStorageKeys } from "@/lib/monthly/local-recovery";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
 
@@ -35,6 +38,7 @@ function download(value: unknown) {
 }
 
 export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
+  const copy = useUiMessages();
   const { address, chainId } = useAccount(); const { data: wallet } = useWalletClient();
   const storage = monthlyStorageKeys(BUYER_PROFILE, address);
   const storageScope = `${BUYER_PROFILE.networkId}:${address?.toLowerCase() ?? "disconnected"}`;

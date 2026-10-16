@@ -1,11 +1,14 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useId } from "react";
 import { PAPER_REPOSITORIES } from "@/lib/papers/types";
 import { SCREENING_STATES, type LiteratureEntry } from "@/lib/papers/literature-workspace";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 /** Selection stays inspectable when screening filters hide the saved cards. */
 export function LiteratureComparisonPreview({ entries, filter, savedQuestion, draft, onRemove }: {
@@ -15,6 +18,7 @@ export function LiteratureComparisonPreview({ entries, filter, savedQuestion, dr
   draft: string;
   onRemove: (url: string) => void;
 }) {
+  const copy = useUiMessages();
   const id = useId();
   if (!entries.length) return null;
   return <section aria-label={copy("literatureComparison.label")} className="mt-4 min-w-0">

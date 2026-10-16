@@ -8,13 +8,16 @@
  * marks the hard cap the orchestrator (not the model) enforces.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
 
-const message = createMessages("en");
+
+
 
 import type { TraceStep } from "@/lib/types";
 import { isPaymentRecord, paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { fmtUsdc } from "./phase-style";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 /** Keep ambiguous and offline amounts separate from confirmed Arc settlement. */
 export function stepPaymentTotals(steps: TraceStep[]): {
@@ -57,6 +60,7 @@ export function BudgetMeter({
   streaming: boolean;
   pending?: number;
 }) {
+  const message = useUiMessages();
   if (budget <= 0) return null;
   const pct = Math.max(0, Math.min(100, (spent / budget) * 100));
   const saved = Math.max(0, budget - spent);

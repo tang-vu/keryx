@@ -20,16 +20,19 @@ import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messag
  * silence instead of a row of zeros.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Scale } from "lucide-react";
 import { fmtUsdc } from "@/components/keryx/phase-style";
 import type { SourcePerformance } from "@/lib/creator/source-performance";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 interface FeedbackData {
   windowRuns: number;
@@ -39,6 +42,8 @@ interface FeedbackData {
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
 export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const [data, setData] = useState<FeedbackData | null>(null);
 
   useEffect(() => {

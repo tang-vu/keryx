@@ -7,6 +7,9 @@ import { sourceClaimSchema, type SourceClaim } from "@/lib/sources/public-source
 import { sourceClaimTarget } from "@/lib/registration-return";
 import { claimRequest } from "./public-source-claim-api";
 import { ClaimControlStatus } from "./public-source-claim-status";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const uiCopy = createMessages("en");
 
@@ -14,6 +17,7 @@ const policyLabels = { free: uiCopy("sourceClaims.free"), "citation-only": uiCop
 
 /** Manual authenticated discovery only: opening a saved claim never renews or activates it. */
 export function PublicSourceClaims({ owner, network, enabled, now }: { owner: string; network: string; enabled: boolean; now: number }) {
+  const uiCopy = useUiMessages();
   const [claims, setClaims] = useState<SourceClaim[] | null>(null);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState("");

@@ -6,6 +6,9 @@ import { SiteFooter } from "@/components/keryx/site-footer";
 import { WithdrawalAccount } from "@/components/keryx/withdrawal-account";
 import { withdrawalWorkspaceLimits } from "@/lib/gateway/withdrawal-workspace-limits";
 import { config } from "@/lib/config";
+import { UiMessage } from "@/lib/i18n/ui-copy";
+
+
 
 const uiCopy = createMessages("en");
 
@@ -19,10 +22,10 @@ export default function WithdrawalsPage() {
     <SiteHeader />
     <main className="mx-auto max-w-[820px] space-y-8 px-4 py-10 sm:px-8">
       <header className="space-y-3 border-b border-line pb-6">
-        <h1 className="font-display text-4xl">{uiCopy("withdrawalPage.title")}</h1>
-        <p className="font-serif text-ink-2">{uiCopy("withdrawalPage.introduction")}</p>
-        <p className="text-sm text-ink-3">{uiCopy("withdrawalPage.historyBoundary", { network: config.profile.label })}</p>
-        <Link href="/me/sources" className="inline-block text-sm underline">{uiCopy("withdrawalPage.back")}</Link>
+        <h1 className="font-display text-4xl"><UiMessage messageKey={"withdrawalPage.title"} /></h1>
+        <p className="font-serif text-ink-2"><UiMessage messageKey={"withdrawalPage.introduction"} /></p>
+        <p className="text-sm text-ink-3"><UiMessage messageKey={"withdrawalPage.historyBoundary"} values={{ network: config.profile.label }} /></p>
+        <Link href="/me/sources" className="inline-block text-sm underline"><UiMessage messageKey={"withdrawalPage.back"} /></Link>
       </header>
       <WithdrawalAccount limits={limits} />
     </main>

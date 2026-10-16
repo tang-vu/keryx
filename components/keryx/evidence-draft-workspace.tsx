@@ -12,6 +12,9 @@ import { relatedWorkReadingDraft } from "@/lib/research/related-work-generation"
 import { appendCompletedEvidenceDraftImport } from "@/components/keryx/completed-evidence-draft-import";
 import { CompletedEvidenceDraftSelector } from "@/components/keryx/completed-evidence-draft-selector";
 import { completedEvidenceDraftSelectionCopy as completedCopy } from "@/locales/en/completed-evidence-draft-selection";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_completedCopy = completedCopy;
+
 
 const field = "mt-2 block w-full min-w-0 rounded-none border border-line bg-paper px-3 py-2 font-serif text-sm text-ink";
 const button = "inline-flex min-h-11 items-center border border-ink px-3 py-2 font-mono text-xs text-ink disabled:opacity-50";
@@ -22,6 +25,7 @@ const choice = "mt-2 flex gap-3 font-serif text-sm text-ink-2";
 const empty = (): Editors => ({ reports: [], passage: "", claims: [], themes: [{ id: "theme1", title: copy.theme.initialTitle, authorNote: "", excerptIds: [] }] });
 
 export function EvidenceDraftWorkspace() {
+  const completedCopy = useUiCopy("completed-evidence-draft-selection", uiEnglish_completedCopy);
   const store = useLiteratureWorkspace(), [editors, setEditors] = useState(empty), [reportJson, setReportJson] = useState("");
   const [message, setMessage] = useState(""), [reviewer, setReviewer] = useState(""), passageRef = useRef<HTMLTextAreaElement>(null);
   const [resetRevision, setResetRevision] = useState(0);

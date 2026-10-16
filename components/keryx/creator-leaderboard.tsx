@@ -8,14 +8,17 @@ import { formatRecordedUsdc, selectPlural } from "@/lib/i18n/format";
  * per-creator earnings detail.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import Link from "next/link";
 import { Crown, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { shortAddr } from "./phase-style";
 import { cn } from "@/lib/utils";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 export interface LeaderboardEntry {
   sourceId: string;
@@ -26,13 +29,14 @@ export interface LeaderboardEntry {
   citationCount: number;
 }
 
-export function CreatorLeaderboard({ rows, title = uiCopy("creatorLeaderboard.title") }: { rows: LeaderboardEntry[]; title?: string }) {
+export function CreatorLeaderboard({ rows, title }: { rows: LeaderboardEntry[]; title?: string }) {
+  const uiCopy = useUiMessages();
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-2 space-y-0 pb-4">
         <Trophy className="h-4 w-4 text-seal" />
         <CardTitle className="font-serif text-lg font-normal">
-          {title}
+          {title ?? uiCopy("creatorLeaderboard.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">

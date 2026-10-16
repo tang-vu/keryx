@@ -4,7 +4,7 @@ export const uiPreferenceMessages = Object.freeze({
   english: "English",
   vietnamesePreview: "Tiếng Việt (preview)",
   chinesePreview: "简体中文 (preview)",
-  previewNotice: "Preview: machine draft, not human reviewed. Only navigation changes; other text remains English.",
+  previewNotice: "Preview: machine draft, not human reviewed. Interface text is translated; critical payment, consent and legal text stays in English.",
   englishOnly: "English is currently the only offered interface language.",
   checking: "Checking language preference…",
   saving: "Saving account language…",

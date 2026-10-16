@@ -6,9 +6,9 @@
  * source name + rationale. Fades/slides in on mount.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
 
-const message = createMessages("en");
+
+
 
 import { Globe } from "lucide-react";
 import type { Decision, TraceStep } from "@/lib/types";
@@ -16,8 +16,12 @@ import { isDecisionRecord } from "@/lib/research/decision-record";
 import { parseSelectionDiagnostic, type SelectionDiagnostic } from "@/lib/research/selection-diagnostic";
 import { ACTION_STYLES, PHASE_STYLES, fmtUsdc } from "./phase-style";
 import { cn } from "@/lib/utils";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 export function TraceRow({ step }: { step: TraceStep }) {
+  const message = useUiMessages();
   const ps = PHASE_STYLES[step.phase] ?? PHASE_STYLES.done;
   const Icon = ps.icon;
   const decision =
@@ -66,6 +70,7 @@ export function TraceRow({ step }: { step: TraceStep }) {
 }
 
 function SelectionDiagnosticBody({ message: diagnosticMessage, diagnostic }: { message: string; diagnostic: SelectionDiagnostic }) {
+  const message = useUiMessages();
   const counts = diagnostic.counts;
   return <div className="mt-1 space-y-2 text-sm leading-snug text-ink-2" data-testid="selection-diagnostic-row">
     <p className="font-semibold">{diagnostic.outcome === "refused" ? message("sourceDecision.refused") : message("sourceDecision.partiallyWithheld")}</p>
@@ -104,6 +109,7 @@ function DecisionBadge({ decision }: { decision: Decision }) {
 }
 
 function DecisionBody({ decision }: { decision: Decision }) {
+  const message = useUiMessages();
   return (
     <div className="mt-1">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">

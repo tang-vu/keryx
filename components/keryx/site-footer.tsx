@@ -11,14 +11,17 @@ import { KeryxGlyph } from "./keryx-mark";
 import { browserPaymentProfile,browserRegistryAddress } from "@/lib/browser-payment-profile";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { setupCopy } from "@/locales/en/get-started";
 import { SUPPORT_MAILTO } from "@/lib/public-support";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LanguageSwitcher } from "./language-switcher";
+import { useUiCopy, useUiCopyFunction, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const richMessage = createRichMessages("en");
+
+
+
 
 const profile=browserPaymentProfile(),EXPLORER=profile.explorerUrl;
 const configuredRegistry=browserRegistryAddress();
@@ -28,10 +31,10 @@ const USDC = profile.usdcAddress;
 type FooterLink = { label: string; href: string; external?: boolean };
 
 // Product surfaces. "API for agents" is the OpenAPI reference (also the A2A entry point).
-function houseLinks(message: ReturnType<typeof createMessages>): FooterLink[] { return [
+function houseLinks(message: ReturnType<typeof createMessages>, guide = productGuideCopy): FooterLink[] { return [
   { label: message("shellNavigation.ask"), href: "/" },
-  { label: productGuideCopy("product.pricing"), href: "/pricing" },
-  { label: productGuideCopy("product.about"), href: "/about" },
+  { label: guide("product.pricing"), href: "/pricing" },
+  { label: guide("product.about"), href: "/about" },
   { label: message("shellNavigation.operator"), href: "/operator" },
   { label: message("shellNavigation.answers"), href: "/answers" },
   { label: message("shellNavigation.sources"), href: "/sources" },
@@ -47,11 +50,11 @@ function houseLinks(message: ReturnType<typeof createMessages>): FooterLink[] { 
 ]; }
 
 // Current configured contract references; historical receipt links keep their original rail.
-function docsLinks(message: ReturnType<typeof createMessages>): FooterLink[] { return [
-  { label: setupCopy.navigation.start, href: "/get-started" },
-  { label: setupCopy.navigation.download, href: "/download" },
-  { label: setupCopy.navigation.integrations, href: "/integrations" },
-  { label: productGuideCopy("product.support"), href: SUPPORT_MAILTO, external: true },
+function docsLinks(message: ReturnType<typeof createMessages>, guide = productGuideCopy, setup = setupCopy): FooterLink[] { return [
+  { label: setup.navigation.start, href: "/get-started" },
+  { label: setup.navigation.download, href: "/download" },
+  { label: setup.navigation.integrations, href: "/integrations" },
+  { label: guide("product.support"), href: SUPPORT_MAILTO, external: true },
   { label: message("shellFooter.github"), href: "https://github.com/tang-vu/keryx", external: true },
   { label: message("shellFooter.registryContract"), href: `${EXPLORER}/address/${REGISTRY}#code`, external: true },
   { label: message("shellFooter.usdcOnArc"), href: `${EXPLORER}/address/${USDC}`, external: true },
@@ -91,7 +94,9 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
 }
 
 export function SiteFooter() {
-  const { message, locale } = useLocale();
+  const richMessage = useUiRichMessages();
+  const shell = useLocale(), { locale } = shell, message = useUiMessages(shell.message);
+  const guide = useUiCopyFunction("product-guide", productGuideCopy), setup = useUiCopy("get-started", setupCopy);
   return (
     <footer lang={locale} className="border-t border-ink bg-panel">
       <div className="mx-auto max-w-[1180px] px-4 pb-10 pt-[54px] sm:px-[30px]">
@@ -103,13 +108,13 @@ export function SiteFooter() {
                 Keryx
               </span>
             </div>
-            <p lang="en" className="mt-4 max-w-[42ch] font-serif text-[16px] leading-[1.55] text-ink-3">
+            <p lang={locale} className="mt-4 max-w-[42ch] font-serif text-[16px] leading-[1.55] text-ink-3">
               {richMessage("shellFooter.etymology", { gap: " ", word: <span className="italic text-ink">κῆρυξ</span> })}
             </p>
           </div>
 
-          <FooterCol title={message("shellFooter.house")} links={houseLinks(message)} />
-          <FooterCol title={message("shellFooter.docsAndProof")} links={docsLinks(message)} />
+          <FooterCol title={message("shellFooter.house")} links={houseLinks(message, guide)} />
+          <FooterCol title={message("shellFooter.docsAndProof")} links={docsLinks(message, guide, setup)} />
         </div>
 
         <div className="mt-10 flex flex-wrap justify-between gap-3 border-t border-ink pt-5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-3">

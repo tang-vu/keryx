@@ -1,8 +1,8 @@
 "use client";
 import { SigningAmount } from "./signing-amount";
 import { formatSigningUsdc } from "@/lib/i18n/format";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 import Link from "next/link";
@@ -21,14 +21,18 @@ import { downloadBuyerJson } from "@/lib/buyer/download";
 import { ResearchPrivateResult } from "./research-private-result";
 import { ResearchFunding } from "./research-funding";
 import { WalletPicker } from "./wallet-picker";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
+
+
+
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 type Review = Awaited<ReturnType<typeof previewPrivateBrowserQuote>>;
 
 export function ResearchPrivateCheckout({ merchants }: { merchants: PrivateMerchantPolicy }) {
+  const copy = useUiMessages();
   const { session } = useSiweAuth();
   return <section aria-labelledby="private-checkout-heading" className="border border-line bg-paper p-6">
     <h2 id="private-checkout-heading" className="font-display text-3xl">{copy("privateCheckout.title")}</h2>
@@ -40,6 +44,8 @@ export function ResearchPrivateCheckout({ merchants }: { merchants: PrivateMerch
 }
 
 function PrivateCheckout({ payer, merchants }: { payer: string; merchants: PrivateMerchantPolicy }) {
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
   const { address, chainId } = useAccount(), { data: wallet } = useWalletClient();
   const { switchChainAsync, isPending: switching } = useSwitchChain();
   const [question, setQuestion] = useState(""), [budgetText, setBudgetText] = useState("0.03"), [totalText, setTotalText] = useState("0.05");

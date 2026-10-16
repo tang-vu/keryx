@@ -8,12 +8,16 @@ import { WithdrawalHistoryPanel } from "./withdrawal-history-panel";
 import type { WithdrawPolicy } from "@/lib/gateway/withdraw-protocol";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { CreatorOwnerWithdrawalPanel } from "./creator-owner-withdrawal-panel";
-import { createMessages } from "@/lib/i18n/messages";
 
-const copy = createMessages("en");
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
 
 
 export function WithdrawalAccount({ limits }: { limits: Omit<WithdrawPolicy, "owner" | "recipient"> | null }) {
+  const copy = useUiMessages();
   const { session } = useSiweAuth(), { address } = useAccount(), { data: wallet } = useWalletClient();
   if (session === undefined) return <p role="status">{copy("withdrawalAccount.checkingSignIn")}</p>;
   if (!session) return <Link href="/connect" className="underline">{copy("withdrawalAccount.signIn")}</Link>;

@@ -1,10 +1,13 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 type Rating = "up" | "down";
 type Phase = "loading" | "ready" | "unavailable" | "sending" | "confirmed" | "unconfirmed";
@@ -46,6 +49,7 @@ export function AnswerFeedback({ queryId }: { queryId: string }) {
 }
 
 function ReportFeedback({ queryId }: { queryId: string }) {
+  const copy = useUiMessages();
   const [counts, setCounts] = useState<Counts | null>(null);
   const [phase, setPhase] = useState<Phase>("loading");
   const [recorded, setRecorded] = useState<Rating | null>(null);

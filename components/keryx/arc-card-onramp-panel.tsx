@@ -16,6 +16,9 @@ import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messag
 import { createMessages } from "@/lib/i18n/messages";
 import { useEffect, useRef, useState } from "react";
 import type { OnrampKit, OnrampSession, OnrampWidget } from "@circle-fin/onramp-kit";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
 
@@ -25,6 +28,7 @@ const UNAVAILABLE = copy("cardFunding.unavailable");
 const PRODUCTION_ORIGIN = "https://onramp.arc.io";
 
 export function ArcCardOnrampPanel() {
+  const copy = useUiMessages();
   const [available, setAvailable] = useState(false);
   const [sandbox, setSandbox] = useState(false);
   const [prepared, setPrepared] = useState<{ kit: OnrampKit; session: OnrampSession } | null>(null);

@@ -3,7 +3,7 @@ import { formatSigningUsdc } from "@/lib/i18n/format";
 import { DisplayTime } from "@/components/keryx/display-time";
 import { createRichMessages as createDateMessages } from "@/lib/i18n/rich-messages";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 
 import Link from "next/link";
 import { ownedHistoryCopy } from "@/locales/en/owned-history";
@@ -14,11 +14,16 @@ import { privateWorkspaceHistorySchema, privateWorkspaceResultSchema,
   type PrivateWorkspaceHistory, type PrivateWorkspaceResult } from "@/lib/a2a/private-workspace";
 import { ResearchPrivateResult } from "./research-private-result";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_ownedHistoryCopy = ownedHistoryCopy;
 
-const message = createMessages("en");
+
+
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 export function ResearchPrivateJobs() {
+  const message = useUiMessages();
+  const ownedHistoryCopy = useUiCopy("owned-history", uiEnglish_ownedHistoryCopy);
   const { session } = useSiweAuth();
   return <section aria-labelledby="private-jobs-heading" className="border border-line bg-paper p-6">
     <h2 id="private-jobs-heading" className="font-display text-3xl">{message("privateResearchJobs.title")}</h2>
@@ -32,6 +37,7 @@ export function ResearchPrivateJobs() {
 }
 
 function PrivateJobs({ wallet }: { wallet: string }) {
+  const message = useUiMessages();
   const [request, setRequest] = useState<{ cursor: PrivateWorkspaceHistory["nextCursor"]; revision: number }>({ cursor: null, revision: 0 });
   const [history, setHistory] = useState<PrivateWorkspaceHistory | null>(null);
   const [selection, setSelection] = useState<{ job: PrivateWorkspaceHistory["jobs"][number]; revision: number } | null>(null);

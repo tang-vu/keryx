@@ -4,16 +4,20 @@ import { useEffect, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { readBoundedJson } from "@/lib/read-bounded-json";
-import { createMessages } from "@/lib/i18n/messages";
+
 import { CLAIMANT_HISTORY_DETAIL_MAX_BYTES, parseClaimantHistoryDetail, parseClaimantHistoryPage, type ClaimantHistoryDetail,
   type ClaimantHistoryPage, type ClaimantHistoryRow, type HistoryDisplayIdentity } from "./claimant-history-contract";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const message = createMessages("en");
+
+
+
 const buttonClass = "min-h-11 border border-line px-4 text-sm";
 type ReadState<T> = { key: string; status: "ready"; value: T } | { key: string; status: "unavailable" | "changed" | "signed-out" };
 const failure = (status: number) => status === 409 ? "changed" : status === 401 ? "signed-out" : "unavailable";
 
 export function ClaimantHistoryPane() {
+  const message = useUiMessages();
   const { session } = useSiweAuth();
   if (session === undefined) return <p role="status">{message("claimantHistory.checking")}</p>;
   if (!session || !/^0x[0-9a-fA-F]{40}$/.test(session.address)) return <p role="status">{message("claimantHistory.signedOut")}</p>;
@@ -24,6 +28,7 @@ export function ClaimantHistoryPane() {
 }
 
 export function ClaimantHistoryView({ owner, network }: { owner: string; network: string }) {
+  const message = useUiMessages();
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
   const [revision, setRevision] = useState(0);
   const [result, setResult] = useState<ReadState<ClaimantHistoryPage> | null>(null);
@@ -81,12 +86,14 @@ export function ClaimantHistoryView({ owner, network }: { owner: string; network
 }
 
 function OwnershipLabel({ ownership }: { ownership: ClaimantHistoryRow["ownership"] }) {
+  const message = useUiMessages();
   return <p className="text-xs text-ink-2">{ownership.method === "claimed" ? message("claimantHistory.claimed") : message("claimantHistory.recorded")}
     {ownership.method === "claimed" && <> · {message("claimantHistory.claimedAt", { date: ownership.claimedAt })}</>}
   </p>;
 }
 
 function ClaimantHistorySavedRun({ identity, selected, close }: { identity: HistoryDisplayIdentity; selected: ClaimantHistoryRow; close(): void }) {
+  const message = useUiMessages();
   const { owner, network, origin } = identity;
   const requestKey = JSON.stringify({ owner, network, origin, id: selected.id });
   const [result, setResult] = useState<ReadState<ClaimantHistoryDetail> | null>(null);

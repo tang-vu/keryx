@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import { setupCopy } from "@/locales/en/get-started";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_setupCopy = setupCopy;
+
 
 /** Copy-only examples: displaying or copying never executes a command. */
 export function SetupCode({ title, value }: { title: string; value: string }) {
+  const setupCopy = useUiCopy("get-started", uiEnglish_setupCopy);
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
   async function copy() {
     try { await navigator.clipboard.writeText(value); setStatus("copied"); }

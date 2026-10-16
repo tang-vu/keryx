@@ -6,8 +6,8 @@
  * Both use the connected creator wallet and preserve the initiating draft through SIWE.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useCallback, useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import Link from "next/link";
@@ -31,11 +31,15 @@ import {
 } from "@/components/keryx/sources-list";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { registrationConnectHref, registrationDraft, registrationTarget, type RegistrationDraft } from "@/lib/registration-return";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 export default function RegisterPage() {
+  const uiCopy = useUiMessages();
   const [restored, setRestored] = useState<{ draft: RegistrationDraft; error: string } | null>(null);
   useEffect(() => {
     try { setRestored({ draft: registrationDraft(new URLSearchParams(window.location.search)), error: "" }); }
@@ -48,6 +52,8 @@ export default function RegisterPage() {
 }
 
 function WalletFundedRegistrationPage({ initial }: { initial: RegistrationDraft }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const { address, isConnected, chainId } = useAccount();
   const profile = browserPaymentProfile();
   const { session } = useSiweAuth();

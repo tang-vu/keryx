@@ -1,18 +1,22 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { formatRecordedUsdc } from "@/lib/i18n/format";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PaymentRecord } from "@/lib/types";
 import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { recordedArcLabel } from "@/lib/arc-network-display";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 type State = "loading" | "ready" | "empty" | "error";
 
 export function DispatchWire() {
+  const copy = useUiMessages();
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [state, setState] = useState<State>("loading");
   const requestId = useRef(0);

@@ -67,6 +67,22 @@
     "humanBody": {
       "source": "Share the original job ID, original payment reference and last recorded stage privately with the owner. This page has not contacted a responder. Uncertain legs require original-only review before any remedy.",
       "text": "Chia sẻ riêng với chủ sở hữu ID tác vụ ban đầu, tham chiếu thanh toán ban đầu và giai đoạn ghi nhận gần nhất. Trang này chưa liên hệ người xử lý. Các khoản chưa rõ cần được xem xét chỉ từ bản gốc trước khi khắc phục."
+    },
+    "reviewBody": {
+      "source": "The last server observation records a failure or a review-required status while the original target has not elapsed. Keep the original job for review; this does not establish current delivery or authorize recovery spending.",
+      "text": "Quan sát gần nhất từ máy chủ ghi nhận lỗi hoặc trạng thái cần xem xét khi mốc hoàn thành ban đầu chưa tới. Giữ công việc gốc để xem xét; điều này không chứng minh việc giao hiện tại hay cho phép chi phí phục hồi."
+    },
+    "reviewObservation": {
+      "source": "Review is based on the retained server status, not a deadline crossing. This page does not mean that a person has been notified or received the job.",
+      "text": "Việc xem xét dựa trên trạng thái máy chủ được lưu lại, không phải do đã qua hạn. Trang này không có nghĩa là một người đã được thông báo hoặc đã nhận công việc."
+    },
+    "reviewTerms": {
+      "source": "A recorded failure or review-required status may need attention before the target elapses. Review does not restart the original target.",
+      "text": "Lỗi hoặc trạng thái cần xem xét được ghi nhận có thể cần xử lý trước khi tới mốc hoàn thành. Việc xem xét không đặt lại mốc ban đầu."
+    },
+    "reviewTitle": {
+      "source": "This job needs review before its completion target.",
+      "text": "Công việc này cần xem xét trước mốc hoàn thành."
     }
   }
 }

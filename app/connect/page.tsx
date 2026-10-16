@@ -30,13 +30,18 @@ import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { sourceReturnWithOwner, safeRegistrationReturn, registrationOwnerMatches } from "@/lib/registration-return";
 import { AccountSessions } from "@/components/keryx/account-sessions";
 import { CircleGoogleCallback, CircleGoogleWalletButton } from "@/components/keryx/circle-google-wallet";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
+
 
 export default function ConnectPage() {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const { disconnect, disconnectAsync } = useDisconnect();
   const chainGuard = useArcChainGuard();
   const { address, isConnected, session, authState, signIn, signOut, refresh } = useSiweAuth();

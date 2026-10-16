@@ -3,5 +3,174 @@
   "review": null,
   "sourcePath": "locales/en/topic-watches.ts",
   "sourceSha256": "da619acd121f4e293b428684dc8d402443b4ac2c578719dc67f7374a7fc447a2",
-  "entries": {}
+  "entries": {
+    "topicWatch.accountChanged": {
+      "source": "Account changed. Refresh to verify this session.",
+      "text": "Tài khoản đã đổi. Làm mới để xác minh phiên này."
+    },
+    "topicWatch.authors": {
+      "source": "Authors, comma separated (optional, up to 4)",
+      "text": "Tác giả, ngăn cách bằng dấu phẩy (tùy chọn, tối đa 4)"
+    },
+    "topicWatch.cadence": {
+      "source": "Minimum minutes between manual check slots",
+      "text": "Số phút tối thiểu giữa các mốc kiểm tra thủ công"
+    },
+    "topicWatch.cancel": {
+      "source": "Cancel watch",
+      "text": "Hủy theo dõi"
+    },
+    "topicWatch.cancelled": {
+      "source": "Cancellation is retained. This watch ID cannot be reused.",
+      "text": "Đã lưu việc hủy. Không thể dùng lại ID theo dõi này."
+    },
+    "topicWatch.check": {
+      "source": "Check local metadata now",
+      "text": "Kiểm tra siêu dữ liệu cục bộ ngay"
+    },
+    "topicWatch.checking": {
+      "source": "Checking account…",
+      "text": "Đang kiểm tra tài khoản…"
+    },
+    "topicWatch.checks": {
+      "source": "Maximum checks per period",
+      "text": "Số lần kiểm tra tối đa mỗi kỳ"
+    },
+    "topicWatch.close": {
+      "source": "Close editor",
+      "text": "Đóng trình chỉnh sửa"
+    },
+    "topicWatch.consent": {
+      "source": "I consent to manual local metadata checks with zero spending. No scheduled operation is enabled.",
+      "text": "Tôi đồng ý kiểm tra siêu dữ liệu cục bộ theo cách thủ công với mức chi bằng không. Không bật thao tác theo lịch nào."
+    },
+    "topicWatch.create": {
+      "source": "Create watch",
+      "text": "Tạo theo dõi"
+    },
+    "topicWatch.createTitle": {
+      "source": "Create a private watch",
+      "text": "Tạo theo dõi riêng tư"
+    },
+    "topicWatch.edit": {
+      "source": "Edit settings",
+      "text": "Sửa cài đặt"
+    },
+    "topicWatch.editTitle": {
+      "source": "Edit unchecked watch",
+      "text": "Sửa theo dõi chưa được kiểm tra"
+    },
+    "topicWatch.empty": {
+      "source": "No private watches saved.",
+      "text": "Chưa lưu theo dõi riêng tư nào."
+    },
+    "topicWatch.expiry": {
+      "source": "Expires in days",
+      "text": "Hết hạn sau số ngày"
+    },
+    "topicWatch.heartbeat": {
+      "source": "Show a quiet line when nothing changes",
+      "text": "Hiện dòng trạng thái ngắn khi không có thay đổi"
+    },
+    "topicWatch.history": {
+      "source": "Check history ({count})",
+      "text": "Lịch sử kiểm tra ({count})"
+    },
+    "topicWatch.keywordValues": {
+      "source": "Keywords: {keywords}",
+      "text": "Từ khóa: {keywords}"
+    },
+    "topicWatch.keywords": {
+      "source": "Title keywords, comma separated (up to 8)",
+      "text": "Từ khóa tiêu đề, ngăn cách bằng dấu phẩy (tối đa 8)"
+    },
+    "topicWatch.listUnavailable": {
+      "source": "Watch list unavailable",
+      "text": "Danh sách theo dõi không khả dụng"
+    },
+    "topicWatch.menu": {
+      "source": "Private topic watches",
+      "text": "Theo dõi chủ đề riêng tư"
+    },
+    "topicWatch.metadataTitle": {
+      "source": "Private topic watches | Keryx",
+      "text": "Theo dõi chủ đề riêng tư · Keryx"
+    },
+    "topicWatch.missed": {
+      "source": "{count} missed slots retained; no catch-up was run.",
+      "text": "Đã giữ lại {count} mốc bị lỡ; không chạy bù."
+    },
+    "topicWatch.missedHistory": {
+      "source": "Missed slots {fromSlot}–{toSlot}; no catch-up",
+      "text": "Mốc bị lỡ {fromSlot}–{toSlot}; không chạy bù"
+    },
+    "topicWatch.newMatches": {
+      "source": "; {count} new lexical matches",
+      "text": "; {count} kết quả khớp từ vựng mới"
+    },
+    "topicWatch.pause": {
+      "source": "Pause",
+      "text": "Tạm dừng"
+    },
+    "topicWatch.period": {
+      "source": "Period in days",
+      "text": "Kỳ tính theo ngày"
+    },
+    "topicWatch.question": {
+      "source": "Review question",
+      "text": "Câu hỏi cần xem xét"
+    },
+    "topicWatch.refresh": {
+      "source": "Refresh watches",
+      "text": "Làm mới theo dõi"
+    },
+    "topicWatch.requestUnavailable": {
+      "source": "Watch request unavailable",
+      "text": "Yêu cầu theo dõi không khả dụng"
+    },
+    "topicWatch.result": {
+      "source": "{status}{code}. Paid requests: {paidRequests}.",
+      "text": "{status}{code}. Yêu cầu trả phí: {paidRequests}."
+    },
+    "topicWatch.resume": {
+      "source": "Resume",
+      "text": "Tiếp tục"
+    },
+    "topicWatch.retry": {
+      "source": "{message}. Refresh before retrying; an unconfirmed write may have completed.",
+      "text": "{message}. Làm mới trước khi thử lại; thao tác ghi chưa được xác nhận có thể đã hoàn tất."
+    },
+    "topicWatch.save": {
+      "source": "Save settings",
+      "text": "Lưu cài đặt"
+    },
+    "topicWatch.scope": {
+      "source": "Manual checks compare the local curated scholarly catalog. They do not search for newly published papers or read paper bodies. Spend: 0 USDC; spending capacity: 0. Scheduling and funded watches are unavailable.",
+      "text": "Kiểm tra thủ công so sánh danh mục học thuật tuyển chọn cục bộ. Không tìm bài vừa xuất bản hay đọc nội dung bài. Chi: 0 USDC; khả năng chi: 0. Chưa có theo dõi theo lịch hoặc được cấp vốn."
+    },
+    "topicWatch.signIn": {
+      "source": "Sign in to manage private watches",
+      "text": "Đăng nhập để quản lý theo dõi riêng tư"
+    },
+    "topicWatch.slotHistory": {
+      "source": "Slot {slot}: {status}{reason}{matches}",
+      "text": "Mốc {slot}: {status}{reason}{matches}"
+    },
+    "topicWatch.state": {
+      "source": "{status} · revision {revision} · expires {expires} · spend 0 USDC",
+      "text": "{status} · phiên bản {revision} · hết hạn {expires} · chi 0 USDC"
+    },
+    "topicWatch.title": {
+      "source": "Private topic watches",
+      "text": "Theo dõi chủ đề riêng tư"
+    },
+    "topicWatch.unavailable": {
+      "source": "Request unavailable",
+      "text": "Yêu cầu không khả dụng"
+    },
+    "topicWatch.venues": {
+      "source": "Venues, comma separated (optional, up to 4)",
+      "text": "Nơi xuất bản, ngăn cách bằng dấu phẩy (tùy chọn, tối đa 4)"
+    }
+  }
 }

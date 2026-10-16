@@ -17,12 +17,16 @@ import { CurrentHistoryPane } from "./current-history-view";
 import { ClaimantHistoryPane } from "./claimant-history-view";
 import { personalHistoryCopy as copy } from "@/locales/en/personal-history";
 import { ownedHistoryCopy } from "@/locales/en/owned-history";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
-import { selectPlural } from "@/lib/i18n/format";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+import { selectPlural } from "@/lib/i18n/format";
+import { useUiCopy, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+const uiEnglish_ownedHistoryCopy = ownedHistoryCopy;
+
+
+
+
 
 interface AskCreator {
   sourceId: string;
@@ -61,6 +65,9 @@ function timeAgo(iso: string) {
 }
 
 export function MyAsksView() {
+  const message = useUiMessages();
+  const copy = useUiCopy("personal-history", uiEnglish_copy);
+  const ownedHistoryCopy = useUiCopy("owned-history", uiEnglish_ownedHistoryCopy);
   const [historical, setHistorical] = useState(false);
   const [browse, setBrowse] = useState(false);
   const [claimantHistory, setClaimantHistory] = useState(false);
@@ -80,6 +87,8 @@ export function MyAsksView() {
 }
 
 export function MyAsksLedger({ historical }: { historical: boolean }) {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const [loading, setLoading] = useState(true);
   const [signedOut, setSignedOut] = useState(false);
   const [asks, setAsks] = useState<AskRow[]>([]);

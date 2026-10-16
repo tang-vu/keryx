@@ -7,11 +7,14 @@ import type { WithdrawalRecord } from "@/lib/types";
 import { CreatorCashoutsPanel } from "./creator-cashouts-panel";
 import { RegistryStatusSection, type RegistryHealth } from "./registry-status-section";
 import { SettlementProofSection, type SettlementHealth } from "./settlement-proof-section";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
+
 
 const REPO = "https://github.com/tang-vu/keryx";
 
@@ -63,6 +66,8 @@ function EvidenceLink({ href, children }: { href: string; children: React.ReactN
 }
 
 export function ProofDashboard() {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const [health, setHealth] = useState<ProofHealth | null>(null);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
   const [reachable, setReachable] = useState(true);

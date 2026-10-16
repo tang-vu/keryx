@@ -4,6 +4,7 @@ import { lstatSync, readdirSync, readFileSync, realpathSync, writeFileSync } fro
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { generateUiPreviews } from "./generate-ui-previews.mjs";
 
 // Parse source only. Do not load application modules, credentials or JSX runtimes.
 const ts = createRequire(import.meta.url)("typescript");
@@ -127,9 +128,17 @@ export function extractUiCopy(filename, source) {
     if (ts.isJsxAttribute(node) && textAttributes.has(node.name.getText(ast)) && node.initializer) {
       rendered(ts.isJsxExpression(node.initializer) ? node.initializer.expression : node.initializer, "attribute");
     }
+    if (ts.isJsxAttribute(node) && node.name.getText(ast) === "source" &&
+      node.parent.parent.tagName?.getText(ast) === "UiText" && node.initializer) {
+      rendered(ts.isJsxExpression(node.initializer) ? node.initializer.expression : node.initializer, "jsx-expression");
+    }
     if (ts.isJsxExpression(node) && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))) rendered(node.expression, "jsx-expression");
     if (ts.isPropertyAssignment(node)) {
       const name = propertyName(node.name);
+      if (textAttributes.has(name) && ts.isObjectLiteralExpression(node.parent) &&
+        ts.isJsxExpression(node.parent.parent) && ts.isJsxAttribute(node.parent.parent.parent) &&
+        node.parent.parent.parent.name.getText(ast) === "attributes" &&
+        node.parent.parent.parent.parent.parent.tagName?.getText(ast) === "UiElement") rendered(node.initializer, "attribute");
       const metadata = insideMetadata(node);
       const title = metadata && name === "title" ? constantExpression(node.initializer) : undefined;
       if (title && ts.isObjectLiteralExpression(title)) {
@@ -478,6 +487,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     requireCondition(args.length === 0 || (args.length === 1 && args[0] === "--write-baseline"), "Usage: node scripts/check-ui-copy.mjs [--write-baseline]");
     const scan = scanRepository();
     for (const draft of scanNamespaceDrafts()) console.log(`${draft.locale}: ${draft.authoredEntries} machine-draft entries, ${draft.nonTranslatableMachineIdentifiers} preserved identifiers, ${draft.uncoveredEntries} uncovered; no human approval or activation.`);
+    generateUiPreviews(true);
     if (args.length) {
       requireCondition(!process.env.CI && !process.env.GITHUB_ACTIONS, "CI cannot rewrite the UI copy baseline");
       requireCondition(execFileSync("git", ["diff", "--name-only", "HEAD", "--", ...scopes],

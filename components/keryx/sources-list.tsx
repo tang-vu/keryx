@@ -5,14 +5,17 @@
  * (mono short), and author splits when there is more than one author.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { Wallet, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { fmtUsdc, shortAddr } from "./phase-style";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 export interface SourceCardData {
   evidenceProvenance?: "synthetic-demo";
@@ -34,6 +37,7 @@ export interface SourceCardData {
 }
 
 export function SourcesList({ sources }: { sources: SourceCardData[] }) {
+  const copy = useUiMessages();
   if (sources.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-line py-10 text-center text-sm text-ink-3">

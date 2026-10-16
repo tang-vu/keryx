@@ -19,6 +19,9 @@ import { decisionReviewCopy as reviewCopy } from "@/lib/research/decision-review
 import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/hooks/use-research-visibility";
 import type { RunVisibility } from "@/lib/run-privacy/contracts";
 import { ResearchVisibilityPicker } from "./research-visibility-picker";
+import { UiText, useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 // Catalogue adoption only. Interface locale and request data remain unchanged.
 const message = createMessages("en");
@@ -101,6 +104,7 @@ const SUGGESTIONS = [
 ];
 
 export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, questionCapUsdc, restoreQuestion, showLaunchBadge = false }: AskFormProps) {
+  const message = useUiMessages();
   const ownVisibility = useResearchVisibility(parentVisibility, { enabled: !publicationPreference });
   const visibility = publicationPreference ?? ownVisibility;
   const [draft, setDraft] = useState<{ question: string; wallet: string | null; revision: number } | null>(null);
@@ -338,7 +342,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
             {SUGGESTIONS.map((s) => (
               <button key={s.label} type="button" disabled={disabled} onClick={() => setQuestion(s.q)}
                 className="min-h-11 max-w-full border border-line bg-paper px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
-                {s.label}
+                <UiText source={s.label} />
               </button>
             ))}
           </div>}

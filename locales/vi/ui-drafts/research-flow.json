@@ -1175,6 +1175,38 @@
     "researchVisibility.openResearch": {
       "source": "Open research on Keryx",
       "text": "Mở nghiên cứu trên Keryx"
+    },
+    "researchVisibility.embedNotice": {
+      "source": "This embedded widget publishes public research. Open Keryx to ask a private or unlisted question.",
+      "text": "Tiện ích nhúng này công bố nghiên cứu công khai. Mở Keryx để đặt câu hỏi riêng tư hoặc không niêm yết."
+    },
+    "researchVisibility.followUp": {
+      "source": "A follow-up keeps hidden parent context at the same or more private visibility. Start a new question to choose Public.",
+      "text": "Câu hỏi tiếp nối giữ ngữ cảnh cha bị ẩn ở mức riêng tư tương đương hoặc cao hơn. Bắt đầu câu hỏi mới để chọn Công khai."
+    },
+    "researchVisibility.privateNotice": {
+      "source": "Only your signed-in account can open this report. Keryx and the configured AI provider still process your question.",
+      "text": "Chỉ tài khoản đã đăng nhập của bạn mở được báo cáo này. Keryx và nhà cung cấp AI được cấu hình vẫn xử lý câu hỏi của bạn."
+    },
+    "researchVisibility.publicNotice": {
+      "source": "Your question, answer, citations and payment references will appear in public history. Do not include confidential information.",
+      "text": "Câu hỏi, câu trả lời, trích dẫn và tham chiếu thanh toán sẽ xuất hiện trong lịch sử công khai. Đừng đưa thông tin bí mật vào."
+    },
+    "researchVisibility.questionOnly": {
+      "source": "This choice applies to this question. Your saved account default stays unchanged.",
+      "text": "Lựa chọn này chỉ áp dụng cho câu hỏi này. Mặc định đã lưu của tài khoản không thay đổi."
+    },
+    "researchVisibility.signIn": {
+      "source": "Sign in to choose Private and keep access to your saved answer.",
+      "text": "Đăng nhập để chọn Riêng tư và giữ quyền truy cập câu trả lời đã lưu."
+    },
+    "researchVisibility.unavailable": {
+      "source": "Visibility settings are unavailable. Retry before submitting your question.",
+      "text": "Cài đặt hiển thị không khả dụng. Hãy thử lại trước khi gửi câu hỏi."
+    },
+    "researchVisibility.unlistedNotice": {
+      "source": "Anyone with this report's link can read it. It stays out of public lists.",
+      "text": "Bất kỳ ai có liên kết báo cáo đều đọc được. Báo cáo không xuất hiện trong danh sách công khai."
     }
   }
 }

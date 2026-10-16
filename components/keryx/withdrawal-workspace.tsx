@@ -1,7 +1,7 @@
 "use client";
 import { formatAmount } from "@/lib/i18n/format";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { parseUnits } from "viem";
 import { withdrawPolicySchema, type WithdrawPolicy } from "@/lib/gateway/withdraw-protocol";
@@ -10,8 +10,11 @@ import { prepareWithdrawalBrowserDraft } from "@/lib/gateway/withdrawal-browser-
 import { WithdrawalReviewPanel } from "./withdrawal-review-panel";
 import { WithdrawalRecoveryPanel } from "./withdrawal-recovery-panel";
 import type { signWithdrawalBrowserDraft } from "@/lib/gateway/withdrawal-browser-flow";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 type Wallet = Parameters<typeof signWithdrawalBrowserDraft>[2];
 type Limits = Omit<WithdrawPolicy, "owner" | "recipient">;
@@ -22,6 +25,7 @@ const button = "rounded border border-current px-4 py-2 text-sm disabled:opacity
 export function WithdrawalWorkspace({ address, wallet, limits }: {
   address: string | null; wallet: Wallet | null; limits: Limits | null;
 }) {
+  const uiCopy = useUiMessages();
   const parsed = withdrawalOwnerSchema.safeParse(address);
   if (!parsed.success || !wallet || wallet.account?.address.toLowerCase() !== parsed.data)
     return <p>{uiCopy("withdrawalWorkspace.connect")}</p>;
@@ -33,6 +37,7 @@ export function WithdrawalWorkspace({ address, wallet, limits }: {
 }
 
 function OwnerWorkspace({ owner, wallet, limits }: { owner: string; wallet: Wallet; limits: Limits }) {
+  const uiCopy = useUiMessages();
   const [amount, setAmount] = useState(""), [id, setId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const active = useRef<AbortController | null>(null), gate = useRef(false);

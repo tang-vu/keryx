@@ -675,6 +675,13 @@ test("integration setup and playground copy is catalogued; protocols, URLs and e
   }
 });
 
+test("localized leaves and native attribute boundaries retain copy-guard coverage", () => {
+  const findings = extractUiCopy("components/example.tsx", `const Example = () => <><UiText source={"New label"} /><UiElement as="a" names={["title"]} attributes={{ title: "New tooltip", href: "/original", className: "layout-only" }}>child</UiElement></>;`);
+  assert(findings.some(finding => finding.text === "New label" && finding.kind === "jsx-expression"));
+  assert(findings.some(finding => finding.text === "New tooltip" && finding.kind === "attribute"));
+  assert(!findings.some(finding => ["/original", "layout-only"].includes(finding.text)));
+});
+
 test("dashboard notices, counts, payment labels and accessibility copy are catalogued", () => {
   for (const file of ["app/dashboard/page.tsx", "components/keryx/dashboard-view.tsx", "components/keryx/payments-feed.tsx"]) {
     assert.deepEqual(extractUiCopy(file, readFileSync(new URL(`../${file}`, import.meta.url), "utf8")), [], file);

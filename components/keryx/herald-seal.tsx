@@ -4,10 +4,13 @@
  * "K" holds the centre. States the thesis: the messenger is paid.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
-import { cn } from "@/lib/utils";
 
-const uiCopy = createMessages("en");
+import { cn } from "@/lib/utils";
+import { UiMessage } from "@/lib/i18n/ui-copy";
+
+
+
+
 
 export function HeraldSeal({ className }: { className?: string }) {
   return (
@@ -23,7 +26,7 @@ export function HeraldSeal({ className }: { className?: string }) {
           style={{ fontSize: 13, letterSpacing: "0.32em" }}
         >
           <textPath href="#eng-sealring" startOffset="0">
-            {uiCopy("brandPresentation.sealLegend", { brand: "KERYX", greekBrand: "ΚΗΡΥΞ" })}
+            <UiMessage plain messageKey={"brandPresentation.sealLegend"} values={{ brand: "KERYX", greekBrand: "ΚΗΡΥΞ" }} />
           </textPath>
         </text>
       </g>

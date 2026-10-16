@@ -3,12 +3,16 @@ import { useId } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { uiPreferenceCopy } from "@/locales/en/ui-preference";
 import type { UiLocale } from "@/lib/i18n/locales";
+import { useUiCopyFunction } from "@/lib/i18n/ui-copy";
+const uiEnglish_uiPreferenceCopy = uiPreferenceCopy;
+
 
 /** Reused in desktop header, mobile menu and footer; native select provides keyboard/AT behavior. */
 export function LanguageSwitcher() {
+  const uiPreferenceCopy = useUiCopyFunction("ui-preference", uiEnglish_uiPreferenceCopy);
   const id = useId(), { locale, ready, status, enabledLocales, selectLocale } = useLocale();
   const preview = locale !== "en";
-  return <div className="max-w-full py-1 font-mono text-[10px] text-ink-3" lang="en" data-language-switcher>
+  return <div className="max-w-full py-1 font-mono text-[10px] text-ink-3" lang={locale} data-language-switcher>
     <label htmlFor={id} className="sr-only">{uiPreferenceCopy("language")}</label>
     <select id={id} value={locale} disabled={!ready} onChange={event => selectLocale(event.target.value as UiLocale)}
       title={preview ? uiPreferenceCopy("previewNotice") : undefined}

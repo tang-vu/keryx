@@ -5,14 +5,18 @@ import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRecordedUsdc } from "@/lib/i18n/format";
-import { createMessages } from "@/lib/i18n/messages";
+
 import type { SourceLeaderboard as SourceLeaderboardData } from "@/lib/sources/source-leaderboard";
 import { shortAddr } from "./phase-style";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 /** Source identity and fee beneficiary are separate: a shared wallet never collapses rows. */
 export function SourceLeaderboard({ data, network }: { data: SourceLeaderboardData; network: string }) {
+  const copy = useUiMessages();
   const [query, setQuery] = useState("");
   const needle = query.trim().toLocaleLowerCase();
   const rows = data.rows.filter(row => !needle || `${row.sourceName} ${row.sourceId} ${row.walletAddress ?? ""} ${row.feeBeneficiaries.join(" ")}`.toLocaleLowerCase().includes(needle));

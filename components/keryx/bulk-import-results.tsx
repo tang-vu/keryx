@@ -9,13 +9,16 @@ import { SigningAmount } from "./signing-amount";
 
 import { createMessages } from "@/lib/i18n/messages";
 import { selectPlural } from "@/lib/i18n/format";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import { CheckCircle2, Loader2, XCircle, ShieldCheck, Copy, ExternalLink, PenLine } from "lucide-react";
 import { toast } from "sonner";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
 
 export type BulkPhase =
   | "ready"      // ingested, awaiting the creator's on-chain signature
@@ -73,6 +76,8 @@ export function BulkImportResults({
   onCheck: (rssUrl: string) => void;
   onHashChange: (rssUrl: string, hash: string) => void;
 }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   if (feeds.length === 0) return null;
   return (
     <ul className="divide-y divide-line border border-line bg-paper-2">
@@ -143,6 +148,7 @@ export function BulkVerifyPanel({
   verifying: boolean;
   onVerifyAll: () => void;
 }) {
+  const uiCopy = useUiMessages();
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(token);

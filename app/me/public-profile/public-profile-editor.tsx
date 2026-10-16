@@ -4,13 +4,18 @@ import { publicProfileCopy as copy } from "@/locales/en/public-profiles";
 import { useEffect,useRef,useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { PUBLIC_PROFILE_FIELDS,publicProfileInput,publicProfileSettings,type PublicProfileSettings } from "@/lib/profiles/public-profile";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 const labels=copy.fields;
-export function PublicProfileEditor(){const {session}=useSiweAuth();
+export function PublicProfileEditor(){
+  const copy = useUiCopy("public-profiles", uiEnglish_copy);const {session}=useSiweAuth();
   if(session===undefined)return <p role="status" className="mt-6">{copy.checking}</p>;
   if(!session)return <p className="mt-6"><Link className="underline" href="/connect">{copy.signIn}</Link> {copy.signInPurpose}</p>;
   return <Editor key={session.address.toLowerCase()} wallet={session.address.toLowerCase()}/>;
 }
 function Editor({wallet}:{wallet:string}){
+  const copy = useUiCopy("public-profiles", uiEnglish_copy);
   const [settings,setSettings]=useState<PublicProfileSettings|null>(null),[fields,setFields]=useState<Array<typeof PUBLIC_PROFILE_FIELDS[number]>>([]),[ids,setIds]=useState("");
   const [message,setMessage]=useState(""),[busy,setBusy]=useState(false),controller=useRef<AbortController|null>(null);
   useEffect(()=>{const owned=new AbortController();controller.current=owned;

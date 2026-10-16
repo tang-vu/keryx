@@ -20,6 +20,9 @@ import { currentArcLabel } from "@/lib/arc-network-display";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { useLedgerResource, type LedgerResource } from "@/lib/hooks/use-ledger-resource";
 import type { DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const message = createMessages("en");
 const uiCopy = message;
@@ -77,6 +80,7 @@ function publicCountBody(body: unknown): { publicQuestions: number } {
 }
 
 function ResourceNotice({ resource, label }: { resource: LedgerResource<unknown> & { retry: () => void }; label: string }) {
+  const uiRichCopy = useUiRichMessages();
   if (resource.status === "ready") return null;
   return <div role="status" className="mb-3 text-sm leading-relaxed text-ink-2">
     {resource.status === "loading" ? uiCopy("ledgerResource.loading", { label }) : resource.data !== null && resource.observedAt ? uiRichCopy("ledgerResource.unavailableWithObservation", { label, observed: <DisplayTime value={resource.observedAt} timeZone="UTC" timeStyle="medium" />, retry: <button type="button" onClick={resource.retry} className="min-h-11 px-2 text-seal underline">{uiCopy("ledgerResource.retry")}</button> }) : uiRichCopy("ledgerResource.unavailable", { label, retry: <button type="button" onClick={resource.retry} className="min-h-11 px-2 text-seal underline">{uiCopy("ledgerResource.retry")}</button> })}
@@ -93,6 +97,8 @@ function recordedTotal(kind: "questions" | "accounts" | "guests", count: number,
 }
 
 export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview: ReactNode; historyPreview?: ReactNode }) {
+  const message = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const metricsResource = useLedgerResource("/api/metrics", metricBody);
   const paymentsResource = useLedgerResource("/api/payments?limit=200", paymentBody);
   const withdrawalsResource = useLedgerResource("/api/withdrawals?limit=25", withdrawalBody);
