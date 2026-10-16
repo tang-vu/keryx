@@ -10,8 +10,10 @@ import { chromium } from "playwright";
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
 import { specialistBriefCopy as copy } from "../locales/en/specialist-briefs";
 import { SPECIALIST_BRIEF_IDS, specialistBriefs } from "../lib/research/specialist-briefs";
+import { parseResearchAvailability } from "../lib/research/availability-contract";
 
 const source = process.cwd();
+const available = parseResearchAvailability({ state: "not-paused" })!;
 const temporary = await mkdtemp(join(tmpdir(), "keryx-specialist-briefs-"));
 assert(resolve(temporary).startsWith(resolve(tmpdir()) + sep));
 const screenshots = process.env.KERYX_BRIEF_SCREENSHOT_DIR;
@@ -51,11 +53,18 @@ try {
     const context = await browser.newContext({ viewport: { width, height: 844 }, permissions: ["clipboard-read", "clipboard-write"] });
     const outbound: string[] = [];
     try {
+      // Model an already-counted landing so telemetry cannot issue an unrelated POST.
+      await context.addInitScript(() => {
+        sessionStorage.setItem(`keryx:activation:landing:${new Date().toISOString().slice(0, 10)}`, "1");
+      });
       await context.route("**/*", route => {
         const request = route.request(), url = new URL(request.url());
         if (url.origin !== origin || request.method() !== "GET") { outbound.push(request.url()); return route.abort(); }
         if (url.pathname.startsWith("/api/")) {
-          if (/\/api\/(?:ask(?:\/|$)|agent\/ask|source\/|cite\/)/u.test(url.pathname)) outbound.push(url.pathname);
+          if (url.pathname === "/api/ask/visibility") return route.fulfill({ json: { wallet: null, defaultVisibility: "public", privacyActive: false } });
+          // Open availability ensures a pause cannot mask accidental automatic research.
+          if (url.pathname === "/api/research/availability") return route.fulfill({ json: available });
+          if (/\/api\/(?:ask(?:\/|$)|agent\/ask|source\/|cite\/|research\/|session\/)/u.test(url.pathname)) outbound.push(url.pathname);
           return route.fulfill({ status: 503, json: { error: "Offline preparation fixture" } });
         }
         return route.continue();
@@ -75,6 +84,7 @@ try {
         assert(question.includes(specialistBriefs[track].instruction));
         assert(question.includes("Unread source leads:"));
         assert.equal(await page.getByRole("link", { name: copy.checkout, exact: true }).getAttribute("href"), "/research?mode=deep#paid-research");
+        assert.equal(await page.getByRole("link", { name: copy.trial, exact: true }).getAttribute("href"), "/?mode=deep#dispatch");
         const downloading = page.waitForEvent("download");
         await page.getByRole("button", { name: copy.download, exact: true }).click();
         const download = await downloading, downloadPath = await download.path(); assert(downloadPath);
@@ -121,10 +131,21 @@ try {
         await page.evaluate(async () => { window.scrollTo(0, 0); await document.fonts.ready; });
         await page.screenshot({ path: join(screenshots, `briefs-${width}.png`), fullPage: true });
       }
+      await page.getByLabel(copy.decision).fill("Synthetic sponsored trial handoff, not a live task.");
+      await page.getByRole("button", { name: copy.prepare, exact: true }).click();
+      await page.getByText(copy.handoff, { exact: true }).waitFor();
+      await page.getByRole("link", { name: copy.trial, exact: true }).click();
+      await page.waitForURL(origin + "/?mode=deep#dispatch");
+      await page.waitForFunction(() => document.querySelector<HTMLInputElement>('input[name="research-depth"][value="deep"]')?.checked === true);
+      await page.getByText(available.message, { exact: true }).waitFor();
+      await page.locator("#ask-question:enabled").waitFor();
+      assert.equal(await page.locator('input[name="research-depth"][value="quick"]').isChecked(), false);
+      assert.equal(await page.locator("#ask-question").inputValue(), "", "The request still requires explicit copy/paste");
+      assert.equal(await page.locator('[data-tour="dispatch-btn"]').isDisabled(), true);
       assert.deepEqual(outbound, []); assert.deepEqual(errors, []);
     } finally { await context.unrouteAll({ behavior: "wait" }); await context.close(); }
   }
-  console.log("PASS built specialist drafts: all three tracks, mobile layout, copy/download, unsafe-lead refusal, stale-result invalidation and no persistence; no research/payment requests.");
+  console.log("PASS built specialist drafts: all three tracks, mobile layout, copy/download, unsafe-lead refusal, stale-result invalidation, no persistence and empty Deep trial handoff; no research/payment requests.");
 } finally {
   await browser.close();
   if (child && !didExit) child.kill();

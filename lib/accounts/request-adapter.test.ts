@@ -90,10 +90,12 @@ describe("exact ordinary browser request authority", () => {
 
   it("refuses forged signature, issuer, audience, type, future/expired claims and zero wallet before durable reads", async () => {
     const now = Math.floor(Date.now() / 1000);
+    // Exercise the second boundary between building options and signing them.
+    vi.spyOn(Date, "now").mockReturnValue((now + 1) * 1000);
     for (const options of [
       { signingSecret: `${secret}-foreign` }, { issuer: "foreign" }, { audience: "foreign" }, { typ: "foreign" },
       { iat: now + 60, exp: now + 3600 }, { iat: now - 3600, exp: now },
-      { address: `0x${"0".repeat(40)}` }, { jti: "not-a-durable-login" }, { exp: now + 604801 },
+      { address: `0x${"0".repeat(40)}` }, { jti: "not-a-durable-login" }, { iat: now, exp: now + 604801 },
     ]) {
       const l = await login(options, false), response = await adapter().authenticate(request(l.token));
       expect(response).toBeInstanceOf(Response); expect((response as Response).status).toBe(401); assertPrivate(response as Response);
