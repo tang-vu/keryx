@@ -17,7 +17,7 @@ export const recordedPayment = Object.freeze({
   citationMicros: 25_000,
   pendingMicros: 0,
   failedMicros: 0,
-  /** Production SourceRegistry recorded in docs/mainnet-status.md. */
+  /** Retained V1 SourceRegistry for this October 8 receipt. Health reports V3, which has no active record for this source. */
   registryAddress: "0x42a64061b6cd84067bb660b2a9b8aa881fd225bb",
   circleTransferUrl: `${ARC_MAINNET_PROFILE.gatewayApiUrl}/v1/x402/transfers/${recordedWalkthrough.circleTransferId}`,
   rpcUrl: ARC_MAINNET_PROFILE.rpcUrl,

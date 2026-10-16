@@ -1,8 +1,17 @@
 # Supported-surface release parity
 
+## App 0.27.70 delivered — October 16
+
+Production web is app **0.27.70** at commit `2dda3717`
+([v0.27.70](https://github.com/tang-vu/keryx/releases/tag/v0.27.70)).
+That release note publishes MCP **0.4.25** and Operator Desktop **0.4.23**
+assets from the same source. Hosted MCP stays **0.3.18**. The extension stays
+**0.1.4.2**. Owner Desktop installation was not verified in that note.
+The October 15 section below is the 0.27.68 delivery record.
+
 ## App68 public-research delivery — October 15
 
-Production app/OpenAPI **0.27.68 /d1b3aff6** is live after one combined deployment
+Production app/OpenAPI **0.27.68 /d1b3aff6** went live on October 15 after one combined deployment
 and the exact maintenance clear. Public health, OpenAPI and homepage returned
 HTTP 200. Published stdio/npm/Registry **0.4.23** and Desktop **0.4.21** bind that
 same source, with exact-main acceptance, downloaded asset/hash checks and npm

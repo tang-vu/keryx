@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/operations.ts",
-  "sourceSha256": "6a2db103f1003ae55264ad3969db6e55c281905277c58dfe1b747e6a8b67cdfc",
+  "sourceSha256": "b6cff5c5b55ca0204e3e1bc001e742da7762f9749fe776e5c78334eeea78a7ae",
   "entries": {
     "statusRegistry.parityMatch": {
       "source": "{compared}/{compared} match · {checkedAgo}",
@@ -957,7 +957,7 @@
       "text": "开源构建"
     },
     "proofDashboard.queryCountIncludesAllRecordedUseOnlySettled": {
-      "source": "Query count includes all recorded use. Only settled records count. Keryx operating fees and creator rewards are shown separately.",
+      "source": "Query count includes all recorded use. Only settled records count. Keryx operating fees and creator rewards are shown separately. The settlement-parity block is a separate, older check and can remain an empty ledger without confirming these totals.",
       "text": "查询数包括全部记录使用。仅已结算记录计入。Keryx 运营费与创作者奖励分别显示。"
     },
     "proofDashboard.tractionLedgerUnavailable": {
@@ -1205,7 +1205,7 @@
       "text": "检查于 {checkedAt}"
     },
     "statusSettlement.noSettledOutboundPaymentsWereRecordedAtThis": {
-      "source": "No settled outbound payments were recorded at this check. Circle balances were not queried; this does not prove payment readiness or settlement.",
+      "source": "No settled outbound payments were recorded at this check. Circle balances were not queried; this does not prove payment readiness or settlement. Traction totals elsewhere are a separate projection and are not confirmed by this empty ledger.",
       "text": "此次检查没有已结算对外付款记录。未查询 Circle 余额；这不证明付款就绪或结算。"
     },
     "statusSettlement.settlementEmptyLedger": {

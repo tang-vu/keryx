@@ -1,14 +1,26 @@
 # MCP package distribution
 
+## App 0.27.70 delivered — October 16
+
+[v0.27.70](https://github.com/tang-vu/keryx/releases/tag/v0.27.70) is the delivered
+web app at commit `2dda3717`. The release note publishes MCP **0.4.25** and
+Operator Desktop **0.4.23** assets from that source. Hosted MCP stays **0.3.18**.
+The extension stays **0.1.4.2**. Owner Desktop installation was not verified.
+The preparation sections below preceded that delivery. They are not a second claim
+that publication is still pending.
+
 ## App70 migration recovery cohort in preparation — October 16
+
+This preparation record preceded the October 16 delivery above.
 
 App/OpenAPI **0.27.70** separates the migration's streamed 64 MiB framed-byte
 budget from enrollment's 32 MiB encoded-row budget. File, raw-byte, field, row,
 deadline, schema, identity and financial checks retain their existing limits.
 Stdio **0.4.25** and Desktop **0.4.23** prepare the same corrected source cohort;
 hosted MCP **0.3.18** and extension **0.1.4.2** keep their established contracts.
-Exact-source CI, publication readback and VPS verification remain required before
-delivery is claimed. This preparation grants no spending, custody or scheduling
+Exact-source CI, publication readback and VPS verification were still required
+when this note was written. The delivered section above records the later result.
+This preparation grants no spending, custody or scheduling
 authority.
 
 ## App69 coordinated release in preparation — October 16
@@ -19,8 +31,9 @@ after interrupted streams, account-owned pending purchase history, and profile
 metadata and layout fixes. Stdio **0.4.24** and Desktop **0.4.22** refresh the
 distribution cohort from the same source without adding local client authority.
 Hosted MCP **0.3.18** and extension **0.1.4.2** retain their established contracts.
-Deployment, artifact publication and readback, and owner installation remain
-separate checks; this preparation record does not claim delivery. Existing
+Deployment, artifact publication and readback, and owner installation remained
+separate checks when this note was written. The delivered section above is the
+later record. Existing
 spending limits, custody, private holds and schedules remain in force.
 
 ## App68 public-research distribution delivered — October 15
