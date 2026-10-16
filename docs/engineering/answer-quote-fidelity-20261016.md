@@ -13,6 +13,12 @@ markup merely because it starts and ends with delimiter characters. Original
 offsets, sentinel bytes, quote language spans and real citation controls remain.
 Grounding, stored answer/quote text and payment/reward guards are unchanged.
 
+Existing dispatch-language DOM fixtures for the escaped quote and heading also
+expected their literal delimiters to disappear. Their expected displayed/original
+text now retains those exact punctuation bytes, and explicitly refuses accidental
+emphasis/code elements. All generated/original language-range, citation and
+provenance assertions remain; ordinary unescaped Markdown keeps its formatting.
+
 The affected consumers are web answer cards, saved dispatch reports and embedded
 reports. Extensions that open hosted reports receive the same reader correction.
 Native desktop plain-text results, CLI, API, remote/stdio MCP and bot payloads
