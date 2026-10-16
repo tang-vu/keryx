@@ -43,7 +43,7 @@ it("admits original markdown as inert text while preserving URL and bounds", asy
   expect(result).toMatchObject({ finalUrl: "https://example.org/pricing", kind: "text", truncated: true });
   expect(result.text).toHaveLength(60000);
   expect(result.text).toContain("does not include backups");
-  expect(transport).toHaveBeenLastCalledWith("https://example.org/pricing", expect.objectContaining({ maxBytes: 2 * 1024 * 1024, timeoutMs: 8000, maxHops: 3, httpsOnly: true, allowedContentTypes: expect.arrayContaining(["text/markdown"]) }));
+  expect(transport).toHaveBeenLastCalledWith("https://example.org/pricing", expect.objectContaining({ representation: "article", maxBytes: 2 * 1024 * 1024, timeoutMs: 8000, maxHops: 3, httpsOnly: true, allowedContentTypes: expect.arrayContaining(["text/markdown"]) }));
   transport.mockResolvedValueOnce({ contentType: "text/markdown", finalUrl: "https://example.org/pricing", bytes: new Uint8Array(500001) });
   await expect(readArticle("https://example.org/pricing")).rejects.toMatchObject({ code: "article-byte-limit" });
 });
