@@ -185,7 +185,7 @@ async function saved(options: Parameters<typeof fixture>[0] = {}) {
 
 // Only disposable fixture configuration, installed before importing the selected
 // application boundary. No runtime flag toggle, provider call or proof replacement.
-async function selectedFacade(f: ReturnType<typeof fixture>, privacyActive = true, publicActive = true) {
+async function selectedFacadeModules(f: ReturnType<typeof fixture>, privacyActive = true, publicActive = true) {
   vi.resetModules();
   const registry = `0x${"12".repeat(20)}`;
   for (const [key, value] of Object.entries({
@@ -200,15 +200,27 @@ async function selectedFacade(f: ReturnType<typeof fixture>, privacyActive = tru
     KERYX_PUBLIC_PROFILES_ENABLED: String(publicActive), KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED: "false",
   })) vi.stubEnv(key, value);
   const application = await import("./application-storage"), api = await import("./enrolled-sqlite-adapter");
+  return { application, api };
+}
+type SelectedApplication = Awaited<ReturnType<typeof selectedFacadeModules>>["application"];
+async function selectedWriter(application: SelectedApplication) {
   const writer = await application.createApplicationStorage();
   if (!writer || !("close" in writer) || typeof writer.close !== "function") throw new Error("Selected native writer required");
   const closeWriter = writer.close;
   connections.push({ close: () => { closeWriter(); } });
+  return writer;
+}
+async function selectedReader(application: SelectedApplication) {
   const reader = await application.createReadonlyApplicationStorage();
   if (!reader) throw new Error("Selected native reader required");
   let readerClosed = false;
   const closeReader = () => { if (!readerClosed) { application.closeReadonlyApplicationStorage(reader); readerClosed = true; } };
   connections.push({ close: closeReader });
+  return { reader, closeReader };
+}
+async function selectedFacade(f: ReturnType<typeof fixture>, privacyActive = true, publicActive = true) {
+  const { application, api } = await selectedFacadeModules(f, privacyActive, publicActive);
+  const writer = await selectedWriter(application), { reader, closeReader } = await selectedReader(application);
   return { writer, reader, closeReader, api, application };
 }
 
@@ -292,10 +304,20 @@ describe("#264 actual selected application publicProfiles facade (authored; UNRU
     });
   });
 
-  it("selected readonly genuine ports refuse mutations before SQL and retain healthy publication/owner readers through visibility and erasure", async () => {
-    const f = await saved(); await f.change("public", "public"); await f.change("reader", "public");
-    await f.port.update(actor, input(["public", "reader", "private"], ["displayName", "ledgers"]));
-    const selected = await selectedFacade(f), reader = selected.reader, before = originals(f.file), financial = financialOriginals(f.file);
+  describe("selected readonly genuine ports with independent cold fixture setup", () => {
+    let f: Awaited<ReturnType<typeof saved>>, selected: Awaited<ReturnType<typeof selectedFacade>>;
+    let modules: Awaited<ReturnType<typeof selectedFacadeModules>>, writer: Awaited<ReturnType<typeof selectedWriter>>;
+    // Keep the genuine fixture/publication setup and cold selected-module opening
+    // under their own canonical hook deadlines, as in the owner/revision journey.
+    beforeEach(async () => {
+      f = await saved(); await f.change("public", "public"); await f.change("reader", "public");
+      await f.port.update(actor, input(["public", "reader", "private"], ["displayName", "ledgers"]));
+    });
+    beforeEach(async () => { modules = await selectedFacadeModules(f); });
+    beforeEach(async () => { writer = await selectedWriter(modules.application); });
+    beforeEach(async () => { selected = { ...modules, writer, ...await selectedReader(modules.application) }; });
+    it("selected readonly genuine ports refuse mutations before SQL and retain healthy publication/owner readers through visibility and erasure", async () => {
+    const reader = selected.reader, before = originals(f.file), financial = financialOriginals(f.file);
     const bytes = hash(readFileSync(f.file)), prepare = vi.spyOn(DatabaseSync.prototype, "prepare"), exec = vi.spyOn(DatabaseSync.prototype, "exec");
     await expect(reader.publicProfiles!.update(actor, input([], ["ledgers"], 1))).rejects.toMatchObject({ code: "public_profile_unavailable" });
     await expect(reader.publicProfiles!.unpublish(actor)).rejects.toMatchObject({ code: "public_profile_unavailable" });
@@ -321,6 +343,7 @@ describe("#264 actual selected application publicProfiles facade (authored; UNRU
     expect(originals(f.file)).toBe(afterErase);
     expect(raw(f.file, db => db.prepare("SELECT * FROM payment_events ORDER BY id").all())).toEqual(payments);
     expect(selected.application.applicationSqliteIdentity(reader)).toEqual(f.identity);
+    });
   });
 
   it.each(["unpublish", "selection", "profile"] as const)("selected facade retains strict null after genuine synchronous %s at the final native yield", async mutation => {
