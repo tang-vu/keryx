@@ -41,6 +41,9 @@ saved reports and the protected account-claim research entry.
 - New/changed English invalidates only the affected VI/ZH draft leaves and
   namespace bindings. Unreviewed translations fall back to English; no locale
   activation or translation approval is claimed.
+- The existing 48-trial offline study also binds the core English catalogue as
+  a runtime source input. Actual regeneration updates only its catalogue hash;
+  all trials, economic fields and zero outbound attempts remain unchanged.
 
 This outcome has no version bump, package publication or production deployment.
 After review and required CI, merge the focused PR and hand the runtime change to
