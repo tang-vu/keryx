@@ -2,7 +2,7 @@
   "locale": "zh-Hans",
   "status": "machineDraft",
   "review": null,
-  "complete": true,
+  "complete": false,
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
@@ -11,11 +11,11 @@
   "totals": {
     "englishNamespaceFiles": 65,
     "coreInlineSources": 1,
-    "extractedLeaves": 5887,
-    "authoredEntries": 5858,
+    "extractedLeaves": 5890,
+    "authoredEntries": 5856,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 0,
-    "completeNamespaces": 66
+    "uncoveredEntries": 5,
+    "completeNamespaces": 64
   },
   "namespaces": [
     {
@@ -2793,10 +2793,10 @@
     {
       "namespace": "product-guide",
       "sourcePath": "locales/en/product-guide.ts",
-      "sourceSha256": "8f9a10b842280db7fa02502d74d003a2d71f868a66a364a0f1146d5c57c80620",
+      "sourceSha256": "96781f403ed4d596dcdcd689e4250755278c531ee1f3a2a31aaa260e309c6095",
       "draftPath": "locales/zh-Hans/ui-drafts/product-guide.json",
       "extractedLeaves": 93,
-      "authoredEntries": 93,
+      "authoredEntries": 91,
       "coveredKeys": [
         "about.boundariesBody",
         "about.boundariesTitle",
@@ -2859,8 +2859,6 @@
         "product.faqTrust",
         "product.faqTrustBody",
         "product.faqWallet",
-        "product.faqWalletBody",
-        "product.heroBody",
         "product.heroKicker",
         "product.heroTitle",
         "product.metaDescription",
@@ -2893,7 +2891,10 @@
         "product.walkthrough"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [],
+      "uncoveredKeys": [
+        "product.faqWalletBody",
+        "product.heroBody"
+      ],
       "sourceAliases": {}
     },
     {
@@ -6334,9 +6335,9 @@
     {
       "namespace": "core-inline",
       "sourcePath": "lib/i18n/messages.ts",
-      "sourceSha256": "35c58250afc3e1f53dbef39a646bfe8f90d2d4c008c0002a5457a7393c4842e1",
+      "sourceSha256": "37ac7ad5e8f7daf683952524320809f87a27d21ed650959de267137fd2cc6c2d",
       "draftPath": "locales/zh-Hans/ui-drafts/core-inline.json",
-      "extractedLeaves": 387,
+      "extractedLeaves": 390,
       "authoredEntries": 387,
       "coveredKeys": [
         "account.askQuestion",
@@ -6728,7 +6729,11 @@
         "withdrawalAccount.signIn"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [],
+      "uncoveredKeys": [
+        "researchEntry.freeTrialNotice",
+        "researchEntry.moreOptions",
+        "researchEntry.sessionPayerNotice"
+      ],
       "sourceAliases": {}
     },
     {

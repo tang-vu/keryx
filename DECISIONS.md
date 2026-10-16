@@ -1,5 +1,15 @@
 # Keryx — Decision Log
 
+## Make the homepage question the first decision — 2026-10-16
+
+Keep question, depth, submit, examples and truthful payer/publication notices on
+the initial ask path; group retained advanced controls in one closed disclosure.
+Readers may compose while the server resolves visibility, but submission still
+requires its exact owner-bound selection. Preserve account-change draft fencing,
+session limits, parent privacy and request payloads. Hide unavailable mainnet
+manuscript controls. Simplify the shared primary navigation without deleting any
+route. See [scope and surface boundaries](docs/engineering/homepage539.md).
+
 ## Separate migration streaming from enrollment encoding limits — 2026-10-16
 
 Migration snapshots stream typed, length-framed cells into per-row hashes. Give

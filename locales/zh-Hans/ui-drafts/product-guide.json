@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/product-guide.ts",
-  "sourceSha256": "8f9a10b842280db7fa02502d74d003a2d71f868a66a364a0f1146d5c57c80620",
+  "sourceSha256": "96781f403ed4d596dcdcd689e4250755278c531ee1f3a2a31aaa260e309c6095",
   "entries": {
     "product.heroKicker": {
       "source": "For researchers",
@@ -11,10 +11,6 @@
     "product.heroTitle": {
       "source": "AI research.",
       "text": "AI 研究。"
-    },
-    "product.heroBody": {
-      "source": "Cited answers. Visible source choices.",
-      "text": "带引用的答案，可见的来源选择。"
     },
     "product.overviewKicker": {
       "source": "What you get",
@@ -119,10 +115,6 @@
     "product.faqWallet": {
       "source": "Do I need a wallet to try Keryx?",
       "text": "尝试 Keryx 需要钱包吗？"
-    },
-    "product.faqWalletBody": {
-      "source": "The sponsored public trial needs no wallet or USDC deposit. Keryx covers approved source spending and operating costs within its usage and spending limits. Check availability in the question form; access can be paused.",
-      "text": "赞助公开试用无需钱包或 USDC 存款。Keryx 在使用及支出限制内承担获批来源支出及运营成本。请在问题表单检查可用性；访问可能暂停。"
     },
     "product.faqPublic": {
       "source": "Can I submit confidential research?",
