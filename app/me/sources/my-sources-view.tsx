@@ -7,7 +7,7 @@
  * settings stay on each source's own creator page; every row links there.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BellRing, Loader2, Mail, RefreshCw, Webhook } from "lucide-react";
@@ -15,8 +15,11 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { FeedVerificationPanel, type VerificationSource } from "@/components/keryx/feed-verification-panel";
 import { fmtUsdc } from "@/components/keryx/phase-style";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 interface OwnedSource {
   id: string;
@@ -38,6 +41,7 @@ interface CreatorListing {
 }
 
 export function MySourcesView() {
+  const uiCopy = useUiMessages();
   const [loading, setLoading] = useState(true);
   const [signedOut, setSignedOut] = useState(false);
   const [sources, setSources] = useState<OwnedSource[]>([]);

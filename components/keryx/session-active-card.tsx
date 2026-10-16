@@ -8,10 +8,13 @@ import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { UsdcPresetChips } from "./usdc-preset-chips";
 import { parseBudgetAmount } from "./research-budget-fields";
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
 
 
 interface Props {
@@ -37,6 +40,8 @@ function formatRemaining(ms: number) {
 }
 
 export function SessionActiveCard({ grantState, onTopUp, onRevoke, onExtend }: Props) {
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
   const mainnet = !browserPaymentProfile().testnet;
   const [showTopUp, setShowTopUp] = useState(false);
   const [topUpInput, setTopUpInput] = useState("0.05");

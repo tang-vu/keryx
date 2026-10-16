@@ -19,12 +19,15 @@ import { DisplayTime } from "@/components/keryx/display-time";
  */
 
 import { createRichMessages } from "@/lib/i18n/rich-messages";
-import { createMessages } from "@/lib/i18n/messages";
+
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 export interface GatewayProof {
   checkedAt: string;
@@ -43,6 +46,7 @@ function ago(iso: string) {
 }
 
 export function GatewayProofPanel({ proof }: { proof: GatewayProof | null }) {
+  const uiCopy = useUiMessages();
   if (!proof || proof.wallets.length === 0) return null;
 
   const short = proof.wallets.filter((w) => w.verdict === "short");

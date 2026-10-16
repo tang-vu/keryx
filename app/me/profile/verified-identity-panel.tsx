@@ -2,12 +2,16 @@
 import { useEffect, useRef, useState } from "react";
 import { identityCopy as copy } from "@/locales/en/profile-identities";
 import { IDENTITY_PROVIDERS, identitySnapshotSchema, identityUrl, type IdentityProvider, type IdentitySnapshot } from "@/lib/profiles/verified-identities";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 export function VerifiedIdentityPanel(props: { wallet: string; saved: boolean }) {
   return <IdentityPanelSession key={`${props.wallet}:${props.saved ? "saved" : "unsaved"}`} {...props} />;
 }
 /** Saved-profile deletion/recreation is a new lifecycle even when the wallet stays the same. */
 function IdentityPanelSession({ wallet, saved }: { wallet: string; saved: boolean }) {
+  const copy = useUiCopy("profile-identities", uiEnglish_copy);
   const [snapshot, setSnapshot] = useState<IdentitySnapshot | null>(null), [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const owner = useRef<AbortController | null>(null);

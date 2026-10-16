@@ -13,8 +13,8 @@ import { SigningAmount } from "./signing-amount";
  * retained recovery records and an explicitly reviewed owner gas transaction.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWalletClient } from "wagmi";
 import { Loader2, ArrowUpRight, Coins } from "lucide-react";
@@ -25,14 +25,19 @@ import { fmtUsdc } from "./phase-style";
 import { readGatewayCredit } from "@/lib/gateway/read-credit";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { CreatorOwnerWithdrawalPanel } from "./creator-owner-withdrawal-panel";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 export function WithdrawEarningsPanel({ address }: { address: string }) {
   return browserPaymentProfile().testnet ? <TestnetWithdrawEarningsPanel address={address}/> : <CreatorOwnerWithdrawalPanel address={address}/>;
 }
 function TestnetWithdrawEarningsPanel({ address }: { address: string }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const { data: walletClient } = useWalletClient();
   const [balance, setBalance] = useState<{ address: string; available: bigint | null; error: boolean } | null>(null);
   const balanceRead = useRef({ value: 0 });

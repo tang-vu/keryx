@@ -8,7 +8,7 @@
  */
 
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -25,9 +25,12 @@ import { ArchiveTopicChips } from "@/components/keryx/archive-topic-chips";
 import { ProductEntryNote } from "@/components/keryx/product-guide";
 import { safeInlineJson } from "@/lib/safe-json";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
+import { UiMessage, UiRichMessage } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
 
 // Same cadence as the archive it slices — new dispatches join a topic without a redeploy.
 export const dynamic = "force-dynamic";
@@ -144,13 +147,13 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
           href="/answers"
           className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal underline-offset-4 hover:underline"
         >
-          {copy("reportTopic.archive")}
+          <UiMessage messageKey={"reportTopic.archive"} />
         </Link>
         <h1 className="mt-2 font-display text-[clamp(28px,4.5vw,42px)] font-medium leading-[1.05] tracking-tight text-ink">
-          {richCopy("reportTopic.heading", { topic: <em className="italic text-paid">{topic.label}</em> })}
+          <UiRichMessage messageKey={"reportTopic.heading"} values={{ topic: <em className="italic text-paid">{topic.label}</em> }} />
         </h1>
         <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
-          {copy(entries.length === 1 ? "reportTopic.summary.one" : "reportTopic.summary.other", { count: entries.length })}
+          <UiMessage messageKey={entries.length === 1 ? "reportTopic.summary.one" : "reportTopic.summary.other"} values={{ count: entries.length }} />
         </p>
 
         <div className="mt-6"><ProductEntryNote /></div>
@@ -171,7 +174,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
 
         {rest.length > 0 && (
           <p className="mt-8 border-t border-line pt-5 font-serif text-[15px] leading-[1.55] text-ink-2">
-            {richCopy("reportTopic.coverage", { shown: shown.length, total: entries.length, archive: <Link href="/answers" className="underline decoration-line underline-offset-4 transition-colors hover:text-ink hover:decoration-ink">{copy("reportTopic.fullArchive")}</Link> })}
+            <UiRichMessage messageKey={"reportTopic.coverage"} values={{ shown: shown.length, total: entries.length, archive: <Link href="/answers" className="underline decoration-line underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"><UiMessage messageKey={"reportTopic.fullArchive"} /></Link> }} />
           </p>
         )}
 
@@ -180,7 +183,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
             href="/"
             className="inline-block border border-ink bg-seal px-[18px] py-2.5 font-mono text-[11.5px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
           >
-            {copy("reportTopic.ask")}
+            <UiMessage messageKey={"reportTopic.ask"} />
           </Link>
         </div>
       </main>

@@ -11,8 +11,8 @@ import { SigningAmount } from "@/components/keryx/signing-amount";
  * cache within seconds. Offline sources: a plain POST writes the DB row directly.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Archive, Banknote, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -28,9 +28,12 @@ import { listingPriceCall, listingDeactivateCall } from "@/lib/creator/listing-c
 import { REGISTRY_ABI, REVISIONED_REGISTRY_ABI } from "@/lib/registry/registry-abi";
 import { parseListingSnapshot, sameListingSnapshot } from "@/lib/creator/listing-snapshot";
 import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
+import { useUiCopy, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
 
 interface ListingData {
   mode: "onchain" | "offline";
@@ -51,6 +54,9 @@ interface ListingData {
 }
 
 export function ListingControlsPanel({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
+  const copy = useUiCopy("creator-registration", uiEnglish_copy);
   const [data, setData] = useState<ListingData | null>(null); // null until proven owner
   const [price, setPrice] = useState("0");
   const [busy, setBusy] = useState(false);

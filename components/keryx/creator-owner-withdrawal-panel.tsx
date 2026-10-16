@@ -10,6 +10,9 @@ import { listWithdrawalBrowserJournals,readWithdrawalBrowserJournal } from "@/li
 import { prepareCreatorOwnerBrowserWithdrawal,signCreatorOwnerBrowserWithdrawal,submitCreatorOwnerBrowserWithdrawal,
   recoverCreatorOwnerBrowserWithdrawal,mintCreatorOwnerBrowserWithdrawal,completeCreatorOwnerBrowserWithdrawal,
   type CreatorOwnerReview } from "@/lib/gateway/creator-owner-browser-client";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const uiCopy = createMessages("en");
 
@@ -24,6 +27,7 @@ export function CreatorOwnerWithdrawalPanel({address}:{address:string}){
   return <CreatorOwner key={address.toLowerCase()} owner={address.toLowerCase()}/>;
 }
 function CreatorOwner({owner}:{owner:string}){
+  const uiCopy = useUiMessages();
   const {data:wallet}=useWalletClient(),rpc=usePublicClient({chainId:profile.chainId});
   const [amount,setAmount]=useState(""),[fee,setFee]=useState(""),[id,setId]=useState(""),[hash,setHash]=useState("");
   const [row,setRow]=useState<Row|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState("");

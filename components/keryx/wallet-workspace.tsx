@@ -11,8 +11,12 @@ import { CircleGoogleWalletButton } from "./circle-google-wallet";
 import { SessionGrantPanel } from "./session-grant-panel";
 import { FaucetPanel } from "./faucet-panel";
 import { ArcCardOnrampPanel } from "./arc-card-onramp-panel";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 function ReceivingWallet({ address }: { address: string }) {
+  const copy = useUiCopy("wallet-workspace", uiEnglish_copy);
   const [feedback, setFeedback] = useState<string | null>(null);
   const profile = browserPaymentProfile();
   return <section id="add-money" className="scroll-mt-6 space-y-4 border border-line bg-paper-2 p-4 sm:p-6">
@@ -39,6 +43,7 @@ function ReceivingWallet({ address }: { address: string }) {
 }
 
 export function WalletWorkspace() {
+  const copy = useUiCopy("wallet-workspace", uiEnglish_copy);
   const { address, isConnected, session, refresh } = useSiweAuth();
   const { connector } = useAccount();
   if (session === undefined) return <p role="status" className="text-sm text-ink-2">{copy.loading}</p>;

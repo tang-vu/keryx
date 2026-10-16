@@ -1,6 +1,6 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import Link from "next/link";
 import bibliographyCopy from "@/locales/en/bibliographies.json";
 import { useRef, useState } from "react";
@@ -11,8 +11,11 @@ import { paperReferencesCslJson, paperReferencesRis } from "@/lib/papers/referen
 import { changeLiteratureWorkspace, clearLiteratureWorkspace, replaceLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, parseLiteratureWorkspace,
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 const field = "mt-1 block min-h-11 w-full min-w-0 border border-line bg-paper-2 px-3 py-2 font-serif text-base text-ink";
 const buttonBase = "inline-flex min-h-11 items-center justify-center border px-3 py-2 font-mono text-xs hover:border-ink disabled:opacity-50";
@@ -20,6 +23,7 @@ const button = `${buttonBase} border-line text-seal`;
 type Action = (action: () => void | Promise<void>, success: string) => Promise<void>;
 
 function ReviewFocus({ workspace, act }: { workspace: Workspace; act: Action }) {
+  const copy = useUiMessages();
   const [base, setBase] = useState({ title: workspace.title, question: workspace.question });
   const [draft, setDraft] = useState(base);
   const stale = workspace.title !== base.title || workspace.question !== base.question;
@@ -42,6 +46,7 @@ function ReviewFocus({ workspace, act }: { workspace: Workspace; act: Action }) 
 }
 
 function ScreeningEditor({ entry, act }: { entry: LiteratureEntry; act: Action }) {
+  const copy = useUiMessages();
   const [base, setBase] = useState({ screening: entry.screening, notes: entry.notes });
   const [draft, setDraft] = useState(base);
   const stale = entry.notes !== base.notes || entry.screening !== base.screening;
@@ -73,6 +78,7 @@ function SavedPaper({ entry, selected, selectionFull, toggle, act }: {
   entry: LiteratureEntry; selected: boolean; selectionFull: boolean; toggle: () => void;
   act: Action;
 }) {
+  const copy = useUiMessages();
   const paper = entry.paper;
   return <article className="min-w-0 border border-line bg-paper p-5 sm:p-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -105,6 +111,7 @@ function SavedPaper({ entry, selected, selectionFull, toggle, act }: {
 }
 
 export function LiteratureWorkspace() {
+  const copy = useUiMessages();
   const { ready, workspace, error, raw } = useLiteratureWorkspace();
   const [message, setMessage] = useState(""), [failure, setFailure] = useState("");
   const [selected, setSelected] = useState<string[]>([]), [filter, setFilter] = useState("all");

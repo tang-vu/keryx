@@ -12,12 +12,15 @@
  * Renders nothing when the wallet owns no unclaimed rows, so almost nobody ever sees it.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { Link2 } from "lucide-react";
 import type { SourceCardData } from "./sources-list";
 import { fmtUsdc } from "./phase-style";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 export function ClaimOnchainPanel({
   sources,
@@ -29,6 +32,7 @@ export function ClaimOnchainPanel({
   /** Pre-fill the register form with this source's feed/URL so the creator can sign. */
   onClaim: (source: SourceCardData) => void;
 }) {
+  const uiCopy = useUiMessages();
   if (!address) return null;
 
   const unclaimed = sources.filter(

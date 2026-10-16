@@ -16,6 +16,9 @@ import { ResearchFundingActivity } from "./research-funding-activity";
 import { ArcCardOnrampPanel } from "./arc-card-onramp-panel";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "@/lib/arc-network-profile";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
 
@@ -47,6 +50,7 @@ function outcomeMessage(record: FundingRecord, step: FundingStep) {
 export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRevision = 0, disabled, onBusy, onChanged }: {
   payer: string; initialAmount: number; requiredMicros: string; creditRevision?: number; disabled: boolean; onBusy: (busy: boolean) => void; onChanged: () => void;
 }) {
+  const copy = useUiMessages();
   const profile = browserPaymentProfile();
   const { data: wallet } = useWalletClient();
   const chain = usePublicClient({ chainId: browserPaymentProfile().chainId }) as PublicClient | undefined;

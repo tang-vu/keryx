@@ -5,6 +5,9 @@ import { accountHistorySchema } from "@/lib/a2a/account-history-types";
 import { paidJobEscalationSchema } from "@/lib/a2a/overdue-types";
 import { readAccountMetadata } from "@/lib/buyer/account-owned-transport";
 import { pendingOwner257Copy as copy } from "@/locales/en/pending-owner257";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 const ownedRow = accountHistorySchema.shape.jobs.element.extend({ escalation: paidJobEscalationSchema, attention: z.enum(["needs_review", "unknown"]), recoveryState: z.enum(["held", "unknown"]) });
 const ownedPacket = z.object({ wallet: accountHistorySchema.shape.wallet, jobs: z.array(ownedRow).max(25), nextCursor: accountHistorySchema.shape.nextCursor,
@@ -14,6 +17,7 @@ export const ACCOUNT_JOB_READ_TIMEOUT_MS = 5000;
 
 /** Mounted same-original observation only. No payment/recovery command exists. */
 export function AccountJobs({ orderId }: { orderId: string }) {
+  const copy = useUiCopy("pending-owner257", uiEnglish_copy);
   const [row, setRow] = useState<z.infer<typeof ownedRow> | null>(null);
   useEffect(() => {
     setRow(null);

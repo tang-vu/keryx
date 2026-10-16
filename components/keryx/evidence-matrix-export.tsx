@@ -1,12 +1,16 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import type { QueryRun } from "@/lib/types";
 import { buildEvidenceMatrix, evidenceMatrixCsv } from "@/lib/research/evidence-matrix";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 export function EvidenceMatrixExport({ run }: { run: QueryRun }) {
+  const copy = useUiMessages();
   const rows = buildEvidenceMatrix(run);
   const sources = run.citations.filter((citation, index, all) => all.findIndex((other) =>
     other.marker === citation.marker && other.sourceId === citation.sourceId && other.itemId === citation.itemId &&

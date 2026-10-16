@@ -8,18 +8,22 @@
  * back to the creator's live earnings page, turning payouts into proof and reach.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { BadgeCheck, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 // SSR + first client render agree on the canonical host; refined to the real origin on mount
 // so localhost/preview embeds copy the right URL too.
 const CANONICAL = "https://keryx.cc";
 
 export function EmbedBadgePanel({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
   const origin = useBrowserOrigin(CANONICAL);
 
   const badgeUrl = `${origin}/api/creator/${creatorId}/badge.svg`;
@@ -69,6 +73,7 @@ function SnippetRow({
   value: string;
   onCopy: () => void;
 }) {
+  const uiCopy = useUiMessages();
   return (
     <div>
       <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">{label}</div>

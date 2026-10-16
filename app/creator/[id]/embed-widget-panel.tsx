@@ -8,18 +8,22 @@
  * Complements the static badge (proof) with a live surface (demand).
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { Copy, MessageSquareQuote } from "lucide-react";
 import { toast } from "sonner";
 import { useBrowserOrigin } from "@/lib/hooks/use-browser-origin";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 // SSR + first client render agree on the canonical host; refined on mount so
 // localhost/preview copies carry the right URL.
 const CANONICAL = "https://keryx.cc";
 
 export function EmbedWidgetPanel({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
   const origin = useBrowserOrigin(CANONICAL);
 
   const snippet = `<script src="${origin}/keryx-widget.js" data-keryx-source="${creatorId}" async></script>`;

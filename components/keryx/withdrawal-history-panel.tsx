@@ -2,28 +2,34 @@
 import { formatAmount } from "@/lib/i18n/format";
 import { DisplayTime } from "./display-time";
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useEffect, useRef, useState } from "react";
 import { withdrawalOwnerSchema } from "@/lib/gateway/withdrawal-request";
 import { readWithdrawalBrowserHistory } from "@/lib/gateway/withdrawal-browser-history";
 import type { WithdrawalHistoryEntry, WithdrawalHistoryPage } from "@/lib/gateway/withdrawal-history-types";
 import { readWithdrawalHistoryStatus } from "@/lib/gateway/withdrawal-history-status";
 import { WithdrawalHistoryProgress, type HistoryProgress } from "./withdrawal-history-progress";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 const button = "rounded border border-current px-3 py-2 text-sm disabled:opacity-50";
 
 /** Private, read-only server metadata. Remount on account changes, with no dependency
  * on retained local drafts and no controls that create another authorization. */
 export function WithdrawalHistoryPanel({ address }: { address: string }) {
+  const uiCopy = useUiMessages();
   const parsed = withdrawalOwnerSchema.safeParse(address);
   return parsed.success ? <OwnerHistory key={parsed.data} owner={parsed.data} /> : <p>{uiCopy("withdrawalHistory.signIn")}</p>;
 }
 
 function OwnerHistory({ owner }: { owner: string }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const [page, setPage] = useState<WithdrawalHistoryPage | null>(null);
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const [signedOut, setSignedOut] = useState(false);

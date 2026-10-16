@@ -10,10 +10,13 @@ import { fmtUsdc } from "./phase-style";
 import { ReportActions } from "./report-actions";
 import { SelectionFailureDownload } from "./selection-failure-download";
 import { DecisionReviews } from "./decision-reviews";
-import { createMessages } from "@/lib/i18n/messages";
-import { savedReportRecoveryPath } from "@/lib/research/ask-stream-lifecycle";
 
-const message = createMessages("en");
+import { savedReportRecoveryPath } from "@/lib/research/ask-stream-lifecycle";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
 
 export interface ResearchTurnData {
   id: number;
@@ -24,6 +27,7 @@ export interface ResearchTurnData {
 }
 
 export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
+  const message = useUiMessages();
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const { state, stopped } = turn;
   const streaming = !stopped && state.status === "streaming";

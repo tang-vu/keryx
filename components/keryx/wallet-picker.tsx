@@ -25,9 +25,12 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { useSyncExternalStore } from "react";
 import { CircleGoogleWalletButton } from "./circle-google-wallet";
-import { createMessages } from "@/lib/i18n/messages";
 
-const copy = createMessages("en");
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
 
 
 const subscribeHydration = () => () => {};
@@ -52,6 +55,7 @@ const ROW =
   "flex w-full items-center gap-3 border border-ink bg-paper px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-ink transition-all hover:-translate-y-0.5 hover:bg-seal hover:text-cream hover:shadow-[0_5px_0_var(--ink)] active:translate-y-0 active:shadow-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none";
 
 export function WalletPicker({ isBusy, onConnected, onSelect, onConnectionFailed }: Props) {
+  const copy = useUiMessages();
   const { connectAsync, connectors, isPending } = useConnect();
   const hydrated = useSyncExternalStore(subscribeHydration, clientSnapshot, serverSnapshot);
   const busy = isBusy || isPending;

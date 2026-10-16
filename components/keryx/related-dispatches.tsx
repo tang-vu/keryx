@@ -10,6 +10,9 @@ import { DisplayTime } from "@/components/keryx/display-time";
 import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import type { ArchiveEntry } from "@/lib/answers-archive";
+import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
 
@@ -20,12 +23,12 @@ function fmtDate(iso: string) {
 export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
   if (entries.length === 0) return null;
   return (
-    <section aria-label={copy("relatedReports.label")} className="mt-14 border-t border-ink pt-8">
+    <UiAttributes names={["aria-label"]}><section aria-label={copy("relatedReports.label")} className="mt-14 border-t border-ink pt-8">
       <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-seal">
-        {copy("relatedReports.kicker")}
+        <UiMessage messageKey={"relatedReports.kicker"} />
       </div>
       <h2 className="font-display text-[22px] font-medium tracking-tight text-ink">
-        {copy("relatedReports.label")}
+        <UiMessage messageKey={"relatedReports.label"} />
       </h2>
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {entries.map((e) => (
@@ -36,7 +39,7 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
           >
             <div className="flex items-baseline justify-between gap-3">
               <span className="font-mono text-[9.5px] uppercase tracking-[0.18em] text-seal">
-                {copy(e.archivedNetwork ? "archiveReport.historicalDispatch" : "archiveReport.dispatch")}
+                <UiMessage messageKey={e.archivedNetwork ? "archiveReport.historicalDispatch" : "archiveReport.dispatch"} />
               </span>
               <span className="font-mono text-[9.5px] text-ink-3">
                 {fmtDate(e.createdAt)}
@@ -47,9 +50,9 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
             </div>
             <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[0.06em] text-ink-3">
               <span>
-                {copy(selectPlural(e.citationCount) === "one" ? "report.citedSources.one" : "report.citedSources.other", { count: e.citationCount })}
+                <UiMessage messageKey={selectPlural(e.citationCount) === "one" ? "report.citedSources.one" : "report.citedSources.other"} values={{ count: e.citationCount }} />
               </span>
-              <span className="text-paid">{copy("archiveReport.creatorRewards", { amount: formatRecordedUsdc(e.toCreators, { minimumFractionDigits: 4, denomination: e.archivedNetwork ? "test USDC" : "$" }) })}</span>
+              <span className="text-paid"><UiMessage messageKey={"archiveReport.creatorRewards"} values={{ amount: formatRecordedUsdc(e.toCreators, { minimumFractionDigits: 4, denomination: e.archivedNetwork ? "test USDC" : "$" }) }} /></span>
             </div>
           </Link>
         ))}
@@ -59,9 +62,9 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
           href="/answers"
           className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3 underline decoration-ink-3 underline-offset-4 transition-colors hover:text-ink"
         >
-          {copy("relatedReports.browse")}
+          <UiMessage messageKey={"relatedReports.browse"} />
         </Link>
       </div>
-    </section>
+    </section></UiAttributes>
   );
 }

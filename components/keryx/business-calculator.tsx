@@ -4,10 +4,13 @@ import { useRef, useState } from "react";
 import { businessScenarioSchema, calculateBusinessScenario } from "@/lib/economics/business-scenario";
 import template from "@/docs/business-scenario-template.json";
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
 
 const fields = [
   ["paidJobsPerMonth", message("businessCalculator.paidJobsPerMonth"), message("businessCalculator.wholeJobsLeaveBlankWhenDemandIsUnknown")],
@@ -45,6 +48,8 @@ const money = (value: string | null) => value === null ? message("businessCalcul
 const button = message("businessCalculator.borderBorderInkPx4Py2Font");
 
 export function BusinessCalculator() {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const [form, setForm] = useState<Form>(initial);
   const [notice, setNotice] = useState("");
   const revision = useRef(0);

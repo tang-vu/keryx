@@ -7,9 +7,9 @@
  * fills as tolls/rewards settle so the hard spend cap is visible, not implied.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
 
-const message = createMessages("en");
+
+
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TraceStep } from "@/lib/types";
@@ -17,6 +17,9 @@ import { TraceRow } from "./trace-row";
 import { SectionHeading } from "./banknote";
 import { BudgetMeter, stepPaymentTotals } from "./budget-meter";
 import { fmtUsdc } from "./phase-style";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 interface ReasoningConsoleProps {
   steps: TraceStep[];
@@ -26,6 +29,7 @@ interface ReasoningConsoleProps {
 }
 
 export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleProps) {
+  const message = useUiMessages();
   const scrollRef = useRef<HTMLDivElement>(null);
   const followingRef = useRef(true);
   const [following, setFollowing] = useState(true);

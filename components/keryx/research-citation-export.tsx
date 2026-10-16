@@ -1,13 +1,17 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useState } from "react";
 import type { Citation } from "@/lib/types";
 import { buildCitationExport, type CitationExportFormat } from "@/lib/research-citation-export";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 export function ResearchCitationExport({ citations }: { citations: Citation[] }) {
+  const copy = useUiMessages();
   const [error, setError] = useState("");
   const { count, omitted } = buildCitationExport(citations, "bibtex");
   if (!citations.length) return null;

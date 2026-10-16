@@ -1,15 +1,19 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import type { BibliographicTaskResult } from "@/lib/research/bibliographic-task";
 import { paperReferencesCslJson } from "@/lib/papers/reference-export";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { useState } from "react";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 /** Metadata reference downloads never enter research citation/reward exports. */
 export function BibliographyExports({ result }: { result: BibliographicTaskResult }) {
+  const copy = useUiMessages();
   const [error, setError] = useState("");
   const cslJson = paperReferencesCslJson(result.record.paper ? [result.record.paper] : []);
   const exports = { ...result.bibliographyExports, "csl-json": cslJson };

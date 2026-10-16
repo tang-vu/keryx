@@ -1,22 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import type { TopicWatchResult, TopicWatchSpec, TopicWatchState } from "@/lib/research/topic-watches";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 const button = "min-h-11 border border-line px-4 py-2 text-sm disabled:opacity-50";
 const field = "block w-full border border-line bg-paper p-2";
 const terms = (value: FormDataEntryValue | null) => String(value ?? "").split(",").map(s => s.trim()).filter(Boolean);
 export function TopicWatchManager() {
+  const copy = useUiMessages();
   const { session } = useSiweAuth();
   if (session === undefined) return <p role="status">{copy("topicWatch.checking")}</p>;
   if (!session) return <Link href="/connect" className="underline">{copy("topicWatch.signIn")}</Link>;
   return <WatchEditor key={session.address.toLowerCase()} wallet={session.address.toLowerCase()} />;
 }
 function WatchEditor({ wallet }: { wallet: string }) {
+  const copy = useUiMessages();
   const [watches, setWatches] = useState<TopicWatchState[]>([]), [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [generation, setGeneration] = useState(0);

@@ -1,7 +1,7 @@
 "use client";
 
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
@@ -14,9 +14,12 @@ import { claimRequest } from "./public-source-claim-api";
 import { ClaimControlStatus, ClaimTime } from "./public-source-claim-status";
 import { PublicSourceClaims } from "./public-source-claims";
 import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
+import { useUiCopy, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
 
 interface InitialClaim extends SourceClaimDraft { name?: string }
 interface ProofState { challenge: SourceClaimChallenge; proof: SourceClaimProof; proofUrl: string; proofToken?: string }
@@ -39,6 +42,9 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "", onVerif
   onDraftChange?: (draft: SourceClaimDraft) => void; connectHrefForDraft?: (draft: SourceClaimDraft) => string | null;
   hidePolicy?: boolean; requireFeed?: boolean; defaultSourceFromFeed?: boolean;
 }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
+  const copy = useUiCopy("creator-registration", uiEnglish_copy);
   const wallet = useAccount(), { session } = useSiweAuth();
   const profile = browserPaymentProfile();
   const owner = session?.address.toLowerCase();

@@ -20,6 +20,9 @@ import {
   WANTED_DETAIL_LIMIT,
   type PublicWantedOffer,
 } from "@/lib/wanted-board";
+import { UiMessage } from "@/lib/i18n/ui-copy";
+
+
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
@@ -83,23 +86,23 @@ export default async function WantedClaimPage({ params }: PageProps) {
           href="/wanted"
           className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3 underline decoration-line underline-offset-4 transition-colors hover:text-ink"
         >
-          {uiCopy("wantedClaim.back")}
+          <UiMessage messageKey={"wantedClaim.back"} />
         </Link>
 
         <article className="mt-7 border-2 border-ink bg-paper p-[5px]">
           <div className="border border-ink">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-ink bg-ink px-5 py-3 text-paper">
               <span className="font-mono text-[10.5px] uppercase tracking-[0.18em]">
-                {uiCopy("wantedClaim.state", { state })}
+                <UiMessage messageKey={"wantedClaim.state"} values={{ state }} />
               </span>
               <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-paper/65">
-                {uiCopy("wantedClaim.receipt")}
+                <UiMessage messageKey={"wantedClaim.receipt"} />
               </span>
             </header>
 
             <div className="p-5 sm:p-8">
               <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">
-                {uiCopy("wantedClaim.paidClaim")}
+                <UiMessage messageKey={"wantedClaim.paidClaim"} />
               </div>
               <h1 className="mt-3 font-display text-[clamp(28px,5vw,44px)] font-medium leading-[1.08] tracking-tight text-ink">
                 {gap.claim}
@@ -130,7 +133,7 @@ export default async function WantedClaimPage({ params }: PageProps) {
                   href={`/dispatch/${gap.queryId}`}
                   className="inline-flex items-center border border-line px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-2 transition-colors hover:border-ink hover:text-ink"
                 >
-                  {uiCopy("wantedClaim.inspectFailed")}
+                  <UiMessage messageKey={"wantedClaim.inspectFailed"} />
                 </Link>
               </div>
             </div>
@@ -141,10 +144,10 @@ export default async function WantedClaimPage({ params }: PageProps) {
           <>
             <section className="mt-9 border-l-2 border-seal pl-5">
               <h2 className="font-display text-[23px] font-medium text-ink">
-                {uiCopy("wantedClaim.invitationTitle")}
+                <UiMessage messageKey={"wantedClaim.invitationTitle"} />
               </h2>
               <p className="mt-2 max-w-[66ch] font-serif text-[15.5px] leading-[1.6] text-ink-2">
-                {uiCopy("wantedClaim.invitation", { network: currentArcLabel })}
+                <UiMessage messageKey={"wantedClaim.invitation"} values={{ network: currentArcLabel }} />
               </p>
             </section>
 
@@ -157,13 +160,13 @@ export default async function WantedClaimPage({ params }: PageProps) {
         ) : (
           <section className="mt-10 border border-paid/50 bg-paid/[0.06] p-6">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.17em] text-paid">
-              {uiCopy("wantedClaim.covered")}
+              <UiMessage messageKey={"wantedClaim.covered"} />
             </div>
             <h2 className="mt-2 font-display text-[28px] font-medium text-ink">
-              {uiCopy("wantedClaim.transition", { before: Math.round(gap.coverage * 100), after: Math.round(fill?.coverage ?? 0) })}
+              <UiMessage messageKey={"wantedClaim.transition"} values={{ before: Math.round(gap.coverage * 100), after: Math.round(fill?.coverage ?? 0) }} />
             </h2>
             <p className="mt-3 max-w-[66ch] font-serif text-[15.5px] leading-[1.6] text-ink-2">
-              {uiCopy("wantedClaim.settlementBoundary")}
+              <UiMessage messageKey={"wantedClaim.settlementBoundary"} />
             </p>
             {fill && (
               <div className="mt-5">
@@ -171,11 +174,11 @@ export default async function WantedClaimPage({ params }: PageProps) {
                   href={`/dispatch/${fill.queryId}`}
                   className="font-mono text-[11px] uppercase tracking-[0.13em] text-ink underline underline-offset-4 hover:text-seal"
                 >
-                  {uiCopy("wantedClaim.inspectClosing")}
+                  <UiMessage messageKey={"wantedClaim.inspectClosing"} />
                 </Link>
                 {fill.paid.length > 0 && (
                   <p className="mt-3 font-mono text-[10.5px] leading-relaxed text-ink-3">
-                    {uiCopy("wantedClaim.cited", { sources: fill.paid.map((source) => source.sourceName).join(", ") })}
+                    <UiMessage messageKey={"wantedClaim.cited"} values={{ sources: fill.paid.map((source) => source.sourceName).join(", ") }} />
                   </p>
                 )}
               </div>
@@ -195,7 +198,7 @@ function OffersList({ offers }: { offers: PublicWantedOffer[] }) {
   return (
     <section className="mt-9">
       <h2 className="font-mono text-[10.5px] uppercase tracking-[0.17em] text-ink-3">
-        {uiCopy("wantedClaim.offers")}
+        <UiMessage messageKey={"wantedClaim.offers"} />
       </h2>
       <ul className="mt-3 divide-y divide-line border border-line bg-paper">
         {offers.map((offer) => (
@@ -209,7 +212,7 @@ function OffersList({ offers }: { offers: PublicWantedOffer[] }) {
                 href={`/dispatch/${offer.retryRunId}`}
                 className="mt-1 inline-block font-mono text-[10px] text-seal underline underline-offset-4"
               >
-                {uiCopy("wantedClaim.inspectRetry")}
+                <UiMessage messageKey={"wantedClaim.inspectRetry"} />
               </Link>
             ) : null}
           </li>
@@ -245,7 +248,7 @@ function BriefStat({
 
 function offerDescription(offer: PublicWantedOffer) {
   const status = wantedOfferStatus(offer);
-  const post = offer.sourceItemLink ? <a href={offer.sourceItemLink} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-seal">{uiCopy("wantedClaim.offeredPost")}</a> : null;
+  const post = offer.sourceItemLink ? <a href={offer.sourceItemLink} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-seal"><UiMessage messageKey={"wantedClaim.offeredPost"} /></a> : null;
   const version = offer.contentVersion?.slice(0, 18);
   if (post && version) return uiRichCopy(offer.articleOfferId ? "wantedClaim.offerPostVersionPrice" : "wantedClaim.offerPostVersion", { status, post, version });
   if (post) return uiRichCopy(offer.articleOfferId ? "wantedClaim.offerPostPrice" : "wantedClaim.offerPost", { status, post });

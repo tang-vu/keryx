@@ -16,8 +16,8 @@ import { SigningRecordedAmount } from "./signing-amount";
  * Styled as a banknote registration slip (The Mint aesthetic).
  */
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Loader2, Rss, Wallet, PartyPopper, ExternalLink, ShieldCheck, Copy, Webhook } from "lucide-react";
 import { toast } from "sonner";
@@ -30,9 +30,12 @@ import { registrationTitles } from "@/lib/i18n/registration-status";
 import { REGISTRY_ABI } from "@/lib/registry/registry-abi";
 import { browserPaymentProfile, browserRegistryAddress } from "@/lib/browser-payment-profile";
 import { FeedVerificationPanel } from "./feed-verification-panel";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 interface CreatedSource {
   id: string;
@@ -91,6 +94,7 @@ export function RegisterForm({
   prefillWalletAddress?: string;
   prefill?: RegisterPrefill;
 }) {
+  const uiCopy = useUiMessages();
   const [rssUrl, setRssUrl] = useState(prefill?.rssUrl ?? "");
   const [name, setName] = useState(prefill?.name ?? "");
   const [url, setUrl] = useState(prefill?.url ?? "");
@@ -548,6 +552,8 @@ function SuccessCard({
   onVerified: () => void;
   onAgain: () => void;
 }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   // Show the proof step only when the source isn't verified yet AND we have a token to show.
   const needsVerify = source.verified === false && verification !== null;
   return (
@@ -616,6 +622,7 @@ function SuccessCard({
 }
 
 function GapIntentPanel({ intent }: { intent: GapIntentReceipt }) {
+  const uiCopy = useUiMessages();
   return (
     <div className="rounded-md border border-seal/40 bg-seal/[0.06] p-4">
       <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-seal">
@@ -637,6 +644,8 @@ function GapIntentPanel({ intent }: { intent: GapIntentReceipt }) {
  * citation delivery. Rotatable later from the creator's own profile page.
  */
 function NotifySecretPanel({ notify }: { notify: { url: string; secret: string } }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const copy = async (value: string, label: string) => {
     try {
       await navigator.clipboard.writeText(value);

@@ -1,7 +1,7 @@
 "use client";
 
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
@@ -13,9 +13,12 @@ import { fmtUsdc } from "./phase-style";
 import { claimRequest } from "./public-source-claim-api";
 import { ClaimTime } from "./public-source-claim-status";
 import { RegistrationSponsorLink } from "./registration-sponsor-link";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
 
 interface Listing { id: string; name: string; url: string; rssUrl?: string; walletAddress: string; onchainId?: string; fetchPrice: number }
 const modes: { value: SourceClaimMode; title: string; detail: string }[] = [
@@ -28,6 +31,8 @@ function sameUrl(a: string | undefined, b: string) { try { return !!a && canonic
 export function PublicSourceClaimPolicy({ claim, name, initialFetchPrice = 0.016, embedded = false, enabled, controlFresh, onChanged, onReload }: {
   claim: SourceClaim; name?: string; initialFetchPrice?: number; embedded?: boolean; enabled: boolean; controlFresh: boolean; onChanged: (claim: SourceClaim) => void; onReload: () => void;
 }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const wallet = useAccount(), { session } = useSiweAuth();
   const owner = session?.address.toLowerCase(), profile = browserPaymentProfile();
   const identity = `${owner}:${wallet.address}:${wallet.chainId}:${claim.id}:${claim.revision}`;

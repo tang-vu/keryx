@@ -1,8 +1,11 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
 
-const copy = createMessages("en");
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
 
 export function parseBudgetAmount(value: string): number | null {
   if (!/^(0|[1-9]\d*)(\.\d{1,6})?$/.test(value)) return null;
@@ -17,6 +20,7 @@ interface Props {
 }
 
 export function ResearchBudgetFields({ questionInput, onQuestionChange, durationSeconds, onDurationChange }: Props) {
+  const copy = useUiMessages();
   return <div className="grid gap-3 sm:grid-cols-2">
     <label className="flex flex-col gap-1.5 text-xs text-ink-2">
       {copy("budgetFields.questionCap")}

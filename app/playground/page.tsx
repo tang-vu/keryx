@@ -12,15 +12,18 @@ import { formatNumber, formatRecordedAmount } from "@/lib/i18n/format";
  * by the same IP rate-limit as the site's anonymous asker).
  */
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useState } from "react";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { Copy, Play, Loader2 } from "lucide-react";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 const BASE = "https://keryx.cc/api/v1";
 const PRESETS = [
@@ -64,6 +67,8 @@ console.log(r.choices[0].message.content);`,
 }
 
 export default function PlaygroundPage() {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const [q, setQ] = useState(PRESETS[0]!);
   const [tab, setTab] = useState<"curl" | "python" | "js">("curl");
   const [running, setRunning] = useState(false);

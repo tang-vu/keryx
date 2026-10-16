@@ -1,13 +1,17 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
 
-const message = createMessages("en");
+
+
 
 import { selectionFailureExport } from "@/lib/research/selection-failure-export";
 import type { SelectionDiagnostic } from "@/lib/research/selection-diagnostic";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 export function SelectionFailureDownload({ diagnostic }: { diagnostic?: SelectionDiagnostic }) {
+  const message = useUiMessages();
   const artifact = selectionFailureExport(diagnostic);
   if (!artifact) return null;
   function download() {

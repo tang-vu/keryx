@@ -1,7 +1,7 @@
 "use client";
 
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -19,9 +19,12 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { cn } from "@/lib/utils";
 import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
 import { RESEARCH_AVAILABILITY_UNKNOWN } from "@/lib/research/availability-contract";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
 
 type ClientId = "codex" | "claude" | "cursor";
 type Health = "checking" | "ready" | "unavailable";
@@ -111,6 +114,7 @@ async function probeConnection() {
 }
 
 function CopyButton({ value, label = uiCopy("mcpSetup.copy") }: { value: string; label?: string }) {
+  const uiCopy = useUiMessages();
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -132,6 +136,8 @@ function CopyButton({ value, label = uiCopy("mcpSetup.copy") }: { value: string;
 }
 
 export function McpIntegrationClient() {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const { availability, checking, refresh } = useResearchAvailability();
   const [selected, setSelected] = useState<ClientId>("codex");
   const [health, setHealth] = useState<Health>("checking");

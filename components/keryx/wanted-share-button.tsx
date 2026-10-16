@@ -1,10 +1,13 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useState } from "react";
 import { Check, Copy, Share2 } from "lucide-react";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 export function WantedShareButton({
   url,
@@ -13,6 +16,7 @@ export function WantedShareButton({
   url: string;
   claim: string;
 }) {
+  const uiCopy = useUiMessages();
   const [copied, setCopied] = useState(false);
 
   const share = async () => {

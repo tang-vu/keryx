@@ -5,11 +5,14 @@ import type { ReactNode } from "react";
 
 
 import { arcProfileLabel, recordedArcProfile } from "@/lib/arc-network-display";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
+
 
 /**
  * /status section for settlement parity: what Keryx's payout ledger claims is still sitting in
@@ -51,6 +54,8 @@ function ago(iso: string) {
 const usd = (n: number) => `$${formatRecordedAmount(n, { minimumFractionDigits: 6 })}`;
 
 export function SettlementProofSection({ settlement }: { settlement: SettlementHealth }) {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const { counts, accounts } = settlement;
   if (settlement.basis === "empty-ledger" && accounts.length === 0 &&
       settlement.owedUsdc === 0 && settlement.confirmedUsdc === 0 && settlement.cashedOutUsdc === 0 &&

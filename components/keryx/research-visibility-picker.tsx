@@ -1,13 +1,17 @@
 "use client";
-import { createMessages } from "@/lib/i18n/messages";
+
 import type { RunVisibility } from "@/lib/run-privacy/contracts";
 import type { useResearchVisibility } from "@/lib/hooks/use-research-visibility";
-const message = createMessages("en");
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
+
 const exposure = { private: 0, unlisted: 1, public: 2 };
 
 export function ResearchVisibilityPicker({ preference, disabled, parentVisibility, allowedVisibilities, compact, showContextHint = true }: {
   preference: ReturnType<typeof useResearchVisibility>; disabled?: boolean; parentVisibility?: RunVisibility; allowedVisibilities?: readonly RunVisibility[]; compact?: boolean; showContextHint?: boolean;
 }) {
+  const message = useUiMessages();
   return <div className={compact ? "mb-2" : "mt-3 border-t border-line pt-3"} data-testid="research-visibility">
     <label className="flex min-h-11 flex-wrap items-center gap-3 font-mono text-xs text-ink">
       {message("researchVisibility.label")}

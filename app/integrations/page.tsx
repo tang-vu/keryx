@@ -5,6 +5,9 @@ import { SetupCode } from "@/components/keryx/setup-code";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { installationLinks as links, setupExamples } from "@/lib/public-installation";
 import { setupCopy as copy } from "@/locales/en/get-started";
+import { UiAttributes, UiText } from "@/lib/i18n/ui-copy";
+
+
 
 export const metadata: Metadata = {
   title: copy.integrations.metadata, description: copy.integrations.description,
@@ -17,88 +20,88 @@ const guide = copy.integrations;
 
 export default function IntegrationsPage() {
   return <SetupGuide current="/integrations" title={guide.title} body={guide.body}>
-    <nav aria-label={copy.navigation.integrations} className="flex flex-wrap gap-x-6 font-mono">
-      {copy.surfaces.filter(surface => ["mcp", "api", "cli", "bots"].includes(surface.id)).map(surface => <a key={surface.id} href={`#${surface.id}`} className={setupLinkClass}>{surface.title}</a>)}
-    </nav>
+    <UiAttributes names={["aria-label"]} namespaces={["get-started"]}><nav aria-label={copy.navigation.integrations} className="flex flex-wrap gap-x-6 font-mono">
+      {copy.surfaces.filter(surface => ["mcp", "api", "cli", "bots"].includes(surface.id)).map(surface => <a key={surface.id} href={`#${surface.id}`} className={setupLinkClass}><UiText source={surface.title} namespaces={["get-started"]} /></a>)}
+    </nav></UiAttributes>
     <section id="mcp" className={sectionClass} aria-labelledby="mcp-title">
-      <h2 id="mcp-title" className="font-display text-3xl">{guide.mcpTitle}</h2>
-      <p className={bodyClass}>{guide.mcpBody}</p>
+      <h2 id="mcp-title" className="font-display text-3xl"><UiText source={guide.mcpTitle} namespaces={["get-started"]} /></h2>
+      <p className={bodyClass}><UiText source={guide.mcpBody} namespaces={["get-started"]} /></p>
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-2">
         <article className="min-w-0 border border-line bg-paper p-6">
-          <h3 className="font-display text-2xl">{guide.remoteTitle}</h3>
-          <p className={bodyClass}>{guide.remoteBody}</p>
+          <h3 className="font-display text-2xl"><UiText source={guide.remoteTitle} namespaces={["get-started"]} /></h3>
+          <p className={bodyClass}><UiText source={guide.remoteBody} namespaces={["get-started"]} /></p>
           <SetupCode title={guide.remoteEndpoint} value={setupExamples.remoteEndpoint} />
-          <p className={bodyClass}>{guide.remoteStep}</p>
-          <Link href="/integrations/mcp" className={`${setupLinkClass} mt-3`}>{guide.remoteAction}</Link>
+          <p className={bodyClass}><UiText source={guide.remoteStep} namespaces={["get-started"]} /></p>
+          <Link href="/integrations/mcp" className={`${setupLinkClass} mt-3`}><UiText source={guide.remoteAction} namespaces={["get-started"]} /></Link>
         </article>
         <article className="min-w-0 border border-line bg-paper p-6">
-          <h3 className="font-display text-2xl">{guide.stdioTitle}</h3>
-          <p className={bodyClass}>{guide.stdioBody}</p>
-          <h4 className="mt-4 font-display text-xl">{copy.common.requirements}</h4>
-          <p className={bodyClass}>{guide.stdioRequirements}</p>
+          <h3 className="font-display text-2xl"><UiText source={guide.stdioTitle} namespaces={["get-started"]} /></h3>
+          <p className={bodyClass}><UiText source={guide.stdioBody} namespaces={["get-started"]} /></p>
+          <h4 className="mt-4 font-display text-xl"><UiText source={copy.common.requirements} namespaces={["get-started"]} /></h4>
+          <p className={bodyClass}><UiText source={guide.stdioRequirements} namespaces={["get-started"]} /></p>
           <SetupCode title={guide.stdioConfig} value={setupExamples.stdio} />
-          <p className={bodyClass}>{guide.stdioStep}</p>
+          <p className={bodyClass}><UiText source={guide.stdioStep} namespaces={["get-started"]} /></p>
           <div className="mt-3 flex flex-wrap gap-x-5">
-            <a href="https://github.com/tang-vu/keryx/blob/main/mcp/README.md" className={setupLinkClass}>{guide.stdioGuide}</a>
-            <a href={links.npm} className={setupLinkClass}>{guide.stdioPackage}</a>
+            <a href="https://github.com/tang-vu/keryx/blob/main/mcp/README.md" className={setupLinkClass}><UiText source={guide.stdioGuide} namespaces={["get-started"]} /></a>
+            <a href={links.npm} className={setupLinkClass}><UiText source={guide.stdioPackage} namespaces={["get-started"]} /></a>
           </div>
         </article>
       </div>
     </section>
     <section id="api" className={sectionClass} aria-labelledby="api-title">
-      <h2 id="api-title" className="font-display text-3xl">{guide.apiTitle}</h2>
-      <p className={bodyClass}>{guide.apiBody}</p>
+      <h2 id="api-title" className="font-display text-3xl"><UiText source={guide.apiTitle} namespaces={["get-started"]} /></h2>
+      <p className={bodyClass}><UiText source={guide.apiBody} namespaces={["get-started"]} /></p>
       <div className="mt-5 grid items-start gap-5 lg:grid-cols-2">
         <article className="min-w-0 border border-line bg-paper p-6">
-          <h3 className="font-display text-2xl">{guide.apiConfigTitle}</h3>
+          <h3 className="font-display text-2xl"><UiText source={guide.apiConfigTitle} namespaces={["get-started"]} /></h3>
           <dl className="mt-4 font-mono text-xs leading-relaxed">
-            <dt className="text-ink-3">{guide.apiBase}</dt><dd className="mt-1 break-all">{setupExamples.apiBase}</dd>
-            <dt className="mt-3 text-ink-3">{guide.apiModel}</dt><dd className="mt-1">{setupExamples.model}</dd>
+            <dt className="text-ink-3"><UiText source={guide.apiBase} namespaces={["get-started"]} /></dt><dd className="mt-1 break-all">{setupExamples.apiBase}</dd>
+            <dt className="mt-3 text-ink-3"><UiText source={guide.apiModel} namespaces={["get-started"]} /></dt><dd className="mt-1">{setupExamples.model}</dd>
           </dl>
           <SetupSteps steps={guide.apiSteps} />
           <div className="mt-3 flex flex-wrap gap-x-5">
-            <Link href="/dev" className={setupLinkClass}>{guide.apiKeys}</Link>
-            <a href="/api/docs" className={setupLinkClass}>{guide.apiReference}</a>
-            <a href={`${links.docs}openai-compatible-api.md`} className={setupLinkClass}>{guide.apiRecipes}</a>
+            <Link href="/dev" className={setupLinkClass}><UiText source={guide.apiKeys} namespaces={["get-started"]} /></Link>
+            <a href="/api/docs" className={setupLinkClass}><UiText source={guide.apiReference} namespaces={["get-started"]} /></a>
+            <a href={`${links.docs}openai-compatible-api.md`} className={setupLinkClass}><UiText source={guide.apiRecipes} namespaces={["get-started"]} /></a>
           </div>
         </article>
         <div className="min-w-0">
           <SetupCode title={guide.apiReadOnly} value={setupExamples.models} />
           <SetupCode title={guide.apiExample} value={setupExamples.chat} />
-          <p className="mt-3 font-serif text-sm leading-relaxed text-ink-2">{guide.apiExampleNotice}</p>
+          <p className="mt-3 font-serif text-sm leading-relaxed text-ink-2"><UiText source={guide.apiExampleNotice} namespaces={["get-started"]} /></p>
         </div>
       </div>
       <article className="mt-5 border-l-2 border-paid bg-paper p-6">
-        <h3 className="font-display text-2xl">{guide.a2aTitle}</h3>
-        <p className={bodyClass}>{guide.a2aBody}</p>
-        <Link href="/research#paid-research" className={`${setupLinkClass} mt-3`}>{guide.a2aAction}</Link>
+        <h3 className="font-display text-2xl"><UiText source={guide.a2aTitle} namespaces={["get-started"]} /></h3>
+        <p className={bodyClass}><UiText source={guide.a2aBody} namespaces={["get-started"]} /></p>
+        <Link href="/research#paid-research" className={`${setupLinkClass} mt-3`}><UiText source={guide.a2aAction} namespaces={["get-started"]} /></Link>
       </article>
     </section>
     <section id="cli" className={sectionClass} aria-labelledby="cli-title">
-      <h2 id="cli-title" className="font-display text-3xl">{guide.cliTitle}</h2>
-      <p className={bodyClass}>{guide.cliBody}</p>
-      <h3 className="mt-4 font-display text-xl">{copy.common.requirements}</h3>
-      <p className={bodyClass}>{guide.cliRequirements}</p>
-      <p className={bodyClass}>{guide.cliBoundary}</p>
+      <h2 id="cli-title" className="font-display text-3xl"><UiText source={guide.cliTitle} namespaces={["get-started"]} /></h2>
+      <p className={bodyClass}><UiText source={guide.cliBody} namespaces={["get-started"]} /></p>
+      <h3 className="mt-4 font-display text-xl"><UiText source={copy.common.requirements} namespaces={["get-started"]} /></h3>
+      <p className={bodyClass}><UiText source={guide.cliRequirements} namespaces={["get-started"]} /></p>
+      <p className={bodyClass}><UiText source={guide.cliBoundary} namespaces={["get-started"]} /></p>
       <SetupCode title={guide.cliSetup} value={setupExamples.cli} />
       <div className="mt-3 flex flex-wrap gap-x-6">
-        <a href="https://github.com/tang-vu/keryx#run-it" className={setupLinkClass}>{guide.cliGuide}</a>
-        <a href={`${links.docs}buyer-agent.md`} className={setupLinkClass}>{guide.cliBuyer}</a>
+        <a href="https://github.com/tang-vu/keryx#run-it" className={setupLinkClass}><UiText source={guide.cliGuide} namespaces={["get-started"]} /></a>
+        <a href={`${links.docs}buyer-agent.md`} className={setupLinkClass}><UiText source={guide.cliBuyer} namespaces={["get-started"]} /></a>
       </div>
     </section>
     <section id="bots" className={sectionClass} aria-labelledby="bots-title">
-      <h2 id="bots-title" className="font-display text-3xl">{guide.botsTitle}</h2>
-      <p className={bodyClass}>{guide.botsBody}</p>
+      <h2 id="bots-title" className="font-display text-3xl"><UiText source={guide.botsTitle} namespaces={["get-started"]} /></h2>
+      <p className={bodyClass}><UiText source={guide.botsBody} namespaces={["get-started"]} /></p>
       <div className="mt-5 grid gap-4 md:grid-cols-3">
         {[
           { title: guide.telegram, body: guide.telegramBody, action: guide.telegramAction, href: links.telegram, docs: "telegram-bot-setup.md" },
           { title: guide.discord, body: guide.discordBody, action: guide.discordAction, href: links.discord, docs: "discord-bot-setup.md" },
           { title: guide.slack, body: guide.slackBody, action: guide.slackAction, href: `${links.docs}slack-bot-setup.md`, docs: null },
         ].map(bot => <article key={bot.title} className="flex flex-col border border-line bg-paper p-6">
-          <h3 className="font-display text-2xl">{bot.title}</h3>
-          <p className="mb-3 mt-3 flex-1 font-serif leading-relaxed text-ink-2">{bot.body}</p>
-          <a href={bot.href} className={setupLinkClass}>{bot.action}</a>
-          {bot.docs && <a href={`${links.docs}${bot.docs}`} className={setupLinkClass}>{guide.selfHost}</a>}
+          <h3 className="font-display text-2xl"><UiText source={bot.title} namespaces={["get-started"]} /></h3>
+          <p className="mb-3 mt-3 flex-1 font-serif leading-relaxed text-ink-2"><UiText source={bot.body} namespaces={["get-started"]} /></p>
+          <a href={bot.href} className={setupLinkClass}><UiText source={bot.action} namespaces={["get-started"]} /></a>
+          {bot.docs && <a href={`${links.docs}${bot.docs}`} className={setupLinkClass}><UiText source={guide.selfHost} namespaces={["get-started"]} /></a>}
         </article>)}
       </div>
     </section>

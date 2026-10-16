@@ -14,15 +14,18 @@
  * at dispatch time on the full text it pays for.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { createRichMessages } from "@/lib/i18n/rich-messages";
 import { useState } from "react";
 import Link from "next/link";
 import { Loader2, Rss } from "lucide-react";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { registrationTarget } from "@/lib/registration-return";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 const uiRichCopy = createRichMessages("en");
 
 interface Match {
@@ -55,6 +58,7 @@ export function FeedMatchForm({
   gapId?: string;
   claim?: string;
 } = {}) {
+  const uiCopy = useUiMessages();
   const [rssUrl, setRssUrl] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -158,6 +162,7 @@ export function FeedMatchForm({
 }
 
 function Verdict({ result, rssUrl }: { result: Result; rssUrl: string }) {
+  const uiCopy = useUiMessages();
   const { feed, matches, gapsChecked, judged, wouldBuy, rationale } = result;
   const byModel = judged === "model";
   const matchedPost = matches[0]?.post?.link ? matches[0] : null;

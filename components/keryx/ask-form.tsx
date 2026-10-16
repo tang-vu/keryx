@@ -19,6 +19,9 @@ import { decisionReviewCopy as reviewCopy } from "@/lib/research/decision-review
 import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/hooks/use-research-visibility";
 import type { RunVisibility } from "@/lib/run-privacy/contracts";
 import { ResearchVisibilityPicker } from "./research-visibility-picker";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 // Catalogue adoption only. Interface locale and request data remain unchanged.
 const message = createMessages("en");
@@ -101,6 +104,7 @@ const SUGGESTIONS = [
 ];
 
 export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, questionCapUsdc, restoreQuestion, showLaunchBadge = false }: AskFormProps) {
+  const message = useUiMessages();
   const ownVisibility = useResearchVisibility(parentVisibility, { enabled: !publicationPreference });
   const visibility = publicationPreference ?? ownVisibility;
   const [draft, setDraft] = useState<{ question: string; wallet: string | null; revision: number } | null>(null);

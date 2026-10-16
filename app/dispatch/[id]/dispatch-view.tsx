@@ -3,7 +3,7 @@ import { selectPlural } from "@/lib/i18n/format";
 
 import { DisplayTime } from "@/components/keryx/display-time";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import type { QueryRun, PaymentRecord } from "@/lib/types";
 import type { PresentationLanguage } from "@/shared/i18n/presentation-language";
 import { ReasoningConsole } from "@/components/keryx/reasoning-console";
@@ -15,8 +15,11 @@ import { projectBibliographicTask } from "@/lib/research/bibliographic-task-resu
 import { DecisionReviews } from "@/components/keryx/decision-reviews";
 import { ReadCheckpointVerify } from "@/components/keryx/read-checkpoint-verify";
 import { projectActualReadCheckpoints } from "@/lib/research-audit/actual-read-projection";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 export function DispatchView({
   run,
@@ -32,6 +35,7 @@ export function DispatchView({
   historical?: boolean;
   historicalNetwork?: string;
 }) {
+  const copy = useUiMessages();
   const bibliography = projectBibliographicTask(run.bibliography);
   const confidence = bibliography ? null : deriveConfidence(run);
   const mode = run.paymentMode ?? null;

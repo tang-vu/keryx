@@ -9,14 +9,17 @@
  * truth (the inspect step prints the real price + schema).
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Copy, Terminal } from "lucide-react";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const message = createMessages("en");
+
+
+
 
 const ORIGIN = "https://keryx.cc";
 
@@ -31,6 +34,7 @@ circle services pay ${ORIGIN}/api/agent/ask -X POST
 #    default Deep total: $0.05 service + $0.05 creator cap = $0.10`;
 
 export function A2aCallCard() {
+  const message = useUiMessages();
   const [copied, setCopied] = useState(false);
 
   function copy() {

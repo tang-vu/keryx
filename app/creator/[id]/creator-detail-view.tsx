@@ -3,8 +3,8 @@ import { selectPlural } from "@/lib/i18n/format";
 
 import { DisplayTime } from "@/components/keryx/display-time";
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { OwnerFeedVerification } from "@/components/keryx/owner-feed-verification";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -22,9 +22,12 @@ import { EmbedBadgePanel } from "./embed-badge-panel";
 import { EmbedWidgetPanel } from "./embed-widget-panel";
 import { DecisionFeedbackPanel } from "./decision-feedback-panel";
 import { GatewayProofPanel, type GatewayProof } from "./gateway-proof-panel";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 interface CreatorData {
   scholarlyRights?: { status: string; declarationId?: string; approvalId?: string; license?: string; summary?: string; contentVersion?: string; effectiveAt?: string; embargoUntil?: string; expiresAt?: string } | null;
@@ -62,6 +65,8 @@ interface CreatorData {
 }
 
 export function CreatorDetailView({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const [data, setData] = useState<CreatorData | null>(null);
   const [error, setError] = useState<string | null>(null);
 

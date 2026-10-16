@@ -6,6 +6,9 @@ import { formatLocalizedInstant } from "@/lib/i18n/format";
 import { ownerRunAssignmentMessages as copy } from "@/locales/en/owner-run-assignments";
 import { manifestSchema, type Manifest, type RecipientAction } from "@/lib/owner-run-assignments/contracts";
 import { inboxSchema, type AssignmentInbox, type InboxItem } from "@/lib/owner-run-assignments/projection";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 const button = "min-h-11 border border-line px-4 py-2 disabled:opacity-50";
 type Recovery = { expected: AssignmentInbox["recipient"]; input: RecipientAction };
@@ -14,6 +17,7 @@ function sameRecipient(left: Recovery["expected"], right: Recovery["expected"]) 
     && left.memberGeneration === right.memberGeneration && left.wallet === right.wallet;
 }
 export function OwnerRunAssignmentInbox({ readOnlyView = false }: { readOnlyView?: boolean } = {}) {
+  const copy = useUiCopy("owner-run-assignments", uiEnglish_copy);
   const { session } = useSiweAuth();
   if (session === undefined) return <p role="status">{copy.checking}</p>;
   if (!session) return <Link href="/connect">{copy.signIn}</Link>;
@@ -21,6 +25,7 @@ export function OwnerRunAssignmentInbox({ readOnlyView = false }: { readOnlyView
     wallet={session.address.toLowerCase()} readOnlyView={readOnlyView} />;
 }
 function Editor({ wallet, readOnlyView = false }: { wallet: string; readOnlyView?: boolean }) {
+  const copy = useUiCopy("owner-run-assignments", uiEnglish_copy);
   const recoveryId = useId();
   const [inbox, setInbox] = useState<AssignmentInbox | null>(null), [message, setMessage] = useState("");
   const [proposal, setProposal] = useState<Manifest | null>(null), [busy, setBusy] = useState(false);

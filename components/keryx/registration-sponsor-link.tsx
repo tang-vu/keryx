@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
 import { registrationTarget } from "@/lib/registration-return";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 /** The ordinary registration flow stays available while sponsorship is disabled. */
 export function RegistrationSponsorLink({ claimId, wallet, publisherUrl, rssUrl, name, fetchPrice }: { claimId?: string; wallet: string; publisherUrl?: string; rssUrl?: string; name?: string; fetchPrice?: number }) {
+  const copy = useUiCopy("creator-registration", uiEnglish_copy);
   const [result, setResult] = useState<{ wallet: string; available: boolean; publisherOrigins?: string[] } | null>(null);
   useEffect(() => {
     const controller = new AbortController();

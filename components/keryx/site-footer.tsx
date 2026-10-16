@@ -11,14 +11,17 @@ import { KeryxGlyph } from "./keryx-mark";
 import { browserPaymentProfile,browserRegistryAddress } from "@/lib/browser-payment-profile";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { setupCopy } from "@/locales/en/get-started";
 import { SUPPORT_MAILTO } from "@/lib/public-support";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LanguageSwitcher } from "./language-switcher";
+import { useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const richMessage = createRichMessages("en");
+
+
+
 
 const profile=browserPaymentProfile(),EXPLORER=profile.explorerUrl;
 const configuredRegistry=browserRegistryAddress();
@@ -91,6 +94,7 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
 }
 
 export function SiteFooter() {
+  const richMessage = useUiRichMessages();
   const { message, locale } = useLocale();
   return (
     <footer lang={locale} className="border-t border-ink bg-panel">

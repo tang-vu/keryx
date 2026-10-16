@@ -2,7 +2,7 @@
 import { formatRecordedUsdc, selectPlural } from "@/lib/i18n/format";
 
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { demoteSyntheticEvidence } from "@/lib/research/evidence-provenance";
 
 /**
@@ -32,10 +32,14 @@ import { SourceEvidenceLens } from "./source-evidence-lens";
 import { reasoningOutputLimitText } from "@/lib/llm/reasoning-telemetry";
 import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
 import { BibliographyExports } from "./bibliography-exports";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 export function AnswerCard({ run, answerLanguage, meta, permalink, payments = [], showFeedback = true, historicalNetwork }: { run: QueryRun; answerLanguage?: PresentationLanguage; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[]; showFeedback?: boolean; historicalNetwork?: string }) {
+  const copy = useUiMessages();
   const originalAnswer = run.answer;
   run = demoteSyntheticEvidence(run);
   // A read projection that changes prose invalidates the recorded final bytes.
@@ -201,6 +205,7 @@ function safeArticleUrl(value?: string): string | undefined {
 }
 
 function EvidenceLedger({ run }: { run: QueryRun }) {
+  const copy = useUiMessages();
   const evidence = run.evidence ?? [];
   return (
     <div className="mt-7 border-t border-ink pt-5">
@@ -285,6 +290,7 @@ function SummaryStrip({
   historicalNetwork,
   permalink,
 }: SummaryStripProps) {
+  const copy = useUiMessages();
   const [copied, setCopied] = useState(false);
   const creatorShare = spent > 0 ? `${Math.round((toCreators / spent) * 100)}%` : "—";
 

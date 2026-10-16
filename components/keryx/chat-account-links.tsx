@@ -6,6 +6,9 @@ import type { ChatRecipient } from "@/lib/chat-accounts/contracts";
 import { takeChatAccountFragment } from "@/lib/chat-accounts/fragment-intake";
 import { isOwnBrowserAuthChange } from "@/lib/browser-auth-notice";
 import { chatAccountMessages } from "@/locales/en/chat-accounts";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_chatAccountMessages = chatAccountMessages;
+
 
 interface Account { accountId: string; revision: number }
 interface Preview { recipient: ChatRecipient; account: Account; expiresAt: number; consentProof: string }
@@ -15,6 +18,7 @@ class ChatAccountRequestError extends Error {
 }
 
 export function ChatAccountLinks() {
+  const chatAccountMessages = useUiCopy("chat-accounts", uiEnglish_chatAccountMessages);
   // Credential stays in component memory, never query/server props/local storage.
   const token = useRef<string | null>(null), started = useRef(false);
   const epoch = useRef(0), pending = useRef<AbortController | null>(null), mounted = useRef(false);

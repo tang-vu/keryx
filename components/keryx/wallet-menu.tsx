@@ -29,12 +29,17 @@ import {
 import { WalletPicker } from "./wallet-picker";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { shortAddress } from "@/lib/utils";
-import { createMessages } from "@/lib/i18n/messages";
+
 import { webHeaderMessages } from "@/locales/en/web-header";
 import { chatAccountMessages } from "@/locales/en/chat-accounts";
 import { ownerRunAssignmentMessages } from "@/locales/en/owner-run-assignments";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_webHeaderMessages = webHeaderMessages;
+const uiEnglish_chatAccountMessages = chatAccountMessages;
+const uiEnglish_ownerRunAssignmentMessages = ownerRunAssignmentMessages;
 
-const copy = createMessages("en");
+
+
 
 
 const CHIP =
@@ -52,6 +57,10 @@ function useHydrated(): boolean {
 }
 
 export function WalletMenu() {
+  const copy = useUiMessages();
+  const webHeaderMessages = useUiCopy("web-header", uiEnglish_webHeaderMessages);
+  const chatAccountMessages = useUiCopy("chat-accounts", uiEnglish_chatAccountMessages);
+  const ownerRunAssignmentMessages = useUiCopy("owner-run-assignments", uiEnglish_ownerRunAssignmentMessages);
   const { address, isConnected, session, authState, signIn, signOut } = useSiweAuth();
   const { status } = useAccount();
   const { disconnectAsync } = useDisconnect();

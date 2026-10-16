@@ -1,7 +1,7 @@
 "use client";
 import { DisplayTime } from "@/components/keryx/display-time";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 
 import { useEffect, useState } from "react";
 import { listBrowserJournals, importBrowserJournal, exportBrowserJournal, deleteBrowserJournal, type BrowserJournal } from "@/lib/buyer/browser-journal";
@@ -9,13 +9,17 @@ import { resumeBrowserResearch } from "@/lib/buyer/browser-client";
 import { downloadBuyerJson } from "@/lib/buyer/download";
 import { useResearchWorkspace } from "./research-workspace";
 import { ResearchJobDetails } from "./research-job-details";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const message = createMessages("en");
+
+
+
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 type Result = Awaited<ReturnType<typeof resumeBrowserResearch>>;
 
 export function ResearchSavedJobs() {
+  const message = useUiMessages();
   const { selection, revision, select, refresh } = useResearchWorkspace();
   const [rows, setRows] = useState<BrowserJournal[]>([]);
   const [storageError, setStorageError] = useState("");

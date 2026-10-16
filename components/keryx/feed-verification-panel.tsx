@@ -1,13 +1,16 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Copy, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
 import { verificationToken } from "@/lib/sources/feed-verification-token";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 export interface VerificationSource { id: string; walletAddress: string; verified?: boolean; rssUrl?: string | null }
 
@@ -15,6 +18,7 @@ export interface VerificationSource { id: string; walletAddress: string; verifie
 export function FeedVerificationPanel({ source, enabled = true, onVerified }: {
   source: VerificationSource; enabled?: boolean; onVerified?: () => void;
 }) {
+  const uiCopy = useUiMessages();
   const { session } = useSiweAuth();
   const identity = `${source.id}:${source.walletAddress.toLowerCase()}`;
   const owner = session?.address.toLowerCase();

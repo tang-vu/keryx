@@ -4,6 +4,9 @@ import { createMessages } from "@/lib/i18n/messages";
 import { useId, useRef, useState, type RefObject } from "react";
 import type { EvidenceMatrixInput } from "@/lib/research/evidence-matrix";
 import { buildSourceEvidenceLens, type SourceEvidenceLensModel } from "@/lib/research/source-evidence-lens";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
 
@@ -29,6 +32,7 @@ function SourceEvidenceLensSelection({ run }: { run: EvidenceMatrixInput }) {
 export function SourceEvidenceLensView({ model, selectId, selectRef, onOmit }: {
   model: SourceEvidenceLensModel; selectId: string; selectRef?: RefObject<HTMLSelectElement | null>; onOmit: (sourceId: string | null) => void;
 }) {
+  const copy = useUiMessages();
   if (!model.available) return <p className="mt-5 text-sm text-ink-3">{copy("reportSourceLens.unavailable")}</p>;
   if (!model.sources.length) return <p className="mt-5 text-sm text-ink-3">{copy("reportSourceLens.empty")}</p>;
   const omitted = model.sources.find(source => source.sourceId === model.omittedSourceId);

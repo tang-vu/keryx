@@ -2,19 +2,23 @@
 import { formatRecordedAmount, selectPlural } from "@/lib/i18n/format";
 
 
-import { createMessages } from "@/lib/i18n/messages";
 
-const message = createMessages("en");
+
+
 
 import { useEffect, useState } from "react";
 import { verifyBrowserDecisions, type BuyerDecisions } from "@/lib/a2a/buyer-decisions";
 import { readBoundedJson } from "@/lib/read-bounded-json";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 export function ResearchDecisions({ queryId, answer, claims }: {
   queryId: string;
   answer: string;
   claims: { claimIndex: number; claim: string }[];
 }) {
+  const message = useUiMessages();
   const [decisions, setDecisions] = useState<BuyerDecisions | null>(null);
   const [error, setError] = useState(false);
   const [revision, setRevision] = useState(0);

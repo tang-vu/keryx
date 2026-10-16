@@ -1,14 +1,17 @@
 "use client";
 
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { formatNumber, selectPlural } from "@/lib/i18n/format";
 import { DisplayTime } from "./display-time";
 import type { ReactNode } from "react";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const message = createMessages("en");
-const richMessage = createRichMessages("en");
+
+
+
+
 
 /**
  * /status section for the on-chain SourceRegistry: the contract (linked to ArcScan),
@@ -36,6 +39,8 @@ function ago(iso: string) {
 }
 
 export function RegistryStatusSection({ registry }: { registry: RegistryHealth }) {
+  const message = useUiMessages();
+  const richMessage = useUiRichMessages();
   const { parity } = registry;
   const parityLabel = !parity
     ? message("statusRegistry.notYetChecked")

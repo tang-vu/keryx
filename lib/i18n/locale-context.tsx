@@ -33,8 +33,9 @@ function sameBinding(left: PreferenceBinding, right: PreferenceBinding) {
 /** English SSR/hydration; preference resolution starts only after mount. ROOT must
  * explicitly admit a preview list at composition time; preparedLocales is never a default. */
 export function LocaleProvider({ children, enabledLocales = shippedUiLocales, connectedWallet = null,
-  network = browserPaymentProfile().networkId, fetcher = browserFetch }: {
+  network = browserPaymentProfile().networkId, fetcher = browserFetch, prepareLocale }: {
   children: ReactNode; enabledLocales?: readonly UiLocale[]; connectedWallet?: string | null; network?: string; fetcher?: typeof fetch;
+  prepareLocale?: (locale: UiLocale) => Promise<unknown>;
 }) {
   if (!enabledLocales.includes("en") || enabledLocales.some(locale => !preparedLocales.includes(locale))) throw new Error("English locale fallback is required");
   const enabledKey = enabledLocales.join(",");
@@ -69,12 +70,12 @@ export function LocaleProvider({ children, enabledLocales = shippedUiLocales, co
     if (!epoch.current.current(ticket)) return;
     const selected = selectPreference(preferences.current, enabled.current).locale;
     try {
-      const catalogue = await loadUiShellCatalogue(selected, enabled.current);
+      const [catalogue] = await Promise.all([loadUiShellCatalogue(selected, enabled.current), prepareLocale?.(selected)]);
       if (epoch.current.current(ticket)) setView({ locale: selected, catalogue, status, ready: true });
     } catch {
       if (epoch.current.current(ticket)) setView({ locale: "en", catalogue: {}, status: "loadFailed", ready: true });
     }
-  }, []);
+  }, [prepareLocale]);
 
   useEffect(() => {
     let live = true;

@@ -6,9 +6,12 @@ import { toast } from "sonner";
 import { CIRCLE_GOOGLE_CONNECTOR_ID } from "@/lib/circle-wallet-config";
 import { circleWalletIdentity, circleWalletCanSign, startGoogleWalletLogin, resumeGoogleWalletLogin } from "@/lib/circle-wallet-browser";
 import { circleWalletPublicConfigured } from "@/lib/circle-wallet-config";
-import { createMessages } from "@/lib/i18n/messages";
 
-const copy = createMessages("en");
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
+
+
 
 
 /** Absent configuration is an honest unavailable option, never a simulated wallet. */
@@ -20,6 +23,7 @@ export function CircleGoogleWalletButton(props: GoogleWalletButtonProps) {
   return circleWalletPublicConfigured() ? <ConfiguredGoogleWalletButton {...props}/> : null;
 }
 function ConfiguredGoogleWalletButton({ disabled = false, onSelect, onConnected, onConnectionFailed, reconnectOnly = false }: GoogleWalletButtonProps) {
+  const copy = useUiMessages();
   const { connectors, connectAsync, isPending } = useConnect();
   const { connector: currentConnector } = useAccount();
   const [available, setAvailable] = useState(false);
@@ -63,6 +67,7 @@ export function CircleGoogleCallback(props: { onConnected?: () => void }) {
   return circleWalletPublicConfigured() ? <ConfiguredGoogleCallback {...props}/> : null;
 }
 function ConfiguredGoogleCallback({ onConnected }: { onConnected?: () => void }) {
+  const copy = useUiMessages();
   const { connectors, connectAsync } = useConnect();
   const [status, setStatus] = useState<string | null>(null);
   const completed = useRef(false);

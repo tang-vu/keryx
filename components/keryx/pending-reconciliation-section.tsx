@@ -2,6 +2,9 @@ import { formatNumber, selectPlural } from "@/lib/i18n/format";
 import { DisplayTime } from "@/components/keryx/display-time";
 
 import { createMessages } from "@/lib/i18n/messages";
+import { UiMessage } from "@/lib/i18n/ui-copy";
+
+
 
 const message = createMessages("en");
 export interface PendingReconciliationHealth {
@@ -56,7 +59,7 @@ export function PendingReconciliationSection({
   return (
     <section className="mt-8 border-t border-line pt-5">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">{message("statusReconciliation.ambiguousPaymentReconciliation")}</h2>
+        <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3"><UiMessage messageKey={"statusReconciliation.ambiguousPaymentReconciliation"} /></h2>
         <span className={`font-mono text-[10px] uppercase tracking-[0.12em] ${clean ? "text-paid" : reconciliation.degraded ? "text-red-700" : "text-amber-700"}`}>
           {label}
         </span>
@@ -106,7 +109,7 @@ export function PendingReconciliationSection({
         />
         <Row k={message("statusReconciliation.lastChecked")} v={<DisplayTime value={reconciliation.checkedAt} />} />
       </dl>
-      <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint">{message("statusReconciliation.acceptedTransfersSettleOnlyOnAnExactTuple")}</p>
+      <p className="mt-3 font-mono text-[10px] leading-relaxed tracking-wide text-faint"><UiMessage messageKey={"statusReconciliation.acceptedTransfersSettleOnlyOnAnExactTuple"} /></p>
     </section>
   );
 }

@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ui-preference.ts",
-  "sourceSha256": "796e9d98f5484ec5ae54906050b0af8d7ad2cb5c46fd969931ecec749e4d9fe7",
+  "sourceSha256": "71a28873f12c58e26700933278be179753094d6eac945c464729443d488a1f96",
   "entries": {
     "language": {
       "source": "Interface language",
@@ -21,8 +21,8 @@
       "text": "简体中文（预览）"
     },
     "previewNotice": {
-      "source": "Preview: machine draft, not human reviewed. Only navigation changes; other text remains English.",
-      "text": "预览：机器草稿，未经人工审阅。仅导航会变化；其他文本仍为英文。"
+      "source": "Preview: machine draft, not human reviewed. Interface text is translated; critical payment, consent and legal text stays in English.",
+      "text": "预览版为机器翻译，尚未经人工审核。界面文字已翻译；涉及付款、同意和法律的重要文字仍使用英语。"
     },
     "englishOnly": {
       "source": "English is currently the only offered interface language.",

@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { createMessages } from "@/lib/i18n/messages";
+
 import { fetchOperatorLedger } from "@/lib/operator-ledger/client";
 import { formatLedgerMicros, type LedgerFunding, type LedgerLeg, type OperatorLedger } from "@/lib/operator-ledger/contracts";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const message = createMessages("en");
+
+
+
 const fundings: LedgerFunding[] = ["browser", "treasury", "unknown", "offline"];
 const fundingLabel = { browser: "jobLedger.browser", treasury: "jobLedger.treasury", unknown: "jobLedger.unknown", offline: "jobLedger.offline" } as const;
 const kindLabel = { fetch: "jobLedger.access", citation: "jobLedger.reward", "operating-fee": "jobLedger.sponsoredFee" } as const;
@@ -16,6 +19,7 @@ const stateLabel: Record<LedgerLeg["state"], "jobLedger.settled" | "jobLedger.pe
 const coverageLabel = { "matched-finish-count": "jobLedger.coverageMatched", incomplete: "jobLedger.coverageIncomplete", unknown: "jobLedger.coverageUnknown" } as const;
 
 export function OperatorLedgerView() {
+  const message = useUiMessages();
   const [days, setDays] = useState(7), [attempt, setAttempt] = useState(0);
   const [ledger, setLedger] = useState<OperatorLedger | null>(null), [failed, setFailed] = useState(false);
   useEffect(() => {

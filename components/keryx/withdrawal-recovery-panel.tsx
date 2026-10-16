@@ -2,17 +2,20 @@
 import { formatAmount, selectPlural } from "@/lib/i18n/format";
 
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { withdrawalRecoveryStatusCopy } from "@/lib/i18n/withdrawal-recovery-status";
 import { withdrawalOwnerSchema } from "@/lib/gateway/withdrawal-request";
 import { listWithdrawalBrowserJournals } from "@/lib/gateway/withdrawal-browser-journal";
 import { recoverWithdrawalBrowserStatus } from "@/lib/gateway/withdrawal-browser-flow";
 import { exportWithdrawalRecoveryFile, importWithdrawalRecoveryFile } from "@/lib/gateway/withdrawal-recovery-file";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 type Row = Awaited<ReturnType<typeof listWithdrawalBrowserJournals>>["requests"][number];
 type Status = Awaited<ReturnType<typeof recoverWithdrawalBrowserStatus>>;
@@ -21,10 +24,12 @@ const button = "rounded border border-current px-3 py-2 text-sm disabled:opacity
 /** Mounted by the completed withdrawal workspace. A wallet change remounts all
  * local state and cancels pending reads; this panel never signs or submits payments. */
 export function WithdrawalRecoveryPanel({ address, onReview }: { address: string; onReview?: (id: string) => void }) {
+  const uiCopy = useUiMessages();
   const parsed = withdrawalOwnerSchema.safeParse(address);
   return parsed.success ? <OwnerRecovery key={parsed.data} owner={parsed.data} onReview={onReview} /> : <p>{uiCopy("withdrawalRecovery.connect")}</p>;
 }
 function OwnerRecovery({ owner, onReview }: { owner: string; onReview?: (id: string) => void }) {
+  const uiCopy = useUiMessages();
   const [rows, setRows] = useState<Row[]>([]), [cursor, setCursor] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
@@ -93,6 +98,8 @@ function OwnerRecovery({ owner, onReview }: { owner: string; onReview?: (id: str
   </section>;
 }
 function RecoveryStatus({ result }: { result: Status }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   if (result.state === "authentication-required") return <p>{uiCopy("withdrawalRecovery.signIn")}</p>;
   if (result.state === "unavailable") return <p>{uiCopy("withdrawalRecovery.serverUnavailable")}</p>;
   const progress = result.progress;

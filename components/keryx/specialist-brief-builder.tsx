@@ -4,12 +4,16 @@ import Link from "next/link";
 import { useRef, useState, type FormEvent } from "react";
 import { SPECIALIST_BRIEF_IDS, specialistBriefs, prepareSpecialistBrief, type SpecialistBriefId } from "@/lib/research/specialist-briefs";
 import { specialistBriefCopy as copy } from "@/locales/en/specialist-briefs";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 type Prepared = ReturnType<typeof prepareSpecialistBrief>;
 const fieldClass = "w-full min-w-0 border border-line bg-paper-2 p-3 font-serif text-base text-ink";
 const linkClass = "inline-flex min-h-11 items-center font-mono text-sm text-paid underline underline-offset-4";
 
 export function SpecialistBriefBuilder() {
+  const copy = useUiCopy("specialist-briefs", uiEnglish_copy);
   const [track, setTrack] = useState<SpecialistBriefId>("api-platform");
   const [decision, setDecision] = useState("");
   const [context, setContext] = useState("");

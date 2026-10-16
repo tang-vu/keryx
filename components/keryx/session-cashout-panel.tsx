@@ -13,11 +13,14 @@ import { verifySessionWithdrawalPreparation, type SessionWithdrawalPreparation }
 import { readBrowserSessionWithdrawal, claimBrowserSessionWithdrawalDelivery,listBrowserSessionWithdrawalReferences } from "@/lib/session/browser-session-withdrawal-storage";
 import { submitBrowserSessionOwnerMint } from "@/lib/session/browser-session-owner-mint";
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import { walletWorkspaceMessages as walletCopy } from "@/locales/en/wallet-workspace";
+import { useUiCopy, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_walletCopy = walletCopy;
+
 
 const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
 
 
 function atomic(value:string,positive=false){
@@ -29,6 +32,9 @@ function atomic(value:string,positive=false){
 /** Normal owner-funded session recovery, including expired/revoked payment grants.
  * No session transaction authority or automatic burn/mint retry is exposed. */
 export function SessionCashoutPanel({sessAddr,expanded=false}:{sessAddr:string|null;expanded?:boolean}){
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
+  const walletCopy = useUiCopy("wallet-workspace", uiEnglish_walletCopy);
   const {data:wallet}=useWalletClient(),rpc=usePublicClient(),owner=wallet?.account?.address.toLowerCase()??null;
   const ownerRef=useRef(owner),generation=useRef(0);
   const [open,setOpen]=useState(expanded),[amount,setAmount]=useState(""),[fee,setFee]=useState(""),[id,setId]=useState("");

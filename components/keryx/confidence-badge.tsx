@@ -9,6 +9,9 @@
 
 import { createMessages } from "@/lib/i18n/messages";
 import type { Confidence } from "@/lib/types";
+import { UiText } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
 
@@ -35,7 +38,7 @@ export function ConfidenceBadge({
       title={confidence.reason}
     >
       <span className="font-semibold">{confidence.level}</span>
-      <span className="opacity-70">{sourceGrounding ? copy("reportConfidence.sourceGrounding") : copy("reportConfidence.confidence")}</span>
+      <span className="opacity-70"><UiText source={sourceGrounding ? copy("reportConfidence.sourceGrounding") : copy("reportConfidence.confidence")} /></span>
       {showReason && confidence.reason ? (
         <span className="ml-1 normal-case tracking-normal opacity-80">— {confidence.reason}</span>
       ) : null}

@@ -7,6 +7,9 @@ const message = createMessages("en");
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { currentArcLabel } from "@/lib/arc-network-display";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const steps = [
   { target: "hero", title: message("researchTour.budgetTitle"), body: message("researchTour.budgetBody") },
@@ -16,6 +19,7 @@ const steps = [
 ] as const;
 
 export function OnboardingTour() {
+  const message = useUiMessages();
   const [active, setActive] = useState(false);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);

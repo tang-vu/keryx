@@ -17,12 +17,15 @@
  * exactly as it did before this existed.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { Children, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 /** One entry that exists in the archive but isn't rendered as a card on this page. */
 export interface ArchiveSearchEntry {
@@ -50,6 +53,7 @@ export function ArchiveSearch({
   others?: ArchiveSearchEntry[];
   placeholder?: string;
 }) {
+  const copy = useUiMessages();
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const cards = Children.toArray(children);

@@ -2,7 +2,7 @@
 import { formatRecordedUsdc, formatUsdcMicros, selectPlural, sumRecordedUsdc } from "@/lib/i18n/format";
 
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { Citation, EvidenceRecord, PaymentRecord } from "@/lib/types";
@@ -10,8 +10,11 @@ import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { ScholarlyMetadataDetails } from "./scholarly-metadata";
 import { recordedArcLabel,recordedArcTransactionUrl } from "@/lib/arc-network-display";
 import { GatewayContractReferences } from "./gateway-contract-references";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 interface Props {
   queryId: string;
@@ -32,6 +35,7 @@ function safeArticleUrl(value?: string): string | undefined {
 }
 
 export function CitationEvidencePanel({ queryId, citation, evidence, payments, onClose }: Props) {
+  const copy = useUiMessages();
   const panelRef = useRef<HTMLDialogElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const articleUrl = safeArticleUrl(citation.itemUrl);

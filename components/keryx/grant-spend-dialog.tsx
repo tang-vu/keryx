@@ -11,6 +11,9 @@ import { SessionActiveCard } from "./session-active-card";
 import { UsdcPresetChips } from "./usdc-preset-chips";
 import { ResearchBudgetFields, parseBudgetAmount } from "./research-budget-fields";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
 
@@ -37,6 +40,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function GrantSpendDialog({ grantState, onActivate, onTopUp, onExtend, onRevoke, onTryRecover, onRecoverViaSignature }: Props) {
+  const copy = useUiMessages();
   const mainnet = !browserPaymentProfile().testnet;
   const [budgetInput, setBudgetInput] = useState("0.05");
   const [questionInput, setQuestionInput] = useState("0.05");

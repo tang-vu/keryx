@@ -9,6 +9,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { MySourcesView } from "./my-sources-view";
+import { UiMessage } from "@/lib/i18n/ui-copy";
+
+
 
 const uiCopy = createMessages("en");
 
@@ -24,13 +27,13 @@ export default function MySourcesPage() {
       <SiteHeader />
       <main className="mx-auto max-w-[820px] px-4 py-10 sm:px-8">
         <div className="mb-8 border-b border-line pb-6">
-          <h1 className="font-serif text-2xl text-ink">{uiCopy("creatorPortfolio.title")}</h1>
+          <h1 className="font-serif text-2xl text-ink"><UiMessage messageKey={"creatorPortfolio.title"} /></h1>
           <p className="mt-1 font-mono text-xs text-ink-3">
-            {uiCopy("creatorPortfolio.ownership")}
+            <UiMessage messageKey={"creatorPortfolio.ownership"} />
           </p>
         </div>
         <MySourcesView />
-        <Link href="/me/withdrawals" className="mt-6 inline-block text-sm underline">{uiCopy("creatorPortfolio.withdrawals")}</Link>
+        <Link href="/me/withdrawals" className="mt-6 inline-block text-sm underline"><UiMessage messageKey={"creatorPortfolio.withdrawals"} /></Link>
       </main>
     </>
   );

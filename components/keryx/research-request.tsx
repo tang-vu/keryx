@@ -1,7 +1,7 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useEffect, useRef, useState } from "react";
 import { MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
 import { buyerRequestSchema } from "@/lib/buyer/protocol";
@@ -9,9 +9,12 @@ import { quoteBuyer } from "@/lib/buyer/quote";
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { ResearchCheckout } from "./research-checkout";
 import { currentArcLabel } from "@/lib/arc-network-display";
+import { useUiCopyFunction, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_productGuideCopy = productGuideCopy;
 
-const copy = createMessages("en");
-const richCopy = createRichMessages("en");
+
+
+
 
 type ResearchRequestProps = {
   mode: "quick" | "deep"; budget: number; version: string; total: number; payee: string;
@@ -23,6 +26,9 @@ export function ResearchRequest(props: ResearchRequestProps) {
 }
 
 function ResearchRequestForm({ mode, budget, version, total, payee }: ResearchRequestProps) {
+  const copy = useUiMessages();
+  const richCopy = useUiRichMessages();
+  const productGuideCopy = useUiCopyFunction("product-guide", uiEnglish_productGuideCopy);
   const [question, setQuestion] = useState("");
   const [copied, setCopied] = useState("");
   const [verifiedRequest, setVerifiedRequest] = useState<string | null>(null);

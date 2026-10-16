@@ -6,6 +6,9 @@ import { formatSigningUsdc } from "@/lib/i18n/format";
 import { readRecordedReceipt, readResearchAdmission, recordedWalkthrough } from "@/lib/recorded-walkthrough";
 import { readCircleTransfer, readRegistryPayout, recordedPayment } from "@/lib/recorded-walkthrough-verification";
 import { walkthroughMessages as messages } from "@/locales/en/walkthrough";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_messages = messages;
+
 
 const buttonStyle = "border border-line px-4 py-3 font-mono text-xs text-ink hover:bg-paper-2 disabled:opacity-50";
 const linkStyle = "inline-block py-2 text-paid underline underline-offset-4";
@@ -43,6 +46,7 @@ const registryOutcomes = { checking: messages.registryChecking, registered: mess
 const liveOutcomes = { checking: messages.liveChecking, "not-paused": messages.liveOpen, paused: messages.livePaused, unavailable: messages.liveUnknown };
 
 export function RecordedWalkthrough() {
+  const messages = useUiCopy("walkthrough", uiEnglish_messages);
   const [step, setStep] = useState(-1);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (step >= 0) heading.current?.focus(); }, [step]);

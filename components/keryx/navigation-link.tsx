@@ -5,8 +5,12 @@ import { createPortal } from "react-dom";
 import Link, { useLinkStatus } from "next/link";
 import { Loader2 } from "lucide-react";
 import { webHeaderMessages } from "@/locales/en/web-header";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_webHeaderMessages = webHeaderMessages;
+
 
 function NavigationStatus() {
+  const webHeaderMessages = useUiCopy("web-header", uiEnglish_webHeaderMessages);
   const { pending } = useLinkStatus();
   if (!pending) return null;
 

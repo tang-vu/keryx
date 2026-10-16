@@ -31,6 +31,9 @@ import { pagePrivacyActor } from "@/lib/run-privacy/auth";
 import { runPrivacyCopy } from "@/locales/en/run-privacy";
 import { ProductEntryNote } from "@/components/keryx/product-guide";
 import { recordedAnswerLanguage } from "@/lib/research/answer-language-provenance";
+import { UiMessage, UiText } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
 
@@ -185,13 +188,13 @@ export default async function DispatchPage({ params }: PageProps) {
               href="/answers"
               className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3 transition-colors hover:text-ink"
             >
-              {copy("reportDispatch.archive")}
+              <UiMessage messageKey={"reportDispatch.archive"} />
             </Link>
             <Link
               href="/"
               className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3 transition-colors hover:text-ink"
             >
-              {copy("reportDispatch.new")}
+              <UiMessage messageKey={"reportDispatch.new"} />
             </Link>
           </div>
         </div>
@@ -200,14 +203,14 @@ export default async function DispatchPage({ params }: PageProps) {
       <main className="mx-auto max-w-[1180px] px-4 pb-20 pt-10 sm:px-[30px]">
         {dispatch.visibility === "public" && <ProductEntryNote />}
         {archive ? <HistoricalDispatchNote archive={archive} /> : null}
-        {thread.parentUnavailable ? <p role="status" className="mb-6 max-w-[860px] font-serif text-sm text-ink-3">{copy("reportDispatch.parentUnavailable")}</p> : null}
+        {thread.parentUnavailable ? <p role="status" className="mb-6 max-w-[860px] font-serif text-sm text-ink-3"><UiMessage messageKey={"reportDispatch.parentUnavailable"} /></p> : null}
         {parent ? (
           <Link
             href={`/dispatch/${parent.id}`}
             className="mb-6 flex max-w-[860px] items-baseline gap-2.5 border-l-2 border-line pl-4 transition-colors hover:border-ink"
           >
             <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
-              {copy(parentDispatch?.archive ? "reportDispatch.followsHistorical" : "reportDispatch.follows")}
+              <UiMessage messageKey={parentDispatch?.archive ? "reportDispatch.followsHistorical" : "reportDispatch.follows"} />
             </span>
             <span className="font-serif text-[15px] leading-[1.5] text-ink-2">
               {parent.question}
@@ -218,19 +221,19 @@ export default async function DispatchPage({ params }: PageProps) {
         <DispatchView run={publicQueryRun(run)} answerLanguage={answerLanguage} payments={payments} historical={Boolean(archive)} historicalNetwork={archive?.network} />
 
         <PortableReceiptPanel dispatchId={id} />
-        <Link href={`/me/run-privacy?run=${encodeURIComponent(id)}`} className="text-sm underline">{runPrivacyCopy.manage}</Link>
+        <Link href={`/me/run-privacy?run=${encodeURIComponent(id)}`} className="text-sm underline"><UiText source={runPrivacyCopy.manage} namespaces={["run-privacy"]} /></Link>
         {!archive && <DeliverableAcceptance id={id} answer={run.answer} />}
         <PurchaseOutcomesPanel dispatchId={id} report={purchaseOutcomes} />
 
         {comparison.delta ? <AnswerDeltaPanel delta={comparison.delta} /> : null}
-        {comparison.unavailable ? <p role="status" className="mt-6 max-w-[860px] font-serif text-sm text-ink-3">{copy("reportDispatch.comparisonUnavailable")}</p> : null}
+        {comparison.unavailable ? <p role="status" className="mt-6 max-w-[860px] font-serif text-sm text-ink-3"><UiMessage messageKey={"reportDispatch.comparisonUnavailable"} /></p> : null}
 
         {freshness ? <FreshnessNote freshness={freshness} dispatchId={id} question={run.question} /> : null}
 
         {followUps.length ? (
           <section className="mt-8 max-w-[860px]">
             <h2 className="mb-3.5 border-b border-line pb-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-ink-3">
-              {copy("reportDispatch.followedBy")}
+              <UiMessage messageKey={"reportDispatch.followedBy"} />
             </h2>
             <ul className="space-y-2.5">
               {followUps.map((f) => (
@@ -241,15 +244,15 @@ export default async function DispatchPage({ params }: PageProps) {
                   >
                     {f.run.question}
                   </Link>
-                  {archive ? <span className="ml-2 font-mono text-[10px] text-ink-3">{f.archive ? copy("reportDispatch.historicalNetwork") : CURRENT_NETWORK_LABEL}</span> : null}
+                  {archive ? <span className="ml-2 font-mono text-[10px] text-ink-3"><UiText source={f.archive ? copy("reportDispatch.historicalNetwork") : CURRENT_NETWORK_LABEL} namespaces={["run-privacy"]} /></span> : null}
                 </li>
               ))}
             </ul>
           </section>
         ) : null}
-        {thread.followUpsUnavailable ? <p role="status" className="mt-6 max-w-[860px] font-serif text-sm text-ink-3">{copy("reportDispatch.followUpsUnavailable")}</p> : null}
+        {thread.followUpsUnavailable ? <p role="status" className="mt-6 max-w-[860px] font-serif text-sm text-ink-3"><UiMessage messageKey={"reportDispatch.followUpsUnavailable"} /></p> : null}
 
-        {archive ? <p className="mt-8 font-serif text-sm text-ink-2">{copy("reportDispatch.historicalFollowUp", { network: CURRENT_NETWORK_LABEL })}</p> : null}
+        {archive ? <p className="mt-8 font-serif text-sm text-ink-2"><UiMessage messageKey={"reportDispatch.historicalFollowUp"} values={{ network: CURRENT_NETWORK_LABEL }} /></p> : null}
         <FollowUpForm parentId={id} />
         <RelatedDispatches entries={related} />
       </main>

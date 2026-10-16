@@ -8,6 +8,9 @@ import { jobTargetCopy } from "@/locales/en/job-targets";
 import { useJobTargetWarning } from "@/lib/operator/job-target-observation";
 import { jobTargetCustomerState, type JobTargetStatus } from "@/lib/operator/job-targets";
 import { AccountJobs } from "./account-jobs";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_jobTargetCopy = jobTargetCopy;
+
 
 export function ResearchJobEscalation({ escalation, original, status }: {
   escalation?: PaidJobEscalation;
@@ -22,6 +25,7 @@ function ObservedJobEscalation({ escalation, original, status }: {
   status?: JobTargetStatus;
   original?: { orderId: string; payment: z.infer<typeof originalOrderPaymentSchema> };
 }) {
+  const jobTargetCopy = useUiCopy("job-targets", uiEnglish_jobTargetCopy);
   const localWarning = useJobTargetWarning(escalation, status);
   const customerState = jobTargetCustomerState(escalation, localWarning, status);
   const [choice, setChoice] = useState<"wait" | "partial" | "human" | null>(null);

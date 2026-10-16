@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { accountMembershipCopy as copy } from "@/locales/en/account-membership";
 import { accountIdSchema, canonicalWalletSchema, digestSchema, membershipSchema, preconditionSchema, type AccountPrecondition,
   type IssuedMembershipChallenge, type Membership } from "@/lib/accounts/contracts";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 const accountConsent = { version: 1, privateAccount: true, shareOwnedHistory: true } as const;
 const linkConsent = { version: 1, sharePastAndFutureOwnedHistory: true, walletAuthorityStaysSeparate: true } as const;
@@ -18,6 +21,7 @@ const messages: Record<string, string> = {
   invalid_membership_proof: "The wallet proof is invalid, expired or already used. Reload and start a fresh explicit link.",
 };
 export function AccountMembershipWorkspace() {
+  const copy = useUiCopy("account-membership", uiEnglish_copy);
   const [membership, setMembership] = useState<Membership | null>(null);
   const [sessionWallet, setSessionWallet] = useState<string | null>(null);
   const [offer, setOffer] = useState<AccountPrecondition | null>(null);

@@ -9,8 +9,8 @@ import { formatRecordedUsdc, selectPlural } from "@/lib/i18n/format";
  * per-tx explorer page; on-chain proof is the batched settlement wallet, linked in the header.
  */
 
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { DisplayTime } from "./display-time";
 import { Check, CircleX, Clock3 } from "lucide-react";
 import type { PaymentRecord } from "@/lib/types";
@@ -28,9 +28,12 @@ import { shortAddr } from "./phase-style";
 import { cn } from "@/lib/utils";
 import { GatewayContractReferences } from "./gateway-contract-references";
 import { recordedArcLabel } from "@/lib/arc-network-display";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const dateCopy = createRichMessages("en");
+
+
+
+
 
 function timeAgo(iso: string) {
   return <DisplayTime value={iso} relative />;
@@ -43,6 +46,8 @@ export function PaymentsFeed({
   payments: PaymentRecord[];
   compact?: boolean;
 }) {
+  const uiCopy = useUiMessages();
+  const dateCopy = useUiRichMessages();
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
@@ -201,6 +206,7 @@ export function PaymentsFeed({
 }
 
 function KindBadge({ kind }: { kind: PaymentRecord["kind"] }) {
+  const uiCopy = useUiMessages();
   const citation = kind === "citation";
   return (
     <span

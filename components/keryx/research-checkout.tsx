@@ -1,7 +1,7 @@
 "use client";
 import { SigningAmount } from "./signing-amount";
 import { formatAmount } from "@/lib/i18n/format";
-import { createMessages } from "@/lib/i18n/messages";
+
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
 import { useEffect, useRef, useState } from "react";
@@ -16,8 +16,11 @@ import { downloadBuyerJson } from "@/lib/buyer/download";
 import { ResearchJobTarget } from "./research-job-target";
 import { readAccountPurchaseSession, consentToAccountPurchase, invalidateAccountPurchaseConsent, type AccountPurchaseSession, type AccountPurchaseConsent } from "@/lib/buyer/account-owned-transport";
 import { pendingOwner257Copy } from "@/locales/en/pending-owner257";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+const uiEnglish_pendingOwner257Copy = pendingOwner257Copy;
 
-const copy = createMessages("en");
+
+
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:cursor-not-allowed disabled:opacity-40";
 type Review = { request: BuyerRequest; payer: string; payee: string; amount: string };
@@ -25,6 +28,8 @@ type Review = { request: BuyerRequest; payer: string; payee: string; amount: str
 export function ResearchCheckout({ question, mode, budget, version, total, payee }: {
   question: string; mode: "quick" | "deep"; budget: number; version: string; total: number; payee: string;
 }) {
+  const copy = useUiMessages();
+  const pendingOwner257Copy = useUiCopy("pending-owner257", uiEnglish_pendingOwner257Copy);
   const { address, chainId } = useAccount();
   const { data: wallet } = useWalletClient();
   const { switchChainAsync, isPending: switching } = useSwitchChain();

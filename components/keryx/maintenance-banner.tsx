@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createMessages } from "@/lib/i18n/messages";
+
 import { STATUS_PATH, type MaintenanceStatus } from "@/lib/maintenance/public-status";
 import { observeMaintenanceStatus, type StatusReadBudget } from "@/lib/maintenance/status-observer";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const message = createMessages("en");
+
+
+
 
 /** Independent public control notice; it cannot disable, submit or recover a caller's request. */
 export function MaintenanceBanner() {
+  const message = useUiMessages();
   const [status, setStatus] = useState<MaintenanceStatus | null>(null);
   const [observation, setObservation] = useState<"current" | "unavailable" | "finished">("current");
   const budget = useRef<StatusReadBudget>({ startedAt: null, reads: 0, stopped: false });

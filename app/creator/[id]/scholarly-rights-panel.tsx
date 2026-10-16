@@ -1,24 +1,30 @@
 "use client";
-import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
+
 import { useCallback, useEffect, useState } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 import { paperDeclarationMessage, paperDeclarationSchema, type PaperDeclaration, type PaperState } from "@/lib/scholarly/rights-protocol";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
+import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
+
+
+
+
 
 type Data = { state: PaperState | null; enrolled: boolean; ready: boolean; items: number; active: boolean; verified: boolean;
   binding: Pick<PaperDeclaration, "protocol" | "network" | "deploymentOrigin" | "sourceId" | "itemId" | "registry" | "onchainId" | "creator" | "recipient" | "priceMicros" | "canonicalUrl" | "contentVersion" | "bodyHash" | "plaintextBytes" | "manifestId"> | null };
 const date = (days: number) => new Date(Date.now() + days * 86400_000).toISOString().slice(0, 10);
 export function ScholarlyRightsPanel({creatorId}:{creatorId:string}){
+  const uiCopy = useUiMessages();
   return browserPaymentProfile().testnet?<TestnetScholarlyRightsPanel creatorId={creatorId}/>:<section className="mt-6 rounded-xl border border-line p-4" aria-label={uiCopy("creatorRights.aria")}>
     <h2 className="font-display text-xl">{uiCopy("creatorRights.mainnetTitle")}</h2>
     <p className="mt-2 text-sm">{uiCopy("creatorRights.mainnetHeld")}</p>
   </section>;
 }
 function TestnetScholarlyRightsPanel({ creatorId }: { creatorId: string }) {
+  const uiCopy = useUiMessages();
+  const uiRichCopy = useUiRichMessages();
   const [data, setData] = useState<Data | null>(null), [working, setWorking] = useState(false), [message, setMessage] = useState("");
   const [unavailable, setUnavailable] = useState(uiCopy("creatorRights.loading"));
   const { address } = useAccount(), { signMessageAsync } = useSignMessage();

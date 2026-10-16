@@ -1,15 +1,19 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import { useEffect, useRef, useState } from "react";
 import { PaperCard } from "./paper-card";
 import { paperSearchResultSchema, type PaperSearchResult } from "@/lib/papers/types";
 import { normalizeDoi } from "@/lib/scholarly/doi";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 /** No effect or prefetch starts external discovery. Each submit is a separate explicit action. */
 export function PaperSearchPanel({ initialQuery = "", author, year }: { initialQuery?: string; author?: string; year?: string }) {
+  const copy = useUiMessages();
   const [result, setResult] = useState<PaperSearchResult>(), [error, setError] = useState("");
   const [busy, setBusy] = useState(false), request = useRef<AbortController | null>(null);
   useEffect(() => () => request.current?.abort(), []);

@@ -8,11 +8,15 @@ import { ResearchJobEscalation } from "./research-job-escalation";
 import { DeliverableAcceptance } from "./deliverable-acceptance";
 import type { BuyerJob } from "@/lib/a2a/buyer-workspace";
 import { AccountJobs } from "./account-jobs";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
+
+
 
 const message = createMessages("en");
 const usdc = (value: number | null | undefined) => value == null ? message("researchJobDetails.unknown") : `${formatRecordedAmount(value, { minimumFractionDigits: 6 })} USDC`;
 
 export function ResearchJobDetails({ job, onDownloadReceipt }: { job: BuyerJob; onDownloadReceipt?: () => void }) {
+  const message = useUiMessages();
   return (
     <div className="mt-5 space-y-6">
       <AccountJobs orderId={job.queryId} />

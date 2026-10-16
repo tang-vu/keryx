@@ -7,8 +7,12 @@ import { readBoundedJson } from "@/lib/read-bounded-json";
 import { RUN_SURFACES } from "@/lib/research/run-provenance";
 import { historyPageSchema, historyQueryString, type HistoryInput, type HistoryPage } from "@/lib/history/personal-history";
 import { personalHistoryCopy as copy } from "@/locales/en/personal-history";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 export function CurrentHistoryPane() {
+  const copy = useUiCopy("personal-history", uiEnglish_copy);
   const { session } = useSiweAuth();
   if (session === undefined) return <p role="status">{copy.checking}</p>;
   return session ? <CurrentHistoryView key={session.address.toLowerCase()} owner={session.address.toLowerCase()} /> : <p>{copy.signedOut}</p>;
@@ -16,6 +20,7 @@ export function CurrentHistoryPane() {
 
 /** Owner switch unmounts this component; late requests cannot publish an older wallet's rows. */
 export function CurrentHistoryView({ owner }: { owner: string }) {
+  const copy = useUiCopy("personal-history", uiEnglish_copy);
   const formId = useId();
   const [query, setQuery] = useState<HistoryInput>({ limit: 25 });
   const [cursors, setCursors] = useState<(string | undefined)[]>([]);

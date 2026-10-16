@@ -10,6 +10,9 @@ import { CreatorDetailView } from "./creator-detail-view";
 import { SourceLearningPanel } from "@/components/keryx/source-learning-panel";
 import { readSourceLearning } from "@/lib/research/source-learning-server";
 import { config } from "@/lib/config";
+import { UiMessage } from "@/lib/i18n/ui-copy";
+
+
 
 const uiCopy = createMessages("en");
 
@@ -94,7 +97,7 @@ export default async function CreatorPage({ params }: PageProps) {
             href="/dashboard"
             className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3 transition-colors hover:text-ink"
           >
-            {uiCopy("creatorPage.back")}
+            <UiMessage messageKey={"creatorPage.back"} />
           </Link>
         </div>
       </header>

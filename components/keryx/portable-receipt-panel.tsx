@@ -1,4 +1,7 @@
 import { createMessages } from "@/lib/i18n/messages";
+import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
 /** Public export affordance for the deterministic research receipt. */
@@ -10,20 +13,20 @@ interface Props {
 export function PortableReceiptPanel({ dispatchId }: Props) {
   const receiptPath = `/api/dispatch/${dispatchId}/receipt`;
   return (
-    <section
+    <UiAttributes names={["aria-label"]}><section
       aria-label={copy("portableReceipt.label")}
       className="mt-8 max-w-[860px] border border-ink bg-paper px-5 py-4 sm:px-6"
     >
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="max-w-[610px]">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-paid">
-            {copy("portableReceipt.label")}
+            <UiMessage messageKey={"portableReceipt.label"} />
           </p>
           <h2 className="mt-1 font-display text-[21px] font-semibold tracking-tight text-ink">
-            {copy("portableReceipt.title")}
+            <UiMessage messageKey={"portableReceipt.title"} />
           </h2>
           <p className="mt-1.5 font-serif text-[14px] leading-relaxed text-ink-2">
-            {copy("portableReceipt.notice")}
+            <UiMessage messageKey={"portableReceipt.notice"} />
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
@@ -33,16 +36,16 @@ export function PortableReceiptPanel({ dispatchId }: Props) {
             rel="noreferrer"
             className="border border-line bg-paper-2 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-2 transition-colors hover:border-ink hover:text-ink"
           >
-            {copy("portableReceipt.view")}
+            <UiMessage messageKey={"portableReceipt.view"} />
           </a>
           <a
             href={`${receiptPath}?download=1`}
             className="border border-ink bg-ink px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-paper transition-colors hover:bg-paid"
           >
-            {copy("portableReceipt.download")}
+            <UiMessage messageKey={"portableReceipt.download"} />
           </a>
         </div>
       </div>
-    </section>
+    </section></UiAttributes>
   );
 }

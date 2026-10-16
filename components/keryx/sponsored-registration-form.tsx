@@ -15,6 +15,9 @@ import { registrationIntentDigest, registrationTypedData, sponsoredRegistrationS
 import { getBrowserRegistryVersion } from "@/lib/registry/registry-version";
 import { creatorRegistrationCopy as copy } from "@/locales/en/creator-registration";
 import { registrationConnectHref, registrationTarget } from "@/lib/registration-return";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 interface Availability { available: boolean; reservedGasAvailable?: boolean; reason?: string; sponsorAddress?: string; policyDigest?: string; maxGasWei?: string; publisherOrigins?: string[] }
 const labels: Record<SponsoredRegistration["state"], string> = copy.stateLabels;
@@ -22,6 +25,7 @@ export function SponsoredRegistrationForm({ claimId, canPrepare = true, inspecti
   claimId?: string; canPrepare?: boolean; inspectionOnly?: boolean; initialFetchPrice?: number; onPriceChange?: (price: number) => void;
   onIndexed?: (original: SponsoredRegistration) => void; connectHref?: string | null;
 }) {
+  const copy = useUiCopy("creator-registration", uiEnglish_copy);
   const wallet = useAccount(), { session } = useSiweAuth(), { signTypedDataAsync } = useSignTypedData();
   const walletConfig = useConfig();
   const [availability, setAvailability] = useState<Availability | null>(null);

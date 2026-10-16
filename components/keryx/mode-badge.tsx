@@ -5,12 +5,15 @@
  * vs "offline preview — payments simulated" (quiet ink).
  */
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import type { StreamMode } from "@/lib/hooks/use-ask-stream";
 import { cn } from "@/lib/utils";
 import { currentArcLabel } from "@/lib/arc-network-display";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const copy = createMessages("en");
+
+
+
 
 export function ModeBadge({
   mode,
@@ -19,6 +22,7 @@ export function ModeBadge({
   mode: StreamMode | null;
   className?: string;
 }) {
+  const copy = useUiMessages();
   if (!mode) return null;
   const real = mode === "real";
   return (

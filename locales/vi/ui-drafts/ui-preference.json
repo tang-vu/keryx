@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ui-preference.ts",
-  "sourceSha256": "796e9d98f5484ec5ae54906050b0af8d7ad2cb5c46fd969931ecec749e4d9fe7",
+  "sourceSha256": "71a28873f12c58e26700933278be179753094d6eac945c464729443d488a1f96",
   "entries": {
     "language": {
       "source": "Interface language",
@@ -21,8 +21,8 @@
       "text": "简体中文 (xem trước)"
     },
     "previewNotice": {
-      "source": "Preview: machine draft, not human reviewed. Only navigation changes; other text remains English.",
-      "text": "Xem trước: bản nháp máy, chưa được người xem xét. Chỉ điều hướng thay đổi; nội dung khác vẫn bằng tiếng Anh."
+      "source": "Preview: machine draft, not human reviewed. Interface text is translated; critical payment, consent and legal text stays in English.",
+      "text": "Bản xem trước do máy dịch, chưa được người duyệt. Nội dung giao diện được dịch; nội dung quan trọng về thanh toán, chấp thuận và pháp lý vẫn dùng tiếng Anh."
     },
     "englishOnly": {
       "source": "English is currently the only offered interface language.",

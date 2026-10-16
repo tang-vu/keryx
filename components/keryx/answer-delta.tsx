@@ -4,6 +4,9 @@ import { formatAmount, formatRecordedAmount, recordedUsdcMicros, selectPlural } 
 import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import type { AnswerDelta } from "@/lib/answers-delta";
+import { UiAttributes, UiMessage, UiText } from "@/lib/i18n/ui-copy";
+
+
 
 const copy = createMessages("en");
 
@@ -25,16 +28,16 @@ function signedUsdc(settlement: NonNullable<AnswerDelta["settlement"]>): string 
 export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
   const coverage = delta.coverage;
   return (
-    <section aria-label={copy("answerDelta.label")} className="mt-8 max-w-[860px] border border-ink bg-paper">
+    <UiAttributes names={["aria-label"]}><section aria-label={copy("answerDelta.label")} className="mt-8 max-w-[860px] border border-ink bg-paper">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink bg-ink px-5 py-3 text-cream">
         <p className="font-mono text-[10.5px] uppercase tracking-[0.18em]">
-          {copy("answerDelta.kicker")}
+          <UiMessage messageKey={"answerDelta.kicker"} />
         </p>
         <Link
           href={`/dispatch/${delta.previousId}`}
           className="font-mono text-[10px] uppercase tracking-[0.12em] text-cream/75 underline decoration-cream/40 underline-offset-2 hover:text-cream"
         >
-          {copy("answerDelta.compareParent")}
+          <UiMessage messageKey={"answerDelta.compareParent"} />
         </Link>
       </div>
 
@@ -79,16 +82,16 @@ export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
           />
           {delta.previousEvidenceSpans !== null && delta.currentEvidenceSpans !== null ? (
             <p>
-              <span className="uppercase tracking-[0.1em] text-ink-3">{copy("answerDelta.verifiedSpans")}</span>{" "}
+              <span className="uppercase tracking-[0.1em] text-ink-3"><UiMessage messageKey={"answerDelta.verifiedSpans"} /></span>{" "}
               {delta.previousEvidenceSpans} → {delta.currentEvidenceSpans}
             </p>
           ) : null}
         </div>
         <p className="mt-3 max-w-[74ch] font-mono text-[9.5px] leading-[1.55] text-faint">
-          {copy("answerDelta.notice")}
+          <UiMessage messageKey={"answerDelta.notice"} />
         </p>
       </div>
-    </section>
+    </section></UiAttributes>
   );
 }
 
@@ -106,7 +109,7 @@ function SourceList({ label, sources }: { label: string; sources: string[] }) {
   return (
     <p>
       <span className="uppercase tracking-[0.1em] text-ink-3">{label}</span>{" "}
-      {sources.length > 0 ? sources.join(", ") : copy("answerDelta.none")}
+      <UiText source={sources.length > 0 ? sources.join(", ") : copy("answerDelta.none")} />
     </p>
   );
 }

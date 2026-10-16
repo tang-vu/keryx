@@ -6,10 +6,14 @@ import { acceptanceSnapshotSchema, publicAcceptanceSchema, deliverableIdSchema,
   type AcceptanceInput, type AcceptanceSnapshot, type PublicAcceptance } from "@/lib/deliverable-acceptance/contracts";
 import { readBoundedJson } from "@/lib/read-bounded-json";
 import { deliverableAcceptanceCopy as copy } from "@/locales/en/deliverable-acceptance";
+import { useUiCopy } from "@/lib/i18n/ui-copy";
+const uiEnglish_copy = copy;
+
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 const label = (state: string) => state === "accepted" ? copy.accepted : state === "revision_requested" ? copy.revised : state === "rejected" ? copy.rejected : copy.noResponse;
 export function DeliverableAcceptance({ id, answer }: { id: string; answer: string }) {
+  const copy = useUiCopy("deliverable-acceptance", uiEnglish_copy);
   const { session } = useSiweAuth();
   const [publicRevision, setPublicRevision] = useState(0);
   if (!deliverableIdSchema.safeParse(id).success) return null;
@@ -23,6 +27,7 @@ export function DeliverableAcceptance({ id, answer }: { id: string; answer: stri
   </section>;
 }
 function PublicState({ id, revision }: { id: string; revision: number }) {
+  const copy = useUiCopy("deliverable-acceptance", uiEnglish_copy);
   const [state, setState] = useState<PublicAcceptance | null>(null);
   useEffect(() => {
     const abort = new AbortController(), timer = setTimeout(() => abort.abort(), 10000);
@@ -34,6 +39,7 @@ function PublicState({ id, revision }: { id: string; revision: number }) {
   return <p className="mt-2 text-sm">{state ? state.state !== "not_shared" ? `${copy.publicHeading}: ${label(state.state)}` : copy.notShared : copy.publicUnavailable}</p>;
 }
 function OwnerChoice({ id, wallet, answer, onAcknowledged }: { id: string; wallet: string; answer: string; onAcknowledged: () => void }) {
+  const copy = useUiCopy("deliverable-acceptance", uiEnglish_copy);
   const [snapshot, setSnapshot] = useState<AcceptanceSnapshot | null>(null), [reason, setReason] = useState("");
   const [consent, setConsent] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [pending, setPending] = useState<AcceptanceInput | null>(null);
