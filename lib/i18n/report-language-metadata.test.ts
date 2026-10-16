@@ -58,7 +58,7 @@ describe("recorded answer DOM language without translation", () => {
   it.each(["Xin chào: bằng chứng giữ nguyên.", "中文证据，原文不改。", "Literal English evidence."])(
     "marks unrecorded text und while leaving the original answer and citation unchanged: %s", text => {
       const answer = text + " [S1]", before = JSON.stringify(citation);
-      const html = renderToStaticMarkup(createElement(AnswerMarkdown, { text: answer, citations: [citation] }));
+      const html = renderToStaticMarkup(createElement(AnswerMarkdown, { text: answer, citations: [citation], onCitationClick: () => {} }));
       expect(html).toMatch(/^<div lang="und"/); expect(html).toContain(text);
       expect(html).toContain('<button lang="en"');
       expect(html).toContain('Original source 中文'); expect(html).toContain("[1]");

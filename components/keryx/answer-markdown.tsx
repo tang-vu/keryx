@@ -39,7 +39,14 @@ function renderOriginalQuotes(text: string, original: ReturnType<typeof quotedOr
   return <>{text.slice(0, start)}<span lang="und">{text.slice(start, end)}</span>{text.slice(end)}</>;
 }
 
-function renderInline(text: string, keyBase: string, original: ReturnType<typeof quotedOriginalSpan>, offset: number): ReactNode[] {
+function renderInline(
+  text: string,
+  citations: Citation[],
+  keyBase: string,
+  original: ReturnType<typeof quotedOriginalSpan>,
+  offset: number,
+  onCitationClick?: AnswerMarkdownProps["onCitationClick"],
+): ReactNode[] {
   // Retain split positions: only odd entries are captured markup. An unmatched
   // text fragment can itself start/end with escaped or unpaired delimiters.
   const parts = text.split(INLINE_RE);
@@ -53,14 +60,14 @@ function renderInline(text: string, keyBase: string, original: ReturnType<typeof
     if (markup && part.startsWith("**") && part.endsWith("**")) {
       return (
         <strong key={key} className="font-semibold text-ink">
-          {renderOriginalQuotes(part.slice(2, -2), original, start + 2)}
+          {renderCitationText(part.slice(2, -2), citations, key, original, start + 2, onCitationClick)}
         </strong>
       );
     }
     if (markup && part.startsWith("*") && part.endsWith("*")) {
       return (
         <em key={key} className="italic">
-          {renderOriginalQuotes(part.slice(1, -1), original, start + 1)}
+          {renderCitationText(part.slice(1, -1), citations, key, original, start + 1, onCitationClick)}
         </em>
       );
     }
@@ -74,19 +81,20 @@ function renderInline(text: string, keyBase: string, original: ReturnType<typeof
         </code>
       );
     }
-    return <Fragment key={key}>{renderOriginalQuotes(part, original, start)}</Fragment>;
+    return <Fragment key={key}>{renderCitationText(part, citations, key, original, start, onCitationClick)}</Fragment>;
   });
 }
 
-function renderWithCitations(
+/** Code spans bypass this pass: citation syntax there is literal text. */
+function renderCitationText(
   text: string,
   citations: Citation[],
   keyBase: string,
+  original: ReturnType<typeof quotedOriginalSpan>,
+  offset: number,
   onCitationClick?: (marker: string, trigger: HTMLButtonElement) => void,
 ): ReactNode[] {
   const nodes: ReactNode[] = [];
-  // Detect quotation before citation/emphasis splitting removes its open context.
-  const original = quotedOriginalSpan(text);
   let last = 0;
   let m: RegExpExecArray | null;
   CITATION_RE.lastIndex = 0;
@@ -94,20 +102,29 @@ function renderWithCitations(
 
   while ((m = CITATION_RE.exec(text)) !== null) {
     const before = text.slice(last, m.index);
-    if (before) nodes.push(...renderInline(before, `${keyBase}-t${idx}`, original, last));
+    if (before) nodes.push(<Fragment key={`${keyBase}-t${idx}`}>{renderOriginalQuotes(before, original, offset + last)}</Fragment>);
     const marker = m[1];
     const cite = citations.find((c) => c.marker === marker);
+    const title = cite
+      ? cite.itemTitle ? copy("reportCitation.articleTitle", { article: cite.itemTitle, publication: cite.sourceName, weight: Math.round(cite.weight * 100) }) : copy("reportCitation.title", { source: cite.sourceName, weight: Math.round(cite.weight * 100) })
+      : marker;
+    // Compact readers can hand off to the full report instead of an inspector.
+    // Without a handler, keep the reference visible without promising an action.
+    if (!onCitationClick) {
+      nodes.push(<span lang="en" key={`${keyBase}-c${idx}`} title={title} className="mx-0.5 font-mono text-[0.72em] font-semibold text-seal">
+        [{marker.replace(/\D/g, "") || marker}]
+      </span>);
+      last = m.index + m[0].length;
+      idx++;
+      continue;
+    }
     nodes.push(
       <button
         lang="en"
         key={`${keyBase}-c${idx}`}
         type="button"
         onClick={(event) => onCitationClick?.(marker, event.currentTarget)}
-        title={
-          cite
-            ? cite.itemTitle ? copy("reportCitation.articleTitle", { article: cite.itemTitle, publication: cite.sourceName, weight: Math.round(cite.weight * 100) }) : copy("reportCitation.title", { source: cite.sourceName, weight: Math.round(cite.weight * 100) })
-            : marker
-        }
+        title={title}
         aria-label={cite ? copy("reportCitation.openEvidence", { source: cite.itemTitle ?? cite.sourceName }) : copy("reportCitation.label", { marker })}
         className="mx-0.5 inline-flex min-h-7 items-center rounded-sm px-1 align-baseline font-mono text-[0.72em] font-semibold text-seal underline decoration-seal/40 underline-offset-2 transition-colors hover:bg-seal/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"
       >
@@ -118,8 +135,19 @@ function renderWithCitations(
     idx++;
   }
   const tail = text.slice(last);
-  if (tail) nodes.push(...renderInline(tail, `${keyBase}-tend`, original, last));
+  if (tail) nodes.push(<Fragment key={`${keyBase}-tend`}>{renderOriginalQuotes(tail, original, offset + last)}</Fragment>);
   return nodes;
+}
+
+function renderWithCitations(
+  text: string,
+  citations: Citation[],
+  keyBase: string,
+  onCitationClick?: AnswerMarkdownProps["onCitationClick"],
+): ReactNode[] {
+  // Keep formatting boundaries intact, then find evidence controls in prose.
+  // Detect original-quote offsets before either pass splits the text.
+  return renderInline(text, citations, keyBase, quotedOriginalSpan(text), 0, onCitationClick);
 }
 
 export function AnswerMarkdown({
