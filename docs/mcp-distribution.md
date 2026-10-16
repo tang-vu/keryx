@@ -1,5 +1,17 @@
 # MCP package distribution
 
+## App69 coordinated release in preparation — October 16
+
+App/OpenAPI **0.27.69** prepares the latest merged batch: clearer wallet funding
+and budget controls, immediate navigation and language previews, report recovery
+after interrupted streams, account-owned pending purchase history, and profile
+metadata and layout fixes. Stdio **0.4.24** and Desktop **0.4.22** refresh the
+distribution cohort from the same source without adding local client authority.
+Hosted MCP **0.3.18** and extension **0.1.4.2** retain their established contracts.
+Deployment, artifact publication and readback, and owner installation remain
+separate checks; this preparation record does not claim delivery. Existing
+spending limits, custody, private holds and schedules remain in force.
+
 ## App68 public-research distribution delivered — October 15
 
 App/OpenAPI **0.27.68**, published stdio/npm/official Registry **0.4.23** and
