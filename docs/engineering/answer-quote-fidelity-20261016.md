@@ -34,26 +34,15 @@ Validation:
   a local junction for read-only dependency access, with caches disabled and the
   Vite cache path isolated locally. No install, rebuild, provider or payment ran.
 
-The existing Vitest config does not include `components/**/*.test.tsx`. This
-focused invocation explicitly collects the new file without modifying config:
+The render test lives under the existing `lib/**/*.test.ts` discovery pattern,
+using `createElement` so both ordinary local runs and hosted shards collect it
+without a new config exception:
 
 ```powershell
-@'
-import path from 'node:path';
-import { startVitest } from 'vitest/node';
-const files = ['components/keryx/answer-markdown.test.tsx', 'lib/agent/answer-grounding.test.ts', 'lib/i18n/report-language-metadata.test.ts'];
-const ctx = await startVitest('test', files, {
-  config: false, run: true, watch: false, include: files,
-  maxWorkers: 1, cache: false, testTimeout: 20000, hookTimeout: 20000,
-  env: { KERYX_EXTERNAL_DISCOVERY: '0' },
-}, { resolve: { alias: { '@': process.cwd() } },
-  cacheDir: path.resolve('.artifacts/answer-quote-fidelity-vite') });
-if (ctx.state.getFiles().some(file => file.result?.state === 'fail') || ctx.state.getUnhandledErrors().length) process.exitCode = 1;
-await ctx.close();
-'@ | node --input-type=module
-node node_modules/eslint/bin/eslint.js components/keryx/answer-markdown.tsx components/keryx/answer-markdown.test.tsx
+npm.cmd test -- lib/agent/answer-markdown-rendering.test.ts lib/agent/answer-grounding.test.ts lib/i18n/report-language-metadata.test.ts
+node node_modules/eslint/bin/eslint.js components/keryx/answer-markdown.tsx lib/agent/answer-markdown-rendering.test.ts
 ```
 
 Root retains whole-source TypeScript/build, independent review, required CI,
-new-test discovery integration, merge and batched release. This worker commits
+merge and batched release. This worker commits
 only the three assigned files locally; it does not mutate coordination records.

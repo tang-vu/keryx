@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { finalizeGroundedAnswer } from "@/lib/agent/answer-grounding";
 import { buildEvidenceLedger } from "@/lib/agent/evidence-ledger";
 import type { Citation } from "@/lib/types";
-import { AnswerMarkdown } from "./answer-markdown";
+import { AnswerMarkdown } from "@/components/keryx/answer-markdown";
 
 const citation: Citation = {
   marker: "S1", sourceId: "quote-fixture", sourceName: "Quote fixture",
@@ -29,7 +29,7 @@ afterEach(async () => {
 
 async function render(text: string, onCitationClick = vi.fn()) {
   await act(async () => {
-    root.render(<AnswerMarkdown text={text} citations={[citation]} language="en" onCitationClick={onCitationClick} />);
+    root.render(createElement(AnswerMarkdown, { text, citations: [citation], language: "en", onCitationClick }));
   });
   return onCitationClick;
 }
