@@ -217,3 +217,32 @@ h1, h2, p { margin-top: 0; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+.sponsored-navigation { display: grid; gap: 6px; margin: 16px 0; }
+.sponsored-navigation button { padding: 10px; border: 1px solid var(--ink); background: var(--cream); color: var(--ink); text-align: left; font: 600 11px/1.4 'Spline Sans Mono', monospace; }
+.sponsored-navigation button[aria-pressed="true"] { border-color: var(--paid); box-shadow: inset 3px 0 var(--paid); }
+.sponsored-form-panel form { padding: 0 23px 23px; }
+.sponsored-helper-wait { margin: 0 23px 16px; color: var(--ink-3); font-size: 13px; }
+.sponsored-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.sponsored-budget { margin-top: 16px; }
+.sponsored-budget input { max-width: 220px; }
+.sponsored-consent { display: flex; align-items: start; gap: 10px; margin-top: 20px; color: var(--ink); font-size: 14px; line-height: 1.5; }
+.sponsored-consent input { margin: 5px 0 0; flex: none; accent-color: var(--paid); }
+.sponsored-uncertain { margin-bottom: 20px; padding: 15px; border: 1px solid var(--seal); background: #f6dfd4; font-size: 14px; line-height: 1.6; }
+.sponsored-citations, .sponsored-receipt { margin: 0 23px 20px; overflow-wrap: anywhere; }
+.sponsored-citations h3 { font-size: 16px; margin: 0 0 10px; }
+.sponsored-citations ol { padding-left: 20px; }
+.sponsored-citations li { margin-bottom: 18px; }
+.sponsored-receipt { border-top: 1px solid var(--line); padding-top: 15px; font-size: 13px; line-height: 1.6; color: var(--ink-3); }
+.sponsored-receipt p { margin: 6px 0 0; }
+.sponsored-url { display: flex; align-items: end; gap: 8px; min-width: 0; margin-top: 10px; }
+.sponsored-url .field { flex: 1; min-width: 0; }
+.sponsored-url input { font-family: 'Spline Sans Mono', monospace; font-size: 11px; }
+.sponsored-url button { flex: none; min-height: 38px; }
+.sponsored-report > .sponsored-url { margin: 0 23px 23px; }
+@media (max-width: 640px) {
+  .sidebar .sponsored-navigation { grid-column: 1/-1; grid-row: 5; grid-template-columns: 1fr 1fr; margin: 5px 0; }
+  .sponsored-url { align-items: stretch; flex-direction: column; }
+  .sponsored-url button { align-self: start; }
+  .sponsored-form-panel form { padding: 0 19px 19px; }
+}

@@ -7,6 +7,7 @@ async function call<T>(command: string, args: Record<string, unknown> = {}): Pro
 }
 
 const api: DesktopAPI = {
+  researchSponsored: (input) => call("research_sponsored", { input: JSON.stringify(input) }),
   chooseWorkspace: () => call("choose_workspace"),
   createWorkspace: () => call("create_workspace"),
   refresh: () => call("refresh"),

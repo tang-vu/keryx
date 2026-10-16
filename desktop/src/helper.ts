@@ -3,7 +3,9 @@ import { createNativeTaskWriter } from "../../lib/operator/native-task-writer";
 import { publishPrivateText } from "../../lib/operator/private-text-export";
 import { WorkspaceStore } from "./workspace";
 import { workspaceCreatedSelectionFailed } from "./helper-errors";
-import { boundErrorMessage, encodeResponseFrame, MAX_REQUEST_FRAME, parseRequestFrame, type HelperRequest } from "./helper-protocol";
+import { researchSponsored, SponsoredResearchError } from "../../shared/sponsored-research-client";
+import type { SponsoredResearchOutcome } from "./contracts";
+import { boundErrorMessage, encodeResponseFrame, MAX_REQUEST_FRAME, parseRequestFrame, parseSponsoredInput, SPONSORED_HELPER_TIMEOUT_MS, type HelperRequest } from "./helper-protocol";
 
 declare const KERYX_NATIVE_SOURCE_COMMIT: string;
 
@@ -87,6 +89,22 @@ async function execute(request: HelperRequest): Promise<unknown> {
   }
   if (!store) throw new Error("Helper is not initialized");
   switch (request.action) {
+    case "research_sponsored": {
+      keys(arg, ["input"]);
+      const input = parseSponsoredInput(arg.input);
+      // No WorkspaceStore read/write, selected path, local references, environment
+      // credentials or caller-controlled origin enters this hosted request.
+      try {
+        return { ok: true, result: await researchSponsored(input, {
+          baseUrl: "https://keryx.cc", signal: AbortSignal.timeout(SPONSORED_HELPER_TIMEOUT_MS),
+        }) } satisfies SponsoredResearchOutcome;
+      } catch (error) {
+        return { ok: false, message: boundErrorMessage(error instanceof Error ? error.message : "Sponsored research could not be confirmed"),
+          uncertain: error instanceof SponsoredResearchError ? error.uncertain : true,
+          ...(error instanceof SponsoredResearchError ? { queryId: error.queryId, dispatchUrl: error.dispatchUrl } : {}),
+        } satisfies SponsoredResearchOutcome;
+      }
+    }
     case "choose_workspace": {
       keys(arg, ["path"]);
       const result = await store.select(string(arg.path, 32767));

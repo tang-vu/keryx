@@ -256,6 +256,23 @@ async fn create_task(
 }
 
 #[tauri::command]
+async fn research_sponsored(
+    window: WebviewWindow,
+    host: State<'_, HostState>,
+    input: String,
+) -> Result<String, String> {
+    check_caller(&window)?;
+    let payload = helper_protocol::sponsored_payload(&input)?;
+    helper_call(
+        &host,
+        "research_sponsored",
+        payload,
+        Duration::from_secs(helper_protocol::SPONSORED_TIMEOUT_SECS),
+    )
+    .await
+}
+
+#[tauri::command]
 async fn resume_task(
     window: WebviewWindow,
     host: State<'_, HostState>,
@@ -419,6 +436,7 @@ pub fn run() {
             create_workspace,
             refresh,
             create_task,
+            research_sponsored,
             resume_task,
             read_result,
             export_brief,

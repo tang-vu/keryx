@@ -77,6 +77,8 @@ jobs:
         run: npx playwright install chromium
       - name: Verify desktop layout and keyboard behavior
         run: node desktop/scripts/test-ui.mjs
+      - name: Verify sponsored public research and duplicate submission boundaries
+        run: node desktop/scripts/test-sponsored-ui.mjs
       - name: Upload desktop layout screenshots for visual triage
         if: always()
         uses: actions/upload-artifact@v4

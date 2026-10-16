@@ -82,6 +82,7 @@ describe("real Desktop neutral renderer binding", () => {
     vi.stubGlobal("navigator", dom.window.navigator);
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     api = {
+      researchSponsored: vi.fn(async () => { throw new Error("Unexpected public research"); }),
       refresh: vi.fn(async () => workspace),
       chooseWorkspace: vi.fn(async () => null), createWorkspace: vi.fn(async () => null),
       createTask: vi.fn(async () => { throw new Error("Unexpected task creation"); }),

@@ -39,8 +39,10 @@ import { registerRunPrivacyRead } from "../lib/run-privacy/mcp.ts";
 import { createRunPrivacyClient } from "../lib/run-privacy/client.ts";
 import { registerAcceptanceTools } from "../lib/deliverable-acceptance/mcp.ts";
 import { createAcceptanceClient } from "../lib/deliverable-acceptance/client.ts";
+import { registerSponsoredResearchTool } from "./sponsored-research.mts";
 
 const server = new McpServer({ name: "keryx", version: packageInfo.version });
+registerSponsoredResearchTool(server, { baseUrl: meta.baseUrl });
 registerObligationInspection(server, () => createObligationClient(meta.baseUrl, () => process.env.KERYX_API_KEY).read());
 registerEvidenceDraftTool(server);
 registerDraftCheckTool(server);

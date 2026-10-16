@@ -59,6 +59,7 @@
     "generate-wallets": "node --no-warnings scripts/generate-wallets.mts",
     "seed-sources": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/seed-sources.mts",
     "ask": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/ask.mts",
+    "ask:sponsored": "node --import tsx --no-warnings scripts/ask-sponsored.mts",
     "demo": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/demo-full-cycle.mts",
     "register-onchain": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/register-existing-source-onchain.mts",
     "metrics": "node --import tsx --no-warnings --env-file-if-exists=.env.local scripts/metrics.mts",

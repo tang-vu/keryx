@@ -9,7 +9,13 @@ export type WorkspaceView = { name: string; path: string; tasks: TaskRow[]; refe
   creationState?: CreationState };
 export type CreateInput = { question: string; mode: "quick" | "deep"; creatorBudget: string; payee: string; totalCap: string; network?: "arc" | "arcTestnet" };
 export type SavedResult = NonNullable<Awaited<ReturnType<typeof import("../../lib/operator/task").readOperatorResult>>>;
+export type SponsoredResearchInput = import("../../shared/sponsored-research-client").SponsoredResearchInput;
+export type SponsoredResearchResult = import("../../shared/sponsored-research-client").SponsoredResearchResult;
+export type SponsoredResearchOutcome = { ok: true; result: SponsoredResearchResult } | {
+  ok: false; message: string; uncertain: boolean; queryId?: string; dispatchUrl?: string;
+};
 export type DesktopAPI = {
+  researchSponsored(input: SponsoredResearchInput): Promise<SponsoredResearchOutcome>;
   chooseWorkspace(): Promise<WorkspaceView | null>;
   createWorkspace(): Promise<WorkspaceView | null>;
   refresh(): Promise<WorkspaceView | null>;

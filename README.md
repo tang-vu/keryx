@@ -520,10 +520,14 @@ cp .env.example .env.local
 # 3. Demo sources (offline development needs no wallet keys)
 npm run seed-sources
 
-# 4a. One question, full reasoning trace in the terminal
+# 4a. Hosted sponsored trial: no local wallet or provider keys, public report
+npm run ask:sponsored -- --help
+npm run ask:sponsored -- --public "How do source tolls differ from citation rewards?" --mode quick --budget 0.05
+
+# 4b. Local engine, full reasoning trace in the terminal
 npm run ask -- "How do x402 and stablecoins enable autonomous AI agent commerce?" --budget 0.05
 
-# 4b. Or the full web app (SIWE auth, session grants, browser co-sign)
+# 4c. Or the full web app (SIWE auth, session grants, browser co-sign)
 npm run dev          # http://localhost:3939
 
 # 5. Live metrics
@@ -536,6 +540,11 @@ secrets privately under the current role-specific labels and preserve existing
 wallets and backups. Follow [treasury custody](docs/treasury-wallet-custody.md) or
 [caller-owned buyer setup](docs/buyer-agent.md); starting a demo does not create or
 recover a wallet.
+
+The [sponsored client guide](docs/sponsored-client-research.md) covers the source
+CLI, stdio MCP tool and native Desktop screen. They share hosted service limits;
+the existing caller-funded buyer remains a separate choice. Published package
+and installer availability must be checked independently of the source checkout.
 
 | Mode | Reasoning | Payments | When |
 |------|-----------|----------|------|
