@@ -80,7 +80,7 @@ export function QualityScorecard({ id, artifactSha256, scorecard: card }: {
       <ul className="mt-3 space-y-3">{card.coverage.issues.map(row => <li key={row.number} className="border-t border-line pt-3">
         <IssueLinks numbers={[row.number]} />
         <p><UiText source={copy.requiredKinds} namespaces={["quality"]} />: {row.requiredKinds.map(k => copy.kinds[k]).join(" · ")}</p>
-        <p><UiText source={copy.retainedCases} namespaces={["quality"]} />: <UiText source={row.caseIds.join(" · ") || copy.none} /></p>
+        <p><UiText source={copy.retainedCases} namespaces={["quality"]} />: {row.caseIds.join(" · ") || <UiText source={copy.none} namespaces={["quality"]} />}</p>
         <p><UiText source={copy.missingKinds} namespaces={["quality"]} />: {row.missingKinds.map(k => copy.kinds[k]).join(" · ") || copy.none}</p>
       </li>)}</ul>
     </details>

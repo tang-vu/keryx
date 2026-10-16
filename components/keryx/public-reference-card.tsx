@@ -28,7 +28,7 @@ function FeedItem({ item }: { item: PublicReference["items"][number] }) {
   return (
     <li className="border-t border-line py-3 first:border-t-0">
       <a href={item.link} target="_blank" rel="noopener noreferrer" className="block break-words font-serif text-[14px] leading-snug text-ink underline decoration-line underline-offset-4 hover:decoration-ink">
-        <UiText source={item.title || copy("sourceFeed.untitled")} /> ↗
+        {item.title || <UiMessage messageKey="sourceFeed.untitled" />} ↗
       </a>
       <p className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 font-mono text-[11px] leading-relaxed text-ink-3">
         {published ? <span><UiRichMessage messageKey={"sourceFeed.published"} values={{ date: <DisplayTime value={item.publishedAt!} dateOnly /> }} /></span> : <span><UiMessage messageKey={"sourceFeed.dateUnavailable"} /></span>}

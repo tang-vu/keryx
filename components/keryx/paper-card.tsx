@@ -10,7 +10,7 @@ const copy = createMessages("en");
 
 function RecordDetails({ record }: { record: PaperRecord }) {
   return <div className="min-w-0 space-y-2 text-sm">
-    <p className="break-words font-serif text-ink-2"><UiText source={record.authors.join(", ") || copy("paperCard.contributorsUnavailable")} /></p>
+    <p className="break-words font-serif text-ink-2">{record.authors.join(", ") || <UiMessage messageKey="paperCard.contributorsUnavailable" />}</p>
     {record.authorsTruncated && <p className="font-serif text-xs text-ink-3"><UiMessage messageKey={record.authorCount === 1 ? "paperCard.contributors.one" : "paperCard.contributors.other"} values={{ recorded: record.authors.length, count: record.authorCount ?? "" }} /></p>}
     <p className="break-words font-mono text-[11px] text-ink-3">{[record.venue, record.publishedYear, record.arxivId && `arXiv ${record.arxivId}`, record.doi && `DOI ${record.doi}`].filter(Boolean).join(" · ")}</p>
     <a href={record.metadataUrl} target="_blank" rel="noopener noreferrer" className="inline-block min-h-11 py-2 font-mono text-[11px] text-seal underline"><UiMessage messageKey={"paperCard.observed"} values={{ date: record.metadataObservedAt.slice(0, 10), repository: PAPER_REPOSITORIES[record.repository] }} /></a>

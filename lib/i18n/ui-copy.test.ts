@@ -9,6 +9,13 @@ import { UiElement, UiCopyProvider, UiMessage, UiText, useUiCopy, useUiMessages,
 import { loadUiPreview } from "./ui-preview";
 import { setupCopy } from "@/locales/en/get-started";
 import { englishMessages } from "./messages";
+import { PaperCard } from "@/components/keryx/paper-card";
+import type { PaperRecord } from "@/lib/papers/types";
+
+vi.mock("@/components/keryx/paper-save-button", () => ({ PaperSaveButton: () => null }));
+const paper: PaperRecord = { title: "What do you want to know?", authors: ["What do you want to know?"], authorCount: 1,
+  authorsTruncated: false, repository: "arxiv", arxivId: "2601.00001v1", url: "https://arxiv.org/abs/2601.00001v1",
+  metadataUrl: "https://arxiv.org/abs/2601.00001v1", metadataObservedAt: "2026-10-16T00:00:00Z", publicationKind: "preprint", peerReview: "unknown" };
 
 let root: Root, container: HTMLDivElement, mounts: number;
 const guest = async () => new Response(null, { status: 401 });
@@ -25,6 +32,7 @@ function Probe() {
     h("p", { id: "object" }, setup.start.title),
     h("p", { id: "leaf" }, h(UiText, { source: setupCopy.start.title, namespaces: ["get-started"] })),
     h("p", { id: "original" }, englishMessages["researchEntry.question"]),
+    h("div", { id: "paper" }, h(PaperCard, { group: { id: "paper:original", record: paper, records: [paper] } })),
     h("p", { id: "critical" }, h(UiMessage, { messageKey: "account.signatureInstruction" })),
     h("p", { id: "rich" }, rich("archiveIndex.title", { emphasis: h("strong", null, "Original node") })),
     h(UiElement, { as: "input", names: ["placeholder"], attributes: { id: "draft", defaultValue: "Unsent original draft", placeholder: englishMessages["researchEntry.placeholder"] } }));
@@ -54,6 +62,8 @@ it("changes both server leaves and client copy without remounting, changing orig
     expect(message === englishMessages["researchEntry.question"]).toBe(locale === "en");
     expect(container.querySelector("#object")!.textContent).toBe(container.querySelector("#leaf")!.textContent);
     expect(container.querySelector("#original")!.textContent).toBe(englishMessages["researchEntry.question"]);
+    expect(container.querySelector("#paper h3")!.textContent).toBe(paper.title);
+    expect(container.querySelector("#paper p.break-words")!.textContent).toBe(paper.authors[0]);
     expect(container.querySelector("#critical")!.textContent).toBe(englishMessages["account.signatureInstruction"]);
     expect(container.querySelector("#critical span")!.getAttribute("lang")).toBe("en");
     expect(input.value).toBe("Exact unsent question <USDC> {count}");
