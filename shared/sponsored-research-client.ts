@@ -22,7 +22,7 @@ export type SponsoredResearchOptions = {
 };
 
 export const SPONSORED_RESEARCH_NOTICE =
-  "Hosted sponsored research publishes your question and report. Source budget excludes model/search costs; server quotas and pauses apply. " +
+  "Keryx pays for admitted hosted sponsored research within service limits. Your question and report become public. Source budget excludes model/search costs; server quotas and pauses apply. " +
   "Reward allocations are not settlement proof. Disconnecting may leave research or payments running; inspect the report before submitting again. No automatic retries.";
 export const SPONSORED_RESEARCH_TIMEOUT_MS = 330_000;
 

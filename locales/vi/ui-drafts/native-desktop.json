@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/native-desktop.ts",
-  "sourceSha256": "d0e3861976ddc14b2ee076cdc139399bc781c0929672c02970ce4e34dee151e3",
+  "sourceSha256": "eb91dc1ebc2a3cbd354c167ae3fe6dadd5ca1dca144228d469663f4e890b5303",
   "entries": {
     "nativeDesktop.savedResult.openFailed": {
       "source": "Saved result cannot be opened: {reason}",
@@ -511,6 +511,150 @@
     "nativeDesktop.exports.evidence-csv": {
       "source": "Export evidence CSV",
       "text": "Xuất CSV bằng chứng"
+    },
+    "nativeDesktop.sponsored.screens": {
+      "source": "Research screens",
+      "text": "Các màn hình nghiên cứu"
+    },
+    "nativeDesktop.sponsored.title": {
+      "source": "Sponsored research",
+      "text": "Nghiên cứu được tài trợ"
+    },
+    "nativeDesktop.sponsored.localTasks": {
+      "source": "Local tasks",
+      "text": "Nhiệm vụ cục bộ"
+    },
+    "nativeDesktop.sponsored.payer": {
+      "source": "Keryx pays · shared limits",
+      "text": "Keryx chi trả · hạn mức dùng chung"
+    },
+    "nativeDesktop.sponsored.selectUrl": {
+      "source": "Select URL",
+      "text": "Chọn URL"
+    },
+    "nativeDesktop.sponsored.waitNotice": {
+      "source": "Still waiting for confirmation. The hosted request may still be running. Ask stays locked; do not submit the same question again.",
+      "text": "Vẫn đang chờ xác nhận. Yêu cầu trên dịch vụ có thể vẫn đang được xử lý. Nút Hỏi vẫn bị khóa; đừng gửi lại cùng câu hỏi."
+    },
+    "nativeDesktop.sponsored.eyebrow": {
+      "source": "PUBLIC HOSTED RESEARCH",
+      "text": "NGHIÊN CỨU CÔNG KHAI QUA DỊCH VỤ"
+    },
+    "nativeDesktop.sponsored.introduction": {
+      "source": "Ask a shareable question. Keryx pays within shared limits; availability, source budgets and service pauses are enforced by the hosted service.",
+      "text": "Đặt câu hỏi có thể chia sẻ công khai. Keryx chi trả trong các hạn mức dùng chung; dịch vụ áp dụng các giới hạn về khả dụng, ngân sách nguồn và việc tạm dừng dịch vụ."
+    },
+    "nativeDesktop.sponsored.questionTitle": {
+      "source": "What would you like to learn?",
+      "text": "Bạn muốn tìm hiểu điều gì?"
+    },
+    "nativeDesktop.sponsored.publicBoundary": {
+      "source": "No API key or wallet is needed. Questions and results become public trial reports. Private local tasks and references are not attached.",
+      "text": "Không cần khóa API hay ví. Câu hỏi và kết quả sẽ trở thành báo cáo thử nghiệm công khai. Các nhiệm vụ và tài liệu tham khảo cục bộ riêng tư không được đính kèm."
+    },
+    "nativeDesktop.sponsored.helperWait": {
+      "source": "Waiting for the desktop helper to become available.",
+      "text": "Đang chờ trình hỗ trợ ứng dụng máy tính sẵn sàng."
+    },
+    "nativeDesktop.sponsored.question": {
+      "source": "Shareable question",
+      "text": "Câu hỏi có thể chia sẻ công khai"
+    },
+    "nativeDesktop.sponsored.questionPlaceholder": {
+      "source": "Type a question suitable for a public report",
+      "text": "Nhập câu hỏi phù hợp để đưa vào báo cáo công khai"
+    },
+    "nativeDesktop.sponsored.depth": {
+      "source": "Research depth",
+      "text": "Độ sâu nghiên cứu"
+    },
+    "nativeDesktop.sponsored.quickHint": {
+      "source": "A focused answer",
+      "text": "Câu trả lời tập trung vào trọng tâm"
+    },
+    "nativeDesktop.sponsored.deepHint": {
+      "source": "A broader investigation",
+      "text": "Tìm hiểu trên phạm vi rộng hơn"
+    },
+    "nativeDesktop.sponsored.sourceBudget": {
+      "source": "Source budget (USDC)",
+      "text": "Ngân sách nguồn (USDC)"
+    },
+    "nativeDesktop.sponsored.sourceBudgetBoundary": {
+      "source": "0 to 0.08 USDC. Zero uses free sources. This source cap is separate from model and search costs; the server may apply a lower cap.",
+      "text": "Từ 0 đến 0.08 USDC. Mức 0 chỉ dùng nguồn miễn phí. Hạn mức cho nguồn này tách biệt với chi phí mô hình và tìm kiếm; máy chủ có thể áp dụng hạn mức thấp hơn."
+    },
+    "nativeDesktop.sponsored.consent": {
+      "source": "I agree to publish this question and its result as a public trial report.",
+      "text": "Tôi đồng ý công bố câu hỏi này và kết quả của câu hỏi dưới dạng báo cáo thử nghiệm công khai."
+    },
+    "nativeDesktop.sponsored.submissionBoundary": {
+      "source": "Sent to https://keryx.cc. No automatic retry or paid buyer fallback. Public results are not saved to private workspace journals.",
+      "text": "Gửi đến https://keryx.cc. Không tự động thử lại hay chuyển sang luồng bên mua trả phí. Kết quả công khai không được lưu vào nhật ký không gian làm việc riêng tư."
+    },
+    "nativeDesktop.sponsored.asking": {
+      "source": "Asking…",
+      "text": "Đang hỏi…"
+    },
+    "nativeDesktop.sponsored.ask": {
+      "source": "Ask",
+      "text": "Hỏi"
+    },
+    "nativeDesktop.sponsored.waiting": {
+      "source": "Waiting for hosted research. This can take up to five minutes. Keep this window open.",
+      "text": "Đang chờ nghiên cứu trên dịch vụ. Quá trình này có thể mất đến năm phút. Hãy giữ cửa sổ này mở."
+    },
+    "nativeDesktop.sponsored.uncertain": {
+      "source": "Completion is uncertain.",
+      "text": "Chưa xác định yêu cầu đã hoàn tất hay chưa."
+    },
+    "nativeDesktop.sponsored.uncertainBoundary": {
+      "source": " The hosted request may continue after a timeout or disconnect. Ask is locked for this session. Keep any original report URL below and inspect it before deciding whether to ask again. No request was automatically resent.",
+      "text": " Yêu cầu trên dịch vụ có thể tiếp tục sau khi hết thời gian chờ hoặc mất kết nối. Nút Hỏi bị khóa trong phiên này. Giữ lại URL báo cáo ban đầu bên dưới, nếu có, và kiểm tra báo cáo trước khi quyết định có hỏi lại hay không. Không có yêu cầu nào được tự động gửi lại."
+    },
+    "nativeDesktop.sponsored.resultLabel": {
+      "source": "Sponsored research result",
+      "text": "Kết quả nghiên cứu được tài trợ"
+    },
+    "nativeDesktop.sponsored.answerEyebrow": {
+      "source": "HOSTED ANSWER",
+      "text": "CÂU TRẢ LỜI TỪ DỊCH VỤ"
+    },
+    "nativeDesktop.sponsored.resultTitle": {
+      "source": "Research result",
+      "text": "Kết quả nghiên cứu"
+    },
+    "nativeDesktop.sponsored.citations": {
+      "source": "Citations",
+      "text": "Trích dẫn"
+    },
+    "nativeDesktop.sponsored.citationUrl": {
+      "source": "Citation {number} URL",
+      "text": "URL trích dẫn {number}"
+    },
+    "nativeDesktop.sponsored.noCitations": {
+      "source": "No citations were returned.",
+      "text": "Không có trích dẫn nào được trả về."
+    },
+    "nativeDesktop.sponsored.receiptTitle": {
+      "source": "Receipt status: hosted report",
+      "text": "Trạng thái biên nhận: báo cáo trên dịch vụ"
+    },
+    "nativeDesktop.sponsored.receiptBoundary": {
+      "source": "A budget or reward allocation is not proof of payment. Inspect the public report for recorded receipts and settlement evidence. Pending or planned rewards are not settled payments.",
+      "text": "Ngân sách hoặc việc phân bổ khoản thưởng không phải là bằng chứng thanh toán. Kiểm tra báo cáo công khai để xem biên nhận được ghi lại và bằng chứng quyết toán. Khoản thưởng đang chờ xử lý hoặc mới được lên kế hoạch chưa phải là khoản thanh toán đã quyết toán."
+    },
+    "nativeDesktop.sponsored.reportTitle": {
+      "source": "Public report",
+      "text": "Báo cáo công khai"
+    },
+    "nativeDesktop.sponsored.reportHint": {
+      "source": "Select a URL, press Ctrl+C, and paste it into your browser.",
+      "text": "Chọn URL, nhấn Ctrl+C rồi dán vào trình duyệt."
+    },
+    "nativeDesktop.sponsored.reportUrl": {
+      "source": "Public report URL",
+      "text": "URL báo cáo công khai"
     }
   }
 }

@@ -1,5 +1,8 @@
 import React, { useRef, useState } from "react";
 import type { DesktopAPI, SponsoredResearchResult } from "./contracts";
+import { createMessages } from "../../lib/i18n/messages";
+
+const copy = createMessages("en");
 
 // A renderer deadline never cancels the native/helper operation or releases the
 // submission lock. Only a confirmed response can do that.
@@ -22,7 +25,7 @@ function SelectableUrl({ label, url }: { label: string; url: string }) {
   const field = useRef<HTMLInputElement>(null);
   return <div className="sponsored-url">
     <label className="field">{label}<input ref={field} readOnly value={url} onFocus={event => event.currentTarget.select()}/></label>
-    <button type="button" className="secondary" onClick={() => { field.current?.focus(); field.current?.select(); }}>Select URL</button>
+    <button type="button" className="secondary" onClick={() => { field.current?.focus(); field.current?.select(); }}>{copy("nativeDesktop.sponsored.selectUrl")}</button>
   </div>;
 }
 
@@ -47,7 +50,7 @@ export function SponsoredResearch({ api, unavailable = false }: { api: Pick<Desk
     locked.current = true;
     setState("pending"); setMessage(""); setResult(null); setRecovery(null);
     const timer = setTimeout(() => {
-      setMessage("Still waiting for confirmation. The hosted request may still be running. Ask stays locked; do not submit the same question again.");
+      setMessage(copy("nativeDesktop.sponsored.waitNotice"));
     }, SPONSORED_WAIT_NOTICE_MS);
     try {
       const outcome = await api.researchSponsored({ question: question.trim(), mode, budget: amount, publicReport: true });
@@ -72,30 +75,30 @@ export function SponsoredResearch({ api, unavailable = false }: { api: Pick<Desk
   const report = result ? sponsoredReportUrl(result.dispatchUrl, result.queryId)
     : sponsoredReportUrl(recovery?.dispatchUrl, recovery?.queryId);
 
-  return <section className="sponsored-screen" aria-label="Sponsored research">
-    <div className="page-heading"><div><span className="eyebrow">PUBLIC HOSTED RESEARCH</span><h1>Sponsored research</h1><p>Ask a shareable question. Keryx pays within shared limits; availability, source budgets and service pauses are enforced by the hosted service.</p></div></div>
+  return <section className="sponsored-screen" aria-label={copy("nativeDesktop.sponsored.title")}>
+    <div className="page-heading"><div><span className="eyebrow">{copy("nativeDesktop.sponsored.eyebrow")}</span><h1>{copy("nativeDesktop.sponsored.title")}</h1><p>{copy("nativeDesktop.sponsored.introduction")}</p></div></div>
     <section className="panel sponsored-form-panel">
-      <div className="panel-heading"><div><h2>What would you like to learn?</h2><p>No API key or wallet is needed. Questions and results become public trial reports. Private local tasks and references are not attached.</p></div></div>
-      {unavailable && <p className="sponsored-helper-wait" role="status">Waiting for the desktop helper to become available.</p>}
+      <div className="panel-heading"><div><h2>{copy("nativeDesktop.sponsored.questionTitle")}</h2><p>{copy("nativeDesktop.sponsored.publicBoundary")}</p></div></div>
+      {unavailable && <p className="sponsored-helper-wait" role="status">{copy("nativeDesktop.sponsored.helperWait")}</p>}
       <form onSubmit={ask}>
         <fieldset disabled={busy || unavailable} className="sponsored-fields">
-          <label className="field">Shareable question<textarea required maxLength={2000} rows={3} value={question} placeholder="Type a question suitable for a public report" onChange={event => setQuestion(event.target.value)}/></label>
-          <fieldset className="mode-field"><legend>Research depth</legend><div className="mode-options">{(["quick", "deep"] as const).map(value => <label key={value} className={mode === value ? "mode-option selected" : "mode-option"}><input type="radio" name="sponsored-mode" value={value} checked={mode === value} onChange={() => setMode(value)}/><span><strong>{value === "quick" ? "Quick" : "Deep"}</strong><small>{value === "quick" ? "A focused answer" : "A broader investigation"}</small></span></label>)}</div></fieldset>
-          <label className="field sponsored-budget">Source budget (USDC)<input required type="number" inputMode="decimal" min="0" max="0.08" step="any" value={budget} onChange={event => setBudget(event.target.value)}/><small>0 to 0.08 USDC. Zero uses free sources. This source cap is separate from model and search costs; the server may apply a lower cap.</small></label>
-          <label className="sponsored-consent"><input type="checkbox" required checked={publicReport} onChange={event => setPublicReport(event.target.checked)}/><span>I agree to publish this question and its result as a public trial report.</span></label>
+          <label className="field">{copy("nativeDesktop.sponsored.question")}<textarea required maxLength={2000} rows={3} value={question} placeholder={copy("nativeDesktop.sponsored.questionPlaceholder")} onChange={event => setQuestion(event.target.value)}/></label>
+          <fieldset className="mode-field"><legend>{copy("nativeDesktop.sponsored.depth")}</legend><div className="mode-options">{(["quick", "deep"] as const).map(value => <label key={value} className={mode === value ? "mode-option selected" : "mode-option"}><input type="radio" name="sponsored-mode" value={value} checked={mode === value} onChange={() => setMode(value)}/><span><strong>{value === "quick" ? copy("nativeDesktop.task.quick") : copy("nativeDesktop.task.deep")}</strong><small>{value === "quick" ? copy("nativeDesktop.sponsored.quickHint") : copy("nativeDesktop.sponsored.deepHint")}</small></span></label>)}</div></fieldset>
+          <label className="field sponsored-budget">{copy("nativeDesktop.sponsored.sourceBudget")}<input required type="number" inputMode="decimal" min="0" max="0.08" step="any" value={budget} onChange={event => setBudget(event.target.value)}/><small>{copy("nativeDesktop.sponsored.sourceBudgetBoundary")}</small></label>
+          <label className="sponsored-consent"><input type="checkbox" required checked={publicReport} onChange={event => setPublicReport(event.target.checked)}/><span>{copy("nativeDesktop.sponsored.consent")}</span></label>
         </fieldset>
-        <div className="form-footer"><span>Sent to https://keryx.cc. No automatic retry or paid buyer fallback. Public results are not saved to private workspace journals.</span><button type="submit" className="primary" disabled={busy || unavailable || !valid}>{state === "pending" ? "Asking…" : "Ask"}</button></div>
+        <div className="form-footer"><span>{copy("nativeDesktop.sponsored.submissionBoundary")}</span><button type="submit" className="primary" disabled={busy || unavailable || !valid}>{state === "pending" ? copy("nativeDesktop.sponsored.asking") : copy("nativeDesktop.sponsored.ask")}</button></div>
       </form>
     </section>
-    {state === "pending" && <p className="activity" role="status">Waiting for hosted research. This can take up to five minutes. Keep this window open.</p>}
+    {state === "pending" && <p className="activity" role="status">{copy("nativeDesktop.sponsored.waiting")}</p>}
     {message && <div className="alert error" role="alert"><span>{message}</span></div>}
-    {state === "uncertain" && <div className="sponsored-uncertain" role="status"><strong>Completion is uncertain.</strong> The hosted request may continue after a timeout or disconnect. Ask is locked for this session. Keep any original report URL below and inspect it before deciding whether to ask again. No request was automatically resent.</div>}
-    {result && <section className="panel sponsored-result" aria-label="Sponsored research result">
-      <div className="panel-heading"><div><span className="eyebrow">HOSTED ANSWER</span><h2>Research result</h2></div></div>
+    {state === "uncertain" && <div className="sponsored-uncertain" role="status"><strong>{copy("nativeDesktop.sponsored.uncertain")}</strong>{copy("nativeDesktop.sponsored.uncertainBoundary")}</div>}
+    {result && <section className="panel sponsored-result" aria-label={copy("nativeDesktop.sponsored.resultLabel")}>
+      <div className="panel-heading"><div><span className="eyebrow">{copy("nativeDesktop.sponsored.answerEyebrow")}</span><h2>{copy("nativeDesktop.sponsored.resultTitle")}</h2></div></div>
       <div className="answer"><p>{result.answer}</p></div>
-      <div className="sponsored-citations"><h3>Citations</h3>{result.citations.length ? <ol>{result.citations.map((citation, index) => <li key={index}><strong>{citation.sourceName}</strong>{publicUrl(citation.sourceUrl) && <SelectableUrl label={`Citation ${index + 1} URL`} url={publicUrl(citation.sourceUrl)!}/>}</li>)}</ol> : <p>No citations were returned.</p>}</div>
-      <div className="sponsored-receipt"><strong>Receipt status: hosted report</strong><p>A budget or reward allocation is not proof of payment. Inspect the public report for recorded receipts and settlement evidence. Pending or planned rewards are not settled payments.</p></div>
+      <div className="sponsored-citations"><h3>{copy("nativeDesktop.sponsored.citations")}</h3>{result.citations.length ? <ol>{result.citations.map((citation, index) => <li key={index}><strong>{citation.sourceName}</strong>{publicUrl(citation.sourceUrl) && <SelectableUrl label={copy("nativeDesktop.sponsored.citationUrl", { number: index + 1 })} url={publicUrl(citation.sourceUrl)!}/>}</li>)}</ol> : <p>{copy("nativeDesktop.sponsored.noCitations")}</p>}</div>
+      <div className="sponsored-receipt"><strong>{copy("nativeDesktop.sponsored.receiptTitle")}</strong><p>{copy("nativeDesktop.sponsored.receiptBoundary")}</p></div>
     </section>}
-    {report && <section className="panel sponsored-report"><div className="panel-heading"><div><h2>Public report</h2><p>Select a URL, press Ctrl+C, and paste it into your browser.</p></div></div><SelectableUrl label="Public report URL" url={report}/></section>}
+    {report && <section className="panel sponsored-report"><div className="panel-heading"><div><h2>{copy("nativeDesktop.sponsored.reportTitle")}</h2><p>{copy("nativeDesktop.sponsored.reportHint")}</p></div></div><SelectableUrl label={copy("nativeDesktop.sponsored.reportUrl")} url={report}/></section>}
   </section>;
 }

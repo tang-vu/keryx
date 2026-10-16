@@ -3,21 +3,28 @@
 ## Sponsored public research (source candidate)
 
 `ask_keryx_sponsored` runs hosted sponsored research with **no API key, buyer
-wallet or funding setup**. From this checkout, configure your MCP client with:
+wallet or funding setup**. First build the source checkout:
+
+```sh
+npm install
+npm --prefix mcp run build
+```
+
+Configure your MCP client to start the resulting bundle using its absolute path:
 
 ```json
 {
   "mcpServers": {
     "keryx": {
       "command": "node",
-      "args": ["--import", "tsx", "/absolute/path/to/keryx/mcp/keryx-mcp-server.mts"]
+      "args": ["/absolute/path/to/keryx/mcp/dist/keryx-mcp.mjs"]
     }
   }
 }
 ```
 
-Run from the checkout so Node can resolve `tsx`. Then explicitly consent to a
-public question and trial report when calling the tool:
+This configuration also works when the MCP client starts from another directory.
+Explicitly consent to a public question and trial report when calling the tool:
 
 ```js
 ask_keryx_sponsored({

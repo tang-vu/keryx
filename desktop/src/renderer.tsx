@@ -118,9 +118,9 @@ function App() {
       <label className="sidebar-section-label">{presentation.language}<select aria-label={presentation.language} value={languageOverride} onChange={event => setLanguageOverride(event.target.value)}>
         <option value="auto">{presentation.auto}</option><option value="en">{clientLanguageNames.en}</option><option value="vi">{clientLanguageNames.vi}</option><option value="pt">{clientLanguageNames.pt}</option><option value="es">{clientLanguageNames.es}</option>
       </select></label>
-      <nav className="sponsored-navigation" aria-label="Research screens">
-        <button type="button" aria-pressed={screen === "sponsored"} onClick={() => setScreen("sponsored")}>Sponsored research</button>
-        <button type="button" aria-pressed={screen === "local"} onClick={() => setScreen("local")}>Local tasks</button>
+      <nav className="sponsored-navigation" aria-label={message("nativeDesktop.sponsored.screens")}>
+        <button type="button" aria-pressed={screen === "sponsored"} onClick={() => setScreen("sponsored")}>{message("nativeDesktop.sponsored.title")}</button>
+        <button type="button" aria-pressed={screen === "local"} onClick={() => setScreen("local")}>{message("nativeDesktop.sponsored.localTasks")}</button>
       </nav>
       {screen === "local" && <>
       <div className="sidebar-section-label">{message("nativeDesktop.workspace.section")}</div>
@@ -139,7 +139,7 @@ function App() {
     </aside>
 
     <main className="main">
-      <header className="topbar"><div className="breadcrumb">{message("nativeDesktop.breadcrumb.mint")}<span>/</span>{message("nativeDesktop.breadcrumb.operator")}<span>/</span> {screen === "sponsored" ? "Sponsored research" : task ? neutral("nativeDesktop.breadcrumb.task") : neutral("nativeDesktop.breadcrumb.desk")}</div><span className="network-pill"><span className="status-dot"/> {screen === "sponsored" ? "Keryx pays · shared limits" : task ? taskLabel : preparedLabel}</span></header>
+      <header className="topbar"><div className="breadcrumb">{message("nativeDesktop.breadcrumb.mint")}<span>/</span>{message("nativeDesktop.breadcrumb.operator")}<span>/</span> {screen === "sponsored" ? message("nativeDesktop.sponsored.title") : task ? neutral("nativeDesktop.breadcrumb.task") : neutral("nativeDesktop.breadcrumb.desk")}</div><span className="network-pill"><span className="status-dot"/> {screen === "sponsored" ? message("nativeDesktop.sponsored.payer") : task ? taskLabel : preparedLabel}</span></header>
       <div className="content" hidden={screen !== "local"}>
         {controlsBusy && <div className="activity" role="status">{busy ? busyLabel[busy] : message("nativeDesktop.busy.savedResult")}</div>}
         {error && <div role="alert" className="alert error"><strong>{message("nativeDesktop.action.failed")}</strong><span>{error}</span><button onClick={() => setError("")}>×</button></div>}

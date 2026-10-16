@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  researchSponsored, sponsoredResearchOrigin, SponsoredResearchError, SPONSORED_RESEARCH_TIMEOUT_MS,
+  researchSponsored, sponsoredResearchOrigin, SponsoredResearchError, SPONSORED_RESEARCH_TIMEOUT_MS, SPONSORED_RESEARCH_NOTICE,
   type SponsoredResearchInput,
 } from "./sponsored-research-client";
 
@@ -36,6 +36,8 @@ afterEach(() => vi.useRealTimers());
 
 describe("hosted sponsored boundary", () => {
   it("posts the actual streaming contract with fixed anonymous headers and zero budget", async () => {
+    expect(SPONSORED_RESEARCH_NOTICE).toContain("Keryx pays");
+    expect(SPONSORED_RESEARCH_NOTICE).toContain("question and report become public");
     const fetch = transport(streamResponse(complete())), onProgress = vi.fn();
     const result = await researchSponsored({ ...input, question: "  question  ", budget: 0, mode: "quick", headers: { Authorization: "secret" }, apiKey: "secret" } as SponsoredResearchInput,
       { fetch, onProgress, headers: { Cookie: "secret" }, apiKey: "secret" } as Parameters<typeof researchSponsored>[1]);

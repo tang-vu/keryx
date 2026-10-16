@@ -38,6 +38,7 @@ try {
   for (const network of ["arcTestnet", "arc"]) {
     const transport = new StdioClientTransport({ command: process.execPath,
       args: ["--import", pathToFileURL(bootstrap).href, resolve("mcp/dist/keryx-mcp.mjs")],
+      cwd: temporary,
       env: { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "",
         KERYX_BASE_URL: "https://synthetic.example", KERYX_API_KEY: "FORBIDDEN_LOCAL_KEY",
         KERYX_NETWORK: network, NEXT_PUBLIC_KERYX_NETWORK: network,
