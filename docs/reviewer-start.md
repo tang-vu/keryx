@@ -44,7 +44,7 @@ under-three-minute benchmark here.
 
 ## Evidence by judging criterion
 
-The [official event guidance](https://tameion.thecanteonapp.com/) recommends these
+The [official event guidance](https://tameion.thecanteenapp.com/) recommends these
 weights; judges retain the final say. Each row points to an inspectable example.
 Test USDC during the event window counts. An outside customer paying on mainnet
 counts more. The figures below are not added together.
