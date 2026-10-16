@@ -29,14 +29,14 @@ export interface LeaderboardEntry {
   citationCount: number;
 }
 
-export function CreatorLeaderboard({ rows, title = uiCopy("creatorLeaderboard.title") }: { rows: LeaderboardEntry[]; title?: string }) {
+export function CreatorLeaderboard({ rows, title }: { rows: LeaderboardEntry[]; title?: string }) {
   const uiCopy = useUiMessages();
   return (
     <Card>
       <CardHeader className="flex-row items-center gap-2 space-y-0 pb-4">
         <Trophy className="h-4 w-4 text-seal" />
         <CardTitle className="font-serif text-lg font-normal">
-          {title}
+          {title ?? uiCopy("creatorLeaderboard.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">

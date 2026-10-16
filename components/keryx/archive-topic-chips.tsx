@@ -7,7 +7,7 @@
 import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import type { ArchiveTopic } from "@/lib/answers-topics";
-import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -25,7 +25,7 @@ export function ArchiveTopicChips({
 }) {
   if (topics.length === 0) return null;
   return (
-    <UiAttributes names={["aria-label"]}><nav aria-label={copy("archiveTopics.label")} className="mt-6 flex flex-wrap items-center gap-1.5">
+    <UiElement as="nav" names={["aria-label"]} attributes={{ "aria-label": copy("archiveTopics.label"), "className": "mt-6 flex flex-wrap items-center gap-1.5" }}>
       <span className="mr-1 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-3">
         <UiMessage messageKey={"archiveTopics.title"} />
       </span>
@@ -61,6 +61,6 @@ export function ArchiveTopicChips({
           </div>
         </details>
       )}
-    </nav></UiAttributes>
+    </UiElement>
   );
 }

@@ -3,7 +3,7 @@ import type { PublicReference } from "@/lib/public-references/catalog";
 import type { PublicReferencePage } from "@/lib/public-references/archive";
 import { createMessages } from "@/lib/i18n/messages";
 import { DisplayTime } from "./display-time";
-import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -47,18 +47,17 @@ export function PublicReferenceLibrary({ page, status, references, filters }: {
     <p className="mt-3 max-w-[75ch] font-serif text-[15px] leading-relaxed text-ink-2"><UiMessage messageKey={"sourceArchive.description"} /></p>
     <form action="/sources#article-library" method="get" className="mt-5 grid gap-3 border border-line bg-paper p-4 sm:grid-cols-[minmax(0,1fr)_180px_150px_auto]">
       <label className="block font-mono text-[11px] text-ink-3"><UiMessage messageKey={"sourceArchive.search"} />
-        <UiAttributes names={["placeholder"]}><input name="articleQuery" defaultValue={filters.query} maxLength={500} placeholder={copy("sourceArchive.placeholder")}
-          className="mt-1 block min-h-11 w-full border border-line bg-paper-2 px-3 font-serif text-sm text-ink" /></UiAttributes>
+        <UiElement as="input" names={["placeholder"]} attributes={{ "name": "articleQuery", "defaultValue": filters.query, "maxLength": 500, "placeholder": copy("sourceArchive.placeholder"), "className": "mt-1 block min-h-11 w-full border border-line bg-paper-2 px-3 font-serif text-sm text-ink" }}></UiElement>
       </label>
       <label className="block font-mono text-[11px] text-ink-3"><UiMessage messageKey={"sourceArchive.publisher"} />
         <select name="publisher" defaultValue={filters.referenceId} className="mt-1 min-h-11 w-full border border-line bg-paper-2 px-2 text-xs text-ink">
-          <option value=""><UiMessage messageKey={"sourceArchive.all"} /></option>
+          <option value=""><UiMessage plain messageKey={"sourceArchive.all"} /></option>
           {references.map(reference => <option key={reference.id} value={reference.id}>{reference.name}</option>)}
         </select>
       </label>
       <label className="block font-mono text-[11px] text-ink-3"><UiMessage messageKey={"sourceArchive.sort"} />
         <select name="articleSort" defaultValue={filters.sort} className="mt-1 min-h-11 w-full border border-line bg-paper-2 px-2 text-xs text-ink">
-          <option value="recent"><UiMessage messageKey={"sourceArchive.recent"} /></option><option value="oldest"><UiMessage messageKey={"sourceArchive.oldest"} /></option><option value="relevance"><UiMessage messageKey={"sourceArchive.relevance"} /></option>
+          <option value="recent"><UiMessage plain messageKey={"sourceArchive.recent"} /></option><option value="oldest"><UiMessage plain messageKey={"sourceArchive.oldest"} /></option><option value="relevance"><UiMessage plain messageKey={"sourceArchive.relevance"} /></option>
         </select>
       </label>
       <button className="min-h-11 self-end border border-ink bg-seal px-4 font-mono text-xs text-paper"><UiMessage messageKey={"sourceArchive.button"} /></button>
@@ -80,9 +79,9 @@ export function PublicReferenceLibrary({ page, status, references, filters }: {
           </div>
         </article>;
       })}</div>}
-    {page && (filters.cursor || page.nextCursor) && <UiAttributes names={["aria-label"]}><nav aria-label={copy("sourceArchive.pages")} className="mt-5 flex flex-wrap gap-4 font-mono text-xs text-seal">
+    {page && (filters.cursor || page.nextCursor) && <UiElement as="nav" names={["aria-label"]} attributes={{ "aria-label": copy("sourceArchive.pages"), "className": "mt-5 flex flex-wrap gap-4 font-mono text-xs text-seal" }}>
       {filters.cursor && <Link href={browseHref(filters)} className="min-h-11 border border-line bg-paper px-4 py-3"><UiMessage messageKey={"sourceArchive.start"} /></Link>}
       {page.nextCursor && <Link href={browseHref(filters, page.nextCursor)} className="min-h-11 border border-line bg-paper px-4 py-3"><UiMessage messageKey={"sourceArchive.next"} /> →</Link>}
-    </nav></UiAttributes>}
+    </UiElement>}
   </section>;
 }

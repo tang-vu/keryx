@@ -1175,6 +1175,38 @@
     "researchVisibility.openResearch": {
       "source": "Open research on Keryx",
       "text": "在 Keryx 上打开研究"
+    },
+    "researchVisibility.embedNotice": {
+      "source": "This embedded widget publishes public research. Open Keryx to ask a private or unlisted question.",
+      "text": "此嵌入式组件会发布公开研究。请打开 Keryx 以提出私人或不公开列出的问题。"
+    },
+    "researchVisibility.followUp": {
+      "source": "A follow-up keeps hidden parent context at the same or more private visibility. Start a new question to choose Public.",
+      "text": "追问会以相同或更私密的可见性保留隐藏的上文。要选择公开，请新建问题。"
+    },
+    "researchVisibility.privateNotice": {
+      "source": "Only your signed-in account can open this report. Keryx and the configured AI provider still process your question.",
+      "text": "只有你已登录的账户可以打开此报告。Keryx 和配置的 AI 提供方仍会处理你的问题。"
+    },
+    "researchVisibility.publicNotice": {
+      "source": "Your question, answer, citations and payment references will appear in public history. Do not include confidential information.",
+      "text": "你的问题、回答、引用和付款引用将出现在公开历史记录中。请勿包含机密信息。"
+    },
+    "researchVisibility.questionOnly": {
+      "source": "This choice applies to this question. Your saved account default stays unchanged.",
+      "text": "此选择仅适用于此问题。已保存的账户默认设置保持不变。"
+    },
+    "researchVisibility.signIn": {
+      "source": "Sign in to choose Private and keep access to your saved answer.",
+      "text": "登录以选择私人，并保留对已保存回答的访问权限。"
+    },
+    "researchVisibility.unavailable": {
+      "source": "Visibility settings are unavailable. Retry before submitting your question.",
+      "text": "可见性设置不可用。提交问题前请重试。"
+    },
+    "researchVisibility.unlistedNotice": {
+      "source": "Anyone with this report's link can read it. It stays out of public lists.",
+      "text": "任何持有此报告链接的人都可以阅读。报告不会出现在公开列表中。"
     }
   }
 }

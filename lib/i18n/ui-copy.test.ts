@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import React, { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { LocaleProvider, useLocale } from "./locale-context";
 import { preparedLocales, type UiLocale } from "./locales";
-import { UiAttributes, UiCopyProvider, UiMessage, UiText, useUiCopy, useUiMessages, useUiRichMessages } from "./ui-copy";
+import { UiElement, UiCopyProvider, UiMessage, UiText, useUiCopy, useUiMessages, useUiRichMessages } from "./ui-copy";
 import { loadUiPreview } from "./ui-preview";
 import { setupCopy } from "@/locales/en/get-started";
 import { englishMessages } from "./messages";
@@ -13,11 +14,12 @@ let root: Root, container: HTMLDivElement, mounts: number;
 const guest = async () => new Response(null, { status: 401 });
 const h = React.createElement;
 function Probe() {
-  const { locale, status, selectLocale } = useLocale(), copy = useUiMessages(), rich = useUiRichMessages();
+  const { locale, ready, status, selectLocale } = useLocale(), copy = useUiMessages(), rich = useUiRichMessages();
   const setup = useUiCopy("get-started", setupCopy);
   useEffect(() => { mounts++; }, []);
   return h("section", null,
     h("output", { id: "locale" }, locale), h("output", { id: "status" }, status),
+    h("output", { id: "ready" }, String(ready)),
     ...preparedLocales.map(value => h("button", { key: value, id: value, onClick: () => selectLocale(value) }, value)),
     h("p", { id: "message" }, copy("researchEntry.question")),
     h("p", { id: "object" }, setup.start.title),
@@ -25,11 +27,12 @@ function Probe() {
     h("p", { id: "original" }, englishMessages["researchEntry.question"]),
     h("p", { id: "critical" }, h(UiMessage, { messageKey: "account.signatureInstruction" })),
     h("p", { id: "rich" }, rich("archiveIndex.title", { emphasis: h("strong", null, "Original node") })),
-    h(UiAttributes, { names: ["placeholder"], children: h("input", { id: "draft", defaultValue: "Unsent original draft", placeholder: englishMessages["researchEntry.placeholder"] }) }));
+    h(UiElement, { as: "input", names: ["placeholder"], attributes: { id: "draft", defaultValue: "Unsent original draft", placeholder: englishMessages["researchEntry.placeholder"] } }));
 }
 async function mount(prepareLocale: (locale: UiLocale) => Promise<unknown> = loadUiPreview) {
   await act(async () => root.render(h(LocaleProvider, { enabledLocales: preparedLocales, network: "eip155:5042", fetcher: guest, prepareLocale,
     children: h(UiCopyProvider, { children: h(Probe) }) })));
+  await vi.waitFor(() => expect(container.querySelector("#ready")!.textContent).toBe("true"));
 }
 async function select(locale: UiLocale) { await act(async () => container.querySelector<HTMLButtonElement>(`#${locale}`)!.click()); }
 beforeEach(() => {
@@ -46,6 +49,7 @@ it("changes both server leaves and client copy without remounting, changing orig
   input.value = "Exact unsent question <USDC> {count}";
   for (const locale of ["vi", "zh-Hans", "en"] as const) {
     await select(locale);
+    await vi.waitFor(() => expect(container.querySelector("#locale")!.textContent).toBe(locale));
     const message = container.querySelector("#message")!.textContent;
     expect(message === englishMessages["researchEntry.question"]).toBe(locale === "en");
     expect(container.querySelector("#object")!.textContent).toBe(container.querySelector("#leaf")!.textContent);
@@ -68,14 +72,24 @@ it("keeps English on chunk failure, permits retry and ignores a superseded slow 
     return loadUiPreview(locale);
   });
   await select("vi");
+  await vi.waitFor(() => expect(container.querySelector("#status")!.textContent).toBe("loadFailed"));
   expect(container.querySelector("#locale")!.textContent).toBe("en");
   expect(container.querySelector("#status")!.textContent).toBe("loadFailed");
   fail = false; delayed = true;
   await select("vi");
   await select("zh-Hans");
+  await vi.waitFor(() => expect(container.querySelector("#locale")!.textContent).toBe("zh-Hans"));
   expect(container.querySelector("#locale")!.textContent).toBe("zh-Hans");
   await act(async () => { release(); await waiting; });
   expect(container.querySelector("#locale")!.textContent).toBe("zh-Hans");
   delayed = false; await select("vi");
+  await vi.waitFor(() => expect(container.querySelector("#locale")!.textContent).toBe("vi"));
   expect(container.querySelector("#locale")!.textContent).toBe("vi");
+});
+
+it("keeps SVG and option copy as text and renders opaque children without inspecting their props", () => {
+  const svg = renderToStaticMarkup(h(UiElement, { as: "svg", names: ["aria-label"], attributes: { "aria-label": "Original label" },
+    children: h("text", null, h(UiMessage, { messageKey: "launchBadge.brand", plain: true })) }));
+  expect(svg).toBe('<svg aria-label="Original label"><text>Product Hunt</text></svg>');
+  expect(renderToStaticMarkup(h("option", null, h(UiText, { source: "English", plain: true })))).toBe("<option>English</option>");
 });

@@ -161,20 +161,20 @@ export default async function SourcesPage({ searchParams }: {
           </Link>
           {(citedSources.status === "unavailable" || citedSources.entries.length > 0) && <Link href={libraryBrowseHref(filters, { kind: "cited" })} className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
             <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-3"><UiMessage messageKey={"sourceLibrary.citedDocuments"} /></p>
-            <p className="mt-1 font-display text-3xl text-ink"><UiText source={citedSources.status === "ready" ? citedSources.entries.length : copy("sourceLibrary.unavailable")} /></p>
+            <p className="mt-1 font-display text-3xl text-ink">{citedSources.status === "ready" ? citedSources.entries.length : <UiMessage messageKey={"sourceLibrary.unavailable"} />}</p>
             <p className="mt-1 font-serif text-sm text-ink-2"><UiMessage messageKey={"sourceLibrary.publicHistory"} /></p>
           </Link>}
           {(publicReferences.status === "unavailable" || references.length > 0 || !hasSources) && <Link href={libraryBrowseHref(filters, { kind: "feed" })} className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3"><UiMessage messageKey={"sourceLibrary.publicReferences"} /></p>
             <p className="mt-1 font-display text-3xl text-ink">
-              <UiText source={publicReferences.status === "ready" ? references.length : copy("sourceLibrary.unavailable")} />
+              {publicReferences.status === "ready" ? references.length : <UiMessage messageKey={"sourceLibrary.unavailable"} />}
             </p>
-            <p className="mt-1 font-serif text-sm text-ink-2"><UiText source={publicReferences.status === "ready" ? copy("sourceArchive.feedCount", { count: retainedItemCount }) : copy("sourceLibrary.feedItemsUnavailable")} /></p>
+            <p className="mt-1 font-serif text-sm text-ink-2">{publicReferences.status === "ready" ? <UiMessage messageKey={"sourceArchive.feedCount"} values={{ count: retainedItemCount }} /> : <UiMessage messageKey={"sourceLibrary.feedItemsUnavailable"} />}</p>
           </Link>}
           {(registry.status === "unavailable" || entries.length > 0 || !hasSources) && <Link href={libraryBrowseHref(filters, { kind: "creator" })} className="bg-paper p-4 transition-colors hover:bg-paper-2 sm:p-5">
             <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-3"><UiMessage messageKey={"sourceLibrary.creatorListings"} /></p>
             <p className="mt-1 font-display text-3xl text-ink">
-              <UiText source={registry.status === "ready" ? entries.length : copy("sourceLibrary.unavailable")} />
+              {registry.status === "ready" ? entries.length : <UiMessage messageKey={"sourceLibrary.unavailable"} />}
             </p>
             <p className="mt-1 font-serif text-sm text-ink-2"><UiMessage messageKey={"sourceLibrary.registrationPolicies"} /></p>
           </Link>}

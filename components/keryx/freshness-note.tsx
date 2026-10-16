@@ -10,7 +10,7 @@ import { createMessages } from "@/lib/i18n/messages";
 
 import Link from "next/link";
 import type { Freshness } from "@/lib/answers-freshness";
-import { UiAttributes, UiMessage, UiRichMessage, UiText } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage, UiRichMessage, UiText } from "@/lib/i18n/ui-copy";
 
 
 
@@ -54,10 +54,7 @@ export function FreshnessNote({ freshness, dispatchId, question }: Props) {
 
   if (supersededVersions > 0) {
     return (
-      <UiAttributes names={["aria-label"]}><section
-        aria-label={copy("reportFreshness.label")}
-        className="mt-8 max-w-[860px] border-2 border-ink bg-paper p-[5px]"
-      >
+      <UiElement as="section" names={["aria-label"]} attributes={{ "aria-label": copy("reportFreshness.label"), "className": "mt-8 max-w-[860px] border-2 border-ink bg-paper p-[5px]" }}>
         <div className="border border-ink px-5 py-4">
           <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-seal">
             <UiMessage messageKey={"reportFreshness.moved"} />
@@ -89,7 +86,7 @@ export function FreshnessNote({ freshness, dispatchId, question }: Props) {
           ) : null}
           <FreshnessActions reAsk={reAsk} auditPath={auditPath} />
         </div>
-      </section></UiAttributes>
+      </UiElement>
     );
   }
 
@@ -100,10 +97,7 @@ export function FreshnessNote({ freshness, dispatchId, question }: Props) {
       publicationCheck === "unavailable"
     ) {
       return (
-        <UiAttributes names={["aria-label"]}><section
-          aria-label={copy("reportFreshness.label")}
-          className="mt-8 max-w-[860px] border-l-2 border-seal pl-4"
-        >
+        <UiElement as="section" names={["aria-label"]} attributes={{ "aria-label": copy("reportFreshness.label"), "className": "mt-8 max-w-[860px] border-l-2 border-seal pl-4" }}>
           <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-seal">
             <UiMessage messageKey={"reportFreshness.incomplete"} />
           </p>
@@ -111,7 +105,7 @@ export function FreshnessNote({ freshness, dispatchId, question }: Props) {
             <UiMessage messageKey={"reportFreshness.incompleteNotice"} />
           </p>
           <AuditLink href={auditPath} />
-        </section></UiAttributes>
+        </UiElement>
       );
     }
 
@@ -129,29 +123,21 @@ export function FreshnessNote({ freshness, dispatchId, question }: Props) {
             : copy("reportFreshness.quietWatched.other", { watched: watchedCount, count: citedCount });
 
     return (
-      <UiAttributes names={["aria-label"]}><section
-        aria-label={copy("reportFreshness.label")}
-        className="mt-8 max-w-[860px] border-l-2 border-line pl-4"
-      >
+      <UiElement as="section" names={["aria-label"]} attributes={{ "aria-label": copy("reportFreshness.label"), "className": "mt-8 max-w-[860px] border-l-2 border-line pl-4" }}>
         <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
           <UiMessage messageKey={"reportFreshness.current"} />
         </p>
         <p className="mt-1.5 font-serif text-[14.5px] leading-[1.6] text-ink-2">
-          <UiText source={versionedCitations > 0
-            ? copy(currentVersions === 1 ? "reportFreshness.currentVersions.one" : "reportFreshness.currentVersions.other", { count: currentVersions })
-            : null} />{" "}
+          {versionedCitations > 0 ? <UiMessage messageKey={currentVersions === 1 ? "reportFreshness.currentVersions.one" : "reportFreshness.currentVersions.other"} values={{ count: currentVersions }} /> : null}{" "}
           {subject}
         </p>
         <AuditLink href={auditPath} />
-      </section></UiAttributes>
+      </UiElement>
     );
   }
 
   return (
-    <UiAttributes names={["aria-label"]}><section
-      aria-label={copy("reportFreshness.label")}
-      className="mt-8 max-w-[860px] border-2 border-ink bg-paper p-[5px]"
-    >
+    <UiElement as="section" names={["aria-label"]} attributes={{ "aria-label": copy("reportFreshness.label"), "className": "mt-8 max-w-[860px] border-2 border-ink bg-paper p-[5px]" }}>
       <div className="border border-ink px-5 py-4">
         <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-seal">
           <UiMessage messageKey={"reportFreshness.new"} />
@@ -183,7 +169,7 @@ export function FreshnessNote({ freshness, dispatchId, question }: Props) {
         </ul>
         <FreshnessActions reAsk={reAsk} auditPath={auditPath} />
       </div>
-    </section></UiAttributes>
+    </UiElement>
   );
 }
 

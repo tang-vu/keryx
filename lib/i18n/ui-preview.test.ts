@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { emptyUiPreview, getUiPreview, loadUiPreview, previewCopy, previewText } from "./ui-preview";
+import { emptyUiPreview, getUiPreview, loadUiPreview, previewCopy, previewMessage, previewText } from "./ui-preview";
 import { englishMessages, createMessages } from "./messages";
 import { setupCopy } from "@/locales/en/get-started";
 
@@ -22,6 +22,11 @@ it("keeps exact originals, missing and ambiguous values and namespace boundaries
   expect(previewText(preview, "Shared")).toBe("Shared");
   expect(previewText(preview, "Question: unchanged original evidence")).toBe("Question: unchanged original evidence");
   expect(previewText(preview, "toString")).toBe("toString");
+  expect(previewText(preview, "toString", ["__proto__"])).toBe("toString");
+  const shared = { ...preview, $messages: { "area.a": "Một", "area.b": "Hai" } };
+  expect(previewMessage(shared, "area.a", "Shared")).toBe("Một");
+  expect(previewMessage(shared, "area.b", "Shared")).toBe("Hai");
+  expect(previewMessage(shared, "missing", "Shared")).toBe("Shared");
 });
 
 it("translates authored objects without changing the source, links, IDs or English critical prose", async () => {

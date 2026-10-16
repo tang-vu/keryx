@@ -3,5 +3,114 @@
   "review": null,
   "sourcePath": "locales/en/chat-accounts.ts",
   "sourceSha256": "45230a5b912efcd378f8a1d24d94b4a5dc918e2c75af5e6d615b10148be9b648",
-  "entries": {}
+  "entries": {
+    "account.enrollPrompt": {
+      "source": "Need to enroll or resume your private account? ",
+      "text": "需要注册或继续使用你的私人账户？"
+    },
+    "account.openWorkspace": {
+      "source": "Open account workspace in a separate tab",
+      "text": "在单独标签页中打开账户工作区"
+    },
+    "account.returnInstructions": {
+      "source": ", then return here and load a fresh preview before checking consent.",
+      "text": "，然后返回此处，加载新的预览后再检查同意事项。"
+    },
+    "action.confirm": {
+      "source": "Confirm chat link",
+      "text": "确认聊天关联"
+    },
+    "action.load": {
+      "source": "Load account and chat links",
+      "text": "加载账户和聊天关联"
+    },
+    "action.unlink": {
+      "source": "Unlink",
+      "text": "解除关联"
+    },
+    "consent.sectionLabel": {
+      "source": "Private chat account consent",
+      "text": "私人聊天账户同意"
+    },
+    "consent.statement": {
+      "source": "I consent to attach future questions from this chat to this Keryx account. Payment, wallet and custody authority stay separate.",
+      "text": "我同意将此聊天今后的问题关联到此 Keryx 账户。付款、钱包和托管权限仍然独立。"
+    },
+    "error.accountChanged": {
+      "source": "Account changed, no explicit account consent exists, or this chat is already linked. Reload and check the account.",
+      "text": "账户已更改、尚无明确的账户同意，或此聊天已关联。请重新加载并检查账户。"
+    },
+    "error.expired": {
+      "source": "Link expired or already used. Send /link again in your private chat.",
+      "text": "链接已过期或已使用。请在私人聊天中再次发送 /link。"
+    },
+    "error.signIn": {
+      "source": "Sign in to Keryx using the account menu, then load this private link again.",
+      "text": "通过账户菜单登录 Keryx，然后重新加载此私人链接。"
+    },
+    "error.unavailable": {
+      "source": "Chat linking is unavailable.",
+      "text": "聊天关联暂不可用。"
+    },
+    "error.unconfirmed": {
+      "source": "Chat linking is unavailable. Your binding was not confirmed; reload to inspect it.",
+      "text": "聊天关联不可用。尚未确认你的关联；请重新加载以检查。"
+    },
+    "history.unavailable": {
+      "source": "Past-run attachment is unavailable because earlier runs lack verified retained chat-user provenance.",
+      "text": "无法关联以往运行，因为早期运行缺少经过验证并保留的聊天用户来源证据。"
+    },
+    "notice.authChanged": {
+      "source": "Authentication changed. Load and review your account again.",
+      "text": "身份验证已更改。请重新加载并检查账户。"
+    },
+    "notice.initial": {
+      "source": "Sign in, then load your chat links.",
+      "text": "登录后，加载你的聊天关联。"
+    },
+    "notice.linked": {
+      "source": "Chat linked. Future questions use this account history. No historical runs were attached.",
+      "text": "聊天已关联。今后的问题将使用此账户的历史记录。未关联任何历史运行。"
+    },
+    "notice.listed": {
+      "source": "Your linked chat accounts are listed below. Start /link in a private bot chat to add one.",
+      "text": "已关联的聊天账户列在下方。请在与机器人的私人聊天中发送 /link 以添加账户。"
+    },
+    "notice.preview": {
+      "source": "Check the chat and account below before confirming.",
+      "text": "确认前，请检查下方的聊天和账户。"
+    },
+    "notice.unlinked": {
+      "source": "Chat unlinked. Existing owned history stays in your account.",
+      "text": "已解除聊天关联。现有的所属历史记录仍保留在账户中。"
+    },
+    "page.description": {
+      "source": "Link a verified private chat to your signed-in Keryx account to keep future questions in your history.",
+      "text": "将经过验证的私人聊天关联到已登录的 Keryx 账户，以将今后的问题保存在历史记录中。"
+    },
+    "page.heading": {
+      "source": "Chat accounts",
+      "text": "聊天账户"
+    },
+    "page.title": {
+      "source": "Chat accounts — Keryx",
+      "text": "聊天账户 — Keryx"
+    },
+    "preview.accountLabel": {
+      "source": "Keryx account: ",
+      "text": "Keryx 账户："
+    },
+    "preview.chatLabel": {
+      "source": "Chat: ",
+      "text": "聊天："
+    },
+    "preview.expiresLabel": {
+      "source": "Expires: ",
+      "text": "到期："
+    },
+    "walletMenu.chatAccounts": {
+      "source": "Chat accounts",
+      "text": "聊天账户"
+    }
+  }
 }

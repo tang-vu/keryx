@@ -14,7 +14,7 @@ function Clock({ value }: { value: string }) {
   return <time dateTime={value} title={value}>{formatLocalizedDate(value, "en", "UTC")?.text} · {value}</time>;
 }
 function Fingerprint({ label, value }: { label: string; value: string }) {
-  return <div className="mt-2"><dt className="text-faint"><UiText source={label} namespaces={["quality"]} /></dt><dd className="break-all font-mono text-xs">{value}</dd></div>;
+  return <div className="mt-2"><dt className="text-faint"><UiText source={label} /></dt><dd className="break-all font-mono text-xs">{value}</dd></div>;
 }
 function IssueLinks({ numbers }: { numbers: readonly number[] }) {
   return <span className="inline-flex flex-wrap gap-2">{numbers.map(n => <a key={n}
@@ -24,7 +24,7 @@ function Groups({ title, rows }: { title: string; rows: (PublicQualityScorecard[
   return <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[580px] text-left text-sm">
     <caption className="mb-2 text-left font-display text-xl">{title}</caption>
     <thead><tr className="border-b border-line">{[copy.group, copy.sample, copy.passes, copy.failures, copy.passRate, copy.usefulRate].map(label =>
-      <th key={label} scope="col" className="p-2 font-medium"><UiText source={label} namespaces={["quality"]} /></th>)}</tr></thead>
+      <th key={label} scope="col" className="p-2 font-medium"><UiText source={label} /></th>)}</tr></thead>
     <tbody>{rows.map(row => <tr key={row.label} className="border-b border-line">
       <th scope="row" className="p-2 font-normal">{row.label}</th>
       <td className="p-2">{number(row.cases)}</td><td className="p-2">{number(row.deterministicPasses)}</td>
@@ -50,7 +50,7 @@ export function QualityScorecard({ id, artifactSha256, scorecard: card }: {
       {[[copy.sample, number(card.overall.cases)], [copy.passes, number(card.overall.deterministicPasses)],
         [copy.failures, number(card.overall.deterministicFailures)], [copy.passRate, rate(card.overall.deterministicPassRate)],
         [copy.usefulRate, copy.unknownRate], [copy.semantic, copy.unjudged], [copy.language, copy.unjudged]].map(([label, value]) =>
-        <div key={label} className="border border-line p-3"><dt className="text-sm text-ink-2"><UiText source={label} namespaces={["quality"]} /></dt><dd className="mt-1 font-mono">{value}</dd></div>)}
+        <div key={label} className="border border-line p-3"><dt className="text-sm text-ink-2"><UiText source={label} /></dt><dd className="mt-1 font-mono">{value}</dd></div>)}
     </dl>
     <p className="mt-4 text-sm text-ink-2"><UiText source={copy.allowance} namespaces={["quality"]} /></p>
     <Groups title={copy.byKind} rows={card.byKind.map(row => ({ ...row, label: copy.kinds[row.kind] }))} />
@@ -80,7 +80,7 @@ export function QualityScorecard({ id, artifactSha256, scorecard: card }: {
       <ul className="mt-3 space-y-3">{card.coverage.issues.map(row => <li key={row.number} className="border-t border-line pt-3">
         <IssueLinks numbers={[row.number]} />
         <p><UiText source={copy.requiredKinds} namespaces={["quality"]} />: {row.requiredKinds.map(k => copy.kinds[k]).join(" · ")}</p>
-        <p><UiText source={copy.retainedCases} namespaces={["quality"]} />: <UiText source={row.caseIds.join(" · ") || copy.none} namespaces={["quality"]} /></p>
+        <p><UiText source={copy.retainedCases} namespaces={["quality"]} />: <UiText source={row.caseIds.join(" · ") || copy.none} /></p>
         <p><UiText source={copy.missingKinds} namespaces={["quality"]} />: {row.missingKinds.map(k => copy.kinds[k]).join(" · ") || copy.none}</p>
       </li>)}</ul>
     </details>

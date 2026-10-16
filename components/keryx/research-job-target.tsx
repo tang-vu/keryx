@@ -9,7 +9,7 @@ export function ResearchJobTarget({ mode, version, monthly = false }: {
 }) {
   const target = jobCompletionTarget(mode, version);
   return <div className="space-y-2 font-serif text-sm" data-job-completion-target>
-    <p><UiText source={target ? jobTargetCopy.target(target.tier, target.seconds) : jobTargetCopy.unavailable} namespaces={["job-targets"]} /></p>
+    <p><UiText source={target ? jobTargetCopy.target(target.tier, target.seconds) : jobTargetCopy.unavailable} /></p>
     {target && <p className="text-ink-3"><UiText source={jobTargetCopy.terms} namespaces={["job-targets"]} /></p>}
     {target && <p className="text-ink-3"><UiText source={jobTargetCopy.reviewTerms} namespaces={["job-targets"]} /></p>}
     {target && monthly && <p className="text-ink-3"><UiText source={jobTargetCopy.monthly} namespaces={["job-targets"]} /></p>}

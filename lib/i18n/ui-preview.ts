@@ -20,11 +20,15 @@ export function loadUiPreview(locale: UiLocale): Promise<UiPreview> {
 }
 
 export function previewText(preview: UiPreview, source: string, namespaces?: readonly string[]): string {
-  const matches = (namespaces ?? Object.keys(preview)).flatMap(namespace => {
-    const entries = preview[namespace];
+  const matches = (namespaces ?? Object.keys(preview).filter(name => !name.startsWith("$"))).flatMap(namespace => {
+    const entries = Object.hasOwn(preview, namespace) ? preview[namespace] : undefined;
     return entries && Object.hasOwn(entries, source) ? [entries[source]] : [];
   });
   return matches.length && matches.every(text => text === matches[0]) ? matches[0] : source;
+}
+
+export function previewMessage(preview: UiPreview, key: string, source: string): string {
+  return Object.hasOwn(preview.$messages ?? {}, key) ? preview.$messages[key] : source;
 }
 
 /** Translate authored catalogue objects only, leaving identifiers and absent leaves exact. */

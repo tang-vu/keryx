@@ -1,9 +1,48 @@
 {
-    "status":  "machineDraft",
-    "review":  null,
-    "sourcePath":  "locales/en/pending-owner257.ts",
-    "sourceSha256":  "57f905d1d84b7f2886c0eb3c7124dbc87a03a0bf9a78bd1e7123ff970c56eed3",
-    "entries":  {
-
-                }
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/pending-owner257.ts",
+  "sourceSha256": "57f905d1d84b7f2886c0eb3c7124dbc87a03a0bf9a78bd1e7123ff970c56eed3",
+  "entries": {
+    "account": {
+      "source": "Signed-in account",
+      "text": "Tài khoản đã đăng nhập"
+    },
+    "checking": {
+      "source": "Checking current account session…",
+      "text": "Đang kiểm tra phiên tài khoản hiện tại…"
+    },
+    "consent": {
+      "source": "Optionally save this new job to my signed-in account history. This is separate from payment and wallet consent.",
+      "text": "Tùy chọn lưu công việc mới này vào lịch sử tài khoản đã đăng nhập của tôi. Việc này tách biệt với chấp thuận thanh toán và ví."
+    },
+    "failed": {
+      "source": "The original job recorded a failure. Its payment state remains unchanged. Review this original; do not pay again.",
+      "text": "Công việc gốc ghi nhận lỗi. Trạng thái thanh toán không thay đổi. Hãy xem lại bản gốc này; đừng thanh toán lại."
+    },
+    "held": {
+      "source": "The original job has an explicitly retained recovery hold. Its payment state remains unchanged. Review this original; do not pay again.",
+      "text": "Công việc gốc có lệnh giữ phục hồi được lưu rõ ràng. Trạng thái thanh toán không thay đổi. Hãy xem lại bản gốc này; đừng thanh toán lại."
+    },
+    "paymentUnknown": {
+      "source": "Creator payment state is unknown.",
+      "text": "Chưa rõ trạng thái thanh toán cho tác giả."
+    },
+    "recoveryUnknown": {
+      "source": "Recovery evidence is unknown.",
+      "text": "Chưa rõ bằng chứng phục hồi."
+    },
+    "refresh": {
+      "source": "Refresh account session",
+      "text": "Làm mới phiên tài khoản"
+    },
+    "signIn": {
+      "source": "Sign in and refresh to optionally save a new job to account history.",
+      "text": "Đăng nhập rồi làm mới để tùy chọn lưu công việc mới vào lịch sử tài khoản."
+    },
+    "title": {
+      "source": "NeedsReview",
+      "text": "NeedsReview"
+    }
+  }
 }

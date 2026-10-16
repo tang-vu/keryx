@@ -7,7 +7,7 @@ import { quoteA2aResearch } from "@/lib/a2a/pricing";
 import { formatRecordedAmount } from "@/lib/i18n/format";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { productGuideCopy as copy } from "@/locales/en/product-guide";
-import { UiAttributes, UiText } from "@/lib/i18n/ui-copy";
+import { UiElement, UiText } from "@/lib/i18n/ui-copy";
 
 
 
@@ -60,10 +60,10 @@ export default function PricingPage() {
           <table className="w-full border-collapse text-left font-mono text-xs sm:text-sm">
             <caption className="mb-3 text-left font-serif text-sm leading-relaxed text-ink-3"><UiText source={copy("pricing.quoteNotice")} namespaces={["product-guide"]} /></caption>
             <thead><tr className="border-b border-ink">
-              {[copy("pricing.package"), copy("pricing.service"), copy("pricing.reserve"), copy("pricing.total")].map(label => <th key={label} className="px-2 py-3 font-medium"><UiText source={label} namespaces={["product-guide"]} /></th>)}
+              {[copy("pricing.package"), copy("pricing.service"), copy("pricing.reserve"), copy("pricing.total")].map(label => <th key={label} className="px-2 py-3 font-medium"><UiText source={label} /></th>)}
             </tr></thead>
             <tbody>{packages.map(({ label, quote }) => <tr key={label} className="border-b border-line">
-              <th scope="row" className="px-2 py-4 font-medium"><UiText source={label} namespaces={["product-guide"]} /></th>
+              <th scope="row" className="px-2 py-4 font-medium"><UiText source={label} /></th>
               {[quote.serviceFeeUsdc, quote.creatorBudgetUsdc, quote.totalPriceUsdc].map((value, index) => <td key={index} className="px-2 py-4 tabular-nums">{amount(value)}</td>)}
             </tr>)}</tbody>
           </table>
@@ -83,12 +83,12 @@ export default function PricingPage() {
           <Link href="/register" className={actionClass}><UiText source={copy("pricing.creatorTitle")} namespaces={["product-guide"]} /></Link>
         </section>
       </div>
-      <UiAttributes names={["aria-label"]} namespaces={["product-guide"]}><nav className="mt-6 flex flex-wrap gap-x-6" aria-label={copy("product.about")}>
+      <UiElement as="nav" names={["aria-label"]} namespaces={["product-guide"]} attributes={{ "className": "mt-6 flex flex-wrap gap-x-6", "aria-label": copy("product.about") }}>
         <Link href="/briefs" className={actionClass}><UiText source={copy("product.briefsAction")} namespaces={["product-guide"]} /></Link>
         <Link href="/about" className={actionClass}><UiText source={copy("product.about")} namespaces={["product-guide"]} /></Link>
         <Link href="/terms" className={actionClass}><UiText source={copy("product.terms")} namespaces={["product-guide"]} /></Link>
         <Link href="/privacy" className={actionClass}><UiText source={copy("product.privacy")} namespaces={["product-guide"]} /></Link>
-      </nav></UiAttributes>
+      </UiElement>
     </main>
     <SiteFooter />
   </div>;

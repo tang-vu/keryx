@@ -40,7 +40,7 @@ export default function QualityPage() {
       </section>
       <section className="mt-8 border border-line p-5">
         <h2 className="font-display text-2xl"><UiText source={copy.gatesTitle} namespaces={["quality"]} /></h2>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed">{copy.gates.map(gate => <li key={gate}><UiText source={gate} namespaces={["quality"]} /></li>)}</ul>
+        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed">{copy.gates.map(gate => <li key={gate}><UiText source={gate} /></li>)}</ul>
         <a className="mt-4 inline-block text-paid underline underline-offset-4" href="https://github.com/tang-vu/keryx/issues/287"><UiText source={copy.issueLink} namespaces={["quality"]} /></a>
       </section>
     </main>

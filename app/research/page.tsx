@@ -77,7 +77,7 @@ export default async function ResearchPage({ searchParams }: {
           <form action="/research#paid-research" className="mt-5 flex flex-wrap items-end gap-4">
             <label className="grid gap-2 font-mono text-xs"><UiMessage messageKey={"paidResearch.package"} />
               <select name="mode" defaultValue={mode} className="border border-line bg-paper-2 p-3 text-sm">
-                <option value="quick"><UiMessage messageKey={"paidResearch.quick"} /></option><option value="deep"><UiMessage messageKey={"paidResearch.deep"} /></option>
+                <option value="quick"><UiMessage plain messageKey={"paidResearch.quick"} /></option><option value="deep"><UiMessage plain messageKey={"paidResearch.deep"} /></option>
               </select>
             </label>
             <label className="grid gap-2 font-mono text-xs"><UiMessage messageKey={"paidResearch.cap"} />

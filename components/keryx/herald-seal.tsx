@@ -26,7 +26,7 @@ export function HeraldSeal({ className }: { className?: string }) {
           style={{ fontSize: 13, letterSpacing: "0.32em" }}
         >
           <textPath href="#eng-sealring" startOffset="0">
-            <UiMessage messageKey={"brandPresentation.sealLegend"} values={{ brand: "KERYX", greekBrand: "ΚΗΡΥΞ" }} />
+            <UiMessage plain messageKey={"brandPresentation.sealLegend"} values={{ brand: "KERYX", greekBrand: "ΚΗΡΥΞ" }} />
           </textPath>
         </text>
       </g>

@@ -10,7 +10,7 @@
 import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import { archiveLanguagePath } from "@/lib/answers-language";
-import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -35,10 +35,7 @@ export function ArchivePagination({ page, totalPages, language = null }: { page:
   const numbers = pageNumbers(page, totalPages);
 
   return (
-    <UiAttributes names={["aria-label"]}><nav
-      aria-label={copy("archivePages.label")}
-      className="mt-10 flex flex-wrap items-center gap-2 border-t border-line pt-6"
-    >
+    <UiElement as="nav" names={["aria-label"]} attributes={{ "aria-label": copy("archivePages.label"), "className": "mt-10 flex flex-wrap items-center gap-2 border-t border-line pt-6" }}>
       {page > 1 && (
         <Link href={archiveLanguagePath(page - 1, language)} rel="prev" className={linkClass}>
           <UiMessage messageKey={"archivePages.newer"} />
@@ -72,6 +69,6 @@ export function ArchivePagination({ page, totalPages, language = null }: { page:
           <UiMessage messageKey={"archivePages.older"} />
         </Link>
       )}
-    </nav></UiAttributes>
+    </UiElement>
   );
 }

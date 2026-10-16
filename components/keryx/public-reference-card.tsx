@@ -5,7 +5,7 @@ import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import type { PublicReference } from "@/lib/public-references/catalog";
 import { librarySearchMatches } from "@/lib/sources/library-browse";
-import { UiAttributes, UiMessage, UiRichMessage, UiText } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage, UiRichMessage, UiText } from "@/lib/i18n/ui-copy";
 
 
 
@@ -63,14 +63,14 @@ export function PublicReferenceCard({ reference, compact = false, matchingQuery 
       <p className="mt-1 break-words font-mono text-[11px] text-ink-3">{domain}</p>
       {reference.description && <p className={`mt-3 font-serif text-[14px] leading-relaxed text-ink-2 ${compact ? "line-clamp-2" : ""}`}>{reference.description}</p>}
       {reference.tags.length > 0 && (
-        <UiAttributes names={["aria-label"]}><ul aria-label={copy("sourceFeed.topics")} className="mt-3 flex flex-wrap gap-1.5">
+        <UiElement as="ul" names={["aria-label"]} attributes={{ "aria-label": copy("sourceFeed.topics"), "className": "mt-3 flex flex-wrap gap-1.5" }}>
           {reference.tags.slice(0, compact ? 3 : 5).map((tag) => <li key={tag} className="rounded border border-line bg-paper-2 px-1.5 py-0.5 font-mono text-[11px] text-ink-3">{tag}</li>)}
-        </ul></UiAttributes>
+        </UiElement>
       )}
 
       <div className="mt-4 border-t border-line pt-3">
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">
-          <UiText source={compact ? copy("sourceFeed.compactItems") : matchingItems.length ? copy(selectPlural(items.length) === "one" ? "sourceFeed.matching.one" : "sourceFeed.matching.other", { count: items.length, total: recentItems.length }) : copy(selectPlural(items.length) === "one" ? "sourceFeed.latest.one" : "sourceFeed.latest.other", { count: items.length })} />
+          {compact ? <UiMessage messageKey={"sourceFeed.compactItems"} /> : matchingItems.length ? <UiMessage messageKey={selectPlural(items.length) === "one" ? "sourceFeed.matching.one" : "sourceFeed.matching.other"} values={{ count: items.length, total: recentItems.length }} /> : <UiMessage messageKey={selectPlural(items.length) === "one" ? "sourceFeed.latest.one" : "sourceFeed.latest.other"} values={{ count: items.length }} />}
         </p>
         {items.length > 0 ? (
           <>

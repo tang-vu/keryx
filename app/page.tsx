@@ -7,6 +7,9 @@ import { HowItWorks, ForCreators } from "@/components/keryx/landing-sections";
 import { walkthroughMessages } from "@/locales/en/walkthrough";
 import { LandingVisit } from "@/components/keryx/landing-visit";
 import { ProductOverview, ProductProof, ProductFaq, ProductSetupEntry } from "@/components/keryx/product-guide";
+import { UiText } from "@/lib/i18n/ui-copy";
+
+
 
 export default function AskPage() {
   return <div className="min-h-screen bg-paper-2">
@@ -14,7 +17,7 @@ export default function AskPage() {
     <SiteHeader />
     <main>
       <div className="mx-auto max-w-[960px] px-4 sm:px-[30px] sm:pt-5">
-        <Link href="/walkthrough" prefetch={false} className="text-sm text-paid underline underline-offset-4">{walkthroughMessages.landingLink}</Link>
+        <Link href="/walkthrough" prefetch={false} className="text-sm text-paid underline underline-offset-4"><UiText source={walkthroughMessages.landingLink} namespaces={["walkthrough"]} /></Link>
       </div>
       <ResearchChat showLaunchBadge introduceProduct />
       <div className="mx-auto max-w-[960px] px-4 sm:px-[30px]"><ActivityTicker /></div>

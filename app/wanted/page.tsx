@@ -115,7 +115,7 @@ export default async function WantedPage() {
           <UiRichMessage messageKey={"wantedBoard.title"} values={{ emphasis: <em className="italic text-paid"><UiMessage messageKey={"wantedBoard.titleEmphasis"} /></em> }} />
         </h1>
         <p className="mt-4 max-w-[62ch] font-serif text-[17px] leading-[1.55] text-ink-2">
-          <UiText source={gaps.length > 0 ? uiCopy(selectPlural(gaps.length) === "one" ? "wantedBoard.introduction.one" : "wantedBoard.introduction.other", { count: gaps.length, window: WANTED_WINDOW_RUNS }) : uiCopy("wantedBoard.empty", { window: WANTED_WINDOW_RUNS })} />
+          {gaps.length > 0 ? <UiMessage messageKey={selectPlural(gaps.length) === "one" ? "wantedBoard.introduction.one" : "wantedBoard.introduction.other"} values={{ count: gaps.length, window: WANTED_WINDOW_RUNS }} /> : <UiMessage messageKey={"wantedBoard.empty"} values={{ window: WANTED_WINDOW_RUNS }} />}
         </p>
 
         {gaps.length > 0 && (
@@ -124,7 +124,7 @@ export default async function WantedPage() {
               <li key={gap.claim} className="border border-line bg-paper p-5">
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-3">
-                    <UiText source={gap.seen > 1 ? uiCopy("wantedBoard.coverageAsked", { coverage: Math.round(gap.coverage * 100), count: gap.seen }) : uiCopy("wantedBoard.coverage", { coverage: Math.round(gap.coverage * 100) })} />
+                    {gap.seen > 1 ? <UiMessage messageKey={"wantedBoard.coverageAsked"} values={{ coverage: Math.round(gap.coverage * 100), count: gap.seen }} /> : <UiMessage messageKey={"wantedBoard.coverage"} values={{ coverage: Math.round(gap.coverage * 100) }} />}
                   </span>
                   <span className="shrink-0 font-mono text-[10px] text-ink-3">
                     {<DisplayTime value={gap.createdAt} dateOnly />}

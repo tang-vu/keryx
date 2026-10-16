@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createMessages } from "@/lib/i18n/messages";
 import { archiveLanguagePath } from "@/lib/answers-language";
-import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -12,7 +12,7 @@ export function ArchiveLanguageFilter({ languages, selected }: {
   languages: Array<{ language: string; count: number }>; selected: string | null;
 }) {
   return <div className="mt-6">
-    <UiAttributes names={["aria-label"]}><nav aria-label={copy("archiveLanguage.label")} className="flex flex-wrap gap-2 text-sm">
+    <UiElement as="nav" names={["aria-label"]} attributes={{ "aria-label": copy("archiveLanguage.label"), "className": "flex flex-wrap gap-2 text-sm" }}>
       <Link href="/answers" aria-current={selected === null ? "page" : undefined} className="text-seal underline underline-offset-4">
         <UiMessage messageKey={"archiveLanguage.all"} />
       </Link>
@@ -20,7 +20,7 @@ export function ArchiveLanguageFilter({ languages, selected }: {
         hrefLang="en" aria-current={selected === language ? "page" : undefined} className="text-seal underline underline-offset-4">
         <UiMessage messageKey={"archiveLanguage.option"} values={{ language: language === "und" ? copy("archiveLanguage.undetermined") : names.of(language) ?? language, count }} />
       </Link>)}
-    </nav></UiAttributes>
+    </UiElement>
     <p className="mt-2 text-xs text-ink-3"><UiMessage messageKey={"archiveLanguage.notice"} /></p>
   </div>;
 }

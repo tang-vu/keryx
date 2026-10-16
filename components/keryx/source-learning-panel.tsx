@@ -1,13 +1,13 @@
 import { createMessages } from "@/lib/i18n/messages";
 import { formatLocalizedDate, formatLocalizedNumber, formatLocalizedUsdc } from "@/lib/i18n/format";
 import type { SourceLearningReport } from "@/lib/research/source-learning-contract";
-import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
 
 const copy = createMessages("en");
 export function SourceLearningPanel({ report, sourceId }: { report: SourceLearningReport | null; sourceId: string }) {
-  return <UiAttributes names={["aria-label"]}><section className="mb-8 border border-line bg-paper p-4" aria-label={copy("sourceLearning.title")}>
+  return <UiElement as="section" names={["aria-label"]} attributes={{ "className": "mb-8 border border-line bg-paper p-4", "aria-label": copy("sourceLearning.title") }}>
     <h2 className="font-display text-xl"><UiMessage messageKey={"sourceLearning.title"} /></h2>
     {!report ? <p className="mt-2 text-sm text-ink-2"><UiMessage messageKey={"sourceLearning.unavailable"} /></p> : <>
       <p className="mt-2 max-w-[80ch] text-sm text-ink-2"><UiMessage messageKey={"sourceLearning.boundary"} /></p>
@@ -32,5 +32,5 @@ export function SourceLearningPanel({ report, sourceId }: { report: SourceLearni
       <p className="mt-2 text-sm"><UiMessage messageKey={"sourceLearning.change"} /></p>
       <a className="mt-3 inline-block text-sm underline" href={`/api/source/${encodeURIComponent(sourceId)}/learning`}><UiMessage messageKey={"sourceLearning.api"} /></a>
     </>}
-  </section></UiAttributes>;
+  </UiElement>;
 }

@@ -1,10 +1,13 @@
 "use client";
 
-import { createMessages } from "@/lib/i18n/messages";
+
 import Link from "next/link";
 import { useEffect } from "react";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
-const uiCopy = createMessages("en");
+
+
+
 
 /**
  * Branded route error boundary — catches render/runtime throws inside the layout
@@ -17,6 +20,7 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const uiCopy = useUiMessages();
   useEffect(() => {
     console.error("[keryx] route error:", error);
   }, [error]);

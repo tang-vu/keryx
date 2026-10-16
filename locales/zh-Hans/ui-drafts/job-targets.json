@@ -67,6 +67,22 @@
     "humanBody": {
       "source": "Share the original job ID, original payment reference and last recorded stage privately with the owner. This page has not contacted a responder. Uncertain legs require original-only review before any remedy.",
       "text": "私下向所有者提供原始任务 ID、原始付款参考和上次记录阶段。此页面未联系响应人员。结果待核实的付款在任何补救前必须仅针对原始记录进行审阅。"
+    },
+    "reviewBody": {
+      "source": "The last server observation records a failure or a review-required status while the original target has not elapsed. Keep the original job for review; this does not establish current delivery or authorize recovery spending.",
+      "text": "服务器最近的观察在原定目标尚未到达时记录了失败或需要审查的状态。请保留原任务以供审查；这不证明当前已交付，也不授予恢复支出权限。"
+    },
+    "reviewObservation": {
+      "source": "Review is based on the retained server status, not a deadline crossing. This page does not mean that a person has been notified or received the job.",
+      "text": "审查依据是保留的服务器状态，而不是截止时间已过。此页面不表示有人已获通知或收到任务。"
+    },
+    "reviewTerms": {
+      "source": "A recorded failure or review-required status may need attention before the target elapses. Review does not restart the original target.",
+      "text": "记录的失败或需要审查状态可能需在目标到达前处理。审查不会重置原定目标。"
+    },
+    "reviewTitle": {
+      "source": "This job needs review before its completion target.",
+      "text": "此任务需要在完成目标到达前审查。"
     }
   }
 }

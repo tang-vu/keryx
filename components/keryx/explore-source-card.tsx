@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { ExploreSource } from "@/lib/public-references/explore-catalog";
 import { LIBRARY_TOPICS } from "@/lib/sources/library-browse";
-import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -17,7 +17,7 @@ export function ExploreSourceCard({ source }: { source: ExploreSource }) {
     <h3 className="mt-2 font-display text-xl font-medium leading-snug text-ink"><a href={source.url} target="_blank" rel="noopener noreferrer" className="break-words hover:text-seal">{source.name}<ArrowUpRight aria-hidden="true" className="ml-1 inline h-4 w-4" /></a></h3>
     <p className="mt-1 break-words font-mono text-[11px] text-ink-3">{domain}</p>
     <p className="mt-3 font-serif text-sm leading-relaxed text-ink-2">{source.description}</p>
-    <UiAttributes names={["aria-label"]}><ul aria-label={copy("sourceExplore.topics")} className="mt-3 flex flex-wrap gap-1.5">{[LIBRARY_TOPICS[source.topic], ...source.tags].slice(0, 5).map(tag => <li key={tag} className="rounded border border-line bg-paper-2 px-1.5 py-0.5 font-mono text-[11px] text-ink-3">{tag}</li>)}</ul></UiAttributes>
+    <UiElement as="ul" names={["aria-label"]} attributes={{ "aria-label": copy("sourceExplore.topics"), "className": "mt-3 flex flex-wrap gap-1.5" }}>{[LIBRARY_TOPICS[source.topic], ...source.tags].slice(0, 5).map(tag => <li key={tag} className="rounded border border-line bg-paper-2 px-1.5 py-0.5 font-mono text-[11px] text-ink-3">{tag}</li>)}</UiElement>
     <div className="mt-auto pt-4"><Link href={`/?q=${encodeURIComponent(`Summarize the guidance in ${source.url}, with citations and evidence gaps clearly stated.`)}`} className="inline-block min-h-11 py-3 font-mono text-[11px] text-seal underline underline-offset-4"><UiMessage messageKey={"sourceExplore.ask"} /></Link>
       <p className="font-serif text-xs leading-relaxed text-ink-3"><UiMessage messageKey={"sourceExplore.draftNotice"} /></p>
     </div>

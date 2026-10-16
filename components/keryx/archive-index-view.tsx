@@ -44,7 +44,7 @@ export function ArchiveIndexView({
     <main className="mx-auto max-w-[860px] px-4 pb-20 pt-12 sm:px-[30px]">
       <div className="mb-2 flex items-baseline justify-between gap-4">
         <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          <UiText source={slice.page > 1 ? copy("archiveIndex.page", { page: slice.page, pages: slice.totalPages }) : copy("archiveIndex.kicker")} />
+          {slice.page > 1 ? <UiMessage messageKey={"archiveIndex.page"} values={{ page: slice.page, pages: slice.totalPages }} /> : <UiMessage messageKey={"archiveIndex.kicker"} />}
         </span>
         <a
           href={language ? `/answers/feed.xml?${new URLSearchParams({ language })}` : "/answers/feed.xml"}

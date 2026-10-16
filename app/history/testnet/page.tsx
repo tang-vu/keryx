@@ -9,7 +9,7 @@ import { historyBefore, historyNext } from "@/lib/history/public-history";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { TestnetHistorySummary } from "@/components/keryx/testnet-history-summary";
-import { UiAttributes, UiMessage, UiRichMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage, UiRichMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -41,10 +41,10 @@ export default async function TestnetHistoryPage({ searchParams }: { searchParam
         </li>)}
       </ol>
       {!data.runs.length && <p className="mt-5 text-sm"><UiMessage messageKey={"reportTestnetHistory.empty"} /></p>}
-      <UiAttributes names={["aria-label"]}><nav className="mt-6 flex flex-wrap gap-6 text-sm text-seal" aria-label={copy("reportTestnetHistory.pages")}>
+      <UiElement as="nav" names={["aria-label"]} attributes={{ "className": "mt-6 flex flex-wrap gap-6 text-sm text-seal", "aria-label": copy("reportTestnetHistory.pages") }}>
         {params.has("before") && <Link href="/history/testnet" className="underline"><UiMessage messageKey={"reportTestnetHistory.newest"} /></Link>}
         {data.runs.length > 50 && <Link href={`/history/testnet?${historyNext(data.runs[49])}`} className="underline"><UiMessage messageKey={"reportTestnetHistory.older"} /></Link>}
-      </nav></UiAttributes>
+      </UiElement>
     </> : <p role="status" className="mt-6 text-sm"><UiRichMessage messageKey={"reportTestnetHistory.unavailable"} values={{ retry: <Link href="/history/testnet" className="underline"><UiMessage messageKey={"reportTestnetHistory.retry"} /></Link> }} /></p>;
   return <div className="min-h-screen bg-paper-2"><SiteHeader /><main className="mx-auto max-w-[980px] px-4 pb-20 pt-10 sm:px-[30px]">
     <Link href="/dashboard" className="text-sm text-seal underline"><UiMessage messageKey={"reportTestnetHistory.current"} /></Link>

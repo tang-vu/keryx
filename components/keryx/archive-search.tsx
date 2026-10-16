@@ -42,7 +42,7 @@ export function ArchiveSearch({
   children,
   filters,
   others = [],
-  placeholder = copy("archiveFilter.placeholder"),
+  placeholder,
 }: {
   /** Lowercase searchable text per card, in the same order as `children`. */
   terms: string[];
@@ -77,7 +77,7 @@ export function ArchiveSearch({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={placeholder}
+          placeholder={placeholder ?? copy("archiveFilter.placeholder")}
           aria-label={copy("archiveFilter.label")}
           className="w-full bg-transparent font-mono text-[13px] text-ink outline-none placeholder:text-ink-3"
         />

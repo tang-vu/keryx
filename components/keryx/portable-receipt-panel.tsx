@@ -1,5 +1,5 @@
 import { createMessages } from "@/lib/i18n/messages";
-import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -13,10 +13,7 @@ interface Props {
 export function PortableReceiptPanel({ dispatchId }: Props) {
   const receiptPath = `/api/dispatch/${dispatchId}/receipt`;
   return (
-    <UiAttributes names={["aria-label"]}><section
-      aria-label={copy("portableReceipt.label")}
-      className="mt-8 max-w-[860px] border border-ink bg-paper px-5 py-4 sm:px-6"
-    >
+    <UiElement as="section" names={["aria-label"]} attributes={{ "aria-label": copy("portableReceipt.label"), "className": "mt-8 max-w-[860px] border border-ink bg-paper px-5 py-4 sm:px-6" }}>
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="max-w-[610px]">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-paid">
@@ -46,6 +43,6 @@ export function PortableReceiptPanel({ dispatchId }: Props) {
           </a>
         </div>
       </div>
-    </section></UiAttributes>
+    </UiElement>
   );
 }

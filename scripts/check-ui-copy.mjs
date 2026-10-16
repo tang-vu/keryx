@@ -135,6 +135,10 @@ export function extractUiCopy(filename, source) {
     if (ts.isJsxExpression(node) && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))) rendered(node.expression, "jsx-expression");
     if (ts.isPropertyAssignment(node)) {
       const name = propertyName(node.name);
+      if (textAttributes.has(name) && ts.isObjectLiteralExpression(node.parent) &&
+        ts.isJsxExpression(node.parent.parent) && ts.isJsxAttribute(node.parent.parent.parent) &&
+        node.parent.parent.parent.name.getText(ast) === "attributes" &&
+        node.parent.parent.parent.parent.parent.tagName?.getText(ast) === "UiElement") rendered(node.initializer, "attribute");
       const metadata = insideMetadata(node);
       const title = metadata && name === "title" ? constantExpression(node.initializer) : undefined;
       if (title && ts.isObjectLiteralExpression(title)) {

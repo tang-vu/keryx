@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createMessages } from "@/lib/i18n/messages";
 import type { TestnetArchiveInfo, TestnetArchiveSummary, TestnetCreatorEntry } from "@/lib/history/testnet-archive";
 import { shortAddr } from "./phase-style";
-import { UiAttributes, UiMessage, UiText } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage, UiText } from "@/lib/i18n/ui-copy";
 
 
 
@@ -17,7 +17,7 @@ function CreatorRows({ rows, start = 0 }: { rows: TestnetCreatorEntry[]; start?:
         <p className="break-words font-serif text-base text-ink">{row.sourceName}</p>
         <p className="mt-1 font-mono text-[11px] leading-relaxed text-ink-3">
           {/^(?:0x)[a-fA-F0-9]{40}$/.test(row.walletAddress)
-            ? <UiAttributes names={["aria-label"]}><a href={`https://testnet.arcscan.app/address/${row.walletAddress}`} target="_blank" rel="noopener noreferrer" className="underline" aria-label={message("ledgerHistory.inspectWallet", { wallet: row.walletAddress })}>{shortAddr(row.walletAddress)} ↗</a></UiAttributes>
+            ? <UiElement as="a" names={["aria-label"]} attributes={{ "href": `https://testnet.arcscan.app/address/${row.walletAddress}`, "target": "_blank", "rel": "noopener noreferrer", "className": "underline", "aria-label": message("ledgerHistory.inspectWallet", { wallet: row.walletAddress }) }}>{shortAddr(row.walletAddress)} ↗</UiElement>
             : <span>{shortAddr(row.walletAddress)}</span>}
           {" · "}<UiMessage messageKey={"ledgerHistory.paymentCounts"} values={{ cites: formatNumber(row.citationCount), payments: formatNumber(row.paymentCount) }} />
         </p>
@@ -48,7 +48,7 @@ export function TestnetHistorySummary({ info, summary, creators, expandedCreator
   info: TestnetArchiveInfo; summary: TestnetArchiveSummary; creators?: TestnetCreatorEntry[] | null; expandedCreators?: boolean;
 }) {
   const inbound = summary.paymentKinds.find(kind => kind.kind === "inbound");
-  return <UiAttributes names={["aria-label"]}><section id="testnet-history" className="mt-8 border-t-2 border-seal bg-paper-2 p-5 sm:p-6" aria-label={message("ledgerHistory.evidenceLabel")}>
+  return <UiElement as="section" names={["aria-label"]} attributes={{ "id": "testnet-history", "className": "mt-8 border-t-2 border-seal bg-paper-2 p-5 sm:p-6", "aria-label": message("ledgerHistory.evidenceLabel") }}>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><p className="font-mono text-[11px] uppercase tracking-[0.15em] text-seal"><UiMessage messageKey={"ledgerHistory.trackRecord"} /></p><h2 className="mt-2 font-display text-2xl text-ink"><UiMessage messageKey={"ledgerHistory.title"} /></h2></div>
       <Link href="/history/testnet" className="min-h-11 border border-ink px-4 py-3 text-sm text-ink hover:underline"><UiMessage messageKey={"ledgerHistory.browseQuestions"} /></Link>
@@ -78,5 +78,5 @@ export function TestnetHistorySummary({ info, summary, creators, expandedCreator
         <a href="https://github.com/tang-vu/keryx/blob/main/docs/tameion-submission.md" className="min-h-11 py-3 underline"><UiMessage messageKey={"ledgerHistory.eventEvidence"} /></a>
       </div>
     </details>
-  </section></UiAttributes>;
+  </UiElement>;
 }

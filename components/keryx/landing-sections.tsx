@@ -5,16 +5,16 @@
  */
 
 import { createMessages } from "@/lib/i18n/messages";
-import { createRichMessages } from "@/lib/i18n/rich-messages";
+
 import Link from "next/link";
 import { MintIcon, type MintIconName } from "./mint-icons";
 import { cn } from "@/lib/utils";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { aboutStory } from "@/locales/en/about-story";
+import { UiMessage, UiRichMessage, UiText } from "@/lib/i18n/ui-copy";
 
 const uiCopy = createMessages("en");
-const uiRichCopy = createRichMessages("en");
 
 const STEPS: {
   num: string;
@@ -47,7 +47,7 @@ export function HowItWorks() {
     <section id="how-it-works" className="mx-auto max-w-[1180px] scroll-mt-24 px-4 pb-2.5 pt-12 sm:px-[30px]" aria-labelledby="how-it-works-title">
       <div className="mb-7 flex items-baseline gap-4">
         <h2 id="how-it-works-title" className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal">
-          {productGuideCopy("product.stepsTitle")}
+          <UiText source={productGuideCopy("product.stepsTitle")} namespaces={["product-guide","about-story"]} />
         </h2>
         <span className="h-px flex-1 bg-line" />
       </div>
@@ -71,19 +71,19 @@ export function HowItWorks() {
               <MintIcon name={s.icon} />
             </span>
             <div className="font-display text-[54px] font-semibold italic leading-none text-seal">
-              {s.num}
+              <UiText source={s.num} />
             </div>
             <div className="mb-2.5 mt-[18px] font-mono text-[11px] uppercase tracking-[0.18em] text-paid">
-              {s.kicker}
+              <UiText source={s.kicker} />
             </div>
             <p className="relative font-serif text-[16px] leading-[1.55] text-ink-2">
-              {s.body}
+              <UiText source={s.body} />
             </p>
           </div>
         ))}
       </div>
       <Link lang="en" href="/about#in-practice" className="mt-4 inline-flex min-h-11 items-center gap-3 font-serif text-base text-paid underline underline-offset-4 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-paid">
-        {aboutStory.landingLink}<span aria-hidden="true">→</span>
+        <UiText source={aboutStory.landingLink} namespaces={["product-guide","about-story"]} /><span aria-hidden="true">→</span>
       </Link>
     </section>
   );
@@ -101,26 +101,26 @@ export function ForCreators() {
             <use href="#eng-rose1" fill="none" stroke="currentColor" strokeWidth="0.4" />
           </svg>
           <div className="relative font-mono text-[11px] uppercase tracking-[0.2em] text-paper/75">
-            {uiCopy("landingSteps.creators")}
+            <UiMessage messageKey={"landingSteps.creators"} />
           </div>
           <h2 className="relative mt-4 max-w-[18ch] font-display text-[clamp(32px,5.4vw,72px)] font-medium leading-[0.98] tracking-[-0.01em]">
-            {uiRichCopy("landingCreators.title", { emphasis: <em className="font-semibold italic">{uiCopy("landingCreators.titleEmphasis")}</em> })}
+            <UiRichMessage messageKey={"landingCreators.title"} values={{ emphasis: <em className="font-semibold italic"><UiMessage messageKey={"landingCreators.titleEmphasis"} /></em> }} />
           </h2>
           <p className="relative mt-6 max-w-[54ch] font-serif text-[clamp(16px,1.5vw,19px)] leading-[1.55] text-paper/85">
-            {uiCopy("landingCreators.introduction", { network: currentArcLabel })}
+            <UiMessage messageKey={"landingCreators.introduction"} values={{ network: currentArcLabel }} />
           </p>
           <div className="relative mt-8 flex flex-wrap gap-3">
             <Link
               href="/register"
               className="border border-paper bg-paper px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_5px_0_rgba(15,42,30,0.6)] active:translate-y-0 active:shadow-none"
             >
-              {uiCopy("landingSteps.listFeed")}
+              <UiMessage messageKey={"landingSteps.listFeed"} />
             </Link>
             <Link
               href="/dashboard"
               className="border border-paper/55 px-6 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-paper transition-colors hover:bg-paper hover:text-paid"
             >
-              {uiCopy("landingSteps.ledger")}
+              <UiMessage messageKey={"landingSteps.ledger"} />
             </Link>
           </div>
         </div>

@@ -244,7 +244,7 @@ export default async function DispatchPage({ params }: PageProps) {
                   >
                     {f.run.question}
                   </Link>
-                  {archive ? <span className="ml-2 font-mono text-[10px] text-ink-3"><UiText source={f.archive ? copy("reportDispatch.historicalNetwork") : CURRENT_NETWORK_LABEL} namespaces={["run-privacy"]} /></span> : null}
+                  {archive ? <span className="ml-2 font-mono text-[10px] text-ink-3">{f.archive ? <UiMessage messageKey={"reportDispatch.historicalNetwork"} /> : CURRENT_NETWORK_LABEL}</span> : null}
                 </li>
               ))}
             </ul>

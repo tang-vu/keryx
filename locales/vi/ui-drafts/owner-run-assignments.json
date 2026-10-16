@@ -3,5 +3,130 @@
   "review": null,
   "sourcePath": "locales/en/owner-run-assignments.ts",
   "sourceSha256": "e371c237cf4a9bfcec31f78c77752c3a92126a6b6361a5a77a688b39e207d663",
-  "entries": {}
+  "entries": {
+    "acknowledgement": {
+      "source": "I consent to associating these exact runs with my account, labelled Assigned by owner, and to confirming or rejecting them later.",
+      "text": "Tôi đồng ý gắn đúng các lượt chạy này vào tài khoản của mình, gắn nhãn Do chủ sở hữu chỉ định và xác nhận hoặc từ chối sau này."
+    },
+    "assigned": {
+      "source": "Assigned by owner — awaiting confirmation",
+      "text": "Do chủ sở hữu chỉ định — chờ xác nhận"
+    },
+    "assignedAt": {
+      "source": "Assigned",
+      "text": "Được chỉ định"
+    },
+    "assignedCount": {
+      "source": "Assigned by owner",
+      "text": "Do chủ sở hữu chỉ định"
+    },
+    "changed": {
+      "source": "Your account session changed. Refresh before continuing.",
+      "text": "Phiên tài khoản đã đổi. Hãy làm mới trước khi tiếp tục."
+    },
+    "checking": {
+      "source": "Checking sign-in…",
+      "text": "Đang kiểm tra đăng nhập…"
+    },
+    "claimed": {
+      "source": "Claimed — originally assigned by owner",
+      "text": "Đã nhận — ban đầu do chủ sở hữu chỉ định"
+    },
+    "claimedCount": {
+      "source": "Claimed from owner assignment",
+      "text": "Đã nhận từ chỉ định của chủ sở hữu"
+    },
+    "confirm": {
+      "source": "Confirm attribution",
+      "text": "Xác nhận ghi nhận đóng góp"
+    },
+    "confirmedAt": {
+      "source": "Confirmed",
+      "text": "Đã xác nhận"
+    },
+    "consent": {
+      "source": "Record consent to this proposal",
+      "text": "Ghi nhận chấp thuận đề xuất này"
+    },
+    "consentManifest": {
+      "source": "Paste the exact proposal supplied by the owner",
+      "text": "Dán đúng đề xuất do chủ sở hữu cung cấp"
+    },
+    "empty": {
+      "source": "No active assignments for this account generation.",
+      "text": "Không có chỉ định đang hoạt động cho thế hệ tài khoản này."
+    },
+    "financialAcknowledgement": {
+      "source": "This consent gives no payment, spending, settlement, or publication permission.",
+      "text": "Chấp thuận này không cấp quyền thanh toán, chi tiêu, quyết toán hay công bố."
+    },
+    "historical": {
+      "source": "Historical committed result; this receipt gives no current assignment authority.",
+      "text": "Kết quả lịch sử đã ghi nhận; biên nhận này không cấp quyền chỉ định hiện tại."
+    },
+    "invalid": {
+      "source": "The proposal or response is invalid. Keep the original proposal and refresh your account.",
+      "text": "Đề xuất hoặc phản hồi không hợp lệ. Giữ đề xuất gốc và làm mới tài khoản."
+    },
+    "menu": {
+      "source": "Run assignments",
+      "text": "Chỉ định lượt chạy"
+    },
+    "pendingConsent": {
+      "source": "Consent recorded. The owner must separately apply the reviewed proposal.",
+      "text": "Đã ghi nhận chấp thuận. Chủ sở hữu phải áp dụng riêng đề xuất đã được xem xét."
+    },
+    "profile": {
+      "source": "Assignment attribution counts",
+      "text": "Số lượt ghi nhận theo chỉ định"
+    },
+    "proposalSummary": {
+      "source": "Proposal run IDs and original networks",
+      "text": "ID lượt chạy và mạng gốc trong đề xuất"
+    },
+    "recovery": {
+      "source": "Recovery request JSON",
+      "text": "JSON yêu cầu phục hồi"
+    },
+    "refresh": {
+      "source": "Refresh assignments",
+      "text": "Làm mới chỉ định"
+    },
+    "reject": {
+      "source": "Reject assignment",
+      "text": "Từ chối chỉ định"
+    },
+    "resolve": {
+      "source": "Resolve the same request",
+      "text": "Giải quyết cùng yêu cầu"
+    },
+    "scope": {
+      "source": "Review attribution to your current private account. Assignment does not change who paid, creator rewards, or a report’s audience.",
+      "text": "Xem lại việc ghi nhận cho tài khoản riêng tư hiện tại. Chỉ định không đổi bên trả tiền, thưởng tác giả hay đối tượng được xem báo cáo."
+    },
+    "signIn": {
+      "source": "Sign in to review assignments",
+      "text": "Đăng nhập để xem xét chỉ định"
+    },
+    "suppressed": {
+      "source": "Association inactive. You can still reject or withdraw it.",
+      "text": "Liên kết không còn hoạt động. Bạn vẫn có thể từ chối hoặc rút lại."
+    },
+    "title": {
+      "source": "Owner-assigned research",
+      "text": "Nghiên cứu do chủ sở hữu chỉ định"
+    },
+    "unavailable": {
+      "source": "Assignments are unavailable for this account or storage profile.",
+      "text": "Chỉ định không khả dụng cho tài khoản hoặc hồ sơ lưu trữ này."
+    },
+    "unknown": {
+      "source": "This operation’s outcome is unresolved. Keep the recovery JSON below. Resolve the same request before starting another operation.",
+      "text": "Kết quả thao tác chưa được giải quyết. Giữ JSON phục hồi bên dưới. Giải quyết cùng yêu cầu trước khi bắt đầu thao tác khác."
+    },
+    "withdraw": {
+      "source": "Withdraw attribution",
+      "text": "Rút lại ghi nhận"
+    }
+  }
 }

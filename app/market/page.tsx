@@ -12,7 +12,7 @@ import { SiteHeader } from "@/components/keryx/site-header";
 import { fmtUsdc, shortAddr } from "@/components/keryx/phase-style";
 import { getDb } from "@/lib/db";
 import { listArticleMarket } from "@/lib/offers/offer-book";
-import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -60,13 +60,7 @@ export default async function MarketPage({
               <UiMessage messageKey={"sourceMarket.search"} />
             </label>
             <div className="mt-2 flex gap-2">
-              <UiAttributes names={["placeholder"]}><input
-                id="market-query"
-                name="q"
-                defaultValue={query}
-                placeholder={copy("sourceMarket.placeholder", { protocol: "x402" })}
-                className="min-w-0 flex-1 border border-line bg-paper-2 px-3 py-2 font-serif text-sm outline-none focus:border-seal"
-              /></UiAttributes>
+              <UiElement as="input" names={["placeholder"]} attributes={{ "id": "market-query", "name": "q", "defaultValue": query, "placeholder": copy("sourceMarket.placeholder", { protocol: "x402" }), "className": "min-w-0 flex-1 border border-line bg-paper-2 px-3 py-2 font-serif text-sm outline-none focus:border-seal" }}></UiElement>
               <button className="border border-ink bg-ink px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-cream">
                 <UiMessage messageKey={"sourceMarket.find"} />
               </button>

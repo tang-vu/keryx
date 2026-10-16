@@ -403,6 +403,10 @@
     "ledgerRecorded.public.stale.other": {
       "source": "{count} public questions on {network} · last successful read",
       "text": "{count} 个公开问题，位于 {network} · 最近一次成功读取"
+    },
+    "ledgerPresentation.recordedBoundary": {
+      "source": "Recorded totals cover all saved activity in this database, including public, unlisted and private questions and records without verified network metadata.",
+      "text": "记录总数涵盖此数据库中保存的全部活动，包括公开、不公开列出和私人问题，以及缺少已验证网络元数据的记录。"
     }
   }
 }

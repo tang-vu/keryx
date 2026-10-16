@@ -27,11 +27,11 @@ export default function GetStartedPage() {
         {copy.surfaces.map(surface => {
           const Icon = icons[surface.id];
           return <article key={surface.id} className="flex min-w-0 flex-col border border-line bg-paper p-6">
-            <div className="flex items-center gap-3"><Icon size={22} className="shrink-0 text-seal" aria-hidden="true" /><span className="font-mono text-[11px] text-ink-3"><UiText source={surface.tag} namespaces={["get-started"]} /></span></div>
-            <h3 className="mt-4 font-display text-2xl"><UiText source={surface.title} namespaces={["get-started"]} /></h3>
-            <p className="mt-3 font-serif leading-relaxed text-ink-2"><UiText source={surface.body} namespaces={["get-started"]} /></p>
-            <p className="mb-4 mt-3 flex-1 font-serif text-sm leading-relaxed text-ink-3"><UiText source={surface.detail} namespaces={["get-started"]} /></p>
-            <Link href={surface.href} className={setupLinkClass}><UiText source={surface.action} namespaces={["get-started"]} /><ArrowUpRight size={14} aria-hidden="true" /></Link>
+            <div className="flex items-center gap-3"><Icon size={22} className="shrink-0 text-seal" aria-hidden="true" /><span className="font-mono text-[11px] text-ink-3"><UiText source={surface.tag} /></span></div>
+            <h3 className="mt-4 font-display text-2xl"><UiText source={surface.title} /></h3>
+            <p className="mt-3 font-serif leading-relaxed text-ink-2"><UiText source={surface.body} /></p>
+            <p className="mb-4 mt-3 flex-1 font-serif text-sm leading-relaxed text-ink-3"><UiText source={surface.detail} /></p>
+            <Link href={surface.href} className={setupLinkClass}><UiText source={surface.action} /><ArrowUpRight size={14} aria-hidden="true" /></Link>
           </article>;
         })}
       </div>
@@ -50,8 +50,8 @@ export default function GetStartedPage() {
       <h2 id="setup-faq" className="font-display text-3xl"><UiText source={copy.start.faqTitle} namespaces={["get-started"]} /></h2>
       <div className="mt-4 border-y border-line">
         {copy.start.faq.map(faq => <details key={faq.question} className="border-b border-line last:border-b-0">
-          <summary className="min-h-11 cursor-pointer py-4 font-serif text-lg"><UiText source={faq.question} namespaces={["get-started"]} /></summary>
-          <p className="max-w-[76ch] pb-5 font-serif leading-relaxed text-ink-2"><UiText source={faq.answer} namespaces={["get-started"]} /></p>
+          <summary className="min-h-11 cursor-pointer py-4 font-serif text-lg"><UiText source={faq.question} /></summary>
+          <p className="max-w-[76ch] pb-5 font-serif leading-relaxed text-ink-2"><UiText source={faq.answer} /></p>
         </details>)}
       </div>
     </section>

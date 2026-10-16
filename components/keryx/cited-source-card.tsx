@@ -33,7 +33,7 @@ export function CitedSourceCard({ entry, compact = false }: { entry: CitedSource
     </h3>
     <p className="mt-2 break-words font-mono text-[11px] text-ink-3">{entry.publisher}</p>
     <p className="mt-4 text-sm leading-relaxed text-ink-2">
-      <UiText source={entry.deliveryKind ? (SCOPE_LABELS[entry.deliveryKind]?.[entry.truncated ? 1 : 0] ?? (entry.truncated ? copy("sourceCited.unclassifiedBounded") : undefined)) : copy(entry.truncated ? "sourceCited.scopeBounded.unrecorded" : "sourceCited.scope.unrecorded")} />
+      {entry.deliveryKind ? (SCOPE_LABELS[entry.deliveryKind]?.[entry.truncated ? 1 : 0] ?? (entry.truncated ? copy("sourceCited.unclassifiedBounded") : undefined)) : <UiMessage messageKey={entry.truncated ? "sourceCited.scopeBounded.unrecorded" : "sourceCited.scope.unrecorded"} />}
     </p>
     {!compact && <p className="mt-2 font-mono text-[11px] leading-relaxed text-ink-3">{retrieved ? <><UiRichMessage messageKey={"sourceCited.observed"} values={{ date: <DisplayTime value={entry.retrievedAt!} dateOnly /> }} /></> : copy("sourceCited.readUnavailable")}</p>}
     <div className="mt-auto pt-4">

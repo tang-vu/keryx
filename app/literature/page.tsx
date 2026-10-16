@@ -8,7 +8,7 @@ import { LiteratureWorkspace } from "@/components/keryx/literature-workspace";
 import { SponsoredTrialNotice } from "@/components/keryx/sponsored-trial-notice";
 import { evidenceDraftCopy as draftCopy } from "@/lib/research/evidence-draft-copy";
 import { draftCheckCopy as checkCopy } from "@/lib/research/draft-check-copy";
-import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -27,12 +27,12 @@ export default function LiteraturePage() {
       <p className="font-mono text-xs uppercase tracking-[0.16em] text-seal"><UiMessage messageKey={"literaturePage.kicker"} /></p>
       <h1 className="mt-3 font-display text-[clamp(30px,5vw,46px)] font-medium leading-tight text-ink"><UiMessage messageKey={"literaturePage.heading"} /></h1>
       <p className="mt-4 max-w-[65ch] font-serif text-lg leading-relaxed text-ink-2"><UiMessage messageKey={"literaturePage.intro"} /></p>
-      <UiAttributes names={["aria-label"]}><nav aria-label={copy("literaturePage.workflowLabel")} className="mt-5 flex flex-wrap gap-3">
+      <UiElement as="nav" names={["aria-label"]} attributes={{ "aria-label": copy("literaturePage.workflowLabel"), "className": "mt-5 flex flex-wrap gap-3" }}>
         <Link prefetch={false} href="/sources?kind=paper#research-papers" className="inline-flex min-h-11 items-center border border-ink bg-seal px-4 py-2 font-mono text-xs text-paper"><UiMessage messageKey={"literaturePage.find"} /></Link>
         <a href="#literature-project" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline"><UiMessage messageKey={"literaturePage.focus"} /></a>
         <Link prefetch={false} href="/literature/drafts" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{draftCopy.page.navigation}</Link>
         <Link prefetch={false} href="/literature/check" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{checkCopy.page.navigation}</Link>
-      </nav></UiAttributes>
+      </UiElement>
       <div className="mt-6"><SponsoredTrialNotice prepareQuestion /></div>
       <LiteratureWorkspace />
       <noscript><p className="mt-5 font-serif text-sm text-ink-2"><UiMessage messageKey={"literaturePage.noscript"} /></p></noscript>

@@ -19,7 +19,7 @@ import { decisionReviewCopy as reviewCopy } from "@/lib/research/decision-review
 import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/hooks/use-research-visibility";
 import type { RunVisibility } from "@/lib/run-privacy/contracts";
 import { ResearchVisibilityPicker } from "./research-visibility-picker";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { UiText, useUiMessages } from "@/lib/i18n/ui-copy";
 
 
 
@@ -342,7 +342,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
             {SUGGESTIONS.map((s) => (
               <button key={s.label} type="button" disabled={disabled} onClick={() => setQuestion(s.q)}
                 className="min-h-11 max-w-full border border-line bg-paper px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
-                {s.label}
+                <UiText source={s.label} />
               </button>
             ))}
           </div>}

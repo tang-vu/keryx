@@ -3,5 +3,206 @@
   "review": null,
   "sourcePath": "locales/en/about-story.ts",
   "sourceSha256": "5f834afb936d0341fd818ed2f2efe7d2c629dd9bd882eadd36b322d8c3cd17a9",
-  "entries": {}
+  "entries": {
+    "aboutStory.demo": {
+      "source": "Watch the 2:47 product demo",
+      "text": "观看 2:47 产品演示"
+    },
+    "walkthrough": {
+      "source": "Explore a recorded job",
+      "text": "查看一项记录的任务"
+    },
+    "landingLink": {
+      "source": "See Keryx in a real research task",
+      "text": "查看 Keryx 在实际研究任务中的使用"
+    },
+    "feedbackLabel": {
+      "source": "USER FEEDBACK · RELAYED BY THE FOUNDER · OCTOBER 16, 2026",
+      "text": "用户反馈 · 创始人转述 · 2026年10月16日"
+    },
+    "feedbackTitle": {
+      "source": "It helped them get the job done.",
+      "text": "它帮助他们完成了任务。"
+    },
+    "feedbackBody": {
+      "source": "The founder reports that 0xacee, Hoàng and Trần Minh Hiếu each said Keryx helped solve their tasks, quickly and at low cost.",
+      "text": "据创始人转述，0xacee、Hoàng 和 Trần Minh Hiếu 都表示 Keryx 帮助他们快速、低成本地解决了任务。"
+    },
+    "feedbackLink": {
+      "source": "Read the user stories and feedback record",
+      "text": "阅读用户故事和反馈记录"
+    },
+    "distinctionLabel": {
+      "source": "THE DIFFERENCE",
+      "text": "区别所在"
+    },
+    "distinctionTitle": {
+      "source": "Pay for access. Reward the evidence.",
+      "text": "为访问付费。为证据奖励。"
+    },
+    "distinctionBody": {
+      "source": "Opening a source and using it to support an answer are different things. Keryx makes both decisions visible, under your source budget.",
+      "text": "打开来源与用它支持回答是两回事。Keryx 会在你的来源预算内展示这两项决策。"
+    },
+    "access.number": {
+      "source": "01",
+      "text": "01"
+    },
+    "access.title": {
+      "source": "The read",
+      "text": "阅读"
+    },
+    "access.label": {
+      "source": "SOURCE ACCESS",
+      "text": "来源访问"
+    },
+    "access.body": {
+      "source": "The agent compares previews and prices, then explains BUY, SKIP or CACHE. Public material and reusable cached reads can cost no access toll.",
+      "text": "代理比较预览和价格，再说明 BUY、SKIP 或 CACHE。公开材料和可复用的缓存阅读可能无需访问费用。"
+    },
+    "reward.number": {
+      "source": "02",
+      "text": "02"
+    },
+    "reward.title": {
+      "source": "The contribution",
+      "text": "贡献"
+    },
+    "reward.label": {
+      "source": "CITATION REWARD",
+      "term": "citation-reward"
+    },
+    "reward.body": {
+      "source": "A registered creator can earn a separate reward when retained evidence qualifies for a citation. Reading alone does not earn that reward.",
+      "text": "当保留的证据符合引用条件时，已注册创作者可获得单独奖励。仅被阅读并不足以获得奖励。"
+    },
+    "budgetNote": {
+      "source": "Source spending stays within the authorised cap. Service, model and search costs are separate; the report keeps pending and settled payments distinct.",
+      "text": "来源支出保持在已授权的限额内。服务、模型和搜索成本另计；报告会区分待确认付款和已结算付款。"
+    },
+    "practiceLabel": {
+      "source": "IN PRACTICE · OCTOBER 15, 2026",
+      "text": "实际使用 · 2026年10月15日"
+    },
+    "practiceTitle": {
+      "source": "A builder came back with another question.",
+      "text": "一位开发者带着另一个问题回来了。"
+    },
+    "practiceIntroduction": {
+      "source": "After an earlier storage-research session, 0xacee returned while building VoiceReady, an audio-preview companion. The task was concrete: understand when browser preview URLs should be released.",
+      "text": "在此前一次存储研究会话之后，0xacee 在开发音频预览工具 VoiceReady 时再次使用 Keryx。任务很具体：弄清何时应释放浏览器预览 URL。"
+    },
+    "videoLabel": {
+      "source": "Open the 2:23 VoiceReady recording",
+      "text": "打开 2:23 VoiceReady 录像"
+    },
+    "videoSeries": {
+      "source": "RECORDED USER WORKFLOW",
+      "text": "录制的用户工作流程"
+    },
+    "videoProject": {
+      "source": "VoiceReady",
+      "text": "VoiceReady"
+    },
+    "videoDuration": {
+      "source": "2:23 · ENGLISH",
+      "text": "2:23 · 英语"
+    },
+    "videoCaption": {
+      "source": "2:23 · English narration and burned-in captions · Actual browser captures with shortened waits and AI narration.",
+      "text": "2:23 · 英语解说和嵌入式字幕 · 实际浏览器录屏，缩短了等待时间并使用 AI 解说。"
+    },
+    "storySteps.0.label": {
+      "source": "THE QUESTION",
+      "text": "问题"
+    },
+    "storySteps.0.body": {
+      "source": "How should an audio preview release its temporary browser URL?",
+      "text": "音频预览应如何释放临时浏览器 URL？"
+    },
+    "storySteps.1.label": {
+      "source": "THE EVIDENCE",
+      "text": "证据"
+    },
+    "storySteps.1.body": {
+      "source": "With the MDN original supplied, Keryx retained passages about URL revocation and when to release a reference. The report keeps its Moderate source-grounding label.",
+      "text": "提供 MDN 原文后，Keryx 保留了关于撤销 URL 和释放引用时机的段落。报告保留其 Moderate 来源依据标签。"
+    },
+    "storySteps.2.label": {
+      "source": "THE USE",
+      "text": "用途"
+    },
+    "storySteps.2.body": {
+      "source": "Those passages informed review of the preview lifecycle. Implementation and checks were performed separately by an assistant.",
+      "text": "这些段落为审查预览生命周期提供了依据。实现和检查由助手另行完成。"
+    },
+    "aboutStory.report": {
+      "source": "Read the original MDN report",
+      "text": "阅读原始 MDN 报告"
+    },
+    "aboutStory.caseStudy": {
+      "source": "Read the case study and its limits",
+      "text": "阅读案例研究及其局限"
+    },
+    "storyScope": {
+      "source": "Owner-confirmed outside-user return task. Sponsored research with a zero-USDC source cap and no creator payments. The recording also retains failed FFmpeg research.",
+      "text": "所有者确认的外部用户回访任务。研究由赞助支持，来源限额为零 USDC，未向创作者付款。录像也保留了失败的 FFmpeg 研究。"
+    },
+    "usageTitle": {
+      "source": "The people behind the recorded activity",
+      "text": "记录活动背后的人"
+    },
+    "usageBody": {
+      "source": "Documented user stories and verified wallet actors are different evidence. Some participants are identified through owner-confirmed sessions and recordings, rather than the wallet classification used in the table. Their stories do not change these counters or establish independent payment.",
+      "text": "有记录的用户故事与已验证的钱包主体是不同的证据。部分参与者通过所有者确认的会话和录像识别，而非表中使用的钱包分类。他们的故事不会改变这些计数，也不证明独立付款。"
+    },
+    "usageLink": {
+      "source": "Explore a documented return task",
+      "text": "查看有记录的回访任务"
+    },
+    "inspectLabel": {
+      "source": "SEE FOR YOURSELF",
+      "text": "亲自查看"
+    },
+    "inspectTitle": {
+      "source": "Follow the result all the way back.",
+      "text": "沿着结果一路追溯。"
+    },
+    "inspect.0.title": {
+      "source": "Follow one recorded job",
+      "text": "跟踪一项记录的任务"
+    },
+    "inspect.0.body": {
+      "source": "Inspect a partial owner-QA answer, CACHE/SKIP reasons and a mainnet citation receipt. No wallet or new spending.",
+      "text": "检查所有者测试中的部分回答、CACHE/SKIP 原因和主网引用收据。无需钱包或新增支出。"
+    },
+    "inspect.0.action": {
+      "source": "Open the walkthrough",
+      "text": "打开操作演示"
+    },
+    "inspect.1.title": {
+      "source": "Look inside a decision",
+      "text": "查看决策内部"
+    },
+    "inspect.1.body": {
+      "source": "Compare model proposals, policy checks and recorded outcomes. Economic replay checks recorded arithmetic.",
+      "text": "比较模型提案、策略检查和记录结果。经济重放会检查记录中的算术。"
+    },
+    "inspect.1.action": {
+      "source": "Open Decision Lab",
+      "text": "打开决策实验室"
+    },
+    "inspect.2.title": {
+      "source": "Check the money trail",
+      "text": "检查资金轨迹"
+    },
+    "inspect.2.body": {
+      "source": "Inspect payment evidence and its verification scope. Testnet, mainnet, pending and simulated records keep their labels.",
+      "text": "检查付款证据及其验证范围。测试网、主网、待确认和模拟记录保留各自标签。"
+    },
+    "inspect.2.action": {
+      "source": "Inspect public proof",
+      "text": "查看公开证据"
+    }
+  }
 }

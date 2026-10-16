@@ -403,6 +403,10 @@
     "ledgerRecorded.public.stale.other": {
       "source": "{count} public questions on {network} · last successful read",
       "text": "{count} câu hỏi công khai trên {network} · lần đọc thành công gần nhất"
+    },
+    "ledgerPresentation.recordedBoundary": {
+      "source": "Recorded totals cover all saved activity in this database, including public, unlisted and private questions and records without verified network metadata.",
+      "text": "Tổng được ghi nhận bao gồm mọi hoạt động đã lưu trong cơ sở dữ liệu này, gồm câu hỏi công khai, không niêm yết, riêng tư và bản ghi chưa có siêu dữ liệu mạng được xác minh."
     }
   }
 }

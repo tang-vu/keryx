@@ -39,7 +39,7 @@ export function PaidStamp({ className }: { className?: string }) {
             style={{ fontSize: 13, letterSpacing: ".26em", stroke: "none" }}
           >
             <textPath href="#kxStampRing" startOffset="0">
-              <UiMessage messageKey={"creatorPayments.stampRing"} />
+              <UiMessage plain messageKey={"creatorPayments.stampRing"} />
             </textPath>
           </text>
           <line x1="44" y1="92" x2="176" y2="92" strokeWidth="1.5" />
@@ -50,7 +50,7 @@ export function PaidStamp({ className }: { className?: string }) {
             className="font-serif"
             style={{ fontWeight: 700, fontSize: 42, stroke: "none" }}
           >
-            <UiMessage messageKey={"creatorPayments.stampPaid"} />
+            <UiMessage plain messageKey={"creatorPayments.stampPaid"} />
           </text>
           <line x1="44" y1="146" x2="176" y2="146" strokeWidth="1.5" />
           <text
@@ -60,7 +60,7 @@ export function PaidStamp({ className }: { className?: string }) {
             className="font-mono"
             style={{ fontSize: 11, letterSpacing: ".22em", stroke: "none" }}
           >
-            <UiMessage messageKey={"creatorPayments.stampSettled"} />
+            <UiMessage plain messageKey={"creatorPayments.stampSettled"} />
           </text>
         </g>
       </svg>

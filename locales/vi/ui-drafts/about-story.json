@@ -3,5 +3,206 @@
   "review": null,
   "sourcePath": "locales/en/about-story.ts",
   "sourceSha256": "5f834afb936d0341fd818ed2f2efe7d2c629dd9bd882eadd36b322d8c3cd17a9",
-  "entries": {}
+  "entries": {
+    "aboutStory.demo": {
+      "source": "Watch the 2:47 product demo",
+      "text": "Xem video giới thiệu sản phẩm 2:47"
+    },
+    "walkthrough": {
+      "source": "Explore a recorded job",
+      "text": "Khám phá một công việc được ghi lại"
+    },
+    "landingLink": {
+      "source": "See Keryx in a real research task",
+      "text": "Xem Keryx trong một nhiệm vụ nghiên cứu thực tế"
+    },
+    "feedbackLabel": {
+      "source": "USER FEEDBACK · RELAYED BY THE FOUNDER · OCTOBER 16, 2026",
+      "text": "PHẢN HỒI NGƯỜI DÙNG · NHÀ SÁNG LẬP THUẬT LẠI · 16/10/2026"
+    },
+    "feedbackTitle": {
+      "source": "It helped them get the job done.",
+      "text": "Keryx đã giúp họ hoàn thành công việc."
+    },
+    "feedbackBody": {
+      "source": "The founder reports that 0xacee, Hoàng and Trần Minh Hiếu each said Keryx helped solve their tasks, quickly and at low cost.",
+      "text": "Theo nhà sáng lập, 0xacee, Hoàng và Trần Minh Hiếu đều cho biết Keryx giúp giải quyết nhiệm vụ của họ nhanh chóng với chi phí thấp."
+    },
+    "feedbackLink": {
+      "source": "Read the user stories and feedback record",
+      "text": "Đọc câu chuyện người dùng và bản ghi phản hồi"
+    },
+    "distinctionLabel": {
+      "source": "THE DIFFERENCE",
+      "text": "ĐIỂM KHÁC BIỆT"
+    },
+    "distinctionTitle": {
+      "source": "Pay for access. Reward the evidence.",
+      "text": "Trả phí truy cập. Thưởng cho bằng chứng."
+    },
+    "distinctionBody": {
+      "source": "Opening a source and using it to support an answer are different things. Keryx makes both decisions visible, under your source budget.",
+      "text": "Mở một nguồn và dùng nguồn đó để hỗ trợ câu trả lời là hai việc khác nhau. Keryx hiển thị cả hai quyết định trong ngân sách nguồn của bạn."
+    },
+    "access.number": {
+      "source": "01",
+      "text": "01"
+    },
+    "access.title": {
+      "source": "The read",
+      "text": "Lượt đọc"
+    },
+    "access.label": {
+      "source": "SOURCE ACCESS",
+      "text": "TRUY CẬP NGUỒN"
+    },
+    "access.body": {
+      "source": "The agent compares previews and prices, then explains BUY, SKIP or CACHE. Public material and reusable cached reads can cost no access toll.",
+      "text": "Tác nhân so sánh bản xem trước và giá, rồi giải thích BUY, SKIP hoặc CACHE. Tài liệu công khai và lượt đọc đã lưu có thể dùng lại có thể không tốn phí truy cập."
+    },
+    "reward.number": {
+      "source": "02",
+      "text": "02"
+    },
+    "reward.title": {
+      "source": "The contribution",
+      "text": "Đóng góp"
+    },
+    "reward.label": {
+      "source": "CITATION REWARD",
+      "term": "citation-reward"
+    },
+    "reward.body": {
+      "source": "A registered creator can earn a separate reward when retained evidence qualifies for a citation. Reading alone does not earn that reward.",
+      "text": "Tác giả đã đăng ký có thể nhận phần thưởng riêng khi bằng chứng được giữ lại đủ điều kiện cho trích dẫn. Chỉ được đọc thôi chưa đủ để nhận thưởng."
+    },
+    "budgetNote": {
+      "source": "Source spending stays within the authorised cap. Service, model and search costs are separate; the report keeps pending and settled payments distinct.",
+      "text": "Chi phí nguồn nằm trong hạn mức đã ủy quyền. Chi phí dịch vụ, mô hình và tìm kiếm tính riêng; báo cáo phân biệt thanh toán đang chờ và đã quyết toán."
+    },
+    "practiceLabel": {
+      "source": "IN PRACTICE · OCTOBER 15, 2026",
+      "text": "TRONG THỰC TẾ · 15/10/2026"
+    },
+    "practiceTitle": {
+      "source": "A builder came back with another question.",
+      "text": "Một nhà phát triển quay lại với câu hỏi khác."
+    },
+    "practiceIntroduction": {
+      "source": "After an earlier storage-research session, 0xacee returned while building VoiceReady, an audio-preview companion. The task was concrete: understand when browser preview URLs should be released.",
+      "text": "Sau phiên nghiên cứu về lưu trữ trước đó, 0xacee quay lại khi xây dựng VoiceReady, một công cụ hỗ trợ nghe thử âm thanh. Nhiệm vụ cụ thể là tìm hiểu khi nào nên giải phóng URL nghe thử của trình duyệt."
+    },
+    "videoLabel": {
+      "source": "Open the 2:23 VoiceReady recording",
+      "text": "Mở video VoiceReady 2:23"
+    },
+    "videoSeries": {
+      "source": "RECORDED USER WORKFLOW",
+      "text": "QUY TRÌNH NGƯỜI DÙNG ĐƯỢC GHI LẠI"
+    },
+    "videoProject": {
+      "source": "VoiceReady",
+      "text": "VoiceReady"
+    },
+    "videoDuration": {
+      "source": "2:23 · ENGLISH",
+      "text": "2:23 · TIẾNG ANH"
+    },
+    "videoCaption": {
+      "source": "2:23 · English narration and burned-in captions · Actual browser captures with shortened waits and AI narration.",
+      "text": "2:23 · Thuyết minh và phụ đề gắn sẵn bằng tiếng Anh · Hình ghi trình duyệt thực tế, rút ngắn thời gian chờ và dùng thuyết minh AI."
+    },
+    "storySteps.0.label": {
+      "source": "THE QUESTION",
+      "text": "CÂU HỎI"
+    },
+    "storySteps.0.body": {
+      "source": "How should an audio preview release its temporary browser URL?",
+      "text": "Bản nghe thử nên giải phóng URL trình duyệt tạm thời như thế nào?"
+    },
+    "storySteps.1.label": {
+      "source": "THE EVIDENCE",
+      "text": "BẰNG CHỨNG"
+    },
+    "storySteps.1.body": {
+      "source": "With the MDN original supplied, Keryx retained passages about URL revocation and when to release a reference. The report keeps its Moderate source-grounding label.",
+      "text": "Với bản gốc MDN được cung cấp, Keryx giữ lại các đoạn về thu hồi URL và thời điểm giải phóng tham chiếu. Báo cáo giữ nhãn mức bám nguồn Moderate."
+    },
+    "storySteps.2.label": {
+      "source": "THE USE",
+      "text": "CÁCH DÙNG"
+    },
+    "storySteps.2.body": {
+      "source": "Those passages informed review of the preview lifecycle. Implementation and checks were performed separately by an assistant.",
+      "text": "Các đoạn này hỗ trợ xem xét vòng đời bản nghe thử. Việc triển khai và kiểm tra do một trợ lý thực hiện riêng."
+    },
+    "aboutStory.report": {
+      "source": "Read the original MDN report",
+      "text": "Đọc báo cáo MDN gốc"
+    },
+    "aboutStory.caseStudy": {
+      "source": "Read the case study and its limits",
+      "text": "Đọc nghiên cứu tình huống và các giới hạn"
+    },
+    "storyScope": {
+      "source": "Owner-confirmed outside-user return task. Sponsored research with a zero-USDC source cap and no creator payments. The recording also retains failed FFmpeg research.",
+      "text": "Nhiệm vụ người dùng bên ngoài quay lại đã được chủ sở hữu xác nhận. Nghiên cứu được tài trợ với hạn mức nguồn bằng không USDC và không có thanh toán cho tác giả. Video cũng giữ lại phần nghiên cứu FFmpeg thất bại."
+    },
+    "usageTitle": {
+      "source": "The people behind the recorded activity",
+      "text": "Những người đứng sau hoạt động được ghi nhận"
+    },
+    "usageBody": {
+      "source": "Documented user stories and verified wallet actors are different evidence. Some participants are identified through owner-confirmed sessions and recordings, rather than the wallet classification used in the table. Their stories do not change these counters or establish independent payment.",
+      "text": "Câu chuyện người dùng được ghi chép và các chủ thể ví được xác minh là những loại bằng chứng khác nhau. Một số người tham gia được nhận diện qua phiên và video được chủ sở hữu xác nhận, thay vì cách phân loại ví trong bảng. Câu chuyện của họ không đổi các bộ đếm này hay chứng minh thanh toán độc lập."
+    },
+    "usageLink": {
+      "source": "Explore a documented return task",
+      "text": "Khám phá một nhiệm vụ quay lại có ghi chép"
+    },
+    "inspectLabel": {
+      "source": "SEE FOR YOURSELF",
+      "text": "TỰ MÌNH KIỂM TRA"
+    },
+    "inspectTitle": {
+      "source": "Follow the result all the way back.",
+      "text": "Lần ngược kết quả đến tận nguồn."
+    },
+    "inspect.0.title": {
+      "source": "Follow one recorded job",
+      "text": "Theo dõi một công việc được ghi lại"
+    },
+    "inspect.0.body": {
+      "source": "Inspect a partial owner-QA answer, CACHE/SKIP reasons and a mainnet citation receipt. No wallet or new spending.",
+      "text": "Kiểm tra câu trả lời chưa đầy đủ trong kiểm thử của chủ sở hữu, lý do CACHE/SKIP và biên nhận trích dẫn mainnet. Không cần ví hay chi tiêu mới."
+    },
+    "inspect.0.action": {
+      "source": "Open the walkthrough",
+      "text": "Mở phần hướng dẫn minh họa"
+    },
+    "inspect.1.title": {
+      "source": "Look inside a decision",
+      "text": "Xem bên trong một quyết định"
+    },
+    "inspect.1.body": {
+      "source": "Compare model proposals, policy checks and recorded outcomes. Economic replay checks recorded arithmetic.",
+      "text": "So sánh đề xuất mô hình, kiểm tra chính sách và kết quả được ghi nhận. Phát lại kinh tế kiểm tra các phép tính đã ghi lại."
+    },
+    "inspect.1.action": {
+      "source": "Open Decision Lab",
+      "text": "Mở Phòng thí nghiệm quyết định"
+    },
+    "inspect.2.title": {
+      "source": "Check the money trail",
+      "text": "Kiểm tra dấu vết dòng tiền"
+    },
+    "inspect.2.body": {
+      "source": "Inspect payment evidence and its verification scope. Testnet, mainnet, pending and simulated records keep their labels.",
+      "text": "Kiểm tra bằng chứng thanh toán và phạm vi xác minh. Bản ghi testnet, mainnet, đang chờ và mô phỏng giữ nguyên nhãn."
+    },
+    "inspect.2.action": {
+      "source": "Inspect public proof",
+      "text": "Kiểm tra bằng chứng công khai"
+    }
+  }
 }

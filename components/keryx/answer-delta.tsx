@@ -4,7 +4,7 @@ import { formatAmount, formatRecordedAmount, recordedUsdcMicros, selectPlural } 
 import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import type { AnswerDelta } from "@/lib/answers-delta";
-import { UiAttributes, UiMessage, UiText } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage, UiText } from "@/lib/i18n/ui-copy";
 
 
 
@@ -28,7 +28,7 @@ function signedUsdc(settlement: NonNullable<AnswerDelta["settlement"]>): string 
 export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
   const coverage = delta.coverage;
   return (
-    <UiAttributes names={["aria-label"]}><section aria-label={copy("answerDelta.label")} className="mt-8 max-w-[860px] border border-ink bg-paper">
+    <UiElement as="section" names={["aria-label"]} attributes={{ "aria-label": copy("answerDelta.label"), "className": "mt-8 max-w-[860px] border border-ink bg-paper" }}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink bg-ink px-5 py-3 text-cream">
         <p className="font-mono text-[10.5px] uppercase tracking-[0.18em]">
           <UiMessage messageKey={"answerDelta.kicker"} />
@@ -91,7 +91,7 @@ export function AnswerDeltaPanel({ delta }: { delta: AnswerDelta }) {
           <UiMessage messageKey={"answerDelta.notice"} />
         </p>
       </div>
-    </section></UiAttributes>
+    </UiElement>
   );
 }
 
@@ -109,7 +109,7 @@ function SourceList({ label, sources }: { label: string; sources: string[] }) {
   return (
     <p>
       <span className="uppercase tracking-[0.1em] text-ink-3">{label}</span>{" "}
-      <UiText source={sources.length > 0 ? sources.join(", ") : copy("answerDelta.none")} />
+      {sources.length > 0 ? sources.join(", ") : <UiMessage messageKey={"answerDelta.none"} />}
     </p>
   );
 }

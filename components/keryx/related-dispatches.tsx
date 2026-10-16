@@ -10,7 +10,7 @@ import { DisplayTime } from "@/components/keryx/display-time";
 import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import type { ArchiveEntry } from "@/lib/answers-archive";
-import { UiAttributes, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -23,7 +23,7 @@ function fmtDate(iso: string) {
 export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
   if (entries.length === 0) return null;
   return (
-    <UiAttributes names={["aria-label"]}><section aria-label={copy("relatedReports.label")} className="mt-14 border-t border-ink pt-8">
+    <UiElement as="section" names={["aria-label"]} attributes={{ "aria-label": copy("relatedReports.label"), "className": "mt-14 border-t border-ink pt-8" }}>
       <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-seal">
         <UiMessage messageKey={"relatedReports.kicker"} />
       </div>
@@ -65,6 +65,6 @@ export function RelatedDispatches({ entries }: { entries: ArchiveEntry[] }) {
           <UiMessage messageKey={"relatedReports.browse"} />
         </Link>
       </div>
-    </section></UiAttributes>
+    </UiElement>
   );
 }

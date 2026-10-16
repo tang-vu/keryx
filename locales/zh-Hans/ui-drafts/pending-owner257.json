@@ -1,9 +1,48 @@
 {
-    "status":  "machineDraft",
-    "review":  null,
-    "sourcePath":  "locales/en/pending-owner257.ts",
-    "sourceSha256":  "57f905d1d84b7f2886c0eb3c7124dbc87a03a0bf9a78bd1e7123ff970c56eed3",
-    "entries":  {
-
-                }
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/pending-owner257.ts",
+  "sourceSha256": "57f905d1d84b7f2886c0eb3c7124dbc87a03a0bf9a78bd1e7123ff970c56eed3",
+  "entries": {
+    "account": {
+      "source": "Signed-in account",
+      "text": "已登录账户"
+    },
+    "checking": {
+      "source": "Checking current account session…",
+      "text": "正在检查当前账户会话…"
+    },
+    "consent": {
+      "source": "Optionally save this new job to my signed-in account history. This is separate from payment and wallet consent.",
+      "text": "可选择将这项新任务保存到我已登录账户的历史记录中。这与付款和钱包同意相互独立。"
+    },
+    "failed": {
+      "source": "The original job recorded a failure. Its payment state remains unchanged. Review this original; do not pay again.",
+      "text": "原任务记录了失败。其付款状态保持不变。请检查此原任务；不要再次付款。"
+    },
+    "held": {
+      "source": "The original job has an explicitly retained recovery hold. Its payment state remains unchanged. Review this original; do not pay again.",
+      "text": "原任务保留了明确的恢复暂停记录。其付款状态保持不变。请检查此原任务；不要再次付款。"
+    },
+    "paymentUnknown": {
+      "source": "Creator payment state is unknown.",
+      "text": "创作者付款状态未知。"
+    },
+    "recoveryUnknown": {
+      "source": "Recovery evidence is unknown.",
+      "text": "恢复证据未知。"
+    },
+    "refresh": {
+      "source": "Refresh account session",
+      "text": "刷新账户会话"
+    },
+    "signIn": {
+      "source": "Sign in and refresh to optionally save a new job to account history.",
+      "text": "登录并刷新后，可选择将新任务保存到账户历史记录中。"
+    },
+    "title": {
+      "source": "NeedsReview",
+      "text": "NeedsReview"
+    }
+  }
 }
