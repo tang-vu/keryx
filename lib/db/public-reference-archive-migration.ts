@@ -12,6 +12,9 @@ import { STORAGE_SNAPSHOT_LIMITS as limits, encodeStorageValue } from "./storage
 import { validateStorageIdentity, type StorageIdentity } from "./storage-identity";
 
 export const PUBLIC_ARCHIVE_TABLES = Object.freeze(["public_reference_articles", "public_reference_article_versions", "public_reference_article_terms"]);
+// Migration hashes each framed row as it is read; enrollment retains encoded rows
+// in memory and keeps its separate 32 MiB limit. All other snapshot bounds are shared.
+export const MIGRATION_FRAMED_BYTE_LIMIT = 64 * 1024 * 1024;
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
 function excluded(db: DatabaseSync, identity: StorageIdentity): Set<string> {
@@ -85,7 +88,7 @@ export function snapshotPublicArchiveStorage(db: DatabaseSync, identity: Storage
         if (!(payload instanceof Uint8Array)) throw new Error("Public archive migration typed value refused");
         const prefix = `${type}:${payload.byteLength}:`;
         framedBytes += Buffer.byteLength(prefix) + payload.byteLength;
-        if (framedBytes > limits.encodedBytes) throw new Error("Public archive migration framed byte limit");
+        if (framedBytes > MIGRATION_FRAMED_BYTE_LIMIT) throw new Error("Public archive migration framed byte limit");
         hash.update(prefix); hash.update(payload);
       }
       hashes.push(hash.digest("hex"));
