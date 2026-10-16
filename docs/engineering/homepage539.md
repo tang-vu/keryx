@@ -26,6 +26,8 @@ inside that section. The overview/setup components and their routes remain.
 Desktop and mobile share Ask, Past answers and Sources as primary navigation;
 all previous secondary destinations remain under More tools. The footer retains
 saved reports and the protected account-claim research entry.
+That protected footer entry uses full document navigation, preserving its nonce
+and initial-document bootstrap instead of attempting an RSC transition.
 
 ## Surface boundaries and acceptance
 

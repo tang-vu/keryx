@@ -142,10 +142,17 @@ try {
   const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
   // A normal anchor must create a new initial document, not a router transition.
   await page.goto(origin + "/research");
+  await page.getByTestId("composer-publication-notice").waitFor();
   const privateEntry = page.getByRole("navigation", { name: "Research tools", exact: true }).getByRole("link", { name: copy.entry, exact: true });
   assert.equal(await privateEntry.getAttribute("href"), "/research/private");
-  assert.equal(await page.getByRole("contentinfo").getByRole("link", { name: copy.entry, exact: true }).getAttribute("href"), "/research/private");
-  await Promise.all([page.waitForNavigation(), privateEntry.click()]);
+  const footerEntry = page.getByRole("contentinfo").getByRole("link", { name: copy.entry, exact: true });
+  assert.equal(await footerEntry.getAttribute("href"), "/research/private");
+  const privateRequests: Array<{ navigation: boolean }> = [];
+  page.on("request", request => {
+    if (new URL(request.url()).pathname === "/research/private") privateRequests.push({ navigation: request.isNavigationRequest() });
+  });
+  await Promise.all([page.waitForNavigation(), footerEntry.click()]);
+  assert.deepEqual(privateRequests, [{ navigation: true }], "The hydrated footer must open one initial document without RSC or prefetch");
   await page.getByRole("textbox", { name: "What do you want to know?", exact: true }).fill("Synthetic private research");
   await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
   await page.getByRole("button", { name: copy.open, exact: true }).waitFor();
