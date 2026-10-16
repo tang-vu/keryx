@@ -1054,7 +1054,8 @@ it("reads exact versioned scholarly PDFs, preserves observed metadata, and never
   expect(funded).not.toHaveBeenCalled(); expect((d.gateway as FakeGateway).fetchCalls).toEqual([]); expect((d.gateway as FakeGateway).citationCalls).toEqual([]); expect(run.totalSpent).toBe(0);
 });
 it("counts PDF and explicit abstract fallback as separate read attempts under the aggregate quick cap", async () => {
-  const d = deps([], fakeEngine({ decide: input => input.candidates.map((candidate, index) => ({ ...buy({ id: candidate.id, name: candidate.name, price: 0 }), targets: [index] })) }), fakeGateway());
+  const d = deps([], fakeEngine({ decide: input => input.candidates.map((candidate, index) => ({ ...buy({ id: candidate.id, name: candidate.name, price: 0 }), targets: [index] })),
+    sufficiency: () => ({ sufficient: false, rationale: "Keep reading to exercise the aggregate attempt cap" }) }), fakeGateway());
   d.engine.decompose = async () => ["first claim", "second claim", "third claim"];
   injectPapers(d, ["1706.03762v7", "1706.03763v1", "1706.03764v1"]);
   d.readWebArticle = vi.fn(async (url: string) => { if (url.includes("/pdf/")) throw new Error("full paper unavailable");
@@ -1132,7 +1133,7 @@ it.each([
   "Use https://www.sqlite.org/wal.html and https://www.sqlite.org/pragma.html#pragma_synchronous to explain WAL durability.",
   "Use https://www.postgresql.org/docs/current/sql-select.html to explain queue locking and crash gaps.",
 ])("considers supplied originals omitted by discovery and binds their bounded scope to trace and receipt: %s", async question => {
-  const d = deps([], fakeEngine(), fakeGateway());
+  const d = deps([], fakeEngine({ sufficiency: () => ({ sufficient: false, rationale: "Inspect each supplied original" }) }), fakeGateway());
   const fund = vi.spyOn(d.gateway, "ensureFunded");
   d.webSearch = { search: async () => [] };
   d.readWebArticle = vi.fn(async url => ({ text: "Synthetic original document evidence used only for this fixture.", title: "Original", finalUrl: url, kind: "html" as const, truncated: true }));
@@ -1553,7 +1554,7 @@ it("retains free original web decisions when owned-source funding becomes unknow
   expect((d.gateway as FakeGateway).fetchCalls).toHaveLength(0); expect((d.gateway as FakeGateway).citationCalls).toHaveLength(0);
 });
 it("excludes normalized copies and does not spend model decision time from the web read allowance", async () => {
-  const d = deps([], fakeEngine(), fakeGateway());
+  const d = deps([], fakeEngine({ sufficiency: () => ({ sufficient: false, rationale: "Check the other original for independent evidence" }) }), fakeGateway());
   const decide = d.engine.decide.bind(d.engine);
   d.engine.decide = async input => { const decisions = await decide(input); vi.spyOn(Date, "now").mockReturnValue(Date.now() + 60000); return decisions; };
   d.webSearch = { search: async () => [{ title: "a", url: "https://a.example/article", snippet: "relevant" }, { title: "b", url: "https://b.example/article", snippet: "relevant" }] };
@@ -2881,7 +2882,7 @@ it("routes a complete collected run through explicit effects without public writ
   const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
     ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
     action: candidate.cached ? "CACHE" : "BUY",
-  })) });
+  })), sufficiency: input => ({ sufficient: input.gathered.length >= 2, rationale: "Read both scoped sources" }) });
   const d = deps(sources, engine, fakeGateway());
   const checkpointObserver = vi.fn(); Object.defineProperty(d.db, "decisionReviews", { value: {} }); d.readCheckpointSink = checkpointObserver;
   const forbidden = vi.fn(async () => { throw new Error("Public effect forbidden"); });
@@ -3156,7 +3157,8 @@ describe("actual READ checkpoint capture differentials", () => {
       if (scenario === "final-assessment-error") {
         expect(actual.economic.decisions.map(d => d.action)).toEqual(["CACHE", "CACHE"]);
         expect(records.filter(r => r.check.kind === "sufficiency" && r.check.unavailable))
-          .toEqual([expect.objectContaining({ candidate: 0, round: 0, outcome: { action: "STOP", rule: "assessment-unavailable" } })]);
+          .toEqual([expect.objectContaining({ candidate: 1, round: 0, plan: "CACHE", outcome: { action: "STOP", rule: "assessment-unavailable" } }),
+            expect.objectContaining({ candidate: 0, round: 0, outcome: { action: "STOP", rule: "assessment-unavailable" } })]);
       } else {
         const refused = records.filter(r => r.check.kind === "funding" && r.check.unavailable && r.outcome.action === "SKIP");
         expect(refused.length).toBeGreaterThan(0);
@@ -3369,7 +3371,8 @@ describe("claim-managed free creator reading", () => {
     const items = Object.fromEntries(sources.map(source => [source.id, [{ id: `${source.id}-article`, sourceId: source.id,
       title: "Source evidence", summary: "Preview", content: `Measured evidence from ${source.id} supports the research question.`,
       link: `${source.url}article`, publishedAt: proofTime }]]));
-    const gateway = fakeGateway(), engine = fakeEngine(), d = deps(sources, engine, gateway, { items });
+    const gateway = fakeGateway(), engine = fakeEngine({ sufficiency: input => ({ sufficient: input.gathered.length >= ids.length,
+      rationale: "Assess all selected creator articles" }) }), d = deps(sources, engine, gateway, { items });
     d.db.getSourceClaimForSource = async id => claims.get(id) ?? null;
     const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
       payTo: source.walletAddress, creator: source.walletAddress, listPriceUsdc: 0, active: true, authority: "onchain", stale: false }));
@@ -3758,7 +3761,7 @@ describe("ordinary registered RSS document aliases", () => {
   });
 
   it("withholds a selected paid alias when the earlier public read redirects to its document", async () => {
-    const f = fixture(), original = "https://engineering.test/recovery-original";
+    const f = fixture({ sufficiency: () => ({ sufficient: false, rationale: "Check the selected alias before final assessment" }) }), original = "https://engineering.test/recovery-original";
     f.d.webSearch = { search: async () => [] };
     f.d.readWebArticle = vi.fn(async () => ({ text: articleText, title: f.item.title,
       finalUrl: articleUrl, kind: "html" as const, truncated: false }));
@@ -3964,6 +3967,7 @@ it("defers wallet funding until public-only research expansion admits an owned p
       action: candidate.id === "owned-later" ? "SKIP" : "BUY",
       targets: [candidate.id === "owned-later" ? 1 : 0],
     })),
+    sufficiency: input => ({ sufficient: input.gathered.length >= 2, rationale: "Owned evidence still needs reading" }),
     reevaluate: () => { expansionStarted = true; return { shouldBuyMore: true, recommendedIds: [source.id], rationale: "Owned evidence fills the gap" }; },
   });
   engine.decompose = async () => ["public evidence", "owned evidence"];
@@ -4033,7 +4037,7 @@ describe("funding uncertainty preserves public research", () => {
     const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
       ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
       action: candidate.id === "public:free" ? "BUY" : "SKIP",
-    })), reevaluate: reeval });
+    })), sufficiency: () => ({ sufficient: false, rationale: "Free evidence gaps remain" }), reevaluate: reeval });
     const d = deps(sources, engine, gateway); d.db.listPublicReferences = async () => [publicRef(), publicRef("public:extra"), publicRef("public:remaining")];
     const { run } = await drive({ question: "Evidence gaps", budget: 0.03,
       executionLimits: { attentionLimit: 4, reevaluateRounds: 2 }, onCreatorPaymentBoundary: boundary }, d);
@@ -4051,7 +4055,7 @@ describe("funding uncertainty preserves public research", () => {
     const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
       ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
       action: candidate.id === "public:extra" ? "SKIP" : "BUY", targets: [candidate.id === source.id ? 1 : 0],
-    })), reevaluate: input => { expect(input.remainingBudget).toBeCloseTo(0, 8);
+    })), sufficiency: () => ({ sufficient: false, rationale: "The owned evidence remains unavailable" }), reevaluate: input => { expect(input.remainingBudget).toBeCloseTo(0, 8);
       expect(input.skippedSources.map(item => item.id)).toEqual(["public:extra"]);
       return { shouldBuyMore: true, recommendedIds: [source.id, "public:extra"], rationale: "free gap evidence" }; } });
     engine.decompose = async () => ["public evidence", "owned evidence"];
@@ -4074,7 +4078,8 @@ describe("funding uncertainty preserves public research", () => {
     const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
       ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
       action: lazy && candidate.id === source.id ? "SKIP" : "BUY",
-    })), reevaluate: () => ({ shouldBuyMore: true, recommendedIds: [source.id], rationale: "owned gap" }) });
+    })), sufficiency: () => ({ sufficient: false, rationale: "The owned evidence still needs reading" }),
+      reevaluate: () => ({ shouldBuyMore: true, recommendedIds: [source.id], rationale: "owned gap" }) });
     const synthesize = vi.spyOn(engine, "synthesize"), boundary = vi.fn(), d = deps([source], engine, gateway);
     d.db.listPublicReferences = async () => [publicRef()]; d.db.saveQueryRun = vi.fn();
     await expect(collectRun({ question: "Evidence", budget: 0.03, onCreatorPaymentBoundary: boundary,
@@ -4137,6 +4142,242 @@ describe("original public attention gate regression (#128)", () => {
   });
 });
 
+
+describe("free evidence sufficiency and exhausted-budget cache expansion", () => {
+  it.each(["missing", "empty", "whitespace", "throwing"] as const)(
+    "does not count an unread initial cache toward heuristic sufficiency: %s", async scenario => {
+      const sources = ["good-cache", "vanished-cache", "needed-paid"].map(id => makeSource({ id }));
+      const assessedReads: { sourceId: string; text: string }[][] = [];
+      const assessments: boolean[] = [];
+      const heuristic = new HeuristicEngine();
+      const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }, 0.6),
+        action: candidate.cached ? "CACHE" : "BUY",
+      })) });
+      engine.decompose = async () => ["Evidence supports this research claim"];
+      engine.sufficiency = vi.fn(async input => {
+        assessedReads.push(input.gathered.map(({ sourceId, text }) => ({ sourceId, text })));
+        const result = await heuristic.sufficiency(input);
+        assessments.push(result.sufficient);
+        return result;
+      });
+      const gateway = fakeGateway(), fetch = vi.spyOn(gateway, "payFetch");
+      const d = deps(sources, engine, gateway, { cachedAt: {
+        "good-cache": new Date().toISOString(), "vanished-cache": new Date().toISOString(),
+      } });
+      const cached = vi.spyOn(d.db, "getCached").mockImplementation(async key => {
+        if (key === "good-cache") return "Evidence supports this research claim.";
+        if (scenario === "throwing") throw Error("Synthetic cache lookup failed");
+        return scenario === "missing" ? null : scenario === "empty" ? "" : " \n\t ";
+      });
+      Object.defineProperty(d.db, "decisionReviews", { value: {} });
+      try {
+        const { run, steps } = await drive({ question: "Explain the research evidence", budget: 0.02,
+          executionLimits: { attentionLimit: 3, reevaluateRounds: 1 } }, d);
+        expect(cached.mock.calls.map(([key]) => key)).toEqual(["good-cache", "vanished-cache"]);
+        expect(fetch).toHaveBeenCalledTimes(1);
+        expect(fetch.mock.calls[0][0].source.id).toBe("needed-paid");
+        expect(gateway.fetchCalls).toEqual(["needed-paid"]);
+        expect(assessedReads.map(reads => reads.map(read => read.sourceId)))
+          .toEqual([["good-cache"], ["good-cache", "needed-paid"]]);
+        expect(assessments).toEqual([false, true]);
+        expect(assessedReads.flat().every(read => read.text.trim().length > 0)).toBe(true);
+        expect(run.decisions.find(decision => decision.sourceId === "vanished-cache"))
+          .toMatchObject({ action: "SKIP", rationale: expect.stringContaining("cached content"),
+            basis: expect.objectContaining({ plannedAction: "CACHE" }) });
+        expect(steps.some(step => step.phase === "fetch" && step.message.includes("SKIP vanished-cache")
+          && step.message.includes("cached content"))).toBe(true);
+        const capture = projectActualReadCheckpoints(run);
+        if (!capture || capture.packet.schema !== 4 || capture.packet.economics.status !== "available") throw Error("Missing economic capture");
+        expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+        expect(capture.packet.economics.records.filter(record => record.kind === "query-budget"
+          && record.status === "available" && record.input.operation === "release"))
+          .toEqual([expect.objectContaining({ event: "sufficient", input: { operation: "release", before: "0.002", operands: ["0"] },
+            outcome: { beforeMicros: "2000", afterMicros: "2000" } })]);
+      } finally { cached.mockRestore(); }
+    });
+
+  it("withholds rewards when only the final assessment fails after an insufficient interim and cached expansion", async () => {
+    const sources = [makeSource({ id: "initial-paid" }), makeSource({ id: "cache-gap" })];
+    const assessedReads: string[][] = [];
+    const assess = vi.fn((input: SufficiencyInput) => {
+      assessedReads.push(input.gathered.map(read => read.sourceId));
+      if (assessedReads.length === 2) throw Error("Synthetic final-only assessment failure");
+      return { sufficient: false, rationale: "The initial read leaves an evidence gap",
+        perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.2, coveredBy: ["S1"] })) };
+    });
+    const expansionReads: string[][] = [];
+    const reeval = vi.fn((input: ReevaluateInput) => {
+      expansionReads.push(input.gathered.map(read => read.sourceId));
+      return { shouldBuyMore: true, recommendedIds: ["cache-gap"], rationale: "Add the retained cached evidence" };
+    });
+    const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+      ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+      action: candidate.id === "initial-paid" ? "BUY" : "SKIP",
+    })), sufficiency: assess, reevaluate: reeval });
+    const synthesize = vi.spyOn(engine, "synthesize"), gateway = fakeGateway();
+    const d = deps(sources, engine, gateway, { cachedAt: { "cache-gap": new Date().toISOString() } });
+    Object.defineProperty(d.db, "decisionReviews", { value: {} });
+    const { run, steps } = await drive({ question: "Explain the research evidence", budget: 0.02,
+      executionLimits: { attentionLimit: 2, reevaluateRounds: 1 } }, d);
+    expect(assess).toHaveBeenCalledTimes(2);
+    expect(assessedReads).toEqual([["initial-paid"], ["initial-paid", "cache-gap"]]);
+    expect(reeval).toHaveBeenCalledTimes(1);
+    expect(expansionReads).toEqual([["initial-paid"]]);
+    expect(steps.some(step => step.message.includes("Reading assessment unavailable"))).toBe(false);
+    expect(steps.some(step => step.phase === "reevaluate" && step.message.includes("reused cached cache-gap"))).toBe(true);
+    expect(steps.filter(step => (step.detail as { final?: boolean; failed?: boolean } | undefined)?.final
+      && (step.detail as { failed?: boolean }).failed)).toHaveLength(1);
+    expect(synthesize.mock.calls[0][0].gathered.map(read => [read.sourceId, read.text]))
+      .toEqual([["initial-paid", "content:initial-paid."], ["cache-gap", "cached:cache-gap."]]);
+    expect(gateway.fetchCalls).toEqual(["initial-paid"]);
+    expect(d.db.payments).toEqual([expect.objectContaining({ kind: "fetch", sourceId: "initial-paid",
+      amountUsdc: 0.002, settled: true, txHash: "0xfetch" })]);
+    expect(run.totalSpent).toBe(0.002);
+    expect(gateway.citationCalls).toEqual([]); expect(run.citations).toEqual([]);
+    expect(run.claimCoverage).toEqual([expect.objectContaining({ coverage: 0 })]);
+    expect(run.confidence?.level).toBe("Low");
+    const capture = projectActualReadCheckpoints(run);
+    if (!capture || capture.packet.schema !== 4) throw Error("Missing final failure capture");
+    expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+    expect(capture.packet.records.filter(record => record.check.kind === "sufficiency" && record.check.unavailable))
+      .toEqual([expect.objectContaining({ candidate: 0, round: 0, proposal: "UNKNOWN", plan: "UNKNOWN",
+        outcome: { action: "STOP", rule: "assessment-unavailable" } })]);
+  });
+
+  it.each(["cache", "public-feed", "public-web"] as const)(
+    "stops after two sufficient %s reads and releases only the unread BUY reservation", async route => {
+      const sources = ["free-a", "free-b", "unread-paid"].map(id => makeSource({ id }));
+      const gateway = fakeGateway();
+      const assessedReads: number[] = [];
+      const assess = vi.fn((input: SufficiencyInput) => { assessedReads.push(input.gathered.length); return { sufficient: input.gathered.length >= 2,
+        rationale: "Two independent reads cover the claim", perClaim: input.subClaims.map(claim => ({
+          claim, coverage: input.gathered.length >= 2 ? 0.9 : 0.2, coveredBy: input.gathered.map(read => read.marker),
+        })) }; });
+      const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }, 0.6),
+        action: candidate.cached || candidate.sourceKind === "public-reference" ? "CACHE" : "BUY",
+      })), sufficiency: assess });
+      const d = deps(route === "cache" ? sources : sources.slice(2), engine, gateway,
+        { cachedAt: Object.fromEntries(sources.slice(0, 2).map(source => [source.id, new Date().toISOString()])) });
+      Object.defineProperty(d.db, "decisionReviews", { value: {} });
+      if (route === "public-feed") d.db.listPublicReferences = async () => [publicRef("public:first"), publicRef("public:second")];
+      if (route === "public-web") {
+        d.webSearch = { search: async () => [] };
+        d.readWebArticle = async url => ({ text: `Independent evidence from ${url} supports this claim.`,
+          title: "Independent evidence", finalUrl: url, kind: "html", truncated: false });
+      }
+      const { run, steps } = await drive({ question: route === "public-web"
+        ? "Read https://first.test/evidence and https://second.test/evidence" : "Explain the evidence",
+        origin: "web", budget: 0.02, executionLimits: { attentionLimit: 3, reevaluateRounds: 1 } }, d);
+      expect(run.evidencePortfolio?.selectedBuyUsdc).toBe(0.002);
+      expect(run.evidencePortfolio?.selectedAssetIds).toHaveLength(3);
+      expect(gateway.fetchCalls).toEqual([]);
+      expect(assessedReads).toEqual([1, 2]);
+      expect(run.decisions.find(decision => decision.sourceId === "unread-paid")).toMatchObject({ action: "SKIP",
+        rationale: expect.stringContaining("stopped early"), basis: expect.objectContaining({ plannedAction: "BUY" }) });
+      expect(run.citations).toHaveLength(2);
+      expect(steps.some(step => step.message.includes("skipping 1 further paid fetch"))).toBe(true);
+      const capture = projectActualReadCheckpoints(run);
+      if (!capture || capture.packet.schema !== 4 || capture.packet.economics.status !== "available") throw Error("Missing economic capture");
+      expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+      expect(capture.packet.economics.records).toContainEqual(expect.objectContaining({ event: "sufficient", status: "available",
+        input: { operation: "release", before: "0.002", operands: ["0.002"] }, outcome: { beforeMicros: "2000", afterMicros: "0" } }));
+      expect(capture.packet.economics.records).toContainEqual(expect.objectContaining({ event: "initial-remaining", status: "available",
+        outcome: { beforeMicros: "10000", afterMicros: "10000" } }));
+    });
+
+  it.each(["cache", "public-feed", "pending", "settled"] as const)(
+    "fails closed after free evidence assessment fails while retaining %s reads and holds", async scenario => {
+      const held = scenario === "pending" || scenario === "settled";
+      const sources = [makeSource({ id: "held", fetchPrice: 0.002 }), makeSource({ id: "cached", fetchPrice: 0.002 }),
+        makeSource({ id: "unread", fetchPrice: 0.002 })];
+      const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }, candidate.id === "held" ? 1 : 0.6),
+        action: candidate.cached || candidate.sourceKind === "public-reference" ? "CACHE" : "BUY",
+        targets: held ? [candidate.id === "held" ? 0 : 1] : [0],
+      })), sufficiency: () => { throw Error("Synthetic assessment outage"); } });
+      if (held) engine.decompose = async () => ["First claim", "Second claim"];
+      const synthesize = vi.spyOn(engine, "synthesize"), reeval = vi.spyOn(engine, "reevaluate"), gateway = fakeGateway();
+      if (held) gateway.payFetch = async request => {
+        gateway.fetchCalls.push(request.source.id);
+        const payment = makePayment({ kind: "fetch", queryId: request.queryId, sourceId: request.source.id,
+          sourceName: request.source.name, payer: AGENT, payee: request.source.walletAddress, amountUsdc: request.priceUsdc!,
+          settled: scenario === "settled", settlementStatus: scenario === "pending" ? "pending" : "settled",
+          ...(scenario === "settled" ? { txHash: "synthetic-settlement" } : {}) });
+        throw scenario === "pending" ? new PaymentPendingError("Synthetic pending", payment) : new PaymentSettledError("Synthetic settled", payment);
+      };
+      const d = deps(scenario === "public-feed" ? sources.slice(2) : held ? sources : sources.slice(1), engine, gateway,
+        { cachedAt: { cached: new Date().toISOString() } });
+      if (scenario === "public-feed") d.db.listPublicReferences = async () => [publicRef()];
+      Object.defineProperty(d.db, "decisionReviews", { value: {} });
+      const { run, steps } = await drive({ question: "Explain the evidence", budget: 0.02,
+        executionLimits: { attentionLimit: 3, reevaluateRounds: 1 } }, d);
+      expect(gateway.fetchCalls).toEqual(held ? ["held"] : []);
+      expect(synthesize.mock.calls[0][0].gathered.map(read => read.sourceId)).toEqual([scenario === "public-feed" ? "public:free" : "cached"]);
+      expect(reeval).not.toHaveBeenCalled(); expect(gateway.citationCalls).toEqual([]);
+      expect(steps.some(step => step.message.includes("Reading assessment unavailable"))).toBe(true);
+      const fetches = d.db.payments.filter(payment => payment.kind === "fetch");
+      expect(fetches).toHaveLength(held ? 1 : 0);
+      if (held) expect(fetches[0]).toMatchObject({ sourceId: "held", settlementStatus: scenario, amountUsdc: 0.002 });
+      const capture = projectActualReadCheckpoints(run);
+      if (!capture || capture.packet.schema !== 4 || capture.packet.economics.status !== "available") throw Error("Missing economic capture");
+      expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+      expect(capture.packet.economics.records.filter(record => record.kind === "query-budget" && record.status === "available" && record.input.operation === "release")).toEqual([]);
+      if (held) expect(capture.packet.economics.records).toContainEqual(expect.objectContaining({ event: scenario === "pending" ? "pending" : "settled-undelivered",
+        status: "available", outcome: { beforeMicros: "4000", afterMicros: "4000" } }));
+    });
+
+  it.each(["fresh", "stale", "missing", "evicted", "terms", "rights"] as const)(
+    "checks actual retained cache before admitting exhausted-budget expansion: %s", async scenario => {
+      const sources = [makeSource({ id: "paid-first", fetchPrice: fetchBudget(0.004) }), makeSource({ id: "cached-gap", fetchPrice: 0.01 })];
+      let expanding = false;
+      const reeval = vi.fn((_input: ReevaluateInput) => {
+        expanding = true;
+        return { shouldBuyMore: true, recommendedIds: ["cached-gap"], rationale: "Fill the second claim" };
+      });
+      const engine = fakeEngine({ decide: input => input.candidates.map(candidate => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }, candidate.id === "paid-first" ? 1 : 0.5),
+        action: candidate.cached ? "CACHE" : "BUY", targets: candidate.id === "paid-first" ? [0, 1] : [1],
+      })), sufficiency: input => ({ sufficient: input.gathered.length === 2, rationale: "The second claim needs the cached body",
+        perClaim: input.subClaims.map((claim, index) => ({ claim, coverage: index === 0 || input.gathered.length === 2 ? 0.9 : 0,
+          coveredBy: index === 0 ? ["S1"] : input.gathered.length === 2 ? ["S2"] : [] })) }), reevaluate: reeval });
+      engine.decompose = async () => ["First claim", "Second claim"];
+      const synthesize = vi.spyOn(engine, "synthesize");
+      const gateway = fakeGateway(), d = deps(sources, engine, gateway, scenario === "missing" ? {} : {
+        cachedAt: { "cached-gap": new Date(Date.now() - (scenario === "stale" ? config.cacheTtlSeconds + 60 : 0) * 1000).toISOString() },
+      });
+      const cached = vi.spyOn(d.db, "getCached");
+      if (scenario === "evicted") cached.mockResolvedValue(null);
+      const terms = vi.spyOn(fetchAuthority, "sourceFetchTerms").mockImplementation(async source => ({
+        payTo: source.walletAddress, creator: source.walletAddress, active: true, authority: "database", stale: false,
+        listPriceUsdc: source.fetchPrice + (scenario === "terms" && expanding && source.id === "cached-gap" ? 0.001 : 0),
+      }));
+      const rights = vi.spyOn(scholarlyGate, "paperCanResearch").mockImplementation(async (_db, source) =>
+        !(scenario === "rights" && expanding && source.id === "cached-gap"));
+      Object.defineProperty(d.db, "decisionReviews", { value: {} });
+      try {
+        const { run } = await drive({ question: "Explain both claims", budget: 0.004,
+          executionLimits: { attentionLimit: 2, reevaluateRounds: 1 } }, d);
+        expect(reeval).toHaveBeenCalledTimes(scenario === "stale" || scenario === "missing" ? 0 : 1);
+        if (reeval.mock.calls.length) {
+          expect(reeval.mock.calls[0][0].remainingBudget).toBe(0);
+          expect(reeval.mock.calls[0][0].skippedSources.map(candidate => [candidate.id, candidate.price])).toEqual([["cached-gap", 0]]);
+        }
+        expect(gateway.fetchCalls).toEqual(["paid-first"]);
+        expect(d.db.payments.filter(payment => payment.kind === "fetch").map(payment => payment.amountUsdc)).toEqual([0.002]);
+        expect(synthesize.mock.calls[0][0].gathered.map(read => read.sourceId)).toEqual(scenario === "fresh" ? ["paid-first", "cached-gap"] : ["paid-first"]);
+        if (scenario === "fresh" || scenario === "evicted") expect(cached).toHaveBeenCalledWith("cached-gap");
+        const capture = projectActualReadCheckpoints(run);
+        if (!capture || capture.packet.schema !== 4 || capture.packet.economics.status !== "available") throw Error("Missing economic capture");
+        expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+        if (scenario === "evicted") {
+          expect(capture.packet.records).toContainEqual(expect.objectContaining({ round: 1,
+            check: { kind: "budget", present: true, gathered: false, price: "0.01", remaining: "0" }, outcome: { action: "SKIP", rule: "budget" } }));
+        }
+      } finally { terms.mockRestore(); rights.mockRestore(); cached.mockRestore(); }
+    });
+});
 
 describe("research issue trust regressions", () => {
   it("excludes a new unmarked exact seed copy before any read or citation payment", async () => {

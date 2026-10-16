@@ -1162,7 +1162,52 @@ async function* runAdmittedAgent(
   // instead of asking the same question about the same evidence twice.
   let interimAssessment: { result: SufficiencyResult; reads: number } | undefined;
 
+  async function* assessInitialRead(d: Decision): AsyncGenerator<TraceStep, boolean> {
+    // Every successful delivery can make further tolls unnecessary, including free/cache reads.
+    let suf: SufficiencyResult;
+    try { suf = await engine.sufficiency({ question: input.question, subClaims, gathered }); }
+    catch {
+      readingAssessmentUnavailable = true;
+      const assessment = checkpoint({ kind: "sufficiency", sufficient: false, unavailable: true }, d.assetId ?? d.sourceId);
+      for (const unread of buys.slice(buys.indexOf(d) + 1)) await observeReview(unread.assetId ?? unread.sourceId, "assessment-unavailable");
+      yield emit("sufficiency", "Reading assessment unavailable; stopping further purchases and retaining completed reads and receipts.");
+      if (assessment.action !== "STOP") throw new Error("Invalid unavailable assessment policy");
+      return true;
+    }
+    interimAssessment = { result: suf, reads: gathered.length };
+    if (suf.perClaim && suf.perClaim.length > 0) {
+      for (const c of suf.perClaim) {
+        const pct = Math.round(c.coverage * 100);
+        const by = c.coveredBy.length ? ` by ${c.coveredBy.join(", ")}` : "";
+        yield emit("sufficiency", `Sub-claim "${c.claim.slice(0, 60)}${c.claim.length > 60 ? "…" : ""}": ${pct}% covered${by}`);
+      }
+    }
+    yield emit("sufficiency", suf.rationale, { sufficient: suf.sufficient, perClaim: suf.perClaim });
+    lastSufficient = suf.sufficient;
+    lastGaps = suf.perClaim ? suf.perClaim.filter((c) => c.coverage < 0.4).length : 0;
+    if (checkpoint({ kind: "sufficiency", sufficient: suf.sufficient, unavailable: false }, d.assetId ?? d.sourceId).action === "STOP") {
+      // Only future unread selections release their query-local toll reservation. Prior pending,
+      // settled-undelivered and funding-withheld selections retain their existing holds.
+      let unreadBuys = 0;
+      let released = 0;
+      for (const x of buys.slice(buys.indexOf(d) + 1)) {
+        await observeReview(x.assetId ?? x.sourceId, "sufficient");
+        const was = markUnread(x, "not read: the sources already read covered every research target, so the agent stopped early.");
+        if (was === "BUY" && assetById.has(x.assetId ?? x.sourceId)) { unreadBuys++; released += x.price; }
+      }
+      const beforeRelease = spentTolls;
+      spentTolls = Math.max(0, round(spentTolls - released));
+      captureQueryBudget("release", "sufficient", beforeRelease, [released], spentTolls, d.assetId ?? d.sourceId);
+      if (unreadBuys) {
+        yield emit("sufficiency", `Stopping early — skipping ${unreadBuys} further paid fetch(es) to save budget.`);
+      }
+      return true;
+    }
+    return false;
+  }
+
   for (const d of buys) {
+    const readsBefore = gathered.length;
     if (checkpoint({ kind: "duplicate", found: documentAlreadyRead(d, gathered) }, d.assetId ?? d.sourceId).action === "SKIP") {
       await observeReview(d.assetId ?? d.sourceId, "duplicate");
       const was = markUnread(d, "this canonical document was already read through another delivery channel; no second attention slot, access toll or independent contribution.");
@@ -1182,6 +1227,7 @@ async function* runAdmittedAgent(
       if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker });
         yield emit("fetch", `Read extracted public text from ${read.itemUrl} - ${marker}; quote matching establishes source grounding, not fact verification.`); }
       else yield emit("fetch", `Public page unavailable (${lastWebFailure}); no evidence admitted. Continuing research.`);
+      if (read && (yield* assessInitialRead(d))) break;
       continue;
     }
     const publicRead = publicReads.get(d.assetId ?? d.sourceId);
@@ -1193,6 +1239,7 @@ async function* runAdmittedAgent(
       const marker = `S${++markerN}`;
       gathered.push({ ...publicRead, marker });
       yield emit("fetch", `Read ${d.sourceName} - free public feed reference, no creator payment - ${marker}`);
+      if (yield* assessInitialRead(d)) break;
       continue;
     }
     const asset = assetById.get(d.assetId ?? d.sourceId);
@@ -1260,7 +1307,14 @@ async function* runAdmittedAgent(
         } else yield emit("fetch", `Free creator article ${assetLabel} unavailable; continuing with other evidence.`);
       }
     } else if (delivery === "CACHE") {
-      const cached = (await effects.getCached(cacheKey)) ?? "";
+      let cached: string | null;
+      try { cached = await effects.getCached(cacheKey); } catch { cached = null; }
+      if (!cached?.trim()) {
+        markUnread(d, "cached content was missing, empty or unavailable; no evidence was read.");
+        await observeReview(d.assetId ?? d.sourceId, "not-admitted");
+        yield emit("fetch", `SKIP ${assetLabel}: cached content was missing, empty or unavailable; continuing with other selected sources.`);
+        continue;
+      }
       gathered.push({
         assetId: asset.candidate.id,
         sourceId: source.id,
@@ -1374,49 +1428,8 @@ async function* runAdmittedAgent(
         yield emit("fetch", `Couldn't buy ${assetLabel} (${reason}) — skipping it, continuing with what's read.`);
         continue;
       }
-
-      // stop-early check after each paid read — now with per-claim coverage
-      let suf: SufficiencyResult;
-      try { suf = await engine.sufficiency({ question: input.question, subClaims, gathered }); }
-      catch {
-        readingAssessmentUnavailable = true;
-        const assessment = checkpoint({ kind: "sufficiency", sufficient: false, unavailable: true }, d.assetId ?? d.sourceId);
-        for (const unread of buys.slice(buys.indexOf(d) + 1)) await observeReview(unread.assetId ?? unread.sourceId, "assessment-unavailable");
-        yield emit("sufficiency", "Reading assessment unavailable; stopping further purchases and retaining completed reads and receipts.");
-        if (assessment.action !== "STOP") throw new Error("Invalid unavailable assessment policy");
-        break;
-      }
-      interimAssessment = { result: suf, reads: gathered.length };
-      if (suf.perClaim && suf.perClaim.length > 0) {
-        for (const c of suf.perClaim) {
-          const pct = Math.round(c.coverage * 100);
-          const by = c.coveredBy.length ? ` by ${c.coveredBy.join(", ")}` : "";
-          yield emit("sufficiency", `Sub-claim "${c.claim.slice(0, 60)}${c.claim.length > 60 ? "…" : ""}": ${pct}% covered${by}`);
-        }
-      }
-      yield emit("sufficiency", suf.rationale, { sufficient: suf.sufficient, perClaim: suf.perClaim });
-      lastSufficient = suf.sufficient;
-      lastGaps = suf.perClaim ? suf.perClaim.filter((c) => c.coverage < 0.4).length : 0;
-      if (checkpoint({ kind: "sufficiency", sufficient: suf.sufficient, unavailable: false }, d.assetId ?? d.sourceId).action === "STOP") {
-        // Record what actually happened: an unread selection is not a purchase, and its toll
-        // reservation returns to the fetch budget for any later gap-filling read. A decision
-        // already withheld by a funding failure keeps its reservation and its own rationale.
-        let unreadBuys = 0;
-        let released = 0;
-        for (const x of buys.slice(buys.indexOf(d) + 1)) {
-          await observeReview(x.assetId ?? x.sourceId, "sufficient");
-          const was = markUnread(x, "not read: the sources already read covered every research target, so the agent stopped early.");
-          if (was === "BUY" && assetById.has(x.assetId ?? x.sourceId)) { unreadBuys++; released += x.price; }
-        }
-        const beforeRelease = spentTolls;
-        spentTolls = Math.max(0, round(spentTolls - released));
-        captureQueryBudget("release", "sufficient", beforeRelease, [released], spentTolls, d.assetId ?? d.sourceId);
-        if (unreadBuys) {
-          yield emit("sufficiency", `Stopping early — skipping ${unreadBuys} further paid fetch(es) to save budget.`);
-        }
-        break;
-      }
     }
+    if (gathered.length > readsBefore && (yield* assessInitialRead(d))) break;
   }
 
   // 4b) RE-EVALUATE — after the initial fetch pass, assess per-claim coverage and
@@ -1466,7 +1479,8 @@ async function* runAdmittedAgent(
           return {
             id: d.assetId ?? d.sourceId,
             name: d.sourceName,
-            price: asset?.priceUsdc ?? (publicCandidates.has(d.assetId ?? d.sourceId) ? 0 : Infinity),
+            price: freshCache.has(d.assetId ?? d.sourceId) ? 0
+              : asset?.priceUsdc ?? (publicCandidates.has(d.assetId ?? d.sourceId) ? 0 : Infinity),
             preview: asset?.candidate.preview ?? publicCandidates.get(d.sourceId)?.preview ?? "",
           };
         }).filter(candidate => candidate.price === 0 || candidate.price <= remainingBudget);
@@ -1559,9 +1573,11 @@ async function* runAdmittedAgent(
         const asset = assetById.get(recId);
         const source = asset?.source;
         // Guard against an engine recommending a source we already read (duplicate marker +
-        // double payment) or that no longer fits the remaining budget.
-        if (checkpoint({ kind: "budget", present: !!asset && !!source, gathered: gatheredIds.has(recId),
-          price: String(asset?.priceUsdc ?? 0), remaining: String(remainingBudget) }, recId, round + 1).action === "SKIP" || !asset || !source) {
+        // double payment) or that no longer fits the remaining budget. A fresh-cache hint can
+        // defer paid affordability until the retained body is resolved behind the read gates.
+        const mayReuseCache = !!asset && !!source && !gatheredIds.has(recId) && freshCache.has(recId);
+        if ((!mayReuseCache && checkpoint({ kind: "budget", present: !!asset && !!source, gathered: gatheredIds.has(recId),
+          price: String(asset?.priceUsdc ?? 0), remaining: String(remainingBudget) }, recId, round + 1).action === "SKIP") || !asset || !source) {
           await captureRecommendation(recId, "SKIP", !asset || !source ? "not-admitted" : gatheredIds.has(recId) ? "duplicate" : "budget", round + 1, reeval.recommendedIds.indexOf(recId)); continue;
         }
         if (checkpoint({ kind: "funding", unavailable: fundingUnavailable, positivePrice: asset.priceUsdc > 0 }, recId, round + 1).action === "SKIP") {
@@ -1588,6 +1604,13 @@ async function* runAdmittedAgent(
           continue;
         }
         const retainedCache = asset.priceUsdc > 0 && freshCache.has(recId) ? await effects.getCached(asset.cacheKey).catch(() => null) : null;
+        // Discovery's fresh-cache hint admits a zero-cost candidate, not a paid fallback. An
+        // evicted/empty copy must still fit the remaining fetch allocation before any admission.
+        if (mayReuseCache && !retainedCache && checkpoint({ kind: "budget", present: true, gathered: false,
+          price: String(asset.priceUsdc), remaining: String(remainingBudget) }, recId, round + 1).action === "SKIP") {
+          await captureRecommendation(recId, "SKIP", "budget", round + 1, reeval.recommendedIds.indexOf(recId));
+          continue;
+        }
         checkpointPlans.set(recId, retainedCache ? "CACHE" : "BUY");
         const reviewRecord = await captureRecommendation(recId, retainedCache ? "CACHE" : "BUY", retainedCache ? "cache-selected" : "selected", round + 1, reeval.recommendedIds.indexOf(recId));
         const admission = await admitReview(asset, reviewRecord, round + 1);
