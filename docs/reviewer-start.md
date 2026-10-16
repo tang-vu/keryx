@@ -135,8 +135,11 @@ research outcomes, settlement parity, and payment reconciliation were last
 recorded on October 6. The settlement block said `empty-ledger` while traction
 on the same payload reported 100 payments. Those projections are separate.
 This check started no research, signature, or payment. Fresh sponsored admission
-was not probed. MCP, desktop, and extension identities stay on their own
-manifests. The October 13 submission snapshot stays unchanged.
+was not probed. The [v0.27.70 release](https://github.com/tang-vu/keryx/releases/tag/v0.27.70)
+publishes this web source with MCP 0.4.25 and Operator Desktop 0.4.23 assets.
+Hosted MCP stays 0.3.18 and the extension stays 0.1.4.2. That release note does
+not record an owner Desktop installation, and this walkthrough check did not
+re-download the packages. The October 13 submission snapshot stays unchanged.
 
 Hoàng's October 2 MCP/Devin recording was posted on the owner's @tangvu_dev
 account, which is now suspended. Its [archived edited video](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)

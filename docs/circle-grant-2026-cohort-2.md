@@ -1,8 +1,8 @@
 # Circle 2026 Cohort 2 — Keryx proposal (copy/paste version)
 
-Prepared: 2026-08-13; current-network refresh: 2026-10-04. Production is Arc mainnet; the August traction snapshot below remains testnet history. This edit does not resubmit the application. See [current status](mainnet-status.md).
+Prepared: 2026-08-13; current-network refresh: 2026-10-04; registry note: 2026-10-16. Production is Arc mainnet. Health on October 16 reports SourceRegistry V3 `0x2217250019ab614dae7391d346d05c3fc4d71ae1`. Paste blocks below that name `0x42a64061…` are the October 4 V1 answer and the retained contract. They are not the registry in current health. The recorded walkthrough payout check still reads V1. The August traction snapshot below remains testnet history. This edit does not resubmit the application. See [current status](mainnet-status.md).
 
-Each form field below has one `text` block. Use the copy button on that block and paste it directly into Questbook. Lines inside a block are intentional; there is no hard-wrapped prose to join manually.
+Each form field below has one `text` block. Use the copy button on that block and paste it directly into Questbook. Lines inside a block are intentional; there is no hard-wrapped prose to join manually. Do not paste a block that names SourceRegistry V1 when the field asks for the registry in current health. Use V3 `0x2217250019ab614dae7391d346d05c3fc4d71ae1` for that answer, and keep V1 as the retained October 4 contract.
 
 ## Complete these owner-only fields first
 
@@ -167,13 +167,15 @@ Yes. Keryx is a publicly accessible, continuously operated production web/API se
 
 ### Are you live on Arc?
 
-Select `Yes`. If an explanation field appears, paste:
+Select `Yes`. If an explanation field appears, paste the October 4 answer below only when that historical V1 address is the intended answer. Current health reports V3 `0x2217250019ab614dae7391d346d05c3fc4d71ae1`. V1 `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb` remains the retained contract, and the walkthrough payout check still reads it.
 
 ```text
 Yes — Arc mainnet (eip155:5042). SourceRegistry: https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb. Public chain, registry, and settlement evidence: https://keryx.cc/proof.
 ```
 
 ### Please enter the smart contract addresses
+
+The block below is the October 4 V1 answer. For a new paste, name V3 `0x2217250019ab614dae7391d346d05c3fc4d71ae1` as the registry in current health, and keep V1 as retained authority.
 
 ```text
 SourceRegistry (Arc mainnet, eip155:5042): 0x42a64061b6cd84067bb660b2a9b8aa881fd225bb
@@ -411,7 +413,8 @@ Do not use that statement unless it is fully true. Disclose any relationship tha
 - Main repository: https://github.com/tang-vu/keryx
 - Latest release: https://github.com/tang-vu/keryx/releases/latest
 - Reusable primitives: https://github.com/tang-vu/keryx-arc-primitives
-- Current mainnet SourceRegistry: https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb
+- Health SourceRegistry V3, October 16: https://explorer.arc.io/address/0x2217250019ab614dae7391d346d05c3fc4d71ae1
+- Retained V1 SourceRegistry, October 4 authority and the walkthrough payout check: https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb
 - Historical August testnet SourceRegistry: https://testnet.arcscan.app/address/0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536
 - Architecture: https://github.com/tang-vu/keryx/blob/main/docs/system-architecture.md
 - Security model: https://github.com/tang-vu/keryx/blob/main/docs/security-threat-model.md
