@@ -15,6 +15,9 @@ The recording uses a direct link without an embedded third-party player,
 automatic playback or eager media download. English story copy is separate from
 rendering. Usage links to the same story and explains why documented participant
 evidence differs from classified wallet actors, without changing either count.
+The new English catalogue is inventoried in the Vietnamese and Simplified Chinese
+draft manifests. Its untranslated keys remain explicitly uncovered with English
+fallback; no translation review or locale activation is inferred.
 
 The [VoiceReady case study](case-studies/voiceready-2026-10-15.md) is the source
 for participant attribution, the original report, the published recording and

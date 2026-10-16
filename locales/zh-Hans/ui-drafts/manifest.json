@@ -6,15 +6,15 @@
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
-  "scope": "All 64 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
+  "scope": "All 65 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
   "financialLegalConsent": "Unreviewed; English-authoritative fallback until actual named-human review. No runtime integration or activation supplied.",
   "totals": {
-    "englishNamespaceFiles": 64,
+    "englishNamespaceFiles": 65,
     "coreInlineSources": 1,
-    "extractedLeaves": 5829,
+    "extractedLeaves": 5882,
     "authoredEntries": 5571,
-    "nonTranslatableMachineIdentifiers": 21,
-    "uncoveredEntries": 237,
+    "nonTranslatableMachineIdentifiers": 28,
+    "uncoveredEntries": 283,
     "completeNamespaces": 56
   },
   "namespaces": [
@@ -6790,6 +6790,101 @@
         "withdrawalSteps"
       ],
       "nonTranslatableMachineIdentifiers": [],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "about-story",
+      "sourcePath": "locales/en/about-story.ts",
+      "sourceSha256": "911dc51ffee264ed23e49e80da9dd82a5e4d0d7ff5073db92bc7411f07dd210f",
+      "draftPath": "locales/zh-Hans/ui-drafts/about-story.json",
+      "extractedLeaves": 53,
+      "authoredEntries": 0,
+      "coveredKeys": [],
+      "nonTranslatableMachineIdentifiers": [
+        {
+          "key": "inspect.0.href",
+          "value": "/walkthrough",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "inspect.1.href",
+          "value": "/operator/decisions",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "inspect.2.href",
+          "value": "/proof",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "aboutStoryLinks.demo",
+          "value": "https://youtu.be/sNonqLPMysg",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "returnVideo",
+          "value": "https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.mp4",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "aboutStoryLinks.report",
+          "value": "/dispatch/c2febd88-a367-432a-8b90-4214f1f82e44",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "aboutStoryLinks.caseStudy",
+          "value": "https://github.com/tang-vu/keryx/blob/main/docs/case-studies/voiceready-2026-10-15.md",
+          "reason": "Published destination or internal route; preserve exact navigation target."
+        }
+      ],
+      "uncoveredKeys": [
+        "aboutStory.caseStudy",
+        "aboutStory.demo",
+        "aboutStory.report",
+        "access.body",
+        "access.label",
+        "access.number",
+        "access.title",
+        "budgetNote",
+        "distinctionBody",
+        "distinctionLabel",
+        "distinctionTitle",
+        "inspect.0.action",
+        "inspect.0.body",
+        "inspect.0.title",
+        "inspect.1.action",
+        "inspect.1.body",
+        "inspect.1.title",
+        "inspect.2.action",
+        "inspect.2.body",
+        "inspect.2.title",
+        "inspectLabel",
+        "inspectTitle",
+        "landingLink",
+        "practiceIntroduction",
+        "practiceLabel",
+        "practiceTitle",
+        "reward.body",
+        "reward.label",
+        "reward.number",
+        "reward.title",
+        "storyScope",
+        "storySteps.0.body",
+        "storySteps.0.label",
+        "storySteps.1.body",
+        "storySteps.1.label",
+        "storySteps.2.body",
+        "storySteps.2.label",
+        "usageBody",
+        "usageLink",
+        "usageTitle",
+        "videoCaption",
+        "videoDuration",
+        "videoLabel",
+        "videoProject",
+        "videoSeries",
+        "walkthrough"
+      ],
       "sourceAliases": {}
     }
   ]
