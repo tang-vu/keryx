@@ -26,7 +26,9 @@ interface AnswerMarkdownProps {
 }
 
 const CITATION_RE = /\[(S\d+)\]/g;
-const INLINE_RE = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+// Grounded literals put U+200B after each delimiter. Such delimiters are text,
+// including inside real markup; neither opening nor closing may consume them.
+const INLINE_RE = /(\*\*(?!\u200b)(?:\*\u200b|[^*])+\*(?!\u200b)\*(?!\u200b)|\*(?!\u200b)(?:\*\u200b|[^*])+\*(?!\u200b)|`(?!\u200b)(?:`\u200b|[^`])+`(?!\u200b))/g;
 
 /** Clip the original span from the unsplit text to each displayed fragment. */
 function renderOriginalQuotes(text: string, original: ReturnType<typeof quotedOriginalSpan>, offset: number): ReactNode {
@@ -38,27 +40,31 @@ function renderOriginalQuotes(text: string, original: ReturnType<typeof quotedOr
 }
 
 function renderInline(text: string, keyBase: string, original: ReturnType<typeof quotedOriginalSpan>, offset: number): ReactNode[] {
-  const parts = text.split(INLINE_RE).filter(Boolean);
+  // Retain split positions: only odd entries are captured markup. An unmatched
+  // text fragment can itself start/end with escaped or unpaired delimiters.
+  const parts = text.split(INLINE_RE);
   let cursor = offset;
   return parts.map((part, i) => {
+    if (!part) return null;
     const key = `${keyBase}-i${i}`;
     const start = cursor;
     cursor += part.length;
-    if (part.startsWith("**") && part.endsWith("**")) {
+    const markup = i % 2 === 1;
+    if (markup && part.startsWith("**") && part.endsWith("**")) {
       return (
         <strong key={key} className="font-semibold text-ink">
           {renderOriginalQuotes(part.slice(2, -2), original, start + 2)}
         </strong>
       );
     }
-    if (part.startsWith("*") && part.endsWith("*")) {
+    if (markup && part.startsWith("*") && part.endsWith("*")) {
       return (
         <em key={key} className="italic">
           {renderOriginalQuotes(part.slice(1, -1), original, start + 1)}
         </em>
       );
     }
-    if (part.startsWith("`") && part.endsWith("`")) {
+    if (markup && part.startsWith("`") && part.endsWith("`")) {
       return (
         <code
           key={key}

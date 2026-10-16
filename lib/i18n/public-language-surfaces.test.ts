@@ -198,9 +198,9 @@ const quoteCases = [
     name: "answer-grounding U+200B emphasis, backticks and literal source marker", tag: "p",
     // Literal retained bytes from answer-grounding's separators; no producer invocation.
     source: 'Generated before. “Original *\u200bEnglish*\u200b and `\u200bcode`\u200b [\u200bS1] tail” generated after. [S1]',
-    displayed: 'Generated before. “Original \u200bEnglish\u200b and \u200bcode\u200b [\u200bS1] tail” generated after. [1]',
-    original: '“Original \u200bEnglish\u200b and \u200bcode\u200b [\u200bS1] tail”',
-    formats: { em: "\u200bEnglish", code: "\u200bcode" },
+    displayed: 'Generated before. “Original *\u200bEnglish*\u200b and `\u200bcode`\u200b [\u200bS1] tail” generated after. [1]',
+    original: '“Original *\u200bEnglish*\u200b and `\u200bcode`\u200b [\u200bS1] tail”',
+    formats: {}, literalDelimiters: true,
   },
   {
     name: "citation splitting inside an original", tag: "p",
@@ -240,9 +240,9 @@ const quoteCases = [
   {
     name: "answer-grounding U+200B topic in a heading", tag: "h2",
     source: '### Generated topic: “Original `\u200bcode`\u200b” generated after. [S1]',
-    displayed: 'Generated topic: “Original \u200bcode\u200b” generated after. [1]',
-    original: '“Original \u200bcode\u200b”',
-    formats: { code: "\u200bcode" },
+    displayed: 'Generated topic: “Original `\u200bcode`\u200b” generated after. [1]',
+    original: '“Original `\u200bcode`\u200b”',
+    formats: {}, literalDelimiters: true,
   },
 ];
 
@@ -279,6 +279,7 @@ function expectQuoteLanguages(html: string, quote: typeof quoteCases[number], la
     for (const [tag, text] of Object.entries(quote.formats)) {
       expect(body.querySelector(tag)?.textContent).toBe(text);
     }
+    if (quote.literalDelimiters) expect(body.querySelectorAll("strong, em, code")).toHaveLength(0);
     const buttons = Array.from(body.querySelectorAll("button"));
     expect(buttons).toHaveLength(quote.name === "citation splitting inside an original" ? 2 : 1);
     for (const button of buttons) {
