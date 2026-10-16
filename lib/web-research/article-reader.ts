@@ -24,7 +24,7 @@ export function extractArticle(text: string, finalUrl: string, contentType: stri
 export const readArticle: ArticleReader = async (url, signal) => {
   if (!canonicalUrl(url)) throw new ArticleReadError("invalid-url");
   const fetched = await fetchPublicBytes(url, { maxBytes: 2 * 1024 * 1024, timeoutMs: 8000, maxHops: 3, signal,
-    httpsOnly: true, allowedContentTypes: ["text/html", "application/xhtml+xml", "text/plain", "text/markdown", "application/pdf"] }).catch(error => {
+    representation: "article", httpsOnly: true, allowedContentTypes: ["text/html", "application/xhtml+xml", "text/plain", "text/markdown", "application/pdf"] }).catch(error => {
       throw new ArticleReadError(signal?.aborted ? "cancelled" : error instanceof UnsafeTargetError && error.message === "that file is too large to read" ? "article-byte-limit" : "transport-unavailable");
     });
     // OpenReview can return a successful HTML response at this verification route.

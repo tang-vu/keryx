@@ -33,6 +33,8 @@ export interface FetchLimits {
   signal?: AbortSignal;
   httpsOnly?: boolean;
   allowedContentTypes?: string[];
+  /** Article reads negotiate document formats and a stable default language; feeds keep their existing headers. */
+  representation?: "article";
   /** Whole-document membership callers refuse partial or ranged responses. */
   requireFullResponse?: boolean;
 }
@@ -248,7 +250,11 @@ export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): P
           dispatcher,
           redirect: "manual",
           signal: ctrl.signal,
-          headers: { "User-Agent": "Keryx-FeedCheck/1", Accept: "application/rss+xml, application/xml, text/xml, */*" },
+          headers: limits.representation === "article"
+            ? { "User-Agent": "Keryx-FeedCheck/1",
+              Accept: "text/html, application/xhtml+xml, text/plain, text/markdown, application/pdf;q=0.9, */*;q=0.8",
+              "Accept-Language": "en" }
+            : { "User-Agent": "Keryx-FeedCheck/1", Accept: "application/rss+xml, application/xml, text/xml, */*" },
         });
 
         if (res.status >= 300 && res.status < 400) {

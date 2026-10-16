@@ -82,6 +82,32 @@ it("pins each redirect hop and snapshots final URL/type/body", async () => {
   await expect(pinnedAddresses(1)).resolves.toEqual([publicV6]);
   expect(mocks.fetch.mock.calls[0][1]).toMatchObject({ redirect: "manual", dispatcher: expect.anything() });
 });
+it("requests article formats and English across vetted redirects without replacing an explicit URL locale", async () => {
+  mocks.fetch.mockImplementation(async (url, init) => {
+    expect(init.headers.Accept).toContain("text/html");
+    expect(init.headers.Accept).toContain("application/pdf");
+    expect(init.headers["Accept-Language"]).toBe("en");
+    expect(Object.keys(init.headers).sort()).toEqual(["Accept", "Accept-Language", "User-Agent"]);
+    return url.hostname === "first.example"
+      ? new Response(null, { status: 302, headers: { location: "https://second.example/article?hl=vi" } })
+      : new Response("Popup source text", { headers: { "content-type": "text/html" } });
+  });
+  const result = await fetchPublicBytes("https://first.example/article", { representation: "article", httpsOnly: true });
+  expect(result.finalUrl).toBe("https://second.example/article?hl=vi");
+  expect(new TextDecoder().decode(result.bytes)).toBe("Popup source text");
+  expect(mocks.lookup).toHaveBeenCalledTimes(2);
+  expect(mocks.fetch).toHaveBeenCalledTimes(2);
+  await expect(pinnedAddresses(0)).resolves.toEqual([publicV4]);
+  await expect(pinnedAddresses(1)).resolves.toEqual([publicV4]);
+});
+it("keeps feed negotiation unchanged after an article read", async () => {
+  mocks.fetch.mockImplementation(async () => new Response("body"));
+  await fetchPublicBytes("https://first.example/article", { representation: "article" });
+  await fetchPublicBytes("https://first.example/feed");
+  expect(mocks.fetch.mock.calls[1][1].headers).toEqual({
+    "User-Agent": "Keryx-FeedCheck/1", Accept: "application/rss+xml, application/xml, text/xml, */*",
+  });
+});
 it("refuses private and nonHTTPS redirects before opening a second socket", async () => {
   for (const location of ["https://127.0.0.1/private", "https://198.18.0.1/private", "https://[2001:db8::1]/private", "http://second.example/a"]) {
     mocks.fetch.mockReset().mockResolvedValue(new Response(null, { status: 302, headers: { location } }));
