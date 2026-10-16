@@ -66,7 +66,8 @@ it("changes both server leaves and client copy without remounting, changing orig
     expect(container.querySelector("#paper h3")!.textContent).toBe(paper.title);
     expect(container.querySelector("#paper p.break-words")!.textContent).toBe(paper.authors[0]);
     expect(container.querySelector("#critical")!.textContent).toBe(englishMessages["account.signatureInstruction"]);
-    expect(container.querySelector("#critical span")!.getAttribute("lang")).toBe("en");
+    if (locale === "en") expect(container.querySelector("#critical span")).toBeNull();
+    else expect(container.querySelector("#critical span")!.getAttribute("lang")).toBe("en");
     expect(input.value).toBe("Exact unsent question <USDC> {count}");
     expect(container.querySelector("#rich strong")!.textContent).toBe("Original node");
   }

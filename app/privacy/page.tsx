@@ -8,19 +8,16 @@
 import type { Metadata } from "next";
 import { englishPublicAlternates } from "@/lib/i18n/public-metadata";
 import { createMessages } from "@/lib/i18n/messages";
-
+import { createRichMessages } from "@/lib/i18n/rich-messages";
 import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/public-support";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
-import { UiMessage, UiRichMessage } from "@/lib/i18n/ui-copy";
-
-
 
 const message = createMessages("en");
-
+const richMessage = createRichMessages("en");
 
 const TITLE = message("legal.privacy.metadataTitle");
 const DESCRIPTION =
@@ -50,69 +47,69 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-paper-2">
       <SiteHeader />
       <main className="mx-auto max-w-[760px] px-4 pb-20 pt-12 sm:px-[30px]">
-        <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-seal"><UiMessage messageKey={"legal.finePrint"} /></div>
-        <h1 className="font-display text-[clamp(30px,5vw,44px)] font-medium leading-[1.05] tracking-tight text-ink"><UiMessage messageKey={"legal.privacy.title"} /></h1>
-        <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3"><UiMessage messageKey={"legal.privacy.updated"} values={{ date: UPDATED }} /></p>
+        <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-seal">{message("legal.finePrint")}</div>
+        <h1 className="font-display text-[clamp(30px,5vw,44px)] font-medium leading-[1.05] tracking-tight text-ink">{message("legal.privacy.title")}</h1>
+        <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">{message("legal.privacy.updated", { date: UPDATED })}</p>
 
         <Section title={message("legal.privacy.shortVersion.heading")}>
-          <p><UiRichMessage messageKey={"legal.privacy.shortVersion.summary"} values={{ network: currentArcLabel, publishedNotice: <strong className="text-ink"><UiMessage messageKey={"legal.privacy.shortVersion.publicNotice"} /></strong> }} /></p>
+          <p>{richMessage("legal.privacy.shortVersion.summary", { network: currentArcLabel, publishedNotice: <strong className="text-ink">{message("legal.privacy.shortVersion.publicNotice")}</strong> })}</p>
         </Section>
 
         <Section title={message("legal.privacy.publicQuestions.heading")}>
-          <p><UiRichMessage messageKey={"legal.privacy.publicQuestions.processing"} values={{ dispatchPath: <span className="font-mono text-[13.5px]">/dispatch/…</span>, archiveLink: <Link href="/answers" className="text-seal underline underline-offset-2"><UiMessage messageKey={"legal.privacy.archive"} /></Link> }} /></p>
-          <p><UiMessage messageKey={"legal.privacy.publicQuestions.rateLimits"} /></p>
+          <p>{richMessage("legal.privacy.publicQuestions.processing", { dispatchPath: <span className="font-mono text-[13.5px]">/dispatch/…</span>, archiveLink: <Link href="/answers" className="text-seal underline underline-offset-2">{message("legal.privacy.archive")}</Link> })}</p>
+          <p>{message("legal.privacy.publicQuestions.rateLimits")}</p>
         </Section>
 
         <Section title={message("legal.privacy.literatureWorkspace.heading")}>
-          <p><UiRichMessage messageKey={"legal.privacy.literatureWorkspace.localData"} values={{ literatureLink: <Link href="/literature" className="text-seal underline"><UiMessage messageKey={"legal.privacy.literatureWorkspace.link"} /></Link> }} /></p>
-          <p><UiMessage messageKey={"legal.privacy.literatureWorkspace.comparisonAndDeletion"} /></p>
+          <p>{richMessage("legal.privacy.literatureWorkspace.localData", { literatureLink: <Link href="/literature" className="text-seal underline">{message("legal.privacy.literatureWorkspace.link")}</Link> })}</p>
+          <p>{message("legal.privacy.literatureWorkspace.comparisonAndDeletion")}</p>
         </Section>
 
         <Section title={message("legal.privacy.privatePilot.heading")}>
-          <p><UiMessage messageKey={"legal.privacy.privatePilot.processing"} /></p>
-          <p><UiMessage messageKey={"legal.privacy.privatePilot.localRecovery"} /></p>
-          <p><UiRichMessage messageKey={"legal.privacy.privatePilot.localDeletion"} values={{ researchLink: <Link href="/research" className="text-seal underline underline-offset-2"><UiMessage messageKey={"legal.privacy.privatePilot.researchLink"} /></Link> }} /></p>
+          <p>{message("legal.privacy.privatePilot.processing")}</p>
+          <p>{message("legal.privacy.privatePilot.localRecovery")}</p>
+          <p>{richMessage("legal.privacy.privatePilot.localDeletion", { researchLink: <Link href="/research" className="text-seal underline underline-offset-2">{message("legal.privacy.privatePilot.researchLink")}</Link> })}</p>
         </Section>
 
         <Section title={message("legal.privacy.aggregateCounters.heading")}>
-          <p><UiMessage messageKey={"legal.privacy.aggregateCounters.collection"} /></p>
+          <p>{message("legal.privacy.aggregateCounters.collection")}</p>
         </Section>
 
         <Section title={message("legal.privacy.walletAccounts.heading")}>
-          <p><UiMessage messageKey={"legal.privacy.walletAccounts.accountData"} /></p>
-          {!browserPaymentProfile().testnet&&<p><UiMessage messageKey={"legal.privacy.walletAccounts.mainnetRecovery"} /></p>}
+          <p>{message("legal.privacy.walletAccounts.accountData")}</p>
+          {!browserPaymentProfile().testnet&&<p>{message("legal.privacy.walletAccounts.mainnetRecovery")}</p>}
         </Section>
 
         <Section title={message("legal.privacy.googleSignIn.heading")}>
-          <p><UiMessage messageKey={"legal.privacy.googleSignIn.processing"} /></p>
-          <p><UiMessage messageKey={"legal.privacy.googleSignIn.credentials"} /></p>
-          <p><UiMessage messageKey={"legal.privacy.googleSignIn.recovery"} /></p>
-          <p><UiRichMessage messageKey={"legal.privacy.googleSignIn.privacyPolicies"} values={{ googlePolicyLink: <a href="https://policies.google.com/privacy" className="text-seal underline underline-offset-2"><UiMessage messageKey={"legal.privacy.googleSignIn.googlePolicy"} /></a>, circlePolicyLink: <a href="https://www.circle.com/legal/privacy-policy" className="text-seal underline underline-offset-2"><UiMessage messageKey={"legal.privacy.googleSignIn.circlePolicy"} /></a> }} /></p>
+          <p>{message("legal.privacy.googleSignIn.processing")}</p>
+          <p>{message("legal.privacy.googleSignIn.credentials")}</p>
+          <p>{message("legal.privacy.googleSignIn.recovery")}</p>
+          <p>{richMessage("legal.privacy.googleSignIn.privacyPolicies", { googlePolicyLink: <a href="https://policies.google.com/privacy" className="text-seal underline underline-offset-2">{message("legal.privacy.googleSignIn.googlePolicy")}</a>, circlePolicyLink: <a href="https://www.circle.com/legal/privacy-policy" className="text-seal underline underline-offset-2">{message("legal.privacy.googleSignIn.circlePolicy")}</a> })}</p>
         </Section>
 
         <Section title={message("legal.privacy.sourceListings.heading")}>
-          <p><UiMessage messageKey={"legal.privacy.sourceListings.publicAndPrivateFields"} /></p>
+          <p>{message("legal.privacy.sourceListings.publicAndPrivateFields")}</p>
         </Section>
 
         <Section title={message("legal.privacy.extension.heading")}>
-          <p><UiRichMessage messageKey={"legal.privacy.extension.destinations"} values={{ serviceOrigin: <span className="font-mono text-[13.5px]">https://keryx.cc</span> }} /></p>
+          <p>{richMessage("legal.privacy.extension.destinations", { serviceOrigin: <span className="font-mono text-[13.5px]">https://keryx.cc</span> })}</p>
           <ul className="ml-5 flex list-disc flex-col gap-2">
-            <li><UiMessage messageKey={"legal.privacy.extension.asking"} /></li>
-            <li><UiRichMessage messageKey={"legal.privacy.extension.listPage"} values={{ listAction: <em><UiMessage messageKey={"legal.privacy.extension.listAction"} /></em> }} /></li>
-            <li><UiMessage messageKey={"legal.privacy.extension.selection"} /></li>
-            <li><UiRichMessage messageKey={"legal.privacy.extension.localStorage"} values={{ storageApi: <span className="font-mono text-[13.5px]">chrome.storage.local</span> }} /></li>
+            <li>{message("legal.privacy.extension.asking")}</li>
+            <li>{richMessage("legal.privacy.extension.listPage", { listAction: <em>{message("legal.privacy.extension.listAction")}</em> })}</li>
+            <li>{message("legal.privacy.extension.selection")}</li>
+            <li>{richMessage("legal.privacy.extension.localStorage", { storageApi: <span className="font-mono text-[13.5px]">chrome.storage.local</span> })}</li>
           </ul>
         </Section>
 
         <Section title={message("legal.privacy.thirdParties.heading")}>
-          <p><UiRichMessage messageKey={"legal.privacy.thirdParties.reasoningAndPayments"} values={{ workersPolicyLink: <a href="https://developers.cloudflare.com/workers-ai/platform/data-usage/" className="text-seal underline underline-offset-2"><UiMessage messageKey={"legal.privacy.thirdParties.workersPolicy"} /></a> }} /></p>
-          <p><UiRichMessage messageKey={"legal.privacy.thirdParties.webServices"} values={{ collectionLink: <a href="https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/" className="text-seal underline underline-offset-2"><UiMessage messageKey={"legal.privacy.thirdParties.collectionLink"} /></a> }} /></p>
+          <p>{richMessage("legal.privacy.thirdParties.reasoningAndPayments", { workersPolicyLink: <a href="https://developers.cloudflare.com/workers-ai/platform/data-usage/" className="text-seal underline underline-offset-2">{message("legal.privacy.thirdParties.workersPolicy")}</a> })}</p>
+          <p>{richMessage("legal.privacy.thirdParties.webServices", { collectionLink: <a href="https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/" className="text-seal underline underline-offset-2">{message("legal.privacy.thirdParties.collectionLink")}</a> })}</p>
         </Section>
 
         <Section title={message("legal.privacy.retentionAndContact.heading")}>
-          <p><UiRichMessage messageKey={"legal.privacy.retentionAndContact.records"} values={{ contactAddress: <a href={SUPPORT_MAILTO} className="text-seal underline underline-offset-2">
+          <p>{richMessage("legal.privacy.retentionAndContact.records", { contactAddress: <a href={SUPPORT_MAILTO} className="text-seal underline underline-offset-2">
               {SUPPORT_EMAIL}
-            </a> }} /></p>
+            </a> })}</p>
         </Section>
       </main>
       <SiteFooter />

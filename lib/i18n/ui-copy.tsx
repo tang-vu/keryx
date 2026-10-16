@@ -25,7 +25,7 @@ export function UiText({ source, namespaces, plain = false }: { source: string |
   const { preview, locale } = useContext(UiCopyContext) ?? english;
   if (typeof source !== "string") return source;
   const text = previewText(preview, source, namespaces);
-  if (plain) return text;
+  if (plain || locale === "en") return text;
   return <span lang={text === source ? "en" : locale}>{text}</span>;
 }
 
@@ -34,7 +34,7 @@ export function UiMessage({ messageKey, values, plain = false }: { messageKey: M
   const { locale } = useContext(UiCopyContext) ?? english;
   const text = message(messageKey, values);
   const original = (english.message as typeof message)(messageKey, values);
-  if (plain) return text;
+  if (plain || locale === "en") return text;
   return <span lang={text === original ? "en" : locale}>{text}</span>;
 }
 
@@ -42,7 +42,7 @@ export function UiRichMessage({ messageKey, values, plain = false }: { messageKe
   const rich = useUiRichMessages() as (key: MessageKey, values?: Record<string, ReactNode>) => ReactNode[];
   const { preview, locale } = useContext(UiCopyContext) ?? english;
   const source = englishMessages[messageKey];
-  if (plain) return rich(messageKey, values);
+  if (plain || locale === "en") return rich(messageKey, values);
   return <span lang={previewMessage(preview, messageKey, source) === source ? "en" : locale}>{rich(messageKey, values)}</span>;
 }
 

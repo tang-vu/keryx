@@ -13,6 +13,7 @@ source titles, receipts, URLs, identifiers and submitted arguments are not fed
 through a DOM translator. Existing component state is retained across a switch.
 Native attribute boundaries own their native element and leave Server Component
 children opaque. SVG and option leaves return plain text to preserve valid markup.
+English leaves preserve the original markup; target-language leaves mark their language.
 Display hooks and leaves import a pure copy context. Catalogue loading and wallet
 locale negotiation stay in the application provider, so isolated maintenance and
 other display-only consumers acquire no wallet/network environment dependency.

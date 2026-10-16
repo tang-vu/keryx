@@ -8,9 +8,9 @@ import { useUiMessages } from "@/lib/i18n/ui-copy";
 
 
 
-const copy = createMessages("en");
+const defaultMessages = createMessages("en");
 
-const remainingExcerpts = (count: number) => copy(count === 1 ? "reportSourceLens.remaining.one" : "reportSourceLens.remaining.other", { count });
+const remainingExcerpts = (count: number, message = defaultMessages) => message(count === 1 ? "reportSourceLens.remaining.one" : "reportSourceLens.remaining.other", { count });
 
 export function SourceEvidenceLens({ run }: { run: EvidenceMatrixInput }) {
   const sourceKey = JSON.stringify(buildSourceEvidenceLens(run).sources.map(source => source.sourceId).sort());
@@ -18,6 +18,7 @@ export function SourceEvidenceLens({ run }: { run: EvidenceMatrixInput }) {
 }
 
 function SourceEvidenceLensSelection({ run }: { run: EvidenceMatrixInput }) {
+  const message = useUiMessages();
   const [omittedSourceId, setOmittedSourceId] = useState<string | null>(null);
   const id = useId();
   const selectRef = useRef<HTMLSelectElement>(null);
@@ -26,13 +27,13 @@ function SourceEvidenceLensSelection({ run }: { run: EvidenceMatrixInput }) {
     if (sourceId === null) selectRef.current?.focus();
     setOmittedSourceId(sourceId);
   };
-  return <SourceEvidenceLensView model={model} selectId={id} selectRef={selectRef} onOmit={onOmit} />;
+  return <SourceEvidenceLensView messages={message} model={model} selectId={id} selectRef={selectRef} onOmit={onOmit} />;
 }
 
-export function SourceEvidenceLensView({ model, selectId, selectRef, onOmit }: {
-  model: SourceEvidenceLensModel; selectId: string; selectRef?: RefObject<HTMLSelectElement | null>; onOmit: (sourceId: string | null) => void;
+export function SourceEvidenceLensView({ model, selectId, selectRef, onOmit, messages = defaultMessages }: {
+  messages?: ReturnType<typeof createMessages>; model: SourceEvidenceLensModel; selectId: string; selectRef?: RefObject<HTMLSelectElement | null>; onOmit: (sourceId: string | null) => void;
 }) {
-  const copy = useUiMessages();
+  const copy = messages;
   if (!model.available) return <p className="mt-5 text-sm text-ink-3">{copy("reportSourceLens.unavailable")}</p>;
   if (!model.sources.length) return <p className="mt-5 text-sm text-ink-3">{copy("reportSourceLens.empty")}</p>;
   const omitted = model.sources.find(source => source.sourceId === model.omittedSourceId);
@@ -58,7 +59,7 @@ export function SourceEvidenceLensView({ model, selectId, selectRef, onOmit }: {
       {model.rows.map(row => <li key={row.claimIndex} className="border-l-2 border-line pl-3">
         <p className="break-words font-serif text-sm text-ink">{row.claim}</p>
         <p className={`mt-1 text-sm ${row.state === "lost-last-excerpt" ? "text-seal" : "text-ink-3"}`}>
-          {row.state === "already-missing" ? copy("reportSourceLens.missing") : row.state === "lost-last-excerpt" ? copy("reportSourceLens.lost") : remainingExcerpts(row.remaining.length)}
+          {row.state === "already-missing" ? copy("reportSourceLens.missing") : row.state === "lost-last-excerpt" ? copy("reportSourceLens.lost") : remainingExcerpts(row.remaining.length, copy)}
         </p>
         {row.remaining.length > 0 && <details className="mt-1">
           <summary className="min-h-11 cursor-pointer py-2 text-sm text-ink-3">{copy("reportSourceLens.inspect")}</summary>
