@@ -14,6 +14,8 @@ const option = process.argv.indexOf("--output-dir");
 assert(option >= 0 && process.argv[option + 1], "Explicit --output-dir in the admitted resource is required");
 const output = resolve(process.argv[option + 1]);
 const offeredCss = (await postcss([tailwind()]).process(await readFile("app/globals.css", "utf8"), { from: "app/globals.css" })).css;
+const offeredPreferenceDrafts = Object.fromEntries(await Promise.all(["vi", "zh-Hans"].map(async locale => [locale,
+  JSON.parse(await readFile(`locales/${locale}/ui-drafts/ui-preference.json`, "utf8")).entries])));
 const base = "https://locale-fixture.test", alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 const originalPacket = { question: "Retain original request", budget: 0.05, payer: alice, sessionId: "original-session", signature: "0x1234", nonce: "retained-original-nonce" };
 // Bind to current English bytes, never to a draft's claimed source/hash or manifest counts.
@@ -246,7 +248,7 @@ try {
     if (width < 1024) await page.getByRole("button", { name: "Open menu", exact: true }).click();
     await page.locator('header select:visible').first().selectOption("vi");
     await page.waitForFunction(() => document.documentElement.lang === "vi");
-    assert((await page.locator('header select:visible').first().getAttribute("title"))?.includes("machine draft, not human reviewed"));
+    assert.equal(await page.locator('header select:visible').first().getAttribute("title"), offeredPreferenceDrafts.vi.previewNotice.text);
     if (width < 1024) assert(await page.locator('header [id$="-notice"]').last().isVisible(), "Phone menu retains the full preview notice");
     assert(await page.locator('header').getByText("Đặt câu hỏi", { exact: true }).count() > 0);
     assert.equal(await page.getByLabel("Draft question").inputValue(), "Preserve this offered-language draft");
@@ -266,12 +268,12 @@ try {
     assert(!offeredLayout.horizontalOverflow, `Offered preview must fit the actual ${width}px stylesheet: ${JSON.stringify(offeredLayout)}`);
     if (width >= 1024) assert(offeredLayout.controls.every(control => control.top >= 0 && control.bottom <= offeredLayout.headerHeight),
       `Preview controls must fit the desktop header: ${JSON.stringify(offeredLayout)}`);
-    await page.waitForFunction(() => document.querySelector('footer [role="status"]')?.textContent?.includes("saved in this browser"));
+    await page.waitForFunction(expected => document.querySelector('footer [role="status"]')?.textContent === expected, offeredPreferenceDrafts.vi.browserSaved.text);
     await page.reload(); await page.waitForFunction(() => document.documentElement.lang === "vi");
     await page.locator('footer select').selectOption("zh-Hans");
     await page.waitForFunction(() => document.documentElement.lang === "zh-Hans");
     assert(await page.locator('footer').getByText("提出问题", { exact: true }).count() > 0);
-    await page.waitForFunction(() => document.querySelector('footer [role="status"]')?.textContent?.includes("saved in this browser"));
+    await page.waitForFunction(expected => document.querySelector('footer [role="status"]')?.textContent === expected, offeredPreferenceDrafts["zh-Hans"].browserSaved.text);
     await page.reload(); await page.waitForFunction(() => document.documentElement.lang === "zh-Hans");
     await page.screenshot({ path: resolve(output, `offered-zh-Hans-${width}.png`), fullPage: true });
     assert.equal(await page.locator('footer a[href="/privacy"]').textContent(), "Privacy");
