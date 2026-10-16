@@ -1,5 +1,12 @@
 # Keryx — Tameion builder showcase & fireside preparation
 
+> **Historical archive — October 16, 2026.** This September 25 showcase/fireside
+> draft is not the current hackathon pitch. Use the [October 16 final rehearsal](tameion-final-rehearsal.md)
+> for current preparation (optional supplementary material only). The
+> [submission record](tameion-submission.md) documents the October 13 submission
+> and its unchanged 2:47 demo. The historical text below retains its original
+> dates, network labels, unsent draft status and uncertainties.
+
 **Cập nhật 2026-10-04:** production đã lên Arc mainnet. Xem
 [trạng thái và địa chỉ hiện tại](mainnet-status.md); các câu chuyện testnet cũ bên dưới
 vẫn giữ đúng mạng và thời điểm, không chuyển thành doanh thu mainnet.
