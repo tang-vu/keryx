@@ -94,7 +94,7 @@ export function SpecialistBriefBuilder() {
       <p className="mt-4 max-w-[80ch] font-serif text-sm text-ink-2">{copy.handoff}</p>
       <nav className="mt-3 flex flex-wrap gap-x-6" aria-label={copy.review}>
         <Link href="/research?mode=deep#paid-research" prefetch={false} className={linkClass}>{copy.checkout}</Link>
-        <Link href="/#dispatch" prefetch={false} className={linkClass}>{copy.trial}</Link>
+        <Link href="/?mode=deep#dispatch" prefetch={false} className={linkClass}>{copy.trial}</Link>
       </nav>
     </section>}
   </>;
