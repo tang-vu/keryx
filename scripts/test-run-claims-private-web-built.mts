@@ -142,8 +142,10 @@ try {
   const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
   // A normal anchor must create a new initial document, not a router transition.
   await page.goto(origin + "/research");
-  assert.equal(await page.getByRole("link", { name: copy.entry }).getAttribute("href"), "/research/private");
-  await Promise.all([page.waitForNavigation(), page.getByRole("link", { name: copy.entry }).click()]);
+  const privateEntry = page.getByRole("navigation", { name: "Research tools", exact: true }).getByRole("link", { name: copy.entry, exact: true });
+  assert.equal(await privateEntry.getAttribute("href"), "/research/private");
+  assert.equal(await page.getByRole("contentinfo").getByRole("link", { name: copy.entry, exact: true }).getAttribute("href"), "/research/private");
+  await Promise.all([page.waitForNavigation(), privateEntry.click()]);
   await page.getByRole("textbox", { name: "What do you want to know?", exact: true }).fill("Synthetic private research");
   await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
   await page.getByRole("button", { name: copy.open, exact: true }).waitFor();
