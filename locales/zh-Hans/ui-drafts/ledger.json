@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ledger.ts",
-  "sourceSha256": "f72696cced220e11978636eb93d52336a68c81971ee0901a42663b0f9498f736",
+  "sourceSha256": "24d48c22fe8027ef7da6909013f062937174786acc03147787aad0903adb3459",
   "entries": {
     "ledgerResource.loading": {
       "source": "Loading {label}…",
@@ -193,7 +193,7 @@
       "text": "运营费转账"
     },
     "ledgerPresentation.totalsBoundary": {
-      "source": "Amounts in USDC. Settled volume includes the separately listed operating fees. Only settled records count.",
+      "source": "Amounts in USDC. Settled volume includes the separately listed operating fees. Only settled records count. The creator count is settled payees in this database, including first-party sources, and is not a count of outside customers.",
       "text": "金额以 USDC 计。已结算金额包括单独列出的运营费。仅计入已结算记录。"
     },
     "ledgerPresentation.verifyRecords": {

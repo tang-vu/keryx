@@ -55,7 +55,7 @@ export const ledgerMessages = Object.freeze({
   "ledgerPresentation.operatingFees": "Keryx operating fees",
   "ledgerPresentation.unavailable": "Unavailable",
   "ledgerPresentation.operatingTransfers": "Operating fee transfers",
-  "ledgerPresentation.totalsBoundary": "Amounts in USDC. Settled volume includes the separately listed operating fees. Only settled records count.",
+  "ledgerPresentation.totalsBoundary": "Amounts in USDC. Settled volume includes the separately listed operating fees. Only settled records count. The creator count is settled payees in this database, including first-party sources, and is not a count of outside customers.",
   "ledgerPresentation.verifyRecords": "How these records are verified →",
   "ledgerPresentation.claimSource": "Publish work? Claim your source →",
   "ledgerPresentation.cashouts": "Cash-out records",

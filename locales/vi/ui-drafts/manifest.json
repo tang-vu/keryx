@@ -1767,7 +1767,7 @@
     {
       "namespace": "ledger",
       "sourcePath": "locales/en/ledger.ts",
-      "sourceSha256": "f72696cced220e11978636eb93d52336a68c81971ee0901a42663b0f9498f736",
+      "sourceSha256": "24d48c22fe8027ef7da6909013f062937174786acc03147787aad0903adb3459",
       "draftPath": "locales/vi/ui-drafts/ledger.json",
       "extractedLeaves": 101,
       "authoredEntries": 101,
@@ -2163,7 +2163,7 @@
     {
       "namespace": "operations",
       "sourcePath": "locales/en/operations.ts",
-      "sourceSha256": "6a2db103f1003ae55264ad3969db6e55c281905277c58dfe1b747e6a8b67cdfc",
+      "sourceSha256": "b6cff5c5b55ca0204e3e1bc001e742da7762f9749fe776e5c78334eeea78a7ae",
       "draftPath": "locales/vi/ui-drafts/operations.json",
       "extractedLeaves": 351,
       "authoredEntries": 350,
@@ -5847,7 +5847,7 @@
     {
       "namespace": "walkthrough",
       "sourcePath": "locales/en/walkthrough.ts",
-      "sourceSha256": "92ca53286ef6e6e217bf584eade3b52c40500720bbbae284404eb8c8bab48662",
+      "sourceSha256": "5d75890065060a0188c0f2b259af97e0167fd2d3c37e59a9e5faab9b51f0483f",
       "draftPath": "locales/vi/ui-drafts/walkthrough.json",
       "extractedLeaves": 76,
       "authoredEntries": 76,

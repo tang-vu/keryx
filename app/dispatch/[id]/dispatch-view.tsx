@@ -15,10 +15,8 @@ import { projectBibliographicTask } from "@/lib/research/bibliographic-task-resu
 import { DecisionReviews } from "@/components/keryx/decision-reviews";
 import { ReadCheckpointVerify } from "@/components/keryx/read-checkpoint-verify";
 import { projectActualReadCheckpoints } from "@/lib/research-audit/actual-read-projection";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
-
-
-
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+import { walkthroughMessages as englishWalkthroughMessages } from "@/locales/en/walkthrough";
 
 
 export function DispatchView({
@@ -36,6 +34,7 @@ export function DispatchView({
   historicalNetwork?: string;
 }) {
   const copy = useUiMessages();
+  const walkthroughMessages = useUiCopy("walkthrough", englishWalkthroughMessages);
   const bibliography = projectBibliographicTask(run.bibliography);
   const confidence = bibliography ? null : deriveConfidence(run);
   const mode = run.paymentMode ?? null;
@@ -51,6 +50,7 @@ export function DispatchView({
         <p lang="und" className="font-serif text-[clamp(17px,1.5vw,20px)] leading-[1.55] text-ink-2">
           {run.question}
         </p>
+        {run.id === "b144ef47-c2f5-46ec-bdb7-e62bc1314913" ? <p className="mt-3 text-sm leading-relaxed text-ink-3">{walkthroughMessages.limitation}</p> : null}
         <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
           {bibliography ? <span className="text-xs text-ink-3">{copy("reportDispatchView.bibliography")}</span> : confidence ? <ConfidenceBadge confidence={confidence} showReason /> : null}
           <p className="font-mono text-[10px] text-ink-3">

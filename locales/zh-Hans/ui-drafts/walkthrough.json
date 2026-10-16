@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/walkthrough.ts",
-  "sourceSha256": "92ca53286ef6e6e217bf584eade3b52c40500720bbbae284404eb8c8bab48662",
+  "sourceSha256": "5d75890065060a0188c0f2b259af97e0167fd2d3c37e59a9e5faab9b51f0483f",
   "entries": {
     "title": {
       "source": "Follow a recorded research job",
@@ -25,7 +25,7 @@
       "text": "无需钱包或注册，跟踪现有公开示例。此页打开存储证据，不开始研究或付款。"
     },
     "limitation": {
-      "source": "This is a partial first-party QA result, not an accepted customer task. The recording and guidance are curated; the answer, decisions and receipt are retained records.",
+      "source": "This is a partial first-party QA result, not an accepted customer task. The recording and guidance are curated; the answer, decisions and receipt are retained records. The stored question speaks as a Kenya-based operations engineer. That is a test persona in this owner QA prompt, not an identified customer.",
       "text": "这是部分第一方 QA 结果，不是已接受客户任务。录制及指导经编排；答案、决策及收据为保留记录。"
     },
     "start": {
@@ -97,7 +97,7 @@
       "text": "检查点记录一笔 Arc 主网上已结算引用奖励，来源访问成本为零。这是此 QA 任务创作者付款数字，不是外部客户收入或业务利润。"
     },
     "steps.2.limit": {
-      "source": "The Circle transfer ID is a batch-payment reference, not an individual Arc transaction hash. The three checks below are separate: receipt integrity, Circle's own transfer record and the Arc registry's current payout wallet. None of them proves chain finality for this individual payment.",
+      "source": "The Circle transfer ID is a batch-payment reference, not an individual Arc transaction hash. The three checks below are separate: receipt integrity, Circle's own transfer record and the retained V1 registry's current payout wallet on Arc. None of them proves chain finality for this individual payment.",
       "text": "Circle 转账 ID 是批量付款参考，不是单笔 Arc 交易哈希。下方三项检查独立：收据完整性、Circle 自身转账记录和 Arc 注册表当前收款钱包。均不证明单笔付款链上最终性。"
     },
     "steps.2.action": {
@@ -205,7 +205,7 @@
       "text": "在 Arc 检查收款钱包"
     },
     "registryNote": {
-      "source": "Reads the cited source from the SourceRegistry contract through the public Arc mainnet RPC and compares its payout wallet with the recorded payee.",
+      "source": "Reads retained SourceRegistry V1, 0x42a64061b6cd84067bb660b2a9b8aa881fd225bb, through the public Arc mainnet RPC. Current health reports V3, which has no active record for this source. The check compares V1's payout wallet with the recorded payee.",
       "text": "通过公开 Arc 主网 RPC 从 SourceRegistry 合约读取引用来源，将收款钱包与记录收款人比较。"
     },
     "registryChecking": {
@@ -213,7 +213,7 @@
       "text": "正在从 Arc 主网读取来源注册…"
     },
     "registryRegistered": {
-      "source": "Arc mainnet reports this source as active with the recorded payee as its payout wallet. This is the registry's current state, not the state at payment time or a payment transaction.",
+      "source": "Retained SourceRegistry V1 on Arc reports this source as active with the recorded payee as its payout wallet. This is V1's current record, not the V3 registry in health, not the state at payment time, and not a payment transaction.",
       "text": "Arc 主网报告来源已启用，收款钱包为记录收款人。这是注册表当前状态，不是付款时状态或付款交易。"
     },
     "registryChanged": {
