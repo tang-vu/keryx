@@ -140,8 +140,10 @@ Agent entrypoint (SSE) + signature return handler.
 
 ### `contracts/`
 Hardhat project. SourceRegistry.sol tracks creator-owned sources on Arc.
-Production mainnet registry: `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`;
-see [current deployment](mainnet-status.md).
+Production mainnet registry reported by health on October 16, 2026: V3
+`0x2217250019ab614dae7391d346d05c3fc4d71ae1`. The October 4 V1 registry
+`0x42a64061b6cd84067bb660b2a9b8aa881fd225bb` remains retained earlier authority.
+See [current deployment](mainnet-status.md).
 
 | File | Purpose |
 |------|---------|

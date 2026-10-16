@@ -306,6 +306,13 @@ earlier source identity. Compare current health and release manifests with sourc
 before treating later changes as deployed. Source or downloadable artifacts alone
 do not establish independently accepted work.
 
+A read-only health check on October 16, 2026 at 08:22 UTC reported operational
+Arc mainnet at `2dda3717`. That source's package version is 0.27.70, and its
+registry address is V3 `0x2217250019ab614dae7391d346d05c3fc4d71ae1`. The October
+14 client manifests above keep their own versions. Monitoring on the October 16
+response was incomplete, with observation checks last recorded on October 6.
+See [mainnet status](mainnet-status.md).
+
 ## Arc OSS: components other builders can use
 
 The separate [keryx-arc-primitives](https://github.com/tang-vu/keryx-arc-primitives)
@@ -326,17 +333,19 @@ reconciliation and funded acceptance. [Maintenance and accepted scope](arc-primi
 
 ## Public addresses
 
-Only public API/configuration values are reproduced. Rows below describe the
-**current Arc mainnet, eip155:5042** deployment/profile. The former October 2 testnet
+Only public API/configuration values are reproduced. The registry rows match
+health at `2026-10-16T08:22:29.241Z` on Arc mainnet, `eip155:5042`. Gateway and
+USDC addresses are the pinned mainnet profile. The former October 2 testnet
 address table remains in Git history, on its original rail. Merchant and treasury
-identities are read from current selected-role responses rather than imported from
-that table; Monthly returned HTTP 503 during this check and its current payee is unverified.
-Creator `payTo` and session addresses vary per source/user and must be captured for
-the actual workflow rather than inferred from this table.
+identities are read from the selected role's public response. An earlier
+documentation check found the Monthly quote unavailable; this October 16 refresh
+did not request a new quote. Creator `payTo` and session addresses vary per
+source or user and must be captured for the actual workflow.
 
 | Role | Full public address | Public source / explorer |
 | --- | --- | --- |
-| SourceRegistry | `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb` | [Health](https://keryx.cc/api/health), [explorer](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb) |
+| SourceRegistry V3 | `0x2217250019ab614dae7391d346d05c3fc4d71ae1` | [Health](https://keryx.cc/api/health), [explorer](https://explorer.arc.io/address/0x2217250019ab614dae7391d346d05c3fc4d71ae1) |
+| SourceRegistry V1, retained October 4 authority | `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb` | [Explorer](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb). The recorded walkthrough payout check still reads this contract. Health does not. |
 | Settlement treasury balance identity | Read the current selected-role public projection | [Treasury API](https://keryx.cc/api/treasury); availability is separate from health |
 | Research Monthly quote merchant/payee | Current quote unavailable at this check | [Public quote](https://keryx.cc/api/research/monthly?quote=1); do not reuse the historical testnet payee |
 | USDC token | `0x3600000000000000000000000000000000000000` | [Public network profile](../lib/arc-network-profile.ts), [explorer](https://explorer.arc.io/address/0x3600000000000000000000000000000000000000) |
@@ -486,49 +495,16 @@ first run needs longer, record the genuine steps and disclose elapsed time/cuts.
 
 ## Pilot intake and evidence record
 
-Four outside users are recorded, including Hoàng's matched runs/payment, Hiếu's
-working paper and 0xacee's recorded workflow, in
-[Event-period usage](#event-period-usage-testnet-week-then-mainnet) above. The
-own-business and small-team tracks, and the blank record below for the next
-participant, remain open.
+The filled records are Hoàng's matched runs and payment, Hiếu's working paper,
+and 0xacee's recorded workflow and October 15 return task, in
+[Event-period usage](#event-period-usage-testnet-week-then-mainnet) above.
+@JamWaveX is named without matched run IDs. The records above are the evidence
+in this pack. A later participant needs a filled record of their own.
 
-Prepare the remaining intake tracks without implying that a participant is selected:
-
-- Own-business: use a genuine Keryx operational or product research decision with
-  an owner-accepted deliverable. Report it as own-business activity.
-- Freelancer: obtain a consented client-work research task with a concrete deadline
-  and acceptance criterion; disclose sponsorship or reimbursement.
-- Small team: obtain a genuine API/vendor/competitor comparison that supports a
-  business decision; record the participant's acceptance and repeat need.
-
-These are candidate use cases. Participant selection, actual questions, outreach
-channel/consent and payment evidence remain pending for each track. No outreach is
-performed by preparing this pack.
-
-Use one record per genuine task. Store sensitive details privately with consent;
-put only approved public identifiers and redacted proof links here. Do not paste
-private handoff notes, customer questions/documents or keys into the public repo.
-Keep raw signed payment headers, authorizations and bearer signatures private,
-along with full private receipts and journals. Public fields below must contain
-opaque or sanitized reference IDs and deliberately redacted evidence links, never
-reusable credentials or complete signed payloads. Participant consent does not
-turn payment authorization material into safe public evidence.
-
-| Field | Value to supply |
-| --- | --- |
-| Business public name / URL; authorized participant role | **Pending** |
-| Consent for task, recording and public evidence; date/scope | **Pending** |
-| Origin: own-business / independent / sponsored; relationship and subsidy | **Pending** |
-| Problem, exact approved task, expected decision and success criterion | **Pending** |
-| Task time, product/release commit and supported surface | **Pending** |
-| Approved payer address, funding source, network, asset, cap and quote/version | **Pending** |
-| Order/dispatch/request IDs; original authorization reference | **Pending** |
-| Delivered report and business acceptance/feedback with timestamp | **Pending** |
-| Incoming payment, source tolls and creator rewards: separate exact micro-USDC amounts | **Pending** |
-| Circle payment/transfer reference and exact matched status for each leg | **Pending** |
-| Chain hash, explorer, receipt/block and what it independently proves | **Pending** |
-| Pending/failed/unknown obligations; recovery result with original IDs and no repeat spend | **Pending** |
-| Return usage and event-period totals with counting rule | **Pending** |
+Own-business and small-team tracks are not filled. A later task needs its own
+consent, question, payer, receipt, and acceptance record, stored privately where
+the details are sensitive. This document does not perform outreach. Keep raw
+signed payment headers, authorizations, and bearer signatures private.
 
 For Circle nanopayments, an exact matched Circle record supports the individual
 authorization. An Arc batch transaction receipt supports that batch; it does not

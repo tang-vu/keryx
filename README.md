@@ -309,8 +309,13 @@ deployment/distribution acceptance remain separate gates.
   is a separate role; historical testnet cash-outs do not prove a mainnet withdrawal.
 - **Keep everything** — 100% of every citation reward goes to creator wallets. 0% platform fee.
 - **Squat-proof identity** — sources live in an on-chain SourceRegistry
-  ([`0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb))
-  with creator-scoped IDs and on-chain multi-author splits.
+  with creator-scoped IDs and on-chain multi-author splits. Health on
+  October 16, 2026 reported V3
+  [`0x2217250019ab614dae7391d346d05c3fc4d71ae1`](https://explorer.arc.io/address/0x2217250019ab614dae7391d346d05c3fc4d71ae1).
+  The October 4 V1 registry
+  [`0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb)
+  remains the retained earlier authority. The recorded walkthrough payout
+  check still reads V1.
 
 ### Public sources and owner claims
 
@@ -431,13 +436,16 @@ The [Circle and Arc integration ledger](docs/engineering/circle-arc-integration-
 maps each integration to code, network, status and public proof. It also records the
 gasless user-action evaluation and the sponsored testnet proof still required by #304.
 
-Production uses **Arc mainnet (`eip155:5042`)**, observed October 4, 2026 through
-[/api/health](https://keryx.cc/api/health). Full constants, release identities and
-the separation from historical testnet evidence are in [mainnet status](docs/mainnet-status.md).
+Production uses **Arc mainnet (`eip155:5042`)**. A read-only
+[/api/health](https://keryx.cc/api/health) check on October 16, 2026 reported
+commit `2dda3717` and SourceRegistry V3. The October 4 launch observation
+remains in [mainnet status](docs/mainnet-status.md), with the full constants
+and the separation from historical testnet evidence.
 
 | Role | Full public address | Explorer |
 | --- | --- | --- |
-| SourceRegistry | `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb` | [Arc mainnet](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb) |
+| SourceRegistry V3, health October 16 | `0x2217250019ab614dae7391d346d05c3fc4d71ae1` | [Arc mainnet](https://explorer.arc.io/address/0x2217250019ab614dae7391d346d05c3fc4d71ae1) |
+| SourceRegistry V1, retained October 4 authority | `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb` | [Arc mainnet](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb) |
 | Gateway Wallet | `0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE` | [Arc mainnet](https://explorer.arc.io/address/0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE) |
 | Gateway Minter | `0x2222222d7164433c4C09B0b0D809a9b52C04C205` | [Arc mainnet](https://explorer.arc.io/address/0x2222222d7164433c4C09B0b0D809a9b52C04C205) |
 
