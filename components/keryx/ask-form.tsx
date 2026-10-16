@@ -291,7 +291,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
                 </button>
               ))}
             </div>}
-            <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
+            <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-payer-notice">
               {payer === "session"
                 ? message("researchEntry.sessionPayerNotice", { network: currentArcLabel })
                 : payer === "paused"
@@ -300,7 +300,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
                   ? message("researchEntry.expiredSessionNotice")
                   : message("researchEntry.freeTrialNotice")}
             </p>
-            {visibility.ready && <p className="mt-1 text-xs leading-4 text-ink-3" role="status">
+            {visibility.ready && <p className="mt-1 text-xs leading-4 text-ink-3" role="status" data-testid="composer-publication-notice">
               {visibility.visibility === "public" ? message("researchTrial.publicNotice") : message(`researchVisibility.${visibility.visibility}Notice`)}
             </p>}
             {visibility.status === "error" && <p className="mt-2 text-sm text-seal" role="status">

@@ -65,7 +65,8 @@ try {
     }
     if (path === "/") {
       assert(html.includes(copy("product.heroTitle")));
-      assert(html.includes(copy("product.overviewTitle")));
+      assert(!html.includes(copy("product.overviewTitle")), "Homepage omits the detailed overview");
+      assert(html.includes(copy("product.stepsTitle")) && html.includes(copy("product.faqWallet")));
       assert(!html.includes('"price":"0"'), "No unqualified free SoftwareApplication offer");
     }
   }
@@ -181,10 +182,13 @@ try {
         }
       }
       if (width >= 1024) {
+        assert.deepEqual(await page.locator("header nav").first().locator(":scope > a").evaluateAll(links => links.map(link => link.getAttribute("href"))), ["/", "/answers", "/sources", "/register"]);
+        await page.locator("header nav").first().getByText("More tools", { exact: true }).click();
         assert.equal(await page.locator("header nav").getByRole("link", { name: setupCopy.navigation.start, exact: true }).isVisible(), true);
       }
       if (width < 1024) {
         await page.getByRole("button", { name: "Open menu" }).click();
+        await page.locator("#mobile-site-menu").getByText("More tools", { exact: true }).click();
         await page.locator("#mobile-site-menu").getByRole("link", { name: copy("product.navigationPricing"), exact: true }).click();
         await page.waitForURL(origin + "/pricing");
         assert.equal(await page.locator("#mobile-site-menu").isVisible(), false, "New route hides the menu");
