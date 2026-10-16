@@ -1,5 +1,28 @@
 # Current Arc mainnet deployment
 
+## October 16 health readback
+
+A read-only [health](https://keryx.cc/api/health) check at `2026-10-16T08:22:29.241Z`
+reported operational, database ok, network `arc`, settlement mode `real`, and
+commit `2dda3717`. That commit's package version is **0.27.70**. The registry
+address in the response is V3
+[`0x2217250019ab614dae7391d346d05c3fc4d71ae1`](https://explorer.arc.io/address/0x2217250019ab614dae7391d346d05c3fc4d71ae1).
+This identifies the deployed web source. It does not republish MCP, desktop, or
+extension packages, and it does not change the October 13 form comparison.
+
+The same response reported `monitoring.state` `incomplete`. Registry parity,
+research outcomes, settlement parity, and payment reconciliation were last
+checked on October 6 and were stale. The settlement block used basis
+`empty-ledger` and zero confirmed USDC. The traction block on the same payload
+reported 100 payments. Those are separate projections. This read did not rerun
+the observation jobs.
+
+The October 15 section below is the 0.27.68 delivery record. It includes a
+Dashboard source-leaderboard overflow at 390px. Later source contains the
+overflow fix from [#518](https://github.com/tang-vu/keryx/pull/518).
+[#513](https://github.com/tang-vu/keryx/issues/513) is still open. This read
+did not repeat a 390px layout check.
+
 ## October 15 public-research release delivered
 
 Production app/OpenAPI **0.27.68** is live on Arc at source
@@ -206,7 +229,7 @@ of the production host's private provider configuration.
 | Explorer | `https://explorer.arc.io` |
 | Circle Gateway API | `https://gateway-api.circle.com` |
 | CCTP domain | `26` |
-| Production SourceRegistry V3, observed October 12 | [`0x2217250019ab614dae7391d346d05c3fc4d71ae1`](https://explorer.arc.io/address/0x2217250019ab614dae7391d346d05c3fc4d71ae1) |
+| Production SourceRegistry V3, health October 16; first recorded October 12 | [`0x2217250019ab614dae7391d346d05c3fc4d71ae1`](https://explorer.arc.io/address/0x2217250019ab614dae7391d346d05c3fc4d71ae1) |
 | V3 deploy block / runtime code hash | `25564218` / `0xc915aed2667848d7a52af54c6202940116145dca6f7dbb8a9c58ce8335740fb9` |
 | Retained V1 authority, first health observation October 4 | [`0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`](https://explorer.arc.io/address/0x42a64061b6cd84067bb660b2a9b8aa881fd225bb), deploy block `23910720` |
 

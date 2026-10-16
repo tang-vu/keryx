@@ -95,23 +95,48 @@ deliverables. [Live cohort accounting](https://keryx.cc/usage) publishes its own
 period, network and outside/team/scripted/unknown rules; unknown callers are not
 automatically counted as outside people.
 
-A read-only check on **October 15 at 08:50 UTC** found
+A browser inspection on **October 15 at 08:50 UTC** found
 [health](https://keryx.cc/api/health) operational on Arc mainnet at `708f2621`.
 The walkthrough, stored report, receipt, Decision Lab and usage page returned
-HTTP 200. The [v0.27.67 release](https://github.com/tang-vu/keryx/releases/tag/v0.27.67)
-lists MCP 0.4.22 and Windows assets. These are availability and discovery checks,
-with fresh research/payment admission still unprobed. Read each client manifest
-for its own source identity; this check does not establish a fresh install or
-synchronized client behavior. The October 13 submission snapshot stays unchanged.
-
-During the same day's browser inspection, all four recorded steps opened.
-Circle's transfer check and Arc's payout-wallet check matched. **The current
-receipt integrity check reported a mismatch:** the endpoint returned a
+HTTP 200. Circle's transfer check and Arc's payout-wallet check matched. The
+receipt integrity check did not: the endpoint then returned a
 `settlement-receipt:1` projection rather than the retained `research-receipt:1`
-payload. Compare the [retained snapshot](../fixtures/walkthrough/recorded-mainnet-receipt.json)
-and the original digest below; the shorter live projection is not a replacement
-checkpoint. Public-history recovery and a fresh deployed readback remain with
-the [existing recovery work](https://github.com/tang-vu/keryx/pull/504).
+payload. The [v0.27.67 release](https://github.com/tang-vu/keryx/releases/tag/v0.27.67)
+lists MCP 0.4.22 and Windows assets from that day's discovery check. That
+mismatch describes October 15, before the later public-history recovery.
+
+A fresh read on **October 16 at 08:22 UTC** found health operational on Arc
+mainnet at `2dda3717`. That source's package version is 0.27.70. The same public
+calls the walkthrough buttons make were repeated. The buttons themselves were
+not clicked in a browser. Their result predicates were evaluated on the responses:
+
+- `GET /api/dispatch/b144ef47-c2f5-46ec-bdb7-e62bc1314913/receipt` returned HTTP 200
+  with top-level fields `integrity,payload` and schema `urn:keryx:research-receipt:1`.
+  The canonical payload hash, the embedded digest, and `X-Keryx-Receipt-Digest`
+  were all `sha256:97803e69c805d4c5ce4fa1470ed2336571799697f0a7ec90d59e33d4674553b6`.
+  That is the retained checkpoint, so the integrity control's result is a match.
+  The [retained snapshot](../fixtures/walkthrough/recorded-mainnet-receipt.json)
+  stays the checkpoint. This response does not replace it.
+- Circle's transfer `f2751e74-754b-48a7-b416-6e682410ac9f` returned HTTP 200 with
+  status `completed`, token USDC, network `eip155:5042` in both directions,
+  recipient `0x3d609ef127094624cc434aad5a9faca0851daa2d`, and amount `25000`
+  (0.025 USDC). That is the control's completed result. It is Circle's API
+  record, not an individual Arc transaction.
+- The payout control still calls SourceRegistry V1
+  `0x42a64061b6cd84067bb660b2a9b8aa881fd225bb`, not the V3 address in current
+  health. `eth_chainId` returned `0x13b2` (5042). `get` for source
+  `0x1881535394a6c36b638933dc7f398897d2ceba32e052f3484c4295290dacffc7` returned
+  active, with payout wallet `0x3d609ef127094624cc434aad5a9faca0851daa2d`.
+  That is the control's registered result for the V1 contract. It does not show
+  that V3 holds this source.
+
+Monitoring on the October 16 health response was `incomplete`. Registry parity,
+research outcomes, settlement parity, and payment reconciliation were last
+recorded on October 6. The settlement block said `empty-ledger` while traction
+on the same payload reported 100 payments. Those projections are separate.
+This check started no research, signature, or payment. Fresh sponsored admission
+was not probed. MCP, desktop, and extension identities stay on their own
+manifests. The October 13 submission snapshot stays unchanged.
 
 Hoàng's October 2 MCP/Devin recording was posted on the owner's @tangvu_dev
 account, which is now suspended. Its [archived edited video](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)
