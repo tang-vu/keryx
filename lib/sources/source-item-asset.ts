@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { SourceItem, SourceItemIdentity } from "../types";
+import { canonicalUrl } from "../web-research/url-identity";
 import { contentReceipt } from "./content-receipt";
 
 const STOP_WORDS = new Set([
@@ -140,4 +141,46 @@ export function selectRelevantSourceItem(
   }
 
   return best;
+}
+
+/**
+ * Keep the existing overall choice, then offer at most two complementary articles.
+ * Extra choices must improve a target's metadata score and add a previously unmatched
+ * target term. Publisher tags and paid bodies cannot earn an additional slot.
+ */
+export function selectRelevantSourceItems(
+  question: string,
+  subClaims: string[],
+  sourceTags: string[],
+  items: SourceItem[],
+): SourceItem[] {
+  const best = selectRelevantSourceItem(question, subClaims, sourceTags, items);
+  if (!best) return [];
+
+  const targets = subClaims.map(tokens);
+  const ranked = items.map(item => ({
+    item,
+    document: canonicalUrl(item.link) ?? item.link,
+    metadata: tokens(`${item.title} ${item.summary}`),
+    scores: targets.map(target => overlapScore(target, item.title) * 4 + overlapScore(target, item.summary) * 1.5),
+  }));
+  const selected = [ranked.find(candidate => candidate.item === best)!];
+  while (selected.length < 3) {
+    const coveredTerms = new Set(selected.flatMap(candidate => [...candidate.metadata]));
+    const coveredScores = targets.map((_, index) => Math.max(...selected.map(candidate => candidate.scores[index])));
+    let next: typeof ranked[number] | undefined;
+    let bestGain = 0;
+    for (const candidate of ranked) {
+      if (selected.some(existing => existing.item.id === candidate.item.id || existing.document === candidate.document)) continue;
+      const gain = targets.reduce((total, target, index) => {
+        const addsTerm = [...target].some(token => candidate.metadata.has(token) && !coveredTerms.has(token));
+        return total + (addsTerm ? Math.max(0, candidate.scores[index] - coveredScores[index]) : 0);
+      }, 0);
+      // Equal scores retain the catalog's newest-first ordering.
+      if (gain > bestGain) { next = candidate; bestGain = gain; }
+    }
+    if (!next) break;
+    selected.push(next);
+  }
+  return selected.map(candidate => candidate.item);
 }

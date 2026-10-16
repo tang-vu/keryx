@@ -54,6 +54,7 @@ import { evidenceContext } from "../llm/evidence-context";
 import { buildContextualQuoteOptions } from "../llm/quote-context";
 import { prepareDecisionBrief, reviewDecisionBrief, briefEvidence } from "../llm/decision-brief";
 import { makePayment, type PaymentGateway } from "../payments/payment-gateway";
+import { allocateSplit } from "../payments/split-allocation";
 import { PaymentPendingError, PaymentSettledError } from "../payments/payment-state";
 import type { AgentDeps } from "./deps";
 import type { KeryxDB } from "../db/keryx-db";
@@ -86,6 +87,8 @@ import { surfaceResearch } from "../research/surface-result";
 import { ArticleReadError } from "../web-research/article-reader";
 import * as fetchAuthority from "../registry/source-fetch-payto";
 import * as sourceLearning from "../research/source-learning-observations";
+import * as publicFetch from "../net/public-fetch";
+import { RECENCY_FEED_URL, recencyAtomEntry, recencyAtomFeed } from "../sources/source-recency-feed-fixtures";
 import * as scholarlyGate from "../scholarly/paid-gate";
 import * as documentSelection from "./document-selection";
 import type { SourceClaim } from "../sources/public-source-claim";
@@ -100,6 +103,7 @@ import type { DecisionReview } from "../research/decision-review-types";
 import { projectActualReadCheckpoints } from "../research-audit/actual-read-projection";
 import { createTrustedUsageContext } from "../research/usage-provenance";
 import { verifyActualReadPacket, type ActualReadRecord } from "../research-audit/actual-read-record";
+import { replayAllocation, type EconomicRecord } from "../research-audit/economic-checkpoint";
 
 const AGENT = "0xAGENT";
 const EPS = 1e-6;
@@ -2307,6 +2311,243 @@ describe("runAgent — money-safety invariants", () => {
     const { run } = await drive({ question: "q" }, d); // no budget
 
     expect(run.budget).toBe(config.defaultBudget);
+  });
+});
+
+describe("registered publisher multi-article discovery", () => {
+  const question = "Compare SQLite backup snapshots with Postgres replication consistency";
+  const claims = ["SQLite backup snapshots", "Postgres replication consistency"];
+  function fixture(over: EngineOverrides = {}) {
+    const source = makeSource({ id: "registered-publisher", tags: [], fetchPrice: 0.004 });
+    const backup: SourceItem = { id: "backup", sourceId: source.id, title: "SQLite backup snapshots",
+      summary: "Consistent SQLite snapshots", content: "SQLite backups preserve a consistent snapshot of the database.",
+      link: `${source.url}/backup`, publishedAt: "2026-10-12T00:00:00.000Z" };
+    const replication: SourceItem = { id: "replication", sourceId: source.id, title: "Postgres replication",
+      summary: "Replica consistency", content: "Postgres replication replays committed records on a replica.",
+      link: `${source.url}/replication`, publishedAt: "2026-10-13T00:00:00.000Z" };
+    const unrelated: SourceItem = { id: "sports", sourceId: source.id, title: "Football results", summary: "Weekend scores",
+      content: "SQLite backup snapshots and Postgres replication appear only in this paid body.",
+      link: `${source.url}/sports`, publishedAt: "2026-10-14T00:00:00.000Z" };
+    const engine = fakeEngine({
+      decide: input => input.candidates.map(candidate => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        action: candidate.cached ? "CACHE" as const : "BUY" as const,
+        targets: [candidate.item?.itemId === backup.id ? 0 : 1],
+      })),
+      sufficiency: input => ({ sufficient: input.gathered.length >= 2, rationale: "Inspect both complementary targets",
+        perClaim: input.subClaims.map((claim, index) => ({ claim, coverage: 0.9,
+          coveredBy: input.gathered.filter(row => row.itemId === [backup.id, replication.id][index]).map(row => row.marker) })) }),
+      synthesize: input => ({ answer: input.gathered.map(row => `${row.text} [${row.marker}]`).join(" "),
+        citedMarkers: input.gathered.map(row => row.marker), evidence: input.gathered.map(row => ({
+          marker: row.marker, claimIndex: row.itemId === backup.id ? 0 : 1, quote: row.text, support: 0.9,
+        })) }),
+      ...over,
+    });
+    engine.decompose = async () => claims;
+    const gateway = fakeGateway(), d = deps([source], engine, gateway, { items: { [source.id]: [unrelated, replication, backup] } });
+    return { source, backup, replication, unrelated, engine, gateway, d };
+  }
+
+  it("proposes and reads complementary articles with separate cache, quote and reward identities", async () => {
+    const f = fixture(), cache = vi.spyOn(f.d.db, "setCached"), cacheLookup = vi.spyOn(f.d.db, "getCachedAt");
+    const attribute = vi.spyOn(f.engine, "attribute").mockImplementation(async (input: Parameters<ReasoningEngine["attribute"]>[0]) =>
+      input.used.map(row => ({ sourceId: row.sourceId, weight: row.itemId === f.backup.id ? 0.7 : 0.3, rationale: "Separate article contributions" })));
+    const { run } = await drive({ question, budget: 0.05, executionLimits: { attentionLimit: 2, reevaluateRounds: 0 } }, f.d);
+    expect(f.engine.decideInput?.candidates.map(row => row.id)).toEqual(["item:backup", "item:replication"]);
+    expect(f.gateway.fetchCalls).toEqual([f.source.id, f.source.id]);
+    expect(f.gateway.fetchItems).toEqual([f.backup.id, f.replication.id]);
+    expect(cache.mock.calls).toEqual([f.backup, f.replication].map(article => [sourceItemCacheKey(f.source.id, article), article.content]));
+    expect(cacheLookup.mock.calls.map(([key]) => key)).toEqual(expect.arrayContaining(
+      [f.backup, f.replication].map(article => sourceItemCacheKey(f.source.id, article))));
+    expect(new Set(attribute.mock.calls[0][0].used.map(row => row.sourceId)).size).toBe(2);
+    expect(run.citations).toHaveLength(2);
+    for (const [index, article] of [f.backup, f.replication].entries()) {
+      expect(run.citations[index]).toMatchObject({ ...sourceItemIdentity(article), sourceId: f.source.id, weight: [0.7, 0.3][index] });
+      expect(run.evidence?.find(row => row.itemId === article.id)).toMatchObject({ ...sourceItemIdentity(article), quote: article.content, qualifiesForReward: true });
+      expect(f.d.db.payments.filter(row => row.itemId === article.id).map(row => row.kind)).toEqual(["fetch", "citation"]);
+    }
+    expect(f.gateway.citationCalls.map(row => row.amount)).toEqual(allocateSplit(citationPool(0.05), [0.7, 0.3]));
+    expect(f.d.db.payments.every(row => row.sourceId === f.source.id && row.payee === f.source.walletAddress)).toBe(true);
+    expect(run.totalSpent).toBeLessThanOrEqual(run.budget);
+  });
+
+  it("retains unequal same-publisher article weights and exact micros in economic capture and replay", async () => {
+    const f = fixture();
+    Object.defineProperty(f.d.db, "decisionReviews", { value: {} });
+    const attribute = vi.spyOn(f.engine, "attribute").mockImplementation(async (input: Parameters<ReasoningEngine["attribute"]>[0]) =>
+      input.used.map((row: typeof input.used[number]) => ({ sourceId: row.sourceId,
+        weight: row.itemId === f.backup.id ? 0.8 : 0.2, rationale: "Unequal article contributions" })));
+    const { run, steps } = await drive({ question, budget: 0.020002,
+      executionLimits: { attentionLimit: 2, reevaluateRounds: 0 } }, f.d);
+    expect(attribute.mock.calls[0][0].used.map((row: Parameters<ReasoningEngine["attribute"]>[0]["used"][number]) => row.sourceId))
+      .toEqual(["attribution:S1", "attribution:S2"]);
+    expect(run.citations.map((row: QueryRun["citations"][number]) => [row.sourceId, row.itemId, row.weight, Math.round(row.reward * 1_000_000)]))
+      .toEqual([[f.source.id, f.backup.id, 0.8, 8001], [f.source.id, f.replication.id, 0.2, 2000]]);
+    expect(f.gateway.citationCalls.map((row: FakeGateway["citationCalls"][number]) => [row.sourceId, row.payee, Math.round(row.amount * 1_000_000)]))
+      .toEqual([[f.source.id, f.source.walletAddress, 8001], [f.source.id, f.source.walletAddress, 2000]]);
+    expect(f.d.db.payments.every((row: PaymentRecord) => row.sourceId === f.source.id && row.payee === f.source.walletAddress)).toBe(true);
+    const capture = projectActualReadCheckpoints(run);
+    if (!capture || capture.packet.schema !== 4 || capture.packet.economics.status !== "available") throw Error("Missing economic capture");
+    const allocation = capture.packet.economics.records.find((record: EconomicRecord) => record.kind === "citation-allocation");
+    if (!allocation || allocation.status !== "available" || allocation.kind !== "citation-allocation") throw Error("Unavailable article allocation");
+    expect(allocation.input).toMatchObject({ groups: [1, 2], eligible: [true, true],
+      proposals: [{ group: 1, weight: "0.8" }, { group: 2, weight: "0.2" }] });
+    expect(allocation.outcome).toEqual({ weights: ["0.8", "0.2"], grossMicros: ["8001", "2000"], rewardsMicros: ["8001", "2000"] });
+    expect(replayAllocation(allocation.input)).toEqual(allocation.outcome);
+    expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+    expect(steps.find((step: TraceStep) => step.message.startsWith("Discovered "))?.message)
+      .toContain("2 verified creator candidate(s) from 1 publisher(s)");
+  });
+
+  it("retains a pending second article's fetch hold against a later sibling and persists the first article report", async () => {
+    const laterId = "recovery";
+    const f = fixture({
+      decide: (input: DecideInput) => input.candidates.map((candidate: DecideInput["candidates"][number]) => ({
+        ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }, candidate.item?.itemId === "backup" ? 0.95 : 0.8),
+        action: candidate.item?.itemId === laterId ? "SKIP" as const : "BUY" as const,
+        targets: [candidate.item?.itemId === "backup" ? 0 : candidate.item?.itemId === "replication" ? 1 : 2],
+      })),
+      sufficiency: (input: SufficiencyInput) => ({ sufficient: false, rationale: "Pending replication leaves the remaining targets unread",
+        perClaim: input.subClaims.map((claim: string, index: number) => ({ claim, coverage: index === 0 ? 0.9 : 0,
+          coveredBy: index === 0 ? input.gathered.map((row: SufficiencyInput["gathered"][number]) => row.marker) : [] })) }),
+      reevaluate: (_input: ReevaluateInput) => ({ shouldBuyMore: true, recommendedIds: [`item:${laterId}`], rationale: "Read the remaining recovery target" }),
+    });
+    const later: SourceItem = { ...f.replication, id: laterId, title: "Disaster recovery testing", summary: "Recovery drills",
+      content: "Disaster recovery tests verify that restored data remains usable.", link: `${f.source.url}/recovery` };
+    f.engine.decompose = async () => [...claims, "Disaster recovery testing"];
+    f.d.db.getItems = vi.fn(async (_sourceId: string) => [f.backup, f.replication, later]);
+    Object.defineProperty(f.d.db, "decisionReviews", { value: {} });
+    const settledFetch = f.gateway.payFetch.bind(f.gateway);
+    f.gateway.payFetch = async (request: Parameters<PaymentGateway["payFetch"]>[0]) => {
+      if (request.item?.id !== f.replication.id) return settledFetch(request);
+      f.gateway.fetchCalls.push(request.source.id); f.gateway.fetchItems.push(request.item.id);
+      const payment = makePayment({ kind: "fetch", queryId: request.queryId, sourceId: request.source.id,
+        sourceName: request.source.name, ...sourceItemIdentity(request.item), payer: AGENT, payee: request.source.walletAddress,
+        amountUsdc: request.priceUsdc!, settled: false, settlementStatus: "pending", authorizationId: "synthetic-second-article" });
+      throw new PaymentPendingError("Synthetic second article remains pending", payment);
+    };
+    const reeval = vi.spyOn(f.engine, "reevaluate"), saved = vi.fn(async (_run: QueryRun) => {});
+    f.d.db.saveQueryRun = saved;
+    const budget = 0.008 / (1 - config.citationPoolRatio);
+    const run = await collectRun({ question: `${question} and disaster recovery testing`, budget, researchMode: "deep",
+      executionLimits: { attentionLimit: 3, reevaluateRounds: 1 } }, { deps: f.d });
+    expect(new Set(f.engine.decideInput?.candidates.map((candidate: DecideInput["candidates"][number]) => candidate.item?.itemId)))
+      .toEqual(new Set([f.backup.id, f.replication.id, later.id]));
+    expect(f.gateway.fetchItems).toEqual([f.backup.id, f.replication.id]);
+    expect(reeval).not.toHaveBeenCalled();
+    expect(run.decisions.find((row: Decision) => row.itemId === later.id)?.action).toBe("SKIP");
+    expect(run.citations).toHaveLength(1);
+    expect(run.citations[0]).toMatchObject({ sourceId: f.source.id, ...sourceItemIdentity(f.backup) });
+    expect(run.evidence?.some((row: NonNullable<QueryRun["evidence"]>[number]) => row.itemId === f.replication.id || row.itemId === later.id)).toBe(false);
+    expect(run.answer).toContain(f.backup.content);
+    expect(saved).toHaveBeenCalledExactlyOnceWith(run);
+    expect(run.pendingPayments).toBe(1); expect(run.pendingSpendUsdc).toBe(0.004);
+    expect(run.totalSpent).toBeCloseTo(0.004 + citationPool(budget));
+    expect(run.totalSpent + run.pendingSpendUsdc!).toBeCloseTo(budget);
+    expect(f.d.db.payments.find((row: PaymentRecord) => row.itemId === f.replication.id))
+      .toMatchObject({ sourceId: f.source.id, payee: f.source.walletAddress, kind: "fetch", settled: false,
+        settlementStatus: "pending", amountUsdc: 0.004, authorizationId: "synthetic-second-article" });
+    const capture = projectActualReadCheckpoints(run);
+    if (!capture || capture.packet.schema !== 4 || capture.packet.economics.status !== "available") throw Error("Missing pending economic capture");
+    expect(await verifyActualReadPacket(capture.packet, capture.retainedDigest)).toBe(true);
+    expect(capture.packet.economics.records).toContainEqual(expect.objectContaining({ kind: "query-budget", event: "pending", status: "available",
+      input: { operation: "hold", before: "0.008", operands: [] }, outcome: { beforeMicros: "8000", afterMicros: "8000" } }));
+    expect(capture.packet.economics.records).toContainEqual(expect.objectContaining({ kind: "query-budget", event: "initial-remaining", status: "available",
+      outcome: { beforeMicros: "8000", afterMicros: "0" } }));
+    expect(capture.packet.economics.records.filter((record: EconomicRecord) => record.status === "available"
+      && record.kind === "query-budget" && record.input.operation === "release")).toEqual([]);
+  });
+
+  it("reuses one exact article cache while buying the other article", async () => {
+    const f = fixture(), key = sourceItemCacheKey(f.source.id, f.backup);
+    f.d.db.getCachedAt = vi.fn(async (cacheKey: string) => cacheKey === key ? new Date().toISOString() : null);
+    f.d.db.getCached = vi.fn(async (cacheKey: string) => cacheKey === key ? f.backup.content : null);
+    const cache = vi.spyOn(f.d.db, "setCached");
+    const { run } = await drive({ question, budget: 0.05, executionLimits: { attentionLimit: 2, reevaluateRounds: 0 } }, f.d);
+    expect(f.gateway.fetchItems).toEqual([f.replication.id]);
+    expect(run.decisions.find(row => row.itemId === f.backup.id)?.action).toBe("CACHE");
+    expect(run.citations.map(row => row.itemId)).toEqual([f.backup.id, f.replication.id]);
+    expect(cache).toHaveBeenCalledExactlyOnceWith(sourceItemCacheKey(f.source.id, f.replication), f.replication.content);
+  });
+
+  it("keeps each article's signed offer, version and source-owned payment terms", async () => {
+    const f = fixture(), account = privateKeyToAccount(`0x${"33".repeat(32)}`);
+    f.source.walletAddress = account.address;
+    const offers: ArticleOffer[] = [];
+    for (const [index, article] of [f.backup, f.replication].entries()) {
+      const message = { sourceId: f.source.id, itemId: article.id, contentVersion: sourceItemContentVersion(article),
+        priceUsdc6: (index + 1) * 1_000, expiresAt: Math.floor(Date.now() / 1_000) + 3_600,
+        nonce: `0x${(index ? "ab" : "cd").repeat(32)}` as `0x${string}` };
+      const signature = await account.signTypedData(articleOfferTypedData(message));
+      offers.push({ id: articleOfferId(signature), ...message, signer: account.address, signature, createdAt: new Date().toISOString() });
+    }
+    f.d.db.getArticleOffer = vi.fn(async (sourceId: string, itemId: string) =>
+      offers.find(offer => offer.sourceId === sourceId && offer.itemId === itemId) ?? null);
+    const { run } = await drive({ question, budget: 0.05, executionLimits: { attentionLimit: 2, reevaluateRounds: 0 } }, f.d);
+    expect(f.gateway.fetchItems).toEqual([f.backup.id, f.replication.id]);
+    expect(f.gateway.fetchOffers).toEqual(offers.map(offer => offer.id));
+    expect(f.gateway.fetchPrices).toEqual([0.001, 0.002]);
+    expect(run.decisions.map(row => [row.itemId, row.contentVersion, row.offerId, row.price, row.listPrice]))
+      .toEqual(offers.map(offer => [offer.itemId, offer.contentVersion, offer.id, offer.priceUsdc6 / 1_000_000, f.source.fetchPrice]));
+    expect(f.d.db.payments.every(row => row.payee === account.address && row.sourceId === f.source.id)).toBe(true);
+  });
+
+  it.each([
+    { budget: 0.05, attentionLimit: 1 },
+    { budget: 0.01, attentionLimit: 2 },
+  ])("preserves existing budget and attention limits: %j", async ({ budget, attentionLimit }) => {
+    const f = fixture();
+    const { run } = await drive({ question, budget, executionLimits: { attentionLimit, reevaluateRounds: 0 } }, f.d);
+    expect(f.engine.decideInput?.candidates).toHaveLength(2);
+    expect(f.gateway.fetchItems).toHaveLength(1);
+    expect(run.decisions.filter(row => row.action === "BUY")).toHaveLength(1);
+    expect(run.evidencePortfolio?.selectedBuyUsdc).toBeLessThanOrEqual(fetchBudget(budget) + EPS);
+    expect(run.totalSpent).toBeLessThanOrEqual(budget + EPS);
+  });
+
+  it("keeps the strongest overall article for a legacy publisher-only proposal", async () => {
+    const f = fixture({ decide: () => [buy({ id: "registered-publisher", name: "Registered publisher", price: 0.004 })] });
+    await drive({ question, budget: 0.05, executionLimits: { attentionLimit: 2, reevaluateRounds: 0 } }, f.d);
+    expect(f.engine.decideInput?.candidates.map(row => row.item?.itemId)).toEqual([f.backup.id, f.replication.id]);
+    expect(f.gateway.fetchItems).toEqual([f.backup.id]);
+  });
+
+  it("keeps an exact targeted article single and rejects its changed version", async () => {
+    const f = fixture(), targetAsset = { sourceId: f.source.id, itemId: f.replication.id,
+      contentVersion: sourceItemContentVersion(f.replication) };
+    const { run } = await drive({ question, budget: 0.05, targetAsset }, f.d);
+    expect(f.engine.decideInput?.candidates.map(row => row.item?.itemId)).toEqual([f.replication.id]);
+    expect(f.gateway.fetchItems).toEqual([f.replication.id]);
+    expect(run.citations[0]).toMatchObject(sourceItemIdentity(f.replication));
+    const changed = fixture();
+    await expect(drive({ question, budget: 0.05, targetAsset: { ...targetAsset, contentVersion: "sha256:changed" } }, changed.d))
+      .rejects.toThrow("wanted response article changed or disappeared");
+    expect(changed.gateway.fetchCalls).toEqual([]);
+  });
+
+  it("admits only the observed newest exact article despite complementary older metadata", async () => {
+    const f = fixture();
+    f.source.rssUrl = RECENCY_FEED_URL;
+    Object.assign(f.backup, { title: "Release old", link: "https://publisher.example.test/old", publishedAt: "2026-09-01T12:00:00.000Z" });
+    Object.assign(f.replication, { title: "Release new", link: "https://publisher.example.test/new", publishedAt: "2026-10-07T12:00:00.000Z" });
+    f.d.db.getSourceItemByLink = vi.fn(async (sourceId: string, link: string) =>
+      [f.backup, f.replication].find(article => article.sourceId === sourceId && article.link === link) ?? null);
+    const transport = vi.spyOn(publicFetch, "fetchPublicBytes").mockResolvedValue({
+      bytes: new TextEncoder().encode(recencyAtomFeed(recencyAtomEntry("old", "2026-09-01T12:00:00Z") + recencyAtomEntry("new"))),
+      finalUrl: RECENCY_FEED_URL, contentType: "application/atom+xml",
+    });
+    const catalog = vi.spyOn(f.d.db, "getItems");
+    try {
+      const { run } = await drive({ question: `Name the newest release in ${RECENCY_FEED_URL}.`, origin: "web",
+        budget: 0.05, researchMode: "quick" }, f.d);
+      expect(transport).toHaveBeenCalledTimes(1);
+      expect(catalog).not.toHaveBeenCalled();
+      expect(f.engine.decideInput?.candidates.map(row => row.item?.itemId)).toEqual([f.replication.id]);
+      expect(f.gateway.fetchItems).toEqual([f.replication.id]);
+      expect(run.sourceRecency?.metadataReads).toBe(1);
+      expect(run.evidencePortfolio?.attentionLimit).toBe(1);
+      expect(run.citations[0]).toMatchObject(sourceItemIdentity(f.replication));
+    } finally { transport.mockRestore(); }
   });
 });
 

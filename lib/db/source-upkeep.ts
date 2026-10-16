@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { PUBLIC_FEED_BATCH_ITEMS } from "../public-references/limits";
 
 export const SOURCE_UPKEEP_KEY = "sourceUpkeep";
 export const SOURCE_UPKEEP_BATCH = 2;
@@ -33,7 +34,7 @@ function readState(value: string): State {
         !Number.isFinite(Date.parse(state.completedAt)))) ||
       (state.summary !== undefined && (!state.summary ||
         !integer(state.summary.attempted) || state.summary.attempted > SOURCE_UPKEEP_BATCH ||
-        !integer(state.summary.added) || state.summary.added > SOURCE_UPKEEP_BATCH * 10 ||
+        !integer(state.summary.added) || state.summary.added > SOURCE_UPKEEP_BATCH * PUBLIC_FEED_BATCH_ITEMS ||
         !integer(state.summary.failed) || state.summary.failed > SOURCE_UPKEEP_BATCH ||
         !integer(state.summary.skipped) || state.summary.skipped > SOURCE_UPKEEP_BATCH))) {
     throw new Error("Invalid upkeep journal");
@@ -85,9 +86,12 @@ export function finishSqliteSourceUpkeep(
     const row = db.prepare("SELECT value FROM sync_state WHERE key=?").get(SOURCE_UPKEEP_KEY);
     const state = row ? readState(String(row.value)) : null;
     if (state?.slot === claim.slot) {
+      const completedAt = new Date(now).toISOString();
+      const value = JSON.stringify({ ...state, leaseUntil: 0, completedAt, summary });
+      // Never persist a completion that would make the next hourly claim fail closed.
+      readState(value);
       db.prepare("UPDATE sync_state SET value=?,updated_at=? WHERE key=?")
-        .run(JSON.stringify({ ...state, leaseUntil: 0, completedAt: new Date(now).toISOString(), summary }),
-          new Date(now).toISOString(), SOURCE_UPKEEP_KEY);
+        .run(value, completedAt, SOURCE_UPKEEP_KEY);
     }
     db.exec("COMMIT");
   } catch (error) {

@@ -193,6 +193,24 @@ describe("saveMemory", () => {
     expect(saved[0].sourceScores).toEqual({});
   });
 
+  it.each([false, true])("aggregates a publisher's article citations into one run observation (reversed: %s)", async (reverse) => {
+    const { db, saved } = fakeDb();
+    const citations = [
+      { ...citation("spec"), marker: "S1", itemId: "article-one", weight: 0.7, reward: 0.007 },
+      { ...citation("spec"), marker: "S2", itemId: "article-two", weight: 0.3, reward: 0.003 },
+    ];
+    await saveMemory(db, "plural", "How does x402 settle?", reverse ? citations.reverse() : citations, ["spec"]);
+    expect(saved).toHaveLength(1);
+    expect(saved[0].sourceScores).toEqual({ spec: { name: "spec", weight: 1, reward: 0.01 } });
+    expect(saved[0].sourcesRead).toEqual(["spec"]);
+
+    const corpus = [...saved, ...Array.from({ length: 4 }, (_, i) => memory(`other-${i}`, ["x402"], ["gen"]))];
+    const ctx = await buildDecisionContext(fakeDb(corpus).db, "How does x402 settle?", [SPECIALIST]);
+    expect(ctx.sample).toBe(5);
+    expect(ctx.memory).toContain("Vitalik's Blog: cited in 1 of 1 run that read it on this subject (100%, avg weight 1, avg reward $0.0100)");
+    expect(ctx.reputation).toContain("Vitalik's Blog: reputation 100/100 (1 citation on this subject)");
+  });
+
   it("writes nothing when the run read nothing — it proves nothing either way", async () => {
     const { db, saved } = fakeDb();
     await saveMemory(db, "q2", "How does x402 settle?", [citation("spec")], []);

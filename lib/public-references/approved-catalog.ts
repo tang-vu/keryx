@@ -75,4 +75,15 @@ export const APPROVED_PUBLIC_REFERENCES: PublicReference[] = [
   approvedFeed("explore:our-world-in-data", "https://ourworldindata.org/atom-data-insights.xml"),
   approvedFeed("explore:plos", "https://theplosblog.plos.org/feed/"),
   approvedFeed("explore:martin-fowler", "https://martinfowler.com/feed.atom"),
+  // Official-hosted feeds with multiple usable article bodies in the 2026-10-16 parser audit.
+  // Counts and delivery limits are audit evidence, never checked-in article snapshots.
+  approvedFeed("explore:mdn", "https://developer.mozilla.org/en-US/blog/rss.xml"),
+  approvedFeed("explore:web-dev", "https://web.dev/static/blog/feed.xml"),
+  approvedFeed("explore:chrome-developers", "https://developer.chrome.com/static/blog/feed.xml"),
+  approvedFeed("explore:webkit", "https://webkit.org/feed/"),
+  approvedFeed("explore:react", "https://react.dev/rss.xml"),
+  approvedFeed("explore:v8", "https://v8.dev/blog.atom"),
+  approvedFeed("explore:w3c-blog", "https://www.w3.org/blog/feed/"),
+  approvedFeed("explore:mit-ai", "https://news.mit.edu/topic/mitartificial-intelligence2-rss.xml"),
+  approvedFeed("explore:arxiv-cs-ai", "https://rss.arxiv.org/rss/cs.AI"),
 ].map((reference) => publicReferenceSchema.parse({ ...reference, active: true, items: [] }));

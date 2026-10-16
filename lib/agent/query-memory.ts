@@ -67,7 +67,13 @@ export async function saveMemory(
 
   const sourceScores: Record<string, { name: string; weight: number; reward: number }> = {};
   for (const c of citations) {
-    sourceScores[c.sourceId] = { name: c.sourceName, weight: c.weight, reward: c.reward };
+    // Multiple cited articles contribute to one publisher observation for this run.
+    const previous = sourceScores[c.sourceId];
+    sourceScores[c.sourceId] = {
+      name: c.sourceName,
+      weight: (previous?.weight ?? 0) + c.weight,
+      reward: (previous?.reward ?? 0) + c.reward,
+    };
   }
 
   await db.saveQueryMemory({

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { SourceItem } from "../types";
 import {
   selectRelevantSourceItem,
+  selectRelevantSourceItems,
   sourceItemAssetId,
   sourceItemCacheKey,
   sourceItemContentVersion,
@@ -45,6 +46,48 @@ describe("source item assets", () => {
     const older = item({ id: "old", title: "Beta" });
 
     expect(selectRelevantSourceItem("unrelated question", [], [], [newest, older])).toBe(newest);
+  });
+
+  it("adds complementary target matches using metadata without inspecting paid bodies", () => {
+    const backup = item({ id: "backup", title: "SQLite backup snapshots", summary: "Consistent SQLite snapshots" });
+    const replication = item({ id: "replication", title: "Postgres replication", summary: "Replica consistency" });
+    const irrelevant = item({ id: "newest", title: "Football results", summary: "Weekend scores" });
+    for (const article of [backup, replication, irrelevant]) {
+      Object.defineProperty(article, "content", { get() { throw new Error("Paid body inspected during selection"); } });
+    }
+    expect(selectRelevantSourceItems("Compare SQLite backup snapshots and Postgres replication",
+      ["SQLite backup snapshots", "Postgres replication consistency"], [], [irrelevant, backup, replication]))
+      .toEqual([backup, replication]);
+  });
+
+  it("bounds registered selection to three articles including the overall choice", () => {
+    const overview = item({ id: "overview", title: "Cache replica signer recovery", summary: "Overview" });
+    const details = ["Replica consistency", "Signer isolation", "Recovery workflow"].map((title, index) =>
+      item({ id: `detail-${index}`, title, summary: "Technical details" }));
+    expect(selectRelevantSourceItems("Cache replica signer recovery", details.map(article => article.title), [], [overview, ...details]))
+      .toEqual([overview, details[0], details[1]]);
+  });
+
+  it("does not pad with zero-match, tag-only or already-covered target metadata", () => {
+    const relevant = item({ id: "relevant", title: "SQLite backup snapshots" });
+    const redundant = item({ id: "redundant", title: relevant.title });
+    const tagOnly = item({ id: "tags", title: "Publisher newsletter", summary: "Publisher newsletter" });
+    const unrelated = item({ id: "unrelated", title: "Football results" });
+    expect(selectRelevantSourceItems("SQLite backup snapshots", ["SQLite backup snapshots"], ["Publisher newsletter"],
+      [relevant, redundant, tagOnly, unrelated])).toEqual([relevant]);
+    expect(selectRelevantSourceItems("Unmatched question", ["Unmatched target"], [], [unrelated, tagOnly])).toEqual([unrelated]);
+    expect(selectRelevantSourceItems("SQLite", [], [], [relevant, redundant])).toEqual([relevant]);
+    expect(selectRelevantSourceItems("SQLite", ["backup"], [], [])).toEqual([]);
+  });
+
+  it("deduplicates item IDs and canonical documents without collapsing versioned locations", () => {
+    const overview = item({ id: "overview", title: "Cache replica signer recovery", summary: "Overview",
+      link: "https://example.test/document?a=1&b=2" });
+    const alias = item({ id: "alias", title: "Replica consistency", link: "https://EXAMPLE.test/document?utm_source=feed&b=2&a=1#replica" });
+    const duplicateId = item({ id: overview.id, title: "Signer isolation", link: "https://example.test/another" });
+    const distinct = item({ id: "version-two", title: "Recovery workflow", link: "https://example.test/document?a=1&b=2&version=2" });
+    expect(selectRelevantSourceItems("Cache replica signer recovery", ["Replica consistency", "Signer isolation", "Recovery workflow"], [],
+      [overview, alias, duplicateId, distinct])).toEqual([overview, distinct]);
   });
 
   it("changes the cache identity when plaintext content changes", () => {

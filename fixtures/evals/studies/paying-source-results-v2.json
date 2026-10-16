@@ -75,14 +75,14 @@
     "lib/agent/operating-fee.ts": "75d8f70b423e2b687a43c526fd8bdda220a57f9871f63deafc31b689e81775d8",
     "lib/agent/optimizer-checkpoint-capture.ts": "61c9eb080406a8fec1cf699a9811377ac40e0922e6440dd517f2efeb06b62af2",
     "lib/agent/public-reference-evidence.ts": "96f3eb0353e2a049e7a60f1e649ab4e46baaff6277faebf7b51d8a5cb2755031",
-    "lib/agent/query-memory.ts": "429015c9e4ac247792935fd3de479aa31d16f24393e254c598d2ced6787ad772",
+    "lib/agent/query-memory.ts": "442593e4a76285b8c90a7ae6160b2abccb4bc35027e2b559208ea6eebda97c36",
     "lib/agent/read-checkpoint-capture.ts": "4656c6d3bd9e1613ad9cf6d5f95ecefdd8db4cd2cb4389901874bdcc4bac5c75",
     "lib/agent/read-recovery.ts": "aa370a23463223f37880537df9833b857b620b6122e2c090d2cf4878eae06831",
     "lib/agent/requested-source-report.ts": "651901147731b77a82cf0442bece04c0dab01c2a7588c81bb4f7977e7379e085",
     "lib/agent/research-effects.ts": "03b112db36a63a94a8a00f644cefb1d9b65c3b91016053d1e9ba7532d5c98174",
     "lib/agent/research-follow-up.ts": "5fe8212365fd85d4918c880d562842d4f82791ccec5c4eb9b593864ad43be867",
     "lib/agent/research-verdict.ts": "30f1abb81ab37d84a765c7f1d5285be7a72145db899bf13132286f29c68f7084",
-    "lib/agent/run-agent.ts": "ec4b6c0cb24342f5f5b15bbb97fac6a6c4ffe97d344039dae095bc5fe8d5b3db",
+    "lib/agent/run-agent.ts": "58323d62a25b6f2de7aae646f3a5789fa79586d30c33f693b56932046ba5ff51",
     "lib/agent/run-bibliographic-agent.ts": "ec1ed1ed8e24e62be35a1952723fa1bc33a628f0addad9f792d430a6e588c3e2",
     "lib/agent/sentence-note-answer.ts": "d0bcafb7bbb204fca80eb6dbfd7878619c1aa563da84a7f9ea03c83af78fe4fe",
     "lib/agent/source-recency-observations.ts": "a965730639f47849e7edb83ddc9fd34f805be399bc2a3509caba44948a230ee7",
@@ -206,7 +206,7 @@
     "lib/db/session-withdrawal-abort.ts": "1d4a8b4386247156c39aaf09fa1bf47f78113c18173f8faab00b7be3eb3e5018",
     "lib/db/session-withdrawal-journal.ts": "f20ac57d3d64d3e0291ceca5ad0fb97eab304851bf06b0c436aa7660056cb161",
     "lib/db/source-registry-origin.ts": "18b6592833aeb65265a8f155bb2cc3e30e90e4fe2ecb50dbeb2dc5b35120c731",
-    "lib/db/source-upkeep.ts": "8455ef72133ec86d93faf18bbafff3b242cb600b7f86dc16e1b1c8132fa8b04d",
+    "lib/db/source-upkeep.ts": "fd22f9931ae96e4af7c1caf30af5dea55047d3756a399941ce7a59af0d2d2957",
     "lib/db/sqlite-adapter.ts": "1905588833c7cc4d5cf2e80a4b2a28c973b9f9fc002b164d7c659dfbb72e221f",
     "lib/db/sqlite-application-schema-profile.ts": "a9ab32809c8575de85d3d7aff6e5ae2532723cf1aeeb585e914cc9b7ac563a4d",
     "lib/db/sqlite-application-schema.ts": "1259627e38df4010f755ad579fcb9e058acdd0de132ea72fcdd9adec9519e17a",
@@ -341,7 +341,8 @@
     "lib/profiles/public-profile.ts": "49136a70ff48d630e0f47b628e79acc88205b7a5b2a36a58e367dc7847896180",
     "lib/profiles/verified-identities.ts": "501e22512d7ff4dd6e93f580994135fc272c18435b5ca76c5d5fc62a68273016",
     "lib/public-references/archive.ts": "cddd9829f10fea4de43c726e76b80acbd521d2999a73cb468b28c79db89714d9",
-    "lib/public-references/catalog.ts": "d78a979aa00197a52b02b900ae7c57f4fcb1c6581d7dd3336b69e4f4d64a1703",
+    "lib/public-references/catalog.ts": "79ef13c7c20461bf42400839984de3fc0ad6cd80f6aae9a361c619ab2c29775c",
+    "lib/public-references/limits.ts": "78841d77f386a9d470e1f65244335dce6afecc90a3b6808d627ff9e8bc03062c",
     "lib/public-references/youtube-feed.ts": "e2bc9f5c497b9f22e4f7b461c48cb3c0afc5c531f5d1f9230752290e854c7448",
     "lib/read-bounded-json.ts": "f5844cb3b4d5a33040f47be412205c96d6efc08a3e4d305de807f17846593cd9",
     "lib/receipt-integrity-core.ts": "bc46044567ba6c301e991264a8a65beaff01de5c091f6645887c069ec7d60802",
@@ -422,7 +423,7 @@
     "lib/scholarly/provider.ts": "26cf5456c2ac5aa2f2566697558020930a4a9b7199d27ca9e300d20a0d7f0fa0",
     "lib/scholarly/rights-authority.ts": "f77b4e42a9443d80a12a9d09d5ca1b1c343365b1a349549ba5da42fd8f4bf01f",
     "lib/scholarly/rights-protocol.ts": "4d383e86f9b5a79aa775e58b7de199c558c65c3fb7b53022c5ad427ef22296d8",
-    "lib/scholarly/work-groups.ts": "5d3b26a86c47650ac6d09205cdc5d911db47db08636794de2edc9fdf05739e71",
+    "lib/scholarly/work-groups.ts": "76ef25e85842848e4592b606a776517aa8036c8cda8ccd361b520160265a5e63",
     "lib/session/session-signing-policy.ts": "ba4300e140ba8c9a680f98d63c49c6cd92a026074b4b683a1c4e1ad41f270c81",
     "lib/sources/article-content-manifest-schema.ts": "62b2ffbeb22616118fbb41f1db6f9808fb09aeef04ec1edf298fa7a560d9200d",
     "lib/sources/article-content-manifest.ts": "15afd31e26817293dfbd4c817a117a97ef386e4bdee368643f35aabaf3435b9a",
@@ -439,7 +440,7 @@
     "lib/sources/seed-provenance.ts": "4f32797e24f09129e4b145a897df52313ff0ec87ef04c09314cc8641a45663f7",
     "lib/sources/source-claim-access.ts": "fa674d6bb7e0d194e59eaad1c06da41ee029aa421a9827361cbe3a6c5bb8de1e",
     "lib/sources/source-claim-request.ts": "3828aad0e11d46d7d75eef20708057fbbbdf876a282e491425d6a92666140b61",
-    "lib/sources/source-item-asset.ts": "012d88d5627f0fc1b4ebca204cbbf3d1dc6cb2b8c1c6a83de58bec51fb2cdc38",
+    "lib/sources/source-item-asset.ts": "13e7edeb2fe084114c99f5ae6b026a5cb8e7f64072fbe4912b34670a33f5432b",
     "lib/sources/source-recency-feed-date.ts": "3196cc6faaa1ac416b0d23a92d61992fc82f78c0e6423060d8251233d7b0d7ba",
     "lib/sources/source-recency-feed-parser.ts": "64f4354bbf4051b01e19ec543187f72a79d9e74312addb86f0adbdc95d9278c4",
     "lib/sources/source-recency-feed.ts": "8075e686d8b4313bc660c515898fc10de04eb8cd07ffabdfeb52cae17a14486d",
@@ -1010,7 +1011,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -1977,7 +1978,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -2944,7 +2945,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -4008,7 +4009,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -5135,7 +5136,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -6172,7 +6173,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -7268,7 +7269,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -8454,7 +8455,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -9581,7 +9582,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -10677,7 +10678,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -11863,7 +11864,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -13049,7 +13050,7 @@
             "Meridian reservoir capacity copy — Meridian reservoir capacity copy",
             "Meridian reservoir complete guide — Meridian reservoir complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -14138,7 +14139,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -15105,7 +15106,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -16072,7 +16073,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -17293,7 +17294,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -18485,7 +18486,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -19522,7 +19523,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -20775,7 +20776,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -22183,7 +22184,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -23375,7 +23376,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -24628,7 +24629,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -26036,7 +26037,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -27444,7 +27445,7 @@
             "Aurora beacon battery copy — Aurora beacon battery copy",
             "Aurora beacon battery service guide — Aurora beacon battery service guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -28596,7 +28597,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -29561,7 +29562,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -30526,7 +30527,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -31697,7 +31698,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -32833,7 +32834,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -33868,7 +33869,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -35071,7 +35072,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -36375,7 +36376,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -37511,7 +37512,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -38714,7 +38715,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -40018,7 +40019,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -41322,7 +41323,7 @@
             "Cedar archive retention record — Cedar archive retention record",
             "Cedar archive complete guide — Cedar archive complete guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -42420,7 +42421,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -43385,7 +43386,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -44350,7 +44351,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -45521,7 +45522,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -46657,7 +46658,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -47692,7 +47693,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -48895,7 +48896,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -50199,7 +50200,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -51335,7 +51336,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -52538,7 +52539,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -53842,7 +53843,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {
@@ -55146,7 +55147,7 @@
             "Lumen sensor calibration interval — Lumen sensor calibration interval",
             "Lumen sensor threshold calibration guide — Lumen sensor threshold calibration guide"
           ],
-          "message": "Discovered 4 verified creator source(s) and 0 free public reference(s)",
+          "message": "Discovered 4 verified creator candidate(s) from 4 publisher(s) and 0 free public reference candidate(s)",
           "phase": "discover"
         },
         {

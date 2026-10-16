@@ -35,6 +35,13 @@ it("requires separate nonduplicate publisher groups for every claim before High"
   expect(researchVerdict({ ...base, conflicts: [], sources: undefined }).level).toBe("Moderate");
 });
 
+it("cannot reach High from one known publisher's articles across distinct domains", () => {
+  const sources = base.sources.map(source => ({ ...source, sourceId: "same-publisher" }));
+  expect(researchVerdict({ ...base, conflicts: [], sources }).level).toBe("Moderate");
+  expect(researchVerdict({ ...base, conflicts: [], sources: [...sources].reverse() }).level).toBe("Moderate");
+  expect(researchVerdict({ ...base, conflicts: [] }).level).toBe("High");
+});
+
 it("localizes reasons while preserving every confidence classification and input", () => {
   const cases = [
     { ...base, conflicts: [], citedMarkers: [] },

@@ -100,7 +100,7 @@ import { hasKnownSeedFingerprint } from "../research/seed-evidence-fingerprints"
 import { normalizePreviewDepth, previewSummary } from "../sources/preview-depth";
 import { isCacheFresh, isCacheWithinTtl, newestPublishedAt } from "./cache-freshness";
 import {
-  selectRelevantSourceItem,
+  selectRelevantSourceItems,
   sourceItemAssetId,
   sourceItemCacheKey,
   sourceItemContentVersion,
@@ -659,74 +659,77 @@ async function* runAdmittedAgent(
     // for free. Article selection never inspects paid full text.
     const depth = normalizePreviewDepth(s.previewDepth);
     const target = input.targetAsset?.sourceId === s.id ? input.targetAsset : undefined;
-    const item = target
-      ? items.find((candidate) => candidate.id === target.itemId) ?? null
-      : selectRelevantSourceItem(input.question, subClaims, s.tags, items);
+    const targetItem = target ? items.find((candidate) => candidate.id === target.itemId) : undefined;
 
-    if (target && (!item || sourceItemContentVersion(item) !== target.contentVersion)) {
+    if (target && (!targetItem || sourceItemContentVersion(targetItem) !== target.contentVersion)) {
       throw new Error("wanted response article changed or disappeared before discovery");
     }
+    const selectedItems = targetItem ? [targetItem]
+      : recencyResolution.status === "eligible" ? items
+      : selectRelevantSourceItems(input.question, subClaims, s.tags, items);
 
-    if (item) {
-      const duplicatePublic = claimAccess.claim && [...publicReads.values()].find(read =>
-        publicDuplicateOfOwnedItem(item, read, contentBodyHash));
-      if (duplicatePublic && (terms.listPriceUsdc > 0 || !claimAccess.rewardAllowed)) {
-        yield emit("discover", `READ preference for ${s.name}: the same exact article is already a free public reference; no duplicate purchase or contribution.`);
-        continue;
+    if (selectedItems.length > 0) {
+      for (const item of selectedItems) {
+        const duplicatePublic = claimAccess.claim && [...publicReads.values()].find(read =>
+          publicDuplicateOfOwnedItem(item, read, contentBodyHash));
+        if (duplicatePublic && (terms.listPriceUsdc > 0 || !claimAccess.rewardAllowed)) {
+          yield emit("discover", `READ preference for ${s.name}: the same exact article is already a free public reference; no duplicate purchase or contribution.`);
+          continue;
+        }
+        const id = sourceItemAssetId(item.id);
+        const identity = { ...sourceItemIdentity({ ...item, evidenceProvenance: item.evidenceProvenance ?? s.evidenceProvenance }),
+          ...(claimAccess.snapshot ? { sourceClaim: claimAccess.snapshot } : {}),
+          ...(terms.listPriceUsdc === 0 ? { accessKind: "creator-free" as const } : {}) };
+        const cacheKey = sourceItemCacheKey(s.id, item);
+        const cached = isCacheWithinTtl(await effects.getCachedAt(cacheKey), Date.now(), config.cacheTtlSeconds);
+        if (cached) freshCache.add(id);
+        const summary = previewSummary(item.summary, depth);
+        const resolvedOffer = s.scholarlyEnrolled ? null : await resolveValidArticleOffer(db, s, item, terms);
+        if (target?.articleOfferId && resolvedOffer?.offer.id !== target.articleOfferId) {
+          throw new Error("wanted response article offer expired or was replaced before discovery");
+        }
+        if (resolvedOffer) signedOfferCount++;
+        const priceUsdc = resolvedOffer?.ref.priceUsdc ?? terms.listPriceUsdc;
+        const candidate: SourceCandidate = {
+          id,
+          sourceId: s.id,
+          item: identity,
+          name: `${s.name} — ${item.title}`,
+          description: s.description,
+          tags: s.tags,
+          fetchPrice: priceUsdc,
+          ...(resolvedOffer
+            ? {
+                offer: {
+                  id: resolvedOffer.offer.id,
+                  listPriceUsdc: terms.listPriceUsdc,
+                  expiresAt: resolvedOffer.offer.expiresAt,
+                },
+              }
+            : {}),
+          cached,
+          preview: summary ? `- ${item.title}: ${summary}` : `- ${item.title}`,
+        };
+        // Put the offered work first so large catalogs cannot hide it from a bounded model prompt.
+        // Position is not a recommendation: the engine still prices and decides it normally.
+        if (target) candidates.unshift(candidate);
+        else candidates.push(candidate);
+        assetById.set(id, {
+          terms,
+          candidate,
+          source: s,
+          item,
+          cacheKey,
+          priceUsdc,
+          listPriceUsdc: terms.listPriceUsdc,
+          claimPolicy: claimAccess.snapshot,
+          rewardAllowed: claimAccess.rewardAllowed,
+          ...(duplicatePublic ? { publicFallback: duplicatePublic } : {}),
+          offer: resolvedOffer
+            ? { ...resolvedOffer.ref, proof: resolvedOffer.offer }
+            : undefined,
+        });
       }
-      const id = sourceItemAssetId(item.id);
-      const identity = { ...sourceItemIdentity({ ...item, evidenceProvenance: item.evidenceProvenance ?? s.evidenceProvenance }),
-        ...(claimAccess.snapshot ? { sourceClaim: claimAccess.snapshot } : {}),
-        ...(terms.listPriceUsdc === 0 ? { accessKind: "creator-free" as const } : {}) };
-      const cacheKey = sourceItemCacheKey(s.id, item);
-      const cached = isCacheWithinTtl(await effects.getCachedAt(cacheKey), Date.now(), config.cacheTtlSeconds);
-      if (cached) freshCache.add(id);
-      const summary = previewSummary(item.summary, depth);
-      const resolvedOffer = s.scholarlyEnrolled ? null : await resolveValidArticleOffer(db, s, item, terms);
-      if (target?.articleOfferId && resolvedOffer?.offer.id !== target.articleOfferId) {
-        throw new Error("wanted response article offer expired or was replaced before discovery");
-      }
-      if (resolvedOffer) signedOfferCount++;
-      const priceUsdc = resolvedOffer?.ref.priceUsdc ?? terms.listPriceUsdc;
-      const candidate: SourceCandidate = {
-        id,
-        sourceId: s.id,
-        item: identity,
-        name: `${s.name} — ${item.title}`,
-        description: s.description,
-        tags: s.tags,
-        fetchPrice: priceUsdc,
-        ...(resolvedOffer
-          ? {
-              offer: {
-                id: resolvedOffer.offer.id,
-                listPriceUsdc: terms.listPriceUsdc,
-                expiresAt: resolvedOffer.offer.expiresAt,
-              },
-            }
-          : {}),
-        cached,
-        preview: summary ? `- ${item.title}: ${summary}` : `- ${item.title}`,
-      };
-      // Put the offered work first so large catalogs cannot hide it from a bounded model prompt.
-      // Position is not a recommendation: the engine still prices and decides it normally.
-      if (target) candidates.unshift(candidate);
-      else candidates.push(candidate);
-      assetById.set(id, {
-        terms,
-        candidate,
-        source: s,
-        item,
-        cacheKey,
-        priceUsdc,
-        listPriceUsdc: terms.listPriceUsdc,
-        claimPolicy: claimAccess.snapshot,
-        rewardAllowed: claimAccess.rewardAllowed,
-        ...(duplicatePublic ? { publicFallback: duplicatePublic } : {}),
-        offer: resolvedOffer
-          ? { ...resolvedOffer.ref, proof: resolvedOffer.offer }
-          : undefined,
-      });
       continue;
     }
 
@@ -784,9 +787,10 @@ async function* runAdmittedAgent(
       input.targetAsset,
     );
   }
+  const creatorCandidates = candidates.filter(candidate => !publicCandidates.has(candidate.id));
   yield emit(
     "discover",
-    `Discovered ${candidates.length - publicCandidates.size} verified creator source(s) and ${publicCandidates.size} free public reference(s)${unverifiedCount > 0 ? ` — skipped ${unverifiedCount} unverified (feed ownership unproven, off the money path)` : ""}`,
+    `Discovered ${creatorCandidates.length} verified creator candidate(s) from ${new Set(creatorCandidates.map(candidate => candidate.sourceId ?? candidate.id)).size} publisher(s) and ${publicCandidates.size} free public reference candidate(s)${unverifiedCount > 0 ? ` — skipped ${unverifiedCount} unverified (feed ownership unproven, off the money path)` : ""}`,
     candidates.map((c) => c.name),
   );
   if (selfOwnedCount > 0) {
@@ -871,9 +875,12 @@ async function* runAdmittedAgent(
     yield emit("decide", `Decision validation withheld ${diagnostic.counts.withheldCandidateCount} candidate(s) and rejected ${diagnostic.counts.invalidRowCount} row(s). Independently valid proposals continue through the existing read and payment gates. All research targets remain; proposed relevance is not verified evidence.`, diagnostic);
   }
   const sourceById = new Map(sources.map((s) => [s.id, s]));
-  const assetBySourceId = new Map(
-    [...assetById.values()].map((asset) => [asset.source.id, asset]),
-  );
+  const assetBySourceId = new Map<string, InternalAsset>();
+  // Legacy publisher-only proposals keep the strongest overall article choice.
+  // Additional per-target articles must not silently replace that fallback.
+  for (const asset of assetById.values()) {
+    if (!assetBySourceId.has(asset.source.id)) assetBySourceId.set(asset.source.id, asset);
+  }
   const isExternal = (id: string) => id.startsWith("ext:");
   const externalById = new Map(external.map((c) => [c.id, c]));
 
@@ -2007,13 +2014,14 @@ async function* runAdmittedAgent(
       : `> ⚠ Low confidence — ${verdict.reason.replace(/[.!?]$/, "")}. Treat this as provisional.\n\n${answer}`;
   }
 
+  const citedSourceCount = new Set(used.map(item => item.sourceId)).size;
   yield emit("synthesize", unavailableAssessment ? (vi
     ? "Đã giữ kết quả chưa hoàn chỉnh để kiểm tra việc giao kết quả; bước tổng hợp hoặc đánh giá bằng chứng không khả dụng."
-    : "Retained an incomplete result for delivery review; synthesis or evidence assessment was unavailable.") : brief ? (vi ? `Đã chuẩn bị bản phân tích có dẫn nguồn từ ${used.length} nguồn`
-    : `Prepared a cited decision brief from ${used.length} source(s)`) : citedSummary ? (vi
-    ? `Đã chuẩn bị tóm tắt có trích dẫn từng câu từ ${used.length} nguồn`
-    : `Prepared a sentence-cited summary from ${used.length} source(s)`) : vi ? `Đã chuẩn bị trích đoạn từ ${used.length} nguồn; chưa xác minh được tổng hợp đầy đủ`
-    : `Prepared source excerpts citing ${used.length} source(s); complete synthesis is unverified`, { answer });
+    : "Retained an incomplete result for delivery review; synthesis or evidence assessment was unavailable.") : brief ? (vi ? `Đã chuẩn bị bản phân tích có dẫn nguồn từ ${citedSourceCount} nguồn`
+    : `Prepared a cited decision brief from ${citedSourceCount} source(s)`) : citedSummary ? (vi
+    ? `Đã chuẩn bị tóm tắt có trích dẫn từng câu từ ${citedSourceCount} nguồn`
+    : `Prepared a sentence-cited summary from ${citedSourceCount} source(s)`) : vi ? `Đã chuẩn bị trích đoạn từ ${citedSourceCount} nguồn; chưa xác minh được tổng hợp đầy đủ`
+    : `Prepared source excerpts citing ${citedSourceCount} source(s); complete synthesis is unverified`, { answer });
   yield emit("verdict", `Confidence: ${verdict.level} — ${verdict.reason}.`, verdict);
 
   // 6) ATTRIBUTE contribution weights
@@ -2068,7 +2076,7 @@ async function* runAdmittedAgent(
       };
     });
     checkpointCapture.economic("citation-allocation", "attribution", 0, 0, () => captureAllocation(citationPool, round(citationPool),
-      used.map(g => g.sourceId), proposedAttributions, used.map(g => g.sourceKind !== "public-reference" && g.creatorRewardEligible !== false),
+      attributionUsed.map(g => g.sourceId), proposedAttributions, used.map(g => g.sourceKind !== "public-reference" && g.creatorRewardEligible !== false),
       attributions.map(item => item.weight), rewards, citations.map(c => c.reward)));
   }
   for (const c of citations) {

@@ -8372,3 +8372,16 @@ Parent independent source review, 48 affected migration controls, 18 mounted
 controls and changed TypeScript checks passed. Exact-head required CI and sole
 ROOT batch/target authority remain; no production migration was performed here.
 See [the fixed native25 stock migration boundary](docs/engineering/job257-native25-stock-migration-20261016.md).
+
+## 2026-10-16: bounded article choices within a publisher
+
+Extend registered-source discovery to at most three complementary articles, ranked
+from free metadata, rather than raising reading or spending limits. Keep exact
+article versions, offers, caches and original publisher payment authority. Existing
+public archive discovery already supports multiple articles per research target.
+Known shared publisher identity reduces confidence diversity, memory aggregates
+article contributions once per publisher/run, and allocation capture uses the same
+article keys as attribution. Public feed additions grant no creator payout rights.
+Keep existing feed limits and the two-feed hourly allowance; journal counters must
+accept those actual public batches. The [implementation and dated ingestion trial](docs/engineering/article-source-expansion-20261016.md)
+record scope, evidence and the existing coordinator's deployment/import boundary.
