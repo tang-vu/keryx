@@ -1,0 +1,56 @@
+/** English product story. Published user evidence keeps its original scope and network. */
+export const aboutStory = Object.freeze({
+  demo: "Watch the 2:47 product demo",
+  walkthrough: "Explore a recorded job",
+  landingLink: "See Keryx in a real research task",
+  feedbackLabel: "USER FEEDBACK · RELAYED BY THE FOUNDER · OCTOBER 16, 2026",
+  feedbackTitle: "It helped them get the job done.",
+  feedbackBody: "The founder reports that 0xacee, Hoàng and Trần Minh Hiếu each said Keryx helped solve their tasks, quickly and at low cost.",
+  feedbackLink: "Read the user stories and feedback record",
+  distinctionLabel: "THE DIFFERENCE",
+  distinctionTitle: "Pay for access. Reward the evidence.",
+  distinctionBody: "Opening a source and using it to support an answer are different things. Keryx makes both decisions visible, under your source budget.",
+  access: {
+    number: "01", title: "The read", label: "SOURCE ACCESS",
+    body: "The agent compares previews and prices, then explains BUY, SKIP or CACHE. Public material and reusable cached reads can cost no access toll.",
+  },
+  reward: {
+    number: "02", title: "The contribution", label: "CITATION REWARD",
+    body: "A registered creator can earn a separate reward when retained evidence qualifies for a citation. Reading alone does not earn that reward.",
+  },
+  budgetNote: "Source spending stays within the authorised cap. Service, model and search costs are separate; the report keeps pending and settled payments distinct.",
+  practiceLabel: "IN PRACTICE · OCTOBER 15, 2026",
+  practiceTitle: "A builder came back with another question.",
+  practiceIntroduction: "After an earlier storage-research session, 0xacee returned while building VoiceReady, an audio-preview companion. The task was concrete: understand when browser preview URLs should be released.",
+  videoLabel: "Open the 2:23 VoiceReady recording",
+  videoSeries: "RECORDED USER WORKFLOW",
+  videoProject: "VoiceReady",
+  videoDuration: "2:23 · ENGLISH",
+  videoCaption: "2:23 · English narration and burned-in captions · Actual browser captures with shortened waits and AI narration.",
+  storySteps: [
+    { label: "THE QUESTION", body: "How should an audio preview release its temporary browser URL?" },
+    { label: "THE EVIDENCE", body: "With the MDN original supplied, Keryx retained passages about URL revocation and when to release a reference. The report keeps its Moderate source-grounding label." },
+    { label: "THE USE", body: "Those passages informed review of the preview lifecycle. Implementation and checks were performed separately by an assistant." },
+  ],
+  report: "Read the original MDN report",
+  caseStudy: "Read the case study and its limits",
+  storyScope: "Owner-confirmed outside-user return task. Sponsored research with a zero-USDC source cap and no creator payments. The recording also retains failed FFmpeg research.",
+  usageTitle: "The people behind the recorded activity",
+  usageBody: "Documented user stories and verified wallet actors are different evidence. Some participants are identified through owner-confirmed sessions and recordings, rather than the wallet classification used in the table. Their stories do not change these counters or establish independent payment.",
+  usageLink: "Explore a documented return task",
+  inspectLabel: "SEE FOR YOURSELF",
+  inspectTitle: "Follow the result all the way back.",
+  inspect: [
+    { href: "/walkthrough", title: "Follow one recorded job", body: "Inspect a partial owner-QA answer, CACHE/SKIP reasons and a mainnet citation receipt. No wallet or new spending.", action: "Open the walkthrough" },
+    { href: "/operator/decisions", title: "Look inside a decision", body: "Compare model proposals, policy checks and recorded outcomes. Economic replay checks recorded arithmetic.", action: "Open Decision Lab" },
+    { href: "/proof", title: "Check the money trail", body: "Inspect payment evidence and its verification scope. Testnet, mainnet, pending and simulated records keep their labels.", action: "Inspect public proof" },
+  ],
+} as const);
+
+export const aboutStoryLinks = Object.freeze({
+  demo: "https://youtu.be/sNonqLPMysg",
+  returnVideo: "https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.mp4",
+  report: "/dispatch/c2febd88-a367-432a-8b90-4214f1f82e44",
+  caseStudy: "https://github.com/tang-vu/keryx/blob/main/docs/case-studies/voiceready-2026-10-15.md",
+  feedback: "https://github.com/tang-vu/keryx/blob/main/docs/case-studies/user-feedback-2026-10-16.md",
+} as const);

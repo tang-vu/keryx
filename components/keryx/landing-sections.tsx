@@ -11,6 +11,7 @@ import { MintIcon, type MintIconName } from "./mint-icons";
 import { cn } from "@/lib/utils";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { productGuideCopy } from "@/locales/en/product-guide";
+import { aboutStory } from "@/locales/en/about-story";
 
 const uiCopy = createMessages("en");
 const uiRichCopy = createRichMessages("en");
@@ -81,6 +82,9 @@ export function HowItWorks() {
           </div>
         ))}
       </div>
+      <Link lang="en" href="/about#in-practice" className="mt-4 inline-flex min-h-11 items-center gap-3 font-serif text-base text-paid underline underline-offset-4 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-paid">
+        {aboutStory.landingLink}<span aria-hidden="true">→</span>
+      </Link>
     </section>
   );
 }
