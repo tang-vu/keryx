@@ -1,5 +1,26 @@
 # Supported-surface release parity
 
+## Sponsored CLI, stdio MCP and Desktop — October 16 source candidate
+
+Explicit hosted-sponsored research is added through one shared client. Existing
+server admission, funding and query/lifetime limits retain authority; clients
+do not load a signer, add quota or fall back to a paid purchase.
+
+| Surface | Behavior and release boundary |
+| --- | --- |
+| Source CLI | `npm run ask:sponsored -- --public "question"` calls hosted Chat Completions; help is keyless and makes no request. Local engine and buyer commands retain their roles. |
+| Stdio MCP | New `ask_keryx_sponsored` requires `publicReport: true`; existing `ask_keryx` remains caller-funded. Changed bundle inputs need a new accepted package identity/publication. |
+| Native Desktop | Separate Sponsored research screen, deliberate public intent and no private-task prefill; trusted native/helper transport retains renderer CSP. Changed helper/renderer/native inputs need new exact-source installer assets. |
+| Web / OpenAI-compatible API / remote MCP | Existing hosted endpoint, public-trial and sponsored admission contracts are reused. No new route, grant, quota or API-key authority. |
+| Browser extension / Telegram / Discord / Slack | Existing hosted-sponsored adapters retain their request/result and installation roles. No changed extension bytes or bot setup authority. |
+| Buyer / private Operator / A2A | Existing custody, fixed package quote, original recovery and local storage remain independent. A sponsored refusal never invokes a buyer. |
+
+The [client guide](sponsored-client-research.md) records consent, interruption and
+delivery boundaries. Focused tests, independent review, required aggregate and
+platform CI precede merge; the existing release owner batches publication and
+installation-link updates. The delivered versions below do not yet establish
+publication or owner installation of this source candidate.
+
 ## App 0.27.70 delivered — October 16
 
 Production web is app **0.27.70** at commit `2dda3717`

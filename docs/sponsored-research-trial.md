@@ -61,6 +61,12 @@ separate measurements.
 
 ## Surfaces and release gates
 
+The [sponsored client source candidate](sponsored-client-research.md) adds explicit
+hosted-sponsored entry points to CLI, stdio MCP and native Desktop. Each requires
+public-report intent and shares this hosted admission; the existing buyer/private
+roles below keep their authority. New package/installer publication is separate
+from existing hosted service availability.
+
 | Surface | Behavior |
 | --- | --- |
 | Web/literature | Sponsored/public-report messaging, manual preparation, visible payer, wait/retry guidance after quota refusal. |

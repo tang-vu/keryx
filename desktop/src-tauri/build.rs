@@ -69,6 +69,7 @@ fn main() {
             "create_workspace",
             "refresh",
             "create_task",
+            "research_sponsored",
             "resume_task",
             "read_result",
             "export_brief",

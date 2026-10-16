@@ -6,6 +6,7 @@ import { createMessages } from "../../lib/i18n/messages";
 import { checkedBibliographyExportCopy } from "../../locales/en/checked-bibliography-exports";
 import { clientLanguageNames, clientPresentationLanguage, clientPresentationMessages } from "../../shared/i18n/client-language";
 import { desktopNeutralMessages } from "../../shared/i18n/desktop-neutral";
+import { SponsoredResearch } from "./sponsored-research";
 
 declare global { interface Window { keryxDesktop: DesktopAPI } }
 
@@ -48,6 +49,7 @@ function MintMark({ large = false }: { large?: boolean }) {
 }
 
 function App() {
+  const [screen, setScreen] = useState<"local" | "sponsored">("local");
   const [languageOverride, setLanguageOverride] = useState("auto");
   const presentationLanguage = clientPresentationLanguage(navigator.language, languageOverride);
   const presentation = clientPresentationMessages(presentationLanguage).controls;
@@ -116,6 +118,11 @@ function App() {
       <label className="sidebar-section-label">{presentation.language}<select aria-label={presentation.language} value={languageOverride} onChange={event => setLanguageOverride(event.target.value)}>
         <option value="auto">{presentation.auto}</option><option value="en">{clientLanguageNames.en}</option><option value="vi">{clientLanguageNames.vi}</option><option value="pt">{clientLanguageNames.pt}</option><option value="es">{clientLanguageNames.es}</option>
       </select></label>
+      <nav className="sponsored-navigation" aria-label={message("nativeDesktop.sponsored.screens")}>
+        <button type="button" aria-pressed={screen === "sponsored"} onClick={() => setScreen("sponsored")}>{message("nativeDesktop.sponsored.title")}</button>
+        <button type="button" aria-pressed={screen === "local"} onClick={() => setScreen("local")}>{message("nativeDesktop.sponsored.localTasks")}</button>
+      </nav>
+      {screen === "local" && <>
       <div className="sidebar-section-label">{message("nativeDesktop.workspace.section")}</div>
     <div className="workspace-card"><div className="workspace-icon">⌂</div><div className="workspace-copy"><strong>{view?.name ?? neutral("nativeDesktop.workspace.none")}</strong><small>{view ? message(selectPlural(view.tasks.length) === "one" ? "nativeDesktop.workspace.taskCount.one" : "nativeDesktop.workspace.taskCount.other", { count: view.tasks.length }) : message("nativeDesktop.workspace.chooseFolder")}</small></div></div>
       <div className="sidebar-actions">
@@ -128,11 +135,12 @@ function App() {
           <span className="task-item-foot"><span>{item.mode.toUpperCase()}</span><span>{stageLabel[item.status.stage] ?? item.status.stage}</span></span>
         </button>)}</div>
         <div className="sidebar-bottom"><span className="status-dot"/>{message("nativeDesktop.workspace.localTasks")}<span className="muted">{message("nativeDesktop.workspace.localBoundary")}</span></div></>}
+      </>}
     </aside>
 
     <main className="main">
-      <header className="topbar"><div className="breadcrumb">{message("nativeDesktop.breadcrumb.mint")}<span>/</span>{message("nativeDesktop.breadcrumb.operator")}<span>/</span> {task ? neutral("nativeDesktop.breadcrumb.task") : neutral("nativeDesktop.breadcrumb.desk")}</div><span className="network-pill"><span className="status-dot"/> {task ? taskLabel : preparedLabel}</span></header>
-      <div className="content">
+      <header className="topbar"><div className="breadcrumb">{message("nativeDesktop.breadcrumb.mint")}<span>/</span>{message("nativeDesktop.breadcrumb.operator")}<span>/</span> {screen === "sponsored" ? message("nativeDesktop.sponsored.title") : task ? neutral("nativeDesktop.breadcrumb.task") : neutral("nativeDesktop.breadcrumb.desk")}</div><span className="network-pill"><span className="status-dot"/> {screen === "sponsored" ? message("nativeDesktop.sponsored.payer") : task ? taskLabel : preparedLabel}</span></header>
+      <div className="content" hidden={screen !== "local"}>
         {controlsBusy && <div className="activity" role="status">{busy ? busyLabel[busy] : message("nativeDesktop.busy.savedResult")}</div>}
         {error && <div role="alert" className="alert error"><strong>{message("nativeDesktop.action.failed")}</strong><span>{error}</span><button onClick={() => setError("")}>×</button></div>}
         {notice && <div className="alert success"><span>{notice}</span><button onClick={() => setNotice("")}>×</button></div>}
@@ -167,6 +175,8 @@ function App() {
     {view.invalidDirectories > 0 && <p className="unrecognized">{message(selectPlural(view.invalidDirectories) === "one" ? "nativeDesktop.workspace.unrecognized.one" : "nativeDesktop.workspace.unrecognized.other", { count: view.invalidDirectories })}</p>}
         </>}
       </div>
+      {/* Keep mounted across navigation: pending/uncertain submissions retain their lock. */}
+      <div className="content" hidden={screen !== "sponsored"}><SponsoredResearch api={window.keryxDesktop} unavailable={!ready || controlsBusy}/></div>
     </main>
   </div>;
 }

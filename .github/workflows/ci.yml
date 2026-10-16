@@ -312,6 +312,7 @@ jobs:
         run: |
           node --test scripts/mcp-registry-release.test.mjs
           npm --prefix mcp run build
+          node --import tsx scripts/test-sponsored-mcp-package.mts
           node --import tsx scripts/test-monthly-mcp-package.mts
           node --import tsx scripts/test-paper-lookup-mcp-package.mts
           node --import tsx scripts/test-private-profiles-mcp-package.mts

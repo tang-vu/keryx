@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/native-desktop.ts",
-  "sourceSha256": "d0e3861976ddc14b2ee076cdc139399bc781c0929672c02970ce4e34dee151e3",
+  "sourceSha256": "eb91dc1ebc2a3cbd354c167ae3fe6dadd5ca1dca144228d469663f4e890b5303",
   "entries": {
     "nativeDesktop.savedResult.openFailed": {
       "source": "Saved result cannot be opened: {reason}",
@@ -511,6 +511,150 @@
     "nativeDesktop.exports.evidence-csv": {
       "source": "Export evidence CSV",
       "text": "导出证据 CSV"
+    },
+    "nativeDesktop.sponsored.screens": {
+      "source": "Research screens",
+      "text": "研究界面"
+    },
+    "nativeDesktop.sponsored.title": {
+      "source": "Sponsored research",
+      "text": "受赞助的研究"
+    },
+    "nativeDesktop.sponsored.localTasks": {
+      "source": "Local tasks",
+      "text": "本地任务"
+    },
+    "nativeDesktop.sponsored.payer": {
+      "source": "Keryx pays · shared limits",
+      "text": "Keryx 承担费用 · 共享限额"
+    },
+    "nativeDesktop.sponsored.selectUrl": {
+      "source": "Select URL",
+      "text": "选中 URL"
+    },
+    "nativeDesktop.sponsored.waitNotice": {
+      "source": "Still waiting for confirmation. The hosted request may still be running. Ask stays locked; do not submit the same question again.",
+      "text": "仍在等待确认。托管请求可能仍在执行。“提问”按钮保持锁定；请勿重复提交同一问题。"
+    },
+    "nativeDesktop.sponsored.eyebrow": {
+      "source": "PUBLIC HOSTED RESEARCH",
+      "text": "托管式公开研究"
+    },
+    "nativeDesktop.sponsored.introduction": {
+      "source": "Ask a shareable question. Keryx pays within shared limits; availability, source budgets and service pauses are enforced by the hosted service.",
+      "text": "提出可公开分享的问题。Keryx 在共享限额内承担费用；可用性、来源预算和服务暂停均由托管服务控制。"
+    },
+    "nativeDesktop.sponsored.questionTitle": {
+      "source": "What would you like to learn?",
+      "text": "你想了解什么？"
+    },
+    "nativeDesktop.sponsored.publicBoundary": {
+      "source": "No API key or wallet is needed. Questions and results become public trial reports. Private local tasks and references are not attached.",
+      "text": "无需 API 密钥或钱包。问题和结果将成为公开的试用报告。不会附加本地私密任务和参考资料。"
+    },
+    "nativeDesktop.sponsored.helperWait": {
+      "source": "Waiting for the desktop helper to become available.",
+      "text": "正在等待桌面助手就绪。"
+    },
+    "nativeDesktop.sponsored.question": {
+      "source": "Shareable question",
+      "text": "可公开分享的问题"
+    },
+    "nativeDesktop.sponsored.questionPlaceholder": {
+      "source": "Type a question suitable for a public report",
+      "text": "输入适合公开报告的问题"
+    },
+    "nativeDesktop.sponsored.depth": {
+      "source": "Research depth",
+      "text": "研究深度"
+    },
+    "nativeDesktop.sponsored.quickHint": {
+      "source": "A focused answer",
+      "text": "有针对性的回答"
+    },
+    "nativeDesktop.sponsored.deepHint": {
+      "source": "A broader investigation",
+      "text": "范围更广的调查"
+    },
+    "nativeDesktop.sponsored.sourceBudget": {
+      "source": "Source budget (USDC)",
+      "text": "来源预算（USDC）"
+    },
+    "nativeDesktop.sponsored.sourceBudgetBoundary": {
+      "source": "0 to 0.08 USDC. Zero uses free sources. This source cap is separate from model and search costs; the server may apply a lower cap.",
+      "text": "0 至 0.08 USDC。设为零时使用免费来源。此来源支出上限与模型和搜索费用分开；服务器可能采用更低的上限。"
+    },
+    "nativeDesktop.sponsored.consent": {
+      "source": "I agree to publish this question and its result as a public trial report.",
+      "text": "我同意将此问题及其结果发布为公开的试用报告。"
+    },
+    "nativeDesktop.sponsored.submissionBoundary": {
+      "source": "Sent to https://keryx.cc. No automatic retry or paid buyer fallback. Public results are not saved to private workspace journals.",
+      "text": "发送至 https://keryx.cc。不会自动重试或回退到付费买方流程。公开结果不会保存到私密工作区日志中。"
+    },
+    "nativeDesktop.sponsored.asking": {
+      "source": "Asking…",
+      "text": "正在提问…"
+    },
+    "nativeDesktop.sponsored.ask": {
+      "source": "Ask",
+      "text": "提问"
+    },
+    "nativeDesktop.sponsored.waiting": {
+      "source": "Waiting for hosted research. This can take up to five minutes. Keep this window open.",
+      "text": "正在等待托管研究。此过程最长可能需要五分钟。请保持此窗口打开。"
+    },
+    "nativeDesktop.sponsored.uncertain": {
+      "source": "Completion is uncertain.",
+      "text": "是否完成尚待核实。"
+    },
+    "nativeDesktop.sponsored.uncertainBoundary": {
+      "source": " The hosted request may continue after a timeout or disconnect. Ask is locked for this session. Keep any original report URL below and inspect it before deciding whether to ask again. No request was automatically resent.",
+      "text": " 超时或断开连接后，托管请求仍可能继续执行。本会话中的“提问”按钮已锁定。请保留下方提供的原始报告 URL，并先查看报告，再决定是否重新提问。没有自动重发任何请求。"
+    },
+    "nativeDesktop.sponsored.resultLabel": {
+      "source": "Sponsored research result",
+      "text": "受赞助的研究结果"
+    },
+    "nativeDesktop.sponsored.answerEyebrow": {
+      "source": "HOSTED ANSWER",
+      "text": "托管服务的回答"
+    },
+    "nativeDesktop.sponsored.resultTitle": {
+      "source": "Research result",
+      "text": "研究结果"
+    },
+    "nativeDesktop.sponsored.citations": {
+      "source": "Citations",
+      "text": "引用"
+    },
+    "nativeDesktop.sponsored.citationUrl": {
+      "source": "Citation {number} URL",
+      "text": "引用 {number} URL"
+    },
+    "nativeDesktop.sponsored.noCitations": {
+      "source": "No citations were returned.",
+      "text": "未返回任何引用。"
+    },
+    "nativeDesktop.sponsored.receiptTitle": {
+      "source": "Receipt status: hosted report",
+      "text": "凭证状态：托管报告"
+    },
+    "nativeDesktop.sponsored.receiptBoundary": {
+      "source": "A budget or reward allocation is not proof of payment. Inspect the public report for recorded receipts and settlement evidence. Pending or planned rewards are not settled payments.",
+      "text": "预算或奖励分配不能证明已付款。请查看公开报告中记录的凭证和结算证据。待处理或计划中的奖励不等于已结算付款。"
+    },
+    "nativeDesktop.sponsored.reportTitle": {
+      "source": "Public report",
+      "text": "公开报告"
+    },
+    "nativeDesktop.sponsored.reportHint": {
+      "source": "Select a URL, press Ctrl+C, and paste it into your browser.",
+      "text": "选中 URL，按 Ctrl+C，然后粘贴到浏览器中。"
+    },
+    "nativeDesktop.sponsored.reportUrl": {
+      "source": "Public report URL",
+      "text": "公开报告 URL"
     }
   }
 }

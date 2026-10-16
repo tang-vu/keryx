@@ -1,5 +1,53 @@
 # Keryx MCP
 
+## Sponsored public research (source candidate)
+
+`ask_keryx_sponsored` runs hosted sponsored research with **no API key, buyer
+wallet or funding setup**. First build the source checkout:
+
+```sh
+npm install
+npm --prefix mcp run build
+```
+
+Configure your MCP client to start the resulting bundle using its absolute path:
+
+```json
+{
+  "mcpServers": {
+    "keryx": {
+      "command": "node",
+      "args": ["/absolute/path/to/keryx/mcp/dist/keryx-mcp.mjs"]
+    }
+  }
+}
+```
+
+This configuration also works when the MCP client starts from another directory.
+Explicitly consent to a public question and trial report when calling the tool:
+
+```js
+ask_keryx_sponsored({
+  question: "What evidence supports sodium-ion batteries for grid storage?",
+  publicReport: true,
+  mode: "quick",
+  budget: 0
+})
+```
+
+Questions are bounded to 2,000 characters; mode is `quick` or `deep`. The optional
+source budget accepts **0–0.08 USDC**, including zero, independently of model/search
+operating costs. Server quotas, caps and pauses apply. No private task fields are
+accepted. A timeout or disconnect may leave server work running: there are no
+automatic retries or automatic paid fallbacks. Quota refusals require waiting
+before a deliberate new submission. Returned payment evidence keeps planned,
+pending and settled states distinct.
+
+The separate `ask_keryx` tool remains the paid buyer path and retains its own
+wallet, merchant policy and recovery requirements. This addition is a source
+candidate; package publication and installed availability belong to the parent
+release and are not claimed here.
+
 The ORIGINAL268 **NEXT source candidate** adds `history_private_jobs_list`,
 `history_private_jobs_detail` and `history_private_jobs_export` to both MCP
 registrations. **Current published 0.4.20 does not contain these tools.** No new

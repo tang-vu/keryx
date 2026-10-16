@@ -8,6 +8,7 @@
     "allow-create-workspace",
     "allow-refresh",
     "allow-create-task",
+    "allow-research-sponsored",
     "allow-resume-task",
     "allow-read-result",
     "allow-export-brief",

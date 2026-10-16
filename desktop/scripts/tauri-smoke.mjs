@@ -254,6 +254,17 @@ try {
     throw Error("Packaged WebView2 did not load its local bridge, font, and assets exclusively from the app origin");
   }
   if (await page.evaluate(() => window.keryxDesktop.refresh()) !== null) throw Error("Fresh app selected an unexpected workspace");
+  // Exercise the real packaged bridge, app ACL and Rust input boundary. Missing
+  // public intent must reach the fixed validator and refuse before hosted HTTP.
+  const sponsoredRefusal = await page.evaluate(async () => {
+    try {
+      await window.keryxDesktop.researchSponsored({ question: "Synthetic public intent refusal", mode: "quick", budget: 0, publicReport: false });
+      return "unexpected success";
+    } catch (error) { return String(error); }
+  });
+  if (!sponsoredRefusal.includes("explicit public-report consent")) {
+    throw Error(`Packaged sponsored command did not reach its native input guard: ${sponsoredRefusal}`);
+  }
   await page.getByRole("button", { name: /Create workspace/ }).click();
   await page.getByRole("heading", { name: "Prepare paid research" }).waitFor();
   await page.locator(".activity").waitFor({ state: "hidden" });
