@@ -5,6 +5,14 @@ const textLink = "inline-flex min-h-11 items-center gap-2 text-sm text-paid unde
 
 export function AboutResearchStory() {
   return <div lang="en">
+    <section aria-labelledby="user-feedback-title" className="mx-auto max-w-[960px] px-4 pt-12 sm:px-[30px] sm:pt-16">
+      <div className="border-l-2 border-paid bg-paper p-6 sm:p-8">
+        <p className="font-mono text-[10px] leading-relaxed tracking-[0.12em] text-paid">{story.feedbackLabel}</p>
+        <h2 id="user-feedback-title" className="mt-3 font-display text-2xl leading-tight sm:text-3xl">{story.feedbackTitle}</h2>
+        <p className="mt-3 max-w-[65ch] font-serif text-lg leading-relaxed text-ink-2">{story.feedbackBody}</p>
+        <a href={links.feedback} className={`${textLink} mt-3`}>{story.feedbackLink}<span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
     <section aria-labelledby="two-tolls-title" className="mx-auto max-w-[960px] px-4 py-14 sm:px-[30px] sm:py-20">
       <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-seal">{story.distinctionLabel}</p>
       <h2 id="two-tolls-title" className="mt-3 max-w-[22ch] font-display text-3xl leading-tight sm:text-4xl">{story.distinctionTitle}</h2>

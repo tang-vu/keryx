@@ -22,8 +22,12 @@ fallback; no translation review or locale activation is inferred.
 The [VoiceReady case study](case-studies/voiceready-2026-10-15.md) is the source
 for participant attribution, the original report, the published recording and
 its limits. The page keeps sponsored zero-source-cap research, a failed FFmpeg
-answer, assistant implementation and unconfirmed customer acceptance explicit.
-It makes no new user, payment, revenue, margin or quality-rate claim.
+answer and separate assistant implementation explicit.
+The owner's October 16 confirmation adds qualitative feedback from 0xacee,
+Hoàng and Trần Minh Hiếu: useful research that helped solve tasks, quickly and
+at low cost. The [feedback record](case-studies/user-feedback-2026-10-16.md)
+and About identify the founder as the source of that feedback. No new person,
+payment, revenue, margin or measured speed/cost/quality rate is claimed.
 
 ## Remaining work in priority order
 
@@ -42,10 +46,10 @@ It makes no new user, payment, revenue, margin or quality-rate claim.
    walkthrough. Preserve the partial owner-QA and Low-confidence labels and the
    original payment verification scope. The existing walkthrough outcome remains
    owned separately.
-4. Seek participant feedback on the supplied result and a finished deliverable.
-   The named return task establishes further use, while paid repeat demand and
-   independently accepted complete business fulfillment remain open. New outreach
-   and spending need their applicable authority.
+4. Build on the three useful-outcome confirmations with task-specific feedback
+   on the finished deliverable. Paid repeat demand and independently accepted
+   complete business fulfillment remain open. New outreach and spending need
+   their applicable authority.
 
 The [official event page](https://tameion.thecanteenapp.com/) gives October 17,
 11:59 PM ET (October 18, 10:59 AM Vietnam) and a video under three minutes.

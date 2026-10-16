@@ -11,10 +11,10 @@
   "totals": {
     "englishNamespaceFiles": 65,
     "coreInlineSources": 1,
-    "extractedLeaves": 5882,
+    "extractedLeaves": 5887,
     "authoredEntries": 5571,
-    "nonTranslatableMachineIdentifiers": 28,
-    "uncoveredEntries": 283,
+    "nonTranslatableMachineIdentifiers": 29,
+    "uncoveredEntries": 287,
     "completeNamespaces": 56
   },
   "namespaces": [
@@ -6795,9 +6795,9 @@
     {
       "namespace": "about-story",
       "sourcePath": "locales/en/about-story.ts",
-      "sourceSha256": "911dc51ffee264ed23e49e80da9dd82a5e4d0d7ff5073db92bc7411f07dd210f",
+      "sourceSha256": "5f834afb936d0341fd818ed2f2efe7d2c629dd9bd882eadd36b322d8c3cd17a9",
       "draftPath": "locales/zh-Hans/ui-drafts/about-story.json",
-      "extractedLeaves": 53,
+      "extractedLeaves": 58,
       "authoredEntries": 0,
       "coveredKeys": [],
       "nonTranslatableMachineIdentifiers": [
@@ -6835,6 +6835,11 @@
           "key": "aboutStoryLinks.caseStudy",
           "value": "https://github.com/tang-vu/keryx/blob/main/docs/case-studies/voiceready-2026-10-15.md",
           "reason": "Published destination or internal route; preserve exact navigation target."
+        },
+        {
+          "key": "feedback",
+          "value": "https://github.com/tang-vu/keryx/blob/main/docs/case-studies/user-feedback-2026-10-16.md",
+          "reason": "Published destination or internal route; preserve exact navigation target."
         }
       ],
       "uncoveredKeys": [
@@ -6849,6 +6854,10 @@
         "distinctionBody",
         "distinctionLabel",
         "distinctionTitle",
+        "feedbackBody",
+        "feedbackLabel",
+        "feedbackLink",
+        "feedbackTitle",
         "inspect.0.action",
         "inspect.0.body",
         "inspect.0.title",
