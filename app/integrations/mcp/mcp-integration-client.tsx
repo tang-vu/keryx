@@ -191,12 +191,12 @@ export function McpIntegrationClient() {
                 {uiCopy("mcpSetup.introduction")}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <a
+                <Link
                   href="#setup"
                   className="border border-ink bg-seal px-5 py-3 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)]"
                 >
                   {uiCopy("mcpSetup.connect")}
-                </a>
+                </Link>
                 <a
                   href="https://registry.modelcontextprotocol.io/v0/servers?search=keryx"
                   target="_blank"

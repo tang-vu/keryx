@@ -21,7 +21,7 @@ const guide = copy.integrations;
 export default function IntegrationsPage() {
   return <SetupGuide current="/integrations" title={guide.title} body={guide.body}>
     <UiElement as="nav" names={["aria-label"]} namespaces={["get-started"]} attributes={{ "aria-label": copy.navigation.integrations, "className": "flex flex-wrap gap-x-6 font-mono" }}>
-      {copy.surfaces.filter(surface => ["mcp", "api", "cli", "bots"].includes(surface.id)).map(surface => <a key={surface.id} href={`#${surface.id}`} className={setupLinkClass}><UiText source={surface.title} /></a>)}
+      {copy.surfaces.filter(surface => ["mcp", "api", "cli", "bots"].includes(surface.id)).map(surface => <Link key={surface.id} href={`#${surface.id}`} className={setupLinkClass}><UiText source={surface.title} /></Link>)}
     </UiElement>
     <section id="mcp" className={sectionClass} aria-labelledby="mcp-title">
       <h2 id="mcp-title" className="font-display text-3xl"><UiText source={guide.mcpTitle} /></h2>

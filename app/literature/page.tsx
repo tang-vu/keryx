@@ -29,7 +29,7 @@ export default function LiteraturePage() {
       <p className="mt-4 max-w-[65ch] font-serif text-lg leading-relaxed text-ink-2"><UiMessage messageKey={"literaturePage.intro"} /></p>
       <UiElement as="nav" names={["aria-label"]} attributes={{ "aria-label": copy("literaturePage.workflowLabel"), "className": "mt-5 flex flex-wrap gap-3" }}>
         <Link prefetch={false} href="/sources?kind=paper#research-papers" className="inline-flex min-h-11 items-center border border-ink bg-seal px-4 py-2 font-mono text-xs text-paper"><UiMessage messageKey={"literaturePage.find"} /></Link>
-        <a href="#literature-project" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline"><UiMessage messageKey={"literaturePage.focus"} /></a>
+        <Link href="#literature-project" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline"><UiMessage messageKey={"literaturePage.focus"} /></Link>
         <Link prefetch={false} href="/literature/drafts" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{draftCopy.page.navigation}</Link>
         <Link prefetch={false} href="/literature/check" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{checkCopy.page.navigation}</Link>
       </UiElement>

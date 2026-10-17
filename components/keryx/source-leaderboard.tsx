@@ -28,7 +28,7 @@ export function SourceLeaderboard({ data, network }: { data: SourceLeaderboardDa
       {data.catalogStatus !== "ready" && <p role="status" className="text-xs text-muted-foreground">{copy("sourceLeaderboard.catalogUnavailable")}</p>}
       {data.operatingFeesStatus !== "ready" && <div role="status" className="space-y-2 text-xs text-muted-foreground">
         <p>{copy(data.operatingFeesStatus === "incomplete" ? "sourceLeaderboard.feesIncomplete" : "sourceLeaderboard.feesUnavailable")}</p>
-        <a href="#payment-proof-title" className="inline-block min-h-11 py-3 text-seal underline">{copy("sourceLeaderboard.viewSettledFees")}</a>
+        <Link href="#payment-proof-title" className="inline-block min-h-11 py-3 text-seal underline">{copy("sourceLeaderboard.viewSettledFees")}</Link>
       </div>}
       <input aria-label={copy("sourceLeaderboard.searchLabel")} placeholder={copy("sourceLeaderboard.searchPlaceholder")} value={query} onChange={event => setQuery(event.target.value)} className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm" />
     </CardHeader>
