@@ -8395,3 +8395,21 @@ article keys as attribution. Public feed additions grant no creator payout right
 Keep existing feed limits and the two-feed hourly allowance; journal counters must
 accept those actual public batches. The [implementation and dated ingestion trial](docs/engineering/article-source-expansion-20261016.md)
 record scope, evidence and the existing coordinator's deployment/import boundary.
+
+## Explicit hosted-sponsored clients - 2026-10-16
+
+The owner requested sponsored entry points for CLI, local stdio MCP and native
+Desktop. Reuse the hosted Chat Completions endpoint through one bounded client
+instead of embedding the treasury engine, copying custody or creating new quota.
+Use anonymous hosted identity without forwarding local API keys/cookies; existing
+server limits, prefunded treasury and settlement evidence retain authority.
+
+Sponsored submission requires an explicit public-report choice. Native Desktop
+keeps a separate form without private-task/reference prefill or private receipt
+storage. The existing MCP paid tool, buyer CLI and Operator task workflow remain
+explicit choices; quota refusal and interruption never invoke them or retry a
+POST automatically. A missing/truncated response remains uncertain and retains
+any received original report identity. Only hosted originals can establish actual
+settlement. The same-source MCP/Desktop artifacts and installation links belong
+to the existing serialized release batch, not an independent client deployment.
+See [the client contract and delivery boundary](docs/sponsored-client-research.md).

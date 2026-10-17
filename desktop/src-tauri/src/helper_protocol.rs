@@ -3,6 +3,35 @@ use std::io::{BufRead, Write};
 
 pub const MAX_REQUEST_FRAME: usize = 128 * 1024;
 pub const MAX_RESPONSE_FRAME: usize = 16 * 1024 * 1024;
+pub const SPONSORED_TIMEOUT_SECS: u64 = 330;
+
+#[derive(Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct SponsoredInput {
+    question: String,
+    mode: String,
+    budget: f64,
+    public_report: bool,
+}
+
+pub fn sponsored_payload(input: &str) -> Result<String, String> {
+    if input.len() > 16 * 1024 {
+        return Err("Invalid sponsored research input".into());
+    }
+    let input: SponsoredInput =
+        serde_json::from_str(input).map_err(|_| "Invalid sponsored research input")?;
+    if input.question.trim().is_empty()
+        || input.question.encode_utf16().count() > 2000
+        || input.question.contains('\0')
+        || !["quick", "deep"].contains(&input.mode.as_str())
+        || !input.budget.is_finite()
+        || !(0.0..=0.08).contains(&input.budget)
+        || !input.public_report
+    {
+        return Err("Use a shareable question, Quick or Deep, a source budget from 0 to 0.08 USDC, and explicit public-report consent".into());
+    }
+    Ok(serde_json::json!({ "input": input }).to_string())
+}
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -89,6 +118,29 @@ pub fn exchange<W: Write, R: BufRead>(
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    #[test]
+    fn sponsored_request_requires_public_intent_and_only_public_fields() {
+        let valid =
+            r#"{"question":"Shareable question","mode":"quick","budget":0,"publicReport":true}"#;
+        let parsed: serde_json::Value =
+            serde_json::from_str(&sponsored_payload(valid).unwrap()).unwrap();
+        assert_eq!(parsed["input"]["budget"], 0.0);
+        for invalid in [
+            valid.replace("true", "false"),
+            valid.replace("\"budget\":0", "\"budget\":0.081"),
+            valid.replace("\"budget\":0", "\"budget\":-0.01"),
+            valid.replace("quick", "automatic"),
+            valid.replace("Shareable question", " "),
+            valid.replace("\"question\"", "\"workspace\":\"private\",\"question\""),
+            valid.replace(
+                "\"question\"",
+                "\"baseUrl\":\"https://other.invalid\",\"question\"",
+            ),
+        ] {
+            assert!(sponsored_payload(&invalid).is_err(), "{invalid}");
+        }
+    }
 
     #[test]
     fn preserves_opaque_legacy_json_escape() {

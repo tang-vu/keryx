@@ -1,15 +1,33 @@
+import type { SponsoredResearchInput } from "./contracts";
+
 export const MAX_REQUEST_FRAME = 128 * 1024;
 export const MAX_RESPONSE_FRAME = 16 * 1024 * 1024;
 export const MAX_ERROR_BYTES = 2048;
+// The trusted host allows 330 seconds, leaving time to return the abort outcome.
+export const SPONSORED_HELPER_TIMEOUT_MS = 300_000;
 
 export type HelperAction = "init" | "choose_workspace" | "create_workspace" | "refresh" |
-  "create_task" | "resume_task" | "read_result" | "export_brief" | "export_task" | "import_reference";
+  "create_task" | "resume_task" | "read_result" | "export_brief" | "export_task" | "import_reference" | "research_sponsored";
 
 export type HelperRequest = { id: number; action: HelperAction; payload: string };
 export type HelperResponse = { id: number; ok: true; result: string } | { id: number; ok: false; error: string };
 
 const actions = new Set<HelperAction>(["init", "choose_workspace", "create_workspace", "refresh",
-  "create_task", "resume_task", "read_result", "export_brief", "export_task", "import_reference"]);
+  "create_task", "resume_task", "read_result", "export_brief", "export_task", "import_reference", "research_sponsored"]);
+
+// Only user-authored public research fields can cross this boundary. Workspace
+// handles, paths, reference contents, credentials and caller-selected hosts refuse.
+export function parseSponsoredInput(value: unknown): SponsoredResearchInput {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid sponsored research input");
+  const input = value as Record<string, unknown>;
+  if (Object.keys(input).sort().join(",") !== "budget,mode,publicReport,question"
+    || typeof input.question !== "string" || !input.question.trim() || input.question.length > 2000 || input.question.includes("\0")
+    || (input.mode !== "quick" && input.mode !== "deep") || input.publicReport !== true
+    || typeof input.budget !== "number" || !Number.isFinite(input.budget) || input.budget < 0 || input.budget > 0.08) {
+    throw new Error("Use a shareable question, Quick or Deep, a source budget from 0 to 0.08 USDC, and explicit public-report consent");
+  }
+  return { question: input.question.trim(), mode: input.mode, budget: input.budget, publicReport: true };
+}
 
 export function parseRequestFrame(frame: Buffer, priorId: number): HelperRequest {
   if (!frame.length || frame.length > MAX_REQUEST_FRAME || frame.includes(0)) throw new Error("Invalid request frame");

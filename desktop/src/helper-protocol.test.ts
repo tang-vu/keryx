@@ -1,13 +1,30 @@
 import { describe, expect, it } from "vitest";
 import { PrivateTextExportError } from "../../lib/operator/private-text-export";
 import { boundErrorMessage, encodeResponseFrame, MAX_ERROR_BYTES, MAX_REQUEST_FRAME, MAX_RESPONSE_FRAME,
-  parseRequestFrame } from "./helper-protocol";
+  parseRequestFrame, parseSponsoredInput } from "./helper-protocol";
 
 function request(id: number, action = "refresh", payload = "{}") {
   return Buffer.from(JSON.stringify({ id, action, payload }));
 }
 
 describe("desktop helper framing", () => {
+  it("allowlists only the exact sponsored action and public input fields, including zero budget", () => {
+    const input = { question: "Shareable question", mode: "quick", budget: 0, publicReport: true };
+    const payload = JSON.stringify({ input });
+    expect(parseRequestFrame(request(1, "research_sponsored", payload), 0).action).toBe("research_sponsored");
+    expect(parseSponsoredInput(input)).toEqual(input);
+    for (const action of ["researchSponsored", "ask_sponsored", "research_sponsored;run_shell"]) {
+      expect(() => parseRequestFrame(request(1, action, payload), 0)).toThrow("Invalid request envelope");
+    }
+    for (const extra of ["workspace", "handle", "references", "baseUrl", "apiKey", "claimTicket"]) {
+      expect(() => parseSponsoredInput({ ...input, [extra]: "private" })).toThrow();
+    }
+    for (const invalid of [{ ...input, publicReport: false }, { ...input, mode: "auto" }, { ...input, budget: -1 },
+      { ...input, budget: 0.08001 }, { ...input, budget: NaN }, { ...input, budget: Infinity }, { ...input, question: " " },
+      { ...input, question: "x".repeat(2001) }, { ...input, question: "bad\0question" }]) {
+      expect(() => parseSponsoredInput(invalid)).toThrow();
+    }
+  });
   it("requires monotonic single-flight IDs and a known operation", () => {
     expect(parseRequestFrame(request(1), 0)).toEqual({ id: 1, action: "refresh", payload: "{}" });
     expect(() => parseRequestFrame(request(1), 1)).toThrow("Invalid request envelope");

@@ -557,6 +557,8 @@ test("native Desktop copy is catalogued; executable buyer command remains invari
   assert.deepEqual(findings.map(finding => finding.text), [
     "$env:KERYX_NETWORK=${value}; $env:NEXT_PUBLIC_KERYX_NETWORK=${value}; npm run buyer -- buy --request ${value} --payee ${value} --max-total ${value} --state ${value}",
   ]);
+  assert.deepEqual(extractUiCopy("desktop/src/sponsored-research.tsx",
+    readFileSync(new URL("../desktop/src/sponsored-research.tsx", import.meta.url), "utf8")), []);
 });
 
 test("public source claim proof, policy, status and accessible controls are catalogued", () => {
