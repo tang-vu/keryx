@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/get-started.ts",
-  "sourceSha256": "d427adbbc59f24e9e4ca01c4b3c9694189d92c3e44237258f3b0c0c9609b91fd",
+  "sourceSha256": "2ac7d0d2ecc1cb7ec5c1e300ad715a5881f26106c149c1e9b64c399655388a6d",
   "entries": {
     "navigation.start": {
       "source": "Get started",
@@ -413,8 +413,8 @@
       "text": "下载扩展 ZIP"
     },
     "download.extensionRequirements": {
-      "source": "Chrome or Edge on desktop, or another compatible Chromium browser. Developer mode is required for this unpacked install. A public Chrome Web Store install link is not available here.",
-      "text": "桌面版 Chrome 或 Edge，或其他兼容 Chromium 浏览器。此未打包安装需要开发者模式。此处没有公开 Chrome Web Store 安装链接。"
+      "source": "Use Chrome or Edge on desktop, or another compatible Chromium browser. For the ZIP, follow the unpacked-install steps below and enable Developer mode. The public Chrome Web Store listing is also available; check its displayed version before installing.",
+      "text": "????? Chrome ? Edge?????? Chromium ???????? ZIP???????????????????????????? Chrome Web Store ??????????????????"
     },
     "download.extensionSteps.0": {
       "source": "Download and extract the extension ZIP. The extracted directory contains manifest.json directly.",
@@ -659,6 +659,10 @@
     "integrations.selfHost": {
       "source": "Self-hosting guide",
       "text": "自行托管指南"
+    },
+    "download.extensionStore": {
+      "source": "Chrome Web Store",
+      "text": "Chrome Web Store"
     }
   }
 }

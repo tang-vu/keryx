@@ -8,6 +8,7 @@ export const installationLinks = Object.freeze({
   checksums: operatorRelease,
   manifest: operatorRelease,
   extensionSource: `${release}/download/extension-v0.1.4.3/keryx-extension-v0.1.4.3.zip`,
+  extensionStore: "https://chromewebstore.google.com/detail/ofhhhbkpdemcngolfgkjkmkjdilhgjmd",
   webview: "https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download-section",
   docs: "https://github.com/tang-vu/keryx/blob/main/docs/",
   npm: "https://www.npmjs.com/package/keryx-mcp",

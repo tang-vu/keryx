@@ -11,8 +11,8 @@
   "totals": {
     "englishNamespaceFiles": 66,
     "coreInlineSources": 1,
-    "extractedLeaves": 5948,
-    "authoredEntries": 5892,
+    "extractedLeaves": 5949,
+    "authoredEntries": 5893,
     "nonTranslatableMachineIdentifiers": 29,
     "uncoveredEntries": 27,
     "completeNamespaces": 64
@@ -1347,10 +1347,10 @@
     {
       "namespace": "get-started",
       "sourcePath": "locales/en/get-started.ts",
-      "sourceSha256": "d427adbbc59f24e9e4ca01c4b3c9694189d92c3e44237258f3b0c0c9609b91fd",
+      "sourceSha256": "2ac7d0d2ecc1cb7ec5c1e300ad715a5881f26106c149c1e9b64c399655388a6d",
       "draftPath": "locales/zh-Hans/ui-drafts/get-started.json",
-      "extractedLeaves": 178,
-      "authoredEntries": 164,
+      "extractedLeaves": 179,
+      "authoredEntries": 165,
       "coveredKeys": [
         "common.copied",
         "common.copy",
@@ -1387,6 +1387,7 @@
         "download.extensionSteps.1",
         "download.extensionSteps.2",
         "download.extensionSteps.3",
+        "download.extensionStore",
         "download.extensionTag",
         "download.extensionTitle",
         "download.extensionVersion",
