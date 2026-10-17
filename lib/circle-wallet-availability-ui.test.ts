@@ -90,7 +90,7 @@ it("aborts unmount and ignores a late ready response from the old check", async 
   expect(container.textContent).toBe(""); expect(mocks.connect).not.toHaveBeenCalled();
 });
 
-it("serializes expired-wallet reconnect clicks and retains a visible failure for explicit retry", async () => {
+it("serializes expired-wallet reconnect clicks and reports failure once before explicit retry", async () => {
   mocks.identity = { address: `0x${"1".repeat(40)}` }; mocks.current = { id: "circle-google" };
   let fail!: (reason: Error) => void;
   mocks.login.mockImplementationOnce(() => new Promise<void>((_resolve, reject) => { fail = reject; }));
@@ -100,6 +100,7 @@ it("serializes expired-wallet reconnect clicks and retains a visible failure for
   expect(mocks.login).toHaveBeenCalledTimes(1); expect(button().disabled).toBe(true);
   await act(async () => fail(new Error("preflight unavailable")));
   expect(button().disabled).toBe(false); expect(failed).toHaveBeenCalledTimes(1);
-  expect(container.querySelector('[role="status"]')!.textContent).toContain("Google wallet sign-in could not start");
+  expect(mocks.toast).toHaveBeenCalledExactlyOnceWith("Google wallet sign-in could not start. Please try again.");
+  expect(container.querySelector('[role="status"]')).toBeNull();
   await click(); expect(mocks.login).toHaveBeenCalledTimes(2); expect(mocks.connect).not.toHaveBeenCalled();
 });

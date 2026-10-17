@@ -30,7 +30,6 @@ function ConfiguredGoogleWalletButton({ disabled = false, onSelect, onConnected,
   const [availability, setAvailability] = useState<"loading" | "ready" | "error" | "disabled">("loading");
   const [check, setCheck] = useState(0);
   const [starting, setStarting] = useState(false);
-  const [startError, setStartError] = useState(false);
   const startPending = useRef(false);
   const [, renderExpiry] = useState(0);
   useEffect(() => {
@@ -50,20 +49,19 @@ function ConfiguredGoogleWalletButton({ disabled = false, onSelect, onConnected,
   if (availability === "disabled" || !connector) return null;
   if (reconnectOnly && (currentConnector?.id !== CIRCLE_GOOGLE_CONNECTOR_ID || circleWalletCanSign())) return null;
   return <div>
-    {(availability === "loading" || availability === "error" || startError) && <p role="status" className="mb-2 font-mono text-xs leading-relaxed text-ink-2">
+    {(availability === "loading" || availability === "error") && <p role="status" className="mb-2 font-mono text-xs leading-relaxed text-ink-2">
       {availability === "loading" ? copy("walletPicker.loading") : copy("googleWallet.startFailed")}
     </p>}
     <button type="button" disabled={disabled || isPending || starting || availability === "loading"} aria-busy={availability === "loading" || starting || isPending} onClick={() => {
     if (availability === "error") {
-      setAvailability("loading"); setStartError(false); setCheck(value => value + 1);
+      setAvailability("loading"); setCheck(value => value + 1);
       return;
     }
     if (availability !== "ready" || startPending.current) return;
-    startPending.current = true; setStarting(true); setStartError(false);
+    startPending.current = true; setStarting(true);
     const attempt = Symbol();
     onSelect?.(attempt);
     const failed = () => {
-      setStartError(true);
       onConnectionFailed?.(attempt);
       toast.error(copy("googleWallet.startFailed"));
     };
