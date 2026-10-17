@@ -113,7 +113,34 @@ does not authorize signing or writer resumption; those require the existing
 post-migration operational gates. A refused or incompletely acknowledged attempt
 keeps writers stopped and preserves its originals and evidence.
 
-Existing provenance snapshot acceptance remains bounded at 64 MiB file size,
-100,000 rows and 32 MiB encoded row data. These migration limits are separate
-from article retention. A larger enrolled store needs a separately reviewed
-scalable migration rather than weakening its original-preservation checks.
+Mainnet accepts exact source-built base and full native25 profiles, each before
+or after archive activation. Partial native definitions, missing immutable
+guards and unknown tables remain refused. Original fulfillment, native rows,
+identity and existing fences remain part of the exact preservation checks.
+
+For a combined migration and release, the existing protected redeploy config
+accepts `keryx-redeploy-public-reference-archive-migration-v1`. It selects only
+this fixed CLI and retains the six existing fields: `format`, `manifest`,
+`expectedManifestDigest`, `expectedIdentityDigest`, `backup` and `receipt`.
+The reviewed redeploy path verifies stopped public roles, uses the accepted
+candidate's migration source, then starts the new cohort. The operator must
+also stop every private or scheduled writer; `--writers-stopped` records that
+evidence and does not stop processes. Failure after migration is attempted
+keeps writers stopped and all builds retained, without an automatic rollback.
+
+This archive command accepts up to 256 MiB database allocation, 250,000 rows,
+2 MiB per field, 128 MiB raw fields and 128 MiB framed row data, with the existing
+15-second snapshot deadline. Every table, typed field and rowid is hashed; only
+row hashes are retained for sorting. Allocation and all snapshot bounds are
+checked again after archive tables and legacy items are added, before COMMIT.
+The larger allowance is restricted to exact archive profiles. Other migrations,
+generic backup/provenance and enrollment retain their existing limits, including
+enrollment's separate 32 MiB encoded snapshot limit. Generic backups may refuse
+an archive store beyond those limits; they do not establish a verified backup.
+For an already-current archive, this same stopped-writer command with fresh
+backup/receipt paths verifies a complete backup and returns `already-current`.
+
+These bounds cover an operation, not unlimited feed retention. Inspect actual
+row counts and file allocation after imports and before planning further growth.
+A store beyond these bounds requires separately reviewed capacity changes while
+retaining exact original-preservation checks.

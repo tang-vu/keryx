@@ -7,9 +7,8 @@ import { canonicalJson } from "../lib/canonical-json";
 import { inspectStorageDeploymentManifest } from "../lib/db/runtime-storage-config";
 import { storageIdentityDigest, type StorageIdentity } from "../lib/db/storage-identity";
 import { assertStorageCreationParent, holdStorageTarget } from "../lib/db/storage-identity-sqlite";
-import { STORAGE_SNAPSHOT_LIMITS as limits } from "../lib/db/storage-identity-snapshot";
 import { migratePublicReferenceArchiveStorage, publicReferenceArchiveMigrationProfiles,
-  snapshotPublicArchiveStorage } from "../lib/db/public-reference-archive-migration";
+  snapshotPublicArchiveMigrationStorage, PUBLIC_ARCHIVE_SNAPSHOT_LIMITS as limits } from "../lib/db/public-reference-archive-migration";
 
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 function fail(): never { throw new Error("Public archive storage migration refused; preserve originals, backup and stopped writers"); }
@@ -19,7 +18,7 @@ function openSnapshot(file: string, identity: StorageIdentity, profiles: readonl
   try {
     if (fstatSync(held.descriptor).size > limits.fileBytes) fail();
     db = new DatabaseSync(file, { readOnly: true, allowExtension: false }); db.exec("PRAGMA busy_timeout=1000; BEGIN");
-    held.verify(); const value = snapshotPublicArchiveStorage(db, identity, profiles); held.verify();
+    held.verify(); const value = snapshotPublicArchiveMigrationStorage(db, identity, profiles); held.verify();
     return { db, held, value, close() { try { db!.close(); } finally { held.close(); } } };
   } catch (error) { try { db?.close(); } finally { held.close(); } throw error; }
 }
@@ -84,7 +83,7 @@ export async function migratePublicArchiveStorage(options: PublicArchiveMigratio
       if (migrationTarget.identity !== source.held.identity) fail();
       result = migratePublicReferenceArchiveStorage(manifest.backend.databasePath, manifest.identity, db => {
         migrationTarget.verify(); recheck(); outputHeld!.verify();
-        if (canonicalJson(snapshotPublicArchiveStorage(db, manifest.identity, profiles)) !== canonicalJson(source.value)) fail();
+        if (canonicalJson(snapshotPublicArchiveMigrationStorage(db, manifest.identity, profiles)) !== canonicalJson(source.value)) fail();
         const retained = openSnapshot(options.backup, manifest.identity, profiles);
         try { if (canonicalJson(retained.value) !== canonicalJson(source.value)) fail(); } finally { retained.close(); }
       });
