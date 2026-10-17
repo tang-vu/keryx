@@ -8,7 +8,7 @@ skips or reuses, and rewards eligible creators for the evidence it actually
 cites. The business use is research for developers and researchers: a cited
 deliverable with the source choices and money trail available for inspection.
 
-**[Watch the submitted demo — 2:47](https://youtu.be/sNonqLPMysg)** ·
+**[Watch the final demo — under 3 minutes](https://youtu.be/4uHylKXcv5Y)** ·
 **[Open the recorded walkthrough — no wallet](https://keryx.cc/walkthrough)** ·
 **[See an outside user — 1:53](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)**
 
@@ -78,7 +78,7 @@ shows storage/backup research with useful, partial and unsupported results. The
 owner confirmed direct operation or supervision; the
 [story](tameion-submission.md#recorded-outside-user-workflow-0xacee) separates the
 user session from later assistant-run prototype checks. It is supporting footage,
-separate from the submitted 2:47 demo.
+separate from the final product demo linked at the top.
 
 The owner confirmed a further [VoiceReady task by 0xacee on October 15](tameion-submission.md#return-task-from-0xacee-on-october-15):
 Keryx's MDN excerpts informed a local audio-preview review, while FFmpeg research
@@ -101,17 +101,22 @@ and [CLI guide](operator-task-alpha.md) for durable tasks and original-job recov
 
 ## Submission and counting scope
 
-The owner confirmed the form submission on October 13. The
+The final video was published on October 17 and is linked above; a new form
+submission is not confirmed. The owner confirmed the earlier form submission on
+October 13. The
 [submitted comparison](https://github.com/tang-vu/keryx/compare/2291753cc4fff2135d546227d5aafda287cbed7d...92733ecc6dfb5076815c2a29de6370c02a84845c)
 keeps the September 25 baseline and submitted source fixed. The
 [submission pack](tameion-submission.md) records the broader build, four identified
 outside users, dated mainnet/testnet activity and distribution windows.
 
 The October 13 mainnet snapshot records 129 questions and 40 settled payment
-records totaling 0.703750 USDC. It includes owner/QA activity. The 2,333 npm
-downloads cover September 27–October 12; website visits and GitHub clones retain
-their own 21/14-day windows. These are distinct from unique people or accepted
-deliverables. [Live cohort accounting](https://keryx.cc/usage) publishes its own
+records totaling 0.703750 USDC. It includes owner/QA activity. The October 17
+API refresh reports 2,711 npm download events for September 27–October 12 and
+3,619 lifetime events through October 16; those periods overlap. GitHub reports
+41,654 clones and 781 views for October 3–16. Website visits retain their October
+13 observation. The [distribution refresh](tameion-submission.md#october-17-distribution-refresh)
+keeps the correction and rolling windows separate from growth, unique people and
+accepted deliverables. [Live cohort accounting](https://keryx.cc/usage) publishes its own
 period, network and outside/team/scripted/unknown rules; unknown callers are not
 automatically counted as outside people.
 

@@ -6832,7 +6832,7 @@
     {
       "namespace": "about-story",
       "sourcePath": "locales/en/about-story.ts",
-      "sourceSha256": "5f834afb936d0341fd818ed2f2efe7d2c629dd9bd882eadd36b322d8c3cd17a9",
+      "sourceSha256": "58e61441c4456ed7baf045a46829d276afb52dfd405bdce694c32ba170c380ea",
       "draftPath": "locales/zh-Hans/ui-drafts/about-story.json",
       "extractedLeaves": 58,
       "authoredEntries": 50,
@@ -6906,7 +6906,7 @@
         },
         {
           "key": "aboutStoryLinks.demo",
-          "value": "https://youtu.be/sNonqLPMysg",
+          "value": "https://youtu.be/4uHylKXcv5Y",
           "reason": "Published destination or internal route; preserve exact navigation target."
         },
         {

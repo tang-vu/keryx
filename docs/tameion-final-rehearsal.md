@@ -1,5 +1,10 @@
 **Keryx — final rehearsal, October 16, 2026**
 
+> **October 17 update:** the [published final demo](https://youtu.be/4uHylKXcv5Y)
+> includes the VoiceReady return task and refreshed npm count, under three minutes.
+> It is in the updated form draft; form resubmission is not confirmed. The
+> October 16 rehearsal and October 13 submission references below keep their dates.
+
 **30-second English opening**
 
 “Keryx helps developers and researchers turn documentation questions into cited answers they can inspect and use. It shows why an agent reads, skips or reuses a source, and separates access purchases from rewards for evidence actually cited. Today I’ll show how a returning builder used MDN passages to review VoiceReady’s audio previews, then inspect a separate recorded job’s decisions and mainnet payment evidence.”
