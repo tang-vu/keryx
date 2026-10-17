@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState, useRef } from "react";
+import { useAccount } from "wagmi";
 import type { WalletClient } from "viem";
 import { useSessionGrant } from "@/lib/hooks/use-session-grant";
 import { GrantSpendDialog } from "@/components/keryx/grant-spend-dialog";
@@ -22,6 +23,7 @@ import Link from "next/link";
 import { formatAmount, recordedUsdcMicros } from "@/lib/i18n/format";
 import { walletWorkspaceMessages as copy } from "@/locales/en/wallet-workspace";
 import { useUiCopy } from "@/lib/i18n/ui-copy";
+import { SessionFundingRecovery } from "./session-funding-recovery";
 const uiEnglish_copy = copy;
 
 
@@ -56,6 +58,7 @@ interface Props {
 export function SessionGrantPanel({ onBindingChange, variant = "chat" }: Props) {
   const copy = useUiCopy("wallet-workspace", uiEnglish_copy);
   const [authed, setAuthed] = useState(false);
+  const { address, isConnected } = useAccount();
   const { state, tryRecover, recoverViaSignature, generateAndFund, topUp, extend, revoke, getSessionWalletClient, markExpired, authorizeSessionPayment } =
     useSessionGrant();
   // Stable ref so onBindingChange closures always read the latest binding.
@@ -120,6 +123,8 @@ export function SessionGrantPanel({ onBindingChange, variant = "chat" }: Props) 
         onTryRecover={tryRecover}
         onRecoverViaSignature={recoverViaSignature}
       />
+      {!browserPaymentProfile().testnet && isConnected && address &&
+        <SessionFundingRecovery key={address.toLowerCase()} payer={address} revision={`${state.status}:${state.sessAddr ?? ""}`} />}
   </>;
 
   if (variant === "wallet") return <div className="space-y-6">

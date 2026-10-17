@@ -78,6 +78,8 @@ export function GrantSpendDialog({ grantState, onActivate, onTopUp, onExtend, on
   </div>;
 
   const retained = !!grantState.sessAddr;
+  // A retained signing key alone does not prove a deposit or an admitted budget.
+  const savedBudget = retained && grantState.cap > 0;
   return <div className="mb-4 space-y-3 border border-ink/20 bg-paper-2 px-4 py-3">
     <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-2">{mainnet ? copy("budgetGrant.mainnetTitle") : copy("budgetGrant.testnetTitle")}</div>
     <p className="max-w-[65ch] text-sm leading-relaxed text-ink-2">
@@ -87,16 +89,16 @@ export function GrantSpendDialog({ grantState, onActivate, onTopUp, onExtend, on
     {grantState.error && <p role="alert" className="border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">{grantState.error}</p>}
 
     {retained && <div className="space-y-2 border border-seal/40 bg-paper px-3 py-3">
-      <p className="text-xs leading-relaxed text-ink-2">
+      {(!mainnet || savedBudget) && <p className="text-xs leading-relaxed text-ink-2">
         {copy(mainnet ? "budgetGrant.savedMainnet" : "budgetGrant.savedTestnet")}
-      </p>
+      </p>}
       <button type="button" disabled={resuming} onClick={async () => {
         setResuming(true); setResumeFailed(false);
         try { if (!await onExtend()) setResumeFailed(true); }
         catch { setResumeFailed(true); }
         finally { setResuming(false); }
       }} className="border border-ink bg-ink px-4 py-2 font-mono text-[11px] text-cream disabled:opacity-50">
-        {resuming ? copy("budgetGrant.recovering") : mainnet ? copy("budgetGrant.continue") : copy("budgetGrant.resume")}
+        {resuming ? copy("budgetGrant.recovering") : mainnet ? copy(savedBudget ? "budgetGrant.continue" : "budgetGrant.recoverSaved") : copy("budgetGrant.resume")}
       </button>
       {resumeFailed && <p role="alert" className="text-xs text-destructive">{copy("budgetGrant.recoveryFailed")}</p>}
     </div>}
