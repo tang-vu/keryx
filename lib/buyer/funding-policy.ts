@@ -6,6 +6,19 @@ import { browserPaymentProfile } from "../browser-payment-profile";
 export const fundingAmountSchema = z.string().regex(/^[1-9]\d{0,15}$/).refine(value =>
   /^[1-9]\d{0,15}$/.test(value) && BigInt(value) <= BigInt(browserPaymentProfile().testnet ? 1_000_000 : Number.MAX_SAFE_INTEGER));
 export const transactionHashSchema = z.string().regex(/^0x[a-fA-F0-9]{64}$/);
+const gasQuantity = z.string().regex(/^[1-9]\d{0,77}$/);
+export const fundingCancellationQuoteSchema = z.object({
+  attemptId: z.string().uuid(), recordId: z.string().uuid(), recordDigest: transactionHashSchema,
+  payer: addressSchema, chainId: z.literal(browserPaymentProfile().chainId),
+  nonce: z.number().int().nonnegative().safe(), gas: gasQuantity,
+  maxFeePerGas: gasQuantity, maxPriorityFeePerGas: z.string().regex(/^(0|[1-9]\d{0,77})$/),
+  expiresAt: z.number().int().positive().safe(),
+}).strict().refine(q => BigInt(q.maxPriorityFeePerGas) <= BigInt(q.maxFeePerGas), "Invalid fee bounds");
+export type FundingCancellationQuote = z.infer<typeof fundingCancellationQuoteSchema>;
+const cancellationSchema = z.object({
+  quote: fundingCancellationQuoteSchema,
+  phase: z.enum(["preparing", "signed", "broadcast-possible"]), hash: transactionHashSchema.optional(),
+}).strict().refine(value => (value.phase === "preparing") === !value.hash, "Signed cancellation needs its hash");
 export const fundingResolutionSchema = z.object({
   hash: transactionHashSchema, blockHash: transactionHashSchema, blockNumber: z.string().regex(/^\d{1,24}$/),
   status: z.enum(["confirmed", "reverted", "replaced"]), basis: z.literal("configured-rpc-finalized"),
@@ -13,6 +26,7 @@ export const fundingResolutionSchema = z.object({
 const legSchema = z.object({ status: z.enum(["ready", "possible", "submitted", "confirmed", "reverted", "rejected", "replaced"]), hash: transactionHashSchema.optional(),
   originalHash: transactionHashSchema.optional(), resolution: fundingResolutionSchema.optional(),
   nonce: z.number().int().nonnegative().safe().optional(), beforeBlock: z.string().regex(/^\d{1,24}$/).optional(),
+  cancellations: z.array(cancellationSchema).optional(),
 }).strict()
   .refine(value => !["submitted", "confirmed", "reverted", "replaced"].includes(value.status) || !!value.hash, "Mined/submitted transaction needs a hash")
   .refine(value => value.status !== "replaced" || !!value.resolution, "Replacement needs finalized evidence")
@@ -42,6 +56,9 @@ export const fundingRecordSchema = z.object({
     ctx.addIssue({ code: "custom", message: "Session credit needs its exact depositor" });
   if (row.gatewayCreditAcknowledged && (row.deposit.status !== "confirmed" || row.gatewayCreditBefore === undefined))
     ctx.addIssue({ code: "custom", message: "Gateway credit acknowledgement requires a confirmed session deposit" });
+  if (row.deposit.cancellations || row.approval.cancellations?.some(item =>
+    item.quote.payer !== row.payer || item.quote.nonce !== row.approval.nonce))
+    ctx.addIssue({ code: "custom", message: "Cancellation must use the original approval owner and nonce" });
 });
 export type FundingRecord = z.infer<typeof fundingRecordSchema>;
 export type FundingStep = "approval" | "deposit";
