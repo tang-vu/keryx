@@ -131,9 +131,9 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-2">{message("ledger.introduction")}</p>
         <nav aria-label={message("ledger.sectionsLabel")} className="mt-4 flex flex-wrap gap-x-5 text-sm text-seal">
           <Link href="/history/testnet" className="min-h-11 py-3 underline">{message("ledger.testnetTrackRecord")}</Link>
-          <a href="#current-activity" className="min-h-11 py-3 underline">{message("ledger.activity", { network: currentArcLabel })}</a>
-          <a href="#current-creators" className="min-h-11 py-3 underline">{message("ledger.currentCreators")}</a>
-          <a href="#payment-records" className="min-h-11 py-3 underline">{message("ledger.paymentEvidence")}</a>
+          <Link href="#current-activity" className="min-h-11 py-3 underline">{message("ledger.activity", { network: currentArcLabel })}</Link>
+          <Link href="#current-creators" className="min-h-11 py-3 underline">{message("ledger.currentCreators")}</Link>
+          <Link href="#payment-records" className="min-h-11 py-3 underline">{message("ledger.paymentEvidence")}</Link>
         </nav>
       </header>
 

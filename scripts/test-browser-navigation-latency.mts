@@ -58,8 +58,13 @@ try {
   console.log(JSON.stringify({ phase: "startup-ready", engine: engine.name() }));
 
   for (const width of [390, 1366]) {
-    for (const destination of ["/research", "/proof", "/usage", "/history/testnet"]) {
+    for (const { destination, fragment } of [
+      ...["/research", "/proof", "/usage"].map(destination => ({ destination, fragment: "" })),
+      ...["#current-activity", "#current-creators", "#payment-records"]
+        .map(fragment => ({ destination: "/history/testnet", fragment })),
+    ]) {
       const entryPath = destination === "/usage" ? "/proof" : destination === "/history/testnet" ? "/dashboard" : "/";
+      const returnUrl = origin + entryPath + fragment;
       const context = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: width === 390, isMobile: width === 390 });
       try {
         const page = await context.newPage(), errors: string[] = [];
@@ -82,6 +87,16 @@ try {
         await page.goto(origin + entryPath);
         console.log(JSON.stringify({ phase: "goto-complete", engine: engine.name(), width, destination }));
         await page.waitForFunction(() => [...document.querySelectorAll("button")].some(button => button.textContent?.includes("Connect Wallet")));
+        const entryHeading = await page.getByRole("heading", { level: 1 }).innerText();
+        if (fragment) {
+          const sectionLink = page.locator(`main nav a[href="${fragment}"]`);
+          if (width === 390) await sectionLink.tap(); else await sectionLink.click();
+          await page.waitForURL(returnUrl);
+          await page.waitForFunction(id => {
+            const box = document.getElementById(id)?.getBoundingClientRect();
+            return box && box.top < innerHeight && box.bottom > 0;
+          }, fragment.slice(1));
+        }
         let link;
         if (destination === "/research") {
           if (width === 390) await page.getByRole("button", { name: "Open menu" }).tap();
@@ -177,11 +192,25 @@ try {
           await page.waitForURL(origin + destination);
           await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ state: "detached" });
           await page.getByRole("heading", { level: 1 }).waitFor();
+          const destinationHeading = await page.getByRole("heading", { level: 1 }).innerText();
+          assert.notEqual(destinationHeading, entryHeading, "History assertions distinguish the two page bodies");
           await page.locator('header button[aria-label="Open menu"]').waitFor({ state: "attached" });
-          await page.goBack(); await page.waitForURL(origin + entryPath);
+          await page.goBack(); await page.waitForURL(returnUrl);
+          // A native fragment can restore the URL with null history state while
+          // Next keeps the destination DOM. A URL-only assertion misses that bug.
+          await page.getByRole("heading", { level: 1, name: entryHeading, exact: true }).waitFor();
+          assert.equal(await page.getByRole("heading", { level: 1, name: destinationHeading, exact: true }).count(), 0);
+          if (fragment) {
+            await page.goForward(); await page.waitForURL(origin + destination);
+            await page.getByRole("heading", { level: 1, name: destinationHeading, exact: true }).waitFor();
+            assert.equal(await page.getByRole("heading", { level: 1, name: entryHeading, exact: true }).count(), 0);
+            await page.goBack(); await page.waitForURL(returnUrl);
+            await page.getByRole("heading", { level: 1, name: entryHeading, exact: true }).waitFor();
+            assert.equal(await page.getByRole("heading", { level: 1, name: destinationHeading, exact: true }).count(), 0);
+          }
         }
         assert.deepEqual(errors, []);
-        console.log(JSON.stringify({ engine: engine.name(), width, destination, loadingMs, finalResponseWithheld: true }));
+        console.log(JSON.stringify({ engine: engine.name(), width, destination, fragment, loadingMs, finalResponseWithheld: true }));
       } finally {
         console.log(JSON.stringify({ phase: "context-cleanup-start", engine: engine.name(), width, destination, heldRouteCount: held.size }));
         await context.unrouteAll({ behavior: "ignoreErrors" });
