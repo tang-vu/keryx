@@ -25,6 +25,7 @@
 @source "../shared";
 @import "tw-animate-css";
 @import "../shared/design-tokens.css";
+@import "./fonts/vietnamese.css";
 
 /*
  * Keryx · The Mint — engraved-banknote / herald's-treasury system.
@@ -97,10 +98,10 @@
   --color-line-2: var(--line-2);
 
   /* Type system */
-  --font-display: var(--font-bodoni), "Bodoni Moda", Georgia, serif;
-  --font-serif: var(--font-spectral), Georgia, serif;
-  --font-sans: var(--font-spectral), Georgia, serif;
-  --font-mono: var(--font-spline-mono), ui-monospace, monospace;
+  --font-display: var(--font-localized-display, var(--font-bodoni)), "Bodoni Moda", Georgia, serif;
+  --font-serif: var(--font-localized-serif, var(--font-spectral)), Georgia, serif;
+  --font-sans: var(--font-localized-serif, var(--font-spectral)), Georgia, serif;
+  --font-mono: var(--font-localized-mono, var(--font-spline-mono)), ui-monospace, monospace;
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
