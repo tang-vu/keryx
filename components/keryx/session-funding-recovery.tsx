@@ -58,7 +58,7 @@ export function SessionFundingRecovery({ payer, revision = "" }: { payer: string
         <p className="font-mono text-xs">{copy(step === "approval" ? "gatewayFunding.approvalStatus" : "gatewayFunding.depositStatus", { status: record[step].status })}</p>
         {["possible", "submitted"].includes(record[step].status) && <>
           {!record[step].hash && <label className="grid gap-2 text-xs">{copy("gatewayFunding.transactionHash")}
-            <input value={hash} onChange={event => setHash(event.target.value)} autoComplete="off" spellCheck={false} placeholder="0x…" disabled={busy}
+            <input value={hash} onChange={event => setHash(event.target.value)} autoComplete="off" spellCheck={false} disabled={busy}
               className="min-w-0 border border-line bg-paper p-2 font-mono text-xs" />
           </label>}
           <button type="button" disabled={busy || !chain || (!record[step].hash && !/^0x[a-fA-F0-9]{64}$/.test(hash.trim()))}
