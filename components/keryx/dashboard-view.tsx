@@ -79,11 +79,12 @@ function publicCountBody(body: unknown): { publicQuestions: number } {
   return { publicQuestions: value.publicQuestions };
 }
 
-function ResourceNotice({ resource, label }: { resource: LedgerResource<unknown> & { retry: () => void }; label: string }) {
+function ResourceNotice({ resource, label }: { resource: LedgerResource<unknown> & { retry: () => void; retrying: boolean }; label: string }) {
   const uiRichCopy = useUiRichMessages();
   if (resource.status === "ready") return null;
+  const retry = <button type="button" onClick={resource.retry} disabled={resource.retrying} className="min-h-11 cursor-pointer px-2 text-seal underline disabled:cursor-wait disabled:no-underline">{resource.retrying ? uiCopy("ledgerResource.loading", { label }) : uiCopy("ledgerResource.retry")}</button>;
   return <div role="status" className="mb-3 text-sm leading-relaxed text-ink-2">
-    {resource.status === "loading" ? uiCopy("ledgerResource.loading", { label }) : resource.data !== null && resource.observedAt ? uiRichCopy("ledgerResource.unavailableWithObservation", { label, observed: <DisplayTime value={resource.observedAt} timeZone="UTC" timeStyle="medium" />, retry: <button type="button" onClick={resource.retry} className="min-h-11 px-2 text-seal underline">{uiCopy("ledgerResource.retry")}</button> }) : uiRichCopy("ledgerResource.unavailable", { label, retry: <button type="button" onClick={resource.retry} className="min-h-11 px-2 text-seal underline">{uiCopy("ledgerResource.retry")}</button> })}
+    {resource.status === "loading" ? uiCopy("ledgerResource.loading", { label }) : resource.data !== null && resource.observedAt ? uiRichCopy("ledgerResource.unavailableWithObservation", { label, observed: <DisplayTime value={resource.observedAt} timeZone="UTC" timeStyle="medium" />, retry }) : uiRichCopy("ledgerResource.unavailable", { label, retry })}
   </div>;
 }
 

@@ -5,19 +5,22 @@ export type SqliteSchemaExpectation = readonly [name: string, type: "table" | "i
 /** Compare each expected name/type/exact SQL in one native statement. Only one
  * boolean leaves SQLite: missing or altered definitions never become cached
  * authority, and untrusted stored SQL is not materialized into the JS heap.
+ * Index only object metadata, then read the first matching row's SQL by rowid;
+ * copying SQL into the temporary covering index makes repeated guards expensive.
  */
 export function sqliteSchemaMatches(db: DatabaseSync, expected: readonly SqliteSchemaExpectation[]): boolean {
   return db.prepare(`WITH actual AS MATERIALIZED (
-    SELECT rowid, name, type, sql FROM sqlite_schema
+    SELECT rowid, name, type FROM sqlite_schema
   ), expected AS MATERIALIZED (
     SELECT json_extract(value,'$[0]') AS name,
       json_extract(value,'$[1]') AS type,
       json_extract(value,'$[2]') AS sql FROM json_each(?)
   ) SELECT NOT EXISTS (
-    SELECT 1 FROM expected WHERE (
-      SELECT actual.sql=expected.sql FROM actual
-      WHERE actual.name=expected.name AND actual.type=expected.type
-      ORDER BY actual.rowid LIMIT 1
-    ) IS NOT 1
+    SELECT 1 FROM expected LEFT JOIN sqlite_schema AS definition
+      ON definition.rowid=(
+        SELECT MIN(actual.rowid) FROM actual
+        WHERE actual.name=expected.name AND actual.type=expected.type
+      )
+    WHERE (definition.sql=expected.sql) IS NOT 1
   ) AS matches`).get(JSON.stringify(expected))?.matches === 1;
 }
