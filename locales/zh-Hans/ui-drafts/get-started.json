@@ -414,7 +414,7 @@
     },
     "download.extensionRequirements": {
       "source": "Use Chrome or Edge on desktop, or another compatible Chromium browser. For the ZIP, follow the unpacked-install steps below and enable Developer mode. The public Chrome Web Store listing is also available; check its displayed version before installing.",
-      "text": "????? Chrome ? Edge?????? Chromium ???????? ZIP???????????????????????????? Chrome Web Store ??????????????????"
+      "text": "请使用桌面版 Chrome 或 Edge，或其他兼容的 Chromium 浏览器。使用 ZIP 时，请按下方步骤加载已解压的扩展，并开启开发者模式。Chrome Web Store 也有公开页面；安装前请检查其中显示的版本。"
     },
     "download.extensionSteps.0": {
       "source": "Download and extract the extension ZIP. The extracted directory contains manifest.json directly.",
