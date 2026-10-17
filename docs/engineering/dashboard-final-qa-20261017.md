@@ -21,6 +21,13 @@ reads and resume with a fresh read. Errors retain the dated previous observation
 and the existing manual retry behavior. No cached privacy or payment verdict is
 introduced.
 
+The shared header's settled-payment ticker uses the same bounded reader, keeping
+its thirty-second cadence and settled-only display. Its previous fixed interval
+could overlap slow requests and left network reads running after navigation.
+The reader now waits for completion, times out at fifteen seconds, aborts on
+unmount and pauses hidden tabs. A failed refresh still replaces the ticker with
+its unavailable/retry state instead of presenting old payments as a fresh read.
+
 The dashboard requests its displayed 25 recent questions. `/api/runs` accepts
 one optional decimal `limit` from 1 through 50, defaulting to the existing 50.
 Invalid or repeated values refuse before reading storage. Network/cohort/privacy

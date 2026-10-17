@@ -3,11 +3,11 @@
 
 import { formatRecordedUsdc } from "@/lib/i18n/format";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import type { PaymentRecord } from "@/lib/types";
 import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { recordedArcLabel } from "@/lib/arc-network-display";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { useLedgerResource } from "@/lib/hooks/use-ledger-resource";
 
 
 
@@ -15,38 +15,19 @@ import { useUiMessages } from "@/lib/i18n/ui-copy";
 
 type State = "loading" | "ready" | "empty" | "error";
 
+function settledCitations(body: unknown): PaymentRecord[] {
+  if (!body || typeof body !== "object" || !("payments" in body) || !Array.isArray(body.payments)) throw new Error("Invalid payment feed");
+  return (body.payments as PaymentRecord[]).filter((p) =>
+    p.kind === "citation" && p.settled === true && paymentSettlementStatus(p) === "settled" && p.amountUsdc > 0,
+  ).slice(0, 12);
+}
+
 export function DispatchWire() {
   const copy = useUiMessages();
-  const [payments, setPayments] = useState<PaymentRecord[]>([]);
-  const [state, setState] = useState<State>("loading");
-  const requestId = useRef(0);
-
-  const load = useCallback(async () => {
-    const id = ++requestId.current;
-    try {
-      const response = await fetch("/api/payments?limit=50", { cache: "no-store" });
-      if (!response.ok) throw new Error("Payment feed unavailable");
-      const body = await response.json();
-      if (!Array.isArray(body.payments)) throw new Error("Invalid payment feed");
-      const settled = (body.payments as PaymentRecord[]).filter((p) =>
-        p.kind === "citation" && p.settled === true && paymentSettlementStatus(p) === "settled" && p.amountUsdc > 0,
-      ).slice(0, 12);
-      if (id !== requestId.current) return;
-      setPayments(settled);
-      setState(settled.length ? "ready" : "empty");
-    } catch {
-      if (id !== requestId.current) return;
-      setPayments([]);
-      setState("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    const requests = requestId;
-    const initial = window.setTimeout(() => void load(), 0);
-    const timer = window.setInterval(() => void load(), 30_000);
-    return () => { window.clearTimeout(initial); window.clearInterval(timer); requests.current++; };
-  }, [load]);
+  const resource = useLedgerResource("/api/payments?limit=50", settledCitations, true, 30_000);
+  const payments = resource.data ?? [];
+  const state: State = resource.retrying || resource.status === "loading" ? "loading"
+    : resource.status === "error" ? "error" : payments.length ? "ready" : "empty";
 
   if (state === "empty") return null;
 
@@ -62,7 +43,7 @@ export function DispatchWire() {
           </div>
         )}
       </div>
-      {state === "error" && <button type="button" onClick={() => { setState("loading"); void load(); }} className="min-h-11 shrink-0 px-3 font-mono text-[10px] uppercase text-ink underline">{copy("dispatchWire.retry")}</button>}
+      {state === "error" && <button type="button" onClick={resource.retry} className="min-h-11 shrink-0 px-3 font-mono text-[10px] uppercase text-ink underline">{copy("dispatchWire.retry")}</button>}
     </div>
   );
 }
