@@ -9,7 +9,7 @@ vi.mock("@/lib/hooks/use-ledger-resource", () => ({ useLedgerResource: (url: str
   state.requests.push(url);
   const summary = url.startsWith("/api/runs/summary"), history = url.startsWith("/api/runs?");
   return { status: summary ? state.publicCountStatus : history ? state.historyStatus : "ready", observedAt: "2026-10-14T00:00:00Z", retry: () => {},
-    data: url === "/api/metrics" ? state.metrics : summary ? state.publicCount === null ? null : { publicQuestions: state.publicCount } : history ? state.history : [] };
+    data: url === "/api/metrics?view=dashboard" ? state.metrics : summary ? state.publicCount === null ? null : { publicQuestions: state.publicCount } : history ? state.history : [] };
 } }));
 // Site navigation/custody providers are outside this dashboard rendering regression.
 vi.mock("@/components/keryx/site-header", () => ({ SiteHeader: () => null }));
@@ -31,6 +31,7 @@ it("distinguishes recorded activity from an empty current-network public listing
   expect(html).toContain("public questions on");
   expect(html).toContain("No public questions to display.");
   expect(html).not.toContain("No dispatches yet");
+  expect(state.requests).toContain("/api/metrics?view=dashboard");
   const url = new URL(state.requests.find(url => url.startsWith("/api/runs"))!, "https://keryx.invalid");
   expect(url.searchParams.get("network")).toBe(browserPaymentProfile().networkId);
   expect(url.searchParams.get("period")).toBe("all");

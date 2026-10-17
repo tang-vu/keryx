@@ -761,8 +761,10 @@ export const openapiSpec = {
       get: {
         operationId: "getDashboardMetrics",
         summary: "Read aggregate dashboard telemetry",
-        description: "Public aggregate telemetry and settled payment totals. Recorded historical evidence samples do not establish current factual support; groundedClaimRate is null with an explicit unreassessed basis. This endpoint neither reads paid bodies nor reassesses archived evidence.",
-        responses: { "200": { description: "Dashboard metrics, leaderboard, topics and daily settled volume.", content: {
+        description: "Public aggregate telemetry and settled payment totals. Recorded historical evidence samples do not establish current factual support; groundedClaimRate is null with an explicit unreassessed basis. This endpoint neither reads paid bodies nor reassesses archived evidence. A single view=dashboard selects fresh metrics, creator leaderboard and sourceLeaderboard with the same usage and metricsScope boundaries; it omits engagement metadata, topics, dailySettled and historicalArchive. Absent, unknown or repeated view values retain the full default response.",
+        parameters: [{ in: "query", name: "view", required: false, schema: { type: "string" }, example: "dashboard",
+          description: "Optional projection. Only one exact dashboard value selects the smaller response; all other selections preserve the default contract." }],
+        responses: { "200": { description: "Full default metrics, leaderboard, sourceLeaderboard, topics, daily settled volume and historical archive status; explicit dashboard view returns metrics, both leaderboards and scope metadata only.", content: {
           "application/json": { schema: { type: "object", required: ["metrics"], properties: {
             metrics: { allOf: [
               { $ref: "#/components/schemas/DashboardGroundingStatus" },

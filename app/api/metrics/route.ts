@@ -34,19 +34,20 @@ function topicBreakdown(
     .map(([name, v]) => ({ name, pct: Math.round((v / total) * 100) }));
 }
 
-export async function GET() {
+export async function GET(request?: Request) {
+  const views = request ? new URL(request.url).searchParams.getAll("view") : [];
+  const dashboardOnly = views.length === 1 && views[0] === "dashboard";
   const db = await getDb();
   const [metrics, leaderboard, payments, sources, dailySettled, feedback, activationFunnel] = await Promise.all([
     db.metrics(),
     db.creatorLeaderboard(),
-    db.listPayments(1000),
+    dashboardOnly ? Promise.resolve([]) : db.listPayments(1000),
     db.listSources(),
-    db.dailySettled(14),
+    dashboardOnly ? Promise.resolve([]) : db.dailySettled(14),
     // Feedback is optional engagement metadata, independent of settled metrics.
-    db.getFeedbackStats().catch(() => undefined),
-    db.activationFunnel(30).catch(() => undefined),
+    dashboardOnly ? Promise.resolve(undefined) : db.getFeedbackStats().catch(() => undefined),
+    dashboardOnly ? Promise.resolve(undefined) : db.activationFunnel(30).catch(() => undefined),
   ]);
-  const tagsById = new Map(sources.map((s) => [s.id, (s.tags ?? []).slice(0, 3)]));
   // Display identity only: retain every original payment/source/wallet and amount.
   const namesById = new Map(sources.map(source => [source.id, source.name]));
   const namedLeaderboard = leaderboard.map(row => ({
@@ -54,17 +55,27 @@ export async function GET() {
     sourceName: (!row.sourceName || row.sourceName === row.sourceId)
       ? namesById.get(row.sourceId) || row.sourceName || row.sourceId : row.sourceName,
   }));
-  const topics = topicBreakdown(payments, tagsById);
   const sourceLeaderboard = await loadSourceLeaderboard(db, { sources, earnings: namedLeaderboard, network: config.networkId });
+  const dashboard = {
+    usage: { endpoint: "/api/usage", page: "/usage", classification: "outside/team/scripted/unknown", unclassifiedIsOutside: false },
+    metricsScope: { cohort: "mixed-all-origins", period: "all-time", network: "not-row-partitioned",
+      countingRule: "Existing recorded activity totals; not outside-user traction. Use /api/usage for explicit network/period/cohort figures." },
+    metrics,
+    leaderboard: namedLeaderboard,
+    sourceLeaderboard,
+  };
+  // The explicit dashboard view uses fresh ledger reads without waiting for
+  // engagement, chart, or archive data that this consumer never displays.
+  if (dashboardOnly) return Response.json(dashboard);
+  const tagsById = new Map(sources.map((s) => [s.id, (s.tags ?? []).slice(0, 3)]));
+  const topics = topicBreakdown(payments, tagsById);
   let historicalArchive;
   try {
     const archive = await getTestnetArchive();
     historicalArchive = archive ? { status: "available", info: archive.info, summary: await archive.summary() } : { status: "not-configured" };
   } catch { historicalArchive = { status: "unavailable" }; }
   return Response.json({
-    usage: { endpoint: "/api/usage", page: "/usage", classification: "outside/team/scripted/unknown", unclassifiedIsOutside: false },
-    metricsScope: { cohort: "mixed-all-origins", period: "all-time", network: "not-row-partitioned",
-      countingRule: "Existing recorded activity totals; not outside-user traction. Use /api/usage for explicit network/period/cohort figures." },
+    ...dashboard,
     historicalArchive,
     metrics: {
       ...metrics,
@@ -72,8 +83,6 @@ export async function GET() {
       feedbackTotal: feedback?.total,
       activationFunnel,
     },
-    leaderboard: namedLeaderboard,
-    sourceLeaderboard,
     topics,
     dailySettled,
   });

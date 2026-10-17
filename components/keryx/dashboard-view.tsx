@@ -109,7 +109,7 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
   // Keep the existing short revocation refresh for public question bodies.
   const runsResource = useLedgerResource(`/api/runs?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all&limit=25`, runBody, true, 10_000);
   const publicCountResource = useLedgerResource(`/api/runs/summary?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all`, publicCountBody);
-  const metricsResource = useLedgerResource("/api/metrics", metricBody, totalsVisible || creatorsVisible);
+  const metricsResource = useLedgerResource("/api/metrics?view=dashboard", metricBody, totalsVisible || creatorsVisible);
   const paymentsResource = useLedgerResource("/api/payments?limit=200", paymentBody, paymentsVisible);
   const withdrawalsResource = useLedgerResource("/api/withdrawals?limit=25", withdrawalBody, creatorsVisible);
   const metrics = metricsResource.data?.metrics;
