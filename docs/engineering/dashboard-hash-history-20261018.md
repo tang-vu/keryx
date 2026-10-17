@@ -7,8 +7,11 @@ used native anchors. Native fragment entries can have null history state, which
 the pinned Next App Router ignores on popstate.
 
 The three section links now use the existing Next Link component, preserving
-their labels, fragment URLs and scrolling. Next owns the history entries as it
-does for the adjacent archive link. No custom history handler is introduced.
+their labels, fragment URLs and scrolling. The same correction covers four
+adjacent locations with this reachable pattern: the source leaderboard's
+unavailable-fee link, integration guide section links, the literature workspace
+link and the MCP setup link. Next owns the history entries as it does for other
+internal links. No custom history handler is introduced.
 
 The existing compiled Next navigation harness now tests each of the three
 fragments separately at 390 and 1366 pixels, with Chromium and WebKit. It checks
@@ -28,6 +31,15 @@ After the fix, the rebuilt application passed all twelve cases on each engine,
 including every fragment at both widths and the existing delayed-navigation and
 HTTP-status contracts. Both runs exited successfully after browser/server cleanup
 with no held requests. Independent source review found no concrete issue.
+
+Additional cases exercise a representative link at each of those four locations,
+at both widths and with the same URL/body Back/Forward/Back assertions. The
+conditional leaderboard case supplies an offline zero-value source row and an
+unavailable operating-fee status, scrolls to creators to trigger the real deferred
+reader, then follows its recovery link. Other browser API calls remain refused.
+The default CI command runs the original and adjacent cases together. The
+`--adjacent-fragments` option runs only the affected additions when reusing valid
+unchanged original-case evidence.
 
 Local builds use the pinned Turbopack compiler. Its documented root is temporarily
 normalized to include the read-only sibling dependency junction, then the config

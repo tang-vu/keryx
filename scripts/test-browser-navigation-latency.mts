@@ -28,6 +28,19 @@ async function fulfillBuiltGet(route: Route) {
   return route.fulfill({ response, headers, body });
 }
 const engine = process.argv.includes("--webkit") ? webkit : chromium;
+type NavigationCase = { destination: string; fragment: string; entryPath?: string };
+const adjacentFragments: NavigationCase[] = [
+  { entryPath: "/dashboard", destination: "/history/testnet", fragment: "#payment-proof-title" },
+  { entryPath: "/integrations", destination: "/proof", fragment: "#mcp" },
+  { entryPath: "/literature", destination: "/proof", fragment: "#literature-project" },
+  { entryPath: "/integrations/mcp", destination: "/proof", fragment: "#setup" },
+];
+const navigationCases: NavigationCase[] = process.argv.includes("--adjacent-fragments") ? adjacentFragments : [
+  ...["/research", "/proof", "/usage"].map(destination => ({ destination, fragment: "" })),
+  ...["#current-activity", "#current-creators", "#payment-records"]
+    .map(fragment => ({ destination: "/history/testnet", fragment })),
+  ...adjacentFragments,
+];
 console.log(JSON.stringify({ phase: "browser-launch-start", engine: engine.name() }));
 const browser = await engine.launch({ headless: true });
 console.log(JSON.stringify({ phase: "browser-launch-complete", engine: engine.name() }));
@@ -58,12 +71,8 @@ try {
   console.log(JSON.stringify({ phase: "startup-ready", engine: engine.name() }));
 
   for (const width of [390, 1366]) {
-    for (const { destination, fragment } of [
-      ...["/research", "/proof", "/usage"].map(destination => ({ destination, fragment: "" })),
-      ...["#current-activity", "#current-creators", "#payment-records"]
-        .map(fragment => ({ destination: "/history/testnet", fragment })),
-    ]) {
-      const entryPath = destination === "/usage" ? "/proof" : destination === "/history/testnet" ? "/dashboard" : "/";
+    for (const { destination, fragment, entryPath: suppliedEntryPath } of navigationCases) {
+      const entryPath = suppliedEntryPath ?? (destination === "/usage" ? "/proof" : destination === "/history/testnet" ? "/dashboard" : "/");
       const returnUrl = origin + entryPath + fragment;
       const context = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: width === 390, isMobile: width === 390 });
       try {
@@ -73,6 +82,16 @@ try {
         await context.route("**/*", async route => {
           const request = route.request(), url = new URL(request.url());
           if (url.origin !== origin || request.method() !== "GET") return route.abort();
+          if (fragment === "#payment-proof-title" && url.pathname === "/api/metrics")
+            return route.fulfill({ status: 200, json: {
+              metrics: { totalQueries: 0, totalPayments: 0, totalVolumeUsdc: 0, totalCreatorPayoutsUsdc: 0,
+                creatorsEarning: 0, pendingPaymentConfirmations: 0, pendingPaymentVolumeUsdc: 0,
+                failedPaymentAttempts: 0, failedPaymentVolumeUsdc: 0 },
+              leaderboard: [], sourceLeaderboard: { rows: [{ sourceId: "navigation-fixture", sourceName: "Offline navigation source",
+                href: "/sources", kind: "public-reference", creatorEarnedUsdc: 0, paymentCount: 0, citationCount: 0,
+                operatingFeeUsdc: null, operatingFeePaymentCount: null, operatingFeeCitationCount: null, feeBeneficiaries: [] }], catalogStatus: "ready",
+                operatingFeesStatus: "unavailable", operatingFeeNetwork: "arcTestnet" },
+            } });
           if (url.pathname.startsWith("/api/")) return route.fulfill({ status: 503, json: { error: "Read-only fixture" } });
           if (url.pathname === destination && url.searchParams.has("_rsc") && request.headers()["next-router-prefetch"] !== "1") {
             assert(!finalRoute, "One final navigation request");
@@ -89,7 +108,10 @@ try {
         await page.waitForFunction(() => [...document.querySelectorAll("button")].some(button => button.textContent?.includes("Connect Wallet")));
         const entryHeading = await page.getByRole("heading", { level: 1 }).innerText();
         if (fragment) {
-          const sectionLink = page.locator(`main nav a[href="${fragment}"]`);
+          // The unavailable-fee link is conditional on the visible creator
+          // section's metrics response, not part of the dashboard's section nav.
+          if (fragment === "#payment-proof-title") await page.locator("#current-creators").scrollIntoViewIfNeeded();
+          const sectionLink = page.locator(`main a[href="${fragment}"]`);
           if (width === 390) await sectionLink.tap(); else await sectionLink.click();
           await page.waitForURL(returnUrl);
           await page.waitForFunction(id => {
@@ -210,7 +232,7 @@ try {
           }
         }
         assert.deepEqual(errors, []);
-        console.log(JSON.stringify({ engine: engine.name(), width, destination, fragment, loadingMs, finalResponseWithheld: true }));
+        console.log(JSON.stringify({ engine: engine.name(), width, entryPath, destination, fragment, loadingMs, finalResponseWithheld: true }));
       } finally {
         console.log(JSON.stringify({ phase: "context-cleanup-start", engine: engine.name(), width, destination, heldRouteCount: held.size }));
         await context.unrouteAll({ behavior: "ignoreErrors" });
