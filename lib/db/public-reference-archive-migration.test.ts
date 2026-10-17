@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalJson } from "../canonical-json";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
+import { installNativeUserDomainSchema, NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema";
+import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, storageIdentityDigest, type StorageIdentity } from "./storage-identity";
 import { assertStorageFences, assertStorageIdentity, insertStorageIdentity, installStorageFences, registerStorageCapability,
@@ -15,7 +17,8 @@ import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-prof
 import { publicReferenceItemId, type PublicReference } from "../public-references/catalog";
 import { hasPublicReferenceArchive } from "./public-reference-archive";
 import { migratePublicReferenceArchiveStorage, publicReferenceArchiveMigrationProfiles,
-  snapshotPublicArchiveStorage, MIGRATION_FRAMED_BYTE_LIMIT } from "./public-reference-archive-migration";
+  snapshotPublicArchiveStorage, snapshotPublicArchiveMigrationStorage, PUBLIC_ARCHIVE_SNAPSHOT_LIMITS,
+  MIGRATION_FRAMED_BYTE_LIMIT } from "./public-reference-archive-migration";
 import { scanFullStorageSnapshot, STORAGE_SNAPSHOT_LIMITS } from "./storage-identity-snapshot";
 import { inspectPublicArchiveStorage, migratePublicArchiveStorage, runPublicArchiveStorageCli } from "../../scripts/source-archive-storage-migrate.mjs";
 
@@ -26,7 +29,7 @@ const reference: PublicReference = { id: "public:migration-test", name: "Origina
   items: [1, 2, 3].map(n => ({ id: publicReferenceItemId("public:migration-test", `https://archive.test/${n}`),
     link: `https://archive.test/${n}`, title: `Original article ${n}`, content: `Retained historical public body ${n}`,
     summary: "Public article", deliveryKind: "excerpt" })) };
-function fixture(mainnet = true, invalid = false) {
+function fixture(mainnet = true, invalid = false, nativeUserDomains = false) {
   const directory = mkdtempSync(join(tmpdir(), "keryx-public-archive-migration-")); directories.push(directory);
   const file = join(directory, "store.sqlite"), manifest = join(directory, "deployment.json");
   const identity: StorageIdentity = mainnet ? { ...syntheticStorageIdentity("testnet-offline"), format: "keryx-mainnet-storage-identity-v1",
@@ -35,6 +38,17 @@ function fixture(mainnet = true, invalid = false) {
   try {
     db.exec("BEGIN IMMEDIATE");
     if (mainnet) installMainnetApplicationSchema(db); else installSqliteApplicationSchema(db);
+    if (nativeUserDomains) {
+      installNativeUserDomainSchema(db);
+      const wallet = `0x${"1".repeat(40)}`;
+      db.prepare("INSERT INTO private_profiles(wallet,handle,display_name,bio,purpose,links,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)")
+        .run(wallet, null, "Synthetic retained owner", "Retained native note ☃", "research", "[]", reference.refreshedAt!, reference.refreshedAt!);
+      db.prepare("INSERT INTO private_bibliographies VALUES(?,?,?,?,?,?,?,?,?)")
+        .run("synthetic-native-bib", wallet, "1".repeat(64), "Original native bibliography", "@misc{synthetic,\n title={Original}}\n", 0, 1,
+          reference.refreshedAt!, reference.refreshedAt!);
+      db.prepare("INSERT INTO sync_state(key,value,updated_at) VALUES(?,?,?)")
+        .run("synthetic-typed-original", new Uint8Array([0, 255, 128]), null);
+    }
     const snapshot = invalid ? { ...reference, items: [reference.items[0], { ...reference.items[1], id: reference.items[2]!.id }] } : reference;
     db.prepare("INSERT INTO public_references(id,active,rss_url,snapshot) VALUES (?,?,?,?)")
       .run(reference.id, 1, reference.rssUrl, JSON.stringify(snapshot));
@@ -66,6 +80,63 @@ function largeMetadata(f: ReturnType<typeof fixture>, value: string | Uint8Array
 }
 
 describe("explicit public archive storage activation", () => {
+  it("pairs only the exact supported base and full-native mainnet schemas across archive activation", () => {
+    const pairs = publicReferenceArchiveMigrationProfiles(true);
+    expect(NATIVE_USER_DOMAIN_TABLES).toHaveLength(25);
+    expect(pairs).toHaveLength(2);
+    expect(pairs.flat().sort()).toEqual([...supportedSqliteApplicationProfiles(true)].sort());
+  });
+
+  it("backs up and preserves populated native25 originals, fences and original fulfillment through activation and repeat", async () => {
+    const f = fixture(true, false, true), beforeProfile = profile(f.file, f.identity);
+    const pair = publicReferenceArchiveMigrationProfiles(true).find(([before]) => before === beforeProfile)!;
+    expect(pair).toBeDefined();
+    const beforeDb = new DatabaseSync(f.file, { readOnly: true });
+    let before;
+    try { before = snapshotPublicArchiveStorage(beforeDb, f.identity, [pair[0]]); }
+    finally { beforeDb.close(); }
+    const inspected = inspectPublicArchiveStorage(f.manifest), backup = join(f.directory, "native25-before.sqlite");
+    expect(inspected.schemaDigest).toBe(createHash("sha256").update(pair[0]).digest("hex"));
+    expect(await migratePublicArchiveStorage({ manifest: f.manifest, expectedManifestDigest: inspected.manifestDigest,
+      expectedIdentityDigest: inspected.identityDigest, backup, receipt: join(f.directory, "native25-archive.jsonl"), writersStopped: true }))
+      .toMatchObject({ status: "migrated", originalRowsPreserved: true, signingResumeAuthorized: false, phase: "migration-verified" });
+    const copied = new DatabaseSync(backup, { readOnly: true }), afterDb = new DatabaseSync(f.file, { readOnly: true });
+    let after;
+    try {
+      expect(snapshotPublicArchiveStorage(copied, f.identity, [pair[0]])).toEqual(before);
+      after = snapshotPublicArchiveStorage(afterDb, f.identity, [pair[1]]);
+      for (const [table, original] of Object.entries(before.tables)) expect(after.tables[table]).toEqual(original);
+      for (const table of NATIVE_USER_DOMAIN_TABLES) expect(after.tables[table]).toEqual(before.tables[table]);
+      for (const table of ["a2a_failed_original_fulfillments", "a2a_fulfillment_completions"])
+        expect(after.tables[table]).toEqual(before.tables[table]);
+      assertStorageIdentity(afterDb, f.identity); assertStorageFences(afterDb, f.identity);
+      expect(afterDb.prepare("SELECT count(*) AS n FROM public_reference_articles").get()!.n).toBe(3);
+    } finally { copied.close(); afterDb.close(); }
+    expect(migratePublicReferenceArchiveStorage(f.file, f.identity, () => {})).toMatchObject({ status: "already-current" });
+    const repeated = new DatabaseSync(f.file, { readOnly: true });
+    try { expect(snapshotPublicArchiveStorage(repeated, f.identity, [pair[1]])).toEqual(after); }
+    finally { repeated.close(); }
+  });
+
+  it.each([
+    ["missing immutable native trigger", "DROP TRIGGER pending_job_owners_no_update", "source profile differs"],
+    ["modified count-equivalent25 schema", "ALTER TABLE private_profiles ADD COLUMN unexpected TEXT", "source profile differs"],
+    ["unknown future domain", "CREATE TABLE unexpected_native_family(id TEXT PRIMARY KEY)", "unsupported_table"],
+  ])("refuses native archive activation with %s", (_name, sql, error) => {
+    const f = fixture(true, false, true), changed = new DatabaseSync(f.file);
+    let before;
+    try { changed.exec(sql); before = sqliteApplicationSchemaProfile(changed, new Set()); } finally { changed.close(); }
+    expect(() => migratePublicReferenceArchiveStorage(f.file, f.identity, () => {})).toThrow(error);
+    const db = new DatabaseSync(f.file, { readOnly: true });
+    try {
+      expect(sqliteApplicationSchemaProfile(db, new Set())).toBe(before);
+      expect(hasPublicReferenceArchive(db)).toBe(false); assertStorageIdentity(db, f.identity);
+      if (error === "unsupported_table") expect(() => assertStorageFences(db, f.identity)).toThrow(error);
+      else assertStorageFences(db, f.identity);
+    }
+    finally { db.close(); }
+  });
+
   it("preserves streamed originals above 32 MiB without raising enrollment's encoded limit", () => {
     const f = fixture(), value = "x".repeat(1024 * 1024), pair = publicReferenceArchiveMigrationProfiles(true)[0]!;
     largeMetadata(f, value);
@@ -108,6 +179,95 @@ describe("explicit public archive storage activation", () => {
     } finally { db.close(); }
   });
 
+  it("verifies full native originals and repeat backups above standard file/framed limits", async () => {
+    const f = fixture(true, false, true), pair = publicReferenceArchiveMigrationProfiles(true)[1]!;
+    largeMetadata(f, new Uint8Array(1024 * 1024));
+    const padding = new DatabaseSync(f.file);
+    try {
+      registerStorageCapability(padding, f.identity, () => true); padding.exec("BEGIN IMMEDIATE");
+      const insert = padding.prepare("INSERT INTO sync_state(key,value) VALUES (?,?)");
+      const value = "allocation-only".padEnd(2 * 1024 * 1024, "x");
+      for (let index = 0; index < 17; index++) insert.run(`padding-${index}`, value);
+      padding.exec("DELETE FROM sync_state WHERE key LIKE 'padding-%'; COMMIT");
+    } finally { padding.close(); }
+    expect(statSync(f.file).size).toBeGreaterThan(STORAGE_SNAPSHOT_LIMITS.fileBytes);
+    expect(statSync(f.file).size).toBeLessThan(PUBLIC_ARCHIVE_SNAPSHOT_LIMITS.fileBytes);
+    const db = new DatabaseSync(f.file, { readOnly: true });
+    let before;
+    try {
+      expect(() => snapshotPublicArchiveStorage(db, f.identity, [pair[0]])).toThrow("file limit");
+      before = snapshotPublicArchiveMigrationStorage(db, f.identity, [pair[0]]);
+    } finally { db.close(); }
+    const inspected = inspectPublicArchiveStorage(f.manifest), backup = join(f.directory, "large-before.sqlite");
+    const options = { manifest: f.manifest, expectedManifestDigest: inspected.manifestDigest,
+      expectedIdentityDigest: inspected.identityDigest, backup, receipt: join(f.directory, "large.jsonl"), writersStopped: true };
+    expect(await migratePublicArchiveStorage(options)).toMatchObject({ status: "migrated", originalRowsPreserved: true });
+    const copied = new DatabaseSync(backup, { readOnly: true }), after = new DatabaseSync(f.file, { readOnly: true });
+    try {
+      expect(snapshotPublicArchiveMigrationStorage(copied, f.identity, [pair[0]])).toEqual(before);
+      const migrated = snapshotPublicArchiveMigrationStorage(after, f.identity, [pair[1]]);
+      for (const [table, original] of Object.entries(before.tables)) expect(migrated.tables[table]).toEqual(original);
+      assertStorageIdentity(after, f.identity); assertStorageFences(after, f.identity);
+    } finally { copied.close(); after.close(); }
+    expect(await migratePublicArchiveStorage({ ...options, backup: join(f.directory, "large-current.sqlite"),
+      receipt: join(f.directory, "large-current.jsonl") })).toMatchObject({ status: "already-current", originalRowsPreserved: true });
+    // Existing no-replace semantics still protect the larger backup and receipt.
+    await expect(migratePublicArchiveStorage(options)).rejects.toThrow();
+  }, 60_000);
+
+  it("keeps archive field/framed limits and exact profile admission bounded", () => {
+    const f = fixture(), pair = publicReferenceArchiveMigrationProfiles(true)[0]!;
+    const db = new DatabaseSync(f.file);
+    try {
+      registerStorageCapability(db, f.identity, () => true);
+      const insert = db.prepare("INSERT INTO sync_state(key,value) VALUES (?,?)");
+      insert.run("oversized-field", "x".repeat(STORAGE_SNAPSHOT_LIMITS.fieldBytes + 1));
+      expect(() => snapshotPublicArchiveMigrationStorage(db, f.identity, pair)).toThrow("byte limit");
+      db.exec("DELETE FROM sync_state WHERE key='oversized-field'; BEGIN IMMEDIATE");
+      for (let index = 0; index < 65; index++) insert.run(`framed-${index}`, new Uint8Array(1024 * 1024));
+      db.exec("COMMIT");
+      expect(() => snapshotPublicArchiveMigrationStorage(db, f.identity, pair)).toThrow("framed byte limit");
+      expect(() => snapshotPublicArchiveMigrationStorage(db, f.identity, ["0".repeat(64)])).toThrow("profiles refused");
+      expect(() => snapshotPublicArchiveMigrationStorage(db, f.identity, [])).toThrow("profiles refused");
+      assertStorageIdentity(db, f.identity); assertStorageFences(db, f.identity);
+      expect(hasPublicReferenceArchive(db)).toBe(false);
+    } finally { db.close(); }
+    expect(PUBLIC_ARCHIVE_SNAPSHOT_LIMITS).toMatchObject({ fileBytes: 256 * 1024 * 1024, rows: 250_000,
+      framedBytes: 128 * 1024 * 1024, deadlineMs: 15_000, totalBytes: 128 * 1024 * 1024, fieldBytes: 2 * 1024 * 1024 });
+    expect(STORAGE_SNAPSHOT_LIMITS).toMatchObject({ fileBytes: 64 * 1024 * 1024, rows: 100_000, encodedBytes: 32 * 1024 * 1024 });
+  }, 30_000);
+
+  it("hashes archive rows beyond100k but refuses more than250k before backup admission or DDL", () => {
+    const f = fixture(), pair = publicReferenceArchiveMigrationProfiles(true)[0]!;
+    const db = new DatabaseSync(f.file);
+    try {
+      registerStorageCapability(db, f.identity, () => true);
+      db.exec(`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<100001)
+        INSERT INTO sync_state(key,value) SELECT 'row-'||value,'' FROM n`);
+      expect(snapshotPublicArchiveMigrationStorage(db, f.identity, pair).rows).toBeGreaterThan(100_000);
+      expect(() => snapshotPublicArchiveStorage(db, f.identity, pair)).toThrow("row/deadline limit");
+      db.exec(`WITH RECURSIVE n(value) AS (SELECT 100002 UNION ALL SELECT value+1 FROM n WHERE value<250001)
+        INSERT INTO sync_state(key,value) SELECT 'row-'||value,'' FROM n`);
+    } finally { db.close(); }
+    let admitted = false;
+    expect(() => migratePublicReferenceArchiveStorage(f.file, f.identity, () => { admitted = true; })).toThrow("row/deadline limit");
+    expect(admitted).toBe(false);
+    const retained = new DatabaseSync(f.file, { readOnly: true });
+    try { expect(hasPublicReferenceArchive(retained)).toBe(false); assertStorageFences(retained, f.identity); }
+    finally { retained.close(); }
+  }, 30_000);
+
+  it("refuses an archive file beyond256MiB before creating a backup or receipt", async () => {
+    const f = fixture(), inspected = inspectPublicArchiveStorage(f.manifest);
+    const backup = join(f.directory, "oversized-backup.sqlite"), receipt = join(f.directory, "oversized.jsonl");
+    // Extend only this synthetic fixture; no large value is loaded into memory.
+    truncateSync(f.file, PUBLIC_ARCHIVE_SNAPSHOT_LIMITS.fileBytes + 4096);
+    expect(() => inspectPublicArchiveStorage(f.manifest)).toThrow("refused");
+    await expect(migratePublicArchiveStorage({ manifest: f.manifest, expectedManifestDigest: inspected.manifestDigest,
+      expectedIdentityDigest: inspected.identityDigest, backup, receipt, writersStopped: true })).rejects.toThrow("refused");
+    expect(existsSync(backup)).toBe(false); expect(existsSync(receipt)).toBe(false);
+  });
+
   it("adds archive under the original identity/fences while retaining every old row exactly", () => {
     const f = fixture(), pair = publicReferenceArchiveMigrationProfiles(true)[0]!;
     expect(profile(f.file, f.identity)).toBe(pair[0]);
@@ -133,8 +293,8 @@ describe("explicit public archive storage activation", () => {
     } finally { try { db.close(); } catch { /* Already closed for exclusive repeat. */ } }
   });
 
-  it("rolls back all archive DDL and inserted prefixes if a legacy middle item is forged", () => {
-    const f = fixture(true, true), before = profile(f.file, f.identity);
+  it.each([false, true])("rolls back all archive DDL and inserted prefixes for forged legacy items (native=%s)", nativeUserDomains => {
+    const f = fixture(true, true, nativeUserDomains), before = profile(f.file, f.identity);
     expect(() => migratePublicReferenceArchiveStorage(f.file, f.identity, () => {})).toThrow("identity differs");
     expect(profile(f.file, f.identity)).toBe(before);
     const db = new DatabaseSync(f.file, { readOnly: true });
