@@ -7,17 +7,67 @@ settlement on Arc.
 
 **[Final demo — under 3 minutes, English narration and subtitles](https://youtu.be/4uHylKXcv5Y)** ·
 **[Live product](https://keryx.cc)** · **[Reviewer route](reviewer-start.md)** ·
-**[Windows/MCP release](https://github.com/tang-vu/keryx/releases/tag/v0.27.63)** ·
+**[Windows/MCP downloads](https://keryx.cc/download)** ·
 **[User workflow video — Hoàng](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)** ·
 **[User workflow video — 0xacee](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-keryx-user-workflow-20261012.mp4)** ·
 **[User research paper — Trần Minh Hiếu](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hieu-keryx-research-pilot-20261013.pdf)**
 
-The owner confirmed submitting the Google Form on **October 13, 2026**. The
-submitted code comparison is frozen from the September 25 pre-event baseline to
-the submitted October 13 source:
-[2291753…92733ec](https://github.com/tang-vu/keryx/compare/2291753cc4fff2135d546227d5aafda287cbed7d...92733ecc6dfb5076815c2a29de6370c02a84845c).
-Later main commits remain visible in the repository and are not silently added
-to that submitted comparison.
+The owner confirmed **resubmitting the Google Form on October 17, 2026 at
+23:43 GMT+7**. The final prepared entry uses the demo above and this fixed event
+comparison, from the September 25 pre-event baseline to the October 17 merged source:
+**[2291753…6fc96424](https://github.com/tang-vu/keryx/compare/2291753cc4fff2135d546227d5aafda287cbed7d...6fc964247673fc8f6b7e24f47ad731f9e3771fc2)**.
+Submission is owner-confirmed; the final Google Form payload was not independently
+read back. Later repository commits do not move this prepared code boundary.
+
+## October 17 current evidence
+
+This is the current submission summary. The October 13 table and older delivery
+checks later in this document are retained history, with their original dates.
+
+| Measure | Recorded result | Scope |
+| --- | --- | --- |
+| Mainnet service usage | **216 questions, 16 accounts, 174 guest questions included in the 216** | Current mainnet deployment; public metrics checked October 17 at 16:09 UTC, deployment scope confirmed by the owner |
+| Contactable task participants | **Four**, with an October 15 returning-user task and a user-led paper using 65 retained reports | Case studies below; contactable participants are not the total service audience |
+| Mainnet settlement records | **116 settled records, 2.170250 USDC gross volume** | September 27–October 17; settlement references retained; includes incoming/outgoing and owner/QA activity |
+| Mainnet creator payouts | **1.272750 USDC** in source-access/citation payouts to two first-party source records | Distinct from operating fees, catalog rows and the historical testnet creator set |
+| Keryx operating fees | **0.867500 USDC across 43 settled records** | Fee beneficiary is Keryx; 46 source rows receive attributed shares of those fees |
+| Source catalog | **211 source/catalog records** | Catalog size is distinct from the number of paid creators |
+| Pending payments | **Three records, 0.035000 USDC** | Excluded from settled totals |
+| Historical testnet creators | **23 paid creator wallets; 11,314 creator payments; 56.748064 test USDC** | June 15–October 2; includes pre-event history and internal activity |
+| Event-window testnet use | **258 completed runs; 304 source/citation payments; 2.086750 test USDC** | September 27–October 2; separate network and window |
+
+Sources: [service metrics](https://keryx.cc/api/metrics),
+[event-window mainnet breakdown](https://keryx.cc/api/usage?network=eip155%3A5042&since=2026-09-27),
+[ledger](https://keryx.cc/dashboard), [testnet archive](https://keryx.cc/history/testnet).
+Accounts, questions, wallets and payment records are separate units. The network-filtered
+API currently attributes 159 of the 216 questions to stored mainnet tags; 57 legacy
+questions lack those tags. That is a provenance subset of the owner-confirmed
+mainnet deployment's service total. Stored funding/cohort classifications remain
+unknown; named user evidence is established separately below.
+
+The 46 fee-attributed source rows do not mean those publishers received creator
+payments: those allocations identify Keryx's fee beneficiary. The two-source
+mainnet creator view and the 23-wallet testnet archive describe different scopes.
+The gross total also includes a 0.03 USDC owner order whose inbound payment
+settled but research delivery failed. These aggregates establish recorded activity,
+not outside-customer revenue or net profit. Participant-funded repeat demand and
+independent acceptance of a complete paid-business result remain next milestones.
+
+## Continuity and business direction
+
+Keryx has been developed solo since June 2026. The
+[June 20 RSSHub proposal](https://github.com/DIYgod/RSSHub/discussions/22315)
+documents early outreach about opt-in creator payouts; it does not establish
+upstream integration. After Lepton, development continued into original-source
+research, reusable writing outputs, client applications and mainnet production.
+The October 15 return task and Hiếu's working paper connect those capabilities
+to actual developer and researcher work.
+
+The intended business is research deliverables for developers, researchers and
+small teams, with source budgets and eligible creator rewards. Prepaid research,
+the business Operator and a manual Monthly plan implement the purchase and
+delivery workflow. The priority is repeat use and accepted paid outcomes; feature
+availability and recorded payments retain the evidence scopes in this document.
 
 ## October 17 final video
 
@@ -29,10 +79,10 @@ The cut adds the October 15 VoiceReady return task, preserves the failed FFmpeg
 research and sponsored zero-source-cap boundary, and updates the closing npm
 count. Its English narration and subtitles remain available.
 
-The final form draft now uses this video URL. A new Google Form submission has
-**not been confirmed**. The October 13 submission and frozen code comparison
-above remain historical; the [original 2:47 film](https://youtu.be/sNonqLPMysg)
-belongs to that earlier entry.
+The final prepared form uses this video URL, and the owner confirmed resubmission
+on October 17. The October 13 entry's
+[original comparison](https://github.com/tang-vu/keryx/compare/2291753cc4fff2135d546227d5aafda287cbed7d...92733ecc6dfb5076815c2a29de6370c02a84845c)
+and [2:47 film](https://youtu.be/sNonqLPMysg) are historical artifacts.
 
 ## Community recognition
 
@@ -70,25 +120,30 @@ Builder ($250). These are prior awards, separate from Tameion results and revenu
 | Missing-evidence procurement | Define a research gap, compare provider-signed quotations using integer micro-USDC budgets, inspect signed supporting/refuting deliveries | [Procurement](evidence-procurement.md); portable prototype, funded provider execution remains a next stage |
 | Reusable Arc components | Exact money/allocation, two-toll x402, durable journal interfaces, registry indexing, budget reservations and withdrawal helpers | [Separate MIT library](https://github.com/tang-vu/keryx-arc-primitives), [accepted refresh](arc-primitives-maintenance.md); testnet defaults and explicit host duties |
 
-After the submitted comparison, [PR #455](https://github.com/tang-vu/keryx/pull/455)
+After the October 13 comparison, [PR #455](https://github.com/tang-vu/keryx/pull/455)
 also merged owner-bound completed-private-read import into evidence drafts. It
 reuses the retained job and exact excerpts through explicit selection/import;
 the [source record](engineering/completed-evidence-draft-283-20261013.md) retains
-its privacy and evidence boundaries. It awaits the next production batch.
+its privacy and evidence boundaries. It is included in the final prepared October
+17 comparison; deployment follows the separately recorded release batch.
 
 ## October 17 distribution refresh
 
-These are new API readbacks on October 17, not additions to the retained October
-13 table below. Financial and website observations keep their original dates.
+The October 17 checks below replace the current-summary distribution figures.
+The October 13 table below keeps its own reporting windows.
 
 | Channel | Observation | Window / counting rule |
 | --- | --- | --- |
-| npm event window | 2,711 download events | September 27–October 12; official API readback October 17 |
+| npm event window | 2,711 download events | September 27–October 16; official API readback October 17 |
 | npm lifetime | 3,619 download events | June 23–October 16; overlaps the event window, so do not add the two totals |
 | GitHub traffic | 41,654 clone events, 1,528 unique cloners, 781 views and 49 unique visitors | October 3–16; authenticated repository API readback October 17; a different rolling window from the older snapshot |
 | GitHub repository | 4 stars and 1 fork | Repository API readback October 17 |
+| Website | 580 visits and approximately 1,430 page views | Cloudflare, Exclude bots enabled; September 27, 00:00–October 17, 22:50 GMT+7; visits are sessions |
+| X | 44 @keryxpays followers; 46 posts in the profile header | Checked October 17; posts are the profile total, not an event-period count |
+| Chrome extension | 12 installs, 0 uninstalls | Owner-supplied console snapshot October 17; displayed window September 17–October 15 |
+| Product Hunt | 8 upvotes | Retained October 13 snapshot |
 
-Sources: [npm event window](https://api.npmjs.org/downloads/point/2026-09-27:2026-10-12/keryx-mcp),
+Sources: [npm event window](https://api.npmjs.org/downloads/point/2026-09-27:2026-10-16/keryx-mcp),
 [npm lifetime](https://api.npmjs.org/downloads/point/2026-06-23:2026-10-16/keryx-mcp),
 [npm daily range](https://api.npmjs.org/downloads/range/2026-09-27:2026-10-16/keryx-mcp),
 and the owner's authenticated [GitHub Traffic](https://github.com/tang-vu/keryx/graphs/traffic)
@@ -98,8 +153,30 @@ The same npm event window now returns 2,711 rather than the earlier 2,333.
 The difference of 378 matches the current October 12 daily count; it is not
 presented as new downloads after October 13. The API reports zero for October
 13–16 at this readback. Downloads and clones may include repeat installs, CI and
-automation; neither establishes unique people or paid adoption. The four-person
-verified minimum is unchanged, and 0xacee's return task adds no fifth user.
+automation. These are distribution counts. Four people are contactable for the
+case studies below; the service usage above extends beyond those case studies.
+0xacee's return task is further use by the same participant.
+
+### Inbound email and collaboration
+
+The retained October 13 review across three email accounts identified **27
+Keryx-related contacts/interactions**, before and during Tameion, with seven generic
+promotional emails excluded. It includes product discussions, collaboration
+proposals, organizer relationships, invitations and service offers. Examples
+include Leonard Witteler / Motive discussing receipts and editable agent briefs,
+Burs-IA proposing public independent testing, and a personalized XRPL Commons
+hackathon invitation after seeing Keryx at ETHOnline.
+
+An October 17 follow-up search found continuing press-feature outreach after
+Product Hunt and extension-promotion pitches. Some involve paid placement or
+marketing services. No published coverage, customer conversion or extra unique
+contact count is inferred. The 27 figure counts reviewed contacts/interactions,
+rather than an exact incoming-message total or paying customers.
+
+Separately, the Product Hunt launch generated **four inbound LinkedIn contacts**
+interested in Keryx. The retained October 13 discoverability snapshot records
+**126 backlinks from 47 linking websites**, including Glama/Trendshift listings.
+These cumulative relationship signals have no established event-period net growth.
 
 ## October 13 traction snapshot
 
@@ -374,8 +451,8 @@ it did not repeat a fresh installation or package acceptance trial.
 | Browser extension | Existing browser research/registration entry points | Thin adapter, separate package/store status; hosted handoffs |
 | Discord / Telegram / Slack | Existing chat research adapters and report links | Each adapter keeps its own authentication and sponsored-service role |
 
-The submitted source comparison ends at `92733ecc`; main also includes later
-merged improvements. A later October 14 read-only health check reported
+The historical October 13 source comparison ends at `92733ecc`; the final
+prepared October 17 comparison ends at `6fc96424`. A later October 14 health check reported
 operational Arc mainnet at `ae298ff4`. The client observations above retain their
 earlier source identity. Compare current health and release manifests with source
 before treating later changes as deployed. Source or downloadable artifacts alone
@@ -388,14 +465,28 @@ registry address is V3 `0x2217250019ab614dae7391d346d05c3fc4d71ae1`. The October
 response was incomplete, with observation checks last recorded on October 6.
 See [mainnet status](mainnet-status.md).
 
+A read-only October 17 check at 15:50 UTC observed web app **0.27.75**, source
+`50ad8e0e`, operational on Arc mainnet. The final prepared comparison includes
+later merged Google wallet recovery and public-source metadata performance fixes.
+That source snapshot is distinct from the dated deployed identity and client
+releases. Live routes showed intermittent latency during October 17; the
+[review card](tameion-closeout-2026-10-17.md) retains availability observations and
+direct media backups.
+
 ## Arc OSS: components other builders can use
 
 The separate [keryx-arc-primitives](https://github.com/tang-vu/keryx-arc-primitives)
-repository is MIT-licensed and refreshed to **0.3.0** during Tameion. Its built ESM
+repository is MIT-licensed and refreshed to **0.4.0** during Tameion. Its built ESM
 exports, TypeScript declarations, offline demo and consumer checks support reuse of
 integer micro-USDC parsing/allocation, fixed/computed two-toll x402 flows with
 required durable journals, creator-bound registry/indexing helpers, an atomic
 budget-reservation reference and signed withdrawal helpers.
+
+The 0.4.0 refresh adds plaintext SHA-256/UTF-8 integrity checks that retain payment
+evidence after delivery failure, plus payment-term checks against the selected
+source-version registry. Its 116 synthetic tests, offline demo and clean-consumer
+import/type checks support the built GitHub release tarball. No npm publication
+is claimed for this separate library.
 
 Alongside [Circle's Arc Nanopayments reference](https://github.com/circlefin/arc-nanopayments),
 Keryx adds the research workflow around a transfer: select useful information,

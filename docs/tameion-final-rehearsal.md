@@ -2,8 +2,9 @@
 
 > **October 17 update:** the [published final demo](https://youtu.be/4uHylKXcv5Y)
 > includes the VoiceReady return task and refreshed npm count, under three minutes.
-> It is in the updated form draft; form resubmission is not confirmed. The
-> October 16 rehearsal and October 13 submission references below keep their dates.
+> The owner confirmed form resubmission on October 17 at 23:43 GMT+7. Use the
+> [reviewer guide](reviewer-start.md) for the final route and evidence. The
+> October 16 rehearsal and October 13 submission references below are historical.
 
 **30-second English opening**
 

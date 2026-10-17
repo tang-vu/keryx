@@ -1,5 +1,12 @@
 # Keryx at Tameion 2026 — planned direction
 
+**Final October 17 update:** the owner confirmed form resubmission. Use the
+[reviewer guide](reviewer-start.md) for the current route, and the
+[submission evidence](tameion-submission.md#october-17-current-evidence) for the
+fixed October 17 source comparison, mainnet usage and business progress. The
+planning and release observations below retain their original dates; the
+October 13 entry is an earlier submission, not the final preparation boundary.
+
 **Deadline checked October 15:** the [official event page](https://tameion.thecanteenapp.com/)
 now gives **October 17, 11:59 PM ET** (October 18, 10:59 AM in Vietnam).
 Earlier October 10 references below retain their historical planning context.
