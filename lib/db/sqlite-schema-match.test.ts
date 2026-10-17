@@ -101,3 +101,52 @@ it("keeps native schema writing disabled after a writable_schema request", () =>
     expect(sqliteSchemaMatches(db, [["sealed_fixture", "table", sql]])).toBe(true);
   } finally { db.close(); }
 });
+
+it("keeps first-row semantics for duplicate names/kinds and NULL definitions inside SQLite", () => {
+  const db = new DatabaseSync(":memory:");
+  // Modern SQLite refuses forged sqlite_schema rows. Run the same native query
+  // over a synthetic metadata table to exercise duplicate/corrupt-row semantics.
+  const fixture = { prepare: (sql: string) => db.prepare(sql.replaceAll("sqlite_schema", "schema_fixture")) } as unknown as DatabaseSync;
+  const sql = "CREATE TABLE source(value TEXT)", laterSql = sql + " ";
+  try {
+    db.exec("CREATE TABLE schema_fixture(name TEXT,type TEXT,sql TEXT)");
+    const insert = db.prepare("INSERT INTO schema_fixture(rowid,name,type,sql) VALUES(?,?,?,?)");
+    insert.run(40, "source", "table", sql);
+    insert.run(-2, "source", "table", laterSql);
+    insert.run(-3, "source", "trigger", sql);
+    expect(sqliteSchemaMatches(fixture, [["source", "table", sql]])).toBe(false);
+    expect(sqliteSchemaMatches(fixture, [["source", "table", laterSql]])).toBe(true);
+    expect(sqliteSchemaMatches(fixture, [["source", "trigger", sql]])).toBe(true);
+    expect(sqliteSchemaMatches(fixture, [["source", "index", sql]])).toBe(false);
+    expect(sqliteSchemaMatches(fixture, [["Source", "table", laterSql]])).toBe(false);
+    db.prepare("UPDATE schema_fixture SET sql=NULL WHERE rowid=-2").run();
+    expect(sqliteSchemaMatches(fixture, [["source", "table", sql]])).toBe(false);
+    expect(sqliteSchemaMatches(fixture, [["source", "table", null as unknown as string]])).toBe(false);
+    db.prepare("DELETE FROM schema_fixture WHERE rowid=-2").run();
+    expect(sqliteSchemaMatches(fixture, [["source", "table", sql], ["source", "table", sql]])).toBe(true);
+    expect(sqliteSchemaMatches(fixture, [["source", "table", sql], ["source", "table", laterSql]])).toBe(false);
+    expect(sqliteSchemaMatches(fixture, [["source"]] as unknown as SqliteSchemaExpectation[])).toBe(false);
+    expect(sqliteSchemaMatches(fixture, [[null, "table", sql]] as unknown as SqliteSchemaExpectation[])).toBe(false);
+  } finally { db.close(); }
+});
+
+it("observes fresh SQL after repeated success and treats stored/expected SQL as exact data", () => {
+  const db = new DatabaseSync(":memory:");
+  const sql = "CREATE TABLE exact_fixture(value TEXT DEFAULT '??c; DROP TABLE sentinel; --')";
+  const expected: SqliteSchemaExpectation[] = [["exact_fixture", "table", sql]];
+  try {
+    db.exec("CREATE TABLE sentinel(id TEXT)"); db.exec(sql);
+    const before = schemaSnapshot(db);
+    for (let i = 0; i < 20; i++) expect(sqliteSchemaMatches(db, expected)).toBe(true);
+    expect(sqliteSchemaMatches(db, [["exact_fixture", "table", sql + " "]])).toBe(false);
+    expect(sqliteSchemaMatches(db, [["exact_fixture", "table", sql.replace("??c", "doc")]])).toBe(false);
+    expect(sqliteSchemaMatches(db, [["exact_fixture", "table", "SELECT 1; DROP TABLE sentinel"]])).toBe(false);
+    expect(schemaSnapshot(db)).toEqual(before);
+    db.exec("DROP TABLE exact_fixture");
+    db.exec(sql.replace("??c", "changed"));
+    expect(sqliteSchemaMatches(db, expected)).toBe(false);
+    db.exec("DROP TABLE exact_fixture"); db.exec(sql);
+    expect(sqliteSchemaMatches(db, expected)).toBe(true);
+    expect(schemaSnapshot(db)).toEqual(before);
+  } finally { db.close(); }
+});
