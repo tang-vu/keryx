@@ -2,7 +2,17 @@
 
 The user confirmed on **2026-10-02** that the [standalone Showcase repository](https://github.com/tang-vu/keryx-arc-primitives) should stay current alongside relevant Keryx primitive changes. This is authorized development-session work, not an autonomous scheduler or a promise of execution while the desktop app is closed. Avoid artificial activity commits or claims of momentum without useful verified changes.
 
-## Accepted refresh
+## Accepted 0.4 refresh — October 17
+
+Standalone [PR #2](https://github.com/tang-vu/keryx-arc-primitives/pull/2) is merged as [`9690ee8fcabdd103b2bb4edfa0d588c80ca35f10`](https://github.com/tang-vu/keryx-arc-primitives/commit/9690ee8fcabdd103b2bb4edfa0d588c80ca35f10), version **0.4.0**. Keryx's gitlink pins that exact source. The inspected upstream anchor is [`50ad8e0ebdd65ba35da965dfb3e7ef8b0e6b3ed0`](https://github.com/tang-vu/keryx/tree/50ad8e0ebdd65ba35da965dfb3e7ef8b0e6b3ed0).
+
+The additive refresh extracts October 9 plaintext-integrity and October 12 registry-origin protections. `selectPlaintextCommitment` snapshots explicit hashes/byte counts before I/O; `checkPaidText` verifies SHA-256 and UTF-8 while retaining the identical host payment original when delivery fails. `getRegistryPaymentTerms` reads the selected original-version registry and rejects inactive/foreign-creator records, invalid payees/prices, wrong chain and RPC failure. It retains deployment/source identity rather than substituting the current global registry or a database fallback.
+
+Validation: clean Node 24.21.0/npm 11.19.0 install; formatting, TypeScript, **116 synthetic tests**, ESM/declaration build and no-network demo; clean-consumer imports/types for **12 exports** and **32 allowlisted artifact files**. Independent exact-head review found no reachable defects; [PR CI](https://github.com/tang-vu/keryx-arc-primitives/actions/runs/39042645252) and [exact-main CI](https://github.com/tang-vu/keryx-arc-primitives/actions/runs/39042733417) passed. The [0.4.0 GitHub release](https://github.com/tang-vu/keryx-arc-primitives/releases/tag/v0.4.0) contains the built tarball; no npm publication is claimed.
+
+Existing SDK/dependency pins, payment journals/signing/retry contracts, original Solidity and testnet defaults remain unchanged. Publisher authentication, exact version selection, payment evidence, durable recovery, RPC trust/freshness and signing admission stay host-owned. Upstream v2/v3 registry adapters and mainnet activation remain separate work. See [0.4 integration](https://github.com/tang-vu/keryx-arc-primitives/blob/9690ee8fcabdd103b2bb4edfa0d588c80ca35f10/docs/migration-0.4.md) and [this refresh's surface audit](engineering/arc-primitives-refresh-20261017.md).
+
+## Accepted 0.3 baseline
 
 Standalone [PR #1](https://github.com/tang-vu/keryx-arc-primitives/pull/1) was squash-merged as [`fea33574e106a91013e52fad9e99bd4db9df1206`](https://github.com/tang-vu/keryx-arc-primitives/commit/fea33574e106a91013e52fad9e99bd4db9df1206), version **0.3.0**. The [GitHub release](https://github.com/tang-vu/keryx-arc-primitives/releases/tag/v0.3.0) includes a built tarball; no npm publication is claimed. The reviewed upstream anchor is Keryx [`2c59c07`](https://github.com/tang-vu/keryx/tree/2c59c07). The preceding standalone source was the July 5 extraction; its September 19 change only updated ignored artifacts.
 
@@ -26,8 +36,8 @@ No automatic copying or release is assumed. Changes may intentionally remain ups
 
 | Surface | Role in this refresh |
 | --- | --- |
-| Standalone library and host API | Generated ESM/types, framework-neutral seller results and required journal interfaces; independently versioned 0.3.0 artifact |
-| Browser integration | Burn-intent signing/verification and budget-reference contract; complete browser worker/custody/UI stays upstream/host-owned |
+| Standalone library and host API | Generated ESM/types, framework-neutral seller results, journal interfaces, plaintext checks and selected-registry terms; independently versioned 0.4.0 artifact |
+| Browser integration | Portable plaintext checks, burn-intent signing/verification and budget-reference contract; complete browser worker/custody/UI stays upstream/host-owned |
 | Keryx web/API | Documentation and exact submodule reference updated; deployed TypeScript payment behavior remains authoritative and unchanged by this slice |
 | Keryx desktop | Upstream installer/application; no source, package version, rebuild or synchronized installer claim from library-only changes |
 | Keryx CLI | Upstream application/signed recovery flows; no adapter/runtime modification needed for this independent extraction |
