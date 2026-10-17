@@ -29,4 +29,15 @@ describe("public classified usage/history routes", () => {
     expect(response.status).toBe(200); expect(reader).toHaveBeenCalledWith(expect.objectContaining({ network: "eip155:5042", period: "7d" }), "outside", 50);
     expect(response.headers.get("X-Keryx-History-Coverage")).toContain("filtered-before-page");
   });
+  it("bounds an explicit recent-page limit before any store or archive read", async () => {
+    const reader = vi.fn().mockResolvedValue([run("selected")]);
+    getDb.mockResolvedValue({ publicUsage: { history: reader } } as unknown as KeryxDB);
+    for (const limit of ["0", "51", "-1", "1.5", "25&limit=25", "", "01", "1e1"]) {
+      expect((await history(new Request(`https://keryx.invalid/api/runs?limit=${limit}`))).status).toBe(400);
+    }
+    expect(getDb).not.toHaveBeenCalled(); expect(getArchive).not.toHaveBeenCalled();
+    const response = await history(new Request("https://keryx.invalid/api/runs?network=eip155:5042&period=all&limit=25"));
+    expect(response.status).toBe(200);
+    expect(reader).toHaveBeenCalledWith(expect.objectContaining({ network: "eip155:5042", period: "all" }), "default", 25);
+  });
 });

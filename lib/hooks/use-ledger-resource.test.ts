@@ -43,7 +43,7 @@ it("signals a manual retry immediately and waits for its result before polling a
   expect(fetcher).toHaveBeenCalledTimes(2);
   await act(async () => finish(new Response("42")));
   expect(resource).toMatchObject({ status: "ready", data: 42, retrying: false });
-  await act(async () => vi.advanceTimersByTimeAsync(10_000));
+  await act(async () => vi.advanceTimersByTimeAsync(60_000));
   expect(fetcher).toHaveBeenCalledTimes(3);
   expect(resource.data).toBe(43);
 });
@@ -56,7 +56,7 @@ it("keeps the original observation through a failed retry and allows a later suc
     .mockResolvedValueOnce(new Response("43"));
   await mount();
   const observedAt = resource.observedAt;
-  await act(async () => vi.advanceTimersByTimeAsync(10_000));
+  await act(async () => vi.advanceTimersByTimeAsync(60_000));
   await act(async () => resource.retry());
   expect(resource).toMatchObject({ status: "error", data: 42, observedAt, retrying: true });
   await act(async () => finish(new Response(null, { status: 503 })));
@@ -77,4 +77,46 @@ it("aborts an outstanding read on retry and ignores its late result", async () =
   expect(resource).toMatchObject({ data: null, retrying: true });
   await act(async () => finishRetry(new Response("42")));
   expect(resource).toMatchObject({ status: "ready", data: 42, retrying: false });
+});
+
+it("defers a section until enabled without making other reads wait", async () => {
+  let section: ReturnType<typeof useLedgerResource<number>>;
+  function Sections({ enabled }: { enabled: boolean }) {
+    const current = useLedgerResource("/api/runs", parse);
+    const deferred = useLedgerResource("/api/payments", parse, enabled);
+    useEffect(() => { resource = current; section = deferred; }, [current, deferred]);
+    return null;
+  }
+  fetcher.mockImplementation(async url => new Response(url === "/api/runs" ? "42" : "7"));
+  await act(async () => root.render(createElement(Sections, { enabled: false })));
+  expect(fetcher.mock.calls.map(call => call[0])).toEqual(["/api/runs"]);
+  expect(resource.data).toBe(42);
+  expect(section!.data).toBeNull();
+  await act(async () => root.render(createElement(Sections, { enabled: true })));
+  expect(fetcher.mock.calls.map(call => call[0])).toEqual(["/api/runs", "/api/payments"]);
+  expect(section!.data).toBe(7);
+});
+
+it("pauses hidden tabs and resumes with one fresh read without overlap", async () => {
+  let visibility = "visible";
+  vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility as DocumentVisibilityState);
+  fetcher.mockImplementation(async () => new Response("42"));
+  await mount();
+  await act(async () => vi.advanceTimersByTimeAsync(59_999));
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  visibility = "hidden";
+  await act(async () => document.dispatchEvent(new Event("visibilitychange")));
+  await act(async () => vi.advanceTimersByTimeAsync(180_000));
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  let finish!: (response: Response) => void;
+  fetcher.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  visibility = "visible";
+  await act(async () => document.dispatchEvent(new Event("visibilitychange")));
+  await act(async () => document.dispatchEvent(new Event("visibilitychange")));
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  await act(async () => finish(new Response("43")));
+  expect(resource.data).toBe(43);
+  await act(async () => vi.advanceTimersByTimeAsync(60_000));
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  vi.restoreAllMocks();
 });
