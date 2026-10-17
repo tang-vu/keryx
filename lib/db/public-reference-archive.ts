@@ -22,7 +22,7 @@ export class PublicReferenceArchiveError extends Error {
 // are operation capacity, not a truncation limit on the lifetime public library.
 export const PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS = Object.freeze({ ...STORAGE_SNAPSHOT_LIMITS,
   fileBytes: 256 * 1024 * 1024, rows: 500_000, totalBytes: 192 * 1024 * 1024, framedBytes: 192 * 1024 * 1024 });
-const TERM_INSERT_ROWS = 256, TERM_INSERT_BYTES = 128 * 1024;
+const TERM_INSERT_ROWS = 2048, TERM_INSERT_BYTES = 128 * 1024;
 const quote = (name: string) => `"${name.replaceAll('"', '""')}"`;
 function checkWriteDeadline(deadline: number): void {
   if (Date.now() >= deadline) throw new Error("Public archive write deadline");
@@ -122,6 +122,18 @@ export function publicReferenceArchiveTransaction<T>(db: DatabaseSync, operation
   catch (error) { db.exec("ROLLBACK TO public_reference_archive; RELEASE public_reference_archive"); throw error; }
 }
 
+/** Reserve a top-level writer before its first read snapshot. Nested callers
+ * retain their outer transaction and the same publisher-local SAVEPOINT. */
+function publicReferenceArchiveWriteTransaction<T>(db: DatabaseSync, operation: () => T): T {
+  if (db.isTransaction) return publicReferenceArchiveTransaction(db, operation);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const result = publicReferenceArchiveTransaction(db, operation);
+    db.exec("COMMIT");
+    return result;
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
+
 /** Explicit installer only. Enrolled stores also require reviewed fences/profile reenrollment. */
 export function installPublicReferenceArchive(db: DatabaseSync): void {
   publicReferenceArchiveTransaction(db, () => {
@@ -188,18 +200,26 @@ function indexItems(prepare: Prepared, referenceId: string, items: Iterable<Publ
   const insert = prepare(`INSERT INTO public_reference_article_terms(term,reference_id,item_id,weight)
     SELECT json_extract(value,'$[0]'),?,json_extract(value,'$[1]'),json_extract(value,'$[2]') FROM json_each(?)`);
   let batch: [string, string, number][] = [];
+  let batchBytes = 2; // JSON array brackets; commas are counted before append.
   const flush = () => {
     checkWriteDeadline(deadline);
     const encoded = JSON.stringify(batch);
     if (Buffer.byteLength(encoded) > TERM_INSERT_BYTES) throw new Error("Public archive term batch byte limit");
     insert.run(referenceId, encoded);
-    batch = [];
+    batch = []; batchBytes = 2;
   };
   for (const item of selected) {
     const terms = new Map<string, number>();
     for (const [text, weight] of [[item.title, 6], [item.summary, 2], [item.content, 1]] as const)
       for (const term of archiveSearchTerms(text)) terms.set(term, (terms.get(term) ?? 0) + weight);
-    for (const [term, weight] of terms) { batch.push([term, item.id, weight]); if (batch.length === TERM_INSERT_ROWS) flush(); }
+    for (const [term, weight] of terms) {
+      const tuple: [string, string, number] = [term, item.id, weight];
+      const tupleBytes = Buffer.byteLength(JSON.stringify(tuple));
+      if (tupleBytes + 2 > TERM_INSERT_BYTES) throw new Error("Public archive term batch byte limit");
+      if (batch.length && (batch.length === TERM_INSERT_ROWS || batchBytes + 1 + tupleBytes > TERM_INSERT_BYTES)) flush();
+      batchBytes += (batch.length ? 1 : 0) + tupleBytes;
+      batch.push(tuple);
+    }
   }
   if (batch.length) flush();
 }
@@ -296,7 +316,7 @@ export function archiveSqlitePublicReferenceItems(db: DatabaseSync, referenceId:
   kind: PublicReferenceCollectionKind, observedAt = new Date().toISOString()): { added: number; updated: number } {
   requireArchive(db);
   const deadline = Date.now() + PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.deadlineMs;
-  return publicReferenceArchiveTransaction(db, () => {
+  return publicReferenceArchiveWriteTransaction(db, () => {
     const row = db.prepare("SELECT id,active,rss_url,snapshot FROM public_references WHERE id=?").get(referenceId);
     if (!row || !decodeReference(row).active) throw new Error("Active public publisher required");
     const result = writeItems(db, referenceId, items, kind, observedAt, deadline);
@@ -309,7 +329,7 @@ export function upsertSqlitePublicReference(db: DatabaseSync, input: PublicRefer
   requireArchive(db);
   const value = publicReferenceSchema.parse(input);
   const deadline = Date.now() + PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.deadlineMs;
-  return publicReferenceArchiveTransaction(db, () => {
+  return publicReferenceArchiveWriteTransaction(db, () => {
     const prior = db.prepare("SELECT id,active,rss_url,snapshot FROM public_references WHERE id=?").get(value.id);
     if (prior) {
       const original = decodeReference(prior);
