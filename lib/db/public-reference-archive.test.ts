@@ -56,20 +56,20 @@ async function enrolledFixture(archive: boolean) {
     backend: { kind: "sqlite", databasePath: file } }));
   vi.stubEnv("KERYX_STORAGE_MANIFEST", manifest); vi.stubEnv("KERYX_SQLITE_PATH", file);
   vi.stubEnv("KERYX_FORCE_OFFLINE", "1");
-  return { file, identity, api: await import("./enrolled-sqlite-adapter") };
+  return { file, manifest, identity, api: await import("./enrolled-sqlite-adapter") };
 }
 
 describe("durable cumulative public archive", () => {
   it("inserts exact normalized term weights in bounded batches, without reindexing an identical revision", () => {
-    const db = database(), prepare = db.prepare.bind(db), batches: [string, number][][] = [];
+    const db = database(), prepare = db.prepare.bind(db), batches: [string, string, number][][] = [];
     const item = article(1, { title: "Alpha alpha", summary: "alpha beta", content: `alpha ${Array.from({ length: 600 }, (_, n) => `word${n}`).join(" ")}` });
     vi.spyOn(db, "prepare").mockImplementation(sql => {
       const statement = prepare(sql);
       if (sql.startsWith("INSERT INTO public_reference_article_terms")) {
         const run = statement.run.bind(statement);
         vi.spyOn(statement, "run").mockImplementation((...args: Parameters<typeof statement.run>) => {
-          expect(Buffer.byteLength(String(args[2]))).toBeLessThanOrEqual(128 * 1024);
-          batches.push(JSON.parse(String(args[2]))); return run(...args);
+          expect(Buffer.byteLength(String(args[1]))).toBeLessThanOrEqual(128 * 1024);
+          batches.push(JSON.parse(String(args[1]))); return run(...args);
         });
       }
       return statement;
@@ -150,6 +150,17 @@ describe("durable cumulative public archive", () => {
     expect(db.isTransaction).toBe(false);
   });
 
+  it("refuses a table beyond the bounded column metadata before committing a publisher", () => {
+    const db = database(), snapshot = db.prepare("SELECT snapshot FROM public_references").get()!.snapshot;
+    const columns = Array.from({ length: PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.columns + 1 }, (_, n) => `"column${n}" TEXT`);
+    db.exec(`CREATE TABLE "wide metadata" (${columns.join(",")})`);
+    expect(() => upsertSqlitePublicReference(db, { ...publisher, items: [article(1)] })).toThrow("column limit");
+    expect(db.prepare("SELECT snapshot FROM public_references").get()!.snapshot).toBe(snapshot);
+    for (const table of ["public_reference_articles", "public_reference_article_versions", "public_reference_article_terms"])
+      expect(db.prepare(`SELECT count(*) AS n FROM ${table}`).get()!.n).toBe(0);
+    expect(db.isTransaction).toBe(false);
+  });
+
   it("refuses a whole-store row overflow before committing any publisher changes", () => {
     const db = database(), tables = db.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all();
     const existing = tables.reduce((sum, table) => sum + Number(db.prepare(`SELECT count(*) AS n FROM "${String(table.name).replaceAll('"', '""')}"`).get()!.n), 0);
@@ -215,6 +226,114 @@ describe("durable cumulative public archive", () => {
     expect(await restarted.publicReferenceArchiveStats()).toEqual({ articles: 40, publishers: 1,
       oldestPublishedAt: DATE, newestPublishedAt: DATE });
   });
+
+  it.each([0, 31, 32, 63])("preserves sequential A-to-B-to-A transitions across %i preceding items", prefix => {
+    const db = database(), original = article(1, { title: "Alpha", content: "alpha original words" }),
+      changed = { ...original, title: "Bravo", content: "bravo original words" };
+    const earlier = "2026-10-01T00:00:00.000Z";
+    archiveSqlitePublicReferenceItems(db, publisher.id, [original], "article", earlier);
+    // A final revision equal to the initial one must still rebuild an index
+    // touched by intermediate revisions; comparing only final hashes misses it.
+    db.exec("DELETE FROM public_reference_article_terms");
+    db.prepare("INSERT INTO public_reference_article_terms VALUES('corrupt',?,?,9)").run(publisher.id, original.id);
+    const inputs = [...Array.from({ length: prefix }, (_, n) => article(n + 10)), changed, original];
+    expect(archiveSqlitePublicReferenceItems(db, publisher.id, inputs, "article", DATE)).toEqual({ added: prefix, updated: 2 });
+    const selected = querySqlitePublicReferenceItems(db, { referenceId: publisher.id, limit: 100 }).items.find(item => item.id === original.id)!;
+    expect(selected).toMatchObject({ title: "Alpha", content: original.content, firstCollectedAt: earlier, lastCollectedAt: DATE });
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_article_versions").get()!.n).toBe(prefix + 2);
+    expect(db.prepare("SELECT term,weight FROM public_reference_article_terms WHERE item_id=? ORDER BY term").all(original.id))
+      .toEqual([{ term: "alpha", weight: 7 }, { term: "original", weight: 1 }, { term: "public", weight: 2 },
+        { term: "archive", weight: 2 }, { term: "summary", weight: 2 }, { term: "words", weight: 1 }].sort((a, b) => a.term.localeCompare(b.term)));
+  });
+
+  it("retains each canonical duplicate original while simulating its current revision in input order", () => {
+    const db = database(), first = article(1, { content: "first equal body" }),
+      rawLink = first.link + "?utm_source=duplicate#fragment",
+      legacyId = `public-item:${createHash("sha256").update(`${publisher.id}\n${rawLink}`).digest("hex")}`,
+      variant = { ...first, id: legacyId, link: rawLink, content: "other equal body" };
+    expect(archiveSqlitePublicReferenceItems(db, publisher.id, [first, variant, first], "feed", DATE)).toEqual({ added: 1, updated: 2 });
+    expect(sqlitePublicReferenceArchiveStats(db).articles).toBe(1);
+    expect(querySqlitePublicReferenceItems(db, {}).items[0]!.content).toBe(first.content);
+    const originals = db.prepare("SELECT original_snapshot FROM public_reference_article_versions").all().map(row => JSON.parse(String(row.original_snapshot)));
+    expect(originals).toHaveLength(2); expect(originals).toContainEqual(first); expect(originals).toContainEqual(variant);
+  });
+
+  it("keeps a recovered full body and its term weights while retaining multiple abridged feed versions", () => {
+    const db = database(), full = article(1, { title: "Full alpha", content: "alpha retained body ".repeat(40), deliveryKind: "excerpt" });
+    archiveSqlitePublicReferenceItems(db, publisher.id, [full], "article", DATE);
+    const short = { ...full, title: "Short bravo", content: "bravo", deliveryKind: "full_text" as const };
+    expect(archiveSqlitePublicReferenceItems(db, publisher.id, [short, { ...short, content: "charlie" }, short], "feed", DATE))
+      .toEqual({ added: 0, updated: 0 });
+    expect(querySqlitePublicReferenceItems(db, {}).items[0]).toMatchObject({ content: full.content, collectionKind: "article" });
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_article_versions").get()!.n).toBe(3);
+    expect(db.prepare("SELECT weight FROM public_reference_article_terms WHERE item_id=? AND term='alpha'").get(full.id)!.weight).toBe(7);
+    expect(db.prepare("SELECT 1 FROM public_reference_article_terms WHERE term IN ('bravo','charlie')").get()).toBeUndefined();
+  });
+
+  it("rolls back an already-written chunk if a later input forges its public identity", () => {
+    const db = database(), inputs = Array.from({ length: 66 }, (_, n) => article(n));
+    inputs[65] = { ...inputs[65]!, id: article(1000).id };
+    expect(() => upsertSqlitePublicReference(db, { ...publisher, items: inputs, refreshedAt: DATE })).toThrow("identity");
+    for (const table of ["public_reference_articles", "public_reference_article_versions", "public_reference_article_terms"])
+      expect(db.prepare(`SELECT count(*) AS n FROM ${table}`).get()!.n).toBe(0);
+    expect(JSON.parse(String(db.prepare("SELECT snapshot FROM public_references").get()!.snapshot)).items).toEqual([]);
+  });
+
+  it("keeps the input byte budget across flushed chunks and preserves escaped original bytes", () => {
+    const db = database(), escaped = article(1, { content: "\u0000\n\\???".repeat(20_000), summary: "Escaped original" });
+    archiveSqlitePublicReferenceItems(db, publisher.id, [escaped], "feed", DATE);
+    expect(db.prepare("SELECT original_snapshot FROM public_reference_article_versions").get()!.original_snapshot).toBe(canonicalJson(escaped));
+    const inputs = Array.from({ length: 69 }, (_, n) => article(n + 10, { content: "x".repeat(500_000) }));
+    expect(() => upsertSqlitePublicReference(db, { ...publisher, items: inputs, refreshedAt: DATE })).toThrow("processing byte capacity");
+    expect(sqlitePublicReferenceArchiveStats(db).articles).toBe(1);
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_article_versions").get()!.n).toBe(1);
+  });
+
+  it("keeps native last-observation MAX semantics without decoding stored raw TEXT bytes", () => {
+    const db = database(); archiveSqlitePublicReferenceItems(db, publisher.id, [article(1)], "feed", DATE);
+    db.exec("UPDATE public_reference_articles SET last_collected_at=CAST(x'80ff' AS TEXT)");
+    archiveSqlitePublicReferenceItems(db, publisher.id, [article(1)], "feed", DATE);
+    expect(db.prepare("SELECT hex(CAST(last_collected_at AS BLOB)) AS value FROM public_reference_articles").get()!.value).toBe("80FF");
+  });
+
+  it.each(["0080FF", "00FF"])("keeps native first-observation MIN bytes %s through repeated and cross-chunk refreshes", bytes => {
+    const db = database(), item = article(1);
+    archiveSqlitePublicReferenceItems(db, publisher.id, [item], "feed", DATE);
+    db.prepare("UPDATE public_reference_articles SET first_collected_at=CAST(? AS TEXT)").run(Buffer.from(bytes, "hex"));
+    for (const inputs of [[item], Array.from({ length: 65 }, () => item), [item]]) {
+      expect(archiveSqlitePublicReferenceItems(db, publisher.id, inputs, "feed", DATE)).toEqual({ added: 0, updated: 0 });
+      expect(db.prepare("SELECT hex(CAST(first_collected_at AS BLOB)) AS value FROM public_reference_articles").get()!.value).toBe(bytes);
+    }
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_article_versions").get()!.n).toBe(1);
+  });
+
+  it("refuses an orphan current version without replacing its existing article metadata", () => {
+    const db = database(); archiveSqlitePublicReferenceItems(db, publisher.id, [article(1)], "feed", DATE);
+    const trigger = String(db.prepare("SELECT sql FROM sqlite_schema WHERE name='public_reference_versions_retained'").get()!.sql);
+    db.exec("DROP TRIGGER public_reference_versions_retained; DELETE FROM public_reference_article_versions"); db.exec(trigger);
+    const before = db.prepare("SELECT * FROM public_reference_articles").all();
+    expect(() => archiveSqlitePublicReferenceItems(db, publisher.id, [article(1)], "feed", DATE)).toThrow("provenance differs");
+    expect(db.prepare("SELECT * FROM public_reference_articles").all()).toEqual(before);
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_article_versions").get()!.n).toBe(0);
+  });
+
+  it("rejects a changed runtime on reuse of a prepared chunk statement and closes without a written prefix", async () => {
+    const fixture = await enrolledFixture(true), writer = await fixture.api.createEnrolledSqliteAdapter(); adapters.push(writer);
+    await writer.upsertPublicReference(publisher);
+    const inputs = Array.from({ length: 65 }, (_, n) => article(n)), last = inputs[64]!;
+    Object.defineProperty(inputs, 64, { get() {
+      // The first chunk has warmed the prior-reader statement. The next reuse
+      // must still validate runtime identity before it can observe/write rows.
+      writeFileSync(fixture.manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity: { ...fixture.identity,
+        deploymentId: "00000000-0000-4000-8000-000000000099" }, backend: { kind: "sqlite", databasePath: fixture.file } }));
+      return last;
+    } });
+    await expect(writer.archivePublicReferenceItems(publisher.id, inputs, "article", DATE)).rejects.toThrow("configuration unavailable");
+    const native = new DatabaseSync(fixture.file, { readOnly: true });
+    try { for (const table of ["public_reference_articles", "public_reference_article_versions", "public_reference_article_terms"])
+      expect(native.prepare(`SELECT count(*) AS n FROM ${table}`).get()!.n).toBe(0); }
+    finally { native.close(); }
+  }, 30_000);
 
   it("deduplicates canonical URLs, repeats idempotently and retains exact immutable revisions", () => {
     const db = database(), first = article(1);

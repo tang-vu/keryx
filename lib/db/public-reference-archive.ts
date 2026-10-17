@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { DatabaseSync, type SQLInputValue } from "node:sqlite";
+import { DatabaseSync, type SQLInputValue, type StatementSync } from "node:sqlite";
 import { z } from "zod";
 import { canonicalJson } from "../canonical-json";
 import { sourceItemContentVersion } from "../sources/source-item-asset";
@@ -35,14 +35,19 @@ function assertWriteCapacity(db: DatabaseSync, deadline: number): void {
   const allocated = isVerifiedSqliteConnection(db) ? readVerifiedSqliteAllocatedBytes(db)
     : Number(db.prepare("PRAGMA page_count").get()!.page_count) * Number(db.prepare("PRAGMA page_size").get()!.page_size);
   if (!Number.isSafeInteger(allocated) || allocated > limits.fileBytes) throw new Error("Public archive write file limit");
-  const tables = db.prepare("SELECT name,sql FROM sqlite_schema WHERE type='table' ORDER BY name LIMIT ?").all(limits.schemaObjects + 1);
+  // Read bounded column metadata in one guarded statement; each quantity query
+  // below still rechecks the connection against the same writer snapshot.
+  const tables = db.prepare(`SELECT s.name,s.sql,
+    (SELECT json_group_array(name) FROM (SELECT name FROM pragma_table_info(s.name) ORDER BY cid LIMIT ?)) AS column_names
+    FROM sqlite_schema s WHERE type='table' ORDER BY s.name LIMIT ?`).all(limits.columns + 1, limits.schemaObjects + 1);
   if (tables.length > limits.schemaObjects) throw new Error("Public archive write schema limit");
   let rows = 0, bytes = 0, framed = 0;
   for (const table of tables) {
     checkWriteDeadline(deadline);
     if (typeof table.name !== "string" || typeof table.sql !== "string") throw new Error("Public archive write schema limit");
-    const columns = db.prepare(`PRAGMA table_info(${quote(table.name)})`).all().map(row => String(row.name));
-    if (columns.length > limits.columns) throw new Error("Public archive write column limit");
+    const columns: unknown = typeof table.column_names === "string" ? JSON.parse(table.column_names) : null;
+    if (!Array.isArray(columns) || columns.some(name => typeof name !== "string") || columns.length > limits.columns)
+      throw new Error("Public archive write column limit");
     const rowid = !/\bWITHOUT\s+ROWID\b/i.test(table.sql)
       ? ["_rowid_", "rowid", "oid"].find(name => !columns.some(column => column.toLowerCase() === name)) : undefined;
     if (rowid) columns.unshift(rowid);
@@ -166,22 +171,36 @@ function prefer(next: PublicReferenceItem, prior: PublicReferenceItem,
   // An abridged refresh cannot replace an already retained original body.
   return next.content.length >= prior.content.length;
 }
-function indexItem(db: DatabaseSync, referenceId: string, item: PublicReferenceItem, deadline: number): void {
-  db.prepare("DELETE FROM public_reference_article_terms WHERE reference_id=? AND item_id=?").run(referenceId, item.id);
-  const terms = new Map<string, number>();
-  for (const [text, weight] of [[item.title, 6], [item.summary, 2], [item.content, 1]] as const)
-    for (const term of archiveSearchTerms(text)) terms.set(term, (terms.get(term) ?? 0) + weight);
-  const insert = db.prepare(`INSERT INTO public_reference_article_terms(term,reference_id,item_id,weight)
-    SELECT json_extract(value,'$[0]'),?,?,json_extract(value,'$[1]') FROM json_each(?)`);
-  let batch: [string, number][] = [];
+type Prepared = (sql: string) => StatementSync;
+const ARTICLE_WRITE_ROWS = 32, ARTICLE_WRITE_BYTES = 8 * 1024 * 1024;
+interface PendingArticle {
+  id: string; canonicalUrl: string; revision: string; first: string; last: string;
+  published: string | null; sort: string; item: PublicReferenceItem; kind: PublicReferenceCollectionKind;
+}
+interface PendingVersion {
+  item: PublicReferenceItem; original: string; snapshot: string; revision: string; contentVersion: string;
+}
+function indexItems(prepare: Prepared, referenceId: string, items: Iterable<PublicReferenceItem>, deadline: number): void {
+  const selected = [...items];
+  if (!selected.length) return;
+  prepare(`DELETE FROM public_reference_article_terms WHERE reference_id=? AND item_id IN (SELECT value FROM json_each(?))`)
+    .run(referenceId, JSON.stringify(selected.map(item => item.id)));
+  const insert = prepare(`INSERT INTO public_reference_article_terms(term,reference_id,item_id,weight)
+    SELECT json_extract(value,'$[0]'),?,json_extract(value,'$[1]'),json_extract(value,'$[2]') FROM json_each(?)`);
+  let batch: [string, string, number][] = [];
   const flush = () => {
     checkWriteDeadline(deadline);
     const encoded = JSON.stringify(batch);
     if (Buffer.byteLength(encoded) > TERM_INSERT_BYTES) throw new Error("Public archive term batch byte limit");
-    insert.run(referenceId, item.id, encoded);
+    insert.run(referenceId, encoded);
     batch = [];
   };
-  for (const term of terms) { batch.push(term); if (batch.length === TERM_INSERT_ROWS) flush(); }
+  for (const item of selected) {
+    const terms = new Map<string, number>();
+    for (const [text, weight] of [[item.title, 6], [item.summary, 2], [item.content, 1]] as const)
+      for (const term of archiveSearchTerms(text)) terms.set(term, (terms.get(term) ?? 0) + weight);
+    for (const [term, weight] of terms) { batch.push([term, item.id, weight]); if (batch.length === TERM_INSERT_ROWS) flush(); }
+  }
   if (batch.length) flush();
 }
 
@@ -191,39 +210,85 @@ function writeItems(db: DatabaseSync, referenceId: string, inputs: PublicReferen
   if (kind !== "feed" && kind !== "article") throw new Error("Invalid public article collection kind");
   const collectedAt = timestamp(observedAt);
   let bytes = 0, added = 0, updated = 0;
+  // Only fixed parameterized statements are reused within this call. Their
+  // verified get/all/run wrappers still perform every fresh connection guard.
+  const statements = new Map<string, StatementSync>();
+  const prepare: Prepared = sql => {
+    let statement = statements.get(sql);
+    if (!statement) { statement = db.prepare(sql); statements.set(sql, statement); }
+    return statement;
+  };
+  let chunk: PendingVersion[] = [], chunkBytes = 0;
+  const flush = () => {
+    if (!chunk.length) return;
+    checkWriteDeadline(deadline);
+    const priorRows = prepare(`SELECT a.*,v.snapshot,v.collection_kind FROM public_reference_articles a
+      LEFT JOIN public_reference_article_versions v ON v.reference_id=a.reference_id AND v.item_id=a.item_id AND v.revision=a.current_revision
+      WHERE a.reference_id=? AND a.item_id IN (SELECT value FROM json_each(?))`)
+      .all(referenceId, JSON.stringify([...new Set(chunk.map(value => value.item.id))]));
+    const current = new Map<string, PendingArticle>();
+    for (const row of priorRows) {
+      if (typeof row.item_id !== "string" || typeof row.canonical_url !== "string" || typeof row.current_revision !== "string" ||
+        typeof row.first_collected_at !== "string" || typeof row.last_collected_at !== "string" ||
+        typeof row.sort_at !== "string" || row.published_at !== null && typeof row.published_at !== "string" ||
+        typeof row.snapshot !== "string" || !["feed", "article"].includes(String(row.collection_kind)))
+        throw new Error("Public archived article provenance differs");
+      current.set(row.item_id, { id: row.item_id, canonicalUrl: row.canonical_url, revision: row.current_revision,
+        first: row.first_collected_at, last: row.last_collected_at, published: row.published_at as string | null,
+        sort: row.sort_at, item: publicReferenceItemSchema.parse(JSON.parse(row.snapshot)), kind: row.collection_kind as PublicReferenceCollectionKind });
+    }
+    const articles = new Map<string, PendingArticle>(), indexes = new Map<string, PublicReferenceItem>();
+    for (const value of chunk) {
+      checkWriteDeadline(deadline);
+      const item = value.item, prior = current.get(item.id);
+      const selected = !prior || prefer(item, prior.item, kind, prior.kind);
+      const first = prior ? [collectedAt, prior.first].sort()[0]! : collectedAt;
+      const published = selected ? item.publishedAt ? timestamp(item.publishedAt) : null : prior!.published;
+      const state: PendingArticle = { id: item.id, canonicalUrl: prior?.canonicalUrl ?? item.link,
+        revision: selected ? value.revision : prior!.revision, first,
+        last: collectedAt,
+        published, sort: published ?? first, item: selected ? item : prior!.item, kind: selected ? kind : prior!.kind };
+      if (!prior) added++;
+      else if (selected && prior.revision !== value.revision) updated++;
+      // A->B->A must still rebuild A's index, even though its final revision is
+      // the one that was current before this chunk. Count transitions per input.
+      if (selected && (!prior || prior.revision !== value.revision)) indexes.set(item.id, item);
+      current.set(item.id, state); articles.set(item.id, state);
+    }
+    const placeholders = (count: number, width: number) => Array.from({ length: count }, () => `(${Array(width).fill("?").join(",")})`).join(",");
+    checkWriteDeadline(deadline);
+    prepare(`INSERT INTO public_reference_article_versions(reference_id,item_id,revision,content_version,snapshot,original_snapshot,collection_kind,collected_at)
+      VALUES ${placeholders(chunk.length, 8)} ON CONFLICT(reference_id,item_id,revision) DO NOTHING`)
+      .run(...chunk.flatMap(value => [referenceId, value.item.id, value.revision, value.contentVersion, value.snapshot, value.original, kind, collectedAt]));
+    const final = [...articles.values()];
+    checkWriteDeadline(deadline);
+    prepare(`INSERT INTO public_reference_articles(reference_id,item_id,canonical_url,current_revision,first_collected_at,last_collected_at,published_at,sort_at)
+      VALUES ${placeholders(final.length, 8)} ON CONFLICT(reference_id,item_id) DO UPDATE SET
+        current_revision=excluded.current_revision,first_collected_at=min(public_reference_articles.first_collected_at,excluded.last_collected_at),
+        last_collected_at=max(public_reference_articles.last_collected_at,excluded.last_collected_at),
+        published_at=excluded.published_at,sort_at=excluded.sort_at`)
+      .run(...final.flatMap(value => [referenceId, value.id, value.canonicalUrl, value.revision, value.first, value.last, value.published, value.sort]));
+    indexItems(prepare, referenceId, indexes.values(), deadline);
+    chunk = []; chunkBytes = 0;
+  };
   for (const input of inputs) {
     checkWriteDeadline(deadline);
     const item = normalizeItem(referenceId, input), original = canonicalJson(publicReferenceItemSchema.parse(input));
-    bytes += Buffer.byteLength(original);
+    const originalBytes = Buffer.byteLength(original), snapshot = canonicalJson(item), snapshotBytes = Buffer.byteLength(snapshot);
+    bytes += originalBytes;
     if (bytes > 32 * 1024 * 1024) throw new Error("Public article batch exceeds processing byte capacity");
-    const snapshot = canonicalJson(item), contentVersion = sourceItemContentVersion({ ...item, sourceId: referenceId });
-    const revision = digest({ item, original, kind });
-    const prior = db.prepare(`SELECT a.*,v.snapshot,v.collection_kind FROM public_reference_articles a
-      JOIN public_reference_article_versions v ON v.reference_id=a.reference_id AND v.item_id=a.item_id AND v.revision=a.current_revision
-      WHERE a.reference_id=? AND a.item_id=?`).get(referenceId, item.id);
-    db.prepare(`INSERT INTO public_reference_article_versions(reference_id,item_id,revision,content_version,snapshot,original_snapshot,collection_kind,collected_at)
-      VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(reference_id,item_id,revision) DO NOTHING`)
-      .run(referenceId, item.id, revision, contentVersion, snapshot, original, kind, collectedAt);
-    if (prior && !["feed", "article"].includes(String(prior.collection_kind))) throw new Error("Public archived article provenance differs");
-    const selected = !prior || prefer(item, publicReferenceItemSchema.parse(JSON.parse(String(prior.snapshot))),
-      kind, prior.collection_kind as PublicReferenceCollectionKind);
-    if (!prior) {
-      db.prepare(`INSERT INTO public_reference_articles(reference_id,item_id,canonical_url,current_revision,first_collected_at,last_collected_at,published_at,sort_at)
-        VALUES (?,?,?,?,?,?,?,?)`).run(referenceId, item.id, item.link, revision, collectedAt, collectedAt,
-          item.publishedAt ? timestamp(item.publishedAt) : null, item.publishedAt ? timestamp(item.publishedAt) : collectedAt);
-      added++;
-    } else {
-      const changed = selected && prior.current_revision !== revision;
-      const firstCollectedAt = [collectedAt, String(prior.first_collected_at)].sort()[0]!;
-      const publishedAt = selected ? item.publishedAt ? timestamp(item.publishedAt) : null : prior.published_at as SQLInputValue;
-      db.prepare(`UPDATE public_reference_articles SET last_collected_at=max(last_collected_at,?),
-        first_collected_at=min(first_collected_at,?),current_revision=?,published_at=?,sort_at=? WHERE reference_id=? AND item_id=?`)
-        .run(collectedAt, collectedAt, selected ? revision : String(prior.current_revision),
-          publishedAt, publishedAt ?? firstCollectedAt, referenceId, item.id);
-      if (changed) updated++;
-    }
-    if (selected && (!prior || prior.current_revision !== revision)) indexItem(db, referenceId, item, deadline);
+    if (originalBytes > PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.fieldBytes || snapshotBytes > PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.fieldBytes)
+      throw new Error("Public archive write row/byte limit");
+    // Direct bound TEXT parameters retain exact immutable snapshot bytes; no
+    // JSON reconstruction or lossy original decoding is part of bulk insertion.
+    const size = originalBytes + snapshotBytes + Buffer.byteLength(item.id + referenceId) + 256;
+    if (chunk.length && (chunk.length >= ARTICLE_WRITE_ROWS || chunkBytes + size > ARTICLE_WRITE_BYTES)) flush();
+    if (size > ARTICLE_WRITE_BYTES) throw new Error("Public article batch exceeds processing byte capacity");
+    chunk.push({ item, original, snapshot, revision: digest({ item, original, kind }),
+      contentVersion: sourceItemContentVersion({ ...item, sourceId: referenceId }) });
+    chunkBytes += size;
   }
+  flush();
   return { added, updated };
 }
 
