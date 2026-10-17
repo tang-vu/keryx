@@ -10,8 +10,9 @@ import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
 import { formatAmount } from "@/lib/i18n/format";
 import { SigningAmount } from "./signing-amount";
+import { FundingCancellation } from "./funding-cancellation";
 
-/** Inspect the existing original only: no wallet client, signing, deposit, or lock release. */
+/** Original inspection remains read-only; cancellation has its own explicit fee/consent flow. */
 export function SessionFundingRecovery({ payer, revision = "" }: { payer: string; revision?: string }) {
   const copy = useUiMessages(), profile = browserPaymentProfile();
   const chain = usePublicClient({ chainId: profile.chainId }) as PublicClient | undefined;
@@ -68,6 +69,8 @@ export function SessionFundingRecovery({ payer, revision = "" }: { payer: string
         </>}
         {record[step].hash && <a className="block break-all font-mono text-xs underline" href={`${profile.explorerUrl}/tx/${record[step].hash}`} target="_blank" rel="noreferrer">{copy("gatewayFunding.viewNetworkTransaction")}</a>}
       </div>)}
+      {record.deposit.status === "ready" && ["possible", "submitted"].includes(record.approval.status) &&
+        <FundingCancellation key={record.id} record={record} chain={chain} refresh={refresh} onResolved={setMessage} />}
     </>}
     {message && <p role="status" className="text-xs">{message}</p>}
     <button type="button" disabled={busy} className="min-h-11 text-xs underline disabled:opacity-40" onClick={() => {

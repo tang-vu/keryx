@@ -1,6 +1,6 @@
 import { browserTransaction, type BrowserStore } from "./browser-storage";
 import { addressSchema, BUYER_NETWORK } from "./protocol";
-import { fundingAmountSchema, fundingRecordSchema, fundingResolutionSchema, transactionHashSchema, type FundingRecord, type FundingStep } from "./funding-policy";
+import { fundingAmountSchema, fundingRecordSchema, fundingResolutionSchema, transactionHashSchema, fundingCancellationQuoteSchema, type FundingCancellationQuote, type FundingRecord, type FundingStep } from "./funding-policy";
 import { browserPaymentProfile } from "../browser-payment-profile";
 import { hasOriginalSessionDepositCredit } from "../session/session-funding-credit";
 
@@ -50,6 +50,30 @@ async function change(id: string, update: (record: FundingRecord) => FundingReco
     };
   });
 }
+
+/** Sign-only attempts can be explicitly superseded. Preserve every known hash for recovery.
+ * The exact snapshot CAS also prevents a stale tab from replacing a newer review. */
+export const claimFundingCancellation = (snapshot: FundingRecord, quote: FundingCancellationQuote) => {
+  fundingRecordSchema.parse(snapshot); fundingCancellationQuoteSchema.parse(quote);
+  return change(snapshot.id, row => {
+    if (JSON.stringify(row) !== JSON.stringify(snapshot) || !row.activePayer || row.deposit.status !== "ready"
+      || !["possible", "submitted"].includes(row.approval.status) || quote.recordId !== row.id || quote.payer !== row.payer
+      || quote.nonce !== row.approval.nonce || Date.now() >= quote.expiresAt) return null;
+    return { ...row, approval: { ...row.approval, cancellations: [...(row.approval.cancellations ?? []), { quote, phase: "preparing" as const }] } };
+  });
+};
+
+/** A stale signer can neither attach a hash nor acquire the single broadcast claim. */
+export const advanceFundingCancellation = (id: string, attemptId: string, phase: "signed" | "broadcast-possible", hash: string) => {
+  transactionHashSchema.parse(hash);
+  return change(id, row => {
+    const attempts = row.approval.cancellations, current = attempts?.at(-1);
+    if (!row.activePayer || row.deposit.status !== "ready" || !["possible", "submitted"].includes(row.approval.status)
+      || !current || current.quote.attemptId !== attemptId || (phase === "broadcast-possible" && Date.now() >= current.quote.expiresAt)
+      || (phase === "signed" ? current.phase !== "preparing" : current.phase !== "signed" || current.hash !== hash)) return null;
+    return { ...row, approval: { ...row.approval, cancellations: [...attempts!.slice(0, -1), { ...current, phase, hash }] } };
+  });
+};
 
 export const claimFundingStep = (id: string, step: FundingStep, nonce: number, beforeBlock: string) => change(id, row => {
   if (!row.activePayer || !["ready", "rejected"].includes(row[step].status) || (step === "deposit" && row.approval.status !== "confirmed")) return null;
