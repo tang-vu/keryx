@@ -19,6 +19,7 @@ import { fmtUsdc } from "./phase-style";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { useLedgerResource, type LedgerResource } from "@/lib/hooks/use-ledger-resource";
+import { useVisibleLedgerSection } from "@/lib/hooks/use-visible-ledger-section";
 import type { DashboardMetrics, PaymentRecord, WithdrawalRecord } from "@/lib/types";
 import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
@@ -100,11 +101,17 @@ function recordedTotal(kind: "questions" | "accounts" | "guests", count: number,
 export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview: ReactNode; historyPreview?: ReactNode }) {
   const message = useUiMessages();
   const uiRichCopy = useUiRichMessages();
-  const metricsResource = useLedgerResource("/api/metrics", metricBody);
-  const paymentsResource = useLedgerResource("/api/payments?limit=200", paymentBody);
-  const withdrawalsResource = useLedgerResource("/api/withdrawals?limit=25", withdrawalBody);
-  const runsResource = useLedgerResource(`/api/runs?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all`, runBody);
+  const [totalsRef, totalsVisible] = useVisibleLedgerSection<HTMLDivElement>();
+  const [creatorsRef, creatorsVisible] = useVisibleLedgerSection();
+  const [paymentsRef, paymentsVisible] = useVisibleLedgerSection();
+  // These are the first useful reads. Financial panels load independently when
+  // approached, rather than making every visit start five expensive scans.
+  // Keep the existing short revocation refresh for public question bodies.
+  const runsResource = useLedgerResource(`/api/runs?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all&limit=25`, runBody, true, 10_000);
   const publicCountResource = useLedgerResource(`/api/runs/summary?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all`, publicCountBody);
+  const metricsResource = useLedgerResource("/api/metrics", metricBody, totalsVisible || creatorsVisible);
+  const paymentsResource = useLedgerResource("/api/payments?limit=200", paymentBody, paymentsVisible);
+  const withdrawalsResource = useLedgerResource("/api/withdrawals?limit=25", withdrawalBody, creatorsVisible);
   const metrics = metricsResource.data?.metrics;
   const leaderboard = metricsResource.data?.leaderboard ?? [];
   const creatorNames = new Map(leaderboard.map(row => [row.sourceId, row.sourceName]));
@@ -145,7 +152,7 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
           <Link href="/" className="min-h-11 border border-ink bg-ink px-4 py-3 font-mono text-xs text-paper hover:underline">{uiCopy("ledgerPresentation.ask")}</Link>
         </div>
         <p className="mt-4 max-w-2xl text-xs leading-relaxed text-ink-3">{uiCopy("ledgerPresentation.recordedBoundary")}</p>
-        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div ref={totalsRef} className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
           <span className="font-mono text-sm text-ink">{metrics ? recordedTotal("questions", metrics.totalQueries, metricsResource.status === "error") : metricsResource.status === "error" ? uiCopy("ledgerPresentation.questionsUnavailable") : uiCopy("ledgerPresentation.questionsLoading")}</span>
           <span className="font-mono text-sm text-ink">{metrics?.recordedAccounts != null ? recordedTotal("accounts", metrics.recordedAccounts, metricsResource.status === "error") : metrics || metricsResource.status === "error" ? uiCopy("ledgerPresentation.accountsUnavailable") : uiCopy("ledgerPresentation.accountsLoading")}</span>
           <span className="font-mono text-sm text-ink">{metrics?.guestQuestions != null ? recordedTotal("guests", metrics.guestQuestions, metricsResource.status === "error") : metrics || metricsResource.status === "error" ? uiCopy("ledgerPresentation.guestsUnavailable") : uiCopy("ledgerPresentation.guestsLoading")}</span>
@@ -157,7 +164,7 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
       <div className="mt-8 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section aria-label={uiCopy("ledgerPresentation.activityAria")} className="min-w-0">
           <ResourceNotice resource={runsResource} label={uiCopy("ledgerPresentation.questionRecords")} />
-          {runsResource.data !== null && <DispatchHistory runs={runs.slice(0, 4)} title={uiCopy("ledgerPresentation.recent")} description={uiCopy("ledgerPresentation.publicHistoryBoundary", { network: currentArcLabel })} emptyMessage={uiCopy("ledgerPresentation.noPublicQuestions")} showFinancials={false} />}
+          <DispatchHistory runs={runs.slice(0, 4)} title={uiCopy("ledgerPresentation.recent")} description={uiCopy("ledgerPresentation.publicHistoryBoundary", { network: currentArcLabel })} emptyMessage={runsResource.data === null ? "" : uiCopy("ledgerPresentation.noPublicQuestions")} showFinancials={false} />
           {runs.length > 4 && <details className="mt-4 border border-line bg-paper-2/30"><summary className="cursor-pointer px-5 py-4 font-display text-lg text-ink">{uiCopy("ledgerPresentation.more")}</summary><div className="px-4 pb-4"><DispatchHistory runs={runs.slice(4, 25)} title={uiCopy("ledgerPresentation.earlier")} showFinancials={false} /></div></details>}
           <Link href="/answers" className="mt-3 inline-block min-h-11 py-2 font-mono text-xs text-seal underline">{uiCopy("ledgerPresentation.pastAnswers")}</Link>
         </section>
@@ -187,7 +194,7 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
         </aside>
       </div>
 
-      <section id="current-creators" aria-label={message("ledger.currentCreators")} className="mt-8">
+      <section ref={creatorsRef} id="current-creators" aria-label={message("ledger.currentCreators")} className="mt-8">
         <ResourceNotice resource={withdrawalsResource} label={uiCopy("ledgerPresentation.cashouts")} />
         {(!!metricsResource.data?.sourceLeaderboard?.rows.length || leaderboard.length > 0 || withdrawals.length > 0) && <div className={`mt-5 grid gap-5 ${withdrawals.length > 0 ? "lg:grid-cols-2" : ""}`}>
           {metricsResource.data?.sourceLeaderboard
@@ -199,7 +206,7 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
 
       {sourcePreview}
 
-      <section id="payment-records" aria-label={uiCopy("ledgerPresentation.paymentRecords")} className="mt-8">
+      <section ref={paymentsRef} id="payment-records" aria-label={uiCopy("ledgerPresentation.paymentRecords")} className="mt-8">
         <ResourceNotice resource={paymentsResource} label={uiCopy("ledgerPresentation.paymentRecords")} />
         {payments.length > 0 && <details className="border border-line"><summary className="min-h-11 cursor-pointer px-5 py-3 font-display text-lg text-ink">{uiCopy("ledgerPresentation.inspectPayments")}</summary><PaymentsFeed payments={payments} /></details>}
         {(payments.length > 0 || withdrawals.length > 0) && <p className="mt-4 text-sm leading-relaxed text-ink-2">{uiCopy("ledgerPresentation.referencesBoundary")}</p>}

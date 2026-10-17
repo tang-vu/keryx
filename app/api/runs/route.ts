@@ -18,8 +18,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request = new Request("https://keryx.invalid/api/runs")) {
   const params = new URL(request.url).searchParams;
-  let window, cohort, archived;
+  let window, cohort, archived, limit;
   try {
+    const requestedLimit = params.get("limit");
+    if (params.getAll("limit").length > 1 || requestedLimit !== null && !/^[1-9]\d?$/.test(requestedLimit)) throw Error("Invalid history limit");
+    limit = requestedLimit === null ? 50 : Number(requestedLimit);
+    if (limit > 50) throw Error("Invalid history limit");
     if (params.getAll("archive").length > 1 || params.has("archive") && params.get("archive") !== "testnet") throw Error("Invalid archive selector");
     archived = params.get("archive") === "testnet";
     window = usageWindow(params, archived ? "eip155:5042002" : config.profile.networkId); cohort = historyCohort(params);
@@ -35,7 +39,7 @@ export async function GET(request: Request = new Request("https://keryx.invalid/
         return NextResponse.json({ error: "classified_archive_history_unavailable", complete: false }, { status: 503 });
       const archive = await getTestnetArchive();
       if (!archive) return NextResponse.json({ error: "testnet_history_unavailable", complete: false }, { status: 503 });
-      const rows = (await archive.listRecentQueries(50)).filter(includes);
+      const rows = (await archive.listRecentQueries(50)).filter(includes).slice(0, limit);
       return NextResponse.json(rows.map(run => questionSummary(run, archive.info)), { headers: {
         "X-Keryx-Testnet-History": "available", "X-Keryx-History-Network": archive.info.network,
         "X-Keryx-History-Profile": "historical-testnet-archive",
@@ -47,7 +51,7 @@ export async function GET(request: Request = new Request("https://keryx.invalid/
     if(privacyReadsActive(db))requirePrivacy(db);
     const classified = params.has("network") || params.has("period") || params.has("since") || cohort !== "default";
     if (classified && db.publicUsage) {
-      const runs = await db.publicUsage.history(window, cohort, 50);
+      const runs = await db.publicUsage.history(window, cohort, limit);
       return NextResponse.json(runs.map(run => questionSummary(run)), { headers: {
         "X-Keryx-History-Coverage": "complete-bounded-window-filtered-before-page",
         "X-Keryx-History-Network": window.network, "X-Keryx-History-Since": window.since,
@@ -64,7 +68,7 @@ export async function GET(request: Request = new Request("https://keryx.invalid/
     catch { archiveStatus = "unavailable"; }
     // Preserve default compatibility and current-wins identity before hiding scripts;
     // an older duplicate cannot resurrect a current scripted run.
-    const rows = mergeQuestionHistory(runs, historical, 100).filter(row => includes(row.run)).slice(0, 50);
+    const rows = mergeQuestionHistory(runs, historical, 100).filter(row => includes(row.run)).slice(0, limit);
     return NextResponse.json(rows.map(row => questionSummary(row.run, row.historical ? archive!.info : undefined)), { headers: {
       "X-Keryx-Testnet-History": archiveStatus,
       "X-Keryx-History-Coverage": "incomplete-current-and-archive-50-row-scans-deduped-scripted-filtered-before-final-page",

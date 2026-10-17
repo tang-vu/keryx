@@ -11,7 +11,8 @@ import { groupPaperWorks } from "../lib/papers/work-groups";
 import type { SourceLeaderboard } from "../lib/sources/source-leaderboard";
 
 const focusedLeaderboard = process.argv.slice(2).includes("--source-leaderboard-only");
-assert(process.argv.slice(2).every(arg => arg === "--source-leaderboard-only"), "Unknown ledger browser selection");
+const focusedProgressive = process.argv.slice(2).includes("--dashboard-progressive-only");
+assert(process.argv.slice(2).every(arg => ["--source-leaderboard-only", "--dashboard-progressive-only"].includes(arg)), "Unknown ledger browser selection");
 
 // This component harness also renders the async server page. Compute its Node-only
 // bibliography helper in Node, as Next does, rather than polyfilling crypto in a browser.
@@ -87,9 +88,9 @@ try {
         window.fixtureRenderSources=params=>SourcesPage({searchParams:Promise.resolve(params)}).then(page=>root.render(page));
         window.fixtureRenderSources(Object.fromEntries(new URL(location.href).searchParams));
       }
-      else root.render(<DashboardView historyPreview={mode==='archive'?<TestnetHistorySummary info={${JSON.stringify(archiveInfo)}} summary={${JSON.stringify(archiveSummary)}} creators={${JSON.stringify(archivedCreators)}}/>:undefined} sourcePreview={<SourceDirectoryPreview directory={directory}/>}/>);
+      else root.render(<DashboardView historyPreview={mode==='archive'?<TestnetHistorySummary info={${JSON.stringify(archiveInfo)}} summary={${JSON.stringify(archiveSummary)}} creators={${JSON.stringify(archivedCreators)}}/>:mode==='progressive'?<div style={{height:1600}} aria-label="Retained history fixture"/>:undefined} sourcePreview={<SourceDirectoryPreview directory={directory}/>}/>);
     `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife", plugins: [chrome], define: { "process.env": "{}", "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(network), "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": "undefined", "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined", "process.env.NODE_ENV": '"production"' } });
-    for (const width of focusedLeaderboard ? [390, 1440] : [320, 390, 768, 1440]) {
+    for (const width of focusedLeaderboard || focusedProgressive ? [390, 1440] : [320, 390, 768, 1440]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
       await page.clock.install();
       const errors: string[] = [];
@@ -98,6 +99,9 @@ try {
       let mode = "zero";
       let metricRequests = 0;
       let releaseMetrics: (() => void) | undefined;
+      let releasePublicCount: (() => void) | undefined;
+      let releaseRecent: (() => void) | undefined;
+      const apiRequests: string[] = [];
       const guestModes: Record<string, unknown> = {
         "guest-unavailable": null, "guest-legacy": undefined, "guest-fraction": 1.5,
         "guest-negative": -1, "guest-string": "12", "guest-excess": 29, "guest-zero": 0,
@@ -109,6 +113,7 @@ try {
         const pathname = requested.pathname;
         if (pathname === "/api/papers") paperRequests.push(requested.href);
         if (pathname.startsWith("/api/")) {
+          apiRequests.push(pathname);
           if (pathname === "/api/metrics") {
             metricRequests++;
             if (mode === "retry-pending") await new Promise<void>(resolve => { releaseMetrics = resolve; });
@@ -116,12 +121,14 @@ try {
           if (mode === "error" && pathname === "/api/metrics") return route.fulfill({ status: 503, json: { error: "unavailable" } });
           if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "account-unavailable" ? { recordedAccounts: null } : mode === "account-malformed" ? { recordedAccounts: 1.5 } : mode === "account-zero" ? { recordedAccounts: 0 } : mode === "account-legacy" ? { recordedAccounts: undefined } : {}), ...(Object.hasOwn(guestModes, mode) ? { guestQuestions: guestModes[mode] } : {}), ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [], ...(mode === "source-leaderboard" ? { sourceLeaderboard: { ...sourceLeaderboard, operatingFeeNetwork: network === "arc" ? "eip155:5042" : "eip155:5042002" } } : {}) } });
           if (pathname === "/api/runs/summary") {
+            if (mode === "progressive") await new Promise<void>(resolve => { releasePublicCount = resolve; });
             assert.equal(requested.searchParams.get("network"), network === "arc" ? "eip155:5042" : "eip155:5042002");
             assert.equal(requested.searchParams.get("period"), "all");
             if (mode === "count-unavailable") return route.fulfill({ status: 503, json: { error: "unavailable" } });
             return route.fulfill({ json: { complete: true, network: requested.searchParams.get("network"), period: "all", cohort: "default", publicQuestions: mode === "empty-history" ? 0 : 18 } });
           }
           if (pathname === "/api/runs") {
+            if (mode === "recent-pending") await new Promise<void>(resolve => { releaseRecent = resolve; });
             assert.equal(requested.searchParams.get("network"), network === "arc" ? "eip155:5042" : "eip155:5042002");
             assert.equal(requested.searchParams.get("period"), "all");
             assert.equal(requested.searchParams.has("archive"), false);
@@ -134,10 +141,49 @@ try {
         }
         return route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' });
       });
-      async function open(url: string) {
+      async function open(url: string, activateBelowFold = true) {
         await page.goto(`https://ledger.fixture${url}`);
         await page.addStyleTag({ content: css });
         await page.addScriptTag({ content: bundle.outputFiles[0].text });
+        if (url.startsWith("/dashboard") && activateBelowFold) {
+          await page.locator("#payment-records").scrollIntoViewIfNeeded();
+          await page.locator("#current-creators").scrollIntoViewIfNeeded();
+          await page.locator("#current-activity").scrollIntoViewIfNeeded();
+        }
+      }
+      if (!focusedLeaderboard && (width === 390 || width === 1440)) {
+        mode = "progressive";
+        await open("/dashboard?mode=progressive", false);
+        await page.getByText(run.question, { exact: true }).waitFor();
+        await page.getByText("Recent public questions", { exact: true }).waitFor();
+        await page.getByText("Loading Public question count…", { exact: true }).waitFor();
+        assert.deepEqual([...apiRequests].sort(), ["/api/runs", "/api/runs/summary"], "Initial reads prioritize current questions; offscreen financial sections wait");
+        assert(releasePublicCount, "Count is still pending while recent questions render");
+        // Direct creator navigation must request its leaderboard even if the
+        // earlier recorded-totals marker has never approached the viewport.
+        await page.locator("#current-creators").evaluate(element => element.scrollIntoView({ block: "start" }));
+        await page.getByText("28 recorded questions", { exact: true }).waitFor();
+        await page.locator("#payment-records").scrollIntoViewIfNeeded();
+        await page.locator("#current-creators").scrollIntoViewIfNeeded();
+        await page.waitForFunction(() => document.querySelector("#payment-records")?.textContent?.includes("Loading Payment records") === false);
+        assert(apiRequests.includes("/api/payments") && apiRequests.includes("/api/withdrawals"), "Scrolling starts each independent financial read");
+        releasePublicCount();
+        await page.getByText(`18 public questions on ${network === "arc" ? "Arc mainnet" : "Arc Testnet"}`, { exact: true }).waitFor();
+        await page.locator("#current-activity").scrollIntoViewIfNeeded();
+        await page.screenshot({ path: path.join(screenshots, `ledger-progressive-${network}-${width}.png`), fullPage: true });
+
+        mode = "recent-pending";
+        await open("/dashboard");
+        await page.getByText(`18 public questions on ${network === "arc" ? "Arc mainnet" : "Arc Testnet"}`, { exact: true }).waitFor();
+        await page.getByText("Recent public questions", { exact: true }).waitFor();
+        assert.equal(await page.getByText("No public questions to display.", { exact: true }).count(), 0, "Pending questions are not an empty population");
+        assert(releaseRecent, "Recent questions can still be pending after the count renders");
+        releaseRecent();
+        await page.getByText(run.question, { exact: true }).waitFor();
+        assert.deepEqual(errors, []);
+        console.log(`Progressive independent dashboard passed ${network}/${width}`);
+        mode = "zero";
+        if (focusedProgressive) { await page.close(); continue; }
       }
       if (width === 390 || width === 1440) {
         mode = "source-leaderboard";
@@ -273,7 +319,7 @@ try {
       await page.getByRole("heading", { name: "No settled payments yet" }).waitFor();
       mode = "error";
       // Retry against an error after an accepted read must retain visibly dated data.
-      await page.clock.fastForward(10_100);
+      await page.clock.fastForward(60_100);
       await page.getByText(/Showing the last successful read from [A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2}\s[AP]M UTC\./).waitFor();
       await page.getByText("12 guest questions · last successful read", { exact: true }).waitFor();
       mode = "retry-pending";
