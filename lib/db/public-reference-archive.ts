@@ -21,7 +21,7 @@ export class PublicReferenceArchiveError extends Error {
 // Same fixed archive-only bounds as the verified migration/backup reader. These
 // are operation capacity, not a truncation limit on the lifetime public library.
 export const PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS = Object.freeze({ ...STORAGE_SNAPSHOT_LIMITS,
-  fileBytes: 256 * 1024 * 1024, rows: 250_000, framedBytes: 128 * 1024 * 1024 });
+  fileBytes: 256 * 1024 * 1024, rows: 500_000, totalBytes: 192 * 1024 * 1024, framedBytes: 192 * 1024 * 1024 });
 const TERM_INSERT_ROWS = 256, TERM_INSERT_BYTES = 128 * 1024;
 const quote = (name: string) => `"${name.replaceAll('"', '""')}"`;
 function checkWriteDeadline(deadline: number): void {

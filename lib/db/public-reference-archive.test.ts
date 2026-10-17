@@ -161,6 +161,18 @@ describe("durable cumulative public archive", () => {
     expect(db.isTransaction).toBe(false);
   });
 
+  it("commits a bounded publisher above the former250k archive row cap", () => {
+    const db = database(), retainedRows = 250_001;
+    db.prepare(`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<?)
+      INSERT INTO public_reference_article_terms SELECT 'word'||value,?, 'synthetic-retained-item',1 FROM n`)
+      .run(retainedRows, publisher.id);
+    expect(() => upsertSqlitePublicReference(db, { ...publisher, items: [article(1)] })).not.toThrow();
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_article_terms").get()!.n).toBeGreaterThan(retainedRows);
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_articles").get()!.n).toBe(1);
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_article_versions").get()!.n).toBe(1);
+    expect(db.isTransaction).toBe(false);
+  }, 30_000);
+
   it("refuses a whole-store row overflow before committing any publisher changes", () => {
     const db = database(), tables = db.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all();
     const existing = tables.reduce((sum, table) => sum + Number(db.prepare(`SELECT count(*) AS n FROM "${String(table.name).replaceAll('"', '""')}"`).get()!.n), 0);
@@ -195,7 +207,7 @@ describe("durable cumulative public archive", () => {
       if (kind !== "file" && sql.startsWith("SELECT count(*) AS rows,coalesce(sum(")) {
         const get = statement.get.bind(statement);
         vi.spyOn(statement, "get").mockImplementation((...args: Parameters<typeof statement.get>) => ({ ...get(...args),
-          [kind === "raw" ? "bytes" : "framed"]: PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.framedBytes + 1 }));
+          [kind === "raw" ? "bytes" : "framed"]: (kind === "raw" ? PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.totalBytes : PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.framedBytes) + 1 }));
       }
       return statement;
     });

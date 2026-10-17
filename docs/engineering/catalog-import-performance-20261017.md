@@ -21,8 +21,8 @@ batch still crosses the guarded connection and every inserted row still crosses
 the existing storage fences. There is no raw writer, guard cache or schema change.
 
 Before a publisher SAVEPOINT is released, aggregate SQL checks the whole store
-against the existing archive-specific bounds: 250,000 rows, 256 MiB allocated
-pages, 128 MiB raw fields, 128 MiB typed framing and 2 MiB per field, with the same
+against the fixed archive-specific bounds: 500,000 rows, 256 MiB allocated
+pages, 192 MiB raw fields, 192 MiB typed framing and 2 MiB per field, with the same
 512-table/128-column bounds. Hidden rowids and exact TEXT/BLOB byte lengths are
 included. Only counts and byte quantities leave SQLite. A private fixed metadata
 reader measures allocated pages inside the same transaction; it keeps the full
@@ -56,7 +56,7 @@ The inode replacement test runs on platforms that permit renaming an open SQLite
 file. Required tests and review must pass before merge; a separately elected
 production import must verify actual completion and the nine catalog entries.
 
-The coordinated source batch advances app `0.27.74`, stdio MCP/Registry `0.4.29`
+The original import-performance source batch allocated app `0.27.74`, stdio MCP/Registry `0.4.29`
 and Windows desktop `0.4.27`, because their packaged storage code changes. Hosted
 MCP keeps its existing role/version; web/API, extension and bots use the updated
 hosted archive without new request or payment contracts. Extension `0.1.4.3`
@@ -137,4 +137,40 @@ archive inspection passed. The baseline's 143,385 terms included 140,676 terms f
 an unrelated synthetic publisher, plus 2,709 Lilian Weng terms. Its capacity result
 does not establish the production archive's overlap or needed capacity. Complete
 Catalog 59 remains unqualified. No new production import,
-deadline relaxation, capacity increase or automatic retry is implied.
+deadline relaxation, capacity increase or automatic retry was implied by that synthetic run alone.
+
+## Archive capacity from captured public inputs
+
+A separate finite observation retained 58 approved public feed bodies: 32 cached
+responses from the earlier qualification and 26 new successful responses. Django
+had a generic fetch failure and remains unqualified; none of those observations
+establishes completion of the 59-publisher import. Replaying the retained XML only,
+without a database or network call, compared 2,516 usable inputs with the recorded
+production metadata. It found 1,471 existing item identities, 1,467 exact current
+revisions, 1,045 new article identities and 1,049 new immutable versions. The exact
+selected index increment was 155,178 terms with no ambiguous length preference.
+The public-only row projection is 303,774 from a recorded 146,482-row baseline.
+These real incoming inputs, rather than unrelated synthetic filler, demonstrate
+pressure on the former 250,000-row archive bound.
+
+The fixed archive-only allowance is therefore 500,000 whole-store rows and
+192 MiB each for raw fields and typed framing. Conservative new or rewritten
+payload estimates for the 58 feeds are 29,204,492 raw bytes and 40,824,721 framed
+bytes. Adding those to the previously accepted 128 MiB bounds fits below 192 MiB.
+This arithmetic sizes an allowance; the historical whole-store count and missing
+full-store byte baseline do not become fresh capacity acceptance. Old preview
+transitions and SQLite page/index allocation are not completely forecast.
+
+The writer and exact archive inspection/backup reader use the same fixed profile.
+The reader now checks raw bytes against its selected operation bound; generic
+callers still select the original 128 MiB raw limit. The 256 MiB allocated-file
+limit, 2 MiB field limit, 15-second deadline, 512-table and 128-column limits remain
+unchanged. Enrollment, generic backup/provenance and other migrations retain all
+original limits. No source schema, identity, fence, custody or payment authority
+changes, no reenrollment and no additional storage DDL are required.
+
+Focused native fixtures cover inspection and writing above the former row/raw/
+framing limits, refusal above each new boundary, publisher rollback and unchanged
+generic refusals. An actual elected import must still pass its same-transaction
+whole-store checks before each publisher commits. This correction does not retry
+an import, truncate feeds or add a recurring job.

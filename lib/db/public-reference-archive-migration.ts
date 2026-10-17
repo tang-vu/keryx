@@ -18,7 +18,7 @@ export const MIGRATION_FRAMED_BYTE_LIMIT = 64 * 1024 * 1024;
 // Only the exact public-archive profiles use these operation bounds. Enrollment,
 // generic backup/provenance and other domain migrations keep their own limits.
 export const PUBLIC_ARCHIVE_SNAPSHOT_LIMITS = Object.freeze({ ...limits,
-  fileBytes: 256 * 1024 * 1024, rows: 250_000, framedBytes: 128 * 1024 * 1024 });
+  fileBytes: 256 * 1024 * 1024, rows: 500_000, totalBytes: 192 * 1024 * 1024, framedBytes: 192 * 1024 * 1024 });
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
 function excluded(db: DatabaseSync, identity: StorageIdentity): Set<string> {
@@ -72,7 +72,7 @@ export function snapshotPublicArchiveMigrationStorage(db: DatabaseSync, identity
   return snapshotStorage(db, identity, profiles, PUBLIC_ARCHIVE_SNAPSHOT_LIMITS);
 }
 function snapshotStorage(db: DatabaseSync, identity: StorageIdentity, profiles: readonly string[],
-  bounds: Readonly<{ fileBytes: number; rows: number; framedBytes: number; deadlineMs: number }>): PublicArchiveStorageSnapshot {
+  bounds: Readonly<{ fileBytes: number; rows: number; totalBytes: number; framedBytes: number; deadlineMs: number }>): PublicArchiveStorageSnapshot {
   assertStorageIdentity(db, identity); assertStorageFences(db, identity);
   const profile = sqliteApplicationSchemaProfile(db, excluded(db, identity));
   if (!profiles.includes(profile) || db.prepare("PRAGMA integrity_check(1)").get()?.integrity_check !== "ok"
@@ -105,7 +105,7 @@ function snapshotStorage(db: DatabaseSync, identity: StorageIdentity, profiles: 
       const hash = createHash("sha256");
       for (let index = 0; index < columns.length; index++) {
         const length = Number(row[`l${index}`] ?? 0);
-        if (length > limits.fieldBytes || (bytes += length) > limits.totalBytes) throw new Error("Public archive migration byte limit");
+        if (length > limits.fieldBytes || (bytes += length) > bounds.totalBytes) throw new Error("Public archive migration byte limit");
         const type = String(row[`t${index}`]), value = row[`v${index}`];
         // Binary length framing preserves malformed UTF-8 without a lossy decode or hex expansion.
         const payload = type === "text" ? value as Uint8Array : Buffer.from(encodeStorageValue(value, type));
