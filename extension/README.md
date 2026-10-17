@@ -13,6 +13,18 @@ network selector; it consumes the selected hosted deployment. Planned rewards
 and pending payments remain separate from settled creator payouts. See
 [current deployment and distribution evidence](../docs/mainnet-status.md).
 
+## 0.1.4.3 completion update
+
+Ordinary research streams now finish after the final summary and `[DONE]`, even
+when the HTTP body stays open. Responses carrying a caller-private claim packet
+still require clean stream EOF before making the handoff available. Missing
+completion markers and streamed errors remain failures.
+
+This source version prepares the fix for distribution. Published ZIP identity,
+Chrome Web Store approval and the version installed in a browser require separate
+verification. The original Edge loading report remains unverified in the installed
+popup. See the [change and verification record](../docs/engineering/extension-loading-20261017.md).
+
 ## What it does
 
 - **Toolbar popup** — type a question or use your selection, choose Quick/Deep and a source
@@ -38,6 +50,10 @@ and pending payments remain separate from settled creator payouts. See
 1. Open `chrome://extensions` (or `edge://extensions`) and turn on **Developer mode**.
 2. Click **Load unpacked** and select this `extension/` folder.
 3. Pin the Keryx herald to your toolbar. Highlight text on any page and ask.
+
+For a released ZIP, extract it first and select the directory containing
+`manifest.json`. Verify the source path and version before reloading an existing
+unpacked copy; a source version change does not update a Store-installed copy.
 
 Works on any Chromium browser (Chrome, Edge, Brave, Arc). Manifest V3.
 
