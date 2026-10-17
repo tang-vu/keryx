@@ -52,7 +52,7 @@ try {
   assert(ready, `Built header server unavailable: ${output}`);
 
   for (const width of [390, 1366]) {
-    for (const destination of ["/sources", "/pricing", "/register"]) {
+    for (const destination of ["/sources", "/answers", "/pricing", "/register"]) {
       const context = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: width === 390,
         isMobile: width === 390, reducedMotion: "reduce" });
       const held: Route[] = [];
@@ -97,7 +97,17 @@ try {
         await status.getByRole("status").filter({ hasText: "Loading page" }).waitFor();
         assert.equal(await status.count(), 1);
         if (width === 390) assert.equal(await page.locator("#mobile-site-menu").isVisible(), false, "Menu closes immediately without hiding portal");
-        assert.equal(await status.evaluate(element => getComputedStyle(element).pointerEvents), "none", "Navigation remains interruptible");
+        assert.equal(await status.evaluate(element => getComputedStyle(element).pointerEvents), "auto", "Loading shields stale content from clicks");
+        assert(await page.locator("main").evaluate(element => element.inert), "Covered content is also unavailable to keyboard and screen readers");
+        const bounds = await status.boundingBox(); assert(bounds);
+        assert(bounds.y <= 68 && bounds.height >= 775, "Loading fills the content viewport below the header");
+        assert(await page.evaluate(() => !!document.elementFromPoint(innerWidth / 2, innerHeight / 2)?.closest("[data-navigation-pending]")), "The old page is covered at the viewport center");
+        const message = await status.getByRole("status").boundingBox(); assert(message);
+        assert(Math.abs(message.x + message.width / 2 - width / 2) <= 2, "Loading message is horizontally centered");
+        assert(await page.locator("header a[href='/']").first().evaluate(element => {
+          const box = element.getBoundingClientRect();
+          return element.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
+        }), "Header stays available for replacement navigation");
         assert.equal(await status.locator("svg").evaluate(element => getComputedStyle(element).animationName), "none", "Reduced motion honored");
         // Wait for the actual held request without supplying its response.
         for (let attempt = 0; !held.length && attempt < 40; attempt++) await new Promise(done => setTimeout(done, 25));
@@ -120,6 +130,8 @@ try {
           await status.waitFor({ state: "detached" });
         }
         await page.getByRole("heading", { level: 1 }).waitFor();
+        assert.equal(await page.locator("main").evaluate(element => element.inert), false, "Completed content is interactive");
+        assert.equal(await page.evaluate(() => document.body.style.overflow), "", "Page scrolling restored");
         await page.goBack(); await page.waitForURL(origin + "/");
         await status.waitFor({ state: "detached" });
         assert.deepEqual(errors, []);
@@ -131,7 +143,7 @@ try {
       }
     }
   }
-  console.log("PASS: cold header clicks acknowledge immediately; mobile closure, replacement, completion, history and reduced motion preserved.");
+  console.log("PASS: cold header clicks replace stale content immediately; header interruption, mobile closure, completion, history and reduced motion preserved.");
 } finally {
   await browser.close();
   if (child && !didExit) { child.kill(); await stopped; }

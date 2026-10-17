@@ -1,10 +1,6 @@
-import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { KeryxWordmark } from "@/components/keryx/keryx-mark";
-import { webHeaderMessages } from "@/locales/en/web-header";
-import { UiText } from "@/lib/i18n/ui-copy";
-
-
+import { PageLoadingContent } from "./page-loading-content";
 
 /** Prefetchable shell for public data pages; private document bootstraps keep their own boundary. */
 export function PageLoading() {
@@ -17,11 +13,8 @@ export function PageLoading() {
           <Link href="/"><KeryxWordmark /></Link>
         </div>
       </header>
-      <main className="mx-auto max-w-[1180px] px-4 py-12 sm:px-[30px]" aria-busy="true">
-        <p role="status" className="flex items-center gap-3 font-mono text-sm text-ink-3">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          <UiText source={webHeaderMessages["shellHeader.loadingPage"]} namespaces={["web-header"]} />
-        </p>
+      <main className="min-h-[calc(100dvh-67px)] bg-paper-2" aria-busy="true">
+        <PageLoadingContent />
       </main>
     </>
   );
