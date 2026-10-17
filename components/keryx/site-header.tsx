@@ -48,11 +48,15 @@ export function SiteHeader() {
   const shell = useLocale(), { locale } = shell, message = useUiMessages(shell.message);
   const guide = useUiCopyFunction("product-guide", productGuideCopy), setup = useUiCopy("get-started", setupCopy);
   const NAV = navigation(message, guide, setup);
+  const primaryPaths = ["/", "/answers", "/sources"];
+  const primary = primaryPaths.map(href => NAV.find(link => link.href === href)!);
+  const more = NAV.filter(link => !primaryPaths.includes(link.href) && link.href !== "/register");
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const desktopMore = useRef<HTMLDetailsElement>(null);
 
   // Close menu on route change
   useEffect(() => {
@@ -91,7 +95,10 @@ export function SiteHeader() {
     setMenuMounted(true);
     setMenuOpen((v) => !v);
   }, []);
-  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+    if (desktopMore.current) desktopMore.current.open = false;
+  }, []);
 
   return (
     <>
@@ -103,7 +110,7 @@ export function SiteHeader() {
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1 lg:flex">
-            {NAV.slice(0, 6).map((link) => {
+            {primary.map((link) => {
               const active =
                 link.href === "/"
                   ? pathname === "/"
@@ -123,6 +130,17 @@ export function SiteHeader() {
                 </Link>
               );
             })}
+            <details ref={desktopMore} className="relative" onKeyDown={event => {
+              if (event.key === "Escape" && desktopMore.current) {
+                desktopMore.current.open = false;
+                desktopMore.current.querySelector("summary")?.focus();
+              }
+            }}>
+              <summary className="flex min-h-11 cursor-pointer items-center px-2 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-3">{message("shellHeader.moreTools")}</summary>
+              <div className="absolute right-0 top-full z-50 max-h-[70dvh] min-w-60 overflow-y-auto border border-ink bg-paper py-2 shadow-lg">
+                {more.map(link => <Link key={link.href} href={link.href} onNavigate={closeMenu} className="flex min-h-11 items-center px-4 font-mono text-[11px] uppercase text-ink-2 hover:bg-paper-2">{link.label}</Link>)}
+              </div>
+            </details>
             <Link
               href="/register"
               className="ml-2 border border-ink bg-seal px-3 py-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-[0.08em] text-paper transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_0_var(--ink)] active:translate-y-0 active:shadow-none"
@@ -178,7 +196,7 @@ export function SiteHeader() {
               <div id="mobile-site-menu" hidden={!menuOpen} className="absolute left-0 right-0 top-[66px] z-50 max-h-[calc(100dvh-66px)] overflow-y-auto overscroll-contain border-b border-ink bg-paper shadow-lg">
                 <nav className="mx-auto flex max-w-[1180px] flex-col px-4 py-3" aria-label={message("shellHeader.mobileNavigation")}>
                   <span className="px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-seal">{message("shellHeader.explore")}</span>
-                  {NAV.slice(0, 6).map((link) => {
+                  {primary.map((link) => {
                     const active =
                       link.href === "/"
                         ? pathname === "/"
@@ -202,7 +220,7 @@ export function SiteHeader() {
                   <Link href="/register" onNavigate={closeMenu} className={cn("flex min-h-11 items-center border-l-2 px-4 py-2 font-mono text-[12px] uppercase tracking-[0.08em]", pathname.startsWith("/register") ? "border-seal text-ink" : "border-transparent text-seal")}>{message("shellNavigation.creators")}</Link>
                   <details className="mt-2 border-t border-line pt-2">
                     <summary className="flex min-h-11 cursor-pointer items-center px-4 font-mono text-[11px] uppercase tracking-wider text-ink">{message("shellHeader.moreTools")}</summary>
-                    {NAV.slice(6).filter((link) => link.href !== "/register").map((link) => <Link key={link.href} href={link.href} onNavigate={closeMenu} className="flex min-h-11 items-center px-4 font-mono text-[11px] uppercase text-ink-2">{link.label}</Link>)}
+                    {more.map((link) => <Link key={link.href} href={link.href} onNavigate={closeMenu} className="flex min-h-11 items-center px-4 font-mono text-[11px] uppercase text-ink-2">{link.label}</Link>)}
                   </details>
                   <div className="mt-3 border-t border-line px-4 pt-3">
                     <WalletMenu />

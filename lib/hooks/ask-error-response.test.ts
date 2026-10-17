@@ -132,7 +132,7 @@ it("renders a maintenance refusal in the real conversation, restores its draft a
       { timeout: 5000, message: "Real conversation mounted" }).toEqual({ mounted: 1, errors: [] });
     expect(errors).toEqual([]);
     const draft = page.locator("#ask-question"), dispatch = page.locator('[data-tour="dispatch-btn"]');
-    await page.getByText("No global research pause was observed.", { exact: false }).waitFor();
+    await page.getByTestId("composer-publication-notice").waitFor();
     await draft.fill("Synthetic retained question"); await expect.poll(() => dispatch.isEnabled()).toBe(true);
     await dispatch.click(); await page.getByRole("alert").waitFor();
     expect(await page.getByRole("alert").innerText()).toContain("New application requests are held.");

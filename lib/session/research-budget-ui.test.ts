@@ -73,7 +73,8 @@ it("shows held capacity, clamps question requests to the signed maximum and make
     await page.evaluate(() => (window as unknown as { showBudget(): void }).showBudget());
     await page.getByText("0.020000 USDC used or held").waitFor();
     expect(await page.getByText(/0\.030000 USDC remaining/).count()).toBe(1);
-    expect(await page.getByText("Budget and model: $0.015000 USDC").count()).toBe(1);
+    await page.getByText("More options", { exact: true }).click();
+    expect(await page.locator('[data-tour="budget"]').textContent()).toContain("0.015000");
     await page.getByLabel("What do you want to know?").fill("Compare two research approaches");
     await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
     await page.getByRole("button", { name: "Renew duration" }).click();
@@ -88,7 +89,7 @@ it("can submit free-only research with an explicit zero source budget", async ()
   const { context, page } = await mount();
   try {
     await page.getByLabel("What do you want to know?").fill("Read public documentation only");
-    await page.getByText("Budget and model: $0.050000 USDC").click();
+    await page.getByText("More options", { exact: true }).click();
     await page.getByLabel("Maximum budget in USDC").fill("0");
     await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
     expect(await page.evaluate(() => (window as unknown as { actions: unknown[] }).actions)).toEqual([

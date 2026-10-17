@@ -185,14 +185,16 @@ try {
     await page.evaluate(() => document.fonts.ready);
     const question = page.getByLabel("What do you want to know?");
     await question.waitFor();
-    await page.getByRole("complementary", { name: "Sponsored research trial" }).waitFor();
+    await page.getByText("Free trial. Keryx pays. No wallet.", { exact: true }).waitFor();
+    await page.getByTestId("composer-publication-notice").waitFor();
+    assert.equal(await page.getByRole("complementary", { name: "Sponsored research trial" }).count(), 0);
     assert.equal(calls.length, 0, "Opening the sponsored composer never starts research");
     await page.screenshot({ path: join(screenshots, `chat-idle-${width}.png`) });
     const ask = page.locator('[data-tour="dispatch-btn"]');
-    await page.getByText(/Budget and model:/).click();
+    await page.getByText("More options", { exact: true }).click();
     await page.getByLabel("Maximum budget in USDC").fill("0.06");
     await page.getByLabel("AI model").selectOption("fixture-model");
-    await page.getByText(/Budget and model:/).click();
+    await page.getByText("More options", { exact: true }).click();
     await question.fill("First research question");
     await question.press("Control+Enter");
     await page.getByText("Synthetic report 1", { exact: false }).waitFor();
@@ -272,10 +274,9 @@ try {
     assert.deepEqual(errors, []);
     if (width === 390) {
       await page.goto(`${base}/research`, { waitUntil: "domcontentloaded" });
-      const researchAvailability = parseResearchAvailability({ state: "not-paused" });
-      assert(researchAvailability);
-      // This rendered status exists only after the real availability effect consumes the intercepted GET.
-      await page.getByRole("main").getByText(researchAvailability.message, { exact: true }).waitFor();
+      // The normal form no longer shows a healthy availability panel. Its
+      // publication notice still proves hydration consumed the context GET.
+      await page.getByRole("main").getByTestId("composer-publication-notice").waitFor();
       await page.evaluate(() => document.fonts.ready);
       const researchQuestion = page.getByRole("main").getByRole("textbox", { name: "What do you want to know?", exact: true });
       await researchQuestion.waitFor({ state: "visible" });
@@ -303,8 +304,10 @@ try {
       return route.fulfill({ status: 429, headers: { "Retry-After": "60" }, json: {} });
     });
     await quotaPage.goto(base, { waitUntil: "domcontentloaded" });
-    // Rendered effect-driven availability proves hydration consumed the fixture.
-    await quotaPage.getByText(available.message, { exact: true }).waitFor();
+    // The publication notice is effect-driven; an enabled action below also
+    // proves the healthy availability check completed without its old panel.
+    await quotaPage.getByTestId("composer-publication-notice").waitFor();
+    assert.equal(await quotaPage.getByText(available.message, { exact: true }).count(), 0);
     const quotaQuestion = quotaPage.getByLabel("What do you want to know?");
     const quotaDispatch = quotaPage.locator('[data-tour="dispatch-btn"]');
     await quotaQuestion.fill(quotaDraft);

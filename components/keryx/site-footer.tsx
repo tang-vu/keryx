@@ -14,6 +14,7 @@ import { createMessages } from "@/lib/i18n/messages";
 
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { setupCopy } from "@/locales/en/get-started";
+import { privateResearchCopy } from "@/locales/en/run-claim-research";
 import { SUPPORT_MAILTO } from "@/lib/public-support";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LanguageSwitcher } from "./language-switcher";
@@ -28,10 +29,10 @@ const configuredRegistry=browserRegistryAddress();
 const REGISTRY = /^0x0{40}$/.test(configuredRegistry)&&profile.testnet?"0x2e12Fa3256B21b9d8726933b5c4bfBDCc740e536":configuredRegistry;
 const USDC = profile.usdcAddress;
 
-type FooterLink = { label: string; href: string; external?: boolean };
+type FooterLink = { label: string; href: string; external?: boolean; fullNavigation?: boolean };
 
 // Product surfaces. "API for agents" is the OpenAPI reference (also the A2A entry point).
-function houseLinks(message: ReturnType<typeof createMessages>, guide = productGuideCopy): FooterLink[] { return [
+function houseLinks(message: ReturnType<typeof createMessages>, guide = productGuideCopy, claim = privateResearchCopy): FooterLink[] { return [
   { label: message("shellNavigation.ask"), href: "/" },
   { label: guide("product.pricing"), href: "/pricing" },
   { label: guide("product.about"), href: "/about" },
@@ -44,6 +45,8 @@ function houseLinks(message: ReturnType<typeof createMessages>, guide = productG
   { label: message("shellNavigation.creators"), href: "/register" },
   { label: message("shellNavigation.playground"), href: "/playground" },
   { label: message("shellNavigation.research"), href: "/research" },
+  { label: message("researchChat.savedReports"), href: "/me/asks" },
+  { label: claim.entry, href: "/research/private", fullNavigation: true },
   { label: message("shellFooter.businessCalculator"), href: "/economics" },
   { label: message("shellFooter.remoteMcp"), href: "/integrations/mcp" },
   { label: message("shellFooter.agentApi"), href: "/api/docs", external: true },
@@ -72,12 +75,12 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
       </div>
       <div className="flex flex-col gap-2.5 font-serif text-[15px] text-ink">
         {links.map((l) =>
-          l.external ? (
+          l.external || l.fullNavigation ? (
             <a
               key={l.href}
               href={l.href}
-              target="_blank"
-              rel="noopener noreferrer"
+              target={l.external ? "_blank" : undefined}
+              rel={l.external ? "noopener noreferrer" : undefined}
               className="transition-colors hover:text-seal"
             >
               {l.label}
@@ -97,6 +100,7 @@ export function SiteFooter() {
   const richMessage = useUiRichMessages();
   const shell = useLocale(), { locale } = shell, message = useUiMessages(shell.message);
   const guide = useUiCopyFunction("product-guide", productGuideCopy), setup = useUiCopy("get-started", setupCopy);
+  const claim = useUiCopy("run-claim-research", privateResearchCopy);
   return (
     <footer lang={locale} className="border-t border-ink bg-panel">
       <div className="mx-auto max-w-[1180px] px-4 pb-10 pt-[54px] sm:px-[30px]">
@@ -113,7 +117,7 @@ export function SiteFooter() {
             </p>
           </div>
 
-          <FooterCol title={message("shellFooter.house")} links={houseLinks(message, guide)} />
+          <FooterCol title={message("shellFooter.house")} links={houseLinks(message, guide, claim)} />
           <FooterCol title={message("shellFooter.docsAndProof")} links={docsLinks(message, guide, setup)} />
         </div>
 

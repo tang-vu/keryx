@@ -73,7 +73,9 @@ try {
         await page.waitForFunction(() => [...document.querySelectorAll("button")].some(button => button.textContent?.includes("Connect Wallet")));
         const choose = async (path: string) => {
           if (width === 390) await page.getByRole("button", { name: "Open menu", exact: true }).tap();
-          const link = page.locator(`${width === 390 ? "#mobile-site-menu" : "header nav"} a[href="${path}"]`).first();
+          const navigation = page.locator(width === 390 ? "#mobile-site-menu" : "header nav").first();
+          const link = navigation.locator(`a[href="${path}"]`).first();
+          if (!await link.isVisible()) await navigation.getByText("More tools", { exact: true }).click();
           await link.evaluate(anchor => anchor.addEventListener("click", () => performance.mark("header-click"), { once: true }));
           if (width === 390) await link.tap(); else await link.click();
         };

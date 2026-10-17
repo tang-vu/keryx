@@ -481,6 +481,7 @@ try {
     const da = await pendingDetail(a), db = await pendingDetail(b), before = await snapshot(b);
     // Actual Next client navigation unmounts the actual page/workspace. Removing DOM
     // nodes or calling a test root's unmount would not establish this behavior.
+    await a.locator("header").getByText("More tools", { exact: true }).click();
     await a.locator("header").getByRole("link", { name: "About", exact: true }).click(); await a.waitForURL(`${origin}/about`);
     await flush(a); await flush(b); assert((await snapshot(a)).requests[da.id].aborted);
     assert(!(await snapshot(b)).requests[db.id].aborted, "Peer still owns its request before completion/finally abort");

@@ -137,7 +137,7 @@ try {
       await page.getByRole("link", { name: copy.trial, exact: true }).click();
       await page.waitForURL(origin + "/?mode=deep#dispatch");
       await page.waitForFunction(() => document.querySelector<HTMLInputElement>('input[name="research-depth"][value="deep"]')?.checked === true);
-      await page.getByText(available.message, { exact: true }).waitFor();
+      await page.getByTestId("composer-publication-notice").waitFor();
       await page.locator("#ask-question:enabled").waitFor();
       assert.equal(await page.locator('input[name="research-depth"][value="quick"]').isChecked(), false);
       assert.equal(await page.locator("#ask-question").inputValue(), "", "The request still requires explicit copy/paste");
