@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/get-started.ts",
-  "sourceSha256": "2ac7d0d2ecc1cb7ec5c1e300ad715a5881f26106c149c1e9b64c399655388a6d",
+  "sourceSha256": "9450616cf1959d638de574cbeec2f3a445dbdea9d93bc8dcd67301299373e2fa",
   "entries": {
     "navigation.start": {
       "source": "Get started",
@@ -369,8 +369,8 @@
       "text": "Tải WebView2 Runtime"
     },
     "download.desktopVersion": {
-      "source": "Operator 0.4.29 · release v0.27.76",
-      "text": "Operator 0.4.29 · bản phát hành v0.27.76"
+      "source": "Operator ${operatorVersion} · release v${releaseVersion}",
+      "text": "Operator ${operatorVersion} · bản phát hành v${releaseVersion}"
     },
     "download.desktopSteps.0": {
       "source": "Open the release assets and choose the -setup.exe installer or -win32-x64.zip portable build. Review the matching -release.json manifest and -SHA256SUMS.txt checksums.",
