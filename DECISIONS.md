@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+## Recover uncertain approval nonces through explicit owner cancellation — 2026-10-17
+
+Keep missing-hash approvals held until positive finalized evidence. Offer a separate
+zero-value self-transfer using the retained original nonce, with exact native gas
+review and owner consent. Sign without broadcasting, independently verify the
+envelope and save its deterministic hash before claiming a single raw send.
+Preserve earlier hashes across explicit re-reviews; never infer failure from an
+empty history or automatically repeat funding. Existing finalized replacement
+verification alone resolves the original hold. See
+[authority, persistence and surface boundaries](docs/engineering/funding-cancellation.md).
+
 ## Make the homepage question the first decision — 2026-10-16
 
 Keep question, depth, submit, examples and truthful payer/publication notices on
