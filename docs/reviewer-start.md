@@ -1,5 +1,8 @@
 # Reviewer guide: follow the decisions, check the payment, see real use
 
+For the October 17 checkpoint, use the [final review card](tameion-closeout-2026-10-17.md)
+for a compact route, direct media backups and dated release/availability limits.
+
 Keryx researches a question under a budget, explains which sources it buys,
 skips or reuses, and rewards eligible creators for the evidence it actually
 cites. The business use is research for developers and researchers: a cited
