@@ -9,7 +9,27 @@ if (!args.includes("--apply")) {
   console.log(`Approved free public references: ${APPROVED_PUBLIC_REFERENCES.map((reference) => reference.name).join(", ")}. Use --apply to fetch and import.`);
 } else {
   if (hasSupabase()) throw new Error("Public reference onboarding requires SQLite");
-  const results = await importPublicReferenceCatalog(await getDb());
-  for (const result of results) console.log(`${result.name}: ${result.ok ? `${result.items} public feed items` : "import failed"}`);
-  if (results.some((result) => !result.ok)) process.exitCode = 1;
+  const controller = new AbortController();
+  const stop = () => controller.abort();
+  process.once("SIGINT", stop); process.once("SIGTERM", stop);
+  let db: Awaited<ReturnType<typeof getDb>> | undefined;
+  try {
+    db = await getDb();
+    const results = await importPublicReferenceCatalog(db, undefined, {
+      signal: controller.signal,
+      onProgress(progress) {
+        if (progress.phase === "started") console.log(`${progress.name}: importing public feed (${progress.index}/${progress.total})`);
+        else {
+          const result = progress.result;
+          console.log(`${result.name}: ${result.ok ? `${result.items} public feed items` : "import failed"}`);
+          if (result.code) console.log(`${result.name}: public import status ${result.code}`);
+        }
+      },
+    });
+    if (results.length !== APPROVED_PUBLIC_REFERENCES.length) console.log(`Catalog import stopped after ${results.length}/${APPROVED_PUBLIC_REFERENCES.length} publishers; remaining publishers were not attempted.`);
+    if (results.length !== APPROVED_PUBLIC_REFERENCES.length || results.some((result) => !result.ok)) process.exitCode = 1;
+  } finally {
+    process.off("SIGINT", stop); process.off("SIGTERM", stop);
+    if (db && "close" in db && typeof db.close === "function") db.close();
+  }
 }

@@ -9,7 +9,24 @@ import { installPublicProfileFunctions } from "./public-profile-functions";
 const verifiedConnections = new WeakMap<DatabaseSync, { identity: Readonly<StorageIdentity>; readOnly: boolean;
   readonly foreignKeys: true; readonly busyTimeout: 5000; readonly nativeUserDomainProfile?: string;
   readonly selectedApplicationProfile?: string;
-  closed: boolean; assert(): void }>();
+  closed: boolean; assert(): void; allocatedBytes(): number }>();
+
+/** Dispatch metadata only. Closed/revoked wrappers remain verified and must
+ * never fall back to an ordinary connection after their guard refuses. */
+export function isVerifiedSqliteConnection(db: DatabaseSync): boolean {
+  return verifiedConnections.has(db);
+}
+
+/** Fixed allocation metadata, including uncommitted pages. No SQL, callbacks,
+ * native handles or caller-controlled limits leave the verified connection. */
+export function readVerifiedSqliteAllocatedBytes(db: DatabaseSync): number {
+  const record = verifiedConnections.get(db);
+  if (arguments.length !== 1 || !record) return refuseStorage("storage_unavailable");
+  record.assert();
+  const bytes = record.allocatedBytes();
+  record.assert();
+  return bytes;
+}
 
 /** Internal composition verifies native connection provenance; an ordinary DB cannot qualify. */
 export function assertVerifiedSqliteConnection(db: DatabaseSync, access: "read" | "write" = "read"): Readonly<StorageIdentity> {
@@ -74,6 +91,7 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
   let excluded: Set<string> | undefined;
   let nativeUserDomainProfile: string | undefined;
   let selectedApplicationProfile: string | undefined;
+  let allocatedBytes: (() => number) | undefined;
   try {
     runtimeGuard?.();
     db = new DatabaseSync(file, { readOnly, allowExtension: false });
@@ -97,7 +115,7 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     if (identity.authorityMode === "mainnet-real") installPublicProfileFunctions(db);
     if (!readOnly) db.exec("PRAGMA synchronous=FULL");
     registerStorageCapability(db, identity, () => !closed);
-    restrictStorageApplicationSql(db);
+    allocatedBytes = restrictStorageApplicationSql(db);
   } catch (error) {
     closed = true;
     try { db?.close(); } catch { /* preserve fixed admission refusal */ }
@@ -148,7 +166,7 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
     throw new Error("Unsupported verified storage operation");
   } });
   const record = { identity, readOnly, foreignKeys: true as const, busyTimeout: 5000 as const,
-    nativeUserDomainProfile, selectedApplicationProfile, closed: false, assert };
+    nativeUserDomainProfile, selectedApplicationProfile, closed: false, assert, allocatedBytes: allocatedBytes! };
   verifiedConnections.set(wrapped, record);
   return { db: wrapped, close };
 }
