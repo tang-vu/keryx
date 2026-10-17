@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { canonicalJson } from "../canonical-json";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
+import { installNativeUserDomainSchema } from "./native-user-domain-schema";
 import { installPublicReferenceArchive } from "./public-reference-archive";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { GATEWAY_FUNDING_SCHEMA, GATEWAY_FUNDING_INDEXES } from "./gateway-funding-sqlite-schema";
@@ -22,20 +23,27 @@ function excluded(db: DatabaseSync, identity: StorageIdentity): Set<string> {
     "storage_identity_no_insert", ...Object.keys(storageFenceStatements(db, identity))]);
 }
 
-/** Exact source pairs preserve original enrollment/financial schema and optional funding tables. */
+/** Exact source pairs preserve base/full-native mainnet schema and optional testnet funding tables. */
 export function publicReferenceArchiveMigrationProfiles(mainnet = false): readonly (readonly [string, string])[] {
-  return (mainnet ? [false] : [false, true]).map(funding => {
+  const references = mainnet
+    ? [{ funding: false, nativeUserDomains: false }, { funding: false, nativeUserDomains: true }]
+    : [{ funding: false, nativeUserDomains: false }, { funding: true, nativeUserDomains: false }];
+  return references.map(({ funding, nativeUserDomains }) => {
     const db = new DatabaseSync(":memory:");
     try {
+      db.exec("BEGIN");
       if (mainnet) installMainnetApplicationSchema(db, { publicReferenceArchive: false });
       else installSqliteApplicationSchema(db, { publicReferenceArchive: false });
+      if (nativeUserDomains) installNativeUserDomainSchema(db);
       if (funding) {
         for (const sql of Object.values(GATEWAY_FUNDING_SCHEMA)) db.exec(sql);
         for (const sql of Object.values(GATEWAY_FUNDING_INDEXES)) db.exec(sql);
       }
       const before = sqliteApplicationSchemaProfile(db, new Set());
       installPublicReferenceArchive(db);
-      return [before, sqliteApplicationSchemaProfile(db, new Set())] as const;
+      const pair = [before, sqliteApplicationSchemaProfile(db, new Set())] as const;
+      db.exec("ROLLBACK");
+      return pair;
     } finally { db.close(); }
   });
 }

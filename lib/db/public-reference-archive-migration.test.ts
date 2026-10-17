@@ -7,6 +7,8 @@ import { DatabaseSync } from "node:sqlite";
 import { canonicalJson } from "../canonical-json";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
+import { installNativeUserDomainSchema, NATIVE_USER_DOMAIN_TABLES } from "./native-user-domain-schema";
+import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, storageIdentityDigest, type StorageIdentity } from "./storage-identity";
 import { assertStorageFences, assertStorageIdentity, insertStorageIdentity, installStorageFences, registerStorageCapability,
@@ -26,7 +28,7 @@ const reference: PublicReference = { id: "public:migration-test", name: "Origina
   items: [1, 2, 3].map(n => ({ id: publicReferenceItemId("public:migration-test", `https://archive.test/${n}`),
     link: `https://archive.test/${n}`, title: `Original article ${n}`, content: `Retained historical public body ${n}`,
     summary: "Public article", deliveryKind: "excerpt" })) };
-function fixture(mainnet = true, invalid = false) {
+function fixture(mainnet = true, invalid = false, nativeUserDomains = false) {
   const directory = mkdtempSync(join(tmpdir(), "keryx-public-archive-migration-")); directories.push(directory);
   const file = join(directory, "store.sqlite"), manifest = join(directory, "deployment.json");
   const identity: StorageIdentity = mainnet ? { ...syntheticStorageIdentity("testnet-offline"), format: "keryx-mainnet-storage-identity-v1",
@@ -35,6 +37,17 @@ function fixture(mainnet = true, invalid = false) {
   try {
     db.exec("BEGIN IMMEDIATE");
     if (mainnet) installMainnetApplicationSchema(db); else installSqliteApplicationSchema(db);
+    if (nativeUserDomains) {
+      installNativeUserDomainSchema(db);
+      const wallet = `0x${"1".repeat(40)}`;
+      db.prepare("INSERT INTO private_profiles(wallet,handle,display_name,bio,purpose,links,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)")
+        .run(wallet, null, "Synthetic retained owner", "Retained native note ☃", "research", "[]", reference.refreshedAt!, reference.refreshedAt!);
+      db.prepare("INSERT INTO private_bibliographies VALUES(?,?,?,?,?,?,?,?,?)")
+        .run("synthetic-native-bib", wallet, "1".repeat(64), "Original native bibliography", "@misc{synthetic,\n title={Original}}\n", 0, 1,
+          reference.refreshedAt!, reference.refreshedAt!);
+      db.prepare("INSERT INTO sync_state(key,value,updated_at) VALUES(?,?,?)")
+        .run("synthetic-typed-original", new Uint8Array([0, 255, 128]), null);
+    }
     const snapshot = invalid ? { ...reference, items: [reference.items[0], { ...reference.items[1], id: reference.items[2]!.id }] } : reference;
     db.prepare("INSERT INTO public_references(id,active,rss_url,snapshot) VALUES (?,?,?,?)")
       .run(reference.id, 1, reference.rssUrl, JSON.stringify(snapshot));
@@ -66,6 +79,63 @@ function largeMetadata(f: ReturnType<typeof fixture>, value: string | Uint8Array
 }
 
 describe("explicit public archive storage activation", () => {
+  it("pairs only the exact supported base and full-native mainnet schemas across archive activation", () => {
+    const pairs = publicReferenceArchiveMigrationProfiles(true);
+    expect(NATIVE_USER_DOMAIN_TABLES).toHaveLength(25);
+    expect(pairs).toHaveLength(2);
+    expect(pairs.flat().sort()).toEqual([...supportedSqliteApplicationProfiles(true)].sort());
+  });
+
+  it("backs up and preserves populated native25 originals, fences and original fulfillment through activation and repeat", async () => {
+    const f = fixture(true, false, true), beforeProfile = profile(f.file, f.identity);
+    const pair = publicReferenceArchiveMigrationProfiles(true).find(([before]) => before === beforeProfile)!;
+    expect(pair).toBeDefined();
+    const beforeDb = new DatabaseSync(f.file, { readOnly: true });
+    let before;
+    try { before = snapshotPublicArchiveStorage(beforeDb, f.identity, [pair[0]]); }
+    finally { beforeDb.close(); }
+    const inspected = inspectPublicArchiveStorage(f.manifest), backup = join(f.directory, "native25-before.sqlite");
+    expect(inspected.schemaDigest).toBe(createHash("sha256").update(pair[0]).digest("hex"));
+    expect(await migratePublicArchiveStorage({ manifest: f.manifest, expectedManifestDigest: inspected.manifestDigest,
+      expectedIdentityDigest: inspected.identityDigest, backup, receipt: join(f.directory, "native25-archive.jsonl"), writersStopped: true }))
+      .toMatchObject({ status: "migrated", originalRowsPreserved: true, signingResumeAuthorized: false, phase: "migration-verified" });
+    const copied = new DatabaseSync(backup, { readOnly: true }), afterDb = new DatabaseSync(f.file, { readOnly: true });
+    let after;
+    try {
+      expect(snapshotPublicArchiveStorage(copied, f.identity, [pair[0]])).toEqual(before);
+      after = snapshotPublicArchiveStorage(afterDb, f.identity, [pair[1]]);
+      for (const [table, original] of Object.entries(before.tables)) expect(after.tables[table]).toEqual(original);
+      for (const table of NATIVE_USER_DOMAIN_TABLES) expect(after.tables[table]).toEqual(before.tables[table]);
+      for (const table of ["a2a_failed_original_fulfillments", "a2a_fulfillment_completions"])
+        expect(after.tables[table]).toEqual(before.tables[table]);
+      assertStorageIdentity(afterDb, f.identity); assertStorageFences(afterDb, f.identity);
+      expect(afterDb.prepare("SELECT count(*) AS n FROM public_reference_articles").get()!.n).toBe(3);
+    } finally { copied.close(); afterDb.close(); }
+    expect(migratePublicReferenceArchiveStorage(f.file, f.identity, () => {})).toMatchObject({ status: "already-current" });
+    const repeated = new DatabaseSync(f.file, { readOnly: true });
+    try { expect(snapshotPublicArchiveStorage(repeated, f.identity, [pair[1]])).toEqual(after); }
+    finally { repeated.close(); }
+  });
+
+  it.each([
+    ["missing immutable native trigger", "DROP TRIGGER pending_job_owners_no_update", "source profile differs"],
+    ["modified count-equivalent25 schema", "ALTER TABLE private_profiles ADD COLUMN unexpected TEXT", "source profile differs"],
+    ["unknown future domain", "CREATE TABLE unexpected_native_family(id TEXT PRIMARY KEY)", "unsupported_table"],
+  ])("refuses native archive activation with %s", (_name, sql, error) => {
+    const f = fixture(true, false, true), changed = new DatabaseSync(f.file);
+    let before;
+    try { changed.exec(sql); before = sqliteApplicationSchemaProfile(changed, new Set()); } finally { changed.close(); }
+    expect(() => migratePublicReferenceArchiveStorage(f.file, f.identity, () => {})).toThrow(error);
+    const db = new DatabaseSync(f.file, { readOnly: true });
+    try {
+      expect(sqliteApplicationSchemaProfile(db, new Set())).toBe(before);
+      expect(hasPublicReferenceArchive(db)).toBe(false); assertStorageIdentity(db, f.identity);
+      if (error === "unsupported_table") expect(() => assertStorageFences(db, f.identity)).toThrow(error);
+      else assertStorageFences(db, f.identity);
+    }
+    finally { db.close(); }
+  });
+
   it("preserves streamed originals above 32 MiB without raising enrollment's encoded limit", () => {
     const f = fixture(), value = "x".repeat(1024 * 1024), pair = publicReferenceArchiveMigrationProfiles(true)[0]!;
     largeMetadata(f, value);
@@ -133,8 +203,8 @@ describe("explicit public archive storage activation", () => {
     } finally { try { db.close(); } catch { /* Already closed for exclusive repeat. */ } }
   });
 
-  it("rolls back all archive DDL and inserted prefixes if a legacy middle item is forged", () => {
-    const f = fixture(true, true), before = profile(f.file, f.identity);
+  it.each([false, true])("rolls back all archive DDL and inserted prefixes for forged legacy items (native=%s)", nativeUserDomains => {
+    const f = fixture(true, true, nativeUserDomains), before = profile(f.file, f.identity);
     expect(() => migratePublicReferenceArchiveStorage(f.file, f.identity, () => {})).toThrow("identity differs");
     expect(profile(f.file, f.identity)).toBe(before);
     const db = new DatabaseSync(f.file, { readOnly: true });

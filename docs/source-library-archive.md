@@ -113,7 +113,25 @@ does not authorize signing or writer resumption; those require the existing
 post-migration operational gates. A refused or incompletely acknowledged attempt
 keeps writers stopped and preserves its originals and evidence.
 
-Existing provenance snapshot acceptance remains bounded at 64 MiB file size,
-100,000 rows and 32 MiB encoded row data. These migration limits are separate
-from article retention. A larger enrolled store needs a separately reviewed
-scalable migration rather than weakening its original-preservation checks.
+Mainnet accepts exact source-built base and full native25 profiles, each before
+or after archive activation. Partial native definitions, missing immutable
+guards and unknown tables remain refused. Original fulfillment, native rows,
+identity and existing fences remain part of the exact preservation checks.
+
+For a combined migration and release, the existing protected redeploy config
+accepts `keryx-redeploy-public-reference-archive-migration-v1`. It selects only
+this fixed CLI and retains the six existing fields: `format`, `manifest`,
+`expectedManifestDigest`, `expectedIdentityDigest`, `backup` and `receipt`.
+The reviewed redeploy path verifies stopped public roles, uses the accepted
+candidate's migration source, then starts the new cohort. The operator must
+also stop every private or scheduled writer; `--writers-stopped` records that
+evidence and does not stop processes. Failure after migration is attempted
+keeps writers stopped and all builds retained, without an automatic rollback.
+
+Migration snapshots retain limits of 64 MiB database allocation, 100,000 rows,
+2 MiB per field, 128 MiB raw fields and 64 MiB framed row data. The allocation
+limit is checked again after archive tables and legacy items are added, before
+COMMIT. Enrollment's separate 32 MiB encoded snapshot limit is unchanged.
+These operation bounds are separate from article retention. A larger store or
+archive expansion needs a separately reviewed scalable migration rather than
+weaker original-preservation checks.
