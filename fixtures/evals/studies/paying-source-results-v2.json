@@ -209,7 +209,7 @@
     "lib/db/source-registry-origin.ts": "18b6592833aeb65265a8f155bb2cc3e30e90e4fe2ecb50dbeb2dc5b35120c731",
     "lib/db/source-upkeep.ts": "fd22f9931ae96e4af7c1caf30af5dea55047d3756a399941ce7a59af0d2d2957",
     "lib/db/sqlite-adapter.ts": "68128e8815fbf56cc1ad0fa0687444b0099c15ce7e911d0fdef682f172e15df7",
-    "lib/db/sqlite-application-schema-profile.ts": "a9ab32809c8575de85d3d7aff6e5ae2532723cf1aeeb585e914cc9b7ac563a4d",
+    "lib/db/sqlite-application-schema-profile.ts": "d61d22e551cecf252d68d66944eb945c07b9e0b6a64bd17172026d8d9bdc2ee2",
     "lib/db/sqlite-application-schema.ts": "1259627e38df4010f755ad579fcb9e058acdd0de132ea72fcdd9adec9519e17a",
     "lib/db/sqlite-browser-journal.ts": "de69cb201540437fa6c194042f1c8c7ae7a04775c00bf5ec7fbac5f327c31542",
     "lib/db/sqlite-browser-signing-originals.ts": "35501e9b6867120bc9840bd059e6e017a1e27e14f537c57448526d15891e18c0",
