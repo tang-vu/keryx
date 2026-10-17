@@ -8,6 +8,7 @@ import { circleWalletPublicConfig, circleWalletPublicConfigured } from "./circle
 import { browserPaymentProfile } from "./browser-payment-profile";
 import { AUTH_CHALLENGE_TTL_MS } from "./auth-time-policy";
 import { safeRegistrationReturn, sourceReturnWithOwner, registrationOwnerMatches } from "./registration-return";
+import { readCircleWalletAvailability } from "./circle-wallet-availability";
 
 const CONTINUATION = "keryx-circle-google-oauth-v1";
 const IDENTITY = `keryx-circle-owner-${browserPaymentProfile().networkId}`;
@@ -81,8 +82,7 @@ export async function startGoogleWalletLogin() {
   // Public navigation only; retain an existing owner and the initiating profile.
   const publicReturn = target ? { target: sourceReturnWithOwner(target, identity?.address), network: browserPaymentProfile().networkId } : undefined;
   if (!circleWalletPublicConfigured()) throw new Error("Google wallet sign-in is not configured");
-  const ready = await fetch("/api/auth/circle/config", { cache: "no-store", signal: AbortSignal.timeout(10_000) });
-  if (!ready.ok || !(await ready.json()).available) throw new Error("Google wallet sign-in is not configured");
+  if (!await readCircleWalletAvailability()) throw new Error("Google wallet sign-in is not configured");
   const { W3SSdk: SDK } = await import("@circle-fin/w3s-pw-web-sdk");
   const { SocialLoginProvider } = await import("@circle-fin/w3s-pw-web-sdk/dist/src/types");
   clearCircleWalletIdentity(); callback = undefined;
