@@ -5,16 +5,18 @@ desktop, API, CLI, remote/stdio MCP and bot capabilities, implement the applicab
 parts, and leave durable notes so subsequent updates consider these surfaces together.
 Version numbers alone do not establish feature parity, publication or installation.
 
-Extension **0.1.4.1 store-preparation patch** remains a Chromium Manifest V3 hosted research client.
+Extension **0.1.4.3 source preparation** remains a Chromium Manifest V3 hosted research client.
 It uses the existing OpenAI-compatible endpoint and permissions; it has no signer,
 account token, local Operator task engine, funding action or scheduler.
+The [October 17 completion update](engineering/extension-loading-20261017.md)
+records the implemented fix and separate publication, Store and installed-popup gates.
 
 | Capability | Extension behavior and authority |
 | --- | --- |
 | Quick/Deep and source budget | Sends the existing `mode` and `budget` fields; preserves zero and accepts the editable web's $0–$0.08 range. The server still clamps/admit requests; source spending is separate from model/search cost. |
 | Current tab/selection | Selection prefills an editable question. The shown HTTP(S) page URL is included only on opt-in, as an ordinary literal URL in that question. No full-page collection or new source-admission contract. |
 | Scholarly discovery | Explicit unchecked `scholarly` option uses the existing provider disclosure and hosted discovery rules. Metadata/source discovery is not proof of reading, rights or settlement. |
-| Research status and failure | Reads public pause observation. HTTP errors, structured/legacy streamed errors and truncated streams fail visibly. One active POST, no retries. Stop/timeout disconnect observation; server work and payments may continue. |
+| Research status and failure | Reads public pause observation. Ordinary streams complete after the final summary and `[DONE]` without waiting for transport EOF; responses carrying a caller-private packet retain clean EOF. HTTP errors, structured/legacy streamed errors and truncated streams fail visibly. One active POST, no retries. Stop/timeout disconnect observation; server work and payments may continue. |
 | Answer, citations and money | Safe text answer, original HTTP(S) article links, exact canonical USDC display, planned rewards/recorded totals/pending spend. The complete hosted report owns evidence review and per-payment receipts. No distinct-settled-creator count inferred. |
 | Recorded exports | Download the returned BibTeX/RIS/CSL-JSON/evidence CSV bytes. No new model call, reference enrichment or recomputation. Answer rendering remains plain text; rich Markdown/evidence editing stays on web. |
 | Reopening reports | At most ten completed same-origin public dispatch URLs (UUID or deterministic A2A ID) plus timestamps in device storage, with a clear control. No prompts, answers, page contents, tokens or keys saved to this list. It is best-effort device history, not hosted account history. |
@@ -29,7 +31,8 @@ account token, local Operator task engine, funding action or scheduler.
    web, desktop, CLI, API, both MCP transports and bots. Record intentional handoffs and gaps.
 2. Update affected adapters, browser-safe shared helpers, tests, documentation and packaging
    in the same coherent outcome. If extension bytes change, advance its independent manifest
-   version and the packer's explicit allowlist. A version bump never substitutes for adapter work.
+   version and verify that the packer's explicit allowlist includes every required runtime file.
+   A version bump never substitutes for adapter work.
 3. Test actual popup requests, failure/truncation/abort and duplicate submission, zero budget,
    safe links/text, source consent and exact exports; verify real browser layout and the ZIP.
    Keep synthetic acceptance distinct from installed-user usefulness and live settlement.
