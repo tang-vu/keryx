@@ -30,7 +30,7 @@ async function recordGeometry(page: Page, name: string) {
     const rects = Object.fromEntries(Object.entries({
       action: '[data-tour="dispatch-btn"]',
       metadata: '[data-testid="paper-metadata-handoff"]',
-      cap: '[data-testid="composer-source-cap"]',
+      payer: '[data-testid="composer-payer-notice"]',
       header: '[aria-label="Research conversation"] > header',
       globe: '[data-testid="chat-globe"]',
       canvas: '[data-testid="chat-globe"] canvas',
@@ -47,6 +47,26 @@ async function recordGeometry(page: Page, name: string) {
   // Bounded geometry only: no question, account, source or payment-record values.
   await writeFile(join(screenshotDir, `${name}.json`), JSON.stringify(geometry, null, 2) + "\n", { flag: "wx" });
   return geometry;
+}
+
+async function assertWrappedPayer(page: Page, width: number, height: number, name: string) {
+  const payer = page.getByTestId("composer-payer-notice");
+  const previousStyle = await payer.getAttribute("style");
+  try {
+    await payer.evaluate(element => { element.style.fontFamily = "monospace"; element.style.maxWidth = "140px"; });
+    assert(await payer.evaluate(element => element.getBoundingClientRect().height >= Number.parseFloat(getComputedStyle(element).lineHeight) * 2 - 1),
+      "Fallback fixture must positively wrap the payer notice");
+    const geometry = await recordGeometry(page, name);
+    await page.screenshot({ path: join(screenshotDir, `${name}.png`) });
+    assert(geometry.action && geometry.action.bottom <= height, `Action is cut off with wrapped payer copy: ${geometry.action?.bottom}`);
+    assert(geometry.payer && geometry.payer.top >= geometry.action.bottom, "Payer notice follows the primary action");
+    assert.equal(await page.getByTestId("paper-metadata-handoff").isVisible(), false, "Metadata lookup stays in More options");
+    assert.equal(geometry.docWidth, width);
+  } finally {
+    await payer.evaluate((element, style) => {
+      if (style === null) element.removeAttribute("style"); else element.setAttribute("style", style);
+    }, previousStyle);
+  }
 }
 
 const child = externalBase ? null : spawn(process.execPath,
@@ -116,7 +136,7 @@ try {
         return {
           input: document.querySelector("textarea")?.getBoundingClientRect().toJSON(),
           cta: document.querySelector('[data-tour="dispatch-btn"]')?.getBoundingClientRect().toJSON(),
-          cap: document.querySelector('[data-testid="composer-source-cap"]')?.getBoundingClientRect().toJSON(),
+          payer: document.querySelector('[data-testid="composer-payer-notice"]')?.getBoundingClientRect().toJSON(),
           guide: document.querySelector('[data-testid="hero-guide"]')?.getBoundingClientRect().toJSON(),
           kickerText: kicker ? range.getBoundingClientRect().toJSON() : null,
           headline: document.querySelector("h1")?.getBoundingClientRect().toJSON(),
@@ -146,8 +166,10 @@ try {
         `Question misses first viewport at ${width}x${height}: ${measurements.input.top}`);
       assert(measurements.cta.top > measurements.input.bottom,
         `Action precedes question at ${width}x${height}`);
-      assert(measurements.cap && measurements.cap.bottom <= measurements.cta.top,
-        `Source cap must be visible before the action at ${width}x${height}`);
+      assert(measurements.payer && measurements.payer.top >= measurements.cta.bottom,
+        `Short payer notice follows the action at ${width}x${height}`);
+      assert.equal(await page.getByTestId("composer-source-cap").count(), 0, "No source cap above the primary action");
+      assert.equal(await page.getByTestId("paper-metadata-handoff").isVisible(), false);
       if (width <= 430 && height >= 640) assert(measurements.cta.bottom <= height,
         `Mobile action is cut off in the first viewport at ${width}x${height}: ${measurements.cta.bottom}`);
       if (width >= 1024) assert(measurements.cta.bottom <= height,
@@ -173,45 +195,16 @@ try {
       assert.equal(await page.locator('[data-tour="budget"]').isVisible(), false);
 
       if (width === 320 && height === 640) {
-        const cap = page.getByTestId("composer-source-cap");
-        const previousStyle = await cap.getAttribute("style");
-        try {
-          // The Linux CI capture wrapped this disclosure into two lines. Keep the
-          // action reachable with wider fallback glyphs even on a narrower host font.
-          await cap.evaluate(element => {
-            element.style.fontFamily = "monospace";
-            element.style.maxWidth = "200px";
-          });
-          const wrapped = await cap.evaluate(element => ({
-            height: element.getBoundingClientRect().height,
-            width: element.getBoundingClientRect().width,
-            font: getComputedStyle(element).fontFamily,
-            lineHeight: Number.parseFloat(getComputedStyle(element).lineHeight),
-            text: element.textContent,
-          }));
-          assert(wrapped.height >= wrapped.lineHeight * 2 - 1,
-            `Fallback fixture must positively wrap the source cap: ${JSON.stringify(wrapped)}`);
-          const action = await page.locator('[data-tour="dispatch-btn"]').boundingBox();
-          const metadata = await page.getByTestId("paper-metadata-handoff").boundingBox();
-          await page.screenshot({ path: join(screenshotDir, "home-320x640-wrapped-cap.png") });
-          assert(action && action.y + action.height <= height,
-            `Mobile action is cut off with a wrapped source cap: ${action && action.y + action.height}`);
-          assert(metadata && metadata.height >= 44 && metadata.y + metadata.height <= action.y,
-            "Free metadata must retain a 44px target before research");
-          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
-        } finally {
-          await cap.evaluate((element, style) => {
-            if (style === null) element.removeAttribute("style");
-            else element.setAttribute("style", style);
-          }, previousStyle);
-        }
+        await assertWrappedPayer(page, width, height, "home-320x640-wrapped-payer");
       }
 
       if (width === 320 || width === 1366) {
-        await page.getByText(/Budget and model:/).click();
+        await page.getByText("More options", { exact: true }).click();
         assert.equal(await page.locator('[data-tour="budget"]').isVisible(), true);
         const range = await page.getByLabel("Maximum budget in USDC").boundingBox();
         assert(range && range.height >= 44, `Budget target under 44px at ${width}px`);
+        const metadata = await page.getByTestId("paper-metadata-handoff").boundingBox();
+        assert(metadata && metadata.height >= 44, `Metadata target under 44px inside More options at ${width}px`);
         await page.getByRole("button", { name: "How it works" }).click();
         await page.getByRole("dialog", { name: "How Keryx works" }).waitFor();
         await page.getByRole("button", { name: "Close tour" }).click();
@@ -290,15 +283,7 @@ try {
           assert(geometry.action && geometry.action.bottom <= height,
             `Mobile action is cut off with ${feedState} feed: ${geometry.action?.bottom}`);
           if (width === 320) {
-            const cap = page.getByTestId("composer-source-cap");
-            await cap.evaluate(element => { element.style.fontFamily = "monospace"; element.style.maxWidth = "200px"; });
-            assert(await cap.evaluate(element => element.getBoundingClientRect().height >= Number.parseFloat(getComputedStyle(element).lineHeight) * 2 - 1),
-              "Feed fixture must positively wrap the source cap");
-            const wrapped = await recordGeometry(page, `${name}-wrapped-cap`);
-            await page.screenshot({ path: join(screenshotDir, `${name}-wrapped-cap.png`) });
-            assert(wrapped.action && wrapped.action.bottom <= height,
-              `Mobile action is cut off with ${feedState} feed and wrapped source cap: ${wrapped.action?.bottom}`);
-            assert(wrapped.metadata && wrapped.metadata.height >= 44 && wrapped.metadata.bottom <= wrapped.action.top);
+            await assertWrappedPayer(page, width, height, `${name}-wrapped-payer`);
           }
           await page.unroute("**/api/payments?*");
         }

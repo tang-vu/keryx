@@ -2,7 +2,7 @@
 export const productGuideMessages = Object.freeze({
   "product.heroKicker": "For researchers",
   "product.heroTitle": "AI research.",
-  "product.heroBody": "Cited answers. Visible source choices.",
+  "product.heroBody": "Cited research. This trial is free, with no wallet required.",
   "product.overviewKicker": "What you get",
   "product.overviewTitle": "A research answer you can follow back to its sources.",
   "product.overviewBody": "Keryx is a citation-toll reading agent. Give it a question and a source budget: it discovers material, explains what it reads or skips, and writes an answer with citations. Eligible cited creators can receive separate USDC rewards.",
@@ -29,7 +29,7 @@ export const productGuideMessages = Object.freeze({
   "product.try": "Try a research question",
   "product.faqTitle": "Before your first question",
   "product.faqWallet": "Do I need a wallet to try Keryx?",
-  "product.faqWalletBody": "The sponsored public trial needs no wallet or USDC deposit. Keryx covers approved source spending and operating costs within its usage and spending limits. Check availability in the question form; access can be paused.",
+  "product.faqWalletBody": "The sponsored public trial needs no wallet or USDC deposit. Keryx covers approved source spending and operating costs within its usage and spending limits. The form shows a notice when the trial is paused.",
   "product.faqPublic": "Can I submit confidential research?",
   "product.faqPublicBody": "Sponsored trial reports have public links. Use questions you can share publicly. Review the separate private-research flow and privacy terms before submitting confidential material; signing in alone does not make a trial report private.",
   "product.faqPayment": "Does every citation pay a publisher?",

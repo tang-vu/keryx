@@ -69,14 +69,15 @@ try {
   assert(textOrder.budget & 4);
 
   await question.fill("  How are citations rewarded?  ");
-  const scholarly = page.getByRole("checkbox", { name: "Search scholarly papers (Crossref and arXiv)" });
+  const scholarly = page.getByRole("checkbox", { name: "Search scholarly papers (Crossref and arXiv)", includeHidden: true });
+  assert.equal(await scholarly.isVisible(), false);
+  await page.getByText("More options", { exact: true }).click();
   assert.equal(await scholarly.isChecked(), false);
   await scholarly.check();
   await page.locator('input[name="research-depth"][value="deep"]').check();
-  await page.getByText(/Budget and model:/).click();
   await page.getByLabel("Maximum budget in USDC").fill("0.06");
   await page.getByLabel("AI model").selectOption("other");
-  await page.getByText(/Budget and model:/).click();
+  await page.getByText("More options", { exact: true }).click();
   await page.evaluate(() => document.dispatchEvent(new CustomEvent("keryx:tour-budget")));
   assert.equal(await page.locator('[data-tour="budget"]').isVisible(), true);
   await page.getByRole("button", { name: "Ask Keryx" }).click();
@@ -92,7 +93,7 @@ try {
   const paidScholarly = page.getByRole("checkbox", { name: paidManuscriptLabel });
   assert.equal(await paidScholarly.isDisabled(), true);
   await page.locator("#payer-session").click();
-  await page.getByText(/Your research budget pays/).waitFor();
+  await page.getByText(/Your research budget pays/).first().waitFor();
   assert.equal(await paidScholarly.isDisabled(), false);
   await paidScholarly.check();
   await page.getByRole("button", { name: "Ask Keryx" }).click();
@@ -132,8 +133,9 @@ try {
   await mainnet.goto("https://research-form.test/");
   await mainnet.addScriptTag({ content: (await fixtureBundle("arc")).outputFiles[0].text });
   await mainnet.locator("#payer-session").click();
-  assert.equal(await mainnet.getByRole("checkbox", { name: paidManuscriptLabel }).isDisabled(), true);
-  await mainnet.getByText("Paid manuscript rights are not yet available on mainnet. Ordinary registered articles remain available.", { exact: true }).waitFor();
+  await mainnet.getByText("More options", { exact: true }).click();
+  assert.equal(await mainnet.getByRole("checkbox", { name: paidManuscriptLabel, includeHidden: true }).count(), 0);
+  assert.equal(await mainnet.getByText("Paid manuscript rights are not yet available on mainnet. Ordinary registered articles remain available.", { exact: true }).count(), 0);
   await mainnet.getByLabel("What do you want to know?").fill("Read ordinary mainnet sources");
   await mainnet.getByRole("button", { name: "Ask Keryx" }).click();
   assert.equal(await mainnet.evaluate(() => (window as unknown as { calls: unknown[][] }).calls[0][6]), false);

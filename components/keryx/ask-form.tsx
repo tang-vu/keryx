@@ -14,7 +14,6 @@ import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
 import { RESEARCH_AVAILABILITY_UNKNOWN, RESEARCH_PAUSED_MESSAGE } from "@/lib/research/availability-contract";
 import { paperLibraryHref } from "@/lib/papers/handoff";
 import { createMessages } from "@/lib/i18n/messages";
-import { ProductHuntBadge } from "./product-hunt-badge";
 import { decisionReviewCopy as reviewCopy } from "@/lib/research/decision-review-copy";
 import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/hooks/use-research-visibility";
 import type { RunVisibility } from "@/lib/run-privacy/contracts";
@@ -27,7 +26,6 @@ import { UiText, useUiMessages } from "@/lib/i18n/ui-copy";
 const message = createMessages("en");
 
 interface AskFormProps {
-  showLaunchBadge?: boolean;
   disabled?: boolean;
   questionCapUsdc?: number;
   parentId?: string | null;
@@ -103,20 +101,30 @@ const SUGGESTIONS = [
   },
 ];
 
-export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, questionCapUsdc, restoreQuestion, showLaunchBadge = false }: AskFormProps) {
+export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, questionCapUsdc, restoreQuestion }: AskFormProps) {
   const message = useUiMessages();
   const ownVisibility = useResearchVisibility(parentVisibility, { enabled: !publicationPreference });
   const visibility = publicationPreference ?? ownVisibility;
-  const [draft, setDraft] = useState<{ question: string; wallet: string | null; revision: number } | null>(null);
-  const question = visibility.ready && draft?.wallet === visibility.wallet && draft.revision === visibility.identityRevision ? draft.question : "";
+  // An unbound draft is editable while the first visibility context is loading.
+  // Only the server response can bind it to an owner; it cannot be submitted yet.
+  const [draft, setDraft] = useState<{ question: string; wallet: string | null | undefined; revision: number } | null>(null);
+  const question = draft && draft.revision === visibility.identityRevision &&
+    (draft.wallet === undefined || visibility.ready && draft.wallet === visibility.wallet) ? draft.question : "";
   const setQuestion = useCallback((next: string | ((current: string) => string)) => {
     const publication = visibility.getSelection();
-    if (!publication) return;
     const revision = visibility.getIdentityRevision();
-    setDraft(previous => ({ question: typeof next === "string" ? next : next(previous?.wallet === publication.expectedWallet && previous.revision === revision ? previous.question : ""),
-      wallet: publication.expectedWallet, revision }));
+    const wallet = publication?.expectedWallet;
+    setDraft(previous => ({ question: typeof next === "string" ? next : next(previous && (previous.wallet === undefined || previous.wallet === wallet) && previous.revision === revision ? previous.question : ""),
+      wallet, revision }));
   }, [visibility.getSelection, visibility.getIdentityRevision]);
-  useEffect(() => { setDraft(previous => previous && previous.revision !== visibility.identityRevision ? null : previous); }, [visibility.identityRevision]);
+  useEffect(() => {
+    const publication = visibility.getSelection();
+    const revision = visibility.getIdentityRevision();
+    setDraft(previous => {
+      if (!previous || previous.revision !== revision) return null;
+      return publication && previous.wallet === undefined ? { ...previous, wallet: publication.expectedWallet } : previous;
+    });
+  }, [visibility.ready, visibility.identityRevision, visibility.getSelection, visibility.getIdentityRevision]);
   const { availability, checking, refresh } = useResearchAvailability();
   const [dismissedRejection, setDismissedRejection] = useState<number | null>(null);
   const researchPaused = availability?.state === "paused" ||
@@ -147,6 +155,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
   const [paidScholarly, setPaidScholarly] = useState(false);
   const [reviewFirst, setReviewFirst] = useState(false);
   const [models, setModels] = useState<PickerModel[]>([]);
+  const testnet = browserPaymentProfile().testnet;
   const advancedRef = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const revealBudget = () => { if (advancedRef.current) advancedRef.current.open = true; };
@@ -213,7 +222,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
     if (!q || disabled || payer === "paused" || checking || researchPaused) return;
     const publication = visibility.getSelection();
     if (!publication || !draft || draft.revision !== visibility.getIdentityRevision() || draft.wallet !== publication.expectedWallet) return;
-    onAsk(q, effectiveBudget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly, paidScholarly && payer === "session", reviewFirst, publication);
+    onAsk(q, effectiveBudget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly, paidScholarly && payer === "session" && testnet, reviewFirst, publication);
     if (clearOnSubmit) setQuestion("");
   };
 
@@ -231,10 +240,6 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
   return (
     <div data-tour="ask-form">
       <div className="border border-ink bg-paper-2">
-        <div className="hidden flex-wrap items-center justify-between gap-2 border-b border-ink bg-ink px-4 py-2.5 text-cream sm:flex sm:px-5">
-          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em]">{message("researchEntry.ask")}</span>
-          <span className="font-mono text-[11px]">{message("researchEntry.network", { network: currentArcLabel })}</span>
-        </div>
         <div className="p-3.5 sm:p-5">
           <label htmlFor="ask-question" className="block font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">
             {message("researchEntry.question")}
@@ -242,34 +247,20 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
           <textarea
             id="ask-question"
             value={question}
-            onChange={(e) => { sharedAutoRef.current = null; setQuestion(e.target.value); }}
+            onChange={(e) => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(e.target.value); }}
             onKeyDown={(e) => {
               if (!e.nativeEvent.isComposing && (e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); submit(); }
             }}
             placeholder={message("researchEntry.placeholder")}
             rows={2}
             maxLength={MAX_ASK_QUESTION_CHARS}
-            disabled={disabled || !visibility.ready}
+            disabled={disabled}
             className="mt-2 min-h-[76px] w-full resize-y border border-ink bg-paper px-3 py-2 font-serif text-[17px] leading-snug text-ink outline-none placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50"
           />
           <p className="mt-1 text-xs text-ink-3">{message("researchEntry.keyboardHint")}</p>
-          <a href={paperLibraryHref(question)} aria-label={message("researchEntry.metadataLookupLabel")} className="inline-flex min-h-11 items-center font-serif text-sm text-seal underline" data-testid="paper-metadata-handoff">
-            {message("researchEntry.metadataLookup")}
-          </a>
-          {researchPaused && availabilityPanel}
+          {(researchPaused || !checking && !availability) && availabilityPanel}
 
           <div className="mt-1 border-t border-line pt-1 sm:mt-2 sm:pt-3">
-            <ResearchVisibilityPicker preference={visibility} disabled={disabled} parentVisibility={parentVisibility} compact showContextHint={false} />
-            <p className="mb-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-source-cap">
-              {message("researchEntry.sourceCap", { amount: formatRecordedAmount(effectiveBudget, { minimumFractionDigits: 6, useGrouping: false }), payer: message(payer === "treasury" ? "researchEntry.treasuryPayer" : payer === "session" ? "researchEntry.sessionPayer" : payer === "expired" ? "researchEntry.expiredPayer" : "researchEntry.pausedPayer") })}
-            </p>
-            <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || !visibility.ready || question.trim().length === 0}
-              data-tour="dispatch-btn"
-              className="kx-press min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
-              {message(disabled ? "researchEntry.researching" : researchPaused ? "researchEntry.paused" : "researchEntry.ask")}
-            </button>
-            {visibility.ready && <p className="mt-1 text-xs leading-4 text-ink-3">{parentVisibility && parentVisibility !== "public"
-              ? message("researchVisibility.followUp") : !visibility.wallet ? message("researchVisibility.signIn") : message("researchVisibility.questionOnly")}</p>}
           <fieldset className="mt-1">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">{message("researchEntry.depth")}</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
@@ -287,31 +278,39 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
                 : message("researchEntry.deepHint")}
             </p>
           </fieldset>
-            {showLaunchBadge && <div className="mt-3 flex justify-center sm:justify-start"><ProductHuntBadge /></div>}
-            <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2">
+            <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || !visibility.ready || draft?.wallet === undefined || question.trim().length === 0}
+              data-tour="dispatch-btn"
+              className="kx-press mt-3 min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
+              {message(disabled ? "researchEntry.researching" : researchPaused ? "researchEntry.paused" : "researchEntry.ask")}
+            </button>
+            {!conversation && <div className="mt-2 flex flex-wrap gap-2" aria-label={message("researchEntry.examplesLabel")}>
+              {SUGGESTIONS.map((s) => (
+                <button key={s.label} type="button" disabled={disabled} onClick={() => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(s.q); }}
+                  className="min-h-11 max-w-full border border-line bg-paper px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
+                  <UiText source={s.label} />
+                </button>
+              ))}
+            </div>}
+            <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-payer-notice">
               {payer === "session"
-                ? message("researchEntry.sessionNotice", { network: currentArcLabel, amount: formatRecordedAmount(effectiveBudget, { minimumFractionDigits: 6, useGrouping: false }) })
+                ? message("researchEntry.sessionPayerNotice", { network: currentArcLabel })
                 : payer === "paused"
                   ? message("researchEntry.unavailableSessionNotice")
                 : payer === "expired"
                   ? message("researchEntry.expiredSessionNotice")
-                  : message("researchEntry.sponsoredNotice", { network: currentArcLabel })}
+                  : message("researchEntry.freeTrialNotice")}
             </p>
+            {visibility.ready && <p className="mt-1 text-xs leading-4 text-ink-3" role="status" data-testid="composer-publication-notice">
+              {visibility.visibility === "public" ? message("researchTrial.publicNotice") : message(`researchVisibility.${visibility.visibility}Notice`)}
+            </p>}
+            {visibility.status === "error" && <p className="mt-2 text-sm text-seal" role="status">
+              {message("researchVisibility.unavailable")} {" "}
+              <button type="button" className="min-h-11 underline" onClick={() => { if (advancedRef.current) advancedRef.current.open = true; }}>{message("researchEntry.moreOptions")}</button>
+            </p>}
           </div>
-          {!researchPaused && availabilityPanel}
-          <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-2 font-mono text-xs text-ink">
-            <input type="checkbox" checked={scholarly} disabled={disabled} onChange={event => setScholarly(event.target.checked)} />
-            {message("researchEntry.scholarly")}
-          </label>
-          <p className="text-xs text-ink-3">{message("researchEntry.scholarlyNotice")}</p>
-          <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={paidScholarly} disabled={disabled || payer !== "session" || !browserPaymentProfile().testnet} onChange={event => setPaidScholarly(event.target.checked)} /> {message("researchEntry.paidScholarly")}</label>
-          {!browserPaymentProfile().testnet&&<p className="mt-1 text-xs text-ink-3">{message("researchEntry.paidScholarlyMainnetNotice")}</p>}
-          <p className="text-xs text-ink-3">{message("researchEntry.paidScholarlyNotice")}</p>
-          <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={reviewFirst} disabled={disabled || payer !== "session" && !reviewFirst} onChange={event => setReviewFirst(event.target.checked)} />{reviewCopy.mode}</label>
-          <p className="mt-1 text-xs text-ink-3">{reviewCopy.modeNotice}</p>
           <details ref={advancedRef} className="mt-3 border-t border-line pt-2">
             <summary className="flex min-h-11 cursor-pointer items-center font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 marker:text-seal hover:text-ink">
-              {message("researchEntry.budgetAndModel", { amount: formatRecordedAmount(effectiveBudget, { minimumFractionDigits: 6, useGrouping: false }) })}
+              {message("researchEntry.moreOptions")}
             </summary>
             <div className="pb-2 pt-1">
               <div className="flex flex-wrap items-center justify-between gap-2" data-tour="budget">
@@ -322,6 +321,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
                 disabled={disabled} onChange={(e) => setBudget(parseFloat(e.target.value))}
                 className="mt-2 w-full" aria-label={message("researchEntry.maximumBudgetLabel")} />
               <p className="mt-2 font-serif text-[13px] text-ink-2">{message("researchEntry.budgetNotice")}</p>
+              {payer === "session" && <p className="mt-2 text-xs text-ink-2">{message("researchEntry.sessionNotice", { network: currentArcLabel, amount: formatRecordedAmount(effectiveBudget, { minimumFractionDigits: 6, useGrouping: false }) })}</p>}
               {models.length > 1 && (
                 <label className="mt-3 flex flex-col gap-1 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2">
                   {message("researchEntry.model")}
@@ -336,16 +336,23 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
                 </label>
               )}
             </div>
+            <ResearchVisibilityPicker preference={visibility} disabled={disabled} parentVisibility={parentVisibility} compact />
+            <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-2 font-mono text-xs text-ink">
+              <input type="checkbox" checked={scholarly} disabled={disabled} onChange={event => setScholarly(event.target.checked)} />
+              {message("researchEntry.scholarly")}
+            </label>
+            <p className="text-xs text-ink-3">{message("researchEntry.scholarlyNotice")}</p>
+            {testnet && <>
+              <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={paidScholarly} disabled={disabled || payer !== "session"} onChange={event => setPaidScholarly(event.target.checked)} /> {message("researchEntry.paidScholarly")}</label>
+              <p className="text-xs text-ink-3">{message("researchEntry.paidScholarlyNotice")}</p>
+            </>}
+            <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={reviewFirst} disabled={disabled || payer !== "session" && !reviewFirst} onChange={event => setReviewFirst(event.target.checked)} />{reviewCopy.mode}</label>
+            <p className="mt-1 text-xs text-ink-3">{reviewCopy.modeNotice}</p>
+            <a href={paperLibraryHref(question)} aria-label={message("researchEntry.metadataLookupLabel")} className="inline-flex min-h-11 items-center font-serif text-sm text-seal underline" data-testid="paper-metadata-handoff">
+              {message("researchEntry.metadataLookup")}
+            </a>
+            <p className="mt-2 text-xs text-ink-3">{message("researchEntry.searchNotice")}</p>
           </details>
-          <p className="mt-2 text-xs text-ink-3">{message("researchEntry.searchNotice")}</p>
-          {!conversation && <div className="mt-2 flex flex-wrap gap-2" aria-label={message("researchEntry.examplesLabel")}>
-            {SUGGESTIONS.map((s) => (
-              <button key={s.label} type="button" disabled={disabled} onClick={() => setQuestion(s.q)}
-                className="min-h-11 max-w-full border border-line bg-paper px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
-                <UiText source={s.label} />
-              </button>
-            ))}
-          </div>}
         </div>
       </div>
     </div>

@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { SiteHeader } from "@/components/keryx/site-header";
 import { SiteFooter } from "@/components/keryx/site-footer";
 import { ResearchChat } from "@/components/keryx/research-chat";
 import { ActivityTicker } from "@/components/keryx/activity-ticker";
 import { HowItWorks, ForCreators } from "@/components/keryx/landing-sections";
-import { walkthroughMessages } from "@/locales/en/walkthrough";
 import { LandingVisit } from "@/components/keryx/landing-visit";
-import { ProductOverview, ProductProof, ProductFaq, ProductSetupEntry } from "@/components/keryx/product-guide";
-import { UiText } from "@/lib/i18n/ui-copy";
+import { ProductProof, ProductFaq } from "@/components/keryx/product-guide";
+import { ProductHuntBadge } from "@/components/keryx/product-hunt-badge";
 
 
 
@@ -16,14 +14,12 @@ export default function AskPage() {
     <LandingVisit />
     <SiteHeader />
     <main>
-      <div className="mx-auto max-w-[960px] px-4 sm:px-[30px] sm:pt-5">
-        <Link href="/walkthrough" prefetch={false} className="text-sm text-paid underline underline-offset-4"><UiText source={walkthroughMessages.landingLink} namespaces={["walkthrough"]} /></Link>
-      </div>
-      <ResearchChat showLaunchBadge introduceProduct />
-      <div className="mx-auto max-w-[960px] px-4 sm:px-[30px]"><ActivityTicker /></div>
-      <ProductOverview />
-      <ProductSetupEntry />
+      <ResearchChat introduceProduct />
       <HowItWorks />
+      <div className="mx-auto max-w-[960px] px-4 sm:px-[30px]">
+        <ActivityTicker />
+        <div className="mt-3"><ProductHuntBadge /></div>
+      </div>
       <ProductProof />
       <ForCreators />
       <ProductFaq />

@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { aboutStory } from "@/locales/en/about-story";
+import { walkthroughMessages } from "@/locales/en/walkthrough";
 import { UiMessage, UiRichMessage, UiText } from "@/lib/i18n/ui-copy";
 
 const uiCopy = createMessages("en");
@@ -84,6 +85,9 @@ export function HowItWorks() {
       </div>
       <Link lang="en" href="/about#in-practice" className="mt-4 inline-flex min-h-11 items-center gap-3 font-serif text-base text-paid underline underline-offset-4 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-paid">
         <UiText source={aboutStory.landingLink} namespaces={["product-guide","about-story"]} /><span aria-hidden="true">→</span>
+      </Link>
+      <Link href="/walkthrough" prefetch={false} className="mt-2 flex min-h-11 items-center text-sm text-paid underline underline-offset-4">
+        <UiText source={walkthroughMessages.landingLink} namespaces={["walkthrough"]} />
       </Link>
     </section>
   );

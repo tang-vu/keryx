@@ -83,10 +83,11 @@ try {
         console.log(JSON.stringify({ phase: "goto-complete", engine: engine.name(), width, destination }));
         await page.waitForFunction(() => [...document.querySelectorAll("button")].some(button => button.textContent?.includes("Connect Wallet")));
         let link;
-        if (width === 390 && destination === "/research") {
-          await page.getByRole("button", { name: "Open menu" }).tap();
-          await page.locator("#mobile-site-menu").getByText("More tools", { exact: true }).tap();
-          link = page.locator(`#mobile-site-menu a[href="${destination}"]`);
+        if (destination === "/research") {
+          if (width === 390) await page.getByRole("button", { name: "Open menu" }).tap();
+          const navigation = page.locator(width === 390 ? "#mobile-site-menu" : "header nav").first();
+          await navigation.getByText("More tools", { exact: true }).click();
+          link = navigation.locator(`a[href="${destination}"]`);
         } else {
           link = page.locator(`a[href="${destination}"]`).first();
         }
