@@ -14,6 +14,11 @@ continues to disable this option. Abandoned checks are aborted and cannot publis
 late readiness into another component. Reconnect initiation is serialized even
 when it starts outside Wagmi's pending connection state.
 
+The actual login preflight uses the same strict 30-second helper, so a second
+10-second check cannot reject a service that the button has just loaded. Failed
+preflight reads create no device challenge or OAuth operation and leave existing
+public wallet hints and retained funding custody untouched.
+
 Existing catalogue messages cover loading, failure and retry. No new locale
 activation, translation claim, authority or configuration fallback is introduced.
 This does not repair the origin's underlying response latency. That operational
