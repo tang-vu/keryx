@@ -52,6 +52,7 @@ import type { PublicReferenceItem, PublicReferenceQuery, PublicReferencePage,
   PublicReferenceArchiveStats, PublicReferenceCollectionKind } from "../public-references/archive";
 import { archiveSqlitePublicReferenceItems, querySqlitePublicReferenceItems, readSqlitePublicReference,
   sqlitePublicReferenceArchiveStats, upsertSqlitePublicReference } from "./public-reference-archive";
+import { listSqlitePublicReferences } from "./public-reference-list";
 import { issueSqliteSourceClaimChallenge, getSqliteSourceClaimChallenge, reserveSqliteSourceClaimVerification,
   verifySqliteSourceClaim, getSqliteSourceClaim, getSqliteSourceClaimForSource, listSqliteSourceClaims,
   bindSqliteSourceClaim, updateSqliteSourceClaimPolicy, getRetainedSourceClaimMarker } from "./public-source-claims";
@@ -408,8 +409,7 @@ export class SqliteAdapter implements KeryxDB {
   }
 
   async listPublicReferences(): Promise<PublicReference[]> {
-    return this.db.prepare("SELECT id,active,rss_url,snapshot FROM public_references WHERE active=1 ORDER BY id").all()
-      .map((row) => readSqlitePublicReference(this.db, row));
+    return listSqlitePublicReferences(this.db);
   }
   async getPublicReference(id: string): Promise<PublicReference | null> {
     const row = this.db.prepare("SELECT id,active,rss_url,snapshot FROM public_references WHERE id=?").get(id);
