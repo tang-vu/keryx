@@ -1347,7 +1347,7 @@
     {
       "namespace": "get-started",
       "sourcePath": "locales/en/get-started.ts",
-      "sourceSha256": "d430fd307a429aedf218f6286314513893202a99b011f455fcbe3912bfe10bd5",
+      "sourceSha256": "d427adbbc59f24e9e4ca01c4b3c9694189d92c3e44237258f3b0c0c9609b91fd",
       "draftPath": "locales/zh-Hans/ui-drafts/get-started.json",
       "extractedLeaves": 178,
       "authoredEntries": 164,

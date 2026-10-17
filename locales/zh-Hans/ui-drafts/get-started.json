@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/get-started.ts",
-  "sourceSha256": "d430fd307a429aedf218f6286314513893202a99b011f455fcbe3912bfe10bd5",
+  "sourceSha256": "d427adbbc59f24e9e4ca01c4b3c9694189d92c3e44237258f3b0c0c9609b91fd",
   "entries": {
     "navigation.start": {
       "source": "Get started",
@@ -353,28 +353,28 @@
       "text": "Windows x64 和 Microsoft Edge WebView2 Runtime。自带 Node，无需单独安装 Node。此 Alpha 版需手动更新。"
     },
     "download.installer": {
-      "source": "Download Windows installer",
-      "text": "下载 Windows 安装程序"
+      "source": "Choose Windows installer",
+      "text": "选择 Windows 安装程序"
     },
     "download.portable": {
-      "source": "Download portable ZIP",
-      "text": "下载便携版 ZIP"
+      "source": "Choose portable ZIP",
+      "text": "选择便携 ZIP"
     },
     "download.manifest": {
-      "source": "Build manifest",
-      "text": "构建清单"
+      "source": "Release manifest and checksums",
+      "text": "发行清单与校验和"
     },
     "download.webview": {
       "source": "Get WebView2 Runtime",
       "text": "获取 WebView2 Runtime"
     },
     "download.desktopVersion": {
-      "source": "Operator 0.4.17 · published in v0.27.63",
-      "text": "Operator 0.4.17 · 发布于 v0.27.63"
+      "source": "Operator 0.4.29 · release v0.27.76",
+      "text": "Operator 0.4.29 · 发行版 v0.27.76"
     },
     "download.desktopSteps.0": {
-      "source": "Download the installer from the published GitHub release. Review the release manifest and SHA256 checksums if you need to verify the build.",
-      "text": "从已发布 GitHub 版本下载安装程序。如需验证构建，请审阅发布清单和 SHA256 校验和。"
+      "source": "Open the release assets and choose the -setup.exe installer or -win32-x64.zip portable build. Review the matching -release.json manifest and -SHA256SUMS.txt checksums.",
+      "text": "打开发行资源，选择 -setup.exe 安装程序或 -win32-x64.zip 便携版本。查看对应的 -release.json 清单和 -SHA256SUMS.txt 校验和。"
     },
     "download.desktopSteps.1": {
       "source": "Run the installer in your normal Windows user session. Install WebView2 Runtime if it is missing. For the portable build, extract and keep the whole folder together.",
@@ -405,28 +405,28 @@
       "text": "从工具栏或右键菜单对所选文本提问。检查研究过程，打开被引用来源，并从已完成报告导出记录的参考文献。"
     },
     "download.extensionVersion": {
-      "source": "Extension 0.1.4.2 · source from v0.27.63",
-      "text": "扩展 0.1.4.2 · 源码来自 v0.27.63"
+      "source": "Extension 0.1.4.3 · published manual-install ZIP",
+      "text": "扩展 0.1.4.3 · 已发布的手动安装 ZIP"
     },
     "download.extensionDownload": {
-      "source": "Download extension source ZIP",
-      "text": "下载扩展源码 ZIP"
+      "source": "Download extension ZIP",
+      "text": "下载扩展 ZIP"
     },
     "download.extensionRequirements": {
       "source": "Chrome or Edge on desktop, or another compatible Chromium browser. Developer mode is required for this unpacked install. A public Chrome Web Store install link is not available here.",
       "text": "桌面版 Chrome 或 Edge，或其他兼容 Chromium 浏览器。此未打包安装需要开发者模式。此处没有公开 Chrome Web Store 安装链接。"
     },
     "download.extensionSteps.0": {
-      "source": "Download and extract the source ZIP. It contains the project; use the extension folder inside the extracted project.",
-      "text": "下载并解压源码 ZIP。其中包含项目；使用解压项目内的 extension 文件夹。"
+      "source": "Download and extract the extension ZIP. The extracted directory contains manifest.json directly.",
+      "text": "下载并解压扩展 ZIP。解压目录直接包含 manifest.json。"
     },
     "download.extensionSteps.1": {
       "source": "Open chrome://extensions in Chrome or edge://extensions in Edge, then turn on Developer mode.",
       "text": "在 Chrome 打开 chrome://extensions，或在 Edge 打开 edge://extensions，然后开启开发者模式。"
     },
     "download.extensionSteps.2": {
-      "source": "Choose Load unpacked and select the extension folder, which contains manifest.json. Pin Keryx to your toolbar.",
-      "text": "选择 Load unpacked，选取含有 manifest.json 的 extension 文件夹。将 Keryx 固定到工具栏。"
+      "source": "Choose Load unpacked and select the extracted directory containing manifest.json. Pin Keryx to your toolbar.",
+      "text": "选择 Load unpacked，选中包含 manifest.json 的解压目录，并将 Keryx 固定到工具栏。"
     },
     "download.extensionSteps.3": {
       "source": "Highlight text or type a question. Review the sponsored availability and budget before pressing Ask. Including the page URL is optional.",
