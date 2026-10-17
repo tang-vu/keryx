@@ -76,6 +76,7 @@ export async function readResearchStream(response, onChunk) {
   let buffer = "";
   let completed = false;
   let finalSummary = false;
+  let privateDelivery = false;
   const frame = event => {
     const data = event.split("\n").filter(line => line.startsWith("data:"))
       .map(line => line.slice(5).trimStart()).join("\n").trim();
@@ -89,6 +90,7 @@ export async function readResearchStream(response, onChunk) {
       throw new Error(typeof content === "string" ? content.replace(/^\s*\[keryx error\]\s*/, "") :
         "Research could not finish. Inspect the report before starting another request.");
     }
+    if (chunk?.keryx_private !== undefined) privateDelivery = true;
     onChunk(chunk);
     if (chunk?.keryx && chunk?.choices?.[0]?.finish_reason === "stop") finalSummary = true;
   };
@@ -103,7 +105,9 @@ export async function readResearchStream(response, onChunk) {
         frame(buffer.slice(0, boundary));
         buffer = buffer.slice(boundary + 2);
       }
-      if (done) break;
+      // Ordinary completion need not wait for EOF; private delivery still requires it.
+      // Process the received batch first so trailing data still fails validation.
+      if (done || completed && !privateDelivery) break;
     }
     if (buffer.trim()) frame(buffer);
     if (!completed || !finalSummary) throw new Error("The research stream ended before completion. Inspect the report before starting another request.");
