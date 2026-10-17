@@ -128,10 +128,19 @@ also stop every private or scheduled writer; `--writers-stopped` records that
 evidence and does not stop processes. Failure after migration is attempted
 keeps writers stopped and all builds retained, without an automatic rollback.
 
-Migration snapshots retain limits of 64 MiB database allocation, 100,000 rows,
-2 MiB per field, 128 MiB raw fields and 64 MiB framed row data. The allocation
-limit is checked again after archive tables and legacy items are added, before
-COMMIT. Enrollment's separate 32 MiB encoded snapshot limit is unchanged.
-These operation bounds are separate from article retention. A larger store or
-archive expansion needs a separately reviewed scalable migration rather than
-weaker original-preservation checks.
+This archive command accepts up to 256 MiB database allocation, 250,000 rows,
+2 MiB per field, 128 MiB raw fields and 128 MiB framed row data, with the existing
+15-second snapshot deadline. Every table, typed field and rowid is hashed; only
+row hashes are retained for sorting. Allocation and all snapshot bounds are
+checked again after archive tables and legacy items are added, before COMMIT.
+The larger allowance is restricted to exact archive profiles. Other migrations,
+generic backup/provenance and enrollment retain their existing limits, including
+enrollment's separate 32 MiB encoded snapshot limit. Generic backups may refuse
+an archive store beyond those limits; they do not establish a verified backup.
+For an already-current archive, this same stopped-writer command with fresh
+backup/receipt paths verifies a complete backup and returns `already-current`.
+
+These bounds cover an operation, not unlimited feed retention. Inspect actual
+row counts and file allocation after imports and before planning further growth.
+A store beyond these bounds requires separately reviewed capacity changes while
+retaining exact original-preservation checks.

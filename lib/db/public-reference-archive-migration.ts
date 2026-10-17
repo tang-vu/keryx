@@ -13,9 +13,12 @@ import { STORAGE_SNAPSHOT_LIMITS as limits, encodeStorageValue } from "./storage
 import { validateStorageIdentity, type StorageIdentity } from "./storage-identity";
 
 export const PUBLIC_ARCHIVE_TABLES = Object.freeze(["public_reference_articles", "public_reference_article_versions", "public_reference_article_terms"]);
-// Migration hashes each framed row as it is read; enrollment retains encoded rows
-// in memory and keeps its separate 32 MiB limit. All other snapshot bounds are shared.
+// Other migration callers retain the standard bounds, including 64 MiB framing.
 export const MIGRATION_FRAMED_BYTE_LIMIT = 64 * 1024 * 1024;
+// Only the exact public-archive profiles use these operation bounds. Enrollment,
+// generic backup/provenance and other domain migrations keep their own limits.
+export const PUBLIC_ARCHIVE_SNAPSHOT_LIMITS = Object.freeze({ ...limits,
+  fileBytes: 256 * 1024 * 1024, rows: 250_000, framedBytes: 128 * 1024 * 1024 });
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
 function excluded(db: DatabaseSync, identity: StorageIdentity): Set<string> {
@@ -58,6 +61,18 @@ export interface PublicArchiveStorageSnapshot {
  * This is migration/backup evidence only; no runtime storage-reader capability is issued. */
 export function snapshotPublicArchiveStorage(db: DatabaseSync, identity: StorageIdentity,
   profiles: readonly string[]): PublicArchiveStorageSnapshot {
+  return snapshotStorage(db, identity, profiles, { ...limits, framedBytes: MIGRATION_FRAMED_BYTE_LIMIT });
+}
+/** Fixed archive-only resource allowance; callers cannot supply numeric overrides
+ * or admit a schema outside the source-built archive pairs. */
+export function snapshotPublicArchiveMigrationStorage(db: DatabaseSync, identity: StorageIdentity,
+  profiles: readonly string[]): PublicArchiveStorageSnapshot {
+  const accepted = publicReferenceArchiveMigrationProfiles(identity.authorityMode === "mainnet-real").flat();
+  if (!profiles.length || profiles.some(profile => !accepted.includes(profile))) throw new Error("Public archive migration profiles refused");
+  return snapshotStorage(db, identity, profiles, PUBLIC_ARCHIVE_SNAPSHOT_LIMITS);
+}
+function snapshotStorage(db: DatabaseSync, identity: StorageIdentity, profiles: readonly string[],
+  bounds: Readonly<{ fileBytes: number; rows: number; framedBytes: number; deadlineMs: number }>): PublicArchiveStorageSnapshot {
   assertStorageIdentity(db, identity); assertStorageFences(db, identity);
   const profile = sqliteApplicationSchemaProfile(db, excluded(db, identity));
   if (!profiles.includes(profile) || db.prepare("PRAGMA integrity_check(1)").get()?.integrity_check !== "ok"
@@ -65,8 +80,8 @@ export function snapshotPublicArchiveStorage(db: DatabaseSync, identity: Storage
   // Includes pages allocated by the uncommitted archive; refuse before COMMIT,
   // rather than discovering an oversized accepted target in the postflight.
   const pages = Number(db.prepare("PRAGMA page_count").get()!.page_count), pageSize = Number(db.prepare("PRAGMA page_size").get()!.page_size);
-  if (!Number.isSafeInteger(pages * pageSize) || pages * pageSize > limits.fileBytes) throw new Error("Public archive migration file limit");
-  const tables: PublicArchiveStorageSnapshot["tables"] = {}, deadline = Date.now() + limits.deadlineMs;
+  if (!Number.isSafeInteger(pages * pageSize) || pages * pageSize > bounds.fileBytes) throw new Error("Public archive migration file limit");
+  const tables: PublicArchiveStorageSnapshot["tables"] = {}, deadline = Date.now() + bounds.deadlineMs;
   let rows = 0, bytes = 0, framedBytes = 0;
   const schema = db.prepare("SELECT name,sql FROM sqlite_schema WHERE type='table' ORDER BY name LIMIT ?").all(limits.schemaObjects + 1);
   if (schema.length > limits.schemaObjects) throw new Error("Public archive migration schema limit");
@@ -84,8 +99,9 @@ export function snapshotPublicArchiveStorage(db: DatabaseSync, identity: Storage
     const statement = db.prepare(`SELECT ${projections.join(",")} FROM ${quote(table.name)} LIMIT ?`);
     statement.setReadBigInts(true);
     const hashes: string[] = [];
-    for (const row of statement.iterate(limits.rows + 1)) {
-      if (++rows > limits.rows || Date.now() > deadline) throw new Error("Public archive migration row/deadline limit");
+    // Stream each bounded field; only fixed-size row hashes are retained for sorting.
+    for (const row of statement.iterate(bounds.rows + 1)) {
+      if (++rows > bounds.rows || Date.now() > deadline) throw new Error("Public archive migration row/deadline limit");
       const hash = createHash("sha256");
       for (let index = 0; index < columns.length; index++) {
         const length = Number(row[`l${index}`] ?? 0);
@@ -96,12 +112,16 @@ export function snapshotPublicArchiveStorage(db: DatabaseSync, identity: Storage
         if (!(payload instanceof Uint8Array)) throw new Error("Public archive migration typed value refused");
         const prefix = `${type}:${payload.byteLength}:`;
         framedBytes += Buffer.byteLength(prefix) + payload.byteLength;
-        if (framedBytes > MIGRATION_FRAMED_BYTE_LIMIT) throw new Error("Public archive migration framed byte limit");
+        if (framedBytes > bounds.framedBytes) throw new Error("Public archive migration framed byte limit");
         hash.update(prefix); hash.update(payload);
       }
       hashes.push(hash.digest("hex"));
     }
-    tables[table.name] = { rows: hashes.length, digest: sha(canonicalJson({ columns, rows: hashes.sort() })) };
+    // Same canonical bytes as {columns,rows:sortedHashes}, without constructing a
+    // second table-sized JSON string. Never retain complete encoded originals.
+    const digest = createHash("sha256").update(`{"columns":${canonicalJson(columns)},"rows":[`);
+    hashes.sort().forEach((hash, index) => digest.update(`${index ? "," : ""}"${hash}"`));
+    tables[table.name] = { rows: hashes.length, digest: digest.update("]}").digest("hex") };
   }
   return { format: "keryx-public-archive-storage-snapshot-v1", schemaDigest: sha(profile), rows, tables };
 }
@@ -122,7 +142,7 @@ export function migratePublicReferenceArchiveStorage(file: string, value: Storag
     const before = sqliteApplicationSchemaProfile(db, excluded(db, identity));
     const pair = pairs.find(([previous, current]) => before === previous || before === current);
     if (!pair) throw new Error("Public archive migration source profile differs");
-    const originals = snapshotPublicArchiveStorage(db, identity, pair);
+    const originals = snapshotPublicArchiveMigrationStorage(db, identity, pair);
     const changes = db.prepare("SELECT total_changes() AS n").get()!.n;
     beforeMigrate(db);
     held.verify(); assertStorageIdentity(db, identity); assertStorageFences(db, identity);
@@ -130,7 +150,7 @@ export function migratePublicReferenceArchiveStorage(file: string, value: Storag
       throw new Error("Public archive migration admission changed");
     if (before === pair[0]) { installPublicReferenceArchive(db); installStorageFences(db, identity); }
     assertStorageIdentity(db, identity); assertStorageFences(db, identity); held.verify();
-    const after = snapshotPublicArchiveStorage(db, identity, [pair[1]]), retained = { ...after.tables };
+    const after = snapshotPublicArchiveMigrationStorage(db, identity, [pair[1]]), retained = { ...after.tables };
     for (const table of PUBLIC_ARCHIVE_TABLES) if (!(table in originals.tables)) delete retained[table];
     if (canonicalJson(retained) !== canonicalJson(originals.tables)) throw new Error("Public archive migration original rows differ");
     db.exec("COMMIT");

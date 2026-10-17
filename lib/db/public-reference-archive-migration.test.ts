@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -17,7 +17,8 @@ import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-prof
 import { publicReferenceItemId, type PublicReference } from "../public-references/catalog";
 import { hasPublicReferenceArchive } from "./public-reference-archive";
 import { migratePublicReferenceArchiveStorage, publicReferenceArchiveMigrationProfiles,
-  snapshotPublicArchiveStorage, MIGRATION_FRAMED_BYTE_LIMIT } from "./public-reference-archive-migration";
+  snapshotPublicArchiveStorage, snapshotPublicArchiveMigrationStorage, PUBLIC_ARCHIVE_SNAPSHOT_LIMITS,
+  MIGRATION_FRAMED_BYTE_LIMIT } from "./public-reference-archive-migration";
 import { scanFullStorageSnapshot, STORAGE_SNAPSHOT_LIMITS } from "./storage-identity-snapshot";
 import { inspectPublicArchiveStorage, migratePublicArchiveStorage, runPublicArchiveStorageCli } from "../../scripts/source-archive-storage-migrate.mjs";
 
@@ -176,6 +177,95 @@ describe("explicit public archive storage activation", () => {
       assertStorageIdentity(db, f.identity); assertStorageFences(db, f.identity);
       expect(hasPublicReferenceArchive(db)).toBe(false);
     } finally { db.close(); }
+  });
+
+  it("verifies full native originals and repeat backups above standard file/framed limits", async () => {
+    const f = fixture(true, false, true), pair = publicReferenceArchiveMigrationProfiles(true)[1]!;
+    largeMetadata(f, new Uint8Array(1024 * 1024));
+    const padding = new DatabaseSync(f.file);
+    try {
+      registerStorageCapability(padding, f.identity, () => true); padding.exec("BEGIN IMMEDIATE");
+      const insert = padding.prepare("INSERT INTO sync_state(key,value) VALUES (?,?)");
+      const value = "allocation-only".padEnd(2 * 1024 * 1024, "x");
+      for (let index = 0; index < 17; index++) insert.run(`padding-${index}`, value);
+      padding.exec("DELETE FROM sync_state WHERE key LIKE 'padding-%'; COMMIT");
+    } finally { padding.close(); }
+    expect(statSync(f.file).size).toBeGreaterThan(STORAGE_SNAPSHOT_LIMITS.fileBytes);
+    expect(statSync(f.file).size).toBeLessThan(PUBLIC_ARCHIVE_SNAPSHOT_LIMITS.fileBytes);
+    const db = new DatabaseSync(f.file, { readOnly: true });
+    let before;
+    try {
+      expect(() => snapshotPublicArchiveStorage(db, f.identity, [pair[0]])).toThrow("file limit");
+      before = snapshotPublicArchiveMigrationStorage(db, f.identity, [pair[0]]);
+    } finally { db.close(); }
+    const inspected = inspectPublicArchiveStorage(f.manifest), backup = join(f.directory, "large-before.sqlite");
+    const options = { manifest: f.manifest, expectedManifestDigest: inspected.manifestDigest,
+      expectedIdentityDigest: inspected.identityDigest, backup, receipt: join(f.directory, "large.jsonl"), writersStopped: true };
+    expect(await migratePublicArchiveStorage(options)).toMatchObject({ status: "migrated", originalRowsPreserved: true });
+    const copied = new DatabaseSync(backup, { readOnly: true }), after = new DatabaseSync(f.file, { readOnly: true });
+    try {
+      expect(snapshotPublicArchiveMigrationStorage(copied, f.identity, [pair[0]])).toEqual(before);
+      const migrated = snapshotPublicArchiveMigrationStorage(after, f.identity, [pair[1]]);
+      for (const [table, original] of Object.entries(before.tables)) expect(migrated.tables[table]).toEqual(original);
+      assertStorageIdentity(after, f.identity); assertStorageFences(after, f.identity);
+    } finally { copied.close(); after.close(); }
+    expect(await migratePublicArchiveStorage({ ...options, backup: join(f.directory, "large-current.sqlite"),
+      receipt: join(f.directory, "large-current.jsonl") })).toMatchObject({ status: "already-current", originalRowsPreserved: true });
+    // Existing no-replace semantics still protect the larger backup and receipt.
+    await expect(migratePublicArchiveStorage(options)).rejects.toThrow();
+  }, 60_000);
+
+  it("keeps archive field/framed limits and exact profile admission bounded", () => {
+    const f = fixture(), pair = publicReferenceArchiveMigrationProfiles(true)[0]!;
+    const db = new DatabaseSync(f.file);
+    try {
+      registerStorageCapability(db, f.identity, () => true);
+      const insert = db.prepare("INSERT INTO sync_state(key,value) VALUES (?,?)");
+      insert.run("oversized-field", "x".repeat(STORAGE_SNAPSHOT_LIMITS.fieldBytes + 1));
+      expect(() => snapshotPublicArchiveMigrationStorage(db, f.identity, pair)).toThrow("byte limit");
+      db.exec("DELETE FROM sync_state WHERE key='oversized-field'; BEGIN IMMEDIATE");
+      for (let index = 0; index < 65; index++) insert.run(`framed-${index}`, new Uint8Array(1024 * 1024));
+      db.exec("COMMIT");
+      expect(() => snapshotPublicArchiveMigrationStorage(db, f.identity, pair)).toThrow("framed byte limit");
+      expect(() => snapshotPublicArchiveMigrationStorage(db, f.identity, ["0".repeat(64)])).toThrow("profiles refused");
+      expect(() => snapshotPublicArchiveMigrationStorage(db, f.identity, [])).toThrow("profiles refused");
+      assertStorageIdentity(db, f.identity); assertStorageFences(db, f.identity);
+      expect(hasPublicReferenceArchive(db)).toBe(false);
+    } finally { db.close(); }
+    expect(PUBLIC_ARCHIVE_SNAPSHOT_LIMITS).toMatchObject({ fileBytes: 256 * 1024 * 1024, rows: 250_000,
+      framedBytes: 128 * 1024 * 1024, deadlineMs: 15_000, totalBytes: 128 * 1024 * 1024, fieldBytes: 2 * 1024 * 1024 });
+    expect(STORAGE_SNAPSHOT_LIMITS).toMatchObject({ fileBytes: 64 * 1024 * 1024, rows: 100_000, encodedBytes: 32 * 1024 * 1024 });
+  }, 30_000);
+
+  it("hashes archive rows beyond100k but refuses more than250k before backup admission or DDL", () => {
+    const f = fixture(), pair = publicReferenceArchiveMigrationProfiles(true)[0]!;
+    const db = new DatabaseSync(f.file);
+    try {
+      registerStorageCapability(db, f.identity, () => true);
+      db.exec(`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<100001)
+        INSERT INTO sync_state(key,value) SELECT 'row-'||value,'' FROM n`);
+      expect(snapshotPublicArchiveMigrationStorage(db, f.identity, pair).rows).toBeGreaterThan(100_000);
+      expect(() => snapshotPublicArchiveStorage(db, f.identity, pair)).toThrow("row/deadline limit");
+      db.exec(`WITH RECURSIVE n(value) AS (SELECT 100002 UNION ALL SELECT value+1 FROM n WHERE value<250001)
+        INSERT INTO sync_state(key,value) SELECT 'row-'||value,'' FROM n`);
+    } finally { db.close(); }
+    let admitted = false;
+    expect(() => migratePublicReferenceArchiveStorage(f.file, f.identity, () => { admitted = true; })).toThrow("row/deadline limit");
+    expect(admitted).toBe(false);
+    const retained = new DatabaseSync(f.file, { readOnly: true });
+    try { expect(hasPublicReferenceArchive(retained)).toBe(false); assertStorageFences(retained, f.identity); }
+    finally { retained.close(); }
+  }, 30_000);
+
+  it("refuses an archive file beyond256MiB before creating a backup or receipt", async () => {
+    const f = fixture(), inspected = inspectPublicArchiveStorage(f.manifest);
+    const backup = join(f.directory, "oversized-backup.sqlite"), receipt = join(f.directory, "oversized.jsonl");
+    // Extend only this synthetic fixture; no large value is loaded into memory.
+    truncateSync(f.file, PUBLIC_ARCHIVE_SNAPSHOT_LIMITS.fileBytes + 4096);
+    expect(() => inspectPublicArchiveStorage(f.manifest)).toThrow("refused");
+    await expect(migratePublicArchiveStorage({ manifest: f.manifest, expectedManifestDigest: inspected.manifestDigest,
+      expectedIdentityDigest: inspected.identityDigest, backup, receipt, writersStopped: true })).rejects.toThrow("refused");
+    expect(existsSync(backup)).toBe(false); expect(existsSync(receipt)).toBe(false);
   });
 
   it("adds archive under the original identity/fences while retaining every old row exactly", () => {
