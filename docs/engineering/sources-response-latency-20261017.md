@@ -5,8 +5,8 @@ Pricing at 1.42s and Sources at 9.29s to first byte (10.54s total). These are
 individual samples, not typical latency or proof of a specific production frame.
 The installed health source was `50ad8e0e`.
 
-The SQLite public reference list reads all active snapshots, then checks archive
-availability and counts articles again for every publisher. On an enrolled
+The SQLite public reference list previously read all active snapshots, then checked
+archive availability and counted articles again for every publisher. On an enrolled
 connection, each prepare and execution also performs the existing fresh storage
 checks. A synthetic 30-publisher directory performed 128 guard calls, including
 30 archive probes and 30 individual counts. Simply caching an accepted schema or
@@ -43,17 +43,26 @@ Ten focused cases passed: parity with the previous reader, active-only behavior,
 legacy schema preservation, constant statement count as publisher count grows,
 five corrupt snapshot refusals with transaction cleanup, fresh counts/activation,
 and actual verified-connection refusal after a schema change. Focused ESLint
-passed. Caller integration, independent storage review, applicable checks and
-required hosted CI still gate the complete runtime candidate.
+passed. Those original helper and test sources remain unchanged.
+
+The actual enrolled SQLite adapter now delegates `listPublicReferences` to the
+bulk reader. Five additional facade cases passed: legacy and archive result parity
+with unchanged read-only file bytes, constant native statement count as publisher
+count grows, refusal after schema drift, and refusal of malformed active snapshots.
+The scoped TypeScript check passed. The offline paying-source study write and check
+both exited successfully with zero outbound attempts; all 48 complete trial objects,
+answers, metrics and payment results stayed identical. Its runtime source footprint
+adds this helper (461 to 462 files) and refreshes the adapter hash. The root lock
+and app75/MCP30/desktop28 metadata remain unchanged. Independent review and required
+hosted CI for the completed candidate remain merge gates.
 
 ## Delivery boundary
 
-This reader and tests are a source preparation for the existing coordinator's
-public archive performance outcome. The adapter's existing `listPublicReferences`
-method must delegate to the helper before claiming a runtime correction. The
-archive writer remains owned by the concurrent catalog performance task; the
-separate helper avoids modifying that claimed file. No unused helper-only release
-or independent deploy is intended.
+The adapter caller is connected to the reader in the same focused outcome. The
+archive writer remains owned by the concurrent catalog performance task and is
+unchanged here. The existing release owner will merge this completed caller path
+after review and required CI, then include it in the combined deployment. Local
+synthetic results do not claim a production speedup.
 
 The shared SQLite adapter reaches web/API, CLI, desktop, remote/stdio MCP and bots
 within their current roles. The browser extension retains its API/handoff role.
