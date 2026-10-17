@@ -80,11 +80,71 @@ describe("durable cumulative public archive", () => {
       for (const term of archiveSearchTerms(text)) expected.set(term, (expected.get(term) ?? 0) + weight);
     const observed = db.prepare("SELECT term,weight FROM public_reference_article_terms ORDER BY term").all();
     expect(observed).toEqual([...expected].sort(([a], [b]) => a.localeCompare(b)).map(([term, weight]) => ({ term, weight })));
-    expect(batches).toHaveLength(Math.ceil(expected.size / 256)); expect(batches.every(batch => batch.length <= 256)).toBe(true);
+    expect(batches).toHaveLength(1); expect(batches[0]).toHaveLength(expected.size);
     const count = batches.length;
     upsertSqlitePublicReference(db, { ...publisher, items: [item], refreshedAt: DATE });
     expect(batches).toHaveLength(count);
     expect(querySqlitePublicReferenceItems(db, { query: "alpha beta", sort: "relevance" }).items).toHaveLength(1);
+  });
+
+  it("flushes before the exact UTF8 JSON byte boundary for multibyte terms", () => {
+    const db = database(), prepare = db.prepare.bind(db), batches: [string, string, number][][] = [];
+    const terms = Array.from({ length: 600 }, (_, n) => "\u754c".repeat(96) + String(n).padStart(3, "0"));
+    vi.spyOn(db, "prepare").mockImplementation(sql => {
+      const statement = prepare(sql);
+      if (sql.startsWith("INSERT INTO public_reference_article_terms")) {
+        const run = statement.run.bind(statement);
+        vi.spyOn(statement, "run").mockImplementation((...args: Parameters<typeof statement.run>) => {
+          const encoded = String(args[1]); expect(Buffer.byteLength(encoded)).toBeLessThanOrEqual(128 * 1024);
+          batches.push(JSON.parse(encoded)); return run(...args);
+        });
+      }
+      return statement;
+    });
+    expect(upsertSqlitePublicReference(db, { ...publisher, items: [article(1, {
+      title: "", summary: "", content: terms.join(" ") })], refreshedAt: DATE })).toEqual({ added: 1, updated: 0 });
+    expect(batches.length).toBeGreaterThan(1);
+    expect(batches.flat()).toHaveLength(terms.length);
+    for (let n = 0; n < batches.length - 1; n++) {
+      expect(batches[n]!.length).toBeLessThan(2048);
+      expect(Buffer.byteLength(JSON.stringify([...batches[n]!, batches[n + 1]![0]]))).toBeGreaterThan(128 * 1024);
+    }
+    expect(prepare("SELECT term,weight FROM public_reference_article_terms ORDER BY term").all())
+      .toEqual(terms.map(term => ({ term, weight: 1 })));
+  });
+
+  it.each([false, true])("rolls back every byte-bounded term batch while preserving an outer transaction=%s", nested => {
+    const db = database(), prepare = db.prepare.bind(db), snapshot = prepare("SELECT snapshot FROM public_references WHERE id=?").get(publisher.id)!.snapshot;
+    if (nested) {
+      db.exec("BEGIN");
+      prepare("INSERT INTO public_references(id,active,rss_url,snapshot) VALUES(?,1,?,?)")
+        .run("public:outer", publisher.rssUrl, JSON.stringify({ ...publisher, id: "public:outer" }));
+    }
+    let writes = 0;
+    vi.spyOn(db, "prepare").mockImplementation(sql => {
+      const statement = prepare(sql);
+      if (sql.startsWith("INSERT INTO public_reference_article_terms")) {
+        const run = statement.run.bind(statement);
+        vi.spyOn(statement, "run").mockImplementation((...args: Parameters<typeof statement.run>) => {
+          const result = run(...args);
+          if (++writes === 2) throw new Error("Injected second term batch failure");
+          return result;
+        });
+      }
+      return statement;
+    });
+    const content = Array.from({ length: 600 }, (_, n) => "\u754c".repeat(96) + String(n).padStart(3, "0")).join(" ");
+    expect(() => upsertSqlitePublicReference(db, { ...publisher, items: [article(1, { title: "", summary: "", content })], refreshedAt: DATE }))
+      .toThrow("Injected second term batch failure");
+    expect(writes).toBe(2); expect(db.isTransaction).toBe(nested);
+    expect(prepare("SELECT snapshot FROM public_references WHERE id=?").get(publisher.id)!.snapshot).toBe(snapshot);
+    for (const table of ["public_reference_articles", "public_reference_article_versions", "public_reference_article_terms"])
+      expect(prepare(`SELECT count(*) AS n FROM ${table}`).get()!.n).toBe(0);
+    if (nested) {
+      expect(prepare("SELECT id FROM public_references WHERE id='public:outer'").get()).toBeDefined();
+      db.exec("COMMIT");
+      expect(prepare("SELECT id FROM public_references WHERE id='public:outer'").get()).toBeDefined();
+    }
   });
 
   it("matches the archive reader's exact capacity constants and typed framing, including hidden rowids", () => {
@@ -493,6 +553,40 @@ describe("durable cumulative public archive", () => {
       } while (cursor);
       expect(actual).toEqual(expected); expect(new Set(actual).size).toBe(inputs.length);
     }
+  });
+
+  it.each(["upsert", "archive"] as const)("reserves a top-level %s writer before a competing WAL snapshot can commit", operation => {
+    const directory = mkdtempSync(join(tmpdir(), "keryx-public-archive-write-")); directories.push(directory);
+    const file = join(directory, "store.sqlite"), writer = new DatabaseSync(file), competitor = new DatabaseSync(file);
+    connections.push(writer, competitor); writer.exec("PRAGMA journal_mode=WAL"); competitor.exec("PRAGMA busy_timeout=0");
+    installSqliteApplicationSchema(writer, { publicReferenceArchive: true });
+    upsertSqlitePublicReference(writer, publisher);
+    const prepare = writer.prepare.bind(writer); let attempted = false, competingCode: number | undefined;
+    const intercepted = vi.spyOn(writer, "prepare").mockImplementation(sql => {
+      const statement = prepare(sql);
+      if (!sql.startsWith("SELECT id,active,rss_url,snapshot FROM public_references WHERE id=?")) return statement;
+      const get = statement.get.bind(statement);
+      vi.spyOn(statement, "get").mockImplementation((...args: Parameters<typeof statement.get>) => {
+        const result = get(...args);
+        if (!attempted) {
+          attempted = true;
+          try { upsertSqlitePublicReference(competitor, { ...publisher, items: [article(2)] }); }
+          catch (error) { competingCode = (error as { errcode?: number }).errcode; }
+        }
+        return result;
+      });
+      return statement;
+    });
+    try {
+      const write = () => operation === "upsert"
+        ? upsertSqlitePublicReference(writer, { ...publisher, items: [article(1)] })
+        : archiveSqlitePublicReferenceItems(writer, publisher.id, [article(1)], "article", DATE);
+      expect(write()).toEqual({ added: 1, updated: 0 });
+      expect(attempted).toBe(true); expect(competingCode).toBe(5);
+      expect(writer.isTransaction).toBe(false); expect(competitor.isTransaction).toBe(false);
+    } finally { intercepted.mockRestore(); }
+    expect(archiveSqlitePublicReferenceItems(competitor, publisher.id, [article(2)], "article", DATE)).toEqual({ added: 1, updated: 0 });
+    expect(querySqlitePublicReferenceItems(writer, {}).total).toBe(2);
   });
 
   it("binds count and page to the same snapshot while a second WAL writer adds an article", () => {
