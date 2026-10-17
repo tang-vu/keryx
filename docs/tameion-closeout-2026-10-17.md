@@ -9,6 +9,12 @@ then follow one retained job. Opening these artifacts starts no purchase.
 **[Submission and evidence](tameion-submission.md)** ·
 **[Full reviewer guide](reviewer-start.md)**
 
+**Final submission update:** the owner confirmed form resubmission on October 17
+at 23:43 GMT+7. The [current evidence summary](tameion-submission.md#october-17-current-evidence)
+records **216 service questions, 16 accounts and 174 guest questions included in
+the 216**, alongside four contactable case-study participants. The release and
+availability checks below retain their observation times.
+
 ## Two minutes to inspect the product
 
 1. Open the [recorded walkthrough](https://keryx.cc/walkthrough). Follow its
@@ -75,11 +81,12 @@ updated installed client.
 
 ## Submission checkpoint
 
-The owner confirmed submitting the form on **October 13**. Its
-[submitted source comparison](https://github.com/tang-vu/keryx/compare/2291753cc4fff2135d546227d5aafda287cbed7d...92733ecc6dfb5076815c2a29de6370c02a84845c)
-and original 2:47 film remain historical. The [final October 17 video](https://youtu.be/4uHylKXcv5Y)
-adds the VoiceReady return task and refreshed npm count; it is now in the final
-form draft, but a new form submission is not confirmed. See the
+The owner confirmed resubmitting the form on **October 17 at 23:43 GMT+7**.
+The final prepared entry uses the
+[fixed event comparison ending at 6fc96424](https://github.com/tang-vu/keryx/compare/2291753cc4fff2135d546227d5aafda287cbed7d...6fc964247673fc8f6b7e24f47ad731f9e3771fc2)
+and [final October 17 video](https://youtu.be/4uHylKXcv5Y), including the VoiceReady
+return task. The submitted payload was not independently read back. The earlier
+October 13 entry, its source comparison and original 2:47 film remain historical. See the
 [October 17 distribution refresh](tameion-submission.md#october-17-distribution-refresh)
 for current npm/GitHub windows. October 16 community recognition and the separately
 dated [extension distribution update](tameion-submission.md#october-17-extension-distribution-update)
@@ -88,6 +95,6 @@ and settled payments retain separate counting rules.
 
 The [official event page](https://tameion.thecanteenapp.com/), checked October 17,
 gives **October 17, 11:59 PM ET / October 18, 10:59 AM Vietnam**. The owner's
-working cutoff is **10:00 AM Vietnam on October 18**. This card adds no form
-resubmission, new spending or runtime release. Independent accepted paid-business
+working cutoff is **10:00 AM Vietnam on October 18**. This card records the owner's
+submission confirmation; it starts no new spending or runtime release. Independent accepted paid-business
 fulfillment and paid repeat demand remain open milestones.

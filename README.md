@@ -12,20 +12,18 @@ budget: inspect its source choices, reuse the cited evidence, and see USDC payme
 receipts for eligible creators whose work it cites. Production runs on Arc mainnet
 with Circle Gateway and x402.
 
-**[Final Tameion demo — under 3 minutes, narrated and subtitled](https://youtu.be/4uHylKXcv5Y)** ·
 **[Try Keryx](https://keryx.cc)** · **[Windows downloads](https://keryx.cc/download)** ·
 **[MCP / API / CLI](https://keryx.cc/integrations)** ·
-**[Reviewer guide](docs/reviewer-start.md)** · **[Tameion build and traction](docs/tameion-submission.md)**
+**[Watch the product demo — 2:49, narrated and subtitled](https://youtu.be/4uHylKXcv5Y)**
 
-**Arc community recognition:** Keryx received a shoutout from the Arc team at the
-[Architect Check-in on October 16, 2026](https://community.arc.io/public/clubs/architects/events/architect-check-in-u1f8k3tkdy),
-as one of approximately **3–4 projects shown** during the event, confirmed by the
-owner. See the [recognition note](docs/tameion-submission.md#community-recognition).
+Developed continuously since June 2026: source discovery and creator payments now connect
+to research briefs, literature tools and durable desktop/CLI tasks. Developers and
+researchers use it for concrete work; [recorded tasks](#see-users-use-it) include
+app development, scholarship research and a returning builder's audio-preview review.
 
-![Keryx displayed during the Arc Architect Check-In, with Circle speakers visible](docs/assets/arc-architect-check-in-2026-10-16.png)
-
-*Keryx on screen at the October 16 Architect Check-In. Screenshot supplied by the
-project owner.*
+**Reviewing the Tameion continuation?** Start with the [reviewer guide](docs/reviewer-start.md)
+for the event delta, current usage and direct evidence. The
+[submission pack](docs/tameion-submission.md) keeps reporting periods and historical checkpoints.
 
 ## What you can do
 
@@ -71,13 +69,14 @@ for attribution and the study's scope.
 Hoàng, a freelance developer, used Keryx MCP inside Devin CLI for his Face Marker
 app. Academic research and SaaS discovery are also documented in the
 [outside-user stories](docs/tameion-submission.md#named-external-user-hoàng-freelance-developer).
-Four identified outside people are a verified minimum. One is a freelance
-business with a matched sponsored testnet payment: Hoàng, for his own Face Marker
-app. 0xacee is a SaaS builder with recorded sessions. Trần Minh Hiếu and
-@JamWaveX are students, and JamWaveX has no matched run in the pack. That is not
-four onboarded businesses. The user recordings are supporting evidence. The final
-product demo above was published on October 17 and includes the VoiceReady return
-task; the October 13 submission remains a separately dated record.
+These are four contactable participants with documented use stories, rather than
+the total user count. Hoàng's source payment is matched to sponsored testnet
+settlement; other stories retain their own evidence scope. On October 15,
+**0xacee returned with a VoiceReady development task**: retained MDN passages
+informed review of browser object-URL cleanup. See the
+[2:23 return recording](https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.mp4)
+and [case study](docs/case-studies/voiceready-2026-10-15.md), including the unsuccessful
+FFmpeg research and the separate assistant implementation checks.
 
 ## Try it in two minutes — no wallet
 
@@ -100,26 +99,30 @@ The path below does not submit a question, ask for a signature, or spend anythin
 
 ## Usage so far
 
-The **dated submission evidence and October 17 distribution refresh** keep each
-reporting window separate:
+**October 17, 2026 snapshot.** Product activity, contactable participants and
+distribution measure different things:
 
 | Measure | Snapshot | Window |
 | --- | --- | --- |
-| Arc mainnet activity | 129 recorded questions, 15 accounts, 87 guest questions included in the question total | Retained October 13 mainnet snapshot |
-| Arc mainnet settlements | 40 settled payment records, 0.703750 USDC gross volume | Retained October 13 mainnet snapshot |
-| MCP distribution | 2,711 npm download events; 3,619 lifetime events | API readback October 17; event window September 27–October 12; lifetime June 23–October 16, overlapping totals |
-| Website reach | Approximately 1,000 visits and 1,180 page views, with Cloudflare bot exclusion enabled | 21-day snapshot supplied October 13 |
+| Mainnet service activity | **216 recorded questions, 16 recorded accounts; 174 guest questions included in the 216** | Current mainnet deployment, checked October 17; accounts and questions are not unique-human counts |
+| Task evidence | Four contactable participants; a documented October 15 return task; a user-led working paper using 65 retained reports | Case studies below; reports and repeat tasks are included activity, not additional people |
+| Arc mainnet settlements | 116 settled payment records; 2.170250 USDC gross recorded volume | September 27–October 17, including owner/QA; incoming and outgoing records, not customer revenue |
+| MCP distribution | 2,711 npm download events; 3,619 lifetime events | September 27–October 16 and June 23–October 16 respectively; overlapping totals |
+| Website reach | 580 visits, approximately 1,430 page views; Cloudflare Exclude bots enabled | September 27, 00:00–October 17, 22:50 GMT+7; visits are sessions |
 | Repository distribution | 41,654 clones, 1,528 unique cloners, 781 views and 49 unique visitors; 4 stars, 1 fork | GitHub API readback October 17; traffic window October 3–16 |
-| Community reach | 46 @keryxpays followers, more than 20 posts and several thousand cumulative views; 8 Product Hunt upvotes | Owner-supplied October 13 snapshot |
+| Extension / community | 12 extension installs, 0 uninstalls; 44 @keryxpays followers; 8 Product Hunt upvotes | Extension console September 17–October 15; X checked October 17; Product Hunt snapshot October 13 |
 
-Mainnet records include owner/QA activity; gross volume is distinct from revenue.
-Downloads, clones and visits measure reach and can include repeat or automated
-activity. [The submission pack](docs/tameion-submission.md#october-17-distribution-refresh)
-documents the named users, counting rules, discovery channels and separate testnet
-history. [Live Ledger](https://keryx.cc/dashboard) and [public metrics](https://keryx.cc/api/metrics)
-show their own current activity. The retained October 13 snapshots remain in the
-submission pack; the npm correction and rolling GitHub window are not added to
-those older observations as new growth.
+The retained email review also records **27 Keryx-related contacts/interactions
+across three mailboxes**, including product discussion, collaboration and invitations;
+some outreach offers marketing services. Four further inbound LinkedIn contacts
+followed the Product Hunt launch. These are relationship signals, separate from usage.
+
+The [current evidence summary](docs/tameion-submission.md#october-17-current-evidence)
+explains network provenance, payment recipients, email counting and the separate
+testnet archive of **23 paid creator wallets**. Mainnet creator payouts and Keryx
+operating-fee allocations are distinct. Downloads/clones may include automation.
+[Live Ledger](https://keryx.cc/dashboard) and [public metrics](https://keryx.cc/api/metrics)
+show current activity; dated snapshots remain available for comparison.
 
 ## What happened during Tameion
 
@@ -183,13 +186,12 @@ Unsupported output-language requests use English scaffold labels without forcing
 statement translation; [language-selection scope](docs/engineering/output-language-2026-10-09.md)
 records the finite parser and remaining localization gates.
 
-The result is a working micro-economy: readers that pay by default, and writers that earn by
-being *useful* — not by being clicked.
+The goal is to make useful evidence payable and its contribution inspectable.
 
-## An agent that genuinely decides
+## How source decisions work
 
-Most "payment agents" are scripts with a wallet. Keryx's differentiator is **visible agency** —
-the model reasons about money and shows its work, streamed live to the UI:
+Keryx exposes the model's source proposals, the bounded selection policy and the
+observed result, streamed to the UI:
 
 - **Buy / skip / cache with rationale** — every spend decision names the exact article version and explains why.
 - **Open article market** — [`/market`](https://keryx.cc/market) and `GET /api/offers` publish exact payable versions, registry list prices, x402 paths, and verifiable EIP-712 discounts signed by publishers.
@@ -249,16 +251,9 @@ literal/read-bound scoring and exact simulated ledger amounts are reproducible w
 live model behavior, semantic correctness, real spending and exploration's causal
 effect remain unmeasured.
 
-Historical testnet trace (recorded output; not current mainnet traction):
-
-```
-[decide]  BUY Agent Economy Weekly — strong match on x402, autonomous, commerce; worth the $0.004 toll
-[decide]  SKIP Garden & Soil Monthly — weak match (no key terms); not worth $0.002
-[fetch]   Paid $0.004 to Agent Economy Weekly — S1
-[sufficiency] Read 2 sources covering all sub-claims; stopping early to save budget
-[settle]  Settled $0.015 → Mara Okoye · $0.010 → Devin Park   (60/40 author split)
-📊 $0.032 spent → 100% to creators · 3 bought / 3 skipped
-```
+[Historical testnet records](https://keryx.cc/history/testnet) retain their original
+network and settlement labels. The [current usage summary](#usage-so-far) keeps
+mainnet and testnet reporting separate.
 
 ## Research tools and desktop
 
@@ -600,7 +595,7 @@ Full threat matrix and verification results: [`docs/security-threat-model.md`](.
 ## Fork the primitives
 
 The MIT-licensed [standalone Arc primitives](https://github.com/tang-vu/keryx-arc-primitives)
-now have a reviewed **0.3 safety and packaging refresh**, also pinned at
+now have a reviewed **0.4.0 integrity and payment-terms refresh**, also pinned at
 [`arc-primitives/`](./arc-primitives) (clone with `--recurse-submodules`).
 
 - Exact micro-USDC parsing and weighted allocation, plus fixed/dynamic x402 settlement
@@ -612,11 +607,14 @@ now have a reviewed **0.3 safety and packaging refresh**, also pinned at
   exact attestation binding and journaled mint transaction identity.
 - Additive discovery metadata, pinned Circle SDK/x402 dependencies, generated ESM/types,
   a no-network demo and a clean packed-consumer check.
+- Plaintext SHA-256/UTF-8 delivery checks retain payment evidence on delivery failure;
+  selected source-version registry checks bind the origin, payee and price.
 
-The 81 tests and offline demo are synthetic; funded acceptance, durable storage,
+The 116 tests and offline demo are synthetic; funded acceptance, durable storage,
 browser custody, reconciliation and mainnet review remain host-owned gates. This
 library release does not change Keryx's payment runtime, MCP package or desktop installer.
-See the [standalone migration guide](https://github.com/tang-vu/keryx-arc-primitives/blob/fea33574e106a91013e52fad9e99bd4db9df1206/docs/migration-0.3.md)
+The built release is available as a GitHub tarball. See the
+[standalone 0.4 migration guide](https://github.com/tang-vu/keryx-arc-primitives/blob/9690ee8fcabdd103b2bb4edfa0d588c80ca35f10/docs/migration-0.4.md)
 and [maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
 
 ## Project docs
@@ -637,16 +635,30 @@ and [maintenance and surface boundaries](docs/arc-primitives-maintenance.md).
 
 ## Origin & where it's going
 
-Keryx started at the **Lepton Agents Hackathon** (Canteen × Circle, on Arc, June 2026) as the
-canonical build of the "herald" model — *content cited, paid per citation* — and never stopped
-running. The service at [keryx.cc](https://keryx.cc) runs caller-driven research with
-Arc mainnet payment authority; it has no hourly research or payout guarantee.
-Current work adds broad-web and scholarly evidence, chat-first cited reports, local
-Windows/CLI task recovery, and a bounded Research Monthly pilot. The hosted prepaid Operator layer is implemented; independently accepted fulfillment
-and a general autonomous scheduler remain separate milestones. Production mainnet is live; independent
-usefulness, audit, adoption and profitability retain their
-[explicit acceptance gates](docs/mainnet-delivery-plan.md). See the [Tameion submission evidence](docs/tameion-submission.md)
-for dated releases, public contract/wallet addresses, product delta and pending pilot proof.
+Keryx has been developed by a solo builder since June 2026, beginning with creator
+nanopayments and growing into a research service. A
+[June 20 RSSHub discussion](https://github.com/DIYgod/RSSHub/discussions/22315)
+proposed opt-in feed payouts; it records community outreach, with no upstream
+adoption claimed. Development continued after Lepton, production moved to Arc
+mainnet on October 4, and later user tasks shaped the writing and recovery tools.
+
+The business direction is research deliverables for developers, researchers and
+small teams, with eligible creators paid for supporting evidence. Prepaid research,
+the hosted Operator and a bounded manual Research Monthly plan provide the
+commercial workflow. The next validation goals are participant-funded repeat
+demand and independent acceptance of a complete paid-business result. The
+[roadmap](docs/project-roadmap.md) and [delivery plan](docs/mainnet-delivery-plan.md)
+record the next work; the [event evidence](docs/tameion-submission.md) records progress.
+
+**Arc community recognition:** Keryx received a shoutout from the Arc team at the
+[Architect Check-in on October 16, 2026](https://community.arc.io/public/clubs/architects/events/architect-check-in-u1f8k3tkdy),
+as one of approximately **3–4 projects shown** during the event, confirmed by the
+owner. See the [recognition note](docs/tameion-submission.md#community-recognition).
+
+![Keryx displayed during the Arc Architect Check-In, with Circle speakers visible](docs/assets/arc-architect-check-in-2026-10-16.png)
+
+*Keryx on screen at the October 16 Architect Check-In. Screenshot supplied by the
+project owner.*
 
 ## Stack
 

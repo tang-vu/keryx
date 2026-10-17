@@ -3,14 +3,17 @@
 Production uses Arc mainnet. [Current status](mainnet-status.md) records network/
 contracts and dated delivery; explicit testnet entries below are development or history.
 
-October 5 bounded-research release candidate: application 0.26.16, caller MCP 0.4.5, remote MCP 0.3.1
-and desktop 0.4.6. The map's older version stamp and distribution counts are historical;
-use [supported-surface parity](surface-parity.md) and [MCP distribution](mcp-distribution.md)
-for current identities and the separate npm, registry, installer and deployment gates.
+For a product overview and the October 17 event snapshot, start with the
+[README](../README.md) and [reviewer guide](reviewer-start.md). The
+[current evidence summary](tameion-submission.md#october-17-current-evidence)
+keeps usage, settlement and contactable users separate.
 
-**Version:** 0.19.0 (exact authorization expiry and pending ownership, updated 2026-08-25)
-
-This document maps the codebase structure for the non-custodial Keryx dApp. Organized by domain; files < 200 LOC per kebab-case naming standard.
+This is a module map, originally written August 25 and incrementally maintained;
+it is not a release manifest or a claim that every entry has been re-audited.
+The deployed TypeScript application remains the payment authority. Windows/Rust
+task tools, API/MCP, extension and chat adapters have their own roles and release
+identities in [surface parity](surface-parity.md) and [MCP distribution](mcp-distribution.md).
+Use source files and their tests for exact implementation behavior.
 
 ---
 
