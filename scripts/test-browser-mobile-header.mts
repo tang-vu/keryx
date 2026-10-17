@@ -158,8 +158,8 @@ try {
   await page.locator("#mobile-site-menu").getByRole("button", { name: /^Sign in/ }).waitFor();
   assert.equal(await page.evaluate(() => (window as unknown as { signIns: number }).signIns), 1);
   await ready();
-  await page.locator("#mobile-site-menu").getByRole("link", { name: "Activity & proof" }).tap();
-  assert.equal(await page.evaluate(() => (window as unknown as { pendingNavigation: string }).pendingNavigation), "/dashboard");
+  await page.locator("#mobile-site-menu").getByRole("link", { name: "Past answers" }).tap();
+  assert.equal(await page.evaluate(() => (window as unknown as { pendingNavigation: string }).pendingNavigation), "/answers");
   assert.equal(await page.locator("#mobile-site-menu").isVisible(), false, "Close the menu when navigation starts, before the delayed route completes");
   await ready();
   await page.locator("#mobile-site-menu").getByText("More tools", { exact: true }).tap();

@@ -110,7 +110,7 @@ try {
     const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
     assert.equal((await page.goto(origin + "/operator/ledger"))?.status(), 200);
     await page.getByText("Offline records", { exact: true }).first().waitFor();
-    await page.locator("summary").first().click(); await page.getByText("Simulated — excluded", { exact: false }).first().waitFor();
+    await page.locator("main summary").first().click(); await page.getByText("Simulated — excluded", { exact: false }).first().waitFor();
     await page.evaluate(() => document.fonts.ready);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     const download = page.waitForEvent("download"); await page.getByText("Download balanced CSV", { exact: true }).click();
@@ -119,7 +119,7 @@ try {
     assert.equal(text, operatorLedgerCsv(native));
     mode = "positive"; await page.getByRole("button", { name: "Read again", exact: true }).click();
     await page.getByText("0.015700 USDC", { exact: true }).first().waitFor();
-    await page.locator("summary").first().click();
+    await page.locator("main summary").first().click();
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     assert(!/PRIVATE-CUSTOMER|PRIVATE-ANSWER|PRIVATE-RATIONALE|auth-one|payment-one/.test(await page.locator("body").innerText()));
     await page.screenshot({ path: join(screenshots, `public-ledger-${width}.png`), fullPage: true });

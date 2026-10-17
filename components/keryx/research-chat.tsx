@@ -28,7 +28,7 @@ type ScopedTurn = ResearchTurnData & { publication: ResearchPublicationSelection
 type ScopedRequest = Omit<ScopedTurn, "state">;
 const hidden = (turn: ScopedRequest, state: AskStreamState) => turn.publication.visibility !== "public" || !!state.meta?.visibility && state.meta.visibility !== "public";
 
-export function ResearchChat({ paidHref = "/research#paid-research", showLaunchBadge = false, privateClaims = false, introduceProduct = false }: { paidHref?: string; showLaunchBadge?: boolean; privateClaims?: boolean; introduceProduct?: boolean }) {
+export function ResearchChat({ paidHref = "/research#paid-research", privateClaims = false, introduceProduct = false }: { paidHref?: string; privateClaims?: boolean; introduceProduct?: boolean }) {
   const message = useUiMessages();
   const privateResearchCopy = useUiCopy("run-claim-research", uiEnglish_privateResearchCopy);
   const productGuideCopy = useUiCopyFunction("product-guide", uiEnglish_productGuideCopy);
@@ -134,7 +134,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
         <div data-testid="hero-guide" className="absolute right-0 top-0 sm:static sm:mr-[156px]"><OnboardingTour /></div>
       </div>
       <h1 className={`mt-1 font-display ${introduceProduct ? "text-[clamp(28px,5vw,46px)]" : "text-[clamp(32px,5vw,46px)]"} leading-none sm:mt-2 sm:leading-tight`}>{introduceProduct ? productGuideCopy("product.heroTitle") : message("researchChat.title")}</h1>
-      <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:mt-2 sm:max-w-[64ch] sm:text-base sm:leading-normal">{introduceProduct ? productGuideCopy("product.heroBody") : message("researchChat.introduction")}</p>
+      <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:mt-2 sm:max-w-[64ch] sm:text-base sm:leading-normal">{introduceProduct && payer === "treasury" ? productGuideCopy("product.heroBody") : message("researchChat.introduction")}</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label={message("researchChat.turnsLabel")}>
       {visibleHistory.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
@@ -149,15 +149,15 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
       {privateClaims && !protectedDocument && <p role="status" className="mt-3 text-seal">{privateResearchCopy.fullNavigation}</p>}
       <AskForm disabled={streaming || privateClaims && !protectedDocument} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
         parentVisibility={parentVisibility} publicationPreference={publicationPreference}
-        showLaunchBadge={showLaunchBadge && !hasTurns}
         restoreQuestion={visibleRequest && (state.errorKind === "research-paused" || state.errorKind === "rate-limit" || state.errorKind === "maintenance")
           ? { ...visibleRequest, researchPaused: state.errorKind === "research-paused" } : undefined} />
-      {payer === "treasury" && !hasTurns && <div className="mt-3"><SponsoredTrialNotice /></div>}
+      {!introduceProduct && payer === "treasury" && !hasTurns && <div className="mt-3"><SponsoredTrialNotice /></div>}
       {!privateClaims && <div className="mt-3"><SessionGrantPanel onBindingChange={handleBindingChange} /></div>}
       {privateClaims && claimStatus !== "none" && claimStatus !== "waiting" && <div className="mt-3 border border-line p-4" role="status">
         <p>{claimStatus === "available" ? privateResearchCopy.available : claimStatus === "opened" ? privateResearchCopy.opened : claimStatus === "lost" ? privateResearchCopy.lost : privateResearchCopy.failed}</p>
         {claimStatus === "available" && <button className="mt-2 min-h-11 underline" type="button" onClick={() => privateHandoff.open()}>{privateResearchCopy.open}</button>}
       </div>}
+      {(!introduceProduct || hasTurns) && <>
       <p className="mt-3 text-xs text-ink-3">{message("researchChat.historyNotice")}</p>
       <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs text-ink-2" aria-label={message("researchChat.toolsLabel")}>
         {!privateClaims && <a href="/research/private" className="underline underline-offset-4">{privateResearchCopy.entry}</a>}
@@ -165,6 +165,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", showLaunchB
         <a href={paidHref} className="underline underline-offset-4">{message("researchChat.paidResearch")}</a>
         <a href="/register" className="underline underline-offset-4">{message("researchChat.publishSource")}</a>
       </nav>
+      </>}
     </div>
   </section>;
 }

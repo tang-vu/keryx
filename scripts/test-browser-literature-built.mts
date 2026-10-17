@@ -139,6 +139,8 @@ try {
     assert.equal(await page.locator('input[name="research-depth"][value="deep"]').isChecked(), true);
     await composer.fill("Private draft: identify the title and first author of arXiv 2005.11401v4");
     const metadataLink = page.getByTestId("paper-metadata-handoff");
+    assert.equal(await metadataLink.isVisible(), false);
+    await page.getByText("More options", { exact: true }).click();
     await metadataLink.waitFor();
     assert.equal(await metadataLink.getAttribute("href"), "/sources?kind=paper&q=2005.11401v4#research-papers");
     const box = await metadataLink.boundingBox(); assert(box && box.height >= 43 && box.x >= 0 && box.x + box.width <= width + 1);

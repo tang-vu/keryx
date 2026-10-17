@@ -147,7 +147,8 @@ it("hides a private draft while focused context is pending and preserves same-ow
   await type("Synthetic private draft");
   const held = deferred<Response>(); respond = () => held.promise; await focus();
   expect((container.querySelector("textarea") as HTMLTextAreaElement).value).toBe("");
-  expect((container.querySelector("textarea") as HTMLTextAreaElement).disabled).toBe(true);
+  expect((container.querySelector("textarea") as HTMLTextAreaElement).disabled).toBe(false);
+  expect((container.querySelector("[data-tour=dispatch-btn]") as HTMLButtonElement).disabled).toBe(true);
   expect(container.querySelector("[data-testid=paper-metadata-handoff]")?.getAttribute("href")).not.toContain("Synthetic");
   await act(async () => held.resolve(json(context(alice, "public"))));
   expect((container.querySelector("textarea") as HTMLTextAreaElement).value).toBe("Synthetic private draft");
@@ -165,6 +166,55 @@ it("clears an old draft on pending logout and cannot submit it under the next ac
   await submit(); expect(onAsk).not.toHaveBeenCalled();
   await type("Bob public draft"); await submit();
   expect(onAsk.mock.calls[0][0]).toBe("Bob public draft"); expect(onAsk.mock.calls[0].at(-1)).toEqual({ visibility: "public", expectedWallet: bob });
+});
+
+it("allows typing before visibility resolves but binds and submits only the server-provided owner and default", async () => {
+  const held = deferred<Response>(); respond = () => held.promise;
+  const onAsk = vi.fn(); await render(createElement(AskForm, { onAsk }));
+  await type("Draft while preferences are loading"); await submit();
+  expect((container.querySelector("textarea") as HTMLTextAreaElement).value).toBe("Draft while preferences are loading");
+  expect(onAsk).not.toHaveBeenCalled();
+  await act(async () => held.resolve(json(context(alice, "unlisted"))));
+  await submit();
+  expect(onAsk).toHaveBeenCalledOnce();
+  expect(onAsk.mock.calls[0][0]).toBe("Draft while preferences are loading");
+  expect(onAsk.mock.calls[0].at(-1)).toEqual({ visibility: "unlisted", expectedWallet: alice });
+});
+
+it("discards a newly typed pending draft when revalidation confirms a different owner", async () => {
+  const onAsk = vi.fn(); await render(createElement(AskForm, { onAsk }));
+  await type("Alice original draft");
+  const held = deferred<Response>(); respond = () => held.promise; await focus();
+  await type("Draft during account revalidation"); await submit();
+  expect(onAsk).not.toHaveBeenCalled();
+  await act(async () => held.resolve(json(context(bob, "public"))));
+  expect((container.querySelector("textarea") as HTMLTextAreaElement).value).toBe("");
+  await submit(); expect(onAsk).not.toHaveBeenCalled();
+});
+
+it("retains the pending draft after a failed preference request, then uses the retried server choice", async () => {
+  const held = deferred<Response>(); respond = () => held.promise;
+  const onAsk = vi.fn(); await render(createElement(AskForm, { onAsk })); await type("Keep this draft through retry");
+  await act(async () => held.resolve(json({}, 503))); await submit();
+  expect(onAsk).not.toHaveBeenCalled();
+  expect(container.textContent).toContain("Visibility settings are unavailable");
+  respond = () => json(context(alice, "private"));
+  await act(async () => {
+    [...container.querySelectorAll("button")].find(button => button.textContent === "Retry visibility settings")!.click();
+  });
+  await submit(); expect(onAsk.mock.calls[0][0]).toBe("Keep this draft through retry");
+  expect(onAsk.mock.calls[0].at(-1)).toEqual({ visibility: "private", expectedWallet: alice });
+});
+
+it("keeps a reader's edit instead of auto-submitting a shared-link question after visibility resolves", async () => {
+  window.history.replaceState(null, "", "/?q=Shared%20question&run=1");
+  const held = deferred<Response>(); respond = () => held.promise;
+  const onAsk = vi.fn(); await render(createElement(AskForm, { onAsk }));
+  await type("My edited question");
+  await act(async () => held.resolve(json(context()))); await flush();
+  expect((container.querySelector("textarea") as HTMLTextAreaElement).value).toBe("My edited question");
+  expect(onAsk).not.toHaveBeenCalled(); await submit();
+  expect(onAsk.mock.calls[0][0]).toBe("My edited question");
 });
 
 it("prefills a shared question and dispatches its opt-in once only after verified context", async () => {
