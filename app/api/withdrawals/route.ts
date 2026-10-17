@@ -9,10 +9,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const limit = Math.min(
-    100,
-    parseInt(new URL(req.url).searchParams.get("limit") ?? "20", 10) || 20,
-  );
+  const params = new URL(req.url).searchParams, raw = params.get("limit");
+  if (params.getAll("limit").length > 1 || raw !== null && (!/^[1-9]\d*$/.test(raw) || !Number.isSafeInteger(Number(raw))))
+    return Response.json({ error: "invalid_limit" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+  const limit = raw === null ? 20 : Math.min(100, Number(raw));
   const db = await getDb();
   const withdrawals = await db.listWithdrawals(limit);
   return Response.json({ withdrawals });
