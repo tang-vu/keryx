@@ -124,14 +124,16 @@ it.each(["effect replay", "owner change"])("finishes recovery after %s invalidat
   } finally { await context.close(); }
 });
 
-it("restores an expired funded key with a readable consent-renewal message", async () => {
+it("restores a retained key without claiming an admitted funded budget when metadata is absent", async () => {
   const { page, context } = await mount();
   try {
     await release(page, "saved");
     await expect.poll(async () => (await state(page)).status).toBe("paused");
     expect((await state(page)).error).toContain("Review a new spending consent");
     expect((await state(page)).sessAddr).toBe("0x3333333333333333333333333333333333333333");
-    expect(await page.getByRole("button", { name: "Continue with saved budget" }).count()).toBe(1);
+    expect(await page.getByRole("button", { name: "Continue with saved budget" }).count()).toBe(0);
+    expect(await page.getByRole("button", { name: "Recover a saved budget" }).count()).toBe(1);
+    expect(await page.getByText("Your funded budget is saved in this browser.", { exact: false }).count()).toBe(0);
     expect(await page.evaluate(() => (window as unknown as Fixture).signatures)).toBe(0);
   } finally { await context.close(); }
 });
