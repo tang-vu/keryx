@@ -12,7 +12,11 @@ export interface LedgerResource<T> {
 export function useLedgerResource<T>(url: string, parse: (body: unknown) => T) {
   const [resource, setResource] = useState<LedgerResource<T>>({ status: "loading", data: null, observedAt: null });
   const [revision, setRevision] = useState(0);
-  const retry = useCallback(() => setRevision(value => value + 1), []);
+  const [retrying, setRetrying] = useState(false);
+  const retry = useCallback(() => {
+    setRetrying(true);
+    setRevision(value => value + 1);
+  }, []);
   useEffect(() => {
     let alive = true;
     let timer: ReturnType<typeof setTimeout>;
@@ -26,11 +30,14 @@ export function useLedgerResource<T>(url: string, parse: (body: unknown) => T) {
       } catch {
         if (alive) setResource(previous => ({ ...previous, status: "error" }));
       } finally {
-        if (alive) timer = setTimeout(() => void poll(), 10_000);
+        if (alive) {
+          setRetrying(false);
+          timer = setTimeout(() => void poll(), 10_000);
+        }
       }
     }
     void poll();
     return () => { alive = false; clearTimeout(timer); controller.abort(); };
   }, [url, parse, revision]);
-  return { ...resource, retry };
+  return { ...resource, retrying, retry };
 }

@@ -96,6 +96,8 @@ try {
       const paperRequests: string[] = [];
       page.on("pageerror", error => errors.push(error.message));
       let mode = "zero";
+      let metricRequests = 0;
+      let releaseMetrics: (() => void) | undefined;
       const guestModes: Record<string, unknown> = {
         "guest-unavailable": null, "guest-legacy": undefined, "guest-fraction": 1.5,
         "guest-negative": -1, "guest-string": "12", "guest-excess": 29, "guest-zero": 0,
@@ -107,6 +109,10 @@ try {
         const pathname = requested.pathname;
         if (pathname === "/api/papers") paperRequests.push(requested.href);
         if (pathname.startsWith("/api/")) {
+          if (pathname === "/api/metrics") {
+            metricRequests++;
+            if (mode === "retry-pending") await new Promise<void>(resolve => { releaseMetrics = resolve; });
+          }
           if (mode === "error" && pathname === "/api/metrics") return route.fulfill({ status: 503, json: { error: "unavailable" } });
           if (pathname === "/api/metrics") return route.fulfill({ json: mode === "malformed" ? { metrics: { totalQueries: 28 }, leaderboard: [] } : { metrics: { ...metrics, ...(mode === "account-unavailable" ? { recordedAccounts: null } : mode === "account-malformed" ? { recordedAccounts: 1.5 } : mode === "account-zero" ? { recordedAccounts: 0 } : mode === "account-legacy" ? { recordedAccounts: undefined } : {}), ...(Object.hasOwn(guestModes, mode) ? { guestQuestions: guestModes[mode] } : {}), ...(mode === "pending" ? { pendingPaymentConfirmations: 1, pendingPaymentVolumeUsdc: 0.02, failedPaymentAttempts: 1, failedPaymentVolumeUsdc: 0.01 } : {}) }, leaderboard: [], ...(mode === "source-leaderboard" ? { sourceLeaderboard: { ...sourceLeaderboard, operatingFeeNetwork: network === "arc" ? "eip155:5042" : "eip155:5042002" } } : {}) } });
           if (pathname === "/api/runs/summary") {
@@ -249,14 +255,43 @@ try {
       await page.getByText(run.question).waitFor();
       await page.getByRole("heading", { name: "Settlement records" }).waitFor();
       assert.equal(await page.getByRole("heading", { name: "No settled payments yet" }).count(), 0);
+      const beforeRetry = metricRequests;
+      mode = "retry-pending";
+      await Promise.all([
+        page.waitForRequest(request => new URL(request.url()).pathname === "/api/metrics"),
+        page.getByRole("button", { name: "Retry", exact: true }).click(),
+      ]);
+      const retrying = page.getByRole("button", { name: "Loading Settlement totals…", exact: true });
+      await retrying.waitFor();
+      assert.equal(await retrying.isDisabled(), true, "Retry visibly waits for the pending request");
+      await page.clock.fastForward(10_100);
+      assert.equal(metricRequests, beforeRetry + 1, "Do not overlap polling and a pending manual retry");
+      assert(releaseMetrics, "Manual retry reached the metrics API");
+      await page.screenshot({ path: path.join(screenshots, `ledger-retry-pending-${network}-${width}.png`), fullPage: true });
       mode = "zero";
-      await page.getByRole("button", { name: "Retry", exact: true }).click();
+      releaseMetrics();
       await page.getByRole("heading", { name: "No settled payments yet" }).waitFor();
       mode = "error";
       // Retry against an error after an accepted read must retain visibly dated data.
       await page.clock.fastForward(10_100);
       await page.getByText(/Showing the last successful read from [A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2}:\d{2}\s[AP]M UTC\./).waitFor();
       await page.getByText("12 guest questions · last successful read", { exact: true }).waitFor();
+      mode = "retry-pending";
+      releaseMetrics = undefined;
+      await Promise.all([
+        page.waitForRequest(request => new URL(request.url()).pathname === "/api/metrics"),
+        page.getByRole("button", { name: "Retry", exact: true }).click(),
+      ]);
+      await retrying.waitFor();
+      await page.getByText("12 guest questions · last successful read", { exact: true }).waitFor();
+      assert.equal(await page.getByText(/Showing the last successful read from/).count(), 1);
+      assert(releaseMetrics);
+      mode = "error";
+      releaseMetrics();
+      await page.getByRole("button", { name: "Retry", exact: true }).waitFor();
+      mode = "zero";
+      await page.getByRole("button", { name: "Retry", exact: true }).click();
+      await page.getByRole("heading", { name: "No settled payments yet" }).waitFor();
 
       mode = "malformed";
       await open("/dashboard");
