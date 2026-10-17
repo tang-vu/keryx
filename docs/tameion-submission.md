@@ -95,6 +95,20 @@ next validation targets at that checkpoint. The separately dated
 [October 15 return task](#return-task-from-0xacee-on-october-15) adds an
 owner-confirmed further use by an existing participant.
 
+## October 17 extension distribution update
+
+The owner confirmed that **Keryx — Ask & pay creators** was newly published
+publicly on the [Chrome Web Store](https://chromewebstore.google.com/detail/ofhhhbkpdemcngolfgkjkmkjdilhgjmd).
+The developer-console snapshot supplied on October 17 reports **12 installs and
+0 uninstalls**, with a displayed reporting window of **September 17–October 15,
+2026**. That window is the console's reporting range, not the extension's launch
+date or evidence that it was public throughout the range.
+
+These are early extension-distribution counts. Install events do not establish
+unique people, active users, paid customers or a retention rate. The source is the
+owner-supplied console text; the public listing provides the installation link.
+This separately dated update does not change the October 13 snapshots above.
+
 ## Event-period usage: testnet week, then mainnet
 
 Production moved from Arc testnet to mainnet on October 4. The retained event-period
