@@ -113,17 +113,34 @@ export function insertStorageIdentity(db: DatabaseSync, identity: Readonly<Stora
   db.prepare(`INSERT INTO ${STORAGE_IDENTITY_TABLE} VALUES(1,?)`).run(JSON.stringify(identity));
 }
 /** Compatible application SQL may mutate fenced rows, never attach, rewrite schema or load extensions. */
-export function restrictStorageApplicationSql(db: DatabaseSync): void {
+export function restrictStorageApplicationSql(db: DatabaseSync): () => number {
   if (typeof db.setAuthorizer !== "function") refuseStorage("sqlite_authorizer_unavailable");
   const allowed = new Set([sqliteConstants.SQLITE_READ, sqliteConstants.SQLITE_SELECT, sqliteConstants.SQLITE_INSERT,
     sqliteConstants.SQLITE_UPDATE, sqliteConstants.SQLITE_DELETE, sqliteConstants.SQLITE_TRANSACTION,
     sqliteConstants.SQLITE_SAVEPOINT, sqliteConstants.SQLITE_FUNCTION, sqliteConstants.SQLITE_RECURSIVE]);
+  let readingAllocation = false;
   db.setAuthorizer((action, first, second) => {
-    if (action === sqliteConstants.SQLITE_PRAGMA) return ["schema_version", "table_xinfo", "table_info"].includes(first ?? "")
+    if (action === sqliteConstants.SQLITE_PRAGMA) return ["schema_version", "table_xinfo", "table_info"].includes(first ?? "") ||
+      readingAllocation && second === null && ["page_count", "page_size"].includes(first ?? "")
       ? sqliteConstants.SQLITE_OK : sqliteConstants.SQLITE_DENY;
     if (action === sqliteConstants.SQLITE_FUNCTION && second?.toLowerCase() === "load_extension") return sqliteConstants.SQLITE_DENY;
     return allowed.has(action) ? sqliteConstants.SQLITE_OK : sqliteConstants.SQLITE_DENY;
   });
+  // Captured native connection only; neither this closure nor its statements is
+  // an application entrypoint. The authorizer remains installed throughout.
+  return () => {
+    if (readingAllocation) return refuseStorage("storage_unavailable");
+    readingAllocation = true;
+    try {
+      const pages = Number(db.prepare("PRAGMA page_count").get()?.page_count);
+      const pageSize = Number(db.prepare("PRAGMA page_size").get()?.page_size);
+      const bytes = pages * pageSize;
+      if (!Number.isSafeInteger(pages) || pages < 0 || !Number.isSafeInteger(pageSize) || pageSize < 512 ||
+        pageSize > 65536 || (pageSize & (pageSize - 1)) !== 0 || !Number.isSafeInteger(bytes))
+        return refuseStorage("storage_unavailable");
+      return bytes;
+    } finally { readingAllocation = false; }
+  };
 }
 export function registerStorageCapability(db: DatabaseSync, identity: Readonly<StorageIdentity>, active: () => boolean): void {
   const digest = storageIdentityDigest(identity);

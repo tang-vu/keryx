@@ -1,7 +1,7 @@
 /** Genuine isolated SQLite only; no provider, signing, spend or shared database. */
 import { afterAll, afterEach, beforeAll, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
+import { copyFileSync, mkdtempSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
@@ -9,7 +9,8 @@ import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
 import { installNativeUserDomainSchema } from "./native-user-domain-schema";
 import { insertStorageIdentity, installStorageFences } from "./storage-identity-sqlite";
-import { assertVerifiedSqliteConnection, assertVerifiedSqliteSelectedApplicationPolicy, openVerifiedSqliteStorage } from "./storage-identity-connection";
+import { assertVerifiedSqliteConnection, assertVerifiedSqliteSelectedApplicationPolicy, isVerifiedSqliteConnection,
+  openVerifiedSqliteStorage, readVerifiedSqliteAllocatedBytes } from "./storage-identity-connection";
 import { supportedSqliteApplicationProfiles } from "./enrolled-sqlite-schema-profile";
 import { sqliteApplicationSchemaProfile } from "./sqlite-application-schema-profile";
 import { createEnrolledSqliteRunPrivacy, isEnrolledSqlitePrivacyContention } from "./run-privacy-sqlite";
@@ -42,6 +43,60 @@ function fixture(archive = false, bundle = true, options: Parameters<typeof open
   const connection = openVerifiedSqliteStorage(file, identity, options); opened.push(connection);
   return { file, connection };
 }
+
+it("reads allocated uncommitted pages through fixed metadata only and retains application PRAGMA denials", () => {
+  let guards = 0;
+  const f = fixture(true, true, { runtimeGuard: () => { guards++; }, applicationProfiles: supportedSqliteApplicationProfiles(true) });
+  const db = f.connection.db, before = readVerifiedSqliteAllocatedBytes(db), priorGuards = guards;
+  for (const sql of ["PRAGMA page_count", "PRAGMA page_size", "PRAGMA page_size=8192", "PRAGMA page_count=1"])
+    expect(() => db.prepare(sql).get()).toThrow();
+  db.exec("SAVEPOINT synthetic_allocation");
+  db.prepare("INSERT INTO sync_state(key,value) VALUES('synthetic-allocation',zeroblob(?))").run(4 * 1024 * 1024);
+  expect(readVerifiedSqliteAllocatedBytes(db)).toBeGreaterThan(before);
+  expect(guards).toBeGreaterThan(priorGuards);
+  db.exec("ROLLBACK TO synthetic_allocation; RELEASE synthetic_allocation");
+  expect(readVerifiedSqliteAllocatedBytes(db)).toBe(before);
+  for (const sql of ["PRAGMA page_count", "PRAGMA page_size", "PRAGMA page_size=8192"])
+    expect(() => db.prepare(sql).get()).toThrow();
+  expect(() => Reflect.get(db, "setAuthorizer")).toThrow("Unsupported");
+});
+
+it("allocation metadata rejects unverified, closed and revoked connections without ordinary fallback", () => {
+  const raw = new DatabaseSync(":memory:"); opened.push(raw);
+  expect(isVerifiedSqliteConnection(raw)).toBe(false);
+  expect(() => readVerifiedSqliteAllocatedBytes(raw)).toThrow("storage_unavailable");
+  let revoked = false;
+  const f = fixture(true, true, { runtimeGuard: () => { if (revoked) throw new Error("Synthetic allocation revocation"); },
+    applicationProfiles: supportedSqliteApplicationProfiles(true) });
+  expect(isVerifiedSqliteConnection(f.connection.db)).toBe(true);
+  expect(() => Reflect.apply(readVerifiedSqliteAllocatedBytes, undefined, [f.connection.db, "PRAGMA page_count"])).toThrow("storage_unavailable");
+  revoked = true; expect(() => readVerifiedSqliteAllocatedBytes(f.connection.db)).toThrow("Synthetic allocation revocation");
+  expect(isVerifiedSqliteConnection(f.connection.db)).toBe(true);
+  f.connection.close(); expect(isVerifiedSqliteConnection(f.connection.db)).toBe(true);
+  expect(() => readVerifiedSqliteAllocatedBytes(f.connection.db)).toThrow("closed");
+});
+
+it.each(["profile", "fence"])("allocation metadata preserves the full %s drift refusal", kind => {
+  const f = fixture(true, true, { runtimeGuard() {}, applicationProfiles: supportedSqliteApplicationProfiles(true) });
+  expect(readVerifiedSqliteAllocatedBytes(f.connection.db)).toBeGreaterThan(0);
+  const raw = new DatabaseSync(f.file);
+  try {
+    if (kind === "profile") raw.exec("CREATE INDEX synthetic_allocation_drift ON query_runs(created_at)");
+    else {
+      const name = String(raw.prepare("SELECT name FROM sqlite_schema WHERE type='trigger' AND name GLOB 'storage_fence_*' LIMIT 1").get()!.name);
+      raw.exec(`DROP TRIGGER "${name}"`);
+    }
+  } finally { raw.close(); }
+  expect(() => readVerifiedSqliteAllocatedBytes(f.connection.db)).toThrow(kind === "profile" ? "schema migration required" : "fence_missing_or_changed");
+  expect(isVerifiedSqliteConnection(f.connection.db)).toBe(true);
+});
+
+it.skipIf(process.platform === "win32")("allocation metadata refuses a replaced target inode", () => {
+  const f = fixture(true, true, { runtimeGuard() {}, applicationProfiles: supportedSqliteApplicationProfiles(true) });
+  renameSync(f.file, `${f.file}.retained`); copyFileSync(template(true, true), f.file);
+  expect(() => readVerifiedSqliteAllocatedBytes(f.connection.db)).toThrow("target_replaced");
+  expect(isVerifiedSqliteConnection(f.connection.db)).toBe(true);
+});
 
 it.each([[false, false], [false, true], [true, false], [true, true]])(
   "selected policy accepts exact mainnet archive=%s bundle=%s without another SQL guard", (archive, bundle) => {

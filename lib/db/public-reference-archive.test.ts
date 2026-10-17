@@ -14,10 +14,12 @@ import { canonicalJson } from "../canonical-json";
 import { inspectSqliteEnrollment, enrollSqliteStorage } from "./storage-identity-provision";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { publicReferenceItemId, type PublicReference } from "../public-references/catalog";
-import type { PublicReferenceItem } from "../public-references/archive";
+import { archiveSearchTerms, type PublicReferenceItem } from "../public-references/archive";
+import { encodeStorageValue } from "./storage-identity-snapshot";
+import { PUBLIC_ARCHIVE_SNAPSHOT_LIMITS } from "./public-reference-archive-migration";
 import { STORAGE_TESTNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
 import { archiveSqlitePublicReferenceItems, hasPublicReferenceArchive, installPublicReferenceArchive,
-  querySqlitePublicReferenceItems, sqlitePublicReferenceArchiveStats, upsertSqlitePublicReference } from "./public-reference-archive";
+  PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS, querySqlitePublicReferenceItems, sqlitePublicReferenceArchiveStats, upsertSqlitePublicReference } from "./public-reference-archive";
 
 const publisher: PublicReference = { id: "public:archive-test", name: "Archive", url: "https://archive.test/",
   rssUrl: "https://archive.test/feed", description: "Public evidence", tags: [], active: true, items: [] };
@@ -33,6 +35,7 @@ afterEach(() => {
   for (const db of connections.splice(0)) db.close();
   for (const path of directories.splice(0)) rmSync(path, { recursive: true, force: true });
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 function database(): DatabaseSync {
   const db = new DatabaseSync(":memory:"); connections.push(db); installSqliteApplicationSchema(db, { publicReferenceArchive: true });
@@ -57,6 +60,142 @@ async function enrolledFixture(archive: boolean) {
 }
 
 describe("durable cumulative public archive", () => {
+  it("inserts exact normalized term weights in bounded batches, without reindexing an identical revision", () => {
+    const db = database(), prepare = db.prepare.bind(db), batches: [string, number][][] = [];
+    const item = article(1, { title: "Alpha alpha", summary: "alpha beta", content: `alpha ${Array.from({ length: 600 }, (_, n) => `word${n}`).join(" ")}` });
+    vi.spyOn(db, "prepare").mockImplementation(sql => {
+      const statement = prepare(sql);
+      if (sql.startsWith("INSERT INTO public_reference_article_terms")) {
+        const run = statement.run.bind(statement);
+        vi.spyOn(statement, "run").mockImplementation((...args: Parameters<typeof statement.run>) => {
+          expect(Buffer.byteLength(String(args[2]))).toBeLessThanOrEqual(128 * 1024);
+          batches.push(JSON.parse(String(args[2]))); return run(...args);
+        });
+      }
+      return statement;
+    });
+    upsertSqlitePublicReference(db, { ...publisher, items: [item], refreshedAt: DATE });
+    const expected = new Map<string, number>();
+    for (const [text, weight] of [[item.title, 6], [item.summary, 2], [item.content, 1]] as const)
+      for (const term of archiveSearchTerms(text)) expected.set(term, (expected.get(term) ?? 0) + weight);
+    const observed = db.prepare("SELECT term,weight FROM public_reference_article_terms ORDER BY term").all();
+    expect(observed).toEqual([...expected].sort(([a], [b]) => a.localeCompare(b)).map(([term, weight]) => ({ term, weight })));
+    expect(batches).toHaveLength(Math.ceil(expected.size / 256)); expect(batches.every(batch => batch.length <= 256)).toBe(true);
+    const count = batches.length;
+    upsertSqlitePublicReference(db, { ...publisher, items: [item], refreshedAt: DATE });
+    expect(batches).toHaveLength(count);
+    expect(querySqlitePublicReferenceItems(db, { query: "alpha beta", sort: "relevance" }).items).toHaveLength(1);
+  });
+
+  it("matches the archive reader's exact capacity constants and typed framing, including hidden rowids", () => {
+    expect(PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS).toEqual(PUBLIC_ARCHIVE_SNAPSHOT_LIMITS);
+    const db = database();
+    db.exec("CREATE TABLE capacity_fixture(integer_value INTEGER,real_value REAL,text_value TEXT,blob_value BLOB,null_value)");
+    db.prepare("INSERT INTO capacity_fixture VALUES(?,?,?,?,NULL)").run(BigInt("9223372036854775807"), 0.125, "a\0é", new Uint8Array([0, 255]));
+    db.exec("INSERT INTO capacity_fixture VALUES(-9223372036854775808,0.5,CAST(x'80ff' AS TEXT),x'',NULL)");
+    const prepare = db.prepare.bind(db), measured = { rows: 0, bytes: 0, framed: 0 };
+    vi.spyOn(db, "prepare").mockImplementation(sql => {
+      const statement = prepare(sql);
+      if (sql.startsWith("SELECT count(*) AS rows,coalesce(sum(")) {
+        const get = statement.get.bind(statement);
+        vi.spyOn(statement, "get").mockImplementation((...args: Parameters<typeof statement.get>) => {
+          const result = get(...args)!;
+          for (const key of ["rows", "bytes", "framed"] as const) measured[key] += Number(result[key]);
+          return result;
+        });
+      }
+      return statement;
+    });
+    upsertSqlitePublicReference(db, { ...publisher, items: [article(1)], refreshedAt: DATE });
+    const expected = { rows: 0, bytes: 0, framed: 0 }, quote = (name: string) => `"${name.replaceAll('"', '""')}"`;
+    for (const table of prepare("SELECT name,sql FROM sqlite_schema WHERE type='table'").all()) {
+      const names = prepare(`PRAGMA table_info(${quote(String(table.name))})`).all().map(row => String(row.name));
+      const rowid = !/\bWITHOUT\s+ROWID\b/i.test(String(table.sql))
+        ? ["_rowid_", "rowid", "oid"].find(name => !names.some(column => column.toLowerCase() === name)) : undefined;
+      if (rowid) names.unshift(rowid);
+      const statement = prepare(`SELECT ${names.flatMap((name, n) => [`typeof(${quote(name)}) AS t${n}`, `length(CAST(${quote(name)} AS BLOB)) AS l${n}`,
+        `CASE WHEN typeof(${quote(name)})='text' THEN CAST(${quote(name)} AS BLOB) ELSE ${quote(name)} END AS v${n}`]).join(",")} FROM ${quote(String(table.name))}`);
+      statement.setReadBigInts(true);
+      for (const row of statement.iterate()) {
+        expected.rows++;
+        for (let n = 0; n < names.length; n++) {
+          const type = String(row[`t${n}`]), value = row[`v${n}`];
+          const payload = type === "text" ? value as Uint8Array : Buffer.from(encodeStorageValue(value, type));
+          expected.bytes += Number(row[`l${n}`] ?? 0);
+          expected.framed += Buffer.byteLength(`${type}:${payload.byteLength}:`) + payload.byteLength;
+        }
+      }
+    }
+    expect(measured).toEqual(expected);
+  });
+
+  it("rolls back publisher metadata, versions and term batches when the write deadline expires", () => {
+    const db = database(), prepare = db.prepare.bind(db), before = String(db.prepare("SELECT snapshot FROM public_references").get()!.snapshot);
+    let clock = 1000; vi.spyOn(Date, "now").mockImplementation(() => clock);
+    vi.spyOn(db, "prepare").mockImplementation(sql => {
+      const statement = prepare(sql);
+      if (sql.startsWith("INSERT INTO public_reference_article_terms")) {
+        const run = statement.run.bind(statement);
+        vi.spyOn(statement, "run").mockImplementation((...args: Parameters<typeof statement.run>) => {
+          const result = run(...args); clock += PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.deadlineMs; return result;
+        });
+      }
+      return statement;
+    });
+    expect(() => upsertSqlitePublicReference(db, { ...publisher, items: [article(1, {
+      content: Array.from({ length: 600 }, (_, n) => `word${n}`).join(" ") })] })).toThrow("write deadline");
+    expect(prepare("SELECT snapshot FROM public_references").get()!.snapshot).toBe(before);
+    for (const table of ["public_reference_articles", "public_reference_article_versions", "public_reference_article_terms"])
+      expect(prepare(`SELECT count(*) AS n FROM ${table}`).get()!.n).toBe(0);
+    expect(db.isTransaction).toBe(false);
+  });
+
+  it("refuses a whole-store row overflow before committing any publisher changes", () => {
+    const db = database(), tables = db.prepare("SELECT name FROM sqlite_schema WHERE type='table'").all();
+    const existing = tables.reduce((sum, table) => sum + Number(db.prepare(`SELECT count(*) AS n FROM "${String(table.name).replaceAll('"', '""')}"`).get()!.n), 0);
+    db.prepare(`WITH RECURSIVE n(value) AS (SELECT 1 UNION ALL SELECT value+1 FROM n WHERE value<?)
+      INSERT INTO public_reference_article_terms SELECT 'word'||value,?, 'synthetic-retained-item',1 FROM n`)
+      .run(PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.rows - existing, publisher.id);
+    const snapshot = db.prepare("SELECT snapshot FROM public_references").get()!.snapshot;
+    expect(() => upsertSqlitePublicReference(db, { ...publisher, items: [article(1)] })).toThrow("row/byte limit");
+    expect(db.prepare("SELECT snapshot FROM public_references").get()!.snapshot).toBe(snapshot);
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_articles").get()!.n).toBe(0);
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_article_versions").get()!.n).toBe(0);
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_article_terms").get()!.n).toBe(PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.rows - existing);
+  }, 30_000);
+
+  it("refuses oversized existing fields before committing the new publisher snapshot", () => {
+    const db = database(), snapshot = db.prepare("SELECT snapshot FROM public_references").get()!.snapshot;
+    db.prepare("INSERT INTO sync_state(key,value) VALUES(?,?)").run("synthetic-field", "x".repeat(PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.fieldBytes + 1));
+    expect(() => upsertSqlitePublicReference(db, { ...publisher, items: [article(1)] })).toThrow("row/byte limit");
+    expect(db.prepare("SELECT snapshot FROM public_references").get()!.snapshot).toBe(snapshot);
+    expect(db.prepare("SELECT count(*) AS n FROM public_reference_article_versions").get()!.n).toBe(0);
+  });
+
+  it.each(["file", "raw", "framed"])("rolls back all publisher changes on a %s capacity refusal", kind => {
+    const db = database(), prepare = db.prepare.bind(db), snapshot = prepare("SELECT snapshot FROM public_references").get()!.snapshot;
+    // Inject only the returned quantity at the capacity boundary. Separate tests
+    // above compare actual aggregate framing and real row/field overflows, and
+    // the native helper test measures pages in an uncommitted SAVEPOINT.
+    const intercepted = vi.spyOn(db, "prepare").mockImplementation(sql => {
+      const statement = prepare(sql);
+      if (kind === "file" && sql === "PRAGMA page_count")
+        vi.spyOn(statement, "get").mockReturnValue({ page_count: PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.fileBytes });
+      if (kind !== "file" && sql.startsWith("SELECT count(*) AS rows,coalesce(sum(")) {
+        const get = statement.get.bind(statement);
+        vi.spyOn(statement, "get").mockImplementation((...args: Parameters<typeof statement.get>) => ({ ...get(...args),
+          [kind === "raw" ? "bytes" : "framed"]: PUBLIC_REFERENCE_ARCHIVE_WRITE_LIMITS.framedBytes + 1 }));
+      }
+      return statement;
+    });
+    try { expect(() => upsertSqlitePublicReference(db, { ...publisher, items: [article(1)] })).toThrow(kind === "file" ? "file limit" : "row/byte limit"); }
+    finally { intercepted.mockRestore(); }
+    expect(prepare("SELECT snapshot FROM public_references").get()!.snapshot).toBe(snapshot);
+    for (const table of ["public_reference_articles", "public_reference_article_versions", "public_reference_article_terms"])
+      expect(prepare(`SELECT count(*) AS n FROM ${table}`).get()!.n).toBe(0);
+    expect(db.isTransaction).toBe(false);
+  });
+
   it("retains more than ten articles across refresh and restart with bounded publisher previews", async () => {
     const directory = mkdtempSync(join(tmpdir(), "keryx-public-archive-")); directories.push(directory);
     const file = join(directory, "archive.sqlite");
