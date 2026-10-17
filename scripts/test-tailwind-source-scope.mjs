@@ -15,11 +15,11 @@ const fixture = await mkdtemp(path.join(temporaryParent, "keryx-tailwind-source-
 const modules = path.join(fixture, "node_modules");
 let linked = false;
 try {
-  for (const directory of ["app", "components/keryx", "components/ui", "lib", "shared"])
+  for (const directory of ["app/fonts", "components/keryx", "components/ui", "lib", "shared"])
     await mkdir(path.join(fixture, directory), { recursive: true });
   // Real authored class sources cover the home layout, conditional trace chips,
   // component variants, responsive arbitrary values and browser grant controls.
-  for (const file of ["app/globals.css", "app/page.tsx", "components/keryx/phase-style.ts",
+  for (const file of ["app/globals.css", "app/fonts/vietnamese.css", "app/page.tsx", "components/keryx/phase-style.ts",
     "components/keryx/grant-spend-dialog.tsx", "components/ui/button.tsx", "components/ui/dialog.tsx", "shared/design-tokens.css"])
     await writeFile(path.join(fixture, file), await readFile(path.join(repository, file)));
   await symlink(path.join(repository, "node_modules"), modules, process.platform === "win32" ? "junction" : "dir");
