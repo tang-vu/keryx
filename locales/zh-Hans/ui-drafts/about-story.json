@@ -2,11 +2,11 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/about-story.ts",
-  "sourceSha256": "5f834afb936d0341fd818ed2f2efe7d2c629dd9bd882eadd36b322d8c3cd17a9",
+  "sourceSha256": "58e61441c4456ed7baf045a46829d276afb52dfd405bdce694c32ba170c380ea",
   "entries": {
     "aboutStory.demo": {
-      "source": "Watch the 2:47 product demo",
-      "text": "观看 2:47 产品演示"
+      "source": "Watch the final product demo",
+      "text": "观看最终产品演示"
     },
     "walkthrough": {
       "source": "Explore a recorded job",

@@ -53,7 +53,9 @@ payment, revenue, margin or measured speed/cost/quality rate is claimed.
 
 The [official event page](https://tameion.thecanteenapp.com/) gives October 17,
 11:59 PM ET (October 18, 10:59 AM Vietnam) and a video under three minutes.
-The submitted 2:47 demo and frozen submitted-source comparison remain recorded in
+The [final October 17 demo](https://youtu.be/4uHylKXcv5Y) is now published, under
+three minutes, with the returning-user task and refreshed npm count. The original
+October 13 film and frozen submitted-source comparison remain recorded in
 the [submission pack](tameion-submission.md). Later work does not silently amend
 the October 13 submission or its recorded metrics.
 

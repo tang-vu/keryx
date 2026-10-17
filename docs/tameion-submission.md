@@ -5,7 +5,7 @@ and creator payments across web, Windows, CLI and agent integrations. A question
 and budget lead to visible source decisions, a cited report and inspectable USDC
 settlement on Arc.
 
-**[Submitted demo — 2:47, English narration and subtitles](https://youtu.be/sNonqLPMysg)** ·
+**[Final demo — under 3 minutes, English narration and subtitles](https://youtu.be/4uHylKXcv5Y)** ·
 **[Live product](https://keryx.cc)** · **[Reviewer route](reviewer-start.md)** ·
 **[Windows/MCP release](https://github.com/tang-vu/keryx/releases/tag/v0.27.63)** ·
 **[User workflow video — Hoàng](https://github.com/tang-vu/keryx/releases/download/v0.27.63/hoang-keryx-mcp-user-workflow-20261002.mp4)** ·
@@ -18,6 +18,21 @@ the submitted October 13 source:
 [2291753…92733ec](https://github.com/tang-vu/keryx/compare/2291753cc4fff2135d546227d5aafda287cbed7d...92733ecc6dfb5076815c2a29de6370c02a84845c).
 Later main commits remain visible in the repository and are not silently added
 to that submitted comparison.
+
+## October 17 final video
+
+The owner published the [final v4 demo](https://youtu.be/4uHylKXcv5Y) on
+**October 17, 2026**. The local export is 169.47 seconds; anonymous YouTube
+page/player metadata reports 170 seconds, playability OK and not private. This
+checks public metadata, not equality of the uploaded stream to local bytes.
+The cut adds the October 15 VoiceReady return task, preserves the failed FFmpeg
+research and sponsored zero-source-cap boundary, and updates the closing npm
+count. Its English narration and subtitles remain available.
+
+The final form draft now uses this video URL. A new Google Form submission has
+**not been confirmed**. The October 13 submission and frozen code comparison
+above remain historical; the [original 2:47 film](https://youtu.be/sNonqLPMysg)
+belongs to that earlier entry.
 
 ## Community recognition
 
@@ -60,6 +75,31 @@ also merged owner-bound completed-private-read import into evidence drafts. It
 reuses the retained job and exact excerpts through explicit selection/import;
 the [source record](engineering/completed-evidence-draft-283-20261013.md) retains
 its privacy and evidence boundaries. It awaits the next production batch.
+
+## October 17 distribution refresh
+
+These are new API readbacks on October 17, not additions to the retained October
+13 table below. Financial and website observations keep their original dates.
+
+| Channel | Observation | Window / counting rule |
+| --- | --- | --- |
+| npm event window | 2,711 download events | September 27–October 12; official API readback October 17 |
+| npm lifetime | 3,619 download events | June 23–October 16; overlaps the event window, so do not add the two totals |
+| GitHub traffic | 41,654 clone events, 1,528 unique cloners, 781 views and 49 unique visitors | October 3–16; authenticated repository API readback October 17; a different rolling window from the older snapshot |
+| GitHub repository | 4 stars and 1 fork | Repository API readback October 17 |
+
+Sources: [npm event window](https://api.npmjs.org/downloads/point/2026-09-27:2026-10-12/keryx-mcp),
+[npm lifetime](https://api.npmjs.org/downloads/point/2026-06-23:2026-10-16/keryx-mcp),
+[npm daily range](https://api.npmjs.org/downloads/range/2026-09-27:2026-10-16/keryx-mcp),
+and the owner's authenticated [GitHub Traffic](https://github.com/tang-vu/keryx/graphs/traffic)
+and repository API readbacks.
+
+The same npm event window now returns 2,711 rather than the earlier 2,333.
+The difference of 378 matches the current October 12 daily count; it is not
+presented as new downloads after October 13. The API reports zero for October
+13–16 at this readback. Downloads and clones may include repeat installs, CI and
+automation; neither establishes unique people or paid adoption. The four-person
+verified minimum is unchanged, and 0xacee's return task adds no fifth user.
 
 ## October 13 traction snapshot
 
@@ -504,7 +544,7 @@ repository and a recorded demo **under three minutes**, encourages a live link,
 and allows repeated submissions before the deadline. Submit via the
 [official form](https://forms.gle/BBWrdfuircrKiG2i6) by October 17, 23:59 ET
 (October 18, 10:59 Vietnam; extended from October 10, observed October 5). Repository: [tang-vu/keryx](https://github.com/tang-vu/keryx).
-Live service: [keryx.cc](https://keryx.cc). Submitted video: [2:47 narrated demo](https://youtu.be/sNonqLPMysg).
+Live service: [keryx.cc](https://keryx.cc). Original October 13 submitted video: [2:47 narrated demo](https://youtu.be/sNonqLPMysg). The final October 17 video is linked above.
 Product and evidence-backed traction updates in Canteen, and showcase participation,
 are separate from submitting this form. This document does not authorize posting,
 contacting businesses, recording participants or submitting on their behalf.
@@ -514,7 +554,8 @@ contacting businesses, recording participants or submitting on their behalf.
 
 ## Next accepted paid-business workflow
 
-The submitted 2:47 product demo and supporting user recording are linked above.
+The final product demo and supporting user recordings are linked above; the
+original October 13 submitted film remains historical.
 The following plan is retained for a future accepted paid-business workflow.
 Use an actual consented business task and its original artifacts. If the
 first run needs longer, record the genuine steps and disclose elapsed time/cuts.

@@ -1,10 +1,10 @@
 # Keryx — final review card, October 17, 2026
 
 Keryx turns a research question and budget into visible source choices, a cited
-answer and inspectable creator-payment records. Start with the submitted film,
+answer and inspectable creator-payment records. Start with the final film,
 then follow one retained job. Opening these artifacts starts no purchase.
 
-**[Submitted demo — 2:47, English narration and subtitles](https://youtu.be/sNonqLPMysg)** ·
+**[Final demo — under 3 minutes, English narration and subtitles](https://youtu.be/4uHylKXcv5Y)** ·
 **[Recorded walkthrough — no wallet](https://keryx.cc/walkthrough)** ·
 **[Submission and evidence](tameion-submission.md)** ·
 **[Full reviewer guide](reviewer-start.md)**
@@ -77,7 +77,11 @@ updated installed client.
 
 The owner confirmed submitting the form on **October 13**. Its
 [submitted source comparison](https://github.com/tang-vu/keryx/compare/2291753cc4fff2135d546227d5aafda287cbed7d...92733ecc6dfb5076815c2a29de6370c02a84845c)
-and 2:47 film remain unchanged. October 16 community recognition and the separately
+and original 2:47 film remain historical. The [final October 17 video](https://youtu.be/4uHylKXcv5Y)
+adds the VoiceReady return task and refreshed npm count; it is now in the final
+form draft, but a new form submission is not confirmed. See the
+[October 17 distribution refresh](tameion-submission.md#october-17-distribution-refresh)
+for current npm/GitHub windows. October 16 community recognition and the separately
 dated [extension distribution update](tameion-submission.md#october-17-extension-distribution-update)
 are recorded in the submission pack. Install events, research runs, named people
 and settled payments retain separate counting rules.

@@ -12,7 +12,7 @@ budget: inspect its source choices, reuse the cited evidence, and see USDC payme
 receipts for eligible creators whose work it cites. Production runs on Arc mainnet
 with Circle Gateway and x402.
 
-**[Tameion demo — 2:47, narrated and subtitled](https://youtu.be/sNonqLPMysg)** ·
+**[Final Tameion demo — under 3 minutes, narrated and subtitled](https://youtu.be/4uHylKXcv5Y)** ·
 **[Try Keryx](https://keryx.cc)** · **[Windows downloads](https://keryx.cc/download)** ·
 **[MCP / API / CLI](https://keryx.cc/integrations)** ·
 **[Reviewer guide](docs/reviewer-start.md)** · **[Tameion build and traction](docs/tameion-submission.md)**
@@ -75,8 +75,9 @@ Four identified outside people are a verified minimum. One is a freelance
 business with a matched sponsored testnet payment: Hoàng, for his own Face Marker
 app. 0xacee is a SaaS builder with recorded sessions. Trần Minh Hiếu and
 @JamWaveX are students, and JamWaveX has no matched run in the pack. That is not
-four onboarded businesses. Both user videos are supporting evidence; the 2:47
-video above is the submitted hackathon demo.
+four onboarded businesses. The user recordings are supporting evidence. The final
+product demo above was published on October 17 and includes the VoiceReady return
+task; the October 13 submission remains a separately dated record.
 
 ## Try it in two minutes — no wallet
 
@@ -99,23 +100,26 @@ The path below does not submit a question, ask for a signature, or spend anythin
 
 ## Usage so far
 
-The **October 13, 2026 submission snapshot** keeps each reporting window separate:
+The **dated submission evidence and October 17 distribution refresh** keep each
+reporting window separate:
 
 | Measure | Snapshot | Window |
 | --- | --- | --- |
 | Arc mainnet activity | 129 recorded questions, 15 accounts, 87 guest questions included in the question total | Retained October 13 mainnet snapshot |
 | Arc mainnet settlements | 40 settled payment records, 0.703750 USDC gross volume | Retained October 13 mainnet snapshot |
-| MCP distribution | 2,333 npm downloads; +1,434 since the previously reported October 4 total | September 27–October 12 |
+| MCP distribution | 2,711 npm download events; 3,619 lifetime events | API readback October 17; event window September 27–October 12; lifetime June 23–October 16, overlapping totals |
 | Website reach | Approximately 1,000 visits and 1,180 page views, with Cloudflare bot exclusion enabled | 21-day snapshot supplied October 13 |
-| Repository distribution | 33,649 clones, 1,537 unique cloners, 766 views and 46 unique visitors | 14-day snapshot supplied October 13 |
+| Repository distribution | 41,654 clones, 1,528 unique cloners, 781 views and 49 unique visitors; 4 stars, 1 fork | GitHub API readback October 17; traffic window October 3–16 |
 | Community reach | 46 @keryxpays followers, more than 20 posts and several thousand cumulative views; 8 Product Hunt upvotes | Owner-supplied October 13 snapshot |
 
 Mainnet records include owner/QA activity; gross volume is distinct from revenue.
 Downloads, clones and visits measure reach and can include repeat or automated
-activity. [The submission pack](docs/tameion-submission.md#october-13-traction-snapshot)
+activity. [The submission pack](docs/tameion-submission.md#october-17-distribution-refresh)
 documents the named users, counting rules, discovery channels and separate testnet
 history. [Live Ledger](https://keryx.cc/dashboard) and [public metrics](https://keryx.cc/api/metrics)
-show newer activity without rewriting this dated snapshot.
+show their own current activity. The retained October 13 snapshots remain in the
+submission pack; the npm correction and rolling GitHub window are not added to
+those older observations as new growth.
 
 ## What happened during Tameion
 
@@ -505,7 +509,7 @@ documents checked upstream patterns and their Keryx acceptance gates. Use
 [`$keryx-oss-adoption`](.agents/skills/keryx-oss-adoption/SKILL.md) for future
 OSS learning and adaptation tasks in supporting development agents.
 
-**One local developer command (~90s).** This is not the submitted 2:47 demo.
+**One local developer command (~90s).** The final recorded demo is linked at the top of this README.
 Decide → pay the x402 toll → read → synthesize → settle
 weighted citation rewards, then report payments on the explicitly configured network.
 The checked-in environment example is for isolated testnet development; mainnet

@@ -4,7 +4,8 @@
 > draft is not the current hackathon pitch. Use the [October 16 final rehearsal](tameion-final-rehearsal.md)
 > for current preparation (optional supplementary material only). The
 > [submission record](tameion-submission.md) documents the October 13 submission
-> and its unchanged 2:47 demo. The historical text below retains its original
+> and original 2:47 demo. The [final October 17 video](https://youtu.be/4uHylKXcv5Y)
+> is now the current demo; final form resubmission is unconfirmed. The historical text below retains its original
 > dates, network labels, unsent draft status and uncertainties.
 
 **Cập nhật 2026-10-04:** production đã lên Arc mainnet. Xem

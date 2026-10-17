@@ -1,6 +1,6 @@
 /** English product story. Published user evidence keeps its original scope and network. */
 export const aboutStory = Object.freeze({
-  demo: "Watch the 2:47 product demo",
+  demo: "Watch the final product demo",
   walkthrough: "Explore a recorded job",
   landingLink: "See Keryx in a real research task",
   feedbackLabel: "USER FEEDBACK · RELAYED BY THE FOUNDER · OCTOBER 16, 2026",
@@ -48,7 +48,7 @@ export const aboutStory = Object.freeze({
 } as const);
 
 export const aboutStoryLinks = Object.freeze({
-  demo: "https://youtu.be/sNonqLPMysg",
+  demo: "https://youtu.be/4uHylKXcv5Y",
   returnVideo: "https://github.com/tang-vu/keryx/releases/download/v0.27.63/0xacee-voiceready-keryx-return-20261015.mp4",
   report: "/dispatch/c2febd88-a367-432a-8b90-4214f1f82e44",
   caseStudy: "https://github.com/tang-vu/keryx/blob/main/docs/case-studies/voiceready-2026-10-15.md",
