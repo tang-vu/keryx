@@ -6,6 +6,8 @@ import { MAX_ASK_QUESTION_CHARS } from "../ask-input";
 const origin = "https://keryx.cc";
 const report = `${origin}/dispatch/12345678-1234-1234-1234-123456789abc`;
 const terminal = { choices: [{ delta: {}, finish_reason: "stop" }], keryx: { citations: [] } };
+const privateTerminal = { ...terminal, keryx_private: { version: 1, runId: "12345678-1234-1234-1234-123456789abc", status: "available",
+  delivery: { version: 1, claimUrl: `${origin}/claim-run#${"c".repeat(64)}`, expiresAt: "2099-01-01T00:00:00.000Z" } } };
 const event = (value: unknown) => `data: ${JSON.stringify(value)}\r\n\r\n`;
 
 describe("extension hosted request boundaries", () => {
@@ -52,6 +54,48 @@ describe("extension hosted request boundaries", () => {
 });
 
 describe("extension streamed completion", () => {
+  it("completes and cancels after the terminal protocol without waiting for transport EOF", async () => {
+    const answer = { choices: [{ delta: { content: "Complete answer" } }] };
+    const bytes = new TextEncoder().encode(event(answer) + event(terminal) + "data: [DONE]\r\n\r\n");
+    let source!: ReadableStreamDefaultController<Uint8Array>;
+    let cancelled = false;
+    let forcedClosure = false;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) { source = controller; controller.enqueue(bytes); },
+      cancel() { cancelled = true; },
+    });
+    // Close a regressed reader deterministically rather than leaving a pending test.
+    const timeout = setTimeout(() => { forcedClosure = true; source.close(); }, 1000);
+    const chunks: unknown[] = [];
+    try {
+      await readResearchStream(new Response(stream), (chunk: unknown) => chunks.push(chunk));
+      expect(forcedClosure).toBe(false);
+      expect(cancelled).toBe(true);
+      expect(chunks).toEqual([answer, terminal]);
+      expect(stream.locked).toBe(false);
+    } finally { clearTimeout(timeout); }
+  });
+  it("keeps private delivery pending after the terminal protocol until clean transport EOF", async () => {
+    let source!: ReadableStreamDefaultController<Uint8Array>;
+    let cancelled = false;
+    let settled = false;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) { source = controller; controller.enqueue(new TextEncoder().encode(event(privateTerminal) + "data: [DONE]\r\n\r\n")); },
+      cancel() { cancelled = true; },
+    });
+    const completion = readResearchStream(new Response(stream), () => {}).then(() => { settled = true; });
+    try {
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(settled).toBe(false);
+      expect(cancelled).toBe(false);
+      expect(stream.locked).toBe(true);
+    } finally {
+      if (!cancelled) source.close();
+      await completion;
+    }
+    expect(settled).toBe(true);
+    expect(stream.locked).toBe(false);
+  });
   it("reassembles every byte of split UTF-8 and CRLF and requires the final summary", async () => {
     const answer = { choices: [{ delta: { content: "Câu trả lời 🧪" } }] };
     const bytes = new TextEncoder().encode(event(answer) + event(terminal) + "data: [DONE]\r\n\r\n");
@@ -62,6 +106,27 @@ describe("extension streamed completion", () => {
     const chunks: unknown[] = [];
     await readResearchStream(new Response(stream), (chunk: unknown) => chunks.push(chunk));
     expect(chunks).toEqual([answer, terminal]);
+    expect(stream.locked).toBe(false);
+  });
+  it("rejects data received after the terminal marker, including an unterminated trailing event", async () => {
+    const extra = { choices: [{ delta: { content: "Unexpected answer" } }] };
+    for (const summary of [terminal, privateTerminal]) {
+      for (const trailing of [event(extra), `data: ${JSON.stringify(extra)}`]) {
+        const body = event(summary) + "data: [DONE]\r\n\r\n" + trailing;
+        await expect(readResearchStream(new Response(body), () => {})).rejects.toThrow("Unexpected data after the response ended.");
+      }
+    }
+  });
+  it("rejects private stream data arriving in a later read after the terminal marker", async () => {
+    let source!: ReadableStreamDefaultController<Uint8Array>;
+    const stream = new ReadableStream<Uint8Array>({ start(controller) {
+      source = controller;
+      controller.enqueue(new TextEncoder().encode(event(privateTerminal) + "data: [DONE]\r\n\r\n"));
+    } });
+    const completion = readResearchStream(new Response(stream), () => {});
+    await new Promise(resolve => setTimeout(resolve, 0));
+    source.enqueue(new TextEncoder().encode(event(terminal)));
+    await expect(completion).rejects.toThrow("Unexpected data after the response ended.");
     expect(stream.locked).toBe(false);
   });
   it("refuses HTTP-200 application errors, missing completion and malformed events", async () => {
