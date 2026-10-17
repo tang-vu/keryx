@@ -17,6 +17,11 @@ with Circle Gateway and x402.
 **[MCP / API / CLI](https://keryx.cc/integrations)** ·
 **[Reviewer guide](docs/reviewer-start.md)** · **[Tameion build and traction](docs/tameion-submission.md)**
 
+**Arc community recognition:** Keryx received a shoutout from the Arc team at the
+[Architect Check-in on October 16, 2026](https://community.arc.io/public/clubs/architects/events/architect-check-in-u1f8k3tkdy),
+as one of approximately **3–4 projects shown** during the event, confirmed by the
+owner. See the [recognition note](docs/tameion-submission.md#community-recognition).
+
 ## What you can do
 
 | Workflow | What Keryx provides | Guide |

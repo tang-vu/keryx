@@ -19,6 +19,14 @@ the submitted October 13 source:
 Later main commits remain visible in the repository and are not silently added
 to that submitted comparison.
 
+## Community recognition
+
+On **October 16, 2026**, the Arc team gave Keryx a shoutout at the
+[Architect Check-in](https://community.arc.io/public/clubs/architects/events/architect-check-in-u1f8k3tkdy).
+Keryx was one of approximately **3–4 projects shown** during the event. The shoutout
+and approximate project count were confirmed by the owner on October 17; the
+linked event page provides the event reference.
+
 ## Event-period product delta
 
 The event began September 27. The existing citation-toll service has been developed
