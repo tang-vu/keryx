@@ -27,3 +27,9 @@ Other Arc builders can fork the standalone primitives or lift the focused module
 tests from the main repository. The live `/proof` dossier links the deployed commit, CI, Arc RPC and
 registry parity, Circle wallet-balance parity, and real creator
 withdrawal transactions—along with the limit of what each evidence layer can prove.
+
+## Arc Studio exploration
+
+The owner also created and reviewed an [Arc Studio onboarding prototype](./arc-studio-showcase.md)
+on October 17, 2026. It is retained as a standalone showcase of tool exploration
+with synthetic state; Keryx production keeps its existing implementation.
