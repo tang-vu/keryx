@@ -7,13 +7,14 @@ Keryx serves readers researching a question, researchers preparing related work,
 ## Start here
 
 - [Get started](https://keryx.cc/get-started): choose the web app, Windows Operator alpha, browser extension, MCP, API, CLI or chat bots. Each has its own setup requirements and role.
-- [Downloads](https://keryx.cc/download): published Windows x64 installer/portable build and a pinned source ZIP for manually loading the Chromium extension. Web deployment does not establish installed-client versions. No mobile/macOS/Linux installer or public extension-store install link is offered here.
+- [Downloads](https://keryx.cc/download): published Windows x64 installer/portable build, a [public Chrome Web Store listing](https://chromewebstore.google.com/detail/ofhhhbkpdemcngolfgkjkmkjdilhgjmd), and the [extension 0.1.4.3 manual ZIP](https://github.com/tang-vu/keryx/releases/download/extension-v0.1.4.3/keryx-extension-v0.1.4.3.zip). For the ZIP, extract it, enable Developer mode at chrome://extensions or edge://extensions, and choose Load unpacked with the directory containing manifest.json at its root. Check the version displayed by the Store listing; web deployment does not establish installed-client versions. No mobile/macOS/Linux installer is offered here.
 - [Integrations](https://keryx.cc/integrations): hosted and stdio MCP, OpenAI-compatible API setup, separate caller-funded x402 research, source CLI installation and Telegram/Discord/Slack guides. Copying examples does not run them.
 - [Focused briefs](https://keryx.cc/briefs): prepare bounded API/platform comparisons, SaaS competitor/niche questions or literature overviews with separate review checklists. Preparation stays in the browser; copying or downloading a request does not start research or authorize payment. Existing checkout determines price and availability. These templates are not a new guaranteed deliverable or specialist price offer.
 - [Ask Keryx](https://keryx.cc/): try sponsored public research without a wallet or deposit. Keryx covers admitted source purchases, eligible creator rewards and operating fees within its usage, prefunding and spending limits. Availability is bounded; this is not unlimited free research.
 - [Pricing](https://keryx.cc/pricing): explains the sponsored trial, personal source budgets and paid research packages. A source-spend cap is not the price of every Keryx service. An active personal research budget uses the caller's USDC; check the payer in the composer before submitting.
 - [About and support](https://keryx.cc/about): product purpose, public source code, support and current limitations.
 - [Recorded walkthrough](https://keryx.cc/walkthrough): inspect a labelled walkthrough and its evidence before asking your own question.
+- [Reviewer start](https://github.com/tang-vu/keryx/blob/main/docs/reviewer-start.md): follow the canonical review guide and its labelled evidence.
 
 Sponsored trial reports have public links. Submit only questions you can share publicly. Account saving does not make an already published report private. Separately labelled private research has its own availability, payment and processing disclosures.
 

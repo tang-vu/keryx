@@ -147,7 +147,13 @@ try {
         if (path === "/download") {
           assert.equal(await page.getByRole("link", { name: setupCopy.download.installer, exact: true }).getAttribute("href"), installationLinks.installer);
           assert.equal(await page.getByRole("link", { name: setupCopy.download.extensionDownload, exact: true }).getAttribute("href"), installationLinks.extensionSource);
-          assert.equal(await page.locator('a[href*="chromewebstore.google.com"]').count(), 0, "No invented store install link");
+          const storeUrl = "https://chromewebstore.google.com/detail/ofhhhbkpdemcngolfgkjkmkjdilhgjmd";
+          assert.equal(installationLinks.extensionStore, storeUrl, "Only the verified public Store listing");
+          assert.equal(await page.locator('a[href*="chromewebstore.google.com"]').count(), 1);
+          assert.equal(await page.getByRole("link", { name: setupCopy.download.extensionStore, exact: true }).getAttribute("href"), storeUrl);
+          const extensionLinks = await page.locator("#extension a").evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute("href")));
+          const zipIndex = extensionLinks.indexOf(installationLinks.extensionSource);
+          assert(zipIndex >= 0 && extensionLinks.indexOf(storeUrl) > zipIndex, "Versioned ZIP remains the first install choice");
           assert((await page.locator("#extension").innerText()).includes("Load unpacked"));
         }
         if (path === "/integrations") {

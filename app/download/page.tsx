@@ -42,6 +42,7 @@ export default function DownloadPage() {
         <h2 id="extension-title" className="mt-3 font-display text-3xl"><UiText source={copy.download.extensionTitle} namespaces={["get-started"]} /></h2>
         <p className="mt-3 font-serif leading-relaxed text-ink-2"><UiText source={copy.download.extensionBody} namespaces={["get-started"]} /></p>
         <a href={links.extensionSource} className="mt-5 inline-flex min-h-11 items-center border border-ink bg-ink px-5 py-3 font-mono text-sm text-paper"><UiText source={copy.download.extensionDownload} namespaces={["get-started"]} /></a>
+        <p className="mt-3"><a href={links.extensionStore} className={setupLinkClass}><UiText source={copy.download.extensionStore} namespaces={["get-started"]} /></a></p>
         <p className="mt-3 font-mono text-xs text-ink-3"><UiText source={copy.download.extensionVersion} namespaces={["get-started"]} /></p>
         <h3 className="mt-6 font-display text-xl"><UiText source={copy.common.requirements} namespaces={["get-started"]} /></h3>
         <p className="mt-2 font-serif leading-relaxed text-ink-2"><UiText source={copy.download.extensionRequirements} namespaces={["get-started"]} /></p>

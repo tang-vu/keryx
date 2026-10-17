@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/get-started.ts",
-  "sourceSha256": "d430fd307a429aedf218f6286314513893202a99b011f455fcbe3912bfe10bd5",
+  "sourceSha256": "2ac7d0d2ecc1cb7ec5c1e300ad715a5881f26106c149c1e9b64c399655388a6d",
   "entries": {
     "navigation.start": {
       "source": "Get started",
@@ -353,28 +353,28 @@
       "text": "Windows x64 và Microsoft Edge WebView2 Runtime. Node được đóng gói; không cần cài Node riêng. Bản alpha này cập nhật thủ công."
     },
     "download.installer": {
-      "source": "Download Windows installer",
-      "text": "Tải bộ cài Windows"
+      "source": "Choose Windows installer",
+      "text": "Chọn bộ cài Windows"
     },
     "download.portable": {
-      "source": "Download portable ZIP",
-      "text": "Tải ZIP di động"
+      "source": "Choose portable ZIP",
+      "text": "Chọn bản ZIP portable"
     },
     "download.manifest": {
-      "source": "Build manifest",
-      "text": "Manifest bản dựng"
+      "source": "Release manifest and checksums",
+      "text": "Manifest và mã kiểm của bản phát hành"
     },
     "download.webview": {
       "source": "Get WebView2 Runtime",
       "text": "Tải WebView2 Runtime"
     },
     "download.desktopVersion": {
-      "source": "Operator 0.4.17 · published in v0.27.63",
-      "text": "Operator 0.4.17 · xuất bản trong v0.27.63"
+      "source": "Operator 0.4.29 · release v0.27.76",
+      "text": "Operator 0.4.29 · bản phát hành v0.27.76"
     },
     "download.desktopSteps.0": {
-      "source": "Download the installer from the published GitHub release. Review the release manifest and SHA256 checksums if you need to verify the build.",
-      "text": "Tải bộ cài từ bản phát hành GitHub đã xuất bản. Xem manifest phát hành và checksum SHA256 nếu cần xác minh bản dựng."
+      "source": "Open the release assets and choose the -setup.exe installer or -win32-x64.zip portable build. Review the matching -release.json manifest and -SHA256SUMS.txt checksums.",
+      "text": "Mở các tệp của bản phát hành và chọn bộ cài -setup.exe hoặc bản portable -win32-x64.zip. Kiểm tra manifest -release.json và mã kiểm trong -SHA256SUMS.txt tương ứng."
     },
     "download.desktopSteps.1": {
       "source": "Run the installer in your normal Windows user session. Install WebView2 Runtime if it is missing. For the portable build, extract and keep the whole folder together.",
@@ -405,28 +405,28 @@
       "text": "Hỏi về văn bản được chọn từ thanh công cụ hoặc menu chuột phải. Kiểm tra nhật ký nghiên cứu, mở nguồn được trích dẫn và xuất tài liệu tham khảo ghi nhận từ báo cáo hoàn tất."
     },
     "download.extensionVersion": {
-      "source": "Extension 0.1.4.2 · source from v0.27.63",
-      "text": "Tiện ích 0.1.4.2 · nguồn từ v0.27.63"
+      "source": "Extension 0.1.4.3 · published manual-install ZIP",
+      "text": "Extension 0.1.4.3 · ZIP cài thủ công đã phát hành"
     },
     "download.extensionDownload": {
-      "source": "Download extension source ZIP",
-      "text": "Tải ZIP mã nguồn tiện ích"
+      "source": "Download extension ZIP",
+      "text": "Tải ZIP extension"
     },
     "download.extensionRequirements": {
-      "source": "Chrome or Edge on desktop, or another compatible Chromium browser. Developer mode is required for this unpacked install. A public Chrome Web Store install link is not available here.",
-      "text": "Chrome hoặc Edge trên máy tính, hoặc trình duyệt Chromium tương thích khác. Cần chế độ nhà phát triển để cài bản chưa đóng gói. Chưa có liên kết cài công khai qua Chrome Web Store tại đây."
+      "source": "Use Chrome or Edge on desktop, or another compatible Chromium browser. For the ZIP, follow the unpacked-install steps below and enable Developer mode. The public Chrome Web Store listing is also available; check its displayed version before installing.",
+      "text": "Dùng Chrome hoặc Edge trên máy tính, hoặc trình duyệt Chromium tương thích khác. Với bản ZIP, làm theo các bước cài chưa đóng gói bên dưới và bật chế độ nhà phát triển. Cũng có trang công khai trên Chrome Web Store; hãy kiểm tra phiên bản hiển thị ở đó trước khi cài."
     },
     "download.extensionSteps.0": {
-      "source": "Download and extract the source ZIP. It contains the project; use the extension folder inside the extracted project.",
-      "text": "Tải và giải nén ZIP nguồn. ZIP chứa dự án; dùng thư mục extension trong dự án đã giải nén."
+      "source": "Download and extract the extension ZIP. The extracted directory contains manifest.json directly.",
+      "text": "Tải và giải nén ZIP extension. Thư mục đã giải nén chứa trực tiếp manifest.json."
     },
     "download.extensionSteps.1": {
       "source": "Open chrome://extensions in Chrome or edge://extensions in Edge, then turn on Developer mode.",
       "text": "Mở chrome://extensions trong Chrome hoặc edge://extensions trong Edge, rồi bật chế độ nhà phát triển."
     },
     "download.extensionSteps.2": {
-      "source": "Choose Load unpacked and select the extension folder, which contains manifest.json. Pin Keryx to your toolbar.",
-      "text": "Chọn Load unpacked và chọn thư mục extension có manifest.json. Ghim Keryx vào thanh công cụ."
+      "source": "Choose Load unpacked and select the extracted directory containing manifest.json. Pin Keryx to your toolbar.",
+      "text": "Chọn Load unpacked và chọn thư mục đã giải nén chứa manifest.json. Ghim Keryx lên thanh công cụ."
     },
     "download.extensionSteps.3": {
       "source": "Highlight text or type a question. Review the sponsored availability and budget before pressing Ask. Including the page URL is optional.",
@@ -659,6 +659,10 @@
     "integrations.selfHost": {
       "source": "Self-hosting guide",
       "text": "Hướng dẫn tự lưu trữ"
+    },
+    "download.extensionStore": {
+      "source": "Chrome Web Store",
+      "text": "Chrome Web Store"
     }
   }
 }
