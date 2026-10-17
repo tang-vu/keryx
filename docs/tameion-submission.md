@@ -27,6 +27,10 @@ Keryx was one of approximately **3–4 projects shown** during the event. The sh
 and approximate project count were confirmed by the owner on October 17; the
 linked event page provides the event reference.
 
+![Keryx displayed during the Arc Architect Check-In, with Circle speakers visible](assets/arc-architect-check-in-2026-10-16.png)
+
+*Owner-supplied screenshot showing Keryx on screen during the session.*
+
 ## Event-period product delta
 
 The event began September 27. The existing citation-toll service has been developed

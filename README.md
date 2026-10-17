@@ -22,6 +22,11 @@ with Circle Gateway and x402.
 as one of approximately **3–4 projects shown** during the event, confirmed by the
 owner. See the [recognition note](docs/tameion-submission.md#community-recognition).
 
+![Keryx displayed during the Arc Architect Check-In, with Circle speakers visible](docs/assets/arc-architect-check-in-2026-10-16.png)
+
+*Keryx on screen at the October 16 Architect Check-In. Screenshot supplied by the
+project owner.*
+
 ## What you can do
 
 | Workflow | What Keryx provides | Guide |
