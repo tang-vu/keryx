@@ -2,6 +2,19 @@ import { expect, it, vi } from "vitest";
 const { transport, UnsafeTargetError } = vi.hoisted(() => ({ transport: vi.fn(), UnsafeTargetError: class UnsafeTargetError extends Error {} }));
 vi.mock("../net/public-fetch", () => ({ fetchPublicBytes: transport, UnsafeTargetError }));
 import { readArticle } from "./article-reader";
+import { rememberPublicFetchFailure } from "../net/public-fetch-diagnostic";
+
+it("propagates only the sanitized original HTTP failure facts", async () => {
+  const error = new UnsafeTargetError("PRIVATE_VENDOR_BODY https://original.example/?token=PRIVATE");
+  rememberPublicFetchFailure(error, { reason: "http-status", httpStatus: 403, elapsedMs: 125 });
+  transport.mockRejectedValueOnce(error);
+  let caught: unknown;
+  try { await readArticle("https://original.example/manual?token=PRIVATE"); } catch (error) { caught = error; }
+  expect(caught).toMatchObject({ code: "transport-unavailable", message: "transport-unavailable",
+    diagnostic: { reason: "http-status", httpStatus: 403, elapsedMs: 125 } });
+  expect(JSON.stringify(caught)).not.toMatch(/PRIVATE|original\.example/);
+  expect(transport.mock.calls.at(-1)?.[1]).toMatchObject({ maxBytes: 2097152, timeoutMs: 8000, maxHops: 3, httpsOnly: true });
+});
 it.each([
   ["https://openreview.net/challenge?redirect=%2Fforum%3Fid%3Dpaper", "text/html"],
   ["https://openreview.net/challenge/", "application/pdf"],

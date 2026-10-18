@@ -4,11 +4,19 @@ import { extractHtml } from "./html-reader";
 import { bodyIdentity, canonicalUrl, digest, publisherGroup } from "./url-identity";
 import type { GatheredContent } from "../llm";
 import { observedHtmlTextLayout, type HtmlTextLayout } from "./html-text-layout";
+import { publicFetchFailure, safePublicFetchDiagnostic, type PublicFetchDiagnostic } from "../net/public-fetch-diagnostic";
 
 export interface ArticleRead { text: string; title: string; finalUrl: string; kind: "html" | "text" | "pdf"; truncated: boolean; htmlTextLayout?: HtmlTextLayout }
 export type ArticleFailureCode = "invalid-url" | "document-identity-changed" | "publisher-verification-required" | "transport-unavailable" | "article-byte-limit" | "html-extraction-unavailable" | "pdf-extraction-unavailable" | "cancelled";
 export class ArticleReadError extends Error {
-  constructor(readonly code: ArticleFailureCode) { super(code); this.name = "ArticleReadError"; }
+  readonly diagnostic?: PublicFetchDiagnostic;
+  constructor(readonly code: ArticleFailureCode, diagnostic?: PublicFetchDiagnostic) {
+    super(code); this.name = "ArticleReadError";
+    this.diagnostic = safePublicFetchDiagnostic(diagnostic);
+  }
+}
+export function articleReadDiagnostic(error: unknown): PublicFetchDiagnostic | undefined {
+  return error instanceof ArticleReadError ? safePublicFetchDiagnostic(error.diagnostic) : publicFetchFailure(error);
 }
 export function articleFailureCode(error: unknown): ArticleFailureCode {
   if (error instanceof ArticleReadError) return error.code;
@@ -25,7 +33,7 @@ export const readArticle: ArticleReader = async (url, signal) => {
   if (!canonicalUrl(url)) throw new ArticleReadError("invalid-url");
   const fetched = await fetchPublicBytes(url, { maxBytes: 2 * 1024 * 1024, timeoutMs: 8000, maxHops: 3, signal,
     representation: "article", httpsOnly: true, allowedContentTypes: ["text/html", "application/xhtml+xml", "text/plain", "text/markdown", "application/pdf"] }).catch(error => {
-      throw new ArticleReadError(signal?.aborted ? "cancelled" : error instanceof UnsafeTargetError && error.message === "that file is too large to read" ? "article-byte-limit" : "transport-unavailable");
+      throw new ArticleReadError(signal?.aborted ? "cancelled" : error instanceof UnsafeTargetError && error.message === "that file is too large to read" ? "article-byte-limit" : "transport-unavailable", publicFetchFailure(error));
     });
     // OpenReview can return a successful HTML response at this verification route.
     // Its instructions are an access failure, never text from the requested paper.

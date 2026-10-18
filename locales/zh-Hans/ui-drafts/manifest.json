@@ -11,11 +11,11 @@
   "totals": {
     "englishNamespaceFiles": 66,
     "coreInlineSources": 1,
-    "extractedLeaves": 5961,
+    "extractedLeaves": 5973,
     "authoredEntries": 5893,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 39,
-    "completeNamespaces": 64
+    "uncoveredEntries": 51,
+    "completeNamespaces": 63
   },
   "namespaces": [
     {
@@ -3535,9 +3535,9 @@
     {
       "namespace": "reports",
       "sourcePath": "locales/en/reports.ts",
-      "sourceSha256": "3ef9c9df446f2d5ea84d314e233d4cdf1c0d8dd5d98c609409b983aec1206408",
+      "sourceSha256": "d5b5271fac92f5630f699468a4f95aa1bd647e910ae44461bc8f6b605678045f",
       "draftPath": "locales/zh-Hans/ui-drafts/reports.json",
-      "extractedLeaves": 567,
+      "extractedLeaves": 579,
       "authoredEntries": 567,
       "coveredKeys": [
         "answerDelta.added",
@@ -4109,7 +4109,20 @@
         "scholarlyMetadata.record"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [],
+      "uncoveredKeys": [
+        "reportReading.cacheHit.one",
+        "reportReading.cacheHit.other",
+        "reportReading.cacheSelection.one",
+        "reportReading.cacheSelection.other",
+        "reportReading.failedRead.one",
+        "reportReading.failedRead.other",
+        "reportReading.noRecordedReads",
+        "reportReading.publicRead.one",
+        "reportReading.publicRead.other",
+        "reportReading.publicSelection.one",
+        "reportReading.publicSelection.other",
+        "reportReading.reads"
+      ],
       "sourceAliases": {}
     },
     {

@@ -25,6 +25,7 @@
 import { lookup } from "node:dns/promises";
 import { isIP, type LookupFunction } from "node:net";
 import { Agent, fetch as undiciFetch } from "undici";
+import { publicFetchFailure, rememberPublicFetchFailure, type PublicFetchReason } from "./public-fetch-diagnostic";
 
 export interface FetchLimits {
   timeoutMs?: number;
@@ -47,6 +48,25 @@ const DEFAULTS = { timeoutMs: 10_000, maxBytes: 2_000_000, maxHops: 3 };
 
 /** Why a URL was refused. Phrased for the person who pasted it. */
 export class UnsafeTargetError extends Error {}
+
+function targetRefusal(message: string, reason: PublicFetchReason, httpStatus?: number): UnsafeTargetError {
+  const error = new UnsafeTargetError(message);
+  rememberPublicFetchFailure(error, { reason, elapsedMs: 0, ...(httpStatus === undefined ? {} : { httpStatus }) });
+  return error;
+}
+
+function networkFailureReason(error: unknown, readingBody: boolean): PublicFetchReason {
+  const own = (value: unknown, key: string): unknown => value && typeof value === "object"
+    ? Object.getOwnPropertyDescriptor(value, key)?.value : undefined;
+  for (const value of [error, own(error, "cause")]) {
+    const code = own(value, "code");
+    if (["CERT_HAS_EXPIRED", "CERT_NOT_YET_VALID", "DEPTH_ZERO_SELF_SIGNED_CERT", "ERR_TLS_CERT_ALTNAME_INVALID",
+      "UNABLE_TO_VERIFY_LEAF_SIGNATURE", "SELF_SIGNED_CERT_IN_CHAIN", "UNABLE_TO_GET_ISSUER_CERT_LOCALLY"].includes(code as string)) return "tls-unavailable";
+    if (["UND_ERR_CONNECT_TIMEOUT", "UND_ERR_HEADERS_TIMEOUT", "UND_ERR_BODY_TIMEOUT", "ETIMEDOUT"].includes(code as string)) return "timeout";
+    if (["ECONNREFUSED", "ECONNRESET", "EHOSTUNREACH", "ENETUNREACH"].includes(code as string)) return readingBody ? "body-unavailable" : "connection-unavailable";
+  }
+  return readingBody ? "body-unavailable" : "transport-unavailable";
+}
 
 /** Expand an IPv6 address into eight hextets, including dotted IPv4 tails. */
 function ipv6Hextets(address: string): number[] | null {
@@ -137,13 +157,13 @@ async function resolvePublicUrl(raw: string, signal?: AbortSignal): Promise<{ ur
   try {
     url = new URL(raw);
   } catch {
-    throw new UnsafeTargetError("that is not a URL");
+    throw targetRefusal("that is not a URL", "invalid-url");
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new UnsafeTargetError("only http and https addresses can be read");
+    throw targetRefusal("only http and https addresses can be read", "invalid-url");
   }
   if (url.username || url.password) {
-    throw new UnsafeTargetError("remove the credentials from the URL");
+    throw targetRefusal("remove the credentials from the URL", "invalid-url");
   }
 
   const host = url.hostname.replace(/^\[|\]$/g, ""); // an IPv6 literal arrives bracketed
@@ -151,12 +171,12 @@ async function resolvePublicUrl(raw: string, signal?: AbortSignal): Promise<{ ur
     ? [host]
     : (await abortable(lookup(host, { all: true }), signal).catch((error) => {
         if (signal?.aborted) throw error;
-        throw new UnsafeTargetError("that host does not resolve");
+        throw targetRefusal("that host does not resolve", "dns-unavailable");
       })).map((r) => r.address);
 
-  if (addresses.length === 0) throw new UnsafeTargetError("that host does not resolve");
+  if (addresses.length === 0) throw targetRefusal("that host does not resolve", "dns-unavailable");
   if (!addresses.every(isPublicAddress)) {
-    throw new UnsafeTargetError("that address is on a private network");
+    throw targetRefusal("that address is on a private network", "blocked-address");
   }
   // Prefer IPv4 when both families are public: an IPv6 DNS answer need not mean this host has
   // IPv6 connectivity. Validate the entire answer set first, and still pin exactly one address.
@@ -233,6 +253,8 @@ export async function fetchPublicDocument(raw: string, limits: FetchLimits = {})
 
 export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): Promise<{ bytes: Uint8Array; finalUrl: string; contentType: string }> {
   const { timeoutMs, maxBytes, maxHops } = { ...DEFAULTS, ...limits };
+  const started = Date.now();
+  let readingBody = false;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   const onAbort = () => ctrl.abort();
@@ -243,7 +265,7 @@ export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): P
     let target = raw;
     for (let hop = 0; hop <= maxHops; hop++) {
       const { url, address } = await resolvePublicUrl(target, ctrl.signal);
-      if (limits.httpsOnly && url.protocol !== "https:") throw new UnsafeTargetError("only HTTPS articles can be read");
+      if (limits.httpsOnly && url.protocol !== "https:") throw targetRefusal("only HTTPS articles can be read", "invalid-url");
       const dispatcher = pinnedAgent(address);
       try {
         const res = await undiciFetch(url, {
@@ -259,27 +281,35 @@ export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): P
 
         if (res.status >= 300 && res.status < 400) {
           const location = res.headers.get("location");
-          if (!location) throw new UnsafeTargetError("that address redirects nowhere");
+          if (!location) throw targetRefusal("that address redirects nowhere", "redirect-unavailable");
           await res.body?.cancel();
           target = new URL(location, url).toString();
           continue;
         }
-        if (!res.ok) throw new UnsafeTargetError(`the feed answered ${res.status}`);
+        if (!res.ok) throw targetRefusal(`the feed answered ${res.status}`, "http-status", res.status);
         if (limits.requireFullResponse && (res.status !== 200 || res.headers.has("content-range"))) {
           await res.body?.cancel();
-          throw new UnsafeTargetError("the document response is partial or ranged");
+          throw targetRefusal("the document response is partial or ranged", "partial-response");
         }
         const contentType = (res.headers.get("content-type") ?? "").split(";", 1)[0]!.trim().toLowerCase();
         if (limits.allowedContentTypes && !limits.allowedContentTypes.includes(contentType)) {
           await res.body?.cancel();
-          throw new UnsafeTargetError("unsupported document type");
+          throw targetRefusal("unsupported document type", "unsupported-content-type");
         }
+        readingBody = true;
         return { bytes: await readCappedBytes(res as unknown as Response, maxBytes), finalUrl: url.href, contentType };
       } finally {
         await dispatcher.close();
       }
     }
-    throw new UnsafeTargetError("that address redirects too many times");
+    throw targetRefusal("that address redirects too many times", "redirect-limit");
+  } catch (error) {
+    const refusal = publicFetchFailure(error);
+    const reason = limits.signal?.aborted ? "cancelled" : ctrl.signal.aborted ? "timeout"
+      : refusal?.reason ?? networkFailureReason(error, readingBody);
+    rememberPublicFetchFailure(error, { reason, elapsedMs: Math.max(0, Date.now() - started),
+      ...(reason === "http-status" && refusal?.httpStatus !== undefined ? { httpStatus: refusal.httpStatus } : {}) });
+    throw error;
   } finally {
     clearTimeout(timer);
     limits.signal?.removeEventListener("abort", onAbort);
@@ -333,7 +363,7 @@ async function readCappedBytes(res: Response, maxBytes: number): Promise<Uint8Ar
     total += value.byteLength;
     if (total > maxBytes) {
       await reader.cancel();
-      throw new UnsafeTargetError("that file is too large to read");
+      throw targetRefusal("that file is too large to read", "byte-limit");
     }
     chunks.push(value);
   }

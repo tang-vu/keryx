@@ -31,7 +31,8 @@ import { tavilyProvider } from "../web-research/tavily-provider";
 import { admitBoundedResearch, bindBoundedResearchAdmission } from "../research/research-allowance";
 import { admitBusinessCanaryRun, bindBusinessCanaryAdmission } from "../business-operator/canary-policy";
 import { BusinessCanaryEngine } from "../business-operator/canary-suppliers";
-import { ArticleReadError, articleFailureCode, gatheredArticle, readArticle } from "../web-research/article-reader";
+import { ArticleReadError, articleFailureCode, articleReadDiagnostic, gatheredArticle, readArticle } from "../web-research/article-reader";
+import { sourceReadDetail } from "../research/source-read-outcomes";
 import { bodyIdentity, canonicalUrl } from "../web-research/url-identity";
 import { isPublicReferenceId } from "../public-references/catalog";
 /**
@@ -525,10 +526,12 @@ async function* runAdmittedAgent(
   const seenWebBodies = new Set<string>();
   const seenWebUrls = new Set<string>();
   let lastWebFailure = "unavailable";
+  let lastWebDiagnostic: ReturnType<typeof articleReadDiagnostic>;
   const scholarlyReadFailures: string[] = [];
   const publicReadOutcomes: Array<{ name: string; code: string; assetId?: string }> = [];
   async function fetchWeb(id: string): Promise<GatheredContent | null> {
     lastWebFailure = "web-operation-limit";
+    lastWebDiagnostic = undefined;
     const candidate = webCandidates.get(id);
     if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 12) || webRemainingMs <= 0) {
       publicReadOutcomes.push({ name: candidate?.name ?? "Public source", code: lastWebFailure, assetId: id });
@@ -611,7 +614,7 @@ async function* runAdmittedAgent(
         if (abstractFallback) scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: only the abstract page was read; full-paper evidence is unavailable.`);
       }
       return extracted;
-    } catch (error) { lastWebFailure = articleFailureCode(error); publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure, assetId: id }); return null; }
+    } catch (error) { lastWebFailure = articleFailureCode(error); lastWebDiagnostic = articleReadDiagnostic(error); publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure, assetId: id }); return null; }
     finally { webRemainingMs -= Date.now() - operationStarted; }
   }
   for (const candidate of publicCandidates.values()) {
@@ -1232,8 +1235,8 @@ async function* runAdmittedAgent(
       for (const message of scholarlyReadFailures.splice(0)) yield emit("fetch", message);
       if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
       if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker });
-        yield emit("fetch", `Read extracted public text from ${read.itemUrl} - ${marker}; quote matching establishes source grounding, not fact verification.`); }
-      else yield emit("fetch", `Public page unavailable (${lastWebFailure}); no evidence admitted. Continuing research.`);
+        yield emit("fetch", `Read extracted public text from ${read.itemUrl} - ${marker}; quote matching establishes source grounding, not fact verification.`, sourceReadDetail(d.assetId ?? d.sourceId, "public", "succeeded")); }
+      else yield emit("fetch", `Public page unavailable (${lastWebFailure}); no evidence admitted. Continuing research.`, sourceReadDetail(d.assetId ?? d.sourceId, "public", "failed", lastWebFailure, lastWebDiagnostic));
       if (read && (yield* assessInitialRead(d))) break;
       continue;
     }
@@ -1245,7 +1248,7 @@ async function* runAdmittedAgent(
       }
       const marker = `S${++markerN}`;
       gathered.push({ ...publicRead, marker });
-      yield emit("fetch", `Read ${d.sourceName} - free public feed reference, no creator payment - ${marker}`);
+      yield emit("fetch", `Read ${d.sourceName} - free public feed reference, no creator payment - ${marker}`, sourceReadDetail(d.assetId ?? d.sourceId, "public", "succeeded"));
       if (yield* assessInitialRead(d)) break;
       continue;
     }
@@ -1319,7 +1322,7 @@ async function* runAdmittedAgent(
       if (!cached?.trim()) {
         markUnread(d, "cached content was missing, empty or unavailable; no evidence was read.");
         await observeReview(d.assetId ?? d.sourceId, "not-admitted");
-        yield emit("fetch", `SKIP ${assetLabel}: cached content was missing, empty or unavailable; continuing with other selected sources.`);
+        yield emit("fetch", `SKIP ${assetLabel}: cached content was missing, empty or unavailable; continuing with other selected sources.`, sourceReadDetail(d.assetId ?? d.sourceId, "cache", "failed", "cache-unavailable"));
         continue;
       }
       gathered.push({
@@ -1331,7 +1334,7 @@ async function* runAdmittedAgent(
         text: cached,
         creatorRewardEligible: asset.rewardAllowed !== false,
       });
-      yield emit("fetch", `Reused cached ${assetLabel} (free) — ${marker}`);
+      yield emit("fetch", `Reused cached ${assetLabel} (free) — ${marker}`, sourceReadDetail(d.assetId ?? d.sourceId, "cache", "succeeded"));
     } else {
       if (checkpoint({ kind: "zero-budget", zero: budget === 0 }, d.assetId ?? d.sourceId).action === "SKIP") {
         await observeReview(d.assetId ?? d.sourceId, "zero-budget");
@@ -1562,8 +1565,8 @@ async function* runAdmittedAgent(
           for (const message of scholarlyReadFailures.splice(0)) yield emit("reevaluate", message);
           if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
           if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker }); attentionUsed++; gatheredIds.add(recId);
-            yield emit("reevaluate", `READ original public page ${read.itemUrl}, 0 USDC - ${marker}`); }
-          else yield emit("reevaluate", `Public gap read unavailable (${lastWebFailure}); claim remains unknown.`);
+            yield emit("reevaluate", `READ original public page ${read.itemUrl}, 0 USDC - ${marker}`, sourceReadDetail(recId, "public", "succeeded")); }
+          else yield emit("reevaluate", `Public gap read unavailable (${lastWebFailure}); claim remains unknown.`, sourceReadDetail(recId, "public", "failed", lastWebFailure, lastWebDiagnostic));
           continue;
         }
         const publicRead = publicReads.get(recId);
@@ -1574,7 +1577,7 @@ async function* runAdmittedAgent(
           gathered.push({ ...publicRead, marker });
           attentionUsed++;
           gatheredIds.add(recId);
-          yield emit("reevaluate", `Filling gap - free public feed reference ${publicRead.sourceName}, no creator payment - ${marker}`);
+          yield emit("reevaluate", `Filling gap - free public feed reference ${publicRead.sourceName}, no creator payment - ${marker}`, sourceReadDetail(recId, "public", "succeeded"));
           continue;
         }
         const asset = assetById.get(recId);
@@ -1637,7 +1640,7 @@ async function* runAdmittedAgent(
             gathered.push({ assetId: asset.candidate.id, sourceId: source.id, sourceName: source.name,
               ...itemIdentity, marker, text: retainedCache!, creatorRewardEligible: asset.rewardAllowed !== false });
             attentionUsed++; gatheredIds.add(recId);
-            yield emit("reevaluate", `Filling gap — reused cached ${assetLabel} (free) — ${marker}`);
+            yield emit("reevaluate", `Filling gap — reused cached ${assetLabel} (free) — ${marker}`, sourceReadDetail(recId, "cache", "succeeded"));
             continue;
         }
         if (delivery === "FREE" && asset.item) {

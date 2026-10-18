@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/reports.ts",
-  "sourceSha256": "3ef9c9df446f2d5ea84d314e233d4cdf1c0d8dd5d98c609409b983aec1206408",
+  "sourceSha256": "d5b5271fac92f5630f699468a4f95aa1bd647e910ae44461bc8f6b605678045f",
   "entries": {
     "reportActions.copy": {
       "source": "Copy report",
