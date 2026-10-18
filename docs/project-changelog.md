@@ -14,6 +14,9 @@
 - The app0.27.80 live samples found a partial SQLite answer and a YouTube planning
   refusal. Their one-attempt allowance is consumed; these changes do not retry
   either question or establish useful live answers.
+- Prepare MCP0.4.34 and Desktop0.4.32 because the shared English report catalog
+  changes their recorded build inputs. Publication must use the accepted merged
+  catalog source; retained artifacts do not establish this new delivery.
 - Focused PR review/CI, exact final-main acceptance, the applicable distribution
   audit and one combined deployment remain release gates.
 
