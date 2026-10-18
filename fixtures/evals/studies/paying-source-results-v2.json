@@ -20,7 +20,7 @@
     "reevaluateRounds": 1,
     "searchCalls": 0
   },
-  "lockSha256": "abb4f1d33ddb8b439a79449802d937ff4de517006f9541b620dea49da8c2ef04",
+  "lockSha256": "54f81714d436f707882e745394d51ded8f543e85bab776f981569d0faee9e651",
   "outboundAttempts": 0,
   "runtimeSources": {
     "lib/a2a/account-history.ts": "6ab94d83204d3fca655cc83023cd8028d77d300cab406d4f033e14ebc3efb29d",
@@ -215,7 +215,7 @@
     "lib/db/sqlite-browser-signing-originals.ts": "35501e9b6867120bc9840bd059e6e017a1e27e14f537c57448526d15891e18c0",
     "lib/db/sqlite-browser-source-context.ts": "aa0d6ba599f1fcab13cfd7cd6a110ec35a97d8bba5bd64d616ceaefda209cce2",
     "lib/db/sqlite-schema-match.ts": "2e852011fbc0b1bc319a35749b17c3417a4bdfa4a566651c0216233413531eb7",
-    "lib/db/storage-identity-connection.ts": "62c693f1712f5ef62de036c62af472a4957d23427e7d3fa85541e75b1ada6535",
+    "lib/db/storage-identity-connection.ts": "786e6fd5b985e1c8660ac01a4ff6e728cd68d6e286494db4571d9ab17a9a9a9a",
     "lib/db/storage-identity-snapshot.ts": "8b69fe5238c38a52f4554556f584e99ca575ee67142713cdcb1a6c34dbe94322",
     "lib/db/storage-identity-sqlite.ts": "074376ab42988f42b34cf3a1649d7f2585a881dfa94644087ba40dc0c169e67c",
     "lib/db/storage-identity.ts": "0804c3e5b784c7cffa6b687ebb605b2728bf70525d3c006b49667c76c9b312a8",
