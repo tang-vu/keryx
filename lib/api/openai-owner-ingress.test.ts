@@ -9,10 +9,10 @@ import type { QueryRun, TraceStep } from "../types";
 // boundaries are synthetic; this does not prove live key-store or paid acceptance.
 const mocks = vi.hoisted(() => ({
   getDb: vi.fn(), lookupKey: vi.fn(), incrementUsage: vi.fn(),
-  admission: vi.fn(), claim: vi.fn(), collectRun: vi.fn(), outbound: vi.fn(),
+  admission: vi.fn(), claim: vi.fn(), deps: vi.fn(), collectRun: vi.fn(), outbound: vi.fn(),
 }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.getDb }));
-vi.mock("@/lib/agent", () => ({ collectRun: mocks.collectRun }));
+vi.mock("@/lib/agent", () => ({ collectRun: mocks.collectRun, getAgentDeps: mocks.deps }));
 vi.mock("@/lib/llm", () => ({ resolveModelChoice: () => undefined }));
 vi.mock("@/lib/sponsored-admission", () => ({ checkSponsoredResearchAdmission: mocks.admission }));
 vi.mock("@/lib/run-claims/hosted-delivery", () => ({ prepareHostedRunClaim: mocks.claim }));
@@ -41,6 +41,7 @@ const API_PROVENANCE = { version: 1, surface: "api", ownershipMethod: "api-key" 
 const UNKNOWN_PROVENANCE = { version: 1, surface: "api", ownershipMethod: "unknown" } as const;
 const STEP: TraceStep = { phase: "decompose", message: "Synthetic trace without research", ts: 1 };
 const store = { verifyApiKey: mocks.lookupKey, incrementUsage: mocks.incrementUsage };
+const preparedDeps = { db: store, engine: { name: "synthetic-fixture" }, gateway: { mode: "offline" } };
 
 function request(stream: boolean, key: string | null = RAW_KEY, client = "desktop") {
   return new NextRequest(`https://synthetic-owner.example/api/v1/chat/completions?client=${client}`, {
@@ -79,6 +80,7 @@ beforeEach(() => {
   mocks.incrementUsage.mockResolvedValue(undefined);
   mocks.admission.mockResolvedValue(null);
   mocks.claim.mockResolvedValue(null);
+  mocks.deps.mockResolvedValue(preparedDeps);
   mocks.collectRun.mockImplementation(async (input: RunInput, opts?: { onStep?: (step: TraceStep) => void }) => {
     opts?.onStep?.(STEP);
     return completedRun(input);
@@ -97,7 +99,9 @@ function assertInput(owned: boolean) {
   expect(input).toEqual({ question: QUESTION, budget: owned ? 0.5 : 0.03,
     queryId: expect.any(String), origin: owned ? "a2a" : "web", model: undefined,
     scholarly: false, researchMode: "deep", ...(owned ? { asker: KEY_OWNER } : {}),
-    provenance: owned ? API_PROVENANCE : UNKNOWN_PROVENANCE });
+    provenance: owned ? API_PROVENANCE : UNKNOWN_PROVENANCE,
+    signal: expect.any(AbortSignal), onCreatorPaymentBoundary: expect.any(Function), onQueryRunSaveBoundary: expect.any(Function) });
+  expect(mocks.deps).toHaveBeenCalledExactlyOnceWith({ model: undefined });
   for (const field of ["payer", "walletAddress", "mcpClient", "userAgent", "ip", "fundingOwner", "askerFunded"])
     expect(input).not.toHaveProperty(field);
   expect(mocks.admission).toHaveBeenCalledExactlyOnceWith(owned
@@ -133,12 +137,12 @@ async function assertCompletion(response: Response, stream: boolean, owned: bool
     expect(chunks[1].choices[0].delta).toEqual({ reasoning_content: `[decompose] ${STEP.message}\n` });
     expect(chunks[2].choices[0].delta.content).toBe(completedRun(input).answer);
     expect(final).toMatchObject({ object: "chat.completion.chunk", choices: [{ delta: {}, finish_reason: "stop" }] });
-    expect(mocks.collectRun.mock.calls[0][1]).toEqual({ onStep: expect.any(Function) });
+    expect(mocks.collectRun.mock.calls[0][1]).toEqual({ deps: preparedDeps, onStep: expect.any(Function) });
   } else {
     expect(final).toMatchObject({ object: "chat.completion", choices: [{
       message: { role: "assistant", content: completedRun(input).answer }, finish_reason: "stop",
     }], usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } });
-    expect(mocks.collectRun.mock.calls[0]).toHaveLength(1);
+    expect(mocks.collectRun.mock.calls[0][1]).toEqual({ deps: preparedDeps, onStep: expect.any(Function) });
   }
   expect(final).toMatchObject({ id: `chatcmpl-${input.queryId}`, model: "keryx", keryx: {
     queryId: input.queryId, provenance: owned ? API_PROVENANCE : UNKNOWN_PROVENANCE,
@@ -183,7 +187,8 @@ it.each([false, true])("retains the verified owner at collection when research r
   } else {
     expect(response.status).toBe(422);
     expect(JSON.parse(wire)).toEqual({ error: { message,
-      type: "invalid_request_error", code: "research_plan_refinement_required" } });
+      type: "invalid_request_error", code: "research_plan_refinement_required", reportSaved: false,
+      planningFailure: { version: 1, stage: "decompose", reason: "invalid_output", maximumTargets: 8, automaticRetry: false } } });
   }
   for (const privateValue of [RAW_KEY, KEY_OWNER, FORGED_OWNER, DECLARED_PAYER]) expect(wire).not.toContain(privateValue);
 });
