@@ -1,4 +1,19 @@
-# Batch fresh source catalog metadata reads
+# Prioritize dashboard questions and batch fresh source metadata
+
+The initial public-question count and four recent questions now start before
+secondary metrics, payment and withdrawal reads, including when every financial
+section is already visible. Each question resource renders immediately on its
+own response. Both initial requests must settle, successfully or with an error,
+before visible financial resources start. Refreshes and manual retries retain
+their ready/error status, so this initial gate stays open and never aborts or
+resets financial reads. The existing 10-second public-body revocation refresh,
+15-second request deadline, hidden-tab pause and on-demand older questions remain.
+
+The real dashboard/hook test passes eight cases after four new cases fail on the
+previous component: no financial request starts before both initial question
+reads settle; either completion order renders partial content; either initial
+failure releases secondary reads; retry and refresh retain that release. The
+existing four progressive-history cases remain unchanged. Scoped lint passes.
 
 The dashboard already loads its sections independently. Its metrics request can
 still block other requests on the synchronous SQLite connection: listing sources
@@ -59,9 +74,20 @@ A later bounded production observation reports 245 catalog rows comprising only
 The operating-fee originals/provenance path and remaining bootstrap/count costs
 require separate measurement before attributing the observed production delay.
 
+A separate synthetic run matches those catalog dimensions and activates the
+real enrolled evidence-provenance projection with 12 settled fee originals,
+each containing a nonempty source/item citation identity. It produces 245 board
+rows and two creator earnings rows: one projected public original takes
+251.917 ms with 11 fresh identity-check reads, and the source leaderboard takes
+3,385.469 ms with 144 such reads. Dashboard metrics take 4,068.351 ms. The actual
+production settled-fee count is unknown; 12 is a controlled fixture dimension.
+This identifies remaining per-original financial/provenance work without
+changing its validation or attributing the production delay to it. That run also
+exits 0 with full EOF, zero outbound attempts and unchanged original file bytes.
+
 | Surface | Applicable behavior |
 | --- | --- |
-| Browser dashboard and hosted APIs | SQLite-backed source catalog reads receive the optimization; progressive section loading is already independent. |
+| Browser dashboard and hosted APIs | Initial question count/recent bodies have priority over secondary ledger reads; SQLite-backed source catalog reads receive batching. |
 | Hosted remote MCP, OpenAI-compatible API, agent-to-agent API and bots | Server-side callers of this SQLite catalog share the fresh batched projection. Adapter, payment and evidence contracts are unchanged. |
 | Local CLI | A local enrolled SQLite checkout receives the same catalog behavior. Other storage backends are unchanged. |
 | Stdio MCP and native desktop | The existing closed source graphs (162 stdio, 104 helper and 36 renderer modules) contain none of the three changed DB modules. No native/npm package version change or publication is implied. Final release provenance remains ROOT's gate. |
