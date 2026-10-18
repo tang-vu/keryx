@@ -6,7 +6,7 @@ import { FLASH_POLICY } from "../economics/provider-cost-policy";
 import { OpenAICompatibleEngine } from "./openai-compatible-engine";
 import type { ChatJsonOptions } from "./json-chat-engine";
 import { ReasoningInputLimitError, ReasoningOutputValidationError, ReasoningTransportError, outputTokenLimitFromValidatedError } from "./reasoning-engine";
-import { ResearchAllowance, RESEARCH_ALLOWANCE_REVIEW, validateResearchAllowancePolicy,
+import { ResearchAllowance, RESEARCH_ALLOWANCE_REVIEW, TWO_ORIGINAL_RESEARCH_REVIEW, validateResearchAllowancePolicy,
   type ConfiguredResearchAllowance } from "../research/research-allowance";
 
 // A new date requires a fresh supplier-price review, never just a renewed environment value.
@@ -87,7 +87,8 @@ export function configuredProductionModelAllowance() {
   if (hash(bytes) !== expected) return refuse("policy digest mismatch");
   let value: unknown;
   try { value = JSON.parse(bytes.toString("utf8")); } catch { return refuse("policy refused"); }
-  const policy = value && typeof value === "object" && "format" in value && value.format === "keryx-production-research-allowance-v2"
+  const policy = value && typeof value === "object" && "format" in value &&
+    (value.format === "keryx-production-research-allowance-v2" || value.format === "keryx-production-research-allowance-v3")
     ? validateResearchAllowancePolicy(value) : validatePolicy(value);
   return { policy, digest: expected, file };
 }
@@ -106,9 +107,10 @@ export class ProductionModelAllowance {
   constructor(private readonly configured: ConfiguredProductionModelAllowance,
     private readonly flushDirectory: (directory: string) => void = syncDirectory) {
     const { policy } = configured;
-    if (policy.format === "keryx-production-research-allowance-v2") {
+    if (policy.format === "keryx-production-research-allowance-v2" || policy.format === "keryx-production-research-allowance-v3") {
       this.research = new ResearchAllowance(configured as ConfiguredResearchAllowance, flushDirectory);
-      this.reservePerCallMicroUsd = RESEARCH_ALLOWANCE_REVIEW.modelReserveMicroUsd;
+      this.reservePerCallMicroUsd = (policy.format === "keryx-production-research-allowance-v3"
+        ? TWO_ORIGINAL_RESEARCH_REVIEW : RESEARCH_ALLOWANCE_REVIEW).modelReserveMicroUsd;
       this.slots = policy.maximumCalls;
       return;
     }

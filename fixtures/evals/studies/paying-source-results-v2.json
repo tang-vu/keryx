@@ -397,7 +397,7 @@
     "lib/research/evidence-provenance.ts": "abd04b783b9502c26ce6bd0ae023b92f45037e7717c9775218c8a125cf9474dc",
     "lib/research/presentation-language.ts": "1e388cc8bcb5434d5a1c482b06bebc3626e0fbc764010f7b098c74136a0cfa68",
     "lib/research/reference-export-core.ts": "0b72b1c0da61a4f0809a06634d36f95ac60d3bbfa6bf3118eda1cf81b929048b",
-    "lib/research/research-allowance.ts": "0ed3244af5ccb1384c3a78d13ac5c60122d679626e3a0fb5caba6c95bd02824d",
+    "lib/research/research-allowance.ts": "fba02d30b03d8dfd7dfed118045bcc9db564696a8b1f148a504b61af031826bd",
     "lib/research/run-provenance.ts": "b5c018ca119d2eeca1494fb065a16a9f9dc578251d138097797f92ea400e1ee2",
     "lib/research/seed-evidence-fingerprints.ts": "9de4a850c5eb42eaba2397d98faf847622d19f72903b68c2e4afc12296cc0989",
     "lib/research/selection-diagnostic.ts": "ad7a2a09f4cc72ef9a9b6e8814207a896765d1bb6727b7d6aae41a29e10df9a8",
