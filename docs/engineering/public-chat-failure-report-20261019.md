@@ -33,6 +33,16 @@ anonymous readers, error-only SSE, measured failed model usage, cancellation,
 private claim ordering/outage, sponsored admission, existing owner history and
 the sponsored client. Three-file ESLint and `git diff --check` pass.
 
+The first required CI exposed 13 failures in two additional legacy fixtures:
+the hosted-claim fixture lacked the now-explicit dependency selector, and the
+cross-surface fixture still required the old error shape without a saved report
+reference. Their narrow updates retain the existing private-packet, payment,
+terminal-error, caller-excerpt and no-retry assertions, add exact saved-failure
+references and verify claim refusal precedes dependency selection. All 34 cases
+in those files pass, with scoped lint, bringing the retained focused total to
+203 unique passing tests. Runtime bytes remain unchanged by this correction;
+the original CI failure is retained and fresh exact-head CI is required.
+
 The first fixture preparation error and an initial existing A2A rate-limit failure
 are retained in local output. The latter came from the local runner explicitly
 setting both policy controls to empty strings: the existing guard correctly
