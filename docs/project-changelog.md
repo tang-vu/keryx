@@ -1,5 +1,23 @@
 # Keryx Project Changelog
 
+### App0.27.80 research recovery — October 18 preparation
+
+- Recover valid comparison plans when the model omits only whitespace between
+  exact original spans or repeats their exact scope as a constraint. Preserve
+  source URLs, qualifications, target limits and evidence requirements.
+- Reopen a failed question explicitly for a fresh submission, preserving original
+  saved results and existing owner, visibility and budget admission.
+- Keep an explicitly selected interface language across account refresh and
+  navigation, with owner, network, origin and logout isolation.
+- Wait for a short SQLite writer lock during fresh reader admission using the
+  existing five-second bound; retain identity, schema and SQL authority checks.
+- Include the previously merged Circle native Arc signing guard and retained
+  original inspection in this deployment batch. This does not authorize new
+  funding, signatures, allowance renewal or automatic research retries.
+- Required focused PR CI, exact-main acceptance, applicable distribution audit
+  and one combined deployment remain release gates. Controlled regression answers
+  do not establish useful live-provider results for the two reported samples.
+
 ### App0.27.79 homepage recovery — October 18 preparation
 
 - Read research visibility without acquiring a SQLite write lock. Submission
