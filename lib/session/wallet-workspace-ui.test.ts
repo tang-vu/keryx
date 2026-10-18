@@ -26,7 +26,7 @@ beforeAll(async () => {
       "process.env.NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS": '"0x4444444444444444444444444444444444444444"',
       "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
     plugins: [{ name: "controlled-wallet-boundary", setup(api) {
-      api.onResolve({ filter: /^next\/link$|^wagmi$|use-siwe-auth$|use-session-grant$|circle-google-wallet$|faucet-panel$|arc-card-onramp-panel$|session-signer-client$|browser-session-http$|browser-session-grant-reference$|session-withdrawal-protocol$|browser-session-withdrawal-storage$|browser-session-owner-mint$/ }, args => ({ path: args.path, namespace: "fixture" }));
+      api.onResolve({ filter: /^next\/link$|^wagmi$|use-siwe-auth$|use-session-grant$|circle-google-wallet$|circle-wallet-browser$|faucet-panel$|arc-card-onramp-panel$|session-signer-client$|browser-session-http$|browser-session-grant-reference$|session-withdrawal-protocol$|browser-session-withdrawal-storage$|browser-session-owner-mint$/ }, args => ({ path: args.path, namespace: "fixture" }));
       api.onLoad({ filter: /.*/, namespace: "fixture" }, ({ path }) => {
         const contents = path === "next/link" ? `import React from 'react';export default function Link({href,children,...props}){return <a href={href} {...props}>{children}</a>}`
           : path === "wagmi" ? `export const useAccount=()=>({connector:{id:'circleGoogle'}});export const useWalletClient=()=>({data:window.auth.isConnected?{account:{address:window.auth.address}}:undefined});export const usePublicClient=()=>({});`
@@ -35,6 +35,7 @@ beforeAll(async () => {
             const api={tryRecover:call('restore'),recoverViaSignature:call('recover'),generateAndFund:call('activate'),topUp:call('topup'),extend:call('renew'),revoke:call('stop'),getSessionWalletClient:()=>null,markExpired:()=>{}};
             export const useSessionGrant=()=>({...api,state:window.grant});`
           : path.endsWith("circle-google-wallet") ? `import React from'react';export const CircleGoogleWalletButton=({reconnectOnly})=>reconnectOnly?null:<button onClick={()=>window.actions.push({type:'google'})}>Continue with Google</button>;`
+          : path.endsWith("circle-wallet-browser") ? `export const listCircleWalletRecoveryTransactions=async()=>{window.actions.push({type:'circleHistory'});throw Error('Unexpected Circle history request');};`
           : path.endsWith("faucet-panel") ? `import React from'react';export const FaucetPanel=()=> <p>Wallet USDC balance unavailable</p>;`
           : path.endsWith("arc-card-onramp-panel") ? `import React from'react';export const ArcCardOnrampPanel=()=>null;`
           : path.endsWith("session-signer-client") ? `export const getSessionSigner=()=>({sessionAddress:'0x2222222222222222222222222222222222222222',restoreRetained:async()=>{window.actions.push({type:'withdrawRestore'})},signWithdrawal:async(id,value)=>{window.withdrawalPhase='exposed';window.actions.push({type:'withdrawSign',id,value});return{id}},reconcileWithdrawal:async()=>{},cancelUnexposedWithdrawal:async()=>{},abortWithdrawal:async()=>{}});`

@@ -55,7 +55,7 @@ try {
   const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 390, height: 844 } });
   context.setDefaultTimeout(15_000);
   let signed = 0; let paid = 0; let lookups = 0; let unsignedQuotes = 0;
-  let fundingTransactions = 0; let fundingNonce = 7; let head = 100; let gatewayAvailable = "0";
+  let fundingTransactions = 0; let fundingNonce = 7; let head = 100; let gatewayAvailable = "0"; let capabilityQueries = 0;
   const funding = new Map<string, { tx: object; receipt: object }>();
   await context.exposeFunction("syntheticFundingState", (kind: string, hash?: string) => {
     if (kind === "nonce") return fundingNonce;
@@ -77,6 +77,12 @@ try {
   await context.exposeFunction("syntheticWalletRequest", async ({ method, params }: { method: string; params?: unknown[] }) => {
     if (method === "eth_accounts") return [account.address];
     if (method === "eth_chainId") return "0x4cef52";
+    if (method === "wallet_getCapabilities") {
+      capabilityQueries++;
+      assert.equal(String(params?.[0]).toLowerCase(), account.address.toLowerCase());
+      assert.deepEqual(params?.[1], ["0x4cef52"]);
+      return {}; // External wallet has no Keryx-specific denial metadata.
+    }
     if (method === "eth_sendTransaction") {
       const value = params?.[0] as { from: string; to: string; data: `0x${string}`; nonce: string; value: string };
       assert.equal(value.from.toLowerCase(), account.address.toLowerCase());
@@ -162,6 +168,7 @@ try {
   await page.getByRole("button", { name: "Deposit 0.050000 USDC", exact: true }).click();
   await page.getByText("Wallet or storage response is uncertain.", { exact: false }).waitFor();
   assert.equal(fundingTransactions, 2);
+  assert.equal(capabilityQueries, 3, "Legacy wallet funding remains available without capability metadata");
   await mount();
   await page.locator("summary").filter({ hasText: "Add USDC to Gateway" }).click();
   await page.getByText("2. Deposit: possible", { exact: true }).waitFor();
