@@ -13,6 +13,9 @@ import type { SourceLeaderboard } from "../lib/sources/source-leaderboard";
 const focusedLeaderboard = process.argv.slice(2).includes("--source-leaderboard-only");
 const focusedProgressive = process.argv.slice(2).includes("--dashboard-progressive-only");
 assert(process.argv.slice(2).every(arg => ["--source-leaderboard-only", "--dashboard-progressive-only"].includes(arg)), "Unknown ledger browser selection");
+function releaseFixtureRequest(resume: (() => void) | undefined) {
+  assert(resume, "Held synthetic request has started"); resume();
+}
 
 // This component harness also renders the async server page. Compute its Node-only
 // bibliography helper in Node, as Next does, rather than polyfilling crypto in a browser.
@@ -101,6 +104,18 @@ try {
       let releaseMetrics: (() => void) | undefined;
       let releasePublicCount: (() => void) | undefined;
       let releaseRecent: (() => void) | undefined;
+      let releaseOlder: (() => void) | undefined;
+      let olderStarted: (() => void) | undefined;
+      function waitForOlderRead() {
+        return new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error("Older-question fixture did not start")), 30_000);
+          olderStarted = () => { clearTimeout(timer); resolve(); };
+        });
+      }
+      let olderReads = 0;
+      const runLimits: number[] = [];
+      const questionPage = Array.from({ length: 6 }, (_, index) => ({ ...run, id: `on-demand-${index}`,
+        question: `On-demand public question ${index}`, createdAt: `2026-10-17T00:0${6 - index}:00.000Z` }));
       const apiRequests: string[] = [];
       const guestModes: Record<string, unknown> = {
         "guest-unavailable": null, "guest-legacy": undefined, "guest-fraction": 1.5,
@@ -125,14 +140,23 @@ try {
             assert.equal(requested.searchParams.get("network"), network === "arc" ? "eip155:5042" : "eip155:5042002");
             assert.equal(requested.searchParams.get("period"), "all");
             if (mode === "count-unavailable") return route.fulfill({ status: 503, json: { error: "unavailable" } });
-            return route.fulfill({ json: { complete: true, network: requested.searchParams.get("network"), period: "all", cohort: "default", publicQuestions: mode === "empty-history" ? 0 : 18 } });
+            return route.fulfill({ json: { complete: true, network: requested.searchParams.get("network"), period: "all", cohort: "default", publicQuestions: mode === "empty-history" ? 0 : mode === "on-demand-history" ? 6 : 18 } });
           }
           if (pathname === "/api/runs") {
+            const requestedLimit = Number(requested.searchParams.get("limit"));
+            assert([4, 25].includes(requestedLimit), "Question reads use the visible or explicitly expanded bound");
+            runLimits.push(requestedLimit);
             if (mode === "recent-pending") await new Promise<void>(resolve => { releaseRecent = resolve; });
             assert.equal(requested.searchParams.get("network"), network === "arc" ? "eip155:5042" : "eip155:5042002");
             assert.equal(requested.searchParams.get("period"), "all");
             assert.equal(requested.searchParams.has("archive"), false);
             if (mode === "history-unavailable") return route.fulfill({ status: 503, json: { error: "unavailable" } });
+            if (mode === "on-demand-history") {
+              if (requestedLimit === 4) return route.fulfill({ json: questionPage.slice(0, 4) });
+              const round = ++olderReads;
+              await new Promise<void>(resolve => { releaseOlder = resolve; olderStarted?.(); olderStarted = undefined; });
+              return route.fulfill({ json: round === 1 ? questionPage : questionPage.slice(0, 4) });
+            }
             return route.fulfill({ json: mode === "empty-history" ? [] : mode === "archive" ? [run, { ...run, id: "old-testnet-run", question: "Archived testnet question stays in history", archive: archiveInfo }] : [run] });
           }
           if (pathname === "/api/payments") return route.fulfill({ json: { payments: mode === "pending" ? [{ id: "fixture-payment", sourceName: "Pending creator fixture", queryId: "fixture-run", sourceId: "fixture-creator", kind: "citation", payer: "buyer", payee: "creator", amountUsdc: 0.02, network: "eip155:5042002", authorizationId: "fixture-authorization", settled: false, settlementStatus: "pending", createdAt: "2026-10-05T00:00:00.000Z" }] : [] } });
@@ -158,6 +182,7 @@ try {
         await page.getByText("Recent public questions", { exact: true }).waitFor();
         await page.getByText("Loading Public question count…", { exact: true }).waitFor();
         assert.deepEqual([...apiRequests].sort(), ["/api/runs", "/api/runs/summary"], "Initial reads prioritize current questions; offscreen financial sections wait");
+        assert.deepEqual(runLimits, [4], "Do not read collapsed older question bodies");
         assert(releasePublicCount, "Count is still pending while recent questions render");
         // Direct creator navigation must request its leaderboard even if the
         // earlier recorded-totals marker has never approached the viewport.
@@ -180,6 +205,33 @@ try {
         assert(releaseRecent, "Recent questions can still be pending after the count renders");
         releaseRecent();
         await page.getByText(run.question, { exact: true }).waitFor();
+
+        mode = "on-demand-history"; runLimits.length = 0;
+        await open("/dashboard?mode=on-demand-history", false);
+        await page.getByText(questionPage[3].question, { exact: true }).waitFor();
+        assert.deepEqual(runLimits, [4]);
+        assert.equal(await page.getByText(questionPage[4].question, { exact: true }).count(), 0);
+        const more = page.locator("summary").filter({ hasText: "More questions" });
+        await Promise.all([waitForOlderRead(), more.click()]);
+        assert(releaseOlder, "Opening earlier questions starts its own read");
+        await page.getByText(questionPage[0].question, { exact: true }).waitFor();
+        assert.equal(await page.getByText(questionPage[4].question, { exact: true }).count(), 0, "Current questions remain usable while older ones load");
+        releaseFixtureRequest(releaseOlder);
+        await page.getByText(questionPage[4].question, { exact: true }).waitFor();
+        assert.equal(await page.locator('a[href="/dispatch/on-demand-0"]').count(), 1, "Do not duplicate recent questions");
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width, "Expanded questions fit the viewport");
+        await page.screenshot({ path: path.join(screenshots, `ledger-on-demand-${network}-${width}.png`), fullPage: true });
+        await more.click();
+        await page.getByText(questionPage[4].question, { exact: true }).waitFor({ state: "detached" });
+        assert.equal(await page.getByText(questionPage[4].question, { exact: true }).count(), 0, "Closing removes older bodies from the DOM");
+        releaseOlder = undefined;
+        await Promise.all([waitForOlderRead(), more.click()]);
+        assert(releaseOlder, "Reopening starts a fresh read");
+        assert.equal(await page.getByText(questionPage[4].question, { exact: true }).count(), 0, "A previous older body cannot reappear before revalidation");
+        releaseFixtureRequest(releaseOlder);
+        await page.getByText("No public questions to display.", { exact: true }).waitFor();
+        assert.equal(await page.getByText(questionPage[4].question, { exact: true }).count(), 0);
+        await more.click();
         assert.deepEqual(errors, []);
         console.log(`Progressive independent dashboard passed ${network}/${width}`);
         mode = "zero";
@@ -315,7 +367,7 @@ try {
       assert(releaseMetrics, "Manual retry reached the metrics API");
       await page.screenshot({ path: path.join(screenshots, `ledger-retry-pending-${network}-${width}.png`), fullPage: true });
       mode = "zero";
-      releaseMetrics();
+      releaseFixtureRequest(releaseMetrics);
       await page.getByRole("heading", { name: "No settled payments yet" }).waitFor();
       mode = "error";
       // Retry against an error after an accepted read must retain visibly dated data.
@@ -333,7 +385,7 @@ try {
       assert.equal(await page.getByText(/Showing the last successful read from/).count(), 1);
       assert(releaseMetrics);
       mode = "error";
-      releaseMetrics();
+      releaseFixtureRequest(releaseMetrics);
       await page.getByRole("button", { name: "Retry", exact: true }).waitFor();
       mode = "zero";
       await page.getByRole("button", { name: "Retry", exact: true }).click();

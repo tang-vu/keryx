@@ -3,7 +3,7 @@ import { selectPlural } from "@/lib/i18n/format";
 
 import { DisplayTime } from "@/components/keryx/display-time";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { createMessages } from "@/lib/i18n/messages";
 import { createRichMessages } from "@/lib/i18n/rich-messages";
@@ -80,12 +80,33 @@ function publicCountBody(body: unknown): { publicQuestions: number } {
   return { publicQuestions: value.publicQuestions };
 }
 
+function publicQuestionsUrl(limit: 4 | 25) {
+  return `/api/runs?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all&limit=${limit}`;
+}
+
 function ResourceNotice({ resource, label }: { resource: LedgerResource<unknown> & { retry: () => void; retrying: boolean }; label: string }) {
   const uiRichCopy = useUiRichMessages();
   if (resource.status === "ready") return null;
   const retry = <button type="button" onClick={resource.retry} disabled={resource.retrying} className="min-h-11 cursor-pointer px-2 text-seal underline disabled:cursor-wait disabled:no-underline">{resource.retrying ? uiCopy("ledgerResource.loading", { label }) : uiCopy("ledgerResource.retry")}</button>;
   return <div role="status" className="mb-3 text-sm leading-relaxed text-ink-2">
     {resource.status === "loading" ? uiCopy("ledgerResource.loading", { label }) : resource.data !== null && resource.observedAt ? uiRichCopy("ledgerResource.unavailableWithObservation", { label, observed: <DisplayTime value={resource.observedAt} timeZone="UTC" timeStyle="medium" />, retry }) : uiRichCopy("ledgerResource.unavailable", { label, retry })}
+  </div>;
+}
+
+/** Mount only while open: closing drops old bodies and aborts their outstanding read. */
+function EarlierPublicQuestions({ recent }: { recent: RunSummary[] }) {
+  const resource = useLedgerResource(publicQuestionsUrl(25), runBody, true, 10_000);
+  const seen = new Set(recent.map(run => run.id));
+  const oldest = recent.at(-1);
+  const older = (resource.data ?? []).filter(run => {
+    if (run.archive || seen.has(run.id) || oldest && (run.createdAt > oldest.createdAt
+      || run.createdAt === oldest.createdAt && run.id >= oldest.id)) return false;
+    seen.add(run.id); return true;
+  }).slice(0, 21);
+  return <div className="px-4 pb-4">
+    <ResourceNotice resource={resource} label={uiCopy("ledgerPresentation.questionRecords")} />
+    {resource.data !== null && <DispatchHistory runs={older} title={uiCopy("ledgerPresentation.earlier")}
+      emptyMessage={uiCopy("ledgerPresentation.noPublicQuestions")} showFinancials={false} />}
   </div>;
 }
 
@@ -104,10 +125,11 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
   const [totalsRef, totalsVisible] = useVisibleLedgerSection<HTMLDivElement>();
   const [creatorsRef, creatorsVisible] = useVisibleLedgerSection();
   const [paymentsRef, paymentsVisible] = useVisibleLedgerSection();
+  const [earlierOpen, setEarlierOpen] = useState(false);
   // These are the first useful reads. Financial panels load independently when
   // approached, rather than making every visit start five expensive scans.
   // Keep the existing short revocation refresh for public question bodies.
-  const runsResource = useLedgerResource(`/api/runs?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all&limit=25`, runBody, true, 10_000);
+  const runsResource = useLedgerResource(publicQuestionsUrl(4), runBody, true, 10_000);
   const publicCountResource = useLedgerResource(`/api/runs/summary?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all`, publicCountBody);
   const metricsResource = useLedgerResource("/api/metrics?view=dashboard", metricBody, totalsVisible || creatorsVisible);
   const paymentsResource = useLedgerResource("/api/payments?limit=200", paymentBody, paymentsVisible);
@@ -121,6 +143,9 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
   }));
   const withdrawals = withdrawalsResource.data ?? [];
   const runs = (runsResource.data ?? []).filter(run => !run.archive);
+  const recent = runs.slice(0, 4);
+  const hasEarlier = recent.length > 0 && (publicCountResource.data
+    ? publicCountResource.data.publicQuestions > recent.length : recent.length === 4);
 
   return <div className="min-h-screen bg-paper">
     <SiteHeader />
@@ -164,8 +189,11 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
       <div className="mt-8 grid items-start gap-7 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section aria-label={uiCopy("ledgerPresentation.activityAria")} className="min-w-0">
           <ResourceNotice resource={runsResource} label={uiCopy("ledgerPresentation.questionRecords")} />
-          <DispatchHistory runs={runs.slice(0, 4)} title={uiCopy("ledgerPresentation.recent")} description={uiCopy("ledgerPresentation.publicHistoryBoundary", { network: currentArcLabel })} emptyMessage={runsResource.data === null ? "" : uiCopy("ledgerPresentation.noPublicQuestions")} showFinancials={false} />
-          {runs.length > 4 && <details className="mt-4 border border-line bg-paper-2/30"><summary className="cursor-pointer px-5 py-4 font-display text-lg text-ink">{uiCopy("ledgerPresentation.more")}</summary><div className="px-4 pb-4"><DispatchHistory runs={runs.slice(4, 25)} title={uiCopy("ledgerPresentation.earlier")} showFinancials={false} /></div></details>}
+          <DispatchHistory runs={recent} title={uiCopy("ledgerPresentation.recent")} description={uiCopy("ledgerPresentation.publicHistoryBoundary", { network: currentArcLabel })} emptyMessage={runsResource.data === null ? "" : uiCopy("ledgerPresentation.noPublicQuestions")} showFinancials={false} />
+          {hasEarlier && <details open={earlierOpen} onToggle={event => setEarlierOpen(event.currentTarget.open)} className="mt-4 border border-line bg-paper-2/30">
+            <summary className="cursor-pointer px-5 py-4 font-display text-lg text-ink">{uiCopy("ledgerPresentation.more")}</summary>
+            {earlierOpen && <EarlierPublicQuestions recent={recent} />}
+          </details>}
           <Link href="/answers" className="mt-3 inline-block min-h-11 py-2 font-mono text-xs text-seal underline">{uiCopy("ledgerPresentation.pastAnswers")}</Link>
         </section>
         <aside aria-labelledby="payment-proof-title" className="border-t-2 border-seal bg-paper-2 p-5">
