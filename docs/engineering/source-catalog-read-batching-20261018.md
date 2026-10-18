@@ -48,6 +48,17 @@ amplification, not production latency, complete financial eligibility or a fix
 for every dashboard delay. Runtime pins and full outputs are retained under the
 outcome's local `output/dashboard-perf` and `output/source-catalog-batch` paths.
 
+After rebasing onto merged PR 579, the reviewed three runtime files remain
+byte-identical. The existing 48-trial source study was regenerated and checked:
+only those three runtime-source hashes changed, every trial remains deeply and
+canonically byte-identical, and outbound attempts remain zero.
+
+A later bounded production observation reports 245 catalog rows comprising only
+2 creator sources, 115 public references, 40 papers and 88 explore entries. The
+24-source synthetic case is therefore not the current production composition.
+The operating-fee originals/provenance path and remaining bootstrap/count costs
+require separate measurement before attributing the observed production delay.
+
 | Surface | Applicable behavior |
 | --- | --- |
 | Browser dashboard and hosted APIs | SQLite-backed source catalog reads receive the optimization; progressive section loading is already independent. |
