@@ -126,14 +126,17 @@ export function DashboardView({ sourcePreview, historyPreview }: { sourcePreview
   const [creatorsRef, creatorsVisible] = useVisibleLedgerSection();
   const [paymentsRef, paymentsVisible] = useVisibleLedgerSection();
   const [earlierOpen, setEarlierOpen] = useState(false);
-  // These are the first useful reads. Financial panels load independently when
-  // approached, rather than making every visit start five expensive scans.
+  // Render these first useful reads independently. Even an already-visible
+  // financial panel waits for both initial reads to finish before scanning.
   // Keep the existing short revocation refresh for public question bodies.
   const runsResource = useLedgerResource(publicQuestionsUrl(4), runBody, true, 10_000);
   const publicCountResource = useLedgerResource(`/api/runs/summary?network=${encodeURIComponent(browserPaymentProfile().networkId)}&period=all`, publicCountBody);
-  const metricsResource = useLedgerResource("/api/metrics?view=dashboard", metricBody, totalsVisible || creatorsVisible);
-  const paymentsResource = useLedgerResource("/api/payments?limit=200", paymentBody, paymentsVisible);
-  const withdrawalsResource = useLedgerResource("/api/withdrawals?limit=25", withdrawalBody, creatorsVisible);
+  // Resources retain ready/error during refresh and retry, so this initial
+  // priority gate stays open without aborting or resetting financial reads.
+  const initialQuestionsSettled = runsResource.status !== "loading" && publicCountResource.status !== "loading";
+  const metricsResource = useLedgerResource("/api/metrics?view=dashboard", metricBody, initialQuestionsSettled && (totalsVisible || creatorsVisible));
+  const paymentsResource = useLedgerResource("/api/payments?limit=200", paymentBody, initialQuestionsSettled && paymentsVisible);
+  const withdrawalsResource = useLedgerResource("/api/withdrawals?limit=25", withdrawalBody, initialQuestionsSettled && creatorsVisible);
   const metrics = metricsResource.data?.metrics;
   const leaderboard = metricsResource.data?.leaderboard ?? [];
   const creatorNames = new Map(leaderboard.map(row => [row.sourceId, row.sourceName]));

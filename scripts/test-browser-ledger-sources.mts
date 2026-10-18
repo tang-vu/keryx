@@ -184,27 +184,34 @@ try {
         assert.deepEqual([...apiRequests].sort(), ["/api/runs", "/api/runs/summary"], "Initial reads prioritize current questions; offscreen financial sections wait");
         assert.deepEqual(runLimits, [4], "Do not read collapsed older question bodies");
         assert(releasePublicCount, "Count is still pending while recent questions render");
-        // Direct creator navigation must request its leaderboard even if the
-        // earlier recorded-totals marker has never approached the viewport.
+        // Every financial section may approach the viewport while the count is
+        // held, but none may compete with the initial question reads.
         await page.locator("#current-creators").evaluate(element => element.scrollIntoView({ block: "start" }));
-        await page.getByText("28 recorded questions", { exact: true }).waitFor();
         await page.locator("#payment-records").scrollIntoViewIfNeeded();
         await page.locator("#current-creators").scrollIntoViewIfNeeded();
-        await page.waitForFunction(() => document.querySelector("#payment-records")?.textContent?.includes("Loading Payment records") === false);
-        assert(apiRequests.includes("/api/payments") && apiRequests.includes("/api/withdrawals"), "Scrolling starts each independent financial read");
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+        assert.deepEqual([...apiRequests].sort(), ["/api/runs", "/api/runs/summary"], "All financial GETs wait while the initial count is held, including after scrolling");
         releasePublicCount();
         await page.getByText(`18 public questions on ${network === "arc" ? "Arc mainnet" : "Arc Testnet"}`, { exact: true }).waitFor();
+        // Creator navigation still enables metrics without visiting the earlier
+        // totals marker, once both initial question reads have settled.
+        await page.getByText("28 recorded questions", { exact: true }).waitFor();
+        await page.waitForFunction(() => document.querySelector("#payment-records")?.textContent?.includes("Loading Payment records") === false);
+        assert(apiRequests.includes("/api/payments") && apiRequests.includes("/api/withdrawals"), "Scrolling starts each independent financial read");
         await page.locator("#current-activity").scrollIntoViewIfNeeded();
         await page.screenshot({ path: path.join(screenshots, `ledger-progressive-${network}-${width}.png`), fullPage: true });
 
-        mode = "recent-pending";
+        mode = "recent-pending"; apiRequests.length = 0;
         await open("/dashboard");
         await page.getByText(`18 public questions on ${network === "arc" ? "Arc mainnet" : "Arc Testnet"}`, { exact: true }).waitFor();
         await page.getByText("Recent public questions", { exact: true }).waitFor();
         assert.equal(await page.getByText("No public questions to display.", { exact: true }).count(), 0, "Pending questions are not an empty population");
         assert(releaseRecent, "Recent questions can still be pending after the count renders");
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+        assert.deepEqual([...apiRequests].sort(), ["/api/runs", "/api/runs/summary"], "All financial GETs also wait while initial recent questions are held");
         releaseRecent();
         await page.getByText(run.question, { exact: true }).waitFor();
+        await page.getByText("28 recorded questions", { exact: true }).waitFor();
 
         mode = "on-demand-history"; runLimits.length = 0;
         await open("/dashboard?mode=on-demand-history", false);
