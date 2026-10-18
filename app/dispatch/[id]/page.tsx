@@ -218,7 +218,7 @@ export default async function DispatchPage({ params }: PageProps) {
           </Link>
         ) : null}
 
-        <DispatchView run={publicQueryRun(run)} answerLanguage={answerLanguage} payments={payments} historical={Boolean(archive)} historicalNetwork={archive?.network} />
+        <DispatchView run={publicQueryRun(run)} answerLanguage={answerLanguage} payments={payments} historical={Boolean(archive)} historicalNetwork={archive?.network} visibility={dispatch.visibility} recoveryWallet={actor?.wallet ?? null} />
 
         <PortableReceiptPanel dispatchId={id} />
         <Link href={`/me/run-privacy?run=${encodeURIComponent(id)}`} className="text-sm underline"><UiText source={runPrivacyCopy.manage} namespaces={["run-privacy"]} /></Link>

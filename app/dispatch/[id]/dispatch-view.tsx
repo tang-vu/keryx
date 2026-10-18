@@ -17,6 +17,8 @@ import { ReadCheckpointVerify } from "@/components/keryx/read-checkpoint-verify"
 import { projectActualReadCheckpoints } from "@/lib/research-audit/actual-read-projection";
 import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
 import { walkthroughMessages as englishWalkthroughMessages } from "@/locales/en/walkthrough";
+import { ResearchRecovery } from "@/components/keryx/research-recovery";
+import type { RunVisibility } from "@/lib/run-privacy/contracts";
 
 
 export function DispatchView({
@@ -25,6 +27,8 @@ export function DispatchView({
   payments,
   historical = false,
   historicalNetwork,
+  visibility,
+  recoveryWallet,
 }: {
   run: QueryRun;
   /** Trusted stored-answer language, read on the server before public projection. */
@@ -32,6 +36,8 @@ export function DispatchView({
   payments: PaymentRecord[];
   historical?: boolean;
   historicalNetwork?: string;
+  visibility?: RunVisibility;
+  recoveryWallet: string | null;
 }) {
   const copy = useUiMessages();
   const walkthroughMessages = useUiCopy("walkthrough", englishWalkthroughMessages);
@@ -58,6 +64,8 @@ export function DispatchView({
           </p>
         </div>
       </div>
+
+      {!historical && visibility && <ResearchRecovery question={run.question} budget={run.budget} parentId={run.id} visibility={visibility} expectedWallet={recoveryWallet} />}
 
       <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,330px)]">
         <AnswerCard run={run} answerLanguage={answerLanguage} meta={null} payments={payments} showFeedback={!historical} historicalNetwork={recordedNetwork} />

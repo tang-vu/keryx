@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const wallet = `0x${"a".repeat(40)}`;
+const recoveryQuestion = "Compare SQLite WAL and rollback journals for a small web application. Use https://sqlite.org/wal.html?v=3#limits; keep concurrent writes visible.";
 let browser: Browser;
 const bundles: Record<string, string> = {};
 
@@ -13,9 +14,17 @@ beforeAll(async () => {
     bundles[network] = (await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
       import React from 'react';import{createRoot}from'react-dom/client';
       import AskPage from './app/page';import{AskForm}from'./components/keryx/ask-form';
+      import{ResearchRecovery}from'./components/keryx/research-recovery';
+      import{useResearchVisibility}from'./lib/hooks/use-research-visibility';
       window.actions=[];const p=new URLSearchParams(location.search);
-      createRoot(document.getElementById('root')).render(location.pathname==='/form'
-        ?<AskForm payer={p.get('payer')??'treasury'} onAsk={(...args)=>window.actions.push(args)}/>:<AskPage/>);
+      function RestorationForm(){const preference=useResearchVisibility('private');return <><output id="restore-owner">{preference.ready?preference.wallet:'loading'}</output>
+        <AskForm publicationPreference={preference} parentVisibility="private" allowSharedPrefill={false}
+          restoreQuestion={{id:-1,question:${JSON.stringify(recoveryQuestion)},researchPaused:false,replace:true,budget:0.025,expectedWallet:${JSON.stringify(wallet)},expectedRevision:0}}
+          onAsk={(...args)=>window.actions.push(args)}/></>}
+      createRoot(document.getElementById('root')).render(location.pathname==='/saved'
+        ?<><p id="saved-answer">Original planning refusal remains unchanged.</p><ResearchRecovery question={${JSON.stringify(recoveryQuestion)}} budget={0.025}
+          parentId="11111111-1111-4111-8111-111111111111" visibility={p.get('visibility')??'public'} expectedWallet={${JSON.stringify(wallet)}}/></>:location.pathname==='/form'
+        ?p.has('restore-owner')?<RestorationForm/>:<AskForm payer={p.get('payer')??'treasury'} onAsk={(...args)=>window.actions.push(args)}/>:<AskPage/>);
     ` }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: {
       "process.env": "{}",
       "process.env.NODE_ENV": '"production"', "process.env.NEXT_PUBLIC_KERYX_NETWORK": JSON.stringify(network),
@@ -44,30 +53,121 @@ afterAll(async () => { await browser?.close(); });
 async function mount(path = "/form", network = "arc", signedIn = false, failedVisibility = false) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   let visibilityFails = failedVisibility;
+  let currentWallet: string | null = signedIn ? wallet : null;
+  const setOwner = (value: string | null) => { currentWallet = value; };
+  const asks: Array<{ body: Record<string, unknown>; wallet: string | undefined }> = [];
   await context.route("**/*", route => {
     const url = new URL(route.request().url());
     if (url.pathname === "/api/ask/visibility") {
       const fails = visibilityFails; visibilityFails = false;
-      return route.fulfill(fails ? { status: 503, json: {} } : { json: { wallet: signedIn ? wallet : null, defaultVisibility: "public", privacyActive: true } });
+      return route.fulfill(fails ? { status: 503, json: {} } : { json: { wallet: currentWallet, defaultVisibility: "public", privacyActive: true } });
     }
     if (url.pathname === "/api/models") return route.fulfill({ json: { models: [{ id: "fixture-model", label: "Fixture model", note: "Synthetic model" }, { id: "other", label: "Other model", note: "Synthetic alternative" }] } });
     if (url.pathname === "/api/research/availability") return route.fulfill(path.includes("availability=failed")
       ? { status: 503, json: {} } : { json: { state: "not-paused" } });
     if (url.pathname === "/api/sources") return route.fulfill({ json: { sources: [] } });
     if (url.pathname === "/api/metrics") return route.fulfill({ json: { metrics: {}, recentPayments: [] } });
-    if (url.pathname === "/api/ask") return route.fulfill({ contentType: "text/event-stream", body:
+    if (url.pathname === "/api/ask") {
+      asks.push({ body: route.request().postDataJSON(), wallet: route.request().headers()["x-keryx-expected-wallet"] });
+      if (path.includes("rate-limit") && asks.length === 1) return route.fulfill({ status: 429, json: { error: "Controlled capacity limit" } });
+      if (path.includes("planning-error") && asks.length === 1) return route.fulfill({ contentType: "text/event-stream", body:
+        'event: error\ndata: {"message":"A valid plan with at most 8 independent research targets could not be prepared."}\n\n' });
+      return route.fulfill({ contentType: "text/event-stream", body:
       `event: meta\ndata: {"mode":"offline","engine":"synthetic","visibility":"public"}\n\nevent: done\ndata: {"id":"11111111-1111-4111-8111-111111111111","answer":"Synthetic browser answer"}\n\n` });
+    }
     return route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' });
   });
   const page = await context.newPage(); page.setDefaultTimeout(5000);
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto(`https://homepage.test${path}`);
+  if (path.includes("restore-owner")) await page.evaluate(() => {
+    const ordinary = window.setTimeout.bind(window), callbacks: Array<() => void> = [];
+    Reflect.set(window, "heldRestoreCallbacks", callbacks);
+    window.setTimeout = ((callback: TimerHandler, delay?: number, ...args: unknown[]) => {
+      if (delay === 0 && typeof callback === "function") { callbacks.push(() => callback(...args)); return ordinary(() => {}, 0); }
+      return ordinary(callback, delay, ...args);
+    }) as typeof window.setTimeout;
+  });
   await page.addScriptTag({ content: bundles[network] });
+  if (path.startsWith("/saved")) { await page.getByRole("button", { name: "Reopen original question", exact: true }).waitFor(); return { context, page, asks, setOwner }; }
   try { await page.getByLabel("What do you want to know?").waitFor(); }
   catch (error) { const body = await page.locator("body").innerText(); await context.close(); throw new Error(`${String(error)}; browser errors: ${errors.join("; ")}; body: ${body.slice(0, 500)}`); }
-  await page.getByRole("status").filter({ hasText: failedVisibility ? "Visibility settings are unavailable" : "Trial reports have public links" }).first().waitFor();
-  return { context, page };
+  if (path.includes("restore-owner")) await page.getByTestId("composer-publication-notice").waitFor();
+  else await page.getByRole("status").filter({ hasText: failedVisibility ? "Visibility settings are unavailable" : "Trial reports have public links" }).first().waitFor();
+  return { context, page, asks, setOwner };
 }
+
+it("refuses a queued restoration callback after the confirmed owner/revision changes", async () => {
+  const { context, page, asks, setOwner } = await mount("/form?restore-owner", "arc", true);
+  try {
+    await page.waitForFunction(() => (Reflect.get(window, "heldRestoreCallbacks") as unknown[]).length > 0);
+    setOwner(`0x${"b".repeat(40)}`);
+    await Promise.all([page.waitForResponse(response => new URL(response.url()).pathname === "/api/ask/visibility"),
+      page.evaluate(() => window.dispatchEvent(new Event("focus")))]);
+    await page.waitForFunction(owner => document.querySelector("#restore-owner")?.textContent === owner, `0x${"b".repeat(40)}`);
+    // Retain and invoke even a stale queued callback: owner fencing must stand
+    // independently of React cleanup's best-effort cancellation.
+    await page.evaluate(() => { for (const callback of Reflect.get(window, "heldRestoreCallbacks") as Array<() => void>) callback(); });
+    expect(await page.getByLabel("What do you want to know?").inputValue()).toBe("");
+    expect(asks).toEqual([]);
+    expect(await page.evaluate(() => (window as unknown as { actions: unknown[] }).actions)).toEqual([]);
+  } finally { await context.close(); }
+});
+
+it("explicitly reopens the original after an automatic rate-limit restoration without reusing its restore id", async () => {
+  const { context, page, asks } = await mount("/?rate-limit");
+  try {
+    await page.getByLabel("What do you want to know?").fill(recoveryQuestion);
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.waitForFunction(q => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value === q, recoveryQuestion);
+    await page.getByLabel("What do you want to know?").fill("A different unsubmitted draft");
+    await page.getByRole("button", { name: "Reopen original question", exact: true }).click();
+    await page.waitForFunction(q => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value === q, recoveryQuestion);
+    expect(asks).toHaveLength(1);
+  } finally { await context.close(); }
+});
+
+it.each(["public", "private"])("reopens a saved %s question only on click, preserving text/cap/parent/privacy until explicit Ask", async visibility => {
+  const { context, page, asks } = await mount(`/saved?visibility=${visibility}&run=1&q=Injected%20different%20question&budget=0.08`, "arc", visibility === "private");
+  try {
+    expect(await page.getByLabel("What do you want to know?").count()).toBe(0); expect(asks).toEqual([]);
+    await page.getByRole("button", { name: "Reopen original question", exact: true }).click();
+    await page.waitForFunction(q => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value === q, recoveryQuestion);
+    expect(asks).toEqual([]); expect(page.url()).not.toContain("SQLite");
+    expect(await page.locator("#saved-answer").textContent()).toBe("Original planning refusal remains unchanged.");
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.waitForFunction(() => document.body.textContent?.includes("Synthetic browser answer"));
+    expect(asks).toHaveLength(1);
+    expect(asks[0]).toMatchObject({ body: { question: recoveryQuestion, budget: 0.025, parentId: "11111111-1111-4111-8111-111111111111", visibility },
+      wallet: visibility === "private" ? wallet : "anonymous" });
+  } finally { await context.close(); }
+});
+
+it("does not move a saved private question into a different confirmed owner or guest draft", async () => {
+  const { context, page, asks } = await mount("/saved?visibility=private");
+  try {
+    await page.getByRole("button", { name: "Reopen original question", exact: true }).click();
+    await page.getByLabel("What do you want to know?").waitFor();
+    expect(await page.getByLabel("What do you want to know?").inputValue()).toBe("");
+    expect(await page.getByRole("button", { name: "Ask Keryx", exact: true }).isDisabled()).toBe(true);
+    expect(asks).toEqual([]);
+  } finally { await context.close(); }
+});
+
+it("keeps a planning failure immutable while explicitly restoring the complete original draft without a resend", async () => {
+  const { context, page, asks } = await mount("/?planning-error");
+  try {
+    await page.getByLabel("What do you want to know?").fill(recoveryQuestion);
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.getByRole("button", { name: "Reopen original question", exact: true }).click();
+    await page.waitForFunction(q => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value === q, recoveryQuestion);
+    expect(asks).toHaveLength(1);
+    expect(await page.locator("article").filter({ hasText: recoveryQuestion }).count()).toBe(1);
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.waitForFunction(() => document.body.textContent?.includes("Synthetic browser answer"));
+    expect(asks).toHaveLength(2); expect(asks[1].body.question).toBe(recoveryQuestion);
+  } finally { await context.close(); }
+});
 
 it("shows the short trial ask path and reveals all retained controls together, with no mainnet manuscript option", async () => {
   const { context, page } = await mount();

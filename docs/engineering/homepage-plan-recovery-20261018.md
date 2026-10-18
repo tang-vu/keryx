@@ -28,6 +28,12 @@ two controlled original reads, separate evidence review and final cited answer;
 all four requested subject/dimension pairs survive, with zero payments. These
 fixtures establish no live-provider semantic accuracy or successful production
 SQLite/YouTube answer. No billable model, search or payment call was made.
+The Chromium composer suite also passes 12 tests: saved public/private recovery,
+exact original text and cap, current owner/visibility, stale callbacks after an
+owner change, automatic-versus-explicit restore IDs, legacy shared-link
+suppression, and explicit resubmission. The controlled 48-trial study was
+regenerated only for the two changed planner source hashes; all trial records
+remain deeply and byte-for-byte equal and outbound attempts remain zero.
 
 | Surface | Applicable behavior and distribution boundary |
 | --- | --- |
@@ -39,12 +45,16 @@ SQLite/YouTube answer. No billable model, search or payment call was made.
 | Browser extension | Its existing hosted research handoff receives server behavior; extension code and artifacts are unchanged. |
 | Telegram and Discord | Their server routes invoke shared research; bot adapters and command contracts are unchanged. |
 
-The existing browser composer permits a new explicit request after an error,
-and the failed turn remains visible. It clears on submit and restores requests
-only for maintenance, paused research and rate limiting; generic planning errors
-have no one-click exact-question retry. Readers can copy/edit the visible
-question and submit a fresh request under current admission and budget checks.
-This change does not rewrite a saved failure or retry it automatically. A retry
-convenience UI remains separate work. Required CI, merge and the coordinated
+Current saved reports and failed live turns now offer **Reopen original
+question**. This opens/restores the complete question in component memory,
+retains its source cap within current form/session limits, and requires a
+separate Ask action under current availability and publication admission. Saved
+report recovery retains its parent visibility and verified reader wallet;
+unknown visibility or a changed private owner cannot populate the draft.
+Deferred restoration rechecks owner, visibility and identity revision before
+changing question or cap. Saved recovery ignores legacy URL auto-run/prefill
+parameters. No question is added to URL/storage, no request is automatically
+resent and the original saved failure remains unchanged. Historical archive
+records receive no new composer. Required CI, merge and the coordinated
 production release remain with ROOT; no synchronized package or deployed-source
 claim follows from these local checks.
