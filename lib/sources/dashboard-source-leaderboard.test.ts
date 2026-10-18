@@ -35,6 +35,7 @@ it("distinguishes recorded activity from an empty current-network public listing
   const url = new URL(state.requests.find(url => url.startsWith("/api/runs"))!, "https://keryx.invalid");
   expect(url.searchParams.get("network")).toBe(browserPaymentProfile().networkId);
   expect(url.searchParams.get("period")).toBe("all");
+  expect(url.searchParams.get("limit")).toBe("4");
   expect(url.searchParams.has("archive")).toBe(false);
 });
 
