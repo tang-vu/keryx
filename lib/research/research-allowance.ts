@@ -21,6 +21,30 @@ export const RESEARCH_ALLOWANCE_REVIEW = {
   searchPaygUsdPerCredit: 0.008,
 } as const;
 
+/** Fresh owner authority for these exact originals only; historical policies stay closed. */
+export const TWO_ORIGINAL_RESEARCH_REVIEW = {
+  policyId: "keryx-homepage-two-originals-2026-10-18-v3",
+  priceCheckedOn: "2026-10-18",
+  modelPricePolicyId: "deepseek-flash-reviewed-2026-10-18-v1",
+  modelEvidenceSha256: "66422ffcfa61f846b188904c93edf7a3bdcb4d68231c9084e20645eee19edacc",
+  searchPricePolicyId: "tavily-basic-reviewed-2026-10-18-v1",
+  searchEvidenceSha256: "3b47f63bdf04897f26adfbe50fc384afef966d3b810d19e814682465c4f5a72e",
+  modelReserveMicroUsd: 20660,
+  modelPeakInputUsdPerMillion: 0.30,
+  modelPeakOutputUsdPerMillion: 1.20,
+  framingTokens: 4096,
+  searchReserveMicroUsd: 8000,
+  searchCreditsPerRequest: 1,
+  searchPaygUsdPerCredit: 0.008,
+  // The task was recorded after the owner's fresh grant. Never admit before that record.
+  notBefore: "2026-10-18T13:13:25.659Z",
+  expiresAt: "2026-10-19T03:30:00Z",
+  questionSha256: [
+    "19e8e4e3f09ff0d5a8d8ffb64688f8c19b41a789e45f0f5203f4059199e2ae34",
+    "1f9cbcac9bd37d5dae615a1c09a817ba16f75207dd786042084e24eb59876d1f",
+  ],
+} as const;
+
 const questionHash = z.string().regex(/^[a-f0-9]{64}$/);
 const policySchema = z.object({
   format: z.literal("keryx-production-research-allowance-v2"),
@@ -57,7 +81,31 @@ const policySchema = z.object({
 }).strict();
 
 export type ResearchAllowancePolicy = z.infer<typeof policySchema>;
-export interface ConfiguredResearchAllowance { policy: ResearchAllowancePolicy; digest: string; file: string }
+const twoOriginalPolicySchema = policySchema.extend({
+  format: z.literal("keryx-production-research-allowance-v3"),
+  policyId: z.literal(TWO_ORIGINAL_RESEARCH_REVIEW.policyId),
+  priceCheckedOn: z.literal(TWO_ORIGINAL_RESEARCH_REVIEW.priceCheckedOn),
+  pricePolicyId: z.literal(TWO_ORIGINAL_RESEARCH_REVIEW.modelPricePolicyId),
+  modelEvidenceSha256: z.literal(TWO_ORIGINAL_RESEARCH_REVIEW.modelEvidenceSha256),
+  expiresAt: z.literal(TWO_ORIGINAL_RESEARCH_REVIEW.expiresAt),
+  search: policySchema.shape.search.extend({
+    pricePolicyId: z.literal(TWO_ORIGINAL_RESEARCH_REVIEW.searchPricePolicyId),
+    evidenceSha256: z.literal(TWO_ORIGINAL_RESEARCH_REVIEW.searchEvidenceSha256),
+    maximumCalls: z.literal(4),
+  }),
+  research: policySchema.shape.research.extend({
+    maximumQuestions: z.literal(2),
+    questionSha256: z.tuple([
+      z.literal(TWO_ORIGINAL_RESEARCH_REVIEW.questionSha256[0]),
+      z.literal(TWO_ORIGINAL_RESEARCH_REVIEW.questionSha256[1]),
+    ]),
+  }),
+});
+export type TwoOriginalResearchAllowancePolicy = z.infer<typeof twoOriginalPolicySchema>;
+type DatedResearchAllowancePolicy = ResearchAllowancePolicy | TwoOriginalResearchAllowancePolicy;
+export interface ConfiguredResearchAllowance { policy: DatedResearchAllowancePolicy; digest: string; file: string }
+const reviewFor = (policy: DatedResearchAllowancePolicy) => policy.format === "keryx-production-research-allowance-v3"
+  ? TWO_ORIGINAL_RESEARCH_REVIEW : RESEARCH_ALLOWANCE_REVIEW;
 export interface BoundedResearchInput {
   question: string;
   queryId: string;
@@ -120,18 +168,25 @@ function syncDirectory(directory: string) {
 }
 
 export function validateResearchAllowancePolicy(value: unknown, now = new Date()) {
-  let policy: ResearchAllowancePolicy;
-  try { policy = policySchema.parse(value); } catch { return refuse("policy refused"); }
-  if (now.toISOString().slice(0, 10) !== policy.priceCheckedOn ||
-      Date.parse(policy.expiresAt) <= now.getTime() || policy.expiresAt.slice(0, 10) !== policy.priceCheckedOn)
+  let policy: DatedResearchAllowancePolicy;
+  try {
+    policy = value && typeof value === "object" && "format" in value && value.format === "keryx-production-research-allowance-v3"
+      ? twoOriginalPolicySchema.parse(value) : policySchema.parse(value);
+  } catch { return refuse("policy refused"); }
+  const expired = policy.format === "keryx-production-research-allowance-v3"
+    ? !(now.getTime() >= Date.parse(TWO_ORIGINAL_RESEARCH_REVIEW.notBefore) && Date.parse(policy.expiresAt) > now.getTime())
+    : now.toISOString().slice(0, 10) !== policy.priceCheckedOn ||
+      Date.parse(policy.expiresAt) <= now.getTime() || policy.expiresAt.slice(0, 10) !== policy.priceCheckedOn;
+  if (expired)
     refuse("expired; a new tariff review and authorization are required");
-  // 46 * 20660 + 6 * 8000 = 998360 microUSD; failed/unknown calls retain the full hold.
-  if (Math.ceil((policy.maximumInputBytes + RESEARCH_ALLOWANCE_REVIEW.framingTokens) *
-      RESEARCH_ALLOWANCE_REVIEW.modelPeakInputUsdPerMillion + policy.maximumOutputTokens *
-      RESEARCH_ALLOWANCE_REVIEW.modelPeakOutputUsdPerMillion) !== RESEARCH_ALLOWANCE_REVIEW.modelReserveMicroUsd)
+  const review = reviewFor(policy);
+  // v2: 998360; fresh exact-two v3: 982360 microUSD. Failed/unknown calls keep the full hold.
+  if (Math.ceil((policy.maximumInputBytes + review.framingTokens) *
+      review.modelPeakInputUsdPerMillion + policy.maximumOutputTokens *
+      review.modelPeakOutputUsdPerMillion) !== review.modelReserveMicroUsd)
     refuse("reviewed model ceiling mismatch");
-  if (policy.maximumCalls * RESEARCH_ALLOWANCE_REVIEW.modelReserveMicroUsd +
-      policy.search.maximumCalls * RESEARCH_ALLOWANCE_REVIEW.searchReserveMicroUsd > policy.maximumMicroUsd)
+  if (policy.maximumCalls * review.modelReserveMicroUsd +
+      policy.search.maximumCalls * review.searchReserveMicroUsd > policy.maximumMicroUsd)
     refuse("combined ceiling exceeded");
   protectedPath(policy.journalDirectory, true);
   return policy;
@@ -188,14 +243,15 @@ export class ResearchAllowance {
       refuse("policy snapshot mismatch; retained holds preserved");
     if (readProtected(path.join(policy.journalDirectory, "policy.sha256")).toString("utf8") !== `${digest}\n`)
       refuse("journal belongs to a different policy");
+    const questions: readonly string[] = policy.research.questionSha256;
     for (const name of fs.readdirSync(policy.journalDirectory)) {
       if (name === "policy.sha256") continue;
       const model = /^model-([0-9]{4})\.json$/.exec(name);
       const question = /^question-([a-f0-9]{64})\.json$/.exec(name);
       const search = /^search-([a-f0-9]{64})-(01|02)\.json$/.exec(name);
       if (!(model && Number(model[1]) >= 1 && Number(model[1]) <= policy.maximumCalls) &&
-          !(question && policy.research.questionSha256.includes(question[1])) &&
-          !(search && policy.research.questionSha256.includes(search[1]))) refuse("unexpected journal state");
+          !(question && questions.includes(question[1])) &&
+          !(search && questions.includes(search[1]))) refuse("unexpected journal state");
       // Empty/partial recognized holds consume capacity; their payload never restores it.
       protectedPath(path.join(policy.journalDirectory, name), false);
     }
@@ -208,7 +264,8 @@ export class ResearchAllowance {
         typeof input.question !== "string" || typeof input.queryId !== "string" || !input.queryId.trim() || input.queryId.length > 200)
       refuse("requires public web quick research with zero source budget and no browser funding");
     const questionSha256 = sha(input.question);
-    if (!this.configured.policy.research.questionSha256.includes(questionSha256)) refuse("question is outside the frozen scope");
+    const questions: readonly string[] = this.configured.policy.research.questionSha256;
+    if (!questions.includes(questionSha256)) refuse("question is outside the frozen scope");
     const admission = Object.freeze({ policySha256: this.configured.digest, questionSha256, queryIdSha256: sha(input.queryId) });
     const receipt = JSON.stringify({ format: "keryx-research-question-hold-v2", ...admission,
       reservedAt: new Date().toISOString(), sourceBudgetMicroUsdc: 0, outcome: "consumed-regardless-of-research-outcome" }) + "\n";
@@ -237,14 +294,14 @@ export class ResearchAllowance {
     if (inputBytes > this.configured.policy.maximumInputBytes || !Number.isInteger(maxTokens) ||
         maxTokens < 1 || maxTokens > this.configured.policy.maximumOutputTokens) refuse("request bound exceeded; no truncation or fallback");
     return this.reserveSlots(admission, "model", this.configured.policy.maximumCalls,
-      RESEARCH_ALLOWANCE_REVIEW.modelReserveMicroUsd, { inputBytes, maximumOutputTokens: maxTokens });
+      reviewFor(this.configured.policy).modelReserveMicroUsd, { inputBytes, maximumOutputTokens: maxTokens });
   }
 
   reserveSearch(query: string) {
     const admission = this.validateAdmission();
     if (typeof query !== "string" || !query.trim() || query.length > 500) refuse("search query bound exceeded");
     return this.reserveSlots(admission, "search", this.configured.policy.research.maximumSearchCallsPerQuestion,
-      RESEARCH_ALLOWANCE_REVIEW.searchReserveMicroUsd, { querySha256: sha(query), searchDepth: "basic" });
+      reviewFor(this.configured.policy).searchReserveMicroUsd, { querySha256: sha(query), searchDepth: "basic" });
   }
 
   private reserveSlots(admission: BoundedResearchAdmission, kind: "model" | "search", slots: number,

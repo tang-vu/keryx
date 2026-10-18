@@ -40,6 +40,32 @@ const input = (question = questions[0], queryId = "query-one") => ({ question, q
   origin: "web", researchMode: "quick", budget: 0, fundingOwner: "treasury", privateScope: false } as const);
 const allowance = () => new ResearchAllowance(configuredResearchAllowance()!, flush);
 const names = (directory: string, prefix: string) => fs.readdirSync(directory).filter(name => name.startsWith(prefix));
+const originalQuestions = [
+  "Compare SQLite WAL and rollback journals for a small web application. What are the concurrency and operational tradeoffs?",
+  "Compare English-language educational YouTube topic ideas for children ages 6–9. Distinguish evidence from assumptions and explain the limits of claims about audience demand.",
+];
+const freshNow = "2026-10-18T14:00:00.000Z";
+function freshFixture(change: Record<string, unknown> = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "keryx-research-allowance-")); roots.push(root);
+  fs.chmodSync(root, 0o700);
+  const journalDirectory = path.join(root, "journal"); fs.mkdirSync(journalDirectory, { mode: 0o700 });
+  const policy = {
+    format: "keryx-production-research-allowance-v3", policyId: "keryx-homepage-two-originals-2026-10-18-v3",
+    priceCheckedOn: "2026-10-18", pricePolicyId: "deepseek-flash-reviewed-2026-10-18-v1",
+    modelEvidenceSha256: "66422ffcfa61f846b188904c93edf7a3bdcb4d68231c9084e20645eee19edacc", provider: "deepseek",
+    endpoint: "https://api.deepseek.com/chat/completions", model: "deepseek-v4-flash",
+    expiresAt: "2026-10-19T03:30:00Z", maximumMicroUsd: 1000000, maximumCalls: 46,
+    maximumInputBytes: 32000, maximumOutputTokens: 8192, journalDirectory,
+    search: { provider: "tavily", endpoint: "https://api.tavily.com/search", pricePolicyId: "tavily-basic-reviewed-2026-10-18-v1",
+      evidenceSha256: "3b47f63bdf04897f26adfbe50fc384afef966d3b810d19e814682465c4f5a72e", searchDepth: "basic", maximumCalls: 4, reservePerCallMicroUsd: 8000 },
+    research: { origin: "web", mode: "quick", sourceBudgetMicroUsdc: 0, maximumQuestions: 2,
+      maximumSearchCallsPerQuestion: 2, questionSha256: originalQuestions.map(sha) },
+  };
+  const file = path.join(root, "policy.json"), text = JSON.stringify({ ...policy, ...change });
+  fs.writeFileSync(file, text, { mode: 0o600 });
+  vi.stubEnv("KERYX_MODEL_ALLOWANCE_FILE", file); vi.stubEnv("KERYX_MODEL_ALLOWANCE_SHA256", sha(text));
+  return { root, policy, file, digest: sha(text) };
+}
 async function within<T>(admission: ReturnType<ResearchAllowance["admit"]>, operation: () => Promise<T>) {
   async function* body() { return await operation(); }
   return (await bindBoundedResearchAdmission(admission, body()).next()).value as T;
@@ -52,6 +78,116 @@ afterEach(() => {
     if (!path.isAbsolute(root) || !root.startsWith(path.join(os.tmpdir(), "keryx-research-allowance-"))) throw Error("Unsafe test cleanup");
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+describe("fresh exact-two-original allowance", () => {
+  beforeEach(() => vi.setSystemTime(freshNow));
+
+  it("admits exactly the two original hashes once across midnight without reopening October 4/5", () => {
+    const { policy } = freshFixture();
+    const budget = allowance();
+    budget.admit(input(originalQuestions[0]));
+    vi.setSystemTime("2026-10-19T00:01:00Z");
+    budget.admit(input(originalQuestions[1], "second-original"));
+    expect(() => allowance().admit(input(originalQuestions[0], "replacement"))).toThrow("already consumed");
+    expect(() => allowance().admit(input("A third original"))).toThrow("outside the frozen scope");
+    expect(names(policy.journalDirectory, "question-")).toHaveLength(2);
+    fixture(); expect(() => configuredResearchAllowance()).toThrow("expired");
+  });
+
+  it("rejects changed scope, counts, tariffs, expiry and funding before any new question hold", () => {
+    const value = freshFixture();
+    const budget = allowance();
+    for (const change of [{ origin: "engine" }, { origin: "mcp" }, { researchMode: "deep" }, { budget: 0.05 },
+      { fundingOwner: "browser" }, { privateScope: true }, { paidScholarly: true }, { question: originalQuestions[0] + " " }])
+      expect(() => budget.admit({ ...input(originalQuestions[0]), ...change })).toThrow("Bounded research allowance");
+    for (const change of [{ maximumCalls: 47 }, { maximumMicroUsd: 1000001 }, { priceCheckedOn: "2026-10-19" },
+      { modelEvidenceSha256: "a".repeat(64) }, { expiresAt: "2026-10-19T03:30:01Z" },
+      { search: { ...value.policy.search, maximumCalls: 5 } },
+      { research: { ...value.policy.research, maximumQuestions: 3, questionSha256: [...originalQuestions.map(sha), sha("third")] } },
+      { research: { ...value.policy.research, questionSha256: [sha("changed"), sha(originalQuestions[1])] } },
+      { endpoint: "https://other.example/chat/completions" }, { model: "deepseek-v4-pro" }, { retries: true }]) {
+      const rejected = freshFixture(change);
+      expect(() => configuredResearchAllowance()).toThrow("Bounded research allowance");
+      expect(names(rejected.policy.journalDirectory, "question-")).toHaveLength(0);
+    }
+    freshFixture(); vi.setSystemTime("2026-10-19T03:30:00Z");
+    expect(() => configuredResearchAllowance()).toThrow("expired");
+    freshFixture(); vi.setSystemTime("2026-10-18T13:13:25.658Z");
+    expect(() => configuredResearchAllowance()).toThrow("expired");
+    expect(names(value.policy.journalDirectory, "question-")).toHaveLength(0);
+  });
+
+  it("caps 46 shared model holds and four basic search holds including empty consumed slots", async () => {
+    const { policy } = freshFixture(); const budget = allowance();
+    fs.writeFileSync(path.join(policy.journalDirectory, "model-0001.json"), "", { mode: 0o600 });
+    const first = budget.admit(input(originalQuestions[0]));
+    await within(first, async () => {
+      for (let i = 0; i < 45; i++) expect(allowance().reserveModel("", "", 1).reserveMicroUsd).toBe(20660);
+      expect(() => budget.reserveModel("", "", 1)).toThrow("model exhausted");
+      budget.reserveSearch("first"); budget.reserveSearch("second");
+      expect(() => budget.reserveSearch("replacement")).toThrow("search exhausted");
+    });
+    const second = allowance().admit(input(originalQuestions[1], "second-original"));
+    fs.writeFileSync(path.join(policy.journalDirectory, `search-${sha(originalQuestions[1])}-01.json`), "", { mode: 0o600 });
+    await within(second, async () => {
+      expect(() => allowance().reserveModel("", "", 1)).toThrow("model exhausted");
+      allowance().reserveSearch("last search");
+      expect(() => allowance().reserveSearch("replacement")).toThrow("search exhausted");
+    });
+    expect(names(policy.journalDirectory, "model-")).toHaveLength(46);
+    expect(names(policy.journalDirectory, "search-")).toHaveLength(4);
+    expect(46 * 20660 + 4 * 8000).toBe(982360);
+  });
+
+  it("uses the bounded model and actual basic-search transports with durable holds before failed HTTP", async () => {
+    const { policy } = freshFixture(); const budget = allowance(), admission = budget.admit(input(originalQuestions[0]));
+    const engine = new BoundedProductionEngine("synthetic-model-key",
+      new ProductionModelAllowance(configuredProductionModelAllowance()!, flush));
+    let models = 0, searches = 0;
+    const request = vi.fn(async (url: string, init: RequestInit) => {
+      expect(names(policy.journalDirectory, "question-")).toHaveLength(1);
+      if (url === "https://api.deepseek.com/chat/completions") {
+        models++; expect(names(policy.journalDirectory, "model-")).toHaveLength(models);
+        expect(JSON.parse(init.body as string)).toMatchObject({ model: "deepseek-v4-flash", max_tokens: 2048 });
+        throw Error("Uncertain provider outcome");
+      }
+      expect(url).toBe("https://api.tavily.com/search"); searches++;
+      expect(names(policy.journalDirectory, "search-")).toHaveLength(searches);
+      expect(JSON.parse(init.body as string)).toMatchObject({ search_depth: "basic", auto_parameters: false });
+      if (searches === 1) throw Error("Uncertain search outcome");
+      return Response.json({ results: [] });
+    });
+    vi.stubGlobal("fetch", request);
+    await within(admission, async () => {
+      await expect(engine.decompose(originalQuestions[0])).rejects.toThrow("reservation retained");
+      await expect(tavilyProvider("synthetic-search-key").search("first")).rejects.toThrow("Search provider unavailable");
+      await expect(tavilyProvider("synthetic-search-key").search("second")).resolves.toEqual([]);
+      await expect(tavilyProvider("synthetic-search-key").search("third")).rejects.toThrow("search exhausted");
+    });
+    expect([models, searches, request.mock.calls.length]).toEqual([1, 2, 3]);
+    expect(() => allowance().admit(input(originalQuestions[0], "replacement"))).toThrow("already consumed");
+  });
+
+  it("retains failed persistence and expiry-crossing holds and refuses closed contexts without dispatch", async () => {
+    const { policy } = freshFixture(); const budget = allowance();
+    const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
+    const admission = budget.admit(input(originalQuestions[0]));
+    const controller = new AbortController();
+    async function* body() {
+      const failing = new ResearchAllowance(configuredResearchAllowance()!, () => { throw Error("directory flush failed"); });
+      expect(() => failing.reserveModel("", "", 1)).toThrow("directory flush failed");
+      const crossing = new ResearchAllowance(configuredResearchAllowance()!, () => vi.setSystemTime("2026-10-19T03:30:00Z"));
+      expect(() => crossing.reserveSearch("late")).toThrow("expired");
+      yield "done";
+    }
+    const generator = bindBoundedResearchAdmission(admission, body(), controller.signal);
+    await generator.next(); controller.abort();
+    await expect(generator.next()).rejects.toThrow("closed");
+    expect(names(policy.journalDirectory, "model-")).toHaveLength(1);
+    expect(names(policy.journalDirectory, "search-")).toHaveLength(1);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });
 
 describe("shared dated research allowance", () => {
