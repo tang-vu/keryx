@@ -33,6 +33,7 @@ import { reasoningOutputLimitText } from "@/lib/llm/reasoning-telemetry";
 import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
 import { BibliographyExports } from "./bibliography-exports";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { sourceReadSummary } from "@/lib/research/source-read-outcomes";
 
 
 
@@ -58,7 +59,7 @@ export function AnswerCard({ run, answerLanguage, meta, permalink, payments = []
   const selectedCitation = run.citations.find((citation) => citation.marker === highlight);
   const bought = run.decisions.filter((d) => d.action === "BUY").length;
   const skipped = run.decisions.filter((d) => d.action === "SKIP").length;
-  const cached = run.decisions.filter((d) => d.action === "CACHE").length;
+  const reads = sourceReadSummary(run);
   const confidence = deriveConfidence(run);
   const outputLimit = reasoningOutputLimitText(run.reasoningAttempts, /[ăâđêôơưĂÂĐÊÔƠƯ\u1ea0-\u1ef9]/u.test(run.question) ? "vi" : "en", run.trace);
 
@@ -179,7 +180,7 @@ export function AnswerCard({ run, answerLanguage, meta, permalink, payments = []
           toCreators={run.totalToCreators}
           bought={bought}
           skipped={skipped}
-          cached={cached}
+          reads={reads}
           engine={run.engine}
           pending={run.pendingPayments ?? 0}
           mode={run.paymentMode ?? meta?.mode ?? null}
@@ -270,7 +271,7 @@ interface SummaryStripProps {
   toCreators: number;
   bought: number;
   skipped: number;
-  cached: number;
+  reads: ReturnType<typeof sourceReadSummary>;
   engine: string;
   pending: number;
   mode: "real" | "offline" | null;
@@ -283,7 +284,7 @@ function SummaryStrip({
   toCreators,
   bought,
   skipped,
-  cached,
+  reads,
   engine,
   pending,
   mode,
@@ -293,6 +294,13 @@ function SummaryStrip({
   const copy = useUiMessages();
   const [copied, setCopied] = useState(false);
   const creatorShare = spent > 0 ? `${Math.round((toCreators / spent) * 100)}%` : "—";
+  const readLabels = [
+    reads.publicReads ? copy(selectPlural(reads.publicReads) === "one" ? "reportReading.publicRead.one" : "reportReading.publicRead.other", { count: reads.publicReads }) : null,
+    reads.cacheHits ? copy(selectPlural(reads.cacheHits) === "one" ? "reportReading.cacheHit.one" : "reportReading.cacheHit.other", { count: reads.cacheHits }) : null,
+    reads.failedReads ? copy(selectPlural(reads.failedReads) === "one" ? "reportReading.failedRead.one" : "reportReading.failedRead.other", { count: reads.failedReads }) : null,
+    reads.publicSelectionsWithoutOutcome ? copy(selectPlural(reads.publicSelectionsWithoutOutcome) === "one" ? "reportReading.publicSelection.one" : "reportReading.publicSelection.other", { count: reads.publicSelectionsWithoutOutcome }) : null,
+    reads.cacheSelectionsWithoutOutcome ? copy(selectPlural(reads.cacheSelectionsWithoutOutcome) === "one" ? "reportReading.cacheSelection.one" : "reportReading.cacheSelection.other", { count: reads.cacheSelectionsWithoutOutcome }) : null,
+  ].filter(Boolean);
 
   const copyPermalink = useCallback(() => {
     if (!permalink) return;
@@ -309,8 +317,9 @@ function SummaryStrip({
       {pending > 0 && <Stat label={copy("reportReading.pendingProof")} value={`${pending}`} />}
       <Stat
         label={copy("reportReading.decisions")}
-        value={[copy(selectPlural(bought) === "one" ? "reportReading.bought.one" : "reportReading.bought.other", { count: bought }), copy(selectPlural(cached) === "one" ? "reportReading.cached.one" : "reportReading.cached.other", { count: cached }), copy(selectPlural(skipped) === "one" ? "reportReading.skipped.one" : "reportReading.skipped.other", { count: skipped })].join(" · ")}
+        value={[copy(selectPlural(bought) === "one" ? "reportReading.bought.one" : "reportReading.bought.other", { count: bought }), copy(selectPlural(skipped) === "one" ? "reportReading.skipped.one" : "reportReading.skipped.other", { count: skipped })].join(" · ")}
       />
+      <Stat label={copy("reportReading.reads")} value={readLabels.length ? readLabels.join(" · ") : copy("reportReading.noRecordedReads")} />
       <div className="ml-auto flex items-center gap-2">
         {permalink && (
           <button
