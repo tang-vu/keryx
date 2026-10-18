@@ -45,6 +45,16 @@ it("reviews without signing and saves the independently verified hash before a s
   expect(wallet.sendTransaction).not.toHaveBeenCalled(); expect(row.approval.status).toBe("possible"); expect(row.activePayer).toBe(payer);
 });
 
+it("refuses known unsupported cancellation before a fee review or claim, preserving the uncertain original", async () => {
+  const { wallet, w, c } = setup();
+  const quote = await reviewFundingCancellation(row.id, w, c);
+  Object.assign(wallet, { request: vi.fn(async () => ({ "0x0": { keryxExactTransactionSigning: { supported: false } } })) });
+  await expect(reviewFundingCancellation(row.id, w, c)).rejects.toMatchObject({ code: 4200 });
+  await expect(submitFundingCancellation(quote, w, c)).rejects.toMatchObject({ code: 4200 });
+  expect(journal.claimFundingCancellation).not.toHaveBeenCalled(); expect(wallet.signTransaction).not.toHaveBeenCalled();
+  expect(row.approval.status).toBe("possible"); expect(row.activePayer).toBe(payer);
+});
+
 it.each(["owner", "wallet-chain", "rpc-chain", "code", "nonce", "gas-balance", "fees", "changed-record", "expired", "claim"])("blocks before signing on %s", async failure => {
   const { wallet, chain, w, c } = setup(), quote = await reviewFundingCancellation(row.id, w, c);
   if (failure === "owner") wallet.getAddresses.mockResolvedValue([]);

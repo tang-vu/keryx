@@ -14,6 +14,7 @@ import { POST as prepare } from "@/app/api/auth/circle/prepare/route";
 import { POST as login } from "@/app/api/auth/circle/session/route";
 import { POST as sign } from "@/app/api/auth/circle/sign/route";
 import { GET as readiness } from "@/app/api/auth/circle/config/route";
+import { POST as recovery } from "@/app/api/auth/circle/recovery-transactions/route";
 import { CIRCLE_LOGIN_COOKIE, circleLoginHash, readCircleBody, verifiedCircleWallet } from "./circle-wallet-server";
 
 const state = "a".repeat(64), walletId = "00000000-0000-4000-8000-000000000001";
@@ -146,4 +147,42 @@ it("bounds chunked UTF-8 bodies before parsing and applies rate limits before ve
   await expect(readCircleBody(large, z.unknown())).rejects.toThrow("Body too large");
   mocks.limit.mockResolvedValue(Response.json({ error: "rate limited" }, { status: 429 }));
   expect((await login(req("session", { state, userToken }))).status).toBe(429); expect(fetcher).not.toHaveBeenCalled();
+});
+
+it.each([false, true])("refuses raw signing for native Arc wallets before vendor challenges, testnet=%s", async testnet => {
+  Object.assign(mocks.profile, { testnet });
+  const response = await sign(req("sign", { userToken, kind: "transaction", payload: "0x02", idempotencyKey: walletId }));
+  expect(response.status).toBe(501); expect(await response.json()).toMatchObject({ code: 4200 });
+  expect(fetcher).not.toHaveBeenCalled(); expect(mocks.createSession).not.toHaveBeenCalled();
+});
+
+const query = { from: "2026-01-01T00:00:00.000Z", to: "2026-01-02T00:00:00.000Z" };
+it("requires origin, live session and same original vendor wallet before a read-only history request", async () => {
+  const body = { userToken, query };
+  expect((await recovery(req("recovery-transactions", body, { origin: "https://attacker.invalid" }))).status).toBe(403);
+  mocks.session.mockResolvedValue(null);
+  expect((await recovery(req("recovery-transactions", body))).status).toBe(401); expect(fetcher).not.toHaveBeenCalled();
+  mocks.session.mockResolvedValue({ address: `0x${"2".repeat(40)}` });
+  expect((await recovery(req("recovery-transactions", body))).status).toBe(403); expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it("keeps lookup credentials out of URLs/results and never creates or executes a challenge", async () => {
+  fetcher.mockResolvedValueOnce(Response.json({ data: { wallets: [wallet] } }))
+    .mockResolvedValueOnce(Response.json({ data: { transactions: [] } }));
+  const response = await recovery(req("recovery-transactions", { userToken, query }));
+  expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(await response.json()).toEqual({ owner, ...query, transactions: [] });
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  for (const [url, init] of fetcher.mock.calls) {
+    expect(init.method).toBe("GET"); expect(init.body).toBeUndefined(); expect(init.headers["X-User-Token"]).toBe(userToken);
+    expect(url).not.toContain(userToken); expect(url).not.toContain("sign/"); expect(url).not.toContain("/user/transactions/");
+  }
+});
+it("refuses injected recovery authority and hides upstream failures", async () => {
+  expect((await recovery(req("recovery-transactions", { userToken, query, walletId }))).status).toBe(400);
+  expect((await recovery(req("recovery-transactions", { userToken, query: { ...query, walletIds: walletId } }))).status).toBe(400);
+  expect(fetcher).not.toHaveBeenCalled();
+  fetcher.mockResolvedValueOnce(Response.json({ data: { wallets: [wallet] } }))
+    .mockResolvedValueOnce(Response.json({ message: "private-vendor-detail", code: 156027 }, { status: 400 }));
+  const response = await recovery(req("recovery-transactions", { userToken, query }));
+  expect(response.status).toBe(503); expect(await response.text()).not.toContain("private-vendor-detail");
 });

@@ -19,6 +19,13 @@ function provider() {
   });
   return { rpc, sign, current, api: createCircleWalletProvider({ address: owner.address, chainId: 5042, rpc, sign, assertCurrent: current }) };
 }
+it("reports native Arc transaction incapability locally without a vendor request or signature", async () => {
+  const { api, rpc, sign } = provider();
+  expect(await api.request({ method: "wallet_getCapabilities", params: [owner.address, ["0x13b2"]] }))
+    .toEqual({ "0x13b2": { keryxExactTransactionSigning: { supported: false } } });
+  await expect(api.request({ method: "wallet_getCapabilities", params: [other.address] })).rejects.toThrow("account differs");
+  expect(rpc).not.toHaveBeenCalled(); expect(sign).not.toHaveBeenCalled();
+});
 it("verifies the exact owner message and typed consent signatures independently", async () => {
   const { api, sign, rpc } = provider();
   const message = stringToHex("Synthetic Keryx wallet consent");

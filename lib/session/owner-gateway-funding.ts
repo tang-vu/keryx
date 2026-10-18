@@ -7,6 +7,7 @@ import type { FundingRecord, FundingStep } from "../buyer/funding-policy";
 export { GATEWAY_DEPOSIT_FOR_ABI } from "../buyer/funding-policy";
 import { hasOriginalSessionDepositCredit, readOwnerSessionCredit, type SessionFundingCredit } from "./session-funding-credit";
 import { readRetainedSessionGrantReference } from "./browser-session-grant-reference";
+import { assertExactTransactionSigning } from "../circle-wallet-capabilities";
 export type OwnerFundingPhase = "approval-awaiting" | "approval-submitted" | "approved" | "deposit-awaiting" | "deposit-submitted" | "deposited";
 
 export async function reconcileOwnerSessionCredit(owner: Address, signer: Address, knownAvailableMicros: bigint) {
@@ -40,7 +41,11 @@ export async function fundOwnerGatewaySession(input: { owner: Address; signer: A
     throw new Error("A retained funding transaction needs reconciliation before adding funds");
   if (input.creditSnapshot && (input.creditSnapshot.address !== input.signer.toLowerCase() ||
     input.creditSnapshot.available !== input.knownAvailableMicros.toString())) throw new Error("Session funding baseline differs");
-  record ??= await createFundingRecord(input.owner, input.amountMicros, input.signer, input.knownAvailableMicros.toString(), input.creditSnapshot?.observedAt);
+  if (!record) {
+    await assertExactTransactionSigning(input.wallet, input.owner, profile.chainId);
+    input.assertCurrent?.();
+    record = await createFundingRecord(input.owner, input.amountMicros, input.signer, input.knownAvailableMicros.toString(), input.creditSnapshot?.observedAt);
+  }
   async function confirm(step: FundingStep, current: FundingRecord) {
     for (let attempt=0; attempt<30; attempt++) {
       input.assertCurrent?.();

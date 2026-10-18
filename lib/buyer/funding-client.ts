@@ -6,6 +6,7 @@ import { readGatewayCredit } from "../gateway/read-credit";
 import { fundingTransaction, transactionHashSchema, verifyFundingTransaction, type FundingRecord, type FundingStep } from "./funding-policy";
 import { claimFundingStep, readFundingRecord, saveFundingHash, rejectFundingPrompt, confirmFundingStep, resolveFundingReplacement } from "./funding-journal";
 import { inspectFundingReplacement } from "./funding-replacement";
+import { assertExactTransactionSigning } from "../circle-wallet-capabilities";
 
 function userRejected(error: unknown): boolean {
   let value = error;
@@ -29,6 +30,7 @@ export async function submitFundingStep(input: { id: string; step: FundingStep; 
   const record = await readFundingRecord(id);
   if (!record.activePayer || !["ready", "rejected"].includes(record[step].status)
     || (step === "deposit" && record.approval.status !== "confirmed")) throw new Error("This funding step needs recovery, not another wallet request");
+  await assertExactTransactionSigning(wallet, record.payer, arcChain.id, signal);
   const tx = fundingTransaction(record, step);
   await checkIdentity(wallet, chain, record.payer, signal);
   // Unknown Gateway credit must not encourage additional deposits.

@@ -8438,3 +8438,25 @@ through final delivery. This distinguishes an incomplete assessment from a
 negative evidence finding, while keeping unreviewed support and rewards zero.
 See [homepage recovery](docs/engineering/homepage-research-recovery-20261018.md)
 for scope, checks and the unconfirmed original sample executions.
+
+## Native Circle Arc signing capability and retained-original lookup - 2026-10-18
+
+A live owner cancellation returned Circle error156027. The documented raw-sign
+transaction endpoint supports generic EVM and Solana wallet codes, not the native
+ARC wallet selected by Google login. Synthetic signature tests did not establish
+vendor support. Refuse native raw transaction signing in browser and API, and
+replace its recovery fee/sign prompt with authenticated read-only history lookup.
+
+Circle history is scoped to the verified immutable original wallet/user/network
+and a bounded creation window, with explicit UUID pagination. Vendor status is
+not release authority. Only the existing canonical finalized onchain verifier
+may resolve the original from an exact same-sender/same-nonce hash. Absence, an
+unsupported-operation error and an unrelated failed challenge preserve the hold.
+
+Do not substitute a generic EVM wallet, create custody, or weaken nonce/fee terms
+through a managed transfer/cancel fallback. Native Circle managed cancellation
+requires its transaction ID and does not expose the reviewed fee ceiling. Native
+transfer does not expose the reviewed nonce. Retaining a supported managed
+challenge/transaction lifecycle is separate work; this change does not claim
+that the historical0.07USDC original was recovered. See
+docs/engineering/funding-cancellation.md for surface roles and vendor references.
