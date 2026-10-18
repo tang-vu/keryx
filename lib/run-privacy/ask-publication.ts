@@ -21,7 +21,8 @@ export async function readResearchVisibility(): Promise<ResearchVisibilityContex
   const wallet = (await getSession())?.address.toLowerCase() ?? null;
   const db = await getDb(), active = creationPrivacyActive(db);
   const store = active ? requirePrivacy(db) : undefined;
-  if (store) await store.creationReady();
+  // Preference observation must not acquire SQLite's writer lock. Submission
+  // independently proves writable creation storage before provider/payment effects.
   return { wallet, privacyActive: active,
     defaultVisibility: wallet && store ? await store.defaults({ wallet, binding: privacyBinding() }) : "public" };
 }

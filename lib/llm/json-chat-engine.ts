@@ -376,8 +376,10 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       answer: envelope?.answer ?? (out.answer as string) ?? "",
       citedMarkers: envelope?.citedMarkers ?? (Array.isArray(out.citedMarkers) ? (out.citedMarkers as string[]) : []),
       evidence,
-      ...(proposals.length ? { evidenceReview: review && typeof review === "object" && Array.isArray((review as { reviews?: unknown }).reviews)
-        ? "completed" as const : "unavailable" as const } : {}),
+      ...(proposals.length ? review && typeof review === "object" && Array.isArray((review as { reviews?: unknown }).reviews)
+        ? { evidenceReview: "completed" as const }
+        // A failed review is unavailable assessment, not evidence that the read sources lack support.
+        : { evidenceReview: "unavailable" as const, synthesisFailure: "review" as const } : {}),
       conflicts: parseConflicts(out.conflicts),
       ...(synthesisOutputLimit ? { synthesisOutputLimit } : {}),
       ...(teaching ? { teachingProposals: { preparationGaps: teaching.gaps,
