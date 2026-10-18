@@ -1,5 +1,22 @@
 # Keryx Project Changelog
 
+### App0.27.81 research follow-up - October 19 preparation
+
+- Prepare prospective idea comparisons without requiring the caller to name the
+  candidate ideas in advance. Preserve the original audience, language, evidence
+  and demand-claim qualifications, bounded targets and named-comparison checks.
+- Save genuine pre-discovery planning failures as failed reports with a closed
+  reason code, original visibility and owner access. Private claim delivery stays
+  separate; a saved failure is not a completed answer.
+- Preserve safe public-read failure details and distinguish successful original
+  reads, real cache hits and failed selections in the answer receipt. Transport,
+  evidence, source-spending and reward limits remain unchanged.
+- The app0.27.80 live samples found a partial SQLite answer and a YouTube planning
+  refusal. Their one-attempt allowance is consumed; these changes do not retry
+  either question or establish useful live answers.
+- Focused PR review/CI, exact final-main acceptance, the applicable distribution
+  audit and one combined deployment remain release gates.
+
 ### App0.27.80 research recovery — October 18 preparation
 
 - Recover valid comparison plans when the model omits only whitespace between
