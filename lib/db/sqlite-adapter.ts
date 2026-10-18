@@ -26,7 +26,7 @@ import { ProfileIdentityError, type ProfileIdentitiesStore } from "../profiles/v
 import { PrivateProfileError, type PrivateProfilesStore } from "../profiles/private-profile";
 import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, getSqliteRegistrationSponsorExecution, inspectSqliteRegistrationSponsorFunding, transitionSqliteRegistrationSponsor, type RegistrationSponsorTransition } from "./registration-sponsor";
 import type { ActiveRegistrationSponsorPolicy, RegistrationSponsorFundingObservation, SponsoredRegistration } from "../sources/registration-sponsor-protocol";
-import { bindSqliteSourceRegistryOrigin, readSqliteSourceRegistryOrigin } from "./source-registry-origin";
+import { bindSqliteSourceRegistryOrigin, readSqliteSourceRegistryOrigin, readSqliteSourceRegistryOrigins } from "./source-registry-origin";
 import { retainSqliteRegistryCollision } from "./registry-collisions";
 import { readSqliteOperatorInventory, type OperatorInventoryInput } from "../business-operator/inventory";
 import { installOrdinarySqliteApplicationSchema } from "./sqlite-application-schema";
@@ -55,7 +55,7 @@ import { archiveSqlitePublicReferenceItems, querySqlitePublicReferenceItems, rea
 import { listSqlitePublicReferences } from "./public-reference-list";
 import { issueSqliteSourceClaimChallenge, getSqliteSourceClaimChallenge, reserveSqliteSourceClaimVerification,
   verifySqliteSourceClaim, getSqliteSourceClaim, getSqliteSourceClaimForSource, listSqliteSourceClaims,
-  bindSqliteSourceClaim, updateSqliteSourceClaimPolicy, getRetainedSourceClaimMarker } from "./public-source-claims";
+  bindSqliteSourceClaim, updateSqliteSourceClaimPolicy, getRetainedSourceClaimMarker, getRetainedSourceClaimMarkers } from "./public-source-claims";
 import { canonicalSourceUrl, type IssueSourceClaimChallenge, type VerifySourceClaim,
   type BindSourceClaim, type UpdateSourceClaimPolicy } from "../sources/public-source-claim";
 /**
@@ -430,14 +430,12 @@ export class SqliteAdapter implements KeryxDB {
   }
   async listSources(): Promise<Source[]> {
     // Filter to active=1 only — deactivated on-chain sources must not be discovered/cited.
-    const rows = this.db.prepare(`SELECT * FROM sources WHERE active = 1 ORDER BY created_at`).all();
-    return rows.map(row => rowToSourceWithClaim(this.db, row));
+    return listSourcesWithClaims(this.db, true);
   }
 
   async listAllSources(): Promise<Source[]> {
     // Deactivated rows included — owner history only, never discovery. See the interface note.
-    const rows = this.db.prepare(`SELECT * FROM sources ORDER BY created_at`).all();
-    return rows.map(row => rowToSourceWithClaim(this.db, row));
+    return listSourcesWithClaims(this.db, false);
   }
 
   async setSourceMeta(id: string, meta: import("./keryx-db").SourceMeta): Promise<void> {
@@ -2690,6 +2688,31 @@ function rowToApiKey(r: Record<string, unknown>): ApiKeyRow {
   };
 }
 
+/** One synchronous read snapshot; retain full connection guards on every SQL
+ * statement and the enrolled facade's fresh post-await assertion. */
+function listSourcesWithClaims(db: DatabaseSync, activeOnly: boolean): Source[] {
+  const ownTransaction = !db.isTransaction;
+  if (ownTransaction) db.exec("BEGIN");
+  try {
+    const sources = db.prepare(activeOnly ? "SELECT * FROM sources WHERE active = 1 ORDER BY created_at"
+      : "SELECT * FROM sources ORDER BY created_at").all().map(rowToSource);
+    for (let start = 0; start < sources.length; start += 100) {
+      const batch = sources.slice(start, start + 100);
+      const markers = getRetainedSourceClaimMarkers(db, batch.map(source => source.id));
+      const origins = readSqliteSourceRegistryOrigins(db, batch.flatMap(source => source.onchainId ? [source.onchainId] : []));
+      for (const source of batch) {
+        const marker = markers.get(source.id), authority = source.onchainId ? origins.get(source.onchainId) : undefined;
+        if (marker) source.sourceClaimId = marker;
+        if (authority) source.registryAuthority = authority;
+      }
+    }
+    if (ownTransaction) db.exec("COMMIT");
+    return sources;
+  } catch (error) {
+    if (ownTransaction) db.exec("ROLLBACK");
+    throw error;
+  }
+}
 function rowToSourceWithClaim(db: DatabaseSync, row: Record<string, unknown>): Source {
   const source = rowToSource(row), marker = getRetainedSourceClaimMarker(db, source.id);
   const authority = source.onchainId ? readSqliteSourceRegistryOrigin(db, source.onchainId) : undefined;

@@ -66,25 +66,59 @@ export function getRetainedSourceClaimMarker(db: DatabaseSync, sourceId: string)
   const sourceDigest = digest(sourceId);
   const row = db.prepare("SELECT value FROM sync_state WHERE key=?").get(PREFIX + `marker:${sourceDigest}`)
     ?? db.prepare("SELECT value FROM sync_state WHERE key=?").get(PREFIX + `source:${sourceDigest}`);
-  if (row) {
-    try {
-      const binding = bindingSchema.safeParse(JSON.parse(String(row.value)));
-      if (binding.success && binding.data.sourceId === sourceId) return binding.data.claimId;
-    } catch { /* Corrupt retained state is managed, never a legacy earning fallback. */ }
-    return digest(`unavailable-source-claim:${sourceId}`);
-  }
+  if (row) return retainedBindingMarker(sourceId, row.value);
   // Pre-marker records and deletion-only corruption still retain their linked identity.
   // json_valid guards unrelated damaged records; this lookup grants no policy authority.
   const retained = db.prepare(`SELECT key,value FROM sync_state WHERE (key LIKE ? OR key LIKE ?)
     AND CASE WHEN json_valid(value) THEN COALESCE(json_extract(value,'$.linkedSourceId'),json_extract(value,'$.claim.linkedSourceId')) END=? LIMIT 1`)
     .get(PREFIX + "claim:%", PREFIX + "history:%", sourceId);
   if (!retained) return null;
+  return retainedLinkedMarker(sourceId, retained.key, retained.value);
+}
+function retainedBindingMarker(sourceId: string, value: unknown): string {
   try {
-    const value = JSON.parse(String(retained.value));
-    const claim = sourceClaimSchema.safeParse(String(retained.key).startsWith(PREFIX + "history:") ? value.claim : value);
+    const binding = bindingSchema.safeParse(JSON.parse(String(value)));
+    if (binding.success && binding.data.sourceId === sourceId) return binding.data.claimId;
+  } catch { /* Corrupt retained state is managed, never a legacy earning fallback. */ }
+  return digest(`unavailable-source-claim:${sourceId}`);
+}
+function retainedLinkedMarker(sourceId: string, key: unknown, raw: unknown): string {
+  try {
+    const value = JSON.parse(String(raw));
+    const claim = sourceClaimSchema.safeParse(String(key).startsWith(PREFIX + "history:") ? value.claim : value);
     if (claim.success && claim.data.linkedSourceId === sourceId) return claim.data.id;
   } catch { /* Corrupt retained state is managed, never a legacy earning fallback. */ }
   return digest(`unavailable-source-claim:${sourceId}`);
+}
+/** Fresh catalog metadata only. Presence priority and corrupt-managed fallback
+ * match the single-source reader; no claim ownership/policy authority is added. */
+export function getRetainedSourceClaimMarkers(db: DatabaseSync, sourceIds: readonly string[]): ReadonlyMap<string, string | null> {
+  if (sourceIds.length > 100 || sourceIds.some(id => typeof id !== "string")) throw new Error("Source catalog batch exceeds its bound");
+  const ids = [...new Set(sourceIds)], result = new Map<string, string | null>();
+  if (!ids.length) return result;
+  const keys = ids.flatMap(id => [PREFIX + `marker:${digest(id)}`, PREFIX + `source:${digest(id)}`]);
+  const values = new Map(db.prepare("SELECT key,value FROM sync_state WHERE key IN (SELECT value FROM json_each(?))")
+    .all(JSON.stringify(keys)).map(row => [String(row.key), row.value]));
+  const pending: string[] = [];
+  for (const id of ids) {
+    const marker = PREFIX + `marker:${digest(id)}`, source = PREFIX + `source:${digest(id)}`;
+    if (values.has(marker)) result.set(id, retainedBindingMarker(id, values.get(marker)));
+    else if (values.has(source)) result.set(id, retainedBindingMarker(id, values.get(source)));
+    else { result.set(id, null); pending.push(id); }
+  }
+  if (pending.length) {
+    // Keep the original first matching claim/history lookup for each ID. The
+    // correlated native selection avoids inventing a new history preference.
+    // Values leave SQLite in their original types, including damaged BLOB rows.
+    const retained = db.prepare(`SELECT requested.value AS source_id,retained.key,retained.value
+      FROM json_each(?) requested LEFT JOIN sync_state retained ON retained.key=(
+        SELECT candidate.key FROM sync_state candidate WHERE (candidate.key LIKE ? OR candidate.key LIKE ?)
+        AND CASE WHEN json_valid(candidate.value) THEN COALESCE(json_extract(candidate.value,'$.linkedSourceId'),json_extract(candidate.value,'$.claim.linkedSourceId')) END=requested.value LIMIT 1)`)
+      .all(JSON.stringify(pending), PREFIX + "claim:%", PREFIX + "history:%");
+    for (const row of retained) if (row.key !== null)
+      result.set(String(row.source_id), retainedLinkedMarker(String(row.source_id), row.key, row.value));
+  }
+  return result;
 }
 export function getSqliteSourceClaimForSource(db: DatabaseSync, sourceId: string): SourceClaim | null {
   const row = db.prepare("SELECT value FROM sync_state WHERE key=?").get(PREFIX + `source:${digest(sourceId)}`);
