@@ -16,7 +16,9 @@ import { ResearchFundingActivity } from "./research-funding-activity";
 import { ArcCardOnrampPanel } from "./arc-card-onramp-panel";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "@/lib/arc-network-profile";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+import { assertExactTransactionSigning, CircleTransactionSigningUnavailableError } from "@/lib/circle-wallet-capabilities";
+import { fundingCancellationCopy } from "@/locales/en/funding-cancellation";
 
 
 
@@ -51,6 +53,7 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
   payer: string; initialAmount: number; requiredMicros: string; creditRevision?: number; disabled: boolean; onBusy: (busy: boolean) => void; onChanged: () => void;
 }) {
   const copy = useUiMessages();
+  const circleCopy = useUiCopy("funding-cancellation", fundingCancellationCopy);
   const profile = browserPaymentProfile();
   const { data: wallet } = useWalletClient();
   const chain = usePublicClient({ chainId: browserPaymentProfile().chainId }) as PublicClient | undefined;
@@ -124,7 +127,7 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
     if (disabled || operation.current) return;
     const abort = new AbortController(); operation.current = abort; setBusy(true); onBusy(true);
     try { await action(abort.signal); }
-    catch { if (live.current) setMessage(copy("gatewayFunding.stepIncomplete")); }
+    catch (error) { if (live.current) setMessage(error instanceof CircleTransactionSigningUnavailableError ? circleCopy.fundingUnsupported : copy("gatewayFunding.stepIncomplete")); }
     finally {
       if (live.current) { await refresh().catch(() => setMessage(copy("gatewayFunding.recordsNotRefreshed"))); setBusy(false); onBusy(false); }
       operation.current = null;
@@ -192,6 +195,7 @@ export function ResearchFunding({ payer, initialAmount, requiredMicros, creditRe
         if (!wallet) return;
         void run(async signal => {
           const value = reviewedDeposit(amount); if (!value) throw new Error("Invalid amount");
+          await assertExactTransactionSigning(wallet, payer, profile.chainId, signal);
           await connectedBuyerWallet(wallet, payer, signal).readWallet();
           signal.throwIfAborted(); await createFundingRecord(payer, value);
           if (live.current) { setAccepted(false); setLookupHash(""); setMessage(copy("gatewayFunding.planSaved")); }

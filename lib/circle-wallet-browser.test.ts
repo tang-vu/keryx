@@ -45,6 +45,49 @@ it("restores only public Circle identity after a live same-wallet session check,
   await expect(browser.signCircleWallet("message", "0x1234")).rejects.toThrow("expired");
   expect(fetcher).toHaveBeenCalledTimes(1); expect(sdkMocks.auth).not.toHaveBeenCalled();
 });
+
+const recoveryQuery = { from: "2026-01-01T00:00:00.000Z", to: "2026-01-02T00:00:00.000Z" };
+it("refuses unsupported native transaction signing before API/SDK calls, retaining identity and custody", async () => {
+  pendingReturn(undefined); const fetcher = readyWallet();
+  const browser = await import("./circle-wallet-browser"); await browser.resumeGoogleWalletLogin(); fetcher.mockClear();
+  const original = localStorage.getItem(IDENTITY);
+  await expect(browser.signCircleWallet("transaction", "0x02")).rejects.toMatchObject({ code: 4200 });
+  expect(fetcher).not.toHaveBeenCalled(); expect(sdkMocks.execute).not.toHaveBeenCalled();
+  expect(localStorage.getItem(IDENTITY)).toBe(original); expect(browser.circleWalletIdentity()?.address).toBe(owner);
+});
+it("uses only live same-owner credentials for explicit read-only recovery and never persists tokens", async () => {
+  pendingReturn(undefined); const fetcher = readyWallet();
+  const browser = await import("./circle-wallet-browser"); await browser.resumeGoogleWalletLogin(); fetcher.mockClear();
+  fetcher.mockResolvedValueOnce(Response.json({ owner, ...recoveryQuery, transactions: [] }));
+  expect((await browser.listCircleWalletRecoveryTransactions(owner, recoveryQuery)).transactions).toEqual([]);
+  expect(fetcher.mock.calls[0][0]).toBe("/api/auth/circle/recovery-transactions");
+  expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toEqual({ userToken: "synthetic-user-token-never-store", query: recoveryQuery });
+  expect(sdkMocks.execute).not.toHaveBeenCalled();
+  expect([...Object.values(localStorage), ...Object.values(sessionStorage)].join(" ")).not.toContain("synthetic-user-token-never-store");
+  await expect(browser.listCircleWalletRecoveryTransactions(`0x${"2".repeat(40)}`, recoveryQuery)).rejects.toThrow("expired");
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
+it("ignores late history after a wallet change", async () => {
+  pendingReturn(undefined); const fetcher = readyWallet();
+  const browser = await import("./circle-wallet-browser"); await browser.resumeGoogleWalletLogin(); fetcher.mockClear();
+  let finish!: (r: Response) => void;
+  fetcher.mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; }));
+  const pending = browser.listCircleWalletRecoveryTransactions(owner, recoveryQuery);
+  browser.clearCircleWalletIdentity(); finish(Response.json({ owner, ...recoveryQuery, transactions: [] }));
+  await expect(pending).rejects.toThrow("changed");
+  expect(sdkMocks.execute).not.toHaveBeenCalled();
+});
+it("does not fetch an aborted recovery query or publish a response aborted in flight", async () => {
+  pendingReturn(undefined); const fetcher = readyWallet();
+  const browser = await import("./circle-wallet-browser"); await browser.resumeGoogleWalletLogin(); fetcher.mockClear();
+  const controller = new AbortController(); controller.abort();
+  await expect(browser.listCircleWalletRecoveryTransactions(owner, recoveryQuery, controller.signal)).rejects.toThrow();
+  expect(fetcher).not.toHaveBeenCalled();
+  const inFlight = new AbortController();
+  fetcher.mockImplementationOnce(async () => { inFlight.abort(); return Response.json({ owner, ...recoveryQuery, transactions: [] }); });
+  await expect(browser.listCircleWalletRecoveryTransactions(owner, recoveryQuery, inFlight.signal)).rejects.toThrow();
+  expect(sdkMocks.execute).not.toHaveBeenCalled();
+});
 it.each([{ origin: "https://attacker.invalid" }, { network: "eip155:5042002" }, { address: "invalid" }])(
   "does not publish a tampered public identity hint", async fields => {
     storedIdentity(fields); const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
@@ -118,7 +161,7 @@ function pendingReturn(publicReturn: unknown, fields: Record<string, unknown> = 
   history.replaceState(null, "", `/connect#${hash}`);
 }
 function readyWallet() {
-  const fetcher = vi.fn(async (url: string) => Response.json(url.endsWith("prepare") ? { ready: true } : { address: owner, walletId }));
+  const fetcher = vi.fn(async (url: string, _init?: RequestInit) => Response.json(url.endsWith("prepare") ? { ready: true } : { address: owner, walletId }));
   vi.stubGlobal("fetch", fetcher); return fetcher;
 }
 // These injected SDK callbacks test adapter error containment, not vendor crypto

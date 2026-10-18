@@ -40,6 +40,17 @@ function setup() {
 }
 
 describe("explicit one-step funding", () => {
+  it("refuses known unsupported native signing before claiming a funding nonce; old holds and unknown4200 failures remain retained", async () => {
+    const { input, wallet, send } = setup();
+    Object.assign(wallet, { request: vi.fn(async () => ({ "0x0": { keryxExactTransactionSigning: { supported: false } } })) });
+    await expect(submitFundingStep(input)).rejects.toMatchObject({ code: 4200 });
+    expect(storage.claimFundingStep).not.toHaveBeenCalled(); expect(send).not.toHaveBeenCalled(); expect(row.approval.status).toBe("ready");
+    Object.assign(wallet, { request: vi.fn().mockRejectedValue({ code: -32601 }) });
+    send.mockRejectedValue({ code: 4200 });
+    expect(await submitFundingStep(input)).toEqual({ state: "uncertain" });
+    expect(row.approval.status).toBe("possible"); expect(storage.rejectFundingPrompt).not.toHaveBeenCalled();
+    await expect(submitFundingStep(input)).rejects.toThrow("recovery");
+  });
   it("commits replacement evidence against its original snapshot without wallet requests", async () => {
     const { input, send } = setup(); row.approval = { status: "possible", nonce: 7, beforeBlock: "100" };
     const snapshot = structuredClone(row), evidence = { hash, status: "replaced" };

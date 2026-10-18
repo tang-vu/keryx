@@ -6,7 +6,56 @@ do not prove that signed bytes cannot later be broadcast. Preserve the original
 funding hold and session custody. No new deposit or budget renewal is a recovery
 step.
 
-## Owner flow
+## Native Circle Google wallets
+
+Native `ARC` and `ARC-TESTNET` wallets do not support Circle's raw transaction
+signing endpoint. The current [user-controlled OpenAPI](https://developers.circle.com/openapi/user-controlled-wallets.yaml)
+limits `POST /v1/w3s/user/sign/transaction` to `SOL`, `SOL-DEVNET`, `EVM` and
+`EVM-TESTNET`. The broad supported-wallet matrix is not endpoint acceptance.
+Error `156027` on a new cancellation does not prove an older approval was never
+signed. Neither the browser nor an older/direct API caller may create this
+unsupported native-Arc signing challenge. Message and typed-data signing remain
+separate capabilities.
+
+The Circle EIP-1193 adapter reports the Keryx-specific, denial-only
+`keryxExactTransactionSigning.supported: false` metadata through EIP-5792
+`wallet_getCapabilities`. This is not a standard guarantee of signing support.
+Funding checks it before new plan creation and every ready/rejected funding or
+cancellation claim. Existing external wallets without this metadata retain their
+normal transaction checks. Only recognized unsupported-method errors from this
+read are ignored; a network failure refuses before exposure. Never reinterpret a
+`4200` caught after a transaction claim as a safe rejection. Submitted/confirmed
+recovery and consent using already available Gateway credit remain separate.
+
+For a connected Google wallet, the recovery page offers explicit read-only Circle
+history inspection instead of a cancellation fee/signing prompt. A same-origin,
+rate-limited authenticated POST carries the in-memory user token; the server makes
+only GET requests. It independently resolves the immutable original EOA and binds
+the wallet, Circle user, selected network, outbound direction and search window.
+Queries are limited to 31 days and 20 rows per page. The browser follows UUID
+cursors explicitly, up to five pages per search; a full page, repeated cursor,
+outage, expired credential or empty result never clears the original. The displayed
+date range is limited to the original creation window; it is not a claim that all
+historical or subsequently signed transactions have been inspected.
+
+Circle IDs, statuses and hashes are candidate metadata only. The owner can check
+a returned hash through the existing configured-RPC canonical finalized nonce
+verifier. That verifier distinguishes the exact planned approval from another
+transaction consuming its nonce. Lookup never signs, broadcasts, deposits, renews
+a budget, stores credentials or terminalizes an attempt from vendor status alone.
+Previously saved cancellation hashes and manual original-hash inspection remain
+available. A wallet/account change aborts or discards the in-flight history page.
+
+Native Circle cancellation requires a Circle transaction ID and accepts only an
+idempotency key; it does not accept this flow's hard gas/fee limits. Native transfer
+and contract execution do not accept a caller-selected nonce. They are not silent
+fallbacks for the exact-nonce cancellation. No generic-EVM wallet substitution,
+new wallet/custody or new self-transfer is introduced. If no exact finalized hash
+can be recovered, this historical original remains held. A managed native Circle
+transaction lifecycle with retained challenge/transaction IDs is separate work,
+not completion of this original's recovery.
+
+## Owner flow for wallets supporting exact transaction signing
 
 The wallet page offers a separate cancellation fee review for an unresolved
 approval whose deposit is still `ready`. It uses the retained original nonce,

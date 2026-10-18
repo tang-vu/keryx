@@ -9,6 +9,8 @@ import { browserPaymentProfile } from "./browser-payment-profile";
 import { AUTH_CHALLENGE_TTL_MS } from "./auth-time-policy";
 import { safeRegistrationReturn, sourceReturnWithOwner, registrationOwnerMatches } from "./registration-return";
 import { readCircleWalletAvailability } from "./circle-wallet-availability";
+import { circleTransactionSigningError } from "./circle-wallet-capabilities";
+import { circleRecoveryQuerySchema, circleRecoveryPageSchema, type CircleRecoveryQuery } from "./circle-wallet-recovery";
 
 const CONTINUATION = "keryx-circle-google-oauth-v1";
 const IDENTITY = `keryx-circle-owner-${browserPaymentProfile().networkId}`;
@@ -27,9 +29,10 @@ let signaturePending = false;
 let restore: Promise<CircleWalletIdentity | undefined> | undefined;
 let identityRevision = 0;
 
-async function post(path: string, value: unknown) {
+async function post(path: string, value: unknown, signal?: AbortSignal) {
   const response = await fetch(`/api/auth/circle/${path}`, { method: "POST", cache: "no-store",
-    headers: { "Content-Type": "application/json" }, body: JSON.stringify(value), signal: AbortSignal.timeout(20_000) });
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify(value),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000) });
   const data = await response.json().catch(() => null);
   if (!response.ok || !data) throw new Error(typeof data?.error === "string" ? data.error : "Google wallet operation unavailable");
   return data;
@@ -187,6 +190,7 @@ export function resumeGoogleWalletLogin(): Promise<CircleWalletIdentity | null> 
 }
 
 export async function signCircleWallet(kind: "message" | "typedData" | "transaction", payload: string): Promise<string> {
+  if (kind === "transaction") throw circleTransactionSigningError();
   if (!credentials || !circleWalletIdentity()) throw new Error("Google wallet authentication expired; sign in again");
   if (signaturePending) throw new Error("Finish the current wallet confirmation first");
   signaturePending = true;
@@ -194,7 +198,22 @@ export async function signCircleWallet(kind: "message" | "typedData" | "transact
     const challenge = await post("sign", { userToken: credentials.userToken, kind, payload, idempotencyKey: crypto.randomUUID() });
     const result = await execute(z.string().uuid().parse(challenge.challengeId));
     const data = "data" in result ? result.data : undefined;
-    const output = kind === "transaction" && data && "signedTransaction" in data ? data.signedTransaction : data && "signature" in data ? data.signature : undefined;
+    const output = data && "signature" in data ? data.signature : undefined;
     return z.string().regex(/^0x[a-fA-F0-9]+$/).parse(output);
   } finally { signaturePending = false; }
+}
+
+/** Explicit history inspection only. Uses the existing live credential without
+ * a wallet challenge, signature, new login, or persisted token. */
+export async function listCircleWalletRecoveryTransactions(owner: string, query: CircleRecoveryQuery, signal?: AbortSignal) {
+  const current = identity, auth = credentials, revision = identityRevision;
+  if (!current || current.address.toLowerCase() !== owner.toLowerCase() || !auth || auth.expiresAt <= Date.now())
+    throw new Error("Google wallet authentication expired; sign in again");
+  signal?.throwIfAborted();
+  const page = circleRecoveryPageSchema.parse(await post("recovery-transactions", { userToken: auth.userToken, query: circleRecoveryQuerySchema.parse(query) }, signal));
+  signal?.throwIfAborted();
+  if (identity !== current || credentials !== auth || identityRevision !== revision || auth.expiresAt <= Date.now()
+    || page.owner.toLowerCase() !== owner.toLowerCase() || page.from !== query.from || page.to !== query.to)
+    throw new Error("Google wallet changed during inspection");
+  return page;
 }

@@ -22,6 +22,10 @@ export function createCircleWalletProvider(input: {
       input.assertCurrent();
       const params = Array.isArray(request.params) ? request.params : [];
       if (request.method === "eth_accounts" || request.method === "eth_requestAccounts") return [input.address];
+      if (request.method === "wallet_getCapabilities") {
+        if (params.length < 1 || params.length > 2 || !addressEquals(params[0], input.address)) throw new Error("Capability account differs");
+        return { [`0x${input.chainId.toString(16)}`]: { keryxExactTransactionSigning: { supported: false } } };
+      }
       if (request.method === "eth_chainId") {
         const chain = await input.rpc({ method: "eth_chainId" });
         if (typeof chain !== "string" || !/^0x[a-fA-F0-9]+$/.test(chain) || BigInt(chain) !== BigInt(input.chainId)) throw new Error("Google wallet RPC network differs");

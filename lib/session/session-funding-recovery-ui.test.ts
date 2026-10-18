@@ -48,7 +48,12 @@ beforeAll(async () => {
       "process.env.NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS": "undefined" },
     plugins: [{ name: "synthetic-read-only-rpc", setup(builder) {
       builder.onResolve({ filter: /^wagmi$/ }, args => ({ path: args.path, namespace: "fake-rpc" }));
-      builder.onLoad({ filter: /.*/, namespace: "fake-rpc" }, () => ({ contents: "export const usePublicClient=()=>window.rpc; export const useWalletClient=()=>({data:window.wallet})", loader: "js" }));
+      builder.onLoad({ filter: /.*/, namespace: "fake-rpc" }, () => ({ contents: "export const usePublicClient=()=>window.rpc; export const useWalletClient=()=>({data:window.wallet}); export const useAccount=()=>({connector:{id:window.circleWallet?'circleGoogle':'injected'}})", loader: "js" }));
+      builder.onResolve({ filter: /circle-wallet-browser$/ }, args => ({ path: args.path, namespace: "fake-circle-history" }));
+      builder.onLoad({ filter: /.*/, namespace: "fake-circle-history" }, () => ({ contents: `export const listCircleWalletRecoveryTransactions=async(owner,query,signal)=>{
+        window.historyReads=(window.historyReads||0)+1;if(window.holdHistory)await new Promise(resolve=>window.releaseHistory=resolve);
+        signal?.throwIfAborted();return{owner,from:query.from,to:query.to,transactions:window.circleTransactions||[]}}
+      `, loader: "js" }));
     } }] })).outputFiles[0].text;
   browser = await chromium.launch({ headless: true });
 });
@@ -100,6 +105,49 @@ it("a superseded sign-only callback cannot broadcast or release the original hol
     await page.getByText("Cancellation is not finalized.", { exact: false }).waitFor();
     expect(await originalStatus(page)).toBe("possible");
     expect(await page.evaluate(() => (window as unknown as { financialActions: string[] }).financialActions)).toEqual(["sign"]);
+    expect(errors).toEqual([]);
+  } finally { await context.close(); }
+});
+
+it("Google wallets get read-only history instead of an unsupported fee/sign prompt; metadata and bad hashes keep the original held", async () => {
+  const { page, context, errors } = await mount();
+  try {
+    await page.evaluate(value => {
+      const w = window as unknown as { circleWallet: boolean; circleTransactions: unknown[]; enableWallet(): void };
+      w.circleWallet = true; w.circleTransactions = [{ id: "00000000-0000-4000-8000-000000000002", hash: value, createdAt: new Date().toISOString(), status: "FAILED" }]; w.enableWallet();
+    }, hash);
+    await page.getByRole("button", { name: "Search Circle history", exact: true }).click();
+    await page.getByText("Circle status (not settlement proof): FAILED", { exact: true }).waitFor();
+    expect(await page.getByRole("button", { name: "Review cancellation fee", exact: true }).count()).toBe(0);
+    expect(await page.getByRole("button", { name: "Sign and send cancellation", exact: true }).count()).toBe(0);
+    expect(await originalStatus(page)).toBe("possible");
+    await page.evaluate(value => { (window as unknown as { transaction: { from: string } }).transaction.from = value; }, other);
+    await page.getByRole("button", { name: "Check finalized transaction", exact: true }).click();
+    await page.getByText("History inspection is read-only.", { exact: false }).waitFor();
+    expect(await originalStatus(page)).toBe("possible");
+    await page.evaluate(value => { (window as unknown as { transaction: { from: string } }).transaction.from = value; }, owner);
+    await page.getByRole("button", { name: "Check finalized transaction", exact: true }).click();
+    await expect.poll(() => originalStatus(page)).toBe("confirmed");
+    expect(await page.evaluate(() => (window as unknown as { financialActions: string[] }).financialActions)).toEqual([]);
+    expect(errors).toEqual([]);
+  } finally { await context.close(); }
+});
+
+it("an empty Circle page and an interrupted account switch cannot clear the original or expose late history", async () => {
+  const { page, context, errors } = await mount();
+  try {
+    await page.evaluate(() => { const w = window as unknown as { circleWallet: boolean; enableWallet(): void }; w.circleWallet = true; w.enableWallet(); });
+    await page.getByRole("button", { name: "Search Circle history", exact: true }).click();
+    await page.getByText("This page returned no transaction hashes.", { exact: false }).waitFor();
+    expect(await originalStatus(page)).toBe("possible");
+    await page.evaluate(() => { (window as unknown as { holdHistory: boolean }).holdHistory = true; });
+    await page.getByRole("button", { name: "Search Circle history", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => typeof (window as unknown as { releaseHistory?: () => void }).releaseHistory)).toBe("function");
+    await page.evaluate(value => { (window as unknown as { update(v: unknown): void }).update({ currentOwner: value }); }, other);
+    await page.evaluate(() => (window as unknown as { releaseHistory(): void }).releaseHistory());
+    expect(await originalStatus(page)).toBe("possible");
+    expect(await page.getByRole("button", { name: "Check finalized transaction", exact: true }).count()).toBe(0);
+    expect(await page.evaluate(() => (window as unknown as { financialActions: string[] }).financialActions)).toEqual([]);
     expect(errors).toEqual([]);
   } finally { await context.close(); }
 });

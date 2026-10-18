@@ -4,6 +4,7 @@ import { browserPaymentProfile } from "../browser-payment-profile";
 import { verifyCircleSignedTransaction } from "../circle-wallet-transaction";
 import { advanceFundingCancellation, claimFundingCancellation, readFundingRecord } from "./funding-journal";
 import { fundingCancellationQuoteSchema, fundingRecordSchema, type FundingCancellationQuote, type FundingRecord } from "./funding-policy";
+import { assertExactTransactionSigning } from "../circle-wallet-capabilities";
 
 export const fundingRecordDigest = (record: FundingRecord) => keccak256(stringToHex(JSON.stringify(fundingRecordSchema.parse(record))));
 
@@ -29,6 +30,7 @@ async function identity(wallet: WalletClient, chain: PublicClient, record: Fundi
  * Absence of an original transaction never releases the original funding hold. */
 export async function reviewFundingCancellation(id: string, wallet: WalletClient, chain: PublicClient, signal?: AbortSignal): Promise<FundingCancellationQuote> {
   const record = await readFundingRecord(id); eligible(record);
+  await assertExactTransactionSigning(wallet, record.payer, browserPaymentProfile().chainId, signal);
   await identity(wallet, chain, record, signal);
   const [estimate, fees, native] = await Promise.all([
     chain.estimateGas({ account: record.payer as Hex, to: record.payer as Hex, value: BigInt(0), data: "0x" }),
@@ -58,6 +60,7 @@ export async function submitFundingCancellation(quote: FundingCancellationQuote,
   // Locate the exact retained record rather than accepting a new payer/nonce from a form.
   const snapshot = await readFundingRecord(quote.recordId);
   if (fundingRecordDigest(snapshot) !== quote.recordDigest) throw new Error("Funding record changed; review cancellation again");
+  await assertExactTransactionSigning(wallet, snapshot.payer, quote.chainId, signal);
   eligible(snapshot); await identity(wallet, chain, snapshot, signal); fresh(quote, signal);
   if (!await claimFundingCancellation(snapshot, quote)) throw new Error("Another tab changed the cancellation review");
   await identity(wallet, chain, snapshot, signal); fresh(quote, signal);
