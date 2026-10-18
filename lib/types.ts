@@ -483,6 +483,8 @@ export interface OperatingFeeSnapshot {
 }
 
 export interface QueryRun {
+  /** Failed before discovery; a saved question attempt, never a completed/evidence-supported answer. */
+  planningFailure?: import("./research/planning-failure").PlanningFailureDiagnostic;
   /** Public write-time source outcomes; observational only, with no live learned spending authority. */
   sourceLearning?: import("./research/source-learning-contract").SourceLearningSnapshot;
   /** Write-time server classification. Missing historical observations remain unknown. */

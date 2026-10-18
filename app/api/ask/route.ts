@@ -24,7 +24,10 @@ import { accountSessionContext } from "@/lib/account-sessions";
 import { assertDecisionReviewAuthority } from "@/lib/research/decision-review-authority";
 import { getAgentDeps } from "@/lib/agent";
 import { runAgent } from "@/lib/agent/run-agent";
-import { researchFailureMessage } from "@/lib/llm/research-plan";
+import { ResearchPlanningError, researchFailureMessage } from "@/lib/llm/research-plan";
+import { parsePlanningFailure } from "@/lib/research/planning-failure";
+import { effectiveEngineName, reasoningAttempts, reasoningUsage, reasoningCalls } from "@/lib/llm/resilient-engine";
+import { outputTokenLimitFromValidatedError } from "@/lib/llm/reasoning-engine";
 import { askStreamWriter } from "@/lib/research/ask-stream-lifecycle";
 import { ResearchSelectionError } from "@/lib/llm/research-selection";
 import { config } from "@/lib/config";
@@ -44,8 +47,8 @@ import type {
   BrowserPaymentContext,
   PaymentRequirements,
 } from "@/lib/payments/browser-cosign-gateway";
-import type { QueryRun, ResearchMode } from "@/lib/types";
-import { createTrustedUsageContext } from "@/lib/research/usage-provenance";
+import type { QueryRun, ResearchMode, TraceStep } from "@/lib/types";
+import { createTrustedUsageContext, newRunUsage } from "@/lib/research/usage-provenance";
 import { MAX_ASK_QUESTION_CHARS, parseAskQuestion, parseResearchMode } from "@/lib/ask-input";
 import { recordActivationEvent } from "@/lib/activation";
 import { isAddress } from "viem";
@@ -295,8 +298,9 @@ export async function POST(req: NextRequest) {
         },
       }) : undefined;
 
+      let deps: Awaited<ReturnType<typeof getAgentDeps>> | undefined;
+      const planningTrace: TraceStep[] = [], startedAt = Date.now();
       try {
-        let deps;
 
         if (useBrowserCoSign && sessionId) {
           // Build the requestSignature callback that the BrowserCoSignGateway calls for each BUY.
@@ -372,6 +376,7 @@ export async function POST(req: NextRequest) {
         );
         let res = await gen.next();
         while (!res.done) {
+          planningTrace.push(res.value);
           send("step", res.value);
           if (isPaymentRecord(res.value.detail)) retainPaymentHistory = true;
           res = await gen.next();
@@ -412,9 +417,39 @@ export async function POST(req: NextRequest) {
           if (claimPacket) send("private-run-claim", claimPacket);
         }
       } catch (err) {
+        const planningFailure = err instanceof ResearchPlanningError ? parsePlanningFailure({ version: 1, stage: "decompose",
+          reason: err.reason, maximumTargets: err.maximumTargets, automaticRetry: false,
+          ...(outputTokenLimitFromValidatedError(err) === undefined ? {} : { outputTokenLimit: outputTokenLimitFromValidatedError(err) }) }) : undefined;
+        let reportSaved = false;
+        let claimPacket: Awaited<ReturnType<NonNullable<typeof privateClaim>["complete"]>> | undefined;
+        // A planning refusal precedes discovery/payment. Do not manufacture zero-spend
+        // history for an arbitrary later-stage failure, cancellation or payment boundary.
+        if (planningFailure && deps && !agentAbort.signal.aborted && !retainPaymentHistory && planningTrace.every(step => step.phase === "decompose")) {
+          const provenance = { version: 1 as const, surface: "web" as const, ownershipMethod: asker ? "session" as const : "unknown" as const };
+          const failed: QueryRun = { id: queryId, question: askQuestion, budget: askBudget, researchMode,
+            engine: effectiveEngineName(deps.engine), planningFailure, provenance,
+            usage: newRunUsage({ asker, provenance, ...(isBot ? { usageContext: createTrustedUsageContext(config.profile.networkId,
+              { actor: "unknown", funding: "unknown", scripted: true }) } : {}) }, config.profile.networkId, config.devWallets ?? []),
+            reasoningAttempts: reasoningAttempts(deps.engine), llmUsage: reasoningUsage(deps.engine), llmCalls: reasoningCalls(deps.engine),
+            subClaims: [], decisions: [], citations: [], evidence: [], claimCoverage: [],
+            answer: researchFailureMessage(err), totalSpent: 0, totalToCreators: 0,
+            trace: [...planningTrace, { phase: "verdict", message: "Research planning failed before discovery. No answer or source-payment result was produced.", detail: planningFailure, ts: Date.now() }],
+            createdAt: new Date().toISOString(), origin: isBot ? "engine" : "web", fundingOwner: deps.gateway.mode === "offline" ? "offline" : useBrowserCoSign ? "browser" : "treasury",
+            paymentMode: deps.gateway.mode, durationMs: Math.max(0, Date.now() - startedAt),
+            ...(parentId ? { parentId } : {}), ...(asker ? { asker, askerFunded: useBrowserCoSign } : {}) };
+          try {
+            if (publication.privacyActive) await deps.db.saveQueryRun(failed, { visibility: publication.visibility });
+            else await deps.db.saveQueryRun(failed);
+            reportSaved = true;
+            claimPacket = await privateClaim?.complete(failed);
+          } catch { /* Keep the original refusal; no retry, raw storage error or false saved claim. */ }
+        }
         send("error", { message: researchFailureMessage(err),
+          ...(planningFailure ? { code: err instanceof ResearchPlanningError ? err.code : "research_plan_refinement_required", planningFailure, reportSaved,
+            ...(reportSaved && privateClaim ? { failedReportId: queryId } : {}) } : {}),
           ...(researchAdmissionError(err) ? { code: "research_paused" } : {}),
           ...(err instanceof ResearchSelectionError ? { code: err.code, selectionDiagnostic: err.diagnostic } : {}) });
+        if (claimPacket) send("private-run-claim", claimPacket);
       } finally {
         await reviewAdapter?.close(queryId).catch(() => undefined);
         req.signal.removeEventListener("abort", disconnect);
