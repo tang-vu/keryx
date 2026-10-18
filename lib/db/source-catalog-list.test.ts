@@ -18,7 +18,7 @@ const hash = (text: string) => createHash("sha256").update(text).digest("hex");
 const prefix = "keryx:source-claims:v1:", originPrefix = "keryx:source-registry-origin:v1:";
 const wallet = `0x${"1".repeat(40)}`, date = "2026-10-10T00:00:00.000Z";
 const identity = { ...syntheticStorageIdentity("mainnet-real"), format: "keryx-mainnet-storage-identity-v1" as const,
-  network: "eip155:5042", profileDigest: STORAGE_MAINNET_PROFILE_DIGEST };
+  network: "eip155:5042" as const, profileDigest: STORAGE_MAINNET_PROFILE_DIGEST };
 const authority = { network: "eip155:5042", address: `0x${"3".repeat(40)}`, version: 3, codeHash: `0x${"a".repeat(64)}`, deployBlock: "10" };
 const sourceId = (i: number) => `source-${String(i).padStart(3, "0")}`;
 const onchainId = (i: number) => `0x${String(i + 1).padStart(64, "0")}`;
