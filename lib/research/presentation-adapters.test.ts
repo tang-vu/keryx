@@ -8,8 +8,8 @@ import { presentationLanguages } from "./presentation-language";
 import { buildCompletion, keryxMeta } from "../openai-compat";
 import { openapiSpec } from "../openapi-spec";
 
-const mocks = vi.hoisted(() => ({ collect: vi.fn(), admission: vi.fn(), verify: vi.fn(), db: vi.fn() }));
-vi.mock("@/lib/agent", () => ({ collectRun: mocks.collect }));
+const mocks = vi.hoisted(() => ({ collect: vi.fn(), deps: vi.fn(), admission: vi.fn(), verify: vi.fn(), db: vi.fn() }));
+vi.mock("@/lib/agent", () => ({ collectRun: mocks.collect, getAgentDeps: mocks.deps }));
 vi.mock("@/lib/sponsored-admission", () => ({ checkSponsoredResearchAdmission: mocks.admission }));
 vi.mock("@/lib/api-keys", () => ({ verifyApiKey: mocks.verify }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
@@ -23,10 +23,12 @@ vi.mock("@/lib/config", async original => {
 import { POST } from "../../app/api/v1/chat/completions/route";
 import { createRemoteMcpServer, remoteResearchResult } from "../mcp/remote-server";
 const locales = ["en", "vi", "pt", "es"] as const;
+const preparedDeps = { db: {}, engine: { name: "synthetic-presentation" }, gateway: { mode: "offline" } };
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   vi.clearAllMocks(); mocks.admission.mockResolvedValue(null); mocks.verify.mockResolvedValue(null);
   mocks.collect.mockImplementation(async (input: { question: string }) => presentationRun(input.question));
+  mocks.deps.mockResolvedValue(preparedDeps);
   fetchMock = vi.fn(async () => { throw new Error("No external transport admitted"); }); vi.stubGlobal("fetch", fetchMock);
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
@@ -38,13 +40,16 @@ function request(language: unknown, stream = false, auth?: string) {
 it.each(locales.flatMap(language => [false, true].map(stream => [language, stream] as const)))
   ("API %s stream=%s applies labels only and preserves the existing machine/private envelope", async (language, stream) => {
     const response = await POST(request(language, stream)); expect(response.status).toBe(200);
+    const wire = await response.text();
     const input = mocks.collect.mock.calls[0][0];
+    expect(mocks.deps).toHaveBeenCalledExactlyOnceWith({ model: undefined });
+    expect(mocks.collect.mock.calls[0][1]).toEqual({ deps: preparedDeps, onStep: expect.any(Function) });
     expect(input).toMatchObject({ question: presentationQuestions.en, budget: 0, provenance: { surface: "api", ownershipMethod: "unknown" } });
     for (const forbidden of ["language", "answerLanguage", "requestedLanguage", "originalQuestion"])
       expect(input).not.toHaveProperty(forbidden);
     const run = presentationRun(), expected = keryxMeta(run);
     if (stream) {
-      const body = await response.text(); expect(body.endsWith("data: [DONE]\n\n")).toBe(true);
+      const body = wire; expect(body.endsWith("data: [DONE]\n\n")).toBe(true);
       const chunks = body.split("\n\n").filter(part => part.startsWith("data: {")).map(part => JSON.parse(part.slice(6)));
       expect(chunks[0].choices[0].delta).toEqual({ role: "assistant" });
       const answer = chunks.find(chunk => typeof chunk.choices[0].delta.content === "string").choices[0].delta.content;
@@ -52,7 +57,7 @@ it.each(locales.flatMap(language => [false, true].map(stream => [language, strea
       expect(chunks.at(-1)).toMatchObject({ object: "chat.completion.chunk", choices: [{ finish_reason: "stop", delta: {} }], keryx: expected });
       expect(chunks.at(-1)).not.toHaveProperty("language");
     } else {
-      const body = await response.json(); expect(body.keryx).toEqual(expected);
+      const body = JSON.parse(wire); expect(body.keryx).toEqual(expected);
       expect(body.choices[0].message.content.startsWith(run.answer)).toBe(true);
       expect(body.choices[0].message.content).toContain(researchPresentationCatalogues[language].citations);
       expect(body).not.toHaveProperty("language"); expect(body).not.toHaveProperty("answerLanguage");
@@ -64,12 +69,14 @@ it.each(["fr", "zh-Hans", "es-ES", null, {}, 3])("API rejects unsupported langua
   expect(await response.json()).toEqual({ error: { type: "invalid_request_error", code: "invalid_request",
     message: "language must be en, vi, pt, pt-BR or es (generated labels only)" } });
   expect(mocks.admission).not.toHaveBeenCalled(); expect(mocks.collect).not.toHaveBeenCalled(); expect(fetchMock).not.toHaveBeenCalled();
+  expect(mocks.deps).not.toHaveBeenCalled();
 });
 it.each(locales)("API %s language changes grant no authentication rights or different auth error fields", async language => {
   const response = await POST(request(language, false, "kx_live_isolated-invalid"));
   expect(response.status).toBe(401);
   expect(await response.json()).toEqual({ error: { message: "invalid or revoked api key", type: "invalid_request_error", code: "invalid_api_key" } });
   expect(mocks.collect).not.toHaveBeenCalled(); expect(mocks.admission).not.toHaveBeenCalled();
+  expect(mocks.deps).not.toHaveBeenCalled();
 });
 it("the public API request schema describes the same finite labels-only enum", () => {
   expect(openapiSpec.components.schemas.ChatCompletionRequest.properties.language.enum).toEqual([...presentationLanguages]);

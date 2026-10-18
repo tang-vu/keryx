@@ -15,7 +15,8 @@ import { lastUserQuestion, validChatMessages } from "../openai-compat";
 const request = (body: unknown) => new NextRequest("http://localhost/api/fixture", {
   method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
 });
-beforeEach(() => vi.clearAllMocks());
+const preparedDeps = { db: {}, engine: { name: "synthetic-shape" }, gateway: { mode: "offline" } };
+beforeEach(() => { vi.clearAllMocks(); calls.getAgentDeps.mockResolvedValue(preparedDeps); });
 
 describe("research request shape admission", () => {
   it.each([null, [], "question", 4, true])("rejects non-object body %j before runners", async body => {
@@ -42,7 +43,9 @@ describe("research request shape admission", () => {
     calls.collectRun.mockResolvedValue(run);
     const response = await chat(request({ messages: [{ role: "user", content }] }));
     expect(response.status).toBe(200);
-    expect(calls.collectRun).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ question: "text question" }));
+    expect(calls.getAgentDeps).toHaveBeenCalledExactlyOnceWith({ model: undefined });
+    expect(calls.collectRun).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ question: "text question" }),
+      { deps: preparedDeps, onStep: expect.any(Function) });
     expect((await response.json()).choices[0].message.content).toBe("Fixture answer");
   });
   it("rejects malformed previous turns even when the final question is usable", async () => {
