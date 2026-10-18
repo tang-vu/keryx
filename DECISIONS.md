@@ -1,5 +1,26 @@
 # Keryx — Decision Log
 
+## Recover ordinary research without changing its authority — 2026-10-18
+
+Admit comparison-plan whitespace omitted between otherwise exact caller spans;
+retain every original word, URL, qualification and the eight-target bound. Accept
+redundant constraints only when they exactly repeat retained scope. Do not add
+model repair calls or weaken evidence review. Keep failed saved results immutable
+and let the reader explicitly reopen the original question before submitting a
+fresh request through the existing owner, visibility and budget checks.
+
+Treat an explicit owner-scoped browser language choice as newer than an account
+preference or browser language header. Bind a choice made while identity resolves
+once in memory; retain owner, origin, network and logout isolation.
+
+Install the existing bounded SQLite lock wait before initial identity reads, so
+a short writer lock does not immediately refuse a new reader. Retain all storage
+admission checks and write restrictions. See the focused
+[planner](docs/engineering/homepage-plan-recovery-20261018.md),
+[locale](docs/engineering/explicit-ui-language-20261018.md) and
+[storage](docs/engineering/sqlite-read-reliability-20261018.md) records. Live-provider
+answer quality and deployed delivery require their own actual observations.
+
 ## Recover uncertain approval nonces through explicit owner cancellation — 2026-10-17
 
 Keep missing-hash approvals held until positive finalized evidence. Offer a separate
