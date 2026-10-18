@@ -33,7 +33,9 @@ interface AskFormProps {
   publicationPreference?: ReturnType<typeof useResearchVisibility>;
   conversation?: boolean;
   clearOnSubmit?: boolean;
-  restoreQuestion?: { id: number; question: string; researchPaused?: boolean };
+  allowSharedPrefill?: boolean;
+  restoreQuestion?: { id: number; question: string; researchPaused?: boolean; budget?: number; replace?: boolean;
+    expectedWallet?: string | null; expectedRevision?: number };
   payer?: "treasury" | "session" | "expired" | "paused";
   onAsk: (
     question: string,
@@ -101,7 +103,7 @@ const SUGGESTIONS = [
   },
 ];
 
-export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, questionCapUsdc, restoreQuestion }: AskFormProps) {
+export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, allowSharedPrefill = true, questionCapUsdc, restoreQuestion }: AskFormProps) {
   const message = useUiMessages();
   const ownVisibility = useResearchVisibility(parentVisibility, { enabled: !publicationPreference });
   const visibility = publicationPreference ?? ownVisibility;
@@ -136,13 +138,20 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
   const restored = useRef<number | null>(null);
   useEffect(() => {
     if (!restoreQuestion || restored.current === restoreQuestion.id || !visibility.ready) return;
+    const publication = visibility.getSelection(), revision = visibility.getIdentityRevision();
+    if (!publication || restoreQuestion.expectedWallet !== undefined && restoreQuestion.expectedWallet !== publication.expectedWallet
+      || restoreQuestion.expectedRevision !== undefined && restoreQuestion.expectedRevision !== revision) return;
     const timer = window.setTimeout(() => {
-      if (!visibility.getSelection()) return;
+      const current = visibility.getSelection();
+      if (!current || current.expectedWallet !== publication.expectedWallet || current.visibility !== publication.visibility
+        || visibility.getIdentityRevision() !== revision) return;
       restored.current = restoreQuestion.id;
-      setQuestion(current => current.trim() ? current : restoreQuestion.question);
+      setQuestion(current => restoreQuestion.replace || !current.trim() ? restoreQuestion.question : current);
+      if (typeof restoreQuestion.budget === "number" && Number.isFinite(restoreQuestion.budget) && restoreQuestion.budget >= 0)
+        setBudget(Math.min(0.08, restoreQuestion.budget));
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [restoreQuestion, setQuestion, visibility.ready, visibility.getSelection]);
+  }, [restoreQuestion, setQuestion, visibility.ready, visibility.getSelection, visibility.getIdentityRevision]);
   const [budget, setBudget] = useState(0.05);
   const maximumBudget = payer === "session" && questionCapUsdc !== undefined && Number.isFinite(questionCapUsdc) && questionCapUsdc > 0
     ? Math.min(0.08, questionCapUsdc) : 0.08;
@@ -181,6 +190,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
   useEffect(() => {
     if (prefilled.current) return;
     prefilled.current = true;
+    if (!allowSharedPrefill) return;
     const timer = window.setTimeout(() => {
       const { q, budget: b, run, parent, model: m, mode } = readSharedAsk();
       if (q) setSharedQuestion(q);
@@ -193,7 +203,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
       if (q && run) sharedAutoRef.current = { q, budget: b, run, parent, model: m, mode };
     }, 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [allowSharedPrefill]);
   useEffect(() => {
     if (!visibility.ready || sharedQuestion === null) return;
     setQuestion(sharedQuestion); setSharedQuestion(null);

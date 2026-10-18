@@ -63,12 +63,35 @@ export class ResearchPlanningError extends ReasoningOutputValidationError {
 type ComparisonRole = "subject" | "dimension" | "shared" | "scope" | "framing";
 interface ComparisonPart { text: string; role: ComparisonRole }
 
+/** Recover only boundary whitespace, never missing wording or punctuation.
+ * Models commonly trim string values. Rebind each remaining exact span to the
+ * caller in order so this tolerance cannot omit qualifications or rewrite URLs.
+ */
+function callerComparisonParts(question: string, parts: ComparisonPart[]): ComparisonPart[] | null {
+  if (parts.map(part => part.text).join("") === question) return parts;
+  if (question.length > 64 * 600) return null;
+  const restored: ComparisonPart[] = [];
+  let offset = 0;
+  for (const part of parts) {
+    const text = part.text.trim();
+    if (!text) { if (part.role !== "framing") return null; continue; }
+    const whitespace = question.slice(offset).match(/^\s*/u)![0];
+    if (whitespace) { restored.push({ text: whitespace, role: "framing" }); offset += whitespace.length; }
+    if (!question.startsWith(text, offset)) return null;
+    restored.push({ text, role: part.role }); offset += text.length;
+  }
+  const trailing = question.slice(offset);
+  if (trailing.trim()) return null;
+  if (trailing) restored.push({ text: trailing, role: "framing" });
+  return restored;
+}
+
 /** Private proposal from the same planning response, never an answer or a repair call.
  * Exact, ordered caller parts prevent foreign wording or an omitted span from being
  * silently accepted. Role classification is still the model's semantic proposal;
  * provenance alone cannot establish that it classified every requested need correctly.
  */
-function comparisonResearchPlan(question: string, raw: unknown): string[] {
+function comparisonResearchPlan(question: string, raw: unknown, constraints: readonly string[]): string[] {
   const invalid = (): never => { throw new ResearchPlanningError(question, "invalid_output"); };
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return invalid();
   const proposal = raw as Record<string, unknown>;
@@ -78,10 +101,14 @@ function comparisonResearchPlan(question: string, raw: unknown): string[] {
       part && typeof part === "object" && !Array.isArray(part) && Object.keys(part).length === 2 &&
       typeof part.text === "string" && part.text.length > 0 && part.text.length <= 600 && part.text.isWellFormed() &&
       typeof part.role === "string" && roles.includes(part.role))) return invalid();
-  const parts = proposal.parts as ComparisonPart[];
-  if (parts.map(part => part.text).join("") !== question) return invalid();
+  const parts = callerComparisonParts(question, proposal.parts as ComparisonPart[]);
+  if (!parts) return invalid();
   const texts = (role: ComparisonRole) => parts.filter(part => part.role === role).map(part => part.text.trim());
   const subjects = texts("subject"), dimensions = texts("dimension"), shared = texts("shared");
+  const scope = texts("scope");
+  // A transport may repeat a caller scope span in the ordinary constraints key.
+  // Accept only that exact redundant scope, which every constructed target retains.
+  if (constraints.some(constraint => !scope.includes(constraint.trim()))) return invalid();
   const needs = [...subjects, ...dimensions, ...shared];
   if (subjects.length < 2 || !dimensions.length || needs.some(text => !text) ||
     new Set(needs).size !== needs.length || subjects.some(text => /https?:\/\//iu.test(text))) return invalid();
@@ -110,7 +137,6 @@ function comparisonResearchPlan(question: string, raw: unknown): string[] {
   if (subjects.length * dimensions.length + shared.length > MAX_RESEARCH_TARGETS) {
     throw new ResearchPlanningError(question, "needs_refinement");
   }
-  const scope = texts("scope");
   if (scope.some(text => !text)) return invalid();
   const target = (subject: string, need: string) => `${subject}: ${need.replace(/[.!?]+$/u, "")}?` +
     (scope.length ? `\n${scope.join(" ")}` : "");
@@ -130,12 +156,12 @@ export function parseResearchPlan(question: string, output: Record<string, unkno
   }
   if (output.comparison !== undefined) {
     // Mixed opaque claims cannot be discarded in favor of a plausible structure.
-    if (output.status !== "complete" || (Array.isArray(output.constraints) && output.constraints.length !== 0) ||
+    if (output.status !== "complete" ||
       (output.claims !== undefined && (!Array.isArray(output.claims) || output.claims.length !== 0))) {
       throw new ResearchPlanningError(question, Array.isArray(output.claims) && output.claims.length > MAX_RESEARCH_TARGETS
         ? "expanded_output" : "invalid_output");
     }
-    return comparisonResearchPlan(question, output.comparison);
+    return comparisonResearchPlan(question, output.comparison, (output.constraints ?? []) as string[]);
   }
   if (!Array.isArray(output.claims) || output.claims.length === 0 || output.claims.length > 64 ||
     !output.claims.every(value => typeof value === "string" && value.trim().length > 0 && value.length <= 600)) {

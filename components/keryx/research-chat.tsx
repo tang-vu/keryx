@@ -19,7 +19,9 @@ import { privateResearchCopy } from "@/locales/en/run-claim-research";
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/hooks/use-research-visibility";
 import type { AskStreamState } from "@/lib/hooks/use-ask-stream";
-import { useUiCopy, useUiCopyFunction, useUiMessages } from "@/lib/i18n/ui-copy";
+import { UiText, useUiCopy, useUiCopyFunction, useUiMessages } from "@/lib/i18n/ui-copy";
+import type { RunVisibility } from "@/lib/run-privacy/contracts";
+import { researchRecoveryCopy } from "@/lib/research/research-recovery-copy";
 const uiEnglish_privateResearchCopy = privateResearchCopy;
 const uiEnglish_productGuideCopy = productGuideCopy;
 
@@ -28,7 +30,10 @@ type ScopedTurn = ResearchTurnData & { publication: ResearchPublicationSelection
 type ScopedRequest = Omit<ScopedTurn, "state">;
 const hidden = (turn: ScopedRequest, state: AskStreamState) => turn.publication.visibility !== "public" || !!state.meta?.visibility && state.meta.visibility !== "public";
 
-export function ResearchChat({ paidHref = "/research#paid-research", privateClaims = false, introduceProduct = false }: { paidHref?: string; privateClaims?: boolean; introduceProduct?: boolean }) {
+export function ResearchChat({ paidHref = "/research#paid-research", privateClaims = false, introduceProduct = false, initialRequest }: {
+  paidHref?: string; privateClaims?: boolean; introduceProduct?: boolean;
+  initialRequest?: { question: string; budget: number; parentId: string; visibility: RunVisibility; expectedWallet: string | null };
+}) {
   const message = useUiMessages();
   const privateResearchCopy = useUiCopy("run-claim-research", uiEnglish_privateResearchCopy);
   const productGuideCopy = useUiCopyFunction("product-guide", uiEnglish_productGuideCopy);
@@ -52,7 +57,11 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
   const [history, setHistory] = useState<ScopedTurn[]>([]);
   const [request, setRequest] = useState<ScopedRequest | null>(null);
   const [rootRequest, setRootRequest] = useState(false);
-  const [anchor, setAnchor] = useState<string | undefined>();
+  const [anchor, setAnchor] = useState<string | undefined>(initialRequest?.parentId);
+  const [reopened, setReopened] = useState<{ id: number; question: string; budget: number; researchPaused: false; replace: true;
+    binding?: { wallet: string | null; revision: number } } | undefined>(
+    initialRequest ? { id: 0, question: initialRequest.question, budget: initialRequest.budget, researchPaused: false, replace: true } : undefined);
+  const recoverySequence = useRef(0);
   const sequence = useRef(0);
   const activeTurnRef = useRef<HTMLDivElement>(null);
   const requestId = request?.id;
@@ -83,6 +92,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
   const activeRequest = useRef<ScopedRequest | null>(null), activeState = useRef(state);
   useLayoutEffect(() => { activeRequest.current = request; activeState.current = state; }, [request, state]);
   const clearOwnedTurns = useCallback(() => {
+    setReopened(undefined);
     setHistory(previous => previous.filter(turn => !hidden(turn, turn.state)));
     if (activeRequest.current && hidden(activeRequest.current, activeState.current)) {
       activeRequest.current = null; setRequest(null); reset();
@@ -91,7 +101,8 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
   }, [reset, privateHandoff]);
   const inheritedTurn = history.find(turn => turn.state.run?.id === parentId);
   const parentVisibility = parentId ? state.meta?.visibility ?? request?.publication.visibility
-    ?? inheritedTurn?.state.meta?.visibility ?? inheritedTurn?.publication.visibility : undefined;
+    ?? inheritedTurn?.state.meta?.visibility ?? inheritedTurn?.publication.visibility
+    ?? (parentId === initialRequest?.parentId ? initialRequest?.visibility : undefined) : undefined;
   const publicationPreference = useResearchVisibility(parentVisibility, { onOwnerBoundary: clearOwnedTurns });
   useEffect(() => () => reset(), [reset]);
   useEffect(() => {
@@ -105,10 +116,16 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
         && captured.meta.visibilityOwner.toLowerCase() === publicationPreference.wallet);
   const visibleHistory = history.filter(turn => canDisplay(turn, turn.state));
   const visibleRequest = request && canDisplay(request, state) ? request : null;
+  const recoverySelection = reopened && publicationPreference.ready
+    && (!reopened.binding || reopened.binding.wallet === publicationPreference.wallet
+      && reopened.binding.revision === publicationPreference.identityRevision)
+    && (!initialRequest || initialRequest.visibility === "public" || initialRequest.expectedWallet === publicationPreference.wallet)
+    ? reopened : undefined;
   const submit: Parameters<typeof AskForm>[0]["onAsk"] = (question, budget, sharedParent, model, mode, scholarly, paidScholarly, reviewFirst, publication) => {
     if (streaming) return;
     const selected = publicationPreference.getSelection();
     if (!selected || !publication || selected.expectedWallet !== publication.expectedWallet || selected.visibility !== publication.visibility) return;
+    setReopened(undefined);
     if (request) setHistory(previous => [...previous, { ...request, state }]);
     setAnchor(rootRequest ? undefined : parentId ?? undefined);
     const next = { id: ++sequence.current, question, publication: selected, ownerRevision: publicationPreference.getIdentityRevision(),
@@ -147,10 +164,18 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
         {streaming && <button type="button" onClick={stop} className="min-h-11 border border-seal px-3 py-2 font-mono text-xs text-seal">{message("researchChat.stopResearch")}</button>}
       </div>}
       {privateClaims && !protectedDocument && <p role="status" className="mt-3 text-seal">{privateResearchCopy.fullNavigation}</p>}
-      <AskForm disabled={streaming || privateClaims && !protectedDocument} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit
+      {visibleRequest && state.status === "error" && <div className="mb-3 border border-line bg-paper p-4">
+        <p className="mb-2 text-sm text-ink-2"><UiText source={researchRecoveryCopy.review} /></p>
+        <button type="button" className="min-h-11 border border-line px-4 py-2 font-mono text-xs" onClick={() => setReopened({
+          id: --recoverySequence.current, question: visibleRequest.question, budget: state.budget, researchPaused: false, replace: true,
+          binding: { wallet: visibleRequest.publication.expectedWallet, revision: visibleRequest.ownerRevision },
+        })}><UiText source={researchRecoveryCopy.reopen} /></button>
+      </div>}
+      <AskForm disabled={streaming || privateClaims && !protectedDocument} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns || initialRequest ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit allowSharedPrefill={!initialRequest}
         parentVisibility={parentVisibility} publicationPreference={publicationPreference}
-        restoreQuestion={visibleRequest && (state.errorKind === "research-paused" || state.errorKind === "rate-limit" || state.errorKind === "maintenance")
-          ? { ...visibleRequest, researchPaused: state.errorKind === "research-paused" } : undefined} />
+        restoreQuestion={recoverySelection ? { ...recoverySelection, expectedWallet: publicationPreference.wallet, expectedRevision: publicationPreference.identityRevision }
+          : (visibleRequest && (state.errorKind === "research-paused" || state.errorKind === "rate-limit" || state.errorKind === "maintenance")
+          ? { ...visibleRequest, researchPaused: state.errorKind === "research-paused", expectedWallet: visibleRequest.publication.expectedWallet, expectedRevision: visibleRequest.ownerRevision } : undefined)} />
       {!introduceProduct && payer === "treasury" && !hasTurns && <div className="mt-3"><SponsoredTrialNotice /></div>}
       {!privateClaims && <div className="mt-3"><SessionGrantPanel onBindingChange={handleBindingChange} /></div>}
       {privateClaims && claimStatus !== "none" && claimStatus !== "waiting" && <div className="mt-3 border border-line p-4" role="status">

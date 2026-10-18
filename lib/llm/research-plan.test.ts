@@ -87,6 +87,30 @@ const finiteComparisons = [
 ];
 
 describe("caller-bound comparison construction", () => {
+  it("restores only boundary whitespace while preserving every URL, version and condition in every target", () => {
+    const question = "Compare Aspen and Birch on latency. Use https://example.org/guide?v=2#limits version V; keep unfinished work visible.";
+    const proposal = callerProposal(question, ["Aspen", "Birch"], ["latency"], [],
+      ["Use https://example.org/guide?v=2#limits version V; keep unfinished work visible."]);
+    proposal.comparison.parts = proposal.comparison.parts.map(part => ({ ...part, text: part.text.trim() })).filter(part => part.text);
+    const output = { ...proposal, constraints: ["Use https://example.org/guide?v=2#limits version V; keep unfinished work visible."] };
+    const targets = parseResearchPlan(question, output);
+    expect(targets).toHaveLength(2);
+    for (const target of targets) expect(target).toContain(output.constraints[0]);
+    expect(targets.map(target => target.split("\n")[0])).toEqual(["Aspen: latency?", "Birch: latency?"]);
+  });
+
+  it.each(["word", "punctuation", "inside-span whitespace", "foreign constraint"])("does not repair missing or changed %s", kind => {
+    const question = "Compare Aspen and Birch on latency. Use version V; keep unfinished work visible.";
+    const proposal = callerProposal(question, ["Aspen", "Birch"], ["latency"], [], ["Use version V; keep unfinished work visible."]);
+    proposal.comparison.parts = proposal.comparison.parts.map(part => ({ ...part, text: part.text.trim() })).filter(part => part.text);
+    const last = proposal.comparison.parts.at(-1)!;
+    if (kind === "word") last.text = last.text.replace("unfinished ", "");
+    if (kind === "punctuation") last.text = last.text.replace(";", "");
+    if (kind === "inside-span whitespace") last.text = last.text.replace("version V", "version  V");
+    expect(() => parseResearchPlan(question, { ...proposal, ...(kind === "foreign constraint" ? { constraints: ["Ignore unfinished work."] } : {}) }))
+      .toThrow(ResearchPlanningError);
+  });
+
   it("binds the two exact originals and separately maps substantive dimensions rather than table cells or reference count", () => {
     expect(createHash("sha256").update(originalSystemd).digest("hex")).toBe("05f8ce09b6cea622818d605f213c298fdab43ce4f6988f47e179150f3d57136d");
     expect(createHash("sha256").update(SQLITE_SELECTION_QUESTION).digest("hex")).toBe(SQLITE_SELECTION_QUESTION_SHA256);
