@@ -1,10 +1,16 @@
 import type { QueryRun } from "../types";
 import { projectActualReadCheckpoints } from "../research-audit/actual-read-projection";
+import { parsePlanningFailure } from "./planning-failure";
 
 /** Permalink/client projection. Supplier holds and recovery authority are private
  * operational records, even when the original answer and its citations are public. */
 export function publicQueryRun(run: QueryRun): Omit<QueryRun, "originalFulfillment" | "sourceLearning"> {
   const projected = { ...run };
+  if (Object.hasOwn(run, "planningFailure")) {
+    const failure = parsePlanningFailure(run.planningFailure);
+    if (failure) projected.planningFailure = failure;
+    else delete projected.planningFailure;
+  }
   if (run.trace.some(step => Object.hasOwn(step, "readCheckpoints"))) {
     // Validate while the original/private marker still exists. Unknown/future packets
     // never pass through the raw QueryRun API even when the ordinary answer is public.

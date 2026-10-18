@@ -30,7 +30,8 @@ const facts = [
 ];
 const urls = ["https://docs.example.org/wal", "https://docs.example.org/rollback"];
 
-function dependencies(output: Record<string, unknown>) {
+function dependencies(output: Record<string, unknown>, scenario = { facts, urls }) {
+  const { facts, urls } = scenario;
   const planningCalls: unknown[] = [], reviewCalls: unknown[] = [];
   const transport = vi.fn<typeof fetch>(async (_url, init) => {
     const wire = JSON.parse(init!.body as string);
@@ -109,5 +110,52 @@ describe("homepage comparison reaches a supported answer", () => {
     expect(d.planningCalls).toHaveLength(1); expect(d.transport).toHaveBeenCalledOnce();
     expect(d.deps.webSearch!.search).not.toHaveBeenCalled(); expect(d.deps.readWebArticle).not.toHaveBeenCalled();
     expect(d.gateway.ensureFunded).not.toHaveBeenCalled(); expect(d.gateway.payFetch).not.toHaveBeenCalled(); expect(d.gateway.payCitation).not.toHaveBeenCalled();
+  });
+});
+
+describe("prospective homepage topic ideas", () => {
+  const original = "Compare English-language educational YouTube topic ideas for children ages 6–9. Distinguish evidence from assumptions and explain the limits of claims about audience demand.";
+  const scope = "For English-language educational YouTube topic ideas for children ages 6–9; distinguish evidence from assumptions and explain the limits of claims about audience demand.";
+  const ideasFacts = [
+    "The controlled animal-science document describes observing animal habitats.",
+    "The controlled mathematics document describes comparing quantities with objects.",
+    "Educational suitability alone does not establish audience demand.",
+    "The controlled documents contain no measured YouTube audience-demand data.",
+  ];
+  const claims = ["What evidence could ground an animal-habitat topic idea?", "What evidence could ground a quantity-comparison topic idea?",
+    "Which educational-suitability assumptions remain untested?", "What are the limits of audience-demand claims?"]
+    .map(need => `${need}\n${scope}`);
+
+  it("uses bounded provisional ideas without requiring caller-named subjects or dropping qualifications", async () => {
+    const d = dependencies({ status: "complete", constraints: [scope, "Provisional, nonexhaustive ideas, not verified popularity."], claims },
+      { facts: ideasFacts, urls });
+    const run = await collectRun({ question: original, origin: "web", budget: 0, researchMode: "quick" }, { deps: d.deps });
+    const system = d.planningCalls[0] as { messages: Array<{ content: string }> };
+    expect(system.messages[0].content).toContain("prospective idea comparisons");
+    expect(system.messages[0].content).toContain("ordinary constraints/claims");
+    expect(system.messages[0].content).toContain("not a request for an exhaustive inventory");
+    expect(run.question).toBe(original);
+    expect(run.subClaims).toEqual(claims);
+    expect(run.subClaims.every(target => target.includes(scope))).toBe(true);
+    expect(d.planningCalls).toHaveLength(1);
+    expect(d.deps.readWebArticle).toHaveBeenCalledTimes(2);
+    expect(run.evidence).toHaveLength(4);
+    expect(run.answer).toContain("no measured YouTube audience-demand data");
+    expect(run.answer).not.toMatch(/valid plan|No supported answer|no qualifying excerpts/i);
+    expect(run.evidence!.every(row => row.qualifiesForAnswer && !row.qualifiesForReward)).toBe(true);
+    expect(run.totalSpent).toBe(0); expect(run.totalToCreators).toBe(0);
+    expect(d.gateway.payFetch).not.toHaveBeenCalled(); expect(d.gateway.payCitation).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { question: original + " Cover every possible topic exhaustively.", output: { status: "needs_refinement" } },
+    { question: original, output: { status: "complete", claims: Array.from({ length: 9 }, (_, i) => `Independent factual need ${i}?`) } },
+  ])("retains a terminal refinement for genuinely unbounded or oversized scope: $question", async ({ question, output }) => {
+    const d = dependencies(output);
+    await expect(collectRun({ question, origin: "web", budget: 0, researchMode: "quick" }, { deps: d.deps }))
+      .rejects.toBeInstanceOf(ResearchPlanningError);
+    expect(d.planningCalls).toHaveLength(1); expect(d.transport).toHaveBeenCalledOnce();
+    expect(d.deps.webSearch!.search).not.toHaveBeenCalled(); expect(d.deps.readWebArticle).not.toHaveBeenCalled();
+    expect(d.gateway.payFetch).not.toHaveBeenCalled(); expect(d.gateway.payCitation).not.toHaveBeenCalled();
   });
 });

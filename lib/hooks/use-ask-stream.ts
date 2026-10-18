@@ -42,6 +42,7 @@ import type { PrivateClaimHandoff } from "../run-claims/web-handoff";
 import { privateResearchCopy } from "../../locales/en/run-claim-research";
 import type { ResearchPublicationSelection } from "./use-research-visibility";
 import type { RunVisibility } from "../run-privacy/contracts";
+import { savedPlanningFailureId } from "../research/planning-failure";
 
 export type StreamMode = "real" | "offline";
 
@@ -372,8 +373,10 @@ export function useAskStream(opts?: AskStreamOpts) {
     }
 
     if (event === "error") {
-      privateClaimHandoff?.fail();
       const { message, code, selectionDiagnostic } = data as { message: string; code?: string; selectionDiagnostic?: unknown };
+      const failedReportId = savedPlanningFailureId(data);
+      if (failedReportId) privateClaimHandoff?.saved(failedReportId);
+      else privateClaimHandoff?.fail();
       const diagnostic = parseSelectionDiagnostic(selectionDiagnostic);
       setState((s) => ({ ...s, status: "error", errorKind: code === "research_paused" ? "research-paused" : "generic",
         error: code === "research_paused" ? RESEARCH_PAUSED_MESSAGE : message,

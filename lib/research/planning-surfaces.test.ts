@@ -92,7 +92,7 @@ async function refusal(surface: Surface, question: string,
   if (surface === "web") {
     expect(events.map(event => event.event)).toEqual(["meta", "step", "error"]);
     expect(events[1].data).toEqual(step);
-    expect(events[2].data).toEqual({ message: expect.any(String) });
+    expect(events[2].data).toMatchObject({ message: expect.any(String) });
     return { message: events[2].data.message as string, wire };
   }
   const chunks = events.map(event => event.data as { choices: Array<{ delta: { content?: string; reasoning_content?: string; role?: string }; finish_reason: unknown }>; keryx?: unknown });
@@ -137,7 +137,11 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
-  expect(mocks.saveQueryRun).not.toHaveBeenCalled();
+  // Web now retains an explicitly failed original; other adapters still return
+  // the terminal refusal. Neither path fabricates a completed answer or receipt.
+  for (const [run] of mocks.saveQueryRun.mock.calls) expect(run).toMatchObject({
+    planningFailure: { stage: "decompose", automaticRetry: false }, subClaims: [], citations: [], evidence: [], totalSpent: 0, totalToCreators: 0,
+  });
   expect(mocks.recordActivationEvent.mock.calls.map(([event]) => event)).not.toContain("reader_answer_completed");
   expect(mocks.pay).not.toHaveBeenCalled(); expect(mocks.payCitation).not.toHaveBeenCalled();
   expect(mocks.network).not.toHaveBeenCalled();
