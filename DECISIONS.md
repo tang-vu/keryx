@@ -8424,3 +8424,17 @@ any received original report identity. Only hosted originals can establish actua
 settlement. The same-source MCP/Desktop artifacts and installation links belong
 to the existing serialized release batch, not an independent client deployment.
 See [the client contract and delivery boundary](docs/sponsored-client-research.md).
+
+## 2026-10-18: separate visibility observation from research admission
+
+Research visibility GETs read the admitted privacy store and account default
+without probing the creation writer. The former zero-row UPDATE acquired a
+SQLite write lock and could block the server during concurrent work. Submission
+still proves write readiness before inference or payment and retains owner,
+privacy and parent checks. A displayed choice grants no execution authority.
+
+An unavailable relevance review now carries its existing review failure stage
+through final delivery. This distinguishes an incomplete assessment from a
+negative evidence finding, while keeping unreviewed support and rewards zero.
+See [homepage recovery](docs/engineering/homepage-research-recovery-20261018.md)
+for scope, checks and the unconfirmed original sample executions.

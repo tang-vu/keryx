@@ -1022,8 +1022,10 @@ describe("exact original NASA Spanish note — real frozen HTML, synthetic provi
       if (["missing-statement-review", "missing-illumination", "dropped-qualification"].includes(failure)) expect(run.answer).not.toContain(statements[2]);
       if (failure === "generation-unavailable") expect(run.answer).toContain("No fue posible evaluar las evidencias");
       if (failure === "review-unavailable") {
-        expect(run.answer).toContain("Falta de evidencia: ningún fragmento admitido");
+        expect(run.answer).toContain("No fue posible evaluar las evidencias");
+        expect(run.answer).not.toContain("Falta de evidencia: ningún fragmento admitido");
         expect(run.trace.some(row => row.message.includes("Evidence relevance review unavailable"))).toBe(true);
+        expect(run.trace.some(row => (row.detail as Record<string, unknown> | undefined)?.synthesisFailureStage === "review")).toBe(true);
       }
       expect(verifyResearchReceipt(buildResearchReceipt(run, [])).valid).toBe(true);
       expect(remoteResearchResult(run).answer).toBe(run.answer);
@@ -5048,6 +5050,50 @@ it.each([
 });
 
 describe("completed reads survive bounded model exhaustion", () => {
+  it("classifies a real JSON review outage as unavailable while retaining the original public read", async () => {
+    const url = "https://publisher.example/wal", original = "WAL readers and writers can operate concurrently.";
+    class ReviewOutageEngine extends JsonChatEngine {
+      readonly name = "synthetic-review-outage";
+      callsSeen = 0;
+      protected async chatJson(_model: string, _system: string, user: string, cap?: number) {
+        const packet = JSON.parse(user);
+        this.callsSeen++;
+        if (this.callsSeen === 2) throw new ReasoningOutputLimitError(cap!);
+        const option = (packet.quoteOptions as Array<{ quoteId: string; marker: string; text: string }>)
+          .find(row => row.text === original);
+        expect(option).toBeDefined();
+        return { evidence: [{ claimIndex: 0, marker: option!.marker, quoteId: option!.quoteId,
+          support: 0.9, statement: original }], conflicts: [] };
+      }
+    }
+    const transport = new ReviewOutageEngine(), engine = fakeEngine(), gateway = fakeGateway();
+    engine.decompose = async () => ["What concurrency does WAL permit?"];
+    const synthesize = vi.fn(async (input: SynthInput) => transport.synthesize(input));
+    engine.synthesize = synthesize;
+    const d = deps([], engine, gateway);
+    d.webSearch = { search: vi.fn(async () => []) };
+    d.readWebArticle = vi.fn(async () => ({ text: original, title: "Controlled WAL original", finalUrl: url,
+      kind: "html" as const, truncated: false }));
+    const { run, steps } = await drive({ question: `Use ${url} to explain WAL concurrency.`, origin: "web", budget: 0 }, d);
+    expect(d.readWebArticle).toHaveBeenCalledTimes(1);
+    expect(synthesize).toHaveBeenCalledTimes(1);
+    expect(transport.callsSeen).toBe(2);
+    expect(run.answer).toContain("Read 1 source(s), but the synthesis review was unavailable");
+    expect(run.answer).toContain("Original reads and receipts are retained");
+    expect(run.answer).not.toContain("The read content supplied no qualifying excerpts");
+    expect(run.confidence?.reason).toContain("remain unassessed");
+    expect(steps.some(step => (step.detail as Record<string, unknown> | undefined)?.synthesisFailureStage === "review")).toBe(true);
+    expect(synthesize.mock.calls[0][0].gathered[0].text).toBe(original);
+    expect(run.evidence?.[0]).toMatchObject({ quote: original, support: 0, qualifiesForAnswer: false, qualifiesForReward: false });
+    expect(run.citations).toEqual([]);
+    expect(run.totalSpent).toBe(0);
+    expect(gateway.fetchCalls).toEqual([]);
+    expect(gateway.citationCalls).toEqual([]);
+    const receipt = buildResearchReceipt(run, d.db.payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(remoteResearchResult(run).answer).toBe(run.answer);
+    expect(researchReportMarkdown(run, null, d.db.payments)).toContain("synthesis review was unavailable");
+  });
   it.each(["direct-error", "inner-review"] as const)("persists a %s output diagnostic with retained reads and no fabricated attempt or reward", async mode => {
     const engine = fakeEngine({ synthesize: () => {
       if (mode === "direct-error") throw new ReasoningOutputLimitError(2560);

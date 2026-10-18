@@ -1,5 +1,18 @@
 # Keryx Project Changelog
 
+### App0.27.79 homepage recovery — October 18 preparation
+
+- Read research visibility without acquiring a SQLite write lock. Submission
+  still verifies the creation writer before inference or payment, and retains
+  owner checks, saved defaults and hidden-parent restrictions.
+- Distinguish an unavailable evidence review from a completed review that found
+  insufficient evidence. Keep original reads and receipts; unreviewed evidence
+  remains ineligible for answer claims and creator rewards.
+- Deployment and exact-main acceptance remain release gates. The two reported
+  sample executions have not been identified, so this change does not claim
+  that either sample now produces a useful live answer. See the
+  [recovery scope and validation](engineering/homepage-research-recovery-20261018.md).
+
 ### App0.27.68 public-research delivery — October 15
 
 - Default ordinary research to Public when no account preference is saved. Show

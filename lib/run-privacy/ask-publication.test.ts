@@ -44,10 +44,12 @@ it("does not advertise a guessed preference when active storage is missing", asy
   mocks.db.mockResolvedValue({ runPrivacyActive: true });
   await expect(readResearchVisibility()).rejects.toThrow("privacy_unavailable");
 });
-it("refuses active storage without an admitted creation writer before offering or accepting Public", async () => {
+it("observes choices without probing a creation writer, but still requires one before submission", async () => {
   mocks.ready.mockRejectedValue(new Error("privacy_unavailable"));
-  await expect(readResearchVisibility()).rejects.toThrow("privacy_unavailable");
+  expect(await readResearchVisibility()).toEqual({ wallet: null, defaultVisibility: "public", privacyActive: true });
+  expect(mocks.ready).not.toHaveBeenCalled();
   await expect(prepareAskPublication(request(), "public")).rejects.toThrow("privacy_unavailable");
+  expect(mocks.ready).toHaveBeenCalledOnce();
   mocks.db.mockResolvedValue({ runPrivacyActive: true, runPrivacy: { defaults: mocks.defaults } });
   await expect(prepareAskPublication(request(), "public")).rejects.toThrow();
 });

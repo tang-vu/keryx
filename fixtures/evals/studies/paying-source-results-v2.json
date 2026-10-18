@@ -20,7 +20,7 @@
     "reevaluateRounds": 1,
     "searchCalls": 0
   },
-  "lockSha256": "2ef8f20e53685a137fd870964a81b22c138ddfebf6a2da43bf73ca14676109f1",
+  "lockSha256": "abb4f1d33ddb8b439a79449802d937ff4de517006f9541b620dea49da8c2ef04",
   "outboundAttempts": 0,
   "runtimeSources": {
     "lib/a2a/account-history.ts": "6ab94d83204d3fca655cc83023cd8028d77d300cab406d4f033e14ebc3efb29d",
@@ -272,7 +272,7 @@
     "lib/llm/evidence-review.ts": "c8bc586a1f9245256d11abc0ac79f01a27c2a7893b1726c7bdb085ffb405dc82",
     "lib/llm/evidence-span.ts": "3b1dec4f0cf51a2cb52bd454beacbaed9d5b4864c13ec8754f780ffabbd7fff4",
     "lib/llm/heuristic-engine.ts": "acf3e201a9969dc7f2d9c2101a7768b397f7c526fc60748754f418caf04be190",
-    "lib/llm/json-chat-engine.ts": "10b7b53291ea49c6330fbb1ee2a6716b65dc0e5ccf541b979a09393f0f738262",
+    "lib/llm/json-chat-engine.ts": "f8fbd6aae3ea5a75f07488cc02a315f551a26de197311789d6a653c10165741a",
     "lib/llm/openai-compatible-engine.ts": "337954a32b416c5527dc92a9abbdcb567bfad6cc8a0b203fb60596e15aa09fb9",
     "lib/llm/original-fulfillment-quality.ts": "ed45528a08ba62b2a398e62ec251e22bed6a026985de464ac2c6e7296924e5c6",
     "lib/llm/output-limit-diagnostic.ts": "2824a90d15fa6317782fd3194b19aa96f5d28f64f164ac205efbd1a14ecedfe2",

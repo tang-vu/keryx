@@ -27,7 +27,7 @@ class PacketEngine extends JsonChatEngine {
   readonly name = "synthetic-evidence-packet";
   callsSeen: Array<{ system: string; packet: Record<string, unknown>; cap?: number }> = [];
   responseBytes = 0;
-  constructor(private readonly failure?: "review" | "generation") { super(); }
+  constructor(private readonly failure?: "review" | "review-transport" | "review-malformed" | "generation") { super(); }
   protected async chatJson(_model: string, system: string, user: string, cap?: number) {
     const packet = JSON.parse(user);
     this.callsSeen.push({ system, packet, cap });
@@ -37,6 +37,8 @@ class PacketEngine extends JsonChatEngine {
     }
     if (this.callsSeen.length === 2) {
       if (this.failure === "review") throw new ReasoningOutputLimitError(cap!);
+      if (this.failure === "review-transport") throw new Error("Synthetic review transport unavailable");
+      if (this.failure === "review-malformed") return {};
       return { reviews: facts.map((_, index) => ({ index, support: 0.9, statementSupport: 0.9 })) };
     }
     const options = packet.quoteOptions as Array<{ quoteId: string; marker: string; text: string }>;
@@ -143,8 +145,19 @@ describe("ordinary evidence-only synthesis", () => {
     const result = await engine.synthesize(input);
     expect(engine.callsSeen).toHaveLength(2);
     expect(result).toMatchObject({ answer: "", citedMarkers: [], evidenceReview: "unavailable",
+      synthesisFailure: "review",
       synthesisOutputLimit: { stage: "review", outputTokenLimit: 3072 } });
     expect(result.evidence.every(row => row.support === 0 && row.statementSupport === 0)).toBe(true);
+  });
+
+  it.each(["review-transport", "review-malformed"] as const)("marks %s as unavailable rather than a negative evidence finding", async failure => {
+    const engine = new PacketEngine(failure);
+    const result = await engine.synthesize(input);
+    expect(engine.callsSeen).toHaveLength(2);
+    expect(result).toMatchObject({ answer: "", citedMarkers: [], evidenceReview: "unavailable", synthesisFailure: "review" });
+    expect(result.evidence).toHaveLength(facts.length);
+    expect(result.evidence.every(row => row.support === 0 && row.statementSupport === 0)).toBe(true);
+    expect(result.synthesisOutputLimit).toBeUndefined();
   });
 
   it("does not manufacture markers for invalid targets, unknown reads or unresolved quotes", () => {
