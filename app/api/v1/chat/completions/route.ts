@@ -19,7 +19,7 @@
 import { isRequestObject } from "@/lib/request-object";
 import { unsupportedDecisionReviewIntent } from "@/lib/research/decision-review-types";
 import { NextRequest } from "next/server";
-import { collectRun } from "@/lib/agent";
+import { collectRun, getAgentDeps, type AgentDeps } from "@/lib/agent";
 import { prepareHostedRunClaim } from "@/lib/run-claims/hosted-delivery";
 import { RunClaimError } from "@/lib/run-claims/contracts";
 import { resolveModelChoice } from "@/lib/llm";
@@ -39,7 +39,7 @@ import {
   keryxMeta,
   traceLine,
 } from "@/lib/openai-compat";
-import type { PaymentOrigin } from "@/lib/types";
+import type { PaymentOrigin, QueryRun, TraceStep } from "@/lib/types";
 import { parseAskQuestion } from "@/lib/ask-input";
 import { ResearchPlanningError, researchFailureMessage } from "@/lib/llm/research-plan";
 import { ResearchSelectionError } from "@/lib/llm/research-selection";
@@ -47,6 +47,10 @@ import type { SelectionDiagnostic } from "@/lib/research/selection-diagnostic";
 import { readResearchAvailability } from "@/lib/research/availability";
 import { researchAdmissionError } from "@/lib/research/availability-contract";
 import { presentationLanguage } from "@/lib/research/presentation-language";
+import { parsePlanningFailure } from "@/lib/research/planning-failure";
+import { effectiveEngineName, reasoningAttempts, reasoningUsage, reasoningCalls } from "@/lib/llm/resilient-engine";
+import { outputTokenLimitFromValidatedError } from "@/lib/llm/reasoning-engine";
+import { createTrustedUsageContext, newRunUsage } from "@/lib/research/usage-provenance";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,11 +65,64 @@ const CORS = {
 };
 
 /** OpenAI-shaped error envelope so client SDKs surface a readable message. */
-function openaiError(message: string, status: number, code: string, selectionDiagnostic?: SelectionDiagnostic) {
+function openaiError(message: string, status: number, code: string, selectionDiagnostic?: SelectionDiagnostic,
+  failure?: Awaited<ReturnType<typeof savePlanningFailure>>) {
   return Response.json(
-    { error: { message, type: "invalid_request_error", code, ...(selectionDiagnostic ? { selectionDiagnostic } : {}) } },
-    { status, headers: CORS },
+    { error: { message, type: "invalid_request_error", code, ...(selectionDiagnostic ? { selectionDiagnostic } : {}),
+      ...(failure?.error ?? {}) }, ...(failure?.packet ? { keryx_private: failure.packet } : {}) },
+    { status, headers: { ...CORS, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } },
   );
+}
+
+type HostedClaim = Awaited<ReturnType<typeof prepareHostedRunClaim>>;
+interface PlanningContext {
+  deps?: AgentDeps;
+  claim?: HostedClaim;
+  trace: TraceStep[];
+  paymentStarted: boolean;
+  savingStarted: boolean;
+  cancelled: boolean;
+  startedAt: number;
+}
+
+/** Adapter-local failure history. The shared collector also serves already-paid
+ * A2A jobs, so it must never manufacture an unpaid result for arbitrary errors. */
+async function savePlanningFailure(error: unknown, context: PlanningContext,
+  input: Parameters<typeof collectRun>[0], signal: AbortSignal, scripted: boolean) {
+  if (!(error instanceof ResearchPlanningError)) return;
+  const planningFailure = parsePlanningFailure({ version: 1, stage: "decompose", reason: error.reason,
+    maximumTargets: error.maximumTargets, automaticRetry: false,
+    ...(outputTokenLimitFromValidatedError(error) === undefined ? {} : { outputTokenLimit: outputTokenLimitFromValidatedError(error) }) });
+  if (!planningFailure) return;
+  let reportSaved = false;
+  let packet: Awaited<ReturnType<NonNullable<HostedClaim>["complete"]>> | undefined;
+  const deps = context.deps;
+  // A genuine observed planning refusal precedes discovery/payment and the
+  // normal save boundary. Cancellation and uncertain later failures stay unsaved.
+  if (deps && !signal.aborted && !context.cancelled && !context.paymentStarted && !context.savingStarted &&
+      context.trace.length > 0 && context.trace.every(step => step.phase === "decompose")) {
+    const failed: QueryRun = { id: input.queryId!, question: input.question, budget: input.budget!, researchMode: input.researchMode,
+      engine: effectiveEngineName(deps.engine), planningFailure, provenance: input.provenance,
+      usage: newRunUsage({ asker: input.asker, provenance: input.provenance, ...(scripted ? { usageContext:
+        createTrustedUsageContext(config.profile.networkId, { actor: "unknown", funding: "unknown", scripted: true }) } : {}) },
+        config.profile.networkId, config.devWallets ?? []),
+      reasoningAttempts: reasoningAttempts(deps.engine), llmUsage: reasoningUsage(deps.engine), llmCalls: reasoningCalls(deps.engine),
+      subClaims: [], decisions: [], citations: [], evidence: [], claimCoverage: [], answer: researchFailureMessage(error),
+      totalSpent: 0, totalToCreators: 0, trace: [...context.trace, { phase: "verdict",
+        message: "Research planning failed before discovery. No answer or source-payment result was produced.", detail: planningFailure, ts: Date.now() }],
+      createdAt: new Date().toISOString(), origin: input.origin, fundingOwner: deps.gateway.mode === "offline" ? "offline" : "treasury",
+      paymentMode: deps.gateway.mode, durationMs: Math.max(0, Date.now() - context.startedAt),
+      ...(input.asker ? { asker: input.asker, askerFunded: false } : {}) };
+    try {
+      // Same request-local DB facade and default-visibility policy as collectRun.
+      // Never accept visibility/owner/funding authority from the OpenAI body.
+      await deps.db.saveQueryRun(failed);
+      reportSaved = true;
+      packet = await context.claim?.complete(failed);
+    } catch { /* Preserve the original refusal, without retry or raw storage errors. */ }
+  }
+  return { error: { planningFailure, reportSaved, ...(reportSaved ? { queryId: input.queryId,
+    dispatchUrl: `${config.baseUrl}/dispatch/${input.queryId}` } : {}) }, packet };
 }
 
 export function OPTIONS() {
@@ -147,14 +204,24 @@ export async function POST(req: NextRequest) {
   const budget = Math.min(requested, budgetCap);
 
   const queryId = crypto.randomUUID();
+  const context: PlanningContext = { trace: [], paymentStarted: false, savingStarted: false, cancelled: false, startedAt: Date.now() };
+  const input: Parameters<typeof collectRun>[0] = { question, budget, queryId, origin, model: modelChoice?.id,
+    scholarly: body.scholarly === true, researchMode: body.mode ?? "deep", signal: req.signal,
+    ...(keyIdentity ? { asker: keyIdentity.walletAddress } : {}),
+    provenance: { version: 1, surface: "api", ownershipMethod: keyIdentity ? "api-key" : "unknown" },
+    onCreatorPaymentBoundary: async () => { context.paymentStarted = true; },
+    onQueryRunSaveBoundary: async () => { context.savingStarted = true; } };
+  const collect = async (onStep?: (step: TraceStep) => void) => {
+    context.deps = await getAgentDeps({ model: modelChoice?.id });
+    return collectRun(input, { deps: context.deps, onStep: step => { context.trace.push(step); onStep?.(step); } });
+  };
 
   // ── Non-streaming: run to completion, return one ChatCompletion object. ──
   if (!body.stream) {
     try {
-      const privateClaim = isBot ? null : await prepareHostedRunClaim(queryId, keyIdentity?.walletAddress);
-      const run = await collectRun({ question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep", ...(keyIdentity ? { asker: keyIdentity.walletAddress } : {}),
-        provenance: { version: 1, surface: "api", ownershipMethod: keyIdentity ? "api-key" : "unknown" } });
-      const packet = await privateClaim?.complete(run);
+      context.claim = isBot ? null : await prepareHostedRunClaim(queryId, keyIdentity?.walletAddress);
+      const run = await collect();
+      const packet = await context.claim?.complete(run);
       return Response.json({ ...buildCompletion(run, modelName, body.language), ...(packet ? { keryx_private: packet } : {}) }, { headers: { ...CORS, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
     } catch (error) {
       if (error instanceof RunClaimError) return openaiError("Private run claims are unavailable on this deployment.", 503, "claims_unavailable");
@@ -162,7 +229,8 @@ export async function POST(req: NextRequest) {
       if (held) return openaiError(held.message, 503, held.code);
       if (!(error instanceof ResearchPlanningError) && !(error instanceof ResearchSelectionError)) throw error;
       return openaiError(researchFailureMessage(error), error.status, error.code,
-        error instanceof ResearchSelectionError ? error.diagnostic : undefined);
+        error instanceof ResearchSelectionError ? error.diagnostic : undefined,
+        await savePlanningFailure(error, context, input, req.signal, isBot));
     }
   }
 
@@ -179,17 +247,13 @@ export async function POST(req: NextRequest) {
         }
       };
       try {
-        const privateClaim = isBot ? null : await prepareHostedRunClaim(queryId, keyIdentity?.walletAddress);
+        context.claim = isBot ? null : await prepareHostedRunClaim(queryId, keyIdentity?.walletAddress);
         send(buildChunk(id, modelName, { role: "assistant" }));
         // Stream each trace step as an o1-style reasoning delta. Clients that don't support
         // reasoning_content ignore it and still receive the answer content below.
-        const run = await collectRun(
-          { question, budget, queryId, origin, model: modelChoice?.id, scholarly: body.scholarly === true, researchMode: body.mode ?? "deep", ...(keyIdentity ? { asker: keyIdentity.walletAddress } : {}),
-            provenance: { version: 1, surface: "api", ownershipMethod: keyIdentity ? "api-key" : "unknown" } },
-          { onStep: (s) => send(buildChunk(id, modelName, { reasoning_content: traceLine(s) })) },
-        );
+        const run = await collect(s => send(buildChunk(id, modelName, { reasoning_content: traceLine(s) })));
         send(buildChunk(id, modelName, { content: buildAnswerContent(run, body.language) }));
-        const packet = await privateClaim?.complete(run);
+        const packet = await context.claim?.complete(run);
         send(buildChunk(id, modelName, {}, "stop", { keryx: keryxMeta(run), ...(packet ? { keryx_private: packet } : {}) }));
         try {
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -197,17 +261,21 @@ export async function POST(req: NextRequest) {
           // Client disconnected before the terminator — nothing to flush.
         }
       } catch (err) {
+        const failure = await savePlanningFailure(err, context, input, req.signal, isBot);
         send(
           buildChunk(id, modelName, {
             content: `\n\n[keryx error] ${researchFailureMessage(err)}`,
           }, null, researchAdmissionError(err)
             ? { keryx_error: { code: "research_paused" } }
-            : err instanceof ResearchSelectionError ? { keryx_error: { code: err.code, selectionDiagnostic: err.diagnostic } } : undefined),
+            : err instanceof ResearchSelectionError ? { keryx_error: { code: err.code, selectionDiagnostic: err.diagnostic } }
+            : failure && err instanceof ResearchPlanningError ? { keryx_error: { code: err.code, ...failure.error },
+              ...(failure.packet ? { keryx_private: failure.packet } : {}) } : undefined),
         );
       } finally {
-        controller.close();
+        try { controller.close(); } catch { /* Reader cancellation already closed the stream. */ }
       }
     },
+    cancel() { context.cancelled = true; },
   });
 
   return new Response(stream, {

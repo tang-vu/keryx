@@ -4,8 +4,8 @@ import { NextRequest } from "next/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { deliveryFixture } from "./delivery.test-fixture";
 import { privateRunClaimPacketSchema } from "./delivery";
-const mocks = vi.hoisted(() => ({ db: vi.fn(), collect: vi.fn(), verifyKey: vi.fn() }));
-vi.mock("@/lib/agent", () => ({ collectRun: mocks.collect }));
+const mocks = vi.hoisted(() => ({ db: vi.fn(), deps: vi.fn(), collect: vi.fn(), verifyKey: vi.fn() }));
+vi.mock("@/lib/agent", () => ({ collectRun: mocks.collect, getAgentDeps: mocks.deps }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
 vi.mock("@/lib/api-keys", () => ({ verifyApiKey: mocks.verifyKey }));
 vi.mock("@/lib/llm", () => ({ resolveModelChoice: () => null }));
@@ -19,8 +19,9 @@ import { POST } from "../../app/api/v1/chat/completions/route";
 import { createRemoteMcpServer, remoteResearchResult } from "../mcp/remote-server";
 let f: ReturnType<typeof deliveryFixture>;
 beforeEach(() => {
-  vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "true"); mocks.collect.mockReset(); mocks.db.mockReset(); mocks.verifyKey.mockReset();
+  vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "true"); mocks.collect.mockReset(); mocks.db.mockReset(); mocks.deps.mockReset(); mocks.verifyKey.mockReset();
   f = deliveryFixture(); mocks.db.mockResolvedValue(f.db);
+  mocks.deps.mockResolvedValue({ db: f.db, engine: { name: "synthetic" }, gateway: { mode: "offline" } });
   mocks.collect.mockImplementation(async (input: { queryId: string; asker?: string }) => f.save(input.queryId, input.asker ? { asker: input.asker } : {}));
 });
 afterEach(() => { f.sql.close(); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
@@ -42,6 +43,7 @@ it.each([false, true])("unavailable OpenAI admission starts zero research calls:
   mocks.db.mockResolvedValue({}); const response = await POST(request(stream));
   if (!stream) expect(response.status).toBe(503);
   expect(await response.text()).toContain("claims_unavailable"); expect(mocks.collect).not.toHaveBeenCalled();
+  expect(mocks.deps).not.toHaveBeenCalled();
 });
 it("owned keys and verified internal engine callers do not issue anonymous ownership links", async () => {
   const wallet = `0x${"a".repeat(40)}`;

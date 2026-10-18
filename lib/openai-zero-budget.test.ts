@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { beforeEach, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ collectRun: vi.fn() }));
-vi.mock("@/lib/agent", () => ({ collectRun: mocks.collectRun }));
+const mocks = vi.hoisted(() => ({ collectRun: vi.fn(), deps: vi.fn() }));
+vi.mock("@/lib/agent", () => ({ collectRun: mocks.collectRun, getAgentDeps: mocks.deps }));
 vi.mock("@/lib/llm", () => ({ resolveModelChoice: () => null }));
 vi.mock("@/lib/config", async importOriginal => {
   const actual = await importOriginal<typeof import("./config")>();
@@ -16,16 +16,20 @@ vi.mock("@/lib/openai-compat", async importOriginal => {
 });
 import { POST } from "../app/api/v1/chat/completions/route";
 
-beforeEach(() => { vi.clearAllMocks(); mocks.collectRun.mockResolvedValue({}); });
+const preparedDeps = { db: {}, engine: { name: "synthetic-budget" }, gateway: { mode: "offline" } };
+beforeEach(() => { vi.clearAllMocks(); mocks.collectRun.mockResolvedValue({}); mocks.deps.mockResolvedValue(preparedDeps); });
 it.each([0, undefined])("preserves explicit zero while clamping the default for OpenAI callers: %s", async budget => {
   const response = await POST(new NextRequest("https://keryx.cc/api/v1/chat/completions", { method: "POST",
     body: JSON.stringify({ messages: [{ role: "user", content: "Read public originals" }], budget }) }));
   expect(response.status).toBe(200);
-  expect(mocks.collectRun).toHaveBeenCalledWith(expect.objectContaining({ budget: budget === 0 ? 0 : 0.03 }));
+  expect(mocks.deps).toHaveBeenCalledExactlyOnceWith({ model: undefined });
+  expect(mocks.collectRun).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ budget: budget === 0 ? 0 : 0.03 }),
+    { deps: preparedDeps, onStep: expect.any(Function) });
 });
 it.each([{ reviewFirst: true }, { reviewFirst: "false" }, { mode: "review-first" }, { researchMode: "review-first" }])("refuses unsupported interactive review intent before the provider: %j", async intent => {
   const response = await POST(new NextRequest("https://keryx.cc/api/v1/chat/completions", { method: "POST",
     body: JSON.stringify({ messages: [{ role: "user", content: "Synthetic question" }], ...intent }) }));
   expect(response.status).toBe(400); expect(await response.json()).toMatchObject({ error: { code: "review_unsupported" } });
   expect(mocks.collectRun).not.toHaveBeenCalled();
+  expect(mocks.deps).not.toHaveBeenCalled();
 });

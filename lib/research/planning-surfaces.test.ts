@@ -32,6 +32,8 @@ import { ReasoningOutputValidationError, ReasoningOutputLimitError } from "../ll
 
 const RAW_PROVIDER_OUTPUT = "RAW_PROVIDER_PLAN_NOT_CALLER_TEXT";
 const step: TraceStep = { phase: "decompose", message: "Preparing a bounded research plan", ts: 1 };
+const preparedDeps = { db: { saveQueryRun: mocks.saveQueryRun, recordActivationEvent: mocks.recordActivationEvent },
+  engine: { name: "local-planning-fixture" }, gateway: { mode: "offline", pay: mocks.pay, payCitation: mocks.payCitation } };
 const surfaces = ["web", "openai-json", "openai-stream", "mcp"] as const;
 type Surface = typeof surfaces[number];
 
@@ -79,7 +81,9 @@ async function refusal(surface: Surface, question: string,
     const response = await completion(completionRequest(question, false));
     expect(response.status).toBe(422);
     const body = await response.json();
-    expect(body).toEqual({ error: { message: expect.any(String), type: "invalid_request_error", code: "research_plan_refinement_required" } });
+    const run = mocks.saveQueryRun.mock.calls[0][0];
+    expect(body).toEqual({ error: { message: expect.any(String), type: "invalid_request_error", code: "research_plan_refinement_required",
+      planningFailure: run.planningFailure, reportSaved: true, queryId: run.id, dispatchUrl: `https://keryx.invalid/dispatch/${run.id}` } });
     return { message: body.error.message, wire: JSON.stringify(body) };
   }
   const response = surface === "web"
@@ -105,13 +109,21 @@ async function refusal(surface: Surface, question: string,
   }
   const message = chunks[2].choices[0].delta.content!;
   expect(message).toMatch(/^\n\n\[keryx error\] /);
+  const run = mocks.saveQueryRun.mock.calls[0]?.[0];
+  if (run) expect(events[2].data.keryx_error).toEqual({ code: "research_plan_refinement_required",
+    planningFailure: run.planningFailure, reportSaved: true, queryId: run.id, dispatchUrl: `https://keryx.invalid/dispatch/${run.id}` });
+  else expect(events[2].data).not.toHaveProperty("keryx_error");
   return { message, wire };
 }
 
 function singleDispatch(surface: Surface, question: string) {
   const runner = surface === "web" ? mocks.runAgent : mocks.collectRun;
   expect(runner).toHaveBeenCalledOnce();
-  expect(runner).toHaveBeenCalledWith(expect.objectContaining({ question, budget: 0.02 }), ...(surface === "web" || surface === "openai-stream" ? [expect.any(Object)] : []));
+  expect(runner).toHaveBeenCalledWith(expect.objectContaining({ question, budget: 0.02 }), ...(surface !== "mcp" ? [expect.any(Object)] : []));
+  if (surface.startsWith("openai")) {
+    expect(mocks.getAgentDeps).toHaveBeenCalledExactlyOnceWith({ model: undefined });
+    expect(mocks.collectRun.mock.calls[0][1]).toEqual({ deps: preparedDeps, onStep: expect.any(Function) });
+  }
   expect(surface === "web" ? mocks.collectRun : mocks.runAgent).not.toHaveBeenCalled();
   expect(mocks.provider).toHaveBeenCalledExactlyOnceWith(question);
 }
@@ -120,8 +132,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.provider.mockResolvedValue({ status: "complete", claims: Array.from({ length: MAX_RESEARCH_TARGETS + 1 }, (_, index) => `${RAW_PROVIDER_OUTPUT}-${index}`) });
   mocks.recordActivationEvent.mockResolvedValue(undefined);
-  mocks.getAgentDeps.mockResolvedValue({ db: { saveQueryRun: mocks.saveQueryRun, recordActivationEvent: mocks.recordActivationEvent },
-    engine: { name: "local-planning-fixture" }, gateway: { mode: "offline", pay: mocks.pay, payCitation: mocks.payCitation } });
+  mocks.getAgentDeps.mockResolvedValue(preparedDeps);
   mocks.runAgent.mockImplementation(async function* (params: { question: string }) {
     yield step;
     await boundedResearchPlan(params.question, () => mocks.provider(params.question));
@@ -137,8 +148,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.unstubAllGlobals();
-  // Web now retains an explicitly failed original; other adapters still return
-  // the terminal refusal. Neither path fabricates a completed answer or receipt.
+  // Web/OpenAI may retain an explicitly failed original; remote MCP retains its
+  // terminal-only contract. No path fabricates a completed answer or receipt.
   for (const [run] of mocks.saveQueryRun.mock.calls) expect(run).toMatchObject({
     planningFailure: { stage: "decompose", automaticRetry: false }, subClaims: [], citations: [], evidence: [], totalSpent: 0, totalToCreators: 0,
   });
@@ -179,8 +190,9 @@ describe("terminal planning refusals reach the original caller", () => {
     expect(message.length).toBeLessThan(1_500);
     expect(message).toContain("keeping the original source URLs/versions and qualifications");
     expect(message).toContain("not a new question or an automatic retry");
-    for (const privateOrSuccess of [RAW_PROVIDER_OUTPUT, "caller-url-token", "https://docs.example.invalid", "settledPayments", "paymentAttempts", "dispatchUrl", "creatorsPaid"])
+    for (const privateOrSuccess of [RAW_PROVIDER_OUTPUT, "caller-url-token", "https://docs.example.invalid", "settledPayments", "paymentAttempts", "creatorsPaid"])
       expect(wire).not.toContain(privateOrSuccess);
+    if (!surface.startsWith("openai")) expect(wire).not.toContain("dispatchUrl");
   });
 
   it.each(surfaces)("%s keeps Vietnamese refinement guidance tied to that caller", async surface => {
