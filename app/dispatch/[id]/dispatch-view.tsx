@@ -28,7 +28,7 @@ export function DispatchView({
   historical = false,
   historicalNetwork,
   visibility,
-  recoveryWallet,
+  recoveryWallet = null,
 }: {
   run: QueryRun;
   /** Trusted stored-answer language, read on the server before public projection. */
@@ -37,7 +37,7 @@ export function DispatchView({
   historical?: boolean;
   historicalNetwork?: string;
   visibility?: RunVisibility;
-  recoveryWallet: string | null;
+  recoveryWallet?: string | null;
 }) {
   const copy = useUiMessages();
   const walkthroughMessages = useUiCopy("walkthrough", englishWalkthroughMessages);
