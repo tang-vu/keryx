@@ -95,6 +95,9 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
   try {
     runtimeGuard?.();
     db = new DatabaseSync(file, { readOnly, allowExtension: false });
+    // Apply the existing bounded lock wait before admission reads, which can meet
+    // a short writer lock too. This is connection-local and admits no SQL capability.
+    db.exec("PRAGMA busy_timeout=5000");
     held.verify(); assertStorageIdentity(db, identity); assertStorageFences(db, identity); held.verify();
     if (profiles) {
       excluded = new Set([STORAGE_IDENTITY_TABLE, "storage_identity_no_update", "storage_identity_no_delete",
@@ -108,7 +111,6 @@ export function openVerifiedSqliteStorage(file: string, expected: StorageIdentit
       }
     }
     // Connection settings follow identity admission and precede SQL restriction. They are not schema repair.
-    db.exec("PRAGMA busy_timeout=5000");
     db.exec("PRAGMA foreign_keys=ON");
     if (db.prepare("PRAGMA foreign_keys").get()?.foreign_keys !== 1) return refuseStorage("storage_unavailable");
     if (identity.authorityMode === "mainnet-real") installRunOwnershipFunctions(db);

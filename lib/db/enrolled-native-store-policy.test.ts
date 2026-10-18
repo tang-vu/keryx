@@ -1,9 +1,10 @@
 /** Genuine isolated SQLite only; no provider, signing, spend or shared database. */
 import { afterAll, afterEach, beforeAll, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { copyFileSync, mkdtempSync, renameSync, rmSync } from "node:fs";
+import { copyFileSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Worker } from "node:worker_threads";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "./storage-identity";
 import { installMainnetApplicationSchema } from "./mainnet-application-schema";
@@ -174,4 +175,35 @@ it("non-contention runtime revocation remains permanently refused", async () => 
   expect(isEnrolledSqlitePrivacyContention(refusal)).toBe(false); failed = false;
   await expect(privacy.read("synthetic-owned")).rejects.toThrow("privacy_unavailable");
   expect(() => assertVerifiedSqliteSelectedApplicationPolicy(f.connection.db)).toThrow();
+});
+
+it("opens a fresh enrolled reader after a short native writer lock without changing the database", async () => {
+  const f = fixture(false, true);
+  const before = readFileSync(f.file), shared = new SharedArrayBuffer(8), state = new Int32Array(shared);
+  const worker = new Worker(`
+    const { workerData } = require('node:worker_threads');
+    const { DatabaseSync } = require('node:sqlite');
+    const state = new Int32Array(workerData.shared), db = new DatabaseSync(workerData.file);
+    try {
+      db.exec('BEGIN EXCLUSIVE'); Atomics.store(state, 0, 1); Atomics.notify(state, 0);
+      if (Atomics.wait(state, 1, 0, 5000) === 'timed-out') throw new Error('Reader did not start');
+      Atomics.wait(state, 0, 1, 500);
+      db.exec('ROLLBACK');
+    } finally { if (db.isTransaction) db.exec('ROLLBACK'); db.close(); }
+  `, { eval: true, workerData: { file: f.file, shared } });
+  const exited = new Promise<void>((resolve, reject) => {
+    worker.once("error", reject);
+    worker.once("exit", code => code === 0 ? resolve() : reject(new Error(`Native writer exited ${code}`)));
+  });
+  try {
+    expect(Atomics.wait(state, 0, 0, 5000)).not.toBe("timed-out");
+    expect(Atomics.load(state, 0)).toBe(1);
+    const connection = openVerifiedSqliteStorage(f.file, identity, { readOnly: true,
+      runtimeGuard() { if (Atomics.compareExchange(state, 1, 0, 1) === 0) Atomics.notify(state, 1); },
+      applicationProfiles: supportedSqliteApplicationProfiles(true) });
+    opened.push(connection);
+    expect(connection.db.prepare("SELECT id FROM query_runs WHERE id=?").get("synthetic-owned")?.id).toBe("synthetic-owned");
+    expect(() => assertVerifiedSqliteConnection(connection.db, "write")).toThrow("storage_unavailable");
+  } finally { await exited; }
+  expect(readFileSync(f.file)).toEqual(before);
 });
