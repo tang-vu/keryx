@@ -51,6 +51,7 @@ function fixture() {
     return captured ? reply(captured, value) : new Response(null, { status: 401 });
   }) as typeof fetch;
   return { fetcher, puts, setOwner: (value: string | null) => { owner = value; }, failWrites: () => { failWrites = true; },
+    setAccount: (wallet: string, locale: string | null) => { values.set(wallet, locale); },
     setSessionFailure: (value: typeof sessionFailure) => { sessionFailure = value; },
     delayRead: () => { let release!: () => void; delay = new Promise<void>(resolve => { release = resolve; }); return () => { delay = null; release(); }; } };
 }
@@ -115,6 +116,74 @@ it("ignores a delayed stored response after explicit choice", async () => {
   await choose("vi"); await act(async () => release());
   expect(container.querySelector("#locale")?.textContent).toBe("vi");
 });
+it.each([false, true])("keeps selected English on remount when the Vietnamese account read is delayed=%s", async delayed => {
+  const f = fixture(); f.setAccount(alice, "vi"); f.failWrites();
+  await mount(f.fetcher); await choose("en");
+  await vi.waitFor(() => expect(f.puts).toHaveLength(1));
+  expect(localStorage.getItem(key(alice))).toBe(encodeLocaleValue("en"));
+  await act(async () => { root!.unmount(); }); root = undefined;
+  const release = delayed ? f.delayRead() : () => {};
+  await mount(f.fetcher);
+  const editor = container.querySelector<HTMLInputElement>("#editor")!; editor.value = "Retain English editor";
+  await act(async () => { release(); });
+  await vi.waitFor(() => expect(container.querySelector("#status")?.textContent).toBe(""));
+  expect(container.querySelector("#locale")?.textContent).toBe("en");
+  await refocus();
+  expect(container.querySelector("#locale")?.textContent).toBe("en");
+  expect(document.documentElement.lang).toBe("en");
+  expect(container.querySelector("#editor")).toBe(editor); expect(editor.value).toBe("Retain English editor");
+  expect(f.puts).toHaveLength(1);
+});
+it.each([false, true])("keeps unknown-session English through resolution and delayed account read with storage denied=%s", async denied => {
+  seedScopes(); const f = fixture(); f.setAccount(alice, "vi"); f.setSessionFailure("status");
+  vi.spyOn(window.navigator, "languages", "get").mockReturnValue(["vi"]);
+  const read = vi.spyOn(Storage.prototype, "getItem"), write = vi.spyOn(Storage.prototype, "setItem");
+  if (denied) {
+    read.mockImplementation(() => { throw new Error("Synthetic storage denial"); });
+    write.mockImplementation(() => { throw new Error("Synthetic storage denial"); });
+  }
+  await mount(f.fetcher); await choose("en");
+  expect(container.querySelector("#status")?.textContent).toBe("memoryOnly");
+  expect(read).not.toHaveBeenCalled(); expect(write).not.toHaveBeenCalled(); expect(f.puts).toEqual([]);
+  const editor = container.querySelector<HTMLInputElement>("#editor")!; editor.value = "Keep unknown-session draft";
+  f.setSessionFailure(null); const release = f.delayRead(); await refocus();
+  expect(container.querySelector("#locale")?.textContent).toBe("en");
+  await act(async () => { release(); }); await refocus();
+  expect(container.querySelector("#locale")?.textContent).toBe("en");
+  expect(document.documentElement.lang).toBe("en");
+  expect(container.querySelector("#editor")).toBe(editor); expect(editor.value).toBe("Keep unknown-session draft");
+  expect(mounts).toBe(1); expect(write).not.toHaveBeenCalled(); expect(f.puts).toEqual([]);
+  f.setOwner(bob); await refocus();
+  expect(container.querySelector("#locale")?.textContent).toBe("zh-Hans");
+  expect(write).not.toHaveBeenCalled(); expect(f.puts).toEqual([]);
+});
+it("drops unknown intent bound to an observed wallet when that wallet changes before session resolution", async () => {
+  const f = fixture(); f.setSessionFailure("status");
+  const read = vi.spyOn(Storage.prototype, "getItem"), write = vi.spyOn(Storage.prototype, "setItem");
+  await mount(f.fetcher, preparedLocales, { connectedWallet: alice }); await choose("vi");
+  await act(async () => { root!.render(tree(f.fetcher, preparedLocales, { connectedWallet: bob })); });
+  await vi.waitFor(() => expect(container.querySelector("select")?.disabled).toBe(false));
+  expect(container.querySelector("#locale")?.textContent).toBe("en");
+  expect(read).not.toHaveBeenCalled(); expect(write).not.toHaveBeenCalled(); expect(f.puts).toEqual([]);
+  f.setOwner(bob); f.setSessionFailure(null); await refocus();
+  expect(container.querySelector("#locale")?.textContent).toBe("zh-Hans");
+  expect(write).not.toHaveBeenCalled(); expect(f.puts).toEqual([]);
+});
+it("binds a fresh unknown English choice to the current wallet rather than an older confirmed guest", async () => {
+  const f = fixture(); f.setOwner(null); f.setAccount(alice, "vi");
+  localStorage.setItem(key(null), encodeLocaleValue("zh-Hans"));
+  await mount(f.fetcher);
+  const write = vi.spyOn(Storage.prototype, "setItem");
+  f.setOwner(alice); f.setSessionFailure("status");
+  await act(async () => { root!.render(tree(f.fetcher, preparedLocales, { connectedWallet: alice })); });
+  await vi.waitFor(() => expect(container.querySelector("select")?.disabled).toBe(false));
+  await choose("en"); expect(container.querySelector("#status")?.textContent).toBe("memoryOnly");
+  f.setSessionFailure(null); await refocus();
+  expect(container.querySelector("#locale")?.textContent).toBe("en");
+  expect(localStorage.getItem(key(null))).toBe(encodeLocaleValue("zh-Hans"));
+  expect(localStorage.getItem(key(alice))).toBeNull();
+  expect(write).not.toHaveBeenCalled(); expect(f.puts).toEqual([]);
+});
 it("drops late account responses on owner change and restores the guest scope on logout", async () => {
   const f = fixture(), release = f.delayRead(); await mount(f.fetcher);
   f.setOwner(bob); await act(async () => window.dispatchEvent(new Event("keryx:auth")));
@@ -164,7 +233,7 @@ it.each(["status", "reject", "malformed"] as const)("keeps %s session identity u
   await refocus(); expect(container.querySelector("#locale")?.textContent).toBe("vi");
   expect(read).not.toHaveBeenCalled(); expect(write).not.toHaveBeenCalled(); expect(f.puts).toEqual([]);
   f.setSessionFailure(null); await refocus();
-  expect(container.querySelector("#locale")?.textContent).toBe("en");
+  expect(container.querySelector("#locale")?.textContent).toBe("vi");
   f.setOwner(null); await act(async () => { window.dispatchEvent(new CustomEvent("keryx:auth", { detail: "signed-out" })); });
   await vi.waitFor(() => expect(container.querySelector("#locale")?.textContent).toBe("zh-Hans"));
   expect(write).not.toHaveBeenCalled();
@@ -191,7 +260,7 @@ it("keeps a connected-wallet mismatch unknown without reading or writing guest o
   await refocus(); expect(container.querySelector("#locale")?.textContent).toBe("vi");
   expect(read).not.toHaveBeenCalled(); expect(write).not.toHaveBeenCalled(); expect(f.puts).toEqual([]);
   f.setOwner(bob); await refocus();
-  expect(container.querySelector("#locale")?.textContent).toBe("zh-Hans"); expect(write).not.toHaveBeenCalled();
+  expect(container.querySelector("#locale")?.textContent).toBe("vi"); expect(write).not.toHaveBeenCalled();
 });
 it("retains last-confirmed-owner intent through an outage without persisting unknown selections", async () => {
   const f = fixture(); f.failWrites(); await mount(f.fetcher); await choose("vi");
@@ -204,7 +273,7 @@ it("retains last-confirmed-owner intent through an outage without persisting unk
   expect(localStorage.getItem(key(alice))).toBe(encodeLocaleValue("vi"));
   f.setOwner(bob); await refocus();
   await choose("en"); await vi.waitFor(() => expect(f.puts).toHaveLength(2));
-  f.setOwner(alice); await refocus(); expect(container.querySelector("#locale")?.textContent).toBe("en");
+  f.setOwner(alice); await refocus(); expect(container.querySelector("#locale")?.textContent).toBe("vi");
   expect(localStorage.getItem(key(null))).toBeNull();
 });
 it("clears explicit intent for a new network and genuine logout", async () => {

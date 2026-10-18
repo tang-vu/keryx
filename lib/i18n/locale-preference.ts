@@ -53,8 +53,9 @@ export function writeBrowserLocale(storage: () => BrowserStore, scope: LocaleSco
 
 export function selectPreference(input: { explicit?: unknown; account?: unknown; browser?: unknown; acceptLanguage?: string | null },
   enabled: readonly UiLocale[]) {
-  // Invalid/disabled account values do not suppress a valid browser preference.
-  const stored = negotiateUiLocale({ explicit: input.account, stored: input.browser }, enabled);
+  // A browser value records an explicit choice for this owner and realm. Account
+  // and language-header resolution must not replace that choice on a later visit.
+  const stored = negotiateUiLocale({ explicit: input.browser, stored: input.account }, enabled);
   return negotiateUiLocale({ explicit: input.explicit,
     stored: stored.source === "default" ? undefined : stored.locale, acceptLanguage: input.acceptLanguage }, enabled);
 }

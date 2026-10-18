@@ -120,7 +120,13 @@ export function LocaleProvider({ children, enabledLocales = shippedUiLocales, co
         return;
       }
       const binding: LocaleScope = { origin, network, owner };
-      if (explicitChoice.current && !sameBinding(explicitChoice.current.binding, binding)) explicitChoice.current = null;
+      if (explicitChoice.current) {
+        const previous = explicitChoice.current.binding;
+        if (!sameRealm(previous, binding) || previous.owner !== undefined && !sameBinding(previous, binding)) explicitChoice.current = null;
+        // A choice made before the first session reply remains current intent.
+        // Bind it once in memory; resolving identity grants no persistence/write.
+        else explicitChoice.current = { ...explicitChoice.current, binding };
+      }
       scope.current = binding;
       confirmedScope.current = binding;
       preferences.current = { ...emptyPreferences(), explicit: explicitChoice.current?.locale ?? null,
@@ -164,9 +170,12 @@ export function LocaleProvider({ children, enabledLocales = shippedUiLocales, co
       binding.origin !== window.location.origin ||
       binding.owner && activeRealm.current.connectedWallet && binding.owner !== canonicalLocaleOwner(activeRealm.current.connectedWallet) || !enabled.current.includes(locale)) return;
     const ticket = epoch.current.invalidate();
-    // An outage can retain intent for the last confirmed identity. A first-time
-    // unknown choice remains unbound and is discarded when identity resolves.
-    explicitChoice.current = { binding: binding.owner === undefined ? confirmedScope.current ?? binding : binding, locale };
+    // Retain an outage choice for the last confirmed identity or observed wallet.
+    // A first unknown choice binds on resolution, without reading/writing a scope
+    // until the session confirms it. Later owner/realm changes still clear it.
+    const observedOwner = canonicalLocaleOwner(activeRealm.current.connectedWallet);
+    explicitChoice.current = { binding: binding.owner === undefined ?
+      observedOwner ? { ...binding, owner: observedOwner } : confirmedScope.current ?? binding : binding, locale };
     preferences.current.explicit = locale;
     const durableBinding = binding.owner === undefined ? null : { ...binding, owner: binding.owner };
     const saved = durableBinding ? writeBrowserLocale(() => window.localStorage, durableBinding, locale) : false;

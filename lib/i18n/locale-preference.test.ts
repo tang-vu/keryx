@@ -6,9 +6,12 @@ import { preparedLocales, shippedUiLocales } from "./locales";
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 const scope = { origin: "https://keryx.test", network: "eip155:5042", owner: alice };
 describe("bounded interface preference (source candidate; runtime acceptance remains separate)", () => {
-  it("orders explicit, account, owner-scoped browser, quality-ranked header, English", () => {
+  it("orders current explicit, owner-scoped browser, account, quality-ranked header, English", () => {
     expect(selectPreference({ explicit: "vi", account: "zh-Hans", browser: "en", acceptLanguage: "en" }, preparedLocales).locale).toBe("vi");
-    expect(selectPreference({ account: "zh-Hans", browser: "vi" }, preparedLocales).locale).toBe("zh-Hans");
+    expect(selectPreference({ account: "zh-Hans", browser: "vi" }, preparedLocales).locale).toBe("vi");
+    expect(selectPreference({ account: "vi", browser: "en", acceptLanguage: "vi" }, preparedLocales).locale).toBe("en");
+    expect(selectPreference({ explicit: "en", account: "vi", browser: "zh-Hans", acceptLanguage: "vi" }, preparedLocales).locale).toBe("en");
+    expect(selectPreference({ account: "vi", browser: "corrupt", acceptLanguage: "zh-Hans" }, preparedLocales).locale).toBe("vi");
     expect(selectPreference({ account: "corrupt", browser: "vi", acceptLanguage: "zh-Hans" }, preparedLocales).locale).toBe("vi");
     expect(selectPreference({ acceptLanguage: "vi;q=0.1,zh-CN;q=0.9" }, preparedLocales).locale).toBe("zh-Hans");
     expect(selectPreference({ acceptLanguage: "vi;q=0,vi-VN;q=1,zh-TW" }, preparedLocales).locale).toBe("en");
