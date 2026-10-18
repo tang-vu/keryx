@@ -17,6 +17,7 @@ The transport regression first produced 11 failures; the real AnswerCard regress
 - 51 transport/article tests pass, including existing SSRF/pinned lookup and document-reader checks.
 - Nine new outcome tests pass, including real AnswerCard rendering, actual `runAgent` with injected effects, public-report serialization, missing cache bodies and diagnostic isolation between sources.
 - 410 existing agent/i18n cases pass. All focused runs finished with exit 0 and complete stdout/stderr; scoped ESLint passes for all 11 changed TypeScript files.
+- Hosted CI exposed the report namespace's stale draft-source bindings. Both machine-draft manifests now record the 12 new English keys as uncovered; existing translations, review status and generated message bodies are unchanged. All 49 copy-guard tests, including the actual CLI from another working directory, pass. Preview digest headers are regenerated without activating a locale or changing the copy baseline.
 - The frozen 48-trial offline study is refreshed for actual changed inputs, with trial behavior and outbound-call bounds checked separately from source hashes.
 
 No live research, provider/search call, payment or saved-report mutation was used for these checks. Required hosted CI and independent review remain the PR admission checks.
