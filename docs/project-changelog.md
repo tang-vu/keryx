@@ -14,6 +14,8 @@
 - Keep npm executable links inside the independent dependency copy so build tools
   can resolve their package-relative modules; external and directory links still refuse.
 - Allow a bounded 4 GiB heap for the isolated full-source TypeScript checks.
+- Restore a verified publisher claim when parent and child session checks finish
+  in either order, while fencing delayed claims after wallet/network changes or disconnect.
 - Exact-main CI, the prepared Linux artifact, host compatibility and one combined
   deploy remain delivery gates. No new funding, renewal or transaction is authorized.
 

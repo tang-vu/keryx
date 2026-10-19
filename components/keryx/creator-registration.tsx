@@ -68,10 +68,10 @@ export function CreatorRegistration({ initial = {}, initialError = "" }: { initi
   }, [withProof]);
   const loadedClaim = useCallback((next: SourceClaim) => {
     const current = latest.current;
-    if (!current.authenticated || (current.draft.owner && next.ownerWallet !== current.draft.owner) || next.ownerWallet !== current.owner || next.network !== profile.networkId ||
+    if (current.identity !== identity || !current.authenticated || (current.draft.owner && next.ownerWallet !== current.draft.owner) || next.ownerWallet !== current.owner || next.network !== profile.networkId ||
       next.id !== current.draft.sourceClaimId || next.canonicalUrl !== current.draft.url || next.rssUrl !== current.draft.rssUrl) return;
     setSnapshot(previous => ({ identity: current.identity, claim: next, ...(previous?.identity === current.identity && previous.claim.id === next.id ? { original: previous.original } : {}) }));
-  }, [profile.networkId]);
+  }, [profile.networkId, identity]);
   const loadPolicy = useCallback(async (registered: SponsoredRegistration, captured: string) => {
     const token = ++generation.current; setPolicyLoading(true); setPolicyError("");
     try {

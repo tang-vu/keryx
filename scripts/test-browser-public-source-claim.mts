@@ -51,6 +51,8 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       let challengeCalls = 0, verifyCalls = 0;
       let expectedCanonical = canonicalUrl, expectedRss: string | undefined, sponsorAvailable = false;
       let unifiedFixture = false, sponsorRow: SponsoredRegistration | null = null, sponsorIndex = "pending";
+      let restoreAuthOrder: "child-first" | "parent-first" | null = null, restoreSessionCalls = 0, heldRestoreAuth: Route | undefined;
+      let holdRestoreClaim = false, restoreClaimReady: ((route: Route) => void) | undefined;
       const sponsorPosts: Record<string, unknown>[] = [];
       const feedHomepage = "https://publisher.example/";
       const challengeResponse = () => ({ challenge, proof: sourceClaimProof(challenge!), proofToken: `keryx-source-claim-v1:${challenge!.nonce}:${"c".repeat(64)}`, proofUrl: challenge!.proofMethod === "rss-channel" ? challenge!.rssUrl : new URL("/.well-known/keryx-source-claim.json", challenge!.canonicalUrl).toString(), claim: stored });
@@ -82,10 +84,14 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
           }
           return route.fulfill({ json: { available: sponsorAvailable, ...(!sponsorAvailable && unifiedFixture ? { reason: "insufficient-balance" } : {}), eligibility: "verified-publisher", funding: "wallet-balance", sponsorAddress: sponsor, policyDigest, maxGasWei: "40000000000000000" } });
         }
-        if (pathname === "/api/auth/session") return route.fulfill({ status: authenticated ? 200 : 401, json: { session: authenticated ? { address: sessionOwner, role: "asker" } : null } });
+        if (pathname === "/api/auth/session") {
+          if (restoreAuthOrder && ++restoreSessionCalls === (restoreAuthOrder === "child-first" ? 2 : 1)) { heldRestoreAuth = route; return; }
+          return route.fulfill({ status: authenticated ? 200 : 401, json: { session: authenticated ? { address: sessionOwner, role: "asker" } : null } });
+        }
         if (pathname === "/api/auth/nonce") { const now = Date.now(); return route.fulfill({ json: { nonce: "ClaimFixtureNonce123", issuedAt: new Date(now).toISOString(), challengeExpiresAt: new Date(now + 300000).toISOString(), sessionExpiresAt: new Date(now + 7 * 86400000).toISOString() } }); }
         if (pathname === "/api/auth/verify") { authenticated = true; return route.fulfill({ json: { ok: true, address: owner, role: "asker" } }); }
         if (pathname === "/api/source-claims") {
+          if (holdRestoreClaim && url.searchParams.has("claimId")) { holdRestoreClaim = false; assert(restoreClaimReady); restoreClaimReady(route); return; }
           if (!url.searchParams.size) {
             if (holdList) { heldList = route; return; }
             return route.fulfill({ json: { claims: stored ? [{ ...stored, ...(wrongListScope ? { ownerWallet: other } : {}) }] : [] } });
@@ -344,6 +350,38 @@ createRoot(document.getElementById('root')).render(location.pathname==='/registe
       await page.evaluate(address => (window as unknown as { setWallet: (address: string) => void }).setWallet(address), other);
       await savedRecovery.waitFor({ state: "hidden" });
       assert.equal(await page.getByLabel("Original request", { exact: true }).count(), 0, "Changing wallet fences the recovered original");
+      // Restore the authoritative claim with both auth response orders. The
+      // child's verified result must survive the parent's later session check.
+      for (const order of ["child-first", "parent-first"] as const) {
+        restoreAuthOrder = order; restoreSessionCalls = 0; heldRestoreAuth = undefined;
+        await page.goto(preparedUrl);
+        if (order === "child-first") await page.getByRole("heading", { name: "Source control verified", exact: true }).waitFor();
+        else await page.getByRole("region", { name: "Saved registration recovery", exact: true }).waitFor();
+        const restoredAuth = heldRestoreAuth as Route | undefined; assert(restoredAuth);
+        await restoredAuth.fulfill({ json: { session: { address: sessionOwner, role: "asker" } } });
+        restoreAuthOrder = null;
+        await page.getByRole("button", { name: "Sign reviewed registration", exact: true }).waitFor();
+        assert.equal(sponsorPosts.length, 1); assert.equal(await page.evaluate(() => (window as unknown as { typedSigns: unknown[] }).typedSigns.length), 0);
+      }
+      // A delayed claim cannot reopen registration after its wallet identity was
+      // fenced, even when the parent session had already become authenticated.
+      for (const fence of ["account", "network", "disconnect"] as const) {
+        const capturedClaim = new Promise<Route>(resolve => { restoreClaimReady = resolve; }); holdRestoreClaim = true;
+        const requested = page.waitForRequest(request => new URL(request.url()).pathname === "/api/source-claims" && new URL(request.url()).searchParams.has("claimId"));
+        await page.goto(preparedUrl); await requested;
+        const restoredClaim = await capturedClaim;
+        await page.getByRole("region", { name: "Saved registration recovery", exact: true }).waitFor();
+        await page.evaluate(({ address, chainId }) => (window as unknown as { setWallet: (address: string | undefined, chainId: number) => void }).setWallet(address, chainId),
+          { address: fence === "disconnect" ? undefined : fence === "account" ? other : owner, chainId: fence === "network" ? profile.chainId + 1 : profile.chainId });
+        if (fence === "account") await page.getByText(/This draft belongs to another wallet/).waitFor();
+        else if (fence === "network") await page.getByText(/Switch your wallet to/).waitFor();
+        else await page.getByRole("link", { name: "Connect and sign in to claim", exact: true }).waitFor();
+        await restoredClaim.fulfill({ json: { claim: stored } });
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+        assert.equal(await page.locator("#creator-register-title").count(), 0);
+        assert.equal(await page.getByRole("button", { name: "Sign reviewed registration", exact: true }).count(), 0);
+        assert.equal(sponsorPosts.length, 1); assert.equal(await page.evaluate(() => (window as unknown as { typedSigns: unknown[] }).typedSigns.length), 0);
+      }
       await page.goto(preparedUrl); await page.getByRole("button", { name: "Sign reviewed registration", exact: true }).waitFor();
       assert.equal(sponsorPosts.length, 1, "Returning to the claim recovers the admitted original without a replacement hold");
       await page.getByRole("button", { name: "Sign reviewed registration", exact: true }).click();
