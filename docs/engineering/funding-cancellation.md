@@ -38,6 +38,22 @@ outage, expired credential or empty result never clears the original. The displa
 date range is limited to the original creation window; it is not a claim that all
 historical or subsequently signed transactions have been inspected.
 
+Circle's Transaction contract makes `walletId`, `userId` and `sourceAddress`
+optional. Missing fields no longer discard a valid page. Every supplied identity
+field must still match the verified original; malformed or conflicting fields
+reject the page. A candidate hash requires a positive match through `walletId` or
+`sourceAddress`. A row with only `userId`, or neither wallet/owner field, remains
+status/ID metadata with its hash withheld. All rows still count toward the page
+size and cursor. A candidate hash remains subject to the canonical finalized
+sender/nonce verifier before any original can change.
+
+History failures emit a bounded server diagnostic containing only the stage
+(`wallet`, `list` or `validation`), available HTTP status/numeric Circle code, or
+allowlisted Zod issue paths. Tokens, headers, wallet data, raw responses and error
+messages are never serialized. The client retains the existing generic error.
+These diagnostics distinguish an upstream refusal from a response-contract
+failure; a static parser mismatch alone does not establish the live 503 cause.
+
 Circle IDs, statuses and hashes are candidate metadata only. The owner can check
 a returned hash through the existing configured-RPC canonical finalized nonce
 verifier. That verifier distinguishes the exact planned approval from another

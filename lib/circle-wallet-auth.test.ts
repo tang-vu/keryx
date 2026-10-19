@@ -15,7 +15,7 @@ import { POST as login } from "@/app/api/auth/circle/session/route";
 import { POST as sign } from "@/app/api/auth/circle/sign/route";
 import { GET as readiness } from "@/app/api/auth/circle/config/route";
 import { POST as recovery } from "@/app/api/auth/circle/recovery-transactions/route";
-import { CIRCLE_LOGIN_COOKIE, circleLoginHash, readCircleBody, verifiedCircleWallet } from "./circle-wallet-server";
+import { CIRCLE_LOGIN_COOKIE, circleLoginHash, readCircleBody, verifiedCircleWallet, circleRecoveryFailure, CircleWalletError } from "./circle-wallet-server";
 
 const state = "a".repeat(64), walletId = "00000000-0000-4000-8000-000000000001";
 const owner = `0x${"1".repeat(40)}`;
@@ -30,6 +30,7 @@ function req(path: string, body: unknown, headers: Record<string, string> = {}) 
 }
 beforeEach(() => {
   vi.unstubAllEnvs(); vi.restoreAllMocks(); vi.clearAllMocks();
+  vi.spyOn(console, "warn").mockImplementation(() => undefined);
   vi.stubEnv("KERYX_CIRCLE_GOOGLE_ENABLED", "true"); vi.stubEnv("CIRCLE_API_KEY", "synthetic-test-api-key");
   vi.stubEnv("NEXT_PUBLIC_CIRCLE_APP_ID", "synthetic-app"); vi.stubEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID", "synthetic-google-client");
   Object.assign(mocks.profile, { chainId: 5042, testnet: false });
@@ -157,6 +158,8 @@ it.each([false, true])("refuses raw signing for native Arc wallets before vendor
 });
 
 const query = { from: "2026-01-01T00:00:00.000Z", to: "2026-01-02T00:00:00.000Z" };
+const historyRow = { id: "00000000-0000-4000-8000-000000000002", walletId, userId: wallet.userId, sourceAddress: owner,
+  blockchain: "ARC", transactionType: "OUTBOUND", createDate: query.from, state: "INITIATED", txHash: `0x${"a".repeat(64)}` };
 it("requires origin, live session and same original vendor wallet before a read-only history request", async () => {
   const body = { userToken, query };
   expect((await recovery(req("recovery-transactions", body, { origin: "https://attacker.invalid" }))).status).toBe(403);
@@ -185,4 +188,65 @@ it("refuses injected recovery authority and hides upstream failures", async () =
     .mockResolvedValueOnce(Response.json({ message: "private-vendor-detail", code: 156027 }, { status: 400 }));
   const response = await recovery(req("recovery-transactions", { userToken, query }));
   expect(response.status).toBe(503); expect(await response.text()).not.toContain("private-vendor-detail");
+  expect(console.warn).toHaveBeenCalledExactlyOnceWith("Circle recovery unavailable", { stage: "list", httpStatus: 400, circleCode: 156027 });
+});
+
+it("returns a mixed partial/complete history page without relaxing hash ownership", async () => {
+  const partial = { ...historyRow, walletId: undefined, userId: undefined, sourceAddress: undefined };
+  fetcher.mockResolvedValueOnce(Response.json({ data: { wallets: [wallet] } }))
+    .mockResolvedValueOnce(Response.json({ data: { transactions: [partial, { ...historyRow, id: walletId }] } }));
+  const response = await recovery(req("recovery-transactions", { userToken, query }));
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ owner, ...query, transactions: [
+    { id: historyRow.id, createdAt: query.from, status: "INITIATED" },
+    { id: walletId, hash: historyRow.txHash, createdAt: query.from, status: "INITIATED" },
+  ] });
+  expect(console.warn).not.toHaveBeenCalled();
+  expect(fetcher.mock.calls.every(([, init]) => init.method === "GET" && init.body === undefined)).toBe(true);
+  expect(mocks.createSession).not.toHaveBeenCalled(); expect(mocks.upsert).not.toHaveBeenCalled();
+});
+
+it("diagnoses wallet resolution before history listing without disclosing vendor details", async () => {
+  fetcher.mockResolvedValueOnce(Response.json({ code: 155105, message: "private-vendor-detail" }, { status: 401 }));
+  const response = await recovery(req("recovery-transactions", { userToken, query }));
+  expect(response.status).toBe(401); expect(await response.json()).toEqual({ error: "Google wallet authentication expired; sign in again" });
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(console.warn).toHaveBeenCalledExactlyOnceWith("Circle recovery unavailable", { stage: "wallet", httpStatus: 401, circleCode: 155105 });
+});
+
+it("diagnoses wallet schema failures without logging wallet data", async () => {
+  fetcher.mockResolvedValueOnce(Response.json({ data: { wallets: [{ ...wallet, userId: null }] } }));
+  const response = await recovery(req("recovery-transactions", { userToken, query }));
+  expect(response.status).toBe(503); expect(fetcher).toHaveBeenCalledTimes(1);
+  expect(console.warn).toHaveBeenCalledExactlyOnceWith("Circle recovery unavailable", { stage: "wallet", issuePaths: [[0, "userId"]] });
+});
+
+it("distinguishes response validation from a failed vendor list request", async () => {
+  fetcher.mockResolvedValueOnce(Response.json({ data: { wallets: [wallet] } }))
+    .mockResolvedValueOnce(Response.json({ data: { transactions: [{ ...historyRow, txHash: "private-invalid-hash" }] } }));
+  const response = await recovery(req("recovery-transactions", { userToken, query }));
+  expect(response.status).toBe(503); expect(await response.json()).toEqual({ error: "Google wallet operation unavailable; please try again" });
+  expect(console.warn).toHaveBeenCalledExactlyOnceWith("Circle recovery unavailable", { stage: "validation", issuePaths: [[0, "txHash"]] });
+});
+
+it("still rejects conflicting ownership on partial rows and logs only the validation stage", async () => {
+  fetcher.mockResolvedValueOnce(Response.json({ data: { wallets: [wallet] } }))
+    .mockResolvedValueOnce(Response.json({ data: { transactions: [{ ...historyRow, userId: undefined, sourceAddress: `0x${"2".repeat(40)}` }] } }));
+  expect((await recovery(req("recovery-transactions", { userToken, query }))).status).toBe(503);
+  expect(console.warn).toHaveBeenCalledExactlyOnceWith("Circle recovery unavailable", { stage: "validation" });
+});
+
+it("does not log network error messages, URLs, headers or attached data", async () => {
+  fetcher.mockResolvedValueOnce(Response.json({ data: { wallets: [wallet] } }))
+    .mockRejectedValueOnce(Object.assign(new Error(`private-network-detail/${userToken}`), { headers: { Authorization: "private" }, data: wallet }));
+  expect((await recovery(req("recovery-transactions", { userToken, query }))).status).toBe(503);
+  expect(console.warn).toHaveBeenCalledExactlyOnceWith("Circle recovery unavailable", { stage: "list" });
+});
+
+it("bounds and redacts diagnostic paths and rejects nonnumeric Circle codes", async () => {
+  const error = new z.ZodError(Array.from({ length: 12 }, () => ({ code: z.ZodIssueCode.custom, path: ["private-path", 0, "txHash", "private-key", "private-deep"], message: "private-message" })));
+  expect(circleRecoveryFailure(error, "validation").status).toBe(503);
+  expect(console.warn).toHaveBeenLastCalledWith("Circle recovery unavailable", { stage: "validation", issuePaths: Array.from({ length: 8 }, () => ["?", 0, "txHash", "?"]) });
+  circleRecoveryFailure(new CircleWalletError(503, Number.NaN), "list");
+  expect(console.warn).toHaveBeenLastCalledWith("Circle recovery unavailable", { stage: "list", httpStatus: 503 });
 });
