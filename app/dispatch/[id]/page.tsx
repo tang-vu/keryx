@@ -1,6 +1,7 @@
 import { formatRecordedAmount } from "@/lib/i18n/format";
 import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { closedDispatchMetadata, publicDispatchMetadata } from "@/lib/i18n/report-metadata";
 import { recordedReportPreview } from "@/lib/i18n/recorded-report-preview";
 import Link from "next/link";
@@ -9,9 +10,8 @@ import { getDb } from "@/lib/db";
 import { config } from "@/lib/config";
 import { loadDispatchThread, resolveDispatch } from "@/lib/history/read-dispatch";
 import { HistoricalDispatchNote } from "@/components/keryx/historical-dispatch-note";
-import { cleanText, relatedAnswers } from "@/lib/answers-archive";
-import { getArchiveCached } from "@/lib/answers-archive-cache";
-import { RelatedDispatches } from "@/components/keryx/related-dispatches";
+import { cleanText } from "@/lib/answers-archive";
+import { RelatedDispatchesStream } from "@/components/keryx/related-dispatches-stream";
 import { FollowUpForm } from "@/components/keryx/follow-up-form";
 import { FreshnessNote } from "@/components/keryx/freshness-note";
 import { loadFreshness } from "@/lib/answers-freshness";
@@ -118,16 +118,6 @@ export default async function DispatchPage({ params }: PageProps) {
       return { delta: null, unavailable: true };
     }
   })();
-
-  // Internal link mesh: point this permalink at its archive neighbours.
-  const related = relatedAnswers(
-    {
-      id,
-      question: run.question,
-      sourceNames: run.citations.map((c) => c.sourceName).filter(Boolean),
-    },
-    await getArchiveCached(),
-  );
 
   // QAPage structured data — lets search + AI crawlers read this permalink as a
   // question with an accepted answer, and surface the sources it credited.
@@ -254,7 +244,11 @@ export default async function DispatchPage({ params }: PageProps) {
 
         {archive ? <p className="mt-8 font-serif text-sm text-ink-2"><UiMessage messageKey={"reportDispatch.historicalFollowUp"} values={{ network: CURRENT_NETWORK_LABEL }} /></p> : null}
         <FollowUpForm parentId={id} />
-        <RelatedDispatches entries={related} />
+        {/* Optional archive discovery must not hold back the authorized report. */}
+        <Suspense fallback={null}>
+          <RelatedDispatchesStream current={{ id, question: run.question,
+            sourceNames: run.citations.map((c) => c.sourceName).filter(Boolean) }} />
+        </Suspense>
       </main>
     </div>
   );
