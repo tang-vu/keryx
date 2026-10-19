@@ -27,7 +27,7 @@ export function preparationEnvironment({ commit, scratch, inherited = process.en
     PATH: inherited.PATH ?? '',
     NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1', CI: '1',
     KERYX_NETWORK: publicNetwork, NEXT_PUBLIC_KERYX_NETWORK: publicNetwork,
-    KERYX_FORCE_OFFLINE: '1', KERYX_COMMIT: commit,
+    KERYX_FORCE_OFFLINE: publicNetwork === 'arc' ? '0' : '1', KERYX_COMMIT: commit,
     SUPABASE_URL: '', SUPABASE_ANON_KEY: '', SUPABASE_SERVICE_ROLE_KEY: '',
     NEXT_PUBLIC_SUPABASE_URL: '', NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
     HOME: scratch, USERPROFILE: scratch, TMPDIR: scratch, TMP: scratch, TEMP: scratch,
@@ -35,13 +35,21 @@ export function preparationEnvironment({ commit, scratch, inherited = process.en
   };
   // Next compiles these public connector identifiers into browser bundles. A
   // mainnet artifact must preserve the supported Google wallet connection.
-  // Accept only this public pair; never load a runtime ENV file into the builder.
+  // Mainnet config deliberately refuses an offline bypass. This build has only
+  // public constants, not runtime credentials or a funded storage manifest.
   if (publicNetwork === 'arc') {
     const appId = inherited.NEXT_PUBLIC_CIRCLE_APP_ID, clientId = inherited.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (typeof appId !== 'string' || !/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/.test(appId) ||
-        typeof clientId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,199}\.apps\.googleusercontent\.com$/.test(clientId)) refuse();
+    if (typeof appId !== 'string' || appId.length !== 36 || !/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/.test(appId) ||
+        typeof clientId !== 'string' || clientId !== clientId.trim() || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,199}\.apps\.googleusercontent\.com$/.test(clientId)) refuse();
     env.NEXT_PUBLIC_CIRCLE_APP_ID = appId;
     env.NEXT_PUBLIC_GOOGLE_CLIENT_ID = clientId;
+    for (const name of ['KERYX_REGISTRY_ADDRESS', 'KERYX_REGISTRY_READ_ADDRESS']) {
+      const server = inherited[name], browser = inherited[`NEXT_PUBLIC_${name}`];
+      if (typeof server !== 'string' || server.length !== 42 || !/^0x[0-9a-f]{40}$/i.test(server) || /^0x0{40}$/i.test(server) ||
+          typeof browser !== 'string' || server.toLowerCase() !== browser.toLowerCase()) refuse();
+      env[name] = server;
+      env[`NEXT_PUBLIC_${name}`] = browser;
+    }
   }
   // Required Windows process/DLL lookup inputs, never credentials or NODE_OPTIONS.
   for (const name of ['SystemRoot', 'SYSTEMROOT', 'WINDIR', 'ComSpec', 'PATHEXT'])
@@ -247,12 +255,15 @@ export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBui
   }
   if (hash(fs.readFileSync(process.execPath)) !== toolchain.nodeSha256 || hash(fs.readFileSync(npmCli)) !== toolchain.npmCliSha256) refuse();
   return { node: process.versions.node, npm: pinnedNpm, platform: process.platform, ...toolchain,
-    arch: process.arch, publicBuildSettings: { network: publicNetwork, forceOffline: true,
+    arch: process.arch, publicBuildSettings: { network: publicNetwork, forceOffline: !mainnetPublicBuild,
       ...(mainnetPublicBuild ? { circleGooglePublicConfigSha256: hash(serial({
         NEXT_PUBLIC_CIRCLE_APP_ID: buildEnv.NEXT_PUBLIC_CIRCLE_APP_ID,
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: buildEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
       })) } : {}),
-    }, results };
+    }, ...(mainnetPublicBuild ? { buildRegistrySettings: {
+      writeAddress: buildEnv.KERYX_REGISTRY_ADDRESS,
+      readAddress: buildEnv.KERYX_REGISTRY_READ_ADDRESS,
+    } } : {}), results };
 }
 
 export function prepareImmutableRelease({ repo, releasesDir, commit, dependencies, npmCli, mainnetPublicBuild = false }) {

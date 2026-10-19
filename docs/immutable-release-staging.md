@@ -136,7 +136,10 @@ For that mainnet option, supply the existing public `NEXT_PUBLIC_CIRCLE_APP_ID`
 isolated builder environment. Missing or malformed identifiers refuse before
 running checks. Next compiles them into the Google wallet browser connector;
 dropping them would produce an artifact with that supported connector disabled.
-Use only those public values, without mounting or loading the runtime ENV file.
+Also supply the reviewed public write/read registry addresses as matching nonzero
+server/public twins: `KERYX_REGISTRY_ADDRESS` / `NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS`
+and `KERYX_REGISTRY_READ_ADDRESS` / `NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS`.
+Use only these public values, without mounting or loading the runtime ENV file.
 
 The builder materializes the exact full Git commit using the existing staging
 boundary, then copies independently installed dependencies into its own candidate.
@@ -160,11 +163,18 @@ automatic ENV loading cannot select `.env.local` because
 source staging excludes it. With `--mainnet-public-build`, only the build command
 selects the existing `arc` server/public network constants; npm version,
 typechecking and tests remain explicitly arcTestnet/offline. Only the build also
-receives the validated Circle/Google public identifiers; tests do not inherit them.
-The mainnet public build still has forced offline mode and no runtime storage,
-provider or signing credentials. The exact browser settings and a digest of the
+receives the validated Circle/Google identifiers and registry twins; tests do not
+inherit them. The mainnet build sets `KERYX_FORCE_OFFLINE=0`, as required by the
+existing mainnet configuration guard; tests, typechecking and the default testnet
+build retain `1`. Runtime guards remain unchanged. The build still has no runtime
+storage, provider or signing credentials. Run this keyless build with outbound
+network denied, as in the [manual hosted workflow](hosted-immutable-preparation.md).
+The exact browser settings and a digest of the
 two public identifier values are recorded; **a default testnet
 artifact cannot be promoted to mainnet**. Neither profile is production admission.
+`checks.publicBuildSettings` records the actual network, offline boolean and public
+identifier digest; `checks.buildRegistrySettings` separately records the public
+write/read addresses. Original preparation and artifact receipts bind these bytes.
 
 Each command retains its real exit/signal/error, elapsed time, tool arguments and
 diagnostic-output digest alongside the actual log, including failures. A failed
