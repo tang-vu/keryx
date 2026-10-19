@@ -17,6 +17,7 @@ import { quoteResearchMonthly } from "@/lib/monthly/quote";
 
 const owner = privateKeyToAccount(`0x${"1".repeat(64)}`);
 beforeEach(() => {
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
   vi.stubEnv("KERYX_MONTHLY_ENABLED", "1"); state.claims.clear(); state.claim.mockReset(); state.settle.mockReset();
   state.authority.mockReset().mockResolvedValue(undefined);
   state.claim.mockImplementation(async (claim: { authorizationId: string; requireExisting: boolean; issued: unknown }) => {

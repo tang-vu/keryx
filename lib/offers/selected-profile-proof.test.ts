@@ -4,6 +4,7 @@ import { recoverTypedDataAddress } from "viem";
 afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
 it.each(["arc", "arcTestnet"])("binds creator offer/content proofs to the independently selected %s deployment", async network => {
   vi.resetModules(); vi.stubEnv("KERYX_NETWORK", network); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", network);
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
   const { articleOfferTypedData } = await import("./article-offer-proof");
   const { articleContentManifestTypedData } = await import("../sources/article-content-manifest-schema");
   const signer = privateKeyToAccount(`0x${"11".repeat(32)}`), chainId = network === "arc" ? 5042 : 5042002;

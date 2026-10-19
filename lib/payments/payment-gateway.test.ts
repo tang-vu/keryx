@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { KeryxDB } from "../db/keryx-db";
 
 vi.mock("../config", async (importOriginal) => {
@@ -16,8 +16,10 @@ const signer = "0x1111111111111111111111111111111111111111";
 
 describe("payment gateway browser authority", () => {
   beforeEach(() => {
+    vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
     getGrant.mockReset();
   });
+  afterEach(() => vi.unstubAllEnvs());
 
   it("fails closed when an admitted browser grant disappears before gateway creation", async () => {
     getGrant.mockResolvedValue(undefined);
