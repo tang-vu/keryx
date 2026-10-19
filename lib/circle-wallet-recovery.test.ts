@@ -43,6 +43,39 @@ it.each([null, "", undefined])("keeps a pending transaction without a hash as me
   expect(page.transactions[0].id).toBe(row.id);
 });
 
+it.each([
+  { omitted: ["walletId"], candidate: true }, { omitted: ["userId"], candidate: true }, { omitted: ["sourceAddress"], candidate: true },
+  { omitted: ["walletId", "userId"], candidate: true }, { omitted: ["sourceAddress", "userId"], candidate: true },
+  { omitted: ["walletId", "sourceAddress"], candidate: false }, { omitted: ["walletId", "userId", "sourceAddress"], candidate: false },
+])(
+  "accepts omitted optional Circle identity fields, requiring wallet/owner attribution for hashes: $omitted", async ({ omitted, candidate }) => {
+    const partial: Record<string, unknown> = { ...row, state: "INITIATED" };
+    for (const field of omitted) delete partial[field];
+    const page = await listCircleRecoveryTransactions({ wallet, query, request: async () => ({ transactions: [partial, {
+      ...row, id: "00000000-0000-4000-8000-000000000003",
+    }] }) });
+    expect(page.transactions).toEqual([
+      { id: row.id, ...(candidate ? { hash } : {}), createdAt: row.createDate, status: "INITIATED" },
+      { id: "00000000-0000-4000-8000-000000000003", hash, createdAt: row.createDate, status: "FAILED" },
+    ]);
+  });
+
+it.each([{ walletId: null }, { userId: "" }, { sourceAddress: "not-an-address" },
+  { walletId: "00000000-0000-4000-8000-000000000003" }, { sourceAddress: `0x${"2".repeat(40)}` }])(
+  "still refuses malformed or conflicting identity on a partial row: %j", async fields => {
+    const partial = { ...row, userId: undefined, ...fields };
+    await expect(listCircleRecoveryTransactions({ wallet, query, request: async () => ({ transactions: [partial] }) })).rejects.toThrow();
+  });
+
+it("counts partial rows toward the page limit and cursor without promoting their hashes", async () => {
+  const rows = Array.from({ length: 20 }, (_, n) => ({ ...row, walletId: undefined, sourceAddress: undefined,
+    id: `00000000-0000-4000-8000-${String(n + 2).padStart(12, "0")}` }));
+  const page = await listCircleRecoveryTransactions({ wallet, query, request: async () => ({ transactions: rows }) });
+  expect(page.transactions).toHaveLength(20);
+  expect(page.transactions.every(tx => tx.hash === undefined)).toBe(true);
+  expect(page.nextPageAfter).toBe(rows.at(-1)!.id);
+});
+
 it("refuses duplicate, repeated, oversized and malformed pages without returning partial evidence", async () => {
   for (const transactions of [[row, row], Array.from({ length: 21 }, () => row), undefined]) {
     await expect(listCircleRecoveryTransactions({ wallet, query, request: async () => ({ transactions }) })).rejects.toThrow();

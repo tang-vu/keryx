@@ -97,3 +97,20 @@ export function circleFailure(error: unknown) {
     ? "Google wallet authentication expired; sign in again" : "Google wallet operation unavailable; please try again" },
   error instanceof CircleWalletError && [401, 403].includes(error.status) ? 401 : 503);
 }
+
+export type CircleRecoveryStage = "wallet" | "list" | "validation";
+const recoveryDiagnosticFields = new Set(["wallets", "transactions", "id", "walletId", "userId", "address", "sourceAddress",
+  "blockchain", "transactionType", "createDate", "createdAt", "state", "status", "txHash", "hash", "custodyType", "accountType"]);
+/** Recovery diagnostics never serialize errors, messages, inputs or vendor payloads. */
+export function circleRecoveryFailure(error: unknown, stage: CircleRecoveryStage) {
+  console.warn("Circle recovery unavailable", {
+    stage,
+    ...(error instanceof CircleWalletError ? {
+      ...(Number.isInteger(error.status) && error.status >= 100 && error.status <= 599 ? { httpStatus: error.status } : {}),
+      ...(typeof error.code === "number" && Number.isSafeInteger(error.code) && error.code >= 0 ? { circleCode: error.code } : {}),
+    } : {}),
+    ...(error instanceof z.ZodError ? { issuePaths: error.issues.slice(0, 8).map(issue => issue.path.slice(0, 4).map(part =>
+      typeof part === "number" ? part : recoveryDiagnosticFields.has(part) ? part : "?")) } : {}),
+  });
+  return circleFailure(error);
+}

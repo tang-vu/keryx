@@ -27,20 +27,26 @@ export async function listCircleRecoveryTransactions(input: {
     txType: "OUTBOUND", from: query.from, to: query.to, pageSize: String(CIRCLE_RECOVERY_PAGE_SIZE), order: "ASC" });
   if (query.pageAfter) params.set("pageAfter", query.pageAfter);
   const data = await input.request(`transactions?${params}`);
-  const rows = z.array(z.object({ id: z.string().uuid(), walletId: z.string().uuid(), userId: z.string().min(1).max(256),
-    sourceAddress: address, blockchain: z.string(), transactionType: z.literal("OUTBOUND"),
+  // Circle's Transaction contract permits these identity fields to be omitted,
+  // including on partial/pending rows. Missing fields must not discard the page.
+  const rows = z.array(z.object({ id: z.string().uuid(), walletId: z.string().uuid().optional(), userId: z.string().min(1).max(256).optional(),
+    sourceAddress: address.optional(), blockchain: z.string(), transactionType: z.literal("OUTBOUND"),
     createDate: date, state: z.string().min(1).max(64), txHash: z.preprocess(value => value === null || value === "" ? undefined : value, hash.optional()),
   })).max(CIRCLE_RECOVERY_PAGE_SIZE).parse(data.transactions);
   const ids = new Set<string>();
   for (const row of rows) {
     const created = Date.parse(row.createDate);
-    if (row.walletId !== wallet.id || row.userId !== wallet.userId || row.blockchain !== wallet.blockchain
-      || row.sourceAddress.toLowerCase() !== wallet.address.toLowerCase() || created < Date.parse(query.from)
+    if ((row.walletId !== undefined && row.walletId !== wallet.id) || (row.userId !== undefined && row.userId !== wallet.userId) || row.blockchain !== wallet.blockchain
+      || (row.sourceAddress !== undefined && row.sourceAddress.toLowerCase() !== wallet.address.toLowerCase()) || created < Date.parse(query.from)
       || created > Date.parse(query.to) || ids.has(row.id) || row.id === query.pageAfter) throw new Error("Circle recovery scope differs");
     ids.add(row.id);
   }
   return circleRecoveryPageSchema.parse({ owner: wallet.address, from: query.from, to: query.to,
-    transactions: rows.map(row => ({ id: row.id, hash: row.txHash, createdAt: row.createDate, status: row.state })),
+    // Require a positive wallet/owner match for candidate hashes; userId alone
+    // cannot identify a wallet. Every supplied identity was checked above.
+    transactions: rows.map(row => ({ id: row.id,
+      ...((row.walletId !== undefined || row.sourceAddress !== undefined) && row.txHash
+        ? { hash: row.txHash } : {}), createdAt: row.createDate, status: row.state })),
     // A full page is conservatively incomplete; the caller must request the next
     // page. Never follow vendor-provided URLs or infer absence from pagination.
     ...(rows.length === CIRCLE_RECOVERY_PAGE_SIZE ? { nextPageAfter: rows.at(-1)!.id } : {}),
