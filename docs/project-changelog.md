@@ -1,5 +1,19 @@
 # Keryx Project Changelog
 
+### App0.27.82 saved-report and Circle recovery — October 19 preparation
+
+- Stream the saved report before resolving related archive links, preserving
+  report visibility and ownership checks.
+- Accept optional identity fields in Circle transaction history without losing
+  the entire page. Candidate hashes still require matching wallet/owner evidence;
+  only the existing canonical finalized sender/nonce verifier may resolve an original.
+- Distinguish wallet, vendor-list and row-validation failures with bounded safe
+  diagnostics. No vendor status, empty history or timeout clears a funding hold.
+- Preserve the existing public Circle/Google identifiers in isolated mainnet
+  builds. Keep funded ENV, storage and signing/provider credentials out of the builder.
+- Exact-main CI, the prepared Linux artifact, host compatibility and one combined
+  deploy remain delivery gates. No new funding, renewal or transaction is authorized.
+
 ### App0.27.81 research follow-up - October 19 preparation
 
 - Prepare prospective idea comparisons without requiring the caller to name the
