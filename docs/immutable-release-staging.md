@@ -387,6 +387,14 @@ rehearsal evidence; retained logs and any captured closed receipt remain availab
 Preparation runs Vitest in its normal `NODE_ENV=test` runtime and compilation in
 `production`, recording the setting with each command. Both retain the same fresh
 credential-free testnet/offline storage environment.
+
+Root Vitest test/hook deadlines are bounded at 20 seconds on all platforms. A
+timestamped virtualized-Linux diagnostic completed the first native mainnet-storage
+case's guarded assertion sequence in 12.22 seconds, exceeding the previous 10-second
+runner deadline cumulatively. Windows retains one worker; Linux retains its normal
+parallelism. The native storage-provisioning child's 15-second product deadline and
+all storage-authority assertions remain unchanged.
+
 Turbopack's `.next/node_modules` aliases are materialized from the candidate's
 independent dependency copy. Alias targets must map inside that copy or the known
 dependency input root; outside paths refuse before mutation. Bounded byte/entry
