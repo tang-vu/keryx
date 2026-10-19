@@ -146,7 +146,7 @@ export function copyPreparationDependencies({ source, dependencies }) {
   const pkg = JSON.parse(fs.readFileSync(path.join(source, 'package.json')));
   for (const name of Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }))
     if (!actual.packages[`node_modules/${name}`]) refuse();
-  // Refuse external dependency links before dereferencing; a serving/root ENV or
+  // Refuse external dependency links before copying; a serving/root ENV or
   // data directory must never be imported as a candidate dependency.
   let files = 0, bytes = 0;
   const links = [];
@@ -154,15 +154,16 @@ export function copyPreparationDependencies({ source, dependencies }) {
     const target = fs.realpathSync.native(file), relative = path.relative(dependencies, target);
     const stat = fs.statSync(target);
     if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative) || !stat.isFile()) refuse();
-    return stat;
+    return { stat, target: relative };
   };
   const check = directory => {
     for (const name of fs.readdirSync(directory)) {
       const file = path.join(directory, name), stat = fs.lstatSync(file);
       if (++files > 250000) refuse();
       if (stat.isSymbolicLink()) {
-        bytes += checkedLink(file).size;
-        links.push(path.relative(dependencies, file));
+        const checked = checkedLink(file);
+        bytes += checked.stat.size;
+        links.push({ relative: path.relative(dependencies, file), target: checked.target });
       } else if (stat.isDirectory()) check(file);
       else if (!stat.isFile()) refuse();
       else bytes += stat.size;
@@ -172,21 +173,29 @@ export function copyPreparationDependencies({ source, dependencies }) {
   check(dependencies);
   const available = fs.statfsSync(source, { bigint: true });
   if (available.bavail * available.bsize < BigInt(bytes + 4 * 1024 ** 3)) refuse();
-  fs.cpSync(dependencies, path.join(source, 'node_modules'), {
-    recursive: true, dereference: true, errorOnExist: true, force: false,
-    // A filter selects Node's checked per-entry JS copy path. The pinned native
-    // recursive path retained npm executable links in the actual Linux cohort.
-    filter: file => { if (fs.lstatSync(file).isSymbolicLink()) checkedLink(file); return true; },
+  const copiedRoot = path.join(source, 'node_modules');
+  const linkTargets = new Map(links.map(link => [link.relative, link.target]));
+  fs.cpSync(dependencies, copiedRoot, {
+    recursive: true, dereference: false, verbatimSymlinks: true, errorOnExist: true, force: false,
+    // Copy regular entries independently. Recreate only verified file links below,
+    // so even an absolute installation link never points back to its input tree.
+    filter: file => {
+      if (!fs.lstatSync(file).isSymbolicLink()) return true;
+      if (checkedLink(file).target !== linkTargets.get(path.relative(dependencies, file))) refuse();
+      return false;
+    },
   });
-  for (const relative of links) {
-    const copied = fs.lstatSync(path.join(source, 'node_modules', relative));
-    if (!copied.isFile() || copied.isSymbolicLink() || copied.nlink !== 1) refuse();
+  for (const { relative, target } of links) {
+    const copied = path.join(copiedRoot, relative), copiedTarget = path.join(copiedRoot, target);
+    fs.symlinkSync(path.relative(path.dirname(copied), copiedTarget), copied, 'file');
+    if (!fs.lstatSync(copied).isSymbolicLink() || fs.realpathSync.native(copied) !== copiedTarget ||
+        !fs.lstatSync(copiedTarget).isFile() || fs.lstatSync(copiedTarget).nlink !== 1) refuse();
   }
   const protectedEntries = protectPreparationCopy(path.join(source, 'node_modules'));
   if (hash(fs.readFileSync(path.join(source, 'node_modules', '.package-lock.json'))) !== hash(installed) ||
       hash(fs.readFileSync(path.join(dependencies, '.package-lock.json'))) !== hash(installed)) refuse();
   return { lockSha256: hash(lock), installedLockSha256: hash(installed),
-    copiedFiles: files, copiedBytes: bytes, materializedFileLinks: links.length, protectedEntries, method: 'independent-file-copy' };
+    copiedFiles: files, copiedBytes: bytes, preservedFileLinks: links.length, protectedEntries, method: 'independent-file-copy' };
 }
 
 /** Commands are fixed and run sequentially, before artifact recording and any hold.

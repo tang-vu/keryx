@@ -11,6 +11,8 @@
   diagnostics. No vendor status, empty history or timeout clears a funding hold.
 - Preserve the existing public Circle/Google identifiers in isolated mainnet
   builds. Keep funded ENV, storage and signing/provider credentials out of the builder.
+- Keep npm executable links inside the independent dependency copy so build tools
+  can resolve their package-relative modules; external and directory links still refuse.
 - Exact-main CI, the prepared Linux artifact, host compatibility and one combined
   deploy remain delivery gates. No new funding, renewal or transaction is authorized.
 

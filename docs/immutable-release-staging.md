@@ -393,10 +393,14 @@ and disk-headroom checks precede materialization. The build/input dependency tre
 remain untouched, and the complete artifact/trace inspector retains its link
 containment rules. Intended-host extraction and runtime-cache admission are
 separate from dependency-alias materialization.
-The dependency copy uses a checked per-entry copy filter, since the pinned native
-recursive copy retained npm executable links in the actual Linux output. Internal
-file-link bytes count toward headroom, their targets are rechecked at copy, and the
-result must be an independent regular file. Directory/external links still refuse.
+The dependency copy uses a checked per-entry filter and independently copies every
+regular target. Verified file links are then recreated as relative links into that
+copy, including installation links that originally used absolute paths. Flattening
+an npm executable into `.bin` breaks its package-relative imports; an actual Linux
+preparation exposed this before TypeScript could start. Functional CLI regressions
+cover sibling-module resolution and independence from later input changes. Link
+target bytes still count toward headroom and targets are rechecked at copy.
+Directory/external links still refuse; no link points back to installation inputs.
 Turbopack NFT references can name the materialized dependency alias directory.
 Only the exact hashed alias shape is accepted, with its entire file/directory/byte
 inventory equal to the candidate's independent package copy. Ordinary directory
