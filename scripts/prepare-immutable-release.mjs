@@ -229,7 +229,8 @@ export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBui
     const logFile = path.join(staged.candidate, `${name}.log`), fd = fs.openSync(logFile, 'wx', 0o600);
     let result;
     try {
-      result = call(args, name === 'typecheck' ? 2560 : 1536, fd, nodeEnv, name === 'build');
+      // The complete TypeScript graph exceeds a 2.5 GiB heap on the isolated Linux builder.
+      result = call(args, name === 'typecheck' ? 4096 : 1536, fd, nodeEnv, name === 'build');
       // Injectable processes may return captured output; native processes write
       // directly to the retained log even if the controller exits mid-check.
       fs.writeSync(fd, (result.stdout ?? '') + (result.stderr ?? ''));

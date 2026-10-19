@@ -13,6 +13,7 @@
   builds. Keep funded ENV, storage and signing/provider credentials out of the builder.
 - Keep npm executable links inside the independent dependency copy so build tools
   can resolve their package-relative modules; external and directory links still refuse.
+- Allow a bounded 4 GiB heap for the isolated full-source TypeScript checks.
 - Exact-main CI, the prepared Linux artifact, host compatibility and one combined
   deploy remain delivery gates. No new funding, renewal or transaction is authorized.
 
