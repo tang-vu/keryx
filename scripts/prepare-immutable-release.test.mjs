@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { test } from 'node:test';
 import { preparationEnvironment, runPreparationChecks, copyPreparationDependencies, materializePreparationBuildAliases } from './prepare-immutable-release.mjs';
 
@@ -167,27 +168,55 @@ test('dependency directory links cannot copy external storage or ENV bytes', t =
   assert.equal(fs.existsSync(path.join(f.source, 'node_modules')), false);
 });
 
-test('npm executable file links become independent regular candidate files', t => {
+test('copied npm executables resolve sibling modules inside the independent candidate', t => {
+  for (const absolute of [false, true]) {
   const f = fixture(t), packages = { 'node_modules/fixture': { version: '1.0.0' } };
   fs.writeFileSync(path.join(f.source, 'package.json'), JSON.stringify({ dependencies: { fixture: '1.0.0' } }));
   fs.writeFileSync(path.join(f.source, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages }));
   fs.writeFileSync(path.join(f.dependencies, '.package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages }));
   fs.mkdirSync(path.join(f.dependencies, '.bin')); fs.mkdirSync(path.join(f.dependencies, 'fixture'));
-  const original = path.join(f.dependencies, 'fixture', 'cli.js'); fs.writeFileSync(original, 'synthetic executable');
+  const original = path.join(f.dependencies, 'fixture', 'cli.cjs');
+  fs.writeFileSync(original, "process.stdout.write(require('./lib/result.cjs'));\n");
+  fs.mkdirSync(path.join(f.dependencies, 'fixture', 'lib'));
+  const result = path.join(f.dependencies, 'fixture', 'lib', 'result.cjs');
+  fs.writeFileSync(result, "module.exports='independent executable';\n");
   const link = path.join(f.dependencies, '.bin', 'fixture');
-  try { fs.symlinkSync('../fixture/cli.js', link, 'file'); }
+  try { fs.symlinkSync(absolute ? original : '../fixture/cli.cjs', link, 'file'); }
   catch (error) {
     if (process.platform === 'win32' && error.code === 'EPERM') { t.skip('Unprivileged Windows file links unavailable; Linux CI verifies the actual copy.'); return; }
     throw error;
   }
   const receipt = copyPreparationDependencies(f);
-  assert.equal(receipt.materializedFileLinks, 1);
   const copied = path.join(f.source, 'node_modules', '.bin', 'fixture');
-  assert.equal(fs.lstatSync(copied).isSymbolicLink(), false); assert.equal(fs.lstatSync(copied).nlink, 1);
+  assert.equal(execFileSync(process.execPath, [copied], { encoding: 'utf8' }), 'independent executable');
+  assert.equal(receipt.preservedFileLinks, 1);
+  assert.equal(fs.lstatSync(copied).isSymbolicLink(), true);
+  assert.equal(path.isAbsolute(fs.readlinkSync(copied)), false);
+  assert.equal(fs.realpathSync(copied), path.join(f.source, 'node_modules', 'fixture', 'cli.cjs'));
+  // Changing the installation cannot affect execution from the copied package.
+  fs.writeFileSync(result, "module.exports='changed input';\n");
+  assert.equal(execFileSync(process.execPath, [copied], { encoding: 'utf8' }), 'independent executable');
   fs.writeFileSync(copied, 'candidate only');
-  assert.equal(fs.readFileSync(original, 'utf8'), 'synthetic executable');
-  assert.equal(fs.readFileSync(path.join(f.source, 'node_modules', 'fixture', 'cli.js'), 'utf8'), 'synthetic executable');
+  assert.equal(fs.readFileSync(original, 'utf8'), "process.stdout.write(require('./lib/result.cjs'));\n");
+  assert.equal(fs.readFileSync(path.join(f.source, 'node_modules', 'fixture', 'cli.cjs'), 'utf8'), 'candidate only');
   assert.equal(fs.lstatSync(link).isSymbolicLink(), true);
+  }
+});
+
+test('npm file links cannot import external runtime bytes', t => {
+  const f = fixture(t), packages = { 'node_modules/fixture': { version: '1.0.0' } };
+  fs.writeFileSync(path.join(f.source, 'package.json'), JSON.stringify({ dependencies: { fixture: '1.0.0' } }));
+  fs.writeFileSync(path.join(f.source, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages }));
+  fs.writeFileSync(path.join(f.dependencies, '.package-lock.json'), JSON.stringify({ lockfileVersion: 3, packages }));
+  fs.mkdirSync(path.join(f.dependencies, 'fixture'));
+  const outside = path.join(f.root, 'external-runtime.cjs'); fs.writeFileSync(outside, 'synthetic must-not-copy');
+  try { fs.symlinkSync(outside, path.join(f.dependencies, 'fixture', 'cli.cjs'), 'file'); }
+  catch (error) {
+    if (process.platform === 'win32' && error.code === 'EPERM') { t.skip('Linux CI verifies file-link containment.'); return; }
+    throw error;
+  }
+  assert.throws(() => copyPreparationDependencies(f));
+  assert.equal(fs.existsSync(path.join(f.source, 'node_modules')), false);
 });
 
 test('Turbopack aliases copy only independent candidate dependency bytes and retain build inputs', t => {
