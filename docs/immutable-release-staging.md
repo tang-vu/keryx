@@ -149,7 +149,8 @@ not proof of the contents of each package; complete artifact hashes and trace
 closure still bind the actual copied bytes.
 
 Node24.21.0/npm11.19.0 are required. Fixed, sequential commands run the actual
-TypeScript/MTS checks, Vitest suite and Next production build. A fresh environment
+TypeScript/MTS checks, Vitest suite and Next production build. Typechecking has a
+fixed 4 GiB V8 heap; the other commands retain their 1.5 GiB heap. A fresh environment
 selects arcTestnet/offline, blanks Supabase and omits runtime credentials, funded
 storage manifests, injected Node options and provider configuration. HOME, cache,
 temporary files live in a new isolated scratch directory outside the source
