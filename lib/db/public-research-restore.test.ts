@@ -192,7 +192,7 @@ it("sanitizes actual operator decoder failures so private stored text never reac
   writeFileSync(manifest, canonicalJson({ format: "keryx-storage-deployment-v1", identity: f.identity,
     backend: { kind: "sqlite", databasePath: f.file } }));
   const child = spawnSync(process.execPath, ["--import", "tsx", "scripts/restore-public-research.mts", "export", "--out", output], {
-    cwd: process.cwd(), env: { ...process.env, KERYX_STORAGE_MANIFEST: manifest, NODE_OPTIONS: "--max-old-space-size=2048" },
+    cwd: process.cwd(), env: { ...process.env, KERYX_STORAGE_MANIFEST: manifest, KERYX_FORCE_OFFLINE: "0", NODE_OPTIONS: "--max-old-space-size=2048" },
     encoding: "utf8", timeout: 30000,
   });
   expect(child.status).toBe(1); expect(child.stderr).toContain('"code":"protected_review_refused"');

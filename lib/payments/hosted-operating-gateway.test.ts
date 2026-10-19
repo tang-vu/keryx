@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC_MAINNET_PROFILE } from "../arc-network-profile";
 import { operatingFeeEndpointPath, operatingFeePolicyDigest, type OperatingFeeContext } from "./operating-fee-policy";
@@ -25,7 +25,9 @@ const fee: OperatingFeeContext = { policyDigest: operatingFeePolicyDigest(feePol
 beforeEach(() => {
   vi.clearAllMocks(); state.policy.mockReturnValue(hostedPolicy); state.configured.mockReturnValue(feePolicy); state.available.mockResolvedValue(BigInt(100000));
   vi.stubEnv("KERYX_MAINNET_TREASURY_PRIVATE_KEY", key);
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
 });
+afterEach(() => vi.unstubAllEnvs());
 it.each(["settled", "pending", "settled-undelivered"] as const)("retains the actual %s original without reclassifying the fee as creator payment", async status => {
   const db = { admitHostedTreasuryPolicy: vi.fn(), hostedTreasuryAccounting: vi.fn(async () => ({ retainedMicroUsdc: "0", confirmedMicroUsdc: "0" })),
     submitHostedAuthorization: vi.fn(), confirmHostedAuthorization: vi.fn() };

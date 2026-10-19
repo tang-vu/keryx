@@ -24,6 +24,7 @@ function row(balance = "5.000000", depositor = publicAddress, domain = 26) {
 beforeEach(async () => {
   vi.resetModules(); vi.resetAllMocks(); state.profile = (await import("../arc-network-profile")).ARC_MAINNET_PROFILE; state.baseUrl = "https://keryx.cc";
   vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
   identity = { format: "keryx-mainnet-storage-identity-v1", network: "eip155:5042", authorityMode: "mainnet-real",
     deploymentId: "8e6833f4-fcde-4241-a6a6-bd6071567296", storageId: "9e6833f4-fcde-4241-a6a6-bd6071567296",
     enrollmentId: "ae6833f4-fcde-4241-a6a6-bd6071567296", enrolledAt: "2026-10-02T00:00:00.000Z",

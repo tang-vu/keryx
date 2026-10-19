@@ -570,6 +570,7 @@ it("refuses mainnet without a sealed manifest before creating a legacy database"
   cleanup.push(() => rmSync(folder, { recursive: true, force: true }));
   vi.stubEnv("KERYX_STORAGE_MANIFEST", undefined); vi.stubEnv("KERYX_SQLITE_PATH", file);
   vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
   vi.stubEnv("KERYX_REGISTRY_ADDRESS", `0x${"55".repeat(20)}`); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS", `0x${"55".repeat(20)}`);
   const { getDb } = await import("./index");
   await expect(getDb()).rejects.toThrow("Storage deployment configuration unavailable");
