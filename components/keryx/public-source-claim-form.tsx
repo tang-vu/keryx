@@ -67,8 +67,8 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "", onVerif
   const [now, setNow] = useState(0);
   const currentRef = useRef({ identity, enabled });
   const generation = useRef(0), busy = useRef(false), mounted = useRef(true);
-  const callbacks = useRef({ onVerified, onClaimLoaded, onDraftChange });
-  useLayoutEffect(() => { callbacks.current = { onVerified, onClaimLoaded, onDraftChange }; }, [onVerified, onClaimLoaded, onDraftChange]);
+  const callbacks = useRef({ onVerified, onDraftChange });
+  useLayoutEffect(() => { callbacks.current = { onVerified, onDraftChange }; }, [onVerified, onDraftChange]);
   const retainDraft = useCallback((draft: SourceClaimDraft) => {
     selectionRef.current = draft;
     setSelection(draft);
@@ -82,6 +82,11 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "", onVerif
   const proof = snapshot?.identity === identity ? snapshot.proof : null;
   const expired = !!proof && now >= Date.parse(proof.challenge.expiresAt);
   const needsFreshProof = !!claim && !claimControlIsFresh(claim, now);
+  // Parent and child session checks can finish in either order. Re-publish only
+  // the current identity-bound claim when the parent's callback becomes ready.
+  useEffect(() => {
+    if (claim && enabled && currentRef.current.identity === identity && currentRef.current.enabled) onClaimLoaded?.(claim);
+  }, [claim, enabled, identity, onClaimLoaded]);
 
   const acceptClaim = useCallback((value: unknown, captured: string) => {
     const next = sourceClaimSchema.parse(value);
@@ -96,7 +101,6 @@ export function PublicSourceClaimForm({ initial = {}, initialError = "", onVerif
     const draft = { url: next.canonicalUrl, ...(next.rssUrl ? { rssUrl: next.rssUrl } : {}), claimId: next.id, ...(next.publicReferenceId ? { referenceId: next.publicReferenceId } : {}), owner: next.ownerWallet };
     retainDraft(draft);
     if (currentRef.current.identity === captured && currentRef.current.enabled) {
-      callbacks.current.onClaimLoaded?.(next);
       if (claimControlIsFresh(next)) callbacks.current.onVerified?.(next);
     }
     return next;
