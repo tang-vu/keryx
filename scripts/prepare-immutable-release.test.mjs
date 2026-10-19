@@ -2,8 +2,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import { preparationEnvironment, runPreparationChecks, copyPreparationDependencies, materializePreparationBuildAliases } from './prepare-immutable-release.mjs';
+
+const publicCircle = Object.freeze({
+  NEXT_PUBLIC_CIRCLE_APP_ID: '00000000-0000-4000-8000-000000000001',
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID: '123456789-synthetic.apps.googleusercontent.com',
+});
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-preparation-test-'));
@@ -23,30 +29,46 @@ test('fresh builder environment cannot inherit funded storage, keys, providers o
     PATH: 'toolchain', OPENAI_API_KEY: 'synthetic', FUNDER_PRIVATE_KEY: 'synthetic',
     KERYX_STORAGE_MANIFEST: '/funded.json', KERYX_SQLITE_PATH: '/funded.sqlite',
     SUPABASE_URL: 'https://shared.invalid', NODE_OPTIONS: '--import=/unsafe.mjs',
-    NEXT_PUBLIC_KERYX_NETWORK: 'arc', WSLENV: 'OPENAI_API_KEY',
+    NEXT_PUBLIC_KERYX_NETWORK: 'arc', WSLENV: 'OPENAI_API_KEY', ...publicCircle,
   } });
   assert.equal(env.KERYX_NETWORK, 'arcTestnet'); assert.equal(env.KERYX_FORCE_OFFLINE, '1');
   assert.equal(env.SUPABASE_URL, ''); assert.equal(env.NEXT_PUBLIC_KERYX_NETWORK, 'arcTestnet');
   for (const name of ['OPENAI_API_KEY', 'FUNDER_PRIVATE_KEY', 'KERYX_STORAGE_MANIFEST', 'NODE_OPTIONS', 'WSLENV'])
     assert.equal(Object.hasOwn(env, name), false);
   assert.equal(Object.hasOwn(env, 'KERYX_SQLITE_PATH'), false);
+  for (const key of Object.keys(publicCircle)) assert.equal(Object.hasOwn(env, key), false);
 });
 
 test('explicit mainnet public constants keep the same secret-free offline environment', () => {
   const options = { commit: 'a'.repeat(40), scratch: path.resolve(os.tmpdir()), inherited: {
     PATH: 'toolchain', OPENAI_API_KEY: 'synthetic', KERYX_STORAGE_MANIFEST: '/funded.json',
-    KERYX_SQLITE_PATH: '/funded.sqlite', FUNDER_PRIVATE_KEY: 'synthetic', NODE_OPTIONS: '--import=/unsafe',
+    KERYX_SQLITE_PATH: '/funded.sqlite', FUNDER_PRIVATE_KEY: 'synthetic', NODE_OPTIONS: '--import=/unsafe', ...publicCircle,
   } };
   const previous = preparationEnvironment(options), mainnet = preparationEnvironment({ ...options, publicNetwork: 'arc' });
-  assert.deepEqual(mainnet, { ...previous, KERYX_NETWORK: 'arc', NEXT_PUBLIC_KERYX_NETWORK: 'arc' });
+  assert.deepEqual(mainnet, { ...previous, KERYX_NETWORK: 'arc', NEXT_PUBLIC_KERYX_NETWORK: 'arc', ...publicCircle });
   assert.equal(mainnet.KERYX_FORCE_OFFLINE, '1');
   for (const publicNetwork of ['mainnet', 'arc;echo', '', null, ['arc']])
     assert.throws(() => preparationEnvironment({ ...options, publicNetwork }));
 });
 
+test('mainnet public build refuses missing or malformed connector IDs before executing any command', t => {
+  for (const inherited of [{}, { NEXT_PUBLIC_CIRCLE_APP_ID: publicCircle.NEXT_PUBLIC_CIRCLE_APP_ID },
+    { NEXT_PUBLIC_GOOGLE_CLIENT_ID: publicCircle.NEXT_PUBLIC_GOOGLE_CLIENT_ID },
+    { ...publicCircle, NEXT_PUBLIC_CIRCLE_APP_ID: 'synthetic-private-api-key' },
+    { ...publicCircle, NEXT_PUBLIC_CIRCLE_APP_ID: `${publicCircle.NEXT_PUBLIC_CIRCLE_APP_ID}\nUNSAFE=1` },
+    { ...publicCircle, NEXT_PUBLIC_GOOGLE_CLIENT_ID: 'synthetic-secret-or-wrong-domain' },
+    { ...publicCircle, NEXT_PUBLIC_GOOGLE_CLIENT_ID: `${publicCircle.NEXT_PUBLIC_GOOGLE_CLIENT_ID}\nUNSAFE=1` }]) {
+    const f = fixture(t);
+    assert.throws(() => runPreparationChecks({ ...f, inherited, mainnetPublicBuild: true,
+      run: () => assert.fail('invalid public config executed a command') }), /Release preparation refused/);
+    assert.equal(fs.existsSync(path.join(f.root, 'npm-version.json')), false);
+    assert.equal(fs.existsSync(path.join(f.root, 'preparation.json')), false);
+  }
+});
+
 test('mainnet preparation changes only the public build profile; tests stay testnet and failures retain refusal', t => {
   const f = fixture(t), calls = [];
-  const checks = runPreparationChecks({ ...f, mainnetPublicBuild: true, run(_command, args, options) {
+  const checks = runPreparationChecks({ ...f, mainnetPublicBuild: true, inherited: { ...publicCircle }, run(_command, args, options) {
     const name = args.at(-1); calls.push({ name, env: options.env });
     assert.equal(options.cwd, f.source);
     assert.equal(options.env.KERYX_FORCE_OFFLINE, '1');
@@ -54,18 +76,23 @@ test('mainnet preparation changes only the public build profile; tests stay test
     assert.equal(options.env.NEXT_PUBLIC_KERYX_NETWORK, name === 'build' ? 'arc' : 'arcTestnet');
     assert.equal(options.env.NODE_ENV, name === 'test' ? 'test' : 'production');
     assert.equal(options.env.SUPABASE_URL, '');
+    for (const [key, value] of Object.entries(publicCircle))
+      assert.equal(options.env[key], name === 'build' ? value : undefined);
     for (const key of ['KERYX_STORAGE_MANIFEST', 'KERYX_SQLITE_PATH', 'FUNDER_PRIVATE_KEY', 'OPENAI_API_KEY'])
       assert.equal(Object.hasOwn(options.env, key), false);
     return { status: 0, stdout: name === '--version' ? '11.19.0\n' : 'synthetic checked command output', stderr: '' };
   } });
   assert.deepEqual(calls.map(x => x.name), ['--version', 'typecheck', 'test', 'build']);
-  assert.deepEqual(checks.publicBuildSettings, { network: 'arc', forceOffline: true });
+  const publicConfigSha256 = createHash('sha256').update(JSON.stringify(publicCircle) + '\n').digest('hex');
+  assert.deepEqual(checks.publicBuildSettings, { network: 'arc', forceOffline: true, circleGooglePublicConfigSha256: publicConfigSha256 });
+  assert.equal(JSON.stringify(checks).includes(publicCircle.NEXT_PUBLIC_CIRCLE_APP_ID), false);
+  assert.equal(JSON.stringify(checks).includes(publicCircle.NEXT_PUBLIC_GOOGLE_CLIENT_ID), false);
   assert.equal(checks.results.length, 3);
   for (const mainnetPublicBuild of ['true', 1, null])
     assert.throws(() => runPreparationChecks({ ...fixture(t), mainnetPublicBuild,
       run: () => assert.fail('invalid profile executed a command') }));
   const failed = fixture(t), seen = [];
-  assert.throws(() => runPreparationChecks({ ...failed, mainnetPublicBuild: true, run(_command, args) {
+  assert.throws(() => runPreparationChecks({ ...failed, mainnetPublicBuild: true, inherited: { ...publicCircle }, run(_command, args) {
     const name = args.at(-1); seen.push(name);
     return { status: name === 'test' ? 9 : 0, stdout: name === '--version' ? '11.19.0\n' : '', stderr: '' };
   } }));

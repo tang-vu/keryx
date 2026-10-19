@@ -131,6 +131,13 @@ intended mainnet browser artifact. Omitting it retains the testnet default;
 unknown profile options refuse. Preparation must finish and its exact artifact
 be reviewed before the operator starts the writer hold.
 
+For that mainnet option, supply the existing public `NEXT_PUBLIC_CIRCLE_APP_ID`
+(UUID) and `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (`*.apps.googleusercontent.com`) in the
+isolated builder environment. Missing or malformed identifiers refuse before
+running checks. Next compiles them into the Google wallet browser connector;
+dropping them would produce an artifact with that supported connector disabled.
+Use only those public values, without mounting or loading the runtime ENV file.
+
 The builder materializes the exact full Git commit using the existing staging
 boundary, then copies independently installed dependencies into its own candidate.
 It matches every installed-lock entry against the source lockfile, requires direct
@@ -151,9 +158,11 @@ funded storage manifest or unused SQLite-path override is inherited. Next's
 automatic ENV loading cannot select `.env.local` because
 source staging excludes it. With `--mainnet-public-build`, only the build command
 selects the existing `arc` server/public network constants; npm version,
-typechecking and tests remain explicitly arcTestnet/offline. The mainnet public
-build still has forced offline mode and no runtime storage, provider or signing
-credentials. The exact browser settings are recorded; **a default testnet
+typechecking and tests remain explicitly arcTestnet/offline. Only the build also
+receives the validated Circle/Google public identifiers; tests do not inherit them.
+The mainnet public build still has forced offline mode and no runtime storage,
+provider or signing credentials. The exact browser settings and a digest of the
+two public identifier values are recorded; **a default testnet
 artifact cannot be promoted to mainnet**. Neither profile is production admission.
 
 Each command retains its real exit/signal/error, elapsed time, tool arguments and

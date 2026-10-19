@@ -33,6 +33,16 @@ export function preparationEnvironment({ commit, scratch, inherited = process.en
     HOME: scratch, USERPROFILE: scratch, TMPDIR: scratch, TMP: scratch, TEMP: scratch,
     npm_config_cache: path.join(scratch, 'npm-cache'), npm_config_audit: 'false', npm_config_fund: 'false',
   };
+  // Next compiles these public connector identifiers into browser bundles. A
+  // mainnet artifact must preserve the supported Google wallet connection.
+  // Accept only this public pair; never load a runtime ENV file into the builder.
+  if (publicNetwork === 'arc') {
+    const appId = inherited.NEXT_PUBLIC_CIRCLE_APP_ID, clientId = inherited.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (typeof appId !== 'string' || !/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/.test(appId) ||
+        typeof clientId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,199}\.apps\.googleusercontent\.com$/.test(clientId)) refuse();
+    env.NEXT_PUBLIC_CIRCLE_APP_ID = appId;
+    env.NEXT_PUBLIC_GOOGLE_CLIENT_ID = clientId;
+  }
   // Required Windows process/DLL lookup inputs, never credentials or NODE_OPTIONS.
   for (const name of ['SystemRoot', 'SYSTEMROOT', 'WINDIR', 'ComSpec', 'PATHEXT'])
     if (inherited[name] !== undefined) env[name] = inherited[name];
@@ -181,12 +191,12 @@ export function copyPreparationDependencies({ source, dependencies }) {
 
 /** Commands are fixed and run sequentially, before artifact recording and any hold.
  * The process seam lets tests prove failure ordering without pretending a build passed. */
-export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBuild = false, run = spawnSync }) {
+export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBuild = false, inherited = process.env, run = spawnSync }) {
   if (process.versions.node !== pinnedNode || !path.isAbsolute(npmCli) ||
       !fs.lstatSync(npmCli).isFile() || typeof mainnetPublicBuild !== 'boolean') refuse();
-  const env = preparationEnvironment({ commit: staged.commit, scratch });
+  const env = preparationEnvironment({ commit: staged.commit, scratch, inherited });
   const publicNetwork = mainnetPublicBuild ? 'arc' : 'arcTestnet';
-  const buildEnv = preparationEnvironment({ commit: staged.commit, scratch, publicNetwork });
+  const buildEnv = preparationEnvironment({ commit: staged.commit, scratch, publicNetwork, inherited });
   const toolchain = { nodeSha256: hash(fs.readFileSync(process.execPath)), npmCliSha256: hash(fs.readFileSync(npmCli)) };
   const call = (args, heap, outputFd, nodeEnv = 'production', publicBuild = false) => run(process.execPath, [npmCli, ...args], {
     cwd: staged.source, env: { ...(publicBuild ? buildEnv : env), NODE_ENV: nodeEnv, NODE_OPTIONS: `--max-old-space-size=${heap}` },
@@ -227,7 +237,12 @@ export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBui
   }
   if (hash(fs.readFileSync(process.execPath)) !== toolchain.nodeSha256 || hash(fs.readFileSync(npmCli)) !== toolchain.npmCliSha256) refuse();
   return { node: process.versions.node, npm: pinnedNpm, platform: process.platform, ...toolchain,
-    arch: process.arch, publicBuildSettings: { network: publicNetwork, forceOffline: true }, results };
+    arch: process.arch, publicBuildSettings: { network: publicNetwork, forceOffline: true,
+      ...(mainnetPublicBuild ? { circleGooglePublicConfigSha256: hash(serial({
+        NEXT_PUBLIC_CIRCLE_APP_ID: buildEnv.NEXT_PUBLIC_CIRCLE_APP_ID,
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: buildEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      })) } : {}),
+    }, results };
 }
 
 export function prepareImmutableRelease({ repo, releasesDir, commit, dependencies, npmCli, mainnetPublicBuild = false }) {
