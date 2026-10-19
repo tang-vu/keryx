@@ -1,0 +1,87 @@
+name: Hosted immutable preparation
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Full 40-character current main commit (preparation only)
+        required: true
+        type: string
+      circle_app_id:
+        description: Existing public Circle app UUID
+        required: true
+        type: string
+      google_client_id:
+        description: Existing public Google client ID
+        required: true
+        type: string
+      registry_write_address:
+        description: Reviewed published mainnet registry write address
+        required: true
+        type: string
+      registry_read_address:
+        description: Reviewed published mainnet registry read address
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+      - name: Pin npm and install independent preparation inputs
+        run: |
+          npm install --global npm@11.19.0 --no-audit --no-fund
+          npm ci --no-audit --no-fund
+      - name: Prepare Ubuntu browser system dependencies
+        run: node scripts/ci-browser-apt.mjs
+      - name: Install Chromium before network isolation
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/keryx-browser-input-${{ github.run_id }}-${{ github.run_attempt }}
+        run: npx playwright install --with-deps chromium
+      - name: One official preparation in a loopback-only namespace
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+          PUBLIC_CIRCLE: ${{ inputs.circle_app_id }}
+          PUBLIC_GOOGLE: ${{ inputs.google_client_id }}
+          PUBLIC_WRITE: ${{ inputs.registry_write_address }}
+          PUBLIC_READ: ${{ inputs.registry_read_address }}
+          PREPARATION_ROOT: ${{ runner.temp }}/keryx-hosted-${{ github.run_id }}-${{ github.run_attempt }}
+          BROWSER_INPUT: ${{ runner.temp }}/keryx-browser-input-${{ github.run_id }}-${{ github.run_attempt }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node_bin="$(command -v node)"
+          npm_cli="$(npm root --global)/npm/bin/npm-cli.js"
+          # Only public constants cross this boundary. No GitHub token or runtime ENV.
+          sudo -n env -i PATH="$PATH" SOURCE_COMMIT="$SOURCE_COMMIT" \
+            HOSTED_REPO="$GITHUB_WORKSPACE" HOSTED_ROOT="$PREPARATION_ROOT" \
+            HOSTED_BROWSER_CACHE="$BROWSER_INPUT" HOSTED_NPM_CLI="$npm_cli" \
+            NEXT_PUBLIC_CIRCLE_APP_ID="$PUBLIC_CIRCLE" NEXT_PUBLIC_GOOGLE_CLIENT_ID="$PUBLIC_GOOGLE" \
+            KERYX_REGISTRY_ADDRESS="$PUBLIC_WRITE" NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS="$PUBLIC_WRITE" \
+            KERYX_REGISTRY_READ_ADDRESS="$PUBLIC_READ" NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS="$PUBLIC_READ" \
+            /usr/bin/unshare --net -- /bin/bash -euc \
+            '/usr/sbin/ip link set lo up; exec /usr/bin/setpriv --reuid "$1" --regid "$2" --clear-groups --bounding-set=-all --no-new-privs -- "$3" "$4"' \
+            hosted-prepare "$(id -u)" "$(id -g)" "$node_bin" "$GITHUB_WORKSPACE/scripts/prepare-hosted-immutable-release.mjs"
+      - name: Retain original preparation captures and complete cohort
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: immutable-preparation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/keryx-hosted-${{ github.run_id }}-${{ github.run_attempt }}/artifacts/
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: warn
