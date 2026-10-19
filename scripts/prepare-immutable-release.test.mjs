@@ -59,7 +59,7 @@ test('explicit mainnet build uses strict mainnet config with only public constan
 });
 
 test('mainnet build requires matching nonzero write and read registry twins before commands', t => {
-  for (const key of Object.keys(publicRegistry)) for (const value of [undefined, '', `0x${'0'.repeat(40)}`, `0x${'3'.repeat(40)}`, 'not-an-address']) {
+  for (const key of Object.keys(publicRegistry)) for (const value of [undefined, '', `0x${'0'.repeat(40)}`, `0x${'3'.repeat(40)}`, `${publicRegistry[key]}\n`, 'not-an-address']) {
     const f = fixture(t);
     assert.throws(() => runPreparationChecks({ ...f, mainnetPublicBuild: true,
       inherited: { ...mainnetPublic, [key]: value }, run: () => assert.fail('invalid registry executed a command') }));
@@ -71,8 +71,10 @@ test('mainnet public build refuses missing or malformed connector IDs before exe
   for (const inherited of [{}, { NEXT_PUBLIC_CIRCLE_APP_ID: publicCircle.NEXT_PUBLIC_CIRCLE_APP_ID },
     { NEXT_PUBLIC_GOOGLE_CLIENT_ID: publicCircle.NEXT_PUBLIC_GOOGLE_CLIENT_ID },
     { ...publicCircle, NEXT_PUBLIC_CIRCLE_APP_ID: 'synthetic-private-api-key' },
+    { ...publicCircle, NEXT_PUBLIC_CIRCLE_APP_ID: `${publicCircle.NEXT_PUBLIC_CIRCLE_APP_ID}\n` },
     { ...publicCircle, NEXT_PUBLIC_CIRCLE_APP_ID: `${publicCircle.NEXT_PUBLIC_CIRCLE_APP_ID}\nUNSAFE=1` },
     { ...publicCircle, NEXT_PUBLIC_GOOGLE_CLIENT_ID: 'synthetic-secret-or-wrong-domain' },
+    { ...publicCircle, NEXT_PUBLIC_GOOGLE_CLIENT_ID: `${publicCircle.NEXT_PUBLIC_GOOGLE_CLIENT_ID}\n` },
     { ...publicCircle, NEXT_PUBLIC_GOOGLE_CLIENT_ID: `${publicCircle.NEXT_PUBLIC_GOOGLE_CLIENT_ID}\nUNSAFE=1` }]) {
     const f = fixture(t);
     assert.throws(() => runPreparationChecks({ ...f, inherited: { ...publicRegistry, ...inherited }, mainnetPublicBuild: true,

@@ -31,6 +31,7 @@ test('manual source accepts only the complete current-main checkout identity', (
     assert.throws(() => assertMainSource(value, commit, commit));
   assert.throws(() => assertMainSource(commit, 'b'.repeat(40), commit));
   assert.throws(() => assertMainSource(commit, commit, 'b'.repeat(40)));
+  assert.throws(() => archiveEntries(`${commit}\n`));
 });
 
 test('outer official command receives no runner tokens, storage, keys or Node injection', () => {

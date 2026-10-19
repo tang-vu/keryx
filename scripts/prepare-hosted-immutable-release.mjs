@@ -17,7 +17,7 @@ const regularDirectory = file => {
 };
 
 export function assertMainSource(commit, head, main) {
-  assert(typeof commit === 'string' && /^[a-f0-9]{40}$/.test(commit), 'FULL_SOURCE_COMMIT_REQUIRED');
+  assert(typeof commit === 'string' && commit.length === 40 && /^[a-f0-9]{40}$/.test(commit), 'FULL_SOURCE_COMMIT_REQUIRED');
   assert.equal(head, commit, 'CHECKOUT_MUST_MATCH_SOURCE');
   assert.equal(main, commit, 'SOURCE_MUST_BE_CURRENT_MAIN');
 }

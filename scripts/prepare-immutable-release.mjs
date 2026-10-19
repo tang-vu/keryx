@@ -39,13 +39,13 @@ export function preparationEnvironment({ commit, scratch, inherited = process.en
   // public constants, not runtime credentials or a funded storage manifest.
   if (publicNetwork === 'arc') {
     const appId = inherited.NEXT_PUBLIC_CIRCLE_APP_ID, clientId = inherited.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (typeof appId !== 'string' || !/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/.test(appId) ||
-        typeof clientId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,199}\.apps\.googleusercontent\.com$/.test(clientId)) refuse();
+    if (typeof appId !== 'string' || appId.length !== 36 || !/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/.test(appId) ||
+        typeof clientId !== 'string' || clientId !== clientId.trim() || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,199}\.apps\.googleusercontent\.com$/.test(clientId)) refuse();
     env.NEXT_PUBLIC_CIRCLE_APP_ID = appId;
     env.NEXT_PUBLIC_GOOGLE_CLIENT_ID = clientId;
     for (const name of ['KERYX_REGISTRY_ADDRESS', 'KERYX_REGISTRY_READ_ADDRESS']) {
       const server = inherited[name], browser = inherited[`NEXT_PUBLIC_${name}`];
-      if (typeof server !== 'string' || !/^0x[0-9a-f]{40}$/i.test(server) || /^0x0{40}$/i.test(server) ||
+      if (typeof server !== 'string' || server.length !== 42 || !/^0x[0-9a-f]{40}$/i.test(server) || /^0x0{40}$/i.test(server) ||
           typeof browser !== 'string' || server.toLowerCase() !== browser.toLowerCase()) refuse();
       env[name] = server;
       env[`NEXT_PUBLIC_${name}`] = browser;
