@@ -3,6 +3,7 @@ import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "./arc-network-profile"
 import { assertPaymentRuntimeConfiguration, paymentRuntimeConfig } from "./payment-runtime-config";
 it("pins payment-only mainnet callers without requiring a content registry", () => {
   vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
   try { expect(paymentRuntimeConfig().profile).toBe(ARC_MAINNET_PROFILE);
     expect(paymentRuntimeConfig().gatewayBalanceApi).toBe("https://gateway-api.circle.com/v1/balances");
     vi.stubEnv("KERYX_RPC_URL", "https://reviewed-mainnet-failover.example");

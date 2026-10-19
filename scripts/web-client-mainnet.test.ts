@@ -12,6 +12,7 @@ import { browserSessionCustodyContext } from "../lib/session/browser-session-cus
 import { privateHeadlessTestDirectory } from "./helpers/headless-state-test-fixture";
 import { headlessCashoutFixture,testHeadlessWrapping } from "./helpers/headless-cashout-test-fixture";
 vi.stubEnv("KERYX_NETWORK","arc");vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK","arc");
+vi.stubEnv("KERYX_FORCE_OFFLINE","0");
 vi.stubEnv("KERYX_REGISTRY_ADDRESS",`0x${"33".repeat(20)}`);vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS",`0x${"33".repeat(20)}`);
 vi.stubEnv("KERYX_REGISTRY_READ_ADDRESS",undefined);vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS",undefined);
 const {runHeadlessMainnet}=await import("./web-client-mainnet.mjs");
