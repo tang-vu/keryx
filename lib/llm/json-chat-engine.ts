@@ -42,6 +42,7 @@ import type {
   SynthesisOutputLimit,
   Conflict,
   LlmUsageRecord,
+  LlmCallStage,
 } from "./reasoning-engine";
 
 export interface ChatJsonOptions { reasoningReview?: boolean }
@@ -67,9 +68,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     if (this.selectionRecords.length > MAX_SELECTION_DIAGNOSTIC_HISTORY) this.selectionRecords.shift();
   }
 
-  private measuredChatJson(...args: Parameters<JsonChatEngine["chatJson"]>) {
+  private measuredChatJson(stage: LlmCallStage, ...args: Parameters<JsonChatEngine["chatJson"]>) {
     this.validateChatJsonInput(...args);
-    return this.callLedger.track(this.name, () => this.chatJson(...args));
+    return this.callLedger.track(this.name, () => this.chatJson(...args), stage);
   }
 
   get usage(): readonly LlmUsageRecord[] {
@@ -84,6 +85,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     this.usageRecords.push(cloneUsage({
       engine: this.name,
       callId: this.callLedger.currentId,
+      ...(this.callLedger.currentStage ? { stage: this.callLedger.currentStage } : {}),
       model: usage.model,
       inputTokens: usage.inputTokens,
       cachedInputTokens: usage.cachedInputTokens,
@@ -132,7 +134,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async decompose(question: string): Promise<string[]> {
-    return boundedResearchPlan(question, () => this.measuredChatJson(
+    return boundedResearchPlan(question, () => this.measuredChatJson("decompose",
       config.llmModel,
       "You plan research for Keryx, a reading agent that pays content access tolls and distributes USDC creator rewards according to cited contributions. " +
         `Break the user's question into 1-${MAX_RESEARCH_TARGETS} concise questions to investigate, NOT proposed answers or assertions of fact. ` +
@@ -206,7 +208,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     const decisions: Decision[] = [];
     for (const [batchIndex, batch] of batches.entries()) {
       let out: Record<string, unknown>;
-      try { out = await this.measuredChatJson(config.llmModel, batch.system, batch.user, batch.maxTokens); }
+      try { out = await this.measuredChatJson("decide", config.llmModel, batch.system, batch.user, batch.maxTokens); }
       catch (error) {
         throw this.selectionFailure(error, batchIndex, batch.input);
       }
@@ -223,7 +225,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async sufficiency(input: SufficiencyInput): Promise<SufficiencyResult> {
-    const out = await this.measuredChatJson(
+    const out = await this.measuredChatJson("sufficiency",
       config.llmModel,
       "You decide if enough has been read to answer confidently. For EACH sub-claim, estimate its coverage (0.0 = not covered, 1.0 = fully supported) " +
         "and list which source markers cover it. " + COVERAGE_GUIDANCE +
@@ -252,7 +254,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   }
 
   async reevaluate(input: ReevaluateInput): Promise<ReevaluateOutput> {
-    const out = await this.measuredChatJson(
+    const out = await this.measuredChatJson("reevaluate",
       config.llmModel,
       "You are a research agent that has already read some sources. Now assess coverage per sub-claim. " + COVERAGE_GUIDANCE +
         "For each claim, estimate how well the gathered content supports it (0.0 = not covered, 1.0 = fully covered). " +
@@ -331,7 +333,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       } catch { /* Keep the unchanged ordinary generation, with proposals withheld. */ }
     }
     // Retain the admitted ceiling even when the ordinary packet omits a redundant prose draft.
-    const out = await this.measuredChatJson(config.synthesisModel, generationSystem, generationJson, generationTokens);
+    const out = await this.measuredChatJson("synthesize", config.synthesisModel, generationSystem, generationJson, generationTokens);
     const proposals = resolveQuoteEvidence(out.evidence, quoteOptions);
     const teaching: PreparedTeachingProposals | undefined = teachingRequest ? teachingGeneration
       ? prepareTeachingProposals(teachingRequest, input.question, proposals, out.teachingProposals)
@@ -363,7 +365,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
             }
           } catch { /* Review facts once; the proposal addition has no authority. */ }
         }
-        if (reviewedIndexes.size) review = await this.measuredChatJson(
+        if (reviewedIndexes.size) review = await this.measuredChatJson("evidence-review",
           config.llmModel,
           reviewSystem,
           reviewJson,
@@ -452,7 +454,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       // No selected passage, target or adverse source is removed to admit a call.
       const sources = briefContextSources(selectedSources, input, []);
       failureStage = "generation";
-      const raw = await this.measuredChatJson(config.synthesisModel, BRIEF_GENERATION_GUIDANCE,
+      const raw = await this.measuredChatJson("synthesize", config.synthesisModel, BRIEF_GENERATION_GUIDANCE,
         JSON.stringify({ question: input.question,
           researchTargets: input.subClaims.map((question, targetIndex) => ({ targetIndex, question })), sources,
           quoteOptions: options.map(({ quoteId, marker, text, start, end }) => ({ quoteId, marker, text, start, end })),
@@ -467,7 +469,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
       const reviewedSources = briefContextSources(selectedSources, input, candidate.quotes);
       const packet = prepareDecisionBrief(input, candidate.candidate, options, reviewedSources)!;
       failureStage = "review";
-      const review = await this.measuredChatJson(config.llmModel, BRIEF_REVIEW_GUIDANCE,
+      const review = await this.measuredChatJson("evidence-review", config.llmModel, BRIEF_REVIEW_GUIDANCE,
         JSON.stringify({ packet: briefReviewPacket(packet), schema: BRIEF_COMPACT_REVIEW_SCHEMA }), 4096, { reasoningReview: true });
       const decisionBrief = reviewDecisionBrief(packet, review);
       if (!decisionBrief) return unavailable();
@@ -488,7 +490,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
   async attribute(
     input: AttributeInput,
   ): Promise<{ sourceId: string; weight: number; rationale: string }[]> {
-    const out = await this.measuredChatJson(
+    const out = await this.measuredChatJson("attribute",
       config.synthesisModel,
       "You assign each cited source a contribution weight (0..1) for how much it grounded the answer. " + EVIDENCE_CONTEXT_GUIDANCE + "Weights must sum to ~1. Output strict JSON.",
       JSON.stringify({

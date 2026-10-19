@@ -68,6 +68,8 @@ export type ReasoningStep =
   | "synthesize"
   | "attribute";
 
+export type LlmCallStage = ReasoningStep | "evidence-review";
+
 /**
  * One actual attempt to serve a reasoning step. Errors are deliberately reduced to a status/code:
  * provider response bodies can contain request context and must not become public run metadata.
@@ -94,6 +96,8 @@ export interface ReasoningAttempt {
 /** Provider-reported token usage for one completed (or billable truncated) model response.
  * Prompts and provider response bodies are deliberately never retained. */
 export interface LlmUsageRecord {
+  /** Application-assigned operation, never derived from provider text. Absent on history. */
+  stage?: LlmCallStage;
   /** Locally generated call correlation; absent on historical usage. */
   callId?: string;
   engine: string;
@@ -299,6 +303,7 @@ export interface ReasoningEngine {
   /** Run-local provider usage. Absent on engines that predate/support no usage telemetry. */
   readonly usage?: readonly LlmUsageRecord[];
   readonly calls?: readonly import("./call-ledger").LlmCallRecord[];
+  readonly telemetry?: readonly ReasoningAttempt[];
   /** Bounded request-local selection refusals, including isolated rows in a served selection. */
   readonly selectionDiagnostics?: readonly import("../research/selection-diagnostic").SelectionDiagnostic[];
 

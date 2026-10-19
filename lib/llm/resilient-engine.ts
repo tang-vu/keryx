@@ -97,7 +97,7 @@ export function effectiveEngineName(engine: ReasoningEngine): string {
 
 /** Structured attempts from every tier in one run's fallback chain. */
 export function reasoningAttempts(engine: ReasoningEngine): ReasoningAttempt[] {
-  return engine instanceof ResilientEngine ? engine.telemetry : [];
+  return [...(engine.telemetry ?? [])];
 }
 
 /** Provider counters from every tier that was actually called during this run. */

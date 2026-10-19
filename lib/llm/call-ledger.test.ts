@@ -10,12 +10,16 @@ it("keeps overlapping calls correlated and exposes pending work without leaking 
     firstId = ledger.currentId;
     await gate;
     expect(ledger.currentId).toBe(firstId);
-  });
+    expect(ledger.currentStage).toBe("sufficiency");
+  }, "sufficiency");
   await expect(ledger.track("synthetic", async () => {
     expect(ledger.currentId).not.toBe(firstId);
+    expect(ledger.currentStage).toBe("decide");
     throw new Error("private body");
-  })).rejects.toThrow("private body");
+  }, "decide")).rejects.toThrow("private body");
   expect(ledger.currentId).toBeUndefined();
+  expect(ledger.currentStage).toBeUndefined();
+  expect(ledger.calls.map(call => call.stage)).toEqual(["sufficiency", "decide"]);
   expect(ledger.calls.map((call) => call.outcome)).toEqual(["pending", "failed"]);
   const snapshot = ledger.calls;
   snapshot[0].outcome = "failed";
