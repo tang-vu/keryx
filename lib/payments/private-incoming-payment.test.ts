@@ -27,6 +27,7 @@ it("does not retry HTTP failures, oversized or malformed facilitator responses",
 it("captures the trusted mainnet service without requiring a registry or trusting body-selected rails", async () => {
   vi.resetModules();
   vi.stubEnv("KERYX_NETWORK", "arc"); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");
+  vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
   const { privateIncomingFacilitator: selected } = await import("./private-incoming-payment");
   const http = vi.fn<typeof fetch>(async () => Response.json({ success: true }));
   vi.stubGlobal("fetch", http);

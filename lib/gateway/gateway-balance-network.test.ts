@@ -12,6 +12,7 @@ afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.resetModules(); 
 describe("deployment-bound Gateway balance reads", () => {
   it.each([ARC_TESTNET_PROFILE, ARC_MAINNET_PROFILE])("uses the captured $name service for grant and watchdog reads", async profile => {
     vi.stubEnv("KERYX_NETWORK", profile.name); vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", profile.name);
+    vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
     vi.resetModules();
     const balance = await import("./gateway-balance");
     // A later configuration mutation cannot silently switch one running service.

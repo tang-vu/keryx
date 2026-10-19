@@ -76,6 +76,7 @@ describe("trusted Arc profiles and payment release gate", () => {
 
   it("captures public profile once and selects all mainnet pins with HTTP indexer fallback", async () => {
     vi.stubEnv("KERYX_NETWORK","arc");vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK","arc");
+    vi.stubEnv("KERYX_FORCE_OFFLINE","0");
     vi.stubEnv("KERYX_REGISTRY_ADDRESS",`0x${"ab".repeat(20)}`);vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS",`0x${"ab".repeat(20)}`);
     vi.resetModules();const {config:selected}=await import("./config"),browser=await import("./browser-payment-profile"),chains=await import("./chains");
     expect(selected.profile.name).toBe("arc");expect(selected.chainId).toBe(5042);expect(selected.gatewayWallet).toBe(ARC_MAINNET_PROFILE.gatewayWallet);

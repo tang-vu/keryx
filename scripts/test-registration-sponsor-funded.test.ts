@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,6 +11,25 @@ import { fundedFixturePolicySchema, fundedFixtureOriginal, fundedFixtureClaim, f
 import { admitSqliteRegistrationSponsor, getSqliteRegistrationSponsor, transitionSqliteRegistrationSponsor } from "../lib/db/registration-sponsor";
 import { FUNDED_BASELINE, assertSupplementAggregate, readFundedBaselineNative } from "./helpers/registration-sponsor-funded-baseline.mjs";
 import { registrationIntentDigest } from "../lib/sources/registration-sponsor-protocol";
+
+// Unit journals and source-file reads are real; their Git metadata is synthetic.
+// Immutable build inputs deliberately contain no .git directory. Keep the funded
+// operator's actual Git requirement intact and never treat this fixture as authority.
+const gitFixture = vi.hoisted(() => ({ unavailable: false }));
+vi.mock("node:child_process", async importOriginal => {
+  const actual = await importOriginal<typeof import("node:child_process")>();
+  return { ...actual, execFileSync: (...args: Parameters<typeof actual.execFileSync>) => {
+    const [command, commandArgs] = args;
+    if (command !== "git") return actual.execFileSync(...args);
+    if (gitFixture.unavailable) throw new Error("Synthetic Git metadata unavailable");
+    if (!Array.isArray(commandArgs) || commandArgs[0] !== "-C") throw new Error("Unexpected synthetic Git command");
+    const query = JSON.stringify(commandArgs.slice(2));
+    if (query === JSON.stringify(["rev-parse", "HEAD"])) return "a".repeat(40) + "\n";
+    if (query === JSON.stringify(["rev-parse", "HEAD^{tree}"])) return "b".repeat(40) + "\n";
+    if (query === JSON.stringify(["status", "--porcelain", "--untracked-files=all"])) return "";
+    throw new Error("Unexpected synthetic Git command");
+  } };
+});
 
 const now = 1_800_000_000_000;
 function fixture(): FundedFixturePolicy {
@@ -141,7 +160,7 @@ it("keeps the fifth-attempt money gate at 0.16 while allowing actual receipts to
     expect(() => admitSqliteRegistrationSponsor(db, { ...manifest.policy, maxLifetimeWei: "200000000000000000" }, later, now + 1)).toThrow();
   } finally { db.close(); }
 });
-it("pins actual source closure, runtime, tree/commit and every retained file before resumed work", () => {
+it("pins actual source closure and runtime with synthetic Git metadata before resumed work", () => {
   const original = captureFundedSourceBinding(); expect(verifyFundedSourceBinding(original, original).acceptedCiClaimed).toBe(false);
   expect(Object.keys(original.files)).toContain("scripts/test-registration-sponsor-funded.mts");
   expect(Object.keys(original.files)).toContain("lib/db/indexer.ts");
@@ -152,6 +171,11 @@ it("pins actual source closure, runtime, tree/commit and every retained file bef
   expect(() => verifyFundedSourceBinding(original, { ...original, runtimeNode: "changed-runtime" })).toThrow();
   expect(fundedRegistryAuthority(fixture())).toEqual({ network: "eip155:5042002", address: fixture().policy.registryAddress,
     version: 3, codeHash: fixture().policy.registryCodeHash, deployBlock: "66758711" });
+});
+it("refuses unavailable Git metadata instead of accepting a source snapshot as funded authority", () => {
+  gitFixture.unavailable = true;
+  try { expect(() => captureFundedSourceBinding()).toThrow("Synthetic Git metadata unavailable"); }
+  finally { gitFixture.unavailable = false; }
 });
 it("help is keyless and unknown credentials/flags cannot become an execution path", () => {
   const help = execFileSync(process.execPath, ["--import", "tsx", "scripts/test-registration-sponsor-funded.mts", "--help"], { encoding: "utf8" });
