@@ -4,9 +4,10 @@ When source selection falls through an open circuit and an input-limited
 alternate to the heuristic, remote and stdio text now explain the recorded
 failure categories and HTTP statuses as well as the existing serving tiers.
 Recorded cooldown milliseconds are explicitly historical, not a live countdown.
-At most eight distinct failures are displayed; the bounded structured attempt
-history remains unchanged. English, Vietnamese, Portuguese and Spanish use the
-same validated facts.
+At most eight distinct source-selection failures are displayed; the bounded
+structured attempt history remains unchanged. English, Vietnamese, Portuguese
+and Spanish use their existing source-selection diagnostic label and the same
+validated facts. Other steps retain their existing serving/output-limit text.
 
 The added summary reads only the existing bounded public attempt projection,
 never a supplier exception, message, body or cause. Unknown application errors

@@ -43,15 +43,15 @@ export function presentationReasoningText(result: Partial<ReasoningSurface>, lan
 /** Historical attempt categories, not a live retry countdown or permission to retry. */
 function presentationFailureText(result: Partial<ReasoningSurface>, language: PresentationLanguage): string {
   const failures = [...new Set(surfaceReasoning(result.reasoningAttempts).reasoningAttempts
-    .filter(attempt => attempt.outcome !== "served")
+    .filter(attempt => attempt.step === "decide" && attempt.outcome !== "served")
     .map(attempt => `${attempt.step}: ${attempt.outcome === "circuit-open" ? "circuit-open" : attempt.error ?? attempt.outcome}` +
       (attempt.status === undefined ? "" : ` (HTTP ${attempt.status})`) +
       (attempt.outcome === "circuit-open" && attempt.retryAfterMs !== undefined
         ? ` [recorded-retry-after-ms=${attempt.retryAfterMs}]` : "")))];
   if (!failures.length) return "";
   const copy = researchPresentationMessages(language);
-  return copy("failureSummary", { failures: failures.slice(0, 8).join("; ") +
-    (failures.length > 8 ? copy("failureMore", { count: failures.length - 8 }) : "") });
+  return `${copy("selectionDiagnostic")}\n${failures.slice(0, 8).join("; ")}` +
+    (failures.length > 8 ? copy("more", { count: failures.length - 8 }) : "");
 }
 
 /** Existing financial authority prose remains exact English; ordinary headings are separate. */

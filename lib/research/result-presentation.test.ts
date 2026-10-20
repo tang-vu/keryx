@@ -97,7 +97,7 @@ it.each(locales)("%s output-limit/serving notices reuse bounded public records w
   const original = hash(result), text = presentationReasoningText(result, language);
   expect(text).toContain("2,560 tokens"); expect(text).not.toContain("99 tokens"); expect(text).not.toContain("PRIVATE");
   expect(text).toContain(language === "en" ? "Output-limit history is partial: 5" : researchPresentationCatalogues[language].limitPartial.replace("{count}", "5"));
-  if (language === "en") expect(text.startsWith(reasoningServingText(result))).toBe(true);
+  if (language === "en") expect(text).toBe(reasoningServingText(result));
   else expect(text).toContain(researchPresentationCatalogues[language].limitReview);
   expect(hash(result)).toBe(original);
 });
@@ -107,7 +107,7 @@ it("legacy English API/stdio content keeps its exact canonical financial fragmen
     "- Source 日本語 & <original> — $0.000001 (weight 1.00)\n\nRecorded to creators: $0.000001 · payment mode: offline. " +
     API_SETTLEMENT_NOTICE + `dispatch: ${config.baseUrl}/dispatch/language-fixture`);
   const stdio = { ...result, totalToCreators: run.totalToCreators, amountPaid: "0.070001" };
-  expect(stdioResearchText(stdio, "https://example.invalid", locale)).toBe(run.answer + "\n\n" + presentationReasoningText(stdio, "en") +
+  expect(stdioResearchText(stdio, "https://example.invalid", locale)).toBe(run.answer + "\n\n" + reasoningServingText(stdio) +
     "\n\n— Paid Keryx 0.070001 USDC\nRecorded creator total: $0.000001; citation allocations (not individual settlement proof):\n" +
     "  • Source 日本語 & <original> — $0.000001\nOn-chain proof + live feed: https://example.invalid/dashboard");
 });
@@ -138,7 +138,7 @@ it.each(locales)("%s exposes recorded open circuits and rejected fallback input 
   const result = remoteResearchResult(run), before = hash(result), text = presentationReasoningText(result, language);
   expect(text).toContain("decide: circuit-open [recorded-retry-after-ms=1800000]");
   expect(text).toContain("decide: input_limit (HTTP 413)");
-  expect(text).toContain(researchPresentationCatalogues[language].failureSummary.split("{failures}")[0]);
+  expect(text).toContain(researchPresentationCatalogues[language].selectionDiagnostic);
   expect(result.reasoning.sourceSelection).toMatchObject({ state: "heuristic", fallbackUsed: true });
   expect(hash(result)).toBe(before);
 });
@@ -151,5 +151,6 @@ it("bounds displayed failure history and omits private exception fields", () => 
   }));
   const text = presentationReasoningText(result, "en");
   expect(text).toContain("HTTP 507"); expect(text).not.toContain("HTTP 508");
-  expect(text).toContain("4 more recorded failures"); expect(text).not.toContain("PRIVATE-CREDENTIAL");
+  expect(text).toContain(researchPresentationCatalogues.en.more.replace("{count}", "4"));
+  expect(text).not.toContain("PRIVATE-CREDENTIAL");
 });
