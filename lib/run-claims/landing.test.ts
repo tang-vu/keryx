@@ -9,9 +9,29 @@ const origin = "http://localhost:3939";
 let browser: Browser;
 beforeAll(async () => { browser = await chromium.launch({ headless: true, executablePath: process.env.KERYX_CLAIMS_BROWSER_EXECUTABLE }); });
 afterAll(async () => { await browser?.close(); });
-async function fixture(options: { enabled?: boolean; inject?: boolean; claimStatus?: number } = {}) {
+async function fixture(options: { enabled?: boolean; inject?: boolean; claimStatus?: number; defer?: "session" | "response" | "body"; failDeferred?: boolean } = {}) {
   const context = await browser.newContext(), page = await context.newPage();
   let wallet: string | null = alice;
+  let sessionReads = 0, releaseGate!: () => void, markPaused!: () => void, markDelivered!: () => void;
+  const gate = new Promise<void>(resolve => { releaseGate = resolve; }), paused = new Promise<void>(resolve => { markPaused = resolve; });
+  const delivered = new Promise<void>(resolve => { markDelivered = resolve; });
+  if (options.defer === "body") await context.addInitScript(failDeferred => {
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      if (response.url === `${location.origin}/api/me/run-claims`) {
+        const json = response.json.bind(response);
+        response.json = async () => {
+          const value = await json();
+          Reflect.set(window, "claimBodyPaused", true);
+          await new Promise<void>(resolve => { Reflect.set(window, "releaseClaimBody", resolve); });
+          if (failDeferred) throw new Error("Synthetic late response-body failure");
+          return value;
+        };
+      }
+      return response;
+    };
+  }, options.failDeferred === true);
   const calls: { url: string; method: string; body: string | null; expected: string | undefined; referrer: string | undefined }[] = [];
   const external: string[] = [], failures: string[] = [];
   page.on("pageerror", error => failures.push(error.message));
@@ -23,14 +43,31 @@ async function fixture(options: { enabled?: boolean; inject?: boolean; claimStat
     calls.push({ url: request.url(), method: request.method(), body: request.postData(), expected: request.headers()["x-keryx-expected-wallet"], referrer: request.headers().referer });
     if (url.origin !== origin) { external.push(request.url()); return route.abort(); }
     if (url.pathname === "/claim-run") return route.fulfill({ status: 200, headers: Object.fromEntries(response.headers), body: html });
-    if (url.pathname === "/api/auth/session") return route.fulfill({ status: wallet ? 200 : 401, json: { session: wallet ? { address: wallet } : null } });
-    if (url.pathname === "/api/me/run-claims") return route.fulfill({ status: options.claimStatus ?? 200, json: options.claimStatus
-      ? { error: "claim_unavailable" } : { version: 1, runId: "synthetic-run", wallet, binding: { origin, network: "eip155:5042002" } } });
+    if (url.pathname === "/api/auth/session") {
+      if (++sessionReads === 2 && options.defer === "session") {
+        markPaused(); await gate;
+        if (options.failDeferred) return route.fulfill({ status: 503, json: { error: "synthetic_unavailable" } });
+      }
+      return route.fulfill({ status: wallet ? 200 : 401, json: { session: wallet ? { address: wallet } : null } });
+    }
+    if (url.pathname === "/api/me/run-claims") {
+      if (options.defer === "response") { markPaused(); await gate; }
+      const claimStatus = options.defer === "response" && options.failDeferred ? 503 : options.claimStatus;
+      await route.fulfill({ status: claimStatus ?? 200, json: claimStatus
+        ? { error: "claim_unavailable" } : { version: 1, runId: "synthetic-run", wallet, binding: { origin, network: "eip155:5042002" } } });
+      markDelivered(); return;
+    }
     if (url.pathname === "/connect") return route.fulfill({ body: "<!doctype html><title>Synthetic sign-in window</title>" });
     external.push(request.url()); return route.abort();
   });
   await page.goto(`${origin}/claim-run#${token}`);
-  return { context, page, calls, external, failures, switchWallet: (value: string | null) => { wallet = value; } };
+  return { context, page, calls, external, failures, switchWallet: (value: string | null) => { wallet = value; },
+    waitForPause: () => options.defer === "body" ? page.waitForFunction(() => Reflect.get(window, "claimBodyPaused") === true) : paused,
+    release: async () => {
+      releaseGate();
+      if (options.defer === "body") await page.evaluate(() => { const release = Reflect.get(window, "releaseClaimBody"); if (typeof release === "function") release(); });
+      if (options.defer === "response") await delivered;
+    } };
 }
 it("hashes exactly the emitted script/style bytes and supplies HTTP privacy/frame headers without tokens", async () => {
   const response = runClaimLandingResponse(true), html = await response.text();
@@ -110,4 +147,37 @@ it.each([false, true])("inactive or refused landing forgets secret without repla
     expect(await f.page.getByRole("button", { name: copy.claim, exact: true }).isDisabled()).toBe(true);
     expect(f.calls.filter(call => call.method === "POST")).toHaveLength(enabled ? 1 : 0); expect(f.external).toEqual([]); expect(f.failures).toEqual([]);
   } finally { await f.context.close(); }
+});
+
+it.each((["session", "response", "body"] as const).flatMap(defer => [false, true].map(failDeferred => ({ defer, failDeferred }))))(
+  "pagehide permanently retires a claim attempt paused at $defer (late failure=$failDeferred)", async ({ defer, failDeferred }) => {
+  const f = await fixture({ defer, failDeferred });
+  try {
+    await f.page.getByText(copy.ready, { exact: true }).waitFor();
+    await f.page.getByRole("button", { name: copy.claim, exact: true }).click(); await f.waitForPause();
+    // Exercise the real handlers with controlled persisted-page lifecycle events.
+    // This does not claim actual browser back/forward-cache navigation acceptance.
+    await f.page.evaluate(() => {
+      window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true }));
+      window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+    });
+    await f.page.getByText(copy.unavailable, { exact: true }).waitFor();
+    // An abandoned claim response is actively cancelled, so network completion
+    // is not an acknowledgement. The route gate confirms its late delivery.
+    const response = defer === "session" ? f.page.waitForResponse(response => new URL(response.url()).pathname === "/api/auth/session") : null;
+    await f.release(); if (response) await (await response).finished();
+    await f.page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const posts = f.calls.filter(call => call.method === "POST");
+    expect(posts).toHaveLength(defer === "session" ? 0 : 1);
+    for (const post of posts) expect(JSON.parse(post.body!)).toEqual({ token });
+    expect(await f.page.locator("#status").textContent()).toBe(copy.unavailable);
+    expect(await f.page.getByRole("button", { name: copy.claim, exact: true }).isDisabled()).toBe(true);
+    const beforeFocus = f.calls.length;
+    await f.page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await f.page.getByRole("button", { name: copy.check, exact: true }).click();
+    expect(f.calls).toHaveLength(beforeFocus);
+    expect(await f.page.content()).not.toContain(token);
+    expect(await f.page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length }))).toEqual({ local: 0, session: 0 });
+    expect(f.external).toEqual([]); expect(f.failures).toEqual([]);
+  } finally { await f.release(); await f.context.close(); }
 });
