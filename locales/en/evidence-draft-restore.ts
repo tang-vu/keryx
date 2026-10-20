@@ -1,0 +1,18 @@
+export const evidenceDraftRestoreCopy = {
+  heading: "Continue a saved draft",
+  guidance: "Open a private-evidence-draft.json file previously downloaded from this editor. Preview it before restoring. The saved paper selection is used only in this tab; your saved bibliography stays unchanged.",
+  file: "Choose a draft backup (.json)",
+  reading: "Opening the backup in this tab…",
+  preview: "Backup preview",
+  untitled: "Untitled draft",
+  summary: "{papers} included papers · {reports} reports · {excerpts} retained excerpts · {claims} claims · {themes} themes",
+  passage: "Saved passage preview",
+  replace: "Restoring replaces this tab’s current passage, imported reports, assessments and themes. Save your current draft first if you want to keep it.",
+  restore: "Restore in this tab",
+  save: "Save current draft first",
+  cancel: "Cancel restore",
+  restored: "Draft restored in this tab. Continue editing, then download a new backup before leaving.",
+  refused: "Backup not opened. Choose a valid Keryx private draft JSON file within the draft limits. Your current draft is unchanged.",
+  stale: "This tab changed while the backup was being reviewed. Choose the file again to review it before replacing your latest edits.",
+  cancelled: "Restore cancelled. Your current draft is unchanged.",
+} as const;
