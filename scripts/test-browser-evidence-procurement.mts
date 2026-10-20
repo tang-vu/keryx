@@ -73,8 +73,14 @@ const screenshots = process.env.EVIDENCE_PROCUREMENT_SCREENSHOTS ?? await mkdtem
 await mkdir(screenshots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const boot = async (page: Page) => { await page.goto("https://evidence-procurement.test/"); await page.addScriptTag({ content: bundle.outputFiles[0].text }); await page.getByRole("heading", { name: "1. Define the evidence you need" }).waitFor(); };
+const nextDownloadAt = new WeakMap<Page, number>();
 const download = async (page: Page, name: string) => {
+  // Pace deliberate clicks to avoid Chromium dropping burst downloads. Every
+  // click still awaits the real download and checks its complete file bytes.
+  const pause = (nextDownloadAt.get(page) ?? 0) - performance.now();
+  if (pause > 0) await delay(pause);
   const waiting = page.waitForEvent("download"); await page.getByRole("button", { name, exact: true }).click();
+  nextDownloadAt.set(page, performance.now() + 130);
   const saved = await waiting; return { name: saved.suggestedFilename(), text: await readFile((await saved.path())!, "utf8") };
 };
 
