@@ -14,6 +14,7 @@ import { CompletedEvidenceDraftSelector } from "@/components/keryx/completed-evi
 import { completedEvidenceDraftSelectionCopy as completedCopy } from "@/locales/en/completed-evidence-draft-selection";
 import { useUiCopy } from "@/lib/i18n/ui-copy";
 import { EvidenceDraftRestore } from "./evidence-draft-restore";
+import { evidenceDraftEditingCopy as editingEnglish } from "@/locales/en/evidence-draft-editing";
 const uiEnglish_completedCopy = completedCopy;
 
 
@@ -35,6 +36,7 @@ function nextEditorId(prefix: "claim" | "theme" | "statement", rows: readonly { 
 
 export function EvidenceDraftWorkspace() {
   const completedCopy = useUiCopy("completed-evidence-draft-selection", uiEnglish_completedCopy);
+  const editingCopy = useUiCopy("evidence-draft-editing", editingEnglish);
   const store = useLiteratureWorkspace(), [editors, setEditors] = useState(empty), [reportJson, setReportJson] = useState("");
   const [restoredWorkspace, setRestoredWorkspace] = useState<EvidenceDraftRequest["workspace"]>();
   const workspace = restoredWorkspace ?? store.workspace;
@@ -155,6 +157,11 @@ export function EvidenceDraftWorkspace() {
               origin: "user-assessment", reviewer: reviewer.trim(), reviewedAt: new Date().toISOString(), verdict,
               claimText: result!.text, paperUrls: [...claim.paperUrls], excerptIds: [...claim.excerptIds], excerpts: result!.excerpts,
             } })}>{copyText(copy.claim.recordAssessment, { assessment: assessmentLabels[verdict] })}</button>)}
+          <button type="button" className={`${button} mt-3`} onClick={() => {
+            if (!window.confirm(editingCopy.confirmClaim)) return;
+            setEditors(current => ({ ...current, claims: current.claims.filter(row => row.id !== claim.id) }));
+            setMessage(editingCopy.claimRemoved);
+          }}>{editingCopy.removeClaim}</button>
         </article>;
       })}
     </section>
@@ -232,6 +239,11 @@ export function EvidenceDraftWorkspace() {
           })}
           <button type="button" className={`${button} mt-4`} disabled={(theme.statements ?? []).length >= 24} onClick={() => replace({
             statements: [...(theme.statements ?? []), { id: nextEditorId("statement", editors.themes.flatMap(row => row.statements ?? [])), kind: "contribution", text: "", paperUrls: [], excerptIds: [] }] })}>{copy.statement.add}</button>
+          <button type="button" className={`${button} ml-2 mt-4`} onClick={() => {
+            if (!window.confirm(editingCopy.confirmTheme)) return;
+            setEditors(current => ({ ...current, themes: current.themes.filter(row => row.id !== theme.id) }));
+            setMessage(editingCopy.themeRemoved);
+          }}>{editingCopy.removeTheme}</button>
         </article>;
       })}
       <button type="button" className={`${button} mt-4`} disabled={editors.themes.length >= 16} onClick={() => update({ themes: [...editors.themes, { id: nextEditorId("theme", editors.themes), title: copy.theme.newTitle, authorNote: "", excerptIds: [] }] })}>{copy.theme.add}</button>

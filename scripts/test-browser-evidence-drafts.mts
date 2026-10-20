@@ -9,9 +9,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { chromium, type Browser } from "playwright";
+import { chromium, type Browser, type Locator } from "playwright";
 import { evidenceDraftFixture } from "../lib/research/fixtures/evidence-draft";
-import { buildEvidenceDraft } from "../lib/research/evidence-draft";
+import { buildEvidenceDraft, type EvidenceDraftRequest } from "../lib/research/evidence-draft";
+import { evidenceDraftEditingCopy as editing } from "../locales/en/evidence-draft-editing";
 import { LITERATURE_STORAGE_KEY } from "../lib/papers/literature-workspace";
 import { saveLiteraturePaper } from "../lib/papers/literature-workspace";
 import { PAPER_CATALOG } from "../lib/papers/catalog";
@@ -19,6 +20,11 @@ import { PAPER_CATALOG } from "../lib/papers/catalog";
 const source = resolve(import.meta.dirname, ".."), dist = resolve(source, process.env.NEXT_DIST_DIR ?? ".next");
 await readFile(join(dist, "BUILD_ID"), "utf8");
 const artifacts = join(source, ".artifacts", "evidence-drafts"), fixture = join(artifacts, `runtime-${randomUUID()}`);
+// /literature/drafts belongs to the existing literature UX screenshot artifact.
+// Keep runtime fixtures separate so only PNGs enter that retained artifact.
+const screenshots = process.env.GITHUB_ACTIONS === "true" && process.env.RUNNER_TEMP
+  ? join(process.env.RUNNER_TEMP, "literature-ux-screenshots", "evidence-drafts") : artifacts;
+await mkdir(screenshots, { recursive: true });
 await mkdir(join(fixture, "lib"), { recursive: true }); await mkdir(join(fixture, "data"));
 await copyNextConfigFixture(source, fixture);
 await symlink(join(source, "node_modules"), join(fixture, "node_modules"), process.platform === "win32" ? "junction" : "dir");
@@ -158,7 +164,45 @@ try {
     assert.equal(await themes.getByLabel("Your synthesis notes (unverified)").nth(1).inputValue(), "Second-theme edits");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `Overflow at ${width}`);
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({ path: join(artifacts, `drafts-${width}.png`), fullPage: true });
+    await page.screenshot({ path: join(screenshots, `drafts-${width}.png`), fullPage: true });
+    const backupInput = async (): Promise<EvidenceDraftRequest> => {
+      const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download private draft JSON", exact: true }).click()]);
+      const path = await file.path(); assert(path);
+      return JSON.parse(await readFile(path, "utf8")) as EvidenceDraftRequest;
+    };
+    const remove = async (button: Locator, question: string, accept: boolean) => {
+      const opened = page.waitForEvent("dialog"), click = button.click(), dialog = await opened;
+      assert.equal(dialog.type(), "confirm"); assert.equal(dialog.message(), question);
+      if (accept) await dialog.accept(); else await dialog.dismiss();
+      await click;
+    };
+    const removeClaim = claims.getByRole("button", { name: editing.removeClaim, exact: true });
+    const removeTheme = articles.first().getByRole("button", { name: editing.removeTheme, exact: true });
+    for (const [name, control] of [["remove-claim", removeClaim], ["remove-theme", removeTheme]] as const) {
+      await control.scrollIntoViewIfNeeded();
+      const bounds = await control.boundingBox();
+      assert(bounds && bounds.height >= 43 && bounds.x >= 0 && bounds.x + bounds.width <= width + 1, "Removal controls fit the viewport and retain touch targets");
+      await control.screenshot({ path: join(screenshots, `${name}-${width}.png`) });
+    }
+    const beforeRemoval = await backupInput();
+    await remove(removeClaim, editing.confirmClaim, false);
+    assert.deepEqual(await backupInput(), beforeRemoval, "Cancelled claim removal preserves the whole packet");
+    await remove(removeClaim, editing.confirmClaim, true);
+    const withoutClaim = await backupInput();
+    assert.deepEqual(withoutClaim, { ...beforeRemoval, claims: [] });
+    assert.equal(await passage.inputValue(), fixture.passage);
+    await remove(removeTheme, editing.confirmTheme, false);
+    assert.deepEqual(await backupInput(), withoutClaim, "Cancelled theme removal preserves the whole packet");
+    await remove(removeTheme, editing.confirmTheme, true);
+    const withoutTheme = await backupInput();
+    assert.deepEqual(withoutTheme, { ...withoutClaim, themes: withoutClaim.themes.slice(1) });
+    assert.equal(await articles.first().getByLabel("Your sentence").inputValue(), unfinishedText, "Other unfinished editor survives row removal");
+    assert.equal(await articles.first().getByLabel("What this sentence does").inputValue(), "gap");
+    await remove(articles.last().getByRole("button", { name: editing.removeTheme, exact: true }), editing.confirmTheme, true);
+    const lastTheme = await backupInput();
+    assert.equal(lastTheme.themes.length, 1); assert.equal(buildEvidenceDraft(lastTheme).references.length, 0);
+    assert.deepEqual(lastTheme.reports, beforeRemoval.reports, "Source reports remain available after removing their last citation");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `Removal overflow at ${width}`);
     await page.reload(); assert.equal(await page.getByLabel("Your original passage").inputValue(), "");
     assert.equal(blocked.filter(path => path.includes("research/evidence-draft") || path.includes("ask")).length, 0);
     await context.close(); console.log(`Built private drafts ${width}px: exact claim, named assessment, theme preservation, excerpt-bound statement, citation/reference downloads and memory reset passed.`);
