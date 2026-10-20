@@ -32,11 +32,21 @@ The candidate is not production delivery or evidence of independent demand.
 3. Record **To screen**, **Include**, **Exclude** or **Undecided** and your own notes.
    Save explicitly. These are personal decisions, not agent verification or claims
    that a paper has been read. Filter the list without discarding an open draft.
+   **Search saved papers and notes** finds all entered words across titles,
+   authors, DOI/arXiv identifiers, years, venues, saved links and saved notes, in
+   any order. Latin accents are optional; other scripts retain their meaningful
+   characters. Search combines with the screening filter, whose counts reflect
+   the current search. It uses saved notes,
+   so a note still being edited does not change the search until explicitly saved.
+   Hidden cards keep their unsaved editors. **Clear search** keeps the selected
+   screening filter. Search stays in this tab and is omitted from URLs, backups
+   and research requests; no metadata/provider call or storage write is made.
 4. Select two papers and choose **Prepare comparison**. This opens an editable Deep
    question with the saved review question and both exact links. Notes and screening
    decisions are omitted. Review the question and visible budget before submitting.
    The selected pair stays visible across screening filters, with exact record links,
    arXiv versions and an outside-filter label. Remove either paper individually.
+   Search also keeps the pair selected and labels papers outside its results.
    **Review prepared question** shows exactly the draft that will open, using the
    saved focus rather than unsaved edits in the focus form.
    Existing research availability, model/search costs, original-reading and payment
@@ -68,12 +78,15 @@ personal notes, exact links/versions, contributor limitations and metadata prove
 Formula-like cells are neutralized for spreadsheet import; stored notes stay literal.
 This is a screening list, not the answer's evidence matrix or a settlement receipt.
 
-Choose a screening filter, then **Download shown references (RIS)** to move that
-subset into a reference manager. The visible count is the export scope; comparison
+Choose a search and screening filter, then **Download shown references (RIS)** or
+the shown CSL JSON download to move that subset into a reference manager. The
+visible count is the export scope; comparison
 checkboxes do not change it. Only saved bibliography metadata is exported, with
 exact URLs/arXiv versions, supplied names/year/DOI/venue and a provenance note.
-Your review focus, screening labels and personal notes are omitted. Select **All
-saved papers** for the full bibliography. This file is separate from CSV and JSON.
+Your review focus, screening labels, search text and personal notes are omitted.
+Clear search and select **All saved papers** for the full bibliography. These
+reference files are separate from the full screening CSV and private JSON backup,
+which retain all saved records regardless of the current search/filter.
 
 Import through your reference manager's file import. The exporter uses the types
 recognized by [Zotero's RIS translator](https://github.com/zotero/translators/blob/c7551c1a4d5b9623273119c7fbadf8735731dc92/RIS.js):

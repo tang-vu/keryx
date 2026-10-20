@@ -1,0 +1,32 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/literature-search.ts",
+  "sourceSha256": "a7cfda62a904c4c49cfca0e826411e54b595e3547edac6e8d2910ae13716de30",
+  "entries": {
+    "label": {
+      "source": "Search saved papers and notes",
+      "text": "Tìm tài liệu và ghi chú đã lưu"
+    },
+    "guidance": {
+      "source": "Search titles, authors, DOI/arXiv IDs, years, venues, links or saved notes. All words must match. Latin accents are optional. Search stays in this tab.",
+      "text": "Tìm theo tiêu đề, tác giả, mã DOI/arXiv, năm, nơi công bố, liên kết hoặc ghi chú đã lưu. Mọi từ đều phải khớp. Có thể bỏ dấu chữ Latin. Từ khóa chỉ ở trong tab này."
+    },
+    "clear": {
+      "source": "Clear search",
+      "text": "Xóa từ khóa"
+    },
+    "scope": {
+      "source": "Reference downloads contain only papers shown by both search and screening. CSV and JSON backup contain all saved papers. Notes stay out of reference downloads.",
+      "text": "Tệp tài liệu tham khảo chỉ chứa các bài đang hiển thị theo cả tìm kiếm và sàng lọc. CSV và bản sao lưu JSON chứa toàn bộ bài đã lưu. Ghi chú không có trong tệp tài liệu tham khảo."
+    },
+    "empty": {
+      "source": "No saved papers match this search and screening filter.",
+      "text": "Không có tài liệu đã lưu nào khớp từ khóa và bộ lọc sàng lọc này."
+    },
+    "outsideSearch": {
+      "source": "Outside the current search; still selected.",
+      "text": "Ngoài kết quả tìm kiếm hiện tại; vẫn được chọn."
+    }
+  }
+}
