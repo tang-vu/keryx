@@ -49,6 +49,17 @@ Continuing a restored draft keeps its existing claim spans, selected excerpts,
 assessments and themes when you add new rows. New claims and themes remain
 independent of the restored rows, including after saving and reopening again.
 
+Use **Remove this claim** to discard one selected span and its recorded assessment
+without changing the original passage or other claims. **Remove this theme**
+discards only that theme's notes, statements and excerpt selections. Both ask for
+confirmation; canceling keeps the current draft. Other rows, including unfinished
+statements, stay in place. Retained source reports are kept, so their excerpts
+remain available to other rows. Reference downloads follow the remaining themes
+and exported statements; removing the last citation removes its reference too.
+You can remove every claim/theme or free a slot at the editor limits, then add
+new rows without clearing the rest of your work. Download a new private backup
+to retain these deliberate changes.
+
 Passage, report JSON, assessments and theme edits remain in tab memory; no upload,
 public history, localStorage draft write or background request is performed by
 this editor. The existing bibliography stays in its existing browser store.

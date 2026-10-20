@@ -6,16 +6,16 @@
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
-  "scope": "All 69 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
+  "scope": "All 70 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
   "financialLegalConsent": "Unreviewed; critical English-authoritative fallback until actual named-human review. Neutral machine-draft UI is integrated only in explicit previews.",
   "totals": {
-    "englishNamespaceFiles": 69,
+    "englishNamespaceFiles": 70,
     "coreInlineSources": 1,
-    "extractedLeaves": 6008,
-    "authoredEntries": 5928,
+    "extractedLeaves": 6014,
+    "authoredEntries": 5934,
     "nonTranslatableMachineIdentifiers": 29,
     "uncoveredEntries": 51,
-    "completeNamespaces": 66
+    "completeNamespaces": 67
   },
   "namespaces": [
     {
@@ -7063,6 +7063,25 @@
         "review",
         "stale",
         "total"
+      ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "evidence-draft-editing",
+      "sourcePath": "locales/en/evidence-draft-editing.ts",
+      "sourceSha256": "ef6356859f04f3ffee8ba9f1ad201d3b7951814e4d277e993f7ead1111e14cc2",
+      "draftPath": "locales/vi/ui-drafts/evidence-draft-editing.json",
+      "extractedLeaves": 6,
+      "authoredEntries": 6,
+      "coveredKeys": [
+        "claimRemoved",
+        "confirmClaim",
+        "confirmTheme",
+        "removeClaim",
+        "removeTheme",
+        "themeRemoved"
       ],
       "nonTranslatableMachineIdentifiers": [],
       "uncoveredKeys": [],
