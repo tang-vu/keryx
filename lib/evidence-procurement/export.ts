@@ -1,10 +1,17 @@
-import { csvCell } from "../csv-cell";
 import { buildEvidenceProcurement, PROCUREMENT_NOTICE, type EvidenceProcurementResult } from "./engine";
 
 export const PROCUREMENT_RECEIPT_FORMATS = ["json", "markdown", "csv"] as const;
 export type ProcurementReceiptFormat = typeof PROCUREMENT_RECEIPT_FORMATS[number];
 export const MAX_PROCUREMENT_RECEIPT_BYTES = 524_288;
 const EXPORT_NOTICE = "Dated private inspection. Quote amounts and selections are proposals, not financial reservations. Provider stances and caller reviews remain declarations. Only the original JSON packet can be restored; this receipt grants no payment, payout or factual authority.";
+
+// Match the established evidence CSV protection locally, without importing the
+// research presentation module and its full UI catalogue into private receipts.
+function csvCell(value: string | number): string {
+  const raw = String(value);
+  const safe = /^[\s\p{Cc}\p{Cf}]*[=+\-@]/u.test(raw) ? `'${raw}` : raw;
+  return `"${safe.replace(/"/g, '""')}"`;
+}
 
 export function procurementReceiptFormat(value: unknown): ProcurementReceiptFormat {
   if (value === undefined) return "json";
