@@ -1,11 +1,8 @@
+import { normalizeSearchText } from "./normalize-search-text";
+
 /** Fold search text only; original questions and publisher names stay untouched. */
 export function normalizeArchiveSearch(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .normalize("NFC")
+  return normalizeSearchText(text)
     .replace(/\s+/g, " ")
     .trim();
 }

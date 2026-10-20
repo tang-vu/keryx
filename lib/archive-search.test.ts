@@ -30,6 +30,8 @@ describe("archive search", () => {
     }
     expect(matches("Arc 中文研究", "研究 arc")).toBe(true);
     expect(matches("カイド", "ガイド")).toBe(false);
+    expect(matches("Йога", "Иога")).toBe(false);
+    expect(matches("أبحاث", "ابحاث")).toBe(false);
   });
 
   it("treats blank search as unfiltered and input as literal text", () => {
