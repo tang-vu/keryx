@@ -201,3 +201,76 @@ it("keeps corrupt stored data recoverable and offers replacement without a misle
   await page.getByText(messages("literatureWorkspace.restored"), { exact: true }).waitFor();
   expect(JSON.parse((await stored(page))!)).toEqual(incoming());
 }, 1024, "{broken"));
+
+for (const field of ["title", "notes"] as const) it.each([320, 1440])(`refuses malformed UTF-8 ${field} without a preview, data write or lost editor at %ipx`, width => fixture(async (page, raw) => {
+  await page.getByLabel(messages("literatureWorkspace.titleLabel"), { exact: true }).fill("UNSAVED focus 📚");
+  const first = paper(page, 0); await first.getByText(messages("literatureWorkspace.editNotes"), { exact: true }).click();
+  const notes = first.getByLabel(messages("literatureWorkspace.notesLabel")); await notes.fill("UNSAVED original note");
+  // A previous valid preview must not remain actionable after choosing an invalid file.
+  await choose(page); await preview(page).waitFor();
+  const value = incoming();
+  if (field === "title") value.entries[1].paper.title = "INVALID_BYTES"; else value.entries[1].notes = "INVALID_BYTES";
+  const [before, after] = serializeLiteratureWorkspace(value).split("INVALID_BYTES");
+  const bytes = Buffer.concat([Buffer.from(before), Buffer.from([0xff]), Buffer.from(after)]);
+  await file(page).setInputFiles({ name: "damaged-backup.json", mimeType: "application/json", buffer: bytes });
+  await page.getByRole("alert").filter({ hasText: messages("paperWorkspace.unsupportedBackup") }).waitFor();
+  expect(await preview(page).count()).toBe(0);
+  expect(await page.getByRole("button", { name: messages("literatureWorkspace.restore"), exact: true }).count()).toBe(0);
+  expect(await stored(page)).toBe(raw);
+  expect(await notes.inputValue()).toBe("UNSAVED original note");
+  expect(await page.getByLabel(messages("literatureWorkspace.titleLabel"), { exact: true }).inputValue()).toBe("UNSAVED focus 📚");
+}, width));
+
+it.each([320, 1440])("adds exact valid Unicode and BOM input after a refused file at %ipx", width => fixture(async (page, raw) => {
+  await file(page).setInputFiles({ name: "damaged.json", mimeType: "application/json", buffer: Buffer.from([0xff]) });
+  await page.getByRole("alert").filter({ hasText: messages("paperWorkspace.unsupportedBackup") }).waitFor();
+  const value = incoming(); value.entries[1].notes = "Ghi chú 📚 e\u0301 � العربية 中文";
+  await file(page).setInputFiles({ name: "unicode.json", mimeType: "application/json", buffer: Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(serializeLiteratureWorkspace(value))]) });
+  await preview(page).waitFor(); expect(await stored(page)).toBe(raw);
+  await add(page).click(); await page.getByText(copy.added, { exact: true }).waitFor();
+  expect(JSON.parse((await stored(page))!).entries[2]).toEqual(value.entries[1]);
+}, width));
+
+it("ignores a delayed damaged file after a newer valid preview", () => fixture(async (page, raw) => {
+  await page.evaluate(() => {
+    const original = File.prototype.arrayBuffer;
+    File.prototype.arrayBuffer = function () {
+      if (this.name !== "delayed.json") return original.call(this);
+      const file = this;
+      return new Promise<ArrayBuffer>((resolve, reject) => Object.assign(window, { releaseLiteratureRead: () => original.call(file).then(resolve, reject) }));
+    };
+  });
+  await file(page).setInputFiles({ name: "delayed.json", mimeType: "application/json", buffer: Buffer.from([0xff]) });
+  await page.waitForFunction(() => "releaseLiteratureRead" in window);
+  await choose(page); await preview(page).waitFor();
+  await page.evaluate(() => (window as unknown as { releaseLiteratureRead: () => Promise<void> }).releaseLiteratureRead());
+  expect(await preview(page).count()).toBe(1); expect(await page.getByRole("alert").count()).toBe(0);
+  expect(await stored(page)).toBe(raw);
+}));
+
+it("reports an empty file-read error and permits retrying the same valid file", () => fixture(async (page, raw) => {
+  await page.evaluate(() => {
+    const original = File.prototype.arrayBuffer;
+    File.prototype.arrayBuffer = function () { File.prototype.arrayBuffer = original; return Promise.reject(new Error("")); };
+  });
+  await choose(page);
+  await page.getByRole("alert").filter({ hasText: messages("literatureWorkspace.unreadable") }).waitFor();
+  expect(await stored(page)).toBe(raw); expect(await preview(page).count()).toBe(0);
+  await choose(page); await preview(page).waitFor();
+  expect(await page.getByRole("alert").count()).toBe(0); expect(await stored(page)).toBe(raw);
+}));
+
+it("ignores a damaged file finishing after the workspace unmounts", () => fixture(async (page, raw) => {
+  await page.evaluate(() => {
+    const original = File.prototype.arrayBuffer;
+    File.prototype.arrayBuffer = function () {
+      const file = this;
+      return new Promise<ArrayBuffer>((resolve, reject) => Object.assign(window, { releaseLiteratureRead: () => original.call(file).then(resolve, reject) }));
+    };
+  });
+  await file(page).setInputFiles({ name: "delayed.json", mimeType: "application/json", buffer: Buffer.from([0xff]) });
+  await page.waitForFunction(() => "releaseLiteratureRead" in window);
+  await page.evaluate(() => (window as unknown as { root: { unmount: () => void } }).root.unmount());
+  await page.evaluate(() => (window as unknown as { releaseLiteratureRead: () => Promise<void> }).releaseLiteratureRead());
+  expect(await page.getByRole("alert").count()).toBe(0); expect(await stored(page)).toBe(raw);
+}));

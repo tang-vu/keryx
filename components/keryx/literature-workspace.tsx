@@ -9,13 +9,13 @@ import { downloadBrowserText } from "@/lib/browser-text-download";
 import { PAPER_REPOSITORIES } from "@/lib/papers/types";
 import { paperReferencesCslJson, paperReferencesRis } from "@/lib/papers/reference-export";
 import { changeLiteratureWorkspace, clearLiteratureWorkspace, replaceLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
-import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, MAX_SAVED_PAPERS, parseLiteratureWorkspace,
+import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, MAX_SAVED_PAPERS,
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
 import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
 import { searchLiteratureEntries } from "@/lib/papers/literature-search";
 import { literatureSearchCopy as searchEnglish } from "@/locales/en/literature-search";
 import { literatureImportCopy as importEnglish } from "@/locales/en/literature-import";
-import { addMissingLiteraturePapers, previewLiteratureImport } from "@/lib/papers/literature-import";
+import { addMissingLiteraturePapers, previewLiteratureImport, readLiteratureWorkspaceFile } from "@/lib/papers/literature-import";
 
 
 
@@ -231,10 +231,10 @@ export function LiteratureWorkspace() {
           if (!file) return;
           try {
             if (file.size > MAX_LITERATURE_BYTES) throw new Error(copy("literatureWorkspace.tooLarge"));
-            const imported = parseLiteratureWorkspace(await file.text());
+            const imported = readLiteratureWorkspaceFile(new Uint8Array(await file.arrayBuffer()));
             if (generation !== importGeneration.current) return;
             setPending({ workspace: imported, filename: file.name }); setFailure(""); setMessage("");
-          } catch (issue) { if (generation === importGeneration.current) setFailure(issue instanceof Error ? issue.message : copy("literatureWorkspace.unreadable")); }
+          } catch (issue) { if (generation === importGeneration.current) setFailure(issue instanceof Error && issue.message.trim() ? issue.message : copy("literatureWorkspace.unreadable")); }
         }} />
       </label>
       {pending && <div className="mt-4 border border-seal p-4">

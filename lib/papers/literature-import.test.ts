@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { PAPER_CATALOG } from "./catalog";
-import { addMissingLiteraturePapers, previewLiteratureImport } from "./literature-import";
-import { emptyLiteratureWorkspace, saveLiteraturePaper, serializeLiteratureWorkspace } from "./literature-workspace";
+import { addMissingLiteraturePapers, previewLiteratureImport, readLiteratureWorkspaceFile } from "./literature-import";
+import { emptyLiteratureWorkspace, MAX_LITERATURE_BYTES, saveLiteraturePaper, serializeLiteratureWorkspace } from "./literature-workspace";
 import { literatureImportCopy as copy } from "../../locales/en/literature-import";
 
 const time = "2026-10-20T00:00:00Z";
@@ -72,4 +72,28 @@ it("refuses invalid or evidence-bearing input even when all its URLs would be sk
   incoming.entries[0].paper.peerReview = "verified" as never;
   expect(() => addMissingLiteraturePapers(current, incoming)).toThrow();
   expect(current.entries[0].paper.peerReview).toBe("unknown");
+});
+
+it.each([{ prefix: [] }, { prefix: [0xef, 0xbb, 0xbf] }])("retains exact valid Unicode and literal replacement characters with BOM $prefix", ({ prefix }) => {
+  const value = saved(0); value.title = "Tổng quan 📚"; value.entries[0].notes = "e\u0301 · � · العربية · 中文";
+  const bytes = Buffer.concat([Buffer.from(prefix), Buffer.from(serializeLiteratureWorkspace(value))]);
+  expect(readLiteratureWorkspaceFile(bytes)).toEqual(value);
+});
+
+it.each([[0xff], [0xc0, 0xaf], [0xe2, 0x82], [0xed, 0xa0, 0x80], [0xf4, 0x90, 0x80, 0x80]].map(invalid => ({ invalid })))(
+  "refuses malformed UTF-8 $invalid instead of importing repaired note text", ({ invalid }) => {
+    const value = saved(0); value.entries[0].notes = "INVALID_BYTES";
+    const [before, after] = serializeLiteratureWorkspace(value).split("INVALID_BYTES");
+    const bytes = Buffer.concat([Buffer.from(before), Buffer.from(invalid), Buffer.from(after)]);
+    // This file is accepted after the browser's old lossy decode, proving why byte validation matters.
+    expect(() => JSON.parse(new TextDecoder().decode(bytes))).not.toThrow();
+    expect(() => readLiteratureWorkspaceFile(bytes)).toThrow("backup");
+    expect(value.entries[0].notes).toBe("INVALID_BYTES");
+  });
+
+it("bounds actual bytes and keeps strict JSON/schema validation after decoding", () => {
+  expect(() => readLiteratureWorkspaceFile(new Uint8Array(MAX_LITERATURE_BYTES + 1))).toThrow("1 MiB");
+  for (const value of ["{broken", JSON.stringify({ ...saved(0), version: 2 }), JSON.stringify({ ...saved(0), payments: [] })])
+    expect(() => readLiteratureWorkspaceFile(new TextEncoder().encode(value))).toThrow();
+  expect(() => readLiteratureWorkspaceFile(Buffer.from([0xff, 0xfe, 0x7b, 0x00]))).toThrow();
 });

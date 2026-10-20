@@ -100,7 +100,11 @@ handling under a minimal host; Zotero application acceptance remains open.
 
 Download **JSON backup** before moving devices or clearing data. Import accepts a
 strict version-1 personal-bibliography file, up to 1 MiB. Selecting a file only
-opens a preview; it does not write anything. For readable current storage,
+opens a preview; it does not write anything. Files must contain valid UTF-8
+(an optional UTF-8 BOM is accepted). Damaged byte sequences are refused instead
+of silently replacing characters in titles or notes. Valid Unicode, including a
+literal replacement character, stays unchanged. A refused file clears any older
+import preview and keeps saved data and unsaved editors intact. For readable current storage,
 **Add missing papers** adds only records whose exact landing URL is not already
 saved. The preview counts new papers, already-saved records and the resulting
 total, with an expandable list of exact links, saved screening and notes to add.

@@ -9,6 +9,9 @@ import { chromium } from "playwright";
 import { PAPER_CATALOG } from "../lib/papers/catalog";
 import { LITERATURE_STORAGE_KEY, parseLiteratureWorkspace, serializeLiteratureWorkspace } from "../lib/papers/literature-workspace";
 import { literatureImportCopy as importCopy } from "../locales/en/literature-import";
+import { createMessages } from "../lib/i18n/messages";
+
+const messages = createMessages("en");
 
 const require = createRequire(import.meta.url), port = 3963, base = `http://127.0.0.1:${port}`;
 const screenshots = process.env.KERYX_LITERATURE_SCREENSHOT_DIR ?? join(process.cwd(), ".artifacts", "literature-ux");
@@ -136,10 +139,21 @@ try {
     const originalRaw = await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY); assert(originalRaw);
     const originalWorkspace = parseLiteratureWorkspace(originalRaw);
     const missingPaper = PAPER_CATALOG.find(paper => !originalWorkspace.entries.some(entry => entry.paper.url === paper.url)); assert(missingPaper);
-    const importedEntry = { paper: missingPaper, savedAt: "2026-10-20T00:00:00Z", screening: "exclude" as const, notes: "Imported private note: verify methods against the original." };
+    const importedEntry = { paper: missingPaper, savedAt: "2026-10-20T00:00:00Z", screening: "exclude" as const, notes: "Imported private note: verify methods against the original. 📚 � e\u0301 العربية" };
     const incomingWorkspace = { ...originalWorkspace, title: "Ignored imported focus", entries: [originalWorkspace.entries[0], importedEntry] };
     const importFile = page.getByLabel("Restore a workspace backup (JSON, up to 1 MiB)");
-    await importFile.setInputFiles({ name: "literature-additions.json", mimeType: "application/json", buffer: Buffer.from(serializeLiteratureWorkspace(incomingWorkspace)) });
+    const damagedWorkspace = { ...incomingWorkspace, entries: [{ ...importedEntry, notes: "DAMAGED_BYTES" }] };
+    const [beforeDamage, afterDamage] = serializeLiteratureWorkspace(damagedWorkspace).split("DAMAGED_BYTES");
+    await importFile.setInputFiles({ name: "damaged-library.json", mimeType: "application/json", buffer:
+      Buffer.concat([Buffer.from(beforeDamage), Buffer.from([0xff]), Buffer.from(afterDamage)]) });
+    const refusedFile = page.getByRole("alert").filter({ hasText: messages("paperWorkspace.unsupportedBackup") });
+    await refusedFile.waitFor();
+    assert.equal(await page.getByRole("region", { name: importCopy.preview, exact: true }).count(), 0);
+    assert.equal(await page.getByRole("button", { name: "Replace workspace with this backup", exact: true }).count(), 0);
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY), originalRaw, "Invalid UTF-8 never writes repaired metadata or notes");
+    await refusedFile.screenshot({ path: join(screenshots, `utf8-refused-${width}.png`) });
+    await importFile.setInputFiles({ name: "literature-additions.json", mimeType: "application/json", buffer:
+      Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(serializeLiteratureWorkspace(incomingWorkspace))]) });
     const importPreview = page.getByRole("region", { name: importCopy.preview, exact: true });
     await importPreview.waitFor();
     assert.deepEqual(await importPreview.locator("dd").allTextContents(), ["1", "1", "3/50"]);
