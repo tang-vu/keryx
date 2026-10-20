@@ -15,6 +15,7 @@ import { copyNextConfigFixture } from "../test-support/next-config-fixture";
 import { privateKeyToAccount } from "viem/accounts";
 import { buildEvidenceProcurement, procurementRequestHash, procurementOfferHash, procurementBodyHash, procurementOfferMessage, procurementDeliveryMessage } from "../lib/evidence-procurement/engine";
 import { MAX_PROCUREMENT_BYTES, parseEvidenceProcurement, type EvidenceProcurementPacket, type ProcurementOffer, type ProcurementDelivery } from "../lib/evidence-procurement/contracts";
+import { exportEvidenceProcurement } from "../lib/evidence-procurement/export";
 
 // Known test key stays in the Node fixture. Only signatures and the public address reach the browser.
 const account = privateKeyToAccount(`0x${"1".padStart(64, "0")}`);
@@ -49,8 +50,21 @@ parseEvidenceProcurement(boundaryPacket);
 const css = await postcss([tailwindcss()]).process(await readFile("app/globals.css", "utf8"), { from: resolve("app/globals.css") });
 const bundle = await build({ stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import{EvidenceProcurementWorkspace}from'./components/keryx/evidence-procurement-workspace';
   const signer={address:${JSON.stringify(account.address)},signMessage:message=>new Promise(resolve=>{window.pendingSigningMessage=message;window.releaseSignature=resolve;})};
-  createRoot(document.getElementById('root')).render(<EvidenceProcurementWorkspace signer={signer}/>);`, loader: "tsx", resolveDir: process.cwd() },
-  bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env.NODE_ENV": '"production"' } });
+  const root=createRoot(document.getElementById('root'));
+  function Fixture({address}){React.useEffect(()=>{window.procurementAccountReady=address;},[address]);return <EvidenceProcurementWorkspace signer={{...signer,address}}/>;}
+  window.changeProcurementAccount=address=>root.render(<Fixture address={address}/>);
+  window.unmountProcurement=()=>root.unmount();
+  root.render(<Fixture address={signer.address}/>);`, loader: "tsx", resolveDir: process.cwd() },
+  bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env.NODE_ENV": '"production"' },
+  plugins: [{ name: "pause-readable-receipt-after-real-render", setup(builder) {
+    builder.onLoad({ filter: /[\\/]evidence-procurement[\\/]export\.ts$/ }, async args => ({ loader: "ts",
+      contents: (await readFile(args.path, "utf8")).replace("export async function exportEvidenceProcurement(", "async function renderReceipt(") + `
+        export async function exportEvidenceProcurement(...args: Parameters<typeof renderReceipt>) {
+          const receipt=await renderReceipt(...args);
+          if(window.pauseProcurementExport) await new Promise(resolve=>{window.releaseProcurementExport=()=>{window.pauseProcurementExport=false;delete window.releaseProcurementExport;resolve();};});
+          return receipt;
+        }` }));
+  } }] });
 const screenshots = process.env.EVIDENCE_PROCUREMENT_SCREENSHOTS ?? await mkdtemp(join(tmpdir(), "keryx-evidence-procurement-"));
 await mkdir(screenshots, { recursive: true });
 const browser = await chromium.launch({ headless: true });
@@ -228,6 +242,15 @@ try {
     assert.equal(receipt.payment.status, "not-observed"); assert.equal(receipt.reviews[0].authority, "caller-declared");
     assert.equal(receipt.deliveries[0].excerpts[0].stance, "refutes"); assert.equal(receipt.deliveries[0].excerpts[0].text, body);
     assert.equal(receipt.quoteBudget.authority, "proposal-only");
+    for (const format of ["markdown", "csv"]) {
+      await page.getByRole("combobox", { name: "Download decision receipt", exact: true }).selectOption(format);
+      const saved = await download(page, "Download decision receipt");
+      const expected = await exportEvidenceProcurement(receipt.packet, format, Date.parse(receipt.observedAt));
+      assert.equal(saved.name, `private-evidence-procurement-receipt.${expected.extension}`); assert.equal(saved.text, expected.text);
+      assert(saved.text.includes("not-observed")); assert(saved.text.includes("refutes")); assert(saved.text.includes("caller-reviewed"));
+    }
+    await page.getByRole("combobox", { name: "Download decision receipt", exact: true }).selectOption("json");
+    assert.deepEqual(JSON.parse((await download(page, "Download decision receipt")).text), receipt, "Selecting a presentation format preserves the displayed inspection");
     const exported = await download(page, "Download private plaintext packet");
     assert.equal(exported.name, "private-evidence-procurement-packet.json");
     assert.equal(JSON.parse(exported.text).reviews[0].reviewer, "Synthetic reviewer");
@@ -266,6 +289,14 @@ try {
       await page.getByRole("button", { name: "Compare current quotations", exact: true }).click();
       await page.getByText("Recommended next: highest declared missing priority per micro-USDC.", { exact: false }).waitFor();
       await page.evaluate(value => { (window as unknown as { procurementTestNow: number }).procurementTestNow = value; }, Date.parse(expiredAt));
+      // A download preserves the displayed observation; selecting a proposal
+      // remains a separate fresh-expiry check immediately afterward.
+      await page.getByRole("combobox", { name: "Download decision receipt", exact: true }).selectOption("json");
+      const displayed = JSON.parse((await download(page, "Download decision receipt")).text);
+      await page.getByRole("combobox", { name: "Download decision receipt", exact: true }).selectOption("markdown");
+      assert.equal((await download(page, "Download decision receipt")).text,
+        (await exportEvidenceProcurement(displayed.packet, "markdown", Date.parse(displayed.observedAt))).text);
+      await page.getByRole("combobox", { name: "Download decision receipt", exact: true }).selectOption("json");
       await page.getByRole("button", { name: "Select proposal offer1", exact: true }).click();
       await page.getByText("Quotation cannot be selected now. It expired or no longer adds eligible coverage. Compare again.", { exact: true }).waitFor();
       assert.deepEqual(JSON.parse((await download(page, "Download private plaintext packet")).text).selectedOfferIds, []);
@@ -289,6 +320,42 @@ try {
     await page.getByLabel("Restore private packet file (JSON, up to 64 KiB)", { exact: true }).setInputFiles({ name: "boundary-export.json", mimeType: "application/json", buffer: Buffer.from(boundaryExport.text) });
     await page.getByRole("button", { name: "Replace tab with validated packet", exact: true }).click();
     assert.equal((await download(page, "Download private plaintext packet")).text, boundaryExport.text);
+    // Pause after the real renderer completes, so a stale asynchronous callback
+    // cannot download private data after an edit, account change or unmount.
+    for (const action of ["edit", "account", "unmount"]) {
+      await page.getByLabel("Restore private packet file (JSON, up to 64 KiB)", { exact: true }).setInputFiles({ name: "packet.json", mimeType: "application/json", buffer: Buffer.from(exported.text) });
+      await page.getByRole("button", { name: "Replace tab with validated packet", exact: true }).click();
+      await page.getByRole("button", { name: "Compare current quotations", exact: true }).click();
+      await page.getByRole("combobox", { name: "Download decision receipt", exact: true }).selectOption("csv");
+      let staleDownloads = 0; const countDownload = () => { staleDownloads++; }; page.on("download", countDownload);
+      await page.evaluate(() => { (window as unknown as { pauseProcurementExport: boolean }).pauseProcurementExport = true; });
+      await page.getByRole("button", { name: "Download decision receipt", exact: true }).click();
+      await page.waitForFunction(() => typeof (window as unknown as { releaseProcurementExport?: unknown }).releaseProcurementExport === "function");
+      if (action === "edit") await page.getByLabel("What decision are you trying to make?", { exact: true }).fill("Edited private decision");
+      else if (action === "account") {
+        const changed = `0x${"2".repeat(40)}`;
+        await page.evaluate(value => (window as unknown as { changeProcurementAccount: (value: string) => void }).changeProcurementAccount(value), changed);
+        await page.waitForFunction(value => (window as unknown as { procurementAccountReady: string }).procurementAccountReady === value, changed);
+      } else {
+        await page.evaluate(() => (window as unknown as { unmountProcurement: () => void }).unmountProcurement());
+        assert.equal(await page.locator("#root").textContent(), "");
+      }
+      await page.evaluate(() => (window as unknown as { releaseProcurementExport: () => void }).releaseProcurementExport());
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      assert.equal(staleDownloads, 0, `${action} invalidates a pending private receipt`); page.off("download", countDownload);
+    }
+    await boot(page);
+    const nonDisplayable = JSON.parse(exported.text) as EvidenceProcurementPacket;
+    nonDisplayable.request.decision += "\u0000";
+    nonDisplayable.selectedOfferIds = [];
+    await page.getByLabel("Restore private packet file (JSON, up to 64 KiB)", { exact: true }).setInputFiles({ name: "control.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(nonDisplayable)) });
+    await page.getByRole("button", { name: "Replace tab with validated packet", exact: true }).click();
+    await page.getByRole("button", { name: "Compare current quotations", exact: true }).click();
+    await page.getByRole("combobox", { name: "Download decision receipt", exact: true }).selectOption("csv");
+    await page.getByRole("button", { name: "Download decision receipt", exact: true }).click();
+    await page.getByRole("status").filter({ hasText: "Could not validate this change." }).waitFor();
+    await page.getByRole("combobox", { name: "Download decision receipt", exact: true }).selectOption("json");
+    assert.deepEqual(JSON.parse((await download(page, "Download decision receipt")).text).packet, nonDisplayable, "A refused readable export preserves the JSON fallback");
     await page.getByRole("button", { name: "Clear tab packet", exact: true }).click();
     assert.equal(await page.getByLabel("What decision are you trying to make?").inputValue(), "");
     assert.equal(await page.getByRole("button", { name: "Download private plaintext packet", exact: true }).isDisabled(), true);

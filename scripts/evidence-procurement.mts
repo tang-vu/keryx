@@ -4,9 +4,10 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MAX_PROCUREMENT_BYTES, parseEvidenceProcurement } from "../lib/evidence-procurement/contracts.ts";
 import { buildEvidenceProcurement } from "../lib/evidence-procurement/engine.ts";
+import { exportEvidenceProcurement, procurementReceiptFormat } from "../lib/evidence-procurement/export.ts";
 import { publishPrivateText } from "../lib/operator/private-text-export.ts";
 
-const usage = "Usage: npm run evidence:procurement -- --file PRIVATE_PACKET.json [--out NEW_FILE]\nAssess supplied version-1 evidence procurement locally. No environment credentials, provider requests, signing, purchases or rewards. Without --out, prints the private result. With --out, saves only the validated original packet for reimport, refusing overwrite; results are recomputed on each use.";
+const usage = "Usage: npm run evidence:procurement -- --file PRIVATE_PACKET.json [--format json|markdown|csv] [--out NEW_FILE]\nAssess supplied version-1 evidence procurement locally. No environment credentials, provider requests, signing, purchases or rewards. Default JSON prints the private result; with --out it saves only the original packet for reimport. Markdown/CSV prints a readable receipt or saves it with --out, refusing overwrite. Formatted receipts are not restorable, are bounded to 524288 UTF-8 bytes, and results are recomputed on each use.";
 
 /** Reject special files before reading and bound actual bytes, including file growth. */
 export async function readEvidenceProcurementPacket(path: string) {
@@ -34,12 +35,21 @@ export async function runEvidenceProcurement(args: string[]) {
   const options: Record<string, string> = {};
   for (let i = 0; i < args.length; i += 2) {
     const name = args[i], value = args[i + 1];
-    if (!["--file", "--out"].includes(name) || options[name] !== undefined || !value || value.startsWith("--"))
+    if (!["--file", "--out", "--format"].includes(name) || options[name] !== undefined || !value || value.startsWith("--"))
       throw new Error("Invalid procurement options");
     options[name] = value;
   }
   if (!options["--file"]) throw new Error("Missing procurement file");
+  const format = procurementReceiptFormat(options["--format"]);
   const packet = await readEvidenceProcurementPacket(options["--file"]);
+  if (format !== "json") {
+    const receipt = await exportEvidenceProcurement(packet, format);
+    if (options["--out"]) {
+      await publishPrivateText(options["--out"], receipt.text);
+      console.log("Private evidence procurement receipt saved. No provider contacted or payment started.");
+    } else console.log(receipt.text);
+    return;
+  }
   const procurement = await buildEvidenceProcurement(packet);
   if (options["--out"]) {
     await publishPrivateText(options["--out"], JSON.stringify(packet));

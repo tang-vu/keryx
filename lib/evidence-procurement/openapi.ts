@@ -10,6 +10,9 @@ export const evidenceProcurementOpenApiPath = {
   "/api/research/evidence-procurement": { post: {
     operationId: "assessPrivateEvidenceProcurement",
     summary: "Plan and inspect private evidence procurement from supplied inputs",
+    parameters: [{ name: "format", in: "query", required: false,
+      description: "At most one format selector; no other query parameters. Default JSON result is unchanged. Markdown/CSV are private dated receipts, not restorable packets; at most 524288 UTF-8 bytes, refused without truncation. CSV formula-like cells receive a leading apostrophe.",
+      schema: { type: "string", enum: ["json", "markdown", "csv"], default: "json" } }],
     security: [{ ApiKeyAuth: [] }, { WebSession: [] }],
     description: "Stateless local proposal assessment. Identifies declared missing requirements, verifies supplied provider offer/delivery signatures and exact content bindings, and ranks declared coverage per integer micro-USDC. Caller coverage, selections and reviews remain assertions; signatures prove neither source ownership nor factual quality. No provider, URL, model or benchmark is invoked, no packet stored, and no purchase, escrow, settlement or reward authorized. API keys require export scope; sessions require the exact configured public Origin and same-origin Sec-Fetch-Site when supplied. Authentication precedes body reading. At most 65536 actual UTF-8 bytes and five seconds; every response private/no-store with fixed errors. Reimport only the original packet and recompute results. Executable rules: lib/evidence-procurement/contracts.ts and engine.ts.",
     requestBody: { required: true, content: { "application/json": { schema: {
@@ -61,8 +64,8 @@ export const evidenceProcurementOpenApiPath = {
       },
     } } } },
     responses: {
-      "200": { description: "procurement: recomputed request hash, original validated packet, observation time, offer/delivery/review reasons, missing requirements, proposal-only quote budget, optional next-offer recommendation, and payment status not-observed. No financial reservation or factual verdict." },
-      "400": { description: "Invalid selector/MIME/JSON/UTF-8, oversized or late body, invalid strict packet or proposed selection." },
+      "200": { description: "Default/json: procurement with recomputed request hash, original validated packet, observation time, offer/delivery/review reasons, missing requirements, proposal-only quote budget, optional next-offer recommendation, and payment status not-observed. Markdown/CSV: attachment containing the same dated inspection in text/markdown or text/csv. No financial reservation or factual verdict." },
+      "400": { description: "Invalid selector/MIME/JSON/UTF-8, oversized or late body, invalid strict packet or proposed selection, or formatted receipt exceeding the output bound or containing non-displayable controls." },
       "401": { description: "Absent/revoked session or invalid API key. Private body unread." },
       "403": { description: "Missing export scope or cross-origin cookie request. Private body unread." },
       "503": { description: "Authentication unavailable. Private body unread." },

@@ -61,16 +61,49 @@ locale selection, translation approval or support for additional languages.
 
 | Surface | Role |
 |---|---|
-| Web | Create, inspect, export and restore the portable packet at `/operator/evidence`; computations stay in the browser. |
-| API | Authenticated `POST /api/research/evidence-procurement`; export scope, exact-origin cookie policy, bounded input and private/no-store responses. Authentication may access the existing account store. |
-| Remote and stdio MCP | `evidence_procurement` transforms caller-supplied packets; messages can be retained by the caller's MCP client. It never contacts a provider or purchases. |
-| CLI | `npm run evidence:procurement -- --file private-packet.json`; `--out NEW_FILE` publishes a complete validated packet without overwrite for restore. |
+| Web | Create, inspect, export and restore the portable packet at `/operator/evidence`; computations stay in the browser. The decision receipt selector offers JSON, Markdown and CSV. |
+| API | Authenticated `POST /api/research/evidence-procurement`; optional single `?format=json`, `markdown` or `csv`; export scope, exact-origin cookie policy, bounded input and private/no-store responses. Authentication may access the existing account store. |
+| Remote and stdio MCP | `evidence_procurement` transforms caller-supplied packets; optional `format: "json"`, `"markdown"` or `"csv"`. Structured procurement stays unchanged; text contains the selected receipt. Messages can be retained by the caller's MCP client. It never contacts a provider or purchases. |
+| CLI | `npm run evidence:procurement -- --file private-packet.json`; optional `--format json\|markdown\|csv`. Default/json `--out NEW_FILE` publishes the original packet for restore; Markdown/CSV `--out NEW_FILE` saves the receipt. All writes refuse overwrite. |
 | Desktop | Browser workspace and CLI file handoff; no new native helper, task journal, installer or local scheduler authority. |
 | Extension and bots | Existing research roles; the workspace is available by URL. No private packet is automatically forwarded through a bot or extension. |
 
 This shared evaluator performs no network, model, provider, storage or payment
 I/O. API authentication, CLI file handling and explicit browser downloads have
 their stated effects. The source URL is not fetched or certified by this tool.
+
+## Readable decision receipts
+
+The default JSON contracts are unchanged. Only the original validated packet is
+restorable; JSON results and Markdown/CSV receipts are inspection artifacts.
+Readable receipts include the observation time, request and content bindings,
+exact integer quote amounts, all supplied quotations and refusal reasons,
+requirement states, attributed excerpts and caller review notes. Rejected
+deliveries expose no attributed excerpt text. Neither signatures nor a formatted
+report establish factual truth, source ownership, customer acceptance or payment.
+
+Browser receipt downloads preserve the displayed observation, even if a quote
+expires afterward. Reinspect the packet to obtain a current decision; downloading
+a historical receipt does not refresh it or reserve funds. Edits, account changes
+and closing the workspace invalidate pending formatted downloads. API, CLI and
+MCP rebuild the original packet at the current inspection time.
+
+Markdown escapes supplied prose and quotes it as literal text. CSV uses a
+`record_type` column: one request row, requirement rows, one row per supplied
+quotation, delivery rows, attributed excerpt rows and caller review rows. Quote
+prices occur only on quotation rows, so repeating excerpts does not multiply
+costs. Filter by record type before aggregating. Formula-like cells, including
+those with leading whitespace or Unicode control/format characters, receive a
+leading apostrophe. This presentation safeguard changes that CSV cell's literal
+text; the original packet retains the exact input. CSV uses quoted cells and CRLF
+records, including proper quoting of embedded newlines and quotation marks.
+
+Each requested formatted receipt is limited to 524,288 actual UTF-8 bytes and
+refused without truncation if larger. Non-displayable C0/C1 controls other than
+tab, CR and LF also refuse formatted export. Neither restriction changes the
+original packet/JSON contract. An export failure leaves the packet and displayed
+inspection available for JSON download. Keep downloaded receipts as private as
+the original packet; no additional upload or automatic sharing occurs.
 
 ## Remaining gates
 
