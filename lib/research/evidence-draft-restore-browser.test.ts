@@ -7,6 +7,7 @@ import { buildEvidenceDraft } from "./evidence-draft";
 import { evidenceDraftCopy as copy } from "./evidence-draft-copy";
 import { evidenceDraftRestoreCopy as restore } from "../../locales/en/evidence-draft-restore";
 import { MAX_EVIDENCE_DRAFT_BACKUP_BYTES } from "./evidence-draft-restore";
+import { LITERATURE_STORAGE_KEY, serializeLiteratureWorkspace } from "../papers/literature-workspace";
 
 let browser: Browser, bundle: string;
 beforeAll(async () => {
@@ -16,12 +17,9 @@ beforeAll(async () => {
     createRoot(document.getElementById('root')).render(<EvidenceDraftWorkspace/>);
   ` }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
     define: { "process.env.NODE_ENV": '"production"' }, plugins: [{ name: "offline-workspace", setup(plugin) {
-      plugin.onResolve({ filter: /literature-browser-store$/ }, () => ({ path: "store", namespace: "fixture" }));
       plugin.onResolve({ filter: /completed-evidence-draft-selector$/ }, () => ({ path: "completed", namespace: "fixture" }));
-      plugin.onLoad({ filter: /.*/, namespace: "fixture" }, ({ path }) => ({ loader: "jsx", resolveDir: process.cwd(), contents: path === "store"
-        ? `const workspace={version:1,scope:'personal-bibliography',title:'Existing library',question:'',entries:[]};
-           export function useLiteratureWorkspace(){return {ready:true,workspace};}`
-        : `export function CompletedEvidenceDraftSelector({onImport}){window.originalCompletedImport??=onImport;window.latestCompletedImport=onImport;return null;}` }));
+      plugin.onLoad({ filter: /.*/, namespace: "fixture" }, () => ({ loader: "jsx", resolveDir: process.cwd(), contents:
+        `export function CompletedEvidenceDraftSelector({onImport}){window.originalCompletedImport??=onImport;window.latestCompletedImport=onImport;return null;}` }));
     } }] })).outputFiles[0].text;
   browser = await chromium.launch({ headless: true });
 }, 30_000);
@@ -41,9 +39,18 @@ async function fixturePage(page: Page, requests: string[]) {
     return route.request().url() === "https://draft-restore.test/" ? route.fulfill({ contentType: "text/html", body: '<meta charset="utf-8"><div id="root"></div>' }) : route.abort();
   });
   await page.goto("https://draft-restore.test/");
-  await page.evaluate(() => localStorage.setItem("saved-library-sentinel", "unchanged"));
+  const library = evidenceDraftFixture().workspace;
+  library.title = "Existing saved bibliography";
+  library.entries[0].screening = "exclude";
+  library.entries[0].notes = "Keep my original screening note";
+  await page.evaluate(({ key, raw }) => {
+    localStorage.setItem("saved-library-sentinel", "unchanged");
+    localStorage.setItem(key, raw);
+  }, { key: LITERATURE_STORAGE_KEY, raw: serializeLiteratureWorkspace(library) });
   await page.addScriptTag({ content: bundle });
   await page.getByLabel(copy.claim.passage).waitFor();
+  await page.getByText(copy.workspace.includeFirst, { exact: true }).waitFor();
+  return page.evaluate(() => Object.entries(localStorage).sort());
 }
 
 it.each([320, 1366])("saves, reopens and continues a private draft without changing the library at %ipx", async width => {
@@ -51,7 +58,7 @@ it.each([320, 1366])("saves, reopens and continues a private draft without chang
   try {
     const page = await context.newPage(), requests: string[] = [], errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
-    await fixturePage(page, requests);
+    const originalStorage = await fixturePage(page, requests);
     const packet = backup(), passage = page.getByLabel(copy.claim.passage);
     await passage.fill("Current unsaved text");
     await choose(page, JSON.stringify(packet, null, 2));
@@ -82,7 +89,7 @@ it.each([320, 1366])("saves, reopens and continues a private draft without chang
     expect(text).toContain("Written after restoring this draft.");
     expect(text).toContain(packet.reports[0].evidence![0].quote);
     expect(text).toContain(packet.workspace.entries[0].paper.url);
-    expect(await page.evaluate(() => Object.entries(localStorage))).toEqual([["saved-library-sentinel", "unchanged"]]);
+    expect(await page.evaluate(() => Object.entries(localStorage).sort())).toEqual(originalStorage);
     expect(errors).toEqual([]);
     expect(requests.every(url => url === "https://draft-restore.test/")).toBe(true);
   } finally { await context.close(); }
