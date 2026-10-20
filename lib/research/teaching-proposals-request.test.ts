@@ -16,6 +16,38 @@ describe("original caller teaching request admission", () => {
     expect(parseTeachingProposalRequest(englishTeachingQuestion)).toMatchObject({ language: "en", explanationMaximumWords: 99 });
     expect(parseTeachingProposalRequest(englishTeachingQuestion.replace("under", "at most"))).toMatchObject({ explanationMaximumWords: 100 });
   });
+  it.each([".", ";", "!", "?"])("keeps a source-purchase prohibition separate from the next request after %s", separator => {
+    const english = englishTeachingQuestion.replace("Propose a", `Do not buy sources${separator} Propose a`);
+    const vietnamese = vietnameseTeachingQuestion.replace("cần một hoạt động", `không mua nguồn${separator} Cần một hoạt động`);
+    expect(parseTeachingProposalRequest(english)).toMatchObject({ language: "en", durationMinutes: 10, exampleCount: 2 });
+    expect(parseTeachingProposalRequest(vietnamese)).toMatchObject({ language: "vi", durationMinutes: 10, exampleCount: 2 });
+  });
+  it("retains ordinary punctuation immediately before a spelled-out count", () => {
+    expect(parseTeachingProposalRequest(englishTeachingQuestion.replace(", two", ",two"))).toMatchObject({ exampleCount: 2 });
+    expect(parseTeachingProposalRequest(vietnameseTeachingQuestion.replace(", hai", ",hai"))).toMatchObject({ exampleCount: 2 });
+  });
+  it.each([
+    englishTeachingQuestion.replace("two classification examples", "12 classification examples"),
+    englishTeachingQuestion.replace("two classification examples", "-2 classification examples"),
+    englishTeachingQuestion.replace("two classification examples", "+2 classification examples"),
+    englishTeachingQuestion.replace("two classification examples", "−2 classification examples"),
+    englishTeachingQuestion.replace("two classification examples", "2.2 classification examples"),
+    englishTeachingQuestion.replace("two classification examples", "1/2 classification examples"),
+    englishTeachingQuestion.replace("two classification examples", "two classification exampleship"),
+    englishTeachingQuestion.replace("Propose a 10-minute", "Propose beta 10-minute"),
+    englishTeachingQuestion.replace("one exit question", "someone exit question"),
+    englishTeachingQuestion.replace("100 words", "100 wordsmiths"),
+    vietnameseTeachingQuestion.replace("hai ví dụ", "12 ví dụ"),
+    vietnameseTeachingQuestion.replace("hai ví dụ", "-2 ví dụ"),
+    vietnameseTeachingQuestion.replace("hai ví dụ", "2,2 ví dụ"),
+    vietnameseTeachingQuestion.replace("100 từ", "100 từng"),
+  ])("does not reinterpret a partial number or word as a supported request: %s", question => {
+    expect(parseTeachingProposalRequest(question)).toBeUndefined();
+  });
+  it.each(["Do not", "Don't", "Cannot", "Can't"])("preserves same-clause negation, including a line break: %s", prohibition => {
+    expect(parseTeachingProposalRequest(englishTeachingQuestion.replace("Propose a", `${prohibition}\npropose a`))).toBeUndefined();
+    expect(parseTeachingProposalRequest(englishTeachingQuestion.replace("Write in English", `${prohibition} write in English`))).toBeUndefined();
+  });
   it.each([
     "Which ten-minute classroom activities did NASA test?",
     englishTeachingQuestion.replace("Write in English", "Do not write in English"),
