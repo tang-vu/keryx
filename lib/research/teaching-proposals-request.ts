@@ -27,10 +27,10 @@ export function parseTeachingProposalRequest(originalQuestion: string): Teaching
   const name = languageMatches[0][1] ?? languageMatches[0][2];
   const language = name === "việt" || name === "vietnamese" ? "vi" : name === "anh" || name === "english" ? "en" : undefined;
   if (!language) return;
-  const activity = unique(question, /(?:một|1)\s+hoạt động\s+(\d{1,2})\s+phút|(?:a|one|1)\s+(\d{1,2})[- ]minute\s+(?:classroom\s+)?activity/gu);
-  const examples = unique(question, /(một|hai|ba|bốn|[1-4])\s+ví dụ[^.;\n]{0,70}phân loại|(one|two|three|four|[1-4])\s+(?:invented\s+)?classification examples?/gu);
+  const activity = unique(question, /(?:một|1)\s+hoạt động\s+(\d+)\s+phút|(?:a|one|1)\s+(\d+)[- ]minute\s+(?:classroom\s+)?activity/gu);
+  const examples = unique(question, /(một|hai|ba|bốn|\d+)\s+ví dụ[^.;\n]{0,70}phân loại|(one|two|three|four|\d+)\s+(?:invented\s+)?classification examples?/gu);
   const exit = unique(question, /(?:một|1)\s+câu hỏi cuối giờ\s+có đáp án|(?:an?|one|1)\s+exit (?:question|ticket)\s+with\s+(?:an?\s+)?answer/gu);
-  const explanation = unique(question, /giải thích\s+(dưới|không quá|tối đa)\s+(\d{1,3})\s+từ|explanation\s+(under|at most|up to)\s+(\d{1,3})\s+words/gu);
+  const explanation = unique(question, /giải thích\s+(dưới|không quá|tối đa)\s+(\d+)\s+từ|explanation\s+(under|at most|up to)\s+(\d+)\s+words/gu);
   // Explicit proposal labeling is required. Historical NASA-tested activity
   // questions cannot activate this contract merely by mentioning the same nouns.
   if (!activity || !examples || !exit || !explanation ||
@@ -49,11 +49,21 @@ export function parseTeachingProposalRequest(originalQuestion: string): Teaching
 }
 
 function negative(text: string, index: number) {
-  return /(?:không|đừng|do not|don't|not)\s+(?:\S+\s+){0,3}$/u.test(text.slice(Math.max(0, index - 55), index));
+  // A separate sentence or semicolon ends the prohibition. A line break alone
+  // does not: "Do not\npropose" must still refuse the request.
+  const clause = text.slice(Math.max(0, index - 55), index).split(/[.!?;]/u).at(-1) ?? "";
+  return /(?<![\p{L}\p{M}\p{N}_])(?:không|đừng|do not|don't|cannot|can't|not)\s+(?:\S+\s+){0,3}$/u.test(clause);
 }
 function unique(text: string, pattern: RegExp) {
-  const matches = [...text.matchAll(pattern)];
-  return matches.length === 1 && !negative(text, matches[0].index!) ? matches[0] : undefined;
+  // Match whole phrases, never a suffix such as "one" in "someone" or "2"
+  // in "12", a signed number, decimal or fraction. Numeric bounds belong to
+  // the schema so an out-of-range whole count cannot become a smaller one.
+  const complete = new RegExp(String.raw`(?<![\p{L}\p{M}\p{N}_])(?:${pattern.source})(?![\p{L}\p{M}\p{N}_])`, pattern.flags);
+  const matches = [...text.matchAll(complete)];
+  if (matches.length !== 1) return;
+  const match = matches[0];
+  if (/^\d/u.test(match[0]) && /[.,/+\-\u2212]/u.test(text[match.index! - 1] ?? "")) return;
+  return !negative(text, match.index!) ? match : undefined;
 }
 
 export function validTeachingProposalRequest(request: TeachingProposalRequest, originalQuestion: string): boolean {
