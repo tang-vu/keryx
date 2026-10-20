@@ -47,6 +47,22 @@ describe("bibliography-only paper library", () => {
     for (const query of ["q=a&q=b", `q=${"a".repeat(121)}`, "year=202x", "doi=invalid", "search=true", "search=1&q=.*", "search=1&q="])
       expect(() => parsePaperRequest(new URLSearchParams(query))).toThrow();
   });
+  it("finds unaccented Vietnamese titles and a single contributor without rewriting metadata", () => {
+    const paper = { ...record, title: "Đánh giá đám mây", authors: ["Đỗ Thị Lan", "Trần Văn Bình"],
+      authorCount: 2, doi: "10.1234/work" };
+    expect(paperMatches(paper, { q: "danh gia dam may", author: "do thi lan" })).toBe(true);
+    expect(paperMatches(paper, { q: "", author: "do binh" })).toBe(false);
+    expect(paperMatches(paper, { q: "dam may", year: "2025" })).toBe(false);
+    expect(paperMatches(paper, { q: "dam may", doi: "10.1234/other" })).toBe(false);
+    expect(paper.authors).toEqual(["Đỗ Thị Lan", "Trần Văn Bình"]);
+    expect(paper.title).toBe("Đánh giá đám mây");
+  });
+  it("retains non-Latin distinctions in titles and author names", () => {
+    const paper = { ...record, title: "ガイド", authors: ["Йога"] };
+    expect(paperMatches(paper, { q: "ガイド".normalize("NFD"), author: "Йога".normalize("NFD") })).toBe(true);
+    expect(paperMatches(paper, { q: "カイド" })).toBe(false);
+    expect(paperMatches(paper, { q: "", author: "Иога" })).toBe(false);
+  });
   it("limits callers and global searches with finite RAM and without database writes", () => {
     let now = 0; const admit = createPaperSearchLimiter(() => now);
     expect([admit("a"), admit("a"), admit("a")]).toEqual([0, 0, 0]);
