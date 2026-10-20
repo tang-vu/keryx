@@ -13,7 +13,13 @@ have not been measured. Neither issue's full acceptance is established.
    `evidence`. The editor accepts up to eight reports within a 64 KiB total packet.
 3. Paste your original passage. Select a claim's exact text and add that span.
    Choose its exact cited paper and select retained excerpts. No statement is
-   rewritten. Changing passage bytes clears its former spans and assessments.
+   rewritten. Editing around a claim keeps its annotation and assessment, shifting
+   the UTF-16 offsets when needed. An edit intersecting a claim clears that claim's
+   annotation and assessment; the selection prompt highlights that you should
+   select the changed text again. Other claims, themes and retained reports stay
+   in place. If the browser cannot locate an edit unambiguously (for example,
+   replacing repeated prose without an input selection), affected annotations
+   are cleared instead of moved to another occurrence.
 4. An excerpt match leaves semantic assessment pending. You may record your own
    named supported, partly-supported or not-found assessment. It remains explicitly
    user supplied. Missing retained source evidence always withholds that judgment.

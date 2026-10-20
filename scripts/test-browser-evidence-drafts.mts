@@ -187,6 +187,23 @@ async function main() {
         await control.screenshot({ path: join(screenshots, `${name}-${width}.png`) });
       }
       const beforeRemoval = await backupInput();
+      // Editing surrounding prose must preserve exact assessed text and its
+      // evidence in the actual compiled page, including UTF-16 offset shifts.
+      const introduction = "🧪 Introduction. ", conclusion = " Closing note.";
+      await passage.evaluate((element: HTMLTextAreaElement) => { element.focus(); element.setSelectionRange(0, 0); });
+      await page.keyboard.insertText(introduction);
+      await passage.evaluate((element: HTMLTextAreaElement) => { element.focus(); element.setSelectionRange(element.value.length, element.value.length); });
+      await page.keyboard.insertText(conclusion);
+      const surrounded = await backupInput();
+      assert.deepEqual(surrounded, { ...beforeRemoval, passage: introduction + beforeRemoval.passage + conclusion,
+        claims: beforeRemoval.claims.map(row => ({ ...row, start: row.start + introduction.length, end: row.end + introduction.length })) });
+      assert.equal(buildEvidenceDraft(surrounded).claims[0].status, "user-assessed");
+      await passage.screenshot({ path: join(screenshots, `passage-preserved-${width}.png`) });
+      await passage.evaluate((element: HTMLTextAreaElement, length: number) => { element.focus(); element.setSelectionRange(0, length); }, introduction.length);
+      await page.keyboard.press("Backspace");
+      await passage.evaluate((element: HTMLTextAreaElement, length: number) => { element.focus(); element.setSelectionRange(element.value.length - length, element.value.length); }, conclusion.length);
+      await page.keyboard.press("Backspace");
+      assert.deepEqual(await backupInput(), beforeRemoval, "Removing only surrounding prose preserves the complete original assessed packet");
       await remove(removeClaim, editing.confirmClaim, false);
       assert.deepEqual(await backupInput(), beforeRemoval, "Cancelled claim removal preserves the whole packet");
       await remove(removeClaim, editing.confirmClaim, true);
