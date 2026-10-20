@@ -26,6 +26,15 @@ type Statement = NonNullable<EvidenceDraftRequest["themes"][number]["statements"
 const choice = "mt-2 flex gap-3 font-serif text-sm text-ink-2";
 const empty = (): Editors => ({ reports: [], passage: "", claims: [], themes: [{ id: "theme1", title: copy.theme.initialTitle, authorNote: "", excerptIds: [] }] });
 
+// Match the downloadable inputs; unfinished editor rows are protected separately.
+function retainedEditorsSnapshot(editors: Editors) {
+  return JSON.stringify({ reports: editors.reports, passage: editors.passage, claims: editors.claims,
+    themes: editors.themes.map(({ statements, ...theme }) => {
+      const written = (statements ?? []).filter(row => row.text.trim());
+      return written.length ? { ...theme, statements: written } : theme;
+    }), readingStatuses: editors.readingStatuses });
+}
+
 /** Restored identifiers need not be consecutive. Never renumber an existing row. */
 function nextEditorId(prefix: "claim" | "theme" | "statement", rows: readonly { id: string }[]) {
   const used = new Set(rows.map(row => row.id));
@@ -42,6 +51,15 @@ export function EvidenceDraftWorkspace() {
   const workspace = restoredWorkspace ?? store.workspace;
   const workspaceReady = !!restoredWorkspace || store.ready, workspaceError = restoredWorkspace ? undefined : store.error;
   const [message, setMessage] = useState(""), [reviewer, setReviewer] = useState(""), passageRef = useRef<HTMLTextAreaElement>(null);
+  const [retainedSnapshot, setRetainedSnapshot] = useState(() => retainedEditorsSnapshot(empty()));
+  const hasUnretainedInputs = !!reportJson || !!reviewer || editors.themes.some(theme => theme.statements?.some(row => !row.text.trim()));
+  const hasUnsavedChanges = hasUnretainedInputs || retainedEditorsSnapshot(editors) !== retainedSnapshot;
+  useLayoutEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = "true"; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasUnsavedChanges]);
   const [resetRevision, setResetRevision] = useState(0);
   const importEpoch = useRef(0), activeImportEpoch = resetRevision;
   const restoreContext = useMemo(() => ({ editors, reportJson, reviewer, workspace }), [editors, reportJson, reviewer, workspace]);
@@ -69,7 +87,13 @@ export function EvidenceDraftWorkspace() {
     } catch { setMessage(copy.download.refused); }
   };
   const backupFile = () => {
-    try { buildEvidenceDraft(request); downloadBrowserText(JSON.stringify(request, null, 2) + "\n", "private-evidence-draft.json", "application/json"); setMessage(copy.download.backupSuccess); }
+    try {
+      buildEvidenceDraft(request);
+      downloadBrowserText(JSON.stringify(request, null, 2) + "\n", "private-evidence-draft.json", "application/json");
+      // This records a requested download, never filesystem delivery. Inputs
+      // deliberately absent from the packet continue to require a warning.
+      setRetainedSnapshot(retainedEditorsSnapshot(editors)); setMessage(copy.download.backupSuccess);
+    }
     catch { setMessage(copy.download.backupRefused); }
   };
   return <section className="mt-8 space-y-6" aria-label={copy.workspace.label}>
@@ -86,7 +110,7 @@ export function EvidenceDraftWorkspace() {
         importEpoch.current++; setResetRevision(importEpoch.current);
         liveEditors.current = next; liveWorkspace.current = packet.workspace;
         liveRestoreContext.current = { editors: next, workspace: packet.workspace, reportJson: "", reviewer: "" };
-        setRestoredWorkspace(packet.workspace); setEditors(next); setReportJson(""); setReviewer(""); setMessage("");
+        setRestoredWorkspace(packet.workspace); setEditors(next); setRetainedSnapshot(retainedEditorsSnapshot(next)); setReportJson(""); setReviewer(""); setMessage("");
         return true;
       } catch { return false; }
     }} />

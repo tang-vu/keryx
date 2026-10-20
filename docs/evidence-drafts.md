@@ -71,6 +71,23 @@ themes. Downloads are a deliberate retention choice and should be kept private.
 The browser profile and same-origin scripts can
 access editor contents; no protection against a compromised origin is claimed.
 
+After an edit, the editor requests the browser's native confirmation before a
+reload, tab close or other full-document navigation. Cancel keeps the tab's current
+work. Requesting a valid private JSON download makes those exported inputs the
+retained baseline; later edits warn again, and reverting to that baseline removes
+the warning. Restoring a file starts from its retained baseline. Markdown, LaTeX,
+BibTeX and RIS downloads do not save the editable draft. Unfinished statement rows,
+unimported report JSON and the reviewer input still warn after a JSON download,
+because they are absent from that file. A failed download request does not clear
+the warning. Verify the browser actually saved the requested file before leaving.
+
+The browser supplies the confirmation text and decides whether to show it after
+user interaction. This is a best-effort safeguard: same-document app navigation,
+browser/process crashes and mobile app-manager shutdown are not protected. Keep
+downloading private backups deliberately; this safeguard adds no storage, upload
+or automatic recovery. See the browser's
+[beforeunload limitations](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event#usage_notes).
+
 The browser accepts existing version-1 private draft JSON, with a 256 KiB file
 limit to allow formatted JSON around the existing 64 KiB compact packet limit.
 Invalid UTF-8, invalid packets and invalid evidence selections are refused before
