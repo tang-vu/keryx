@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { evidenceProcurementCopy as copy, evidenceProcurementCopyText as copyText } from "@/lib/evidence-procurement/copy";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { MAX_PROCUREMENT_BYTES, parseEvidenceProcurement, type EvidenceProcurementPacket, type ProcurementOffer, type ProcurementDelivery } from "@/lib/evidence-procurement/contracts";
@@ -34,8 +34,9 @@ export function EvidenceProcurementWorkspace({ signer }: { signer?: Signer } = {
   const [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
   const [receiptFormat, setReceiptFormat] = useState<ProcurementReceiptFormat>("json");
   const revision = useRef(0), operation = useRef(false);
-  // An account switch or disconnect cannot attach a callback from a former wallet.
-  useEffect(() => { const guard = revision; guard.current++; return () => { guard.current++; }; }, [signer?.address]);
+  // Invalidate at commit/unmount, before promises can resume ahead of passive
+  // effects and attach private output or a signature from a former account.
+  useLayoutEffect(() => { const guard = revision; guard.current++; return () => { guard.current++; }; }, [signer?.address]);
   const [requestId, setRequestId] = useState("request1"), [decision, setDecision] = useState("");
   const [network, setNetwork] = useState<EvidenceProcurementPacket["request"]["network"]>("eip155:5042");
   const [budget, setBudget] = useState("0.05"), [requestExpiry, setRequestExpiry] = useState("");

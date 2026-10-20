@@ -51,7 +51,11 @@ const css = await postcss([tailwindcss()]).process(await readFile("app/globals.c
 const bundle = await build({ stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import{EvidenceProcurementWorkspace}from'./components/keryx/evidence-procurement-workspace';
   const signer={address:${JSON.stringify(account.address)},signMessage:message=>new Promise(resolve=>{window.pendingSigningMessage=message;window.releaseSignature=resolve;})};
   const root=createRoot(document.getElementById('root'));
-  function Fixture({address}){React.useEffect(()=>{window.procurementAccountReady=address;},[address]);return <EvidenceProcurementWorkspace signer={{...signer,address}}/>;}
+  function Fixture({address}){
+    React.useLayoutEffect(()=>{if(window.releaseOnAccountCommit){window.releaseOnAccountCommit=false;window.releaseProcurementExport();}},[address]);
+    React.useEffect(()=>{window.procurementAccountReady=address;},[address]);
+    return <EvidenceProcurementWorkspace signer={{...signer,address}}/>;
+  }
   window.changeProcurementAccount=address=>root.render(<Fixture address={address}/>);
   window.unmountProcurement=()=>root.unmount();
   root.render(<Fixture address={signer.address}/>);`, loader: "tsx", resolveDir: process.cwd() },
@@ -334,13 +338,18 @@ try {
       if (action === "edit") await page.getByLabel("What decision are you trying to make?", { exact: true }).fill("Edited private decision");
       else if (action === "account") {
         const changed = `0x${"2".repeat(40)}`;
-        await page.evaluate(value => (window as unknown as { changeProcurementAccount: (value: string) => void }).changeProcurementAccount(value), changed);
+        // Resume during the account commit itself, before passive effects. This
+        // reproduces a stale download with a useEffect-only generation guard.
+        await page.evaluate(value => {
+          const controls = window as unknown as { releaseOnAccountCommit: boolean; changeProcurementAccount: (value: string) => void };
+          controls.releaseOnAccountCommit = true; controls.changeProcurementAccount(value);
+        }, changed);
         await page.waitForFunction(value => (window as unknown as { procurementAccountReady: string }).procurementAccountReady === value, changed);
       } else {
         await page.evaluate(() => (window as unknown as { unmountProcurement: () => void }).unmountProcurement());
         assert.equal(await page.locator("#root").textContent(), "");
       }
-      await page.evaluate(() => (window as unknown as { releaseProcurementExport: () => void }).releaseProcurementExport());
+      await page.evaluate(() => { (window as unknown as { releaseProcurementExport?: () => void }).releaseProcurementExport?.(); });
       await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
       assert.equal(staleDownloads, 0, `${action} invalidates a pending private receipt`); page.off("download", countDownload);
     }
