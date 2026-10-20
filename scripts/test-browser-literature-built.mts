@@ -6,6 +6,9 @@ import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium } from "playwright";
+import { PAPER_CATALOG } from "../lib/papers/catalog";
+import { LITERATURE_STORAGE_KEY, parseLiteratureWorkspace, serializeLiteratureWorkspace } from "../lib/papers/literature-workspace";
+import { literatureImportCopy as importCopy } from "../locales/en/literature-import";
 
 const require = createRequire(import.meta.url), port = 3963, base = `http://127.0.0.1:${port}`;
 const screenshots = process.env.KERYX_LITERATURE_SCREENSHOT_DIR ?? join(process.cwd(), ".artifacts", "literature-ux");
@@ -130,6 +133,32 @@ try {
     await page.screenshot({ path: join(screenshots, `saved-${width}.png`), fullPage: true });
     await page.screenshot({ path: join(screenshots, `saved-viewport-${width}.png`) });
     await selection.screenshot({ path: join(screenshots, `comparison-${width}.png`) });
+    const originalRaw = await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY); assert(originalRaw);
+    const originalWorkspace = parseLiteratureWorkspace(originalRaw);
+    const missingPaper = PAPER_CATALOG.find(paper => !originalWorkspace.entries.some(entry => entry.paper.url === paper.url)); assert(missingPaper);
+    const importedEntry = { paper: missingPaper, savedAt: "2026-10-20T00:00:00Z", screening: "exclude" as const, notes: "Imported private note: verify methods against the original." };
+    const incomingWorkspace = { ...originalWorkspace, title: "Ignored imported focus", entries: [originalWorkspace.entries[0], importedEntry] };
+    const importFile = page.getByLabel("Restore a workspace backup (JSON, up to 1 MiB)");
+    await importFile.setInputFiles({ name: "literature-additions.json", mimeType: "application/json", buffer: Buffer.from(serializeLiteratureWorkspace(incomingWorkspace)) });
+    const importPreview = page.getByRole("region", { name: importCopy.preview, exact: true });
+    await importPreview.waitFor();
+    assert.deepEqual(await importPreview.locator("dd").allTextContents(), ["1", "1", "3/50"]);
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY), originalRaw, "Preview makes no storage write");
+    await importPreview.getByText(importCopy.review, { exact: true }).click();
+    await importPreview.getByRole("link", { name: missingPaper.title, exact: true }).waitFor();
+    const addMissing = importPreview.getByRole("button", { name: importCopy.add, exact: true });
+    await addMissing.scrollIntoViewIfNeeded();
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    for (const control of [importFile, addMissing, page.getByRole("button", { name: "Replace workspace with this backup", exact: true }), page.getByRole("button", { name: "Cancel restore", exact: true })]) {
+      const bounds = await control.boundingBox(); assert(bounds && bounds.height >= 43 && bounds.x >= 0 && bounds.x + bounds.width <= width + 1, "Import controls fit the viewport and retain touch targets");
+    }
+    await importPreview.screenshot({ path: join(screenshots, `import-preview-${width}.png`) });
+    await addMissing.click(); await page.getByText(importCopy.added, { exact: true }).waitFor();
+    const combinedRaw = await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY); assert(combinedRaw);
+    assert.deepEqual(parseLiteratureWorkspace(combinedRaw), { ...originalWorkspace, entries: [...originalWorkspace.entries, importedEntry] });
+    assert.equal(await page.getByLabel("Show screening decisions").inputValue(), "include");
+    assert.equal(await selection.locator("li").count(), 2);
+    assert.equal(await comparison.getAttribute("href"), preparedHref, "Adding papers preserves the selected pair and saved review focus");
     const href = await comparison.getAttribute("href"); assert(href);
     const expected = new URL(href, base).searchParams.get("q")!;
     await comparison.click();

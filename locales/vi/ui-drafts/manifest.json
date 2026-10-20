@@ -6,16 +6,16 @@
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
-  "scope": "All 68 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
+  "scope": "All 69 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
   "financialLegalConsent": "Unreviewed; critical English-authoritative fallback until actual named-human review. Neutral machine-draft UI is integrated only in explicit previews.",
   "totals": {
-    "englishNamespaceFiles": 68,
+    "englishNamespaceFiles": 69,
     "coreInlineSources": 1,
-    "extractedLeaves": 5995,
-    "authoredEntries": 5915,
+    "extractedLeaves": 6008,
+    "authoredEntries": 5928,
     "nonTranslatableMachineIdentifiers": 29,
     "uncoveredEntries": 51,
-    "completeNamespaces": 65
+    "completeNamespaces": 66
   },
   "namespaces": [
     {
@@ -7037,6 +7037,32 @@
         "label",
         "outsideSearch",
         "scope"
+      ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "literature-import",
+      "sourcePath": "locales/en/literature-import.ts",
+      "sourceSha256": "3bd4f26eedd5cc3a63117035a485a27bb46493dc5501f2df24a4d7e761a80f68",
+      "draftPath": "locales/vi/ui-drafts/literature-import.json",
+      "extractedLeaves": 13,
+      "authoredEntries": 13,
+      "coveredKeys": [
+        "add",
+        "added",
+        "adding",
+        "cancelled",
+        "capacity",
+        "duplicates",
+        "newPapers",
+        "none",
+        "notice",
+        "preview",
+        "review",
+        "stale",
+        "total"
       ],
       "nonTranslatableMachineIdentifiers": [],
       "uncoveredKeys": [],

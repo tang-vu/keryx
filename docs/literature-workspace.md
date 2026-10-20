@@ -98,10 +98,30 @@ and version before academic use. No attachment, enrichment or synchronization is
 requested. A pinned translator check covers synthetic type/identity/author/year/note
 handling under a minimal host; Zotero application acceptance remains open.
 
-Download **JSON backup** before moving devices or clearing data. Restore accepts a
-strict version-1 personal-bibliography file, up to 1 MiB. The preview precedes an
-explicit replacement of the entire current list, focus and notes; it does not merge.
-Imported metadata is not revalidated against repositories. Invalid/future/duplicate
+Download **JSON backup** before moving devices or clearing data. Import accepts a
+strict version-1 personal-bibliography file, up to 1 MiB. Selecting a file only
+opens a preview; it does not write anything. For readable current storage,
+**Add missing papers** adds only records whose exact landing URL is not already
+saved. The preview counts new papers, already-saved records and the resulting
+total, with an expandable list of exact links, saved screening and notes to add.
+Current duplicate snapshots, screening, notes and review focus win; the backup's
+review title/question are ignored even when the current library is empty.
+Different arXiv versions remain distinct. Unsaved editors, search, screening filter
+and comparison selection stay in place. This is a local addition, not cloud sync,
+metadata enrichment or a conflict-resolution service.
+
+The entire addition must fit both the 50-paper and 1 MiB workspace limits; no
+partial subset is saved. The preview follows saved changes from other tabs.
+If another change wins the Web Lock after confirmation, the import refuses the
+stale operation and asks for a reviewed retry. Canceling or leaving the workspace
+before a queued addition obtains its lock prevents that addition. A storage or
+readback failure reports an unverified save and keeps the preview for recovery.
+
+**Replace workspace with this backup** remains the separate explicit replacement of the
+entire list, focus and notes; it discards local editors and resets filters.
+Unreadable stored data permits recovery by replacement, without offering an
+additive preview against an unknown library. Imported metadata is not revalidated
+against repositories. Invalid/future/duplicate
 records and extra read/payment fields are refused without replacing existing data.
 Unreadable stored data is kept and can be downloaded before an explicit replacement
 or clear. Quota/readback failures never report a verified save.
