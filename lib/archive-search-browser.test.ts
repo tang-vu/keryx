@@ -60,8 +60,9 @@ it.each([320, 1366])("finds and opens every off-page match at %ipx", async (widt
     await search.fill("  circle   may dam  ");
     await page.getByRole("status").filter({ hasText: "54 found" }).waitFor();
     expect(await page.locator("article:visible").allTextContents()).toEqual(["Đánh giá đám mây"]);
-    const newer = page.getByRole("button", { name: "← Newer" });
-    const older = page.getByRole("button", { name: "Older →" });
+    const navigation = page.getByRole("navigation", { name: "Elsewhere in the archive · 53" });
+    const newer = navigation.getByRole("button", { name: "← Newer" });
+    const older = navigation.getByRole("button", { name: "Older →" });
     expect(await newer.isDisabled()).toBe(true);
     const seen: string[] = [];
     for (let index = 0; index < 3; index++) {

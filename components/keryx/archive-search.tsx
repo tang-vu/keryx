@@ -117,7 +117,8 @@ export function ArchiveSearch({
             ))}
           </ul>
           {lastPage > 0 && (
-            <nav aria-label={copy("archivePages.label")} className="mt-4 flex gap-3 font-mono text-[11px]">
+            <nav aria-label={copy(otherMatches.length === 1 ? "archiveFilter.elsewhere.one" : "archiveFilter.elsewhere.other", { count: otherMatches.length })}
+              className="mt-4 flex gap-3 font-mono text-[11px]">
               <button type="button" aria-controls={resultsId} disabled={page === 0}
                 onClick={() => setResultPage(page - 1)}
                 className="border border-line px-4 py-3 disabled:opacity-40">
