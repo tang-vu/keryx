@@ -15,6 +15,7 @@ import { completedEvidenceDraftSelectionCopy as completedCopy } from "@/locales/
 import { useUiCopy } from "@/lib/i18n/ui-copy";
 import { EvidenceDraftRestore } from "./evidence-draft-restore";
 import { evidenceDraftEditingCopy as editingEnglish } from "@/locales/en/evidence-draft-editing";
+import { rebaseEvidenceDraftClaims, type PassageEditHint } from "@/lib/research/evidence-draft-passage";
 const uiEnglish_completedCopy = completedCopy;
 
 
@@ -51,6 +52,18 @@ export function EvidenceDraftWorkspace() {
   const workspace = restoredWorkspace ?? store.workspace;
   const workspaceReady = !!restoredWorkspace || store.ready, workspaceError = restoredWorkspace ? undefined : store.error;
   const [message, setMessage] = useState(""), [reviewer, setReviewer] = useState(""), passageRef = useRef<HTMLTextAreaElement>(null);
+  const passageEdit = useRef<PassageEditHint | undefined>(undefined);
+  const [passageNeedsSelection, setPassageNeedsSelection] = useState(false);
+  useLayoutEffect(() => {
+    const element = passageRef.current;
+    if (!element) return;
+    const capture = (event: Event) => {
+      passageEdit.current = { passage: element.value, start: element.selectionStart, end: element.selectionEnd,
+        inputType: (event as InputEvent).inputType };
+    };
+    element.addEventListener("beforeinput", capture);
+    return () => element.removeEventListener("beforeinput", capture);
+  }, []);
   const [retainedSnapshot, setRetainedSnapshot] = useState(() => retainedEditorsSnapshot(empty()));
   const hasUnretainedInputs = !!reportJson || !!reviewer || editors.themes.some(theme => theme.statements?.some(row => !row.text.trim()));
   const hasUnsavedChanges = hasUnretainedInputs || retainedEditorsSnapshot(editors) !== retainedSnapshot;
@@ -111,6 +124,7 @@ export function EvidenceDraftWorkspace() {
         liveEditors.current = next; liveWorkspace.current = packet.workspace;
         liveRestoreContext.current = { editors: next, workspace: packet.workspace, reportJson: "", reviewer: "" };
         setRestoredWorkspace(packet.workspace); setEditors(next); setRetainedSnapshot(retainedEditorsSnapshot(next)); setReportJson(""); setReviewer(""); setMessage("");
+        passageEdit.current = undefined; setPassageNeedsSelection(false);
         return true;
       } catch { return false; }
     }} />
@@ -147,15 +161,19 @@ export function EvidenceDraftWorkspace() {
     <section className="border border-line bg-paper p-5" aria-label={copy.claim.label}>
       <label className="font-mono text-xs text-ink-2">{copy.claim.passage}
         <textarea ref={passageRef} className={field} rows={6} maxLength={12000} value={editors.passage} onChange={event => {
-          // Existing spans refer to these exact bytes. Never silently shift a claim to new prose.
-          update({ passage: event.target.value, claims: [] });
+          const passage = event.target.value;
+          const rebased = rebaseEvidenceDraftClaims(editors.passage, passage, editors.claims, passageEdit.current);
+          passageEdit.current = undefined;
+          update({ passage, claims: rebased.claims });
+          if (rebased.removed) setPassageNeedsSelection(true);
         }} />
       </label>
-      <p className="mt-2 font-serif text-xs text-ink-3">{copy.claim.guidance}</p>
+      <p role={passageNeedsSelection ? "status" : undefined} className={`mt-2 font-serif text-xs ${passageNeedsSelection ? "text-seal" : "text-ink-3"}`}>{copy.claim.selectFirst}</p>
       <button type="button" className={`${button} mt-3`} disabled={!included.length || editors.claims.length >= 32} onClick={() => {
         const element = passageRef.current; if (!element || element.selectionStart === element.selectionEnd) { setMessage(copy.claim.selectFirst); return; }
         update({ claims: [...editors.claims, { id: nextEditorId("claim", editors.claims), start: element.selectionStart,
           end: element.selectionEnd, paperUrls: [included[0].paper.url], excerptIds: [] }] });
+        setPassageNeedsSelection(false);
       }}>{copy.claim.add}</button>
       <label className="mt-4 block font-mono text-xs text-ink-2">{copy.claim.reviewer}
         <input className={field} value={reviewer} maxLength={120} onChange={event => setReviewer(event.target.value)} />
