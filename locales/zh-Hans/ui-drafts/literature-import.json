@@ -1,0 +1,60 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/literature-import.ts",
+  "sourceSha256": "3bd4f26eedd5cc3a63117035a485a27bb46493dc5501f2df24a4d7e761a80f68",
+  "entries": {
+    "preview": {
+      "source": "Add missing papers from this backup",
+      "text": "从此备份添加尚未保存的论文"
+    },
+    "notice": {
+      "source": "Only exact paper URLs that are not already saved will be added, with their saved screening and notes. Your current review focus, existing papers and unsaved editors stay as they are. The backup's review focus is ignored. No upload or metadata lookup occurs.",
+      "text": "仅添加确切论文 URL 尚未保存的记录，并保留其已保存的筛选决定和笔记。当前研究问题、已有论文和未保存的编辑保持原样。忽略备份中的研究问题。不会上传数据或查询元数据。"
+    },
+    "newPapers": {
+      "source": "Papers to add",
+      "text": "将添加的论文数"
+    },
+    "duplicates": {
+      "source": "Already saved; keep current version and notes",
+      "text": "已保存；保留当前记录和笔记"
+    },
+    "total": {
+      "source": "Total after adding",
+      "text": "添加后的总数"
+    },
+    "review": {
+      "source": "Review the exact papers to add",
+      "text": "查看将添加的确切论文"
+    },
+    "add": {
+      "source": "Add missing papers",
+      "text": "添加尚未保存的论文"
+    },
+    "adding": {
+      "source": "Adding papers…",
+      "text": "正在添加论文…"
+    },
+    "added": {
+      "source": "Missing papers added on this browser. Existing review focus, papers and notes were kept.",
+      "text": "已在此浏览器中添加尚未保存的论文。当前研究问题、已有论文和笔记均已保留。"
+    },
+    "none": {
+      "source": "Every paper in this backup is already saved. Nothing needs to be added.",
+      "text": "此备份中的所有论文均已保存，无需添加。"
+    },
+    "capacity": {
+      "source": "Adding these papers would exceed the 50-paper limit. Remove papers or choose a smaller backup. Nothing has been added.",
+      "text": "添加这些论文将超过 50 篇的限制。请移除部分论文或选择较小的备份。尚未添加任何论文。"
+    },
+    "stale": {
+      "source": "Your saved library changed while this import was waiting. Review the updated preview and try again. Nothing has been added by this import.",
+      "text": "等待导入期间，已保存的文献库发生了变化。请查看更新后的预览后重试。此次导入尚未添加任何论文。"
+    },
+    "cancelled": {
+      "source": "Adding papers was cancelled. Nothing has been added by this import.",
+      "text": "已取消添加论文。此次导入尚未添加任何论文。"
+    }
+  }
+}
