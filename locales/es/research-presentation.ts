@@ -18,6 +18,8 @@ export const researchPresentationSpanish = Object.freeze({
   financialDetails: "Información financiera (en inglés):",
   remoteFailure: "La investigación Keryx falló: {detail}",
   stdioFailure: "La llamada Keryx falló: {detail}",
+  failureSummary: "Fallos de razonamiento registrados: {failures}",
+  failureMore: "; {count} fallos registrados m?s",
   selectionDiagnostic: "Diagnóstico de selección de fuentes (no es un informe finalizado ni un recibo de pago):",
   requestedUnknown: "Idioma de las etiquetas: {language}. No se registró el idioma de la respuesta; el texto original no cambia.",
   requestedMismatch: "Idioma de las etiquetas: {language}; idioma registrado de la respuesta: {answerLanguage}. La respuesta original no cambia.",

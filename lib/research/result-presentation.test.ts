@@ -97,7 +97,7 @@ it.each(locales)("%s output-limit/serving notices reuse bounded public records w
   const original = hash(result), text = presentationReasoningText(result, language);
   expect(text).toContain("2,560 tokens"); expect(text).not.toContain("99 tokens"); expect(text).not.toContain("PRIVATE");
   expect(text).toContain(language === "en" ? "Output-limit history is partial: 5" : researchPresentationCatalogues[language].limitPartial.replace("{count}", "5"));
-  if (language === "en") expect(text).toBe(reasoningServingText(result));
+  if (language === "en") expect(text.startsWith(reasoningServingText(result))).toBe(true);
   else expect(text).toContain(researchPresentationCatalogues[language].limitReview);
   expect(hash(result)).toBe(original);
 });
@@ -107,13 +107,42 @@ it("legacy English API/stdio content keeps its exact canonical financial fragmen
     "- Source 日本語 & <original> — $0.000001 (weight 1.00)\n\nRecorded to creators: $0.000001 · payment mode: offline. " +
     API_SETTLEMENT_NOTICE + `dispatch: ${config.baseUrl}/dispatch/language-fixture`);
   const stdio = { ...result, totalToCreators: run.totalToCreators, amountPaid: "0.070001" };
-  expect(stdioResearchText(stdio, "https://example.invalid", locale)).toBe(run.answer + "\n\n" + reasoningServingText(stdio) +
+  expect(stdioResearchText(stdio, "https://example.invalid", locale)).toBe(run.answer + "\n\n" + presentationReasoningText(stdio, "en") +
     "\n\n— Paid Keryx 0.070001 USDC\nRecorded creator total: $0.000001; citation allocations (not individual settlement proof):\n" +
     "  • Source 日本語 & <original> — $0.000001\nOn-chain proof + live feed: https://example.invalid/dashboard");
 });
-it.each(locales)("%s stdio failures preserve raw diagnostics and perform no retry", async language => {
+it.each(locales)("%s stdio failures withhold raw diagnostics and perform no retry", async language => {
   const detail = 'Original provider 日本語 <raw> & {detail}', ask = vi.fn(async () => { throw new Error(detail); });
   const response = await createStdioResearchHandler(ask, "https://example.invalid")({ question: presentationQuestions.en, language });
-  expect(response).toEqual({ isError: true, content: [{ type: "text", text: researchPresentationCatalogues[language].stdioFailure.replace("{detail}", detail) }] });
+  expect(response).toEqual({ isError: true, content: [{ type: "text", text: researchPresentationCatalogues[language].stdioFailure.replace("{detail}", "request_failed") }] });
+  expect(JSON.stringify(response)).not.toContain(detail);
   expect(ask).toHaveBeenCalledOnce();
+});
+
+it.each(locales)("%s exposes recorded open circuits and rejected fallback input without a new request", language => {
+  const run = presentationRun();
+  run.reasoningAttempts = [
+    { step: "decide", engine: "llm:primary", tier: 0, attempt: 0, startedAt: 1, durationMs: 0,
+      outcome: "circuit-open", retryAfterMs: 1800000 },
+    { step: "decide", engine: "llm:alternate", tier: 1, attempt: 1, startedAt: 2, durationMs: 0,
+      outcome: "input-limited", error: "input_limit", status: 413 },
+    { step: "decide", engine: "heuristic", tier: 2, attempt: 1, startedAt: 3, durationMs: 0, outcome: "served" },
+  ];
+  const result = remoteResearchResult(run), before = hash(result), text = presentationReasoningText(result, language);
+  expect(text).toContain("decide: circuit-open [recorded-retry-after-ms=1800000]");
+  expect(text).toContain("decide: input_limit (HTTP 413)");
+  expect(text).toContain(researchPresentationCatalogues[language].failureSummary.split("{failures}")[0]);
+  expect(result.reasoning.sourceSelection).toMatchObject({ state: "heuristic", fallbackUsed: true });
+  expect(hash(result)).toBe(before);
+});
+
+it("bounds displayed failure history and omits private exception fields", () => {
+  const result = remoteResearchResult(presentationRun());
+  result.reasoningAttempts = Array.from({ length: 12 }, (_, index) => ({
+    step: "decide", engine: "llm:synthetic", tier: 0, attempt: index + 1, startedAt: index, durationMs: 0,
+    outcome: "failed", error: "provider", status: 500 + index, privateBody: "PRIVATE-CREDENTIAL",
+  }));
+  const text = presentationReasoningText(result, "en");
+  expect(text).toContain("HTTP 507"); expect(text).not.toContain("HTTP 508");
+  expect(text).toContain("4 more recorded failures"); expect(text).not.toContain("PRIVATE-CREDENTIAL");
 });

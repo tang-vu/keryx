@@ -18,6 +18,8 @@ export const researchPresentationVietnamese = Object.freeze({
   financialDetails: "Thông tin tài chính (tiếng Anh):",
   remoteFailure: "Nghiên cứu Keryx thất bại: {detail}",
   stdioFailure: "Lời gọi Keryx thất bại: {detail}",
+  failureSummary: "L?i suy lu?n ?? ghi nh?n: {failures}",
+  failureMore: "; c?n {count} l?i ?? ghi nh?n",
   selectionDiagnostic: "Chẩn đoán lựa chọn nguồn (không phải báo cáo hoàn tất hay biên nhận thanh toán):",
   requestedUnknown: "Ngôn ngữ nhãn: {language}. Ngôn ngữ câu trả lời chưa được ghi nhận; văn bản gốc không thay đổi.",
   requestedMismatch: "Ngôn ngữ nhãn: {language}; ngôn ngữ câu trả lời đã ghi nhận: {answerLanguage}. Câu trả lời gốc không thay đổi.",
