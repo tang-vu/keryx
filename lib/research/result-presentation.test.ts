@@ -111,11 +111,18 @@ it("legacy English API/stdio content keeps its exact canonical financial fragmen
     "\n\n— Paid Keryx 0.070001 USDC\nRecorded creator total: $0.000001; citation allocations (not individual settlement proof):\n" +
     "  • Source 日本語 & <original> — $0.000001\nOn-chain proof + live feed: https://example.invalid/dashboard");
 });
-it.each(locales)("%s stdio failures withhold raw diagnostics and perform no retry", async language => {
+it.each(locales)("%s stdio failures preserve raw diagnostics and perform no retry", async language => {
   const detail = 'Original provider 日本語 <raw> & {detail}', ask = vi.fn(async () => { throw new Error(detail); });
   const response = await createStdioResearchHandler(ask, "https://example.invalid")({ question: presentationQuestions.en, language });
-  expect(response).toEqual({ isError: true, content: [{ type: "text", text: researchPresentationCatalogues[language].stdioFailure.replace("{detail}", "request_failed") }] });
-  expect(JSON.stringify(response)).not.toContain(detail);
+  expect(response).toEqual({ isError: true, content: [{ type: "text", text: researchPresentationCatalogues[language].stdioFailure.replace("{detail}", detail) }] });
+  expect(ask).toHaveBeenCalledOnce();
+});
+
+it("keeps the paid buyer's existing recovery instruction and makes no replacement call", async () => {
+  const detail = "Previous payment requires recovery. Use keryx_recover before another paid call";
+  const ask = vi.fn(async () => { throw new Error(detail); });
+  const response = await createStdioResearchHandler(ask, "https://example.invalid")({ question: presentationQuestions.en });
+  expect(response).toMatchObject({ isError: true, content: [{ text: expect.stringContaining(detail) }] });
   expect(ask).toHaveBeenCalledOnce();
 });
 

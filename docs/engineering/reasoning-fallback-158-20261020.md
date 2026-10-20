@@ -8,12 +8,12 @@ At most eight distinct failures are displayed; the bounded structured attempt
 history remains unchanged. English, Vietnamese, Portuguese and Spanish use the
 same validated facts.
 
-Stdio failures no longer echo an arbitrary exception message or coerce a thrown
-object into text. Known validation/input/transport classes and own numeric HTTP
-statuses retain bounded categories. Unknown application failures stay
-`request_failed`; they are never guessed to be network failures. Supplier
-messages, bodies, causes, credentials and accessors are excluded. No retry,
-provider call, circuit mutation or spending is introduced by presentation.
+The added summary reads only the existing bounded public attempt projection,
+never a supplier exception, message, body or cause. Unknown application errors
+are not relabelled as network failures. No retry, provider call, circuit mutation
+or spending is introduced by presentation. The paid stdio buyer's existing
+failure and recovery instructions remain intact, including `keryx_recover`
+before another paid call; blanket exception replacement would hide them.
 
 The existing resilient engine and synthetic regressions already distinguish
 post-response validation from transport failure, keep request-dependent errors
@@ -28,8 +28,8 @@ Closing the core defect after successful source acceptance does not turn either
 missing observation into evidence. Other open issues remain open.
 
 Focused validation covers the original circuit/input-limited/heuristic shape,
-all four label languages, bounded history, safe error categories and hostile
-exception objects, together with unchanged canonical financial fragments and
+all four label languages, bounded history, private-field omission and the
+existing paid-recovery instruction, together with canonical financial fragments and
 structured result/receipt hashes. Required PR CI and the existing coordinator's
 release process remain separate gates.
 

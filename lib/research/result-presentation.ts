@@ -5,7 +5,6 @@ import type { Confidence } from "../types";
 import { researchPresentationMessages } from "./presentation-messages";
 import { readCompletedAnswerLanguage, type CompletedAnswerLanguageProvenance } from "./answer-language-provenance";
 import { livePresentationLocale, recordedPresentationLocale, type PresentationLanguage, type PresentationLocale, type RequestedPresentationLanguage } from "./presentation-language";
-import { boundedReasoningFailure } from "./reasoning-failure";
 
 /** The resolution is presentation metadata, never a new response/receipt/answer-language field. */
 export function presentationLocaleNotice(locale: PresentationLocale): string {
@@ -121,7 +120,7 @@ export function createStdioResearchHandler<T extends StdioPresentationResult>(as
       return { content: [{ type: "text" as const, text: stdioResearchText(result, baseUrl, completedLocale) }],
         structuredContent: { ...publicResult, ...(packet ? { answerLanguage: packet } : {}) } };
     } catch (error) {
-      const detail = boundedReasoningFailure(error);
+      const detail = error instanceof Error ? error.message : String(error);
       return { isError: true, content: [{ type: "text" as const, text: researchPresentationMessages(locale.language)("stdioFailure", { detail }) }] };
     }
   };
