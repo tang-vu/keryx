@@ -210,7 +210,17 @@ async function main() {
       assert.equal(buildEvidenceDraft(lastTheme).references.length, 0);
       assert.deepEqual(lastTheme.reports, beforeRemoval.reports, "Source reports remain available after removing their last citation");
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `Removal overflow at ${width}`);
-      await page.reload(); assert.equal(await page.getByLabel("Your original passage").inputValue(), "");
+      // Blank statements and reviewer input are not in the JSON packet. Even
+      // after requesting a backup, unloading must still warn about those inputs.
+      const warning = page.waitForEvent("dialog");
+      const cancelledReload = page.reload().then(() => false, () => true);
+      const dialog = await warning; assert.equal(dialog.type(), "beforeunload"); await dialog.dismiss();
+      assert.equal(await cancelledReload, true);
+      assert.equal(await articles.first().getByLabel("Your sentence").inputValue(), unfinishedText);
+      const leaving = page.waitForEvent("dialog");
+      const confirmedReload = page.reload();
+      const leavingDialog = await leaving; assert.equal(leavingDialog.type(), "beforeunload"); await leavingDialog.accept();
+      await confirmedReload; assert.equal(await page.getByLabel("Your original passage").inputValue(), "");
       assert.equal(blocked.filter(path => path.includes("research/evidence-draft") || path.includes("ask")).length, 0);
       await context.close(); completedWidths.push(width);
       console.log(`Built private drafts ${width}px: exact claim, named assessment, theme preservation, excerpt-bound statement, citation/reference downloads and memory reset passed.`);
