@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import bibliographyCopy from "@/locales/en/bibliographies.json";
-import { useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { LiteratureComparisonPreview } from "./literature-comparison-preview";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { PAPER_REPOSITORIES } from "@/lib/papers/types";
@@ -11,7 +11,9 @@ import { paperReferencesCslJson, paperReferencesRis } from "@/lib/papers/referen
 import { changeLiteratureWorkspace, clearLiteratureWorkspace, replaceLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, parseLiteratureWorkspace,
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+import { searchLiteratureEntries } from "@/lib/papers/literature-search";
+import { literatureSearchCopy as searchEnglish } from "@/locales/en/literature-search";
 
 
 
@@ -112,9 +114,11 @@ function SavedPaper({ entry, selected, selectionFull, toggle, act }: {
 
 export function LiteratureWorkspace() {
   const copy = useUiMessages();
+  const searchCopy = useUiCopy("literature-search", searchEnglish), searchHelpId = useId();
   const { ready, workspace, error, raw } = useLiteratureWorkspace();
   const [message, setMessage] = useState(""), [failure, setFailure] = useState("");
   const [selected, setSelected] = useState<string[]>([]), [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
   const [pending, setPending] = useState<{ workspace: Workspace; filename: string }>();
   const [editingRevision, setEditingRevision] = useState(0);
   const [restoring, setRestoring] = useState(false);
@@ -126,7 +130,10 @@ export function LiteratureWorkspace() {
   const active = selected.filter(url => workspace.entries.some(entry => entry.paper.url === url));
   let draft = "", draftError = "";
   if (active.length === 2) { try { draft = literatureComparisonDraft(workspace, active); } catch (issue) { draftError = (issue as Error).message; } }
-  const visible = workspace.entries.filter(entry => filter === "all" || entry.screening === filter);
+  const searched = useMemo(() => searchLiteratureEntries(workspace.entries, query), [workspace.entries, query]);
+  const searchMatches = new Set(searched.map(entry => entry.paper.url));
+  const visible = searched.filter(entry => filter === "all" || entry.screening === filter);
+  const visibleUrls = new Set(visible.map(entry => entry.paper.url));
 
   return <div className="mt-7 space-y-6">
     <p className="max-w-[75ch] font-serif text-sm leading-relaxed text-ink-2">{copy("literatureWorkspace.privacy")}</p>
@@ -147,8 +154,16 @@ export function LiteratureWorkspace() {
           <Link prefetch={false} href="/sources?kind=paper#research-papers" className={button}>{copy("literatureWorkspace.find")}</Link>
         </div>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0 flex-1 basis-64">
+            <label className="block font-mono text-xs text-ink-2">{searchCopy.label}
+              <input type="search" maxLength={200} autoComplete="off" autoCapitalize="none" spellCheck={false} value={query}
+                onChange={event => setQuery(event.target.value)} aria-describedby={searchHelpId} className={field} />
+            </label>
+            <p id={searchHelpId} className="mt-2 font-serif text-xs text-ink-3">{searchCopy.guidance}</p>
+            {query !== "" && <button type="button" className={`${button} mt-2`} onClick={() => setQuery("")}>{searchCopy.clear}</button>}
+          </div>
           <label className="font-mono text-xs text-ink-2">{copy("literatureWorkspace.filter")}<select value={filter} onChange={event => setFilter(event.target.value)} className={field}>
-            <option value="all">{copy("literatureWorkspace.filterAll")}</option>{Object.entries(SCREENING_STATES).map(([value, label]) => <option key={value} value={value}>{label} ({workspace.entries.filter(entry => entry.screening === value).length})</option>)}
+            <option value="all">{copy("literatureWorkspace.filterAll")}</option>{Object.entries(SCREENING_STATES).map(([value, label]) => <option key={value} value={value}>{label} ({searched.filter(entry => entry.screening === value).length})</option>)}
           </select></label>
           <div className="space-y-2">
             <p role="status" className="font-serif text-sm text-ink-2">{copy(visible.length === 1 ? "literatureWorkspace.selection.one" : "literatureWorkspace.selection.other", { count: visible.length, selected: active.length })}</p>
@@ -163,10 +178,11 @@ export function LiteratureWorkspace() {
           </div>
         </div>
         <p className="mt-2 font-serif text-xs text-ink-3">{copy("literatureWorkspace.referencesNotice")}</p>
+        <p className="mt-2 font-serif text-xs text-ink-3">{searchCopy.scope}</p>
         <div className="mt-4 border border-line bg-panel p-4">
           <p className="font-serif text-sm text-ink-2">{copy("literatureWorkspace.compareNotice")}</p>
           <LiteratureComparisonPreview entries={active.flatMap(url => workspace.entries.filter(entry => entry.paper.url === url)
-            .map(({ paper, screening }) => ({ paper, screening })))} filter={filter} savedQuestion={workspace.question} draft={draft}
+            .map(({ paper, screening }) => ({ paper, screening, matchesSearch: searchMatches.has(paper.url) })))} filter={filter} savedQuestion={workspace.question} draft={draft}
             onRemove={url => setSelected(active.filter(selectedUrl => selectedUrl !== url))} />
           <div className="mt-3 flex flex-wrap gap-3">{draft ? <Link prefetch={false} href={`/?q=${encodeURIComponent(draft)}&mode=deep`} className={`${buttonBase} border-ink bg-seal text-paper`}>{copy("literatureWorkspace.prepare")}</Link> : <button disabled className={button}>{copy("literatureWorkspace.selectTwo")}</button>}
             {active.length > 0 && <button type="button" className={button} onClick={() => setSelected([])}>{copy("literatureWorkspace.clearSelection")}</button>}
@@ -179,8 +195,8 @@ export function LiteratureWorkspace() {
           <ol className="mt-3 list-decimal space-y-2 pl-5 font-serif text-sm text-ink-2"><li>{copy("literatureWorkspace.emptyFind")}</li><li>{copy("literatureWorkspace.emptySave")}</li><li>{copy("literatureWorkspace.emptyCompare")}</li></ol>
           <Link prefetch={false} href="/sources?kind=paper#research-papers" className={`${button} mt-4`}>{copy("literatureWorkspace.browse")}</Link>
         </div> : <>
-          {visible.length === 0 && <p className="mt-5 font-serif text-sm text-ink-2">{copy("literatureWorkspace.filterEmpty")}</p>}
-          <div className="mt-5 grid gap-4 md:grid-cols-2">{workspace.entries.map(entry => <div key={`${editingRevision}:${entry.paper.url}`} hidden={filter !== "all" && entry.screening !== filter} className="min-w-0"><SavedPaper entry={entry} selected={active.includes(entry.paper.url)} selectionFull={active.length === 2}
+          {visible.length === 0 && <p className="mt-5 font-serif text-sm text-ink-2">{query.trim() ? searchCopy.empty : copy("literatureWorkspace.filterEmpty")}</p>}
+          <div className="mt-5 grid gap-4 md:grid-cols-2">{workspace.entries.map(entry => <div key={`${editingRevision}:${entry.paper.url}`} hidden={!visibleUrls.has(entry.paper.url)} className="min-w-0"><SavedPaper entry={entry} selected={active.includes(entry.paper.url)} selectionFull={active.length === 2}
             toggle={() => setSelected(active.includes(entry.paper.url) ? active.filter(url => url !== entry.paper.url) : [...active, entry.paper.url])} act={act} /></div>)}</div>
         </>}
       </section>
@@ -217,7 +233,7 @@ export function LiteratureWorkspace() {
           await act(async () => {
             await replaceLiteratureWorkspace(captured.workspace, () => generation === importGeneration.current);
             if (generation !== importGeneration.current) return;
-            setPending(undefined); setSelected([]); setFilter("all"); setEditingRevision(value => value + 1);
+            setPending(undefined); setSelected([]); setFilter("all"); setQuery(""); setEditingRevision(value => value + 1);
           }, copy("literatureWorkspace.restored"));
           setRestoring(false);
         }}>{restoring ? copy("literatureWorkspace.restoring") : copy("literatureWorkspace.restore")}</button>
@@ -227,7 +243,7 @@ export function LiteratureWorkspace() {
         <p className="mt-2 font-serif text-sm text-ink-2">{copy("literatureWorkspace.clearNotice")}</p>
         <button type="button" className={`${button} mt-3`} onClick={() => act(async () => {
           if (!window.confirm(copy("literatureWorkspace.clearConfirm"))) throw new Error(copy("literatureWorkspace.clearCancelled"));
-          await clearLiteratureWorkspace(); ++importGeneration.current; setPending(undefined); setSelected([]); setFilter("all"); setEditingRevision(value => value + 1);
+          await clearLiteratureWorkspace(); ++importGeneration.current; setPending(undefined); setSelected([]); setFilter("all"); setQuery(""); setEditingRevision(value => value + 1);
         }, copy("literatureWorkspace.cleared"))}>{copy("literatureWorkspace.clear")}</button>
       </details>
     </section>}

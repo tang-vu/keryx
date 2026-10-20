@@ -6,16 +6,16 @@
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
-  "scope": "All 67 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
+  "scope": "All 68 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
   "financialLegalConsent": "Unreviewed; critical English-authoritative fallback until actual named-human review. Neutral machine-draft UI is integrated only in explicit previews.",
   "totals": {
-    "englishNamespaceFiles": 67,
+    "englishNamespaceFiles": 68,
     "coreInlineSources": 1,
-    "extractedLeaves": 5989,
-    "authoredEntries": 5909,
+    "extractedLeaves": 5995,
+    "authoredEntries": 5915,
     "nonTranslatableMachineIdentifiers": 29,
     "uncoveredEntries": 51,
-    "completeNamespaces": 64
+    "completeNamespaces": 65
   },
   "namespaces": [
     {
@@ -7018,6 +7018,25 @@
         "stale",
         "summary",
         "untitled"
+      ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "literature-search",
+      "sourcePath": "locales/en/literature-search.ts",
+      "sourceSha256": "a7cfda62a904c4c49cfca0e826411e54b595e3547edac6e8d2910ae13716de30",
+      "draftPath": "locales/zh-Hans/ui-drafts/literature-search.json",
+      "extractedLeaves": 6,
+      "authoredEntries": 6,
+      "coveredKeys": [
+        "clear",
+        "empty",
+        "guidance",
+        "label",
+        "outsideSearch",
+        "scope"
       ],
       "nonTranslatableMachineIdentifiers": [],
       "uncoveredKeys": [],
