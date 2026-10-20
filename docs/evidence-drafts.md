@@ -45,6 +45,10 @@ have not been measured. Neither issue's full acceptance is established.
    If you edit while a file is opening or after its preview appears, choose the
    file again to review it against the latest draft before replacement.
 
+Continuing a restored draft keeps its existing claim spans, selected excerpts,
+assessments and themes when you add new rows. New claims and themes remain
+independent of the restored rows, including after saving and reopening again.
+
 Passage, report JSON, assessments and theme edits remain in tab memory; no upload,
 public history, localStorage draft write or background request is performed by
 this editor. The existing bibliography stays in its existing browser store.

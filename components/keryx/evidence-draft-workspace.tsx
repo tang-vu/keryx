@@ -25,6 +25,14 @@ type Statement = NonNullable<EvidenceDraftRequest["themes"][number]["statements"
 const choice = "mt-2 flex gap-3 font-serif text-sm text-ink-2";
 const empty = (): Editors => ({ reports: [], passage: "", claims: [], themes: [{ id: "theme1", title: copy.theme.initialTitle, authorNote: "", excerptIds: [] }] });
 
+/** Restored identifiers need not be consecutive. Never renumber an existing row. */
+function nextEditorId(prefix: "claim" | "theme" | "statement", rows: readonly { id: string }[]) {
+  const used = new Set(rows.map(row => row.id));
+  let next = rows.length + 1;
+  while (used.has(`${prefix}${next}`)) next++;
+  return `${prefix}${next}`;
+}
+
 export function EvidenceDraftWorkspace() {
   const completedCopy = useUiCopy("completed-evidence-draft-selection", uiEnglish_completedCopy);
   const store = useLiteratureWorkspace(), [editors, setEditors] = useState(empty), [reportJson, setReportJson] = useState("");
@@ -51,11 +59,6 @@ export function EvidenceDraftWorkspace() {
   const update = (changes: Partial<Editors>) => { setEditors(current => ({ ...current, ...changes })); setMessage(""); };
   const toggle = (ids: string[], id: string) => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id];
   const excerpts = draft?.excerpts ?? [];
-  const nextStatementId = () => {
-    const used = new Set(editors.themes.flatMap(theme => (theme.statements ?? []).map(row => row.id)));
-    let next = used.size + 1; while (used.has(`statement${next}`)) next++;
-    return `statement${next}`;
-  };
   const exportFile = (format: "markdown" | "latex" | "bibtex" | "ris") => {
     try {
       const exports = exportEvidenceDraft(request), extension = { markdown: "md", latex: "tex", bibtex: "bib", ris: "ris" }[format];
@@ -125,7 +128,7 @@ export function EvidenceDraftWorkspace() {
       <p className="mt-2 font-serif text-xs text-ink-3">{copy.claim.guidance}</p>
       <button type="button" className={`${button} mt-3`} disabled={!included.length || editors.claims.length >= 32} onClick={() => {
         const element = passageRef.current; if (!element || element.selectionStart === element.selectionEnd) { setMessage(copy.claim.selectFirst); return; }
-        update({ claims: [...editors.claims, { id: `claim${editors.claims.length + 1}`, start: element.selectionStart,
+        update({ claims: [...editors.claims, { id: nextEditorId("claim", editors.claims), start: element.selectionStart,
           end: element.selectionEnd, paperUrls: [included[0].paper.url], excerptIds: [] }] });
       }}>{copy.claim.add}</button>
       <label className="mt-4 block font-mono text-xs text-ink-2">{copy.claim.reviewer}
@@ -228,10 +231,10 @@ export function EvidenceDraftWorkspace() {
             </div>;
           })}
           <button type="button" className={`${button} mt-4`} disabled={(theme.statements ?? []).length >= 24} onClick={() => replace({
-            statements: [...(theme.statements ?? []), { id: nextStatementId(), kind: "contribution", text: "", paperUrls: [], excerptIds: [] }] })}>{copy.statement.add}</button>
+            statements: [...(theme.statements ?? []), { id: nextEditorId("statement", editors.themes.flatMap(row => row.statements ?? [])), kind: "contribution", text: "", paperUrls: [], excerptIds: [] }] })}>{copy.statement.add}</button>
         </article>;
       })}
-      <button type="button" className={`${button} mt-4`} disabled={editors.themes.length >= 16} onClick={() => update({ themes: [...editors.themes, { id: `theme${editors.themes.length + 1}`, title: copy.theme.newTitle, authorNote: "", excerptIds: [] }] })}>{copy.theme.add}</button>
+      <button type="button" className={`${button} mt-4`} disabled={editors.themes.length >= 16} onClick={() => update({ themes: [...editors.themes, { id: nextEditorId("theme", editors.themes), title: copy.theme.newTitle, authorNote: "", excerptIds: [] }] })}>{copy.theme.add}</button>
       <button type="button" className={`${button} ml-2 mt-4`} disabled={!editors.readingStatuses?.length} onClick={() => update({ readingStatuses: [] })}>{copy.reading.clear}</button>
       {!!draft?.unread.length && <div className="mt-5">
         <h3 className="font-mono text-xs text-ink-2">{copy.theme.unreadHeading}</h3>
