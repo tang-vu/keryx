@@ -34,15 +34,35 @@ have not been measured. Neither issue's full acceptance is established.
    `\addbibresource{references.bib}`, `\autocite` and `\printbibliography`. Markdown
    uses the same stable citation keys and includes an explicit reference list.
    The RIS library contains exactly the cited records, although RIS importers need
-   not preserve citation keys. Download private draft JSON to retain claim inputs
-   and assessments; this version has no draft-backup restore editor.
+   not preserve citation keys. Download private draft JSON to retain exported
+   draft inputs, selected excerpts and assessments.
+8. To resume later, open **Continue a saved draft** and choose that JSON backup.
+   Review its title, counts and passage preview. **Save current draft first**
+   downloads the current valid draft before replacement. Choose **Restore in this
+   tab** to continue editing, then download a new backup before leaving. The
+   backup's Include selection is used in this tab only; your saved bibliography
+   is unchanged. Cancelled or invalid files leave the current draft unchanged.
+   If you edit while a file is opening or after its preview appears, choose the
+   file again to review it against the latest draft before replacement.
 
 Passage, report JSON, assessments and theme edits remain in tab memory; no upload,
 public history, localStorage draft write or background request is performed by
 this editor. The existing bibliography stays in its existing browser store.
-Reload/navigation loses the in-memory draft. Downloads are a deliberate retention
-choice and should be kept private. The browser profile and same-origin scripts can
+Reload/navigation loses the in-memory draft; reopening a downloaded backup is
+explicit, with no automatic save or recovery. Empty unfinished statement rows,
+the unimported report JSON field and the reviewer input are not backup contents.
+Restoring replaces the current draft's passage, imported reports, assessments and
+themes. Downloads are a deliberate retention choice and should be kept private.
+The browser profile and same-origin scripts can
 access editor contents; no protection against a compromised origin is claimed.
+
+The browser accepts existing version-1 private draft JSON, with a 256 KiB file
+limit to allow formatted JSON around the existing 64 KiB compact packet limit.
+Invalid UTF-8, invalid packets and invalid evidence selections are refused before
+replacement. Opening a backup projects its Include records and drops screening
+notes, matching the editor's existing workspace projection. An imported assembly
+operation is removed rather than replayed. Restoring does not authenticate report
+origin, promote stale assessments or make a provider, model or payment request.
 
 ## Shared contract and evidence boundaries
 
@@ -148,7 +168,7 @@ guard accepts this source without rewriting its historical baseline.
 
 | Surface | Source behavior and role |
 | --- | --- |
-| Web | `/literature/drafts` assembles locally from the saved Include records and explicitly imported reports. No automatic server call. |
+| Web | `/literature/drafts` assembles locally from saved Include records and explicitly imported reports, or resumes a reviewed private JSON backup using its tab-only Include selection. No automatic server call or bibliography overwrite. |
 | API | `POST /api/research/evidence-draft` accepts the same packet, with a verified export-scoped API key or active same-origin web session. Authentication is checked before private body reading. Existing authentication access includes key last-used bookkeeping in ordinary adapters; the new draft transformation makes no DB, provider, payment or file calls and writes no draft/query/history/payment data. Actual streamed bytes and deadline are bounded; fixed errors never echo passages. Every response is private/no-store. |
 | Remote MCP | `evidence_draft` is a stateless pure transformation of caller-supplied inputs. It retrieves no owned/private record and grants no new authority. Client/host message retention is outside Keryx's deletion control. |
 | Stdio MCP / CLI clients | The same local `evidence_draft` tool is registered in the stdio server. It makes no HTTP/wallet call; it can process caller-retained data offline. Repository CLI may use the authenticated JSON API. No autonomous drafting command is added. |
