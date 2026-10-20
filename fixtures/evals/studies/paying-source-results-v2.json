@@ -372,7 +372,7 @@
     "lib/research-audit/purchase-outcomes.ts": "1b156be91a02a2a2a9d9f053380d8851f202f96d4a748315acda73c54e6c0c82",
     "lib/research-audit/usage-cohort.ts": "c3aef331ebe1f99036ef2cd606b8bd367c2f54b9152f1e69926eab2c1d491f57",
     "lib/research-audit/usage-summary.ts": "56eb38572471e0dd23e8748ac54fa636184d52f387e4d5de68d314776b15eca4",
-    "lib/research-citation-export.ts": "6867b4d7178f93f0908966c162af9dbbcab7f6eeb8a65e1ffb7e4b4de81c0c06",
+    "lib/research-citation-export.ts": "86997b7fb4c7f186d93ff582069c908b29a45c60b0fc4bb0a054c8b0b9be7eda",
     "lib/research-receipt-asset.ts": "b50067c285446041f6209beccf06c85a6eed68a80b2b751176cfabbc44d09927",
     "lib/research-receipt-types.ts": "39c437d78944214e034aaacf3f2666f00323787ecfef1d0075ee50f48922aafa",
     "lib/research/answer-language-provenance.ts": "be6cd6885118b4134165098602d9ff137f8e8113a2ab3af1d9e3e7bdd7fdd637",
