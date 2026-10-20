@@ -1,5 +1,8 @@
 import type { EvidenceRecord, QueryRun } from "../types";
 import { englishMessages } from "../i18n/messages";
+import { csvCell } from "../csv-cell";
+// Preserve existing consumers without coupling new CSV exports to UI catalogues.
+export { csvCell as evidenceCsvCell } from "../csv-cell";
 
 export type EvidenceMatrixInput = Pick<QueryRun, "subClaims" | "citations" | "evidence" | "claimCoverage">;
 export interface EvidenceMatrixRow {
@@ -40,13 +43,6 @@ export function buildEvidenceMatrix(run: EvidenceMatrixInput): EvidenceMatrixRow
   });
 }
 
-/** Quote every cell; neutralize spreadsheet formulas even after invisible prefixes. */
-export function evidenceCsvCell(value: string | number): string {
-  const raw = String(value);
-  const safe = /^[\s\p{Cc}\p{Cf}]*[=+\-@]/u.test(raw) ? `'${raw}` : raw;
-  return `"${safe.replace(/"/g, '""')}"`;
-}
-
 export function evidenceMatrixCsv(run: EvidenceMatrixInput): string {
   const rows: (string | number)[][] = [["claim_index", "claim", "inspection_status", "source_marker", "source_id",
     "publication", "article_title", "article_url", "published_at", "item_id", "content_version", "exact_excerpt", "evidence_provenance"]];
@@ -56,5 +52,5 @@ export function evidenceMatrixCsv(run: EvidenceMatrixInput): string {
       item.sourceName, item.itemTitle ?? englishMessages["evidenceMatrix.notRecorded"], item.itemUrl ?? englishMessages["evidenceMatrix.notRecorded"],
       item.itemPublishedAt ?? englishMessages["evidenceMatrix.notRecorded"], item.itemId ?? englishMessages["evidenceMatrix.notRecorded"], item.contentVersion ?? englishMessages["evidenceMatrix.notRecorded"], item.quote, item.evidenceProvenance === "synthetic-demo" ? englishMessages["evidenceMatrix.syntheticExport"] : englishMessages["evidenceMatrix.unclassifiedExport"]]);
   }
-  return rows.map((row) => row.map(evidenceCsvCell).join(",")).join("\r\n") + "\r\n";
+  return rows.map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
 }

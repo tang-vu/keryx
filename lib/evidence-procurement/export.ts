@@ -1,4 +1,4 @@
-import { evidenceCsvCell } from "../research/evidence-matrix";
+import { csvCell } from "../csv-cell";
 import { buildEvidenceProcurement, PROCUREMENT_NOTICE, type EvidenceProcurementResult } from "./engine";
 
 export const PROCUREMENT_RECEIPT_FORMATS = ["json", "markdown", "csv"] as const;
@@ -96,7 +96,7 @@ function csvReceipt(result: EvidenceProcurementResult): string {
   result.reviews.forEach((row, index) => add("review", String(index), { offer_id: row.offerId, delivery_hash: row.deliveryHash,
     reviewer: row.reviewer, reviewer_note: row.reviewerNote, review_reason: row.reason, review_authority: row.authority,
     caller_accepted_requirement_ids: row.acceptedRequirementIds.join(" ") }));
-  return [COLUMNS.map(evidenceCsvCell).join(","), ...rows.map(row => COLUMNS.map(column => evidenceCsvCell(row[column] ?? "")).join(","))].join("\r\n") + "\r\n";
+  return [COLUMNS.map(csvCell).join(","), ...rows.map(row => COLUMNS.map(column => csvCell(row[column] ?? "")).join(","))].join("\r\n") + "\r\n";
 }
 
 // The strict packet is already a bounded plain-data copy. Inspect actual string
