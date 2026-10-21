@@ -135,6 +135,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
     const observed = await refresh();
     if (observed?.state === "not-paused" && restoreQuestion) setDismissedRejection(restoreQuestion.id);
   };
+  const [budget, setBudget] = useState(0.05);
   const restored = useRef<number | null>(null);
   useEffect(() => {
     if (!restoreQuestion || restored.current === restoreQuestion.id || !visibility.ready) return;
@@ -152,7 +153,6 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
     }, 0);
     return () => window.clearTimeout(timer);
   }, [restoreQuestion, setQuestion, visibility.ready, visibility.getSelection, visibility.getIdentityRevision]);
-  const [budget, setBudget] = useState(0.05);
   const maximumBudget = payer === "session" && questionCapUsdc !== undefined && Number.isFinite(questionCapUsdc) && questionCapUsdc > 0
     ? Math.min(0.08, questionCapUsdc) : 0.08;
   const effectiveBudget = Math.min(budget, maximumBudget);
@@ -189,9 +189,11 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
   const [sharedQuestion, setSharedQuestion] = useState<string | null>(null);
   useEffect(() => {
     if (prefilled.current) return;
-    prefilled.current = true;
-    if (!allowSharedPrefill) return;
+    if (!allowSharedPrefill) { prefilled.current = true; return; }
     const timer = window.setTimeout(() => {
+      // Strict Mode may clean up the first scheduled effect before it runs.
+      // Consume the URL only when its callback actually applies the draft.
+      prefilled.current = true;
       const { q, budget: b, run, parent, model: m, mode } = readSharedAsk();
       if (q) setSharedQuestion(q);
       if (b !== null) setBudget(b);
