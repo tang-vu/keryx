@@ -6,6 +6,7 @@ import { HowItWorks, ForCreators } from "@/components/keryx/landing-sections";
 import { LandingVisit } from "@/components/keryx/landing-visit";
 import { ProductProof, ProductFaq } from "@/components/keryx/product-guide";
 import { ProductHuntBadge } from "@/components/keryx/product-hunt-badge";
+import { ResearchResources } from "@/components/keryx/research-resources";
 
 
 
@@ -21,6 +22,7 @@ export default function AskPage() {
         <div className="mt-3"><ProductHuntBadge /></div>
       </div>
       <ProductProof />
+      <ResearchResources />
       <ForCreators />
       <ProductFaq />
     </main>

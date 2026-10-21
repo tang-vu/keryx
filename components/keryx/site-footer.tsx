@@ -16,6 +16,7 @@ import { productGuideCopy } from "@/locales/en/product-guide";
 import { setupCopy } from "@/locales/en/get-started";
 import { privateResearchCopy } from "@/locales/en/run-claim-research";
 import { SUPPORT_MAILTO } from "@/lib/public-support";
+import { researchGuidesCopy } from "@/locales/en/research-guides";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LanguageSwitcher } from "./language-switcher";
 import { useUiCopy, useUiCopyFunction, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
@@ -40,6 +41,7 @@ function houseLinks(message: ReturnType<typeof createMessages>, guide = productG
   { label: message("shellNavigation.answers"), href: "/answers" },
   { label: message("shellNavigation.sources"), href: "/sources" },
   { label: message("shellNavigation.literature"), href: "/literature" },
+  { label: researchGuidesCopy.navigation, href: "/guides" },
   { label: message("shellNavigation.activity"), href: "/dashboard" },
   { label: message("shellFooter.publicProof"), href: "/proof" },
   { label: message("shellNavigation.creators"), href: "/register" },
