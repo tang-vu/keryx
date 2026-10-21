@@ -60,7 +60,7 @@ export interface EconomicsA2aOrderRow {
 
 export type EconomicsRunSample = Pick<
   QueryRun,
-  "id" | "researchMode" | "fundingOwner" | "llmUsage"
+  "id" | "researchMode" | "fundingOwner" | "llmUsage" | "llmCalls"
 > & { usageCoverage?: "complete" | "unknown"; usageCoverageVersion?: 2 };
 
 /** Require one valid usage record for every completed instrumented call. */
@@ -100,6 +100,7 @@ export function economicsRunSample(run: QueryRun): EconomicsRunSample | null {
     researchMode: run.researchMode,
     fundingOwner: run.fundingOwner,
     llmUsage: run.llmUsage.map(cloneUsage),
+    ...(Array.isArray(run.llmCalls) ? { llmCalls: run.llmCalls.map(call => ({ ...call })) } : {}),
     usageCoverage: completeUsage(run) ? "complete" : "unknown",
     usageCoverageVersion: 2,
   };
