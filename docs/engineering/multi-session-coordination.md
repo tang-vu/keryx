@@ -5,6 +5,12 @@ sessions. Separate their work, avoid duplicate investigation and expensive check
 and give each release one owner. Speed comes from independent work and reusable
 evidence; the [validation and release gates](../development-workflow.md) still apply.
 
+Owner-confirmed October 21, 2026: coordination prevents conflicting writes,
+resource use, merges and deployments. Each outcome owner reviews, fixes and
+validates its own work. Cross-session review and a separate reviewer are optional,
+not an admission requirement or a reason to stop ready work and request another
+agent. Required checks and existing release/financial authority remain unchanged.
+
 ## Start by claiming one outcome
 
 Before editing, fetch/prune, inspect the worktree/branch state, open PRs and current
@@ -79,9 +85,11 @@ process or cancel its CI to free resources.
 
 Reuse check results only when source, inputs, environment and checked scope still
 match. Focused evidence for one PR does not accept a newly combined release.
-Let one designated reviewer handle a candidate rather than having every session
-repeat the same full investigation. Cancel only superseded same-PR validation
-allowed by the existing workflow; preserve main/manual/scheduled/publication runs.
+The outcome owner completes the candidate review; reuse applicable evidence
+without having every session repeat the same investigation. Additional review may
+be requested when useful, but another session's approval is not a routine gate.
+Cancel only superseded same-PR validation allowed by the existing workflow;
+preserve main/manual/scheduled/publication runs.
 Record measured timing if reporting a speed improvement.
 
 ## One merge queue and one release owner

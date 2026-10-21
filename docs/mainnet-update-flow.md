@@ -55,7 +55,9 @@ does not require a runtime deploy or distribution version change.
    main. Record network, schema, custody and public-contract impact.
 3. **Validate locally and in CI.** Run focused behavior/failure checks, required
    TypeScript/lint/build/contract checks in proportion to the change, and all
-   required repository CI. Payment/auth/storage changes require independent review.
+   required repository CI. The outcome owner reviews payment/auth/storage authority
+   and failure paths under the current development workflow; a separate reviewer
+   is optional.
    Test both supported network profiles where the changed behavior depends on them.
 4. **Exercise staging where applicable.** Use original public documents for research
    usefulness, and testnet for real vendor/payment integration. Record exact
@@ -123,7 +125,9 @@ They normally need no paid canary. Shared research changes need grounded-output,
 empty/partial result and export/adapter checks. Public API changes require
 compatibility coverage. Payment, signing, storage and contracts need focused
 failure/concurrency/replay tests, migration/restore evidence where relevant and
-independent review. Testnet success alone does not cover mainnet profile bindings.
+source review by the outcome owner. Explicit external audit and financial/custody
+acceptance remain scoped to their documented operations. Testnet success alone
+does not cover mainnet profile bindings.
 
 Reviewed-role deploys retain the prior build and do not automatically roll back
 on a failed health check. Once a migration is attempted, uncertainty can include
