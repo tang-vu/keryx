@@ -55,6 +55,24 @@ afterEach(async () => {
 });
 
 describe("unfinished non-target editor statements", () => {
+  it("imports same-version PDF evidence and downloads the selected original read URL", async () => {
+    const report = evidenceDraftFixture().reports[0];
+    report.id = "pdf-retained-report";
+    const readUrl = report.citations[0].itemUrl!.replace("/abs/", "/pdf/");
+    report.citations[0].itemUrl = readUrl; report.evidence![0].itemUrl = readUrl;
+    report.evidence![0].quote = "This separate PDF passage retains its own measured outcome.";
+    await fill(control<HTMLTextAreaElement>(container, copy.import.label), JSON.stringify(report));
+    await act(async () => { container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    expect(container.textContent).toContain("matching retained excerpts: 2");
+    const label = [...articles()[0].querySelectorAll("label")].find(row => row.textContent?.includes(report.evidence![0].quote));
+    expect(label).toBeDefined();
+    await check(label!.querySelector<HTMLInputElement>('input[type="checkbox"]')!);
+    await click(container, copy.download.markdown);
+    const markdown = vi.mocked(downloadBrowserText).mock.calls.at(-1)![0];
+    expect(markdown).toContain(report.evidence![0].quote);
+    expect(markdown).toContain(`[retained read](<${readUrl}>)`);
+  });
+
   for (const mode of ["append", "regenerate"] as const) it.each(["", " \n\t "])(`${mode} preserves an unfinished row with text %j`, async unfinishedText => {
     await fill(control<HTMLTextAreaElement>(container, copy.claim.passage), "Preserve these passage bytes.");
     await fill(control<HTMLTextAreaElement>(articles()[0], copy.theme.notes), "Keep other human notes.");

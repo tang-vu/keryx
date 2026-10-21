@@ -115,9 +115,26 @@ an exact item URL/source/item/content-version/marker match to one retained citat
 the original research claim/index and a qualified bounded quote. Missing version,
 unqualified records, ambiguous duplicate markers, synthetic markers and known seed
 fingerprints are withheld. Bibliography, matching titles and alternate versions
-cannot supply evidence. No alias or redirect resolution is performed: use the exact
-saved record URL in the retained read. Reports with a PDF read URL rather than the
-saved landing URL need a future reviewed identity adapter, not title matching.
+cannot supply evidence. A canonical `https://arxiv.org/pdf/<id>v<version>` read
+URL (with an optional `.pdf` suffix) may map to the saved canonical `/abs/` record
+only when its explicit arXiv identifier and version match. Citation and evidence
+rows must still agree literally on the original source, item, read URL, content
+version and marker. Unversioned URLs, HTML, query/fragment variants, redirects and
+other repositories retain the existing exact-URL rule. Metadata links and titles
+never supply this mapping.
+
+A mapped excerpt adds `readUrl` containing its original PDF URL; `paperUrl` stays
+the saved bibliography record. Both URL identities bind its excerpt identifier
+and any user assessment. Markdown and LaTeX retain the read URL beside the quote;
+BibTeX/RIS keep one matching saved reference. Existing exact-URL excerpts keep
+their original shape, identifiers and assessment bindings. Private draft backups
+can retain the optional assessment `readUrl`; older clients may refuse those new
+mapped assessments. Restore them with a client supporting this mapping.
+
+This mapping belongs to the caller-supplied report transformation shared by the
+editor, API and MCP. The authenticated completed-private-read selector keeps its
+existing literal original-URL contract; no private lookup, stored result or
+payment identity is rewritten or broadened by this adapter.
 
 Imported reports are caller supplied. Schema checks and exact matching do not
 authenticate their origin or prove the source was read, the quote is verbatim in
