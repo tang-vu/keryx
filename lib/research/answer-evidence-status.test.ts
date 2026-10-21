@@ -7,6 +7,8 @@ import { AnswerCard } from "../../components/keryx/answer-card";
 import { AnswerEvidenceStatus } from "../../components/keryx/answer-evidence-status";
 import { AskForm } from "../../components/keryx/ask-form";
 import { createMessages } from "../i18n/messages";
+import { englishUiCopy, UiCopyContext } from "../i18n/ui-copy-context";
+import { loadUiPreview } from "../i18n/ui-preview-catalogues";
 import type { EvidenceRecord, QueryRun } from "../types";
 import { buildAnswerEvidenceStatus, evidenceFollowUpContext, evidenceFollowUpHref } from "./answer-evidence-status";
 
@@ -86,6 +88,16 @@ describe("recorded answer evidence status", () => {
     const run = fixture(); run.claimCoverage!.push({ ...run.claimCoverage![0], coverage: 1 });
     run.claimCoverage![2].claim = "another target";
     expect(buildAnswerEvidenceStatus(run).targets.map(row => row.estimate)).toEqual([null, 0, null]);
+  });
+  it.each(["vi", "zh-Hans"] as const)("keeps new %s labels in explicit English fallback without translating original targets or the critical budget notice", async locale => {
+    const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
+    const run = fixture(); run.subClaims[0] = "Original target 中文 {question}";
+    const html = renderToStaticMarkup(createElement(UiCopyContext.Provider,
+      { value: { ...englishUiCopy, locale, preview, message } }, createElement(AnswerEvidenceStatus, { run })));
+    expect(message("reportEvidence.title")).toBe(copy("reportEvidence.title"));
+    expect(html).toContain(message("reportEvidence.title")); expect(html).toContain(run.subClaims[0]);
+    expect(message("reportEvidence.prepareNotice")).toBe(copy("reportEvidence.prepareNotice"));
+    expect(html).toContain(copy("reportEvidence.prepareNotice"));
   });
 });
 

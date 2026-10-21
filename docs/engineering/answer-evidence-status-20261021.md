@@ -49,6 +49,7 @@ fixture route is removed before the candidate is committed.
 Web reports and web-backed desktop views share the changed card and composer.
 CLI, API, stdio/remote MCP, extension and bots retain their existing recorded
 evidence contracts and web-report handoffs; no envelope or reward calculation
-changes. New authored UI keys use the established English fallback until preview
-translations are supplied. Required hosted PR and exact-main checks remain the
+changes. New authored UI keys use explicit English fallback in the Vietnamese and
+Simplified Chinese previews. Their uncovered keys and source bindings are recorded
+honestly; no translation approval or activation is claimed. Required hosted PR and exact-main checks remain the
 acceptance gates. Runtime deployment belongs to the existing coordinated batch.
