@@ -117,3 +117,40 @@ it.each(locales)("%s stdio failures preserve raw diagnostics and perform no retr
   expect(response).toEqual({ isError: true, content: [{ type: "text", text: researchPresentationCatalogues[language].stdioFailure.replace("{detail}", detail) }] });
   expect(ask).toHaveBeenCalledOnce();
 });
+
+it("keeps the paid buyer's existing recovery instruction and makes no replacement call", async () => {
+  const detail = "Previous payment requires recovery. Use keryx_recover before another paid call";
+  const ask = vi.fn(async () => { throw new Error(detail); });
+  const response = await createStdioResearchHandler(ask, "https://example.invalid")({ question: presentationQuestions.en });
+  expect(response).toMatchObject({ isError: true, content: [{ text: expect.stringContaining(detail) }] });
+  expect(ask).toHaveBeenCalledOnce();
+});
+
+it.each(locales)("%s exposes recorded open circuits and rejected fallback input without a new request", language => {
+  const run = presentationRun();
+  run.reasoningAttempts = [
+    { step: "decide", engine: "llm:primary", tier: 0, attempt: 0, startedAt: 1, durationMs: 0,
+      outcome: "circuit-open", retryAfterMs: 1800000 },
+    { step: "decide", engine: "llm:alternate", tier: 1, attempt: 1, startedAt: 2, durationMs: 0,
+      outcome: "input-limited", error: "input_limit", status: 413 },
+    { step: "decide", engine: "heuristic", tier: 2, attempt: 1, startedAt: 3, durationMs: 0, outcome: "served" },
+  ];
+  const result = remoteResearchResult(run), before = hash(result), text = presentationReasoningText(result, language);
+  expect(text).toContain("decide: circuit-open [recorded-retry-after-ms=1800000]");
+  expect(text).toContain("decide: input_limit (HTTP 413)");
+  expect(text).toContain(researchPresentationCatalogues[language].selectionDiagnostic);
+  expect(result.reasoning.sourceSelection).toMatchObject({ state: "heuristic", fallbackUsed: true });
+  expect(hash(result)).toBe(before);
+});
+
+it("bounds displayed failure history and omits private exception fields", () => {
+  const result = remoteResearchResult(presentationRun());
+  result.reasoningAttempts = Array.from({ length: 12 }, (_, index) => ({
+    step: "decide", engine: "llm:synthetic", tier: 0, attempt: index + 1, startedAt: index, durationMs: 0,
+    outcome: "failed", error: "provider", status: 500 + index, privateBody: "PRIVATE-CREDENTIAL",
+  }));
+  const text = presentationReasoningText(result, "en");
+  expect(text).toContain("HTTP 507"); expect(text).not.toContain("HTTP 508");
+  expect(text).toContain(researchPresentationCatalogues.en.more.replace("{count}", "4"));
+  expect(text).not.toContain("PRIVATE-CREDENTIAL");
+});

@@ -7,7 +7,7 @@ import { build } from "esbuild";
 import { chromium, type Browser } from "playwright";
 import { ledgerFixture, ledgerPayment, ledgerRun } from "../lib/operator-ledger/test-fixture.ts";
 import { ledgerDigest } from "../lib/operator-ledger/projection.ts";
-import { operatorLedgerCsv, verifyOperatorLedger } from "../lib/operator-ledger/export.ts";
+import { operatorLedgerCsv, operatorLedgerJson, verifyOperatorLedger } from "../lib/operator-ledger/export.ts";
 import type { OperatorLedger } from "../lib/operator-ledger/contracts.ts";
 
 const browserRun = ledgerRun({ id: "44444444-4444-4444-8444-444444444444", fundingOwner: "browser", askerFunded: true,
@@ -24,7 +24,7 @@ window.ledgerVerify=verifyBrowserOperatorLedger; createRoot(document.getElementB
   resolveDir: process.cwd(), sourcefile: "ledger-browser-fixture.tsx", loader: "tsx" },
   bundle: true, write: false, format: "iife", platform: "browser", tsconfig: resolve("tsconfig.json"),
   define: { "process.env.NODE_ENV": '"production"', "process.env": "{}" }, logLevel: "silent" });
-let mode: "ok" | "empty" | "tamper" = "ok", requests = 0;
+let mode: "ok" | "empty" | "tamper" = "ok", requests = 0, ledgerReads = 0;
 const server = createServer((request, response) => {
   if (++requests > 200) { response.writeHead(503).end(); return; }
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
@@ -32,6 +32,7 @@ const server = createServer((request, response) => {
   if (url.pathname === "/fixture.js") { response.writeHead(200, { "content-type": "text/javascript" }).end(bundle.outputFiles[0].text); return; }
   if (url.pathname === "/operator/ledger") { response.writeHead(200, { "content-type": "text/html" }).end("<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'><div id=root style='max-width:1100px;margin:auto;overflow-wrap:anywhere'></div><script src=/fixture.js></script>"); return; }
   if (url.pathname === "/api/operator/ledger") {
+    ledgerReads++;
     const value = mode === "empty" ? ledgerFixture([], []) : structuredClone(corpus[0]);
     value.payload.window.days = Number(url.searchParams.get("days") ?? 7);
     value.payload.window.from = new Date(Date.parse(value.payload.window.readStartedAt) - value.payload.window.days * 86_400_000).toISOString();
@@ -74,10 +75,19 @@ try {
     const text = await page.locator("body").innerText();
     assert(!/PRIVATE-CUSTOMER|PRIVATE-ANSWER|PRIVATE-RATIONALE|auth-one|payment-one/.test(text));
   }
+  // A new server observation must not replace the snapshot the reader chose to export.
+  mode = "empty"; const readsBeforeExport = ledgerReads;
   const downloadPromise = page.waitForEvent("download"); await page.getByText("Download balanced CSV", { exact: true }).click();
   const stream = await (await downloadPromise).createReadStream(); assert(stream);
   let csv = ""; for await (const chunk of stream) { csv += chunk.toString(); assert(Buffer.byteLength(csv) <= 2_000_000); }
   assert.equal(csv, operatorLedgerCsv(corpus[0]));
+  const jsonPromise = page.waitForEvent("download"); await page.getByText("Download JSON ledger", { exact: true }).click();
+  const jsonStream = await (await jsonPromise).createReadStream(); assert(jsonStream);
+  let json = ""; for await (const chunk of jsonStream) { json += chunk.toString(); assert(Buffer.byteLength(json) <= 2_000_000); }
+  assert.equal(json, operatorLedgerJson(corpus[0]));
+  verifyOperatorLedger(JSON.parse(json), corpus[0].integrity.digest);
+  assert.equal(ledgerReads, readsBeforeExport);
+  mode = "ok";
   await page.locator("#ledger-days").selectOption("31"); await page.getByText("0.015700 USDC", { exact: true }).first().waitFor();
   mode = "tamper"; await page.getByRole("button", { name: "Read again", exact: true }).click();
   await page.getByText(/Public transfer evidence is unavailable/).waitFor();
@@ -85,6 +95,7 @@ try {
   await page.getByText("No eligible public web dispatches were observed in this bounded slice.", { exact: true }).waitFor();
   assert.equal(errors.length, 0); verifyOperatorLedger(corpus[0]);
   console.log(JSON.stringify({ gate: "public-job-ledger-browser", actualWebCryptoCases: parity.cases, functionalWidths: [390, 1280], cssLayoutQualified: false, csvBalanced: true,
+    displayedSnapshotJsonAndCsv: true, noExportRead: true,
     tamperRefused: true, emptyScopePreserved: true, privatePayloadAbsent: true, requests }));
 } finally {
   try { await browser?.close(); }

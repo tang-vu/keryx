@@ -1,0 +1,15 @@
+export const literatureImportCopy = {
+  preview: "Add missing papers from this backup",
+  notice: "Only exact paper URLs that are not already saved will be added, with their saved screening and notes. Your current review focus, existing papers and unsaved editors stay as they are. The backup's review focus is ignored. No upload or metadata lookup occurs.",
+  newPapers: "Papers to add",
+  duplicates: "Already saved; keep current version and notes",
+  total: "Total after adding",
+  review: "Review the exact papers to add",
+  add: "Add missing papers",
+  adding: "Adding papers…",
+  added: "Missing papers added on this browser. Existing review focus, papers and notes were kept.",
+  none: "Every paper in this backup is already saved. Nothing needs to be added.",
+  capacity: "Adding these papers would exceed the 50-paper limit. Remove papers or choose a smaller backup. Nothing has been added.",
+  stale: "Your saved library changed while this import was waiting. Review the updated preview and try again. Nothing has been added by this import.",
+  cancelled: "Adding papers was cancelled. Nothing has been added by this import.",
+} as const;

@@ -16,7 +16,8 @@ export function presentationLocaleNotice(locale: PresentationLocale): string {
 
 /** Shared recorded facts, same bounded projection as the existing English renderer. */
 export function presentationReasoningText(result: Partial<ReasoningSurface>, language: PresentationLanguage): string {
-  if (language === "en") return reasoningServingText(result);
+  const failures = presentationFailureText(result, language);
+  if (language === "en") return [reasoningServingText(result), failures].filter(Boolean).join("\n");
   const copy = researchPresentationMessages(language), reasoning = result.reasoning;
   const fallback = (value: boolean | null) => copy(value === true ? "fallbackServed" : value === false ? "requestedServed" : "fallbackUnknown");
   const tiers = !reasoning || !Array.isArray(reasoning.steps) ? copy("servingUnavailable")
@@ -36,7 +37,21 @@ export function presentationReasoningText(result: Partial<ReasoningSurface>, lan
   const omitted = result.outputLimitTraceStepsOmitted;
   const partial = typeof omitted === "number" && Number.isSafeInteger(omitted) && omitted > 0
     ? copy("limitPartial", { count: omitted.toLocaleString("en-US") }) : "";
-  return [tiers, notice, partial].filter(Boolean).join("\n");
+  return [tiers, notice, partial, failures].filter(Boolean).join("\n");
+}
+
+/** Historical attempt categories, not a live retry countdown or permission to retry. */
+function presentationFailureText(result: Partial<ReasoningSurface>, language: PresentationLanguage): string {
+  const failures = [...new Set(surfaceReasoning(result.reasoningAttempts).reasoningAttempts
+    .filter(attempt => attempt.step === "decide" && attempt.outcome !== "served")
+    .map(attempt => `${attempt.step}: ${attempt.outcome === "circuit-open" ? "circuit-open" : attempt.error ?? attempt.outcome}` +
+      (attempt.status === undefined ? "" : ` (HTTP ${attempt.status})`) +
+      (attempt.outcome === "circuit-open" && attempt.retryAfterMs !== undefined
+        ? ` [recorded-retry-after-ms=${attempt.retryAfterMs}]` : "")))];
+  if (!failures.length) return "";
+  const copy = researchPresentationMessages(language);
+  return `${copy("selectionDiagnostic")}\n${failures.slice(0, 8).join("; ")}` +
+    (failures.length > 8 ? copy("more", { count: failures.length - 8 }) : "");
 }
 
 /** Existing financial authority prose remains exact English; ordinary headings are separate. */

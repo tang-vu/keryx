@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { evidenceProcurementCopy as copy, evidenceProcurementCopyText as copyText } from "@/lib/evidence-procurement/copy";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { MAX_PROCUREMENT_BYTES, parseEvidenceProcurement, type EvidenceProcurementPacket, type ProcurementOffer, type ProcurementDelivery } from "@/lib/evidence-procurement/contracts";
 import { buildEvidenceProcurement, PROCUREMENT_NOTICE, procurementRequestHash, procurementBodyHash, procurementOfferHash, procurementDeliveryHash,
   procurementOfferMessage, procurementDeliveryMessage, type EvidenceProcurementResult } from "@/lib/evidence-procurement/engine";
+import { exportEvidenceProcurement, PROCUREMENT_RECEIPT_FORMATS, type ProcurementReceiptFormat } from "@/lib/evidence-procurement/export";
 
 const field = "mt-2 block w-full min-w-0 border border-line bg-paper px-3 py-2 font-serif text-sm text-ink";
 const button = "inline-flex min-h-11 items-center justify-center border border-ink px-3 py-2 font-mono text-xs text-ink disabled:cursor-not-allowed disabled:opacity-50";
@@ -31,9 +32,11 @@ export function EvidenceProcurementWorkspace({ signer }: { signer?: Signer } = {
   const [packet, setPacket] = useState<EvidenceProcurementPacket>();
   const [result, setResult] = useState<EvidenceProcurementResult>();
   const [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
+  const [receiptFormat, setReceiptFormat] = useState<ProcurementReceiptFormat>("json");
   const revision = useRef(0), operation = useRef(false);
-  // An account switch or disconnect cannot attach a callback from a former wallet.
-  useEffect(() => { revision.current++; }, [signer?.address]);
+  // Invalidate at commit/unmount, before promises can resume ahead of passive
+  // effects and attach private output or a signature from a former account.
+  useLayoutEffect(() => { const guard = revision; guard.current++; return () => { guard.current++; }; }, [signer?.address]);
   const [requestId, setRequestId] = useState("request1"), [decision, setDecision] = useState("");
   const [network, setNetwork] = useState<EvidenceProcurementPacket["request"]["network"]>("eip155:5042");
   const [budget, setBudget] = useState("0.05"), [requestExpiry, setRequestExpiry] = useState("");
@@ -87,6 +90,23 @@ export function EvidenceProcurementWorkspace({ signer }: { signer?: Signer } = {
       }
       commit({ ...packet, selectedOfferIds: [...packet.selectedOfferIds, id] }, copy.messages.selectionChanged);
     } catch { if (revision.current === observedRevision) { setResult(undefined); setMessage(errorMessage); } }
+    finally { operation.current = false; setBusy(false); }
+  };
+  const downloadReceipt = async () => {
+    if (!result || operation.current) return;
+    if (receiptFormat === "json") {
+      downloadBrowserText(JSON.stringify(result, null, 2) + "\n", "private-evidence-procurement-receipt.json", "application/json");
+      setMessage(copy.messages.receiptDownloaded); return;
+    }
+    const observedRevision = revision.current; operation.current = true; setBusy(true);
+    try {
+      // Preserve the displayed, dated inspection rather than silently evaluating
+      // its expiry and recommendations again at the later download time.
+      const receipt = await exportEvidenceProcurement(result.packet, receiptFormat, Date.parse(result.observedAt));
+      if (revision.current !== observedRevision) return;
+      downloadBrowserText(receipt.text, `private-evidence-procurement-receipt.${receipt.extension}`, receipt.contentType);
+      setMessage(copy.messages.receiptDownloaded);
+    } catch { if (revision.current === observedRevision) setMessage(errorMessage); }
     finally { operation.current = false; setBusy(false); }
   };
   const readJson = (text: string): unknown => {
@@ -353,9 +373,11 @@ export function EvidenceProcurementWorkspace({ signer }: { signer?: Signer } = {
       <div className="mt-4 flex flex-wrap gap-3"><button type="button" className={button} disabled={!packet} onClick={() => {
         if (!packet) return; downloadBrowserText(JSON.stringify(parseEvidenceProcurement(packet)), "private-evidence-procurement-packet.json", "application/json"); setMessage(copy.messages.packetDownloaded);
       }}>{copy.workspace.downloadPrivatePlaintextPacket}</button>
-      <button type="button" className={button} disabled={!result || busy} onClick={() => {
-        if (!result) return; downloadBrowserText(JSON.stringify(result, null, 2) + "\n", "private-evidence-procurement-receipt.json", "application/json"); setMessage(copy.messages.receiptDownloaded);
-      }}>{copy.workspace.downloadDecisionReceipt}</button>
+      <label className={label}>{copy.workspace.downloadDecisionReceipt}<select className={field} disabled={!result || busy}
+        value={receiptFormat} onChange={event => setReceiptFormat(event.target.value as ProcurementReceiptFormat)}>
+        {PROCUREMENT_RECEIPT_FORMATS.map(format => <option key={format} value={format}>{format.toUpperCase()}</option>)}
+      </select></label>
+      <button type="button" className={button} disabled={!result || busy} onClick={() => void downloadReceipt()}>{copy.workspace.downloadDecisionReceipt}</button>
       <button type="button" className={button} onClick={() => {
         edited(); setPacket(undefined); setRequestId("request1"); setDecision(""); setNetwork("eip155:5042"); setBudget("0.05"); setRequestExpiry(""); setRequirements([{ id: "requirement1", question: "", priority: 10, status: "missing" }]);
         setOfferId("offer1"); setProviderWallet(""); setSourceUrl(""); setDeliverable(""); setPrice("0.01"); setNonce(""); setOfferExpiry(""); setOfferRequirements([]); setOfferSignature("");

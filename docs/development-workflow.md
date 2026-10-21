@@ -11,6 +11,14 @@ Claim one outcome and its paths/resources before editing; use isolated worktrees
 one merge queue and one release owner. Batch agreed outcomes into one accepted
 combined deployment, and reuse evidence only while its source and inputs apply.
 
+Owner-confirmed October 21, 2026: each outcome owner completes source review,
+fixes and validation for its own work. Multiple sessions coordinate path/resource
+ownership, serialized merges and batched releases. A separate or cross-session
+reviewer is optional; routine PRs do not wait for another session or agent to
+approve them. This supersedes older blanket independent-review wording. Required
+CI, security/payment checks and explicit external audit or financial/custody
+acceptance for their documented operations remain in force.
+
 ## One PR per coherent outcome
 
 Keep related edits and review corrections on one focused branch and PR until
@@ -32,7 +40,7 @@ already accepted unchanged CI candidate.
 | --- | --- |
 | PR with only regular Markdown files in `docs/`, or root README, PLAN, DECISIONS or AGENTS | Scope/gate regressions and engineering-feed integrity; runtime lanes skipped |
 | UI, code, tests, configuration, dependencies, workflows, scripts, schemas, runtime assets, mixed or unknown changes | All existing main CI assertions, split across independent runner lanes |
-| Payment, auth, storage, contracts, shared/public interfaces and platform adapters | Full main acceptance plus applicable domain/platform workflows and independent review |
+| Payment, auth, storage, contracts, shared/public interfaces and platform adapters | Full main acceptance plus applicable domain/platform workflows and outcome-owner source review |
 | Any push to main | Full exact-source acceptance, including prose-only changes, to preserve publication authority |
 
 Document changes still need direct accuracy/link inspection and any applicable
@@ -78,8 +86,9 @@ filters remain intact. Broader filter narrowing is a separate measured change.
 
 ## Merge and delivery
 
-Review the completed candidate and pass its required checks, then merge under
-the owner's standing authorization. Do not wait for informational lint to merge.
+The outcome owner reviews the completed candidate, addresses findings and passes
+its required checks, then merges under the owner's standing authorization.
+Do not wait for informational lint to merge.
 If main advances, reconcile and validate the combined candidate where required;
 old CI evidence cannot establish acceptance of new combined source.
 

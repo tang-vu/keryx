@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { buildDraftCheck, DRAFT_CHECK_NOTICE, MAX_DRAFT_CHECK_BYTES, MAX_DRAFT_SOURCE_CHARACTERS, type DraftCheck, type DraftCheckRequest } from "@/lib/research/draft-check";
 import { detectDraftReferenceFormat, parseDraftReferences, type DraftReference } from "@/lib/research/draft-check-references";
@@ -71,6 +71,12 @@ export function DraftCheckWorkspace() {
   const [lifetime, setLifetime] = useState<DraftCheckLifetime>(3600);
   const [result, setResult] = useState<DraftCheck>(), [message, setMessage] = useState("");
   const editGeneration = useRef(0);
+  const fileInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const input = fileInput.current, cancel = () => { editGeneration.current++; };
+    input?.addEventListener("cancel", cancel);
+    return () => { input?.removeEventListener("cancel", cancel); cancel(); };
+  }, []);
   const format = importedFormat ?? detectDraftReferenceFormat(referenceText);
   const references = useMemo<DraftReference[] | undefined>(() => {
     try { return parseDraftReferences(format, referenceText); } catch { return undefined; }
@@ -93,13 +99,16 @@ export function DraftCheckWorkspace() {
     setSources(Object.fromEntries(packet.sources.map(row => [row.reference, { text: row.text, complete: row.coverage === "full-text", identity: row.identity }])));
     setSuggestions(packet.suggestions ?? []); setResult(buildDraftCheck(packet));
   };
-  const retained = async (action: () => void) => {
+  const retained = async (action: () => void, isCurrent: () => boolean = () => true) => {
     try {
       if (!navigator.locks?.request) throw new Error("Storage coordination unavailable");
-      await navigator.locks.request(DRAFT_CHECK_STORAGE_KEY, { mode: "exclusive" }, action);
-    } catch { setMessage(copy.retention.unavailable); }
+      await navigator.locks.request(DRAFT_CHECK_STORAGE_KEY, { mode: "exclusive" }, () => {
+        if (isCurrent()) action();
+      });
+    } catch { if (isCurrent()) setMessage(copy.retention.unavailable); }
   };
   const run = () => {
+    editGeneration.current++;
     try {
       setResult(buildDraftCheck(request())); setMessage(copy.workspace.done);
     } catch { setResult(undefined); setMessage(copy.workspace.refused); }
@@ -144,14 +153,16 @@ export function DraftCheckWorkspace() {
       <button type="button" className={button} disabled={!result} onClick={() => {
         downloadBrowserText(`${JSON.stringify(request(), null, 2)}\n`, "private-draft-input.json", "application/json"); setMessage(copy.workspace.downloaded);
       }}>{copy.retention.downloadInput}</button>
-      <label className={button}>{copy.retention.importInput}<input type="file" accept=".json,application/json" className="ml-2 max-w-40" onChange={async event => {
+      <label className={button}>{copy.retention.importInput}<input ref={fileInput} type="file" accept=".json,application/json" className="ml-2 max-w-40" onChange={async event => {
         const file = event.target.files?.[0]; event.target.value = "";
-        const generation = editGeneration.current;
-        try { if (!file || file.size > MAX_DRAFT_CHECK_BYTES) throw new Error("Invalid packet");
-          const packet = readDraftCheckFile(new Uint8Array(await file.arrayBuffer()));
+        const generation = ++editGeneration.current;
+        if (!file) return;
+        try { if (file.size > MAX_DRAFT_CHECK_BYTES) throw new Error("Invalid packet");
+          const bytes = new Uint8Array(await file.arrayBuffer());
           if (generation !== editGeneration.current) return;
+          const packet = readDraftCheckFile(bytes);
           load(packet); setMessage(copy.retention.restored); }
-        catch { setMessage(copy.workspace.refused); }
+        catch { if (generation === editGeneration.current) setMessage(copy.workspace.refused); }
       }} /></label>
       <button type="button" className={button} onClick={() => { editGeneration.current++; setPassage(""); setReferenceText(""); setSources({}); setSuggestions([]); setChosenClaims(undefined); setImportedFormat(undefined); setResult(undefined); setMessage(copy.workspace.cleared); }}>{copy.workspace.clear}</button>
     </div>
@@ -165,10 +176,13 @@ export function DraftCheckWorkspace() {
         <button type="button" className={button} disabled={!result} onClick={() => void retained(() => {
           saveDraftCheck(window.localStorage, request(), lifetime); setMessage(copy.retention.saved);
         })}>{copy.retention.save}</button>
-        <button type="button" className={button} onClick={() => void retained(() => {
-          const saved = restoreDraftCheck(window.localStorage); if (saved) load(saved.request);
-          setMessage(saved ? copy.retention.restored : copy.retention.absent);
-        })}>{copy.retention.restore}</button>
+        <button type="button" className={button} onClick={() => {
+          const generation = ++editGeneration.current;
+          void retained(() => {
+            const saved = restoreDraftCheck(window.localStorage); if (saved) load(saved.request);
+            setMessage(saved ? copy.retention.restored : copy.retention.absent);
+          }, () => generation === editGeneration.current);
+        }}>{copy.retention.restore}</button>
         <button type="button" className={button} onClick={() => void retained(() => {
           clearSavedDraftCheck(window.localStorage); setMessage(copy.retention.cleared);
         })}>{copy.retention.clear}</button>

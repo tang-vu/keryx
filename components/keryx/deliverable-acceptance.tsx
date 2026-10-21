@@ -46,6 +46,7 @@ function OwnerChoice({ id, wallet, answer, onAcknowledged }: { id: string; walle
   const [verifiedAnswer, setVerifiedAnswer] = useState<{ answer: string; digest: string } | null>(null);
   const answerMatches = !!verifiedAnswer && verifiedAnswer.answer === answer && verifiedAnswer.digest === snapshot?.answerDigest;
   const live = useRef(true);
+  const requestGeneration = useRef(0);
   const path = `/api/me/deliverables/${id}/acceptance`;
   useEffect(() => {
     let active = true;
@@ -57,6 +58,7 @@ function OwnerChoice({ id, wallet, answer, onAcknowledged }: { id: string; walle
   }, [answer, snapshot?.answerDigest]);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   async function request(input?: AcceptanceInput) {
+    const generation = ++requestGeneration.current;
     setBusy(true); setError("");
     try {
       const response = await fetch(path, { method: input ? "POST" : "GET", cache: "no-store", credentials: "same-origin",
@@ -65,18 +67,20 @@ function OwnerChoice({ id, wallet, answer, onAcknowledged }: { id: string; walle
       if (!response.ok) throw new Error(response.status === 409 ? copy.conflict : input ? copy.failed : copy.unavailable);
       const result = acceptanceSnapshotSchema.parse(await readBoundedJson(response, 16384));
       if (result.wallet !== wallet || result.id !== id) throw new Error(copy.unavailable);
-      if (!live.current) return;
+      if (!live.current || generation !== requestGeneration.current) return;
       setSnapshot(result); if (input) setPending(null);
       onAcknowledged();
-    } catch (cause) { if (live.current) setError(cause instanceof Error && [copy.conflict, copy.failed, copy.unavailable].some(message => message === cause.message) ? cause.message : copy.failed); }
-    finally { if (live.current) setBusy(false); }
+    } catch (cause) { if (live.current && generation === requestGeneration.current) setError(cause instanceof Error && [copy.conflict, copy.failed, copy.unavailable].some(message => message === cause.message) ? cause.message : copy.failed); }
+    finally { if (live.current && generation === requestGeneration.current) setBusy(false); }
   }
   useEffect(() => {
+    // A manual read or submission supersedes this mount-time observation, including errors.
+    const generation = ++requestGeneration.current;
     const abort = new AbortController(), timer = setTimeout(() => abort.abort(), 10000);
     void fetch(path, { cache: "no-store", headers: { "X-Keryx-Expected-Wallet": wallet }, signal: abort.signal })
       .then(async response => { if (!response.ok) throw new Error(copy.unavailable); return acceptanceSnapshotSchema.parse(await readBoundedJson(response, 16384)); })
-      .then(result => { if (!abort.signal.aborted && result.wallet === wallet && result.id === id) setSnapshot(result); })
-      .catch(() => { if (!abort.signal.aborted) setError(copy.unavailable); });
+      .then(result => { if (!abort.signal.aborted && generation === requestGeneration.current && result.wallet === wallet && result.id === id) setSnapshot(result); })
+      .catch(() => { if (!abort.signal.aborted && generation === requestGeneration.current) setError(copy.unavailable); });
     return () => { clearTimeout(timer); abort.abort(); };
   }, [path, wallet, id]);
   const submit = (choice: AcceptanceInput["choice"]) => {

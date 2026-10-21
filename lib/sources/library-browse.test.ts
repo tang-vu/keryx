@@ -37,6 +37,21 @@ describe("source library browsing", () => {
     expect(parseLibraryFilters({ q: ["  Agents  ", "payments"], topic: "__proto__", kind: "constructor", sort: "bad" })).toEqual({ ...all, q: "Agents" });
     expect(parseLibraryFilters({ q: "x".repeat(200), topic: "payments", kind: "feed", sort: "recent" })).toEqual({ q: "x".repeat(120), topic: "payments", kind: "feed", sort: "recent" });
   });
+  it("finds Vietnamese names and retained titles with unaccented search", () => {
+    const source: LibraryRecord = { id: "vi", name: "Đại học", url: "https://research.example/", kind: "feed",
+      itemTitles: ["Đánh giá đám mây"] };
+    expect(librarySearchMatches(source, "dai hoc")).toBe(true);
+    expect(librarySearchMatches(source, "danh gia dam may")).toBe(true);
+    expect(browseLibrary([source], { ...all, q: "hoc danh gia" })).toEqual([source]);
+    expect(source.name).toBe("Đại học");
+    expect(source.itemTitles).toEqual(["Đánh giá đám mây"]);
+  });
+  it("keeps meaningful non-Latin marks distinct while accepting equivalent Unicode forms", () => {
+    const source: LibraryRecord = { id: "ja", name: "ガイド", url: "https://research.example/", kind: "explore" };
+    expect(librarySearchMatches(source, "ガイド".normalize("NFD"))).toBe(true);
+    expect(librarySearchMatches(source, "カイド")).toBe(false);
+    expect(librarySearchMatches({ ...source, name: "Йога" }, "Иога")).toBe(false);
+  });
   it("keeps unknown observation dates last and does not mutate the source order", () => {
     expect(browseLibrary(records, { ...all, sort: "recent" }).map(row => row.id)).toEqual(["cited", "feed", "creator", "docs"]);
     expect(browseLibrary(records, { ...all, sort: "name" }).map(row => row.id)).toEqual(["feed", "cited", "creator", "docs"]);

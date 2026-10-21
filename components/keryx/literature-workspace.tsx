@@ -3,15 +3,19 @@
 
 import Link from "next/link";
 import bibliographyCopy from "@/locales/en/bibliographies.json";
-import { useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { LiteratureComparisonPreview } from "./literature-comparison-preview";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { PAPER_REPOSITORIES } from "@/lib/papers/types";
 import { paperReferencesCslJson, paperReferencesRis } from "@/lib/papers/reference-export";
 import { changeLiteratureWorkspace, clearLiteratureWorkspace, replaceLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
-import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, parseLiteratureWorkspace,
+import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, MAX_SAVED_PAPERS,
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+import { searchLiteratureEntries } from "@/lib/papers/literature-search";
+import { literatureSearchCopy as searchEnglish } from "@/locales/en/literature-search";
+import { literatureImportCopy as importEnglish } from "@/locales/en/literature-import";
+import { addMissingLiteraturePapers, previewLiteratureImport, readLiteratureWorkspaceFile } from "@/lib/papers/literature-import";
 
 
 
@@ -112,13 +116,26 @@ function SavedPaper({ entry, selected, selectionFull, toggle, act }: {
 
 export function LiteratureWorkspace() {
   const copy = useUiMessages();
+  const searchCopy = useUiCopy("literature-search", searchEnglish), searchHelpId = useId();
+  const importCopy = useUiCopy("literature-import", importEnglish);
   const { ready, workspace, error, raw } = useLiteratureWorkspace();
   const [message, setMessage] = useState(""), [failure, setFailure] = useState("");
   const [selected, setSelected] = useState<string[]>([]), [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
   const [pending, setPending] = useState<{ workspace: Workspace; filename: string }>();
   const [editingRevision, setEditingRevision] = useState(0);
   const [restoring, setRestoring] = useState(false);
+  const [adding, setAdding] = useState(false);
   const importGeneration = useRef(0);
+  useEffect(() => () => { ++importGeneration.current; }, []);
+  const importPreview = useMemo(() => {
+    if (!pending || error) return;
+    const preview = previewLiteratureImport(workspace, pending.workspace);
+    let issue = "";
+    try { addMissingLiteraturePapers(workspace, pending.workspace); }
+    catch (failure) { issue = failure instanceof Error ? failure.message : copy("literatureWorkspace.actionFailed"); }
+    return { ...preview, issue };
+  }, [workspace, pending, error, copy]);
   const act: Action = async (action, success) => {
     try { await action(); setFailure(""); setMessage(success); }
     catch (issue) { setMessage(""); setFailure(issue instanceof Error ? issue.message : copy("literatureWorkspace.actionFailed")); }
@@ -126,7 +143,10 @@ export function LiteratureWorkspace() {
   const active = selected.filter(url => workspace.entries.some(entry => entry.paper.url === url));
   let draft = "", draftError = "";
   if (active.length === 2) { try { draft = literatureComparisonDraft(workspace, active); } catch (issue) { draftError = (issue as Error).message; } }
-  const visible = workspace.entries.filter(entry => filter === "all" || entry.screening === filter);
+  const searched = useMemo(() => searchLiteratureEntries(workspace.entries, query), [workspace.entries, query]);
+  const searchMatches = new Set(searched.map(entry => entry.paper.url));
+  const visible = searched.filter(entry => filter === "all" || entry.screening === filter);
+  const visibleUrls = new Set(visible.map(entry => entry.paper.url));
 
   return <div className="mt-7 space-y-6">
     <p className="max-w-[75ch] font-serif text-sm leading-relaxed text-ink-2">{copy("literatureWorkspace.privacy")}</p>
@@ -147,8 +167,16 @@ export function LiteratureWorkspace() {
           <Link prefetch={false} href="/sources?kind=paper#research-papers" className={button}>{copy("literatureWorkspace.find")}</Link>
         </div>
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0 flex-1 basis-64">
+            <label className="block font-mono text-xs text-ink-2">{searchCopy.label}
+              <input type="search" maxLength={200} autoComplete="off" autoCapitalize="none" spellCheck={false} value={query}
+                onChange={event => setQuery(event.target.value)} aria-describedby={searchHelpId} className={field} />
+            </label>
+            <p id={searchHelpId} className="mt-2 font-serif text-xs text-ink-3">{searchCopy.guidance}</p>
+            {query !== "" && <button type="button" className={`${button} mt-2`} onClick={() => setQuery("")}>{searchCopy.clear}</button>}
+          </div>
           <label className="font-mono text-xs text-ink-2">{copy("literatureWorkspace.filter")}<select value={filter} onChange={event => setFilter(event.target.value)} className={field}>
-            <option value="all">{copy("literatureWorkspace.filterAll")}</option>{Object.entries(SCREENING_STATES).map(([value, label]) => <option key={value} value={value}>{label} ({workspace.entries.filter(entry => entry.screening === value).length})</option>)}
+            <option value="all">{copy("literatureWorkspace.filterAll")}</option>{Object.entries(SCREENING_STATES).map(([value, label]) => <option key={value} value={value}>{label} ({searched.filter(entry => entry.screening === value).length})</option>)}
           </select></label>
           <div className="space-y-2">
             <p role="status" className="font-serif text-sm text-ink-2">{copy(visible.length === 1 ? "literatureWorkspace.selection.one" : "literatureWorkspace.selection.other", { count: visible.length, selected: active.length })}</p>
@@ -163,10 +191,11 @@ export function LiteratureWorkspace() {
           </div>
         </div>
         <p className="mt-2 font-serif text-xs text-ink-3">{copy("literatureWorkspace.referencesNotice")}</p>
+        <p className="mt-2 font-serif text-xs text-ink-3">{searchCopy.scope}</p>
         <div className="mt-4 border border-line bg-panel p-4">
           <p className="font-serif text-sm text-ink-2">{copy("literatureWorkspace.compareNotice")}</p>
           <LiteratureComparisonPreview entries={active.flatMap(url => workspace.entries.filter(entry => entry.paper.url === url)
-            .map(({ paper, screening }) => ({ paper, screening })))} filter={filter} savedQuestion={workspace.question} draft={draft}
+            .map(({ paper, screening }) => ({ paper, screening, matchesSearch: searchMatches.has(paper.url) })))} filter={filter} savedQuestion={workspace.question} draft={draft}
             onRemove={url => setSelected(active.filter(selectedUrl => selectedUrl !== url))} />
           <div className="mt-3 flex flex-wrap gap-3">{draft ? <Link prefetch={false} href={`/?q=${encodeURIComponent(draft)}&mode=deep`} className={`${buttonBase} border-ink bg-seal text-paper`}>{copy("literatureWorkspace.prepare")}</Link> : <button disabled className={button}>{copy("literatureWorkspace.selectTwo")}</button>}
             {active.length > 0 && <button type="button" className={button} onClick={() => setSelected([])}>{copy("literatureWorkspace.clearSelection")}</button>}
@@ -179,8 +208,8 @@ export function LiteratureWorkspace() {
           <ol className="mt-3 list-decimal space-y-2 pl-5 font-serif text-sm text-ink-2"><li>{copy("literatureWorkspace.emptyFind")}</li><li>{copy("literatureWorkspace.emptySave")}</li><li>{copy("literatureWorkspace.emptyCompare")}</li></ol>
           <Link prefetch={false} href="/sources?kind=paper#research-papers" className={`${button} mt-4`}>{copy("literatureWorkspace.browse")}</Link>
         </div> : <>
-          {visible.length === 0 && <p className="mt-5 font-serif text-sm text-ink-2">{copy("literatureWorkspace.filterEmpty")}</p>}
-          <div className="mt-5 grid gap-4 md:grid-cols-2">{workspace.entries.map(entry => <div key={`${editingRevision}:${entry.paper.url}`} hidden={filter !== "all" && entry.screening !== filter} className="min-w-0"><SavedPaper entry={entry} selected={active.includes(entry.paper.url)} selectionFull={active.length === 2}
+          {visible.length === 0 && <p className="mt-5 font-serif text-sm text-ink-2">{query.trim() ? searchCopy.empty : copy("literatureWorkspace.filterEmpty")}</p>}
+          <div className="mt-5 grid gap-4 md:grid-cols-2">{workspace.entries.map(entry => <div key={`${editingRevision}:${entry.paper.url}`} hidden={!visibleUrls.has(entry.paper.url)} className="min-w-0"><SavedPaper entry={entry} selected={active.includes(entry.paper.url)} selectionFull={active.length === 2}
             toggle={() => setSelected(active.includes(entry.paper.url) ? active.filter(url => url !== entry.paper.url) : [...active, entry.paper.url])} act={act} /></div>)}</div>
         </>}
       </section>
@@ -196,28 +225,61 @@ export function LiteratureWorkspace() {
         {raw !== undefined && <button type="button" className={button} onClick={() => act(() => downloadBrowserText(raw, "keryx-literature-stored-data.json", "application/json"), copy("literatureWorkspace.storedPrepared"))}>{copy("literatureWorkspace.stored")}</button>}
       </div>
       <label className="mt-5 block font-mono text-xs text-ink-2">{copy("literatureWorkspace.restoreLabel")}
-        <input type="file" accept=".json,application/json" disabled={restoring} className={`${field} max-w-full`} onChange={async event => {
+        <input type="file" accept=".json,application/json" disabled={restoring || adding} className={`${field} max-w-full`} onChange={async event => {
           const file = event.currentTarget.files?.[0]; event.currentTarget.value = "";
           const generation = ++importGeneration.current; setPending(undefined);
           if (!file) return;
           try {
             if (file.size > MAX_LITERATURE_BYTES) throw new Error(copy("literatureWorkspace.tooLarge"));
-            const imported = parseLiteratureWorkspace(await file.text());
+            const imported = readLiteratureWorkspaceFile(new Uint8Array(await file.arrayBuffer()));
             if (generation !== importGeneration.current) return;
             setPending({ workspace: imported, filename: file.name }); setFailure(""); setMessage("");
-          } catch (issue) { if (generation === importGeneration.current) setFailure(issue instanceof Error ? issue.message : copy("literatureWorkspace.unreadable")); }
+          } catch (issue) { if (generation === importGeneration.current) setFailure(issue instanceof Error && issue.message.trim() ? issue.message : copy("literatureWorkspace.unreadable")); }
         }} />
       </label>
       {pending && <div className="mt-4 border border-seal p-4">
         <p className="break-words font-serif text-sm text-ink">{copy(pending.workspace.entries.length === 1 ? "literatureWorkspace.backupSummary.one" : "literatureWorkspace.backupSummary.other", { filename: pending.filename, count: pending.workspace.entries.length, title: pending.workspace.title || copy("literatureWorkspace.untitled") })}</p>
+        {importPreview && <section aria-label={importCopy.preview} className="mt-4 border border-line p-4">
+          <h3 className="font-display text-lg text-ink">{importCopy.preview}</h3>
+          <p className="mt-2 font-serif text-sm text-ink-2">{importCopy.notice}</p>
+          <dl className="mt-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 font-mono text-xs text-ink-2">
+            <dt>{importCopy.newPapers}</dt><dd>{importPreview.additions.length}</dd>
+            <dt>{importCopy.duplicates}</dt><dd>{importPreview.duplicates}</dd>
+            <dt>{importCopy.total}</dt><dd>{`${importPreview.total}/${MAX_SAVED_PAPERS}`}</dd>
+          </dl>
+          {importPreview.additions.length > 0 && <details className="mt-3">
+            <summary className="min-h-11 cursor-pointer py-3 font-mono text-xs text-seal underline">{importCopy.review}</summary>
+            <ul className="space-y-3">{importPreview.additions.map(entry => <li key={entry.paper.url} className="min-w-0 border-t border-line pt-3">
+              <a href={entry.paper.url} target="_blank" rel="noopener noreferrer" className="break-words font-serif text-sm text-seal underline">{entry.paper.title}</a>
+              <p className="break-words font-mono text-xs text-ink-3">{entry.paper.url}</p>
+              <p className="mt-1 font-mono text-xs text-ink-2">{SCREENING_STATES[entry.screening]}</p>
+              {entry.notes && <p className="mt-2 whitespace-pre-wrap break-words font-serif text-sm text-ink-2">{entry.notes}</p>}
+            </li>)}</ul>
+          </details>}
+          {importPreview.issue && <p role="alert" className="mt-2 font-serif text-sm text-seal">{importPreview.issue}</p>}
+          {!importPreview.additions.length && <p className="mt-2 font-serif text-sm text-ink-2">{importCopy.none}</p>}
+          <button type="button" disabled={restoring || adding || !!importPreview.issue || !importPreview.additions.length} className={`${button} mt-3`} onClick={async () => {
+            const generation = importGeneration.current, captured = pending, base = serializeLiteratureWorkspace(workspace);
+            setAdding(true);
+            await act(async () => {
+              await changeLiteratureWorkspace(current => {
+                if (generation !== importGeneration.current) throw new Error(importCopy.cancelled);
+                if (serializeLiteratureWorkspace(current) !== base) throw new Error(importCopy.stale);
+                return addMissingLiteraturePapers(current, captured.workspace);
+              });
+              if (generation === importGeneration.current) setPending(undefined);
+            }, importCopy.added);
+            setAdding(false);
+          }}>{adding ? importCopy.adding : importCopy.add}</button>
+        </section>}
         <p className="mt-2 font-serif text-sm text-ink-2">{copy("literatureWorkspace.restoreNotice")}</p>
-        <div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={restoring} className={button} onClick={async () => {
+        <div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={restoring || adding} className={button} onClick={async () => {
           const generation = importGeneration.current, captured = pending;
           setRestoring(true);
           await act(async () => {
             await replaceLiteratureWorkspace(captured.workspace, () => generation === importGeneration.current);
             if (generation !== importGeneration.current) return;
-            setPending(undefined); setSelected([]); setFilter("all"); setEditingRevision(value => value + 1);
+            setPending(undefined); setSelected([]); setFilter("all"); setQuery(""); setEditingRevision(value => value + 1);
           }, copy("literatureWorkspace.restored"));
           setRestoring(false);
         }}>{restoring ? copy("literatureWorkspace.restoring") : copy("literatureWorkspace.restore")}</button>
@@ -227,7 +289,7 @@ export function LiteratureWorkspace() {
         <p className="mt-2 font-serif text-sm text-ink-2">{copy("literatureWorkspace.clearNotice")}</p>
         <button type="button" className={`${button} mt-3`} onClick={() => act(async () => {
           if (!window.confirm(copy("literatureWorkspace.clearConfirm"))) throw new Error(copy("literatureWorkspace.clearCancelled"));
-          await clearLiteratureWorkspace(); ++importGeneration.current; setPending(undefined); setSelected([]); setFilter("all"); setEditingRevision(value => value + 1);
+          await clearLiteratureWorkspace(); ++importGeneration.current; setPending(undefined); setSelected([]); setFilter("all"); setQuery(""); setEditingRevision(value => value + 1);
         }, copy("literatureWorkspace.cleared"))}>{copy("literatureWorkspace.clear")}</button>
       </details>
     </section>}

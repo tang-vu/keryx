@@ -16,8 +16,8 @@ do not load a signer, add quota or fall back to a paid purchase.
 | Buyer / private Operator / A2A | Existing custody, fixed package quote, original recovery and local storage remain independent. A sponsored refusal never invokes a buyer. |
 
 The [client guide](sponsored-client-research.md) records consent, interruption and
-delivery boundaries. Focused tests, independent review, required aggregate and
-platform CI precede merge; the existing release owner batches publication and
+delivery boundaries. Focused tests, outcome-owner source review, required aggregate
+and platform CI precede merge; the existing release owner batches publication and
 installation-link updates. The delivered versions below do not yet establish
 publication or owner installation of this source candidate.
 
@@ -926,7 +926,7 @@ mainnet funding/settlement or synchronized hosted/package/installer delivery.
 
 1. Compare current main/history with all supported adapters and documented capabilities. For each changed contract identify producer, consumers, legacy behavior, private/public scope and payment authority.
 2. Update every applicable surface together; record intentional exclusions and remaining work rather than silently omitting them. Exercise actual transport/CLI/IPC behavior, not just a helper mirror.
-3. Pass focused regression tests, type checking, relevant production build, independent review and required CI. Desktop changes require exact-source packaged Windows and fresh standard-user installer acceptance. Caller MCP changes require clean-install packed-package startup, synthetic signing, original-response-loss fencing and new-process GET-only recovery acceptance.
+3. Complete source review as the outcome owner and pass focused regression tests, type checking, the relevant production build and required CI. A separate reviewer is optional under the [current development workflow](development-workflow.md). Desktop changes require exact-source packaged Windows and fresh standard-user installer acceptance. Caller MCP changes require clean-install packed-package startup, synthetic signing, original-response-loss fencing and new-process GET-only recovery acceptance.
 4. Record root source commit/version, production `/api/health` commit, desktop installer/manifest version and exact release asset checksums, remote MCP protocol version, and caller MCP published npm version or verified release tarball. A green desktop CI build without downloadable current assets is not distribution completion; a repo package bump without npm publication is not an npm release.
 5. Merge/deploy/release under `AGENTS.md`, verify each applicable artifact and update the evidence record. Never advertise a not-yet-published registry package. Preserve the applicable M1–M8 acceptance and custody/spending gates; current mainnet status does not authorize additional funds or historical journal relabelling.
 

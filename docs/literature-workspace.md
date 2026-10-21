@@ -32,11 +32,21 @@ The candidate is not production delivery or evidence of independent demand.
 3. Record **To screen**, **Include**, **Exclude** or **Undecided** and your own notes.
    Save explicitly. These are personal decisions, not agent verification or claims
    that a paper has been read. Filter the list without discarding an open draft.
+   **Search saved papers and notes** finds all entered words across titles,
+   authors, DOI/arXiv identifiers, years, venues, saved links and saved notes, in
+   any order. Latin accents are optional; other scripts retain their meaningful
+   characters. Search combines with the screening filter, whose counts reflect
+   the current search. It uses saved notes,
+   so a note still being edited does not change the search until explicitly saved.
+   Hidden cards keep their unsaved editors. **Clear search** keeps the selected
+   screening filter. Search stays in this tab and is omitted from URLs, backups
+   and research requests; no metadata/provider call or storage write is made.
 4. Select two papers and choose **Prepare comparison**. This opens an editable Deep
    question with the saved review question and both exact links. Notes and screening
    decisions are omitted. Review the question and visible budget before submitting.
    The selected pair stays visible across screening filters, with exact record links,
    arXiv versions and an outside-filter label. Remove either paper individually.
+   Search also keeps the pair selected and labels papers outside its results.
    **Review prepared question** shows exactly the draft that will open, using the
    saved focus rather than unsaved edits in the focus form.
    Existing research availability, model/search costs, original-reading and payment
@@ -68,12 +78,15 @@ personal notes, exact links/versions, contributor limitations and metadata prove
 Formula-like cells are neutralized for spreadsheet import; stored notes stay literal.
 This is a screening list, not the answer's evidence matrix or a settlement receipt.
 
-Choose a screening filter, then **Download shown references (RIS)** to move that
-subset into a reference manager. The visible count is the export scope; comparison
+Choose a search and screening filter, then **Download shown references (RIS)** or
+the shown CSL JSON download to move that subset into a reference manager. The
+visible count is the export scope; comparison
 checkboxes do not change it. Only saved bibliography metadata is exported, with
 exact URLs/arXiv versions, supplied names/year/DOI/venue and a provenance note.
-Your review focus, screening labels and personal notes are omitted. Select **All
-saved papers** for the full bibliography. This file is separate from CSV and JSON.
+Your review focus, screening labels, search text and personal notes are omitted.
+Clear search and select **All saved papers** for the full bibliography. These
+reference files are separate from the full screening CSV and private JSON backup,
+which retain all saved records regardless of the current search/filter.
 
 Import through your reference manager's file import. The exporter uses the types
 recognized by [Zotero's RIS translator](https://github.com/zotero/translators/blob/c7551c1a4d5b9623273119c7fbadf8735731dc92/RIS.js):
@@ -85,10 +98,34 @@ and version before academic use. No attachment, enrichment or synchronization is
 requested. A pinned translator check covers synthetic type/identity/author/year/note
 handling under a minimal host; Zotero application acceptance remains open.
 
-Download **JSON backup** before moving devices or clearing data. Restore accepts a
-strict version-1 personal-bibliography file, up to 1 MiB. The preview precedes an
-explicit replacement of the entire current list, focus and notes; it does not merge.
-Imported metadata is not revalidated against repositories. Invalid/future/duplicate
+Download **JSON backup** before moving devices or clearing data. Import accepts a
+strict version-1 personal-bibliography file, up to 1 MiB. Selecting a file only
+opens a preview; it does not write anything. Files must contain valid UTF-8
+(an optional UTF-8 BOM is accepted). Damaged byte sequences are refused instead
+of silently replacing characters in titles or notes. Valid Unicode, including a
+literal replacement character, stays unchanged. A refused file clears any older
+import preview and keeps saved data and unsaved editors intact. For readable current storage,
+**Add missing papers** adds only records whose exact landing URL is not already
+saved. The preview counts new papers, already-saved records and the resulting
+total, with an expandable list of exact links, saved screening and notes to add.
+Current duplicate snapshots, screening, notes and review focus win; the backup's
+review title/question are ignored even when the current library is empty.
+Different arXiv versions remain distinct. Unsaved editors, search, screening filter
+and comparison selection stay in place. This is a local addition, not cloud sync,
+metadata enrichment or a conflict-resolution service.
+
+The entire addition must fit both the 50-paper and 1 MiB workspace limits; no
+partial subset is saved. The preview follows saved changes from other tabs.
+If another change wins the Web Lock after confirmation, the import refuses the
+stale operation and asks for a reviewed retry. Canceling or leaving the workspace
+before a queued addition obtains its lock prevents that addition. A storage or
+readback failure reports an unverified save and keeps the preview for recovery.
+
+**Replace workspace with this backup** remains the separate explicit replacement of the
+entire list, focus and notes; it discards local editors and resets filters.
+Unreadable stored data permits recovery by replacement, without offering an
+additive preview against an unknown library. Imported metadata is not revalidated
+against repositories. Invalid/future/duplicate
 records and extra read/payment fields are refused without replacing existing data.
 Unreadable stored data is kept and can be downloaded before an explicit replacement
 or clear. Quota/readback failures never report a verified save.

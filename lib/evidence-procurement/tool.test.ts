@@ -5,6 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { buildEvidenceProcurement, PROCUREMENT_NOTICE } from "./engine";
 import { evidenceProcurementTool, registerEvidenceProcurementTool } from "./tool";
 import { evidenceProcurementOpenApiPath } from "./openapi";
+import { exportEvidenceProcurement } from "./export";
 
 const packet = () => ({ version: 1, scope: "private-evidence-procurement", request: {
   id: "mcp-fixture", network: "eip155:5042002", decision: "Which benchmark evidence is missing?",
@@ -26,6 +27,18 @@ it("exposes the same CPU-only contract through the actual MCP SDK", async () => 
     const result = await client.callTool({ name: "evidence_procurement", arguments: { packet: packet() } });
     expect(result.isError).not.toBe(true); expect(result.structuredContent).toEqual({ procurement: await buildEvidenceProcurement(packet()) });
     expect(result.content).toEqual([{ type: "text", text: PROCUREMENT_NOTICE }]); expect(http).not.toHaveBeenCalled();
+    for (const format of ["markdown", "csv"]) {
+      const receipt = await exportEvidenceProcurement(packet(), format);
+      const formatted = await client.callTool({ name: "evidence_procurement", arguments: { packet: packet(), format } });
+      expect(formatted.isError).not.toBe(true); expect(formatted.structuredContent).toEqual(result.structuredContent);
+      expect(formatted.content).toEqual([{ type: "text", text: receipt.text }]);
+    }
+    for (const format of [null, "SECRET_FORMAT", ["csv"], { PRIVATE_FORMAT: true }]) {
+      const invalid = await client.callTool({ name: "evidence_procurement", arguments: { packet: packet(), format } });
+      expect(invalid.isError).toBe(true); expect(invalid).not.toHaveProperty("structuredContent");
+      expect(JSON.stringify(invalid)).not.toMatch(/SECRET_FORMAT|PRIVATE_FORMAT/);
+    }
+    expect(http).not.toHaveBeenCalled();
   } finally { await client.close(); await server.close(); }
 });
 it("refuses derived output and emits fixed private errors", async () => {
@@ -43,4 +56,6 @@ it("publishes the strict original packet shape and the private authentication bo
   expect(schema.properties.offers.items.required).toContain("deliverable");
   expect(schema.properties.reviews.items.required).toContain("reviewer");
   expect(operation.description).toContain("65536 actual UTF-8 bytes"); expect(operation.description).toContain("Authentication precedes body reading");
+  expect(operation.parameters[0]).toMatchObject({ name: "format", in: "query", required: false,
+    schema: { enum: ["json", "markdown", "csv"], default: "json" } });
 });

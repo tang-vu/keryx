@@ -13,7 +13,13 @@ have not been measured. Neither issue's full acceptance is established.
    `evidence`. The editor accepts up to eight reports within a 64 KiB total packet.
 3. Paste your original passage. Select a claim's exact text and add that span.
    Choose its exact cited paper and select retained excerpts. No statement is
-   rewritten. Changing passage bytes clears its former spans and assessments.
+   rewritten. Editing around a claim keeps its annotation and assessment, shifting
+   the UTF-16 offsets when needed. An edit intersecting a claim clears that claim's
+   annotation and assessment; the selection prompt highlights that you should
+   select the changed text again. Other claims, themes and retained reports stay
+   in place. If the browser cannot locate an edit unambiguously (for example,
+   replacing repeated prose without an input selection), affected annotations
+   are cleared instead of moved to another occurrence.
 4. An excerpt match leaves semantic assessment pending. You may record your own
    named supported, partly-supported or not-found assessment. It remains explicitly
    user supplied. Missing retained source evidence always withholds that judgment.
@@ -34,15 +40,67 @@ have not been measured. Neither issue's full acceptance is established.
    `\addbibresource{references.bib}`, `\autocite` and `\printbibliography`. Markdown
    uses the same stable citation keys and includes an explicit reference list.
    The RIS library contains exactly the cited records, although RIS importers need
-   not preserve citation keys. Download private draft JSON to retain claim inputs
-   and assessments; this version has no draft-backup restore editor.
+   not preserve citation keys. Download private draft JSON to retain exported
+   draft inputs, selected excerpts and assessments.
+8. To resume later, open **Continue a saved draft** and choose that JSON backup.
+   Review its title, counts and passage preview. **Save current draft first**
+   downloads the current valid draft before replacement. Choose **Restore in this
+   tab** to continue editing, then download a new backup before leaving. The
+   backup's Include selection is used in this tab only; your saved bibliography
+   is unchanged. Cancelled or invalid files leave the current draft unchanged.
+   If you edit while a file is opening or after its preview appears, choose the
+   file again to review it against the latest draft before replacement.
+
+Continuing a restored draft keeps its existing claim spans, selected excerpts,
+assessments and themes when you add new rows. New claims and themes remain
+independent of the restored rows, including after saving and reopening again.
+
+Use **Remove this claim** to discard one selected span and its recorded assessment
+without changing the original passage or other claims. **Remove this theme**
+discards only that theme's notes, statements and excerpt selections. Both ask for
+confirmation; canceling keeps the current draft. Other rows, including unfinished
+statements, stay in place. Retained source reports are kept, so their excerpts
+remain available to other rows. Reference downloads follow the remaining themes
+and exported statements; removing the last citation removes its reference too.
+You can remove every claim/theme or free a slot at the editor limits, then add
+new rows without clearing the rest of your work. Download a new private backup
+to retain these deliberate changes.
 
 Passage, report JSON, assessments and theme edits remain in tab memory; no upload,
 public history, localStorage draft write or background request is performed by
 this editor. The existing bibliography stays in its existing browser store.
-Reload/navigation loses the in-memory draft. Downloads are a deliberate retention
-choice and should be kept private. The browser profile and same-origin scripts can
+Reload/navigation loses the in-memory draft; reopening a downloaded backup is
+explicit, with no automatic save or recovery. Empty unfinished statement rows,
+the unimported report JSON field and the reviewer input are not backup contents.
+Restoring replaces the current draft's passage, imported reports, assessments and
+themes. Downloads are a deliberate retention choice and should be kept private.
+The browser profile and same-origin scripts can
 access editor contents; no protection against a compromised origin is claimed.
+
+After an edit, the editor requests the browser's native confirmation before a
+reload, tab close or other full-document navigation. Cancel keeps the tab's current
+work. Requesting a valid private JSON download makes those exported inputs the
+retained baseline; later edits warn again, and reverting to that baseline removes
+the warning. Restoring a file starts from its retained baseline. Markdown, LaTeX,
+BibTeX and RIS downloads do not save the editable draft. Unfinished statement rows,
+unimported report JSON and the reviewer input still warn after a JSON download,
+because they are absent from that file. A failed download request does not clear
+the warning. Verify the browser actually saved the requested file before leaving.
+
+The browser supplies the confirmation text and decides whether to show it after
+user interaction. This is a best-effort safeguard: same-document app navigation,
+browser/process crashes and mobile app-manager shutdown are not protected. Keep
+downloading private backups deliberately; this safeguard adds no storage, upload
+or automatic recovery. See the browser's
+[beforeunload limitations](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event#usage_notes).
+
+The browser accepts existing version-1 private draft JSON, with a 256 KiB file
+limit to allow formatted JSON around the existing 64 KiB compact packet limit.
+Invalid UTF-8, invalid packets and invalid evidence selections are refused before
+replacement. Opening a backup projects its Include records and drops screening
+notes, matching the editor's existing workspace projection. An imported assembly
+operation is removed rather than replayed. Restoring does not authenticate report
+origin, promote stale assessments or make a provider, model or payment request.
 
 ## Shared contract and evidence boundaries
 
@@ -57,9 +115,26 @@ an exact item URL/source/item/content-version/marker match to one retained citat
 the original research claim/index and a qualified bounded quote. Missing version,
 unqualified records, ambiguous duplicate markers, synthetic markers and known seed
 fingerprints are withheld. Bibliography, matching titles and alternate versions
-cannot supply evidence. No alias or redirect resolution is performed: use the exact
-saved record URL in the retained read. Reports with a PDF read URL rather than the
-saved landing URL need a future reviewed identity adapter, not title matching.
+cannot supply evidence. A canonical `https://arxiv.org/pdf/<id>v<version>` read
+URL (with an optional `.pdf` suffix) may map to the saved canonical `/abs/` record
+only when its explicit arXiv identifier and version match. Citation and evidence
+rows must still agree literally on the original source, item, read URL, content
+version and marker. Unversioned URLs, HTML, query/fragment variants, redirects and
+other repositories retain the existing exact-URL rule. Metadata links and titles
+never supply this mapping.
+
+A mapped excerpt adds `readUrl` containing its original PDF URL; `paperUrl` stays
+the saved bibliography record. Both URL identities bind its excerpt identifier
+and any user assessment. Markdown and LaTeX retain the read URL beside the quote;
+BibTeX/RIS keep one matching saved reference. Existing exact-URL excerpts keep
+their original shape, identifiers and assessment bindings. Private draft backups
+can retain the optional assessment `readUrl`; older clients may refuse those new
+mapped assessments. Restore them with a client supporting this mapping.
+
+This mapping belongs to the caller-supplied report transformation shared by the
+editor, API and MCP. The authenticated completed-private-read selector keeps its
+existing literal original-URL contract; no private lookup, stored result or
+payment identity is rewritten or broadened by this adapter.
 
 Imported reports are caller supplied. Schema checks and exact matching do not
 authenticate their origin or prove the source was read, the quote is verbatim in
@@ -148,7 +223,7 @@ guard accepts this source without rewriting its historical baseline.
 
 | Surface | Source behavior and role |
 | --- | --- |
-| Web | `/literature/drafts` assembles locally from the saved Include records and explicitly imported reports. No automatic server call. |
+| Web | `/literature/drafts` assembles locally from saved Include records and explicitly imported reports, or resumes a reviewed private JSON backup using its tab-only Include selection. No automatic server call or bibliography overwrite. |
 | API | `POST /api/research/evidence-draft` accepts the same packet, with a verified export-scoped API key or active same-origin web session. Authentication is checked before private body reading. Existing authentication access includes key last-used bookkeeping in ordinary adapters; the new draft transformation makes no DB, provider, payment or file calls and writes no draft/query/history/payment data. Actual streamed bytes and deadline are bounded; fixed errors never echo passages. Every response is private/no-store. |
 | Remote MCP | `evidence_draft` is a stateless pure transformation of caller-supplied inputs. It retrieves no owned/private record and grants no new authority. Client/host message retention is outside Keryx's deletion control. |
 | Stdio MCP / CLI clients | The same local `evidence_draft` tool is registered in the stdio server. It makes no HTTP/wallet call; it can process caller-retained data offline. Repository CLI may use the authenticated JSON API. No autonomous drafting command is added. |

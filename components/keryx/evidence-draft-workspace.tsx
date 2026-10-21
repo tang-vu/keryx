@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { assembleEvidenceDraftRequest, buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, EVIDENCE_DRAFT_NOTICE, MAX_EVIDENCE_DRAFT_BYTES,
@@ -13,6 +13,9 @@ import { appendCompletedEvidenceDraftImport } from "@/components/keryx/completed
 import { CompletedEvidenceDraftSelector } from "@/components/keryx/completed-evidence-draft-selector";
 import { completedEvidenceDraftSelectionCopy as completedCopy } from "@/locales/en/completed-evidence-draft-selection";
 import { useUiCopy } from "@/lib/i18n/ui-copy";
+import { EvidenceDraftRestore } from "./evidence-draft-restore";
+import { evidenceDraftEditingCopy as editingEnglish } from "@/locales/en/evidence-draft-editing";
+import { rebaseEvidenceDraftClaims, type PassageEditHint } from "@/lib/research/evidence-draft-passage";
 const uiEnglish_completedCopy = completedCopy;
 
 
@@ -24,30 +27,71 @@ type Statement = NonNullable<EvidenceDraftRequest["themes"][number]["statements"
 const choice = "mt-2 flex gap-3 font-serif text-sm text-ink-2";
 const empty = (): Editors => ({ reports: [], passage: "", claims: [], themes: [{ id: "theme1", title: copy.theme.initialTitle, authorNote: "", excerptIds: [] }] });
 
+// Match the downloadable inputs; unfinished editor rows are protected separately.
+function retainedEditorsSnapshot(editors: Editors) {
+  return JSON.stringify({ reports: editors.reports, passage: editors.passage, claims: editors.claims,
+    themes: editors.themes.map(({ statements, ...theme }) => {
+      const written = (statements ?? []).filter(row => row.text.trim());
+      return written.length ? { ...theme, statements: written } : theme;
+    }), readingStatuses: editors.readingStatuses });
+}
+
+/** Restored identifiers need not be consecutive. Never renumber an existing row. */
+function nextEditorId(prefix: "claim" | "theme" | "statement", rows: readonly { id: string }[]) {
+  const used = new Set(rows.map(row => row.id));
+  let next = rows.length + 1;
+  while (used.has(`${prefix}${next}`)) next++;
+  return `${prefix}${next}`;
+}
+
 export function EvidenceDraftWorkspace() {
   const completedCopy = useUiCopy("completed-evidence-draft-selection", uiEnglish_completedCopy);
+  const editingCopy = useUiCopy("evidence-draft-editing", editingEnglish);
   const store = useLiteratureWorkspace(), [editors, setEditors] = useState(empty), [reportJson, setReportJson] = useState("");
+  const [restoredWorkspace, setRestoredWorkspace] = useState<EvidenceDraftRequest["workspace"]>();
+  const workspace = restoredWorkspace ?? store.workspace;
+  const workspaceReady = !!restoredWorkspace || store.ready, workspaceError = restoredWorkspace ? undefined : store.error;
   const [message, setMessage] = useState(""), [reviewer, setReviewer] = useState(""), passageRef = useRef<HTMLTextAreaElement>(null);
+  const passageEdit = useRef<PassageEditHint | undefined>(undefined);
+  const [passageNeedsSelection, setPassageNeedsSelection] = useState(false);
+  useLayoutEffect(() => {
+    const element = passageRef.current;
+    if (!element) return;
+    const capture = (event: Event) => {
+      passageEdit.current = { passage: element.value, start: element.selectionStart, end: element.selectionEnd,
+        inputType: (event as InputEvent).inputType };
+    };
+    element.addEventListener("beforeinput", capture);
+    return () => element.removeEventListener("beforeinput", capture);
+  }, []);
+  const [retainedSnapshot, setRetainedSnapshot] = useState(() => retainedEditorsSnapshot(empty()));
+  const hasUnretainedInputs = !!reportJson || !!reviewer || editors.themes.some(theme => theme.statements?.some(row => !row.text.trim()));
+  const hasUnsavedChanges = hasUnretainedInputs || retainedEditorsSnapshot(editors) !== retainedSnapshot;
+  useLayoutEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = "true"; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [hasUnsavedChanges]);
   const [resetRevision, setResetRevision] = useState(0);
+  const importEpoch = useRef(0), activeImportEpoch = resetRevision;
+  const restoreContext = useMemo(() => ({ editors, reportJson, reviewer, workspace }), [editors, reportJson, reviewer, workspace]);
+  const liveRestoreContext = useRef(restoreContext);
+  useLayoutEffect(() => { liveRestoreContext.current = restoreContext; }, [restoreContext]);
   // A sentence still being written stays in this tab and out of the draft contract.
   const themes = editors.themes.map(({ statements, ...theme }) => {
     const written = (statements ?? []).filter(row => row.text.trim());
     return written.length ? { ...theme, statements: written } : theme;
   });
-  const request: EvidenceDraftRequest = { version: 1, scope: "private-evidence-draft", workspace: evidenceDraftWorkspace(store.workspace), ...editors, themes };
-  const liveEditors = useRef(editors), liveWorkspace = useRef(store.workspace);
-  useLayoutEffect(() => { liveEditors.current = editors; liveWorkspace.current = store.workspace; }, [editors, store.workspace]);
+  const request: EvidenceDraftRequest = { version: 1, scope: "private-evidence-draft", workspace: evidenceDraftWorkspace(workspace), ...editors, themes };
+  const liveEditors = useRef(editors), liveWorkspace = useRef(workspace);
+  useLayoutEffect(() => { liveEditors.current = editors; liveWorkspace.current = workspace; }, [editors, workspace]);
   let draft: ReturnType<typeof buildEvidenceDraft> | undefined, error = "";
   try { draft = buildEvidenceDraft(request); } catch { error = copy.workspace.changed; }
-  const included = store.workspace.entries.filter(row => row.screening === "include");
+  const included = workspace.entries.filter(row => row.screening === "include");
   const update = (changes: Partial<Editors>) => { setEditors(current => ({ ...current, ...changes })); setMessage(""); };
   const toggle = (ids: string[], id: string) => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id];
   const excerpts = draft?.excerpts ?? [];
-  const nextStatementId = () => {
-    const used = new Set(editors.themes.flatMap(theme => (theme.statements ?? []).map(row => row.id)));
-    let next = used.size + 1; while (used.has(`statement${next}`)) next++;
-    return `statement${next}`;
-  };
   const exportFile = (format: "markdown" | "latex" | "bibtex" | "ris") => {
     try {
       const exports = exportEvidenceDraft(request), extension = { markdown: "md", latex: "tex", bibtex: "bib", ris: "ris" }[format];
@@ -55,13 +99,37 @@ export function EvidenceDraftWorkspace() {
       setMessage(copy.download.success);
     } catch { setMessage(copy.download.refused); }
   };
+  const backupFile = () => {
+    try {
+      buildEvidenceDraft(request);
+      downloadBrowserText(JSON.stringify(request, null, 2) + "\n", "private-evidence-draft.json", "application/json");
+      // This records a requested download, never filesystem delivery. Inputs
+      // deliberately absent from the packet continue to require a warning.
+      setRetainedSnapshot(retainedEditorsSnapshot(editors)); setMessage(copy.download.backupSuccess);
+    }
+    catch { setMessage(copy.download.backupRefused); }
+  };
   return <section className="mt-8 space-y-6" aria-label={copy.workspace.label}>
     <p className="font-serif text-sm leading-relaxed text-ink-2">{EVIDENCE_DRAFT_NOTICE}</p>
     <p className="font-serif text-sm text-ink-2">{copy.workspace.privacy}</p>
-    {!store.ready && <p role="status">{copy.workspace.loading}</p>}
-    {store.error && <p role="alert" className="text-seal">{store.error}</p>}
+    {!workspaceReady && <p role="status">{copy.workspace.loading}</p>}
+    {workspaceError && <p role="alert" className="text-seal">{workspaceError}</p>}
     {included.length === 0 && <p className="font-serif text-sm text-ink-2">{copy.workspace.includeFirst}</p>}
-    <CompletedEvidenceDraftSelector key={resetRevision} workspace={store.workspace} disabled={!store.ready || !!store.error} onImport={value => {
+    <EvidenceDraftRestore context={restoreContext} canSave={!!draft} onSave={backupFile} onRestore={(packet, expectedContext) => {
+      if (liveRestoreContext.current !== expectedContext) return false;
+      try {
+        buildEvidenceDraft(packet);
+        const next: Editors = { reports: packet.reports, passage: packet.passage, claims: packet.claims, themes: packet.themes, readingStatuses: packet.readingStatuses };
+        importEpoch.current++; setResetRevision(importEpoch.current);
+        liveEditors.current = next; liveWorkspace.current = packet.workspace;
+        liveRestoreContext.current = { editors: next, workspace: packet.workspace, reportJson: "", reviewer: "" };
+        setRestoredWorkspace(packet.workspace); setEditors(next); setRetainedSnapshot(retainedEditorsSnapshot(next)); setReportJson(""); setReviewer(""); setMessage("");
+        passageEdit.current = undefined; setPassageNeedsSelection(false);
+        return true;
+      } catch { return false; }
+    }} />
+    <CompletedEvidenceDraftSelector key={resetRevision} workspace={workspace} disabled={!workspaceReady || !!workspaceError} onImport={value => {
+      if (activeImportEpoch !== importEpoch.current) return false;
       try {
         const next = appendCompletedEvidenceDraftImport(liveEditors.current, liveWorkspace.current, value);
         liveEditors.current = next; setEditors(next); setMessage(completedCopy.imported);
@@ -87,21 +155,25 @@ export function EvidenceDraftWorkspace() {
         <textarea className={field} value={reportJson} onChange={event => setReportJson(event.target.value)} maxLength={MAX_EVIDENCE_DRAFT_BYTES} rows={5} spellCheck={false} />
       </label>
       <p className="mt-2 font-serif text-xs text-ink-3">{copy.import.guidance}</p>
-      <button type="submit" className={`${button} mt-3`} disabled={!store.ready || !included.length || editors.reports.length >= 8}>{copy.import.button}</button>
+      <button type="submit" className={`${button} mt-3`} disabled={!workspaceReady || !included.length || editors.reports.length >= 8}>{copy.import.button}</button>
       <p className="mt-2 font-mono text-xs text-ink-3">{copyText(copy.import.summary, { reports: editors.reports.length, excerpts: draft?.excerpts.length ?? 0 })}</p>
     </form>
     <section className="border border-line bg-paper p-5" aria-label={copy.claim.label}>
       <label className="font-mono text-xs text-ink-2">{copy.claim.passage}
         <textarea ref={passageRef} className={field} rows={6} maxLength={12000} value={editors.passage} onChange={event => {
-          // Existing spans refer to these exact bytes. Never silently shift a claim to new prose.
-          update({ passage: event.target.value, claims: [] });
+          const passage = event.target.value;
+          const rebased = rebaseEvidenceDraftClaims(editors.passage, passage, editors.claims, passageEdit.current);
+          passageEdit.current = undefined;
+          update({ passage, claims: rebased.claims });
+          if (rebased.removed) setPassageNeedsSelection(true);
         }} />
       </label>
-      <p className="mt-2 font-serif text-xs text-ink-3">{copy.claim.guidance}</p>
+      <p role={passageNeedsSelection ? "status" : undefined} className={`mt-2 font-serif text-xs ${passageNeedsSelection ? "text-seal" : "text-ink-3"}`}>{copy.claim.selectFirst}</p>
       <button type="button" className={`${button} mt-3`} disabled={!included.length || editors.claims.length >= 32} onClick={() => {
         const element = passageRef.current; if (!element || element.selectionStart === element.selectionEnd) { setMessage(copy.claim.selectFirst); return; }
-        update({ claims: [...editors.claims, { id: `claim${editors.claims.length + 1}`, start: element.selectionStart,
+        update({ claims: [...editors.claims, { id: nextEditorId("claim", editors.claims), start: element.selectionStart,
           end: element.selectionEnd, paperUrls: [included[0].paper.url], excerptIds: [] }] });
+        setPassageNeedsSelection(false);
       }}>{copy.claim.add}</button>
       <label className="mt-4 block font-mono text-xs text-ink-2">{copy.claim.reviewer}
         <input className={field} value={reviewer} maxLength={120} onChange={event => setReviewer(event.target.value)} />
@@ -127,6 +199,11 @@ export function EvidenceDraftWorkspace() {
               origin: "user-assessment", reviewer: reviewer.trim(), reviewedAt: new Date().toISOString(), verdict,
               claimText: result!.text, paperUrls: [...claim.paperUrls], excerptIds: [...claim.excerptIds], excerpts: result!.excerpts,
             } })}>{copyText(copy.claim.recordAssessment, { assessment: assessmentLabels[verdict] })}</button>)}
+          <button type="button" className={`${button} mt-3`} onClick={() => {
+            if (!window.confirm(editingCopy.confirmClaim)) return;
+            setEditors(current => ({ ...current, claims: current.claims.filter(row => row.id !== claim.id) }));
+            setMessage(editingCopy.claimRemoved);
+          }}>{editingCopy.removeClaim}</button>
         </article>;
       })}
     </section>
@@ -203,10 +280,15 @@ export function EvidenceDraftWorkspace() {
             </div>;
           })}
           <button type="button" className={`${button} mt-4`} disabled={(theme.statements ?? []).length >= 24} onClick={() => replace({
-            statements: [...(theme.statements ?? []), { id: nextStatementId(), kind: "contribution", text: "", paperUrls: [], excerptIds: [] }] })}>{copy.statement.add}</button>
+            statements: [...(theme.statements ?? []), { id: nextEditorId("statement", editors.themes.flatMap(row => row.statements ?? [])), kind: "contribution", text: "", paperUrls: [], excerptIds: [] }] })}>{copy.statement.add}</button>
+          <button type="button" className={`${button} ml-2 mt-4`} onClick={() => {
+            if (!window.confirm(editingCopy.confirmTheme)) return;
+            setEditors(current => ({ ...current, themes: current.themes.filter(row => row.id !== theme.id) }));
+            setMessage(editingCopy.themeRemoved);
+          }}>{editingCopy.removeTheme}</button>
         </article>;
       })}
-      <button type="button" className={`${button} mt-4`} disabled={editors.themes.length >= 16} onClick={() => update({ themes: [...editors.themes, { id: `theme${editors.themes.length + 1}`, title: copy.theme.newTitle, authorNote: "", excerptIds: [] }] })}>{copy.theme.add}</button>
+      <button type="button" className={`${button} mt-4`} disabled={editors.themes.length >= 16} onClick={() => update({ themes: [...editors.themes, { id: nextEditorId("theme", editors.themes), title: copy.theme.newTitle, authorNote: "", excerptIds: [] }] })}>{copy.theme.add}</button>
       <button type="button" className={`${button} ml-2 mt-4`} disabled={!editors.readingStatuses?.length} onClick={() => update({ readingStatuses: [] })}>{copy.reading.clear}</button>
       {!!draft?.unread.length && <div className="mt-5">
         <h3 className="font-mono text-xs text-ink-2">{copy.theme.unreadHeading}</h3>
@@ -219,7 +301,7 @@ export function EvidenceDraftWorkspace() {
             ...(status ? [{ paperUrl: row.paper.url, status, reason }] : []),
           ] });
           let readHref: string | undefined;
-          try { readHref = `/?${new URLSearchParams({ q: relatedWorkReadingDraft(store.workspace, row.paper.url), mode: "deep" })}`; } catch { /* Keep the editor when the normal question limit refuses. */ }
+          try { readHref = `/?${new URLSearchParams({ q: relatedWorkReadingDraft(workspace, row.paper.url), mode: "deep" })}`; } catch { /* Keep the editor when the normal question limit refuses. */ }
           return <div key={row.paper.url} className="mt-3">
             <p className="break-all font-serif text-sm text-ink-2">{row.paper.title} · {row.paper.url}</p>
             {readHref && <a href={readHref} target="_blank" rel="noopener noreferrer" className={`${button} mt-2`}>{copy.reading.prepare}</a>}
@@ -239,11 +321,11 @@ export function EvidenceDraftWorkspace() {
     </section>
     {error && <p role="alert" className="font-serif text-sm text-seal">{error}</p>}
     <div className="flex flex-wrap gap-3">{(["markdown", "latex", "bibtex", "ris"] as const).map(format => <button key={format} type="button" className={button} disabled={!draft} onClick={() => exportFile(format)}>{copy.download[format]}</button>)}
-      <button type="button" className={button} disabled={!draft} onClick={() => {
-        try { buildEvidenceDraft(request); downloadBrowserText(JSON.stringify(request, null, 2) + "\n", "private-evidence-draft.json", "application/json"); setMessage(copy.download.backupSuccess); }
-        catch { setMessage(copy.download.backupRefused); }
-      }}>{copy.download.backup}</button>
-      <button type="button" className={button} onClick={() => { setResetRevision(current => current + 1); setEditors(empty()); setReportJson(""); setReviewer(""); setMessage(copy.workspace.cleared); }}>{copy.workspace.clear}</button></div>
+      <button type="button" className={button} disabled={!draft} onClick={backupFile}>{copy.download.backup}</button>
+      <button type="button" className={button} onClick={() => {
+        importEpoch.current++; setResetRevision(importEpoch.current);
+        setRestoredWorkspace(undefined); setEditors(empty()); setReportJson(""); setReviewer(""); setMessage(copy.workspace.cleared);
+      }}>{copy.workspace.clear}</button></div>
     <p role="status" aria-live="polite" className="font-serif text-sm text-seal">{message}</p>
   </section>;
 }

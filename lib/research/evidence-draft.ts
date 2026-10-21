@@ -7,6 +7,7 @@ import { isWellFormedUtf16 } from "../llm/well-formed-utf16";
 import { assertRelatedWorkStatementShape, RELATED_WORK_STATEMENT_KINDS, resolveRelatedWorkStatements } from "./related-work-statements";
 import { assembleRelatedWorkThemes, type RelatedWorkAssembly } from "./related-work-generation";
 import { relatedWorkReadingLists } from "./related-work-reading";
+import { retainedPaperRecordUrl } from "./retained-paper-identity";
 
 export const MAX_EVIDENCE_DRAFT_BYTES = 65_536;
 const text = (max: number, min = 0) => z.string().min(min).max(max).refine(isWellFormedUtf16);
@@ -36,7 +37,7 @@ const assessmentSchema = z.object({
   verdict: z.enum(["supported", "partly-supported", "not-found"]),
   claimText: text(4000), paperUrls: z.array(url).min(1).max(4), excerptIds: z.array(id).max(16),
   // These exact retained rows, rather than their nonsecurity IDs alone, bind an assessment.
-  excerpts: z.array(z.object({ id, reportId: id, paperUrl: url, contentVersion: text(200, 1), quote: text(240, 1) }).strict()).max(16),
+  excerpts: z.array(z.object({ id, reportId: id, paperUrl: url, contentVersion: text(200, 1), quote: text(240, 1), readUrl: url.optional() }).strict()).max(16),
 }).strict();
 const claimSchema = z.object({ id, start: z.number().int().nonnegative(), end: z.number().int().positive(),
   paperUrls: z.array(url).min(1).max(4), excerptIds: z.array(id).max(16), assessment: assessmentSchema.optional(),
@@ -56,7 +57,7 @@ export const evidenceDraftRequestSchema = z.object({
     z.object({ mode: z.literal("regenerate"), themeId: id }).strict()]).optional(),
 }).strict();
 export type EvidenceDraftRequest = z.infer<typeof evidenceDraftRequestSchema>;
-export interface DraftExcerpt { id: string; reportId: string; paperUrl: string; contentVersion: string; quote: string }
+export interface DraftExcerpt { id: string; reportId: string; paperUrl: string; contentVersion: string; quote: string; readUrl?: string }
 export const EVIDENCE_DRAFT_NOTICE = "Drafting aid. Read the papers and review the text yourself. Imported reports are caller-supplied; their origin, factual support and settlement are not authenticated here. No research, purchase or creator reward is started.";
 
 /** Only Include bibliography/focus enters drafting; screening notes are not evidence. */
@@ -81,7 +82,8 @@ export function parseEvidenceDraftRequest(value: unknown): EvidenceDraftRequest 
   return input;
 }
 
-/** Exact URL + source + item + version + marker + claim binding from the retained ledger.
+/** Literal URL + source + item + version + marker + claim binding within the retained ledger.
+ * An explicit same-version arXiv PDF may then map to its saved bibliography record.
  * No title similarity, DOI inference, cross-version substitution or semantic support inference. */
 export function retainedDraftExcerpts(input: EvidenceDraftRequest): DraftExcerpt[] {
   return retainedDraftEvidence(input).map(row => row.excerpt);
@@ -90,13 +92,13 @@ export function retainedDraftExcerpts(input: EvidenceDraftRequest): DraftExcerpt
 /** Keep assembly context beside the exact row admitted by the shared gate.
  * Targets are internal context, never part of the portable excerpt/assessment. */
 function retainedDraftEvidence(input: EvidenceDraftRequest) {
-  const included = new Set(input.workspace.entries.filter(row => row.screening === "include").map(row => row.paper.url));
+  const included = input.workspace.entries.filter(row => row.screening === "include").map(row => row.paper);
   const result = new Map<string, { excerpt: DraftExcerpt; target: string }>();
   for (const report of input.reports) {
     const syntheticMarkers = new Set([...report.citations, ...(report.evidence ?? [])]
       .filter(row => row.evidenceProvenance === "synthetic-demo" || hasKnownSeedFingerprint(row.itemTitle, row.itemUrl, row.contentReceipt?.bodyHash)).map(row => row.marker));
     for (const row of report.evidence ?? []) {
-      if (!row.itemUrl || !included.has(row.itemUrl) || !row.itemId || !row.contentVersion?.trim()
+      if (!row.itemUrl || !row.itemId || !row.contentVersion?.trim()
         || syntheticMarkers.has(row.marker) || !(row.qualifiesForAnswer ?? row.qualifiesForReward)
         || !row.quote.trim() || report.subClaims[row.claimIndex] !== row.claim) continue;
       const citations = report.citations.filter(citation => citation.marker === row.marker);
@@ -104,7 +106,10 @@ function retainedDraftEvidence(input: EvidenceDraftRequest) {
       const citation = citations[0];
       if (citation.sourceId !== row.sourceId || citation.itemId !== row.itemId || citation.itemUrl !== row.itemUrl
         || citation.contentVersion !== row.contentVersion) continue;
-      const body = { reportId: report.id, paperUrl: row.itemUrl, contentVersion: row.contentVersion, quote: row.quote };
+      const paperUrl = retainedPaperRecordUrl(row.itemUrl, included);
+      if (!paperUrl) continue;
+      const body = { reportId: report.id, paperUrl, contentVersion: row.contentVersion, quote: row.quote,
+        ...(paperUrl !== row.itemUrl ? { readUrl: row.itemUrl } : {}) };
       const key = referenceKey(JSON.stringify({ ...body, sourceId: row.sourceId, itemId: row.itemId, marker: row.marker }), "excerpt");
       const excerpt = { id: key, ...body };
       if (result.has(key) && JSON.stringify(result.get(key)!.excerpt) !== JSON.stringify(excerpt)) throw new Error("Excerpt identifier collision");
