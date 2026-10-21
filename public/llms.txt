@@ -46,3 +46,10 @@ Answers can be incomplete or mistaken. Citations, evidence assessments and payme
 - [Privacy](https://keryx.cc/privacy) and [terms](https://keryx.cc/terms): publication, processing, wallet recovery, payment and support disclosures.
 
 Source access tolls, creator rewards, Keryx operating fees and network fees can be separate charges. Operating fees are recorded separately from creator rewards. Browser-funded research retains its authorized source/creator grants; a sponsored operating fee does not add a service charge to those grants. Circle Gateway references can identify batch settlement rather than an individual Arc transaction. Historical receipts retain their original network and payee.
+
+## Research guides and free tools
+
+- [Research guides](https://keryx.cc/guides): Practical, source-linked research workflows.
+- [Literature review matrix guide](https://keryx.cc/guides/literature-review-matrix): Columns, illustrative example, screening and synthesis workflow.
+- [Verify AI citations](https://keryx.cc/guides/verify-ai-citations): Source identity, claim support and publication updates.
+- [Free literature review matrix](https://keryx.cc/tools/literature-review-matrix): Browser-only notes worksheet and CSV export. No sign-up, paper retrieval or AI verification; export before leaving.

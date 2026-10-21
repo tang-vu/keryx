@@ -15,6 +15,7 @@ import { formatRecordedAmount } from "../lib/i18n/format";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "../lib/public-support";
 import { setupCopy } from "../locales/en/get-started";
 import { installationLinks, setupExamples } from "../lib/public-installation";
+import { checkResearchGuides } from "../test-support/research-guide-acceptance";
 
 const source = process.cwd();
 const temporary = await mkdtemp(join(tmpdir(), "keryx-product-guide-"));
@@ -207,6 +208,7 @@ try {
     }
   }
   assert.deepEqual(forbidden, [], "Product discovery never submits research or payment requests");
+  await checkResearchGuides(browser, origin, screenshots);
   console.log("PASS: built product/setup/download/integration routes, crawlability, seven surfaces, pinned downloads, clipboard success/refusal, keyboard FAQ and navigation at 320/390/1024/1366px; no research, signing or payment.");
 } finally {
   await browser.close();

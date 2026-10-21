@@ -1,0 +1,36 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-guides.ts",
+  "sourceSha256": "368445f62d35c6b09bfb79874f5acd6c5ab343d2e46fffb378adf7caa007c9eb",
+  "entries": {
+    "navigation": {
+      "source": "Research guides",
+      "text": "研究指南"
+    },
+    "allGuides": {
+      "source": "All research guides",
+      "text": "全部研究指南"
+    },
+    "tool.add": {
+      "source": "Add a source",
+      "text": "添加来源"
+    },
+    "tool.download": {
+      "source": "Download matrix CSV",
+      "text": "下载矩阵 CSV"
+    },
+    "tool.template": {
+      "source": "Download empty CSV template",
+      "text": "下载空白 CSV 模板"
+    },
+    "tool.copy": {
+      "source": "Copy CSV",
+      "text": "复制 CSV"
+    },
+    "tool.question": {
+      "source": "Research question",
+      "text": "研究问题"
+    }
+  }
+}
