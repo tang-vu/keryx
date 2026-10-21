@@ -1,13 +1,24 @@
 import { describe, it, expect } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { createHash } from "node:crypto";
+import { ArchiveAnswerRow } from "../components/keryx/archive-answer-row";
 import {
+  archiveAnswerSnippet,
   buildArchive,
   buildArchiveStream,
+  extractiveAnswerPreview,
+  metadataAnswerExcerpt,
   normalizeQuestion,
   cleanText,
   relatedAnswers,
+  searchTerm,
   type ArchiveEntry,
 } from "./answers-archive";
+import { confidenceBanner } from "./research/confidence-copy";
+import { buildAnswersFeedXml } from "./answers-feed";
+import { archiveIndexJsonLd } from "../app/answers/archive-index-json-ld";
+import { paginateArchive } from "./answers-pagination";
 import type { QueryRun } from "./types";
 import type { PresentationLanguage } from "../shared/i18n/presentation-language";
 
@@ -134,6 +145,69 @@ describe("buildArchive", () => {
     expect(out.map((e) => e.id)).toEqual(["new", "old"]);
     expect(out[0].answerSnippet.endsWith("…")).toBe(true);
     expect(out[0].answerSnippet.length).toBeLessThan(long.length);
+  });
+
+  it("skips a current opening caveat and keeps the later sentence with its short caution", () => {
+    const reason = "Each summary sentence is tied to a verbatim excerpt and model-checked; completeness and independent factual correctness remain unverified. Evidence assessment: 4 sub-claims remain below the evidence threshold.";
+    const body = "Export the question, the cited excerpts, the payment state and the date.";
+    const raw = confidenceBanner(body, { level: "Low", reason }, "en");
+    const before = raw;
+    const snippet = archiveAnswerSnippet(raw);
+    expect(raw).toBe(before);
+    expect(raw).toContain("Each summary sentence is tied");
+    expect(snippet).toBe(`⚠ Low confidence — ${body}`);
+    expect(snippet).not.toContain("Each summary sentence");
+    expect(snippet).not.toContain("Treat this as provisional.");
+    const entry = buildArchive([run({
+      id: "caveat", question: "How should we export evidence?", answer: raw,
+      confidence: { level: "Low", reason },
+    })])[0];
+    expect(entry.answerSnippet).toBe(snippet);
+    expect(entry.confidence).toEqual({ level: "Low", reason });
+    const longBody = `Export the question. ${"detail ".repeat(80)}`;
+    const longSnippet = archiveAnswerSnippet(confidenceBanner(longBody, { level: "Low", reason }, "en"));
+    expect(longSnippet.startsWith("⚠ Low confidence — Export the question.")).toBe(true);
+    expect(longSnippet.endsWith("…")).toBe(true);
+    expect(longSnippet).not.toContain("Each summary sentence");
+    expect(searchTerm(entry)).toBe("how should we export evidence? latent space");
+    expect(searchTerm(entry)).not.toContain("cited excerpts");
+    const xml = buildAnswersFeedXml([entry], "https://keryx.cc");
+    expect(xml).toContain(`⚠ Low confidence — ${body}`);
+    expect(xml).not.toContain("Each summary sentence");
+    const listed = archiveIndexJsonLd({
+      base: "https://keryx.cc", url: "https://keryx.cc/answers", name: "Archive",
+      slice: paginateArchive([entry], 1), totalEntries: 1,
+    });
+    const item = (listed.mainEntity as { itemListElement: Array<Record<string, unknown>> }).itemListElement[0];
+    expect(item).toEqual({ "@type": "ListItem", position: 1, url: "https://keryx.cc/dispatch/caveat", name: entry.question });
+    expect(JSON.stringify(item)).not.toContain(body);
+    const html = renderToStaticMarkup(createElement(ArchiveAnswerRow, { entry }));
+    expect(html).toContain(`<p lang="und" class="mt-2 font-serif text-[15px] leading-[1.5] text-ink-2">⚠ Low confidence — ${body}</p>`);
+    expect(html).toContain(`title="${reason}"`);
+    expect(html).toContain(">Low<");
+    expect(html).toContain("confidence");
+    expect(metadataAnswerExcerpt(raw)).toBe(snippet);
+    expect(metadataAnswerExcerpt("line1\nline2")).toBe("line1 line2");
+    expect(metadataAnswerExcerpt("a".repeat(180))).toBe("a".repeat(160));
+  });
+
+  it.each([
+    ["vi", "Độ tin cậy thấp", "Giữ nguyên câu trả lời đã lưu."],
+    ["pt", "Baixa confiança", "Mantenha a frase original salva."],
+    ["es", "Confianza baja", "Conserve la frase original guardada."],
+  ] as const)("keeps the %s caution label and the original later sentence", (language, label, body) => {
+    const raw = confidenceBanner(body, { level: "Low", reason: "Motivo registrado." }, language);
+    expect(archiveAnswerSnippet(raw)).toBe(`⚠ ${label} — ${body}`);
+    expect(raw).toContain(body);
+  });
+
+  it("does not strip a caveat that has no later sentence or no recognized closer", () => {
+    const only = confidenceBanner("", { level: "Low", reason: "Evidence assessment: none." }, "en");
+    expect(archiveAnswerSnippet(only)).toContain("Treat this as provisional.");
+    expect(archiveAnswerSnippet(only)).not.toBe("⚠ Low confidence —");
+    const unrecognized = "⚠ Low confidence — a reason without the provisional sentence. Useful body.";
+    expect(extractiveAnswerPreview(unrecognized)).toBeNull();
+    expect(archiveAnswerSnippet(unrecognized)).toBe(unrecognized);
   });
 });
 

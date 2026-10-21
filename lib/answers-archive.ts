@@ -31,6 +31,16 @@ export interface ArchiveEntry {
 }
 
 const SNIPPET_LEN = 220;
+const METADATA_EXCERPT_LEN = 160;
+
+/** Opening caveats the current delivery writer prepends. The preview may skip
+ * only this exact wording; it never rewrites, translates or grades the answer. */
+const OPENING_CAVEATS = [
+  { label: "Low confidence", closer: "Treat this as provisional." },
+  { label: "Độ tin cậy thấp", closer: "Kết quả chưa hoàn chỉnh." },
+  { label: "Baixa confiança", closer: "Trate este resultado como provisório." },
+  { label: "Confianza baja", closer: "Trate este resultado como provisional." },
+] as const;
 
 /** Normalize a question for dedupe: lowercase, collapse whitespace, drop trailing punctuation. */
 export function normalizeQuestion(q: string): string {
@@ -47,6 +57,41 @@ export function cleanText(s: string): string {
     .trim();
 }
 
+/** When cleaned prose starts with a known delivery caveat and a later sentence
+ * exists, keep the original short caution and return that later sentence.
+ * Anything else, including a caveat with no following sentence, stays intact. */
+export function extractiveAnswerPreview(cleaned: string): string | null {
+  for (const caveat of OPENING_CAVEATS) {
+    const prefix = `⚠ ${caveat.label} — `;
+    if (!cleaned.startsWith(prefix)) continue;
+    const at = cleaned.indexOf(caveat.closer, prefix.length);
+    if (at < 0) return null;
+    const body = cleaned.slice(at + caveat.closer.length).trim();
+    if (!body) return null;
+    return `${prefix}${body}`;
+  }
+  return null;
+}
+
+function boundedPreview(text: string, limit: number, ellipsis: boolean): string {
+  if (text.length <= limit) return text;
+  const sliced = text.slice(0, limit).trimEnd();
+  return ellipsis ? `${sliced}…` : sliced;
+}
+
+/** Archive card, topic row and Atom content share this extract. */
+export function archiveAnswerSnippet(answer: string): string {
+  const cleaned = cleanText(answer);
+  return boundedPreview(extractiveAnswerPreview(cleaned) ?? cleaned, SNIPPET_LEN, true);
+}
+
+/** Dispatch metadata excerpt. Unbannered answers keep the historical raw slice. */
+export function metadataAnswerExcerpt(answer: string): string {
+  const extracted = extractiveAnswerPreview(cleanText(answer));
+  if (extracted === null) return answer.slice(0, METADATA_EXCERPT_LEN).replace(/\n/g, " ");
+  return boundedPreview(extracted, METADATA_EXCERPT_LEN, false);
+}
+
 /** Pick the better run to represent a question: most citations, then most paid out, then newest. */
 function betterThanEntry(run: QueryRun, entry: ArchiveEntry): boolean {
   if (run.citations.length !== entry.citationCount) return run.citations.length > entry.citationCount;
@@ -55,12 +100,10 @@ function betterThanEntry(run: QueryRun, entry: ArchiveEntry): boolean {
 }
 
 function toEntry(r: QueryRun, answerLanguage: PresentationLanguage | "und"): ArchiveEntry {
-  const answer = cleanText(r.answer);
   return {
     id: r.id,
     question: r.question.trim(),
-    answerSnippet:
-      answer.length > SNIPPET_LEN ? answer.slice(0, SNIPPET_LEN).trimEnd() + "…" : answer,
+    answerSnippet: archiveAnswerSnippet(r.answer),
     citationCount: r.citations.length,
     toCreators: r.totalToCreators,
     totalSpent: r.totalSpent,

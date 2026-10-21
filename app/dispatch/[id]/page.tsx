@@ -10,7 +10,7 @@ import { getDb } from "@/lib/db";
 import { config } from "@/lib/config";
 import { loadDispatchThread, resolveDispatch } from "@/lib/history/read-dispatch";
 import { HistoricalDispatchNote } from "@/components/keryx/historical-dispatch-note";
-import { cleanText } from "@/lib/answers-archive";
+import { cleanText, metadataAnswerExcerpt } from "@/lib/answers-archive";
 import { RelatedDispatchesStream } from "@/components/keryx/related-dispatches-stream";
 import { FollowUpForm } from "@/components/keryx/follow-up-form";
 import { FreshnessNote } from "@/components/keryx/freshness-note";
@@ -65,7 +65,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (!dispatch || dispatch.visibility!=="public") return closedDispatchMetadata();
     const { run, archive } = dispatch;
     const preview = recordedReportPreview(run);
-    const snippet = run.answer.slice(0, 160).replace(/\n/g, " ");
+    const snippet = metadataAnswerExcerpt(run.answer);
     const cited = run.citations.length;
     const conf = deriveConfidence(run);
     const descriptions = preview.metadataCopy({
