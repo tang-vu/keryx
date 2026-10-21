@@ -23,6 +23,8 @@ import {
   type ModelChoice,
 } from "./model-catalog";
 import { createModelEngine } from "./model-engine";
+import { StagedEngine } from "./staged-engine";
+import { CoverageReuseEngine } from "./coverage-reuse-engine";
 import { endpointFor, endpointForModel } from "./provider-endpoints";
 import type { ReasoningEngine } from "./reasoning-engine";
 import { BoundedProductionEngine, configuredProductionModelAllowance, ProductionModelAllowance } from "./bounded-production-engine";
@@ -93,6 +95,15 @@ function buildChoiceEngine(choice: ModelChoice): ReasoningEngine {
 
   const primary = createModelEngine(choice);
   if (!primary) return buildDefaultEngine();
+  if (choice.routineModel) {
+    const routineChoice = findModelChoice(choice.routineModel);
+    const routine = routineChoice && createModelEngine(routineChoice);
+    if (!routine) throw new Error("Balanced research routine model unavailable");
+    return new StagedEngine(
+      buildChain([routine, ...defaultRealEngines(new Set([routine.name, primary.name]))]),
+      buildChain([primary, ...defaultRealEngines(new Set([primary.name]))]),
+    );
+  }
   return buildChain([primary, ...defaultRealEngines(new Set([primary.name]))]);
 }
 
@@ -109,7 +120,7 @@ export function getReasoningEngine(modelId?: string): ReasoningEngine {
     return new BoundedProductionEngine(process.env.DEEPSEEK_API_KEY ?? "", new ProductionModelAllowance(bounded));
   }
   const choice = resolveModelChoice(modelId);
-  return choice ? buildChoiceEngine(choice) : buildDefaultEngine();
+  return new CoverageReuseEngine(choice ? buildChoiceEngine(choice) : buildDefaultEngine());
 }
 
 export type { ReasoningEngine } from "./reasoning-engine";

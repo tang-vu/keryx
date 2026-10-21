@@ -2,6 +2,7 @@ import type { PaymentRecord, PaymentSettlementStatus, QueryRun, ResearchMode } f
 import { config } from "../config";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE, type ArcNetworkProfile } from "../arc-network-profile";
 import { cloneUsage, usageCostBounds, type CostBounds } from "./provider-cost-policy";
+import { summarizeStageCosts, type StageCostSummary } from "./stage-costs";
 
 /** Historical scenario identity only. Never applied implicitly to newly generated reports. */
 export const HISTORICAL_ECONOMICS_POLICY_V1 = {
@@ -59,7 +60,7 @@ export interface EconomicsA2aOrderRow {
 
 export type EconomicsRunSample = Pick<
   QueryRun,
-  "id" | "researchMode" | "fundingOwner" | "llmUsage"
+  "id" | "researchMode" | "fundingOwner" | "llmUsage" | "llmCalls"
 > & { usageCoverage?: "complete" | "unknown"; usageCoverageVersion?: 2 };
 
 /** Require one valid usage record for every completed instrumented call. */
@@ -99,12 +100,14 @@ export function economicsRunSample(run: QueryRun): EconomicsRunSample | null {
     researchMode: run.researchMode,
     fundingOwner: run.fundingOwner,
     llmUsage: run.llmUsage.map(cloneUsage),
+    ...(Array.isArray(run.llmCalls) ? { llmCalls: run.llmCalls.map(call => ({ ...call })) } : {}),
     usageCoverage: completeUsage(run) ? "complete" : "unknown",
     usageCoverageVersion: 2,
   };
 }
 
 export interface EconomicsSnapshot {
+  stageUsage?: StageCostSummary[];
   label: "testnet-observatory" | "mainnet-observatory";
   network?: "eip155:5042002" | "eip155:5042";
   policy: typeof ECONOMICS_POLICY | typeof MAINNET_ECONOMICS_POLICY;
@@ -307,6 +310,7 @@ export function calculateEconomics(
     policy,
     generatedAt: now.toISOString(),
     sampledRuns: sampled.length,
+    stageUsage: summarizeStageCosts(runs),
     pricedRuns,
     unpricedRuns: sampled.length - pricedRuns,
     providerCalls,

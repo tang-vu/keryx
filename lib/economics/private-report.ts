@@ -15,6 +15,7 @@ function legacyPrivateEconomicsReport(s: EconomicsSnapshot) {
       providerCalls: s.providerCalls, inputTokens: s.inputTokens, cachedInputTokens: s.cachedInputTokens,
       outputTokens: s.outputTokens, unknownCacheCalls: s.unknownCacheCalls,
       unpricedModels: [...s.unpricedModels], pricingPolicyIds: [...s.pricingPolicyIds] },
+    stageUsage: structuredClone(s.stageUsage ?? []),
     estimates: { costAndMarginScope: s.costAndMarginScope, totalLlmCostUpperBoundUsd: s.totalLlmCostUpperBoundUsd,
       llmCostUsdBounds: s.estimatedLlmCostUsdBounds ? { ...s.estimatedLlmCostUsdBounds } : null,
       shadowServiceFeesAllSampledUsdc: s.shadowServiceFeesAllSampledUsdc,

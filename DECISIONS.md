@@ -8481,3 +8481,15 @@ transfer does not expose the reviewed nonce. Retaining a supported managed
 challenge/transaction lifecycle is separate work; this change does not claim
 that the historical0.07USDC original was recovered. See
 docs/engineering/funding-cancellation.md for surface roles and vendor references.
+
+## Make ordinary model cost explicit by stage (2026-10-19)
+
+Keep Flash as the default and retain the existing explicit Pro meaning. Offer
+`deepseek-balanced` as a disclosed Flash routine/Pro synthesis-and-review choice.
+Reuse only exact successful provider coverage within one ordinary run, outside
+provider circuits; changed evidence and failed suppliers cannot populate reuse.
+Record application-assigned call stages and captured-price estimates. Preserve
+the optional call ledger through the compact economics storage projection so
+failed, pending and missing-usage work remains visible in the private report.
+Keep historical unknowns, fixed private/bounded originals and financial authority.
+See [the cost boundary](docs/engineering/llm-unit-costs.md).

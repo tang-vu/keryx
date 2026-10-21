@@ -29,6 +29,8 @@ export interface ModelChoice {
   note: string;
   /** Offered only for explicit selection; excluded from automatic supplier probes. */
   manualOnly?: boolean;
+  /** Ordinary staged option; retained private/bounded policies keep their fixed transport. */
+  routineModel?: string;
 }
 
 export const DEFAULT_MODEL_ID = "deepseek-flash";
@@ -61,6 +63,15 @@ export const MODEL_CATALOG: ModelChoice[] = [
     provider: "deepseek",
     model: "deepseek-flash",
     note: "Default research model. Lower published cost; quality still depends on the task and evidence.",
+  },
+  {
+    id: "deepseek-balanced",
+    label: "DeepSeek Balanced",
+    provider: "deepseek",
+    model: "deepseek-v4-pro",
+    routineModel: "deepseek-flash",
+    note: "Flash plans, selects sources, checks coverage and assigns contributions; Pro synthesizes and reviews evidence. Provider fallback remains visible.",
+    manualOnly: true,
   },
   {
     id: "deepseek-v4-pro",
