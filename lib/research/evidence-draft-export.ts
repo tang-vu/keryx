@@ -71,9 +71,11 @@ export function exportEvidenceDraft(value: unknown) {
       // One anchor per excerpt: a quotation repeated in a later theme keeps the first target.
       const first = !anchored.has(excerpt.id); anchored.add(excerpt.id);
       md.push(...(first ? [`<a id="${excerpt.id}"></a>`] : []), ...excerpt.quote.split(/\r\n|\r|\n/).map(line => `> ${markdown(line)}`), "",
-        `[@${key(excerpt.paperUrl)}] — [exact record](<${excerpt.paperUrl}>) · version ${markdown(single(excerpt.contentVersion))} · report ${markdown(excerpt.reportId)}`, "");
+        `[@${key(excerpt.paperUrl)}] — [exact record](<${excerpt.paperUrl}>) · version ${markdown(single(excerpt.contentVersion))} · report ${markdown(excerpt.reportId)}${
+          excerpt.readUrl ? ` · [retained read](<${excerpt.readUrl}>)` : ""}`, "");
       tex.push(...(first ? [`\\label{${excerpt.id}}`] : []), "\\begin{quote}", latex(excerpt.quote), "\\end{quote}",
-        `\\autocite{${key(excerpt.paperUrl)}}. Version: ${latex(excerpt.contentVersion)}. Report: ${latex(excerpt.reportId)}.`, "");
+        `\\autocite{${key(excerpt.paperUrl)}}. Version: ${latex(excerpt.contentVersion)}. Report: ${latex(excerpt.reportId)}.${
+          excerpt.readUrl ? ` Retained read URL: ${latex(excerpt.readUrl)}.` : ""}`, "");
     }
   }
   md.push("## Included papers without usable retained excerpts", "");
