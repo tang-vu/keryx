@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { readEvidenceProcurementPacket, runEvidenceProcurement } from "./evidence-procurement.mts";
 import { MAX_PROCUREMENT_BYTES } from "../lib/evidence-procurement/contracts.ts";
 import { buildEvidenceProcurement } from "../lib/evidence-procurement/engine.ts";
+import { exportEvidenceProcurement } from "../lib/evidence-procurement/export.ts";
 
 const packet = () => ({ version: 1, scope: "private-evidence-procurement", request: {
   id: "cli-fixture", network: "eip155:5042002", decision: "PRIVATE_DECISION: identify missing benchmark evidence.",
@@ -46,7 +47,31 @@ it("rejects special files, oversized bytes, invalid UTF-8 and derived outputs", 
 });
 it("rejects ambiguous or unsupported options before reading a file", async () => {
   for (const args of [[], ["--file"], ["--file", input, "--file", input], ["--file", input, "--pay"],
-    ["--help", "--file", input], ["--out", input], ["--file", "--out"]])
+    ["--help", "--file", input], ["--out", input], ["--file", "--out"], ["--file", "missing", "--format", "SECRET_FORMAT"],
+    ["--file", input, "--format", "csv", "--format", "csv"], ["--file", input, "--format"]])
     await expect(runEvidenceProcurement(args)).rejects.toThrow();
   expect(console.log).not.toHaveBeenCalled();
+});
+it.each(["markdown", "csv"])("prints and privately saves the same %s receipt without overwrite or provider I/O", async format => {
+  const http = vi.spyOn(globalThis, "fetch").mockRejectedValue(Error("No transport"));
+  const receipt = await exportEvidenceProcurement(packet(), format);
+  await runEvidenceProcurement(["--file", input, "--format", format]);
+  expect(vi.mocked(console.log).mock.calls[0][0]).toBe(receipt.text); vi.mocked(console.log).mockClear();
+  const output = join(folder, `receipt.${receipt.extension}`);
+  await runEvidenceProcurement(["--file", input, "--format", format, "--out", output]);
+  expect(await readFile(output, "utf8")).toBe(receipt.text); expect(JSON.stringify(vi.mocked(console.log).mock.calls)).not.toContain("PRIVATE_DECISION");
+  if (process.platform !== "win32") expect((await stat(output)).mode & 0o077).toBe(0);
+  await expect(runEvidenceProcurement(["--file", input, "--format", format, "--out", output])).rejects.toThrow();
+  expect(await readFile(output, "utf8")).toBe(receipt.text);
+  await expect(readEvidenceProcurementPacket(output)).rejects.toThrow(); expect(http).not.toHaveBeenCalled();
+});
+it("retains explicit JSON packet output and creates no file when formatted export refuses private controls", async () => {
+  const output = join(folder, "packet.json");
+  await runEvidenceProcurement(["--file", input, "--format", "json", "--out", output]);
+  expect(await readEvidenceProcurementPacket(output)).toEqual(packet());
+  const privatePacket = packet(); privatePacket.request.decision += "\u0000";
+  await writeFile(input, JSON.stringify(privatePacket));
+  const refused = join(folder, "refused.csv");
+  await expect(runEvidenceProcurement(["--file", input, "--format", "csv", "--out", refused])).rejects.toThrow("non-displayable");
+  await expect(stat(refused)).rejects.toMatchObject({ code: "ENOENT" }); expect(await readEvidenceProcurementPacket(input)).toEqual(privatePacket);
 });

@@ -3,6 +3,7 @@ import type { ExploreSourceTopic } from "../public-references/explore-catalog";
 import { englishMessages } from "../i18n/messages";
 import type { PaperRecord } from "../papers/types";
 import { paperMatches } from "../papers/filters";
+import { normalizeSearchText } from "../normalize-search-text";
 
 export const LIBRARY_TOPICS = {
   "ai-agents": englishMessages["sourceBrowse.topic.agents"],
@@ -73,15 +74,12 @@ export function libraryTopicHints(record: LibraryRecord): LibraryTopic[] {
   return topics.length ? topics : ["other"];
 }
 
-function normalize(value: string): string {
-  return value.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
-}
 /** Literal AND-token matching, bounded and independent of regex syntax supplied by a visitor. */
 export function librarySearchMatches(record: LibraryRecord, query: string): boolean {
-  const text = normalize([record.name, record.url, record.description, ...record.tags ?? []].join(" "));
-  const terms = normalize(query).split(/\s+/u).filter(Boolean);
+  const text = normalizeSearchText([record.name, record.url, record.description, ...record.tags ?? []].join(" "));
+  const terms = normalizeSearchText(query).split(/\s+/u).filter(Boolean);
   const matches = (candidate: string) => terms.every(term => candidate.includes(term));
-  return matches(text) || !!record.itemTitles?.some(title => matches(`${text} ${normalize(title)}`));
+  return matches(text) || !!record.itemTitles?.some(title => matches(`${text} ${normalizeSearchText(title)}`));
 }
 
 export function browseLibrary<T extends LibraryRecord>(records: readonly T[], filters: LibraryFilters): T[] {

@@ -8,6 +8,7 @@ import { POST } from "../../app/api/research/evidence-procurement/route";
 import { buildEvidenceProcurement } from "./engine";
 import { MAX_PROCUREMENT_BYTES } from "./contracts";
 import { createEvidenceProcurementRoute } from "./route";
+import { exportEvidenceProcurement } from "./export";
 
 const now = Date.parse("2026-10-12T12:00:00.000Z");
 const packet = () => ({ version: 1, scope: "private-evidence-procurement", request: {
@@ -87,4 +88,35 @@ it("holds the five-second read deadline even when body cancellation never settle
   const response = createEvidenceProcurementRoute(async () => null)(input);
   await vi.advanceTimersByTimeAsync(5001);
   expect((await response).status).toBe(400);
+});
+it.each(["markdown", "csv"])("returns the shared %s attachment under the existing private authorization boundary", async format => {
+  const http = vi.spyOn(globalThis, "fetch").mockRejectedValue(Error("No transport"));
+  const response = await POST(request({ Authorization: `Bearer ${key}` }, packet(), `${url}?format=${format}`));
+  const receipt = await exportEvidenceProcurement(packet(), format);
+  expect(response.status).toBe(200); expect(await response.text()).toBe(receipt.text);
+  expect(response.headers.get("content-type")).toBe(receipt.contentType);
+  expect(response.headers.get("content-disposition")).toBe(`attachment; filename="private-evidence-procurement-receipt.${receipt.extension}"`);
+  expect(response.headers.get("cache-control")).toBe("private, no-store"); expect(response.headers.get("vary")).toBe("Authorization, Cookie");
+  expect(response.headers.get("x-content-type-options")).toBe("nosniff"); expect(http).not.toHaveBeenCalled();
+  authentication.key.mockResolvedValue({ scopes: "ask" });
+  const denied = request({ Authorization: `Bearer ${key}` }, packet(), `${url}?format=${format}`);
+  expect((await POST(denied)).status).toBe(403); expect(denied.bodyUsed).toBe(false);
+  const crossOrigin = request({ Origin: "https://other.example" }, packet(), `${url}?format=${format}`);
+  expect((await POST(crossOrigin)).status).toBe(403); expect(crossOrigin.bodyUsed).toBe(false);
+});
+it("keeps explicit JSON compatible and rejects ambiguous formats before auth or private reads", async () => {
+  expect(await (await POST(request({ Origin: "https://keryx.cc" }, packet(), `${url}?format=json`))).json()).toEqual({ procurement: await buildEvidenceProcurement(packet()) });
+  const authorize = vi.fn(async () => null), handler = createEvidenceProcurementRoute(authorize);
+  for (const query of ["format=", "format=SECRET_FORMAT", "format=csv&format=csv", "format=markdown&wallet=other", "format[]=csv"]) {
+    const input = request({}, packet(), `${url}?${query}`), response = await handler(input);
+    expect(response.status).toBe(400); expect(input.bodyUsed).toBe(false);
+    expect(await response.json()).toEqual({ error: "invalid_evidence_procurement_request" });
+  }
+  expect(authorize).not.toHaveBeenCalled();
+});
+it("contains formatted-export errors while JSON can still preserve the original packet", async () => {
+  const input = packet(); input.request.decision = "PRIVATE_DETAIL\u0000";
+  const response = await POST(request({ Origin: "https://keryx.cc" }, input, `${url}?format=csv`));
+  expect(response.status).toBe(400); expect(await response.json()).toEqual({ error: "invalid_evidence_procurement" });
+  expect((await (await POST(request({ Origin: "https://keryx.cc" }, input))).json()).procurement.packet).toEqual(input);
 });

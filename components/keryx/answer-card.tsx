@@ -34,6 +34,7 @@ import { projectBibliographicTask } from "@/lib/research/bibliographic-task-resu
 import { BibliographyExports } from "./bibliography-exports";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
 import { sourceReadSummary } from "@/lib/research/source-read-outcomes";
+import { AnswerEvidenceStatus } from "./answer-evidence-status";
 
 
 
@@ -80,9 +81,9 @@ export function AnswerCard({ run, answerLanguage, meta, permalink, payments = []
           {run.evidencePortfolio ? (
             <span
               className="font-mono text-[10px] text-ink-3"
-              title={copy("reportReading.portfolioTitle")}
+              title={copy("reportEvidence.selectionNotice")}
             >
-              {run.evidencePortfolio.outcome?.evidenceYield !== null && run.evidencePortfolio.outcome?.evidenceYield !== undefined ? copy("reportReading.portfolioYield", { selected: run.evidencePortfolio.selectedAssetIds.length, eligible: run.evidencePortfolio.eligibleCandidates, yield: Math.round(run.evidencePortfolio.outcome.evidenceYield * 100) }) : copy("reportReading.portfolio", { selected: run.evidencePortfolio.selectedAssetIds.length, eligible: run.evidencePortfolio.eligibleCandidates })}
+              {copy("reportEvidence.selection", { selected: run.evidencePortfolio.selectedAssetIds.length, eligible: run.evidencePortfolio.eligibleCandidates })}
             </span>
           ) : null}
         </div>
@@ -91,6 +92,7 @@ export function AnswerCard({ run, answerLanguage, meta, permalink, payments = []
       <div className="border border-ink bg-paper">
         <div className="px-6 py-6 sm:px-9">
           <div className="max-w-[64ch]">
+            {!bibliography && <AnswerEvidenceStatus run={run} />}
             <AnswerMarkdown
               language={generatedProseLanguage}
               text={run.answer}

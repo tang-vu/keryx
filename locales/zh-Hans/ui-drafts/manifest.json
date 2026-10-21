@@ -6,16 +6,16 @@
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
-  "scope": "All 66 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
+  "scope": "All 70 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
   "financialLegalConsent": "Unreviewed; critical English-authoritative fallback until actual named-human review. Neutral machine-draft UI is integrated only in explicit previews.",
   "totals": {
-    "englishNamespaceFiles": 66,
+    "englishNamespaceFiles": 70,
     "coreInlineSources": 1,
-    "extractedLeaves": 5973,
-    "authoredEntries": 5893,
+    "extractedLeaves": 6028,
+    "authoredEntries": 5934,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 51,
-    "completeNamespaces": 63
+    "uncoveredEntries": 65,
+    "completeNamespaces": 67
   },
   "namespaces": [
     {
@@ -3535,9 +3535,9 @@
     {
       "namespace": "reports",
       "sourcePath": "locales/en/reports.ts",
-      "sourceSha256": "d5b5271fac92f5630f699468a4f95aa1bd647e910ae44461bc8f6b605678045f",
+      "sourceSha256": "16bae398942d07675a4307af7447316f6fb8dbca6c838b81ad78c09cc2cf13d0",
       "draftPath": "locales/zh-Hans/ui-drafts/reports.json",
-      "extractedLeaves": 579,
+      "extractedLeaves": 593,
       "authoredEntries": 567,
       "coveredKeys": [
         "answerDelta.added",
@@ -4110,6 +4110,20 @@
       ],
       "nonTranslatableMachineIdentifiers": [],
       "uncoveredKeys": [
+        "reportEvidence.draft",
+        "reportEvidence.excerpts",
+        "reportEvidence.inspect",
+        "reportEvidence.inspectCount",
+        "reportEvidence.missing",
+        "reportEvidence.notice",
+        "reportEvidence.prepare",
+        "reportEvidence.prepareNotice",
+        "reportEvidence.recorded",
+        "reportEvidence.selection",
+        "reportEvidence.selectionNotice",
+        "reportEvidence.targetUnavailable",
+        "reportEvidence.title",
+        "reportEvidence.unavailable",
         "reportReading.cacheHit.one",
         "reportReading.cacheHit.other",
         "reportReading.cacheSelection.one",
@@ -6992,6 +7006,99 @@
         "historyLimit",
         "fundingUnsupported"
       ],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "evidence-draft-restore",
+      "sourcePath": "locales/en/evidence-draft-restore.ts",
+      "sourceSha256": "e0425fc58b10560681cc8995392a136e7782fa5b7abb5a5561cfee28c8e5ae9c",
+      "draftPath": "locales/zh-Hans/ui-drafts/evidence-draft-restore.json",
+      "extractedLeaves": 16,
+      "authoredEntries": 16,
+      "coveredKeys": [
+        "cancel",
+        "cancelled",
+        "file",
+        "guidance",
+        "heading",
+        "passage",
+        "preview",
+        "reading",
+        "refused",
+        "replace",
+        "restore",
+        "restored",
+        "save",
+        "stale",
+        "summary",
+        "untitled"
+      ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "literature-search",
+      "sourcePath": "locales/en/literature-search.ts",
+      "sourceSha256": "a7cfda62a904c4c49cfca0e826411e54b595e3547edac6e8d2910ae13716de30",
+      "draftPath": "locales/zh-Hans/ui-drafts/literature-search.json",
+      "extractedLeaves": 6,
+      "authoredEntries": 6,
+      "coveredKeys": [
+        "clear",
+        "empty",
+        "guidance",
+        "label",
+        "outsideSearch",
+        "scope"
+      ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "literature-import",
+      "sourcePath": "locales/en/literature-import.ts",
+      "sourceSha256": "3bd4f26eedd5cc3a63117035a485a27bb46493dc5501f2df24a4d7e761a80f68",
+      "draftPath": "locales/zh-Hans/ui-drafts/literature-import.json",
+      "extractedLeaves": 13,
+      "authoredEntries": 13,
+      "coveredKeys": [
+        "add",
+        "added",
+        "adding",
+        "cancelled",
+        "capacity",
+        "duplicates",
+        "newPapers",
+        "none",
+        "notice",
+        "preview",
+        "review",
+        "stale",
+        "total"
+      ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "evidence-draft-editing",
+      "sourcePath": "locales/en/evidence-draft-editing.ts",
+      "sourceSha256": "ef6356859f04f3ffee8ba9f1ad201d3b7951814e4d277e993f7ead1111e14cc2",
+      "draftPath": "locales/zh-Hans/ui-drafts/evidence-draft-editing.json",
+      "extractedLeaves": 6,
+      "authoredEntries": 6,
+      "coveredKeys": [
+        "claimRemoved",
+        "confirmClaim",
+        "confirmTheme",
+        "removeClaim",
+        "removeTheme",
+        "themeRemoved"
+      ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     }
   ]

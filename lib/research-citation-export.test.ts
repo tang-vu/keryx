@@ -34,6 +34,31 @@ it("exports CSL-JSON with observed names, publication precision and the existing
   expect(entry.note).toContain("Read scope: publisher-page");
   expect(result.content).not.toMatch(/private allocation rationale|reward|payTo/);
 });
+it.each([
+  ["2024", [[2024]], "2024"],
+  ["2024-02", [[2024, 2]], "2024/02"],
+  ["2024-02-29", [[2024, 2, 29]], "2024/02/29"],
+] as const)("preserves valid scholarly publication precision across formats for %s", (publishedDate, parts, risDate) => {
+  const row = citation({ scholarly: { ...scholarly, publishedDate } });
+  expect(buildCitationExport([row], "bibtex").content).toContain("year = {2024}");
+  expect(buildCitationExport([row], "ris").content).toContain(`PY  - ${risDate}\r\n`);
+  expect(JSON.parse(buildCitationExport([row], "csl-json").content)[0].issued).toEqual({ "date-parts": parts });
+});
+it.each([
+  "2023-02-29", "2024-04-31", "2026-02-30", "2026-00", "2026-13", "0000", "0999",
+  "2026-2", "2026-01-01T00:00:00Z", "2026\r\nER  -", "unknown", "", undefined,
+])("uses the valid recorded article date consistently when the scholarly date is invalid: %s", publishedDate => {
+  const row = citation({ scholarly: { ...scholarly, publishedDate } });
+  expect(buildCitationExport([row], "bibtex").content).toContain("year = {2026}");
+  expect(buildCitationExport([row], "ris").content).toContain("PY  - 2026/09/28\r\n");
+  expect(JSON.parse(buildCitationExport([row], "csl-json").content)[0].issued).toEqual({ "date-parts": [[2026, 9, 28]] });
+});
+it.each(["2026-02-30", "2026-13", "0000", "unknown"])("does not invent a publication year from an invalid scholarly date %s", publishedDate => {
+  const row = citation({ itemPublishedAt: undefined, scholarly: { ...scholarly, publishedDate } });
+  expect(buildCitationExport([row], "bibtex").content).not.toContain("year =");
+  expect(buildCitationExport([row], "ris").content).not.toMatch(/^PY  -/m);
+  expect(JSON.parse(buildCitationExport([row], "csl-json").content)[0]).not.toHaveProperty("issued");
+});
 it("keeps CSL references distinct across versions and stable across order, with no inferred names or read authority", () => {
   const a = citation({ scholarly: { ...scholarly, evidenceScope: undefined }, itemTitle: 'Title " } ] 日本語' });
   const b = citation({ contentVersion: "other-version" });

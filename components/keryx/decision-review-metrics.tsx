@@ -13,6 +13,12 @@ export function DecisionReviewMetricsView() {
     const end = new Date(); end.setUTCHours(0, 0, 0, 0); const start = new Date(end.getTime() - 30 * 86_400_000);
     setSince(start.toISOString().slice(0, 10)); setUntil(end.toISOString().slice(0, 10));
   }, 0); return () => { clearTimeout(timer); active.current = false; request.current?.abort(); }; }, []);
+  function changePeriod(field: "since" | "until", value: string) {
+    // Counts and in-flight observations belong to the previous selected period.
+    request.current?.abort(); request.current = null;
+    setResult(null); setNotice(""); setBusy(false);
+    if (field === "since") setSince(value); else setUntil(value);
+  }
   async function load() {
     if (request.current) return;
     const period = { network: "eip155:5042002", since: `${since}T00:00:00.000Z`, until: `${until}T00:00:00.000Z` };
@@ -27,12 +33,12 @@ export function DecisionReviewMetricsView() {
       if (value.since !== period.since || value.until !== period.until) throw new Error();
       if (active.current && !controller.signal.aborted) { setResult(value); setNotice(""); }
     } catch { if (active.current && !controller.signal.aborted) setNotice(copy.metricsUnavailable); }
-    finally { if (request.current === controller) request.current = null; if (active.current) setBusy(false); }
+    finally { if (request.current === controller) { request.current = null; if (active.current) setBusy(false); } }
   }
   return <div className="min-w-0">
     <form className="mt-6 flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); void load(); }}>
-      <label className="block text-xs text-ink-2">{copy.since}<input type="date" required value={since} onChange={event => setSince(event.target.value)} className="mt-1 block min-h-11 border border-line bg-paper px-3" /></label>
-      <label className="block text-xs text-ink-2">{copy.until}<input type="date" required value={until} onChange={event => setUntil(event.target.value)} className="mt-1 block min-h-11 border border-line bg-paper px-3" /></label>
+      <label className="block text-xs text-ink-2">{copy.since}<input type="date" required value={since} onChange={event => changePeriod("since", event.target.value)} className="mt-1 block min-h-11 border border-line bg-paper px-3" /></label>
+      <label className="block text-xs text-ink-2">{copy.until}<input type="date" required value={until} onChange={event => changePeriod("until", event.target.value)} className="mt-1 block min-h-11 border border-line bg-paper px-3" /></label>
       <button type="submit" disabled={busy} className="min-h-11 border border-line px-4 py-2 font-mono text-xs disabled:opacity-50">{copy.loadMetrics}</button>
     </form>
     {notice && <p role="status" className="mt-4 text-sm text-ink-2">{notice}</p>}

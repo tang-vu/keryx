@@ -167,6 +167,13 @@ can also be deliberately downloaded/restored; their retention belongs to the use
 Saved input is bounded and validated before replacement, writes/deletes are read
 back, and cooperating tabs serialize deliberate actions with Web Locks. Restore
 recomputes the current method's results, rather than trusting saved verdicts.
+File restores and device restores waiting for a Web Lock apply only while the
+initiating editor action is current. Choosing another file or device restore,
+editing, running a new check, clearing the tab or leaving the editor discards
+the pending replacement and its late errors. An empty file selection or dismissing
+the file picker also cancels an earlier file read. Start the restore again if you
+still want to replace the latest text. Device Save and Delete retain their explicit storage-only roles;
+discarding a stale restore does not delete the device save.
 API responses are `private, no-store`, authentication
 is checked before the body is read, and fixed errors never echo the passage. An MCP
 client may keep its own tool messages; that retention is outside Keryx's control.

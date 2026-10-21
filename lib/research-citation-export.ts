@@ -8,7 +8,7 @@ interface Reference {
   title: string;
   url: string;
   source: string;
-  date?: string;
+  issued?: CslReference["issued"];
   note: string;
   scholarly?: ScholarlyMetadata;
   version?: string;
@@ -63,7 +63,9 @@ function references(citations: readonly Citation[]) {
     const keyCount = (keys.get(baseKey) ?? 0) + 1;
     keys.set(baseKey, keyCount);
     const scholarly = citation.scholarly?.evidenceScope ? citation.scholarly : undefined;
-    entries.push({ key: keyCount === 1 ? baseKey : `${baseKey}_${keyCount}`, title, url, source, date: publicationDate(citation.itemPublishedAt), scholarly, ...(version ? { version } : {}),
+    // Resolve one validated date for every format; never salvage a year from an impossible date.
+    const issued = cslIssued(scholarly?.publishedDate) ?? cslIssued(publicationDate(citation.itemPublishedAt));
+    entries.push({ key: keyCount === 1 ? baseKey : `${baseKey}_${keyCount}`, title, url, source, issued, scholarly, ...(version ? { version } : {}),
       note: text(`${citation.evidenceProvenance === "synthetic-demo" ? "ILLUSTRATIVE SYNTHETIC DEMO; not factual evidence. " : ""}Cited by Keryx [${text(citation.marker)}]. Source: ${source}.${itemId ? ` Item: ${itemId}.` : ""}${version ? ` Content version: ${version}.` : ""} ${scholarly ? `Bibliographic metadata from ${scholarly.provider}, observed ${text(scholarly.retrievedAt)} (${text(scholarly.recordUrl)}). Read scope: ${scholarly.evidenceScope}. ${scholarly.workType === "preprint" ? "Preprint. " : ""}Peer review unknown; metadata does not verify author rights.${scholarly.authorCount !== undefined && scholarly.authors.length < scholarly.authorCount ? ` Incomplete contributor list: ${scholarly.authors.length}/${scholarly.authorCount} provider entries recorded${scholarly.authorsTruncated ? "; capped at 50" : ""}.` : ""}` : "Bibliographic metadata is limited to the recorded article identity."}`) });
   }
   return { entries, omitted };
@@ -88,7 +90,7 @@ export function buildCitationExport(citations: readonly Citation[], format: Cita
   if (format === "csl-json") {
     const records: CslReference[] = entries.map(entry => {
       const metadata = entry.scholarly;
-      const issued = cslIssued(metadata?.publishedDate) ?? cslIssued(entry.date);
+      const issued = entry.issued;
       return {
         id: entry.key, "citation-key": entry.key,
         type: metadata?.workType === "journal-article" ? "article-journal" : metadata?.workType === "preprint" ? "manuscript" : "webpage",
@@ -112,7 +114,8 @@ export function buildCitationExport(citations: readonly Citation[], format: Cita
   }
   const content = entries.map((entry) => {
     const metadata = entry.scholarly;
-    const year = metadata?.publishedDate?.match(/^\d{4}(?:-\d{2})?(?:-\d{2})?$/)?.[0].slice(0, 4) ?? entry.date?.slice(0, 4);
+    const dateParts = entry.issued?.["date-parts"][0];
+    const year = dateParts?.[0].toString();
     if (format === "ris") return [
       // MANSCPT is recognized by Zotero; UNPB silently becomes a journal article.
       `TY  - ${metadata?.workType === "journal-article" ? "JOUR" : metadata?.workType === "preprint" ? "MANSCPT" : "WEB"}`, `TI  - ${entry.title}`, `UR  - ${entry.url}`,
@@ -126,7 +129,7 @@ export function buildCitationExport(citations: readonly Citation[], format: Cita
       ...(metadata?.volume ? [`VL  - ${text(metadata.volume)}`] : []),
       ...(metadata?.issue ? [`IS  - ${text(metadata.issue)}`] : []),
       ...(metadata?.pages ? [`SP  - ${text(metadata.pages)}`] : []),
-      ...(metadata?.publishedDate ? [`PY  - ${text(metadata.publishedDate).replaceAll("-", "/")}`] : entry.date ? [`PY  - ${entry.date.replaceAll("-", "/")}`] : []),
+      ...(dateParts ? [`PY  - ${dateParts.map(part => String(part).padStart(2, "0")).join("/")}`] : []),
       `N1  - ${risNote(entry.note)}`, "ER  - ",
     ].join("\r\n");
     const fields = [

@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 
 import { fetchOperatorLedger } from "@/lib/operator-ledger/client";
 import { formatLedgerMicros, type LedgerFunding, type LedgerLeg, type OperatorLedger } from "@/lib/operator-ledger/contracts";
+import { operatorLedgerCsvText, operatorLedgerJsonText } from "@/lib/operator-ledger/serialize";
+import { downloadBrowserText } from "@/lib/browser-text-download";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
 
 
@@ -31,6 +33,12 @@ export function OperatorLedgerView() {
   }, [days, attempt]);
   const data = ledger?.payload;
   const unknown = message("jobLedger.unknownValue");
+  function download(format: "json" | "csv") {
+    // Only fetchOperatorLedger's validated, digest-checked snapshot enters this state.
+    if (!ledger) return;
+    downloadBrowserText(format === "json" ? operatorLedgerJsonText(ledger) : operatorLedgerCsvText(ledger),
+      `keryx-public-job-ledger.${format}`, format === "json" ? "application/json" : "text/csv;charset=utf-8");
+  }
   return <section className="space-y-6" aria-labelledby="public-job-ledger-title">
     <Link href="/operator" className="text-sm underline">{message("jobLedger.back")}</Link>
     <header className="space-y-3">
@@ -45,8 +53,8 @@ export function OperatorLedgerView() {
       </select>
       <button type="button" onClick={() => { setLedger(null); setFailed(false); setAttempt(value => value + 1); }} className="rounded border border-ink/20 px-3 py-2 text-sm">{message("jobLedger.retry")}</button>
       {data && <>
-        <a href={`/api/operator/ledger?days=${days}&download=1`} className="text-sm underline">{message("jobLedger.exportJson")}</a>
-        <a href={`/api/operator/ledger?days=${days}&format=csv`} className="text-sm underline">{message("jobLedger.exportCsv")}</a>
+        <button type="button" onClick={() => download("json")} className="text-sm underline">{message("jobLedger.exportJson")}</button>
+        <button type="button" onClick={() => download("csv")} className="text-sm underline">{message("jobLedger.exportCsv")}</button>
       </>}
     </div>
     {!data && <p role="status">{message(failed ? "jobLedger.unavailable" : "jobLedger.loading")}</p>}

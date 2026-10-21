@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-draft-restore.ts",
+  "sourceSha256": "e0425fc58b10560681cc8995392a136e7782fa5b7abb5a5561cfee28c8e5ae9c",
+  "entries": {
+    "heading": {
+      "source": "Continue a saved draft",
+      "text": "Tiếp tục bản nháp đã lưu"
+    },
+    "guidance": {
+      "source": "Open a private-evidence-draft.json file previously downloaded from this editor. Preview it before restoring. The saved paper selection is used only in this tab; your saved bibliography stays unchanged.",
+      "text": "Mở tệp private-evidence-draft.json đã tải xuống từ trình soạn thảo này. Xem trước rồi mới phục hồi. Danh sách bài báo trong tệp chỉ được dùng trong tab này; thư mục tài liệu đã lưu của bạn không thay đổi."
+    },
+    "file": {
+      "source": "Choose a draft backup (.json)",
+      "text": "Chọn bản sao lưu bản nháp (.json)"
+    },
+    "reading": {
+      "source": "Opening the backup in this tab…",
+      "text": "Đang mở bản sao lưu trong tab này…"
+    },
+    "preview": {
+      "source": "Backup preview",
+      "text": "Xem trước bản sao lưu"
+    },
+    "untitled": {
+      "source": "Untitled draft",
+      "text": "Bản nháp chưa có tiêu đề"
+    },
+    "summary": {
+      "source": "{papers} included papers · {reports} reports · {excerpts} retained excerpts · {claims} claims · {themes} themes",
+      "text": "{papers} bài báo được chọn · {reports} báo cáo · {excerpts} trích đoạn được giữ lại · {claims} nhận định · {themes} chủ đề"
+    },
+    "passage": {
+      "source": "Saved passage preview",
+      "text": "Xem trước đoạn văn đã lưu"
+    },
+    "replace": {
+      "source": "Restoring replaces this tab’s current passage, imported reports, assessments and themes. Save your current draft first if you want to keep it.",
+      "text": "Phục hồi sẽ thay thế đoạn văn, báo cáo đã nhập, đánh giá và chủ đề hiện có trong tab này. Hãy lưu bản nháp hiện tại trước nếu bạn muốn giữ lại."
+    },
+    "restore": {
+      "source": "Restore in this tab",
+      "text": "Phục hồi trong tab này"
+    },
+    "save": {
+      "source": "Save current draft first",
+      "text": "Lưu bản nháp hiện tại trước"
+    },
+    "cancel": {
+      "source": "Cancel restore",
+      "text": "Hủy phục hồi"
+    },
+    "restored": {
+      "source": "Draft restored in this tab. Continue editing, then download a new backup before leaving.",
+      "text": "Đã phục hồi bản nháp trong tab này. Tiếp tục chỉnh sửa rồi tải xuống bản sao lưu mới trước khi rời trang."
+    },
+    "refused": {
+      "source": "Backup not opened. Choose a valid Keryx private draft JSON file within the draft limits. Your current draft is unchanged.",
+      "text": "Chưa mở bản sao lưu. Hãy chọn tệp JSON bản nháp riêng tư hợp lệ của Keryx trong giới hạn dung lượng bản nháp. Bản nháp hiện tại của bạn không thay đổi."
+    },
+    "stale": {
+      "source": "This tab changed while the backup was being reviewed. Choose the file again to review it before replacing your latest edits.",
+      "text": "Nội dung trong tab đã thay đổi khi bạn đang xem trước bản sao lưu. Hãy chọn lại tệp để kiểm tra trước khi thay thế các chỉnh sửa mới nhất."
+    },
+    "cancelled": {
+      "source": "Restore cancelled. Your current draft is unchanged.",
+      "text": "Đã hủy phục hồi. Bản nháp hiện tại của bạn không thay đổi."
+    }
+  }
+}

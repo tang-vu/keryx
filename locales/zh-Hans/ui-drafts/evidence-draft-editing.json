@@ -1,0 +1,32 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-draft-editing.ts",
+  "sourceSha256": "ef6356859f04f3ffee8ba9f1ad201d3b7951814e4d277e993f7ead1111e14cc2",
+  "entries": {
+    "removeClaim": {
+      "source": "Remove this claim",
+      "text": "移除此论断"
+    },
+    "confirmClaim": {
+      "source": "Remove this claim and its recorded assessment? Your original passage, other claims and themes will be kept.",
+      "text": "移除此论断及其已记录的评估？原始段落、其他论断和主题将保留。"
+    },
+    "claimRemoved": {
+      "source": "Claim removed. Your passage, other claims and themes were kept.",
+      "text": "已移除此论断。原始段落、其他论断和主题均已保留。"
+    },
+    "removeTheme": {
+      "source": "Remove this theme",
+      "text": "移除此主题"
+    },
+    "confirmTheme": {
+      "source": "Remove this theme, its notes and its statements? Other themes, claims and retained source reports will be kept.",
+      "text": "移除此主题及其笔记和句子？其他主题、论断和已保留的来源报告将保留。"
+    },
+    "themeRemoved": {
+      "source": "Theme removed. Other themes, claims and retained source reports were kept.",
+      "text": "已移除此主题。其他主题、论断和已保留的来源报告均已保留。"
+    }
+  }
+}
