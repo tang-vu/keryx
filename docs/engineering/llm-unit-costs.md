@@ -3,8 +3,11 @@
 `deepseek-flash` remains the default. `deepseek-v4-pro` still selects Pro for
 the complete ordinary pipeline. The explicit `deepseek-balanced` choice uses
 Flash for planning, source selection, coverage, re-evaluation and attribution,
-and Pro for synthesis and its separate evidence review. The model catalog's
-label and note disclose this routing on the existing web/API/CLI/MCP surfaces.
+and Pro for synthesis and its separate evidence review. The web picker and
+`/api/models` expose the catalog label and routing note. Ordinary API, CLI and
+remote MCP callers can select `deepseek-balanced`; the OpenAI-compatible model
+list uses `keryx:deepseek-balanced`. These adapters forward the catalog ID to the
+same ordinary selector. Fixed desktop/stdio MCP handoffs keep their existing roles.
 Each lane keeps the existing configured provider fallbacks and circuit policy;
 run usage and attempt metadata identify the actual serving models.
 
