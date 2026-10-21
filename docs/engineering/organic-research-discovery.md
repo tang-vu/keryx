@@ -60,7 +60,8 @@ selection before judging demand. Review whether people continue to the literatur
 workspace or research entry; attribution setup and account access must be verified
 before claiming conversion or AI citation metrics. No recurring job is created.
 
-Web and desktop's hosted-web view gain these discovery pages. CLI, API, remote and
-stdio MCP, extension and bots retain their established research/payment roles.
-This browser-only worksheet adds no new adapter contract, storage schema or
-financial authority. Existing source/distribution acceptance remains required.
+The public website gains these discovery pages. The native Operator desktop,
+CLI, API, remote and stdio MCP, extension and bots retain their established
+research/payment roles; the worksheet is available through a browser. It adds no
+new adapter contract, storage schema or financial authority. Existing
+source/distribution acceptance remains required.
