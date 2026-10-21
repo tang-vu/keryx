@@ -5,6 +5,7 @@ import { answersPagePath, paginateArchive } from "@/lib/answers-pagination";
 import { loadWantedBoard, WANTED_DETAIL_LIMIT } from "@/lib/wanted-board";
 import { englishSitemapAlternates } from "@/lib/i18n/public-metadata";
 import { publicProfileSitemap } from "@/lib/profiles/public-profile-loader";
+import { GUIDE_PATHS, GUIDE_PUBLISHED } from "@/lib/research-tools/guide-metadata";
 
 const BASE = process.env.BASE_URL || "https://keryx.cc";
 
@@ -14,6 +15,7 @@ export const revalidate = 0;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes: MetadataRoute.Sitemap = [
+    ...GUIDE_PATHS.map(path => ({ url: `${BASE}${path}`, lastModified: new Date(GUIDE_PUBLISHED), changeFrequency: "monthly" as const, priority: 0.7 })),
     { url: `${BASE}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${BASE}/pricing`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${BASE}/briefs`, changeFrequency: "weekly", priority: 0.8 },

@@ -1,0 +1,36 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-guides.ts",
+  "sourceSha256": "368445f62d35c6b09bfb79874f5acd6c5ab343d2e46fffb378adf7caa007c9eb",
+  "entries": {
+    "navigation": {
+      "source": "Research guides",
+      "text": "Hướng dẫn nghiên cứu"
+    },
+    "allGuides": {
+      "source": "All research guides",
+      "text": "Tất cả hướng dẫn nghiên cứu"
+    },
+    "tool.add": {
+      "source": "Add a source",
+      "text": "Thêm nguồn"
+    },
+    "tool.download": {
+      "source": "Download matrix CSV",
+      "text": "Tải bảng CSV"
+    },
+    "tool.template": {
+      "source": "Download empty CSV template",
+      "text": "Tải mẫu CSV trống"
+    },
+    "tool.copy": {
+      "source": "Copy CSV",
+      "text": "Sao chép CSV"
+    },
+    "tool.question": {
+      "source": "Research question",
+      "text": "Câu hỏi nghiên cứu"
+    }
+  }
+}
