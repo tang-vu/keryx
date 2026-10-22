@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
   // The deploy recreates .next.tmp every time, so its filesystem cache is never reused.
   // Keep normal local/CI cache behavior; skip the wasted write only for that temporary build.
   experimental: {
+    // Compiled evidence/allowance checks inspect named exports in the real build.
+    // Keep those names stable when Next16.4 enables export-key mangling by default;
+    // ordinary production minification remains enabled for the same deployed build.
+    turbopackMangleExportNames: false,
     turbopackFileSystemCacheForBuild: process.env.NEXT_DIST_DIR !== ".next.tmp",
     // Next isolates static workers from the parent's heap flag. On the small VPS,
     // generating eight pages together exhausted the worker's ~480 MiB heap.

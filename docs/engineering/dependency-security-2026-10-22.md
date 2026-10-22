@@ -27,14 +27,19 @@ advisories concern `react-server-dom-*`; Next ships its own compiled server
 implementation. Updating only the application React packages would not establish
 that the framework contains these fixes.
 
-The compiled-worker fixture now reads literal module-export calls with the
-TypeScript parser: Next 16.4 mangles the worker helper's export name, so matching
-only `.default(...)` no longer identifies its emitted reference. The fixture
-requires one unambiguous descriptor whose bootstrap, runtime chunks and mainnet
-entry all exist in the same inspected build. It still executes that actual
-production worker in Chromium with the original synthetic transport and all
-signing, custody, spend and payout assertions. Comments, string lookalikes,
-dynamic chunk expressions, missing files and ambiguous references are refused.
+Next 16.4 enables export-key mangling by default in production. Keryx explicitly
+sets the documented `experimental.turbopackMangleExportNames: false` to preserve
+the named exports inspected by its compiled evidence, HTML and research-allowance
+checks. Ordinary production JavaScript minification remains enabled. Acceptance
+executes the same actual build used for delivery, including the unchanged mainnet
+Chromium worker, signing, custody, spend and payout assertions. This preserves
+the existing compiler behavior while taking the security release.
+
+The fixture's registration reader also follows Next16.4's optional leading array
+of strict factories. It retains each original factory and module ID, rejects
+malformed groups and keeps export ambiguity checks. No factory is executed by
+the inspector; the existing fixtures then invoke the selected compiled exports
+through the real Next runtime with their original hermetic dependencies.
 
 Next also moved its native image helpers to
 `next/dist/server/image-optimizer/transform`. The image fixture follows that

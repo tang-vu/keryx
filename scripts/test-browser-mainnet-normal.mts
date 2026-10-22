@@ -17,7 +17,6 @@ import { createHash } from "node:crypto";
 import { resolve, join } from "node:path";
 import { createSessionWithdrawalAbort, type SessionWithdrawalAbort } from "../lib/gateway/session-withdrawal-abort";
 import type { BrowserSessionAuthorizationBinding } from "../lib/session/browser-session-runtime";
-import { nextWorkerDescriptor } from "../test-support/next-worker-descriptor";
 
 process.env.KERYX_NETWORK = "arc"; process.env.NEXT_PUBLIC_KERYX_NETWORK = "arc";
 const origin = "https://keryx.cc", registry = `0x${"33".repeat(20)}` as Hex;
@@ -41,7 +40,11 @@ if (nextDist) {
     packagedFiles.set(`/_next/static/chunks/${name}`,readFileSync(join(chunkPath,name),"utf8"));
   const entry = [...packagedFiles].find(([,source])=>source.includes("Browser session operation refused"));
   assert.ok(entry,"Next must emit the production mainnet worker entry");
-  const descriptor = nextWorkerDescriptor(packagedFiles, entry[0]);
+  let descriptor: {bootstrap:string;chunks:string[]} | null = null;
+  for(const source of packagedFiles.values()) for(const match of source.matchAll(/\.default\("(static\/chunks\/turbopack-worker-[^"/]+\.js)",(\[[^\]]+\])\)/g)) {
+    const chunks=JSON.parse(match[2]) as string[];
+    if(chunks.includes(entry[0].replace("/_next/",""))) descriptor={bootstrap:match[1],chunks};
+  }
   assert.ok(descriptor,"Packaged client must reference the same mainnet entry");
   workerUrl=`/_next/${descriptor.bootstrap}#params=${encodeURIComponent(JSON.stringify([
     descriptor.chunks.map(chunk=>`/_next/${chunk}`).reverse(),"","/_next/","",""]))}`;
