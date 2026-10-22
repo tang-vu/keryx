@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const PUBLIC_ORIGIN = 'https://keryx.cc';
-export const NEXT_VERSION = '16.3.8';
+export const NEXT_VERSION = '16.4.1';
 
 function singleHeader(req, name) {
   const values = [];
@@ -94,7 +94,7 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939, 
     ...(useBuildConfig ? { conf } : {}) });
   const priorConfig = process.env.__NEXT_PRIVATE_STANDALONE_CONFIG;
   try {
-    // Pinned Next 16.3.8's custom-server prepare/router path does not forward
+    // Pinned Next 16.4.1's custom-server prepare/router path does not forward
     // conf. Use the same serialized-config input as its generated launcher,
     // sourced exclusively from the inspected build, during initialization.
     if (useBuildConfig) process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = JSON.stringify(conf);

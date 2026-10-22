@@ -39,7 +39,7 @@ export function verifyReleaseReview(binding, read, artifact) {
       preparation.artifactInspectionSha256 !== binding.artifactInspectionSha256 ||
       preparation.writerHoldStarted !== false || preparation.runtimeEnvironmentLoaded !== false ||
       preparation.checks?.publicBuildSettings?.network !== 'arc' || preparation.checks?.platform !== 'linux' ||
-      preparation.checks?.node !== '24.21.0' || preparation.checks?.npm !== '11.19.0' ||
+      preparation.checks?.node !== '24.22.1' || preparation.checks?.npm !== '11.19.0' ||
       !Array.isArray(preparation.checks.results) || preparation.checks.results.length !== 3 ||
       preparation.checks.results.some((result, index) => result.name !== ['typecheck', 'tests', 'build'][index] ||
         result.exitCode !== 0 || result.signal !== null || result.processError !== null || !/^[a-f0-9]{64}$/.test(result.outputSha256))) refuse();

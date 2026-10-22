@@ -34,7 +34,7 @@ for (const [name, leaf] of [["TEMP", "temp"], ["TMP", "temp"], ["TSX_CACHE_DIR",
 const run = join(output, "run"), fixture = join(output, "runtime");
 await mkdir(run); await mkdir(fixture); // Exclusive: never overwrite retained runs.
 const require = createRequire(import.meta.url);
-assert.equal(require("next/package.json").version, "16.3.8");
+assert.equal(require("next/package.json").version, "16.4.1");
 const buildId = (await readFile(join(dist, "BUILD_ID"), "utf8")).trim();
 assert(buildId.length > 0 && buildId.length <= 128, "Missing bounded compiled BUILD_ID; parent must admit current build");
 const appPaths = JSON.parse(await readFile(join(dist, "server/app-paths-manifest.json"), "utf8")) as Record<string, string>;
@@ -564,7 +564,7 @@ try {
   assert.deepEqual(await pinSources(), sourcePins, "Source unchanged during compiled control");
   await writeFile(join(run, "synthetic-evidence.json"), JSON.stringify({
     scope: "Actual emitted Next page/hooks/mounted API + synthetic disposable testnet SQLite/session fixtures. No native/settlement/MCP/production acceptance.",
-    buildId, node: process.version, next: "16.3.8", browser: browser.version(), sourcePins, results, requests: httpRequests,
+    buildId, node: process.version, next: "16.4.1", browser: browser.version(), sourcePins, results, requests: httpRequests,
     privateOriginalsUnchanged: originals() === originalBytes, externalAttempts: externalAttempts.length, unavailablePrefetches,
     sourceToBuildAdmission: "Parent must supply the existing exact-source/input build evidence; observing BUILD_ID alone does not establish it.",
   }, null, 2) + "\n", { flag: "wx" });

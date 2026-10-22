@@ -85,7 +85,7 @@ test('staged native compatibility review must bind exact artifact, existing ENV 
     previouslyActiveRoles: ['keryx', 'keryx-a2a-worker'], heldSchedulers: true, rollback: 'hold-for-review' };
   const preparation = { format: 'keryx-immutable-preparation-v1', productionAdmitted: false, ...artifact,
     artifactInspectionSha256: binding.artifactInspectionSha256, writerHoldStarted: false, runtimeEnvironmentLoaded: false,
-    checks: { publicBuildSettings: { network: 'arc' }, platform: 'linux', node: '24.21.0', npm: '11.19.0',
+    checks: { publicBuildSettings: { network: 'arc' }, platform: 'linux', node: '24.22.1', npm: '11.19.0',
       results: ['typecheck', 'tests', 'build'].map(name => ({ name, exitCode: 0, signal: null, processError: null, outputSha256: 'a'.repeat(64) })) } };
   const reader = value => (file, expected, environment) => {
     if (file.endsWith('/preparation.json')) { assert.equal(expected, binding.preparationSha256); return preparation; }

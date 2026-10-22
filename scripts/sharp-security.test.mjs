@@ -40,7 +40,7 @@ try {
   sharp.concurrency(1);
   const { imageConfigDefault } = nextRequire("next/dist/shared/lib/image-config");
   assert.equal(imageConfigDefault.dangerouslyAllowSVG, false);
-  const { getSharp, optimizeImage } = nextRequire("next/dist/server/image-optimizer");
+  const { getSharp, optimizeImage } = nextRequire("next/dist/server/image-optimizer/transform");
   assert.equal(getSharp(1), sharp);
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="#ff0000"/></svg>');
   const options = { limitInputPixels: 4096, failOn: "warning" };

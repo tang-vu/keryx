@@ -81,6 +81,6 @@ async function sizeOf(dir) {
 await sizeOf(app);
 console.log(JSON.stringify({ packagedSourceCommit: sourceCommit, nativeWriterVerified: true,
   shell: "Tauri", productName: pe.productName, embeddedIconVerified: true,
-  nodeVersion: "24.21.0", nodeSha256: nodeHash, helperSha256: hash(helper),
+  nodeVersion: "24.22.1", nodeSha256: nodeHash, helperSha256: hash(helper),
   executableSha256: hash(executable), executableBytes: executable.length,
   portableUncompressedBytes: packageBytes }));

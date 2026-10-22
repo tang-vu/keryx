@@ -80,7 +80,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "24.21.0"
+          node-version: "24.22.1"
           cache: npm
 
       - name: Install official Rust toolchain
@@ -172,7 +172,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "24.21.0"
+          node-version: "24.22.1"
           cache: npm
 
       - name: Install JavaScript dependencies without building Rust

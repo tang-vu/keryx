@@ -180,7 +180,7 @@ async function main() {
     assert.equal(await realpath(join(output, leaf)), join(actualOutput, leaf), `Canonical ${name} leaf inside actual output`);
   }
   failureOutput = output;
-  const require = createRequire(import.meta.url); assert.equal(require("next/package.json").version, "16.3.8");
+  const require = createRequire(import.meta.url); assert.equal(require("next/package.json").version, "16.4.1");
   const pinnedPaths = [...new Set([...nextConfigFixtureFiles, "package-lock.json", "instrumentation.ts",
     "test-support/next-config-fixture.ts", "app/me/chat-accounts/page.tsx", "app/account/page.tsx",
     "components/keryx/chat-account-links.tsx", "components/keryx/site-header.tsx", "components/keryx/wallet-menu.tsx",

@@ -165,7 +165,7 @@ export function packageCohort({ releases, commit, archive, env }) {
 }
 
 async function main() {
-  assertNetworkIsolation(); assert.equal(process.versions.node, '24.21.0');
+  assertNetworkIsolation(); assert.equal(process.versions.node, '24.22.1');
   const { SOURCE_COMMIT: commit, HOSTED_REPO: repo, HOSTED_ROOT: root, HOSTED_BROWSER_CACHE: cache, HOSTED_NPM_CLI: npmCli } = process.env;
   regularDirectory(repo); regularDirectory(cache);
   assert(path.isAbsolute(root) && path.resolve(root) === root && !fs.existsSync(root));

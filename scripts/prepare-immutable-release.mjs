@@ -10,7 +10,7 @@ import { stageImmutableSource, recordImmutableArtifact, verifyImmutableArtifact 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const serial = value => JSON.stringify(value) + '\n';
 const refuse = () => { throw Error('Release preparation refused; retain all candidate evidence. No writer hold or deployment started.'); };
-const pinnedNode = '24.21.0';
+const pinnedNode = '24.22.1';
 const pinnedNpm = '11.19.0';
 export const preparationCommands = Object.freeze([
   ['typecheck', ['run', 'typecheck']],

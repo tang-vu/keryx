@@ -46,7 +46,7 @@ for (const [a, b] of [[dist, output], [actualDist, actualOutput]])
 for (const [name, leaf] of [["TEMP", "temp"], ["TMP", "temp"], ["TSX_CACHE_DIR", "tsx-cache"]] as const)
   assert.equal(resolve(process.env[name] ?? ""), resolve(output, leaf), `Parent binds ${name} to owned output/${leaf}`);
 const require = createRequire(import.meta.url);
-assert.equal(require("next/package.json").version, "16.3.8");
+assert.equal(require("next/package.json").version, "16.4.1");
 assert.equal(Object.keys(copy).length, 31, "Preserve the actual 31 English keys; no catalogue activation");
 const sha = (bytes: Buffer | string) => createHash("sha256").update(bytes).digest("hex");
 const pinnedPaths = [...new Set([...nextConfigFixtureFiles, "scripts/test-browser-owner-run-assignments269-built.mts",
@@ -78,20 +78,20 @@ for (const [name, consumer] of [["profile", "private-profile-view"], ["asks", "m
   assert(match, `Missing emitted reference manifest for ${route}`); assert.equal(JSON.parse(match[1]), route);
   const reference = JSON.parse(match[2]) as { clientModules: Record<string, { chunks: unknown[] }> };
   assert(reference.clientModules && typeof reference.clientModules === "object");
-  for (const module of ["owner-run-assignment-inbox", consumer]) {
-    const entries = Object.entries(reference.clientModules).filter(([key]) => key.replaceAll("\\", "/").includes(`/${module}.tsx`));
-    assert(entries.length > 0, `Actual ${module} entry required on ${route}`);
+  for (const clientModule of ["owner-run-assignment-inbox", consumer]) {
+    const entries = Object.entries(reference.clientModules).filter(([key]) => key.replaceAll("\\", "/").includes(`/${clientModule}.tsx`));
+    assert(entries.length > 0, `Actual ${clientModule} entry required on ${route}`);
     const chunks = [...new Set(entries.flatMap(([, value]) => {
       assert(Array.isArray(value.chunks));
       return value.chunks.filter((value): value is string => typeof value === "string" && value.split("?")[0].endsWith(".js"))
         .map(value => decodeURIComponent(value.split("?")[0].replace(/^\/?_next\//, "")));
     }))];
-    assert(chunks.length > 0 && chunks.length <= 64, `Bounded emitted ${module} chunks`);
+    assert(chunks.length > 0 && chunks.length <= 64, `Bounded emitted ${clientModule} chunks`);
     for (const path of chunks) {
       assert(path.startsWith("static/chunks/") && inside(join(dist, path), dist), "Only manifest-bound emitted client chunks");
       if (!compiledPaths.includes(path)) compiledPaths.push(path);
     }
-    consumerBuildEntries.push({ route, module, chunks });
+    consumerBuildEntries.push({ route, module: clientModule, chunks });
   }
 }
 async function pinBuild() { return Promise.all(compiledPaths.map(async path => ({ path, sha256: sha(await readFile(join(dist, path))) }))); }

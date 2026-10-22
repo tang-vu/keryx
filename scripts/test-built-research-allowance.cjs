@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
-const { findExportModuleIds } = require('./test-built-empty-evidence.cjs');
+const { findExportModuleIds, moduleFactoryGroups } = require('./test-built-empty-evidence.cjs');
 const ts = require('typescript');
 
 const hash = value => createHash('sha256').update(value).digest('hex');
@@ -49,11 +49,8 @@ async function productionGraph(build, names) {
     runtime.c(chunk);
     const registrations = require(path.join(build, chunk));
     for (const name of names) for (const id of findExportModuleIds(registrations, name)) ids.get(name).add(id);
-    let registered = [];
-    for (const registration of registrations) {
-      if (typeof registration !== 'function') { registered.push(registration); continue; }
-      if (findExportModuleIds([...registered, registration], 'config').length) configFactories.add(registration);
-      registered = [];
+    for (const { moduleIds, factory } of moduleFactoryGroups(registrations)) {
+      if (findExportModuleIds([...moduleIds, factory], 'config').length) configFactories.add(factory);
     }
   }
   // Next may tree-shake unused browser registry getters. Read only literal PUBLIC pins from

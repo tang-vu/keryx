@@ -4,20 +4,40 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
 
+/** Match the pinned runtime's compressed groups, including its optional leading strict array.
+ * Next16.4 emits strict factories inside an IIFE, then prepends that array to the flat groups.
+ * Keep the original factory identities and ID boundaries; inspection never invokes a factory. */
+function moduleFactoryGroups(registrations) {
+  assert(Array.isArray(registrations), 'Unsupported Turbopack registrations');
+  const groups = [];
+  function readFlat(entries) {
+    let moduleIds = [];
+    for (const entry of entries) {
+      if (typeof entry !== 'function') {
+        assert(['number', 'string'].includes(typeof entry), 'Unsupported Turbopack module ID');
+        moduleIds.push(entry);
+        continue;
+      }
+      assert(moduleIds.length, 'Turbopack factory has no registered module ID');
+      groups.push({ moduleIds, factory: entry });
+      moduleIds = [];
+    }
+    assert.equal(moduleIds.length, 0, 'Turbopack registration has no factory');
+  }
+  if (Array.isArray(registrations[0])) {
+    readFlat(registrations[0]);
+    readFlat(registrations.slice(1));
+  } else readFlat(registrations);
+  return groups;
+}
+
 /** Read Turbopack's compressed [id, ...ids, factory] registrations without executing factories.
  * ESM bindings encode [name, 0, value] or [name, getter, optionalSetter]; strings in values are
  * not export names. Concatenated factories can pass an explicit module ID to context.s(). */
 function findExportModuleIds(registrations, exportName) {
   const found = new Set();
-  let moduleIds = [];
   const callable = node => ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isIdentifier(node);
-  for (const registration of registrations) {
-    if (typeof registration !== 'function') {
-      assert(['number', 'string'].includes(typeof registration), 'Unsupported Turbopack module ID');
-      moduleIds.push(registration);
-      continue;
-    }
-    assert(moduleIds.length, 'Turbopack factory has no registered module ID');
+  for (const { moduleIds, factory: registration } of moduleFactoryGroups(registrations)) {
     const source = ts.createSourceFile('factory.js', `(${registration.toString()})`, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
     assert.equal(source.parseDiagnostics.length, 0, 'Cannot parse Turbopack module factory');
     function visit(node) {
@@ -57,9 +77,7 @@ function findExportModuleIds(registrations, exportName) {
       ts.forEachChild(node, visit);
     }
     visit(source);
-    moduleIds = [];
   }
-  assert.equal(moduleIds.length, 0, 'Turbopack registration has no factory');
   return [...found];
 }
 
@@ -137,5 +155,5 @@ async function main() {
   console.log('PASS: minified production no-source, failed-public-read and bilingual raw-follow-up recency branches retain gaps with zero evidence/spend.');
 }
 
-module.exports = { findExportModuleIds };
+module.exports = { findExportModuleIds, moduleFactoryGroups };
 if (require.main === module) main().catch(error => { console.error(error); process.exitCode = 1; });
