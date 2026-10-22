@@ -2,8 +2,10 @@
 
 
 import type { QueryRun } from "@/lib/types";
-import { buildEvidenceMatrix, evidenceMatrixCsv, evidenceMatrixMarkdown } from "@/lib/research/evidence-matrix";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { buildEvidenceMatrix, evidenceMatrixCsv } from "@/lib/research/evidence-matrix";
+import { evidenceMatrixMarkdown } from "@/lib/research/evidence-matrix-markdown";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+import { evidenceMatrixExportEnglish } from "@/locales/en/evidence-matrix-export";
 
 
 
@@ -11,6 +13,7 @@ import { useUiMessages } from "@/lib/i18n/ui-copy";
 
 export function EvidenceMatrixExport({ run }: { run: QueryRun }) {
   const copy = useUiMessages();
+  const exportCopy = useUiCopy("evidence-matrix-export", evidenceMatrixExportEnglish);
   const rows = buildEvidenceMatrix(run);
   const sources = run.citations.filter((citation, index, all) => all.findIndex((other) =>
     other.marker === citation.marker && other.sourceId === citation.sourceId && other.itemId === citation.itemId &&
@@ -33,7 +36,7 @@ export function EvidenceMatrixExport({ run }: { run: QueryRun }) {
         <>
           <div className="my-3 flex flex-wrap gap-3">
             <button type="button" onClick={() => downloadFile("keryx-evidence-matrix.csv", `\uFEFF${evidenceMatrixCsv(run)}`, "text/csv;charset=utf-8")} className="min-h-11 border border-line px-3 font-mono text-xs text-ink hover:border-ink focus-visible:outline-2 focus-visible:outline-seal">{copy("evidenceMatrix.download")}</button>
-            <button type="button" onClick={() => downloadFile("keryx-evidence-matrix.md", evidenceMatrixMarkdown(run), "text/markdown;charset=utf-8")} className="min-h-11 border border-line px-3 font-mono text-xs text-ink hover:border-ink focus-visible:outline-2 focus-visible:outline-seal">{copy("evidenceMatrix.downloadMarkdown")}</button>
+            <button type="button" onClick={() => downloadFile("keryx-evidence-matrix.md", evidenceMatrixMarkdown(run), "text/markdown;charset=utf-8")} className="min-h-11 border border-line px-3 font-mono text-xs text-ink hover:border-ink focus-visible:outline-2 focus-visible:outline-seal">{exportCopy.downloadMarkdown}</button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">

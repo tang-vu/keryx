@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EvidenceRecord } from "../types";
-import { buildEvidenceMatrix, evidenceCsvCell, evidenceMatrixCsv, evidenceMatrixMarkdown, type EvidenceMatrixInput } from "./evidence-matrix";
+import { buildEvidenceMatrix, evidenceCsvCell, evidenceMatrixCsv, type EvidenceMatrixInput } from "./evidence-matrix";
+import { evidenceMatrixMarkdown } from "./evidence-matrix-markdown";
 
 const evidence: EvidenceRecord = { claimIndex: 0, claim: "Market size?", marker: "S1", sourceId: "one",
   sourceName: "Publication", quote: 'Exact "quoted" evidence\n第二行', support: 0.8, qualifiesForReward: true };

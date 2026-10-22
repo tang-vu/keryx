@@ -31,7 +31,6 @@ export const reportMessages = Object.freeze({
   "evidenceMatrix.title": "Research evidence matrix",
   "evidenceMatrix.notice": "Compare unverified research targets with cited sources and inspect recorded excerpts. An empty cell means no inspectable excerpt was recorded; it does not establish whether a claim is true, false, or disputed. Coverage and agent confidence do not prove entailment, measured accuracy or complete synthesis.",
   "evidenceMatrix.download": "Download evidence CSV",
-  "evidenceMatrix.downloadMarkdown": "Download evidence Markdown",
   "evidenceMatrix.caption": "Research target by cited source evidence matrix",
   "evidenceMatrix.target": "Research target (unverified)",
   "evidenceMatrix.status": "Inspection status",
