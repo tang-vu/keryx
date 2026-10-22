@@ -395,7 +395,7 @@
     "lib/research/confidence-copy.ts": "1040828ef5ee49e811b1ba94acbf2c797bdc3d8323ba2798f8bcfc75e197eeb6",
     "lib/research/decision-basis.ts": "e2f1a2a472de6658cec66a97040ad1296986ac40e910992a22ba3e74b1f820f1",
     "lib/research/decision-review-types.ts": "738a710e74201cb7ef66907588dcfeefae302e70e5b72bf98f60bb55f0ab348b",
-    "lib/research/evidence-matrix.ts": "075649d9facb98e8542e3647d5c4736e4fd445e6e276453371e45a0a77c3a616",
+    "lib/research/evidence-matrix.ts": "31bdab3174a1b111b4a407a5f465e21f0bfe15f29bc224bd9df8a5e2459444e0",
     "lib/research/evidence-provenance.ts": "abd04b783b9502c26ce6bd0ae023b92f45037e7717c9775218c8a125cf9474dc",
     "lib/research/pdf-reading.ts": "bd6a7941134538eda854b527c188446cf48d9b7706bf08d5cdaa30708ebb0a24",
     "lib/research/presentation-language.ts": "1e388cc8bcb5434d5a1c482b06bebc3626e0fbc764010f7b098c74136a0cfa68",
