@@ -11,10 +11,10 @@
   "totals": {
     "englishNamespaceFiles": 71,
     "coreInlineSources": 1,
-    "extractedLeaves": 6175,
+    "extractedLeaves": 6176,
     "authoredEntries": 5941,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 205,
+    "uncoveredEntries": 206,
     "completeNamespaces": 67
   },
   "namespaces": [
@@ -3535,9 +3535,9 @@
     {
       "namespace": "reports",
       "sourcePath": "locales/en/reports.ts",
-      "sourceSha256": "16bae398942d07675a4307af7447316f6fb8dbca6c838b81ad78c09cc2cf13d0",
+      "sourceSha256": "1a841a7967b6586ce3f538df50697ac78f8ee13d88ada7d704b1d0bb382ef975",
       "draftPath": "locales/zh-Hans/ui-drafts/reports.json",
-      "extractedLeaves": 593,
+      "extractedLeaves": 594,
       "authoredEntries": 567,
       "coveredKeys": [
         "answerDelta.added",
@@ -4110,6 +4110,7 @@
       ],
       "nonTranslatableMachineIdentifiers": [],
       "uncoveredKeys": [
+        "evidenceMatrix.downloadMarkdown",
         "reportEvidence.draft",
         "reportEvidence.excerpts",
         "reportEvidence.inspect",

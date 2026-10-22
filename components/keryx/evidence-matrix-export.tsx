@@ -2,7 +2,7 @@
 
 
 import type { QueryRun } from "@/lib/types";
-import { buildEvidenceMatrix, evidenceMatrixCsv } from "@/lib/research/evidence-matrix";
+import { buildEvidenceMatrix, evidenceMatrixCsv, evidenceMatrixMarkdown } from "@/lib/research/evidence-matrix";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
 
 
@@ -16,11 +16,11 @@ export function EvidenceMatrixExport({ run }: { run: QueryRun }) {
     other.marker === citation.marker && other.sourceId === citation.sourceId && other.itemId === citation.itemId &&
     other.contentVersion === citation.contentVersion) === index);
 
-  function downloadCsv() {
-    const url = URL.createObjectURL(new Blob(["\uFEFF", evidenceMatrixCsv(run)], { type: "text/csv;charset=utf-8" }));
+  function downloadFile(filename: string, body: string, type: string) {
+    const url = URL.createObjectURL(new Blob([body], { type }));
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "keryx-evidence-matrix.csv";
+    anchor.download = filename;
     document.body.appendChild(anchor);
     try { anchor.click(); } finally { anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
   }
@@ -31,7 +31,10 @@ export function EvidenceMatrixExport({ run }: { run: QueryRun }) {
       <p className="mt-3 text-sm text-ink-3">{copy("evidenceMatrix.notice")}</p>
       {rows.length ? (
         <>
-          <button type="button" onClick={downloadCsv} className="my-3 min-h-11 border border-line px-3 font-mono text-xs text-ink hover:border-ink focus-visible:outline-2 focus-visible:outline-seal">{copy("evidenceMatrix.download")}</button>
+          <div className="my-3 flex flex-wrap gap-3">
+            <button type="button" onClick={() => downloadFile("keryx-evidence-matrix.csv", `\uFEFF${evidenceMatrixCsv(run)}`, "text/csv;charset=utf-8")} className="min-h-11 border border-line px-3 font-mono text-xs text-ink hover:border-ink focus-visible:outline-2 focus-visible:outline-seal">{copy("evidenceMatrix.download")}</button>
+            <button type="button" onClick={() => downloadFile("keryx-evidence-matrix.md", evidenceMatrixMarkdown(run), "text/markdown;charset=utf-8")} className="min-h-11 border border-line px-3 font-mono text-xs text-ink hover:border-ink focus-visible:outline-2 focus-visible:outline-seal">{copy("evidenceMatrix.downloadMarkdown")}</button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">
               <caption className="sr-only">{copy("evidenceMatrix.caption")}</caption>

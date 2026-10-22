@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EvidenceRecord } from "../types";
-import { buildEvidenceMatrix, evidenceCsvCell, evidenceMatrixCsv, type EvidenceMatrixInput } from "./evidence-matrix";
+import { buildEvidenceMatrix, evidenceCsvCell, evidenceMatrixCsv, evidenceMatrixMarkdown, type EvidenceMatrixInput } from "./evidence-matrix";
 
 const evidence: EvidenceRecord = { claimIndex: 0, claim: "Market size?", marker: "S1", sourceId: "one",
   sourceName: "Publication", quote: 'Exact "quoted" evidence\n第二行', support: 0.8, qualifiesForReward: true };
@@ -49,6 +49,27 @@ describe("research evidence matrix", () => {
     expect(csv).toContain('"Exact ""quoted"" evidence\n第二行"');
     expect(csv).toContain('"Not recorded"');
     expect(csv).toContain('"Pricing?","No inspectable excerpt recorded"');
+  });
+  it("exports the same inspectable rows as Markdown without adding an excerpt", () => {
+    const markdown = evidenceMatrixMarkdown(run);
+    expect(markdown).toContain("    Exact \"quoted\" evidence");
+    expect(markdown).toContain("    第二行");
+    expect(markdown).toContain("Inspection status: Recorded excerpt");
+    expect(markdown).toContain("    Pricing?");
+    expect(markdown).toContain("Inspection status: No inspectable excerpt recorded");
+    expect(markdown.match(/Exact excerpt:/g)).toHaveLength(1);
+    const overlong = evidenceMatrixMarkdown({ ...run, evidence: [{ ...evidence, quote: "x".repeat(241) }] });
+    expect(overlong).not.toContain("x".repeat(241));
+    expect(overlong).toContain("Inspection status: No inspectable excerpt recorded");
+    const versions = ["v1", "v2"];
+    const versioned = { ...run,
+      evidence: versions.map((contentVersion) => ({ ...evidence, itemId: "article", contentVersion })),
+      citations: versions.map((contentVersion) => ({ ...run.citations[0], itemId: "article", contentVersion })),
+    };
+    const versionText = evidenceMatrixMarkdown(versioned);
+    expect(versionText).toContain("Content version: v1");
+    expect(versionText).toContain("Content version: v2");
+    expect(versionText.match(/Exact excerpt:/g)).toHaveLength(2);
   });
   it("neutralizes formulas after whitespace, controls, and formatting characters", () => {
     for (const value of ["=1+1", "+SUM(A1)", "-1+1", "@SUM(A1)", " \t\r\n=1", "\u0000=1", "\u200b=1"]) {
