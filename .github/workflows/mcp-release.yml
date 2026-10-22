@@ -61,7 +61,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.source.outputs.sha != ''
         with:
-          node-version: '24.21.0'
+          node-version: '24.22.1'
       - name: Install project-pinned npm
         if: steps.source.outputs.sha != ''
         run: npm install --global npm@11.19.0 --no-audit --no-fund

@@ -12,7 +12,7 @@
     "README.md"
   ],
   "engines": {
-    "node": "^22.19.0 || >=24.0.0"
+    "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
   },
   "scripts": {
     "build": "esbuild keryx-mcp-server.mts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist/keryx-mcp.mjs",

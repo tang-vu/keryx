@@ -1,7 +1,9 @@
 # October 22 security dependency review
 
 The root application pins Next.js and `eslint-config-next` to **16.4.1** to
-include the October 14 upstream security fixes. The public-origin server and its
+include the October 14 upstream security fixes. CI, release preparation and the
+desktop runtime now pin **Node.js 24.22.1** for the October 21 security release.
+The public-origin server and its
 compiled browser acceptance fixtures require that same exact framework version.
 This source update requires production-build, public-origin, privacy and payment
 acceptance before merge, followed by the existing coordinated runtime release.
@@ -41,21 +43,29 @@ optimizer output and desktop-brand checks. The 48 offline study trials were
 rerun against the new lock: their outputs and source bindings stayed identical;
 only the recorded lock hash and its generated write-up changed.
 
-## Runtime upgrade remains a separate requirement
+## Node.js source pins and runtime delivery
 
 The [October 21 Node.js security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)
 fixes the Brotli decoder RCE CVE-2026-111497 and DNS/TLS issues. The patched
 24.x release is **24.22.1**; the patched 22.x and 26.x releases are 22.23.4 and
-26.12.1. At this review, CI/build tooling and the bundled desktop runtime still
-pin 24.21.0. The development executable was also 24.21.0; the live server
-executable was not independently inspected by this dependency change.
+26.12.1. The initial audit found CI/build tooling and the bundled desktop runtime
+pinned to 24.21.0. This update changes those source pins, the preparation/review
+checks and the desktop binary/archive hashes together. Root and stdio MCP engine
+ranges require patched 22.x/24.x versions or 26.12.1 and later. The development
+machine's default executable was 24.21.0; focused checks use a separately verified
+24.22.1 binary. The global default and live server executable were not replaced
+by this source change.
 
 Keryx's public fetch path uses Undici to read untrusted public responses. The
 installed Undici implementation calls Node's Brotli decoder. Bounding bytes
 after decompression is not a fix for a native decoder memory-safety issue.
-The Node upgrade must cover the server, development/build/CI executables and the
-desktop binary with its official archive/binary hashes and artifact verification.
-This Next update alone does not repair an older Node executable or installed app.
+Delivery must cover the server, development/build executables and the desktop
+binary with artifact verification. The Windows x64 ZIP and extracted node.exe
+were downloaded from the official 24.22.1 release, checked against its published
+SHA-256 values and executed locally. The binary SHA-256 is
+`d702daa815eabbff763c7d3808e235cf031cf2ca70211b56847bc72f51e240e5`.
+Merged source does not replace an older running process, installation or builder
+image. Those remain with the existing release owner.
 
 ## Audit residuals and release boundaries
 
@@ -75,7 +85,8 @@ framework update does not relax payment, content, custody or evidence authority.
 Web/API/remote MCP and root CLI/bots use the root installation and require the
 updated runtime artifact. Desktop and the browser extension keep their existing
 hosted-service handoffs. The standalone stdio MCP package has its own unchanged
-lock, but its host Node executable still needs the Node security release. Separate
-Cloudflare locks and Rust locks are unchanged by this Next outcome. Version
+dependency closure and updated engine requirement, but its host Node executable
+still needs the Node security release. Separate Cloudflare locks and Rust locks
+are unchanged by this outcome. Version
 allocation, installer/package publication and deployment stay with the existing
 release owner; merged source is not proof of an installed runtime update.

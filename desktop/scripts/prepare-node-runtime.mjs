@@ -3,11 +3,11 @@ import { createHash } from "node:crypto";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
-const version = "24.21.0";
+const version = "24.22.1";
 const archive = `node-v${version}-win-x64.zip`;
-// Node.js official SHASUMS256.txt for v24.21.0, win-x64 ZIP.
-const archiveHash = "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541";
-export const nodeHash = "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32";
+// Node.js official SHASUMS256.txt for v24.22.1, win-x64 ZIP.
+const archiveHash = "d2046d28c2c3dcd211ac5145c0bf30e2047ef9dfb306693c8c6e2eccd8b95fa5";
+export const nodeHash = "d702daa815eabbff763c7d3808e235cf031cf2ca70211b56847bc72f51e240e5";
 const licenseHash = "ed34dd8e3f0a78dbaf00d0444ce8e285b015b765379c2e17880455f70370f8e9";
 const root = resolve(import.meta.dirname, "../..");
 const cache = join(root, ".artifacts", "node-runtime");
