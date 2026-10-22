@@ -16,11 +16,29 @@ illustrative examples and links to the existing literature/research surfaces.
 No synthetic study is presented as actual evidence.
 
 The worksheet uses tab memory only, with 50 sources and 2,000 characters per cell.
-It makes no model, retrieval, payment, account or persistence request. Its empty
-template is also downloadable without JavaScript. CSV output quotes multiline
+It makes no model, retrieval, payment, account or server persistence request. Its
+empty template is also downloadable without JavaScript. CSV output quotes multiline
 values and uses the existing formula-neutralizing cell encoder. The exported
-research question repeats on each row; no sources or notes are silently filtered.
-The page explicitly tells users to download before reloading or leaving.
+research question repeats on each row.
+
+Readers can save an editable JSON file and open it after a reload to resume exact
+notes, or import a UTF-8 CSV using all nine template column names. File selection
+does not modify the worksheet. A preview shows the question, source counts and
+first titles before explicit replacement or addition. Replacement warns about
+current notes; additions preserve them, require the same question and enforce the
+combined row limit. Duplicates remain distinct rows. An edit made during file
+reading or preview makes that preview stale; a late read cannot displace a newer
+file. Bad encoding, malformed/unsupported files, extra JSON fields and oversized
+inputs refuse without changing current work. Files have a 6 MiB byte limit.
+
+CSV imports retain safety apostrophes, because stripping them could alter original
+notes. Editable JSON preserves the original text exactly, including formula-like
+notes that are neutralized only when exported to a spreadsheet. A single blank CSV
+template row opens as an empty worksheet. CSV is comma-separated with headers;
+semicolon-separated or mixed-question spreadsheets need adjustment before import.
+The page shows unsaved changes and adds a browser reload/close warning while work
+has changed since the last editable-file download or import. This warning is not
+an autosave or an internal-navigation guarantee; readers must keep their file.
 
 ## Crawlability and machine-readable descriptions
 
@@ -44,12 +62,16 @@ references from Cochrane and Crossref where used.
 
 - `lib/research-tools/literature-matrix.test.ts`: Unicode, multiline CSV, formula
   injection, blank download and explicit limits.
+- `lib/research-tools/literature-matrix-file.test.ts`: exact editable round trips,
+  prior CSV compatibility, encoding/schema/size refusal, quoted record parsing,
+  question conflicts and non-destructive additions.
 - `lib/research-tools/guide-metadata.test.ts`: shipped sitemap URLs, English
   alternates and schema/visible-copy consistency.
 - `test-support/research-guide-acceptance.ts`: raw canonical HTML, 404, blank
   template, 320/390/1366px layouts, actual CSV download, clipboard success/refusal
   and refusal of any notes/research/payment submission. The existing built product
-  guide CI test calls this helper.
+  guide CI test calls this helper, including real file save/reload/reopen,
+  invalid/stale import refusal and file-read races on mobile and desktop.
 - English remains the public language. Partial Vietnamese/Chinese label drafts
   stay marked as machine drafts; no translated article URLs are manufactured.
 
