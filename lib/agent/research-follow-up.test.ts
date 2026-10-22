@@ -62,7 +62,10 @@ describe("bounded research follow-up", () => {
 
   it("keeps abstract scope and reported conflict unresolved without publishing a model's chosen winner", () => {
     const text = researchFollowUp({ vi: false, outcomes: [], gathered: [
-      { ...source, webProvenance: undefined, publicDeliveryKind: "abstract" }, { ...source, sourceId: "second", marker: "S2" }],
+      { ...source, webProvenance: undefined, publicDeliveryKind: "abstract", scholarly: {
+        provider: "arxiv", recordUrl: "https://arxiv.org/abs/2005.11401v4", retrievedAt: "2026-10-04T00:00:00Z",
+        title: "Observed abstract page", authors: [], arxivId: "2005.11401v4", workType: "preprint", peerReview: "unknown", evidenceScope: "abstract-page",
+      } }, { ...source, sourceId: "second", marker: "S2" }],
     conflicts: [{ point: "Invented assertion", positions: [{ marker: "S1", stance: "7 days" }, { marker: "S2", stance: "30 days" }],
       trusted: "S2", reason: "Invented guarantee" }] });
     expect(text).toContain("only the abstract page was read");

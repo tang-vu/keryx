@@ -27,9 +27,12 @@ export function researchFollowUp(input: {
     else if (source.webProvenance?.truncated) rows.push(vi
       ? `- “${name}”: bản trích xuất đã bị cắt. Đọc phần còn thiếu của đúng phiên bản trước khi kết luận về toàn bộ tài liệu; giữ bản đã lưu để đối chiếu.`
       : `- “${name}”: the extracted text was truncated. Read the missing section of the same version before making whole-document conclusions; retain this snapshot for comparison.`);
-    if (source.publicDeliveryKind === "abstract" || source.scholarly?.evidenceScope === "abstract-page") rows.push(vi
+    if (source.scholarly?.evidenceScope === "abstract-page") rows.push(vi
       ? `- “${name}”: chỉ đọc được trang tóm tắt. Lấy toàn văn đúng phiên bản trước khi so sánh phương pháp, đánh giá hoặc các giới hạn chưa có trong tóm tắt.`
       : `- “${name}”: only the abstract page was read. Obtain the exact full-text version before comparing methods, evaluations or limitations absent from the abstract.`);
+    else if (source.publicDeliveryKind === "abstract") rows.push(vi
+      ? `- “${name}”: nguồn chỉ cung cấp bản tóm tắt hoặc giới thiệu; chưa xác nhận đã đọc toàn văn. Lấy bản gốc đầy đủ của đúng tài liệu và phiên bản để kiểm tra các chi tiết chưa có trong phần được cung cấp.`
+      : `- “${name}”: the source supplied an abstract or summary; full-text reading has not been established. Obtain the complete original of the same document and version to check details absent from the supplied text.`);
   }
   const known = new Set(input.gathered.map(source => source.marker));
   const reportedConflict = input.conflicts.some(conflict =>
