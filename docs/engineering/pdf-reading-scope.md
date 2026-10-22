@@ -33,7 +33,9 @@ cancellation, child-memory and no-external-resource restrictions remain in force
 
 Source cards and citation inspection show the page observations and the text-only
 boundary. Deterministic research follow-up suggests inspecting the same original
-version and, when needed, obtaining publisher text, a text-layer PDF or a separately
+version. Capped reads point to the remaining original pages, including the last
+visited page when a character cutoff may have interrupted it. Textless pages get
+conditional guidance for publisher text, a text-layer PDF or a separately
 OCR-processed copy. It starts no retry, model request, OCR job or purchase. It does
 not treat a missing text layer as missing evidence or turn an operational read
 observation into a claim-support or settlement verdict.

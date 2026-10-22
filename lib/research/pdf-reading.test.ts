@@ -26,6 +26,16 @@ describe("PDF read-scope presentation", () => {
     expect(text).toContain("có thể là bản scan, trang trắng"); expect(text).toContain("chưa thực hiện OCR");
     expect(text).not.toContain("PDF text extraction visited");
   });
+  it("targets a real observed character-cap shape at remaining original pages, without suggesting OCR for readable text", () => {
+    const capped = { ...scope, pagesRead: 15, totalPages: 19, pagesWithoutText: [], textLimitReached: true };
+    for (const vi of [false, true]) {
+      const text = pdfReadingNotice(capped, vi);
+      expect(text).toContain(vi ? "15/19 trang PDF" : "visited 15 of 19 pages");
+      expect(text).toContain(vi ? "Đọc trực tiếp các trang còn lại" : "Read the remaining original pages directly");
+      expect(text).toContain(vi ? "cắt giữa trang cuối" : "last visited page incomplete");
+      expect(text).not.toMatch(/OCR|No text was extracted|Không trích xuất được chữ/);
+    }
+  });
   it("retains actual PDF metadata and bounds in gathered identity while leaving historical and HTML identity unchanged", () => {
     const base = { text: "Observed original text.", title: "Original", finalUrl: "https://example.org/paper.pdf", kind: "pdf" as const, truncated: false };
     const result = gatheredArticle("public:pdf", { ...base, pdfTextScope: scope });
