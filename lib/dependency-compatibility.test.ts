@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const anchorRequire = createRequire(require.resolve("@coral-xyz/anchor"));
@@ -21,5 +21,26 @@ describe("patched Anchor TOML dependency", () => {
     catch (error) { failure = error; }
     expect(failure).toBeInstanceOf(Error);
     expect(failure).not.toBeInstanceOf(RangeError);
+  });
+  it("refuses oversized integers before expensive BigInt conversion", () => {
+    for (const literal of ["9".repeat(4096), `0x${"f".repeat(4096)}`, `0o${"7".repeat(4096)}`, `0b${"1".repeat(4096)}`]) {
+      const conversion = vi.spyOn(globalThis, "BigInt");
+      try {
+        expect(() => toml.parse(`value = ${literal}`)).toThrow();
+        expect(conversion).not.toHaveBeenCalled();
+      } finally {
+        conversion.mockRestore();
+      }
+    }
+  });
+  it("preserves distinct array tables and dotted-key configuration values", () => {
+    const arrays = Array.from({ length: 64 }, (_, index) => `[[entry${index}]]\nvalue = ${index}`).join("\n");
+    const parsed = toml.parse(Buffer.from(arrays));
+    expect(Object.keys(parsed)).toHaveLength(64);
+    expect(parsed.entry63).toEqual([{ value: 63 }]);
+    const parts = Array.from({ length: 64 }, (_, index) => `key${index}`);
+    let value: unknown = toml.parse(`${parts.join(".")} = 42`);
+    for (const part of parts) value = (value as Record<string, unknown>)[part];
+    expect(value).toBe(42);
   });
 });
