@@ -5,6 +5,7 @@ import { chromium, type Browser, type Page } from "playwright";
 import { evidenceDraftFixture } from "./fixtures/evidence-draft";
 import { evidenceDraftCopy as copy } from "./evidence-draft-copy";
 import { evidenceDraftRestoreCopy as restore } from "../../locales/en/evidence-draft-restore";
+import { evidenceDraftEditingCopy as editing } from "../../locales/en/evidence-draft-editing";
 import { LITERATURE_STORAGE_KEY, serializeLiteratureWorkspace } from "../papers/literature-workspace";
 
 let browser: Browser, bundle: string;
@@ -123,4 +124,21 @@ it.each([320, 1440])("dismisses a real reload without losing work at %ipx", asyn
     expect(await passage.inputValue()).toBe("Keep these exact unsaved bytes \u{1f600}"); await expectWarning(page, true);
     expect((await download(page)).passage).toBe("Keep these exact unsaved bytes \u{1f600}"); await expectWarning(page, false);
   }, width);
+});
+
+it("restores the prior retained baseline and warning when undoing clear", async () => {
+  await fixture(async page => {
+    const clear = async () => {
+      const opened = page.waitForEvent("dialog"), click = page.getByRole("button", { name: copy.workspace.clear, exact: true }).click();
+      const dialog = await opened; expect(dialog.message()).toBe(editing.confirmClear); await dialog.accept(); await click;
+    };
+    await openBackup(page); await expectWarning(page, false);
+    await clear(); await expectWarning(page, false);
+    await page.getByRole("button", { name: editing.undoClear, exact: true }).click(); await expectWarning(page, false);
+    await page.getByLabel(copy.theme.notes).fill("Unsaved note before clear"); await expectWarning(page, true);
+    await clear(); await expectWarning(page, false);
+    await page.getByRole("button", { name: editing.undoClear, exact: true }).click();
+    expect(await page.getByLabel(copy.theme.notes).inputValue()).toBe("Unsaved note before clear"); await expectWarning(page, true);
+    expect((await download(page)).themes[0].authorNote).toBe("Unsaved note before clear"); await expectWarning(page, false);
+  });
 });

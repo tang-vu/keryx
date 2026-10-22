@@ -176,3 +176,81 @@ it("frees a slot at both editor limits and preserves unique IDs when adding agai
     expect(new Set(result.themes.map(row => row.id)).size).toBe(16);
   }, packet);
 });
+
+it.each([320, 1440])("cancels whole-draft clear or undoes it with exact exports and unfinished inputs at %ipx", width => fixture(width, async page => {
+  await unfinished(page);
+  await themes(page).nth(1).getByLabel(copy.theme.notes).fill("Latest unsaved author note 🧪");
+  const before = await saved(page), expected = exportEvidenceDraft(before);
+  const clear = page.getByRole("button", { name: copy.workspace.clear, exact: true });
+  await remove(page, clear, editing.confirmClear, false);
+  expect(await saved(page)).toEqual(before); await assertUnfinished(page, 1);
+  expect(await page.getByRole("button", { name: editing.undoClear, exact: true }).count()).toBe(0);
+  await remove(page, clear, editing.confirmClear, true);
+  await page.getByText(copy.workspace.cleared, { exact: true }).waitFor();
+  expect(await page.getByLabel(copy.claim.passage).inputValue()).toBe("");
+  expect(await claims(page).count()).toBe(0);
+  expect((await saved(page)).reports).toEqual([]);
+  // A second clear can cancel a new pending selector without replacing the
+  // only useful recovery with an empty editor.
+  await remove(page, clear, editing.confirmClear, true);
+  await page.getByRole("button", { name: editing.undoClear, exact: true }).click();
+  await page.getByText(editing.clearRestored, { exact: true }).waitFor();
+  expect(await page.getByLabel(copy.claim.passage).evaluate(element => element === document.activeElement)).toBe(true);
+  await assertUnfinished(page, 1); expect(await saved(page)).toEqual(before);
+  for (const format of ["markdown", "latex", "bibtex", "ris"] as const)
+    expect(await download(page, copy.download[format])).toBe(expected[format]);
+}));
+
+it.each(["passage", "report", "reviewer", "note"] as const)("ends clear recovery when new %s work starts", kind => fixture(1024, async page => {
+  await remove(page, page.getByRole("button", { name: copy.workspace.clear, exact: true }), editing.confirmClear, true);
+  expect(await page.getByRole("button", { name: editing.undoClear, exact: true }).count()).toBe(1);
+  const label = { passage: copy.claim.passage, report: copy.import.label, reviewer: copy.claim.reviewer, note: copy.theme.notes }[kind];
+  await page.getByLabel(label).fill("New work must not be replaced");
+  expect(await page.getByRole("button", { name: editing.undoClear, exact: true }).count()).toBe(0);
+  expect(await page.getByLabel(label).inputValue()).toBe("New work must not be replaced");
+}));
+
+it("keeps the original draft when a recovery copy cannot be prepared", () => fixture(1024, async page => {
+  await unfinished(page); const before = await saved(page);
+  await page.evaluate(() => { window.structuredClone = () => { throw new Error("Synthetic clone refusal"); }; });
+  await remove(page, page.getByRole("button", { name: copy.workspace.clear, exact: true }), editing.confirmClear, true);
+  await page.getByText(editing.clearRefused, { exact: true }).waitFor();
+  expect(await saved(page)).toEqual(before); await assertUnfinished(page, 1);
+  expect(await page.getByRole("button", { name: editing.undoClear, exact: true }).count()).toBe(0);
+}));
+
+it("invalidates an old file preview across clear/undo and retires recovery after a new explicit restore", () => fixture(1024, async (page, packet) => {
+  const next = structuredClone(packet); next.workspace.title = "New explicit restored workspace";
+  await page.getByLabel(restore.file, { exact: true }).setInputFiles({ name: "different-draft.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(next)) });
+  expect(await page.getByRole("button", { name: restore.restore, exact: true }).isDisabled()).toBe(false);
+  await remove(page, page.getByRole("button", { name: copy.workspace.clear, exact: true }), editing.confirmClear, true);
+  await page.getByRole("button", { name: editing.undoClear, exact: true }).click();
+  expect(await page.getByRole("button", { name: restore.restore, exact: true }).isDisabled()).toBe(true);
+  expect(await saved(page)).toEqual(packet);
+  await remove(page, page.getByRole("button", { name: copy.workspace.clear, exact: true }), editing.confirmClear, true);
+  await page.getByLabel(restore.file, { exact: true }).setInputFiles({ name: "different-draft.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(next)) });
+  await page.getByRole("button", { name: restore.restore, exact: true }).click();
+  expect(await page.getByRole("button", { name: editing.undoClear, exact: true }).count()).toBe(0);
+  expect(await saved(page)).toEqual(next);
+}));
+
+it("recovers unfinished edits even when the draft cannot currently be downloaded", () => fixture(1024, async page => {
+  await themes(page).first().getByLabel(copy.theme.title).fill("");
+  await themes(page).first().getByLabel(copy.theme.notes).fill("Keep this temporarily invalid draft 🧪");
+  expect(await page.getByRole("button", { name: copy.download.backup, exact: true }).isDisabled()).toBe(true);
+  await remove(page, page.getByRole("button", { name: copy.workspace.clear, exact: true }), editing.confirmClear, true);
+  await page.getByRole("button", { name: editing.undoClear, exact: true }).click();
+  expect(await themes(page).first().getByLabel(copy.theme.title).inputValue()).toBe("");
+  expect(await themes(page).first().getByLabel(copy.theme.notes).inputValue()).toBe("Keep this temporarily invalid draft 🧪");
+  expect(await page.getByRole("button", { name: copy.download.backup, exact: true }).isDisabled()).toBe(true);
+}));
+
+it("does not persist clear recovery when reopening the editor", () => fixture(1024, async page => {
+  await remove(page, page.getByRole("button", { name: copy.workspace.clear, exact: true }), editing.confirmClear, true);
+  await page.reload();
+  await page.addScriptTag({ content: bundle });
+  await page.getByLabel(copy.claim.passage).waitFor();
+  expect(await page.getByRole("button", { name: editing.undoClear, exact: true }).count()).toBe(0);
+  expect(await page.getByLabel(copy.claim.passage).inputValue()).toBe("");
+  expect(await claims(page).count()).toBe(0);
+}));
