@@ -11,6 +11,7 @@ import { ScholarlyMetadataDetails } from "./scholarly-metadata";
 import { recordedArcLabel,recordedArcTransactionUrl } from "@/lib/arc-network-display";
 import { GatewayContractReferences } from "./gateway-contract-references";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { PdfReadingScope } from "./pdf-reading-scope";
 
 
 
@@ -121,6 +122,7 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
           <div className="mt-4 border-l-2 border-line pl-4">
             <p className="font-mono text-xs text-ink-3">{copy("citationEvidence.publicReference")}</p>
             <p className="mt-2 font-mono text-xs text-ink-3">{citation.webProvenance ? copy(citation.webProvenance.truncated ? "citationEvidence.webBounded" : "citationEvidence.webText", { extraction: citation.webProvenance.extraction, retrievedAt: citation.webProvenance.retrievedAt }) : publicDelivery}</p>
+            <PdfReadingScope provenance={citation.webProvenance} />
             <p className="mt-2 text-sm text-ink-2">{citation.webProvenance ? copy("citationEvidence.groundingNotice", { publisherGroup: citation.webProvenance.publisherGroup }) : copy("citationEvidence.rssNotice")}</p>
           </div>
         )}

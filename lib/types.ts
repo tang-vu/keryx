@@ -132,7 +132,10 @@ export interface SourceItemIdentity {
     publisherGroup: string;
     normalizedBodyHash: string;
     extraction: "html" | "text" | "pdf";
+    /** Page/character limits clipped the extracted text; textless PDF pages are separate. */
     truncated: boolean;
+    /** New PDF reads only; absence on historical records means unknown page scope. */
+    pdfTextScope?: import("./web-research/pdf-text-scope").PdfTextScope;
   };
   /** Trusted catalog provenance; public references never carry payout authority. */
   sourceKind?: "public-reference";

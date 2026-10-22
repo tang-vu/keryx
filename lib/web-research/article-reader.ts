@@ -5,8 +5,9 @@ import { bodyIdentity, canonicalUrl, digest, publisherGroup } from "./url-identi
 import type { GatheredContent } from "../llm";
 import { observedHtmlTextLayout, type HtmlTextLayout } from "./html-text-layout";
 import { publicFetchFailure, safePublicFetchDiagnostic, type PublicFetchDiagnostic } from "../net/public-fetch-diagnostic";
+import { observedPdfTextScope, pdfTextScopeTruncated, type PdfTextScope } from "./pdf-text-scope";
 
-export interface ArticleRead { text: string; title: string; finalUrl: string; kind: "html" | "text" | "pdf"; truncated: boolean; htmlTextLayout?: HtmlTextLayout }
+export interface ArticleRead { text: string; title: string; finalUrl: string; kind: "html" | "text" | "pdf"; truncated: boolean; htmlTextLayout?: HtmlTextLayout; pdfTextScope?: PdfTextScope }
 export type ArticleFailureCode = "invalid-url" | "document-identity-changed" | "publisher-verification-required" | "transport-unavailable" | "article-byte-limit" | "html-extraction-unavailable" | "pdf-extraction-unavailable" | "cancelled";
 export class ArticleReadError extends Error {
   readonly diagnostic?: PublicFetchDiagnostic;
@@ -43,7 +44,9 @@ export const readArticle: ArticleReader = async (url, signal) => {
     }
     if (fetched.contentType === "application/pdf") {
       const result = await extractPdfText(fetched.bytes, { signal, maxPages: 20, maxChars: 60000, timeoutMs: 5000 }).catch(() => { throw new ArticleReadError(signal?.aborted ? "cancelled" : "pdf-extraction-unavailable"); });
-      return { text: result.text, title: new URL(fetched.finalUrl).hostname, finalUrl: fetched.finalUrl, kind: "pdf", truncated: result.truncated };
+      return { text: result.text, title: new URL(fetched.finalUrl).hostname, finalUrl: fetched.finalUrl, kind: "pdf", truncated: result.truncated,
+        pdfTextScope: { format: "keryx-pdf-text-scope-v1", pagesRead: result.pagesRead, totalPages: result.totalPages,
+          pagesWithoutText: result.pagesWithoutText, textLimitReached: result.textLimitReached } };
     }
     // Plain formats keep their byte cap. HTML now applies that same cap after
     // inert markup normalization inside the bounded worker, not to JS payloads.
@@ -55,10 +58,13 @@ export function gatheredArticle(id: string, article: ArticleRead): GatheredConte
   const finalUrl = canonicalUrl(article.finalUrl);
   if (!finalUrl) throw new Error("Invalid article provenance");
   const layout = article.kind === "html" ? observedHtmlTextLayout(article.text, article.htmlTextLayout) : undefined;
+  const pdfTextScope = article.kind === "pdf" ? observedPdfTextScope(article.pdfTextScope) : undefined;
   return { assetId: id, sourceId: id, sourceName: publisherGroup(finalUrl), sourceKind: "public-reference",
     publicDeliveryKind: "excerpt", itemId: digest(finalUrl), itemTitle: article.title, itemUrl: finalUrl,
     contentVersion: digest(article.text), marker: "", text: article.text,
     ...(layout ? { htmlTextLayout: layout } : {}),
     webProvenance: { retrievedAt: new Date().toISOString(), publisherGroup: publisherGroup(article.finalUrl),
-      normalizedBodyHash: bodyIdentity(article.text), extraction: article.kind, truncated: article.truncated } };
+      normalizedBodyHash: bodyIdentity(article.text), extraction: article.kind,
+      truncated: article.truncated || Boolean(pdfTextScope && pdfTextScopeTruncated(pdfTextScope)),
+      ...(pdfTextScope ? { pdfTextScope } : {}) } };
 }

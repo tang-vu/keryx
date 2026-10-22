@@ -1,8 +1,9 @@
 import { expect, it, vi } from "vitest";
 const { transport, UnsafeTargetError } = vi.hoisted(() => ({ transport: vi.fn(), UnsafeTargetError: class UnsafeTargetError extends Error {} }));
 vi.mock("../net/public-fetch", () => ({ fetchPublicBytes: transport, UnsafeTargetError }));
-import { readArticle } from "./article-reader";
+import { readArticle, gatheredArticle } from "./article-reader";
 import { rememberPublicFetchFailure } from "../net/public-fetch-diagnostic";
+import { pdfFixture } from "../../test-support/pdf-fixture";
 
 it("propagates only the sanitized original HTTP failure facts", async () => {
   const error = new UnsafeTargetError("PRIVATE_VENDOR_BODY https://original.example/?token=PRIVATE");
@@ -59,4 +60,18 @@ it("admits original markdown as inert text while preserving URL and bounds", asy
   expect(transport).toHaveBeenLastCalledWith("https://example.org/pricing", expect.objectContaining({ representation: "article", maxBytes: 2 * 1024 * 1024, timeoutMs: 8000, maxHops: 3, httpsOnly: true, allowedContentTypes: expect.arrayContaining(["text/markdown"]) }));
   transport.mockResolvedValueOnce({ contentType: "text/markdown", finalUrl: "https://example.org/pricing", bytes: new Uint8Array(500001) });
   await expect(readArticle("https://example.org/pricing")).rejects.toMatchObject({ code: "article-byte-limit" });
+});
+
+it("carries actual mixed PDF extraction scope through the bounded original reader and gathered provenance", async () => {
+  transport.mockResolvedValueOnce({ contentType: "application/pdf", finalUrl: "https://example.org/paper.pdf",
+    bytes: pdfFixture(["This original page supplied readable evidence.", null, "Another observed text page."]) });
+  const article = await readArticle("https://example.org/paper.pdf");
+  expect(article).toMatchObject({ kind: "pdf", truncated: false, pdfTextScope: {
+    format: "keryx-pdf-text-scope-v1", pagesRead: 3, totalPages: 3, pagesWithoutText: [2], textLimitReached: false } });
+  expect(article.text).toContain("readable evidence");
+  const gathered = gatheredArticle("public:pdf", article);
+  expect(gathered.webProvenance?.pdfTextScope).toEqual(article.pdfTextScope);
+  expect(gathered.webProvenance?.truncated).toBe(false);
+  expect(transport).toHaveBeenLastCalledWith("https://example.org/paper.pdf", expect.objectContaining({
+    maxBytes: 2 * 1024 * 1024, timeoutMs: 8000, maxHops: 3, httpsOnly: true }));
 });

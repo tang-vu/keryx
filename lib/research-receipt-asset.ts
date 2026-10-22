@@ -1,5 +1,12 @@
 import type { ContentReceiptRef, SourceItemIdentity } from "./types";
 import type { ReceiptAsset } from "./research-receipt-types";
+import { observedPdfTextScope } from "./web-research/pdf-text-scope";
+
+function publicWebProvenance(value: NonNullable<SourceItemIdentity["webProvenance"]>) {
+  const { pdfTextScope, ...provenance } = value;
+  const scope = value.extraction === "pdf" ? observedPdfTextScope(pdfTextScope) : undefined;
+  return { ...provenance, ...(scope ? { pdfTextScope: scope } : {}) };
+}
 
 export function receiptAsset(value: Partial<SourceItemIdentity>): ReceiptAsset {
   return {
@@ -7,7 +14,7 @@ export function receiptAsset(value: Partial<SourceItemIdentity>): ReceiptAsset {
     ...(value.sourceClaim ? { sourceClaim: { id: value.sourceClaim.id, revision: value.sourceClaim.revision,
       mode: value.sourceClaim.mode, effectiveAt: value.sourceClaim.effectiveAt, verifiedAt: value.sourceClaim.verifiedAt } } : {}),
     ...(value.accessKind === "creator-free" ? { accessKind: value.accessKind } : {}),
-    ...(value.webProvenance ? { webProvenance: { ...value.webProvenance } } : {}),
+    ...(value.webProvenance ? { webProvenance: publicWebProvenance(value.webProvenance) } : {}),
     ...(value.requestedSource ? { requestedSource: { urls: [...value.requestedSource.urls], readScope: value.requestedSource.readScope } } : {}),
     ...(value.scholarly ? { scholarly: {
       provider: value.scholarly.provider, recordUrl: value.scholarly.recordUrl, retrievedAt: value.scholarly.retrievedAt,

@@ -29,6 +29,7 @@ import { CitationEvidencePanel } from "./citation-evidence-panel";
 import { ResearchCitationExport } from "./research-citation-export";
 import { EvidenceMatrixExport } from "./evidence-matrix-export";
 import { SourceEvidenceLens } from "./source-evidence-lens";
+import { PdfReadingScope } from "./pdf-reading-scope";
 import { reasoningOutputLimitText } from "@/lib/llm/reasoning-telemetry";
 import { projectBibliographicTask } from "@/lib/research/bibliographic-task-result";
 import { BibliographyExports } from "./bibliography-exports";
@@ -159,6 +160,7 @@ export function AnswerCard({ run, answerLanguage, meta, permalink, payments = []
                             {c.webProvenance ? copy(c.webProvenance.truncated ? "reportReading.webBounded" : "reportReading.webText", { extraction: c.webProvenance.extraction }) : c.publicDeliveryKind ? c.publicDeliveryKind === "full_text" ? copy("reportReading.rssFullText") : copy("reportReading.rssDelivery", { delivery: c.publicDeliveryKind.replaceAll("_", " ") }) : copy("reportReading.rssFeedBody")}
                           </span>
                         )}
+                        {isPublicReference && <PdfReadingScope provenance={c.webProvenance} />}
                         {c.scholarly && <ScholarlyMetadataDetails metadata={c.scholarly} />}
                       </span>
                       <button type="button" aria-label={copy("reportReading.inspectCitation", { marker: c.marker })} aria-haspopup="dialog" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center px-2 font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">{copy("reportReading.evidence")}</button>

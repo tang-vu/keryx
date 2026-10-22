@@ -102,6 +102,44 @@ describe("owned completed private retained-ledger adapter", () => {
     const result = await loadCompletedEvidenceDraft(f.context, f.input);
     expect(result.draft.excerpts[0].contentVersion).toBe("f".repeat(64)); expect(result.provenance.payoutAuthority).toBe(false);
   });
+  it("reopens a partial PDF saved ledger with its observed scope, preserving exact snapshot bytes and payment authority", async () => {
+    const f = fixture(), scope = { format: "keryx-pdf-text-scope-v1" as const, pagesRead: 3, totalPages: 3, pagesWithoutText: [2], textLimitReached: false };
+    const provenance = { retrievedAt: "2026-10-12T01:00:00.000Z", publisherGroup: "arxiv.org",
+      normalizedBodyHash: "e".repeat(64), extraction: "pdf" as const, truncated: false, pdfTextScope: scope };
+    for (const row of [f.run.citations[0], f.run.evidence![0], f.run.decisions[0]]) {
+      row.contentVersion = "f".repeat(64); delete row.contentReceipt; row.webProvenance = provenance; row.sourceKind = "public-reference";
+    }
+    f.run.evidence![0].qualifiesForReward = false; f.run.citations[0].reward = 0;
+    f.input.selection.sources[0].contentVersion = "f".repeat(64); f.resnapshot();
+    const original = f.saved().serializedRun;
+    const result = await loadCompletedEvidenceDraft(f.context, f.input);
+    expect(result.draft.excerpts[0].quote).toBe(f.quote);
+    expect(result.observations[0].reason).toContain("visited pages 2");
+    expect(result.observations[0].reason).toContain("did not perform OCR");
+    expect(result.provenance.payoutAuthority).toBe(false);
+    expect(f.saved().serializedRun).toBe(original);
+  });
+  it.each(["inconsistent-limit", "wrong-kind", "invalid-pages", "mismatched-citation"])("refuses forged PDF scope %s while leaving the saved result intact", async change => {
+    const f = fixture(), provenance = { retrievedAt: "2026-10-12T01:00:00.000Z", publisherGroup: "arxiv.org",
+      normalizedBodyHash: "e".repeat(64), extraction: "pdf" as const, truncated: true,
+      pdfTextScope: { format: "keryx-pdf-text-scope-v1" as const, pagesRead: 3, totalPages: 3, pagesWithoutText: [2], textLimitReached: false } };
+    for (const row of [f.run.citations[0], f.run.evidence![0], f.run.decisions[0]]) {
+      row.contentVersion = "f".repeat(64); delete row.contentReceipt; row.webProvenance = structuredClone(provenance); row.sourceKind = "public-reference";
+    }
+    if (change === "inconsistent-limit") {
+      f.run.citations[0].webProvenance!.truncated = false;
+      f.run.citations[0].webProvenance!.pdfTextScope!.textLimitReached = true;
+    }
+    if (change === "wrong-kind") f.run.citations[0].webProvenance!.extraction = "html";
+    if (change === "invalid-pages") f.run.citations[0].webProvenance!.pdfTextScope!.pagesWithoutText = [4];
+    if (change === "mismatched-citation") f.run.citations[0].webProvenance!.pdfTextScope!.pagesWithoutText = [1];
+    f.run.evidence![0].qualifiesForReward = false; f.run.citations[0].reward = 0;
+    f.input.selection.sources[0].contentVersion = "f".repeat(64); f.resnapshot();
+    const original = f.saved().serializedRun;
+    const result = await loadCompletedEvidenceDraft(f.context, f.input).catch(() => null);
+    if (result) expect(result.draft.excerpts).toEqual([]);
+    expect(f.saved().serializedRun).toBe(original);
+  });
   it.each(["intent", "execution", "result", "interrupted", "cross-payer"])("refuses missing/noncompleted/cancelled/foreign %s", async change => {
     const f = fixture();
     if (change === "intent") f.db.getPrivateResearchIntent.mockResolvedValue(null as never);

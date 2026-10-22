@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { extractPdfText } from "./pdf-reader";
+import { pdfFixture } from "../../test-support/pdf-fixture";
 
 // A real uncompressed PDF with correct object offsets; no binary fixture needed.
 function pdf(pages: string[], actions = false): Uint8Array {
@@ -31,15 +32,36 @@ const options = { maxPages: 4, maxChars: 2000, timeoutMs: 10_000 };
 describe("contained PDF text extraction", () => {
   it("extracts real PDF text without executing document JavaScript", async () => {
     const value = await extractPdfText(pdf(["Actual source text"], true), options);
-    expect(value).toEqual({ text: "Actual source text", pagesRead: 1, totalPages: 1, truncated: false });
+    expect(value).toEqual({ text: "Actual source text", pagesRead: 1, totalPages: 1, truncated: false, pagesWithoutText: [], textLimitReached: false });
   });
 
   it("bounds actual pages and text and reports truncation", async () => {
     const pages = await extractPdfText(pdf(["First page", "Second page"]), { ...options, maxPages: 1 });
-    expect(pages).toEqual({ text: "First page", pagesRead: 1, totalPages: 2, truncated: true });
+    expect(pages).toEqual({ text: "First page", pagesRead: 1, totalPages: 2, truncated: true, pagesWithoutText: [], textLimitReached: false });
     const chars = await extractPdfText(pdf(["Long source text"]), { ...options, maxChars: 4 });
     expect(chars.text).toBe("Long");
     expect(chars.truncated).toBe(true);
+    expect(chars.textLimitReached).toBe(true);
+  });
+
+  it("keeps readable text while marking the actual textless image page as incomplete coverage", async () => {
+    const value = await extractPdfText(pdfFixture(["Readable first page.", null, "Readable last page."]), options);
+    expect(value).toEqual({ text: "Readable first page. Readable last page.", pagesRead: 3, totalPages: 3,
+      truncated: false, pagesWithoutText: [2], textLimitReached: false });
+  });
+
+  it("does not call a blank page a scan or invent text from an image-only document", async () => {
+    const value = await extractPdfText(pdfFixture(["", "Observed text."]), options);
+    expect(value).toMatchObject({ text: "Observed text.", pagesRead: 2, pagesWithoutText: [1], truncated: false });
+    await expect(extractPdfText(pdfFixture([null, null]), options)).rejects.toThrow("PDF text extraction failed");
+    expect((await extractPdfText(pdfFixture(["Recovered after image-only refusal."]), options)).pagesWithoutText).toEqual([]);
+  });
+
+  it("records only visited textless pages and separates a character cutoff from a complete page", async () => {
+    const value = await extractPdfText(pdfFixture([null, "Long observed text.", null]), { ...options, maxChars: 4 });
+    expect(value).toMatchObject({ text: "Long", pagesRead: 2, totalPages: 3, pagesWithoutText: [1], textLimitReached: true, truncated: true });
+    const pageLimit = await extractPdfText(pdfFixture(["Observed text.", null]), { ...options, maxPages: 1 });
+    expect(pageLimit).toMatchObject({ pagesRead: 1, totalPages: 2, pagesWithoutText: [], textLimitReached: false, truncated: true });
   });
 
   it("rejects malformed, empty-text and oversized input with sanitized errors", async () => {

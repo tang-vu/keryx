@@ -10,6 +10,16 @@ const source: GatheredContent = { sourceId: "original", sourceName: "Original", 
   webProvenance: { retrievedAt: "2026-10-04T00:00:00Z", publisherGroup: "example.org", normalizedBodyHash: "body", extraction: "pdf", truncated: true } };
 
 describe("bounded research follow-up", () => {
+  it("reports mixed-PDF page scope and recovery without claiming textless pages lack evidence", () => {
+    const scope = { format: "keryx-pdf-text-scope-v1" as const, pagesRead: 3, totalPages: 3, pagesWithoutText: [2], textLimitReached: false };
+    for (const vi of [false, true]) {
+      const text = researchFollowUp({ vi, outcomes: [], gathered: [{ ...source, webProvenance: { ...source.webProvenance!, pdfTextScope: scope } }], conflicts: [] });
+      expect(text).toContain(vi ? "3/3 trang PDF" : "visited 3 of 3 pages");
+      expect(text).toContain(vi ? "trang đã thử đọc: 2" : "visited pages 2");
+      expect(text).toContain(vi ? "chưa thực hiện OCR" : "did not perform OCR");
+      expect(text).not.toMatch(/\[S1\]|the extracted text was truncated|bản trích xuất đã bị cắt|no evidence/);
+    }
+  });
   it("explains publisher verification as unread content in both languages without starting recovery", () => {
     for (const vi of [false, true]) {
       const text = researchFollowUp({ vi, outcomes: [{ name: "OpenReview paper", code: "publisher-verification-required" }], gathered: [], conflicts: [] });

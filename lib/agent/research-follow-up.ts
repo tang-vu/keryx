@@ -1,6 +1,7 @@
 import type { Conflict, GatheredContent, SynthesisFailureStage } from "../llm/reasoning-engine";
 import { publicReadRecoveryLines, reportLabel, type PublicReadOutcome } from "./read-recovery";
 import { synthesisFailureDetail } from "./synthesis-failure";
+import { pdfReadingNotice } from "../research/pdf-reading";
 
 /** Only observed reading limits and an explicitly unverified conflict flag become next steps.
  * No draft assertions, new citation markers, evidence eligibility or payment authority. */
@@ -17,10 +18,13 @@ export function researchFollowUp(input: {
   const synthesis = synthesisFailureDetail(input.synthesisFailure, input.gathered.length, vi);
   if (synthesis) rows.unshift(`- ${synthesis}`);
   const limited = input.gathered.filter(source => source.webProvenance?.truncated ||
-    source.publicDeliveryKind === "abstract" || source.scholarly?.evidenceScope === "abstract-page");
+    source.publicDeliveryKind === "abstract" || source.scholarly?.evidenceScope === "abstract-page" ||
+    source.webProvenance?.extraction === "pdf" && Boolean(pdfReadingNotice(source.webProvenance.pdfTextScope)));
   for (const source of limited.slice(0, 8)) {
     const name = reportLabel(source.itemTitle ?? source.sourceName);
-    if (source.webProvenance?.truncated) rows.push(vi
+    const pdf = source.webProvenance?.extraction === "pdf" ? pdfReadingNotice(source.webProvenance.pdfTextScope, vi) : "";
+    if (pdf) rows.push(`- “${name}”: ${pdf}`);
+    else if (source.webProvenance?.truncated) rows.push(vi
       ? `- “${name}”: bản trích xuất đã bị cắt. Đọc phần còn thiếu của đúng phiên bản trước khi kết luận về toàn bộ tài liệu; giữ bản đã lưu để đối chiếu.`
       : `- “${name}”: the extracted text was truncated. Read the missing section of the same version before making whole-document conclusions; retain this snapshot for comparison.`);
     if (source.publicDeliveryKind === "abstract" || source.scholarly?.evidenceScope === "abstract-page") rows.push(vi

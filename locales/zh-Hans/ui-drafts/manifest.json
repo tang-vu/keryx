@@ -6,15 +6,15 @@
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
-  "scope": "All 71 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
+  "scope": "All 73 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
   "financialLegalConsent": "Unreviewed; critical English-authoritative fallback until actual named-human review. Neutral machine-draft UI is integrated only in explicit previews.",
   "totals": {
-    "englishNamespaceFiles": 72,
+    "englishNamespaceFiles": 73,
     "coreInlineSources": 1,
-    "extractedLeaves": 6182,
+    "extractedLeaves": 6187,
     "authoredEntries": 5941,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 212,
+    "uncoveredEntries": 217,
     "completeNamespaces": 67
   },
   "namespaces": [
@@ -7279,6 +7279,24 @@
         "tool.title",
         "tool.unsaved",
         "tool.untitledSource"
+      ],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "pdf-reading",
+      "sourcePath": "locales/en/pdf-reading.ts",
+      "sourceSha256": "58b420cebb4f12f8b818edd1347e7eb77260613cf613503dfd75af8456669d2c",
+      "draftPath": "locales/zh-Hans/ui-drafts/pdf-reading.json",
+      "extractedLeaves": 5,
+      "authoredEntries": 0,
+      "coveredKeys": [],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [
+        "emptyPages",
+        "limit",
+        "recovery",
+        "summary",
+        "textOnly"
       ],
       "sourceAliases": {}
     }
