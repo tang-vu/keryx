@@ -1,10 +1,13 @@
 import { MATRIX_CSV_HEADER, MATRIX_FIELDS, MAX_MATRIX_CELL_CHARS, MAX_MATRIX_ROWS, validateLiteratureMatrix, type MatrixRow } from "./literature-matrix";
+import { parseLiteratureWorkspace } from "../papers/literature-workspace";
+import { literatureLibraryMatrix } from "./literature-matrix-library";
 
 /** Covers even a full worksheet of JSON-escaped control characters. */
 export const MAX_MATRIX_FILE_BYTES = 6 * 1024 * 1024;
 const FORMAT = "keryx-literature-matrix";
 export interface MatrixDocument { question: string; rows: MatrixRow[] }
-export type MatrixFileIssue = "size" | "encoding" | "format" | "csv" | "headers" | "questions" | "limits";
+export type MatrixFileKind = "csv" | "json" | "library";
+export type MatrixFileIssue = "size" | "encoding" | "format" | "csv" | "headers" | "questions" | "limits" | "library";
 export class MatrixFileError extends Error {
   constructor(public readonly issue: MatrixFileIssue) { super(issue); }
 }
@@ -25,14 +28,21 @@ function checked(document: MatrixDocument): MatrixDocument {
   catch { throw new MatrixFileError("limits"); }
   return document;
 }
-function parseJson(text: string): MatrixDocument {
+function parseJson(text: string): MatrixDocument & { kind: MatrixFileKind } {
   let data: unknown;
   try { data = JSON.parse(text); } catch { throw new MatrixFileError("format"); }
+  if (record(data) && data.scope === "personal-bibliography") {
+    let workspace;
+    try { workspace = parseLiteratureWorkspace(text); }
+    catch { throw new MatrixFileError("library"); }
+    try { return { ...literatureLibraryMatrix(workspace), kind: "library" }; }
+    catch { throw new MatrixFileError("limits"); }
+  }
   if (!record(data) || !keysExactly(data, ["format", "version", "question", "rows"]) || data.format !== FORMAT || data.version !== 1 ||
     typeof data.question !== "string" || !Array.isArray(data.rows) || data.rows.some(row => !record(row) || !keysExactly(row, MATRIX_FIELDS) || MATRIX_FIELDS.some(field => typeof row[field] !== "string"))) {
     throw new MatrixFileError("format");
   }
-  return checked({ question: data.question, rows: data.rows.map(row => Object.fromEntries(MATRIX_FIELDS.map(field => [field, row[field]])) as MatrixRow) });
+  return { ...checked({ question: data.question, rows: data.rows.map(row => Object.fromEntries(MATRIX_FIELDS.map(field => [field, row[field]])) as MatrixRow) }), kind: "json" };
 }
 
 /** Comma-separated UTF-8 CSV, quoted newlines and escaped quotes. Never executes cells. */
@@ -80,11 +90,11 @@ function parseCsv(text: string): MatrixDocument {
 }
 
 /** Decode bytes fatally: a different encoding must never silently corrupt notes. */
-export function readLiteratureMatrixFile(bytes: Uint8Array): MatrixDocument & { kind: "json" | "csv" } {
+export function readLiteratureMatrixFile(bytes: Uint8Array): MatrixDocument & { kind: MatrixFileKind } {
   if (bytes.byteLength > MAX_MATRIX_FILE_BYTES) throw new MatrixFileError("size");
   let text: string;
   try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { throw new MatrixFileError("encoding"); }
-  if (text.trimStart().startsWith("{")) return { ...parseJson(text), kind: "json" };
+  if (text.trimStart().startsWith("{")) return parseJson(text);
   return { ...parseCsv(text), kind: "csv" };
 }
 

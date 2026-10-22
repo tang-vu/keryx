@@ -40,6 +40,22 @@ The page shows unsaved changes and adds a browser reload/close warning while wor
 has changed since the last editable-file download or import. This warning is not
 an autosave or an internal-navigation guarantee; readers must keep their file.
 
+The same file picker accepts the existing `/literature` workspace backup. Its
+strict, versioned personal-bibliography schema and 1 MiB limit remain authoritative.
+After preview and explicit replacement/addition, the question, titles, recorded
+authors/year, exact versioned landing URL, optional DOI and screening decision/notes
+become worksheet rows. Incomplete author lists disclose their recorded/total count.
+Findings, study design, population, limitations and passage locators remain blank.
+The original library and browser storage are unchanged, and the new matrix remains
+unsaved until the reader downloads its editable file. Keep the original backup for
+the library title, observation times and other bibliographic metadata.
+
+The conversion never clips text, merges sources or infers reading from metadata.
+Combined title/author or decision/note fields that exceed the worksheet's 2,000
+character limit refuse the whole import; the error explains this and no current
+notes change. Matching-question, capacity, stale-preview and file-race guards apply
+to library imports as they do to matrix files. Imported content renders as text.
+
 ## Crawlability and machine-readable descriptions
 
 The homepage and footer link to the research desk. All four pages enter the
@@ -65,6 +81,9 @@ references from Cochrane and Crossref where used.
 - `lib/research-tools/literature-matrix-file.test.ts`: exact editable round trips,
   prior CSV compatibility, encoding/schema/size refusal, quoted record parsing,
   question conflicts and non-destructive additions.
+- `lib/research-tools/literature-matrix-library.test.ts`: strict library backups,
+  literal screening notes, observed versions, incomplete names, empty evidence,
+  whole-file refusal without truncation and exact editable-file continuation.
 - `lib/research-tools/guide-metadata.test.ts`: shipped sitemap URLs, English
   alternates and schema/visible-copy consistency.
 - `test-support/research-guide-acceptance.ts`: raw canonical HTML, 404, blank
