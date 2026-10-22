@@ -29,6 +29,29 @@ describe("research evidence matrix", () => {
     expect(evidenceMatrixCsv(publicRun)).toContain('"Recorded excerpt"');
     expect(buildEvidenceMatrix({ ...publicRun, evidence: [{ ...publicEvidence, qualifiesForAnswer: false, qualifiesForReward: true }] })[0].evidence).toEqual([]);
   });
+  it.each([
+    ["exact URL", "https://publisher.example/paper?v=1", "https://publisher.example/paper?v=1", true],
+    ["copied origin", "https://publisher.example/paper?v=1", "https://copied.example/paper?v=1", false],
+    ["different article", "https://publisher.example/paper", "https://publisher.example/another-paper", false],
+    ["different query version", "https://publisher.example/paper?v=1", "https://publisher.example/paper?v=2", false],
+    ["exact versioned PDF", "https://arxiv.org/pdf/2005.11401v4", "https://arxiv.org/pdf/2005.11401v4", true],
+    ["PDF and metadata record", "https://arxiv.org/abs/2005.11401v4", "https://arxiv.org/pdf/2005.11401v4", false],
+    ["missing citation URL", undefined, "https://publisher.example/paper", false],
+    ["missing excerpt URL", "https://publisher.example/paper", undefined, false],
+    ["legacy URLs both absent", undefined, undefined, true],
+  ] as const)("binds %s consistently in the matrix and its CSV/Markdown exports", (_name, citationUrl, excerptUrl, accepted) => {
+    const bound = { ...run,
+      citations: [{ ...run.citations[0], itemId: "article", itemUrl: citationUrl, contentVersion: "v1" }],
+      evidence: [{ ...evidence, itemId: "article", itemUrl: excerptUrl, contentVersion: "v1" }],
+    };
+    const before = JSON.stringify(bound);
+    const row = buildEvidenceMatrix(bound)[0];
+    expect(row.evidence).toHaveLength(accepted ? 1 : 0);
+    expect(row.status).toBe(accepted ? "Recorded excerpt" : "No inspectable excerpt recorded");
+    expect(evidenceMatrixCsv(bound).includes('Exact ""quoted"" evidence')).toBe(accepted);
+    expect(evidenceMatrixMarkdown(bound).includes(evidence.quote)).toBe(accepted);
+    expect(JSON.stringify(bound)).toBe(before);
+  });
   it("retains exact article identities and keeps versions separate for the same marker and source", () => {
     const versions = ["v1", "v2"];
     const versioned = { ...run,
