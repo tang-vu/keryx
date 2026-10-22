@@ -17,7 +17,7 @@ export function EvidenceMatrixExport({ run }: { run: QueryRun }) {
   const rows = buildEvidenceMatrix(run);
   const sources = run.citations.filter((citation, index, all) => all.findIndex((other) =>
     other.marker === citation.marker && other.sourceId === citation.sourceId && other.itemId === citation.itemId &&
-    other.contentVersion === citation.contentVersion) === index);
+    other.itemUrl === citation.itemUrl && other.contentVersion === citation.contentVersion) === index);
 
   function downloadFile(filename: string, body: string, type: string) {
     const url = URL.createObjectURL(new Blob([body], { type }));
@@ -55,7 +55,7 @@ export function EvidenceMatrixExport({ run }: { run: QueryRun }) {
                 <td className="border-b border-line p-2 align-top text-ink-3">{row.status}</td>
                 {sources.map((source, index) => {
                   const excerpts = row.evidence.filter((item) => item.marker === source.marker && item.sourceId === source.sourceId &&
-                    item.itemId === source.itemId && item.contentVersion === source.contentVersion);
+                    item.itemId === source.itemId && item.itemUrl === source.itemUrl && item.contentVersion === source.contentVersion);
                   return <td key={index} className="border-b border-line p-2 align-top">
                     {excerpts.length ? <details><summary className="cursor-pointer text-paid">{copy(excerpts.length === 1 ? "evidenceMatrix.inspect.one" : "evidenceMatrix.inspect.other", { count: excerpts.length })}</summary>
                       {excerpts.map((item, quoteIndex) => <blockquote key={quoteIndex} className="mt-2 whitespace-pre-wrap border-l-2 border-paid pl-3 font-serif [overflow-wrap:anywhere]">{item.quote}</blockquote>)}

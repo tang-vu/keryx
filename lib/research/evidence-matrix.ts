@@ -31,7 +31,7 @@ export function buildEvidenceMatrix(run: EvidenceMatrixInput): EvidenceMatrixRow
       item.claimIndex === claimIndex && item.claim === claim && ((item.qualifiesForAnswer ?? item.qualifiesForReward) || item.evidenceProvenance === "synthetic-demo") &&
       item.quote.trim().length > 0 && item.quote.length <= 240 &&
       run.citations.some((citation) => citation.marker === item.marker && citation.sourceId === item.sourceId &&
-        citation.itemId === item.itemId && citation.contentVersion === item.contentVersion),
+        citation.itemId === item.itemId && citation.itemUrl === item.itemUrl && citation.contentVersion === item.contentVersion),
     );
     // These historical status values also appear in CSV. Use fixed English source
     // literals, never a selected translation or a changed machine status union.

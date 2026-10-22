@@ -7,7 +7,7 @@ function exportRecord(fields: Partial<EvidenceRecord> = {}): string {
     sourceName: "Publication", quote: "Exact excerpt", support: 0.8, qualifiesForReward: true, ...fields };
   return evidenceMatrixMarkdown({ subClaims: [item.claim], evidence: [item],
     citations: [{ marker: item.marker, sourceId: item.sourceId, sourceName: item.sourceName,
-      itemId: item.itemId, contentVersion: item.contentVersion, weight: 1, reward: 0, rationale: "" }] });
+      itemId: item.itemId, itemUrl: item.itemUrl, contentVersion: item.contentVersion, weight: 1, reward: 0, rationale: "" }] });
 }
 
 describe("Markdown evidence fidelity", () => {

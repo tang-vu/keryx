@@ -45,7 +45,7 @@ async function fixture(answer, intent) {
       answerSha256: sha256(answer), budgetUsdc: intent.request.budget, researchMode: intent.request.researchMode },
     bibliography, citations: [{ marker: "[1]", sourceId: "synthetic", sourceName: "Synthetic acceptance source",
       itemId: "article", itemTitle: "Synthetic article", itemUrl: "https://example.org/article", contentVersion: "v1", weight: 1, rewardPlannedUsdc: 0.005, rationale: "read" }],
-    claims: [{ claimIndex: 0, claim: "Synthetic claim", evidence: [{ marker: "[1]", sourceId: "synthetic", sourceName: "Synthetic acceptance source", itemId: "article", contentVersion: "v1", quote: "Synthetic bounded evidence", support: 0.8, qualifiesForAnswer: true, qualifiesForReward: true }] }],
+    claims: [{ claimIndex: 0, claim: "Synthetic claim", evidence: [{ marker: "[1]", sourceId: "synthetic", sourceName: "Synthetic acceptance source", itemId: "article", itemUrl: "https://example.org/article", contentVersion: "v1", quote: "Synthetic bounded evidence", support: 0.8, qualifiesForAnswer: true, qualifiesForReward: true }] }],
     settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.005,
       pendingCreatorUsdc: 0, simulatedCreatorUsdc: 0 } };
   const digest = researchReceiptDigest(payload);

@@ -34,6 +34,27 @@ export function fixture(): QueryRun {
 }
 
 describe("research surface parity", () => {
+  it.each([
+    ["matching URL", "https://example.org/paper", "https://example.org/paper", true],
+    ["copied origin", "https://example.org/paper", "https://copied.example/paper", false],
+    ["changed article version", "https://example.org/paper?v=1", "https://example.org/paper?v=2", false],
+    ["missing citation URL", undefined, "https://example.org/paper", false],
+    ["missing excerpt URL", "https://example.org/paper", undefined, false],
+    ["legacy URLs both absent", undefined, undefined, true],
+  ] as const)("preserves %s evidence identity across shared transports without changing the stored run or receipt", (_name, citationUrl, excerptUrl, accepted) => {
+    const run = fixture();
+    run.citations[0].itemUrl = citationUrl;
+    run.evidence![0].itemUrl = excerptUrl;
+    const before = JSON.stringify(run), receipt = buildResearchReceipt(run, []);
+    for (const output of [surfaceResearch(run), remoteResearchResult(run), keryxMeta(run),
+      a2aResponseFromRun(run, quoteA2aResearch(0.03, "deep"))]) {
+      expect(output.evidence).toHaveLength(accepted ? 1 : 0);
+      expect(output.researchExports.evidenceCsv.includes("Exact original quote")).toBe(accepted);
+      expect(output.citations).toHaveLength(1);
+    }
+    expect(JSON.stringify(run)).toBe(before);
+    expect(buildResearchReceipt(run, [])).toEqual(receipt);
+  });
   it("projects one closed assertion packet consistently without changing historical receipt bytes or adding private sidecars", () => {
     const run = fixture(), receipt = buildResearchReceipt(run, []), capture = createReadCheckpointCapture(true);
     const check = { kind: "channel", creatorFree: false, cache: true } as const;
