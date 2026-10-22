@@ -13,7 +13,7 @@ export function pdfReadingNotice(value: unknown, vi = false, copy = pdfReadingCo
     : copy.emptyPages.replace("{pages}", pagesWithoutText.join(", ")));
   if (textLimitReached || pagesRead < totalPages) parts.push(vi
     ? "Giới hạn số trang hoặc ký tự đã dừng trích xuất trước khi hoàn tất tài liệu." : copy.limit);
-  parts.push(vi ? "Chưa đọc ảnh, hình minh họa hoặc chữ trong bản scan." : copy.textOnly);
+  parts.push(vi ? "Chỉ đọc lớp văn bản có sẵn trong PDF; chưa diễn giải ảnh hoặc hình minh họa." : copy.textOnly);
   if (pagesWithoutText.length || textLimitReached || pagesRead < totalPages) parts.push(vi
     ? "Đối chiếu đúng phiên bản gốc. Nếu cần, lấy PDF có lớp văn bản, bản văn bản của nhà xuất bản hoặc bản đã được xử lý OCR riêng; lượt này chưa thực hiện OCR."
     : copy.recovery);

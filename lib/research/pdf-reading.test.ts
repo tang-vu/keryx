@@ -9,13 +9,14 @@ describe("PDF read-scope presentation", () => {
     const text = pdfReadingNotice(scope);
     expect(text).toContain("visited 3 of 5 pages"); expect(text).toContain("visited pages 2");
     expect(text).toContain("may be scanned, blank"); expect(text).toContain("page or character limit");
-    expect(text).toContain("Images, figures and scanned text were not read");
+    expect(text).toContain("Only the available PDF text layer was read");
+    expect(text).toContain("images and figures were not interpreted");
     expect(text).toContain("same original version"); expect(text).toContain("did not perform OCR");
     expect(text).not.toMatch(/proves|no evidence|claim is false|\[S\d+\]/);
   });
   it("preserves a text-only boundary even when every page yielded text, without inventing a limit", () => {
     const text = pdfReadingNotice({ ...scope, totalPages: 3, pagesWithoutText: [] });
-    expect(text).toContain("visited 3 of 3 pages"); expect(text).toContain("Images, figures and scanned text were not read");
+    expect(text).toContain("visited 3 of 3 pages"); expect(text).toContain("images and figures were not interpreted");
     expect(text).not.toMatch(/No text was extracted|limit stopped|OCR/);
     expect(pdfReadingNotice(undefined)).toBe(""); expect(pdfReadingNotice({ pagesRead: 3 })).toBe("");
   });
