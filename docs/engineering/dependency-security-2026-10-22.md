@@ -25,6 +25,22 @@ advisories concern `react-server-dom-*`; Next ships its own compiled server
 implementation. Updating only the application React packages would not establish
 that the framework contains these fixes.
 
+The compiled-worker fixture now reads literal module-export calls with the
+TypeScript parser: Next 16.4 mangles the worker helper's export name, so matching
+only `.default(...)` no longer identifies its emitted reference. The fixture
+requires one unambiguous descriptor whose bootstrap, runtime chunks and mainnet
+entry all exist in the same inspected build. It still executes that actual
+production worker in Chromium with the original synthetic transport and all
+signing, custody, spend and payout assertions. Comments, string lookalikes,
+dynamic chunk expressions, missing files and ambiguous references are refused.
+
+Next also moved its native image helpers to
+`next/dist/server/image-optimizer/transform`. The image fixture follows that
+actual implementation and retains its native version, malformed-input, pixel,
+optimizer output and desktop-brand checks. The 48 offline study trials were
+rerun against the new lock: their outputs and source bindings stayed identical;
+only the recorded lock hash and its generated write-up changed.
+
 ## Runtime upgrade remains a separate requirement
 
 The [October 21 Node.js security release](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)
