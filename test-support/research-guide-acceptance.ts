@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { Browser } from "playwright";
 import { researchGuidesCopy as copy } from "../locales/en/research-guides";
+import { checkLiteratureMatrixFiles } from "./literature-matrix-file-acceptance";
 
 /** Run against an isolated spending-free server, including the compiled CI build. */
 export async function checkResearchGuides(browser: Browser, origin: string, evidence?: string) {
@@ -64,7 +65,14 @@ export async function checkResearchGuides(browser: Browser, origin: string, evid
       await page.evaluate("Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.reject(new Error('test refusal')) } })");
       await page.getByRole("button", { name: copy.tool.copy, exact: true }).click();
       await page.getByText(copy.tool.copyFailed, { exact: true }).waitFor();
-      if (evidence) { await mkdir(evidence, { recursive: true }); await page.screenshot({ path: join(evidence, `matrix-${width}.png`), fullPage: true }); }
+      await checkLiteratureMatrixFiles(page);
+      if (evidence) {
+        await mkdir(evidence, { recursive: true });
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.waitForFunction(() => window.scrollY === 0);
+        await page.screenshot({ path: join(evidence, `matrix-viewport-${width}.png`), animations: "disabled" });
+        await page.screenshot({ path: join(evidence, `matrix-${width}.png`), fullPage: true, animations: "disabled" });
+      }
       await page.getByRole("button", { name: `${copy.tool.remove} 1`, exact: true }).click();
       assert.equal(await page.locator("fieldset").count(), 0);
       assert.equal(await page.getByLabel(copy.tool.question, { exact: true }).inputValue(), "Does retrieval improve factuality?");
@@ -72,5 +80,5 @@ export async function checkResearchGuides(browser: Browser, origin: string, evid
       assert.deepEqual(errors, [], "No page runtime errors");
     } finally { await context.unrouteAll({ behavior: "wait" }); await context.close(); }
   }
-  console.log("PASS: research guides, canonical HTML, 404, no-JS template, mobile matrix export, spreadsheet safety, clipboard refusal and no data submission.");
+  console.log("PASS: research guides, canonical HTML, 404, no-JS template, mobile matrix save/reopen/import, stale and invalid file refusal, spreadsheet safety, clipboard refusal and no data submission.");
 }
