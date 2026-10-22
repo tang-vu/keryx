@@ -67,7 +67,7 @@ export async function writtenV1(state: string, recordedArticle = false) {
       sourceId: "synthetic", itemId: "item", itemTitle: "Observed synthetic article", itemUrl: "https://example.org/article",
       contentVersion: "v1", weight: 1, rewardPlannedUsdc: 0.01, rationale: "recorded" } : {}) }],
     ...(recordedArticle ? { claims: [{ claimIndex: 0, claim: "Synthetic claim", evidence: [{ marker: "[1]",
-      sourceId: "synthetic", sourceName: "Synthetic creator", itemId: "item", contentVersion: "v1",
+      sourceId: "synthetic", sourceName: "Synthetic creator", itemId: "item", itemUrl: "https://example.org/article", contentVersion: "v1",
       quote: "Synthetic bounded excerpt", support: 0.8, qualifiesForAnswer: true, qualifiesForReward: true }] }] } : {}),
     settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.01,
       pendingCreatorUsdc: 0.005, simulatedCreatorUsdc: 0 } };
