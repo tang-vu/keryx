@@ -73,6 +73,23 @@ describe("unfinished non-target editor statements", () => {
     expect(markdown).toContain(`[retained read](<${readUrl}>)`);
   });
 
+  it("shows recorded PDF bounds in excerpt selection and preserves them in downloaded draft inputs and text", async () => {
+    const report = evidenceDraftFixture().reports[0]; report.id = "pdf-scoped-report";
+    report.evidence![0].quote = "This scoped retained PDF paragraph states a bounded result.";
+    const scope = { format: "keryx-pdf-text-scope-v1", pagesRead: 20, totalPages: 35, pagesWithoutText: [3], textLimitReached: false };
+    for (const row of [report.citations[0], report.evidence![0]]) Object.assign(row, { webProvenance: { extraction: "pdf", truncated: true, pdfTextScope: scope } });
+    await fill(control<HTMLTextAreaElement>(container, copy.import.label), JSON.stringify(report));
+    await act(async () => { container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    expect(container.textContent).toContain("20 of 35 pages"); expect(container.textContent).toContain("visited pages 3");
+    const label = [...articles()[0].querySelectorAll("label")].find(row => row.textContent?.includes(report.evidence![0].quote));
+    await check(label!.querySelector<HTMLInputElement>('input[type="checkbox"]')!);
+    await click(container, copy.download.markdown);
+    expect(vi.mocked(downloadBrowserText).mock.calls.at(-1)![0]).toContain("20 of 35 pages");
+    await click(container, copy.download.backup);
+    const packet = JSON.parse(vi.mocked(downloadBrowserText).mock.calls.at(-1)![0]);
+    expect(buildEvidenceDraft(packet).excerpts.find(row => row.reportId === report.id)?.pdfTextScope).toEqual(scope);
+  });
+
   for (const mode of ["append", "regenerate"] as const) it.each(["", " \n\t "])(`${mode} preserves an unfinished row with text %j`, async unfinishedText => {
     await fill(control<HTMLTextAreaElement>(container, copy.claim.passage), "Preserve these passage bytes.");
     await fill(control<HTMLTextAreaElement>(articles()[0], copy.theme.notes), "Keep other human notes.");

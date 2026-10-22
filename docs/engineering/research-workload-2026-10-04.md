@@ -120,6 +120,13 @@ registry, signing, custody, mainnet cap or scheduler changes are introduced.
 
 ## Repeatable commands
 
+Fresh fixture-PDF captures retain the production reader's observed
+`pdfTextScope`, including visited/total pages, visited pages without text and the
+character-limit flag. Existing snapshots are not backfilled from titles or
+expected fixture text. Capture integrity includes this metadata, so changing it
+invalidates replay before reasoning. Reader limits remain 20 pages, 60,000 characters
+and five seconds; these bounds do not establish complete interpretation or OCR.
+
 From an isolated checkout with installed dependencies, without a live environment:
 
 ```text
