@@ -15,6 +15,8 @@ import {
   searchTerm,
   type ArchiveEntry,
 } from "./answers-archive";
+import { finalizeGroundedAnswer } from "./agent/answer-grounding";
+import type { EvidenceLedger } from "./agent/evidence-ledger";
 import { confidenceBanner } from "./research/confidence-copy";
 import { buildAnswersFeedXml } from "./answers-feed";
 import { archiveIndexJsonLd } from "../app/answers/archive-index-json-ld";
@@ -199,6 +201,100 @@ describe("buildArchive", () => {
     const raw = confidenceBanner(body, { level: "Low", reason: "Motivo registrado." }, language);
     expect(archiveAnswerSnippet(raw)).toBe(`⚠ ${label} — ${body}`);
     expect(raw).toContain(body);
+  });
+
+  it("skips the fixed grounding lead and the first target label when a sentence follows", () => {
+    const claim = "What should the export include?";
+    const quote = "Keep the original receipt.";
+    const finding = "Keep the receipt beside the cited quote.";
+    const ledger: EvidenceLedger = {
+      evidence: [{ claimIndex: 0, claim, marker: "S1", sourceId: "s1", sourceName: "Keryx", quote, support: 0.2, qualifiesForAnswer: true, qualifiesForReward: false }],
+      claimCoverage: [{ claimIndex: 0, claim, coverage: 0.2, coveredBy: ["S1"] }],
+      acceptedMarkers: new Set(["S1"]),
+      droppedEvidence: 0,
+      droppedCitations: [],
+    };
+    const grounded = finalizeGroundedAnswer({
+      question: "How should we export evidence?", answer: "", ledger,
+      statements: [{ claimIndex: 0, marker: "S1", quote, text: finding }],
+      presentation: { language: "en", requestedBulletCount: 2 },
+    });
+    const reason = "Each summary sentence is tied to a verbatim excerpt and model-checked; completeness and independent factual correctness remain unverified.";
+    const raw = confidenceBanner(grounded, { level: "Low", reason }, "en");
+    const before = raw;
+    const snippet = archiveAnswerSnippet(raw);
+    expect(raw).toBe(before);
+    expect(raw).toContain("Model-written summary with sentence-level citations.");
+    expect(raw).toContain("Could not present 2 short bullets");
+    expect(raw).toContain("Treat this as provisional.");
+    expect(snippet.startsWith(`⚠ Low confidence — ${finding} Source text:`)).toBe(true);
+    expect(snippet).toContain(quote);
+    expect(snippet).not.toContain("Model-written summary");
+    expect(snippet).not.toContain("Could not present 2");
+    expect(snippet).not.toContain("Research target");
+    expect(snippet).not.toContain("Requested topic");
+    expect(snippet).not.toContain("Treat this as provisional.");
+    const entry = buildArchive([run({ id: "lead", question: "How should we export evidence?", answer: raw, confidence: { level: "Low", reason } })])[0];
+    expect(entry.answerSnippet).toBe(snippet);
+    expect(entry.confidence).toEqual({ level: "Low", reason });
+    expect(searchTerm(entry)).toBe("how should we export evidence? latent space");
+    expect(searchTerm(entry)).not.toContain(finding.toLowerCase());
+    const xml = buildAnswersFeedXml([entry], "https://keryx.cc");
+    expect(xml).toContain(`⚠ Low confidence — ${finding}`);
+    expect(xml).not.toContain("Model-written summary");
+    expect(metadataAnswerExcerpt(raw).startsWith(`⚠ Low confidence — ${finding}`)).toBe(true);
+    expect(metadataAnswerExcerpt(grounded).startsWith(finding)).toBe(true);
+    expect(metadataAnswerExcerpt(grounded)).not.toContain("Model-written summary");
+    const excerptsOnly = finalizeGroundedAnswer({ question: "How should we export evidence?", answer: "", ledger });
+    const excerptSnippet = archiveAnswerSnippet(confidenceBanner(excerptsOnly, { level: "Low", reason }, "en"));
+    expect(excerptsOnly).toContain("Source excerpts only.");
+    expect(excerptSnippet.startsWith("⚠ Low confidence —")).toBe(true);
+    expect(excerptSnippet).toContain(`“${quote}”`);
+    expect(excerptSnippet).not.toContain("Source excerpts only");
+    const empty: EvidenceLedger = { ...ledger, evidence: [], acceptedMarkers: new Set() };
+    const unsupported = finalizeGroundedAnswer({ question: "How should we export evidence?", answer: "", ledger: empty });
+    const gapSnippet = archiveAnswerSnippet(confidenceBanner(unsupported, { level: "Low", reason }, "en"));
+    expect(unsupported).toContain("No supported answer.");
+    expect(gapSnippet).toContain("Evidence gap: no qualifying excerpt for this research target.");
+    expect(gapSnippet).not.toContain("No supported answer");
+  });
+
+  it.each([
+    ["vi", "Độ tin cậy thấp", "Giữ biên nhận cạnh trích đoạn đã dẫn."],
+    ["pt", "Baixa confiança", "Mantenha o recibo ao lado do trecho citado."],
+    ["es", "Confianza baja", "Conserve el recibo junto al fragmento citado."],
+  ] as const)("skips the %s grounding lead and keeps the original sentence", (language, label, finding) => {
+    const claim = "What should the export include?";
+    const quote = "Keep the original receipt.";
+    const ledger: EvidenceLedger = {
+      evidence: [{ claimIndex: 0, claim, marker: "S1", sourceId: "s1", sourceName: "Keryx", quote, support: 0.2, qualifiesForAnswer: true, qualifiesForReward: false }],
+      claimCoverage: [{ claimIndex: 0, claim, coverage: 0.2, coveredBy: ["S1"] }],
+      acceptedMarkers: new Set(["S1"]),
+      droppedEvidence: 0,
+      droppedCitations: [],
+    };
+    const grounded = finalizeGroundedAnswer({
+      question: "How should we export evidence?", answer: "", ledger,
+      statements: [{ claimIndex: 0, marker: "S1", quote, text: finding }],
+      presentation: { language },
+    });
+    const raw = confidenceBanner(grounded, { level: "Low", reason: "Motivo registrado." }, language);
+    const snippet = archiveAnswerSnippet(raw);
+    expect(raw).toContain(finding);
+    expect(snippet.startsWith(`⚠ ${label} — ${finding}`)).toBe(true);
+    expect(snippet).not.toContain("Research target");
+    expect(snippet).not.toContain("Yêu cầu nghiên cứu");
+    expect(snippet).not.toContain("Objetivo de");
+  });
+
+  it("does not strip a delivery lead or target label that has no later sentence", () => {
+    const only = "Model-written summary with sentence-level citations. Each sentence is followed by the verbatim source text it was checked against; sentences without a qualifying excerpt were removed.";
+    expect(extractiveAnswerPreview(only)).toBeNull();
+    expect(archiveAnswerSnippet(only)).toBe(only);
+    const label = "Research target 1 Requested topic (unverified): “Only the topic.”";
+    expect(extractiveAnswerPreview(label)).toBeNull();
+    expect(archiveAnswerSnippet(label)).toBe(label);
+    expect(extractiveAnswerPreview("Model-written notes belong in the lab book.")).toBeNull();
   });
 
   it("does not strip a caveat that has no later sentence or no recognized closer", () => {

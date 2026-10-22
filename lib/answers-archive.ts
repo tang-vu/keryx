@@ -42,6 +42,34 @@ const OPENING_CAVEATS = [
   { label: "Confianza baja", closer: "Trate este resultado como provisional." },
 ] as const;
 
+/** Exact introductions from the current grounded-answer writer. A later
+ * original sentence may follow one of these; the stored answer is not edited. */
+const DELIVERY_LEADS = [
+  "Model-written summary with sentence-level citations. Each sentence is followed by the verbatim source text it was checked against; sentences without a qualifying excerpt were removed.",
+  "Source excerpts only. The draft is withheld as a conclusion; complete synthesis is unverified. Qualifying source excerpts are quoted below. Research targets are topics to investigate, not established conclusions.",
+  "No supported answer. Synthesis or evidence review did not complete; evidence for the research targets could not be assessed. Original reads and receipts are retained.",
+  "No supported answer. The read content supplied no qualifying excerpts for the research targets; the draft is withheld as a conclusion.",
+  "Tóm tắt do mô hình viết, trích dẫn theo từng câu. Sau mỗi câu là nguyên văn đoạn nguồn mà câu đó đã được đối chiếu; câu không có trích đoạn đủ điều kiện đã bị loại.",
+  "Bản nháp không được giữ như kết luận. Dưới đây chỉ giữ các trích đoạn nguồn đủ điều kiện; chưa xác minh được câu trả lời tổng hợp đầy đủ. Các chủ đề nghiên cứu không phải kết luận đã được chứng minh.",
+  "Chưa có câu trả lời được bằng chứng hỗ trợ. Bước tổng hợp hoặc kiểm tra bằng chứng chưa hoàn tất; chưa thể đánh giá bằng chứng cho các yêu cầu nghiên cứu. Kết quả đọc và biên nhận gốc vẫn được giữ.",
+  "Chưa có câu trả lời được bằng chứng hỗ trợ. Nội dung đã đọc chưa cung cấp trích đoạn đủ điều kiện cho các yêu cầu nghiên cứu; bản nháp không được giữ như kết luận.",
+  "Resumo escrito por modelo, com citações por frase. Cada frase aparece junto ao trecho original usado na sua verificação.",
+  "Apenas trechos das fontes; o rascunho foi retido e a síntese completa permanece não verificada.",
+  "Não há resposta sustentada: a síntese ou a revisão das evidências não foi concluída. Leituras e recibos originais foram preservados.",
+  "Não há resposta sustentada: o conteúdo lido não forneceu trechos qualificados para os objetivos de pesquisa.",
+  "Resumen escrito por un modelo, con citas por frase. Cada frase aparece junto al texto original utilizado para revisarla.",
+  "Solo fragmentos de las fuentes; el borrador no se presenta como conclusión y la síntesis completa sigue sin verificarse.",
+  "No hay una respuesta respaldada: la síntesis o la revisión de las evidencias no se completó. Se conservan las lecturas y los recibos originales.",
+  "No hay una respuesta respaldada: el contenido leído no proporcionó fragmentos admitidos para los objetivos de investigación.",
+] as const;
+
+const TARGET_LABELS = [
+  { heading: "Research target", topic: "Requested topic (unverified)" },
+  { heading: "Yêu cầu nghiên cứu", topic: "Chủ đề yêu cầu (chưa xác minh)" },
+  { heading: "Objetivo de pesquisa", topic: "Tema solicitado (não verificado)" },
+  { heading: "Objetivo de investigación", topic: "Tema solicitado (no verificado)" },
+] as const;
+
 /** Normalize a question for dedupe: lowercase, collapse whitespace, drop trailing punctuation. */
 export function normalizeQuestion(q: string): string {
   return q.toLowerCase().replace(/\s+/g, " ").trim().replace(/[?!.\s]+$/, "");
@@ -57,20 +85,87 @@ export function cleanText(s: string): string {
     .trim();
 }
 
+function stripExactLead(text: string, lead: string): string | null {
+  if (!text.startsWith(lead)) return null;
+  const rest = text.slice(lead.length).trim();
+  return rest || null;
+}
+
+function bulletNotice(count: number): string[] {
+  return [
+    `Could not present ${count} short bullets while preserving every target and qualifying excerpt; the target layout follows.`,
+    `Chưa thể trình bày ${count} gạch đầu dòng ngắn mà vẫn giữ mọi yêu cầu và trích đoạn đủ điều kiện; các yêu cầu được trình bày bên dưới.`,
+    `Não foi possível apresentar ${count} tópicos curtos preservando todos os objetivos e trechos qualificados; os objetivos são apresentados abaixo.`,
+    `No fue posible presentar ${count} puntos breves conservando todos los objetivos y fragmentos admitidos; los objetivos se presentan a continuación.`,
+  ];
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+}
+
+/** Skip one exact target heading and its quoted requested topic when a later
+ * sentence remains. A topic whose quote contains a closing curly quote stays. */
+function skipTargetLabel(text: string): string | null {
+  for (const label of TARGET_LABELS) {
+    const pattern = new RegExp(`^${escapeRegExp(label.heading)} \\d+ ${escapeRegExp(label.topic)}: “[^”]*”\\s+([\\s\\S]+)$`, "u");
+    const match = pattern.exec(text);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+}
+
+/** Skip the fixed layout sentences that follow a confidence closer, or open an
+ * unbannered answer. Evidence-gap and limitation sentences are not leads. */
+function skipDeliveryLead(text: string): string | null {
+  let rest = text;
+  let changed = false;
+  for (let count = 1; count <= 8 && !changed; count++) {
+    for (const lead of bulletNotice(count)) {
+      const notice = stripExactLead(rest, lead);
+      if (!notice) continue;
+      rest = notice;
+      changed = true;
+      break;
+    }
+  }
+  for (const lead of DELIVERY_LEADS) {
+    const next = stripExactLead(rest, lead);
+    if (!next) continue;
+    rest = next;
+    changed = true;
+    break;
+  }
+  const afterTarget = skipTargetLabel(rest);
+  if (afterTarget) {
+    rest = afterTarget;
+    changed = true;
+  }
+  return changed ? rest : null;
+}
+
 /** When cleaned prose starts with a known delivery caveat and a later sentence
  * exists, keep the original short caution and return that later sentence.
- * Anything else, including a caveat with no following sentence, stays intact. */
+ * A following fixed grounding introduction and the first target label are
+ * skipped the same way. Anything else, including a caveat or lead with no
+ * following sentence, stays intact. */
 export function extractiveAnswerPreview(cleaned: string): string | null {
+  let caution: string | null = null;
+  let body = cleaned;
   for (const caveat of OPENING_CAVEATS) {
     const prefix = `⚠ ${caveat.label} — `;
     if (!cleaned.startsWith(prefix)) continue;
     const at = cleaned.indexOf(caveat.closer, prefix.length);
     if (at < 0) return null;
-    const body = cleaned.slice(at + caveat.closer.length).trim();
-    if (!body) return null;
-    return `${prefix}${body}`;
+    const rest = cleaned.slice(at + caveat.closer.length).trim();
+    if (!rest) return null;
+    caution = prefix;
+    body = rest;
+    break;
   }
-  return null;
+  const later = skipDeliveryLead(body);
+  if (later === null) return caution ? `${caution}${body}` : null;
+  return caution ? `${caution}${later}` : later;
 }
 
 function boundedPreview(text: string, limit: number, ellipsis: boolean): string {
@@ -85,7 +180,7 @@ export function archiveAnswerSnippet(answer: string): string {
   return boundedPreview(extractiveAnswerPreview(cleaned) ?? cleaned, SNIPPET_LEN, true);
 }
 
-/** Dispatch metadata excerpt. Unbannered answers keep the historical raw slice. */
+/** Dispatch metadata excerpt. Answers with no recognized lead keep the historical raw slice. */
 export function metadataAnswerExcerpt(answer: string): string {
   const extracted = extractiveAnswerPreview(cleanText(answer));
   if (extracted === null) return answer.slice(0, METADATA_EXCERPT_LEN).replace(/\n/g, " ");
