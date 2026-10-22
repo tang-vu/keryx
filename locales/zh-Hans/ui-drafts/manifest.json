@@ -11,10 +11,10 @@
   "totals": {
     "englishNamespaceFiles": 72,
     "coreInlineSources": 1,
-    "extractedLeaves": 6176,
+    "extractedLeaves": 6182,
     "authoredEntries": 5941,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 206,
+    "uncoveredEntries": 212,
     "completeNamespaces": 67
   },
   "namespaces": [
@@ -7118,9 +7118,9 @@
     {
       "namespace": "research-guides",
       "sourcePath": "locales/en/research-guides.ts",
-      "sourceSha256": "7dc7d3b0db88685dc4dc71f5d80d826a3f721a504160042f8359ad7ffae8ef6c",
+      "sourceSha256": "f22ce1a334d53f3701a33f078314fc5c24d66b26b75961785a47a5260decb473",
       "draftPath": "locales/zh-Hans/ui-drafts/research-guides.json",
-      "extractedLeaves": 147,
+      "extractedLeaves": 153,
       "authoredEntries": 7,
       "coveredKeys": [
         "allGuides",
@@ -7237,6 +7237,7 @@
         "tool.fileErrors.encoding",
         "tool.fileErrors.format",
         "tool.fileErrors.headers",
+        "tool.fileErrors.library",
         "tool.fileErrors.limits",
         "tool.fileErrors.questions",
         "tool.fileErrors.read",
@@ -7248,6 +7249,11 @@
         "tool.importedQuestion",
         "tool.incomingCount",
         "tool.intro",
+        "tool.libraryHelp",
+        "tool.libraryIncompleteAuthors",
+        "tool.libraryLink",
+        "tool.libraryLoaded",
+        "tool.libraryNotice",
         "tool.limit",
         "tool.loaded",
         "tool.localNotice",

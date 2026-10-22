@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { useUiCopy } from "@/lib/i18n/ui-copy";
 import { emptyMatrixRow, literatureMatrixCsv, MATRIX_FIELDS, MAX_MATRIX_CELL_CHARS, MAX_MATRIX_ROWS, type MatrixField, type MatrixRow } from "@/lib/research-tools/literature-matrix";
-import { appendLiteratureMatrix, literatureMatrixJson, MatrixFileError, MAX_MATRIX_FILE_BYTES, readLiteratureMatrixFile, type MatrixDocument } from "@/lib/research-tools/literature-matrix-file";
+import { appendLiteratureMatrix, literatureMatrixJson, MatrixFileError, MAX_MATRIX_FILE_BYTES, readLiteratureMatrixFile, type MatrixDocument, type MatrixFileKind } from "@/lib/research-tools/literature-matrix-file";
 import { researchGuidesCopy } from "@/locales/en/research-guides";
 
 const fieldClass = "mt-2 block min-h-11 w-full min-w-0 rounded-none border border-line bg-paper-2 px-3 py-2 font-serif text-base text-ink";
@@ -17,7 +18,7 @@ export function LiteratureReviewMatrix() {
   const [rows, setRows] = useState<{ id: number; value: MatrixRow }[]>([]);
   const [status, setStatus] = useState("");
   const [failure, setFailure] = useState("");
-  const [pending, setPending] = useState<{ document: MatrixDocument; filename: string; kind: "csv" | "json"; revision: number }>();
+  const [pending, setPending] = useState<{ document: MatrixDocument; filename: string; kind: MatrixFileKind; revision: number }>();
   const [reading, setReading] = useState(false);
   const [revision, setRevision] = useState(0), [savedRevision, setSavedRevision] = useState(0);
   const currentRevision = useRef(0), importGeneration = useRef(0);
@@ -73,8 +74,8 @@ export function LiteratureReviewMatrix() {
     catch { setFailure(appendIssue); return; }
     setQuestion(next.question); setRows(next.rows.map(value => ({ id: nextId.current++, value })));
     changed();
-    if (!append) setSavedRevision(currentRevision.current);
-    setPending(undefined); setStatus(append ? copy.appended : copy.loaded);
+    if (!append && pending.kind !== "library") setSavedRevision(currentRevision.current);
+    setPending(undefined); setStatus(pending.kind === "library" ? copy.libraryLoaded : append ? copy.appended : copy.loaded);
   }
   return <section aria-labelledby="matrix-heading" className="mt-8 border border-ink bg-paper p-4 sm:p-7">
     <h2 id="matrix-heading" className="font-display text-2xl text-ink">{copy.title}</h2>
@@ -103,6 +104,7 @@ export function LiteratureReviewMatrix() {
       <input id={`${prefix}-file`} type="file" accept=".json,.csv,application/json,text/csv" className="mt-3 block min-h-11 w-full min-w-0 max-w-full font-serif text-sm text-ink-2 file:mr-3 file:min-h-11 file:border file:border-ink file:bg-paper-2 file:px-3 file:font-mono file:text-xs file:text-seal"
         aria-describedby={`${prefix}-file-help`} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void openFile(file); }} />
       <p id={`${prefix}-file-help`} className="mt-2 max-w-[78ch] font-serif text-sm leading-relaxed text-ink-3">{copy.fileHelp}</p>
+      <p className="mt-3 max-w-[78ch] font-serif text-sm leading-relaxed text-ink-2">{copy.libraryHelp} <Link href="/literature" prefetch={false} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-seal underline underline-offset-4">{copy.libraryLink}</Link></p>
       {reading && <p role="status" className="mt-3 font-serif text-seal">{copy.reading}</p>}
       {pending && <section aria-labelledby={`${prefix}-preview`} className="mt-4 min-w-0 border border-line bg-paper-2 p-4">
         <h3 id={`${prefix}-preview`} className="font-display text-xl text-ink">{copy.preview}</h3>
@@ -118,6 +120,7 @@ export function LiteratureReviewMatrix() {
         <p className="mt-3 max-w-[75ch] font-serif text-sm leading-relaxed text-ink-2">{copy.replaceWarning}</p>
         <p className="mt-3 max-w-[75ch] font-serif text-sm leading-relaxed text-ink-3">{copy.appendNotice}</p>
         {pending.kind === "csv" && <p className="mt-3 max-w-[75ch] font-serif text-sm leading-relaxed text-ink-3">{copy.csvNotice}</p>}
+        {pending.kind === "library" && <p className="mt-3 max-w-[75ch] whitespace-pre-wrap font-serif text-sm leading-relaxed text-seal">{copy.libraryNotice}</p>}
         {(stale || appendIssue) && <p role="status" className="mt-3 font-serif text-sm text-seal">{stale ? copy.staleImport : appendIssue}</p>}
         <div className="mt-4 flex flex-wrap gap-3">
           <button type="button" className={buttonClass} disabled={stale || !!appendIssue || !pending.document.rows.length} onClick={() => applyImport(true)}>{copy.append}</button>
