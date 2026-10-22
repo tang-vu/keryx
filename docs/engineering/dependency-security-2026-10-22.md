@@ -108,6 +108,11 @@ fixtures use synthetic data, Arc testnet/offline settings and isolated storage;
 they do not establish mainnet settlement or runtime delivery. Full applicable
 hosted acceptance and the existing coordinated runtime release remain required.
 
+The 48-trial offline study was also reproduced and checked against this lock.
+Its outputs and all 468 application source bindings stayed identical; only the
+lock hash and that hash in the generated write-up changed. This updates provenance
+without treating synthetic results as live user or settlement evidence.
+
 The separate stdio MCP lock already contains `fast-uri` 3.1.8, Hono 4.13.12 and
 `ip-address` 10.7.2, at or above the three advisory patch boundaries. Its manifest
 and lock are unchanged by this follow-up. Its host executable still needs the
