@@ -20,9 +20,11 @@ See the [vendor security release](https://nextjs.org/blog/nextjs-security-update
 The October 22 npm audit result did not enumerate these Next advisories, so its
 severity totals alone cannot establish that the framework is patched.
 
-The lock update changes the Next framework, its matching environment/SWC packages
-and matching ESLint configuration/plugin. It preserves every other package record,
-including React 19.2.8, sharp 0.35.5 and the Circle/wallet/payment closure. The React
+The framework portion of the update changes Next, its matching environment/SWC
+packages and matching ESLint configuration/plugin. At that stage it preserved
+every other package record, including React 19.2.8, sharp 0.35.5 and the
+Circle/wallet/payment closure. The compatible three-record follow-up is described
+below. The React
 advisories concern `react-server-dom-*`; Next ships its own compiled server
 implementation. Updating only the application React packages would not establish
 that the framework contains these fixes.
@@ -75,14 +77,59 @@ These security pins replace the older Node 24.21.0/22.19.0 examples in retained
 setup and release documentation; all other release, isolation and custody
 requirements remain in force.
 
+## Compatible production dependency follow-up
+
+The root lock also advances exactly three existing package records, with no
+manifest change and no added or removed packages:
+
+| Package | Root lock change | Advisory and reviewed use |
+| --- | --- | --- |
+| `fast-uri` | 3.1.7 → 3.1.9 | [GHSA-hrr3-gc8f-f4qj](https://github.com/fastify/fast-uri/security/advisories/GHSA-hrr3-gc8f-f4qj), patched in 3.1.8: inconsistent host case normalization with encoded octets. AJV uses this resolver; MCP SDK 1.32.1 constructs its default AJV provider. Keryx's tools use Zod and do not expose arbitrary schema/form elicitation, so the specific host-policy bypass is not demonstrated on the public route. |
+| `hono` | 4.13.7 → 4.13.13 | [GHSA-5r4p-p66f-jhc7](https://github.com/honojs/hono/security/advisories/GHSA-5r4p-p66f-jhc7), patched in 4.13.11: static-file path decoding can bypass middleware mounted on a protected prefix. Hono is present in the SDK example closure; Keryx's `/mcp` and mandate MCP routes use Web Standard transport and do not serve files through Hono. |
+| `ip-address` | 10.5.0 → 10.7.4 | [GHSA-h3mg-xc3c-68pw](https://github.com/beaugunderson/ip-address/security/advisories/GHSA-h3mg-xc3c-68pw), patched in 10.7.1: unbounded IPv6 parse diagnostics. It is pulled through `express-rate-limit` in the SDK OAuth helpers. Keryx's routes retain their own key, IP, scope and rate-limit admission rather than mounting those helpers. |
+
+The review distinguishes installed dependency presence from a demonstrated
+exploitable application path. It does not remove guards or declare the remaining
+closure unreachable. SDK, AJV, React, Next, Circle/wallet/payment packages and all
+other package records retain their existing versions.
+
+Bounded in-memory probes reproduce the old encoded-host inconsistency and a
+Hono malformed-percent protected-file bypass, then confirm refusal/canonicalization
+with the patched libraries. An 8 KiB invalid IPv6 string previously produced a
+278,528-character diagnostic; the new parser rejects it with a typed, short error
+and no expanded diagnostic. Valid IPv6 and the rate-limit helper remain compatible.
+The actual SDK validator retains valid/invalid data, local references and caching.
+These probes made no external requests and did not run destructive oversized inputs.
+
+Fifty-three existing HTTP/MCP/rate-limit cases pass on the isolated new graph,
+including stateless initialize/list/call, body bounds and deadlines, origin/scoped
+access refusal, private-history fences and durable rate-limit behavior. Local
+fixtures use synthetic data, Arc testnet/offline settings and isolated storage;
+they do not establish mainnet settlement or runtime delivery. Full applicable
+hosted acceptance and the existing coordinated runtime release remain required.
+
+The 48-trial offline study was also reproduced and checked against this lock.
+Its outputs and all 468 application source bindings stayed identical; only the
+lock hash and that hash in the generated write-up changed. This updates provenance
+without treating synthetic results as live user or settlement evidence.
+
+The separate stdio MCP lock already contains `fast-uri` 3.1.8, Hono 4.13.12 and
+`ip-address` 10.7.2, at or above the three advisory patch boundaries. Its manifest
+and lock are unchanged by this follow-up. Its host executable still needs the
+Node security release, independently of package audit results.
+
 ## Audit residuals and release boundaries
 
-The unchanged baseline root production lock audit returned **0 high/critical,
-20 moderate and 7 low package records**. The full root audit, including development
-tools, returned 19 high and 1 critical package records. Counts include transitive
+The baseline root production lock audit returned **0 high/critical, 20 moderate
+and 7 low package records**. After the three compatible root records above, the
+fresh production audit returns **0 high/critical, 17 moderate and 7 low**. The
+baseline full root audit, including development tools, returned 19 high and
+1 critical package records. Counts include transitive
 propagation and are not distinct CVE counts or evidence of exploitation.
-Development/worker updates remain necessary, including Vitest/Vite/Handlebars and
-the separate Cloudflare sharp/Undici closures. Preserve the existing production
+Development tool updates remain necessary, including Vitest/Vite/Handlebars.
+The separate Cloudflare sharp/Undici toolchain closures have their own reviewed
+[Worker update](https://github.com/tang-vu/keryx/pull/637) and independent lock,
+vendor-build and native-runtime acceptance. Preserve the existing production
 high/critical gate. Do not apply forced Hardhat major upgrades, Miniflare downgrades
 or incompatible overrides to silence an audit.
 
@@ -94,7 +141,7 @@ Web/API/remote MCP and root CLI/bots use the root installation and require the
 updated runtime artifact. Desktop and the browser extension keep their existing
 hosted-service handoffs. The standalone stdio MCP package has its own unchanged
 dependency closure and updated engine requirement, but its host Node executable
-still needs the Node security release. Separate Cloudflare locks and Rust locks
-are unchanged by this outcome. Version
+still needs the Node security release. The root follow-up does not modify the
+separate Cloudflare or Rust locks, configure a Worker or change schedules. Version
 allocation, installer/package publication and deployment stay with the existing
 release owner; merged source is not proof of an installed runtime update.
