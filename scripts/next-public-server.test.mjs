@@ -94,7 +94,7 @@ test('pinned production Next sees public HTTPS origin on a private ephemeral soc
     await writeFile(join(dir, 'public', 'pixel.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1cAAAAASUVORK5CYII=', 'base64'));
     for (const file of ['lib/web-research/extraction-worker.ts', 'lib/web-research/html-reader.ts',
       'lib/web-research/html-reader-worker.mjs', 'lib/web-research/html-content-worker.mjs', 'lib/web-research/html-visibility.mjs',
-      'lib/web-research/pdf-reader.ts', 'lib/web-research/pdf-reader-worker.mjs',
+      'lib/web-research/pdf-reader.ts', 'lib/web-research/pdf-reader-worker.mjs', 'lib/web-research/pdf-text-scope.ts',
       'lib/web-research/parser-slots.ts', 'lib/web-research/html-text-layout.ts',
       'lib/research/arxiv-bibliography-page.ts', 'lib/research/arxiv-bibliography-worker.mjs',
       'lib/research/bibliographic-original-types.ts', 'lib/scholarly/doi.ts', 'lib/scholarly/arxiv-identity.ts']) {

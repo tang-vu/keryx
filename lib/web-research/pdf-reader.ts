@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { extractionWorker } from "./extraction-worker";
 import { acquireParserSlot } from "./parser-slots";
+import { pdfTextScopeSchema, pdfTextScopeTruncated } from "./pdf-text-scope";
 
 export interface PdfExtractionOptions {
   signal?: AbortSignal;
@@ -14,6 +15,8 @@ export interface PdfExtraction {
   pagesRead: number;
   totalPages: number;
   truncated: boolean;
+  pagesWithoutText: number[];
+  textLimitReached: boolean;
 }
 
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -62,7 +65,11 @@ export async function extractPdfText(bytes: Uint8Array, options: PdfExtractionOp
             !Number.isInteger(value.pagesRead) || value.pagesRead < 1 || value.pagesRead > options.maxPages ||
             !Number.isInteger(value.totalPages) || value.totalPages < value.pagesRead ||
             typeof value.truncated !== "boolean") throw failure();
-        resolve(value);
+        const scope = pdfTextScopeSchema.safeParse({ format: "keryx-pdf-text-scope-v1", pagesRead: value.pagesRead,
+          totalPages: value.totalPages, pagesWithoutText: value.pagesWithoutText, textLimitReached: value.textLimitReached });
+        if (!scope.success || value.truncated !== pdfTextScopeTruncated(scope.data)) throw failure();
+        resolve({ text: value.text, pagesRead: value.pagesRead, totalPages: value.totalPages, truncated: value.truncated,
+          pagesWithoutText: scope.data.pagesWithoutText, textLimitReached: scope.data.textLimitReached });
       } catch { reject(failure()); }
     };
     child.stdout!.setEncoding("utf8");

@@ -122,10 +122,11 @@ test("actual completed result selection/import exports retain all 23 original so
   }
 });
 
-test("all 72 existing English namespaces and core-inline are source-extractable without importing them", () => {
+test("all 73 existing English namespaces and core-inline are source-extractable without importing them", () => {
   const directory = new URL("../locales/en/", import.meta.url);
   const files = readdirSync(directory).filter(file => /\.(ts|json|cjs)$/.test(file));
-  assert.equal(files.length, 72);
+  assert.equal(files.length, 73);
+  assert(files.includes("pdf-reading.ts"));
   assert(files.includes("about-story.ts"));
   assert(files.includes("wallet-workspace.ts"));
   assert(files.includes("evidence-draft-restore.ts"));

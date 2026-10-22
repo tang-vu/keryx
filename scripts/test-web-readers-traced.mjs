@@ -50,6 +50,8 @@ try {
   assert.ok(readable.text.includes(passage.trim())); assert.equal(readable.kind, "html");
   const extractedPdf = await worker("pdf-reader-worker.mjs", ["2", "1000"], pdf("Original PDF evidence"));
   assert.equal(extractedPdf.text, "Original PDF evidence"); assert.equal(extractedPdf.pagesRead, 1);
+  assert.deepEqual(extractedPdf.pagesWithoutText, []); assert.equal(extractedPdf.textLimitReached, false);
+  assert.equal(extractedPdf.truncated, false);
   console.log("Assembled production trace: actual HTML and PDF extraction passed (no network or secrets).");
 } finally {
   assert.equal(path.dirname(path.resolve(assembled)), path.resolve(tmpdir()));

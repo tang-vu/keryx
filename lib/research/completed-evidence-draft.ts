@@ -11,6 +11,8 @@ import { literatureWorkspaceSchema } from "../papers/literature-workspace";
 import { assembleEvidenceDraftRequest, buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace,
   parseEvidenceDraftRequest, retainedDraftExcerpts, type EvidenceDraftRequest } from "./evidence-draft";
 import { exportEvidenceDraft } from "./evidence-draft-export";
+import { pdfTextScopeSchema, pdfTextScopeTruncated } from "../web-research/pdf-text-scope";
+import { pdfReadingNotice } from "./pdf-reading";
 
 export const COMPLETED_READ_CAPABILITY = "owned-private-completed-read-v1" as const;
 export const MAX_COMPLETED_SNAPSHOT_BYTES = 262_144;
@@ -56,7 +58,8 @@ const receipt = z.object({ bodyHash: z.string().regex(/^0x[a-f0-9]{64}$/).option
   plaintextBytes: z.number().int().nonnegative().max(16 * 1024 * 1024),
   manifestId: text(200).optional(), manifestSigner: text(200).optional(), manifest: z.unknown().optional() }).strict();
 const web = z.object({ retrievedAt: date, publisherGroup: text(200), normalizedBodyHash: text(80),
-  extraction: z.enum(["html", "text", "pdf"]), truncated: z.boolean() }).strict();
+  extraction: z.enum(["html", "text", "pdf"]), truncated: z.boolean(), pdfTextScope: pdfTextScopeSchema.optional() }).strict()
+  .refine(value => !value.pdfTextScope || value.extraction === "pdf" && (!pdfTextScopeTruncated(value.pdfTextScope) || value.truncated));
 const identity = {
   sourceId: identifier, sourceName: text(1000), marker: z.string().regex(/^S[1-9]\d{0,2}$/),
   itemId: identifier.optional(), itemTitle: text(1000).optional(), itemUrl: https.optional(), contentVersion: version.optional(),
@@ -208,7 +211,11 @@ export async function loadCompletedEvidenceDraft(context: CompletedReadContext, 
           && extractAnswerMarkers(run.answer).has(row.marker) && retainedBodyBinding(row, citation);
       });
       if (!valid.length) observations.push({ paperUrl: selected.itemUrl, status: "unavailable", reason: "No eligible version-bound retained body excerpt is available." });
-      else { admitted.push(...valid); observations.push({ paperUrl: selected.itemUrl, status: "retained", reason: "Authenticated saved ledger; semantic support is unjudged." }); }
+      else {
+        admitted.push(...valid);
+        const pdf = valid[0].webProvenance?.extraction === "pdf" ? pdfReadingNotice(valid[0].webProvenance.pdfTextScope) : "";
+        observations.push({ paperUrl: selected.itemUrl, status: "retained", reason: ["Authenticated saved ledger; semantic support is unjudged.", pdf].filter(Boolean).join(" ") });
+      }
     }
     // Re-read the same owner-bound completion before disclosure. Exact bytes,
     // signature-bearing intent and worker claim must still match the first read.
