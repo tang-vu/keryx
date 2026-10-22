@@ -9,12 +9,12 @@
   "scope": "All 71 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
   "financialLegalConsent": "Unreviewed; critical English-authoritative fallback until actual named-human review. Neutral machine-draft UI is integrated only in explicit previews.",
   "totals": {
-    "englishNamespaceFiles": 71,
+    "englishNamespaceFiles": 72,
     "coreInlineSources": 1,
-    "extractedLeaves": 6175,
+    "extractedLeaves": 6176,
     "authoredEntries": 5941,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 205,
+    "uncoveredEntries": 206,
     "completeNamespaces": 67
   },
   "namespaces": [
@@ -1152,6 +1152,20 @@
       ],
       "nonTranslatableMachineIdentifiers": [],
       "uncoveredKeys": [],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "evidence-matrix-export",
+      "sourcePath": "locales/en/evidence-matrix-export.ts",
+      "sourceSha256": "0590e48a8c18ef8d12e01d9acc643b7382030cc2e7277743a7e88a9e16b5d974",
+      "draftPath": "locales/zh-Hans/ui-drafts/evidence-matrix-export.json",
+      "extractedLeaves": 1,
+      "authoredEntries": 0,
+      "coveredKeys": [],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [
+        "downloadMarkdown"
+      ],
       "sourceAliases": {}
     },
     {
