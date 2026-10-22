@@ -66,6 +66,9 @@ SHA-256 values and executed locally. The binary SHA-256 is
 `d702daa815eabbff763c7d3808e235cf031cf2ca70211b56847bc72f51e240e5`.
 Merged source does not replace an older running process, installation or builder
 image. Those remain with the existing release owner.
+These security pins replace the older Node 24.21.0/22.19.0 examples in retained
+setup and release documentation; all other release, isolation and custody
+requirements remain in force.
 
 ## Audit residuals and release boundaries
 

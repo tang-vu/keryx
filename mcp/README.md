@@ -391,7 +391,8 @@ claiming these source tools are installed. See
 | `keryx_wallet_status` | Report configured caller custody and balances, or missing-custody/merchant-policy guidance. Never creates or replaces a wallet. |
 | `keryx_recover` | Inspect the original saved payment or funding attempt. Performs reads; never submits another payment, approval or deposit. |
 
-Version **0.4.0** changes local setup. Use Node.js **22.19+ in the 22 LTS line, or 24+**.
+Version **0.4.0** changes local setup. Use a patched Node.js **22.23.4+ in the 22 LTS line,
+24.22.1+ in the 24 LTS line, or 26.12.1 and later**.
 Builds use the repository's pinned npm 11.19.0 installer. Critical consumer dependencies are
 pinned to Circle x402 batching 3.5.0 and viem 2.55.19.
 
