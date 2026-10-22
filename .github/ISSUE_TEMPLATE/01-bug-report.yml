@@ -1,0 +1,51 @@
+name: Bug report
+description: Report reproducible incorrect behavior. English and Vietnamese are welcome.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For vulnerabilities, use [private security reporting](https://github.com/tang-vu/keryx/security/advisories/new).
+        Do not include keys, tokens, private questions, environment files or unredacted payment records.
+        For payment uncertainty, preserve the original job and do not repeat a purchase to reproduce it.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Use synthetic or redacted data. Include the page or command and a minimal example if possible.
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - Web
+        - Windows desktop
+        - CLI
+        - API
+        - MCP (remote or stdio)
+        - Browser extension
+        - Bot
+        - Other or unsure
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Version and environment
+      description: App/package version or commit, browser/OS, command, and offline/testnet/mainnet context. Write unknown if unavailable.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted evidence (optional)
+      description: Relevant error text, logs or screenshots. Remove secrets and personal information before posting.

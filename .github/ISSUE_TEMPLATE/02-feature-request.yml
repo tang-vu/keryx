@@ -1,0 +1,28 @@
+name: Feature request
+description: Describe a user need and a concrete improvement. English and Vietnamese are welcome.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. Keep private research and account details out of public reports.
+        See the [contribution guide](https://github.com/tang-vu/keryx/blob/main/CONTRIBUTING.md).
+  - type: textarea
+    id: need
+    attributes:
+      label: What are you trying to do?
+      description: Describe the task, who it helps, and where the current experience falls short.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Explain the result you would expect. Include the affected surface and how you would know it works.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and constraints (optional)
+      description: Workarounds tried, accessibility needs, compatibility, and any payment or privacy implications.

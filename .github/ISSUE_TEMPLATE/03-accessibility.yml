@@ -1,0 +1,34 @@
+name: Accessibility barrier
+description: Tell us what prevents you from using Keryx. English and Vietnamese are welcome.
+title: "[Accessibility]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        See the [accessibility statement](https://github.com/tang-vu/keryx/blob/main/ACCESSIBILITY.md).
+        You do not need a WCAG reference or disability disclosure to report a barrier.
+        For private reports, email support@keryx.cc. Remove personal information from screenshots and logs.
+  - type: textarea
+    id: barrier
+    attributes:
+      label: Task and barrier
+      description: What were you trying to do, on which page or surface, and what prevented it?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What would let you complete the task?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (optional)
+      description: Browser/app version, OS, assistive technology, input method, zoom or display settings, if known.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Steps or redacted evidence (optional)
+      description: Reproduction steps, error text, screenshots, recordings or a workaround that helped.
