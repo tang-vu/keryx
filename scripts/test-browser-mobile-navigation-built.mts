@@ -6,8 +6,9 @@ import { once } from "node:events";
 import { mkdtemp, symlink, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
-import { chromium, webkit, type Route } from "playwright";
+import { chromium, webkit, type BrowserContext, type Route } from "playwright";
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
+import { drainBrowserRoutes } from "../test-support/drain-browser-routes";
 
 const source = process.cwd(), temporary = await mkdtemp(join(tmpdir(), "keryx-mobile-navigation-"));
 assert(resolve(temporary).startsWith(resolve(tmpdir()) + sep));
@@ -20,6 +21,7 @@ let child: ReturnType<typeof spawn> | undefined, didExit = false, stopped: Promi
 const engine = process.argv.includes("--webkit") ? webkit : chromium;
 const browser = await engine.launch({ headless: true });
 let held: Route | undefined;
+let context: BrowserContext | undefined;
 try {
   await copyNextConfigFixture(source, temporary);
   await symlink(join(source, "node_modules"), join(temporary, "node_modules"), process.platform === "win32" ? "junction" : "dir");
@@ -42,7 +44,7 @@ try {
     await new Promise(done => setTimeout(done, 250));
   }
   assert(ready, `Built navigation server unavailable: ${output}`);
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await context.newPage();
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -75,13 +77,18 @@ try {
   await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ state: "detached" });
   assert.equal((await fetch(`${physicalOrigin}/does-not-exist`)).status, 404, "Unrelated not-found status remains unchanged");
   assert.deepEqual(errors, []);
-  console.log(`PASS (${engine.name()}): built dynamic route partially prefetches; real touch navigation displays loading before delayed response; final header restores; no wallet flow in fallback; unrelated 404 preserved. Offline disposable store, GET only.`);
-  await context.close();
 } finally {
-  if (held) await held.abort().catch(() => undefined);
-  await browser.close();
-  if (child && !didExit) { child.kill(); await stopped; }
-  assert(!child || didExit, "Observe server exit before removing disposable fixture");
-  // Only our checked temporary fixture is removed; node_modules/.next are links.
-  await rm(temporary, { recursive: true, force: true });
+  try {
+    if (held) await held.abort().catch(() => undefined);
+    if (context) await drainBrowserRoutes(context);
+  } finally {
+    try { await browser.close(); }
+    finally {
+      if (child && !didExit) { child.kill(); await stopped; }
+      assert(!child || didExit, "Observe server exit before removing disposable fixture");
+      // Only our checked temporary fixture is removed; node_modules/.next are links.
+      await rm(temporary, { recursive: true, force: true });
+    }
+  }
 }
+console.log(`PASS (${engine.name()}): built dynamic route partially prefetches; real touch navigation displays loading before delayed response; final header restores; no wallet flow in fallback; unrelated 404 preserved. Offline disposable store, GET only.`);
