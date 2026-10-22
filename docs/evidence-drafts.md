@@ -159,6 +159,22 @@ IDs identify rows; literal row bytes additionally bind user assessments. Changed
 claim text, references, selected excerpts or row bytes invalidate an assessment.
 Reviewer names and timestamps are assertions, not verified identity or expert review.
 
+Valid recorded PDF text scope is retained when the citation and its eligible
+evidence row contain matching `webProvenance.pdfTextScope` observations. The draft,
+editable backup, excerpt controls, Markdown and LaTeX keep the visited/total-page
+counts, visited pages without text and character-limit flag. The existing notice
+also explains that images were not interpreted and gives a same-version recovery
+step when a visited page yielded no text. These imported observations remain
+caller supplied; they do not certify full-paper coverage or semantic support.
+
+Scope is part of the retained excerpt payload and manual-assessment binding.
+Quotation identifiers and selections stay stable when optional scope is introduced
+or changed; a previous assessment becomes stale rather than silently applying its
+judgment to different reading bounds. URL/version changes retain their existing
+selection-invalidation behavior. Missing, malformed, contradictory or conflicting
+annotations provide no page counts; a valid quotation is still retained. Titles,
+URLs and expected fixture content never supply missing coverage.
+
 No usable retained excerpt alone says nothing about original access. Optional
 `readingStatuses` records the caller's explicit `unread` or `unavailable` observation
 and reason for a unique exact Include URL. These papers export separately and are

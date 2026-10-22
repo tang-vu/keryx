@@ -8,6 +8,7 @@ import { assertRelatedWorkStatementShape, RELATED_WORK_STATEMENT_KINDS, resolveR
 import { assembleRelatedWorkThemes, type RelatedWorkAssembly } from "./related-work-generation";
 import { relatedWorkReadingLists } from "./related-work-reading";
 import { retainedPaperRecordUrl } from "./retained-paper-identity";
+import { observedPdfTextScope, pdfTextScopeSchema, pdfTextScopeTruncated, type PdfTextScope } from "../web-research/pdf-text-scope";
 
 export const MAX_EVIDENCE_DRAFT_BYTES = 65_536;
 const text = (max: number, min = 0) => z.string().min(min).max(max).refine(isWellFormedUtf16);
@@ -16,11 +17,26 @@ const url = z.string().max(2048).url().refine(isWellFormedUtf16).refine(value =>
   const parsed = new URL(value);
   return parsed.protocol === "https:" && !parsed.username && !parsed.password && !/[<>"\s\u0000-\u001f\u007f-\u009f]/u.test(value);
 });
+// Optional historical report metadata remains untrusted. Keep only an observed,
+// internally consistent PDF scope; unknown/malformed annotations supply no bounds.
+const pdfProvenance = z.unknown().optional().transform(value => {
+  try {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return;
+    const fields = Object.getOwnPropertyDescriptors(value);
+    if (!fields.extraction || !("value" in fields.extraction) || fields.extraction.value !== "pdf"
+      || !fields.pdfTextScope || !("value" in fields.pdfTextScope)) return;
+    const scope = observedPdfTextScope(fields.pdfTextScope.value);
+    if (!scope || fields.truncated && (!("value" in fields.truncated)
+      || typeof fields.truncated.value !== "boolean" || fields.truncated.value !== pdfTextScopeTruncated(scope))) return;
+    return { extraction: "pdf" as const, pdfTextScope: scope };
+  } catch { return; }
+});
 const identity = {
   marker: id, sourceId: text(200, 1), itemId: text(200, 1).optional(),
   itemTitle: text(1000).optional(), itemUrl: url.optional(), contentVersion: text(200).optional(),
   evidenceProvenance: z.literal("synthetic-demo").optional(),
   contentReceipt: z.object({ bodyHash: text(200).optional() }).strip().optional(),
+  webProvenance: pdfProvenance,
 };
 // Strip unrelated report fields. A caller-imported report is never authenticated by this parser.
 export const evidenceDraftReportSchema = z.object({
@@ -37,7 +53,8 @@ const assessmentSchema = z.object({
   verdict: z.enum(["supported", "partly-supported", "not-found"]),
   claimText: text(4000), paperUrls: z.array(url).min(1).max(4), excerptIds: z.array(id).max(16),
   // These exact retained rows, rather than their nonsecurity IDs alone, bind an assessment.
-  excerpts: z.array(z.object({ id, reportId: id, paperUrl: url, contentVersion: text(200, 1), quote: text(240, 1), readUrl: url.optional() }).strict()).max(16),
+  excerpts: z.array(z.object({ id, reportId: id, paperUrl: url, contentVersion: text(200, 1), quote: text(240, 1), readUrl: url.optional(),
+    pdfTextScope: pdfTextScopeSchema.optional() }).strict()).max(16),
 }).strict();
 const claimSchema = z.object({ id, start: z.number().int().nonnegative(), end: z.number().int().positive(),
   paperUrls: z.array(url).min(1).max(4), excerptIds: z.array(id).max(16), assessment: assessmentSchema.optional(),
@@ -57,7 +74,7 @@ export const evidenceDraftRequestSchema = z.object({
     z.object({ mode: z.literal("regenerate"), themeId: id }).strict()]).optional(),
 }).strict();
 export type EvidenceDraftRequest = z.infer<typeof evidenceDraftRequestSchema>;
-export interface DraftExcerpt { id: string; reportId: string; paperUrl: string; contentVersion: string; quote: string; readUrl?: string }
+export interface DraftExcerpt { id: string; reportId: string; paperUrl: string; contentVersion: string; quote: string; readUrl?: string; pdfTextScope?: PdfTextScope }
 export const EVIDENCE_DRAFT_NOTICE = "Drafting aid. Read the papers and review the text yourself. Imported reports are caller-supplied; their origin, factual support and settlement are not authenticated here. No research, purchase or creator reward is started.";
 
 /** Only Include bibliography/focus enters drafting; screening notes are not evidence. */
@@ -108,11 +125,23 @@ function retainedDraftEvidence(input: EvidenceDraftRequest) {
         || citation.contentVersion !== row.contentVersion) continue;
       const paperUrl = retainedPaperRecordUrl(row.itemUrl, included);
       if (!paperUrl) continue;
+      const scope = row.webProvenance?.pdfTextScope;
+      const pdfTextScope = scope && citation.webProvenance?.pdfTextScope
+        && JSON.stringify(scope) === JSON.stringify(citation.webProvenance.pdfTextScope) ? scope : undefined;
       const body = { reportId: report.id, paperUrl, contentVersion: row.contentVersion, quote: row.quote,
         ...(paperUrl !== row.itemUrl ? { readUrl: row.itemUrl } : {}) };
       const key = referenceKey(JSON.stringify({ ...body, sourceId: row.sourceId, itemId: row.itemId, marker: row.marker }), "excerpt");
-      const excerpt = { id: key, ...body };
-      if (result.has(key) && JSON.stringify(result.get(key)!.excerpt) !== JSON.stringify(excerpt)) throw new Error("Excerpt identifier collision");
+      const previous = result.get(key), identity = { id: key, ...body };
+      let retainedScope = pdfTextScope;
+      if (previous) {
+        const { pdfTextScope: priorScope, ...priorIdentity } = previous.excerpt;
+        if (JSON.stringify(priorIdentity) !== JSON.stringify(identity)) throw new Error("Excerpt identifier collision");
+        // One quotation can occur under multiple targets. Its bounds are unknown
+        // unless every admitted occurrence agrees; missing scope cannot be filled.
+        retainedScope = priorScope && pdfTextScope && JSON.stringify(priorScope) === JSON.stringify(pdfTextScope) ? pdfTextScope : undefined;
+      }
+      // Reading metadata is assessment context, not a new quotation identity.
+      const excerpt = { ...identity, ...(retainedScope ? { pdfTextScope: retainedScope } : {}) };
       result.set(key, { excerpt, target: row.claim });
     }
   }

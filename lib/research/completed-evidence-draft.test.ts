@@ -119,6 +119,24 @@ describe("owned completed private retained-ledger adapter", () => {
     expect(result.provenance.payoutAuthority).toBe(false);
     expect(f.saved().serializedRun).toBe(original);
   });
+  it("keeps observed PDF bounds after an authenticated completion becomes portable draft inputs and exports", async () => {
+    const f = fixture(), scope = { format: "keryx-pdf-text-scope-v1" as const, pagesRead: 20, totalPages: 35, pagesWithoutText: [3], textLimitReached: false };
+    const provenance = { retrievedAt: "2026-10-12T01:00:00.000Z", publisherGroup: "arxiv.org",
+      normalizedBodyHash: "e".repeat(64), extraction: "pdf" as const, truncated: true, pdfTextScope: scope };
+    for (const row of [f.run.citations[0], f.run.evidence![0], f.run.decisions[0]]) {
+      row.contentVersion = "f".repeat(64); delete row.contentReceipt; row.webProvenance = structuredClone(provenance); row.sourceKind = "public-reference";
+    }
+    f.run.evidence![0].qualifiesForReward = false; f.run.citations[0].reward = 0;
+    f.input.selection.sources[0].contentVersion = "f".repeat(64); f.resnapshot();
+    const original = f.saved().serializedRun, result = await loadCompletedEvidenceDraft(f.context, f.input);
+    expect(result.draft.excerpts[0].pdfTextScope).toEqual(scope);
+    expect(result.editableRequest.reports[0].evidence![0].webProvenance?.pdfTextScope).toEqual(scope);
+    const restored = buildEvidenceDraft(parseEvidenceDraftRequest(JSON.parse(JSON.stringify(result.editableRequest))));
+    expect(restored.excerpts[0].pdfTextScope).toEqual(scope);
+    expect(result.exports.markdown).toContain("20 of 35 pages"); expect(result.exports.latex).toContain("20 of 35 pages");
+    expect(result.provenance.semanticSupport).toBe("UNJUDGED"); expect(result.provenance.payoutAuthority).toBe(false);
+    expect(f.saved().serializedRun).toBe(original);
+  });
   it.each(["inconsistent-limit", "wrong-kind", "invalid-pages", "mismatched-citation"])("refuses forged PDF scope %s while leaving the saved result intact", async change => {
     const f = fixture(), provenance = { retrievedAt: "2026-10-12T01:00:00.000Z", publisherGroup: "arxiv.org",
       normalizedBodyHash: "e".repeat(64), extraction: "pdf" as const, truncated: true,

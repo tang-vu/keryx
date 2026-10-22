@@ -9,6 +9,7 @@ import { articleFailureCode, readArticle } from "../lib/web-research/article-rea
 import { extractPdfText } from "../lib/web-research/pdf-reader.ts";
 import { BoundedWorkloadEngine, WorkloadModelBudget } from "../lib/evals/bounded-workload-engine.ts";
 import { createWorkloadPdfFixtures } from "../lib/evals/workload-pdf-fixtures.ts";
+import { workloadPdfArticle } from "../lib/evals/workload-pdf-article.ts";
 
 const args = process.argv.slice(2);
 const value = (flag: string) => args[args.indexOf(flag) + 1];
@@ -50,7 +51,7 @@ for (const input of selected) {
         if (source.fixture?.artifactPath) {
           const bytes = await readFile(source.fixture.artifactPath);
           const extracted = await extractPdfText(bytes, { maxPages: 20, maxChars: 60000, timeoutMs: 5000 });
-          row.article = { text: extracted.text, title: source.title, finalUrl: url, kind: "pdf", truncated: extracted.truncated };
+          row.article = workloadPdfArticle(extracted, source.title, url);
         } else if (source.text) {
           row.article = { text: source.text, title: source.title, finalUrl: url, kind: "text", truncated: source.fixture?.truncated ?? false };
         } else if (source.url) {

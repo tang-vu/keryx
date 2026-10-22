@@ -14,6 +14,7 @@ import { CompletedEvidenceDraftSelector } from "@/components/keryx/completed-evi
 import { completedEvidenceDraftSelectionCopy as completedCopy } from "@/locales/en/completed-evidence-draft-selection";
 import { useUiCopy } from "@/lib/i18n/ui-copy";
 import { EvidenceDraftRestore } from "./evidence-draft-restore";
+import { PdfReadingScope } from "./pdf-reading-scope";
 import { evidenceDraftEditingCopy as editingEnglish } from "@/locales/en/evidence-draft-editing";
 import { rebaseEvidenceDraftClaims, type PassageEditHint } from "@/lib/research/evidence-draft-passage";
 const uiEnglish_completedCopy = completedCopy;
@@ -196,7 +197,7 @@ export function EvidenceDraftWorkspace() {
           </label>
           {(draft?.excerpts ?? []).filter(row => claim.paperUrls.includes(row.paperUrl)).map(row => <label key={row.id} className="mt-3 flex gap-3 font-serif text-sm text-ink-2">
             <input type="checkbox" className="mt-1" checked={claim.excerptIds.includes(row.id)} onChange={() => replace({ excerptIds: toggle(claim.excerptIds, row.id), assessment: undefined })} />
-            <span>{row.quote}<span className="block font-mono text-xs text-ink-3">{copyText(copy.claim.excerptVersion, { version: row.contentVersion, report: row.reportId })}</span></span>
+            <span>{row.quote}<span className="block font-mono text-xs text-ink-3">{copyText(copy.claim.excerptVersion, { version: row.contentVersion, report: row.reportId })}</span><PdfReadingScope provenance={{ extraction: "pdf", pdfTextScope: row.pdfTextScope }} /></span>
           </label>)}
           <p className="mt-3 font-mono text-xs text-seal">{result?.status === "source-unavailable" ? copy.claim.unavailable : result?.assessment ? copyText(copy.claim.assessed, { assessment: assessmentLabels[result.assessment.verdict] }) : copy.claim.pending}</p>
           <p className="mt-2 font-serif text-xs text-ink-3">{result?.evidenceNotice} {copy.claim.unavailableGuidance}</p>
@@ -233,7 +234,7 @@ export function EvidenceDraftWorkspace() {
           <label className="mt-3 block font-mono text-xs text-ink-2">{copy.theme.notes}<textarea className={field} rows={4} maxLength={2000} value={theme.authorNote} onChange={event => replace({ authorNote: event.target.value })} /></label>
           {(draft?.excerpts ?? []).map(row => <label key={row.id} className="mt-3 flex gap-3 font-serif text-sm text-ink-2">
             <input type="checkbox" className="mt-1" checked={theme.excerptIds.includes(row.id)} onChange={() => replace({ excerptIds: toggle(theme.excerptIds, row.id) })} />
-            <span>{row.quote}<span className="block break-all font-mono text-xs text-ink-3">{row.paperUrl} · {row.contentVersion}</span></span>
+            <span>{row.quote}<span className="block break-all font-mono text-xs text-ink-3">{row.paperUrl} · {row.contentVersion}</span><PdfReadingScope provenance={{ extraction: "pdf", pdfTextScope: row.pdfTextScope }} /></span>
           </label>)}
           <button type="button" className={`${button} mt-3`} onClick={() => replace({ excerptIds: [] })}>{copy.theme.clearExcerpts}</button>
           <button type="button" className={`${button} ml-2 mt-3`} disabled={!draft || !theme.excerptIds.length} onClick={() => {
@@ -278,7 +279,7 @@ export function EvidenceDraftWorkspace() {
                   const chosen = statement.excerptIds.includes(row.id);
                   return <label key={row.id} className={choice}>
                     <input type="checkbox" className="mt-1" checked={chosen} disabled={!chosen && statement.excerptIds.length >= 16} onChange={() => change({ excerptIds: toggle(statement.excerptIds, row.id) })} />
-                    <span>{row.quote}<span className="block break-all font-mono text-xs text-ink-3">{row.paperUrl} · {row.contentVersion}</span></span>
+                    <span>{row.quote}<span className="block break-all font-mono text-xs text-ink-3">{row.paperUrl} · {row.contentVersion}</span><PdfReadingScope provenance={{ extraction: "pdf", pdfTextScope: row.pdfTextScope }} /></span>
                   </label>;
                 })}
               </fieldset>}

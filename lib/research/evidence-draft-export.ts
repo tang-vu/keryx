@@ -3,6 +3,7 @@ import { paperReferencesBibtex, paperReferencesRis } from "../papers/reference-e
 import { assertDraftCitationParity, DRAFT_REFERENCES_HEADING } from "./evidence-draft-parity";
 import { referenceKey } from "./reference-export-core";
 import type { RelatedWorkStatementKind } from "./related-work-statements";
+import { pdfReadingNotice } from "./pdf-reading";
 
 const latex = (text: string) => text.replace(/[\\{}%&_#$^~]/g, char => ({
   "\\": "\\textbackslash{}", "{": "\\{", "}": "\\}", "%": "\\%", "&": "\\&", "_": "\\_",
@@ -76,6 +77,8 @@ export function exportEvidenceDraft(value: unknown) {
       tex.push(...(first ? [`\\label{${excerpt.id}}`] : []), "\\begin{quote}", latex(excerpt.quote), "\\end{quote}",
         `\\autocite{${key(excerpt.paperUrl)}}. Version: ${latex(excerpt.contentVersion)}. Report: ${latex(excerpt.reportId)}.${
           excerpt.readUrl ? ` Retained read URL: ${latex(excerpt.readUrl)}.` : ""}`, "");
+      const scope = pdfReadingNotice(excerpt.pdfTextScope);
+      if (scope) { md.push(markdown(scope), ""); tex.push(latex(scope), ""); }
     }
   }
   md.push("## Included papers without usable retained excerpts", "");
