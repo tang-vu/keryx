@@ -66,6 +66,21 @@ You can remove every claim/theme or free a slot at the editor limits, then add
 new rows without clearing the rest of your work. Download a new private backup
 to retain these deliberate changes.
 
+**Clear this tab's draft** asks for confirmation before resetting the editor.
+Cancel keeps all inputs. After a confirmed clear, **Undo clear** restores the
+original paper/version snapshot, reports, passage, assessments, themes and
+reading observations, including unfinished statements, unimported report text
+and the reviewer input. It also restores the previous retained baseline, so
+unsaved work warns again. Clearing an already cleared editor keeps that recovery
+copy while canceling any newly pending completed-read selection.
+
+Recovery lives only in the current tab. Editing draft fields, successfully
+importing another result or restoring another file ends it; reload, closing the
+tab and crashes lose it. Undo invalidates older import responses and file previews
+and starts no read, purchase or payment replay. It freezes the original draft's
+paper context and does not overwrite the saved bibliography or stored research.
+Download private draft JSON deliberately for recovery beyond this tab.
+
 Passage, report JSON, assessments and theme edits remain in tab memory; no upload,
 public history, localStorage draft write or background request is performed by
 this editor. The existing bibliography stays in its existing browser store.

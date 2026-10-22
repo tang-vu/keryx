@@ -13,6 +13,7 @@ import { chromium, type Browser, type Locator } from "playwright";
 import { evidenceDraftFixture } from "../lib/research/fixtures/evidence-draft";
 import { buildEvidenceDraft, type EvidenceDraftRequest } from "../lib/research/evidence-draft";
 import { evidenceDraftEditingCopy as editing } from "../locales/en/evidence-draft-editing";
+import { evidenceDraftCopy as draftCopy } from "../lib/research/evidence-draft-copy";
 import { LITERATURE_STORAGE_KEY } from "../lib/papers/literature-workspace";
 import { saveLiteraturePaper } from "../lib/papers/literature-workspace";
 import { PAPER_CATALOG } from "../lib/papers/catalog";
@@ -187,6 +188,26 @@ async function main() {
         await control.screenshot({ path: join(screenshots, `${name}-${width}.png`) });
       }
       const beforeRemoval = await backupInput();
+      await page.getByLabel(draftCopy.import.label).fill("Pending unimported text before clear");
+      const clear = page.getByRole("button", { name: draftCopy.workspace.clear, exact: true });
+      await remove(clear, editing.confirmClear, false);
+      assert.deepEqual(await backupInput(), beforeRemoval, "Cancelled clear keeps the exact compiled editor packet");
+      await assertUnfinished();
+      await remove(clear, editing.confirmClear, true);
+      assert.equal(await passage.inputValue(), "");
+      assert.deepEqual((await backupInput()).reports, []);
+      const undoClear = page.getByRole("button", { name: editing.undoClear, exact: true });
+      await undoClear.scrollIntoViewIfNeeded();
+      const undoBounds = await undoClear.boundingBox();
+      assert(undoBounds && undoBounds.height >= 43 && undoBounds.x >= 0 && undoBounds.x + undoBounds.width <= width + 1,
+        "Clear recovery keeps a visible touch target within the phone viewport");
+      await undoClear.screenshot({ path: join(screenshots, `undo-clear-${width}.png`) });
+      await undoClear.click();
+      assert.deepEqual(await backupInput(), beforeRemoval, "Undo clear restores exact versions, assessments, observations and selected excerpts in the compiled page");
+      await assertUnfinished();
+      assert.equal(await page.getByLabel(draftCopy.import.label).inputValue(), "Pending unimported text before clear");
+      assert.equal(await page.getByLabel(draftCopy.claim.reviewer).inputValue(), "Fixture researcher");
+      await page.getByLabel(draftCopy.import.label).fill("");
       // Editing surrounding prose must preserve exact assessed text and its
       // evidence in the actual compiled page, including UTF-16 offset shifts.
       const introduction = "🧪 Introduction. ", conclusion = " Closing note.";

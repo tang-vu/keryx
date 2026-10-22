@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EvidenceDraftWorkspace } from "../../components/keryx/evidence-draft-workspace";
 import { completedEvidenceDraftSelectionCopy as copy } from "../../locales/en/completed-evidence-draft-selection";
 import { evidenceDraftCopy as editorCopy } from "./evidence-draft-copy";
+import { evidenceDraftEditingCopy as editingCopy } from "../../locales/en/evidence-draft-editing";
 import { evidenceDraftFixture } from "./fixtures/evidence-draft";
 import { createCompletedEvidenceDraftSelectionRoute } from "./completed-evidence-draft-selection";
 import { createCompletedEvidenceDraftRoute } from "./completed-evidence-draft-route";
@@ -73,6 +74,7 @@ const backup = async () => {
 beforeEach(async () => {
   workspace = evidenceDraftFixture().workspace; f = fixture();
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  vi.spyOn(window, "confirm").mockReturnValue(true);
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => f.respond(url, init)));
   container = document.createElement("div"); document.body.append(container); root = createRoot(container); await render();
 });
@@ -81,6 +83,20 @@ afterEach(async () => {
   vi.clearAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers();
 });
 describe("completed read mounted in the actual evidence workspace", () => {
+  it("undoes clear against the original paper snapshot after the saved library changes, without reads or library writes", async () => {
+    await fill(control<HTMLTextAreaElement>(editorCopy.claim.passage), "Original exact draft passage.");
+    await select(); await click("Import selected completed result");
+    const original = await backup(), persisted = vi.spyOn(Storage.prototype, "setItem");
+    await click(editorCopy.workspace.clear);
+    workspace = { ...workspace, title: "Separately updated library", entries: [{ ...workspace.entries[0], paper: PAPER_CATALOG[1] }] };
+    await render();
+    const changedLibrary = JSON.stringify(workspace), reads = vi.mocked(fetch).mock.calls.length;
+    await click(editingCopy.undoClear);
+    expect(await backup()).toEqual(original);
+    expect(buildEvidenceDraft(await backup()).excerpts[0].contentVersion).toBe(f.run.evidence[0].contentVersion);
+    expect(JSON.stringify(workspace)).toBe(changedLibrary); expect(persisted).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(reads);
+  });
   it("reads nothing until explicit metadata action, then permits only the checked job's explicit import", async () => {
     const persisted = vi.spyOn(Storage.prototype, "setItem");
     expect(fetch).not.toHaveBeenCalled(); expect(f.db.getPrivateResearchResult).not.toHaveBeenCalled();
@@ -114,7 +130,10 @@ describe("completed read mounted in the actual evidence workspace", () => {
     const draft = await backup(); expect(draft.reports).toHaveLength(1); expect(draft.passage).toBe("Pending passage bytes.");
     expect(draft.themes[0]).not.toHaveProperty("statements");
   });
-  it.each(["metadata", "import"] as const)("discards pending %s on Clear and requires a fresh explicit read/import", async phase => {
+  it.each([
+    { phase: "metadata", undo: false }, { phase: "metadata", undo: true },
+    { phase: "import", undo: false }, { phase: "import", undo: true },
+  ])("discards pending $phase on clear (undo=$undo) and requires a fresh explicit read/import", async ({ phase, undo }) => {
     const entry = workspace.entries[0], second = PAPER_CATALOG[1];
     workspace = { ...workspace, entries: [...workspace.entries, { ...entry, paper: second }] };
     const identity = { sourceId: "original-b", itemId: "paper-b", itemUrl: second.url, marker: "S2" };
@@ -122,6 +141,7 @@ describe("completed read mounted in the actual evidence workspace", () => {
     f.run.evidence.push({ ...f.run.evidence[0], ...identity, qualifiesForAnswer: false });
     f.run.decisions.push({ ...f.run.decisions[0], ...identity }); f.run.answer += " [S2]";
     await render();
+    await fill(control<HTMLTextAreaElement>(editorCopy.claim.passage), "Keep this exact draft across undo.");
     const endpoint = phase === "metadata" ? "/api/research/evidence-draft/completed-read/selection" : "/api/research/evidence-draft/completed-read";
     if (phase === "import") await select();
     let resolve!: (response: Response) => void;
@@ -131,13 +151,16 @@ describe("completed read mounted in the actual evidence workspace", () => {
     const call = vi.mocked(fetch).mock.calls.at(-1)!, signal = call[1]!.signal!;
     const response = await f.respond(endpoint, call[1]); expect(response.ok).toBe(true);
     await click(editorCopy.workspace.clear); expect(signal.aborted).toBe(true);
+    expect(window.confirm).toHaveBeenLastCalledWith(editingCopy.confirmClear);
     expect(container.textContent).toContain(editorCopy.workspace.cleared);
+    if (undo) await click(editingCopy.undoClear);
     const callsAtClear = vi.mocked(fetch).mock.calls.length;
     expect(control<HTMLInputElement>(copy.jobId).value).toBe(""); expect(button(copy.read).disabled).toBe(true);
     expect(button("Import selected completed result")).toBeUndefined();
     await act(async () => { resolve(response); });
     expect(vi.mocked(fetch)).toHaveBeenCalledTimes(callsAtClear);
-    expect(container.textContent).toContain(editorCopy.workspace.cleared);
+    expect(container.textContent).toContain(undo ? editingCopy.clearRestored : editorCopy.workspace.cleared);
+    expect(control<HTMLTextAreaElement>(editorCopy.claim.passage).value).toBe(undo ? "Keep this exact draft across undo." : "");
     expect(container.textContent).not.toContain(copy.ready); expect(container.textContent).not.toContain(copy.imported);
     expect(button("Import selected completed result")).toBeUndefined();
     const cleared = await backup(), built = buildEvidenceDraft(cleared);

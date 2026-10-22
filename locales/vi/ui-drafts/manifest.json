@@ -11,11 +11,11 @@
   "totals": {
     "englishNamespaceFiles": 73,
     "coreInlineSources": 1,
-    "extractedLeaves": 6187,
+    "extractedLeaves": 6192,
     "authoredEntries": 5941,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 217,
-    "completeNamespaces": 67
+    "uncoveredEntries": 222,
+    "completeNamespaces": 66
   },
   "namespaces": [
     {
@@ -7099,9 +7099,9 @@
     {
       "namespace": "evidence-draft-editing",
       "sourcePath": "locales/en/evidence-draft-editing.ts",
-      "sourceSha256": "ef6356859f04f3ffee8ba9f1ad201d3b7951814e4d277e993f7ead1111e14cc2",
+      "sourceSha256": "c6494df15b55e87c23b99f2afb24aeb9203e1fea8f2860b1cf2592bd67553933",
       "draftPath": "locales/vi/ui-drafts/evidence-draft-editing.json",
-      "extractedLeaves": 6,
+      "extractedLeaves": 11,
       "authoredEntries": 6,
       "coveredKeys": [
         "claimRemoved",
@@ -7112,7 +7112,13 @@
         "themeRemoved"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [],
+      "uncoveredKeys": [
+        "clearRefused",
+        "clearRestored",
+        "confirmClear",
+        "undoClear",
+        "undoClearGuidance"
+      ],
       "sourceAliases": {}
     },
     {
