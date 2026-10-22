@@ -53,10 +53,9 @@ describe("research evidence matrix", () => {
   });
   it("exports the same inspectable rows as Markdown without adding an excerpt", () => {
     const markdown = evidenceMatrixMarkdown(run);
-    expect(markdown).toContain("    Exact \"quoted\" evidence");
-    expect(markdown).toContain("    第二行");
+    expect(markdown).toContain('```\nExact "quoted" evidence\n第二行\n```');
     expect(markdown).toContain("Inspection status: Recorded excerpt");
-    expect(markdown).toContain("    Pricing?");
+    expect(markdown).toContain("```\nPricing?\n```");
     expect(markdown).toContain("Inspection status: No inspectable excerpt recorded");
     expect(markdown.match(/Exact excerpt:/g)).toHaveLength(1);
     const overlong = evidenceMatrixMarkdown({ ...run, evidence: [{ ...evidence, quote: "x".repeat(241) }] });
@@ -68,8 +67,8 @@ describe("research evidence matrix", () => {
       citations: versions.map((contentVersion) => ({ ...run.citations[0], itemId: "article", contentVersion })),
     };
     const versionText = evidenceMatrixMarkdown(versioned);
-    expect(versionText).toContain("Content version: v1");
-    expect(versionText).toContain("Content version: v2");
+    expect(versionText).toContain("Content version:\n\n```\nv1\n```");
+    expect(versionText).toContain("Content version:\n\n```\nv2\n```");
     expect(versionText.match(/Exact excerpt:/g)).toHaveLength(2);
   });
   it("neutralizes formulas after whitespace, controls, and formatting characters", () => {

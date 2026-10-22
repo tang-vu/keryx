@@ -37,7 +37,7 @@ const trace = Array.from({length:40},(_,i)=>({phase:'discover',ts:i,message:'Ste
 const run = {id:'synthetic',question:'What happened to a particularly long research question that needs a careful cited explanation?',budget:0.01,engine:'fixture',subClaims:[],decisions:[],citations:[citation,missing],answer:Array.from({length:8},(_,i)=>'A grounded finding [S1]. The archive also appears [S2]. '+('Evidence should be read in context. '.repeat(5))).join(String.fromCharCode(10,10)),totalSpent:0.002,totalToCreators:0.002,trace,createdAt:'2026-09-28T00:00:00Z',paymentMode:'real',evidence:Array.from({length:12},(_,i)=>({claimIndex:i,claim:'A grounded finding',marker:'S1',sourceId:'source-1',sourceName:'Research Journal',quote:i===0?'The measured result was positive.':('A long excerpt of measured evidence, exactly as stored in the run. '.repeat(4)),support:0.8,qualifiesForReward:true}))};
 const payment = (itemId,status,amount) => ({kind:'citation',queryId:'synthetic',sourceId:'source-1',sourceName:'Research Journal',itemId,payer:'payer',payee:'author-wallet',amountUsdc:amount,network:'Arc',settled:status==='settled',settlementStatus:status,createdAt:run.createdAt});
 run.confidence={level:'Moderate',reason:'Observed source grounding only'};run.citations.push(web);run.answer+=' Original public evidence [S3].';run.evidence.push({claimIndex:12,claim:'Original public evidence',marker:'S3',sourceId:web.sourceId,sourceName:web.sourceName,quote:'The original public document explicitly states this finding.',support:0.8,qualifiesForAnswer:true,qualifiesForReward:false,...web});
-run.citations.push(scholarly);run.answer+=' Abstract-scoped finding [S4].';run.evidence.push({claimIndex:13,claim:'Abstract-scoped finding',quote:'This is the observed abstract passage.',support:0.8,qualifiesForAnswer:true,qualifiesForReward:false,...scholarly});
+run.citations.push(scholarly);run.answer+=' Abstract-scoped finding [S4].';run.evidence.push({claimIndex:13,claim:'Abstract-scoped finding',quote:'This is the observed abstract passage.  '+String.fromCharCode(10,10),support:0.8,qualifiesForAnswer:true,qualifiesForReward:false,...scholarly});
 const payments = [payment('article-1','settled',0.001),payment('article-1','pending',0.002),payment('article-1','simulated',0.008),payment('other-article','settled',0.4),{...payment('article-1','settled',0.3),queryId:'other-run'},{...payment('article-1','simulated',0.006),settled:true}];
 function groundedFixture(covered){
   const quote='The protocol binds approval to canonical action identity.';
@@ -112,6 +112,7 @@ try {
     ["Download BibTeX", "keryx-references.bib", "@misc{keryx"],
     ["Download RIS (Zotero)", "keryx-references.ris", "TY  - WEB"],
     ["Download evidence CSV", "keryx-evidence-matrix.csv", '"claim_index","claim","inspection_status"'],
+    ["Download evidence Markdown", "keryx-evidence-matrix.md", "# Research evidence matrix"],
   ]) {
     const waiting = page.waitForEvent("download");
     await page.getByRole("button", { name: button, exact: true }).click();
@@ -137,6 +138,11 @@ try {
       assert(content.includes("AN  - arXiv:1706.03762v7"), "RIS preserves the exact recorded arXiv version");
     }
     if (filename.endsWith(".csv")) assert(content.includes("The original public document explicitly states this finding."), "answer-qualified public evidence remains inspectable without payout authority");
+    if (filename.endsWith(".md")) {
+      assert(content.includes("Exact excerpt:\n\n```\nThis is the observed abstract passage.  \n\n\n```\n"), "the last Markdown excerpt retains trailing spaces and blank lines in the actual download");
+      assert(content.includes("The original public document explicitly states this finding."), "Markdown retains answer-qualified public evidence without payout authority");
+      assert(content.includes("does not decide whether the target is true"), "Markdown preserves the inspection boundary");
+    }
   }
   await page.getByText("Research evidence matrix", { exact: true }).click();
   await citation.evaluate(element => element.scrollIntoView({ behavior: "instant" }));
