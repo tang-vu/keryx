@@ -25,7 +25,7 @@ assert((await readFile(join(root, ".next", "BUILD_ID"), "utf8")).trim(), "A succ
 const temporaryRoot = resolve(tmpdir()), temporary = await mkdtemp(join(temporaryRoot, "keryx-identity-origin-"));
 assert.equal(dirname(resolve(temporary)), temporaryRoot); assert(basename(temporary).startsWith("keryx-identity-origin-"));
 const databasePath = join(temporary, "data", "keryx.sqlite");
-// Next 16.3.8's generated config module resolves relative imports from cwd.
+// Next 16.4.1's generated config module resolves relative imports from cwd.
 // Expose only the candidate's code directory for its unchanged security-header
 // config imports; app dir, default build, dependencies and DB cwd stay unchanged.
 const configSource = resolve(root, "lib"), configLink = resolve(temporary, "lib");

@@ -126,7 +126,7 @@ failureOutput = output; // Only a verified owned directory may retain preflight 
 for (const [name, leaf] of [["TEMP", "temp"], ["TMP", "temp"], ["TSX_CACHE_DIR", "tsx-cache"]] as const)
   assert.equal(resolve(process.env[name] ?? ""), resolve(output, leaf), `Parent binds ${name}`);
 const require = createRequire(import.meta.url), sha = (bytes: Buffer | string) => createHash("sha256").update(bytes).digest("hex");
-assert.equal(require("next/package.json").version, "16.3.8");
+assert.equal(require("next/package.json").version, "16.4.1");
 // Freeze the entire runtime/product graph. Independent fixture tests/docs are
 // intentionally excluded: their author does not provide compiled acceptance.
 async function filesUnder(base: string, directory: string): Promise<string[]> {
