@@ -1,5 +1,16 @@
 # Keryx — Decision Log
 
+## Require explicit source scope in ordinary summary review — 2026-10-23
+
+A high support score must not convert a related-domain policy into factual advice
+for another system. Enrolled ordinary evidence-only engines require explicit
+direct-question and preserved-statement scope judgments plus a bounded account of
+what the source establishes. Missing or incompatible judgments can only withhold
+support; they cannot increase it or replace literal evidence and reward checks.
+Keep independently admitted private/finite originals and other output contracts
+exact. These remain model assessments, with separate usefulness acceptance.
+See [the failure pattern and boundaries](docs/engineering/ordinary-source-scope-review.md).
+
 ## Bound ordinary supplier work across a complete run — 2026-10-23
 
 Give every newly selected ordinary reasoning engine one shared cumulative

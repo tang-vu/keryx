@@ -3,6 +3,7 @@ import type { QuoteOption } from "./quote-options";
 import { isCompleteEvidenceSpan } from "./evidence-span";
 import { EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE, STATEMENT_LANGUAGE_REVIEW_GUIDANCE } from "./evidence-review";
 import type { SupplementalSpanCapability } from "./supplemental-span-capability";
+import { ORDINARY_SCOPE_REVIEW_GUIDANCE, ordinaryScopeReviewSchema } from "./ordinary-evidence-review";
 
 export const MAX_EVIDENCE_REVIEW_INPUT_BYTES = 32_000;
 // Bound both authored messages and reserve framing space; provider transport
@@ -20,9 +21,12 @@ export function buildEvidenceReviewInput(input: {
   supplementalCapability?: SupplementalSpanCapability;
   /** Trusted ordinary producer opt-in. Retained/private review prompts stay exact. */
   observeLanguage?: boolean;
+  /** Selected ordinary engines only; private/finite originals retain legacy bytes. */
+  ordinaryScope?: boolean;
 }): { json: string; reviewedIndexes: ReadonlySet<number> } {
-  const schema = input.observeLanguage ? languageSchema : legacySchema;
-  const guidance = EVIDENCE_REVIEW_GUIDANCE + (input.observeLanguage ? STATEMENT_LANGUAGE_REVIEW_GUIDANCE : "");
+  const schema = input.ordinaryScope ? ordinaryScopeReviewSchema(Boolean(input.observeLanguage)) : input.observeLanguage ? languageSchema : legacySchema;
+  const guidance = EVIDENCE_REVIEW_GUIDANCE + (input.ordinaryScope ? ORDINARY_SCOPE_REVIEW_GUIDANCE : "") +
+    (input.observeLanguage ? STATEMENT_LANGUAGE_REVIEW_GUIDANCE : "");
   const sources = new Map(input.gathered.map(source => [source.marker, source]));
   const ids = new Set(input.options.map(option => option.quoteId));
   if (sources.size !== input.gathered.length || ids.size !== input.options.length) {
@@ -52,6 +56,7 @@ export function buildEvidenceReviewInput(input: {
       ...(proposal.statement ? { statement: proposal.statement } : {}),
       source: { marker: source.marker, sourceId: source.sourceId, name: source.sourceName,
         itemUrl: source.itemUrl, contentVersion: source.contentVersion,
+        ...(input.ordinaryScope && source.itemTitle ? { itemTitle: source.itemTitle } : {}),
         sourceKind: source.sourceKind ?? "creator",
         deliveryKind: source.publicDeliveryKind ?? source.contentReceipt?.deliveryKind ?? "unknown",
         ...(source.webProvenance ? { webProvenance: {
