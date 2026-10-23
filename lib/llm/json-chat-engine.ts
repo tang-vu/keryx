@@ -10,7 +10,8 @@ import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { boundedResearchPlan } from "./research-plan";
 import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
-import { admitOrdinaryCompute } from "./ordinary-compute-budget";
+import { admitOrdinaryCompute, ordinaryComputeSnapshot } from "./ordinary-compute-budget";
+import { ORDINARY_SCOPE_REVIEW_GUIDANCE, ordinaryScopeReviewedResponse } from "./ordinary-evidence-review";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence, type QuoteOption } from "./quote-options";
 import { STATEMENT_GENERATION_GUIDANCE } from "./cited-statement";
@@ -305,6 +306,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     // teaching flag on a legacy/decision-brief input cannot alter their contract.
     const teachingRequest = input.generationFormat === "evidence-only" && !input.answerFormat && input.teachingRequest &&
       validTeachingProposalRequest(input.teachingRequest, input.question) ? input.teachingRequest : undefined;
+    const ordinaryScope = input.generationFormat === "evidence-only" && !input.answerFormat && !input.teachingRequest &&
+      ordinaryComputeSnapshot(this) !== undefined;
     const sources = this.evidenceSources(input);
     const quoteOptions = this.synthesisQuoteOptions(input, sources);
     const generation = {
@@ -347,9 +350,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     if (proposals.length) {
       try {
         const reviewInput = this.synthesisEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims,
-          observeLanguage });
+          observeLanguage, ordinaryScope });
         reviewedIndexes = reviewInput.reviewedIndexes;
-        let reviewSystem = EVIDENCE_REVIEW_GUIDANCE + (observeLanguage
+        let reviewSystem = EVIDENCE_REVIEW_GUIDANCE + (ordinaryScope ? ORDINARY_SCOPE_REVIEW_GUIDANCE : "") + (observeLanguage
           ? STATEMENT_LANGUAGE_REVIEW_GUIDANCE : ""), reviewJson = reviewInput.json;
         if (teaching?.packet?.proposals.length) {
           try {
@@ -379,7 +382,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         synthesisOutputLimit = synthesisOutputLimitFromError(error, "review");
       }
     }
-    const evidence = applyEvidenceReview(proposals, review, reviewedIndexes, observeLanguage);
+    const evidence = applyEvidenceReview(proposals, ordinaryScope ? ordinaryScopeReviewedResponse(review, proposals) : review,
+      reviewedIndexes, observeLanguage);
     const envelope = input.generationFormat === "evidence-only" ? evidenceOnlyEnvelope(input, evidence) : undefined;
     return {
       answer: envelope?.answer ?? (out.answer as string) ?? "",
