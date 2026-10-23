@@ -48,7 +48,8 @@ import type {
   PaymentRequirements,
 } from "@/lib/payments/browser-cosign-gateway";
 import type { QueryRun, ResearchMode, TraceStep } from "@/lib/types";
-import { createTrustedUsageContext, newRunUsage } from "@/lib/research/usage-provenance";
+import { newRunUsage } from "@/lib/research/usage-provenance";
+import { sponsoredUsageContext } from "@/lib/research/sponsored-usage";
 import { MAX_ASK_QUESTION_CHARS, parseAskQuestion, parseResearchMode } from "@/lib/ask-input";
 import { recordActivationEvent } from "@/lib/activation";
 import { isAddress } from "viem";
@@ -299,6 +300,7 @@ export async function POST(req: NextRequest) {
       }) : undefined;
 
       let deps: Awaited<ReturnType<typeof getAgentDeps>> | undefined;
+      let usageContext: object | undefined;
       const planningTrace: TraceStep[] = [], startedAt = Date.now();
       try {
 
@@ -343,6 +345,10 @@ export async function POST(req: NextRequest) {
         }
 
         if (agentAbort.signal.aborted) throw new DOMException("Research cancelled", "AbortError");
+        usageContext = sponsoredUsageContext({ network: config.profile.networkId, queryId, origin: config.baseUrl,
+          gateway: deps.gateway, sponsored: !useBrowserCoSign, scripted: isBot, asker,
+          provenance: { version: 1, surface: "web", ownershipMethod: asker ? "session" : "unknown" },
+          teamWallets: config.devWallets ?? [] });
         send("meta", { engine: deps.engine.name, mode: deps.gateway.mode, researchMode, visibility: publication.visibility,
           ...(!privateClaimRequested && (publication.visibility === "public" || publication.visibility === "unlisted") ? { reportId: queryId } : {}),
           ...(publication.visibility === "private" ? { visibilityOwner: asker } : {}), ...(reviewAdapter ? { reviewOwner: asker } : {}) });
@@ -361,7 +367,7 @@ export async function POST(req: NextRequest) {
             // asker's own sources.
             asker,
             provenance: { version: 1, surface: "web", ownershipMethod: asker ? "session" : "unknown" },
-            usageContext: isBot ? createTrustedUsageContext(config.profile.networkId, { actor: "unknown", funding: "unknown", scripted: true }) : undefined,
+            usageContext,
             researchMode,
             scholarly: body.scholarly === true,
             paidScholarly: body.paidScholarly === true,
@@ -428,8 +434,7 @@ export async function POST(req: NextRequest) {
           const provenance = { version: 1 as const, surface: "web" as const, ownershipMethod: asker ? "session" as const : "unknown" as const };
           const failed: QueryRun = { id: queryId, question: askQuestion, budget: askBudget, researchMode,
             engine: effectiveEngineName(deps.engine), planningFailure, provenance,
-            usage: newRunUsage({ asker, provenance, ...(isBot ? { usageContext: createTrustedUsageContext(config.profile.networkId,
-              { actor: "unknown", funding: "unknown", scripted: true }) } : {}) }, config.profile.networkId, config.devWallets ?? []),
+            usage: newRunUsage({ asker, provenance, usageContext }, config.profile.networkId, config.devWallets ?? []),
             reasoningAttempts: reasoningAttempts(deps.engine), llmUsage: reasoningUsage(deps.engine), llmCalls: reasoningCalls(deps.engine),
             subClaims: [], decisions: [], citations: [], evidence: [], claimCoverage: [],
             answer: researchFailureMessage(err), totalSpent: 0, totalToCreators: 0,
