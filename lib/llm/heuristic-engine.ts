@@ -1,4 +1,5 @@
 import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
+import { arxivDocumentId, questionArxivIds, targetArxivIds } from "../scholarly/arxiv-identity";
 import { completeEvidenceSpans, type EvidenceSpan } from "./evidence-span";
 /**
  * HeuristicEngine — deterministic, offline reasoning. No API key required.
@@ -66,20 +67,34 @@ export class HeuristicEngine implements ReasoningEngine {
       input.question + " " + input.subClaims.join(" "),
     );
     const claimTokens = input.subClaims.map((c) => tokenize(c));
+    const requestedIds = new Set(questionArxivIds(input.question));
 
     return input.candidates.map((c) => {
+      // Exact caller intent is selection context, never factual-support authority.
+      // Titles/snippets cannot supply an arXiv identity or change a version.
+      const requestedId = c.sourceKind === "public-reference" && c.item?.sourceKind === "public-reference" && c.fetchPrice === 0
+        ? arxivDocumentId(c.item.itemUrl ?? "") : undefined;
+      const requestedTargets = requestedId === undefined || !requestedIds.has(requestedId) ? []
+        : input.subClaims.flatMap((claim, index) => targetArxivIds(claim).includes(requestedId) ? [index] : []);
+      const requestedOriginal = requestedTargets.length > 0;
       const docTokens = tokenize(
-        `${c.name} ${c.description} ${c.tags.join(" ")} ${c.preview}`,
+        `${c.name} ${c.description} ${c.tags.join(" ")} ${c.preview} ${requestedOriginal ? requestedId : ""}`,
       );
-      const value = overlap(qTokens, docTokens);
+      // Multi-part instructions must not dilute the matching document target.
+      // Keep the existing attention/spend floor; use measured lexical overlap
+      // with that exact target rather than inventing a minimum confidence/value.
+      const value = Math.max(overlap(qTokens, docTokens), ...requestedTargets.map(index => overlap(claimTokens[index], docTokens)));
       const targets = claimTokens
-        .map((ct, i) => (overlap(ct, docTokens) > 0.15 ? i : -1))
+        .map((ct, i) => (overlap(ct, docTokens) > 0.15 || requestedTargets.includes(i) ? i : -1))
         .filter((i) => i >= 0);
       const terms = sharedTerms(qTokens, docTokens);
 
       let action: Decision["action"];
       let rationale: string;
-      if (c.cached && value >= 0.08) {
+      if (requestedOriginal) {
+        action = c.cached ? "CACHE" : "BUY";
+        rationale = `${c.cached ? "Reuse" : "Read"} the zero-cost public original explicitly requested as arXiv ${requestedId}. URL/version and evidence checks still apply; this selection does not establish factual support.`;
+      } else if (c.cached && value >= 0.08) {
         action = "CACHE";
         rationale = `Already cached and still relevant (matches ${terms.join(", ") || "topic"}); reuse for free instead of paying again.`;
       } else if (value >= 0.12) {
@@ -211,8 +226,11 @@ export class HeuristicEngine implements ReasoningEngine {
     for (let claimIndex = 0; claimIndex < claims.length; claimIndex++) {
       const claim = claims[claimIndex]!;
       const ct = tokenize(claim);
+      const exactTargets = targetArxivIds(claim);
       let best: { score: number; sentence: string; marker: string; span?: EvidenceSpan } = { score: 0, sentence: "", marker: "" };
       for (const g of input.gathered) {
+        const observedArxivId = arxivDocumentId(g.itemUrl ?? "");
+        if (exactTargets.length && (!observedArxivId || !exactTargets.includes(observedArxivId))) continue;
         for (const span of completeEvidenceSpans(g)) {
           const s = g.text.slice(span.start, span.end);
           const score = overlap(ct, tokenize(s));
@@ -231,10 +249,12 @@ export class HeuristicEngine implements ReasoningEngine {
         });
       }
     }
+    const versionBound = claims.some(claim => targetArxivIds(claim).length > 0);
     const answer = lines.length
       ? lines.join(" ")
+      : versionBound ? "No excerpt was selected for these requested document versions."
       : `${input.gathered[0].text.slice(0, 240)}… [${input.gathered[0].marker}]`;
-    if (lines.length === 0) cited.add(input.gathered[0].marker);
+    if (lines.length === 0 && !versionBound) cited.add(input.gathered[0].marker);
     // The heuristic engine does not detect cross-source conflicts — that requires an LLM.
     return { answer, citedMarkers: [...cited], conflicts: [], evidence };
   }
