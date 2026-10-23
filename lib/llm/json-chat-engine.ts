@@ -10,6 +10,7 @@ import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { boundedResearchPlan } from "./research-plan";
 import { cloneUsage } from "../economics/provider-cost-policy";
 import { LlmCallLedger } from "./call-ledger";
+import { admitOrdinaryCompute } from "./ordinary-compute-budget";
 import { evidenceContext, EVIDENCE_CONTEXT_GUIDANCE } from "./evidence-context";
 import { buildQuoteOptions, resolveQuoteEvidence, type QuoteOption } from "./quote-options";
 import { STATEMENT_GENERATION_GUIDANCE } from "./cited-statement";
@@ -70,6 +71,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
 
   private measuredChatJson(stage: LlmCallStage, ...args: Parameters<JsonChatEngine["chatJson"]>) {
     this.validateChatJsonInput(...args);
+    admitOrdinaryCompute(this, stage, args[1], args[2], args[3] ?? 2048);
     return this.callLedger.track(this.name, () => this.chatJson(...args), stage);
   }
 

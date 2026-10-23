@@ -25,6 +25,7 @@ import {
 import { createModelEngine } from "./model-engine";
 import { StagedEngine } from "./staged-engine";
 import { CoverageReuseEngine } from "./coverage-reuse-engine";
+import { OrdinaryComputeBudget, bindOrdinaryComputeBudget } from "./ordinary-compute-budget";
 import { endpointFor, endpointForModel } from "./provider-endpoints";
 import type { ReasoningEngine } from "./reasoning-engine";
 import { BoundedProductionEngine, configuredProductionModelAllowance, ProductionModelAllowance } from "./bounded-production-engine";
@@ -49,7 +50,7 @@ export function resolveModelChoice(id?: string | null): ModelChoice | null {
   return endpointForModel(model) ? model : null;
 }
 
-function defaultRealEngines(exclude = new Set<string>()): ReasoningEngine[] {
+function defaultRealEngines(budget: OrdinaryComputeBudget, exclude = new Set<string>()): ReasoningEngine[] {
   const engines: ReasoningEngine[] = [];
 
   for (const provider of llmProviderOrder()) {
@@ -62,7 +63,10 @@ function defaultRealEngines(exclude = new Set<string>()): ReasoningEngine[] {
     } else if (provider === "cloudflare") {
       engine = createModelEngine(findModelChoice("cloudflare-llama-3.3")!);
     }
-    if (engine && !exclude.has(engine.name)) engines.push(engine);
+    if (engine && !exclude.has(engine.name)) {
+      bindOrdinaryComputeBudget(engine, budget);
+      engines.push(engine);
+    }
   }
 
   return engines;
@@ -85,26 +89,28 @@ function buildChain(realEngines: ReasoningEngine[]): ReasoningEngine {
   return fallback;
 }
 
-function buildDefaultEngine(): ReasoningEngine {
-  const engines = defaultRealEngines();
+function buildDefaultEngine(budget: OrdinaryComputeBudget): ReasoningEngine {
+  const engines = defaultRealEngines(budget);
   return engines.length > 0 ? buildChain(engines) : new HeuristicEngine();
 }
 
-function buildChoiceEngine(choice: ModelChoice): ReasoningEngine {
-  if (choice.id === DEFAULT_MODEL_ID) return buildDefaultEngine();
+function buildChoiceEngine(choice: ModelChoice, budget: OrdinaryComputeBudget): ReasoningEngine {
+  if (choice.id === DEFAULT_MODEL_ID) return buildDefaultEngine(budget);
 
   const primary = createModelEngine(choice);
-  if (!primary) return buildDefaultEngine();
+  if (!primary) return buildDefaultEngine(budget);
+  bindOrdinaryComputeBudget(primary, budget);
   if (choice.routineModel) {
     const routineChoice = findModelChoice(choice.routineModel);
     const routine = routineChoice && createModelEngine(routineChoice);
     if (!routine) throw new Error("Balanced research routine model unavailable");
+    bindOrdinaryComputeBudget(routine, budget);
     return new StagedEngine(
-      buildChain([routine, ...defaultRealEngines(new Set([routine.name, primary.name]))]),
-      buildChain([primary, ...defaultRealEngines(new Set([primary.name]))]),
+      buildChain([routine, ...defaultRealEngines(budget, new Set([routine.name, primary.name]))]),
+      buildChain([primary, ...defaultRealEngines(budget, new Set([primary.name]))]),
     );
   }
-  return buildChain([primary, ...defaultRealEngines(new Set([primary.name]))]);
+  return buildChain([primary, ...defaultRealEngines(budget, new Set([primary.name]))]);
 }
 
 export function getReasoningEngine(modelId?: string): ReasoningEngine {
@@ -120,7 +126,10 @@ export function getReasoningEngine(modelId?: string): ReasoningEngine {
     return new BoundedProductionEngine(process.env.DEEPSEEK_API_KEY ?? "", new ProductionModelAllowance(bounded));
   }
   const choice = resolveModelChoice(modelId);
-  return new CoverageReuseEngine(choice ? buildChoiceEngine(choice) : buildDefaultEngine());
+  const budget = new OrdinaryComputeBudget();
+  const engine = new CoverageReuseEngine(choice ? buildChoiceEngine(choice, budget) : buildDefaultEngine(budget));
+  bindOrdinaryComputeBudget(engine, budget);
+  return engine;
 }
 
 export type { ReasoningEngine } from "./reasoning-engine";
