@@ -1,5 +1,17 @@
 # Keryx — Decision Log
 
+## Bound ordinary supplier work across a complete run — 2026-10-23
+
+Give every newly selected ordinary reasoning engine one shared cumulative
+call/prompt-content/output allowance, including fallback providers, balanced
+routine/synthesis lanes and separate evidence review. Refuse locally before a
+new supplier call when exhausted; do not repair the refusal through another
+provider or change supplier health. Keep failed attempts consumed and existing
+same-input reuse free of new calls. These deterministic work bounds do not
+claim a vendor invoice or USD margin. Independently admitted finite/private
+originals and all source/payment/custody authority retain their contracts.
+See [the limits and surface boundaries](docs/engineering/ordinary-compute-bounds.md).
+
 ## Recover ordinary research without changing its authority — 2026-10-18
 
 Admit comparison-plan whitespace omitted between otherwise exact caller spans;
