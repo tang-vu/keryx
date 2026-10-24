@@ -617,10 +617,11 @@ async function* runAdmittedAgent(
       }
       // A selection is an unread proposal. Attach observed section scope only
       // after the original read succeeds; this changes no decision/spend basis.
-      if (extracted.webProvenance?.htmlSectionScope) for (const decision of finalDecisions) {
+      if (extracted.webProvenance?.htmlSectionScope) for (let index = 0; index < finalDecisions.length; index++) {
+        const decision = finalDecisions[index];
         if ((decision.assetId ?? decision.sourceId) !== id) continue;
-        decision.requestedSource = extracted.requestedSource;
-        decision.webProvenance = extracted.webProvenance;
+        finalDecisions[index] = { ...decision, requestedSource: extracted.requestedSource,
+          webProvenance: extracted.webProvenance };
       }
       return extracted;
     } catch (error) { lastWebFailure = articleFailureCode(error); lastWebDiagnostic = articleReadDiagnostic(error); publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure, assetId: id }); return null; }
