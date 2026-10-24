@@ -29,6 +29,22 @@ it("keeps missing, changed, private, paid-original and planning-failed completio
     expect(await privateRequesterObservations({ run: { ...run, id }, db: { getQueryRun: async () => run }, store, publicOriginal: true, binding, secret })).toBeNull();
   }
   expect(await privateRequesterObservations({ run, db: { getQueryRun: async () => run }, store, publicOriginal: false, binding, secret })).toBeNull();
+  const failed = { ...run, planningFailure: { version: 1 as const, stage: "decompose" as const, reason: "needs_refinement" as const,
+    maximumTargets: 8 as const, automaticRetry: false as const } };
+  const reader = vi.fn(async () => failed);
+  expect(await privateRequesterObservations({ run: failed, db: { getQueryRun: reader }, store, publicOriginal: true, binding, secret })).toBeNull();
+  expect(reader).not.toHaveBeenCalled(); expect(store).not.toHaveBeenCalled();
+});
+
+it("does not open optional metadata when a pending saved-original read completes after abort", async () => {
+  const run = recordedRun(), abort = new AbortController(), store = vi.fn(() => fixture().store);
+  let release: (value: ReturnType<typeof recordedRun>) => void;
+  const saved = new Promise<ReturnType<typeof recordedRun>>(resolve => { release = resolve; });
+  const pending = privateRequesterObservations({ run, db: { getQueryRun: () => saved }, store, publicOriginal: true, binding, secret, signal: abort.signal });
+  abort.abort(); release!(run);
+  const packet = await pending;
+  expect(packet?.feedback).toBeNull(); expect(store).not.toHaveBeenCalled();
+  expect(packet?.observations.generationDurationMs).toBe(run.durationMs);
 });
 
 it("retains observations when optional storage or authentication is unavailable and never retries research", async () => {

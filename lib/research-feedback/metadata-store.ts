@@ -31,7 +31,8 @@ function identity(db: DatabaseSync, binding: RunClaimBinding) {
 }
 /** Independent, explicitly configured opinion metadata. It never opens a main
  * application database or restores any native/enrolled write capability.
- * No credential, question, answer or payment tuple is retained here.
+ * No credential, question, answer or payment tuple is automatically copied here;
+ * the caller's optional reason remains private user-supplied text.
  */
 export function openRequesterOpinionStore(directory: string, rawBinding: RunClaimBinding): RequesterFeedbackStore & { close(): void } {
   const binding = runClaimBindingSchema.parse(rawBinding);

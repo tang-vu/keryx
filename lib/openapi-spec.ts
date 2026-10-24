@@ -20,6 +20,7 @@ import { paidJobEscalationOpenApiProperty, paidJobEscalationOpenApiSchemas } fro
 import { pendingJobOwnerHeader, pendingJobOwnerDescription, pendingJobOwnerOpenApiPaths, pendingJobOwnerOpenApiSchemas } from "./a2a/pending-job-owner-openapi";
 import { RUN_SURFACES, RUN_OWNERSHIP_METHODS } from "./research/run-provenance";
 import { actualReadOpenApiSchemas } from "./research-audit/actual-read-openapi";
+import { requesterFeedbackOpenApiPaths, requesterFeedbackOpenApiSchemas, requesterFeedbackOpenApiSecurityScheme, privateRequesterOpenAiProperty } from "./research-feedback/openapi";
 
 import { privateProfileOpenApiPaths } from "./profiles/openapi";
 import { deliverableAcceptanceOpenApiPaths } from "./deliverable-acceptance/openapi";
@@ -80,6 +81,7 @@ export const openapiSpec = {
   servers: [{ url: "https://keryx.cc", description: "Production (Arc mainnet; verify /api/health for active mode)" }],
   components: {
     securitySchemes: {
+      RequesterFeedbackCapability: requesterFeedbackOpenApiSecurityScheme,
       WebSession: {
         type: "apiKey", in: "cookie", name: "keryx_session",
         description: "Revocable durable web session issued by SIWE or verified Circle Google login. Creator claim writes also require exact same-origin Origin header; API keys and research payment signatures cannot manage claims.",
@@ -104,6 +106,7 @@ export const openapiSpec = {
       },
     },
     schemas: {
+      ...requesterFeedbackOpenApiSchemas,
       ...actualReadOpenApiSchemas,
       ...paidJobEscalationOpenApiSchemas,
       ...pendingJobOwnerOpenApiSchemas,
@@ -440,6 +443,7 @@ export const openapiSpec = {
         type: "object",
         properties: {
           ...privateRunClaimOpenAiProperties,
+          ...privateRequesterOpenAiProperty,
           id: { type: "string", example: "chatcmpl-…" },
           object: { type: "string", example: "chat.completion" },
           model: { type: "string", example: "keryx" },
@@ -675,6 +679,7 @@ export const openapiSpec = {
     ...topicWatchOpenApiPaths,
     ...ownerAssignmentOpenApiPaths,
     ...deliverableAcceptanceOpenApiPaths,
+    ...requesterFeedbackOpenApiPaths,
     ...evidenceDraftOpenApiPath,
     ...draftCheckOpenApiPath,
     ...evidenceProcurementOpenApiPath,
@@ -1029,7 +1034,8 @@ export const openapiSpec = {
           "200": {
             description:
               "ChatCompletion object, or an SSE stream of chat.completion.chunk when stream=true. " +
-              "A terminal planning refusal in a started stream is emitted as [keryx error] content, without a successful completion or automatic retry.",
+              "A terminal planning refusal in a started stream is emitted as [keryx error] content, without a successful completion or automatic retry. " +
+              "An ordinary public completion can include private keryx_private_requester observations beside the public result, in JSON or the final SSE chunk before [DONE]. Retain only in original client memory; never merge into choices, public keryx metadata, saved runs or exports.",
             content: {
               "application/json": { schema: { $ref: "#/components/schemas/ChatCompletion" } },
               "text/event-stream": privateRunClaimOpenAiStream,
