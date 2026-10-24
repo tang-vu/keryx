@@ -720,6 +720,9 @@ jobs:
       - name: Private evidence drafts built interactions (offline, no research)
         run: node --import tsx scripts/test-browser-evidence-drafts.mts
 
+      - name: Saved report comparison (real WebCrypto, local files and downloads)
+        run: node --import tsx scripts/test-browser-report-comparison.mts --built
+
       - name: Evidence procurement request, signatures and restored reviews (offline, synthetic providers)
         run: node --import tsx scripts/test-browser-evidence-procurement.mts
 

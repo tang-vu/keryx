@@ -8,6 +8,24 @@ remain external. The buyer does not auto-install x402's old Zod peer graph.
 Source builds require the repository's pinned dependencies. Bundled code,
 modifications and licenses are listed in `THIRD-PARTY-NOTICES.txt`.
 
+## Compare saved receipts locally (source candidate)
+
+`compare_saved_research({before, after, matches?})` accepts two version-1 research
+receipt JSON strings, at most 512 KiB each. It verifies both recorded payload
+checksums and compares exact retained excerpt rows, source versions and reading
+context. Unique identical targets are paired automatically; explicit one-to-one
+`matches` use recorded claim indices. `[]` leaves all targets unmatched.
+Missing historical ledgers stay unknown. A checksum is not authenticity, factual
+support, settlement or proof of improvement; row counts are not independent sources.
+
+This stdio tool uses no network, model, database or payment capabilities. Your MCP
+client can retain the supplied text and results. For browser-memory-only file
+inspection and JSON/Markdown/CSV downloads, use `/research/compare`. API/remote MCP,
+extension and bot receipt downloads hand off to that local workspace. See
+[the comparison contract](../docs/research-report-comparison.md) for local CLI,
+matching, limits and export semantics. Production/package availability follows
+the coordinated release; this source section does not claim an installed version.
+
 ## Sponsored public research (source candidate)
 
 `ask_keryx_sponsored` runs hosted sponsored research with **no API key, buyer
