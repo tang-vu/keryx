@@ -19,6 +19,7 @@
 import { isRequestObject } from "@/lib/request-object";
 import { unsupportedDecisionReviewIntent } from "@/lib/research/decision-review-types";
 import { NextRequest } from "next/server";
+import { hostedRequesterObservations } from "@/lib/research-feedback/hosted-delivery";
 import { collectRun, getAgentDeps, type AgentDeps } from "@/lib/agent";
 import { prepareHostedRunClaim } from "@/lib/run-claims/hosted-delivery";
 import { RunClaimError } from "@/lib/run-claims/contracts";
@@ -222,7 +223,9 @@ export async function POST(req: NextRequest) {
       context.claim = isBot ? null : await prepareHostedRunClaim(queryId, keyIdentity?.walletAddress);
       const run = await collect();
       const packet = await context.claim?.complete(run);
-      return Response.json({ ...buildCompletion(run, modelName, body.language), ...(packet ? { keryx_private: packet } : {}) }, { headers: { ...CORS, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
+      const requester = !isBot ? await hostedRequesterObservations(run, true, context.deps?.db) : null;
+      return Response.json({ ...buildCompletion(run, modelName, body.language), ...(packet ? { keryx_private: packet } : {}),
+        ...(requester ? { keryx_private_requester: requester } : {}) }, { headers: { ...CORS, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
     } catch (error) {
       if (error instanceof RunClaimError) return openaiError("Private run claims are unavailable on this deployment.", 503, "claims_unavailable");
       const held = researchAdmissionError(error);
@@ -254,7 +257,9 @@ export async function POST(req: NextRequest) {
         const run = await collect(s => send(buildChunk(id, modelName, { reasoning_content: traceLine(s) })));
         send(buildChunk(id, modelName, { content: buildAnswerContent(run, body.language) }));
         const packet = await context.claim?.complete(run);
-        send(buildChunk(id, modelName, {}, "stop", { keryx: keryxMeta(run), ...(packet ? { keryx_private: packet } : {}) }));
+        const requester = !isBot ? await hostedRequesterObservations(run, true, context.deps?.db) : null;
+        send(buildChunk(id, modelName, {}, "stop", { keryx: keryxMeta(run), ...(packet ? { keryx_private: packet } : {}),
+          ...(requester ? { keryx_private_requester: requester } : {}) }));
         try {
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         } catch {

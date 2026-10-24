@@ -117,6 +117,9 @@ it.each([320, 1440])("dismisses a real reload without losing work at %ipx", asyn
   await fixture(async page => {
     const passage = page.getByLabel(copy.claim.passage);
     await passage.fill("Keep these exact unsaved bytes \u{1f600}");
+    // React installs the dirty-state listener in an effect after the input event.
+    // Observe that state before asking Chromium to navigate the real document.
+    await expectWarning(page, true);
     const opened = page.waitForEvent("dialog", { timeout: 1500 });
     const reload = page.reload().then(() => "loaded", () => "cancelled");
     const dialog = await opened;

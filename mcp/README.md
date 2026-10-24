@@ -355,6 +355,33 @@ codex mcp add keryx --url https://keryx.cc/mcp
 
 See the repository's `docs/remote-mcp.md` for the remote trust model.
 
+## Original-requester feedback and recorded observations
+
+Ordinary public sponsored completions can deliver private job observations beside
+the public result: recorded generation duration, partial captured-price model
+cost bounds, and an optional original-response feedback capability. In the MCP
+response, this is separate private content and
+`_meta["keryx/privateRequesterObservations"]`; it is absent from public structured
+research results. Do not copy the capability into reports, URLs, saved public
+results, analytics or shared prompts.
+
+`research_feedback_read({ token })` reads whether an opinion was recorded.
+`research_feedback_submit({ token, choice, reason? })` records an explicit
+`useful`, `revise` or `reject` opinion with an optional private reason. First
+choice wins; exact replay is idempotent and a changed opinion conflicts. After
+response loss, read explicitly before considering another action. Neither tool
+executes research, revision, refund, payment or renewal. No opinion is automatic;
+silence is no response. Private/prepaid originals retain their existing contracts.
+
+The capability comes only from the matching completed original response; a
+public run ID cannot recover or replace it. Optional feedback storage may be
+unavailable without losing the original research result or recorded observations.
+Costs are partial estimates excluding search/infrastructure/gas/unrecorded
+charges; duration is recorded completion, not first-token latency. Invoice and
+profit remain unmeasured. See [configuration, surface roles and validation](../docs/engineering/requester-usefulness-20261024.md).
+This source contract requires the accepted package/hosted release; it does not
+claim that previously installed clients already include these tools.
+
 ## Local stdio tools
 
 Source candidate: `evidence_draft(draft)` assembles private manual claim assessments

@@ -8551,3 +8551,20 @@ do not feed presentation changes back into source selection, rewards or receipts
 Unsupported or unsafe projections retain the original answer instead of clipping
 qualifications. Preserve private/bounded/prepaid and explicit-format boundaries.
 See [scope and validation](docs/engineering/api-integration-note-20261024.md).
+
+## Keep original-requester opinions separate from research and financial state (2026-10-24)
+
+Deliver private job observations through the original saved response channel,
+with an optional purpose-derived capability bound to original content, deployment,
+network, observations and an independently identified metadata journal. Require an
+explicit usefulness choice; retain one immutable opinion, idempotent exact replay
+and read-only response-loss recovery. Do not infer a choice from silence or give
+public report IDs a capability-recovery path. Preserve public runs and exports.
+
+Use only an explicitly configured independent private SQLite opinion journal,
+with no main native/enrolled schema/write fallback. Keep configured origin/store
+identity, file/schema refusal, bounded retention and atomic first-choice gates.
+Record partial captured-policy cost bounds and completion duration honestly;
+missing/unpriced charges, invoices, profit and human identity stay unmeasured.
+Feedback never executes revision, research, refund, settlement or renewal. See
+[contracts and configuration](docs/engineering/requester-usefulness-20261024.md).

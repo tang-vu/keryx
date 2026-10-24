@@ -11,10 +11,10 @@
   "totals": {
     "englishNamespaceFiles": 73,
     "coreInlineSources": 1,
-    "extractedLeaves": 6192,
+    "extractedLeaves": 6211,
     "authoredEntries": 5940,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 223,
+    "uncoveredEntries": 242,
     "completeNamespaces": 65
   },
   "namespaces": [
@@ -3549,9 +3549,9 @@
     {
       "namespace": "reports",
       "sourcePath": "locales/en/reports.ts",
-      "sourceSha256": "16bae398942d07675a4307af7447316f6fb8dbca6c838b81ad78c09cc2cf13d0",
+      "sourceSha256": "adb144795d71e0f33df09a7556d9a5ad7fa227a3194a755863867efaa59e3e7c",
       "draftPath": "locales/vi/ui-drafts/reports.json",
-      "extractedLeaves": 593,
+      "extractedLeaves": 612,
       "authoredEntries": 567,
       "coveredKeys": [
         "answerDelta.added",
@@ -4149,7 +4149,26 @@
         "reportReading.publicRead.other",
         "reportReading.publicSelection.one",
         "reportReading.publicSelection.other",
-        "reportReading.reads"
+        "reportReading.reads",
+        "requesterFeedback.basis",
+        "requesterFeedback.calls",
+        "requesterFeedback.check",
+        "requesterFeedback.confirmed",
+        "requesterFeedback.cost",
+        "requesterFeedback.duration",
+        "requesterFeedback.label",
+        "requesterFeedback.partial",
+        "requesterFeedback.private",
+        "requesterFeedback.question",
+        "requesterFeedback.reason",
+        "requesterFeedback.reject",
+        "requesterFeedback.revise",
+        "requesterFeedback.sending",
+        "requesterFeedback.submit",
+        "requesterFeedback.unavailable",
+        "requesterFeedback.unconfirmed",
+        "requesterFeedback.unknown",
+        "requesterFeedback.useful"
       ],
       "sourceAliases": {}
     },

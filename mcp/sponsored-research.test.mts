@@ -84,7 +84,7 @@ describe("sponsored MCP registration", () => {
       const result = await link.client.callTool({ name: "ask_keryx_sponsored", arguments: args });
       expect(result.isError).not.toBe(true); expect(result.structuredContent).toEqual(completed());
       expect(executor).toHaveBeenCalledExactlyOnceWith({ ...args, question: args.question.trim() },
-        { baseUrl, signal: expect.any(AbortSignal) });
+        { baseUrl, signal: expect.any(AbortSignal), onRequesterObservations: expect.any(Function) });
     } finally { await link.close(); }
   });
 
