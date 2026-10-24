@@ -465,7 +465,7 @@
     "lib/web-research/parser-slots.ts": "aeb2d116a3d3e9e4b9173cf0fcbe49ce8ac606c2f9d004931dc44f8a18d1e6cd",
     "lib/web-research/pdf-reader.ts": "ead37037d4d19f0ca6ddcea2a6a5f5af829488ece790698946a02df946dbe332",
     "lib/web-research/pdf-text-scope.ts": "7490a2269268c1ae21bddbfa85d9abffb4715ab793f9402da46183e83e803568",
-    "lib/web-research/requested-sources.ts": "f6cf4a343418272eb6936a07201337dfa0756e9a4337360545f995c3c520ab8c",
+    "lib/web-research/requested-sources.ts": "611222dd0317c2bf136b63e213ee6bc85ac65b772eb36b72be2591d2d919e2ce",
     "lib/web-research/search-provider.ts": "0b3dd1f1e45b814727242f9e32a49cba9efaaa88a468fc2ac53be6dc9d74cef6",
     "lib/web-research/tavily-provider.ts": "0c30cbc8e71f772632f20dd107d5329804430cc6137791b72f58c096d8cf8995",
     "lib/web-research/url-identity.ts": "6b6b4e392e01e4daf1efdb5aa6d22647897b50eee4e4e9fb4ce213b9a81cf651",
