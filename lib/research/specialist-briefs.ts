@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AskQuestionSchema } from "../ask-input";
 import { specialistBriefCopy as copy } from "../../locales/en/specialist-briefs";
+import { API_INTEGRATION_NOTE_REQUEST } from "./api-integration-note-request";
 
 export const SPECIALIST_BRIEF_IDS = ["api-platform", "saas-competition", "scholarly-literature"] as const;
 export type SpecialistBriefId = (typeof SPECIALIST_BRIEF_IDS)[number];
@@ -28,6 +29,7 @@ export function prepareSpecialistBrief(value: unknown) {
   const input = specialistBriefInputSchema.parse(value);
   const brief = specialistBriefs[input.track];
   const question = AskQuestionSchema.parse([
+    input.track === "api-platform" ? API_INTEGRATION_NOTE_REQUEST : "",
     brief.instruction,
     `Question: ${input.decision}`,
     input.context ? `Constraints: ${input.context}` : "",

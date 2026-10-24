@@ -139,6 +139,8 @@ import {
 import { withDecisionBasis } from "../research/decision-basis";
 import { trustedAnswerPresentation } from "../research/trusted-answer-presentation";
 import { finalizeAnswerLanguage } from "../research/answer-language-provenance";
+import { apiIntegrationNote } from "../research/api-integration-note";
+import { requestsApiIntegrationNote } from "../research/api-integration-note-request";
 import { languageReviewedProposals } from "../research/answer-language-review";
 
 export interface RunInput {
@@ -266,11 +268,15 @@ async function* runAdmittedAgent(
   const { engine, db, gateway } = deps;
   const effects = resolveResearchEffects(db, deps.effects, deps.discoverExternal, input.queryId);
   const startedAt = Date.now();
+  const integrationNoteRequested = effects.scope.kind === "public" && !input.answerFormat && !input.executionLimits &&
+    !input.targetAsset && !input.paidScholarly && ((input.origin ?? "engine") !== "engine" || input.allowExternalWeb === true) &&
+    requestsApiIntegrationNote(input.originalQuestion ?? input.question);
   const budget = input.budget ?? config.defaultBudget;
   const queryId = input.queryId ?? crypto.randomUUID();
   // Retain the execution origin on each payment for audit and channel diagnostics.
   const origin: PaymentOrigin = input.origin ?? "engine";
   const trace: TraceStep[] = [];
+  let integrationNoteProjection: { original: string; note: string } | undefined;
   const payments: PaymentRecord[] = [];
   let paymentAttempts = 0;
   let settledPayments = 0;
@@ -1942,6 +1948,11 @@ async function* runAdmittedAgent(
   answer = brief?.answer ?? finalizeGroundedAnswer({ question: input.question, answer, ledger, statements: citedStatements,
     presentation,
     synthesisUnavailable: Boolean(synthesisFailure) });
+  if (integrationNoteRequested && !brief && !teachingRequest && !presentation.requestedBulletCount &&
+      !presentation.requestedSentenceCount && !presentation.requestedMaximumWords) {
+    const note = apiIntegrationNote({ answer, ledger, statements: citedStatements, language: presentation.language });
+    if (note) integrationNoteProjection = { original: answer, note };
+  }
   const vi = researchResponseLanguage(input.question) === "vi";
   const citedSummary = citedStatements.length > 0;
   const unavailableAssessment = Boolean(synthesisFailure) && ledger.acceptedMarkers.size === 0;
@@ -2435,6 +2446,11 @@ async function* runAdmittedAgent(
     return steps;
   }
   function finish(answer: string): QueryRun {
+    // Keep the canonical grounded answer as attribution/payment input. This
+    // format changes only final presentation, preserving later notices verbatim.
+    if (integrationNoteProjection && answer.includes(integrationNoteProjection.original)) {
+      answer = answer.replace(integrationNoteProjection.original, () => integrationNoteProjection!.note);
+    }
     const originals = requestedSourceReport({ candidates: requested.candidates, notices: requested.notices,
       decisions: finalDecisions, gathered, evidence, outcomes: publicReadOutcomes,
       vi: researchResponseLanguage(input.question) === "vi", withheld: externalDocumentsWithheld,

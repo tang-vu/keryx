@@ -34,7 +34,7 @@ export const specialistBriefCopy = Object.freeze({
     audience: "For freelancers and small engineering teams",
     scope: "Compare up to two named options for one integration decision.",
     placeholder: "Which of these two APIs fits our notification workflow?",
-    instruction: "Compare up to two named APIs/platforms for this decision. Use primary documentation. Cover requirements, integration effort, published price assumptions, limits and unresolved risks. Give a conditional recommendation only where read evidence supports it.",
+    instruction: "Inspect up to two named APIs/platforms for this integration. Use primary documentation for the requested versions and platform. Keep each supported constraint and its conditions beside the exact excerpt and citation. Show actual read scope and missing evidence. Label any implementation check as a proposal; do not infer API behavior from an unrelated policy or metadata.",
     acceptance: ["Both options address the stated constraints, with source-backed trade-offs.", "Prices, limits and versions state their source and observation date; missing information stays unknown.", "The next implementation check and reasons that could change the decision are explicit."],
   },
   saasCompetition: {
