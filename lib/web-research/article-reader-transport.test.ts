@@ -5,6 +5,17 @@ import { readArticle, gatheredArticle } from "./article-reader";
 import { rememberPublicFetchFailure } from "../net/public-fetch-diagnostic";
 import { pdfFixture } from "../../test-support/pdf-fixture";
 
+it("applies the caller's explicit section to the actual redirected document without replacing final provenance", async () => {
+  const requested = "https://original.example/manual#limits", finalUrl = "https://cdn.example/v2/manual#server-choice";
+  transport.mockResolvedValueOnce({ contentType: "text/html", finalUrl, bytes: new TextEncoder().encode(
+    `<html><body><h2 id="limits">Limits</h2><p>${"Synthetic documented constraint; retry may duplicate delivery. ".repeat(3)}</p><h2 id="server-choice">Different section</h2></body></html>`) });
+  const result = await readArticle("https://original.example/manual", undefined, { requestedUrls: [requested] });
+  expect(result.finalUrl).toBe(finalUrl);
+  expect(result.htmlSectionScope?.fragment).toBe("limits");
+  expect(result.text).not.toContain("Different section");
+  expect(gatheredArticle("public:synthetic", result).itemUrl).toBe("https://cdn.example/v2/manual");
+});
+
 it("propagates only the sanitized original HTTP failure facts", async () => {
   const error = new UnsafeTargetError("PRIVATE_VENDOR_BODY https://original.example/?token=PRIVATE");
   rememberPublicFetchFailure(error, { reason: "http-status", httpStatus: 403, elapsedMs: 125 });

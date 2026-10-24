@@ -479,7 +479,7 @@ async function* runAdmittedAgent(
   if (!externalDocumentsWithheld) for (const candidate of requested.candidates.values()) admitWeb(candidate);
   for (const candidate of requested.candidates.values()) for (const url of candidate.item!.requestedSource!.urls) yield emit("discover",
     externalDocumentsWithheld ? `WITHHELD original URL ${url}: external document access is disabled for this scope.`
-      : `Supplied source URL ${url} admitted as an unread discovery lead. No official authorship or evidence established; a supplied fragment requests a section but only a bounded whole-document read is supported.`,
+      : `Supplied source URL ${url} admitted as an unread discovery lead. No official authorship or evidence established; one exact HTML heading/preceding anchor fragment can request a bounded section. Other reads use bounded whole-document extraction.`,
     { url, candidateId: candidate.id, withheld: externalDocumentsWithheld });
   for (const notice of requested.notices) yield emit("discover", `SKIP supplied original ${notice.url}: ${notice.code ? notice.code + ": " : ""}${notice.reason}`, notice);
   let webDiscovery: { status: "completed" | "unavailable" | "not-configured" | "withheld"; attemptedQueries?: number; succeededQueries?: number; failedQueries?: number } = { status: "not-configured" };
@@ -545,7 +545,8 @@ async function* runAdmittedAgent(
       let htmlFallback = false;
       let article;
       try {
-        article = await (deps.readWebArticle ?? readArticle)(candidate.item.itemUrl, webSignal());
+        article = await (deps.readWebArticle ?? readArticle)(candidate.item.itemUrl, webSignal(),
+          candidate.item.requestedSource ? { requestedUrls: candidate.item.requestedSource.urls } : undefined);
         if (metadata?.provider === "arxiv" && article.finalUrl === candidate.item.itemUrl && article.kind !== "pdf") throw new ArticleReadError("pdf-extraction-unavailable");
       }
       catch (error) {
@@ -604,7 +605,8 @@ async function* runAdmittedAgent(
       seenWebBodies.add(identity);
       seenWebUrls.add(article.finalUrl);
       const extracted = gatheredArticle(id, article);
-      extracted.requestedSource = candidate.item.requestedSource;
+      extracted.requestedSource = candidate.item.requestedSource ? { ...candidate.item.requestedSource,
+        readScope: extracted.webProvenance?.htmlSectionScope ? "bounded-heading-section" : "bounded-whole-document" } : undefined;
       if (requestedArxivId && /\/abs\//u.test(article.finalUrl)) extracted.publicDeliveryKind = "abstract";
       if (metadata) {
         extracted.scholarly = { ...metadata, evidenceScope: metadata.provider === "arxiv" ? abstractFallback ? "abstract-page" : "paper-text" : "publisher-page" };
@@ -612,6 +614,13 @@ async function* runAdmittedAgent(
         extracted.itemPublishedAt = metadata.publishedDate?.length === 10 ? metadata.publishedDate : undefined;
         extracted.publicDeliveryKind = abstractFallback ? "abstract" : "excerpt";
         if (abstractFallback) scholarlyReadFailures.push(`arXiv ${metadata.arxivId}: only the abstract page was read; full-paper evidence is unavailable.`);
+      }
+      // A selection is an unread proposal. Attach observed section scope only
+      // after the original read succeeds; this changes no decision/spend basis.
+      if (extracted.webProvenance?.htmlSectionScope) for (const decision of finalDecisions) {
+        if ((decision.assetId ?? decision.sourceId) !== id) continue;
+        decision.requestedSource = extracted.requestedSource;
+        decision.webProvenance = extracted.webProvenance;
       }
       return extracted;
     } catch (error) { lastWebFailure = articleFailureCode(error); lastWebDiagnostic = articleReadDiagnostic(error); publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure, assetId: id }); return null; }

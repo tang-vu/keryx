@@ -79,6 +79,10 @@ export function exportEvidenceDraft(value: unknown) {
           excerpt.readUrl ? ` Retained read URL: ${latex(excerpt.readUrl)}.` : ""}`, "");
       const scope = pdfReadingNotice(excerpt.pdfTextScope);
       if (scope) { md.push(markdown(scope), ""); tex.push(latex(scope), ""); }
+      if (excerpt.htmlSectionScope) {
+        const notice = `Only HTML heading section #${excerpt.htmlSectionScope.fragment} was read; the surrounding document was not read.`;
+        md.push(markdown(notice), ""); tex.push(latex(notice), "");
+      }
     }
   }
   md.push("## Included papers without usable retained excerpts", "");

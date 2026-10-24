@@ -8528,3 +8528,14 @@ hashes fail closed on drift; install and production build verify the cohort. Bun
 the patched validator and unchanged pinned Circle buyer in the MCP CLI so clean consumers do not auto-install an
 unpatched legacy peer graph. Keep monetary authority and required audit/CI gates.
 See [scope and validation](docs/engineering/runtime-audit-patches-20261024.md).
+
+## Read one explicit heading section before constructing a document DOM (2026-10-24)
+
+Use a bounded SAX pass inside the existing isolated HTML worker to identify one
+literal heading/preceding-anchor section, scan for duplicate anchors through EOF,
+then apply the existing DOM limits to that source range. Keep whole-document
+mode and its limits unchanged. Refuse unsupported tree repair and ambiguous
+boundaries rather than infer browser structure. Carry caller intent separately
+from final fetched identity and retain section-only scope in receipts and exports.
+This addresses an observed long-manual extraction limit without changing source,
+payment or creator authority. See [targeted document reading](docs/engineering/targeted-document-reading-20261024.md).

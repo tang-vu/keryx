@@ -4,8 +4,10 @@ import type { ArticleRead } from "./article-reader";
 import { acquireParserSlot } from "./parser-slots";
 import { parse } from "parse5";
 import { observeHtmlTextLayout } from "./html-text-layout";
+import { observedHtmlSectionScope } from "./html-section-scope";
+import { createHash } from "node:crypto";
 
-export async function extractHtml(text: string, finalUrl: string, signal?: AbortSignal): Promise<ArticleRead> {
+export async function extractHtml(text: string, finalUrl: string, signal?: AbortSignal, fragment?: string): Promise<ArticleRead> {
   // Keep this external package visible to Next's dependency tracer; DOM construction and
   // untrusted parsing remain exclusively in the child. It also fails closed on missing runtime.
   if (typeof parse !== "function" || Buffer.byteLength(text, "utf8") > 2 * 1024 * 1024 || finalUrl.length > 4096) throw new Error("HTML parser unavailable");
@@ -30,9 +32,12 @@ export async function extractHtml(text: string, finalUrl: string, signal?: Abort
         const result = JSON.parse(output) as ArticleRead;
         if (typeof result.text !== "string" || result.text.length > 60000 || !result.text.trim() ||
           typeof result.title !== "string" || result.title.length > 200 || result.finalUrl !== finalUrl || result.kind !== "html" || typeof result.truncated !== "boolean") throw new Error();
-        resolve({ ...result, htmlTextLayout: observeHtmlTextLayout(result.text, result.htmlTextLayout) });
+        const scope = observedHtmlSectionScope(result.htmlSectionScope);
+        if (fragment !== undefined ? !scope || scope.fragment !== fragment || scope.documentCharacters !== text.length ||
+          scope.documentSha256 !== createHash("sha256").update(text, "utf8").digest("hex") || !result.truncated : result.htmlSectionScope !== undefined) throw new Error();
+        resolve({ ...result, ...(scope ? { htmlSectionScope: scope } : {}), htmlTextLayout: observeHtmlTextLayout(result.text, result.htmlTextLayout) });
       } catch { reject(new Error("HTML extraction unavailable")); }
     });
-    child.stdin.end(JSON.stringify({ text, finalUrl }));
+    child.stdin.end(JSON.stringify({ text, finalUrl, fragment }));
   }); } finally { release(); }
 }

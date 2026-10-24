@@ -68,7 +68,7 @@ export function requestedSources(question: string) {
     leads.push({ url: requested, candidateId: id });
     candidates.set(id, { id, sourceId: id, sourceKind: "public-reference", name: canonical,
       description: "User-supplied original URL with unobserved contents; no official authorship or document contents established. Consider this original independently of search results. No creator payment.",
-      tags: ["public-web", "requested-source"], fetchPrice: 0, cached: false, preview: "No document text has been read. Only a bounded whole document is supported, not section-specific extraction.",
+      tags: ["public-web", "requested-source"], fetchPrice: 0, cached: false, preview: "No document text has been read. One exact HTML heading/preceding anchor fragment may request a bounded section; other reads use bounded whole-document extraction.",
       item: { sourceKind: "public-reference", itemId: digest(canonical), itemTitle: canonical, itemUrl: canonical,
         contentVersion: "unread", requestedSource: { urls: [requested], readScope: "bounded-whole-document" } } });
   }
