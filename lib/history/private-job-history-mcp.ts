@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { secretFreeMcpInput } from "../mcp/secret-free-input-schema";
 import {
   PRIVATE_JOB_HISTORY_BOUNDS as B, parsePrivateJobHistoryInput, privateJobHistoryInputSchema,
   privateJobHistoryDetailInputSchema, privateJobHistoryPageSchema, privateJobHistoryDetailSchema,
@@ -26,14 +27,7 @@ const refusal = () => ({ isError: true, content: [{ type: "text" as const, text:
 const listInput = privateJobHistoryInputSchema.innerType();
 const detailInput = privateJobHistoryDetailInputSchema;
 function secretFreeInput<T extends z.ZodRawShape>(shape: T) {
-  const guarded = Object.fromEntries(Object.entries(shape).map(([name, schema]) => {
-    const field = schema.catch(() => { throw new Error(PRIVATE_JOB_HISTORY_REFUSAL); });
-    // The converter probes optionality by parsing undefined; retain original required
-    // fields instead of letting a throwing catch make the required detail ID optional.
-    field.isOptional = () => schema.isOptional();
-    return [name, field];
-  }));
-  return z.object(guarded).strict(PRIVATE_JOB_HISTORY_REFUSAL);
+  return secretFreeMcpInput(shape, PRIVATE_JOB_HISTORY_REFUSAL);
 }
 
 /** Same shared schemas for remote and stdio; callbacks supply existing verified authority. */

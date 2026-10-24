@@ -1,5 +1,13 @@
 # Keryx MCP
 
+The CLI bundles the pinned Circle 3.5.0 buyer implementation; its exact inputs
+are recorded in `dist/build-inputs.json`. Its application validators use the
+bundled, security-patched Zod 3 compatibility runtime, retaining existing UTF-16
+limits and schema behavior. MCP SDK, its published Zod 4 dependency and viem
+remain external. The buyer does not auto-install x402's old Zod peer graph.
+Source builds require the repository's pinned dependencies. Bundled code,
+modifications and licenses are listed in `THIRD-PARTY-NOTICES.txt`.
+
 ## Sponsored public research (source candidate)
 
 `ask_keryx_sponsored` runs hosted sponsored research with **no API key, buyer

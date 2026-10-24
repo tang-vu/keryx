@@ -7,7 +7,6 @@ import { tmpdir } from "node:os";
 import { join, resolve, relative, isAbsolute } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { ChildProcess } from "node:child_process";
-import { build } from "esbuild";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createReadCheckpointCapture } from "../lib/agent/read-checkpoint-capture.ts";
@@ -21,8 +20,9 @@ async function bounded<T>(promise: Promise<T>, milliseconds = 15_000): Promise<T
   })]); } finally { clearTimeout(timer); }
 }
 
-await build({ entryPoints: ["mcp/keryx-mcp-server.mts"], bundle: true, platform: "node", format: "esm", target: "node22",
-  packages: "external", outfile: "mcp/dist/keryx-mcp.mjs", logLevel: "silent" });
+// Use the same qualified producer as release builds, including the bundled
+// buyer and patched validator. Never overwrite the artifact with another closure.
+await import("../mcp/build.mjs");
 const folder = await mkdtemp(join(tmpdir(), "keryx-read-checkpoint-package-"));
 const collector = createReadCheckpointCapture(true), check = { kind: "channel", creatorFree: false, cache: true } as const;
 collector.append(check, actualReadCheckpoint(check), { candidate: 1, round: 1, proposal: "BUY", plan: "CACHE", price: 0.002 });

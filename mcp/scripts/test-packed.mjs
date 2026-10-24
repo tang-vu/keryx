@@ -1,7 +1,7 @@
 ﻿import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, writeFile, readFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile, readdir, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -38,10 +38,27 @@ try {
   const expectedPackage = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
   assert.equal(installedPackage.version, expectedPackage.version);
   const dependencies = {};
-  for (const name of ["@circle-fin/x402-batching", "viem", "@modelcontextprotocol/sdk", "zod"]) {
+  for (const name of ["viem", "@modelcontextprotocol/sdk", "zod"]) {
     dependencies[name] = JSON.parse(await readFile(join(workspace, "node_modules", name, "package.json"), "utf8")).version;
     assert.equal(dependencies[name], installedPackage.dependencies[name]);
   }
+  const installedInputs = JSON.parse(await readFile(join(workspace, "node_modules/keryx-mcp/dist/build-inputs.json"), "utf8"));
+  const expectedInputs = JSON.parse(await readFile(new URL("../dist/build-inputs.json", import.meta.url), "utf8"));
+  assert.deepEqual(installedInputs, expectedInputs, "The packed CLI retains exact qualified bundled SDK provenance");
+  assert.equal(createHash("sha256").update(await readFile(join(workspace, "node_modules/keryx-mcp/dist/keryx-mcp.mjs"))).digest("hex"), installedInputs.bundleSha256,
+    "The archive executable must match the qualified producer; another test/build cannot silently replace it");
+  assert.equal(installedInputs.circle.version, expectedPackage.devDependencies["@circle-fin/x402-batching"]);
+  assert.match(installedInputs.circle.sourceSha256, /^[a-f0-9]{64}$/);
+  assert(installedInputs.bundled.some(name => name.includes("node_modules/@circle-fin/x402-batching/")));
+  assert(installedInputs.bundled.some(name => name.includes("node_modules/zod/v3/types.js")));
+  assert(installedInputs.bundled.every(name => name.includes("node_modules/@circle-fin/x402-batching/") || name.includes("node_modules/zod/v3/")));
+  assert.deepEqual(installedInputs.validation, { packageVersion: "4.6.7", runtime: "v3", patch: "CVE-2023-54404-pre-traversal-refusal" });
+  assert.deepEqual(installedInputs.inputDigests.map(row => row.path), installedInputs.bundled);
+  assert(installedInputs.inputDigests.every(row => /^[a-f0-9]{64}$/.test(row.sha256)));
+  for (const name of ["@circle-fin/x402-batching", "@x402/core"]) {
+    await assert.rejects(access(join(workspace, "node_modules", name)), { code: "ENOENT" }, "Consumers must not auto-install the legacy peer graph");
+  }
+  dependencies["bundled:@circle-fin/x402-batching"] = installedInputs.circle.version;
   const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
   // Golden public HTTP-port data, not a source-helper import or producer authority.
   const packet = {
@@ -82,6 +99,11 @@ try {
   };
   const mock = join(workspace, "synthetic-network.cjs");
   await writeFile(mock, `
+require('node:module').registerHooks({resolve(specifier,context,next){
+ if(specifier==='@circle-fin/x402-batching'||specifier.startsWith('@circle-fin/x402-batching/'))throw new Error('Unbundled Circle SDK import refused, including ancestor dependency fallback');
+ if((context.parentURL||'').includes('/node_modules/keryx-mcp/')&&(specifier==='zod'||specifier==='zod/v3'))throw new Error('Application validator must be the qualified bundled implementation');
+ return next(specifier,context);
+}});
 const fs=require('node:fs'), crypto=require('node:crypto'), viem=require('viem');
 const counts={paid:0,rpc:0,recovery:0,bibliography:0,bibliographyQueries:[],researchRequests:[],researchResults:[]};
 const portVectors=${JSON.stringify(portVectors)},publicResult=${JSON.stringify(publicResult)};

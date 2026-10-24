@@ -1,0 +1,83 @@
+{
+  "entry": {
+    "package": "zod",
+    "version": "4.6.7",
+    "path": "package.json",
+    "originalSha256": "c2d190d9ee4e0bdb60332aaa2130a6a98d65ddb903fe1d29248b15de57832c45",
+    "patchedSha256": "626c6494446baefa870c25a980386d8496eff33f93a7da7964022442d09826bc"
+  },
+  "runtime": [
+    {
+      "package": "zod",
+      "version": "4.6.7",
+      "path": "v3/types.js",
+      "originalSha256": "d7214e1dacf9e6e70c9ca80247717b4be13b240510428fef132b7da3260d1a32",
+      "patchedSha256": "8b5558151b90efa215d0ea9f7da836b5e795bd9b5be415eb19d847004eb04261"
+    },
+    {
+      "package": "zod",
+      "version": "4.6.7",
+      "path": "v3/types.cjs",
+      "originalSha256": "7a2f06d88e280bdd198c60e0d292ed7f1e3993e877be4415de07e6abc7746dd1",
+      "patchedSha256": "a5054da5310e823439bb3923c2aa6816999b1788b9084a4e5322ace3174591d6"
+    }
+  ],
+  "imports": [
+    {
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/api-reference/api-client-plugin.js",
+      "originalSha256": "f74c43e30fdaf0ddb677f0dde194b9ab09c83248b1a8a42cdf3eefb5a13e352b",
+      "patchedSha256": "91fd31e1ca2e25543deddb992de0e6f04c7ca2224c8d665126f0106aea83eaaf",
+      "imports": 1
+    },
+    {
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/api-reference/api-reference-configuration.js",
+      "originalSha256": "bc615c6871792756c16aa3d4d273e6f628dfd6ed57949c12443810b91cecbcb4",
+      "patchedSha256": "70a4c0b1161631d488771503d37b89548e0d768713c1ac490149ce793e038499",
+      "imports": 1
+    },
+    {
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/api-reference/api-reference-plugin.js",
+      "originalSha256": "ba8a9c76d1f973fb098e0a7eb115c55f2ccd3a57e0a295c9837c6358c6f4d9ff",
+      "patchedSha256": "c7c0a2237e301a09d517e6026afb4914d39cb1ff1c25539aab4c5a8b079b2c11",
+      "imports": 1
+    },
+    {
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/api-reference/base-configuration.js",
+      "originalSha256": "bbc7a77e9d5b0f0a7d9baa219b3cd1acc877ef52964830deded2486400ce4f77",
+      "patchedSha256": "f446a296b62527261a217b82820a30b333e9a7861aa75fe4bb8d3b0e70bcb813",
+      "imports": 1
+    },
+    {
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/api-reference/source-configuration.js",
+      "originalSha256": "8bdfe7ee7f0a35a23cca2635ab775a512314142a11d40eaeb58e5ec43f65c106",
+      "patchedSha256": "5bfcb498d2b2f43ac7d8818e53e4af3e284753bc3cc81b4ea6346554b8956053",
+      "imports": 1
+    },
+    {
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/entities/security-scheme.js",
+      "originalSha256": "61b42d8f0d154ca51574a744c8f684ae830a12aed24762d55be461130e149d10",
+      "patchedSha256": "d2e972ec6f25a6c157e18e04941deacaf1107eda84290ab6d127c1994fef4217",
+      "imports": 1
+    },
+    {
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/utils/nanoid.js",
+      "originalSha256": "b0ec8f67bf38c86f55db5b515ffd8df8ba2fcc1429d62dc8a5eb870bc6062751",
+      "patchedSha256": "c84c813dd8dffde93fbe2c71767208f583b266673dd262672d32008db364091b",
+      "imports": 1
+    }
+  ]
+}
