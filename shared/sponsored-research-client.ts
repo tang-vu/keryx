@@ -297,7 +297,7 @@ export async function researchSponsored(input: SponsoredResearchInput, options: 
           dispatchUrl = reportUrl(meta.dispatchUrl, origin, queryId);
         }
         result = terminalResult(meta, answer, origin);
-        requesterPacket = chunk.keryx_requester;
+        requesterPacket = chunk.keryx_private_requester;
         if (queryId && result.queryId !== queryId) return invalidResponse("The terminal report changed the canonical query ID.");
         queryId = result.queryId;
         dispatchUrl = result.dispatchUrl;

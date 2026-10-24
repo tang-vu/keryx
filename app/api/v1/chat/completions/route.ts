@@ -225,7 +225,7 @@ export async function POST(req: NextRequest) {
       const packet = await context.claim?.complete(run);
       const requester = !isBot ? await hostedRequesterObservations(run, true, context.deps?.db) : null;
       return Response.json({ ...buildCompletion(run, modelName, body.language), ...(packet ? { keryx_private: packet } : {}),
-        ...(requester ? { keryx_requester: requester } : {}) }, { headers: { ...CORS, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
+        ...(requester ? { keryx_private_requester: requester } : {}) }, { headers: { ...CORS, "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" } });
     } catch (error) {
       if (error instanceof RunClaimError) return openaiError("Private run claims are unavailable on this deployment.", 503, "claims_unavailable");
       const held = researchAdmissionError(error);
@@ -259,7 +259,7 @@ export async function POST(req: NextRequest) {
         const packet = await context.claim?.complete(run);
         const requester = !isBot ? await hostedRequesterObservations(run, true, context.deps?.db) : null;
         send(buildChunk(id, modelName, {}, "stop", { keryx: keryxMeta(run), ...(packet ? { keryx_private: packet } : {}),
-          ...(requester ? { keryx_requester: requester } : {}) }));
+          ...(requester ? { keryx_private_requester: requester } : {}) }));
         try {
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         } catch {

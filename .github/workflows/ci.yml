@@ -699,6 +699,19 @@ jobs:
           path: ${{ runner.temp }}/feedback-ux-screenshots
           if-no-files-found: ignore
 
+      - name: Original requester feedback and recorded job observations (built CSS, hermetic Chromium)
+        env:
+          KERYX_FEEDBACK_SCREENSHOT_DIR: ${{ runner.temp }}/requester-feedback-screenshots
+        run: node --import tsx scripts/test-browser-requester-feedback.mts
+
+      - name: Original requester feedback screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: requester-feedback-screenshots
+          path: ${{ runner.temp }}/requester-feedback-screenshots
+          if-no-files-found: ignore
+
       - name: Literature workspace built navigation and responsive UI (offline, no research)
         env:
           KERYX_LITERATURE_SCREENSHOT_DIR: ${{ runner.temp }}/literature-ux-screenshots

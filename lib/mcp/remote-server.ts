@@ -206,7 +206,7 @@ export function createRemoteMcpServer(
             ...(packet ? [{ type: "text" as const, text: privateRunClaimText(packet) }] : []),
             ...(requester ? [{ type: "text" as const, text: privateRequesterObservationText(requester) }] : [])],
           ...(packet || requester ? { _meta: { ...(packet ? { "keryx/privateRunClaim": packet } : {}),
-            ...(requester ? { "keryx/requesterObservations": requester } : {}) } } : {}),
+            ...(requester ? { "keryx/privateRequesterObservations": requester } : {}) } } : {}),
           structuredContent: result,
         };
       } catch (error) {

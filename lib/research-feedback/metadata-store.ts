@@ -15,7 +15,7 @@ CREATE TRIGGER requester_opinion_store_no_update BEFORE UPDATE ON requester_opin
 CREATE TRIGGER requester_opinion_store_no_delete BEFORE DELETE ON requester_opinion_store BEGIN SELECT RAISE(ABORT,'feedback_unavailable'); END;
 CREATE TRIGGER requester_opinions_no_update BEFORE UPDATE ON requester_opinions BEGIN SELECT RAISE(ABORT,'feedback_unavailable'); END;
 CREATE TRIGGER requester_opinions_no_delete BEFORE DELETE ON requester_opinions BEGIN SELECT RAISE(ABORT,'feedback_unavailable'); END;`;
-const shape = (db: DatabaseSync) => JSON.stringify(db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name").all());
+const shape = (db: DatabaseSync) => JSON.stringify(db.prepare("SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name LIMIT 32").all());
 let expectedShape: string | undefined;
 function expected() {
   if (!expectedShape) { const db = new DatabaseSync(":memory:"); try { db.exec(SQL); expectedShape = shape(db); } finally { db.close(); } }
@@ -69,7 +69,7 @@ export function openRequesterOpinionStore(directory: string, rawBinding: RunClai
       } catch (error) { db.exec("ROLLBACK"); throw error; }
     }
     const storeId = identity(db, binding);
-    db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000; PRAGMA trusted_schema=OFF");
+    db.exec("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=250; PRAGMA trusted_schema=OFF");
     const assertAvailable = () => { if (checkFile() !== physical || identity(db, binding) !== storeId) throw unavailable(); };
     const read = async (id: string) => {
       try {

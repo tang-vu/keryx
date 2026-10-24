@@ -10,6 +10,7 @@ export const feedbackRowSchema = feedbackInputSchema.extend({
   format: z.literal("keryx-requester-feedback-v1"),
   runId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/).refine(value => !/^(prv_|a2a_)/.test(value)),
   deliveredDigest: z.string().regex(/^[a-f0-9]{64}$/), submittedAt: z.string().datetime(),
+  observations: z.lazy(() => jobObservationsSchema),
 }).strict();
 export type RequesterFeedback = z.infer<typeof feedbackRowSchema>;
 export interface RequesterFeedbackStore {
@@ -27,7 +28,8 @@ export const jobObservationsSchema = z.object({
   format: z.literal("keryx-recorded-job-observations-v1"),
   generationDurationMs: z.number().int().nonnegative().nullable(),
   durationBasis: z.literal("recorded-orchestrator-completion"),
-  modelCostUsd: z.object({ lower: z.number().finite().nonnegative(), upper: z.number().finite().nonnegative() }).nullable(),
+  modelCostUsd: z.object({ lower: z.number().finite().nonnegative(), upper: z.number().finite().nonnegative() })
+    .refine(value => value.lower <= value.upper).nullable(),
   costBasis: z.literal("partial-captured-policy-estimate"),
   recordedCalls: z.number().int().nonnegative(), failedCalls: z.number().int().nonnegative(),
   pendingCalls: z.number().int().nonnegative(), missingUsageCalls: z.number().int().nonnegative(),

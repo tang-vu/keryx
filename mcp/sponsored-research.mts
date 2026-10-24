@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { secretFreeMcpInput } from "../lib/mcp/secret-free-input-schema.ts";
-import type { FeedbackDelivery } from "../lib/research-feedback/contracts.ts";
+import { feedbackDeliverySchema, type FeedbackDelivery } from "../lib/research-feedback/contracts.ts";
 import { privateRequesterObservationText } from "../lib/research-feedback/mcp.ts";
 import { AskQuestionSchema, MAX_ASK_QUESTION_CHARS } from "../lib/ask-input.ts";
 import {
@@ -78,10 +78,12 @@ export function registerSponsoredResearchTool(server: McpServer, options: Sponso
       const result = await execute(parsed.data, { baseUrl: options.baseUrl, signal: extra.signal,
         onRequesterObservations: packet => { requester = packet; } });
       extra.signal.throwIfAborted();
+      const parsedRequester = feedbackDeliverySchema.safeParse(requester);
+      const privatePacket = parsedRequester.success && parsedRequester.data.runId === result.queryId ? parsedRequester.data : null;
       return { structuredContent: result,
-        ...(requester ? { _meta: { "keryx/requesterObservations": requester } } : {}),
+        ...(privatePacket ? { _meta: { "keryx/privateRequesterObservations": privatePacket } } : {}),
         content: [{ type: "text" as const, text: `${SPONSORED_RESEARCH_NOTICE}\n\n${JSON.stringify(result, null, 2)}` },
-          ...(requester ? [{ type: "text" as const, text: privateRequesterObservationText(requester) }] : [])] };
+          ...(privatePacket ? [{ type: "text" as const, text: privateRequesterObservationText(privatePacket) }] : [])] };
     } catch (error) {
       return { isError: true, content: [{ type: "text" as const, text:
         failureText(error, options.baseUrl) }] };

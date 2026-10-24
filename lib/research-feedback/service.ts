@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { KeryxDB } from "../db/keryx-db";
 import type { QueryRun } from "../types";
 import { runClaimBindingSchema, type RunClaimBinding } from "../run-claims/contracts";
-import { FeedbackError, feedbackDeliverySchema, feedbackRowSchema, type RequesterFeedbackStore, type FeedbackDelivery } from "./contracts";
+import { FeedbackError, feedbackDeliverySchema, feedbackRowSchema, jobObservationsSchema, type RequesterFeedbackStore, type FeedbackDelivery } from "./contracts";
 import { recordedJobObservations } from "./observations";
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 
@@ -11,12 +11,13 @@ const TTL = 30 * 24 * 60 * 60 * 1000;
 const purpose = "keryx-requester-feedback-capability-v1";
 const capabilitySchema = z.object({ version: z.literal(1), storeId: z.string().uuid(), runId: feedbackRowSchema.shape.runId,
   deliveredDigest: feedbackRowSchema.shape.deliveredDigest, binding: runClaimBindingSchema,
+  observations: jobObservationsSchema,
   issuedAt: z.number().int().nonnegative(), expiresAt: z.number().int().nonnegative() }).strict()
   .refine(value => value.expiresAt - value.issuedAt === TTL);
 export function deliveredResearchDigest(run: QueryRun): string {
   run = demoteSyntheticEvidence(run);
   const original = JSON.stringify([run.id, run.question, run.answer,
-    run.citations.map(row => [row.marker, row.sourceId, row.sourceName, row.sourceUrl ?? null]), run.evidence ?? null]);
+    run.citations.map(row => [row.marker, row.sourceId, row.sourceName, row.itemUrl ?? null]), run.evidence ?? null]);
   if (Buffer.byteLength(original) > 2 * 1024 * 1024) throw new FeedbackError("feedback_unavailable");
   return createHash("sha256").update(original).digest("hex");
 }
@@ -25,8 +26,8 @@ function key(secret: string) {
   return Buffer.from(hkdfSync("sha256", secret, "Keryx caller observations", purpose, 32));
 }
 const signature = (body: string, secret: string) => createHmac("sha256", key(secret)).update(`${purpose}.${body}`).digest();
-export function issueFeedbackToken(run: QueryRun, binding: RunClaimBinding, secret: string, storeId: string, now = Date.now()) {
-  const payload = capabilitySchema.parse({ version: 1, storeId, runId: run.id, binding, deliveredDigest: deliveredResearchDigest(run), issuedAt: now, expiresAt: now + TTL });
+export function issueFeedbackToken(run: QueryRun, binding: RunClaimBinding, secret: string, storeId: string, now = Date.now(), observations = recordedJobObservations(run)) {
+  const payload = capabilitySchema.parse({ version: 1, storeId, runId: run.id, binding, observations, deliveredDigest: deliveredResearchDigest(run), issuedAt: now, expiresAt: now + TTL });
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return { token: `${body}.${signature(body, secret).toString("base64url")}`, expiresAt: new Date(payload.expiresAt).toISOString(), endpoint: "/api/research-feedback" as const };
 }
@@ -59,17 +60,18 @@ export function requesterFeedbackId(runId: string, digest: string) {
  * A late optional failure preserves the saved answer and all payment state.
  */
 export async function privateRequesterObservations(options: { run: QueryRun; db: Pick<KeryxDB, "getQueryRun">; store(): RequesterFeedbackStore; publicOriginal: boolean;
-  binding: RunClaimBinding; secret: string }): Promise<FeedbackDelivery | null> {
+  binding: RunClaimBinding; secret: string; signal?: AbortSignal }): Promise<FeedbackDelivery | null> {
   const { run } = options;
-  if (!options.publicOriginal || run.planningFailure || !feedbackRowSchema.shape.runId.safeParse(run.id).success || !run.answer.trim()) return null;
+  if (options.signal?.aborted || !options.publicOriginal || run.planningFailure || !feedbackRowSchema.shape.runId.safeParse(run.id).success || !run.answer.trim()) return null;
   let feedback: FeedbackDelivery["feedback"] = null;
+  const observations = recordedJobObservations(run);
   try {
     const saved = await options.db.getQueryRun(run.id);
-    if (saved && deliveredResearchDigest(saved) === deliveredResearchDigest(run)) {
+    if (!options.signal?.aborted && saved && deliveredResearchDigest(saved) === deliveredResearchDigest(run)) {
       const store = options.store(); store.assertAvailable();
-      feedback = issueFeedbackToken(run, options.binding, options.secret, store.storeId);
+      feedback = issueFeedbackToken(run, options.binding, options.secret, store.storeId, Date.now(), observations);
     }
   } catch { /* Optional, caller-private observation only. No retry of research. */ }
   try { return feedbackDeliverySchema.parse({ format: "keryx-private-requester-observation-v1", runId: run.id,
-    observations: recordedJobObservations(run), feedback }); } catch { return null; }
+    observations, feedback }); } catch { return null; }
 }

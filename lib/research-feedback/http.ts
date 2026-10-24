@@ -49,6 +49,7 @@ export function createRequesterFeedbackRoute(deps: { db(): Promise<Pick<KeryxDB,
       const feedback = input.operation === "read" ? await store.read(id) : await store.submit({
         format: "keryx-requester-feedback-v1", runId: capability.runId, deliveredDigest: capability.deliveredDigest,
         choice: input.choice, reason: input.reason, submittedAt: new Date().toISOString(),
+        observations: capability.observations,
       });
       if (input.operation === "submit" && (!feedback || feedback.choice !== input.choice || feedback.reason !== input.reason)) throw new FeedbackError("feedback_conflict");
       return feedbackJson(feedbackResponseSchema.parse({ format: "keryx-requester-feedback-response-v1", runId: capability.runId,
