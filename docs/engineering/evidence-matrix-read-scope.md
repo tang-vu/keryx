@@ -26,24 +26,30 @@ flag. Visiting all pages does not establish image or OCR coverage. An unclipped
 body does not establish complete reading or correctness. Digests identify recorded
 bytes; they do not authenticate a publisher or its claims.
 
-Absent historical scope stays unknown. Invalid or incompatible scope is labeled
-and omitted, while the existing quote remains inspectable. Scope comes only from
+Absent or unsupported historical scope stays unknown. Detail follows the existing
+public receipt projection: PDF bounds belong to PDF reads; heading bounds belong
+to partial HTML reads. Contradictory PDF clipping flags are labeled alongside the
+observed page counts rather than silently discarding those facts. Scope comes only from
 the exact excerpt record; it is never filled from another citation, URL or version.
 The existing citation/claim/version admission, synthetic labels, missing-target
 rows, formula protection and verbatim quotation remain in force. No source body,
 private extension field or new evidence assessment is added.
 
-Web uses the existing inspection and download controls. Desktop's sponsored
-research view opens the ordinary report URL; its native Operator view is unchanged.
-CLI, API, remote/stdio MCP, extension and bot adapters do not call these presentation
-helpers; their existing receipt and report-link handoffs are unchanged. This change
-does not add a tool, route, payment, model request or storage format. Runtime
-delivery remains with the existing release owner after the focused PR's required
-acceptance.
+Web uses the existing inspection and download controls. The shared API/remote MCP
+result includes the same CSV through `researchExports`. CLI/stdio MCP and desktop
+Operator recovery reconstruct it through `exportsFromCheckedReceipt`, which now
+retains validated optional extraction metadata from each checked receipt record.
+Direct and reconstructed exports match without modifying receipt bytes or hashes;
+malformed optional metadata does not remove an otherwise usable quote. Desktop's
+sponsored research view also opens the ordinary report URL. Extension and bot
+report-link handoffs remain unchanged. There is no new tool, route, purchase,
+model request or storage format. Required package/desktop acceptance and later
+runtime delivery remain with the existing release owner.
 
 Focused verification:
 
 ```sh
 npx vitest run lib/research/evidence-matrix.test.ts lib/research/evidence-matrix-markdown.test.ts lib/research/evidence-matrix-export.test.ts lib/research/evidence-matrix-read-scope.test.ts lib/research/citation-evidence-panel.test.ts
+npx vitest run lib/research/receipt-exports.test.ts lib/research/surface-result.test.ts lib/agent/run-agent.test.ts
 npm run typecheck
 ```

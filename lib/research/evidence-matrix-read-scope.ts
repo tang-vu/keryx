@@ -32,13 +32,13 @@ export function evidenceReadScope(item: Pick<EvidenceRecord, "webProvenance">): 
       typeof hash !== "string" || !/^[a-f0-9]{64}$/u.test(hash) || typeof truncated !== "boolean") return missing;
     const result: ScopeFields = { ...missing, read_scope: "Extracted text only; detailed read scope not recorded",
       extraction, retrieved_at: retrievedAt, extracted_text_truncated: String(truncated), normalized_body_sha256: hash };
-    const pdfValue = value("pdfTextScope"), htmlValue = value("htmlSectionScope");
-    const pdf = observedPdfTextScope(pdfValue), html = observedHtmlSectionScope(htmlValue);
-    if ((pdfValue !== undefined && (!pdf || extraction !== "pdf" || pdfTextScopeTruncated(pdf) !== truncated)) ||
-      (htmlValue !== undefined && (!html || extraction !== "html"))) {
-      return { ...result, read_scope: "Invalid or conflicting read-scope metadata" };
-    }
-    if (pdf) return { ...result, read_scope: "PDF text extraction only; images and OCR not established", pdf_text_scope: JSON.stringify(pdf) };
+    // Match the existing public receipt projection: unsupported optional detail
+    // remains unknown, PDF scope belongs to PDF, and heading reads are partial.
+    const pdf = extraction === "pdf" ? observedPdfTextScope(value("pdfTextScope")) : undefined;
+    const html = extraction === "html" && truncated ? observedHtmlSectionScope(value("htmlSectionScope")) : undefined;
+    if (pdf) return { ...result, read_scope: pdfTextScopeTruncated(pdf) !== truncated
+      ? "Conflicting PDF clipping metadata; text extraction only, images and OCR not established"
+      : "PDF text extraction only; images and OCR not established", pdf_text_scope: JSON.stringify(pdf) };
     if (html) return { ...result, read_scope: "HTML heading section only; whole-document coverage not established", html_section_scope: JSON.stringify(html) };
     return result;
   } catch { return missing; }

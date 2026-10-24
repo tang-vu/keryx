@@ -33,14 +33,14 @@ function csvRecords(run: EvidenceMatrixInput) {
 
 describe("portable evidence read scope", () => {
   it("keeps a late HTML heading's exact fragment, original bounds and digest in both exports", () => {
-    const run = fixture({ ...base, htmlSectionScope: section }), before = JSON.stringify(run);
+    const run = fixture({ ...base, truncated: true, htmlSectionScope: section }), before = JSON.stringify(run);
     const [record, gap] = csvRecords(run), markdown = evidenceMatrixMarkdown(run);
     expect(record.read_scope).toBe("HTML heading section only; whole-document coverage not established");
     expect(JSON.parse(record.html_section_scope)).toEqual(section);
     expect(record.extraction).toBe("html");
     expect(record.retrieved_at).toBe(base.retrievedAt);
     expect(record.normalized_body_sha256).toBe(base.normalizedBodyHash);
-    expect(record.extracted_text_truncated).toBe("false");
+    expect(record.extracted_text_truncated).toBe("true");
     expect(record.exact_excerpt).toBe(run.evidence![0].quote);
     expect(markdown).toContain(JSON.stringify(section));
     expect(markdown).toContain("UTF-16 HTML offsets");
@@ -76,15 +76,15 @@ describe("portable evidence read scope", () => {
   });
 
   it.each([
-    { ...base, htmlSectionScope: { ...section, htmlEnd: 120_000 } },
-    { ...base, extraction: "text", htmlSectionScope: section },
-    { ...base, extraction: "pdf", truncated: false, pdfTextScope: pdf },
-    { ...base, pdfTextScope: pdf, htmlSectionScope: section },
-    { ...base, extraction: "pdf", pdfTextScope: { ...pdf, pagesWithoutText: [3, 2] } },
-  ])("refuses malformed or conflicting detail while retaining the excerpt: %j", provenance => {
+    [{ ...base, truncated: true, htmlSectionScope: { ...section, htmlEnd: 120_000 } }, "Extracted text only; detailed read scope not recorded"],
+    [{ ...base, extraction: "text", htmlSectionScope: section }, "Extracted text only; detailed read scope not recorded"],
+    [{ ...base, extraction: "pdf", truncated: false, pdfTextScope: pdf }, "Conflicting PDF clipping metadata; text extraction only, images and OCR not established"],
+    [{ ...base, pdfTextScope: pdf, htmlSectionScope: section }, "Extracted text only; detailed read scope not recorded"],
+    [{ ...base, extraction: "pdf", pdfTextScope: { ...pdf, pagesWithoutText: [3, 2] } }, "Extracted text only; detailed read scope not recorded"],
+  ] as const)("keeps observed facts and labels unknown or conflicting scope: %j", (provenance, expected) => {
     const run = fixture(provenance as EvidenceRecord["webProvenance"]), [record] = csvRecords(run);
-    expect(record.read_scope).toBe("Invalid or conflicting read-scope metadata");
-    expect(record.pdf_text_scope).toBe("");
+    expect(record.read_scope).toBe(expected);
+    expect(record.pdf_text_scope).toBe(expected.startsWith("Conflicting") ? JSON.stringify(pdf) : "");
     expect(record.html_section_scope).toBe("");
     expect(record.exact_excerpt).toBe(run.evidence![0].quote);
     expect(evidenceMatrixMarkdown(run)).not.toContain('"htmlStart"');
@@ -100,7 +100,7 @@ describe("portable evidence read scope", () => {
   });
 
   it("serializes only approved provenance fields and keeps hostile values literal", () => {
-    const provenance = { ...base, retrievedAt: "=HYPERLINK(\"bad\")\n```\n# Spoof", htmlSectionScope: { ...section, fragment: "```#spoof" }, privateToken: "MUST_NOT_EXPORT" };
+    const provenance = { ...base, truncated: true, retrievedAt: "=HYPERLINK(\"bad\")\n```\n# Spoof", htmlSectionScope: { ...section, fragment: "```#spoof" }, privateToken: "MUST_NOT_EXPORT" };
     const run = fixture(provenance), [record] = csvRecords(run), markdown = evidenceMatrixMarkdown(run);
     expect(record.retrieved_at).toBe("'" + provenance.retrievedAt);
     expect(JSON.parse(record.html_section_scope).fragment).toBe("```#spoof");
