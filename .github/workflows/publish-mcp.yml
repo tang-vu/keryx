@@ -75,13 +75,11 @@ jobs:
           import assert from 'node:assert/strict';
           import fs from 'node:fs';
           const [pack] = JSON.parse(fs.readFileSync('release/pack.json', 'utf8'));
+          const { assertMcpPackageFiles } = await import('./mcp/scripts/assert-package-files.mjs');
           const pkg = JSON.parse(fs.readFileSync('mcp/package.json', 'utf8'));
           assert.equal(pack.name, pkg.name);
           assert.equal(pack.version, pkg.version);
-          const paths = pack.files.map(file => file.path);
-          for (const required of ['package.json', 'README.md', 'dist/keryx-mcp.mjs']) assert(paths.includes(required), required);
-          assert.equal(paths.length, 3);
-          assert(paths.every(path => ['package.json', 'README.md', 'dist/keryx-mcp.mjs'].includes(path)), 'Unexpected archive file');
+          assertMcpPackageFiles(pack);
           NODE
           sha256sum release/*.tgz > release/SHA256SUMS
       - name: Verify exact packaged consumer with synthetic signing and recovery

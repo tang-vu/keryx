@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,8 +41,10 @@ export function patchLegacyZod(root) {
     if (hash(patched) !== row.patchedSha256) throw new Error(`Legacy validation patch mismatch: ${row.package}/${row.path}`);
     writes.push([filename, patched]);
   };
-  for (const row of [manifest.entry, ...manifest.runtime, ...manifest.imports]) {
-    const packageRoot = join(resolve(root), "node_modules", row.package);
+  const targets = [{ root: resolve(root), rows: [manifest.entry, ...manifest.runtime, ...manifest.imports] }];
+  if (existsSync(join(resolve(root), "mcp/node_modules/zod/package.json"))) targets.push({ root: resolve(root, "mcp"), rows: [manifest.entry, ...manifest.runtime] });
+  for (const target of targets) for (const row of target.rows) {
+    const packageRoot = join(target.root, "node_modules", row.package);
     if (!packages.has(packageRoot)) {
       packages.set(packageRoot, JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")).version);
     }

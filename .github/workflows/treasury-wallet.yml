@@ -34,6 +34,8 @@ jobs:
         run: npx tsc --noEmit -p tsconfig.treasury-scripts.json
       - name: Install caller-local MCP dependency closure
         run: npm --prefix mcp ci --ignore-scripts --no-audit --no-fund
+      - name: Verify bounded compatibility validators in both installed closures
+        run: node scripts/patch-legacy-zod.mjs
       - name: Synthetic caller-local payment and journal recovery checks
         run: npx vitest run --config mcp/vitest.config.mts
       - name: Typecheck caller-local MCP MTS entry points
@@ -45,7 +47,7 @@ jobs:
         shell: bash
         run: |
           npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP" > "$RUNNER_TEMP/keryx-mcp-pack.json"
-          node --input-type=module -e 'import fs from "node:fs"; const [pack]=JSON.parse(fs.readFileSync(process.argv[1])); for(const file of pack.files) { if (!["package.json","README.md","dist/keryx-mcp.mjs"].includes(file.path)) throw Error("Unexpected package path: "+file.path); } if(pack.files.length!==3) throw Error("Expected exactly package manifest, README and bundle");' "$RUNNER_TEMP/keryx-mcp-pack.json"
+          node mcp/scripts/assert-package-files.mjs "$RUNNER_TEMP/keryx-mcp-pack.json"
       - name: Clean installed MCP synthetic signing and new-process recovery
         shell: bash
         # Keep the fresh consumer on the runner's managed scratch volume instead
