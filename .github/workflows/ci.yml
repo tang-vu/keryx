@@ -519,6 +519,9 @@ jobs:
           KERYX_COMMIT: ${{ github.sha }}
         run: npm run build
 
+      - name: Saved report comparison (real WebCrypto, local files and downloads)
+        run: node --import tsx scripts/test-browser-report-comparison.mts --built
+
       - name: Immutable cohort actual Next restart (reuse build, offline testnet)
         env:
           KERYX_RELEASE_REHEARSAL_RESULT: ${{ runner.temp }}/immutable-release-rehearsal.json
@@ -719,9 +722,6 @@ jobs:
 
       - name: Private evidence drafts built interactions (offline, no research)
         run: node --import tsx scripts/test-browser-evidence-drafts.mts
-
-      - name: Saved report comparison (real WebCrypto, local files and downloads)
-        run: node --import tsx scripts/test-browser-report-comparison.mts --built
 
       - name: Evidence procurement request, signatures and restored reviews (offline, synthetic providers)
         run: node --import tsx scripts/test-browser-evidence-procurement.mts

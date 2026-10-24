@@ -14,7 +14,7 @@ import { canonicalJson } from "../lib/canonical-json";
 import { RESEARCH_RECEIPT_SCHEMA } from "../lib/research-receipt-types";
 import { reportComparisonCopy as copy } from "../locales/en/report-comparison";
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
-import { drainBrowserRoutes } from "../test-support/drain-browser-routes";
+import { parsePublicMaintenanceStatus, STATUS_PATH } from "../lib/maintenance/public-status";
 
 const dist = path.resolve(process.env.NEXT_DIST_DIR ?? ".next");
 const cssDir = [path.join(dist, "static/chunks"), path.join(dist, "dev/static/chunks")]
@@ -185,10 +185,16 @@ if (process.argv.includes("--built")) {
     assert(ready, `Compiled comparison route unavailable: ${log}`);
     context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
     const mutations: string[] = [], errors: string[] = [];
+    // The standalone front door owns this endpoint, outside the bare Next app.
+    // This is a synthetic control observation, never an application-health probe.
+    const maintenance = { state: "normal", planned: false, admissionClosed: false, window: null,
+      checkedAt: "2026-10-25T00:00:00.000Z", statusPath: STATUS_PATH, applicationStatus: "not-probed" };
+    assert(parsePublicMaintenanceStatus(maintenance));
     await context.route("**/*", async route => {
       const request = route.request(), url = new URL(request.url());
       if (url.origin !== origin) return route.abort();
       if (request.method() !== "GET") { mutations.push(url.pathname); return route.abort(); }
+      if (url.pathname === STATUS_PATH) return route.fulfill({ json: maintenance });
       if (url.pathname.startsWith("/api/")) return route.fulfill({ json: {} });
       return route.fulfill({ response: await route.fetch({ url: physical + url.pathname + url.search }) });
     });
@@ -203,7 +209,14 @@ if (process.argv.includes("--built")) {
     assert.equal(await page.title(), copy.metadataTitle);
     assert.deepEqual(mutations, []); assert.deepEqual(errors, []);
   } finally {
-    try { if (context) await drainBrowserRoutes(context); }
+    try {
+      if (context) {
+        // Stop page producers without changing routing policy mid-flight. Keep
+        // the request context alive until every existing local proxy finishes.
+        for (const page of context.pages()) await page.close();
+        await context.unrouteAll({ behavior: "wait" });
+      }
+    }
     finally {
       try { await browser.close(); }
       finally {
