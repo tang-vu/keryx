@@ -119,6 +119,25 @@ describe("owned completed private retained-ledger adapter", () => {
     expect(result.provenance.payoutAuthority).toBe(false);
     expect(f.saved().serializedRun).toBe(original);
   });
+  it("keeps observed heading-section bounds through authenticated import, portable restore and exports", async () => {
+    const f = fixture(), scope = { format: "keryx-html-section-scope-v1" as const, fragment: "limits", headingLevel: 2,
+      htmlStart: 42, htmlEnd: 900, documentCharacters: 1100, documentSha256: "a".repeat(64) };
+    for (const row of [f.run.citations[0], f.run.evidence![0], f.run.decisions[0]]) {
+      row.contentVersion = "f".repeat(64); delete row.contentReceipt; row.sourceKind = "public-reference";
+      row.webProvenance = { retrievedAt: "2026-10-12T01:00:00.000Z", publisherGroup: "arxiv.org", normalizedBodyHash: "e".repeat(64),
+        extraction: "html", truncated: true, htmlSectionScope: scope };
+    }
+    f.run.evidence![0].qualifiesForReward = false; f.run.citations[0].reward = 0;
+    f.input.selection.sources[0].contentVersion = "f".repeat(64); f.resnapshot();
+    const result = await loadCompletedEvidenceDraft(f.context, f.input);
+    expect(result.draft.excerpts[0].htmlSectionScope).toEqual(scope);
+    expect(result.editableRequest.reports[0].evidence![0].webProvenance?.htmlSectionScope).toEqual(scope);
+    const restored = buildEvidenceDraft(parseEvidenceDraftRequest(JSON.parse(JSON.stringify(result.editableRequest))));
+    expect(restored.excerpts[0].htmlSectionScope).toEqual(scope);
+    expect(result.exports.markdown).toContain("the surrounding document was not read");
+    expect(result.exports.latex).toContain("the surrounding document was not read");
+    expect(result.provenance.payoutAuthority).toBe(false);
+  });
   it("keeps observed PDF bounds after an authenticated completion becomes portable draft inputs and exports", async () => {
     const f = fixture(), scope = { format: "keryx-pdf-text-scope-v1" as const, pagesRead: 20, totalPages: 35, pagesWithoutText: [3], textLimitReached: false };
     const provenance = { retrievedAt: "2026-10-12T01:00:00.000Z", publisherGroup: "arxiv.org",

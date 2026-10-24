@@ -1,11 +1,13 @@
 import type { ContentReceiptRef, SourceItemIdentity } from "./types";
 import type { ReceiptAsset } from "./research-receipt-types";
 import { observedPdfTextScope } from "./web-research/pdf-text-scope";
+import { observedHtmlSectionScope } from "./web-research/html-section-scope";
 
 function publicWebProvenance(value: NonNullable<SourceItemIdentity["webProvenance"]>) {
-  const { pdfTextScope, ...provenance } = value;
+  const { pdfTextScope, htmlSectionScope, ...provenance } = value;
   const scope = value.extraction === "pdf" ? observedPdfTextScope(pdfTextScope) : undefined;
-  return { ...provenance, ...(scope ? { pdfTextScope: scope } : {}) };
+  const html = value.extraction === "html" && value.truncated ? observedHtmlSectionScope(htmlSectionScope) : undefined;
+  return { ...provenance, ...(scope ? { pdfTextScope: scope } : {}), ...(html ? { htmlSectionScope: html } : {}) };
 }
 
 export function receiptAsset(value: Partial<SourceItemIdentity>): ReceiptAsset {

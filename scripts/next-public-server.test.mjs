@@ -94,6 +94,7 @@ test('pinned production Next sees public HTTPS origin on a private ephemeral soc
     await writeFile(join(dir, 'public', 'pixel.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1cAAAAASUVORK5CYII=', 'base64'));
     for (const file of ['lib/web-research/extraction-worker.ts', 'lib/web-research/html-reader.ts',
       'lib/web-research/html-reader-worker.mjs', 'lib/web-research/html-content-worker.mjs', 'lib/web-research/html-visibility.mjs',
+      'lib/web-research/html-section-worker.mjs', 'lib/web-research/html-section-scope.ts',
       'lib/web-research/pdf-reader.ts', 'lib/web-research/pdf-reader-worker.mjs', 'lib/web-research/pdf-text-scope.ts',
       'lib/web-research/parser-slots.ts', 'lib/web-research/html-text-layout.ts',
       'lib/research/arxiv-bibliography-page.ts', 'lib/research/arxiv-bibliography-worker.mjs',
@@ -116,7 +117,9 @@ export async function GET(){try {
  const xref=Buffer.byteLength(body);body+='xref\\n0 '+offsets.length+'\\n0000000000 65535 f \\n'+offsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \\n').join('')+'trailer\\n<< /Size '+offsets.length+' /Root 1 0 R >>\\nstartxref\\n'+xref+'\\n%%EOF\\n';
  const pdf=await extractPdfText(new Uint8Array(Buffer.from(body)),{maxPages:1,maxChars:2000,timeoutMs:10000});
  const bibliography=await observeArxivBibliographicPage('<html><head><meta name="citation_title" content="Cohort metadata"></head><body></body></html>');
- return Response.json({html:html.title,pdf:pdf.text,bibliography:bibliography.metadata.citation_title?.[0]?.value});
+ const section=await extractHtml('<main><h2 id="limits">Limits</h2><p>'+('This local section retains the qualification: retries may duplicate delivery. '.repeat(4))+'</p><h2>Next section</h2></main>','https://example.com/section',undefined,'limits');
+ if(!section.truncated||section.text.includes('Next section'))throw Error('Compiled section scope lost');
+ return Response.json({html:html.title,section:section.htmlSectionScope?.fragment,pdf:pdf.text,bibliography:bibliography.metadata.citation_title?.[0]?.value});
 }catch(error){return Response.json({fixtureError:String(error),cause:String(error.cause)},{status:500})}}\n`);
     await writeFile(join(dir, 'app', 'api', 'health', 'route.js'), `export const dynamic='force-dynamic';
 export async function GET(){return Response.json({commit:process.env.KERYX_COMMIT,network:'arcTestnet',settles:'offline',db:'ok'})}\n`);
@@ -203,7 +206,7 @@ export async function GET(request){
       const extracted = await get(3940, { path: '/api/extraction' });
       assert.equal(extracted.status, 200, `Compiled extraction refused: ${extracted.body}`);
       assert.deepEqual(JSON.parse(extracted.body),
-        { html: 'Cohort original', pdf: 'Cohort PDF original', bibliography: 'Cohort metadata' });
+        { html: 'Cohort original', section: 'limits', pdf: 'Cohort PDF original', bibliography: 'Cohort metadata' });
       const cached = await get(3940, { path: '/api/cached' });
       assert.equal(cached.status, 200, `Seeded route refused: ${cached.body}`);
       const image = await get(3940, { path: '/_next/image?url=%2Fpixel.png&w=32&q=75' });

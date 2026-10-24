@@ -107,6 +107,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     "jsdom",
     "parse5",
+    "parse5-sax-parser",
     "@mozilla/readability",
     "pdfjs-dist",
     "@circle-fin/unified-balance-kit",
@@ -116,7 +117,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     // Explicitly scoped metadata primitive is staged, not route-activated. Keep
     // its isolated parser available when a future typed adapter passes cutover.
-    "/*": ["./lib/web-research/*-worker.mjs", "./lib/web-research/html-visibility.mjs", "./lib/research/arxiv-bibliography-worker.mjs", "./node_modules/@mozilla/readability/**", "./node_modules/pdfjs-dist/legacy/build/*.mjs", "./node_modules/pdfjs-dist/package.json"],
+    "/*": ["./lib/web-research/*-worker.mjs", "./lib/web-research/html-visibility.mjs", "./lib/research/arxiv-bibliography-worker.mjs", "./node_modules/parse5-sax-parser/**", "./node_modules/@mozilla/readability/**", "./node_modules/pdfjs-dist/legacy/build/*.mjs", "./node_modules/pdfjs-dist/package.json"],
   },
 };
 

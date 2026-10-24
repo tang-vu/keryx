@@ -43,7 +43,7 @@ describe("recorded PDF text scope in private drafts", () => {
     const input = unselect(scoped()), citation = input.reports[0].citations[0], evidence = input.reports[0].evidence![0];
     if (change === "citation-missing") delete citation.webProvenance;
     if (change === "evidence-missing") delete evidence.webProvenance;
-    if (change === "conflicting") citation.webProvenance!.pdfTextScope.totalPages = 40;
+    if (change === "conflicting") citation.webProvenance!.pdfTextScope!.totalPages = 40;
     if (change === "wrong-kind") Object.assign(citation, { webProvenance: { extraction: "html", pdfTextScope: partial } });
     if (change === "malformed") Object.assign(evidence, { webProvenance: { extraction: "pdf", pdfTextScope: { ...partial, pagesWithoutText: [21] } } });
     if (change === "contradictory-truncation") Object.assign(evidence, { webProvenance: { ...evidence.webProvenance, truncated: false } });
@@ -59,7 +59,7 @@ describe("recorded PDF text scope in private drafts", () => {
   });
   it("keeps a quotation selected when only its recorded scope changes", () => {
     const input = scoped(), id = buildEvidenceDraft(input).excerpts[0].id;
-    for (const row of [input.reports[0].citations[0], input.reports[0].evidence![0]]) row.webProvenance!.pdfTextScope.pagesRead = 19;
+    for (const row of [input.reports[0].citations[0], input.reports[0].evidence![0]]) row.webProvenance!.pdfTextScope!.pagesRead = 19;
     const draft = buildEvidenceDraft(input);
     expect(draft.excerpts[0].id).toBe(id); expect(draft.themes[0].excerpts[0].pdfTextScope?.pagesRead).toBe(19);
     expect(draft.claims[0].excerpts[0].id).toBe(id);
@@ -79,7 +79,7 @@ describe("recorded PDF text scope in private drafts", () => {
     const input = scoped(), original = input.reports[0].evidence![0], repeated = structuredClone(original);
     input.reports[0].subClaims.push("A second unverified target"); repeated.claimIndex = 1; repeated.claim = input.reports[0].subClaims[1];
     if (change === "missing") delete repeated.webProvenance;
-    else if (change === "conflicting") repeated.webProvenance!.pdfTextScope.totalPages = 40;
+    else if (change === "conflicting") repeated.webProvenance!.pdfTextScope!.totalPages = 40;
     input.reports[0].evidence!.push(repeated);
     const draft = buildEvidenceDraft(input);
     expect(draft.excerpts).toHaveLength(1);

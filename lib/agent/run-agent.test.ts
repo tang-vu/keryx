@@ -1153,7 +1153,7 @@ it.each([
   expect(steps.some(step => step.message.includes("Supplied source URL"))).toBe(true);
   expect(run.answer).toContain("Supplied original source status");
   expect(run.answer).toContain("Extraction was truncated");
-  if (question.includes("#")) expect(run.answer).toContain("not that section specifically");
+  if (question.includes("#")) expect(run.answer).toContain("a read of the requested section has not been established");
   const receipt = buildResearchReceipt(run, []);
   expect(verifyResearchReceipt(receipt).valid).toBe(true);
   expect(receipt.payload.agency.decisions.map(item => item.requestedSource)).toEqual(run.decisions.map(item => item.requestedSource));
@@ -1357,13 +1357,14 @@ it.each([
   expect(d.readWebArticle).toHaveBeenCalledTimes(urls.length);
   for (const url of urls) {
     const bodyUrl = new URL(url); bodyUrl.hash = "";
-    expect(d.readWebArticle).toHaveBeenCalledWith(bodyUrl.href, expect.any(AbortSignal));
+    expect(d.readWebArticle).toHaveBeenCalledWith(bodyUrl.href, expect.any(AbortSignal), { requestedUrls: [url] });
     expect(engine.decideInput?.candidates.some(candidate => candidate.item?.itemUrl === bodyUrl.href && candidate.item.requestedSource?.urls.includes(url))).toBe(true);
     expect(steps.some(step => step.message.includes(`Supplied source URL ${url} admitted`))).toBe(true);
   }
   expect(run.citations).toHaveLength(urls.length);
   expect(run.citations.every(citation => citation.reward === 0 && citation.webProvenance?.truncated === true)).toBe(true);
-  expect(steps.some(step => step.message.includes("bounded whole-document read"))).toBe(true);
+  expect(run.decisions).toHaveLength(urls.length);
+  expect(run.decisions.every(item => item.requestedSource?.readScope === "bounded-whole-document")).toBe(true);
   expect(fund).not.toHaveBeenCalled(); expect(d.db.payments).toEqual([]);
   const receipt = buildResearchReceipt(run, d.db.payments);
   expect(verifyResearchReceipt(receipt).valid).toBe(true);

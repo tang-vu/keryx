@@ -37,7 +37,17 @@ export function requestedSourceReport(input: {
         : " Only the abstract page was read; full-paper evidence is unavailable.";
     } else if (failure) status = pt ? `Falha na leitura: ${reportLabel(failure.code)}.` : input.vi ? `Đọc thất bại: ${reportLabel(failure.code)}.` : `Read failed: ${reportLabel(failure.code)}.`;
     else status = `${decision?.action === "SKIP" ? "SKIP" : pt ? "Não lida" : input.vi ? "Chưa đọc" : "Not read"}: ${reportLabel(decision?.rationale ?? (pt ? "A leitura não foi concluída dentro dos limites desta execução." : input.vi ? "Chưa hoàn tất lượt đọc trong giới hạn lượt này." : "A read did not complete within this run's limits."))}`;
-    if (requirement.urls.some(url => new URL(url).hash)) status += pt
+    const section = input.withheld ? undefined : read?.webProvenance?.htmlSectionScope;
+    if (section) status += pt
+      ? ` Foi lida apenas a seção ${quoted("#" + section.fragment)}; o restante do documento não foi lido.`
+      : input.vi
+      ? ` Chỉ đọc mục ${quoted("#" + section.fragment)}; phần còn lại của tài liệu chưa được đọc.`
+      : ` Only heading section ${quoted("#" + section.fragment)} was read; the surrounding document was not read.`;
+    else if (requirement.urls.some(url => new URL(url).hash) && (!read || input.withheld)) status += pt
+      ? " Foi fornecido um fragmento; a leitura da seção solicitada não foi estabelecida."
+      : input.vi ? " URL có phần neo; chưa xác nhận đã đọc được mục được yêu cầu."
+      : " A section fragment was supplied; a read of the requested section has not been established.";
+    else if (requirement.urls.some(url => new URL(url).hash)) status += pt
       ? " Foi fornecido um fragmento de seção; o leitor tenta apenas a extração limitada do documento completo, não daquela seção em particular."
       : input.vi
       ? " URL có phần neo; trình đọc chỉ thử trích xuất toàn tài liệu có giới hạn, không nhắm riêng phần đó."

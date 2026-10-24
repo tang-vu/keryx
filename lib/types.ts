@@ -118,8 +118,8 @@ export interface SourceItem {
 /** Immutable identity for the exact article version the agent evaluated and purchased. */
 export interface SourceItemIdentity {
   /** Original URLs explicitly supplied by the caller, including requested fragments.
-   * The current reader attempts bounded whole-document extraction, not section targeting. */
-  requestedSource?: { urls: string[]; readScope: "bounded-whole-document" };
+   * Section scope is recorded only after a successful observed HTML section read. */
+  requestedSource?: { urls: string[]; readScope: "bounded-whole-document" | "bounded-heading-section" };
   /** Policy captured before this read; informational history, never payout authority. */
   sourceClaim?: SourceClaimReceipt;
   /** A free read is distinct from a cache hit or a settled access payment. */
@@ -136,6 +136,7 @@ export interface SourceItemIdentity {
     truncated: boolean;
     /** New PDF reads only; absence on historical records means unknown page scope. */
     pdfTextScope?: import("./web-research/pdf-text-scope").PdfTextScope;
+    htmlSectionScope?: import("./web-research/html-section-scope").HtmlSectionScope;
   };
   /** Trusted catalog provenance; public references never carry payout authority. */
   sourceKind?: "public-reference";

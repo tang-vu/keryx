@@ -12,6 +12,7 @@ import { assembleEvidenceDraftRequest, buildEvidenceDraft, evidenceDraftReportSc
   parseEvidenceDraftRequest, retainedDraftExcerpts, type EvidenceDraftRequest } from "./evidence-draft";
 import { exportEvidenceDraft } from "./evidence-draft-export";
 import { pdfTextScopeSchema, pdfTextScopeTruncated } from "../web-research/pdf-text-scope";
+import { htmlSectionScopeSchema } from "../web-research/html-section-scope";
 import { pdfReadingNotice } from "./pdf-reading";
 
 export const COMPLETED_READ_CAPABILITY = "owned-private-completed-read-v1" as const;
@@ -58,15 +59,17 @@ const receipt = z.object({ bodyHash: z.string().regex(/^0x[a-f0-9]{64}$/).option
   plaintextBytes: z.number().int().nonnegative().max(16 * 1024 * 1024),
   manifestId: text(200).optional(), manifestSigner: text(200).optional(), manifest: z.unknown().optional() }).strict();
 const web = z.object({ retrievedAt: date, publisherGroup: text(200), normalizedBodyHash: text(80),
-  extraction: z.enum(["html", "text", "pdf"]), truncated: z.boolean(), pdfTextScope: pdfTextScopeSchema.optional() }).strict()
-  .refine(value => !value.pdfTextScope || value.extraction === "pdf" && (!pdfTextScopeTruncated(value.pdfTextScope) || value.truncated));
+  extraction: z.enum(["html", "text", "pdf"]), truncated: z.boolean(), pdfTextScope: pdfTextScopeSchema.optional(),
+  htmlSectionScope: htmlSectionScopeSchema.optional() }).strict()
+  .refine(value => (!value.pdfTextScope || value.extraction === "pdf" && (!pdfTextScopeTruncated(value.pdfTextScope) || value.truncated)) &&
+    (!value.htmlSectionScope || value.extraction === "html" && value.truncated));
 const identity = {
   sourceId: identifier, sourceName: text(1000), marker: z.string().regex(/^S[1-9]\d{0,2}$/),
   itemId: identifier.optional(), itemTitle: text(1000).optional(), itemUrl: https.optional(), contentVersion: version.optional(),
   itemPublishedAt: text(100).optional(), evidenceProvenance: z.literal("synthetic-demo").optional(),
   contentReceipt: receipt.optional(), webProvenance: web.optional(), sourceKind: z.literal("public-reference").optional(),
   publicDeliveryKind: z.enum(["full_text", "excerpt", "abstract", "metadata_only"]).optional(),
-  requestedSource: z.object({ urls: z.array(https).max(50), readScope: z.literal("bounded-whole-document") }).strict().optional(),
+  requestedSource: z.object({ urls: z.array(https).max(50), readScope: z.enum(["bounded-whole-document", "bounded-heading-section"]) }).strict().optional(),
   sourceClaim: z.object({ id: text(200), revision: z.number().int().nonnegative(), mode: z.enum(["free", "citation-only", "paid"]),
     effectiveAt: date, verifiedAt: date }).strict().optional(),
   accessKind: z.literal("creator-free").optional(), scholarly: z.unknown().optional(),

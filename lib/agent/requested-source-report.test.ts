@@ -24,13 +24,22 @@ function read(qualified: boolean, truncated = false): ReturnType<typeof input> {
 }
 
 describe("supplied original operational labels", () => {
-  it("keeps legacy English and Vietnamese output exact when Portuguese is not selected", () => {
+  it("distinguishes an observed heading section from whole-document fallback", () => {
+    const value = read(true, true);
+    value.gathered[0].webProvenance!.htmlSectionScope = { format: "keryx-html-section-scope-v1", fragment: "examples", headingLevel: 2,
+      htmlStart: 42, htmlEnd: 900, documentCharacters: 1100, documentSha256: "a".repeat(64) };
+    expect(requestedSourceReport(value)).toContain("Only heading section `#examples` was read");
+    expect(requestedSourceReport(value)).not.toContain("not that section specifically");
+    expect(requestedSourceReport({ ...value, vi: true })).toContain("Chỉ đọc mục");
+    expect(requestedSourceReport({ ...value, language: "pt" })).toContain("Foi lida apenas a seção");
+  });
+  it("does not claim a whole-document or section read for unread originals", () => {
     const english = "### Supplied original source status\n\n" +
       `- \`${original}\`: Not read: A read did not complete within this run's limits.` +
-      " A section fragment was supplied; the reader only attempts bounded whole-document extraction, not that section specifically.";
+      " A section fragment was supplied; a read of the requested section has not been established.";
     const vietnamese = "### Trạng thái nguồn gốc đã cung cấp\n\n" +
       `- \`${original}\`: Chưa đọc: Chưa hoàn tất lượt đọc trong giới hạn lượt này.` +
-      " URL có phần neo; trình đọc chỉ thử trích xuất toàn tài liệu có giới hạn, không nhắm riêng phần đó.";
+      " URL có phần neo; chưa xác nhận đã đọc được mục được yêu cầu.";
     expect(requestedSourceReport(input())).toBe(english);
     expect(requestedSourceReport({ ...input(), language: "en" })).toBe(english);
     expect(requestedSourceReport({ ...input(), language: "es" })).toBe(english);
