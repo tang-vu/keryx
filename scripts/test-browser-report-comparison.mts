@@ -8,12 +8,13 @@ import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import path from "node:path";
 import { build } from "esbuild";
-import { chromium } from "playwright";
+import { chromium, type BrowserContext } from "playwright";
 import { createHash } from "node:crypto";
 import { canonicalJson } from "../lib/canonical-json";
 import { RESEARCH_RECEIPT_SCHEMA } from "../lib/research-receipt-types";
 import { reportComparisonCopy as copy } from "../locales/en/report-comparison";
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
+import { drainBrowserRoutes } from "../test-support/drain-browser-routes";
 
 const dist = path.resolve(process.env.NEXT_DIST_DIR ?? ".next");
 const cssDir = [path.join(dist, "static/chunks"), path.join(dist, "dev/static/chunks")]
@@ -159,6 +160,7 @@ if (process.argv.includes("--built")) {
   await new Promise<void>(resolve => listener.close(() => resolve()));
   const physical = `http://127.0.0.1:${address.port}`, origin = "https://comparison-built.test";
   let child: ReturnType<typeof spawn> | undefined, exited = false, stopped: Promise<void> | undefined;
+  let context: BrowserContext | undefined;
   const links: string[] = [], browser = await chromium.launch({ headless: true });
   try {
     await copyNextConfigFixture(source, temporary);
@@ -181,7 +183,7 @@ if (process.argv.includes("--built")) {
       if (ready) break; await delay(250);
     }
     assert(ready, `Compiled comparison route unavailable: ${log}`);
-    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+    context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
     const mutations: string[] = [], errors: string[] = [];
     await context.route("**/*", async route => {
       const request = route.request(), url = new URL(request.url());
@@ -200,14 +202,18 @@ if (process.argv.includes("--built")) {
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     assert.equal(await page.title(), copy.metadataTitle);
     assert.deepEqual(mutations, []); assert.deepEqual(errors, []);
-    await context.close();
-    console.log("PASS: actual compiled /research/compare route, shell, WebCrypto and imported files; isolated offline store, GET only.");
   } finally {
-    await browser.close();
-    if (child && !exited) { child.kill(); await stopped; }
-    assert(!child || exited, "Observe owned Next server exit before fixture cleanup");
-    for (const link of links) await unlink(link);
-    const target = path.resolve(temporary); assert(target.startsWith(path.resolve(tmpdir()) + path.sep));
-    await rm(target, { recursive: true, force: true });
+    try { if (context) await drainBrowserRoutes(context); }
+    finally {
+      try { await browser.close(); }
+      finally {
+        if (child && !exited) { child.kill(); await stopped; }
+        assert(!child || exited, "Observe owned Next server exit before fixture cleanup");
+        for (const link of links) await unlink(link);
+        const target = path.resolve(temporary); assert(target.startsWith(path.resolve(tmpdir()) + path.sep));
+        await rm(target, { recursive: true, force: true });
+      }
+    }
   }
+  console.log("PASS: actual compiled /research/compare route, shell, WebCrypto, imported files and drained proxy teardown; isolated offline store, GET only.");
 }
