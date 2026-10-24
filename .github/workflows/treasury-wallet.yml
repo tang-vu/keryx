@@ -47,7 +47,7 @@ jobs:
         shell: bash
         run: |
           npm pack --ignore-scripts --json --pack-destination "$RUNNER_TEMP" > "$RUNNER_TEMP/keryx-mcp-pack.json"
-          node mcp/scripts/assert-package-files.mjs "$RUNNER_TEMP/keryx-mcp-pack.json"
+          node scripts/assert-package-files.mjs "$RUNNER_TEMP/keryx-mcp-pack.json"
       - name: Clean installed MCP synthetic signing and new-process recovery
         shell: bash
         # Keep the fresh consumer on the runner's managed scratch volume instead

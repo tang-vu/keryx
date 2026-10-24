@@ -29,6 +29,7 @@ if (bundled.some(name => !name.includes("node_modules/@circle-fin/x402-batching/
   throw new Error(`Review newly bundled third-party modules: ${bundled.join(", ")}`);
 }
 await writeFile(resolve(root, "dist/build-inputs.json"), JSON.stringify({ bundled,
+  bundleSha256: createHash("sha256").update(await readFile(resolve(root, "dist/keryx-mcp.mjs"))).digest("hex"),
   circle: { version: circleVersion, sourceSha256: createHash("sha256").update(await readFile(circleEntry)).digest("hex") },
   validation: { packageVersion: "4.6.7", runtime: "v3", patch: "CVE-2023-54404-pre-traversal-refusal" },
   inputDigests: await Promise.all(bundled.map(async path => ({ path, sha256: createHash("sha256").update(await readFile(resolve(root, path))).digest("hex") }))),

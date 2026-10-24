@@ -45,6 +45,8 @@ try {
   const installedInputs = JSON.parse(await readFile(join(workspace, "node_modules/keryx-mcp/dist/build-inputs.json"), "utf8"));
   const expectedInputs = JSON.parse(await readFile(new URL("../dist/build-inputs.json", import.meta.url), "utf8"));
   assert.deepEqual(installedInputs, expectedInputs, "The packed CLI retains exact qualified bundled SDK provenance");
+  assert.equal(createHash("sha256").update(await readFile(join(workspace, "node_modules/keryx-mcp/dist/keryx-mcp.mjs"))).digest("hex"), installedInputs.bundleSha256,
+    "The archive executable must match the qualified producer; another test/build cannot silently replace it");
   assert.equal(installedInputs.circle.version, expectedPackage.devDependencies["@circle-fin/x402-batching"]);
   assert.match(installedInputs.circle.sourceSha256, /^[a-f0-9]{64}$/);
   assert(installedInputs.bundled.some(name => name.includes("node_modules/@circle-fin/x402-batching/")));
@@ -97,6 +99,11 @@ try {
   };
   const mock = join(workspace, "synthetic-network.cjs");
   await writeFile(mock, `
+require('node:module').registerHooks({resolve(specifier,context,next){
+ if(specifier==='@circle-fin/x402-batching'||specifier.startsWith('@circle-fin/x402-batching/'))throw new Error('Unbundled Circle SDK import refused, including ancestor dependency fallback');
+ if((context.parentURL||'').includes('/node_modules/keryx-mcp/')&&(specifier==='zod'||specifier==='zod/v3'))throw new Error('Application validator must be the qualified bundled implementation');
+ return next(specifier,context);
+}});
 const fs=require('node:fs'), crypto=require('node:crypto'), viem=require('viem');
 const counts={paid:0,rpc:0,recovery:0,bibliography:0,bibliographyQueries:[],researchRequests:[],researchResults:[]};
 const portVectors=${JSON.stringify(portVectors)},publicResult=${JSON.stringify(publicResult)};
