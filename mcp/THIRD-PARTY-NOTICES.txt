@@ -1,0 +1,10 @@
+This distribution includes bundled code from:
+
+@circle-fin/x402-batching 3.5.0
+Circle Internet Financial
+https://github.com/circlefin/x402-batching
+Licensed under Apache License 2.0 (see LICENSE-APACHE-2.0.txt).
+The upstream JavaScript is bundled without changes to payment/signing behavior.
+
+The pinned client has no runtime x402/core or Zod 3 import. The build refuses
+unexpected bundled dependencies. Protocol SDK, viem and Zod 4 remain external.

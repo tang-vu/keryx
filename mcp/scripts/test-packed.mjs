@@ -1,7 +1,7 @@
 ﻿import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, writeFile, readFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile, readdir, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -38,10 +38,20 @@ try {
   const expectedPackage = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
   assert.equal(installedPackage.version, expectedPackage.version);
   const dependencies = {};
-  for (const name of ["@circle-fin/x402-batching", "viem", "@modelcontextprotocol/sdk", "zod"]) {
+  for (const name of ["viem", "@modelcontextprotocol/sdk", "zod"]) {
     dependencies[name] = JSON.parse(await readFile(join(workspace, "node_modules", name, "package.json"), "utf8")).version;
     assert.equal(dependencies[name], installedPackage.dependencies[name]);
   }
+  const installedInputs = JSON.parse(await readFile(join(workspace, "node_modules/keryx-mcp/dist/build-inputs.json"), "utf8"));
+  const expectedInputs = JSON.parse(await readFile(new URL("../dist/build-inputs.json", import.meta.url), "utf8"));
+  assert.deepEqual(installedInputs, expectedInputs, "The packed CLI retains exact qualified bundled SDK provenance");
+  assert.equal(installedInputs.circle.version, expectedPackage.devDependencies["@circle-fin/x402-batching"]);
+  assert.match(installedInputs.circle.sourceSha256, /^[a-f0-9]{64}$/);
+  assert(installedInputs.bundled.length > 0 && installedInputs.bundled.every(name => name.includes("node_modules/@circle-fin/x402-batching/")));
+  for (const name of ["@circle-fin/x402-batching", "@x402/core"]) {
+    await assert.rejects(access(join(workspace, "node_modules", name)), { code: "ENOENT" }, "Consumers must not auto-install the legacy peer graph");
+  }
+  dependencies["bundled:@circle-fin/x402-batching"] = installedInputs.circle.version;
   const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
   // Golden public HTTP-port data, not a source-helper import or producer authority.
   const packet = {

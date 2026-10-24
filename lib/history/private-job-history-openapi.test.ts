@@ -63,7 +63,7 @@ describe("published completed-private-job OpenAPI contract", () => {
 
   it("binds POST fields, date/id syntax and documented bounds to the actual accepted input contracts", () => {
     const input = privateJobHistoryOpenApiPaths["/api/me/private-jobs"].post.requestBody.content["application/json"].schema;
-    const actualFields = Object.keys(privateJobHistoryInputSchema.innerType().shape);
+    const actualFields = Object.keys(privateJobHistoryInputSchema.shape);
     expect(input.additionalProperties).toBe(false);
     expect(Object.keys(input.properties).sort()).toEqual([...actualFields, "format"].sort());
     expect(input.properties.limit.maximum).toBe(B.rows);

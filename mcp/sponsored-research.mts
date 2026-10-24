@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { secretFreeMcpInput } from "../lib/mcp/secret-free-input-schema.ts";
 import { AskQuestionSchema, MAX_ASK_QUESTION_CHARS } from "../lib/ask-input.ts";
 import {
   researchSponsored, SponsoredResearchError, sponsoredResearchOrigin, SPONSORED_RESEARCH_NOTICE,
@@ -13,15 +14,11 @@ const fields = {
   budget: z.number().finite().min(0).max(0.08).optional()
     .describe("Source budget in USDC, 0–0.08 inclusive. Zero is valid. Separate from model/search operating costs; service limits still apply."),
 };
-const inputSchema = z.object(fields).strict(invalidInput);
+const inputSchema = z.object(fields, { error: invalidInput }).strict();
 
 // Follow the existing MCP registrations: keep discovery constraints while preventing
 // SDK validation errors from echoing rejected credentials or private field values.
-const guardedFields = Object.fromEntries(Object.entries(fields).map(([name, schema]) => {
-  const field = (schema as z.ZodTypeAny).catch(() => { throw new Error(invalidInput); });
-  field.isOptional = () => schema.isOptional();
-  return [name, field];
-}));
+const guardedInput = secretFreeMcpInput(fields, invalidInput);
 
 export interface SponsoredResearchToolOptions {
   baseUrl?: string;
@@ -68,7 +65,7 @@ export function registerSponsoredResearchTool(server: McpServer, options: Sponso
       "This creates a new research run and may contact external sources. No automatic retry or paid fallback. " +
       "Timeouts/disconnects may leave server work running; do not resend automatically. " +
       "For a separately authorized purchase from your own funded wallet, use the paid buyer tool ask_keryx.",
-    inputSchema: z.object(guardedFields).strict(invalidInput),
+    inputSchema: guardedInput,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   }, async (raw, extra) => {
     const parsed = inputSchema.safeParse(raw);

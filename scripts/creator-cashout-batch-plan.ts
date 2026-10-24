@@ -100,7 +100,7 @@ export function validateCreatorBatchPlan(input: unknown): CreatorBatchPlan {
 /** Explicit existing custody file. Labels are advisory; derived address is the
  * authority, and duplicates or conflicts never choose a key silently. */
 export function creatorBatchOwnerKey(keystore: unknown, owner: string): Hex {
-  const records = z.record(z.object({ address, privateKey: z.string().regex(/^0x[a-fA-F0-9]{64}$/) }).strict())
+  const records = z.record(z.string(), z.object({ address, privateKey: z.string().regex(/^0x[a-fA-F0-9]{64}$/) }).strict())
     .parse(keystore);
   const matches: Hex[] = [];
   for (const row of Object.values(records)) {

@@ -1,5 +1,11 @@
 # Keryx MCP
 
+The CLI bundles the pinned Circle 3.5.0 buyer implementation; its exact inputs
+are recorded in `dist/build-inputs.json`. The installed CLI uses external Zod 4,
+MCP SDK and viem packages and does not auto-install x402's legacy Zod 3 peer
+graph. Source builds require the repository's pinned dependencies. The bundled
+code and license are listed in `THIRD-PARTY-NOTICES.txt`.
+
 ## Sponsored public research (source candidate)
 
 `ask_keryx_sponsored` runs hosted sponsored research with **no API key, buyer

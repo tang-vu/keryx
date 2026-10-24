@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { secretFreeMcpInput } from "../mcp/secret-free-input-schema";
 import {
   PRIVATE_JOB_HISTORY_BOUNDS as B, parsePrivateJobHistoryInput, privateJobHistoryInputSchema,
   privateJobHistoryDetailInputSchema, privateJobHistoryPageSchema, privateJobHistoryDetailSchema,
@@ -19,28 +19,20 @@ export interface PrivateJobHistoryTools {
 const annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const description = "Private data for this authenticated caller only. Exact-payer completed private jobs in the current store; explicit history:read required. Bounded scan/continuation, unknown provenance and NULL own spend/creator settlement remain explicit. No wallet selector, public report/share link, model prompt, research, source fetch, signer, purchase or mutation authority.";
 const refusal = () => ({ isError: true, content: [{ type: "text" as const, text: PRIVATE_JOB_HISTORY_REFUSAL }] });
-// The pinned SDK normalizes object schemas for discovery/output, not ZodEffects.
-// Expose the SAME underlying object fields; callbacks retain every shared refinement.
-// Catch only to throw a constant error, so SDK enum/regex failures cannot echo tokens
-// or cursors. No invalid value is defaulted/accepted, and JSON Schema keeps its bounds.
-const listInput = privateJobHistoryInputSchema.innerType();
+// Zod4 retains refinements on the object. Expose the same object fields;
+// callbacks retain every shared refinement.
+// Reject a literal, unreachable null sentinel with a constant error, so SDK
+// enum/regex failures cannot echo tokens/cursors. No invalid input is accepted;
+// discovery retains the original bounds, defaults and required fields.
+const listInput = privateJobHistoryInputSchema;
 const detailInput = privateJobHistoryDetailInputSchema;
-function secretFreeInput<T extends z.ZodRawShape>(shape: T) {
-  const guarded = Object.fromEntries(Object.entries(shape).map(([name, schema]) => {
-    const field = schema.catch(() => { throw new Error(PRIVATE_JOB_HISTORY_REFUSAL); });
-    // The converter probes optionality by parsing undefined; retain original required
-    // fields instead of letting a throwing catch make the required detail ID optional.
-    field.isOptional = () => schema.isOptional();
-    return [name, field];
-  }));
-  return z.object(guarded).strict(PRIVATE_JOB_HISTORY_REFUSAL);
-}
+const secretFreeInput = (shape: Parameters<typeof secretFreeMcpInput>[0]) => secretFreeMcpInput(shape, PRIVATE_JOB_HISTORY_REFUSAL);
 
 /** Same shared schemas for remote and stdio; callbacks supply existing verified authority. */
 export function registerPrivateJobHistoryTools(server: McpServer, tools: PrivateJobHistoryTools) {
   server.registerTool("history_private_jobs_list", {
     title: "List your completed private jobs", description, inputSchema: secretFreeInput(listInput.shape),
-    outputSchema: privateJobHistoryPageSchema.innerType(), annotations,
+    outputSchema: privateJobHistoryPageSchema, annotations,
   }, async (raw, extra) => {
     try {
       extra.signal.throwIfAborted();
@@ -53,7 +45,7 @@ export function registerPrivateJobHistoryTools(server: McpServer, tools: Private
   });
   server.registerTool("history_private_jobs_detail", {
     title: "Read one of your completed private results", description,
-    inputSchema: secretFreeInput(detailInput.shape), outputSchema: privateJobHistoryDetailSchema.innerType(), annotations,
+    inputSchema: secretFreeInput(detailInput.shape), outputSchema: privateJobHistoryDetailSchema, annotations,
   }, async (raw, extra) => {
     try {
       extra.signal.throwIfAborted();
@@ -66,7 +58,7 @@ export function registerPrivateJobHistoryTools(server: McpServer, tools: Private
   });
   server.registerTool("history_private_jobs_export", {
     title: "Export your private job metadata", description: description + " Manual finite JSON metadata export only; complete/truncated and continuation are returned. Result bodies are excluded.",
-    inputSchema: secretFreeInput(listInput.shape), outputSchema: privateJobHistoryExportSchema.innerType(), annotations,
+    inputSchema: secretFreeInput(listInput.shape), outputSchema: privateJobHistoryExportSchema, annotations,
   }, async (raw, extra) => {
     try {
       extra.signal.throwIfAborted();

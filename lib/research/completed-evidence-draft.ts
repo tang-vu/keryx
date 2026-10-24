@@ -130,9 +130,9 @@ function checkedRun(raw: string, savedAt: string, selection: CompletedReadSelect
     || !unique((run.evidence ?? []).map(row => JSON.stringify([row.marker, row.claimIndex, row.quote])))) throw new Error();
   // No payment reference is used as evidence. This is the existing completion
   // result schema only; the spend/receipt projection remains on its own route.
-  // Zod 3 refinements wrap the object twice. Unwrap both through the supported
-  // API, retaining the existing result contract and its concrete object type.
-  privateWorkspaceResultSchema.innerType().innerType().shape.result.unwrap().parse({ ...run, savedAt,
+  // Zod4 keeps refinements on the object. Select only the same result field as
+  // before; spend/receipt projection and outer ownership checks remain separate.
+  privateWorkspaceResultSchema.shape.result.unwrap().parse({ ...run, savedAt,
     citations: run.citations.map(row => ({ ...row, recordedRewardUsdc: row.reward })),
     evidence: run.evidence ?? null, claimCoverage: run.claimCoverage ?? null });
   if (run.citations.some(seed) || (run.evidence ?? []).some(seed)) throw new Error();

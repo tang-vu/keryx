@@ -8516,3 +8516,14 @@ the optional call ledger through the compact economics storage projection so
 failed, pending and missing-usage work remains visible in the private report.
 Keep historical unknowns, fixed private/bounded originals and financial authority.
 See [the cost boundary](docs/engineering/llm-unit-costs.md).
+
+## Patch bounded validation without changing legacy SDK contracts (2026-10-24)
+
+Use patched current Zod, undici and body-parser releases. Retain Circle and x402
+SDK versions and their Zod 3 contracts through the published `zod/v3` compatibility
+runtime, with a reviewed early-refusal backport for over-limit arrays in both ESM
+and CommonJS. Exact vendor versions and before/after hashes fail closed on drift;
+install and production build verify the cohort. Bundle the unchanged pinned Circle
+buyer implementation in the MCP CLI so clean consumers do not auto-install an
+unpatched legacy peer graph. Keep monetary authority and required audit/CI gates.
+See [scope and validation](docs/engineering/runtime-audit-patches-20261024.md).

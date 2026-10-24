@@ -36,7 +36,7 @@ const identity = {
   itemTitle: text(1000).optional(), itemUrl: url.optional(), contentVersion: text(200).optional(),
   evidenceProvenance: z.literal("synthetic-demo").optional(),
   contentReceipt: z.object({ bodyHash: text(200).optional() }).strip().optional(),
-  webProvenance: pdfProvenance,
+  webProvenance: pdfProvenance.optional(),
 };
 // Strip unrelated report fields. A caller-imported report is never authenticated by this parser.
 export const evidenceDraftReportSchema = z.object({
