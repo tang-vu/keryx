@@ -73,7 +73,9 @@ try {
   assert(await page.getByRole("button", { name: copy.compare, exact: true }).isDisabled());
   await page.getByLabel(copy.beforeFile, { exact: true }).setInputFiles(file("before.json", receipt("v1")));
   await page.getByLabel(copy.afterFile, { exact: true }).setInputFiles(file("after.json", receipt("v2")));
-  await page.getByRole("button", { name: copy.compare, exact: true }).click();
+  await page.getByLabel(copy.afterFile, { exact: true }).focus(); await page.keyboard.press("Tab");
+  assert(await page.getByRole("button", { name: copy.compare, exact: true }).evaluate(button => button === document.activeElement));
+  await page.keyboard.press("Enter");
   const result = page.getByTestId("report-comparison-result"); await result.waitFor();
   assert.equal(await result.getByText(copy.state["recorded-excerpts-changed"], { exact: true }).count(), 1);
   assert.equal(await result.locator("blockquote").last().textContent(), JSON.parse(receipt("v2")).payload.claims[0].evidence[0].quote);
