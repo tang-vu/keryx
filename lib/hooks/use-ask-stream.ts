@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useRef, useState } from "react";
+import { receiveRequesterObservations } from "../research-feedback/browser-delivery";
 import { RESEARCH_PAUSED_MESSAGE } from "@/lib/research/availability-contract";
 import { BROWSER_AUTHORIZATION_PROTOCOL } from "@/lib/payments/browser-authorization-protocol";
 import type { WalletClient } from "viem";
@@ -185,6 +186,8 @@ export function useAskStream(opts?: AskStreamOpts) {
     } catch {
       return;
     }
+
+    if (event === "private-requester-observations") { receiveRequesterObservations(data); return; }
 
     if (event === "meta") {
       setState((s) => ({ ...s, meta: data as AskMeta }));

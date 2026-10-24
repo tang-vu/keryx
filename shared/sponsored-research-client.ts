@@ -1,4 +1,5 @@
 /** Hosted anonymous research only. This module must remain browser-safe and custody-free. */
+import { feedbackDeliverySchema, type FeedbackDelivery } from "../lib/research-feedback/contracts";
 export type SponsoredResearchInput = {
   question: string;
   mode?: "quick" | "deep";
@@ -19,6 +20,8 @@ export type SponsoredResearchOptions = {
   fetch?: typeof fetch;
   signal?: AbortSignal;
   onProgress?: (text: string) => void;
+  /** One-shot private completion sidecar. Never merged into the public result. */
+  onRequesterObservations?: (packet: FeedbackDelivery) => void;
 };
 
 export const SPONSORED_RESEARCH_NOTICE =
@@ -249,6 +252,7 @@ export async function researchSponsored(input: SponsoredResearchInput, options: 
     const decoder = new TextDecoder("utf-8", { fatal: true });
     let buffer = "", answer = "", bytes = 0, frames = 0, progressChars = 0, done = false;
     let result: SponsoredResearchResult | undefined;
+    let requesterPacket: unknown;
     const frame = (event: string) => {
       if (++frames > 4096 || event.length > MAX_FRAME_CHARS) return invalidResponse("The research stream exceeded the supported event size/count.", "response_too_large");
       const data = event.split("\n").filter(line => line.startsWith("data:")).map(line => line.slice(5).replace(/^ /, "")).join("\n").trim();
@@ -293,6 +297,7 @@ export async function researchSponsored(input: SponsoredResearchInput, options: 
           dispatchUrl = reportUrl(meta.dispatchUrl, origin, queryId);
         }
         result = terminalResult(meta, answer, origin);
+        requesterPacket = chunk.keryx_requester;
         if (queryId && result.queryId !== queryId) return invalidResponse("The terminal report changed the canonical query ID.");
         queryId = result.queryId;
         dispatchUrl = result.dispatchUrl;
@@ -313,6 +318,10 @@ export async function researchSponsored(input: SponsoredResearchInput, options: 
       if (done) { if (buffer.trim()) return invalidResponse("The research stream contained trailing data."); break; }
     }
     if (!done || !result) return invalidResponse("The research stream ended before the terminal report and [DONE].", "incomplete_stream");
+    const requester = feedbackDeliverySchema.safeParse(requesterPacket);
+    if (requester.success && requester.data.runId === result.queryId) {
+      try { options.onRequesterObservations?.(requester.data); } catch { /* Private consumer observation cannot discard a completed answer. */ }
+    }
     return result;
   } catch (error) {
     const failure = error instanceof SponsoredResearchError ? error : undefined;

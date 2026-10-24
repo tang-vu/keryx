@@ -1,6 +1,11 @@
 import { demoteSyntheticEvidence } from "../research/evidence-provenance";
 import { surfaceResearch } from "../research/surface-result";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { hostedRequesterObservations } from "../research-feedback/hosted-delivery";
+import { registerRequesterFeedbackTools, privateRequesterObservationText } from "../research-feedback/mcp";
+import { createRequesterFeedbackRoute } from "../research-feedback/http";
+import { feedbackResponseSchema } from "../research-feedback/contracts";
+import { configuredRequesterOpinionStore } from "../research-feedback/metadata-store";
 import { z } from "zod";
 import { collectRun } from "../agent";
 import { config } from "../config";
@@ -106,6 +111,15 @@ export function createRemoteMcpServer(
       "Budgeted research over creator sources with citation rewards on the configured Arc network. Anonymous research is sponsored by Keryx's treasury.",
   });
   registerEvidenceDraftTool(server);
+  registerRequesterFeedbackTools(server, { baseUrl: config.baseUrl, execute: async (token, input, signal) => {
+    const binding = { network: config.networkId, origin: config.baseUrl };
+    const response = await createRequesterFeedbackRoute({ db: getDb, store: () => configuredRequesterOpinionStore(binding), binding,
+      secret: () => config.jwtSecret })(new Request(`${config.baseUrl}/api/research-feedback`, { method: "POST", signal,
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(input ? { operation: "submit", ...input } : { operation: "read" }) }));
+    if (!response.ok) throw new Error("Requester feedback unavailable");
+    return feedbackResponseSchema.parse(await response.json());
+  } });
   registerDraftCheckTool(server);
   registerEvidenceProcurementTool(server);
   const acceptanceStore = async (scope: "deliverable:read" | "deliverable:write") => {
@@ -183,13 +197,16 @@ export function createRemoteMcpServer(
         });
         const result = remoteResearchResult(run);
         const packet = await privateClaim?.complete(run);
+        const requester = await hostedRequesterObservations(run, true);
         return {
           // Direct caller's private tool response only. The structured public
           // projection remains unchanged and never acquires claim credentials.
           content: [{ type: "text" as const, text: remoteResearchText(result, livePresentationLocale({
             requestedLanguage: language, originalQuestion: question, recordedAnswerLanguage: recordedAnswerLanguage(run) })) },
-            ...(packet ? [{ type: "text" as const, text: privateRunClaimText(packet) }] : [])],
-          ...(packet ? { _meta: { "keryx/privateRunClaim": packet } } : {}),
+            ...(packet ? [{ type: "text" as const, text: privateRunClaimText(packet) }] : []),
+            ...(requester ? [{ type: "text" as const, text: privateRequesterObservationText(requester) }] : [])],
+          ...(packet || requester ? { _meta: { ...(packet ? { "keryx/privateRunClaim": packet } : {}),
+            ...(requester ? { "keryx/requesterObservations": requester } : {}) } } : {}),
           structuredContent: result,
         };
       } catch (error) {

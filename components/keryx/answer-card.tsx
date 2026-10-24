@@ -18,6 +18,7 @@ import type { PresentationLanguage } from "@/shared/i18n/presentation-language";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import { AnswerMarkdown } from "./answer-markdown";
 import { AnswerFeedback } from "./answer-feedback";
+import { RequesterFeedback } from "./requester-feedback";
 import { ScholarlyMetadataDetails } from "./scholarly-metadata";
 import { ModeBadge } from "./mode-badge";
 import { recordedArcLabel } from "@/lib/arc-network-display";
@@ -178,7 +179,7 @@ export function AnswerCard({ run, answerLanguage, meta, permalink, payments = []
           )}
         </div>
 
-        {showFeedback ? <AnswerFeedback queryId={run.id} /> : null}
+        {showFeedback ? <><RequesterFeedback key={run.id} runId={run.id} /><AnswerFeedback queryId={run.id} /></> : null}
         <SummaryStrip
           spent={run.totalSpent}
           toCreators={run.totalToCreators}

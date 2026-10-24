@@ -18,6 +18,7 @@
 
 import { isRequestObject } from "@/lib/request-object";
 import { NextRequest } from "next/server";
+import { hostedRequesterObservations } from "@/lib/research-feedback/hosted-delivery";
 import { BROWSER_AUTHORIZATION_PROTOCOL } from "@/lib/payments/browser-authorization-protocol";
 import { getSession } from "@/lib/auth";
 import { accountSessionContext } from "@/lib/account-sessions";
@@ -413,12 +414,14 @@ export async function POST(req: NextRequest) {
           // Saved original and payment state remain separate from the one-shot
           // caller-private transport. A late claim failure preserves the answer.
           const claimPacket = await privateClaim?.complete(run);
+          const requesterPacket = !isBot ? await hostedRequesterObservations(run, publication.visibility === "public", deps.db) : null;
           if (!isBot) {
             await recordActivationEvent(deps.db, "reader_answer_completed");
             if (isReturning) {
               await recordActivationEvent(deps.db, "reader_returning_dispatch");
             }
           }
+          if (requesterPacket) send("private-requester-observations", requesterPacket);
           send("done", run);
           if (claimPacket) send("private-run-claim", claimPacket);
         }
