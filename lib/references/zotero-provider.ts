@@ -59,7 +59,7 @@ export class ZoteroProvider {
     const { value } = await this.request("/keys/current");
     const parsed = z.object({ userID: z.number().int().positive().max(99_999_999_999_999), access: z.object({
       user: z.object({ library: z.literal(true), notes: z.literal(true), write: z.literal(true), files: z.literal(false).optional() }).strict(),
-      groups: z.record(z.string(), z.unknown()).refine(groups => Object.keys(groups).length === 0),
+      groups: z.record(z.unknown()).refine(groups => Object.keys(groups).length === 0),
     }).strict() }).passthrough().safeParse(value);
     if (!parsed.success || expectedUser && String(parsed.data.userID) !== expectedUser) throw new ZoteroError("zotero_scopes");
     return String(parsed.data.userID);
@@ -90,7 +90,7 @@ export class ZoteroProvider {
     if (!items.length || items.length > 50) throw new ZoteroError("zotero_limit");
     if (libraryVersion(String(expectedVersion)) === undefined) throw new ZoteroError("zotero_provider");
     const { response, value } = await this.request(`/users/${user}/items`, "POST", items, { "If-Unmodified-Since-Version": String(expectedVersion) });
-    const result = z.object({ successful: z.record(z.string(), zoteroItemSchema), unchanged: z.record(z.string(), zoteroKeySchema), failed: z.record(z.string(), z.unknown()) }).strict().safeParse(value);
+    const result = z.object({ successful: z.record(zoteroItemSchema), unchanged: z.record(zoteroKeySchema), failed: z.record(z.unknown()) }).strict().safeParse(value);
     if (!result.success) throw new ZoteroError("zotero_provider");
     // A 200 can contain partial failure; never echo provider messages or claim total success.
     if (Object.keys(result.data.failed).length) throw new ZoteroError("zotero_conflict");

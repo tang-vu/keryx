@@ -11,7 +11,8 @@
     "dist",
     "README.md",
     "THIRD-PARTY-NOTICES.txt",
-    "LICENSE-APACHE-2.0.txt"
+    "LICENSE-APACHE-2.0.txt",
+    "LICENSE-ZOD.txt"
   ],
   "engines": {
     "node": "^22.23.4 || ^24.22.1 || >=26.12.1"

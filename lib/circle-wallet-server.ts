@@ -110,7 +110,7 @@ export function circleRecoveryFailure(error: unknown, stage: CircleRecoveryStage
       ...(typeof error.code === "number" && Number.isSafeInteger(error.code) && error.code >= 0 ? { circleCode: error.code } : {}),
     } : {}),
     ...(error instanceof z.ZodError ? { issuePaths: error.issues.slice(0, 8).map(issue => issue.path.slice(0, 4).map(part =>
-      typeof part === "number" ? part : typeof part === "string" && recoveryDiagnosticFields.has(part) ? part : "?")) } : {}),
+      typeof part === "number" ? part : recoveryDiagnosticFields.has(part) ? part : "?")) } : {}),
   });
   return circleFailure(error);
 }

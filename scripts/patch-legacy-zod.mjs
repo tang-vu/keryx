@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const scriptRoot = dirname(fileURLToPath(import.meta.url));
 const hash = text => createHash("sha256").update(text).digest("hex");
-const importNotice = "// Keryx: retain Zod 3 API via the bounded, patched zod/v3 compatibility runtime.\n";
+const importNotice = "// Keryx: retain this native Zod 4 consumer on its explicit versioned runtime.\n";
 const boundNotice = "// Keryx security backport: reject over-limit arrays before element traversal (CVE-2023-54404).\n";
 
 export function boundLegacyArrays(source, commonjs) {
@@ -41,17 +41,24 @@ export function patchLegacyZod(root) {
     if (hash(patched) !== row.patchedSha256) throw new Error(`Legacy validation patch mismatch: ${row.package}/${row.path}`);
     writes.push([filename, patched]);
   };
-  for (const row of [...manifest.runtime, ...manifest.imports]) {
+  for (const row of [manifest.entry, ...manifest.runtime, ...manifest.imports]) {
     const packageRoot = join(resolve(root), "node_modules", row.package);
     if (!packages.has(packageRoot)) {
       packages.set(packageRoot, JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")).version);
     }
     if (packages.get(packageRoot) !== row.version) throw new Error(`Review legacy validation upgrade: ${row.package}`);
     verify(join(packageRoot, row.path), row, source => {
+      if (row.path === "package.json") {
+        const pkg = JSON.parse(source);
+        pkg.main = "./v3/index.cjs"; pkg.module = "./v3/index.js"; pkg.types = "./v3/index.d.cts";
+        pkg.exports["."] = { ...pkg.exports["./v3"] };
+        pkg.keryxCompatibility = "Root retains the patched Zod 3 contract; explicit /v4 consumers retain native Zod 4.";
+        return JSON.stringify(pkg, null, 2) + "\n";
+      }
       if (row.package === "zod") return boundLegacyArrays(source, row.path.endsWith(".cjs"));
       let count = 0;
       const patched = source.replaceAll(/(\bfrom\s*|\brequire\(\s*)(['"])zod\2/g,
-        (_, prefix, quote) => { count++; return `${prefix}${quote}zod/v3${quote}`; });
+        (_, prefix, quote) => { count++; return `${prefix}${quote}zod/v4${quote}`; });
       if (count !== row.imports) throw new Error("Unexpected legacy Zod import count");
       return importNotice + patched;
     });

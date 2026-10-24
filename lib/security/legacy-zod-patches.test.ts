@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { patchLegacyZod } from "../../scripts/patch-legacy-zod.mjs";
@@ -12,10 +12,10 @@ it("verifies the installed patched cohort without mutating it", () => {
 it("refuses tampered vendor bytes before performing any pending patch", () => {
   const temporary = mkdtempSync(join(tmpdir(), "keryx-legacy-zod-"));
   try {
-    for (const row of [...manifest.runtime, ...manifest.imports]) {
+    for (const row of [manifest.entry, ...manifest.runtime, ...manifest.imports]) {
       const root = join(temporary, "node_modules", row.package);
       mkdirSync(dirname(join(root, row.path)), { recursive: true });
-      writeFileSync(join(root, "package.json"), JSON.stringify({ version: row.version }));
+      if (!existsSync(join(root, "package.json"))) writeFileSync(join(root, "package.json"), JSON.stringify({ version: row.version }));
       writeFileSync(join(root, row.path), readFileSync(join(process.cwd(), "node_modules", row.package, row.path)));
     }
     const first = join(temporary, "node_modules", "zod/v3/types.js");

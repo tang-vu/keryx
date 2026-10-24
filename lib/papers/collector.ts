@@ -135,7 +135,7 @@ export function parseOpenReviewPaper(text: string, target: Extract<PaperTarget, 
   if (Buffer.byteLength(text) > 250000) throw new Error("OpenReview metadata too large");
   const data: unknown = JSON.parse(text);
   const fieldSchema = z.object({ value: z.unknown(), readers: z.array(z.string()).optional() }).passthrough();
-  const noteSchema = z.object({ id: z.string(), forum: z.string(), readers: z.array(z.string()), pdate: z.number().int().optional(), content: z.record(z.string(), fieldSchema) }).passthrough();
+  const noteSchema = z.object({ id: z.string(), forum: z.string(), readers: z.array(z.string()), pdate: z.number().int().optional(), content: z.record(fieldSchema) }).passthrough();
   const response = z.object({ notes: z.array(noteSchema).max(3) }).passthrough().parse(data);
   const matches = response.notes.filter(note => note.id === target.id && note.forum === target.id);
   if (matches.length !== 1 || !matches[0].readers.includes("everyone")) throw new Error("Requested public submission was not returned");

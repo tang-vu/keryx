@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { z } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPrivateJobHistoryRead, registerPrivateJobHistoryTools, type PrivateJobHistoryAccess,
   type PrivateJobHistoryTools } from "./private-job-history-mcp";
@@ -129,8 +129,8 @@ describe("shared MCP registration and stdio key bridge (UNRUN)", () => {
         expect(tool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, openWorldHint: false });
         expect(tool.outputSchema).toBeDefined(); expect(tool.inputSchema).toMatchObject({ type: "object", additionalProperties: false });
       }
-      expect(discovered.tools[0].inputSchema).toEqual(z.toJSONSchema(privateJobHistoryInputSchema, { target: "draft-7", io: "input" }));
-      expect(discovered.tools[1].inputSchema).toEqual(z.toJSONSchema(privateJobHistoryDetailInputSchema, { target: "draft-7", io: "input" }));
+      expect(discovered.tools[0].inputSchema).toEqual(zodToJsonSchema(privateJobHistoryInputSchema.innerType(), { strictUnions: true, pipeStrategy: "input" }));
+      expect(discovered.tools[1].inputSchema).toEqual(zodToJsonSchema(privateJobHistoryDetailInputSchema, { strictUnions: true, pipeStrategy: "input" }));
       expect(discovered.tools[1].inputSchema.required).toEqual(["id"]);
       const list = await link.client.callTool({ name: "history_private_jobs_list", arguments: {} });
       expect(list.structuredContent).toEqual(page()); expect(tools.list).toHaveBeenCalledWith({ limit: 25 }, { signal: expect.any(AbortSignal) });

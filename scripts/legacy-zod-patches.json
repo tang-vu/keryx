@@ -1,4 +1,11 @@
 {
+  "entry": {
+    "package": "zod",
+    "version": "4.6.7",
+    "path": "package.json",
+    "originalSha256": "c2d190d9ee4e0bdb60332aaa2130a6a98d65ddb903fe1d29248b15de57832c45",
+    "patchedSha256": "626c6494446baefa870c25a980386d8496eff33f93a7da7964022442d09826bc"
+  },
   "runtime": [
     {
       "package": "zod",
@@ -17,276 +24,60 @@
   ],
   "imports": [
     {
-      "package": "@circle-fin/adapter-viem-v2",
-      "version": "1.16.0",
-      "path": "index.cjs",
-      "originalSha256": "4ad77f63f9d15c2f0e286c5cb7621508e09b2142932059dc6b1db42017e4f82c",
-      "patchedSha256": "5a4643f4127f950762d1273053b8f98b37dcacdbe16294df37d25580bad6ed94",
-      "imports": 3
-    },
-    {
-      "package": "@circle-fin/adapter-viem-v2",
-      "version": "1.16.0",
-      "path": "index.mjs",
-      "originalSha256": "c3863f6a53987e1dce81703b34669d5038a9141aa9484ae347fd349beaf62462",
-      "patchedSha256": "7dbefc03cfa902c9e76ca8ce02334eae61bf6050d0c77d9c8b1102f5490c502d",
-      "imports": 3
-    },
-    {
-      "package": "@circle-fin/adapter-viem-v2",
-      "version": "1.16.0",
-      "path": "next.cjs",
-      "originalSha256": "a5f6503a30fc0e17d789ab4521132c328d8402dc10351243ed781d916f082dc2",
-      "patchedSha256": "f680f98cf643aaddbcdaa808319f0baa8fa6ae35a88f310f89f2459ae61539f0",
-      "imports": 4
-    },
-    {
-      "package": "@circle-fin/adapter-viem-v2",
-      "version": "1.16.0",
-      "path": "next.mjs",
-      "originalSha256": "44f3f5041374b08f073dbde7147a6ac78af208c91fb86344958be4bc9c63114c",
-      "patchedSha256": "70bd1f046f9cd9a224eddacf6a6c79dee2e6bc3c43dfb251049ca8b184345c99",
-      "imports": 4
-    },
-    {
-      "package": "@circle-fin/onramp-kit",
-      "version": "1.0.3",
-      "path": "index.cjs",
-      "originalSha256": "e9e5cae65e4fd552415071be729bde300a991fe510ecb49dd89a14070e150eee",
-      "patchedSha256": "bfdd67bc520873c87a8a4b7ffb58a27a2b5aeb76f75c433fcbe0d32d518533f4",
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/api-reference/api-client-plugin.js",
+      "originalSha256": "f74c43e30fdaf0ddb677f0dde194b9ab09c83248b1a8a42cdf3eefb5a13e352b",
+      "patchedSha256": "91fd31e1ca2e25543deddb992de0e6f04c7ca2224c8d665126f0106aea83eaaf",
       "imports": 1
     },
     {
-      "package": "@circle-fin/onramp-kit",
-      "version": "1.0.3",
-      "path": "index.mjs",
-      "originalSha256": "fa68c91f0780866c806d141d07b9efcd0f95ffdf6827bf2022ef643967582d84",
-      "patchedSha256": "a70998b5472752aee1a4b1e7bbef2915206e91aa58d0f778a65bd8bdcde01c31",
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/api-reference/api-reference-configuration.js",
+      "originalSha256": "bc615c6871792756c16aa3d4d273e6f628dfd6ed57949c12443810b91cecbcb4",
+      "patchedSha256": "70a4c0b1161631d488771503d37b89548e0d768713c1ac490149ce793e038499",
       "imports": 1
     },
     {
-      "package": "@circle-fin/onramp-kit",
-      "version": "1.0.3",
-      "path": "mocks.cjs",
-      "originalSha256": "00e738b8d12ee42d584169c64221e7d6b2812f25cf45fd35565890937c3792b8",
-      "patchedSha256": "c077a9f115348ff35e2e4ed22fe59b73420d380a89abd65def771942672fe95e",
-      "imports": 3
-    },
-    {
-      "package": "@circle-fin/onramp-kit",
-      "version": "1.0.3",
-      "path": "mocks.mjs",
-      "originalSha256": "3c25ef02a525e9127f763da9c44c06140b6f4e38de8f459a9a9d0a3cd7fb0c84",
-      "patchedSha256": "598e9528895c2cab1decd47d0822f5045b0bdda6d11553a5a5a2efd83c0d5604",
-      "imports": 3
-    },
-    {
-      "package": "@circle-fin/onramp-kit",
-      "version": "1.0.3",
-      "path": "protocol.cjs",
-      "originalSha256": "0fd55261e11b1b1afe459ce1dfdb6a86c53c6d07f950d0ded147d6f0b28718c7",
-      "patchedSha256": "3556a3b9d46f3449267a1c97a1025f0655bd0ffffd561b3a4034043d7a49a6ba",
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/api-reference/api-reference-plugin.js",
+      "originalSha256": "ba8a9c76d1f973fb098e0a7eb115c55f2ccd3a57e0a295c9837c6358c6f4d9ff",
+      "patchedSha256": "c7c0a2237e301a09d517e6026afb4914d39cb1ff1c25539aab4c5a8b079b2c11",
       "imports": 1
     },
     {
-      "package": "@circle-fin/onramp-kit",
-      "version": "1.0.3",
-      "path": "protocol.mjs",
-      "originalSha256": "a5058a3c31da031c2b8b23fb7ad466ff5551d1e3bfddde2868178320b53776aa",
-      "patchedSha256": "4a35477f84e7653351dbc7e07322caf630e34dab05dbd7b4da4b25bf73b78deb",
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/api-reference/base-configuration.js",
+      "originalSha256": "bbc7a77e9d5b0f0a7d9baa219b3cd1acc877ef52964830deded2486400ce4f77",
+      "patchedSha256": "f446a296b62527261a217b82820a30b333e9a7861aa75fe4bb8d3b0e70bcb813",
       "imports": 1
     },
     {
-      "package": "@circle-fin/onramp-kit",
-      "version": "1.0.3",
-      "path": "server.cjs",
-      "originalSha256": "75604fbe0c43e9c560cb11ed21057ee67b663cefd5fff711fb5eaa83c951db49",
-      "patchedSha256": "b9c049bbdc0373166f24c5123e0121fd0a9905e89053dbb32228b79522fc91a8",
-      "imports": 3
-    },
-    {
-      "package": "@circle-fin/onramp-kit",
-      "version": "1.0.3",
-      "path": "server.mjs",
-      "originalSha256": "e8e36e785e1b661d1ce323179a7293bf97947e4d84fd60dfad403456d2b1c916",
-      "patchedSha256": "3bdf4cc0eceb138c8db90a9d5010b8877c4d5cc4002b2aed09042c57eefa4cd6",
-      "imports": 3
-    },
-    {
-      "package": "@circle-fin/provider-gateway-v1",
-      "version": "1.2.1",
-      "path": "index.cjs",
-      "originalSha256": "8d2f5f5f7d0ef122c9c3e06a0152e4b209bfad54c79ee7adc70430f3e21dcc0b",
-      "patchedSha256": "49d55336ed8d86e5e87ce0902a815ed6e80273a89f34cc8a66cb89ca971ae010",
-      "imports": 4
-    },
-    {
-      "package": "@circle-fin/provider-gateway-v1",
-      "version": "1.2.1",
-      "path": "index.mjs",
-      "originalSha256": "2f023ac14a5de936c1bb9c42f1ff1c5af18770e531f743a535b18f0822152f72",
-      "patchedSha256": "31402fb14e511ad2feb0971cf1553e74e3c9db09dd8ce6e3c1ec47fecc88fbe0",
-      "imports": 4
-    },
-    {
-      "package": "@circle-fin/unified-balance-kit",
-      "version": "1.4.1",
-      "path": "index.cjs",
-      "originalSha256": "98392ee1a9b867f5a39c8e193fb11c43fa201e114bf8a8522f4d139774ce8898",
-      "patchedSha256": "410c099cccf36b25d97668167c9ce4b3610fa4f8ffbfbd4b67db996e372bb477",
-      "imports": 4
-    },
-    {
-      "package": "@circle-fin/unified-balance-kit",
-      "version": "1.4.1",
-      "path": "index.mjs",
-      "originalSha256": "d8014aec2905097070a821dd6e2516e77916d94ac3f150716b122dcb5614826c",
-      "patchedSha256": "3c998cb8c3bee47ca8334117c432079a9a337dbefb71377e722b2decd4bf5120",
-      "imports": 4
-    },
-    {
-      "package": "@coinbase/cdp-sdk",
-      "version": "1.55.0",
-      "path": "_esm/policies/evmSchema.js",
-      "originalSha256": "7a3adae0bbae10a06f0f8d9d048ba7d54621b87ec2154d4726efe1233aa0b292",
-      "patchedSha256": "74273c400838b447866483d16548af23b0ac56d50acb7a0f3df26686e5f5149e",
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/api-reference/source-configuration.js",
+      "originalSha256": "8bdfe7ee7f0a35a23cca2635ab775a512314142a11d40eaeb58e5ec43f65c106",
+      "patchedSha256": "5bfcb498d2b2f43ac7d8818e53e4af3e284753bc3cc81b4ea6346554b8956053",
       "imports": 1
     },
     {
-      "package": "@coinbase/cdp-sdk",
-      "version": "1.55.0",
-      "path": "_esm/policies/solanaSchema.js",
-      "originalSha256": "b8249f5860caf7c6f96fe3d1bbf29f489123f3c0cc4f36010570f37c372ed430",
-      "patchedSha256": "39dfb19969d38c2da4ffff2a673e942a39dfd99bf500c011cea6030a10d36b44",
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/entities/security-scheme.js",
+      "originalSha256": "61b42d8f0d154ca51574a744c8f684ae830a12aed24762d55be461130e149d10",
+      "patchedSha256": "d2e972ec6f25a6c157e18e04941deacaf1107eda84290ab6d127c1994fef4217",
       "imports": 1
     },
     {
-      "package": "@coinbase/cdp-sdk",
-      "version": "1.55.0",
-      "path": "_esm/policies/types.js",
-      "originalSha256": "1850163d9a945fa8a8f8306b41895df7bfd92107000c575db31fcb3226ad987e",
-      "patchedSha256": "82c6862782995bbddf390c3639bf1eea790399fb4f1f694a59b29d9c9222f810",
+      "package": "@scalar/types",
+      "version": "0.18.2",
+      "path": "dist/utils/nanoid.js",
+      "originalSha256": "b0ec8f67bf38c86f55db5b515ffd8df8ba2fcc1429d62dc8a5eb870bc6062751",
+      "patchedSha256": "c84c813dd8dffde93fbe2c71767208f583b266673dd262672d32008db364091b",
       "imports": 1
-    },
-    {
-      "package": "@coinbase/cdp-sdk",
-      "version": "1.55.0",
-      "path": "_cjs/policies/evmSchema.js",
-      "originalSha256": "7b20273d74e5b696fc3585c70ede912e292a32511b24e8b031bc8b44a6a27f6e",
-      "patchedSha256": "83320737ae823f3f312d4e3b69f993a653c8f2fb6b10573206f5b85a37d5cd1f",
-      "imports": 1
-    },
-    {
-      "package": "@coinbase/cdp-sdk",
-      "version": "1.55.0",
-      "path": "_cjs/policies/solanaSchema.js",
-      "originalSha256": "d10ba44df11539b6030921be35d07a543481da76be41213e5c8a8993cd0df937",
-      "patchedSha256": "763765acc659b76020ddf2941b35f88143c5f42ae9c5af4b5ad617e7c832bc52",
-      "imports": 1
-    },
-    {
-      "package": "@coinbase/cdp-sdk",
-      "version": "1.55.0",
-      "path": "_cjs/policies/types.js",
-      "originalSha256": "673f2e487d5724f45f9767fb65eaaa39ca10339dd5ecb28f2320d39dd62abeeb",
-      "patchedSha256": "03639ab5fe4b4ed80f631b776244fc21195ffc657aa27f5705ee971519999b79",
-      "imports": 1
-    },
-    {
-      "package": "@reown/appkit-wallet",
-      "version": "1.8.19",
-      "path": "dist/esm/src/W3mFrameSchema.js",
-      "originalSha256": "11e8d0910a5079c954bc94241a6f2a87e6198d7f21d44f05dd235fc8733e8b1c",
-      "patchedSha256": "ebc46b16e97a159314d8ebc9df03327c64892d81e6bf7854e3d615f15d65f548",
-      "imports": 1
-    },
-    {
-      "package": "@reown/appkit-wallet",
-      "version": "1.8.19",
-      "path": "dist/esm/src/W3mFrameTypes.js",
-      "originalSha256": "99004ae1aa724badfb8d2a66f8f7a808a6dec66d36c1f1b0cc34a65cf06f1f6a",
-      "patchedSha256": "70c6c0d30ed487eaf5b9d4af6bce18eca2c30ba16b2351069922fdfcfce2f670",
-      "imports": 1
-    },
-    {
-      "package": "@x402/core",
-      "version": "2.23.0",
-      "path": "dist/esm/chunk-N4QXZG2Z.mjs",
-      "originalSha256": "19c189f7417214b211ee4abdaada531a80e5adc8504d593c172fe1e2ce61c03e",
-      "patchedSha256": "f20e827603edbfcba272b7e53f8289ac1725d817b3b669f822d21a846ef8d6f6",
-      "imports": 2
-    },
-    {
-      "package": "@x402/core",
-      "version": "2.23.0",
-      "path": "dist/cjs/client/index.js",
-      "originalSha256": "9b07b7436df7d54a992559f8fbf50e6641824bc71a575ac02e70f14af329b94c",
-      "patchedSha256": "d381089fe4502bc2d5e8428696227af557f1b91f5388df4d970f1b0fd6abdb88",
-      "imports": 2
-    },
-    {
-      "package": "@x402/core",
-      "version": "2.23.0",
-      "path": "dist/cjs/http/index.js",
-      "originalSha256": "7f29c58a677a4dbd11465214e77aa84fe233c2e9522600f25db6248a2a87da6d",
-      "patchedSha256": "72fb4e8cd49835772cbe4e36619a231074e15ef562975c8f03fb777a24139a80",
-      "imports": 2
-    },
-    {
-      "package": "@x402/core",
-      "version": "2.23.0",
-      "path": "dist/cjs/schemas/index.js",
-      "originalSha256": "2ce416f0d5a89be708bac6e1b9cb2b818c57c69999b464ce0487a3acbf58bbe6",
-      "patchedSha256": "8857f1f5d86280088668d97717af5045dd92e8d89e923cd3a61e848379c28ae8",
-      "imports": 2
-    },
-    {
-      "package": "@x402/core",
-      "version": "2.23.0",
-      "path": "dist/cjs/server/index.js",
-      "originalSha256": "32f8ee710df99de1f31e29ce19f5e4c418ec3814f6caa35fbf27913dac21e88b",
-      "patchedSha256": "28f3ccec7d28e215314c3e20d1017e8e47a0dae511d5b8a96553fc3e682f796a",
-      "imports": 2
-    },
-    {
-      "package": "@x402/evm/node_modules/@x402/core",
-      "version": "2.28.0",
-      "path": "dist/esm/chunk-N4QXZG2Z.mjs",
-      "originalSha256": "19c189f7417214b211ee4abdaada531a80e5adc8504d593c172fe1e2ce61c03e",
-      "patchedSha256": "f20e827603edbfcba272b7e53f8289ac1725d817b3b669f822d21a846ef8d6f6",
-      "imports": 2
-    },
-    {
-      "package": "@x402/evm/node_modules/@x402/core",
-      "version": "2.28.0",
-      "path": "dist/cjs/client/index.js",
-      "originalSha256": "fef97a6df4e89862d3bc16c70ee344a2817fd5cece03e2e7c8b9dedb982f1160",
-      "patchedSha256": "79ac242b3079b409ce79b2605d508b173509383954ece37564eefdb9752eca1f",
-      "imports": 2
-    },
-    {
-      "package": "@x402/evm/node_modules/@x402/core",
-      "version": "2.28.0",
-      "path": "dist/cjs/http/index.js",
-      "originalSha256": "7cbdf22dfdff3bdcc9e3fb0eda5832b42c3a7bb37fd8e3596ec470bb1c62f0c3",
-      "patchedSha256": "bfea1f3168c6ede8577fbe482d3f5ae0f29eb09b0ae1575c80f0b93b70b2718f",
-      "imports": 2
-    },
-    {
-      "package": "@x402/evm/node_modules/@x402/core",
-      "version": "2.28.0",
-      "path": "dist/cjs/schemas/index.js",
-      "originalSha256": "2ce416f0d5a89be708bac6e1b9cb2b818c57c69999b464ce0487a3acbf58bbe6",
-      "patchedSha256": "8857f1f5d86280088668d97717af5045dd92e8d89e923cd3a61e848379c28ae8",
-      "imports": 2
-    },
-    {
-      "package": "@x402/evm/node_modules/@x402/core",
-      "version": "2.28.0",
-      "path": "dist/cjs/server/index.js",
-      "originalSha256": "0fca92dcb60a2fd8f5b7f6e151ffcdff2a0e88480df0440b0073a3c52d84d447",
-      "patchedSha256": "646b603ce8c0fdc506f3b9643e53a19b95d2542975d4b4d685a5af6b324a08ff",
-      "imports": 2
     }
   ]
 }

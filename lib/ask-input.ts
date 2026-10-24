@@ -5,7 +5,7 @@ import type { ResearchMode } from "./types";
 export const MAX_ASK_QUESTION_CHARS = 2_000;
 
 export const AskQuestionSchema = z
-  .string({ error: issue => issue.input === undefined ? "Required" : "question must be a string" })
+  .string({ invalid_type_error: "question must be a string" })
   .trim()
   .min(1, "question is required")
   .max(

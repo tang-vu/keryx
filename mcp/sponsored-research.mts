@@ -14,7 +14,7 @@ const fields = {
   budget: z.number().finite().min(0).max(0.08).optional()
     .describe("Source budget in USDC, 0–0.08 inclusive. Zero is valid. Separate from model/search operating costs; service limits still apply."),
 };
-const inputSchema = z.object(fields, { error: invalidInput }).strict();
+const inputSchema = z.object(fields).strict(invalidInput);
 
 // Follow the existing MCP registrations: keep discovery constraints while preventing
 // SDK validation errors from echoing rejected credentials or private field values.

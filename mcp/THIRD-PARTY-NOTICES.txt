@@ -6,5 +6,13 @@ https://github.com/circlefin/x402-batching
 Licensed under Apache License 2.0 (see LICENSE-APACHE-2.0.txt).
 The upstream JavaScript is bundled without changes to payment/signing behavior.
 
-The pinned client has no runtime x402/core or Zod 3 import. The build refuses
-unexpected bundled dependencies. Protocol SDK, viem and Zod 4 remain external.
+Zod v3 compatibility runtime distributed in zod 4.6.7
+Copyright (c) 2025 Colin McDonnell
+https://github.com/colinhacks/zod
+Licensed under MIT (see LICENSE-ZOD.txt).
+Keryx modifies the array parser to reject inputs above max/exact lengths before
+element traversal, in ESM and CommonJS (CVE-2023-54404 security backport).
+The modified validator is bundled into this executable. The upstream Circle
+buyer is unchanged. All bundled input hashes are in dist/build-inputs.json.
+Protocol SDK, viem and the published Zod 4 package required by the protocol SDK
+remain external. No x402/core peer is auto-installed for the Circle buyer.

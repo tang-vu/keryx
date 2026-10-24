@@ -47,7 +47,12 @@ try {
   assert.deepEqual(installedInputs, expectedInputs, "The packed CLI retains exact qualified bundled SDK provenance");
   assert.equal(installedInputs.circle.version, expectedPackage.devDependencies["@circle-fin/x402-batching"]);
   assert.match(installedInputs.circle.sourceSha256, /^[a-f0-9]{64}$/);
-  assert(installedInputs.bundled.length > 0 && installedInputs.bundled.every(name => name.includes("node_modules/@circle-fin/x402-batching/")));
+  assert(installedInputs.bundled.some(name => name.includes("node_modules/@circle-fin/x402-batching/")));
+  assert(installedInputs.bundled.some(name => name.includes("node_modules/zod/v3/types.js")));
+  assert(installedInputs.bundled.every(name => name.includes("node_modules/@circle-fin/x402-batching/") || name.includes("node_modules/zod/v3/")));
+  assert.deepEqual(installedInputs.validation, { packageVersion: "4.6.7", runtime: "v3", patch: "CVE-2023-54404-pre-traversal-refusal" });
+  assert.deepEqual(installedInputs.inputDigests.map(row => row.path), installedInputs.bundled);
+  assert(installedInputs.inputDigests.every(row => /^[a-f0-9]{64}$/.test(row.sha256)));
   for (const name of ["@circle-fin/x402-batching", "@x402/core"]) {
     await assert.rejects(access(join(workspace, "node_modules", name)), { code: "ENOENT" }, "Consumers must not auto-install the legacy peer graph");
   }

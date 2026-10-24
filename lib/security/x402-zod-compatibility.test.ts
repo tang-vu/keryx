@@ -21,7 +21,7 @@ for (const [name, runtime] of [["ESM", schemas], ["CJS", cjs], ["nested EVM core
 
 it("retains the actual legacy Circle adapter function schemas", async () => {
   const sdk = await import("@circle-fin/adapter-viem-v2");
-  const adapter = await sdk.createViemAdapterFromProvider({ provider: { request: async () => { throw new Error("Synthetic provider must remain lazy"); } } });
+  const adapter = await sdk.createViemAdapterFromProvider({ provider: { request: async () => { throw new Error("Synthetic provider must remain lazy"); }, on() {}, removeListener() {} } });
   expect(adapter).toBeDefined();
   await expect(sdk.createViemAdapterFromProvider({ provider: { request: 1 } } as never)).rejects.toThrow();
 });
