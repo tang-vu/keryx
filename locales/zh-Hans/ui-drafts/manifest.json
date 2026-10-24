@@ -12,10 +12,10 @@
     "englishNamespaceFiles": 73,
     "coreInlineSources": 1,
     "extractedLeaves": 6192,
-    "authoredEntries": 5941,
+    "authoredEntries": 5940,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 222,
-    "completeNamespaces": 66
+    "uncoveredEntries": 223,
+    "completeNamespaces": 65
   },
   "namespaces": [
     {
@@ -5713,16 +5713,15 @@
     {
       "namespace": "specialist-briefs",
       "sourcePath": "locales/en/specialist-briefs.ts",
-      "sourceSha256": "2fb57051feb09c896d6ae0ff4a9ee44a29cf2533a1dd1ec6729835161ba6ca90",
+      "sourceSha256": "9eaff07e9e8f9e44d3ae40bbe70c0e2c0338142e4a8319c32992ab541ff97f33",
       "draftPath": "locales/zh-Hans/ui-drafts/specialist-briefs.json",
       "extractedLeaves": 53,
-      "authoredEntries": 53,
+      "authoredEntries": 52,
       "coveredKeys": [
         "apiPlatform.acceptance.0",
         "apiPlatform.acceptance.1",
         "apiPlatform.acceptance.2",
         "apiPlatform.audience",
-        "apiPlatform.instruction",
         "apiPlatform.placeholder",
         "apiPlatform.scope",
         "apiPlatform.title",
@@ -5773,7 +5772,9 @@
         "trial"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [],
+      "uncoveredKeys": [
+        "apiPlatform.instruction"
+      ],
       "sourceAliases": {}
     },
     {
