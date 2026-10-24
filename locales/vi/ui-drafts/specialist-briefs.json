@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/specialist-briefs.ts",
-  "sourceSha256": "2fb57051feb09c896d6ae0ff4a9ee44a29cf2533a1dd1ec6729835161ba6ca90",
+  "sourceSha256": "9eaff07e9e8f9e44d3ae40bbe70c0e2c0338142e4a8319c32992ab541ff97f33",
   "entries": {
     "title": {
       "source": "Research for a decision.",
@@ -135,10 +135,6 @@
     "apiPlatform.placeholder": {
       "source": "Which of these two APIs fits our notification workflow?",
       "text": "API nào trong hai API phù hợp quy trình thông báo của chúng tôi?"
-    },
-    "apiPlatform.instruction": {
-      "source": "Compare up to two named APIs/platforms for this decision. Use primary documentation. Cover requirements, integration effort, published price assumptions, limits and unresolved risks. Give a conditional recommendation only where read evidence supports it.",
-      "text": "So sánh tối đa hai API/nền tảng có tên cho quyết định này. Dùng tài liệu chính thức. Nêu yêu cầu, công sức tích hợp, giả định giá công bố, giới hạn và rủi ro chưa giải quyết. Chỉ khuyến nghị có điều kiện khi bằng chứng đã đọc hỗ trợ."
     },
     "apiPlatform.acceptance.0": {
       "source": "Both options address the stated constraints, with source-backed trade-offs.",
