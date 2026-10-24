@@ -8539,3 +8539,15 @@ boundaries rather than infer browser structure. Carry caller intent separately
 from final fetched identity and retain section-only scope in receipts and exports.
 This addresses an observed long-manual extraction limit without changing source,
 payment or creator authority. See [targeted document reading](docs/engineering/targeted-document-reading-20261024.md).
+
+## Project concise API notes from already accepted evidence (2026-10-24)
+
+An exact original-request marker opts into an API integration note. Source text
+cannot activate it. Build bounded implementation constraints, verbatim excerpts,
+actual read scope, gaps and explicitly proposed checks from the accepted evidence
+ledger and reviewed cited statements, using the existing answer/export rendering.
+Apply this projection only after canonical attribution and payment decisions;
+do not feed presentation changes back into source selection, rewards or receipts.
+Unsupported or unsafe projections retain the original answer instead of clipping
+qualifications. Preserve private/bounded/prepaid and explicit-format boundaries.
+See [scope and validation](docs/engineering/api-integration-note-20261024.md).
