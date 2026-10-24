@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { deliveryFixture } from "./delivery.test-fixture";
 import { privateRunClaimPacketSchema } from "./delivery";
+import { feedbackDeliverySchema } from "../research-feedback/contracts";
 const mocks = vi.hoisted(() => ({ db: vi.fn(), deps: vi.fn(), collect: vi.fn(), verifyKey: vi.fn() }));
 vi.mock("@/lib/agent", () => ({ collectRun: mocks.collect, getAgentDeps: mocks.deps }));
 vi.mock("@/lib/db", () => ({ getDb: mocks.db }));
@@ -19,6 +20,7 @@ import { POST } from "../../app/api/v1/chat/completions/route";
 import { createRemoteMcpServer, remoteResearchResult } from "../mcp/remote-server";
 let f: ReturnType<typeof deliveryFixture>;
 beforeEach(() => {
+  vi.stubEnv("KERYX_REQUESTER_FEEDBACK_DIRECTORY", "");
   vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "true"); mocks.collect.mockReset(); mocks.db.mockReset(); mocks.deps.mockReset(); mocks.verifyKey.mockReset();
   f = deliveryFixture(); mocks.db.mockResolvedValue(f.db);
   mocks.deps.mockResolvedValue({ db: f.db, engine: { name: "synthetic" }, gateway: { mode: "offline" } });
@@ -65,7 +67,8 @@ it("remote MCP returns private caller content/meta while retaining its exact pub
     const run = JSON.parse(String(f.sql.prepare("SELECT data FROM query_runs WHERE id=?").get(packet.runId)?.data));
     expect(result.structuredContent).toEqual(JSON.parse(JSON.stringify(remoteResearchResult(run))));
     expect(JSON.stringify(result.structuredContent)).not.toContain(new URL(packet.delivery.claimUrl).hash.slice(1));
-    expect(result.content).toHaveLength(2); expect(JSON.stringify(result.content)).toContain(packet.delivery.claimUrl);
+    expect(result.content).toHaveLength(3); expect(JSON.stringify(result.content)).toContain(packet.delivery.claimUrl);
+    expect(feedbackDeliverySchema.parse(result._meta?.["keryx/privateRequesterObservations"])).toMatchObject({ runId: run.id, feedback: null });
   } finally { await client.close(); await server.close(); }
 });
 it("remote MCP unavailable claim domain refuses before its research runner", async () => {
@@ -92,10 +95,13 @@ it.each([false, true])("OpenAI %s preserves the saved answer on late issuance fa
   expect(f.sql.prepare("SELECT data FROM query_runs WHERE id=?").get(packet.runId)?.data).toContain("Saved synthetic answer");
   expect(f.sql.prepare("SELECT * FROM anonymous_run_claims").all()).toEqual([]);
 });
-it.each([false, true])("default-off OpenAI %s needs no claim capability and emits no private field", async stream => {
+it.each([false, true])("default-off OpenAI %s needs no ownership claim capability and emits no ownership claim field", async stream => {
   vi.stubEnv("KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED", "false"); mocks.db.mockResolvedValue({});
   const issue = vi.spyOn(f.store, "issue"), response = await POST(request(stream)), text = await response.text();
-  expect(text).toContain("Saved synthetic answer"); expect(text).not.toContain("keryx_private");
+  expect(text).toContain("Saved synthetic answer"); expect(text).not.toContain('"keryx_private":');
+  const frames = stream ? text.split("\n\n").filter(value => value.startsWith("data: {")).map(value => JSON.parse(value.slice(6))) : [JSON.parse(text)];
+  const final = frames.find(value => value.keryx_private_requester);
+  expect(feedbackDeliverySchema.parse(final.keryx_private_requester)).toMatchObject({ runId: final.keryx.queryId, feedback: null });
   expect(mocks.collect).toHaveBeenCalledOnce(); expect(issue).not.toHaveBeenCalled();
 });
 it.each(["owned", "off", "late-failure"] as const)("remote MCP %s retains the public result and its established authority", async kind => {
@@ -114,11 +120,12 @@ it.each(["owned", "off", "late-failure"] as const)("remote MCP %s retains the pu
     expect(JSON.stringify(result)).not.toContain(secret); expect(JSON.stringify(result)).not.toContain("backend echoed");
     if (kind === "late-failure") {
       expect(result._meta?.["keryx/privateRunClaim"]).toEqual({ version: 1, runId: run.id, status: "unavailable" });
-      expect(result.content).toHaveLength(2); expect(issue).toHaveBeenCalledOnce();
+      expect(result.content).toHaveLength(3); expect(issue).toHaveBeenCalledOnce();
     } else {
-      expect(result._meta?.["keryx/privateRunClaim"]).toBeUndefined(); expect(result.content).toHaveLength(1); expect(issue).not.toHaveBeenCalled();
+      expect(result._meta?.["keryx/privateRunClaim"]).toBeUndefined(); expect(result.content).toHaveLength(2); expect(issue).not.toHaveBeenCalled();
     }
     if (kind === "owned") { expect(run.asker).toBe(actor); expect(mocks.collect.mock.calls[0][0].asker).toBe(actor); }
+    expect(feedbackDeliverySchema.parse(result._meta?.["keryx/privateRequesterObservations"])).toMatchObject({ runId: run.id, feedback: null });
     expect(f.sql.prepare("SELECT * FROM anonymous_run_claims").all()).toEqual([]);
   } finally { await client.close(); await server.close(); }
 });

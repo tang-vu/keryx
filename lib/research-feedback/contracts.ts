@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { isWellFormedUtf16 } from "../llm/well-formed-utf16";
 
 export const feedbackChoiceSchema = z.enum(["useful", "revise", "reject"]);
 export const feedbackInputSchema = z.object({
   choice: feedbackChoiceSchema,
-  reason: z.string().max(1000).refine(value => value.isWellFormed() && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)).default(""),
+  reason: z.string().max(1000).refine(value => isWellFormedUtf16(value) && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)).default(""),
 }).strict();
 export type FeedbackInput = z.infer<typeof feedbackInputSchema>;
 export const feedbackRowSchema = feedbackInputSchema.extend({

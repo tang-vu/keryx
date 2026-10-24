@@ -1,6 +1,8 @@
 "use client";
 import { useState, useSyncExternalStore } from "react";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { useLocale } from "@/lib/i18n/locale-context";
+import { formatLocalizedDecimal, formatLocalizedNumber } from "@/lib/i18n/format";
 import { observeRequesterDelivery, requesterObservation } from "@/lib/research-feedback/browser-delivery";
 import { requestRequesterFeedback } from "@/lib/research-feedback/client";
 import type { FeedbackInput, RequesterFeedback as Feedback } from "@/lib/research-feedback/contracts";
@@ -8,13 +10,14 @@ import type { FeedbackInput, RequesterFeedback as Feedback } from "@/lib/researc
 export function RequesterFeedback({ runId }: { runId: string }) {
   const packet = useSyncExternalStore(observeRequesterDelivery, () => requesterObservation(runId), () => null);
   const copy = useUiMessages();
+  const { locale } = useLocale();
   const [choice, setChoice] = useState<FeedbackInput["choice"] | null>(null), [reason, setReason] = useState("");
   const [phase, setPhase] = useState<"ready" | "sending" | "confirmed" | "unconfirmed">("ready");
   const [saved, setSaved] = useState<Feedback | null>(null);
   if (!packet) return null;
   const observed = packet.observations, price = observed.modelCostUsd;
-  const bounds = price ? `$${price.lower.toFixed(6)}–$${price.upper.toFixed(6)}` : copy("requesterFeedback.unknown");
-  const duration = observed.generationDurationMs === null ? copy("requesterFeedback.unknown") : `${(observed.generationDurationMs / 1000).toFixed(1)} s`;
+  const bounds = price ? `$${formatLocalizedDecimal(price.lower, locale, 6)}–$${formatLocalizedDecimal(price.upper, locale, 6)}` : copy("requesterFeedback.unknown");
+  const duration = observed.generationDurationMs === null ? copy("requesterFeedback.unknown") : `${formatLocalizedDecimal(observed.generationDurationMs / 1000, locale, 1)} s`;
   async function submit(read = false) {
     if (!packet?.feedback || phase === "sending") return;
     const input = read ? undefined : choice ? { choice, reason } : undefined;
@@ -33,7 +36,7 @@ export function RequesterFeedback({ runId }: { runId: string }) {
     </div>
     <details className="text-xs text-ink-3"><summary>{copy("requesterFeedback.basis")}</summary>
       <p className="mt-1">{copy("requesterFeedback.partial")}</p>
-      <p>{copy("requesterFeedback.calls", { failed: observed.failedCalls, missing: observed.missingUsageCalls, unpriced: observed.unpricedUsageRecords })}</p>
+      <p>{copy("requesterFeedback.calls", { failed: formatLocalizedNumber(observed.failedCalls, locale), missing: formatLocalizedNumber(observed.missingUsageCalls, locale), unpriced: formatLocalizedNumber(observed.unpricedUsageRecords, locale) })}</p>
     </details>
     {packet.feedback ? <div className="space-y-2">
       <p className="font-serif text-sm text-ink">{copy("requesterFeedback.question")}</p>

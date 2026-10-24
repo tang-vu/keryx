@@ -47,7 +47,11 @@ it("rejects changed originals and untrusted fields without any research or payme
 it("bounds reason text and refuses a capability delivered from another journal", async () => {
   const f = fixture(), another = opinionFixture(); fixtures.push(another);
   expect((await f.request({ operation: "submit", choice: "useful", reason: "🧪".repeat(501) })).status).toBe(400);
+  for (const reason of ["\ud800", "\udc00", "a\ud800b", "\ud800\ud800", "\u0000"]) {
+    expect((await f.request({ operation: "submit", choice: "useful", reason })).status).toBe(400);
+  }
   const other = issueFeedbackToken(recordedRun(), binding, secret, another.store.storeId);
   expect((await f.request({ operation: "submit", choice: "useful" }, other.token)).status).toBe(401);
   expect(f.db).not.toHaveBeenCalled();
+  expect((await f.request({ operation: "submit", choice: "useful", reason: "🧪".repeat(500) })).status).toBe(200);
 });
