@@ -410,3 +410,21 @@ input[type="range"]:focus-visible {
     .kx-evidence-panel[open] { animation-name: kxEvidenceDrawer; }
   }
 }
+
+/* Public source inspection: keyed source changes arrive once; an eventual
+ * preview fades in without replaying its source header or moving focus. */
+.kx-source-inspector input, .kx-source-inspector select, .kx-source-inspector button {
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+@keyframes kxSourceArrive {
+  from { opacity: .45; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes kxSourceArticles {
+  from { opacity: .65; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kx-source-preview { animation: kxSourceArrive 300ms cubic-bezier(.16,1,.3,1) both; }
+  .kx-source-articles { animation: kxSourceArticles 180ms ease-out both; }
+}
