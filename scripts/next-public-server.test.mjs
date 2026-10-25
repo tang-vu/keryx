@@ -96,6 +96,7 @@ test('pinned production Next sees public HTTPS origin on a private ephemeral soc
       'lib/web-research/html-reader-worker.mjs', 'lib/web-research/html-content-worker.mjs', 'lib/web-research/html-visibility.mjs',
       'lib/web-research/html-section-worker.mjs', 'lib/web-research/html-section-scope.ts',
       'lib/web-research/pdf-reader.ts', 'lib/web-research/pdf-reader-worker.mjs', 'lib/web-research/pdf-text-scope.ts',
+      'lib/web-research/unicode-prefix-worker.mjs',
       'lib/web-research/parser-slots.ts', 'lib/web-research/html-text-layout.ts',
       'lib/research/arxiv-bibliography-page.ts', 'lib/research/arxiv-bibliography-worker.mjs',
       'lib/research/bibliographic-original-types.ts', 'lib/scholarly/doi.ts', 'lib/scholarly/arxiv-identity.ts']) {
@@ -177,7 +178,7 @@ export async function GET(request){
     const storage = join(dir, 'isolated-runtime-storage');
     await mkdir(storage);
     // Decoy code in the operational cwd must never be selected by compiled readers.
-    for (const file of ['lib/web-research/html-reader-worker.mjs', 'lib/web-research/pdf-reader-worker.mjs', 'lib/research/arxiv-bibliography-worker.mjs']) {
+    for (const file of ['lib/web-research/html-reader-worker.mjs', 'lib/web-research/pdf-reader-worker.mjs', 'lib/web-research/unicode-prefix-worker.mjs', 'lib/research/arxiv-bibliography-worker.mjs']) {
       await mkdir(dirname(join(storage, file)), { recursive: true });
       await writeFile(join(storage, file), "throw Error('Wrong storage cohort');\n");
     }
