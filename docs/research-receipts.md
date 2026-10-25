@@ -50,9 +50,20 @@ tool also requires a supplied `X-Keryx-Receipt-Digest` header to match. For an a
 `--expect` compares a digest you retained separately; without that separate value, a party that
 changes both payload and embedded digest can still create an internally consistent self-check.
 Exit code `1` means a comparison failed or the receipt uses an unsupported schema/integrity block.
+Exit code `2` means invalid command arguments. Exactly one file or URL is required;
+missing or duplicate `--expect`, unknown options and extra targets are refused
+before input is read.
 
 The verifier performs no wallet operation and sends no transaction. When passed a URL it makes one
 read-only HTTP request; when passed a file it reads only that file.
+Both inputs are limited to 16 MiB of UTF-8 bytes, with malformed UTF-8 refused
+rather than replaced. An optional UTF-8 BOM is accepted. Only regular local files
+are read. URL requests refuse redirects and embedded credentials and have a
+30-second deadline covering headers and body. Choose the intended final URL
+explicitly. Errors omit private receipt text, URL credentials and local paths;
+no automatic request retry is performed. These transport checks preserve the
+payload checksum's existing consistency scope; they do not certify factual
+support, payment settlement or the identity of a receipt's author.
 
 ## Settlement semantics
 
