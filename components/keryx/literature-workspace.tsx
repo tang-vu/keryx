@@ -9,7 +9,7 @@ import { LiteratureBulkScreening } from "./literature-bulk-screening";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { PAPER_REPOSITORIES } from "@/lib/papers/types";
 import { paperReferencesCslJson, paperReferencesRis } from "@/lib/papers/reference-export";
-import { changeLiteratureWorkspace, clearLiteratureWorkspace, replaceLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
+import { changeLiteratureWorkspace, clearLiteratureWithRecovery, clearLiteratureWorkspace, replaceLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, MAX_SAVED_PAPERS,
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
 import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
@@ -18,6 +18,8 @@ import { LITERATURE_SORTS, sortLiteratureEntries, type LiteratureSort } from "@/
 import { literatureSearchCopy as searchEnglish } from "@/locales/en/literature-search";
 import { literatureImportCopy as importEnglish } from "@/locales/en/literature-import";
 import { addMissingLiteraturePapers, previewLiteratureImport, readLiteratureWorkspaceFile } from "@/lib/papers/literature-import";
+import { hasSavedLiterature, restoreClearedLiterature } from "@/lib/papers/literature-clear-recovery";
+import { literatureClearRecoveryCopy as recoveryEnglish } from "@/locales/en/literature-clear-recovery";
 
 
 
@@ -133,6 +135,7 @@ export function LiteratureWorkspace() {
   const copy = useUiMessages();
   const searchCopy = useUiCopy("literature-search", searchEnglish), searchHelpId = useId(), sortId = useId();
   const importCopy = useUiCopy("literature-import", importEnglish);
+  const recoveryCopy = useUiCopy("literature-clear-recovery", recoveryEnglish);
   const { ready, workspace, error, raw } = useLiteratureWorkspace();
   const [message, setMessage] = useState(""), [failure, setFailure] = useState("");
   const [selected, setSelected] = useState<string[]>([]), [filter, setFilter] = useState("all");
@@ -142,6 +145,17 @@ export function LiteratureWorkspace() {
   const [editingRevision, setEditingRevision] = useState(0);
   const [restoring, setRestoring] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [cleared, setCleared] = useState<Workspace>();
+  const [clearing, setClearing] = useState(false), [recovering, setRecovering] = useState(false);
+  const recoveryHeading = useRef<HTMLHeadingElement>(null), projectHeading = useRef<HTMLHeadingElement>(null), clearSummary = useRef<HTMLElement>(null);
+  const returnFocus = useRef<"project" | "clear" | undefined>(undefined);
+  useUnsavedWarning(!!cleared);
+  useEffect(() => { if (cleared) recoveryHeading.current?.focus(); }, [cleared]);
+  useEffect(() => {
+    if (cleared || recovering || !returnFocus.current) return;
+    const target = returnFocus.current === "project" ? projectHeading.current : clearSummary.current;
+    if (target) { target.focus(); returnFocus.current = undefined; }
+  }, [cleared, recovering, ready, error]);
   const importGeneration = useRef(0);
   useEffect(() => () => { ++importGeneration.current; }, []);
   const importPreview = useMemo(() => {
@@ -171,9 +185,36 @@ export function LiteratureWorkspace() {
     {error && <p role="alert" className="border border-seal bg-paper p-4 font-serif text-sm text-seal">{error}</p>}
     <div role={failure ? "alert" : "status"} aria-live="polite" className="break-words font-serif text-sm text-seal">{failure || message}</div>
 
+    {cleared && <section aria-labelledby="literature-clear-recovery" className="min-w-0 border border-seal bg-paper p-5 sm:p-6">
+      <h2 id="literature-clear-recovery" ref={recoveryHeading} tabIndex={-1} className="font-display text-2xl text-ink">{recoveryCopy.title}</h2>
+      <p className="mt-2 font-serif text-sm text-ink-2">{recoveryCopy.notice}</p>
+      <p className="mt-2 font-serif text-sm text-seal">{recoveryCopy.retention}</p>
+      <p className="mt-3 font-mono text-xs text-ink-2">{recoveryCopy.papers}: {cleared.entries.length}</p>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button type="button" disabled={recovering || clearing || restoring || adding} className={button} onClick={async () => {
+          const saved = cleared, generation = ++importGeneration.current; setPending(undefined); setRecovering(true);
+          await act(async () => {
+            await changeLiteratureWorkspace(current => {
+              if (generation !== importGeneration.current) throw new Error(recoveryCopy.changed);
+              try { return restoreClearedLiterature(current, saved); } catch { throw new Error(recoveryCopy.changed); }
+            });
+            returnFocus.current = "project"; setCleared(undefined); setSelected([]); setFilter("all"); setQuery(""); setEditingRevision(value => value + 1);
+          }, recoveryCopy.restored);
+          setRecovering(false);
+        }}>{recovering ? recoveryCopy.restoring : recoveryCopy.restore}</button>
+        <button type="button" className={button} onClick={() => act(() => {
+          downloadBrowserText(serializeLiteratureWorkspace(cleared), "keryx-cleared-literature-backup.json", "application/json;charset=utf-8");
+        }, recoveryCopy.prepared)}>{recoveryCopy.download}</button>
+        <button type="button" disabled={recovering || clearing} className={button} onClick={() => {
+          if (!window.confirm(recoveryCopy.discardConfirm)) return;
+          returnFocus.current = "clear"; setCleared(undefined); setFailure(""); setMessage(recoveryCopy.discarded);
+        }}>{recoveryCopy.discard}</button>
+      </div>
+    </section>}
+
     {ready && !error && <>
       <section aria-labelledby="literature-project" className="border border-line bg-paper p-5 sm:p-6">
-        <h2 id="literature-project" className="font-display text-2xl text-ink">{copy("literatureWorkspace.focusTitle")}</h2>
+        <h2 id="literature-project" ref={projectHeading} tabIndex={-1} className="font-display text-2xl text-ink">{copy("literatureWorkspace.focusTitle")}</h2>
         <p className="mt-2 font-serif text-sm text-ink-2">{copy("literatureWorkspace.focusExample")}</p>
         <ReviewFocus key={editingRevision} workspace={workspace} act={act} />
       </section>
@@ -250,7 +291,7 @@ export function LiteratureWorkspace() {
         {raw !== undefined && <button type="button" className={button} onClick={() => act(() => downloadBrowserText(raw, "keryx-literature-stored-data.json", "application/json"), copy("literatureWorkspace.storedPrepared"))}>{copy("literatureWorkspace.stored")}</button>}
       </div>
       <label className="mt-5 block font-mono text-xs text-ink-2">{copy("literatureWorkspace.restoreLabel")}
-        <input type="file" accept=".json,application/json" disabled={restoring || adding} className={`${field} max-w-full`} onChange={async event => {
+        <input type="file" accept=".json,application/json" disabled={restoring || adding || clearing || recovering} className={`${field} max-w-full`} onChange={async event => {
           const file = event.currentTarget.files?.[0]; event.currentTarget.value = "";
           const generation = ++importGeneration.current; setPending(undefined);
           if (!file) return;
@@ -283,7 +324,7 @@ export function LiteratureWorkspace() {
           </details>}
           {importPreview.issue && <p role="alert" className="mt-2 font-serif text-sm text-seal">{importPreview.issue}</p>}
           {!importPreview.additions.length && <p className="mt-2 font-serif text-sm text-ink-2">{importCopy.none}</p>}
-          <button type="button" disabled={restoring || adding || !!importPreview.issue || !importPreview.additions.length} className={`${button} mt-3`} onClick={async () => {
+          <button type="button" disabled={restoring || adding || clearing || recovering || !!importPreview.issue || !importPreview.additions.length} className={`${button} mt-3`} onClick={async () => {
             const generation = importGeneration.current, captured = pending, base = serializeLiteratureWorkspace(workspace);
             setAdding(true);
             await act(async () => {
@@ -298,7 +339,7 @@ export function LiteratureWorkspace() {
           }}>{adding ? importCopy.adding : importCopy.add}</button>
         </section>}
         <p className="mt-2 font-serif text-sm text-ink-2">{copy("literatureWorkspace.restoreNotice")}</p>
-        <div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={restoring || adding} className={button} onClick={async () => {
+        <div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={restoring || adding || clearing || recovering} className={button} onClick={async () => {
           const generation = importGeneration.current, captured = pending;
           setRestoring(true);
           await act(async () => {
@@ -310,12 +351,20 @@ export function LiteratureWorkspace() {
         }}>{restoring ? copy("literatureWorkspace.restoring") : copy("literatureWorkspace.restore")}</button>
           <button type="button" disabled={restoring} className={button} onClick={() => { ++importGeneration.current; setPending(undefined); }}>{copy("literatureWorkspace.cancelRestore")}</button></div>
       </div>}
-      <details className="mt-5 border-t border-line pt-2"><summary className="min-h-11 cursor-pointer py-3 font-mono text-xs text-ink-3 underline">{copy("literatureWorkspace.clearDetails")}</summary>
+      <details className="mt-5 border-t border-line pt-2"><summary ref={clearSummary} className="min-h-11 cursor-pointer py-3 font-mono text-xs text-ink-3 underline">{copy("literatureWorkspace.clearDetails")}</summary>
         <p className="mt-2 font-serif text-sm text-ink-2">{copy("literatureWorkspace.clearNotice")}</p>
-        <button type="button" className={`${button} mt-3`} onClick={() => act(async () => {
-          if (!window.confirm(copy("literatureWorkspace.clearConfirm"))) throw new Error(copy("literatureWorkspace.clearCancelled"));
-          await clearLiteratureWorkspace(); ++importGeneration.current; setPending(undefined); setSelected([]); setFilter("all"); setQuery(""); setEditingRevision(value => value + 1);
-        }, copy("literatureWorkspace.cleared"))}>{copy("literatureWorkspace.clear")}</button>
+        {!error && <p className="mt-2 font-serif text-sm text-ink-2">{recoveryCopy.beforeClear}</p>}
+        <button type="button" disabled={clearing || recovering || restoring || adding || !!cleared} className={`${button} mt-3`} onClick={async () => {
+          if (!window.confirm(copy("literatureWorkspace.clearConfirm"))) { setFailure(copy("literatureWorkspace.clearCancelled")); setMessage(""); return; }
+          setClearing(true);
+          await act(async () => {
+            ++importGeneration.current; setPending(undefined);
+            if (error) await clearLiteratureWorkspace();
+            else await clearLiteratureWithRecovery(saved => { if (hasSavedLiterature(saved)) setCleared(saved); return undefined; });
+            setSelected([]); setFilter("all"); setQuery(""); setEditingRevision(value => value + 1);
+          }, copy("literatureWorkspace.cleared"));
+          setClearing(false);
+        }}>{copy("literatureWorkspace.clear")}</button>
       </details>
     </section>}
   </div>;
