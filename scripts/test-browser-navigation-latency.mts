@@ -102,6 +102,10 @@ try {
         const prefetch = page.waitForResponse(response => new URL(response.url()).pathname === destination &&
           response.request().headers()["next-router-prefetch"] === "1" &&
           response.request().headers()["next-router-segment-prefetch"] === undefined);
+        // A failure before we await the prefetch still closes this context.
+        // Observe its cleanup rejection now; the original promise below keeps
+        // rejecting normally when the prefetch itself is the failing step.
+        void prefetch.catch(() => undefined);
         console.log(JSON.stringify({ phase: "goto-start", engine: engine.name(), width, destination, entryPath }));
         await page.goto(origin + entryPath);
         console.log(JSON.stringify({ phase: "goto-complete", engine: engine.name(), width, destination }));
@@ -233,6 +237,10 @@ try {
         }
         assert.deepEqual(errors, []);
         console.log(JSON.stringify({ engine: engine.name(), width, entryPath, destination, fragment, loadingMs, finalResponseWithheld: true }));
+      } catch (error) {
+        console.error(JSON.stringify({ diagnostic: "navigation-case-failure", engine: engine.name(), width,
+          entryPath, destination, fragment, error: String(error).slice(0, 2000) }));
+        throw error;
       } finally {
         console.log(JSON.stringify({ phase: "context-cleanup-start", engine: engine.name(), width, destination, heldRouteCount: held.size }));
         await context.unrouteAll({ behavior: "ignoreErrors" });
