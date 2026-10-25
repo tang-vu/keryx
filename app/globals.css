@@ -26,6 +26,7 @@
 @import "tw-animate-css";
 @import "../shared/design-tokens.css";
 @import "./fonts/vietnamese.css";
+@import "./research-motion.css";
 
 /*
  * Keryx · The Mint — engraved-banknote / herald's-treasury system.

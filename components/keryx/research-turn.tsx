@@ -37,18 +37,27 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
     .filter(status => totals[status] > 0)
     .map(status => message(({ pending: "researchTurn.paymentPending", simulated: "researchTurn.paymentSimulated", unverified: "researchTurn.paymentUnverified", failed: "researchTurn.paymentFailed" } as const)[status], { amount: fmtUsdc(totals[status]) })).join(" · ");
   return <article className="min-w-0 space-y-4" aria-label={message("researchTurn.label", { question: turn.question })} data-testid="research-turn">
-    <div className="ml-auto max-w-[90%] border border-line bg-paper-2 px-4 py-3 sm:px-6">
+    <div className="kx-research-request ml-auto max-w-[90%] border border-line bg-paper-2 px-4 py-3 sm:px-6">
       <p className="font-mono text-[11px] uppercase tracking-wide text-ink-3">{message("researchTurn.requestSummary", { payer: turn.payer, amount: fmtUsdc(state.budget) })}</p>
       <p className="mt-1 whitespace-pre-wrap break-words font-serif text-lg text-ink">{turn.question}</p>
     </div>
     <div className="min-w-0">
-      {state.run && <div id={`answer-${turn.id}`}>
+      {state.run && <div id={`answer-${turn.id}`} className="kx-research-answer">
         <AnswerCard run={state.run} meta={state.meta} payments={state.payments} permalink={`${typeof window === "undefined" ? "" : window.location.origin}/dispatch/${state.run.id}`} />
         <ReportActions run={state.run} meta={state.meta} payments={state.payments} />
       </div>}
-      {streaming && !state.run && <div className="border border-line bg-paper px-4 py-4" role="status" aria-live="polite">
-        <p className="font-mono text-xs uppercase tracking-wide text-seal">{message("researchTurn.inProgress")}</p>
-        <p className="mt-2 break-words font-serif text-lg">{state.steps.at(-1)?.message ?? message("researchTurn.findingSources")}</p>
+      {streaming && !state.run && <div className="kx-research-live border border-line bg-paper" role="status" aria-live="polite">
+        <div className="flex items-start gap-3 px-4 py-5 sm:gap-4 sm:px-6 sm:py-6">
+          <span className="kx-research-signal" aria-hidden="true">
+            <span className="kx-research-orbit" />
+            <span className="kx-research-signal-core" />
+          </span>
+          <div className="min-w-0 pt-1">
+            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-seal">{message("researchTurn.inProgress")}</p>
+            <p className="mt-2 break-words font-serif text-lg leading-relaxed sm:text-xl">{state.steps.at(-1)?.message ?? message("researchTurn.findingSources")}</p>
+          </div>
+        </div>
+        <div className="kx-research-track" aria-hidden="true"><span /></div>
       </div>}
       {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2">{message("researchTurn.stoppedNotice")}</p>}
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">

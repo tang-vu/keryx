@@ -253,7 +253,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
 
   return (
     <div data-tour="ask-form">
-      <div className="border border-line bg-paper shadow-[0_4px_24px_-12px_rgba(27,23,18,0.25)]">
+      <div className="kx-research-composer border border-line bg-paper shadow-[0_4px_24px_-12px_rgba(27,23,18,0.25)]">
         <div className="p-4 sm:p-6">
           <label htmlFor="ask-question" className="block font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-2">
             {message("researchEntry.question")}
@@ -282,7 +282,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">{message("researchEntry.depth")}</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
               {(["quick", "deep"] as const).map((mode) => (
-                <label key={mode} className={`flex min-h-12 cursor-pointer items-center gap-2 border px-3 py-2 font-mono text-xs font-semibold capitalize transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal ${researchMode === mode ? "border-paid bg-paid/10 text-paid" : "border-line bg-paper text-ink-2 hover:border-ink-3"} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
+                <label key={mode} className={`kx-research-depth flex min-h-12 cursor-pointer items-center gap-2 border px-3 py-2 font-mono text-xs font-semibold capitalize transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal ${researchMode === mode ? "border-paid bg-paid/10 text-paid" : "border-line bg-paper text-ink-2 hover:border-ink-3"} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
                   <input type="radio" name="research-depth" value={mode} checked={researchMode === mode}
                     onChange={() => setResearchMode(mode)} disabled={disabled} className="size-3.5 shrink-0 accent-paid" />
                   {mode === "quick" ? <Zap aria-hidden="true" className="size-3.5 shrink-0" /> : <BookOpen aria-hidden="true" className="size-3.5 shrink-0" />}
@@ -298,7 +298,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
           </fieldset>
             <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || !visibility.ready || draft?.wallet === undefined || question.trim().length === 0}
               data-tour="dispatch-btn"
-              className="kx-press flex min-h-12 w-full items-center justify-center gap-4 border border-ink bg-ink px-5 py-3 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-cream transition-colors enabled:hover:border-paid enabled:hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50 sm:mb-[23px] sm:w-auto sm:min-w-44">
+              className="kx-research-submit kx-press flex min-h-12 w-full items-center justify-center gap-4 border border-ink bg-ink px-5 py-3 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-cream transition-colors enabled:hover:border-paid enabled:hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50 sm:mb-[23px] sm:w-auto sm:min-w-44">
               {message(disabled ? "researchEntry.researching" : researchPaused ? "researchEntry.paused" : "researchEntry.ask")}
               <ArrowUpRight aria-hidden="true" className="size-4 shrink-0" />
             </button>
@@ -306,7 +306,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
             {!conversation && <div className="mt-4 flex flex-wrap gap-2" aria-label={message("researchEntry.examplesLabel")}>
               {SUGGESTIONS.map((s) => (
                 <button key={s.label} type="button" disabled={disabled} onClick={() => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(s.q); questionRef.current?.focus(); }}
-                  className="inline-flex min-h-11 max-w-full items-center gap-2 border border-line px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:bg-paper-2/40 hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
+                  className="kx-research-example inline-flex min-h-11 max-w-full items-center gap-2 border border-line px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:bg-paper-2/40 hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
                   <UiText source={s.label} />
                   <ArrowRight aria-hidden="true" className="size-3 shrink-0" />
                 </button>
