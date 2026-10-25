@@ -16,7 +16,8 @@ export async function readBoundedJson(response: Response, maxBytes = 2_000_000):
     const bytes = new Uint8Array(size);
     let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-    // Buffer's previous UTF-8 decoding preserves BOM; retain that parser behavior.
-    return JSON.parse(new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes));
+    // Refuse malformed bytes instead of repairing receipt/authentication text.
+    // Preserve the existing BOM policy: a leading BOM still reaches JSON.parse.
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes));
   } finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
 }
