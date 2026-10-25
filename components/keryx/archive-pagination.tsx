@@ -28,7 +28,7 @@ function pageNumbers(page: number, totalPages: number): number[] {
 }
 
 const linkClass =
-  "border border-ink bg-paper px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink transition-all hover:-translate-y-0.5 hover:shadow-[0_3px_0_var(--ink)]";
+  "inline-flex min-h-11 min-w-11 items-center justify-center border border-line bg-paper px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-ink transition-colors hover:border-seal hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal";
 
 export function ArchivePagination({ page, totalPages, language = null }: { page: number; totalPages: number; language?: string | null }) {
   if (totalPages <= 1) return null;
@@ -51,7 +51,7 @@ export function ArchivePagination({ page, totalPages, language = null }: { page:
             {n === page ? (
               <span
                 aria-current="page"
-                className="border border-ink bg-ink px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-paper"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center border border-ink bg-ink px-3 py-2 font-mono text-[11px] uppercase tracking-[0.12em] text-paper"
               >
                 {n}
               </span>
