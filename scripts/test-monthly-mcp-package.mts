@@ -6,6 +6,9 @@ import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { canonicalJson } from "../lib/canonical-json";
+import { RESEARCH_RECEIPT_SCHEMA } from "../lib/research-receipt-types";
 const temporary = await mkdtemp(join(tmpdir(), "keryx-monthly-mcp-"));
 assert(resolve(temporary).startsWith(resolve(tmpdir()) + sep));
 const bootstrap = join(temporary, "http.mjs");
@@ -17,11 +20,21 @@ const client = new Client({ name: "monthly-distribution-test", version: "1.0.0" 
 try {
   await client.connect(transport);
   const tools = await client.listTools();
+  const comparisonTool = tools.tools.find(tool => tool.name === "compare_saved_research"); assert(comparisonTool);
+  assert.equal(comparisonTool.annotations?.openWorldHint, false);
+  const comparisonPayload = { schema: RESEARCH_RECEIPT_SCHEMA, dispatch: { question: "Synthetic local comparison" }, claims: [], citations: [] };
+  const comparisonReceipt = JSON.stringify({ payload: comparisonPayload, integrity: { algorithm: "sha256", canonicalization: "keryx-json-v1", scope: "payload",
+    digest: `sha256:${createHash("sha256").update(canonicalJson(comparisonPayload)).digest("hex")}` } });
+  const comparison = await client.callTool({ name: comparisonTool.name, arguments: { before: comparisonReceipt, after: comparisonReceipt } });
+  assert.notEqual(comparison.isError, true);
+  assert.equal((comparison.structuredContent as { comparison: { sameReceipt: boolean } }).comparison.sameReceipt, true);
+  const invalidComparison = await client.callTool({ name: comparisonTool.name, arguments: { before: "PRIVATE_FORBIDDEN_COMPARISON", after: comparisonReceipt } });
+  assert.equal(invalidComparison.isError, true); assert(!JSON.stringify(invalidComparison).includes("PRIVATE_FORBIDDEN_COMPARISON"));
   for (const input of [{ question: "Synthetic review request", reviewFirst: true }, { question: "Synthetic review request", mode: "review-first" }, { question: "Synthetic review request", researchMode: "review-first" }]) {
     const refused = await client.callTool({ name: "ask_keryx", arguments: input });
     assert.equal(refused.isError, true); // Input validation before buyer signing/payment/provider.
   }
-  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["evidence_draft", "research_feedback_read", "research_feedback_submit", "draft_check", "evidence_procurement", "deliverable_acceptance_read", "deliverable_acceptance_submit", "operator_obligations_read", "paper_lookup", "ask_keryx", "ask_keryx_sponsored", "keryx_wallet_status", "keryx_recover", "research_monthly", "keryx_operator_status", "keryx_public_job_ledger", "keryx_purchase_outcomes", "keryx_source_learning", "profile_read", "profile_update", "history_read", "history_owned_read", "history_export", "history_private_jobs_list", "history_private_jobs_detail", "history_private_jobs_export", "profile_identities_read", "run_privacy_read", "run_owner_export"].sort());
+  assert.deepEqual(tools.tools.map(tool => tool.name).sort(), ["evidence_draft", "research_feedback_read", "research_feedback_submit", "draft_check", "compare_saved_research", "evidence_procurement", "deliverable_acceptance_read", "deliverable_acceptance_submit", "operator_obligations_read", "paper_lookup", "ask_keryx", "ask_keryx_sponsored", "keryx_wallet_status", "keryx_recover", "research_monthly", "keryx_operator_status", "keryx_public_job_ledger", "keryx_purchase_outcomes", "keryx_source_learning", "profile_read", "profile_update", "history_read", "history_owned_read", "history_export", "history_private_jobs_list", "history_private_jobs_detail", "history_private_jobs_export", "profile_identities_read", "run_privacy_read", "run_owner_export"].sort());
   for (const name of ["run_privacy_read", "run_owner_export"]) {
     const reader = tools.tools.find(item => item.name === name)!;
     assert.equal(reader.annotations?.readOnlyHint, true);assert.equal(reader.annotations?.destructiveHint, false);

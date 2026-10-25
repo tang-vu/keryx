@@ -519,6 +519,9 @@ jobs:
           KERYX_COMMIT: ${{ github.sha }}
         run: npm run build
 
+      - name: Saved report comparison (real WebCrypto, local files and downloads)
+        run: node --import tsx scripts/test-browser-report-comparison.mts --built
+
       - name: Immutable cohort actual Next restart (reuse build, offline testnet)
         env:
           KERYX_RELEASE_REHEARSAL_RESULT: ${{ runner.temp }}/immutable-release-rehearsal.json
