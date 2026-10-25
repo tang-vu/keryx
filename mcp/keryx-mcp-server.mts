@@ -28,6 +28,7 @@ import { registerObligationInspection } from "../lib/operator-obligations/mcp.ts
 import { createObligationClient } from "../lib/operator-obligations/client.ts";
 import { registerEvidenceDraftTool } from "../lib/research/evidence-draft-tool.ts";
 import { registerDraftCheckTool } from "../lib/research/draft-check-tool.ts";
+import { registerReportComparisonTool } from "../lib/research/report-comparison-tool.ts";
 import { registerEvidenceProcurementTool } from "../lib/evidence-procurement/tool.ts";
 import { createHistoryClient } from "../lib/history/personal-history-client.ts";
 import { registerHistoryTool } from "../lib/history/personal-history-mcp.ts";
@@ -48,6 +49,7 @@ registerRequesterFeedbackTools(server, { baseUrl: meta.baseUrl });
 registerObligationInspection(server, () => createObligationClient(meta.baseUrl, () => process.env.KERYX_API_KEY).read());
 registerEvidenceDraftTool(server);
 registerDraftCheckTool(server);
+registerReportComparisonTool(server);
 registerEvidenceProcurementTool(server);
 const acceptanceClient = () => createAcceptanceClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
 registerAcceptanceTools(server, { read: id => acceptanceClient().read(id), submit: (id, input) => acceptanceClient().submit(id, input) });

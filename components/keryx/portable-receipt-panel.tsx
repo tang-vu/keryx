@@ -1,4 +1,5 @@
 import { createMessages } from "@/lib/i18n/messages";
+import { ReportComparisonLink } from "./report-comparison-link";
 import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
 
 
@@ -43,6 +44,7 @@ export function PortableReceiptPanel({ dispatchId }: Props) {
           </a>
         </div>
       </div>
+      <ReportComparisonLink />
     </UiElement>
   );
 }

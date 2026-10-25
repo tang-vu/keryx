@@ -5,6 +5,9 @@
     "incremental": false
   },
   "include": [
+    "scripts/compare-research.mts",
+    "scripts/compare-research.test.mts",
+    "scripts/test-browser-report-comparison.mts",
     "scripts/prepare-specialist-brief.mts",
     "scripts/research-pilot.mts",
     "scripts/test-browser-specialist-briefs.mts",
