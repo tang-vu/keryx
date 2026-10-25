@@ -4,6 +4,7 @@ import { formatRecordedAmount } from "@/lib/i18n/format";
 /** Reader question form. A bounded budget and model remain available after the primary ask. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowRight, ArrowUpRight, BookOpen, ChevronDown, Zap } from "lucide-react";
 // Pure data module (no env imports), so the picker and the server agree on which id is the default.
 import { DEFAULT_MODEL_ID } from "@/lib/llm/model-catalog";
 import { MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
@@ -166,6 +167,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
   const [models, setModels] = useState<PickerModel[]>([]);
   const testnet = browserPaymentProfile().testnet;
   const advancedRef = useRef<HTMLDetailsElement>(null);
+  const questionRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     const revealBudget = () => { if (advancedRef.current) advancedRef.current.open = true; };
     document.addEventListener("keryx:tour-budget", revealBudget);
@@ -251,13 +253,14 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
 
   return (
     <div data-tour="ask-form">
-      <div className="border border-ink bg-paper-2">
-        <div className="p-3.5 sm:p-5">
-          <label htmlFor="ask-question" className="block font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">
+      <div className="border border-line bg-paper shadow-[0_4px_24px_-12px_rgba(27,23,18,0.25)]">
+        <div className="p-4 sm:p-6">
+          <label htmlFor="ask-question" className="block font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-2">
             {message("researchEntry.question")}
           </label>
           <textarea
             id="ask-question"
+            ref={questionRef}
             value={question}
             onChange={(e) => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(e.target.value); }}
             onKeyDown={(e) => {
@@ -267,24 +270,27 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
             rows={2}
             maxLength={MAX_ASK_QUESTION_CHARS}
             disabled={disabled}
-            className="mt-2 min-h-[76px] w-full resize-y border border-ink bg-paper px-3 py-2 font-serif text-[17px] leading-snug text-ink outline-none placeholder:text-ink-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50"
+            aria-describedby="ask-keyboard-hint"
+            className="mt-3 min-h-[88px] w-full resize-y border border-ink-3/75 bg-paper px-3 py-3 font-serif text-lg leading-relaxed text-ink outline-none placeholder:text-ink-3 focus-visible:border-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50 sm:min-h-[104px] sm:text-xl"
           />
-          <p className="mt-1 text-xs text-ink-3">{message("researchEntry.keyboardHint")}</p>
+          <p id="ask-keyboard-hint" className="mt-1 text-xs text-ink-3">{message("researchEntry.keyboardHint")}</p>
           {(researchPaused || !checking && !availability) && availabilityPanel}
 
-          <div className="mt-1 border-t border-line pt-1 sm:mt-2 sm:pt-3">
-          <fieldset className="mt-1">
+          <div className="mt-4 border-t border-line pt-4">
+          <div className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-6">
+          <fieldset className="min-w-0">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2">{message("researchEntry.depth")}</legend>
             <div className="mt-1.5 grid grid-cols-2 gap-2">
               {(["quick", "deep"] as const).map((mode) => (
-                <label key={mode} className={`flex min-h-11 cursor-pointer items-center gap-2 border px-3 py-2 font-mono text-[12px] font-semibold capitalize focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal ${researchMode === mode ? "border-ink bg-ink text-cream" : "border-line bg-paper text-ink"}`}>
+                <label key={mode} className={`flex min-h-12 cursor-pointer items-center gap-2 border px-3 py-2 font-mono text-xs font-semibold capitalize transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal ${researchMode === mode ? "border-paid bg-paid/10 text-paid" : "border-line bg-paper text-ink-2 hover:border-ink-3"} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
                   <input type="radio" name="research-depth" value={mode} checked={researchMode === mode}
-                    onChange={() => setResearchMode(mode)} disabled={disabled} className="accent-seal" />
+                    onChange={() => setResearchMode(mode)} disabled={disabled} className="size-3.5 shrink-0 accent-paid" />
+                  {mode === "quick" ? <Zap aria-hidden="true" className="size-3.5 shrink-0" /> : <BookOpen aria-hidden="true" className="size-3.5 shrink-0" />}
                   {message(mode === "quick" ? "researchEntry.quick" : "researchEntry.deep")}
                 </label>
               ))}
             </div>
-            <p className="mt-1.5 font-serif text-[13px] leading-snug text-ink-2">
+            <p className="mt-2 font-serif text-[13px] leading-snug text-ink-2" aria-live="polite">
               {researchMode === "quick"
                 ? message("researchEntry.quickHint")
                 : message("researchEntry.deepHint")}
@@ -292,18 +298,22 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
           </fieldset>
             <button type="button" onClick={submit} disabled={disabled || payer === "paused" || checking || researchPaused || !visibility.ready || draft?.wallet === undefined || question.trim().length === 0}
               data-tour="dispatch-btn"
-              className="kx-press mt-3 min-h-12 w-full border border-ink bg-ink px-5 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.1em] text-cream transition-all hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
+              className="kx-press flex min-h-12 w-full items-center justify-center gap-4 border border-ink bg-ink px-5 py-3 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-cream transition-colors enabled:hover:border-paid enabled:hover:bg-paid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50 sm:mb-[23px] sm:w-auto sm:min-w-44">
               {message(disabled ? "researchEntry.researching" : researchPaused ? "researchEntry.paused" : "researchEntry.ask")}
+              <ArrowUpRight aria-hidden="true" className="size-4 shrink-0" />
             </button>
-            {!conversation && <div className="mt-2 flex flex-wrap gap-2" aria-label={message("researchEntry.examplesLabel")}>
+          </div>
+            {!conversation && <div className="mt-4 flex flex-wrap gap-2" aria-label={message("researchEntry.examplesLabel")}>
               {SUGGESTIONS.map((s) => (
-                <button key={s.label} type="button" disabled={disabled} onClick={() => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(s.q); }}
-                  className="min-h-11 max-w-full border border-line bg-paper px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
+                <button key={s.label} type="button" disabled={disabled} onClick={() => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(s.q); questionRef.current?.focus(); }}
+                  className="inline-flex min-h-11 max-w-full items-center gap-2 border border-line px-3 py-2 text-left font-mono text-[11px] leading-snug text-ink-2 transition-colors hover:border-seal hover:bg-paper-2/40 hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50">
                   <UiText source={s.label} />
+                  <ArrowRight aria-hidden="true" className="size-3 shrink-0" />
                 </button>
               ))}
             </div>}
-            <p className="mt-2 font-mono text-[11px] leading-snug text-ink-2" data-testid="composer-payer-notice">
+            <div className="mt-4 border-l-2 border-brass/60 pl-3">
+            <p className="font-mono text-[11px] leading-relaxed text-ink-2" data-testid="composer-payer-notice">
               {payer === "session"
                 ? message("researchEntry.sessionPayerNotice", { network: currentArcLabel })
                 : payer === "paused"
@@ -319,10 +329,12 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
               {message("researchVisibility.unavailable")} {" "}
               <button type="button" className="min-h-11 underline" onClick={() => { if (advancedRef.current) advancedRef.current.open = true; }}>{message("researchEntry.moreOptions")}</button>
             </p>}
+            </div>
           </div>
-          <details ref={advancedRef} className="mt-3 border-t border-line pt-2">
-            <summary className="flex min-h-11 cursor-pointer items-center font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 marker:text-seal hover:text-ink">
+          <details ref={advancedRef} className="group/options mt-4 border-t border-line pt-1">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-mono text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal [&::-webkit-details-marker]:hidden">
               {message("researchEntry.moreOptions")}
+              <ChevronDown aria-hidden="true" className="size-4 shrink-0 group-open/options:rotate-180" />
             </summary>
             <div className="pb-2 pt-1">
               <div className="flex flex-wrap items-center justify-between gap-2" data-tour="budget">
