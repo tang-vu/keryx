@@ -68,6 +68,18 @@ literal fences. CSV quotes every cell and prefixes formula-like text, including
 invisible prefixes, with an apostrophe. Use JSON or Markdown to preserve original
 strings without that CSV display guard. Missing values stay unknown.
 
+## Save target choices
+
+After verifying both receipts in the web workspace, **Save target matching**
+downloads a `keryx-report-matching-v1` file. It contains only the ordered receipt
+payload checksums and selected target indices, including an explicitly empty
+selection. Keep both original receipts; the matching file cannot replace them.
+To resume, verify those same receipts in the same order, then use **Restore target
+matching JSON** and compare again. Changed or reversed receipts, invalid indices
+and repeated matches are refused. Matching files are limited to 64 KiB and remain
+in this tab's memory. Checksums and pairing choices do not establish authorship,
+semantic equivalence, factual support or settlement.
+
 ## Local CLI
 
 From the checkout with pinned dependencies:
@@ -77,7 +89,8 @@ node --import tsx scripts/compare-research.mts --before before.json --after afte
 node --import tsx scripts/compare-research.mts --before before.json --after after.json --format markdown --output comparison.md
 ```
 
-Default output is JSON on stdout. `--format` accepts `json`, `markdown` or `csv`.
+Default output is JSON on stdout. `--format` accepts `json`, `markdown`, `csv` or
+`matches` (a reusable matching file without report text).
 `--output` creates a new file exclusively and refuses an existing path. Local
 files use bounded reads and fatal UTF-8 decoding. No environment file is loaded.
 Errors contain fixed codes, without private report text or OS paths.
@@ -87,6 +100,18 @@ For explicit pairs, use `--matches pairs.json` containing at most 256 pairs:
 ```json
 [{"beforeClaimIndex":0,"afterClaimIndex":1}]
 ```
+
+The same option also accepts the saved matching file from web or local MCP:
+
+```powershell
+node --import tsx scripts/compare-research.mts --before before.json --after after.json --format matches --output matching.json
+node --import tsx scripts/compare-research.mts --before before.json --after after.json --matches matching.json
+```
+
+The local MCP tool accepts optional `matchingPlan` JSON instead of `matches` and
+returns a reusable `matchingPlan` object alongside `comparison`. Supplying both
+options is refused. Receipt integrity is checked again on every restore; the
+saved digests are never a caller assertion that replaces verification.
 
 Indices are recorded zero-based claim indices. Duplicate, nonexistent or
 out-of-range indices are rejected. `[]` intentionally selects no pairs.

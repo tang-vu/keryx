@@ -22,10 +22,17 @@ it("compares through the actual local MCP protocol without fetching or credentia
   const [tool] = (await client.listTools()).tools;
   expect(tool.name).toBe("compare_saved_research");
   expect(tool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, openWorldHint: false });
-  expect(Object.keys(tool.inputSchema.properties ?? {}).sort()).toEqual(["after", "before", "matches"]);
+  expect(Object.keys(tool.inputSchema.properties ?? {}).sort()).toEqual(["after", "before", "matches", "matchingPlan"]);
   const result = await client.callTool({ name: tool.name, arguments: { before: receipt(), after: receipt() } });
   expect(result.isError).not.toBe(true);
   expect(result.structuredContent).toMatchObject({ comparison: { format: "keryx-report-comparison-v1", sameReceipt: true, availability: "complete" } });
+  const matchingPlan = (result.structuredContent as { matchingPlan: unknown }).matchingPlan;
+  expect(matchingPlan).toMatchObject({ format: "keryx-report-matching-v1", matches: [] });
+  expect(JSON.stringify(matchingPlan)).not.toContain("Private question");
+  const restored = await client.callTool({ name: tool.name, arguments: { before: receipt(), after: receipt(), matchingPlan: JSON.stringify(matchingPlan) } });
+  expect(restored.structuredContent).toEqual(result.structuredContent);
+  const ambiguous = await client.callTool({ name: tool.name, arguments: { before: receipt(), after: receipt(), matches: [], matchingPlan: JSON.stringify(matchingPlan) } });
+  expect(ambiguous.isError).toBe(true); expect(ambiguous.structuredContent).toBeUndefined();
   expect(fetch).not.toHaveBeenCalled();
 });
 it("does not echo private malformed receipt contents or exception details", async () => {
