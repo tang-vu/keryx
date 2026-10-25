@@ -17,10 +17,11 @@
  * With JavaScript off the box does nothing and the full page stays visible — the archive reads
  * exactly as it did before this existed.
  */
-import { Children, useId, useMemo, useState, type ReactNode } from "react";
+import { Children, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { ArrowUpRight, Search, X } from "lucide-react";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+import { literatureSearchCopy } from "@/locales/en/literature-search";
 import { archiveSearchWords, matchesArchiveSearch, normalizeArchiveSearch } from "@/lib/archive-search";
 
 /** One entry that exists in the archive but isn't rendered as a card on this page. */
@@ -50,6 +51,8 @@ export function ArchiveSearch({
   placeholder?: string;
 }) {
   const copy = useUiMessages();
+  const searchCopy = useUiCopy("literature-search", literatureSearchCopy);
+  const inputRef = useRef<HTMLInputElement>(null);
   const resultsId = useId();
   const [query, setQuery] = useState("");
   const [resultPage, setResultPage] = useState(0);
@@ -71,23 +74,36 @@ export function ArchiveSearch({
   const lastPage = Math.max(0, Math.ceil(otherMatches.length / OTHERS_SHOWN) - 1);
   const page = Math.min(resultPage, lastPage);
   const shownOthers = otherMatches.slice(page * OTHERS_SHOWN, (page + 1) * OTHERS_SHOWN);
+  const clearSearch = () => {
+    setQuery("");
+    setResultPage(0);
+    inputRef.current?.focus();
+  };
 
   return (
     <div className="mt-10">
-      <label className="flex items-center gap-2.5 border border-ink bg-paper px-4 py-3">
+      <div className="flex items-center gap-2 border border-line bg-paper px-4 transition-colors focus-within:border-seal focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal">
+      <label className="flex min-w-0 flex-1 items-center gap-3 py-3">
         <Search className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
         <input
           type="search"
+          ref={inputRef}
           value={query}
           onChange={(e) => { setQuery(e.target.value); setResultPage(0); }}
+          onKeyDown={event => { if (!event.nativeEvent.isComposing && event.key === "Escape" && searching) { event.preventDefault(); clearSearch(); } }}
           placeholder={placeholder ?? copy("archiveFilter.placeholder")}
           aria-label={copy("archiveFilter.label")}
-          className="w-full bg-transparent font-mono text-[13px] text-ink outline-none placeholder:text-ink-3"
+          className="min-h-6 w-full min-w-0 bg-transparent font-mono text-base text-ink outline-none placeholder:text-ink-3 sm:text-[13px]"
         />
-        <span role="status" aria-atomic="true" className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
-          {searching && copy(total === 1 ? "archiveFilter.found.one" : "archiveFilter.found.other", { count: total })}
-        </span>
       </label>
+      {searching && <button type="button" onClick={clearSearch} aria-label={searchCopy.clear}
+        className="inline-flex size-11 shrink-0 items-center justify-center text-ink-3 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-seal">
+        <X aria-hidden="true" className="size-4" />
+      </button>}
+      </div>
+      <p role="status" aria-atomic="true" className="mt-2 min-h-4 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
+        {searching && copy(total === 1 ? "archiveFilter.found.one" : "archiveFilter.found.other", { count: total })}
+      </p>
 
       {filters}
 
@@ -109,9 +125,10 @@ export function ArchiveSearch({
               <li key={o.id}>
                 <Link
                   href={`/dispatch/${o.id}`}
-                  className="font-serif text-[15px] leading-[1.5] text-ink-2 underline decoration-line underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
+                  className="group flex min-h-11 items-start justify-between gap-4 border-b border-line py-3 font-serif text-base leading-relaxed text-ink-2 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"
                 >
-                  {o.question}
+                  <span className="min-w-0 break-words">{o.question}</span>
+                  <ArrowUpRight aria-hidden="true" className="mt-1 size-4 shrink-0 text-brass transition-transform motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5" />
                 </Link>
               </li>
             ))}
@@ -121,12 +138,12 @@ export function ArchiveSearch({
               className="mt-4 flex gap-3 font-mono text-[11px]">
               <button type="button" aria-controls={resultsId} disabled={page === 0}
                 onClick={() => setResultPage(page - 1)}
-                className="border border-line px-4 py-3 disabled:opacity-40">
+                className="min-h-11 border border-line px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-40">
                 {copy("archivePages.newer")}
               </button>
               <button type="button" aria-controls={resultsId} disabled={page === lastPage}
                 onClick={() => setResultPage(page + 1)}
-                className="border border-line px-4 py-3 disabled:opacity-40">
+                className="min-h-11 border border-line px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-40">
                 {copy("archivePages.older")}
               </button>
             </nav>

@@ -184,7 +184,7 @@ describe("buildArchive", () => {
     expect(item).toEqual({ "@type": "ListItem", position: 1, url: "https://keryx.cc/dispatch/caveat", name: entry.question });
     expect(JSON.stringify(item)).not.toContain(body);
     const html = renderToStaticMarkup(createElement(ArchiveAnswerRow, { entry }));
-    expect(html).toContain(`<p lang="und" class="mt-2 font-serif text-[15px] leading-[1.5] text-ink-2">⚠ Low confidence — ${body}</p>`);
+    expect(html.match(/<p lang="und"[^>]*>([^<]*)<\/p>/)?.[1]).toBe(`⚠ Low confidence — ${body}`);
     expect(html).toContain(`title="${reason}"`);
     expect(html).toContain(">Low<");
     expect(html).toContain("confidence");
