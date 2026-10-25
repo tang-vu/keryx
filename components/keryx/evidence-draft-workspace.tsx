@@ -70,7 +70,7 @@ export function EvidenceDraftWorkspace() {
   const [retainedSnapshot, setRetainedSnapshot] = useState(() => retainedEditorsSnapshot(empty()));
   const [recovery, setRecovery] = useState<DraftRecovery>();
   const undoRef = useRef<HTMLButtonElement>(null), recoveryHintId = useId();
-  useLayoutEffect(() => { if (recovery) undoRef.current?.focus({ preventScroll: true }); }, [recovery]);
+  useLayoutEffect(() => { if (recovery) undoRef.current?.focus(); }, [recovery]);
   const hasUnretainedInputs = !!reportJson || !!reviewer || editors.themes.some(theme => theme.statements?.some(row => !row.text.trim()));
   const editorSnapshot = retainedEditorsSnapshot(editors);
   const hasUnsavedChanges = hasUnretainedInputs || editorSnapshot !== retainedSnapshot;

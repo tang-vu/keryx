@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { build } from "esbuild";
 import { chromium, type Browser, type Page, type Locator } from "playwright";
@@ -11,8 +12,10 @@ import { evidenceDraftEditingCopy as editing } from "../../locales/en/evidence-d
 import { LITERATURE_STORAGE_KEY, saveLiteraturePaper, serializeLiteratureWorkspace } from "../papers/literature-workspace";
 import { PAPER_CATALOG } from "../papers/catalog";
 
-let browser: Browser, bundle: string;
+let browser: Browser, bundle: string, stylesheet = "";
 beforeAll(async () => {
+  if (process.env.KERYX_DRAFT_CSS) stylesheet = await readFile(process.env.KERYX_DRAFT_CSS, "utf8");
+  if (process.env.KERYX_DRAFT_SCREENSHOT_DIR) await mkdir(process.env.KERYX_DRAFT_SCREENSHOT_DIR, { recursive: true });
   bundle = (await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React from 'react';import{createRoot}from'react-dom/client';
     import{EvidenceDraftWorkspace}from'./components/keryx/evidence-draft-workspace';
@@ -69,7 +72,7 @@ async function fixture(width: number, run: (page: Page, packet: EvidenceDraftReq
     await context.route("**/*", route => {
       requests.push(route.request().url());
       return route.request().url() === "https://draft-removal.test/" ? route.fulfill({ contentType: "text/html", body:
-        '<meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:12px}input,textarea,select,button{max-width:100%}article,section,a{overflow-wrap:anywhere}</style><div id="root"></div>' }) : route.abort();
+        `<meta charset="utf-8"><style>${stylesheet}\n*{box-sizing:border-box}body{margin:12px}input,textarea,select,button{max-width:100%}article,section,a{overflow-wrap:anywhere}</style><div id="root"></div>` }) : route.abort();
     });
     const page = await context.newPage(); page.setDefaultTimeout(5000); page.on("pageerror", error => errors.push(error.message));
     await page.goto("https://draft-removal.test/");
@@ -163,12 +166,18 @@ it.each([320, 1440])("undoes claim and theme removals with original assessments 
   const undo = page.getByRole("button", { name: editing.undoRemoval, exact: true });
   expect(await undo.evaluate(button => button === document.activeElement)).toBe(true);
   expect(await claims(page).first().evaluate(article => article.previousElementSibling?.tagName)).toBe("ASIDE");
+  const bounds = await undo.boundingBox(); expect(bounds).not.toBeNull();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0); expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(900);
+  if (process.env.KERYX_DRAFT_SCREENSHOT_DIR)
+    await undo.locator("..").screenshot({ path: join(process.env.KERYX_DRAFT_SCREENSHOT_DIR, `claim-recovery-${width}.png`) });
   await page.keyboard.press("Enter");
   await page.getByText(editing.removalRestored, { exact: true }).waitFor();
   expect(await saved(page)).toEqual(before); await assertUnfinished(page, 1);
   expect((await saved(page)).claims[0].assessment).toEqual(packet.claims[0].assessment);
   expect(await undo.count()).toBe(0);
   await remove(page, themes(page).first().getByRole("button", { name: editing.removeTheme, exact: true }), editing.confirmTheme, true);
+  if (process.env.KERYX_DRAFT_SCREENSHOT_DIR)
+    await undo.locator("..").screenshot({ path: join(process.env.KERYX_DRAFT_SCREENSHOT_DIR, `theme-recovery-${width}.png`) });
   await undo.click();
   expect(await saved(page)).toEqual(before); await assertUnfinished(page, 1);
   expect(await themes(page).nth(1).getByLabel(copy.theme.notes).inputValue()).toBe("Keep latest private note");

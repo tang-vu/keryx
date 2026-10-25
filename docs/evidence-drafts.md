@@ -73,6 +73,7 @@ another removal replaces it. Editing fields, importing a result or restoring
 another file ends recovery. If a recovery snapshot cannot be prepared, the
 removal is refused and the current draft stays intact. Clearing after a removal
 keeps a separate **Undo clear** step for the state immediately before that clear.
+The undo control appears where the row was removed and receives keyboard focus.
 
 **Clear this tab's draft** asks for confirmation before resetting the editor.
 Cancel keeps all inputs. After a confirmed clear, **Undo clear** restores the
