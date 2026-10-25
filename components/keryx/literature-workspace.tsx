@@ -354,12 +354,12 @@ export function LiteratureWorkspace() {
       <details className="mt-5 border-t border-line pt-2"><summary ref={clearSummary} className="min-h-11 cursor-pointer py-3 font-mono text-xs text-ink-3 underline">{copy("literatureWorkspace.clearDetails")}</summary>
         <p className="mt-2 font-serif text-sm text-ink-2">{copy("literatureWorkspace.clearNotice")}</p>
         {!error && <p className="mt-2 font-serif text-sm text-ink-2">{recoveryCopy.beforeClear}</p>}
-        <button type="button" disabled={clearing || recovering || restoring || adding || !!cleared} className={`${button} mt-3`} onClick={async () => {
+        <button type="button" disabled={clearing || recovering || restoring || adding || !!cleared || (!!error && raw === undefined)} className={`${button} mt-3`} onClick={async () => {
           if (!window.confirm(copy("literatureWorkspace.clearConfirm"))) { setFailure(copy("literatureWorkspace.clearCancelled")); setMessage(""); return; }
           setClearing(true);
           await act(async () => {
             ++importGeneration.current; setPending(undefined);
-            if (error) await clearLiteratureWorkspace();
+            if (error && raw !== undefined) await clearLiteratureWorkspace();
             else await clearLiteratureWithRecovery(saved => { if (hasSavedLiterature(saved)) setCleared(saved); return undefined; });
             setSelected([]); setFilter("all"); setQuery(""); setEditingRevision(value => value + 1);
           }, copy("literatureWorkspace.cleared"));

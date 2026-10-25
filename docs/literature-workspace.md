@@ -66,6 +66,8 @@ The candidate is not production delivery or evidence of independent demand.
    this or another tab; an identical already-restored library is safe to retain.
    The checkpoint excludes unsaved form edits. Removal or readback failures keep
    the recovery available for download, even if storage becomes inaccessible.
+   If saved data cannot be read at all before clearing, deletion is refused;
+   the explicit corrupt-JSON clear is limited to data that was actually read.
    Restore or explicitly discard it before clearing again. The tab requests a
    native leave warning while this recovery exists, including after download;
    browsers may suppress that warning. No checkpoint is uploaded or auto-saved.

@@ -189,3 +189,17 @@ it("keeps explicit corrupt-storage clearing available without inventing a valid 
   await clear(page); await page.getByText(copy("literatureWorkspace.cleared"), { exact: true }).waitFor();
   expect(await rawState(page)).toBeNull(); expect(await checkpoint(page).count()).toBe(0); await expectWarning(page, false);
 }));
+
+it("refuses unreadable saved storage before deletion instead of using corrupt-JSON clear", () => fixture(1440, async (page, raw) => {
+  await page.evaluate(key => { const original = Storage.prototype.getItem;
+    (window as unknown as { restoreStorage(): void }).restoreStorage = () => { Storage.prototype.getItem = original; };
+    Storage.prototype.getItem = () => { throw new Error("Synthetic unreadable saved storage"); };
+    window.dispatchEvent(new StorageEvent("storage", { key }));
+  }, LITERATURE_STORAGE_KEY);
+  await page.getByText(copy("paperWorkspace.storageUnavailable"), { exact: true }).waitFor();
+  await page.getByText(copy("literatureWorkspace.clearDetails"), { exact: true }).click();
+  const allowed = await page.getByRole("button", { name: copy("literatureWorkspace.clear"), exact: true }).isEnabled();
+  if (allowed) { await clear(page); await page.getByText(copy("paperWorkspace.clearFailed"), { exact: true }).waitFor(); }
+  await restoreStorage(page);
+  expect(await rawState(page)).toBe(raw); expect(allowed).toBe(false); expect(await checkpoint(page).count()).toBe(0);
+}));
