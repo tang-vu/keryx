@@ -29,12 +29,13 @@ import { ReasoningConsole } from './components/keryx/reasoning-console';
 import { DispatchView } from './app/dispatch/[id]/dispatch-view';
 import { buildEvidenceLedger } from './lib/agent/evidence-ledger';
 import { finalizeGroundedAnswer } from './lib/agent/answer-grounding';
-const citation = {marker:'S1', sourceId:'source-1', sourceName:'Research Journal', itemId:'article-1', itemTitle:'The article: an unusually long title about measured evidence and a disputed claim across several research teams', itemUrl:'https://example.org/article', weight:1, reward:0.003, rationale:'evidence'};
+const citation = {marker:'S1', sourceId:'source-1', sourceName:'Research Journal', itemId:'article-1', itemTitle:'The article: an unusually long title about measured evidence and a disputed claim across several research teams', itemUrl:'https://example.org/article', contentVersion:'recorded-v2', weight:1, reward:0.003, rationale:'evidence'};
 const missing = {marker:'S2',sourceId:'source-2',sourceName:'Older Archive',itemTitle:'Legacy article',weight:0, reward:0, rationale:'legacy'};
 const web = {marker:'S3',sourceId:'public:web:fixture',sourceName:'publisher.example',itemTitle:'Original public document',itemUrl:'https://publisher.example/final',contentVersion:'a'.repeat(64),sourceKind:'public-reference',publicDeliveryKind:'excerpt',weight:0,reward:0,rationale:'public evidence',webProvenance:{retrievedAt:'2026-10-01T00:00:00Z',publisherGroup:'publisher.example',normalizedBodyHash:'b'.repeat(64),extraction:'pdf',truncated:true,pdfTextScope:{format:'keryx-pdf-text-scope-v1',pagesRead:3,totalPages:3,pagesWithoutText:[2],textLimitReached:false}}};
 const scholarly = {...web, marker:'S4', sourceId:'public:scholarly:fixture',sourceName:'arxiv.org',itemTitle:'Observed scholarly preprint',itemUrl:'https://arxiv.org/abs/1706.03762v7',publicDeliveryKind:'abstract',webProvenance:{...web.webProvenance,extraction:'html',publisherGroup:'arxiv.org',truncated:false},scholarly:{provider:'arxiv',recordUrl:'https://export.arxiv.org/api/query?id_list=1706.03762v7',retrievedAt:'2026-10-01T00:00:00Z',title:'Observed scholarly preprint',authors:['Observed Author'],arxivId:'1706.03762v7',workType:'preprint',peerReview:'unknown',evidenceScope:'abstract-page'}};
 const trace = Array.from({length:40},(_,i)=>({phase:'discover',ts:i,message:'Step '+i}));
-const run = {id:'synthetic',question:'What happened to a particularly long research question that needs a careful cited explanation?',budget:0.01,engine:'fixture',subClaims:[],decisions:[],citations:[citation,missing],answer:Array.from({length:8},(_,i)=>'A grounded finding [S1]. The archive also appears [S2]. '+('Evidence should be read in context. '.repeat(5))).join(String.fromCharCode(10,10)),totalSpent:0.002,totalToCreators:0.002,trace,createdAt:'2026-09-28T00:00:00Z',paymentMode:'real',evidence:Array.from({length:12},(_,i)=>({claimIndex:i,claim:'A grounded finding',marker:'S1',sourceId:'source-1',sourceName:'Research Journal',quote:i===0?'The measured result was positive.':('A long excerpt of measured evidence, exactly as stored in the run. '.repeat(4)),support:0.8,qualifiesForReward:true}))};
+const run = {id:'synthetic',question:'What happened to a particularly long research question that needs a careful cited explanation?',budget:0.01,engine:'fixture',subClaims:[],decisions:[],citations:[citation,missing],answer:Array.from({length:8},(_,i)=>'A grounded finding [S1]. The archive also appears [S2]. '+('Evidence should be read in context. '.repeat(5))).join(String.fromCharCode(10,10)),totalSpent:0.002,totalToCreators:0.002,trace,createdAt:'2026-09-28T00:00:00Z',paymentMode:'real',evidence:Array.from({length:12},(_,i)=>({...citation,claimIndex:i,claim:'A grounded finding',quote:i===0?'The measured result was positive.':('A long excerpt of measured evidence, exactly as stored in the run. '.repeat(4)),support:0.8,qualifiesForReward:true}))};
+run.evidence.push({...run.evidence[0],contentVersion:'recorded-v1',quote:'WRONG_VERSION_EXCERPT must never be attributed to the selected v2 article.'});
 const payment = (itemId,status,amount) => ({kind:'citation',queryId:'synthetic',sourceId:'source-1',sourceName:'Research Journal',itemId,payer:'payer',payee:'author-wallet',amountUsdc:amount,network:'Arc',settled:status==='settled',settlementStatus:status,createdAt:run.createdAt});
 run.confidence={level:'Moderate',reason:'Observed source grounding only'};run.citations.push(web);run.answer+=' Original public evidence [S3].';run.evidence.push({claimIndex:12,claim:'Original public evidence',marker:'S3',sourceId:web.sourceId,sourceName:web.sourceName,quote:'The original public document explicitly states this finding.',support:0.8,qualifiesForAnswer:true,qualifiesForReward:false,...web});
 run.citations.push(scholarly);run.answer+=' Abstract-scoped finding [S4].';run.evidence.push({claimIndex:13,claim:'Abstract-scoped finding',quote:'This is the observed abstract passage.  '+String.fromCharCode(10,10),support:0.8,qualifiesForAnswer:true,qualifiesForReward:false,...scholarly});
@@ -124,6 +125,7 @@ try {
     for await (const chunk of stream) chunks.push(Buffer.from(chunk));
     const content = Buffer.concat(chunks).toString("utf8");
     assert(content.includes(expected), `${filename} must contain its expected format`);
+    assert(!content.includes("WRONG_VERSION_EXCERPT"), `${filename} must exclude another version's excerpt`);
     assert(!content.includes("author-wallet") && !content.includes("payer"), "exports exclude payment identities");
     if (filename.endsWith(".ris") || filename.endsWith(".bib")) {
       assert(content.includes("https://example.org/article"));
@@ -137,11 +139,17 @@ try {
       assert(!content.includes("TY  - UNPB"), "unsupported preprint tags must not become journal articles");
       assert(content.includes("AN  - arXiv:1706.03762v7"), "RIS preserves the exact recorded arXiv version");
     }
-    if (filename.endsWith(".csv")) assert(content.includes("The original public document explicitly states this finding."), "answer-qualified public evidence remains inspectable without payout authority");
+    if (filename.endsWith(".csv")) {
+      assert(content.includes("The original public document explicitly states this finding."), "answer-qualified public evidence remains inspectable without payout authority");
+      assert(content.includes('""pagesRead"":3') && content.includes('""pagesWithoutText"":[2]'), "CSV retains observed PDF pages even when its clipping flags disagree");
+      assert(content.includes("Conflicting PDF clipping metadata"), "CSV labels the existing contradictory clipping metadata");
+    }
     if (filename.endsWith(".md")) {
       assert(content.includes("Exact excerpt:\n\n```\nThis is the observed abstract passage.  \n\n\n```\n"), "the last Markdown excerpt retains trailing spaces and blank lines in the actual download");
       assert(content.includes("The original public document explicitly states this finding."), "Markdown retains answer-qualified public evidence without payout authority");
       assert(content.includes("does not decide whether the target is true"), "Markdown preserves the inspection boundary");
+      assert(content.includes('"pagesRead":3') && content.includes('"pagesWithoutText":[2]'), "Markdown retains the observed PDF page scope");
+      assert(content.includes("Conflicting PDF clipping metadata"), "Markdown labels the existing contradictory clipping metadata");
     }
   }
   await page.getByText("Research evidence matrix", { exact: true }).click();
@@ -153,6 +161,7 @@ try {
   const dialog = page.getByRole("dialog", { name: /The article/ });
   await dialog.waitFor();
   assert.match(await dialog.innerText(), /The measured result was positive/);
+  assert.doesNotMatch(await dialog.innerText(), /WRONG_VERSION_EXCERPT/);
   assert.match(await dialog.innerText(), /Research target \(unverified\):/);
   assert.doesNotMatch(await dialog.innerText(), /Supports:/);
   assert.match(await dialog.innerText(), /\$0\.001.*settled/);
