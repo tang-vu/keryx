@@ -19,6 +19,13 @@ export const reportComparisonCopy = {
   matchingTitle: "Match the questions you want to compare",
   matchingNotice: "Only unique, identical target text is matched automatically. For renamed or duplicate targets, choose a pair yourself. Your choice is recorded in the export; it does not prove the targets mean the same thing.",
   matchAfter: "Match with an after target", unmatched: "Leave unmatched", matchingChanged: "Target pairs changed. Verify and compare again to refresh the result.",
+  saveMatchingPlan: "Save target matching", restoreMatchingPlan: "Restore target matching JSON",
+  matchingPlanNotice: "Save your target choices for later. This small file contains receipt checksums and target numbers, without report text. Restore it only with the same receipts in the same order. It does not prove that paired targets mean the same thing.",
+  matchingPlanRestored: "Target choices restored. Verify and compare again to refresh the result.",
+  matchingPlanErrors: {
+    "invalid-matching-plan": "This matching file is invalid or exceeds 64 KiB. Save a fresh target matching file and try again.",
+    "matching-receipts-mismatch": "This matching file belongs to different receipts or a different order. Choose the original before and after receipts, verify them, then restore it again.",
+  },
   targetOption: ({ index, claim }: { index: number; claim: string }) => `${index + 1}. ${claim}`,
   resultTitle: "Recorded changes", verified: "Both recorded payload checksums match",
   checksumNotice: "A matching checksum checks payload consistency. It does not prove who created a receipt, factual support, settlement or improvement. Counts describe retained excerpt rows, not independent sources.",
