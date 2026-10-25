@@ -1,0 +1,16 @@
+export const literatureClearRecoveryCopy = {
+  beforeClear: "A recovery of saved data will stay in this tab. Unsaved form edits are excluded. Export a backup first if you need to keep your library after closing the tab.",
+  title: "Recover the cleared saved library",
+  notice: "This tab keeps the saved library from immediately before clearing, including saved review focus, exact paper metadata, screening and notes. Unsaved form edits are not included. Restore works only while the saved library is empty or already identical. New work is never overwritten.",
+  retention: "This recovery stays only in this tab. Download its private JSON backup before leaving. A native leave warning remains until you restore or explicitly discard this recovery; browsers may suppress that warning.",
+  papers: "Saved papers in this recovery",
+  restore: "Restore cleared saved library",
+  restoring: "Restoring cleared saved library…",
+  download: "Download cleared library backup",
+  prepared: "Cleared-library JSON download prepared. Keep it somewhere private; this tab still retains the recovery.",
+  discard: "Discard this recovery",
+  discardConfirm: "Discard this tab's cleared-library recovery? Download its private JSON backup first if you need to keep it. This does not change the current saved library.",
+  discarded: "Cleared-library recovery discarded from this tab.",
+  restored: "The cleared saved library is restored.",
+  changed: "The saved library contains new or different work. Nothing was replaced. Download this recovery, then review it through the normal backup import.",
+} as const;

@@ -60,6 +60,17 @@ The candidate is not production delivery or evidence of independent demand.
    target refuses the entire update. Notes, metadata, saved order and review focus
    stay intact. Unsaved editors are not submitted and may become stale after a
    deliberate bulk change. Cancel the preview to choose a fresh set of papers.
+   Clearing a valid saved library first retains its validated saved contents in
+   this tab under the same workspace lock. Use **Restore cleared saved library**
+   or download its private JSON backup. Restore refuses to replace new work in
+   this or another tab; an identical already-restored library is safe to retain.
+   The checkpoint excludes unsaved form edits. Removal or readback failures keep
+   the recovery available for download, even if storage becomes inaccessible.
+   If saved data cannot be read at all before clearing, deletion is refused;
+   the explicit corrupt-JSON clear is limited to data that was actually read.
+   Restore or explicitly discard it before clearing again. The tab requests a
+   native leave warning while this recovery exists, including after download;
+   browsers may suppress that warning. No checkpoint is uploaded or auto-saved.
 4. Select two papers and choose **Prepare comparison**. This opens an editable Deep
    question with the saved review question and both exact links. Notes and screening
    decisions are omitted. Review the question and visible budget before submitting.
