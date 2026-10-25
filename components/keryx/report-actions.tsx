@@ -1,40 +1,77 @@
 "use client";
 
-
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord, QueryRun } from "@/lib/types";
 import { researchReportFilename, researchReportMarkdown } from "@/lib/research-report-export";
 import { evidenceProcurementCopy } from "@/lib/evidence-procurement/copy";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
+type Props = { run: QueryRun; meta: AskMeta | null; payments: PaymentRecord[] };
+type Notice = "reportActions.copied" | "reportActions.copyUnavailable"
+  | "reportActions.downloaded" | "reportActions.downloadUnavailable";
 
+export function ReportActions(props: Props) {
+  // A previous report's in-flight clipboard result must not label a new report.
+  return <ReportActionsForRun key={props.run.id} {...props} />;
+}
 
-
-
-
-export function ReportActions({ run, meta, payments }: { run: QueryRun; meta: AskMeta | null; payments: PaymentRecord[] }) {
+function ReportActionsForRun({ run, meta, payments }: Props) {
   const copy = useUiMessages();
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [copying, setCopying] = useState(false);
+  const copyPending = useRef(false);
   const text = () => researchReportMarkdown(run, meta, payments);
-  const buttonClass = "min-h-11 border border-line bg-paper px-3 py-2 font-mono text-xs hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal";
-  return <div className="mt-2 flex flex-wrap items-center gap-2">
-    <button type="button" className={buttonClass} onClick={() => {
-      if (!navigator.clipboard?.writeText) { setMessage(copy("reportActions.copyUnavailable")); return; }
-      try {
-      void navigator.clipboard.writeText(text()).then(() => setMessage(copy("reportActions.copied")), () => setMessage(copy("reportActions.copyUnavailable")));
-      } catch { setMessage(copy("reportActions.copyUnavailable")); }
-    }}>{copy("reportActions.copy")}</button>
-    <button type="button" className={buttonClass} onClick={() => {
-      try {
+  const buttonClass = "inline-flex min-h-11 max-w-full items-center justify-center gap-2 border px-4 py-3 font-mono text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal";
+  const failed = notice === "reportActions.copyUnavailable" || notice === "reportActions.downloadUnavailable";
+
+  async function copyReport() {
+    if (copyPending.current) return;
+    copyPending.current = true;
+    setCopying(true);
+    setNotice(null);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(text());
+      setNotice("reportActions.copied");
+    } catch {
+      setNotice("reportActions.copyUnavailable");
+    } finally {
+      copyPending.current = false;
+      setCopying(false);
+    }
+  }
+
+  function downloadReport() {
+    try {
       const url = URL.createObjectURL(new Blob([text()], { type: "text/markdown;charset=utf-8" }));
       const link = document.createElement("a");
-      link.href = url; link.download = researchReportFilename(run.id); link.click();
+      link.href = url;
+      link.download = researchReportFilename(run.id);
+      link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setMessage(copy("reportActions.downloaded"));
-      } catch { setMessage(copy("reportActions.downloadUnavailable")); }
-    }}>{copy("reportActions.download")}</button>
-    <a href={`/dispatch/${encodeURIComponent(run.id)}`} className={buttonClass}>{copy("reportActions.openSaved")}</a>
-    <a href="/operator/evidence" className={buttonClass}>{evidenceProcurementCopy.links.commission}</a>
-    <span role="status" className="text-xs text-ink-3">{message}</span>
+      setNotice("reportActions.downloaded");
+    } catch {
+      setNotice("reportActions.downloadUnavailable");
+    }
+  }
+
+  return <div className="mt-3 border border-line bg-paper-2 p-3 sm:p-4">
+    <div className="flex flex-wrap items-start gap-2">
+      <button type="button" aria-busy={copying} aria-disabled={copying}
+        className={buttonClass + " border-ink bg-ink text-paper hover:bg-ink/85 aria-disabled:cursor-wait"}
+        onClick={() => { void copyReport(); }}>
+        {copying
+          ? <svg aria-hidden="true" className="h-4 w-4 shrink-0 motion-safe:animate-spin" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="10" cy="10" r="7" opacity=".25" /><path d="M10 3a7 7 0 0 1 7 7" strokeLinecap="round" /></svg>
+          : <svg aria-hidden="true" className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="8" y="8" width="12" height="13" rx="1" /><path d="M16 8V3H4v14h4" /></svg>}
+        <span>{copy("reportActions.copy")}</span>
+      </button>
+      <button type="button" className={buttonClass + " border-line bg-paper text-ink hover:border-ink hover:bg-paper-2"} onClick={downloadReport}>
+        <svg aria-hidden="true" className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4" /></svg>
+        <span>{copy("reportActions.download")}</span>
+      </button>
+      <a href={`/dispatch/${encodeURIComponent(run.id)}`} className={buttonClass + " border-transparent text-ink-2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink"}>{copy("reportActions.openSaved")}<span aria-hidden="true">→</span></a>
+      <a href="/operator/evidence" className={buttonClass + " border-transparent text-ink-2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink"}>{evidenceProcurementCopy.links.commission}<span aria-hidden="true">→</span></a>
+    </div>
+    <p role="status" aria-atomic="true" className={`mt-2 min-h-5 text-[13px] leading-relaxed ${failed ? "text-seal" : "text-paid"}`}>{notice ? copy(notice) : ""}</p>
   </div>;
 }
