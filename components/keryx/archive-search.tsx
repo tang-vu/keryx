@@ -93,7 +93,7 @@ export function ArchiveSearch({
           onKeyDown={event => { if (!event.nativeEvent.isComposing && event.key === "Escape" && searching) { event.preventDefault(); clearSearch(); } }}
           placeholder={placeholder ?? copy("archiveFilter.placeholder")}
           aria-label={copy("archiveFilter.label")}
-          className="min-h-6 w-full min-w-0 bg-transparent font-mono text-base text-ink outline-none placeholder:text-ink-3 sm:text-[13px]"
+          className="min-h-6 w-full min-w-0 bg-transparent font-mono text-base text-ink outline-none placeholder:text-ink-3 sm:text-[13px] [&::-webkit-search-cancel-button]:appearance-none"
         />
       </label>
       {searching && <button type="button" onClick={clearSearch} aria-label={searchCopy.clear}

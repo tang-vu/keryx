@@ -178,6 +178,9 @@ it.each([320, 390, 768, 1440])("keeps the authored archive readable and operable
     expect(await search.evaluate(element => getComputedStyle(element.closest("label")!.parentElement!).outlineStyle)).toBe("solid");
     await search.fill("no result fixture");
     await page.getByRole("status").filter({ hasText: "0 found" }).waitFor();
+    const inputBounds = (await search.boundingBox())!;
+    await page.mouse.click(inputBounds.x + inputBounds.width - 8, inputBounds.y + inputBounds.height / 2);
+    expect(await search.inputValue(), "Input has no second native clear action").toBe("no result fixture");
     const clear = page.getByRole("button", { name: "Clear search" });
     expect((await clear.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await clear.click();
