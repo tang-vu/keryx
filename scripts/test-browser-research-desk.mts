@@ -11,9 +11,14 @@ import { assertResearchBrowserFixtureGraph, signedOutResearchAuthFixture } from 
 const output = process.env.KERYX_UX_SCREENSHOT_DIR;
 if (output) await mkdir(output, { recursive: true });
 const bundle = await build({
-  stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';
+  stdin: { contents: `import React,{useEffect,useState}from 'react';import{createRoot}from'react-dom/client';
     import{ResearchChat}from'./components/keryx/research-chat';
-    createRoot(document.getElementById('root')).render(<ResearchChat introduceProduct/>);`,
+    import{ResearchTurn}from'./components/keryx/research-turn';
+    function Fixture(){const[turn,setTurn]=useState(null);useEffect(()=>{
+      const update=e=>setTurn({id:1,question:'Local motion preview',payer:'offline fixture',...e.detail});
+      window.addEventListener('fixture:turn',update);return()=>window.removeEventListener('fixture:turn',update)},[]);
+      return <><ResearchChat introduceProduct/><div className="mx-auto max-w-[960px] px-4 pb-8 sm:px-[30px]">{turn&&<ResearchTurn turn={turn}/>}</div></>}
+    createRoot(document.getElementById('root')).render(<Fixture/>);`,
     loader: "tsx", resolveDir: process.cwd() },
   bundle: true, write: false, platform: "browser", format: "iife", metafile: true,
   external: ["@/lib/x402-client-sign", "@/lib/payments/browser-fetch-price-policy"],
@@ -30,8 +35,9 @@ const fonts = `@font-face{font-family:DeskDisplay;src:url('/fonts/bodoni-moda-la
   :root{--font-bodoni:DeskDisplay;--font-spectral:DeskSerif;--font-spline-mono:DeskMono}`;
 const browser = await chromium.launch({ headless: true });
 try {
-  for (const width of [320, 390, 768, 1440]) {
-    const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce", serviceWorkers: "block" });
+  for (const { width, reducedMotion } of [320, 390, 768, 1440].flatMap(width =>
+    (["reduce", "no-preference"] as const).map(reducedMotion => ({ width, reducedMotion })))) {
+    const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion, serviceWorkers: "block" });
     const errors: string[] = [], requests: string[] = [];
     const page = await context.newPage();
     page.on("pageerror", error => errors.push(error.message));
@@ -57,8 +63,25 @@ try {
       await page.addScriptTag({ content: bundle.outputFiles[0].text });
       const question = page.getByRole("textbox", { name: "What do you want to know?" });
       await question.waitFor();
+      await question.fill("Editable during entrance; never submit");
+      assert.equal(await question.inputValue(), "Editable during entrance; never submit");
+      const entrance = await page.evaluate(() => document.getAnimations().filter(animation =>
+        animation instanceof CSSAnimation && animation.animationName.startsWith("kxResearch")).map(animation => ({
+          name: (animation as CSSAnimation).animationName, timing: animation.effect!.getTiming(),
+          keys: (animation.effect as KeyframeEffect).getKeyframes().flatMap(frame => Object.keys(frame)) })));
+      if (reducedMotion === "reduce") assert.deepEqual(entrance, [], "Reduced motion has no research animation");
+      else {
+        assert(entrance.some(a => a.name === "kxResearchComposer") && entrance.some(a => a.name === "kxResearchRule"));
+        for (const animation of entrance) {
+          assert(Number(animation.timing.duration) + animation.timing.delay <= 700, "Entrances settle within 700ms");
+          assert(animation.keys.every(key => ["offset", "computedOffset", "easing", "composite", "opacity", "transform"].includes(key)),
+            "Research motion cannot animate layout or blur");
+        }
+      }
       await page.getByTestId("composer-publication-notice").waitFor();
       await page.evaluate(() => document.fonts.ready);
+      await page.evaluate(async () => { await Promise.all(document.getAnimations().filter(a =>
+        a instanceof CSSAnimation && a.animationName.startsWith("kxResearch") && a.effect?.getTiming().iterations === 1).map(a => a.finished)); });
       const geometry = await page.evaluate(`(() => {
         const rect = selector => document.querySelector(selector).getBoundingClientRect().toJSON();
         const headline = document.createRange(); headline.selectNodeContents(document.querySelector("h1"));
@@ -72,7 +95,7 @@ try {
         "Guide and actual headline text must not intersect");
       assert(geometry.question.bottom < geometry.action.top);
       if (width < 640) assert(geometry.action.bottom + 107 <= 640, "Primary action fits a 640px mobile viewport including navigation and settlement strip");
-      if (output) await page.screenshot({ path: path.join(output, `desk-${width}.png`), fullPage: true });
+      if (output) await page.screenshot({ path: path.join(output, `desk-${width}-${reducedMotion}.png`), fullPage: true });
       const examples = page.locator('[aria-label="Example questions"] button');
       assert.equal(await examples.count(), 2);
       await examples.first().click();
@@ -87,10 +110,36 @@ try {
       await options.focus(); await page.keyboard.press("Enter");
       assert.equal(await page.getByLabel("Maximum budget in USDC").isVisible(), true);
       assert.equal(await page.getByTestId("composer-payer-notice").isVisible(), true);
-      if (output) await page.screenshot({ path: path.join(output, `desk-${width}-options.png`), fullPage: true });
+      const state = { status: "streaming", budget: .05, steps: [{ phase: "discover", message: "Finding sources worth reading…", ts: 1 }],
+        decisions: [], citations: [], payments: [], run: null, meta: { engine: "heuristic", mode: "offline" }, error: null, errorKind: null, retryAfter: null };
+      await page.evaluate(state => window.dispatchEvent(new CustomEvent("fixture:turn", { detail: { state } })), state);
+      const live = page.locator(".kx-research-live");
+      await live.waitFor();
+      assert.equal(await page.getByRole("progressbar").count(), 0, "Indeterminate decoration cannot claim progress or settlement");
+      if (reducedMotion === "no-preference") {
+        await page.waitForFunction(() => document.querySelector(".kx-research-live")?.getAnimations()[0]?.startTime != null);
+        const start = await live.evaluate(element => element.getAnimations()[0].startTime);
+        await page.evaluate(state => window.dispatchEvent(new CustomEvent("fixture:turn", { detail: { state: {
+          ...state, steps: [...state.steps, { phase: "synthesize", message: "Comparing the recorded evidence", ts: 2 }] } } })), state);
+        await live.getByText("Comparing the recorded evidence").waitFor();
+        assert.equal(await live.evaluate(element => element.getAnimations()[0].startTime), start, "Trace updates must not replay the panel entrance");
+      }
+      await live.scrollIntoViewIfNeeded();
+      if (output) await page.screenshot({ path: path.join(output, `desk-${width}-${reducedMotion}-research.png`), fullPage: true });
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      for (const selector of [".kx-research-live", ".kx-research-orbit", ".kx-research-track > span", ".kx-research-composer"]) {
+        assert.equal(await page.locator(selector).evaluate(element => getComputedStyle(element).animationName), "none");
+      }
+      await page.evaluate(state => window.dispatchEvent(new CustomEvent("fixture:turn", { detail: { state, stopped: true } })), state);
+      assert.equal(await live.count(), 0);
+      await page.getByText(/Stopped waiting for this research/).waitFor();
+      await page.evaluate(state => window.dispatchEvent(new CustomEvent("fixture:turn", { detail: {
+        state: { ...state, status: "error", error: "Local fixture failure" } } })), state);
+      assert.equal(await live.count(), 0);
+      await page.getByRole("alert").filter({ hasText: "Local fixture failure" }).waitFor();
       assert.deepEqual(errors, []);
       assert(requests.includes("/api/ask/visibility") && requests.includes("/api/research/availability"));
     } finally { await context.unrouteAll({ behavior: "wait" }); await context.close(); }
   }
-  console.log("PASS: styled real research desk at 320/390/768/1440px, local fonts, non-overlapping hero, primary action, example focus, native radio/disclosure keyboard controls; GET-only fixture.");
+  console.log("PASS: styled research at 320/390/768/1440px with full/reduced motion; immediate editing, bounded compositor entrances, persistent truthful live panel, stopped/error cleanup, native keyboard controls and no overflow; GET-only fixture.");
 } finally { await browser.close(); }

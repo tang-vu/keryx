@@ -141,17 +141,17 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
     reset();
   };
   const hasTurns = visibleHistory.length > 0 || visibleRequest !== null;
-  return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-tour="hero" aria-label={message("researchChat.label")}>
-    <header className="relative mb-5 min-h-[116px] border-b border-line pb-5 sm:mb-6 sm:min-h-[168px] sm:pb-6">
+  return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-tour="hero" data-research-intro={introduceProduct ? "" : undefined} aria-label={message("researchChat.label")}>
+    <header className="kx-research-hero relative mb-5 min-h-[116px] border-b border-line pb-5 sm:mb-6 sm:min-h-[168px] sm:pb-6">
       <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute right-0 top-[44px] h-[56px] w-[56px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
         <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p data-testid="hero-kicker" className={`${introduceProduct ? "max-w-[calc(100%_-_140px)] sm:max-w-none " : ""}font-mono text-[11px] uppercase tracking-[0.14em] text-seal`}>{introduceProduct ? productGuideCopy("product.heroKicker") : message("researchChat.kicker")}</p>
+        <p data-testid="hero-kicker" className={`kx-research-kicker ${introduceProduct ? "max-w-[calc(100%_-_140px)] sm:max-w-none " : ""}font-mono text-[11px] uppercase tracking-[0.14em] text-seal`}>{introduceProduct ? productGuideCopy("product.heroKicker") : message("researchChat.kicker")}</p>
         <div data-testid="hero-guide" className="absolute right-0 top-0 sm:static sm:mr-[156px]"><OnboardingTour /></div>
       </div>
-      <h1 className={`mt-3 font-display ${introduceProduct ? "text-[clamp(30px,9vw,64px)] tracking-[-0.035em]" : "text-[clamp(32px,5vw,46px)]"} leading-none sm:leading-tight`}>{introduceProduct ? productGuideCopy("product.heroTitle") : message("researchChat.title")}</h1>
-      <p className="mt-3 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:max-w-[min(60ch,calc(100%_-_156px))] sm:text-lg sm:leading-relaxed">{introduceProduct && payer === "treasury" ? productGuideCopy("product.heroBody") : message("researchChat.introduction")}</p>
+      <h1 className={`kx-research-title mt-3 font-display ${introduceProduct ? "text-[clamp(30px,9vw,64px)] tracking-[-0.035em]" : "text-[clamp(32px,5vw,46px)]"} leading-none sm:leading-tight`}>{introduceProduct ? productGuideCopy("product.heroTitle") : message("researchChat.title")}</h1>
+      <p className="kx-research-intro mt-3 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:max-w-[min(60ch,calc(100%_-_156px))] sm:text-lg sm:leading-relaxed">{introduceProduct && payer === "treasury" ? productGuideCopy("product.heroBody") : message("researchChat.introduction")}</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label={message("researchChat.turnsLabel")}>
       {visibleHistory.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}

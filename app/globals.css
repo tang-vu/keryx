@@ -255,3 +255,132 @@ input[type="range"]:focus-visible {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Research choreography: content works without animation or JavaScript.
+ * Entrances change only opacity/transform; feedback never delays an action. */
+.kx-research-hero { position: relative; }
+.kx-research-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--brass), transparent 72%);
+  transform-origin: left;
+  pointer-events: none;
+}
+.kx-research-composer {
+  position: relative;
+  transition: border-color 180ms ease, box-shadow 220ms ease;
+}
+.kx-research-composer::before {
+  content: "";
+  position: absolute;
+  inset: -1px auto auto -1px;
+  width: 56px;
+  height: 2px;
+  background: var(--seal);
+  transform-origin: left;
+  transition: transform 280ms cubic-bezier(.2,.8,.2,1);
+  pointer-events: none;
+}
+.kx-research-composer:focus-within {
+  border-color: var(--brass);
+  box-shadow: 0 12px 36px -24px rgb(27 23 18 / .35);
+}
+.kx-research-composer:focus-within::before { transform: scaleX(1.8); }
+.kx-research-composer textarea {
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.kx-research-depth { transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease; }
+.kx-research-submit { position: relative; overflow: hidden; isolation: isolate; }
+.kx-research-submit::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 20%, rgb(255 255 255 / .16) 50%, transparent 80%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.kx-research-submit svg, .kx-research-example svg {
+  transition: transform 220ms cubic-bezier(.2,.8,.2,1);
+}
+.kx-research-submit:enabled:focus-visible svg { transform: translate(2px, -2px); }
+.kx-research-example:enabled:focus-visible svg { transform: translateX(3px); }
+.kx-research-live { position: relative; overflow: hidden; }
+.kx-research-signal { position: relative; display: block; flex: none; width: 44px; height: 44px; color: var(--seal); }
+.kx-research-signal::before, .kx-research-signal::after {
+  content: "";
+  position: absolute;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+.kx-research-signal::before { inset: 3px; opacity: .2; }
+.kx-research-signal::after { inset: 10px; border-style: dashed; opacity: .45; }
+.kx-research-orbit { position: absolute; inset: 3px; }
+.kx-research-orbit::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.kx-research-signal-core {
+  position: absolute;
+  inset: 19px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.kx-research-track { height: 2px; overflow: hidden; background: var(--line-2); }
+.kx-research-track > span {
+  display: block;
+  width: 36%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--brass), transparent);
+}
+
+@keyframes kxResearchArrive {
+  from { opacity: .3; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes kxResearchComposer {
+  from { opacity: .72; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes kxResearchRule {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes kxResearchSheen { to { transform: translateX(120%); } }
+@keyframes kxResearchOrbit { to { transform: rotate(360deg); } }
+@keyframes kxResearchScan {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(380%); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-research-intro] .kx-research-kicker { animation: kxResearchArrive 440ms cubic-bezier(.16,1,.3,1) both; }
+  [data-research-intro] .kx-research-title { animation: kxResearchArrive 560ms 40ms cubic-bezier(.16,1,.3,1) both; }
+  [data-research-intro] .kx-research-intro { animation: kxResearchArrive 560ms 90ms cubic-bezier(.16,1,.3,1) both; }
+  [data-research-intro] .kx-research-hero::after { animation: kxResearchRule 680ms cubic-bezier(.16,1,.3,1) both; }
+  [data-research-intro] .kx-research-composer { animation: kxResearchComposer 560ms 120ms cubic-bezier(.16,1,.3,1) both; }
+  .kx-research-request { animation: kxResearchArrive 320ms cubic-bezier(.16,1,.3,1) both; }
+  .kx-research-live, .kx-research-answer > :first-child { animation: kxResearchArrive 420ms cubic-bezier(.16,1,.3,1) both; }
+  .kx-research-orbit { animation: kxResearchOrbit 2200ms linear infinite; }
+  .kx-research-signal::after { animation: kxResearchOrbit 12s linear reverse infinite; }
+  .kx-research-track > span { animation: kxResearchScan 2800ms ease-in-out infinite; }
+  .kx-research-submit:enabled:focus-visible::before { animation: kxResearchSheen 550ms ease-out; }
+  @media (hover: hover) and (pointer: fine) {
+    .kx-research-depth { transition: transform 180ms cubic-bezier(.2,.8,.2,1), color 180ms ease, background-color 180ms ease, border-color 180ms ease; }
+    .kx-research-depth:has(input:enabled):hover { transform: translateY(-2px); }
+    .kx-research-depth:has(input:enabled):active { transform: translateY(0); }
+    .kx-research-submit:enabled:hover::before { animation: kxResearchSheen 550ms ease-out; }
+    .kx-research-submit:enabled:hover svg { transform: translate(2px, -2px); }
+    .kx-research-example:enabled:hover svg { transform: translateX(3px); }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kx-research-composer::before, .kx-research-submit svg, .kx-research-example svg { transform: none !important; }
+}
