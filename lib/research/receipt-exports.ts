@@ -4,6 +4,8 @@ import { researchExports } from "./surface-result";
 import { sourceClaimReceiptSchema } from "../sources/public-source-claim";
 import { bibliographyFromCheckedReceipt } from "./bibliographic-task-result";
 import { paperReferencesCslJson } from "../papers/reference-export";
+import { observedPdfTextScope, pdfTextScopeSchema } from "../web-research/pdf-text-scope";
+import { observedHtmlSectionScope, htmlSectionScopeSchema } from "../web-research/html-section-scope";
 
 const text = z.string().max(4096);
 const scholarly = z.object({
@@ -23,6 +25,26 @@ const citation = z.object({ marker: text, sourceId: text.default(""), sourceName
 const evidence = z.object({ marker: text, sourceId: text, sourceName: text, ...identity,
   quote: z.string().max(240), support: z.number().finite(), qualifiesForAnswer: z.boolean().optional(), qualifiesForReward: z.boolean() });
 const claim = z.object({ claimIndex: z.number().int().nonnegative(), claim: text, evidence: z.array(z.unknown()).max(256) });
+const webProvenance = z.object({
+  retrievedAt: text, publisherGroup: text, normalizedBodyHash: text,
+  extraction: z.enum(["html", "text", "pdf"]), truncated: z.boolean(),
+  pdfTextScope: z.preprocess(observedPdfTextScope, pdfTextScopeSchema.optional()),
+  htmlSectionScope: z.preprocess(observedHtmlSectionScope, htmlSectionScopeSchema.optional()),
+});
+
+/** Read only the existing optional metadata; never discard a valid quote because
+ * an older receipt has incomplete extraction metadata, or mutate checked bytes. */
+function receiptWebProvenance(record: unknown) {
+  try {
+    if (!record || typeof record !== "object") return {};
+    const field = Object.getOwnPropertyDescriptor(record, "webProvenance");
+    if (!field || !("value" in field) || !field.value || typeof field.value !== "object" || Array.isArray(field.value)) return {};
+    const fields = Object.getOwnPropertyDescriptors(field.value);
+    if (Object.values(fields).some(value => !("value" in value))) return {};
+    const parsed = webProvenance.safeParse(Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, value.value])));
+    return parsed.success ? { webProvenance: parsed.data } : {};
+  } catch { return {}; }
+}
 
 /** Called only after receipt integrity and original task binding have been checked.
  * Parse the read model separately: an older or malformed optional ledger cannot break recovery. */
@@ -32,14 +54,14 @@ export function exportsFromCheckedReceipt(receipt: unknown) {
   const payload = parsed.success ? parsed.data.payload : {};
   const citations = (payload.citations ?? []).flatMap(value => {
     const item = citation.safeParse(value);
-    return item.success ? [{ ...item.data, ...(hasKnownSyntheticFingerprint(item.data) ? { evidenceProvenance: "synthetic-demo" as const } : {}), reward: item.data.rewardPlannedUsdc }] : [];
+    return item.success ? [{ ...item.data, ...receiptWebProvenance(value), ...(hasKnownSyntheticFingerprint(item.data) ? { evidenceProvenance: "synthetic-demo" as const } : {}), reward: item.data.rewardPlannedUsdc }] : [];
   });
   const claims = (payload.claims ?? []).flatMap(value => {
     const item = claim.safeParse(value); return item.success ? [item.data] : [];
   });
   const records = claims.flatMap(row => row.evidence.flatMap(value => {
     const item = evidence.safeParse(value);
-    return item.success ? [{ ...item.data, ...(hasKnownSyntheticFingerprint(item.data) ? { evidenceProvenance: "synthetic-demo" as const, qualifiesForAnswer: false, qualifiesForReward: false, support: 0 } : {}), claimIndex: row.claimIndex, claim: row.claim }] : [];
+    return item.success ? [{ ...item.data, ...receiptWebProvenance(value), ...(hasKnownSyntheticFingerprint(item.data) ? { evidenceProvenance: "synthetic-demo" as const, qualifiesForAnswer: false, qualifiesForReward: false, support: 0 } : {}), claimIndex: row.claimIndex, claim: row.claim }] : [];
   }));
   const input = { citations, subClaims: [] as string[], claimCoverage: claims.map(row => ({
     claimIndex: row.claimIndex, claim: row.claim, coverage: 0, coveredBy: [] as string[] })),

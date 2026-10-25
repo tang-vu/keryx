@@ -45,7 +45,9 @@ export function CitationEvidencePanel({ queryId, citation, evidence, payments, o
     ? ({ full_text: copy("citationEvidence.rssFullText"), excerpt: copy("citationEvidence.rssExcerpt"), abstract: copy("citationEvidence.rssAbstract"), metadata_only: copy("citationEvidence.rssMetadata") }[citation.publicDeliveryKind])
     : copy("citationEvidence.rssBody");
   const quotes = evidence.filter((item) =>
-    item.marker === citation.marker && item.sourceId === citation.sourceId && (item.qualifiesForAnswer ?? item.qualifiesForReward) && item.quote.trim().length > 0,
+    item.marker === citation.marker && item.sourceId === citation.sourceId &&
+    item.itemId === citation.itemId && item.itemUrl === citation.itemUrl && item.contentVersion === citation.contentVersion &&
+    (item.qualifiesForAnswer ?? item.qualifiesForReward) && item.quote.trim().length > 0,
   );
   const legs = payments.filter((payment) =>
     payment.kind === "citation" && payment.queryId === queryId && payment.sourceId === citation.sourceId &&

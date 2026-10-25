@@ -1,5 +1,6 @@
 import type { EvidenceRecord, QueryRun } from "../types";
 import { englishMessages } from "../i18n/messages";
+import { evidenceReadScope, evidenceReadScopeColumns } from "./evidence-matrix-read-scope";
 
 export type EvidenceMatrixInput = Pick<QueryRun, "subClaims" | "citations" | "evidence" | "claimCoverage">;
 export interface EvidenceMatrixRow {
@@ -49,12 +50,18 @@ export function evidenceCsvCell(value: string | number): string {
 
 export function evidenceMatrixCsv(run: EvidenceMatrixInput): string {
   const rows: (string | number)[][] = [["claim_index", "claim", "inspection_status", "source_marker", "source_id",
-    "publication", "article_title", "article_url", "published_at", "item_id", "content_version", "exact_excerpt", "evidence_provenance"]];
+    "publication", "article_title", "article_url", "published_at", "item_id", "content_version", "exact_excerpt", "evidence_provenance",
+    ...evidenceReadScopeColumns.map(([key]) => key)]];
   for (const row of buildEvidenceMatrix(run)) {
-    if (!row.evidence.length) rows.push([row.claimIndex, row.claim, row.status, "", "", "", "", "", "", "", "", "", ""]);
-    for (const item of row.evidence) rows.push([row.claimIndex, row.claim, row.status, item.marker, item.sourceId,
+    if (!row.evidence.length) rows.push([row.claimIndex, row.claim, row.status, "", "", "", "", "", "", "", "", "", "",
+      ...evidenceReadScopeColumns.map(() => "")]);
+    for (const item of row.evidence) {
+      const scope = evidenceReadScope(item);
+      rows.push([row.claimIndex, row.claim, row.status, item.marker, item.sourceId,
       item.sourceName, item.itemTitle ?? englishMessages["evidenceMatrix.notRecorded"], item.itemUrl ?? englishMessages["evidenceMatrix.notRecorded"],
-      item.itemPublishedAt ?? englishMessages["evidenceMatrix.notRecorded"], item.itemId ?? englishMessages["evidenceMatrix.notRecorded"], item.contentVersion ?? englishMessages["evidenceMatrix.notRecorded"], item.quote, item.evidenceProvenance === "synthetic-demo" ? englishMessages["evidenceMatrix.syntheticExport"] : englishMessages["evidenceMatrix.unclassifiedExport"]]);
+      item.itemPublishedAt ?? englishMessages["evidenceMatrix.notRecorded"], item.itemId ?? englishMessages["evidenceMatrix.notRecorded"], item.contentVersion ?? englishMessages["evidenceMatrix.notRecorded"], item.quote, item.evidenceProvenance === "synthetic-demo" ? englishMessages["evidenceMatrix.syntheticExport"] : englishMessages["evidenceMatrix.unclassifiedExport"],
+      ...evidenceReadScopeColumns.map(([key]) => scope[key])]);
+    }
   }
   return rows.map((row) => row.map(evidenceCsvCell).join(",")).join("\r\n") + "\r\n";
 }
