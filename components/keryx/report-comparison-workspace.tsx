@@ -8,6 +8,9 @@ import { compareSavedResearch, MAX_COMPARISON_RECEIPT_BYTES, ReportComparisonErr
 import { exportReportComparison, type ComparisonExportFormat } from "@/lib/research/report-comparison-export";
 import { COMPARISON_FILTERS, filterComparisonTargets, indexComparisonTargets, matchesComparisonFilter,
   type ComparisonFilter } from "@/lib/research/report-comparison-view";
+import { createReportComparisonPlan, MAX_COMPARISON_PLAN_BYTES, ReportComparisonPlanError,
+  restoreReportComparisonPlan } from "@/lib/research/report-comparison-plan";
+import { downloadBrowserText } from "@/lib/browser-text-download";
 
 type Side = "before" | "after";
 type Copy = typeof reportComparisonCopy;
@@ -38,6 +41,7 @@ export function ReportComparisonWorkspace() {
   const [matches, setMatches] = useState<TargetMatch[] | undefined>();
   const [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<ComparisonFilter>("all"), [query, setQuery] = useState("");
+  const [planLoading, setPlanLoading] = useState(false), [planRestored, setPlanRestored] = useState(false);
   const targetIndex = useMemo(() => result ? indexComparisonTargets(result) : [], [result]);
   const visibleTargets = useMemo(() => filterComparisonTargets(targetIndex, filter, query), [targetIndex, filter, query]);
   const filterCounts = useMemo(() => Object.fromEntries(COMPARISON_FILTERS.map(value =>
@@ -45,7 +49,7 @@ export function ReportComparisonWorkspace() {
   const revision = useRef(0), reads = useRef({ before: 0, after: 0 });
   const form = useRef<HTMLFormElement>(null);
   function resetView() { setFilter("all"); setQuery(""); }
-  function invalidate() { revision.current++; setResult(null); setError(null); setBusy(false); resetView(); }
+  function invalidate() { revision.current++; setResult(null); setError(null); setBusy(false); setPlanLoading(false); setPlanRestored(false); resetView(); }
   async function choose(side: Side, file: File | undefined) {
     invalidate(); setModel(null); setMatches(undefined);
     const token = ++reads.current[side];
@@ -61,7 +65,7 @@ export function ReportComparisonWorkspace() {
     }
   }
   async function compare() {
-    if (files.before.text === null || files.after.text === null) return;
+    if (planLoading || files.before.text === null || files.after.text === null) return;
     const token = revision.current; setBusy(true); setResult(null); setError(null); resetView();
     try {
       const next = await compareSavedResearch({ before: files.before.text, after: files.after.text, matches });
@@ -80,6 +84,24 @@ export function ReportComparisonWorkspace() {
   function clear() {
     reads.current.before++; reads.current.after++; invalidate();
     setFiles({ before: emptyFile(), after: emptyFile() }); setModel(null); setMatches(undefined); form.current?.reset();
+  }
+  function saveMatchingPlan() {
+    if (!model) return;
+    downloadBrowserText(JSON.stringify(createReportComparisonPlan(model, selected), null, 2) + "\n",
+      "keryx-report-matching.json", "application/json;charset=utf-8");
+  }
+  async function restoreMatchingPlan(file: File | undefined) {
+    if (!file || !model) return;
+    invalidate(); const token = revision.current; setPlanLoading(true);
+    try {
+      if (file.size > MAX_COMPARISON_PLAN_BYTES) throw new ReportComparisonPlanError("invalid-matching-plan");
+      const raw = new TextDecoder("utf-8", { fatal: true }).decode(await file.arrayBuffer());
+      const pairs = restoreReportComparisonPlan(raw, model);
+      if (revision.current === token) { setMatches(pairs); setPlanRestored(true); }
+    } catch (failure) {
+      if (revision.current === token) setError(failure instanceof ReportComparisonPlanError
+        ? copy.matchingPlanErrors[failure.code] : copy.errors.file);
+    } finally { if (revision.current === token) setPlanLoading(false); }
   }
   function download(format: ComparisonExportFormat) {
     if (!result) return;
@@ -123,10 +145,19 @@ export function ReportComparisonWorkspace() {
             </select>
           </label>)}
         </div>
+        <div className="mt-6 border-t border-line pt-4">
+          <p className="max-w-3xl font-serif text-sm leading-relaxed text-ink-2">{copy.matchingPlanNotice}</p>
+          <button type="button" disabled={planLoading} onClick={saveMatchingPlan} className="mt-3 border border-line px-4 py-3 font-mono text-xs disabled:opacity-50">{copy.saveMatchingPlan}</button>
+          <label htmlFor="comparison-matching-plan" className="mt-4 block font-mono text-xs">{copy.restoreMatchingPlan}</label>
+          <input id="comparison-matching-plan" type="file" accept=".json,application/json" className={`${fieldClass} mt-2`}
+            onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ""; void restoreMatchingPlan(file); }} />
+          {planLoading && <p role="status" className="mt-3 text-sm">{copy.reading}</p>}
+          {planRestored && <p role="status" className="mt-3 text-sm">{copy.matchingPlanRestored}</p>}
+        </div>
         {!result && matches !== undefined && <p role="status" className="mt-4 font-mono text-xs text-seal">{copy.matchingChanged}</p>}
       </fieldset>}
       <div className="flex flex-wrap items-center gap-3">
-        <button disabled={busy || files.before.text === null || files.after.text === null} className="bg-ink px-5 py-3 font-mono text-sm text-paper disabled:cursor-wait disabled:opacity-50">{busy ? copy.comparing : copy.compare}</button>
+        <button disabled={busy || planLoading || files.before.text === null || files.after.text === null} className="bg-ink px-5 py-3 font-mono text-sm text-paper disabled:cursor-wait disabled:opacity-50">{busy ? copy.comparing : copy.compare}</button>
         <button type="button" onClick={clear} className="border border-line px-4 py-3 font-mono text-xs">{copy.clear}</button>
       </div>
       {error && <p role="alert" className="border border-seal p-4 font-serif text-sm text-seal">{error}</p>}

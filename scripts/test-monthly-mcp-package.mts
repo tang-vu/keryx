@@ -28,6 +28,11 @@ try {
   const comparison = await client.callTool({ name: comparisonTool.name, arguments: { before: comparisonReceipt, after: comparisonReceipt } });
   assert.notEqual(comparison.isError, true);
   assert.equal((comparison.structuredContent as { comparison: { sameReceipt: boolean } }).comparison.sameReceipt, true);
+  const matchingPlan = (comparison.structuredContent as { matchingPlan: { format: string; matches: unknown[] } }).matchingPlan;
+  assert.equal(matchingPlan.format, "keryx-report-matching-v1"); assert.deepEqual(matchingPlan.matches, []);
+  const restoredComparison = await client.callTool({ name: comparisonTool.name,
+    arguments: { before: comparisonReceipt, after: comparisonReceipt, matchingPlan: JSON.stringify(matchingPlan) } });
+  assert.notEqual(restoredComparison.isError, true); assert.deepEqual(restoredComparison.structuredContent, comparison.structuredContent);
   const invalidComparison = await client.callTool({ name: comparisonTool.name, arguments: { before: "PRIVATE_FORBIDDEN_COMPARISON", after: comparisonReceipt } });
   assert.equal(invalidComparison.isError, true); assert(!JSON.stringify(invalidComparison).includes("PRIVATE_FORBIDDEN_COMPARISON"));
   for (const input of [{ question: "Synthetic review request", reviewFirst: true }, { question: "Synthetic review request", mode: "review-first" }, { question: "Synthetic review request", researchMode: "review-first" }]) {

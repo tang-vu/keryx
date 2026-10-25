@@ -10,11 +10,15 @@ modifications and licenses are listed in `THIRD-PARTY-NOTICES.txt`.
 
 ## Compare saved receipts locally (source candidate)
 
-`compare_saved_research({before, after, matches?})` accepts two version-1 research
+`compare_saved_research({before, after, matches?, matchingPlan?})` accepts two version-1 research
 receipt JSON strings, at most 512 KiB each. It verifies both recorded payload
 checksums and compares exact retained excerpt rows, source versions and reading
 context. Unique identical targets are paired automatically; explicit one-to-one
 `matches` use recorded claim indices. `[]` leaves all targets unmatched.
+Alternatively, `matchingPlan` takes saved `keryx-report-matching-v1` JSON (up to
+64 KiB), bound to those exact receipt payload checksums in that order. Do not
+combine it with `matches`. The result includes a reusable `matchingPlan` object
+containing only checksums and target indices, alongside `comparison`.
 Missing historical ledgers stay unknown. A checksum is not authenticity, factual
 support, settlement or proof of improvement; row counts are not independent sources.
 

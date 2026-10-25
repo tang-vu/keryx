@@ -111,6 +111,45 @@ try {
     assert(text.includes(JSON.parse(receipt("v1")).integrity.digest));
     if (format === "json") { const comparison = JSON.parse(text); assert.equal(comparison.summary.addedRows, 1); assert.equal(comparison.summary.removedRows, 1); }
   }
+  // Matching plans retain selections without private report text and cannot be
+  // reused against a different ordered receipt pair.
+  const planDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: copy.saveMatchingPlan, exact: true }).click();
+  const savedPlan = await planDownload, savedPlanPath = await savedPlan.path(); assert(savedPlanPath);
+  assert.equal(savedPlan.suggestedFilename(), "keryx-report-matching.json");
+  const planText = await readFile(savedPlanPath, "utf8"), plan = JSON.parse(planText);
+  assert.equal(plan.format, "keryx-report-matching-v1"); assert.deepEqual(plan.matches, [{ beforeClaimIndex: 0, afterClaimIndex: 0 }]);
+  assert.deepEqual(Object.keys(plan).sort(), ["afterDigest", "beforeDigest", "format", "matches"]);
+  await page.getByRole("combobox", { name: copy.matchAfter }).selectOption("");
+  await page.getByRole("button", { name: copy.compare, exact: true }).click(); await result.waitFor();
+  assert.equal(await result.getByText(copy.match.unmatched, { exact: true }).count(), 2);
+  await page.getByLabel(copy.restoreMatchingPlan, { exact: true }).setInputFiles(file("matching.json", planText));
+  await page.getByText(copy.matchingPlanRestored, { exact: true }).waitFor(); assert.equal(await result.count(), 0);
+  assert.equal(await page.getByRole("combobox", { name: copy.matchAfter }).inputValue(), "0");
+  await page.getByRole("button", { name: copy.compare, exact: true }).click(); await result.waitFor();
+  assert.equal(await result.getByText(copy.state["recorded-excerpts-changed"], { exact: true }).count(), 1);
+  await page.getByLabel(copy.afterFile, { exact: true }).setInputFiles(file("different.json", receipt("v3")));
+  await page.getByRole("button", { name: copy.compare, exact: true }).click(); await result.waitFor();
+  await page.getByLabel(copy.restoreMatchingPlan, { exact: true }).setInputFiles(file("matching.json", planText));
+  await page.getByRole("alert").getByText(copy.matchingPlanErrors["matching-receipts-mismatch"], { exact: true }).waitFor();
+  assert.equal(await result.count(), 0);
+  // Clearing while a file read is pending cannot restore stale choices or errors.
+  await page.evaluate(() => {
+    const original = File.prototype.arrayBuffer;
+    File.prototype.arrayBuffer = async function () {
+      const value = await original.call(this);
+      if (this.name === "slow-matching.json") await new Promise<void>(resolve => {
+        (window as unknown as { releasePlanRead: () => void }).releasePlanRead = resolve;
+      });
+      return value;
+    };
+  });
+  await page.getByLabel(copy.restoreMatchingPlan, { exact: true }).setInputFiles(file("slow-matching.json", planText));
+  await page.waitForFunction(() => typeof (window as unknown as { releasePlanRead?: unknown }).releasePlanRead === "function");
+  await page.getByRole("button", { name: copy.clear, exact: true }).click();
+  await page.evaluate(() => (window as unknown as { releasePlanRead: () => void }).releasePlanRead());
+  await page.waitForFunction(() => !document.querySelector("#comparison-matching-plan"));
+  assert.equal(await page.getByRole("alert").count(), 0); assert.equal(await result.count(), 0);
   // Filter real verified multi-target receipts, with full exports even when no
   // targets are visible. Unknown ledgers and unmatched pairs remain distinct.
   await page.getByLabel(copy.beforeFile, { exact: true }).setInputFiles(file("many-before.json", navigationReceipt(false)));
