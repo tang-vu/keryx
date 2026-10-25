@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { assembleEvidenceDraftRequest, buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, EVIDENCE_DRAFT_NOTICE, MAX_EVIDENCE_DRAFT_BYTES,
@@ -24,7 +24,7 @@ const field = "mt-2 block w-full min-w-0 rounded-none border border-line bg-pape
 const button = "inline-flex min-h-11 items-center border border-ink px-3 py-2 font-mono text-xs text-ink disabled:opacity-50";
 const assessmentLabels = copy.claim.verdicts;
 type Editors = Pick<EvidenceDraftRequest, "reports" | "passage" | "claims" | "themes" | "readingStatuses">;
-type ClearRecovery = { editors: Editors; workspace: EvidenceDraftRequest["workspace"]; reportJson: string;
+type DraftRecovery = { kind: "clear" | "claim" | "theme"; editors: Editors; workspace: EvidenceDraftRequest["workspace"]; reportJson: string;
   reviewer: string; retainedSnapshot: string; passageNeedsSelection: boolean };
 type Statement = NonNullable<EvidenceDraftRequest["themes"][number]["statements"]>[number];
 const choice = "mt-2 flex gap-3 font-serif text-sm text-ink-2";
@@ -68,7 +68,9 @@ export function EvidenceDraftWorkspace() {
     return () => element.removeEventListener("beforeinput", capture);
   }, []);
   const [retainedSnapshot, setRetainedSnapshot] = useState(() => retainedEditorsSnapshot(empty()));
-  const [clearRecovery, setClearRecovery] = useState<ClearRecovery>();
+  const [recovery, setRecovery] = useState<DraftRecovery>();
+  const undoRef = useRef<HTMLButtonElement>(null), recoveryHintId = useId();
+  useLayoutEffect(() => { if (recovery) undoRef.current?.focus({ preventScroll: true }); }, [recovery]);
   const hasUnretainedInputs = !!reportJson || !!reviewer || editors.themes.some(theme => theme.statements?.some(row => !row.text.trim()));
   const editorSnapshot = retainedEditorsSnapshot(editors);
   const hasUnsavedChanges = hasUnretainedInputs || editorSnapshot !== retainedSnapshot;
@@ -94,7 +96,32 @@ export function EvidenceDraftWorkspace() {
   let draft: ReturnType<typeof buildEvidenceDraft> | undefined, error = "";
   try { draft = buildEvidenceDraft(request); } catch { error = copy.workspace.changed; }
   const included = workspace.entries.filter(row => row.screening === "include");
-  const update = (changes: Partial<Editors>) => { setClearRecovery(undefined); setEditors(current => ({ ...current, ...changes })); setMessage(""); };
+  const update = (changes: Partial<Editors>) => { setRecovery(undefined); setEditors(current => ({ ...current, ...changes })); setMessage(""); };
+  const recoverySnapshot = (kind: DraftRecovery["kind"]): DraftRecovery => structuredClone({ kind, editors,
+    workspace: evidenceDraftWorkspace(workspace), reportJson, reviewer, retainedSnapshot, passageNeedsSelection });
+  const restoreRecovery = () => {
+    if (!recovery) return;
+    // Remount the completed-read selector and invalidate file previews before
+    // restoring. Neither side of removal/clear undo accepts an older import.
+    importEpoch.current++; setResetRevision(importEpoch.current);
+    const next = recovery;
+    liveEditors.current = next.editors; liveWorkspace.current = next.workspace;
+    liveRestoreContext.current = { editors: next.editors, workspace: next.workspace, reportJson: next.reportJson, reviewer: next.reviewer };
+    setRecovery(undefined); setRestoredWorkspace(next.workspace); setEditors(next.editors);
+    setRetainedSnapshot(next.retainedSnapshot); setReportJson(next.reportJson); setReviewer(next.reviewer);
+    passageEdit.current = undefined; setPassageNeedsSelection(next.passageNeedsSelection);
+    setMessage(next.kind === "clear" ? editingCopy.clearRestored : editingCopy.removalRestored); passageRef.current?.focus();
+  };
+  const recoveryControl = recovery && <aside className="mt-5 min-w-0 border border-line bg-paper-2 p-4">
+    <button type="button" ref={undoRef} className={button} aria-describedby={recoveryHintId} onClick={restoreRecovery}>
+      {recovery.kind === "clear" ? editingCopy.undoClear : editingCopy.undoRemoval}
+    </button>
+    <p id={recoveryHintId} className="mt-3 font-serif text-xs text-ink-3">{editingCopy.undoClearGuidance}</p>
+  </aside>;
+  const claimUndoIndex = recovery?.kind === "claim"
+    ? recovery.editors.claims.findIndex(old => !editors.claims.some(current => current.id === old.id)) : -1;
+  const themeUndoIndex = recovery?.kind === "theme"
+    ? recovery.editors.themes.findIndex(old => !editors.themes.some(current => current.id === old.id)) : -1;
   const toggle = (ids: string[], id: string) => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id];
   const excerpts = draft?.excerpts ?? [];
   const exportFile = (format: "markdown" | "latex" | "bibtex" | "ris") => {
@@ -128,7 +155,7 @@ export function EvidenceDraftWorkspace() {
         importEpoch.current++; setResetRevision(importEpoch.current);
         liveEditors.current = next; liveWorkspace.current = packet.workspace;
         liveRestoreContext.current = { editors: next, workspace: packet.workspace, reportJson: "", reviewer: "" };
-        setClearRecovery(undefined);
+        setRecovery(undefined);
         setRestoredWorkspace(packet.workspace); setEditors(next); setRetainedSnapshot(retainedEditorsSnapshot(next)); setReportJson(""); setReviewer(""); setMessage("");
         passageEdit.current = undefined; setPassageNeedsSelection(false);
         return true;
@@ -138,7 +165,7 @@ export function EvidenceDraftWorkspace() {
       if (activeImportEpoch !== importEpoch.current) return false;
       try {
         const next = appendCompletedEvidenceDraftImport(liveEditors.current, liveWorkspace.current, value);
-        setClearRecovery(undefined);
+        setRecovery(undefined);
         liveEditors.current = next; setEditors(next); setMessage(completedCopy.imported);
         return true;
       } catch { return false; }
@@ -159,7 +186,7 @@ export function EvidenceDraftWorkspace() {
       } catch { setMessage(copy.import.refused); }
     }}>
       <label className="font-mono text-xs text-ink-2">{copy.import.label}
-        <textarea className={field} value={reportJson} onChange={event => { setClearRecovery(undefined); setReportJson(event.target.value); }} maxLength={MAX_EVIDENCE_DRAFT_BYTES} rows={5} spellCheck={false} />
+        <textarea className={field} value={reportJson} onChange={event => { setRecovery(undefined); setReportJson(event.target.value); }} maxLength={MAX_EVIDENCE_DRAFT_BYTES} rows={5} spellCheck={false} />
       </label>
       <p className="mt-2 font-serif text-xs text-ink-3">{copy.import.guidance}</p>
       <button type="submit" className={`${button} mt-3`} disabled={!workspaceReady || !included.length || editors.reports.length >= 8}>{copy.import.button}</button>
@@ -183,12 +210,12 @@ export function EvidenceDraftWorkspace() {
         setPassageNeedsSelection(false);
       }}>{copy.claim.add}</button>
       <label className="mt-4 block font-mono text-xs text-ink-2">{copy.claim.reviewer}
-        <input className={field} value={reviewer} maxLength={120} onChange={event => { setClearRecovery(undefined); setReviewer(event.target.value); }} />
+        <input className={field} value={reviewer} maxLength={120} onChange={event => { setRecovery(undefined); setReviewer(event.target.value); }} />
       </label>
-      {editors.claims.map(claim => {
+      {editors.claims.map((claim, index) => {
         const result = draft?.claims.find(row => row.id === claim.id);
         const replace = (changes: Partial<typeof claim>) => update({ claims: editors.claims.map(row => row.id === claim.id ? { ...row, ...changes } : row) });
-        return <article className="mt-5 border-t border-line pt-4" key={claim.id}>
+        return <Fragment key={claim.id}>{claimUndoIndex === index && recoveryControl}<article className="mt-5 border-t border-line pt-4">
           <p className="whitespace-pre-wrap font-serif text-sm text-ink">{editors.passage.slice(claim.start, claim.end)}</p>
           <label className="mt-3 block font-mono text-xs text-ink-2">{copy.claim.paper}
             <select className={field} value={claim.paperUrls[0]} onChange={event => replace({ paperUrls: [event.target.value], excerptIds: [], assessment: undefined })}>
@@ -208,12 +235,16 @@ export function EvidenceDraftWorkspace() {
             } })}>{copyText(copy.claim.recordAssessment, { assessment: assessmentLabels[verdict] })}</button>)}
           <button type="button" className={`${button} mt-3`} onClick={() => {
             if (!window.confirm(editingCopy.confirmClaim)) return;
-            setClearRecovery(undefined);
-            setEditors(current => ({ ...current, claims: current.claims.filter(row => row.id !== claim.id) }));
-            setMessage(editingCopy.claimRemoved);
+            try {
+              const checkpoint = recoverySnapshot("claim");
+              setRecovery(checkpoint);
+              setEditors(current => ({ ...current, claims: current.claims.filter(row => row.id !== claim.id) }));
+              setMessage(editingCopy.claimRemoved);
+            } catch { setMessage(editingCopy.removalRefused); }
           }}>{editingCopy.removeClaim}</button>
-        </article>;
+        </article></Fragment>;
       })}
+      {claimUndoIndex === editors.claims.length && recoveryControl}
     </section>
     <section aria-label={copy.theme.label} className="border border-line bg-paper p-5">
       <h2 className="font-display text-xl text-ink">{copy.theme.heading}</h2>
@@ -227,9 +258,9 @@ export function EvidenceDraftWorkspace() {
         }
         catch { setMessage(copy.theme.assemblyRefused); }
       }}>{copy.theme.assemble}</button>
-      {editors.themes.map(theme => {
+      {editors.themes.map((theme, index) => {
         const replace = (changes: Partial<typeof theme>) => update({ themes: editors.themes.map(row => row.id === theme.id ? { ...row, ...changes } : row) });
-        return <article key={theme.id} className="mt-5 border-t border-line pt-4">
+        return <Fragment key={theme.id}>{themeUndoIndex === index && recoveryControl}<article className="mt-5 border-t border-line pt-4">
           <label className="font-mono text-xs text-ink-2">{copy.theme.title}<input className={field} maxLength={120} value={theme.title} onChange={event => replace({ title: event.target.value })} /></label>
           <label className="mt-3 block font-mono text-xs text-ink-2">{copy.theme.notes}<textarea className={field} rows={4} maxLength={2000} value={theme.authorNote} onChange={event => replace({ authorNote: event.target.value })} /></label>
           {(draft?.excerpts ?? []).map(row => <label key={row.id} className="mt-3 flex gap-3 font-serif text-sm text-ink-2">
@@ -291,12 +322,16 @@ export function EvidenceDraftWorkspace() {
             statements: [...(theme.statements ?? []), { id: nextEditorId("statement", editors.themes.flatMap(row => row.statements ?? [])), kind: "contribution", text: "", paperUrls: [], excerptIds: [] }] })}>{copy.statement.add}</button>
           <button type="button" className={`${button} ml-2 mt-4`} onClick={() => {
             if (!window.confirm(editingCopy.confirmTheme)) return;
-            setClearRecovery(undefined);
-            setEditors(current => ({ ...current, themes: current.themes.filter(row => row.id !== theme.id) }));
-            setMessage(editingCopy.themeRemoved);
+            try {
+              const checkpoint = recoverySnapshot("theme");
+              setRecovery(checkpoint);
+              setEditors(current => ({ ...current, themes: current.themes.filter(row => row.id !== theme.id) }));
+              setMessage(editingCopy.themeRemoved);
+            } catch { setMessage(editingCopy.removalRefused); }
           }}>{editingCopy.removeTheme}</button>
-        </article>;
+        </article></Fragment>;
       })}
+      {themeUndoIndex === editors.themes.length && recoveryControl}
       <button type="button" className={`${button} mt-4`} disabled={editors.themes.length >= 16} onClick={() => update({ themes: [...editors.themes, { id: nextEditorId("theme", editors.themes), title: copy.theme.newTitle, authorNote: "", excerptIds: [] }] })}>{copy.theme.add}</button>
       <button type="button" className={`${button} ml-2 mt-4`} disabled={!editors.readingStatuses?.length} onClick={() => update({ readingStatuses: [] })}>{copy.reading.clear}</button>
       {!!draft?.unread.length && <div className="mt-5">
@@ -336,30 +371,17 @@ export function EvidenceDraftWorkspace() {
         try {
           // Retain the whole editing session, including inputs deliberately absent
           // from downloadable drafts. Freeze the exact old paper/version context.
-          const recovery: ClearRecovery = clearRecovery ?? structuredClone({ editors, workspace: evidenceDraftWorkspace(workspace),
-            reportJson, reviewer, retainedSnapshot, passageNeedsSelection });
+          const checkpoint = recovery?.kind === "clear" ? recovery : recoverySnapshot("clear");
           const next = empty();
           importEpoch.current++; setResetRevision(importEpoch.current);
           liveEditors.current = next; liveWorkspace.current = store.workspace;
           liveRestoreContext.current = { editors: next, workspace: store.workspace, reportJson: "", reviewer: "" };
-          setClearRecovery(recovery); setRestoredWorkspace(undefined); setEditors(next);
+          setRecovery(checkpoint); setRestoredWorkspace(undefined); setEditors(next);
           setRetainedSnapshot(retainedEditorsSnapshot(next)); setReportJson(""); setReviewer("");
           passageEdit.current = undefined; setPassageNeedsSelection(false); setMessage(copy.workspace.cleared);
         } catch { setMessage(editingCopy.clearRefused); }
-      }}>{copy.workspace.clear}</button>
-      {clearRecovery && <button type="button" className={button} onClick={() => {
-        // Remount the completed-read selector and invalidate file previews before
-        // restoring. Neither side of clear/undo may accept an older async import.
-        importEpoch.current++; setResetRevision(importEpoch.current);
-        const next = clearRecovery;
-        liveEditors.current = next.editors; liveWorkspace.current = next.workspace;
-        liveRestoreContext.current = { editors: next.editors, workspace: next.workspace, reportJson: next.reportJson, reviewer: next.reviewer };
-        setClearRecovery(undefined); setRestoredWorkspace(next.workspace); setEditors(next.editors);
-        setRetainedSnapshot(next.retainedSnapshot); setReportJson(next.reportJson); setReviewer(next.reviewer);
-        passageEdit.current = undefined; setPassageNeedsSelection(next.passageNeedsSelection);
-        setMessage(editingCopy.clearRestored); passageRef.current?.focus();
-      }}>{editingCopy.undoClear}</button>}</div>
-    {clearRecovery && <p className="font-serif text-xs text-ink-3">{editingCopy.undoClearGuidance}</p>}
+      }}>{copy.workspace.clear}</button></div>
+    {recovery?.kind === "clear" && recoveryControl}
     <p role="status" aria-live="polite" className="font-serif text-sm text-seal">{message}</p>
   </section>;
 }

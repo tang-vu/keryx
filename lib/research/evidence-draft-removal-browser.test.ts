@@ -155,6 +155,88 @@ it("allows empty collections without inventing references and can add fresh rows
   expect(fresh.passage).toBe(packet.passage); expect(fresh.reports).toEqual(packet.reports);
 }));
 
+it.each([320, 1440])("undoes claim and theme removals with original assessments and unfinished edits at %ipx", width => fixture(width, async (page, packet) => {
+  await unfinished(page);
+  await themes(page).nth(1).getByLabel(copy.theme.notes).fill("Keep latest private note");
+  const before = await saved(page);
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  const undo = page.getByRole("button", { name: editing.undoRemoval, exact: true });
+  expect(await undo.evaluate(button => button === document.activeElement)).toBe(true);
+  expect(await claims(page).first().evaluate(article => article.previousElementSibling?.tagName)).toBe("ASIDE");
+  await page.keyboard.press("Enter");
+  await page.getByText(editing.removalRestored, { exact: true }).waitFor();
+  expect(await saved(page)).toEqual(before); await assertUnfinished(page, 1);
+  expect((await saved(page)).claims[0].assessment).toEqual(packet.claims[0].assessment);
+  expect(await undo.count()).toBe(0);
+  await remove(page, themes(page).first().getByRole("button", { name: editing.removeTheme, exact: true }), editing.confirmTheme, true);
+  await undo.click();
+  expect(await saved(page)).toEqual(before); await assertUnfinished(page, 1);
+  expect(await themes(page).nth(1).getByLabel(copy.theme.notes).inputValue()).toBe("Keep latest private note");
+}));
+
+it("recovers only the newest removal and invalidates it when other work is edited", () => fixture(1024, async (page, packet) => {
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await remove(page, themes(page).first().getByRole("button", { name: editing.removeTheme, exact: true }), editing.confirmTheme, true);
+  await page.getByRole("button", { name: editing.undoRemoval, exact: true }).click();
+  expect(await saved(page)).toEqual({ ...packet, claims: packet.claims.slice(1) });
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await themes(page).first().getByLabel(copy.theme.notes).fill("New work after removal");
+  expect(await page.getByRole("button", { name: editing.undoRemoval, exact: true }).count()).toBe(0);
+  expect((await saved(page)).claims).toEqual([]);
+  expect(await themes(page).first().getByLabel(copy.theme.notes).inputValue()).toBe("New work after removal");
+}));
+
+it("keeps the draft when a removal recovery snapshot cannot be prepared", () => fixture(1024, async (page, packet) => {
+  await page.evaluate(() => { window.structuredClone = () => { throw new Error("Synthetic snapshot refusal"); }; });
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await page.getByText(editing.removalRefused, { exact: true }).waitFor();
+  expect(await saved(page)).toEqual(packet);
+  expect(await page.getByRole("button", { name: editing.undoRemoval, exact: true }).count()).toBe(0);
+}));
+
+it("invalidates a pending original file preview across removal undo and retires recovery after explicit restore", () => fixture(1024, async (page, packet) => {
+  await page.evaluate(() => {
+    const original = File.prototype.arrayBuffer;
+    File.prototype.arrayBuffer = async function () {
+      const bytes = await original.call(this);
+      if (this.name === "pending-original.json") await new Promise<void>(resolve => {
+        (window as unknown as { releaseOriginalPreview: () => void }).releaseOriginalPreview = resolve;
+      });
+      return bytes;
+    };
+  });
+  await page.getByLabel(restore.file, { exact: true }).setInputFiles({ name: "pending-original.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(packet)) });
+  await page.waitForFunction(() => typeof (window as unknown as { releaseOriginalPreview?: unknown }).releaseOriginalPreview === "function");
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await page.getByRole("button", { name: editing.undoRemoval, exact: true }).click();
+  await page.evaluate(() => (window as unknown as { releaseOriginalPreview: () => void }).releaseOriginalPreview());
+  expect(await page.getByRole("button", { name: restore.restore, exact: true }).count()).toBe(0);
+  expect(await saved(page)).toEqual(packet);
+  await remove(page, themes(page).first().getByRole("button", { name: editing.removeTheme, exact: true }), editing.confirmTheme, true);
+  const next = structuredClone(packet); next.workspace.title = "Deliberately restored next work";
+  await page.getByLabel(restore.file, { exact: true }).setInputFiles({ name: "next.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(next)) });
+  await page.getByRole("button", { name: restore.restore, exact: true }).click();
+  expect(await page.getByRole("button", { name: editing.undoRemoval, exact: true }).count()).toBe(0);
+  expect(await saved(page)).toEqual(next);
+}));
+
+it("undoes clear to the state after a previous removal, without reviving older recovery", () => fixture(1024, async (page, packet) => {
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await remove(page, page.getByRole("button", { name: copy.workspace.clear, exact: true }), editing.confirmClear, true);
+  await page.getByRole("button", { name: editing.undoClear, exact: true }).click();
+  expect(await saved(page)).toEqual({ ...packet, claims: packet.claims.slice(1) });
+  expect(await page.getByRole("button", { name: editing.undoRemoval, exact: true }).count()).toBe(0);
+}));
+
+it("restores the exact retained baseline and unload warning when undoing a removal", () => fixture(1024, async page => {
+  const warns = () => page.evaluate(() => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })));
+  await expect.poll(warns).toBe(false);
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await expect.poll(warns).toBe(true);
+  await page.getByRole("button", { name: editing.undoRemoval, exact: true }).click();
+  await expect.poll(warns).toBe(false);
+}));
+
 it("frees a slot at both editor limits and preserves unique IDs when adding again", () => {
   const packet = backup();
   packet.claims = Array.from({ length: 32 }, (_, index) => ({ ...packet.claims[index % 2], id: `claim${index + 1}` }));
