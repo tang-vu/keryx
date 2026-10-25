@@ -384,3 +384,29 @@ input[type="range"]:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .kx-research-composer::before, .kx-research-submit svg, .kx-research-example svg { transform: none !important; }
 }
+
+/* Native citation modal: only the evidence scrolls; actions stay within reach.
+ * Motion is a short compositor-only entrance and never gates interaction. */
+.kx-evidence-panel[open] { display: flex; flex-direction: column; }
+.kx-evidence-close, .kx-evidence-article {
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+@keyframes kxEvidenceSheet {
+  from { opacity: .6; transform: translateY(28px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes kxEvidenceDrawer {
+  from { opacity: .6; transform: translateX(32px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes kxEvidenceBackdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kx-evidence-panel[open] { animation: kxEvidenceSheet 360ms cubic-bezier(.16,1,.3,1) both; }
+  .kx-evidence-panel[open]::backdrop { animation: kxEvidenceBackdrop 240ms ease-out both; }
+  @media (min-width: 640px) {
+    .kx-evidence-panel[open] { animation-name: kxEvidenceDrawer; }
+  }
+}
