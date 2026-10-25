@@ -1,7 +1,7 @@
 /** Browser behavior for stored evidence, payment truth, dialog focus and log following. */
 import assert from "node:assert/strict";
 import path from "node:path";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 import { assertSignedOutBrowserFixtureGraph, signedOutResearchAuthFixture } from "../test-support/research-browser-auth-fixture";
@@ -15,6 +15,10 @@ const cssFiles = cssDir
   ? readdirSync(cssDir).filter(name => name.endsWith(".css")).map(name => path.join(cssDir, name))
   : [];
 const stylesheet = cssFiles.map(file => readFileSync(file, "utf8")).join("\n");
+const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR;
+if (screenshots) mkdirSync(screenshots, { recursive: true });
+const fonts = `@font-face{font-family:ReadingDisplay;src:url('/fonts/bodoni-moda-latin.woff2')}@font-face{font-family:ReadingSerif;src:url('/fonts/spectral-latin-400.woff2')}@font-face{font-family:ReadingMono;src:url('/fonts/spline-sans-mono-latin.woff2')}
+  :root{--font-bodoni:ReadingDisplay;--font-spectral:ReadingSerif;--font-spline-mono:ReadingMono}`;
 if (!stylesheet.includes(".bg-paper") || !stylesheet.includes(".sm\\:w-")) {
   throw new Error("Generated Tailwind stylesheet missing or stale; build before styled reading test");
 }
@@ -96,15 +100,17 @@ try {
   page.on("pageerror", error => errors.push(error.message));
   await page.route("**/*", route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname.startsWith("/fonts/")) return route.fulfill({ contentType: "font/woff2", body: readFileSync(path.join("app", pathname)) });
     if (pathname === "/api/feedback") return route.fulfill({ json: { up: 0, down: 0 } });
     return route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' });
   });
   await page.goto("https://reading.invalid");
-  await page.addStyleTag({ content: stylesheet });
+  await page.addStyleTag({ content: stylesheet + fonts });
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
   assert.deepEqual(errors, [], "Reading fixture must boot with its compiled historical testnet profile");
   const citation = page.getByRole("button", { name: /Open evidence for The article/ }).first();
   await citation.waitFor();
+  await page.evaluate(() => document.fonts.ready);
   const citationElement = await citation.elementHandle();
   assert(citationElement, "citation trigger must exist for focus restoration checks");
   await page.getByText("1 citations omitted because an article title or usable article link is unavailable.").waitFor();
@@ -231,25 +237,83 @@ try {
     await citation.click();
     const dialogY = await page.evaluate(() => -parseFloat(document.body.style.top));
     await dialog.waitFor();
+    await dialog.evaluate(async element => {
+      await Promise.all(element.getAnimations({ subtree: true }).map(animation => animation.finished));
+    });
     const geometry = await dialog.evaluate(element => {
-      element.scrollTop = element.scrollHeight;
+      const scroller = element.querySelector<HTMLElement>("[data-evidence-scroll]")!;
+      scroller.scrollTop = scroller.scrollHeight;
       const box = element.getBoundingClientRect();
       const close = element.querySelector<HTMLButtonElement>('button[aria-label="Close citation evidence"]')!.getBoundingClientRect();
+      const article = element.querySelector<HTMLAnchorElement>('footer a')!.getBoundingClientRect();
       return { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width,
-        position: getComputedStyle(element).position, closeTop: close.top, closeBottom: close.bottom,
-        scrollHeight: element.scrollHeight, clientHeight: element.clientHeight };
+        position: getComputedStyle(element).position, closeTop: close.top, closeBottom: close.bottom, closeWidth: close.width, closeHeight: close.height,
+        articleTop: article.top, articleBottom: article.bottom, articleHeight: article.height,
+        scrollHeight: scroller.scrollHeight, clientHeight: scroller.clientHeight, scrollWidth: scroller.scrollWidth, contentWidth: scroller.clientWidth };
     });
     assert.equal(geometry.position, "fixed", `built CSS must style dialog at ${viewport.width}px`);
     assert(geometry.left >= -1 && geometry.right <= viewport.width + 1, `dialog horizontal fit at ${viewport.width}px`);
     assert(geometry.top >= -1 && geometry.bottom <= viewport.height + 1, `dialog vertical fit at ${viewport.width}px`);
-    if (viewport.width >= 768) assert(geometry.width <= 461, `desktop side panel width at ${viewport.width}px`);
+    if (viewport.width >= 768) assert(geometry.width <= 521, `desktop side panel width at ${viewport.width}px`);
     assert(geometry.scrollHeight > geometry.clientHeight, `long evidence should scroll at ${viewport.width}px`);
+    assert(geometry.scrollWidth <= geometry.contentWidth + 1, `evidence horizontal fit at ${viewport.width}px`);
     assert(geometry.closeTop >= geometry.top && geometry.closeBottom <= geometry.bottom, `close must stay visible at ${viewport.width}px`);
+    assert(geometry.articleTop >= geometry.top && geometry.articleBottom <= geometry.bottom, `article action must stay visible after scroll at ${viewport.width}px`);
+    assert(geometry.closeWidth >= 44 && geometry.closeHeight >= 44 && geometry.articleHeight >= 44, "Modal actions retain touch targets");
+    if (screenshots) await page.screenshot({ path: path.join(screenshots, `evidence-${viewport.width}-scrolled.png`) });
+    await dialog.locator("[data-evidence-scroll]").evaluate(element => { element.scrollTop = 0; });
+    if (screenshots) await page.screenshot({ path: path.join(screenshots, `evidence-${viewport.width}.png`) });
     await page.getByRole("button", { name: "Close citation evidence" }).click();
     await dialog.waitFor({ state: "detached" });
     await page.waitForFunction(element => document.activeElement === element, citationElement, { timeout: 2000 });
     assert.equal(await page.evaluate(() => scrollY), dialogY, `reading position changed at ${viewport.width}px; before click ${readingY}, locked ${dialogY}`);
   }
+
+  // Hold the actual CSS animation clock so a fast/slow runner cannot miss the entrance.
+  for (const width of [390, 1024]) {
+    await page.setViewportSize({ width, height: 800 });
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await citation.click();
+    const motion = await dialog.evaluate(element => {
+      const entrance = element.getAnimations().find(animation => animation instanceof CSSAnimation && animation.animationName.startsWith("kxEvidence"));
+      if (!entrance?.effect) throw Error("Native evidence entrance is missing");
+      entrance.pause(); entrance.currentTime = 0;
+      return { name: (entrance as CSSAnimation).animationName, timing: entrance.effect.getTiming(), keys: (entrance.effect as KeyframeEffect).getKeyframes() };
+    });
+    assert.equal(motion.name, width < 640 ? "kxEvidenceSheet" : "kxEvidenceDrawer");
+    assert(Number(motion.timing.duration) <= 400 && motion.timing.iterations === 1, "Evidence settles promptly without a loop");
+    assert(motion.keys.every(key => Object.keys(key).every(property => ["offset", "computedOffset", "easing", "composite", "opacity", "transform"].includes(property))),
+      "Evidence entrances must not animate layout or filters");
+    assert(await page.getByRole("button", { name: "Close citation evidence" }).evaluate(element => document.activeElement === element),
+      "The close control is focused before the entrance completes");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.waitForFunction(() => getComputedStyle(document.querySelector(".kx-evidence-panel")!).animationName === "none");
+    assert.equal(await dialog.evaluate(element => getComputedStyle(element).transform), "none", "Live reduced motion reveals the settled panel immediately");
+    assert.equal(await dialog.evaluate(element => getComputedStyle(element, "::backdrop").animationName), "none");
+    await page.keyboard.press("Tab");
+    assert(await dialog.locator("[data-evidence-scroll]").evaluate(element => document.activeElement === element), "The evidence itself is keyboard reachable");
+    await page.keyboard.press("PageDown");
+    await page.waitForFunction(() => document.querySelector("[data-evidence-scroll]")!.scrollTop > 0);
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "detached" });
+    await citation.click();
+    assert.equal(await dialog.evaluate(element => element.getAnimations({ subtree: true }).length), 0, "Reduced-motion opening has no animated content");
+    await page.keyboard.press("Shift+Tab");
+    assert(await dialog.locator("footer a").evaluate(element => document.activeElement === element), "Reverse Tab wraps from close to article");
+    await page.keyboard.press("Tab");
+    assert(await page.getByRole("button", { name: "Close citation evidence" }).evaluate(element => document.activeElement === element), "Tab wraps from article to close");
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "detached" });
+  }
+
+  await page.getByRole("button", { name: "Open evidence for Observed scholarly preprint" }).first().click();
+  const shortPanel = page.getByRole("dialog", { name: "Observed scholarly preprint" });
+  const shortGeometry = await shortPanel.evaluate(element => ({
+    bottom: element.getBoundingClientRect().bottom, footerBottom: element.querySelector("footer")!.getBoundingClientRect().bottom,
+  }));
+  assert.equal(shortGeometry.footerBottom, shortGeometry.bottom, "A short desktop record still anchors the article action at the panel foot");
+  await page.keyboard.press("Escape");
+  await shortPanel.waitFor({ state: "detached" });
 
   const log = page.getByLabel("Decision log").last();
   await log.evaluate(element => { element.style.height = "120px"; element.style.maxHeight = "120px"; element.style.overflowY = "auto";
