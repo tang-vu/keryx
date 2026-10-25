@@ -122,10 +122,10 @@ test("actual completed result selection/import exports retain all 23 original so
   }
 });
 
-test("all 74 existing English namespaces and core-inline are source-extractable without importing them", () => {
+test("all 75 existing English namespaces and core-inline are source-extractable without importing them", () => {
   const directory = new URL("../locales/en/", import.meta.url);
   const files = readdirSync(directory).filter(file => /\.(ts|json|cjs)$/.test(file));
-  assert.equal(files.length, 74);
+  assert.equal(files.length, 75);
   assert(files.includes("pdf-reading.ts"));
   assert(files.includes("about-story.ts"));
   assert(files.includes("wallet-workspace.ts"));
@@ -133,6 +133,7 @@ test("all 74 existing English namespaces and core-inline are source-extractable 
   assert(files.includes("evidence-matrix-export.ts"));
   assert(files.includes("literature-search.ts"));
   assert(files.includes("literature-import.ts"));
+  assert(files.includes("literature-bulk-screening.ts"));
   assert(files.includes("evidence-draft-editing.ts"));
   assert(files.includes("research-guides.ts"));
   const helpers = extractNamespaceCopy("locales/en/shared-helpers.ts", readFileSync(new URL("shared-helpers.ts", directory), "utf8"));

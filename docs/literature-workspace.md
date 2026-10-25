@@ -53,6 +53,13 @@ The candidate is not production delivery or evidence of independent demand.
    failed or conflicting saves keep it active, including for hidden paper cards.
    Remote-only changes do not create a warning. This does not autosave edits or
    intercept in-app navigation, and browsers may suppress native leave warnings.
+   **Screen shown papers together** previews one saved screening decision for the
+   exact visible paper list. Review titles, links, count and decision before
+   applying. The preview stays fixed if search or filter changes. Every target
+   snapshot is checked under the existing browser lock; a changed or removed
+   target refuses the entire update. Notes, metadata, saved order and review focus
+   stay intact. Unsaved editors are not submitted and may become stale after a
+   deliberate bulk change. Cancel the preview to choose a fresh set of papers.
 4. Select two papers and choose **Prepare comparison**. This opens an editable Deep
    question with the saved review question and both exact links. Notes and screening
    decisions are omitted. Review the question and visible budget before submitting.

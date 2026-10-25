@@ -5,6 +5,7 @@ import Link from "next/link";
 import bibliographyCopy from "@/locales/en/bibliographies.json";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { LiteratureComparisonPreview } from "./literature-comparison-preview";
+import { LiteratureBulkScreening } from "./literature-bulk-screening";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { PAPER_REPOSITORIES } from "@/lib/papers/types";
 import { paperReferencesCslJson, paperReferencesRis } from "@/lib/papers/reference-export";
@@ -215,6 +216,7 @@ export function LiteratureWorkspace() {
         <p className="mt-2 font-serif text-xs text-ink-3">{copy("literatureWorkspace.referencesNotice")}</p>
         <p className="mt-2 font-serif text-xs text-ink-3">{searchCopy.scope}</p>
         <p className="mt-2 font-serif text-xs text-ink-3">{searchCopy.sortNotice}</p>
+        <LiteratureBulkScreening key={editingRevision} workspace={workspace} visible={visible} />
         <div className="mt-4 border border-line bg-panel p-4">
           <p className="font-serif text-sm text-ink-2">{copy("literatureWorkspace.compareNotice")}</p>
           <LiteratureComparisonPreview entries={active.flatMap(url => workspace.entries.filter(entry => entry.paper.url === url)

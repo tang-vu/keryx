@@ -6,15 +6,15 @@
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
-  "scope": "All 74 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
+  "scope": "All 75 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
   "financialLegalConsent": "Unreviewed; critical English-authoritative fallback until actual named-human review. Neutral machine-draft UI is integrated only in explicit previews.",
   "totals": {
-    "englishNamespaceFiles": 74,
+    "englishNamespaceFiles": 75,
     "coreInlineSources": 1,
-    "extractedLeaves": 6321,
+    "extractedLeaves": 6334,
     "authoredEntries": 5940,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 352,
+    "uncoveredEntries": 365,
     "completeNamespaces": 64
   },
   "namespaces": [
@@ -7448,6 +7448,32 @@
         "visibleTargets"
       ],
       "nonTranslatableMachineIdentifiers": [],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "literature-bulk-screening",
+      "sourcePath": "locales/en/literature-bulk-screening.ts",
+      "draftPath": "locales/vi/ui-drafts/literature-bulk-screening.json",
+      "nonTranslatableMachineIdentifiers": [],
+      "sourceSha256": "f1ac32e3e19cb481523e0be2e4e484bb1ec185e0364294b99ea70f6679ecc43c",
+      "extractedLeaves": 13,
+      "coveredKeys": [],
+      "authoredEntries": 0,
+      "uncoveredKeys": [
+        "applying",
+        "cancel",
+        "confirm",
+        "count",
+        "decision",
+        "failed",
+        "notice",
+        "preview",
+        "previewTitle",
+        "saved",
+        "stale",
+        "summary",
+        "target"
+      ],
       "sourceAliases": {}
     }
   ]
