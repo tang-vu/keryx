@@ -89,6 +89,16 @@ filters remain intact. Broader filter narrowing is a separate measured change.
 The outcome owner reviews the completed candidate, addresses findings and passes
 its required checks, then merges under the owner's standing authorization.
 Do not wait for informational lint to merge.
+
+Owner-confirmed October 25, 2026: with one active session, the outcome owner
+self-coordinates authorized source work and records its own serialized merge
+slots under the existing guard; it does not ask the user for another coordinator
+or repeat routine source-merge approval. See the
+[single-active-session rule](engineering/multi-session-coordination.md#single-active-session).
+Other owners' holds, the existing ROOT/Circle release authority and every
+required acceptance/payment/security/custody gate remain in force. Concurrent
+active sessions continue to use the shared coordinator and explicit handoffs.
+
 If main advances, reconcile and validate the combined candidate where required;
 old CI evidence cannot establish acceptance of new combined source.
 

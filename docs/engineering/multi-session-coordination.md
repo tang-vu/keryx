@@ -108,6 +108,35 @@ refresh applicable acceptance evidence. Close the merge slot before admitting
 the next merge. During deployment, hold merges so accepted `origin/main` remains
 the recorded target. Independent implementation, review and CI can continue.
 
+### Single active session
+
+Owner-confirmed October 25, 2026: when only one session is actively executing
+Keryx work, that session is the outcome owner and source coordinator under the
+owner's standing authorization. It records the source role and self-issues one
+serialized merge slot at a time through the existing allocation guard, then
+reviews, validates and merges its ready focused PRs. Do not ask the user to
+appoint another coordinator or repeat routine feature/source-merge approval.
+
+One session may own several worktrees and run several CI jobs. Retained claims,
+idle/completed coordinator labels and historical worktree records do not by
+themselves constitute another active session. Inspect current execution and live
+merge/deployment holds before changing shared state. This distinction does not
+release another owner's files, resources, originals or operational holds; an old
+timestamp, closed chat or missing process still cannot release those claims.
+With concurrent active sessions, continue using the shared coordinator, queue and
+explicit handoffs. Ask the user only for a genuine unresolved authority/access
+conflict, rather than an idle coordinator label.
+
+Source self-coordination preserves the existing ROOT/Circle release owner. It
+does not grant version allocation, publication, deployment, production mutation,
+new funding, budget renewal, spending, custody, autonomous schedules or App54
+UNBOUND authority. All actual required CI, source review, payment/security checks,
+exact-source revalidation after main changes and retention gates still apply.
+Record source-role authority separately from release ownership so a solo source
+merge cannot silently become a release takeover.
+
+### Release coordination
+
 For an agreed multi-PR batch, merge its accepted outcomes, verify the combined
 source and applicable surface gates, then perform one combined release. Record
 the included PRs, full target commit, app/package/installer versions, release
