@@ -48,6 +48,11 @@ The candidate is not production delivery or evidence of independent demand.
    reordering. RIS/CSL reference downloads follow the shown order; screening CSV
    and private JSON backup keep the full original saved order. Sorting reads only
    retained metadata, so it establishes no new publication/reading observation.
+   Unsaved review-focus and screening edits request the browser's native warning
+   on reload or tab close. Saving or reverting each edit clears its warning;
+   failed or conflicting saves keep it active, including for hidden paper cards.
+   Remote-only changes do not create a warning. This does not autosave edits or
+   intercept in-app navigation, and browsers may suppress native leave warnings.
 4. Select two papers and choose **Prepare comparison**. This opens an editable Deep
    question with the saved review question and both exact links. Notes and screening
    decisions are omitted. Review the question and visible budget before submitting.
