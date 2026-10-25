@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useUiCopy } from "@/lib/i18n/ui-copy";
 import { reportComparisonCopy } from "@/locales/en/report-comparison";
 import { compareSavedResearch, MAX_COMPARISON_RECEIPT_BYTES, ReportComparisonError,
   type ComparisonExcerpt, type ReportComparison, type TargetMatch } from "@/lib/research/report-comparison";
 import { exportReportComparison, type ComparisonExportFormat } from "@/lib/research/report-comparison-export";
+import { COMPARISON_FILTERS, filterComparisonTargets, indexComparisonTargets, matchesComparisonFilter,
+  type ComparisonFilter } from "@/lib/research/report-comparison-view";
 
 type Side = "before" | "after";
 type Copy = typeof reportComparisonCopy;
@@ -35,9 +37,15 @@ export function ReportComparisonWorkspace() {
   const [result, setResult] = useState<ReportComparison | null>(null);
   const [matches, setMatches] = useState<TargetMatch[] | undefined>();
   const [error, setError] = useState<string | null>(null), [busy, setBusy] = useState(false);
+  const [filter, setFilter] = useState<ComparisonFilter>("all"), [query, setQuery] = useState("");
+  const targetIndex = useMemo(() => result ? indexComparisonTargets(result) : [], [result]);
+  const visibleTargets = useMemo(() => filterComparisonTargets(targetIndex, filter, query), [targetIndex, filter, query]);
+  const filterCounts = useMemo(() => Object.fromEntries(COMPARISON_FILTERS.map(value =>
+    [value, targetIndex.filter(row => matchesComparisonFilter(row.target, value)).length])) as Record<ComparisonFilter, number>, [targetIndex]);
   const revision = useRef(0), reads = useRef({ before: 0, after: 0 });
   const form = useRef<HTMLFormElement>(null);
-  function invalidate() { revision.current++; setResult(null); setError(null); setBusy(false); }
+  function resetView() { setFilter("all"); setQuery(""); }
+  function invalidate() { revision.current++; setResult(null); setError(null); setBusy(false); resetView(); }
   async function choose(side: Side, file: File | undefined) {
     invalidate(); setModel(null); setMatches(undefined);
     const token = ++reads.current[side];
@@ -54,7 +62,7 @@ export function ReportComparisonWorkspace() {
   }
   async function compare() {
     if (files.before.text === null || files.after.text === null) return;
-    const token = revision.current; setBusy(true); setResult(null); setError(null);
+    const token = revision.current; setBusy(true); setResult(null); setError(null); resetView();
     try {
       const next = await compareSavedResearch({ before: files.before.text, after: files.after.text, matches });
       if (revision.current === token) { setModel(next); setResult(next); }
@@ -144,8 +152,30 @@ export function ReportComparisonWorkspace() {
           <button key={format} type="button" onClick={() => download(format)} className="border border-ink px-4 py-2 font-mono text-xs">{copy[format]}</button>)}</div>
         <p className="mt-4 font-serif text-sm text-ink-2">{copy.exportNotice}</p>
       </section>
+      {result.targets.length > 0 && <section aria-labelledby="comparison-filter-heading" className="border border-line bg-paper p-5">
+        <h3 id="comparison-filter-heading" className="font-display text-xl">{copy.filterTitle}</h3>
+        <div className="mt-4 grid min-w-0 gap-4 md:grid-cols-2">
+          <div className="min-w-0">
+            <label htmlFor="comparison-search" className="mb-2 block font-mono text-xs">{copy.searchLabel}</label>
+            <input id="comparison-search" type="search" value={query} maxLength={512} autoComplete="off" spellCheck={false}
+              onChange={event => setQuery(event.target.value)} className={fieldClass} aria-describedby="comparison-filter-notice" />
+          </div>
+          <div className="min-w-0">
+            <label htmlFor="comparison-filter" className="mb-2 block font-mono text-xs">{copy.filterLabel}</label>
+            <select id="comparison-filter" value={filter} onChange={event => setFilter(event.target.value as ComparisonFilter)} className={fieldClass}>
+              {COMPARISON_FILTERS.map(value => <option key={value} value={value}>{copy.filterOption({ label: copy.filters[value], count: filterCounts[value] })}</option>)}
+            </select>
+          </div>
+        </div>
+        <p id="comparison-filter-notice" className="mt-3 font-serif text-sm text-ink-2">{copy.filterNotice}</p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <p role="status" className="font-mono text-xs">{copy.visibleTargets({ shown: visibleTargets.length, total: result.targets.length })}</p>
+          {(query !== "" || filter !== "all") && <button type="button" onClick={resetView} className="border border-ink px-4 py-2 font-mono text-xs">{copy.resetView}</button>}
+        </div>
+      </section>}
       {result.targets.length === 0 && <p>{copy.empty}</p>}
-      {result.targets.map((target, index) => <section key={`${target.before?.claimIndex ?? "none"}:${target.after?.claimIndex ?? "none"}`} className="min-w-0 border border-line bg-paper">
+      {result.targets.length > 0 && visibleTargets.length === 0 && <p className="border border-line p-5 font-serif text-sm">{copy.noMatches}</p>}
+      {visibleTargets.map(({ target, index }) => <section key={`${target.before?.claimIndex ?? "none"}:${target.after?.claimIndex ?? "none"}`} data-testid="comparison-target" className="min-w-0 border border-line bg-paper">
         <header className="border-b border-line px-5 py-4">
           <h3 className="font-display text-xl">{copy.pairTitle({ index })}</h3>
           <p className="mt-2 font-mono text-xs text-seal">{copy.state[target.state]}</p>

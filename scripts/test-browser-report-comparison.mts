@@ -56,6 +56,21 @@ function receipt(version: string, target = "How long is the buffer valid?", lega
     digest: `sha256:${createHash("sha256").update(canonicalJson(payload)).digest("hex")}` } });
 }
 const file = (name: string, text: string) => ({ name, mimeType: "application/json", buffer: Buffer.from(text) });
+function navigationReceipt(after: boolean) {
+  const { payload } = JSON.parse(receipt("v1"));
+  const evidence = payload.claims[0].evidence;
+  payload.claims = [
+    { claimIndex: 0, claim: "Stable target", evidence },
+    { claimIndex: 1, claim: "Changed target", evidence: [{ ...evidence[0], quote: after ? "New lifetime" : "Old lifetime" }] },
+    { claimIndex: 2, claim: "Empty target", evidence: [] },
+    { claimIndex: 3, claim: "Unknown ledger" },
+    { claimIndex: 4, claim: after ? "New unmatched target" : "Old unmatched target", evidence },
+    { claimIndex: 5, claim: "Context target", evidence: [{ ...evidence[0],
+      webProvenance: { extraction: "text", truncated: after } }] },
+  ];
+  return JSON.stringify({ payload, integrity: { algorithm: "sha256", canonicalization: "keryx-json-v1", scope: "payload",
+    digest: `sha256:${createHash("sha256").update(canonicalJson(payload)).digest("hex")}` } });
+}
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
   const errors: string[] = [], outbound: string[] = [], dialogs: string[] = [];
@@ -96,15 +111,50 @@ try {
     assert(text.includes(JSON.parse(receipt("v1")).integrity.digest));
     if (format === "json") { const comparison = JSON.parse(text); assert.equal(comparison.summary.addedRows, 1); assert.equal(comparison.summary.removedRows, 1); }
   }
+  // Filter real verified multi-target receipts, with full exports even when no
+  // targets are visible. Unknown ledgers and unmatched pairs remain distinct.
+  await page.getByLabel(copy.beforeFile, { exact: true }).setInputFiles(file("many-before.json", navigationReceipt(false)));
+  await page.getByLabel(copy.afterFile, { exact: true }).setInputFiles(file("many-after.json", navigationReceipt(true)));
+  await page.getByRole("button", { name: copy.compare, exact: true }).click(); await result.waitFor();
+  const targets = result.getByTestId("comparison-target"), search = page.getByRole("searchbox", { name: copy.searchLabel });
+  const view = page.getByRole("combobox", { name: copy.filterLabel, exact: true });
+  assert.equal(await targets.count(), 7);
+  await view.selectOption("changes"); assert.equal(await targets.count(), 2);
+  assert.deepEqual(await targets.getByRole("heading", { level: 3 }).allTextContents(), [copy.pairTitle({ index: 1 }), copy.pairTitle({ index: 5 })]);
+  await search.fill("  OLD LIFETIME  "); assert.equal(await targets.count(), 1);
+  assert.equal(await targets.getByRole("heading", { level: 3 }).textContent(), copy.pairTitle({ index: 1 }));
+  await search.fill("no target contains this"); assert.equal(await targets.count(), 0);
+  assert(await result.getByText(copy.noMatches, { exact: true }).isVisible());
+  assert(await result.getByRole("status").getByText(copy.visibleTargets({ shown: 0, total: 7 }), { exact: true }).isVisible());
+  const completeDownload = page.waitForEvent("download"); await page.getByRole("button", { name: copy.json, exact: true }).click();
+  const completePath = await (await completeDownload).path(); assert(completePath);
+  const completeComparison = JSON.parse(await readFile(completePath, "utf8"));
+  assert.equal(completeComparison.targets.length, 7); assert.equal(completeComparison.summary.changedTargets, 2);
+  await page.getByRole("button", { name: copy.resetView, exact: true }).click(); assert.equal(await targets.count(), 7);
+  assert.equal(await search.inputValue(), ""); assert.equal(await view.inputValue(), "all");
+  await view.selectOption("gaps"); assert.equal(await targets.count(), 2);
+  assert.deepEqual(await targets.getByRole("heading", { level: 3 }).allTextContents(), [copy.pairTitle({ index: 2 }), copy.pairTitle({ index: 3 })]);
+  await view.selectOption("unmatched"); assert.equal(await targets.count(), 2);
+  await search.fill("ORIGINAL DOCUMENTATION"); assert.equal(await targets.count(), 2);
+  await page.setViewportSize({ width: 320, height: 844 });
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Navigation must fit mobile");
+  if (output) await page.screenshot({ path: path.join(output, "comparison-filtered-320.png"), fullPage: true });
+  // Verify again and changing files both reset the display, not the artifact.
+  await page.getByRole("button", { name: copy.compare, exact: true }).click(); await result.waitFor();
+  assert.equal(await search.inputValue(), ""); assert.equal(await view.inputValue(), "all"); assert.equal(await targets.count(), 7);
+  await search.fill("nothing here");
+  await page.getByLabel(copy.beforeFile, { exact: true }).setInputFiles(file("before.json", receipt("v1")));
   // File changes invalidate results synchronously; renamed targets require an explicit choice.
   await page.getByLabel(copy.afterFile, { exact: true }).setInputFiles(file("renamed.json", receipt("v2", "A renamed target")));
   assert.equal(await result.count(), 0);
   await page.getByRole("button", { name: copy.compare, exact: true }).click(); await result.waitFor();
+  assert.equal(await search.inputValue(), ""); assert.equal(await view.inputValue(), "all");
   assert.equal(await result.getByText(copy.match.unmatched, { exact: true }).count(), 2);
   await page.getByRole("combobox", { name: copy.matchAfter }).selectOption("0");
   assert.equal(await result.count(), 0); assert.equal(await page.getByRole("button", { name: copy.json, exact: true }).count(), 0);
   await page.getByRole("button", { name: copy.compare, exact: true }).click(); await result.waitFor();
   assert.equal(await result.getByText(copy.match["user-selected"], { exact: true }).count(), 1);
+  assert.equal(await search.inputValue(), ""); assert.equal(await view.inputValue(), "all");
   // Pause real digests after hashing, then change input. Old completion must stay invisible.
   await page.evaluate(() => {
     const original = crypto.subtle.digest.bind(crypto.subtle), pending: Array<() => void> = [];
@@ -205,6 +255,10 @@ if (process.argv.includes("--built")) {
     await page.getByLabel(copy.afterFile, { exact: true }).setInputFiles(file("after.json", receipt("v2")));
     await page.getByRole("button", { name: copy.compare, exact: true }).click();
     await page.getByTestId("report-comparison-result").waitFor();
+    await page.getByRole("searchbox", { name: copy.searchLabel }).fill("no target contains this");
+    assert.equal(await page.getByTestId("comparison-target").count(), 0);
+    await page.getByRole("button", { name: copy.resetView, exact: true }).click();
+    assert.equal(await page.getByTestId("comparison-target").count(), 1);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     assert.equal(await page.title(), copy.metadataTitle);
     assert.deepEqual(mutations, []); assert.deepEqual(errors, []);
