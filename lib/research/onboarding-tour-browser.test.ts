@@ -5,8 +5,9 @@ import { build } from "esbuild";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { chromium, type Browser, type Page } from "playwright";
+import { signedOutResearchAuthFixture, assertSignedOutBrowserFixtureGraph } from "../../test-support/research-browser-auth-fixture";
 
-let browser: Browser, bundle: string, css: string;
+let browser: Browser, bundle: string, researchBundle: string, css: string;
 const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR;
 type GuideFixture = { dispatches: number; budgetEvents: number; context(value: boolean): void; long(value: boolean): void; mount(value: boolean): void };
 const fonts = `@font-face{font-family:GuideDisplay;src:url('/fonts/bodoni-moda-latin.woff2')}@font-face{font-family:GuideSerif;src:url('/fonts/spectral-latin-400.woff2')}@font-face{font-family:GuideMono;src:url('/fonts/spline-sans-mono-latin.woff2')}
@@ -31,11 +32,52 @@ beforeAll(async () => {
     define: { "process.env": JSON.stringify({ NODE_ENV: "production", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet" }) } });
   expect(Object.keys(result.metafile!.inputs).some(path => path.replaceAll("\\", "/").endsWith("components/keryx/onboarding-tour.tsx"))).toBe(true);
   bundle = result.outputFiles[0].text;
+  const research = await build({ stdin: { contents: "import React from'react';import{createRoot}from'react-dom/client';import{ResearchChat}from'./components/keryx/research-chat';createRoot(document.getElementById('root')).render(<ResearchChat introduceProduct/>);", loader: "tsx", resolveDir: process.cwd() },
+    bundle: true, write: false, metafile: true, platform: "browser", format: "iife", jsx: "automatic",
+    define: { "process.env": JSON.stringify({ NODE_ENV: "production", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet" }) },
+    plugins: [signedOutResearchAuthFixture(), { name: "explicit-no-funding-guide-boundary", setup(api) {
+      api.onResolve({ filter: /^\.\/session-grant-panel$/ }, args => args.importer.replaceAll("\\", "/").endsWith("/components/keryx/research-chat.tsx") ? { path: "no-funding", namespace: "guide-funding-fixture" } : undefined);
+      api.onLoad({ filter: /^no-funding$/, namespace: "guide-funding-fixture" }, () => ({ loader: "js", contents: "export function SessionGrantPanel(){return null}" }));
+    } }] });
+  assertSignedOutBrowserFixtureGraph(research.metafile, ["components/keryx/research-chat.tsx", "components/keryx/ask-form.tsx", "components/keryx/onboarding-tour.tsx", "lib/hooks/use-ask-stream.ts"]);
+  researchBundle = research.outputFiles[0].text;
   css = (await postcss([tailwind({ base: process.cwd() })]).process(await readFile("app/globals.css", "utf8"), { from: resolve("app/globals.css") })).css;
   if (screenshots) await mkdir(screenshots, { recursive: true });
   browser = await chromium.launch({ headless: true });
 }, 30_000);
 afterAll(async () => { await browser?.close(); });
+
+it.each([390, 1366])("bounds the first spotlight to the actual research introduction at %i", async width => {
+  const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: "reduce" });
+  const errors: string[] = [], reads: string[] = [];
+  try {
+    await context.route("**/*", async route => {
+      const request = route.request(), url = new URL(request.url());
+      expect(url.origin).toBe("https://guide.test"); expect(request.method()).toBe("GET");
+      if (url.pathname.startsWith("/api/")) {
+        reads.push(url.pathname); expect(url.pathname).not.toBe("/api/ask");
+        return route.fulfill({ status: 503, json: { error: "Offline guide fixture" } });
+      }
+      if (url.pathname === "/guide.css") return route.fulfill({ contentType: "text/css", body: css + fonts });
+      if (url.pathname.startsWith("/fonts/")) return route.fulfill({ contentType: "font/woff2", body: await readFile(join("app", url.pathname)) });
+      expect(url.pathname).toBe("/");
+      return route.fulfill({ contentType: "text/html", body: '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/guide.css"></head><body><main id="root"></main></body></html>' });
+    });
+    const page = await context.newPage(); page.setDefaultTimeout(5000); page.on("pageerror", error => errors.push(error.message));
+    await page.goto("https://guide.test/"); await page.addScriptTag({ content: researchBundle });
+    await page.getByRole("button", { name: "How it works", exact: true }).waitFor(); await page.evaluate(() => document.fonts.ready);
+    await open(page);
+    await expect.poll(() => page.evaluate(() => {
+      const header = document.querySelector('[data-research-intro] > header')?.getBoundingClientRect();
+      const mask = document.querySelector('[data-keryx-tour-portal] mask rect[fill="black"]');
+      return !!header && !!mask && Number(mask.getAttribute("height")) <= header.height + 16 && Number(mask.getAttribute("height")) > 100;
+    })).toBe(true);
+    if (screenshots) await page.screenshot({ path: join(screenshots, "guide-research-introduction-" + width + ".png"), fullPage: true });
+    await page.keyboard.press("Escape"); expect(await page.locator('[data-keryx-tour-portal]').count()).toBe(0);
+    expect(await page.getByRole("button", { name: "How it works", exact: true }).evaluate(element => document.activeElement === element)).toBe(true);
+    expect(reads.length).toBeGreaterThan(0); expect(errors).toEqual([]);
+  } finally { await context.close(); }
+});
 
 async function fixture(test: (page: Page) => Promise<void>, width = 390, height = 800, motion: "reduce" | "no-preference" = "reduce") {
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion: motion });
