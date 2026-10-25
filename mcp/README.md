@@ -1,5 +1,15 @@
 # Keryx MCP
 
+## Export private saved literature locally (source candidate)
+
+`export_saved_literature({backup, format, screening?})` converts a caller-selected
+personal-bibliography v1 backup to BibTeX, RIS or CSL-JSON. It validates the full
+1 MiB bounded JSON before selecting saved screening states, keeps exact versions
+and provenance, and omits private review title, question, notes and decisions.
+This local tool has no file, network, model or payment I/O. Your MCP client may
+retain the entire supplied backup, including private notes. See
+[offline export usage and boundaries](../docs/literature-export.md).
+
 The CLI bundles the pinned Circle 3.5.0 buyer implementation; its exact inputs
 are recorded in `dist/build-inputs.json`. Its application validators use the
 bundled, security-patched Zod 3 compatibility runtime, retaining existing UTF-16

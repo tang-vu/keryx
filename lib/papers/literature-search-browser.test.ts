@@ -41,6 +41,10 @@ afterAll(async () => { await browser?.close(); });
 const card = (page: Page, index: number) => page.locator("article").filter({ has: page.getByRole("checkbox", {
   name: copy("literatureWorkspace.compareLabel", { title: titles[index] }), exact: true,
 }) });
+async function discardAndReload(page: Page) {
+  const opened = page.waitForEvent("dialog", { timeout: 1500 }), reload = page.reload();
+  const dialog = await opened; expect(dialog.type()).toBe("beforeunload"); await dialog.accept(); await reload;
+}
 async function boot(page: Page, raw?: string) {
   await page.goto("https://literature-search.test/");
   if (raw) await page.evaluate(({ key, raw }) => localStorage.setItem(key, raw), { key: LITERATURE_STORAGE_KEY, raw });
@@ -119,7 +123,7 @@ it.each([320, 1440])("searches saved notes, exports the shown subset and keeps d
   expect(await page.evaluate(() => Object.keys(localStorage))).toEqual([LITERATURE_STORAGE_KEY]);
   expect(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY)).toBe(raw);
   expect(page.url()).toBe("https://literature-search.test/");
-  await input.fill("PRIVATE FIELDNOTE"); await page.reload(); await page.addScriptTag({ content: bundle });
+  await input.fill("PRIVATE FIELDNOTE"); await discardAndReload(page); await page.addScriptTag({ content: bundle });
   await input.waitFor(); expect(await input.inputValue()).toBe("");
   expect(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY)).toBe(raw);
 }));
@@ -169,7 +173,7 @@ it.each([320, 1440])("sorts only the visible view, preserves dirty editors/selec
   await sort.selectOption("saved"); expect(await shownTitles()).toEqual(titles);
   expect(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY)).toBe(raw);
   expect(await notes.inputValue()).toBe("UNSAVED sorting note");
-  await sort.selectOption("year"); await page.reload(); await page.addScriptTag({ content: bundle });
+  await sort.selectOption("year"); await discardAndReload(page); await page.addScriptTag({ content: bundle });
   await sort.waitFor(); expect(await sort.inputValue()).toBe("saved");
   expect(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY)).toBe(raw);
   if (css) {

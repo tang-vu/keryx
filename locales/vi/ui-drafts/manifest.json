@@ -6,15 +6,15 @@
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
-  "scope": "All 74 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
+  "scope": "All 76 locales/en TS/JSON/CJS files and separately bound literal core-inline messages; source aliases resolved by plain-source inspection",
   "financialLegalConsent": "Unreviewed; critical English-authoritative fallback until actual named-human review. Neutral machine-draft UI is integrated only in explicit previews.",
   "totals": {
-    "englishNamespaceFiles": 74,
+    "englishNamespaceFiles": 76,
     "coreInlineSources": 1,
-    "extractedLeaves": 6321,
+    "extractedLeaves": 6348,
     "authoredEntries": 5940,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 352,
+    "uncoveredEntries": 379,
     "completeNamespaces": 64
   },
   "namespaces": [
@@ -7448,6 +7448,59 @@
         "visibleTargets"
       ],
       "nonTranslatableMachineIdentifiers": [],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "literature-bulk-screening",
+      "sourcePath": "locales/en/literature-bulk-screening.ts",
+      "draftPath": "locales/vi/ui-drafts/literature-bulk-screening.json",
+      "nonTranslatableMachineIdentifiers": [],
+      "sourceSha256": "f1ac32e3e19cb481523e0be2e4e484bb1ec185e0364294b99ea70f6679ecc43c",
+      "extractedLeaves": 13,
+      "coveredKeys": [],
+      "authoredEntries": 0,
+      "uncoveredKeys": [
+        "applying",
+        "cancel",
+        "confirm",
+        "count",
+        "decision",
+        "failed",
+        "notice",
+        "preview",
+        "previewTitle",
+        "saved",
+        "stale",
+        "summary",
+        "target"
+      ],
+      "sourceAliases": {}
+    },
+    {
+      "namespace": "literature-clear-recovery",
+      "sourcePath": "locales/en/literature-clear-recovery.ts",
+      "draftPath": "locales/vi/ui-drafts/literature-clear-recovery.json",
+      "nonTranslatableMachineIdentifiers": [],
+      "sourceSha256": "a8a4b94e59c931811e5a4e390205d0c01898f9bc4b184dfe2915e2caba5f38ae",
+      "extractedLeaves": 14,
+      "coveredKeys": [],
+      "authoredEntries": 0,
+      "uncoveredKeys": [
+        "beforeClear",
+        "changed",
+        "discard",
+        "discardConfirm",
+        "discarded",
+        "download",
+        "notice",
+        "papers",
+        "prepared",
+        "restore",
+        "restored",
+        "restoring",
+        "retention",
+        "title"
+      ],
       "sourceAliases": {}
     }
   ]
