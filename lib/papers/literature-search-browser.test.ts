@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
+import path from "node:path";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { build } from "esbuild";
 import { chromium, type Browser, type Page } from "playwright";
@@ -13,15 +14,16 @@ const workspace = () => {
   let value = emptyLiteratureWorkspace();
   for (const [index, paper] of PAPER_CATALOG.slice(0, 3).entries())
     value = saveLiteraturePaper(value, { ...paper, title: titles[index], authors: [index === 0 ? "José Đặng" : "Example Author"],
-      authorCount: 1, authorsTruncated: false }, "2026-10-20T00:00:00Z");
+      authorCount: 1, authorsTruncated: false, publishedYear: [2020, 2024, undefined][index] }, `2026-10-${20 + index}T00:00:00Z`);
   value.question = "Grounding methods";
   value.entries[0].notes = "PRIVATE FIELDNOTE alpha systems"; value.entries[0].screening = "include";
   value.entries[1].notes = "PRIVATE FIELDNOTE beta"; value.entries[1].screening = "include";
   value.entries[2].notes = "PRIVATE FIELDNOTE alpha"; value.entries[2].screening = "exclude";
   return value;
 };
-let browser: Browser, bundle: string;
+let browser: Browser, bundle: string, css = "";
 beforeAll(async () => {
+  if (process.env.KERYX_LITERATURE_CSS) css = await readFile(process.env.KERYX_LITERATURE_CSS, "utf8");
   bundle = (await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React from 'react';import{createRoot}from'react-dom/client';
     import{LiteratureWorkspace}from'./components/keryx/literature-workspace';
@@ -52,7 +54,7 @@ async function fixture(width: number, run: (page: Page, raw: string) => Promise<
     await context.route("**/*", route => {
       requests.push(route.request().url());
       return route.request().url() === "https://literature-search.test/" ? route.fulfill({ contentType: "text/html", body:
-        '<meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:12px}input,textarea,select,button{max-width:100%}article,section,a{overflow-wrap:anywhere}</style><main id="root"></main>' }) : route.abort();
+        `<meta charset="utf-8"><style>${css || "*{box-sizing:border-box}body{margin:12px}input,textarea,select,button{max-width:100%}article,section,a{overflow-wrap:anywhere}"}</style><main id="root"></main>` }) : route.abort();
     });
     const page = await context.newPage(); page.setDefaultTimeout(5000); page.on("pageerror", error => errors.push(error.message));
     const raw = serializeLiteratureWorkspace(workspace()); await boot(page, raw);
@@ -134,4 +136,52 @@ it("updates matches after a deliberate saved-note edit in another tab", () => fi
   expect(await input.inputValue()).toBe("newly-saved-marker");
   expect(await card(page, 1).isVisible()).toBe(false); expect(await card(page, 2).isVisible()).toBe(false);
   expect(await other.getByLabel(search.label, { exact: true }).inputValue()).toBe("");
+}));
+
+it.each([320, 1440])("sorts only the visible view, preserves dirty editors/selection and exports the right order at %ipx", width => fixture(width, async (page, raw) => {
+  const current = workspace(), first = card(page, 0), sort = page.getByLabel(search.sortLabel, { exact: true });
+  const shownTitles = () => page.locator("article:visible").getByRole("heading", { level: 2 }).allTextContents();
+  expect(await sort.inputValue()).toBe("saved"); expect(await shownTitles()).toEqual(titles);
+  await first.getByText(copy("literatureWorkspace.editNotes"), { exact: true }).click();
+  const notes = first.getByLabel(copy("literatureWorkspace.notesLabel")); await notes.fill("UNSAVED sorting note");
+  await first.getByRole("checkbox").check(); await card(page, 1).getByRole("checkbox").check();
+  const prepared = page.getByRole("link", { name: copy("literatureWorkspace.prepare"), exact: true });
+  const href = await prepared.getAttribute("href");
+  await sort.selectOption("title"); expect(await shownTitles()).toEqual([titles[0], titles[2], titles[1]]);
+  await sort.selectOption("year"); expect(await shownTitles()).toEqual([titles[1], titles[0], titles[2]]);
+  await sort.selectOption("recent"); expect(await shownTitles()).toEqual([titles[2], titles[1], titles[0]]);
+  expect(await notes.inputValue()).toBe("UNSAVED sorting note"); expect(await prepared.getAttribute("href")).toBe(href);
+  expect(await first.getByRole("checkbox").isChecked()).toBe(true); expect(await card(page, 1).getByRole("checkbox").isChecked()).toBe(true);
+  const csl = JSON.parse(await downloadText(page, copy("literatureWorkspace.csl")));
+  expect(csl.map((row: { URL: string }) => row.URL)).toEqual(current.entries.map(entry => entry.paper.url).reverse());
+  const ris = await downloadText(page, copy("literatureWorkspace.ris"));
+  expect([...ris.matchAll(/^UR  - (.+)$/gm)].map(match => match[1].trim())).toEqual(current.entries.map(entry => entry.paper.url).reverse());
+  expect(ris).not.toContain("PRIVATE"); expect(ris).not.toContain("UNSAVED");
+  expect(JSON.parse(await downloadText(page, copy("literatureWorkspace.backup")))).toEqual(current);
+  const csv = await downloadText(page, copy("literatureWorkspace.csv"));
+  expect(csv.indexOf(current.entries[0].paper.url)).toBeLessThan(csv.indexOf(current.entries[2].paper.url));
+  await page.getByLabel(search.label, { exact: true }).fill("alpha");
+  await page.getByLabel(copy("literatureWorkspace.filter")).selectOption("include");
+  expect(await shownTitles()).toEqual([titles[0]]); expect(await prepared.getAttribute("href")).toBe(href);
+  await page.getByRole("button", { name: search.clear, exact: true }).click();
+  expect(await shownTitles()).toEqual([titles[1], titles[0]]);
+  await page.getByLabel(copy("literatureWorkspace.filter")).selectOption("all");
+  await sort.selectOption("saved"); expect(await shownTitles()).toEqual(titles);
+  expect(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY)).toBe(raw);
+  expect(await notes.inputValue()).toBe("UNSAVED sorting note");
+  await sort.selectOption("year"); await page.reload(); await page.addScriptTag({ content: bundle });
+  await sort.waitFor(); expect(await sort.inputValue()).toBe("saved");
+  expect(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY)).toBe(raw);
+  if (css) {
+    await sort.focus(); await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab");
+    expect(await sort.evaluate(element => element.matches(":focus-visible"))).toBe(true);
+    const bounds = await sort.boundingBox();
+    expect(bounds!.width).toBeGreaterThan(100); expect(bounds!.height).toBeGreaterThanOrEqual(44);
+    expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    if (process.env.KERYX_LITERATURE_SCREENSHOT_DIR) {
+      await mkdir(process.env.KERYX_LITERATURE_SCREENSHOT_DIR, { recursive: true });
+      await page.screenshot({ path: path.join(process.env.KERYX_LITERATURE_SCREENSHOT_DIR, `sort-${width}.png`), fullPage: true });
+    }
+  }
 }));

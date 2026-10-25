@@ -11,11 +11,11 @@
   "totals": {
     "englishNamespaceFiles": 74,
     "coreInlineSources": 1,
-    "extractedLeaves": 6315,
+    "extractedLeaves": 6321,
     "authoredEntries": 5940,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 346,
-    "completeNamespaces": 65
+    "uncoveredEntries": 352,
+    "completeNamespaces": 64
   },
   "namespaces": [
     {
@@ -7074,9 +7074,9 @@
     {
       "namespace": "literature-search",
       "sourcePath": "locales/en/literature-search.ts",
-      "sourceSha256": "a7cfda62a904c4c49cfca0e826411e54b595e3547edac6e8d2910ae13716de30",
+      "sourceSha256": "fdebf7104a5b7734ab952847616d89c58b13620f83909c1e3791638ce01d43f5",
       "draftPath": "locales/zh-Hans/ui-drafts/literature-search.json",
-      "extractedLeaves": 6,
+      "extractedLeaves": 12,
       "authoredEntries": 6,
       "coveredKeys": [
         "clear",
@@ -7087,7 +7087,14 @@
         "scope"
       ],
       "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [],
+      "uncoveredKeys": [
+        "sortLabel",
+        "sortNotice",
+        "sorts.recent",
+        "sorts.saved",
+        "sorts.title",
+        "sorts.year"
+      ],
       "sourceAliases": {}
     },
     {

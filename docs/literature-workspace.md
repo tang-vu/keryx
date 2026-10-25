@@ -41,6 +41,13 @@ The candidate is not production delivery or evidence of independent demand.
    Hidden cards keep their unsaved editors. **Clear search** keeps the selected
    screening filter. Search stays in this tab and is omitted from URLs, backups
    and research requests; no metadata/provider call or storage write is made.
+   **Sort saved papers** changes this tab's view to title, recorded publication
+   year (newest first, missing years last) or recently saved. **Saved order** is
+   the default. Equal sort values keep their saved positions; exact versions
+   stay separate. Open note editors and the selected comparison pair survive
+   reordering. RIS/CSL reference downloads follow the shown order; screening CSV
+   and private JSON backup keep the full original saved order. Sorting reads only
+   retained metadata, so it establishes no new publication/reading observation.
 4. Select two papers and choose **Prepare comparison**. This opens an editable Deep
    question with the saved review question and both exact links. Notes and screening
    decisions are omitted. Review the question and visible budget before submitting.
