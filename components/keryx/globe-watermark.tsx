@@ -25,9 +25,9 @@ export function GlobeWatermark({ className }: { className?: string }) {
     let mounted = true;
     let G = 0;
     // Rotation has two layers: a slow ever-advancing idle spin (baseRot) and a
-    // cursor-driven nudge the globe eases toward, so it "looks at" the pointer
-    // as the mouse moves across the hero, then keeps its majestic drift at rest.
-    let baseRot = 0; // idle longitude, always advancing
+    // cursor-driven nudge the globe eases toward. Drift runs only while visible
+    // and motion is enabled; pausing keeps the last engraved frame in place.
+    let baseRot = 0; // idle longitude while animation is active
     let curYaw = 0; // eased longitude actually rendered
     let curPitch = -18; // eased latitude actually rendered
     let targetYawOffset = 0; // cursor-driven longitude lean (deg)
@@ -40,9 +40,10 @@ export function GlobeWatermark({ className }: { className?: string }) {
     let land: any = null;
     let borders: any = null;
 
-    const reduced =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let reduced = motionPreference.matches;
+    let inView = typeof IntersectionObserver === "undefined";
+    const canAnimate = () => !reduced && inView && !document.hidden;
 
     const sizeNow = () => {
       const root = rootRef.current;
@@ -62,9 +63,9 @@ export function GlobeWatermark({ className }: { className?: string }) {
       projection.scale(S * 0.36).translate([G / 2, G / 2]);
     };
 
-    const draw = () => {
+    const draw = (advance = false) => {
       if (!mounted || !ctx || !path) return;
-      if (!reduced) {
+      if (advance) {
         baseRot += 0.22;
         // ease the rendered rotation toward (idle spin + cursor lean)
         curYaw += (baseRot + targetYawOffset - curYaw) * 0.06;
@@ -97,8 +98,24 @@ export function GlobeWatermark({ className }: { className?: string }) {
       ctx.strokeStyle = "#1b1712";
       ctx.lineWidth = 1.4;
       ctx.stroke();
-      if (reduced) return;
-      raf = requestAnimationFrame(draw);
+    };
+
+    const frame = () => {
+      raf = 0;
+      if (!mounted || !canAnimate() || !ctx || !path) return;
+      draw(true);
+      raf = requestAnimationFrame(frame);
+    };
+    const syncMotion = () => {
+      if (!mounted) return;
+      const active = canAnimate();
+      rootRef.current?.style.setProperty("--globe-play-state", active ? "running" : "paused");
+      if (!active) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      } else if (mounted && ctx && path && raf === 0) {
+        raf = requestAnimationFrame(frame);
+      }
     };
 
     (async () => {
@@ -113,25 +130,25 @@ export function GlobeWatermark({ className }: { className?: string }) {
       graticule = geoGraticule10();
       sizeNow();
       path = geoPath(projection, ctx!);
-      draw(); // spin the ocean disc + graticule immediately
       // JSON modules widen their discriminant strings, so restore the package's
       // Topology type after loading the trusted atlas shipped in node_modules.
       const w = atlas.default as unknown as Topology;
       const countries = w.objects.countries as GeometryObject;
       land = topojson.feature(w, countries);
       borders = topojson.mesh(w, countries, (a, b) => a !== b);
-      if (reduced) draw(); // animated path keeps drawing via rAF; static needs a nudge
+      draw(); // Static atlas remains visible even while motion is paused.
+      syncMotion();
     })();
 
     const onResize = () => {
       sizeNow();
-      if (reduced) draw();
+      draw();
     };
 
     // Steer the globe toward the cursor: map pointer position (viewport-relative,
     // [-1,1]) onto a longitude lean and latitude tilt. The draw loop eases into it.
     const onPointerMove = (e: PointerEvent) => {
-      if (reduced) return;
+      if (!canAnimate()) return;
       const nx = (e.clientX / window.innerWidth) * 2 - 1;
       const ny = (e.clientY / window.innerHeight) * 2 - 1;
       targetYawOffset = Math.max(-1, Math.min(1, nx)) * 34;
@@ -143,12 +160,30 @@ export function GlobeWatermark({ className }: { className?: string }) {
       targetPitch = -18;
     };
 
+    const onMotionChange = () => {
+      reduced = motionPreference.matches;
+      syncMotion();
+    };
+    const observer = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver(entries => {
+      const entry = entries[0];
+      if (!entry) return;
+      inView = entry.isIntersecting;
+      syncMotion();
+    });
+    if (rootRef.current) observer?.observe(rootRef.current);
+    motionPreference.addEventListener("change", onMotionChange);
+    document.addEventListener("visibilitychange", syncMotion);
+    syncMotion();
+
     window.addEventListener("resize", onResize);
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     document.addEventListener("mouseleave", onMouseLeave);
     return () => {
       mounted = false;
       cancelAnimationFrame(raf);
+      observer?.disconnect();
+      motionPreference.removeEventListener("change", onMotionChange);
+      document.removeEventListener("visibilitychange", syncMotion);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("mouseleave", onMouseLeave);
@@ -168,22 +203,22 @@ export function GlobeWatermark({ className }: { className?: string }) {
         viewBox="0 0 200 200"
         className="absolute inset-0 h-full w-full overflow-visible"
       >
-        <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCW 17s linear infinite" }}>
+        <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCW 17s linear infinite", animationPlayState: "var(--globe-play-state, running)" }}>
           <circle cx="100" cy="100" r="96" fill="none" stroke="#1b1712" strokeOpacity="0.16" strokeWidth="1" strokeDasharray="1.2 7.5" />
         </g>
-        <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCCW 5.5s linear infinite" }}>
+        <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCCW 5.5s linear infinite", animationPlayState: "var(--globe-play-state, running)" }}>
           <path d="M100 11 A89 89 0 0 1 189 100" fill="none" stroke="#1b1712" strokeOpacity="0.5" strokeWidth="1.7" strokeLinecap="round" />
           <path d="M100 189 A89 89 0 0 1 11 100" fill="none" stroke="#1b1712" strokeOpacity="0.24" strokeWidth="1.7" strokeLinecap="round" />
         </g>
-        <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCW 9s linear infinite" }}>
+        <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCW 9s linear infinite", animationPlayState: "var(--globe-play-state, running)" }}>
           <path d="M158 33 A82 82 0 0 1 178 64" fill="none" stroke="#1b1712" strokeOpacity="0.3" strokeWidth="1.2" strokeLinecap="round" />
           <path d="M42 167 A82 82 0 0 1 22 136" fill="none" stroke="#1b1712" strokeOpacity="0.3" strokeWidth="1.2" strokeLinecap="round" />
         </g>
-        <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCW 3.6s linear infinite" }}>
+        <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCW 3.6s linear infinite", animationPlayState: "var(--globe-play-state, running)" }}>
           <circle cx="100" cy="16" r="2.1" fill="#1b1712" />
           <circle cx="184" cy="100" r="1.4" fill="#1b1712" fillOpacity="0.55" />
         </g>
-        <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCCW 6.8s linear infinite" }}>
+        <g style={{ transformOrigin: "100px 100px", animation: "kxSpinCCW 6.8s linear infinite", animationPlayState: "var(--globe-play-state, running)" }}>
           <circle cx="100" cy="183" r="1.5" fill="#1b1712" fillOpacity="0.5" />
         </g>
       </svg>

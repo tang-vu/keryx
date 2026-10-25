@@ -26,7 +26,7 @@ assert(section && header && placement && placement.includes("<GlobeWatermark"), 
 const bundle = await build({
   stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';
     import{GlobeWatermark}from'./${component}';
-    createRoot(document.getElementById('root')).render(<section className=${JSON.stringify(section)}><header className=${JSON.stringify(header)}>${placement}</header></section>);`,
+    createRoot(document.getElementById('root')).render(<React.StrictMode><section className=${JSON.stringify(section)}><header className=${JSON.stringify(header)}>${placement}</header></section></React.StrictMode>);`,
     loader: "tsx", resolveDir: process.cwd() },
   bundle: true, write: false, splitting: true, format: "esm", platform: "browser", jsx: "automatic",
   outdir: ".artifacts/globe-fixture-memory", entryNames: "entry", chunkNames: "chunks/[name]-[hash]", metafile: true,
@@ -68,6 +68,20 @@ function bounded(value: Awaited<ReturnType<typeof geometry>>) {
   assert(Math.abs(value.canvas.width - value.canvas.height) <= 1, "Canvas CSS must be square before atlas initialization");
   assert(Math.abs(value.canvas.width - value.root.width * 0.78) <= 1, "Canvas must retain the shipped 78% globe proportion");
 }
+async function pixelsChange(page: Page) {
+  const before = await page.locator("canvas").evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL());
+  await page.waitForTimeout(150);
+  return before !== await page.locator("canvas").evaluate(canvas => (canvas as HTMLCanvasElement).toDataURL());
+}
+async function orbitState(page: Page, state: "running" | "paused") {
+  await page.waitForFunction(state => {
+    const orbit = document.querySelector('[data-testid="chat-globe"] g');
+    if (!orbit) return false;
+    const style = getComputedStyle(orbit);
+    return style.animationPlayState === state || state === "paused" && style.animationName === "none";
+  }, state);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+}
 const browser = await chromium.launch({ headless: true,
   ...(process.env.KERYX_OFFLINE_BROWSER_EXECUTABLE ? { executablePath: process.env.KERYX_OFFLINE_BROWSER_EXECUTABLE } : {}) });
 try {
@@ -107,7 +121,37 @@ try {
       assert.deepEqual(errors, []);
       console.log(JSON.stringify({ phase: "atlas-rendered", width, height, ...after }));
       await page.screenshot({ path: path.join(screenshots, `globe-${width}-dpr${dpr}-rendered.png`) });
+      assert.equal(await pixelsChange(page), false, "Reduced-motion atlas remains static");
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await orbitState(page, "running");
+      assert.equal(await pixelsChange(page), true, "Canvas resumes after live motion-preference change");
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await orbitState(page, "paused");
+      assert.equal(await pixelsChange(page), false, "Canvas pauses after live reduced-motion change");
+      await page.emulateMedia({ reducedMotion: "no-preference" });
+      await orbitState(page, "running");
+      await page.evaluate(() => { document.body.style.minHeight = "2400px"; scrollTo(0, 1200); });
+      await orbitState(page, "paused");
+      assert(await page.locator("canvas").evaluate(canvas => canvas.getBoundingClientRect().bottom < 0));
+      assert.equal(await pixelsChange(page), false, "Offscreen canvas retains its last rendered frame");
+      await page.evaluate(() => scrollTo(0, 0));
+      await orbitState(page, "running");
+      assert.equal(await pixelsChange(page), true, "Visible canvas resumes");
+      // Synthetic browser-visibility signal only; canvas, atlas, media changes and intersection are real.
+      await page.evaluate(() => {
+        Object.defineProperty(document, "hidden", { configurable: true, value: true });
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      await orbitState(page, "paused");
+      assert.equal(await pixelsChange(page), false, "Hidden document pauses canvas and SVG");
+      await page.evaluate(() => {
+        delete (document as unknown as { hidden?: boolean }).hidden;
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      await orbitState(page, "running");
+      assert.equal(await pixelsChange(page), true, "Restored visible document resumes canvas");
+      assert.deepEqual(errors, []);
     } finally { release(); await context.close(); }
   }
-  console.log("PASS: delayed shipped atlas keeps initial and rendered globe bounded at narrow/wide viewports and DPR1/2; actual authored Tailwind CSS, all HTTP intercepted.");
+  console.log("PASS: delayed shipped atlas stays bounded at mobile/desktop DPR1/2 under Strict Mode; actual canvas/SVG follow dynamic reduced motion, real viewport intersections and synthetic document visibility; all HTTP intercepted.");
 } finally { await browser.close(); }
