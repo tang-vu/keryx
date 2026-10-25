@@ -1,5 +1,6 @@
 import { fetchPublicBytes, UnsafeTargetError } from "../net/public-fetch";
 import { extractPdfText } from "./pdf-reader";
+import { unicodePrefix } from "./unicode-prefix-worker.mjs";
 import { extractHtml } from "./html-reader";
 import { bodyIdentity, canonicalUrl, digest, publisherGroup } from "./url-identity";
 import type { GatheredContent } from "../llm";
@@ -46,7 +47,7 @@ export function requestedHtmlFragment(url: string, options?: ArticleReadOptions)
 }
 /** Plain text needs no parser. HTML always uses the isolated worker. */
 export function extractArticle(text: string, finalUrl: string, contentType: string): ArticleRead {
-  if (contentType === "text/plain" || contentType === "text/markdown") return { text: text.slice(0, 60000), title: new URL(finalUrl).hostname, finalUrl, kind: "text", truncated: text.length > 60000 };
+  if (contentType === "text/plain" || contentType === "text/markdown") return { text: unicodePrefix(text, 60000), title: new URL(finalUrl).hostname, finalUrl, kind: "text", truncated: text.length > 60000 };
   throw new Error("Unsupported direct extraction");
 }
 export const readArticle: ArticleReader = async (url, signal, options) => {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { extractPdfText } from "./pdf-reader";
 import { pdfFixture } from "../../test-support/pdf-fixture";
+import { unicodePdfFixture } from "../../test-support/unicode-pdf-fixture";
+import { isWellFormedUtf16 } from "../llm/well-formed-utf16";
 
 // A real uncompressed PDF with correct object offsets; no binary fixture needed.
 function pdf(pages: string[], actions = false): Uint8Array {
@@ -42,6 +44,18 @@ describe("contained PDF text extraction", () => {
     expect(chars.text).toBe("Long");
     expect(chars.truncated).toBe(true);
     expect(chars.textLimitReached).toBe(true);
+  });
+
+  it("clips actual non-BMP PDF text inward without manufacturing a lone surrogate", async () => {
+    const bytes = unicodePdfFixture("AAA🧾ZZ");
+    const whole = await extractPdfText(bytes, options);
+    expect(whole.text).toBe("AAA🧾ZZ");
+    const clipped = await extractPdfText(bytes, { ...options, maxChars: 4 });
+    expect(clipped).toMatchObject({ text: "AAA", pagesRead: 1, totalPages: 1, truncated: true, textLimitReached: true });
+    expect(isWellFormedUtf16(clipped.text)).toBe(true);
+    const exact = await extractPdfText(bytes, { ...options, maxChars: 5 });
+    expect(exact.text).toBe("AAA🧾");
+    expect(exact.textLimitReached).toBe(true);
   });
 
   it("keeps readable text while marking the actual textless image page as incomplete coverage", async () => {
