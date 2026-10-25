@@ -13,6 +13,7 @@ import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
 import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
 import { searchLiteratureEntries } from "@/lib/papers/literature-search";
+import { LITERATURE_SORTS, sortLiteratureEntries, type LiteratureSort } from "@/lib/papers/literature-sort";
 import { literatureSearchCopy as searchEnglish } from "@/locales/en/literature-search";
 import { literatureImportCopy as importEnglish } from "@/locales/en/literature-import";
 import { addMissingLiteraturePapers, previewLiteratureImport, readLiteratureWorkspaceFile } from "@/lib/papers/literature-import";
@@ -116,12 +117,13 @@ function SavedPaper({ entry, selected, selectionFull, toggle, act }: {
 
 export function LiteratureWorkspace() {
   const copy = useUiMessages();
-  const searchCopy = useUiCopy("literature-search", searchEnglish), searchHelpId = useId();
+  const searchCopy = useUiCopy("literature-search", searchEnglish), searchHelpId = useId(), sortId = useId();
   const importCopy = useUiCopy("literature-import", importEnglish);
   const { ready, workspace, error, raw } = useLiteratureWorkspace();
   const [message, setMessage] = useState(""), [failure, setFailure] = useState("");
   const [selected, setSelected] = useState<string[]>([]), [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<LiteratureSort>("saved");
   const [pending, setPending] = useState<{ workspace: Workspace; filename: string }>();
   const [editingRevision, setEditingRevision] = useState(0);
   const [restoring, setRestoring] = useState(false);
@@ -144,8 +146,9 @@ export function LiteratureWorkspace() {
   let draft = "", draftError = "";
   if (active.length === 2) { try { draft = literatureComparisonDraft(workspace, active); } catch (issue) { draftError = (issue as Error).message; } }
   const searched = useMemo(() => searchLiteratureEntries(workspace.entries, query), [workspace.entries, query]);
+  const ordered = useMemo(() => sortLiteratureEntries(workspace.entries, sort), [workspace.entries, sort]);
   const searchMatches = new Set(searched.map(entry => entry.paper.url));
-  const visible = searched.filter(entry => filter === "all" || entry.screening === filter);
+  const visible = ordered.filter(entry => searchMatches.has(entry.paper.url) && (filter === "all" || entry.screening === filter));
   const visibleUrls = new Set(visible.map(entry => entry.paper.url));
 
   return <div className="mt-7 space-y-6">
@@ -178,6 +181,12 @@ export function LiteratureWorkspace() {
           <label className="font-mono text-xs text-ink-2">{copy("literatureWorkspace.filter")}<select value={filter} onChange={event => setFilter(event.target.value)} className={field}>
             <option value="all">{copy("literatureWorkspace.filterAll")}</option>{Object.entries(SCREENING_STATES).map(([value, label]) => <option key={value} value={value}>{label} ({searched.filter(entry => entry.screening === value).length})</option>)}
           </select></label>
+          <div className="min-w-0 max-w-full">
+            <label htmlFor={sortId} className="font-mono text-xs text-ink-2">{searchCopy.sortLabel}</label>
+            <select id={sortId} value={sort} onChange={event => setSort(event.currentTarget.value as LiteratureSort)} className={field}>
+              {LITERATURE_SORTS.map(value => <option key={value} value={value}>{searchCopy.sorts[value]}</option>)}
+            </select>
+          </div>
           <div className="space-y-2">
             <p role="status" className="font-serif text-sm text-ink-2">{copy(visible.length === 1 ? "literatureWorkspace.selection.one" : "literatureWorkspace.selection.other", { count: visible.length, selected: active.length })}</p>
             <button type="button" disabled={visible.length === 0} className={button} onClick={() => act(() => {
@@ -192,6 +201,7 @@ export function LiteratureWorkspace() {
         </div>
         <p className="mt-2 font-serif text-xs text-ink-3">{copy("literatureWorkspace.referencesNotice")}</p>
         <p className="mt-2 font-serif text-xs text-ink-3">{searchCopy.scope}</p>
+        <p className="mt-2 font-serif text-xs text-ink-3">{searchCopy.sortNotice}</p>
         <div className="mt-4 border border-line bg-panel p-4">
           <p className="font-serif text-sm text-ink-2">{copy("literatureWorkspace.compareNotice")}</p>
           <LiteratureComparisonPreview entries={active.flatMap(url => workspace.entries.filter(entry => entry.paper.url === url)
@@ -209,7 +219,7 @@ export function LiteratureWorkspace() {
           <Link prefetch={false} href="/sources?kind=paper#research-papers" className={`${button} mt-4`}>{copy("literatureWorkspace.browse")}</Link>
         </div> : <>
           {visible.length === 0 && <p className="mt-5 font-serif text-sm text-ink-2">{query.trim() ? searchCopy.empty : copy("literatureWorkspace.filterEmpty")}</p>}
-          <div className="mt-5 grid gap-4 md:grid-cols-2">{workspace.entries.map(entry => <div key={`${editingRevision}:${entry.paper.url}`} hidden={!visibleUrls.has(entry.paper.url)} className="min-w-0"><SavedPaper entry={entry} selected={active.includes(entry.paper.url)} selectionFull={active.length === 2}
+          <div className="mt-5 grid gap-4 md:grid-cols-2">{ordered.map(entry => <div key={`${editingRevision}:${entry.paper.url}`} hidden={!visibleUrls.has(entry.paper.url)} className="min-w-0"><SavedPaper entry={entry} selected={active.includes(entry.paper.url)} selectionFull={active.length === 2}
             toggle={() => setSelected(active.includes(entry.paper.url) ? active.filter(url => url !== entry.paper.url) : [...active, entry.paper.url])} act={act} /></div>)}</div>
         </>}
       </section>

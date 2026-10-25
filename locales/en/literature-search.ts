@@ -5,4 +5,7 @@ export const literatureSearchCopy = {
   scope: "Reference downloads contain only papers shown by both search and screening. CSV and JSON backup contain all saved papers. Notes stay out of reference downloads.",
   empty: "No saved papers match this search and screening filter.",
   outsideSearch: "Outside the current search; still selected.",
+  sortLabel: "Sort saved papers",
+  sorts: { saved: "Saved order", title: "Title", year: "Recorded publication year — newest first", recent: "Recently saved" },
+  sortNotice: "Sorting uses saved metadata, not new source observations. Missing years appear last. Visible reference downloads follow this order; CSV, JSON backup and your comparison selection keep their original order. Sort choices stay in this tab.",
 } as const;

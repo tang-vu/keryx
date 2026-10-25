@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/literature-search.ts",
-  "sourceSha256": "a7cfda62a904c4c49cfca0e826411e54b595e3547edac6e8d2910ae13716de30",
+  "sourceSha256": "fdebf7104a5b7734ab952847616d89c58b13620f83909c1e3791638ce01d43f5",
   "entries": {
     "label": {
       "source": "Search saved papers and notes",
