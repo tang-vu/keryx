@@ -27,11 +27,22 @@ const buttonBase = "inline-flex min-h-11 items-center justify-center border px-3
 const button = `${buttonBase} border-line text-seal`;
 type Action = (action: () => void | Promise<void>, success: string) => Promise<void>;
 
+function useUnsavedWarning(dirty: boolean) {
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+}
+
 function ReviewFocus({ workspace, act }: { workspace: Workspace; act: Action }) {
   const copy = useUiMessages();
   const [base, setBase] = useState({ title: workspace.title, question: workspace.question });
   const [draft, setDraft] = useState(base);
   const stale = workspace.title !== base.title || workspace.question !== base.question;
+  const edited = draft.title !== base.title || draft.question !== base.question;
+  useUnsavedWarning(edited && (draft.title !== workspace.title || draft.question !== workspace.question));
   return <form className="mt-4 grid gap-4" onSubmit={event => {
     event.preventDefault();
     act(async () => {
@@ -55,6 +66,8 @@ function ScreeningEditor({ entry, act }: { entry: LiteratureEntry; act: Action }
   const [base, setBase] = useState({ screening: entry.screening, notes: entry.notes });
   const [draft, setDraft] = useState(base);
   const stale = entry.notes !== base.notes || entry.screening !== base.screening;
+  const edited = draft.notes !== base.notes || draft.screening !== base.screening;
+  useUnsavedWarning(edited && (draft.notes !== entry.notes || draft.screening !== entry.screening));
   return <form className="mt-2 space-y-3" onSubmit={event => {
     event.preventDefault();
     act(async () => {
