@@ -171,10 +171,16 @@ function observeBuiltPage({ question, answer, owner, jobId }: { question: string
     release(id) { const item = requests[id]; if (!item?.ready || !item.release || item.released) refuse("Invalid original response release"); item.release!(); },
     post(value) { const sender = new BroadcastChannel("keryx-auth-v1"); sender.postMessage(value); sender.close(); },
     flush: () => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))),
-    storm(source) { let sequence = 1; for (const ms of [5000, 10000, 18000]) {
-      const timer = setTimeout(() => { timers.delete(timer); for (let n = 0; n < 8; n++) channel.postMessage({ type: "logout", source, sequence: ++sequence, pending: true, confirmed: true }); }, ms);
-      timers.add(timer);
-    } },
+    storm(source) {
+      let sequence = 1;
+      const first = events.find(event => typeof event.value === "object" && event.value?.source === source && event.value.pending);
+      if (!first || performance.now() >= first.at + 18000) refuse("Pending-storm setup missed the original receiver delivery window");
+      // Publisher close/observation can take seconds. Stimuli share the receiver's original lease origin.
+      for (const ms of [5000, 10000, 18000]) {
+        const timer = setTimeout(() => { timers.delete(timer); for (let n = 0; n < 8; n++) channel.postMessage({ type: "logout", source, sequence: ++sequence, pending: true, confirmed: true }); }, Math.max(0, first.at + ms - performance.now()));
+        timers.add(timer);
+      }
+    },
     close() { for (const timer of timers) clearTimeout(timer); timers.clear(); mutation.disconnect(); channel.close();
       window.removeEventListener("keryx:auth", authEvent, true); window.fetch = nativeFetch; },
   };

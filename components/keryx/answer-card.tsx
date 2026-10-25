@@ -115,11 +115,11 @@ export function AnswerCard({ run, answerLanguage, meta, permalink, payments = []
           </>}
 
           {run.citations.length > 0 && (
-            <div className="mt-7 border-t border-ink pt-5">
-              <p className="mb-3.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-3">
+            <div className="@container mt-7 border-t border-ink pt-5">
+              <p className="mb-4 font-mono text-[11px] uppercase leading-relaxed tracking-[0.1em] text-ink-3">
                 {copy("reportReading.sources")}
               </p>
-              <ul>
+              <ul aria-label={copy("reportReading.sources")} className="grid gap-3 @2xl:grid-cols-2">
                 {run.citations.map((c) => {
                   const articleUrl = safeArticleUrl(c.itemUrl);
                   const isPublicReference = c.sourceKind === "public-reference";
@@ -127,50 +127,62 @@ export function AnswerCard({ run, answerLanguage, meta, permalink, payments = []
                     <li
                       key={c.marker}
                       className={cn(
-                        "flex flex-wrap items-start gap-x-3 gap-y-1 border-b border-line py-2.5 transition-colors sm:flex-nowrap",
-                        highlight === c.marker && "bg-seal/[0.06]",
+                        "flex min-w-0 flex-col border border-line bg-paper p-4 transition-colors hover:border-brass focus-within:border-seal [overflow-wrap:anywhere] sm:p-5",
+                        highlight === c.marker && "border-seal bg-seal/[0.04]",
                       )}
                     >
-                      <span className="w-5 shrink-0 font-display text-[14px] font-semibold text-paid">
-                        {c.marker.replace(/\D/g, "") || c.marker}
-                      </span>
-                      <span className="min-w-[12rem] flex-1">
-                        {articleUrl ? (
-                          <a
-                            href={articleUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block break-words font-serif text-[15px] text-ink underline decoration-line underline-offset-2 hover:decoration-ink"
-                          >
-                            {c.itemTitle ?? c.sourceName}
-                          </a>
-                        ) : (
-                          <span className="block break-words font-serif text-[15px] text-ink">
-                            {c.itemTitle ?? c.sourceName}
+                      <div className="mb-4">
+                        <div className="grid grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-3">
+                          <span className="min-w-0 pt-1 font-display text-lg font-semibold leading-snug text-paid">
+                            {c.marker.replace(/\D/g, "") || c.marker}
                           </span>
-                        )}
-                        {c.itemTitle ? (
-                          <span className="block break-words font-mono text-[10px] uppercase tracking-[0.08em] text-ink-3">
-                            {c.sourceName}
-                            {c.itemPublishedAt ? ` · ${c.itemPublishedAt.slice(0, 10)}` : ""}
+                          <div className="min-w-0">
+                            {articleUrl ? (
+                              <a
+                                href={articleUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block min-h-11 font-serif text-base leading-relaxed text-ink underline decoration-line underline-offset-4 hover:text-seal hover:decoration-seal focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-seal"
+                              >
+                                {c.itemTitle ?? c.sourceName}
+                              </a>
+                            ) : (
+                              <span className="block font-serif text-base leading-relaxed text-ink">
+                                {c.itemTitle ?? c.sourceName}
+                              </span>
+                            )}
+                            {c.itemTitle ? (
+                              <span className="mt-1 block font-mono text-[11px] leading-relaxed text-ink-3">
+                                {c.sourceName}
+                                {c.itemPublishedAt ? ` · ${c.itemPublishedAt.slice(0, 10)}` : ""}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                        {(c.evidenceProvenance === "synthetic-demo" || isPublicReference || c.scholarly) && <div className="mt-3 border-l-2 border-line pl-3">
+                          {c.evidenceProvenance === "synthetic-demo" && <p className="text-sm leading-relaxed text-seal">{copy("reportReading.synthetic")}</p>}
+                          {isPublicReference && (
+                            <p className="font-mono text-[11px] leading-relaxed text-ink-3">
+                              {c.webProvenance ? copy(c.webProvenance.truncated ? "reportReading.webBounded" : "reportReading.webText", { extraction: c.webProvenance.extraction }) : c.publicDeliveryKind ? c.publicDeliveryKind === "full_text" ? copy("reportReading.rssFullText") : copy("reportReading.rssDelivery", { delivery: c.publicDeliveryKind.replaceAll("_", " ") }) : copy("reportReading.rssFeedBody")}
+                            </p>
+                          )}
+                          {isPublicReference && <PdfReadingScope provenance={c.webProvenance} />}
+                          {c.scholarly && <ScholarlyMetadataDetails metadata={c.scholarly} />}
+                        </div>}
+                      </div>
+                      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+                        <button type="button" aria-label={copy("reportReading.inspectCitation", { marker: c.marker })} aria-haspopup="dialog" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="group inline-flex min-h-11 min-w-11 max-w-full items-center justify-center gap-2 border border-line bg-paper-2 px-3 py-2 font-mono text-xs text-seal transition-colors hover:border-seal hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
+                          {copy("reportReading.evidence")}<svg aria-hidden="true" className="h-4 w-4 shrink-0 motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-0.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10h14m-5-5 5 5-5 5" /></svg>
+                        </button>
+                        <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+                          <span title={copy("reportCitation.title", { source: c.sourceName, weight: Math.round(c.weight * 100) })} className="font-mono text-[11px] tabular-nums text-ink-3">
+                            {Math.round(c.weight * 100)}%
                           </span>
-                        ) : null}
-                        {c.evidenceProvenance === "synthetic-demo" && <span className="block text-sm text-seal">{copy("reportReading.synthetic")}</span>}
-                        {isPublicReference && (
-                          <span className="mt-1 block font-mono text-[10px] text-ink-3">
-                            {c.webProvenance ? copy(c.webProvenance.truncated ? "reportReading.webBounded" : "reportReading.webText", { extraction: c.webProvenance.extraction }) : c.publicDeliveryKind ? c.publicDeliveryKind === "full_text" ? copy("reportReading.rssFullText") : copy("reportReading.rssDelivery", { delivery: c.publicDeliveryKind.replaceAll("_", " ") }) : copy("reportReading.rssFeedBody")}
-                          </span>
-                        )}
-                        {isPublicReference && <PdfReadingScope provenance={c.webProvenance} />}
-                        {c.scholarly && <ScholarlyMetadataDetails metadata={c.scholarly} />}
-                      </span>
-                      <button type="button" aria-label={copy("reportReading.inspectCitation", { marker: c.marker })} aria-haspopup="dialog" onClick={(event) => openCitation(c.marker, event.currentTarget)} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center px-2 font-mono text-xs text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">{copy("reportReading.evidence")}</button>
-                      <span className="shrink-0 font-mono text-[11px] text-ink-3">
-                        {Math.round(c.weight * 100)}%
-                      </span>
-                      {!isPublicReference && <span className="shrink-0 font-mono text-sm tabular-nums text-paid">
-                        {copy("reportReading.planned", { amount: formatRecordedUsdc(c.reward) })}
-                      </span>}
+                          {!isPublicReference && <span className="font-mono text-xs tabular-nums text-paid">
+                            {copy("reportReading.planned", { amount: formatRecordedUsdc(c.reward) })}
+                          </span>}
+                        </div>
+                      </div>
                     </li>
                   );
                 })}
