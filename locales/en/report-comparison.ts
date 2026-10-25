@@ -25,6 +25,12 @@ export const reportComparisonCopy = {
   availability: { complete: "Both target ledgers are inspectable", partial: "Some target ledgers are incomplete", unavailable: "A target ledger is unavailable" },
   comparable: "Comparable targets", changed: "Targets with changes", added: "Added excerpt rows", removed: "Removed excerpt rows", contextChanged: "Reading-context changes", unknown: "Unknown target comparisons",
   summaryNotice: "Unmatched targets are shown separately and are not counted as excerpt additions or losses. Retrieval time alone does not count as a change.",
+  filterTitle: "Find the targets to review", searchLabel: "Search targets, sources and excerpts", filterLabel: "Show targets",
+  filters: { all: "All targets", changes: "Recorded changes", gaps: "Missing or incomplete evidence", unmatched: "Unmatched targets" },
+  filterOption: ({ label, count }: { label: string; count: number }) => `${label} (${count})`,
+  visibleTargets: ({ shown, total }: { shown: number; total: number }) => `Showing ${shown} of ${total} target pairs`,
+  filterNotice: "Search matches literal text on either side, ignoring case. Evidence gaps include incomplete ledgers or targets with no inspectable excerpts; they do not prove a source was lost. Filter counts, summary totals and downloads always cover the full comparison.",
+  resetView: "Show all targets and clear search", noMatches: "No targets match this view. Clear the search or choose another filter; the full comparison remains available to download.",
   illustrativeNotice: ({ rows }: { rows: number }) => `${rows} excerpt rows across the two inputs are marked illustrative. They are not verified research evidence.`,
   empty: "No recorded targets are available for pairing. The recorded questions, answers and checksum bindings remain available below and in the exports.",
   state: {

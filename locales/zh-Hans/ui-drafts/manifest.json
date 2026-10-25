@@ -11,10 +11,10 @@
   "totals": {
     "englishNamespaceFiles": 74,
     "coreInlineSources": 1,
-    "extractedLeaves": 6294,
+    "extractedLeaves": 6306,
     "authoredEntries": 5940,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 325,
+    "uncoveredEntries": 337,
     "completeNamespaces": 65
   },
   "namespaces": [
@@ -7329,9 +7329,9 @@
     {
       "namespace": "report-comparison",
       "sourcePath": "locales/en/report-comparison.ts",
-      "sourceSha256": "bb4bd5bb56a596381c9847ab105b5f4bddeaf3a4a16e0d700d5cbbd907884977",
+      "sourceSha256": "7ee30b17b59fcbbc02882b942e84b06a7caa5ff10c22941c314f1cd538efadcd",
       "draftPath": "locales/zh-Hans/ui-drafts/report-comparison.json",
-      "extractedLeaves": 83,
+      "extractedLeaves": 95,
       "authoredEntries": 0,
       "coveredKeys": [],
       "uncoveredKeys": [
@@ -7366,6 +7366,14 @@
         "excluded",
         "exportNotice",
         "exports",
+        "filterLabel",
+        "filterNotice",
+        "filterOption",
+        "filterTitle",
+        "filters.all",
+        "filters.changes",
+        "filters.gaps",
+        "filters.unmatched",
         "identity",
         "illustrative",
         "illustrativeNotice",
@@ -7384,6 +7392,7 @@
         "matchingNotice",
         "matchingTitle",
         "metadataTitle",
+        "noMatches",
         "noTarget",
         "notRecorded",
         "pairTitle",
@@ -7395,6 +7404,7 @@
         "receiptDetails",
         "removed",
         "reportId",
+        "resetView",
         "resultTitle",
         "row.added",
         "row.context",
@@ -7402,6 +7412,7 @@
         "row.retained",
         "row.unchanged",
         "sameReceipt",
+        "searchLabel",
         "source",
         "sourceMarker",
         "state.comparison-unavailable",
@@ -7417,7 +7428,8 @@
         "unknown",
         "unmatched",
         "verified",
-        "version"
+        "version",
+        "visibleTargets"
       ],
       "nonTranslatableMachineIdentifiers": [],
       "sourceAliases": {}

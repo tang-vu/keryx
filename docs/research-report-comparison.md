@@ -12,6 +12,19 @@ excerpts stay literal, without translation or active links from imported URLs.
 Changing a file or target match clears the previous result immediately; late
 asynchronous verification cannot restore it.
 
+For longer reports, use **Find the targets to review** to search the retained
+target text, source names/IDs, titles, URLs, versions and excerpts on either side.
+Search is a case-insensitive literal substring, not a semantic search or a source
+request. Combine it with **Recorded changes**, **Missing or incomplete evidence**
+or **Unmatched targets**. Evidence gaps include incomplete ledgers and existing
+targets with no inspectable excerpts; an absent paired target alone is unmatched,
+not evidence of a lost source. Categories may overlap.
+
+The visible count follows the search and filter. Category counts, summary totals
+and all downloads always describe the full comparison. Original target-pair
+numbers stay stable while filtering. Clearing the view restores all targets;
+changing either file, changing target pairs or verifying again resets the view.
+
 ## Meaning and limits
 
 Both inputs must be UTF-8 JSON using the existing
