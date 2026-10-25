@@ -142,16 +142,16 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
   };
   const hasTurns = visibleHistory.length > 0 || visibleRequest !== null;
   return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-tour="hero" aria-label={message("researchChat.label")}>
-    <header className="relative mb-2 min-h-[100px] sm:mb-4 sm:min-h-[140px]">
+    <header className="relative mb-5 min-h-[116px] border-b border-line pb-5 sm:mb-6 sm:min-h-[168px] sm:pb-6">
       <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute right-0 top-[44px] h-[56px] w-[56px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
         <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p data-testid="hero-kicker" className={`${introduceProduct ? "max-w-[calc(100%_-_140px)] sm:max-w-none " : ""}font-mono text-[11px] uppercase tracking-wide text-seal`}>{introduceProduct ? productGuideCopy("product.heroKicker") : message("researchChat.kicker")}</p>
+        <p data-testid="hero-kicker" className={`${introduceProduct ? "max-w-[calc(100%_-_140px)] sm:max-w-none " : ""}font-mono text-[11px] uppercase tracking-[0.14em] text-seal`}>{introduceProduct ? productGuideCopy("product.heroKicker") : message("researchChat.kicker")}</p>
         <div data-testid="hero-guide" className="absolute right-0 top-0 sm:static sm:mr-[156px]"><OnboardingTour /></div>
       </div>
-      <h1 className={`mt-1 font-display ${introduceProduct ? "text-[clamp(28px,5vw,46px)]" : "text-[clamp(32px,5vw,46px)]"} leading-none sm:mt-2 sm:leading-tight`}>{introduceProduct ? productGuideCopy("product.heroTitle") : message("researchChat.title")}</h1>
-      <p className="mt-1 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:mt-2 sm:max-w-[64ch] sm:text-base sm:leading-normal">{introduceProduct && payer === "treasury" ? productGuideCopy("product.heroBody") : message("researchChat.introduction")}</p>
+      <h1 className={`mt-3 font-display ${introduceProduct ? "text-[clamp(30px,9vw,64px)] tracking-[-0.035em]" : "text-[clamp(32px,5vw,46px)]"} leading-none sm:leading-tight`}>{introduceProduct ? productGuideCopy("product.heroTitle") : message("researchChat.title")}</h1>
+      <p className="mt-3 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:max-w-[min(60ch,calc(100%_-_156px))] sm:text-lg sm:leading-relaxed">{introduceProduct && payer === "treasury" ? productGuideCopy("product.heroBody") : message("researchChat.introduction")}</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label={message("researchChat.turnsLabel")}>
       {visibleHistory.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
