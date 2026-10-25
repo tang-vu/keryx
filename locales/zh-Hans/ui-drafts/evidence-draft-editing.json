@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/evidence-draft-editing.ts",
-  "sourceSha256": "c6494df15b55e87c23b99f2afb24aeb9203e1fea8f2860b1cf2592bd67553933",
+  "sourceSha256": "4ba77a747f400fc8712c7c5b7f2b32c1e79db615484e6cdd7c4d3ed35aa3491e",
   "entries": {
     "removeClaim": {
       "source": "Remove this claim",

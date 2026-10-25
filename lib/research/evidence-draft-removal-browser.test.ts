@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { build } from "esbuild";
 import { chromium, type Browser, type Page, type Locator } from "playwright";
@@ -11,8 +12,10 @@ import { evidenceDraftEditingCopy as editing } from "../../locales/en/evidence-d
 import { LITERATURE_STORAGE_KEY, saveLiteraturePaper, serializeLiteratureWorkspace } from "../papers/literature-workspace";
 import { PAPER_CATALOG } from "../papers/catalog";
 
-let browser: Browser, bundle: string;
+let browser: Browser, bundle: string, stylesheet = "";
 beforeAll(async () => {
+  if (process.env.KERYX_DRAFT_CSS) stylesheet = await readFile(process.env.KERYX_DRAFT_CSS, "utf8");
+  if (process.env.KERYX_DRAFT_SCREENSHOT_DIR) await mkdir(process.env.KERYX_DRAFT_SCREENSHOT_DIR, { recursive: true });
   bundle = (await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React from 'react';import{createRoot}from'react-dom/client';
     import{EvidenceDraftWorkspace}from'./components/keryx/evidence-draft-workspace';
@@ -69,7 +72,7 @@ async function fixture(width: number, run: (page: Page, packet: EvidenceDraftReq
     await context.route("**/*", route => {
       requests.push(route.request().url());
       return route.request().url() === "https://draft-removal.test/" ? route.fulfill({ contentType: "text/html", body:
-        '<meta charset="utf-8"><style>*{box-sizing:border-box}body{margin:12px}input,textarea,select,button{max-width:100%}article,section,a{overflow-wrap:anywhere}</style><div id="root"></div>' }) : route.abort();
+        `<meta charset="utf-8"><style>${stylesheet}\n*{box-sizing:border-box}body{margin:12px}input,textarea,select,button{max-width:100%}article,section,a{overflow-wrap:anywhere}</style><div id="root"></div>` }) : route.abort();
     });
     const page = await context.newPage(); page.setDefaultTimeout(5000); page.on("pageerror", error => errors.push(error.message));
     await page.goto("https://draft-removal.test/");
@@ -153,6 +156,94 @@ it("allows empty collections without inventing references and can add fresh rows
   const fresh = await saved(page);
   expect(fresh.claims).toHaveLength(1); expect(fresh.themes).toHaveLength(1);
   expect(fresh.passage).toBe(packet.passage); expect(fresh.reports).toEqual(packet.reports);
+}));
+
+it.each([320, 1440])("undoes claim and theme removals with original assessments and unfinished edits at %ipx", width => fixture(width, async (page, packet) => {
+  await unfinished(page);
+  await themes(page).nth(1).getByLabel(copy.theme.notes).fill("Keep latest private note");
+  const before = await saved(page);
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  const undo = page.getByRole("button", { name: editing.undoRemoval, exact: true });
+  expect(await undo.evaluate(button => button === document.activeElement)).toBe(true);
+  expect(await claims(page).first().evaluate(article => article.previousElementSibling?.tagName)).toBe("ASIDE");
+  const bounds = await undo.boundingBox(); expect(bounds).not.toBeNull();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0); expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(900);
+  if (process.env.KERYX_DRAFT_SCREENSHOT_DIR)
+    await undo.locator("..").screenshot({ path: join(process.env.KERYX_DRAFT_SCREENSHOT_DIR, `claim-recovery-${width}.png`) });
+  await page.keyboard.press("Enter");
+  await page.getByText(editing.removalRestored, { exact: true }).waitFor();
+  expect(await saved(page)).toEqual(before); await assertUnfinished(page, 1);
+  expect((await saved(page)).claims[0].assessment).toEqual(packet.claims[0].assessment);
+  expect(await undo.count()).toBe(0);
+  await remove(page, themes(page).first().getByRole("button", { name: editing.removeTheme, exact: true }), editing.confirmTheme, true);
+  if (process.env.KERYX_DRAFT_SCREENSHOT_DIR)
+    await undo.locator("..").screenshot({ path: join(process.env.KERYX_DRAFT_SCREENSHOT_DIR, `theme-recovery-${width}.png`) });
+  await undo.click();
+  expect(await saved(page)).toEqual(before); await assertUnfinished(page, 1);
+  expect(await themes(page).nth(1).getByLabel(copy.theme.notes).inputValue()).toBe("Keep latest private note");
+}));
+
+it("recovers only the newest removal and invalidates it when other work is edited", () => fixture(1024, async (page, packet) => {
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await remove(page, themes(page).first().getByRole("button", { name: editing.removeTheme, exact: true }), editing.confirmTheme, true);
+  await page.getByRole("button", { name: editing.undoRemoval, exact: true }).click();
+  expect(await saved(page)).toEqual({ ...packet, claims: packet.claims.slice(1) });
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await themes(page).first().getByLabel(copy.theme.notes).fill("New work after removal");
+  expect(await page.getByRole("button", { name: editing.undoRemoval, exact: true }).count()).toBe(0);
+  expect((await saved(page)).claims).toEqual([]);
+  expect(await themes(page).first().getByLabel(copy.theme.notes).inputValue()).toBe("New work after removal");
+}));
+
+it("keeps the draft when a removal recovery snapshot cannot be prepared", () => fixture(1024, async (page, packet) => {
+  await page.evaluate(() => { window.structuredClone = () => { throw new Error("Synthetic snapshot refusal"); }; });
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await page.getByText(editing.removalRefused, { exact: true }).waitFor();
+  expect(await saved(page)).toEqual(packet);
+  expect(await page.getByRole("button", { name: editing.undoRemoval, exact: true }).count()).toBe(0);
+}));
+
+it("invalidates a pending original file preview across removal undo and retires recovery after explicit restore", () => fixture(1024, async (page, packet) => {
+  await page.evaluate(() => {
+    const original = File.prototype.arrayBuffer;
+    File.prototype.arrayBuffer = async function () {
+      const bytes = await original.call(this);
+      if (this.name === "pending-original.json") await new Promise<void>(resolve => {
+        (window as unknown as { releaseOriginalPreview: () => void }).releaseOriginalPreview = resolve;
+      });
+      return bytes;
+    };
+  });
+  await page.getByLabel(restore.file, { exact: true }).setInputFiles({ name: "pending-original.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(packet)) });
+  await page.waitForFunction(() => typeof (window as unknown as { releaseOriginalPreview?: unknown }).releaseOriginalPreview === "function");
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await page.getByRole("button", { name: editing.undoRemoval, exact: true }).click();
+  await page.evaluate(() => (window as unknown as { releaseOriginalPreview: () => void }).releaseOriginalPreview());
+  expect(await page.getByRole("button", { name: restore.restore, exact: true }).count()).toBe(0);
+  expect(await saved(page)).toEqual(packet);
+  await remove(page, themes(page).first().getByRole("button", { name: editing.removeTheme, exact: true }), editing.confirmTheme, true);
+  const next = structuredClone(packet); next.workspace.title = "Deliberately restored next work";
+  await page.getByLabel(restore.file, { exact: true }).setInputFiles({ name: "next.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(next)) });
+  await page.getByRole("button", { name: restore.restore, exact: true }).click();
+  expect(await page.getByRole("button", { name: editing.undoRemoval, exact: true }).count()).toBe(0);
+  expect(await saved(page)).toEqual(next);
+}));
+
+it("undoes clear to the state after a previous removal, without reviving older recovery", () => fixture(1024, async (page, packet) => {
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await remove(page, page.getByRole("button", { name: copy.workspace.clear, exact: true }), editing.confirmClear, true);
+  await page.getByRole("button", { name: editing.undoClear, exact: true }).click();
+  expect(await saved(page)).toEqual({ ...packet, claims: packet.claims.slice(1) });
+  expect(await page.getByRole("button", { name: editing.undoRemoval, exact: true }).count()).toBe(0);
+}));
+
+it("restores the exact retained baseline and unload warning when undoing a removal", () => fixture(1024, async page => {
+  const warns = () => page.evaluate(() => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })));
+  await expect.poll(warns).toBe(false);
+  await remove(page, claims(page).first().getByRole("button", { name: editing.removeClaim, exact: true }), editing.confirmClaim, true);
+  await expect.poll(warns).toBe(true);
+  await page.getByRole("button", { name: editing.undoRemoval, exact: true }).click();
+  await expect.poll(warns).toBe(false);
 }));
 
 it("frees a slot at both editor limits and preserves unique IDs when adding again", () => {

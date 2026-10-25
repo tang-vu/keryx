@@ -66,6 +66,15 @@ You can remove every claim/theme or free a slot at the editor limits, then add
 new rows without clearing the rest of your work. Download a new private backup
 to retain these deliberate changes.
 
+After a confirmed claim or theme removal, **Undo removal** restores the most
+recently removed content, its exact source versions and recorded assessments,
+and unfinished editor inputs. This is one recovery step in the current tab;
+another removal replaces it. Editing fields, importing a result or restoring
+another file ends recovery. If a recovery snapshot cannot be prepared, the
+removal is refused and the current draft stays intact. Clearing after a removal
+keeps a separate **Undo clear** step for the state immediately before that clear.
+The undo control appears where the row was removed and receives keyboard focus.
+
 **Clear this tab's draft** asks for confirmation before resetting the editor.
 Cancel keeps all inputs. After a confirmed clear, **Undo clear** restores the
 original paper/version snapshot, reports, passage, assessments, themes and
