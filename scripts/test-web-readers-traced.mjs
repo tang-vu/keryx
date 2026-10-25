@@ -34,6 +34,14 @@ try {
   assert.equal(layout.htmlTextLayout.headings.length, 1);
   assert.equal(layout.text.slice(layout.htmlTextLayout.headings[0].start, layout.htmlTextLayout.headings[0].end), "Rules");
   assert.equal(layout.text.slice(layout.htmlTextLayout.preformatted[0].start, layout.htmlTextLayout.preformatted[0].end), wrapped);
+  const section = `<h2>Delivery conditions</h2><p>${passage.repeat(3)}</p><pre>${wrapped}</pre>`;
+  const sectionDocument = `<html><body><section id="conditions">${section}</section><p>Outside section boundary.</p></body></html>`;
+  const selected = await worker("html-reader-worker.mjs", [], JSON.stringify({
+    text: sectionDocument, finalUrl: "https://example.com/manual", fragment: "conditions" }));
+  assert.ok(selected.text.includes(passage.trim())); assert.ok(!selected.text.includes("Outside section boundary"));
+  assert.equal(selected.truncated, true); assert.equal(selected.htmlSectionScope.fragment, "conditions");
+  assert.equal(selected.htmlSectionScope.documentSha256, createHash("sha256").update(sectionDocument).digest("hex"));
+  assert.equal(sectionDocument.slice(selected.htmlSectionScope.htmlStart, selected.htmlSectionScope.htmlEnd), section);
   // Exercise normalization above the old raw-byte cap and semantic-region fidelity using
   // only the assembled trace: the actual document must beat an unrelated article card.
   const caveat = "Delivery can happen more than once; reconcile against the original event identifier.";
