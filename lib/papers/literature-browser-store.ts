@@ -58,11 +58,25 @@ export async function replaceLiteratureWorkspace(workspace: LiteratureWorkspace,
   });
 }
 export async function clearLiteratureWorkspace() {
+  await withWorkspaceLock(removeWorkspace);
+}
+function removeWorkspace() {
+  try {
+    window.localStorage.removeItem(LITERATURE_STORAGE_KEY);
+    if (window.localStorage.getItem(LITERATURE_STORAGE_KEY) !== null) throw new Error("Readback failed");
+  } catch { throw new Error(copy("paperWorkspace.clearFailed")); }
+  window.dispatchEvent(new Event(changeEvent));
+}
+
+/** Retain a validated clone synchronously before deletion, under the same lock.
+ * A retention failure refuses clear; a removal/readback failure leaves the caller
+ * holding the recovery. Legacy corrupt-storage clearing remains explicit. */
+export async function clearLiteratureWithRecovery(retain: (workspace: LiteratureWorkspace) => undefined) {
   await withWorkspaceLock(() => {
-    try {
-      window.localStorage.removeItem(LITERATURE_STORAGE_KEY);
-      if (window.localStorage.getItem(LITERATURE_STORAGE_KEY) !== null) throw new Error("Readback failed");
-    } catch { throw new Error(copy("paperWorkspace.clearFailed")); }
-    window.dispatchEvent(new Event(changeEvent));
+    const current = snapshot();
+    if (current.error) throw new Error(current.error);
+    const saved = parseLiteratureWorkspace(serializeLiteratureWorkspace(current.workspace));
+    if (retain(saved) !== undefined) throw new Error(copy("paperWorkspace.clearFailed"));
+    removeWorkspace();
   });
 }

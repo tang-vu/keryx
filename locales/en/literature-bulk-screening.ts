@@ -1,0 +1,15 @@
+export const literatureBulkScreeningCopy = {
+  summary: "Screen shown papers together",
+  decision: "Screening decision for shown papers",
+  preview: "Review screening change",
+  previewTitle: "Confirm this screening change",
+  count: "Papers in this preview",
+  target: "Set saved screening to",
+  notice: "Only the exact papers listed below will change. Notes, metadata and your review focus stay as saved. Unsaved editors are not submitted. This preview stays fixed if you change the search or filter. No source lookup or research starts.",
+  confirm: "Apply to these papers",
+  cancel: "Cancel screening change",
+  applying: "Saving screening decisions…",
+  saved: "Screening decisions saved for all previewed papers.",
+  stale: "A previewed paper changed or was removed. No decisions were saved. Cancel and review the shown papers again.",
+  failed: "The screening change could not be verified. Keep this preview, check your saved library, and review again before retrying.",
+} as const;
