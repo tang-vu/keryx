@@ -38,6 +38,22 @@ it("writes a requested new file and refuses to overwrite an existing file", asyn
   await expect(compareResearchCli(args)).rejects.toMatchObject({ code: "EEXIST" });
   expect(await readFile(path, "utf8")).toBe(content);
 });
+it("exports a text-free matching plan, restores it and refuses a different receipt before writing output", async () => {
+  const f = await files(), planFile = join(f.directory, "matching.json");
+  await compareResearchCli([...f.args, "--format", "matches", "--output", planFile]);
+  const plan = JSON.parse(await readFile(planFile, "utf8"));
+  expect(plan).toMatchObject({ format: "keryx-report-matching-v1", matches: [] });
+  expect(JSON.stringify(plan)).not.toContain("Local question");
+  expect(await compareResearchCli([...f.args, "--matches", planFile])).toEqual(await compareResearchCli(f.args));
+  const changed = JSON.parse(await readFile(f.after, "utf8")); changed.payload.dispatch.question = "Changed question";
+  changed.integrity.digest = `sha256:${createHash("sha256").update(canonicalJson(changed.payload)).digest("hex")}`;
+  await writeFile(f.after, JSON.stringify(changed));
+  const output = join(f.directory, "refused.json");
+  await expect(compareResearchCli([...f.args, "--matches", planFile, "--output", output])).rejects.toMatchObject({ code: "matching-receipts-mismatch" });
+  await expect(readFile(output)).rejects.toMatchObject({ code: "ENOENT" });
+  await writeFile(planFile, "[]");
+  expect(JSON.parse((await compareResearchCli([...f.args, "--matches", planFile]))!).format).toBe("keryx-report-comparison-v1");
+});
 it.each([["--before", "x"], ["--before", "x", "--after", "y", "--format", "html"], ["--before", "x", "--after", "y", "--before", "z"]].map(args => ({ args })))("refuses invalid CLI arguments before reading files: %j", async ({ args }) => {
   await expect(compareResearchCli(args)).rejects.toThrow("usage");
 });
