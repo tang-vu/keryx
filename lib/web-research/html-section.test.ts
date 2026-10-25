@@ -31,6 +31,44 @@ it("reads a visible empty legacy named anchor followed immediately by a heading"
   expect(result.text).not.toContain("Next filter");
 });
 
+it("reads a semantic section whose first content is its direct heading and stops at its closing tag", async () => {
+  const selected = `<h2>Task cancellation<a href="#limits">¶</a></h2><p>${fact.repeat(3)}</p><section><h3>Cleanup</h3><pre>try:\n    await work()\nfinally:\n    cleanup()</pre></section>`;
+  const html = `<html><head><title>Async manual</title></head><body><main><section id="intro"><h2>Introduction</h2><p>Unrelated introduction.</p></section><section id="limits">\n<!-- heading follows -->\n${selected}</section><p>Outside the requested section.</p><section><h2>Other section</h2><p>Unrelated tail.</p></section></main></body></html>`;
+  const result = await extractHtml(html, url, undefined, "limits");
+  expect(result).toMatchObject({ title: "Async manual", truncated: true, htmlSectionScope: { fragment: "limits", headingLevel: 2 } });
+  expect(result.text).toContain(fact.trim());
+  expect(result.text).toContain("try:\n    await work()\nfinally:\n    cleanup()");
+  expect(result.text).not.toMatch(/Unrelated|Outside the requested section|Other section/);
+  expect(html.slice(result.htmlSectionScope!.htmlStart, result.htmlSectionScope!.htmlEnd)).toBe(selected);
+  const gathered = gatheredArticle("public:web:synthetic", result);
+  expect(gathered.htmlTextLayout?.headings).toHaveLength(2);
+  expect(receiptAsset(gathered).webProvenance?.htmlSectionScope).toEqual(result.htmlSectionScope);
+});
+
+it.each([
+  `<section id="limits"><p>Content before the heading.</p><h2>Limits</h2><p>${fact.repeat(3)}</p></section>`,
+  `<section id="limits">Intervening text<h2>Limits</h2><p>${fact.repeat(3)}</p></section>`,
+  `<section id="limits"><div><h2>Nested heading</h2><p>${fact.repeat(3)}</p></div></section>`,
+  `<section id="limits"></section><h2>Outside heading</h2><p>${fact.repeat(3)}</p>`,
+  `<section id="limits"><hr><h2>Limits</h2><p>${fact.repeat(3)}</p></section>`,
+  `<section hidden id="limits"><h2>Hidden</h2><p>${fact.repeat(3)}</p></section>`,
+  `<section id="limits"><h2 aria-hidden="true">Hidden heading</h2><p>${fact.repeat(3)}</p></section>`,
+  `<div style="visibility:hidden"><section id="limits" style="visibility:visible"><h2>Reset</h2><p>${fact.repeat(3)}</p></section></div>`,
+  `<section id="limits"><h2>Limits</h2><p>${fact.repeat(3)}</p></section><a name="limits"></a>`,
+  `<div id="limits"><h2>Generic container</h2><p>${fact.repeat(3)}</p></div>`,
+  `<section id="limits"><h2>Limits</h2><p>${fact.repeat(3)}</p></div>`,
+])("refuses ambiguous, hidden and non-heading-first section containers %#", async body => {
+  await expect(extractHtml(`<html><body>${body}</body></html>`, url, undefined, "limits")).rejects.toThrow();
+});
+
+it("stops a heading-first section at an earlier direct peer heading", async () => {
+  const selected = `<h2>Limits</h2><p>${fact.repeat(3)}</p>`;
+  const html = `<main><section id="limits">${selected}<h2>Separate peer</h2><p>Not selected.</p></section></main>`;
+  const result = await extractHtml(html, url, undefined, "limits");
+  expect(result.text).not.toMatch(/Separate peer|Not selected/);
+  expect(html.slice(result.htmlSectionScope!.htmlStart, result.htmlSectionScope!.htmlEnd)).toBe(selected);
+});
+
 it("keeps Unicode and literal code while stopping at the enclosing region", async () => {
   const html = `<html><body><main><h2 id="café">Café 🌍</h2><p>${fact.repeat(2)}</p><pre>if (x &lt; 3) {\n  retry();\n}</pre></main><p>Outside the selected parent.</p></body></html>`;
   const result = await extractHtml(html, url, undefined, "café");

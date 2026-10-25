@@ -4,6 +4,20 @@ vi.mock("../net/public-fetch", () => ({ fetchPublicBytes: transport, UnsafeTarge
 import { readArticle, gatheredArticle } from "./article-reader";
 import { rememberPublicFetchFailure } from "../net/public-fetch-diagnostic";
 import { pdfFixture } from "../../test-support/pdf-fixture";
+import { receiptAsset } from "../research-receipt-asset";
+
+it("retains caller-selected section-container scope through the actual worker and public receipt asset", async () => {
+  const text = "A synthetic cancellation callback must preserve the cleanup condition. ";
+  const html = `<html><body><section id="cleanup"><h2>Cleanup</h2><p>${text.repeat(4)}</p></section><section><h2>Outside</h2><p>Unrelated material.</p></section></body></html>`;
+  transport.mockResolvedValueOnce({ contentType: "text/html", finalUrl: "https://cdn.example/manual", bytes: new TextEncoder().encode(html) });
+  const article = await readArticle("https://original.example/manual", undefined, { requestedUrls: ["https://original.example/manual#cleanup"] });
+  expect(article.text).toContain(text.trim());
+  expect(article.text).not.toContain("Unrelated material");
+  expect(article).toMatchObject({ kind: "html", truncated: true, htmlSectionScope: { fragment: "cleanup", headingLevel: 2, documentCharacters: html.length } });
+  const gathered = gatheredArticle("public:section", article);
+  expect(gathered.itemUrl).toBe("https://cdn.example/manual");
+  expect(receiptAsset(gathered).webProvenance?.htmlSectionScope).toEqual(article.htmlSectionScope);
+});
 
 it("applies the caller's explicit section to the actual redirected document without replacing final provenance", async () => {
   const requested = "https://original.example/manual#limits", finalUrl = "https://cdn.example/v2/manual#server-choice";
