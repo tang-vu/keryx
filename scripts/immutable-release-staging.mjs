@@ -290,7 +290,7 @@ export function inspectImmutableArtifact({ candidate, sourceManifestSha256 }) {
     if (permitted.has(entry.path) || directories.has(entry.path)) continue;
     const top = entry.path.split('/')[0];
     if (!['.next', 'node_modules'].includes(top) &&
-        !['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo'].includes(entry.path)) refuse('unexpected-source-entry');
+        !['next-env.d.ts', 'tsconfig.tsbuildinfo', 'tsconfig.ops-scripts.tsbuildinfo'].includes(entry.path)) refuse(`unexpected-source-entry:${entry.path}`);
   }
   const buildId = readStable(path.join(source, '.next', 'BUILD_ID'), 1024).toString().trim();
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(buildId) || !byName.has('node_modules') ||

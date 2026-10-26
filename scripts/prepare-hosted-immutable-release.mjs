@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { preparationEnvironment } from './prepare-immutable-release.mjs';
+import { MAINNET_PUBLIC_BUILD_KEYS, parseMainnetPublicBuildControls } from './immutable-release-public-profile.mjs';
 
 const here = fileURLToPath(import.meta.url);
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -35,11 +36,10 @@ export function assertNetworkIsolation() {
 /** Whitelist public constants only. The official helper creates its own fresh
  * per-check environment and deliberately omits this control HOME and all tokens. */
 export function hostedChildEnvironment({ commit, home, inherited }) {
-  const checked = preparationEnvironment({ commit, scratch: home, inherited, publicNetwork: 'arc' });
+  const controls = parseMainnetPublicBuildControls(inherited.HOSTED_PUBLIC_BUILD_CONTROLS);
+  const checked = preparationEnvironment({ commit, scratch: home, inherited: { ...inherited, ...controls }, publicNetwork: 'arc' });
   return Object.fromEntries(['PATH', 'HOME', 'USERPROFILE', 'TMPDIR', 'TMP', 'TEMP', 'CI', 'NEXT_TELEMETRY_DISABLED',
-    'NEXT_PUBLIC_CIRCLE_APP_ID', 'NEXT_PUBLIC_GOOGLE_CLIENT_ID',
-    'KERYX_REGISTRY_ADDRESS', 'NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS',
-    'KERYX_REGISTRY_READ_ADDRESS', 'NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS'].map(key => [key, checked[key]]));
+    ...MAINNET_PUBLIC_BUILD_KEYS].map(key => [key, checked[key]]));
 }
 
 export function copyBrowserCache(input, candidate) {

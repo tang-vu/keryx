@@ -44,12 +44,12 @@ fn call(command: &str, args: &[&str], input: &str) -> (bool, Value) {
         .stderr(Stdio::piped())
         .spawn()
         .unwrap();
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(input.as_bytes())
-        .unwrap();
+    let sent = child.stdin.take().unwrap().write_all(input.as_bytes());
+    // Input/argument refusal may close stdin before the entire rejected payload
+    // is written. Still require the actual exit and exact structured response.
+    if let Err(error) = sent {
+        assert_eq!(error.kind(), std::io::ErrorKind::BrokenPipe);
+    }
     let output = child.wait_with_output().unwrap();
     assert!(
         output.stderr.is_empty(),

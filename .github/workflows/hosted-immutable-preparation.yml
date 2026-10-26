@@ -23,6 +23,10 @@ on:
         description: Reviewed published mainnet registry read address
         required: true
         type: string
+      public_build_controls:
+        description: Reviewed public JSON controls for privacy, WalletConnect, registry origins/version and withdrawal window
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -59,6 +63,7 @@ jobs:
           PUBLIC_GOOGLE: ${{ inputs.google_client_id }}
           PUBLIC_WRITE: ${{ inputs.registry_write_address }}
           PUBLIC_READ: ${{ inputs.registry_read_address }}
+          PUBLIC_BUILD_CONTROLS: ${{ inputs.public_build_controls }}
           PREPARATION_ROOT: ${{ runner.temp }}/keryx-hosted-${{ github.run_id }}-${{ github.run_attempt }}
           BROWSER_INPUT: ${{ runner.temp }}/keryx-browser-input-${{ github.run_id }}-${{ github.run_attempt }}
         shell: bash
@@ -70,6 +75,7 @@ jobs:
           sudo -n env -i PATH="$PATH" SOURCE_COMMIT="$SOURCE_COMMIT" \
             HOSTED_REPO="$GITHUB_WORKSPACE" HOSTED_ROOT="$PREPARATION_ROOT" \
             HOSTED_BROWSER_CACHE="$BROWSER_INPUT" HOSTED_NPM_CLI="$npm_cli" \
+            HOSTED_PUBLIC_BUILD_CONTROLS="$PUBLIC_BUILD_CONTROLS" \
             NEXT_PUBLIC_CIRCLE_APP_ID="$PUBLIC_CIRCLE" NEXT_PUBLIC_GOOGLE_CLIENT_ID="$PUBLIC_GOOGLE" \
             KERYX_REGISTRY_ADDRESS="$PUBLIC_WRITE" NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS="$PUBLIC_WRITE" \
             KERYX_REGISTRY_READ_ADDRESS="$PUBLIC_READ" NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS="$PUBLIC_READ" \

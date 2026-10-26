@@ -1,10 +1,14 @@
 import { build } from "esbuild";
 import { chromium, type Browser } from "playwright";
 import { afterAll, beforeAll, expect, it } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { PAPER_CATALOG } from "../papers/catalog";
 import copy from "../../locales/en/zotero.json";
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`, token = "SYNTHETICKEY000000000001";
 let browser: Browser, bundle: string;
+const screenshotDirectory = mkdtempSync(join(tmpdir(), "keryx-zotero-ui-"));
 beforeAll(async () => {
   const fixture = { version: 1, scope: "personal-bibliography", title: "PRIVATE REVIEW TITLE", question: "PRIVATE QUESTION", entries: [{ paper: PAPER_CATALOG[0], savedAt: "2026-10-11T00:00:00Z", screening: "include", notes: "PRIVATE PERSONAL NOTES" }] };
   bundle = (await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
@@ -26,7 +30,12 @@ beforeAll(async () => {
   } }] })).outputFiles[0].text;
   browser = await chromium.launch({ headless: true });
 });
-afterAll(async () => { await browser?.close(); });
+afterAll(async () => {
+  await browser?.close();
+  expect(dirname(screenshotDirectory)).toBe(resolve(tmpdir()));
+  expect(screenshotDirectory.split(/[\\/]/).at(-1)).toMatch(/^keryx-zotero-ui-/);
+  rmSync(screenshotDirectory, { recursive: true });
+});
 async function page(width = 1366, connected = false) {
   const context = await browser.newContext({ viewport: { width, height: 900 } }), page = await context.newPage();
   await page.route("https://fixture.example/**", route => route.fulfill({ contentType: "text/html", body: '<html><head><style>body{font:16px system-ui;margin:16px}input,select{display:block;max-width:100%;box-sizing:border-box;width:100%;padding:8px}button{padding:8px;margin:8px 8px 8px 0;min-height:44px}section>*{margin-bottom:16px}</style></head><body><main id="root"></main></body></html>' }));
@@ -50,7 +59,7 @@ it.each([320, 1366])("requires explicit connection, collection and send actions 
     const sent = JSON.parse(calls[3].body!); expect(sent).toEqual({ kind: "papers", collection: "ABCD2345", papers: [PAPER_CATALOG[0]] });
     expect(calls[3].body).not.toMatch(/PRIVATE REVIEW|PRIVATE QUESTION|PRIVATE PERSONAL/);
     expect(await f.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await f.page.screenshot({ path: `.artifacts/zotero-ui-${width}.png`, fullPage: true });
+    await f.page.screenshot({ path: join(screenshotDirectory, `zotero-ui-${width}.png`), fullPage: true });
     await f.page.getByRole("button", { name: copy.disconnect }).click(); await f.page.getByText(copy.disconnected, { exact: true }).waitFor();
     expect(await f.page.getByLabel(copy.keyLabel).inputValue()).toBe(""); expect(await f.page.locator("select").count()).toBe(0);
     expect(await f.page.evaluate(() => JSON.stringify(localStorage))).not.toContain(token);

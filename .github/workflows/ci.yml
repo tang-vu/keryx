@@ -246,6 +246,7 @@ jobs:
           node --test scripts/release-ops-preflight.test.mjs
           node --test scripts/immutable-release-staging.test.mjs
           node --test scripts/prepare-immutable-release.test.mjs
+          node --test scripts/immutable-release-public-profile.test.mjs
           node --test scripts/prepare-hosted-immutable-release.test.mjs
           node --test scripts/rehearse-prepared-release.test.mjs
           node scripts/rehearse-immutable-release.mjs
