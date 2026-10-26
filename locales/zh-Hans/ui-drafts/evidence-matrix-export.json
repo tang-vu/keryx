@@ -2,6 +2,75 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/evidence-matrix-export.ts",
-  "sourceSha256": "0590e48a8c18ef8d12e01d9acc643b7382030cc2e7277743a7e88a9e16b5d974",
-  "entries": {}
+  "sourceSha256": "92b92608451d2847d512e940b43b3a095288d3cfff19775775562b51c213f05a",
+  "entries": {
+    "downloadMarkdown": {
+      "source": "Download evidence Markdown",
+      "text": "下载 Markdown 格式的证据"
+    },
+    "filters": {
+      "source": "Inspect the evidence",
+      "text": "检查证据"
+    },
+    "search": {
+      "source": "Find a target or excerpt",
+      "text": "查找研究问题或摘录"
+    },
+    "searchHint": {
+      "source": "Search target text, retained excerpts and article details.",
+      "text": "搜索研究问题、已保留摘录及文章信息。"
+    },
+    "advancedFilters": {
+      "source": "Article and excerpt filters",
+      "text": "按文章和摘录筛选"
+    },
+    "article": {
+      "source": "Cited article with an excerpt",
+      "text": "包含摘录的被引文章"
+    },
+    "articleHint": {
+      "source": "Show targets with an excerpt from this exact citation. Other cited sources remain visible for comparison.",
+      "text": "显示包含这条确切引用的摘录的研究问题。其他被引来源仍会显示，以便比较。"
+    },
+    "allArticles": {
+      "source": "All cited articles",
+      "text": "所有被引文章"
+    },
+    "unavailableArticle": {
+      "source": "Previously selected article (no longer cited in this report)",
+      "text": "先前选择的文章（本报告已不再引用）"
+    },
+    "inspectionState": {
+      "source": "Excerpt availability",
+      "text": "摘录可用情况"
+    },
+    "allTargets": {
+      "source": "All targets",
+      "text": "所有研究问题"
+    },
+    "withExcerpts": {
+      "source": "With excerpts (including illustrative demos)",
+      "text": "有摘录（包括示例演示）"
+    },
+    "withoutExcerpts": {
+      "source": "Without excerpts",
+      "text": "无摘录"
+    },
+    "resetFilters": {
+      "source": "Reset filters",
+      "text": "重置筛选"
+    },
+    "resultCount": {
+      "source": "{shown} of {total} targets shown",
+      "text": "显示 {shown} / {total} 个研究问题"
+    },
+    "fullExport": {
+      "source": "Downloads include the complete evidence matrix, including targets hidden by these filters.",
+      "text": "下载文件包含完整的证据矩阵，包括被这些筛选条件隐藏的研究问题。"
+    },
+    "noMatches": {
+      "source": "No target matches these filters. Reset the filters to inspect the complete matrix.",
+      "text": "没有研究问题符合这些筛选条件。重置筛选以检查完整矩阵。"
+    }
+  }
 }
