@@ -149,6 +149,7 @@ export function LiteratureWorkspace() {
   const [clearing, setClearing] = useState(false), [recovering, setRecovering] = useState(false);
   const recoveryHeading = useRef<HTMLHeadingElement>(null), projectHeading = useRef<HTMLHeadingElement>(null), clearSummary = useRef<HTMLElement>(null);
   const returnFocus = useRef<"project" | "clear" | undefined>(undefined);
+  const searchInput = useRef<HTMLInputElement>(null);
   useUnsavedWarning(!!cleared);
   useEffect(() => { if (cleared) recoveryHeading.current?.focus(); }, [cleared]);
   useEffect(() => {
@@ -227,11 +228,12 @@ export function LiteratureWorkspace() {
         <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0 flex-1 basis-64">
             <label className="block font-mono text-xs text-ink-2">{searchCopy.label}
-              <input type="search" maxLength={200} autoComplete="off" autoCapitalize="none" spellCheck={false} value={query}
-                onChange={event => setQuery(event.target.value)} aria-describedby={searchHelpId} className={field} />
+              <input ref={searchInput} type="search" maxLength={200} autoComplete="off" autoCapitalize="none" spellCheck={false} value={query}
+                onChange={event => setQuery(event.target.value)} aria-describedby={searchHelpId} className={field}
+                onKeyDown={event => { if (event.key === "Escape" && !event.nativeEvent.isComposing) { event.preventDefault(); setQuery(""); } }} />
             </label>
             <p id={searchHelpId} className="mt-2 font-serif text-xs text-ink-3">{searchCopy.guidance}</p>
-            {query !== "" && <button type="button" className={`${button} mt-2`} onClick={() => setQuery("")}>{searchCopy.clear}</button>}
+            {query !== "" && <button type="button" className={`${button} mt-2`} onClick={() => { setQuery(""); searchInput.current?.focus(); }}>{searchCopy.clear}</button>}
           </div>
           <label className="font-mono text-xs text-ink-2">{copy("literatureWorkspace.filter")}<select value={filter} onChange={event => setFilter(event.target.value)} className={field}>
             <option value="all">{copy("literatureWorkspace.filterAll")}</option>{Object.entries(SCREENING_STATES).map(([value, label]) => <option key={value} value={value}>{label} ({searched.filter(entry => entry.screening === value).length})</option>)}
