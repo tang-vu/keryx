@@ -47,8 +47,8 @@ beforeAll(async () => {
 }, 30_000);
 afterAll(async () => { await browser?.close(); });
 
-it.each([390, 1366])("bounds the first spotlight to the actual research introduction at %i", async width => {
-  const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: "reduce" });
+it.each([[390, 844], [1366, 844], [320, 480], [320, 360]])("keeps actual research guide targets and controls accessible at %i/%i", async (width, height) => {
+  const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce" });
   const errors: string[] = [], reads: string[] = [];
   try {
     await context.route("**/*", async route => {
@@ -61,18 +61,35 @@ it.each([390, 1366])("bounds the first spotlight to the actual research introduc
       if (url.pathname === "/guide.css") return route.fulfill({ contentType: "text/css", body: css + fonts });
       if (url.pathname.startsWith("/fonts/")) return route.fulfill({ contentType: "font/woff2", body: await readFile(join("app", url.pathname)) });
       expect(url.pathname).toBe("/");
-      return route.fulfill({ contentType: "text/html", body: '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/guide.css"></head><body><main id="root"></main></body></html>' });
+      return route.fulfill({ contentType: "text/html", body: '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/guide.css"></head><body><header style="height:67px;position:sticky;top:0;z-index:50;background:var(--paper)"><a href="/">Fixture home</a></header><main id="root"></main></body></html>' });
     });
     const page = await context.newPage(); page.setDefaultTimeout(5000); page.on("pageerror", error => errors.push(error.message));
     await page.goto("https://guide.test/"); await page.addScriptTag({ content: researchBundle });
     await page.getByRole("button", { name: "How it works", exact: true }).waitFor(); await page.evaluate(() => document.fonts.ready);
-    await open(page);
+    const dialog = await open(page);
     await expect.poll(() => page.evaluate(() => {
       const header = document.querySelector('[data-research-intro] > header')?.getBoundingClientRect();
       const mask = document.querySelector('[data-keryx-tour-portal] mask rect[fill="black"]');
       return !!header && !!mask && Number(mask.getAttribute("height")) <= header.height + 16 && Number(mask.getAttribute("height")) > 100;
     })).toBe(true);
-    if (screenshots) await page.screenshot({ path: join(screenshots, "guide-research-introduction-" + width + ".png"), fullPage: true });
+    if (screenshots) await page.screenshot({ path: join(screenshots, "guide-research-introduction-" + width + (height === 844 ? "" : "-" + height) + ".png"), fullPage: true });
+    await page.evaluate(() => document.querySelector<HTMLElement>("header a")?.focus());
+    expect(await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))).toBe(true);
+    await dialog.getByRole("button", { name: "Close tour", exact: true }).focus();
+    await page.keyboard.press("Shift+Tab");
+    expect(await page.evaluate(() => document.activeElement?.textContent?.trim())).toBe("Next");
+    await page.keyboard.press("Tab");
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))).toBe("Close tour");
+    for (let step = 0; step < 4; step++) {
+      await page.waitForTimeout(500);
+      const sheet = await dialog.boundingBox();
+      expect(sheet && sheet.x >= 0 && sheet.y >= 0 && sheet.x + sheet.width <= width && sheet.y + sheet.height <= height).toBe(true);
+      if (width < 640) {
+        const target = await page.locator('[data-tour="' + ["hero", "ask-form", "budget", "dispatch-btn"][step] + '"]').boundingBox();
+        expect(target && sheet && target.y < sheet.y && target.y + target.height > 106).toBe(true);
+      }
+      if (step < 3) await dialog.getByRole("button", { name: "Next", exact: true }).click();
+    }
     await page.keyboard.press("Escape"); expect(await page.locator('[data-keryx-tour-portal]').count()).toBe(0);
     expect(await page.getByRole("button", { name: "How it works", exact: true }).evaluate(element => document.activeElement === element)).toBe(true);
     expect(reads.length).toBeGreaterThan(0); expect(errors).toEqual([]);
