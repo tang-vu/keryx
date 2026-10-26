@@ -1,9 +1,10 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { QueryRun } from "@/lib/types";
 import { buildEvidenceMatrix, evidenceMatrixCsv, type EvidenceMatrixRow } from "@/lib/research/evidence-matrix";
 import { evidenceMatrixMarkdown } from "@/lib/research/evidence-matrix-markdown";
+import { inspectEvidenceMatrix, matrixSourceIdentity, type MatrixInspectionState } from "@/lib/research/evidence-matrix-inspection";
 import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
 import { evidenceMatrixExportEnglish } from "@/locales/en/evidence-matrix-export";
 import { cn } from "@/lib/utils";
@@ -21,11 +22,21 @@ function EvidenceMatrixReading({ run }: { run: QueryRun }) {
   const exportCopy = useUiCopy("evidence-matrix-export", evidenceMatrixExportEnglish);
   const [view, setView] = useState<"targets" | "matrix">("targets");
   const [downloadError, setDownloadError] = useState(false);
+  const [query, setQuery] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [inspectionState, setInspectionState] = useState<MatrixInspectionState>("all");
+  const searchRef = useRef<HTMLInputElement>(null);
   const noticeId = useId();
   const rows = buildEvidenceMatrix(run);
   const sources = run.citations.filter((citation, index, all) => all.findIndex((other) =>
     other.marker === citation.marker && other.sourceId === citation.sourceId && other.itemId === citation.itemId &&
     other.itemUrl === citation.itemUrl && other.contentVersion === citation.contentVersion) === index);
+  const visibleRows = inspectEvidenceMatrix(rows, { query, source: sourceFilter, state: inspectionState });
+  const hasFilters = query !== "" || sourceFilter !== "" || inspectionState !== "all";
+  function resetFilters() {
+    setQuery(""); setSourceFilter(""); setInspectionState("all");
+    searchRef.current?.focus();
+  }
 
   function downloadFile(filename: string, body: () => string, type: string) {
     setDownloadError(false);
@@ -58,6 +69,53 @@ function EvidenceMatrixReading({ run }: { run: QueryRun }) {
       <p id={noticeId} className="mt-2 text-sm leading-relaxed text-ink-3 [overflow-wrap:anywhere]">{copy("evidenceMatrix.notice")}</p>
       {rows.length ? (
         <div className="@container/matrix min-w-0 pb-3">
+          <fieldset aria-describedby={`${noticeId}-search-hint`} className="mt-5 min-w-0 border border-line bg-paper-2 p-4 sm:p-5">
+            <legend className="px-2 font-mono text-xs uppercase tracking-[0.08em] text-ink-2">{exportCopy.filters}</legend>
+            <p id={`${noticeId}-search-hint`} className="text-sm leading-relaxed text-ink-3 [overflow-wrap:anywhere]">{exportCopy.searchHint}</p>
+              <label className="mt-4 block min-w-0 text-sm text-ink" htmlFor={`${noticeId}-search`}>
+                {exportCopy.search}
+                <input ref={searchRef} id={`${noticeId}-search`} type="search" maxLength={200} value={query}
+                  aria-controls={`${noticeId}-results`} aria-describedby={`${noticeId}-count`}
+                  onChange={event => setQuery(event.target.value)}
+                  onKeyDown={event => { if (event.key === "Escape" && !event.nativeEvent.isComposing) { event.preventDefault(); setQuery(""); } }}
+                  className="mt-2 block min-h-11 w-full min-w-0 border border-line bg-paper px-3 py-2 font-serif text-base text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal" />
+              </label>
+            <details className="mt-3 min-w-0 border-t border-line">
+              <summary className="min-h-11 cursor-pointer py-3 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">{exportCopy.advancedFilters}</summary>
+              <p id={`${noticeId}-article-hint`} className="text-sm leading-relaxed text-ink-3 [overflow-wrap:anywhere]">{exportCopy.articleHint}</p>
+              <div className="mt-4 grid min-w-0 gap-4 @min-[38rem]/matrix:grid-cols-2">
+              <label className="min-w-0 text-sm text-ink" htmlFor={`${noticeId}-article`}>
+                {exportCopy.article}
+                <select id={`${noticeId}-article`} value={sourceFilter} aria-controls={`${noticeId}-results`} aria-describedby={`${noticeId}-article-hint`}
+                  onChange={event => setSourceFilter(event.target.value)}
+                  className="mt-2 block min-h-11 w-full min-w-0 max-w-full border border-line bg-paper px-3 py-2 font-serif text-base text-ink [contain:paint] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
+                  <option value="">{exportCopy.allArticles}</option>
+                  {sourceFilter && !sources.some(source => matrixSourceIdentity(source) === sourceFilter) && <option value={sourceFilter}>{exportCopy.unavailableArticle}</option>}
+                  {sources.map((source, index) => <option key={matrixSourceIdentity(source)} value={matrixSourceIdentity(source)}>
+                    {`${index + 1}. [${source.marker}] ${source.itemTitle ?? source.sourceName} · ${source.sourceName} · ${source.contentVersion ?? copy("evidenceMatrix.notRecorded")} · ${source.itemUrl ?? copy("evidenceMatrix.notRecorded")}`}
+                  </option>)}
+                </select>
+              </label>
+              <label className="min-w-0 text-sm text-ink" htmlFor={`${noticeId}-availability`}>
+                {exportCopy.inspectionState}
+                <select id={`${noticeId}-availability`} value={inspectionState} aria-controls={`${noticeId}-results`}
+                  onChange={event => setInspectionState(event.target.value as MatrixInspectionState)}
+                  className="mt-2 block min-h-11 w-full min-w-0 max-w-full border border-line bg-paper px-3 py-2 font-serif text-base text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
+                  <option value="all">{exportCopy.allTargets}</option>
+                  <option value="with-excerpts">{exportCopy.withExcerpts}</option>
+                  <option value="without-excerpts">{exportCopy.withoutExcerpts}</option>
+                </select>
+              </label>
+              </div>
+            </details>
+            <div className="mt-4 flex min-w-0 flex-wrap items-center justify-between gap-3">
+              <p id={`${noticeId}-count`} role="status" aria-live="polite" aria-atomic="true" className="font-mono text-xs tabular-nums text-ink-2 [overflow-wrap:anywhere]">
+                {exportCopy.resultCount.replace("{shown}", String(visibleRows.length)).replace("{total}", String(rows.length))}
+              </p>
+              <button type="button" disabled={!hasFilters} onClick={resetFilters} className={cn(actionClass, "disabled:opacity-40")}>{exportCopy.resetFilters}</button>
+            </div>
+          </fieldset>
+          <p className="mt-3 text-sm leading-relaxed text-ink-3 [overflow-wrap:anywhere]">{exportCopy.fullExport}</p>
           <div className="my-5 flex min-w-0 flex-wrap items-center justify-between gap-3">
             <div role="group" aria-label={copy("evidenceMatrix.views")} className="flex min-w-0 flex-wrap gap-2">
               {([ ["targets", "evidenceMatrix.byTarget"], ["matrix", "evidenceMatrix.compareSources"] ] as const).map(([value, label]) => (
@@ -73,10 +131,10 @@ function EvidenceMatrixReading({ run }: { run: QueryRun }) {
             </div>
           </div>
           {downloadError && <p role="alert" className="mb-4 border-l-2 border-seal pl-3 text-sm text-seal">{copy("evidenceMatrix.downloadUnavailable")}</p>}
-          <div key={view} className="min-w-0 motion-safe:animate-[kxSourceArrive_200ms_ease-out_both]">
-            {view === "targets" ? (
+          <div id={`${noticeId}-results`} key={view} className="min-w-0 motion-safe:animate-[kxSourceArrive_200ms_ease-out_both]">
+            {visibleRows.length === 0 ? <p className="border-l-2 border-brass bg-paper-2 px-4 py-5 font-serif text-base leading-relaxed text-ink-2 [overflow-wrap:anywhere]">{exportCopy.noMatches}</p> : view === "targets" ? (
               <ol aria-label={copy("evidenceMatrix.byTarget")} aria-describedby={noticeId} className="space-y-5">
-                {rows.map(row => <li key={row.claimIndex} className="min-w-0 border border-line bg-paper">
+                {visibleRows.map(row => <li key={row.claimIndex} className="min-w-0 border border-line bg-paper">
                   <header className="border-b border-line bg-paper-2 px-4 py-4 sm:px-5">
                     <p className="font-mono text-xs uppercase tracking-[0.08em] text-ink-3">{copy("evidenceMatrix.target")}</p>
                     <h3 id={`${noticeId}-${row.claimIndex}`} className="mt-2 font-serif text-lg leading-relaxed text-ink [overflow-wrap:anywhere]">{row.claim}</h3>
@@ -105,7 +163,7 @@ function EvidenceMatrixReading({ run }: { run: QueryRun }) {
                       <SourceHeader source={source} copy={copy} />
                     </th>)}
                   </tr></thead>
-                  <tbody>{rows.map(row => <tr key={row.claimIndex}>
+                  <tbody>{visibleRows.map(row => <tr key={row.claimIndex}>
                     <th scope="row" className="sticky left-0 z-10 w-48 min-w-48 max-w-48 border-b border-r border-line bg-paper p-3 align-top font-normal [overflow-wrap:anywhere]">{row.claim}</th>
                     <td className="border-b border-line p-3 align-top text-ink-3">{row.status}</td>
                     {sources.map((source, index) => <td key={index} className="border-b border-line p-3 align-top">
