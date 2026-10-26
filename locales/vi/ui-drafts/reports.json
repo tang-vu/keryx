@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/reports.ts",
-  "sourceSha256": "a69067451df2e275f4cd72ae62d8d07b5038bd4749c106dd294ed4141847bbf6",
+  "sourceSha256": "621be0928914f28fa344baae5e0fe792beb8e1d78861044ff39c451180f7d13b",
   "entries": {
     "reportActions.copy": {
       "source": "Copy report",
@@ -2201,7 +2201,7 @@
       "text": "Mục tiêu là chủ đề được yêu cầu, không phải khẳng định đã xác minh. Trích đoạn không chứng minh sự thật hay sự củng cố từ nguồn độc lập. Chế độ xem này giữ nguyên câu trả lời, độ tin cậy và thanh toán, đồng thời không gửi yêu cầu mới."
     },
     "reportSourceLens.remaining.one": {
-      "source": "{count} recorded excerpt remain.",
+      "source": "{count} recorded excerpt remains.",
       "text": "Còn {count} trích đoạn đã ghi nhận."
     },
     "reportSourceLens.remaining.other": {
@@ -2323,6 +2323,18 @@
     "evidenceMatrix.downloadUnavailable": {
       "source": "Download unavailable. Try again.",
       "text": "Không thể tải xuống. Hãy thử lại."
+    },
+    "reportSourceLens.localView": {
+      "source": "Local excerpt view",
+      "text": "Chế độ xem trích đoạn cục bộ"
+    },
+    "reportSourceLens.originalExcerpts": {
+      "source": "Original excerpts",
+      "text": "Trích đoạn ban đầu"
+    },
+    "reportSourceLens.viewExcerpts": {
+      "source": "Excerpts in this view",
+      "text": "Trích đoạn trong chế độ xem này"
     }
   }
 }
