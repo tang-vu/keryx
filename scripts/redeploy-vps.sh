@@ -3,9 +3,9 @@
 # redeploy-vps.sh — code deploy to the already-provisioned VPS.
 #
 # Current mainnet uses reviewed role configuration and preserved held schedulers.
-# That path requires web/A2A to be positively stopped before source sync and build:
-# plan a maintenance window. Build into .next.tmp, retain .next.bak at the swap,
-# and inspect failures; reviewed deployments never automatically roll back.
+# Prepare and accept an isolated staged cohort while the website keeps serving.
+# Reviewed delivery requires that prepared cohort; drain only for final handover.
+# Retain recovery cohorts and inspect failures; never automatically roll back.
 # The legacy unreviewed path below can keep the old build serving while it builds
 # and has automatic rollback. It is not the current mainnet operating procedure.
 # See docs/mainnet-update-flow.md and docs/deployment-guide.md for reviewed inputs.
@@ -44,6 +44,8 @@ if [[ -n "$REVIEWED_CONFIG" || -n "$REVIEWED_SHA" ]]; then
      "$REVIEWED_CONFIG" != *..* && "$REVIEWED_SHA" =~ ^[a-f0-9]{64}$ &&
      "$EXPECTED_COMMIT" =~ ^[a-f0-9]{40}$ ]] \
     || { echo "Reviewed PM2 deployment requires paired protected inputs and an exact expected commit" >&2; exit 1; }
+  [[ "$STAGED_RELEASE" == 1 ]] \
+    || { echo "Reviewed redeploy requires a prepared staged release; finish isolated preparation before maintenance" >&2; exit 1; }
 fi
 if [[ -n "$EXPECTED_COMMIT" && ! "$EXPECTED_COMMIT" =~ ^[a-f0-9]{40}$ ]]; then
   echo "Invalid expected deployment commit" >&2; exit 1

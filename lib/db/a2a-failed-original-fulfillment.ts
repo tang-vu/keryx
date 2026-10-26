@@ -15,6 +15,7 @@ import { writeSqliteQueryRun } from "./query-run-record";
 import type { QueryRun } from "../types";
 import type { FulfillmentEvidenceCapability } from "../a2a/fulfillment-supplement-evidence";
 import { a2aResponseFromRun, quoteFromA2aOrder } from "../a2a/result";
+import { historicalNativeEvidenceCsv } from "./a2a-historical-evidence-csv";
 
 const same = (a: unknown, b: unknown) => canonicalJson(a) === canonicalJson(b);
 const originalId = (value: string) => { if (!/^a2a_[a-f0-9]{64}$/.test(value)) throw new Error("Fulfillment original refused"); return value; };
@@ -98,6 +99,14 @@ function preCheckpointNativeResponse<T extends { readCheckpoints: unknown }>(run
   const { readCheckpoints, ...historical } = response;
   return same(readCheckpoints, { status: "unavailable" }) ? historical : null;
 }
+/** Native V1/V2 committed their run before extraction-scope CSV columns existed.
+ * Construct that complete historical CSV only on the expected side, after native
+ * authority/run validation. Every stored field still participates in equality. */
+function preReadScopeNativeResponse(run: QueryRun, response: ReturnType<typeof a2aResponseFromRun>) {
+  if (run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v1" &&
+      run.originalFulfillment?.format !== "keryx-a2a-original-fulfillment-result-v2") return null;
+  return { ...response, researchExports: { ...response.researchExports, evidenceCsv: historicalNativeEvidenceCsv(run) } };
+}
 function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
   readOrder: (row: Record<string, unknown>) => A2aOrder, evidenceCapability?: FulfillmentEvidenceCapability): boolean {
   const record = readRecord(db, authority.original.id);
@@ -119,13 +128,17 @@ function hasCompletion(db: DatabaseSync, authority: FulfillmentAuthority,
     resolution: resolution(record.claim, record.completion),
     response: a2aResponseFromRun(run, quoteFromA2aOrder(record.claim.failedOrder),
       { acceptedAt: record.claim.failedOrder.createdAt, startedAt: record.claim.failedOrder.startedAt }) };
-  if (same(order, expected)) return true;
-  const legacyResponse = preCslNativeResponse(run, expected.response);
-  if (legacyResponse !== null && same(order, { ...expected, response: legacyResponse })) return true;
-  const historicalResponse = preCheckpointNativeResponse(run, expected.response);
-  if (historicalResponse !== null && same(order, { ...expected, response: historicalResponse })) return true;
-  const historicalPreCsl = legacyResponse === null ? null : preCheckpointNativeResponse(run, legacyResponse);
-  return historicalPreCsl !== null && same(order, { ...expected, response: historicalPreCsl });
+  const preReadScope = preReadScopeNativeResponse(run, expected.response);
+  for (const response of preReadScope === null ? [expected.response] : [expected.response, preReadScope]) {
+    if (same(order, { ...expected, response })) return true;
+    const legacyResponse = preCslNativeResponse(run, response);
+    if (legacyResponse !== null && same(order, { ...expected, response: legacyResponse })) return true;
+    const historicalResponse = preCheckpointNativeResponse(run, response);
+    if (historicalResponse !== null && same(order, { ...expected, response: historicalResponse })) return true;
+    const historicalPreCsl = legacyResponse === null ? null : preCheckpointNativeResponse(run, legacyResponse);
+    if (historicalPreCsl !== null && same(order, { ...expected, response: historicalPreCsl })) return true;
+  }
+  return false;
 }
 /** One native transaction inserts the actual run once and commits only the matching failed
  * original. A rollback cannot strand a saved run or erase the immutable failure snapshot. */
