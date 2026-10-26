@@ -52,6 +52,7 @@ const bundled = await build({ absWorkingDir: root, stdin: { resolveDir: root, so
 const inputs = Object.keys(bundled.metafile!.inputs);
 assert(inputs.every(input => input.includes("node_modules/react/") || input.includes("node_modules/react-dom/") ||
   input.includes("node_modules/scheduler/") || ["actual-read-browser-fixture.tsx", "components/keryx/read-checkpoint-verify.tsx",
+    "lib/browser-text-download.ts", "locales/en/reports.ts",
     "lib/research-audit/actual-read-record.ts", "lib/research-audit/actual-read-policy.ts", "lib/research-audit/actual-read-copy.ts",
     "lib/research-audit/actual-read-v2.ts", "lib/research-audit/exact-units.ts", "lib/agent/coverage-precheck.ts",
     "lib/research-audit/actual-read-v3.ts", "lib/research-audit/optimizer-checkpoint.ts", "lib/research-audit/optimizer-policy-v1.ts",

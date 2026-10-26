@@ -5,19 +5,21 @@ import { MAX_READ_PACKET_BYTES, verifyActualReadPacket } from "@/lib/research-au
 import { actualReadCopy as copy } from "@/lib/research-audit/actual-read-copy";
 import type { projectActualReadCheckpoints } from "@/lib/research-audit/actual-read-projection";
 import { DecisionCheckpointInspection } from "./decision-checkpoint-inspection";
+import { downloadBrowserText } from "@/lib/browser-text-download";
+import { reportMessages } from "@/locales/en/reports";
 
 export function ReadCheckpointVerify({ capture }: { capture: ReturnType<typeof projectActualReadCheckpoints> }) {
   const expectedDigest = capture?.retainedDigest ?? null;
   const economicSummary = capture?.packet.schema === 4 ? economicReplaySummary(capture.packet.economics) : null;
-  const [session, setSession] = useState({ capture, expectedDigest, generation: 0, file: null as File | null,
+  const [session, setSession] = useState({ capture, expectedDigest, generation: 0, file: null as File | null, downloadFailed: false,
     state: "idle" as "idle" | "busy" | "passed" | "refused" });
   const attempt = useRef(0);
   useEffect(() => () => { attempt.current++; }, [capture, expectedDigest]);
   // Reset before rendering a new report, including null. An effect alone can briefly show old PASS.
   if (session.capture !== capture || session.expectedDigest !== expectedDigest) {
-    setSession({ capture, expectedDigest, generation: session.generation + 1, file: null, state: "idle" });
+    setSession({ capture, expectedDigest, generation: session.generation + 1, file: null, state: "idle", downloadFailed: false });
   }
-  const { file, state, generation } = session;
+  const { file, state, generation, downloadFailed } = session;
   const verify = async () => {
     const current = ++attempt.current;
     const publish = (state: typeof session.state) => {
@@ -34,9 +36,10 @@ export function ReadCheckpointVerify({ capture }: { capture: ReturnType<typeof p
   };
   const download = () => {
     if (!capture) return;
-    const url = URL.createObjectURL(new Blob([JSON.stringify(capture.packet)], { type: "application/json" }));
-    const link = document.createElement("a"); link.href = url; link.download = "read-checkpoints.json";
-    link.click(); URL.revokeObjectURL(url);
+    const publish = (downloadFailed: boolean) => setSession(active => active.generation === generation ? { ...active, downloadFailed } : active);
+    publish(false);
+    try { downloadBrowserText(JSON.stringify(capture.packet), "read-checkpoints.json", "application/json"); }
+    catch { publish(true); }
   };
   return <section className="mt-4 min-w-0 border border-line bg-paper p-4" aria-label={copy.title}>
     <h2 className="font-mono text-sm text-ink">{copy.title}</h2>
@@ -56,6 +59,7 @@ export function ReadCheckpointVerify({ capture }: { capture: ReturnType<typeof p
       </dl>
       <p className="mt-2 text-xs text-ink-3">{copy.digestHelp}</p>
       <button type="button" onClick={download} className="mt-3 min-h-11 border border-line px-3 py-2 font-mono text-xs">{copy.download}</button>
+      {downloadFailed && <p role="alert" className="mt-2 text-sm text-seal">{reportMessages["evidenceMatrix.downloadUnavailable"]}</p>}
       <label className="mt-3 block text-xs text-ink-2">{copy.choose}
         <input key={generation} type="file" accept="application/json,.json" className="mt-2 block max-w-full" onChange={event => {
           attempt.current++; const file = event.target.files?.[0] ?? null;
