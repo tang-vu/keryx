@@ -138,10 +138,11 @@ export function ArchiveSearch({
 
       {otherMatches.length > 0 && (
         <section aria-labelledby={`${resultsId}-heading`} className="mt-8 min-w-0">
-          <h2 ref={headingRef} id={`${resultsId}-heading`} tabIndex={-1} aria-describedby={`${resultsId}-range`} className="scroll-mt-6 border-b border-line pb-3 font-display text-xl leading-snug text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-seal">
+          <h2 ref={headingRef} id={`${resultsId}-heading`} tabIndex={-1} aria-describedby={`${resultsId}-range`} className="scroll-mt-[83px] border-b border-line pb-3 font-display text-xl leading-snug text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-seal">
             {copy(otherMatches.length === 1 ? "archiveFilter.elsewhere.one" : "archiveFilter.elsewhere.other", { count: otherMatches.length })}
           </h2>
-          <div className="sticky top-3 z-10 my-3 border border-line bg-paper px-3 py-3 shadow-[0_8px_16px_-16px_rgba(27,23,18,0.5)]">
+          {/* Keep navigation below the shared 66px shell and its 1px bottom rule. */}
+          <div className="sticky top-[67px] z-10 my-3 border border-line bg-paper px-3 py-3 shadow-[0_8px_16px_-16px_rgba(27,23,18,0.5)]">
           <p id={`${resultsId}-range`} className="font-mono text-[11px] leading-relaxed tabular-nums text-ink-3">{copy("archiveFilter.resultRange", { start: page * OTHERS_SHOWN + 1, end: Math.min((page + 1) * OTHERS_SHOWN, otherMatches.length), total: otherMatches.length })}</p>
           {lastPage > 0 && (
             <nav aria-label={copy(otherMatches.length === 1 ? "archiveFilter.elsewhere.one" : "archiveFilter.elsewhere.other", { count: otherMatches.length })}
@@ -164,7 +165,7 @@ export function ArchiveSearch({
               <li key={o.id}>
                 <Link
                   href={`/dispatch/${o.id}`}
-                  className="group flex min-h-[44px] min-w-0 scroll-mt-36 items-start justify-between gap-4 border-b border-line py-3 font-serif text-base leading-relaxed text-ink-2 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal motion-reduce:transition-none"
+                  className="group flex min-h-[44px] min-w-0 scroll-mt-[calc(67px_+_9rem)] items-start justify-between gap-4 border-b border-line py-3 font-serif text-base leading-relaxed text-ink-2 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal motion-reduce:transition-none"
                 >
                   <span lang="und" className="min-w-0 break-words">{o.question}</span>
                   <ArrowUpRight aria-hidden="true" className="mt-1 size-4 shrink-0 text-brass transition-transform motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5" />

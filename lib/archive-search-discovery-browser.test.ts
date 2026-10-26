@@ -39,7 +39,7 @@ async function fixture(test:(page:Page)=>Promise<void>,width=390,motion:"reduce"
       if(url.pathname==="/style.css")return route.fulfill({contentType:"text/css",body:css});
       if(url.pathname.startsWith("/fonts/"))return route.fulfill({contentType:"font/woff2",body:await readFile(join("app",url.pathname))});
       if(url.pathname!=="/"){unexpected.push(url.pathname);return route.abort();}
-      return route.fulfill({contentType:"text/html",body:'<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><main style="max-width:900px;margin:32px auto;padding:0 16px"><div id="root"></div></main></body></html>'});
+      return route.fulfill({contentType:"text/html",body:'<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/style.css"></head><body><header style="height:67px;position:sticky;top:0;z-index:50;background:var(--paper)">Archive shell geometry fixture</header><main style="max-width:900px;margin:32px auto;padding:0 16px"><div id="root"></div></main></body></html>'});
     });
     const page=await context.newPage();page.setDefaultTimeout(5000);page.on("pageerror",e=>errors.push(e.message));
     await page.goto("https://archive-discovery.test/");await page.addScriptTag({content:bundle});await page.getByRole("searchbox").waitFor();await page.evaluate(()=>document.fonts.ready);
@@ -54,7 +54,7 @@ it("restores result page focus and viewport context after native pagination",asy
     await page.getByRole("link").first().getByText("Báo cáo đám mây 25",{exact:true}).waitFor();
     const heading=page.getByRole("heading",{name:"Elsewhere in the archive · 53",exact:true});
     expect(await heading.evaluate(n=>document.activeElement===n)).toBe(true);
-    const rect=(await heading.boundingBox())!;expect(rect.y).toBeGreaterThanOrEqual(0);expect(rect.y+rect.height).toBeLessThan(844);
+    const rect=(await heading.boundingBox())!,shell=(await page.locator("header").boundingBox())!;expect(rect.y).toBeGreaterThanOrEqual(shell.y+shell.height);expect(rect.y+rect.height).toBeLessThan(844);
     expect((await page.getByRole("link").first().boundingBox())!.y).toBeLessThan(844);
     expect(await search.inputValue()).toBe("circle may dam");
   });
@@ -130,7 +130,7 @@ it.each([320,390,768,1366].flatMap(width=>(["reduce","no-preference"]as const).m
       const target=page.getByRole("region").getByRole("link").nth(12),toolbar=page.getByRole("region").getByRole("navigation").locator("..");
       await target.evaluate(n=>n.scrollIntoView({block:"start",behavior:"instant"}));
       const tools=(await toolbar.boundingBox())!,row=(await target.boundingBox())!;
-      expect(tools.y).toBeGreaterThanOrEqual(0);expect(tools.y+tools.height).toBeLessThan(844);expect(row.y).toBeGreaterThanOrEqual(tools.y+tools.height);
+      const shell=(await page.locator("header").boundingBox())!;expect(tools.y).toBeGreaterThanOrEqual(shell.y+shell.height);expect(tools.y+tools.height).toBeLessThan(844);expect(row.y).toBeGreaterThanOrEqual(tools.y+tools.height);
       if(screenshots)await page.getByRole("region").screenshot({path:join(screenshots,`archive-discovery-${width}-${motion}.png`)});
       await page.evaluate(()=>{document.documentElement.style.fontSize="24px";});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
       await search.fill("https://no-match.invalid/"+"z".repeat(240));expect(await search.evaluate(n=>document.activeElement===n)).toBe(true);
