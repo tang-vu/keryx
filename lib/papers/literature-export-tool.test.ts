@@ -17,10 +17,16 @@ it("exports through the actual local MCP protocol with read-only closed-world an
   expect(tool.name).toBe("export_saved_literature");
   expect(tool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
   expect(Object.keys(tool.inputSchema.properties ?? {}).sort()).toEqual(["backup", "format", "paperUrls", "screening"]);
+  expect(tool.inputSchema.properties?.format).toMatchObject({ enum: ["bibtex", "ris", "csl-json", "markdown"] });
   const result = await client.callTool({ name: tool.name, arguments: {
     backup: serializeLiteratureWorkspace(literatureBackupFixture()), format: "csl-json", screening: "include" } });
   expect(result.isError).not.toBe(true); expect(result.structuredContent).toMatchObject({ count: 1, scope: "bibliography-only", format: "csl-json" });
   expect(JSON.stringify(result)).not.toContain("PRIVATE_"); expect(fetch).not.toHaveBeenCalled();
+  const markdown = await client.callTool({ name: tool.name, arguments: {
+    backup: serializeLiteratureWorkspace(literatureBackupFixture()), format: "markdown", screening: "include" } });
+  expect(markdown.isError).not.toBe(true); expect(markdown.structuredContent).toMatchObject({ count: 1, scope: "bibliography-only", format: "markdown" });
+  expect((markdown.structuredContent as { content: string }).content).toContain("# Saved bibliography");
+  expect(JSON.stringify(markdown)).not.toContain("PRIVATE_"); expect(fetch).not.toHaveBeenCalled();
   const workspace = literatureBackupFixture(), backup = serializeLiteratureWorkspace(workspace);
   const selected = await client.callTool({ name: tool.name, arguments: { backup, format: "csl-json", paperUrls: workspace.entries.map(entry => entry.paper.url).reverse() } });
   expect(selected.isError).not.toBe(true);
