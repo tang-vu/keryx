@@ -36,6 +36,20 @@ offline reproduction. No shadow production payment is permitted.
 
 ## Release sequence
 
+Owner-confirmed October 26, 2026: keep the current website serving throughout
+dependency installation, typechecking, compilation and applicable candidate
+acceptance. Prepare an isolated, exact-source mainnet artifact before opening
+maintenance. Drain only for the final short switch and necessary fast checks.
+The ordinary reviewed stop-before-install/build path does not satisfy this
+availability requirement and must not be selected for routine delivery.
+
+The existing [immutable preparation and staged role adapter](immutable-release-staging.md)
+can supply this ordering only after its intended-host artifact, trace/startup,
+native original, financial, custody and Operator compatibility gates pass.
+Preparation or investigation alone must not start another maintenance window.
+Reuse verified, unchanged artifacts with matching source, inputs and environment;
+this ordering preserves all existing acceptance and held-scheduler controls.
+
 Use [proportionate validation and release batching](development-workflow.md):
 one PR per coherent outcome, independent required CI lanes, an explicit docs-only
 lane, and informational lint outside merge acceptance. Keep runtime main-source

@@ -16,6 +16,7 @@ import { buildCitationExport } from "../research-citation-export";
 import { evidenceMatrixCsv } from "../research/evidence-matrix";
 import { bibliographicOriginalDeliverable } from "../research/bibliographic-original-text";
 import type { BibliographicOriginalRecord } from "../research/bibliographic-original-types";
+import type { a2aResponseFromRun } from "../a2a/result";
 
 const cleanup: Array<() => void> = [];
 afterEach(() => { for (const close of cleanup.splice(0).reverse()) close(); vi.useRealTimers(); });
@@ -51,7 +52,7 @@ async function completedPresentationFixture(withBibliography = false) {
   }
   result.runSha256 = fulfillmentObjectSha256(result.run);
   expect(await f.db.completeA2aFailedOriginalFulfillment(result)).toBe(true);
-  const modern = (await f.db.getA2aOrder(result.originalId))!.response!;
+  const modern = (await f.db.getA2aOrder(result.originalId))!.response! as ReturnType<typeof a2aResponseFromRun>;
   const legacy = { ...modern, researchExports: {
     bibtex: buildCitationExport(result.run.citations, "bibtex"), ris: buildCitationExport(result.run.citations, "ris"),
     evidenceCsv: evidenceMatrixCsv(result.run) },
@@ -83,8 +84,53 @@ function retainedRows(native: DatabaseSync) {
 function storeResponse(f: Awaited<ReturnType<typeof completedPresentationFixture>>, response: unknown) {
   f.native.prepare("UPDATE a2a_orders SET response_data=? WHERE id=?").run(JSON.stringify(response), f.result.originalId);
 }
+// A complete captured pre-scope CSV shape. Do not derive it by truncating today's
+// CSV or by calling the compatibility implementation under test.
+const thirteenColumnCsv = [
+  '"claim_index","claim","inspection_status","source_marker","source_id","publication","article_title","article_url","published_at","item_id","content_version","exact_excerpt","evidence_provenance"',
+  '"0","A synthetic first target","Recorded excerpt","S1","public:fulfillment:document-one","Synthetic official document","Synthetic retained article","https://example.invalid/document-one","Not recorded","document-one","v1","Synthetic exact source quote.","Not classified as synthetic"',
+  '"1","A synthetic preserved gap","No inspectable excerpt recorded","","","","","","","","","",""',
+].join("\r\n") + "\r\n";
 
 describe("same failed original native fulfillment", () => {
+  it.each([
+    [false, false, false], [false, false, true], [false, true, false], [false, true, true],
+    [true, false, false], [true, false, true], [true, true, false], [true, true, true],
+  ])("reads the complete thirteen-column historical receipt unchanged (bibliography=%s, pre-CSL=%s, pre-checkpoint=%s)",
+    async (bibliography, preCsl, preCheckpoint) => {
+      const f = await completedPresentationFixture(bibliography);
+      const base = preCheckpoint ? preCsl ? f.historicalPreCsl : f.historical : preCsl ? f.legacy : f.modern;
+      const historical = { ...base, researchExports: { ...base.researchExports, evidenceCsv: thirteenColumnCsv } };
+      expect(f.modern.researchExports.evidenceCsv).toContain('"read_scope"');
+      storeResponse(f, historical); const before = retainedRows(f.native);
+      const readonly = new SqliteAdapter(f.file, { readOnly: true }); cleanup.push(() => readonly.close());
+      expect(await readonly.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(true);
+      expect((await readonly.getA2aOrder(f.result.originalId))!.response).toEqual(historical);
+      expect(retainedRows(f.native)).toBe(before);
+      expect(await f.db.completeA2aFailedOriginalFulfillment(f.result)).toBe(true);
+      expect(retainedRows(f.native)).toBe(before);
+    });
+
+  it.each(["csv-cell", "csv-tail", "csv-partial-header", "money", "pricing", "answer", "evidence", "unknown", "export-unknown", "bibtex", "missing-export"])(
+    "refuses %s corruption in a thirteen-column historical receipt without changing any row", async kind => {
+      const f = await completedPresentationFixture();
+      const response = JSON.parse(JSON.stringify({ ...f.historicalPreCsl,
+        researchExports: { ...f.historicalPreCsl.researchExports, evidenceCsv: thirteenColumnCsv } }));
+      if (kind === "csv-cell") response.researchExports.evidenceCsv = thirteenColumnCsv.replace("Synthetic exact source quote.", "Altered quote");
+      if (kind === "csv-tail") response.researchExports.evidenceCsv += "FORGED";
+      if (kind === "csv-partial-header") response.researchExports.evidenceCsv = thirteenColumnCsv.replace('"evidence_provenance"', '"evidence_provenance","read_scope"');
+      if (kind === "money") response.totalPricePaid += 0.000001;
+      if (kind === "pricing") response.pricing.futureAuthority = "forged";
+      if (kind === "answer") response.answer += " Unreviewed statement.";
+      if (kind === "evidence") response.evidence[0].quote = "Altered quote";
+      if (kind === "unknown") response.futureReceiptField = "forged";
+      if (kind === "export-unknown") response.researchExports.futureFormat = "forged";
+      if (kind === "bibtex") response.researchExports.bibtex.content += "FORGED";
+      if (kind === "missing-export") delete response.researchExports.ris;
+      storeResponse(f, response); const before = retainedRows(f.native);
+      expect(await f.db.hasA2aFailedOriginalFulfillment(f.claim.authority)).toBe(false);
+      expect(retainedRows(f.native)).toBe(before);
+    });
   it("keeps a v1 native claim readable after its historical fixed expiry", async () => {
     const f = await setup(), claim = await getClaim(f);
     vi.setSystemTime("2026-10-07T04:00:00.000Z");
