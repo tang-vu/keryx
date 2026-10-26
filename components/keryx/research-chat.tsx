@@ -142,7 +142,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
   };
   const hasTurns = visibleHistory.length > 0 || visibleRequest !== null;
   return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-research-intro={introduceProduct ? "" : undefined} aria-label={message("researchChat.label")}>
-    <header data-tour="hero" className="kx-research-hero relative mb-5 min-h-[116px] border-b border-line pb-5 sm:mb-6 sm:min-h-[168px] sm:pb-6">
+    <header className="kx-research-hero relative mb-5 min-h-[116px] border-b border-line pb-5 sm:mb-6 sm:min-h-[168px] sm:pb-6" data-tour="hero">
       <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute right-0 top-[44px] h-[56px] w-[56px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
         <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" />
       </div>
