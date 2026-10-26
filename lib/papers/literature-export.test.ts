@@ -5,6 +5,34 @@ import { MAX_LITERATURE_BYTES, serializeLiteratureWorkspace } from "./literature
 import { paperReferencesBibtex, paperReferencesCslJson, paperReferencesRis } from "./reference-export";
 
 afterEach(() => vi.unstubAllGlobals());
+it.each(["bibtex", "ris", "csl-json"] as const)("exports the exact caller-selected subset/order in %s without changing saved data", format => {
+  const workspace = literatureBackupFixture(), backup = serializeLiteratureWorkspace(workspace);
+  const papers = workspace.entries.map(entry => entry.paper).reverse();
+  const paperUrls = papers.map(paper => paper.url);
+  const expected = format === "bibtex" ? paperReferencesBibtex(papers) : format === "ris" ? paperReferencesRis(papers) : paperReferencesCslJson(papers);
+  expect(exportLiterature({ backup, format, paperUrls })).toEqual({ format, scope: "bibliography-only", ...expected });
+  expect(exportLiterature({ backup, format, paperUrls: [paperUrls[0]] }).count).toBe(1);
+  expect(exportLiterature({ backup, format, paperUrls: [] })).toMatchObject({ count: 0, content: format === "csl-json" ? "[]\n" : "" });
+  expect(serializeLiteratureWorkspace(workspace)).toBe(backup); expect(paperUrls).toEqual(papers.map(paper => paper.url));
+});
+it("applies screening within the exact selection, and never hides an unknown URL behind a filter", () => {
+  const workspace = literatureBackupFixture(), backup = serializeLiteratureWorkspace(workspace);
+  const paperUrls = workspace.entries.map(entry => entry.paper.url).reverse();
+  const result = exportLiterature({ backup, format: "csl-json", paperUrls, screening: "include" });
+  expect(result.count).toBe(1); expect(JSON.parse(result.content)[0].URL).toBe(workspace.entries[0].paper.url);
+  expect(exportLiterature({ backup, format: "ris", paperUrls: [paperUrls[0]], screening: "include" }).count).toBe(0);
+  expect(() => exportLiterature({ backup, format: "ris", paperUrls: [paperUrls[0].replace(/v99$/u, "v98")], screening: "include" })).toThrow("Selected paper unavailable");
+});
+it("refuses duplicate, malformed and excessive selections instead of guessing or deduplicating", () => {
+  const workspace = literatureBackupFixture(), backup = serializeLiteratureWorkspace(workspace), url = workspace.entries[0].paper.url;
+  for (const paperUrls of [[url, url], Array(51).fill(url), [url.toUpperCase()], [url + " "], ["https://user:secret@arxiv.org/abs/2401.00001v1"], "all", null])
+    expect(() => exportLiterature({ backup, format: "ris", paperUrls } as never)).toThrow();
+});
+it("validates unselected reference links even for an explicit empty selection", () => {
+  const workspace = literatureBackupFixture(); workspace.entries[1].paper.metadataUrl = " " + workspace.entries[1].paper.metadataUrl;
+  expect(() => exportLiterature({ backup: JSON.stringify(workspace), format: "ris", paperUrls: [] })).toThrow();
+  expect(() => exportLiterature({ backup: JSON.stringify(workspace), format: "ris", paperUrls: [workspace.entries[0].paper.url], screening: "include" })).toThrow();
+});
 it.each(["bibtex", "ris", "csl-json"] as const)("exports only exact saved metadata in %s, with stable versions and no private review fields", format => {
   const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
   const workspace = literatureBackupFixture(), backup = serializeLiteratureWorkspace(workspace);

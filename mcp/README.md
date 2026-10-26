@@ -2,10 +2,13 @@
 
 ## Export private saved literature locally (source candidate)
 
-`export_saved_literature({backup, format, screening?})` converts a caller-selected
+`export_saved_literature({backup, format, screening?, paperUrls?})` converts a caller-selected
 personal-bibliography v1 backup to BibTeX, RIS or CSL-JSON. It validates the full
 1 MiB bounded JSON before selecting saved screening states, keeps exact versions
 and provenance, and omits private review title, question, notes and decisions.
+Optional `paperUrls` selects at most 50 unique exact saved URLs in caller order;
+an empty array exports no references. Missing/changed-version URLs refuse the
+entire export, and `screening` filters within the selection. No URL is fetched.
 This local tool has no file, network, model or payment I/O. Your MCP client may
 retain the entire supplied backup, including private notes. See
 [offline export usage and boundaries](../docs/literature-export.md).

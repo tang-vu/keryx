@@ -5,7 +5,7 @@ import { join, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, expect, it } from "vitest";
 import { literatureBackupFixture } from "../../test-support/literature-backup-fixture";
-import { exportLiteratureCli } from "./literature-export-cli";
+import { exportLiteratureCli, MAX_LITERATURE_SELECTION_BYTES } from "./literature-export-cli";
 import { MAX_LITERATURE_BYTES, serializeLiteratureWorkspace } from "./literature-workspace";
 
 const folders: string[] = [], execute = promisify(execFile);
@@ -65,3 +65,41 @@ it("runs the actual CLI with metadata-only stdout and fixed private stderr", asy
   expect(bad.stderr).toContain("invalid-backup-or-file-unavailable");
   expect(bad.stderr).not.toContain(f.input); expect(bad.stderr).not.toContain("PRIVATE_BROKEN_BACKUP");
 });
+it("reads exact URL selections, including BOM/empty lists, without changing either input", async () => {
+  const f = await fixture(), selected = join(f.dir, "selected.json"), url = literatureBackupFixture().entries[1].paper.url;
+  const raw = "\uFEFF" + JSON.stringify([url]); await writeFile(selected, raw);
+  const output = await exportLiteratureCli([...f.args, "--selection", selected]);
+  expect(output).toContain("v99"); expect(output).not.toContain("PRIVATE_");
+  expect(await readFile(selected, "utf8")).toBe(raw); expect(await readFile(f.input, "utf8")).toBe(f.raw);
+  const filtered = await exportLiteratureCli([...f.args, "--selection", selected, "--screening", "include"]);
+  expect(filtered).toBe(""); await writeFile(selected, "[]");
+  expect(await exportLiteratureCli([...f.args, "--selection", selected])).toBe("");
+});
+it("bounds original selection bytes and refuses malformed, duplicate or nonregular selections before output", async () => {
+  const f = await fixture(), selected = join(f.dir, "selected.json"), output = join(f.dir, "must-not-exist.ris");
+  const raw = JSON.stringify([literatureBackupFixture().entries[0].paper.url]);
+  const padded = raw + " ".repeat(MAX_LITERATURE_SELECTION_BYTES - Buffer.byteLength(raw));
+  await writeFile(selected, padded); expect(await exportLiteratureCli([...f.args, "--selection", selected])).toContain("TI  - ");
+  for (const invalid of ["\uFEFF" + padded, Buffer.from([0xc0, 0xaf]), "{}", JSON.stringify(["https://arxiv.org/abs/PRIVATE_NOT_SAVED"]),
+    JSON.stringify([literatureBackupFixture().entries[0].paper.url, literatureBackupFixture().entries[0].paper.url])]) {
+    await writeFile(selected, invalid);
+    await expect(exportLiteratureCli([...f.args, "--selection", selected, "--output", output])).rejects.toThrow();
+    await expect(readFile(output)).rejects.toMatchObject({ code: "ENOENT" });
+  }
+  await expect(exportLiteratureCli([...f.args, "--selection", f.dir, "--output", output])).rejects.toThrow();
+  for (const args of [[...f.args, "--selection"], [...f.args, "--selection", "PRIVATE_MISSING", "--selection", selected]])
+    await expect(exportLiteratureCli(args)).rejects.toThrow("usage");
+});
+it("keeps missing selection URLs and selection paths out of real CLI stderr", async () => {
+  const f = await fixture(), selected = join(f.dir, "PRIVATE_SELECTION_PATH.json");
+  await writeFile(selected, '["https://arxiv.org/abs/PRIVATE_SELECTION_TOKEN"]');
+  const bad = await execute(process.execPath, ["--import", "tsx", "scripts/export-literature.mts", ...f.args, "--selection", selected], { timeout: 10_000 }).catch(error => error);
+  expect(bad.code).toBe(1); expect(bad.stdout).toBe("");
+  expect(bad.stderr).toContain("invalid-backup-or-file-unavailable");
+  expect(bad.stderr).not.toContain("PRIVATE_SELECTION"); expect(bad.stderr).not.toContain(f.dir);
+});
+it.skipIf(process.platform === "win32")("refuses an unwritten POSIX selection FIFO in the real CLI", async () => {
+  const f = await fixture(), fifo = join(f.dir, "selection.fifo"); await execute("mkfifo", [fifo]);
+  const bad = await execute(process.execPath, ["--import", "tsx", "scripts/export-literature.mts", ...f.args, "--selection", fifo], { timeout: 5000 }).catch(error => error);
+  expect(bad.code).toBe(1); expect(bad.killed).not.toBe(true); expect(bad.stdout).toBe("");
+}, 10_000);

@@ -52,7 +52,7 @@ try {
   const libraryExport = tools.tools.find(tool => tool.name === "export_saved_literature")!;
   assert.equal(libraryExport.annotations?.readOnlyHint, true); assert.equal(libraryExport.annotations?.destructiveHint, false);
   assert.equal(libraryExport.annotations?.openWorldHint, false);
-  assert.deepEqual(Object.keys(libraryExport.inputSchema.properties ?? {}).sort(), ["backup", "format", "screening"]);
+  assert.deepEqual(Object.keys(libraryExport.inputSchema.properties ?? {}).sort(), ["backup", "format", "paperUrls", "screening"]);
   const bibliography = tools.tools.find(tool => tool.name === "paper_lookup")!;
   assert.equal(bibliography.annotations?.readOnlyHint, true);
   assert.equal(bibliography.annotations?.destructiveHint, false);
