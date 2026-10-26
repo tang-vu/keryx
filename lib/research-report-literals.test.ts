@@ -28,7 +28,9 @@ describe("literal report metadata", () => {
     noStructureInjection(researchReportMarkdown(run, null, []));
   });
   it.each(["sourceName", "txHash"] as const)("keeps payment %s labels from forging an additional settlement section", field => {
-    const payment = { sourceName: "Writer", amountUsdc: .001, kind: "citation", settled: false, settlementStatus: "pending", [field]: injection } as PaymentRecord;
+    const payment: PaymentRecord = { queryId: original.id, sourceId: "publisher", sourceName: "Writer",
+      payer: "synthetic-payer", payee: "synthetic-payee", amountUsdc: .001, kind: "citation", network: "offline",
+      settled: false, settlementStatus: "pending", createdAt: original.createdAt, [field]: injection };
     const text = researchReportMarkdown(original, null, [payment]); noStructureInjection(text);
     expect(text).toContain("· pending"); expect(text).not.toContain("· settled");
   });
