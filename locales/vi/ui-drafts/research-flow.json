@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/research-flow.ts",
-  "sourceSha256": "188fce0014756dde2b237f3f1db91111930066a115d3f454eab4c21352c40f5f",
+  "sourceSha256": "493d7a7076923699c0ec017d68c4f03695ecb0f10f80509a3e59d67ecff5f8ff",
   "entries": {
     "creatorPayments.stampRing": {
       "source": "★ PAID IN FULL ★ KERYX ★ USDC ON ARC ",
@@ -1207,6 +1207,26 @@
     "researchVisibility.unlistedNotice": {
       "source": "Anyone with this report's link can read it. It stays out of public lists.",
       "text": "Bất kỳ ai có liên kết báo cáo đều đọc được. Báo cáo không xuất hiện trong danh sách công khai."
+    },
+    "decisionLog.followingLatest": {
+      "source": "Following latest steps",
+      "text": "Đang theo dõi các bước mới nhất"
+    },
+    "decisionLog.readingEarlier": {
+      "source": "Reading earlier steps",
+      "text": "Đang đọc các bước trước"
+    },
+    "decisionLog.scrollHint": {
+      "source": "Scroll inside the log to read earlier steps. Jump to latest to follow new steps.",
+      "text": "Cuộn trong nhật ký để đọc các bước trước. Chuyển đến bước mới nhất để theo dõi các bước mới."
+    },
+    "decisionLog.newSteps.one": {
+      "source": "{count} new step",
+      "text": "{count} bước mới"
+    },
+    "decisionLog.newSteps.other": {
+      "source": "{count} new steps",
+      "text": "{count} bước mới"
     }
   }
 }

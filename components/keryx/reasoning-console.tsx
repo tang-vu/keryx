@@ -11,7 +11,7 @@
 
 
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { TraceStep } from "@/lib/types";
 import { TraceRow } from "./trace-row";
 import { SectionHeading } from "./banknote";
@@ -31,39 +31,67 @@ interface ReasoningConsoleProps {
 export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleProps) {
   const message = useUiMessages();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLOListElement>(null);
   const followingRef = useRef(true);
+  const lastScrollTopRef = useRef(0);
   const [following, setFollowing] = useState(true);
+  const [lastReadCount, setLastReadCount] = useState(steps.length);
+  const descriptionId = useId();
 
   const onScroll = useCallback(() => {
     const container = scrollRef.current;
     if (!container) return;
     const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 32;
+    const movedUp = container.scrollTop < lastScrollTopRef.current - 1;
+    lastScrollTopRef.current = container.scrollTop;
+    // A queued scroll event after a layout/append is not a reader leaving the tail.
+    if (!atBottom && followingRef.current && !movedUp) return;
+    if (atBottom || followingRef.current) setLastReadCount(steps.length);
     followingRef.current = atBottom;
     setFollowing(atBottom);
-  }, []);
+  }, [steps.length]);
 
   const jumpToLatest = useCallback(() => {
     const container = scrollRef.current;
     if (!container) return;
     followingRef.current = true;
     setFollowing(true);
+    setLastReadCount(steps.length);
     container.scrollTop = container.scrollHeight;
-  }, []);
+    lastScrollTopRef.current = container.scrollTop;
+    container.focus({ preventScroll: true });
+  }, [steps.length]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (followingRef.current && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      lastScrollTopRef.current = scrollRef.current.scrollTop;
     }
   }, [steps.length, streaming]);
 
+  useEffect(() => {
+    const container = scrollRef.current, content = contentRef.current;
+    if (!container || !content || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (followingRef.current) {
+        container.scrollTop = container.scrollHeight;
+        lastScrollTopRef.current = container.scrollTop;
+      }
+    });
+    observer.observe(container);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+
   const paymentTotals = stepPaymentTotals(steps);
   const spent = paymentTotals.settled;
+  const newSteps = following ? 0 : Math.max(0, steps.length - lastReadCount);
 
   // Once a run is active the heading shows the live spend / cap; before that it
   // falls back to the deciding pulse or step count.
   const right =
     budget > 0 ? (
-      <span className="inline-flex items-center gap-2">
+      <span className="inline-flex max-w-full flex-wrap items-center gap-2">
         {streaming && <ThinkingDots />}
         <span className="tabular-nums tracking-normal">
           <span className="text-paid">{message("decisionLog.settledAmount", { amount: fmtUsdc(spent) })}</span>
@@ -80,8 +108,8 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
     ) : undefined;
 
   return (
-    <div className="flex h-full flex-col">
-      <SectionHeading numeral="I" label={message("decisionLog.title")} right={right} />
+    <div className="flex h-full min-w-0 flex-col [overflow-wrap:anywhere]">
+      <SectionHeading numeral="I" label={message("decisionLog.title")} right={right} className="flex-wrap" />
       <BudgetMeter spent={spent} budget={budget} streaming={streaming} pending={paymentTotals.pending + paymentTotals.unverified} />
       {(paymentTotals.pending > 0 || paymentTotals.simulated > 0 || paymentTotals.unverified > 0) && (
         <p className="mb-3 font-mono text-xs text-ink-2">
@@ -92,32 +120,46 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
           {paymentTotals.unverified > 0 && message("decisionLog.unverifiedAmount", { amount: fmtUsdc(paymentTotals.unverified) })}
         </p>
       )}
-      <div className="flex flex-1 flex-col overflow-hidden border border-ink bg-paper">
-        <div ref={scrollRef} onScroll={onScroll} aria-label={message("decisionLog.label")} className="max-h-[60vh] min-h-[320px] flex-1 overflow-y-auto overscroll-contain px-5 py-2 sm:max-h-[68vh]">
-          <div className="relative">
+      <p id={`${descriptionId}-hint`} className="sr-only">{message("decisionLog.scrollHint")}</p>
+      <div className="flex min-w-0 flex-1 flex-col border border-ink bg-paper">
+        <div ref={scrollRef} onScroll={onScroll} role="region" tabIndex={0} aria-label={message("decisionLog.label")} aria-describedby={`${descriptionId}-hint ${descriptionId}-mode`} className="max-h-[60vh] min-h-[320px] min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 [overflow-anchor:none] [scrollbar-gutter:stable] focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-seal sm:max-h-[68vh] sm:px-5">
+          <ol ref={contentRef} role="list" className="relative min-w-0 divide-y divide-line/60">
             {steps.map((step, i) => (
-              <TraceRow key={`${step.phase}-${step.ts}-${i}`} step={step} />
+              <li key={`${step.phase}-${step.ts}-${i}`} className={streaming && following && i === steps.length - 1 ? "motion-safe:animate-[kxUp_260ms_cubic-bezier(.16,1,.3,1)_both]" : undefined}>
+                <TraceRow step={step} />
+              </li>
             ))}
-            {streaming && steps.length === 0 && (
+          </ol>
+          {streaming && steps.length === 0 && (
               <p className="py-8 text-center font-mono text-[12px] uppercase tracking-[0.1em] text-ink-3">
                 {message("decisionLog.connecting")}
               </p>
             )}
+        </div>
+        <div className="flex min-h-[80px] min-w-0 flex-wrap items-center justify-between gap-3 border-t border-line bg-paper-2 px-4 py-3 sm:px-5">
+          <div className="min-w-0 flex-1 basis-40">
+            <p id={`${descriptionId}-mode`} className="flex items-start gap-2 font-mono text-[11px] leading-relaxed text-ink-2">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="mt-0.5 shrink-0 text-seal">
+                {following ? <path d="M10 3v12m-4-4 4 4 4-4" /> : <path d="M7 4v12m6-12v12" />}
+              </svg>
+              <span>{message(following ? "decisionLog.followingLatest" : "decisionLog.readingEarlier")}</span>
+            </p>
+            <p role="status" aria-live="polite" aria-atomic="true" className="mt-1 font-mono text-[11px] leading-relaxed text-seal">
+              {newSteps > 0 && <span key={newSteps} className="inline-block motion-safe:animate-[kxUp_180ms_ease-out_both]">{message(newSteps === 1 ? "decisionLog.newSteps.one" : "decisionLog.newSteps.other", { count: newSteps })}</span>}
+            </p>
           </div>
+          {!following && <button type="button" onClick={jumpToLatest} className="inline-flex min-h-[44px] min-w-0 max-w-full items-center justify-center gap-2 border border-ink bg-ink px-4 py-2 font-mono text-xs text-paper transition-colors duration-180 hover:bg-paper hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal motion-reduce:transition-none">
+            {message("decisionLog.jumpToLatest")}<span aria-hidden="true">↓</span>
+          </button>}
         </div>
       </div>
-      {!following && (
-        <button type="button" onClick={jumpToLatest} className="self-end border border-ink bg-paper px-3 py-1.5 font-mono text-xs text-ink underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">
-          {message("decisionLog.jumpToLatest")}
-        </button>
-      )}
     </div>
   );
 }
 
 function ThinkingDots() {
   return (
-    <span className="flex items-center gap-0.5">
+    <span aria-hidden="true" className="flex items-center gap-0.5">
       {[0, 1, 2].map((i) => (
         <span
           key={i}
