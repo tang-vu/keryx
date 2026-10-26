@@ -9,7 +9,7 @@ const noteText = (value: string) => field(value).replace(/&/g, "&amp;").replace(
 /** Unread bibliography, never converted into a Citation or inferred read evidence.
  * Validate the complete bounded list before formatting; retain the first snapshot
  * of each exact landing URL and preserve different arXiv versions. */
-export function validateReferencePapers(records: readonly PaperRecord[]) {
+function referencePapers(records: readonly PaperRecord[]) {
   const parsed = paperRecordSchema.array().max(50).parse(records);
   const identities = new Map<string, PaperRecord>();
   for (const paper of parsed) {
@@ -31,7 +31,7 @@ function provenanceNote(paper: PaperRecord) {
 
 /** Saved metadata only. Exact versions keep separate stable keys without claiming a read. */
 export function paperReferencesCslJson(records: readonly PaperRecord[]) {
-  const papers = validateReferencePapers(records);
+  const papers = referencePapers(records);
   const entries: CslReference[] = papers.map(paper => {
     const key = referenceKey(paper.url, "keryxPaper");
     return {
@@ -50,7 +50,7 @@ export function paperReferencesCslJson(records: readonly PaperRecord[]) {
 }
 
 export function paperReferencesRis(records: readonly PaperRecord[]) {
-  const papers = validateReferencePapers(records);
+  const papers = referencePapers(records);
   const content = papers.map(paper => {
     const type = paper.publicationKind === "preprint" ? "MANSCPT" : paper.publicationKind === "conference-paper" ? "CONF" : paper.publicationKind === "journal-article" ? "JOUR" : "WEB";
     const note = provenanceNote(paper);
@@ -69,7 +69,7 @@ export function paperReferencesRis(records: readonly PaperRecord[]) {
 /** Literal provider names, without guessed given/family splits or publication status.
  * Original-page report projections retain their existing ordinal key contract. */
 export function paperReferencesBibtex(records: readonly PaperRecord[], keyMode: "stable" | "legacy-ordinal" = "stable") {
-  const papers = validateReferencePapers(records);
+  const papers = referencePapers(records);
   const escape = (value: string) => field(value).replace(/[\\{}%&_#$^~]/g, char => ({
     "\\": "\\textbackslash{}", "{": "\\{", "}": "\\}", "%": "\\%", "&": "\\&", "_": "\\_",
     "#": "\\#", "$": "\\$", "^": "\\textasciicircum{}", "~": "\\textasciitilde{}",
