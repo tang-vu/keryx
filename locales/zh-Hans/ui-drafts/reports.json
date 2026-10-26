@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/reports.ts",
-  "sourceSha256": "621be0928914f28fa344baae5e0fe792beb8e1d78861044ff39c451180f7d13b",
+  "sourceSha256": "c382523e9b0216952efe118a5e28d1ba77c298f0c6bb7c38fe28d5b8e1ca2b5b",
   "entries": {
     "reportActions.copyUnavailable": {
       "source": "Copy unavailable. Download the report instead.",
@@ -2335,6 +2335,30 @@
     "reportSourceLens.viewExcerpts": {
       "source": "Excerpts in this view",
       "text": "此视图中的摘录"
+    },
+    "archiveFilter.searchHint": {
+      "source": "Search terms can appear in any order in questions or cited sources.",
+      "text": "搜索词可按任意顺序出现在问题或引用来源中。"
+    },
+    "archiveFilter.onThisPage": {
+      "source": "On this page",
+      "text": "本页"
+    },
+    "archiveFilter.elsewhereLabel": {
+      "source": "Elsewhere",
+      "text": "其他位置"
+    },
+    "archiveFilter.resultRange": {
+      "source": "Matches {start}–{end} of {total}",
+      "text": "第 {start}–{end} 项，共 {total} 项"
+    },
+    "archiveFilter.emptyHint": {
+      "source": "Try fewer search terms or another cited source.",
+      "text": "尝试减少搜索词或搜索其他引用来源。"
+    },
+    "archiveFilter.showPage": {
+      "source": "Show this page's reports",
+      "text": "显示本页报告"
     }
   }
 }

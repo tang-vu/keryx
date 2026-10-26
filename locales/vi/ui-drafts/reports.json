@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/reports.ts",
-  "sourceSha256": "621be0928914f28fa344baae5e0fe792beb8e1d78861044ff39c451180f7d13b",
+  "sourceSha256": "c382523e9b0216952efe118a5e28d1ba77c298f0c6bb7c38fe28d5b8e1ca2b5b",
   "entries": {
     "reportActions.copy": {
       "source": "Copy report",
@@ -2335,6 +2335,30 @@
     "reportSourceLens.viewExcerpts": {
       "source": "Excerpts in this view",
       "text": "Trích đoạn trong chế độ xem này"
+    },
+    "archiveFilter.searchHint": {
+      "source": "Search terms can appear in any order in questions or cited sources.",
+      "text": "Các từ tìm kiếm có thể xuất hiện theo bất kỳ thứ tự nào trong câu hỏi hoặc nguồn được trích dẫn."
+    },
+    "archiveFilter.onThisPage": {
+      "source": "On this page",
+      "text": "Trên trang này"
+    },
+    "archiveFilter.elsewhereLabel": {
+      "source": "Elsewhere",
+      "text": "Ở nơi khác"
+    },
+    "archiveFilter.resultRange": {
+      "source": "Matches {start}–{end} of {total}",
+      "text": "Kết quả {start}–{end} trong {total}"
+    },
+    "archiveFilter.emptyHint": {
+      "source": "Try fewer search terms or another cited source.",
+      "text": "Thử ít từ tìm kiếm hơn hoặc một nguồn được trích dẫn khác."
+    },
+    "archiveFilter.showPage": {
+      "source": "Show this page's reports",
+      "text": "Hiện các báo cáo trên trang này"
     }
   }
 }
