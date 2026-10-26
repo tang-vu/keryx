@@ -30,6 +30,7 @@ import { registerEvidenceDraftTool } from "../lib/research/evidence-draft-tool.t
 import { registerDraftCheckTool } from "../lib/research/draft-check-tool.ts";
 import { registerReportComparisonTool } from "../lib/research/report-comparison-tool.ts";
 import { registerLiteratureExportTool } from "../lib/papers/literature-export-tool.ts";
+import { registerLiteratureInspectionTool } from "../lib/papers/literature-inspection-tool.ts";
 import { registerEvidenceProcurementTool } from "../lib/evidence-procurement/tool.ts";
 import { createHistoryClient } from "../lib/history/personal-history-client.ts";
 import { registerHistoryTool } from "../lib/history/personal-history-mcp.ts";
@@ -52,6 +53,7 @@ registerEvidenceDraftTool(server);
 registerDraftCheckTool(server);
 registerReportComparisonTool(server);
 registerLiteratureExportTool(server);
+registerLiteratureInspectionTool(server);
 registerEvidenceProcurementTool(server);
 const acceptanceClient = () => createAcceptanceClient(meta.baseUrl, () => process.env.KERYX_API_KEY);
 registerAcceptanceTools(server, { read: id => acceptanceClient().read(id), submit: (id, input) => acceptanceClient().submit(id, input) });

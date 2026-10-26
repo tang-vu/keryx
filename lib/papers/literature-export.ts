@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { MAX_LITERATURE_BYTES, MAX_SAVED_PAPERS, parseLiteratureWorkspace } from "./literature-workspace";
+import { MAX_LITERATURE_BYTES, MAX_SAVED_PAPERS } from "./literature-workspace";
 import { paperReferencesBibtex, paperReferencesCslJson, paperReferencesRis } from "./reference-export";
 import { paperHttpsUrlSchema } from "./types";
+import { parseValidatedLiteratureBackup } from "./literature-backup";
 
 export const literaturePaperSelection = z.array(paperHttpsUrlSchema).max(MAX_SAVED_PAPERS)
   .refine(urls => new Set(urls).size === urls.length, "Duplicate selected paper");
@@ -17,13 +18,7 @@ export const literatureExportInput = z.object({
  * into reference records, or turn saved metadata into reading evidence. */
 export function exportLiterature(input: z.infer<typeof literatureExportInput>) {
   const { backup, format, screening = "all", paperUrls } = literatureExportInput.parse(input);
-  if (new TextEncoder().encode(backup).byteLength > MAX_LITERATURE_BYTES) throw new Error("Backup limit exceeded");
-  // Validate the complete backup before filtering: invalid excluded records must
-  // not be hidden by the caller's view. The parser also checks UTF-8 byte length.
-  const workspace = parseLiteratureWorkspace(backup.replace(/^\uFEFF/u, ""));
-  // The existing pure public projection validates all reference-specific fields
-  // before selection, including records omitted from the final export (max50).
-  paperReferencesCslJson(workspace.entries.map(entry => entry.paper));
+  const workspace = parseValidatedLiteratureBackup(backup);
   const byUrl = new Map(workspace.entries.map(entry => [entry.paper.url, entry]));
   const selected = paperUrls === undefined ? workspace.entries : paperUrls.map(url => {
     const entry = byUrl.get(url);

@@ -1,28 +1,11 @@
 /** Deliberate local input only. No env loader, provider, wallet or network client. */
-import { constants } from "node:fs";
-import { open, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { MAX_LITERATURE_BYTES } from "./literature-workspace";
 import { exportLiterature, literaturePaperSelection } from "./literature-export";
+import { readLiteratureFile } from "./literature-file-input";
 
 export const MAX_LITERATURE_SELECTION_BYTES = 65_536;
 export const usage = "Usage: node --import tsx scripts/export-literature.mts --input library.json --format bibtex|ris|csl-json [--screening all|unscreened|include|exclude|undecided] [--selection selected-urls.json] [--output new-file]";
-async function readBackup(path: string, limit = MAX_LITERATURE_BYTES) {
-  // Nonblocking open prevents a FIFO from hanging before the regular-file check.
-  const file = await open(path, constants.O_RDONLY | (constants.O_NONBLOCK ?? 0));
-  try {
-    const stat = await file.stat();
-    if (!stat.isFile() || stat.size > limit) throw new Error("input");
-    const bytes = Buffer.alloc(limit + 1);
-    let offset = 0;
-    while (offset < bytes.length) {
-      const { bytesRead } = await file.read(bytes, offset, bytes.length - offset, offset);
-      if (!bytesRead) break;
-      offset += bytesRead;
-    }
-    if (offset > limit) throw new Error("input");
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, offset));
-  } finally { await file.close(); }
-}
 
 export async function exportLiteratureCli(args: string[]): Promise<string | null> {
   if (args.length === 1 && args[0] === "--help") return usage + "\n";
@@ -36,8 +19,8 @@ export async function exportLiteratureCli(args: string[]): Promise<string | null
   if (!options.has("--input") || !["bibtex", "ris", "csl-json"].includes(format ?? "") ||
       (screening !== undefined && !["all", "unscreened", "include", "exclude", "undecided"].includes(screening))) throw new Error("usage");
   const paperUrls = options.has("--selection")
-    ? literaturePaperSelection.parse(JSON.parse(await readBackup(options.get("--selection")!, MAX_LITERATURE_SELECTION_BYTES))) : undefined;
-  const result = exportLiterature({ backup: await readBackup(options.get("--input")!), paperUrls,
+    ? literaturePaperSelection.parse(JSON.parse(await readLiteratureFile(options.get("--selection")!, MAX_LITERATURE_SELECTION_BYTES))) : undefined;
+  const result = exportLiterature({ backup: await readLiteratureFile(options.get("--input")!, MAX_LITERATURE_BYTES), paperUrls,
     format: format as "bibtex" | "ris" | "csl-json", screening: screening as "all" | "unscreened" | "include" | "exclude" | "undecided" | undefined });
   if (!options.has("--output")) return result.content;
   await writeFile(options.get("--output")!, result.content, { encoding: "utf8", flag: "wx", mode: 0o600 });

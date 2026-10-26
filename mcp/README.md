@@ -1,5 +1,16 @@
 # Keryx MCP
 
+## Inspect a private saved library locally (source candidate)
+
+`inspect_saved_literature({backup})` validates a caller-supplied personal-bibliography
+v1 backup and returns aggregate counts for saved records, personal screening,
+repositories, recorded publication kinds and missing metadata. Output omits
+private focus, notes and individual paper identities. Missing fields and current
+paper status remain unknown; counts are not reading, quality or settlement proof.
+This local tool has no file, network, model, wallet or payment I/O. MCP clients may
+retain the entire supplied backup, including private notes. See
+[offline inspection usage and limits](../docs/literature-inspection.md).
+
 ## Export private saved literature locally (source candidate)
 
 `export_saved_literature({backup, format, screening?, paperUrls?})` converts a caller-selected
