@@ -77,3 +77,26 @@ it("executes the real CLI entry point and keeps private input and OS file paths 
   expect(failure.stderr).toContain("invalid-receipt"); expect(failure.stderr).not.toContain("FORBIDDEN_PRIVATE_CONTENT");
   expect(failure.stderr).not.toContain(f.directory);
 });
+
+for (const option of ["--before", "--after", "--matches"]) {
+  async function refuseInput(f: Awaited<ReturnType<typeof files>>, input: string) {
+    const output = join(f.directory, "must-not-be-created.json");
+    const args = option === "--matches" ? [...f.args, option, input] : f.args.map((value, index) =>
+      index > 0 && f.args[index - 1] === option ? input : value);
+    const failure = await promisify(execFile)(process.execPath,
+      ["--import", "tsx", "scripts/compare-research.mts", ...args, "--output", output],
+      { timeout: 5000, maxBuffer: 65_536 }).catch(error => error);
+    expect(failure.code).toBe(1); expect(failure.killed).not.toBe(true);
+    expect(failure.stdout).toBe(""); expect(failure.stderr).toContain("Comparison refused (");
+    expect(failure.stderr).not.toContain(f.directory);
+    await expect(readFile(output)).rejects.toMatchObject({ code: "ENOENT" });
+  }
+  it(`refuses a directory at ${option} without creating output`, async () => {
+    const f = await files(); await refuseInput(f, f.directory);
+  }, 10_000);
+  it.runIf(process.platform !== "win32")(`refuses a FIFO at ${option} without waiting for a writer`, async () => {
+    const f = await files(), fifo = join(f.directory, "private-input.fifo");
+    await promisify(execFile)("mkfifo", [fifo]);
+    await refuseInput(f, fifo);
+  }, 10_000);
+}

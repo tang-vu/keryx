@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /** Explicit local files only. No environment file, credentials or network client. */
+import { constants } from "node:fs";
 import { open, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
@@ -9,7 +10,8 @@ import { compareResearchWithPlan, createReportComparisonPlan, MAX_COMPARISON_PLA
 
 const usage = "Usage: node --import tsx scripts/compare-research.mts --before receipt.json --after receipt.json [--matches pairs-or-matching-plan.json] [--format json|markdown|csv|matches] [--output new-file]";
 async function boundedFile(path: string, limit: number): Promise<string> {
-  const file = await open(path, "r");
+  // A FIFO must not wait for a writer before this descriptor can be validated.
+  const file = await open(path, constants.O_RDONLY | (constants.O_NONBLOCK ?? 0));
   try {
     const stat = await file.stat();
     if (!stat.isFile() || stat.size > limit) throw new ReportComparisonError("input-too-large");

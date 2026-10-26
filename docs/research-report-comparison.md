@@ -92,7 +92,9 @@ node --import tsx scripts/compare-research.mts --before before.json --after afte
 Default output is JSON on stdout. `--format` accepts `json`, `markdown`, `csv` or
 `matches` (a reusable matching file without report text).
 `--output` creates a new file exclusively and refuses an existing path. Local
-files use bounded reads and fatal UTF-8 decoding. No environment file is loaded.
+files use bounded reads and fatal UTF-8 decoding. Receipt and matching inputs must
+resolve to regular files; directories, devices and Unix FIFOs are refused without
+waiting for a FIFO writer. No environment file is loaded.
 Errors contain fixed codes, without private report text or OS paths.
 
 For explicit pairs, use `--matches pairs.json` containing at most 256 pairs:
