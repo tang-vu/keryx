@@ -22,7 +22,6 @@ export function OnboardingTour() {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const [panelHeight, setPanelHeight] = useState(0);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -102,16 +101,6 @@ export function OnboardingTour() {
   }, [active, step]);
 
   useEffect(() => {
-    if (!active || !portalRoot || !panel.current) return;
-    const element = panel.current;
-    const measure = () => setPanelHeight(element.getBoundingClientRect().height);
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    measure();
-    return () => observer.disconnect();
-  }, [active, portalRoot]);
-
-  useEffect(() => {
     if (!active || !portalRoot) return;
     panel.current?.querySelector<HTMLButtonElement>("button")?.focus();
     const keydown = (event: KeyboardEvent) => {
@@ -130,9 +119,6 @@ export function OnboardingTour() {
 
   const narrow = size.width < 640;
   const width = Math.min(340, Math.max(0, size.width - 16));
-  const left = rect ? Math.max(8, Math.min(rect.left, size.width - width - 8)) : 8;
-  const above = rect ? size.height - rect.bottom < panelHeight + 20 && rect.top > panelHeight + 20 : false;
-  const top = rect ? Math.max(8, Math.min(size.height - panelHeight - 8, above ? rect.top - panelHeight - 12 : rect.bottom + 12)) : 8;
   const spotlight = rect && rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0 && rect.top < size.height && rect.left < size.width ? {
     x: Math.max(4, rect.left - 8), y: Math.max(4, rect.top - 8),
     width: Math.max(0, Math.min(size.width - 4, rect.right + 8) - Math.max(4, rect.left - 8)),
@@ -154,7 +140,7 @@ export function OnboardingTour() {
               {spotlight && <rect key={step} {...spotlight} rx="10" fill="none" stroke="var(--seal)" strokeWidth="1.5" className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200" />}
             </svg>
           </div>
-          <div ref={panel} role="dialog" aria-modal="true" aria-label={message("researchTour.label")} aria-describedby={bodyId} className="fixed z-[9999] flex max-h-[calc(100dvh-16px)] flex-col overflow-hidden rounded-t-2xl border border-ink bg-paper shadow-2xl motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-200 sm:rounded-none" style={narrow ? { left: 0, right: 0, bottom: 0 } : { width, top, left }}>
+          <div ref={panel} role="dialog" aria-modal="true" aria-label={message("researchTour.label")} aria-describedby={bodyId} className="fixed z-[9999] flex max-h-[calc(100dvh-16px)] flex-col overflow-hidden rounded-t-2xl border border-ink bg-paper shadow-2xl motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-200 sm:rounded-none" style={narrow ? { left: 0, right: 0, bottom: 0 } : { width, right: 8, bottom: 8 }}>
             <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-paper-2 px-5 py-3">
               <div className="min-w-0">
                 <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-seal">{message("researchTour.step", { number: step + 1, total: steps.length })}</p>

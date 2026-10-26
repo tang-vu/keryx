@@ -103,6 +103,7 @@ const change = (page: Page, key: "context" | "long" | "mount", value: boolean) =
 const open = async (page: Page) => {
   await page.getByRole("button", { name: "How it works", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "How Keryx works", exact: true }); await dialog.waitFor();
+  await expect.poll(() => dialog.getByRole("button", { name: "Close tour", exact: true }).evaluate(element => document.activeElement === element)).toBe(true);
   await expect.poll(() => page.evaluate(() => document.getAnimations().some(animation => animation.playState === "running" && animation.effect?.getComputedTiming().iterations !== Infinity))).toBe(false);
   return dialog;
 };
@@ -149,6 +150,22 @@ it.each([320, 390, 768, 1366].flatMap(width => (["reduce", "no-preference"] as c
       expect(await page.getByRole("button", { name: "How it works", exact: true }).evaluate(element => document.activeElement === element)).toBe(true);
     }, width, 800, motion);
   });
+
+it("keeps desktop guide actions fixed as the highlighted target changes", async () => {
+  await fixture(async page => {
+    const dialog = await open(page), action = dialog.locator("footer button").last();
+    const original = await action.boundingBox(); expect(original).toBeTruthy();
+    for (const title of ["Ask a question", "Choose a spending cap", "Start research"]) {
+      await action.click();
+      await dialog.getByRole("region", { name: title, exact: true }).waitFor();
+      await expect.poll(async () => {
+        const current = await action.boundingBox();
+        return !!current && Math.abs(current.x - original!.x) < 1 && Math.abs(current.y - original!.y) < 1;
+      }).toBe(true);
+    }
+    await page.keyboard.press("Escape"); await restored(page);
+  }, 1366);
+});
 
 it("uses current guide copy, completes four steps, and blocks dispatch through the spotlight", async () => {
   await fixture(async page => {
