@@ -3,7 +3,7 @@
 /**
  * One row in the live reasoning console. Renders a phase chip plus the step
  * message, and for `decide` steps a colored BUY/SKIP/CACHE badge with the
- * source name + rationale. Fades/slides in on mount.
+ * source name + rationale. The owning ledger controls live arrival motion.
  */
 
 
@@ -31,7 +31,7 @@ export function TraceRow({ step }: { step: TraceStep }) {
   const diagnostic = step.phase === "decide" ? parseSelectionDiagnostic(step.detail) : undefined;
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 flex gap-3 py-2.5">
+    <div className="flex min-w-0 gap-3 py-3 [overflow-wrap:anywhere]">
       <div className="relative flex flex-col items-center">
         <span
           className={cn(
@@ -45,7 +45,7 @@ export function TraceRow({ step }: { step: TraceStep }) {
       </div>
 
       <div className="min-w-0 flex-1 pb-1">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span
             className={cn(
               "rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide",
