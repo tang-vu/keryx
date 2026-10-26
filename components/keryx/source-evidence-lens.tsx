@@ -52,7 +52,7 @@ export function SourceEvidenceLensView({ model, selectId, selectRef, onOmit, mes
         {copy("reportSourceLens.select")}
         <select ref={selectRef} id={selectId} value={model.omittedSourceId ?? ""} onChange={event => onOmit(event.target.value || null)}
           aria-describedby={`${selectId}-notice`}
-          className="mt-2 block min-h-[44px] w-full min-w-0 max-w-full border border-line bg-paper px-3 py-2 font-serif text-base text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
+          className="mt-2 block min-h-[44px] w-full min-w-0 max-w-full border border-line bg-paper px-3 py-2 font-serif text-base text-ink [contain:paint] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
           <option value="">{copy("reportSourceLens.keepAll")}</option>
           {model.sources.map(source => <option key={source.sourceId} value={source.sourceId}>{source.sourceName}</option>)}
         </select>

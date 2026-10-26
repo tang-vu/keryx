@@ -4,7 +4,7 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 import { build } from "esbuild";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
-import { chromium, type Browser, type Page } from "playwright";
+import { chromium, webkit, type Browser, type Page } from "playwright";
 import type { QueryRun } from "../types";
 
 let browser: Browser, css: string, bundle: string;
@@ -40,7 +40,8 @@ beforeAll(async () => {
   bundle = result.outputFiles[0].text;
   css = (await postcss([tailwind({ base: process.cwd() })]).process(await readFile("app/globals.css", "utf8"), { from: resolve("app/globals.css") })).css;
   if (screenshots) await mkdir(screenshots, { recursive: true });
-  browser = await chromium.launch({ headless: true });
+  const engine = process.env.KERYX_UX_BROWSER === "webkit" ? webkit : chromium;
+  browser = await engine.launch({ headless: true });
 }, 30_000);
 afterAll(async () => { await browser?.close(); });
 const lens = (page: Page) => page.getByRole("combobox").locator("xpath=ancestor::details[1]");
