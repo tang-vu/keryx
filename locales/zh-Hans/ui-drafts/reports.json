@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/reports.ts",
-  "sourceSha256": "a69067451df2e275f4cd72ae62d8d07b5038bd4749c106dd294ed4141847bbf6",
+  "sourceSha256": "621be0928914f28fa344baae5e0fe792beb8e1d78861044ff39c451180f7d13b",
   "entries": {
     "reportActions.copyUnavailable": {
       "source": "Copy unavailable. Download the report instead.",
@@ -2189,7 +2189,7 @@
       "text": "目标是请求主题，不是已核验断言。摘录不证明真伪或独立佐证。此视图不更改答案、置信度及付款，不发送新请求。"
     },
     "reportSourceLens.remaining.one": {
-      "source": "{count} recorded excerpt remain.",
+      "source": "{count} recorded excerpt remains.",
       "text": "剩余 {count} 条记录摘录。"
     },
     "reportSourceLens.remaining.other": {
@@ -2323,6 +2323,18 @@
     "evidenceMatrix.downloadUnavailable": {
       "source": "Download unavailable. Try again.",
       "text": "无法下载。请重试。"
+    },
+    "reportSourceLens.localView": {
+      "source": "Local excerpt view",
+      "text": "本地摘录视图"
+    },
+    "reportSourceLens.originalExcerpts": {
+      "source": "Original excerpts",
+      "text": "原始摘录"
+    },
+    "reportSourceLens.viewExcerpts": {
+      "source": "Excerpts in this view",
+      "text": "此视图中的摘录"
     }
   }
 }
