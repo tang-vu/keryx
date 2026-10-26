@@ -21,6 +21,13 @@ import { createSessionWithdrawalAbort, verifySessionWithdrawalAbort } from "../.
 const roots:string[]=[],closers:Array<()=>void>=[];
 afterEach(()=>{for(const close of closers.splice(0))close();for(const root of roots.splice(0)){if(!path.resolve(root).startsWith(path.join(os.tmpdir(),"keryx-headless-state-")))throw new Error("Unexpected fixture cleanup path");fs.rmSync(root,{recursive:true,force:true});}vi.restoreAllMocks();});
 function directory(){const root=privateHeadlessTestDirectory();roots.push(root);return root;}
+function removeCreatedEmptyArtifactDirectory(directory:string,created:boolean){
+  if(!created)return;
+  const stat=fs.lstatSync(directory);
+  if(directory!==path.resolve(".artifacts")||!stat.isDirectory()||stat.isSymbolicLink())throw new Error("Unexpected archived-writer fixture directory");
+  // rmdir is atomic and cannot remove files, another test's output or a symlink.
+  try{fs.rmdirSync(directory);}catch(error){if(!["ENOTEMPTY","EEXIST"].includes((error as NodeJS.ErrnoException).code??""))throw error;}
+}
 async function fixture(dir:string){const f=await headlessCashoutFixture(dir);closers.push(()=>{f.key.lock();f.state.close();});return f;}
 function payment(p:Awaited<ReturnType<typeof headlessCashoutFixture>>["p"]){const nonce=`0x${"88".repeat(32)}`,question={id:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",budgetMicroUsdc:"10000"};
   return{nonce,question,original:{sessionId:p.ownerAddr,sessAddr:p.sessAddr,grantEpoch:p.grantEpoch,reqId:question.id,sourceId:"original",kind:"fetch" as const,expectedNonce:nonce,browserAuthorizationProtocol:"durable-v1" as const,
@@ -41,7 +48,7 @@ it("explicit v2 upgrade keeps first cipher, original headers/caps/nonces and fen
   const tables=["custody","questions","exposure","headers","terminal"],before=tables.map(t=>db.prepare(`SELECT * FROM ${t}`).all());db.close();
   const unchanged=fs.readFileSync(file);
   await expect(openHeadlessMainnetState(dir,context,wrapping,false)).rejects.toThrow("owner recovery");expect(fs.readFileSync(file)).toEqual(unchanged);
-  const artifacts=path.resolve(".artifacts"),legacy=path.join(artifacts,"legacy-headless-v2.mts");fs.mkdirSync(artifacts,{recursive:true});
+  const artifacts=path.resolve(".artifacts"),createdArtifacts=!fs.existsSync(artifacts),legacy=path.join(artifacts,"legacy-headless-v2.mts");fs.mkdirSync(artifacts,{recursive:true});
   // Exact archived v2 source from f420250; reproducible even in a shallow checkout.
   const old=fs.readFileSync(new URL("../fixtures/headless-mainnet-state-v2.mts.txt",import.meta.url),"utf8").replaceAll("\r\n","\n");
   expect(createHash("sha256").update(old).digest("hex")).toBe("ae55fac949df22e555e78a72ffa0dc1bf571e2142cc5a687c25393ef3ab0160d");
@@ -58,7 +65,7 @@ it("explicit v2 upgrade keeps first cipher, original headers/caps/nonces and fen
     const originalV3=fs.readFileSync(file);
     expect(invokeOld()).toContain("old-writer-refused");
     expect(fs.readFileSync(file)).toEqual(originalV3);
-  }finally{fs.unlinkSync(legacy);}
+  }finally{fs.unlinkSync(legacy);removeCreatedEmptyArtifactDirectory(artifacts,createdArtifacts);}
 },30000);
 
 it("explicit v3 upgrade retains exposed originals and fences the archived v3 writer before crypto",async()=>{
@@ -76,7 +83,7 @@ it("explicit v3 upgrade retains exposed originals and fences the archived v3 wri
   const before=tables.map(t=>db.prepare(`SELECT * FROM ${t}`).all());db.close();
   const unchanged=fs.readFileSync(file);
   await expect(openHeadlessMainnetState(dir,context,wrapping,false)).rejects.toThrow("owner recovery");expect(fs.readFileSync(file)).toEqual(unchanged);
-  const legacy=path.resolve(".artifacts","legacy-headless-v3.mts");fs.mkdirSync(path.dirname(legacy),{recursive:true});
+  const artifacts=path.resolve(".artifacts"),createdArtifacts=!fs.existsSync(artifacts),legacy=path.join(artifacts,"legacy-headless-v3.mts");fs.mkdirSync(artifacts,{recursive:true});
   const old=fs.readFileSync(new URL("../fixtures/headless-mainnet-state-v3.mts.txt",import.meta.url),"utf8").replaceAll("\r\n","\n");
   expect(createHash("sha256").update(old).digest("hex")).toBe("b213dcdfb72480cc63d620e0b17bce8e096fb6651d81e9d7d274460c4a26d839");
   // Relative helper imports must target current compatibility dependencies in the fixture.
@@ -90,7 +97,7 @@ it("explicit v3 upgrade retains exposed originals and fences the archived v3 wri
     expect(upgraded.withdrawals.activeWithdrawal()).toBe(f.p.requestId);
     const inspect=new DatabaseSync(file,{readOnly:true});expect(tables.map(t=>inspect.prepare(`SELECT * FROM ${t}`).all())).toEqual(before);inspect.close();upgraded.close();
     const v4=fs.readFileSync(file);expect(invoke()).toContain("v3-refused");expect(fs.readFileSync(file)).toEqual(v4);
-  } finally {fs.unlinkSync(legacy);}
+  } finally {fs.unlinkSync(legacy);removeCreatedEmptyArtifactDirectory(artifacts,createdArtifacts);}
 },30000);
 
 it("retains a pending publication abort across lost acknowledgement and restart; only its exact proof clears the cashout barrier",async()=>{
