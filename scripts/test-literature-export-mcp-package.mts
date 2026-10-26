@@ -26,12 +26,23 @@ try {
       await client.connect(transport);
       const tool = (await client.listTools()).tools.find(tool => tool.name === "export_saved_literature")!;
       assert(tool); assert.deepEqual(tool.annotations, { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
+      assert.deepEqual(Object.keys(tool.inputSchema.properties ?? {}).sort(), ["backup", "format", "paperUrls", "screening"]);
       for (const format of ["bibtex", "ris", "csl-json"] as const) {
         const input = { backup: serializeLiteratureWorkspace(literatureBackupFixture()), format, screening: "include" as const };
         const result = await client.callTool({ name: tool.name, arguments: input });
         assert(!result.isError); assert.deepEqual(result.structuredContent, exportLiterature(input));
         assert(!JSON.stringify(result).includes("PRIVATE_"));
+        const paperUrls = literatureBackupFixture().entries.map(entry => entry.paper.url).reverse();
+        for (const selection of [paperUrls, [paperUrls[0]], []]) {
+          const selectedInput = { backup: input.backup, format, paperUrls: selection };
+          const selected = await client.callTool({ name: tool.name, arguments: selectedInput });
+          assert(!selected.isError); assert.deepEqual(selected.structuredContent, exportLiterature(selectedInput));
+          assert(!JSON.stringify(selected).includes("PRIVATE_"));
+        }
       }
+      const missing = await client.callTool({ name: tool.name, arguments: {
+        backup: serializeLiteratureWorkspace(literatureBackupFixture()), format: "ris", paperUrls: ["https://arxiv.org/abs/PRIVATE_NOT_SAVED"] } });
+      assert(missing.isError); assert(!missing.structuredContent); assert(!JSON.stringify(missing).includes("PRIVATE_NOT_SAVED"));
       const bad = await client.callTool({ name: tool.name, arguments: { backup: "PRIVATE_MALFORMED_BACKUP", format: "ris" } });
       assert(bad.isError); assert(!bad.structuredContent); assert(!JSON.stringify(bad).includes("PRIVATE_MALFORMED_BACKUP"));
     } finally { await client.close(); }
