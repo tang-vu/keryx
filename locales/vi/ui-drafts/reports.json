@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/reports.ts",
-  "sourceSha256": "adb144795d71e0f33df09a7556d9a5ad7fa227a3194a755863867efaa59e3e7c",
+  "sourceSha256": "097220dccb9caf68693e213d956cb9e8a34471eddc41e1bab759ce450c42592c",
   "entries": {
     "reportActions.copy": {
       "source": "Copy report",
@@ -2271,6 +2271,26 @@
     "reportTestnetHistory.unavailable": {
       "source": "Testnet history could not be loaded. {retry}",
       "text": "Không thể tải lịch sử testnet. {retry}"
+    },
+    "reportReading.summary": {
+      "source": "Report summary",
+      "text": "Tóm tắt báo cáo"
+    },
+    "reportReading.link": {
+      "source": "Report link",
+      "text": "Liên kết báo cáo"
+    },
+    "reportReading.copyLink": {
+      "source": "Copy link",
+      "text": "Sao chép liên kết"
+    },
+    "reportReading.copyingLink": {
+      "source": "Copying link…",
+      "text": "Đang sao chép liên kết…"
+    },
+    "reportReading.copyUnavailable": {
+      "source": "Copy unavailable. Select the link and copy it manually.",
+      "text": "Không thể sao chép. Hãy chọn liên kết và sao chép thủ công."
     }
   }
 }

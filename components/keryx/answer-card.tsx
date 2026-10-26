@@ -9,10 +9,10 @@ import { demoteSyntheticEvidence } from "@/lib/research/evidence-provenance";
  * §II · The reading — the grounded answer set as a printed page: Spectral body
  * with footnote citation markers, a footnotes apparatus where each one pays its
  * author, and a settlement strip (spent / % to creators / decisions / engine).
- * When a permalink URL is available, a Share button copies it to the clipboard.
+ * A saved report link remains selectable when clipboard access is unavailable.
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { QueryRun, PaymentRecord } from "@/lib/types";
 import type { PresentationLanguage } from "@/shared/i18n/presentation-language";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
@@ -193,6 +193,7 @@ export function AnswerCard({ run, answerLanguage, meta, permalink, payments = []
 
         {showFeedback ? <><RequesterFeedback key={run.id} runId={run.id} /><AnswerFeedback queryId={run.id} /></> : null}
         <SummaryStrip
+          key={run.id}
           spent={run.totalSpent}
           toCreators={run.totalToCreators}
           bought={bought}
@@ -309,7 +310,6 @@ function SummaryStrip({
   permalink,
 }: SummaryStripProps) {
   const copy = useUiMessages();
-  const [copied, setCopied] = useState(false);
   const creatorShare = spent > 0 ? `${Math.round((toCreators / spent) * 100)}%` : "—";
   const readLabels = [
     reads.publicReads ? copy(selectPlural(reads.publicReads) === "one" ? "reportReading.publicRead.one" : "reportReading.publicRead.other", { count: reads.publicReads }) : null,
@@ -319,44 +319,31 @@ function SummaryStrip({
     reads.cacheSelectionsWithoutOutcome ? copy(selectPlural(reads.cacheSelectionsWithoutOutcome) === "one" ? "reportReading.cacheSelection.one" : "reportReading.cacheSelection.other", { count: reads.cacheSelectionsWithoutOutcome }) : null,
   ].filter(Boolean);
 
-  const copyPermalink = useCallback(() => {
-    if (!permalink) return;
-    navigator.clipboard.writeText(permalink).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [permalink]);
-
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-ink bg-paper-2 px-6 py-3.5 text-sm sm:px-9">
-      <Stat label={mode === "offline" ? copy("reportReading.simulatedSpend") : mode === "real" ? copy("reportReading.spent") : copy("reportReading.recordedSpend")} value={formatRecordedUsdc(spent)} mono />
-      <Stat label={mode === "offline" ? copy("reportReading.simulatedShare") : mode === "real" ? copy("reportReading.toCreators") : copy("reportReading.recordedShare")} value={creatorShare} accent={spent > 0 && mode === "real"} />
-      {pending > 0 && <Stat label={copy("reportReading.pendingProof")} value={`${pending}`} />}
-      <Stat
-        label={copy("reportReading.decisions")}
-        value={[copy(selectPlural(bought) === "one" ? "reportReading.bought.one" : "reportReading.bought.other", { count: bought }), copy(selectPlural(skipped) === "one" ? "reportReading.skipped.one" : "reportReading.skipped.other", { count: skipped })].join(" · ")}
-      />
-      <Stat label={copy("reportReading.reads")} value={readLabels.length ? readLabels.join(" · ") : copy("reportReading.noRecordedReads")} />
-      <div className="ml-auto flex items-center gap-2">
-        {permalink && (
-          <button
-            type="button"
-            onClick={copyPermalink}
-            className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3 transition-colors hover:border-ink hover:text-ink"
-          >
-            {copied ? copy("reportReading.copied") : copy("reportReading.share")}
-          </button>
-        )}
-        <span className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3">
+    <section aria-label={copy("reportReading.summary")} className="@container/summary border-t border-ink bg-paper-2 px-6 py-5 sm:px-9 sm:py-6">
+      <dl className="grid min-w-0 grid-cols-1 gap-x-5 gap-y-5 @min-[18rem]/summary:grid-cols-2 @min-[44rem]/summary:grid-cols-4">
+        <Stat label={mode === "offline" ? copy("reportReading.simulatedSpend") : mode === "real" ? copy("reportReading.spent") : copy("reportReading.recordedSpend")} value={formatRecordedUsdc(spent)} mono prominent />
+        <Stat label={mode === "offline" ? copy("reportReading.simulatedShare") : mode === "real" ? copy("reportReading.toCreators") : copy("reportReading.recordedShare")} value={creatorShare} accent={spent > 0 && mode === "real"} prominent />
+        {pending > 0 && <Stat label={copy("reportReading.pendingProof")} value={`${pending}`} />}
+        <Stat
+          className={pending > 0 ? undefined : "@min-[18rem]/summary:col-span-2"}
+          label={copy("reportReading.decisions")}
+          value={[copy(selectPlural(bought) === "one" ? "reportReading.bought.one" : "reportReading.bought.other", { count: bought }), copy(selectPlural(skipped) === "one" ? "reportReading.skipped.one" : "reportReading.skipped.other", { count: skipped })].join(" · ")}
+        />
+        <Stat className="col-span-full border-t border-line pt-4" label={copy("reportReading.reads")} value={readLabels.length ? readLabels.join(" · ") : copy("reportReading.noRecordedReads")} />
+      </dl>
+      <div className="mt-4 flex min-w-0 flex-wrap items-center gap-2">
+        <span className="min-w-0 border border-line bg-card px-2 py-1 font-mono text-xs text-ink-3 [overflow-wrap:anywhere]">
           {engine}
         </span>
         {historicalNetwork ? (
-          <span className="border border-line bg-card px-2 py-0.5 font-mono text-[11px] text-ink-3">
+          <span className="min-w-0 border border-line bg-card px-2 py-1 font-mono text-xs text-ink-3 [overflow-wrap:anywhere]">
             {copy("reportReading.historical", { network: recordedArcLabel(historicalNetwork) })}
           </span>
         ) : <ModeBadge mode={mode} />}
       </div>
-    </div>
+      {permalink && <PermalinkCopy key={permalink} permalink={permalink} />}
+    </section>
   );
 }
 
@@ -365,26 +352,78 @@ function Stat({
   value,
   mono,
   accent,
+  prominent,
+  className,
 }: {
   label: string;
   value: string;
   mono?: boolean;
   accent?: boolean;
+  prominent?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-ink-3">
+    <div className={cn("min-w-0 [overflow-wrap:anywhere]", className)}>
+      <dt className="font-mono text-xs uppercase tracking-[0.08em] text-ink-3">
         {label}
-      </span>
-      <span
+      </dt>
+      <dd
         className={cn(
-          "font-semibold tabular-nums text-ink",
+          "mt-1 text-sm font-semibold tabular-nums text-ink",
+          prominent && "text-xl sm:text-2xl",
           mono && "font-mono",
           accent && "text-paid",
         )}
       >
         {value}
-      </span>
+      </dd>
+    </div>
+  );
+}
+
+function PermalinkCopy({ permalink }: { permalink: string }) {
+  const copy = useUiMessages();
+  const [state, setState] = useState<"idle" | "copying" | "copied" | "unavailable">("idle");
+  const pending = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  const copyPermalink = async () => {
+    if (pending.current) return;
+    pending.current = true;
+    setState("copying");
+    try {
+      await navigator.clipboard.writeText(permalink);
+      if (mounted.current) setState("copied");
+    } catch {
+      if (mounted.current) setState("unavailable");
+    } finally {
+      pending.current = false;
+    }
+  };
+
+  return (
+    <div className="mt-5 border-t border-line pt-4">
+      <label className="block min-w-0">
+        <span className="font-mono text-xs uppercase tracking-[0.08em] text-ink-3">{copy("reportReading.link")}</span>
+        <input readOnly value={permalink} onFocus={event => event.currentTarget.select()} onClick={event => event.currentTarget.select()}
+          className="mt-2 block min-h-[44px] w-full min-w-0 border border-line bg-card px-3 py-2 text-base text-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink" />
+      </label>
+      <div className="mt-3 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+        <button type="button" onClick={copyPermalink} aria-busy={state === "copying"} aria-disabled={state === "copying"}
+          className="inline-flex min-h-[44px] min-w-[44px] max-w-full items-center justify-center gap-2 border border-ink bg-ink px-4 py-2 font-mono text-xs text-paper transition-[background-color,color,translate] duration-200 hover:bg-paper hover:text-ink motion-safe:hover:-translate-y-0.5 aria-disabled:cursor-wait aria-disabled:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink motion-reduce:transition-none">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0">
+            {state === "copied" ? <path d="m5 12 4 4L19 6" /> : <><rect x="8" y="8" width="12" height="12" rx="1" /><path d="M16 8V4H4v12h4" /></>}
+          </svg>
+          {copy("reportReading.copyLink")}
+        </button>
+        <p role="status" aria-atomic="true" className="min-h-5 min-w-0 flex-1 text-sm text-ink-2 [overflow-wrap:anywhere]">
+          {state === "copying" ? copy("reportReading.copyingLink") : state === "copied" ? copy("reportReading.copied") : state === "unavailable" ? copy("reportReading.copyUnavailable") : ""}
+        </p>
+      </div>
     </div>
   );
 }
