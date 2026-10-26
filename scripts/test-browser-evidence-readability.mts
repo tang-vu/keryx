@@ -60,6 +60,9 @@ try {
       await page.goto("https://evidence.test/"); await page.addScriptTag({ content: bundle.outputFiles[0].text });
       const trigger = page.getByRole("button", { name: "Inspect evidence for citation S1", exact: true });
       await trigger.waitFor();
+      await page.getByText("Research evidence matrix", { exact: true }).click();
+      await page.getByRole("button", { name: "Compare sources", exact: true }).click();
+      await page.getByRole("columnheader", { name: "Research target (unverified)", exact: true }).waitFor();
       // Native details inspection exposes the matrix and source-omission excerpt views.
       await page.locator("details").evaluateAll(nodes => nodes.forEach(node => { (node as HTMLDetailsElement).open = true; }));
       const quotes = page.locator("blockquote");

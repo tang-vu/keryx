@@ -25,7 +25,7 @@ const run: QueryRun = { id: "matrix-alpha", question: "Synthetic local evidence 
     { ...first, contentVersion: "wrong-version", claimIndex: 0, claim, quote: "WRONG_VERSION_MUST_STAY_OUT", support: .9, qualifiesForAnswer: true, qualifiesForReward: false },
     { ...illustrative, claimIndex: 0, claim, quote: "Illustrative measurement, not factual support.", support: .5, qualifiesForAnswer: false, qualifiesForReward: false }] };
 type Fixture = { report(index: number): void; stress(value: boolean): void; locale(value: "vi" | "zh-Hans"): void;
-  mode(value: "ok" | "throw" | "missing" | "clickThrow"): void; created: string[]; revoked: string[]; unchanged(): boolean };
+  quote(value: string): void; mode(value: "ok" | "throw" | "missing" | "clickThrow"): void; created: string[]; revoked: string[]; unchanged(): boolean };
 const fonts = `@font-face{font-family:MatrixDisplay;src:url('/fonts/bodoni-moda-latin.woff2')}@font-face{font-family:MatrixSerif;src:url('/fonts/spectral-latin-400.woff2')}@font-face{font-family:MatrixMono;src:url('/fonts/spline-sans-mono-latin.woff2')}:root{--font-bodoni:MatrixDisplay;--font-spectral:MatrixSerif;--font-spline-mono:MatrixMono}`;
 
 beforeAll(async () => {
@@ -33,8 +33,8 @@ beforeAll(async () => {
     import{UiCopyContext,englishUiCopy}from'./lib/i18n/ui-copy-context';import{createMessages}from'./lib/i18n/messages';import vi from'./locales/generated/vi-ui-preview';import zh from'./locales/generated/zh-Hans-ui-preview';
     const original=${JSON.stringify(run)},before=JSON.stringify(original),nativeCreate=URL.createObjectURL.bind(URL),nativeRevoke=URL.revokeObjectURL.bind(URL),nativeClick=HTMLAnchorElement.prototype.click;
     const fixture=window.matrixFixture={created:[],revoked:[],unchanged:()=>JSON.stringify(original)===before,mode(mode){Object.defineProperty(URL,'createObjectURL',{configurable:true,writable:true,value:mode==='missing'?undefined:blob=>{if(mode==='throw')throw Error('PRIVATE_EXPORT_DETAIL');const url=nativeCreate(blob);fixture.created.push(url);return url}});URL.revokeObjectURL=url=>{fixture.revoked.push(url);nativeRevoke(url)};HTMLAnchorElement.prototype.click=mode==='clickThrow'?function(){throw Error('PRIVATE_CLICK_DETAIL')}:nativeClick}};fixture.mode('ok');
-    function App(){const[index,setIndex]=useState(0),[stress,setStress]=useState(false),[locale,setLocale]=useState('en');Object.assign(fixture,{report:setIndex,stress:setStress,locale:setLocale});
-      const value={...original,id:index?'matrix-'+index:original.id,...(index===1?{evidence:undefined}:index===2?{citations:[],evidence:[]}:index===3?{citations:[],subClaims:[],evidence:[]}:{}),...(stress?{subClaims:[...original.subClaims,...Array.from({length:12},(_,index)=>'Unverified target '+index+' '+ 'OriginalIdentifier'.repeat(8))]}:{})},preview=locale==='vi'?vi:locale==='zh-Hans'?zh:{};
+    function App(){const[index,setIndex]=useState(0),[stress,setStress]=useState(false),[locale,setLocale]=useState('en'),[quote,setQuote]=useState(null);Object.assign(fixture,{report:setIndex,stress:setStress,locale:setLocale,quote:setQuote});
+      const value={...original,id:index?'matrix-'+index:original.id,...(index===1?{evidence:undefined}:index===2?{citations:[],evidence:[]}:index===3?{citations:[],subClaims:[],evidence:[]}:{}),...(quote!==null?{evidence:original.evidence.map((item,index)=>index===0?{...item,quote}:item)}:{}),...(stress?{subClaims:[...original.subClaims,...Array.from({length:12},(_,index)=>'Unverified target '+index+' '+ 'OriginalIdentifier'.repeat(8))]}:{})},preview=locale==='vi'?vi:locale==='zh-Hans'?zh:{};
       const ui=locale==='en'?englishUiCopy:{...englishUiCopy,locale,preview,message:createMessages(locale,preview.$messages)};
       return <UiCopyContext.Provider value={ui}><AnswerCard run={value} meta={null} showFeedback={false}/></UiCopyContext.Provider>}
     createRoot(document.getElementById('root')).render(<App/>);`, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, metafile: true, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env": JSON.stringify({ NODE_ENV: "production", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet" }) } });
@@ -146,6 +146,23 @@ it("keeps missing sources and missing targets explicit without empty source acti
     expect(await root.getByRole("list").count()).toBe(0);
     expect(await root.getByRole("table").count()).toBe(0);
   });
+});
+
+it("preserves long unbroken quotes, indentation, blank lines and literal markup in target cards", async () => {
+  await fixture(async page => {
+    const root = matrix(page); await root.locator(":scope > summary").click();
+    const target = root.getByRole("list", { name: "By target", exact: true }).locator(":scope > li").first();
+    await target.getByText("Inspect cited sources", { exact: true }).click();
+    const source = target.locator("article").first(); await source.getByText("Inspect 1 excerpt", { exact: true }).click();
+    for (const original of ["The reference is https://example.invalid/" + "x".repeat(190) + ".", 'A retained quoted line.\n    "aaa","b""bb","ccc"\n\n    Literal <img data-fixture-injection> text.  \n\n']) {
+      await page.evaluate(value => (window as unknown as { matrixFixture: Fixture }).matrixFixture.quote(value), original);
+      const quote = source.locator("blockquote");
+      await expect.poll(() => quote.textContent()).toBe(original);
+      expect(await quote.innerText()).toBe(original);
+      expect(await quote.evaluate(element => element.clientWidth > 0 && element.scrollWidth <= element.clientWidth)).toBe(true);
+      expect(await page.locator("[data-fixture-injection]").count()).toBe(0);
+    }
+  }, 320);
 });
 
 it("preserves actual CSV/Markdown download bytes and recovers from export failures", async () => {
