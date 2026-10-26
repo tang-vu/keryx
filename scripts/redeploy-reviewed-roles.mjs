@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { parseEnv } from 'node:util';
 
 const names = ['keryx', 'keryx-a2a-worker'];
 const prefix = ['-i', 'PATH=/usr/bin:/bin', 'NODE_ENV=production', '/usr/bin/node', '--env-file=/root/keryx/.env.local'];
@@ -12,6 +13,42 @@ const tails = {
 };
 const refuse = () => { throw Error('Reviewed role deployment refused; preserve processes and retained builds.'); };
 const digest = b => createHash('sha256').update(b).digest('hex');
+// This stdin authority stays self-contained. Regression tests keep its public
+// digest vocabulary equal to the separately imported keyless builder's policy.
+export const REVIEWED_PUBLIC_BUILD_KEYS = Object.freeze([
+  'NEXT_PUBLIC_CIRCLE_APP_ID', 'NEXT_PUBLIC_GOOGLE_CLIENT_ID',
+  'KERYX_REGISTRY_ADDRESS', 'NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS',
+  'KERYX_REGISTRY_READ_ADDRESS', 'NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS',
+  'KERYX_RUN_PRIVACY_ENABLED', 'NEXT_PUBLIC_WC_PROJECT_ID',
+  'KERYX_REGISTRY_VERSION', 'NEXT_PUBLIC_KERYX_REGISTRY_VERSION',
+  'KERYX_REGISTRY_ORIGINS', 'NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS',
+  'KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS', 'NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS',
+]);
+export function reviewedPublicBuildProfileSha256(bytes) {
+  const env = parseEnv(bytes.toString('utf8'));
+  const profile = Object.fromEntries(REVIEWED_PUBLIC_BUILD_KEYS.map(key =>
+    [key, env[key] ?? (key === 'NEXT_PUBLIC_WC_PROJECT_ID' ? '' : undefined)]));
+  if (env.KERYX_NETWORK !== 'arc' || env.NEXT_PUBLIC_KERYX_NETWORK !== 'arc' ||
+      env.KERYX_RUN_PRIVACY_ENABLED !== 'true' || Object.values(profile).some(value => typeof value !== 'string') ||
+      ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY']
+        .some(key => ![undefined, ''].includes(env[key]))) refuse();
+  return digest(JSON.stringify(profile) + '\n');
+}
+export function reviewedPrivateHeaderDigest(source) {
+  const file = path.join(source, '.next', 'routes-manifest.json'), stat = fs.lstatSync(file);
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size > 4 * 1024 * 1024) refuse();
+  const value = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (!Array.isArray(value.headers) || value.headers.length > 1024) refuse();
+  const expected = [['Cache-Control', 'no-store'], ['Referrer-Policy', 'no-referrer'], ['X-Robots-Tag', 'noindex, nofollow']];
+  const rows = ['/dispatch/:path*', '/api/dispatch/:path*'].map(sourcePath => {
+    const found = value.headers.filter(row => row.source === sourcePath);
+    if (found.length !== 1 || !Array.isArray(found[0].headers) || found[0].headers.length !== expected.length) refuse();
+    const headers = found[0].headers.map(header => [header.key, header.value]);
+    if (JSON.stringify(headers) !== JSON.stringify(expected)) refuse();
+    return { source: sourcePath, headers };
+  });
+  return digest(JSON.stringify(rows) + '\n');
+}
 export function releaseSource(commit) {
   if (!/^[a-f0-9]{40}$/.test(commit)) refuse();
   return `/root/.local/share/keryx-releases/${commit}/source`;
@@ -30,7 +67,7 @@ export function validateReleaseBinding(value) {
 
 /** This protected operator review binds existing acceptance/native evidence, not
  * new payment/storage authority. No automatic migration or rollback is provided. */
-export function verifyReleaseReview(binding, read, artifact) {
+export function verifyReleaseReview(binding, read, artifact, inspectHeaders = reviewedPrivateHeaderDigest) {
   validateReleaseBinding(binding);
   const preparation = read(`${path.posix.dirname(releaseSource(binding.commit))}/preparation.json`, binding.preparationSha256);
   if (!preparation || preparation.format !== 'keryx-immutable-preparation-v1' ||
@@ -38,12 +75,15 @@ export function verifyReleaseReview(binding, read, artifact) {
       preparation.sourceManifestSha256 !== binding.sourceManifestSha256 ||
       preparation.artifactInspectionSha256 !== binding.artifactInspectionSha256 ||
       preparation.writerHoldStarted !== false || preparation.runtimeEnvironmentLoaded !== false ||
-      preparation.checks?.publicBuildSettings?.network !== 'arc' || preparation.checks?.platform !== 'linux' ||
+      preparation.checks?.publicBuildSettings?.network !== 'arc' || preparation.checks.publicBuildSettings.forceOffline !== false || preparation.checks?.platform !== 'linux' ||
       preparation.checks?.node !== '24.22.1' || preparation.checks?.npm !== '11.19.0' ||
       !Array.isArray(preparation.checks.results) || preparation.checks.results.length !== 3 ||
       preparation.checks.results.some((result, index) => result.name !== ['typecheck', 'tests', 'build'][index] ||
         result.exitCode !== 0 || result.signal !== null || result.processError !== null || !/^[a-f0-9]{64}$/.test(result.outputSha256))) refuse();
-  read('/root/keryx/.env.local', binding.runtimeEnvironmentSha256, true);
+  const runtimePublic = read('/root/keryx/.env.local', binding.runtimeEnvironmentSha256, true);
+  if (!runtimePublic || runtimePublic.mainnetPublicConfigSha256 !== preparation.checks.publicBuildSettings.mainnetPublicConfigSha256 ||
+      !/^[a-f0-9]{64}$/.test(preparation.checks.publicBuildSettings.mainnetPublicConfigSha256) ||
+      !/^[a-f0-9]{64}$/.test(preparation.checks.publicBuildSettings.privateRunHeadersSha256)) refuse();
   const review = read(binding.compatibilityReviewFile, binding.compatibilityReviewSha256);
   const fields = ['format', 'commit', 'tree', 'sourceManifestSha256', 'artifactInspectionSha256',
     'artifactDigest', 'buildId', 'runtimeEnvironmentSha256', 'acceptanceEvidenceSha256',
@@ -64,6 +104,7 @@ export function verifyReleaseReview(binding, read, artifact) {
     'economicSchemaDigest', 'retainedEconomicStateSha256']) if (!/^[a-f0-9]{64}$/.test(review[name])) refuse();
   if (artifact && ['commit', 'tree', 'buildId', 'artifactDigest', 'sourceManifestSha256'].some(name =>
     artifact[name] !== review[name] || artifact[name] !== preparation[name])) refuse();
+  if (artifact && inspectHeaders(releaseSource(binding.commit)) !== preparation.checks.publicBuildSettings.privateRunHeadersSha256) refuse();
   return review;
 }
 
@@ -203,7 +244,7 @@ export function readProtectedDeploymentJson(file, expectedSha256, environmentFil
     if (BigInt(bytes.length) !== before.size || digest(bytes) !== expectedSha256 ||
         signature(fs.fstatSync(fd, { bigint: true })) !== signature(before) ||
         signature(fs.lstatSync(file, { bigint: true })) !== signature(before)) refuse();
-    return environmentFile ? undefined : JSON.parse(bytes);
+    return environmentFile ? { mainnetPublicConfigSha256: reviewedPublicBuildProfileSha256(bytes) } : JSON.parse(bytes);
   } finally { fs.closeSync(fd); }
 }
 export function readReviewedRoles(file, expected) {

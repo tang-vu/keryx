@@ -85,22 +85,26 @@ test('staged native compatibility review must bind exact artifact, existing ENV 
     previouslyActiveRoles: ['keryx', 'keryx-a2a-worker'], heldSchedulers: true, rollback: 'hold-for-review' };
   const preparation = { format: 'keryx-immutable-preparation-v1', productionAdmitted: false, ...artifact,
     artifactInspectionSha256: binding.artifactInspectionSha256, writerHoldStarted: false, runtimeEnvironmentLoaded: false,
-    checks: { publicBuildSettings: { network: 'arc' }, platform: 'linux', node: '24.22.1', npm: '11.19.0',
+    checks: { publicBuildSettings: { network: 'arc', forceOffline: false, mainnetPublicConfigSha256: '4'.repeat(64), privateRunHeadersSha256: 'd'.repeat(64) }, platform: 'linux', node: '24.22.1', npm: '11.19.0',
       results: ['typecheck', 'tests', 'build'].map(name => ({ name, exitCode: 0, signal: null, processError: null, outputSha256: 'a'.repeat(64) })) } };
   const reader = value => (file, expected, environment) => {
     if (file.endsWith('/preparation.json')) { assert.equal(expected, binding.preparationSha256); return preparation; }
-    if (environment) { assert.equal(file, '/root/keryx/.env.local'); assert.equal(expected, binding.runtimeEnvironmentSha256); return; }
+    if (environment) { assert.equal(file, '/root/keryx/.env.local'); assert.equal(expected, binding.runtimeEnvironmentSha256); return { mainnetPublicConfigSha256: '4'.repeat(64) }; }
     assert.equal(file, binding.compatibilityReviewFile); assert.equal(expected, binding.compatibilityReviewSha256);
     return value;
   };
-  assert.equal(verifyReleaseReview(binding, reader(review), artifact), review);
+  const verify = (read, actual = artifact) => verifyReleaseReview(binding, read, actual, () => 'd'.repeat(64));
+  assert.equal(verify(reader(review)), review);
   const reordered = { ...review, previouslyActiveRoles: [...review.previouslyActiveRoles].reverse() };
-  assert.equal(verifyReleaseReview(binding, reader(reordered), artifact), reordered);
+  assert.equal(verify(reader(reordered)), reordered);
   preparation.checks.publicBuildSettings.network = 'arcTestnet';
-  assert.throws(() => verifyReleaseReview(binding, reader(review), artifact));
+  assert.throws(() => verify(reader(review)));
   preparation.checks.publicBuildSettings.network = 'arc';
+  preparation.checks.publicBuildSettings.forceOffline = true;
+  assert.throws(() => verify(reader(review)));
+  preparation.checks.publicBuildSettings.forceOffline = false;
   preparation.checks.results[0].exitCode = 7;
-  assert.throws(() => verifyReleaseReview(binding, reader(review), artifact));
+  assert.throws(() => verify(reader(review)));
   preparation.checks.results[0].exitCode = 0;
   for (const mutate of [r => r.mainnetPublicSettingsAccepted = false, r => r.heldSchedulers = false,
     r => r.previouslyActiveRoles.push('keryx-private-worker'), r => r.rollback = 'automatic',
@@ -108,9 +112,18 @@ test('staged native compatibility review must bind exact artifact, existing ENV 
     r => r.artifactInspectionSha256 = 'a'.repeat(64), r => r.tree = 'a'.repeat(40),
     r => r.runtimeEnvironmentSha256 = 'a'.repeat(64), r => r.storageIdentityDigest = null]) {
     const r = structuredClone(review); mutate(r);
-    assert.throws(() => verifyReleaseReview(binding, reader(r), artifact));
+    assert.throws(() => verify(reader(r)));
   }
-  assert.throws(() => verifyReleaseReview(binding, () => { throw Error('changed ENV'); }, artifact));
+  assert.throws(() => verify(() => { throw Error('changed ENV'); }));
+  for (const key of ['mainnetPublicConfigSha256', 'privateRunHeadersSha256']) {
+    const old = preparation.checks.publicBuildSettings[key];
+    for (const value of [undefined, '', 'e'.repeat(64)]) {
+      preparation.checks.publicBuildSettings[key] = value;
+      assert.throws(() => verify(reader(review)));
+    }
+    preparation.checks.publicBuildSettings[key] = old;
+  }
+  assert.throws(() => verifyReleaseReview(binding, reader(review), artifact, () => 'e'.repeat(64)));
 });
 test('positively exited prior immutable definitions are retained before replacement', () => {
   const c = stagedConfig(), app = c.apps[0];

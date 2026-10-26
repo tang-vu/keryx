@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { test } from 'node:test';
 import { preparationEnvironment, runPreparationChecks, copyPreparationDependencies, materializePreparationBuildAliases } from './prepare-immutable-release.mjs';
+import { mainnetPublicBuildProfileSha256, mainnetPrivateHeaderDigest } from './immutable-release-public-profile.mjs';
 
 const publicCircle = Object.freeze({
   NEXT_PUBLIC_CIRCLE_APP_ID: '00000000-0000-4000-8000-000000000001',
@@ -17,7 +18,23 @@ const publicRegistry = Object.freeze({
   KERYX_REGISTRY_READ_ADDRESS: `0x${'2'.repeat(40)}`,
   NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS: `0x${'2'.repeat(40)}`,
 });
-const mainnetPublic = { ...publicCircle, ...publicRegistry };
+const origins = JSON.stringify([
+  { network: 'eip155:5042', address: publicRegistry.KERYX_REGISTRY_ADDRESS, version: 3, codeHash: `0x${'a'.repeat(64)}`, deployBlock: '1' },
+  { network: 'eip155:5042', address: publicRegistry.KERYX_REGISTRY_READ_ADDRESS, version: 1, codeHash: `0x${'b'.repeat(64)}`, deployBlock: '0' },
+]);
+const publicControls = { KERYX_RUN_PRIVACY_ENABLED: 'true', NEXT_PUBLIC_WC_PROJECT_ID: 'f'.repeat(32),
+  KERYX_REGISTRY_VERSION: '3', NEXT_PUBLIC_KERYX_REGISTRY_VERSION: '3',
+  KERYX_REGISTRY_ORIGINS: origins, NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS: origins,
+  KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS: '1500000', NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS: '1500000' };
+const mainnetPublic = { ...publicCircle, ...publicRegistry, ...publicControls };
+function writePrivateHeaders(source) {
+  fs.mkdirSync(path.join(source, '.next'), { recursive: true });
+  fs.writeFileSync(path.join(source, '.next', 'routes-manifest.json'), JSON.stringify({ headers:
+    ['/dispatch/:path*', '/api/dispatch/:path*'].map(source => ({ source, headers: [
+      { key: 'Cache-Control', value: 'no-store' }, { key: 'Referrer-Policy', value: 'no-referrer' },
+      { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+    ] })) }));
+}
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-preparation-test-'));
@@ -77,7 +94,7 @@ test('mainnet public build refuses missing or malformed connector IDs before exe
     { ...publicCircle, NEXT_PUBLIC_GOOGLE_CLIENT_ID: `${publicCircle.NEXT_PUBLIC_GOOGLE_CLIENT_ID}\n` },
     { ...publicCircle, NEXT_PUBLIC_GOOGLE_CLIENT_ID: `${publicCircle.NEXT_PUBLIC_GOOGLE_CLIENT_ID}\nUNSAFE=1` }]) {
     const f = fixture(t);
-    assert.throws(() => runPreparationChecks({ ...f, inherited: { ...publicRegistry, ...inherited }, mainnetPublicBuild: true,
+    assert.throws(() => runPreparationChecks({ ...f, inherited: { ...publicRegistry, ...publicControls, ...inherited }, mainnetPublicBuild: true,
       run: () => assert.fail('invalid public config executed a command') }), /Release preparation refused/);
     assert.equal(fs.existsSync(path.join(f.root, 'npm-version.json')), false);
     assert.equal(fs.existsSync(path.join(f.root, 'preparation.json')), false);
@@ -98,11 +115,14 @@ test('mainnet preparation changes only the public build profile; tests stay test
       assert.equal(options.env[key], name === 'build' ? value : undefined);
     for (const key of ['KERYX_STORAGE_MANIFEST', 'KERYX_SQLITE_PATH', 'FUNDER_PRIVATE_KEY', 'OPENAI_API_KEY'])
       assert.equal(Object.hasOwn(options.env, key), false);
+    if (name === 'build') writePrivateHeaders(f.source);
     return { status: 0, stdout: name === '--version' ? '11.19.0\n' : 'synthetic checked command output', stderr: '' };
   } });
   assert.deepEqual(calls.map(x => x.name), ['--version', 'typecheck', 'test', 'build']);
   const publicConfigSha256 = createHash('sha256').update(JSON.stringify(publicCircle) + '\n').digest('hex');
-  assert.deepEqual(checks.publicBuildSettings, { network: 'arc', forceOffline: false, circleGooglePublicConfigSha256: publicConfigSha256 });
+  assert.deepEqual(checks.publicBuildSettings, { network: 'arc', forceOffline: false,
+    mainnetPublicConfigSha256: mainnetPublicBuildProfileSha256(mainnetPublic),
+    privateRunHeadersSha256: mainnetPrivateHeaderDigest(f.source), circleGooglePublicConfigSha256: publicConfigSha256 });
   assert.deepEqual(checks.buildRegistrySettings, { writeAddress: publicRegistry.KERYX_REGISTRY_ADDRESS, readAddress: publicRegistry.KERYX_REGISTRY_READ_ADDRESS });
   assert.equal(JSON.stringify(checks).includes(publicCircle.NEXT_PUBLIC_CIRCLE_APP_ID), false);
   assert.equal(JSON.stringify(checks).includes(publicCircle.NEXT_PUBLIC_GOOGLE_CLIENT_ID), false);
@@ -118,6 +138,23 @@ test('mainnet preparation changes only the public build profile; tests stay test
   assert.deepEqual(seen, ['--version', 'typecheck', 'test']);
   assert.equal(fs.existsSync(path.join(failed.root, 'build.json')), false);
   assert.equal(fs.existsSync(path.join(failed.root, 'preparation.json')), false);
+});
+
+test('successful commands cannot admit missing or weakened compiled private headers', t => {
+  for (const weaken of [false, true]) {
+    const f = fixture(t);
+    assert.throws(() => runPreparationChecks({ ...f, mainnetPublicBuild: true, inherited: mainnetPublic,
+      run(_command, args) {
+        if (args.at(-1) === 'build' && weaken) {
+          writePrivateHeaders(f.source);
+          const file = path.join(f.source, '.next', 'routes-manifest.json'), routes = JSON.parse(fs.readFileSync(file));
+          routes.headers[0].headers[1].value = 'strict-origin-when-cross-origin'; fs.writeFileSync(file, JSON.stringify(routes));
+        }
+        return { status: 0, stdout: args.at(-1) === '--version' ? '11.19.0\n' : '', stderr: '' };
+      } }));
+    assert.equal(fs.existsSync(path.join(f.root, 'build.json')), true);
+    assert.equal(fs.existsSync(path.join(f.root, 'preparation.json')), false);
+  }
 });
 
 test('failed typecheck/test/build retains the real failure and cannot reach later checks', t => {

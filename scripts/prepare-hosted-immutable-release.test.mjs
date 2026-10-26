@@ -15,6 +15,14 @@ const publicInputs = {
   KERYX_REGISTRY_ADDRESS: `0x${'1'.repeat(40)}`, NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: `0x${'1'.repeat(40)}`,
   KERYX_REGISTRY_READ_ADDRESS: `0x${'2'.repeat(40)}`, NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS: `0x${'2'.repeat(40)}`,
 };
+const origins = JSON.stringify([
+  { network: 'eip155:5042', address: publicInputs.KERYX_REGISTRY_ADDRESS, version: 3, codeHash: `0x${'a'.repeat(64)}`, deployBlock: '1' },
+  { network: 'eip155:5042', address: publicInputs.KERYX_REGISTRY_READ_ADDRESS, version: 1, codeHash: `0x${'b'.repeat(64)}`, deployBlock: '0' },
+]);
+const publicControls = { KERYX_RUN_PRIVACY_ENABLED: 'true', NEXT_PUBLIC_WC_PROJECT_ID: 'f'.repeat(32),
+  KERYX_REGISTRY_VERSION: '3', NEXT_PUBLIC_KERYX_REGISTRY_VERSION: '3',
+  KERYX_REGISTRY_ORIGINS: origins, NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS: origins,
+  KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS: '1500000', NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS: '1500000' };
 function fixture(t, createCandidate = true) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-hosted-test-'));
   t.after(() => { assert.equal(path.dirname(root), os.tmpdir()); assert.match(path.basename(root), /^keryx-hosted-test-/); fs.rmSync(root, { recursive: true, force: true }); });
@@ -36,14 +44,19 @@ test('manual source accepts only the complete current-main checkout identity', (
 
 test('outer official command receives no runner tokens, storage, keys or Node injection', () => {
   const home = path.resolve(os.tmpdir()), inherited = { PATH: 'toolchain', ...publicInputs,
+    HOSTED_PUBLIC_BUILD_CONTROLS: JSON.stringify(publicControls),
     GITHUB_TOKEN: 'synthetic', ACTIONS_RUNTIME_TOKEN: 'synthetic', NODE_OPTIONS: '--import=unsafe',
     KERYX_STORAGE_MANIFEST: '/funded', PRIVATE_KEY: 'synthetic', SUPABASE_URL: 'https://shared.invalid' };
   const actual = hostedChildEnvironment({ commit, home, inherited });
   assert.equal(actual.HOME, home); assert.equal(actual.PATH, 'toolchain');
   for (const [key, value] of Object.entries(publicInputs)) assert.equal(actual[key], value);
+  for (const [key, value] of Object.entries(publicControls)) assert.equal(actual[key], value);
   for (const key of ['GITHUB_TOKEN', 'ACTIONS_RUNTIME_TOKEN', 'NODE_OPTIONS', 'KERYX_STORAGE_MANIFEST', 'PRIVATE_KEY', 'SUPABASE_URL', 'PLAYWRIGHT_BROWSERS_PATH'])
     assert(!Object.hasOwn(actual, key));
   assert.throws(() => hostedChildEnvironment({ commit, home, inherited: { ...inherited, NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS: `0x${'3'.repeat(40)}` } }));
+  for (const controls of [undefined, '{}', '{', JSON.stringify({ ...publicControls, PRIVATE_KEY: 'synthetic' }),
+    JSON.stringify({ ...publicControls, KERYX_REGISTRY_VERSION: '1' })])
+    assert.throws(() => hostedChildEnvironment({ commit, home, inherited: { ...inherited, HOSTED_PUBLIC_BUILD_CONTROLS: controls } }));
 });
 
 test('browser input copies independently only into real helper-created scratch', t => {
