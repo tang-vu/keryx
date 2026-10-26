@@ -24,7 +24,14 @@ export function LiteratureReviewMatrix() {
   const currentRevision = useRef(0), importGeneration = useRef(0);
   const nextId = useRef(1);
   const addButton = useRef<HTMLButtonElement>(null);
+  const focusAdded = useRef(false);
   const prefix = useId();
+  useEffect(() => {
+    if (!focusAdded.current) return;
+    focusAdded.current = false;
+    const last = rows.at(-1);
+    if (last) document.getElementById(`${prefix}-${last.id}-title`)?.focus();
+  }, [prefix, rows]);
   const csv = () => literatureMatrixCsv(question, rows.map(row => row.value));
   const snapshot = () => ({ question, rows: rows.map(row => row.value) });
   const hasNotes = question !== "" || rows.length > 0;
@@ -142,6 +149,8 @@ export function LiteratureReviewMatrix() {
       }}>{copy.remove} {index + 1}</button>
     </fieldset>)}</div>
     <button ref={addButton} type="button" disabled={rows.length >= MAX_MATRIX_ROWS} className={`${buttonClass} mt-5`} onClick={() => {
+      if (rows.length >= MAX_MATRIX_ROWS) return;
+      focusAdded.current = true;
       const id = nextId.current++; setRows(current => current.length >= MAX_MATRIX_ROWS ? current : [...current, { id, value: emptyMatrixRow() }]); changed();
     }}>{copy.add}</button>
     {rows.length >= MAX_MATRIX_ROWS && <p className="mt-3 font-serif text-sm text-ink-3">{copy.limit}</p>}
