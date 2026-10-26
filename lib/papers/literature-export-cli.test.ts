@@ -18,7 +18,7 @@ async function fixture() {
   const input = join(dir, "private-library.json"), raw = serializeLiteratureWorkspace(literatureBackupFixture());
   await writeFile(input, raw); return { dir, input, raw, args: ["--input", input, "--format", "ris"] };
 }
-it.each(["bibtex", "ris", "csl-json"])("deliberately exports %s without changing private input", async format => {
+it.each(["bibtex", "ris", "csl-json", "markdown"])("deliberately exports %s without changing private input", async format => {
   const f = await fixture(); const output = await exportLiteratureCli(["--input", f.input, "--format", format, "--screening", "include"]);
   expect(output).not.toContain("PRIVATE_"); expect(output).toContain("Peer review unknown"); expect(output).not.toContain("v99");
   expect(await readFile(f.input, "utf8")).toBe(f.raw);
@@ -59,6 +59,8 @@ it("runs the actual CLI with metadata-only stdout and fixed private stderr", asy
   const f = await fixture();
   const good = await execute(process.execPath, ["--import", "tsx", "scripts/export-literature.mts", ...f.args], { timeout: 10_000 });
   expect(good.stdout).toContain("TY  - MANSCPT"); expect(good.stdout).not.toContain("PRIVATE_"); expect(good.stderr).toBe("");
+  const markdown = await execute(process.execPath, ["--import", "tsx", "scripts/export-literature.mts", "--input", f.input, "--format", "markdown"], { timeout: 10_000 });
+  expect(markdown.stdout).toContain("# Saved bibliography"); expect(markdown.stdout).not.toContain("PRIVATE_"); expect(markdown.stderr).toBe("");
   await writeFile(f.input, "PRIVATE_BROKEN_BACKUP");
   const bad = await execute(process.execPath, ["--import", "tsx", "scripts/export-literature.mts", ...f.args], { timeout: 10_000 }).catch(error => error);
   expect(bad.code).toBe(1); expect(bad.stdout).toBe("");

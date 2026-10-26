@@ -3,13 +3,14 @@ import { MAX_LITERATURE_BYTES, MAX_SAVED_PAPERS } from "./literature-workspace";
 import { paperReferencesBibtex, paperReferencesCslJson, paperReferencesRis } from "./reference-export";
 import { paperHttpsUrlSchema } from "./types";
 import { parseValidatedLiteratureBackup } from "./literature-backup";
+import { literatureReferencesMarkdown } from "./literature-markdown";
 
 export const literaturePaperSelection = z.array(paperHttpsUrlSchema).max(MAX_SAVED_PAPERS)
   .refine(urls => new Set(urls).size === urls.length, "Duplicate selected paper");
 
 export const literatureExportInput = z.object({
   backup: z.string().max(MAX_LITERATURE_BYTES),
-  format: z.enum(["bibtex", "ris", "csl-json"]),
+  format: z.enum(["bibtex", "ris", "csl-json", "markdown"]),
   screening: z.enum(["all", "unscreened", "include", "exclude", "undecided"]).optional(),
   paperUrls: literaturePaperSelection.optional(),
 }).strict();
@@ -26,6 +27,7 @@ export function exportLiterature(input: z.infer<typeof literatureExportInput>) {
     return entry;
   });
   const papers = selected.filter(entry => screening === "all" || entry.screening === screening).map(entry => entry.paper);
-  const result = format === "bibtex" ? paperReferencesBibtex(papers) : format === "ris" ? paperReferencesRis(papers) : paperReferencesCslJson(papers);
+  const result = format === "bibtex" ? paperReferencesBibtex(papers) : format === "ris" ? paperReferencesRis(papers)
+    : format === "markdown" ? literatureReferencesMarkdown(papers) : paperReferencesCslJson(papers);
   return { format, scope: "bibliography-only" as const, count: result.count, content: result.content };
 }
