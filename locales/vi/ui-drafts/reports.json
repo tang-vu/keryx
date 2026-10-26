@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/reports.ts",
-  "sourceSha256": "097220dccb9caf68693e213d956cb9e8a34471eddc41e1bab759ce450c42592c",
+  "sourceSha256": "a69067451df2e275f4cd72ae62d8d07b5038bd4749c106dd294ed4141847bbf6",
   "entries": {
     "reportActions.copy": {
       "source": "Copy report",
@@ -2291,6 +2291,38 @@
     "reportReading.copyUnavailable": {
       "source": "Copy unavailable. Select the link and copy it manually.",
       "text": "Không thể sao chép. Hãy chọn liên kết và sao chép thủ công."
+    },
+    "evidenceMatrix.views": {
+      "source": "Evidence views",
+      "text": "Cách xem bằng chứng"
+    },
+    "evidenceMatrix.byTarget": {
+      "source": "By target",
+      "text": "Theo câu hỏi"
+    },
+    "evidenceMatrix.compareSources": {
+      "source": "Compare sources",
+      "text": "So sánh nguồn"
+    },
+    "evidenceMatrix.identity": {
+      "source": "Recorded source identity",
+      "text": "Định danh nguồn đã ghi nhận"
+    },
+    "evidenceMatrix.inspectSources": {
+      "source": "Inspect cited sources",
+      "text": "Xem các nguồn được trích dẫn"
+    },
+    "evidenceMatrix.articleUrl": {
+      "source": "Article URL",
+      "text": "URL bài viết"
+    },
+    "evidenceMatrix.version": {
+      "source": "Recorded version: {version}",
+      "text": "Phiên bản đã ghi nhận: {version}"
+    },
+    "evidenceMatrix.downloadUnavailable": {
+      "source": "Download unavailable. Try again.",
+      "text": "Không thể tải xuống. Hãy thử lại."
     }
   }
 }

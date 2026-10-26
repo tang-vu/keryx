@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/reports.ts",
-  "sourceSha256": "097220dccb9caf68693e213d956cb9e8a34471eddc41e1bab759ce450c42592c",
+  "sourceSha256": "a69067451df2e275f4cd72ae62d8d07b5038bd4749c106dd294ed4141847bbf6",
   "entries": {
     "reportActions.copyUnavailable": {
       "source": "Copy unavailable. Download the report instead.",
@@ -2291,6 +2291,38 @@
     "reportReading.copyUnavailable": {
       "source": "Copy unavailable. Select the link and copy it manually.",
       "text": "无法复制。请选择链接并手动复制。"
+    },
+    "evidenceMatrix.views": {
+      "source": "Evidence views",
+      "text": "证据视图"
+    },
+    "evidenceMatrix.byTarget": {
+      "source": "By target",
+      "text": "按研究问题查看"
+    },
+    "evidenceMatrix.compareSources": {
+      "source": "Compare sources",
+      "text": "比较来源"
+    },
+    "evidenceMatrix.identity": {
+      "source": "Recorded source identity",
+      "text": "已记录的来源标识"
+    },
+    "evidenceMatrix.inspectSources": {
+      "source": "Inspect cited sources",
+      "text": "查看引用来源"
+    },
+    "evidenceMatrix.articleUrl": {
+      "source": "Article URL",
+      "text": "文章 URL"
+    },
+    "evidenceMatrix.version": {
+      "source": "Recorded version: {version}",
+      "text": "已记录的版本：{version}"
+    },
+    "evidenceMatrix.downloadUnavailable": {
+      "source": "Download unavailable. Try again.",
+      "text": "无法下载。请重试。"
     }
   }
 }

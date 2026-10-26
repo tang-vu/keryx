@@ -352,6 +352,7 @@ try {
     assert(rendered.includes("not proof of entailment"));
     const matrix = result.getByText("Research evidence matrix", { exact: true });
     if (!await matrix.evaluate(element => element.closest("details")?.open)) await matrix.click();
+    await result.getByRole("button", { name: "Compare sources", exact: true }).click();
     await result.getByRole("columnheader", { name: "Research target (unverified)" }).waitFor();
     assert.equal(await result.getByRole("button", { name: /Open evidence for Protocol article/ }).count(), covered ? 2 : 1,
       "only quoted evidence should create answer citation controls");

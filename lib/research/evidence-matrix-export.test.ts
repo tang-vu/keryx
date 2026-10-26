@@ -19,17 +19,16 @@ function fixture(secondUrl: string): QueryRun {
 
 describe("rendered evidence matrix article identity", () => {
   it.each(["https://publisher.example/article?v=2", "https://copied.example/article?v=1"])(
-    "keeps separately cited %s in its own column with only its retained quote", secondUrl => {
+    "keeps separately cited %s in its own source card with only its retained quote", secondUrl => {
       const run = fixture(secondUrl), before = JSON.stringify(run);
       const dom = new JSDOM(renderToStaticMarkup(createElement(EvidenceMatrixExport, { run })));
       try {
         const document = dom.window.document;
-        const sources = [...document.querySelectorAll("thead th")].slice(2);
+        const sources = [...document.querySelectorAll('ol[aria-label="By target"] > li:first-child article')];
         expect(sources).toHaveLength(2);
         expect(sources[0].textContent).toContain("First exact article");
         expect(sources[1].textContent).toContain("Second exact article");
-        const cells = [...document.querySelectorAll("tbody tr:first-child td")].slice(1);
-        expect(cells.map(cell => [...cell.querySelectorAll("blockquote")].map(quote => quote.textContent)))
+        expect(sources.map(cell => [...cell.querySelectorAll("blockquote")].map(quote => quote.textContent)))
           .toEqual([[run.evidence![0].quote], [run.evidence![1].quote]]);
         expect(JSON.stringify(run)).toBe(before);
       } finally { dom.window.close(); }
@@ -42,16 +41,16 @@ describe("rendered evidence matrix article identity", () => {
     const dom = new JSDOM(renderToStaticMarkup(createElement(EvidenceMatrixExport, { run })));
     try {
       expect(dom.window.document.querySelectorAll("blockquote")).toHaveLength(0);
-      expect(dom.window.document.querySelector("tbody tr td")!.textContent).toBe("No inspectable excerpt recorded");
+      expect(dom.window.document.querySelector("ol > li > header p:last-child span")!.textContent).toBe("No inspectable excerpt recorded");
     } finally { dom.window.close(); }
   });
 
-  it("retains the historical single column when both sides lack an article URL", () => {
+  it("retains the historical single source identity when both sides lack an article URL", () => {
     const run = fixture("https://publisher.example/article?v=2");
     for (const row of [...run.citations, ...run.evidence!]) delete row.itemUrl;
     const dom = new JSDOM(renderToStaticMarkup(createElement(EvidenceMatrixExport, { run })));
     try {
-      expect(dom.window.document.querySelectorAll("thead th")).toHaveLength(3);
+      expect(dom.window.document.querySelectorAll('ol[aria-label="By target"] > li:first-child article')).toHaveLength(1);
       expect([...dom.window.document.querySelectorAll("blockquote")].map(quote => quote.textContent))
         .toEqual(run.evidence!.map(row => row.quote));
     } finally { dom.window.close(); }
