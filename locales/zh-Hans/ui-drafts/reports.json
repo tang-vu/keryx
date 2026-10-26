@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/reports.ts",
-  "sourceSha256": "adb144795d71e0f33df09a7556d9a5ad7fa227a3194a755863867efaa59e3e7c",
+  "sourceSha256": "097220dccb9caf68693e213d956cb9e8a34471eddc41e1bab759ce450c42592c",
   "entries": {
     "reportActions.copyUnavailable": {
       "source": "Copy unavailable. Download the report instead.",
@@ -2271,6 +2271,26 @@
     "reportTestnetHistory.unavailable": {
       "source": "Testnet history could not be loaded. {retry}",
       "text": "无法加载测试网历史。{retry}"
+    },
+    "reportReading.summary": {
+      "source": "Report summary",
+      "text": "报告摘要"
+    },
+    "reportReading.link": {
+      "source": "Report link",
+      "text": "报告链接"
+    },
+    "reportReading.copyLink": {
+      "source": "Copy link",
+      "text": "复制链接"
+    },
+    "reportReading.copyingLink": {
+      "source": "Copying link…",
+      "text": "正在复制链接…"
+    },
+    "reportReading.copyUnavailable": {
+      "source": "Copy unavailable. Select the link and copy it manually.",
+      "text": "无法复制。请选择链接并手动复制。"
     }
   }
 }
