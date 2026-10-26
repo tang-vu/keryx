@@ -2,7 +2,7 @@
 
 ## Inspect a private saved library locally (source candidate)
 
-`inspect_saved_literature({backup})` validates a caller-supplied personal-bibliography
+`inspect_saved_literature({backup, baselineBackup?})` validates a caller-supplied personal-bibliography
 v1 backup and returns aggregate counts for saved records, personal screening,
 repositories, recorded publication kinds and missing metadata. Output omits
 private focus, notes and individual paper identities. Missing fields and current
@@ -10,6 +10,13 @@ paper status remain unknown; counts are not reading, quality or settlement proof
 This local tool has no file, network, model, wallet or payment I/O. MCP clients may
 retain the entire supplied backup, including private notes. See
 [offline inspection usage and limits](../docs/literature-inspection.md).
+
+Optional `baselineBackup` adds aggregate changes from that before snapshot to
+the `backup` after snapshot. Exact URLs define retained records; versions are
+not inferred matches. Metadata, timestamps and personal-state changes stay
+separate, and no changed values or paper identities enter the result. Both
+snapshots must validate within their individual 1 MiB limits. Clients may retain
+both full inputs. Omitting `baselineBackup` keeps the existing single-backup response.
 
 ## Export private saved literature locally (source candidate)
 

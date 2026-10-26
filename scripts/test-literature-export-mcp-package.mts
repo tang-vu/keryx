@@ -27,15 +27,29 @@ try {
       const tools = (await client.listTools()).tools;
       const inspection = tools.find(tool => tool.name === "inspect_saved_literature")!;
       assert(inspection); assert.deepEqual(inspection.annotations, { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
-      assert.deepEqual(Object.keys(inspection.inputSchema.properties ?? {}), ["backup"]);
+      assert.deepEqual(Object.keys(inspection.inputSchema.properties ?? {}).sort(), ["backup", "baselineBackup"]);
       const summary = await client.callTool({ name: inspection.name, arguments: { backup: serializeLiteratureWorkspace(literatureBackupFixture()) } });
       assert(!summary.isError);
       const aggregate = summary.structuredContent as { format: string; count: number; screening: { include: number; exclude: number }; repositories: { arxiv: number } };
       assert.equal(aggregate.format, "keryx-literature-inspection-v1"); assert.equal(aggregate.count, 2);
       assert.equal(aggregate.screening.include, 1); assert.equal(aggregate.screening.exclude, 1); assert.equal(aggregate.repositories.arxiv, 2);
+      assert(!Object.hasOwn(summary.structuredContent!, "comparison"));
       assert(!JSON.stringify(summary).includes("PRIVATE_")); assert(!JSON.stringify(summary).includes("https://"));
       const emptySummary = await client.callTool({ name: inspection.name, arguments: { backup: serializeLiteratureWorkspace(emptyLiteratureWorkspace()) } });
       assert(!emptySummary.isError); assert.equal((emptySummary.structuredContent as { count: number }).count, 0);
+      const comparedSummary = await client.callTool({ name: inspection.name, arguments: {
+        backup: serializeLiteratureWorkspace(literatureBackupFixture()), baselineBackup: serializeLiteratureWorkspace(literatureBackupFixture()) } });
+      assert(!comparedSummary.isError);
+      const comparison = (comparedSummary.structuredContent as { comparison: { format: string; retainedRecords: number; addedRecords: number; removedRecords: number; metadataChanges: number } }).comparison;
+      assert.equal(comparison.format, "keryx-literature-comparison-v1"); assert.equal(comparison.retainedRecords, 2);
+      assert.equal(comparison.addedRecords, 0); assert.equal(comparison.removedRecords, 0); assert.equal(comparison.metadataChanges, 0);
+      assert(!JSON.stringify(comparedSummary).includes("PRIVATE_")); assert(!JSON.stringify(comparedSummary).includes("https://"));
+      const emptyBaseline = await client.callTool({ name: inspection.name, arguments: {
+        backup: serializeLiteratureWorkspace(literatureBackupFixture()), baselineBackup: serializeLiteratureWorkspace(emptyLiteratureWorkspace()) } });
+      assert(!emptyBaseline.isError); assert.equal((emptyBaseline.structuredContent as { comparison: { addedRecords: number } }).comparison.addedRecords, 2);
+      const badBaseline = await client.callTool({ name: inspection.name, arguments: {
+        backup: serializeLiteratureWorkspace(literatureBackupFixture()), baselineBackup: "PRIVATE_INVALID_BASELINE" } });
+      assert(badBaseline.isError); assert(!badBaseline.structuredContent); assert(!JSON.stringify(badBaseline).includes("PRIVATE_INVALID_BASELINE"));
       const badSummary = await client.callTool({ name: inspection.name, arguments: { backup: "PRIVATE_MALFORMED_BACKUP" } });
       assert(badSummary.isError); assert(!badSummary.structuredContent); assert(!JSON.stringify(badSummary).includes("PRIVATE_MALFORMED_BACKUP"));
       const tool = tools.find(tool => tool.name === "export_saved_literature")!;

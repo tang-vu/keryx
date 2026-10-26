@@ -28,6 +28,45 @@ The result omits the private review title, question, notes, paper titles, author
 identifiers, URLs and saved timestamps. Keep the original backup: the summary
 cannot restore it or authenticate its publisher.
 
+## Compare two snapshots
+
+Pass the before snapshot as `--baseline`; `--input` is the after snapshot:
+
+```powershell
+node --import tsx scripts/inspect-literature.mts --input current.json --baseline previous.json --output new-comparison.json
+```
+
+The existing inspection fields still describe `--input`. An additional
+`comparison` object with format `keryx-literature-comparison-v1` reports before/
+after record counts, additions, removals, retained records, and changes to:
+
+- Validated bibliographic metadata, excluding its observation timestamp.
+- Recorded `metadataObservedAt` and `savedAt` values separately.
+- Personal screening and note values on retained records.
+- Relative order of retained URLs and the private review focus.
+
+Records match by exact saved URL. A different arXiv version or renamed URL is an
+addition/removal, even if its title or DOI is the same. Field-change counts apply
+only to retained records and may overlap. Inserting/removing records alone does
+not change their retained relative order. JSON property order is irrelevant;
+metadata uses the existing backup schema's normalization, while private focus,
+notes and recorded timestamp strings compare literally. Timestamps do not select
+before/after order or establish when a change actually happened.
+
+Both snapshots validate completely before any result or output file is produced.
+Each is independently limited to 1 MiB of original UTF-8 bytes, including BOM.
+A valid empty baseline reports all current records as additions; an empty file or
+malformed baseline is refused. Neither file is modified, and `--output` also
+refuses to overwrite the baseline. The comparison contains no individual URLs,
+titles, names, note text or review-focus values. Its change counts can still be
+personal information. Keep both originals; the result is no authenticity,
+research-quality, reading or settlement proof.
+
+For local stdio MCP, supply optional `baselineBackup` alongside `backup`; both
+are explicit JSON strings, with the same before/after roles. Omitting the baseline
+preserves the original single-backup output without a `comparison` field. MCP
+clients may retain both complete supplied backups despite the redacted result.
+
 Input must be a regular UTF-8 file, optionally with BOM, at most 1 MiB including
 BOM and whitespace. Oversized, malformed or nonregular inputs are refused before
 output creation. File reads and validation are shared with reference export;
