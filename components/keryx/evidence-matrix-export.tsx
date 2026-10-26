@@ -82,7 +82,7 @@ function EvidenceMatrixReading({ run }: { run: QueryRun }) {
                     <h3 id={`${noticeId}-${row.claimIndex}`} className="mt-2 font-serif text-lg leading-relaxed text-ink [overflow-wrap:anywhere]">{row.claim}</h3>
                     <p className="mt-2 font-mono text-xs text-ink-3 [overflow-wrap:anywhere]">{copy("evidenceMatrix.status")}: <span>{row.status}</span></p>
                   </header>
-                  <details>
+                  {sources.length > 0 && <details>
                     <summary aria-describedby={`${noticeId}-${row.claimIndex}`} className="min-h-[44px] cursor-pointer px-4 py-3 font-mono text-xs text-ink hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal sm:px-5">{copy("evidenceMatrix.inspectSources")}</summary>
                     <div className="grid min-w-0 grid-cols-1 divide-y divide-line border-t border-line @min-[38rem]/matrix:grid-cols-2 @min-[38rem]/matrix:divide-y-0">
                       {sources.map((source, index) => <article key={index} className="min-w-0 p-4 @min-[38rem]/matrix:border-b @min-[38rem]/matrix:border-line @min-[38rem]/matrix:odd:border-r sm:p-5">
@@ -90,7 +90,7 @@ function EvidenceMatrixReading({ run }: { run: QueryRun }) {
                         <SourceExcerpts excerpts={excerptsFor(row, source)} copy={copy} />
                       </article>)}
                     </div>
-                  </details>
+                  </details>}
                 </li>)}
               </ol>
             ) : (

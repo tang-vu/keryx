@@ -34,7 +34,7 @@ beforeAll(async () => {
     const original=${JSON.stringify(run)},before=JSON.stringify(original),nativeCreate=URL.createObjectURL.bind(URL),nativeRevoke=URL.revokeObjectURL.bind(URL),nativeClick=HTMLAnchorElement.prototype.click;
     const fixture=window.matrixFixture={created:[],revoked:[],unchanged:()=>JSON.stringify(original)===before,mode(mode){Object.defineProperty(URL,'createObjectURL',{configurable:true,writable:true,value:mode==='missing'?undefined:blob=>{if(mode==='throw')throw Error('PRIVATE_EXPORT_DETAIL');const url=nativeCreate(blob);fixture.created.push(url);return url}});URL.revokeObjectURL=url=>{fixture.revoked.push(url);nativeRevoke(url)};HTMLAnchorElement.prototype.click=mode==='clickThrow'?function(){throw Error('PRIVATE_CLICK_DETAIL')}:nativeClick}};fixture.mode('ok');
     function App(){const[index,setIndex]=useState(0),[stress,setStress]=useState(false),[locale,setLocale]=useState('en');Object.assign(fixture,{report:setIndex,stress:setStress,locale:setLocale});
-      const value={...original,id:index?'matrix-beta':original.id,...(index?{evidence:undefined}:{}),...(stress?{subClaims:[...original.subClaims,...Array.from({length:12},(_,index)=>'Unverified target '+index+' '+ 'OriginalIdentifier'.repeat(8))]}:{})},preview=locale==='vi'?vi:locale==='zh-Hans'?zh:{};
+      const value={...original,id:index?'matrix-'+index:original.id,...(index===1?{evidence:undefined}:index===2?{citations:[],evidence:[]}:index===3?{citations:[],subClaims:[],evidence:[]}:{}),...(stress?{subClaims:[...original.subClaims,...Array.from({length:12},(_,index)=>'Unverified target '+index+' '+ 'OriginalIdentifier'.repeat(8))]}:{})},preview=locale==='vi'?vi:locale==='zh-Hans'?zh:{};
       const ui=locale==='en'?englishUiCopy:{...englishUiCopy,locale,preview,message:createMessages(locale,preview.$messages)};
       return <UiCopyContext.Provider value={ui}><AnswerCard run={value} meta={null} showFeedback={false}/></UiCopyContext.Provider>}
     createRoot(document.getElementById('root')).render(<App/>);`, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, metafile: true, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env": JSON.stringify({ NODE_ENV: "production", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet" }) } });
@@ -126,6 +126,26 @@ it.each(["vi", "zh-Hans"] as const)("keeps original source data readable in the 
     expect(await source.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
     if (screenshots) await source.screenshot({ path: join(screenshots, `evidence-source-${locale}-320-large.png`) });
   }, 320);
+});
+
+it("keeps missing sources and missing targets explicit without empty source actions", async () => {
+  await fixture(async page => {
+    await page.evaluate(() => (window as unknown as { matrixFixture: Fixture }).matrixFixture.report(2));
+    const root = matrix(page);
+    await root.getByText("No inspectable excerpt recorded", { exact: true }).first().waitFor({ state: "attached" });
+    await root.locator(":scope > summary").click();
+    expect(await root.getByText("No inspectable excerpt recorded", { exact: true }).count()).toBe(3);
+    expect(await root.getByText("Inspect cited sources", { exact: true }).count()).toBe(0);
+    await root.getByRole("button", { name: "Compare sources", exact: true }).click();
+    expect(await root.getByRole("columnheader").count()).toBe(2);
+    expect(await root.locator("blockquote").count()).toBe(0);
+    await page.evaluate(() => (window as unknown as { matrixFixture: Fixture }).matrixFixture.report(3));
+    await root.getByText("Research claims were not recorded for this dispatch. No evidence matrix is available.", { exact: true }).waitFor({ state: "attached" });
+    await root.locator(":scope > summary").click();
+    expect(await root.getByRole("button").count()).toBe(0);
+    expect(await root.getByRole("list").count()).toBe(0);
+    expect(await root.getByRole("table").count()).toBe(0);
+  });
 });
 
 it("preserves actual CSV/Markdown download bytes and recovers from export failures", async () => {
