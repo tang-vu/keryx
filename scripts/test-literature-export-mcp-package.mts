@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { literatureBackupFixture } from "../test-support/literature-backup-fixture";
-import { serializeLiteratureWorkspace } from "../lib/papers/literature-workspace";
+import { emptyLiteratureWorkspace, serializeLiteratureWorkspace } from "../lib/papers/literature-workspace";
 import { exportLiterature } from "../lib/papers/literature-export";
 
 const temporary = await mkdtemp(join(tmpdir(), "keryx-library-mcp-"));
@@ -24,7 +24,21 @@ try {
     const client = new Client({ name: "library-export-distribution-test", version: "1" });
     try {
       await client.connect(transport);
-      const tool = (await client.listTools()).tools.find(tool => tool.name === "export_saved_literature")!;
+      const tools = (await client.listTools()).tools;
+      const inspection = tools.find(tool => tool.name === "inspect_saved_literature")!;
+      assert(inspection); assert.deepEqual(inspection.annotations, { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
+      assert.deepEqual(Object.keys(inspection.inputSchema.properties ?? {}), ["backup"]);
+      const summary = await client.callTool({ name: inspection.name, arguments: { backup: serializeLiteratureWorkspace(literatureBackupFixture()) } });
+      assert(!summary.isError);
+      const aggregate = summary.structuredContent as { format: string; count: number; screening: { include: number; exclude: number }; repositories: { arxiv: number } };
+      assert.equal(aggregate.format, "keryx-literature-inspection-v1"); assert.equal(aggregate.count, 2);
+      assert.equal(aggregate.screening.include, 1); assert.equal(aggregate.screening.exclude, 1); assert.equal(aggregate.repositories.arxiv, 2);
+      assert(!JSON.stringify(summary).includes("PRIVATE_")); assert(!JSON.stringify(summary).includes("https://"));
+      const emptySummary = await client.callTool({ name: inspection.name, arguments: { backup: serializeLiteratureWorkspace(emptyLiteratureWorkspace()) } });
+      assert(!emptySummary.isError); assert.equal((emptySummary.structuredContent as { count: number }).count, 0);
+      const badSummary = await client.callTool({ name: inspection.name, arguments: { backup: "PRIVATE_MALFORMED_BACKUP" } });
+      assert(badSummary.isError); assert(!badSummary.structuredContent); assert(!JSON.stringify(badSummary).includes("PRIVATE_MALFORMED_BACKUP"));
+      const tool = tools.find(tool => tool.name === "export_saved_literature")!;
       assert(tool); assert.deepEqual(tool.annotations, { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
       assert.deepEqual(Object.keys(tool.inputSchema.properties ?? {}).sort(), ["backup", "format", "paperUrls", "screening"]);
       for (const format of ["bibtex", "ris", "csl-json"] as const) {
@@ -48,5 +62,5 @@ try {
     } finally { await client.close(); }
   }
   assert(!(await readdir(temporary)).some(name => name.startsWith("forbidden-")));
-  console.log("PASS built local stdio literature export on both synthetic profiles: exact shared references, private review fields omitted, zero fetch/wallet/payment access.");
+  console.log("PASS built local stdio literature inspection and export on both synthetic profiles: private summaries, exact references, zero fetch/wallet/payment access.");
 } finally { await rm(temporary, { recursive: true, force: true }); }
