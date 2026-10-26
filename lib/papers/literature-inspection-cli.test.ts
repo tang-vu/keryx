@@ -66,3 +66,32 @@ it.skipIf(process.platform === "win32")("refuses an unwritten FIFO in the real C
   const bad = await execute(process.execPath, ["--import", "tsx", "scripts/inspect-literature.mts", "--input", fifo], { timeout: 5000 }).catch(error => error);
   expect(bad.code).toBe(1); expect(bad.killed).not.toBe(true); expect(bad.stdout).toBe(""); expect(bad.stderr).not.toContain(f.dir);
 }, 10_000);
+it("compares explicit baseline/current files without modifying either, and refuses baseline overwrite", async () => {
+  const f = await fixture(), baseline = join(f.dir, "previous.json"), after = literatureBackupFixture();
+  await writeFile(baseline, "\uFEFF" + f.raw); after.entries[0].screening = "undecided"; after.entries[1].notes = "PRIVATE_AFTER_NOTE";
+  await writeFile(f.input, serializeLiteratureWorkspace(after));
+  const result = await execute(process.execPath, ["--import", "tsx", "scripts/inspect-literature.mts", ...f.args, "--baseline", baseline], { timeout: 10_000 });
+  expect(JSON.parse(result.stdout).comparison).toMatchObject({ retainedRecords: 2, screeningChanges: 1, noteChanges: 1 });
+  expect(result.stdout).not.toContain("PRIVATE_"); expect(result.stderr).toBe("");
+  await expect(inspectLiteratureCli([...f.args, "--baseline", baseline, "--output", baseline])).rejects.toMatchObject({ code: "EEXIST" });
+  expect(await readFile(baseline, "utf8")).toBe("\uFEFF" + f.raw);
+  expect(await readFile(f.input, "utf8")).toBe(serializeLiteratureWorkspace(after));
+}, 15_000);
+it("refuses invalid baseline arguments or files without creating a partial summary", async () => {
+  const f = await fixture(), baseline = join(f.dir, "PRIVATE_BASELINE_PATH.json"), output = join(f.dir, "must-not-exist.json");
+  for (const args of [[...f.args, "--baseline"], [...f.args, "--baseline", "PRIVATE_MISSING", "--baseline", baseline]])
+    await expect(inspectLiteratureCli(args)).rejects.toThrow("usage");
+  for (const invalid of [Buffer.alloc(MAX_LITERATURE_BYTES + 1, 32), Buffer.from([0xc0, 0xaf]), "PRIVATE_BASELINE_CONTENT"]) {
+    await writeFile(baseline, invalid);
+    await expect(inspectLiteratureCli([...f.args, "--baseline", baseline, "--output", output])).rejects.toThrow();
+    await expect(readFile(output)).rejects.toMatchObject({ code: "ENOENT" });
+  }
+  const bad = await execute(process.execPath, ["--import", "tsx", "scripts/inspect-literature.mts", ...f.args, "--baseline", baseline], { timeout: 10_000 }).catch(error => error);
+  expect(bad.code).toBe(1); expect(bad.stdout).toBe("");
+  expect(bad.stderr).not.toContain("PRIVATE_"); expect(bad.stderr).not.toContain(f.dir);
+}, 15_000);
+it.skipIf(process.platform === "win32")("refuses an unwritten baseline FIFO without waiting for a writer", async () => {
+  const f = await fixture(), fifo = join(f.dir, "baseline.fifo"); await execute("mkfifo", [fifo]);
+  const bad = await execute(process.execPath, ["--import", "tsx", "scripts/inspect-literature.mts", ...f.args, "--baseline", fifo], { timeout: 5000 }).catch(error => error);
+  expect(bad.code).toBe(1); expect(bad.killed).not.toBe(true); expect(bad.stdout).toBe(""); expect(bad.stderr).not.toContain(f.dir);
+}, 10_000);

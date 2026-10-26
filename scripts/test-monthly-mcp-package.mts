@@ -55,7 +55,7 @@ try {
   assert.deepEqual(Object.keys(libraryExport.inputSchema.properties ?? {}).sort(), ["backup", "format", "paperUrls", "screening"]);
   const libraryInspection = tools.tools.find(tool => tool.name === "inspect_saved_literature")!;
   assert.deepEqual(libraryInspection.annotations, { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
-  assert.deepEqual(Object.keys(libraryInspection.inputSchema.properties ?? {}), ["backup"]);
+  assert.deepEqual(Object.keys(libraryInspection.inputSchema.properties ?? {}).sort(), ["backup", "baselineBackup"]);
   const bibliography = tools.tools.find(tool => tool.name === "paper_lookup")!;
   assert.equal(bibliography.annotations?.readOnlyHint, true);
   assert.equal(bibliography.annotations?.destructiveHint, false);
