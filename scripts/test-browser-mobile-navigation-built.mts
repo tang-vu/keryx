@@ -8,7 +8,6 @@ import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { chromium, webkit, type BrowserContext, type Route } from "playwright";
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
-import { drainBrowserRoutes } from "../test-support/drain-browser-routes";
 
 const source = process.cwd(), temporary = await mkdtemp(join(tmpdir(), "keryx-mobile-navigation-"));
 assert(resolve(temporary).startsWith(resolve(tmpdir()) + sep));
@@ -22,6 +21,8 @@ const engine = process.argv.includes("--webkit") ? webkit : chromium;
 const browser = await engine.launch({ headless: true });
 let held: Route | undefined;
 let context: BrowserContext | undefined;
+let draining = false;
+const proxies = new Set<Promise<void>>();
 try {
   await copyNextConfigFixture(source, temporary);
   await symlink(join(source, "node_modules"), join(temporary, "node_modules"), process.platform === "win32" ? "junction" : "dir");
@@ -50,6 +51,7 @@ try {
   page.on("pageerror", error => errors.push(error.message));
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
+    if (draining) return route.abort("aborted");
     if (url.origin !== origin) return route.abort();
     if (request.method() !== "GET") return route.abort(); // Telemetry is not forwarded or persisted.
     if (url.pathname === "/sources" && url.searchParams.has("_rsc") && request.headers()["next-router-prefetch"] !== "1") {
@@ -57,7 +59,16 @@ try {
     }
     // Keep the actual production CSP, including upgrade-insecure-requests. The
     // browser sees HTTPS; only the disposable local origin transport is remapped.
-    return route.fulfill({ response: await route.fetch({ url: physicalOrigin + url.pathname + url.search }) });
+    const proxy = (async () => {
+      await route.fulfill({ response: await route.fetch({ url: physicalOrigin + url.pathname + url.search }) });
+    })();
+    proxies.add(proxy);
+    try { await proxy; }
+    catch (error) {
+      console.error(JSON.stringify({ diagnostic: "mobile-navigation-proxy-failure", engine: engine.name(),
+        path: url.pathname, draining, error: String(error).slice(0, 1000) }));
+      throw error;
+    } finally { proxies.delete(proxy); }
   });
   await page.goto(origin);
   await page.waitForFunction(() => [...document.querySelectorAll("button")].some(button => button.textContent?.includes("Connect Wallet")));
@@ -79,8 +90,11 @@ try {
   assert.deepEqual(errors, []);
 } finally {
   try {
+    // Keep this same interceptor as the network fence. Replacing handlers while
+    // WebKit proxies are pending can race their eventual fulfill operation.
+    draining = true;
     if (held) await held.abort().catch(() => undefined);
-    if (context) await drainBrowserRoutes(context);
+    while (proxies.size) await Promise.all([...proxies]);
   } finally {
     try { await browser.close(); }
     finally {
