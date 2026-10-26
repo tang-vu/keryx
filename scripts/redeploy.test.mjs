@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { REVIEWED_CONTROLS, TRANSPORT_CONTROLS, redeployEnvironment, runRedeploy, runRedeployCommand } from './redeploy.mjs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 const reviewed = {
   KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER: '1',
   KERYX_REDEPLOY_REVIEWED_PM2_CONFIG: '/root/.local/share/reviewed/roles.json',
   KERYX_REDEPLOY_REVIEWED_PM2_SHA256: 'a'.repeat(64),
   KERYX_REDEPLOY_EXPECTED_COMMIT: 'b'.repeat(40),
+  KERYX_REDEPLOY_STAGED_RELEASE: '1',
 };
 test('Windows forwards every reviewed control without translating native paths', () => {
   const env = redeployEnvironment({ ...reviewed, WSLENV: 'USER_SETTING/u:KERYX_REDEPLOY_REVIEWED_PM2_CONFIG/p' }, 'win32');
@@ -16,6 +18,24 @@ test('Windows forwards every reviewed control without translating native paths',
 });
 test('partial reviewed controls refuse before a shell or deployment starts', () => {
   assert.throws(() => redeployEnvironment({ KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER: '1' }), /four complete/);
+});
+test('reviewed stop-before-build refuses before transport probing or a deployment starts', async () => {
+  for (const staged of [undefined, '0']) {
+    const env = { ...reviewed, KERYX_REDEPLOY_STAGED_RELEASE: staged };
+    await assert.rejects(runRedeploy(env, () => assert.fail('deployment started'),
+      () => assert.fail('transport probed')), /prepared staged release/);
+  }
+});
+test('direct shell entry refuses reviewed stop-before-build before attempting SSH', () => {
+  const bash = process.platform === 'win32' ? 'C:/Program Files/Git/bin/bash.exe' : 'bash';
+  const result = spawnSync(bash, ['scripts/redeploy-vps.sh'], {
+    env: { ...process.env, ...reviewed, KERYX_REDEPLOY_STAGED_RELEASE: '0',
+      KERYX_SSH_BIN: '/nonexistent/keryx-test-must-not-contact-ssh' },
+    encoding: 'utf8', windowsHide: true,
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /prepared staged release/);
+  assert.doesNotMatch(result.stderr, /No such file|ssh .*failed/);
 });
 test('explicit legacy/testnet controls preserve their existing values', () => {
   const env = redeployEnvironment({ KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER: '0', KERYX_REDEPLOY_EXPECTED_COMMIT: 'b'.repeat(40) }, 'linux');
