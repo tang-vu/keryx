@@ -48,14 +48,16 @@ it.each([
 });
 
 it.each([undefined, null, false, true, "", " ", "0x1000", "1e3", "1.5", "-1", "NaN", "Infinity", {}, [],
-  1.5, -1, Number.MAX_SAFE_INTEGER + 1, "9007199254740993", Number.MAX_SAFE_INTEGER].map((amount, caseNumber) => ({ amount, caseNumber })))(
+  1.5, -1, Number.MAX_SAFE_INTEGER + 1, "9007199254740993", Number.MAX_SAFE_INTEGER,
+  9000000000007812, "9000000000007812"].map((amount, caseNumber) => ({ amount, caseNumber })))(
   "never replaces absent or inexact base-unit quote $caseNumber with a zero price", async ({ amount }) => {
     const candidates = await discover([first, { ...suspect, accepts: [{ ...offer, amount }] }, last]);
     expect(candidates.map(c => c.name)).toEqual([first.name, last.name]);
     expect(candidates.every(c => c.fetchPrice === 0.002)).toBe(true);
   });
 
-it.each([["0", 0], [0, 0], ["2000", 0.002], [2000, 0.002], ["0002000", 0.002], ["1000000000000", 1_000_000]])(
+it.each([["0", 0], [0, 0], ["2000", 0.002], [2000, 0.002], ["0002000", 0.002], ["1000000000000", 1_000_000],
+  ["9000000000000000", 9_000_000_000]])(
   "retains an explicit exact quote %j without changing resource identity", async (amount, expected) => {
     const [candidate] = await discover([{ ...first, accepts: [{ ...offer, amount }] }]);
     expect(candidate.fetchPrice).toBe(expected); expect(candidate.external?.resource).toBe(first.resource);

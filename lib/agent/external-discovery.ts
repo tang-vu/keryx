@@ -112,6 +112,9 @@ function advertisedPrice(amount: unknown): number | null {
   if (!Number.isSafeInteger(micros) || micros < 0) return null;
   const price = micros / 1_000_000;
   if (Math.round(price * 1_000_000) !== micros) return null;
+  // Binary multiplication can round back to the original integer while decimal
+  // rendering differs by a micro. The advertised six-digit quote must agree too.
+  if (BigInt(price.toFixed(6).replace(".", "")) !== BigInt(micros)) return null;
   return price === 0 ? 0 : price;
 }
 
