@@ -260,3 +260,84 @@ describe("bounded marketplace discovery work", () => {
     expect(result.every(c => c.description.includes("keyword match"))).toBe(true);
   });
 });
+
+function indexedResponse(data: unknown) {
+  return { ok: true, json: async (): Promise<unknown> => ({ data }) };
+}
+
+function indexedEmbeddingFetch() {
+  state.config.embeddingApiKey = "synthetic-test-key";
+  const fetch = vi.fn(async (_url: string, init: RequestInit) => {
+    const { input } = JSON.parse(init.body as string) as { input: string[] };
+    return indexedResponse(input.map((_, index) => ({ index, embedding: index === 0 ? [1, 0] : [0, 1] })));
+  });
+  vi.stubGlobal("fetch", fetch);
+  return fetch;
+}
+
+describe("embedding response identity", () => {
+  it("binds declared indices to the correct endpoint before caching a reordered response", async () => {
+    const fetch = indexedEmbeddingFetch();
+    fetch.mockResolvedValueOnce(indexedResponse([{ index: 0, embedding: [1, 0] }]));
+    fetch.mockResolvedValueOnce(indexedResponse([
+      { index: 1, embedding: [0, 1] }, { index: 0, embedding: [1, 0] },
+    ]));
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const first = await discoverExternalCandidates("weather", []);
+    expect(first.map(candidate => candidate.external?.resource)).toEqual([marketplaceItems()[0].resource]);
+    expect(first[0].description).toContain("semantic match 100%");
+    expect(await discoverExternalCandidates("weather", [])).toEqual(first);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("accepts complete ordered indices without changing source metadata or discovery-only authority", async () => {
+    indexedEmbeddingFetch();
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const result = await discoverExternalCandidates("weather", []);
+    expect(result).toHaveLength(1);
+    expect(result[0].external?.resource).toBe(marketplaceItems()[0].resource);
+    expect(result[0].external?.payTo).toBe(marketplaceItems()[0].accepts[0].payTo);
+    expect(result[0].description).toContain("Discovery-only: evaluated but never purchased by Keryx");
+  });
+
+  it.each([
+    ["duplicate", [0, 0]], ["negative", [-1, 1]], ["out of range", [0, 2]],
+    ["fractional", [0, 0.5]], ["string", ["0", 1]], ["null", [0, null]],
+    ["partly absent", [0, undefined]],
+  ])("rejects %s endpoint indices and retries the snapshot without poisoning its cache", async (_name, indices) => {
+    const fetch = indexedEmbeddingFetch();
+    fetch.mockResolvedValueOnce(indexedResponse([{ index: 0, embedding: [1, 0] }]));
+    fetch.mockResolvedValueOnce(indexedResponse((indices as unknown[]).map(index => ({
+      ...(index === undefined ? {} : { index }), embedding: [1, 0],
+    }))));
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const first = await discoverExternalCandidates("weather", []);
+    expect(first).toHaveLength(2);
+    expect(first.every(candidate => candidate.description.includes("keyword match"))).toBe(true);
+    const retried = await discoverExternalCandidates("weather", []);
+    expect(retried.map(candidate => candidate.external?.resource)).toEqual([marketplaceItems()[0].resource]);
+    expect(retried[0].description).toContain("semantic match 100%");
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("rejects an invalid single-question index and permits a fresh successful retry", async () => {
+    const fetch = indexedEmbeddingFetch();
+    fetch.mockResolvedValueOnce(indexedResponse([{ index: 1, embedding: [1, 0] }]));
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const first = await discoverExternalCandidates("weather", []);
+    expect(first).toHaveLength(2);
+    expect(first.every(candidate => candidate.description.includes("keyword match"))).toBe(true);
+    expect((await discoverExternalCandidates("weather", []))[0].description).toContain("semantic match 100%");
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("retains ordered index-free compatibility when the whole endpoint batch omits indices", async () => {
+    const fetch = indexedEmbeddingFetch();
+    fetch.mockResolvedValueOnce(indexedResponse([{ index: 0, embedding: [1, 0] }]));
+    fetch.mockResolvedValueOnce(indexedResponse([{ embedding: [1, 0] }, { embedding: [0, 1] }]));
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const result = await discoverExternalCandidates("weather", []);
+    expect(result.map(candidate => candidate.external?.resource)).toEqual([marketplaceItems()[0].resource]);
+    expect(result[0].description).toContain("semantic match 100%");
+  });
+});

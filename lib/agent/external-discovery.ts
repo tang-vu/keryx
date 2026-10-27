@@ -167,12 +167,24 @@ async function embed(texts: string[]): Promise<Vec[] | null> {
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) return null;
-    const json = (await res.json()) as { data?: { embedding?: unknown }[] } | null;
+    const json = (await res.json()) as { data?: { embedding?: unknown; index?: unknown }[] } | null;
     if (!Array.isArray(json?.data) || json.data.length !== texts.length) return null;
     const vecs = json.data.map(d => d?.embedding);
     if (!vecs.every((v): v is Vec => Array.isArray(v) && v.length > 0 &&
       v.every(n => typeof n === "number" && Number.isFinite(n)))) return null;
-    return vecs;
+    // Legacy compatible providers may omit every index and return input order.
+    // Once any row declares an index, require a complete one-to-one mapping.
+    if (!json.data.some(row => row?.index !== undefined)) return vecs;
+    const ordered = new Array<Vec>(texts.length);
+    const seen = new Set<number>();
+    for (const [offset, row] of json.data.entries()) {
+      const index = row?.index;
+      if (typeof index !== "number" || !Number.isInteger(index) || index < 0 ||
+        index >= texts.length || seen.has(index)) return null;
+      seen.add(index);
+      ordered[index] = vecs[offset];
+    }
+    return ordered;
   } catch {
     return null;
   }
