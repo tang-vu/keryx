@@ -6,7 +6,8 @@ import { ArrowDownToLine, ArrowLeft, ArrowUpRight, LockKeyhole, ShieldCheck } fr
 import { evaluateMandate, type MandateAssessment, type MandateInput } from "@/lib/research-mandate/evaluate";
 import { mandateExample } from "@/lib/research-mandate/example";
 import { mandateCopy, mandateReasonsVi, mandateProtocolCopy as protocol } from "@/locales/en/research-mandates";
-import { useUiCopy } from "@/lib/i18n/ui-copy";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+import { downloadBrowserText } from "@/lib/browser-text-download";
 const uiEnglish_mandateCopy = mandateCopy;
 const uiEnglish_mandateReasonsVi = mandateReasonsVi;
 const uiEnglish_protocol = protocol;
@@ -16,6 +17,7 @@ const button = "rounded-md border border-current/20 px-4 py-2 text-sm transition
 const primaryButton = button.replace("hover:bg-current/5", "hover:bg-[#114b36]") + " bg-[#176247] text-white disabled:opacity-40";
 type Scenario = "ready" | "overdue" | "pending" | "recipient" | "unknown";
 export function ResearchMandateWorkspace() {
+  const message = useUiMessages();
   const mandateCopy = useUiCopy("research-mandates", uiEnglish_mandateCopy);
   const mandateReasonsVi = useUiCopy("research-mandates", uiEnglish_mandateReasonsVi);
   const protocol = useUiCopy("research-mandates", uiEnglish_protocol);
@@ -24,8 +26,9 @@ export function ResearchMandateWorkspace() {
   const [sample, setSample] = useState(false);
   const [result, setResult] = useState<MandateAssessment | null>(null);
   const [error, setError] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
   const copy = mandateCopy[language];
-  function update(value: string) { setText(value); setResult(null); setError(false); }
+  function update(value: string) { setText(value); setResult(null); setError(false); setDownloadError(""); }
   function load(scenario: Scenario) {
     const input = mandateExample();
     if (scenario === "ready") input.policy.liabilities = [];
@@ -58,9 +61,9 @@ export function ResearchMandateWorkspace() {
     } catch { setResult(null); setError(true); }
   }
   function download(name: string, content: unknown) {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(content, null, 2)], { type: "application/json" }));
-    const anchor = document.createElement("a"); anchor.href = url; anchor.download = name; anchor.click();
-    URL.revokeObjectURL(url);
+    setDownloadError("");
+    try { downloadBrowserText(JSON.stringify(content, null, 2), name, "application/json"); }
+    catch { setDownloadError(message("evidenceMatrix.downloadUnavailable")); }
   }
   const status = result ? ({ "within-supplied-policy": copy.within, hold: copy.hold, skip: copy.skip, review: copy.review })[result.assessment] : null;
   return <main className="mx-auto max-w-6xl px-5 py-8 sm:px-10 sm:py-12" lang={language}>
@@ -74,6 +77,7 @@ export function ResearchMandateWorkspace() {
         <p className="mt-5 max-w-xl text-lg opacity-80">{copy.intro}</p></div>
       <aside className="self-end border-l-2 border-[#176247]/40 pl-6"><ShieldCheck size={30} className="mb-4 text-[#176247]" /><p className="leading-relaxed">{copy.explanation}</p><p className="mt-4 font-mono text-xs uppercase tracking-wide opacity-65">{copy.status}</p></aside>
     </header>
+    {downloadError && <p role="alert" className="mb-5 text-sm text-red-800">{downloadError}</p>}
     <section aria-label={copy.workspace} className="grid gap-5 lg:grid-cols-[1.05fr_1fr]">
       <div className="rounded-xl border border-current/20 bg-white/35 p-5 sm:p-7">
         <h2 className="text-xl">{copy.scenarios}</h2>
