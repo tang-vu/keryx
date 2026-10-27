@@ -3,6 +3,7 @@
  * This is the "show me the agent's reasoning logs" view.
  *
  * Usage: npm run ask -- "How do x402 and stablecoins enable AI agent commerce?" --budget 0.05
+ *        npm run ask -- --help
  *        npm run ask -- "…" --model deepseek-v4-pro   (catalog id; see lib/llm/model-catalog.ts)
  *        npm run ask -- "…" --web   (explicit external search provider disclosure)
  * Private claims require a direct Node launcher with a dedicated inherited pipe; see private-cli-claims-262.md.
@@ -17,6 +18,22 @@ import { recordedAnswerLanguage } from "../lib/research/answer-language-provenan
 
 // ── parse args ──
 const argv = process.argv.slice(2);
+if (argv.includes("--help") || argv.includes("-h")) {
+  console.log(`Usage: npm run ask -- [options] "question"
+
+Options:
+  --help, -h                Show help without starting research or contacting providers.
+  --budget USDC             Nonnegative source cap, at most six decimal places.
+  --model ID                Override the configured reasoning model.
+  --web                     Allow configured external web/search providers.
+  --language LANGUAGE       Presentation labels: auto, en, vi, pt, pt-BR or es.
+  --private-claim-fd FD      Dedicated inherited private pipe; direct Node launcher only.
+
+Without a question, the existing sample question is used.
+Model and search operating costs are separate from the source cap.
+Private claim setup: docs/engineering/private-cli-claims-262.md`);
+  process.exit(0);
+}
 let budget: number | undefined;
 let model: string | undefined;
 let allowExternalWeb = false;
