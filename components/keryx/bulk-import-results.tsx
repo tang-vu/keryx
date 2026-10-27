@@ -1,4 +1,5 @@
 "use client";
+import { useLayoutEffect, useRef, useState } from "react";
 import { SigningAmount } from "./signing-amount";
 
 /**
@@ -149,14 +150,6 @@ export function BulkVerifyPanel({
   onVerifyAll: () => void;
 }) {
   const uiCopy = useUiMessages();
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(token);
-      toast.success(uiCopy("bulkVerification.copied"));
-    } catch {
-      toast.error(uiCopy("bulkVerification.copyFailed"));
-    }
-  };
   return (
     <div className="space-y-3 rounded-md border border-amber-500/40 bg-amber-500/[0.07] p-4">
       <div className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-amber-700">
@@ -165,17 +158,10 @@ export function BulkVerifyPanel({
       </div>
       <p className="text-xs text-ink-2">{instructions}</p>
       <div className="flex items-center gap-2">
-        <code className="flex-1 break-all rounded border border-line bg-paper px-2.5 py-1.5 font-mono text-xs text-ink">
+        <code className="min-w-0 flex-1 break-all rounded border border-line bg-paper px-2.5 py-1.5 font-mono text-xs text-ink">
           {token}
         </code>
-        <button
-          type="button"
-          onClick={copy}
-          title={uiCopy("bulkVerification.copyTitle")}
-          className="shrink-0 rounded-md border border-line px-2 py-1.5 text-ink transition-colors hover:bg-paper"
-        >
-          <Copy className="h-3.5 w-3.5" />
-        </button>
+        <BulkTokenCopy key={token} token={token} />
       </div>
       <button
         type="button"
@@ -192,4 +178,34 @@ export function BulkVerifyPanel({
       </button>
     </div>
   );
+}
+
+function BulkTokenCopy({ token }: { token: string }) {
+  const uiCopy = useUiMessages();
+  const mounted = useRef(false);
+  const busy = useRef(false);
+  const [pending, setPending] = useState(false);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const copy = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setPending(true);
+    try {
+      await navigator.clipboard.writeText(token);
+      if (mounted.current) toast.success(uiCopy("bulkVerification.copied"));
+    } catch {
+      if (mounted.current) toast.error(uiCopy("bulkVerification.copyFailed"));
+    } finally {
+      busy.current = false;
+      if (mounted.current) setPending(false);
+    }
+  };
+  return <button type="button" onClick={copy} aria-busy={pending} aria-disabled={pending}
+    aria-label={uiCopy("bulkVerification.copyTitle")} title={uiCopy("bulkVerification.copyTitle")}
+    className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-md border border-line px-2 py-1.5 text-ink transition-colors hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
+    <Copy className="h-3.5 w-3.5" />
+  </button>;
 }
