@@ -216,17 +216,26 @@ async function embedOne(text: string): Promise<Vec | null> {
   }
 }
 
-/** Cosine similarity between two vectors (0..1). Returns 0 on dimension mismatch. */
+/** Cosine similarity (-1..1); zero/mismatched vectors retain the zero-score convention. */
 function cosine(a: Vec, b: Vec): number {
   if (a.length !== b.length) return 0;
+  // Embeddings are finite, but providers need not normalize them. Scaling each
+  // vector first preserves its direction without squaring huge/tiny components.
+  let scaleA = 0, scaleB = 0;
+  for (let i = 0; i < a.length; i++) {
+    scaleA = Math.max(scaleA, Math.abs(a[i]));
+    scaleB = Math.max(scaleB, Math.abs(b[i]));
+  }
+  if (scaleA === 0 || scaleB === 0) return 0;
   let dot = 0, magA = 0, magB = 0;
   for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    magA += a[i] * a[i];
-    magB += b[i] * b[i];
+    const x = a[i] / scaleA, y = b[i] / scaleB;
+    dot += x * y;
+    magA += x * x;
+    magB += y * y;
   }
   const denom = Math.sqrt(magA) * Math.sqrt(magB);
-  return denom > 0 ? dot / denom : 0;
+  return Math.max(-1, Math.min(1, dot / denom));
 }
 
 /** Keyword-overlap score (fallback when embeddings unavailable). */
