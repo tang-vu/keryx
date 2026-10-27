@@ -8,10 +8,22 @@ environment files, use an account or wallet, or fetch metadata:
 node --import tsx scripts/export-literature.mts --input library.json --format ris --screening include --output included.ris
 ```
 
-Formats are `bibtex`, `ris` and `csl-json`. Omit `--screening` to export all saved
+Formats are `bibtex`, `ris`, `csl-json` and `markdown`. Omit `--screening` to export all saved
 papers, or choose `unscreened`, `include`, `exclude` or `undecided`. Saved order,
 exact versions and recorded metadata provenance are retained. An empty selection
 produces an empty reference file (`[]` for CSL-JSON).
+
+For an inspectable Markdown bibliography:
+
+```powershell
+node --import tsx scripts/export-literature.mts --input library.json --format markdown --screening include --output bibliography.md
+```
+
+Markdown uses the same canonical bibliographic records and stable keys as
+CSL-JSON. Titles are literal headings; each recorded field and provenance note
+is fenced as data, including embedded Markdown/HTML. Missing authors, publication
+date, venue and DOI remain explicitly unrecorded. It is a bibliography for
+inspection, not a literature review synthesis or evidence that a paper was read.
 
 To export specific papers, supply `--selection selected-urls.json`. The file is a
 JSON array of at most 50 unique exact saved landing URLs, in desired export order:
@@ -43,6 +55,8 @@ The local stdio MCP tool `export_saved_literature` takes the same backup as a
 `format`, `scope: "bibliography-only"`, `count` and `content`, without file access
 or network calls. MCP clients may retain the entire supplied backup, including
 private notes; use the browser workspace when those bytes should stay there.
+The tool's discovered format enum and the shared local library function also
+accept `markdown`; no hosted backup-upload endpoint is added.
 
 Neither interface emits the private review title, question, screening decisions
 or notes. References contain saved bibliographic metadata only, with the existing

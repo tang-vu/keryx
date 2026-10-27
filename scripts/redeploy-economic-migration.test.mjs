@@ -167,7 +167,7 @@ test('failure hold stops both fixed roles even if the first stop fails; never st
   assert.deepEqual(calls, [['stop', 'keryx']]);
 });
 
-test('actual redeploy shell orders migration after build, before startup, and fences all subsequent failures', t => {
+test('actual redeploy shell requires preparation, orders staged migration before startup, and fences subsequent failures', t => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-economic-deploy-'));
   t.after(() => fs.rmSync(directory, { recursive: true }));
   const trace = path.join(directory, 'trace');
@@ -210,30 +210,18 @@ esac
     assert.ifError(result.error);
     return { ...result, trace: fs.readFileSync(trace, 'utf8') };
   };
-  const success = execute();
-  assert.equal(success.status, 0, success.stdout + success.stderr);
-  const at = text => success.trace.indexOf(text);
-  assert.ok(at('- validate ' + configFile) < at('git fetch'));
-  assert.ok(at('npm run build') < at('- migrate ' + configFile));
-  assert.ok(at('- migrate ' + configFile) < at(rolesFile + ' ' + 'c'.repeat(64) + ' a2a'));
-  assert.ok(!success.trace.includes(' - hold'));
-  assert.ok(!/rm -rf|pm2 (reload|restart)|bash -s -- (resume|stop)|crontab/.test(success.trace));
-  for (const failure of ['migration', 'a2a', 'web', 'health', 'config']) {
-    const result = execute(failure);
-    assert.notEqual(result.status, 0, failure);
-    assert.match(result.trace, / - hold\n/);
-    assert.doesNotMatch(result.trace, /rm -rf|pm2 (reload|restart)|bash -s -- resume|crontab/);
-    assert.match(result.stderr, /No automatic rollback/);
-  }
-  const build = execute('build');
-  assert.notEqual(build.status, 0); assert.doesNotMatch(build.trace, / - (migrate|hold)/);
+  const ordinary = execute();
+  assert.equal(ordinary.status, 1);
+  assert.match(ordinary.stderr, /prepared staged release/);
+  assert.equal(ordinary.trace, '', 'Refuse before SSH, source sync, build, migration or role mutation');
+  const staged = { KERYX_REDEPLOY_STAGED_RELEASE: '1' };
   for (const extra of [{ KERYX_REDEPLOY_REVIEWED_PM2_CONFIG: '', KERYX_REDEPLOY_REVIEWED_PM2_SHA256: '' },
     { KERYX_REDEPLOY_EXPECTED_COMMIT: '' },
     { KERYX_REDEPLOY_PRESERVE_HELD_SCHEDULER: '0' }, { KERYX_REDEPLOY_ECONOMIC_MIGRATION_SHA256: '' },
     { KERYX_REDEPLOY_ECONOMIC_MIGRATION_CONFIG: '/tmp/untrusted.json' }]) {
-    const result = execute('', extra); assert.notEqual(result.status, 0); assert.equal(result.trace, '');
+    const result = execute('', { ...staged, ...extra }); assert.notEqual(result.status, 0); assert.equal(result.trace, '');
   }
-  const staged = { KERYX_REDEPLOY_STAGED_RELEASE: '1' }, prepared = execute('', staged);
+  const prepared = execute('', staged);
   assert.equal(prepared.status, 0, prepared.stdout + prepared.stderr);
   const stagedAt = text => prepared.trace.indexOf(text);
   assert.ok(stagedAt(' artifact 1 ' + 'e'.repeat(40)) >= 0);

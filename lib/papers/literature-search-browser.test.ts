@@ -41,6 +41,27 @@ afterAll(async () => { await browser?.close(); });
 const card = (page: Page, index: number) => page.locator("article").filter({ has: page.getByRole("checkbox", {
   name: copy("literatureWorkspace.compareLabel", { title: titles[index] }), exact: true,
 }) });
+
+it.each([320, 1440])("retains search focus on clear/Escape and preserves IME, screening and selection at %ipx", async width => {
+  await fixture(width, async (page, raw) => {
+    const input = page.getByLabel(search.label, { exact: true });
+    const filter = page.getByLabel(copy("literatureWorkspace.filter"));
+    await card(page, 0).getByRole("checkbox").check(); await filter.selectOption("include");
+    await input.fill("no matching paper");
+    await page.getByRole("button", { name: search.clear, exact: true }).click();
+    expect(await input.evaluate(element => document.activeElement === element)).toBe(true);
+    expect(await input.inputValue()).toBe(""); expect(await filter.inputValue()).toBe("include");
+    expect(await card(page, 0).getByRole("checkbox").isChecked()).toBe(true);
+    await input.fill("in-progress composition");
+    await input.dispatchEvent("keydown", { key: "Escape", isComposing: true });
+    expect(await input.inputValue()).toBe("in-progress composition");
+    await input.press("Escape");
+    expect(await input.inputValue()).toBe("");
+    expect(await input.evaluate(element => document.activeElement === element)).toBe(true);
+    expect(await filter.inputValue()).toBe("include");
+    expect(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY)).toBe(raw);
+  });
+});
 async function discardAndReload(page: Page) {
   const opened = page.waitForEvent("dialog", { timeout: 1500 }), reload = page.reload();
   const dialog = await opened; expect(dialog.type()).toBe("beforeunload"); await dialog.accept(); await reload;

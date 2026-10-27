@@ -2,14 +2,22 @@
 
 [Hosted immutable preparation](../.github/workflows/hosted-immutable-preparation.yml)
 runs the existing official preparation command on GitHub-hosted Ubuntu24.04 with
-Node24.21.0/npm11.19.0. It provides an alternative to the local WSL builder whose
+Node24.22.1/npm11.19.0. It provides an alternative to the local WSL builder whose
 observed backward wall-clock changes invalidated native authentication fixtures.
 It changes no application, authentication, payment or storage guard.
 
 The release owner dispatches it manually on `main` after review and required CI.
 Supply the full 40-character current main commit, the existing public Circle app
 UUID and Google client ID, and reviewed published mainnet registry write/read
-addresses. The source must equal both the checkout and `origin/main` captured by
+addresses. Also supply `public_build_controls`, a JSON object with exactly these
+eight string fields from the same reviewed deployment:
+
+- `KERYX_RUN_PRIVACY_ENABLED` (`"true"`) and `NEXT_PUBLIC_WC_PROJECT_ID` (the existing ID or explicit empty string).
+- `KERYX_REGISTRY_VERSION` and `NEXT_PUBLIC_KERYX_REGISTRY_VERSION`.
+- `KERYX_REGISTRY_ORIGINS` and `NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS` (matching compact origin JSON strings).
+- `KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS` and `NEXT_PUBLIC_KERYX_WITHDRAWAL_MAX_AHEAD_BLOCKS`.
+
+The source must equal both the checkout and `origin/main` captured by
 that checkout. There are no scheduled or push triggers, production credentials,
 SSH steps, deployment, package publication or automatic retries.
 
@@ -17,9 +25,16 @@ Dependencies and Chromium/system libraries install before isolation. The one-sho
 [driver](../scripts/prepare-hosted-immutable-release.mjs) then runs as the ordinary
 runner user in a new loopback-only network namespace, with capabilities dropped
 and privilege escalation disabled. Only PATH, fresh control/scratch paths and the
-six public configuration values reach the command. GitHub tokens and the runner's
+fourteen explicitly validated public compilation values reach the command. GitHub tokens and the runner's
 other environment variables are omitted. The driver verifies the actual network
 namespace and privilege state before launching preparation.
+
+Preparation binds a digest of that complete public profile and inspects the actual
+compiled `/dispatch/:path*` and `/api/dispatch/:path*` privacy headers. Reviewed
+role admission derives the same digest from the protected runtime ENV without
+returning its secrets, and rechecks artifact headers. An earlier six-value receipt
+cannot satisfy this gate. This preserves the existing registry authority, mobile
+wallet login and withdrawal window; it grants no new runtime or spending authority.
 
 It invokes exactly once:
 

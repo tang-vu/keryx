@@ -2,6 +2,75 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/evidence-matrix-export.ts",
-  "sourceSha256": "0590e48a8c18ef8d12e01d9acc643b7382030cc2e7277743a7e88a9e16b5d974",
-  "entries": {}
+  "sourceSha256": "92b92608451d2847d512e940b43b3a095288d3cfff19775775562b51c213f05a",
+  "entries": {
+    "downloadMarkdown": {
+      "source": "Download evidence Markdown",
+      "text": "Tải bằng chứng dạng Markdown"
+    },
+    "filters": {
+      "source": "Inspect the evidence",
+      "text": "Kiểm tra bằng chứng"
+    },
+    "search": {
+      "source": "Find a target or excerpt",
+      "text": "Tìm mục nghiên cứu hoặc trích đoạn"
+    },
+    "searchHint": {
+      "source": "Search target text, retained excerpts and article details.",
+      "text": "Tìm trong nội dung mục nghiên cứu, trích đoạn đã lưu và thông tin bài viết."
+    },
+    "advancedFilters": {
+      "source": "Article and excerpt filters",
+      "text": "Lọc theo bài viết và trích đoạn"
+    },
+    "article": {
+      "source": "Cited article with an excerpt",
+      "text": "Bài được dẫn có trích đoạn"
+    },
+    "articleHint": {
+      "source": "Show targets with an excerpt from this exact citation. Other cited sources remain visible for comparison.",
+      "text": "Hiển thị các mục có trích đoạn từ đúng nguồn dẫn này. Các nguồn được dẫn khác vẫn hiển thị để so sánh."
+    },
+    "allArticles": {
+      "source": "All cited articles",
+      "text": "Tất cả bài được dẫn"
+    },
+    "unavailableArticle": {
+      "source": "Previously selected article (no longer cited in this report)",
+      "text": "Bài đã chọn trước đó (không còn được dẫn trong báo cáo này)"
+    },
+    "inspectionState": {
+      "source": "Excerpt availability",
+      "text": "Tình trạng trích đoạn"
+    },
+    "allTargets": {
+      "source": "All targets",
+      "text": "Tất cả mục nghiên cứu"
+    },
+    "withExcerpts": {
+      "source": "With excerpts (including illustrative demos)",
+      "text": "Có trích đoạn (gồm ví dụ minh hoạ)"
+    },
+    "withoutExcerpts": {
+      "source": "Without excerpts",
+      "text": "Không có trích đoạn"
+    },
+    "resetFilters": {
+      "source": "Reset filters",
+      "text": "Đặt lại bộ lọc"
+    },
+    "resultCount": {
+      "source": "{shown} of {total} targets shown",
+      "text": "Đang hiển thị {shown} / {total} mục nghiên cứu"
+    },
+    "fullExport": {
+      "source": "Downloads include the complete evidence matrix, including targets hidden by these filters.",
+      "text": "Tệp tải xuống chứa toàn bộ ma trận bằng chứng, gồm cả các mục bị bộ lọc ẩn đi."
+    },
+    "noMatches": {
+      "source": "No target matches these filters. Reset the filters to inspect the complete matrix.",
+      "text": "Không có mục nào khớp bộ lọc. Đặt lại bộ lọc để kiểm tra toàn bộ ma trận."
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import { backup, DatabaseSync } from "node:sqlite";
-import { mkdirSync, mkdtempSync } from "node:fs";
-import { join } from "node:path";
+import { mkdtempSync, rmSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { installSqliteApplicationSchema } from "../db/sqlite-application-schema";
 import { createSqliteZotero, ZOTERO_SQL } from "../db/zotero-sqlite";
@@ -16,7 +17,16 @@ import type { KeryxDB } from "../db/keryx-db";
 import { encryptContent } from "../ipfs/content-crypto";
 const owner = `0x${"a".repeat(40)}`, token = "SYNTHETICKEY000000000001", collection = "ABCD2345";
 const databases: DatabaseSync[] = [];
-afterEach(() => { databases.splice(0).forEach(db => db.close()); vi.unstubAllEnvs(); });
+const temporaryDirectories: string[] = [];
+afterEach(() => {
+  databases.splice(0).forEach(db => db.close());
+  for (const directory of temporaryDirectories.splice(0)) {
+    expect(dirname(directory)).toBe(resolve(tmpdir()));
+    expect(directory.split(/[\\/]/).at(-1)).toMatch(/^keryx-zotero-db-/);
+    rmSync(directory, { recursive: true });
+  }
+  vi.unstubAllEnvs();
+});
 function syntheticZotero() {
   const items = new Map<string, ZoteroItem>(), calls: Array<{ url: string; method: string; body?: Record<string, unknown>[]; headers: Headers }> = [];
   let version = 1;
@@ -62,9 +72,8 @@ function held() {
 async function sharedLibrary() {
   vi.stubEnv("CONTENT_MASTER_KEY", "11".repeat(32));
   // Two real SQLite connections/stores, one isolated retained file, one provider.
-  const artifacts = join(process.cwd(), ".artifacts");
-  mkdirSync(artifacts, { recursive: true });
-  const path = join(mkdtempSync(join(artifacts, "zotero-reviewfix-db-")), "synthetic.sqlite");
+  const directory = mkdtempSync(join(tmpdir(), "keryx-zotero-db-")); temporaryDirectories.push(directory);
+  const path = join(directory, "synthetic.sqlite");
   // Schema installation stays in the isolated memory test fixture. Its snapshot
   // preserves the existing two real connection/store concurrency boundary.
   const seed = fixture(); await backup(seed.db, path);

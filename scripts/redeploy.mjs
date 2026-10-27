@@ -30,6 +30,8 @@ export function redeployEnvironment(environment, platform = process.platform) {
   const staged = env.KERYX_REDEPLOY_STAGED_RELEASE ?? '0';
   if (!['0', '1'].includes(staged) || staged === '1' && !reviewed)
     throw new Error('Staged release requires complete reviewed controls');
+  if (reviewed && staged !== '1')
+    throw new Error('Reviewed redeploy requires a prepared staged release; finish isolated preparation before maintenance');
   if (platform === 'win32') {
     const previous = (env.WSLENV ?? '').split(':').filter(Boolean)
       .filter(entry => !TRANSPORT_CONTROLS.includes(entry.split('/')[0]));

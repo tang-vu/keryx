@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { stageImmutableSource, recordImmutableArtifact, verifyImmutableArtifact } from './immutable-release-staging.mjs';
+import { mainnetPublicBuildProfile, mainnetPublicBuildProfileSha256, mainnetPrivateHeaderDigest } from './immutable-release-public-profile.mjs';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const serial = value => JSON.stringify(value) + '\n';
@@ -38,18 +39,7 @@ export function preparationEnvironment({ commit, scratch, inherited = process.en
   // Mainnet config deliberately refuses an offline bypass. This build has only
   // public constants, not runtime credentials or a funded storage manifest.
   if (publicNetwork === 'arc') {
-    const appId = inherited.NEXT_PUBLIC_CIRCLE_APP_ID, clientId = inherited.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (typeof appId !== 'string' || appId.length !== 36 || !/^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$/.test(appId) ||
-        typeof clientId !== 'string' || clientId !== clientId.trim() || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,199}\.apps\.googleusercontent\.com$/.test(clientId)) refuse();
-    env.NEXT_PUBLIC_CIRCLE_APP_ID = appId;
-    env.NEXT_PUBLIC_GOOGLE_CLIENT_ID = clientId;
-    for (const name of ['KERYX_REGISTRY_ADDRESS', 'KERYX_REGISTRY_READ_ADDRESS']) {
-      const server = inherited[name], browser = inherited[`NEXT_PUBLIC_${name}`];
-      if (typeof server !== 'string' || server.length !== 42 || !/^0x[0-9a-f]{40}$/i.test(server) || /^0x0{40}$/i.test(server) ||
-          typeof browser !== 'string' || server.toLowerCase() !== browser.toLowerCase()) refuse();
-      env[name] = server;
-      env[`NEXT_PUBLIC_${name}`] = browser;
-    }
+    try { Object.assign(env, mainnetPublicBuildProfile(inherited)); } catch { refuse(); }
   }
   // Required Windows process/DLL lookup inputs, never credentials or NODE_OPTIONS.
   for (const name of ['SystemRoot', 'SYSTEMROOT', 'WINDIR', 'ComSpec', 'PATHEXT'])
@@ -254,9 +244,11 @@ export function runPreparationChecks({ staged, scratch, npmCli, mainnetPublicBui
     if (result.error || result.signal || result.status !== 0) refuse();
   }
   if (hash(fs.readFileSync(process.execPath)) !== toolchain.nodeSha256 || hash(fs.readFileSync(npmCli)) !== toolchain.npmCliSha256) refuse();
+  const privateRunHeadersSha256 = mainnetPublicBuild ? mainnetPrivateHeaderDigest(staged.source) : undefined;
   return { node: process.versions.node, npm: pinnedNpm, platform: process.platform, ...toolchain,
     arch: process.arch, publicBuildSettings: { network: publicNetwork, forceOffline: !mainnetPublicBuild,
-      ...(mainnetPublicBuild ? { circleGooglePublicConfigSha256: hash(serial({
+      ...(mainnetPublicBuild ? { mainnetPublicConfigSha256: mainnetPublicBuildProfileSha256(buildEnv), privateRunHeadersSha256,
+        circleGooglePublicConfigSha256: hash(serial({
         NEXT_PUBLIC_CIRCLE_APP_ID: buildEnv.NEXT_PUBLIC_CIRCLE_APP_ID,
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: buildEnv.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
       })) } : {}),

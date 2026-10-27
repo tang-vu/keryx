@@ -11,11 +11,11 @@
   "totals": {
     "englishNamespaceFiles": 76,
     "coreInlineSources": 1,
-    "extractedLeaves": 6375,
-    "authoredEntries": 5967,
+    "extractedLeaves": 6391,
+    "authoredEntries": 5984,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 379,
-    "completeNamespaces": 64
+    "uncoveredEntries": 378,
+    "completeNamespaces": 65
   },
   "namespaces": [
     {
@@ -1157,15 +1157,31 @@
     {
       "namespace": "evidence-matrix-export",
       "sourcePath": "locales/en/evidence-matrix-export.ts",
-      "sourceSha256": "0590e48a8c18ef8d12e01d9acc643b7382030cc2e7277743a7e88a9e16b5d974",
+      "sourceSha256": "92b92608451d2847d512e940b43b3a095288d3cfff19775775562b51c213f05a",
       "draftPath": "locales/zh-Hans/ui-drafts/evidence-matrix-export.json",
-      "extractedLeaves": 1,
-      "authoredEntries": 0,
-      "coveredKeys": [],
-      "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [
-        "downloadMarkdown"
+      "extractedLeaves": 17,
+      "authoredEntries": 17,
+      "coveredKeys": [
+        "advancedFilters",
+        "allArticles",
+        "allTargets",
+        "article",
+        "articleHint",
+        "downloadMarkdown",
+        "filters",
+        "fullExport",
+        "inspectionState",
+        "noMatches",
+        "resetFilters",
+        "resultCount",
+        "search",
+        "searchHint",
+        "unavailableArticle",
+        "withExcerpts",
+        "withoutExcerpts"
       ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     },
     {

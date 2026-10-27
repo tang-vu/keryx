@@ -1,10 +1,18 @@
 # Immutable release preparation and actual-runtime rehearsal
 
 Issue [#164](https://github.com/tang-vu/keryx/issues/164), October 5, 2026. This is a
-bounded preparation and inspection boundary. The current [reviewed deployment
-flow](deployment-guide.md) remains authoritative, including its early writer drain.
-The replacement has **not passed production acceptance** and this work does not
-shorten the current production maintenance window.
+bounded preparation and inspection boundary. Owner-confirmed October 26:
+prepare and qualify the candidate while the current website serves, then drain
+only for a short final handover. The reviewed entry points refuse the historical
+stop-before-build mode. The replacement still needs actual production acceptance;
+preparation alone waives none of the original, financial, custody or Operator gates.
+
+Mainnet preparation now binds the complete public compilation profile, including
+Registry version/origins, WalletConnect, the withdrawal block window and private
+dispatch headers. The protected role reader compares the profile digest against
+the actual runtime ENV and checks the compiled artifact's private headers. See the
+[manual inputs](hosted-immutable-preparation.md); older six-value preparation is
+retained as historical evidence and cannot be promoted through the current gate.
 
 ## Current authority and the problem
 

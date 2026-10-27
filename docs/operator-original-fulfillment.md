@@ -241,3 +241,12 @@ writers stopped; do not rerun with overwritten receipts, relabel provenance or
 restore an older schema while new records may exist. A current-store invocation
 with fresh artifacts only verifies/backs up that state and reports
 `already-current`; it does not reset claims or authorize supplier execution.
+
+## Historical native response presentations
+
+Native V1/V2 completion verification reconstructs complete expected historical
+responses, including the original thirteen-column evidence CSV, from the validated
+run. It never truncates or rewrites stored receipts. Full response equality and
+all native authority, financial, evidence and replay checks still apply. Current
+exports keep their extraction-scope columns; unknown fields or changed historical
+CSV cells refuse completion proof.

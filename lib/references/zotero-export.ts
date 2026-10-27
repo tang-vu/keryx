@@ -43,17 +43,22 @@ export function zoteroReportReferences(run: QueryRun, baseUrl: string) {
   const output = buildCitationExport(run.citations, "csl-json");
   if (output.omitted) throw new ZoteroError("zotero_conflict");
   const rows = JSON.parse(output.content) as CslReference[], reportUrl = `${new URL(baseUrl).origin}/dispatch/${encodeURIComponent(run.id)}`;
+  // Explicit answer rejection wins over the historical reward-only flag, as it
+  // does in report inspection. Keep this adapter's existing 16KiB exact quotation
+  // contract (including old records without target metadata); notes do not make
+  // a target-coverage assertion. Unlabelled demos must not become factual notes.
+  const evidence = (run.evidence ?? []).filter(item => (item.qualifiesForAnswer ?? item.qualifiesForReward) === true
+    && item.evidenceProvenance !== "synthetic-demo");
   return rows.map(row => {
     const matching = run.citations.filter(citation => {
       const one = JSON.parse(buildCitationExport([citation], "csl-json").content) as CslReference[];
       return one[0]?.id === row.id;
     });
     if (!matching.length) throw new ZoteroError("zotero_conflict");
-    const quotes = [...new Set((run.evidence ?? []).filter(evidence => matching.some(citation =>
-      evidence.marker === citation.marker && evidence.sourceId === citation.sourceId && evidence.itemId === citation.itemId &&
-      evidence.itemUrl === citation.itemUrl && evidence.contentVersion === citation.contentVersion) &&
-      (evidence.qualifiesForAnswer === true || evidence.qualifiesForReward === true)).map(evidence => evidence.quote))];
+    const quotes = [...new Set(evidence.filter(item => matching.some(citation =>
+      item.marker === citation.marker && item.sourceId === citation.sourceId && item.itemId === citation.itemId &&
+      item.itemUrl === citation.itemUrl && item.contentVersion === citation.contentVersion)).map(item => item.quote))];
     if (quotes.length > 50 || quotes.some(quote => typeof quote !== "string" || quote.length > 16_384)) throw new ZoteroError("zotero_limit");
-    return reference(row, reportUrl, quotes);
+    return reference(row, reportUrl, quotes.filter(quote => quote.trim().length > 0));
   });
 }
