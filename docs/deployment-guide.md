@@ -2,19 +2,26 @@
 
 How Keryx ships to production. **The live site is served from a VPS**, not Vercel.
 
-**Post-mainnet workflow (October 4, 2026):** use the
-[update flow](mainnet-update-flow.md) before executing this runbook. Production
-uses reviewed role configuration, sealed storage and deliberately held schedules.
-Preserve those exact inputs and states; a bare default redeploy may install
-reconciliation cron or use a legacy launcher. Historical provisioning/backup
-examples below do not establish the active mainnet configuration.
+**Routine release order (owner confirmed October 26, 2026):** follow the
+[update flow](mainnet-update-flow.md#release-sequence). Keep the accepted website
+serving while dependencies, typechecking, compilation and candidate checks run in
+isolation. Qualify the [prepared artifact and staged role path](immutable-release-staging.md)
+on the intended host before another maintenance window; preparation or investigation
+alone does not start maintenance. Drain writers only for the final cutover and
+necessary fast verification after all applicable gates pass.
+
+Production retains reviewed roles, sealed storage, required originals, custody,
+Operator acceptance and deliberately held schedules. A bare default redeploy may
+install reconciliation cron or select a legacy launcher. The provisioning,
+stop-before-build and backup details below describe retained tooling; they do not
+establish a qualified prepared cutover or the active mainnet configuration.
 
 ## Topology
 - **VPS** (`root@`, app at `/root/keryx`) runs the Next.js app under **pm2** (process `keryx`, port **3939**).
 - **Cloudflare named tunnel** maps `https://keryx.cc` → `http://localhost:3939` on the VPS (already configured).
-- Routine deploys use `npm run redeploy` (`scripts/redeploy-vps.sh`), which SSHes in and checks out `origin/main`. `npm run deploy` is the separate provisioning path.
-- When install inputs changed, the redeploy repeats `npm ci` up to three times for transient registry network errors only; any other install failure stops immediately and leaves no successful-install stamp.
-- ⇒ **The VPS serves whatever is on `origin/main`.** Local edits are invisible until committed **and pushed**.
+- `npm run redeploy` enters `scripts/redeploy.mjs` and its VPS launcher. `npm run deploy` is the separate provisioning path. Select the release path through the admission sequence above; command availability does not qualify routine use.
+- When install inputs changed, the retained VPS launcher repeats `npm ci` up to three times for transient registry network errors only; any other install failure stops immediately and leaves no successful-install stamp. This retry behavior does not satisfy prepared-artifact qualification.
+- **The VPS serves the last admitted deployment.** Pushing or merging `origin/main` makes source available for a later release; it does not switch production. Verify the deployed full commit/build, network and required distributed identities after cutover.
 
 ## One-time prereqs (already set up on this machine)
 - SSH alias `keryx-vps` in `~/.ssh/config` with key auth (`ssh keryx-vps` works passwordless).
@@ -22,12 +29,17 @@ examples below do not establish the active mainnet configuration.
 - VPS has Node 24, pm2, cloudflared, and 2 GB swap (the script provisions these; re-runnable).
 - Cloudflare tunnel `keryx.cc → :3939` live.
 
-## Standard release — reviewed PR, then current origin/main
+## Source acceptance and prepared-release admission
 
 Work on a focused feature branch; pass required CI and review, then merge the PR.
 Do not push a feature directly to main. Documentation-only updates require no
-runtime deployment. For user-visible product updates, inspect the actual mainnet
-role/storage/policy state and use the reviewed deployment mode below.
+runtime deployment. The existing coordinator batches runtime delivery separately
+from focused source merges. For a product release, prepare and verify the exact
+source/artifact/environment pair while the accepted website continues serving.
+Retain every intended-host, original recovery, native writer, schema/fence,
+custody, Operator, rollback and off-box retention gate in the
+[staging contract](immutable-release-staging.md). A successful source PR or hosted
+fixture does not establish that these production gates passed.
 
 ```bash
 # On the feature branch, after appropriate validation
@@ -36,22 +48,24 @@ git commit -m "feat(scope): what changed"
 git push -u origin <feature-branch>
 
 # Open the PR, pass required CI/review, merge, and verify the merged commit.
-# Inspect source, custody/schema compatibility and actual worker/scheduler state.
-# Supply the validated reviewed-role and held-scheduler inputs described below.
-
-# Deploy only after that preparation; never run this bare on the reviewed mainnet host.
-npm run redeploy
-
-# Verify expected commit/network and operational state; do not publish private telemetry.
-curl -fsS https://keryx.cc/api/health
+# The release coordinator separately qualifies preparation and cutover, binds
+# reviewed roles/storage/custody/held schedules and verifies actual delivery.
+# This source-work example does not execute a production lifecycle command.
 ```
-The build runs **on the VPS** and can remain quiet for several minutes. A September 9
-build compiled in 6.7 minutes before page generation and reload; this is historical
-timing, not a current estimate. **The reviewed mainnet path requires web and A2A
-writers positively stopped before source sync/build**, so plan a maintenance window.
-The prior build is retained for recovery. Only the legacy non-reviewed path keeps
-the old `.next` serving while `.next.tmp` builds; do not promise that availability
-for the reviewed mainnet procedure.
+
+The retained reviewed-role launcher validates that web and A2A writers were
+positively stopped before it syncs source and builds on the VPS. Preserve that
+check; this stop-before-build contract does not meet the current routine release
+order and must not be bypassed to imitate a prepared cutover. Qualify the isolated
+preparation/staged path before opening maintenance, then positively drain all
+affected writers and retain in-flight or ambiguous economic state for the final
+handover. Resume only the previously authorized roles and held-scheduler policy.
+
+A September 9 VPS build compiled in 6.7 minutes before page generation and reload;
+this is historical timing, not a current duration or availability target. The old
+non-reviewed `.next.tmp` behavior does not prove the reviewed staged handover.
+Retaining a prior build also does not establish that its schema/fence and custody
+bindings permit rollback after a migration; preserve the explicit recovery gates.
 
 Planned outage admission must stay independent of the application. The
 [maintenance procedure and isolated Linux rehearsal](engineering/planned-maintenance-2026-10-08.md)
