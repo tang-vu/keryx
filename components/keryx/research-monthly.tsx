@@ -21,6 +21,7 @@ import { AskQuestionSchema, MAX_ASK_QUESTION_CHARS } from "@/lib/ask-input";
 import { BUYER_PROFILE } from "@/lib/buyer/protocol";
 import { monthlyStorageKeys } from "@/lib/monthly/local-recovery";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { downloadPrivateBrowserText } from "@/lib/browser-private-text-download";
 
 
 
@@ -31,10 +32,9 @@ function save(key: string, value: unknown) {
   const text = JSON.stringify(value); localStorage.setItem(key, text);
   if (localStorage.getItem(key) !== text) throw new Error(copy("monthlyResearch.storageUnavailable"));
 }
-function download(value: unknown) {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2) + "\n"], { type: "application/json" }));
-  const link = document.createElement("a"); link.href = url; link.download = "keryx-monthly-recovery.json"; link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+function download(value: unknown, unavailable: string) {
+  try { downloadPrivateBrowserText(JSON.stringify(value, null, 2) + "\n", "keryx-monthly-recovery.json", "application/json"); }
+  catch { throw new Error(unavailable); }
 }
 
 export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
@@ -56,12 +56,16 @@ export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
   const [record, setRecord] = useState<{ remaining: number; expired: boolean; purchase: { expiresAt: string; payer: string }; redemptions: { requestId: string; orderId: string }[] } | null>(null);
   const [request, setRequest] = useState<{ monthlyId: string; requestId: string; question: string; payer: string } | null>(null);
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
+  const manualDownload = (value: unknown) => {
+    try { download(value, copy("evidenceMatrix.downloadUnavailable")); setMessage(""); }
+    catch { setMessage(copy("evidenceMatrix.downloadUnavailable")); }
+  };
   useEffect(() => {
     scope.current = storageScope;
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
-      setMonthlyId(""); setIntent(null); setPurchaseUncertain(false); setRecord(null); setRequest(null); setSelectedJob(null);
+      setMonthlyId(""); setIntent(null); setPurchaseUncertain(false); setRecord(null); setRequest(null); setSelectedJob(null); setMessage("");
       const keys = monthlyStorageKeys(BUYER_PROFILE, address);
       try {
         if (keys) {
@@ -116,7 +120,7 @@ export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
         assertScope(); if (!wallet || !address || !storage) return;
         const result = await buyMonthly({ quote, payer: address, ...connectedBuyerWallet(wallet, address),
           prepare: async value => { assertScope(); save(storage.intent(value.monthlyId), { intent: value, state: "prepared" });
-            save(storage.last, value.monthlyId); setMonthlyId(value.monthlyId); setIntent(value); download(value); },
+            save(storage.last, value.monthlyId); setMonthlyId(value.monthlyId); setIntent(value); download(value, copy("evidenceMatrix.downloadUnavailable")); },
           claim: async value => { assertScope(); const key = storage.intent(value.monthlyId);
             const saved = JSON.parse(localStorage.getItem(key) ?? "null"); if (saved?.state !== "prepared") throw new Error(copy("monthlyResearch.recoveryOnly"));
             save(key, { intent: value, state: "submitted" }); setPurchaseUncertain(true); }, });
@@ -124,7 +128,7 @@ export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
           : copy("monthlyResearch.purchaseUncertain"));
       }); }}>{copy("monthlyResearch.buy", { amount: format(quote.totalMicros) })}</button>
     </>}
-    {intent && <button className={button} onClick={() => download(intent)}>{copy("monthlyResearch.downloadPurchase")}</button>}
+    {intent && <button className={button} onClick={() => manualDownload(intent)}>{copy("monthlyResearch.downloadPurchase")}</button>}
     <label className="grid gap-2 font-mono text-xs">{copy("monthlyResearch.planId")}<input value={monthlyId} onChange={e => { setMonthlyId(e.target.value.trim()); setRecord(null); }} className="border border-line bg-paper-2 p-3" /></label>
     <label className="grid gap-2 font-mono text-xs">{copy("monthlyResearch.importRequest")}<input type="file" accept="application/json,.json" disabled={busy} onChange={event => {
       const file = event.target.files?.[0]; event.target.value = ""; if (!file) return;
@@ -152,13 +156,13 @@ export function ResearchMonthly({ quote }: { quote: MonthlyQuote }) {
           const [addresses, network] = await Promise.all([wallet.getAddresses(), wallet.getChainId()]);
           assertScope(); if (addresses[0]?.toLowerCase() !== record.purchase.payer.toLowerCase() || network !== BUYER_PROFILE.chainId) throw new Error(copy("monthlyResearch.connectOriginalPayer"));
           const value = { monthlyId, requestId: crypto.randomUUID(), question: AskQuestionSchema.parse(question), payer: address };
-          save(storage!.request, value); setRequest(value); download(monthlyRecoveryFile(value));
+          save(storage!.request, value); setRequest(value); download(monthlyRecoveryFile(value), copy("evidenceMatrix.downloadUnavailable"));
           const result = await submitMonthly(value, sign); assertScope(); setSelectedJob(result.queryId); setMessage(copy("monthlyResearch.requestAdmitted"));
           localStorage.removeItem(storage!.request); setRequest(null); setRecord(null); });
       }}>{copy("monthlyResearch.useRequest")}</button>
     </div>}
     {request && <div className="space-y-3 border border-line p-4"><p className="font-serif text-sm">{copy("monthlyResearch.retainedRequest", { requestId: request.requestId })}</p>
-      <button className={button} onClick={() => download(monthlyRecoveryFile(request))}>{copy("monthlyResearch.downloadRequest")}</button>
+      <button className={button} onClick={() => manualDownload(monthlyRecoveryFile(request))}>{copy("monthlyResearch.downloadRequest")}</button>
       <button className={button} disabled={busy || !wallet || address?.toLowerCase() !== request.payer.toLowerCase()} onClick={() => { void run(async () => {
         assertScope(); const result = await submitMonthly(request, sign); assertScope(); setSelectedJob(result.queryId); setMessage(copy("monthlyResearch.followingJob"));
         localStorage.removeItem(storage!.request); setRequest(null); setRecord(null);
