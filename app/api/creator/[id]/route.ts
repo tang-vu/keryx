@@ -20,15 +20,16 @@ export async function GET(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const { id } = await ctx.params;
+  const headers = { "Cache-Control": "no-store" };
   if (!id) {
-    return NextResponse.json({ error: "missing id" }, { status: 400 });
+    return NextResponse.json({ error: "missing id" }, { status: 400, headers });
   }
 
   try {
     const db = await getDb();
     const source = await db.getSource(id);
     if (!source) {
-      return NextResponse.json({ error: "creator not found" }, { status: 404 });
+      return NextResponse.json({ error: "creator not found" }, { status: 404, headers });
     }
 
     // All-time payouts for this creator (full-table, not the capped live feed) so every
@@ -131,9 +132,8 @@ export async function GET(
       },
       recentPayments,
       dailyEarnings,
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    }, { headers });
+  } catch {
+    return NextResponse.json({ error: "creator_data_unavailable" }, { status: 500, headers });
   }
 }
