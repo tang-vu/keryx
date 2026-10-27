@@ -18,8 +18,10 @@
  *    where this source was skipped — the same question, the same budget, the same minute. Comparing
  *    against an all-time average would mix cheap runs with rich ones and read as a slur.
  *
- * `BUY` and `CACHE` count recorded choices: BUY requests a fresh read, CACHE chooses cached
- * content. These tallies do not inspect paid-delivery or settlement evidence. Answer citations
+ * A source is observed once per dispatch, even when several of its articles were weighed.
+ * Any BUY makes that source's disposition BUY; otherwise CACHE wins over SKIP. The first
+ * decision in the winning class supplies its original price, value and rationale.
+ * These are recorded choices, not paid-delivery or settlement evidence. Answer citations
  * are counted independently; they do not establish a settled citation reward.
  */
 
@@ -42,17 +44,17 @@ export interface SkipNote {
 export interface SourcePerformance {
   /** Dispatches whose decisions name this source — the denominator for everything below. */
   considered: number;
-  bought: number; // Recorded BUY decisions; not a count of settled tolls.
-  reused: number; // Recorded CACHE decisions; delivery is not verified.
-  skipped: number;
+  bought: number; // Dispatches with any BUY choice; not a count of settled tolls.
+  reused: number; // CACHE-only chosen dispatches; delivery is not verified.
+  skipped: number; // Dispatches that only passed on this source.
   /** Dispatches whose answers cite this source; no reward settlement is implied. */
   cited: number;
-  /** cited / (bought + reused) — of the times it was chosen, how often it made the answer. */
+  /** Of the dispatches that chose it, the fraction whose answers cited it. */
   citeThrough: number | null;
   /** Median expected value the agent assigned when it chose it vs when it passed. */
   evChosen: number | null;
   evSkipped: number | null;
-  /** Price it asked at its most recent decision (the agent's view of the listing, not the DB's). */
+  /** Price in the newest dispatch's representative choice, not a current DB quote. */
   price: number | null;
   /** Median listed price of the other sources chosen across the runs where this one was skipped. */
   rivalPriceOnSkip: number | null;
@@ -78,7 +80,7 @@ function median(values: number[]): number | null {
  */
 function chosenPriceIn(run: QueryRun): number | null {
   const chosen = (run.decisions ?? [])
-    .filter((d) => d.action !== "SKIP" && Number.isFinite(d.price))
+    .filter((d) => !d.external && (d.action === "BUY" || d.action === "CACHE") && Number.isFinite(d.price))
     .map((d) => d.price);
   return median(chosen);
 }
@@ -90,6 +92,7 @@ interface Tally {
   reused: number;
   skipped: number;
   cited: number;
+  citedWhenChosen: number;
   evChosen: number[];
   evSkipped: number[];
   lastPrice: number | null;
@@ -104,6 +107,7 @@ function emptyTally(): Tally {
     reused: 0,
     skipped: 0,
     cited: 0,
+    citedWhenChosen: 0,
     evChosen: [],
     evSkipped: [],
     lastPrice: null,
@@ -112,7 +116,7 @@ function emptyTally(): Tally {
   };
 }
 
-function record(tally: Tally, run: QueryRun, decision: Decision, wasCited: boolean) {
+function record(tally: Tally, run: QueryRun, decision: Decision, wasCited: boolean, rivalPriceInRun: number | null) {
   tally.considered += 1;
   if (wasCited) tally.cited += 1;
   // Runs arrive newest-first, so the first price seen is the current one.
@@ -121,7 +125,7 @@ function record(tally: Tally, run: QueryRun, decision: Decision, wasCited: boole
   if (decision.action === "SKIP") {
     tally.skipped += 1;
     tally.evSkipped.push(decision.expectedValue);
-    const rival = chosenPriceIn(run);
+    const rival = rivalPriceInRun;
     if (rival !== null) tally.rivalPrices.push(rival);
     if (tally.skips.length < MAX_SKIP_NOTES && decision.rationale) {
       tally.skips.push({
@@ -139,6 +143,7 @@ function record(tally: Tally, run: QueryRun, decision: Decision, wasCited: boole
 
   if (decision.action === "CACHE") tally.reused += 1;
   else tally.bought += 1;
+  if (wasCited) tally.citedWhenChosen += 1;
   tally.evChosen.push(decision.expectedValue);
 }
 
@@ -150,7 +155,7 @@ function collapse(tally: Tally): SourcePerformance {
     reused: tally.reused,
     skipped: tally.skipped,
     cited: tally.cited,
-    citeThrough: chosen > 0 ? tally.cited / chosen : null,
+    citeThrough: chosen > 0 ? tally.citedWhenChosen / chosen : null,
     evChosen: median(tally.evChosen),
     evSkipped: median(tally.evSkipped),
     price: tally.lastPrice,
@@ -161,8 +166,8 @@ function collapse(tally: Tally): SourcePerformance {
 
 /**
  * One pass over the run window produces the feedback for every source in it. Building per-source
- * on demand would re-parse the same runs once per creator page view; the index is small enough to
- * memo whole (see source-performance-cache.ts).
+ * on demand would repeat the same aggregation. The caller supplies the current public corpus;
+ * privacy-sensitive question text must not be served from a retained stale cache.
  *
  * `runs` must be newest-first — `listRecentQueries` already returns that order, and the skip notes
  * and current price both depend on it.
@@ -175,12 +180,23 @@ export function buildPerformanceIndex(runs: QueryRun[]): Record<string, SourcePe
     if (decisions.length === 0) continue;
     const cited = new Set((run.citations ?? []).map((c) => c.sourceId).filter(Boolean));
 
+    const bySource = new Map<string, Decision>();
     for (const decision of decisions) {
       // External marketplace endpoints are discovery-only and have no creator page to feed.
       if (!decision.sourceId || decision.external) continue;
+      if (decision.action !== "BUY" && decision.action !== "CACHE" && decision.action !== "SKIP") continue;
+      const previous = bySource.get(decision.sourceId);
+      if (!previous || (decision.action === "BUY" && previous.action !== "BUY") ||
+        (decision.action === "CACHE" && previous.action === "SKIP")) bySource.set(decision.sourceId, decision);
+    }
+    const observations = [...bySource.values()];
+    // Every wholly skipped source shares the same selected-article price bar in this run.
+    // Compute it once rather than sorting all choices again for every skipped article/source.
+    const rivalPrice = observations.some(decision => decision.action === "SKIP") ? chosenPriceIn(run) : null;
+    for (const decision of observations) {
       let tally = tallies.get(decision.sourceId);
       if (!tally) tallies.set(decision.sourceId, (tally = emptyTally()));
-      record(tally, run, decision, cited.has(decision.sourceId));
+      record(tally, run, decision, cited.has(decision.sourceId), rivalPrice);
     }
   }
 

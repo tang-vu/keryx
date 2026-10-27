@@ -1,6 +1,6 @@
 /**
  * Source decision feedback. What must never break: the counts only ever come from runs that really
- * named the source, BUY and CACHE stay distinguishable (one settles a toll, the other does not),
+ * named the source, fresh and cache choices stay distinguishable without implying settlement,
  * the price comparison is drawn from the same runs that passed, and a rationale is reproduced
  * verbatim — a paraphrase would be us putting words in the agent's mouth on a creator's own page.
  */
@@ -146,5 +146,81 @@ describe("buildPerformanceIndex", () => {
     const bare = { ...run("r0", []), decisions: undefined, citations: undefined } as unknown as QueryRun;
     expect(() => buildPerformanceIndex([bare, run("r1", [decision("a", "BUY")])])).not.toThrow();
     expect(buildPerformanceIndex([bare, run("r1", [decision("a", "BUY")])]).a.bought).toBe(1);
+  });
+
+  it("counts one source dispatch when one article is bought and another is skipped", () => {
+    const index = buildPerformanceIndex([run("r1", [
+      decision("a", "BUY", { assetId: "article-one", expectedValue: 0.8 }),
+      decision("a", "SKIP", { assetId: "article-two", expectedValue: 0.1 }),
+    ], [cite("a")])]);
+    expect(index.a).toMatchObject({ considered: 1, bought: 1, reused: 0, skipped: 0,
+      cited: 1, citeThrough: 1, evChosen: 0.8, evSkipped: null, rivalPriceOnSkip: null, recentSkips: [] });
+  });
+
+  it.each([
+    ["BUY", "CACHE"], ["CACHE", "BUY"], ["BUY", "SKIP"], ["SKIP", "BUY"],
+  ] as const)("a mixed %s/%s dispatch has one fresh-read source choice", (first, second) => {
+    const source = buildPerformanceIndex([run("r1", [
+      decision("a", first, { assetId: "article-one" }),
+      decision("a", second, { assetId: "article-two" }),
+    ], [cite("a")])]).a;
+    expect(source).toMatchObject({ considered: 1, bought: 1, reused: 0, skipped: 0, cited: 1, citeThrough: 1 });
+  });
+
+  it("counts repeated fresh article choices and markers as one citing source dispatch", () => {
+    const index = buildPerformanceIndex([run("r1", [
+      decision("a", "BUY", { assetId: "article-one" }),
+      decision("a", "BUY", { assetId: "article-two" }),
+      decision("b", "BUY"),
+    ], [cite("a"), cite("a")])]);
+    expect(index.a).toMatchObject({ considered: 1, bought: 1, cited: 1, citeThrough: 1 });
+    expect(index.b).toMatchObject({ considered: 1, bought: 1, cited: 0, citeThrough: 0 });
+  });
+
+  it("keeps one cached-only source choice while retaining the actual article-price comparison", () => {
+    const index = buildPerformanceIndex([run("r1", [
+      decision("a", "CACHE", { assetId: "article-one", price: 0.002 }),
+      decision("a", "CACHE", { assetId: "article-two", price: 0.004 }),
+      decision("a", "SKIP", { assetId: "article-three", price: 0.009 }),
+      decision("b", "SKIP"),
+    ], [cite("a")])]);
+    expect(index.a).toMatchObject({ considered: 1, bought: 0, reused: 1, skipped: 0, cited: 1, citeThrough: 1 });
+    expect(index.b.rivalPriceOnSkip).toBe(0.003);
+  });
+
+  it("keeps one original skip rationale per source dispatch and unique dispatch links", () => {
+    const first = "First exact rationale; do not paraphrase.";
+    const index = buildPerformanceIndex([
+      run("r2", [decision("a", "SKIP", { assetId: "a1", rationale: first, expectedValue: 0.1 }),
+        decision("a", "SKIP", { assetId: "a2", rationale: "Second article", expectedValue: 0.3 }),
+        decision("b", "BUY", { price: 0.006 })]),
+      run("r1", [decision("a", "SKIP", { assetId: "a1" }), decision("a", "SKIP", { assetId: "a2" })]),
+    ]);
+    expect(index.a).toMatchObject({ considered: 2, skipped: 2, bought: 0, reused: 0, cited: 0, citeThrough: null });
+    expect(index.a.recentSkips.map(note => note.queryId)).toEqual(["r2", "r1"]);
+    expect(index.a.recentSkips[0]).toMatchObject({ rationale: first, expectedValue: 0.1, rivalPrice: 0.006 });
+  });
+
+  it("does not turn a legacy unchosen citation into a chosen-dispatch success", () => {
+    const source = buildPerformanceIndex([
+      run("r2", [decision("a", "BUY")]),
+      run("r1", [decision("a", "SKIP")], [cite("a")]),
+    ]).a;
+    expect(source).toMatchObject({ considered: 2, bought: 1, skipped: 1, cited: 1, citeThrough: 0 });
+  });
+
+  it("does not invent a BUY observation for an unsupported stored action", () => {
+    const invalid = { ...decision("a", "SKIP", { price: 0.99 }), action: "UNKNOWN" } as unknown as Decision;
+    const index = buildPerformanceIndex([run("r1", [invalid, decision("b", "BUY"), decision("c", "SKIP")])]);
+    expect(index.a).toBeUndefined();
+    expect(index.b).toMatchObject({ considered: 1, bought: 1, cited: 0 });
+    expect(index.c.rivalPriceOnSkip).toBe(0.002);
+  });
+
+  it("keeps discovery-only external proposals out of the chosen-source price comparison", () => {
+    const index = buildPerformanceIndex([run("r1", [decision("a", "SKIP"),
+      decision("b", "BUY", { price: 0.002 }), decision("ext", "BUY", { external: true, price: 0.99 })])]);
+    expect(index.ext).toBeUndefined();
+    expect(index.a.rivalPriceOnSkip).toBe(0.002);
   });
 });
