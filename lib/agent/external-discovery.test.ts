@@ -3,6 +3,7 @@ import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../arc-network-profile
 
 const state = vi.hoisted(() => ({ marketplace: vi.fn(), config: {
   networkId: "eip155:5042", externalDiscovery: true, externalDiscoveryLimit: 10, embeddingApiKey: "",
+  embeddingBaseUrl: "https://embeddings.example/v1", embeddingModel: "test-embedding",
 } }));
 vi.mock("../config", () => ({ config: state.config }));
 vi.mock("node:child_process", async () => {
@@ -21,8 +22,9 @@ beforeEach(() => {
   vi.resetModules();
   state.marketplace.mockReset().mockResolvedValue({ stdout: JSON.stringify({ data: { items: marketplaceItems() } }) });
   state.config.externalDiscovery = true;
+  state.config.embeddingApiKey = "";
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("external marketplace selected-network metadata", () => {
   it.each([ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE])("matches $name without accepting the other network as compatible", async (profile) => {
@@ -71,5 +73,190 @@ describe("external marketplace selected-network metadata", () => {
     const { discoverExternalCandidates } = await import("./external-discovery");
     expect(await discoverExternalCandidates("weather", [])).toEqual([]);
     expect(state.marketplace).not.toHaveBeenCalled();
+  });
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(done => { resolve = done; });
+  return { promise, resolve };
+}
+
+function embeddingFetch() {
+  state.config.embeddingApiKey = "synthetic-test-key";
+  const fetch = vi.fn(async (_url: string, init: RequestInit) => {
+    const { input } = JSON.parse(init.body as string) as { input: string[] };
+    return { ok: true, json: async () => ({ data: input.map(() => ({ embedding: [1, 0] })) }) };
+  });
+  vi.stubGlobal("fetch", fetch);
+  return fetch;
+}
+
+describe("bounded marketplace discovery work", () => {
+  it("shares an in-flight marketplace load across concurrent questions", async () => {
+    const response = deferred<{ stdout: string }>();
+    state.marketplace.mockReturnValue(response.promise);
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const first = discoverExternalCandidates("weather", []);
+    const second = discoverExternalCandidates("weather forecast", []);
+    expect(state.marketplace).toHaveBeenCalledOnce();
+    response.resolve({ stdout: JSON.stringify({ data: { items: marketplaceItems() } }) });
+    expect((await Promise.all([first, second])).every(items => items.length === 2)).toBe(true);
+  });
+
+  it("starts the successful snapshot TTL at completion and refreshes after expiry", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(0);
+    const response = deferred<{ stdout: string }>();
+    state.marketplace.mockReturnValueOnce(response.promise);
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const first = discoverExternalCandidates("weather", []);
+    clock.mockReturnValue(14_000);
+    response.resolve({ stdout: JSON.stringify({ data: { items: marketplaceItems() } }) });
+    await first;
+    clock.mockReturnValue(30 * 60_000);
+    await discoverExternalCandidates("weather", []);
+    expect(state.marketplace).toHaveBeenCalledOnce();
+    clock.mockReturnValue(30 * 60_000 + 14_000);
+    await discoverExternalCandidates("weather", []);
+    expect(state.marketplace).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries an expired negative snapshot without retaining a failed in-flight load", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(0);
+    state.marketplace.mockRejectedValueOnce(new Error("CLI unavailable"));
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    expect(await discoverExternalCandidates("weather", [])).toEqual([]);
+    clock.mockReturnValue(2 * 60_000 - 1);
+    expect(await discoverExternalCandidates("weather", [])).toEqual([]);
+    expect(state.marketplace).toHaveBeenCalledOnce();
+    clock.mockReturnValue(2 * 60_000);
+    expect(await discoverExternalCandidates("weather", [])).toHaveLength(2);
+    expect(state.marketplace).toHaveBeenCalledTimes(2);
+  });
+
+  it("embeds a snapshot only once while embedding each distinct question", async () => {
+    const fetch = embeddingFetch();
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const first = await discoverExternalCandidates("weather", []);
+    const second = await discoverExternalCandidates("forecast", []);
+    expect(first).toHaveLength(2);
+    expect(second).toHaveLength(2);
+    expect(first.every(c => c.description.includes("semantic match 100%"))).toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    await discoverExternalCandidates("weather", []);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    for (const [url] of fetch.mock.calls) expect(url).toBe("https://embeddings.example/v1/embeddings");
+    expect(second.every(c => c.description.includes("Discovery-only: evaluated but never purchased"))).toBe(true);
+  });
+
+  it("shares pending question and snapshot embeddings across concurrent identical questions", async () => {
+    const fetch = embeddingFetch();
+    const response = deferred<Awaited<ReturnType<typeof fetch>>>();
+    fetch.mockReturnValueOnce(response.promise);
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const first = discoverExternalCandidates("weather", []);
+    const second = discoverExternalCandidates("weather", []);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    response.resolve({ ok: true, json: async () => ({ data: [{ embedding: [1, 0] }] }) });
+    const [a, b] = await Promise.all([first, second]);
+    expect(a).toEqual(b);
+    expect(a).toHaveLength(2);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not reuse a different question with the old 32-bit hash collision", async () => {
+    const fetch = embeddingFetch();
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    await discoverExternalCandidates("Aa", []);
+    await discoverExternalCandidates("B@", []);
+    const inputs = fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string).input);
+    expect(inputs).toContainEqual(["Aa "]);
+    expect(inputs).toContainEqual(["B@ "]);
+  });
+
+  it("shares a pending snapshot embedding across distinct concurrent questions", async () => {
+    const fetch = embeddingFetch();
+    const response = deferred<Awaited<ReturnType<typeof fetch>>>();
+    fetch.mockImplementation(async (_url, init) => {
+      const { input } = JSON.parse(init.body as string) as { input: string[] };
+      return input.length === 2 ? response.promise :
+        { ok: true, json: async () => ({ data: [{ embedding: [1, 0] }] }) };
+    });
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const first = discoverExternalCandidates("weather", []);
+    const second = discoverExternalCandidates("forecast", []);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+    response.resolve({ ok: true, json: async () => ({ data: [{ embedding: [1, 0] }, { embedding: [1, 0] }] }) });
+    const results = await Promise.all([first, second]);
+    expect(results.map(items => items.length)).toEqual([2, 2]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("evicts the least recently used question when its bounded cache fills", async () => {
+    const fetch = embeddingFetch();
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    for (let i = 0; i < 128; i++) await discoverExternalCandidates(`question ${i}`, []);
+    await discoverExternalCandidates("question 0", []);
+    await discoverExternalCandidates("question 128", []);
+    await discoverExternalCandidates("question 0", []);
+    await discoverExternalCandidates("question 1", []);
+    const inputs = fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string).input);
+    expect(inputs.filter(input => input.length === 2)).toHaveLength(1);
+    expect(inputs.filter(input => input[0] === "question 0 ")).toHaveLength(1);
+    expect(inputs.filter(input => input[0] === "question 1 ")).toHaveLength(2);
+  });
+
+  it("re-embeds refreshed marketplace metadata instead of reusing stale vectors", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(0);
+    const fetch = embeddingFetch();
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    await discoverExternalCandidates("weather", []);
+    state.marketplace.mockResolvedValue({ stdout: JSON.stringify({ data: { items: marketplaceItems().slice(0, 1) } }) });
+    clock.mockReturnValue(30 * 60_000);
+    expect(await discoverExternalCandidates("weather", [])).toHaveLength(1);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(state.marketplace).toHaveBeenCalledTimes(2);
+  });
+
+  it("falls back on a failed embedding request and retries the next question", async () => {
+    const fetch = embeddingFetch();
+    fetch.mockRejectedValueOnce(new Error("provider unavailable"));
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const first = await discoverExternalCandidates("weather", []);
+    expect(first.every(c => c.description.includes("keyword match"))).toBe(true);
+    const second = await discoverExternalCandidates("weather", []);
+    expect(second.every(c => c.description.includes("semantic match"))).toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries failed snapshot embeddings without repeating a successful question embedding", async () => {
+    const fetch = embeddingFetch();
+    fetch.mockImplementationOnce(async () => ({ ok: true, json: async () => ({ data: [{ embedding: [1, 0] }] }) }));
+    fetch.mockRejectedValueOnce(new Error("snapshot embedding unavailable"));
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    expect((await discoverExternalCandidates("weather", [])).every(c => c.description.includes("keyword match"))).toBe(true);
+    expect((await discoverExternalCandidates("weather", [])).every(c => c.description.includes("semantic match"))).toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([null, { data: [{ embedding: null }] }, { data: [{ embedding: ["1", 0] }] },
+    { data: [{ embedding: [] }] }, { data: [{ embedding: [NaN, 0] }] }, { data: [] }])(
+    "uses keyword fallback for a malformed query embedding (%j)", async body => {
+      const fetch = embeddingFetch();
+      fetch.mockResolvedValueOnce({ ok: true, json: async () => body } as Awaited<ReturnType<typeof fetch>>);
+      const { discoverExternalCandidates } = await import("./external-discovery");
+      const result = await discoverExternalCandidates("weather", []);
+      expect(result).toHaveLength(2);
+      expect(result.every(c => c.description.includes("keyword match"))).toBe(true);
+    },
+  );
+
+  it("uses keyword fallback when snapshot dimensions differ from the question", async () => {
+    const fetch = embeddingFetch();
+    fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ data: [{ embedding: [1, 0, 0] }] }) });
+    const { discoverExternalCandidates } = await import("./external-discovery");
+    const result = await discoverExternalCandidates("weather", []);
+    expect(result).toHaveLength(2);
+    expect(result.every(c => c.description.includes("keyword match"))).toBe(true);
   });
 });

@@ -13,6 +13,7 @@
  */
 
 import { exec } from "node:child_process";
+import { createHash } from "node:crypto";
 import { promisify } from "node:util";
 import { config } from "../config";
 import type { SourceCandidate } from "../llm";
@@ -56,6 +57,7 @@ interface RawItem {
 // Marketplace snapshot cache — one CLI call serves many queries. Negative results cached briefly so
 // a missing/offline `circle` CLI never re-hangs every query.
 let snapshot: { at: number; items: ExternalEndpoint[] } | null = null;
+let loadingMarketplace: Promise<ExternalEndpoint[]> | null = null;
 const TTL_OK = 30 * 60_000;
 const TTL_FAIL = 2 * 60_000;
 
@@ -65,19 +67,27 @@ async function loadMarketplace(): Promise<ExternalEndpoint[]> {
   if (snapshot && now - snapshot.at < (snapshot.items.length ? TTL_OK : TTL_FAIL)) {
     return snapshot.items;
   }
-  let items: ExternalEndpoint[] = [];
+  if (loadingMarketplace) return loadingMarketplace;
+  loadingMarketplace = (async () => {
+    let items: ExternalEndpoint[] = [];
+    try {
+      const { stdout } = await pexec(
+        "circle services search --output json --limit 200",
+        { timeout: 15_000, maxBuffer: 16 * 1024 * 1024, windowsHide: true },
+      );
+      const raw = (JSON.parse(stdout)?.data?.items ?? []) as RawItem[];
+      items = raw.map(parseItem).filter((e): e is ExternalEndpoint => e !== null);
+    } catch {
+      items = []; // CLI absent, offline, or timed out — discovery degrades gracefully.
+    }
+    snapshot = { at: Date.now(), items };
+    return items;
+  })();
   try {
-    const { stdout } = await pexec(
-      "circle services search --output json --limit 200",
-      { timeout: 15_000, maxBuffer: 16 * 1024 * 1024, windowsHide: true },
-    );
-    const raw = (JSON.parse(stdout)?.data?.items ?? []) as RawItem[];
-    items = raw.map(parseItem).filter((e): e is ExternalEndpoint => e !== null);
-  } catch {
-    items = []; // CLI absent, offline, or timed out — discovery degrades gracefully.
+    return await loadingMarketplace;
+  } finally {
+    loadingMarketplace = null;
   }
-  snapshot = { at: now, items };
-  return items;
 }
 
 /** Map one raw bazaar item to a normalized endpoint, or null if it lacks a payable resource. */
@@ -132,14 +142,15 @@ function tokens(text: string): Set<string> {
 
 type Vec = number[];
 
-/** Embedding cache: text-hash → vector. Avoids repeated API calls across queries. */
+/** Bounded question LRU; retain neither question text nor a growing history of vectors. */
+const MAX_QUESTION_EMBEDDINGS = 128;
 const embedCache = new Map<string, Vec>();
+const pendingEmbeddings = new Map<string, Promise<Vec | null>>();
+/** A refreshed snapshot gets new vectors; obsolete snapshots can be garbage-collected. */
+const snapshotEmbeddings = new WeakMap<ExternalEndpoint[], Promise<Vec[] | null>>();
 
 function cacheKey(text: string): string {
-  // Simple DJB2 hash — fast, no crypto import needed, sufficient for cache keys
-  let h = 5381;
-  for (let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
-  return String(h);
+  return createHash("sha256").update(text).digest("hex");
 }
 
 /** Call an OpenAI-compatible /embeddings endpoint. Returns the vector or null on failure. */
@@ -156,8 +167,12 @@ async function embed(texts: string[]): Promise<Vec[] | null> {
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) return null;
-    const json = (await res.json()) as { data: { embedding: Vec }[] };
-    return json.data?.map((d) => d.embedding) ?? null;
+    const json = (await res.json()) as { data?: { embedding?: unknown }[] } | null;
+    if (!Array.isArray(json?.data) || json.data.length !== texts.length) return null;
+    const vecs = json.data.map(d => d?.embedding);
+    if (!vecs.every((v): v is Vec => Array.isArray(v) && v.length > 0 &&
+      v.every(n => typeof n === "number" && Number.isFinite(n)))) return null;
+    return vecs;
   } catch {
     return null;
   }
@@ -167,11 +182,26 @@ async function embed(texts: string[]): Promise<Vec[] | null> {
 async function embedOne(text: string): Promise<Vec | null> {
   const key = cacheKey(text);
   const cached = embedCache.get(key);
-  if (cached) return cached;
-  const vecs = await embed([text]);
-  if (!vecs || vecs.length === 0) return null;
-  embedCache.set(key, vecs[0]);
-  return vecs[0];
+  if (cached) {
+    embedCache.delete(key);
+    embedCache.set(key, cached);
+    return cached;
+  }
+  const pending = pendingEmbeddings.get(key);
+  if (pending) return pending;
+  const request = (async () => {
+    const vecs = await embed([text]);
+    if (!vecs) return null;
+    embedCache.set(key, vecs[0]);
+    if (embedCache.size > MAX_QUESTION_EMBEDDINGS) embedCache.delete(embedCache.keys().next().value!);
+    return vecs[0];
+  })();
+  pendingEmbeddings.set(key, request);
+  try {
+    return await request;
+  } finally {
+    pendingEmbeddings.delete(key);
+  }
 }
 
 /** Cosine similarity between two vectors (0..1). Returns 0 on dimension mismatch. */
@@ -201,6 +231,17 @@ function endpointText(e: ExternalEndpoint): string {
   return `${e.name}. ${e.description} ${e.category} ${e.resource}`;
 }
 
+/** Share only this snapshot's embedding work. Failed requests remain retryable. */
+async function embedSnapshot(endpoints: ExternalEndpoint[]): Promise<Vec[] | null> {
+  const cached = snapshotEmbeddings.get(endpoints);
+  if (cached) return cached;
+  const request = embed(endpoints.map(endpointText));
+  snapshotEmbeddings.set(endpoints, request);
+  const vecs = await request;
+  if (!vecs) snapshotEmbeddings.delete(endpoints);
+  return vecs;
+}
+
 /**
  * Score all endpoints against a question. Uses embedding cosine similarity when an embedding
  * API is configured and reachable; falls back to keyword-overlap otherwise.
@@ -212,9 +253,8 @@ async function scoreEndpoints(
   // Try semantic scoring first
   const qVec = await embedOne(question);
   if (qVec) {
-    const texts = endpoints.map(endpointText);
-    const vecs = await embed(texts);
-    if (vecs && vecs.length === endpoints.length) {
+    const vecs = await embedSnapshot(endpoints);
+    if (vecs && vecs.every(v => v.length === qVec.length)) {
       return endpoints.map((e, i) => ({
         e,
         s: cosine(qVec, vecs[i]),
