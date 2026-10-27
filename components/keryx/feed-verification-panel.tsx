@@ -32,10 +32,6 @@ export function FeedVerificationPanel({ source, enabled = true, onVerified }: {
   const [message, setMessage] = useState("");
   const busy = useRef(false);
   const token = verificationToken(source.walletAddress);
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(token); toast.success(uiCopy("feedVerification.copied")); }
-    catch { toast.error(uiCopy("feedVerification.copyUnavailable")); }
-  };
   const verify = async () => {
     if (busy.current || !enabled || !ownerMatches) return;
     const current = () => mounted.current && latest.current.identity === identity && latest.current.owner === owner;
@@ -60,10 +56,28 @@ export function FeedVerificationPanel({ source, enabled = true, onVerified }: {
     <p className="text-sm text-ink-2">{uiCopy("feedVerification.instructions")}</p>
     <p className="break-all text-xs">{uiCopy("feedVerification.wallet", { wallet: source.walletAddress })}</p>
     {source.rssUrl && <p className="break-all text-xs">{uiCopy("feedVerification.feed", { url: source.rssUrl })}</p>}
-    <div className="flex items-center gap-2"><code className="min-w-0 flex-1 break-all border border-line bg-paper p-2 font-mono text-xs">{token}</code><button type="button" onClick={() => void copy()} aria-label={uiCopy("feedVerification.copyLabel")}><Copy className="h-4 w-4" /></button></div>
+    <div className="flex items-center gap-2"><code className="min-w-0 flex-1 break-all border border-line bg-paper p-2 font-mono text-xs">{token}</code><VerificationTokenCopy key={JSON.stringify([identity, owner])} token={token} /></div>
     {!enabled && <p role="status" className="text-sm">{uiCopy("feedVerification.waitForIndex")}</p>}
     {!ownerMatches && <p role="status" className="text-sm">{uiCopy("feedVerification.signIn")}</p>}
     {message && <p role="status" className="text-sm text-seal">{message}</p>}
     <button type="button" onClick={() => void verify()} disabled={checking || !enabled || !ownerMatches} className="flex items-center gap-2 border border-ink px-4 py-2 text-sm disabled:opacity-50">{checking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}{checking ? uiCopy("feedVerification.checking") : uiCopy("feedVerification.verify")}</button>
   </section>;
+}
+
+function VerificationTokenCopy({ token }: { token: string }) {
+  const uiCopy = useUiMessages();
+  const mounted = useRef(true), busy = useRef(false);
+  const [pending, setPending] = useState(false);
+  useLayoutEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const copy = async () => {
+    if (busy.current) return;
+    busy.current = true; setPending(true);
+    try {
+      await navigator.clipboard.writeText(token);
+      if (mounted.current) toast.success(uiCopy("feedVerification.copied"));
+    } catch {
+      if (mounted.current) toast.error(uiCopy("feedVerification.copyUnavailable"));
+    } finally { busy.current = false; if (mounted.current) setPending(false); }
+  };
+  return <button type="button" onClick={() => void copy()} aria-busy={pending} aria-disabled={pending} aria-label={uiCopy("feedVerification.copyLabel")} className="flex min-h-11 min-w-11 shrink-0 items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal aria-disabled:cursor-wait"><Copy className="h-4 w-4" /></button>;
 }
