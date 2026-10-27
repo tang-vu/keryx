@@ -11,11 +11,12 @@
 
 
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Copy, Terminal } from "lucide-react";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+import { setupCopy } from "@/locales/en/get-started";
 
 
 
@@ -35,12 +36,46 @@ circle services pay ${ORIGIN}/api/agent/ask -X POST
 
 export function A2aCallCard() {
   const message = useUiMessages();
-  const [copied, setCopied] = useState(false);
+  const setup = useUiCopy("get-started", setupCopy);
+  const [status, setStatus] = useState<"idle" | "pending" | "copied" | "failed">("idle");
+  const example = useRef<HTMLPreElement>(null);
+  const mounted = useRef(true), copyPending = useRef(false);
+  const resetTimer = useRef<number | undefined>(undefined);
 
-  function copy() {
-    void navigator.clipboard.writeText(SNIPPET).catch(() => null);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; window.clearTimeout(resetTimer.current); };
+  }, []);
+
+  async function copy() {
+    if (copyPending.current) return;
+    copyPending.current = true;
+    window.clearTimeout(resetTimer.current);
+    resetTimer.current = undefined;
+    setStatus("pending");
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(SNIPPET);
+      if (!mounted.current) return;
+      setStatus("copied");
+      resetTimer.current = window.setTimeout(() => {
+        resetTimer.current = undefined;
+        if (mounted.current) setStatus("idle");
+      }, 2000);
+    } catch {
+      if (!mounted.current) return;
+      setStatus("failed");
+      example.current?.focus();
+      try {
+        const selection = window.getSelection();
+        if (example.current && selection) {
+          const range = document.createRange(); range.selectNodeContents(example.current);
+          selection.removeAllRanges(); selection.addRange(range);
+        }
+      } catch { /* The focused example remains available for manual selection. */ }
+    } finally {
+      copyPending.current = false;
+    }
   }
 
   return (
@@ -61,17 +96,22 @@ export function A2aCallCard() {
       <div className="relative m-5 mt-3.5 border border-line bg-paper-2">
         <button
           type="button"
-          onClick={copy}
+          onClick={() => { void copy(); }}
           title={message("agentIntegration.copyTitle")}
-          className="absolute right-2 top-2 inline-flex items-center gap-1.5 border border-line bg-paper px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-2 transition-colors hover:border-seal hover:text-seal"
+          aria-label={message("agentIntegration.copyTitle")}
+          aria-busy={status === "pending"} aria-disabled={status === "pending"}
+          className="absolute right-2 top-2 inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 border border-line bg-paper px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-2 transition-colors hover:border-seal hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal aria-disabled:cursor-wait motion-reduce:transition-none"
         >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
-          {copied ? message("agentIntegration.copied") : message("agentIntegration.copy")}
+          {status === "copied" ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
+          {status === "copied" ? message("agentIntegration.copied") : message("agentIntegration.copy")}
         </button>
-        <pre className="overflow-x-auto px-4 py-3.5 font-mono text-[12px] leading-relaxed text-ink">
+        <pre ref={example} tabIndex={0} aria-label={message("agentIntegration.title")} className="max-w-full overflow-x-auto px-4 pb-3.5 pt-16 font-mono text-[12px] leading-relaxed text-ink focus-visible:outline-2 focus-visible:outline-seal">
           <code>{SNIPPET}</code>
         </pre>
       </div>
+      <p role="status" aria-atomic="true" className={`mb-4 min-h-4 px-5 font-mono text-xs leading-relaxed ${status === "failed" ? "text-seal" : "text-paid"}`}>
+        {status === "failed" ? setup.common.copyFailed : status === "copied" ? message("agentIntegration.copied") : ""}
+      </p>
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-line px-5 py-3 font-mono text-[11px] text-ink-3">
         <Terminal size={13} className="text-seal" />
