@@ -53,7 +53,11 @@ it("carries a uniquely matching extracted heading and its qualified paragraphs t
   const source = { ...gatheredArticle("synthetic", article), marker: "S1",
     requestedSource: { urls: [requestedUrl], readScope: "bounded-whole-document" as const } };
   const baseline = evidenceContext(question, targets, [{ ...source, requestedSource: undefined }])[0];
-  expect(baseline.passages.some(passage => passage.text.includes(configuration))).toBe(false);
+  // Spare body sampling can recover the first rules, but cannot certify that a
+  // following qualification was retained. The explicit hint still preserves it.
+  expect(baseline.passages.some(passage => passage.text.includes(configuration))).toBe(true);
+  expect(baseline.passages.some(passage => passage.text.includes(caveat))).toBe(false);
+  expect(baseline.candidateSelection?.sampled).toBe(true);
   const selected = evidenceContext(question, targets, [source])[0];
   for (const fact of [mechanism, configuration, symptom, caveat]) {
     expect(selected.passages.some(passage => passage.text.includes(fact))).toBe(true);

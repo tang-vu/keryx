@@ -60,7 +60,7 @@ beforeAll(async () => {
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 
-type Failure = "none" | "climate-withheld" | "review-unavailable" | "false-source-attribution" | "unselected-facts";
+type Failure = "none" | "climate-withheld" | "review-unavailable" | "false-source-attribution" | "unglossed-targets";
 class SyntheticNasaTeachingTransport extends JsonChatEngine {
   readonly name = "llm:synthetic-nasa-teaching-fixture";
   packets: { system: string; packet: Record<string, unknown>; cap?: number }[] = [];
@@ -72,7 +72,7 @@ class SyntheticNasaTeachingTransport extends JsonChatEngine {
       const options = packet.quoteOptions as { quoteId: string; marker: string; text: string }[];
       const evidence = quotes.flatMap((quote, claimIndex) => {
         const option = options.find(row => row.text === quote);
-        if (!option && this.failure === "unselected-facts") return [];
+        if (!option && this.failure === "unglossed-targets") return [];
         if (!option) throw new Error("Actual NASA passage was not selected for generation");
         return [{ claimIndex, marker: option.marker, quoteId: option.quoteId, statement: statements[claimIndex], support: 0.9 }];
       });
@@ -109,7 +109,7 @@ async function drive(options: { enabled?: boolean; failure?: Failure; untranslat
   const transport = new SyntheticNasaTeachingTransport(failure);
   const synthesize = vi.fn((input: SynthInput) => transport.synthesize(input));
   const attribute = vi.fn(async (input: { used: { sourceId: string }[] }) => input.used.map(row => ({ sourceId: row.sourceId, weight: 1, rationale: "Synthetic factual contribution assessment" })));
-  const activeTargets = failure === "unselected-facts" ? untranslatedTargets.map(target => target.replace(/\s*\([^)]*\)/gu, ""))
+  const activeTargets = failure === "unglossed-targets" ? untranslatedTargets.map(target => target.replace(/\s*\([^)]*\)/gu, ""))
     : options.untranslated ? untranslatedTargets : targets;
   const engine = { name: "synthetic-nasa-teaching-engine", decompose: async () => activeTargets,
     decide: async (input: { candidates: { id: string; name: string }[] }) => input.candidates.map(row => ({ sourceId: row.id, sourceName: row.name,
@@ -198,18 +198,21 @@ it("admits the original Vietnamese targets through their explicit glosses and ac
   expect(researchReportMarkdown(on.run, null, [])).toContain("Hoạt động do Keryx đề xuất (10 phút)");
 });
 
-it("records an unglossed-target retrieval limitation without pretending the available NASA facts or invented lesson were admitted", async () => {
-  const f = await drive({ failure: "unselected-facts" });
+it("retains actual NASA premises for unglossed targets and admits the lesson only with synthetic independent supplier review", async () => {
+  const f = await drive({ failure: "unglossed-targets" });
   const options = f.transport.packets[0].packet.quoteOptions as { text: string }[];
   for (const quote of quotes) {
     expect(article.text).toContain(quote);
-    expect(options.map(row => row.text)).not.toContain(quote);
+    expect(options.map(row => row.text)).toContain(quote);
   }
-  expect(f.run.teachingProposals!.complete).toBe(false);
-  expect(f.run.teachingProposals!.proposals).toEqual([]);
-  expect(f.run.answer).toContain("tìm đoạn trực tiếp trả lời mục đó");
-  expect(f.run.answer).not.toContain("hôm nay thành phố có mưa");
-  expect(f.transport.packets).toHaveLength(1); // No proposal-only review or repair.
+  expect(f.run.subClaims).toEqual(untranslatedTargets.map(target => target.replace(/\s*\([^)]*\)/gu, "")));
+  expect(f.run.teachingProposals!.complete).toBe(true);
+  expect(f.run.teachingProposals!.admittedStatements.map(row => row.text)).toEqual(statements);
+  expect(f.run.teachingProposals!.proposals.map(row => row.proposal.kind))
+    .toEqual(["activity", "classification-example", "classification-example", "exit-question"]);
+  expect(f.transport.packets).toHaveLength(2); // Existing factual/proposal review remains required.
+  const sources = f.transport.packets[0].packet.sources as { passages: { text: string }[] }[];
+  expect(sources[0].passages.reduce((sum, passage) => sum + passage.text.length, 0)).toBeLessThanOrEqual(2000);
   expect(f.read).toHaveBeenCalledOnce(); expect(f.deniedPayment).not.toHaveBeenCalled();
 });
 
