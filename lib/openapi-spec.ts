@@ -62,6 +62,10 @@ const outputLimitMetadataProperties = {
   outputLimitTraceStepsOmitted: { type: "integer", minimum: 1, description: "Earlier trace steps outside the bounded diagnostic scan; not a count of output-limit events." },
 };
 
+const creatorFeedbackHeaders = {
+  "Cache-Control": { description: "Do not cache question-derived feedback.", schema: { type: "string", enum: ["no-store"] } },
+} as const;
+
 export const openapiSpec = {
   openapi: "3.1.0",
   info: {
@@ -1284,11 +1288,21 @@ export const openapiSpec = {
           "expected value on each side of the choice, the median listed price of the sources " +
           "chosen in the runs that passed on it, and the most recent skip rationales verbatim. " +
           "Public — every underlying decision trace is already published on its dispatch " +
-          "permalink. `performance` is null when the window never weighed the source.",
+          "permalink. `performance` is null only after a successful public read that never weighed the source. " +
+          "A failed read returns 503 instead of an empty observation. Recorded choices and citations " +
+          "do not attest paid delivery or settled rewards. Responses use Cache-Control: no-store.",
         parameters: [{ in: "path", name: "id", required: true, schema: { type: "string" } }],
         responses: {
-          "200": { description: "{ sourceId, name, windowRuns, performance }" },
-          "404": { description: "Source not found." },
+          "200": { description: "{ sourceId, name, windowRuns, performance }", headers: creatorFeedbackHeaders },
+          "404": { description: "Source not found.", headers: creatorFeedbackHeaders },
+          "503": {
+            description: "Creator decision feedback is unavailable. No empty or zero-value observation is inferred.",
+            headers: creatorFeedbackHeaders,
+            content: { "application/json": {
+              schema: { type: "object", required: ["error"], properties: { error: { type: "string", enum: ["creator_performance_unavailable"] } } },
+              example: { error: "creator_performance_unavailable" },
+            } },
+          },
         },
       },
     },
