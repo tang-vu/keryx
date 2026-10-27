@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import { chromium, webkit, type Route } from "playwright";
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
+import { fulfillBuiltGet } from "../test-support/fulfill-built-get";
 
 const source = process.cwd(), temporary = await mkdtemp(join(tmpdir(), "keryx-navigation-latency-"));
 assert(resolve(temporary).startsWith(resolve(tmpdir()) + sep));
@@ -17,16 +18,6 @@ listener.listen(0, "127.0.0.1"); await once(listener, "listening");
 const address = listener.address(); assert(address && typeof address === "object");
 await new Promise<void>((done, reject) => listener.close(error => error ? reject(error) : done()));
 const physicalOrigin = `http://127.0.0.1:${address.port}`, origin = "https://navigation-latency.test";
-async function fulfillBuiltGet(route: Route) {
-  const request = route.request(), url = new URL(request.url());
-  assert.equal(request.method(), "GET");
-  const response = await route.fetch({ url: physicalOrigin + url.pathname + url.search });
-  const body = await response.body(), headers = { ...response.headers() };
-  // APIResponse bodies are decoded buffers, not the upstream compressed/chunked wire stream.
-  for (const name of ["content-encoding", "transfer-encoding", "content-length", "connection", "keep-alive"])
-    delete headers[name];
-  return route.fulfill({ response, headers, body });
-}
 const engine = process.argv.includes("--webkit") ? webkit : chromium;
 type NavigationCase = { destination: string; fragment: string; entryPath?: string };
 const adjacentFragments: NavigationCase[] = [
@@ -97,7 +88,7 @@ try {
             assert(!finalRoute, "One final navigation request");
             finalRoute = route; held.add(route); return;
           }
-          return fulfillBuiltGet(route);
+          return fulfillBuiltGet(route, physicalOrigin);
         });
         const prefetch = page.waitForResponse(response => new URL(response.url()).pathname === destination &&
           response.request().headers()["next-router-prefetch"] === "1" &&
@@ -213,7 +204,7 @@ try {
           await page.locator('header button[aria-label="Open menu"]').waitFor({ state: "attached" });
           await finalRoute.abort(); held.delete(finalRoute);
         } else {
-          await fulfillBuiltGet(finalRoute);
+          await fulfillBuiltGet(finalRoute, physicalOrigin);
           held.delete(finalRoute);
           await page.waitForURL(origin + destination);
           await page.getByRole("status").filter({ hasText: "Loading page" }).waitFor({ state: "detached" });
