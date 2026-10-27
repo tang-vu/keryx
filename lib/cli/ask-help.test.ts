@@ -22,7 +22,7 @@ registerHooks({ resolve(specifier, context, next) {
 afterAll(() => { unlinkSync(guard); rmdirSync(directory); });
 
 function invoke(args: string[], claims = false) {
-  const env: Record<string, string> = { KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1",
+  const env: NodeJS.ProcessEnv = { NODE_ENV: "test", KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1",
     KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED: String(claims), NO_COLOR: "1", TEMP: tmpdir(), TMP: tmpdir(), TMPDIR: tmpdir() };
   for (const key of ["PATH", "SystemRoot", "ComSpec", "PATHEXT", "NODE_COMPILE_CACHE"]) {
     const value = process.env[key]; if (value !== undefined) env[key] = value;
