@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { downloadPrivateBrowserText } from "@/lib/browser-private-text-download";
 import { ownedHistoryCopy } from "@/locales/en/owned-history";
 import { useEffect, useRef, useState } from "react";
 import { useSiweAuth } from "@/lib/hooks/use-siwe-auth";
@@ -277,11 +278,8 @@ function History({ wallet, attach, current, accessLost }: {
       const text = format === "json" ? JSON.stringify(value) : csv(value);
       if (new TextEncoder().encode(text).byteLength > B.exportBytes) throw new Error(unavailable);
       if (!live() || version !== actionVersion.current) return;
-      const url = URL.createObjectURL(new Blob([text], { type: format === "json" ? "application/json" : "text/csv;charset=utf-8" }));
-      try {
-        const anchor = document.createElement("a"); anchor.href = url; anchor.download = `keryx-private-job-history.${format}`;
-        anchor.click(); // Never mount or retain a private download link in the DOM.
-      } finally { URL.revokeObjectURL(url); }
+      // Never mount or retain a private download link in the DOM.
+      downloadPrivateBrowserText(text, `keryx-private-job-history.${format}`, format === "json" ? "application/json" : "text/csv;charset=utf-8");
       if (live() && version === actionVersion.current) setDownload(value.truncated ? copy.download.truncated({ rows: value.rows.length })
         : copy.download.complete({ rows: value.rows.length }));
     } catch (error) { if (version === actionVersion.current) failed(error); }

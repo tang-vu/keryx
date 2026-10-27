@@ -316,7 +316,7 @@ it.each([
   expect(container.querySelector("pre")).toBeNull(); expect(container.querySelector('[role="alert"]')).toBeTruthy();
 });
 
-it.each(["json", "csv"] as const)("downloads validated bounded %s metadata only on manual action, with NULL/qualification and immediate URL cleanup", async format => {
+it.each(["json", "csv"] as const)("downloads validated bounded %s metadata only on manual action, with NULL/qualification and delayed URL cleanup", async format => {
   const saved = { ...row(), question: '=HYPERLINK("https://foreign.test","formula")' };
   const f = fixture(); f.respond(path => Response.json(path.endsWith("/export") ? exported([saved], true) : page([saved]))); await render();
   expect(f.downloads).toEqual([]); await click(format === "json" ? "Download JSON" : "Download CSV");
@@ -329,7 +329,7 @@ it.each(["json", "csv"] as const)("downloads validated bounded %s metadata only 
   if (format === "json") expect(JSON.parse(text).rows[0].ownSettledSpendMicros).toBeNull();
   else expect(text).toContain("'=HYPERLINK");
   expect(container.textContent).toContain("Export is truncated"); expect(container.querySelectorAll("a[href^='blob:']")).toHaveLength(0);
-  expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:private-download");
+  await vi.waitFor(() => expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:private-download"), { timeout: 3000 });
 });
 
 it.each([
