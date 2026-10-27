@@ -6,28 +6,6 @@ permissions:
 on:
   push:
     branches: [main]
-    paths:
-      - "rust/**"
-      - "test-support/**"
-      - "lib/**"
-      - "scripts/create-rust-readonly-manifest.mts"
-      - "scripts/evaluate-rust-readonly.mts"
-      - "scripts/test-rust-native-artifact.mts"
-      - "scripts/test-rust-native-handoff.mts"
-      - "scripts/rust-native-synthetic-fixture.mts"
-      - "scripts/rust-native-test-fixture.rs"
-      - "scripts/rust-offline-fallback-guard.mjs"
-      - "scripts/operator.mts"
-      - "scripts/build-native-writer.mts"
-      - "scripts/pe-imports.mjs"
-      - "scripts/pe-imports.test.mjs"
-      - "scripts/test-native-task-creation.mts"
-      - "scripts/run-standard-user-native-test.ps1"
-      - "scripts/standard-user-native-child.ps1"
-      - "package.json"
-      - "package-lock.json"
-      - "docs/native-inspection-evaluation.md"
-      - ".github/workflows/native-inspection-adapter.yml"
   pull_request:
     branches: [main]
     paths:

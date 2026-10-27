@@ -6,22 +6,6 @@ permissions:
 on:
   push:
     branches: [main]
-    paths:
-      - "desktop/**"
-      - "shared/**"
-      - "app/icon.svg"
-      - "app/globals.css"
-      - "lib/**"
-      - "rust/**"
-      - "test-support/**"
-      - "scripts/build-native-writer.mts"
-      - "scripts/pe-imports.mjs"
-      - "scripts/pe-imports.test.mjs"
-      - "scripts/operator.mts"
-      - "scripts/test-reading-evidence.mts"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/desktop.yml"
   pull_request:
     branches: [main]
     paths:

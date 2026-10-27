@@ -6,15 +6,6 @@ permissions:
 on:
   push:
     branches: [main]
-    paths:
-      - "lib/**"
-      - "app/api/**"
-      - "components/keryx/session-*"
-      - "components/keryx/creator-owner-withdrawal-panel.tsx"
-      - "scripts/funding-inspect*"
-      - "package*.json"
-      - "vitest.config.mts"
-      - ".github/workflows/windows-payment-fixtures.yml"
   pull_request:
     branches: [main]
     paths:
