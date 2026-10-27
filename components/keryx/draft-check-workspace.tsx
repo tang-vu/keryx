@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { downloadBrowserText } from "@/lib/browser-text-download";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 import { buildDraftCheck, DRAFT_CHECK_NOTICE, MAX_DRAFT_CHECK_BYTES, MAX_DRAFT_SOURCE_CHARACTERS, type DraftCheck, type DraftCheckRequest } from "@/lib/research/draft-check";
 import { detectDraftReferenceFormat, parseDraftReferences, type DraftReference } from "@/lib/research/draft-check-references";
 import { draftCheckCopy as copy, draftCheckCopyText as copyText } from "@/lib/research/draft-check-copy";
@@ -63,6 +64,7 @@ export function DraftCheckResults({ result }: { result: DraftCheck }) {
 
 /** Tab-memory editor. The shared contract runs in this browser; no request is made. */
 export function DraftCheckWorkspace() {
+  const uiCopy = useUiMessages();
   const [passage, setPassage] = useState(""), [referenceText, setReferenceText] = useState("");
   const [sources, setSources] = useState<Record<string, SourceEditor>>({});
   const [suggestions, setSuggestions] = useState<DraftCheckRequest["suggestions"]>([]);
@@ -148,10 +150,14 @@ export function DraftCheckWorkspace() {
       <button type="button" className={button} disabled={!passage.trim() || !references} onClick={run}>{copy.workspace.check}</button>
       <button type="button" className={button} disabled={!result} onClick={() => {
         if (!result) return;
-        downloadBrowserText(`${JSON.stringify(result, null, 2)}\n`, "private-draft-check.json", "application/json"); setMessage(copy.workspace.downloaded);
+        try {
+          downloadBrowserText(`${JSON.stringify(result, null, 2)}\n`, "private-draft-check.json", "application/json"); setMessage(copy.workspace.downloaded);
+        } catch { setMessage(uiCopy("evidenceMatrix.downloadUnavailable")); }
       }}>{copy.workspace.download}</button>
       <button type="button" className={button} disabled={!result} onClick={() => {
-        downloadBrowserText(`${JSON.stringify(request(), null, 2)}\n`, "private-draft-input.json", "application/json"); setMessage(copy.workspace.downloaded);
+        try {
+          downloadBrowserText(`${JSON.stringify(request(), null, 2)}\n`, "private-draft-input.json", "application/json"); setMessage(copy.workspace.downloaded);
+        } catch { setMessage(uiCopy("evidenceMatrix.downloadUnavailable")); }
       }}>{copy.retention.downloadInput}</button>
       <label className={button}>{copy.retention.importInput}<input ref={fileInput} type="file" accept=".json,application/json" className="ml-2 max-w-40" onChange={async event => {
         const file = event.target.files?.[0]; event.target.value = "";
