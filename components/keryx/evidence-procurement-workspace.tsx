@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { evidenceProcurementCopy as copy, evidenceProcurementCopyText as copyText } from "@/lib/evidence-procurement/copy";
 import { downloadBrowserText } from "@/lib/browser-text-download";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 import { MAX_PROCUREMENT_BYTES, parseEvidenceProcurement, type EvidenceProcurementPacket, type ProcurementOffer, type ProcurementDelivery } from "@/lib/evidence-procurement/contracts";
 import { buildEvidenceProcurement, PROCUREMENT_NOTICE, procurementRequestHash, procurementBodyHash, procurementOfferHash, procurementDeliveryHash,
   procurementOfferMessage, procurementDeliveryMessage, type EvidenceProcurementResult } from "@/lib/evidence-procurement/engine";
@@ -29,6 +30,7 @@ const currentObservationTime = () => Date.now();
 
 /** Private tab-memory workbench. An optional client signer signs messages only. */
 export function EvidenceProcurementWorkspace({ signer }: { signer?: Signer } = {}) {
+  const uiCopy = useUiMessages();
   const [packet, setPacket] = useState<EvidenceProcurementPacket>();
   const [result, setResult] = useState<EvidenceProcurementResult>();
   const [message, setMessage] = useState(""), [busy, setBusy] = useState(false);
@@ -371,7 +373,10 @@ export function EvidenceProcurementWorkspace({ signer }: { signer?: Signer } = {
       <h2 className="font-display text-xl">{copy.workspace.keepOrRestoreThisWork}</h2>
       <p className="mt-2 font-serif text-sm text-ink-2">{copy.workspace.downloadThePacketToContinueLaterOrShareSelected}</p>
       <div className="mt-4 flex flex-wrap gap-3"><button type="button" className={button} disabled={!packet} onClick={() => {
-        if (!packet) return; downloadBrowserText(JSON.stringify(parseEvidenceProcurement(packet)), "private-evidence-procurement-packet.json", "application/json"); setMessage(copy.messages.packetDownloaded);
+        if (!packet) return;
+        try {
+          downloadBrowserText(JSON.stringify(parseEvidenceProcurement(packet)), "private-evidence-procurement-packet.json", "application/json"); setMessage(copy.messages.packetDownloaded);
+        } catch { setMessage(uiCopy("evidenceMatrix.downloadUnavailable")); }
       }}>{copy.workspace.downloadPrivatePlaintextPacket}</button>
       <label className={label}>{copy.workspace.downloadDecisionReceipt}<select className={field} disabled={!result || busy}
         value={receiptFormat} onChange={event => setReceiptFormat(event.target.value as ProcurementReceiptFormat)}>
