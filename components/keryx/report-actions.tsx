@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { AskMeta } from "@/lib/hooks/use-ask-stream";
 import type { PaymentRecord, QueryRun } from "@/lib/types";
 import { researchReportFilename, researchReportMarkdown } from "@/lib/research-report-export";
+import { downloadBrowserText } from "@/lib/browser-text-download";
 import { evidenceProcurementCopy } from "@/lib/evidence-procurement/copy";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
 type Props = { run: QueryRun; meta: AskMeta | null; payments: PaymentRecord[] };
@@ -43,12 +44,7 @@ function ReportActionsForRun({ run, meta, payments }: Props) {
 
   function downloadReport() {
     try {
-      const url = URL.createObjectURL(new Blob([text()], { type: "text/markdown;charset=utf-8" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = researchReportFilename(run.id);
-      link.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      downloadBrowserText(text(), researchReportFilename(run.id), "text/markdown;charset=utf-8");
       setNotice("reportActions.downloaded");
     } catch {
       setNotice("reportActions.downloadUnavailable");

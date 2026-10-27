@@ -9,7 +9,9 @@ import { chromium, type Browser, type Page } from "playwright";
 let browser: Browser, bundle: string, css: string;
 const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR;
 type Fixture = { mode(value: "defer" | "throw" | "missing"): void; settle(success: boolean): void;
-  report(index: number): void; writes: string[]; failDownload(value: boolean): void };
+  report(index: number): void; writes: string[]; failDownload(value: boolean): void;
+  failLink(stage: "none" | "create" | "append" | "click"): void;
+  allocated: string[]; revoked: string[]; connections: boolean[] };
 const fonts = `@font-face{font-family:ReportDisplay;src:url('/fonts/bodoni-moda-latin.woff2')}@font-face{font-family:ReportSerif;src:url('/fonts/spectral-latin-400.woff2')}@font-face{font-family:ReportMono;src:url('/fonts/spline-sans-mono-latin.woff2')}
   :root{--font-bodoni:ReportDisplay;--font-spectral:ReportSerif;--font-spline-mono:ReportMono}`;
 
@@ -17,13 +19,19 @@ beforeAll(async () => {
   bundle = (await build({
     stdin: { contents: `import React,{StrictMode,useState}from'react';import{createRoot}from'react-dom/client';
       import{ReportActions}from'./components/keryx/report-actions';
-      const pending=[];let mode='defer';
-      const nativeCreate=URL.createObjectURL.bind(URL);
-      const fixture=window.reportFixture={writes:[],mode(value){mode=value;Object.defineProperty(navigator,'clipboard',{configurable:true,value:value==='missing'?undefined:{writeText(text){
+      const pending=[];let mode='defer',downloadFailure='none';
+      const nativeCreate=URL.createObjectURL.bind(URL),nativeRevoke=URL.revokeObjectURL.bind(URL),nativeElement=document.createElement.bind(document),
+        nativeAppend=document.body.appendChild.bind(document.body),nativeClick=HTMLAnchorElement.prototype.click;
+      const fixture=window.reportFixture={writes:[],allocated:[],revoked:[],connections:[],mode(value){mode=value;Object.defineProperty(navigator,'clipboard',{configurable:true,value:value==='missing'?undefined:{writeText(text){
         fixture.writes.push(text);if(mode==='throw')throw Error('PRIVATE_CLIPBOARD_DETAIL');
         return new Promise((resolve,reject)=>pending.push({resolve,reject}));}}})},
         settle(success){const request=pending.shift();if(!request)throw Error('No pending synthetic clipboard request');success?request.resolve():request.reject(Error('PRIVATE_PERMISSION_DETAIL'))},
-        failDownload(value){URL.createObjectURL=value?()=>{throw Error('PRIVATE_DOWNLOAD_DETAIL')}:nativeCreate}};
+        failDownload(value){downloadFailure=value?'url':'none'},failLink(stage){downloadFailure=stage}};
+      URL.createObjectURL=blob=>{if(downloadFailure==='url')throw Error('PRIVATE_DOWNLOAD_DETAIL');const url=nativeCreate(blob);fixture.allocated.push(url);return url;};
+      URL.revokeObjectURL=url=>{fixture.revoked.push(url);nativeRevoke(url);};
+      document.createElement=(name,...options)=>{if(name==='a'&&downloadFailure==='create')throw Error('PRIVATE_LINK_DETAIL');return nativeElement(name,...options);};
+      document.body.appendChild=node=>{if(node instanceof HTMLAnchorElement&&downloadFailure==='append')throw Error('PRIVATE_APPEND_DETAIL');return nativeAppend(node);};
+      HTMLAnchorElement.prototype.click=function(){fixture.connections.push(this.isConnected);if(downloadFailure==='click')throw Error('PRIVATE_CLICK_DETAIL');return nativeClick.call(this);};
       fixture.mode('defer');
       const reports=['report/alpha?x=1','report-beta'].map((id,index)=>({id,question:index?'Second question':'First question',answer:index?'Second report body [S1].':'First report body [S1].',
         budget:0.01,engine:'fixture',subClaims:[],decisions:[],createdAt:'2026-10-01',trace:[],paymentMode:'offline',totalSpent:0,totalToCreators:0,
@@ -67,6 +75,34 @@ async function fixture(run: (page: Page) => Promise<void>, width = 390, reducedM
 const settle = (page: Page, success: boolean) => page.evaluate(value => (window as unknown as { reportFixture: Fixture }).reportFixture.settle(value), success);
 const report = (page: Page, index: number) => page.evaluate(value => (window as unknown as { reportFixture: Fixture }).reportFixture.report(value), index);
 const writes = (page: Page) => page.evaluate(() => (window as unknown as { reportFixture: Fixture }).reportFixture.writes);
+const lifecycle = (page: Page) => page.evaluate(() => {
+  const value = (window as unknown as { reportFixture: Fixture }).reportFixture;
+  return { allocated: value.allocated, revoked: value.revoked, connections: value.connections };
+});
+
+it.each(["create", "append", "click"] as const)("releases allocated URLs when report download fails at %s and permits an exact retry", async stage => {
+  await fixture(async page => {
+    await page.getByRole("button", { name: "Copy report", exact: true }).click(); await settle(page, true);
+    const expected = (await writes(page))[0];
+    await page.evaluate(stage => (window as unknown as { reportFixture: Fixture }).reportFixture.failLink(stage), stage);
+    const download = page.getByRole("button", { name: "Download report", exact: true }); await download.click();
+    await expect.poll(() => page.getByRole("status").textContent()).toBe("Download unavailable. Open the saved report instead.");
+    const failed = await lifecycle(page); expect(failed.allocated).toHaveLength(1);
+    await expect.poll(async () => (await lifecycle(page)).revoked, { timeout: 5000 }).toEqual(failed.allocated);
+    expect(await page.locator("a[download]").count()).toBe(0);
+    await page.evaluate(() => (window as unknown as { reportFixture: Fixture }).reportFixture.failLink("none"));
+    const pendingDownload = page.waitForEvent("download"); await download.click(); const file = await pendingDownload;
+    expect(file.suggestedFilename()).toBe("keryx-report-reportalphax1.md");
+    const stream = await file.createReadStream(); if (!stream) throw Error("Actual retry download missing");
+    const parts: Buffer[] = []; for await (const part of stream) parts.push(Buffer.from(part));
+    expect(Buffer.concat(parts).toString("utf8")).toBe(expected);
+    expect(await page.getByRole("status").textContent()).toBe("Report downloaded with citations and payment states.");
+    const retried = await lifecycle(page); expect(retried.allocated).toHaveLength(2);
+    expect(retried.connections.length).toBeGreaterThan(0); expect(retried.connections.every(Boolean)).toBe(true);
+    await expect.poll(async () => (await lifecycle(page)).revoked, { timeout: 5000 }).toEqual(retried.allocated);
+    expect(await page.locator("a[download]").count()).toBe(0);
+  });
+});
 
 it("keeps clipboard feedback truthful through pending, denial, synchronous failure and unsupported clipboard", async () => {
   await fixture(async page => {
