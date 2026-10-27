@@ -9,12 +9,14 @@ import { useUiCopy } from "@/lib/i18n/ui-copy";
 const uiEnglish_copy = copy;
 
 
-const ratioText = (value: { numeratorMicros: string; denominatorSupportedClaims: number } | null, unit: string) =>
-  value ? copy.ratio({ amount: value.numeratorMicros, unit, count: value.denominatorSupportedClaims }) : copy.unknown;
-
 /** Local memory only. Inputs are never uploaded, placed in a URL or saved to browser storage. */
 export function ResearchEvidenceAuditWorkspace() {
   const copy = useUiCopy("evidence-audit", uiEnglish_copy);
+  const ratioText = (value: { numeratorMicros: string; denominatorSupportedClaims: number } | null, unit: string) => {
+    if (!value) return copy.unknown;
+    const values = { amount: value.numeratorMicros, unit, count: value.denominatorSupportedClaims };
+    return copy.ratio.replace(/\$\{(amount|unit|count)\}/g, (_match, key: keyof typeof values) => String(values[key]));
+  };
   const [input, setInput] = useState("");
   const [trust, setTrust] = useState("");
   const [result, setResult] = useState<ResearchEvidenceAudit | null>(null);

@@ -28,7 +28,7 @@ export const evidenceAuditCopy = {
   comparisons: "Decision → receipt comparisons",
   noDecisions: "No captured decisions supplied. Historical records are not reconstructed.",
   download: "Download local result",
-  ratio: ({ amount, unit, count }: { amount: string; unit: string; count: number }) => `${amount} micro-${unit} / ${count} supported claims`,
+  ratio: "${amount} micro-${unit} / ${count} supported claims",
   cost: ({ amount, status }: { amount: string; status: string }) => `${amount} micro-USD · ${status}`,
   receipt: ({ check, digest }: { check: string; digest: string }) => `Receipt: ${check} · ${digest}`,
   networkReview: ({ network, review }: { network: string; review: string }) => `Network: ${network} · Review: ${review}`,
