@@ -6,6 +6,7 @@ import template from "@/docs/business-scenario-template.json";
 import { createMessages } from "@/lib/i18n/messages";
 
 import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+import { downloadBrowserText } from "@/lib/browser-text-download";
 
 
 
@@ -52,19 +53,20 @@ export function BusinessCalculator() {
   const richMessage = useUiRichMessages();
   const [form, setForm] = useState<Form>(initial);
   const [notice, setNotice] = useState("");
+  const [downloadError, setDownloadError] = useState("");
   const revision = useRef(0);
   let input: Scenario | null = null;
   let result: ReturnType<typeof calculateBusinessScenario> | null = null;
   try { input = scenario(form); result = calculateBusinessScenario(input); } catch { /* Invalid edits hide all old results. */ }
 
   function edit(key: keyof Form, value: string) {
-    revision.current++; setNotice(""); setForm(previous => ({ ...previous, [key]: value }));
+    revision.current++; setNotice(""); setDownloadError(""); setForm(previous => ({ ...previous, [key]: value }));
   }
   function download(kind: "inputs" | "report") {
     if (!input || !result) return;
-    const blob = new Blob([JSON.stringify(kind === "inputs" ? input : { inputs: input, report: result }, null, 2) + "\n"], { type: "application/json" });
-    const url = URL.createObjectURL(blob), link = document.createElement("a");
-    link.href = url; link.download = `keryx-business-${kind}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setDownloadError("");
+    try { downloadBrowserText(JSON.stringify(kind === "inputs" ? input : { inputs: input, report: result }, null, 2) + "\n", `keryx-business-${kind}.json`, "application/json"); }
+    catch { setDownloadError(message("evidenceMatrix.downloadUnavailable")); }
   }
   return <div className="space-y-8">
     <section className="border border-line bg-paper p-5 sm:p-8" aria-labelledby="assumptions-title">
@@ -89,13 +91,14 @@ export function BusinessCalculator() {
             if (file.size > 8192) throw new Error("Oversized file");
             const parsed = businessScenarioSchema.parse(JSON.parse((await file.text()).replace(/^\uFEFF/, "")));
             if (version !== revision.current) return;
-            setForm(toForm(parsed)); setNotice(message("businessCalculator.scenarioInputsImportedLocally"));
+            setForm(toForm(parsed)); setDownloadError(""); setNotice(message("businessCalculator.scenarioInputsImportedLocally"));
           } catch { if (version === revision.current) setNotice(message("businessCalculator.couldNotImportInputsUseAKeryxInputs")); }
         }} /> })}</label>
-        <button type="button" className={button} onClick={() => { revision.current++; setForm(initial()); setNotice(message("businessCalculator.resetToIllustrativeFeesWithUnknownCostsAnd")); }}>{message("businessCalculator.resetAssumptions")}</button>
+        <button type="button" className={button} onClick={() => { revision.current++; setForm(initial()); setDownloadError(""); setNotice(message("businessCalculator.resetToIllustrativeFeesWithUnknownCostsAnd")); }}>{message("businessCalculator.resetAssumptions")}</button>
       </div>
       <p className="mt-3 font-serif text-sm text-ink-3">{message("businessCalculator.calculationsAndImportedFilesStayInThisPage")}</p>
       {notice && <p role="status" className="mt-3 font-serif text-sm">{notice}</p>}
+      {downloadError && <p role="alert" className="mt-3 font-serif text-sm text-seal">{downloadError}</p>}
     </section>
     {!result ? <p role="alert" className="border border-seal p-5 font-serif">{message("businessCalculator.enterNonnegativeAmountsWithUpToSixDecimal")}</p> : <>
       <section aria-labelledby="results-title" className="space-y-4">
