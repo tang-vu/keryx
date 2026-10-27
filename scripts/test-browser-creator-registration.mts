@@ -6,6 +6,7 @@ import { chromium } from "playwright";
 import { encodeAbiParameters, encodeEventTopics } from "viem";
 import { ARC_MAINNET_PROFILE, ARC_TESTNET_PROFILE } from "../lib/arc-network-profile";
 import { registrationId } from "../lib/sources/registration-status";
+import type { SourcePerformanceResponse } from "../lib/creator/source-performance-response";
 const creator = `0x${"a".repeat(40)}` as const, registry = `0x${"b".repeat(40)}` as const;
 const urlHash = `0x${"c".repeat(64)}` as const, hash = `0x${"d".repeat(64)}` as const;
 const sourceId = registrationId(creator, urlHash);
@@ -56,7 +57,7 @@ export const usePublicClient=({chainId})=>{window.registrationChain=chainId;retu
   if(u.pathname==="/api/sources") {posts++;preparedPrice=route.request().postDataJSON().fetchPrice;observedPost?.();await holdPost;return route.fulfill({json:offline?{mode:"offline",source:{id:sourceId,name:"Fixture feed",walletAddress:creator,fetchPrice:.005,authors:[],verified:false},verification:{token:`keryx-verify:${creator}`,canVerify:true,instructions:"Place token in your feed"},notify:{url:"https://webhook.invalid",secret:"fixture-secret"}}:{mode:"onchain",sourceId,registryAddress:registry,registerParams:{urlHash,payoutWallet:creator,authors:[{wallet:creator,basisPoints:10000}],fetchPriceUsdc6:"5000",contentCid:"",tags:""},verification:{token:`keryx-verify:${creator}`,canVerify:true,instructions:"Place token in your feed"},notify:{url:"https://webhook.invalid",secret:"fixture-secret"}}});}
   if(u.pathname==="/api/sources/verify"){verifiedId=route.request().postDataJSON().sourceId;return route.fulfill({json:{verified:true}});}
   if(u.pathname.endsWith("/listing")){reads++;if(indexMode==="network")return route.abort();return route.fulfill({status:indexMode==="pending"?404:indexMode==="unavailable"?502:200,json:{mode:indexMode==="offline"?"offline":"onchain",onchainId:indexMode==="mismatch"?urlHash:sourceId,registryAddress:registry,creator}});}
-  if(u.pathname.endsWith("/performance"))return route.fulfill({json:{windowRuns:3,performance:{considered:3,bought:2,reused:1,cited:1,citeThrough:1/3,skipped:0,recentSkips:[],rivalPriceOnSkip:null,price:.016}}});
+  if(u.pathname.endsWith("/performance"))return route.fulfill({json:{sourceId:"feedback",name:"Fixture feedback",windowRuns:3,performance:{considered:3,bought:2,reused:1,cited:1,citeThrough:1/3,skipped:0,recentSkips:[],rivalPriceOnSkip:null,price:.016,evChosen:null,evSkipped:null}} satisfies SourcePerformanceResponse});
   return route.fulfill({contentType:"text/html",body:'<meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div>'});
  });
  async function fresh(initialCreator: string=creator){await page.goto("https://registration.invalid");await page.evaluate(value=>window.registrationInitialCreator=value,initialCreator);await page.addScriptTag({content:bundle.outputFiles[0].text});await page.waitForTimeout(100);if(errors.length)throw new Error(errors.join(" | "));await page.locator("#rss").fill("https://feed.invalid/rss");}
