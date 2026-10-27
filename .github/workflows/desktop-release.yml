@@ -40,6 +40,13 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const automatic = context.eventName === 'workflow_run';
+            core.info(`desktop-release-provenance ${JSON.stringify({
+              phase: 'trigger', eventName: context.eventName, callbackRunId: context.runId,
+              workflowDefinitionSha: context.sha,
+              upstreamRunId: automatic ? context.payload.workflow_run.id : null,
+              upstreamSourceSha: automatic ? context.payload.workflow_run.head_sha : null,
+              upstreamWorkflow: automatic ? context.payload.workflow_run.name : null,
+            })}`);
             let tag = process.env.RELEASE_TAG;
             if (automatic) {
               const source = (await github.rest.repos.getContent({ owner, repo, path: 'package.json', ref: context.payload.workflow_run.head_sha })).data;
@@ -54,6 +61,10 @@ jobs:
             if (release.draft) throw new Error('Publish the release before attaching desktop assets');
             let ref = (await github.rest.git.getRef({ owner, repo, ref: `tags/${tag}` })).data.object;
             while (ref.type === 'tag') ref = (await github.rest.git.getTag({ owner, repo, tag_sha: ref.sha })).data.object;
+            core.info(`desktop-release-provenance ${JSON.stringify({
+              phase: 'release', callbackRunId: context.runId, releaseTag: tag,
+              releaseSourceSha: ref.type === 'commit' ? ref.sha : null,
+            })}`);
             if (automatic && ref.sha !== context.payload.workflow_run.head_sha) { core.info('Version release belongs to another source; skip'); return; }
             if (ref.type !== 'commit') throw new Error('Release tag must resolve to a commit');
             const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
