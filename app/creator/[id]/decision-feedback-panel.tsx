@@ -26,7 +26,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Scale } from "lucide-react";
 import { fmtUsdc } from "@/components/keryx/phase-style";
-import type { SourcePerformance } from "@/lib/creator/source-performance";
+import { isSourcePerformanceResponse, type SourcePerformanceResponse } from "@/lib/creator/source-performance-response";
 import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
 
@@ -34,32 +34,75 @@ import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
 
 
-interface FeedbackData {
-  windowRuns: number;
-  performance: SourcePerformance | null;
-}
+type FeedbackRead = { creatorId: string; attempt: number } & (
+  { status: "available"; data: SourcePerformanceResponse } | { status: "unavailable" }
+);
+const READ_TIMEOUT_MS = 15_000;
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
 
 export function DecisionFeedbackPanel({ creatorId }: { creatorId: string }) {
+  return <DecisionFeedbackContent key={creatorId} creatorId={creatorId} />;
+}
+
+function DecisionFeedbackContent({ creatorId }: { creatorId: string }) {
   const uiCopy = useUiMessages();
   const uiRichCopy = useUiRichMessages();
-  const [data, setData] = useState<FeedbackData | null>(null);
+  const [result, setResult] = useState<FeedbackRead | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    fetch(`/api/creator/${creatorId}/performance`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: FeedbackData | null) => setData(d))
-      .catch(() => {});
-  }, [creatorId]);
+    let active = true;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      if (!active) return;
+      active = false;
+      controller.abort();
+      setResult({ creatorId, attempt, status: "unavailable" });
+    }, READ_TIMEOUT_MS);
+    void (async () => {
+      try {
+        const response = await fetch(`/api/creator/${encodeURIComponent(creatorId)}/performance`, {
+          signal: controller.signal, cache: "no-store",
+        });
+        if (!response.ok) throw new Error("Feedback unavailable");
+        const data: unknown = await response.json();
+        if (!isSourcePerformanceResponse(data, creatorId)) throw new Error("Invalid feedback response");
+        if (!active) return;
+        active = false;
+        clearTimeout(timer);
+        setResult({ creatorId, attempt, status: "available", data });
+      } catch {
+        if (!active) return;
+        active = false;
+        clearTimeout(timer);
+        setResult({ creatorId, attempt, status: "unavailable" });
+      }
+    })();
+    return () => { active = false; clearTimeout(timer); controller.abort(); };
+  }, [creatorId, attempt]);
 
+  const current = result?.creatorId === creatorId && result.attempt === attempt ? result : null;
+  if (result?.creatorId === creatorId && result.status === "unavailable") {
+    const pending = current === null;
+    return <section aria-label={uiCopy("creatorDecisions.title")} className="mb-8 border border-line bg-paper p-5">
+      <h2 className="mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">{uiCopy("creatorDecisions.title")}</h2>
+      <p role="status" className="max-w-xl font-serif text-sm text-ink-2">{uiCopy("sourceLearning.unavailable")}</p>
+      <button type="button" disabled={pending} aria-busy={pending} onClick={() => setAttempt(value => value + 1)}
+        className="mt-3 min-h-11 rounded-sm border border-line px-3 font-mono text-xs text-ink disabled:opacity-50">
+        {uiCopy("myHistory.retry")}
+      </button>
+    </section>;
+  }
+
+  const data = current?.status === "available" ? current.data : null;
   const perf = data?.performance;
   if (!perf || perf.considered === 0) return null;
 
   const chosen = perf.bought + perf.reused;
 
   return (
-    <section className="mb-8 border border-line bg-paper p-5">
+    <section aria-label={uiCopy("creatorDecisions.title")} className="mb-8 border border-line bg-paper p-5">
       <h2 className="mb-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
         <Scale className="h-3.5 w-3.5 text-seal" /> {uiCopy("creatorDecisions.title")}
       </h2>
