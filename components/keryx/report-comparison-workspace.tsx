@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { useUiCopy } from "@/lib/i18n/ui-copy";
+import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
 import { reportComparisonCopy } from "@/locales/en/report-comparison";
 import { compareSavedResearch, MAX_COMPARISON_RECEIPT_BYTES, ReportComparisonError,
   type ComparisonExcerpt, type ReportComparison, type TargetMatch } from "@/lib/research/report-comparison";
@@ -35,6 +35,8 @@ function Excerpt({ row, copy, status }: { row: ComparisonExcerpt; copy: Copy; st
 
 export function ReportComparisonWorkspace() {
   const copy = useUiCopy("report-comparison", reportComparisonCopy);
+  const message = useUiMessages();
+  const [downloadError, setDownloadError] = useState("");
   const [files, setFiles] = useState<Record<Side, FileState>>({ before: emptyFile(), after: emptyFile() });
   const [model, setModel] = useState<ReportComparison | null>(null);
   const [result, setResult] = useState<ReportComparison | null>(null);
@@ -49,7 +51,7 @@ export function ReportComparisonWorkspace() {
   const revision = useRef(0), reads = useRef({ before: 0, after: 0 });
   const form = useRef<HTMLFormElement>(null);
   function resetView() { setFilter("all"); setQuery(""); }
-  function invalidate() { revision.current++; setResult(null); setError(null); setBusy(false); setPlanLoading(false); setPlanRestored(false); resetView(); }
+  function invalidate() { revision.current++; setResult(null); setError(null); setDownloadError(""); setBusy(false); setPlanLoading(false); setPlanRestored(false); resetView(); }
   async function choose(side: Side, file: File | undefined) {
     invalidate(); setModel(null); setMatches(undefined);
     const token = ++reads.current[side];
@@ -66,7 +68,7 @@ export function ReportComparisonWorkspace() {
   }
   async function compare() {
     if (planLoading || files.before.text === null || files.after.text === null) return;
-    const token = revision.current; setBusy(true); setResult(null); setError(null); resetView();
+    const token = revision.current; setBusy(true); setResult(null); setError(null); setDownloadError(""); resetView();
     try {
       const next = await compareSavedResearch({ before: files.before.text, after: files.after.text, matches });
       if (revision.current === token) { setModel(next); setResult(next); }
@@ -87,8 +89,11 @@ export function ReportComparisonWorkspace() {
   }
   function saveMatchingPlan() {
     if (!model) return;
-    downloadBrowserText(JSON.stringify(createReportComparisonPlan(model, selected), null, 2) + "\n",
-      "keryx-report-matching.json", "application/json;charset=utf-8");
+    setDownloadError("");
+    try {
+      downloadBrowserText(JSON.stringify(createReportComparisonPlan(model, selected), null, 2) + "\n",
+        "keryx-report-matching.json", "application/json;charset=utf-8");
+    } catch { setDownloadError(message("evidenceMatrix.downloadUnavailable")); }
   }
   async function restoreMatchingPlan(file: File | undefined) {
     if (!file || !model) return;
@@ -105,11 +110,11 @@ export function ReportComparisonWorkspace() {
   }
   function download(format: ComparisonExportFormat) {
     if (!result) return;
-    const type = format === "json" ? "application/json" : format === "csv" ? "text/csv" : "text/markdown";
-    const url = URL.createObjectURL(new Blob([exportReportComparison(result, format)], { type: `${type};charset=utf-8` }));
-    const link = document.createElement("a"); link.href = url;
-    link.download = `keryx-report-comparison.${format === "markdown" ? "md" : format}`;
-    link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setDownloadError("");
+    try {
+      const type = format === "json" ? "application/json" : format === "csv" ? "text/csv" : "text/markdown";
+      downloadBrowserText(exportReportComparison(result, format), `keryx-report-comparison.${format === "markdown" ? "md" : format}`, `${type};charset=utf-8`);
+    } catch { setDownloadError(message("evidenceMatrix.downloadUnavailable")); }
   }
   return <section className="mx-auto max-w-[1080px] px-4 py-10 sm:px-8 sm:py-16">
     <header className="max-w-3xl">
@@ -118,6 +123,7 @@ export function ReportComparisonWorkspace() {
       <p className="mt-5 font-serif text-lg leading-relaxed text-ink-2">{copy.introduction}</p>
     </header>
     <p className="mt-7 border-l-2 border-paid bg-paper p-4 font-serif text-sm leading-relaxed text-ink-2">{copy.privacy}</p>
+    {downloadError && <p role="alert" className="mt-4 font-serif text-sm text-seal">{downloadError}</p>}
     <form ref={form} className="mt-8 space-y-6" onSubmit={event => { event.preventDefault(); void compare(); }}>
       <p className="max-w-3xl font-serif text-sm leading-relaxed text-ink-2">{copy.instructions}</p>
       <div className="grid min-w-0 gap-4 md:grid-cols-2">
