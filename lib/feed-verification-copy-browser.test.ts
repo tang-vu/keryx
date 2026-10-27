@@ -46,7 +46,7 @@ it("copies only the public challenge once while pending and waits for success", 
 }));
 it.each(["source", "owner", "hide"].flatMap(change => [true, false].map(ok => ({ change, ok }))))("ignores late $ok toasts after $change changes", async ({ change, ok }) => fixture(async page => {
   await copy(page).click(); await page.evaluate(change => (window as unknown as { fixture: Fixture }).fixture.mount(change), change);
-  if (change === "hide") await page.getByRole("button").waitFor({ state: "detached" });
+  if (change === "hide") await expect.poll(() => page.getByRole("button").count()).toBe(0);
   else if (change === "source") await page.getByText(verificationToken(other), { exact: true }).waitFor();
   else await expect.poll(() => page.getByRole("button").last().isDisabled()).toBe(true);
   await settle(page, ok); expect((await state(page)).toasts).toEqual([]);
