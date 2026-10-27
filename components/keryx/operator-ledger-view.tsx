@@ -24,6 +24,7 @@ export function OperatorLedgerView() {
   const message = useUiMessages();
   const [days, setDays] = useState(7), [attempt, setAttempt] = useState(0);
   const [ledger, setLedger] = useState<OperatorLedger | null>(null), [failed, setFailed] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
   useEffect(() => {
     const abort = new AbortController();
     void fetchOperatorLedger(window.location.origin, days, abort.signal).then(value => {
@@ -36,8 +37,11 @@ export function OperatorLedgerView() {
   function download(format: "json" | "csv") {
     // Only fetchOperatorLedger's validated, digest-checked snapshot enters this state.
     if (!ledger) return;
-    downloadBrowserText(format === "json" ? operatorLedgerJsonText(ledger) : operatorLedgerCsvText(ledger),
-      `keryx-public-job-ledger.${format}`, format === "json" ? "application/json" : "text/csv;charset=utf-8");
+    try {
+      downloadBrowserText(format === "json" ? operatorLedgerJsonText(ledger) : operatorLedgerCsvText(ledger),
+        `keryx-public-job-ledger.${format}`, format === "json" ? "application/json" : "text/csv;charset=utf-8");
+      setDownloadError("");
+    } catch { setDownloadError(message("evidenceMatrix.downloadUnavailable")); }
   }
   return <section className="space-y-6" aria-labelledby="public-job-ledger-title">
     <Link href="/operator" className="text-sm underline">{message("jobLedger.back")}</Link>
@@ -48,15 +52,16 @@ export function OperatorLedgerView() {
     </header>
     <div className="flex flex-wrap items-center gap-3">
       <label htmlFor="ledger-days" className="text-sm">{message("jobLedger.window")}</label>
-      <select id="ledger-days" value={days} onChange={event => { setLedger(null); setFailed(false); setDays(Number(event.target.value)); }} className="rounded border border-ink/20 bg-paper px-3 py-2">
+      <select id="ledger-days" value={days} onChange={event => { setLedger(null); setFailed(false); setDownloadError(""); setDays(Number(event.target.value)); }} className="rounded border border-ink/20 bg-paper px-3 py-2">
         {[1, 7, 31].map(count => <option key={count} value={count}>{message("jobLedger.days", { count })}</option>)}
       </select>
-      <button type="button" onClick={() => { setLedger(null); setFailed(false); setAttempt(value => value + 1); }} className="rounded border border-ink/20 px-3 py-2 text-sm">{message("jobLedger.retry")}</button>
+      <button type="button" onClick={() => { setLedger(null); setFailed(false); setDownloadError(""); setAttempt(value => value + 1); }} className="rounded border border-ink/20 px-3 py-2 text-sm">{message("jobLedger.retry")}</button>
       {data && <>
         <button type="button" onClick={() => download("json")} className="text-sm underline">{message("jobLedger.exportJson")}</button>
         <button type="button" onClick={() => download("csv")} className="text-sm underline">{message("jobLedger.exportCsv")}</button>
       </>}
     </div>
+    {downloadError && <p role="alert">{downloadError}</p>}
     {!data && <p role="status">{message(failed ? "jobLedger.unavailable" : "jobLedger.loading")}</p>}
     {data && <>
       <div className="space-y-2 rounded border border-ink/15 bg-paper p-4 text-sm">
