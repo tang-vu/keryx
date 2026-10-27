@@ -11,6 +11,7 @@ import { listWithdrawalBrowserJournals } from "@/lib/gateway/withdrawal-browser-
 import { recoverWithdrawalBrowserStatus } from "@/lib/gateway/withdrawal-browser-flow";
 import { exportWithdrawalRecoveryFile, importWithdrawalRecoveryFile } from "@/lib/gateway/withdrawal-recovery-file";
 import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+import { downloadPrivateBrowserText } from "@/lib/browser-private-text-download";
 
 
 
@@ -61,9 +62,7 @@ function OwnerRecovery({ owner, onReview }: { owner: string; onReview?: (id: str
   });
   const download = (id: string) => run(async signal => {
     const text = await exportWithdrawalRecoveryFile(id, owner, current, signal); signal.throwIfAborted();
-    const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "keryx-withdrawal-recovery.json";
-    anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 0);
+    downloadPrivateBrowserText(text, "keryx-withdrawal-recovery.json", "application/json");
   });
   const importFile = (file: File) => run(async signal => {
     if (file.size > 16384) throw new Error();
