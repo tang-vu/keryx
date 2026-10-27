@@ -3,7 +3,7 @@ import { build } from "esbuild";
 import { chromium, type Browser, type Page } from "playwright";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { prepareWithdrawIntent } from "./withdraw-intent";
-import { withdrawTypedData, type WithdrawPolicy } from "./withdraw-protocol";
+import { withdrawRequestSchema, withdrawTypedData, type WithdrawPolicy } from "./withdraw-protocol";
 import { createWithdrawalRequest } from "./withdrawal-request";
 import { createMessages } from "../i18n/messages";
 
@@ -12,7 +12,7 @@ const policy: WithdrawPolicy = { owner: account.address, recipient: account.addr
 type Fixture = { mode: string; mount(owner: string): void; revokes: string[]; handoffs: boolean[]; downloads: { text: string; name: string; connected: boolean }[] };
 let browser: Browser, bundle: string, expected: string;
 beforeAll(async () => {
-  const burnIntent = prepareWithdrawIntent(account.address, 50000n);
+  const burnIntent = withdrawRequestSchema.shape.burnIntent.parse(prepareWithdrawIntent(account.address, BigInt(50000)));
   const original = await createWithdrawalRequest({ burnIntent, signature: await account.signTypedData(withdrawTypedData(burnIntent)) }, policy);
   expected = JSON.stringify({ format: "keryx-withdrawal-recovery-v1", network: "eip155:5042002", recoveryOnly: true, exportedAt: new Date(fixed).toISOString(), original }, null, 2);
   bundle = (await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
