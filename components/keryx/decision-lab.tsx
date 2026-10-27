@@ -6,11 +6,15 @@ import { decisionLabCopy as copy } from "@/lib/research-audit/decision-lab-copy"
 import { DecisionCheckpointInspection } from "./decision-checkpoint-inspection";
 import { SignedDecisionVerify } from "./signed-decision-verify";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
+import { downloadBrowserText } from "@/lib/browser-text-download";
+import { useUiMessages } from "@/lib/i18n/ui-copy";
 
 const buttonClass = "min-h-11 border border-ink px-4 py-2 font-mono text-xs disabled:opacity-50";
 
 export function DecisionLab() {
+  const message = useUiMessages();
   const hydrated = useHydrated();
+  const [downloadError, setDownloadError] = useState("");
   const [packet, setPacket] = useState<ActualReadPacket>(syntheticDecisionShowcasePacket);
   const [recorded, setRecorded] = useState(false);
   const [recordedDigest, setRecordedDigest] = useState<string | null>(null);
@@ -20,7 +24,7 @@ export function DecisionLab() {
   const [generation, setGeneration] = useState(0);
   const attempt = useRef(0);
   useEffect(() => () => { attempt.current++; }, []);
-  const invalidate = () => { attempt.current++; setState("idle"); };
+  const invalidate = () => { attempt.current++; setState("idle"); setDownloadError(""); };
   const inspect = async () => {
     const current = ++attempt.current;
     setState("busy");
@@ -39,9 +43,9 @@ export function DecisionLab() {
     invalidate(); setPacket(syntheticDecisionShowcasePacket()); setRecorded(false); setRecordedDigest(null); setGeneration(value => value + 1);
   };
   const download = () => {
-    const url = URL.createObjectURL(new Blob([canonicalReadPacket(packet)], { type: "application/json" }));
-    const link = document.createElement("a"); link.href = url; link.download = recorded ? "read-checkpoints.json" : "synthetic-read-checkpoints.json";
-    link.click(); URL.revokeObjectURL(url);
+    setDownloadError("");
+    try { downloadBrowserText(canonicalReadPacket(packet), recorded ? "read-checkpoints.json" : "synthetic-read-checkpoints.json", "application/json"); }
+    catch { setDownloadError(message("evidenceMatrix.downloadUnavailable")); }
   };
   return <div className="mt-8 min-w-0">
     <section className="border-l-4 border-seal bg-paper px-5 py-4" aria-label={copy.shadowTitle}>
@@ -53,6 +57,7 @@ export function DecisionLab() {
         <button type="button" disabled={!hydrated} onClick={reset} className={buttonClass}>{copy.reset}</button>
         <button type="button" disabled={!hydrated} onClick={download} className={buttonClass}>{copy.download}</button>
       </div>
+      {downloadError && <p role="alert" className="mt-3 text-sm text-seal">{downloadError}</p>}
     </section>
     <DecisionCheckpointInspection key={generation} packet={packet} />
     <section className="mt-5 border border-line bg-paper p-4 sm:p-5" aria-label={copy.importTitle}>
