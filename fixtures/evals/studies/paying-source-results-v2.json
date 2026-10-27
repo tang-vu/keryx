@@ -71,7 +71,7 @@
     "lib/agent/empty-public-evidence.ts": "2b69e86df6f84a412da416e8b8074670fbada3ce486833a98b97a43dedffa2a0",
     "lib/agent/evidence-ledger.ts": "62747a86e4ddba595f124da6a8af71871b9b15d86e16faf7903dfd01bcca9d86",
     "lib/agent/evidence-portfolio.ts": "3a2234b8b1220ea6183405566a52bfe8a935d5ee95f9c937aed34e065f6dacb1",
-    "lib/agent/external-discovery.ts": "88d172c9fccf3af9b5f2206b4f2e61bf853228f2fa3b5bc8799fa884c9a956f0",
+    "lib/agent/external-discovery.ts": "af125ff10c90b9a64ca1a4afd7d405765317f73463850e08af2782efc82e00ce",
     "lib/agent/operating-fee.ts": "75d8f70b423e2b687a43c526fd8bdda220a57f9871f63deafc31b689e81775d8",
     "lib/agent/optimizer-checkpoint-capture.ts": "61c9eb080406a8fec1cf699a9811377ac40e0922e6440dd517f2efeb06b62af2",
     "lib/agent/public-reference-evidence.ts": "96f3eb0353e2a049e7a60f1e649ab4e46baaff6277faebf7b51d8a5cb2755031",
