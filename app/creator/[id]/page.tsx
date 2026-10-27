@@ -1,5 +1,6 @@
 import { createMessages } from "@/lib/i18n/messages";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
@@ -10,7 +11,7 @@ import { CreatorDetailView } from "./creator-detail-view";
 import { SourceLearningPanel } from "@/components/keryx/source-learning-panel";
 import { readSourceLearning } from "@/lib/research/source-learning-server";
 import { config } from "@/lib/config";
-import { UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage, UiRichMessage } from "@/lib/i18n/ui-copy";
 
 
 
@@ -50,12 +51,28 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
+async function CreatorSourceLearning({ db, sourceId }: {
+  db: Parameters<typeof readSourceLearning>[0]; sourceId: string;
+}) {
+  const learning = await readSourceLearning(db, sourceId, config.networkId).catch(() => null);
+  return <SourceLearningPanel report={learning} sourceId={sourceId} />;
+}
+
+function SourceLearningPending() {
+  return <UiElement as="section" names={["aria-label"]} attributes={{
+    className: "mb-8 border border-line bg-paper p-4", "aria-label": uiCopy("sourceLearning.title"), "aria-busy": true,
+  }}>
+    <h2 className="font-display text-xl"><UiMessage messageKey="sourceLearning.title" /></h2>
+    <p role="status" className="mt-2 text-sm text-ink-2"><UiRichMessage messageKey="ledgerResource.loading"
+      values={{ label: <UiMessage messageKey="sourceLearning.title" /> }} /></p>
+  </UiElement>;
+}
+
 export default async function CreatorPage({ params }: PageProps) {
   const { id } = await params;
   const db = await getDb();
   const source = await db.getSource(id);
   if (!source) notFound();
-  const learning = await readSourceLearning(db, id, config.networkId).catch(() => null);
 
   // A creator page is a profile: who they are, what they publish, and the trail back to the
   // registry that lists them.
@@ -104,7 +121,9 @@ export default async function CreatorPage({ params }: PageProps) {
 
       <main className="mx-auto max-w-[1180px] px-4 pb-20 pt-10 sm:px-[30px]">
         <CreatorDetailView creatorId={id} />
-        <SourceLearningPanel report={learning} sourceId={id} />
+        <Suspense key={id} fallback={<SourceLearningPending />}>
+          <CreatorSourceLearning db={db} sourceId={id} />
+        </Suspense>
       </main>
     </div>
   );
