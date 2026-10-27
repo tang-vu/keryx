@@ -31,7 +31,7 @@ beforeAll(async () => {
 }, 30_000);
 afterAll(async () => { await browser?.close(); });
 
-async function fixture(test: (page: Page) => Promise<void>, width = 390) {
+async function fixture(test: (page: Page) => Promise<void>, width = 390, pausedClock = false) {
   const context = await browser.newContext({ viewport: { width, height: 1000 }, reducedMotion: "reduce", serviceWorkers: "block" });
   const requests: string[] = [], errors: string[] = [];
   try {
@@ -43,7 +43,14 @@ async function fixture(test: (page: Page) => Promise<void>, width = 390) {
       return route.fulfill({ contentType: "text/html", body: '<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style><main id="root" style="margin:16px;max-width:1000px"></main>' });
     });
     const page = await context.newPage(); page.setDefaultTimeout(5000); page.on("pageerror", error => errors.push(error.message));
-    await page.goto("https://agent-copy.test/"); await page.addScriptTag({ content: bundle }); await button(page).waitFor();
+    await page.goto("https://agent-copy.test/");
+    if (pausedClock) {
+      await page.clock.install({ time: new Date("2026-10-27T00:00:00Z") });
+      await page.clock.pauseAt(new Date("2026-10-27T00:01:00Z"));
+    }
+    await page.addScriptTag({ content: bundle });
+    if (pausedClock) await page.clock.runFor(1);
+    await button(page).waitFor();
     await page.evaluate(() => document.fonts.ready); await test(page);
     expect(errors).toEqual([]); expect(requests.every(value => value === "/" || value.startsWith("/fonts/"))).toBe(true);
     expect(await page.locator("body").textContent()).not.toContain("PRIVATE_");
@@ -82,17 +89,21 @@ it.each(["missing", "throw", "reject"])("offers manual selection when clipboard 
 }));
 
 it("clears an earlier success timer before a pending retry and resets only the newest success", async () => fixture(async page => {
-  await page.clock.install(); await button(page).click(); await settle(page, true);
+  await button(page).click(); await settle(page, true);
   await expect.poll(() => button(page).textContent()).toContain(message("agentIntegration.copied"));
   await page.clock.runFor(1500); await button(page).click(); await page.clock.runFor(600);
   expect(await button(page).getAttribute("aria-busy")).toBe("true");
   expect(await button(page).textContent()).not.toContain(message("agentIntegration.copied"));
-  await settle(page, true); await page.clock.runFor(1500);
+  await settle(page, true);
+  await expect.poll(() => button(page).textContent()).toContain(message("agentIntegration.copied"));
+  await page.clock.runFor(1500);
+  // A delayed Node runner must not consume the remaining virtual timeout.
+  await new Promise(resolve => setTimeout(resolve, 750));
   expect(await button(page).textContent()).toContain(message("agentIntegration.copied"));
   await page.clock.runFor(600);
   await expect.poll(() => button(page).textContent()).toContain(message("agentIntegration.copy"));
   expect(await page.getByRole("status").textContent()).toBe("");
-}));
+}, 390, true));
 
 it("keeps a late clipboard result from affecting a remounted card", async () => fixture(async page => {
   await button(page).click();
