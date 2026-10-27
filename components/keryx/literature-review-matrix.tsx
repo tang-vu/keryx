@@ -18,6 +18,8 @@ export function LiteratureReviewMatrix() {
   const [rows, setRows] = useState<{ id: number; value: MatrixRow }[]>([]);
   const [status, setStatus] = useState("");
   const [failure, setFailure] = useState("");
+  const [copyPending, setCopyPending] = useState(false);
+  const copyAttempt = useRef<symbol | null>(null);
   const [pending, setPending] = useState<{ document: MatrixDocument; filename: string; kind: MatrixFileKind; revision: number }>();
   const [reading, setReading] = useState(false);
   const [revision, setRevision] = useState(0), [savedRevision, setSavedRevision] = useState(0);
@@ -35,7 +37,7 @@ export function LiteratureReviewMatrix() {
   const csv = () => literatureMatrixCsv(question, rows.map(row => row.value));
   const snapshot = () => ({ question, rows: rows.map(row => row.value) });
   const hasNotes = question !== "" || rows.length > 0;
-  useEffect(() => () => { ++importGeneration.current; }, []);
+  useEffect(() => () => { ++importGeneration.current; copyAttempt.current = null; }, []);
   useEffect(() => {
     if (!hasNotes || revision === savedRevision) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -43,7 +45,17 @@ export function LiteratureReviewMatrix() {
     return () => window.removeEventListener("beforeunload", warn);
   }, [hasNotes, revision, savedRevision]);
   function changed() {
+    copyAttempt.current = null; setCopyPending(false);
     currentRevision.current++; setRevision(currentRevision.current); setStatus(""); setFailure("");
+  }
+  async function copyCsv() {
+    if (copyAttempt.current) return;
+    const attempt = Symbol(), revision = currentRevision.current;
+    copyAttempt.current = attempt; setCopyPending(true); setFailure(""); setStatus("");
+    const current = () => copyAttempt.current === attempt && currentRevision.current === revision;
+    try { await navigator.clipboard.writeText(csv()); if (current()) setStatus(copy.copied); }
+    catch { if (current()) setStatus(copy.copyFailed); }
+    finally { if (current()) { copyAttempt.current = null; setCopyPending(false); } }
   }
   function edit(id: number, field: MatrixField, value: string) {
     setRows(current => current.map(row => row.id === id ? { ...row, value: { ...row.value, [field]: value } } : row)); changed();
@@ -101,9 +113,7 @@ export function LiteratureReviewMatrix() {
       <button type="button" className={buttonClass} onClick={() => {
         download(literatureMatrixCsv("", []), "literature-review-matrix-template.csv", "text/csv;charset=utf-8", copy.downloaded);
       }}>{copy.template}</button>
-      <button type="button" className={buttonClass} onClick={async () => {
-        setFailure(""); try { await navigator.clipboard.writeText(csv()); setStatus(copy.copied); } catch { setStatus(copy.copyFailed); }
-      }}>{copy.copy}</button>
+      <button type="button" className={buttonClass} disabled={copyPending} aria-busy={copyPending} onClick={() => void copyCsv()}>{copy.copy}</button>
     </div>
     <p role={failure ? "alert" : "status"} aria-live="polite" className="mt-3 min-h-6 font-serif text-sm text-seal">{failure || status}</p>
     <div className="mt-4 border-y border-line py-4">
