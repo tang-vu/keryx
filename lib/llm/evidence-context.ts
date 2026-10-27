@@ -5,6 +5,7 @@ import { sourceSentenceSegments, type SourceExtraction } from "./source-sentence
 import { sourceHtmlLayout, sourceTextBlocks } from "./source-text-blocks";
 import { observedHtmlTextLayout, type HtmlTextLayout } from "../web-research/html-text-layout";
 import { enumeratedContext, enumeratedContextRange } from "./enumerated-context";
+import { structuralContextSamples } from "./structural-context-sample";
 
 const MAX_SOURCE_CHARACTERS = 200_000;
 const PASSAGE_CHARACTERS = 600;
@@ -353,6 +354,24 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     }
     for (const anchor of anchors) nominate(anchor, true);
   }
+  const spareWindows: Window[] = [];
+  if (!offsets.length && !namedOffsets.length && layout && !layout.limited && scanned.length === text.length &&
+    subClaims.some(claim => [...claim.slice(0, 8192)].some(character => /\p{L}/u.test(character) && character.codePointAt(0)! > 127))) {
+    const samples = structuralContextSamples(scanned, blocks, layout, PASSAGE_CHARACTERS, siblingContexts)
+      .sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start);
+    for (const range of samples) {
+      let existing: Window | undefined;
+      for (const window of seen.values()) if (window.start === range.start && window.end === range.end) { existing = window; break; }
+      if (existing) { spareWindows.push(existing); continue; }
+      // Original nominations and pools are complete. Only their unused ceiling
+      // can admit another intact block; no original candidate is displaced.
+      if (nominated >= nominationLimit) break;
+      nominated++;
+      const body = scanned.slice(range.start, range.end), words = terms(body);
+      spareWindows.push({ ...range, text: body, words, structuralContext: false,
+        questionScore: questionTerms.size ? [...questionTerms].filter(term => words.has(term)).length / questionTerms.size : 0 });
+    }
+  }
   // Retain the opening for context, then balance relevance across the requested targets.
   // Whitespace-only text has no blocks, but remains a bounded verbatim excerpt.
   if (!opening) addWindow(0, Math.min(PASSAGE_CHARACTERS, scanned.length));
@@ -411,19 +430,41 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     });
   }
   // Adjacent/overlapping windows are one exact substring, not concatenated quotations.
-  // Allowing overlap avoids excluding evidence that straddles a previously selected edge.
-  const passages: { start: number; end: number; text: string }[] = [];
-  for (const window of selected.sort((a, b) => a.start - b.start)) {
-    const previous = passages.at(-1);
-    if (previous && window.start <= previous.end) {
-      previous.end = Math.max(previous.end, window.end);
-      previous.text = text.slice(previous.start, previous.end);
-    } else passages.push({ start: window.start, end: window.end, text: window.text });
+  // Compact before counting spare slots: several lexical nominations can already
+  // describe the same delivered passage. Their bytes must all remain selected.
+  const compact = (ranges: readonly { start: number; end: number }[]) => {
+    const result: { start: number; end: number; text: string }[] = [];
+    for (const range of [...ranges].sort((a, b) => a.start - b.start)) {
+      const previous = result.at(-1);
+      if (previous && range.start <= previous.end) {
+        previous.end = Math.max(previous.end, range.end);
+        previous.text = text.slice(previous.start, previous.end);
+      } else result.push({ start: range.start, end: range.end, text: text.slice(range.start, range.end) });
+    }
+    return result;
+  };
+  let passages = compact(selected);
+  // Only fill unused slots/characters after the original lexical selection. A
+  // fuller intact block leads this small structural sample, never a claim of
+  // topical relevance. Explicit heading/fragment/gloss hints retain precedence.
+  for (const sample of spareWindows) {
+    const combined = compact([...passages, sample]);
+    const characters = combined.reduce((sum, passage) => sum + passage.text.length, 0);
+    if (combined.length > MAX_WINDOWS || characters > MAX_CONTEXT_CHARACTERS ||
+      characters === passages.reduce((sum, passage) => sum + passage.text.length, 0)) continue;
+    const retained = windows.find(window => window.start === sample.start && window.end === sample.end);
+    if (!retained && windows.length >= candidateLimit) continue;
+    if (!retained) windows.push(sample);
+    passages = combined;
   }
+  const additionalSamples = spareWindows.filter(sample => {
+    for (const window of seen.values()) if (window.start === sample.start && window.end === sample.end) return false;
+    return true;
+  }).length;
   return {
     originalCharacters: text.length, scannedCharacters: scanned.length, excerpted: true,
     passages,
-    candidateSelection: { sampled: true, nominated, retained: windows.length, perTargetLimit: CANDIDATES_PER_TARGET, retentionLimited: seen.size > windows.length },
+    candidateSelection: { sampled: true, nominated, retained: windows.length, perTargetLimit: CANDIDATES_PER_TARGET, retentionLimited: seen.size + additionalSamples > windows.length },
     contextOmissions: passages.flatMap(passage => {
       const before = blocks.some(block => block.start < passage.start && block.end > passage.start);
       const after = blocks.some(block => block.start < passage.end && block.end > passage.end) ||
