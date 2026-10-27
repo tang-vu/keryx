@@ -3,7 +3,7 @@
  *
  * Keryx doesn't only read its own registered creators — it can probe the LIVE open x402 service
  * bazaar (Circle's `circle services search`) and reason over real third-party endpoints during a
- * query. One CLI call snapshots the whole marketplace (cached); each query then ranks it locally by
+ * query. One CLI call takes a bounded cached snapshot; each query then ranks it locally by
  * topical relevance and surfaces the best matches as candidates.
  *
  * Endpoints advertise acceptance on various chains, which may include the selected Arc profile.
@@ -39,20 +39,16 @@ export interface ExternalEndpoint {
   name: string;
   description: string;
   category: string;
-  price: number; // USDC per call (min across accepted chains)
+  price: number; // minimum admitted USDC quote; metadata only, never payment authority
   chains: string[]; // human labels
   payTo: string;
   onArc: boolean; // advertises acceptance on the trusted selected Arc profile; not purchase authority
 }
 
-interface RawItem {
-  resource?: string;
-  name?: string;
-  provider?: string;
-  description?: string;
-  category?: string;
-  accepts?: { network?: string; payTo?: string; amount?: string }[];
-}
+// Local admission caps, not vendor or payment limits. Oversize fields/offers are
+// refused intact, so an omitted offer cannot silently change an advertised price.
+const MAX_MARKETPLACE_ITEMS = 200;
+const MAX_ACCEPTS_PER_ITEM = 64;
 
 // Marketplace snapshot cache — one CLI call serves many queries. Negative results cached briefly so
 // a missing/offline `circle` CLI never re-hangs every query.
@@ -61,7 +57,7 @@ let loadingMarketplace: Promise<ExternalEndpoint[]> | null = null;
 const TTL_OK = 30 * 60_000;
 const TTL_FAIL = 2 * 60_000;
 
-/** Snapshot the whole live marketplace via the Circle CLI (cached). Returns [] on any failure. */
+/** Snapshot at most 200 marketplace rows. Whole-response failures return []. */
 async function loadMarketplace(): Promise<ExternalEndpoint[]> {
   const now = Date.now();
   if (snapshot && now - snapshot.at < (snapshot.items.length ? TTL_OK : TTL_FAIL)) {
@@ -75,8 +71,10 @@ async function loadMarketplace(): Promise<ExternalEndpoint[]> {
         "circle services search --output json --limit 200",
         { timeout: 15_000, maxBuffer: 16 * 1024 * 1024, windowsHide: true },
       );
-      const raw = (JSON.parse(stdout)?.data?.items ?? []) as RawItem[];
-      items = raw.map(parseItem).filter((e): e is ExternalEndpoint => e !== null);
+      const response: unknown = JSON.parse(stdout);
+      const raw = record(response) && record(response.data) ? response.data.items : undefined;
+      if (Array.isArray(raw)) items = raw.slice(0, MAX_MARKETPLACE_ITEMS).map(parseItem)
+        .filter((e): e is ExternalEndpoint => e !== null);
     } catch {
       items = []; // CLI absent, offline, or timed out — discovery degrades gracefully.
     }
@@ -90,24 +88,58 @@ async function loadMarketplace(): Promise<ExternalEndpoint[]> {
   }
 }
 
-/** Map one raw bazaar item to a normalized endpoint, or null if it lacks a payable resource. */
-function parseItem(it: RawItem): ExternalEndpoint | null {
-  const resource = it.resource;
-  const accepts = it.accepts ?? [];
-  if (!resource || accepts.length === 0) return null;
+const record = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
 
-  const prices = accepts
-    .map((a) => Number(a.amount) / 1e6)
-    .filter((n) => Number.isFinite(n) && n >= 0);
-  const networks = [...new Set(accepts.map((a) => a.network).filter(Boolean) as string[])];
-  const chains = networks.map((n) => CHAINS[n] ?? n);
+function optionalText(value: unknown, maximum: number, multiline = false): boolean {
+  if (value === undefined || value === null) return true;
+  const controls = multiline ? /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/u : /[\u0000-\u001f\u007f-\u009f]/u;
+  return typeof value === "string" && value.length <= maximum && !controls.test(value);
+}
+
+function resourceUrl(value: unknown): value is string {
+  if (typeof value !== "string" || !value || value.length > 4096 || /[\s\u0000-\u001f\u007f-\u009f\\]/u.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password;
+  } catch { return false; }
+}
+
+/** Unknown or inexact quotes stay unknown. An explicit exact zero remains zero. */
+function advertisedPrice(amount: unknown): number | null {
+  const micros = typeof amount === "number" ? amount : typeof amount === "string" && amount.length <= 32 && /^[0-9]+$/u.test(amount)
+    ? Number(amount) : NaN;
+  if (!Number.isSafeInteger(micros) || micros < 0) return null;
+  const price = micros / 1_000_000;
+  if (Math.round(price * 1_000_000) !== micros) return null;
+  return price === 0 ? 0 : price;
+}
+
+/** Admit plain bounded HTTP metadata per listing/offer; it never grants purchase authority. */
+function parseItem(it: unknown): ExternalEndpoint | null {
+  if (!record(it)) return null;
+  const resource = it.resource;
+  if (!resourceUrl(resource) || !optionalText(it.name, 256) || !optionalText(it.provider, 256) ||
+    !optionalText(it.description, 8192, true) || !optionalText(it.category, 128) ||
+    !Array.isArray(it.accepts) || !it.accepts.length || it.accepts.length > MAX_ACCEPTS_PER_ITEM) return null;
+  const accepts: Array<{ price: number; network: string; payTo: string }> = [];
+  for (const offer of it.accepts) {
+    if (!record(offer) || !optionalText(offer.network, 128) || !optionalText(offer.payTo, 256)) continue;
+    const price = advertisedPrice(offer.amount);
+    if (price === null) continue;
+    accepts.push({ price, network: typeof offer.network === "string" ? offer.network : "",
+      payTo: typeof offer.payTo === "string" ? offer.payTo : "" });
+  }
+  if (!accepts.length) return null;
+  const networks = [...new Set(accepts.map(a => a.network).filter(Boolean))];
+  const chains = networks.map(n => Object.hasOwn(CHAINS, n) ? CHAINS[n]! : n);
 
   return {
     resource,
-    name: it.name || it.provider || deriveName(resource),
-    description: it.description || "",
-    category: it.category || "",
-    price: prices.length ? Math.min(...prices) : 0,
+    name: (typeof it.name === "string" ? it.name : "") || (typeof it.provider === "string" ? it.provider : "") || deriveName(resource),
+    description: typeof it.description === "string" ? it.description : "",
+    category: typeof it.category === "string" ? it.category : "",
+    price: Math.min(...accepts.map(a => a.price)),
     chains,
     payTo: accepts.find((a) => a.payTo)?.payTo ?? "",
     onArc: networks.includes(config.networkId),
@@ -321,7 +353,7 @@ export async function discoverExternalCandidates(
         `[Live x402 marketplace · ${method === "semantic" ? `semantic match ${Math.round(s * 100)}%` : `keyword match`}] ` +
         `${e.description || e.category || "External paid API"}. ` +
         `Advertises payment acceptance on ${chainStr} — ${e.onArc ? "includes Keryx's selected network" : "does not include Keryx's selected network"}. ` +
-        `~$${e.price.toFixed(4)}/call. Discovery-only: evaluated but never purchased by Keryx.`,
+        `~$${e.price.toFixed(6)}/call. Discovery-only: evaluated but never purchased by Keryx.`,
       tags: ["external", "x402-marketplace", ...(e.category ? [e.category.toLowerCase()] : [])],
       fetchPrice: e.price,
       cached: false,
