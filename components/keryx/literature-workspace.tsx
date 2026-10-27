@@ -8,7 +8,9 @@ import { LiteratureComparisonPreview } from "./literature-comparison-preview";
 import { LiteratureBulkScreening } from "./literature-bulk-screening";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { PAPER_REPOSITORIES } from "@/lib/papers/types";
-import { paperReferencesCslJson, paperReferencesRis } from "@/lib/papers/reference-export";
+import { paperReferencesBibtex, paperReferencesCslJson, paperReferencesRis } from "@/lib/papers/reference-export";
+import { literatureReferencesMarkdown } from "@/lib/papers/literature-markdown";
+import { reportComparisonCopy } from "@/locales/en/report-comparison";
 import { changeLiteratureWorkspace, clearLiteratureWithRecovery, clearLiteratureWorkspace, replaceLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, MAX_SAVED_PAPERS,
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
@@ -133,6 +135,7 @@ function SavedPaper({ entry, selected, selectionFull, toggle, act }: {
 
 export function LiteratureWorkspace() {
   const copy = useUiMessages();
+  const formatCopy = useUiCopy("report-comparison", reportComparisonCopy);
   const searchCopy = useUiCopy("literature-search", searchEnglish), searchHelpId = useId(), sortId = useId();
   const importCopy = useUiCopy("literature-import", importEnglish);
   const recoveryCopy = useUiCopy("literature-clear-recovery", recoveryEnglish);
@@ -179,6 +182,14 @@ export function LiteratureWorkspace() {
   const searchMatches = new Set(searched.map(entry => entry.paper.url));
   const visible = ordered.filter(entry => searchMatches.has(entry.paper.url) && (filter === "all" || entry.screening === filter));
   const visibleUrls = new Set(visible.map(entry => entry.paper.url));
+  const downloadReferences = (format: "bibtex" | "markdown") => act(() => {
+    try {
+      const papers = visible.map(entry => entry.paper);
+      const exported = format === "bibtex" ? paperReferencesBibtex(papers) : literatureReferencesMarkdown(papers);
+      downloadBrowserText(exported.content, `keryx-literature-references.${format === "bibtex" ? "bib" : "md"}`,
+        format === "bibtex" ? "application/x-bibtex;charset=utf-8" : "text/markdown;charset=utf-8");
+    } catch { throw new Error(copy("bibliographyExport.failed")); }
+  }, "");
 
   return <div className="mt-7 space-y-6">
     <p className="max-w-[75ch] font-serif text-sm leading-relaxed text-ink-2">{copy("literatureWorkspace.privacy")}</p>
@@ -254,6 +265,8 @@ export function LiteratureWorkspace() {
               const exported = paperReferencesCslJson(visible.map(entry => entry.paper));
               downloadBrowserText(exported.content, "keryx-literature-references.json", "application/json;charset=utf-8");
             }, copy(visible.length === 1 ? "literatureWorkspace.cslPrepared.one" : "literatureWorkspace.cslPrepared.other", { count: visible.length }))}>{copy("literatureWorkspace.csl")}</button>
+            <button type="button" disabled={visible.length === 0} className={button} onClick={() => void downloadReferences("bibtex")}>{copy("bibliographyExport.bibtex")}</button>
+            <button type="button" disabled={visible.length === 0} className={button} onClick={() => void downloadReferences("markdown")}>{formatCopy.markdown}</button>
           </div>
         </div>
         <p className="mt-2 font-serif text-xs text-ink-3">{copy("literatureWorkspace.referencesNotice")}</p>
