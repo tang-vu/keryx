@@ -17,7 +17,7 @@
  * With JavaScript off the box does nothing and the full page stays visible — the archive reads
  * exactly as it did before this existed.
  */
-import { Children, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { Children, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Search, X } from "lucide-react";
 import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
@@ -53,6 +53,8 @@ export function ArchiveSearch({
   const copy = useUiMessages();
   const searchCopy = useUiCopy("literature-search", literatureSearchCopy);
   const inputRef = useRef<HTMLInputElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const pageJumpPendingRef = useRef(false);
   const resultsId = useId();
   const [query, setQuery] = useState("");
   const [resultPage, setResultPage] = useState(0);
@@ -74,36 +76,55 @@ export function ArchiveSearch({
   const lastPage = Math.max(0, Math.ceil(otherMatches.length / OTHERS_SHOWN) - 1);
   const page = Math.min(resultPage, lastPage);
   const shownOthers = otherMatches.slice(page * OTHERS_SHOWN, (page + 1) * OTHERS_SHOWN);
+  const goToPage = (next: number) => {
+    if (next === page) return;
+    pageJumpPendingRef.current = true;
+    setResultPage(next);
+  };
+  useLayoutEffect(() => {
+    if (!pageJumpPendingRef.current) return;
+    pageJumpPendingRef.current = false;
+    headingRef.current?.focus({ preventScroll: true });
+    headingRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+  }, [page]);
   const clearSearch = () => {
+    pageJumpPendingRef.current = false;
     setQuery("");
     setResultPage(0);
     inputRef.current?.focus();
   };
 
   return (
-    <div className="mt-10">
+    <div className="mt-10 min-w-0 [overflow-wrap:anywhere]">
+      <p id={`${resultsId}-hint`} className="sr-only">{copy("archiveFilter.searchHint")}</p>
       <div className="flex items-center gap-2 border border-line bg-paper px-4 transition-colors focus-within:border-seal focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal">
-      <label className="flex min-w-0 flex-1 items-center gap-3 py-3">
+      <label className="flex min-w-0 flex-1 items-center gap-3 py-2">
         <Search className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
         <input
           type="search"
           ref={inputRef}
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setResultPage(0); }}
+          onChange={(e) => { pageJumpPendingRef.current = false; setQuery(e.target.value); setResultPage(0); }}
           onKeyDown={event => { if (!event.nativeEvent.isComposing && event.key === "Escape" && searching) { event.preventDefault(); clearSearch(); } }}
           placeholder={placeholder ?? copy("archiveFilter.placeholder")}
           aria-label={copy("archiveFilter.label")}
-          className="min-h-6 w-full min-w-0 bg-transparent font-mono text-base text-ink outline-none placeholder:text-ink-3 sm:text-[13px] [&::-webkit-search-cancel-button]:appearance-none"
+          aria-describedby={`${resultsId}-hint`}
+          className="min-h-[44px] w-full min-w-0 bg-transparent font-mono text-base text-ink outline-none placeholder:text-ink-3 sm:text-[13px] [&::-webkit-search-cancel-button]:appearance-none"
         />
       </label>
       {searching && <button type="button" onClick={clearSearch} aria-label={searchCopy.clear}
-        className="inline-flex size-11 shrink-0 items-center justify-center text-ink-3 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-seal">
+        className="inline-flex size-[44px] shrink-0 items-center justify-center text-ink-3 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-seal motion-reduce:transition-none">
         <X aria-hidden="true" className="size-4" />
       </button>}
       </div>
       <p role="status" aria-atomic="true" className="mt-2 min-h-4 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-3">
         {searching && copy(total === 1 ? "archiveFilter.found.one" : "archiveFilter.found.other", { count: total })}
       </p>
+
+      {searching && <dl className="mt-4 grid min-w-0 grid-cols-2 gap-4 border-y border-line py-3">
+        <div className="min-w-0"><dt className="font-mono text-[11px] leading-relaxed text-ink-3">{copy("archiveFilter.onThisPage")}</dt><dd className="mt-1 font-mono text-xl tabular-nums text-ink">{visible}</dd></div>
+        <div className="min-w-0"><dt className="font-mono text-[11px] leading-relaxed text-ink-3">{copy("archiveFilter.elsewhereLabel")}</dt><dd className="mt-1 font-mono text-xl tabular-nums text-ink">{otherMatches.length}</dd></div>
+      </dl>}
 
       {filters}
 
@@ -116,45 +137,52 @@ export function ArchiveSearch({
       </div>
 
       {otherMatches.length > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-3 border-b border-line pb-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-ink-3">
+        <section aria-labelledby={`${resultsId}-heading`} className="mt-8 min-w-0">
+          <h2 ref={headingRef} id={`${resultsId}-heading`} tabIndex={-1} aria-describedby={`${resultsId}-range`} className="scroll-mt-[83px] border-b border-line pb-3 font-display text-xl leading-snug text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-seal">
             {copy(otherMatches.length === 1 ? "archiveFilter.elsewhere.one" : "archiveFilter.elsewhere.other", { count: otherMatches.length })}
           </h2>
-          <ul id={resultsId} className="space-y-2.5">
+          {/* Keep navigation below the shared 66px shell and its 1px bottom rule. */}
+          <div className="sticky top-[67px] z-10 my-3 border border-line bg-paper px-3 py-3 shadow-[0_8px_16px_-16px_rgba(27,23,18,0.5)]">
+          <p id={`${resultsId}-range`} className="font-mono text-[11px] leading-relaxed tabular-nums text-ink-3">{copy("archiveFilter.resultRange", { start: page * OTHERS_SHOWN + 1, end: Math.min((page + 1) * OTHERS_SHOWN, otherMatches.length), total: otherMatches.length })}</p>
+          {lastPage > 0 && (
+            <nav aria-label={copy(otherMatches.length === 1 ? "archiveFilter.elsewhere.one" : "archiveFilter.elsewhere.other", { count: otherMatches.length })}
+              className="mt-3 flex flex-wrap gap-3 font-mono text-[11px]">
+              <button type="button" aria-controls={resultsId} disabled={page === 0}
+                onClick={() => goToPage(page - 1)}
+                className="min-h-[44px] min-w-0 max-w-full border border-line px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-40">
+                {copy("archivePages.newer")}
+              </button>
+              <button type="button" aria-controls={resultsId} disabled={page === lastPage}
+                onClick={() => goToPage(page + 1)}
+                className="min-h-[44px] min-w-0 max-w-full border border-line px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-40">
+                {copy("archivePages.older")}
+              </button>
+            </nav>
+          )}
+          </div>
+          <ul key={page} id={resultsId} className="space-y-2.5 motion-safe:animate-[kxUp_220ms_cubic-bezier(.16,1,.3,1)_both]">
             {shownOthers.map((o) => (
               <li key={o.id}>
                 <Link
                   href={`/dispatch/${o.id}`}
-                  className="group flex min-h-11 items-start justify-between gap-4 border-b border-line py-3 font-serif text-base leading-relaxed text-ink-2 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"
+                  className="group flex min-h-[44px] min-w-0 scroll-mt-[calc(67px_+_9rem)] items-start justify-between gap-4 border-b border-line py-3 font-serif text-base leading-relaxed text-ink-2 transition-colors hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal motion-reduce:transition-none"
                 >
-                  <span className="min-w-0 break-words">{o.question}</span>
+                  <span lang="und" className="min-w-0 break-words">{o.question}</span>
                   <ArrowUpRight aria-hidden="true" className="mt-1 size-4 shrink-0 text-brass transition-transform motion-safe:group-hover:-translate-y-0.5 motion-safe:group-hover:translate-x-0.5" />
                 </Link>
               </li>
             ))}
           </ul>
-          {lastPage > 0 && (
-            <nav aria-label={copy(otherMatches.length === 1 ? "archiveFilter.elsewhere.one" : "archiveFilter.elsewhere.other", { count: otherMatches.length })}
-              className="mt-4 flex gap-3 font-mono text-[11px]">
-              <button type="button" aria-controls={resultsId} disabled={page === 0}
-                onClick={() => setResultPage(page - 1)}
-                className="min-h-11 border border-line px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-40">
-                {copy("archivePages.newer")}
-              </button>
-              <button type="button" aria-controls={resultsId} disabled={page === lastPage}
-                onClick={() => setResultPage(page + 1)}
-                className="min-h-11 border border-line px-4 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-40">
-                {copy("archivePages.older")}
-              </button>
-            </nav>
-          )}
         </section>
       )}
 
       {searching && total === 0 && (
-        <p className="mt-6 border border-dashed border-line p-6 text-center font-serif text-[15px] text-ink-2">
-          {copy("archiveFilter.empty", { query: query.trim() })}
-        </p>
+        <div className="mt-6 border border-dashed border-line bg-paper p-5 text-center sm:p-6">
+          <Search aria-hidden="true" className="mx-auto mb-3 size-5 text-brass" />
+          <p className="font-serif text-[15px] leading-relaxed text-ink-2">{copy("archiveFilter.empty", { query: query.trim() })}</p>
+          <p className="mt-3 font-serif text-sm leading-relaxed text-ink-3">{copy("archiveFilter.emptyHint")}</p>
+          <button type="button" onClick={clearSearch} className="mt-4 inline-flex min-h-[44px] max-w-full items-center justify-center border border-ink bg-ink px-4 py-2 font-mono text-xs text-paper transition-colors duration-180 hover:bg-paper hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal motion-reduce:transition-none">{copy("archiveFilter.showPage")}</button>
+        </div>
       )}
     </div>
   );
