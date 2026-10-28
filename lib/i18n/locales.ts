@@ -1,14 +1,27 @@
 /** Prepared locales are not release authority. Only English UI currently ships. */
-export const preparedLocales = ["en", "vi", "zh-Hans"] as const;
+export const preparedLocales = ["en", "vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const;
 export type UiLocale = typeof preparedLocales[number];
 export const shippedUiLocales: readonly UiLocale[] = ["en"];
+/** Native names remain recognizable while a different interface language is selected. */
+export const uiLocaleNames: Readonly<Record<UiLocale, string>> = {
+  en: "English", vi: "Tiếng Việt (preview)", "zh-Hans": "简体中文 (preview)",
+  es: "Español (preview)", "pt-BR": "Português do Brasil (preview)",
+  fr: "Français (preview)", de: "Deutsch (preview)", ja: "日本語 (preview)",
+  ko: "한국어 (preview)", hi: "हिन्दी (preview)", id: "Bahasa Indonesia (preview)",
+};
 
 export function normalizeUiLocale(value: unknown): UiLocale | null {
   if (typeof value !== "string" || value.length > 64 || !/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/u.test(value)) return null;
   try {
     const locale = new Intl.Locale(value);
-    if (locale.language === "en" || locale.language === "vi") {
-      return locale.script && locale.script !== "Latn" ? null : locale.language;
+    if (["en", "vi", "es", "fr", "de", "id"].includes(locale.language)) {
+      return locale.script && locale.script !== "Latn" ? null : locale.language as UiLocale;
+    }
+    if (locale.language === "pt") return !locale.script || locale.script === "Latn" ? "pt-BR" : null;
+    const scripted = { ja: "Jpan", ko: "Kore", hi: "Deva" } as const;
+    if (Object.hasOwn(scripted, locale.language)) {
+      const language = locale.language as keyof typeof scripted;
+      return !locale.script || locale.script === scripted[language] ? language : null;
     }
     if (locale.language !== "zh" || locale.script === "Hant" || (!locale.script && ["TW", "HK", "MO"].includes(locale.region ?? ""))) return null;
     return !locale.script || locale.script === "Hans" ? "zh-Hans" : null;

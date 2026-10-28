@@ -139,12 +139,22 @@ export function validateShellDraft(locale: UiLocale, draft: unknown, report?: Sh
 const loaders = {
   vi: () => import("@/locales/vi/ui-shell-preview").then(module => module.uiShellPreview),
   "zh-Hans": () => import("@/locales/zh-Hans/ui-shell-preview").then(module => module.uiShellPreview),
+  es: () => import("@/locales/es/ui-shell-preview").then(module => module.uiShellPreview),
+  "pt-BR": () => import("@/locales/pt-BR/ui-shell-preview").then(module => module.uiShellPreview),
+  fr: () => import("@/locales/fr/ui-shell-preview").then(module => module.uiShellPreview),
+  de: () => import("@/locales/de/ui-shell-preview").then(module => module.uiShellPreview),
+  ja: () => import("@/locales/ja/ui-shell-preview").then(module => module.uiShellPreview),
+  ko: () => import("@/locales/ko/ui-shell-preview").then(module => module.uiShellPreview),
+  hi: () => import("@/locales/hi/ui-shell-preview").then(module => module.uiShellPreview),
+  id: () => import("@/locales/id/ui-shell-preview").then(module => module.uiShellPreview),
 };
 /** No target import for English or a disabled/unsupported locale. Only the selected chunk loads. */
 export async function loadUiShellCatalogue(locale: UiLocale, enabled: readonly UiLocale[], report = reportShellFallback,
-  selectedLoaders: Record<Exclude<UiLocale, "en">, () => Promise<ShellDraft>> = loaders): Promise<MessageCatalogue> {
+  selectedLoaders: Partial<Record<Exclude<UiLocale, "en">, () => Promise<ShellDraft>>> = loaders): Promise<MessageCatalogue> {
   if (locale === "en" || !enabled.includes(locale) || !Object.hasOwn(selectedLoaders, locale)) return {};
-  try { return validateShellDraft(locale, await selectedLoaders[locale as keyof typeof loaders](), report); }
+  const load = selectedLoaders[locale];
+  if (!load) return {};
+  try { return validateShellDraft(locale, await load(), report); }
   catch { return Object.freeze({}); }
 }
 export function createShellMessages(locale: UiLocale, catalogue: MessageCatalogue = {}, report = reportShellFallback) {

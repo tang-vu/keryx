@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/product-guide.ts",
+  "sourceSha256": "96781f403ed4d596dcdcd689e4250755278c531ee1f3a2a31aaa260e309c6095",
+  "entries": {
+    "product.heroKicker": {
+      "source": "For researchers",
+      "text": "Para pesquisadores"
+    },
+    "product.heroTitle": {
+      "source": "AI research.",
+      "text": "Pesquisa com IA."
+    },
+    "product.overviewKicker": {
+      "source": "What you get",
+      "text": "O que você recebe"
+    },
+    "product.overviewTitle": {
+      "source": "A research answer you can follow back to its sources.",
+      "text": "Uma resposta de pesquisa que permite chegar às fontes."
+    },
+    "product.researchersTitle": {
+      "source": "For researchers and students",
+      "text": "Para pesquisadores e estudantes"
+    },
+    "product.researchersAction": {
+      "source": "Open the literature workspace",
+      "text": "Abrir o espaço de pesquisa bibliográfica"
+    },
+    "product.buildersTitle": {
+      "source": "For builders and writers",
+      "text": "Para desenvolvedores e escritores"
+    },
+    "product.buildersBody": {
+      "source": "Investigate a technical question or prepare a brief. Follow the agent's source decisions, inspect supporting citations and reopen the completed report.",
+      "text": "Investigue uma questão técnica ou prepare um relatório. Acompanhe as decisões sobre as fontes, confira as citações e reabra o relatório concluído."
+    },
+    "product.buildersAction": {
+      "source": "Explore sources",
+      "text": "Explorar fontes"
+    },
+    "product.agentsTitle": {
+      "source": "For agent developers",
+      "text": "Para desenvolvedores de agentes"
+    },
+    "product.agentsAction": {
+      "source": "Explore developer integrations",
+      "text": "Explorar integrações para desenvolvedores"
+    },
+    "product.proofKicker": {
+      "source": "Inspect the evidence",
+      "text": "Examine as evidências"
+    },
+    "product.proofTitle": {
+      "source": "Trust comes from what you can check.",
+      "text": "A confiança vem do que você pode verificar."
+    },
+    "product.try": {
+      "source": "Try a research question",
+      "text": "Testar uma pergunta de pesquisa"
+    },
+    "product.faqTitle": {
+      "source": "Before your first question",
+      "text": "Antes da sua primeira pergunta"
+    },
+    "product.navigationAbout": {
+      "source": "About",
+      "text": "Sobre"
+    }
+  }
+}

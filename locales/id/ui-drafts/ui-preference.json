@@ -1,0 +1,44 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ui-preference.ts",
+  "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+  "entries": {
+    "language": {
+      "source": "Interface language",
+      "text": "Bahasa antarmuka"
+    },
+    "previewNotice": {
+      "source": "Preview: machine draft, not human reviewed. Some interface text remains in English. Critical payment, consent and legal text stays in English.",
+      "text": "Pratinjau: draf terjemahan mesin tanpa tinjauan manusia. Sebagian antarmuka tetap berbahasa Inggris. Teks penting tentang pembayaran, persetujuan, dan hukum tetap berbahasa Inggris."
+    },
+    "checking": {
+      "source": "Checking language preference…",
+      "text": "Memeriksa pilihan bahasa…"
+    },
+    "saving": {
+      "source": "Saving account language…",
+      "text": "Menyimpan bahasa akun…"
+    },
+    "accountSaved": {
+      "source": "Language saved to this account.",
+      "text": "Bahasa disimpan ke akun ini."
+    },
+    "browserSaved": {
+      "source": "Language saved in this browser.",
+      "text": "Bahasa disimpan di peramban ini."
+    },
+    "unavailable": {
+      "source": "Account language is unavailable. Your browser choice still applies.",
+      "text": "Bahasa akun tidak tersedia. Pilihan bahasa peramban Anda tetap berlaku."
+    },
+    "memoryOnly": {
+      "source": "Language applies here. Browser storage is unavailable; it may not survive this session.",
+      "text": "Bahasa berlaku di sini. Penyimpanan peramban tidak tersedia; pilihan ini mungkin hilang setelah sesi berakhir."
+    },
+    "loadFailed": {
+      "source": "Translation could not load. English is shown; select the language to retry.",
+      "text": "Terjemahan tidak dapat dimuat. Bahasa Inggris ditampilkan; pilih kembali bahasa untuk mencoba lagi."
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "lib/i18n/messages.ts",
+  "sourceSha256": "37ac7ad5e8f7daf683952524320809f87a27d21ed650959de267137fd2cc6c2d",
+  "entries": {
+    "researchEntry.ask": {
+      "source": "Ask Keryx",
+      "text": "Tanya Keryx"
+    },
+    "researchEntry.question": {
+      "source": "What do you want to know?",
+      "text": "Apa yang ingin Anda ketahui?"
+    },
+    "researchEntry.placeholder": {
+      "source": "Ask a question worth reading for...",
+      "text": "Ajukan pertanyaan yang layak diteliti..."
+    },
+    "researchEntry.depth": {
+      "source": "Research depth",
+      "text": "Kedalaman riset"
+    },
+    "researchEntry.quick": {
+      "source": "quick",
+      "text": "cepat"
+    },
+    "researchEntry.deep": {
+      "source": "deep",
+      "text": "mendalam"
+    },
+    "researchEntry.researching": {
+      "source": "Researching...",
+      "text": "Sedang meneliti..."
+    },
+    "researchEntry.moreOptions": {
+      "source": "More options",
+      "text": "Opsi lainnya"
+    },
+    "researchEntry.model": {
+      "source": "AI model",
+      "text": "Model AI"
+    },
+    "researchEntry.savedReports": {
+      "source": "My saved reports",
+      "text": "Laporan tersimpan saya"
+    }
+  }
+}

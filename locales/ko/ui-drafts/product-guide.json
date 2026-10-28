@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/product-guide.ts",
+  "sourceSha256": "96781f403ed4d596dcdcd689e4250755278c531ee1f3a2a31aaa260e309c6095",
+  "entries": {
+    "product.heroKicker": {
+      "source": "For researchers",
+      "text": "연구자를 위한 서비스"
+    },
+    "product.heroTitle": {
+      "source": "AI research.",
+      "text": "AI 리서치."
+    },
+    "product.overviewKicker": {
+      "source": "What you get",
+      "text": "제공되는 결과"
+    },
+    "product.overviewTitle": {
+      "source": "A research answer you can follow back to its sources.",
+      "text": "원문 출처까지 확인할 수 있는 조사 답변."
+    },
+    "product.researchersTitle": {
+      "source": "For researchers and students",
+      "text": "연구자와 학생을 위해"
+    },
+    "product.researchersAction": {
+      "source": "Open the literature workspace",
+      "text": "문헌 작업 공간 열기"
+    },
+    "product.buildersTitle": {
+      "source": "For builders and writers",
+      "text": "개발자와 작가를 위해"
+    },
+    "product.buildersBody": {
+      "source": "Investigate a technical question or prepare a brief. Follow the agent's source decisions, inspect supporting citations and reopen the completed report.",
+      "text": "기술적인 질문을 조사하거나 보고서를 준비하세요. 출처 선택 과정을 확인하고, 근거 인용을 검토하고, 완료된 보고서를 다시 열 수 있습니다."
+    },
+    "product.buildersAction": {
+      "source": "Explore sources",
+      "text": "출처 둘러보기"
+    },
+    "product.agentsTitle": {
+      "source": "For agent developers",
+      "text": "에이전트 개발자를 위해"
+    },
+    "product.agentsAction": {
+      "source": "Explore developer integrations",
+      "text": "개발자 연동 살펴보기"
+    },
+    "product.proofKicker": {
+      "source": "Inspect the evidence",
+      "text": "증거 확인"
+    },
+    "product.proofTitle": {
+      "source": "Trust comes from what you can check.",
+      "text": "직접 확인할 수 있는 정보가 신뢰를 만듭니다."
+    },
+    "product.try": {
+      "source": "Try a research question",
+      "text": "조사 질문 시도하기"
+    },
+    "product.faqTitle": {
+      "source": "Before your first question",
+      "text": "첫 질문 전에"
+    },
+    "product.navigationAbout": {
+      "source": "About",
+      "text": "소개"
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/shell.ts",
+  "sourceSha256": "98de613c0f20357e8d901f40f221f5e183141096b6713f44c0c02baa5d0c1e5a",
+  "entries": {
+    "shellNavigation.ask": {
+      "source": "Ask a question",
+      "text": "Poser une question"
+    },
+    "shellNavigation.answers": {
+      "source": "Past answers",
+      "text": "Réponses précédentes"
+    },
+    "shellNavigation.sources": {
+      "source": "Sources",
+      "text": "Sources"
+    },
+    "shellNavigation.literature": {
+      "source": "Literature workspace",
+      "text": "Espace bibliographique"
+    },
+    "shellNavigation.creators": {
+      "source": "For creators",
+      "text": "Pour les créateurs"
+    },
+    "shellNavigation.mySources": {
+      "source": "My sources",
+      "text": "Mes sources"
+    },
+    "shellNavigation.myDispatches": {
+      "source": "My dispatches",
+      "text": "Mes publications"
+    },
+    "shellNavigation.playground": {
+      "source": "Playground",
+      "text": "Bac à sable"
+    },
+    "shellNavigation.developer": {
+      "source": "Dev portal",
+      "text": "Portail développeur"
+    },
+    "shellHeader.creatorAction": {
+      "source": "For creators ▸",
+      "text": "Pour les créateurs ▸"
+    },
+    "shellHeader.closeMenu": {
+      "source": "Close menu",
+      "text": "Fermer le menu"
+    },
+    "shellHeader.openMenu": {
+      "source": "Open menu",
+      "text": "Ouvrir le menu"
+    },
+    "shellHeader.mobileNavigation": {
+      "source": "Mobile navigation",
+      "text": "Navigation mobile"
+    },
+    "shellHeader.explore": {
+      "source": "Explore",
+      "text": "Explorer"
+    },
+    "shellHeader.moreTools": {
+      "source": "More tools",
+      "text": "Autres outils"
+    },
+    "shellFooter.house": {
+      "source": "The house",
+      "text": "Keryx"
+    },
+    "shellFooter.docsAndProof": {
+      "source": "Docs & proof",
+      "text": "Documentation et preuves"
+    }
+  }
+}

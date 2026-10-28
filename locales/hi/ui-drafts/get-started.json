@@ -1,0 +1,84 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/get-started.ts",
+  "sourceSha256": "9450616cf1959d638de574cbeec2f3a445dbdea9d93bc8dcd67301299373e2fa",
+  "entries": {
+    "navigation.start": {
+      "source": "Get started",
+      "text": "शुरू करें"
+    },
+    "navigation.download": {
+      "source": "Download",
+      "text": "डाउनलोड"
+    },
+    "navigation.integrations": {
+      "source": "Integrations",
+      "text": "एकीकरण"
+    },
+    "navigation.label": {
+      "source": "Ways to use Keryx",
+      "text": "Keryx इस्तेमाल करने के तरीके"
+    },
+    "navigation.downloadAction": {
+      "source": "Get the app or extension",
+      "text": "ऐप या एक्सटेंशन प्राप्त करें"
+    },
+    "navigation.connectAction": {
+      "source": "Connect MCP, API or CLI",
+      "text": "MCP, API या CLI जोड़ें"
+    },
+    "start.title": {
+      "source": "Your research. Wherever you work.",
+      "text": "आपका शोध, आपके काम की जगह पर।"
+    },
+    "start.body": {
+      "source": "Ask in your browser, research a page you are reading, connect your AI assistant, or build Keryx into your own workflow. Pick a starting point below.",
+      "text": "ब्राउज़र में प्रश्न पूछें, पढ़े जा रहे पृष्ठ पर शोध करें, अपना AI सहायक जोड़ें या Keryx को अपने उपकरणों में शामिल करें। शुरुआत का तरीका चुनें।"
+    },
+    "start.try": {
+      "source": "Try Keryx in the browser",
+      "text": "ब्राउज़र में Keryx आज़माएँ"
+    },
+    "start.browse": {
+      "source": "Browse downloads",
+      "text": "डाउनलोड देखें"
+    },
+    "start.firstTitle": {
+      "source": "Your first cited answer",
+      "text": "स्रोत संदर्भों वाला आपका पहला उत्तर"
+    },
+    "start.choose": {
+      "source": "Choose how you use Keryx",
+      "text": "Keryx इस्तेमाल करने का तरीका चुनें"
+    },
+    "common.steps": {
+      "source": "Get set up",
+      "text": "सेटअप करें"
+    },
+    "common.requirements": {
+      "source": "What you need",
+      "text": "आपको क्या चाहिए"
+    },
+    "common.help": {
+      "source": "Need a hand?",
+      "text": "मदद चाहिए?"
+    },
+    "common.support": {
+      "source": "Contact support",
+      "text": "सहायता से संपर्क करें"
+    },
+    "common.docs": {
+      "source": "Read the full guide",
+      "text": "पूरी मार्गदर्शिका पढ़ें"
+    },
+    "common.copy": {
+      "source": "Copy",
+      "text": "कॉपी करें"
+    },
+    "common.copied": {
+      "source": "Copied",
+      "text": "कॉपी हो गया"
+    }
+  }
+}

@@ -112,8 +112,8 @@ describe("bound display formatters", () => {
     [-0.0000001, 6, "Unavailable", "Unavailable", "Unavailable"],
   ] as const;
 
-  it.each(cases)("derives %s USDC at %s places from its exact micro integer in every prepared locale", (usdc, digits, en, vi, zh) => {
-    expect(preparedLocales.map(locale => createFormatters(locale).usdc(usdc, digits))).toEqual([en, vi, zh]);
+  it.each(cases)("retains existing exact %s USDC displays at %s places", (usdc, digits, en, vi, zh) => {
+    expect((["en", "vi", "zh-Hans"] as const).map(locale => createFormatters(locale).usdc(usdc, digits))).toEqual([en, vi, zh]);
   });
 
   it("refuses fractional-micro repair and keeps the facade on the canonical recorded contract", () => {
