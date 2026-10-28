@@ -6,6 +6,7 @@ import { listedQuestion, publicFinancialPayment } from "@/lib/run-privacy/public
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { recordedUsdcMicros } from "@/lib/display/recorded-usdc";
 import {
   findAccount,
   SETTLEMENT_PARITY_STATE_KEY,
@@ -14,6 +15,13 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** Keep the existing numeric response only when it preserves the exact recorded micros. */
+function creatorUsdc(micros: bigint): number {
+  const amount = Number(micros) / 1_000_000;
+  if (recordedUsdcMicros(amount) !== micros) throw new Error("creator_amount_unavailable");
+  return amount;
+}
 
 export async function GET(
   _req: NextRequest,
@@ -46,20 +54,27 @@ export async function GET(
 
     const actualCreatorPayments = creatorPayments.filter((p) => p.kind === "fetch" || p.kind === "citation");
     const settledPayments = actualCreatorPayments.filter((p) => p.settled);
-    const settledTotal = settledPayments.reduce((sum, p) => sum + p.amountUsdc, 0);
+
+    // Sum the recorded legs in integer micro-USDC. Rounding an accumulated float
+    // would hide invalid legs and can make valid totals unavailable to the UI.
+    let settledMicros = BigInt(0);
+    const dailyMap = new Map<string, bigint>();
+    for (const p of settledPayments) {
+      const micros = recordedUsdcMicros(p.amountUsdc);
+      if (micros === null) throw new Error("creator_amount_unavailable");
+      settledMicros += micros;
+      const day = p.createdAt.slice(0, 10);
+      dailyMap.set(day, (dailyMap.get(day) ?? BigInt(0)) + micros);
+    }
+    const settledTotal = creatorUsdc(settledMicros);
     const totalEarned = entry?.totalEarnedUsdc ?? settledTotal;
     const paymentCount = entry?.paymentCount ?? settledPayments.length;
     const citationCount = entry?.citationCount ?? settledPayments.filter((p) => p.kind === "citation").length;
 
     // Earnings per day from all-time settled payouts.
-    const dailyMap = new Map<string, number>();
-    for (const p of settledPayments) {
-      const day = p.createdAt.slice(0, 10);
-      dailyMap.set(day, (dailyMap.get(day) ?? 0) + p.amountUsdc);
-    }
     const dailyEarnings = [...dailyMap.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, amount]) => ({ date, amount }));
+      .map(([date, micros]) => ({ date, amount: creatorUsdc(micros) }));
 
     // Attach the question that triggered each payout so the creator sees WHAT work of
     // theirs was used, not an opaque query id — the tangible "you were cited for this".
