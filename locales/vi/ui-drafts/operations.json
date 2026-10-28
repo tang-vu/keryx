@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/operations.ts",
-  "sourceSha256": "b6cff5c5b55ca0204e3e1bc001e742da7762f9749fe776e5c78334eeea78a7ae",
+  "sourceSha256": "bb773b06c89aba933354fe96d67a715f8d0173aa782e7da697ebbd3346566456",
   "entries": {
     "statusRegistry.parityMatch": {
       "source": "{compared}/{compared} match · {checkedAgo}",
@@ -953,8 +953,8 @@
       "text": "Mã triển khai có tên rõ ràng"
     },
     "proofDashboard.openSourceBuild": {
-      "source": "Open-source build",
-      "text": "Bản dựng mã nguồn mở"
+      "source": "Public code",
+      "text": "Mã nguồn công khai"
     },
     "proofDashboard.queryCountIncludesAllRecordedUseOnlySettled": {
       "source": "Query count includes all recorded use. Only settled records count. Keryx operating fees and creator rewards are shown separately. The settlement-parity block is a separate, older check and can remain an empty ledger without confirming these totals.",
@@ -1341,8 +1341,8 @@
       "text": "Bằng chứng công khai — Keryx"
     },
     "proofPage.metadataDescription": {
-      "source": "Live evidence for Keryx's open-source build, Arc registry authority, Circle settlement, and creator cash-outs.",
-      "text": "Bằng chứng trực tiếp cho bản dựng nguồn mở Keryx, thẩm quyền registry Arc, quyết toán Circle và rút tiền tác giả."
+      "source": "Live evidence for Keryx's public source code, Arc registry authority, Circle settlement, and creator cash-outs.",
+      "text": "Bằng chứng trực tiếp về mã nguồn công khai của Keryx, thẩm quyền sổ đăng ký Arc, quyết toán Circle và việc người sáng tạo rút tiền."
     },
     "proofPage.title": {
       "source": "Evidence, with its {emphasis}",

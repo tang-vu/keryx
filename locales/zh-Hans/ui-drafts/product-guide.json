@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/product-guide.ts",
-  "sourceSha256": "96781f403ed4d596dcdcd689e4250755278c531ee1f3a2a31aaa260e309c6095",
+  "sourceSha256": "a00c655c696545d98ed34b0737aaaeac5a6cddd49b1a89ba8e506e52a3b2e7d5",
   "entries": {
     "product.heroKicker": {
       "source": "For researchers",
@@ -289,8 +289,8 @@
       "text": "有效研究依赖发布基础作品的人。Keryx 将来源发现及带引用答案与有边界的付费访问和合格创作者奖励结合。即使没有出版者付款，公开参考资料仍有价值。"
     },
     "about.projectTitle": {
-      "source": "An open-source project",
-      "text": "开源项目"
+      "source": "Developed in public",
+      "text": "公开开发"
     },
     "about.projectBody": {
       "source": "Keryx's implementation, changes and issue tracker are public on GitHub. Inspect the code, report a problem or follow development there. Public proof and quality pages document evidence and remaining acceptance gates; they do not establish independent customer adoption.",
@@ -375,6 +375,14 @@
     "product.heroBody": {
       "source": "Cited research. This trial is free, with no wallet required.",
       "text": "带有引用的研究。本次试用免费，无需钱包。"
+    },
+    "about.projectLegalNotice": {
+      "source": "Keryx does not currently have a repository-wide license. Some files and dependencies carry their own license terms. Read the licensing scope before reusing code.",
+      "text": "Keryx 目前没有适用于整个代码仓库的许可证。部分文件和依赖项有各自的许可条款。复用代码前，请阅读许可范围说明。"
+    },
+    "about.projectLegalLink": {
+      "source": "Licensing scope",
+      "text": "许可范围"
     }
   }
 }
