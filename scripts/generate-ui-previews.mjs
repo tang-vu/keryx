@@ -16,7 +16,7 @@ const read = file => readFileSync(path.join(root, file), "utf8");
 // fail, even when somebody regenerates the compiled chunks after deleting text.
 const entryPreviewMinimums = {
   "core-inline": { authored: 10, preview: 10 }, "get-started": { authored: 19, preview: 19 },
-  "product-guide": { authored: 16, preview: 16 }, shell: { authored: 17, preview: 17 },
+  "product-guide": { authored: 95, preview: 49 }, shell: { authored: 17, preview: 17 },
   // The conservative critical-copy filter retains the loadFailed status in English.
   "ui-preference": { authored: 9, preview: 8 },
 };
