@@ -42,9 +42,11 @@ export default function AboutPage() {
           <section>
             <h2 className="font-display text-2xl text-ink"><UiText source={copy("about.projectTitle")} namespaces={["product-guide","about-story"]} /></h2>
             <p className="mt-3"><UiText source={copy("about.projectBody")} namespaces={["product-guide","about-story"]} /></p>
+            <p className="mt-3"><UiText source={copy("about.projectLegalNotice")} namespaces={["product-guide"]} /></p>
             <div className="mt-2 flex flex-wrap gap-x-6">
               <a href="https://github.com/tang-vu/keryx" className={linkClass}><UiText source={copy("about.github")} namespaces={["product-guide","about-story"]} /></a>
               <a href="https://github.com/tang-vu/keryx/issues" className={linkClass}><UiText source={copy("about.issues")} namespaces={["product-guide","about-story"]} /></a>
+              <a href="https://github.com/tang-vu/keryx/blob/main/docs/licensing.md" className={linkClass}><UiText source={copy("about.projectLegalLink")} namespaces={["product-guide"]} /></a>
             </div>
           </section>
           <section id="contact" className="scroll-mt-24 border border-paid bg-paper p-6">

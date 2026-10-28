@@ -11,8 +11,8 @@
   "totals": {
     "englishNamespaceFiles": 76,
     "coreInlineSources": 1,
-    "extractedLeaves": 6391,
-    "authoredEntries": 6362,
+    "extractedLeaves": 6393,
+    "authoredEntries": 6364,
     "nonTranslatableMachineIdentifiers": 29,
     "uncoveredEntries": 0,
     "completeNamespaces": 77
@@ -2230,7 +2230,7 @@
     {
       "namespace": "operations",
       "sourcePath": "locales/en/operations.ts",
-      "sourceSha256": "b6cff5c5b55ca0204e3e1bc001e742da7762f9749fe776e5c78334eeea78a7ae",
+      "sourceSha256": "bb773b06c89aba933354fe96d67a715f8d0173aa782e7da697ebbd3346566456",
       "draftPath": "locales/vi/ui-drafts/operations.json",
       "extractedLeaves": 351,
       "authoredEntries": 350,
@@ -2860,10 +2860,10 @@
     {
       "namespace": "product-guide",
       "sourcePath": "locales/en/product-guide.ts",
-      "sourceSha256": "96781f403ed4d596dcdcd689e4250755278c531ee1f3a2a31aaa260e309c6095",
+      "sourceSha256": "a00c655c696545d98ed34b0737aaaeac5a6cddd49b1a89ba8e506e52a3b2e7d5",
       "draftPath": "locales/vi/ui-drafts/product-guide.json",
-      "extractedLeaves": 93,
-      "authoredEntries": 93,
+      "extractedLeaves": 95,
+      "authoredEntries": 95,
       "coveredKeys": [
         "about.boundariesBody",
         "about.boundariesTitle",
@@ -2875,6 +2875,8 @@
         "about.issues",
         "about.metadataTitle",
         "about.projectBody",
+        "about.projectLegalLink",
+        "about.projectLegalNotice",
         "about.projectTitle",
         "about.title",
         "about.whyBody",

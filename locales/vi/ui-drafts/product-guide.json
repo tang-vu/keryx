@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/product-guide.ts",
-  "sourceSha256": "96781f403ed4d596dcdcd689e4250755278c531ee1f3a2a31aaa260e309c6095",
+  "sourceSha256": "a00c655c696545d98ed34b0737aaaeac5a6cddd49b1a89ba8e506e52a3b2e7d5",
   "entries": {
     "product.heroKicker": {
       "source": "For researchers",
@@ -289,8 +289,8 @@
       "text": "Nghiên cứu hữu ích phụ thuộc người xuất bản công trình nền tảng. Keryx kết hợp khám phá nguồn và câu trả lời có trích dẫn với truy cập trả phí có giới hạn, phần thưởng tác giả đủ điều kiện. Tài liệu tham khảo công khai vẫn hữu ích dù không trả tiền nhà xuất bản."
     },
     "about.projectTitle": {
-      "source": "An open-source project",
-      "text": "Dự án mã nguồn mở"
+      "source": "Developed in public",
+      "text": "Phát triển công khai"
     },
     "about.projectBody": {
       "source": "Keryx's implementation, changes and issue tracker are public on GitHub. Inspect the code, report a problem or follow development there. Public proof and quality pages document evidence and remaining acceptance gates; they do not establish independent customer adoption.",
@@ -375,6 +375,14 @@
     "product.heroBody": {
       "source": "Cited research. This trial is free, with no wallet required.",
       "text": "Nghiên cứu có trích dẫn. Dùng thử này miễn phí, không cần ví."
+    },
+    "about.projectLegalNotice": {
+      "source": "Keryx does not currently have a repository-wide license. Some files and dependencies carry their own license terms. Read the licensing scope before reusing code.",
+      "text": "Keryx hiện chưa có giấy phép áp dụng cho toàn bộ kho mã. Một số tệp và thư viện phụ thuộc có điều khoản giấy phép riêng. Hãy đọc phạm vi giấy phép trước khi sử dụng lại mã."
+    },
+    "about.projectLegalLink": {
+      "source": "Licensing scope",
+      "text": "Phạm vi giấy phép"
     }
   }
 }

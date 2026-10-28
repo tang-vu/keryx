@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/product-guide.ts",
-  "sourceSha256": "96781f403ed4d596dcdcd689e4250755278c531ee1f3a2a31aaa260e309c6095",
+  "sourceSha256": "a00c655c696545d98ed34b0737aaaeac5a6cddd49b1a89ba8e506e52a3b2e7d5",
   "entries": {
     "product.heroKicker": {
       "source": "For researchers",
@@ -67,6 +67,10 @@
     "product.navigationAbout": {
       "source": "About",
       "text": "Acerca de"
+    },
+    "about.projectTitle": {
+      "source": "Developed in public",
+      "text": "Desarrollado en público"
     }
   }
 }

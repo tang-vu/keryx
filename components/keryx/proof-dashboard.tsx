@@ -9,7 +9,7 @@ import { RegistryStatusSection, type RegistryHealth } from "./registry-status-se
 import { SettlementProofSection, type SettlementHealth } from "./settlement-proof-section";
 
 
-import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+import { UiMessage, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
 
 
@@ -146,7 +146,7 @@ export function ProofDashboard() {
 
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="border border-line bg-paper p-6">
-          <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal">{message("proofDashboard.openSourceBuild")}</div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-seal"><UiMessage messageKey="proofDashboard.openSourceBuild" /></div>
           <h2 className="mt-1 font-display text-[23px] font-semibold tracking-tight text-ink">{message("proofDashboard.theDeployedCodeHasAName")}</h2>
           <dl className="mt-6 grid grid-cols-1 gap-4 font-mono text-[11px] sm:grid-cols-2">
             <ProofRow label={message("proofDashboard.deployedCommit")}>
