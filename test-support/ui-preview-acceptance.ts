@@ -40,6 +40,17 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
         assert.equal(await page.locator("#ask-question").inputValue(), original);
         assert.equal(await page.locator("#ask-question").getAttribute("placeholder"), drafts[locale]["core-inline"].entries["researchEntry.placeholder"].text);
         assert.equal(await select().getAttribute("title"), drafts[locale]["ui-preference"].entries.previewNotice.text);
+        const [headline, guide, globe] = await Promise.all([page.locator("h1").evaluate(element => {
+          const range = document.createRange(); range.selectNodeContents(element);
+          return range.getBoundingClientRect().toJSON() as { x: number; y: number; width: number; height: number };
+        }),
+          page.getByTestId("hero-guide").boundingBox(), page.getByTestId("chat-globe").boundingBox()]);
+        assert(headline && guide && globe, `${locale}/${width} hero elements are present`);
+        for (const [name, obstacle] of [["guide", guide], ["globe", globe]] as const) {
+          assert(headline.x + headline.width <= obstacle.x || headline.x >= obstacle.x + obstacle.width ||
+            headline.y + headline.height <= obstacle.y || headline.y >= obstacle.y + obstacle.height,
+          `${locale}/${width} headline must not overlap ${name}`);
+        }
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `${locale}/${width} homepage overflow`);
         if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-home.png`), fullPage: true });
         await page.goto(`${base}/get-started`, { waitUntil: "networkidle" });

@@ -26,8 +26,7 @@ The eight newer previews have 71 authored presentation entries each. They are
 partial translations: account workflows, reports, installation instructions and
 other untranslated text retain English. A preview choice changes interface copy;
 it does not translate original questions, source evidence, saved answers or
-payment records, or select the language of a research answer. Choose the answer
-language in the research form separately.
+payment records, or select the language of a research answer.
 
 1. Note the **Interface language** choice currently shown: **Tiếng Việt (preview)**
    (`vi`), **简体中文 (preview)** (`zh-Hans`), **English** (`en`), or a native
