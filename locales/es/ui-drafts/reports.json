@@ -1,0 +1,68 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/reports.ts",
+  "sourceSha256": "c382523e9b0216952efe118a5e28d1ba77c298f0c6bb7c38fe28d5b8e1ca2b5b",
+  "entries": {
+    "reportEvidence.title": {
+      "source": "Recorded evidence",
+      "text": "Evidencia registrada"
+    },
+    "reportEvidence.recorded": {
+      "source": "Targets with inspectable excerpts: {count}/{total}.",
+      "text": "Temas con fragmentos que se pueden examinar: {count}/{total}."
+    },
+    "reportEvidence.unavailable": {
+      "source": "This report has no stored excerpt ledger; target support cannot be inspected here.",
+      "text": "Este informe no tiene un registro de fragmentos guardado; aquí no se puede examinar qué respalda cada tema."
+    },
+    "reportEvidence.notice": {
+      "source": "Excerpt presence and estimated support do not establish a complete or factually correct answer.",
+      "text": "La presencia de fragmentos y la estimación de su respaldo no demuestran que una respuesta sea completa ni correcta en los hechos."
+    },
+    "reportEvidence.inspectCount": {
+      "source": "Targets with missing excerpts or a low recorded support estimate: {count}.",
+      "text": "Temas sin fragmentos o con una estimación de respaldo registrada baja: {count}."
+    },
+    "reportEvidence.inspect": {
+      "source": "Inspect targets and prepare a follow-up",
+      "text": "Examinar temas y preparar una pregunta de seguimiento"
+    },
+    "reportEvidence.targetUnavailable": {
+      "source": "Excerpt ledger unavailable",
+      "text": "Registro de fragmentos no disponible"
+    },
+    "reportEvidence.missing": {
+      "source": "No qualifying excerpt recorded",
+      "text": "No se ha registrado ningún fragmento que cumpla los criterios"
+    },
+    "reportEvidence.excerpts": {
+      "source": "Inspectable excerpts: {count}",
+      "text": "Fragmentos que se pueden examinar: {count}"
+    },
+    "reportEvidence.prepare": {
+      "source": "Prepare follow-up",
+      "text": "Preparar una pregunta de seguimiento"
+    },
+    "reportEvidence.prepareNotice": {
+      "source": "Opens an editable question. Review the question and budget before starting a new research run, which may incur charges.",
+      "text": "Abre una pregunta que puedes editar. Revisa la pregunta y el presupuesto antes de iniciar una nueva investigación, que puede generar cargos."
+    },
+    "reportEvidence.draft": {
+      "source": "Investigate this research target: “{target}”. Find source excerpts, explain what they support and identify what remains unknown. Original question: “{question}”.",
+      "text": "Investiga este tema de investigación: «{target}». Busca fragmentos de las fuentes, explica qué respaldan e identifica qué sigue sin saberse. Pregunta original: «{question}»."
+    },
+    "reportEvidence.selection": {
+      "source": "Selected sources: {selected}/{eligible} proposals",
+      "text": "Fuentes seleccionadas: {selected}/{eligible} propuestas"
+    },
+    "reportEvidence.selectionNotice": {
+      "source": "Source selection is a plan. Inspect the recorded excerpts for actual evidence; selection counts do not measure answer support.",
+      "text": "La selección de fuentes es un plan. Examina los fragmentos registrados para comprobar la evidencia disponible; el número de fuentes seleccionadas no mide el respaldo de la respuesta."
+    },
+    "reportReading.estimated": {
+      "source": "{coverage}% estimated",
+      "text": "{coverage}% estimado"
+    }
+  }
+}

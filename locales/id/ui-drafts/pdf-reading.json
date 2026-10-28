@@ -1,0 +1,28 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/pdf-reading.ts",
+  "sourceSha256": "eeb3bf3c3bc763f6771e486d44c9f6fd779e4e0354b7b50f917e8cdca8be1ebc",
+  "entries": {
+    "summary": {
+      "source": "PDF text extraction visited {read} of {total} pages.",
+      "text": "Ekstraksi teks PDF mengakses {read} dari {total} halaman."
+    },
+    "emptyPages": {
+      "source": "No text was extracted from visited pages {pages}. These pages may be scanned, blank or otherwise unavailable to the text reader.",
+      "text": "Tidak ada teks yang diekstrak dari halaman yang diakses: {pages}. Halaman ini mungkin berupa hasil pindai, kosong, atau tidak dapat dibaca oleh pembaca teks karena alasan lain."
+    },
+    "limit": {
+      "source": "A page or character limit stopped text extraction before the document was complete. Read the remaining original pages directly before making whole-document conclusions; a character cutoff can leave the last visited page incomplete. Retain this snapshot for comparison.",
+      "text": "Batas halaman atau karakter menghentikan ekstraksi teks sebelum seluruh dokumen selesai. Baca langsung halaman asli yang tersisa sebelum menarik kesimpulan tentang seluruh dokumen; pemotongan berdasarkan karakter dapat membuat halaman terakhir yang diakses tidak lengkap. Simpan rekaman ini untuk perbandingan."
+    },
+    "textOnly": {
+      "source": "Only the available PDF text layer was read; images and figures were not interpreted.",
+      "text": "Hanya lapisan teks PDF yang tersedia yang dibaca; gambar dan diagram tidak ditafsirkan."
+    },
+    "recovery": {
+      "source": "Check the same original version. If needed, obtain a text-layer PDF, publisher text or a separately OCR-processed copy; this run did not perform OCR.",
+      "text": "Periksa versi asli yang sama. Jika perlu, dapatkan PDF dengan lapisan teks, teks dari penerbit, atau salinan yang diproses OCR secara terpisah; proses ini tidak melakukan OCR."
+    }
+  }
+}

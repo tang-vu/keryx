@@ -22,11 +22,20 @@ This guide does not enable a preview or establish production delivery.
 | हिन्दी | `hi` | Navigation, question labels, getting started and neutral product/About copy |
 | Bahasa Indonesia | `id` | Navigation, question labels, getting started and neutral product/About copy |
 
-The eight newer previews have 150 authored presentation entries each, including
+The eight newer previews have 170 authored presentation entries each, including
 all 95 source-bound entries in the product guide. The current preview boundary
 admits 48 of those product-guide keys; the other 47 retain English. Authored
 payment, privacy, consent and legal drafts still require human review before use.
-These remain partial translations: account workflows, reports, installation instructions and
+They also include 15 draft labels and explanations for recorded evidence, estimates
+and follow-up questions (14 admitted), plus all five PDF-reading scope clauses
+(all five admitted). The budget notice retains English. The academic recovery
+instruction has an exact namespace/key/English-template exception for checking
+original text and OCR limitations; it grants no translation approval. All financial,
+consent, privacy and legal copy retains its existing review boundary.
+The reports namespace has 634 source leaves; the other
+619 remain uncovered in these eight drafts. Original questions, research targets,
+answers, source excerpts and receipts stay unchanged.
+These remain partial translations: account workflows, most reports, installation instructions and
 other untranslated text retain English. A preview choice changes interface copy;
 it does not translate original questions, source evidence, saved answers or
 payment records, or select the language of a research answer.
@@ -58,9 +67,14 @@ duyệt. Nội dung quan trọng về chấp thuận, thanh toán và pháp lý 
 tiếng Anh chính thức. Tiếng Anh là giao diện có thẩm quyền; các lựa chọn xem trước
 và phạm vi dịch được liệt kê ở bảng trên. Các bản dịch mới bao phủ điều hướng,
 nhãn của biểu mẫu hỏi, phần bắt đầu sử dụng và các đoạn giới thiệu sản phẩm trung tính.
-Mỗi ngôn ngữ mới có 150 mục nháp, bao gồm đủ 95 mục của phần hướng dẫn sản phẩm;
+Mỗi ngôn ngữ mới có 170 mục nháp, bao gồm đủ 95 mục của phần hướng dẫn sản phẩm;
 chỉ 48 mục trong phần này đủ điều kiện xem trước, 47 mục còn lại vẫn dùng tiếng Anh.
 Một phần giao diện vẫn dùng tiếng Anh; đủ bản nháp không đồng nghĩa đã được duyệt.
+Phần bằng chứng có thêm 15 mục nháp (14 mục xem trước), phần giới hạn đọc PDF có
+đủ 5 mục nháp (5 mục xem trước). Thông báo ngân sách vẫn dùng tiếng Anh. Hướng dẫn
+khôi phục PDF chỉ được dùng ngoại lệ khi khớp đúng tên phần, khóa và câu tiếng Anh
+đã kiểm tra về văn bản gốc và giới hạn OCR. Ngoại lệ này không phê duyệt bản dịch.
+Phần báo cáo còn 619 mục chưa có bản dịch trong 8 ngôn ngữ này.
 Ngôn ngữ giao diện và ngôn ngữ câu trả lời là hai lựa chọn riêng. Hướng dẫn này không bật bản xem trước.
 
 1. Ghi lựa chọn đang hiển thị ở **Interface language**: **Tiếng Việt (preview)**
@@ -88,9 +102,12 @@ Không có tuyên bố phê duyệt của tác giả hay tác nhân AI cho các 
 预览翻译是机器草稿（`machineDraft`），尚未经人工审核。涉及同意、
 付款和法律的重要文字仍使用具有权威性的英语原文。英语是权威界面语言；
 预览语言及翻译范围见上表。新增预览涵盖导航、提问表单标签、入门内容和中性的产品介绍。
-每种新增语言有 150 条草稿，包括产品指南的全部 95 条原文；其中 48 条可用于预览，
+每种新增语言有 170 条草稿，包括产品指南的全部 95 条原文；其中 48 条可用于预览，
 其余 47 条仍使用英语。草稿完整不代表通过人工审核。部分界面仍为英语。
 界面语言与研究回答语言是独立的选项。本指南不会启用预览。
+另有 15 条证据说明草稿（14 条可预览）和全部 5 条 PDF 阅读范围说明（5 条可预览）。
+预算提示仍使用英语。关于原文和 OCR 限制的恢复说明采用精确匹配命名空间、键名和
+英语原文的学术说明例外；这不代表翻译获批。这 8 种语言的报告命名空间还有 619 条未翻译。
 
 1. 记录 **Interface language** 中当前显示的选项：**Tiếng Việt (preview)**
    （`vi`）、**简体中文 (preview)**（`zh-Hans`）或 **English**（`en`）。

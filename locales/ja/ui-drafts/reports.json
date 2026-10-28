@@ -1,0 +1,68 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/reports.ts",
+  "sourceSha256": "c382523e9b0216952efe118a5e28d1ba77c298f0c6bb7c38fe28d5b8e1ca2b5b",
+  "entries": {
+    "reportEvidence.title": {
+      "source": "Recorded evidence",
+      "text": "記録された根拠"
+    },
+    "reportEvidence.recorded": {
+      "source": "Targets with inspectable excerpts: {count}/{total}.",
+      "text": "確認できる抜粋がある調査対象：{count}/{total}。"
+    },
+    "reportEvidence.unavailable": {
+      "source": "This report has no stored excerpt ledger; target support cannot be inspected here.",
+      "text": "このレポートには抜粋の記録が保存されていないため、各調査対象を支える根拠をここでは確認できません。"
+    },
+    "reportEvidence.notice": {
+      "source": "Excerpt presence and estimated support do not establish a complete or factually correct answer.",
+      "text": "抜粋があることや根拠の充足度の推定だけでは、回答が完全であることや事実として正しいことは証明できません。"
+    },
+    "reportEvidence.inspectCount": {
+      "source": "Targets with missing excerpts or a low recorded support estimate: {count}.",
+      "text": "抜粋がない、または記録された根拠の充足度の推定が低い調査対象：{count}。"
+    },
+    "reportEvidence.inspect": {
+      "source": "Inspect targets and prepare a follow-up",
+      "text": "調査対象を確認し、追加の質問を準備"
+    },
+    "reportEvidence.targetUnavailable": {
+      "source": "Excerpt ledger unavailable",
+      "text": "抜粋の記録を利用できません"
+    },
+    "reportEvidence.missing": {
+      "source": "No qualifying excerpt recorded",
+      "text": "条件を満たす抜粋は記録されていません"
+    },
+    "reportEvidence.excerpts": {
+      "source": "Inspectable excerpts: {count}",
+      "text": "確認できる抜粋：{count}"
+    },
+    "reportEvidence.prepare": {
+      "source": "Prepare follow-up",
+      "text": "追加の質問を準備"
+    },
+    "reportEvidence.prepareNotice": {
+      "source": "Opens an editable question. Review the question and budget before starting a new research run, which may incur charges.",
+      "text": "編集できる質問を開きます。新たなリサーチを開始する前に、質問と予算を確認してください。費用が発生する場合があります。"
+    },
+    "reportEvidence.draft": {
+      "source": "Investigate this research target: “{target}”. Find source excerpts, explain what they support and identify what remains unknown. Original question: “{question}”.",
+      "text": "次の調査対象について調べてください：「{target}」。情報源の抜粋を探し、それらが何を裏付けるかを説明し、まだ不明な点を明らかにしてください。元の質問：「{question}」。"
+    },
+    "reportEvidence.selection": {
+      "source": "Selected sources: {selected}/{eligible} proposals",
+      "text": "選択した情報源：{selected}/{eligible}件の候補"
+    },
+    "reportEvidence.selectionNotice": {
+      "source": "Source selection is a plan. Inspect the recorded excerpts for actual evidence; selection counts do not measure answer support.",
+      "text": "情報源の選択は計画です。実際の根拠は記録された抜粋を確認してください。選択した件数は、回答がどの程度裏付けられているかを示しません。"
+    },
+    "reportReading.estimated": {
+      "source": "{coverage}% estimated",
+      "text": "推定{coverage}%"
+    }
+  }
+}

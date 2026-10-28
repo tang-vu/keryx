@@ -1,0 +1,68 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/reports.ts",
+  "sourceSha256": "c382523e9b0216952efe118a5e28d1ba77c298f0c6bb7c38fe28d5b8e1ca2b5b",
+  "entries": {
+    "reportEvidence.title": {
+      "source": "Recorded evidence",
+      "text": "Éléments de preuve enregistrés"
+    },
+    "reportEvidence.recorded": {
+      "source": "Targets with inspectable excerpts: {count}/{total}.",
+      "text": "Points de recherche avec des extraits consultables : {count}/{total}."
+    },
+    "reportEvidence.unavailable": {
+      "source": "This report has no stored excerpt ledger; target support cannot be inspected here.",
+      "text": "Ce rapport ne contient aucun registre d'extraits enregistré ; les éléments qui étayent chaque point de recherche ne peuvent pas être examinés ici."
+    },
+    "reportEvidence.notice": {
+      "source": "Excerpt presence and estimated support do not establish a complete or factually correct answer.",
+      "text": "La présence d'extraits et le soutien estimé ne prouvent pas qu'une réponse est complète ou factuellement correcte."
+    },
+    "reportEvidence.inspectCount": {
+      "source": "Targets with missing excerpts or a low recorded support estimate: {count}.",
+      "text": "Points de recherche sans extraits ou avec une faible estimation de soutien enregistrée : {count}."
+    },
+    "reportEvidence.inspect": {
+      "source": "Inspect targets and prepare a follow-up",
+      "text": "Examiner les points de recherche et préparer une question complémentaire"
+    },
+    "reportEvidence.targetUnavailable": {
+      "source": "Excerpt ledger unavailable",
+      "text": "Registre d'extraits indisponible"
+    },
+    "reportEvidence.missing": {
+      "source": "No qualifying excerpt recorded",
+      "text": "Aucun extrait répondant aux critères n'est enregistré"
+    },
+    "reportEvidence.excerpts": {
+      "source": "Inspectable excerpts: {count}",
+      "text": "Extraits consultables : {count}"
+    },
+    "reportEvidence.prepare": {
+      "source": "Prepare follow-up",
+      "text": "Préparer une question complémentaire"
+    },
+    "reportEvidence.prepareNotice": {
+      "source": "Opens an editable question. Review the question and budget before starting a new research run, which may incur charges.",
+      "text": "Ouvre une question modifiable. Vérifiez la question et le budget avant de lancer une nouvelle recherche, qui peut entraîner des frais."
+    },
+    "reportEvidence.draft": {
+      "source": "Investigate this research target: “{target}”. Find source excerpts, explain what they support and identify what remains unknown. Original question: “{question}”.",
+      "text": "Étudiez ce point de recherche : « {target} ». Trouvez des extraits de sources, expliquez ce qu'ils étayent et indiquez ce qui reste inconnu. Question d'origine : « {question} »."
+    },
+    "reportEvidence.selection": {
+      "source": "Selected sources: {selected}/{eligible} proposals",
+      "text": "Sources sélectionnées : {selected}/{eligible} propositions"
+    },
+    "reportEvidence.selectionNotice": {
+      "source": "Source selection is a plan. Inspect the recorded excerpts for actual evidence; selection counts do not measure answer support.",
+      "text": "La sélection des sources est un plan. Examinez les extraits enregistrés pour consulter les preuves réelles ; le nombre de sources sélectionnées ne mesure pas le soutien apporté à la réponse."
+    },
+    "reportReading.estimated": {
+      "source": "{coverage}% estimated",
+      "text": "{coverage}% estimé"
+    }
+  }
+}

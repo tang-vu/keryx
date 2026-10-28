@@ -1,0 +1,68 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/reports.ts",
+  "sourceSha256": "c382523e9b0216952efe118a5e28d1ba77c298f0c6bb7c38fe28d5b8e1ca2b5b",
+  "entries": {
+    "reportEvidence.title": {
+      "source": "Recorded evidence",
+      "text": "दर्ज किए गए साक्ष्य"
+    },
+    "reportEvidence.recorded": {
+      "source": "Targets with inspectable excerpts: {count}/{total}.",
+      "text": "जिन शोध विषयों के अंश जाँचे जा सकते हैं: {count}/{total}।"
+    },
+    "reportEvidence.unavailable": {
+      "source": "This report has no stored excerpt ledger; target support cannot be inspected here.",
+      "text": "इस रिपोर्ट में अंशों का कोई सहेजा हुआ रिकॉर्ड नहीं है; यहाँ शोध विषयों के समर्थन की जाँच नहीं की जा सकती।"
+    },
+    "reportEvidence.notice": {
+      "source": "Excerpt presence and estimated support do not establish a complete or factually correct answer.",
+      "text": "अंशों की मौजूदगी और समर्थन का अनुमान यह साबित नहीं करते कि उत्तर पूरा या तथ्यात्मक रूप से सही है।"
+    },
+    "reportEvidence.inspectCount": {
+      "source": "Targets with missing excerpts or a low recorded support estimate: {count}.",
+      "text": "जिन शोध विषयों के अंश नहीं हैं या जिनके दर्ज समर्थन का अनुमान कम है: {count}।"
+    },
+    "reportEvidence.inspect": {
+      "source": "Inspect targets and prepare a follow-up",
+      "text": "शोध विषय जाँचें और आगे का प्रश्न तैयार करें"
+    },
+    "reportEvidence.targetUnavailable": {
+      "source": "Excerpt ledger unavailable",
+      "text": "अंशों का रिकॉर्ड उपलब्ध नहीं है"
+    },
+    "reportEvidence.missing": {
+      "source": "No qualifying excerpt recorded",
+      "text": "मानदंडों को पूरा करने वाला कोई अंश दर्ज नहीं है"
+    },
+    "reportEvidence.excerpts": {
+      "source": "Inspectable excerpts: {count}",
+      "text": "जाँचने योग्य अंश: {count}"
+    },
+    "reportEvidence.prepare": {
+      "source": "Prepare follow-up",
+      "text": "आगे का प्रश्न तैयार करें"
+    },
+    "reportEvidence.prepareNotice": {
+      "source": "Opens an editable question. Review the question and budget before starting a new research run, which may incur charges.",
+      "text": "एक ऐसा प्रश्न खोलता है जिसे आप संपादित कर सकते हैं। नया शोध शुरू करने से पहले प्रश्न और बजट की समीक्षा करें; इसमें शुल्क लग सकता है।"
+    },
+    "reportEvidence.draft": {
+      "source": "Investigate this research target: “{target}”. Find source excerpts, explain what they support and identify what remains unknown. Original question: “{question}”.",
+      "text": "इस शोध विषय की पड़ताल करें: “{target}”। स्रोतों के अंश खोजें, बताएँ कि वे किस बात का समर्थन करते हैं और पहचानें कि क्या अब भी अज्ञात है। मूल प्रश्न: “{question}”।"
+    },
+    "reportEvidence.selection": {
+      "source": "Selected sources: {selected}/{eligible} proposals",
+      "text": "चुने गए स्रोत: {selected}/{eligible} प्रस्ताव"
+    },
+    "reportEvidence.selectionNotice": {
+      "source": "Source selection is a plan. Inspect the recorded excerpts for actual evidence; selection counts do not measure answer support.",
+      "text": "स्रोतों का चयन एक योजना है। वास्तविक साक्ष्य के लिए दर्ज किए गए अंश जाँचें; चुने गए स्रोतों की संख्या उत्तर के समर्थन को नहीं मापती।"
+    },
+    "reportReading.estimated": {
+      "source": "{coverage}% estimated",
+      "text": "{coverage}% अनुमानित"
+    }
+  }
+}

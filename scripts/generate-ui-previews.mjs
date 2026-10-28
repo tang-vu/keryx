@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { extractNamespaceCopy, validateNamespaceDraft } from "./check-ui-copy.mjs";
+import { isNeutralResearchPreview } from "../lib/i18n/neutral-research-preview.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // Same conservative boundary as the namespace preview validator. A preview never
@@ -17,6 +18,7 @@ const read = file => readFileSync(path.join(root, file), "utf8");
 const entryPreviewMinimums = {
   "core-inline": { authored: 10, preview: 10 }, "get-started": { authored: 19, preview: 19 },
   "product-guide": { authored: 95, preview: 48 }, shell: { authored: 17, preview: 17 },
+  reports: { authored: 15, preview: 14 }, "pdf-reading": { authored: 5, preview: 5 },
   // The conservative critical-copy filter retains the loadFailed status in English.
   "ui-preference": { authored: 9, preview: 8 },
 };
@@ -58,7 +60,8 @@ export function generateUiPreviews(check = false) {
       const ambiguous = new Set();
       let translatedKeys = 0;
       for (const [key, value] of Object.entries(draft.entries)) {
-        if (!("text" in value) || key !== "previewNotice" && (critical.test(`${binding.namespace} ${key} ${value.source}`) || consentKey.test(key))) continue;
+        if (!("text" in value) || key !== "previewNotice" &&
+          (critical.test(`${binding.namespace} ${key} ${value.source}`) && !isNeutralResearchPreview(binding.namespace, key, value.source) || consentKey.test(key))) continue;
         // Resolve only exact, authored English templates; never match report data,
         // substrings, regular expressions or values interpolated into a template.
         if (entries[value.source] && entries[value.source] !== value.text) ambiguous.add(value.source);

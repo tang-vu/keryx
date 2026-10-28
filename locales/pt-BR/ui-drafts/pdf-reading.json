@@ -1,0 +1,28 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/pdf-reading.ts",
+  "sourceSha256": "eeb3bf3c3bc763f6771e486d44c9f6fd779e4e0354b7b50f917e8cdca8be1ebc",
+  "entries": {
+    "summary": {
+      "source": "PDF text extraction visited {read} of {total} pages.",
+      "text": "A extração de texto do PDF percorreu {read} de {total} páginas."
+    },
+    "emptyPages": {
+      "source": "No text was extracted from visited pages {pages}. These pages may be scanned, blank or otherwise unavailable to the text reader.",
+      "text": "Nenhum texto foi extraído das páginas percorridas {pages}. Essas páginas podem ser digitalizadas, estar em branco ou indisponíveis para o leitor de texto por outro motivo."
+    },
+    "limit": {
+      "source": "A page or character limit stopped text extraction before the document was complete. Read the remaining original pages directly before making whole-document conclusions; a character cutoff can leave the last visited page incomplete. Retain this snapshot for comparison.",
+      "text": "Um limite de páginas ou caracteres interrompeu a extração de texto antes de concluir o documento. Leia diretamente as páginas originais restantes antes de tirar conclusões sobre o documento inteiro; um corte por caracteres pode deixar incompleta a última página percorrida. Guarde este registro para comparação."
+    },
+    "textOnly": {
+      "source": "Only the available PDF text layer was read; images and figures were not interpreted.",
+      "text": "Somente a camada de texto disponível do PDF foi lida; imagens e figuras não foram interpretadas."
+    },
+    "recovery": {
+      "source": "Check the same original version. If needed, obtain a text-layer PDF, publisher text or a separately OCR-processed copy; this run did not perform OCR.",
+      "text": "Confira a mesma versão original. Se necessário, obtenha um PDF com camada de texto, o texto do publicador ou uma cópia processada separadamente com OCR; esta execução não realizou OCR."
+    }
+  }
+}

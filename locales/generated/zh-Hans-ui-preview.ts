@@ -1495,6 +1495,7 @@ const preview: Record<string, Record<string, string>> = {
   "pdf-reading": {
     "No text was extracted from visited pages {pages}. These pages may be scanned, blank or otherwise unavailable to the text reader.": "未能从已访问的页面 {pages} 提取文本。这些页面可能是扫描页、空白页，或因其他原因无法由文本读取器读取。",
     "A page or character limit stopped text extraction before the document was complete. Read the remaining original pages directly before making whole-document conclusions; a character cutoff can leave the last visited page incomplete. Retain this snapshot for comparison.": "页数或字符限制导致文本提取在文档读取完成前停止。对整份文档作出结论前，请直接阅读剩余原始页面；字符截断也可能使最后访问的页面未被完整读取。请保留此快照以供比较。",
+    "Check the same original version. If needed, obtain a text-layer PDF, publisher text or a separately OCR-processed copy; this run did not perform OCR.": "请检查同一原始版本。如有需要，获取带文本层的 PDF、出版方文本或另行经过 OCR 处理的副本；本次运行未执行 OCR。",
     "PDF text extraction visited {read} of {total} pages.": "PDF 文本提取已访问 {read} 页，共 {total} 页。",
     "Only the available PDF text layer was read; images and figures were not interpreted.": "仅读取了 PDF 中可用的文本层；未解读图片和图表。"
   },

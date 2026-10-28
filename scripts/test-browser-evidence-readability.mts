@@ -6,6 +6,9 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { privateWorkspaceResultSchema } from "../lib/a2a/private-workspace";
 import { assertSignedOutBrowserFixtureGraph, signedOutResearchAuthFixture } from "../test-support/research-browser-auth-fixture";
+import { preparedLocales } from "../lib/i18n/locales";
+import { englishMessages } from "../lib/i18n/messages";
+import { buildEvidenceLanguageBrowserFixture } from "../test-support/evidence-language-browser-fixture";
 
 const directory = join(resolve(process.env.NEXT_DIST_DIR ?? ".next"), "static", "chunks");
 const cssFiles = (await readdir(directory)).filter(file => file.endsWith(".css"));
@@ -30,6 +33,12 @@ const privateJob = privateWorkspaceResultSchema.parse({ wallet: `0x${"1".repeat(
   spend: { format: "private-spend-v1", chainFinalityVerified: false, incoming: { status: "not-submitted", priceMicros: "0" },
     creator: { budgetMicros: "0", committedMicros: "0", unresolvedMicros: "0", processingMicros: "0", confirmedMicros: "0", uncommittedMicros: "0", payments: [] } },
   result: { answer: run.answer, engine: run.engine, savedAt: run.createdAt, subClaims: run.subClaims, decisions: [], citations: [], evidence, claimCoverage } });
+const originalQuestion = "Keep original <Question> {count} USDC\n日本語 / Tiếng Việt";
+const originalTargets = [englishMessages["reportEvidence.title"], "Keep original <Target> {coverage} USDC — 日本語 / Tiếng Việt"];
+const languageRun = { ...run, id: "11111111-1111-4111-8111-111111111111", question: originalQuestion, subClaims: originalTargets,
+  evidence: evidence.map((item, index) => ({ ...item, claim: originalTargets[index] })),
+  claimCoverage: claimCoverage.map((item, index) => ({ ...item, claim: originalTargets[index], coverage: index === 0 ? 0.9 : 0.2 })) };
+const pdfScope = { format: "keryx-pdf-text-scope-v1", pagesRead: 3, totalPages: 5, pagesWithoutText: [2], textLimitReached: false };
 const bundle = await build({ stdin: { contents: `
 import React from 'react';import{createRoot}from'react-dom/client';
 import{AnswerCard}from'./components/keryx/answer-card';
@@ -44,8 +53,10 @@ createRoot(document.getElementById('root')).render(<>
 </>);`, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, metafile: true, platform: "browser", format: "iife", jsx: "automatic",
   define: { "process.env": JSON.stringify({ NODE_ENV: "production", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet" }) }, plugins: [signedOutResearchAuthFixture()] });
 assertSignedOutBrowserFixtureGraph(bundle.metafile, ["components/keryx/answer-card.tsx", "components/keryx/research-job-details.tsx", "components/keryx/research-private-result.tsx", "components/keryx/deliverable-acceptance.tsx"]);
+const languageBundle = await buildEvidenceLanguageBrowserFixture(process.cwd());
 const browser = await chromium.launch({ headless: true });
 const results = [];
+const languageResults = [];
 try {
   for (const width of [320, 360, 390, 1280]) {
     const context = await browser.newContext({ viewport: { width, height: 800 }, reducedMotion: "reduce" });
@@ -101,6 +112,65 @@ try {
       results.push({ width, quoteViews: 6, storedExcerptInstances: displayed.length + 2, target, panel, pageErrors: errors, externalRequests: attemptedExternalRequests });
     } finally { await context.close(); }
   }
+  for (const locale of preparedLocales.filter(locale => locale !== "en")) {
+    const reportDraft = JSON.parse(await readFile(`locales/${locale}/ui-drafts/reports.json`, "utf8"));
+    const pdfDraft = JSON.parse(await readFile(`locales/${locale}/ui-drafts/pdf-reading.json`, "utf8"));
+    const interpolate = (source: string, values: Record<string, string | number>) => source.replace(/\{([A-Za-z][A-Za-z0-9]*)\}/gu,
+      (match, key: string) => Object.hasOwn(values, key) ? String(values[key]) : match);
+    for (const width of [390, 1280]) {
+      const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
+      const errors: string[] = [], externalRequests: string[] = [];
+      await context.route("**/*", route => {
+        if (route.request().url() === "https://evidence.test/") return route.fulfill({ contentType: "text/html",
+          body: '<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + css + '</style></head><body><main id="root" style="max-width:800px;margin:auto"></main></body></html>' });
+        externalRequests.push(route.request().url()); return route.abort();
+      });
+      const page = await context.newPage(); page.on("pageerror", error => errors.push(error.message));
+      try {
+        await page.goto("https://evidence.test/"); await page.addScriptTag({ content: languageBundle.outputFiles[0].text });
+        await page.evaluate(async value => {
+          await (window as unknown as { renderEvidenceLanguage: (input: { locale: string; run: typeof languageRun; pdfTextScope: typeof pdfScope }) => Promise<void> }).renderEvidenceLanguage(value);
+        }, { locale, run: languageRun, pdfTextScope: pdfScope });
+        const status = page.locator('[data-view="language-evidence"]');
+        const heading = status.getByRole("heading", { name: reportDraft.entries["reportEvidence.title"].text, exact: true });
+        await heading.waitFor();
+        assert.equal(await heading.locator(`[lang="${locale}"]`).count(), 1);
+        await status.getByText(interpolate(reportDraft.entries["reportEvidence.recorded"].text, { count: 2, total: 2 }), { exact: true }).waitFor();
+        await status.getByText(interpolate(reportDraft.entries["reportEvidence.inspectCount"].text, { count: 1 }), { exact: true }).waitFor();
+        await status.getByText(reportDraft.entries["reportEvidence.inspect"].text, { exact: true }).click();
+        assert.deepEqual(await status.locator("p.break-words").allTextContents(), originalTargets, "Targets remain original data even when identical to a translated label");
+        const budget = status.getByText(englishMessages["reportEvidence.prepareNotice"], { exact: true });
+        await budget.waitFor();
+        assert.equal(await budget.evaluate(element => element.closest("[lang]")?.getAttribute("lang")), "en");
+        const links = status.locator("a"); assert.equal(await links.count(), originalTargets.length);
+        for (let index = 0; index < originalTargets.length; index++) {
+          const url = new URL((await links.nth(index).getAttribute("href"))!, "https://evidence.test/");
+          assert.equal(url.pathname, "/");
+          assert.equal(url.searchParams.get("parent"), languageRun.id);
+          assert.deepEqual([...url.searchParams.keys()].sort(), ["parent", "q"], "Follow-up remains an editable question without auto-run, budget or model grants");
+          assert(url.searchParams.get("q")!.includes(originalQuestion));
+          assert(url.searchParams.get("q")!.includes(originalTargets[index]));
+          const bounds = await links.nth(index).boundingBox(); assert(bounds && bounds.height >= 44);
+        }
+        const scope = page.locator('[data-view="language-pdf"]');
+        const parts = scope.locator("span > span");
+        assert.equal(await parts.count(), 5);
+        const expectedPdf = ["summary", "emptyPages", "limit", "textOnly", "recovery"].map(key => interpolate(pdfDraft.entries[key].text, { read: 3, total: 5, pages: "2" }));
+        assert.equal(await scope.textContent(), expectedPdf.join(" "));
+        assert.deepEqual(await parts.evaluateAll(nodes => nodes.map(node => node.getAttribute("lang"))), [locale, locale, locale, locale, locale]);
+        assert.equal(await scope.locator(`span[lang="${locale}"]`).count(), 5);
+        assert.equal(await scope.locator('span[lang="en"]').count(), 0);
+        assert.deepEqual(errors, []); assert.deepEqual(externalRequests, []);
+        const requests = await page.evaluate(() => (window as unknown as { syntheticRequests: { url: string; method: string }[] }).syntheticRequests);
+        assert.deepEqual(requests, [], "Evidence/PDF presentation must remain local without research, payment or feedback calls");
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `${locale}/${width} evidence overflow`);
+        await page.screenshot({ path: join(output, `language-${locale}-${width}.png`), fullPage: true });
+        languageResults.push({ locale, width, nativePdfClauses: 5, englishPdfClauses: 0, originalTargetsExact: true, originalQuestionInDraftExact: true,
+          editableOnlyFollowUp: true, pageErrors: errors, externalRequests, mutationRequests: 0 });
+      } finally { await context.close(); }
+    }
+  }
 } finally { await browser.close(); }
-await writeFile(join(output, "validation.json"), JSON.stringify({ synthetic: true, modelCalls: 0, paymentCalls: 0, results }, null, 2));
+await writeFile(join(output, "validation.json"), JSON.stringify({ synthetic: true, modelCalls: 0, paymentCalls: 0, results, languagePreviews: languageResults }, null, 2));
 console.log(`PASS: stored excerpts in six views at ${results.length} widths, no horizontal quote overflow, exact whitespace/literal text, 44px target and keyboard focus return.`);
+console.log(`PASS: ${languageResults.length} phone/desktop evidence-language cases, original targets/questions, editable-only follow-up, five native PDF clauses and English budget copy.`);

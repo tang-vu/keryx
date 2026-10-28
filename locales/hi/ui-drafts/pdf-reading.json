@@ -1,0 +1,28 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/pdf-reading.ts",
+  "sourceSha256": "eeb3bf3c3bc763f6771e486d44c9f6fd779e4e0354b7b50f917e8cdca8be1ebc",
+  "entries": {
+    "summary": {
+      "source": "PDF text extraction visited {read} of {total} pages.",
+      "text": "PDF से पाठ निकालते समय {total} में से {read} पृष्ठों तक पहुँचा गया।"
+    },
+    "emptyPages": {
+      "source": "No text was extracted from visited pages {pages}. These pages may be scanned, blank or otherwise unavailable to the text reader.",
+      "text": "जिन पृष्ठों तक पहुँचा गया उनमें {pages} से कोई पाठ नहीं निकाला गया। ये पृष्ठ स्कैन किए हुए, खाली या किसी अन्य कारण से पाठ पढ़ने वाले साधन के लिए अनुपलब्ध हो सकते हैं।"
+    },
+    "limit": {
+      "source": "A page or character limit stopped text extraction before the document was complete. Read the remaining original pages directly before making whole-document conclusions; a character cutoff can leave the last visited page incomplete. Retain this snapshot for comparison.",
+      "text": "पृष्ठों या वर्णों की सीमा के कारण पूरे दस्तावेज़ से पाठ निकालने से पहले प्रक्रिया रुक गई। पूरे दस्तावेज़ पर निष्कर्ष निकालने से पहले बचे हुए मूल पृष्ठ सीधे पढ़ें; वर्णों की सीमा पर रुकने से जिस अंतिम पृष्ठ तक पहुँचा गया वह भी अधूरा रह सकता है। तुलना के लिए यह स्नैपशॉट सँभालकर रखें।"
+    },
+    "textOnly": {
+      "source": "Only the available PDF text layer was read; images and figures were not interpreted.",
+      "text": "PDF की केवल उपलब्ध पाठ परत पढ़ी गई; छवियों और आरेखों की व्याख्या नहीं की गई।"
+    },
+    "recovery": {
+      "source": "Check the same original version. If needed, obtain a text-layer PDF, publisher text or a separately OCR-processed copy; this run did not perform OCR.",
+      "text": "उसी मूल संस्करण की जाँच करें। ज़रूरत हो तो पाठ परत वाला PDF, प्रकाशक का पाठ या अलग से OCR द्वारा संसाधित प्रति प्राप्त करें; इस प्रक्रिया में OCR नहीं किया गया।"
+    }
+  }
+}
