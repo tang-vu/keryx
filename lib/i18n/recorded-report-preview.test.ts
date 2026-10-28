@@ -25,12 +25,13 @@ vi.mock("next/og", () => ({ ImageResponse: class {
 } }));
 import DispatchOgImage, { alt, contentType, dynamic, revalidate, size } from "../../app/dispatch/[id]/opengraph-image";
 
-const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada." };
+const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada.", fr: "Preuves enregistrées." };
 const expected = {
   en: { title: "Keryx Dispatch", one: "source cited", other: "sources cited", imageOne: "sources cited", serial: "Series 2026 — No. 00001" },
   vi: { title: "Báo cáo Keryx", one: "nguồn được trích dẫn", other: "nguồn được trích dẫn", imageOne: "nguồn được trích dẫn", serial: "Loạt 2026 — Số 00001" },
   pt: { title: "Relatório Keryx", one: "fonte citada", other: "fontes citadas", imageOne: "fonte citada", serial: "Série 2026 — Nº 00001" },
   es: { title: "Informe Keryx", one: "fuente citada", other: "fuentes citadas", imageOne: "fuente citada", serial: "Serie 2026 — N.º 00001" },
+  fr: { title: "Rapport Keryx", one: "source citée", other: "sources citées", imageOne: "source citée", serial: "Série 2026 — N° 00001" },
 };
 function packet(answer: string, language: string, method: Method = "deterministic-renderer") {
   return { format: "keryx-answer-language-v1", scope: "generated-prose", language, method,
@@ -47,7 +48,7 @@ function retained(language: PresentationLanguage = "vi", method: Method = "deter
     subClaims: [], decisions: [], citations: [{ marker: "S1", sourceId: "literal-source", sourceName: "Original source 中文",
       weight: 1, reward: 0.000001, rationale: "Synthetic original citation" }], paymentMode: "offline" };
 }
-const matrix = (["en", "vi", "pt", "es"] as const).flatMap(language =>
+const matrix = (["en", "vi", "pt", "es", "fr"] as const).flatMap(language =>
   (["deterministic-renderer", "reviewed-statements-and-renderer"] as const).map(method => ({ language, method })));
 const params = { params: Promise.resolve({ id: "preview_original_277" }) };
 function admit(value: QueryRun, archive: ResolvedDispatch["archive"] = null) {

@@ -7,7 +7,21 @@ export function reportLabel(value: string): string {
     .replace(/[\[\]<>`*_#|]/g, "");
 }
 
-function recovery(code: string, vi: boolean): string {
+const frenchRecovery: Readonly<Record<string, string>> = {
+  "publisher-verification-required": "L'éditeur exige une vérification dans le navigateur ; le document n'a donc pas été lu. Fournissez un original public accessible du même document et de la même version ; la page de vérification n'est pas une preuve relative à l'article.",
+  "pdf-extraction-unavailable": "L'extraction du texte PDF a échoué. Vérifiez si le PDF contient du texte sélectionnable ou uniquement des images ; obtenez un PDF avec une couche de texte ou le texte de l'éditeur pour le même document et la même version. Cette recherche n'a pas effectué d'OCR.",
+  "html-extraction-unavailable": "L'extraction du texte HTML a échoué. Cherchez une édition texte ou PDF du même document et de la même version fournie par l'éditeur ; un aperçu ne remplace pas le contenu original.",
+  "article-byte-limit": "Le document dépasse la limite de taille de lecture. Choisissez une section précise ou une édition texte ou PDF plus petite du même éditeur et de la même version ; le document entier n'a pas été lu.",
+  "document-identity-changed": "La redirection n'a pas conservé l'identité du document demandé. Fournissez un lien vers la version exacte ; ne comblez pas cette lacune avec une autre version.",
+  "empty-or-duplicate-body": "Un contenu vide ou déjà lu n'a pas été ajouté. Examinez l'original et cherchez une source indépendante si une corroboration est nécessaire ; une autre URL ne prouve pas l'indépendance des preuves.",
+  "web-operation-limit": "La limite de tentatives ou de durée de lecture a été atteinte. Donnez la priorité à l'original manquant dans une recherche distincte, après examen de son périmètre et de son coût.",
+  "invalid-url": "L'URL du document n'est pas valide. Fournissez une URL HTTPS publique de l'original exact.",
+  cancelled: "La lecture a été annulée ou sa durée autorisée est écoulée. Conservez le résultat existant et examinez le périmètre avant de demander une nouvelle recherche.",
+};
+
+function recovery(code: string, vi: boolean, french = false): string {
+  if (french) return Object.hasOwn(frenchRecovery, code) ? frenchRecovery[code]
+    : "Le texte original n'était pas disponible. Vérifiez l'URL de l'éditeur et fournissez un original accessible du même document ; cet échec ne prouve pas que le document n'existe pas.";
   switch (code) {
     case "publisher-verification-required": return vi
       ? "Nhà xuất bản yêu cầu xác minh trình duyệt nên chưa đọc được tài liệu. Cung cấp bản gốc công khai có thể đọc của đúng tài liệu và phiên bản; trang xác minh không phải bằng chứng về bài báo."
@@ -43,16 +57,16 @@ function recovery(code: string, vi: boolean): string {
 }
 
 /** Bounded, deterministic suggestions only. Calling this helper starts no read or purchase. */
-export function publicReadRecoveryLines(outcomes: PublicReadOutcome[], vi: boolean): string[] {
+export function publicReadRecoveryLines(outcomes: PublicReadOutcome[], vi: boolean, french = false): string[] {
   const unique = new Map<string, PublicReadOutcome>();
   for (const outcome of outcomes) {
-    const name = reportLabel(outcome.name) || (vi ? "Nguồn công khai" : "Public source");
+    const name = reportLabel(outcome.name) || (french ? "Source publique" : vi ? "Nguồn công khai" : "Public source");
     const key = `${name}\0${outcome.code}`;
     if (!unique.has(key)) unique.set(key, { name, code: outcome.code });
   }
   const entries = [...unique.values()];
-  const rows = entries.slice(0, 8).map(outcome => `- “${outcome.name}”: ${recovery(outcome.code, vi)}`);
-  if (entries.length > 8) rows.push(vi
+  const rows = entries.slice(0, 8).map(outcome => `- “${outcome.name}”: ${recovery(outcome.code, vi, french)}`);
+  if (entries.length > 8) rows.push(french ? `- ${entries.length - 8} autres échecs de lecture sont consignés dans la trace de cette recherche.` : vi
     ? `- Còn ${entries.length - 8} lỗi đọc khác trong nhật ký lượt này.`
     : `- ${entries.length - 8} additional read failures are recorded in this run's trace.`);
   return rows;

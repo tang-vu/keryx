@@ -1862,7 +1862,11 @@ async function* runAdmittedAgent(
   // Only the admitted ordinary renderer participates in language observation.
   const observeAnswerLanguage = ordinaryPresentation && !input.executionLimits &&
     process.env.KERYX_TEACHING_PROPOSALS !== "1";
-  const originalPresentation = answerPresentation(input.originalQuestion ?? input.question, ordinaryPresentation ? "ordinary" : "retained");
+  // New French/ordinary directive grammar belongs only to the observed producer.
+  // Unobserved ordinary packages/teaching keep their existing four-language
+  // grammar; private/special originals keep their existing retained grammar.
+  const originalPresentation = answerPresentation(input.originalQuestion ?? input.question,
+    !ordinaryPresentation ? "retained" : observeAnswerLanguage ? "ordinary" : "legacy");
   const presentation = observeAnswerLanguage ? trustedAnswerPresentation(originalPresentation, input.presentationLanguage) : originalPresentation;
   // First-turn ordinary caller only. Augmented follow-ups, retained/private
   // originals and bounded packages keep their existing synthesis contract.
@@ -2329,7 +2333,8 @@ async function* runAdmittedAgent(
 
   // Follow-up guidance describes observed limits after attribution and settlement. It must
   // not change model-assigned contribution weights or confer evidence/payment authority.
-  const followUp = researchFollowUp({ vi, outcomes: publicReadOutcomes, gathered, conflicts: synthesized.conflicts ?? [],
+  const followUp = researchFollowUp({ vi, language: ordinaryPresentation ? presentation.language : undefined,
+    outcomes: publicReadOutcomes, gathered, conflicts: synthesized.conflicts ?? [],
     paymentReviewRequired: fundingUnavailable || pendingPayments > 0 || fetchFailures > 0,
     synthesisFailure: synthesized.synthesisFailure });
   if (followUp) {

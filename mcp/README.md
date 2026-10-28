@@ -157,7 +157,7 @@ purchase or reward anyone. Signed quotations confer no payout or source ownershi
 authority; coverage/reviews remain declarations and payment is unobserved. See
 [the workflow and remaining hosted/funded gates](../docs/evidence-procurement.md).
 
-The #276 source candidate adds optional `language: en|vi|pt|pt-BR|es` to `ask_keryx` for
+The #276 source candidate adds optional `language: en|vi|pt|pt-BR|es|fr` to `ask_keryx` for
 human-readable presentation only. It is consumed locally after the buyer returns: it is not
 added to the paid request/body/hash or forwarded as a model-language directive. Omission uses
 the original question's finite selector; explicit overrides disclose that actual answer language

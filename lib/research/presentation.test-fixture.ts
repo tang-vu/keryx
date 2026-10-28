@@ -1,6 +1,6 @@
 import type { QueryRun } from "../types";
 export const presentationQuestions = { en: "Answer in English. Explain x402.", vi: "Trả lời bằng tiếng Việt. Giải thích x402.",
-  pt: "Responda em português. Explique x402.", es: "En español, explique x402." } as const;
+  pt: "Responda em português. Explique x402.", es: "En español, explique x402.", fr: "Répondez en français. Expliquez x402." } as const;
 export function presentationRun(question: string = presentationQuestions.en): QueryRun {
   const source = { sourceId: "source-original", sourceName: "Source 日本語 & <original>", itemId: "article-original",
     itemUrl: "https://example.invalid/original", contentVersion: "sha256:" + "a".repeat(64) };

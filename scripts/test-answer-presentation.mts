@@ -9,6 +9,9 @@ import { buildEvidenceLedger } from "../lib/agent/evidence-ledger";
 import { selectCitedStatements } from "../lib/agent/cited-statements";
 import { finalizeGroundedAnswer } from "../lib/agent/answer-grounding";
 import { mdnModelReplay } from "../lib/agent/fixtures/mdn-model-replay";
+import { applyEvidenceReview } from "../lib/llm/evidence-review";
+import { languageReviewedProposals } from "../lib/research/answer-language-review";
+import { finalizeAnswerLanguage } from "../lib/research/answer-language-provenance";
 
 const question = "Em português brasileiro, escreva três tópicos curtos explicando os tipos e o padrão.";
 const quotes = ["submit: O botão envia os dados ao servidor. Esse é o padrão sem o atributo type.",
@@ -28,16 +31,30 @@ const ledger = buildEvidenceLedger({ subClaims: ["Submit", "Default", "Reset", "
 const answer = finalizeGroundedAnswer({ question, answer: "Withheld draft [S1]", ledger,
   statements: selectCitedStatements(proposals, ledger), presentation: answerPresentation(question) });
 assert.equal(answer.match(/^- /gm)?.length, 3);
+const frenchSentences = ["Submit envoie les données au serveur.", "Sans type, submit est la valeur par défaut.",
+  "Reset rétablit les valeurs initiales des contrôles.", "Button n'a aucun comportement par défaut."];
+const frenchProposals = applyEvidenceReview(proposals.map((proposal, index) => ({ ...proposal, statement: frenchSentences[index] })),
+  { reviews: proposals.map((_proposal, index) => ({ index, support: 0.9, statementSupport: 0.9, statementLanguage: "fr" })) },
+  new Set(proposals.map((_proposal, index) => index)), true);
+const frenchStatements = selectCitedStatements(languageReviewedProposals(frenchProposals, "fr"), ledger);
+const frenchAnswer = finalizeGroundedAnswer({ question: "Répondez en français. Write three short bullets explaining the types and default.",
+  answer: "Withheld draft [S1]", ledger, statements: frenchStatements,
+  presentation: answerPresentation("Répondez en français. Write three short bullets explaining the types and default.") });
+const frenchPacket = finalizeAnswerLanguage({ answer: frenchAnswer, rendererLanguage: "fr", statements: frenchStatements, proposals: frenchProposals });
+assert(frenchPacket?.language === "fr" && frenchPacket.method === "reviewed-statements-and-renderer");
 const chunks = path.resolve(process.env.NEXT_DIST_DIR ?? ".next", "static/chunks");
 const css = readdirSync(chunks).filter(file => file.endsWith(".css")).map(file => readFileSync(path.join(chunks, file), "utf8")).join("\n");
 assert(css.includes(".list-disc"), "Build current production CSS before this acceptance check");
 const artifacts = path.resolve(".artifacts");
 mkdirSync(artifacts, { recursive: true });
 const replay = mdnModelReplay();
-const scenarios = [{ name: "synthetic", answer, sentences, quotes, citations: 3,
+const scenarios = [{ name: "synthetic", answer, sentences, quotes, citations: 3, language: undefined,
   pairs: sentences.map((text, index) => ({ text, quote: quotes[Math.max(0, index - 1)] })), sourceId: "fixture", sourceName: "Synthetic source" },
-  { name: "retained-mdn", ...replay, pairs: replay.statements, citations: 5,
-    sourceId: "retained-mdn", sourceName: "mozilla.org" }];
+  { name: "retained-mdn", ...replay, pairs: replay.statements, citations: 5, language: undefined,
+    sourceId: "retained-mdn", sourceName: "mozilla.org" },
+  { name: "synthetic-fr-reviewed", answer: frenchAnswer, sentences: frenchSentences, quotes, citations: 3, language: frenchPacket.language,
+    pairs: frenchStatements.map(row => ({ text: row.text, quote: row.quote })), sourceId: "fixture", sourceName: "Synthetic source" }];
+const results = [];
 const browser = await chromium.launch({ headless: true });
 try {
   for (const scenario of scenarios) {
@@ -46,13 +63,18 @@ import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {AnswerMarkdown} from './components/keryx/answer-markdown';
 window.citationClicks = [];
-createRoot(document.getElementById('root')).render(<AnswerMarkdown text={${JSON.stringify(scenario.answer)}} citations={[{marker:'S1',sourceId:${JSON.stringify(scenario.sourceId)},sourceName:${JSON.stringify(scenario.sourceName)},weight:1,reward:0,rationale:'local acceptance fixture'}]} onCitationClick={(marker,button)=>window.citationClicks.push({marker,focused:document.activeElement===button})} />);
+createRoot(document.getElementById('root')).render(<AnswerMarkdown text={${JSON.stringify(scenario.answer)}} language={${JSON.stringify(scenario.language)}} citations={[{marker:'S1',sourceId:${JSON.stringify(scenario.sourceId)},sourceName:${JSON.stringify(scenario.sourceName)},weight:1,reward:0,rationale:'local acceptance fixture'}]} onCitationClick={(marker,button)=>window.citationClicks.push({marker,focused:document.activeElement===button})} />);
 `, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, platform: "browser", format: "iife", define: { "process.env.NODE_ENV": '"production"' } });
   for (const width of [320, 1366]) {
     const page = await browser.newPage({ viewport: { width, height: 900 } });
     const errors: string[] = [];
+    const externalRequests: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
-    await page.route("**/*", route => route.fulfill({ contentType: "text/html", body: `<style>${css}</style><main id="root" style="max-width:800px;margin:auto;padding:16px"></main>` }));
+    await page.route("**/*", route => {
+      if (route.request().url() === "https://answer-presentation.test/")
+        return route.fulfill({ contentType: "text/html", body: `<style>${css}</style><main id="root" style="max-width:800px;margin:auto;padding:16px"></main>` });
+      externalRequests.push(route.request().url()); return route.abort();
+    });
     await page.goto("https://answer-presentation.test/");
     await page.addScriptTag({ content: scenarioBundle.outputFiles[0].text });
     await page.getByRole("list").waitFor();
@@ -75,10 +97,21 @@ createRoot(document.getElementById('root')).render(<AnswerMarkdown text={${JSON.
     assert(firstText.includes(scenario.sentences[0]) && firstText.includes(scenario.quotes[0]));
     if (scenario.name === "retained-mdn") assert(firstText.includes(scenario.sentences[4]));
     else assert(firstText.includes(scenario.sentences[1]));
+    if (scenario.language === "fr") {
+      assert.equal(await page.locator('main > div[lang="fr"]').count(), 1);
+      assert.equal(await page.locator('main span[lang="und"]').count(), 3);
+      const originals = await page.locator('main span[lang="und"]').allTextContents();
+      assert.deepEqual(originals, quotes.map(quote => `“${quote}”`));
+      assert((await page.locator("main").innerText()).includes("Texte de la source"));
+    }
     assert.deepEqual(errors, []);
+    assert.deepEqual(externalRequests, []);
     await page.screenshot({ path: path.join(artifacts, `answer-presentation-${scenario.name}-${width}.png`), fullPage: true });
+    results.push({ scenario: scenario.name, width, language: scenario.language ?? "und", pairedOriginalsPreserved: true,
+      keyboardCitation: true, overflow: false, pageErrors: errors, externalRequests });
     await page.close();
   }
   }
   console.log("PASS: synthetic and retained MDN model-output replay, four-target/three-item delivery, semantic lists, every paired excerpt, keyboard citations and viewport bounds at320/1366 with production CSS. No new model call, production usefulness or payment claim.");
+  console.log(JSON.stringify({ synthetic: true, modelCalls: 0, paymentCalls: 0, results }));
 } finally { await browser.close(); }

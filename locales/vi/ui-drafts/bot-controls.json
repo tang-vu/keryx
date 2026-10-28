@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/bot-controls.ts",
-  "sourceSha256": "96779e5901639da0bedbc73c2fbd8129bf0f3e45ede8e3c93c276bffc0a89728",
+  "sourceSha256": "9e1578566334d3757b77e0684a7b5cffe06a9866817f642429980dc45094d8d7",
   "entries": {
     "introduction": {
       "source": "Ask a question to receive an answer with citations.",
@@ -33,8 +33,8 @@
       "text": "Thông tin tài chính (tiếng Anh):"
     },
     "languageHelp": {
-      "source": "Use /language en|vi|pt|es|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
-      "text": "Dùng /language en|vi|pt|es|auto để chọn ngôn ngữ câu trả lời và trợ giúp. Yêu cầu ngôn ngữ rõ ràng trong câu hỏi gốc được ưu tiên; auto theo ngôn ngữ câu hỏi."
+      "source": "Use /language en|vi|pt|es|fr|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
+      "text": "Dùng /language en|vi|pt|es|fr|auto để chọn ngôn ngữ câu trả lời và trợ giúp. Yêu cầu ngôn ngữ rõ ràng trong câu hỏi gốc được ưu tiên; auto theo ngôn ngữ câu hỏi."
     },
     "languageCurrent": {
       "source": "Answer language preference: {preference}.",
@@ -49,8 +49,8 @@
       "text": "Không thể đọc hoặc xác nhận việc lưu lựa chọn ngôn ngữ. Không xác nhận đã lưu thành công."
     },
     "languageInvalid": {
-      "source": "Supported values: en, vi, pt (also pt-BR), es, auto.",
-      "text": "Các giá trị hỗ trợ: en, vi, pt (hoặc pt-BR), es, auto."
+      "source": "Supported values: en, vi, pt (also pt-BR), es, fr, auto.",
+      "text": "Các giá trị hỗ trợ: en, vi, pt (hoặc pt-BR), es, fr, auto."
     },
     "languagePrivate": {
       "source": "Set or inspect your language preference in a private chat with Keryx.",

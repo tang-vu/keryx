@@ -115,8 +115,8 @@ function App() {
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand"><MintMark/><div><strong>{message("nativeDesktop.brand.name")}</strong><span>{message("nativeDesktop.brand.tagline")}</span></div></div>
-      <label className="sidebar-section-label">{presentation.language}<select aria-label={presentation.language} value={languageOverride} onChange={event => setLanguageOverride(event.target.value)}>
-        <option value="auto">{presentation.auto}</option><option value="en">{clientLanguageNames.en}</option><option value="vi">{clientLanguageNames.vi}</option><option value="pt">{clientLanguageNames.pt}</option><option value="es">{clientLanguageNames.es}</option>
+      <label lang={presentationLanguage} className="sidebar-section-label">{presentation.language}<select aria-label={presentation.language} value={languageOverride} onChange={event => setLanguageOverride(event.target.value)}>
+        <option value="auto">{presentation.auto}</option>{Object.entries(clientLanguageNames).map(([language, name]) => <option key={language} value={language} lang={language}>{name}</option>)}
       </select></label>
       <nav className="sponsored-navigation" aria-label={message("nativeDesktop.sponsored.screens")}>
         <button type="button" aria-pressed={screen === "sponsored"} onClick={() => setScreen("sponsored")}>{message("nativeDesktop.sponsored.title")}</button>

@@ -4,6 +4,11 @@ import type { CitedStatement } from "../agent/cited-statements";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
 
 const copy = {
+  fr: { title: "Note d'intégration API", notice: "Les contraintes ci-dessous proviennent d'extraits vérifiés. Leur applicabilité complète à l'API, à sa version et à la plateforme, ainsi que l'exactitude des sources, restent non vérifiées.",
+    constraint: "Contrainte et conditions", excerpt: "Extrait original", noSummary: "Aucun résumé vérifié ; examinez l'extrait original", scope: "Périmètre de lecture",
+    section: "section de titre", bounded: "original limité", clipped: "original partiel", missing: "Preuves manquantes", target: "Sujet demandé (non vérifié)",
+    noGaps: "Chaque sujet demandé dispose d'un extrait conservé ; cela n'établit pas une couverture complète.", low: "L'évaluation enregistrée reste inférieure au seuil de preuve.",
+    next: "Vérification d'implémentation — proposition", check: "Testez ces contraintes avec votre version exacte de l'API et votre plateforme avant l'implémentation. Résolvez d'abord les preuves manquantes ; cette vérification proposée n'est pas une conclusion tirée des sources." },
   en: { title: "API integration note", notice: "Constraints below come from checked excerpts. Complete API/version/platform applicability and source correctness remain unverified.",
     constraint: "Constraint and conditions", excerpt: "Original excerpt", noSummary: "No reviewed summary; inspect the original excerpt", scope: "Read scope",
     section: "heading section", bounded: "bounded original", clipped: "partial original", missing: "Missing evidence", target: "Requested topic (unverified)",

@@ -22,7 +22,7 @@ it("refuses missing/wrong ownership before reading recipient state", async () =>
   expect(mocks.notify).not.toHaveBeenCalled(); expect(mocks.write).not.toHaveBeenCalled();
 });
 it("validates the closed input before writes and refuses absent email configuration", async () => {
-  for (const body of [{ language: "fr" }, { language: "vi", email: "other@example.org" }, [], null])
+  for (const body of [{ language: "de" }, { language: "vi", email: "other@example.org" }, [], null])
     expect((await POST(request(body), ctx)).status).toBe(400);
   expect(mocks.write).not.toHaveBeenCalled();
   mocks.notify.mockResolvedValue(null);

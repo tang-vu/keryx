@@ -24,6 +24,7 @@ describe("bounded neutral CLI scaffolding", () => {
   it.each([
     [undefined, "en"], [null, "en"], ["", "en"], ["zh-Hans", "en"],
     ["en-US", "en"], ["VI_vn", "vi"], ["pt-BR", "pt"], ["es-MX", "es"],
+    ["fr-FR", "fr"],
   ] as const)("uses the existing system/default selection for %s", (system, expected) => {
     expect(clientPresentationLanguage(system)).toBe(expected);
     expect(clientPresentationLanguage(system, "auto")).toBe(expected);
@@ -31,13 +32,14 @@ describe("bounded neutral CLI scaffolding", () => {
 
   it.each([
     ["en", "en"], ["vi", "vi"], ["pt", "pt"], ["pt-BR", "pt"], ["es", "es"],
+    ["fr", "fr"],
   ] as const)("honors explicit %s over system language", (override, expected) => {
     expect(clientPresentationLanguage("vi-VN", override)).toBe(expected);
     expect(clientPresentationLanguage("zh-Hans", override)).toBe(expected);
   });
 
   it("retains refusal of unsupported explicit overrides", () => {
-    for (const override of ["fr", "en-US", "", null, {}, 0]) {
+    for (const override of ["de", "en-US", "", null, {}, 0]) {
       expect(() => clientPresentationLanguage("vi-VN", override)).toThrow("Unsupported presentation language");
     }
   });
@@ -47,11 +49,12 @@ describe("bounded neutral CLI scaffolding", () => {
     ["vi", "bộ suy luận", "hạn mức nguồn", "câu hỏi", "mã lượt chạy"],
     ["pt", "motor", "limite para fontes", "pergunta", "id da execução"],
     ["es", "motor", "límite para fuentes", "pregunta", "id de ejecución"],
+    ["fr", "moteur", "limite de sources", "question", "identifiant de recherche"],
   ] as const)("provides all four neutral %s wrappers", (language, engine, sourceCap, question, runId) => {
     expect(clientPresentationMessages(language).controls).toMatchObject({ engine, sourceCap, question, runId });
   });
 
-  it.each(["en", "vi", "pt", "es"] as const)("uses recorded %s for completed labels without rewriting answer/quote bytes", language => {
+  it.each(["en", "vi", "pt", "es", "fr"] as const)("uses recorded %s for completed labels without rewriting answer/quote bytes", language => {
     const run = completedRun(language);
     const before = JSON.stringify(run);
     const selected = clientPresentationLanguage("vi-VN", "es");
@@ -72,7 +75,7 @@ describe("bounded neutral CLI scaffolding", () => {
       { ...run, trace: [] },
       { ...run, answer: run.answer.normalize("NFD") },
       { ...run, trace: [...run.trace, ...run.trace] },
-      ...[{ ...packet, format: "future" }, { ...packet, language: "fr" },
+      ...[{ ...packet, format: "future" }, { ...packet, language: "de" },
         { ...packet, humanApproved: true }, { language: "pt" }].map(answerLanguage => ({
         ...run, trace: [{ ...step, detail: { answerLanguage } }],
       })),
@@ -80,7 +83,7 @@ describe("bounded neutral CLI scaffolding", () => {
     for (const invalid of invalidRuns) {
       const before = JSON.stringify(invalid);
       expect(recordedAnswerLanguage(invalid)).toBeUndefined();
-      for (const selected of ["en", "vi", "pt", "es"] as const) {
+      for (const selected of ["en", "vi", "pt", "es", "fr"] as const) {
         expect(clientPresentationMessages(recordedAnswerLanguage(invalid) ?? selected).controls.runId)
           .toBe(clientPresentationMessages(selected).controls.runId);
       }

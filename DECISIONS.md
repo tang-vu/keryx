@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+## Add French through observed ordinary answer delivery — 2026-10-29
+
+Extend the finite ordinary renderer, independent statement-language observation
+and final-byte/query-bound consumers together. Explicit original-question intent
+or authenticated bot answer preferences can request French; public API/MCP
+`language` and client presentation controls remain labels-only. Preserve original
+questions, evidence and paid bodies/hashes. Private, execution-limited and teaching
+originals retain their prior producer; unobserved operational prose stays UNKNOWN.
+
+Keep canonical English financial/settlement authority and existing review gates.
+Language filtering cannot confer source/reward authority, while native rendered
+answers still enter existing model attribution, so identical live weights are not
+promised. Use the existing bounded reviewer, without a new translation/rewrite call
+or allowance. The [source and acceptance map](docs/engineering/native-french-answer-20261029.md)
+keeps UI previews, native answer evidence, human approval and coordinated delivery
+distinct.
+
 ## Require explicit source scope in ordinary summary review — 2026-10-23
 
 A high support score must not convert a related-domain policy into factual advice

@@ -1,5 +1,6 @@
 import type { ProposedEvidence } from "../llm/reasoning-engine";
 import type { PresentationLanguage } from "./presentation-language";
+import { isPresentationLanguage } from "../../shared/i18n/presentation-language";
 
 // A JSON property on a proposal is never reviewer authority. Keep the observation
 // runtime bound, like the existing quote presentation capabilities.
@@ -8,7 +9,7 @@ const snapshot = (row: ProposedEvidence) => JSON.stringify([row.claimIndex, row.
 
 /** Called only on the independently reviewed row, after duplicate/index checks. */
 export function observeStatementLanguage(row: ProposedEvidence, value: unknown): void {
-  if (row.statement && (value === "en" || value === "vi" || value === "pt" || value === "es"))
+  if (row.statement && isPresentationLanguage(value))
     observations.set(row, { snapshot: snapshot(row), language: value });
 }
 

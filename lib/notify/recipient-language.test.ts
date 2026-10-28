@@ -13,12 +13,12 @@ it("scopes language to the exact configured recipient and rotation, with no visi
     expect(await readRecipientLanguage(db, changed)).toEqual({ language: "en", available: true });
 });
 it("falls back to English after malformed state/read failure and refuses unconfirmed writes", async () => {
-  expect(await readRecipientLanguage({ getSyncState: async () => "fr" }, recipient)).toEqual({ language: "en", available: false });
+  expect(await readRecipientLanguage({ getSyncState: async () => "de" }, recipient)).toEqual({ language: "en", available: false });
   expect(await readRecipientLanguage({ getSyncState: async () => { throw new Error("private backend"); } }, recipient)).toEqual({ language: "en", available: false });
   const set = vi.fn();
   expect(await writeRecipientLanguage({ setSyncState: set, getSyncState: async () => null }, recipient, "vi")).toBe(false);
   expect(set).toHaveBeenCalledOnce(); set.mockClear();
-  expect(await writeRecipientLanguage({ setSyncState: set, getSyncState: async () => null }, recipient, "fr")).toBe(false);
+  expect(await writeRecipientLanguage({ setSyncState: set, getSyncState: async () => null }, recipient, "de")).toBe(false);
   expect(await writeRecipientLanguage({ setSyncState: set }, { ...recipient, unsubToken: "invalid" }, "vi")).toBe(false);
   expect(set).not.toHaveBeenCalled();
 });

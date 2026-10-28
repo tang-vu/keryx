@@ -2,8 +2,18 @@ import type { SynthesisFailureStage } from "../llm/reasoning-engine";
 
 /** Describe the observed application stage, never infer a supplier error's cause.
  * Reading is retained work, not proof of qualified evidence or a useful answer. */
-export function synthesisFailureDetail(stage: SynthesisFailureStage | undefined, reads: number, vi: boolean): string {
+export function synthesisFailureDetail(stage: SynthesisFailureStage | undefined, reads: number, vi: boolean, french = false): string {
   if (!Number.isSafeInteger(reads) || reads < 1) return "";
+  if (french) {
+    const reasons = {
+      input: "les extraits n'ont pas pu être préparés dans les limites prévues pour la synthèse et sa vérification",
+      generation: "la synthèse rédigée était indisponible ou son résultat n'a pas pu être validé",
+      review: "la vérification de la synthèse était indisponible ou son résultat n'a pas pu être validé",
+      synthesis: "la synthèse n'a pas abouti ; l'étape interne en échec est inconnue",
+    };
+    if (!stage || !Object.hasOwn(reasons, stage)) return "";
+    return `${reads} source(s) lue(s), mais ${reasons[stage]}. Cela ne prouve pas que les documents sont dépourvus de preuves. Retain this job's original reads and receipts for delivery review before any new paid request.`;
+  }
   let reason: string;
   switch (stage) {
     case "input": reason = vi

@@ -6,12 +6,13 @@ import { botControlsEnglish } from "../../locales/en/bot-controls";
 import { botControlsVietnamese } from "../../locales/vi/bot-controls";
 import { botControlsPortuguese } from "../../locales/pt-BR/bot-controls";
 import { botControlsSpanish } from "../../locales/es/bot-controls";
+import { botControlsFrench } from "../../locales/fr/bot-controls";
 import { readBotAnswerPreference, writeBotAnswerPreference } from "./answer-preference";
 
-export type BotLanguage = "en" | "vi" | "pt" | "es";
+export type BotLanguage = "en" | "vi" | "pt" | "es" | "fr";
 export type BotLanguagePreference = BotLanguage | "auto";
 export const botControlsCatalogues = Object.freeze({ en: botControlsEnglish, vi: botControlsVietnamese,
-  pt: botControlsPortuguese, es: botControlsSpanish });
+  pt: botControlsPortuguese, es: botControlsSpanish, fr: botControlsFrench });
 
 /** Finite shipped bot catalogue; unrelated UI locales do not grant bot support. */
 export function botLanguage(value: unknown): BotLanguage | undefined {
@@ -21,6 +22,7 @@ export function botLanguage(value: unknown): BotLanguage | undefined {
     case "vi": return "vi";
     case "pt": case "pt-br": return "pt";
     case "es": return "es";
+    case "fr": return "fr";
     default: return undefined;
   }
 }

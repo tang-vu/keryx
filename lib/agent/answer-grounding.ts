@@ -46,12 +46,14 @@ export function finalizeGroundedAnswer(input: {
     const notice = input.presentation!.language === "pt"
       ? `Não foi possível apresentar ${count} tópicos curtos preservando todos os objetivos e trechos qualificados; os objetivos são apresentados abaixo.`
       : input.presentation!.language === "es" ? `No fue posible presentar ${count} puntos breves conservando todos los objetivos y fragmentos admitidos; los objetivos se presentan a continuación.`
+      : input.presentation!.language === "fr" ? `Impossible de présenter ${count} points courts tout en conservant chaque objectif et chaque extrait admis ; la présentation par objectif suit.`
       : vi ? `Chưa thể trình bày ${count} gạch đầu dòng ngắn mà vẫn giữ mọi yêu cầu và trích đoạn đủ điều kiện; các yêu cầu được trình bày bên dưới.`
       : `Could not present ${count} short bullets while preserving every target and qualifying excerpt; the target layout follows.`;
     return `${notice}\n\n${body}`;
   };
   if (input.presentation?.language === "pt") return withNotice(portugueseAnswer(ledger, qualifying, summary, input.synthesisUnavailable));
   if (input.presentation?.language === "es") return withNotice(spanishAnswer(ledger, qualifying, summary, input.synthesisUnavailable));
+  if (input.presentation?.language === "fr") return withNotice(frenchAnswer(ledger, qualifying, summary, input.synthesisUnavailable));
   if (summary.length) return withNotice(citedSummary({ vi, ledger, qualifying, summary }));
   const intro = qualifying.length
     ? vi ? "Bản nháp không được giữ như kết luận. Dưới đây chỉ giữ các trích đoạn nguồn đủ điều kiện; chưa xác minh được câu trả lời tổng hợp đầy đủ. Các chủ đề nghiên cứu không phải kết luận đã được chứng minh."
@@ -102,6 +104,7 @@ function compactSummary(presentation: AnswerPresentation, ledger: EvidenceLedger
     vi: { source: "Nguyên văn nguồn", note: "Tóm tắt do mô hình viết và kiểm tra; hãy đối chiếu trích đoạn đi kèm. Chưa xác minh tính đầy đủ của tổng hợp và tính đúng đắn của nguồn. Thanh toán được ghi riêng." },
     pt: { source: "Texto da fonte", note: "Resumos escritos e verificados por modelos; confira os trechos citados. A síntese completa e a exatidão das fontes permanecem não verificadas. Os pagamentos são registrados separadamente." },
     es: { source: "Texto de la fuente", note: "Resúmenes escritos y revisados por modelos; consulte los fragmentos citados. La síntesis completa y la exactitud de las fuentes siguen sin verificarse. Los pagos se registran por separado." },
+    fr: { source: "Texte de la source", note: "Résumés rédigés et vérifiés par des modèles ; examinez les extraits associés. L'exhaustivité de la synthèse et l'exactitude des sources restent non vérifiées. Les paiements sont consignés séparément." },
   }[presentation.language];
   const rows = groups.map(group => {
     const excerpts = new Map<string, CitedStatement[]>();
@@ -161,6 +164,29 @@ export function spanishAnswer(ledger: EvidenceLedger, qualifying: EvidenceLedger
     ].join("\n\n");
   });
   return [intro, ...sections, `${summary.length ? "Frases escritas y revisadas por modelos, sin verificación independiente. " : ""}Los fragmentos establecen un vínculo con la fuente, pero no demuestran su exactitud ni una síntesis completa. Las fuentes pueden ser incorrectas o contradictorias. Los pagos se registran por separado.`].join("\n\n");
+}
+
+/** French ordinary delivery retains the same admitted sentence/excerpt and gap boundaries. */
+function frenchAnswer(ledger: EvidenceLedger, qualifying: EvidenceLedger["evidence"], summary: CitedStatement[], unavailable?: boolean): string {
+  const intro = summary.length
+    ? "Résumé rédigé par un modèle, avec citations pour chaque phrase. Chaque phrase est accompagnée de l'extrait original utilisé pour la vérifier."
+    : qualifying.length ? "Extraits des sources uniquement ; le brouillon n'est pas présenté comme une conclusion et l'exhaustivité de la synthèse reste non vérifiée."
+    : unavailable ? "Aucune réponse étayée : la synthèse ou la vérification des preuves n'a pas abouti. Les lectures et reçus originaux sont conservés."
+    : "Aucune réponse étayée : le contenu lu n'a fourni aucun extrait admis pour les objectifs de recherche.";
+  const sections = ledger.claimCoverage.map(claim => {
+    const quotes = qualifying.filter(item => item.claimIndex === claim.claimIndex);
+    const sentences = summary.filter(statement => statement.claimIndex === claim.claimIndex);
+    const paired = sentences.map(statement => `${literal(statement.text)} [${statement.marker}] Texte de la source : “${literal(statement.quote)}”`);
+    const rest = quotes.filter(item => !sentences.some(statement => statement.marker === item.marker && statement.quote === item.quote));
+    return [`### Objectif de recherche ${claim.claimIndex + 1}`, `Sujet demandé (non vérifié) : “${literal(claim.claim)}”`,
+      ...paired, ...rest.map(item => `- “${literal(item.quote)}” [${item.marker}]`),
+      ...(!quotes.length ? [unavailable ? "Les preuves relatives à cet objectif n'ont pas pu être évaluées lors de cette recherche."
+        : "Preuves manquantes : aucun extrait admis pour cet objectif."] : []),
+      ...(quotes.length && !(claim.coverage >= MIN_REWARD_SUPPORT)
+        ? ["Preuves manquantes : l'évaluation enregistrée reste inférieure au seuil de soutien pour cet objectif."] : []),
+    ].join("\n\n");
+  });
+  return [intro, ...sections, `${summary.length ? "Phrases rédigées et vérifiées par des modèles, sans vérification indépendante. " : ""}Les extraits établissent un lien avec la source, pas son exactitude ni l'exhaustivité de la synthèse. Les sources peuvent être erronées ou contradictoires. Les paiements sont consignés séparément.`].join("\n\n");
 }
 
 /** Summary sentences per research target, each above the excerpts that carry it. */
