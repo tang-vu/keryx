@@ -33,7 +33,7 @@ it("returns an exact settled total that the actual public money formatter can di
   const response = await request(), body = await response.json();
   expect(response.status).toBe(200);
   expect(body.stats.settledTotal).toBe(0.000005);
-  expect(recordedUsdcMicros(body.stats.settledTotal)).toBe(5n);
+  expect(recordedUsdcMicros(body.stats.settledTotal)).toBe(BigInt(5));
   expect(formatRecordedUsdc(body.stats.settledTotal)).toBe("$0.000005");
   expect(response.headers.get("cache-control")).toBe("no-store");
 });
@@ -116,7 +116,7 @@ it.each([NaN, Infinity, -0, -0.000001, 0.0000001, 0.0000030000000000000004])(
 
 it.each([0.000001, 0.000002])("refuses a total that cannot round-trip its exact integer micros (+%s)", async increment => {
   const large = 9007199254.74099;
-  expect(recordedUsdcMicros(large)).toBe(9007199254740990n);
+  expect(recordedUsdcMicros(large)).toBe(BigInt("9007199254740990"));
   store.payments.mockResolvedValue([payment("large", large), payment("increment", increment)]);
   const response = await request();
   expect(response.status).toBe(500);

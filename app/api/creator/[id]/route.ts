@@ -57,14 +57,14 @@ export async function GET(
 
     // Sum the recorded legs in integer micro-USDC. Rounding an accumulated float
     // would hide invalid legs and can make valid totals unavailable to the UI.
-    let settledMicros = 0n;
+    let settledMicros = BigInt(0);
     const dailyMap = new Map<string, bigint>();
     for (const p of settledPayments) {
       const micros = recordedUsdcMicros(p.amountUsdc);
       if (micros === null) throw new Error("creator_amount_unavailable");
       settledMicros += micros;
       const day = p.createdAt.slice(0, 10);
-      dailyMap.set(day, (dailyMap.get(day) ?? 0n) + micros);
+      dailyMap.set(day, (dailyMap.get(day) ?? BigInt(0)) + micros);
     }
     const settledTotal = creatorUsdc(settledMicros);
     const totalEarned = entry?.totalEarnedUsdc ?? settledTotal;
