@@ -794,6 +794,23 @@ export class SqliteAdapter implements KeryxDB {
     const row = this.db.prepare(`SELECT value FROM sync_state WHERE key=?`).get(key);
     return row ? (row.value as string) : null;
   }
+
+  async getSyncStates(keys: readonly string[]): Promise<ReadonlyMap<string, string | null>> {
+    if (!Array.isArray(keys) || keys.length > 32 || keys.some(key =>
+      typeof key !== "string" || key.length === 0 || key.length > 256)) {
+      throw new Error("Invalid sync-state keys");
+    }
+    const unique = [...new Set(keys)];
+    const values = new Map<string, string | null>(unique.map(key => [key, null]));
+    if (unique.length === 0) return values;
+    // Keep the verified connection's fresh prepare/statement guards. Only the
+    // number of application reads changes; no state survives this operation.
+    const rows = this.db.prepare(
+      `SELECT key, value FROM sync_state WHERE key IN (${unique.map(() => "?").join(",")})`,
+    ).all(...unique);
+    for (const row of rows) values.set(String(row.key), row.value as string);
+    return values;
+  }
   async admitRegistrationSponsor(policy: ActiveRegistrationSponsorPolicy, row: SponsoredRegistration, now?: number, fundingObservation?: RegistrationSponsorFundingObservation) { return admitSqliteRegistrationSponsor(this.db, policy, row, now, fundingObservation); }
   async inspectRegistrationSponsorFunding(policy: ActiveRegistrationSponsorPolicy, observation: RegistrationSponsorFundingObservation, now?: number) { return inspectSqliteRegistrationSponsorFunding(this.db, policy, observation, now); }
   async getRegistrationSponsor(input: { wallet: string; id?: string; canonicalUrl?: string }) { return getSqliteRegistrationSponsor(this.db, input); }

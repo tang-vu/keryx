@@ -77,6 +77,7 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   getCachedAt: "read",
   setCached: "write",
   getSyncState: "read",
+  getSyncStates: "read",
   issueSourceClaimChallenge: "write",
   getSourceClaimChallenge: "read",
   reserveSourceClaimVerification: "write",

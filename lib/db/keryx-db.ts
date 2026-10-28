@@ -391,6 +391,8 @@ export interface KeryxDB extends PublicReferenceArchiveDb {
   // ── sync state (registry indexer checkpoint) ──
   /** Get a named sync-state value (e.g. "lastSyncedBlock"). Returns null if not set. */
   getSyncState(key: string): Promise<string | null>;
+  /** Fresh bounded sync-state read. Optional for adapters with only scalar reads. */
+  getSyncStates?(keys: readonly string[]): Promise<ReadonlyMap<string, string | null>>;
   /** Source claims are atomic SQLite-only state; unsupported adapters expose no mutation fallback. */
   issueSourceClaimChallenge?(input: IssueSourceClaimChallenge): Promise<SourceClaimChallenge>;
   getSourceClaimChallenge?(id: string): Promise<SourceClaimChallenge | null>;
