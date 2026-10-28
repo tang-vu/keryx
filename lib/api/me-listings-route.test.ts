@@ -1,10 +1,10 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { sourceId } from "@/lib/registry/registry-client";
 
 const m = vi.hoisted(() => ({
   session: vi.fn(), db: vi.fn(), registry: vi.fn(),
-  config: { registryAddress: "", registryReadAddress: "" },
+  config: { registryAddress: "", registryReadAddress: "", registryOrigins: "", networkId: "eip155:5042002" },
 }));
 vi.mock("@/lib/auth", () => ({ getSession: m.session }));
 vi.mock("@/lib/db", () => ({ getDb: m.db }));
@@ -51,6 +51,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.config.registryAddress = registryAddress;
   m.config.registryReadAddress = registryAddress;
+  m.config.registryOrigins = "";
   m.session.mockResolvedValue({ address: creator.toUpperCase() });
   db = {
     listAllSources: vi.fn().mockResolvedValue([source()]),
@@ -63,6 +64,7 @@ beforeEach(() => {
   m.db.mockResolvedValue(db);
   m.registry.mockResolvedValue({ creator, active: true });
 });
+afterEach(() => vi.unstubAllEnvs());
 
 it("finds the registry creator with a separate payout using one live read and public fields only", async () => {
   const response = await getListings();
@@ -76,25 +78,89 @@ it("finds the registry creator with a separate payout using one live read and pu
   expect(db.getSourceNotify).not.toHaveBeenCalled();
 });
 
-it("does not read unrelated registry records or leak other owners' listings", async () => {
+it("returns only fresh creator-owned public links while visiting indexed on-chain candidates", async () => {
   db.listAllSources.mockResolvedValue([
     source(),
     source({ id: "other", url: "https://example.com/other-feed", onchainId: otherId,
       walletAddress: creator, authors: [{ walletAddress: creator }] }),
     source({ id: "offline", onchainId: undefined, walletAddress: creator }),
   ]);
+  m.registry.mockImplementation(async (chainId: string) => ({ creator: chainId === id ? creator : other, active: true }));
   const response = await getListings();
   expect(await response.json()).toEqual({
     listings: [{ id: "mine", name: "My feed", active: true }], nextCursor: null, uncertain: 0,
   });
-  expect(m.registry).toHaveBeenCalledExactlyOnceWith(id, { timeoutMs: 4_000 });
+  expect(m.registry).toHaveBeenCalledTimes(2);
+  expect(m.registry).toHaveBeenCalledWith(id, { timeoutMs: 4_000 });
+  expect(m.registry).toHaveBeenCalledWith(otherId, { timeoutMs: 4_000 });
 });
 
-it("returns an empty public list without RPC when only other creators or offline rows exist", async () => {
+it("returns an empty public list after the registry proves another creator owns the row", async () => {
   db.listAllSources.mockResolvedValue([source({ onchainId: otherId })]);
-  m.config.registryReadAddress = other;
+  m.registry.mockResolvedValue({ creator: other, active: true });
+  expect(await (await getListings()).json()).toEqual({ listings: [], nextCursor: null, uncertain: 0 });
+  expect(m.registry).toHaveBeenCalledExactlyOnceWith(otherId, { timeoutMs: 4_000 });
+});
+
+it.each([
+  { url: "https://changed.example/home" },
+  { url: "", rssUrl: "https://changed.example/feed" },
+  { url: "https://changed.example/home", rssUrl: "https://changed.example/feed" },
+])("finds the live creator when cached registration URL metadata is stale: %j", async metadata => {
+  db.listAllSources.mockResolvedValue([source(metadata)]);
+  const response = await getListings();
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ listings: [{ id: "mine", name: "My feed", active: true }], nextCursor: null, uncertain: 0 });
+  expect(m.registry).toHaveBeenCalledExactlyOnceWith(id, { timeoutMs: 4_000 });
+  expect(db.creatorLeaderboard).not.toHaveBeenCalled();
+  expect(db.getSourceNotifyEmail).not.toHaveBeenCalled();
+});
+
+it("keeps an offline-only catalogue empty without any registry read", async () => {
+  db.listAllSources.mockResolvedValue([source({ onchainId: undefined })]);
   expect(await (await getListings()).json()).toEqual({ listings: [], nextCursor: null, uncertain: 0 });
   expect(m.registry).not.toHaveBeenCalled();
+});
+
+it("reaches a stale owned listing after a full page of unrelated rows with nonempty metadata", async () => {
+  const rows = Array.from({ length: 13 }, (_, index) => source({ id: `row-${String(index).padStart(2, "0")}`,
+    url: `https://changed.example/row-${index}`,
+    onchainId: index === 12 ? id : sourceId(other as `0x${string}`, `https://original.example/${index}`) }));
+  db.listAllSources.mockResolvedValue(rows);
+  m.registry.mockImplementation(async (chainId: string) => ({ creator: chainId === id ? creator : other, active: true }));
+  const first = await (await getListings()).json();
+  expect(first).toEqual({ listings: [], nextCursor: "row-11", uncertain: 0 });
+  expect(m.registry).toHaveBeenCalledTimes(12);
+  expect(await (await getListings(first.nextCursor)).json()).toEqual({
+    listings: [{ id: "row-12", name: "My feed", active: true }], nextCursor: null, uncertain: 0,
+  });
+  expect(m.registry).toHaveBeenCalledTimes(13);
+  for (const [, options] of m.registry.mock.calls) expect(options).toEqual({ timeoutMs: 4_000 });
+});
+
+function configureOrigin() {
+  const origin = { network: "eip155:5042002", address: registryAddress, version: 1,
+    codeHash: `0x${"ef".repeat(32)}`, deployBlock: "1" };
+  const text = JSON.stringify([origin]);
+  m.config.registryOrigins = text;
+  vi.stubEnv("KERYX_REGISTRY_ORIGINS", text); vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ORIGINS", text);
+  return origin;
+}
+
+it("keeps a stale listing bound to its exact configured original registry", async () => {
+  const authority = configureOrigin();
+  db.listAllSources.mockResolvedValue([source({ url: "https://changed.example", registryAuthority: authority })]);
+  expect(await (await getListings()).json()).toEqual({ listings: [{ id: "mine", name: "My feed", active: true }], nextCursor: null, uncertain: 0 });
+  expect(m.registry).toHaveBeenCalledExactlyOnceWith(id, { timeoutMs: 4_000, authority });
+});
+
+it.each(["unbound", "foreign"])("withholds %s original authority even when metadata is stale", async kind => {
+  const origin = configureOrigin();
+  db.listAllSources.mockResolvedValue([source({ url: "https://changed.example",
+    ...(kind === "foreign" ? { registryAuthority: { ...origin, address: other } } : {}) })]);
+  expect(await (await getListings()).json()).toEqual({ listings: [], nextCursor: null, uncertain: 1 });
+  expect(m.registry).not.toHaveBeenCalled();
+  expect(db.getSourceNotifyEmail).not.toHaveBeenCalled();
 });
 
 it("finds an RSS-only registration when the cached homepage URL is blank", async () => {
