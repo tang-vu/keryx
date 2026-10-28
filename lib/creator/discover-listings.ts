@@ -21,6 +21,11 @@ export interface CreatorListingsPage {
   uncertain: number;
 }
 
+function matchesCreatorUrl(source: Source, creator: Address): boolean {
+  const urls = [source.url, source.rssUrl].filter((url): url is string => Boolean(url?.trim()));
+  return urls.some((url) => sourceId(creator, url).toLowerCase() === source.onchainId!.toLowerCase());
+}
+
 /** Fresh registry-verified public listing references, with bounded reads per page. */
 export async function discoverCreatorListings(
   sources: Source[],
@@ -28,14 +33,10 @@ export async function discoverCreatorListings(
   cursor: string | null = null,
 ): Promise<CreatorListingsPage> {
   const address = creator.toLowerCase() as Address;
-  // SourceRegistry ids bind the creator to the canonical registration URL. A row without
-  // off-chain URL metadata cannot be narrowed this way, so visit it through pagination.
-  const candidates = sources.filter((source) => {
-    if (!source.onchainId) return false;
-    const urls = [source.url, source.rssUrl].filter((url): url is string => Boolean(url?.trim()));
-    return urls.length === 0 || urls.some((url) =>
-      sourceId(address, url).toLowerCase() === source.onchainId!.toLowerCase());
-  }).sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  // Cached URLs can change after registration. Visit every indexed on-chain id
+  // through bounded pagination; only its fresh registry record establishes ownership.
+  const candidates = sources.filter((source) => Boolean(source.onchainId))
+    .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const remaining = cursor === null ? candidates : candidates.filter((source) => source.id > cursor);
   const page = remaining.slice(0, PAGE_SIZE);
   if (page.length === 0) return { listings: [], nextCursor: null, uncertain: 0 };
@@ -57,7 +58,7 @@ export async function discoverCreatorListings(
         const record = await getRegistrySource(source.onchainId as Hex, { timeoutMs: REGISTRY_TIMEOUT_MS, ...(authority ? { authority } : {}) });
         if (record?.creator.toLowerCase() === address) {
           results[index] = { ...source, active: record.active };
-        } else if (record && (source.url || source.rssUrl)) {
+        } else if (record && matchesCreatorUrl(source, address)) {
           // A locally matching id with a different registry creator is inconsistent.
           uncertain++;
         }
