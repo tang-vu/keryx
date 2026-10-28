@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "locale": "pt-BR",
+  "status": "draft",
+  "review": null,
+  "terms": {
+    "pending": {
+      "text": "Aguardando confirmação",
+      "definition": "A confirmação ainda é aguardada; não há comprovação de um pagamento liquidado."
+    },
+    "settled": {
+      "text": "Liquidado",
+      "definition": "O pagamento mantém evidências reais de liquidação; uma proposta ou assinatura, por si só, não é suficiente."
+    },
+    "failed": {
+      "text": "Falhou",
+      "definition": "A operação tem uma falha confirmada; um resultado financeiro desconhecido deve continuar marcado como incerto."
+    },
+    "uncertain": {
+      "text": "Resultado incerto",
+      "definition": "O resultado financeiro não foi resolvido; é necessário conciliá-lo antes de tentar novamente ou contabilizar a liquidação."
+    },
+    "refunded": {
+      "text": "Reembolsado",
+      "definition": "A conclusão do reembolso tem evidências verificadas; uma solicitação de reembolso, por si só, não é suficiente."
+    },
+    "expired": {
+      "text": "Expirado",
+      "definition": "A autorização ou oferta correspondente passou do prazo de validade; a expiração não reverte um pagamento."
+    },
+    "simulated": {
+      "text": "Simulado",
+      "definition": "O resultado é uma simulação sem conexão identificada como tal, não uma liquidação real em nenhuma das redes."
+    },
+    "sponsored": {
+      "text": "Patrocinado",
+      "definition": "Um patrocinador identificado financia o custo indicado; o patrocínio não comprova, por si só, a liquidação."
+    },
+    "budget": {
+      "text": "Orçamento",
+      "definition": "O valor disponível para a tarefa indicada, conforme suas regras vigentes de financiamento e autorização."
+    },
+    "cap": {
+      "text": "Limite de gastos",
+      "definition": "O gasto máximo autorizado para o escopo indicado; não é uma meta de gasto nem um valor liquidado."
+    },
+    "reserved": {
+      "text": "Reservado",
+      "definition": "Uma capacidade é retida para cobrir uma obrigação; uma reserva não é um pagamento concluído."
+    },
+    "source-toll": {
+      "text": "Tarifa de acesso à fonte",
+      "definition": "A tarifa definida pela fonte para acessar o conteúdo selecionado, separada da recompensa por citação."
+    },
+    "citation-reward": {
+      "text": "Recompensa por citação",
+      "definition": "A recompensa limitada atribuída a um criador citado conforme as regras de evidência e pagamento; a atribuição não é liquidação."
+    },
+    "creator-payout": {
+      "text": "Pagamento ao criador",
+      "definition": "Um pagamento ao destinatário autorizado do criador; seu estado separado determina se houve liquidação."
+    },
+    "withdrawal": {
+      "text": "Retirada",
+      "definition": "Uma transferência a partir do saldo financiado correspondente; uma solicitação ou assinatura não comprova o recebimento."
+    },
+    "authorization": {
+      "text": "Autorização",
+      "definition": "Permissão para uma operação limitada; a permissão, por si só, não transfere fundos."
+    },
+    "session": {
+      "text": "Sessão",
+      "definition": "A interação ou concessão com escopo definido que a interface nomeia; não implica autoridade ilimitada nem permanente."
+    },
+    "receipt": {
+      "text": "Comprovante",
+      "definition": "Um registro mantido da operação indicada e de suas evidências; sua existência, por si só, não comprova liquidação."
+    },
+    "testnet": {
+      "text": "Rede de testes",
+      "definition": "A rede de testes isolada; sua atividade não representa liquidação na rede principal de produção nem adoção real."
+    },
+    "mainnet": {
+      "text": "Rede principal",
+      "definition": "A rede de produção; uma identificação de rede, por si só, não comprova um pagamento bem-sucedido."
+    },
+    "buy": {
+      "text": "BUY",
+      "definition": "O agente seleciona uma compra sujeita às regras de autorização, orçamento e entrega; essa decisão não é liquidação."
+    },
+    "skip": {
+      "text": "SKIP",
+      "definition": "O agente recusa esta fonte ou compra e registra o motivo."
+    },
+    "cache": {
+      "text": "CACHE",
+      "definition": "O agente reutiliza conteúdo de cache admitido conforme as regras de acesso vigentes; essa decisão não comprova um novo pagamento."
+    },
+    "usdc": {
+      "text": "USDC",
+      "definition": "O identificador do ativo permanece inalterado; os valores registrados e o contexto de rede mantêm seu significado vigente."
+    },
+    "arc": {
+      "text": "Arc",
+      "definition": "O nome da rede permanece inalterado; o perfil específico de rede principal ou rede de testes deve continuar explícito."
+    },
+    "x402": {
+      "text": "x402",
+      "definition": "O nome do protocolo de pagamento permanece inalterado; um desafio de pagamento não é prova de liquidação."
+    }
+  },
+  "messages": {
+    "payment.pending": {
+      "term": "pending",
+      "requiresHumanReview": true
+    },
+    "payment.settled": {
+      "term": "settled",
+      "requiresHumanReview": true
+    },
+    "payment.failed": {
+      "term": "failed",
+      "requiresHumanReview": true
+    },
+    "payment.uncertain": {
+      "term": "uncertain",
+      "requiresHumanReview": true
+    },
+    "payment.refunded": {
+      "term": "refunded",
+      "requiresHumanReview": true
+    },
+    "payment.expired": {
+      "term": "expired",
+      "requiresHumanReview": true
+    },
+    "payment.simulated": {
+      "term": "simulated",
+      "requiresHumanReview": true
+    },
+    "consent.authorization": {
+      "term": "authorization",
+      "requiresHumanReview": true
+    },
+    "consent.cap": {
+      "term": "cap",
+      "requiresHumanReview": true
+    },
+    "legal.english-authoritative": {
+      "text": "Esta tradução é fornecida para facilitar a leitura. Os termos de serviço e a política de privacidade em inglês são as versões que prevalecem.",
+      "authority": "en",
+      "requiresHumanReview": true
+    }
+  }
+}

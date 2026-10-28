@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "locale": "ko",
+  "status": "draft",
+  "review": null,
+  "terms": {
+    "pending": {
+      "text": "확인 대기 중",
+      "definition": "아직 확인을 기다리고 있으며, 정산이 완료된 결제는 확인되지 않았습니다."
+    },
+    "settled": {
+      "text": "정산 완료",
+      "definition": "결제에 실제 정산 증거가 보존되어 있습니다. 제안이나 서명만으로는 충분하지 않습니다."
+    },
+    "failed": {
+      "text": "실패 확인됨",
+      "definition": "작업의 실패가 확인된 상태입니다. 금전적 결과를 알 수 없다면 결과 불확실 상태로 남겨야 합니다."
+    },
+    "uncertain": {
+      "text": "결과 불확실",
+      "definition": "금전적 결과가 해결되지 않았습니다. 재시도하거나 정산 완료로 집계하기 전에 대조 확인이 필요합니다."
+    },
+    "refunded": {
+      "text": "환불 완료",
+      "definition": "환불 완료를 입증하는 증거가 검증되었습니다. 환불 요청만으로는 충분하지 않습니다."
+    },
+    "expired": {
+      "text": "만료됨",
+      "definition": "해당 승인이나 제안의 유효 기간이 지났습니다. 만료가 결제를 되돌리는 것은 아닙니다."
+    },
+    "simulated": {
+      "text": "시뮬레이션",
+      "definition": "결과는 명시적으로 표시된 오프라인 시뮬레이션이며, 어느 네트워크에서도 실제 정산이 아닙니다."
+    },
+    "sponsored": {
+      "text": "후원자 부담",
+      "definition": "명시된 후원자가 표시된 비용을 부담합니다. 후원 사실만으로 정산이 완료되었다고 볼 수 없습니다."
+    },
+    "budget": {
+      "text": "예산",
+      "definition": "기존 자금 조달 및 승인 규칙에 따라 해당 작업에 사용할 수 있는 금액입니다."
+    },
+    "cap": {
+      "text": "지출 한도",
+      "definition": "명시된 범위에 대해 승인된 최대 지출액입니다. 지출 목표나 정산된 금액이 아닙니다."
+    },
+    "reserved": {
+      "text": "예약됨",
+      "definition": "의무 이행을 위해 사용 가능한 한도를 확보한 상태입니다. 예약은 결제 완료가 아닙니다."
+    },
+    "source-toll": {
+      "text": "출처 접근 요금",
+      "definition": "선택한 콘텐츠에 접근하기 위해 출처가 정한 요금이며, 인용 보상과는 별개입니다."
+    },
+    "citation-reward": {
+      "text": "인용 보상",
+      "definition": "증거 및 결제 규칙에 따라 인용된 창작자에게 배정되는 한도가 있는 보상입니다. 배정은 정산 완료가 아닙니다."
+    },
+    "creator-payout": {
+      "text": "창작자 지급",
+      "definition": "창작자의 정당한 수취인에게 이루어지는 지급입니다. 정산 여부는 해당 지급의 별도 상태로 판단합니다."
+    },
+    "withdrawal": {
+      "text": "출금",
+      "definition": "해당 충전 잔액에서 외부로 보내는 이체입니다. 요청이나 서명은 수령을 입증하지 않습니다."
+    },
+    "authorization": {
+      "text": "승인",
+      "definition": "범위가 한정된 작업에 대한 허가입니다. 허가만으로 자금이 이체되지는 않습니다."
+    },
+    "session": {
+      "text": "세션",
+      "definition": "화면에 표시된 범위가 한정된 상호작용이나 권한 부여입니다. 무제한 또는 영구적인 권한을 의미하지 않습니다."
+    },
+    "receipt": {
+      "text": "증빙 기록",
+      "definition": "명시된 작업과 그 증거를 보존한 기록입니다. 기록이 존재한다는 사실만으로 정산을 입증하지 않습니다."
+    },
+    "testnet": {
+      "text": "테스트넷",
+      "definition": "격리된 테스트 네트워크입니다. 그 활동은 운영 메인넷의 정산이나 실제 이용 확대의 증거가 아닙니다."
+    },
+    "mainnet": {
+      "text": "메인넷",
+      "definition": "운영 네트워크입니다. 네트워크 이름 표시만으로 결제 성공을 입증하지 않습니다."
+    },
+    "buy": {
+      "text": "BUY",
+      "definition": "에이전트는 승인, 예산 및 전달 규칙에 따라 구매를 선택합니다. 이 결정은 정산 완료가 아닙니다."
+    },
+    "skip": {
+      "text": "SKIP",
+      "definition": "에이전트가 이 출처나 구매를 거절하고 그 이유를 기록합니다."
+    },
+    "cache": {
+      "text": "CACHE",
+      "definition": "에이전트가 기존 접근 규칙에 따라 사용이 허용된 캐시 콘텐츠를 재사용합니다. 이 결정은 새로운 결제를 의미하지 않습니다."
+    },
+    "usdc": {
+      "text": "USDC",
+      "definition": "자산 식별자는 변경되지 않습니다. 기록된 금액과 네트워크 맥락은 기존 의미를 유지합니다."
+    },
+    "arc": {
+      "text": "Arc",
+      "definition": "네트워크 이름은 변경되지 않습니다. 구체적인 메인넷 또는 테스트넷 프로필을 계속 명시해야 합니다."
+    },
+    "x402": {
+      "text": "x402",
+      "definition": "결제 프로토콜 이름은 변경되지 않습니다. 결제 요청은 정산 증거가 아닙니다."
+    }
+  },
+  "messages": {
+    "payment.pending": {
+      "term": "pending",
+      "requiresHumanReview": true
+    },
+    "payment.settled": {
+      "term": "settled",
+      "requiresHumanReview": true
+    },
+    "payment.failed": {
+      "term": "failed",
+      "requiresHumanReview": true
+    },
+    "payment.uncertain": {
+      "term": "uncertain",
+      "requiresHumanReview": true
+    },
+    "payment.refunded": {
+      "term": "refunded",
+      "requiresHumanReview": true
+    },
+    "payment.expired": {
+      "term": "expired",
+      "requiresHumanReview": true
+    },
+    "payment.simulated": {
+      "term": "simulated",
+      "requiresHumanReview": true
+    },
+    "consent.authorization": {
+      "term": "authorization",
+      "requiresHumanReview": true
+    },
+    "consent.cap": {
+      "term": "cap",
+      "requiresHumanReview": true
+    },
+    "legal.english-authoritative": {
+      "text": "이 번역은 이해를 돕기 위해 제공됩니다. 영어 서비스 약관과 영어 개인정보 처리방침이 우선합니다.",
+      "authority": "en",
+      "requiresHumanReview": true
+    }
+  }
+}
