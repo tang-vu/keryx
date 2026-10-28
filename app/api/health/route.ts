@@ -9,6 +9,7 @@
  */
 
 import { getDb } from "@/lib/db";
+import { syncStateSnapshot } from "@/lib/db/sync-state-snapshot";
 import { config, llmProvider } from "@/lib/config";
 import { PARITY_STATE_KEY, type ParitySummary } from "@/lib/registry/parity";
 import {
@@ -37,6 +38,16 @@ export const dynamic = "force-dynamic";
 const BOOT_MS = Date.now();
 
 export async function GET() {
+  const started = performance.now();
+  let phase = "database";
+  let phaseStarted = started;
+  let outcome = "unready";
+  const phaseMs: Record<string, number> = {};
+  const beginPhase = (next: string) => {
+    const now = performance.now();
+    phaseMs[phase] = Math.round(now - phaseStarted);
+    phase = next; phaseStarted = now;
+  };
   // Mainnet browser settlement is caller-funded, independent of hosted custody.
   // Hosted payment admission is checked per request against its sealed policy.
   // Testnet preserves its historical explicit simulation/default behavior.
@@ -59,7 +70,14 @@ export async function GET() {
 
   try {
     const db = await getDb();
+    beginPhase("metrics-and-jobs");
     const [m, a2aJobs] = await Promise.all([db.metrics(), db.a2aOperationsSnapshot(Date.now())]);
+    beginPhase("sync-state");
+    const readSyncState = syncStateSnapshot(db, [
+      ...(config.registryReadAddress ? ["lastSyncedBlock", PARITY_STATE_KEY] : []),
+      DISPATCH_HEALTH_STATE_KEY, SETTLEMENT_PARITY_STATE_KEY,
+      PENDING_RECONCILIATION_STATE_KEY, "a2aWorker",
+    ]);
 
     // Registry section: served from sync_state only — the hourly parity watchdog
     // (scripts/check-registry.mts) does the chain reads; the probe stays chain-free.
@@ -70,8 +88,8 @@ export async function GET() {
     } | null = null;
     if (config.registryReadAddress) {
       const [lastSyncedBlock, parityRaw] = await Promise.all([
-        db.getSyncState("lastSyncedBlock"),
-        db.getSyncState(PARITY_STATE_KEY),
+        readSyncState("lastSyncedBlock"),
+        readSyncState(PARITY_STATE_KEY),
       ]);
       let parity: ParitySummary | null = null;
       try {
@@ -83,11 +101,11 @@ export async function GET() {
     }
 
     // Dispatch section: the hourly outcome watchdog (scripts/check-dispatches.mts) writes the
-    // verdict; the probe only reads it back, so /api/health stays one aggregate read plus two
-    // key lookups. A missing or malformed row hides the section, never the probe.
+    // verdict; the probe reads it with the other sync-state summaries. A missing or malformed
+    // row hides the section, never the probe.
     let dispatches: DispatchHealthSummary | null = null;
     try {
-      const raw = await db.getSyncState(DISPATCH_HEALTH_STATE_KEY);
+      const raw = await readSyncState(DISPATCH_HEALTH_STATE_KEY);
       dispatches = raw ? (JSON.parse(raw) as DispatchHealthSummary) : null;
     } catch {
       /* an unreadable summary must not take the health probe down with it */
@@ -98,7 +116,7 @@ export async function GET() {
     // unreadable summary hides the section, never the probe.
     let settlement: SettlementParitySummary | null = null;
     try {
-      const raw = await db.getSyncState(SETTLEMENT_PARITY_STATE_KEY);
+      const raw = await readSyncState(SETTLEMENT_PARITY_STATE_KEY);
       settlement = raw ? (JSON.parse(raw) as SettlementParitySummary) : null;
     } catch {
       /* a malformed summary must not take the health probe down with it */
@@ -109,7 +127,7 @@ export async function GET() {
     let reconciliation: (PendingReconciliationSummary & PendingReconciliationAssessment) | null =
       null;
     try {
-      const raw = await db.getSyncState(PENDING_RECONCILIATION_STATE_KEY);
+      const raw = await readSyncState(PENDING_RECONCILIATION_STATE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as PendingReconciliationSummary;
         const normalized: PendingReconciliationSummary = {
@@ -149,7 +167,7 @@ export async function GET() {
       stale: boolean;
     } | null = null;
     try {
-      const raw = await db.getSyncState("a2aWorker");
+      const raw = await readSyncState("a2aWorker");
       if (raw) {
         const parsed = JSON.parse(raw) as {
           status?: unknown;
@@ -177,7 +195,8 @@ export async function GET() {
       reconciliation?.degraded || workerDegraded || a2aJobs.degraded
         ? "degraded"
         : "operational";
-
+    beginPhase("response");
+    outcome = operationalStatus;
     return Response.json(
       {
         ok: true,
@@ -209,6 +228,7 @@ export async function GET() {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (err) {
+    outcome = "unready";
     return Response.json(
       {
         ok: false,
@@ -218,5 +238,16 @@ export async function GET() {
       },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
+  } finally {
+    const finished = performance.now();
+    const durationMs = Math.round(finished - started);
+    phaseMs[phase] = Math.round(finished - phaseStarted);
+    if (durationMs >= 2_000 || outcome === "unready") {
+      // Fixed phases and timing only: never log state values, errors, RPC URLs,
+      // wallet data or request identifiers. ISO time works without PM2 prefixes.
+      console.warn("[health] probe", JSON.stringify({
+        at: new Date().toISOString(), outcome, durationMs, phase, phaseMs,
+      }));
+    }
   }
 }
