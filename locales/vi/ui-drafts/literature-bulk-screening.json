@@ -2,6 +2,59 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/literature-bulk-screening.ts",
-  "entries": {},
+  "entries": {
+    "applying": {
+      "source": "Saving screening decisions…",
+      "text": "Đang lưu quyết định sàng lọc…"
+    },
+    "cancel": {
+      "source": "Cancel screening change",
+      "text": "Hủy thay đổi sàng lọc"
+    },
+    "confirm": {
+      "source": "Apply to these papers",
+      "text": "Áp dụng cho các bài báo này"
+    },
+    "count": {
+      "source": "Papers in this preview",
+      "text": "Số bài báo trong bản xem trước"
+    },
+    "decision": {
+      "source": "Screening decision for shown papers",
+      "text": "Quyết định sàng lọc cho các bài đang hiển thị"
+    },
+    "failed": {
+      "source": "The screening change could not be verified. Keep this preview, check your saved library, and review again before retrying.",
+      "text": "Không xác minh được thay đổi sàng lọc. Giữ bản xem trước này, kiểm tra thư viện đã lưu và xem lại trước khi thử lại."
+    },
+    "notice": {
+      "source": "Only the exact papers listed below will change. Notes, metadata and your review focus stay as saved. Unsaved editors are not submitted. This preview stays fixed if you change the search or filter. No source lookup or research starts.",
+      "text": "Chỉ đúng các bài liệt kê bên dưới sẽ thay đổi. Ghi chú, siêu dữ liệu và trọng tâm tổng quan giữ nguyên như đã lưu. Nội dung đang sửa chưa lưu sẽ không được gửi. Bản xem trước không đổi khi bạn đổi tìm kiếm hoặc bộ lọc. Không bắt đầu tra cứu nguồn hay nghiên cứu."
+    },
+    "preview": {
+      "source": "Review screening change",
+      "text": "Xem lại thay đổi sàng lọc"
+    },
+    "previewTitle": {
+      "source": "Confirm this screening change",
+      "text": "Xác nhận thay đổi sàng lọc này"
+    },
+    "saved": {
+      "source": "Screening decisions saved for all previewed papers.",
+      "text": "Đã lưu quyết định sàng lọc cho mọi bài trong bản xem trước."
+    },
+    "stale": {
+      "source": "A previewed paper changed or was removed. No decisions were saved. Cancel and review the shown papers again.",
+      "text": "Một bài trong bản xem trước đã thay đổi hoặc bị xóa. Chưa lưu quyết định nào. Hủy rồi xem lại các bài đang hiển thị."
+    },
+    "summary": {
+      "source": "Screen shown papers together",
+      "text": "Sàng lọc các bài đang hiển thị cùng lúc"
+    },
+    "target": {
+      "source": "Set saved screening to",
+      "text": "Đặt trạng thái sàng lọc đã lưu thành"
+    }
+  },
   "sourceSha256": "f1ac32e3e19cb481523e0be2e4e484bb1ec185e0364294b99ea70f6679ecc43c"
 }

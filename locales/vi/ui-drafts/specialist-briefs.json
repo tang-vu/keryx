@@ -211,6 +211,10 @@
     "scholarlyLiterature.acceptance.2": {
       "source": "Coverage limits and the next literature search are explicit; completeness is not assumed.",
       "text": "Nêu rõ giới hạn bao phủ và lượt tìm tài liệu tiếp theo; không giả định đầy đủ."
+    },
+    "apiPlatform.instruction": {
+      "source": "Inspect up to two named APIs/platforms for this integration. Use primary documentation for the requested versions and platform. Keep each supported constraint and its conditions beside the exact excerpt and citation. Show actual read scope and missing evidence. Label any implementation check as a proposal; do not infer API behavior from an unrelated policy or metadata.",
+      "text": "Kiểm tra tối đa hai API/nền tảng được nêu tên cho tích hợp này. Dùng tài liệu gốc cho phiên bản và nền tảng được yêu cầu. Đặt mỗi ràng buộc có bằng chứng cùng điều kiện áp dụng cạnh đúng đoạn trích và trích dẫn. Hiển thị phạm vi đọc thực tế và bằng chứng còn thiếu. Ghi rõ mọi kiểm tra triển khai là đề xuất; không suy ra hành vi API từ chính sách hay siêu dữ liệu không liên quan."
     }
   }
 }

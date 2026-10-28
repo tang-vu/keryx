@@ -27,6 +27,30 @@
     "outsideSearch": {
       "source": "Outside the current search; still selected.",
       "text": "Ngoài kết quả tìm kiếm hiện tại; vẫn được chọn."
+    },
+    "sortLabel": {
+      "source": "Sort saved papers",
+      "text": "Sắp xếp bài báo đã lưu"
+    },
+    "sortNotice": {
+      "source": "Sorting uses saved metadata, not new source observations. Missing years appear last. Visible reference downloads follow this order; CSV, JSON backup and your comparison selection keep their original order. Sort choices stay in this tab.",
+      "text": "Việc sắp xếp dùng siêu dữ liệu đã lưu, không phải quan sát nguồn mới. Bài thiếu năm được đặt cuối. Tải tài liệu tham khảo đang hiển thị sẽ theo thứ tự này; CSV, bản sao lưu JSON và lựa chọn so sánh giữ thứ tự gốc. Lựa chọn sắp xếp chỉ ở trong thẻ này."
+    },
+    "sorts.recent": {
+      "source": "Recently saved",
+      "text": "Mới lưu gần đây"
+    },
+    "sorts.saved": {
+      "source": "Saved order",
+      "text": "Thứ tự đã lưu"
+    },
+    "sorts.title": {
+      "source": "Title",
+      "text": "Tiêu đề"
+    },
+    "sorts.year": {
+      "source": "Recorded publication year — newest first",
+      "text": "Năm xuất bản đã ghi nhận — mới nhất trước"
     }
   }
 }

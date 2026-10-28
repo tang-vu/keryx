@@ -2,6 +2,63 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/literature-clear-recovery.ts",
-  "entries": {},
+  "entries": {
+    "beforeClear": {
+      "source": "A recovery of saved data will stay in this tab. Unsaved form edits are excluded. Export a backup first if you need to keep your library after closing the tab.",
+      "text": "此标签页将保留已保存数据的恢复副本，不包含表单中未保存的编辑。如需在关闭标签页后保留文献库，请先导出备份。"
+    },
+    "changed": {
+      "source": "The saved library contains new or different work. Nothing was replaced. Download this recovery, then review it through the normal backup import.",
+      "text": "已保存的文献库包含新增或不同的内容。未替换任何数据。请下载此恢复副本，再通过常规备份导入流程检查。"
+    },
+    "discard": {
+      "source": "Discard this recovery",
+      "text": "丢弃此恢复副本"
+    },
+    "discardConfirm": {
+      "source": "Discard this tab's cleared-library recovery? Download its private JSON backup first if you need to keep it. This does not change the current saved library.",
+      "text": "要丢弃此标签页中已清空文献库的恢复副本吗？如需保留，请先下载其私密 JSON 备份。这不会更改当前已保存的文献库。"
+    },
+    "discarded": {
+      "source": "Cleared-library recovery discarded from this tab.",
+      "text": "已从此标签页丢弃已清空文献库的恢复副本。"
+    },
+    "download": {
+      "source": "Download cleared library backup",
+      "text": "下载已清空文献库的备份"
+    },
+    "notice": {
+      "source": "This tab keeps the saved library from immediately before clearing, including saved review focus, exact paper metadata, screening and notes. Unsaved form edits are not included. Restore works only while the saved library is empty or already identical. New work is never overwritten.",
+      "text": "此标签页保留清空前一刻已保存的文献库，包括已保存的综述重点、准确的论文元数据、筛选状态和笔记。不包含表单中未保存的编辑。仅当已保存的文献库为空或已完全相同时才能恢复。绝不会覆盖新内容。"
+    },
+    "papers": {
+      "source": "Saved papers in this recovery",
+      "text": "此恢复副本中的已保存论文数"
+    },
+    "prepared": {
+      "source": "Cleared-library JSON download prepared. Keep it somewhere private; this tab still retains the recovery.",
+      "text": "已准备好已清空文献库的 JSON 下载文件。请妥善私密保存；此标签页仍保留恢复副本。"
+    },
+    "restore": {
+      "source": "Restore cleared saved library",
+      "text": "恢复已清空的已保存文献库"
+    },
+    "restored": {
+      "source": "The cleared saved library is restored.",
+      "text": "已恢复被清空的已保存文献库。"
+    },
+    "restoring": {
+      "source": "Restoring cleared saved library…",
+      "text": "正在恢复已清空的已保存文献库…"
+    },
+    "retention": {
+      "source": "This recovery stays only in this tab. Download its private JSON backup before leaving. A native leave warning remains until you restore or explicitly discard this recovery; browsers may suppress that warning.",
+      "text": "此恢复副本仅保留在此标签页中。离开前请下载其私密 JSON 备份。在你恢复或明确丢弃此副本前，系统会保留浏览器原生离开警告；浏览器可能会阻止该警告显示。"
+    },
+    "title": {
+      "source": "Recover the cleared saved library",
+      "text": "恢复已清空的已保存文献库"
+    }
+  },
   "sourceSha256": "a8a4b94e59c931811e5a4e390205d0c01898f9bc4b184dfe2915e2caba5f38ae"
 }

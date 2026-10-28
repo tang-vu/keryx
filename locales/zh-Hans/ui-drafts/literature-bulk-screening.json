@@ -2,6 +2,59 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/literature-bulk-screening.ts",
-  "entries": {},
+  "entries": {
+    "applying": {
+      "source": "Saving screening decisions…",
+      "text": "正在保存筛选决定…"
+    },
+    "cancel": {
+      "source": "Cancel screening change",
+      "text": "取消筛选更改"
+    },
+    "confirm": {
+      "source": "Apply to these papers",
+      "text": "应用于这些论文"
+    },
+    "count": {
+      "source": "Papers in this preview",
+      "text": "此预览中的论文数"
+    },
+    "decision": {
+      "source": "Screening decision for shown papers",
+      "text": "所显示论文的筛选决定"
+    },
+    "failed": {
+      "source": "The screening change could not be verified. Keep this preview, check your saved library, and review again before retrying.",
+      "text": "无法验证筛选更改。请保留此预览，检查已保存的文献库，复核后再重试。"
+    },
+    "notice": {
+      "source": "Only the exact papers listed below will change. Notes, metadata and your review focus stay as saved. Unsaved editors are not submitted. This preview stays fixed if you change the search or filter. No source lookup or research starts.",
+      "text": "仅更改下方明确列出的论文。笔记、元数据和综述重点保持已保存状态。不会提交编辑器中未保存的内容。即使更改搜索或筛选条件，此预览也保持固定。不会启动来源查询或研究。"
+    },
+    "preview": {
+      "source": "Review screening change",
+      "text": "检查筛选更改"
+    },
+    "previewTitle": {
+      "source": "Confirm this screening change",
+      "text": "确认此次筛选更改"
+    },
+    "saved": {
+      "source": "Screening decisions saved for all previewed papers.",
+      "text": "已为预览中的所有论文保存筛选决定。"
+    },
+    "stale": {
+      "source": "A previewed paper changed or was removed. No decisions were saved. Cancel and review the shown papers again.",
+      "text": "预览中的某篇论文已更改或被移除。未保存任何决定。请取消后重新检查所显示的论文。"
+    },
+    "summary": {
+      "source": "Screen shown papers together",
+      "text": "批量筛选所显示的论文"
+    },
+    "target": {
+      "source": "Set saved screening to",
+      "text": "将已保存的筛选状态设为"
+    }
+  },
   "sourceSha256": "f1ac32e3e19cb481523e0be2e4e484bb1ec185e0364294b99ea70f6679ecc43c"
 }

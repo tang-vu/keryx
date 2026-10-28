@@ -27,6 +27,30 @@
     "outsideSearch": {
       "source": "Outside the current search; still selected.",
       "text": "不在当前搜索结果中；仍已选中。"
+    },
+    "sortLabel": {
+      "source": "Sort saved papers",
+      "text": "排序已保存的论文"
+    },
+    "sortNotice": {
+      "source": "Sorting uses saved metadata, not new source observations. Missing years appear last. Visible reference downloads follow this order; CSV, JSON backup and your comparison selection keep their original order. Sort choices stay in this tab.",
+      "text": "排序使用已保存的元数据，而不是新的来源观测。缺失年份的条目排在最后。可见参考文献下载采用此顺序；CSV、JSON 备份及比较选择保持原顺序。排序选择仅保留在此标签页中。"
+    },
+    "sorts.recent": {
+      "source": "Recently saved",
+      "text": "最近保存"
+    },
+    "sorts.saved": {
+      "source": "Saved order",
+      "text": "保存顺序"
+    },
+    "sorts.title": {
+      "source": "Title",
+      "text": "标题"
+    },
+    "sorts.year": {
+      "source": "Recorded publication year — newest first",
+      "text": "已记录的出版年份——最新优先"
     }
   }
 }

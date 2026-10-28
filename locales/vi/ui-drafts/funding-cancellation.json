@@ -3,5 +3,142 @@
   "review": null,
   "sourcePath": "locales/en/funding-cancellation.ts",
   "sourceSha256": "d06c2fb13ad048d33bb5b3ed2ff59ffc86e504075cd871cdebaca863345d9f02",
-  "entries": {}
+  "entries": {
+    "title": {
+      "source": "Recover an approval without its hash",
+      "text": "Khôi phục một phê duyệt thiếu mã băm"
+    },
+    "explanation": {
+      "source": "Cancel the old approval by sending 0 USDC to your own wallet with the same nonce. This costs native USDC gas. It does not deposit money, enable a budget or revoke an existing allowance. The original approval may complete first.",
+      "text": "Hủy phê duyệt cũ bằng cách gửi 0 USDC tới ví của chính bạn với cùng nonce. Thao tác này tốn phí gas bằng USDC gốc. Nó không nạp tiền, mở ngân sách hay thu hồi hạn mức cho phép hiện có. Phê duyệt gốc có thể hoàn tất trước."
+    },
+    "review": {
+      "source": "Review cancellation fee",
+      "text": "Xem lại phí hủy"
+    },
+    "owner": {
+      "source": "Owner and recipient",
+      "text": "Chủ sở hữu và người nhận"
+    },
+    "network": {
+      "source": "Network",
+      "text": "Mạng"
+    },
+    "nonce": {
+      "source": "Original nonce",
+      "text": "Nonce gốc"
+    },
+    "amount": {
+      "source": "Amount: 0 USDC",
+      "text": "Số tiền: 0 USDC"
+    },
+    "gas": {
+      "source": "Gas limit",
+      "text": "Giới hạn gas"
+    },
+    "feeRate": {
+      "source": "Maximum fee per gas (native units)",
+      "text": "Phí tối đa trên mỗi đơn vị gas (đơn vị gốc)"
+    },
+    "priority": {
+      "source": "Maximum priority fee per gas (native units)",
+      "text": "Phí ưu tiên tối đa trên mỗi đơn vị gas (đơn vị gốc)"
+    },
+    "maxFee": {
+      "source": "Maximum gas fee (native USDC)",
+      "text": "Phí gas tối đa (USDC gốc)"
+    },
+    "expires": {
+      "source": "Review expires",
+      "text": "Thời hạn xem xét"
+    },
+    "limitations": {
+      "source": "A higher-fee pending transaction may prevent this cancellation. Signed transactions do not expire on-chain. Only finalized nonce evidence unlocks the saved plan.",
+      "text": "Một giao dịch đang chờ có phí cao hơn có thể ngăn việc hủy này. Giao dịch đã ký không hết hạn trên chuỗi. Chỉ bằng chứng nonce đã xác nhận cuối cùng mới gỡ chặn kế hoạch đã lưu."
+    },
+    "consent": {
+      "source": "I approve this zero-value cancellation and its maximum gas fee.",
+      "text": "Tôi chấp thuận việc hủy giá trị bằng không này và mức phí gas tối đa của nó."
+    },
+    "sign": {
+      "source": "Sign and send cancellation",
+      "text": "Ký và gửi giao dịch hủy"
+    },
+    "unavailable": {
+      "source": "Could not prepare cancellation. Check the connected owner wallet and network, then review again. The original remains held.",
+      "text": "Chưa thể chuẩn bị giao dịch hủy. Kiểm tra ví chủ sở hữu đang kết nối và mạng, rồi xem lại. Bản ghi gốc vẫn bị khóa xử lý."
+    },
+    "pending": {
+      "source": "Cancellation is not finalized. Check the saved hashes; the original remains held. Review again only if you intend another cancellation with a new fee.",
+      "text": "Giao dịch hủy chưa được xác nhận cuối cùng. Kiểm tra các mã băm đã lưu; bản ghi gốc vẫn bị khóa xử lý. Chỉ xem lại nếu bạn định hủy lần nữa với một khoản phí mới."
+    },
+    "submitted": {
+      "source": "Cancellation sent. Check finality before continuing; the original remains held.",
+      "text": "Đã gửi giao dịch hủy. Kiểm tra xác nhận cuối cùng trước khi tiếp tục; bản ghi gốc vẫn bị khóa xử lý."
+    },
+    "check": {
+      "source": "Check finalized cancellation",
+      "text": "Kiểm tra giao dịch hủy đã xác nhận cuối cùng"
+    },
+    "hash": {
+      "source": "Saved cancellation hash",
+      "text": "Mã băm giao dịch hủy đã lưu"
+    },
+    "replaced": {
+      "source": "The old approval nonce is finalized as a replacement. The saved plan is released; no research budget was funded.",
+      "text": "Nonce phê duyệt cũ đã được xác nhận cuối cùng bằng giao dịch thay thế. Kế hoạch đã lưu được gỡ chặn; không có ngân sách nghiên cứu nào được nạp tiền."
+    },
+    "original": {
+      "source": "The original approval finalized first. Review its status before continuing; no deposit was sent.",
+      "text": "Phê duyệt gốc được xác nhận cuối cùng trước. Kiểm tra trạng thái của nó trước khi tiếp tục; chưa gửi giao dịch nạp tiền nào."
+    },
+    "circleUnsupported": {
+      "source": "Circle does not support this exact-nonce cancellation for Google wallets on Arc. Search Circle history for the existing transaction, then verify its hash on-chain. This does not sign or send another transaction. The original remains held until matching finalized evidence is verified.",
+      "text": "Circle không hỗ trợ cách hủy với đúng nonce này cho ví Google trên Arc. Tìm giao dịch hiện có trong lịch sử Circle, rồi kiểm tra mã băm trên chuỗi. Thao tác này không ký hay gửi giao dịch khác. Bản ghi gốc vẫn bị khóa xử lý cho đến khi xác minh được bằng chứng xác nhận cuối cùng khớp với nó."
+    },
+    "historySearch": {
+      "source": "Search Circle history",
+      "text": "Tìm trong lịch sử Circle"
+    },
+    "historyNext": {
+      "source": "Check next history page",
+      "text": "Kiểm tra trang lịch sử tiếp theo"
+    },
+    "historyWindow": {
+      "source": "History search window",
+      "text": "Khoảng thời gian tìm lịch sử"
+    },
+    "historyStatus": {
+      "source": "Circle status (not settlement proof)",
+      "text": "Trạng thái Circle (không phải bằng chứng quyết toán)"
+    },
+    "circleTransaction": {
+      "source": "Circle transaction ID",
+      "text": "ID giao dịch Circle"
+    },
+    "historyVerify": {
+      "source": "Check finalized transaction",
+      "text": "Kiểm tra giao dịch đã xác nhận cuối cùng"
+    },
+    "historyEmpty": {
+      "source": "This page returned no transaction hashes. It does not prove the original was never signed or sent.",
+      "text": "Trang này không trả về mã băm giao dịch nào. Điều đó không chứng minh giao dịch gốc chưa từng được ký hay gửi."
+    },
+    "historyHeld": {
+      "source": "History inspection is read-only. The saved plan remains held until an exact finalized transaction is verified.",
+      "text": "Việc xem lịch sử chỉ đọc dữ liệu. Kế hoạch đã lưu vẫn bị khóa xử lý cho đến khi xác minh được đúng giao dịch đã xác nhận cuối cùng."
+    },
+    "historyUnavailable": {
+      "source": "Circle history could not be inspected. Reconnect the same Google wallet if its signing session expired, then retry the read-only search. The original remains held.",
+      "text": "Chưa thể xem lịch sử Circle. Kết nối lại đúng ví Google đó nếu phiên ký đã hết hạn, rồi thử lại việc tìm kiếm chỉ đọc. Bản ghi gốc vẫn bị khóa xử lý."
+    },
+    "historyLimit": {
+      "source": "The history page limit was reached; the search is incomplete. The original remains held.",
+      "text": "Đã đạt giới hạn số trang lịch sử; việc tìm kiếm chưa đầy đủ. Bản ghi gốc vẫn bị khóa xử lý."
+    },
+    "fundingUnsupported": {
+      "source": "This Google wallet cannot sign the bounded Arc transaction required for a new deposit. No new funding attempt was started. Existing funds and recovery records are unchanged.",
+      "text": "Ví Google này không thể ký giao dịch Arc bị giới hạn cần cho khoản nạp mới. Chưa bắt đầu lần nạp tiền mới nào. Tiền hiện có và hồ sơ khôi phục được giữ nguyên."
+    }
+  }
 }

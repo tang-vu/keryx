@@ -27,6 +27,38 @@
     "themeRemoved": {
       "source": "Theme removed. Other themes, claims and retained source reports were kept.",
       "text": "Đã xóa chủ đề. Các chủ đề khác, mục kiểm tra và báo cáo nguồn đã lưu được giữ nguyên."
+    },
+    "clearRefused": {
+      "source": "Clear recovery could not be prepared. Your draft was kept. Download its private JSON before trying again.",
+      "text": "Chưa thể chuẩn bị khôi phục sau khi xóa. Bản nháp của bạn được giữ nguyên. Tải JSON riêng tư của bản nháp trước khi thử lại."
+    },
+    "clearRestored": {
+      "source": "Cleared draft restored in this tab with its original paper versions and unfinished edits. Your saved library is unchanged.",
+      "text": "Đã khôi phục bản nháp bị xóa trong thẻ này, kèm phiên bản bài báo gốc và các chỉnh sửa chưa hoàn tất. Thư viện đã lưu của bạn được giữ nguyên."
+    },
+    "confirmClear": {
+      "source": "Clear this tab's draft, including unfinished edits and unimported report text? You can undo here before editing, importing or restoring other work, or closing or reloading this tab.",
+      "text": "Xóa bản nháp trong thẻ này, gồm chỉnh sửa chưa hoàn tất và nội dung báo cáo chưa nhập? Bạn có thể hoàn tác tại đây trước khi chỉnh sửa, nhập hay khôi phục công việc khác, hoặc đóng hay tải lại thẻ này."
+    },
+    "removalRefused": {
+      "source": "Removal recovery could not be prepared. Your draft was kept. Download its private JSON before trying again.",
+      "text": "Chưa thể chuẩn bị khôi phục sau khi xóa mục. Bản nháp của bạn được giữ nguyên. Tải JSON riêng tư của bản nháp trước khi thử lại."
+    },
+    "removalRestored": {
+      "source": "Removed draft content restored in this tab with its original source versions, assessments and unfinished edits.",
+      "text": "Đã khôi phục nội dung bản nháp bị xóa trong thẻ này, kèm phiên bản nguồn gốc, đánh giá và chỉnh sửa chưa hoàn tất."
+    },
+    "undoClear": {
+      "source": "Undo clear",
+      "text": "Hoàn tác xóa bản nháp"
+    },
+    "undoClearGuidance": {
+      "source": "Recovery is available only in this tab until you edit, import or restore other work, or close or reload it. Your saved library is unchanged.",
+      "text": "Chỉ có thể khôi phục trong thẻ này cho đến khi bạn chỉnh sửa, nhập hay khôi phục công việc khác, hoặc đóng hay tải lại thẻ. Thư viện đã lưu của bạn được giữ nguyên."
+    },
+    "undoRemoval": {
+      "source": "Undo removal",
+      "text": "Hoàn tác xóa mục"
     }
   }
 }

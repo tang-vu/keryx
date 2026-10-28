@@ -27,6 +27,38 @@
     "themeRemoved": {
       "source": "Theme removed. Other themes, claims and retained source reports were kept.",
       "text": "已移除此主题。其他主题、论断和已保留的来源报告均已保留。"
+    },
+    "clearRefused": {
+      "source": "Clear recovery could not be prepared. Your draft was kept. Download its private JSON before trying again.",
+      "text": "无法准备清空恢复。你的草稿保持不变。重试前请下载其私密 JSON。"
+    },
+    "clearRestored": {
+      "source": "Cleared draft restored in this tab with its original paper versions and unfinished edits. Your saved library is unchanged.",
+      "text": "已在此标签页恢复清空的草稿，包括原论文版本和未完成的编辑。已保存的文献库保持不变。"
+    },
+    "confirmClear": {
+      "source": "Clear this tab's draft, including unfinished edits and unimported report text? You can undo here before editing, importing or restoring other work, or closing or reloading this tab.",
+      "text": "清空此标签页的草稿，包括未完成的编辑和未导入的报告文本？在编辑、导入或恢复其他内容，或关闭、重新加载此标签页之前，你可以在此撤销。"
+    },
+    "removalRefused": {
+      "source": "Removal recovery could not be prepared. Your draft was kept. Download its private JSON before trying again.",
+      "text": "无法准备移除恢复。你的草稿保持不变。重试前请下载其私密 JSON。"
+    },
+    "removalRestored": {
+      "source": "Removed draft content restored in this tab with its original source versions, assessments and unfinished edits.",
+      "text": "已在此标签页恢复被移除的草稿内容，包括原始来源版本、评估和未完成的编辑。"
+    },
+    "undoClear": {
+      "source": "Undo clear",
+      "text": "撤销清空"
+    },
+    "undoClearGuidance": {
+      "source": "Recovery is available only in this tab until you edit, import or restore other work, or close or reload it. Your saved library is unchanged.",
+      "text": "恢复仅在此标签页可用，直到你编辑、导入或恢复其他内容，或关闭、重新加载该标签页。已保存的文献库保持不变。"
+    },
+    "undoRemoval": {
+      "source": "Undo removal",
+      "text": "撤销移除"
     }
   }
 }

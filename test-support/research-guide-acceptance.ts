@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Browser } from "playwright";
 import { researchGuidesCopy as copy } from "../locales/en/research-guides";
@@ -76,9 +76,43 @@ export async function checkResearchGuides(browser: Browser, origin: string, evid
       await page.getByRole("button", { name: `${copy.tool.remove} 1`, exact: true }).click();
       assert.equal(await page.locator("fieldset").count(), 0);
       assert.equal(await page.getByLabel(copy.tool.question, { exact: true }).inputValue(), "Does retrieval improve factuality?");
+      for (const locale of ["vi", "zh-Hans"]) {
+        const draft = JSON.parse(await readFile(`locales/${locale}/ui-drafts/research-guides.json`, "utf8"));
+        const translated = (key: string) => draft.entries[key].text as string;
+        await page.goto(origin + "/guides");
+        const language = page.locator("[data-language-switcher] select:visible").first();
+        await language.waitFor();
+        await page.waitForFunction(() => !document.querySelector<HTMLSelectElement>("[data-language-switcher] select")?.disabled);
+        await language.selectOption(locale);
+        await page.getByRole("heading", { name: translated("hubTitle"), exact: true }).waitFor();
+        assert.equal(await page.locator(`main h1 [lang="${locale}"]`).count(), 1);
+        for (const [index, guide] of copy.guides.entries()) {
+          await page.goto(origin + `/guides/${guide.slug}`);
+          await page.getByRole("heading", { name: translated(`guides.${index}.title`), exact: true }).waitFor();
+          for (const section of guide.sections) assert.equal(await page.locator(`section[id="${section.id}"]`).count(), 1);
+          assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale} guide fits ${width}px`);
+          if (index === 0) await page.getByText(translated("guides.0.sections.0.paragraphs.0"), { exact: true }).waitFor();
+          if (evidence && width === 390) await page.screenshot({ path: join(evidence, `${locale}-guide-${index}-${width}.png`), fullPage: true, animations: "disabled" });
+        }
+        await page.goto(origin + "/tools/literature-review-matrix");
+        await page.getByRole("heading", { name: translated("tool.title"), exact: true }).waitFor();
+        for (const key of ["privacyNotice", "filePrivacyHelp", "exportPrivacyNotice"] as const)
+          await page.getByText(copy.tool[key], { exact: true }).waitFor();
+        const question = `Original question <${locale}> {count} USDC`, note = `Original evidence: <source> ${locale} =1+2`;
+        await page.getByLabel(translated("tool.question"), { exact: true }).fill(question);
+        await page.getByRole("button", { name: translated("tool.add"), exact: true }).click();
+        await page.getByLabel(translated("tool.columns.finding"), { exact: true }).fill(note);
+        assert.equal(await page.getByLabel(translated("tool.question"), { exact: true }).inputValue(), question);
+        assert.equal(await page.getByLabel(translated("tool.columns.finding"), { exact: true }).inputValue(), note);
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale} matrix fits ${width}px`);
+        if (evidence && width !== 320) {
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.screenshot({ path: join(evidence, `${locale}-matrix-${width}.png`), fullPage: true, animations: "disabled" });
+        }
+      }
       assert.deepEqual(forbidden, [], "Guide and matrix browsing never submits notes, research or payments");
       assert.deepEqual(errors, [], "No page runtime errors");
     } finally { await context.unrouteAll({ behavior: "wait" }); await context.close(); }
   }
-  console.log("PASS: research guides, canonical HTML, 404, no-JS template, mobile matrix save/reopen/import, stale and invalid file refusal, spreadsheet safety, clipboard refusal and no data submission.");
+  console.log("PASS: research guides, canonical HTML, 404, no-JS template, mobile matrix save/reopen/import, stale and invalid file refusal, spreadsheet safety, clipboard refusal, VI/zh-Hans guides and original notes at320/390/1366px, critical English privacy and no data submission.");
 }

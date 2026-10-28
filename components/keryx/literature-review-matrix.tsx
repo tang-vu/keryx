@@ -98,7 +98,7 @@ export function LiteratureReviewMatrix() {
   }
   return <section aria-labelledby="matrix-heading" className="mt-8 border border-ink bg-paper p-4 sm:p-7">
     <h2 id="matrix-heading" className="font-display text-2xl text-ink">{copy.title}</h2>
-    <p className="mt-3 max-w-[78ch] font-serif leading-relaxed text-ink-2">{copy.localNotice}</p>
+    <p className="mt-3 max-w-[78ch] font-serif leading-relaxed text-ink-2">{copy.privacyNotice}</p>
     {hasNotes && revision !== savedRevision && <p className="mt-3 font-serif text-sm text-seal">{copy.unsaved}</p>}
     <div className="mt-6 font-mono text-xs text-ink-2"><label htmlFor={`${prefix}-question`}>{copy.question}</label>
       <textarea id={`${prefix}-question`} maxLength={MAX_MATRIX_CELL_CHARS} rows={2} value={question} placeholder={copy.questionPlaceholder} onChange={event => { setQuestion(event.target.value); changed(); }} className={fieldClass} />
@@ -120,7 +120,7 @@ export function LiteratureReviewMatrix() {
       <label htmlFor={`${prefix}-file`} className="block font-mono text-xs text-ink-2">{copy.open}</label>
       <input id={`${prefix}-file`} type="file" accept=".json,.csv,application/json,text/csv" className="mt-3 block min-h-11 w-full min-w-0 max-w-full font-serif text-sm text-ink-2 file:mr-3 file:min-h-11 file:border file:border-ink file:bg-paper-2 file:px-3 file:font-mono file:text-xs file:text-seal"
         aria-describedby={`${prefix}-file-help`} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void openFile(file); }} />
-      <p id={`${prefix}-file-help`} className="mt-2 max-w-[78ch] font-serif text-sm leading-relaxed text-ink-3">{copy.fileHelp}</p>
+      <p id={`${prefix}-file-help`} className="mt-2 max-w-[78ch] font-serif text-sm leading-relaxed text-ink-3">{copy.filePrivacyHelp}</p>
       <p className="mt-3 max-w-[78ch] font-serif text-sm leading-relaxed text-ink-2">{copy.libraryHelp} <Link href="/literature" prefetch={false} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-seal underline underline-offset-4">{copy.libraryLink}</Link></p>
       {reading && <p role="status" className="mt-3 font-serif text-seal">{copy.reading}</p>}
       {pending && <section aria-labelledby={`${prefix}-preview`} className="mt-4 min-w-0 border border-line bg-paper-2 p-4">
@@ -134,7 +134,7 @@ export function LiteratureReviewMatrix() {
         {pending.document.rows.length > 0 && <><p className="mt-3 font-mono text-xs text-ink-2">{copy.previewSources}</p>
           <ol className="mt-2 list-decimal space-y-1 pl-5 font-serif text-sm text-ink-2">{pending.document.rows.slice(0, 3).map((row, index) => <li key={index} className="break-words"><span className="line-clamp-2">{row.title || copy.untitledSource}</span></li>)}</ol>
         </>}
-        <p className="mt-3 max-w-[75ch] font-serif text-sm leading-relaxed text-ink-2">{copy.replaceWarning}</p>
+        <p className="mt-3 max-w-[75ch] font-serif text-sm leading-relaxed text-ink-2">{copy.replaceConsentWarning}</p>
         <p className="mt-3 max-w-[75ch] font-serif text-sm leading-relaxed text-ink-3">{copy.appendNotice}</p>
         {pending.kind === "csv" && <p className="mt-3 max-w-[75ch] font-serif text-sm leading-relaxed text-ink-3">{copy.csvNotice}</p>}
         {pending.kind === "library" && <p className="mt-3 max-w-[75ch] whitespace-pre-wrap font-serif text-sm leading-relaxed text-seal">{copy.libraryNotice}</p>}
@@ -164,6 +164,6 @@ export function LiteratureReviewMatrix() {
       const id = nextId.current++; setRows(current => current.length >= MAX_MATRIX_ROWS ? current : [...current, { id, value: emptyMatrixRow() }]); changed();
     }}>{copy.add}</button>
     {rows.length >= MAX_MATRIX_ROWS && <p className="mt-3 font-serif text-sm text-ink-3">{copy.limit}</p>}
-    <p className="mt-5 max-w-[80ch] font-serif text-sm leading-relaxed text-ink-3">{copy.exportNotice}</p>
+    <p className="mt-5 max-w-[80ch] font-serif text-sm leading-relaxed text-ink-3">{copy.exportPrivacyNotice}</p>
   </section>;
 }

@@ -2359,6 +2359,186 @@
     "archiveFilter.showPage": {
       "source": "Show this page's reports",
       "text": "显示本页报告"
+    },
+    "reportEvidence.draft": {
+      "source": "Investigate this research target: “{target}”. Find source excerpts, explain what they support and identify what remains unknown. Original question: “{question}”.",
+      "text": "调查这个研究目标：“{target}”。查找来源片段，说明其支持的内容，并指出仍然未知的部分。原始问题：“{question}”。"
+    },
+    "reportEvidence.excerpts": {
+      "source": "Inspectable excerpts: {count}",
+      "text": "可核查的片段：{count}"
+    },
+    "reportEvidence.inspect": {
+      "source": "Inspect targets and prepare a follow-up",
+      "text": "检查目标并准备后续问题"
+    },
+    "reportEvidence.inspectCount": {
+      "source": "Targets with missing excerpts or a low recorded support estimate: {count}.",
+      "text": "缺少片段或已记录支持度估计较低的目标：{count}。"
+    },
+    "reportEvidence.missing": {
+      "source": "No qualifying excerpt recorded",
+      "text": "未记录符合条件的片段"
+    },
+    "reportEvidence.notice": {
+      "source": "Excerpt presence and estimated support do not establish a complete or factually correct answer.",
+      "text": "存在片段及支持度估计并不证明答案完整或事实正确。"
+    },
+    "reportEvidence.prepare": {
+      "source": "Prepare follow-up",
+      "text": "准备后续问题"
+    },
+    "reportEvidence.prepareNotice": {
+      "source": "Opens an editable question. Review the question and budget before starting a new research run, which may incur charges.",
+      "text": "打开一个可编辑的问题。开始可能产生费用的新研究前，请检查问题和预算。"
+    },
+    "reportEvidence.recorded": {
+      "source": "Targets with inspectable excerpts: {count}/{total}.",
+      "text": "包含可核查片段的目标：{count}/{total}。"
+    },
+    "reportEvidence.selection": {
+      "source": "Selected sources: {selected}/{eligible} proposals",
+      "text": "已选来源：{selected}/{eligible} 个提案"
+    },
+    "reportEvidence.selectionNotice": {
+      "source": "Source selection is a plan. Inspect the recorded excerpts for actual evidence; selection counts do not measure answer support.",
+      "text": "来源选择是一项计划。请检查已记录片段以查看实际证据；选择数量不能衡量答案的支持程度。"
+    },
+    "reportEvidence.targetUnavailable": {
+      "source": "Excerpt ledger unavailable",
+      "text": "片段记录不可用"
+    },
+    "reportEvidence.title": {
+      "source": "Recorded evidence",
+      "text": "已记录的证据"
+    },
+    "reportEvidence.unavailable": {
+      "source": "This report has no stored excerpt ledger; target support cannot be inspected here.",
+      "text": "此报告未保存片段记录，无法在此检查目标的支持情况。"
+    },
+    "reportReading.cacheHit.one": {
+      "source": "{count} cache hit",
+      "text": "{count} 次缓存命中"
+    },
+    "reportReading.cacheHit.other": {
+      "source": "{count} cache hits",
+      "text": "{count} 次缓存命中"
+    },
+    "reportReading.cacheSelection.one": {
+      "source": "{count} cache selection (outcome not recorded)",
+      "text": "{count} 次缓存选择（未记录结果）"
+    },
+    "reportReading.cacheSelection.other": {
+      "source": "{count} cache selections (outcomes not recorded)",
+      "text": "{count} 次缓存选择（未记录结果）"
+    },
+    "reportReading.failedRead.one": {
+      "source": "{count} unavailable read",
+      "text": "{count} 次不可用的读取"
+    },
+    "reportReading.failedRead.other": {
+      "source": "{count} unavailable reads",
+      "text": "{count} 次不可用的读取"
+    },
+    "reportReading.noRecordedReads": {
+      "source": "No recorded public/cache read outcomes",
+      "text": "未记录公开来源或缓存的读取结果"
+    },
+    "reportReading.publicRead.one": {
+      "source": "{count} public read",
+      "text": "{count} 次公开来源读取"
+    },
+    "reportReading.publicRead.other": {
+      "source": "{count} public reads",
+      "text": "{count} 次公开来源读取"
+    },
+    "reportReading.publicSelection.one": {
+      "source": "{count} public read selection (outcome not recorded)",
+      "text": "{count} 次公开来源读取选择（未记录结果）"
+    },
+    "reportReading.publicSelection.other": {
+      "source": "{count} public read selections (outcomes not recorded)",
+      "text": "{count} 次公开来源读取选择（未记录结果）"
+    },
+    "reportReading.reads": {
+      "source": "Public / cached reads",
+      "text": "公开来源／缓存读取"
+    },
+    "requesterFeedback.basis": {
+      "source": "What these observations include",
+      "text": "这些观测包含什么"
+    },
+    "requesterFeedback.calls": {
+      "source": "{failed} failed calls; {missing} calls without usage; {unpriced} usage records without a price.",
+      "text": "{failed} 次调用失败；{missing} 次调用缺少用量；{unpriced} 条用量记录没有价格。"
+    },
+    "requesterFeedback.check": {
+      "source": "Check whether feedback was recorded",
+      "text": "检查反馈是否已记录"
+    },
+    "requesterFeedback.confirmed": {
+      "source": "Your feedback is recorded: {choice}.",
+      "text": "你的反馈已记录：{choice}。"
+    },
+    "requesterFeedback.cost": {
+      "source": "Recorded model estimate: {value}",
+      "text": "已记录的模型成本估计：{value}"
+    },
+    "requesterFeedback.duration": {
+      "source": "Recorded generation: {value}",
+      "text": "已记录的生成情况：{value}"
+    },
+    "requesterFeedback.label": {
+      "source": "Your result and recorded generation observations",
+      "text": "你的结果及已记录的生成观测"
+    },
+    "requesterFeedback.partial": {
+      "source": "Generation completion time and a partial model-cost estimate using captured prices. Search, infrastructure, gas and unrecorded provider charges are excluded.",
+      "text": "生成完成耗时及按已记录价格估算的部分模型成本。不包括搜索、基础设施、gas 费用和未记录的供应商费用。"
+    },
+    "requesterFeedback.private": {
+      "source": "Private feedback on this delivered answer. Your first choice is retained. Revision requests do not start research, refunds or payments.",
+      "text": "针对这份已交付答案的私密反馈。系统保留你的首次选择。修改请求不会启动研究、退款或付款。"
+    },
+    "requesterFeedback.question": {
+      "source": "Did this answer help you complete your task?",
+      "text": "这个答案是否帮助你完成了任务？"
+    },
+    "requesterFeedback.reason": {
+      "source": "Optional private reason",
+      "text": "可选的私密原因"
+    },
+    "requesterFeedback.reject": {
+      "source": "Unusable",
+      "text": "无法使用"
+    },
+    "requesterFeedback.revise": {
+      "source": "Needs revision",
+      "text": "需要修改"
+    },
+    "requesterFeedback.sending": {
+      "source": "Checking feedback…",
+      "text": "正在检查反馈…"
+    },
+    "requesterFeedback.submit": {
+      "source": "Record my feedback",
+      "text": "记录我的反馈"
+    },
+    "requesterFeedback.unavailable": {
+      "source": "Private requester feedback is unavailable for this completion.",
+      "text": "本次完成结果不提供请求者私密反馈。"
+    },
+    "requesterFeedback.unconfirmed": {
+      "source": "Could not confirm feedback. It may already be recorded. Check its status before submitting again.",
+      "text": "无法确认反馈。反馈可能已经记录，请先检查状态再重新提交。"
+    },
+    "requesterFeedback.unknown": {
+      "source": "unrecorded",
+      "text": "未记录"
+    },
+    "requesterFeedback.useful": {
+      "source": "Useful",
+      "text": "有用"
     }
   }
 }

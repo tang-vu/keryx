@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/research-guides.ts",
-  "sourceSha256": "f22ce1a334d53f3701a33f078314fc5c24d66b26b75961785a47a5260decb473",
+  "sourceSha256": "86dbf1a55a01b6310c134a1373a95650694f3a2bdbe05618343638ba90ba5633",
   "entries": {
     "navigation": {
       "source": "Research guides",
@@ -31,6 +31,590 @@
     "tool.question": {
       "source": "Research question",
       "text": "研究问题"
+    },
+    "author": {
+      "source": "Keryx",
+      "text": "Keryx"
+    },
+    "contents": {
+      "source": "In this guide",
+      "text": "本指南内容"
+    },
+    "dateLabel": {
+      "source": "Published 21 October 2026",
+      "text": "发布于2026年10月21日"
+    },
+    "editorialNote": {
+      "source": "Written for the Keryx research workflow. Method references are linked where used; the worked examples are illustrative.",
+      "text": "本指南围绕 Keryx 研究流程编写，在使用相关方法处提供参考链接；示例仅供说明。"
+    },
+    "guides.0.action": {
+      "source": "Build your free literature review matrix",
+      "text": "免费创建文献综述矩阵"
+    },
+    "guides.0.actionHref": {
+      "source": "/tools/literature-review-matrix",
+      "text": "/tools/literature-review-matrix"
+    },
+    "guides.0.description": {
+      "source": "A practical literature review matrix template with a worked example, useful columns and a free CSV builder for Excel and Google Sheets.",
+      "text": "实用的文献综述矩阵模板，附有示例、常用字段以及适用于 Excel 和 Google Sheets 的免费 CSV 生成工具。"
+    },
+    "guides.0.sections.0.id": {
+      "source": "what-to-record",
+      "text": "what-to-record"
+    },
+    "guides.0.sections.0.paragraphs.0": {
+      "source": "Start with a source identifier, study design, population or context, relevant finding, limitation, and the page or section you checked. Add a screening decision with a short reason. A title and abstract are useful for discovery, but they do not establish what the full paper supports.",
+      "text": "先记录来源标识、研究设计、研究人群或背景、相关发现、局限，以及你核查过的页码或章节。再记录筛选决定和简短理由。标题和摘要有助于发现文献，但不能证明全文支持哪些结论。"
+    },
+    "guides.0.sections.0.paragraphs.1": {
+      "source": "Decide which fields answer your review question before you start reading. Pilot the table on a few papers and revise confusing fields. Cochrane's data-collection guidance recommends structured forms that preserve the meaning of the original report; its clinical-review methods need adaptation for other disciplines.",
+      "text": "阅读前，先确定哪些字段有助于回答综述问题。用几篇论文试填表格，修改容易引起歧义的字段。Cochrane 的数据收集指南建议使用结构化表单，保留原始报告的含义；其中面向临床综述的方法需要调整后才能用于其他学科。"
+    },
+    "guides.0.sections.0.referenceLabel": {
+      "source": "Cochrane Handbook, Chapter 5: Collecting data",
+      "text": "Cochrane Handbook，第5章：收集数据"
+    },
+    "guides.0.sections.0.referenceUrl": {
+      "source": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-05",
+      "text": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-05"
+    },
+    "guides.0.sections.0.title": {
+      "source": "What belongs in a literature review matrix?",
+      "text": "文献综述矩阵应记录哪些内容？"
+    },
+    "guides.0.sections.1.id": {
+      "source": "worked-example",
+      "text": "worked-example"
+    },
+    "guides.0.sections.1.paragraphs.0": {
+      "source": "Suppose your question is whether retrieval improves the accuracy of answers about internal documentation. An illustrative row might read: study design — controlled comparison; context — a fixed collection of product manuals; finding — fewer unsupported answers on that collection; limitation — one domain and a small evaluation set; locator — results table 2. This is a teaching example, not a real study or an observed Keryx result.",
+      "text": "假设你的问题是：检索能否提高针对内部文档的回答准确率。示例行可以这样记录：研究设计——对照比较；背景——固定的一组产品手册；发现——在该文档集合上，缺乏依据的回答减少；局限——仅涉及一个领域，且评估集较小；定位——结果表2。这是教学示例，并非真实研究或 Keryx 的实测结果。"
+    },
+    "guides.0.sections.1.paragraphs.1": {
+      "source": "A second paper may evaluate open-web questions rather than internal documents. Keep that difference visible in the context column. Do not combine the findings into one improvement percentage unless their outcomes, denominators and evaluation methods support that calculation. Your synthesis can instead say which settings were tested and where the evidence remains uncertain.",
+      "text": "另一篇论文可能评估的是开放网络问题，而非内部文档。应在背景列中保留这一差异。除非结果指标、分母和评估方法支持相应计算，否则不要将这些发现合并为一个提升百分比。可以在综合分析中说明测试过哪些场景，以及哪些证据仍不确定。"
+    },
+    "guides.0.sections.1.title": {
+      "source": "A worked example: compare findings without losing context",
+      "text": "示例：在保留背景的前提下比较研究发现"
+    },
+    "guides.0.sections.2.id": {
+      "source": "workflow",
+      "text": "workflow"
+    },
+    "guides.0.sections.2.paragraphs.0": {
+      "source": "First, write the research question at the top of the worksheet. Next, record candidate sources and why you include or exclude them. When you read an included source, write the relevant finding in your own words and save an exact locator. Use “not checked” when you have only seen an abstract; an empty cell can otherwise look like a negative result.",
+      "text": "首先，在工作表顶部写下研究问题。然后记录候选来源及其纳入或排除理由。阅读已纳入的来源时，用自己的话记录相关发现，并保存准确位置。如果只看过摘要，请填写“未核查”；否则，空白单元格可能被误解为阴性结果。"
+    },
+    "guides.0.sections.2.paragraphs.1": {
+      "source": "Then compare rows by outcome, method and context. Look for agreement, disagreement and missing populations. A useful synthesis explains why two findings might differ and names the evidence you would need to resolve the disagreement. Keep a list of questions for further reading instead of making a source say more than it does.",
+      "text": "接着按结果、方法和背景比较各行。寻找一致之处、分歧和缺少研究的人群。有用的综合分析会解释两个发现为何可能不同，并指出需要什么证据才能解决分歧。保留后续阅读问题清单，避免让来源承载超出其内容的结论。"
+    },
+    "guides.0.sections.2.title": {
+      "source": "Turn reading notes into a synthesis",
+      "text": "将阅读笔记整理成综合分析"
+    },
+    "guides.0.sections.3.id": {
+      "source": "avoid-mistakes",
+      "text": "avoid-mistakes"
+    },
+    "guides.0.sections.3.paragraphs.0": {
+      "source": "Do not count two reports of the same study as two independent studies. Link the reports and note which one supplied each finding. Do not treat a DOI, citation count or an AI-written summary as a quality assessment. Keep bibliographic identity, your reading notes and your judgment in separate fields.",
+      "text": "不要把同一项研究的两份报告算成两项独立研究。关联这些报告，并注明每项发现来自哪一份。不要将 DOI、引用次数或 AI 撰写的摘要视为质量评估。请分别记录书目信息、阅读笔记和你的判断。"
+    },
+    "guides.0.sections.3.paragraphs.1": {
+      "source": "A matrix is an organizational aid. It does not make a review systematic, certify completeness or replace a discipline-appropriate risk-of-bias assessment. For a formal review, define the protocol, search strategy, eligibility rules and extraction checks separately. Keep the original reports available so another reader can audit your notes.",
+      "text": "矩阵是一种信息组织工具。它不会使综述自动成为系统综述，不能证明资料完整，也不能替代适合相关学科的偏倚风险评估。正式综述应另行制定方案、检索策略、纳入标准和数据提取核查流程。请保留原始报告，供其他读者审核笔记。"
+    },
+    "guides.0.sections.3.title": {
+      "source": "Common mistakes and how to avoid them",
+      "text": "常见错误及避免方法"
+    },
+    "guides.0.sections.4.id": {
+      "source": "spreadsheet",
+      "text": "spreadsheet"
+    },
+    "guides.0.sections.4.paragraphs.0": {
+      "source": "Open the free builder, enter your question and add the sources you have actually checked. Download the CSV, then open or import it into your spreadsheet application. The export includes one row per source and repeats the research question so rows retain their context when filtered. Long quotations and commas remain inside their cells.",
+      "text": "打开免费工具，输入问题，并添加你实际核查过的来源。下载 CSV 后，在电子表格应用中打开或导入。导出文件每个来源占一行，并在每行重复研究问题，以便筛选后仍保留背景。长引文和逗号会保留在各自的单元格中。"
+    },
+    "guides.0.sections.4.paragraphs.1": {
+      "source": "Choose “Save editable matrix” to keep an exact copy of your notes for your next session. Open that JSON file here to continue, or import a UTF-8 CSV using the template's nine column names. Review the question and source count before replacing the current matrix or adding rows for the same question. CSV safety apostrophes remain visible on reimport; the editable file preserves the original text.",
+      "text": "选择“保存可编辑矩阵”，为下次使用保留笔记的精确副本。在此打开该 JSON 文件即可继续，也可导入使用模板九个列名的 UTF-8 CSV。替换当前矩阵或为同一问题追加行之前，请检查问题和来源数量。CSV 中用于安全保护的单引号在重新导入时仍会显示；可编辑文件则保留原始文本。"
+    },
+    "guides.0.sections.4.paragraphs.2": {
+      "source": "For an existing Keryx paper collection, download a backup from the literature workspace and open it in the matrix builder. Review the preview before replacing the current worksheet or adding source rows for the same question. Titles, recorded authors and years, exact source links, DOIs and your screening decisions and notes carry over. Evidence fields stay blank until you read the papers. Keep the original backup for the rest of the bibliographic metadata, and save an editable matrix to continue later. This worksheet does not import records into your account or claim to have read your papers.",
+      "text": "对于现有的 Keryx 论文集合，可从文献工作区下载备份，再用矩阵工具打开。替换当前工作表或为同一问题追加来源行前，请查看预览。标题、已记录的作者和年份、准确的来源链接、DOI，以及筛选决定和笔记会一并带入。证据字段保持空白，等待你阅读论文后填写。请保留原始备份以保存其余书目元数据，并保存可编辑矩阵以便后续继续。此工作表不会将记录导入你的账户，也不表示已经阅读了你的论文。"
+    },
+    "guides.0.sections.4.title": {
+      "source": "Use the template in Excel or Google Sheets",
+      "text": "在 Excel 或 Google Sheets 中使用模板"
+    },
+    "guides.0.slug": {
+      "source": "literature-review-matrix",
+      "text": "literature-review-matrix"
+    },
+    "guides.0.summary": {
+      "source": "A literature review matrix is a table that connects each source to the question it helps answer, its methods, findings and limitations. Use it to compare evidence across papers instead of collecting disconnected summaries.",
+      "text": "文献综述矩阵将每个来源与它所回答的问题、研究方法、发现及局限关联起来。用它比较不同论文中的证据，而不是只收集互不关联的摘要。"
+    },
+    "guides.0.title": {
+      "source": "Literature review matrix: template, example and workflow",
+      "text": "文献综述矩阵：模板、示例与工作流程"
+    },
+    "guides.1.action": {
+      "source": "Record your checks in a free evidence matrix",
+      "text": "用免费证据矩阵记录核查过程"
+    },
+    "guides.1.actionHref": {
+      "source": "/tools/literature-review-matrix",
+      "text": "/tools/literature-review-matrix"
+    },
+    "guides.1.description": {
+      "source": "Check whether an AI citation exists, matches the claimed paper and supports the specific claim. A practical workflow for DOI checks, source passages and corrections.",
+      "text": "核查 AI 引用是否存在、是否对应所声称的论文，以及是否支持具体论断。提供 DOI 核查、原文段落核对和更正检查的实用流程。"
+    },
+    "guides.1.sections.0.id": {
+      "source": "identity",
+      "text": "identity"
+    },
+    "guides.1.sections.0.paragraphs.0": {
+      "source": "Open the cited source and compare its title, authors, year and venue with the reference in the answer. If a DOI is given, resolve it and check the publisher's record. For a preprint, record the version you examined. A later version can have different results or wording.",
+      "text": "打开被引用的来源，将标题、作者、年份和发表刊物或会议与回答中的参考文献核对。如果提供 DOI，请解析 DOI 并查看出版方记录。对于预印本，请记录所查阅的版本，因为后续版本的结果或措辞可能不同。"
+    },
+    "guides.1.sections.0.paragraphs.1": {
+      "source": "Crossref provides publisher-deposited bibliographic metadata that can help check the identity of many scholarly works. Its records are useful for matching a DOI to a title and authors. They are not proof that the paper supports an AI-generated sentence. If a record is missing, search the publisher or repository before deciding the citation is fabricated.",
+      "text": "Crossref 提供出版方提交的书目元数据，可帮助核对许多学术作品的身份。其记录有助于将 DOI 与标题、作者匹配，但不能证明论文支持 AI 生成的句子。如果没有找到记录，应先搜索出版方网站或知识库，再判断引用是否虚构。"
+    },
+    "guides.1.sections.0.referenceLabel": {
+      "source": "Crossref: retrieving bibliographic metadata",
+      "text": "Crossref：获取书目元数据"
+    },
+    "guides.1.sections.0.referenceUrl": {
+      "source": "https://www.crossref.org/documentation/retrieve-metadata/rest-api/",
+      "text": "https://www.crossref.org/documentation/retrieve-metadata/rest-api/"
+    },
+    "guides.1.sections.0.title": {
+      "source": "1. Check the source's identity",
+      "text": "1. 核查来源身份"
+    },
+    "guides.1.sections.1.id": {
+      "source": "support",
+      "text": "support"
+    },
+    "guides.1.sections.1.paragraphs.0": {
+      "source": "Break the AI answer into claims you can check. For each claim, find a passage, table or figure in the source and record its location. Compare the population, intervention, outcome, time period and uncertainty. A paper about one dataset does not automatically support a statement about every dataset.",
+      "text": "将 AI 回答拆分为可核查的论断。对每项论断，在来源中找到相应段落、表格或图，并记录位置。比较研究人群、干预、结果、时间范围和不确定性。针对某个数据集的论文，并不自动支持对所有数据集的概括。"
+    },
+    "guides.1.sections.1.paragraphs.1": {
+      "source": "Distinguish direct support from inference. If the paper reports an association, do not restate it as a causal effect. If a number appears in the answer, check the units, baseline and denominator in the original table. When you can access only the abstract, write “abstract checked; full text not checked” and limit your conclusion accordingly.",
+      "text": "区分直接支持与推断。如果论文报告的是关联，不要改写为因果效应。如果回答包含数字，请核查原始表格中的单位、基线和分母。若只能获取摘要，请注明“已核查摘要；未核查全文”，并据此限制结论范围。"
+    },
+    "guides.1.sections.1.title": {
+      "source": "2. Find the passage that supports the claim",
+      "text": "2. 找到支持论断的原文段落"
+    },
+    "guides.1.sections.2.id": {
+      "source": "status",
+      "text": "status"
+    },
+    "guides.1.sections.2.paragraphs.0": {
+      "source": "Look at the publisher's article page for updates before relying on a finding. Crossmark can display changes such as corrections and retractions for participating content. Its presence is a useful route to status information; an absent badge is not evidence that a paper has no updates.",
+      "text": "依赖某项发现之前，应查看出版方的文章页面是否有更新。对于参与该服务的内容，Crossmark 可显示更正、撤稿等变更。有 Crossmark 标记可帮助查找状态信息；没有标记并不说明论文从未更新。"
+    },
+    "guides.1.sections.2.paragraphs.1": {
+      "source": "A citation may exist and accurately report a finding while the larger conclusion is still weak. Look for conflicting studies and note differences in methods or context. Record an unresolved disagreement as a gap. Do not quietly drop an inconvenient source to make the answer sound more certain.",
+      "text": "引用可能真实存在，也准确转述了某项发现，但整体结论仍可能薄弱。请寻找相互冲突的研究，并记录方法或背景差异。将尚未解决的分歧记录为证据缺口。不要为了让回答显得更确定而悄悄删去不符合预期的来源。"
+    },
+    "guides.1.sections.2.referenceLabel": {
+      "source": "Crossref: Crossmark and the current status of research",
+      "text": "Crossref：Crossmark 与研究的当前状态"
+    },
+    "guides.1.sections.2.referenceUrl": {
+      "source": "https://www.crossref.org/services/crossmark/",
+      "text": "https://www.crossref.org/services/crossmark/"
+    },
+    "guides.1.sections.2.title": {
+      "source": "3. Check for corrections, retractions and conflicting evidence",
+      "text": "3. 检查更正、撤稿和冲突证据"
+    },
+    "guides.1.sections.3.id": {
+      "source": "checklist",
+      "text": "checklist"
+    },
+    "guides.1.sections.3.paragraphs.0": {
+      "source": "For each material claim, keep: the exact claim; the source identifier; the source title and version; the passage or table checked; a verdict of supported, partly supported, unsupported or not checked; and the reason for that verdict. Make the reason specific enough that a second reader can follow it.",
+      "text": "对每项重要论断，请保留：论断原文、来源标识、来源标题与版本、核查过的段落或表格、支持／部分支持／不支持／未核查的判断，以及判断理由。理由应足够具体，使另一位读者能够复核。"
+    },
+    "guides.1.sections.3.paragraphs.1": {
+      "source": "For example, if an answer says “the method cuts errors by half,” a useful note might say “partly supported: table 3 reports that reduction only for the small-model condition.” This illustrative example shows why checking a number without its experimental setting is insufficient. Keep the qualified wording when you write your own summary.",
+      "text": "例如，若回答声称“该方法将错误减半”，一条有用的笔记可以是“部分支持：表3仅在小模型条件下报告了这一降幅”。这个示例说明，只核查数字而忽略实验条件是不够的。撰写自己的摘要时，请保留这些限定条件。"
+    },
+    "guides.1.sections.3.title": {
+      "source": "A checklist you can reuse",
+      "text": "可重复使用的核查清单"
+    },
+    "guides.1.sections.4.id": {
+      "source": "keryx",
+      "text": "keryx"
+    },
+    "guides.1.sections.4.paragraphs.0": {
+      "source": "Use the free matrix to record what you checked, what remains uncertain and the source location. In Keryx's literature workspace, saved references are bibliographic records plus your notes. Saving a reference does not mean that Keryx has accessed its full text or verified its claims.",
+      "text": "使用免费矩阵记录已核查内容、尚存的不确定性及来源位置。在 Keryx 文献工作区中，已保存的参考文献是书目记录及你的笔记。保存参考文献并不表示 Keryx 已获取全文或核实其中的论断。"
+    },
+    "guides.1.sections.4.paragraphs.1": {
+      "source": "For a research run, inspect the delivered citations and available evidence before reusing the answer. Keep missing or unread evidence visible. If the exact support is unavailable, narrow the claim or ask a follow-up question. A polished answer becomes more useful when readers can tell which statements are checked and which still need work.",
+      "text": "对于一次研究运行，在复用回答前，请查看交付的引用和可用证据。明确标出缺失或未读的证据。如果无法获得确切支持，应缩小论断范围或提出后续问题。当读者能够分辨哪些陈述已核查、哪些仍需处理时，措辞完善的回答才更有用。"
+    },
+    "guides.1.sections.4.title": {
+      "source": "Apply the checks in a Keryx workflow",
+      "text": "在 Keryx 流程中应用这些核查步骤"
+    },
+    "guides.1.slug": {
+      "source": "verify-ai-citations",
+      "text": "verify-ai-citations"
+    },
+    "guides.1.summary": {
+      "source": "Verify an AI citation in three separate steps: confirm the source exists, confirm it is the intended source, and read the passage that supports the claim. A working link or a valid DOI only resolves the first part of that problem.",
+      "text": "验证 AI 引用应分三步：确认来源存在，确认它就是所指的来源，再阅读支持论断的段落。可打开的链接或有效 DOI 只解决了第一部分问题。"
+    },
+    "guides.1.title": {
+      "source": "How to verify AI citations: a practical checklist",
+      "text": "如何验证 AI 引用：实用核查清单"
+    },
+    "homeIntro": {
+      "source": "Build a literature matrix for free, or learn how to check the citations in an AI answer.",
+      "text": "免费创建文献矩阵，或学习如何核查 AI 回答中的引用。"
+    },
+    "homeTitle": {
+      "source": "Make your next review easier to check",
+      "text": "让下一次综述更便于核查"
+    },
+    "hubDescription": {
+      "source": "Practical research guides and a free literature review matrix. Organize sources, record limitations and check whether citations support your claims.",
+      "text": "实用研究指南和免费文献综述矩阵。整理来源、记录局限，并核查引用是否支持你的论断。"
+    },
+    "hubIntro": {
+      "source": "Start with a useful question, keep a record of what you actually read, and make the path from a claim to its source easy to follow. These guides turn that process into something you can use today.",
+      "text": "从一个有用的问题开始，记录你实际读过的内容，并让论断到来源的追溯路径清晰可循。这些指南帮助你立即应用这一流程。"
+    },
+    "hubTitle": {
+      "source": "Better research starts with evidence you can check",
+      "text": "更好的研究，始于可核查的证据"
+    },
+    "kicker": {
+      "source": "The research desk",
+      "text": "研究工作台"
+    },
+    "literatureAction": {
+      "source": "Organize papers in the literature workspace",
+      "text": "在文献工作区整理论文"
+    },
+    "literatureDetail": {
+      "source": "Save bibliographic records and your screening notes. A saved reference does not mean its full text has been read.",
+      "text": "保存书目记录和筛选笔记。参考文献已保存，并不表示其全文已被阅读。"
+    },
+    "readGuide": {
+      "source": "Read the guide",
+      "text": "阅读指南"
+    },
+    "related": {
+      "source": "Continue your research",
+      "text": "继续研究"
+    },
+    "researchAction": {
+      "source": "Research a question with Keryx",
+      "text": "使用 Keryx 研究问题"
+    },
+    "researchDetail": {
+      "source": "Review research options and pricing before starting a research run.",
+      "text": "开始研究运行前，请查看研究选项和价格。"
+    },
+    "sources": {
+      "source": "Sources and further reading",
+      "text": "来源与延伸阅读"
+    },
+    "tool.append": {
+      "source": "Add these source rows",
+      "text": "追加这些来源行"
+    },
+    "tool.appendCapacity": {
+      "source": "Adding these rows would exceed 50 sources. No rows have been changed.",
+      "text": "追加这些行将超过50个来源。未更改任何行。"
+    },
+    "tool.appendNotice": {
+      "source": "Adding rows keeps your current notes and appends every source row in the file, including duplicates. Both matrices must use the same research question.",
+      "text": "追加行会保留当前笔记，并添加文件中的所有来源行，包括重复行。两个矩阵必须使用同一研究问题。"
+    },
+    "tool.appendQuestion": {
+      "source": "To add rows, both matrices must have exactly the same research question. You can open the file by replacing the current matrix instead.",
+      "text": "追加行要求两个矩阵的研究问题完全相同。你也可以通过替换当前矩阵来打开此文件。"
+    },
+    "tool.appended": {
+      "source": "Source rows added. Save an editable copy to keep the combined matrix.",
+      "text": "已追加来源行。请保存可编辑副本，以保留合并后的矩阵。"
+    },
+    "tool.cancel": {
+      "source": "Cancel import",
+      "text": "取消导入"
+    },
+    "tool.columns.decision": {
+      "source": "Screening decision and reason",
+      "text": "筛选决定及理由"
+    },
+    "tool.columns.design": {
+      "source": "Study design or source type",
+      "text": "研究设计或来源类型"
+    },
+    "tool.columns.finding": {
+      "source": "Finding relevant to your question",
+      "text": "与问题相关的发现"
+    },
+    "tool.columns.identifier": {
+      "source": "DOI or source URL",
+      "text": "DOI 或来源 URL"
+    },
+    "tool.columns.limitation": {
+      "source": "Limitations / conflicting evidence",
+      "text": "局限／冲突证据"
+    },
+    "tool.columns.locator": {
+      "source": "Page / section / table checked",
+      "text": "已核查的页码／章节／表格"
+    },
+    "tool.columns.population": {
+      "source": "Population / context / sample",
+      "text": "研究人群／背景／样本"
+    },
+    "tool.columns.title": {
+      "source": "Source title / author / year",
+      "text": "来源标题／作者／年份"
+    },
+    "tool.copied": {
+      "source": "CSV copied. Paste it into a text file or import it into a spreadsheet.",
+      "text": "已复制 CSV。可粘贴到文本文件，或导入电子表格。"
+    },
+    "tool.copyFailed": {
+      "source": "The browser could not copy the CSV. Use the download button instead.",
+      "text": "浏览器无法复制 CSV。请使用下载按钮。"
+    },
+    "tool.countLabel": {
+      "source": "Sources in this matrix",
+      "text": "此矩阵的来源数"
+    },
+    "tool.csvNotice": {
+      "source": "CSV imports keep cell text, including any spreadsheet-safety apostrophes. Use the editable JSON file to preserve notes exactly between sessions.",
+      "text": "导入 CSV 会保留单元格文本，包括用于电子表格安全保护的单引号。使用可编辑 JSON 文件可在不同会话间精确保留笔记。"
+    },
+    "tool.currentCount": {
+      "source": "Sources currently in this tab",
+      "text": "当前标签页中的来源数"
+    },
+    "tool.description": {
+      "source": "Build and save a free literature review matrix. Open your saved worksheet or import its CSV, record findings and limitations, and export to Excel or Google Sheets. No sign-up.",
+      "text": "免费创建和保存文献综述矩阵。打开已保存的工作表或导入其 CSV，记录发现与局限，再导出至 Excel 或 Google Sheets。无需注册。"
+    },
+    "tool.downloaded": {
+      "source": "CSV download requested. Keep this file before leaving the page.",
+      "text": "已请求下载 CSV。离开页面前请保存好此文件。"
+    },
+    "tool.empty": {
+      "source": "No sources yet. Download an empty template, or add your first source below.",
+      "text": "暂无来源。下载空白模板，或在下方添加第一个来源。"
+    },
+    "tool.exportPrivacyNotice": {
+      "source": "Exports contain all your source rows and the research question. Formula-like cell values receive a leading apostrophe for spreadsheet safety.",
+      "text": "导出文件包含所有来源行和研究问题。对于类似公式的单元格值，会添加前导单引号以提高电子表格安全性。"
+    },
+    "tool.fileErrors.csv": {
+      "source": "The CSV has malformed quotes or inconsistent columns. Check it against the empty template. Your current matrix has not changed.",
+      "text": "CSV 的引号格式错误或列数不一致。请对照空白模板检查。当前矩阵未更改。"
+    },
+    "tool.fileErrors.download": {
+      "source": "The browser could not start the download. Your notes are still in this tab; try again before leaving.",
+      "text": "浏览器无法开始下载。笔记仍在此标签页中；请在离开前重试。"
+    },
+    "tool.fileErrors.encoding": {
+      "source": "This file is not valid UTF-8. Export it as UTF-8 CSV and try again. Your current matrix has not changed.",
+      "text": "此文件不是有效的 UTF-8。请导出为 UTF-8 CSV 后重试。当前矩阵未更改。"
+    },
+    "tool.fileErrors.format": {
+      "source": "This is not a supported Keryx file. Choose a saved matrix JSON, a literature workspace backup, or the template CSV. Your current matrix has not changed.",
+      "text": "此 Keryx 文件不受支持。请选择已保存的矩阵 JSON、文献工作区备份或模板 CSV。当前矩阵未更改。"
+    },
+    "tool.fileErrors.headers": {
+      "source": "Use the template's nine column names, each exactly once. Export a comma-separated CSV with a header row. Your current matrix has not changed.",
+      "text": "请使用模板的九个列名，每个恰好出现一次。导出以逗号分隔且包含表头行的 CSV。当前矩阵未更改。"
+    },
+    "tool.fileErrors.library": {
+      "source": "This literature backup is invalid, unsupported or larger than 1 MiB. Choose the original backup downloaded from your literature workspace. Your current matrix has not changed.",
+      "text": "此文献备份无效、不受支持或超过1 MiB。请选择从文献工作区下载的原始备份。当前矩阵未更改。"
+    },
+    "tool.fileErrors.limits": {
+      "source": "This file exceeds 50 sources or 2,000 characters in a matrix field. Combined titles, author names or screening notes may exceed a field even in a valid literature backup. No text has been shortened and your current matrix has not changed.",
+      "text": "此文件超过50个来源，或某个矩阵字段超过2,000个字符。即使文献备份有效，合并后的标题、作者姓名或筛选笔记仍可能超出字段限制。未截短任何文本，当前矩阵未更改。"
+    },
+    "tool.fileErrors.questions": {
+      "source": "This CSV contains different research questions. Import one question at a time. Your current matrix has not changed.",
+      "text": "此 CSV 包含不同的研究问题。请每次只导入一个问题。当前矩阵未更改。"
+    },
+    "tool.fileErrors.read": {
+      "source": "The browser could not read this file. Choose it again. Your current matrix has not changed.",
+      "text": "浏览器无法读取此文件。请重新选择。当前矩阵未更改。"
+    },
+    "tool.fileErrors.size": {
+      "source": "This file is larger than 6 MiB. Your current matrix has not changed.",
+      "text": "此文件超过6 MiB。当前矩阵未更改。"
+    },
+    "tool.filePrivacyHelp": {
+      "source": "Choose a Keryx matrix JSON file, a literature workspace backup JSON, or a UTF-8 CSV with the template's nine column names. Maximum 6 MiB for matrices, 1 MiB for literature backups, 50 sources and 2,000 characters per matrix field. Files are read only in your browser.",
+      "text": "请选择 Keryx 矩阵 JSON、文献工作区备份 JSON，或使用模板九个列名的 UTF-8 CSV。矩阵最大6 MiB，文献备份最大1 MiB，最多50个来源，每个矩阵字段最多2,000个字符。文件仅在你的浏览器中读取。"
+    },
+    "tool.fileName": {
+      "source": "File",
+      "text": "文件"
+    },
+    "tool.guideAction": {
+      "source": "See a worked literature matrix example",
+      "text": "查看文献矩阵示例"
+    },
+    "tool.howTitle": {
+      "source": "How to use the matrix",
+      "text": "如何使用矩阵"
+    },
+    "tool.importedQuestion": {
+      "source": "Question in this file",
+      "text": "此文件中的问题"
+    },
+    "tool.incomingCount": {
+      "source": "Sources in this file",
+      "text": "此文件中的来源数"
+    },
+    "tool.intro": {
+      "source": "Keep each paper, its finding and the passage behind that finding together. Start with your saved literature library, a template or an existing matrix, then keep an editable copy for your next reading session.",
+      "text": "将每篇论文、其发现及支持该发现的原文段落放在一起记录。可从已保存的文献库、模板或现有矩阵开始，并保留可编辑副本供下次阅读使用。"
+    },
+    "tool.libraryHelp": {
+      "source": "Already saved papers in Keryx? Download a backup from your literature workspace, then open it here to start a matrix with your sources and screening notes.",
+      "text": "已在 Keryx 保存论文？从文献工作区下载备份，再在此打开，即可用你的来源和筛选笔记创建矩阵。"
+    },
+    "tool.libraryIncompleteAuthors": {
+      "source": "{recorded} of {total} author names recorded",
+      "text": "已记录 {recorded} 个作者姓名，共 {total} 个"
+    },
+    "tool.libraryLink": {
+      "source": "Open literature workspace in a new tab",
+      "text": "在新标签页中打开文献工作区"
+    },
+    "tool.libraryLoaded": {
+      "source": "Library sources and screening notes added to the matrix. Read the papers to fill the evidence fields, and save an editable matrix before leaving.",
+      "text": "已将文献库来源和筛选笔记加入矩阵。请阅读论文后填写证据字段，并在离开前保存可编辑矩阵。"
+    },
+    "tool.libraryNotice": {
+      "source": "This is a literature library backup. Only the question, titles, recorded authors and years, source URLs, DOIs, screening decisions and personal notes become matrix rows. Findings, methods, populations, limitations and passage locators stay blank: bibliographic metadata is not reading evidence. Keep the original backup for other metadata and the library title. No rows are merged or deduplicated.",
+      "text": "这是文献库备份。只有问题、标题、已记录的作者和年份、来源 URL、DOI、筛选决定及个人笔记会转换为矩阵行。发现、方法、研究人群、局限及原文位置保持空白：书目元数据并非阅读证据。请保留原始备份以保存其他元数据和文献库名称。不会合并行或去重。"
+    },
+    "tool.limit": {
+      "source": "This browser worksheet holds up to 50 sources. Continue in your exported spreadsheet for larger reviews.",
+      "text": "此浏览器工作表最多容纳50个来源。更大规模的综述请在导出的电子表格中继续。"
+    },
+    "tool.loaded": {
+      "source": "Matrix opened. Save a new editable copy after making changes.",
+      "text": "已打开矩阵。修改后请保存新的可编辑副本。"
+    },
+    "tool.privacyNotice": {
+      "source": "Your entries and imported files stay in this tab and are not uploaded or automatically saved. Save an editable file before reloading or leaving, then open that file here to continue.",
+      "text": "你输入的内容和导入的文件仅保留在此标签页中，不会上传或自动保存。刷新或离开前请保存可编辑文件，之后在此打开该文件继续。"
+    },
+    "tool.noQuestion": {
+      "source": "No research question recorded.",
+      "text": "尚未记录研究问题。"
+    },
+    "tool.noScript": {
+      "source": "Enable JavaScript to edit notes and export your matrix, or download the empty CSV template below.",
+      "text": "启用 JavaScript 以编辑笔记和导出矩阵，或下载下方的空白 CSV 模板。"
+    },
+    "tool.open": {
+      "source": "Open matrix or literature backup",
+      "text": "打开矩阵或文献备份"
+    },
+    "tool.preview": {
+      "source": "Review your matrix file",
+      "text": "检查矩阵文件"
+    },
+    "tool.previewSources": {
+      "source": "First source titles in this file",
+      "text": "文件中的前几个来源标题"
+    },
+    "tool.questionPlaceholder": {
+      "source": "For which population, intervention or context do you need evidence?",
+      "text": "你需要针对哪些人群、干预或背景的证据？"
+    },
+    "tool.reading": {
+      "source": "Reading your file locally…",
+      "text": "正在本地读取文件…"
+    },
+    "tool.remove": {
+      "source": "Remove source",
+      "text": "移除来源"
+    },
+    "tool.replace": {
+      "source": "Replace current matrix",
+      "text": "替换当前矩阵"
+    },
+    "tool.replaceConsentWarning": {
+      "source": "Replacing removes the current question and source rows from this tab. Save an editable copy of your current work first if you want to keep it.",
+      "text": "替换会从此标签页移除当前问题和来源行。若需保留，请先保存当前工作的可编辑副本。"
+    },
+    "tool.save": {
+      "source": "Save editable matrix",
+      "text": "保存可编辑矩阵"
+    },
+    "tool.saved": {
+      "source": "Editable file download requested. Check that the file was saved, then open it here next time to continue with your notes unchanged.",
+      "text": "已请求下载可编辑文件。请确认文件已保存，下次在此打开，即可保留原有笔记继续使用。"
+    },
+    "tool.scopeNotice": {
+      "source": "This tool organizes your notes. It does not retrieve papers, verify citations, assess study quality or run AI research.",
+      "text": "此工具用于整理笔记，不会获取论文、验证引用、评估研究质量或运行 AI 研究。"
+    },
+    "tool.sourceNumber": {
+      "source": "Source",
+      "text": "来源"
+    },
+    "tool.staleImport": {
+      "source": "Your current matrix changed while this preview was open. Choose the file again to review it against your latest notes.",
+      "text": "预览打开期间，当前矩阵已发生变化。请重新选择文件，以便对照最新笔记进行检查。"
+    },
+    "tool.steps.0": {
+      "source": "Write a focused research question, open your literature workspace backup to reuse sources and screening notes, or reopen a saved matrix.",
+      "text": "写下明确的研究问题，打开文献工作区备份以复用来源和筛选笔记，或重新打开已保存的矩阵。"
+    },
+    "tool.steps.1": {
+      "source": "Add one source at a time. Keep multiple reports of one study linked in your notes.",
+      "text": "逐个添加来源。在笔记中关联同一项研究的多份报告。"
+    },
+    "tool.steps.2": {
+      "source": "Record the finding in your own words and the page, section or table you checked.",
+      "text": "用自己的话记录发现，以及核查过的页码、章节或表格。"
+    },
+    "tool.steps.3": {
+      "source": "Keep limitations and screening decisions visible. Save an editable copy before leaving; use CSV for your spreadsheet.",
+      "text": "明确记录局限和筛选决定。离开前保存可编辑副本；在电子表格应用中使用 CSV。"
+    },
+    "tool.title": {
+      "source": "Free literature review matrix builder",
+      "text": "免费文献综述矩阵工具"
+    },
+    "tool.unsaved": {
+      "source": "Changes in this tab are not saved. Save an editable file to keep them.",
+      "text": "此标签页中的更改尚未保存。请保存可编辑文件以保留更改。"
+    },
+    "tool.untitledSource": {
+      "source": "Untitled source",
+      "text": "未命名来源"
     }
   }
 }

@@ -1551,6 +1551,18 @@
     "apiKeys.httpError": {
       "source": "HTTP {status}",
       "text": "HTTP {status}"
+    },
+    "researchEntry.freeTrialNotice": {
+      "source": "Free trial. Keryx pays. No wallet.",
+      "text": "免费试用。由 Keryx 支付。无需钱包。"
+    },
+    "researchEntry.moreOptions": {
+      "source": "More options",
+      "text": "更多选项"
+    },
+    "researchEntry.sessionPayerNotice": {
+      "source": "Your research budget pays on {network}. Your per-question cap and remaining total apply.",
+      "text": "你的研究预算在 {network} 上支付。每个问题的上限及剩余总额均适用。"
     }
   }
 }

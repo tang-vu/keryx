@@ -367,6 +367,14 @@
     "product.slogan": {
       "source": "Cited research. Visible decisions.",
       "text": "Nghiên cứu có trích dẫn. Quyết định rõ ràng."
+    },
+    "product.faqWalletBody": {
+      "source": "The sponsored public trial needs no wallet or USDC deposit. Keryx covers approved source spending and operating costs within its usage and spending limits. The form shows a notice when the trial is paused.",
+      "text": "Bản dùng thử công khai được tài trợ không cần ví hay nạp USDC. Keryx chi trả khoản đọc nguồn và chi phí vận hành được chấp thuận trong giới hạn sử dụng và chi tiêu. Biểu mẫu hiển thị thông báo khi dùng thử tạm dừng."
+    },
+    "product.heroBody": {
+      "source": "Cited research. This trial is free, with no wallet required.",
+      "text": "Nghiên cứu có trích dẫn. Dùng thử này miễn phí, không cần ví."
     }
   }
 }

@@ -2,6 +2,63 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/literature-clear-recovery.ts",
-  "entries": {},
+  "entries": {
+    "beforeClear": {
+      "source": "A recovery of saved data will stay in this tab. Unsaved form edits are excluded. Export a backup first if you need to keep your library after closing the tab.",
+      "text": "Bản khôi phục dữ liệu đã lưu sẽ ở lại trong thẻ này. Không gồm chỉnh sửa biểu mẫu chưa lưu. Xuất bản sao lưu trước nếu cần giữ thư viện sau khi đóng thẻ."
+    },
+    "changed": {
+      "source": "The saved library contains new or different work. Nothing was replaced. Download this recovery, then review it through the normal backup import.",
+      "text": "Thư viện đã lưu có nội dung mới hoặc khác. Không có gì bị thay thế. Tải bản khôi phục này rồi xem lại qua quy trình nhập bản sao lưu thông thường."
+    },
+    "discard": {
+      "source": "Discard this recovery",
+      "text": "Bỏ bản khôi phục này"
+    },
+    "discardConfirm": {
+      "source": "Discard this tab's cleared-library recovery? Download its private JSON backup first if you need to keep it. This does not change the current saved library.",
+      "text": "Bỏ bản khôi phục thư viện đã xóa trong thẻ này? Nếu cần giữ lại, hãy tải bản sao lưu JSON riêng tư trước. Thao tác này không thay đổi thư viện hiện đang lưu."
+    },
+    "discarded": {
+      "source": "Cleared-library recovery discarded from this tab.",
+      "text": "Đã bỏ bản khôi phục thư viện đã xóa khỏi thẻ này."
+    },
+    "download": {
+      "source": "Download cleared library backup",
+      "text": "Tải bản sao lưu thư viện đã xóa"
+    },
+    "notice": {
+      "source": "This tab keeps the saved library from immediately before clearing, including saved review focus, exact paper metadata, screening and notes. Unsaved form edits are not included. Restore works only while the saved library is empty or already identical. New work is never overwritten.",
+      "text": "Thẻ này giữ thư viện đã lưu ngay trước khi xóa, gồm trọng tâm tổng quan, siêu dữ liệu bài báo chính xác, sàng lọc và ghi chú đã lưu. Không gồm chỉnh sửa biểu mẫu chưa lưu. Chỉ khôi phục khi thư viện đã lưu trống hoặc đã giống hệt. Nội dung mới không bao giờ bị ghi đè."
+    },
+    "papers": {
+      "source": "Saved papers in this recovery",
+      "text": "Số bài báo đã lưu trong bản khôi phục"
+    },
+    "prepared": {
+      "source": "Cleared-library JSON download prepared. Keep it somewhere private; this tab still retains the recovery.",
+      "text": "Đã chuẩn bị tệp JSON thư viện đã xóa để tải. Giữ tệp ở nơi riêng tư; thẻ này vẫn giữ bản khôi phục."
+    },
+    "restore": {
+      "source": "Restore cleared saved library",
+      "text": "Khôi phục thư viện đã lưu bị xóa"
+    },
+    "restored": {
+      "source": "The cleared saved library is restored.",
+      "text": "Đã khôi phục thư viện đã lưu bị xóa."
+    },
+    "restoring": {
+      "source": "Restoring cleared saved library…",
+      "text": "Đang khôi phục thư viện đã lưu bị xóa…"
+    },
+    "retention": {
+      "source": "This recovery stays only in this tab. Download its private JSON backup before leaving. A native leave warning remains until you restore or explicitly discard this recovery; browsers may suppress that warning.",
+      "text": "Bản khôi phục chỉ ở trong thẻ này. Tải bản sao lưu JSON riêng tư trước khi rời trang. Cảnh báo rời trang của trình duyệt vẫn được giữ cho đến khi bạn khôi phục hoặc chủ động bỏ bản này; trình duyệt có thể không hiển thị cảnh báo đó."
+    },
+    "title": {
+      "source": "Recover the cleared saved library",
+      "text": "Khôi phục thư viện đã lưu bị xóa"
+    }
+  },
   "sourceSha256": "a8a4b94e59c931811e5a4e390205d0c01898f9bc4b184dfe2915e2caba5f38ae"
 }

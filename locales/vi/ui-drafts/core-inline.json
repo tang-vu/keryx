@@ -1551,6 +1551,18 @@
     "apiKeys.httpError": {
       "source": "HTTP {status}",
       "text": "HTTP {status}"
+    },
+    "researchEntry.freeTrialNotice": {
+      "source": "Free trial. Keryx pays. No wallet.",
+      "text": "Dùng thử miễn phí. Keryx chi trả. Không cần ví."
+    },
+    "researchEntry.moreOptions": {
+      "source": "More options",
+      "text": "Tùy chọn khác"
+    },
+    "researchEntry.sessionPayerNotice": {
+      "source": "Your research budget pays on {network}. Your per-question cap and remaining total apply.",
+      "text": "Ngân sách nghiên cứu của bạn chi trả trên {network}. Hạn mức mỗi câu hỏi và tổng số còn lại đều áp dụng."
     }
   }
 }
