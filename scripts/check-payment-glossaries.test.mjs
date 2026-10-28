@@ -26,9 +26,17 @@ function reviewedFixture() {
 }
 
 test("real assets validate; synthetic drafts cannot pass release validation", () => {
-  assert.deepEqual(checkRepositoryGlossaries().map(({ locale }) => locale), ["en", "vi", "zh-Hans"]);
+  const prepared = ["en", "vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"];
+  assert.deepEqual(checkRepositoryGlossaries().map(({ locale }) => locale), prepared.sort((a, b) => a.localeCompare(b)));
   for (const releaseLocale of ["en", "vi", "zh-Hans"]) {
     assert.throws(() => validateGlossaries(fixtures(), { releaseLocale }), /draft glossary cannot be released/);
+  }
+});
+
+test("every actual unreviewed glossary refuses release, including the eight additional language drafts", () => {
+  for (const { locale, status } of checkRepositoryGlossaries()) {
+    if (status === "draft") assert.throws(() => checkRepositoryGlossaries(undefined, { releaseLocale: locale }),
+      /draft glossary cannot be released/, `${locale} draft must not gain release authority`);
   }
 });
 

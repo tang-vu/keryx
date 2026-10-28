@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "locale": "de",
+  "status": "draft",
+  "review": null,
+  "terms": {
+    "pending": {
+      "text": "Bestätigung ausstehend",
+      "definition": "Die Bestätigung steht noch aus; eine abgewickelte Zahlung ist nicht nachgewiesen."
+    },
+    "settled": {
+      "text": "Abgewickelt",
+      "definition": "Für die Zahlung bleiben echte Abwicklungsnachweise erhalten; ein Vorschlag oder eine Signatur allein reicht nicht aus."
+    },
+    "failed": {
+      "text": "Fehlgeschlagen",
+      "definition": "Für den Vorgang liegt ein bestätigter Fehler vor; ein unbekanntes finanzielles Ergebnis muss als ungewiss gekennzeichnet bleiben."
+    },
+    "uncertain": {
+      "text": "Ergebnis ungewiss",
+      "definition": "Das finanzielle Ergebnis ist ungeklärt; vor einem erneuten Versuch oder der Anrechnung einer Abwicklung ist ein Abgleich erforderlich."
+    },
+    "refunded": {
+      "text": "Erstattet",
+      "definition": "Für den Abschluss der Erstattung liegen geprüfte Nachweise vor; ein Erstattungsantrag allein reicht nicht aus."
+    },
+    "expired": {
+      "text": "Abgelaufen",
+      "definition": "Die Gültigkeitsdauer der betreffenden Autorisierung oder des Angebots ist überschritten; der Ablauf macht eine Zahlung nicht rückgängig."
+    },
+    "simulated": {
+      "text": "Simuliert",
+      "definition": "Das Ergebnis ist ausdrücklich als Offline-Simulation gekennzeichnet und keine echte Abwicklung in einem der beiden Netzwerke."
+    },
+    "sponsored": {
+      "text": "Gesponsert",
+      "definition": "Ein benannter Sponsor finanziert die angegebenen Kosten; das Sponsoring allein weist keine Abwicklung nach."
+    },
+    "budget": {
+      "text": "Budget",
+      "definition": "Der für die angegebene Aufgabe verfügbare Betrag gemäß den bestehenden Finanzierungs- und Autorisierungsregeln."
+    },
+    "cap": {
+      "text": "Ausgabenlimit",
+      "definition": "Die maximal autorisierten Ausgaben für den angegebenen Umfang, kein Ausgabenziel und kein abgewickelter Betrag."
+    },
+    "reserved": {
+      "text": "Reserviert",
+      "definition": "Kapazität wird für eine Verpflichtung zurückgehalten; eine Reservierung ist keine abgeschlossene Zahlung."
+    },
+    "source-toll": {
+      "text": "Zugangsgebühr der Quelle",
+      "definition": "Die von der Quelle festgelegte Gebühr für den Zugriff auf ausgewählte Inhalte, getrennt von einer Zitatvergütung."
+    },
+    "citation-reward": {
+      "text": "Zitatvergütung",
+      "definition": "Die begrenzte Vergütung, die einem zitierten Urheber nach den Nachweis- und Zahlungsregeln zugewiesen wird; eine Zuweisung ist keine Abwicklung."
+    },
+    "creator-payout": {
+      "text": "Auszahlung an Urheber",
+      "definition": "Eine Zahlung an den autorisierten Zahlungsempfänger des Urhebers; der separate Status bestimmt, ob sie abgewickelt wurde."
+    },
+    "withdrawal": {
+      "text": "Abhebung",
+      "definition": "Eine Übertragung aus dem betreffenden finanzierten Guthaben; ein Antrag oder eine Signatur beweist keinen Eingang."
+    },
+    "authorization": {
+      "text": "Autorisierung",
+      "definition": "Die Erlaubnis für einen begrenzten Vorgang; die Erlaubnis allein überträgt kein Geld."
+    },
+    "session": {
+      "text": "Sitzung",
+      "definition": "Die von der Oberfläche benannte, auf einen Umfang begrenzte Interaktion oder Berechtigung; sie bedeutet keine unbegrenzte oder dauerhafte Befugnis."
+    },
+    "receipt": {
+      "text": "Beleg",
+      "definition": "Ein aufbewahrter Datensatz des angegebenen Vorgangs und seiner Nachweise; seine Existenz allein beweist keine Abwicklung."
+    },
+    "testnet": {
+      "text": "Testnetz",
+      "definition": "Das isolierte Testnetzwerk; seine Aktivität ist weder eine Abwicklung im produktiven Hauptnetz noch ein Nachweis tatsächlicher Nutzung."
+    },
+    "mainnet": {
+      "text": "Hauptnetz",
+      "definition": "Das Produktionsnetzwerk; eine Netzwerkbezeichnung allein weist keine erfolgreiche Zahlung nach."
+    },
+    "buy": {
+      "text": "BUY",
+      "definition": "Der Agent wählt einen Kauf nach den Autorisierungs-, Budget- und Lieferregeln aus; diese Entscheidung ist keine Abwicklung."
+    },
+    "skip": {
+      "text": "SKIP",
+      "definition": "Der Agent lehnt diese Quelle oder diesen Kauf ab und hält den Grund fest."
+    },
+    "cache": {
+      "text": "CACHE",
+      "definition": "Der Agent verwendet zugelassene zwischengespeicherte Inhalte gemäß den bestehenden Zugriffsregeln erneut; diese Entscheidung weist keine neue Zahlung nach."
+    },
+    "usdc": {
+      "text": "USDC",
+      "definition": "Die Vermögenswertkennung bleibt unverändert; erfasste Beträge und der Netzwerkkontext behalten ihre bestehende Bedeutung."
+    },
+    "arc": {
+      "text": "Arc",
+      "definition": "Der Netzwerkname bleibt unverändert; das konkrete Hauptnetz- oder Testnetzprofil muss ausdrücklich erkennbar bleiben."
+    },
+    "x402": {
+      "text": "x402",
+      "definition": "Der Name des Zahlungsprotokolls bleibt unverändert; eine Zahlungsaufforderung ist kein Abwicklungsnachweis."
+    }
+  },
+  "messages": {
+    "payment.pending": {
+      "term": "pending",
+      "requiresHumanReview": true
+    },
+    "payment.settled": {
+      "term": "settled",
+      "requiresHumanReview": true
+    },
+    "payment.failed": {
+      "term": "failed",
+      "requiresHumanReview": true
+    },
+    "payment.uncertain": {
+      "term": "uncertain",
+      "requiresHumanReview": true
+    },
+    "payment.refunded": {
+      "term": "refunded",
+      "requiresHumanReview": true
+    },
+    "payment.expired": {
+      "term": "expired",
+      "requiresHumanReview": true
+    },
+    "payment.simulated": {
+      "term": "simulated",
+      "requiresHumanReview": true
+    },
+    "consent.authorization": {
+      "term": "authorization",
+      "requiresHumanReview": true
+    },
+    "consent.cap": {
+      "term": "cap",
+      "requiresHumanReview": true
+    },
+    "legal.english-authoritative": {
+      "text": "Diese Übersetzung dient der leichteren Verständlichkeit. Maßgeblich sind die englischen Nutzungsbedingungen und die englische Datenschutzerklärung.",
+      "authority": "en",
+      "requiresHumanReview": true
+    }
+  }
+}

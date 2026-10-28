@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "locale": "fr",
+  "status": "draft",
+  "review": null,
+  "terms": {
+    "pending": {
+      "text": "En attente de confirmation",
+      "definition": "La confirmation est toujours attendue ; aucun paiement réglé n'est établi."
+    },
+    "settled": {
+      "text": "Réglé",
+      "definition": "Le paiement conserve des preuves réelles de règlement ; une proposition ou une signature ne suffit pas."
+    },
+    "failed": {
+      "text": "Échec confirmé",
+      "definition": "L'opération présente un échec confirmé ; un résultat financier inconnu doit rester indiqué comme incertain."
+    },
+    "uncertain": {
+      "text": "Résultat incertain",
+      "definition": "Le résultat financier n'est pas résolu ; un rapprochement est nécessaire avant de réessayer ou de comptabiliser un règlement."
+    },
+    "refunded": {
+      "text": "Remboursé",
+      "definition": "L'achèvement du remboursement est étayé par des preuves vérifiées ; une simple demande ne suffit pas."
+    },
+    "expired": {
+      "text": "Expiré",
+      "definition": "L'autorisation ou l'offre concernée a dépassé sa période de validité ; l'expiration n'annule pas un paiement."
+    },
+    "simulated": {
+      "text": "Simulé",
+      "definition": "Le résultat est une simulation hors ligne explicitement identifiée, et non un règlement réel sur l'un ou l'autre réseau."
+    },
+    "sponsored": {
+      "text": "Sponsorisé",
+      "definition": "Un sponsor identifié finance le coût indiqué ; ce financement n'établit pas à lui seul le règlement."
+    },
+    "budget": {
+      "text": "Budget",
+      "definition": "Le montant disponible pour la tâche indiquée selon ses règles actuelles de financement et d'autorisation."
+    },
+    "cap": {
+      "text": "Plafond de dépenses",
+      "definition": "La dépense maximale autorisée pour le périmètre indiqué, et non un objectif de dépense ou un montant réglé."
+    },
+    "reserved": {
+      "text": "Réservé",
+      "definition": "Une capacité est retenue pour couvrir une obligation ; une réservation n'est pas un paiement achevé."
+    },
+    "source-toll": {
+      "text": "Frais d'accès à la source",
+      "definition": "Les frais définis par la source pour accéder au contenu sélectionné, distincts de la récompense de citation."
+    },
+    "citation-reward": {
+      "text": "Récompense de citation",
+      "definition": "La récompense plafonnée attribuée à un créateur cité selon les règles de preuve et de paiement ; l'attribution n'est pas un règlement."
+    },
+    "creator-payout": {
+      "text": "Versement au créateur",
+      "definition": "Un paiement au bénéficiaire autorisé du créateur ; son état distinct détermine si le règlement a eu lieu."
+    },
+    "withdrawal": {
+      "text": "Retrait",
+      "definition": "Un transfert depuis le solde financé concerné ; une demande ou une signature ne prouve pas la réception."
+    },
+    "authorization": {
+      "text": "Autorisation",
+      "definition": "La permission d'effectuer une opération limitée ; cette permission ne transfère pas de fonds à elle seule."
+    },
+    "session": {
+      "text": "Session",
+      "definition": "L'interaction ou l'autorisation à périmètre limité désignée par l'interface ; elle n'implique pas un pouvoir illimité ou permanent."
+    },
+    "receipt": {
+      "text": "Justificatif",
+      "definition": "Un enregistrement conservé de l'opération indiquée et de ses preuves ; son existence seule ne prouve pas le règlement."
+    },
+    "testnet": {
+      "text": "Réseau de test",
+      "definition": "Le réseau de test isolé ; son activité ne représente ni un règlement sur le réseau principal de production ni une preuve d'adoption."
+    },
+    "mainnet": {
+      "text": "Réseau principal",
+      "definition": "Le réseau de production ; une simple étiquette de réseau n'établit pas la réussite d'un paiement."
+    },
+    "buy": {
+      "text": "BUY",
+      "definition": "L'agent sélectionne un achat soumis aux règles d'autorisation, de budget et de livraison ; cette décision n'est pas un règlement."
+    },
+    "skip": {
+      "text": "SKIP",
+      "definition": "L'agent écarte cette source ou cet achat et en consigne la raison."
+    },
+    "cache": {
+      "text": "CACHE",
+      "definition": "L'agent réutilise un contenu de cache admis selon les règles d'accès actuelles ; cette décision n'établit pas un nouveau paiement."
+    },
+    "usdc": {
+      "text": "USDC",
+      "definition": "L'identifiant de l'actif reste inchangé ; les montants enregistrés et le contexte réseau gardent leur signification actuelle."
+    },
+    "arc": {
+      "text": "Arc",
+      "definition": "Le nom du réseau reste inchangé ; le profil précis, réseau principal ou réseau de test, doit rester explicite."
+    },
+    "x402": {
+      "text": "x402",
+      "definition": "Le nom du protocole de paiement reste inchangé ; une demande de paiement ne prouve pas le règlement."
+    }
+  },
+  "messages": {
+    "payment.pending": {
+      "term": "pending",
+      "requiresHumanReview": true
+    },
+    "payment.settled": {
+      "term": "settled",
+      "requiresHumanReview": true
+    },
+    "payment.failed": {
+      "term": "failed",
+      "requiresHumanReview": true
+    },
+    "payment.uncertain": {
+      "term": "uncertain",
+      "requiresHumanReview": true
+    },
+    "payment.refunded": {
+      "term": "refunded",
+      "requiresHumanReview": true
+    },
+    "payment.expired": {
+      "term": "expired",
+      "requiresHumanReview": true
+    },
+    "payment.simulated": {
+      "term": "simulated",
+      "requiresHumanReview": true
+    },
+    "consent.authorization": {
+      "term": "authorization",
+      "requiresHumanReview": true
+    },
+    "consent.cap": {
+      "term": "cap",
+      "requiresHumanReview": true
+    },
+    "legal.english-authoritative": {
+      "text": "Cette traduction est fournie pour faciliter la lecture. Les conditions d'utilisation et la politique de confidentialité en anglais font foi.",
+      "authority": "en",
+      "requiresHumanReview": true
+    }
+  }
+}

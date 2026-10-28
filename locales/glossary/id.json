@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "locale": "id",
+  "status": "draft",
+  "review": null,
+  "terms": {
+    "pending": {
+      "text": "Menunggu konfirmasi",
+      "definition": "Konfirmasi masih ditunggu; belum ada bukti pembayaran yang telah diselesaikan."
+    },
+    "settled": {
+      "text": "Penyelesaian terverifikasi",
+      "definition": "Pembayaran menyimpan bukti penyelesaian yang nyata; usulan atau tanda tangan saja tidak cukup."
+    },
+    "failed": {
+      "text": "Kegagalan terkonfirmasi",
+      "definition": "Operasi memiliki kegagalan yang telah dikonfirmasi; hasil keuangan yang tidak diketahui harus tetap ditandai tidak pasti."
+    },
+    "uncertain": {
+      "text": "Hasil tidak pasti",
+      "definition": "Hasil keuangan belum dipastikan; rekonsiliasi diperlukan sebelum mencoba lagi atau menghitungnya sebagai penyelesaian."
+    },
+    "refunded": {
+      "text": "Dana dikembalikan",
+      "definition": "Penyelesaian pengembalian dana memiliki bukti terverifikasi; permintaan pengembalian dana saja tidak cukup."
+    },
+    "expired": {
+      "text": "Kedaluwarsa",
+      "definition": "Otorisasi atau penawaran terkait telah melewati masa berlaku; kedaluwarsa tidak membatalkan pembayaran yang sudah terjadi."
+    },
+    "simulated": {
+      "text": "Simulasi",
+      "definition": "Hasil ini secara jelas merupakan simulasi luring, bukan penyelesaian nyata di salah satu jaringan."
+    },
+    "sponsored": {
+      "text": "Ditanggung sponsor",
+      "definition": "Sponsor yang disebutkan mendanai biaya yang dinyatakan; sponsor saja tidak membuktikan penyelesaian pembayaran."
+    },
+    "budget": {
+      "text": "Anggaran",
+      "definition": "Jumlah yang tersedia untuk tugas yang dinyatakan menurut aturan pendanaan dan otorisasi yang berlaku."
+    },
+    "cap": {
+      "text": "Batas pengeluaran",
+      "definition": "Pengeluaran maksimum yang diotorisasi untuk cakupan yang dinyatakan, bukan target pengeluaran atau jumlah yang telah diselesaikan."
+    },
+    "reserved": {
+      "text": "Dicadangkan",
+      "definition": "Kapasitas ditahan untuk memenuhi kewajiban; pencadangan bukan pembayaran yang telah selesai."
+    },
+    "source-toll": {
+      "text": "Biaya akses sumber",
+      "definition": "Biaya yang ditetapkan sumber untuk mengakses konten terpilih, terpisah dari imbalan sitasi."
+    },
+    "citation-reward": {
+      "text": "Imbalan sitasi",
+      "definition": "Imbalan terbatas yang dialokasikan kepada kreator yang disitasi menurut aturan bukti dan pembayaran; alokasi bukan penyelesaian pembayaran."
+    },
+    "creator-payout": {
+      "text": "Pembayaran kepada kreator",
+      "definition": "Pembayaran kepada penerima kreator yang berwenang; status terpisahnya menentukan apakah pembayaran telah diselesaikan."
+    },
+    "withdrawal": {
+      "text": "Penarikan",
+      "definition": "Transfer keluar dari saldo yang didanai terkait; permintaan atau tanda tangan tidak membuktikan penerimaan dana."
+    },
+    "authorization": {
+      "text": "Otorisasi",
+      "definition": "Izin untuk operasi yang dibatasi; izin saja tidak memindahkan dana."
+    },
+    "session": {
+      "text": "Sesi",
+      "definition": "Interaksi atau pemberian wewenang dengan cakupan terbatas yang disebutkan antarmuka; ini tidak berarti wewenang tanpa batas atau selamanya."
+    },
+    "receipt": {
+      "text": "Bukti pencatatan",
+      "definition": "Catatan yang disimpan mengenai operasi yang dinyatakan beserta buktinya; keberadaannya saja tidak membuktikan penyelesaian pembayaran."
+    },
+    "testnet": {
+      "text": "Jaringan uji",
+      "definition": "Jaringan pengujian yang terisolasi; aktivitasnya bukan penyelesaian di jaringan utama produksi atau bukti adopsi nyata."
+    },
+    "mainnet": {
+      "text": "Jaringan utama",
+      "definition": "Jaringan produksi; nama jaringan saja tidak membuktikan bahwa pembayaran berhasil."
+    },
+    "buy": {
+      "text": "BUY",
+      "definition": "Agen memilih pembelian menurut aturan otorisasi, anggaran, dan penyerahan konten; keputusan ini bukan penyelesaian pembayaran."
+    },
+    "skip": {
+      "text": "SKIP",
+      "definition": "Agen menolak sumber atau pembelian ini dan mencatat alasannya."
+    },
+    "cache": {
+      "text": "CACHE",
+      "definition": "Agen menggunakan kembali konten cache yang diizinkan menurut aturan akses yang berlaku; keputusan ini tidak membuktikan pembayaran baru."
+    },
+    "usdc": {
+      "text": "USDC",
+      "definition": "Pengenal aset tidak berubah; jumlah yang dicatat dan konteks jaringan tetap memiliki makna yang berlaku."
+    },
+    "arc": {
+      "text": "Arc",
+      "definition": "Nama jaringan tidak berubah; profil jaringan utama atau jaringan uji tertentu harus tetap disebutkan dengan jelas."
+    },
+    "x402": {
+      "text": "x402",
+      "definition": "Nama protokol pembayaran tidak berubah; permintaan pembayaran bukan bukti penyelesaian."
+    }
+  },
+  "messages": {
+    "payment.pending": {
+      "term": "pending",
+      "requiresHumanReview": true
+    },
+    "payment.settled": {
+      "term": "settled",
+      "requiresHumanReview": true
+    },
+    "payment.failed": {
+      "term": "failed",
+      "requiresHumanReview": true
+    },
+    "payment.uncertain": {
+      "term": "uncertain",
+      "requiresHumanReview": true
+    },
+    "payment.refunded": {
+      "term": "refunded",
+      "requiresHumanReview": true
+    },
+    "payment.expired": {
+      "term": "expired",
+      "requiresHumanReview": true
+    },
+    "payment.simulated": {
+      "term": "simulated",
+      "requiresHumanReview": true
+    },
+    "consent.authorization": {
+      "term": "authorization",
+      "requiresHumanReview": true
+    },
+    "consent.cap": {
+      "term": "cap",
+      "requiresHumanReview": true
+    },
+    "legal.english-authoritative": {
+      "text": "Terjemahan ini disediakan untuk membantu pemahaman. Ketentuan layanan dan kebijakan privasi berbahasa Inggris merupakan versi yang berwenang.",
+      "authority": "en",
+      "requiresHumanReview": true
+    }
+  }
+}
