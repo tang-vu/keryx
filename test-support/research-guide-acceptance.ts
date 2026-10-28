@@ -35,6 +35,9 @@ export async function checkResearchGuides(browser: Browser, origin: string, evid
         const request = route.request(), url = new URL(request.url());
         if (url.origin !== origin) return route.abort();
         if (!["GET", "HEAD"].includes(request.method())) { forbidden.push(`${request.method()} ${url.pathname}`); return route.abort(); }
+        // A confirmed guest can restore its scoped browser preference after navigation.
+        // An empty 200 session is unknown identity and must not bind guest storage.
+        if (url.pathname === "/api/auth/session") return route.fulfill({ status: 401, contentType: "application/json", body: '{}' });
         if (url.pathname.startsWith("/api/")) return route.fulfill({ status: 200, contentType: "application/json", body: '{}' });
         return route.continue();
       });
