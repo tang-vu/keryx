@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "locale": "ja",
+  "status": "draft",
+  "review": null,
+  "terms": {
+    "pending": {
+      "text": "確認待ち",
+      "definition": "確認を引き続き待っている状態です。決済が完了した支払いは確認されていません。"
+    },
+    "settled": {
+      "text": "決済完了",
+      "definition": "支払いには実際の決済の証拠が保持されています。提案や署名だけでは不十分です。"
+    },
+    "failed": {
+      "text": "失敗確認済み",
+      "definition": "処理の失敗が確認されています。金銭的な結果が不明な場合は、結果不明の状態を維持する必要があります。"
+    },
+    "uncertain": {
+      "text": "結果不明",
+      "definition": "金銭的な結果が未解決です。再試行したり決済完了として集計したりする前に照合が必要です。"
+    },
+    "refunded": {
+      "text": "返金完了",
+      "definition": "返金の完了を示す証拠が検証されています。返金の申請だけでは不十分です。"
+    },
+    "expired": {
+      "text": "有効期限切れ",
+      "definition": "対象の承認または提示条件の有効期間が過ぎています。期限切れによって支払いが取り消されるわけではありません。"
+    },
+    "simulated": {
+      "text": "シミュレーション",
+      "definition": "結果は明示されたオフラインシミュレーションであり、どちらのネットワークでも実際の決済ではありません。"
+    },
+    "sponsored": {
+      "text": "スポンサー負担",
+      "definition": "明示されたスポンサーが記載された費用を負担します。スポンサー負担だけでは決済完了を意味しません。"
+    },
+    "budget": {
+      "text": "予算",
+      "definition": "既存の資金調達および承認の規則に従い、指定された作業に利用できる金額です。"
+    },
+    "cap": {
+      "text": "支出上限",
+      "definition": "指定された範囲で承認された最大支出額です。支出目標や決済済みの金額ではありません。"
+    },
+    "reserved": {
+      "text": "予約済み",
+      "definition": "義務に備えて利用枠を確保しています。予約は支払いの完了ではありません。"
+    },
+    "source-toll": {
+      "text": "情報源のアクセス料金",
+      "definition": "選択したコンテンツへのアクセスに対して情報源が設定する料金です。引用報酬とは別です。"
+    },
+    "citation-reward": {
+      "text": "引用報酬",
+      "definition": "証拠と支払いの規則に基づき、引用されたクリエイターに割り当てられる上限付きの報酬です。割り当ては決済完了ではありません。"
+    },
+    "creator-payout": {
+      "text": "クリエイターへの支払い",
+      "definition": "クリエイターの正当な受取人への支払いです。決済が完了したかどうかは、その支払いの個別の状態で決まります。"
+    },
+    "withdrawal": {
+      "text": "出金",
+      "definition": "対象の入金済み残高からの送金です。申請や署名は着金の証拠にはなりません。"
+    },
+    "authorization": {
+      "text": "承認",
+      "definition": "範囲を限定した処理への許可です。許可だけでは資金は移動しません。"
+    },
+    "session": {
+      "text": "セッション",
+      "definition": "画面で示される、範囲を限定したやり取りまたは権限付与です。無制限または永続的な権限を意味しません。"
+    },
+    "receipt": {
+      "text": "記録票",
+      "definition": "指定された処理とその証拠を保持した記録です。記録が存在するだけでは決済完了を証明しません。"
+    },
+    "testnet": {
+      "text": "テストネット",
+      "definition": "隔離されたテスト用ネットワークです。その活動は本番メインネットでの決済でも、利用拡大の証拠でもありません。"
+    },
+    "mainnet": {
+      "text": "メインネット",
+      "definition": "本番ネットワークです。ネットワーク名の表示だけでは支払いの成功を意味しません。"
+    },
+    "buy": {
+      "text": "BUY",
+      "definition": "エージェントは承認、予算、配信の規則に従って購入を選択します。この判断は決済完了ではありません。"
+    },
+    "skip": {
+      "text": "SKIP",
+      "definition": "エージェントはこの情報源または購入を見送り、理由を記録します。"
+    },
+    "cache": {
+      "text": "CACHE",
+      "definition": "エージェントは既存のアクセス規則に従って、使用が認められたキャッシュ内容を再利用します。この判断は新たな支払いを意味しません。"
+    },
+    "usdc": {
+      "text": "USDC",
+      "definition": "資産の識別子は変更されません。記録された金額とネットワークの文脈は従来の意味を保ちます。"
+    },
+    "arc": {
+      "text": "Arc",
+      "definition": "ネットワーク名は変更されません。具体的にメインネットかテストネットかを引き続き明示する必要があります。"
+    },
+    "x402": {
+      "text": "x402",
+      "definition": "支払いプロトコルの名称は変更されません。支払い要求は決済完了の証拠ではありません。"
+    }
+  },
+  "messages": {
+    "payment.pending": {
+      "term": "pending",
+      "requiresHumanReview": true
+    },
+    "payment.settled": {
+      "term": "settled",
+      "requiresHumanReview": true
+    },
+    "payment.failed": {
+      "term": "failed",
+      "requiresHumanReview": true
+    },
+    "payment.uncertain": {
+      "term": "uncertain",
+      "requiresHumanReview": true
+    },
+    "payment.refunded": {
+      "term": "refunded",
+      "requiresHumanReview": true
+    },
+    "payment.expired": {
+      "term": "expired",
+      "requiresHumanReview": true
+    },
+    "payment.simulated": {
+      "term": "simulated",
+      "requiresHumanReview": true
+    },
+    "consent.authorization": {
+      "term": "authorization",
+      "requiresHumanReview": true
+    },
+    "consent.cap": {
+      "term": "cap",
+      "requiresHumanReview": true
+    },
+    "legal.english-authoritative": {
+      "text": "この翻訳は理解を助けるために提供されています。英語の利用規約およびプライバシーポリシーが優先されます。",
+      "authority": "en",
+      "requiresHumanReview": true
+    }
+  }
+}

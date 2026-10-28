@@ -1,16 +1,35 @@
 # Payment and trust translation instructions
 
 Issue [273](https://github.com/tang-vu/keryx/issues/273) has a preparatory glossary
-and review gate. English, Vietnamese and Simplified Chinese assets are all
+and review gate. English, Vietnamese, Simplified Chinese, Spanish, Brazilian
+Portuguese, French, German, Japanese, Korean, Hindi and Indonesian assets are all
 **drafts written by an agent, with no human translation approval**. They are not
 imported by the application or any distributed client. Existing English screens
 have not been migrated to these messages or retrospectively marked reviewed.
 
 The source glossary is [en.json](../locales/glossary/en.json). Proposed translations
 are [vi.json](../locales/glossary/vi.json) and
-[zh-Hans.json](../locales/glossary/zh-Hans.json). Each has the same 26 terms,
+[zh-Hans.json](../locales/glossary/zh-Hans.json). Additional proposed translations:
+
+| Language | Draft glossary |
+| --- | --- |
+| Español | [es.json](../locales/glossary/es.json) |
+| Português do Brasil | [pt-BR.json](../locales/glossary/pt-BR.json) |
+| Français | [fr.json](../locales/glossary/fr.json) |
+| Deutsch | [de.json](../locales/glossary/de.json) |
+| 日本語 | [ja.json](../locales/glossary/ja.json) |
+| 한국어 | [ko.json](../locales/glossary/ko.json) |
+| हिन्दी | [hi.json](../locales/glossary/hi.json) |
+| Bahasa Indonesia | [id.json](../locales/glossary/id.json) |
+
+Each glossary has the same 26 terms,
 one-line definitions and ten critical message entries. Future locale additions
 must supply every term and message; missing entries fail validation.
+
+The eight additional files prepare the terminology needed for further interface
+translation. They do not translate a live payment screen or enable a language.
+Their `status: "draft"` and `review: null` remain explicit. Ordinary validation
+checks all eleven files; release validation refuses every unreviewed draft.
 
 ## Authoring rules
 
