@@ -1,0 +1,76 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/shell.ts",
+  "sourceSha256": "98de613c0f20357e8d901f40f221f5e183141096b6713f44c0c02baa5d0c1e5a",
+  "entries": {
+    "shellNavigation.ask": {
+      "source": "Ask a question",
+      "text": "질문하기"
+    },
+    "shellNavigation.answers": {
+      "source": "Past answers",
+      "text": "이전 답변"
+    },
+    "shellNavigation.sources": {
+      "source": "Sources",
+      "text": "출처"
+    },
+    "shellNavigation.literature": {
+      "source": "Literature workspace",
+      "text": "문헌 작업 공간"
+    },
+    "shellNavigation.creators": {
+      "source": "For creators",
+      "text": "창작자 안내"
+    },
+    "shellNavigation.mySources": {
+      "source": "My sources",
+      "text": "내 출처"
+    },
+    "shellNavigation.myDispatches": {
+      "source": "My dispatches",
+      "text": "내 발행 글"
+    },
+    "shellNavigation.playground": {
+      "source": "Playground",
+      "text": "실험 공간"
+    },
+    "shellNavigation.developer": {
+      "source": "Dev portal",
+      "text": "개발자 포털"
+    },
+    "shellHeader.creatorAction": {
+      "source": "For creators ▸",
+      "text": "창작자 안내 ▸"
+    },
+    "shellHeader.closeMenu": {
+      "source": "Close menu",
+      "text": "메뉴 닫기"
+    },
+    "shellHeader.openMenu": {
+      "source": "Open menu",
+      "text": "메뉴 열기"
+    },
+    "shellHeader.mobileNavigation": {
+      "source": "Mobile navigation",
+      "text": "모바일 탐색"
+    },
+    "shellHeader.explore": {
+      "source": "Explore",
+      "text": "둘러보기"
+    },
+    "shellHeader.moreTools": {
+      "source": "More tools",
+      "text": "도구 더 보기"
+    },
+    "shellFooter.house": {
+      "source": "The house",
+      "text": "Keryx"
+    },
+    "shellFooter.docsAndProof": {
+      "source": "Docs & proof",
+      "text": "문서 및 증거"
+    }
+  }
+}

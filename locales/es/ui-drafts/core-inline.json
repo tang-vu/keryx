@@ -1,0 +1,48 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "lib/i18n/messages.ts",
+  "sourceSha256": "37ac7ad5e8f7daf683952524320809f87a27d21ed650959de267137fd2cc6c2d",
+  "entries": {
+    "researchEntry.ask": {
+      "source": "Ask Keryx",
+      "text": "Preguntar a Keryx"
+    },
+    "researchEntry.question": {
+      "source": "What do you want to know?",
+      "text": "¿Qué quieres saber?"
+    },
+    "researchEntry.placeholder": {
+      "source": "Ask a question worth reading for...",
+      "text": "Haz una pregunta que merezca investigar..."
+    },
+    "researchEntry.depth": {
+      "source": "Research depth",
+      "text": "Profundidad de la investigación"
+    },
+    "researchEntry.quick": {
+      "source": "quick",
+      "text": "rápida"
+    },
+    "researchEntry.deep": {
+      "source": "deep",
+      "text": "profunda"
+    },
+    "researchEntry.researching": {
+      "source": "Researching...",
+      "text": "Investigando..."
+    },
+    "researchEntry.moreOptions": {
+      "source": "More options",
+      "text": "Más opciones"
+    },
+    "researchEntry.model": {
+      "source": "AI model",
+      "text": "Modelo de IA"
+    },
+    "researchEntry.savedReports": {
+      "source": "My saved reports",
+      "text": "Mis informes guardados"
+    }
+  }
+}

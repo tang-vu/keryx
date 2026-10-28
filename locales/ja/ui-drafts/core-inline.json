@@ -1,0 +1,48 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "lib/i18n/messages.ts",
+  "sourceSha256": "37ac7ad5e8f7daf683952524320809f87a27d21ed650959de267137fd2cc6c2d",
+  "entries": {
+    "researchEntry.ask": {
+      "source": "Ask Keryx",
+      "text": "Keryxに質問"
+    },
+    "researchEntry.question": {
+      "source": "What do you want to know?",
+      "text": "何を知りたいですか？"
+    },
+    "researchEntry.placeholder": {
+      "source": "Ask a question worth reading for...",
+      "text": "調べる価値のある質問を入力してください..."
+    },
+    "researchEntry.depth": {
+      "source": "Research depth",
+      "text": "調査の深さ"
+    },
+    "researchEntry.quick": {
+      "source": "quick",
+      "text": "簡易"
+    },
+    "researchEntry.deep": {
+      "source": "deep",
+      "text": "詳細"
+    },
+    "researchEntry.researching": {
+      "source": "Researching...",
+      "text": "調査中..."
+    },
+    "researchEntry.moreOptions": {
+      "source": "More options",
+      "text": "その他のオプション"
+    },
+    "researchEntry.model": {
+      "source": "AI model",
+      "text": "AIモデル"
+    },
+    "researchEntry.savedReports": {
+      "source": "My saved reports",
+      "text": "保存したレポート"
+    }
+  }
+}

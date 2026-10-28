@@ -2,7 +2,7 @@
 import { useId } from "react";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { uiPreferenceCopy } from "@/locales/en/ui-preference";
-import type { UiLocale } from "@/lib/i18n/locales";
+import { uiLocaleNames, type UiLocale } from "@/lib/i18n/locales";
 import { useUiCopyFunction } from "@/lib/i18n/ui-copy";
 const uiEnglish_uiPreferenceCopy = uiPreferenceCopy;
 
@@ -17,7 +17,7 @@ export function LanguageSwitcher() {
     <select id={id} value={locale} disabled={!ready} onChange={event => selectLocale(event.target.value as UiLocale)}
       title={preview ? uiPreferenceCopy("previewNotice") : undefined}
       aria-describedby={`${id}-notice ${id}-status`} className="min-h-11 max-w-full border border-line bg-paper px-2 text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-seal">
-      {enabledLocales.map(value => <option key={value} value={value} lang={value}>{uiPreferenceCopy(value === "en" ? "english" : value === "vi" ? "vietnamesePreview" : "chinesePreview")}</option>)}
+      {enabledLocales.map(value => <option key={value} value={value} lang={value}>{uiLocaleNames[value]}</option>)}
     </select>
     <p id={`${id}-notice`} className={preview ? "mt-1 max-w-[32ch] text-[10px] normal-case lg:sr-only" : "sr-only"}>
       {preview ? uiPreferenceCopy("previewNotice") : enabledLocales.length === 1 ? uiPreferenceCopy("englishOnly") : ""}

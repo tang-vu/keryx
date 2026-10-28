@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/product-guide.ts",
+  "sourceSha256": "96781f403ed4d596dcdcd689e4250755278c531ee1f3a2a31aaa260e309c6095",
+  "entries": {
+    "product.heroKicker": {
+      "source": "For researchers",
+      "text": "शोधकर्ताओं के लिए"
+    },
+    "product.heroTitle": {
+      "source": "AI research.",
+      "text": "AI शोध।"
+    },
+    "product.overviewKicker": {
+      "source": "What you get",
+      "text": "आपको क्या मिलता है"
+    },
+    "product.overviewTitle": {
+      "source": "A research answer you can follow back to its sources.",
+      "text": "ऐसा शोध उत्तर जिसके मूल स्रोतों तक आप पहुँच सकें।"
+    },
+    "product.researchersTitle": {
+      "source": "For researchers and students",
+      "text": "शोधकर्ताओं और छात्रों के लिए"
+    },
+    "product.researchersAction": {
+      "source": "Open the literature workspace",
+      "text": "साहित्य कार्यक्षेत्र खोलें"
+    },
+    "product.buildersTitle": {
+      "source": "For builders and writers",
+      "text": "डेवलपर और लेखकों के लिए"
+    },
+    "product.buildersBody": {
+      "source": "Investigate a technical question or prepare a brief. Follow the agent's source decisions, inspect supporting citations and reopen the completed report.",
+      "text": "किसी तकनीकी प्रश्न की जाँच करें या रिपोर्ट तैयार करें। स्रोतों के चयन को देखें, सहायक संदर्भ जाँचें और पूरी रिपोर्ट दोबारा खोलें।"
+    },
+    "product.buildersAction": {
+      "source": "Explore sources",
+      "text": "स्रोत खोजें"
+    },
+    "product.agentsTitle": {
+      "source": "For agent developers",
+      "text": "एजेंट डेवलपर के लिए"
+    },
+    "product.agentsAction": {
+      "source": "Explore developer integrations",
+      "text": "डेवलपर एकीकरण देखें"
+    },
+    "product.proofKicker": {
+      "source": "Inspect the evidence",
+      "text": "प्रमाण जाँचें"
+    },
+    "product.proofTitle": {
+      "source": "Trust comes from what you can check.",
+      "text": "भरोसा उसी से बनता है जिसे आप जाँच सकें।"
+    },
+    "product.try": {
+      "source": "Try a research question",
+      "text": "शोध का प्रश्न आज़माएँ"
+    },
+    "product.faqTitle": {
+      "source": "Before your first question",
+      "text": "अपने पहले प्रश्न से पहले"
+    },
+    "product.navigationAbout": {
+      "source": "About",
+      "text": "परिचय"
+    }
+  }
+}

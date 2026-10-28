@@ -1,0 +1,84 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/get-started.ts",
+  "sourceSha256": "9450616cf1959d638de574cbeec2f3a445dbdea9d93bc8dcd67301299373e2fa",
+  "entries": {
+    "navigation.start": {
+      "source": "Get started",
+      "text": "はじめに"
+    },
+    "navigation.download": {
+      "source": "Download",
+      "text": "ダウンロード"
+    },
+    "navigation.integrations": {
+      "source": "Integrations",
+      "text": "連携"
+    },
+    "navigation.label": {
+      "source": "Ways to use Keryx",
+      "text": "Keryxの使い方"
+    },
+    "navigation.downloadAction": {
+      "source": "Get the app or extension",
+      "text": "アプリや拡張機能を入手"
+    },
+    "navigation.connectAction": {
+      "source": "Connect MCP, API or CLI",
+      "text": "MCP、API、CLIを接続"
+    },
+    "start.title": {
+      "source": "Your research. Wherever you work.",
+      "text": "いつもの作業環境でリサーチ。"
+    },
+    "start.body": {
+      "source": "Ask in your browser, research a page you are reading, connect your AI assistant, or build Keryx into your own workflow. Pick a starting point below.",
+      "text": "ブラウザで質問したり、読んでいるページを調べたり、AIアシスタントに接続したり、Keryxを自分のツールに組み込んだりできます。始め方を選んでください。"
+    },
+    "start.try": {
+      "source": "Try Keryx in the browser",
+      "text": "ブラウザでKeryxを試す"
+    },
+    "start.browse": {
+      "source": "Browse downloads",
+      "text": "ダウンロードを見る"
+    },
+    "start.firstTitle": {
+      "source": "Your first cited answer",
+      "text": "引用付きの最初の回答"
+    },
+    "start.choose": {
+      "source": "Choose how you use Keryx",
+      "text": "Keryxの使い方を選ぶ"
+    },
+    "common.steps": {
+      "source": "Get set up",
+      "text": "セットアップ"
+    },
+    "common.requirements": {
+      "source": "What you need",
+      "text": "必要なもの"
+    },
+    "common.help": {
+      "source": "Need a hand?",
+      "text": "お困りですか？"
+    },
+    "common.support": {
+      "source": "Contact support",
+      "text": "サポートに連絡"
+    },
+    "common.docs": {
+      "source": "Read the full guide",
+      "text": "詳しいガイドを読む"
+    },
+    "common.copy": {
+      "source": "Copy",
+      "text": "コピー"
+    },
+    "common.copied": {
+      "source": "Copied",
+      "text": "コピー済み"
+    }
+  }
+}

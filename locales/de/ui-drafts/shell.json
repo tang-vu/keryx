@@ -1,0 +1,76 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/shell.ts",
+  "sourceSha256": "98de613c0f20357e8d901f40f221f5e183141096b6713f44c0c02baa5d0c1e5a",
+  "entries": {
+    "shellNavigation.ask": {
+      "source": "Ask a question",
+      "text": "Frage stellen"
+    },
+    "shellNavigation.answers": {
+      "source": "Past answers",
+      "text": "Bisherige Antworten"
+    },
+    "shellNavigation.sources": {
+      "source": "Sources",
+      "text": "Quellen"
+    },
+    "shellNavigation.literature": {
+      "source": "Literature workspace",
+      "text": "Literaturarbeitsbereich"
+    },
+    "shellNavigation.creators": {
+      "source": "For creators",
+      "text": "Für Autoren"
+    },
+    "shellNavigation.mySources": {
+      "source": "My sources",
+      "text": "Meine Quellen"
+    },
+    "shellNavigation.myDispatches": {
+      "source": "My dispatches",
+      "text": "Meine Beiträge"
+    },
+    "shellNavigation.playground": {
+      "source": "Playground",
+      "text": "Testbereich"
+    },
+    "shellNavigation.developer": {
+      "source": "Dev portal",
+      "text": "Entwicklerportal"
+    },
+    "shellHeader.creatorAction": {
+      "source": "For creators ▸",
+      "text": "Für Autoren ▸"
+    },
+    "shellHeader.closeMenu": {
+      "source": "Close menu",
+      "text": "Menü schließen"
+    },
+    "shellHeader.openMenu": {
+      "source": "Open menu",
+      "text": "Menü öffnen"
+    },
+    "shellHeader.mobileNavigation": {
+      "source": "Mobile navigation",
+      "text": "Mobile Navigation"
+    },
+    "shellHeader.explore": {
+      "source": "Explore",
+      "text": "Entdecken"
+    },
+    "shellHeader.moreTools": {
+      "source": "More tools",
+      "text": "Weitere Werkzeuge"
+    },
+    "shellFooter.house": {
+      "source": "The house",
+      "text": "Keryx"
+    },
+    "shellFooter.docsAndProof": {
+      "source": "Docs & proof",
+      "text": "Dokumentation und Nachweise"
+    }
+  }
+}

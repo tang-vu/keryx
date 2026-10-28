@@ -3,11 +3,34 @@
 ## English
 
 Preview translations are machine drafts (`machineDraft`), not human-reviewed.
-Critical consent, payment and legal text stays in canonical English. Only English
-ships by default; this guide does not enable a preview.
+Critical consent, payment and legal text stays in canonical English. English is
+the authoritative interface. The web app offers the following previews after
+its language controls load; an older deployed version may offer fewer choices.
+This guide does not enable a preview or establish production delivery.
+
+| Language | Code | Draft coverage |
+| --- | --- | --- |
+| English | `en` | Canonical interface |
+| Tiếng Việt | `vi` | Broader interface draft; some English remains |
+| 简体中文 | `zh-Hans` | Broader interface draft; some English remains |
+| Español | `es` | Navigation, question form labels and getting started |
+| Português do Brasil | `pt-BR` | Navigation, question form labels and getting started |
+| Français | `fr` | Navigation, question form labels and getting started |
+| Deutsch | `de` | Navigation, question form labels and getting started |
+| 日本語 | `ja` | Navigation, question form labels and getting started |
+| 한국어 | `ko` | Navigation, question form labels and getting started |
+| हिन्दी | `hi` | Navigation, question form labels and getting started |
+| Bahasa Indonesia | `id` | Navigation, question form labels and getting started |
+
+The eight newer previews have 71 authored presentation entries each. They are
+partial translations: account workflows, reports, installation instructions and
+other untranslated text retain English. A preview choice changes interface copy;
+it does not translate original questions, source evidence, saved answers or
+payment records, or select the language of a research answer.
 
 1. Note the **Interface language** choice currently shown: **Tiếng Việt (preview)**
-   (`vi`), **简体中文 (preview)** (`zh-Hans`), or **English** (`en`).
+   (`vi`), **简体中文 (preview)** (`zh-Hans`), **English** (`en`), or a native
+   language name from the table above followed by **(preview)**.
    Say which explicit preview you are using and where you opened it. If no preview
    is offered, or English appears instead, say so; do not infer it from your browser language.
 2. Name the page and label/button. Copy the current UI wording, suggest better
@@ -29,7 +52,10 @@ No author or agent approval is claimed for these drafts or this guide.
 
 Bản dịch xem trước là bản nháp máy dịch (`machineDraft`), chưa được người
 duyệt. Nội dung quan trọng về chấp thuận, thanh toán và pháp lý vẫn dùng bản
-tiếng Anh chính thức. Mặc định chỉ có tiếng Anh; hướng dẫn này không bật bản xem trước.
+tiếng Anh chính thức. Tiếng Anh là giao diện có thẩm quyền; các lựa chọn xem trước
+và phạm vi dịch được liệt kê ở bảng trên. Các bản dịch mới chỉ bao phủ điều hướng,
+nhãn của biểu mẫu hỏi và phần bắt đầu sử dụng. Một phần giao diện vẫn dùng tiếng Anh.
+Ngôn ngữ giao diện và ngôn ngữ câu trả lời là hai lựa chọn riêng. Hướng dẫn này không bật bản xem trước.
 
 1. Ghi lựa chọn đang hiển thị ở **Interface language**: **Tiếng Việt (preview)**
    (`vi`), **简体中文 (preview)** (`zh-Hans`) hoặc **English** (`en`).
@@ -54,8 +80,9 @@ Không có tuyên bố phê duyệt của tác giả hay tác nhân AI cho các 
 ## 简体中文
 
 预览翻译是机器草稿（`machineDraft`），尚未经人工审核。涉及同意、
-付款和法律的重要文字仍使用具有权威性的英语原文。默认仅提供英语；
-本指南不会启用预览。
+付款和法律的重要文字仍使用具有权威性的英语原文。英语是权威界面语言；
+预览语言及翻译范围见上表。新增预览仅涵盖导航、提问表单标签和入门内容，
+部分界面仍为英语。界面语言与研究回答语言是独立的选项。本指南不会启用预览。
 
 1. 记录 **Interface language** 中当前显示的选项：**Tiếng Việt (preview)**
    （`vi`）、**简体中文 (preview)**（`zh-Hans`）或 **English**（`en`）。

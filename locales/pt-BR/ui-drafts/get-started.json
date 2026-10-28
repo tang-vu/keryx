@@ -1,0 +1,84 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/get-started.ts",
+  "sourceSha256": "9450616cf1959d638de574cbeec2f3a445dbdea9d93bc8dcd67301299373e2fa",
+  "entries": {
+    "navigation.start": {
+      "source": "Get started",
+      "text": "Primeiros passos"
+    },
+    "navigation.download": {
+      "source": "Download",
+      "text": "Baixar"
+    },
+    "navigation.integrations": {
+      "source": "Integrations",
+      "text": "Integrações"
+    },
+    "navigation.label": {
+      "source": "Ways to use Keryx",
+      "text": "Formas de usar o Keryx"
+    },
+    "navigation.downloadAction": {
+      "source": "Get the app or extension",
+      "text": "Obter o aplicativo ou a extensão"
+    },
+    "navigation.connectAction": {
+      "source": "Connect MCP, API or CLI",
+      "text": "Conectar MCP, API ou CLI"
+    },
+    "start.title": {
+      "source": "Your research. Wherever you work.",
+      "text": "Sua pesquisa, onde você trabalha."
+    },
+    "start.body": {
+      "source": "Ask in your browser, research a page you are reading, connect your AI assistant, or build Keryx into your own workflow. Pick a starting point below.",
+      "text": "Pergunte pelo navegador, pesquise uma página que está lendo, conecte seu assistente de IA ou integre o Keryx ao seu trabalho. Escolha por onde começar."
+    },
+    "start.try": {
+      "source": "Try Keryx in the browser",
+      "text": "Testar o Keryx no navegador"
+    },
+    "start.browse": {
+      "source": "Browse downloads",
+      "text": "Ver downloads"
+    },
+    "start.firstTitle": {
+      "source": "Your first cited answer",
+      "text": "Sua primeira resposta com citações"
+    },
+    "start.choose": {
+      "source": "Choose how you use Keryx",
+      "text": "Escolha como usar o Keryx"
+    },
+    "common.steps": {
+      "source": "Get set up",
+      "text": "Configurar"
+    },
+    "common.requirements": {
+      "source": "What you need",
+      "text": "O que você precisa"
+    },
+    "common.help": {
+      "source": "Need a hand?",
+      "text": "Precisa de ajuda?"
+    },
+    "common.support": {
+      "source": "Contact support",
+      "text": "Falar com o suporte"
+    },
+    "common.docs": {
+      "source": "Read the full guide",
+      "text": "Ler o guia completo"
+    },
+    "common.copy": {
+      "source": "Copy",
+      "text": "Copiar"
+    },
+    "common.copied": {
+      "source": "Copied",
+      "text": "Copiado"
+    }
+  }
+}

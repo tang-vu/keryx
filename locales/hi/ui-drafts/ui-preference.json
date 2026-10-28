@@ -1,0 +1,44 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ui-preference.ts",
+  "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+  "entries": {
+    "language": {
+      "source": "Interface language",
+      "text": "इंटरफ़ेस की भाषा"
+    },
+    "previewNotice": {
+      "source": "Preview: machine draft, not human reviewed. Some interface text remains in English. Critical payment, consent and legal text stays in English.",
+      "text": "पूर्वावलोकन: मशीन से बना मसौदा, मानव समीक्षा नहीं हुई है। इंटरफ़ेस का कुछ भाग अंग्रेज़ी में रहता है। भुगतान, सहमति और कानूनी विषयों के महत्वपूर्ण पाठ अंग्रेज़ी में रहते हैं।"
+    },
+    "checking": {
+      "source": "Checking language preference…",
+      "text": "भाषा की पसंद जाँची जा रही है…"
+    },
+    "saving": {
+      "source": "Saving account language…",
+      "text": "खाते की भाषा सहेजी जा रही है…"
+    },
+    "accountSaved": {
+      "source": "Language saved to this account.",
+      "text": "इस खाते में भाषा सहेजी गई।"
+    },
+    "browserSaved": {
+      "source": "Language saved in this browser.",
+      "text": "इस ब्राउज़र में भाषा सहेजी गई।"
+    },
+    "unavailable": {
+      "source": "Account language is unavailable. Your browser choice still applies.",
+      "text": "खाते की भाषा उपलब्ध नहीं है। ब्राउज़र में चुनी गई भाषा लागू रहती है।"
+    },
+    "memoryOnly": {
+      "source": "Language applies here. Browser storage is unavailable; it may not survive this session.",
+      "text": "भाषा यहाँ लागू है। ब्राउज़र संग्रह उपलब्ध नहीं है; इस सत्र के बाद पसंद सहेजी न रहे।"
+    },
+    "loadFailed": {
+      "source": "Translation could not load. English is shown; select the language to retry.",
+      "text": "अनुवाद लोड नहीं हो सका। अंग्रेज़ी दिखाई जा रही है; फिर कोशिश करने के लिए भाषा दोबारा चुनें।"
+    }
+  }
+}

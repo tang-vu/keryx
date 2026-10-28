@@ -1,0 +1,44 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ui-preference.ts",
+  "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+  "entries": {
+    "language": {
+      "source": "Interface language",
+      "text": "インターフェースの言語"
+    },
+    "previewNotice": {
+      "source": "Preview: machine draft, not human reviewed. Some interface text remains in English. Critical payment, consent and legal text stays in English.",
+      "text": "プレビュー：機械翻訳の下書きで、人による確認はありません。画面の一部は英語のままです。支払い、同意、法的事項に関する重要な文言は英語のままです。"
+    },
+    "checking": {
+      "source": "Checking language preference…",
+      "text": "言語設定を確認中…"
+    },
+    "saving": {
+      "source": "Saving account language…",
+      "text": "アカウントの言語を保存中…"
+    },
+    "accountSaved": {
+      "source": "Language saved to this account.",
+      "text": "このアカウントに言語を保存しました。"
+    },
+    "browserSaved": {
+      "source": "Language saved in this browser.",
+      "text": "このブラウザに言語を保存しました。"
+    },
+    "unavailable": {
+      "source": "Account language is unavailable. Your browser choice still applies.",
+      "text": "アカウントの言語を取得できません。ブラウザでの選択は引き続き適用されます。"
+    },
+    "memoryOnly": {
+      "source": "Language applies here. Browser storage is unavailable; it may not survive this session.",
+      "text": "この画面で言語を適用します。ブラウザの保存領域を利用できないため、セッション終了後は保持されない場合があります。"
+    },
+    "loadFailed": {
+      "source": "Translation could not load. English is shown; select the language to retry.",
+      "text": "翻訳を読み込めませんでした。英語で表示しています。言語を選び直すと再試行できます。"
+    }
+  }
+}

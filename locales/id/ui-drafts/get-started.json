@@ -1,0 +1,84 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/get-started.ts",
+  "sourceSha256": "9450616cf1959d638de574cbeec2f3a445dbdea9d93bc8dcd67301299373e2fa",
+  "entries": {
+    "navigation.start": {
+      "source": "Get started",
+      "text": "Mulai"
+    },
+    "navigation.download": {
+      "source": "Download",
+      "text": "Unduh"
+    },
+    "navigation.integrations": {
+      "source": "Integrations",
+      "text": "Integrasi"
+    },
+    "navigation.label": {
+      "source": "Ways to use Keryx",
+      "text": "Cara menggunakan Keryx"
+    },
+    "navigation.downloadAction": {
+      "source": "Get the app or extension",
+      "text": "Dapatkan aplikasi atau ekstensi"
+    },
+    "navigation.connectAction": {
+      "source": "Connect MCP, API or CLI",
+      "text": "Hubungkan MCP, API, atau CLI"
+    },
+    "start.title": {
+      "source": "Your research. Wherever you work.",
+      "text": "Riset Anda, di mana pun Anda bekerja."
+    },
+    "start.body": {
+      "source": "Ask in your browser, research a page you are reading, connect your AI assistant, or build Keryx into your own workflow. Pick a starting point below.",
+      "text": "Bertanya di peramban, teliti halaman yang sedang dibaca, hubungkan asisten AI, atau integrasikan Keryx ke alat Anda. Pilih cara untuk memulai."
+    },
+    "start.try": {
+      "source": "Try Keryx in the browser",
+      "text": "Coba Keryx di peramban"
+    },
+    "start.browse": {
+      "source": "Browse downloads",
+      "text": "Lihat unduhan"
+    },
+    "start.firstTitle": {
+      "source": "Your first cited answer",
+      "text": "Jawaban pertama Anda dengan sitasi"
+    },
+    "start.choose": {
+      "source": "Choose how you use Keryx",
+      "text": "Pilih cara menggunakan Keryx"
+    },
+    "common.steps": {
+      "source": "Get set up",
+      "text": "Siapkan"
+    },
+    "common.requirements": {
+      "source": "What you need",
+      "text": "Yang Anda perlukan"
+    },
+    "common.help": {
+      "source": "Need a hand?",
+      "text": "Perlu bantuan?"
+    },
+    "common.support": {
+      "source": "Contact support",
+      "text": "Hubungi dukungan"
+    },
+    "common.docs": {
+      "source": "Read the full guide",
+      "text": "Baca panduan lengkap"
+    },
+    "common.copy": {
+      "source": "Copy",
+      "text": "Salin"
+    },
+    "common.copied": {
+      "source": "Copied",
+      "text": "Tersalin"
+    }
+  }
+}
