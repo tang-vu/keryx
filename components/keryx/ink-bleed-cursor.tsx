@@ -8,7 +8,7 @@
  * the cotton grain rather than sitting as a clean circle.
  *
  * Implementation: one fixed full-viewport canvas, pointer-transparent. A rAF loop
- * clears the canvas and redraws every live blot each frame; each blot blooms to its
+ * clears the canvas and redraws every live blot each frame, sleeping when empty; each blot blooms to its
  * radius then its `life` fades from 1 to 0, so strokes linger ~1.5s and then leave
  * the paper completely. An SVG turbulence displacement filter gives the organic edge.
  *
@@ -79,13 +79,19 @@ export function InkBleedCursor() {
     let lastX = 0;
     let lastY = 0;
     let primed = false;
-    let raf = 0;
-    let running = true;
+    let raf: number | null = null;
     let last = 0; // timestamp of the previous frame, for delta-time fading
+
+    const wake = () => {
+      if (raf !== null || document.hidden || blots.length === 0) return;
+      last = 0;
+      raf = requestAnimationFrame(draw);
+    };
 
     // Spawn ink when the pointer has travelled far enough — denser, smaller blots
     // when moving slowly; bigger sparser ones on fast strokes (like a loaded nib).
     const onMove = (e: PointerEvent) => {
+      if (document.hidden) return;
       const x = e.clientX;
       const y = e.clientY;
       if (!primed) {
@@ -125,10 +131,12 @@ export function InkBleedCursor() {
         });
       }
       if (blots.length > 240) blots.splice(0, blots.length - 240);
+      wake();
     };
 
     const draw = (now: number) => {
-      if (!running) return;
+      raf = null;
+      if (document.hidden) return;
       const w = window.innerWidth;
       const h = window.innerHeight;
       // Elapsed seconds since the last frame (clamped) drives the fade, so it is
@@ -168,25 +176,26 @@ export function InkBleedCursor() {
         ctx.fill();
       }
 
-      raf = requestAnimationFrame(draw);
+      // The frame that removes the last blot already cleared its old pixels.
+      // Leave the canvas idle until another pointer stroke actually adds ink.
+      if (blots.length > 0) raf = requestAnimationFrame(draw);
     };
 
     const onVisibility = () => {
-      running = !document.hidden;
-      if (running) {
-        last = 0; // restart the clock so the hidden gap isn't counted as one huge frame
-        raf = requestAnimationFrame(draw);
+      if (!document.hidden) {
+        wake();
       } else {
-        cancelAnimationFrame(raf);
+        if (raf !== null) cancelAnimationFrame(raf);
+        raf = null;
+        primed = false;
       }
     };
 
     window.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
-    raf = requestAnimationFrame(draw);
 
     return () => {
-      cancelAnimationFrame(raf);
+      if (raf !== null) cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointermove", onMove);
       document.removeEventListener("visibilitychange", onVisibility);

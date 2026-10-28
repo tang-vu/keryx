@@ -84,6 +84,9 @@ export const viewport: Viewport = {
 
 // "The Mint" type system: Bodoni Moda (engraved denomination display),
 // Spectral (literary reading + UI), Spline Sans Mono (labels, figures, tolls).
+// Multi-face families load the weights/styles the page actually uses through CSS.
+// next/font's preload flag applies to every src: preloading these two families
+// would eagerly fetch all ten faces on every route, including unused italics.
 const bodoni = localFont({
   src: [
     { path: "./fonts/bodoni-moda-latin.woff2", weight: "400 800", style: "normal" },
@@ -91,6 +94,7 @@ const bodoni = localFont({
   ],
   variable: "--font-bodoni",
   display: "swap",
+  preload: false,
 });
 const spectral = localFont({
   src: [
@@ -105,6 +109,7 @@ const spectral = localFont({
   ],
   variable: "--font-spectral",
   display: "swap",
+  preload: false,
 });
 const splineMono = localFont({
   src: "./fonts/spline-sans-mono-latin.woff2",
