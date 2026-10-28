@@ -1,0 +1,48 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "lib/i18n/messages.ts",
+  "sourceSha256": "37ac7ad5e8f7daf683952524320809f87a27d21ed650959de267137fd2cc6c2d",
+  "entries": {
+    "researchEntry.ask": {
+      "source": "Ask Keryx",
+      "text": "Keryx에 질문"
+    },
+    "researchEntry.question": {
+      "source": "What do you want to know?",
+      "text": "무엇을 알고 싶으신가요?"
+    },
+    "researchEntry.placeholder": {
+      "source": "Ask a question worth reading for...",
+      "text": "조사할 가치가 있는 질문을 입력하세요..."
+    },
+    "researchEntry.depth": {
+      "source": "Research depth",
+      "text": "조사 깊이"
+    },
+    "researchEntry.quick": {
+      "source": "quick",
+      "text": "빠르게"
+    },
+    "researchEntry.deep": {
+      "source": "deep",
+      "text": "심층"
+    },
+    "researchEntry.researching": {
+      "source": "Researching...",
+      "text": "조사 중..."
+    },
+    "researchEntry.moreOptions": {
+      "source": "More options",
+      "text": "추가 옵션"
+    },
+    "researchEntry.model": {
+      "source": "AI model",
+      "text": "AI 모델"
+    },
+    "researchEntry.savedReports": {
+      "source": "My saved reports",
+      "text": "내 저장된 보고서"
+    }
+  }
+}

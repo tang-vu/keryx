@@ -1,0 +1,84 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/get-started.ts",
+  "sourceSha256": "9450616cf1959d638de574cbeec2f3a445dbdea9d93bc8dcd67301299373e2fa",
+  "entries": {
+    "navigation.start": {
+      "source": "Get started",
+      "text": "시작하기"
+    },
+    "navigation.download": {
+      "source": "Download",
+      "text": "다운로드"
+    },
+    "navigation.integrations": {
+      "source": "Integrations",
+      "text": "연동"
+    },
+    "navigation.label": {
+      "source": "Ways to use Keryx",
+      "text": "Keryx 사용 방법"
+    },
+    "navigation.downloadAction": {
+      "source": "Get the app or extension",
+      "text": "앱 또는 확장 프로그램 받기"
+    },
+    "navigation.connectAction": {
+      "source": "Connect MCP, API or CLI",
+      "text": "MCP, API 또는 CLI 연결"
+    },
+    "start.title": {
+      "source": "Your research. Wherever you work.",
+      "text": "어디서 일하든 함께하는 리서치."
+    },
+    "start.body": {
+      "source": "Ask in your browser, research a page you are reading, connect your AI assistant, or build Keryx into your own workflow. Pick a starting point below.",
+      "text": "브라우저에서 질문하거나, 읽고 있는 페이지를 조사하거나, AI 어시스턴트를 연결하거나, Keryx를 자신의 도구에 통합하세요. 시작할 방법을 선택하세요."
+    },
+    "start.try": {
+      "source": "Try Keryx in the browser",
+      "text": "브라우저에서 Keryx 사용해 보기"
+    },
+    "start.browse": {
+      "source": "Browse downloads",
+      "text": "다운로드 보기"
+    },
+    "start.firstTitle": {
+      "source": "Your first cited answer",
+      "text": "첫 출처 인용 답변"
+    },
+    "start.choose": {
+      "source": "Choose how you use Keryx",
+      "text": "Keryx 사용 방법 선택"
+    },
+    "common.steps": {
+      "source": "Get set up",
+      "text": "설정하기"
+    },
+    "common.requirements": {
+      "source": "What you need",
+      "text": "필요한 사항"
+    },
+    "common.help": {
+      "source": "Need a hand?",
+      "text": "도움이 필요하신가요?"
+    },
+    "common.support": {
+      "source": "Contact support",
+      "text": "지원 문의"
+    },
+    "common.docs": {
+      "source": "Read the full guide",
+      "text": "전체 가이드 읽기"
+    },
+    "common.copy": {
+      "source": "Copy",
+      "text": "복사"
+    },
+    "common.copied": {
+      "source": "Copied",
+      "text": "복사됨"
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/product-guide.ts",
+  "sourceSha256": "96781f403ed4d596dcdcd689e4250755278c531ee1f3a2a31aaa260e309c6095",
+  "entries": {
+    "product.heroKicker": {
+      "source": "For researchers",
+      "text": "研究者向け"
+    },
+    "product.heroTitle": {
+      "source": "AI research.",
+      "text": "AIリサーチ。"
+    },
+    "product.overviewKicker": {
+      "source": "What you get",
+      "text": "得られるもの"
+    },
+    "product.overviewTitle": {
+      "source": "A research answer you can follow back to its sources.",
+      "text": "情報源までたどれる調査回答。"
+    },
+    "product.researchersTitle": {
+      "source": "For researchers and students",
+      "text": "研究者・学生向け"
+    },
+    "product.researchersAction": {
+      "source": "Open the literature workspace",
+      "text": "文献ワークスペースを開く"
+    },
+    "product.buildersTitle": {
+      "source": "For builders and writers",
+      "text": "開発者・執筆者向け"
+    },
+    "product.buildersBody": {
+      "source": "Investigate a technical question or prepare a brief. Follow the agent's source decisions, inspect supporting citations and reopen the completed report.",
+      "text": "技術的な疑問を調べたり、レポートを準備したりできます。情報源の選択を確認し、引用を調べ、完成したレポートを再度開けます。"
+    },
+    "product.buildersAction": {
+      "source": "Explore sources",
+      "text": "情報源を探す"
+    },
+    "product.agentsTitle": {
+      "source": "For agent developers",
+      "text": "エージェント開発者向け"
+    },
+    "product.agentsAction": {
+      "source": "Explore developer integrations",
+      "text": "開発者向け連携を見る"
+    },
+    "product.proofKicker": {
+      "source": "Inspect the evidence",
+      "text": "証拠を確認"
+    },
+    "product.proofTitle": {
+      "source": "Trust comes from what you can check.",
+      "text": "確認できることが、信頼につながります。"
+    },
+    "product.try": {
+      "source": "Try a research question",
+      "text": "調査の質問を試す"
+    },
+    "product.faqTitle": {
+      "source": "Before your first question",
+      "text": "最初の質問の前に"
+    },
+    "product.navigationAbout": {
+      "source": "About",
+      "text": "Keryxについて"
+    }
+  }
+}

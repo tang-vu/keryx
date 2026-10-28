@@ -1,0 +1,44 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ui-preference.ts",
+  "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+  "entries": {
+    "language": {
+      "source": "Interface language",
+      "text": "Idioma da interface"
+    },
+    "previewNotice": {
+      "source": "Preview: machine draft, not human reviewed. Some interface text remains in English. Critical payment, consent and legal text stays in English.",
+      "text": "Prévia: rascunho automático sem revisão humana. Parte da interface continua em inglês. Os textos essenciais sobre pagamentos, consentimento e questões legais continuam em inglês."
+    },
+    "checking": {
+      "source": "Checking language preference…",
+      "text": "Verificando o idioma…"
+    },
+    "saving": {
+      "source": "Saving account language…",
+      "text": "Salvando o idioma da conta…"
+    },
+    "accountSaved": {
+      "source": "Language saved to this account.",
+      "text": "Idioma salvo nesta conta."
+    },
+    "browserSaved": {
+      "source": "Language saved in this browser.",
+      "text": "Idioma salvo neste navegador."
+    },
+    "unavailable": {
+      "source": "Account language is unavailable. Your browser choice still applies.",
+      "text": "O idioma da conta está indisponível. Sua escolha no navegador continua valendo."
+    },
+    "memoryOnly": {
+      "source": "Language applies here. Browser storage is unavailable; it may not survive this session.",
+      "text": "O idioma vale aqui. O armazenamento do navegador está indisponível; a escolha pode se perder ao encerrar a sessão."
+    },
+    "loadFailed": {
+      "source": "Translation could not load. English is shown; select the language to retry.",
+      "text": "Não foi possível carregar a tradução. O inglês é exibido; selecione o idioma novamente para tentar de novo."
+    }
+  }
+}

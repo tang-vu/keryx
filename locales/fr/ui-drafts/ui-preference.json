@@ -1,0 +1,44 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ui-preference.ts",
+  "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+  "entries": {
+    "language": {
+      "source": "Interface language",
+      "text": "Langue de l’interface"
+    },
+    "previewNotice": {
+      "source": "Preview: machine draft, not human reviewed. Some interface text remains in English. Critical payment, consent and legal text stays in English.",
+      "text": "Aperçu : brouillon automatique sans révision humaine. Une partie de l’interface reste en anglais. Les textes essentiels sur les paiements, le consentement et les questions juridiques restent en anglais."
+    },
+    "checking": {
+      "source": "Checking language preference…",
+      "text": "Vérification de la langue…"
+    },
+    "saving": {
+      "source": "Saving account language…",
+      "text": "Enregistrement de la langue du compte…"
+    },
+    "accountSaved": {
+      "source": "Language saved to this account.",
+      "text": "Langue enregistrée pour ce compte."
+    },
+    "browserSaved": {
+      "source": "Language saved in this browser.",
+      "text": "Langue enregistrée dans ce navigateur."
+    },
+    "unavailable": {
+      "source": "Account language is unavailable. Your browser choice still applies.",
+      "text": "La langue du compte est indisponible. Votre choix dans le navigateur reste actif."
+    },
+    "memoryOnly": {
+      "source": "Language applies here. Browser storage is unavailable; it may not survive this session.",
+      "text": "La langue s’applique ici. Le stockage du navigateur est indisponible ; ce choix peut être perdu à la fin de la session."
+    },
+    "loadFailed": {
+      "source": "Translation could not load. English is shown; select the language to retry.",
+      "text": "Impossible de charger la traduction. L’anglais est affiché ; sélectionnez à nouveau la langue pour réessayer."
+    }
+  }
+}

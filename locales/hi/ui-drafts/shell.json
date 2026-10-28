@@ -1,0 +1,76 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/shell.ts",
+  "sourceSha256": "98de613c0f20357e8d901f40f221f5e183141096b6713f44c0c02baa5d0c1e5a",
+  "entries": {
+    "shellNavigation.ask": {
+      "source": "Ask a question",
+      "text": "प्रश्न पूछें"
+    },
+    "shellNavigation.answers": {
+      "source": "Past answers",
+      "text": "पिछले उत्तर"
+    },
+    "shellNavigation.sources": {
+      "source": "Sources",
+      "text": "स्रोत"
+    },
+    "shellNavigation.literature": {
+      "source": "Literature workspace",
+      "text": "साहित्य कार्यक्षेत्र"
+    },
+    "shellNavigation.creators": {
+      "source": "For creators",
+      "text": "रचनाकारों के लिए"
+    },
+    "shellNavigation.mySources": {
+      "source": "My sources",
+      "text": "मेरे स्रोत"
+    },
+    "shellNavigation.myDispatches": {
+      "source": "My dispatches",
+      "text": "मेरे प्रकाशन"
+    },
+    "shellNavigation.playground": {
+      "source": "Playground",
+      "text": "प्रयोग क्षेत्र"
+    },
+    "shellNavigation.developer": {
+      "source": "Dev portal",
+      "text": "डेवलपर पोर्टल"
+    },
+    "shellHeader.creatorAction": {
+      "source": "For creators ▸",
+      "text": "रचनाकारों के लिए ▸"
+    },
+    "shellHeader.closeMenu": {
+      "source": "Close menu",
+      "text": "मेन्यू बंद करें"
+    },
+    "shellHeader.openMenu": {
+      "source": "Open menu",
+      "text": "मेन्यू खोलें"
+    },
+    "shellHeader.mobileNavigation": {
+      "source": "Mobile navigation",
+      "text": "मोबाइल नेविगेशन"
+    },
+    "shellHeader.explore": {
+      "source": "Explore",
+      "text": "खोजें"
+    },
+    "shellHeader.moreTools": {
+      "source": "More tools",
+      "text": "अन्य उपकरण"
+    },
+    "shellFooter.house": {
+      "source": "The house",
+      "text": "Keryx"
+    },
+    "shellFooter.docsAndProof": {
+      "source": "Docs & proof",
+      "text": "दस्तावेज़ और प्रमाण"
+    }
+  }
+}

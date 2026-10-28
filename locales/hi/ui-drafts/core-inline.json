@@ -1,0 +1,48 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "lib/i18n/messages.ts",
+  "sourceSha256": "37ac7ad5e8f7daf683952524320809f87a27d21ed650959de267137fd2cc6c2d",
+  "entries": {
+    "researchEntry.ask": {
+      "source": "Ask Keryx",
+      "text": "Keryx से पूछें"
+    },
+    "researchEntry.question": {
+      "source": "What do you want to know?",
+      "text": "आप क्या जानना चाहते हैं?"
+    },
+    "researchEntry.placeholder": {
+      "source": "Ask a question worth reading for...",
+      "text": "ऐसा प्रश्न पूछें जिसके लिए शोध करना उपयोगी हो..."
+    },
+    "researchEntry.depth": {
+      "source": "Research depth",
+      "text": "शोध की गहराई"
+    },
+    "researchEntry.quick": {
+      "source": "quick",
+      "text": "त्वरित"
+    },
+    "researchEntry.deep": {
+      "source": "deep",
+      "text": "गहन"
+    },
+    "researchEntry.researching": {
+      "source": "Researching...",
+      "text": "शोध जारी है..."
+    },
+    "researchEntry.moreOptions": {
+      "source": "More options",
+      "text": "अन्य विकल्प"
+    },
+    "researchEntry.model": {
+      "source": "AI model",
+      "text": "AI मॉडल"
+    },
+    "researchEntry.savedReports": {
+      "source": "My saved reports",
+      "text": "मेरी सहेजी गई रिपोर्ट"
+    }
+  }
+}

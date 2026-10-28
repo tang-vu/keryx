@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +9,14 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // upgrades machine drafts into approved payment, privacy, consent or legal copy.
 const critical = /payment|consent|legal|privacy|terms|authoriz|signature|signing|settle|refund|withdraw|deposit|budget|spend|funding|sponsor|purchase|pay\b|paid\b|wallet|receipt|reserv|uncertain|pending|simulat|failed|expired|balance|transaction|obligation|toll|reward|payout|publication|publish|ownership|visibility|private|unlisted|erased|\bcap\b/iu;
 const read = file => readFileSync(path.join(root, file), "utf8");
+// Agreed entry-preview floor. Missing namespaces or lost authored coverage must
+// fail, even when somebody regenerates the compiled chunks after deleting text.
+const entryPreviewMinimums = {
+  "core-inline": { authored: 10, preview: 10 }, "get-started": { authored: 19, preview: 19 },
+  "product-guide": { authored: 16, preview: 16 }, shell: { authored: 17, preview: 17 },
+  // The conservative critical-copy filter retains the loadFailed status in English.
+  "ui-preference": { authored: 9, preview: 8 },
+};
 
 export function generateUiPreviews(check = false) {
   const helpers = extractNamespaceCopy("locales/en/shared-helpers.ts", read("locales/en/shared-helpers.ts"));
@@ -24,21 +32,40 @@ export function generateUiPreviews(check = false) {
   const sharedNamespaces = new Set(["core-inline", ...[...read("lib/i18n/messages.ts")
     .matchAll(/from "\.\.\/\.\.\/locales\/en\/([^"/]+)"/g)].map(match => match[1])]);
   const digests = {};
-  for (const locale of ["vi", "zh-Hans"]) {
+  for (const locale of ["vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"]) {
     const namespaces = {}, messages = {};
+    const inputs = [];
+    const partial = !["vi", "zh-Hans"].includes(locale);
+    const draftDirectory = path.join(root, `locales/${locale}/ui-drafts`);
+    if (partial) for (const namespace of Object.keys(entryPreviewMinimums)) {
+      if (!existsSync(path.join(draftDirectory, `${namespace}.json`))) throw Error(`${locale}: missing entry preview ${namespace}`);
+    }
+    const knownDrafts = new Set(bindings.map(binding => `${binding.namespace}.json`));
+    for (const file of readdirSync(draftDirectory)) {
+      if (file !== "manifest.json" && !knownDrafts.has(file)) throw Error(`${locale}: unknown draft namespace ${file}`);
+    }
     for (const binding of bindings) {
       const draftPath = `locales/${locale}/ui-drafts/${binding.namespace}.json`;
+      if (partial && !existsSync(path.join(root, draftPath))) continue;
       const draft = JSON.parse(read(draftPath));
       validateNamespaceDraft(draft, binding, glossary);
+      inputs.push([binding.sourcePath, binding.sourceSha256,
+        createHash("sha256").update(read(draftPath).replace(/\r\n?/g, "\n")).digest("hex")]);
       const entries = {};
       const ambiguous = new Set();
+      let translatedKeys = 0;
       for (const [key, value] of Object.entries(draft.entries)) {
         if (!("text" in value) || key !== "previewNotice" && critical.test(`${binding.namespace} ${key} ${value.source}`)) continue;
         // Resolve only exact, authored English templates; never match report data,
         // substrings, regular expressions or values interpolated into a template.
         if (entries[value.source] && entries[value.source] !== value.text) ambiguous.add(value.source);
         entries[value.source] = value.text;
+        translatedKeys++;
         if (sharedNamespaces.has(binding.namespace)) messages[key] = value.text;
+      }
+      const minimum = entryPreviewMinimums[binding.namespace];
+      if (partial && minimum && (Object.keys(draft.entries).length < minimum.authored || translatedKeys < minimum.preview)) {
+        throw Error(`${locale}/${binding.namespace}: entry preview coverage fell below ${minimum.authored} authored/${minimum.preview} admitted keys`);
       }
       for (const source of ambiguous) delete entries[source];
       namespaces[binding.namespace] = entries;
@@ -46,8 +73,7 @@ export function generateUiPreviews(check = false) {
     // Shared message calls retain their exact key as well as their English
     // template. Equal English labels from unrelated areas must not collide.
     namespaces.$messages = messages;
-    const inputs = bindings.map(binding => [binding.sourcePath, binding.sourceSha256,
-      createHash("sha256").update(read(`locales/${locale}/ui-drafts/${binding.namespace}.json`).replace(/\r\n?/g, "\n")).digest("hex")]);
+    if (!inputs.length) throw Error(`${locale}: no preview drafts`);
     const digest = createHash("sha256").update(JSON.stringify(inputs)).digest("hex");
     const output = `// Generated by scripts/generate-ui-previews.mjs. Machine drafts; no human approval.\n// Source and draft inputs: ${digest}\nconst preview: Record<string, Record<string, string>> = ${JSON.stringify(namespaces, null, 2)};\nexport default preview;\n`;
     const file = `locales/generated/${locale}-ui-preview.ts`;
@@ -56,6 +82,19 @@ export function generateUiPreviews(check = false) {
     } else {
       mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
       writeFileSync(path.join(root, file), output);
+    }
+    if (partial) {
+      const shellBinding = bindings.find(binding => binding.namespace === "shell");
+      const shellDraft = JSON.parse(read(`locales/${locale}/ui-drafts/shell.json`));
+      const shell = Object.fromEntries(Object.entries(shellDraft.entries).filter(([key, value]) =>
+        /^shell(?:Navigation|Header|Footer)\./u.test(key) && "text" in value &&
+        !critical.test(`shell ${key} ${value.source}`)));
+      validateNamespaceDraft(shellDraft, shellBinding, glossary);
+      const shellOutput = `// Generated by scripts/generate-ui-previews.mjs. Machine draft; no human approval.\nimport type { ShellDraft } from "@/lib/i18n/ui-shell-catalogue";\nexport const uiShellPreview = ${JSON.stringify(shell, null, 2)} satisfies ShellDraft;\n`;
+      const shellFile = `locales/${locale}/ui-shell-preview.ts`;
+      if (check) {
+        if (read(shellFile).replace(/\r\n?/g, "\n") !== shellOutput) throw Error(`${shellFile} is stale; regenerate UI previews`);
+      } else writeFileSync(path.join(root, shellFile), shellOutput);
     }
     digests[locale] = digest;
   }

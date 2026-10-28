@@ -5897,7 +5897,7 @@
     {
       "namespace": "ui-preference",
       "sourcePath": "locales/en/ui-preference.ts",
-      "sourceSha256": "71a28873f12c58e26700933278be179753094d6eac945c464729443d488a1f96",
+      "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
       "draftPath": "locales/zh-Hans/ui-drafts/ui-preference.json",
       "extractedLeaves": 13,
       "authoredEntries": 13,
