@@ -404,7 +404,7 @@
     "lib/research/evidence-matrix-read-scope.ts": "e03f01260c8d522d91165953988665d7875ffd8c2c230dcabf8c3a419f6c283a",
     "lib/research/evidence-matrix.ts": "c4600cb85c5011a9ff6fb9ef274d9e5e7b5bdfb1ab567530e16e32bb5661a253",
     "lib/research/evidence-provenance.ts": "abd04b783b9502c26ce6bd0ae023b92f45037e7717c9775218c8a125cf9474dc",
-    "lib/research/pdf-reading.ts": "bd6a7941134538eda854b527c188446cf48d9b7706bf08d5cdaa30708ebb0a24",
+    "lib/research/pdf-reading.ts": "a6b40528a6e4458658f22c73bae6b1b2a55ca4c7e95bec68a174d757c7f9ef3b",
     "lib/research/presentation-language.ts": "1e388cc8bcb5434d5a1c482b06bebc3626e0fbc764010f7b098c74136a0cfa68",
     "lib/research/reference-export-core.ts": "0b72b1c0da61a4f0809a06634d36f95ac60d3bbfa6bf3118eda1cf81b929048b",
     "lib/research/research-allowance.ts": "fba02d30b03d8dfd7dfed118045bcc9db564696a8b1f148a504b61af031826bd",
