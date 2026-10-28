@@ -98,7 +98,7 @@ export async function checkResearchGuides(browser: Browser, origin: string, evid
           if (evidence && width === 390) await page.screenshot({ path: join(evidence, `${locale}-guide-${index}-${width}.png`), fullPage: true, animations: "disabled" });
         }
         await page.goto(origin + "/tools/literature-review-matrix");
-        await page.getByRole("heading", { name: translated("tool.title"), exact: true }).waitFor();
+        await page.getByRole("heading", { level: 1, name: translated("tool.title"), exact: true }).waitFor();
         for (const key of ["privacyNotice", "filePrivacyHelp", "exportPrivacyNotice"] as const)
           await page.getByText(copy.tool[key], { exact: true }).waitFor();
         const question = `Original question <${locale}> {count} USDC`, note = `Original evidence: <source> ${locale} =1+2`;

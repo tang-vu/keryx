@@ -2,6 +2,7 @@
 import { act, createElement, Fragment, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AnswerCard } from "../../components/keryx/answer-card";
 import { AnswerEvidenceStatus } from "../../components/keryx/answer-evidence-status";
@@ -89,12 +90,14 @@ describe("recorded answer evidence status", () => {
     run.claimCoverage![2].claim = "another target";
     expect(buildAnswerEvidenceStatus(run).targets.map(row => row.estimate)).toEqual([null, 0, null]);
   });
-  it.each(["vi", "zh-Hans"] as const)("keeps new %s labels in explicit English fallback without translating original targets or the critical budget notice", async locale => {
+  it.each(["vi", "zh-Hans"] as const)("previews authored neutral %s labels while preserving original targets and the critical English budget notice", async locale => {
     const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
     const run = fixture(); run.subClaims[0] = "Original target 中文 {question}";
     const html = renderToStaticMarkup(createElement(UiCopyContext.Provider,
       { value: { ...englishUiCopy, locale, preview, message } }, createElement(AnswerEvidenceStatus, { run })));
-    expect(message("reportEvidence.title")).toBe(copy("reportEvidence.title"));
+    const title = JSON.parse(readFileSync(`locales/${locale}/ui-drafts/reports.json`, "utf8")).entries["reportEvidence.title"];
+    expect(message("reportEvidence.title")).toBe(title.text);
+    expect(message("reportEvidence.title")).not.toBe(copy("reportEvidence.title"));
     expect(html).toContain(message("reportEvidence.title")); expect(html).toContain(run.subClaims[0]);
     expect(message("reportEvidence.prepareNotice")).toBe(copy("reportEvidence.prepareNotice"));
     expect(html).toContain(copy("reportEvidence.prepareNotice"));
