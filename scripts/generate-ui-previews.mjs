@@ -11,7 +11,12 @@ const critical = /payment|consent|legal|privacy|terms|authoriz|signature|signing
 const read = file => readFileSync(path.join(root, file), "utf8");
 // Agreed entry-preview floor. Missing namespaces or lost authored coverage must
 // fail, even when somebody regenerates the compiled chunks after deleting text.
-const entryPreviewMinimums = { "core-inline": 10, "get-started": 19, "product-guide": 16, shell: 17, "ui-preference": 9 };
+const entryPreviewMinimums = {
+  "core-inline": { authored: 10, preview: 10 }, "get-started": { authored: 19, preview: 19 },
+  "product-guide": { authored: 16, preview: 16 }, shell: { authored: 17, preview: 17 },
+  // The conservative critical-copy filter retains the loadFailed status in English.
+  "ui-preference": { authored: 9, preview: 8 },
+};
 
 export function generateUiPreviews(check = false) {
   const helpers = extractNamespaceCopy("locales/en/shared-helpers.ts", read("locales/en/shared-helpers.ts"));
@@ -58,8 +63,9 @@ export function generateUiPreviews(check = false) {
         translatedKeys++;
         if (sharedNamespaces.has(binding.namespace)) messages[key] = value.text;
       }
-      if (partial && translatedKeys < (entryPreviewMinimums[binding.namespace] ?? 0)) {
-        throw Error(`${locale}/${binding.namespace}: entry preview coverage fell below ${entryPreviewMinimums[binding.namespace]}`);
+      const minimum = entryPreviewMinimums[binding.namespace];
+      if (partial && minimum && (Object.keys(draft.entries).length < minimum.authored || translatedKeys < minimum.preview)) {
+        throw Error(`${locale}/${binding.namespace}: entry preview coverage fell below ${minimum.authored} authored/${minimum.preview} admitted keys`);
       }
       for (const source of ambiguous) delete entries[source];
       namespaces[binding.namespace] = entries;
