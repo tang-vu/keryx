@@ -19,7 +19,7 @@ import { privateResearchCopy } from "@/locales/en/run-claim-research";
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/hooks/use-research-visibility";
 import type { AskStreamState } from "@/lib/hooks/use-ask-stream";
-import { UiText, useUiCopy, useUiCopyFunction, useUiMessages } from "@/lib/i18n/ui-copy";
+import { UiText, UiMessage, useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
 import type { RunVisibility } from "@/lib/run-privacy/contracts";
 import { researchRecoveryCopy } from "@/lib/research/research-recovery-copy";
 const uiEnglish_privateResearchCopy = privateResearchCopy;
@@ -36,7 +36,6 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
 }) {
   const message = useUiMessages();
   const privateResearchCopy = useUiCopy("run-claim-research", uiEnglish_privateResearchCopy);
-  const productGuideCopy = useUiCopyFunction("product-guide", uiEnglish_productGuideCopy);
   const [privateHandoff] = useState(() => createPrivateClaimHandoff({ origin: () => window.location.origin,
     documentProof: readPrivateDocument, open: url => { window.open(url, "_blank", "noopener,noreferrer"); } }));
   const [claimStatus, setClaimStatus] = useState<PrivateClaimStatus>("none");
@@ -147,11 +146,11 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
         <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" />
       </div>
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
-        <p data-testid="hero-kicker" className={`kx-research-kicker ${introduceProduct ? "max-w-[calc(100%_-_140px)] sm:max-w-none " : ""}font-mono text-[11px] uppercase tracking-[0.14em] text-seal`}>{introduceProduct ? productGuideCopy("product.heroKicker") : message("researchChat.kicker")}</p>
+        <p data-testid="hero-kicker" className={`kx-research-kicker ${introduceProduct ? "max-w-[calc(100%_-_140px)] sm:max-w-none " : ""}font-mono text-[11px] uppercase tracking-[0.14em] text-seal`}>{introduceProduct ? <UiText source={uiEnglish_productGuideCopy("product.heroKicker")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.kicker" />}</p>
         <div data-testid="hero-guide" className="absolute right-0 top-0 sm:static sm:mr-[156px]"><OnboardingTour /></div>
       </div>
-      <h1 className={`kx-research-title mt-3 max-w-[calc(100%_-_84px)] font-display ${introduceProduct ? "text-[clamp(30px,9vw,64px)] tracking-[-0.035em]" : "text-[clamp(32px,5vw,46px)]"} leading-none sm:max-w-[calc(100%_-_156px)] sm:leading-tight`}>{introduceProduct ? productGuideCopy("product.heroTitle") : message("researchChat.title")}</h1>
-      <p className="kx-research-intro mt-3 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:max-w-[min(60ch,calc(100%_-_156px))] sm:text-lg sm:leading-relaxed">{introduceProduct && payer === "treasury" ? productGuideCopy("product.heroBody") : message("researchChat.introduction")}</p>
+      <h1 className={`kx-research-title mt-3 max-w-[calc(100%_-_84px)] font-display ${introduceProduct ? "text-[clamp(30px,9vw,64px)] tracking-[-0.035em]" : "text-[clamp(32px,5vw,46px)]"} leading-none sm:max-w-[calc(100%_-_156px)] sm:leading-tight`}>{introduceProduct ? <UiText source={uiEnglish_productGuideCopy("product.heroTitle")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.title" />}</h1>
+      <p className="kx-research-intro mt-3 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:max-w-[min(60ch,calc(100%_-_156px))] sm:text-lg sm:leading-relaxed">{introduceProduct && payer === "treasury" ? <UiText source={uiEnglish_productGuideCopy("product.heroBody")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.introduction" />}</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label={message("researchChat.turnsLabel")}>
       {visibleHistory.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}

@@ -37,6 +37,10 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
         await select().selectOption(locale);
         const expected = drafts[locale]["core-inline"].entries["researchEntry.question"].text;
         await page.locator('label[for="ask-question"]').filter({ hasText: expected }).waitFor();
+        assert.equal(await page.locator(`label[for="ask-question"] [lang="${locale}"]`).count(), 1, `${locale} question label exposes its language`);
+        assert.equal(await page.locator(`h1 [lang="${locale}"]`).count(), 1, `${locale} headline exposes its language`);
+        assert.equal(await page.locator('.kx-research-intro [lang="en"]').count(), 1, "Critical English introduction retains its own language");
+        assert.equal(await page.locator("option span").count(), 0, "Native select options retain text-only content");
         assert.equal(await page.locator("#ask-question").inputValue(), original);
         assert.equal(await page.locator("#ask-question").getAttribute("placeholder"), drafts[locale]["core-inline"].entries["researchEntry.placeholder"].text);
         assert.equal(await select().getAttribute("title"), drafts[locale]["ui-preference"].entries.previewNotice.text);
