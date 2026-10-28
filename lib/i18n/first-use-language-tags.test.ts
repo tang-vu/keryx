@@ -3,13 +3,15 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { ResearchChat } from "@/components/keryx/research-chat";
+import { AskForm } from "@/components/keryx/ask-form";
 import { LanguageSwitcher } from "@/components/keryx/language-switcher";
 import { LocaleProvider } from "./locale-context";
 import { UiCopyProvider } from "./ui-copy-provider";
 import { loadUiPreview } from "./ui-preview-catalogues";
 import { preparedLocales } from "./locales";
-import { englishMessages } from "./messages";
+import { createMessages, englishMessages } from "./messages";
 import { productGuideCopy } from "@/locales/en/product-guide";
+import { currentArcLabel } from "@/lib/arc-network-display";
 
 // Keep the real composer, visibility and stream hooks. Unrelated wallet/tour
 // panels are absent, and every HTTP request is a bounded synthetic GET.
@@ -43,6 +45,28 @@ beforeEach(() => {
     if (path === "/api/sources") return Response.json({ sources: [] });
     throw Error(`Unexpected synthetic request: ${path}`);
   }));
+});
+
+it.each([
+  ["session", "researchEntry.sessionPayerNotice"],
+  ["expired", "researchEntry.expiredSessionNotice"],
+  ["paused", "researchEntry.unavailableSessionNotice"],
+] as const)("keeps the %s payer notice truthful and explicitly English in a French preview", async (payer, key) => {
+  const onAsk = vi.fn();
+  await act(async () => root.render(h(LocaleProvider, { enabledLocales: preparedLocales, prepareLocale: loadUiPreview,
+    network: "eip155:5042", children: h(UiCopyProvider, { children: h(React.Fragment, null,
+      h(LanguageSwitcher), h(AskForm, { payer, onAsk })) }) })));
+  await vi.waitFor(() => expect(container.querySelector("select")!.disabled).toBe(false));
+  const select = container.querySelector<HTMLSelectElement>("[data-language-switcher] select")!;
+  await act(async () => { select.value = "fr"; select.dispatchEvent(new Event("change", { bubbles: true })); });
+  await vi.waitFor(() => expect(document.documentElement.lang).toBe("fr"));
+  const notice = container.querySelector('[data-testid="composer-payer-notice"]')!;
+  expect(notice.textContent).toBe(createMessages("en")(key, { network: currentArcLabel }));
+  expect(notice.querySelector('[lang="en"]')).not.toBeNull();
+  expect(notice.textContent).not.toBe(englishMessages["researchEntry.freeTrialNotice"]);
+  expect(onAsk).not.toHaveBeenCalled();
+  expect(requests.every(request => request.method === "GET" &&
+    ["/api/auth/session", "/api/ask/visibility", "/api/models", "/api/sources"].includes(request.path))).toBe(true);
 });
 afterEach(async () => {
   await act(async () => root.unmount()); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals();
