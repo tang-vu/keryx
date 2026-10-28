@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { deployReviewedRole, validateReviewedRoles, readReviewedRoles, releaseSource, verifyReleaseReview } from './redeploy-reviewed-roles.mjs';
+import { deployReviewedRole, validateReviewedRoles, readReviewedRoles, releaseSource, verifyReleaseReview, artifactMetadata, recordArtifactReuse, verifyArtifactReuse } from './redeploy-reviewed-roles.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 const config = () => ({ apps: ['keryx', 'keryx-a2a-worker'].map(name => ({
   name, script: '/usr/bin/env', interpreter: 'none', cwd: '/root/keryx',
@@ -27,6 +30,53 @@ const stagedConfig = () => {
 const old = name => ({ name, pid: 0, pm2_env: { status: 'stopped', pm_exec_path: '/usr/bin/npm',
   pm_cwd: '/root/keryx', exec_interpreter: 'none', args: ['run', name === 'keryx' ? 'start' : 'a2a-worker'],
   autorestart: true, kill_timeout: 330000, env: { PRIVATE_KEY: 'not-for-export' } } });
+
+test('metadata reuse refuses same-size writes with restored mtime, replacement, topology and mode drift', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'keryx-artifact-reuse-'));
+  try {
+    fs.chmodSync(root, 0o700);
+    const file = path.join(root, 'content'); fs.writeFileSync(file, 'accepted', { mode: 0o600 });
+    const before = artifactMetadata(root), stat = fs.statSync(file);
+    fs.writeFileSync(file, 'modified'); fs.utimesSync(file, stat.atime, stat.mtime);
+    assert.notDeepEqual(artifactMetadata(root), before);
+    const changed = artifactMetadata(root); fs.unlinkSync(file); fs.writeFileSync(file, 'modified', { mode: 0o600 });
+    assert.notDeepEqual(artifactMetadata(root), changed);
+    const replaced = artifactMetadata(root); fs.mkdirSync(path.join(root, 'extra'), { mode: 0o700 });
+    assert.notDeepEqual(artifactMetadata(root), replaced);
+    if (process.platform !== 'win32') {
+      fs.chmodSync(file, 0o644); const readable = artifactMetadata(root);
+      fs.chmodSync(file, 0o600); assert.notDeepEqual(artifactMetadata(root), readable);
+      fs.chmodSync(file, 0o666); assert.throws(() => artifactMetadata(root)); fs.chmodSync(file, 0o600);
+      fs.symlinkSync('content', path.join(root, 'alias')); assert.doesNotThrow(() => artifactMetadata(root));
+      fs.unlinkSync(path.join(root, 'alias')); fs.symlinkSync('../escape', path.join(root, 'alias'));
+      assert.throws(() => artifactMetadata(root));
+    }
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('reuse proof binds full role/config inputs, original inspection, stable metadata and finite age', { skip: process.platform !== 'linux' }, () => {
+  const c = stagedConfig(), at = Date.now(), metadata = { sha256: 'a'.repeat(64), entries: 10, bytes: 500 };
+  const snapshot = source => { assert.equal(source, releaseSource(c.release.commit)); return metadata; };
+  const artifact = { commit: c.release.commit, sourceManifestSha256: c.release.sourceManifestSha256, artifactDigest: 'd'.repeat(64) };
+  let inspections = 0;
+  const proof = recordArtifactReuse(c, () => { inspections++; return artifact; }, at, snapshot);
+  assert.equal(inspections, 1);
+  c.release.artifactReuseFile = '/root/.local/share/release/artifact-reuse.json'; c.release.artifactReuseSha256 = 'e'.repeat(64);
+  assert.equal(verifyArtifactReuse(c, proof, at, snapshot), artifact);
+  for (const mutate of [v => v.apps[0].autorestart = true, v => v.release.runtimeEnvironmentSha256 = 'f'.repeat(64),
+    v => v.release.artifactInspectionSha256 = 'f'.repeat(64), v => v.release.preparationSha256 = 'f'.repeat(64),
+    v => v.release.compatibilityReviewSha256 = 'f'.repeat(64), v => v.release.artifactReuseFile = '/tmp/proof.json',
+    v => delete v.release.artifactReuseSha256]) {
+    const changed = structuredClone(c); mutate(changed); assert.throws(() => verifyArtifactReuse(changed, proof, at, snapshot));
+  }
+  assert.throws(() => verifyArtifactReuse(c, proof, at + 7200001, snapshot));
+  assert.throws(() => verifyArtifactReuse(c, proof, at - 5001, snapshot));
+  assert.throws(() => verifyArtifactReuse(c, proof, at, () => ({ ...metadata, entries: 11 })));
+  assert.throws(() => verifyArtifactReuse(c, { ...proof, source: '/tmp/substitute' }, at, snapshot));
+  const base = stagedConfig(); let reads = 0;
+  assert.throws(() => recordArtifactReuse(base, () => artifact, at, () => ({ ...metadata, entries: reads++ })));
+  assert.throws(() => recordArtifactReuse(base, () => ({ ...artifact, commit: 'f'.repeat(40) }), at, snapshot));
+});
 
 function harness(initial = [old('keryx')]) {
   const c = config(), events = [], retained = [];

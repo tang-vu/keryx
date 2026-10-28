@@ -56,6 +56,10 @@ export function releaseSource(commit) {
 export function validateReleaseBinding(value) {
   const fields = ['commit', 'sourceManifestSha256', 'artifactInspectionSha256',
     'preparationSha256', 'runtimeEnvironmentSha256', 'compatibilityReviewFile', 'compatibilityReviewSha256'];
+  if (value && (Object.hasOwn(value, 'artifactReuseFile') || Object.hasOwn(value, 'artifactReuseSha256'))) {
+    fields.push('artifactReuseFile', 'artifactReuseSha256');
+    if (value.artifactReuseFile !== path.posix.dirname(value.compatibilityReviewFile ?? '') + '/artifact-reuse.json') refuse();
+  }
   if (!value || Object.keys(value).sort().join('|') !== [...fields].sort().join('|')) refuse();
   releaseSource(value.commit);
   for (const name of fields.filter(name => name.endsWith('Sha256')))
@@ -63,6 +67,70 @@ export function validateReleaseBinding(value) {
   if (!/^\/root\/\.local\/share\/[a-zA-Z0-9_./-]+\.json$/.test(value.compatibilityReviewFile) ||
       path.posix.resolve(value.compatibilityReviewFile) !== value.compatibilityReviewFile) refuse();
   return value;
+}
+
+// Content hashes are computed by the already installed authoritative inspector
+// while the predecessor serves. Linux inode/ctime identities cannot be restored
+// with utimes after a content/mode/link/topology mutation. Root remains the same
+// trusted operator as the protected config and compatibility review. This is
+// scoped evidence reuse, never a general cache or permission to skip inspection.
+export function artifactMetadata(source) {
+  if (!path.isAbsolute(source) || fs.realpathSync(source) !== source) refuse();
+  const started = performance.now(), hash = createHash('sha256');
+  let count = 0, bytes = 0;
+  const identity = s => [s.dev, s.ino, s.mode, s.uid, s.gid, s.nlink, s.size, s.mtimeNs, s.ctimeNs].map(String);
+  const stable = (a, b) => JSON.stringify(identity(a)) === JSON.stringify(identity(b));
+  function visit(file, relative) {
+    const before = fs.lstatSync(file, { bigint: true });
+    if (++count > 250000 || performance.now() - started > 60000 ||
+        process.platform !== 'win32' && (before.uid !== BigInt(process.getuid()) || before.gid !== BigInt(process.getgid()) || !before.isSymbolicLink() && before.mode & 0o022n)) refuse();
+    let link = null;
+    if (before.isDirectory() && !before.isSymbolicLink()) {
+      for (const name of fs.readdirSync(file).sort()) visit(path.join(file, name), relative ? relative + '/' + name : name);
+    } else if (before.isSymbolicLink()) {
+      link = fs.readlinkSync(file);
+      const target = fs.realpathSync(file), inside = path.relative(source, target);
+      if (path.isAbsolute(link) || inside === '..' || inside.startsWith('..' + path.sep) || path.isAbsolute(inside) || !fs.statSync(target).isFile()) refuse();
+    } else {
+      if (!before.isFile() || before.nlink !== 1n) refuse();
+      bytes += Number(before.size);
+      if (!Number.isSafeInteger(bytes) || bytes > 8 * 1024 ** 3) refuse();
+    }
+    const after = fs.lstatSync(file, { bigint: true });
+    if (!stable(before, after) || link !== null && fs.readlinkSync(file) !== link) refuse();
+    hash.update(JSON.stringify([relative, identity(before), link]) + '\n');
+  }
+  visit(source, '');
+  return { sha256: hash.digest('hex'), entries: count, bytes };
+}
+
+function artifactReuseConfigSha256(config) {
+  const release = { ...config.release };
+  delete release.artifactReuseFile; delete release.artifactReuseSha256;
+  return digest(JSON.stringify({ apps: config.apps, release }) + '\n');
+}
+
+export function recordArtifactReuse(config, inspect, now = Date.now(), snapshot = artifactMetadata) {
+  validateReviewedRoles(config);
+  if (!config.release || config.release.artifactReuseFile || process.platform !== 'linux') refuse();
+  const source = releaseSource(config.release.commit), before = snapshot(source);
+  const artifact = inspect();
+  if (artifact.commit !== config.release.commit || artifact.sourceManifestSha256 !== config.release.sourceManifestSha256 ||
+      JSON.stringify(snapshot(source)) !== JSON.stringify(before)) refuse();
+  return { format: 'keryx-immutable-artifact-reuse-v1', configSha256: artifactReuseConfigSha256(config),
+    source, metadata: before, artifact, createdAt: new Date(now).toISOString() };
+}
+
+export function verifyArtifactReuse(config, proof, now = Date.now(), snapshot = artifactMetadata) {
+  validateReviewedRoles(config);
+  const at = Date.parse(proof?.createdAt);
+  if (!config.release?.artifactReuseFile || !proof ||
+      Object.keys(proof).sort().join('|') !== ['format', 'configSha256', 'source', 'metadata', 'artifact', 'createdAt'].sort().join('|') ||
+      proof.format !== 'keryx-immutable-artifact-reuse-v1' || proof.configSha256 !== artifactReuseConfigSha256(config) ||
+      proof.source !== releaseSource(config.release.commit) || !Number.isFinite(at) || at > now + 5000 || now - at > 7200000 ||
+      proof.artifact?.commit !== config.release.commit || proof.artifact.sourceManifestSha256 !== config.release.sourceManifestSha256 ||
+      JSON.stringify(snapshot(proof.source)) !== JSON.stringify(proof.metadata)) refuse();
+  return proof.artifact;
 }
 
 /** This protected operator review binds existing acceptance/native evidence, not
@@ -283,8 +351,9 @@ export function deployReviewedRole(mode, configFile, config, manager, recheck, r
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url) || process.argv[1] === '-') {
   try {
-    if (![5, 7].includes(process.argv.length)) refuse();
-    const [file, expected, mode, staged = '0', expectedCommit = ''] = process.argv.slice(2);
+    if (![5, 7, 8].includes(process.argv.length)) refuse();
+    const [file, expected, mode, staged = '0', expectedCommit = '', proofFile] = process.argv.slice(2);
+    if ((mode === 'artifact-record') !== (process.argv.length === 8)) refuse();
     const config = readReviewedRoles(file, expected);
     if (!['0', '1'].includes(staged) || Boolean(config.release) !== (staged === '1') ||
         config.release && config.release.commit !== expectedCommit) refuse();
@@ -293,16 +362,35 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       if (config.release) verifyReleaseReview(config.release, readProtectedDeploymentJson);
     };
     recheck();
-    if (mode === 'artifact') {
+    if (mode === 'artifact' || mode === 'artifact-record') {
       if (!config.release) refuse();
       // stdin executes at /root/keryx; the already deployed built-in inspector is
       // authoritative; its accepted deployed version must cover this artifact.
       // No candidate inspector or serving source/dependencies are loaded/mutated.
       const { verifyImmutableArtifact } = await import('file:///root/keryx/scripts/immutable-release-staging.mjs');
-      const artifact = verifyImmutableArtifact({ candidate: path.dirname(releaseSource(config.release.commit)), ...config.release });
-      verifyReleaseSourcePaths(releaseSource(config.release.commit));
-      verifyReleaseReview(config.release, readProtectedDeploymentJson, artifact);
-      console.log('Reviewed immutable source/artifact and compatibility binding passed.');
+      const inspect = () => {
+        const artifact = verifyImmutableArtifact({ candidate: path.dirname(releaseSource(config.release.commit)), ...config.release });
+        verifyReleaseSourcePaths(releaseSource(config.release.commit));
+        verifyReleaseReview(config.release, readProtectedDeploymentJson, artifact);
+        return artifact;
+      };
+      if (mode === 'artifact-record') {
+        if (proofFile !== path.posix.dirname(config.release.compatibilityReviewFile) + '/artifact-reuse.json') refuse();
+        const proof = recordArtifactReuse(config, inspect), raw = Buffer.from(JSON.stringify(proof) + '\n');
+        const fd = fs.openSync(proofFile, fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_NOFOLLOW, 0o600);
+        try { fs.writeFileSync(fd, raw); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+        const directory = fs.openSync(path.dirname(proofFile), fs.constants.O_RDONLY | fs.constants.O_DIRECTORY);
+        try { fs.fsyncSync(directory); } finally { fs.closeSync(directory); }
+        readProtectedDeploymentJson(proofFile, digest(raw));
+        console.log(JSON.stringify({ accepted: true, file: proofFile, sha256: digest(raw), source: config.release.commit, metadata: proof.metadata }));
+      } else {
+        const artifact = config.release.artifactReuseFile
+          ? verifyArtifactReuse(config, readProtectedDeploymentJson(config.release.artifactReuseFile, config.release.artifactReuseSha256))
+          : inspect();
+        verifyReleaseSourcePaths(releaseSource(config.release.commit));
+        verifyReleaseReview(config.release, readProtectedDeploymentJson, artifact);
+        console.log('Reviewed immutable source/artifact and compatibility binding passed.');
+      }
       process.exit(0);
     }
     const call = args => execFileSync('/usr/bin/pm2', args, { encoding: 'utf8', maxBuffer: 4194304,
