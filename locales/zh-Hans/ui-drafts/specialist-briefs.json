@@ -211,6 +211,10 @@
     "scholarlyLiterature.acceptance.2": {
       "source": "Coverage limits and the next literature search are explicit; completeness is not assumed.",
       "text": "明确覆盖局限和下一次文献搜索；不假定完整性。"
+    },
+    "apiPlatform.instruction": {
+      "source": "Inspect up to two named APIs/platforms for this integration. Use primary documentation for the requested versions and platform. Keep each supported constraint and its conditions beside the exact excerpt and citation. Show actual read scope and missing evidence. Label any implementation check as a proposal; do not infer API behavior from an unrelated policy or metadata.",
+      "text": "为此集成检查最多两个具名 API／平台。使用针对所请求版本和平台的一手文档。将每项有依据的约束及其条件放在对应原始片段和引用旁。显示实际读取范围及缺失证据。把任何实现检查标为提案，不要从无关政策或元数据推断 API 行为。"
     }
   }
 }

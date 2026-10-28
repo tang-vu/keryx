@@ -3,5 +3,410 @@
   "review": null,
   "sourcePath": "locales/en/report-comparison.ts",
   "sourceSha256": "9696afebc6ec37878e8e82a3f2430076772ec550b1ab9043bbcff5bbcf0b48ab",
-  "entries": {}
+  "entries": {
+    "added": {
+      "source": "Added excerpt rows",
+      "text": "Các dòng trích đoạn được thêm"
+    },
+    "after": {
+      "source": "After",
+      "text": "Sau"
+    },
+    "afterFile": {
+      "source": "After receipt JSON",
+      "text": "JSON biên nhận sau"
+    },
+    "answer": {
+      "source": "Recorded answer",
+      "text": "Câu trả lời đã ghi nhận"
+    },
+    "answerChanged": {
+      "source": "The recorded answer text differs.",
+      "text": "Văn bản câu trả lời đã ghi nhận có khác biệt."
+    },
+    "availability.complete": {
+      "source": "Both target ledgers are inspectable",
+      "text": "Có thể kiểm tra cả hai sổ ghi nhận của mục tiêu"
+    },
+    "availability.partial": {
+      "source": "Some target ledgers are incomplete",
+      "text": "Một số sổ ghi nhận của mục tiêu chưa đầy đủ"
+    },
+    "availability.unavailable": {
+      "source": "A target ledger is unavailable",
+      "text": "Không có sổ ghi nhận cho một mục tiêu"
+    },
+    "back": {
+      "source": "Back to research",
+      "text": "Quay lại nghiên cứu"
+    },
+    "before": {
+      "source": "Before",
+      "text": "Trước"
+    },
+    "beforeFile": {
+      "source": "Before receipt JSON",
+      "text": "JSON biên nhận trước"
+    },
+    "changed": {
+      "source": "Targets with changes",
+      "text": "Mục tiêu có thay đổi"
+    },
+    "checksumNotice": {
+      "source": "A matching checksum checks payload consistency. It does not prove who created a receipt, factual support, settlement or improvement. Counts describe retained excerpt rows, not independent sources.",
+      "text": "Mã kiểm tra khớp chỉ kiểm tra tính nhất quán của dữ liệu. Nó không chứng minh ai tạo biên nhận, căn cứ thực tế, việc quyết toán hay sự cải thiện. Số đếm mô tả các dòng trích đoạn được giữ lại, không phải các nguồn độc lập."
+    },
+    "chooseFile": {
+      "source": "Choose a saved receipt",
+      "text": "Chọn biên nhận đã lưu"
+    },
+    "clear": {
+      "source": "Clear files and comparison",
+      "text": "Xóa tệp và kết quả so sánh"
+    },
+    "comparable": {
+      "source": "Comparable targets",
+      "text": "Mục tiêu có thể so sánh"
+    },
+    "compare": {
+      "source": "Verify and compare",
+      "text": "Xác minh và so sánh"
+    },
+    "comparing": {
+      "source": "Verifying both checksums…",
+      "text": "Đang xác minh cả hai mã kiểm tra…"
+    },
+    "contextChanged": {
+      "source": "Reading-context changes",
+      "text": "Thay đổi bối cảnh đọc"
+    },
+    "createdAt": {
+      "source": "Recorded creation time",
+      "text": "Thời điểm tạo đã ghi nhận"
+    },
+    "csv": {
+      "source": "CSV",
+      "text": "CSV"
+    },
+    "digest": {
+      "source": "Payload checksum",
+      "text": "Mã kiểm tra dữ liệu"
+    },
+    "empty": {
+      "source": "No recorded targets are available for pairing. The recorded questions, answers and checksum bindings remain available below and in the exports.",
+      "text": "Không có mục tiêu đã ghi nhận để ghép cặp. Câu hỏi, câu trả lời và ràng buộc mã kiểm tra đã ghi vẫn có ở bên dưới và trong tệp xuất."
+    },
+    "errors.file": {
+      "source": "This file could not be read as UTF-8 JSON. Choose it again or download a fresh receipt.",
+      "text": "Không đọc được tệp dưới dạng JSON UTF-8. Chọn lại hoặc tải biên nhận mới."
+    },
+    "errors.input-too-large": {
+      "source": "This receipt exceeds 512 KiB. Choose a smaller receipt; the tool does not truncate imported reports.",
+      "text": "Biên nhận vượt quá 512 KiB. Chọn biên nhận nhỏ hơn; công cụ không cắt ngắn báo cáo được nhập."
+    },
+    "errors.invalid-receipt": {
+      "source": "A receipt could not be verified. Use an unedited Receipt JSON download in a browser with WebCrypto support.",
+      "text": "Không xác minh được một biên nhận. Dùng bản tải Receipt JSON chưa chỉnh sửa trong trình duyệt hỗ trợ WebCrypto."
+    },
+    "errors.invalid-target-matches": {
+      "source": "Each target can be matched only once. Review the target pairs and compare again.",
+      "text": "Mỗi mục tiêu chỉ được ghép một lần. Xem lại các cặp mục tiêu rồi so sánh lại."
+    },
+    "errors.unsupported-report": {
+      "source": "The checksum matches, but this report has an unsupported or ambiguous target ledger.",
+      "text": "Mã kiểm tra khớp nhưng báo cáo này có sổ ghi nhận mục tiêu không được hỗ trợ hoặc không rõ ràng."
+    },
+    "excluded": {
+      "source": "${rows} recorded rows excluded from inspection (unqualified, empty, malformed or unbound identity).",
+      "text": "Đã loại ${rows} dòng ghi nhận khỏi kiểm tra (không đủ điều kiện, trống, sai định dạng hoặc chưa ràng buộc danh tính)."
+    },
+    "exportNotice": {
+      "source": "JSON and Markdown preserve original text. CSV quotes every cell and prefixes formula-like text for safer spreadsheet opening. These files describe a comparison; they are not new receipts.",
+      "text": "JSON và Markdown giữ nguyên văn bản gốc. CSV đặt mọi ô trong dấu ngoặc kép và thêm tiền tố cho văn bản giống công thức để mở bảng tính an toàn hơn. Các tệp này mô tả phép so sánh; không phải biên nhận mới."
+    },
+    "exports": {
+      "source": "Download comparison",
+      "text": "Tải kết quả so sánh"
+    },
+    "filterLabel": {
+      "source": "Show targets",
+      "text": "Hiển thị mục tiêu"
+    },
+    "filterNotice": {
+      "source": "Search matches literal text on either side, ignoring case. Evidence gaps include incomplete ledgers or targets with no inspectable excerpts; they do not prove a source was lost. Filter counts, summary totals and downloads always cover the full comparison.",
+      "text": "Tìm kiếm đối chiếu văn bản nguyên dạng ở cả hai bên, không phân biệt chữ hoa thường. Khoảng trống bằng chứng gồm sổ ghi nhận chưa đầy đủ hoặc mục tiêu không có trích đoạn có thể kiểm tra; chúng không chứng minh một nguồn đã bị mất. Số đếm bộ lọc, tổng tóm tắt và tệp tải luôn bao quát toàn bộ phép so sánh."
+    },
+    "filterOption": {
+      "source": "${label} (${count})",
+      "text": "${label} (${count})"
+    },
+    "filterTitle": {
+      "source": "Find the targets to review",
+      "text": "Tìm mục tiêu cần xem lại"
+    },
+    "filters.all": {
+      "source": "All targets",
+      "text": "Tất cả mục tiêu"
+    },
+    "filters.changes": {
+      "source": "Recorded changes",
+      "text": "Thay đổi đã ghi nhận"
+    },
+    "filters.gaps": {
+      "source": "Missing or incomplete evidence",
+      "text": "Bằng chứng thiếu hoặc chưa đầy đủ"
+    },
+    "filters.unmatched": {
+      "source": "Unmatched targets",
+      "text": "Mục tiêu chưa ghép cặp"
+    },
+    "identity": {
+      "source": "Source identity and reading context",
+      "text": "Danh tính nguồn và bối cảnh đọc"
+    },
+    "illustrative": {
+      "source": "Illustrative excerpt",
+      "text": "Trích đoạn minh họa"
+    },
+    "illustrativeNotice": {
+      "source": "${rows} excerpt rows across the two inputs are marked illustrative. They are not verified research evidence.",
+      "text": "Có ${rows} dòng trích đoạn trong hai đầu vào được đánh dấu minh họa. Đây không phải bằng chứng nghiên cứu đã xác minh."
+    },
+    "instructions": {
+      "source": "Download Receipt JSON from each saved report, then choose the two files below. Each file can be up to 512 KiB. No sign-in, new research or purchase is needed.",
+      "text": "Tải Receipt JSON từ mỗi báo cáo đã lưu, rồi chọn hai tệp bên dưới. Mỗi tệp tối đa 512 KiB. Không cần đăng nhập, chạy nghiên cứu mới hay mua thêm."
+    },
+    "introduction": {
+      "source": "Compare the excerpts, source versions and reading context retained in two research receipts. Choose the order yourself; the tool does not decide which report is better.",
+      "text": "So sánh trích đoạn, phiên bản nguồn và bối cảnh đọc được lưu trong hai biên nhận nghiên cứu. Bạn tự chọn thứ tự; công cụ không quyết định báo cáo nào tốt hơn."
+    },
+    "json": {
+      "source": "JSON",
+      "text": "JSON"
+    },
+    "kicker": {
+      "source": "Saved research / local comparison",
+      "text": "Nghiên cứu đã lưu / so sánh trên thiết bị"
+    },
+    "ledgerGap": {
+      "source": "The ledger is incomplete. Retained rows below are shown without inferring additions or losses.",
+      "text": "Sổ ghi nhận chưa đầy đủ. Các dòng được giữ lại hiển thị bên dưới, không suy diễn việc thêm hay mất dữ liệu."
+    },
+    "link": {
+      "source": "Compare two saved reports",
+      "text": "So sánh hai báo cáo đã lưu"
+    },
+    "markdown": {
+      "source": "Markdown",
+      "text": "Markdown"
+    },
+    "match.exact-target-text": {
+      "source": "Unique identical target text",
+      "text": "Văn bản mục tiêu giống hệt và duy nhất"
+    },
+    "match.unmatched": {
+      "source": "Unmatched",
+      "text": "Chưa ghép cặp"
+    },
+    "match.user-selected": {
+      "source": "Pair selected by you",
+      "text": "Cặp do bạn chọn"
+    },
+    "matchAfter": {
+      "source": "Match with an after target",
+      "text": "Ghép với mục tiêu phía sau"
+    },
+    "matchingChanged": {
+      "source": "Target pairs changed. Verify and compare again to refresh the result.",
+      "text": "Các cặp mục tiêu đã thay đổi. Xác minh và so sánh lại để cập nhật kết quả."
+    },
+    "matchingNotice": {
+      "source": "Only unique, identical target text is matched automatically. For renamed or duplicate targets, choose a pair yourself. Your choice is recorded in the export; it does not prove the targets mean the same thing.",
+      "text": "Chỉ văn bản mục tiêu giống hệt và duy nhất được ghép tự động. Với mục tiêu đổi tên hoặc trùng lặp, hãy tự chọn cặp. Lựa chọn của bạn được ghi trong tệp xuất; nó không chứng minh hai mục tiêu cùng ý nghĩa."
+    },
+    "matchingPlanErrors.invalid-matching-plan": {
+      "source": "This matching file is invalid or exceeds 64 KiB. Save a fresh target matching file and try again.",
+      "text": "Tệp ghép cặp không hợp lệ hoặc vượt quá 64 KiB. Lưu tệp ghép mục tiêu mới rồi thử lại."
+    },
+    "matchingPlanErrors.matching-receipts-mismatch": {
+      "source": "This matching file belongs to different receipts or a different order. Choose the original before and after receipts, verify them, then restore it again.",
+      "text": "Tệp ghép cặp này thuộc các biên nhận khác hoặc thứ tự khác. Chọn đúng biên nhận trước và sau ban đầu, xác minh rồi khôi phục lại."
+    },
+    "matchingPlanNotice": {
+      "source": "Save your target choices for later. This small file contains receipt checksums and target numbers, without report text. Restore it only with the same receipts in the same order. It does not prove that paired targets mean the same thing.",
+      "text": "Lưu các lựa chọn mục tiêu để dùng sau. Tệp nhỏ này chứa mã kiểm tra biên nhận và số mục tiêu, không chứa văn bản báo cáo. Chỉ khôi phục với đúng biên nhận và thứ tự ban đầu. Tệp không chứng minh các mục tiêu ghép cặp cùng ý nghĩa."
+    },
+    "matchingPlanRestored": {
+      "source": "Target choices restored. Verify and compare again to refresh the result.",
+      "text": "Đã khôi phục lựa chọn mục tiêu. Xác minh và so sánh lại để cập nhật kết quả."
+    },
+    "matchingTitle": {
+      "source": "Match the questions you want to compare",
+      "text": "Ghép các câu hỏi bạn muốn so sánh"
+    },
+    "metadataTitle": {
+      "source": "Compare saved research | Keryx",
+      "text": "So sánh nghiên cứu đã lưu | Keryx"
+    },
+    "noMatches": {
+      "source": "No targets match this view. Clear the search or choose another filter; the full comparison remains available to download.",
+      "text": "Không có mục tiêu phù hợp với chế độ xem này. Xóa tìm kiếm hoặc chọn bộ lọc khác; vẫn có thể tải toàn bộ kết quả so sánh."
+    },
+    "noTarget": {
+      "source": "No paired target",
+      "text": "Không có mục tiêu ghép cặp"
+    },
+    "notRecorded": {
+      "source": "Not recorded",
+      "text": "Chưa ghi nhận"
+    },
+    "pairTitle": {
+      "source": "Target pair ${index + 1}",
+      "text": "Cặp mục tiêu ${index + 1}"
+    },
+    "privacy": {
+      "source": "Files are read in this tab's memory. They are not uploaded or saved by this tool. Downloads contain your report text; share them deliberately.",
+      "text": "Tệp được đọc trong bộ nhớ của thẻ này, không được công cụ tải lên hay lưu. Tệp tải xuống chứa văn bản báo cáo của bạn; hãy cân nhắc trước khi chia sẻ."
+    },
+    "question": {
+      "source": "Recorded question",
+      "text": "Câu hỏi đã ghi nhận"
+    },
+    "questionChanged": {
+      "source": "The recorded question text differs.",
+      "text": "Văn bản câu hỏi đã ghi nhận có khác biệt."
+    },
+    "quote": {
+      "source": "Exact retained excerpt",
+      "text": "Trích đoạn nguyên văn được giữ lại"
+    },
+    "reading": {
+      "source": "Reading file…",
+      "text": "Đang đọc tệp…"
+    },
+    "receiptDetails": {
+      "source": "Original recorded questions, answers and digest bindings",
+      "text": "Câu hỏi, câu trả lời và ràng buộc mã băm đã ghi nhận ban đầu"
+    },
+    "removed": {
+      "source": "Removed excerpt rows",
+      "text": "Các dòng trích đoạn bị loại"
+    },
+    "reportId": {
+      "source": "Recorded report ID",
+      "text": "ID báo cáo đã ghi nhận"
+    },
+    "resetView": {
+      "source": "Show all targets and clear search",
+      "text": "Hiển thị mọi mục tiêu và xóa tìm kiếm"
+    },
+    "restoreMatchingPlan": {
+      "source": "Restore target matching JSON",
+      "text": "Khôi phục JSON ghép mục tiêu"
+    },
+    "resultTitle": {
+      "source": "Recorded changes",
+      "text": "Thay đổi đã ghi nhận"
+    },
+    "row.added": {
+      "source": "Added recorded excerpt",
+      "text": "Trích đoạn đã ghi nhận được thêm"
+    },
+    "row.context": {
+      "source": "Reading context changed",
+      "text": "Bối cảnh đọc đã thay đổi"
+    },
+    "row.removed": {
+      "source": "Removed recorded excerpt",
+      "text": "Trích đoạn đã ghi nhận bị loại"
+    },
+    "row.retained": {
+      "source": "Retained excerpt; not compared",
+      "text": "Trích đoạn được giữ lại; chưa so sánh"
+    },
+    "row.unchanged": {
+      "source": "Same recorded excerpt",
+      "text": "Trích đoạn đã ghi nhận giống nhau"
+    },
+    "sameReceipt": {
+      "source": "These receipts have the same recorded payload checksum.",
+      "text": "Các biên nhận này có cùng mã kiểm tra dữ liệu đã ghi nhận."
+    },
+    "saveMatchingPlan": {
+      "source": "Save target matching",
+      "text": "Lưu ghép cặp mục tiêu"
+    },
+    "searchLabel": {
+      "source": "Search targets, sources and excerpts",
+      "text": "Tìm mục tiêu, nguồn và trích đoạn"
+    },
+    "source": {
+      "source": "Source",
+      "text": "Nguồn"
+    },
+    "sourceMarker": {
+      "source": "[${marker}]",
+      "text": "[${marker}]"
+    },
+    "state.comparison-unavailable": {
+      "source": "Comparison unavailable",
+      "text": "Không có kết quả so sánh"
+    },
+    "state.no-inspectable-excerpts": {
+      "source": "No inspectable excerpts",
+      "text": "Không có trích đoạn có thể kiểm tra"
+    },
+    "state.read-context-changed": {
+      "source": "Reading context changed",
+      "text": "Bối cảnh đọc đã thay đổi"
+    },
+    "state.recorded-excerpts-changed": {
+      "source": "Recorded excerpts changed",
+      "text": "Trích đoạn đã ghi nhận có thay đổi"
+    },
+    "state.same-recorded-excerpts": {
+      "source": "Same recorded excerpts",
+      "text": "Trích đoạn đã ghi nhận giống nhau"
+    },
+    "state.target-after-only": {
+      "source": "After target is unmatched",
+      "text": "Mục tiêu phía sau chưa ghép cặp"
+    },
+    "state.target-before-only": {
+      "source": "Before target is unmatched",
+      "text": "Mục tiêu phía trước chưa ghép cặp"
+    },
+    "summaryNotice": {
+      "source": "Unmatched targets are shown separately and are not counted as excerpt additions or losses. Retrieval time alone does not count as a change.",
+      "text": "Các mục tiêu chưa ghép cặp được hiển thị riêng, không tính là trích đoạn thêm hay mất. Chỉ khác thời điểm truy xuất không được tính là thay đổi."
+    },
+    "targetOption": {
+      "source": "${index + 1}. ${claim}",
+      "text": "${index + 1}. ${claim}"
+    },
+    "title": {
+      "source": "What changed between your reports?",
+      "text": "Điều gì thay đổi giữa các báo cáo của bạn?"
+    },
+    "unknown": {
+      "source": "Unknown target comparisons",
+      "text": "So sánh mục tiêu chưa xác định"
+    },
+    "unmatched": {
+      "source": "Leave unmatched",
+      "text": "Để chưa ghép cặp"
+    },
+    "verified": {
+      "source": "Both recorded payload checksums match",
+      "text": "Cả hai mã kiểm tra dữ liệu đã ghi nhận đều khớp"
+    },
+    "version": {
+      "source": "Recorded version",
+      "text": "Phiên bản đã ghi nhận"
+    },
+    "visibleTargets": {
+      "source": "Showing ${shown} of ${total} target pairs",
+      "text": "Đang hiển thị ${shown} trên ${total} cặp mục tiêu"
+    }
+  }
 }

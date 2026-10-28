@@ -2359,6 +2359,186 @@
     "archiveFilter.showPage": {
       "source": "Show this page's reports",
       "text": "Hiện các báo cáo trên trang này"
+    },
+    "reportEvidence.draft": {
+      "source": "Investigate this research target: “{target}”. Find source excerpts, explain what they support and identify what remains unknown. Original question: “{question}”.",
+      "text": "Nghiên cứu mục tiêu này: “{target}”. Tìm đoạn trích nguồn, giải thích chúng hỗ trợ điều gì và chỉ ra những gì vẫn chưa biết. Câu hỏi gốc: “{question}”."
+    },
+    "reportEvidence.excerpts": {
+      "source": "Inspectable excerpts: {count}",
+      "text": "Đoạn trích có thể kiểm tra: {count}"
+    },
+    "reportEvidence.inspect": {
+      "source": "Inspect targets and prepare a follow-up",
+      "text": "Kiểm tra mục tiêu và chuẩn bị câu hỏi tiếp theo"
+    },
+    "reportEvidence.inspectCount": {
+      "source": "Targets with missing excerpts or a low recorded support estimate: {count}.",
+      "text": "Mục tiêu thiếu đoạn trích hoặc có mức hỗ trợ ước tính đã ghi nhận thấp: {count}."
+    },
+    "reportEvidence.missing": {
+      "source": "No qualifying excerpt recorded",
+      "text": "Chưa ghi nhận đoạn trích đạt điều kiện"
+    },
+    "reportEvidence.notice": {
+      "source": "Excerpt presence and estimated support do not establish a complete or factually correct answer.",
+      "text": "Việc có đoạn trích và mức hỗ trợ ước tính không chứng minh câu trả lời đầy đủ hay đúng thực tế."
+    },
+    "reportEvidence.prepare": {
+      "source": "Prepare follow-up",
+      "text": "Chuẩn bị câu hỏi tiếp theo"
+    },
+    "reportEvidence.prepareNotice": {
+      "source": "Opens an editable question. Review the question and budget before starting a new research run, which may incur charges.",
+      "text": "Mở một câu hỏi có thể chỉnh sửa. Xem lại câu hỏi và ngân sách trước khi bắt đầu lượt nghiên cứu mới có thể phát sinh phí."
+    },
+    "reportEvidence.recorded": {
+      "source": "Targets with inspectable excerpts: {count}/{total}.",
+      "text": "Mục tiêu có đoạn trích có thể kiểm tra: {count}/{total}."
+    },
+    "reportEvidence.selection": {
+      "source": "Selected sources: {selected}/{eligible} proposals",
+      "text": "Nguồn được chọn: {selected}/{eligible} đề xuất"
+    },
+    "reportEvidence.selectionNotice": {
+      "source": "Source selection is a plan. Inspect the recorded excerpts for actual evidence; selection counts do not measure answer support.",
+      "text": "Lựa chọn nguồn là một kế hoạch. Hãy kiểm tra các đoạn trích đã ghi nhận để xem bằng chứng thực tế; số lượng lựa chọn không đo mức hỗ trợ cho câu trả lời."
+    },
+    "reportEvidence.targetUnavailable": {
+      "source": "Excerpt ledger unavailable",
+      "text": "Sổ ghi đoạn trích không khả dụng"
+    },
+    "reportEvidence.title": {
+      "source": "Recorded evidence",
+      "text": "Bằng chứng đã ghi nhận"
+    },
+    "reportEvidence.unavailable": {
+      "source": "This report has no stored excerpt ledger; target support cannot be inspected here.",
+      "text": "Báo cáo này không có sổ ghi đoạn trích đã lưu; không thể kiểm tra mức hỗ trợ cho mục tiêu tại đây."
+    },
+    "reportReading.cacheHit.one": {
+      "source": "{count} cache hit",
+      "text": "{count} lượt đọc từ bộ nhớ đệm"
+    },
+    "reportReading.cacheHit.other": {
+      "source": "{count} cache hits",
+      "text": "{count} lượt đọc từ bộ nhớ đệm"
+    },
+    "reportReading.cacheSelection.one": {
+      "source": "{count} cache selection (outcome not recorded)",
+      "text": "{count} lượt chọn bộ nhớ đệm (chưa ghi nhận kết quả)"
+    },
+    "reportReading.cacheSelection.other": {
+      "source": "{count} cache selections (outcomes not recorded)",
+      "text": "{count} lượt chọn bộ nhớ đệm (chưa ghi nhận kết quả)"
+    },
+    "reportReading.failedRead.one": {
+      "source": "{count} unavailable read",
+      "text": "{count} lượt đọc không khả dụng"
+    },
+    "reportReading.failedRead.other": {
+      "source": "{count} unavailable reads",
+      "text": "{count} lượt đọc không khả dụng"
+    },
+    "reportReading.noRecordedReads": {
+      "source": "No recorded public/cache read outcomes",
+      "text": "Chưa ghi nhận kết quả đọc nguồn công khai/bộ nhớ đệm"
+    },
+    "reportReading.publicRead.one": {
+      "source": "{count} public read",
+      "text": "{count} lượt đọc nguồn công khai"
+    },
+    "reportReading.publicRead.other": {
+      "source": "{count} public reads",
+      "text": "{count} lượt đọc nguồn công khai"
+    },
+    "reportReading.publicSelection.one": {
+      "source": "{count} public read selection (outcome not recorded)",
+      "text": "{count} lượt chọn đọc nguồn công khai (chưa ghi nhận kết quả)"
+    },
+    "reportReading.publicSelection.other": {
+      "source": "{count} public read selections (outcomes not recorded)",
+      "text": "{count} lượt chọn đọc nguồn công khai (chưa ghi nhận kết quả)"
+    },
+    "reportReading.reads": {
+      "source": "Public / cached reads",
+      "text": "Đọc nguồn công khai / bộ nhớ đệm"
+    },
+    "requesterFeedback.basis": {
+      "source": "What these observations include",
+      "text": "Các quan sát này bao gồm gì"
+    },
+    "requesterFeedback.calls": {
+      "source": "{failed} failed calls; {missing} calls without usage; {unpriced} usage records without a price.",
+      "text": "{failed} lệnh gọi thất bại; {missing} lệnh gọi thiếu số liệu sử dụng; {unpriced} bản ghi sử dụng chưa có giá."
+    },
+    "requesterFeedback.check": {
+      "source": "Check whether feedback was recorded",
+      "text": "Kiểm tra phản hồi đã được ghi nhận chưa"
+    },
+    "requesterFeedback.confirmed": {
+      "source": "Your feedback is recorded: {choice}.",
+      "text": "Phản hồi của bạn đã được ghi nhận: {choice}."
+    },
+    "requesterFeedback.cost": {
+      "source": "Recorded model estimate: {value}",
+      "text": "Ước tính chi phí mô hình đã ghi nhận: {value}"
+    },
+    "requesterFeedback.duration": {
+      "source": "Recorded generation: {value}",
+      "text": "Quá trình tạo đã ghi nhận: {value}"
+    },
+    "requesterFeedback.label": {
+      "source": "Your result and recorded generation observations",
+      "text": "Kết quả của bạn và các quan sát về quá trình tạo đã ghi nhận"
+    },
+    "requesterFeedback.partial": {
+      "source": "Generation completion time and a partial model-cost estimate using captured prices. Search, infrastructure, gas and unrecorded provider charges are excluded.",
+      "text": "Thời gian hoàn tất quá trình tạo và ước tính một phần chi phí mô hình theo giá đã ghi nhận. Không bao gồm tìm kiếm, hạ tầng, phí gas và phí nhà cung cấp chưa được ghi nhận."
+    },
+    "requesterFeedback.private": {
+      "source": "Private feedback on this delivered answer. Your first choice is retained. Revision requests do not start research, refunds or payments.",
+      "text": "Phản hồi riêng tư về câu trả lời đã được cung cấp này. Lựa chọn đầu tiên của bạn được giữ lại. Yêu cầu chỉnh sửa không bắt đầu nghiên cứu, hoàn tiền hay thanh toán."
+    },
+    "requesterFeedback.question": {
+      "source": "Did this answer help you complete your task?",
+      "text": "Câu trả lời này có giúp bạn hoàn thành công việc không?"
+    },
+    "requesterFeedback.reason": {
+      "source": "Optional private reason",
+      "text": "Lý do riêng tư, không bắt buộc"
+    },
+    "requesterFeedback.reject": {
+      "source": "Unusable",
+      "text": "Không dùng được"
+    },
+    "requesterFeedback.revise": {
+      "source": "Needs revision",
+      "text": "Cần chỉnh sửa"
+    },
+    "requesterFeedback.sending": {
+      "source": "Checking feedback…",
+      "text": "Đang kiểm tra phản hồi…"
+    },
+    "requesterFeedback.submit": {
+      "source": "Record my feedback",
+      "text": "Ghi nhận phản hồi của tôi"
+    },
+    "requesterFeedback.unavailable": {
+      "source": "Private requester feedback is unavailable for this completion.",
+      "text": "Phản hồi riêng tư của người yêu cầu không khả dụng cho lần hoàn tất này."
+    },
+    "requesterFeedback.unconfirmed": {
+      "source": "Could not confirm feedback. It may already be recorded. Check its status before submitting again.",
+      "text": "Chưa thể xác nhận phản hồi. Phản hồi có thể đã được ghi nhận. Kiểm tra trạng thái trước khi gửi lại."
+    },
+    "requesterFeedback.unknown": {
+      "source": "unrecorded",
+      "text": "chưa ghi nhận"
+    },
+    "requesterFeedback.useful": {
+      "source": "Useful",
+      "text": "Hữu ích"
     }
   }
 }

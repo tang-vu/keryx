@@ -3,5 +3,142 @@
   "review": null,
   "sourcePath": "locales/en/funding-cancellation.ts",
   "sourceSha256": "d06c2fb13ad048d33bb5b3ed2ff59ffc86e504075cd871cdebaca863345d9f02",
-  "entries": {}
+  "entries": {
+    "title": {
+      "source": "Recover an approval without its hash",
+      "text": "恢复缺少交易哈希的授权"
+    },
+    "explanation": {
+      "source": "Cancel the old approval by sending 0 USDC to your own wallet with the same nonce. This costs native USDC gas. It does not deposit money, enable a budget or revoke an existing allowance. The original approval may complete first.",
+      "text": "使用相同 nonce 向你自己的钱包发送 0 USDC，以取消旧授权。这会消耗原生 USDC gas 费用。它不会存入资金、启用预算或撤销已有授权额度。原始授权可能先完成。"
+    },
+    "review": {
+      "source": "Review cancellation fee",
+      "text": "检查取消费用"
+    },
+    "owner": {
+      "source": "Owner and recipient",
+      "text": "所有者与接收者"
+    },
+    "network": {
+      "source": "Network",
+      "text": "网络"
+    },
+    "nonce": {
+      "source": "Original nonce",
+      "text": "原始 nonce"
+    },
+    "amount": {
+      "source": "Amount: 0 USDC",
+      "text": "金额：0 USDC"
+    },
+    "gas": {
+      "source": "Gas limit",
+      "text": "Gas 上限"
+    },
+    "feeRate": {
+      "source": "Maximum fee per gas (native units)",
+      "text": "每单位 gas 的最高费用（原生单位）"
+    },
+    "priority": {
+      "source": "Maximum priority fee per gas (native units)",
+      "text": "每单位 gas 的最高优先费（原生单位）"
+    },
+    "maxFee": {
+      "source": "Maximum gas fee (native USDC)",
+      "text": "最高 gas 费用（原生 USDC）"
+    },
+    "expires": {
+      "source": "Review expires",
+      "text": "审阅到期时间"
+    },
+    "limitations": {
+      "source": "A higher-fee pending transaction may prevent this cancellation. Signed transactions do not expire on-chain. Only finalized nonce evidence unlocks the saved plan.",
+      "text": "费用更高的待处理交易可能阻止本次取消。已签名交易不会在链上到期。只有最终确认的 nonce 证据才能解除已保存计划的锁定。"
+    },
+    "consent": {
+      "source": "I approve this zero-value cancellation and its maximum gas fee.",
+      "text": "我同意这笔零金额取消交易及其最高 gas 费用。"
+    },
+    "sign": {
+      "source": "Sign and send cancellation",
+      "text": "签名并发送取消交易"
+    },
+    "unavailable": {
+      "source": "Could not prepare cancellation. Check the connected owner wallet and network, then review again. The original remains held.",
+      "text": "无法准备取消交易。请检查已连接的所有者钱包和网络，然后重新审阅。原始记录仍保持操作锁定。"
+    },
+    "pending": {
+      "source": "Cancellation is not finalized. Check the saved hashes; the original remains held. Review again only if you intend another cancellation with a new fee.",
+      "text": "取消交易尚未最终确认。请检查已保存的哈希；原始记录仍保持操作锁定。仅在你确实打算支付新的费用再次取消时重新审阅。"
+    },
+    "submitted": {
+      "source": "Cancellation sent. Check finality before continuing; the original remains held.",
+      "text": "取消交易已发送。继续之前请检查最终确认；原始记录仍保持操作锁定。"
+    },
+    "check": {
+      "source": "Check finalized cancellation",
+      "text": "检查最终确认的取消交易"
+    },
+    "hash": {
+      "source": "Saved cancellation hash",
+      "text": "已保存的取消交易哈希"
+    },
+    "replaced": {
+      "source": "The old approval nonce is finalized as a replacement. The saved plan is released; no research budget was funded.",
+      "text": "旧授权的 nonce 已由替换交易最终确认。已保存的计划解除锁定；没有向研究预算注入资金。"
+    },
+    "original": {
+      "source": "The original approval finalized first. Review its status before continuing; no deposit was sent.",
+      "text": "原始授权先获得最终确认。继续之前请检查其状态；尚未发送任何存款交易。"
+    },
+    "circleUnsupported": {
+      "source": "Circle does not support this exact-nonce cancellation for Google wallets on Arc. Search Circle history for the existing transaction, then verify its hash on-chain. This does not sign or send another transaction. The original remains held until matching finalized evidence is verified.",
+      "text": "Circle 不支持 Google 钱包在 Arc 上使用这种精确 nonce 的取消方式。请在 Circle 历史中查找现有交易，再在链上核验其哈希。此操作不会签名或发送另一笔交易。在匹配的最终确认证据得到核验前，原始记录仍保持操作锁定。"
+    },
+    "historySearch": {
+      "source": "Search Circle history",
+      "text": "搜索 Circle 历史"
+    },
+    "historyNext": {
+      "source": "Check next history page",
+      "text": "检查下一页历史"
+    },
+    "historyWindow": {
+      "source": "History search window",
+      "text": "历史搜索时间范围"
+    },
+    "historyStatus": {
+      "source": "Circle status (not settlement proof)",
+      "text": "Circle 状态（不是结算证明）"
+    },
+    "circleTransaction": {
+      "source": "Circle transaction ID",
+      "text": "Circle 交易 ID"
+    },
+    "historyVerify": {
+      "source": "Check finalized transaction",
+      "text": "检查最终确认的交易"
+    },
+    "historyEmpty": {
+      "source": "This page returned no transaction hashes. It does not prove the original was never signed or sent.",
+      "text": "此页未返回交易哈希。这不能证明原始交易从未被签名或发送。"
+    },
+    "historyHeld": {
+      "source": "History inspection is read-only. The saved plan remains held until an exact finalized transaction is verified.",
+      "text": "历史检查仅为只读操作。在核验精确匹配且最终确认的交易前，已保存的计划仍保持操作锁定。"
+    },
+    "historyUnavailable": {
+      "source": "Circle history could not be inspected. Reconnect the same Google wallet if its signing session expired, then retry the read-only search. The original remains held.",
+      "text": "无法检查 Circle 历史。如果签名会话已到期，请重新连接同一个 Google 钱包，再重试只读搜索。原始记录仍保持操作锁定。"
+    },
+    "historyLimit": {
+      "source": "The history page limit was reached; the search is incomplete. The original remains held.",
+      "text": "已达到历史页数上限；搜索尚不完整。原始记录仍保持操作锁定。"
+    },
+    "fundingUnsupported": {
+      "source": "This Google wallet cannot sign the bounded Arc transaction required for a new deposit. No new funding attempt was started. Existing funds and recovery records are unchanged.",
+      "text": "此 Google 钱包无法签名新存款所需的受限 Arc 交易。没有启动新的注资尝试。现有资金和恢复记录保持不变。"
+    }
+  }
 }

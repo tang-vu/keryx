@@ -38,7 +38,9 @@ function draftFields(value: unknown): Record<string, PropertyDescriptor> | undef
     Object.values(fields).some(field => !field.enumerable || !("value" in field))) return;
   return fields;
 }
-const criticalCopy = /payment|consent|legal|privacy|terms|authoriz|signature|signing|settle|refund|withdraw|deposit|budget|spend|funding|sponsor|purchase|pay\b|paid\b|wallet|receipt|reserv|uncertain|pending|simulat|failed|expired|balance|transaction|obligation|toll|reward|payout|publication|publish|ownership|visibility|private|unlisted|erased|\bcap\b/iu;
+// Library bulk changes and cleared-data recovery require consent review as a whole.
+const criticalCopy = /payment|consent|legal|privacy|terms|authoriz|signature|signing|settle|refund|withdraw|deposit|budget|spend|funding|sponsor|purchase|pay\b|paid\b|wallet|receipt|reserv|uncertain|pending|simulat|failed|expired|balance|transaction|obligation|toll|reward|payout|publication|publish|ownership|visibility|private|unlisted|erased|\bcap\b|literature-(?:bulk-screening|clear-recovery)/iu;
+const consentKey = /(?:^|[.])confirm(?:ation)?(?:[A-Z_]|$)|Confirm(?:ation)?$/u;
 function preservedTokens(text: string, pattern: RegExp): string {
   return JSON.stringify([...text.matchAll(pattern)].map(match => match[0]).sort());
 }
@@ -75,7 +77,7 @@ export function validateNamespacePreview(draft: unknown, source: NamespaceSource
     if (!entry || entry.source?.value !== english) continue;
     const names = Object.keys(entry).sort().join(",");
     if (names !== "source,text" || !previewKeys.includes(key) ||
-      criticalCopy.test(`${source.namespace} ${key} ${english}`) || !validDraftText(key, english, entry.text.value)) continue;
+      criticalCopy.test(`${source.namespace} ${key} ${english}`) || consentKey.test(key) || !validDraftText(key, english, entry.text.value)) continue;
     selected[key] = entry.text.value;
   }
   return Object.freeze(selected);
