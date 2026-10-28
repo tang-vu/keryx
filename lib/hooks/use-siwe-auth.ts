@@ -16,9 +16,8 @@ import { isOwnBrowserAuthChange, notifyBrowserAuthChanged } from "../browser-aut
  * signed out, and the session object when signed in.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import { useAccount, useSignMessage } from "wagmi";
-import { SiweMessage } from "siwe";
 import { arcChain } from "@/lib/chains";
 import { CIRCLE_GOOGLE_CONNECTOR_ID } from "../circle-wallet-config";
 import { circleWalletIdentity, clearCircleWalletIdentity } from "../circle-wallet-browser";
@@ -98,6 +97,10 @@ export function useSiweAuth() {
   const [authState, setAuthState] = useState<AuthState>("idle");
   const [session, setSession] = useState<AuthSession | null | undefined>(undefined);
   const revision = useRef(0);
+  const walletRevision = useRef(0);
+  // A pending sign-in belongs to the wallet/connector that started it, including
+  // a switch away and back while its library or server challenge is loading.
+  useLayoutEffect(() => { walletRevision.current++; }, [address, connector?.id, isConnected]);
   const channel = useRef<BroadcastChannel | null>(null);
   const mounted = useRef(false);
   const observedLogout = useRef(logoutEpoch);
@@ -181,9 +184,11 @@ export function useSiweAuth() {
   }, [refresh, clearForLogout]);
 
   const signIn = useCallback(async (): Promise<SignInResult> => {
-    if (!address || logoutPending()) return { ok: false };
+    if (!address || !isConnected || logoutPending()) return { ok: false };
     const boundary = logoutEpoch;
-    const current = () => mounted.current && boundary === logoutEpoch && !logoutPending();
+    const walletAttempt = walletRevision.current;
+    const current = () => mounted.current && walletAttempt === walletRevision.current
+      && boundary === logoutEpoch && !logoutPending();
     if (connector?.id === CIRCLE_GOOGLE_CONNECTOR_ID) {
       // Google callback already proved Circle token -> wallet ownership on the server.
       // Never turn a persisted connector hint into authentication or prompt redundant SIWE.
@@ -193,24 +198,26 @@ export function useSiweAuth() {
     }
     setAuthState("signing");
     try {
+      // Session restoration and Google sign-in do not need SIWE/Ethers. Keep the
+      // original serializer behind an owned ESM boundary (the package is CJS).
+      // Load before issuing the finite-lived server challenge.
+      const serializer = await import("../auth/browser-sign-in-message").catch(() => null);
+      if (!current()) return { ok: false };
+      if (!serializer) throw new Error("Sign-in is unavailable. Refresh the page and try again.");
       const nonceRes = await fetch("/api/auth/nonce");
       if (!nonceRes.ok) throw new Error("Failed to get nonce");
       const { nonce, issuedAt, sessionExpiresAt } = parseDatedAuthChallenge(await nonceRes.json());
       if (!current()) return { ok: false };
 
-      const message = new SiweMessage({
+      const prepared = serializer.prepareBrowserSignInMessage({
         domain: window.location.host,
         address,
-        // ASCII only — EIP-4361's ABNF rejects non-ASCII (e.g. an em-dash).
-        statement: "Sign in to Keryx. Citations are currency.",
         uri: window.location.origin,
-        version: "1",
         chainId: arcChain.id,
         nonce,
         issuedAt,
         expirationTime: sessionExpiresAt,
       });
-      const prepared = message.prepareMessage();
 
       setAuthState("verifying");
       const signature = await signMessageAsync({ message: prepared });
@@ -245,7 +252,7 @@ export function useSiweAuth() {
     } finally {
       if (mounted.current) setAuthState(logoutPending() ? "signing-out" : "idle");
     }
-  }, [address, connector?.id, signMessageAsync, refresh]);
+  }, [address, connector?.id, isConnected, signMessageAsync, refresh]);
 
   const signOut = useCallback(async () => {
     // The attempt owns delivery through its ACK, independently of hook cleanup.
