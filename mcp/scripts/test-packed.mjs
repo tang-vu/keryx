@@ -85,6 +85,7 @@ try {
     { question: "Explain the café protocol – keep [PACKED-V3-AVAILABLE] exact.", language: "vi", readCheckpoints: capture(packet) },
     { question: "Explain the café protocol – keep [PACKED-V3-PARTIAL] exact.", language: "pt-BR", readCheckpoints: capture(partialPacket) },
     { question: "Explain the café protocol – keep [PACKED-V3-PRIVATE] exact.", language: "vi", readCheckpoints: capture(privatePacket) },
+    { question: "Expliquez le protocole café – gardez [PACKED-FR-AVAILABLE] exact.", language: "fr", readCheckpoints: capture(packet) },
   ];
   const publicResult = {
     answer: "Exact untranslated fixture answer: café – [S1].",
@@ -218,7 +219,7 @@ globalThis.fetch=async(input,init)=>{
     assert.equal(listed.tools.find(tool => tool.name === "paper_lookup").annotations.readOnlyHint, true);
     assert.deepEqual(listed.tools.find(tool => tool.name === "paper_lookup").inputSchema.properties.language.enum, ["en", "fr", "vi"]);
     assert.equal(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.question.maxLength, 2000);
-    assert.deepEqual(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.language.enum, ["en", "vi", "pt", "pt-BR", "es"]);
+    assert.deepEqual(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.language.enum, ["en", "vi", "pt", "pt-BR", "es", "fr"]);
     return { call: (name, args = {}) => request("tools/call", { name, arguments: args }), counts,
       stop: async () => { await stopChild(child); children.delete(child); lines.close(); } };
   }
@@ -227,7 +228,7 @@ globalThis.fetch=async(input,init)=>{
   const missing = await keyless.call("keryx_wallet_status"); assert.match(missing.content[0].text, /unconfigured/); assert.match(missing.content[0].text, /No wallet is created/);
   const invalidQuestion = await keyless.call("ask_keryx", { question: "x".repeat(2001) });
   assert(invalidQuestion.isError); assert.match(invalidQuestion.content[0].text, /2000/);
-  const invalidLanguage = await keyless.call("ask_keryx", { question: "Reject unsupported research language before custody", language: "fr" });
+  const invalidLanguage = await keyless.call("ask_keryx", { question: "Reject unsupported research language before custody", language: "de" });
   assert(invalidLanguage.isError); assert.match(invalidLanguage.content[0].text, /Input validation error.*ask_keryx/);
   assert.match(invalidLanguage.content[0].text, /language/);
   const metadata = await keyless.call("paper_lookup", { query: "https://arxiv.org/pdf/2005.11401v4.pdf" });
@@ -272,10 +273,15 @@ globalThis.fetch=async(input,init)=>{
       assert.match(text, /Cấp phục vụ từng bước/); assert.match(text, /chuẩn bị câu trả lời \(2,560 tokens\)/);
       assert.match(text, /Thông tin tài chính \(tiếng Anh\):/);
       assert(text.includes("Ngôn ngữ nhãn: vi. Ngôn ngữ câu trả lời chưa được ghi nhận; văn bản gốc không thay đổi."));
-    } else {
+    } else if (vector.language === "pt-BR") {
       assert.match(text, /Níveis de execução por etapa/); assert.match(text, /preparação da resposta \(2,560 tokens\)/);
       assert.match(text, /Informações financeiras \(em inglês\):/);
       assert(text.includes("Idioma dos rótulos: pt. O idioma da resposta não foi registrado; o texto original permanece inalterado."));
+    } else {
+      assert.equal(vector.language, "fr");
+      assert.match(text, /Niveaux d'exécution par étape/); assert.match(text, /préparation de la réponse \(2,560 tokens\)/);
+      assert.match(text, /Détails financiers \(en anglais\) :/);
+      assert(text.includes("Langue des libellés : fr. La langue de la réponse n'a pas été enregistrée ; son texte original est conservé."));
     }
     assert.match(text, /— Paid Keryx 0\.1 USDC/);
     assert.match(text, /Recorded creator total: \$0\.000001; citation allocations \(not individual settlement proof\):/);
@@ -284,14 +290,14 @@ globalThis.fetch=async(input,init)=>{
     assert(!Object.hasOwn(data, "answerLanguage")); assert(!Object.hasOwn(data, "language"));
     assert.equal(data.answer, publicResult.answer); assert.deepEqual(data.evidence, publicResult.evidence);
     for (const [field, expected] of Object.entries(publicResult)) assert.deepEqual(data[field], expected);
-    if (index < 2) assert.deepEqual(data.readCheckpoints, vector.readCheckpoints);
-    else assert.deepEqual(data.readCheckpoints, { status: "unavailable" });
+    if (index === 2) assert.deepEqual(data.readCheckpoints, { status: "unavailable" });
+    else assert.deepEqual(data.readCheckpoints, vector.readCheckpoints);
     for (const sentinel of privateSentinels) assert(!JSON.stringify(result).includes(sentinel), "Private checkpoint data escaped compiled buyer projection");
     presented.push(data);
   }
   await presentation.stop(); const presentationCounts = JSON.parse(await readFile(presentation.counts, "utf8"));
-  assert.equal(presentationCounts.paid, 3); assert.equal(presentationCounts.recovery, 0); assert.equal(presentationCounts.bibliography, 0);
-  assert.equal(presentationCounts.researchRequests.length, 6); assert.equal(presentationCounts.researchResults.length, 3);
+  assert.equal(presentationCounts.paid, 4); assert.equal(presentationCounts.recovery, 0); assert.equal(presentationCounts.bibliography, 0);
+  assert.equal(presentationCounts.researchRequests.length, 8); assert.equal(presentationCounts.researchResults.length, 4);
   for (const [index, vector] of portVectors.entries()) {
     const body = { question: vector.question, budget: 0.05, researchMode: "deep", responseMode: "async" };
     assert.deepEqual(presentationCounts.researchRequests.slice(index * 2, index * 2 + 2),
@@ -314,7 +320,7 @@ globalThis.fetch=async(input,init)=>{
   await recovery.stop(); const recoveryCounts = JSON.parse(await readFile(recovery.counts, "utf8")); assert.equal(recoveryCounts.paid, 0); assert.equal(recoveryCounts.recovery, 1);
   }
   console.log(JSON.stringify({ networks: ["arcTestnet", "arc"], package: installedPackage.name, version: installedPackage.version, node: process.version,
-    dependencies, cases: ["keyless initialize/tools/status without wallet creation", "free exact-version bibliography GET and explicit provider failure with retained snapshot", "funded caller status", "actual SDK signed purchase", "recorded per-step heuristic tier", "finite research language refusal before custody", "local stdio labels with unchanged paid body, evidence, amounts and receipt hashes", "compiled v3 available, partial optimizer and private-field refusal", "original response-loss barrier and no second debit", "new-process keyless GET-only recovery"], liveNetwork: false }));
+    dependencies, cases: ["keyless initialize/tools/status without wallet creation", "free exact-version bibliography GET and explicit provider failure with retained snapshot", "funded caller status", "actual SDK signed purchase", "recorded per-step heuristic tier", "finite research language refusal before custody", "local stdio labels including French with unchanged paid body, evidence, amounts and receipt hashes", "compiled v3 available, partial optimizer and private-field refusal", "original response-loss barrier and no second debit", "new-process keyless GET-only recovery"], liveNetwork: false }));
 } finally {
   const stopped = await Promise.allSettled([...children].map(stopChild));
   // Only the mkdtemp-created acceptance workspace is removed.
