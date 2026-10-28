@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // Same conservative boundary as the namespace preview validator. A preview never
 // upgrades machine drafts into approved payment, privacy, consent or legal copy.
 // Library bulk changes and cleared-data recovery require consent review as a whole.
-const critical = /payment|consent|legal|privacy|terms|authoriz|signature|signing|settle|refund|withdraw|deposit|budget|spend|funding|sponsor|purchase|pay\b|paid\b|wallet|receipt|reserv|uncertain|pending|simulat|failed|expired|balance|transaction|obligation|toll|reward|payout|publication|publish|ownership|visibility|private|unlisted|erased|\bcap\b|literature-(?:bulk-screening|clear-recovery)/iu;
+const critical = /payment|consent|legal|privacy|terms|authoriz|signature|signing|settle|refund|withdraw|deposit|budget|spend|funding|sponsor|purchase|pay\b|paid\b|wallet|receipt|reserv|uncertain|pending|simulat|failed|expired|balance|transaction|obligation|toll|reward|payout|publication|publish|ownership|visibility|private|unlisted|erased|\bfees?\b|\bcap\b|literature-(?:bulk-screening|clear-recovery)/iu;
 // Confirmation controls require review; educational prose mentioning confirmation does not.
 const consentKey = /(?:^|[.])confirm(?:ation)?(?:[A-Z_]|$)|Confirm(?:ation)?$/u;
 const read = file => readFileSync(path.join(root, file), "utf8");
@@ -16,7 +16,7 @@ const read = file => readFileSync(path.join(root, file), "utf8");
 // fail, even when somebody regenerates the compiled chunks after deleting text.
 const entryPreviewMinimums = {
   "core-inline": { authored: 10, preview: 10 }, "get-started": { authored: 19, preview: 19 },
-  "product-guide": { authored: 95, preview: 49 }, shell: { authored: 17, preview: 17 },
+  "product-guide": { authored: 95, preview: 48 }, shell: { authored: 17, preview: 17 },
   // The conservative critical-copy filter retains the loadFailed status in English.
   "ui-preference": { authored: 9, preview: 8 },
 };

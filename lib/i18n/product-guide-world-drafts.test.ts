@@ -6,12 +6,13 @@ import { expect, it, vi } from "vitest";
 import AboutPage from "@/app/about/page";
 import { productGuideCopy } from "@/locales/en/product-guide";
 import { extractNamespaceCopy, validateNamespaceDraft } from "../../scripts/check-ui-copy.mjs";
-import { shippedUiLocales } from "./locales";
+import { preparedLocales, shippedUiLocales } from "./locales";
 import { loadUiPreview } from "./ui-preview-catalogues";
 import { previewText } from "./ui-preview";
 import { UiCopyContext, englishUiCopy } from "./ui-copy-context";
 import { createMessages } from "./messages";
 import { createRichMessages } from "./rich-messages";
+import { validateNamespacePreview } from "./ui-shell-catalogue";
 
 vi.mock("@/components/keryx/site-header", () => ({ SiteHeader: () => null }));
 vi.mock("@/components/keryx/site-footer", () => ({ SiteFooter: () => null }));
@@ -37,7 +38,7 @@ it.each(locales)("%s covers every product-guide leaf and renders neutral explana
     expect(draft.entries[key].text).not.toBe(productGuideCopy(key));
     expect(previewText(preview, productGuideCopy(key), ["product-guide"])).toBe(draft.entries[key].text);
   }
-  for (const key of ["pricing.browserBody", "pricing.prepaidTerms", "product.faqPublicBody", "about.projectLegalNotice", "about.projectLegalLink", "about.contactBody"] as const) {
+  for (const key of ["pricing.service", "pricing.browserBody", "pricing.prepaidTerms", "product.faqPublicBody", "about.projectLegalNotice", "about.projectLegalLink", "about.contactBody"] as const) {
     expect(draft.entries[key].text).not.toBe(productGuideCopy(key));
     expect(previewText(preview, productGuideCopy(key), ["product-guide"])).toBe(productGuideCopy(key));
   }
@@ -58,4 +59,21 @@ it.each(locales)("%s covers every product-guide leaf and renders neutral explana
   expect(container.querySelector('a[href="https://github.com/tang-vu/keryx/blob/main/docs/licensing.md"]')!.textContent).toBe("Licensing scope");
   expect(container.querySelector('a[href="https://github.com/tang-vu/keryx"]')!.textContent).toBe(draft.entries["about.github"].text);
   expect(container.querySelector('a[href="https://github.com/tang-vu/keryx/issues"]')!.textContent).toBe(draft.entries["about.issues"].text);
+});
+
+it.each(preparedLocales.filter(locale => locale !== "en"))("%s keeps the unreviewed service-fee label English in compiled and directly loaded previews", async locale => {
+  const draft = JSON.parse(readFileSync(`locales/${locale}/ui-drafts/product-guide.json`, "utf8"));
+  const preview = await loadUiPreview(locale);
+  expect(previewText(preview, productGuideCopy("pricing.service"), ["product-guide"])).toBe("Service fee");
+  const selected = validateNamespacePreview(draft, { namespace: "product-guide", ...binding }, ["pricing.service", "pricing.package"]);
+  expect(selected["pricing.service"]).toBeUndefined();
+  expect(selected["pricing.package"]).toBe(draft.entries["pricing.package"].text);
+});
+
+it("retains fee ceilings and singular, plural and hyphenated fee copy without blocking feedback", () => {
+  const source = { namespace: "product-guide", ...extractNamespaceCopy(sourcePath,
+    'export const copy = {fee: "Service fee", plural: "Operating fees", component: "Service-fee component", ceiling: "Prepare reviewed amount and fee ceiling", feedback: "Leave feedback"};') };
+  const draft = { status: "machineDraft", review: null, sourcePath, sourceSha256: source.sourceSha256,
+    entries: Object.fromEntries(Object.entries(source.entries).map(([key, english]) => [key, { source: english, text: `Preview ${key}` }])) };
+  expect(validateNamespacePreview(draft, source, Object.keys(source.entries))).toEqual({ feedback: "Preview feedback" });
 });

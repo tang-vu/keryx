@@ -12,6 +12,10 @@
       "source": "AI research.",
       "text": "AIリサーチ。"
     },
+    "product.heroBody": {
+      "source": "Cited research. This trial is free, with no wallet required.",
+      "text": "出典付きの調査。このトライアルは無料で、ウォレットは不要です。"
+    },
     "product.overviewKicker": {
       "source": "What you get",
       "text": "得られるもの"
@@ -20,9 +24,21 @@
       "source": "A research answer you can follow back to its sources.",
       "text": "情報源までたどれる調査回答。"
     },
+    "product.overviewBody": {
+      "source": "Keryx is a citation-toll reading agent. Give it a question and a source budget: it discovers material, explains what it reads or skips, and writes an answer with citations. Eligible cited creators can receive separate USDC rewards.",
+      "text": "Keryx は、情報源のアクセス料金と引用を扱う読解エージェントです。質問と情報源の予算を指定すると、資料を探し、何を読むか、何を見送るかを説明し、出典付きの回答を作成します。条件を満たす引用先のクリエイターには、別途 USDC の報酬が支払われる場合があります。"
+    },
+    "product.briefsAction": {
+      "source": "Prepare a focused research brief",
+      "text": "焦点を絞った調査依頼を準備"
+    },
     "product.researchersTitle": {
       "source": "For researchers and students",
       "text": "研究者・学生向け"
+    },
+    "product.researchersBody": {
+      "source": "Find papers, compare evidence and build a literature review. Keep unavailable papers and abstract-only reads visible instead of treating them as full-text evidence.",
+      "text": "論文を探し、証拠を比較し、文献レビューを作成できます。入手できない論文や要旨しか読めていない資料を明示し、全文の証拠として扱わないでください。"
     },
     "product.researchersAction": {
       "source": "Open the literature workspace",
@@ -44,6 +60,10 @@
       "source": "For agent developers",
       "text": "エージェント開発者向け"
     },
+    "product.agentsBody": {
+      "source": "Use research through the API or MCP. Prepaid jobs carry a quoted service fee, a creator reserve and recovery records that distinguish a result from a settled payment.",
+      "text": "API または MCP 経由で調査を利用できます。前払いジョブには、見積もりに示されたサービス料金、クリエイター向け予備費、結果の取得と決済完了を区別する復旧記録が含まれます。"
+    },
     "product.agentsAction": {
       "source": "Explore developer integrations",
       "text": "開発者向け連携を見る"
@@ -56,6 +76,38 @@
       "source": "Trust comes from what you can check.",
       "text": "確認できることが、信頼につながります。"
     },
+    "product.proofBody": {
+      "source": "Open source decisions and original references. Payment records distinguish settled, pending, failed and simulated states. A saved answer or a registry entry alone does not prove a payment or a useful result.",
+      "text": "情報源の選択理由と元の参照先を確認してください。支払い記録では、決済完了、確認待ち、失敗、シミュレーションを区別しています。保存された回答やレジストリの登録だけでは、支払いの実行や結果の有用性は証明できません。"
+    },
+    "product.walkthrough": {
+      "source": "Follow a recorded research job",
+      "text": "記録済みの調査ジョブをたどる"
+    },
+    "product.proof": {
+      "source": "Inspect public proof",
+      "text": "公開されている証拠を確認"
+    },
+    "product.quality": {
+      "source": "Read quality and evaluation limits",
+      "text": "品質と評価の限界を読む"
+    },
+    "product.pricing": {
+      "source": "Pricing & budgets",
+      "text": "料金と予算"
+    },
+    "product.about": {
+      "source": "About & contact",
+      "text": "概要・お問い合わせ"
+    },
+    "product.navigationPricing": {
+      "source": "Pricing",
+      "text": "料金"
+    },
+    "product.navigationAbout": {
+      "source": "About",
+      "text": "Keryxについて"
+    },
     "product.try": {
       "source": "Try a research question",
       "text": "調査の質問を試す"
@@ -64,13 +116,273 @@
       "source": "Before your first question",
       "text": "最初の質問の前に"
     },
-    "product.navigationAbout": {
-      "source": "About",
-      "text": "Keryxについて"
+    "product.faqWallet": {
+      "source": "Do I need a wallet to try Keryx?",
+      "text": "Keryx を試すにはウォレットが必要ですか？"
+    },
+    "product.faqWalletBody": {
+      "source": "The sponsored public trial needs no wallet or USDC deposit. Keryx covers approved source spending and operating costs within its usage and spending limits. The form shows a notice when the trial is paused.",
+      "text": "スポンサー付き公開トライアルでは、ウォレットも USDC の入金も不要です。利用上限と支出上限の範囲内で、承認された情報源への支出と運用コストを Keryx が負担します。トライアルが一時停止中の場合は、質問フォームにお知らせが表示されます。"
+    },
+    "product.faqPublic": {
+      "source": "Can I submit confidential research?",
+      "text": "機密性のある調査内容を送信できますか？"
+    },
+    "product.faqPublicBody": {
+      "source": "Sponsored trial reports have public links. Use questions you can share publicly. Review the separate private-research flow and privacy terms before submitting confidential material; signing in alone does not make a trial report private.",
+      "text": "スポンサー付きトライアルのレポートには公開リンクがあります。公開してもよい質問を使用してください。機密情報を送信する前に、別の非公開調査フローとプライバシーに関する条件を確認してください。ログインしただけでは、トライアルのレポートは非公開になりません。"
+    },
+    "product.faqPayment": {
+      "source": "Does every citation pay a publisher?",
+      "text": "引用するたびに公開者への支払いが発生しますか？"
+    },
+    "product.faqPaymentBody": {
+      "source": "No. Public pages can be read without a source access toll. Creator rewards require qualifying evidence and verified payout authority. Sponsored operating fees, when eligible, are recorded separately and are not publisher payments.",
+      "text": "いいえ。公開ページは、情報源のアクセス料金を支払わずに読めます。クリエイター報酬には、条件を満たす証拠と、検証済みの支払い先権限が必要です。条件を満たすスポンサー負担の運用料金は別途記録され、公開者への支払いとは区別されます。"
+    },
+    "product.faqTrust": {
+      "source": "Are demo reports or AI answers verified facts?",
+      "text": "デモレポートや AI の回答は、検証済みの事実ですか？"
+    },
+    "product.faqTrustBody": {
+      "source": "No. Synthetic examples are demonstrations, and historical testnet receipts stay labelled as testnet. AI answers can be incomplete or wrong: inspect the original sources, evidence limitations and payment state before relying on a report.",
+      "text": "いいえ。合成例はデモンストレーションであり、過去の testnet のレシートは引き続き testnet と明示されます。AI の回答には不足や誤りがあり得ます。レポートを利用する前に、元の情報源、証拠の限界、支払い状態を確認してください。"
+    },
+    "product.entryLabel": {
+      "source": "About this research service",
+      "text": "この調査サービスについて"
+    },
+    "product.entryBody": {
+      "source": "Keryx turns questions into cited research answers with visible source decisions and spending limits. Each saved report keeps its own evidence limitations and payment labels. Open the original sources and receipts to inspect a particular run.",
+      "text": "Keryx は質問から、情報源の選択過程と支出上限が見える、出典付きの調査回答を作成します。保存された各レポートには、そのレポート固有の証拠の限界と支払いラベルが保持されます。特定の実行内容を調べるには、元の情報源とレシートを開いてください。"
+    },
+    "pricing.title": {
+      "source": "Know what you pay for.",
+      "text": "何に支払うのかを理解する。"
+    },
+    "pricing.metadataTitle": {
+      "source": "Pricing & research budgets",
+      "text": "料金と調査予算"
+    },
+    "pricing.description": {
+      "source": "Understand Keryx's sponsored trial, browser-funded source budgets and prepaid Quick/Deep research fees before you start.",
+      "text": "開始前に、Keryx のスポンサー付きトライアル、ブラウザー経由で資金を入れる情報源予算、前払いの Quick/Deep 調査料金を確認してください。"
+    },
+    "pricing.currencySuffix": {
+      "source": "· USDC",
+      "text": "· USDC"
+    },
+    "pricing.introduction": {
+      "source": "Choose the research path that fits your task. Source access, eligible creator rewards and the research service are distinct costs. Payment amounts below are in USDC; the configured network is shown above.",
+      "text": "目的に合う調査方法を選んでください。情報源へのアクセス、条件を満たすクリエイター報酬、調査サービスは、それぞれ別の費用です。以下の支払い金額は USDC 建てで、設定されているネットワークは上部に表示されます。"
+    },
+    "pricing.trialTitle": {
+      "source": "Sponsored public trial",
+      "text": "スポンサー付き公開トライアル"
+    },
+    "pricing.trialPrice": {
+      "source": "No wallet or deposit",
+      "text": "ウォレットも入金も不要"
+    },
+    "pricing.trialBody": {
+      "source": "Keryx sponsors source purchases, eligible rewards and operating costs within current trial limits. Availability is shown in the question form. This is a limited trial, not an unlimited free plan.",
+      "text": "Keryx は現在のトライアル上限内で、情報源の購入、条件を満たす報酬、運用コストを負担します。利用可能かどうかは質問フォームに表示されます。これは制限付きのトライアルであり、無制限の無料プランではありません。"
+    },
+    "pricing.trialPrivacy": {
+      "source": "Trial reports have public links. Use shareable questions.",
+      "text": "トライアルのレポートには公開リンクがあります。共有してもよい質問を使用してください。"
+    },
+    "pricing.browserTitle": {
+      "source": "Your browser source budget",
+      "text": "ブラウザーの情報源予算"
+    },
+    "pricing.browserPrice": {
+      "source": "You set the source cap",
+      "text": "情報源への支出上限を自分で設定"
+    },
+    "pricing.browserBody": {
+      "source": "A funded browser session pays for source reads and eligible creator rewards within your approved question and session caps. Pending authorizations count against the cap; unused funds remain in your Gateway balance. Model and search operating costs are separate from the source cap.",
+      "text": "資金のあるブラウザーセッションでは、承認した質問単位・セッション単位の上限内で、情報源の閲覧と条件を満たすクリエイター報酬を支払います。保留中の支払い承認も上限に算入され、未使用の資金は Gateway 残高に残ります。モデルと検索の運用コストは、情報源の支出上限とは別です。"
+    },
+    "pricing.browserFee": {
+      "source": "No prepaid research-package service fee is added to the browser's source grant.",
+      "text": "ブラウザーの情報源支出枠には、前払い調査パッケージのサービス料金は加算されません。"
+    },
+    "pricing.browserAction": {
+      "source": "Review browser budgets",
+      "text": "ブラウザーの予算を確認"
+    },
+    "pricing.prepaidTitle": {
+      "source": "Prepaid research jobs",
+      "text": "前払い調査ジョブ"
+    },
+    "pricing.prepaidBody": {
+      "source": "Quick and Deep packages combine a service fee with your chosen creator reserve. The fee covers the research service; the reserve bounds source purchases and eligible creator rewards. Review the current quote, availability and terms before paying.",
+      "text": "Quick と Deep のパッケージは、サービス料金と、選択したクリエイター向け予備費を組み合わせたものです。料金は調査サービスを賄い、予備費は情報源の購入と条件を満たすクリエイター報酬への支出を制限します。支払う前に、現在の見積もり、利用可能状況、条件を確認してください。"
+    },
+    "pricing.package": {
+      "source": "Package",
+      "text": "パッケージ"
+    },
+    "pricing.service": {
+      "source": "Service fee",
+      "text": "サービス料金"
+    },
+    "pricing.reserve": {
+      "source": "Creator reserve",
+      "text": "クリエイター向け予備費"
+    },
+    "pricing.total": {
+      "source": "Total prepaid price",
+      "text": "前払いの合計金額"
+    },
+    "pricing.quick": {
+      "source": "Quick",
+      "text": "簡易"
+    },
+    "pricing.deep": {
+      "source": "Deep",
+      "text": "詳細"
+    },
+    "pricing.quoteNotice": {
+      "source": "Illustration using this deployment's default creator reserve. Amounts come from the same pricing function as checkout. This table is not an availability guarantee; checkout can refuse a job or return a different total when you change the reserve.",
+      "text": "このデプロイの既定のクリエイター向け予備費を使った例です。金額は購入手続きと同じ価格計算関数から算出されます。この表は提供可能であることを保証しません。購入手続きでジョブが拒否されたり、予備費を変更すると合計金額が変わったりすることがあります。"
+    },
+    "pricing.prepaidTerms": {
+      "source": "Prepaid packages are non-refundable under the current policy. An unused creator reserve stays in the package. Targets describe the package's service level, not a promise of correctness or an individual completion time.",
+      "text": "現在のポリシーでは、前払いパッケージは返金対象外です。未使用のクリエイター向け予備費はパッケージ内に残ります。目標値はパッケージのサービス水準を示すものであり、正確性や個々のジョブの完了時間を保証するものではありません。"
+    },
+    "pricing.checkout": {
+      "source": "Review current quote & availability",
+      "text": "現在の見積もりと提供状況を確認"
+    },
+    "pricing.monthlyTitle": {
+      "source": "Research Monthly",
+      "text": "月間リサーチ"
+    },
+    "pricing.monthlyBody": {
+      "source": "A separate prepaid option covers four manually requested Deep jobs over 30 days, with a 10% discount against four individual packages. It is not an automatic research schedule. Check the live quote and availability in the research workspace.",
+      "text": "別の前払いオプションでは、30日間に手動で依頼する4件のDeepジョブを利用でき、個別のパッケージ4件に比べて10%割引になります。自動でリサーチを実行するスケジュールではありません。リサーチワークスペースで現在の見積もりと提供状況を確認してください。"
+    },
+    "pricing.creatorTitle": {
+      "source": "Publishing a source?",
+      "text": "情報源を公開しますか？"
+    },
+    "pricing.creatorBody": {
+      "source": "Set an access toll for a source you control and prove ownership. A paid read and an eligible citation reward are separate payment legs; listing alone does not guarantee earnings. Public sources and disabled reward policies do not become paid merely by being cited.",
+      "text": "管理する情報源にアクセス料金を設定し、所有権を証明してください。有料での閲覧と対象となる引用報酬は別々の支払い要素です。登録しただけで収益が保証されるわけではありません。引用されたというだけで、公開情報源が有料になったり、無効な報酬ポリシーによる支払いが始まったりすることはありません。"
+    },
+    "about.metadataTitle": {
+      "source": "About Keryx & support",
+      "text": "Keryxについて・サポート"
+    },
+    "about.description": {
+      "source": "What Keryx does, who it is for, how to inspect its evidence and where to get support.",
+      "text": "Keryxの機能、対象ユーザー、根拠の確認方法、サポート窓口をご案内します。"
+    },
+    "about.title": {
+      "source": "Research with a visible trail.",
+      "text": "過程が見えるリサーチ。"
+    },
+    "about.introduction": {
+      "source": "Keryx helps researchers, builders and writers turn a question into a cited answer while seeing what the agent reads, why it chooses each source and how the source budget is used.",
+      "text": "Keryxは、研究者、開発者、執筆者が質問から出典付きの回答を作成するのを支援します。エージェントが何を読み、なぜ各情報源を選び、情報源の予算をどう使ったかを確認できます。"
+    },
+    "about.whyTitle": {
+      "source": "Why Keryx exists",
+      "text": "Keryxが生まれた理由"
+    },
+    "about.whyBody": {
+      "source": "Useful research depends on the people who publish the underlying work. Keryx combines source discovery and cited answers with bounded paid access and qualifying creator rewards. Public references remain useful even when there is no publisher payment.",
+      "text": "有用なリサーチは、その基礎となる研究や資料を公開する人々に支えられています。Keryxは、情報源の発見と出典付きの回答に、上限のある有料アクセスと条件を満たすクリエイターへの報酬を組み合わせています。公開者への支払いがない場合でも、公開された参考資料は有用です。"
     },
     "about.projectTitle": {
       "source": "Developed in public",
       "text": "開発の過程を公開"
+    },
+    "about.projectBody": {
+      "source": "Keryx's implementation, changes and issue tracker are public on GitHub. Inspect the code, report a problem or follow development there. Public proof and quality pages document evidence and remaining acceptance gates; they do not establish independent customer adoption.",
+      "text": "Keryxの実装、変更履歴、課題管理はGitHubで公開されています。コードの確認、問題の報告、開発状況の確認にご利用ください。公開の実証ページと品質ページには、根拠と残っている受け入れ条件を記載していますが、独立した顧客による導入を証明するものではありません。"
+    },
+    "about.projectLegalNotice": {
+      "source": "Keryx does not currently have a repository-wide license. Some files and dependencies carry their own license terms. Read the licensing scope before reusing code.",
+      "text": "現在、Keryxにはリポジトリ全体を対象とするライセンスがありません。一部のファイルと依存関係には、それぞれ独自のライセンス条件があります。コードを再利用する前に、ライセンスの適用範囲を確認してください。"
+    },
+    "about.projectLegalLink": {
+      "source": "Licensing scope",
+      "text": "ライセンスの適用範囲"
+    },
+    "about.github": {
+      "source": "View source code",
+      "text": "ソースコードを見る"
+    },
+    "about.issues": {
+      "source": "Report an issue",
+      "text": "問題を報告"
+    },
+    "about.contactTitle": {
+      "source": "Contact support",
+      "text": "サポートへのお問い合わせ"
+    },
+    "about.contactBody": {
+      "source": "For questions about research, creator onboarding, payment recovery or privacy, email support. Include a public report link or a non-sensitive description of the issue. Never send private keys, seed phrases, API keys or private recovery credentials.",
+      "text": "リサーチ、クリエイター登録、支払いの復旧、プライバシーに関するご質問は、サポートにメールでお問い合わせください。公開レポートのリンク、または機密情報を含まない問題の説明を添えてください。秘密鍵、シードフレーズ、APIキー、非公開の復旧用認証情報は絶対に送信しないでください。"
+    },
+    "about.boundariesTitle": {
+      "source": "What to know before using it",
+      "text": "利用前に知っておくこと"
+    },
+    "about.boundariesBody": {
+      "source": "AI reports need source review. Sponsored reports are public, experimental features keep their own gates, and payment attempts only count as settled when original settlement evidence exists. Historical and synthetic records keep their original labels.",
+      "text": "AIレポートは情報源の確認が必要です。スポンサー付きレポートは公開され、実験的な機能にはそれぞれ固有の利用条件が適用されます。支払いの試行は、決済を示す元の証拠が存在する場合にのみ決済完了として数えられます。過去の記録と合成データの記録は、元のラベルを維持します。"
+    },
+    "product.support": {
+      "source": "Email support",
+      "text": "サポートにメール"
+    },
+    "product.privacy": {
+      "source": "Privacy",
+      "text": "プライバシー"
+    },
+    "product.terms": {
+      "source": "Terms",
+      "text": "利用規約"
+    },
+    "product.stepsTitle": {
+      "source": "How Keryx researches a question",
+      "text": "Keryxが質問を調べる仕組み"
+    },
+    "product.stepsDecide": {
+      "source": "Keryx compares source previews and prices under your cap, then explains what it reads or skips. Unused browser-session funds remain yours; prepaid reserves follow the package terms.",
+      "text": "Keryxは支出上限の範囲内で情報源のプレビューと価格を比較し、何を読むか、何をスキップするかを説明します。ブラウザーセッションの未使用資金は引き続きあなたのものです。前払いの予備費にはパッケージの条件が適用されます。"
+    },
+    "product.stepsCite": {
+      "source": "It reads available public or purchased material and writes an answer with citations to supporting sources. Unavailable content and thin evidence remain visible.",
+      "text": "利用可能な公開資料や購入した資料を読み、根拠となる情報源を引用した回答を作成します。利用できない内容や根拠が乏しい点も引き続き明示されます。"
+    },
+    "product.metaTitle": {
+      "source": "Keryx — AI research with cited evidence",
+      "text": "Keryx — 出典を示すAIリサーチ"
+    },
+    "product.metaDescription": {
+      "source": "For researchers, builders and writers: turn a question into a cited answer with visible source decisions and spending limits. Try Keryx's sponsored public trial; eligibility and usage limits apply.",
+      "text": "研究者、開発者、執筆者のために、質問から出典付きの回答を作成し、情報源の判断と支出上限を確認できます。Keryxのスポンサー付き公開トライアルをお試しください。利用資格の条件と利用上限が適用されます。"
+    },
+    "product.socialAlt": {
+      "source": "Keryx — cited AI research with visible source decisions",
+      "text": "Keryx — 情報源の判断が見える、出典付きAIリサーチ"
+    },
+    "product.socialTitle": {
+      "source": "Cited research.\nVisible decisions.",
+      "text": "出典付きのリサーチ。\n見える判断。"
+    },
+    "product.socialSubtitle": {
+      "source": "Inspect sources, spending and creator payment proof",
+      "text": "情報源、支出、クリエイターへの支払い証拠を確認"
+    },
+    "product.slogan": {
+      "source": "Cited research. Visible decisions.",
+      "text": "出典付きのリサーチ。見える判断。"
     }
   }
 }

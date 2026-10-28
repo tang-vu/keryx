@@ -12,6 +12,10 @@
       "source": "AI research.",
       "text": "Pesquisa com IA."
     },
+    "product.heroBody": {
+      "source": "Cited research. This trial is free, with no wallet required.",
+      "text": "Pesquisa com citações. Este teste é gratuito, sem necessidade de carteira."
+    },
     "product.overviewKicker": {
       "source": "What you get",
       "text": "O que você recebe"
@@ -20,9 +24,21 @@
       "source": "A research answer you can follow back to its sources.",
       "text": "Uma resposta de pesquisa que permite chegar às fontes."
     },
+    "product.overviewBody": {
+      "source": "Keryx is a citation-toll reading agent. Give it a question and a source budget: it discovers material, explains what it reads or skips, and writes an answer with citations. Eligible cited creators can receive separate USDC rewards.",
+      "text": "Keryx é um agente de leitura que combina citações e tarifas de acesso a fontes. Informe uma pergunta e um orçamento para fontes: ele encontra material, explica o que lê ou descarta e escreve uma resposta com citações. Criadores citados que atendam aos critérios podem receber recompensas separadas em USDC."
+    },
+    "product.briefsAction": {
+      "source": "Prepare a focused research brief",
+      "text": "Preparar um briefing de pesquisa focado"
+    },
     "product.researchersTitle": {
       "source": "For researchers and students",
       "text": "Para pesquisadores e estudantes"
+    },
+    "product.researchersBody": {
+      "source": "Find papers, compare evidence and build a literature review. Keep unavailable papers and abstract-only reads visible instead of treating them as full-text evidence.",
+      "text": "Encontre artigos, compare evidências e elabore uma revisão da literatura. Mantenha visíveis os artigos indisponíveis e as leituras apenas do resumo, sem tratá-los como evidência do texto completo."
     },
     "product.researchersAction": {
       "source": "Open the literature workspace",
@@ -44,6 +60,10 @@
       "source": "For agent developers",
       "text": "Para desenvolvedores de agentes"
     },
+    "product.agentsBody": {
+      "source": "Use research through the API or MCP. Prepaid jobs carry a quoted service fee, a creator reserve and recovery records that distinguish a result from a settled payment.",
+      "text": "Use a pesquisa pela API ou pelo MCP. Trabalhos pré-pagos incluem uma taxa de serviço cotada, uma reserva para criadores e registros de recuperação que distinguem um resultado de um pagamento liquidado."
+    },
     "product.agentsAction": {
       "source": "Explore developer integrations",
       "text": "Explorar integrações para desenvolvedores"
@@ -56,6 +76,38 @@
       "source": "Trust comes from what you can check.",
       "text": "A confiança vem do que você pode verificar."
     },
+    "product.proofBody": {
+      "source": "Open source decisions and original references. Payment records distinguish settled, pending, failed and simulated states. A saved answer or a registry entry alone does not prove a payment or a useful result.",
+      "text": "Abra as decisões sobre fontes e as referências originais. Os registros de pagamento distinguem estados liquidados, aguardando confirmação, com falha e simulados. Uma resposta salva ou um cadastro no registro, por si só, não comprova um pagamento nem um resultado útil."
+    },
+    "product.walkthrough": {
+      "source": "Follow a recorded research job",
+      "text": "Acompanhar uma pesquisa registrada"
+    },
+    "product.proof": {
+      "source": "Inspect public proof",
+      "text": "Examinar as evidências públicas"
+    },
+    "product.quality": {
+      "source": "Read quality and evaluation limits",
+      "text": "Ler os limites de qualidade e avaliação"
+    },
+    "product.pricing": {
+      "source": "Pricing & budgets",
+      "text": "Preços e orçamentos"
+    },
+    "product.about": {
+      "source": "About & contact",
+      "text": "Sobre e contato"
+    },
+    "product.navigationPricing": {
+      "source": "Pricing",
+      "text": "Preços"
+    },
+    "product.navigationAbout": {
+      "source": "About",
+      "text": "Sobre"
+    },
     "product.try": {
       "source": "Try a research question",
       "text": "Testar uma pergunta de pesquisa"
@@ -64,13 +116,273 @@
       "source": "Before your first question",
       "text": "Antes da sua primeira pergunta"
     },
-    "product.navigationAbout": {
-      "source": "About",
-      "text": "Sobre"
+    "product.faqWallet": {
+      "source": "Do I need a wallet to try Keryx?",
+      "text": "Preciso de uma carteira para experimentar o Keryx?"
+    },
+    "product.faqWalletBody": {
+      "source": "The sponsored public trial needs no wallet or USDC deposit. Keryx covers approved source spending and operating costs within its usage and spending limits. The form shows a notice when the trial is paused.",
+      "text": "O teste público patrocinado não exige carteira nem depósito de USDC. Keryx cobre os gastos aprovados com fontes e os custos operacionais dentro dos seus limites de uso e de gastos. O formulário exibe um aviso quando o teste está pausado."
+    },
+    "product.faqPublic": {
+      "source": "Can I submit confidential research?",
+      "text": "Posso enviar uma pesquisa confidencial?"
+    },
+    "product.faqPublicBody": {
+      "source": "Sponsored trial reports have public links. Use questions you can share publicly. Review the separate private-research flow and privacy terms before submitting confidential material; signing in alone does not make a trial report private.",
+      "text": "Os relatórios do teste patrocinado têm links públicos. Use perguntas que você possa compartilhar publicamente. Leia o fluxo separado de pesquisa privada e os termos de privacidade antes de enviar material confidencial; entrar na conta, por si só, não torna privado um relatório do teste."
+    },
+    "product.faqPayment": {
+      "source": "Does every citation pay a publisher?",
+      "text": "Toda citação gera um pagamento a um publicador?"
+    },
+    "product.faqPaymentBody": {
+      "source": "No. Public pages can be read without a source access toll. Creator rewards require qualifying evidence and verified payout authority. Sponsored operating fees, when eligible, are recorded separately and are not publisher payments.",
+      "text": "Não. Páginas públicas podem ser lidas sem tarifa de acesso à fonte. As recompensas para criadores exigem evidências que atendam aos critérios e autoridade de pagamento verificada. As taxas operacionais patrocinadas, quando elegíveis, são registradas separadamente e não são pagamentos a publicadores."
+    },
+    "product.faqTrust": {
+      "source": "Are demo reports or AI answers verified facts?",
+      "text": "Relatórios de demonstração ou respostas de IA são fatos verificados?"
+    },
+    "product.faqTrustBody": {
+      "source": "No. Synthetic examples are demonstrations, and historical testnet receipts stay labelled as testnet. AI answers can be incomplete or wrong: inspect the original sources, evidence limitations and payment state before relying on a report.",
+      "text": "Não. Exemplos sintéticos são demonstrações, e recibos históricos da testnet continuam identificados como testnet. Respostas de IA podem estar incompletas ou erradas: examine as fontes originais, as limitações das evidências e o estado dos pagamentos antes de se apoiar em um relatório."
+    },
+    "product.entryLabel": {
+      "source": "About this research service",
+      "text": "Sobre este serviço de pesquisa"
+    },
+    "product.entryBody": {
+      "source": "Keryx turns questions into cited research answers with visible source decisions and spending limits. Each saved report keeps its own evidence limitations and payment labels. Open the original sources and receipts to inspect a particular run.",
+      "text": "Keryx transforma perguntas em respostas de pesquisa com citações, decisões visíveis sobre fontes e limites de gastos. Cada relatório salvo mantém suas próprias limitações de evidência e identificações de pagamento. Abra as fontes e os recibos originais para examinar uma execução específica."
+    },
+    "pricing.title": {
+      "source": "Know what you pay for.",
+      "text": "Saiba pelo que você paga."
+    },
+    "pricing.metadataTitle": {
+      "source": "Pricing & research budgets",
+      "text": "Preços e orçamentos de pesquisa"
+    },
+    "pricing.description": {
+      "source": "Understand Keryx's sponsored trial, browser-funded source budgets and prepaid Quick/Deep research fees before you start.",
+      "text": "Antes de começar, entenda o teste patrocinado do Keryx, os orçamentos para fontes financiados via navegador e as taxas de pesquisa pré-paga Quick/Deep."
+    },
+    "pricing.currencySuffix": {
+      "source": "· USDC",
+      "text": "· USDC"
+    },
+    "pricing.introduction": {
+      "source": "Choose the research path that fits your task. Source access, eligible creator rewards and the research service are distinct costs. Payment amounts below are in USDC; the configured network is shown above.",
+      "text": "Escolha o caminho de pesquisa adequado à sua tarefa. Acesso a fontes, recompensas elegíveis para criadores e o serviço de pesquisa são custos distintos. Os valores abaixo estão em USDC; a rede configurada aparece acima."
+    },
+    "pricing.trialTitle": {
+      "source": "Sponsored public trial",
+      "text": "Teste público patrocinado"
+    },
+    "pricing.trialPrice": {
+      "source": "No wallet or deposit",
+      "text": "Sem carteira nem depósito"
+    },
+    "pricing.trialBody": {
+      "source": "Keryx sponsors source purchases, eligible rewards and operating costs within current trial limits. Availability is shown in the question form. This is a limited trial, not an unlimited free plan.",
+      "text": "Keryx patrocina compras de acesso a fontes, recompensas elegíveis e custos operacionais dentro dos limites atuais do teste. A disponibilidade aparece no formulário de perguntas. Este é um teste limitado, não um plano gratuito ilimitado."
+    },
+    "pricing.trialPrivacy": {
+      "source": "Trial reports have public links. Use shareable questions.",
+      "text": "Relatórios do teste têm links públicos. Use perguntas que você possa compartilhar."
+    },
+    "pricing.browserTitle": {
+      "source": "Your browser source budget",
+      "text": "Seu orçamento para fontes no navegador"
+    },
+    "pricing.browserPrice": {
+      "source": "You set the source cap",
+      "text": "Você define o limite de gastos com fontes"
+    },
+    "pricing.browserBody": {
+      "source": "A funded browser session pays for source reads and eligible creator rewards within your approved question and session caps. Pending authorizations count against the cap; unused funds remain in your Gateway balance. Model and search operating costs are separate from the source cap.",
+      "text": "Uma sessão de navegador financiada paga leituras de fontes e recompensas elegíveis para criadores dentro dos limites aprovados por pergunta e por sessão. Autorizações pendentes contam para o limite; os fundos não utilizados permanecem no seu saldo do Gateway. Os custos operacionais de modelos e buscas são separados do limite para fontes."
+    },
+    "pricing.browserFee": {
+      "source": "No prepaid research-package service fee is added to the browser's source grant.",
+      "text": "Nenhuma taxa de serviço de pacote de pesquisa pré-pago é acrescentada à autorização de gastos com fontes do navegador."
+    },
+    "pricing.browserAction": {
+      "source": "Review browser budgets",
+      "text": "Revisar orçamentos do navegador"
+    },
+    "pricing.prepaidTitle": {
+      "source": "Prepaid research jobs",
+      "text": "Trabalhos de pesquisa pré-pagos"
+    },
+    "pricing.prepaidBody": {
+      "source": "Quick and Deep packages combine a service fee with your chosen creator reserve. The fee covers the research service; the reserve bounds source purchases and eligible creator rewards. Review the current quote, availability and terms before paying.",
+      "text": "Os pacotes Quick e Deep combinam uma taxa de serviço com a reserva para criadores escolhida por você. A taxa cobre o serviço de pesquisa; a reserva limita os gastos com compras de acesso a fontes e recompensas elegíveis para criadores. Confira a cotação atual, a disponibilidade e os termos antes de pagar."
+    },
+    "pricing.package": {
+      "source": "Package",
+      "text": "Pacote"
+    },
+    "pricing.service": {
+      "source": "Service fee",
+      "text": "Taxa de serviço"
+    },
+    "pricing.reserve": {
+      "source": "Creator reserve",
+      "text": "Reserva para criadores"
+    },
+    "pricing.total": {
+      "source": "Total prepaid price",
+      "text": "Preço total pré-pago"
+    },
+    "pricing.quick": {
+      "source": "Quick",
+      "text": "Rápida"
+    },
+    "pricing.deep": {
+      "source": "Deep",
+      "text": "Aprofundada"
+    },
+    "pricing.quoteNotice": {
+      "source": "Illustration using this deployment's default creator reserve. Amounts come from the same pricing function as checkout. This table is not an availability guarantee; checkout can refuse a job or return a different total when you change the reserve.",
+      "text": "Exemplo com a reserva padrão para criadores desta implantação. Os valores vêm da mesma função de preços usada na finalização da compra. Esta tabela não garante disponibilidade: a compra pode recusar um trabalho ou apresentar outro total se você alterar a reserva."
+    },
+    "pricing.prepaidTerms": {
+      "source": "Prepaid packages are non-refundable under the current policy. An unused creator reserve stays in the package. Targets describe the package's service level, not a promise of correctness or an individual completion time.",
+      "text": "Pela política atual, os pacotes pré-pagos não são reembolsáveis. A reserva não utilizada para criadores permanece no pacote. As metas descrevem o nível de serviço do pacote, sem prometer exatidão ou um prazo de conclusão para cada trabalho."
+    },
+    "pricing.checkout": {
+      "source": "Review current quote & availability",
+      "text": "Ver cotação e disponibilidade atuais"
+    },
+    "pricing.monthlyTitle": {
+      "source": "Research Monthly",
+      "text": "Pesquisa mensal"
+    },
+    "pricing.monthlyBody": {
+      "source": "A separate prepaid option covers four manually requested Deep jobs over 30 days, with a 10% discount against four individual packages. It is not an automatic research schedule. Check the live quote and availability in the research workspace.",
+      "text": "Uma opção pré-paga separada cobre quatro trabalhos Deep solicitados manualmente ao longo de 30 dias, com desconto de 10% em relação a quatro pacotes individuais. Não é um agendamento automático de pesquisas. Confira a cotação e a disponibilidade atuais no espaço de pesquisa."
+    },
+    "pricing.creatorTitle": {
+      "source": "Publishing a source?",
+      "text": "Vai publicar uma fonte?"
+    },
+    "pricing.creatorBody": {
+      "source": "Set an access toll for a source you control and prove ownership. A paid read and an eligible citation reward are separate payment legs; listing alone does not guarantee earnings. Public sources and disabled reward policies do not become paid merely by being cited.",
+      "text": "Defina uma tarifa de acesso para uma fonte que você controla e comprove sua propriedade. Uma leitura paga e uma recompensa por citação elegível são componentes de pagamento separados; estar no catálogo não garante ganhos. Fontes públicas e políticas de recompensa desativadas não passam a gerar pagamentos apenas por receberem uma citação."
+    },
+    "about.metadataTitle": {
+      "source": "About Keryx & support",
+      "text": "Sobre o Keryx e suporte"
+    },
+    "about.description": {
+      "source": "What Keryx does, who it is for, how to inspect its evidence and where to get support.",
+      "text": "O que o Keryx faz, para quem ele serve, como examinar suas evidências e onde obter ajuda."
+    },
+    "about.title": {
+      "source": "Research with a visible trail.",
+      "text": "Pesquisa com um caminho visível."
+    },
+    "about.introduction": {
+      "source": "Keryx helps researchers, builders and writers turn a question into a cited answer while seeing what the agent reads, why it chooses each source and how the source budget is used.",
+      "text": "O Keryx ajuda pesquisadores, desenvolvedores e escritores a transformar uma pergunta em uma resposta com citações, mostrando o que o agente lê, por que escolhe cada fonte e como usa o orçamento para fontes."
+    },
+    "about.whyTitle": {
+      "source": "Why Keryx exists",
+      "text": "Por que o Keryx existe"
+    },
+    "about.whyBody": {
+      "source": "Useful research depends on the people who publish the underlying work. Keryx combines source discovery and cited answers with bounded paid access and qualifying creator rewards. Public references remain useful even when there is no publisher payment.",
+      "text": "Uma pesquisa útil depende de quem publica os trabalhos que a fundamentam. O Keryx combina a descoberta de fontes e respostas com citações com acesso pago limitado e recompensas para criadores que atendam aos critérios. Referências públicas continuam úteis mesmo quando não há pagamento ao publicador."
     },
     "about.projectTitle": {
       "source": "Developed in public",
       "text": "Desenvolvido em público"
+    },
+    "about.projectBody": {
+      "source": "Keryx's implementation, changes and issue tracker are public on GitHub. Inspect the code, report a problem or follow development there. Public proof and quality pages document evidence and remaining acceptance gates; they do not establish independent customer adoption.",
+      "text": "A implementação, as alterações e o rastreador de problemas do Keryx são públicos no GitHub. Examine o código, relate um problema ou acompanhe o desenvolvimento por lá. As páginas públicas de provas e qualidade documentam evidências e critérios de aceitação pendentes; elas não comprovam a adoção por clientes independentes."
+    },
+    "about.projectLegalNotice": {
+      "source": "Keryx does not currently have a repository-wide license. Some files and dependencies carry their own license terms. Read the licensing scope before reusing code.",
+      "text": "No momento, o Keryx não tem uma licença que abranja todo o repositório. Alguns arquivos e dependências têm seus próprios termos de licença. Leia o escopo das licenças antes de reutilizar código."
+    },
+    "about.projectLegalLink": {
+      "source": "Licensing scope",
+      "text": "Escopo das licenças"
+    },
+    "about.github": {
+      "source": "View source code",
+      "text": "Ver código-fonte"
+    },
+    "about.issues": {
+      "source": "Report an issue",
+      "text": "Relatar um problema"
+    },
+    "about.contactTitle": {
+      "source": "Contact support",
+      "text": "Falar com o suporte"
+    },
+    "about.contactBody": {
+      "source": "For questions about research, creator onboarding, payment recovery or privacy, email support. Include a public report link or a non-sensitive description of the issue. Never send private keys, seed phrases, API keys or private recovery credentials.",
+      "text": "Para dúvidas sobre pesquisa, cadastro de criadores, recuperação de pagamentos ou privacidade, envie um e-mail ao suporte. Inclua um link de relatório público ou uma descrição do problema sem dados sensíveis. Nunca envie chaves privadas, frases-semente, chaves de API ou credenciais privadas de recuperação."
+    },
+    "about.boundariesTitle": {
+      "source": "What to know before using it",
+      "text": "O que saber antes de usar"
+    },
+    "about.boundariesBody": {
+      "source": "AI reports need source review. Sponsored reports are public, experimental features keep their own gates, and payment attempts only count as settled when original settlement evidence exists. Historical and synthetic records keep their original labels.",
+      "text": "Relatórios de IA exigem revisão das fontes. Relatórios patrocinados são públicos, recursos experimentais mantêm seus próprios critérios de acesso, e tentativas de pagamento só contam como liquidadas quando há evidência original da liquidação. Registros históricos e sintéticos mantêm suas etiquetas originais."
+    },
+    "product.support": {
+      "source": "Email support",
+      "text": "Enviar e-mail ao suporte"
+    },
+    "product.privacy": {
+      "source": "Privacy",
+      "text": "Privacidade"
+    },
+    "product.terms": {
+      "source": "Terms",
+      "text": "Termos"
+    },
+    "product.stepsTitle": {
+      "source": "How Keryx researches a question",
+      "text": "Como o Keryx pesquisa uma pergunta"
+    },
+    "product.stepsDecide": {
+      "source": "Keryx compares source previews and prices under your cap, then explains what it reads or skips. Unused browser-session funds remain yours; prepaid reserves follow the package terms.",
+      "text": "O Keryx compara prévias e preços de fontes dentro do seu limite de gastos e explica o que lê ou ignora. Os fundos não utilizados da sessão do navegador continuam sendo seus; as reservas pré-pagas seguem os termos do pacote."
+    },
+    "product.stepsCite": {
+      "source": "It reads available public or purchased material and writes an answer with citations to supporting sources. Unavailable content and thin evidence remain visible.",
+      "text": "Ele lê o material público ou comprado que estiver disponível e escreve uma resposta com citações às fontes que a sustentam. Conteúdo indisponível e evidências insuficientes continuam sinalizados."
+    },
+    "product.metaTitle": {
+      "source": "Keryx — AI research with cited evidence",
+      "text": "Keryx — pesquisa com IA e evidências citadas"
+    },
+    "product.metaDescription": {
+      "source": "For researchers, builders and writers: turn a question into a cited answer with visible source decisions and spending limits. Try Keryx's sponsored public trial; eligibility and usage limits apply.",
+      "text": "Para pesquisadores, desenvolvedores e escritores: transforme uma pergunta em uma resposta com citações, decisões de fontes visíveis e limites de gastos. Experimente o teste público patrocinado do Keryx; há critérios de elegibilidade e limites de uso."
+    },
+    "product.socialAlt": {
+      "source": "Keryx — cited AI research with visible source decisions",
+      "text": "Keryx — pesquisa com IA e citações, com decisões de fontes visíveis"
+    },
+    "product.socialTitle": {
+      "source": "Cited research.\nVisible decisions.",
+      "text": "Pesquisa com citações.\nDecisões visíveis."
+    },
+    "product.socialSubtitle": {
+      "source": "Inspect sources, spending and creator payment proof",
+      "text": "Examine fontes, gastos e provas de pagamentos a criadores"
+    },
+    "product.slogan": {
+      "source": "Cited research. Visible decisions.",
+      "text": "Pesquisa com citações. Decisões visíveis."
     }
   }
 }

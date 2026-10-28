@@ -39,7 +39,7 @@ function draftFields(value: unknown): Record<string, PropertyDescriptor> | undef
   return fields;
 }
 // Library bulk changes and cleared-data recovery require consent review as a whole.
-const criticalCopy = /payment|consent|legal|privacy|terms|authoriz|signature|signing|settle|refund|withdraw|deposit|budget|spend|funding|sponsor|purchase|pay\b|paid\b|wallet|receipt|reserv|uncertain|pending|simulat|failed|expired|balance|transaction|obligation|toll|reward|payout|publication|publish|ownership|visibility|private|unlisted|erased|\bcap\b|literature-(?:bulk-screening|clear-recovery)/iu;
+const criticalCopy = /payment|consent|legal|privacy|terms|authoriz|signature|signing|settle|refund|withdraw|deposit|budget|spend|funding|sponsor|purchase|pay\b|paid\b|wallet|receipt|reserv|uncertain|pending|simulat|failed|expired|balance|transaction|obligation|toll|reward|payout|publication|publish|ownership|visibility|private|unlisted|erased|\bfees?\b|\bcap\b|literature-(?:bulk-screening|clear-recovery)/iu;
 const consentKey = /(?:^|[.])confirm(?:ation)?(?:[A-Z_]|$)|Confirm(?:ation)?$/u;
 function preservedTokens(text: string, pattern: RegExp): string {
   return JSON.stringify([...text.matchAll(pattern)].map(match => match[0]).sort());

@@ -24,7 +24,7 @@ This guide does not enable a preview or establish production delivery.
 
 The eight newer previews have 150 authored presentation entries each, including
 all 95 source-bound entries in the product guide. The current preview boundary
-admits 49 of those product-guide keys; the other 46 retain English. Authored
+admits 48 of those product-guide keys; the other 47 retain English. Authored
 payment, privacy, consent and legal drafts still require human review before use.
 These remain partial translations: account workflows, reports, installation instructions and
 other untranslated text retain English. A preview choice changes interface copy;
@@ -59,7 +59,7 @@ tiếng Anh chính thức. Tiếng Anh là giao diện có thẩm quyền; các 
 và phạm vi dịch được liệt kê ở bảng trên. Các bản dịch mới bao phủ điều hướng,
 nhãn của biểu mẫu hỏi, phần bắt đầu sử dụng và các đoạn giới thiệu sản phẩm trung tính.
 Mỗi ngôn ngữ mới có 150 mục nháp, bao gồm đủ 95 mục của phần hướng dẫn sản phẩm;
-chỉ 49 mục trong phần này đủ điều kiện xem trước, 46 mục còn lại vẫn dùng tiếng Anh.
+chỉ 48 mục trong phần này đủ điều kiện xem trước, 47 mục còn lại vẫn dùng tiếng Anh.
 Một phần giao diện vẫn dùng tiếng Anh; đủ bản nháp không đồng nghĩa đã được duyệt.
 Ngôn ngữ giao diện và ngôn ngữ câu trả lời là hai lựa chọn riêng. Hướng dẫn này không bật bản xem trước.
 
@@ -88,8 +88,8 @@ Không có tuyên bố phê duyệt của tác giả hay tác nhân AI cho các 
 预览翻译是机器草稿（`machineDraft`），尚未经人工审核。涉及同意、
 付款和法律的重要文字仍使用具有权威性的英语原文。英语是权威界面语言；
 预览语言及翻译范围见上表。新增预览涵盖导航、提问表单标签、入门内容和中性的产品介绍。
-每种新增语言有 150 条草稿，包括产品指南的全部 95 条原文；其中 49 条可用于预览，
-其余 46 条仍使用英语。草稿完整不代表通过人工审核。部分界面仍为英语。
+每种新增语言有 150 条草稿，包括产品指南的全部 95 条原文；其中 48 条可用于预览，
+其余 47 条仍使用英语。草稿完整不代表通过人工审核。部分界面仍为英语。
 界面语言与研究回答语言是独立的选项。本指南不会启用预览。
 
 1. 记录 **Interface language** 中当前显示的选项：**Tiếng Việt (preview)**

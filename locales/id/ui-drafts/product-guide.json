@@ -12,6 +12,10 @@
       "source": "AI research.",
       "text": "Riset dengan AI."
     },
+    "product.heroBody": {
+      "source": "Cited research. This trial is free, with no wallet required.",
+      "text": "Riset dengan sitasi. Uji coba ini gratis dan tidak memerlukan dompet."
+    },
     "product.overviewKicker": {
       "source": "What you get",
       "text": "Yang Anda dapatkan"
@@ -20,9 +24,21 @@
       "source": "A research answer you can follow back to its sources.",
       "text": "Jawaban riset yang dapat ditelusuri kembali ke sumbernya."
     },
+    "product.overviewBody": {
+      "source": "Keryx is a citation-toll reading agent. Give it a question and a source budget: it discovers material, explains what it reads or skips, and writes an answer with citations. Eligible cited creators can receive separate USDC rewards.",
+      "text": "Keryx adalah agen pembaca yang menggabungkan sitasi dan biaya akses sumber. Berikan pertanyaan dan anggaran sumber: Keryx menemukan materi, menjelaskan apa yang dibaca atau dilewati, lalu menulis jawaban dengan sitasi. Kreator yang dikutip dan memenuhi syarat dapat menerima imbalan USDC secara terpisah."
+    },
+    "product.briefsAction": {
+      "source": "Prepare a focused research brief",
+      "text": "Siapkan permintaan riset yang terarah"
+    },
     "product.researchersTitle": {
       "source": "For researchers and students",
       "text": "Untuk peneliti dan pelajar"
+    },
+    "product.researchersBody": {
+      "source": "Find papers, compare evidence and build a literature review. Keep unavailable papers and abstract-only reads visible instead of treating them as full-text evidence.",
+      "text": "Temukan makalah, bandingkan bukti, dan susun tinjauan pustaka. Tandai makalah yang tidak tersedia dan sumber yang hanya dibaca abstraknya; jangan memperlakukannya sebagai bukti dari teks lengkap."
     },
     "product.researchersAction": {
       "source": "Open the literature workspace",
@@ -44,6 +60,10 @@
       "source": "For agent developers",
       "text": "Untuk pengembang agen"
     },
+    "product.agentsBody": {
+      "source": "Use research through the API or MCP. Prepaid jobs carry a quoted service fee, a creator reserve and recovery records that distinguish a result from a settled payment.",
+      "text": "Gunakan riset melalui API atau MCP. Tugas prabayar mencakup biaya layanan sesuai penawaran, cadangan untuk kreator, dan catatan pemulihan yang membedakan hasil dari pembayaran yang penyelesaiannya telah terverifikasi."
+    },
     "product.agentsAction": {
       "source": "Explore developer integrations",
       "text": "Jelajahi integrasi pengembang"
@@ -56,6 +76,38 @@
       "source": "Trust comes from what you can check.",
       "text": "Kepercayaan berasal dari hal yang dapat Anda periksa."
     },
+    "product.proofBody": {
+      "source": "Open source decisions and original references. Payment records distinguish settled, pending, failed and simulated states. A saved answer or a registry entry alone does not prove a payment or a useful result.",
+      "text": "Buka keputusan pemilihan sumber dan referensi aslinya. Catatan pembayaran membedakan status penyelesaian terverifikasi, menunggu konfirmasi, gagal, dan simulasi. Jawaban tersimpan atau entri registri saja tidak membuktikan adanya pembayaran atau hasil yang berguna."
+    },
+    "product.walkthrough": {
+      "source": "Follow a recorded research job",
+      "text": "Telusuri tugas riset yang tercatat"
+    },
+    "product.proof": {
+      "source": "Inspect public proof",
+      "text": "Periksa bukti publik"
+    },
+    "product.quality": {
+      "source": "Read quality and evaluation limits",
+      "text": "Baca batasan kualitas dan evaluasi"
+    },
+    "product.pricing": {
+      "source": "Pricing & budgets",
+      "text": "Harga dan anggaran"
+    },
+    "product.about": {
+      "source": "About & contact",
+      "text": "Tentang dan kontak"
+    },
+    "product.navigationPricing": {
+      "source": "Pricing",
+      "text": "Harga"
+    },
+    "product.navigationAbout": {
+      "source": "About",
+      "text": "Tentang"
+    },
     "product.try": {
       "source": "Try a research question",
       "text": "Coba pertanyaan riset"
@@ -64,13 +116,273 @@
       "source": "Before your first question",
       "text": "Sebelum pertanyaan pertama Anda"
     },
-    "product.navigationAbout": {
-      "source": "About",
-      "text": "Tentang"
+    "product.faqWallet": {
+      "source": "Do I need a wallet to try Keryx?",
+      "text": "Apakah saya memerlukan dompet untuk mencoba Keryx?"
+    },
+    "product.faqWalletBody": {
+      "source": "The sponsored public trial needs no wallet or USDC deposit. Keryx covers approved source spending and operating costs within its usage and spending limits. The form shows a notice when the trial is paused.",
+      "text": "Uji coba publik bersponsor tidak memerlukan dompet atau setoran USDC. Keryx menanggung pengeluaran sumber yang disetujui dan biaya operasional dalam batas penggunaan serta pengeluarannya. Formulir menampilkan pemberitahuan ketika uji coba dijeda."
+    },
+    "product.faqPublic": {
+      "source": "Can I submit confidential research?",
+      "text": "Bisakah saya mengirim riset yang bersifat rahasia?"
+    },
+    "product.faqPublicBody": {
+      "source": "Sponsored trial reports have public links. Use questions you can share publicly. Review the separate private-research flow and privacy terms before submitting confidential material; signing in alone does not make a trial report private.",
+      "text": "Laporan uji coba bersponsor memiliki tautan publik. Gunakan pertanyaan yang dapat Anda bagikan secara publik. Tinjau alur riset privat yang terpisah dan ketentuan privasi sebelum mengirim materi rahasia; masuk ke akun saja tidak menjadikan laporan uji coba bersifat privat."
+    },
+    "product.faqPayment": {
+      "source": "Does every citation pay a publisher?",
+      "text": "Apakah setiap sitasi membayar penerbit?"
+    },
+    "product.faqPaymentBody": {
+      "source": "No. Public pages can be read without a source access toll. Creator rewards require qualifying evidence and verified payout authority. Sponsored operating fees, when eligible, are recorded separately and are not publisher payments.",
+      "text": "Tidak. Halaman publik dapat dibaca tanpa biaya akses sumber. Imbalan kreator memerlukan bukti yang memenuhi syarat dan otoritas pembayaran yang terverifikasi. Biaya operasional bersponsor, jika memenuhi syarat, dicatat secara terpisah dan bukan merupakan pembayaran kepada penerbit."
+    },
+    "product.faqTrust": {
+      "source": "Are demo reports or AI answers verified facts?",
+      "text": "Apakah laporan demo atau jawaban AI merupakan fakta terverifikasi?"
+    },
+    "product.faqTrustBody": {
+      "source": "No. Synthetic examples are demonstrations, and historical testnet receipts stay labelled as testnet. AI answers can be incomplete or wrong: inspect the original sources, evidence limitations and payment state before relying on a report.",
+      "text": "Tidak. Contoh sintetis adalah demonstrasi, dan tanda terima historis dari testnet tetap diberi label testnet. Jawaban AI bisa tidak lengkap atau keliru: periksa sumber asli, keterbatasan bukti, dan status pembayaran sebelum mengandalkan laporan."
+    },
+    "product.entryLabel": {
+      "source": "About this research service",
+      "text": "Tentang layanan riset ini"
+    },
+    "product.entryBody": {
+      "source": "Keryx turns questions into cited research answers with visible source decisions and spending limits. Each saved report keeps its own evidence limitations and payment labels. Open the original sources and receipts to inspect a particular run.",
+      "text": "Keryx mengubah pertanyaan menjadi jawaban riset bersitasi, dengan keputusan sumber dan batas pengeluaran yang terlihat. Setiap laporan tersimpan mempertahankan keterbatasan bukti dan label pembayarannya sendiri. Buka sumber serta tanda terima asli untuk memeriksa satu proses riset tertentu."
+    },
+    "pricing.title": {
+      "source": "Know what you pay for.",
+      "text": "Ketahui apa yang Anda bayar."
+    },
+    "pricing.metadataTitle": {
+      "source": "Pricing & research budgets",
+      "text": "Harga dan anggaran riset"
+    },
+    "pricing.description": {
+      "source": "Understand Keryx's sponsored trial, browser-funded source budgets and prepaid Quick/Deep research fees before you start.",
+      "text": "Sebelum memulai, pahami uji coba bersponsor Keryx, anggaran sumber yang didanai melalui browser, dan biaya riset prabayar Quick/Deep."
+    },
+    "pricing.currencySuffix": {
+      "source": "· USDC",
+      "text": "· USDC"
+    },
+    "pricing.introduction": {
+      "source": "Choose the research path that fits your task. Source access, eligible creator rewards and the research service are distinct costs. Payment amounts below are in USDC; the configured network is shown above.",
+      "text": "Pilih alur riset yang sesuai dengan tugas Anda. Akses sumber, imbalan kreator yang memenuhi syarat, dan layanan riset adalah biaya yang terpisah. Nilai pembayaran di bawah dinyatakan dalam USDC; jaringan yang dikonfigurasi ditampilkan di atas."
+    },
+    "pricing.trialTitle": {
+      "source": "Sponsored public trial",
+      "text": "Uji coba publik bersponsor"
+    },
+    "pricing.trialPrice": {
+      "source": "No wallet or deposit",
+      "text": "Tanpa dompet atau setoran"
+    },
+    "pricing.trialBody": {
+      "source": "Keryx sponsors source purchases, eligible rewards and operating costs within current trial limits. Availability is shown in the question form. This is a limited trial, not an unlimited free plan.",
+      "text": "Keryx mensponsori pembelian akses sumber, imbalan yang memenuhi syarat, dan biaya operasional dalam batas uji coba saat ini. Ketersediaan ditampilkan pada formulir pertanyaan. Ini adalah uji coba terbatas, bukan paket gratis tanpa batas."
+    },
+    "pricing.trialPrivacy": {
+      "source": "Trial reports have public links. Use shareable questions.",
+      "text": "Laporan uji coba memiliki tautan publik. Gunakan pertanyaan yang boleh dibagikan."
+    },
+    "pricing.browserTitle": {
+      "source": "Your browser source budget",
+      "text": "Anggaran sumber Anda di browser"
+    },
+    "pricing.browserPrice": {
+      "source": "You set the source cap",
+      "text": "Anda menetapkan batas pengeluaran sumber"
+    },
+    "pricing.browserBody": {
+      "source": "A funded browser session pays for source reads and eligible creator rewards within your approved question and session caps. Pending authorizations count against the cap; unused funds remain in your Gateway balance. Model and search operating costs are separate from the source cap.",
+      "text": "Sesi browser yang telah didanai membayar pembacaan sumber dan imbalan kreator yang memenuhi syarat dalam batas per pertanyaan dan per sesi yang Anda setujui. Otorisasi yang masih tertunda diperhitungkan dalam batas tersebut; dana yang tidak terpakai tetap berada di saldo Gateway Anda. Biaya operasional model dan pencarian terpisah dari batas pengeluaran sumber."
+    },
+    "pricing.browserFee": {
+      "source": "No prepaid research-package service fee is added to the browser's source grant.",
+      "text": "Tidak ada biaya layanan paket riset prabayar yang ditambahkan pada izin pengeluaran sumber di browser."
+    },
+    "pricing.browserAction": {
+      "source": "Review browser budgets",
+      "text": "Tinjau anggaran browser"
+    },
+    "pricing.prepaidTitle": {
+      "source": "Prepaid research jobs",
+      "text": "Tugas riset prabayar"
+    },
+    "pricing.prepaidBody": {
+      "source": "Quick and Deep packages combine a service fee with your chosen creator reserve. The fee covers the research service; the reserve bounds source purchases and eligible creator rewards. Review the current quote, availability and terms before paying.",
+      "text": "Paket Quick dan Deep menggabungkan biaya layanan dengan cadangan untuk kreator yang Anda pilih. Biaya tersebut mencakup layanan riset; cadangan membatasi pengeluaran untuk pembelian akses sumber dan imbalan kreator yang memenuhi syarat. Tinjau penawaran terkini, ketersediaan, dan ketentuan sebelum membayar."
+    },
+    "pricing.package": {
+      "source": "Package",
+      "text": "Paket"
+    },
+    "pricing.service": {
+      "source": "Service fee",
+      "text": "Biaya layanan"
+    },
+    "pricing.reserve": {
+      "source": "Creator reserve",
+      "text": "Cadangan untuk kreator"
+    },
+    "pricing.total": {
+      "source": "Total prepaid price",
+      "text": "Total harga prabayar"
+    },
+    "pricing.quick": {
+      "source": "Quick",
+      "text": "Cepat"
+    },
+    "pricing.deep": {
+      "source": "Deep",
+      "text": "Mendalam"
+    },
+    "pricing.quoteNotice": {
+      "source": "Illustration using this deployment's default creator reserve. Amounts come from the same pricing function as checkout. This table is not an availability guarantee; checkout can refuse a job or return a different total when you change the reserve.",
+      "text": "Ilustrasi menggunakan cadangan untuk kreator yang menjadi pengaturan awal pada deployment ini. Jumlah dihitung dengan fungsi harga yang sama seperti saat checkout. Tabel ini tidak menjamin ketersediaan; checkout dapat menolak tugas atau menampilkan total berbeda jika Anda mengubah cadangan."
+    },
+    "pricing.prepaidTerms": {
+      "source": "Prepaid packages are non-refundable under the current policy. An unused creator reserve stays in the package. Targets describe the package's service level, not a promise of correctness or an individual completion time.",
+      "text": "Berdasarkan kebijakan saat ini, paket prabayar tidak dapat dikembalikan dananya. Cadangan untuk kreator yang tidak terpakai tetap berada di dalam paket. Target menjelaskan tingkat layanan paket, bukan janji kebenaran hasil atau waktu penyelesaian setiap tugas."
+    },
+    "pricing.checkout": {
+      "source": "Review current quote & availability",
+      "text": "Tinjau penawaran dan ketersediaan saat ini"
+    },
+    "pricing.monthlyTitle": {
+      "source": "Research Monthly",
+      "text": "Riset bulanan"
+    },
+    "pricing.monthlyBody": {
+      "source": "A separate prepaid option covers four manually requested Deep jobs over 30 days, with a 10% discount against four individual packages. It is not an automatic research schedule. Check the live quote and availability in the research workspace.",
+      "text": "Opsi prabayar terpisah mencakup empat tugas Deep yang diminta secara manual selama 30 hari, dengan diskon 10% dibandingkan empat paket satuan. Ini bukan jadwal riset otomatis. Periksa penawaran dan ketersediaan terkini di ruang kerja riset."
+    },
+    "pricing.creatorTitle": {
+      "source": "Publishing a source?",
+      "text": "Menerbitkan sumber?"
+    },
+    "pricing.creatorBody": {
+      "source": "Set an access toll for a source you control and prove ownership. A paid read and an eligible citation reward are separate payment legs; listing alone does not guarantee earnings. Public sources and disabled reward policies do not become paid merely by being cited.",
+      "text": "Tetapkan biaya akses untuk sumber yang Anda kendalikan dan buktikan kepemilikannya. Pembacaan berbayar dan imbalan sitasi yang memenuhi syarat adalah komponen pembayaran terpisah; masuk ke daftar saja tidak menjamin penghasilan. Sumber publik tidak menjadi berbayar hanya karena dikutip, dan kutipan tidak mengaktifkan kebijakan imbalan yang dinonaktifkan."
+    },
+    "about.metadataTitle": {
+      "source": "About Keryx & support",
+      "text": "Tentang Keryx dan bantuan"
+    },
+    "about.description": {
+      "source": "What Keryx does, who it is for, how to inspect its evidence and where to get support.",
+      "text": "Apa yang dilakukan Keryx, untuk siapa layanan ini dibuat, cara memeriksa buktinya, dan tempat mendapatkan bantuan."
+    },
+    "about.title": {
+      "source": "Research with a visible trail.",
+      "text": "Riset dengan proses yang terlihat."
+    },
+    "about.introduction": {
+      "source": "Keryx helps researchers, builders and writers turn a question into a cited answer while seeing what the agent reads, why it chooses each source and how the source budget is used.",
+      "text": "Keryx membantu peneliti, pengembang, dan penulis mengubah pertanyaan menjadi jawaban dengan sitasi, sambil memperlihatkan apa yang dibaca agen, alasan setiap sumber dipilih, dan penggunaan anggaran sumber."
+    },
+    "about.whyTitle": {
+      "source": "Why Keryx exists",
+      "text": "Mengapa Keryx dibuat"
+    },
+    "about.whyBody": {
+      "source": "Useful research depends on the people who publish the underlying work. Keryx combines source discovery and cited answers with bounded paid access and qualifying creator rewards. Public references remain useful even when there is no publisher payment.",
+      "text": "Riset yang bermanfaat bergantung pada orang-orang yang menerbitkan karya dasarnya. Keryx menggabungkan penemuan sumber dan jawaban bersitasi dengan akses berbayar yang dibatasi serta imbalan bagi kreator yang memenuhi syarat. Referensi publik tetap bermanfaat meskipun tidak ada pembayaran kepada penerbit."
     },
     "about.projectTitle": {
       "source": "Developed in public",
       "text": "Pengembangan secara publik"
+    },
+    "about.projectBody": {
+      "source": "Keryx's implementation, changes and issue tracker are public on GitHub. Inspect the code, report a problem or follow development there. Public proof and quality pages document evidence and remaining acceptance gates; they do not establish independent customer adoption.",
+      "text": "Implementasi, perubahan, dan pelacak masalah Keryx tersedia untuk publik di GitHub. Periksa kode, laporkan masalah, atau ikuti perkembangannya di sana. Halaman bukti publik dan kualitas mendokumentasikan bukti serta kriteria penerimaan yang masih terbuka; halaman tersebut tidak membuktikan adopsi oleh pelanggan independen."
+    },
+    "about.projectLegalNotice": {
+      "source": "Keryx does not currently have a repository-wide license. Some files and dependencies carry their own license terms. Read the licensing scope before reusing code.",
+      "text": "Saat ini Keryx tidak memiliki lisensi yang berlaku untuk seluruh repositori. Beberapa berkas dan dependensi memiliki ketentuan lisensinya sendiri. Baca cakupan lisensi sebelum menggunakan kembali kode."
+    },
+    "about.projectLegalLink": {
+      "source": "Licensing scope",
+      "text": "Cakupan lisensi"
+    },
+    "about.github": {
+      "source": "View source code",
+      "text": "Lihat kode sumber"
+    },
+    "about.issues": {
+      "source": "Report an issue",
+      "text": "Laporkan masalah"
+    },
+    "about.contactTitle": {
+      "source": "Contact support",
+      "text": "Hubungi tim bantuan"
+    },
+    "about.contactBody": {
+      "source": "For questions about research, creator onboarding, payment recovery or privacy, email support. Include a public report link or a non-sensitive description of the issue. Never send private keys, seed phrases, API keys or private recovery credentials.",
+      "text": "Untuk pertanyaan tentang riset, pendaftaran kreator, pemulihan pembayaran, atau privasi, kirim email ke tim bantuan. Sertakan tautan laporan publik atau penjelasan masalah tanpa informasi sensitif. Jangan pernah mengirim kunci privat, frasa seed, kunci API, atau kredensial pemulihan privat."
+    },
+    "about.boundariesTitle": {
+      "source": "What to know before using it",
+      "text": "Hal yang perlu diketahui sebelum menggunakan"
+    },
+    "about.boundariesBody": {
+      "source": "AI reports need source review. Sponsored reports are public, experimental features keep their own gates, and payment attempts only count as settled when original settlement evidence exists. Historical and synthetic records keep their original labels.",
+      "text": "Laporan AI memerlukan peninjauan sumber. Laporan bersponsor bersifat publik, fitur eksperimental tetap memiliki persyaratannya sendiri, dan upaya pembayaran hanya dihitung selesai jika ada bukti penyelesaian asli. Catatan historis dan sintetis mempertahankan label aslinya."
+    },
+    "product.support": {
+      "source": "Email support",
+      "text": "Kirim email ke tim bantuan"
+    },
+    "product.privacy": {
+      "source": "Privacy",
+      "text": "Privasi"
+    },
+    "product.terms": {
+      "source": "Terms",
+      "text": "Ketentuan"
+    },
+    "product.stepsTitle": {
+      "source": "How Keryx researches a question",
+      "text": "Cara Keryx meneliti pertanyaan"
+    },
+    "product.stepsDecide": {
+      "source": "Keryx compares source previews and prices under your cap, then explains what it reads or skips. Unused browser-session funds remain yours; prepaid reserves follow the package terms.",
+      "text": "Keryx membandingkan pratinjau dan harga sumber dalam batas pengeluaran Anda, lalu menjelaskan apa yang dibaca atau dilewati. Dana sesi browser yang tidak terpakai tetap milik Anda; cadangan prabayar mengikuti ketentuan paket."
+    },
+    "product.stepsCite": {
+      "source": "It reads available public or purchased material and writes an answer with citations to supporting sources. Unavailable content and thin evidence remain visible.",
+      "text": "Keryx membaca materi publik atau materi yang dibeli dan tersedia, lalu menulis jawaban dengan sitasi ke sumber pendukung. Konten yang tidak tersedia dan bukti yang terbatas tetap ditandai."
+    },
+    "product.metaTitle": {
+      "source": "Keryx — AI research with cited evidence",
+      "text": "Keryx — riset AI dengan bukti bersitasi"
+    },
+    "product.metaDescription": {
+      "source": "For researchers, builders and writers: turn a question into a cited answer with visible source decisions and spending limits. Try Keryx's sponsored public trial; eligibility and usage limits apply.",
+      "text": "Untuk peneliti, pengembang, dan penulis: ubah pertanyaan menjadi jawaban bersitasi dengan keputusan sumber dan batas pengeluaran yang terlihat. Coba uji coba publik bersponsor Keryx; persyaratan kelayakan dan batas penggunaan berlaku."
+    },
+    "product.socialAlt": {
+      "source": "Keryx — cited AI research with visible source decisions",
+      "text": "Keryx — riset AI bersitasi dengan keputusan sumber yang terlihat"
+    },
+    "product.socialTitle": {
+      "source": "Cited research.\nVisible decisions.",
+      "text": "Riset bersitasi.\nKeputusan terlihat."
+    },
+    "product.socialSubtitle": {
+      "source": "Inspect sources, spending and creator payment proof",
+      "text": "Periksa sumber, pengeluaran, dan bukti pembayaran kepada kreator"
+    },
+    "product.slogan": {
+      "source": "Cited research. Visible decisions.",
+      "text": "Riset bersitasi. Keputusan terlihat."
     }
   }
 }
