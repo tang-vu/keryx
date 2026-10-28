@@ -9,6 +9,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // upgrades machine drafts into approved payment, privacy, consent or legal copy.
 const critical = /payment|consent|legal|privacy|terms|authoriz|signature|signing|settle|refund|withdraw|deposit|budget|spend|funding|sponsor|purchase|pay\b|paid\b|wallet|receipt|reserv|uncertain|pending|simulat|failed|expired|balance|transaction|obligation|toll|reward|payout|publication|publish|ownership|visibility|private|unlisted|erased|\bcap\b/iu;
 const read = file => readFileSync(path.join(root, file), "utf8");
+// Agreed entry-preview floor. Missing namespaces or lost authored coverage must
+// fail, even when somebody regenerates the compiled chunks after deleting text.
+const entryPreviewMinimums = { "core-inline": 10, "get-started": 19, "product-guide": 16, shell: 17, "ui-preference": 9 };
 
 export function generateUiPreviews(check = false) {
   const helpers = extractNamespaceCopy("locales/en/shared-helpers.ts", read("locales/en/shared-helpers.ts"));
@@ -29,7 +32,7 @@ export function generateUiPreviews(check = false) {
     const inputs = [];
     const partial = !["vi", "zh-Hans"].includes(locale);
     const draftDirectory = path.join(root, `locales/${locale}/ui-drafts`);
-    if (partial) for (const namespace of ["core-inline", "get-started", "product-guide", "shell", "ui-preference"]) {
+    if (partial) for (const namespace of Object.keys(entryPreviewMinimums)) {
       if (!existsSync(path.join(draftDirectory, `${namespace}.json`))) throw Error(`${locale}: missing entry preview ${namespace}`);
     }
     const knownDrafts = new Set(bindings.map(binding => `${binding.namespace}.json`));
@@ -45,13 +48,18 @@ export function generateUiPreviews(check = false) {
         createHash("sha256").update(read(draftPath).replace(/\r\n?/g, "\n")).digest("hex")]);
       const entries = {};
       const ambiguous = new Set();
+      let translatedKeys = 0;
       for (const [key, value] of Object.entries(draft.entries)) {
         if (!("text" in value) || key !== "previewNotice" && critical.test(`${binding.namespace} ${key} ${value.source}`)) continue;
         // Resolve only exact, authored English templates; never match report data,
         // substrings, regular expressions or values interpolated into a template.
         if (entries[value.source] && entries[value.source] !== value.text) ambiguous.add(value.source);
         entries[value.source] = value.text;
+        translatedKeys++;
         if (sharedNamespaces.has(binding.namespace)) messages[key] = value.text;
+      }
+      if (partial && translatedKeys < (entryPreviewMinimums[binding.namespace] ?? 0)) {
+        throw Error(`${locale}/${binding.namespace}: entry preview coverage fell below ${entryPreviewMinimums[binding.namespace]}`);
       }
       for (const source of ambiguous) delete entries[source];
       namespaces[binding.namespace] = entries;

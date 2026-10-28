@@ -544,7 +544,17 @@ jobs:
           KERYX_NETWORK: arcTestnet
           NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
           KERYX_FORCE_OFFLINE: "1"
+          KERYX_PRODUCT_SCREENSHOT_DIR: .artifacts/product-guide-browser
         run: npm run test:browser-product-guide
+
+      - name: Retain product and language preview phone/desktop screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-language-preview-${{ github.sha }}
+          path: .artifacts/product-guide-browser/
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Decision Lab compiled route and mobile layout (offline)
         run: npm run test:decision-lab-built
