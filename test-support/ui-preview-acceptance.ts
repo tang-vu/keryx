@@ -3,6 +3,7 @@ import type { Browser } from "playwright";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { preparedLocales, uiLocaleNames } from "../lib/i18n/locales";
+import { productGuideCopy } from "../locales/en/product-guide";
 
 /** Real compiled pages and language controls; no research, payment or external requests. */
 export async function checkUiPreviews(browser: Browser, base: string, output?: string) {
@@ -10,7 +11,7 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
   if (output) await mkdir(output, { recursive: true });
   const locales = preparedLocales.filter(locale => locale !== "en");
   const drafts = Object.fromEntries(await Promise.all(locales.map(async locale => [locale,
-    Object.fromEntries(await Promise.all(["core-inline", "get-started", "ui-preference"].map(async namespace =>
+    Object.fromEntries(await Promise.all(["core-inline", "get-started", "ui-preference", "product-guide"].map(async namespace =>
       [namespace, JSON.parse(await readFile(`locales/${locale}/ui-drafts/${namespace}.json`, "utf8"))])))])));
   const results = [];
   for (const width of [390, 1366]) {
@@ -57,6 +58,22 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
         }
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `${locale}/${width} homepage overflow`);
         if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-home.png`), fullPage: true });
+        await page.goto(`${base}/about`, { waitUntil: "networkidle" });
+        const about = drafts[locale]["product-guide"].entries;
+        const aboutHeading = page.getByRole("heading", { level: 1, name: about["about.title"].text, exact: true });
+        await aboutHeading.waitFor();
+        assert.equal(await aboutHeading.locator(`[lang="${locale}"]`).count(), 1, `${locale} About headline exposes its language`);
+        const explanation = page.getByText(about["about.projectBody"].text, { exact: true });
+        await explanation.waitFor();
+        assert.equal(await explanation.evaluate(element => element.closest("[lang]")?.getAttribute("lang")), locale);
+        const legalNotice = page.getByText(productGuideCopy("about.projectLegalNotice"), { exact: true });
+        await legalNotice.waitFor();
+        assert.equal(await legalNotice.evaluate(element => element.closest("[lang]")?.getAttribute("lang")), "en");
+        const scope = page.locator('a[href="https://github.com/tang-vu/keryx/blob/main/docs/licensing.md"]');
+        assert.equal(await scope.textContent(), productGuideCopy("about.projectLegalLink"));
+        assert.equal(await scope.evaluate(element => (element.querySelector("[lang]") ?? element).closest("[lang]")?.getAttribute("lang")), "en");
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `${locale}/${width} About overflow`);
+        if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-about.png`), fullPage: true });
         await page.goto(`${base}/get-started`, { waitUntil: "networkidle" });
         await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["start.title"].text, exact: true }).waitFor();
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `${locale}/${width} setup overflow`);
@@ -70,12 +87,12 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
       await page.locator('label[for="ask-question"]').filter({ hasText: "What do you want to know?" }).waitFor();
       assert.equal(askRequests, 0, "Language changes must never submit or sign research");
       assert.deepEqual(errors, [], "No browser runtime errors");
-      results.push({ width, locales: ["en", ...locales], routes: ["/", "/get-started"], errors, askRequests });
+      results.push({ width, locales: ["en", ...locales], routes: ["/", "/about", "/get-started"], errors, askRequests });
     } finally {
       await context.unrouteAll({ behavior: "wait" });
       await context.close();
     }
   }
   if (output) await writeFile(resolve(output, "result.json"), JSON.stringify(results, null, 2));
-  console.log(`PASS: ${locales.length} interface previews at 390/1366px, navigation, reload, exact drafts and English reset.`);
+  console.log(`PASS: ${locales.length} interface previews at 390/1366px, About explanations, English legal copy, navigation, reload, exact drafts and English reset.`);
 }

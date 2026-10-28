@@ -13,17 +13,20 @@ This guide does not enable a preview or establish production delivery.
 | English | `en` | Canonical interface |
 | Tiếng Việt | `vi` | Broader interface draft; some English remains |
 | 简体中文 | `zh-Hans` | Broader interface draft; some English remains |
-| Español | `es` | Navigation, question form labels and getting started |
-| Português do Brasil | `pt-BR` | Navigation, question form labels and getting started |
-| Français | `fr` | Navigation, question form labels and getting started |
-| Deutsch | `de` | Navigation, question form labels and getting started |
-| 日本語 | `ja` | Navigation, question form labels and getting started |
-| 한국어 | `ko` | Navigation, question form labels and getting started |
-| हिन्दी | `hi` | Navigation, question form labels and getting started |
-| Bahasa Indonesia | `id` | Navigation, question form labels and getting started |
+| Español | `es` | Navigation, question labels, getting started and neutral product/About copy |
+| Português do Brasil | `pt-BR` | Navigation, question labels, getting started and neutral product/About copy |
+| Français | `fr` | Navigation, question labels, getting started and neutral product/About copy |
+| Deutsch | `de` | Navigation, question labels, getting started and neutral product/About copy |
+| 日本語 | `ja` | Navigation, question labels, getting started and neutral product/About copy |
+| 한국어 | `ko` | Navigation, question labels, getting started and neutral product/About copy |
+| हिन्दी | `hi` | Navigation, question labels, getting started and neutral product/About copy |
+| Bahasa Indonesia | `id` | Navigation, question labels, getting started and neutral product/About copy |
 
-The eight newer previews have 71 authored presentation entries each. They are
-partial translations: account workflows, reports, installation instructions and
+The eight newer previews have 150 authored presentation entries each, including
+all 95 source-bound entries in the product guide. The current preview boundary
+admits 48 of those product-guide keys; the other 47 retain English. Authored
+payment, privacy, consent and legal drafts still require human review before use.
+These remain partial translations: account workflows, reports, installation instructions and
 other untranslated text retain English. A preview choice changes interface copy;
 it does not translate original questions, source evidence, saved answers or
 payment records, or select the language of a research answer.
@@ -53,8 +56,11 @@ No author or agent approval is claimed for these drafts or this guide.
 Bản dịch xem trước là bản nháp máy dịch (`machineDraft`), chưa được người
 duyệt. Nội dung quan trọng về chấp thuận, thanh toán và pháp lý vẫn dùng bản
 tiếng Anh chính thức. Tiếng Anh là giao diện có thẩm quyền; các lựa chọn xem trước
-và phạm vi dịch được liệt kê ở bảng trên. Các bản dịch mới chỉ bao phủ điều hướng,
-nhãn của biểu mẫu hỏi và phần bắt đầu sử dụng. Một phần giao diện vẫn dùng tiếng Anh.
+và phạm vi dịch được liệt kê ở bảng trên. Các bản dịch mới bao phủ điều hướng,
+nhãn của biểu mẫu hỏi, phần bắt đầu sử dụng và các đoạn giới thiệu sản phẩm trung tính.
+Mỗi ngôn ngữ mới có 150 mục nháp, bao gồm đủ 95 mục của phần hướng dẫn sản phẩm;
+chỉ 48 mục trong phần này đủ điều kiện xem trước, 47 mục còn lại vẫn dùng tiếng Anh.
+Một phần giao diện vẫn dùng tiếng Anh; đủ bản nháp không đồng nghĩa đã được duyệt.
 Ngôn ngữ giao diện và ngôn ngữ câu trả lời là hai lựa chọn riêng. Hướng dẫn này không bật bản xem trước.
 
 1. Ghi lựa chọn đang hiển thị ở **Interface language**: **Tiếng Việt (preview)**
@@ -81,8 +87,10 @@ Không có tuyên bố phê duyệt của tác giả hay tác nhân AI cho các 
 
 预览翻译是机器草稿（`machineDraft`），尚未经人工审核。涉及同意、
 付款和法律的重要文字仍使用具有权威性的英语原文。英语是权威界面语言；
-预览语言及翻译范围见上表。新增预览仅涵盖导航、提问表单标签和入门内容，
-部分界面仍为英语。界面语言与研究回答语言是独立的选项。本指南不会启用预览。
+预览语言及翻译范围见上表。新增预览涵盖导航、提问表单标签、入门内容和中性的产品介绍。
+每种新增语言有 150 条草稿，包括产品指南的全部 95 条原文；其中 48 条可用于预览，
+其余 47 条仍使用英语。草稿完整不代表通过人工审核。部分界面仍为英语。
+界面语言与研究回答语言是独立的选项。本指南不会启用预览。
 
 1. 记录 **Interface language** 中当前显示的选项：**Tiếng Việt (preview)**
    （`vi`）、**简体中文 (preview)**（`zh-Hans`）或 **English**（`en`）。
