@@ -1,5 +1,6 @@
 import { createMessages, englishMessages, validateMessageCatalogue, type MessageCatalogue, type MessageKey } from "./messages";
 import { preparedLocales, type UiLocale } from "./locales";
+import { isNeutralResearchPreview } from "./neutral-research-preview.mjs";
 
 export type ShellMessageKey = Extract<MessageKey, `shellNavigation.${string}` | `shellHeader.${string}` | `shellFooter.${string}`>;
 export type ShellDraft = Partial<Record<ShellMessageKey, { source: string; text: string }>>;
@@ -24,7 +25,7 @@ const namespaceNames = new Set([
   "deliverable-acceptance", "draft-check", "evidence-audit", "evidence-drafts", "evidence-procurement", "get-started",
   "integrations", "job-targets", "landing", "ledger", "legal", "my-history", "native-desktop", "operations",
   "operator-obligations", "owned-history", "paid-job-escalation", "personal-history", "product-guide", "profile-identities",
-  "proof", "public-profiles", "purchase-outcome-aggregate", "purchase-outcomes", "quality", "registration",
+  "pdf-reading", "proof", "public-profiles", "purchase-outcome-aggregate", "purchase-outcomes", "quality", "registration",
   "report-presentation", "reports", "research-flow", "research-funding", "research-mandates", "research-presentation",
   "run-claim-research", "run-claims", "run-privacy", "shared-helpers", "shell", "source-archive", "source-claims",
   "source-directory", "source-leaderboard", "specialist-briefs", "ui-preference", "usage", "walkthrough", "wanted",
@@ -77,7 +78,8 @@ export function validateNamespacePreview(draft: unknown, source: NamespaceSource
     if (!entry || entry.source?.value !== english) continue;
     const names = Object.keys(entry).sort().join(",");
     if (names !== "source,text" || !previewKeys.includes(key) ||
-      criticalCopy.test(`${source.namespace} ${key} ${english}`) || consentKey.test(key) || !validDraftText(key, english, entry.text.value)) continue;
+      (criticalCopy.test(`${source.namespace} ${key} ${english}`) && !isNeutralResearchPreview(source.namespace, key, english)) ||
+      consentKey.test(key) || !validDraftText(key, english, entry.text.value)) continue;
     selected[key] = entry.text.value;
   }
   return Object.freeze(selected);

@@ -1495,6 +1495,7 @@ const preview: Record<string, Record<string, string>> = {
   "pdf-reading": {
     "No text was extracted from visited pages {pages}. These pages may be scanned, blank or otherwise unavailable to the text reader.": "Không trích xuất được văn bản từ các trang đã truy cập {pages}. Các trang này có thể là bản quét, trang trống hoặc không đọc được bằng trình đọc văn bản.",
     "A page or character limit stopped text extraction before the document was complete. Read the remaining original pages directly before making whole-document conclusions; a character cutoff can leave the last visited page incomplete. Retain this snapshot for comparison.": "Giới hạn số trang hoặc ký tự đã dừng việc trích xuất trước khi đọc hết tài liệu. Đọc trực tiếp các trang gốc còn lại trước khi kết luận về toàn bộ tài liệu; giới hạn ký tự có thể khiến trang cuối được truy cập chỉ được đọc một phần. Giữ bản chụp này để so sánh.",
+    "Check the same original version. If needed, obtain a text-layer PDF, publisher text or a separately OCR-processed copy; this run did not perform OCR.": "Kiểm tra đúng phiên bản gốc đó. Nếu cần, lấy PDF có lớp văn bản, văn bản từ nhà xuất bản hoặc bản đã xử lý OCR riêng; lượt này không thực hiện OCR.",
     "PDF text extraction visited {read} of {total} pages.": "Quá trình trích xuất văn bản PDF đã truy cập {read} trên {total} trang.",
     "Only the available PDF text layer was read; images and figures were not interpreted.": "Chỉ lớp văn bản có sẵn trong PDF được đọc; hình ảnh và biểu đồ chưa được diễn giải."
   },

@@ -52,6 +52,11 @@ for (const locale of preparedLocales) it(`${locale} exposes actual report-label 
   expect(pdfParts).toHaveLength(5);
   for (const [index, key] of (["summary", "emptyPages", "limit", "textOnly", "recovery"] as const).entries())
     expect(language(pdfParts[index])).toBe(selectedPdf[key] === pdfReadingCopy[key] ? "en" : locale);
+  if (locale !== "en") {
+    for (const key of ["summary", "emptyPages", "limit", "textOnly", "recovery"] as const)
+      expect(selectedPdf[key]).not.toBe(pdfReadingCopy[key]);
+    expect(container.querySelectorAll(`#pdf [lang="${locale}"]`)).toHaveLength(5);
+  }
   const link = container.querySelector("#comparison-link a")!;
   const linkText = previewText(preview, reportComparisonCopy.link, ["report-comparison"]);
   expect(link.textContent).toBe(linkText); expect(link.getAttribute("href")).toBe("/research/compare");
@@ -83,6 +88,7 @@ for (const locale of preparedLocales) it(`${locale} exposes actual report-label 
   expect(container.querySelector("source")).toBeNull();
   const status = container.querySelector("#evidence-status")!, statusTitle = status.querySelector("h3")!;
   expect(statusTitle.textContent).toBe(message("reportEvidence.title"));
+  if (locale !== "en") expect(statusTitle.textContent).not.toBe(englishMessages["reportEvidence.title"]);
   expect(language(statusTitle.querySelector("[lang]") ?? statusTitle))
     .toBe(message("reportEvidence.title") === englishMessages["reportEvidence.title"] ? "en" : locale);
   expect(status.querySelector("p.break-words")!.textContent).toBe(evidence.subClaims[0]);
@@ -90,6 +96,11 @@ for (const locale of preparedLocales) it(`${locale} exposes actual report-label 
   expect(language(budget.querySelector("[lang]") ?? budget)).toBe("en");
   expect(status.querySelector("a")!.getAttribute("href")).toBe(evidenceFollowUpHref(evidence.id,
     message("reportEvidence.draft", evidenceFollowUpContext(evidence.question, evidence.subClaims[0]))));
+  const followUp = new URL(status.querySelector("a")!.getAttribute("href")!, "https://ui.test");
+  expect(followUp.searchParams.get("q")).toContain(evidence.question);
+  expect(followUp.searchParams.get("q")).toContain(evidence.subClaims[0]);
+  expect(followUp.searchParams.get("parent")).toBe(evidence.id);
+  for (const forbidden of ["run", "budget", "model"]) expect(followUp.searchParams.has(forbidden)).toBe(false);
 });
 
 it("does not invent PDF coverage for malformed, missing or non-PDF metadata", async () => {

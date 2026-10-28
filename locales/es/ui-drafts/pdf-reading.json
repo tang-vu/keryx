@@ -1,0 +1,28 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/pdf-reading.ts",
+  "sourceSha256": "eeb3bf3c3bc763f6771e486d44c9f6fd779e4e0354b7b50f917e8cdca8be1ebc",
+  "entries": {
+    "summary": {
+      "source": "PDF text extraction visited {read} of {total} pages.",
+      "text": "La extracción de texto del PDF recorrió {read} de {total} páginas."
+    },
+    "emptyPages": {
+      "source": "No text was extracted from visited pages {pages}. These pages may be scanned, blank or otherwise unavailable to the text reader.",
+      "text": "No se extrajo texto de las páginas recorridas {pages}. Pueden ser páginas escaneadas, en blanco o no disponibles para el lector de texto por otro motivo."
+    },
+    "limit": {
+      "source": "A page or character limit stopped text extraction before the document was complete. Read the remaining original pages directly before making whole-document conclusions; a character cutoff can leave the last visited page incomplete. Retain this snapshot for comparison.",
+      "text": "Un límite de páginas o caracteres detuvo la extracción antes de completar el documento. Lee directamente las páginas originales restantes antes de sacar conclusiones sobre el documento completo; un corte por caracteres puede dejar incompleta la última página recorrida. Conserva esta instantánea para compararla."
+    },
+    "textOnly": {
+      "source": "Only the available PDF text layer was read; images and figures were not interpreted.",
+      "text": "Solo se leyó la capa de texto disponible del PDF; no se interpretaron imágenes ni figuras."
+    },
+    "recovery": {
+      "source": "Check the same original version. If needed, obtain a text-layer PDF, publisher text or a separately OCR-processed copy; this run did not perform OCR.",
+      "text": "Comprueba la misma versión original. Si es necesario, consigue un PDF con capa de texto, el texto del editor o una copia procesada con OCR por separado; esta ejecución no realizó OCR."
+    }
+  }
+}
