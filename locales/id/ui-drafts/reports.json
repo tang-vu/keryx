@@ -63,6 +63,26 @@
     "reportReading.estimated": {
       "source": "{coverage}% estimated",
       "text": "Perkiraan {coverage}%"
+    },
+    "reportActions.copy": {
+      "source": "Copy report",
+      "text": "Salin laporan"
+    },
+    "reportActions.download": {
+      "source": "Download report",
+      "text": "Unduh laporan"
+    },
+    "reportActions.openSaved": {
+      "source": "Open saved report",
+      "text": "Buka laporan tersimpan"
+    },
+    "reportActions.copyUnavailable": {
+      "source": "Copy unavailable. Download the report instead.",
+      "text": "Tidak dapat menyalin. Unduh laporan sebagai gantinya."
+    },
+    "reportActions.downloadUnavailable": {
+      "source": "Download unavailable. Open the saved report instead.",
+      "text": "Tidak dapat mengunduh. Buka laporan tersimpan sebagai gantinya."
     }
   }
 }

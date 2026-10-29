@@ -63,6 +63,26 @@
     "reportReading.estimated": {
       "source": "{coverage}% estimated",
       "text": "{coverage}% estimé"
+    },
+    "reportActions.copy": {
+      "source": "Copy report",
+      "text": "Copier le rapport"
+    },
+    "reportActions.download": {
+      "source": "Download report",
+      "text": "Télécharger le rapport"
+    },
+    "reportActions.openSaved": {
+      "source": "Open saved report",
+      "text": "Ouvrir le rapport enregistré"
+    },
+    "reportActions.copyUnavailable": {
+      "source": "Copy unavailable. Download the report instead.",
+      "text": "Copie indisponible. Téléchargez le rapport à la place."
+    },
+    "reportActions.downloadUnavailable": {
+      "source": "Download unavailable. Open the saved report instead.",
+      "text": "Téléchargement indisponible. Ouvrez le rapport enregistré à la place."
     }
   }
 }

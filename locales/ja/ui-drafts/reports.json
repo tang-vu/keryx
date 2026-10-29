@@ -63,6 +63,26 @@
     "reportReading.estimated": {
       "source": "{coverage}% estimated",
       "text": "推定{coverage}%"
+    },
+    "reportActions.copy": {
+      "source": "Copy report",
+      "text": "レポートをコピー"
+    },
+    "reportActions.download": {
+      "source": "Download report",
+      "text": "レポートをダウンロード"
+    },
+    "reportActions.openSaved": {
+      "source": "Open saved report",
+      "text": "保存済みレポートを開く"
+    },
+    "reportActions.copyUnavailable": {
+      "source": "Copy unavailable. Download the report instead.",
+      "text": "コピーできません。代わりにレポートをダウンロードしてください。"
+    },
+    "reportActions.downloadUnavailable": {
+      "source": "Download unavailable. Open the saved report instead.",
+      "text": "ダウンロードできません。代わりに保存済みレポートを開いてください。"
     }
   }
 }
