@@ -43,6 +43,30 @@
     "researchEntry.savedReports": {
       "source": "My saved reports",
       "text": "मेरी सहेजी गई रिपोर्ट"
+    },
+    "researchEntry.keyboardHint": {
+      "source": "Enter for a new line · Ctrl/⌘ + Enter to ask",
+      "text": "नई पंक्ति के लिए Enter · पूछने के लिए Ctrl/⌘ + Enter"
+    },
+    "researchEntry.metadataLookup": {
+      "source": "Look up free paper metadata",
+      "text": "शोधपत्रों का निःशुल्क मेटाडेटा खोजें"
+    },
+    "researchEntry.metadataLookupLabel": {
+      "source": "Look up free paper metadata: title, authors or DOI",
+      "text": "शोधपत्रों का निःशुल्क मेटाडेटा खोजें: शीर्षक, लेखक या DOI"
+    },
+    "researchEntry.quickHint": {
+      "source": "Quick: up to 2 focused reads.",
+      "text": "त्वरित शोध: प्रश्न पर केंद्रित अधिकतम 2 स्रोतों को पढ़ता है।"
+    },
+    "researchEntry.deepHint": {
+      "source": "Deep: up to 4 reads, including marketplace discovery and a coverage check.",
+      "text": "गहन शोध: अधिकतम 4 स्रोतों को पढ़ता है, जिसमें मार्केटप्लेस में स्रोतों की खोज और शोध के दायरे की जाँच शामिल है।"
+    },
+    "researchEntry.examplesLabel": {
+      "source": "Example questions",
+      "text": "प्रश्नों के उदाहरण"
     }
   }
 }

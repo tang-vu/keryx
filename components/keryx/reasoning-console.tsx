@@ -17,7 +17,7 @@ import { TraceRow } from "./trace-row";
 import { SectionHeading } from "./banknote";
 import { BudgetMeter, stepPaymentTotals } from "./budget-meter";
 import { fmtUsdc } from "./phase-style";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { UiMessage, useUiMessages } from "@/lib/i18n/ui-copy";
 
 
 
@@ -94,17 +94,17 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
       <span className="inline-flex max-w-full flex-wrap items-center gap-2">
         {streaming && <ThinkingDots />}
         <span className="tabular-nums tracking-normal">
-          <span className="text-paid">{message("decisionLog.settledAmount", { amount: fmtUsdc(spent) })}</span>
+          <span className="text-paid"><UiMessage messageKey="decisionLog.settledAmount" values={{ amount: fmtUsdc(spent) }} /></span>
           <span className="text-ink-3"> / ${fmtUsdc(budget)}</span>
         </span>
       </span>
     ) : streaming ? (
       <span className="inline-flex items-center gap-2 text-seal">
         <ThinkingDots />
-        {message("decisionLog.deciding")}
+        <UiMessage messageKey="decisionLog.deciding" />
       </span>
     ) : steps.length > 0 ? (
-      message(steps.length === 1 ? "decisionLog.steps.one" : "decisionLog.steps.other", { count: steps.length })
+      <UiMessage messageKey={steps.length === 1 ? "decisionLog.steps.one" : "decisionLog.steps.other"} values={{ count: steps.length }} />
     ) : undefined;
 
   return (
@@ -113,14 +113,14 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
       <BudgetMeter spent={spent} budget={budget} streaming={streaming} pending={paymentTotals.pending + paymentTotals.unverified} />
       {(paymentTotals.pending > 0 || paymentTotals.simulated > 0 || paymentTotals.unverified > 0) && (
         <p className="mb-3 font-mono text-xs text-ink-2">
-          {paymentTotals.pending > 0 && message("decisionLog.pendingAmount", { amount: fmtUsdc(paymentTotals.pending) })}
+          {paymentTotals.pending > 0 && <UiMessage messageKey="decisionLog.pendingAmount" values={{ amount: fmtUsdc(paymentTotals.pending) }} />}
           {paymentTotals.pending > 0 && (paymentTotals.simulated > 0 || paymentTotals.unverified > 0) && " · "}
-          {paymentTotals.simulated > 0 && message("decisionLog.simulatedAmount", { amount: fmtUsdc(paymentTotals.simulated) })}
+          {paymentTotals.simulated > 0 && <UiMessage messageKey="decisionLog.simulatedAmount" values={{ amount: fmtUsdc(paymentTotals.simulated) }} />}
           {paymentTotals.simulated > 0 && paymentTotals.unverified > 0 && " · "}
-          {paymentTotals.unverified > 0 && message("decisionLog.unverifiedAmount", { amount: fmtUsdc(paymentTotals.unverified) })}
+          {paymentTotals.unverified > 0 && <UiMessage messageKey="decisionLog.unverifiedAmount" values={{ amount: fmtUsdc(paymentTotals.unverified) }} />}
         </p>
       )}
-      <p id={`${descriptionId}-hint`} className="sr-only">{message("decisionLog.scrollHint")}</p>
+      <p id={`${descriptionId}-hint`} className="sr-only"><UiMessage messageKey="decisionLog.scrollHint" /></p>
       <div className="flex min-w-0 flex-1 flex-col border border-ink bg-paper">
         <div ref={scrollRef} onScroll={onScroll} role="region" tabIndex={0} aria-label={message("decisionLog.label")} aria-describedby={`${descriptionId}-hint ${descriptionId}-mode`} className="max-h-[60vh] min-h-[320px] min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 [overflow-anchor:none] [scrollbar-gutter:stable] focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-seal sm:max-h-[68vh] sm:px-5">
           <ol ref={contentRef} role="list" className="relative min-w-0 divide-y divide-line/60">
@@ -132,7 +132,7 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
           </ol>
           {streaming && steps.length === 0 && (
               <p className="py-8 text-center font-mono text-[12px] uppercase tracking-[0.1em] text-ink-3">
-                {message("decisionLog.connecting")}
+                <UiMessage messageKey="decisionLog.connecting" />
               </p>
             )}
         </div>
@@ -142,14 +142,14 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
               <svg aria-hidden="true" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" className="mt-0.5 shrink-0 text-seal">
                 {following ? <path d="M10 3v12m-4-4 4 4 4-4" /> : <path d="M7 4v12m6-12v12" />}
               </svg>
-              <span>{message(following ? "decisionLog.followingLatest" : "decisionLog.readingEarlier")}</span>
+              <span><UiMessage messageKey={following ? "decisionLog.followingLatest" : "decisionLog.readingEarlier"} /></span>
             </p>
             <p role="status" aria-live="polite" aria-atomic="true" className="mt-1 font-mono text-[11px] leading-relaxed text-seal">
-              {newSteps > 0 && <span key={newSteps} className="inline-block motion-safe:animate-[kxUp_180ms_ease-out_both]">{message(newSteps === 1 ? "decisionLog.newSteps.one" : "decisionLog.newSteps.other", { count: newSteps })}</span>}
+              {newSteps > 0 && <span key={newSteps} className="inline-block motion-safe:animate-[kxUp_180ms_ease-out_both]"><UiMessage messageKey={newSteps === 1 ? "decisionLog.newSteps.one" : "decisionLog.newSteps.other"} values={{ count: newSteps }} /></span>}
             </p>
           </div>
           {!following && <button type="button" onClick={jumpToLatest} className="inline-flex min-h-[44px] min-w-0 max-w-full items-center justify-center gap-2 border border-ink bg-ink px-4 py-2 font-mono text-xs text-paper transition-colors duration-180 hover:bg-paper hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal motion-reduce:transition-none">
-            {message("decisionLog.jumpToLatest")}<span aria-hidden="true">↓</span>
+            <UiMessage messageKey="decisionLog.jumpToLatest" /><span aria-hidden="true">↓</span>
           </button>}
         </div>
       </div>

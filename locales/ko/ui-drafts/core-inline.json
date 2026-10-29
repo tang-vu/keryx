@@ -43,6 +43,30 @@
     "researchEntry.savedReports": {
       "source": "My saved reports",
       "text": "내 저장된 보고서"
+    },
+    "researchEntry.keyboardHint": {
+      "source": "Enter for a new line · Ctrl/⌘ + Enter to ask",
+      "text": "Enter로 줄바꿈 · Ctrl/⌘ + Enter로 질문"
+    },
+    "researchEntry.metadataLookup": {
+      "source": "Look up free paper metadata",
+      "text": "무료로 논문 메타데이터 조회"
+    },
+    "researchEntry.metadataLookupLabel": {
+      "source": "Look up free paper metadata: title, authors or DOI",
+      "text": "무료로 논문 메타데이터 조회: 제목, 저자 또는 DOI"
+    },
+    "researchEntry.quickHint": {
+      "source": "Quick: up to 2 focused reads.",
+      "text": "빠른 조사: 질문에 집중한 자료를 최대 2개 읽습니다."
+    },
+    "researchEntry.deepHint": {
+      "source": "Deep: up to 4 reads, including marketplace discovery and a coverage check.",
+      "text": "심층 조사: 자료를 최대 4개 읽고, 마켓플레이스에서 자료를 검색하며 조사 범위를 확인합니다."
+    },
+    "researchEntry.examplesLabel": {
+      "source": "Example questions",
+      "text": "질문 예시"
     }
   }
 }

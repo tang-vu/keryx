@@ -43,6 +43,30 @@
     "researchEntry.savedReports": {
       "source": "My saved reports",
       "text": "Meine gespeicherten Berichte"
+    },
+    "researchEntry.keyboardHint": {
+      "source": "Enter for a new line · Ctrl/⌘ + Enter to ask",
+      "text": "Enter für eine neue Zeile · Ctrl/⌘ + Enter zum Fragen"
+    },
+    "researchEntry.metadataLookup": {
+      "source": "Look up free paper metadata",
+      "text": "Kostenlose Metadaten wissenschaftlicher Artikel nachschlagen"
+    },
+    "researchEntry.metadataLookupLabel": {
+      "source": "Look up free paper metadata: title, authors or DOI",
+      "text": "Kostenlose Artikelmetadaten nachschlagen: Titel, Autoren oder DOI"
+    },
+    "researchEntry.quickHint": {
+      "source": "Quick: up to 2 focused reads.",
+      "text": "Kurz: bis zu 2 gezielte Lektüren."
+    },
+    "researchEntry.deepHint": {
+      "source": "Deep: up to 4 reads, including marketplace discovery and a coverage check.",
+      "text": "Gründlich: bis zu 4 Lektüren, einschließlich Quellensuche im Marktplatz und Prüfung der Themenabdeckung."
+    },
+    "researchEntry.examplesLabel": {
+      "source": "Example questions",
+      "text": "Beispielfragen"
     }
   }
 }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { currentArcLabel } from "@/lib/arc-network-display";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { UiMessage, useUiMessages } from "@/lib/i18n/ui-copy";
 
 
 
@@ -128,7 +128,7 @@ export function OnboardingTour() {
 
   return (
     <>
-      <button ref={trigger} type="button" onClick={() => { setStep(0); setActive(true); }} className="inline-flex min-h-[44px] items-center border border-ink bg-paper px-4 font-mono text-xs text-ink hover:bg-paper-2 focus-visible:outline-2 focus-visible:outline-seal">{message("researchTour.open")}</button>
+      <button ref={trigger} type="button" onClick={() => { setStep(0); setActive(true); }} className="inline-flex min-h-[44px] min-w-0 max-w-full items-center border border-ink bg-paper px-4 font-mono text-xs text-ink [overflow-wrap:anywhere] hover:bg-paper-2 focus-visible:outline-2 focus-visible:outline-seal"><UiMessage messageKey="researchTour.open" /></button>
       {active && portalRoot && createPortal(
         <>
           <div className="fixed inset-0 z-[9998]" aria-hidden="true" onClick={close}>
@@ -144,20 +144,20 @@ export function OnboardingTour() {
           <div ref={panel} role="dialog" aria-modal="true" aria-label={message("researchTour.label")} aria-describedby={bodyId} className="fixed z-[9999] flex max-h-[calc(100dvh-16px)] flex-col overflow-hidden rounded-t-2xl border border-ink bg-paper shadow-2xl motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-200 sm:rounded-none" style={narrow ? { left: 0, right: 0, bottom: 0, maxHeight: "min(calc(100dvh - 16px), max(12.5rem, 50dvh))" } : { width, right: 8, bottom: 8 }}>
             <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-paper-2 px-5 py-3">
               <div className="min-w-0">
-                <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-seal">{message("researchTour.step", { number: step + 1, total: steps.length })}</p>
+                <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-seal"><UiMessage messageKey="researchTour.step" values={{ number: step + 1, total: steps.length }} /></p>
                 <div aria-hidden="true" className="mt-2 flex gap-1">{steps.map((item, index) => <span key={item.target} className={`h-0.5 w-5 ${index <= step ? "bg-seal" : "bg-line"}`} />)}</div>
               </div>
-              <button type="button" onClick={close} aria-label={message("researchTour.closeLabel")} className="min-h-[44px] min-w-[44px] shrink-0 border border-line bg-paper px-3 font-mono text-xs text-ink hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">{message("researchTour.close")}</button>
+              <button type="button" onClick={close} aria-label={message("researchTour.closeLabel")} className="min-h-[44px] min-w-[44px] shrink-0 border border-line bg-paper px-3 font-mono text-xs text-ink hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"><UiMessage messageKey="researchTour.close" /></button>
             </header>
             <div role="region" tabIndex={0} aria-labelledby={titleId} aria-live="polite" aria-atomic="true" className="min-h-0 overflow-y-auto overscroll-contain px-5 py-3 sm:py-5 [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-seal">
               <div key={step} className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
-                <h2 id={titleId} className="font-display text-[28px] leading-tight text-ink">{message(steps[step].title)}</h2>
-                <p id={bodyId} className="mt-3 font-serif text-base leading-relaxed text-ink-2">{message(steps[step].body, { network: currentArcLabel })}</p>
+                <h2 id={titleId} className="font-display text-[28px] leading-tight text-ink"><UiMessage messageKey={steps[step].title} /></h2>
+                <p id={bodyId} className="mt-3 font-serif text-base leading-relaxed text-ink-2"><UiMessage messageKey={steps[step].body} values={{ network: currentArcLabel }} /></p>
               </div>
             </div>
             <footer className="flex shrink-0 flex-wrap justify-between gap-3 border-t border-line bg-paper-2 px-5 py-3">
-              <button type="button" disabled={step === 0} onClick={() => setStep(step - 1)} className="min-h-[44px] border border-line bg-paper px-3 font-mono text-xs text-ink hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-40">{message("researchTour.back")}</button>
-              <button type="button" onClick={() => step === steps.length - 1 ? close() : setStep(step + 1)} className="group ml-auto inline-flex min-h-[44px] items-center gap-3 border border-ink bg-ink px-4 font-mono text-xs text-paper hover:bg-ink/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">{step === steps.length - 1 ? message("researchTour.done") : message("researchTour.next")}<span aria-hidden="true" className="before:content-['→'] motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-0.5" /></button>
+              <button type="button" disabled={step === 0} onClick={() => setStep(step - 1)} className="min-h-[44px] border border-line bg-paper px-3 font-mono text-xs text-ink hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-40"><UiMessage messageKey="researchTour.back" /></button>
+              <button type="button" onClick={() => step === steps.length - 1 ? close() : setStep(step + 1)} className="group ml-auto inline-flex min-h-[44px] items-center gap-3 border border-ink bg-ink px-4 font-mono text-xs text-paper hover:bg-ink/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"><UiMessage messageKey={step === steps.length - 1 ? "researchTour.done" : "researchTour.next"} /><span aria-hidden="true" className="before:content-['→'] motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-0.5" /></button>
             </footer>
           </div>
         </>

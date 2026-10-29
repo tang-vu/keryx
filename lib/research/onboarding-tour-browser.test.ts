@@ -6,9 +6,13 @@ import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { chromium, type Browser, type Page } from "playwright";
 import { signedOutResearchAuthFixture, assertSignedOutBrowserFixtureGraph } from "../../test-support/research-browser-auth-fixture";
+import { loadUiPreview } from "../i18n/ui-preview-catalogues";
+import { createMessages, englishMessages } from "../i18n/messages";
+import { ARC_TESTNET_PROFILE } from "../arc-network-profile";
 
-let browser: Browser, bundle: string, researchBundle: string, css: string;
+let browser: Browser, bundle: string, researchBundle: string, nativeBundle: string, css: string;
 const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR;
+const nativeScreenshots = process.env.KERYX_NATIVE_GUIDANCE_SCREENSHOT_DIR ?? screenshots;
 type GuideFixture = { dispatches: number; budgetEvents: number; context(value: boolean): void; long(value: boolean): void; mount(value: boolean): void };
 const fonts = `@font-face{font-family:GuideDisplay;src:url('/fonts/bodoni-moda-latin.woff2')}@font-face{font-family:GuideSerif;src:url('/fonts/spectral-latin-400.woff2')}@font-face{font-family:GuideMono;src:url('/fonts/spline-sans-mono-latin.woff2')}
 :root{--font-bodoni:GuideDisplay;--font-spectral:GuideSerif;--font-spline-mono:GuideMono}`;
@@ -41,11 +45,131 @@ beforeAll(async () => {
     } }] });
   assertSignedOutBrowserFixtureGraph(research.metafile, ["components/keryx/research-chat.tsx", "components/keryx/ask-form.tsx", "components/keryx/onboarding-tour.tsx", "lib/hooks/use-ask-stream.ts"]);
   researchBundle = research.outputFiles[0].text;
+  const native = await build({ stdin: { contents: `import React from'react';import{createRoot}from'react-dom/client';import{ResearchChat}from'./components/keryx/research-chat';
+    import{LanguageSwitcher}from'./components/keryx/language-switcher';import{LocaleProvider}from'./lib/i18n/locale-context';import{UiCopyProvider}from'./lib/i18n/ui-copy-provider';import{preparedLocales}from'./lib/i18n/locales';import{loadUiPreview}from'./lib/i18n/ui-preview-catalogues';
+    const fixture=window.guideFixture={dispatches:0,budgetEvents:0};document.addEventListener('keryx:tour-budget',()=>fixture.budgetEvents++);
+    createRoot(document.getElementById('root')).render(<LocaleProvider network="eip155:5042002" enabledLocales={preparedLocales} prepareLocale={loadUiPreview}><UiCopyProvider><LanguageSwitcher/><ResearchChat introduceProduct/></UiCopyProvider></LocaleProvider>);`, loader: "tsx", resolveDir: process.cwd() },
+    bundle: true, write: false, metafile: true, platform: "browser", format: "iife", jsx: "automatic",
+    define: { "process.env": JSON.stringify({ NODE_ENV: "production", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet" }) },
+    plugins: [signedOutResearchAuthFixture(), { name: "explicit-native-guide-no-funding-boundary", setup(api) {
+      api.onResolve({ filter: /^\.\/session-grant-panel$/ }, args => args.importer.replaceAll("\\", "/").endsWith("/components/keryx/research-chat.tsx") ? { path: "no-funding", namespace: "native-guide-funding-fixture" } : undefined);
+      api.onLoad({ filter: /^no-funding$/, namespace: "native-guide-funding-fixture" }, () => ({ loader: "js", contents: "export function SessionGrantPanel(){return null}" }));
+    } }] });
+  assertSignedOutBrowserFixtureGraph(native.metafile, ["components/keryx/research-chat.tsx", "components/keryx/ask-form.tsx", "components/keryx/onboarding-tour.tsx",
+    "components/keryx/language-switcher.tsx", "lib/i18n/locale-context.tsx", "lib/i18n/ui-copy-provider.tsx", "lib/hooks/use-ask-stream.ts"]);
+  nativeBundle = native.outputFiles[0].text;
   css = (await postcss([tailwind({ base: process.cwd() })]).process(await readFile("app/globals.css", "utf8"), { from: resolve("app/globals.css") })).css;
   if (screenshots) await mkdir(screenshots, { recursive: true });
+  if (nativeScreenshots && nativeScreenshots !== screenshots) await mkdir(nativeScreenshots, { recursive: true });
   browser = await chromium.launch({ headless: true });
 }, 30_000);
 afterAll(async () => { await browser?.close(); });
+
+it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(locale =>
+  [320, 1366].map(width => ({ locale, width, font: 16 }))), { locale: "fr" as const, width: 320, font: 24 },
+  { locale: "pt-BR" as const, width: 320, font: 32 }])("keeps the native $locale first-use journey and unsent originals intact at $width with $font px text", async ({ locale, width, font }) => {
+  const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
+  const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: "reduce", serviceWorkers: "block" });
+  const errors: string[] = [], requests: Array<{ path: string; method: string }> = [], unexpected: string[] = [];
+  try {
+    await context.route("**/*", async route => {
+      const request = route.request(), url = new URL(request.url());
+      if (url.origin !== "https://guide.test" || request.method() !== "GET") { unexpected.push(`${request.method()} ${url.pathname}`); return route.abort(); }
+      if (url.pathname.startsWith("/api/")) {
+        requests.push({ path: url.pathname, method: request.method() });
+        if (url.pathname === "/api/auth/session") return route.fulfill({ status: 401 });
+        if (url.pathname === "/api/research/availability") return route.fulfill({ json: { state: "not-paused" } });
+        if (url.pathname === "/api/ask/visibility") return route.fulfill({ json: { wallet: null, defaultVisibility: "public", privacyActive: true } });
+        if (url.pathname === "/api/models") return route.fulfill({ json: { models: [{ id: "deepseek", label: "Original model", note: "Original model note" }] } });
+        if (url.pathname === "/api/sources") return route.fulfill({ json: { sources: [] } });
+        unexpected.push(`Unexpected GET ${url.pathname}`); return route.abort();
+      }
+      if (url.pathname === "/guide.css") return route.fulfill({ contentType: "text/css", body: css + fonts });
+      if (url.pathname.startsWith("/fonts/")) return route.fulfill({ contentType: "font/woff2", body: await readFile(join("app", url.pathname)) });
+      if (url.pathname !== "/") { unexpected.push(url.pathname); return route.abort(); }
+      return route.fulfill({ contentType: "text/html", body: '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/guide.css"></head><body><div id="root"></div></body></html>' });
+    });
+    const page = await context.newPage(); page.setDefaultTimeout(5000); page.on("pageerror", error => errors.push(error.message));
+    await page.goto("https://guide.test/"); await page.addScriptTag({ content: nativeBundle });
+    await page.evaluate(size => { document.documentElement.style.fontSize = `${size}px`; }, font);
+    const selector = page.locator("[data-language-switcher] select"), input = page.locator("#ask-question");
+    await expect.poll(() => selector.isEnabled()).toBe(true); await input.waitFor();
+    const original = "Unsent हिन्दी 日本語 <literal> {count} USDC", handle = await input.elementHandle();
+    await input.fill(original);
+    const metadataHref = await page.getByTestId("paper-metadata-handoff").getAttribute("href");
+    await selector.selectOption(locale);
+    await expect.poll(() => page.locator("html").getAttribute("lang")).toBe(locale);
+    expect(await page.locator("#ask-keyboard-hint [lang]").textContent()).toBe(message("researchEntry.keyboardHint"));
+    expect(await page.locator("#ask-keyboard-hint [lang]").getAttribute("lang")).toBe(locale);
+    await page.locator("summary").filter({ hasText: message("researchEntry.moreOptions") }).click();
+    const metadata = page.getByRole("link", { name: message("researchEntry.metadataLookupLabel"), exact: true });
+    expect(await metadata.textContent()).toBe(message("researchEntry.metadataLookup"));
+    expect(await metadata.getAttribute("lang")).toBe(locale); expect(await metadata.getAttribute("href")).toBe(metadataHref);
+    expect(await page.getByRole("group", { name: message("researchEntry.examplesLabel"), exact: true }).count()).toBe(1);
+    await page.getByText(message("researchEntry.quickHint"), { exact: true }).waitFor();
+    await page.getByRole("radio", { name: message("researchEntry.deep"), exact: true }).check();
+    await page.getByText(message("researchEntry.deepHint"), { exact: true }).waitFor();
+    const guideBounds = await page.getByTestId("hero-guide").getByRole("button").boundingBox();
+    expect(guideBounds).toBeTruthy();
+    const kickerClear = await page.getByTestId("hero-kicker").evaluate((element, guide) => {
+      const range = document.createRange(); range.selectNodeContents(element);
+      return Array.from(range.getClientRects()).every(rect => rect.right <= guide!.x + 1 || rect.left >= guide!.x + guide!.width - 1 ||
+        rect.bottom <= guide!.y + 1 || rect.top >= guide!.y + guide!.height - 1);
+    }, guideBounds);
+    expect(kickerClear, "The guide trigger must leave the complete native kicker visible").toBe(true);
+    const submitFits = await page.locator('[data-tour="dispatch-btn"]').evaluate(button => {
+      const bounds = button.getBoundingClientRect();
+      return Array.from(button.querySelectorAll("[lang]")).every(span => {
+        const range = document.createRange(); range.selectNodeContents(span);
+        return Array.from(range.getClientRects()).every(rect => rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1 && rect.top >= bounds.top - 1 && rect.bottom <= bounds.bottom + 1);
+      });
+    });
+    expect(submitFits, "The submit button must not clip its native label").toBe(true);
+    const optionsFit = await page.locator(".kx-research-depth").evaluateAll(labels => labels.every(label => {
+      const bounds = label.getBoundingClientRect();
+      return label.scrollWidth <= label.clientWidth && Array.from(label.querySelectorAll("span")).every(span =>
+        Array.from(span.getClientRects()).every(rect => rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1));
+    }));
+    expect(optionsFit, "Each translated depth label must fit its own option").toBe(true);
+    expect(await page.getByTestId("composer-payer-notice").textContent()).toBe(englishMessages["researchEntry.freeTrialNotice"]);
+    expect(await page.getByTestId("composer-payer-notice").locator('[lang="en"]').count()).toBe(1);
+    expect(await input.inputValue()).toBe(original); expect(await handle!.evaluate(element => element.isConnected)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const frame = `${locale}-${width}${font === 16 ? "" : `-font${font}`}`;
+    if (nativeScreenshots) await page.locator("#root").screenshot({ path: join(nativeScreenshots, `guide-native-composer-${frame}.png`) });
+    const trigger = page.getByRole("button", { name: message("researchTour.open"), exact: true }); await trigger.click();
+    const dialog = page.getByRole("dialog", { name: message("researchTour.label"), exact: true }); await dialog.waitFor();
+    await expect.poll(() => dialog.getByRole("button", { name: message("researchTour.closeLabel"), exact: true }).evaluate(element => document.activeElement === element)).toBe(true);
+    for (const [index, title, body] of [
+      [0, "researchTour.budgetTitle", "researchTour.budgetBody"], [1, "researchTour.questionTitle", "researchTour.questionBody"],
+      [2, "researchTour.capTitle", "researchTour.capBody"], [3, "researchTour.startTitle", "researchTour.startBody"],
+    ] as const) {
+      const reader = dialog.getByRole("region", { name: message(title), exact: true }); await reader.waitFor();
+      expect(await reader.locator("h2 [lang]").getAttribute("lang")).toBe(index === 0 || index === 2 ? "en" : locale);
+      expect(await reader.locator("p [lang]").getAttribute("lang")).toBe(index === 1 ? locale : "en");
+      expect(await reader.locator("p").textContent()).toBe(message(body, { network: ARC_TESTNET_PROFILE.label }));
+      const bounds = await dialog.boundingBox(); expect(bounds && bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= width && bounds.y + bounds.height <= 844).toBe(true);
+      const buttons = await dialog.locator("button").evaluateAll(elements => elements.map(element => { const rect = element.getBoundingClientRect(); return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, height: rect.height }; }));
+      expect(buttons.every(rect => rect.height >= 44 && rect.left >= 0 && rect.right <= width && rect.top >= 0 && rect.bottom <= 844)).toBe(true);
+      expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+      if (font > 16 && index === 1) {
+        expect(await reader.evaluate(element => element.clientHeight > 44 && element.scrollHeight > element.clientHeight)).toBe(true);
+        await reader.focus(); const top = await reader.evaluate(element => element.scrollTop);
+        await page.keyboard.press("PageDown"); await expect.poll(() => reader.evaluate(element => element.scrollTop)).toBeGreaterThan(top);
+      }
+      if (nativeScreenshots) await page.screenshot({ path: join(nativeScreenshots, `guide-native-${frame}-step-${index + 1}.png`) });
+      const action = dialog.getByRole("button", { name: message(index === 3 ? "researchTour.done" : "researchTour.next"), exact: true });
+      await action.focus(); await page.keyboard.press("Enter");
+    }
+    await expect.poll(() => page.locator("[data-keryx-tour-portal]").count()).toBe(0);
+    expect(await trigger.evaluate(element => document.activeElement === element)).toBe(true);
+    expect(await input.inputValue()).toBe(original); expect(await page.getByTestId("paper-metadata-handoff").getAttribute("href")).toBe(metadataHref);
+    expect(await page.evaluate(() => (window as unknown as { guideFixture: GuideFixture }).guideFixture.budgetEvents)).toBe(1);
+    await selector.selectOption("en"); await expect.poll(() => page.locator("html").getAttribute("lang")).toBe("en");
+    expect(await input.inputValue()).toBe(original); expect(await handle!.evaluate(element => element.isConnected)).toBe(true);
+    expect(requests.length).toBeGreaterThan(0); expect(unexpected).toEqual([]); expect(errors).toEqual([]);
+  } finally { await context.close(); }
+});
 
 it.each([[390, 844], [1366, 844], [320, 480], [320, 360]])("keeps actual research guide targets and controls accessible at %i/%i", async (width, height) => {
   const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce" });

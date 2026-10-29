@@ -1,0 +1,76 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-flow.ts",
+  "sourceSha256": "493d7a7076923699c0ec017d68c4f03695ecb0f10f80509a3e59d67ecff5f8ff",
+  "entries": {
+    "researchTour.open": {
+      "source": "How it works",
+      "text": "So funktioniert es"
+    },
+    "researchTour.label": {
+      "source": "How Keryx works",
+      "text": "So funktioniert Keryx"
+    },
+    "researchTour.questionTitle": {
+      "source": "Ask a question",
+      "text": "Frage stellen"
+    },
+    "researchTour.questionBody": {
+      "source": "Enter the research question you want answered. You can inspect decisions as the answer streams.",
+      "text": "Gib die Forschungsfrage ein, die du beantworten möchtest. Du kannst die Entscheidungen prüfen, während die Antwort entsteht."
+    },
+    "researchTour.startTitle": {
+      "source": "Start research",
+      "text": "Recherche starten"
+    },
+    "researchTour.closeLabel": {
+      "source": "Close tour",
+      "text": "Anleitung schließen"
+    },
+    "researchTour.close": {
+      "source": "Close",
+      "text": "Schließen"
+    },
+    "researchTour.back": {
+      "source": "Back",
+      "text": "Zurück"
+    },
+    "researchTour.done": {
+      "source": "Done",
+      "text": "Fertig"
+    },
+    "researchTour.next": {
+      "source": "Next",
+      "text": "Weiter"
+    },
+    "researchTour.step": {
+      "source": "Step {number} of {total}",
+      "text": "Schritt {number} von {total}"
+    },
+    "decisionLog.jumpToLatest": {
+      "source": "Jump to latest",
+      "text": "Zu den neuesten Schritten"
+    },
+    "decisionLog.followingLatest": {
+      "source": "Following latest steps",
+      "text": "Neueste Schritte werden verfolgt"
+    },
+    "decisionLog.readingEarlier": {
+      "source": "Reading earlier steps",
+      "text": "Frühere Schritte werden gelesen"
+    },
+    "decisionLog.scrollHint": {
+      "source": "Scroll inside the log to read earlier steps. Jump to latest to follow new steps.",
+      "text": "Scrolle im Protokoll, um frühere Schritte zu lesen. Springe zu den neuesten Schritten, um neue Schritte zu verfolgen."
+    },
+    "decisionLog.title": {
+      "source": "The decision",
+      "text": "Die Entscheidung"
+    },
+    "decisionLog.label": {
+      "source": "Decision log",
+      "text": "Entscheidungsprotokoll"
+    }
+  }
+}
