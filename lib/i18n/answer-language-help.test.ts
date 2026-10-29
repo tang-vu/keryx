@@ -76,6 +76,8 @@ it.each(preparedLocales)("%s disclosure exposes native examples and preserves th
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
   const button = container.querySelector<HTMLButtonElement>("[data-answer-language-help] button")!;
+  const primaryAction = container.querySelector<HTMLButtonElement>('[data-tour="dispatch-btn"]')!;
+  expect(primaryAction.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   const panel = document.getElementById(button.getAttribute("aria-controls")!)!;
   expect(button.type).toBe("button"); expect(button.getAttribute("aria-expanded")).toBe("false"); expect(panel.hidden).toBe(true);
   expect(button.textContent).toBe(draft(locale).entries.answerLanguageTitle.text);

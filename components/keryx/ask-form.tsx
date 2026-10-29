@@ -260,7 +260,7 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
   return (
     <div data-tour="ask-form">
       <div className="kx-research-composer border border-line bg-paper shadow-[0_4px_24px_-12px_rgba(27,23,18,0.25)]">
-        <div className={offerLanguageHelp ? "p-3 sm:p-6" : "p-4 sm:p-6"}>
+        <div className="p-4 sm:p-6">
           <label htmlFor="ask-question" className="block font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-2">
             <UiMessage messageKey="researchEntry.question" />
           </label>
@@ -277,13 +277,12 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
             maxLength={MAX_ASK_QUESTION_CHARS}
             disabled={disabled}
             aria-describedby="ask-keyboard-hint"
-            className={`${offerLanguageHelp ? "mt-1 sm:mt-3" : "mt-3"} min-h-[88px] w-full resize-y border border-ink-3/75 bg-paper px-3 py-3 font-serif text-lg leading-relaxed text-ink outline-none placeholder:text-ink-3 focus-visible:border-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50 sm:min-h-[104px] sm:text-xl`}
+            className="mt-3 min-h-[88px] w-full resize-y border border-ink-3/75 bg-paper px-3 py-3 font-serif text-lg leading-relaxed text-ink outline-none placeholder:text-ink-3 focus-visible:border-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50 sm:min-h-[104px] sm:text-xl"
           />
           <p id="ask-keyboard-hint" className="mt-1 text-xs text-ink-3"><UiMessage messageKey="researchEntry.keyboardHint" /></p>
-          {offerLanguageHelp && <AnswerLanguageHelp />}
           {(researchPaused || !checking && !availability) && availabilityPanel}
 
-          <div className={offerLanguageHelp ? "border-t border-line sm:mt-4 sm:pt-4" : "mt-4 border-t border-line pt-4"}>
+          <div className="mt-4 border-t border-line pt-4">
           <div className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-6">
           <fieldset className="min-w-0">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2"><UiMessage messageKey="researchEntry.depth" /></legend>
@@ -308,6 +307,7 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
               <ArrowUpRight aria-hidden="true" className="size-4 shrink-0" />
             </button>
           </div>
+            {offerLanguageHelp && <AnswerLanguageHelp />}
             {!conversation && <div className="mt-4 flex flex-wrap gap-2" aria-label={message("researchEntry.examplesLabel")}>
               {SUGGESTIONS.map((s) => (
                 <button key={s.label} type="button" disabled={disabled} onClick={() => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(s.q); questionRef.current?.focus(); }}
