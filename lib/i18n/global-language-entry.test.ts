@@ -14,7 +14,7 @@ import { UiMessage, useUiCopy, useUiMessages } from "./ui-copy";
 import { getUiPreview, loadUiPreview } from "./ui-preview-catalogues";
 import { formatLocalizedUsdc, formatSigningUsdc, formatLocalizedInstant, formatLocalizedNumber } from "./format";
 
-const added = ["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const;
+const added = ["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const;
 const h = React.createElement;
 let root: Root, container: HTMLDivElement;
 const fetcher = vi.fn(async (_path: RequestInfo | URL) => new Response(null, { status: 401 }));
@@ -66,7 +66,7 @@ it("switches every added native-language option and preserves originals, drafts,
 });
 
 it.each(added)("formats %s without changing monetary precision, signing text or time evidence", locale => {
-  const decimal = ["es", "pt-BR", "fr", "de", "id"].includes(locale) ? "," : ".";
+  const decimal = ["es", "pt-BR", "fr", "de", "id", "ru"].includes(locale) ? "," : ".";
   expect(formatLocalizedUsdc("9007199254740991", locale)).toMatch(/740991 USDC$/u);
   expect(formatLocalizedUsdc(1, locale)).toBe(`0${decimal}000001 USDC`);
   expect(formatLocalizedUsdc(49, locale)).toBe(`0${decimal}000049 USDC`);

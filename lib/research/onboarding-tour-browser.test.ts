@@ -65,9 +65,10 @@ beforeAll(async () => {
 }, 30_000);
 afterAll(async () => { await browser?.close(); });
 
-it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(locale =>
+it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const).flatMap(locale =>
   [320, 1366].map(width => ({ locale, width, font: 16 }))), { locale: "fr" as const, width: 320, font: 24 },
-  { locale: "pt-BR" as const, width: 320, font: 32 }])("keeps the native $locale first-use journey and unsent originals intact at $width with $font px text", async ({ locale, width, font }) => {
+  { locale: "pt-BR" as const, width: 320, font: 32 },
+  { locale: "ru" as const, width: 320, font: 32 }, { locale: "ru" as const, width: 1366, font: 32 }])("keeps the native $locale first-use journey and unsent originals intact at $width with $font px text", async ({ locale, width, font }) => {
   const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
   const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: "reduce", serviceWorkers: "block" });
   const errors: string[] = [], requests: Array<{ path: string; method: string }> = [], unexpected: string[] = [];

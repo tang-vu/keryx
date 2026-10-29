@@ -1,0 +1,228 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/reports.ts",
+  "sourceSha256": "c382523e9b0216952efe118a5e28d1ba77c298f0c6bb7c38fe28d5b8e1ca2b5b",
+  "entries": {
+    "reportEvidence.title": {
+      "source": "Recorded evidence",
+      "text": "Сохранённые подтверждения"
+    },
+    "reportEvidence.recorded": {
+      "source": "Targets with inspectable excerpts: {count}/{total}.",
+      "text": "Темы с доступными для проверки цитатами: {count}/{total}."
+    },
+    "reportEvidence.unavailable": {
+      "source": "This report has no stored excerpt ledger; target support cannot be inspected here.",
+      "text": "В этом отчёте нет сохранённого журнала цитат; проверить подтверждения по темам здесь нельзя."
+    },
+    "reportEvidence.notice": {
+      "source": "Excerpt presence and estimated support do not establish a complete or factually correct answer.",
+      "text": "Наличие цитат и оценка подтверждения не означают, что ответ полон или фактически верен."
+    },
+    "reportEvidence.inspectCount": {
+      "source": "Targets with missing excerpts or a low recorded support estimate: {count}.",
+      "text": "Темы без цитат или с низкой сохранённой оценкой подтверждения: {count}."
+    },
+    "reportEvidence.inspect": {
+      "source": "Inspect targets and prepare a follow-up",
+      "text": "Проверить темы и подготовить уточняющий вопрос"
+    },
+    "reportEvidence.targetUnavailable": {
+      "source": "Excerpt ledger unavailable",
+      "text": "Журнал цитат недоступен"
+    },
+    "reportEvidence.missing": {
+      "source": "No qualifying excerpt recorded",
+      "text": "Подходящая цитата не сохранена"
+    },
+    "reportEvidence.excerpts": {
+      "source": "Inspectable excerpts: {count}",
+      "text": "Доступные для проверки цитаты: {count}"
+    },
+    "reportEvidence.prepare": {
+      "source": "Prepare follow-up",
+      "text": "Подготовить уточняющий вопрос"
+    },
+    "reportEvidence.prepareNotice": {
+      "source": "Opens an editable question. Review the question and budget before starting a new research run, which may incur charges.",
+      "text": "Откроется вопрос, который можно отредактировать. Проверьте вопрос и бюджет перед запуском нового исследования, за которое может взиматься плата."
+    },
+    "reportEvidence.draft": {
+      "source": "Investigate this research target: “{target}”. Find source excerpts, explain what they support and identify what remains unknown. Original question: “{question}”.",
+      "text": "Исследуйте эту тему: «{target}». Найдите цитаты из источников, объясните, что они подтверждают, и укажите, что остаётся неизвестным. Исходный вопрос: «{question}»."
+    },
+    "reportEvidence.selection": {
+      "source": "Selected sources: {selected}/{eligible} proposals",
+      "text": "Выбранные источники: {selected}/{eligible} предложений"
+    },
+    "reportEvidence.selectionNotice": {
+      "source": "Source selection is a plan. Inspect the recorded excerpts for actual evidence; selection counts do not measure answer support.",
+      "text": "Выбор источников — это план. Проверяйте сохранённые цитаты, чтобы оценить фактические подтверждения; количество выбранных источников не показывает, насколько обоснован ответ."
+    },
+    "reportReading.estimated": {
+      "source": "{coverage}% estimated",
+      "text": "Оценочно: {coverage}%"
+    },
+    "reportActions.copy": {
+      "source": "Copy report",
+      "text": "Скопировать отчёт"
+    },
+    "reportActions.download": {
+      "source": "Download report",
+      "text": "Скачать отчёт"
+    },
+    "reportActions.openSaved": {
+      "source": "Open saved report",
+      "text": "Открыть сохранённый отчёт"
+    },
+    "reportActions.copyUnavailable": {
+      "source": "Copy unavailable. Download the report instead.",
+      "text": "Копирование недоступно. Скачайте отчёт."
+    },
+    "reportActions.downloadUnavailable": {
+      "source": "Download unavailable. Open the saved report instead.",
+      "text": "Скачивание недоступно. Откройте сохранённый отчёт."
+    },
+    "citationExport.title": {
+      "source": "Reference export",
+      "text": "Экспорт библиографических ссылок"
+    },
+    "citationExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "Скачать BibTeX"
+    },
+    "citationExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "Скачать CSL-JSON"
+    },
+    "citationExport.ris": {
+      "source": "Download RIS (Zotero)",
+      "text": "Скачать RIS (Zotero)"
+    },
+    "citationExport.references.one": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "Библиографических ссылок на статьи: {count}. Сохранены названия, ссылки и даты; найденные научные записи также содержат предоставленные сведения об авторах, DOI и журнале с указанием ограничений чтения. Проверьте метаданные перед использованием в научной работе. Импортируйте RIS в Zotero через File → Import."
+    },
+    "citationExport.omitted.one": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "Пропущено ссылок из-за отсутствия названия статьи или пригодной ссылки на неё: {count}."
+    },
+    "citationExport.references.other": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "Библиографических ссылок на статьи: {count}. Сохранены названия, ссылки и даты; найденные научные записи также содержат предоставленные сведения об авторах, DOI и журнале с указанием ограничений чтения. Проверьте метаданные перед использованием в научной работе. Импортируйте RIS в Zotero через File → Import."
+    },
+    "citationExport.omitted.other": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "Пропущено ссылок из-за отсутствия названия статьи или пригодной ссылки на неё: {count}."
+    },
+    "bibliographyExport.label": {
+      "source": "Bibliography exports",
+      "text": "Экспорт библиографии"
+    },
+    "bibliographyExport.provenance": {
+      "source": "Original metadata and field provenance",
+      "text": "Исходные метаданные и происхождение полей"
+    },
+    "bibliographyExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "Скачать BibTeX"
+    },
+    "bibliographyExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "Скачать CSL-JSON"
+    },
+    "bibliographyExport.ris": {
+      "source": "Download RIS",
+      "text": "Скачать RIS"
+    },
+    "reportSourceLens.unavailable": {
+      "source": "Source inspection unavailable: this report has no stored excerpt ledger.",
+      "text": "Проверка источников недоступна: в этом отчёте нет сохранённого журнала цитат."
+    },
+    "reportSourceLens.empty": {
+      "source": "No inspectable non-demo excerpts are recorded for source inspection.",
+      "text": "Для проверки источников не сохранены доступные цитаты из реальных, недемонстрационных данных."
+    },
+    "reportSourceLens.title": {
+      "source": "What if a source were missing?",
+      "text": "Что изменится без одного источника?"
+    },
+    "reportSourceLens.localView": {
+      "source": "Local excerpt view",
+      "text": "Локальное представление цитат"
+    },
+    "reportSourceLens.originalExcerpts": {
+      "source": "Original excerpts",
+      "text": "Исходные цитаты"
+    },
+    "reportSourceLens.viewExcerpts": {
+      "source": "Excerpts in this view",
+      "text": "Цитаты в этом представлении"
+    },
+    "reportSourceLens.intro": {
+      "source": "Temporarily leave out one source to see which research targets retain excerpts in this report.",
+      "text": "Временно исключите один источник, чтобы увидеть, по каким темам исследования в этом отчёте останутся цитаты."
+    },
+    "reportSourceLens.select": {
+      "source": "Inspect without",
+      "text": "Проверить без источника"
+    },
+    "reportSourceLens.keepAll": {
+      "source": "Keep every source",
+      "text": "Оставить все источники"
+    },
+    "reportSourceLens.restore": {
+      "source": "Restore source",
+      "text": "Вернуть источник"
+    },
+    "reportSourceLens.original": {
+      "source": "Showing the original excerpt ledger.",
+      "text": "Показан исходный журнал цитат."
+    },
+    "reportSourceLens.missing": {
+      "source": "No inspectable excerpts in the original report.",
+      "text": "В исходном отчёте нет доступных для проверки цитат."
+    },
+    "reportSourceLens.lost": {
+      "source": "No excerpts remain in this view.",
+      "text": "В этом представлении цитат не осталось."
+    },
+    "reportSourceLens.inspect": {
+      "source": "Inspect remaining excerpts",
+      "text": "Проверить оставшиеся цитаты"
+    },
+    "reportSourceLens.remaining.one": {
+      "source": "{count} recorded excerpt remains.",
+      "text": "Осталось сохранённых цитат: {count}."
+    },
+    "reportSourceLens.remaining.other": {
+      "source": "{count} recorded excerpts remain.",
+      "text": "Осталось сохранённых цитат: {count}."
+    },
+    "reportSourceLens.omitted.one": {
+      "source": "{count} research target loses its last recorded excerpt without {source}.",
+      "text": "Без источника {source} последнюю сохранённую цитату теряет следующее число тем исследования: {count}."
+    },
+    "reportSourceLens.omitted.other": {
+      "source": "{count} research targets lose their last recorded excerpt without {source}.",
+      "text": "Без источника {source} последнюю сохранённую цитату теряет следующее число тем исследования: {count}."
+    },
+    "reportSourceLens.alreadyMissing.one": {
+      "source": " {count} target already had no inspectable excerpts.",
+      "text": " Тем, по которым уже не было доступных для проверки цитат: {count}."
+    },
+    "reportSourceLens.alreadyMissing.other": {
+      "source": " {count} targets already had no inspectable excerpts.",
+      "text": " Тем, по которым уже не было доступных для проверки цитат: {count}."
+    },
+    "reportSourceLens.version": {
+      "source": "{marker} · {source} · version {version}",
+      "text": "{marker} · {source} · версия {version}"
+    },
+    "reportSourceLens.versionTitle": {
+      "source": "{marker} · {source} · {title} · version {version}",
+      "text": "{marker} · {source} · {title} · версия {version}"
+    }
+  }
+}

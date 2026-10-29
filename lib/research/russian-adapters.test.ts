@@ -29,8 +29,8 @@ it.each([
   expect(JSON.stringify(run)).toBe(before);
 });
 
-it("keeps Russian answer support separate from web UI enrollment and unchanged historical bytes", () => {
-  expect(preparedLocales).not.toContain("ru");
+it("keeps Russian answer identity independent from UI enrollment and preserves historical bytes", () => {
+  expect(preparedLocales).toContain("ru");
   expect(shippedUiLocales).toEqual(["en"]);
   const run = retained();
   run.answer += " Changed.";

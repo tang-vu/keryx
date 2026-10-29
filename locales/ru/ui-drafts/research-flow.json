@@ -1,0 +1,164 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-flow.ts",
+  "sourceSha256": "08624b2d69b1e55478bca2ec23697acc8155b21698c9019762c07581a9487014",
+  "entries": {
+    "researchTour.open": {
+      "source": "How it works",
+      "text": "Как это работает"
+    },
+    "researchTour.label": {
+      "source": "How Keryx works",
+      "text": "Как работает Keryx"
+    },
+    "researchTour.questionTitle": {
+      "source": "Ask a question",
+      "text": "Задайте вопрос"
+    },
+    "researchTour.questionBody": {
+      "source": "Enter the research question you want answered. You can inspect decisions as the answer streams.",
+      "text": "Введите вопрос, который хотите исследовать. Во время формирования ответа можно просматривать решения системы."
+    },
+    "researchTour.startTitle": {
+      "source": "Start research",
+      "text": "Начните исследование"
+    },
+    "researchTour.closeLabel": {
+      "source": "Close tour",
+      "text": "Закрыть руководство"
+    },
+    "researchTour.close": {
+      "source": "Close",
+      "text": "Закрыть"
+    },
+    "researchTour.back": {
+      "source": "Back",
+      "text": "Назад"
+    },
+    "researchTour.done": {
+      "source": "Done",
+      "text": "Готово"
+    },
+    "researchTour.next": {
+      "source": "Next",
+      "text": "Далее"
+    },
+    "researchTour.step": {
+      "source": "Step {number} of {total}",
+      "text": "Шаг {number} из {total}"
+    },
+    "decisionLog.jumpToLatest": {
+      "source": "Jump to latest",
+      "text": "К последним шагам"
+    },
+    "decisionLog.followingLatest": {
+      "source": "Following latest steps",
+      "text": "Показ последних шагов"
+    },
+    "decisionLog.readingEarlier": {
+      "source": "Reading earlier steps",
+      "text": "Просмотр предыдущих шагов"
+    },
+    "decisionLog.scrollHint": {
+      "source": "Scroll inside the log to read earlier steps. Jump to latest to follow new steps.",
+      "text": "Прокрутите журнал, чтобы прочитать предыдущие шаги. Нажмите «К последним шагам», чтобы следить за новыми."
+    },
+    "decisionLog.title": {
+      "source": "The decision",
+      "text": "Решение"
+    },
+    "decisionLog.label": {
+      "source": "Decision log",
+      "text": "Журнал решений"
+    },
+    "researchChat.label": {
+      "source": "Research conversation",
+      "text": "Обсуждение исследования"
+    },
+    "researchChat.kicker": {
+      "source": "Research with Keryx",
+      "text": "Исследуйте с Keryx"
+    },
+    "researchChat.title": {
+      "source": "Ask Keryx",
+      "text": "Спросить Keryx"
+    },
+    "researchChat.introduction": {
+      "source": "Get a cited answer. Inspect source decisions.",
+      "text": "Получите ответ со ссылками на источники. Просмотрите решения о выборе источников."
+    },
+    "researchChat.turnsLabel": {
+      "source": "Conversation turns",
+      "text": "Сообщения беседы"
+    },
+    "researchChat.followUpContext": {
+      "source": "Follow-ups use the previous question only, not its answer or the full chat. Include the details you want researched.",
+      "text": "В уточняющий запрос передаётся только предыдущий вопрос, без ответа и полной переписки. Укажите все подробности, которые нужно исследовать."
+    },
+    "researchChat.newResearch": {
+      "source": "New research",
+      "text": "Новое исследование"
+    },
+    "researchChat.stopResearch": {
+      "source": "Stop research",
+      "text": "Остановить исследование"
+    },
+    "researchChat.toolsLabel": {
+      "source": "Research tools",
+      "text": "Инструменты исследования"
+    },
+    "researchChat.savedReports": {
+      "source": "My saved reports",
+      "text": "Мои сохранённые отчёты"
+    },
+    "researchTurn.inProgress": {
+      "source": "Keryx · Research in progress",
+      "text": "Keryx · Идёт исследование"
+    },
+    "researchTurn.findingSources": {
+      "source": "Finding sources worth reading…",
+      "text": "Ищем источники, которые стоит прочитать…"
+    },
+    "decisionLog.deciding": {
+      "source": "deciding",
+      "text": "принимаем решение"
+    },
+    "decisionLog.connecting": {
+      "source": "Waiting for research updates…",
+      "text": "Ожидаем обновления исследования…"
+    },
+    "decisionLog.newSteps.one": {
+      "source": "{count} new step",
+      "text": "Новых шагов: {count}"
+    },
+    "decisionLog.newSteps.other": {
+      "source": "{count} new steps",
+      "text": "Новых шагов: {count}"
+    },
+    "decisionLog.steps.one": {
+      "source": "{count} steps",
+      "text": "Шагов: {count}"
+    },
+    "decisionLog.steps.other": {
+      "source": "{count} steps",
+      "text": "Шагов: {count}"
+    },
+    "followUp.title": {
+      "source": "Ask a follow-up",
+      "text": "Задать уточняющий вопрос"
+    },
+    "followUp.questionLabel": {
+      "source": "Your follow-up question",
+      "text": "Ваш уточняющий вопрос"
+    },
+    "followUp.placeholder": {
+      "source": "How does that compare to…?",
+      "text": "Как это соотносится с…?"
+    },
+    "followUp.submit": {
+      "source": "Dispatch follow-up",
+      "text": "Отправить уточняющий вопрос"
+    }
+  }
+}

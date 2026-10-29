@@ -45,16 +45,18 @@ describe("private locale route", () => {
     f.session.mockResolvedValueOnce({ db: f.db, wallet: bob, currentId: "other" });
     expect((await f.handle(request("PUT"))).status).toBe(409); expect(f.write).not.toHaveBeenCalled();
   });
-  it("stores a tiny scalar in a locale-only server-owner/network/configured-origin namespace", async () => {
-    const f = fixture(); const response = await f.handle(request("PUT"));
+  it.each(["vi", "ru"] as const)("stores %s as a tiny scalar in a locale-only server-owner/network/configured-origin namespace", async locale => {
+    const f = fixture(); const response = await f.handle(request("PUT", {}, JSON.stringify({ version: 1, locale })));
     expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("private, no-store");
     const key = accountLocaleKey(origin, network, owner);
-    expect(f.write).toHaveBeenCalledWith(key, encodeLocaleValue("vi"));
+    expect(f.write).toHaveBeenCalledWith(key, encodeLocaleValue(locale));
     expect(key).not.toContain("current-session-selector"); expect(key).not.toContain("registry");
     expect(accountLocaleKey(origin, network, bob)).not.toBe(key);
     expect(accountLocaleKey(origin, "eip155:5042002", owner)).not.toBe(key);
     expect(accountLocaleKey("https://other.test", network, owner)).not.toBe(key);
-    expect((await f.handle(request())).status).toBe(200);
+    const retained = await f.handle(request());
+    expect(retained.status).toBe(200);
+    expect(await retained.json()).toMatchObject({ version: 1, locale, owner, origin, network });
   });
   it("refuses unsupported/sealed/unknown facades without a storage fallback", async () => {
     const f = fixture(); f.port.mockResolvedValueOnce(null as never);
@@ -70,7 +72,8 @@ describe("private locale route", () => {
     f.write.mockImplementationOnce(async () => {}); expect((await f.handle(request("PUT"))).status).toBe(503);
   });
   it("refuses oversized/invalid/extra-owner bodies and a session change before write", async () => {
-    for (const body of ['{"version":1,"locale":"vi","owner":"body-owner"}', '{"version":2,"locale":"vi"}', '{"version":1,"locale":"zh-TW"}', " ".repeat(65)]) {
+    for (const body of ['{"version":1,"locale":"vi","owner":"body-owner"}', '{"version":2,"locale":"vi"}', '{"version":1,"locale":"zh-TW"}',
+      '{"version":1,"locale":"ru-RU"}', '{"version":1,"locale":"ru-Latn"}', " ".repeat(65)]) {
       const f = fixture(); expect((await f.handle(request("PUT", {}, body))).status).toBe(400); expect(f.write).not.toHaveBeenCalled();
     }
     const f = fixture(); f.session.mockResolvedValueOnce({ db: f.db, wallet: owner, currentId: "old" }).mockResolvedValueOnce({ db: f.db, wallet: owner, currentId: "new" });

@@ -50,7 +50,7 @@ beforeAll(async () => {
 }, 30_000);
 afterAll(async () => browser?.close());
 
-it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
+it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
   "keeps actual $locale source discovery, scope and native GET handoffs local at $width", async ({ locale, width }) => {
     const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
     const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce", timezoneId: "UTC", serviceWorkers: "block" });

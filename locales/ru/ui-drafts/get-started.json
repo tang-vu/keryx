@@ -1,0 +1,84 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/get-started.ts",
+  "sourceSha256": "9450616cf1959d638de574cbeec2f3a445dbdea9d93bc8dcd67301299373e2fa",
+  "entries": {
+    "navigation.start": {
+      "source": "Get started",
+      "text": "Начать работу"
+    },
+    "navigation.download": {
+      "source": "Download",
+      "text": "Скачать"
+    },
+    "navigation.integrations": {
+      "source": "Integrations",
+      "text": "Интеграции"
+    },
+    "navigation.label": {
+      "source": "Ways to use Keryx",
+      "text": "Способы работы с Keryx"
+    },
+    "navigation.downloadAction": {
+      "source": "Get the app or extension",
+      "text": "Получить приложение или расширение"
+    },
+    "navigation.connectAction": {
+      "source": "Connect MCP, API or CLI",
+      "text": "Подключить MCP, API или CLI"
+    },
+    "start.title": {
+      "source": "Your research. Wherever you work.",
+      "text": "Ваше исследование. Там, где вы работаете."
+    },
+    "start.body": {
+      "source": "Ask in your browser, research a page you are reading, connect your AI assistant, or build Keryx into your own workflow. Pick a starting point below.",
+      "text": "Задавайте вопросы в браузере, исследуйте открытые страницы, подключайте своего ИИ-помощника или встраивайте Keryx в свой рабочий процесс. Выберите, с чего начать."
+    },
+    "start.try": {
+      "source": "Try Keryx in the browser",
+      "text": "Попробовать Keryx в браузере"
+    },
+    "start.browse": {
+      "source": "Browse downloads",
+      "text": "Посмотреть загрузки"
+    },
+    "start.firstTitle": {
+      "source": "Your first cited answer",
+      "text": "Ваш первый ответ со ссылками на источники"
+    },
+    "start.choose": {
+      "source": "Choose how you use Keryx",
+      "text": "Выберите способ работы с Keryx"
+    },
+    "common.steps": {
+      "source": "Get set up",
+      "text": "Настройка"
+    },
+    "common.requirements": {
+      "source": "What you need",
+      "text": "Что потребуется"
+    },
+    "common.help": {
+      "source": "Need a hand?",
+      "text": "Нужна помощь?"
+    },
+    "common.support": {
+      "source": "Contact support",
+      "text": "Связаться с поддержкой"
+    },
+    "common.docs": {
+      "source": "Read the full guide",
+      "text": "Прочитать полное руководство"
+    },
+    "common.copy": {
+      "source": "Copy",
+      "text": "Скопировать"
+    },
+    "common.copied": {
+      "source": "Copied",
+      "text": "Скопировано"
+    }
+  }
+}
