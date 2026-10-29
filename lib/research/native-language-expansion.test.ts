@@ -17,6 +17,7 @@ import { buildEvidenceLedger } from "../agent/evidence-ledger";
 import { selectCitedStatements } from "../agent/cited-statements";
 import { confidenceBanner, evidenceConfidenceReason, ordinaryConfidence } from "./confidence-copy";
 import { normalizeStatement } from "../llm/cited-statement";
+import { apiIntegrationNote } from "./api-integration-note";
 
 const instructions = (question: string) => nativeAnswerInstructions(question.normalize("NFC"));
 const last = (question: string) => instructions(question).filter(row => row.eligible).at(-1)?.language;
@@ -102,6 +103,23 @@ describe.each(["de", "ja", "ko", "hi", "id"] as const)("prepared %s ordinary ren
     expect(answer).toContain(built.quote); expect(answer).toContain(nativeSentences[language]);
     expect(built.ledger.claimCoverage[0].coverage).toBe(0.3);
     expect(built.ledger.evidence[0].qualifiesForReward).toBe(false); expect(JSON.stringify(built)).toBe(before);
+  });
+  it("renders the API note from exact accepted pairs and labels the implementation check as a proposal", () => {
+    const built = nativeFixture(language, { extra: true }), before = JSON.stringify(built);
+    const answer = apiIntegrationNote({ answer: "Original answer [S1]", ...built, language: prepared(language).language });
+    expect(answer).toContain(copy.integration.title); expect(answer).toContain(copy.integration.notice);
+    expect(answer).toContain(nativeSentences[language]); expect(answer).toContain(`“${built.quote}”`);
+    expect(answer).toContain(built.targets[1]); expect(answer).toContain(copy.integration.missing);
+    expect(answer).toContain(copy.integration.check); expect(answer).toContain(copy.integration.bounded);
+    expect(JSON.stringify(built)).toBe(before);
+    expect(apiIntegrationNote({ answer: "Original answer [S1] [S99]", ...built, language: prepared(language).language })).toBeUndefined();
+    expect(Object.isFrozen(copy.integration)).toBe(true);
+  });
+  it("keeps the API note's partial-support and excerpt-only limitations", () => {
+    const built = nativeFixture(language, { coverage: 0.3 });
+    const answer = apiIntegrationNote({ answer: "Original answer [S1]", ...built, statements: [], language: prepared(language).language });
+    expect(answer).toContain(copy.integration.low); expect(answer).toContain(copy.integration.noSummary);
+    expect(answer).not.toContain(nativeSentences[language]); expect(answer).toContain(built.quote);
   });
   it("separates unavailable assessment from assessed empty evidence", () => {
     const built = nativeFixture(language, { noEvidence: true });

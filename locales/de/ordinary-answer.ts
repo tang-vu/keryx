@@ -36,4 +36,16 @@ export const ordinaryAnswerGerman = Object.freeze({
   lowConfidence: "Geringe Verlässlichkeit",
   provisional: "Betrachten Sie dieses Ergebnis als vorläufig.",
   sentenceEnd: ".",
+  integration: Object.freeze({
+    title: "Hinweis zur API-Integration",
+    notice: "Die folgenden Einschränkungen stammen aus geprüften Auszügen. Die vollständige Anwendbarkeit auf API, Version und Plattform sowie die Richtigkeit der Quellen bleiben unbestätigt.",
+    constraint: "Einschränkung und Bedingungen", excerpt: "Originalauszug",
+    noSummary: "Keine geprüfte Zusammenfassung; lesen Sie den Originalauszug", scope: "Gelesener Umfang",
+    section: "Überschriftenabschnitt", bounded: "begrenztes Original", clipped: "Teil des Originals",
+    missing: "Fehlende Belege", target: "Angefragtes Thema (nicht verifiziert)",
+    noGaps: "Für jedes angefragte Thema liegt ein Auszug vor; dies belegt keine vollständige Abdeckung.",
+    low: "Die erfasste Bewertung bleibt unter der Belegschwelle.",
+    next: "Implementierungsprüfung — Vorschlag",
+    check: "Prüfen Sie diese Einschränkungen vor der Implementierung mit Ihrer genauen API-Version und Plattform. Klären Sie zuerst die fehlenden Belege; diese vorgeschlagene Prüfung ist keine Erkenntnis aus den Quellen.",
+  }),
 }) satisfies NativeAnswerCopy;

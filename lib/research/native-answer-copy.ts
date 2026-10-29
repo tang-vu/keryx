@@ -29,6 +29,8 @@ export interface NativeAnswerCopy {
   readonly lowConfidence: string;
   readonly provisional: string;
   readonly sentenceEnd: "." | "。" | "।";
+  readonly integration: Readonly<Record<"title" | "notice" | "constraint" | "excerpt" | "noSummary" |
+    "scope" | "section" | "bounded" | "clipped" | "missing" | "target" | "noGaps" | "low" | "next" | "check", string>>;
 }
 
 const copy: Readonly<Record<AdditionalAnswerLanguage, NativeAnswerCopy>> = Object.freeze({

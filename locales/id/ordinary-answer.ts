@@ -36,4 +36,16 @@ export const ordinaryAnswerIndonesian = Object.freeze({
   lowConfidence: "Tingkat keyakinan rendah",
   provisional: "Perlakukan hasil ini sebagai hasil sementara.",
   sentenceEnd: ".",
+  integration: Object.freeze({
+    title: "Catatan integrasi API",
+    notice: "Batasan berikut berasal dari petikan yang telah diperiksa. Penerapan lengkap pada API, versi dan platform serta kebenaran sumber belum diverifikasi.",
+    constraint: "Batasan dan kondisi", excerpt: "Petikan asli",
+    noSummary: "Tidak ada ringkasan yang telah ditinjau; periksa petikan asli", scope: "Cakupan pembacaan",
+    section: "bagian di bawah judul", bounded: "sumber asli dengan batas pembacaan", clipped: "sebagian sumber asli",
+    missing: "Bukti yang belum tersedia", target: "Topik yang diminta (belum diverifikasi)",
+    noGaps: "Setiap topik yang diminta memiliki petikan tersimpan; hal ini tidak menetapkan cakupan yang lengkap.",
+    low: "Penilaian yang tercatat masih di bawah ambang bukti.",
+    next: "Pemeriksaan implementasi — usulan",
+    check: "Uji batasan ini pada versi API dan platform yang tepat sebelum implementasi. Lengkapi bukti yang belum tersedia terlebih dahulu; pemeriksaan ini adalah usulan, bukan temuan dari sumber.",
+  }),
 }) satisfies NativeAnswerCopy;

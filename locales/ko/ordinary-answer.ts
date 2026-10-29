@@ -36,4 +36,16 @@ export const ordinaryAnswerKorean = Object.freeze({
   lowConfidence: "낮은 신뢰도",
   provisional: "잠정적인 결과로 다뤄 주세요.",
   sentenceEnd: ".",
+  integration: Object.freeze({
+    title: "API 연동 참고 사항",
+    notice: "아래 제약은 검토한 발췌에서 가져왔습니다. API·버전·플랫폼에 대한 완전한 적용 가능성과 출처의 정확성은 확인되지 않았습니다.",
+    constraint: "제약과 조건", excerpt: "출처 원문",
+    noSummary: "검토된 요약이 없습니다. 원문 발췌를 확인해 주세요", scope: "읽은 범위",
+    section: "제목 아래 절", bounded: "범위가 제한된 원문", clipped: "원문의 일부",
+    missing: "부족한 근거", target: "요청한 주제(미확인)",
+    noGaps: "요청한 각 주제에 대해 발췌가 보존되어 있지만 완전한 포괄성을 입증하지는 않습니다.",
+    low: "기록된 평가가 근거 기준에 미치지 못합니다.",
+    next: "구현 전 확인 — 제안",
+    check: "구현 전에 정확한 API 버전과 플랫폼에서 이 제약들을 확인해 주세요. 부족한 근거를 먼저 확인해야 합니다. 이 확인 절차는 제안이며 출처에서 얻은 결론이 아닙니다.",
+  }),
 }) satisfies NativeAnswerCopy;

@@ -36,4 +36,16 @@ export const ordinaryAnswerJapanese = Object.freeze({
   lowConfidence: "確信度が低い結果",
   provisional: "暫定的な結果として扱ってください。",
   sentenceEnd: "。",
+  integration: Object.freeze({
+    title: "API連携の注意点",
+    notice: "以下の制約は確認済みの抜粋に基づきます。API・バージョン・プラットフォームへの完全な適用可否と、出典の正確さは未確認です。",
+    constraint: "制約と条件", excerpt: "出典の原文",
+    noSummary: "確認済みの要約はありません。出典の抜粋を確認してください", scope: "閲覧した範囲",
+    section: "見出しの節", bounded: "範囲を限定した原文", clipped: "原文の一部",
+    missing: "不足している根拠", target: "依頼されたテーマ（未確認）",
+    noGaps: "各テーマについて抜粋は保持されていますが、完全な網羅を示すものではありません。",
+    low: "記録された評価は根拠の基準に達していません。",
+    next: "実装前の確認 — 提案",
+    check: "実装前に、使用する正確なAPIバージョンとプラットフォームでこれらの制約を確認してください。不足する根拠を先に確認してください。この確認手順は提案であり、出典から得た結論ではありません。",
+  }),
 }) satisfies NativeAnswerCopy;
