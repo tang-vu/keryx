@@ -58,3 +58,8 @@ The actual Desktop fixture includes Russian. The packed MCP test appends a Russi
 transport vector, preserving every prior vector position, private refusal, exact
 paid-body hash, custody, journal and recovery assertion. Full hosted acceptance of
 these corrections is required; syntax checks alone do not qualify the packed client.
+
+The CLI help and invalid-language API error also list Russian consistently with
+the accepted request enum. Keyless CLI help runs behind a provider/database import
+guard; Russian API JSON/SSE, authentication refusal and remote MCP cases retain
+the original question, private envelope and no-external-transport checks.

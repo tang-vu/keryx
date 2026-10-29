@@ -26,7 +26,7 @@ Options:
   --budget USDC             Nonnegative source cap, at most six decimal places.
   --model ID                Override the configured reasoning model.
   --web                     Allow configured external web/search providers.
-  --language LANGUAGE       Presentation labels: auto, en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi or id.
+  --language LANGUAGE       Presentation labels: auto, en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi, id or ru.
   --private-claim-fd FD      Dedicated inherited private pipe; direct Node launcher only.
 
 Without a question, the existing sample question is used.
