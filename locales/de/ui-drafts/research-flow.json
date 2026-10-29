@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/research-flow.ts",
-  "sourceSha256": "493d7a7076923699c0ec017d68c4f03695ecb0f10f80509a3e59d67ecff5f8ff",
+  "sourceSha256": "08624b2d69b1e55478bca2ec23697acc8155b21698c9019762c07581a9487014",
   "entries": {
     "researchTour.open": {
       "source": "How it works",
@@ -71,6 +71,94 @@
     "decisionLog.label": {
       "source": "Decision log",
       "text": "Entscheidungsprotokoll"
+    },
+    "researchChat.label": {
+      "source": "Research conversation",
+      "text": "Recherchegespräch"
+    },
+    "researchChat.kicker": {
+      "source": "Research with Keryx",
+      "text": "Mit Keryx recherchieren"
+    },
+    "researchChat.title": {
+      "source": "Ask Keryx",
+      "text": "Keryx fragen"
+    },
+    "researchChat.introduction": {
+      "source": "Get a cited answer. Inspect source decisions.",
+      "text": "Erhalten Sie eine Antwort mit Quellenangaben. Prüfen Sie die Entscheidungen zur Quellenauswahl."
+    },
+    "researchChat.turnsLabel": {
+      "source": "Conversation turns",
+      "text": "Gesprächsbeiträge"
+    },
+    "researchChat.followUpContext": {
+      "source": "Follow-ups use the previous question only, not its answer or the full chat. Include the details you want researched.",
+      "text": "Anschlussfragen verwenden nur die vorherige Frage, nicht deren Antwort oder das gesamte Gespräch. Geben Sie die Details an, die Sie recherchieren möchten."
+    },
+    "researchChat.newResearch": {
+      "source": "New research",
+      "text": "Neue Recherche"
+    },
+    "researchChat.stopResearch": {
+      "source": "Stop research",
+      "text": "Recherche stoppen"
+    },
+    "researchChat.toolsLabel": {
+      "source": "Research tools",
+      "text": "Recherchewerkzeuge"
+    },
+    "researchChat.savedReports": {
+      "source": "My saved reports",
+      "text": "Meine gespeicherten Berichte"
+    },
+    "researchTurn.inProgress": {
+      "source": "Keryx · Research in progress",
+      "text": "Keryx · Recherche läuft"
+    },
+    "researchTurn.findingSources": {
+      "source": "Finding sources worth reading…",
+      "text": "Quellen suchen, die sich zu lesen lohnen…"
+    },
+    "decisionLog.deciding": {
+      "source": "deciding",
+      "text": "Entscheidung läuft"
+    },
+    "decisionLog.connecting": {
+      "source": "Waiting for research updates…",
+      "text": "Auf Rechercheaktualisierungen warten…"
+    },
+    "decisionLog.newSteps.one": {
+      "source": "{count} new step",
+      "text": "{count} neuer Schritt"
+    },
+    "decisionLog.newSteps.other": {
+      "source": "{count} new steps",
+      "text": "{count} neue Schritte"
+    },
+    "decisionLog.steps.one": {
+      "source": "{count} steps",
+      "text": "{count} Schritt"
+    },
+    "decisionLog.steps.other": {
+      "source": "{count} steps",
+      "text": "{count} Schritte"
+    },
+    "followUp.title": {
+      "source": "Ask a follow-up",
+      "text": "Eine Anschlussfrage stellen"
+    },
+    "followUp.questionLabel": {
+      "source": "Your follow-up question",
+      "text": "Ihre Anschlussfrage"
+    },
+    "followUp.placeholder": {
+      "source": "How does that compare to…?",
+      "text": "Wie lässt sich das mit … vergleichen?"
+    },
+    "followUp.submit": {
+      "source": "Dispatch follow-up",
+      "text": "Anschlussfrage absenden"
     }
   }
 }

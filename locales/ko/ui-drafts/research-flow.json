@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/research-flow.ts",
-  "sourceSha256": "493d7a7076923699c0ec017d68c4f03695ecb0f10f80509a3e59d67ecff5f8ff",
+  "sourceSha256": "08624b2d69b1e55478bca2ec23697acc8155b21698c9019762c07581a9487014",
   "entries": {
     "researchTour.open": {
       "source": "How it works",
@@ -71,6 +71,94 @@
     "decisionLog.label": {
       "source": "Decision log",
       "text": "판단 기록"
+    },
+    "researchChat.label": {
+      "source": "Research conversation",
+      "text": "조사 대화"
+    },
+    "researchChat.kicker": {
+      "source": "Research with Keryx",
+      "text": "Keryx로 조사하기"
+    },
+    "researchChat.title": {
+      "source": "Ask Keryx",
+      "text": "Keryx에 질문"
+    },
+    "researchChat.introduction": {
+      "source": "Get a cited answer. Inspect source decisions.",
+      "text": "인용이 포함된 답변을 받고 출처에 관한 결정을 살펴보세요."
+    },
+    "researchChat.turnsLabel": {
+      "source": "Conversation turns",
+      "text": "대화 내역"
+    },
+    "researchChat.followUpContext": {
+      "source": "Follow-ups use the previous question only, not its answer or the full chat. Include the details you want researched.",
+      "text": "후속 질문에는 이전 질문만 사용되며 답변이나 전체 대화는 사용되지 않습니다. 조사할 세부 내용을 질문에 포함하세요."
+    },
+    "researchChat.newResearch": {
+      "source": "New research",
+      "text": "새 조사"
+    },
+    "researchChat.stopResearch": {
+      "source": "Stop research",
+      "text": "조사 중지"
+    },
+    "researchChat.toolsLabel": {
+      "source": "Research tools",
+      "text": "조사 도구"
+    },
+    "researchChat.savedReports": {
+      "source": "My saved reports",
+      "text": "내 저장된 보고서"
+    },
+    "researchTurn.inProgress": {
+      "source": "Keryx · Research in progress",
+      "text": "Keryx · 조사 진행 중"
+    },
+    "researchTurn.findingSources": {
+      "source": "Finding sources worth reading…",
+      "text": "읽을 가치가 있는 출처를 찾는 중…"
+    },
+    "decisionLog.deciding": {
+      "source": "deciding",
+      "text": "결정 중"
+    },
+    "decisionLog.connecting": {
+      "source": "Waiting for research updates…",
+      "text": "조사 업데이트를 기다리는 중…"
+    },
+    "decisionLog.newSteps.one": {
+      "source": "{count} new step",
+      "text": "새 단계 {count}개"
+    },
+    "decisionLog.newSteps.other": {
+      "source": "{count} new steps",
+      "text": "새 단계 {count}개"
+    },
+    "decisionLog.steps.one": {
+      "source": "{count} steps",
+      "text": "{count}단계"
+    },
+    "decisionLog.steps.other": {
+      "source": "{count} steps",
+      "text": "{count}단계"
+    },
+    "followUp.title": {
+      "source": "Ask a follow-up",
+      "text": "후속 질문하기"
+    },
+    "followUp.questionLabel": {
+      "source": "Your follow-up question",
+      "text": "후속 질문"
+    },
+    "followUp.placeholder": {
+      "source": "How does that compare to…?",
+      "text": "그것은 …와 어떻게 비교되나요?"
+    },
+    "followUp.submit": {
+      "source": "Dispatch follow-up",
+      "text": "후속 질문 보내기"
     }
   }
 }
