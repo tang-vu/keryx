@@ -11,8 +11,8 @@
   "totals": {
     "englishNamespaceFiles": 76,
     "coreInlineSources": 1,
-    "extractedLeaves": 6393,
-    "authoredEntries": 6364,
+    "extractedLeaves": 6396,
+    "authoredEntries": 6367,
     "nonTranslatableMachineIdentifiers": 29,
     "uncoveredEntries": 0,
     "completeNamespaces": 77
@@ -5896,12 +5896,15 @@
     {
       "namespace": "ui-preference",
       "sourcePath": "locales/en/ui-preference.ts",
-      "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+      "sourceSha256": "cd4d2e048a95204a23cfd64efd0957e7b38345618c94e467f575e98b4354ac19",
       "draftPath": "locales/vi/ui-drafts/ui-preference.json",
-      "extractedLeaves": 13,
-      "authoredEntries": 13,
+      "extractedLeaves": 16,
+      "authoredEntries": 16,
       "coveredKeys": [
         "accountSaved",
+        "answerLanguageBody",
+        "answerLanguageExamples",
+        "answerLanguageTitle",
         "browserSaved",
         "checking",
         "chinesePreview",

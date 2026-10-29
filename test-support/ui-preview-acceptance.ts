@@ -4,6 +4,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { preparedLocales, uiLocaleNames } from "../lib/i18n/locales";
 import { productGuideCopy } from "../locales/en/product-guide";
+import { answerLanguageInstructions } from "../shared/i18n/answer-language-instructions";
 
 /** Real compiled pages and language controls; no research, payment or external requests. */
 export async function checkUiPreviews(browser: Browser, base: string, output?: string) {
@@ -24,6 +25,10 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
         const url = new URL(route.request().url());
         if (url.origin !== new URL(base).origin) return route.abort();
         if (url.pathname === "/api/auth/session") return route.fulfill({ status: 401, contentType: "application/json", body: "{}" });
+        if (url.pathname === "/api/ask/visibility") {
+          assert.equal(route.request().method(), "GET", "Language help reads only the original public visibility context");
+          return route.fulfill({ json: { wallet: null, defaultVisibility: "public", privacyActive: true } });
+        }
         if (url.pathname === "/api/ask" || url.pathname === "/api/ask/sign") { askRequests++; return route.abort(); }
         return route.continue();
       });
@@ -45,6 +50,25 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
         assert.equal(await page.locator("#ask-question").inputValue(), original);
         assert.equal(await page.locator("#ask-question").getAttribute("placeholder"), drafts[locale]["core-inline"].entries["researchEntry.placeholder"].text);
         assert.equal(await select().getAttribute("title"), drafts[locale]["ui-preference"].entries.previewNotice.text);
+        const help = page.locator("[data-answer-language-help]");
+        const helpButton = help.getByRole("button", { name: drafts[locale]["ui-preference"].entries.answerLanguageTitle.text, exact: true });
+        await helpButton.waitFor();
+        assert.equal(await helpButton.getAttribute("aria-expanded"), "false");
+        await helpButton.press("Enter");
+        assert.equal(await helpButton.getAttribute("aria-expanded"), "true");
+        assert((await help.innerText()).includes(drafts[locale]["ui-preference"].entries.answerLanguageBody.text));
+        assert.equal(await help.locator(`p [lang="${locale}"]`).count(), 2, "Translated explanatory copy declares its own language");
+        assert.equal(await help.getByRole("listitem").count(), answerLanguageInstructions.length);
+        for (const example of answerLanguageInstructions) {
+          assert.equal(await help.locator(`code[lang="${example.language}"]`).textContent(), example.instruction);
+          assert.equal(await help.locator(`li > span[lang="${example.language}"]`).textContent(), example.name);
+        }
+        assert.equal(await page.locator("#ask-question").inputValue(), original, "Opening language guidance never edits the question");
+        assert.equal(askRequests, 0, "Language guidance never submits or signs research");
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, "Expanded language guidance fits the viewport");
+        if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-answer-language-help.png`), fullPage: true });
+        await helpButton.press("Space");
+        assert.equal(await helpButton.getAttribute("aria-expanded"), "false");
         const [headline, guide, globe] = await Promise.all([page.locator("h1").evaluate(element => {
           const range = document.createRange(); range.selectNodeContents(element);
           return range.getBoundingClientRect().toJSON() as { x: number; y: number; width: number; height: number };
@@ -87,12 +111,14 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
       await page.locator('label[for="ask-question"]').filter({ hasText: "What do you want to know?" }).waitFor();
       assert.equal(askRequests, 0, "Language changes must never submit or sign research");
       assert.deepEqual(errors, [], "No browser runtime errors");
-      results.push({ width, locales: ["en", ...locales], routes: ["/", "/about", "/get-started"], errors, askRequests });
+      results.push({ width, locales: ["en", ...locales], routes: ["/", "/about", "/get-started"], errors, askRequests,
+        answerLanguageHelp: { locales, examples: answerLanguageInstructions.length, nativeLanguageTags: true,
+          openedWithEnter: true, closedWithSpace: true, originalQuestionUnchanged: true } });
     } finally {
       await context.unrouteAll({ behavior: "wait" });
       await context.close();
     }
   }
   if (output) await writeFile(resolve(output, "result.json"), JSON.stringify(results, null, 2));
-  console.log(`PASS: ${locales.length} interface previews at 390/1366px, About explanations, English legal copy, navigation, reload, exact drafts and English reset.`);
+  console.log(`PASS: ${locales.length} interface previews at 390/1366px, native answer-language instructions and keyboard help, About explanations, English legal copy, navigation, reload, exact drafts and English reset.`);
 }

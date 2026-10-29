@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ui-preference.ts",
-  "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+  "sourceSha256": "cd4d2e048a95204a23cfd64efd0957e7b38345618c94e467f575e98b4354ac19",
   "entries": {
     "language": {
       "source": "Interface language",
@@ -39,6 +39,18 @@
     "loadFailed": {
       "source": "Translation could not load. English is shown; select the language to retry.",
       "text": "번역을 불러올 수 없습니다. 영어로 표시됩니다. 언어를 다시 선택하면 재시도할 수 있습니다."
+    },
+    "answerLanguageTitle": {
+      "source": "Request an answer language",
+      "text": "답변 언어 요청하기"
+    },
+    "answerLanguageBody": {
+      "source": "Include a language instruction in your question. Interface language changes menus and labels; saved answers keep their original text.",
+      "text": "질문에 원하는 언어를 지정하세요. 화면 언어는 메뉴와 라벨을 변경하며, 저장된 답변은 원문을 유지합니다."
+    },
+    "answerLanguageExamples": {
+      "source": "Supported language instructions",
+      "text": "지원되는 언어 지시문"
     }
   }
 }

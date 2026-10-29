@@ -171,7 +171,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
         })}><UiText source={researchRecoveryCopy.reopen} /></button>
       </div>}
       <AskForm disabled={streaming || privateClaims && !protectedDocument} onAsk={submit} payer={payer} questionCapUsdc={grantBinding.questionCapUsdc} parentId={hasTurns || initialRequest ? parentId ?? null : undefined} conversation={hasTurns} clearOnSubmit allowSharedPrefill={!initialRequest}
-        parentVisibility={parentVisibility} publicationPreference={publicationPreference}
+        parentVisibility={parentVisibility} publicationPreference={publicationPreference} showAnswerLanguageHelp={!privateClaims}
         restoreQuestion={recoverySelection ? { ...recoverySelection, expectedWallet: publicationPreference.wallet, expectedRevision: publicationPreference.identityRevision }
           : (visibleRequest && (state.errorKind === "research-paused" || state.errorKind === "rate-limit" || state.errorKind === "maintenance")
           ? { ...visibleRequest, researchPaused: state.errorKind === "research-paused", expectedWallet: visibleRequest.publication.expectedWallet, expectedRevision: visibleRequest.ownerRevision } : undefined)} />

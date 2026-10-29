@@ -21,6 +21,7 @@ import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/
 import type { RunVisibility } from "@/lib/run-privacy/contracts";
 import { ResearchVisibilityPicker } from "./research-visibility-picker";
 import { UiText, UiMessage, useUiMessages } from "@/lib/i18n/ui-copy";
+import { AnswerLanguageHelp } from "./answer-language-help";
 
 
 
@@ -29,6 +30,7 @@ const message = createMessages("en");
 
 interface AskFormProps {
   disabled?: boolean;
+  showAnswerLanguageHelp?: boolean;
   questionCapUsdc?: number;
   parentId?: string | null;
   parentVisibility?: RunVisibility;
@@ -105,7 +107,7 @@ const SUGGESTIONS = [
   },
 ];
 
-export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, allowSharedPrefill = true, questionCapUsdc, restoreQuestion }: AskFormProps) {
+export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, allowSharedPrefill = true, questionCapUsdc, restoreQuestion }: AskFormProps) {
   const message = useUiMessages();
   const { locale } = useLocale();
   const ownVisibility = useResearchVisibility(parentVisibility, { enabled: !publicationPreference });
@@ -242,6 +244,8 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
     if (clearOnSubmit) setQuestion("");
   };
 
+  const offerLanguageHelp = showAnswerLanguageHelp && visibility.ready && visibility.visibility === "public" &&
+    !conversation && !parentId && !parentRef.current && !paidScholarly;
   const availabilityPanel = (
     <div className="mt-3 border border-line bg-paper p-3 text-sm text-ink-2" role="status">
       <p>{checking ? <UiMessage messageKey="researchEntry.checking" /> : researchPaused ? RESEARCH_PAUSED_MESSAGE :
@@ -303,6 +307,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
               <ArrowUpRight aria-hidden="true" className="size-4 shrink-0" />
             </button>
           </div>
+            {offerLanguageHelp && <AnswerLanguageHelp />}
             {!conversation && <div className="mt-4 flex flex-wrap gap-2" aria-label={message("researchEntry.examplesLabel")}>
               {SUGGESTIONS.map((s) => (
                 <button key={s.label} type="button" disabled={disabled} onClick={() => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(s.q); questionRef.current?.focus(); }}
