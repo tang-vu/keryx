@@ -4,7 +4,7 @@ import { spawn, execFileSync } from "node:child_process";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import { createServer } from "node:net";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { chromium, type Browser } from "playwright";
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
@@ -33,6 +33,7 @@ let startupError: Error | undefined, stopped: Promise<void> | undefined, failure
 let stdout = "", stderr = "", buildId: string | undefined;
 const checks: string[] = [], blockedRequests: string[] = [], widths: number[] = [];
 const readinessFailures: Array<Record<string, unknown>> = [];
+const ogPreviews: Array<{ name: string; displayName: string; purpose: string; sha256: string; bytes: number }> = [];
 try {
   buildId = (await readFile(join(dist, "BUILD_ID"), "utf8")).trim();
   assert(buildId, "A successful stock Next build is required");
@@ -40,12 +41,27 @@ try {
   // The compiled OG route reads the same bundled assets from its isolated CWD.
   // Copy only these fixed local font files, retaining their complete bytes.
   await mkdir(join(fixture, "app/fonts/og"), { recursive: true });
-  for (const name of ["noto-sans-regular.ttf", "noto-sans-math-regular.ttf", "noto-sans-sc-regular.otf"]) {
+  const fontFiles = ["noto-sans-regular.ttf", "noto-sans-math-regular.ttf", "noto-sans-sc-regular.otf",
+    "noto-sans-jp-regular.otf", "noto-sans-kr-regular.otf", "noto-sans-devanagari-regular.ttf"];
+  for (const name of fontFiles) {
     const original = await readFile(join(source, "app/fonts/og", name));
     const target = join(fixture, "app/fonts/og", name);
     await writeFile(target, original, { flag: "wx" });
     assert((await readFile(target)).equals(original), "Retain exact bundled OG font bytes");
   }
+  const tracePath = join(dist, "server/app/u/[handle]/opengraph-image/route.js.nft.json");
+  const trace: { files: string[] } = JSON.parse(await readFile(tracePath, "utf8"));
+  assert(Array.isArray(trace.files) && trace.files.every(path => typeof path === "string"));
+  const traced = new Set(trace.files.map(path => resolve(dirname(tracePath), path)));
+  for (const name of fontFiles) assert(traced.has(join(source, "app/fonts/og", name)), `Compiled profile trace must retain ${name}`);
+  assert(trace.files.some(path => /\/sharp\/dist\/index\.(?:mjs|cjs)$/.test(path)), "Compiled profile trace must retain the Sharp entry point");
+  assert(trace.files.some(path => /\/sharp-[^/]+\.node$/.test(path)), "Compiled profile trace must retain the native Sharp binding");
+  assert(trace.files.some(path => /\/libvips-cpp\.so\./.test(path)), "Compiled profile trace must retain libvips");
+  checks.push("actual compiled profile trace retains six bundled fonts, Sharp entry point, native binding and libvips");
+  // The owned child must shape these scripts with bundled faces alone. This
+  // isolated empty fontconfig is never applied to the runner or another process.
+  const fontconfig = join(fixture, "empty-fontconfig.xml");
+  await writeFile(fontconfig, '<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd"><fontconfig></fontconfig>', { flag: "wx" });
   // Reuse the actual build on Linux. Dependencies resolve through the unchanged
   // repository ancestry; do not add/alter node_modules links, loaders or config.
   await symlink(dist, join(fixture, ".next"), "dir");
@@ -77,6 +93,7 @@ try {
   await database.runPrivacy.change(publicId, { wallet: alice, sessionHash: record.hash, binding: { network: "eip155:5042002", origin } },
     { visibility: "public", revision: 0, requestId: randomUUID() });
   const environment: NodeJS.ProcessEnv = { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: "production", JWT_SECRET: secret, BASE_URL: origin,
+    FONTCONFIG_FILE: fontconfig,
     KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1", KERYX_EXTERNAL_DISCOVERY: "0",
     KERYX_WEB_RESEARCH: "0", KERYX_PUBLIC_PROFILES_ENABLED: "true", KERYX_RUN_PRIVACY_ENABLED: "true",
     NEXT_PUBLIC_SUPABASE_URL: "", NEXT_PUBLIC_SUPABASE_ANON_KEY: "", SUPABASE_SERVICE_ROLE_KEY: "" };
@@ -251,6 +268,39 @@ try {
     } finally { await context.close(); }
   }
   checks.push("real Chromium DOM/production CSS/keyboard link at 320,390,768,1366px; no intercepted API/HTML");
+  let revision = publication.revision;
+  for (const [name, displayName, purpose] of [
+    ["vi", "Nguyễn Ánh", "Vì sao nghiên cứu cần nguồn đáng tin cậy?"],
+    ["han", "中文研究者", "人工智能为什么需要可靠的来源与引用证据？"],
+    ["de", "Deutsche Forschung", "Quellen prüfen und Einschränkungen erhalten."],
+    ["ja", "日本語の研究者", "研究資料の出典と引用を確認してください。"],
+    ["ko", "한국어 연구자", "연구 보고서와 인용 근거를 확인하세요."],
+    ["hi", "हिन्दी शोधकर्ता", "शोध रिपोर्ट, उद्धरण, प्रमाण, प्रश्न और उत्तर।"],
+    ["id", "Peneliti Indonesia", "Periksa sumber, kutipan, dan keterbatasan bukti."],
+    ["hi-long", "शोध ".repeat(20).trim(), "प्रमाण ".repeat(20).trim()],
+    ["ja-long", "研究者".repeat(26), "出典と証拠を確認します。".repeat(10)],
+    ["latin-long", "LongName".repeat(10), "OriginalPurpose".repeat(10)],
+    ["mixed", "Café हिन्दी 日本語 한국어", "Literal <i>प्रमाण</i> & café 日本語 한국어 {question}"],
+  ]) {
+    await database.privateProfiles.update(alice, { handle: "fixture_researcher", displayName,
+      bio: "UNSELECTED PRIVATE PROFILE BIO", purpose, links: [] });
+    const republished = await request("/api/me/public-profile", owner("PUT", { ...input, revision }));
+    assert.equal(republished.status, 200, `Owner must explicitly republish the ${name} fixture`);
+    revision = (await republished.json()).revision;
+    const selected = await (await request("/api/u/fixture_researcher")).json();
+    assert.equal(selected.displayName, displayName); assert.equal(selected.purpose, purpose);
+    assert.doesNotMatch(JSON.stringify(selected), /UNSELECTED|UNEXPORTED/);
+    const preview = await request("/u/fixture_researcher/opengraph-image");
+    assert.equal(preview.status, 200); assert.match(preview.headers.get("cache-control") ?? "", /no-store/);
+    assert.match(preview.headers.get("content-type") ?? "", /image\/png/);
+    const png = Buffer.from(await preview.arrayBuffer());
+    assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+    assert.equal(png.readUInt32BE(16), 1200); assert.equal(png.readUInt32BE(20), 630);
+    assert(png.length > 10000);
+    await writeFile(join(fixture, `profile-og-${name}.png`), png, { flag: "wx" });
+    ogPreviews.push({ name, displayName, purpose, sha256: createHash("sha256").update(png).digest("hex"), bytes: png.length });
+  }
+  checks.push("eleven owner-republished actual built OG previews: native/mixed scripts, bounded long fields, literal originals; empty system fontconfig");
   assert.equal((await request("/api/me/public-profile", owner("DELETE"))).status, 200);
   for (const path of publicPaths) assert.equal((await request(path)).status, 404);
   assert.doesNotMatch(await (await request("/sitemap.xml")).text(), /\/u\/fixture_researcher/);
@@ -277,7 +327,7 @@ finally {
     "lib/db/public-profiles-sqlite.ts", "supabase/migrations/0091_public_researcher_profiles.sql"].map(async path =>
     ({ path, sha256: createHash("sha256").update(await readFile(join(source, path))).digest("hex") })));
   await writeFile(join(fixture, "acceptance.json"), JSON.stringify({ issue: 264, accepted: !failure && childTermination !== null, buildId,
-    sourceHead: execFileSync("git", ["rev-parse", "HEAD"], { cwd: source, encoding: "utf8" }).trim(), pins, checks, widths, readinessFailures,
+    sourceHead: execFileSync("git", ["rev-parse", "HEAD"], { cwd: source, encoding: "utf8" }).trim(), pins, checks, widths, readinessFailures, ogPreviews,
     blockedExternalRequests: blockedRequests.length, childCode, childSignal, childClosed: didExit,
     childExited: childExit !== null, childExit, ownedStopRequest, childTermination,
     stdoutEof, stderrEof, syntheticOnly: true, costs: 0, productionActivation: false,

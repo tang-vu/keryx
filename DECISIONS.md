@@ -1,5 +1,21 @@
 # Keryx — Decision Log
 
+## Shape and fit complete public-profile preview fields — 2026-10-29
+
+Use the existing local Sharp/Pango renderer for researcher-profile names and
+introductions in every script. Actual PNGs exposed incorrect Hindi clusters and
+overlapping Japanese fields within the existing 80/160-character profile limits.
+Fit and rewrap each complete field inside its own bounded region, preserve
+literal originals and disable inserted hyphens. Register the six existing bundled
+fonts once for mixed-script fallback instead of depending on installed host fonts.
+
+Keep the final public projection read after all awaited font and shaping work;
+withdrawal, changed displayed text or storage refusal cannot issue the old card.
+This changes image presentation, not publication consent, answer-language evidence
+or financial authority. The [acceptance map](docs/engineering/native-profile-text-20261029.md)
+requires the actual compiled font/native trace and synthetic published-profile
+PNGs with an empty fontconfig, alongside the existing full CI and platform gates.
+
 ## Extend ordinary answers to German, Japanese, Korean, Hindi and Indonesian — 2026-10-29
 
 Enroll `de`, `ja`, `ko`, `hi` and `id` in the existing bounded ordinary producer,
