@@ -1,0 +1,456 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-directory.ts",
+  "sourceSha256": "65d55254a6598bc0ae3b73b25bf1d70eb005ef6c7bfcf07ac98c7aaac189abae",
+  "entries": {
+    "sourceFeed.fullText": {
+      "source": "Full text in feed",
+      "text": "피드에 있는 전문"
+    },
+    "sourceFeed.excerpt": {
+      "source": "Excerpt in feed",
+      "text": "피드에 있는 발췌문"
+    },
+    "sourceFeed.abstract": {
+      "source": "Abstract in feed",
+      "text": "피드에 있는 초록"
+    },
+    "sourceFeed.metadata": {
+      "source": "Metadata only",
+      "text": "메타데이터만"
+    },
+    "sourceFeed.untitled": {
+      "source": "Untitled feed item",
+      "text": "제목 없는 피드 항목"
+    },
+    "sourceFeed.kicker": {
+      "source": "Free public reference",
+      "text": "무료 공개 참고 자료"
+    },
+    "sourceFeed.topics": {
+      "source": "Topics",
+      "text": "주제"
+    },
+    "sourceFeed.compactItems": {
+      "source": "From the retained feed",
+      "text": "보관된 피드에서"
+    },
+    "sourceFeed.empty": {
+      "source": "No feed items retained in this snapshot.",
+      "text": "이 스냅샷에 보관된 피드 항목이 없습니다."
+    },
+    "sourceFeed.collectedUnavailable": {
+      "source": "Feed collection time unavailable",
+      "text": "피드 수집 시각을 확인할 수 없음"
+    },
+    "sourceFeed.matching.one": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "일치하는 보관된 피드 항목 · {total}개 중 {count}개"
+    },
+    "sourceFeed.latest.one": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "최근 보관된 피드 항목 · 스냅샷에 {count}개"
+    },
+    "sourceFeed.matching.other": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "일치하는 보관된 피드 항목 · {total}개 중 {count}개"
+    },
+    "sourceFeed.latest.other": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "최근 보관된 피드 항목 · 스냅샷에 {count}개"
+    },
+    "sourceFeed.more.one": {
+      "source": "Show {count} more retained item",
+      "text": "보관된 항목 {count}개 더 보기"
+    },
+    "sourceFeed.more.other": {
+      "source": "Show {count} more retained items",
+      "text": "보관된 항목 {count}개 더 보기"
+    },
+    "sourceFeed.collected": {
+      "source": "Feed collected {date}",
+      "text": "피드 수집: {date}"
+    },
+    "sourceCited.kicker": {
+      "source": "Cited public document",
+      "text": "인용된 공개 문서"
+    },
+    "sourceCited.readUnavailable": {
+      "source": "Read time not recorded",
+      "text": "읽은 시각이 기록되지 않음"
+    },
+    "sourceCited.citationUnavailable": {
+      "source": "Citation date not recorded",
+      "text": "인용 날짜가 기록되지 않음"
+    },
+    "sourceCited.inspect": {
+      "source": "Inspect cited answer →",
+      "text": "인용한 답변 살펴보기 →"
+    },
+    "sourceCited.scope.full_text": {
+      "source": "Full text recorded",
+      "text": "전문 기록됨"
+    },
+    "sourceCited.scopeBounded.full_text": {
+      "source": "Full text recorded · Bounded extraction",
+      "text": "전문 기록됨 · 추출 범위 제한"
+    },
+    "sourceCited.scope.excerpt": {
+      "source": "Excerpt recorded",
+      "text": "발췌문 기록됨"
+    },
+    "sourceCited.scopeBounded.excerpt": {
+      "source": "Excerpt recorded · Bounded extraction",
+      "text": "발췌문 기록됨 · 추출 범위 제한"
+    },
+    "sourceCited.scope.abstract": {
+      "source": "Abstract recorded",
+      "text": "초록 기록됨"
+    },
+    "sourceCited.scopeBounded.abstract": {
+      "source": "Abstract recorded · Bounded extraction",
+      "text": "초록 기록됨 · 추출 범위 제한"
+    },
+    "sourceCited.scope.metadata_only": {
+      "source": "Metadata only",
+      "text": "메타데이터만"
+    },
+    "sourceCited.scopeBounded.metadata_only": {
+      "source": "Metadata only · Bounded extraction",
+      "text": "메타데이터만 · 추출 범위 제한"
+    },
+    "sourceCited.scope.unrecorded": {
+      "source": "Reading scope not recorded",
+      "text": "읽은 범위가 기록되지 않음"
+    },
+    "sourceCited.scopeBounded.unrecorded": {
+      "source": "Reading scope not recorded · Bounded extraction",
+      "text": "읽은 범위가 기록되지 않음 · 추출 범위 제한"
+    },
+    "sourceCited.observed": {
+      "source": "Read observed {date}",
+      "text": "읽기 관측: {date}"
+    },
+    "sourceCited.lastCited": {
+      "source": "Last cited {date}",
+      "text": "최근 인용: {date}"
+    },
+    "sourceExplore.topics": {
+      "source": "Topics",
+      "text": "주제"
+    },
+    "sourceExplore.ask": {
+      "source": "Ask with this source →",
+      "text": "이 출처로 질문하기 →"
+    },
+    "sourcePreview.title": {
+      "source": "Explore the sources",
+      "text": "출처 탐색"
+    },
+    "sourcePreview.browse": {
+      "source": "Browse the source library →",
+      "text": "출처 라이브러리 열기 →"
+    },
+    "sourcePreview.citationUnavailable": {
+      "source": "Citation history unavailable",
+      "text": "인용 이력을 확인할 수 없음"
+    },
+    "sourcePreview.referenceUnavailable": {
+      "source": "Public reference count unavailable",
+      "text": "공개 참고 자료 수를 확인할 수 없음"
+    },
+    "sourcePreview.creatorUnavailable": {
+      "source": "Creator listing count unavailable",
+      "text": "창작자 등록 항목 수를 확인할 수 없음"
+    },
+    "sourcePreview.snapshotsUnavailable": {
+      "source": "Public reference snapshots could not be loaded. Reload to retry.",
+      "text": "공개 참고 자료 스냅샷을 불러오지 못했습니다. 새로고침하여 다시 시도하세요."
+    },
+    "sourcePreview.empty": {
+      "source": "No retained sources are listed yet. Keryx can still discover supported public documents in response to a question.",
+      "text": "아직 보관된 출처가 나열되지 않았습니다. Keryx는 질문에 응답하면서 지원되는 공개 문서를 계속 찾을 수 있습니다."
+    },
+    "sourcePreview.documents.one": {
+      "source": "{count} recently cited public document",
+      "text": "최근 인용된 공개 문서 {count}개"
+    },
+    "sourcePreview.feeds.one": {
+      "source": "{count} public feed",
+      "text": "공개 피드 {count}개"
+    },
+    "sourcePreview.creators.one": {
+      "source": "{count} creator listing",
+      "text": "창작자 등록 항목 {count}개"
+    },
+    "sourcePreview.documents.other": {
+      "source": "{count} recently cited public documents",
+      "text": "최근 인용된 공개 문서 {count}개"
+    },
+    "sourcePreview.feeds.other": {
+      "source": "{count} public feeds",
+      "text": "공개 피드 {count}개"
+    },
+    "sourcePreview.creators.other": {
+      "source": "{count} creator listings",
+      "text": "창작자 등록 항목 {count}개"
+    },
+    "sourceFilter.title": {
+      "source": "Find a source",
+      "text": "출처 찾기"
+    },
+    "sourceFilter.topic": {
+      "source": "Topic",
+      "text": "주제"
+    },
+    "sourceFilter.allTopics": {
+      "source": "All topics",
+      "text": "모든 주제"
+    },
+    "sourceFilter.collection": {
+      "source": "Collection",
+      "text": "모음"
+    },
+    "sourceFilter.allCollections": {
+      "source": "All collections",
+      "text": "모든 모음"
+    },
+    "sourceFilter.sort": {
+      "source": "Sort",
+      "text": "정렬"
+    },
+    "sourceFilter.collectionOrder": {
+      "source": "Collection order",
+      "text": "모음 순서"
+    },
+    "sourceFilter.nameOrder": {
+      "source": "Name A–Z",
+      "text": "이름 A–Z"
+    },
+    "sourceFilter.latest": {
+      "source": "Latest recorded observation",
+      "text": "최근 기록된 관측"
+    },
+    "sourceFilter.paperFilters": {
+      "source": "Paper filters · selects research-paper records",
+      "text": "논문 필터 · 연구 논문 레코드 선택"
+    },
+    "sourceFilter.author": {
+      "source": "Author",
+      "text": "저자"
+    },
+    "sourceFilter.authorPlaceholder": {
+      "source": "Author name",
+      "text": "저자 이름"
+    },
+    "sourceFilter.doi": {
+      "source": "Exact DOI",
+      "text": "정확한 DOI"
+    },
+    "sourceFilter.find": {
+      "source": "Find sources",
+      "text": "출처 찾기"
+    },
+    "sourceFilter.topicsLabel": {
+      "source": "Browse source topics",
+      "text": "출처 주제 둘러보기"
+    },
+    "sourceFilter.clear": {
+      "source": "Clear filters",
+      "text": "필터 지우기"
+    },
+    "sourceFilter.placeholder": {
+      "source": "Try {database}, agents or {domain}",
+      "text": "{database}, 에이전트 또는 {domain} 검색"
+    },
+    "sourceFilter.doiPlaceholder": {
+      "source": "{identifier} or {url}",
+      "text": "{identifier} 또는 {url}"
+    },
+    "sourceCited.unclassifiedBounded": {
+      "source": " · Bounded extraction",
+      "text": " · 추출 범위 제한"
+    },
+    "sourceLibrary.title": {
+      "source": "Sources — research papers, public references and creator listings",
+      "text": "출처 — 연구 논문, 공개 참고 자료 및 창작자 등록 항목"
+    },
+    "sourceLibrary.name": {
+      "source": "Keryx Sources",
+      "text": "Keryx 출처"
+    },
+    "sourceLibrary.crumb": {
+      "source": "Sources",
+      "text": "출처"
+    },
+    "sourceLibrary.kicker": {
+      "source": "The reading library",
+      "text": "읽기 라이브러리"
+    },
+    "sourceLibrary.papers": {
+      "source": "Research papers",
+      "text": "연구 논문"
+    },
+    "sourceLibrary.citedDocuments": {
+      "source": "Recently cited documents",
+      "text": "최근 인용된 문서"
+    },
+    "sourceLibrary.unavailable": {
+      "source": "Unavailable",
+      "text": "확인할 수 없음"
+    },
+    "sourceLibrary.publicHistory": {
+      "source": "From public answer history",
+      "text": "공개 답변 이력에서"
+    },
+    "sourceLibrary.publicReferences": {
+      "source": "Public references",
+      "text": "공개 참고 자료"
+    },
+    "sourceLibrary.creatorListings": {
+      "source": "Creator listings",
+      "text": "창작자 등록 항목"
+    },
+    "sourceLibrary.directoryUnavailable": {
+      "source": "Part of the directory could not be loaded. Available records are shown below; a missing count is not an empty catalog.",
+      "text": "디렉터리 일부를 불러오지 못했습니다. 사용 가능한 레코드를 아래에 표시합니다. 수가 표시되지 않는다고 해서 카탈로그가 비어 있는 것은 아닙니다."
+    },
+    "sourceLibrary.reviewQuestion": {
+      "source": "Working on a literature review?",
+      "text": "문헌 검토를 진행하고 있나요?"
+    },
+    "sourceLibrary.reviewNotice": {
+      "source": "Save papers, record screening notes and prepare a comparison. Your list stays on this browser.",
+      "text": "논문을 저장하고 선별 메모를 기록하여 비교를 준비하세요. 목록은 이 브라우저에 보관됩니다."
+    },
+    "sourceLibrary.openWorkspace": {
+      "source": "Open literature workspace →",
+      "text": "문헌 작업 공간 열기 →"
+    },
+    "sourceLibrary.freeDiscovery": {
+      "source": "Original records · free discovery",
+      "text": "원본 레코드 · 무료 탐색"
+    },
+    "sourceLibrary.papersEmpty": {
+      "source": "No starter paper matches these filters. You can search the repositories below.",
+      "text": "이 필터와 일치하는 초기 수록 논문이 없습니다. 아래 저장소에서 검색할 수 있습니다."
+    },
+    "sourceLibrary.emptyTitle": {
+      "source": "No sources match these filters",
+      "text": "이 필터와 일치하는 출처가 없습니다"
+    },
+    "sourceLibrary.clear": {
+      "source": "Clear filters",
+      "text": "필터 지우기"
+    },
+    "sourceLibrary.citedTitle": {
+      "source": "Cited in past answers",
+      "text": "이전 답변에서 인용됨"
+    },
+    "sourceLibrary.citationsUnavailable": {
+      "source": "Public citation history is temporarily unavailable. Reload to retry; other source collections remain available.",
+      "text": "공개 인용 이력을 일시적으로 확인할 수 없습니다. 새로고침하여 다시 시도하세요. 다른 출처 모음은 계속 사용할 수 있습니다."
+    },
+    "sourceLibrary.feedNotice": {
+      "source": "These are retained feed snapshots. Keryx also discovers supported websites and PDFs when you ask a question; this directory is not a complete index of the web. A feed excerpt, abstract or video description may omit the full work. Listing here does not certify content accuracy.",
+      "text": "보관된 피드 스냅샷입니다. Keryx는 질문에 따라 지원되는 웹사이트와 PDF도 찾지만, 이 디렉터리는 웹 전체의 색인이 아닙니다. 피드 발췌문, 초록 또는 동영상 설명에는 전체 저작물이 포함되지 않을 수 있습니다. 여기에 나열된다고 해서 내용의 정확성이 보증되지는 않습니다."
+    },
+    "sourceLibrary.referencesUnavailable": {
+      "source": "Public references are temporarily unavailable. Try this page again to inspect the retained catalog.",
+      "text": "공개 참고 자료를 일시적으로 확인할 수 없습니다. 이 페이지를 다시 열어 보관된 카탈로그를 살펴보세요."
+    },
+    "sourceLibrary.ask": {
+      "source": "ask a question",
+      "text": "질문"
+    },
+    "sourceLibrary.creatorsUnavailable": {
+      "source": "Creator listings are temporarily unavailable. Public references have their own availability and free-reading status.",
+      "text": "창작자 등록 항목을 일시적으로 확인할 수 없습니다. 공개 참고 자료의 이용 가능 여부와 무료 읽기 상태는 별도로 기록됩니다."
+    },
+    "sourceLibrary.creatorsEmpty": {
+      "source": "No creator listings are recorded yet.",
+      "text": "아직 기록된 창작자 등록 항목이 없습니다."
+    },
+    "sourceLibrary.unanswered": {
+      "source": "See what the corpus couldn't answer",
+      "text": "자료 모음이 답하지 못한 질문 보기"
+    },
+    "sourceLibrary.emphasis": {
+      "source": "explore.",
+      "text": "탐색"
+    },
+    "sourceLibrary.heading": {
+      "source": "Sources to {emphasis}",
+      "text": "{emphasis}할 출처."
+    },
+    "sourceLibrary.paperRecords.one": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "저작물 · 관측된 레코드 {count}개 · 논문 본문 미열람"
+    },
+    "sourceLibrary.feedItems.one": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "보관된 피드 · 피드 항목 {count}개"
+    },
+    "sourceLibrary.paperMatches.one": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "일치하는 저작물 {count}개 · 초기 레코드 {total}개. 저자, 연도 및 DOI 필터는 이 참고 문헌 목록에 적용됩니다."
+    },
+    "sourceLibrary.documentsMatched.one": {
+      "source": "{count} documents match this view.",
+      "text": "이 보기와 일치하는 문서 {count}개."
+    },
+    "sourceLibrary.paperRecords.other": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "저작물 · 관측된 레코드 {count}개 · 논문 본문 미열람"
+    },
+    "sourceLibrary.feedItems.other": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "보관된 피드 · 피드 항목 {count}개"
+    },
+    "sourceLibrary.paperMatches.other": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "일치하는 저작물 {count}개 · 초기 레코드 {total}개. 저자, 연도 및 DOI 필터는 이 참고 문헌 목록에 적용됩니다."
+    },
+    "sourceLibrary.documentsMatched.other": {
+      "source": "{count} documents match this view.",
+      "text": "이 보기와 일치하는 문서 {count}개."
+    },
+    "sourceLibrary.feedItemsUnavailable": {
+      "source": "Retained feeds · item count unavailable",
+      "text": "보관된 피드 · 항목 수를 확인할 수 없음"
+    },
+    "sourceLibrary.morePapers.one": {
+      "source": "Show {count} more paper references",
+      "text": "논문 참고 자료 {count}개 더 보기"
+    },
+    "sourceLibrary.moreCited.one": {
+      "source": "Show {count} more cited documents",
+      "text": "인용된 문서 {count}개 더 보기"
+    },
+    "sourceLibrary.moreFeeds.one": {
+      "source": "Show {count} more retained feeds",
+      "text": "보관된 피드 {count}개 더 보기"
+    },
+    "sourceLibrary.morePapers.other": {
+      "source": "Show {count} more paper references",
+      "text": "논문 참고 자료 {count}개 더 보기"
+    },
+    "sourceLibrary.moreCited.other": {
+      "source": "Show {count} more cited documents",
+      "text": "인용된 문서 {count}개 더 보기"
+    },
+    "sourceLibrary.moreFeeds.other": {
+      "source": "Show {count} more retained feeds",
+      "text": "보관된 피드 {count}개 더 보기"
+    },
+    "sourceLibrary.externalIndexes": {
+      "source": "Explore broader scholarly indexes: {openAlex} · {doaj}. These external links open their indexes; Keryx makes no background queries to them.",
+      "text": "더 넓은 학술 색인 탐색: {openAlex} · {doaj}. 이 외부 링크는 각 색인을 엽니다. Keryx는 해당 색인에 백그라운드 쿼리를 보내지 않습니다."
+    },
+    "sourceLibrary.feedEmpty": {
+      "source": "No public feed snapshots are retained yet. You can still {ask} with a public source URL.",
+      "text": "아직 보관된 공개 피드 스냅샷이 없습니다. 공개 출처 URL로 계속 {ask}할 수 있습니다."
+    }
+  }
+}

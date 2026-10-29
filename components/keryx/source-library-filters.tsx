@@ -2,7 +2,8 @@ import { createMessages } from "@/lib/i18n/messages";
 import Link from "next/link";
 import Form from "next/form";
 import { LIBRARY_KINDS, LIBRARY_TOPICS, libraryBrowseHref, type LibraryFilters } from "@/lib/sources/library-browse";
-import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage, UiText } from "@/lib/i18n/ui-copy";
+import { SourceLibraryInput } from "./source-library-input";
 
 
 
@@ -29,7 +30,7 @@ export function SourceLibraryFilters({ filters, total, matched, publishers }: {
         <span className={labelClass}><UiMessage messageKey={"sourceFilter.search"} /></span>
         <div className="relative">
           <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
-          <UiElement as="input" names={["placeholder"]} attributes={{ "type": "search", "name": "q", "maxLength": 120, "defaultValue": filters.q, "placeholder": copy("sourceFilter.placeholder", { database: "PostgreSQL", domain: "circle.com" }), "className": fieldClass + " pl-10" }}></UiElement>
+          <SourceLibraryInput kind="query" defaultValue={filters.q} className={fieldClass + " pl-10"} />
         </div>
       </label>
       <div className="min-w-0"><label htmlFor="source-topic" className={labelClass}><UiMessage messageKey={"sourceFilter.topic"} /></label>
@@ -40,7 +41,7 @@ export function SourceLibraryFilters({ filters, total, matched, publishers }: {
 
       <div className="min-w-0"><label htmlFor="source-collection" className={labelClass}><UiMessage messageKey={"sourceFilter.collection"} /></label>
         <select id="source-collection" name="kind" defaultValue={filters.kind} className={fieldClass}>
-          <option value="all"><UiMessage plain messageKey={"sourceFilter.allCollections"} /></option>{Object.entries(LIBRARY_KINDS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          <option value="all"><UiMessage plain messageKey={"sourceFilter.allCollections"} /></option>{Object.entries(LIBRARY_KINDS).map(([value, label]) => <option key={value} value={value}><UiText plain namespaces={["source-directory"]} source={label} /></option>)}
         </select>
       </div>
       <div className="min-w-0"><label htmlFor="source-sort" className={labelClass}><UiMessage messageKey={"sourceFilter.sort"} /></label>
@@ -61,10 +62,10 @@ export function SourceLibraryFilters({ filters, total, matched, publishers }: {
             </summary>
             <div className="grid gap-3 border-t border-line p-3 sm:grid-cols-2">
               <label className={"min-w-0 " + labelClass}><UiMessage messageKey={"sourceFilter.author"} />
-                <UiElement as="input" names={["placeholder"]} attributes={{ "name": "author", "maxLength": 120, "defaultValue": filters.author ?? "", "placeholder": copy("sourceFilter.authorPlaceholder"), "className": fieldClass }}></UiElement>
+                <SourceLibraryInput kind="author" defaultValue={filters.author ?? ""} className={fieldClass} />
               </label>
               <label className={"min-w-0 " + labelClass}><UiMessage messageKey={"sourceFilter.doi"} />
-                <UiElement as="input" names={["placeholder"]} attributes={{ "name": "doi", "maxLength": 200, "defaultValue": filters.doi ?? "", "placeholder": copy("sourceFilter.doiPlaceholder", { identifier: "10.…", url: "https://doi.org/…" }), "className": fieldClass }}></UiElement>
+                <SourceLibraryInput kind="doi" defaultValue={filters.doi ?? ""} className={fieldClass} />
               </label>
             </div>
           </details>
@@ -72,7 +73,7 @@ export function SourceLibraryFilters({ filters, total, matched, publishers }: {
       </fieldset>
       <button type="submit" className="mt-1 inline-flex min-h-12 items-center justify-between gap-3 border border-ink bg-ink px-4 py-3 font-mono text-xs text-paper transition-colors hover:bg-ink/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal sm:col-span-2 lg:col-span-1 lg:col-start-3"><UiMessage messageKey={"sourceFilter.find"} /><span aria-hidden="true">→</span></button>
     </Form></div>
-    <UiElement as="nav" names={["aria-label"]} attributes={{ "aria-label": copy("sourceFilter.topicsLabel"), "className": "mt-5 flex flex-wrap gap-2 border-t border-line pt-4" }}>
+    <UiElement as="nav" namespaces={["source-directory"]} names={["aria-label"]} attributes={{ "aria-label": copy("sourceFilter.topicsLabel"), "className": "mt-5 flex flex-wrap gap-2 border-t border-line pt-4" }}>
       {Object.entries(LIBRARY_TOPICS).filter(([value]) => value !== "other").map(([value, label]) => <Link key={value}
         href={libraryBrowseHref(filters, { topic: value as LibraryFilters["topic"] })} aria-current={filters.topic === value ? "page" : undefined}
         className={`inline-flex min-h-11 items-center border px-3 py-2 font-mono text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal ${filters.topic === value ? "border-ink bg-ink text-paper" : "border-line bg-paper text-ink-2 hover:border-ink hover:bg-paper-2"}`}>{label}</Link>)}

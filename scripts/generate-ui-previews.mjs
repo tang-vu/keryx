@@ -20,6 +20,7 @@ const entryPreviewMinimums = {
   "research-flow": { authored: 39, preview: 39 },
   "product-guide": { authored: 95, preview: 48 }, shell: { authored: 17, preview: 17 },
   reports: { authored: 55, preview: 54 }, "pdf-reading": { authored: 5, preview: 5 },
+  "source-directory": { authored: 112, preview: 112 },
   // The conservative critical-copy filter retains the loadFailed status in English.
   "ui-preference": { authored: 9, preview: 8 },
 };

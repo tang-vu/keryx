@@ -1,0 +1,456 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-directory.ts",
+  "sourceSha256": "65d55254a6598bc0ae3b73b25bf1d70eb005ef6c7bfcf07ac98c7aaac189abae",
+  "entries": {
+    "sourceFeed.fullText": {
+      "source": "Full text in feed",
+      "text": "Texto completo no feed"
+    },
+    "sourceFeed.excerpt": {
+      "source": "Excerpt in feed",
+      "text": "Trecho no feed"
+    },
+    "sourceFeed.abstract": {
+      "source": "Abstract in feed",
+      "text": "Resumo no feed"
+    },
+    "sourceFeed.metadata": {
+      "source": "Metadata only",
+      "text": "Somente metadados"
+    },
+    "sourceFeed.untitled": {
+      "source": "Untitled feed item",
+      "text": "Item do feed sem título"
+    },
+    "sourceFeed.kicker": {
+      "source": "Free public reference",
+      "text": "Referência pública gratuita"
+    },
+    "sourceFeed.topics": {
+      "source": "Topics",
+      "text": "Tópicos"
+    },
+    "sourceFeed.compactItems": {
+      "source": "From the retained feed",
+      "text": "Do feed preservado"
+    },
+    "sourceFeed.empty": {
+      "source": "No feed items retained in this snapshot.",
+      "text": "Nenhum item do feed foi preservado neste instantâneo."
+    },
+    "sourceFeed.collectedUnavailable": {
+      "source": "Feed collection time unavailable",
+      "text": "Horário de coleta do feed indisponível"
+    },
+    "sourceFeed.matching.one": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "Itens preservados correspondentes · {count} de {total}"
+    },
+    "sourceFeed.latest.one": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "Últimos itens preservados · {count} neste instantâneo"
+    },
+    "sourceFeed.matching.other": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "Itens preservados correspondentes · {count} de {total}"
+    },
+    "sourceFeed.latest.other": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "Últimos itens preservados · {count} neste instantâneo"
+    },
+    "sourceFeed.more.one": {
+      "source": "Show {count} more retained item",
+      "text": "Mostrar mais {count} item preservado"
+    },
+    "sourceFeed.more.other": {
+      "source": "Show {count} more retained items",
+      "text": "Mostrar mais {count} itens preservados"
+    },
+    "sourceFeed.collected": {
+      "source": "Feed collected {date}",
+      "text": "Feed coletado em {date}"
+    },
+    "sourceCited.kicker": {
+      "source": "Cited public document",
+      "text": "Documento público citado"
+    },
+    "sourceCited.readUnavailable": {
+      "source": "Read time not recorded",
+      "text": "Horário de leitura não registrado"
+    },
+    "sourceCited.citationUnavailable": {
+      "source": "Citation date not recorded",
+      "text": "Data da citação não registrada"
+    },
+    "sourceCited.inspect": {
+      "source": "Inspect cited answer →",
+      "text": "Inspecionar a resposta que o cita →"
+    },
+    "sourceCited.scope.full_text": {
+      "source": "Full text recorded",
+      "text": "Texto completo registrado"
+    },
+    "sourceCited.scopeBounded.full_text": {
+      "source": "Full text recorded · Bounded extraction",
+      "text": "Texto completo registrado · Extração limitada"
+    },
+    "sourceCited.scope.excerpt": {
+      "source": "Excerpt recorded",
+      "text": "Trecho registrado"
+    },
+    "sourceCited.scopeBounded.excerpt": {
+      "source": "Excerpt recorded · Bounded extraction",
+      "text": "Trecho registrado · Extração limitada"
+    },
+    "sourceCited.scope.abstract": {
+      "source": "Abstract recorded",
+      "text": "Resumo registrado"
+    },
+    "sourceCited.scopeBounded.abstract": {
+      "source": "Abstract recorded · Bounded extraction",
+      "text": "Resumo registrado · Extração limitada"
+    },
+    "sourceCited.scope.metadata_only": {
+      "source": "Metadata only",
+      "text": "Somente metadados"
+    },
+    "sourceCited.scopeBounded.metadata_only": {
+      "source": "Metadata only · Bounded extraction",
+      "text": "Somente metadados · Extração limitada"
+    },
+    "sourceCited.scope.unrecorded": {
+      "source": "Reading scope not recorded",
+      "text": "Escopo de leitura não registrado"
+    },
+    "sourceCited.scopeBounded.unrecorded": {
+      "source": "Reading scope not recorded · Bounded extraction",
+      "text": "Escopo de leitura não registrado · Extração limitada"
+    },
+    "sourceCited.observed": {
+      "source": "Read observed {date}",
+      "text": "Leitura observada em {date}"
+    },
+    "sourceCited.lastCited": {
+      "source": "Last cited {date}",
+      "text": "Última citação em {date}"
+    },
+    "sourceExplore.topics": {
+      "source": "Topics",
+      "text": "Tópicos"
+    },
+    "sourceExplore.ask": {
+      "source": "Ask with this source →",
+      "text": "Perguntar com esta fonte →"
+    },
+    "sourcePreview.title": {
+      "source": "Explore the sources",
+      "text": "Explorar as fontes"
+    },
+    "sourcePreview.browse": {
+      "source": "Browse the source library →",
+      "text": "Abrir a biblioteca de fontes →"
+    },
+    "sourcePreview.citationUnavailable": {
+      "source": "Citation history unavailable",
+      "text": "Histórico de citações indisponível"
+    },
+    "sourcePreview.referenceUnavailable": {
+      "source": "Public reference count unavailable",
+      "text": "Contagem de referências públicas indisponível"
+    },
+    "sourcePreview.creatorUnavailable": {
+      "source": "Creator listing count unavailable",
+      "text": "Contagem de listagens de criadores indisponível"
+    },
+    "sourcePreview.snapshotsUnavailable": {
+      "source": "Public reference snapshots could not be loaded. Reload to retry.",
+      "text": "Não foi possível carregar os instantâneos das referências públicas. Recarregue para tentar novamente."
+    },
+    "sourcePreview.empty": {
+      "source": "No retained sources are listed yet. Keryx can still discover supported public documents in response to a question.",
+      "text": "Ainda não há fontes preservadas listadas. O Keryx continua podendo descobrir documentos públicos compatíveis em resposta a uma pergunta."
+    },
+    "sourcePreview.documents.one": {
+      "source": "{count} recently cited public document",
+      "text": "{count} documento público citado recentemente"
+    },
+    "sourcePreview.feeds.one": {
+      "source": "{count} public feed",
+      "text": "{count} feed público"
+    },
+    "sourcePreview.creators.one": {
+      "source": "{count} creator listing",
+      "text": "{count} listagem de criador"
+    },
+    "sourcePreview.documents.other": {
+      "source": "{count} recently cited public documents",
+      "text": "{count} documentos públicos citados recentemente"
+    },
+    "sourcePreview.feeds.other": {
+      "source": "{count} public feeds",
+      "text": "{count} feeds públicos"
+    },
+    "sourcePreview.creators.other": {
+      "source": "{count} creator listings",
+      "text": "{count} listagens de criadores"
+    },
+    "sourceFilter.title": {
+      "source": "Find a source",
+      "text": "Encontrar uma fonte"
+    },
+    "sourceFilter.topic": {
+      "source": "Topic",
+      "text": "Tópico"
+    },
+    "sourceFilter.allTopics": {
+      "source": "All topics",
+      "text": "Todos os tópicos"
+    },
+    "sourceFilter.collection": {
+      "source": "Collection",
+      "text": "Coleção"
+    },
+    "sourceFilter.allCollections": {
+      "source": "All collections",
+      "text": "Todas as coleções"
+    },
+    "sourceFilter.sort": {
+      "source": "Sort",
+      "text": "Ordenar"
+    },
+    "sourceFilter.collectionOrder": {
+      "source": "Collection order",
+      "text": "Ordem da coleção"
+    },
+    "sourceFilter.nameOrder": {
+      "source": "Name A–Z",
+      "text": "Nome de A a Z"
+    },
+    "sourceFilter.latest": {
+      "source": "Latest recorded observation",
+      "text": "Última observação"
+    },
+    "sourceFilter.paperFilters": {
+      "source": "Paper filters · selects research-paper records",
+      "text": "Filtros de artigos · selecionam registros de artigos de pesquisa"
+    },
+    "sourceFilter.author": {
+      "source": "Author",
+      "text": "Autor"
+    },
+    "sourceFilter.authorPlaceholder": {
+      "source": "Author name",
+      "text": "Nome do autor"
+    },
+    "sourceFilter.doi": {
+      "source": "Exact DOI",
+      "text": "DOI exato"
+    },
+    "sourceFilter.find": {
+      "source": "Find sources",
+      "text": "Encontrar fontes"
+    },
+    "sourceFilter.topicsLabel": {
+      "source": "Browse source topics",
+      "text": "Explorar tópicos de fontes"
+    },
+    "sourceFilter.clear": {
+      "source": "Clear filters",
+      "text": "Limpar filtros"
+    },
+    "sourceFilter.placeholder": {
+      "source": "Try {database}, agents or {domain}",
+      "text": "Experimente {database}, agentes ou {domain}"
+    },
+    "sourceFilter.doiPlaceholder": {
+      "source": "{identifier} or {url}",
+      "text": "{identifier} ou {url}"
+    },
+    "sourceCited.unclassifiedBounded": {
+      "source": " · Bounded extraction",
+      "text": " · Extração limitada"
+    },
+    "sourceLibrary.title": {
+      "source": "Sources — research papers, public references and creator listings",
+      "text": "Fontes — artigos de pesquisa, referências públicas e listagens de criadores"
+    },
+    "sourceLibrary.name": {
+      "source": "Keryx Sources",
+      "text": "Fontes do Keryx"
+    },
+    "sourceLibrary.crumb": {
+      "source": "Sources",
+      "text": "Fontes"
+    },
+    "sourceLibrary.kicker": {
+      "source": "The reading library",
+      "text": "A biblioteca de leitura"
+    },
+    "sourceLibrary.papers": {
+      "source": "Research papers",
+      "text": "Artigos de pesquisa"
+    },
+    "sourceLibrary.citedDocuments": {
+      "source": "Recently cited documents",
+      "text": "Documentos citados recentemente"
+    },
+    "sourceLibrary.unavailable": {
+      "source": "Unavailable",
+      "text": "Indisponível"
+    },
+    "sourceLibrary.publicHistory": {
+      "source": "From public answer history",
+      "text": "Do histórico de respostas públicas"
+    },
+    "sourceLibrary.publicReferences": {
+      "source": "Public references",
+      "text": "Referências públicas"
+    },
+    "sourceLibrary.creatorListings": {
+      "source": "Creator listings",
+      "text": "Listagens de criadores"
+    },
+    "sourceLibrary.directoryUnavailable": {
+      "source": "Part of the directory could not be loaded. Available records are shown below; a missing count is not an empty catalog.",
+      "text": "Parte do diretório não pôde ser carregada. Os registros disponíveis aparecem abaixo; uma contagem ausente não significa que o catálogo esteja vazio."
+    },
+    "sourceLibrary.reviewQuestion": {
+      "source": "Working on a literature review?",
+      "text": "Está preparando uma revisão da literatura?"
+    },
+    "sourceLibrary.reviewNotice": {
+      "source": "Save papers, record screening notes and prepare a comparison. Your list stays on this browser.",
+      "text": "Salve artigos, registre notas de triagem e prepare uma comparação. Sua lista permanece neste navegador."
+    },
+    "sourceLibrary.openWorkspace": {
+      "source": "Open literature workspace →",
+      "text": "Abrir o espaço de revisão da literatura →"
+    },
+    "sourceLibrary.freeDiscovery": {
+      "source": "Original records · free discovery",
+      "text": "Registros originais · descoberta gratuita"
+    },
+    "sourceLibrary.papersEmpty": {
+      "source": "No starter paper matches these filters. You can search the repositories below.",
+      "text": "Nenhum artigo inicial corresponde a estes filtros. Você pode pesquisar nos repositórios abaixo."
+    },
+    "sourceLibrary.emptyTitle": {
+      "source": "No sources match these filters",
+      "text": "Nenhuma fonte corresponde a estes filtros"
+    },
+    "sourceLibrary.clear": {
+      "source": "Clear filters",
+      "text": "Limpar filtros"
+    },
+    "sourceLibrary.citedTitle": {
+      "source": "Cited in past answers",
+      "text": "Citado em respostas anteriores"
+    },
+    "sourceLibrary.citationsUnavailable": {
+      "source": "Public citation history is temporarily unavailable. Reload to retry; other source collections remain available.",
+      "text": "O histórico público de citações está temporariamente indisponível. Recarregue para tentar novamente; as outras coleções continuam disponíveis."
+    },
+    "sourceLibrary.feedNotice": {
+      "source": "These are retained feed snapshots. Keryx also discovers supported websites and PDFs when you ask a question; this directory is not a complete index of the web. A feed excerpt, abstract or video description may omit the full work. Listing here does not certify content accuracy.",
+      "text": "Estes são instantâneos de feeds preservados. O Keryx também descobre sites e PDFs compatíveis quando você faz uma pergunta; este diretório não é um índice completo da web. Um trecho do feed, resumo ou descrição de vídeo pode omitir a obra completa. Estar listado aqui não certifica a precisão do conteúdo."
+    },
+    "sourceLibrary.referencesUnavailable": {
+      "source": "Public references are temporarily unavailable. Try this page again to inspect the retained catalog.",
+      "text": "As referências públicas estão temporariamente indisponíveis. Abra esta página novamente para inspecionar o catálogo preservado."
+    },
+    "sourceLibrary.ask": {
+      "source": "ask a question",
+      "text": "fazer uma pergunta"
+    },
+    "sourceLibrary.creatorsUnavailable": {
+      "source": "Creator listings are temporarily unavailable. Public references have their own availability and free-reading status.",
+      "text": "As listagens de criadores estão temporariamente indisponíveis. As referências públicas têm sua própria disponibilidade e condição de leitura gratuita."
+    },
+    "sourceLibrary.creatorsEmpty": {
+      "source": "No creator listings are recorded yet.",
+      "text": "Ainda não há listagens de criadores registradas."
+    },
+    "sourceLibrary.unanswered": {
+      "source": "See what the corpus couldn't answer",
+      "text": "Ver o que o corpus não conseguiu responder"
+    },
+    "sourceLibrary.emphasis": {
+      "source": "explore.",
+      "text": "explorar."
+    },
+    "sourceLibrary.heading": {
+      "source": "Sources to {emphasis}",
+      "text": "Fontes para {emphasis}"
+    },
+    "sourceLibrary.paperRecords.one": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "Obras · {count} registro observado · texto do artigo não lido"
+    },
+    "sourceLibrary.feedItems.one": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "Feeds preservados · {count} item"
+    },
+    "sourceLibrary.paperMatches.one": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "{count} obra correspondente · {total} registros iniciais. Os filtros de autor, ano e DOI se aplicam a esta bibliografia."
+    },
+    "sourceLibrary.documentsMatched.one": {
+      "source": "{count} documents match this view.",
+      "text": "{count} documento corresponde a esta visualização."
+    },
+    "sourceLibrary.paperRecords.other": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "Obras · {count} registros observados · texto do artigo não lido"
+    },
+    "sourceLibrary.feedItems.other": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "Feeds preservados · {count} itens"
+    },
+    "sourceLibrary.paperMatches.other": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "{count} obras correspondentes · {total} registros iniciais. Os filtros de autor, ano e DOI se aplicam a esta bibliografia."
+    },
+    "sourceLibrary.documentsMatched.other": {
+      "source": "{count} documents match this view.",
+      "text": "{count} documentos correspondem a esta visualização."
+    },
+    "sourceLibrary.feedItemsUnavailable": {
+      "source": "Retained feeds · item count unavailable",
+      "text": "Feeds preservados · contagem de itens indisponível"
+    },
+    "sourceLibrary.morePapers.one": {
+      "source": "Show {count} more paper references",
+      "text": "Mostrar mais {count} referência de artigo"
+    },
+    "sourceLibrary.moreCited.one": {
+      "source": "Show {count} more cited documents",
+      "text": "Mostrar mais {count} documento citado"
+    },
+    "sourceLibrary.moreFeeds.one": {
+      "source": "Show {count} more retained feeds",
+      "text": "Mostrar mais {count} feed preservado"
+    },
+    "sourceLibrary.morePapers.other": {
+      "source": "Show {count} more paper references",
+      "text": "Mostrar mais {count} referências de artigos"
+    },
+    "sourceLibrary.moreCited.other": {
+      "source": "Show {count} more cited documents",
+      "text": "Mostrar mais {count} documentos citados"
+    },
+    "sourceLibrary.moreFeeds.other": {
+      "source": "Show {count} more retained feeds",
+      "text": "Mostrar mais {count} feeds preservados"
+    },
+    "sourceLibrary.externalIndexes": {
+      "source": "Explore broader scholarly indexes: {openAlex} · {doaj}. These external links open their indexes; Keryx makes no background queries to them.",
+      "text": "Explore índices acadêmicos mais amplos: {openAlex} · {doaj}. Estes links externos abrem os respectivos índices; o Keryx não envia consultas a eles em segundo plano."
+    },
+    "sourceLibrary.feedEmpty": {
+      "source": "No public feed snapshots are retained yet. You can still {ask} with a public source URL.",
+      "text": "Ainda não há instantâneos de feeds públicos preservados. Você pode {ask} com a URL de uma fonte pública."
+    }
+  }
+}
