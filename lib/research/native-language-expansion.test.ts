@@ -143,8 +143,8 @@ describe.each(["de", "ja", "ko", "hi", "id"] as const)("prepared %s ordinary ren
       expect(confidenceBanner("Exact answer", verdict, code)).toContain(copy.provisional);
     }
     expect(ordinaryConfidence(code, "summary", "Original assessment").level).toBe("Low");
-    const reviewed = ordinaryConfidence(code, "summary", "Original assessment", { level: "Medium", reason: "Exact reviewed assessment" });
-    expect(reviewed.level).toBe("Medium"); expect(reviewed.reason).toContain("Exact reviewed assessment");
+    const reviewed = ordinaryConfidence(code, "summary", "Original assessment", { level: "Moderate", reason: "Exact reviewed assessment" });
+    expect(reviewed.level).toBe("Moderate"); expect(reviewed.reason).toContain("Exact reviewed assessment");
     expect(confidenceBanner("Exact answer", reviewed, code)).toBe("Exact answer");
   });
   it("retains all nine confidence limitations and exact count interpolation", () => {

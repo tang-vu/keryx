@@ -244,9 +244,11 @@ globalThis.fetch=async(input,init)=>{
   const missing = await keyless.call("keryx_wallet_status"); assert.match(missing.content[0].text, /unconfigured/); assert.match(missing.content[0].text, /No wallet is created/);
   const invalidQuestion = await keyless.call("ask_keryx", { question: "x".repeat(2001) });
   assert(invalidQuestion.isError); assert.match(invalidQuestion.content[0].text, /2000/);
-  const invalidLanguage = await keyless.call("ask_keryx", { question: "Reject unsupported research language before custody", language: "de" });
-  assert(invalidLanguage.isError); assert.match(invalidLanguage.content[0].text, /Input validation error.*ask_keryx/);
-  assert.match(invalidLanguage.content[0].text, /language/);
+  for (const language of ["zz-unsupported", "de-DE", "hi-IN"]) {
+    const invalidLanguage = await keyless.call("ask_keryx", { question: "Reject unsupported research language before custody", language });
+    assert(invalidLanguage.isError); assert.match(invalidLanguage.content[0].text, /Input validation error.*ask_keryx/);
+    assert.match(invalidLanguage.content[0].text, /language/);
+  }
   const metadata = await keyless.call("paper_lookup", { query: "https://arxiv.org/pdf/2005.11401v4.pdf" });
   assert(!metadata.isError); assert.equal(metadata.structuredContent.scope, "bibliography-only");
   assert.equal(metadata.structuredContent.groups[0].record.arxivId, "2005.11401v4");
