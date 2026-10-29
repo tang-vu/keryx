@@ -1,3 +1,6 @@
+import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
+import { nativeRecoveryCopy, nativeRecoveryFormat, type NativeRecoveryCopy } from "../research/native-recovery-copy";
+
 /** Recorded read failures are operations metadata, never evidence about the document. */
 export interface PublicReadOutcome { name: string; code: string; assetId?: string }
 
@@ -31,7 +34,9 @@ const chineseRecovery: Readonly<Record<string, string>> = {
   cancelled: "读取已取消或超过允许时间。请保留现有结果，并在提出新研究请求前检查范围。",
 };
 
-function recovery(code: string, vi: boolean, french = false, chinese = false): string {
+function recovery(code: string, vi: boolean, french = false, chinese = false, native?: NativeRecoveryCopy): string {
+  if (native) return Object.hasOwn(native.readFailure, code)
+    ? native.readFailure[code as keyof typeof native.readFailure] : native.unknownFailure;
   if (chinese) return Object.hasOwn(chineseRecovery, code) ? chineseRecovery[code]
     : "未能获取原文。请检查出版方 URL 的可访问性，并提供同一文档可读取的原文；此失败不能证明文档不存在。";
   if (french) return Object.hasOwn(frenchRecovery, code) ? frenchRecovery[code]
@@ -71,16 +76,19 @@ function recovery(code: string, vi: boolean, french = false, chinese = false): s
 }
 
 /** Bounded, deterministic suggestions only. Calling this helper starts no read or purchase. */
-export function publicReadRecoveryLines(outcomes: PublicReadOutcome[], vi: boolean, french = false, chinese = false): string[] {
+export function publicReadRecoveryLines(outcomes: PublicReadOutcome[], vi: boolean, french = false, chinese = false,
+  language?: PresentationLanguage): string[] {
+  const native = nativeRecoveryCopy(language);
   const unique = new Map<string, PublicReadOutcome>();
   for (const outcome of outcomes) {
-    const name = reportLabel(outcome.name) || (chinese ? "公开来源" : french ? "Source publique" : vi ? "Nguồn công khai" : "Public source");
+    const name = reportLabel(outcome.name) || native?.publicSource || (chinese ? "公开来源" : french ? "Source publique" : vi ? "Nguồn công khai" : "Public source");
     const key = `${name}\0${outcome.code}`;
     if (!unique.has(key)) unique.set(key, { name, code: outcome.code });
   }
   const entries = [...unique.values()];
-  const rows = entries.slice(0, 8).map(outcome => `- “${outcome.name}”: ${recovery(outcome.code, vi, french, chinese)}`);
-  if (entries.length > 8) rows.push(chinese ? `- 此任务的跟踪记录中另有 ${entries.length - 8} 次读取失败。` : french ? `- ${entries.length - 8} autres échecs de lecture sont consignés dans la trace de cette recherche.` : vi
+  const rows = entries.slice(0, 8).map(outcome => `- “${outcome.name}”: ${recovery(outcome.code, vi, french, chinese, native)}`);
+  if (entries.length > 8) rows.push(native ? `- ${nativeRecoveryFormat(native.additionalFailures, { count: entries.length - 8 })}`
+    : chinese ? `- 此任务的跟踪记录中另有 ${entries.length - 8} 次读取失败。` : french ? `- ${entries.length - 8} autres échecs de lecture sont consignés dans la trace de cette recherche.` : vi
     ? `- Còn ${entries.length - 8} lỗi đọc khác trong nhật ký lượt này.`
     : `- ${entries.length - 8} additional read failures are recorded in this run's trace.`);
   return rows;

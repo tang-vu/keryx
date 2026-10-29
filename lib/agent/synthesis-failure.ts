@@ -1,9 +1,17 @@
 import type { SynthesisFailureStage } from "../llm/reasoning-engine";
+import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
+import { nativeRecoveryCopy, nativeRecoveryFormat } from "../research/native-recovery-copy";
 
 /** Describe the observed application stage, never infer a supplier error's cause.
  * Reading is retained work, not proof of qualified evidence or a useful answer. */
-export function synthesisFailureDetail(stage: SynthesisFailureStage | undefined, reads: number, vi: boolean, french = false, chinese = false): string {
+export function synthesisFailureDetail(stage: SynthesisFailureStage | undefined, reads: number, vi: boolean, french = false, chinese = false,
+  language?: PresentationLanguage): string {
   if (!Number.isSafeInteger(reads) || reads < 1) return "";
+  const native = nativeRecoveryCopy(language);
+  if (native) {
+    if (!stage || !Object.hasOwn(native.synthesis, stage)) return "";
+    return `${nativeRecoveryFormat(native.synthesisSummary, { reads, reason: native.synthesis[stage] })} Retain this job's original reads and receipts for delivery review before any new paid request.`;
+  }
   if (chinese) {
     const reasons = {
       input: "未能在限制内准备好供综合和检查的摘录",
