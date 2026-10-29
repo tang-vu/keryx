@@ -15,7 +15,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { UiMessage, useUiMessages } from "@/lib/i18n/ui-copy";
 
 
 
@@ -37,16 +37,16 @@ export function FollowUpForm({ parentId }: { parentId: string }) {
       <div className="border border-ink">
         <div className="flex items-center justify-between gap-4 border-b border-ink bg-ink px-5 py-3 text-cream">
           <span className="font-mono text-[10.5px] uppercase tracking-[0.18em]">
-            {message("followUp.title")}
+            <UiMessage messageKey="followUp.title" />
           </span>
           <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-cream/70">
-            {message("followUp.paymentNotice")}
+            <UiMessage messageKey="followUp.paymentNotice" />
           </span>
         </div>
 
         <div className="px-5 py-5 sm:px-6">
           <label htmlFor="follow-up" className="sr-only">
-            {message("followUp.questionLabel")}
+            <UiMessage messageKey="followUp.questionLabel" />
           </label>
           <textarea
             id="follow-up"
@@ -62,7 +62,7 @@ export function FollowUpForm({ parentId }: { parentId: string }) {
           />
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="max-w-[46ch] font-mono text-[10px] leading-[1.5] text-ink-3">
-              {message("followUp.contextNotice")}
+              <UiMessage messageKey="followUp.contextNotice" />
             </p>
             <button
               type="button"
@@ -70,7 +70,7 @@ export function FollowUpForm({ parentId }: { parentId: string }) {
               disabled={!question.trim()}
               className="border border-ink bg-ink px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.16em] text-cream transition-opacity disabled:opacity-40"
             >
-              {message("followUp.submit")}
+              <UiMessage messageKey="followUp.submit" />
             </button>
           </div>
         </div>

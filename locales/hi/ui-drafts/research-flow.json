@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/research-flow.ts",
-  "sourceSha256": "493d7a7076923699c0ec017d68c4f03695ecb0f10f80509a3e59d67ecff5f8ff",
+  "sourceSha256": "08624b2d69b1e55478bca2ec23697acc8155b21698c9019762c07581a9487014",
   "entries": {
     "researchTour.open": {
       "source": "How it works",
@@ -71,6 +71,94 @@
     "decisionLog.label": {
       "source": "Decision log",
       "text": "निर्णयों का लॉग"
+    },
+    "researchChat.label": {
+      "source": "Research conversation",
+      "text": "शोध वार्तालाप"
+    },
+    "researchChat.kicker": {
+      "source": "Research with Keryx",
+      "text": "Keryx के साथ शोध करें"
+    },
+    "researchChat.title": {
+      "source": "Ask Keryx",
+      "text": "Keryx से पूछें"
+    },
+    "researchChat.introduction": {
+      "source": "Get a cited answer. Inspect source decisions.",
+      "text": "उद्धरणों वाला उत्तर पाएँ। स्रोतों से जुड़े निर्णय देखें।"
+    },
+    "researchChat.turnsLabel": {
+      "source": "Conversation turns",
+      "text": "वार्तालाप के संदेश"
+    },
+    "researchChat.followUpContext": {
+      "source": "Follow-ups use the previous question only, not its answer or the full chat. Include the details you want researched.",
+      "text": "आगे के प्रश्न में केवल पिछला प्रश्न संदर्भ के रूप में लिया जाता है, उसका उत्तर या पूरी बातचीत नहीं। जिन विवरणों पर शोध चाहिए, उन्हें अपने प्रश्न में शामिल करें।"
+    },
+    "researchChat.newResearch": {
+      "source": "New research",
+      "text": "नया शोध"
+    },
+    "researchChat.stopResearch": {
+      "source": "Stop research",
+      "text": "शोध रोकें"
+    },
+    "researchChat.toolsLabel": {
+      "source": "Research tools",
+      "text": "शोध के साधन"
+    },
+    "researchChat.savedReports": {
+      "source": "My saved reports",
+      "text": "मेरी सहेजी गई रिपोर्ट"
+    },
+    "researchTurn.inProgress": {
+      "source": "Keryx · Research in progress",
+      "text": "Keryx · शोध जारी है"
+    },
+    "researchTurn.findingSources": {
+      "source": "Finding sources worth reading…",
+      "text": "पढ़ने योग्य स्रोत खोजे जा रहे हैं…"
+    },
+    "decisionLog.deciding": {
+      "source": "deciding",
+      "text": "निर्णय लिया जा रहा है"
+    },
+    "decisionLog.connecting": {
+      "source": "Waiting for research updates…",
+      "text": "शोध की नई जानकारी की प्रतीक्षा है…"
+    },
+    "decisionLog.newSteps.one": {
+      "source": "{count} new step",
+      "text": "{count} नया चरण"
+    },
+    "decisionLog.newSteps.other": {
+      "source": "{count} new steps",
+      "text": "{count} नए चरण"
+    },
+    "decisionLog.steps.one": {
+      "source": "{count} steps",
+      "text": "{count} चरण"
+    },
+    "decisionLog.steps.other": {
+      "source": "{count} steps",
+      "text": "{count} चरण"
+    },
+    "followUp.title": {
+      "source": "Ask a follow-up",
+      "text": "आगे का प्रश्न पूछें"
+    },
+    "followUp.questionLabel": {
+      "source": "Your follow-up question",
+      "text": "आपका आगे का प्रश्न"
+    },
+    "followUp.placeholder": {
+      "source": "How does that compare to…?",
+      "text": "इसकी तुलना … से कैसे होती है?"
+    },
+    "followUp.submit": {
+      "source": "Dispatch follow-up",
+      "text": "आगे का प्रश्न भेजें"
     }
   }
 }

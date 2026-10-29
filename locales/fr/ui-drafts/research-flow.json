@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/research-flow.ts",
-  "sourceSha256": "493d7a7076923699c0ec017d68c4f03695ecb0f10f80509a3e59d67ecff5f8ff",
+  "sourceSha256": "08624b2d69b1e55478bca2ec23697acc8155b21698c9019762c07581a9487014",
   "entries": {
     "researchTour.open": {
       "source": "How it works",
@@ -71,6 +71,94 @@
     "decisionLog.label": {
       "source": "Decision log",
       "text": "Journal des décisions"
+    },
+    "researchChat.label": {
+      "source": "Research conversation",
+      "text": "Conversation de recherche"
+    },
+    "researchChat.kicker": {
+      "source": "Research with Keryx",
+      "text": "Rechercher avec Keryx"
+    },
+    "researchChat.title": {
+      "source": "Ask Keryx",
+      "text": "Interroger Keryx"
+    },
+    "researchChat.introduction": {
+      "source": "Get a cited answer. Inspect source decisions.",
+      "text": "Obtenez une réponse avec des citations. Examinez les décisions concernant les sources."
+    },
+    "researchChat.turnsLabel": {
+      "source": "Conversation turns",
+      "text": "Échanges de la conversation"
+    },
+    "researchChat.followUpContext": {
+      "source": "Follow-ups use the previous question only, not its answer or the full chat. Include the details you want researched.",
+      "text": "Les questions complémentaires utilisent uniquement la question précédente, pas sa réponse ni toute la conversation. Incluez les détails que vous souhaitez étudier."
+    },
+    "researchChat.newResearch": {
+      "source": "New research",
+      "text": "Nouvelle recherche"
+    },
+    "researchChat.stopResearch": {
+      "source": "Stop research",
+      "text": "Arrêter la recherche"
+    },
+    "researchChat.toolsLabel": {
+      "source": "Research tools",
+      "text": "Outils de recherche"
+    },
+    "researchChat.savedReports": {
+      "source": "My saved reports",
+      "text": "Mes rapports enregistrés"
+    },
+    "researchTurn.inProgress": {
+      "source": "Keryx · Research in progress",
+      "text": "Keryx · Recherche en cours"
+    },
+    "researchTurn.findingSources": {
+      "source": "Finding sources worth reading…",
+      "text": "Recherche de sources pertinentes à lire…"
+    },
+    "decisionLog.deciding": {
+      "source": "deciding",
+      "text": "décision en cours"
+    },
+    "decisionLog.connecting": {
+      "source": "Waiting for research updates…",
+      "text": "En attente des mises à jour de la recherche…"
+    },
+    "decisionLog.newSteps.one": {
+      "source": "{count} new step",
+      "text": "{count} nouvelle étape"
+    },
+    "decisionLog.newSteps.other": {
+      "source": "{count} new steps",
+      "text": "{count} nouvelles étapes"
+    },
+    "decisionLog.steps.one": {
+      "source": "{count} steps",
+      "text": "{count} étape"
+    },
+    "decisionLog.steps.other": {
+      "source": "{count} steps",
+      "text": "{count} étapes"
+    },
+    "followUp.title": {
+      "source": "Ask a follow-up",
+      "text": "Poser une question complémentaire"
+    },
+    "followUp.questionLabel": {
+      "source": "Your follow-up question",
+      "text": "Votre question complémentaire"
+    },
+    "followUp.placeholder": {
+      "source": "How does that compare to…?",
+      "text": "Comment cela se compare-t-il à… ?"
+    },
+    "followUp.submit": {
+      "source": "Dispatch follow-up",
+      "text": "Envoyer la question complémentaire"
     }
   }
 }

@@ -109,7 +109,7 @@ it("keeps empty connection and historical rows honest without entrance motion", 
     await page.evaluate(() => (window as unknown as { ledgerFixture: Fixture }).ledgerFixture.streaming(false));
     expect(await logRegion(page).getByRole("listitem").evaluateAll(nodes => nodes.map(n => getComputedStyle(n).animationName))).toEqual(Array(30).fill("none"));
     await page.evaluate(() => { const f=(window as unknown as { ledgerFixture: Fixture }).ledgerFixture; f.empty(); f.streaming(true); });
-    await page.getByText("Contacting the herald…", { exact: true }).waitFor();
+    await page.getByText("Waiting for research updates…", { exact: true }).waitFor();
     expect(await logRegion(page).getByRole("listitem").count()).toBe(0);
     expect(await page.getByRole("button", { name: "Jump to latest", exact: true }).count()).toBe(0);
   }, 390, "no-preference");
@@ -141,8 +141,10 @@ it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(l
     const jump = page.getByRole("button", { name: message("decisionLog.jumpToLatest"), exact: true }); await jump.waitFor();
     expect(await jump.locator(`[lang="${locale}"]`).count()).toBe(1);
     expect(await page.locator('[id$="-mode"] [lang]').textContent()).toBe(message("decisionLog.readingEarlier"));
-    await append(page, 2);
-    expect(await page.getByRole("status").locator('[lang="en"]').textContent()).toBe("2 new steps");
+    await append(page, 1);
+    expect(await page.getByRole("status").locator(`[lang="${locale}"]`).textContent()).toBe(message("decisionLog.newSteps.one", { count: 1 }));
+    await append(page, 1);
+    expect(await page.getByRole("status").locator(`[lang="${locale}"]`).textContent()).toBe(message("decisionLog.newSteps.other", { count: 2 }));
     for (const text of ["$0.000001 settled", "$0.000002 confirmation pending", "$0.000008 offline simulated", "$0.000003 conflicting payment state"])
       expect(await page.locator('[lang="en"]').filter({ hasText: text }).count()).toBeGreaterThan(0);
     expect(await log.getByText("Original recorded rationale.", { exact: true }).textContent()).toBe("Original recorded rationale.");
@@ -154,6 +156,9 @@ it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(l
     await jump.click();
     await expect.poll(() => log.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
     expect(await log.evaluate(element => document.activeElement === element)).toBe(true);
+    await page.evaluate(() => { const fixture = (window as unknown as { ledgerFixture: Fixture }).ledgerFixture; fixture.empty(); fixture.streaming(true); });
+    await page.getByText(message("decisionLog.connecting"), { exact: true }).waitFor();
+    expect(await log.getByRole("listitem").count()).toBe(0);
   }, width);
 });
 

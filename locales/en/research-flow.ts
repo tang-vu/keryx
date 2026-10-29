@@ -23,7 +23,7 @@ export const researchFlowMessages = Object.freeze({
   "decisionLog.deciding": "deciding",
   "decisionLog.title": "The decision",
   "decisionLog.label": "Decision log",
-  "decisionLog.connecting": "Contacting the herald…",
+  "decisionLog.connecting": "Waiting for research updates…",
   "decisionLog.jumpToLatest": "Jump to latest",
   "decisionLog.followingLatest": "Following latest steps",
   "decisionLog.readingEarlier": "Reading earlier steps",

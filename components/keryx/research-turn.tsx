@@ -12,7 +12,7 @@ import { SelectionFailureDownload } from "./selection-failure-download";
 import { DecisionReviews } from "./decision-reviews";
 
 import { savedReportRecoveryPath } from "@/lib/research/ask-stream-lifecycle";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { UiMessage, useUiMessages } from "@/lib/i18n/ui-copy";
 import { recordedAnswerLanguage } from "@/lib/research/answer-language-provenance";
 import { researchRecoveryCopy } from "@/lib/research/research-recovery-copy";
 
@@ -33,6 +33,7 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const { state, stopped } = turn;
   const streaming = !stopped && state.status === "streaming";
+  const latestMessage = state.steps.at(-1)?.message;
   const recoveryPath = !stopped && state.status === "error" && !state.run ? savedReportRecoveryPath(state.meta) : null;
   const totals = stepPaymentTotals(state.steps);
   const unsettled = (["pending", "simulated", "unverified", "failed"] as const)
@@ -40,8 +41,8 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
     .map(status => message(({ pending: "researchTurn.paymentPending", simulated: "researchTurn.paymentSimulated", unverified: "researchTurn.paymentUnverified", failed: "researchTurn.paymentFailed" } as const)[status], { amount: fmtUsdc(totals[status]) })).join(" · ");
   return <article className="min-w-0 space-y-4" aria-label={message("researchTurn.label", { question: turn.question })} data-testid="research-turn">
     <div className="kx-research-request ml-auto max-w-[90%] border border-line bg-paper-2 px-4 py-3 sm:px-6">
-      <p className="font-mono text-[11px] uppercase tracking-wide text-ink-3">{message("researchTurn.requestSummary", { payer: turn.payer, amount: fmtUsdc(state.budget) })}</p>
-      <p className="mt-1 whitespace-pre-wrap break-words font-serif text-lg text-ink">{turn.question}</p>
+      <p className="font-mono text-[11px] uppercase tracking-wide text-ink-3"><UiMessage messageKey="researchTurn.requestSummary" values={{ payer: turn.payer, amount: fmtUsdc(state.budget) }} /></p>
+      <p lang="und" className="mt-1 whitespace-pre-wrap break-words font-serif text-lg text-ink">{turn.question}</p>
     </div>
     <div className="min-w-0">
       {state.run && <div id={`answer-${turn.id}`} className="kx-research-answer">
@@ -55,35 +56,35 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
             <span className="kx-research-signal-core" />
           </span>
           <div className="min-w-0 pt-1">
-            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-seal">{message("researchTurn.inProgress")}</p>
-            <p className="mt-2 break-words font-serif text-lg leading-relaxed sm:text-xl">{state.steps.at(-1)?.message ?? message("researchTurn.findingSources")}</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-seal"><UiMessage messageKey="researchTurn.inProgress" /></p>
+            <p className="mt-2 break-words font-serif text-lg leading-relaxed sm:text-xl">{latestMessage != null ? <span lang="und">{latestMessage}</span> : <UiMessage messageKey="researchTurn.findingSources" />}</p>
           </div>
         </div>
         <div className="kx-research-track" aria-hidden="true"><span /></div>
       </div>}
-      {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2">{message("researchTurn.stoppedNotice")}</p>}
+      {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2"><UiMessage messageKey="researchTurn.stoppedNotice" /></p>}
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        <p lang={state.error === researchRecoveryCopy.interrupted ? "en" : undefined}>{state.error ?? message("researchTurn.failed")}</p>
+        <p lang={state.error === researchRecoveryCopy.interrupted ? "en" : state.error != null ? "und" : undefined}>{state.error ?? <UiMessage messageKey="researchTurn.failed" />}</p>
         {recoveryPath && <div className="mt-3 space-y-2">
-          <a href={recoveryPath} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="break-all underline underline-offset-4">{message("reportActions.openSaved")}</a>
+          <a href={recoveryPath} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="break-all underline underline-offset-4"><UiMessage messageKey="reportActions.openSaved" /></a>
         </div>}
         {state.errorKind === "maintenance" && state.maintenance && <div className="mt-2">
-          <a href="/maintenance/status" className="underline underline-offset-4">{message("researchError.serviceStatus")}</a>
-          {state.retryAfter !== null && <p>{message("researchError.checkStatusAfter", { seconds: state.retryAfter })}</p>}
+          <a href="/maintenance/status" className="underline underline-offset-4"><UiMessage messageKey="researchError.serviceStatus" /></a>
+          {state.retryAfter !== null && <p><UiMessage messageKey="researchError.checkStatusAfter" values={{ seconds: state.retryAfter }} /></p>}
         </div>}
         <SelectionFailureDownload diagnostic={state.selectionDiagnostic} />
-        {state.errorKind === "rate-limit" && <p className="mt-2">{state.retryAfter ? message("researchTurn.retryAfter", { seconds: state.retryAfter }) : message("researchTurn.retryShortly")}</p>}
+        {state.errorKind === "rate-limit" && <p className="mt-2">{state.retryAfter ? <UiMessage messageKey="researchTurn.retryAfter" values={{ seconds: state.retryAfter }} /> : <UiMessage messageKey="researchTurn.retryShortly" />}</p>}
       </div>}
       {state.decisionReviews?.length ? <DecisionReviews records={state.decisionReviews} capturedOwner={state.meta?.reviewOwner} live={streaming} /> : null}
       <details className="mt-3 border border-line bg-paper" onToggle={event => setEvidenceOpen(event.currentTarget.open)}>
         <summary className="min-h-11 cursor-pointer break-words px-4 py-3 font-mono text-xs text-ink-2">
           {state.meta?.mode === "offline"
             ? unsettled
-              ? message(state.steps.length === 1 ? "researchTurn.offlineSummaryWithUnsettled.one" : "researchTurn.offlineSummaryWithUnsettled.other", { count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget), unsettled })
-              : message(state.steps.length === 1 ? "researchTurn.offlineSummary.one" : "researchTurn.offlineSummary.other", { count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget) })
+              ? <UiMessage messageKey={state.steps.length === 1 ? "researchTurn.offlineSummaryWithUnsettled.one" : "researchTurn.offlineSummaryWithUnsettled.other"} values={{ count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget), unsettled }} />
+              : <UiMessage messageKey={state.steps.length === 1 ? "researchTurn.offlineSummary.one" : "researchTurn.offlineSummary.other"} values={{ count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget) }} />
             : unsettled
-              ? message(state.steps.length === 1 ? "researchTurn.summaryWithUnsettled.one" : "researchTurn.summaryWithUnsettled.other", { count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget), unsettled })
-              : message(state.steps.length === 1 ? "researchTurn.summary.one" : "researchTurn.summary.other", { count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget) })}
+              ? <UiMessage messageKey={state.steps.length === 1 ? "researchTurn.summaryWithUnsettled.one" : "researchTurn.summaryWithUnsettled.other"} values={{ count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget), unsettled }} />
+              : <UiMessage messageKey={state.steps.length === 1 ? "researchTurn.summary.one" : "researchTurn.summary.other"} values={{ count: state.steps.length, settled: fmtUsdc(totals.settled), cap: fmtUsdc(state.budget) }} />}
         </summary>
         {evidenceOpen && <div className="grid min-w-0 gap-6 border-t border-line p-4 lg:grid-cols-[1.6fr_1fr]">
           <ReasoningConsole steps={state.steps} streaming={streaming} budget={state.budget} />

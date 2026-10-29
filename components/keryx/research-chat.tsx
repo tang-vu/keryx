@@ -158,9 +158,9 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
     </div>}
     <div id="dispatch" className="scroll-mt-24">
       {hasTurns && <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="max-w-[64ch] text-xs text-ink-3">{parentId ? message("researchChat.followUpContext") : message("researchChat.newQuestionContext")}</p>
-        {!streaming && parentId && <button type="button" onClick={() => { setRootRequest(true); setAnchor(undefined); }} className="min-h-11 px-2 font-mono text-xs underline underline-offset-4">{message("researchChat.newResearch")}</button>}
-        {streaming && <button type="button" onClick={stop} className="min-h-11 border border-seal px-3 py-2 font-mono text-xs text-seal">{message("researchChat.stopResearch")}</button>}
+        <p className="max-w-[64ch] text-xs text-ink-3"><UiMessage messageKey={parentId ? "researchChat.followUpContext" : "researchChat.newQuestionContext"} /></p>
+        {!streaming && parentId && <button type="button" onClick={() => { setRootRequest(true); setAnchor(undefined); }} className="min-h-11 px-2 font-mono text-xs underline underline-offset-4"><UiMessage messageKey="researchChat.newResearch" /></button>}
+        {streaming && <button type="button" onClick={stop} className="min-h-11 border border-seal px-3 py-2 font-mono text-xs text-seal"><UiMessage messageKey="researchChat.stopResearch" /></button>}
       </div>}
       {privateClaims && !protectedDocument && <p role="status" className="mt-3 text-seal">{privateResearchCopy.fullNavigation}</p>}
       {visibleRequest && state.status === "error" && <div className="mb-3 border border-line bg-paper p-4">
@@ -182,12 +182,12 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
         {claimStatus === "available" && <button className="mt-2 min-h-11 underline" type="button" onClick={() => privateHandoff.open()}>{privateResearchCopy.open}</button>}
       </div>}
       {(!introduceProduct || hasTurns) && <>
-      <p className="mt-3 text-xs text-ink-3">{message("researchChat.historyNotice")}</p>
+      <p className="mt-3 text-xs text-ink-3"><UiMessage messageKey="researchChat.historyNotice" /></p>
       <nav className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs text-ink-2" aria-label={message("researchChat.toolsLabel")}>
         {!privateClaims && <a href="/research/private" className="underline underline-offset-4">{privateResearchCopy.entry}</a>}
-        <a href="/me/asks" className="underline underline-offset-4">{message("researchChat.savedReports")}</a>
-        <a href={paidHref} className="underline underline-offset-4">{message("researchChat.paidResearch")}</a>
-        <a href="/register" className="underline underline-offset-4">{message("researchChat.publishSource")}</a>
+        <a href="/me/asks" className="underline underline-offset-4"><UiMessage messageKey="researchChat.savedReports" /></a>
+        <a href={paidHref} className="underline underline-offset-4"><UiMessage messageKey="researchChat.paidResearch" /></a>
+        <a href="/register" className="underline underline-offset-4"><UiMessage messageKey="researchChat.publishSource" /></a>
       </nav>
       </>}
     </div>

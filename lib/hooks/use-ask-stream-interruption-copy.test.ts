@@ -69,7 +69,7 @@ it.each(["public", "unlisted", "private", "malformed", "missing"])("retains orig
 it("keeps an explicit terminal error and its original diagnostic after EOF", async () => {
   await start(); await frame("error", { message: "元の診断 <literal> {count}" }); await close();
   expect(hook.state.error).toBe("元の診断 <literal> {count}");
-  expect(container.querySelector('[role="alert"] p')?.hasAttribute("lang")).toBe(false);
+  expect(container.querySelector('[role="alert"] p')?.getAttribute("lang")).toBe("und");
   expect(fetch).toHaveBeenCalledOnce(); expect(sign).not.toHaveBeenCalled();
 });
 it("keeps a completed report and its original bytes after EOF", async () => {
