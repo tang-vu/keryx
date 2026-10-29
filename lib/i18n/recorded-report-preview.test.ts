@@ -62,6 +62,12 @@ function admit(value: QueryRun, archive: ResolvedDispatch["archive"] = null) {
   fixture.resolve.mockResolvedValue({ run: value, reader: {} as ResolvedDispatch["reader"], archive, visibility: "public" });
 }
 const fonts = [{ name: "Existing local face", data: new Uint8Array([1]), weight: 400, style: "normal" }];
+function expectGenericFontInputs(count: number) {
+  expect(fixture.fonts).toHaveBeenCalledTimes(count);
+  for (const [text] of fixture.fonts.mock.calls) expect(text.split("\n")).toEqual([
+    "An autonomous Keryx dispatch", expect.stringMatching(/^Series 2026 — No\. \d{5}$/u), "sources cited",
+  ]);
+}
 beforeEach(() => { vi.clearAllMocks(); fixture.fonts.mockResolvedValue(fonts); });
 function lastImage() {
   const [element, options] = fixture.image.mock.calls.at(-1)!;
@@ -148,7 +154,10 @@ describe("actual OG selection and render boundary", () => {
     admit(value); await DispatchOgImage(params);
     const { html, options } = lastImage();
     expect(fixture.image).toHaveBeenCalledTimes(1);
-    expect(fixture.fonts).toHaveBeenCalledWith(value.question);
+    expect(fixture.fonts).toHaveBeenCalledTimes(1);
+    const fontFields = fixture.fonts.mock.calls[0][0].split("\n");
+    expect(fontFields).toEqual([value.question, expect.stringContaining("2026"), expected[language].imageOne]);
+    expect(html).toContain(fontFields[1]);
     expect(options).toEqual({ width: 1200, height: 630, fonts, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } });
     expect(html).toContain("Original question 中文 {question} &lt;evidence&gt;");
     expect(html).toContain(expected[language].imageOne);
@@ -190,7 +199,7 @@ describe("actual OG selection and render boundary", () => {
     fixture.resolve.mockResolvedValue(null); await DispatchOgImage(params); expect(lastImage().html).toBe(generic);
     fixture.resolve.mockRejectedValue(Error("Synthetic storage refusal")); await DispatchOgImage(params); expect(lastImage().html).toBe(generic);
     expect(reads).not.toHaveBeenCalled();
-    expect(fixture.fonts.mock.calls.every(([text]) => text === "An autonomous Keryx dispatch")).toBe(true);
+    expectGenericFontInputs(5);
     expect(generic).not.toMatch(/Original question|nguồn|answerSha256/);
   });
 
@@ -202,7 +211,7 @@ describe("actual OG selection and render boundary", () => {
     expect(html).toContain("An autonomous Keryx dispatch");
     expect(html).toContain("sources cited");
     expect(html).not.toContain("Original question");
-    expect(fixture.fonts).toHaveBeenCalledWith("An autonomous Keryx dispatch");
+    expectGenericFontInputs(1);
   });
 
   it("awaits the existing font selector before constructing ImageResponse", async () => {
