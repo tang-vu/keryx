@@ -1,5 +1,6 @@
 import { nativeDesktopMessages } from "../../locales/en/native-desktop";
 import type { PresentationLanguage } from "./presentation-language";
+import { nativeClientCatalogues } from "./native-client-copy";
 
 // Deliberate neutral-label allowlist. Financial, recovery, trust and private-boundary
 // copy stays with the English catalogue; this does not activate a UI locale.
@@ -29,6 +30,8 @@ export type DesktopNeutralKey = keyof typeof english;
 type Catalogue = Readonly<Record<DesktopNeutralKey, string>>;
 
 export const desktopNeutralCatalogues = Object.freeze({
+  de: nativeClientCatalogues.de.desktop, ja: nativeClientCatalogues.ja.desktop, ko: nativeClientCatalogues.ko.desktop,
+  hi: nativeClientCatalogues.hi.desktop, id: nativeClientCatalogues.id.desktop,
   en: english,
   "zh-Hans": Object.freeze({
     "nativeDesktop.workspace.none": "没有打开的工作区",

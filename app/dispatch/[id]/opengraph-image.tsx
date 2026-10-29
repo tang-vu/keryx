@@ -5,6 +5,8 @@ import { config } from "@/lib/config";
 import { resolveDispatch } from "@/lib/history/read-dispatch";
 import { publicPreviewFonts, publicPreviewFontFamily } from "@/lib/og-fonts";
 import { recordedReportPreview } from "@/lib/i18n/recorded-report-preview";
+import { publicPreviewText } from "@/lib/og-text";
+import type { ReactElement } from "react";
 
 const copy = createMessages("en");
 
@@ -63,6 +65,16 @@ export default async function DispatchOgImage({
   let serial = 0;
   for (const ch of id) serial = (serial * 31 + ch.charCodeAt(0)) % 100000;
   const serialLabel = String(serial).padStart(5, "0");
+  const serialCaption = preview ? preview.serial(serialLabel) : copy("reportSocial.serial", { serial: serialLabel });
+  const citedCaption = preview ? preview.citedLabel(cited)
+    : copy(selectPlural(cited) === "one" ? "reportSocial.cited.one" : "reportSocial.cited.other");
+  const [headlineText, serialText, citedText] = await Promise.all([
+    publicPreviewText(headline, { fontSize: 52, maxWidth: 1060, maxHeight: 190, color: "#1B1712" }),
+    publicPreviewText(serialCaption,
+      { fontSize: 21, maxWidth: 500, maxHeight: 40, color: "#7A6F58" }),
+    publicPreviewText(citedCaption,
+      { fontSize: 18, maxWidth: 250, maxHeight: 45, color: "#7A6F58" }),
+  ]);
 
   return new ImageResponse(
     (
@@ -91,7 +103,7 @@ export default async function DispatchOgImage({
           }}
         >
           <span>{copy("reportSocial.network", { network: networkLabel })}</span>
-          <span>{preview ? preview.serial(serialLabel) : copy("reportSocial.serial", { serial: serialLabel })}</span>
+          <span {...(typeof serialText === "string" ? {} : { style: { display: "flex" as const } })}>{serialText}</span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -106,13 +118,13 @@ export default async function DispatchOgImage({
           >
             {copy("reportSocial.questionLabel")}
           </div>
-          <div style={{ fontSize: 52, lineHeight: 1.08, fontWeight: 700 }}>
-            {headline}
+          <div style={{ ...(typeof headlineText === "string" ? {} : { display: "flex" as const }), fontSize: 52, lineHeight: 1.08, fontWeight: 700 }}>
+            {headlineText}
           </div>
         </div>
 
         <div style={{ display: "flex", gap: 56 }}>
-          <Denomination value={String(cited)} label={preview ? preview.citedLabel(cited) : copy(selectPlural(cited) === "one" ? "reportSocial.cited.one" : "reportSocial.cited.other")} />
+          <Denomination value={String(cited)} label={citedText} />
           <Denomination value={`$${formatRecordedAmount(spent, { minimumFractionDigits: 4 })}`} label={historical ? copy("reportSocial.testnetRecorded") : copy("reportSocial.recorded")} />
           <Denomination
             value={`$${formatRecordedAmount(toCreators, { minimumFractionDigits: 4 })}`}
@@ -160,7 +172,9 @@ export default async function DispatchOgImage({
         </div>
       </div>
     ),
-    { ...size, fonts: await publicPreviewFonts(question),headers:{"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"} },
+    // The recorded answer can have native captions beside an English original.
+    // Select local glyphs from every displayed text field after public admission.
+    { ...size, fonts: await publicPreviewFonts([question, serialCaption, citedCaption].join("\n")),headers:{"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"} },
   );
 }
 
@@ -171,7 +185,7 @@ function Denomination({
   accent,
 }: {
   value: string;
-  label: string;
+  label: string | ReactElement;
   accent?: boolean;
 }) {
   return (
@@ -188,6 +202,7 @@ function Denomination({
       </div>
       <div
         style={{
+          ...(typeof label === "string" ? {} : { display: "flex" as const }),
           fontSize: 18,
           letterSpacing: 2,
           color: "#7A6F58",

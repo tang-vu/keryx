@@ -7,7 +7,7 @@ import { actualReadCheckpoint } from "../lib/research-audit/actual-read-policy.t
 import { finalizeAnswerLanguage } from "../lib/research/answer-language-provenance.ts";
 const dirs: string[] = [];
 
-it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("%s initial buyer and GET-only recovery sanitize the same completed packet without new calls", async language => {
+it.each(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const)("%s initial buyer and GET-only recovery sanitize the same completed packet without new calls", async language => {
   const f = await buyer();
   vi.stubEnv("KERYX_BUYER_PRIVATE_KEY", `0x${"11".repeat(32)}`);
   vi.stubEnv("KERYX_BUYER_PAYEE", `0x${"22".repeat(20)}`);

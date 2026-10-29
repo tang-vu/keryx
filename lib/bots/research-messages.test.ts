@@ -15,6 +15,11 @@ const requests = [
   ["es", "En español, explique x402.", "Citas y recompensas previstas (USDC)"],
   ["fr", "Répondez en français. Expliquez x402.", "Citations and planned rewards (USDC)"],
   ["zh-Hans", "请用简体中文回答。解释 x402。", "Citations and planned rewards (USDC)"],
+  ["de", "Antworte bitte auf Deutsch. Erkläre x402.", "Citations and planned rewards (USDC)"],
+  ["ja", "日本語で回答してください。x402を説明してください。", "Citations and planned rewards (USDC)"],
+  ["ko", "한국어로 답변해 주세요. x402를 설명해 주세요.", "Citations and planned rewards (USDC)"],
+  ["hi", "कृपया हिंदी में उत्तर दें। x402 समझाएँ।", "Citations and planned rewards (USDC)"],
+  ["id", "Tolong jawab dalam bahasa Indonesia. Jelaskan x402.", "Citations and planned rewards (USDC)"],
 ] as const;
 const placeholders = (text: string) => [...text.matchAll(/\{([A-Za-z][A-Za-z0-9]*)\}/gu)].map(match => match[1]).sort();
 function run(question: string, paymentMode?: "real" | "offline"): QueryRun {
@@ -91,7 +96,7 @@ describe("bot result evidence and payment parity", () => {
       expect(embed.color).toBe(0xc0381c);
       expect(embed.fields[0].name).toBe(botResearchMessages(question)("citationHeading"));
       const language = answerPresentation(question, "ordinary").language;
-      const amount = language === "en" || language === "zh-Hans" ? "$0.000001" : "$0,000001";
+      const amount = ["en", "zh-Hans", "ja", "ko", "hi"].includes(language) ? "$0.000001" : "$0,000001";
       expect(embed.fields[0].value).toContain(`Original & <creator> — ${amount}`);
       expect(embed.footer.text).toContain(`(${paymentMode ?? "legacy"})`);
       for (const text of [telegram(original), slack(original)]) {

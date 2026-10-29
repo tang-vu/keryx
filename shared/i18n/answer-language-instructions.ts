@@ -8,4 +8,9 @@ export const answerLanguageInstructions = Object.freeze([
   { language: "es", name: "Español", instruction: "Responde en español." },
   { language: "fr", name: "Français", instruction: "Répondez en français." },
   { language: "zh-Hans", name: "简体中文", instruction: "请用简体中文回答。" },
+  { language: "de", name: "Deutsch", instruction: "Antworte bitte auf Deutsch." },
+  { language: "ja", name: "日本語", instruction: "日本語で回答してください。" },
+  { language: "ko", name: "한국어", instruction: "한국어로 답변해 주세요." },
+  { language: "hi", name: "हिन्दी", instruction: "कृपया हिंदी में उत्तर दें।" },
+  { language: "id", name: "Bahasa Indonesia", instruction: "Tolong jawab dalam bahasa Indonesia." },
 ] as const satisfies readonly { language: PresentationLanguage; name: string; instruction: string }[]);

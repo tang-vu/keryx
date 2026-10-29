@@ -8,6 +8,11 @@ import type { dispatchMetadataCopy } from "./report-metadata";
 // catalogue or human approval of financial/trust terminology. All financial,
 // confidence, historical-network and original-bibliography wording stays English.
 const ordinaryLabels = {
+  de: { title: "{question} — Keryx-Recherchebericht", one: "zitierte Quelle", other: "zitierte Quellen", serial: "Serie 2026 — Ausgabe {serial}" },
+  ja: { title: "{question} — Keryx調査レポート", one: "件の引用出典", other: "件の引用出典", serial: "2026年シリーズ — 第{serial}号" },
+  ko: { title: "{question} — Keryx 조사 보고서", one: "개 출처 인용", other: "개 출처 인용", serial: "2026 시리즈 — 제{serial}호" },
+  hi: { title: "{question} — Keryx शोध रिपोर्ट", one: "उद्धृत स्रोत", other: "उद्धृत स्रोत", serial: "2026 श्रृंखला — अंक {serial}" },
+  id: { title: "{question} — Laporan Keryx", one: "sumber dikutip", other: "sumber dikutip", serial: "Seri 2026 — No. {serial}" },
   "zh-Hans": { title: "{question} — Keryx 研究报告", one: "个引用来源", other: "个引用来源", serial: "2026 系列 — 第 {serial} 期" },
   vi: { title: "{question} — Báo cáo Keryx", one: "nguồn được trích dẫn", other: "nguồn được trích dẫn",
     serial: "Loạt 2026 — Số {serial}" },
@@ -48,7 +53,8 @@ function previewCopy(language: PresentationLanguage) {
   return createMessages("en", catalogue);
 }
 
-const copies = { en: previewCopy("en"), vi: previewCopy("vi"), pt: previewCopy("pt"), es: previewCopy("es"), fr: previewCopy("fr"), "zh-Hans": previewCopy("zh-Hans") };
+const copies = { en: previewCopy("en"), vi: previewCopy("vi"), pt: previewCopy("pt"), es: previewCopy("es"), fr: previewCopy("fr"), "zh-Hans": previewCopy("zh-Hans"),
+  de: previewCopy("de"), ja: previewCopy("ja"), ko: previewCopy("ko"), hi: previewCopy("hi"), id: previewCopy("id") };
 
 /** Call only after public visibility admission. Reads this retained answer/trace,
  * never a question, request, viewer preference, provider, store or receipt.

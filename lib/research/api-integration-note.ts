@@ -2,8 +2,12 @@ import type { EvidenceLedger } from "../agent/evidence-ledger";
 import { extractAnswerMarkers, MIN_REWARD_SUPPORT } from "../agent/evidence-ledger";
 import type { CitedStatement } from "../agent/cited-statements";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
+import { nativeAnswerCopy } from "./native-answer-copy";
 
 const copy = {
+  de: nativeAnswerCopy("de")!.integration, ja: nativeAnswerCopy("ja")!.integration,
+  ko: nativeAnswerCopy("ko")!.integration, hi: nativeAnswerCopy("hi")!.integration,
+  id: nativeAnswerCopy("id")!.integration,
   "zh-Hans": { title: "API 集成说明", notice: "以下约束来自已检查的摘录。是否完整适用于该 API、具体版本和平台，以及来源是否正确，仍未核实。",
     constraint: "约束与条件", excerpt: "原文摘录", noSummary: "没有经过检查的摘要；请查看原文摘录", scope: "阅读范围",
     section: "标题章节", bounded: "有读取边界的原文", clipped: "不完整的原文", missing: "缺少的证据", target: "所请求的主题（未核实）",

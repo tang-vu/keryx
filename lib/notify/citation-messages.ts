@@ -1,9 +1,26 @@
 import type { PresentationLanguage } from "../research/presentation-language";
+import { nativeClientCatalogues } from "../../shared/i18n/native-client-copy";
+
+const englishEmail = Object.freeze({
+  subject: 'Keryx cited "{sourceName}" — {amount} USDC settled to you',
+  textBody: 'Your source "{sourceName}" was just cited by the Keryx agent and paid {amount} USDC ({weightPct} contribution weight), settled on {network}.',
+  textRate: "You get at most one of these per source per hour — every payout, including the ones between emails, is on your earnings page.",
+  htmlTitle: "Keryx · citation settled",
+  htmlHeading: "{sourceName} was cited — {amount} USDC is yours",
+  htmlBody: "The Keryx agent relied on your work ({weightPct} contribution weight) and settled {amount} USDC to your wallet on {network}.",
+  htmlRate: "At most one alert per source per hour — every payout is on your earnings page.",
+  article: "Article", trace: "Full dispatch trace", earnings: "Your earnings page", stop: "Stop these alerts", traceLink: "See the full dispatch trace", earningsLink: "your earnings page", unsubscribe: "Unsubscribe",
+});
 
 /** Bounded recipient-selected email wrappers, not payment-state or glossary authority.
  * Non-English copy is unreviewed; #273 critical financial/legal copy keeps its existing
  * English authority and human-review gate. No UI locale or trust gate is enabled here. */
 export const citationEmailUnreviewedDraftMessages = {
+  de: { ...englishEmail, ...nativeClientCatalogues.de.email },
+  ja: { ...englishEmail, ...nativeClientCatalogues.ja.email },
+  ko: { ...englishEmail, ...nativeClientCatalogues.ko.email },
+  hi: { ...englishEmail, ...nativeClientCatalogues.hi.email },
+  id: { ...englishEmail, ...nativeClientCatalogues.id.email },
   "zh-Hans": {
     subject: 'Keryx cited "{sourceName}" — {amount} USDC settled to you',
     textBody: 'Your source "{sourceName}" was just cited by the Keryx agent and paid {amount} USDC ({weightPct} contribution weight), settled on {network}.',
@@ -24,16 +41,7 @@ export const citationEmailUnreviewedDraftMessages = {
     htmlRate: "At most one alert per source per hour — every payout is on your earnings page.",
     article: "Article", trace: "Trace complète de la recherche", earnings: "Votre page de revenus", stop: "Arrêter ces alertes", traceLink: "Voir la trace complète de la recherche", earningsLink: "votre page de revenus", unsubscribe: "Se désabonner",
   },
-  en: {
-    subject: 'Keryx cited "{sourceName}" — {amount} USDC settled to you',
-    textBody: 'Your source "{sourceName}" was just cited by the Keryx agent and paid {amount} USDC ({weightPct} contribution weight), settled on {network}.',
-    textRate: "You get at most one of these per source per hour — every payout, including the ones between emails, is on your earnings page.",
-    htmlTitle: "Keryx · citation settled",
-    htmlHeading: "{sourceName} was cited — {amount} USDC is yours",
-    htmlBody: "The Keryx agent relied on your work ({weightPct} contribution weight) and settled {amount} USDC to your wallet on {network}.",
-    htmlRate: "At most one alert per source per hour — every payout is on your earnings page.",
-    article: "Article", trace: "Full dispatch trace", earnings: "Your earnings page", stop: "Stop these alerts", traceLink: "See the full dispatch trace", earningsLink: "your earnings page", unsubscribe: "Unsubscribe",
-  },
+  en: englishEmail,
   vi: {
     subject: 'Keryx đã trích dẫn "{sourceName}" — {amount} USDC đã được quyết toán cho bạn',
     textBody: 'Nguồn "{sourceName}" của bạn vừa được tác nhân Keryx trích dẫn và nhận {amount} USDC (trọng số đóng góp {weightPct}), đã quyết toán trên {network}.',
@@ -76,6 +84,11 @@ const criticalEnglish = {
   htmlBody: citationEmailUnreviewedDraftMessages.en.htmlBody,
 } as const;
 export const citationEmailMessages = {
+  de: { ...citationEmailUnreviewedDraftMessages.de, ...criticalEnglish },
+  ja: { ...citationEmailUnreviewedDraftMessages.ja, ...criticalEnglish },
+  ko: { ...citationEmailUnreviewedDraftMessages.ko, ...criticalEnglish },
+  hi: { ...citationEmailUnreviewedDraftMessages.hi, ...criticalEnglish },
+  id: { ...citationEmailUnreviewedDraftMessages.id, ...criticalEnglish },
   "zh-Hans": { ...citationEmailUnreviewedDraftMessages["zh-Hans"], ...criticalEnglish },
   en: citationEmailUnreviewedDraftMessages.en,
   vi: { ...citationEmailUnreviewedDraftMessages.vi, ...criticalEnglish },

@@ -22,7 +22,7 @@ it("refuses missing/wrong ownership before reading recipient state", async () =>
   expect(mocks.notify).not.toHaveBeenCalled(); expect(mocks.write).not.toHaveBeenCalled();
 });
 it("validates the closed input before writes and refuses absent email configuration", async () => {
-  for (const body of [{ language: "de" }, { language: "vi", email: "other@example.org" }, [], null])
+  for (const body of [{ language: "zz-unsupported" }, { language: "vi", email: "other@example.org" }, [], null])
     expect((await POST(request(body), ctx)).status).toBe(400);
   expect(mocks.write).not.toHaveBeenCalled();
   mocks.notify.mockResolvedValue(null);
@@ -35,6 +35,15 @@ it("confirms saves by readback and returns no recipient, token or private storag
   expect(mocks.write).toHaveBeenCalledOnce();
   mocks.read.mockResolvedValue(null);
   expect((await POST(request({ language: "es" }), ctx)).status).toBe(503);
+});
+it.each(["de", "ja", "ko", "hi", "id"])("saves and reads %s only after the existing owner and exact-recipient checks", async language => {
+  mocks.read.mockResolvedValue(language);
+  const response = await POST(request({ language }), ctx);
+  expect(response.status).toBe(200); expect(await response.json()).toEqual({ language, available: true });
+  expect(mocks.source).toHaveBeenCalledWith("source-a"); expect(mocks.notify).toHaveBeenCalledWith("source-a");
+  expect(mocks.write).toHaveBeenCalledOnce();
+  const read = await GET(request({}), ctx);
+  expect(read.status).toBe(200); expect(await read.json()).toEqual({ language, available: true });
 });
 it("does not report the old recipient's save as a preference for a concurrent replacement", async () => {
   mocks.read.mockResolvedValue("vi");

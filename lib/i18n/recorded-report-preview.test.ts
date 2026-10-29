@@ -25,8 +25,14 @@ vi.mock("next/og", () => ({ ImageResponse: class {
 } }));
 import DispatchOgImage, { alt, contentType, dynamic, revalidate, size } from "../../app/dispatch/[id]/opengraph-image";
 
-const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada.", fr: "Preuves enregistrées.", "zh-Hans": "已记录的证据。" };
+const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada.", fr: "Preuves enregistrées.", "zh-Hans": "已记录的证据。",
+  de: "Erfasste Belege.", ja: "記録された根拠です。", ko: "기록된 근거입니다.", hi: "दर्ज साक्ष्य उपलब्ध हैं।", id: "Bukti telah dicatat." };
 const expected = {
+  de: { title: "Keryx-Recherchebericht", one: "zitierte Quelle", other: "zitierte Quellen", imageOne: "zitierte Quelle", serial: "Serie 2026 — Ausgabe 00001" },
+  ja: { title: "Keryx調査レポート", one: "件の引用出典", other: "件の引用出典", imageOne: "件の引用出典", serial: "2026年シリーズ — 第00001号" },
+  ko: { title: "Keryx 조사 보고서", one: "개 출처 인용", other: "개 출처 인용", imageOne: "개 출처 인용", serial: "2026 시리즈 — 제00001호" },
+  hi: { title: "Keryx शोध रिपोर्ट", one: "उद्धृत स्रोत", other: "उद्धृत स्रोत", imageOne: "उद्धृत स्रोत", serial: "2026 श्रृंखला — अंक 00001" },
+  id: { title: "Laporan Keryx", one: "sumber dikutip", other: "sumber dikutip", imageOne: "sumber dikutip", serial: "Seri 2026 — No. 00001" },
   "zh-Hans": { title: "Keryx 研究报告", one: "个引用来源", other: "个引用来源", imageOne: "个引用来源", serial: "2026 系列 — 第 00001 期" },
   en: { title: "Keryx Dispatch", one: "source cited", other: "sources cited", imageOne: "sources cited", serial: "Series 2026 — No. 00001" },
   vi: { title: "Báo cáo Keryx", one: "nguồn được trích dẫn", other: "nguồn được trích dẫn", imageOne: "nguồn được trích dẫn", serial: "Loạt 2026 — Số 00001" },
@@ -49,13 +55,19 @@ function retained(language: PresentationLanguage = "vi", method: Method = "deter
     subClaims: [], decisions: [], citations: [{ marker: "S1", sourceId: "literal-source", sourceName: "Original source 中文",
       weight: 1, reward: 0.000001, rationale: "Synthetic original citation" }], paymentMode: "offline" };
 }
-const matrix = (["en", "vi", "pt", "es", "fr", "zh-Hans"] as const).flatMap(language =>
+const matrix = (["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const).flatMap(language =>
   (["deterministic-renderer", "reviewed-statements-and-renderer"] as const).map(method => ({ language, method })));
 const params = { params: Promise.resolve({ id: "preview_original_277" }) };
 function admit(value: QueryRun, archive: ResolvedDispatch["archive"] = null) {
   fixture.resolve.mockResolvedValue({ run: value, reader: {} as ResolvedDispatch["reader"], archive, visibility: "public" });
 }
 const fonts = [{ name: "Existing local face", data: new Uint8Array([1]), weight: 400, style: "normal" }];
+function expectGenericFontInputs(count: number) {
+  expect(fixture.fonts).toHaveBeenCalledTimes(count);
+  for (const [text] of fixture.fonts.mock.calls) expect(text.split("\n")).toEqual([
+    "An autonomous Keryx dispatch", expect.stringMatching(/^Series 2026 — No\. \d{5}$/u), "sources cited",
+  ]);
+}
 beforeEach(() => { vi.clearAllMocks(); fixture.fonts.mockResolvedValue(fonts); });
 function lastImage() {
   const [element, options] = fixture.image.mock.calls.at(-1)!;
@@ -142,7 +154,10 @@ describe("actual OG selection and render boundary", () => {
     admit(value); await DispatchOgImage(params);
     const { html, options } = lastImage();
     expect(fixture.image).toHaveBeenCalledTimes(1);
-    expect(fixture.fonts).toHaveBeenCalledWith(value.question);
+    expect(fixture.fonts).toHaveBeenCalledTimes(1);
+    const fontFields = fixture.fonts.mock.calls[0][0].split("\n");
+    expect(fontFields).toEqual([value.question, expect.stringContaining("2026"), expected[language].imageOne]);
+    expect(html).toContain(fontFields[1]);
     expect(options).toEqual({ width: 1200, height: 630, fonts, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } });
     expect(html).toContain("Original question 中文 {question} &lt;evidence&gt;");
     expect(html).toContain(expected[language].imageOne);
@@ -184,7 +199,7 @@ describe("actual OG selection and render boundary", () => {
     fixture.resolve.mockResolvedValue(null); await DispatchOgImage(params); expect(lastImage().html).toBe(generic);
     fixture.resolve.mockRejectedValue(Error("Synthetic storage refusal")); await DispatchOgImage(params); expect(lastImage().html).toBe(generic);
     expect(reads).not.toHaveBeenCalled();
-    expect(fixture.fonts.mock.calls.every(([text]) => text === "An autonomous Keryx dispatch")).toBe(true);
+    expectGenericFontInputs(5);
     expect(generic).not.toMatch(/Original question|nguồn|answerSha256/);
   });
 
@@ -196,7 +211,7 @@ describe("actual OG selection and render boundary", () => {
     expect(html).toContain("An autonomous Keryx dispatch");
     expect(html).toContain("sources cited");
     expect(html).not.toContain("Original question");
-    expect(fixture.fonts).toHaveBeenCalledWith("An autonomous Keryx dispatch");
+    expectGenericFontInputs(1);
   });
 
   it("awaits the existing font selector before constructing ImageResponse", async () => {

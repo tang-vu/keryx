@@ -18,7 +18,7 @@ it("does not migrate help-only intent, rewrites no question, and scopes new answ
 it("fails closed on unbound identity, unsupported values, outage and unconfirmed writes", async () => {
   const store = vi.fn();
   expect(await writeBotAnswerPreference(undefined, "vi", store)).toBe(false);
-  expect(await writeBotAnswerPreference(recipient, "de", store)).toBe(false); expect(store).not.toHaveBeenCalled();
+  expect(await writeBotAnswerPreference(recipient, "zz-unsupported", store)).toBe(false); expect(store).not.toHaveBeenCalled();
   expect(await writeBotAnswerPreference(recipient, "vi", async () => ({ getSyncState: async () => null, setSyncState: async () => {} }))).toBe(false);
   expect(await readBotAnswerPreference(recipient, async () => { throw new Error("private backend"); })).toEqual({ available: false, preference: "auto" });
 });

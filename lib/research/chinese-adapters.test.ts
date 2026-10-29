@@ -89,8 +89,8 @@ describe("Chinese consumer boundaries", () => {
     expect(clientPresentationLanguage(system, "fr")).toBe("fr");
   });
   it.each(["zh-Hant", "zh-TW", "zh-HK", "zh-MO", "zh-Hant-CN", "ja", "zh--CN"])("does not relabel %s as simplified Chinese", system => {
-    expect(systemPresentationLanguage(system)).toBeUndefined();
-    expect(clientPresentationLanguage(system)).toBe("en");
+    expect(systemPresentationLanguage(system)).toBe(system === "ja" ? "ja" : undefined);
+    expect(clientPresentationLanguage(system)).toBe(system === "ja" ? "ja" : "en");
   });
   it.each(["zh", "zh-CN", "zh-Hant", "pt-BR", "fr-FR", "ZH-HANS", { language: "zh-Hans" }])("does not treat %j aliases or hints as recorded answer evidence", value => {
     expect(recordedPresentationLocale(value)).toMatchObject({ language: "en", answerLanguage: "UNKNOWN", source: "fallback" });

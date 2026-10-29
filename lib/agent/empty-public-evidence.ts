@@ -1,6 +1,8 @@
 import type { Decision } from "../types";
 import { publicReadRecoveryLines, type PublicReadOutcome } from "./read-recovery";
 import { requestedSourceUrls } from "../research/source-requirements";
+import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
+import { nativeRecoveryCopy, nativeRecoveryFormat } from "../research/native-recovery-copy";
 
 export interface PublicDiscoverySummary {
   attemptedQueries?: number;
@@ -19,14 +21,23 @@ export function researchResponseLanguage(question: string): "en" | "vi" {
   return accentedWords.length >= 3 && vietnameseCue ? "vi" : "en";
 }
 
-interface EmptyPublicOptions { question?: string; discovery?: PublicDiscoverySummary }
+interface EmptyPublicOptions { question?: string; discovery?: PublicDiscoverySummary; language?: PresentationLanguage }
 
 function recordedText(value: string, limit: number): string {
   return value.replace(/[\r\n\u0000-\u001f]/g, " ").slice(0, limit);
 }
 
-function discoveryDetail(summary: PublicDiscoverySummary | undefined, vi: boolean): string {
+function discoveryDetail(summary: PublicDiscoverySummary | undefined, vi: boolean, language?: PresentationLanguage): string {
   if (!summary) return "";
+  const native = nativeRecoveryCopy(language)?.empty;
+  if (native) {
+    if (summary.status === "withheld") return native.discoveryWithheld;
+    if (summary.status === "not-configured") return native.discoveryUnconfigured;
+    if (summary.status === "unavailable") return native.discoveryUnavailable;
+    const counts = [summary.attemptedQueries, summary.succeededQueries, summary.failedQueries];
+    if (!counts.every(count => Number.isInteger(count) && count! >= 0)) return "";
+    return nativeRecoveryFormat(native.discoveryCounts, { attempted: summary.attemptedQueries!, succeeded: summary.succeededQueries!, failed: summary.failedQueries! });
+  }
   if (summary.status === "withheld") return vi
     ? "Tìm kiếm web bên ngoài bị tắt theo phạm vi của lượt nghiên cứu này. "
     : "External web search was withheld for this run's scope. ";
@@ -54,6 +65,14 @@ export function emptyPublicEvidenceDetail(
   const scholarly = /arxiv|\bdoi\b|10\.\d{4,9}\//iu.test(question);
   const failures = outcomes.slice(0, 3).map(outcome => `${recordedText(outcome.name, 120)} (${recordedText(outcome.code, 80)})`).join("; ");
   const gates = skipped.slice(0, 3).map(decision => `${recordedText(decision.sourceName, 120)}: ${recordedText(decision.rationale, 350)}`).join("; ");
+  const native = nativeRecoveryCopy(options.language)?.empty;
+  if (native) {
+    const detail = outcomes.length ? nativeRecoveryFormat(native.failedOriginals, { failures })
+      : native.noOriginal + (gates ? nativeRecoveryFormat(native.skipped, { reasons: gates }) : "");
+    const recovery = requestedSourceUrls(question).urls.length ? native.suppliedUrls : scholarly ? native.scholarly : native.narrow;
+    return discoveryDetail(options.discovery, false, options.language) + detail + recovery +
+      "A larger source budget does not resolve a free-source attention gate or extraction limit. " + native.limitations;
+  }
   const detail = outcomes.length
     ? vi ? `Nguồn công khai đã chọn không cung cấp được văn bản có thể dùng: ${failures}. `
       : `Selected public originals could not supply usable text: ${failures}. `
@@ -83,9 +102,12 @@ export function emptyEvidenceAnswer(input: {
   pendingPayments: number;
   settledPayments: number;
   fetchFailures: number;
+  /** Ordinary-only selection from the original request; critical payment states stay English. */
+  language?: PresentationLanguage;
 }): string {
-  const vi = researchResponseLanguage(input.question) === "vi";
-  const prefix = vi ? "Chưa có câu trả lời được bằng chứng hỗ trợ: " : "No supported answer: ";
+  const native = nativeRecoveryCopy(input.language)?.empty;
+  const vi = !native && researchResponseLanguage(input.question) === "vi";
+  const prefix = native ? native.prefix : vi ? "Chưa có câu trả lời được bằng chứng hỗ trợ: " : "No supported answer: ";
   if (input.fundingUnavailable) return prefix + (vi
     ? "nguồn trả phí bị giữ lại vì chưa xác minh được trạng thái sẵn sàng của nguồn tiền, và chưa thu được bằng chứng công khai có thể dùng. Tác động của việc nạp ví vẫn chưa rõ; kiểm tra bản ghi nạp tiền gốc trước khi thử trả phí lại."
     : "paid sources were withheld because funding readiness could not be verified, and no usable public evidence was gathered. Wallet funding effects remain unknown; inspect the original funding records before another paid attempt.");
@@ -95,13 +117,13 @@ export function emptyEvidenceAnswer(input: {
   if (input.settledPayments > 0) return prefix + (vi
     ? "thanh toán nguồn đã hoàn tất nhưng chưa nhận được nội dung có thể dùng. Các khoản đã xác nhận vẫn được ghi nhận. Giữ lượt này để kiểm tra trước khi mua lại."
     : "source payments settled, but no usable content was received. Confirmed payments remain recorded. Keep this job for review before buying again.");
-  const nextSteps = publicReadRecoveryLines(input.outcomes, vi);
+  const nextSteps = publicReadRecoveryLines(input.outcomes, vi, false, false, input.language);
   const detail = emptyPublicEvidenceDetail(input.outcomes, input.skipped, input)
     + (nextSteps.length ? `\n\n${nextSteps.join("\n")}` : "");
   if (input.fetchFailures > 0) return prefix + (vi
     ? "đọc nguồn thất bại và chưa có thanh toán nguồn nào được xác nhận. Kiểm tra bản ghi thanh toán của lượt này trước khi bắt đầu lượt trả phí khác. "
     : "source reads failed and no source payment was confirmed. Review this job's payment records before starting another paid job. ") + detail;
-  return prefix + (vi
+  return prefix + (native ? native.noEvidence : vi
     ? "chưa có nguồn nào vượt qua kiểm tra mức liên quan và bằng chứng trong giới hạn lượt này. "
     : "no source passed the relevance and evidence checks within this run's limits. ") + detail;
 }

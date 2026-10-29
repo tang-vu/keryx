@@ -848,7 +848,8 @@ async function* runAdmittedAgent(
     checkpointCapture.stop("discovery", candidates.length);
     evidenceMeasured = true;
     claimCoverage = subClaims.map((claim, claimIndex) => ({ claimIndex, claim, coverage: 0, coveredBy: [] }));
-    return finish(emptyEvidenceAnswer({ question: input.question, outcomes: publicReadOutcomes, skipped: [], discovery: webDiscovery, fundingUnavailable: false, pendingPayments: 0, settledPayments: 0, fetchFailures: 0 }));
+    return finish(emptyEvidenceAnswer({ question: input.question, language: initialPresentation?.language,
+      outcomes: publicReadOutcomes, skipped: [], discovery: webDiscovery, fundingUnavailable: false, pendingPayments: 0, settledPayments: 0, fetchFailures: 0 }));
   }
 
   // 3) DECIDE (engine proposes value; code enforces budget AND the Arc-rail constraint)
@@ -1791,7 +1792,7 @@ async function* runAdmittedAgent(
     claimCoverage = subClaims.map((claim, claimIndex) => ({
       claimIndex, claim, coverage: 0, coveredBy: [],
     }));
-    return finish(emptyEvidenceAnswer({ question: input.question, outcomes: publicReadOutcomes,
+    return finish(emptyEvidenceAnswer({ question: input.question, language: initialPresentation?.language, outcomes: publicReadOutcomes,
       skipped: finalDecisions.filter(decision => webCandidates.has(decision.assetId ?? decision.sourceId) && decision.action === "SKIP"),
       discovery: webDiscovery, fundingUnavailable, pendingPayments, settledPayments, fetchFailures }));
   }

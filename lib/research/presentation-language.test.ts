@@ -18,7 +18,7 @@ describe("human presentation language authority", () => {
       .toMatchObject({ language: "vi", source: "recorded-answer", agreement: "MATCHED" });
     expect(livePresentationLocale({ requestedLanguage: "es", recordedAnswerLanguage: "es" })).toMatchObject({ language: "es", agreement: "MATCHED" });
   });
-  it.each(["it", "zh", "zh-CN", "zh-Hant", "de", "auto", "ES", "es-ES", {}, null])("unsupported requested labels %j do not enable a locale or claim model translation", requestedLanguage => {
+  it.each(["it", "zh", "zh-CN", "zh-Hant", "zz-unsupported", "auto", "ES", "es-ES", {}, null])("unsupported requested labels %j do not enable a locale or claim model translation", requestedLanguage => {
     expect(presentationLanguage(requestedLanguage)).toBeUndefined();
     expect(livePresentationLocale({ requestedLanguage, originalQuestion: cases[1][1] }))
       .toEqual({ language: "en", source: "fallback", answerLanguage: "UNKNOWN", agreement: "UNKNOWN", unsupportedRequestedLanguage: true });
@@ -32,14 +32,14 @@ describe("human presentation language authority", () => {
     expect(report.locale.source).toBe("recorded-answer"); expect(report.notice).toBe("");
     expect(report.labels.title).toBe(researchPresentationCatalogues[language].reportTitle);
   });
-  it.each([undefined, "de", "", { question: cases[1][1], answer: "Vietnamese-looking text", language: "vi" }])
+  it.each([undefined, "zz-unsupported", "", { question: cases[1][1], answer: "Vietnamese-looking text", language: "vi" }])
     ("stored unknown %j cannot use a historical question or arbitrary object property", input => {
       const report = recordedReportPresentation(input);
       expect(report.locale).toMatchObject({ language: "en", source: "fallback", answerLanguage: "UNKNOWN" });
       expect(report.notice).toBe(researchPresentationCatalogues.en.recordedUnknown);
     });
 });
-describe("shared five-language catalogue contract", () => {
+describe("shared finite-language catalogue contract", () => {
   it.each(Object.entries(researchPresentationCatalogues))("%s keeps exact keys and typed placeholders", (_, catalogue) => {
     expect(Object.isFrozen(catalogue)).toBe(true);
     expect(Object.keys(catalogue).sort()).toEqual(Object.keys(researchPresentationCatalogues.en).sort());
