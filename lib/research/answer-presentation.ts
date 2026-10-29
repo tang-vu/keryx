@@ -1,6 +1,7 @@
 import { researchResponseLanguage } from "../agent/empty-public-evidence";
 import { answerWordBudget } from "./answer-word-budget";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
+import { chineseAnswerInstructions } from "./chinese-answer-intent";
 
 /** Ordinary research presentation, derived only from the original caller request. */
 export interface AnswerPresentation {
@@ -35,7 +36,13 @@ function negated(text: string, index: number, ordinary = false): boolean {
 export function answerPresentation(question: string, scope: "ordinary" | "retained" | "legacy" = "ordinary"): AnswerPresentation {
   const text = question.slice(0, 30_000).normalize("NFC").toLowerCase();
   const explicit = /(?<![\p{L}\p{N}_])(?:(?:answer|respond|reply|write)\s+(?:only\s+)?(?:in|using)\s+((?:brazilian\s+)?portuguese|[\p{L}-]+)|(?:trả lời|viết|đáp)\s+(?:bằng\s+)?tiếng\s+(bồ đào nha|[\p{L}-]+)|(?:responda em|escreva em)\s+(português(?:\s+(?:brasileiro|do brasil))?|[\p{L}-]+)|em\s+(português(?:\s+(?:brasileiro|do brasil))?|inglês|vietnamita|francês|espanhol|alemão|japonês|chinês)|(?:responda|responde|escriba|escribe)\s+(?:solo\s+)?en\s+(español)|en\s+(español|français)(?=\s*[,;:])|(?:antworte\s+(?:bitte\s+)?)?auf\s+(deutsch)|(?:réponds?|répondez|répondre|écris|écrivez)\s+(?:uniquement\s+)?en\s+(français)|in\s+(english)(?=\s*[,;:]))(?![\p{L}\p{N}_])/gu;
-  const requests = [...text.matchAll(explicit)];
+  const chinese = scope === "ordinary" ? chineseAnswerInstructions(text) : [];
+  const requests = [
+    ...[...text.matchAll(explicit)].filter(match => !chinese.some(span => match.index! >= span.index && match.index! < span.end))
+      .map(match => ({ kind: "existing" as const, index: match.index!, match })),
+    ...chinese.filter(instruction => instruction.eligible)
+      .map(instruction => ({ kind: "chinese" as const, index: instruction.index, instruction })),
+  ].sort((left, right) => left.index - right.index);
   const quotedRanges = [...text.matchAll(/"[^"]*"|“[^”]*”|«[^»]*»|`[^`]*`|(?<![\p{L}\p{N}])'[^']*'(?![\p{L}\p{N}])/gu)]
     .map(match => ({ start: match.index!, end: match.index! + match[0].length }));
   // Cue detection must not treat a negated language directive as a positive request.
@@ -46,15 +53,23 @@ export function answerPresentation(question: string, scope: "ordinary" | "retain
       (/\b(?:preciso|explique|responda)\b/u.test(cues) && /\buma\b/u.test(cues))) language = "pt";
   let requestedLanguage: AnswerPresentation["requestedLanguage"];
   let budgetLanguageDirective: { index: number; english: boolean } | undefined;
-  for (const request of requests) {
+  for (const entry of requests) {
+    if (entry.kind === "chinese") {
+      requestedLanguage = entry.instruction.language;
+      language = requestedLanguage ?? "en";
+      budgetLanguageDirective = { index: entry.index, english: requestedLanguage === "en" };
+      continue;
+    }
+    const request = entry.match;
     if (negated(text, request.index!, scope === "ordinary")) continue;
     // The ordinary English shorthand resolves a later French/English instruction.
     // Retained originals keep their previous finite directive grammar.
     if (scope !== "ordinary" && (request[8] !== undefined || request[9] !== undefined)) continue;
     // New native forms are directives only at a clause boundary, not page titles
     // or quoted language mentions inside the caller's substantive question.
+    const boundary = scope === "ordinary" ? /(?:^|[.!?;:。！？；：\r\n\u2028\u2029])\s*$/u : /(?:^|[.!?;:\r\n\u2028\u2029])\s*$/u;
     if (request.slice(5).some(value => value !== undefined) &&
-        (!/(?:^|[.!?;:\r\n\u2028\u2029])\s*$/u.test(text.slice(0, request.index!)) ||
+        (!boundary.test(text.slice(0, request.index!)) ||
          quotedRanges.some(range => request.index! >= range.start && request.index! < range.end))) continue;
     const name = request.slice(1).find(value => value !== undefined)!;
     // Newly supported French directives inside quoted examples are original data.
@@ -110,7 +125,7 @@ export function answerPresentation(question: string, scope: "ordinary" | "retain
 export function presentationStatementGuidance(presentation: AnswerPresentation): string {
   // An English label fallback does not authorize overriding an unsupported language request.
   if (!presentation.requestedLanguage) return "";
-  const language = { en: "English", vi: "Vietnamese", pt: "Brazilian Portuguese", es: "Spanish", fr: "French" }[presentation.requestedLanguage];
+  const language = { en: "English", vi: "Vietnamese", pt: "Brazilian Portuguese", es: "Spanish", fr: "French", "zh-Hans": "Simplified Chinese" }[presentation.requestedLanguage];
   const count = presentation.requestedSentenceCount;
   const note = presentation.language === "es" && Number.isInteger(count) && count! >= 1 && count! <= 8
     ? `The caller requests a short note of exactly ${count} sentences, with inspectable originals separately. ` +

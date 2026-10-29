@@ -7,4 +7,5 @@ export const answerLanguageInstructions = Object.freeze([
   { language: "pt", name: "Português", instruction: "Responda em português." },
   { language: "es", name: "Español", instruction: "Responde en español." },
   { language: "fr", name: "Français", instruction: "Répondez en français." },
+  { language: "zh-Hans", name: "简体中文", instruction: "请用简体中文回答。" },
 ] as const satisfies readonly { language: PresentationLanguage; name: string; instruction: string }[]);

@@ -47,6 +47,7 @@ export function finalizeGroundedAnswer(input: {
       ? `Não foi possível apresentar ${count} tópicos curtos preservando todos os objetivos e trechos qualificados; os objetivos são apresentados abaixo.`
       : input.presentation!.language === "es" ? `No fue posible presentar ${count} puntos breves conservando todos los objetivos y fragmentos admitidos; los objetivos se presentan a continuación.`
       : input.presentation!.language === "fr" ? `Impossible de présenter ${count} points courts tout en conservant chaque objectif et chaque extrait admis ; la présentation par objectif suit.`
+      : input.presentation!.language === "zh-Hans" ? `无法在保留每项研究目标和所有获准摘录的同时用 ${count} 个简短要点呈现；下文按研究目标展开。`
       : vi ? `Chưa thể trình bày ${count} gạch đầu dòng ngắn mà vẫn giữ mọi yêu cầu và trích đoạn đủ điều kiện; các yêu cầu được trình bày bên dưới.`
       : `Could not present ${count} short bullets while preserving every target and qualifying excerpt; the target layout follows.`;
     return `${notice}\n\n${body}`;
@@ -54,6 +55,7 @@ export function finalizeGroundedAnswer(input: {
   if (input.presentation?.language === "pt") return withNotice(portugueseAnswer(ledger, qualifying, summary, input.synthesisUnavailable));
   if (input.presentation?.language === "es") return withNotice(spanishAnswer(ledger, qualifying, summary, input.synthesisUnavailable));
   if (input.presentation?.language === "fr") return withNotice(frenchAnswer(ledger, qualifying, summary, input.synthesisUnavailable));
+  if (input.presentation?.language === "zh-Hans") return withNotice(chineseAnswer(ledger, qualifying, summary, input.synthesisUnavailable));
   if (summary.length) return withNotice(citedSummary({ vi, ledger, qualifying, summary }));
   const intro = qualifying.length
     ? vi ? "Bản nháp không được giữ như kết luận. Dưới đây chỉ giữ các trích đoạn nguồn đủ điều kiện; chưa xác minh được câu trả lời tổng hợp đầy đủ. Các chủ đề nghiên cứu không phải kết luận đã được chứng minh."
@@ -105,6 +107,7 @@ function compactSummary(presentation: AnswerPresentation, ledger: EvidenceLedger
     pt: { source: "Texto da fonte", note: "Resumos escritos e verificados por modelos; confira os trechos citados. A síntese completa e a exatidão das fontes permanecem não verificadas. Os pagamentos são registrados separadamente." },
     es: { source: "Texto de la fuente", note: "Resúmenes escritos y revisados por modelos; consulte los fragmentos citados. La síntesis completa y la exactitud de las fuentes siguen sin verificarse. Los pagos se registran por separado." },
     fr: { source: "Texte de la source", note: "Résumés rédigés et vérifiés par des modèles ; examinez les extraits associés. L'exhaustivité de la synthèse et l'exactitude des sources restent non vérifiées. Les paiements sont consignés séparément." },
+    "zh-Hans": { source: "来源原文", note: "摘要由模型撰写并检查；请核对配对的来源摘录。综合结果的完整性和来源的正确性仍未核实。付款状态另行记录。" },
   }[presentation.language];
   const rows = groups.map(group => {
     const excerpts = new Map<string, CitedStatement[]>();
@@ -187,6 +190,28 @@ function frenchAnswer(ledger: EvidenceLedger, qualifying: EvidenceLedger["eviden
     ].join("\n\n");
   });
   return [intro, ...sections, `${summary.length ? "Phrases rédigées et vérifiées par des modèles, sans vérification indépendante. " : ""}Les extraits établissent un lien avec la source, pas son exactitude ni l'exhaustivité de la synthèse. Les sources peuvent être erronées ou contradictoires. Les paiements sont consignés séparément.`].join("\n\n");
+}
+
+/** Simplified Chinese ordinary copy; the same admitted ledger and exact pairs apply. */
+function chineseAnswer(ledger: EvidenceLedger, qualifying: EvidenceLedger["evidence"], summary: CitedStatement[], unavailable?: boolean): string {
+  const intro = summary.length
+    ? "摘要由模型撰写，逐句附有引用。每句话均与检查时使用的来源原文配对显示。"
+    : qualifying.length ? "仅提供来源摘录；草稿不作为结论呈现，综合结果的完整性仍未核实。研究目标是待调查的主题，并非已证实的结论。"
+    : unavailable ? "尚无证据支持的答案：综合或证据检查未能完成。原始阅读结果和凭证均已保留。"
+    : "尚无证据支持的答案：已读内容未能为研究目标提供获准使用的摘录。";
+  const sections = ledger.claimCoverage.map(claim => {
+    const quotes = qualifying.filter(item => item.claimIndex === claim.claimIndex);
+    const sentences = summary.filter(statement => statement.claimIndex === claim.claimIndex);
+    const paired = sentences.map(statement => `${literal(statement.text)} [${statement.marker}] 来源原文：“${literal(statement.quote)}”`);
+    const rest = quotes.filter(item => !sentences.some(statement => statement.marker === item.marker && statement.quote === item.quote));
+    return [`### 研究目标 ${claim.claimIndex + 1}`, `所请求的主题（未核实）：“${literal(claim.claim)}”`,
+      ...paired, ...rest.map(item => `- “${literal(item.quote)}” [${item.marker}]`),
+      ...(!quotes.length ? [unavailable ? "本次运行未能评估此研究目标的证据。" : "证据缺口：此研究目标没有获准使用的摘录。"] : []),
+      ...(quotes.length && !(claim.coverage >= MIN_REWARD_SUPPORT)
+        ? ["证据缺口：已记录的评估仍低于此研究目标的支持阈值。"] : []),
+    ].join("\n\n");
+  });
+  return [intro, ...sections, `${summary.length ? "语句由模型撰写并检查，未经独立验证。" : ""}摘录建立了与来源的联系，但不能证明来源正确或综合结果完整。来源内容可能错误或相互矛盾。付款状态另行记录。`].join("\n\n");
 }
 
 /** Summary sentences per research target, each above the excerpts that carry it. */
