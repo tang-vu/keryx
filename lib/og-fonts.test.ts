@@ -120,7 +120,7 @@ describe("local public preview glyphs", () => {
     const response = await dispatchPreview({ params: Promise.resolve({ id: "synthetic-public-original-en" }) });
     expect(fonts.mock.calls.at(-1)?.[0]).toContain(fixture.text);
     expect(fonts.mock.calls.at(-1)?.[0]).toContain(caption);
-    expect((await fonts.mock.results.at(-1)!.value).map(font => font.name)).toContain(face);
+    expect(await fonts.mock.results.at(-1)!.value).toContainEqual(expect.objectContaining({ name: face }));
     const bytes = Buffer.from(await response.arrayBuffer());
     expect(bytes.readUInt32BE(16)).toBe(1200); expect(bytes.readUInt32BE(20)).toBe(630);
     expect(remoteProtocols(fetch)).toEqual([]);
