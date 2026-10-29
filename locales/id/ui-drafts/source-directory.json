@@ -1,0 +1,456 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-directory.ts",
+  "sourceSha256": "65d55254a6598bc0ae3b73b25bf1d70eb005ef6c7bfcf07ac98c7aaac189abae",
+  "entries": {
+    "sourceFeed.fullText": {
+      "source": "Full text in feed",
+      "text": "Teks lengkap dalam feed"
+    },
+    "sourceFeed.excerpt": {
+      "source": "Excerpt in feed",
+      "text": "Kutipan dalam feed"
+    },
+    "sourceFeed.abstract": {
+      "source": "Abstract in feed",
+      "text": "Abstrak dalam feed"
+    },
+    "sourceFeed.metadata": {
+      "source": "Metadata only",
+      "text": "Hanya metadata"
+    },
+    "sourceFeed.untitled": {
+      "source": "Untitled feed item",
+      "text": "Item feed tanpa judul"
+    },
+    "sourceFeed.kicker": {
+      "source": "Free public reference",
+      "text": "Referensi publik gratis"
+    },
+    "sourceFeed.topics": {
+      "source": "Topics",
+      "text": "Topik"
+    },
+    "sourceFeed.compactItems": {
+      "source": "From the retained feed",
+      "text": "Dari feed yang disimpan"
+    },
+    "sourceFeed.empty": {
+      "source": "No feed items retained in this snapshot.",
+      "text": "Tidak ada item feed yang disimpan dalam snapshot ini."
+    },
+    "sourceFeed.collectedUnavailable": {
+      "source": "Feed collection time unavailable",
+      "text": "Waktu pengumpulan feed tidak tersedia"
+    },
+    "sourceFeed.matching.one": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "Item feed tersimpan yang cocok · {count} dari {total}"
+    },
+    "sourceFeed.latest.one": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "Item feed tersimpan terbaru · {count} dalam snapshot"
+    },
+    "sourceFeed.matching.other": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "Item feed tersimpan yang cocok · {count} dari {total}"
+    },
+    "sourceFeed.latest.other": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "Item feed tersimpan terbaru · {count} dalam snapshot"
+    },
+    "sourceFeed.more.one": {
+      "source": "Show {count} more retained item",
+      "text": "Tampilkan {count} item tersimpan lagi"
+    },
+    "sourceFeed.more.other": {
+      "source": "Show {count} more retained items",
+      "text": "Tampilkan {count} item tersimpan lagi"
+    },
+    "sourceFeed.collected": {
+      "source": "Feed collected {date}",
+      "text": "Feed dikumpulkan pada {date}"
+    },
+    "sourceCited.kicker": {
+      "source": "Cited public document",
+      "text": "Dokumen publik yang dikutip"
+    },
+    "sourceCited.readUnavailable": {
+      "source": "Read time not recorded",
+      "text": "Waktu pembacaan tidak dicatat"
+    },
+    "sourceCited.citationUnavailable": {
+      "source": "Citation date not recorded",
+      "text": "Tanggal pengutipan tidak dicatat"
+    },
+    "sourceCited.inspect": {
+      "source": "Inspect cited answer →",
+      "text": "Periksa jawaban yang mengutipnya →"
+    },
+    "sourceCited.scope.full_text": {
+      "source": "Full text recorded",
+      "text": "Teks lengkap dicatat"
+    },
+    "sourceCited.scopeBounded.full_text": {
+      "source": "Full text recorded · Bounded extraction",
+      "text": "Teks lengkap dicatat · Ekstraksi terbatas"
+    },
+    "sourceCited.scope.excerpt": {
+      "source": "Excerpt recorded",
+      "text": "Kutipan dicatat"
+    },
+    "sourceCited.scopeBounded.excerpt": {
+      "source": "Excerpt recorded · Bounded extraction",
+      "text": "Kutipan dicatat · Ekstraksi terbatas"
+    },
+    "sourceCited.scope.abstract": {
+      "source": "Abstract recorded",
+      "text": "Abstrak dicatat"
+    },
+    "sourceCited.scopeBounded.abstract": {
+      "source": "Abstract recorded · Bounded extraction",
+      "text": "Abstrak dicatat · Ekstraksi terbatas"
+    },
+    "sourceCited.scope.metadata_only": {
+      "source": "Metadata only",
+      "text": "Hanya metadata"
+    },
+    "sourceCited.scopeBounded.metadata_only": {
+      "source": "Metadata only · Bounded extraction",
+      "text": "Hanya metadata · Ekstraksi terbatas"
+    },
+    "sourceCited.scope.unrecorded": {
+      "source": "Reading scope not recorded",
+      "text": "Cakupan pembacaan tidak dicatat"
+    },
+    "sourceCited.scopeBounded.unrecorded": {
+      "source": "Reading scope not recorded · Bounded extraction",
+      "text": "Cakupan pembacaan tidak dicatat · Ekstraksi terbatas"
+    },
+    "sourceCited.observed": {
+      "source": "Read observed {date}",
+      "text": "Pembacaan diamati pada {date}"
+    },
+    "sourceCited.lastCited": {
+      "source": "Last cited {date}",
+      "text": "Terakhir dikutip pada {date}"
+    },
+    "sourceExplore.topics": {
+      "source": "Topics",
+      "text": "Topik"
+    },
+    "sourceExplore.ask": {
+      "source": "Ask with this source →",
+      "text": "Bertanya dengan sumber ini →"
+    },
+    "sourcePreview.title": {
+      "source": "Explore the sources",
+      "text": "Jelajahi sumber"
+    },
+    "sourcePreview.browse": {
+      "source": "Browse the source library →",
+      "text": "Buka perpustakaan sumber →"
+    },
+    "sourcePreview.citationUnavailable": {
+      "source": "Citation history unavailable",
+      "text": "Riwayat kutipan tidak tersedia"
+    },
+    "sourcePreview.referenceUnavailable": {
+      "source": "Public reference count unavailable",
+      "text": "Jumlah referensi publik tidak tersedia"
+    },
+    "sourcePreview.creatorUnavailable": {
+      "source": "Creator listing count unavailable",
+      "text": "Jumlah entri kreator tidak tersedia"
+    },
+    "sourcePreview.snapshotsUnavailable": {
+      "source": "Public reference snapshots could not be loaded. Reload to retry.",
+      "text": "Snapshot referensi publik tidak dapat dimuat. Muat ulang untuk mencoba lagi."
+    },
+    "sourcePreview.empty": {
+      "source": "No retained sources are listed yet. Keryx can still discover supported public documents in response to a question.",
+      "text": "Belum ada sumber tersimpan yang dicantumkan. Keryx tetap dapat menemukan dokumen publik yang didukung sebagai tanggapan atas pertanyaan."
+    },
+    "sourcePreview.documents.one": {
+      "source": "{count} recently cited public document",
+      "text": "{count} dokumen publik yang baru dikutip"
+    },
+    "sourcePreview.feeds.one": {
+      "source": "{count} public feed",
+      "text": "{count} feed publik"
+    },
+    "sourcePreview.creators.one": {
+      "source": "{count} creator listing",
+      "text": "{count} entri kreator"
+    },
+    "sourcePreview.documents.other": {
+      "source": "{count} recently cited public documents",
+      "text": "{count} dokumen publik yang baru dikutip"
+    },
+    "sourcePreview.feeds.other": {
+      "source": "{count} public feeds",
+      "text": "{count} feed publik"
+    },
+    "sourcePreview.creators.other": {
+      "source": "{count} creator listings",
+      "text": "{count} entri kreator"
+    },
+    "sourceFilter.title": {
+      "source": "Find a source",
+      "text": "Temukan sumber"
+    },
+    "sourceFilter.topic": {
+      "source": "Topic",
+      "text": "Topik"
+    },
+    "sourceFilter.allTopics": {
+      "source": "All topics",
+      "text": "Semua topik"
+    },
+    "sourceFilter.collection": {
+      "source": "Collection",
+      "text": "Koleksi"
+    },
+    "sourceFilter.allCollections": {
+      "source": "All collections",
+      "text": "Semua koleksi"
+    },
+    "sourceFilter.sort": {
+      "source": "Sort",
+      "text": "Urutkan"
+    },
+    "sourceFilter.collectionOrder": {
+      "source": "Collection order",
+      "text": "Urutan koleksi"
+    },
+    "sourceFilter.nameOrder": {
+      "source": "Name A–Z",
+      "text": "Nama A–Z"
+    },
+    "sourceFilter.latest": {
+      "source": "Latest recorded observation",
+      "text": "Pengamatan terbaru"
+    },
+    "sourceFilter.paperFilters": {
+      "source": "Paper filters · selects research-paper records",
+      "text": "Filter makalah · memilih catatan makalah penelitian"
+    },
+    "sourceFilter.author": {
+      "source": "Author",
+      "text": "Penulis"
+    },
+    "sourceFilter.authorPlaceholder": {
+      "source": "Author name",
+      "text": "Nama penulis"
+    },
+    "sourceFilter.doi": {
+      "source": "Exact DOI",
+      "text": "DOI yang persis"
+    },
+    "sourceFilter.find": {
+      "source": "Find sources",
+      "text": "Temukan sumber"
+    },
+    "sourceFilter.topicsLabel": {
+      "source": "Browse source topics",
+      "text": "Jelajahi topik sumber"
+    },
+    "sourceFilter.clear": {
+      "source": "Clear filters",
+      "text": "Hapus filter"
+    },
+    "sourceFilter.placeholder": {
+      "source": "Try {database}, agents or {domain}",
+      "text": "Coba {database}, agen, atau {domain}"
+    },
+    "sourceFilter.doiPlaceholder": {
+      "source": "{identifier} or {url}",
+      "text": "{identifier} atau {url}"
+    },
+    "sourceCited.unclassifiedBounded": {
+      "source": " · Bounded extraction",
+      "text": " · Ekstraksi terbatas"
+    },
+    "sourceLibrary.title": {
+      "source": "Sources — research papers, public references and creator listings",
+      "text": "Sumber — makalah penelitian, referensi publik, dan entri kreator"
+    },
+    "sourceLibrary.name": {
+      "source": "Keryx Sources",
+      "text": "Sumber Keryx"
+    },
+    "sourceLibrary.crumb": {
+      "source": "Sources",
+      "text": "Sumber"
+    },
+    "sourceLibrary.kicker": {
+      "source": "The reading library",
+      "text": "Perpustakaan bacaan"
+    },
+    "sourceLibrary.papers": {
+      "source": "Research papers",
+      "text": "Makalah penelitian"
+    },
+    "sourceLibrary.citedDocuments": {
+      "source": "Recently cited documents",
+      "text": "Dokumen yang baru dikutip"
+    },
+    "sourceLibrary.unavailable": {
+      "source": "Unavailable",
+      "text": "Tidak tersedia"
+    },
+    "sourceLibrary.publicHistory": {
+      "source": "From public answer history",
+      "text": "Dari riwayat jawaban publik"
+    },
+    "sourceLibrary.publicReferences": {
+      "source": "Public references",
+      "text": "Referensi publik"
+    },
+    "sourceLibrary.creatorListings": {
+      "source": "Creator listings",
+      "text": "Entri kreator"
+    },
+    "sourceLibrary.directoryUnavailable": {
+      "source": "Part of the directory could not be loaded. Available records are shown below; a missing count is not an empty catalog.",
+      "text": "Sebagian direktori tidak dapat dimuat. Catatan yang tersedia ditampilkan di bawah; jumlah yang tidak diketahui tidak berarti katalog kosong."
+    },
+    "sourceLibrary.reviewQuestion": {
+      "source": "Working on a literature review?",
+      "text": "Sedang mengerjakan tinjauan pustaka?"
+    },
+    "sourceLibrary.reviewNotice": {
+      "source": "Save papers, record screening notes and prepare a comparison. Your list stays on this browser.",
+      "text": "Simpan makalah, catat hasil penyaringan, dan siapkan perbandingan. Daftar Anda tetap tersimpan di browser ini."
+    },
+    "sourceLibrary.openWorkspace": {
+      "source": "Open literature workspace →",
+      "text": "Buka ruang kerja pustaka →"
+    },
+    "sourceLibrary.freeDiscovery": {
+      "source": "Original records · free discovery",
+      "text": "Catatan asli · penelusuran gratis"
+    },
+    "sourceLibrary.papersEmpty": {
+      "source": "No starter paper matches these filters. You can search the repositories below.",
+      "text": "Tidak ada makalah awal yang cocok dengan filter ini. Anda dapat mencari di repositori di bawah."
+    },
+    "sourceLibrary.emptyTitle": {
+      "source": "No sources match these filters",
+      "text": "Tidak ada sumber yang cocok dengan filter ini"
+    },
+    "sourceLibrary.clear": {
+      "source": "Clear filters",
+      "text": "Hapus filter"
+    },
+    "sourceLibrary.citedTitle": {
+      "source": "Cited in past answers",
+      "text": "Dikutip dalam jawaban sebelumnya"
+    },
+    "sourceLibrary.citationsUnavailable": {
+      "source": "Public citation history is temporarily unavailable. Reload to retry; other source collections remain available.",
+      "text": "Riwayat kutipan publik untuk sementara tidak tersedia. Muat ulang untuk mencoba lagi; koleksi sumber lainnya tetap tersedia."
+    },
+    "sourceLibrary.feedNotice": {
+      "source": "These are retained feed snapshots. Keryx also discovers supported websites and PDFs when you ask a question; this directory is not a complete index of the web. A feed excerpt, abstract or video description may omit the full work. Listing here does not certify content accuracy.",
+      "text": "Ini adalah snapshot feed yang disimpan. Keryx juga menemukan situs web dan PDF yang didukung saat Anda mengajukan pertanyaan; direktori ini bukan indeks lengkap web. Kutipan feed, abstrak, atau deskripsi video mungkin tidak mencakup keseluruhan karya. Pencantuman di sini tidak menjamin keakuratan konten."
+    },
+    "sourceLibrary.referencesUnavailable": {
+      "source": "Public references are temporarily unavailable. Try this page again to inspect the retained catalog.",
+      "text": "Referensi publik untuk sementara tidak tersedia. Buka halaman ini lagi untuk memeriksa katalog yang disimpan."
+    },
+    "sourceLibrary.ask": {
+      "source": "ask a question",
+      "text": "mengajukan pertanyaan"
+    },
+    "sourceLibrary.creatorsUnavailable": {
+      "source": "Creator listings are temporarily unavailable. Public references have their own availability and free-reading status.",
+      "text": "Entri kreator untuk sementara tidak tersedia. Referensi publik memiliki ketersediaan dan status pembacaan gratis tersendiri."
+    },
+    "sourceLibrary.creatorsEmpty": {
+      "source": "No creator listings are recorded yet.",
+      "text": "Belum ada entri kreator yang dicatat."
+    },
+    "sourceLibrary.unanswered": {
+      "source": "See what the corpus couldn't answer",
+      "text": "Lihat apa yang tidak dapat dijawab oleh korpus"
+    },
+    "sourceLibrary.emphasis": {
+      "source": "explore.",
+      "text": "dijelajahi."
+    },
+    "sourceLibrary.heading": {
+      "source": "Sources to {emphasis}",
+      "text": "Sumber untuk {emphasis}"
+    },
+    "sourceLibrary.paperRecords.one": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "Karya · {count} catatan yang diamati · teks makalah belum dibaca"
+    },
+    "sourceLibrary.feedItems.one": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "Feed tersimpan · {count} item feed"
+    },
+    "sourceLibrary.paperMatches.one": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "{count} karya yang cocok · {total} catatan awal. Filter penulis, tahun, dan DOI berlaku untuk bibliografi ini."
+    },
+    "sourceLibrary.documentsMatched.one": {
+      "source": "{count} documents match this view.",
+      "text": "{count} dokumen cocok dengan tampilan ini."
+    },
+    "sourceLibrary.paperRecords.other": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "Karya · {count} catatan yang diamati · teks makalah belum dibaca"
+    },
+    "sourceLibrary.feedItems.other": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "Feed tersimpan · {count} item feed"
+    },
+    "sourceLibrary.paperMatches.other": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "{count} karya yang cocok · {total} catatan awal. Filter penulis, tahun, dan DOI berlaku untuk bibliografi ini."
+    },
+    "sourceLibrary.documentsMatched.other": {
+      "source": "{count} documents match this view.",
+      "text": "{count} dokumen cocok dengan tampilan ini."
+    },
+    "sourceLibrary.feedItemsUnavailable": {
+      "source": "Retained feeds · item count unavailable",
+      "text": "Feed tersimpan · jumlah item tidak tersedia"
+    },
+    "sourceLibrary.morePapers.one": {
+      "source": "Show {count} more paper references",
+      "text": "Tampilkan {count} referensi makalah lagi"
+    },
+    "sourceLibrary.moreCited.one": {
+      "source": "Show {count} more cited documents",
+      "text": "Tampilkan {count} dokumen yang dikutip lagi"
+    },
+    "sourceLibrary.moreFeeds.one": {
+      "source": "Show {count} more retained feeds",
+      "text": "Tampilkan {count} feed tersimpan lagi"
+    },
+    "sourceLibrary.morePapers.other": {
+      "source": "Show {count} more paper references",
+      "text": "Tampilkan {count} referensi makalah lagi"
+    },
+    "sourceLibrary.moreCited.other": {
+      "source": "Show {count} more cited documents",
+      "text": "Tampilkan {count} dokumen yang dikutip lagi"
+    },
+    "sourceLibrary.moreFeeds.other": {
+      "source": "Show {count} more retained feeds",
+      "text": "Tampilkan {count} feed tersimpan lagi"
+    },
+    "sourceLibrary.externalIndexes": {
+      "source": "Explore broader scholarly indexes: {openAlex} · {doaj}. These external links open their indexes; Keryx makes no background queries to them.",
+      "text": "Jelajahi indeks ilmiah yang lebih luas: {openAlex} · {doaj}. Tautan eksternal ini membuka indeks tersebut; Keryx tidak mengirim kueri latar belakang ke sana."
+    },
+    "sourceLibrary.feedEmpty": {
+      "source": "No public feed snapshots are retained yet. You can still {ask} with a public source URL.",
+      "text": "Belum ada snapshot feed publik yang disimpan. Anda tetap dapat {ask} dengan URL sumber publik."
+    }
+  }
+}
