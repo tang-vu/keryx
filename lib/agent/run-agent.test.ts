@@ -246,7 +246,7 @@ function buy(c: { id: string; name: string; price: number }, ev = 0.8): Decision
 
 interface EngineOverrides {
   /** Explicit synthetic independent observation; never inferred from a question. */
-  reviewedStatementLanguage?: "en" | "vi" | "pt" | "es" | "fr" | "UNKNOWN";
+  reviewedStatementLanguage?: "en" | "vi" | "pt" | "es" | "fr" | "zh-Hans" | "UNKNOWN";
   decide?: (input: DecideInput) => Decision[];
   sufficiency?: (input: SufficiencyInput) => SufficiencyResult;
   reevaluate?: (input: ReevaluateInput) => {
@@ -508,9 +508,10 @@ const citationPool = (budget: number) => budget * config.citationPoolRatio;
 describe("ordinary recorded answer language", () => {
   const quote = "Original café evidence preserves its qualification.";
   const sentences = { en: "The evidence retains a qualification.", vi: "Bằng chứng giữ lại một điều kiện.",
-    pt: "A evidência conserva uma qualificação.", es: "La evidencia conserva una salvedad.", fr: "Les preuves conservent une réserve." } as const;
-  async function languageRun(options: { language?: "en" | "vi" | "pt" | "es" | "fr";
-    observation?: "en" | "vi" | "pt" | "es" | "fr" | "UNKNOWN"; originalQuestion?: string;
+    pt: "A evidência conserva uma qualificação.", es: "La evidencia conserva una salvedad.", fr: "Les preuves conservent une réserve.",
+    "zh-Hans": "证据保留了原始材料中的限定条件。" } as const;
+  async function languageRun(options: { language?: "en" | "vi" | "pt" | "es" | "fr" | "zh-Hans";
+    observation?: "en" | "vi" | "pt" | "es" | "fr" | "zh-Hans" | "UNKNOWN"; originalQuestion?: string;
     private?: boolean; package?: boolean; teaching?: boolean; pending?: boolean; fundingFails?: boolean } = {}) {
     const statement = sentences[options.observation === "UNKNOWN" ? "en" : options.observation ?? options.language ?? "vi"];
     const item: SourceItem = { id: "language-item", sourceId: "language-source", title: "Synthetic original",
@@ -548,7 +549,7 @@ describe("ordinary recorded answer language", () => {
     }
     return { run, gateway, statement, effects };
   }
-  it.each(["en", "vi", "pt", "es", "fr"] as const)("records %s only from reviewed delivered statements and renderer, across final consumers", async language => {
+  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("records %s only from reviewed delivered statements and renderer, across final consumers", async language => {
     const { run, gateway, statement, effects } = await languageRun({ language, observation: language });
     expect(recordedAnswerLanguage(run)).toBe(language);
     expect(run.answer).toContain(statement);
@@ -595,6 +596,33 @@ describe("ordinary recorded answer language", () => {
     const { run } = await languageRun({ language: "vi", observation: "fr", originalQuestion: "Répondez en français. Explain the qualification." });
     expect(recordedAnswerLanguage(run)).toBe("fr");
     expect(run.answer).toContain(sentences.fr);
+  });
+  it("honors simplified Chinese original-question intent before a different trusted bot preference", async () => {
+    const { run } = await languageRun({ language: "fr", observation: "zh-Hans", originalQuestion: "请用简体中文回答。Explain the qualification." });
+    expect(recordedAnswerLanguage(run)).toBe("zh-Hans");
+    expect(run.answer).toContain(sentences["zh-Hans"]);
+    expect(run.evidence?.map(row => row.quote)).toEqual([quote]);
+  });
+  it.each([{ private: true }, { package: true }, { teaching: true }, { pending: true }, { fundingFails: true }])(
+    "keeps simplified Chinese special/operational output without whole-answer language proof %j", async options => {
+      const { run } = await languageRun({ language: "zh-Hans", observation: "zh-Hans", originalQuestion: "请用简体中文回答。Explain the qualification.", ...options });
+      expect(recordedAnswerLanguage(run)).toBeUndefined();
+      expect(run.trace.at(-1)?.detail ?? {}).not.toHaveProperty("answerLanguage");
+      if (options.private || options.package || options.teaching) expect(run.answer).not.toContain("### 研究目标");
+      if (options.pending) expect(run.answer).toContain("Before any new paid attempt");
+      if (options.fundingFails) expect(run.answer).toContain("Funding readiness is unknown");
+    });
+  it.each([undefined, "en", "fr", "UNKNOWN"] as const)("withholds %s Chinese-mismatched sentences with original evidence and allocations preserved", async observation => {
+    const observed = await languageRun({ language: "zh-Hans", observation: "zh-Hans" });
+    const rejected = await languageRun({ language: "zh-Hans", observation });
+    expect(rejected.run.answer).not.toContain(rejected.statement);
+    expect(recordedAnswerLanguage(rejected.run)).toBe("zh-Hans");
+    expect(rejected.run.trace.at(-1)?.detail).toMatchObject({ answerLanguage: { method: "deterministic-renderer" } });
+    expect(rejected.run.evidence).toEqual(observed.run.evidence);
+    expect(rejected.run.citations.map(row => [row.marker, row.sourceId, row.weight, row.reward]))
+      .toEqual(observed.run.citations.map(row => [row.marker, row.sourceId, row.weight, row.reward]));
+    expect(rejected.gateway.citationCalls).toEqual(observed.gateway.citationCalls);
+    expect(rejected.run.totalSpent).toBe(observed.run.totalSpent);
   });
   it.each([{ private: true }, { package: true }, { teaching: true }])("keeps French outside the retained original renderer/provenance opt-in %j", async options => {
     const { run } = await languageRun({ language: "fr", observation: "fr", originalQuestion: "Répondez en français. Explain the qualification.", ...options });

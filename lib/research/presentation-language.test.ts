@@ -4,7 +4,8 @@ import { recordedReportPresentation } from "./result-presentation";
 import { researchPresentationCatalogues, researchPresentationMessages } from "./presentation-messages";
 
 const cases = [["en", "Answer in English. Explain x402."], ["vi", "Trả lời bằng tiếng Việt. Giải thích x402."],
-  ["pt", "Responda em português. Explique x402."], ["es", "En español, explique x402."], ["fr", "Répondez en français. Expliquez x402."]] as const;
+  ["pt", "Responda em português. Explique x402."], ["es", "En español, explique x402."], ["fr", "Répondez en français. Expliquez x402."],
+  ["zh-Hans", "请用简体中文回答。解释 x402。"]] as const;
 describe("human presentation language authority", () => {
   it.each(cases)("%s question defaults to labels without inventing actual answer language", (language, originalQuestion) => {
     expect(livePresentationLocale({ originalQuestion })).toEqual({ language, source: "question", answerLanguage: "UNKNOWN",
@@ -17,7 +18,7 @@ describe("human presentation language authority", () => {
       .toMatchObject({ language: "vi", source: "recorded-answer", agreement: "MATCHED" });
     expect(livePresentationLocale({ requestedLanguage: "es", recordedAnswerLanguage: "es" })).toMatchObject({ language: "es", agreement: "MATCHED" });
   });
-  it.each(["it", "zh-Hans", "de", "auto", "ES", "es-ES", {}, null])("unsupported requested labels %j do not enable a locale or claim model translation", requestedLanguage => {
+  it.each(["it", "zh", "zh-CN", "zh-Hant", "de", "auto", "ES", "es-ES", {}, null])("unsupported requested labels %j do not enable a locale or claim model translation", requestedLanguage => {
     expect(presentationLanguage(requestedLanguage)).toBeUndefined();
     expect(livePresentationLocale({ requestedLanguage, originalQuestion: cases[1][1] }))
       .toEqual({ language: "en", source: "fallback", answerLanguage: "UNKNOWN", agreement: "UNKNOWN", unsupportedRequestedLanguage: true });

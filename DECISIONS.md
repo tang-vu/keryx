@@ -1,5 +1,22 @@
 # Keryx — Decision Log
 
+## Add Simplified Chinese with script-aware labels and observed ordinary delivery — 2026-10-29
+
+Extend the existing ordinary renderer and independent same-call statement review
+with canonical `zh-Hans`, then carry final-byte/query-bound provenance through the
+existing consumers. Explicit original-question intent or authenticated bot answer
+preferences can request it. Public API/MCP and client presentation controls retain
+their labels-only role. System/platform labels distinguish Hans from Hant; their
+locale aliases never become recorded answer evidence. Retained private, bounded
+and teaching producers keep their existing grammar and opt-in boundaries.
+
+Preserve original source text, English financial authority, spend/custody gates
+and integer allocation. Native answer attribution can change live weights; no
+economic equivalence or human translation approval is inferred. Use the existing
+bounded reviewer without a translation call, new allowance or retry. The
+[source and acceptance map](docs/engineering/native-chinese-answer-20261029.md)
+records supported surfaces and the separate CI, visual and release gates.
+
 ## Add French through observed ordinary answer delivery — 2026-10-29
 
 Extend the finite ordinary renderer, independent statement-language observation

@@ -153,10 +153,10 @@ describe("original-network dispatch resolution", () => {
 });
 
 describe("public dispatch recorded-language consumer", () => {
-  function recorded(): QueryRun {
+  function recorded(language = "vi"): QueryRun {
     const value = { ...run("recorded-public"), question: "Câu hỏi gốc “Original topic”?", answer: "Synthetic generated prose. “Original excerpt” [S1]" };
     return { ...value, trace: [{ phase: "done", ts: 0, message: "Synthetic terminal provenance", detail: {
-      answerLanguage: { format: "keryx-answer-language-v1", scope: "generated-prose", language: "vi",
+      answerLanguage: { format: "keryx-answer-language-v1", scope: "generated-prose", language,
         method: "deterministic-renderer", answerSha256: `0x${createHash("sha256").update(value.answer, "utf8").digest("hex")}` },
     } }] };
   }
@@ -171,19 +171,19 @@ describe("public dispatch recorded-language consumer", () => {
     return { metadata, question: jsonLd[0].mainEntity, answer: jsonLd[0].mainEntity.acceptedAnswer };
   }
 
-  it("passes exact final-byte provenance to the actual public head and Answer only", async () => {
-    const value = recorded(), before = JSON.stringify(value);
+  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"])("passes exact %s final-byte provenance to the actual public head and Answer only", async language => {
+    const value = recorded(language), before = JSON.stringify(value);
     const { metadata, question, answer } = await languageSurfaces(value);
-    expect(metadata.other?.["DC.language"]).toBe("vi");
+    expect(metadata.other?.["DC.language"]).toBe(language);
     expect(metadata.alternates).toEqual({ canonical: `/dispatch/${value.id}`, languages: {}, types: {} });
     expect(question.inLanguage).toBeUndefined();
     expect(question.name).toBe(value.question);
-    expect(answer.inLanguage).toBe("vi");
+    expect(answer.inLanguage).toBe(language);
     expect(answer.text).toContain("Original excerpt");
     expect(JSON.stringify(value)).toBe(before);
   });
 
-  it.each(["missing", "duplicate", "conflicting", "final-byte-mismatch", "future", "extra-field", "malformed"])(
+  it.each(["missing", "duplicate", "conflicting", "final-byte-mismatch", "future", "Chinese locale alias", "Traditional Chinese", "extra-field", "malformed"])(
     "refuses %s evidence in the actual head and structured answer", async kind => {
       const value = recorded();
       const detail = value.trace[0].detail as { answerLanguage: Record<string, unknown> | null };
@@ -192,7 +192,9 @@ describe("public dispatch recorded-language consumer", () => {
       if (kind === "duplicate") value.trace = [...value.trace, ...value.trace];
       if (kind === "conflicting") value.trace.push({ ...value.trace[0], detail: { answerLanguage: { ...packet, language: "en" } } });
       if (kind === "final-byte-mismatch") value.answer += " ";
-      if (kind === "future") packet.language = "zh-Hans";
+      if (kind === "future") packet.language = "ja";
+      if (kind === "Chinese locale alias") packet.language = "zh-CN";
+      if (kind === "Traditional Chinese") packet.language = "zh-Hant";
       if (kind === "extra-field") packet.viewerLanguage = "vi";
       if (kind === "malformed") detail.answerLanguage = null;
       const before = JSON.stringify(value);

@@ -19,7 +19,21 @@ const frenchRecovery: Readonly<Record<string, string>> = {
   cancelled: "La lecture a été annulée ou sa durée autorisée est écoulée. Conservez le résultat existant et examinez le périmètre avant de demander une nouvelle recherche.",
 };
 
-function recovery(code: string, vi: boolean, french = false): string {
+const chineseRecovery: Readonly<Record<string, string>> = {
+  "publisher-verification-required": "出版方要求浏览器验证，因此未能读取文档。请提供同一文档、同一版本且可访问的公开原文；验证页面并非有关文章内容的证据。",
+  "pdf-extraction-unavailable": "PDF 文本提取失败。请检查 PDF 是否含可选择的文本，还是仅有图片；获取同一文档和版本的文本层 PDF 或出版方文本。本次运行未执行 OCR。",
+  "html-extraction-unavailable": "HTML 页面文本提取失败。请查找同一出版方提供的同一文档和版本的文本或 PDF；预览不能替代原文。",
+  "article-byte-limit": "文档超出读取大小限制。请选择具体章节，或同一出版方、同一版本的较小文本或 PDF；尚未读完整份文档。",
+  "document-identity-changed": "重定向未保留所请求文档的身份。请提供确切版本的链接；不要用其他版本填补此证据缺口。",
+  "empty-or-duplicate-body": "内容为空或与已读内容重复，因此未加入。请检查原文；如需佐证，请查找独立来源。不同 URL 不能证明证据独立。",
+  "web-operation-limit": "已达到读取次数或时间限制。请先检查范围与费用，再将缺少的原文列为另一项研究的优先目标。",
+  "invalid-url": "文档 URL 无效。请提供确切原文的公开 HTTPS URL。",
+  cancelled: "读取已取消或超过允许时间。请保留现有结果，并在提出新研究请求前检查范围。",
+};
+
+function recovery(code: string, vi: boolean, french = false, chinese = false): string {
+  if (chinese) return Object.hasOwn(chineseRecovery, code) ? chineseRecovery[code]
+    : "未能获取原文。请检查出版方 URL 的可访问性，并提供同一文档可读取的原文；此失败不能证明文档不存在。";
   if (french) return Object.hasOwn(frenchRecovery, code) ? frenchRecovery[code]
     : "Le texte original n'était pas disponible. Vérifiez l'URL de l'éditeur et fournissez un original accessible du même document ; cet échec ne prouve pas que le document n'existe pas.";
   switch (code) {
@@ -57,16 +71,16 @@ function recovery(code: string, vi: boolean, french = false): string {
 }
 
 /** Bounded, deterministic suggestions only. Calling this helper starts no read or purchase. */
-export function publicReadRecoveryLines(outcomes: PublicReadOutcome[], vi: boolean, french = false): string[] {
+export function publicReadRecoveryLines(outcomes: PublicReadOutcome[], vi: boolean, french = false, chinese = false): string[] {
   const unique = new Map<string, PublicReadOutcome>();
   for (const outcome of outcomes) {
-    const name = reportLabel(outcome.name) || (french ? "Source publique" : vi ? "Nguồn công khai" : "Public source");
+    const name = reportLabel(outcome.name) || (chinese ? "公开来源" : french ? "Source publique" : vi ? "Nguồn công khai" : "Public source");
     const key = `${name}\0${outcome.code}`;
     if (!unique.has(key)) unique.set(key, { name, code: outcome.code });
   }
   const entries = [...unique.values()];
-  const rows = entries.slice(0, 8).map(outcome => `- “${outcome.name}”: ${recovery(outcome.code, vi, french)}`);
-  if (entries.length > 8) rows.push(french ? `- ${entries.length - 8} autres échecs de lecture sont consignés dans la trace de cette recherche.` : vi
+  const rows = entries.slice(0, 8).map(outcome => `- “${outcome.name}”: ${recovery(outcome.code, vi, french, chinese)}`);
+  if (entries.length > 8) rows.push(chinese ? `- 此任务的跟踪记录中另有 ${entries.length - 8} 次读取失败。` : french ? `- ${entries.length - 8} autres échecs de lecture sont consignés dans la trace de cette recherche.` : vi
     ? `- Còn ${entries.length - 8} lỗi đọc khác trong nhật ký lượt này.`
     : `- ${entries.length - 8} additional read failures are recorded in this run's trace.`);
   return rows;

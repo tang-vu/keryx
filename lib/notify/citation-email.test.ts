@@ -61,7 +61,7 @@ describe("shouldSendEmail (rate cap)", () => {
 });
 
 describe("buildCitationEmailContent", () => {
-  it.each(["en", "vi", "pt", "es", "fr"] as const)("localizes %s navigation while retaining original financial facts", async language => {
+  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("localizes %s navigation while retaining original financial facts", async language => {
     const { citationEmailMessages } = await import("./citation-messages");
     const content = buildCitationEmailContent(payload(), { base: "https://keryx.cc", unsubToken: "tok123", language });
     expect(content.text).toContain(citationEmailMessages[language].trace);

@@ -8,6 +8,7 @@ import type { dispatchMetadataCopy } from "./report-metadata";
 // catalogue or human approval of financial/trust terminology. All financial,
 // confidence, historical-network and original-bibliography wording stays English.
 const ordinaryLabels = {
+  "zh-Hans": { title: "{question} — Keryx 研究报告", one: "个引用来源", other: "个引用来源", serial: "2026 系列 — 第 {serial} 期" },
   vi: { title: "{question} — Báo cáo Keryx", one: "nguồn được trích dẫn", other: "nguồn được trích dẫn",
     serial: "Loạt 2026 — Số {serial}" },
   pt: { title: "{question} — Relatório Keryx", one: "fonte citada", other: "fontes citadas",
@@ -47,7 +48,7 @@ function previewCopy(language: PresentationLanguage) {
   return createMessages("en", catalogue);
 }
 
-const copies = { en: previewCopy("en"), vi: previewCopy("vi"), pt: previewCopy("pt"), es: previewCopy("es"), fr: previewCopy("fr") };
+const copies = { en: previewCopy("en"), vi: previewCopy("vi"), pt: previewCopy("pt"), es: previewCopy("es"), fr: previewCopy("fr"), "zh-Hans": previewCopy("zh-Hans") };
 
 /** Call only after public visibility admission. Reads this retained answer/trace,
  * never a question, request, viewer preference, provider, store or receipt.

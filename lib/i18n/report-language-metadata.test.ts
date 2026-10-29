@@ -76,7 +76,7 @@ function retainedTerminal(packet: unknown): QueryRun["trace"][number] {
   return { phase: "done", ts: 0, message: "Synthetic recorded terminal packet", detail: { answerLanguage: packet } };
 }
 function retainedMetadataRun(language: PresentationLanguage, method: RecordedMethod = "deterministic-renderer") {
-  const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada.", fr: "Preuves enregistrées." } satisfies Record<PresentationLanguage, string>;
+  const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada.", fr: "Preuves enregistrées.", "zh-Hans": "已记录的证据。" } satisfies Record<PresentationLanguage, string>;
   const value = run("Literal original 中文 question {question}", `${prose[language]} “Original 1 source cited {excerpt}” [S1]`);
   value.trace = [retainedTerminal(retainedLanguagePacket(value.answer, language, method))];
   value.totalSpent = 0.123456; value.totalToCreators = 0.000001;
@@ -86,13 +86,14 @@ function retainedMetadataRun(language: PresentationLanguage, method: RecordedMet
   return value;
 }
 const metadataExpected = {
+  "zh-Hans": { title: "Keryx 研究报告", source: "个引用来源" },
   en: { title: "Keryx Dispatch", source: "source cited" }, vi: { title: "Báo cáo Keryx", source: "nguồn được trích dẫn" },
   pt: { title: "Relatório Keryx", source: "fonte citada" }, es: { title: "Informe Keryx", source: "fuente citada" },
   fr: { title: "Rapport Keryx", source: "source citée" },
 };
 
 describe("actual metadata caller selects bounded recorded-language presentation", () => {
-  const matrix = (["en", "vi", "pt", "es", "fr"] as const).flatMap(language =>
+  const matrix = (["en", "vi", "pt", "es", "fr", "zh-Hans"] as const).flatMap(language =>
     (["deterministic-renderer", "reviewed-statements-and-renderer"] as const).flatMap(method =>
       [false, true].map(historical => ({ language, method, historical }))));
   it.each(matrix)("renders $language / $method / historical=$historical without altering originals", async ({ language, method, historical }) => {
@@ -125,7 +126,8 @@ describe("actual metadata caller selects bounded recorded-language presentation"
     ["duplicate", value => ({ ...value, trace: [...value.trace, value.trace[0]] })],
     ["malformed", value => ({ ...value, trace: [retainedTerminal({ ...retainedLanguagePacket(value.answer, "vi"), method: "requested-language" })] })],
     ["request-only", value => ({ ...value, trace: [{ phase: "done", ts: 0, message: "Answer in Portuguese", detail: { requestedLanguage: "pt", language: "vi" } }] })],
-    ["unsupported language", value => ({ ...value, trace: [retainedTerminal(retainedLanguagePacket(value.answer, "zh-Hans"))] })],
+    ["unsupported language alias", value => ({ ...value, trace: [retainedTerminal(retainedLanguagePacket(value.answer, "zh-CN"))] })],
+    ["unsupported traditional script", value => ({ ...value, trace: [retainedTerminal(retainedLanguagePacket(value.answer, "zh-Hant"))] })],
     ["final-byte mismatch", value => ({ ...value, answer: `${value.answer}\nFinal bytes changed.` })],
   ];
   it.each(refused)("keeps %s provenance und with English metadata and one original canonical", async (_reason, change) => {

@@ -4,6 +4,11 @@ import type { CitedStatement } from "../agent/cited-statements";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
 
 const copy = {
+  "zh-Hans": { title: "API 集成说明", notice: "以下约束来自已检查的摘录。是否完整适用于该 API、具体版本和平台，以及来源是否正确，仍未核实。",
+    constraint: "约束与条件", excerpt: "原文摘录", noSummary: "没有经过检查的摘要；请查看原文摘录", scope: "阅读范围",
+    section: "标题章节", bounded: "有读取边界的原文", clipped: "不完整的原文", missing: "缺少的证据", target: "所请求的主题（未核实）",
+    noGaps: "每项请求主题都有保留的摘录；这并不证明已完整覆盖。", low: "已记录的评估仍低于证据阈值。",
+    next: "实现检查 — 建议", check: "实现前，请用你的具体 API 版本和平台测试这些约束。先补齐缺少的证据；这项检查属于建议，并非来源已证明的结论。" },
   fr: { title: "Note d'intégration API", notice: "Les contraintes ci-dessous proviennent d'extraits vérifiés. Leur applicabilité complète à l'API, à sa version et à la plateforme, ainsi que l'exactitude des sources, restent non vérifiées.",
     constraint: "Contrainte et conditions", excerpt: "Extrait original", noSummary: "Aucun résumé vérifié ; examinez l'extrait original", scope: "Périmètre de lecture",
     section: "section de titre", bounded: "original limité", clipped: "original partiel", missing: "Preuves manquantes", target: "Sujet demandé (non vérifié)",

@@ -3,13 +3,14 @@ import { botResearchVietnamese } from "../../locales/vi/bot-research";
 import { botResearchPortuguese } from "../../locales/pt-BR/bot-research";
 import { botResearchSpanish } from "../../locales/es/bot-research";
 import { botResearchFrench } from "../../locales/fr/bot-research";
+import { botResearchChinese } from "../../locales/zh-Hans/bot-research";
 import { answerPresentation } from "../research/answer-presentation";
 import { researchAdmissionError } from "../research/availability-contract";
 import type { PresentationLanguage } from "../research/presentation-language";
 
 export const botResearchCatalogues = Object.freeze({
   en: botResearchEnglish, vi: botResearchVietnamese,
-  pt: botResearchPortuguese, es: botResearchSpanish, fr: botResearchFrench,
+  pt: botResearchPortuguese, es: botResearchSpanish, fr: botResearchFrench, "zh-Hans": botResearchChinese,
 });
 export type BotResearchMessageKey = keyof typeof botResearchEnglish;
 type Parameters<Text extends string> = Text extends `${string}{${infer Name}}${infer Tail}`

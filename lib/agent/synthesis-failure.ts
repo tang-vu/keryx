@@ -2,8 +2,18 @@ import type { SynthesisFailureStage } from "../llm/reasoning-engine";
 
 /** Describe the observed application stage, never infer a supplier error's cause.
  * Reading is retained work, not proof of qualified evidence or a useful answer. */
-export function synthesisFailureDetail(stage: SynthesisFailureStage | undefined, reads: number, vi: boolean, french = false): string {
+export function synthesisFailureDetail(stage: SynthesisFailureStage | undefined, reads: number, vi: boolean, french = false, chinese = false): string {
   if (!Number.isSafeInteger(reads) || reads < 1) return "";
+  if (chinese) {
+    const reasons = {
+      input: "未能在限制内准备好供综合和检查的摘录",
+      generation: "书面综合不可用或输出未通过验证",
+      review: "综合检查不可用或检查结果未通过验证",
+      synthesis: "综合未完成；失败的内部步骤未知",
+    };
+    if (!stage || !Object.hasOwn(reasons, stage)) return "";
+    return `已读取 ${reads} 个来源，但${reasons[stage]}。这不能证明文档缺乏证据。Retain this job's original reads and receipts for delivery review before any new paid request.`;
+  }
   if (french) {
     const reasons = {
       input: "les extraits n'ont pas pu être préparés dans les limites prévues pour la synthèse et sa vérification",

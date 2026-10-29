@@ -30,6 +30,27 @@ type Catalogue = Readonly<Record<DesktopNeutralKey, string>>;
 
 export const desktopNeutralCatalogues = Object.freeze({
   en: english,
+  "zh-Hans": Object.freeze({
+    "nativeDesktop.workspace.none": "没有打开的工作区",
+    "nativeDesktop.workspace.open": "打开工作区",
+    "nativeDesktop.workspace.new": "新建工作区",
+    "nativeDesktop.workspace.create": "创建工作区 ",
+    "nativeDesktop.workspace.openExisting": "打开现有工作区",
+    "nativeDesktop.workspace.refresh": "↻ 刷新",
+    "nativeDesktop.workspace.refreshTasks": "刷新任务",
+    "nativeDesktop.task.new": "＋ 新建研究任务",
+    "nativeDesktop.task.section": "02 / 研究任务 ",
+    "nativeDesktop.breadcrumb.task": "任务详情",
+    "nativeDesktop.breadcrumb.desk": "研究工作台",
+    "nativeDesktop.task.title": "研究任务",
+    "nativeDesktop.desk.title": "研究工作台",
+    "nativeDesktop.task.question": "研究问题",
+    "nativeDesktop.task.questionPlaceholder": "你想研究什么？",
+    "nativeDesktop.task.depth": "研究深度",
+    "nativeDesktop.reference.eyebrow": "本地资料库",
+    "nativeDesktop.reference.title": "参考资料副本",
+    "nativeDesktop.reference.import": "+ 导入文件",
+  }),
   fr: Object.freeze({
     "nativeDesktop.workspace.none": "Aucun espace de travail ouvert",
     "nativeDesktop.workspace.open": "Ouvrir un espace de travail",

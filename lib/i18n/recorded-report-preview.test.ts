@@ -25,8 +25,9 @@ vi.mock("next/og", () => ({ ImageResponse: class {
 } }));
 import DispatchOgImage, { alt, contentType, dynamic, revalidate, size } from "../../app/dispatch/[id]/opengraph-image";
 
-const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada.", fr: "Preuves enregistrées." };
+const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada.", fr: "Preuves enregistrées.", "zh-Hans": "已记录的证据。" };
 const expected = {
+  "zh-Hans": { title: "Keryx 研究报告", one: "个引用来源", other: "个引用来源", imageOne: "个引用来源", serial: "2026 系列 — 第 00001 期" },
   en: { title: "Keryx Dispatch", one: "source cited", other: "sources cited", imageOne: "sources cited", serial: "Series 2026 — No. 00001" },
   vi: { title: "Báo cáo Keryx", one: "nguồn được trích dẫn", other: "nguồn được trích dẫn", imageOne: "nguồn được trích dẫn", serial: "Loạt 2026 — Số 00001" },
   pt: { title: "Relatório Keryx", one: "fonte citada", other: "fontes citadas", imageOne: "fonte citada", serial: "Série 2026 — Nº 00001" },
@@ -48,7 +49,7 @@ function retained(language: PresentationLanguage = "vi", method: Method = "deter
     subClaims: [], decisions: [], citations: [{ marker: "S1", sourceId: "literal-source", sourceName: "Original source 中文",
       weight: 1, reward: 0.000001, rationale: "Synthetic original citation" }], paymentMode: "offline" };
 }
-const matrix = (["en", "vi", "pt", "es", "fr"] as const).flatMap(language =>
+const matrix = (["en", "vi", "pt", "es", "fr", "zh-Hans"] as const).flatMap(language =>
   (["deterministic-renderer", "reviewed-statements-and-renderer"] as const).map(method => ({ language, method })));
 const params = { params: Promise.resolve({ id: "preview_original_277" }) };
 function admit(value: QueryRun, archive: ResolvedDispatch["archive"] = null) {
@@ -100,7 +101,8 @@ describe("finite retained-report presentation", () => {
     ["conflicting", value => ({ ...value, trace: [...value.trace, terminal(packet(value.answer, "es"))] })],
     ["duplicate", value => ({ ...value, trace: [...value.trace, value.trace[0]] })],
     ["malformed", value => ({ ...value, trace: [terminal({ ...packet(value.answer, "vi"), answerSha256: "broken" })] })],
-    ["unsupported language", value => ({ ...value, trace: [terminal(packet(value.answer, "zh-Hans"))] })],
+    ["unsupported language alias", value => ({ ...value, trace: [terminal(packet(value.answer, "zh-CN"))] })],
+    ["unsupported traditional script", value => ({ ...value, trace: [terminal(packet(value.answer, "zh-Hant"))] })],
     ["requested alias", value => ({ ...value, trace: [terminal(packet(value.answer, "pt-BR"))] })],
     ["request-only", value => ({ ...value, trace: [{ phase: "done", ts: 0, message: "Answer in Vietnamese", detail:
       { requestedLanguage: "vi", language: "vi", answerLocale: "vi" } }] })],

@@ -42,6 +42,17 @@ const frenchAnswer = finalizeGroundedAnswer({ question: "Répondez en français.
   presentation: answerPresentation("Répondez en français. Write three short bullets explaining the types and default.") });
 const frenchPacket = finalizeAnswerLanguage({ answer: frenchAnswer, rendererLanguage: "fr", statements: frenchStatements, proposals: frenchProposals });
 assert(frenchPacket?.language === "fr" && frenchPacket.method === "reviewed-statements-and-renderer");
+const chineseSentences = ["Submit 将表单数据发送到服务器。", "未设置 type 时，默认行为是 submit。",
+  "Reset 将控件恢复为初始值。", "Button 本身没有默认行为。"];
+const chineseProposals = applyEvidenceReview(proposals.map((proposal, index) => ({ ...proposal, statement: chineseSentences[index] })),
+  { reviews: proposals.map((_proposal, index) => ({ index, support: 0.9, statementSupport: 0.9, statementLanguage: "zh-Hans" })) },
+  new Set(proposals.map((_proposal, index) => index)), true);
+const chineseStatements = selectCitedStatements(languageReviewedProposals(chineseProposals, "zh-Hans"), ledger);
+const chineseQuestion = "请用简体中文回答。Write three short bullets explaining the types and default.";
+const chineseAnswer = finalizeGroundedAnswer({ question: chineseQuestion, answer: "Withheld draft [S1]", ledger,
+  statements: chineseStatements, presentation: answerPresentation(chineseQuestion) });
+const chinesePacket = finalizeAnswerLanguage({ answer: chineseAnswer, rendererLanguage: "zh-Hans", statements: chineseStatements, proposals: chineseProposals });
+assert(chinesePacket?.language === "zh-Hans" && chinesePacket.method === "reviewed-statements-and-renderer");
 const chunks = path.resolve(process.env.NEXT_DIST_DIR ?? ".next", "static/chunks");
 const css = readdirSync(chunks).filter(file => file.endsWith(".css")).map(file => readFileSync(path.join(chunks, file), "utf8")).join("\n");
 assert(css.includes(".list-disc"), "Build current production CSS before this acceptance check");
@@ -53,7 +64,9 @@ const scenarios = [{ name: "synthetic", answer, sentences, quotes, citations: 3,
   { name: "retained-mdn", ...replay, pairs: replay.statements, citations: 5, language: undefined,
     sourceId: "retained-mdn", sourceName: "mozilla.org" },
   { name: "synthetic-fr-reviewed", answer: frenchAnswer, sentences: frenchSentences, quotes, citations: 3, language: frenchPacket.language,
-    pairs: frenchStatements.map(row => ({ text: row.text, quote: row.quote })), sourceId: "fixture", sourceName: "Synthetic source" }];
+    pairs: frenchStatements.map(row => ({ text: row.text, quote: row.quote })), sourceId: "fixture", sourceName: "Synthetic source" },
+  { name: "synthetic-zh-reviewed", answer: chineseAnswer, sentences: chineseSentences, quotes, citations: 3, language: chinesePacket.language,
+    pairs: chineseStatements.map(row => ({ text: row.text, quote: row.quote })), sourceId: "fixture", sourceName: "Synthetic source" }];
 const results = [];
 const browser = await chromium.launch({ headless: true });
 try {
@@ -97,12 +110,12 @@ createRoot(document.getElementById('root')).render(<AnswerMarkdown text={${JSON.
     assert(firstText.includes(scenario.sentences[0]) && firstText.includes(scenario.quotes[0]));
     if (scenario.name === "retained-mdn") assert(firstText.includes(scenario.sentences[4]));
     else assert(firstText.includes(scenario.sentences[1]));
-    if (scenario.language === "fr") {
-      assert.equal(await page.locator('main > div[lang="fr"]').count(), 1);
+    if (scenario.language === "fr" || scenario.language === "zh-Hans") {
+      assert.equal(await page.locator(`main > div[lang="${scenario.language}"]`).count(), 1);
       assert.equal(await page.locator('main span[lang="und"]').count(), 3);
       const originals = await page.locator('main span[lang="und"]').allTextContents();
       assert.deepEqual(originals, quotes.map(quote => `“${quote}”`));
-      assert((await page.locator("main").innerText()).includes("Texte de la source"));
+      assert((await page.locator("main").innerText()).includes(scenario.language === "fr" ? "Texte de la source" : "来源原文"));
     }
     assert.deepEqual(errors, []);
     assert.deepEqual(externalRequests, []);

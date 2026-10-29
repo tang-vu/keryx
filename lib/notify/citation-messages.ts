@@ -4,6 +4,16 @@ import type { PresentationLanguage } from "../research/presentation-language";
  * Non-English copy is unreviewed; #273 critical financial/legal copy keeps its existing
  * English authority and human-review gate. No UI locale or trust gate is enabled here. */
 export const citationEmailUnreviewedDraftMessages = {
+  "zh-Hans": {
+    subject: 'Keryx cited "{sourceName}" — {amount} USDC settled to you',
+    textBody: 'Your source "{sourceName}" was just cited by the Keryx agent and paid {amount} USDC ({weightPct} contribution weight), settled on {network}.',
+    textRate: "You get at most one of these per source per hour — every payout, including the ones between emails, is on your earnings page.",
+    htmlTitle: "Keryx · citation settled",
+    htmlHeading: "{sourceName} was cited — {amount} USDC is yours",
+    htmlBody: "The Keryx agent relied on your work ({weightPct} contribution weight) and settled {amount} USDC to your wallet on {network}.",
+    htmlRate: "At most one alert per source per hour — every payout is on your earnings page.",
+    article: "文章", trace: "完整研究跟踪记录", earnings: "你的收入页面", stop: "停止这些通知", traceLink: "查看完整研究跟踪记录", earningsLink: "你的收入页面", unsubscribe: "取消订阅",
+  },
   fr: {
     subject: 'Keryx cited "{sourceName}" — {amount} USDC settled to you',
     textBody: 'Your source "{sourceName}" was just cited by the Keryx agent and paid {amount} USDC ({weightPct} contribution weight), settled on {network}.',
@@ -66,6 +76,7 @@ const criticalEnglish = {
   htmlBody: citationEmailUnreviewedDraftMessages.en.htmlBody,
 } as const;
 export const citationEmailMessages = {
+  "zh-Hans": { ...citationEmailUnreviewedDraftMessages["zh-Hans"], ...criticalEnglish },
   en: citationEmailUnreviewedDraftMessages.en,
   vi: { ...citationEmailUnreviewedDraftMessages.vi, ...criticalEnglish },
   pt: { ...citationEmailUnreviewedDraftMessages.pt, ...criticalEnglish },

@@ -11,7 +11,7 @@ const answer = "Một kết quả có giới hạn.\nOriginal café\r\n“bytes�
 const applyEvidenceReview = (rows: ProposedEvidence[], response: unknown, indexes?: ReadonlySet<number>) => applyReview(rows, response, indexes, true);
 const run = (packet?: unknown) => ({ answer, trace: packet ? [{ phase: "done", ts: 0, message: "Done", detail: { answerLanguage: packet } }] : [] }) as QueryRun;
 
-it.each(["en", "vi", "pt", "es", "fr"] as const)("projects only the existing %s packet bound to query and final bytes", language => {
+it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("projects only the existing %s packet bound to query and final bytes", language => {
   const packet = finalizeAnswerLanguage({ answer, rendererLanguage: language, statements: [], proposals: [] })!;
   const original = { ...run(packet), id: "completed-original" }, before = JSON.stringify(original);
   const projected = projectCompletedAnswerLanguage(original)!;
@@ -53,7 +53,7 @@ it("rejects missing, duplicate, excluded, mixed and unsupported language observa
   expect(reviewedStatementLanguage(applyEvidenceReview([proposal], { reviews: [row] }, new Set())[0])).toBeUndefined();
 });
 
-it.each(["en", "vi", "pt", "es", "fr"] as const)("binds %s observation and deterministic renderer to exact final UTF-8 bytes", language => {
+it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("binds %s observation and deterministic renderer to exact final UTF-8 bytes", language => {
   const proposals = applyEvidenceReview([proposal], { reviews: [{ index: 0, support: 1, statementSupport: 1, statementLanguage: language }] });
   const statements = [{ claimIndex: 0, marker: "S1", quote: proposal.quote, text: proposal.statement! }];
   const packet = finalizeAnswerLanguage({ answer, rendererLanguage: language, statements, proposals })!;

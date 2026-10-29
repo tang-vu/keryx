@@ -291,7 +291,7 @@ function expectQuoteLanguages(html: string, quote: typeof quoteCases[number], la
 }
 
 describe("recorded generated-prose DOM caller chain", () => {
-  it.each(["en", "vi", "pt", "es"] as const)("transfers exact retained %s bytes through the page and both real callers", async language => {
+  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("transfers exact retained %s bytes through the page and both real callers", async language => {
     const value = retainedRun(language);
     expect(recordedAnswerLanguage(value)).toBe(language);
     const before = JSON.stringify(value);
@@ -309,7 +309,7 @@ describe("recorded generated-prose DOM caller chain", () => {
     expect(JSON.stringify(value)).toBe(before);
   });
 
-  it.each(quoteCases.flatMap(quote => (["vi", "pt", "es"] as const).map(language => ({ ...quote, language }))))(
+  it.each(quoteCases.flatMap(quote => (["vi", "pt", "es", "fr", "zh-Hans"] as const).map(language => ({ ...quote, language }))))(
     "keeps the full $name original undetermined in recorded $language through the real page chain", async quote => {
       const value = { ...retainedRun(quote.language), answer: quote.source,
         trace: [terminal(retainedPacket(quote.source, quote.language))] };
@@ -333,7 +333,9 @@ describe("recorded generated-prose DOM caller chain", () => {
     ["duplicate", value => ({ ...value, trace: [...value.trace, value.trace[0]] })],
     ["malformed digest", value => ({ ...value, trace: [terminal({ ...retainedPacket(value.answer), answerSha256: "not-a-digest" })] })],
     ["extra packet field", value => ({ ...value, trace: [terminal({ ...retainedPacket(value.answer), requestedLanguage: "vi" })] })],
-    ["unknown language", value => ({ ...value, trace: [terminal(retainedPacket(value.answer, "zh-Hans"))] })],
+    ["unknown language", value => ({ ...value, trace: [terminal(retainedPacket(value.answer, "ja"))] })],
+    ["Chinese locale alias", value => ({ ...value, trace: [terminal(retainedPacket(value.answer, "zh-CN"))] })],
+    ["Traditional Chinese", value => ({ ...value, trace: [terminal(retainedPacket(value.answer, "zh-Hant"))] })],
     ["future packet", value => ({ ...value, trace: [terminal({ ...retainedPacket(value.answer), format: "keryx-answer-language-v2" })] })],
     ["null packet", value => ({ ...value, trace: [terminal(null)] })],
     ["nonterminal packet", value => ({ ...value, trace: [{ ...terminal(retainedPacket(value.answer)), phase: "synthesize" }] })],
