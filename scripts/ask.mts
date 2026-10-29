@@ -54,7 +54,7 @@ for (let i = 0; i < argv.length; i++) {
   } else if (argv[i] === "--language") {
     if (languageOverride !== undefined) throw new Error("Duplicate presentation language option.");
     languageOverride = argv[++i];
-    if (!languageOverride || languageOverride.startsWith("-")) throw new Error("--language requires en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi, id or auto.");
+    if (!languageOverride || languageOverride.startsWith("-")) throw new Error("--language requires en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi, id, ru or auto.");
     clientPresentationLanguage(undefined, languageOverride);
   } else if (argv[i] === "--web") {
     allowExternalWeb = true;

@@ -23,7 +23,7 @@ export function ordinaryScopeReviewSchema(observeLanguage: boolean): string {
     '"questionScope":"direct"|"related"|"unrelated"|"unknown","support":number(0..1),' +
     '"statementSupport":number(0..1) when the row has a statement,' +
     '"statementScope":"preserved"|"generalized"|"unknown" when the row has a statement' +
-    (observeLanguage ? ',"statementLanguage":"en"|"vi"|"pt"|"es"|"fr"|"zh-Hans"|"de"|"ja"|"ko"|"hi"|"id"|"UNKNOWN" when the row has a statement' : "") + '}]}';
+    (observeLanguage ? ',"statementLanguage":"en"|"vi"|"pt"|"es"|"fr"|"zh-Hans"|"de"|"ja"|"ko"|"hi"|"id"|"ru"|"UNKNOWN" when the row has a statement' : "") + '}]}';
 }
 
 function data(value: unknown): Record<string, unknown> | undefined {

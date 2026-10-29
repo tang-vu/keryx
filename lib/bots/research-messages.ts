@@ -9,12 +9,13 @@ import { botResearchJapanese } from "../../locales/ja/bot-research";
 import { botResearchKorean } from "../../locales/ko/bot-research";
 import { botResearchHindi } from "../../locales/hi/bot-research";
 import { botResearchIndonesian } from "../../locales/id/bot-research";
+import { botResearchRussian } from "../../locales/ru/bot-research";
 import { answerPresentation } from "../research/answer-presentation";
 import { researchAdmissionError } from "../research/availability-contract";
 import type { PresentationLanguage } from "../research/presentation-language";
 
 export const botResearchCatalogues = Object.freeze({
-  de: botResearchGerman, ja: botResearchJapanese, ko: botResearchKorean, hi: botResearchHindi, id: botResearchIndonesian,
+  de: botResearchGerman, ja: botResearchJapanese, ko: botResearchKorean, hi: botResearchHindi, id: botResearchIndonesian, ru: botResearchRussian,
   en: botResearchEnglish, vi: botResearchVietnamese,
   pt: botResearchPortuguese, es: botResearchSpanish, fr: botResearchFrench, "zh-Hans": botResearchChinese,
 });

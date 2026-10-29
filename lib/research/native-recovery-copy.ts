@@ -5,11 +5,13 @@ import { researchRecoveryJapanese } from "../../locales/ja/research-recovery";
 import { researchRecoveryKorean } from "../../locales/ko/research-recovery";
 import { researchRecoveryHindi } from "../../locales/hi/research-recovery";
 import { researchRecoveryIndonesian } from "../../locales/id/research-recovery";
+import { researchRecoveryRussian } from "../../locales/ru/research-recovery";
 import { pdfReadingGerman } from "../../locales/de/pdf-reading";
 import { pdfReadingJapanese } from "../../locales/ja/pdf-reading";
 import { pdfReadingKorean } from "../../locales/ko/pdf-reading";
 import { pdfReadingHindi } from "../../locales/hi/pdf-reading";
 import { pdfReadingIndonesian } from "../../locales/id/pdf-reading";
+import { pdfReadingRussian } from "../../locales/ru/pdf-reading";
 
 export interface NativeRecoveryCopy {
   readonly publicSource: string;
@@ -30,10 +32,10 @@ export interface NativeRecoveryCopy {
 
 const copy: Readonly<Record<AdditionalAnswerLanguage, NativeRecoveryCopy>> = Object.freeze({
   de: researchRecoveryGerman, ja: researchRecoveryJapanese, ko: researchRecoveryKorean,
-  hi: researchRecoveryHindi, id: researchRecoveryIndonesian,
+  hi: researchRecoveryHindi, id: researchRecoveryIndonesian, ru: researchRecoveryRussian,
 });
 const pdf: Readonly<Record<AdditionalAnswerLanguage, typeof pdfReadingCopy>> = Object.freeze({
-  de: pdfReadingGerman, ja: pdfReadingJapanese, ko: pdfReadingKorean, hi: pdfReadingHindi, id: pdfReadingIndonesian,
+  de: pdfReadingGerman, ja: pdfReadingJapanese, ko: pdfReadingKorean, hi: pdfReadingHindi, id: pdfReadingIndonesian, ru: pdfReadingRussian,
 });
 
 /** Original request scope is checked by callers. Aliases are not output evidence. */

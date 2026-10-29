@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/bot-controls.ts",
-  "sourceSha256": "716e768af760e7befd03cb8ed65ae7ab65ebf416013827daacf7265d110e5af6",
+  "sourceSha256": "7155659116030623294e098398ea394db45df6f931b19c5ae09da9c9640dbb89",
   "entries": {
     "introduction": {
       "source": "Ask a question to receive an answer with citations.",
@@ -33,8 +33,8 @@
       "text": "Thông tin tài chính (tiếng Anh):"
     },
     "languageHelp": {
-      "source": "Use /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
-      "text": "Dùng /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|auto để chọn ngôn ngữ câu trả lời và trợ giúp. Yêu cầu ngôn ngữ rõ ràng trong câu hỏi gốc được ưu tiên; auto theo ngôn ngữ câu hỏi."
+      "source": "Use /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|ru|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
+      "text": "Dùng /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|ru|auto để chọn ngôn ngữ câu trả lời và trợ giúp. Yêu cầu ngôn ngữ rõ ràng trong câu hỏi gốc được ưu tiên; auto theo ngôn ngữ câu hỏi."
     },
     "languageCurrent": {
       "source": "Answer language preference: {preference}.",
@@ -49,8 +49,8 @@
       "text": "Không thể đọc hoặc xác nhận việc lưu lựa chọn ngôn ngữ. Không xác nhận đã lưu thành công."
     },
     "languageInvalid": {
-      "source": "Supported values: en, vi, pt (also pt-BR), es, fr, zh-Hans, de, ja, ko, hi, id, auto.",
-      "text": "Các giá trị hỗ trợ: en, vi, pt (hoặc pt-BR), es, fr, zh-Hans, de, ja, ko, hi, id, auto."
+      "source": "Supported values: en, vi, pt (also pt-BR), es, fr, zh-Hans, de, ja, ko, hi, id, ru, auto.",
+      "text": "Các giá trị hỗ trợ: en, vi, pt (hoặc pt-BR), es, fr, zh-Hans, de, ja, ko, hi, id, ru, auto."
     },
     "languagePrivate": {
       "source": "Set or inspect your language preference in a private chat with Keryx.",

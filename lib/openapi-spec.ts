@@ -434,7 +434,7 @@ export const openapiSpec = {
           },
           scholarly: { type: "boolean", default: false, description: "Opt into bounded Crossref/arXiv discovery; sends the public question to those providers." },
           mode: { type: "string", enum: ["quick", "deep"], default: "deep" },
-          language: { type: "string", enum: ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"], description: "Language of generated human-readable labels only. Defaults to the original question's finite selector; does not translate the answer, alter the question or establish its recorded language. Machine fields, receipts and canonical financial authority remain unchanged." },
+          language: { type: "string", enum: ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"], description: "Language of generated human-readable labels only. Defaults to the original question's finite selector; does not translate the answer, alter the question or establish its recorded language. Machine fields, receipts and canonical financial authority remain unchanged." },
           budget: {
             type: "number",
             description:
@@ -658,7 +658,7 @@ export const openapiSpec = {
         security: [{ WebSession: [] }],
         responses: { "200": { description: "Language and preference availability", content: { "application/json": { schema: {
           type: "object", additionalProperties: false, required: ["language", "available"], properties: {
-            language: { type: "string", enum: ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] }, available: { type: "boolean" },
+            language: { type: "string", enum: ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"] }, available: { type: "boolean" },
           },
         } } } }, "401": { description: "Unauthenticated" }, "403": { description: "Not your source" },
           "404": { description: "Source not found" }, "409": { description: "Email notification not configured" } },
@@ -671,7 +671,7 @@ export const openapiSpec = {
           required: true,
           content: { "application/json": { schema: {
             type: "object", additionalProperties: false, required: ["language"],
-            properties: { language: { type: "string", enum: ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] } },
+            properties: { language: { type: "string", enum: ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"] } },
           } } },
         },
         responses: { "200": { description: "Confirmed saved language" }, "400": { description: "invalid_language" },

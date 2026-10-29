@@ -55,7 +55,7 @@ describe("finite French ordinary answer intent", () => {
   it.each(['Read the phrase "Answer in French."', 'Review «Répondez en français.»',
     'Read “A title. En français, expliquez.”', "Do not\nanswer in French.",
     "Ne\nrépondez en français.", "Ne répondez pas en français.", "Pas\nen français, merci.",
-    "Write in Russian. Explain the policy."])("keeps quoted, negated or unsupported intent outside French: %s", question => {
+    "Write in Italian. Explain the policy."])("keeps quoted, negated or unsupported intent outside French: %s", question => {
     expect(answerPresentation(question).requestedLanguage).toBeUndefined();
     expect(presentationStatementGuidance(answerPresentation(question))).toBe("");
   });
@@ -98,7 +98,7 @@ it("generates French guidance before the same independent bounded review, then d
   expect(engine.packets).toHaveLength(2);
   expect(engine.packets[0].system).toContain("write each statement in French");
   expect(engine.packets[1].system).toContain("a requested language or prompt does not prove");
-  expect(engine.packets[1].data.schema).toContain('"fr"|"zh-Hans"|"de"|"ja"|"ko"|"hi"|"id"|"UNKNOWN"');
+  expect(engine.packets[1].data.schema).toContain('"fr"|"zh-Hans"|"de"|"ja"|"ko"|"hi"|"id"|"ru"|"UNKNOWN"');
   expect(reviewedStatementLanguage(result.evidence[0])).toBe("fr");
   const built = fixture(result.evidence);
   expect(built.answer).toContain(statement);

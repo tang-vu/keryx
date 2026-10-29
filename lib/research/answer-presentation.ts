@@ -134,7 +134,7 @@ export function presentationStatementGuidance(presentation: AnswerPresentation):
   // An English label fallback does not authorize overriding an unsupported language request.
   if (!presentation.requestedLanguage) return "";
   const language = { en: "English", vi: "Vietnamese", pt: "Brazilian Portuguese", es: "Spanish", fr: "French", "zh-Hans": "Simplified Chinese",
-    de: "German", ja: "Japanese", ko: "Korean", hi: "Hindi", id: "Indonesian" }[presentation.requestedLanguage];
+    de: "German", ja: "Japanese", ko: "Korean", hi: "Hindi", id: "Indonesian", ru: "Russian" }[presentation.requestedLanguage];
   const count = presentation.requestedSentenceCount;
   const note = presentation.language === "es" && Number.isInteger(count) && count! >= 1 && count! <= 8
     ? `The caller requests a short note of exactly ${count} sentences, with inspectable originals separately. ` +

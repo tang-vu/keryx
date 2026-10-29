@@ -13,13 +13,14 @@ import { botControlsJapanese } from "../../locales/ja/bot-controls";
 import { botControlsKorean } from "../../locales/ko/bot-controls";
 import { botControlsHindi } from "../../locales/hi/bot-controls";
 import { botControlsIndonesian } from "../../locales/id/bot-controls";
+import { botControlsRussian } from "../../locales/ru/bot-controls";
 import { systemPresentationLanguage, type PresentationLanguage } from "../../shared/i18n/presentation-language";
 import { readBotAnswerPreference, writeBotAnswerPreference } from "./answer-preference";
 
 export type BotLanguage = PresentationLanguage;
 export type BotLanguagePreference = BotLanguage | "auto";
 export const botControlsCatalogues = Object.freeze({ en: botControlsEnglish, vi: botControlsVietnamese,
-  de: botControlsGerman, ja: botControlsJapanese, ko: botControlsKorean, hi: botControlsHindi, id: botControlsIndonesian,
+  de: botControlsGerman, ja: botControlsJapanese, ko: botControlsKorean, hi: botControlsHindi, id: botControlsIndonesian, ru: botControlsRussian,
   pt: botControlsPortuguese, es: botControlsSpanish, fr: botControlsFrench, "zh-Hans": botControlsChinese });
 
 /** Finite shipped bot catalogue; unrelated UI locales do not grant bot support. */
@@ -37,6 +38,7 @@ export function botLanguage(value: unknown): BotLanguage | undefined {
     case "ko": return "ko";
     case "hi": return "hi";
     case "id": return "id";
+    case "ru": return "ru";
     default: return undefined;
   }
 }

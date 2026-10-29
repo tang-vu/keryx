@@ -17,12 +17,12 @@ export function clientPresentationLanguage(systemLocale: unknown, override?: unk
 export const clientLanguageNames = Object.freeze({
   en: "English", vi: "Tiếng Việt", pt: "Português", es: "Español", fr: "Français", "zh-Hans": "简体中文",
   de: nativeClientCatalogues.de.name, ja: nativeClientCatalogues.ja.name, ko: nativeClientCatalogues.ko.name,
-  hi: nativeClientCatalogues.hi.name, id: nativeClientCatalogues.id.name,
+  hi: nativeClientCatalogues.hi.name, id: nativeClientCatalogues.id.name, ru: nativeClientCatalogues.ru.name,
 } as const satisfies Readonly<Record<PresentationLanguage, string>>);
 
 export const clientLanguageControls = {
   de: nativeClientCatalogues.de.controls, ja: nativeClientCatalogues.ja.controls, ko: nativeClientCatalogues.ko.controls,
-  hi: nativeClientCatalogues.hi.controls, id: nativeClientCatalogues.id.controls,
+  hi: nativeClientCatalogues.hi.controls, id: nativeClientCatalogues.id.controls, ru: nativeClientCatalogues.ru.controls,
   "zh-Hans": { language: "呈现语言", auto: "系统语言", answer: "答案", savedAnswer: "已保存的答案", unsavedAnswer: "未保存的答案", citations: "引用", engine: "推理引擎", sourceCap: "来源限额", question: "问题", runId: "运行编号" },
   en: { language: "Presentation language", auto: "System language", answer: "Answer", savedAnswer: "Saved answer", unsavedAnswer: "Unsaved answer", citations: "Citations", engine: "engine", sourceCap: "source cap", question: "question", runId: "run id" },
   vi: { language: "Ngôn ngữ trình bày", auto: "Ngôn ngữ hệ thống", answer: "Câu trả lời", savedAnswer: "Câu trả lời đã lưu", unsavedAnswer: "Câu trả lời chưa lưu", citations: "Trích dẫn", engine: "bộ suy luận", sourceCap: "hạn mức nguồn", question: "câu hỏi", runId: "mã lượt chạy" },

@@ -59,6 +59,7 @@ describe("local public preview glyphs", () => {
     ["Korean", "한국어: 연구 보고서와 인용 근거를 확인하세요.", 2],
     ["Hindi", "हिन्दी: शोध रिपोर्ट, उद्धरण, प्रमाण, प्रश्न और उत्तर। क्ष त्र ज्ञ श्र", 2],
     ["Indonesian", "Bahasa Indonesia: Periksa sumber, kutipan, dan bukti.", 1],
+    ["Russian", "Русский: проверьте источники, цитаты, ограничения и данные. Ёж, её, й, щ, ы, ю, я.", 1],
   ])("renders %s without requesting fallback fonts", async (_language, text, count) => {
     const fetch = vi.fn(localRendererAsset);
     vi.stubGlobal("fetch", fetch);
@@ -87,6 +88,7 @@ describe("local public preview glyphs", () => {
     ["ko", "이 연구의 주장과 한계를 뒷받침하는 출처는 무엇인가요?"],
     ["hi", "इस शोध के दावों और सीमाओं का समर्थन किन स्रोतों से होता है?"],
     ["id", "Sumber apa yang mendukung klaim dan keterbatasan riset ini?"],
+    ["ru", "Какие источники подтверждают утверждения и ограничения исследования?"],
   ] as const)("renders all actual %s public preview routes with the local fonts", async (language, text) => {
     fixture.recordedLanguage = language;
     fixture.text = text;

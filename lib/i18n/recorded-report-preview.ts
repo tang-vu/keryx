@@ -13,6 +13,7 @@ const ordinaryLabels = {
   ko: { title: "{question} — Keryx 조사 보고서", one: "개 출처 인용", other: "개 출처 인용", serial: "2026 시리즈 — 제{serial}호" },
   hi: { title: "{question} — Keryx शोध रिपोर्ट", one: "उद्धृत स्रोत", other: "उद्धृत स्रोत", serial: "2026 श्रृंखला — अंक {serial}" },
   id: { title: "{question} — Laporan Keryx", one: "sumber dikutip", other: "sumber dikutip", serial: "Seri 2026 — No. {serial}" },
+  ru: { title: "{question} — Отчёт Keryx", one: "источник процитирован", other: "источников процитировано", serial: "Серия 2026 — выпуск {serial}" },
   "zh-Hans": { title: "{question} — Keryx 研究报告", one: "个引用来源", other: "个引用来源", serial: "2026 系列 — 第 {serial} 期" },
   vi: { title: "{question} — Báo cáo Keryx", one: "nguồn được trích dẫn", other: "nguồn được trích dẫn",
     serial: "Loạt 2026 — Số {serial}" },
@@ -26,9 +27,15 @@ const ordinaryLabels = {
   title: string; one: string; other: string; serial: string;
 }>;
 
-function previewCopy(language: PresentationLanguage) {
+const russianCounts = Object.freeze({ one: "источник процитирован", few: "источника процитировано", many: "источников процитировано", other: "источника процитировано" });
+const russianPlural = new Intl.PluralRules("ru");
+
+function previewCopy(language: PresentationLanguage, count?: number) {
   if (language === "en") return createMessages("en");
-  const labels = ordinaryLabels[language];
+  const base = ordinaryLabels[language];
+  const counted = language === "ru" && count !== undefined
+    ? russianCounts[russianPlural.select(count) as keyof typeof russianCounts] : undefined;
+  const labels = counted ? { ...base, one: counted, other: counted } : base;
   const catalogue: MessageCatalogue = {
     "reportDispatch.title": labels.title,
     "reportSocial.serial": labels.serial,
@@ -54,7 +61,7 @@ function previewCopy(language: PresentationLanguage) {
 }
 
 const copies = { en: previewCopy("en"), vi: previewCopy("vi"), pt: previewCopy("pt"), es: previewCopy("es"), fr: previewCopy("fr"), "zh-Hans": previewCopy("zh-Hans"),
-  de: previewCopy("de"), ja: previewCopy("ja"), ko: previewCopy("ko"), hi: previewCopy("hi"), id: previewCopy("id") };
+  de: previewCopy("de"), ja: previewCopy("ja"), ko: previewCopy("ko"), hi: previewCopy("hi"), id: previewCopy("id"), ru: previewCopy("ru") };
 
 /** Call only after public visibility admission. Reads this retained answer/trace,
  * never a question, request, viewer preference, provider, store or receipt.
@@ -67,15 +74,16 @@ export function recordedReportPreview(run: Pick<QueryRun, "answer" | "trace">) {
     answerLanguage, presentationLanguage,
     title: (question: string) => copy("reportDispatch.title", { question }),
     serial: (serial: string) => copy("reportSocial.serial", { serial }),
-    citedLabel: (count: number) => copy(count === 1 ? "reportSocial.cited.one" : "reportSocial.cited.other"),
+    citedLabel: (count: number) => (presentationLanguage === "ru" ? previewCopy("ru", count) : copy)(count === 1 ? "reportSocial.cited.one" : "reportSocial.cited.other"),
     metadataCopy: (input: Parameters<typeof dispatchMetadataCopy>[0]) => {
       const history = input.historical ? "historical" : "current";
       const kind = input.bibliographic ? "bibliography" : input.confidence !== undefined ? "confidence" : "plain";
       const form = input.count === 1 ? "one" : "other";
       const values = { ...input, confidence: input.confidence ?? "" };
+      const countedCopy = presentationLanguage === "ru" ? previewCopy("ru", input.count) : copy;
       return {
-        description: copy(`reportMetadata.${history}.${kind}.${form}`, values),
-        openGraph: copy(`reportMetadata.og.${history}.${kind}.${form}`, values),
+        description: countedCopy(`reportMetadata.${history}.${kind}.${form}`, values),
+        openGraph: countedCopy(`reportMetadata.og.${history}.${kind}.${form}`, values),
       };
     },
   };
