@@ -29,5 +29,5 @@ export function normalizeStatement(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const text = value.replace(/\s*\[\s*S\d+\s*\]/g, "").replace(/\s+/g, " ").trim();
   if (text.length < MIN_STATEMENT_LENGTH || text.length > MAX_STATEMENT_LENGTH) return undefined;
-  return /[.!?…。]$/.test(text) ? text : `${text}.`;
+  return /[.!?…。।]$/u.test(text) ? text : `${text}.`;
 }

@@ -4,6 +4,7 @@ import { researchResponseLanguage } from "./empty-public-evidence";
 import type { CitedStatement } from "./cited-statements";
 import type { AnswerPresentation } from "../research/answer-presentation";
 import { compactStatementGroups } from "./compact-statement-groups";
+import { nativeAnswerCopy, nativeCount, type NativeAnswerCopy } from "../research/native-answer-copy";
 
 function literal(value: string): string {
   // The reading UI's small renderer does not decode Markdown escapes/entities. Invisible
@@ -38,12 +39,13 @@ export function finalizeGroundedAnswer(input: {
   const qualifying = ledger.evidence.filter(item => qualifies(item) && ledger.acceptedMarkers.has(item.marker));
   const summary = (input.statements ?? []).filter(statement => qualifying.some(item =>
     item.claimIndex === statement.claimIndex && item.marker === statement.marker && item.quote === statement.quote));
+  const native = nativeAnswerCopy(input.presentation?.language);
   const compact = input.presentation && compactSummary(input.presentation, ledger, qualifying, summary);
   if (compact) return compact;
   const withNotice = (body: string) => {
     const count = input.presentation?.requestedBulletCount;
     if (!count) return body;
-    const notice = input.presentation!.language === "pt"
+    const notice = native ? nativeCount(native.compactNotice, count) : input.presentation!.language === "pt"
       ? `Não foi possível apresentar ${count} tópicos curtos preservando todos os objetivos e trechos qualificados; os objetivos são apresentados abaixo.`
       : input.presentation!.language === "es" ? `No fue posible presentar ${count} puntos breves conservando todos los objetivos y fragmentos admitidos; los objetivos se presentan a continuación.`
       : input.presentation!.language === "fr" ? `Impossible de présenter ${count} points courts tout en conservant chaque objectif et chaque extrait admis ; la présentation par objectif suit.`
@@ -52,6 +54,7 @@ export function finalizeGroundedAnswer(input: {
       : `Could not present ${count} short bullets while preserving every target and qualifying excerpt; the target layout follows.`;
     return `${notice}\n\n${body}`;
   };
+  if (native) return withNotice(nativeGroundedAnswer(native, ledger, qualifying, summary, input.synthesisUnavailable));
   if (input.presentation?.language === "pt") return withNotice(portugueseAnswer(ledger, qualifying, summary, input.synthesisUnavailable));
   if (input.presentation?.language === "es") return withNotice(spanishAnswer(ledger, qualifying, summary, input.synthesisUnavailable));
   if (input.presentation?.language === "fr") return withNotice(frenchAnswer(ledger, qualifying, summary, input.synthesisUnavailable));
@@ -101,7 +104,8 @@ function compactSummary(presentation: AnswerPresentation, ledger: EvidenceLedger
       [...ledger.acceptedMarkers].some(marker => !summary.some(statement => statement.marker === marker))) return undefined;
   const groups = compactStatementGroups(summary, qualifying);
   if (!groups || groups.length !== count || groups.some(group => group.length > 4)) return undefined;
-  const copy = {
+  const native = nativeAnswerCopy(presentation.language);
+  const copy = native ? { source: native.source, note: native.compactNote } : {
     en: { source: "Source text", note: "Model-written and model-checked summaries; inspect the paired source excerpts. Full synthesis and source correctness remain unverified. Payment states are recorded separately." },
     vi: { source: "Nguyên văn nguồn", note: "Tóm tắt do mô hình viết và kiểm tra; hãy đối chiếu trích đoạn đi kèm. Chưa xác minh tính đầy đủ của tổng hợp và tính đúng đắn của nguồn. Thanh toán được ghi riêng." },
     pt: { source: "Texto da fonte", note: "Resumos escritos e verificados por modelos; confira os trechos citados. A síntese completa e a exatidão das fontes permanecem não verificadas. Os pagamentos são registrados separadamente." },
@@ -120,6 +124,25 @@ function compactSummary(presentation: AnswerPresentation, ledger: EvidenceLedger
   });
   if (rows.some(row => row.length > 1200)) return undefined;
   return rows.concat(copy.note).join("\n\n");
+}
+
+/** Copy varies; admitted original targets, statements, excerpts and thresholds do not. */
+function nativeGroundedAnswer(copy: NativeAnswerCopy, ledger: EvidenceLedger, qualifying: EvidenceLedger["evidence"],
+  summary: CitedStatement[], unavailable?: boolean): string {
+  const intro = summary.length ? copy.summaryIntro : qualifying.length ? copy.excerptIntro
+    : unavailable ? copy.unavailableIntro : copy.emptyIntro;
+  const sections = ledger.claimCoverage.map(claim => {
+    const quotes = qualifying.filter(item => item.claimIndex === claim.claimIndex);
+    const sentences = summary.filter(statement => statement.claimIndex === claim.claimIndex);
+    const paired = sentences.map(statement => `${literal(statement.text)} [${statement.marker}] ${copy.source}: “${literal(statement.quote)}”`);
+    const rest = quotes.filter(item => !sentences.some(statement => statement.marker === item.marker && statement.quote === item.quote));
+    return [`### ${copy.target} ${claim.claimIndex + 1}`, `${copy.topic}: “${literal(claim.claim)}”`,
+      ...paired, ...rest.map(item => `- “${literal(item.quote)}” [${item.marker}]`),
+      ...(!quotes.length ? [unavailable ? copy.unavailableGap : copy.gap] : []),
+      ...(quotes.length && !(claim.coverage >= MIN_REWARD_SUPPORT) ? [copy.partialGap] : []),
+    ].join("\n\n");
+  });
+  return [intro, ...sections, `${summary.length ? `${copy.reviewNotice} ` : ""}${copy.limitations}`].join("\n\n");
 }
 
 /** Portuguese ordinary delivery keeps the same excerpt/statement and gap boundaries. */
