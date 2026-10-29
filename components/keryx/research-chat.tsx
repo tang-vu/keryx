@@ -146,8 +146,8 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
         <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" />
       </div>
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
-        <p data-testid="hero-kicker" className={`kx-research-kicker ${introduceProduct ? "max-w-[calc(100%_-_140px)] sm:max-w-none " : ""}font-mono text-[11px] uppercase tracking-[0.14em] text-seal`}>{introduceProduct ? <UiText source={uiEnglish_productGuideCopy("product.heroKicker")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.kicker" />}</p>
-        <div data-testid="hero-guide" className="absolute right-0 top-0 sm:static sm:mr-[156px]"><OnboardingTour /></div>
+        <p data-testid="hero-kicker" className="kx-research-kicker min-w-0 font-mono text-[11px] uppercase tracking-[0.14em] text-seal [overflow-wrap:anywhere]">{introduceProduct ? <UiText source={uiEnglish_productGuideCopy("product.heroKicker")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.kicker" />}</p>
+        <div data-testid="hero-guide" className="relative z-10 min-w-0 max-w-full sm:mr-[156px]"><OnboardingTour /></div>
       </div>
       <h1 className={`kx-research-title mt-3 max-w-[calc(100%_-_84px)] font-display ${introduceProduct ? "text-[clamp(30px,9vw,64px)] tracking-[-0.035em]" : "text-[clamp(32px,5vw,46px)]"} leading-none sm:max-w-[calc(100%_-_156px)] sm:leading-tight`}>{introduceProduct ? <UiText source={uiEnglish_productGuideCopy("product.heroTitle")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.title" />}</h1>
       <p className="kx-research-intro mt-3 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:max-w-[min(60ch,calc(100%_-_156px))] sm:text-lg sm:leading-relaxed">{introduceProduct && payer === "treasury" ? <UiText source={uiEnglish_productGuideCopy("product.heroBody")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.introduction" />}</p>

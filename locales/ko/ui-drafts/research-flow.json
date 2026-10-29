@@ -1,0 +1,76 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-flow.ts",
+  "sourceSha256": "493d7a7076923699c0ec017d68c4f03695ecb0f10f80509a3e59d67ecff5f8ff",
+  "entries": {
+    "researchTour.open": {
+      "source": "How it works",
+      "text": "이용 방법"
+    },
+    "researchTour.label": {
+      "source": "How Keryx works",
+      "text": "Keryx 이용 방법"
+    },
+    "researchTour.questionTitle": {
+      "source": "Ask a question",
+      "text": "질문하기"
+    },
+    "researchTour.questionBody": {
+      "source": "Enter the research question you want answered. You can inspect decisions as the answer streams.",
+      "text": "답을 얻고 싶은 조사 질문을 입력하세요. 답변이 생성되는 동안 판단 과정을 확인할 수 있습니다."
+    },
+    "researchTour.startTitle": {
+      "source": "Start research",
+      "text": "조사 시작"
+    },
+    "researchTour.closeLabel": {
+      "source": "Close tour",
+      "text": "안내 닫기"
+    },
+    "researchTour.close": {
+      "source": "Close",
+      "text": "닫기"
+    },
+    "researchTour.back": {
+      "source": "Back",
+      "text": "이전"
+    },
+    "researchTour.done": {
+      "source": "Done",
+      "text": "완료"
+    },
+    "researchTour.next": {
+      "source": "Next",
+      "text": "다음"
+    },
+    "researchTour.step": {
+      "source": "Step {number} of {total}",
+      "text": "총 {total}단계 중 {number}단계"
+    },
+    "decisionLog.jumpToLatest": {
+      "source": "Jump to latest",
+      "text": "최신 단계로 이동"
+    },
+    "decisionLog.followingLatest": {
+      "source": "Following latest steps",
+      "text": "최신 단계 따라가는 중"
+    },
+    "decisionLog.readingEarlier": {
+      "source": "Reading earlier steps",
+      "text": "이전 단계 읽는 중"
+    },
+    "decisionLog.scrollHint": {
+      "source": "Scroll inside the log to read earlier steps. Jump to latest to follow new steps.",
+      "text": "로그 안에서 스크롤하면 이전 단계를 읽을 수 있습니다. 새로운 단계를 따라가려면 최신 단계로 이동하세요."
+    },
+    "decisionLog.title": {
+      "source": "The decision",
+      "text": "판단"
+    },
+    "decisionLog.label": {
+      "source": "Decision log",
+      "text": "판단 기록"
+    }
+  }
+}

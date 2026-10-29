@@ -1,0 +1,76 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-flow.ts",
+  "sourceSha256": "493d7a7076923699c0ec017d68c4f03695ecb0f10f80509a3e59d67ecff5f8ff",
+  "entries": {
+    "researchTour.open": {
+      "source": "How it works",
+      "text": "यह कैसे काम करता है"
+    },
+    "researchTour.label": {
+      "source": "How Keryx works",
+      "text": "Keryx कैसे काम करता है"
+    },
+    "researchTour.questionTitle": {
+      "source": "Ask a question",
+      "text": "प्रश्न पूछें"
+    },
+    "researchTour.questionBody": {
+      "source": "Enter the research question you want answered. You can inspect decisions as the answer streams.",
+      "text": "वह शोध प्रश्न लिखें जिसका उत्तर आप जानना चाहते हैं। उत्तर बनते समय आप निर्णयों को देख सकते हैं।"
+    },
+    "researchTour.startTitle": {
+      "source": "Start research",
+      "text": "शोध शुरू करें"
+    },
+    "researchTour.closeLabel": {
+      "source": "Close tour",
+      "text": "मार्गदर्शिका बंद करें"
+    },
+    "researchTour.close": {
+      "source": "Close",
+      "text": "बंद करें"
+    },
+    "researchTour.back": {
+      "source": "Back",
+      "text": "पीछे"
+    },
+    "researchTour.done": {
+      "source": "Done",
+      "text": "पूर्ण"
+    },
+    "researchTour.next": {
+      "source": "Next",
+      "text": "आगे"
+    },
+    "researchTour.step": {
+      "source": "Step {number} of {total}",
+      "text": "कुल {total} में से चरण {number}"
+    },
+    "decisionLog.jumpToLatest": {
+      "source": "Jump to latest",
+      "text": "नवीनतम चरणों पर जाएँ"
+    },
+    "decisionLog.followingLatest": {
+      "source": "Following latest steps",
+      "text": "नवीनतम चरणों का अनुसरण जारी है"
+    },
+    "decisionLog.readingEarlier": {
+      "source": "Reading earlier steps",
+      "text": "पिछले चरण पढ़ रहे हैं"
+    },
+    "decisionLog.scrollHint": {
+      "source": "Scroll inside the log to read earlier steps. Jump to latest to follow new steps.",
+      "text": "पिछले चरण पढ़ने के लिए लॉग के अंदर स्क्रॉल करें। नए चरणों का अनुसरण करने के लिए नवीनतम चरणों पर जाएँ।"
+    },
+    "decisionLog.title": {
+      "source": "The decision",
+      "text": "निर्णय"
+    },
+    "decisionLog.label": {
+      "source": "Decision log",
+      "text": "निर्णयों का लॉग"
+    }
+  }
+}

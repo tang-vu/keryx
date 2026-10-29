@@ -1,0 +1,76 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-flow.ts",
+  "sourceSha256": "493d7a7076923699c0ec017d68c4f03695ecb0f10f80509a3e59d67ecff5f8ff",
+  "entries": {
+    "researchTour.open": {
+      "source": "How it works",
+      "text": "Cara kerja"
+    },
+    "researchTour.label": {
+      "source": "How Keryx works",
+      "text": "Cara kerja Keryx"
+    },
+    "researchTour.questionTitle": {
+      "source": "Ask a question",
+      "text": "Ajukan pertanyaan"
+    },
+    "researchTour.questionBody": {
+      "source": "Enter the research question you want answered. You can inspect decisions as the answer streams.",
+      "text": "Masukkan pertanyaan riset yang ingin Anda jawab. Anda dapat memeriksa keputusan saat jawaban sedang dibuat."
+    },
+    "researchTour.startTitle": {
+      "source": "Start research",
+      "text": "Mulai riset"
+    },
+    "researchTour.closeLabel": {
+      "source": "Close tour",
+      "text": "Tutup panduan"
+    },
+    "researchTour.close": {
+      "source": "Close",
+      "text": "Tutup"
+    },
+    "researchTour.back": {
+      "source": "Back",
+      "text": "Kembali"
+    },
+    "researchTour.done": {
+      "source": "Done",
+      "text": "Selesai"
+    },
+    "researchTour.next": {
+      "source": "Next",
+      "text": "Berikutnya"
+    },
+    "researchTour.step": {
+      "source": "Step {number} of {total}",
+      "text": "Langkah {number} dari {total}"
+    },
+    "decisionLog.jumpToLatest": {
+      "source": "Jump to latest",
+      "text": "Ke langkah terbaru"
+    },
+    "decisionLog.followingLatest": {
+      "source": "Following latest steps",
+      "text": "Mengikuti langkah terbaru"
+    },
+    "decisionLog.readingEarlier": {
+      "source": "Reading earlier steps",
+      "text": "Membaca langkah sebelumnya"
+    },
+    "decisionLog.scrollHint": {
+      "source": "Scroll inside the log to read earlier steps. Jump to latest to follow new steps.",
+      "text": "Gulir di dalam log untuk membaca langkah sebelumnya. Buka langkah terbaru untuk mengikuti langkah baru."
+    },
+    "decisionLog.title": {
+      "source": "The decision",
+      "text": "Keputusan"
+    },
+    "decisionLog.label": {
+      "source": "Decision log",
+      "text": "Log keputusan"
+    }
+  }
+}

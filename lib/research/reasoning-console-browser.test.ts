@@ -5,21 +5,27 @@ import { build } from "esbuild";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { chromium, webkit, type Browser, type Page } from "playwright";
+import { loadUiPreview } from "../i18n/ui-preview-catalogues";
+import { createMessages } from "../i18n/messages";
+import type { UiLocale } from "../i18n/locales";
 
 let browser: Browser, bundle: string, css: string;
 const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR;
+const nativeScreenshots = process.env.KERYX_NATIVE_GUIDANCE_SCREENSHOT_DIR ?? screenshots;
 const fonts = `@font-face{font-family:Display;src:url('/fonts/bodoni-moda-latin.woff2')}@font-face{font-family:Serif;src:url('/fonts/spectral-latin-400.woff2')}@font-face{font-family:Mono;src:url('/fonts/spline-sans-mono-latin.woff2')}:root{--font-bodoni:Display;--font-spectral:Serif;--font-spline-mono:Mono}`;
-type Fixture = { append(count: number): void; streaming(value: boolean): void; locale(value: "vi" | "zh-Hans"): void; longText(): void; empty(): void; unchanged(): boolean };
+type Fixture = { append(count: number): void; streaming(value: boolean): void; locale(value: Exclude<UiLocale, "en">): void; longText(): void; empty(): void; unchanged(): boolean };
 
 beforeAll(async () => {
   const result = await build({ stdin: { contents: `import React,{useState}from'react';import{createRoot}from'react-dom/client';import{ReasoningConsole}from'./components/keryx/reasoning-console';
     import{UiCopyContext,englishUiCopy}from'./lib/i18n/ui-copy-context';import{createMessages}from'./lib/i18n/messages';import vi from'./locales/generated/vi-ui-preview';import zh from'./locales/generated/zh-Hans-ui-preview';
+    import es from'./locales/generated/es-ui-preview';import pt from'./locales/generated/pt-BR-ui-preview';import fr from'./locales/generated/fr-ui-preview';import de from'./locales/generated/de-ui-preview';import ja from'./locales/generated/ja-ui-preview';import ko from'./locales/generated/ko-ui-preview';import hi from'./locales/generated/hi-ui-preview';import id from'./locales/generated/id-ui-preview';
+    const previews={vi,'zh-Hans':zh,es,'pt-BR':pt,fr,de,ja,ko,hi,id};
     const seed=Array.from({length:30},(_,i)=>({phase:i%2?'discover':'decompose',message:'Recorded step '+i+' — a retained local fixture message.',ts:i}));
     seed[2]={phase:'decide',ts:2,message:'Recorded decision',detail:{sourceId:'source',sourceName:'Recorded publisher',action:'BUY',price:.002,expectedValue:.8,confidence:.7,rationale:'Original recorded rationale.',targets:[0]}};
     for(const[i,status,amount,conflict]of[[3,'settled',.000001,false],[4,'pending',.000002,false],[5,'simulated',.000008,false],[6,'pending',.000003,true],[7,'failed',.000004,false]])seed[i]={phase:'fetch',ts:i,message:'Recorded '+status+' payment detail.',detail:{kind:'fetch',queryId:'fixture',sourceId:'source',sourceName:'Recorded publisher',itemId:'fixture-item',payer:'fictional-payer',payee:'fictional-payee',amountUsdc:amount,network:'Arc',settled:conflict||status==='settled',settlementStatus:status,createdAt:'2026-10-26T00:00:00Z'}};
     const original=JSON.stringify(seed),fixture=window.ledgerFixture={unchanged:()=>JSON.stringify(seed)===original};
     function App(){const[steps,setSteps]=useState(seed),[streaming,setStreaming]=useState(true),[locale,setLocale]=useState('en');Object.assign(fixture,{append:count=>setSteps(previous=>[...previous,...Array.from({length:count},(_,i)=>({phase:'discover',message:'Appended step '+(previous.length+i),ts:previous.length+i}))]),streaming:setStreaming,locale:setLocale,empty:()=>setSteps([]),longText:()=>setSteps(previous=>previous.map((s,i)=>i===0?{...s,message:'https://example.invalid/'+ 'q'.repeat(320)+' literal <img data-trace-injection> text.  \\n\\n'}:s))});
-      const preview=locale==='vi'?vi:locale==='zh-Hans'?zh:{},ui=locale==='en'?englishUiCopy:{...englishUiCopy,locale,preview,message:createMessages(locale,preview.$messages)};
+      const preview=previews[locale]??{},ui=locale==='en'?englishUiCopy:{...englishUiCopy,locale,preview,message:createMessages(locale,preview.$messages)};
       return <UiCopyContext.Provider value={ui}><ReasoningConsole steps={steps} streaming={streaming} budget={.01}/></UiCopyContext.Provider>}
     createRoot(document.getElementById('root')).render(<App/>);`, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, metafile: true, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env": JSON.stringify({ NODE_ENV: "production", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet" }) } });
   const inputs = Object.keys(result.metafile!.inputs).map(p => p.replaceAll("\\", "/"));
@@ -28,6 +34,7 @@ beforeAll(async () => {
   bundle = result.outputFiles[0].text;
   css = (await postcss([tailwind({ base: process.cwd() })]).process(await readFile("app/globals.css", "utf8"), { from: resolve("app/globals.css") })).css + fonts;
   if (screenshots) await mkdir(screenshots, { recursive: true });
+  if (nativeScreenshots && nativeScreenshots !== screenshots) await mkdir(nativeScreenshots, { recursive: true });
   browser = await (process.env.KERYX_UX_BROWSER === "webkit" ? webkit : chromium).launch({ headless: true });
 }, 30_000);
 afterAll(async () => { await browser?.close(); });
@@ -118,6 +125,36 @@ it.each(["vi", "zh-Hans"] as const)("fits the actual %s preview with enlarged te
     expect(await page.getByRole("button").evaluate(n => (n as HTMLElement).offsetHeight)).toBeGreaterThanOrEqual(44);
     if(screenshots) await page.locator("#root").screenshot({path:join(screenshots,`decision-ledger-${locale}-320-large.png`)});
   }, 320);
+});
+
+it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(locale =>
+  [320, 1366].map(width => ({ locale, width }))))("keeps native $locale log reading controls, English payment evidence and originals at $width", async ({ locale, width }) => {
+  const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
+  await fixture(async page => {
+    await page.evaluate(value => { document.documentElement.lang = value; (window as unknown as { ledgerFixture: Fixture }).ledgerFixture.locale(value); }, locale);
+    const log = page.getByRole("region", { name: message("decisionLog.label"), exact: true });
+    await log.waitFor(); await expect.poll(() => log.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
+    expect(await page.locator('[id$="-hint"] [lang]').getAttribute("lang")).toBe(locale);
+    expect(await page.locator('[id$="-hint"]').textContent()).toBe(message("decisionLog.scrollHint"));
+    expect(await page.locator('[id$="-mode"] [lang]').textContent()).toBe(message("decisionLog.followingLatest"));
+    await log.focus(); await page.keyboard.press("Home");
+    const jump = page.getByRole("button", { name: message("decisionLog.jumpToLatest"), exact: true }); await jump.waitFor();
+    expect(await jump.locator(`[lang="${locale}"]`).count()).toBe(1);
+    expect(await page.locator('[id$="-mode"] [lang]').textContent()).toBe(message("decisionLog.readingEarlier"));
+    await append(page, 2);
+    expect(await page.getByRole("status").locator('[lang="en"]').textContent()).toBe("2 new steps");
+    for (const text of ["$0.000001 settled", "$0.000002 confirmation pending", "$0.000008 offline simulated", "$0.000003 conflicting payment state"])
+      expect(await page.locator('[lang="en"]').filter({ hasText: text }).count()).toBeGreaterThan(0);
+    expect(await log.getByText("Original recorded rationale.", { exact: true }).textContent()).toBe("Original recorded rationale.");
+    expect(await log.getByText("Recorded publisher", { exact: true }).count()).toBeGreaterThan(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await log.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    expect(await jump.evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+    if (nativeScreenshots) await page.locator("#root").screenshot({ path: join(nativeScreenshots, `decision-ledger-native-${locale}-${width}.png`) });
+    await jump.click();
+    await expect.poll(() => log.evaluate(element => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(2);
+    expect(await log.evaluate(element => document.activeElement === element)).toBe(true);
+  }, width);
 });
 
 it.each([320,390,768,1366].flatMap(width => (["reduce","no-preference"] as const).map(motion => ({width,motion}))))(

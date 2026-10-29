@@ -1,5 +1,29 @@
 # Keryx — Decision Log
 
+## Extend native first-use guidance and preserve the language of English fallbacks — 2026-10-29
+
+Add source-bound neutral keyboard, metadata, depth, tour and decision-log copy to
+the eight newer interface previews. Their partial catalogues now contain 196
+authored entries each; the 184 new entries keep `machineDraft` and `review:null`.
+English remains the shipped interface and the authority for unreviewed critical
+payment, spending, privacy and consent copy. No answer-language producer or
+original question is changed by an interface preference.
+
+Use the existing `UiMessage` language boundary for tour and log leaves, including
+English financial fallbacks. Give example controls an actual named group and
+preserve the language of metadata link labels. Actual native phone frames also
+exposed long depth-option names overflowing their individual radio borders;
+let the options wrap according to their available space instead of forcing two
+columns. Keep complete labels and the same `quick`/`deep` values and handlers.
+At enlarged text sizes, let the hero guide remain in wrapping flow and the submit
+label wrap inside its button, preserving both complete controls and submission
+behavior.
+
+The [source and acceptance map](docs/engineering/native-first-use-guidance-20261029.md)
+requires actual native responsive/keyboard journeys, unchanged unsent originals,
+per-option fitting, exact English payment states and the existing full CI gates.
+Human translation approval and coordinated runtime delivery remain separate.
+
 ## Shape and fit complete public-profile preview fields — 2026-10-29
 
 Use the existing local Sharp/Pango renderer for researcher-profile names and

@@ -1,0 +1,76 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-flow.ts",
+  "sourceSha256": "493d7a7076923699c0ec017d68c4f03695ecb0f10f80509a3e59d67ecff5f8ff",
+  "entries": {
+    "researchTour.open": {
+      "source": "How it works",
+      "text": "Cómo funciona"
+    },
+    "researchTour.label": {
+      "source": "How Keryx works",
+      "text": "Cómo funciona Keryx"
+    },
+    "researchTour.questionTitle": {
+      "source": "Ask a question",
+      "text": "Haz una pregunta"
+    },
+    "researchTour.questionBody": {
+      "source": "Enter the research question you want answered. You can inspect decisions as the answer streams.",
+      "text": "Escribe la pregunta de investigación que quieres responder. Puedes examinar las decisiones mientras se genera la respuesta."
+    },
+    "researchTour.startTitle": {
+      "source": "Start research",
+      "text": "Iniciar investigación"
+    },
+    "researchTour.closeLabel": {
+      "source": "Close tour",
+      "text": "Cerrar guía"
+    },
+    "researchTour.close": {
+      "source": "Close",
+      "text": "Cerrar"
+    },
+    "researchTour.back": {
+      "source": "Back",
+      "text": "Atrás"
+    },
+    "researchTour.done": {
+      "source": "Done",
+      "text": "Listo"
+    },
+    "researchTour.next": {
+      "source": "Next",
+      "text": "Siguiente"
+    },
+    "researchTour.step": {
+      "source": "Step {number} of {total}",
+      "text": "Paso {number} de {total}"
+    },
+    "decisionLog.jumpToLatest": {
+      "source": "Jump to latest",
+      "text": "Ir a lo más reciente"
+    },
+    "decisionLog.followingLatest": {
+      "source": "Following latest steps",
+      "text": "Siguiendo los pasos más recientes"
+    },
+    "decisionLog.readingEarlier": {
+      "source": "Reading earlier steps",
+      "text": "Leyendo pasos anteriores"
+    },
+    "decisionLog.scrollHint": {
+      "source": "Scroll inside the log to read earlier steps. Jump to latest to follow new steps.",
+      "text": "Desplázate dentro del registro para leer pasos anteriores. Ve a lo más reciente para seguir los pasos nuevos."
+    },
+    "decisionLog.title": {
+      "source": "The decision",
+      "text": "La decisión"
+    },
+    "decisionLog.label": {
+      "source": "Decision log",
+      "text": "Registro de decisiones"
+    }
+  }
+}

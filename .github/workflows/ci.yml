@@ -197,7 +197,18 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Unit tests (economic invariants)
+        env:
+          KERYX_NATIVE_GUIDANCE_SCREENSHOT_DIR: ${{ runner.temp }}/native-guidance-screenshots
         run: npm test -- --shard=${{ matrix.shard }}/3
+
+      - name: Retain native first-use guidance frames from the existing test shard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-guidance-${{ matrix.shard }}-${{ github.sha }}
+          path: ${{ runner.temp }}/native-guidance-screenshots/
+          # Two fixture files are distributed across three independent shards.
+          if-no-files-found: ignore
 
   integration:
     needs: scope
