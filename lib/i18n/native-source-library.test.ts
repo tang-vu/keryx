@@ -42,7 +42,7 @@ it.each(locales)("%s preserves exact cited metadata and every recorded reading-s
   const ui = await prepared(locale), before = JSON.stringify(cited);
   for (const deliveryKind of ["full_text", "excerpt", "abstract", "metadata_only", undefined] as const) for (const truncated of [false, true]) {
     const output = ui.render(React.createElement(CitedSourceCard, { entry: { ...cited, deliveryKind, truncated } }));
-    const key = `sourceCited.${truncated ? "scopeBounded" : "scope"}.${deliveryKind ?? "unrecorded"}` as keyof typeof englishMessages;
+    const key = `sourceCited.${truncated ? "scopeBounded" : "scope"}.${deliveryKind ?? "unrecorded"}` as Extract<keyof typeof englishMessages, `sourceCited.scope.${string}` | `sourceCited.scopeBounded.${string}`>;
     expect(output.querySelector("article > p.border-l-2")?.textContent).toBe(ui.message(key));
     expect(output.querySelector(`article > p.border-l-2 [lang="${locale}"]`)).not.toBeNull();
     expect(output.querySelector("h3 a")?.textContent).toBe(cited.title); expect(output.querySelector("h3 a")?.getAttribute("href")).toBe(cited.url);
