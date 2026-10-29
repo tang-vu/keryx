@@ -65,11 +65,14 @@ export default async function DispatchOgImage({
   let serial = 0;
   for (const ch of id) serial = (serial * 31 + ch.charCodeAt(0)) % 100000;
   const serialLabel = String(serial).padStart(5, "0");
+  const serialCaption = preview ? preview.serial(serialLabel) : copy("reportSocial.serial", { serial: serialLabel });
+  const citedCaption = preview ? preview.citedLabel(cited)
+    : copy(selectPlural(cited) === "one" ? "reportSocial.cited.one" : "reportSocial.cited.other");
   const [headlineText, serialText, citedText] = await Promise.all([
     publicPreviewText(headline, { fontSize: 52, maxWidth: 1060, maxHeight: 190, color: "#1B1712" }),
-    publicPreviewText(preview ? preview.serial(serialLabel) : copy("reportSocial.serial", { serial: serialLabel }),
+    publicPreviewText(serialCaption,
       { fontSize: 21, maxWidth: 500, maxHeight: 40, color: "#7A6F58" }),
-    publicPreviewText(preview ? preview.citedLabel(cited) : copy(selectPlural(cited) === "one" ? "reportSocial.cited.one" : "reportSocial.cited.other"),
+    publicPreviewText(citedCaption,
       { fontSize: 18, maxWidth: 250, maxHeight: 45, color: "#7A6F58" }),
   ]);
 
@@ -169,7 +172,9 @@ export default async function DispatchOgImage({
         </div>
       </div>
     ),
-    { ...size, fonts: await publicPreviewFonts(question),headers:{"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"} },
+    // The recorded answer can have native captions beside an English original.
+    // Select local glyphs from every displayed text field after public admission.
+    { ...size, fonts: await publicPreviewFonts([question, serialCaption, citedCaption].join("\n")),headers:{"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"} },
   );
 }
 

@@ -107,6 +107,27 @@ describe("local public preview glyphs", () => {
     expect(remoteProtocols(fetch)).toEqual([]);
   }, 30_000);
 
+  it.each([
+    ["zh-Hans", "仅用于检查字形的合成文本。", "个引用来源", "Keryx Sans SC"],
+    ["ja", "字形を確認するための合成テキストです。", "件の引用出典", "Keryx Sans JP"],
+    ["ko", "글자 모양 확인용 합성 텍스트입니다.", "개 출처 인용", "Keryx Sans KR"],
+  ] as const)("loads local %s caption fonts when the original question is English", async (language, answer, caption, face) => {
+    fixture.text = "An English original question stays literal.";
+    fixture.answer = answer;
+    fixture.recordedLanguage = language;
+    const fonts = vi.spyOn(fontHelpers, "publicPreviewFonts");
+    const fetch = vi.fn(localRendererAsset); vi.stubGlobal("fetch", fetch);
+    const response = await dispatchPreview({ params: Promise.resolve({ id: "synthetic-public-original-en" }) });
+    expect(fonts.mock.calls.at(-1)?.[0]).toContain(fixture.text);
+    expect(fonts.mock.calls.at(-1)?.[0]).toContain(caption);
+    expect((await fonts.mock.results.at(-1)!.value).map(font => font.name)).toContain(face);
+    const bytes = Buffer.from(await response.arrayBuffer());
+    expect(bytes.readUInt32BE(16)).toBe(1200); expect(bytes.readUInt32BE(20)).toBe(630);
+    expect(remoteProtocols(fetch)).toEqual([]);
+    if (process.env.KERYX_PREVIEW_CAPTURE_DIR)
+      await writeFile(join(process.env.KERYX_PREVIEW_CAPTURE_DIR, `dispatch-${language}-original-en.png`), bytes);
+  }, 30_000);
+
   it("shapes recorded Hindi captions even when the original question contains no Devanagari", async () => {
     fixture.text = "An English original question stays literal.";
     fixture.answer = "यह केवल अक्षर रचना की जाँच का कृत्रिम पाठ है।";
@@ -116,7 +137,8 @@ describe("local public preview glyphs", () => {
     const response = await dispatchPreview({ params: Promise.resolve({ id: "synthetic-public-original-en" }) });
     const bytes = Buffer.from(await response.arrayBuffer());
     expect(bytes.readUInt32BE(16)).toBe(1200); expect(bytes.readUInt32BE(20)).toBe(630);
-    expect(fonts.mock.calls.at(-1)?.[0]).toBe(fixture.text);
+    expect(fonts.mock.calls.at(-1)?.[0]).toContain(fixture.text);
+    expect(fonts.mock.calls.at(-1)?.[0]).toContain("उद्धृत स्रोत");
     expect(textRender.mock.calls.some(([text]) => text === "उद्धृत स्रोत")).toBe(true);
     expect(remoteProtocols(fetch)).toEqual([]);
     if (process.env.KERYX_PREVIEW_CAPTURE_DIR)

@@ -78,7 +78,9 @@ Devanagari text therefore uses the local Sharp/Pango/HarfBuzz shaper before imag
 layout. Text is literal escaped markup, at most 512 UTF-16 code units, with bounded
 font size, color, width, height, pixels and rendering time. A native Hindi caption
 is shaped even when its original question is English. Other scripts return their
-original string nodes. Sharp 0.35.5 was already locked through Next; making it a
+original string nodes. Local font selection includes the displayed native serial
+and citation captions even when the original question is English, so these labels
+do not require the renderer's external font fallback. Sharp 0.35.5 was already locked through Next; making it a
 direct dependency changes no locked package version, resolved URL or integrity.
 Fresh hosted installation and production tracing remain required acceptance.
 Font sources, licenses and hashes are recorded in [the font inventory](../../app/fonts/og/README.md).
