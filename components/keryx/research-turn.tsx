@@ -14,6 +14,7 @@ import { DecisionReviews } from "./decision-reviews";
 import { savedReportRecoveryPath } from "@/lib/research/ask-stream-lifecycle";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
 import { recordedAnswerLanguage } from "@/lib/research/answer-language-provenance";
+import { researchRecoveryCopy } from "@/lib/research/research-recovery-copy";
 
 
 
@@ -62,7 +63,7 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
       </div>}
       {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2">{message("researchTurn.stoppedNotice")}</p>}
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        <p>{state.error ?? message("researchTurn.failed")}</p>
+        <p lang={state.error === researchRecoveryCopy.interrupted ? "en" : undefined}>{state.error ?? message("researchTurn.failed")}</p>
         {recoveryPath && <div className="mt-3 space-y-2">
           <a href={recoveryPath} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="break-all underline underline-offset-4">{message("reportActions.openSaved")}</a>
         </div>}

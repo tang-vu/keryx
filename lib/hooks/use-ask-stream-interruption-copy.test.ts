@@ -55,6 +55,7 @@ it.each(["public", "unlisted", "private", "malformed", "missing"])("retains orig
   expect(alert.textContent).toContain("Keep recovery records");
   expect(alert.textContent).toContain("do not submit or sign again automatically");
   expect(alert.textContent).not.toMatch(/please try again|refund|cancelled|payment failed/iu);
+  expect(alert.querySelector("p")?.getAttribute("lang")).toBe("en");
   expect(JSON.stringify({ steps: hook.state.steps, payments: hook.state.payments, meta: hook.state.meta })).toBe(original);
   expect(hook.state.payments).toEqual([pending]);
   const link = alert.querySelector("a");
@@ -66,8 +67,9 @@ it.each(["public", "unlisted", "private", "malformed", "missing"])("retains orig
 });
 
 it("keeps an explicit terminal error and its original diagnostic after EOF", async () => {
-  await start(); await frame("error", { message: "Original terminal diagnostic <literal> {count}" }); await close();
-  expect(hook.state.error).toBe("Original terminal diagnostic <literal> {count}");
+  await start(); await frame("error", { message: "元の診断 <literal> {count}" }); await close();
+  expect(hook.state.error).toBe("元の診断 <literal> {count}");
+  expect(container.querySelector('[role="alert"] p')?.hasAttribute("lang")).toBe(false);
   expect(fetch).toHaveBeenCalledOnce(); expect(sign).not.toHaveBeenCalled();
 });
 it("keeps a completed report and its original bytes after EOF", async () => {

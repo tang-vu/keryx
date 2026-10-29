@@ -70,6 +70,7 @@ it.each((["en", "ja"] as const).flatMap(language => [320, 1366].map(width => ({ 
       const alert = page.getByRole("alert"), text = await alert.textContent();
       expect(text).toContain("does not confirm that research or payments stopped");
       expect(text).toContain("do not submit or sign again automatically"); expect(text).not.toContain("please try again");
+      expect(await alert.locator("p").getAttribute("lang")).toBe("en");
       expect(await page.getByText(question, { exact: true }).count()).toBeGreaterThan(0);
       const saved = alert.locator(`a[href="/dispatch/${reportId}"]`); expect(await saved.getAttribute("target")).toBe("_blank");
       expect(await saved.getAttribute("rel")).toBe("noopener noreferrer"); expect(await saved.getAttribute("referrerpolicy")).toBe("no-referrer");

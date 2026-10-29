@@ -44,6 +44,7 @@ import { privateResearchCopy } from "../../locales/en/run-claim-research";
 import type { ResearchPublicationSelection } from "./use-research-visibility";
 import type { RunVisibility } from "../run-privacy/contracts";
 import { savedPlanningFailureId } from "../research/planning-failure";
+import { researchRecoveryCopy } from "../research/research-recovery-copy";
 
 export type StreamMode = "real" | "offline";
 
@@ -549,7 +550,7 @@ export function useAskStream(opts?: AskStreamOpts) {
                 ...s,
                 status: "error",
                 errorKind: "generic",
-                error: "The connection ended before a final report arrived. This does not confirm that research or payments stopped. Open the original saved report if available. Keep recovery records; do not submit or sign again automatically.",
+                error: researchRecoveryCopy.interrupted,
               };
         });
       } catch (err) {
