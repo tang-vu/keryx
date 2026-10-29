@@ -9,26 +9,31 @@ import { researchPresentationJapanese } from "../../locales/ja/research-presenta
 import { researchPresentationKorean } from "../../locales/ko/research-presentation";
 import { researchPresentationHindi } from "../../locales/hi/research-presentation";
 import { researchPresentationIndonesian } from "../../locales/id/research-presentation";
+import { researchPresentationRussian } from "../../locales/ru/research-presentation";
 import { reportPresentationGerman } from "../../locales/de/report-presentation";
 import { reportPresentationJapanese } from "../../locales/ja/report-presentation";
 import { reportPresentationKorean } from "../../locales/ko/report-presentation";
 import { reportPresentationHindi } from "../../locales/hi/report-presentation";
 import { reportPresentationIndonesian } from "../../locales/id/report-presentation";
+import { reportPresentationRussian } from "../../locales/ru/report-presentation";
 import { botResearchGerman } from "../../locales/de/bot-research";
 import { botResearchJapanese } from "../../locales/ja/bot-research";
 import { botResearchKorean } from "../../locales/ko/bot-research";
 import { botResearchHindi } from "../../locales/hi/bot-research";
 import { botResearchIndonesian } from "../../locales/id/bot-research";
+import { botResearchRussian } from "../../locales/ru/bot-research";
 import { botControlsGerman } from "../../locales/de/bot-controls";
 import { botControlsJapanese } from "../../locales/ja/bot-controls";
 import { botControlsKorean } from "../../locales/ko/bot-controls";
 import { botControlsHindi } from "../../locales/hi/bot-controls";
 import { botControlsIndonesian } from "../../locales/id/bot-controls";
+import { botControlsRussian } from "../../locales/ru/bot-controls";
 import { pdfReadingGerman } from "../../locales/de/pdf-reading";
 import { pdfReadingJapanese } from "../../locales/ja/pdf-reading";
 import { pdfReadingKorean } from "../../locales/ko/pdf-reading";
 import { pdfReadingHindi } from "../../locales/hi/pdf-reading";
 import { pdfReadingIndonesian } from "../../locales/id/pdf-reading";
+import { pdfReadingRussian } from "../../locales/ru/pdf-reading";
 import { nativePdfReadingCopy, nativeRecoveryCopy, nativeRecoveryFormat } from "./native-recovery-copy";
 import type { AdditionalAnswerLanguage } from "./native-answer-intent";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
@@ -65,6 +70,7 @@ describe.each([
   ["ko", researchPresentationKorean, reportPresentationKorean, botResearchKorean, botControlsKorean, pdfReadingKorean],
   ["hi", researchPresentationHindi, reportPresentationHindi, botResearchHindi, botControlsHindi, pdfReadingHindi],
   ["id", researchPresentationIndonesian, reportPresentationIndonesian, botResearchIndonesian, botControlsIndonesian, pdfReadingIndonesian],
+  ["ru", researchPresentationRussian, reportPresentationRussian, botResearchRussian, botControlsRussian, pdfReadingRussian],
 ] as const)("prepared %s consumer catalogues", (_locale, research, report, bot, controls, pdf) => {
   it.each([
     ["research", research, researchPresentationEnglish], ["report", report, reportPresentationEnglish],
@@ -110,7 +116,7 @@ function originalRead(qualified = true) {
   return value;
 }
 
-describe.each(["de", "ja", "ko", "hi", "id"] as const)("prepared %s observed read and recovery boundaries", locale => {
+describe.each(["de", "ja", "ko", "hi", "id", "ru"] as const)("prepared %s observed read and recovery boundaries", locale => {
   const language = presentationCode(locale), copy = nativeRecoveryCopy(locale)!, pdf = nativePdfReadingCopy(locale)!;
   it("provides every bounded operational category without translating machine failure codes", () => {
     expect(Object.keys(copy.readFailure).sort()).toEqual(["publisher-verification-required", "pdf-extraction-unavailable",
@@ -263,13 +269,13 @@ it.each([undefined, null, "de-DE", "ja-JP", "ko-KR", "hi-IN", "id-ID", "en", "co
     expect(nativeRecoveryCopy(language)).toBeUndefined(); expect(nativePdfReadingCopy(language)).toBeUndefined();
   });
 
-describe.each(["de", "ja", "ko", "hi", "id"] as const)("actual %s neutral application consumers", locale => {
+describe.each(["de", "ja", "ko", "hi", "id", "ru"] as const)("actual %s neutral application consumers", locale => {
   const copy = nativeClientCatalogues[locale];
   const question = { de: "Antworte bitte auf Deutsch.", ja: "日本語で回答してください。", ko: "한국어로 답변해 주세요.",
-    hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia." }[locale];
+    hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia.", ru: "Ответьте по-русски." }[locale];
   it("accepts exact codes and system labels without granting regional aliases output-language authority", () => {
     expect(presentationLanguage(locale)).toBe(locale); expect(isPresentationLanguage(locale)).toBe(true);
-    const regional = { de: "de-DE", ja: "ja-JP", ko: "ko-KR", hi: "hi-IN", id: "id-ID" }[locale];
+    const regional = { de: "de-DE", ja: "ja-JP", ko: "ko-KR", hi: "hi-IN", id: "id-ID", ru: "ru-RU" }[locale];
     expect(systemPresentationLanguage(regional)).toBe(locale); expect(clientPresentationLanguage(regional)).toBe(locale);
     expect(presentationLanguage(regional)).toBeUndefined(); expect(isPresentationLanguage(regional)).toBe(false);
     expect(botLanguage(locale)).toBe(locale); expect(botLanguage(regional)).toBeUndefined();

@@ -513,7 +513,7 @@ describe("ordinary recorded answer language", () => {
     pt: "A evidência conserva uma qualificação.", es: "La evidencia conserva una salvedad.", fr: "Les preuves conservent une réserve.",
     "zh-Hans": "证据保留了原始材料中的限定条件。", de: "Die Belege behalten eine Einschränkung bei.",
     ja: "証拠には元の限定条件が残されています。", ko: "증거에는 원래의 제한 조건이 유지됩니다.",
-    hi: "साक्ष्य में मूल शर्त बनी रहती है।", id: "Bukti mempertahankan batasan aslinya." } as const;
+    hi: "साक्ष्य में मूल शर्त बनी रहती है।", id: "Bukti mempertahankan batasan aslinya.", ru: "В данных сохраняется исходное ограничение." } as const;
   async function languageRun(options: { language?: PresentationLanguage;
     observation?: PresentationLanguage | "UNKNOWN"; originalQuestion?: string;
     private?: boolean; package?: boolean; teaching?: boolean; pending?: boolean; fundingFails?: boolean } = {}) {
@@ -553,7 +553,7 @@ describe("ordinary recorded answer language", () => {
     }
     return { run, gateway, statement, effects };
   }
-  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const)("records %s only from reviewed delivered statements and renderer, across final consumers", async language => {
+  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"] as const)("records %s only from reviewed delivered statements and renderer, across final consumers", async language => {
     const { run, gateway, statement, effects } = await languageRun({ language, observation: language });
     expect(recordedAnswerLanguage(run)).toBe(language);
     expect(run.answer).toContain(statement);

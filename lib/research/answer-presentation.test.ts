@@ -20,8 +20,8 @@ describe("original caller presentation", () => {
     expect(answerPresentation(question as string).requestedBulletCount).toBe(count);
   });
 
-  it.each(["Answer in Italian. Explain the three types.", "Answer in Russian. Explain the three types.",
-    "Explain HTML. Do not answer in Vietnamese.", "Write in English. Then reply in Russian."])("preserves existing statement-language guidance for unsupported or negated requests: %s", question => {
+  it.each(["Answer in Italian. Explain the three types.", "Answer in Swahili. Explain the three types.",
+    "Explain HTML. Do not answer in Vietnamese.", "Write in English. Then reply in Swahili."])("preserves existing statement-language guidance for unsupported or negated requests: %s", question => {
     expect(presentationStatementGuidance(answerPresentation(question))).toBe("");
   });
 

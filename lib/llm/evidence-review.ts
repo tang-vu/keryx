@@ -25,10 +25,11 @@ export const EVIDENCE_REVIEW_GUIDANCE =
   STATEMENT_REVIEW_GUIDANCE;
 
 export const STATEMENT_LANGUAGE_REVIEW_GUIDANCE =
-  " For every statement, independently identify its actual generated prose language as statementLanguage: en, vi, pt, es, fr, zh-Hans, de, ja, ko, hi, id or UNKNOWN. " +
+  " For every statement, independently identify its actual generated prose language as statementLanguage: en, vi, pt, es, fr, zh-Hans, de, ja, ko, hi, id, ru or UNKNOWN. " +
   "Observe the statement itself, excluding the original quote; a requested language or prompt does not prove the output language. " +
   "zh-Hans means Simplified Chinese prose; Traditional Chinese, mixed, unsupported or ambiguous language is UNKNOWN. " +
   "de means German, ja Japanese, ko Korean, hi Hindi and id Indonesian. Shared Han characters do not establish Japanese or Simplified Chinese by themselves. " +
+  "ru means Russian prose; Cyrillic script alone does not establish Russian, and Ukrainian, Belarusian or ambiguous prose is UNKNOWN. " +
   "This observation is a model assessment, never human approval. ";
 
 /** Review may only reduce the model's original support. Missing/ambiguous reviews fail closed. */

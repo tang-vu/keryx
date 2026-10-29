@@ -92,7 +92,7 @@ describe("finite control locale authority", () => {
     for (const rendered of [telegram(locale), slack(locale), discord(locale)]) {
       expect(rendered).toContain(copy.reviewBoundary);
       expect(rendered).toContain(copy.languageHelp);
-      expect(rendered).toContain("/language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|auto");
+      expect(rendered).toContain("/language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|ru|auto");
       expect(rendered).toContain("/status");
       expect(rendered).not.toMatch(/translated|traduzid|traducid|được dịch/u);
     }

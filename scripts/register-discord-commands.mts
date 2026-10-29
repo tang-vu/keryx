@@ -50,12 +50,12 @@ const commands = [
     ],
   },
   { name: "help", description: "Show Keryx help", options: [
-    { type: 3, name: "language", description: "Help language (en, vi, pt, es, fr, zh-Hans, de, ja, ko, hi, id)", required: false,
-      choices: ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"].map(value => ({ name: value, value })) },
+    { type: 3, name: "language", description: "Help language (en, vi, pt, es, fr, zh-Hans, de, ja, ko, hi, id, ru)", required: false,
+      choices: ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"].map(value => ({ name: value, value })) },
   ] },
   { name: "language", description: "Set or inspect answer and help language", options: [
     { type: 3, name: "value", description: "Answer/help language, or auto to follow the original question", required: false,
-      choices: ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "auto"].map(value => ({ name: value, value })) },
+      choices: ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru", "auto"].map(value => ({ name: value, value })) },
   ] },
 ];
 

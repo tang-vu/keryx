@@ -26,8 +26,9 @@ vi.mock("next/og", () => ({ ImageResponse: class {
 import DispatchOgImage, { alt, contentType, dynamic, revalidate, size } from "../../app/dispatch/[id]/opengraph-image";
 
 const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada.", fr: "Preuves enregistrées.", "zh-Hans": "已记录的证据。",
-  de: "Erfasste Belege.", ja: "記録された根拠です。", ko: "기록된 근거입니다.", hi: "दर्ज साक्ष्य उपलब्ध हैं।", id: "Bukti telah dicatat." };
+  de: "Erfasste Belege.", ja: "記録された根拠です。", ko: "기록된 근거입니다.", hi: "दर्ज साक्ष्य उपलब्ध हैं।", id: "Bukti telah dicatat.", ru: "Данные источников записаны." };
 const expected = {
+  ru: { title: "Отчёт Keryx", one: "источник процитирован", other: "источников процитировано", imageOne: "источник процитирован", serial: "Серия 2026 — выпуск 00001" },
   de: { title: "Keryx-Recherchebericht", one: "zitierte Quelle", other: "zitierte Quellen", imageOne: "zitierte Quelle", serial: "Serie 2026 — Ausgabe 00001" },
   ja: { title: "Keryx調査レポート", one: "件の引用出典", other: "件の引用出典", imageOne: "件の引用出典", serial: "2026年シリーズ — 第00001号" },
   ko: { title: "Keryx 조사 보고서", one: "개 출처 인용", other: "개 출처 인용", imageOne: "개 출처 인용", serial: "2026 시리즈 — 제00001호" },
@@ -55,7 +56,7 @@ function retained(language: PresentationLanguage = "vi", method: Method = "deter
     subClaims: [], decisions: [], citations: [{ marker: "S1", sourceId: "literal-source", sourceName: "Original source 中文",
       weight: 1, reward: 0.000001, rationale: "Synthetic original citation" }], paymentMode: "offline" };
 }
-const matrix = (["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const).flatMap(language =>
+const matrix = (["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"] as const).flatMap(language =>
   (["deterministic-renderer", "reviewed-statements-and-renderer"] as const).map(method => ({ language, method })));
 const params = { params: Promise.resolve({ id: "preview_original_277" }) };
 function admit(value: QueryRun, archive: ResolvedDispatch["archive"] = null) {
@@ -91,9 +92,10 @@ describe("finite retained-report presentation", () => {
             const input = Object.freeze({ historical, bibliographic, confidence, count, spent: "0.123456", creators: "0.000001",
               excerpt: 'Literal 1 source cited · 2 sources cited · {count} “Original” 中文' });
             const descriptions = preview.metadataCopy(input);
-            expect(descriptions.description).toContain(`${count} ${expected[language][count === 1 ? "one" : "other"]} · $0.123456 spent`);
+            const label = language === "ru" && count === 2 ? "источника процитировано" : expected[language][count === 1 ? "one" : "other"];
+            expect(descriptions.description).toContain(`${count} ${label} · $0.123456 spent`);
             expect(descriptions.description).toContain(input.excerpt);
-            expect(descriptions.openGraph).toContain(language === "en" ? `${count} cited` : `${count} ${expected[language][count === 1 ? "one" : "other"]}`);
+            expect(descriptions.openGraph).toContain(language === "en" ? `${count} cited` : `${count} ${label}`);
             expect(descriptions.openGraph).toContain("$0.123456 spent · $0.000001 to creators");
             const prefix = `${historical ? "Arc testnet historical · " : ""}${bibliographic ? "Original bibliographic metadata · " : confidence ? "Moderate confidence · " : ""}`;
             expect(descriptions.description.startsWith(prefix)).toBe(true);

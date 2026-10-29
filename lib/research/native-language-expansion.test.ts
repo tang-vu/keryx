@@ -47,6 +47,7 @@ it.each([["de", pdfReadingGerman], ["ja", pdfReadingJapanese], ["ko", pdfReading
 const prepared = (language: AdditionalAnswerLanguage, requestedBulletCount?: number): AnswerPresentation =>
   ({ language, requestedLanguage: language, ...(requestedBulletCount ? { requestedBulletCount } : {}) });
 const nativeSentences = {
+  ru: "Синтетическое правило требует документированной меры защиты и указывает исключение.",
   de: "Die synthetische Regel verlangt eine dokumentierte Schutzmaßnahme und nennt eine Ausnahme.",
   ja: "この合成された規則は記録された保護措置を求め、例外を定めています。",
   ko: "이 합성 규칙은 기록된 보호 조치를 요구하며 예외를 명시합니다.",
@@ -66,7 +67,7 @@ function nativeFixture(language: AdditionalAnswerLanguage, options: { coverage?:
   return { ledger, quote, target, targets, statements: selectCitedStatements(rows, ledger) };
 }
 
-describe.each(["de", "ja", "ko", "hi", "id"] as const)("prepared %s ordinary renderer boundaries", language => {
+describe.each(["de", "ja", "ko", "hi", "id", "ru"] as const)("prepared %s ordinary renderer boundaries", language => {
   const copy = nativeAnswerCopy(language)!;
   const render = (built: ReturnType<typeof nativeFixture>, statements = built.statements, unavailable = false, count?: number) =>
     finalizeGroundedAnswer({ question: "Original request", answer: "Unreviewed draft [S1]", ledger: built.ledger, statements,
@@ -256,7 +257,7 @@ describe("finite native directives from the original ordinary request", () => {
   });
   it.each(["Answer in German.", "日本語で回答してください。", "한국어로 답변해 주세요.", "हिंदी में उत्तर दें।", "Jawab dalam bahasa Indonesia."])(
     "clears earlier native intent on a later unsupported explicit request: %s", question => {
-      expect(answerPresentation(`${question} Answer in Russian.`)).toEqual({ language: "en" });
+      expect(answerPresentation(`${question} Answer in Italian.`)).toEqual({ language: "en" });
       expect(answerPresentation(`${question} Write exactly twenty words.`).requestedMaximumWords).toBeUndefined();
     });
   it.each([["de", "German"], ["ja", "Japanese"], ["ko", "Korean"], ["hi", "Hindi"], ["id", "Indonesian"]] as const)(
@@ -283,9 +284,9 @@ class SyntheticNativeEngine extends JsonChatEngine {
   }
 }
 
-describe.each(["de", "ja", "ko", "hi", "id"] as const)("actual %s generation and independent language observation", language => {
+describe.each(["de", "ja", "ko", "hi", "id", "ru"] as const)("actual %s generation and independent language observation", language => {
   const question = { de: "Antworte bitte auf Deutsch.", ja: "日本語で回答してください。", ko: "한국어로 답변해 주세요.",
-    hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia." }[language];
+    hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia.", ru: "Ответьте по-русски." }[language];
   it("uses the existing bounded two-call generation/review path and delivers exact original pairs", async () => {
     const built = nativeFixture(language), engine = new SyntheticNativeEngine(language), presentation = answerPresentation(question);
     const input: SynthInput = { question, subClaims: [built.target], gathered: [{ sourceId: "native-copy-synthetic", sourceName: "Original source",
@@ -295,7 +296,7 @@ describe.each(["de", "ja", "ko", "hi", "id"] as const)("actual %s generation and
     expect(engine.packets[0].system).toContain(presentationStatementGuidance(presentation));
     expect(engine.packets[1].system).toContain("a requested language or prompt does not prove the output language");
     expect(engine.packets[1].system).toContain("Shared Han characters do not establish Japanese or Simplified Chinese");
-    expect(engine.packets[1].data.schema).toContain('"de"|"ja"|"ko"|"hi"|"id"|"UNKNOWN"');
+    expect(engine.packets[1].data.schema).toContain('"de"|"ja"|"ko"|"hi"|"id"|"ru"|"UNKNOWN"');
     expect(reviewedStatementLanguage(result.evidence[0])).toBe(language);
     const statements = selectCitedStatements(languageReviewedProposals(result.evidence, language), built.ledger);
     expect(statements).toHaveLength(1); expect(statements[0].text).toBe(nativeSentences[language]);

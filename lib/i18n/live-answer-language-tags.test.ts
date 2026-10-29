@@ -19,6 +19,7 @@ const answers: Record<PresentationLanguage, string> = {
   fr: "Voici une réponse en français.", "zh-Hans": "这是一条已保存的中文回答。",
   de: "Dies ist eine gespeicherte Antwort auf Deutsch.", ja: "これは保存された日本語の回答です。",
   ko: "저장된 한국어 답변입니다.", hi: "यह सहेजा गया हिंदी उत्तर है।", id: "Ini jawaban bahasa Indonesia yang tersimpan.",
+  ru: "Это сохранённый ответ на русском языке.",
 };
 
 // Synthetic retained transport records, never invoke the producer or its finalizer.

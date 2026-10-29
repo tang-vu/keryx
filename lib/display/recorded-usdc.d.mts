@@ -6,7 +6,7 @@ export function recordedUsdcMicros(value: unknown): bigint | null;
 export function formatUsdcMicros(value: unknown, options?: DisplayOptions): string;
 export function formatRecordedUsdc(value: unknown, options?: DisplayOptions): string;
 export function sumRecordedUsdc(values: readonly unknown[]): bigint | null;
-export type DisplayLocale = "en" | "vi" | "zh-Hans" | "pt" | "pt-BR" | "es" | "fr" | "de" | "ja" | "ko" | "hi" | "id";
+export type DisplayLocale = "en" | "vi" | "zh-Hans" | "pt" | "pt-BR" | "es" | "fr" | "de" | "ja" | "ko" | "hi" | "id" | "ru";
 export type AmountOptions = DisplayOptions & { useGrouping?: boolean };
 export function formatAmount(micros: unknown, options?: AmountOptions, locale?: DisplayLocale): string;
 export function formatRecordedAmount(value: unknown, options?: AmountOptions, locale?: DisplayLocale): string;

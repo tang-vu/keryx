@@ -56,6 +56,8 @@ const chineseAnswer = finalizeGroundedAnswer({ question: chineseQuestion, answer
 const chinesePacket = finalizeAnswerLanguage({ answer: chineseAnswer, rendererLanguage: "zh-Hans", statements: chineseStatements, proposals: chineseProposals });
 assert(chinesePacket?.language === "zh-Hans" && chinesePacket.method === "reviewed-statements-and-renderer");
 const nativeSentences = {
+  ru: ["Submit отправляет данные формы на сервер.", "Если type не указан, по умолчанию используется submit.",
+    "Reset возвращает элементам управления исходные значения.", "У Button нет поведения по умолчанию."],
   de: ["Submit sendet die Formulardaten an den Server.", "Ohne type ist submit die Voreinstellung.",
     "Reset setzt die Steuerelemente auf ihre Anfangswerte zurück.", "Button besitzt kein Standardverhalten."],
   ja: ["Submit はフォームのデータをサーバーへ送信します。", "type が未指定の場合、submit が既定値です。",
@@ -68,8 +70,8 @@ const nativeSentences = {
     "Reset mengembalikan kontrol ke nilai awalnya.", "Button tidak memiliki perilaku bawaan."],
 } as const;
 const nativeDirectives = { de: "Antworte bitte auf Deutsch.", ja: "日本語で回答してください。", ko: "한국어로 답변해 주세요.",
-  hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia." } as const;
-const nativeScenarios = (["de", "ja", "ko", "hi", "id"] as const satisfies readonly AdditionalAnswerLanguage[]).map(language => {
+  hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia.", ru: "Ответьте по-русски." } as const;
+const nativeScenarios = (["de", "ja", "ko", "hi", "id", "ru"] as const satisfies readonly AdditionalAnswerLanguage[]).map(language => {
   const statements = nativeSentences[language];
   const rows = applyEvidenceReview(proposals.map((proposal, index) => ({ ...proposal, statement: statements[index] })),
     { reviews: proposals.map((_proposal, index) => ({ index, support: 0.9, statementSupport: 0.9, statementLanguage: language })) },

@@ -31,7 +31,7 @@ type Catalogue = Readonly<Record<DesktopNeutralKey, string>>;
 
 export const desktopNeutralCatalogues = Object.freeze({
   de: nativeClientCatalogues.de.desktop, ja: nativeClientCatalogues.ja.desktop, ko: nativeClientCatalogues.ko.desktop,
-  hi: nativeClientCatalogues.hi.desktop, id: nativeClientCatalogues.id.desktop,
+  hi: nativeClientCatalogues.hi.desktop, id: nativeClientCatalogues.id.desktop, ru: nativeClientCatalogues.ru.desktop,
   en: english,
   "zh-Hans": Object.freeze({
     "nativeDesktop.workspace.none": "没有打开的工作区",

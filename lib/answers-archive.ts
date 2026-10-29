@@ -14,7 +14,7 @@ import { recordedAnswerLanguage } from "./research/answer-language-provenance";
 import type { PresentationLanguage } from "../shared/i18n/presentation-language";
 import { nativeAnswerCopy, nativeCount } from "./research/native-answer-copy";
 
-const nativeCopies = (["de", "ja", "ko", "hi", "id"] as const).map(language => nativeAnswerCopy(language)!);
+const nativeCopies = (["de", "ja", "ko", "hi", "id", "ru"] as const).map(language => nativeAnswerCopy(language)!);
 
 export interface ArchiveEntry {
   id: string;

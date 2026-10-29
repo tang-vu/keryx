@@ -9,11 +9,12 @@ import { researchPresentationJapanese } from "../../locales/ja/research-presenta
 import { researchPresentationKorean } from "../../locales/ko/research-presentation";
 import { researchPresentationHindi } from "../../locales/hi/research-presentation";
 import { researchPresentationIndonesian } from "../../locales/id/research-presentation";
+import { researchPresentationRussian } from "../../locales/ru/research-presentation";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
 
 export const researchPresentationCatalogues = Object.freeze({ en: researchPresentationEnglish, vi: researchPresentationVietnamese,
   de: researchPresentationGerman, ja: researchPresentationJapanese, ko: researchPresentationKorean,
-  hi: researchPresentationHindi, id: researchPresentationIndonesian,
+  hi: researchPresentationHindi, id: researchPresentationIndonesian, ru: researchPresentationRussian,
   pt: researchPresentationPortuguese, es: researchPresentationSpanish, fr: researchPresentationFrench, "zh-Hans": researchPresentationChinese });
 type Key = keyof typeof researchPresentationEnglish;
 type Names<T extends string> = T extends `${string}{${infer Name}}${infer Tail}` ? Name | Names<Tail> : never;

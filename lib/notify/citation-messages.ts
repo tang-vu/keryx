@@ -21,6 +21,7 @@ export const citationEmailUnreviewedDraftMessages = {
   ko: { ...englishEmail, ...nativeClientCatalogues.ko.email },
   hi: { ...englishEmail, ...nativeClientCatalogues.hi.email },
   id: { ...englishEmail, ...nativeClientCatalogues.id.email },
+  ru: { ...englishEmail, ...nativeClientCatalogues.ru.email },
   "zh-Hans": {
     subject: 'Keryx cited "{sourceName}" — {amount} USDC settled to you',
     textBody: 'Your source "{sourceName}" was just cited by the Keryx agent and paid {amount} USDC ({weightPct} contribution weight), settled on {network}.',
@@ -89,6 +90,7 @@ export const citationEmailMessages = {
   ko: { ...citationEmailUnreviewedDraftMessages.ko, ...criticalEnglish },
   hi: { ...citationEmailUnreviewedDraftMessages.hi, ...criticalEnglish },
   id: { ...citationEmailUnreviewedDraftMessages.id, ...criticalEnglish },
+  ru: { ...citationEmailUnreviewedDraftMessages.ru, ...criticalEnglish },
   "zh-Hans": { ...citationEmailUnreviewedDraftMessages["zh-Hans"], ...criticalEnglish },
   en: citationEmailUnreviewedDraftMessages.en,
   vi: { ...citationEmailUnreviewedDraftMessages.vi, ...criticalEnglish },

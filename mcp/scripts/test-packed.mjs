@@ -102,6 +102,9 @@ try {
     { question: "Tolong jawab dalam bahasa Indonesia. Pertahankan café dan [PACKED-ID-AVAILABLE].", language: "id", readCheckpoints: capture(packet),
       serving: "Tingkat eksekusi per langkah", preparation: "persiapan jawaban", financial: "Rincian keuangan (bahasa Inggris):",
       notice: "Bahasa label: id. Bahasa jawaban tidak tercatat; teks aslinya tetap dipertahankan." },
+    { question: "Ответьте по-русски. Объясните café и сохраните [PACKED-RU-AVAILABLE].", language: "ru", readCheckpoints: capture(packet),
+      serving: "Уровни выполнения по шагам", preparation: "подготовка ответа", financial: "Финансовые сведения (на английском):",
+      notice: "Язык подписей: ru. Язык ответа не записан; исходный текст не изменён." },
   ];
   const publicResult = {
     answer: "Exact untranslated fixture answer: café – [S1].",
@@ -235,7 +238,7 @@ globalThis.fetch=async(input,init)=>{
     assert.equal(listed.tools.find(tool => tool.name === "paper_lookup").annotations.readOnlyHint, true);
     assert.deepEqual(listed.tools.find(tool => tool.name === "paper_lookup").inputSchema.properties.language.enum, ["en", "fr", "vi"]);
     assert.equal(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.question.maxLength, 2000);
-    assert.deepEqual(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.language.enum, ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"]);
+    assert.deepEqual(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.language.enum, ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"]);
     return { call: (name, args = {}) => request("tools/call", { name, arguments: args }), counts,
       stop: async () => { await stopChild(child); children.delete(child); lines.close(); } };
   }
