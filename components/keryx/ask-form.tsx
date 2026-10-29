@@ -30,6 +30,7 @@ const message = createMessages("en");
 
 interface AskFormProps {
   disabled?: boolean;
+  showAnswerLanguageHelp?: boolean;
   questionCapUsdc?: number;
   parentId?: string | null;
   parentVisibility?: RunVisibility;
@@ -106,7 +107,7 @@ const SUGGESTIONS = [
   },
 ];
 
-export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, allowSharedPrefill = true, questionCapUsdc, restoreQuestion }: AskFormProps) {
+export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer = "treasury", parentId, parentVisibility, publicationPreference, conversation = false, clearOnSubmit = false, allowSharedPrefill = true, questionCapUsdc, restoreQuestion }: AskFormProps) {
   const message = useUiMessages();
   const { locale } = useLocale();
   const ownVisibility = useResearchVisibility(parentVisibility, { enabled: !publicationPreference });
@@ -277,7 +278,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
             className="mt-3 min-h-[88px] w-full resize-y border border-ink-3/75 bg-paper px-3 py-3 font-serif text-lg leading-relaxed text-ink outline-none placeholder:text-ink-3 focus-visible:border-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50 sm:min-h-[104px] sm:text-xl"
           />
           <p id="ask-keyboard-hint" className="mt-1 text-xs text-ink-3"><UiMessage messageKey="researchEntry.keyboardHint" /></p>
-          {visibility.ready && visibility.visibility === "public" && !conversation && !parentId && !parentRef.current && !paidScholarly && <AnswerLanguageHelp />}
+          {showAnswerLanguageHelp && visibility.ready && visibility.visibility === "public" && !conversation && !parentId && !parentRef.current && !paidScholarly && <AnswerLanguageHelp />}
           {(researchPaused || !checking && !availability) && availabilityPanel}
 
           <div className="mt-4 border-t border-line pt-4">

@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AskForm } from "@/components/keryx/ask-form";
+import { ResearchChat } from "@/components/keryx/research-chat";
 import { UiCopyContext, englishUiCopy } from "./ui-copy-context";
 import { loadUiPreview } from "./ui-preview-catalogues";
 import { preparedLocales, type UiLocale } from "./locales";
@@ -15,6 +16,12 @@ import { answerPresentation } from "@/lib/research/answer-presentation";
 vi.mock("@/lib/hooks/use-research-availability", () => ({ useResearchAvailability: () => ({
   availability: { state: "not-paused" }, checking: false, refresh: async () => ({ state: "not-paused" }),
 }) }));
+vi.mock("@/components/keryx/session-grant-panel", () => ({ SessionGrantPanel: () => null }));
+vi.mock("@/components/keryx/onboarding-tour", () => ({ OnboardingTour: () => null }));
+vi.mock("@/components/keryx/globe-watermark", () => ({ GlobeWatermark: () => null }));
+vi.mock("@/components/keryx/sponsored-trial-notice", () => ({ SponsoredTrialNotice: () => null }));
+vi.mock("@/components/keryx/product-hunt-badge", () => ({ ProductHuntBadge: () => null }));
+vi.mock("@/components/keryx/research-turn", () => ({ ResearchTurn: () => null }));
 let root: Root, container: HTMLDivElement;
 let visibility: "public" | "private" | "unlisted" | "unavailable";
 let requests: Array<{ path: string; method: string }>;
@@ -31,7 +38,7 @@ async function value(locale: UiLocale) {
 async function render(locale: UiLocale, props: Partial<React.ComponentProps<typeof AskForm>> = {}) {
   const onAsk = vi.fn();
   const copy = await value(locale);
-  await act(async () => root.render(h(UiCopyContext.Provider, { value: copy, children: h(AskForm, { onAsk, ...props }) })));
+  await act(async () => root.render(h(UiCopyContext.Provider, { value: copy, children: h(AskForm, { onAsk, showAnswerLanguageHelp: true, ...props }) })));
   await vi.waitFor(() => expect(requests.some(request => request.path === "/api/ask/visibility")).toBe(true));
   return onAsk;
 }
@@ -42,6 +49,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
     const path = String(input); requests.push({ path, method: init.method ?? "GET" });
     if (path === "/api/models") return Response.json({ models: [] });
+    if (path === "/api/sources") return Response.json({ sources: [] });
     if (path === "/api/ask/visibility") return visibility === "unavailable" ? new Response(null, { status: 503 }) : Response.json({
       wallet: visibility === "private" ? "0x" + "1".repeat(40) : null, defaultVisibility: visibility, privacyActive: true,
     });
@@ -97,3 +105,20 @@ it.each([{ conversation: true }, { parentId: "11111111-1111-4111-8111-1111111111
     await render("fr", props);
     expect(container.querySelector("[data-answer-language-help]")).toBeNull();
   });
+
+it.each([false, true])("actual ResearchChat privateClaims=%s qualifies its caller separately from public publication preference", async privateClaims => {
+  const copy = await value("fr");
+  await act(async () => root.render(h(UiCopyContext.Provider, { value: copy, children: h(ResearchChat, { privateClaims, introduceProduct: true }) })));
+  await vi.waitFor(() => expect(container.querySelector('[data-testid="composer-publication-notice"]')).not.toBeNull());
+  expect(container.querySelector("[data-answer-language-help]") !== null).toBe(!privateClaims);
+  if (!privateClaims) {
+    const input = container.querySelector<HTMLTextAreaElement>("#ask-question")!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(input, original);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      container.querySelector<HTMLButtonElement>("[data-answer-language-help] button")!.click();
+    });
+    expect(input.value).toBe(original);
+  }
+  expect(requests.every(request => request.method === "GET" && ["/api/models", "/api/ask/visibility", "/api/sources"].includes(request.path))).toBe(true);
+});
