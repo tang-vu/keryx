@@ -288,7 +288,7 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2"><UiMessage messageKey="researchEntry.depth" /></legend>
             <div className="mt-1.5 flex flex-wrap gap-2 [overflow-wrap:anywhere]">
               {(["quick", "deep"] as const).map((mode) => (
-                <label key={mode} className={`kx-research-depth flex min-h-12 min-w-0 flex-[1_1_10rem] flex-wrap cursor-pointer items-center gap-2 border px-3 py-2 font-mono text-xs font-semibold capitalize transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal ${researchMode === mode ? "border-paid bg-paid/10 text-paid" : "border-line bg-paper text-ink-2 hover:border-ink-3"} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
+                <label key={mode} className={`kx-research-depth flex min-h-12 min-w-0 flex-[1_1_auto] flex-wrap cursor-pointer items-center gap-2 border px-3 py-2 font-mono text-xs font-semibold capitalize transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-seal ${researchMode === mode ? "border-paid bg-paid/10 text-paid" : "border-line bg-paper text-ink-2 hover:border-ink-3"} ${disabled ? "cursor-not-allowed opacity-50" : ""}`}>
                   <input type="radio" name="research-depth" value={mode} checked={researchMode === mode}
                     onChange={() => setResearchMode(mode)} disabled={disabled} className="size-3.5 shrink-0 accent-paid" />
                   {mode === "quick" ? <Zap aria-hidden="true" className="size-3.5 shrink-0" /> : <BookOpen aria-hidden="true" className="size-3.5 shrink-0" />}

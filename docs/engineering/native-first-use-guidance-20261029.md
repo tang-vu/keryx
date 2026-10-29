@@ -33,13 +33,16 @@ depth, navigating the tour and closing it preserve the unsent question and the
 original metadata handoff URL. The guide neither submits a question nor signs,
 funds or retries a request.
 
-Depth options use a wrapping flex layout with a ten-rem basis. They share a row
+Depth options use a wrapping flex layout with an intrinsic text basis. They share a row
 when space permits and retain their full names on narrow surfaces. Inner content
 can wrap with enlarged text. Native radio values, input names, handlers, source
 caps, model settings and server admission keep their existing meaning.
 The hero guide participates in normal wrapping flow, and its trigger stays within
 the available width. The submit label and icon wrap inside the button. This keeps
 the complete text visible at enlarged sizes without changing submission behavior.
+Short labels keep the compact first-screen layout; longer labels wrap when their
+actual contents need the space. The existing English 320px research-desk check
+still requires the primary action to fit with navigation and the settlement strip.
 
 ## Acceptance
 
