@@ -83,6 +83,146 @@
     "reportActions.downloadUnavailable": {
       "source": "Download unavailable. Open the saved report instead.",
       "text": "डाउनलोड नहीं हो सका। इसके बजाय सहेजी गई रिपोर्ट खोलें।"
+    },
+    "citationExport.title": {
+      "source": "Reference export",
+      "text": "संदर्भ निर्यात"
+    },
+    "citationExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "BibTeX डाउनलोड करें"
+    },
+    "citationExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "CSL-JSON डाउनलोड करें"
+    },
+    "citationExport.ris": {
+      "source": "Download RIS (Zotero)",
+      "text": "RIS डाउनलोड करें (Zotero)"
+    },
+    "citationExport.references.one": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "लेख संदर्भ: {count}। दर्ज शीर्षक, लिंक और तिथियाँ शामिल हैं; देखे गए शैक्षणिक रिकॉर्ड में दिए गए लेखक, DOI और पत्रिका के मेटाडेटा के साथ पढ़ने की सीमाएँ भी शामिल हैं। शोधपत्र में उपयोग करने से पहले मेटाडेटा की समीक्षा करें। Zotero में File → Import से RIS आयात करें।"
+    },
+    "citationExport.omitted.one": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "लेख का शीर्षक या उपयोग योग्य लेख लिंक न होने के कारण छोड़े गए उद्धरण: {count}।"
+    },
+    "citationExport.references.other": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "लेख संदर्भ: {count}। दर्ज शीर्षक, लिंक और तिथियाँ शामिल हैं; देखे गए शैक्षणिक रिकॉर्ड में दिए गए लेखक, DOI और पत्रिका के मेटाडेटा के साथ पढ़ने की सीमाएँ भी शामिल हैं। शोधपत्र में उपयोग करने से पहले मेटाडेटा की समीक्षा करें। Zotero में File → Import से RIS आयात करें।"
+    },
+    "citationExport.omitted.other": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "लेख का शीर्षक या उपयोग योग्य लेख लिंक न होने के कारण छोड़े गए उद्धरण: {count}।"
+    },
+    "bibliographyExport.label": {
+      "source": "Bibliography exports",
+      "text": "ग्रंथसूची निर्यात"
+    },
+    "bibliographyExport.provenance": {
+      "source": "Original metadata and field provenance",
+      "text": "मूल मेटाडेटा और फ़ील्ड का स्रोत"
+    },
+    "bibliographyExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "BibTeX डाउनलोड करें"
+    },
+    "bibliographyExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "CSL-JSON डाउनलोड करें"
+    },
+    "bibliographyExport.ris": {
+      "source": "Download RIS",
+      "text": "RIS डाउनलोड करें"
+    },
+    "reportSourceLens.unavailable": {
+      "source": "Source inspection unavailable: this report has no stored excerpt ledger.",
+      "text": "स्रोत की जाँच उपलब्ध नहीं है: इस रिपोर्ट में अंशों का सहेजा गया रिकॉर्ड नहीं है।"
+    },
+    "reportSourceLens.empty": {
+      "source": "No inspectable non-demo excerpts are recorded for source inspection.",
+      "text": "स्रोत की जाँच के लिए डेमो के अलावा कोई जाँच योग्य अंश दर्ज नहीं है।"
+    },
+    "reportSourceLens.title": {
+      "source": "What if a source were missing?",
+      "text": "अगर कोई स्रोत न हो तो?"
+    },
+    "reportSourceLens.localView": {
+      "source": "Local excerpt view",
+      "text": "अंशों का स्थानीय दृश्य"
+    },
+    "reportSourceLens.originalExcerpts": {
+      "source": "Original excerpts",
+      "text": "मूल अंश"
+    },
+    "reportSourceLens.viewExcerpts": {
+      "source": "Excerpts in this view",
+      "text": "इस दृश्य के अंश"
+    },
+    "reportSourceLens.intro": {
+      "source": "Temporarily leave out one source to see which research targets retain excerpts in this report.",
+      "text": "किसी स्रोत को अस्थायी रूप से हटाकर देखें कि इस रिपोर्ट में किन शोध लक्ष्यों के अंश बने रहते हैं।"
+    },
+    "reportSourceLens.select": {
+      "source": "Inspect without",
+      "text": "इसके बिना जाँचें"
+    },
+    "reportSourceLens.keepAll": {
+      "source": "Keep every source",
+      "text": "सभी स्रोत रखें"
+    },
+    "reportSourceLens.restore": {
+      "source": "Restore source",
+      "text": "स्रोत वापस लाएँ"
+    },
+    "reportSourceLens.original": {
+      "source": "Showing the original excerpt ledger.",
+      "text": "अंशों का मूल रिकॉर्ड दिखाया जा रहा है।"
+    },
+    "reportSourceLens.missing": {
+      "source": "No inspectable excerpts in the original report.",
+      "text": "मूल रिपोर्ट में जाँच योग्य अंश नहीं हैं।"
+    },
+    "reportSourceLens.lost": {
+      "source": "No excerpts remain in this view.",
+      "text": "इस दृश्य में कोई अंश नहीं बचा है।"
+    },
+    "reportSourceLens.inspect": {
+      "source": "Inspect remaining excerpts",
+      "text": "शेष अंशों की जाँच करें"
+    },
+    "reportSourceLens.remaining.one": {
+      "source": "{count} recorded excerpt remains.",
+      "text": "{count} दर्ज अंश बचा है।"
+    },
+    "reportSourceLens.remaining.other": {
+      "source": "{count} recorded excerpts remain.",
+      "text": "{count} दर्ज अंश बचे हैं।"
+    },
+    "reportSourceLens.omitted.one": {
+      "source": "{count} research target loses its last recorded excerpt without {source}.",
+      "text": "{source} के बिना {count} शोध लक्ष्य का अंतिम दर्ज अंश हट जाता है।"
+    },
+    "reportSourceLens.omitted.other": {
+      "source": "{count} research targets lose their last recorded excerpt without {source}.",
+      "text": "{source} के बिना {count} शोध लक्ष्यों के अंतिम दर्ज अंश हट जाते हैं।"
+    },
+    "reportSourceLens.alreadyMissing.one": {
+      "source": " {count} target already had no inspectable excerpts.",
+      "text": " {count} लक्ष्य का पहले भी कोई जाँच योग्य अंश नहीं था।"
+    },
+    "reportSourceLens.alreadyMissing.other": {
+      "source": " {count} targets already had no inspectable excerpts.",
+      "text": " {count} लक्ष्यों के पहले भी कोई जाँच योग्य अंश नहीं थे।"
+    },
+    "reportSourceLens.version": {
+      "source": "{marker} · {source} · version {version}",
+      "text": "{marker} · {source} · संस्करण {version}"
+    },
+    "reportSourceLens.versionTitle": {
+      "source": "{marker} · {source} · {title} · version {version}",
+      "text": "{marker} · {source} · {title} · संस्करण {version}"
     }
   }
 }
