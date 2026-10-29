@@ -673,7 +673,8 @@ jobs:
         with:
           name: answer-presentation-screenshots
           path: .artifacts/answer-presentation-*.png
-          if-no-files-found: ignore
+          if-no-files-found: error
+          include-hidden-files: true
 
       - name: Research reading UX (offline Chromium and responsive layout)
         env:

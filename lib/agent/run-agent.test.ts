@@ -246,7 +246,7 @@ function buy(c: { id: string; name: string; price: number }, ev = 0.8): Decision
 
 interface EngineOverrides {
   /** Explicit synthetic independent observation; never inferred from a question. */
-  reviewedStatementLanguage?: "en" | "vi" | "pt" | "es" | "UNKNOWN";
+  reviewedStatementLanguage?: "en" | "vi" | "pt" | "es" | "fr" | "UNKNOWN";
   decide?: (input: DecideInput) => Decision[];
   sufficiency?: (input: SufficiencyInput) => SufficiencyResult;
   reevaluate?: (input: ReevaluateInput) => {
@@ -508,17 +508,17 @@ const citationPool = (budget: number) => budget * config.citationPoolRatio;
 describe("ordinary recorded answer language", () => {
   const quote = "Original café evidence preserves its qualification.";
   const sentences = { en: "The evidence retains a qualification.", vi: "Bằng chứng giữ lại một điều kiện.",
-    pt: "A evidência conserva uma qualificação.", es: "La evidencia conserva una salvedad." } as const;
-  async function languageRun(options: { language?: "en" | "vi" | "pt" | "es";
-    observation?: "en" | "vi" | "pt" | "es" | "UNKNOWN"; originalQuestion?: string;
-    private?: boolean; package?: boolean; pending?: boolean; fundingFails?: boolean } = {}) {
+    pt: "A evidência conserva uma qualificação.", es: "La evidencia conserva una salvedad.", fr: "Les preuves conservent une réserve." } as const;
+  async function languageRun(options: { language?: "en" | "vi" | "pt" | "es" | "fr";
+    observation?: "en" | "vi" | "pt" | "es" | "fr" | "UNKNOWN"; originalQuestion?: string;
+    private?: boolean; package?: boolean; teaching?: boolean; pending?: boolean; fundingFails?: boolean } = {}) {
     const statement = sentences[options.observation === "UNKNOWN" ? "en" : options.observation ?? options.language ?? "vi"];
     const item: SourceItem = { id: "language-item", sourceId: "language-source", title: "Synthetic original",
       link: "https://owned.example/language", summary: "Synthetic evidence", content: quote };
     const source = makeSource({ id: item.sourceId, fetchPrice: 0.004 });
     const engine = fakeEngine({ reviewedStatementLanguage: options.observation, synthesize: input => {
       expect(input.question).toBe("Explain the evidence qualification.");
-      expect(input.observeAnswerLanguage).toBe(options.private || options.package ? undefined : true);
+      expect(input.observeAnswerLanguage).toBe(options.private || options.package || options.teaching ? undefined : true);
       return { answer: "Discard this unreviewed draft [S1]", citedMarkers: ["S1"], evidence: [
         { claimIndex: 0, marker: "S1", quote, support: 0.9, statement, statementSupport: 0.9 },
       ] };
@@ -532,14 +532,23 @@ describe("ordinary recorded answer language", () => {
         amountUsdc: args.amount, weight: args.weight, rationale: args.rationale, settled: false, settlementStatus: "pending" }));
     };
     const queryId = options.private ? `prv_${"e".repeat(64)}` : undefined, effects = isolatedTestEffects(queryId);
-    const run = await collectRun({ question: "Explain the evidence qualification.", origin: "web", budget: 0.03,
+    const previousTeaching = process.env.KERYX_TEACHING_PROPOSALS;
+    if (options.teaching) process.env.KERYX_TEACHING_PROPOSALS = "1";
+    let run: QueryRun;
+    try { run = await collectRun({ question: "Explain the evidence qualification.", origin: "web", budget: 0.03,
       ...(options.language ? { presentationLanguage: options.language } : {}),
       ...(options.originalQuestion ? { originalQuestion: options.originalQuestion } : {}), ...(queryId ? { queryId } : {}),
       ...(options.package ? { executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } } : {}) },
     { deps: { ...deps([source], engine, gateway, { items: { [source.id]: [item] } }), effects } });
+    } finally {
+      if (options.teaching) {
+        if (previousTeaching === undefined) delete process.env.KERYX_TEACHING_PROPOSALS;
+        else process.env.KERYX_TEACHING_PROPOSALS = previousTeaching;
+      }
+    }
     return { run, gateway, statement, effects };
   }
-  it.each(["en", "vi", "pt", "es"] as const)("records %s only from reviewed delivered statements and renderer, across final consumers", async language => {
+  it.each(["en", "vi", "pt", "es", "fr"] as const)("records %s only from reviewed delivered statements and renderer, across final consumers", async language => {
     const { run, gateway, statement, effects } = await languageRun({ language, observation: language });
     expect(recordedAnswerLanguage(run)).toBe(language);
     expect(run.answer).toContain(statement);
@@ -581,6 +590,28 @@ describe("ordinary recorded answer language", () => {
     const { run } = await languageRun({ language: "pt", observation: "es", originalQuestion: "Answer in Spanish about the qualification." });
     expect(recordedAnswerLanguage(run)).toBe("es");
     expect(run.answer).toContain(sentences.es);
+  });
+  it("honors French original-question intent before a different trusted bot preference", async () => {
+    const { run } = await languageRun({ language: "vi", observation: "fr", originalQuestion: "Répondez en français. Explain the qualification." });
+    expect(recordedAnswerLanguage(run)).toBe("fr");
+    expect(run.answer).toContain(sentences.fr);
+  });
+  it.each([{ private: true }, { package: true }, { teaching: true }])("keeps French outside the retained original renderer/provenance opt-in %j", async options => {
+    const { run } = await languageRun({ language: "fr", observation: "fr", originalQuestion: "Répondez en français. Explain the qualification.", ...options });
+    expect(recordedAnswerLanguage(run)).toBeUndefined();
+    expect(run.answer).not.toContain("### Objectif de recherche");
+    expect(run.trace.at(-1)?.detail ?? {}).not.toHaveProperty("answerLanguage");
+  });
+  it.each([undefined, "en", "UNKNOWN"] as const)("withholds %s French-mismatched sentences without removing their qualified evidence or changing fixed mock allocations", async observation => {
+    const observed = await languageRun({ language: "fr", observation: "fr" });
+    const rejected = await languageRun({ language: "fr", observation });
+    expect(rejected.run.answer).not.toContain(rejected.statement);
+    expect(recordedAnswerLanguage(rejected.run)).toBe("fr");
+    expect(rejected.run.trace.at(-1)?.detail).toMatchObject({ answerLanguage: { method: "deterministic-renderer" } });
+    expect(rejected.run.evidence).toEqual(observed.run.evidence);
+    expect(rejected.run.citations.map(row => [row.marker, row.sourceId, row.weight, row.reward])).toEqual(observed.run.citations.map(row => [row.marker, row.sourceId, row.weight, row.reward]));
+    expect(rejected.gateway.citationCalls).toEqual(observed.gateway.citationCalls);
+    expect(rejected.run.totalSpent).toBe(observed.run.totalSpent);
   });
   it.each([{ private: true }, { package: true }, { pending: true }, { fundingFails: true }])(
     "leaves unqualified special or operational-prose paths unknown %j", async options => {

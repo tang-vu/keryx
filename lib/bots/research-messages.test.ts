@@ -13,6 +13,7 @@ const requests = [
   ["vi", "Trả lời bằng tiếng Việt. Giải thích x402.", "Trích dẫn và phần thưởng dự kiến (USDC)"],
   ["pt", "Responda em português. Explique x402.", "Citações e recompensas planejadas (USDC)"],
   ["es", "En español, explique x402.", "Citas y recompensas previstas (USDC)"],
+  ["fr", "Répondez en français. Expliquez x402.", "Citations and planned rewards (USDC)"],
 ] as const;
 const placeholders = (text: string) => [...text.matchAll(/\{([A-Za-z][A-Za-z0-9]*)\}/gu)].map(match => match[1]).sort();
 function run(question: string, paymentMode?: "real" | "offline"): QueryRun {

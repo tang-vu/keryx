@@ -2,7 +2,7 @@ import { demoteSyntheticEvidence } from "./research/evidence-provenance";
 import { isRequestObject } from "./request-object";
 import { surfaceResearch } from "./research/surface-result";
 import { formatRecordedUsdc } from "./display/recorded-usdc";
-import { livePresentationLocale, type PresentationLocale } from "./research/presentation-language";
+import { livePresentationLocale, type PresentationLocale, type RequestedPresentationLanguage } from "./research/presentation-language";
 import { researchPresentationMessages } from "./research/presentation-messages";
 import { API_SETTLEMENT_NOTICE, presentationLocaleNotice } from "./research/result-presentation";
 import { recordedAnswerLanguage } from "./research/answer-language-provenance";
@@ -43,7 +43,7 @@ export interface ChatCompletionRequest {
   scholarly?: boolean;
   mode?: "quick" | "deep";
   /** Generated labels only; never changes question, model output or payment authority. */
-  language?: "en" | "vi" | "pt" | "pt-BR" | "es";
+  language?: RequestedPresentationLanguage;
 }
 
 /** Validate every entry, including earlier turns that are not used as the question. */

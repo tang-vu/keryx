@@ -7,8 +7,8 @@ it("uses the finite system catalogue with an explicit override without enabling 
   expect(clientPresentationLanguage("es-ES", "vi")).toBe("vi");
   expect(clientPresentationLanguage("vi-VN", "auto")).toBe("vi");
   expect(clientPresentationLanguage("zh-Hans")).toBe("en");
-  expect(() => clientPresentationLanguage("vi-VN", "fr")).toThrow("Unsupported presentation language");
-  for (const language of ["en", "vi", "pt", "es"] as const) {
+  expect(() => clientPresentationLanguage("vi-VN", "de")).toThrow("Unsupported presentation language");
+  for (const language of ["en", "vi", "pt", "es", "fr"] as const) {
     expect(clientPresentationMessages(language).controls.answer).toBeTruthy();
     expect(clientPresentationMessages(language).research("reportSources")).toBeTruthy();
   }

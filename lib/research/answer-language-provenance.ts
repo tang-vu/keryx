@@ -4,6 +4,7 @@ import type { ProposedEvidence } from "../llm/reasoning-engine";
 import type { CitedStatement } from "../agent/cited-statements";
 import { reviewedStatementLanguage } from "./answer-language-review";
 import type { PresentationLanguage } from "./presentation-language";
+import { isPresentationLanguage } from "../../shared/i18n/presentation-language";
 
 export interface AnswerLanguageProvenance {
   format: "keryx-answer-language-v1";
@@ -20,7 +21,7 @@ const digest = (answer: string) => sha256(stringToHex(answer));
  * Call after all final answer projections, never from request JSON or a prompt. */
 export function finalizeAnswerLanguage(input: { answer: string; rendererLanguage: PresentationLanguage;
   statements: readonly CitedStatement[]; proposals: readonly ProposedEvidence[] }): AnswerLanguageProvenance | undefined {
-  if (!input.answer || !["en", "vi", "pt", "es"].includes(input.rendererLanguage)) return undefined;
+  if (!input.answer || !isPresentationLanguage(input.rendererLanguage)) return undefined;
   for (const statement of input.statements) {
     const rows = input.proposals.filter(row => row.claimIndex === statement.claimIndex && row.marker === statement.marker &&
       row.quote.trim() === statement.quote && row.statement === statement.text);
@@ -48,7 +49,7 @@ function readAnswerLanguagePacket(packet: unknown, answer: string): AnswerLangua
   const p = packet as Record<string, unknown>;
   if (Object.keys(p).sort().join(",") !== "answerSha256,format,language,method,scope" ||
     p.format !== "keryx-answer-language-v1" || p.scope !== "generated-prose" ||
-    typeof p.language !== "string" || !["en", "vi", "pt", "es"].includes(p.language) ||
+    !isPresentationLanguage(p.language) ||
     (p.method !== "deterministic-renderer" && p.method !== "reviewed-statements-and-renderer") ||
     p.answerSha256 !== digest(answer)) return undefined;
   return { format: "keryx-answer-language-v1", scope: "generated-prose", language: p.language as PresentationLanguage,

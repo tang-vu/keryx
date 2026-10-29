@@ -14,6 +14,8 @@ const ordinaryLabels = {
     serial: "Série 2026 — Nº {serial}" },
   es: { title: "{question} — Informe Keryx", one: "fuente citada", other: "fuentes citadas",
     serial: "Serie 2026 — N.º {serial}" },
+  fr: { title: "{question} — Rapport Keryx", one: "source citée", other: "sources citées",
+    serial: "Série 2026 — N° {serial}" },
 } as const satisfies Record<Exclude<PresentationLanguage, "en">, {
   title: string; one: string; other: string; serial: string;
 }>;
@@ -45,7 +47,7 @@ function previewCopy(language: PresentationLanguage) {
   return createMessages("en", catalogue);
 }
 
-const copies = { en: previewCopy("en"), vi: previewCopy("vi"), pt: previewCopy("pt"), es: previewCopy("es") };
+const copies = { en: previewCopy("en"), vi: previewCopy("vi"), pt: previewCopy("pt"), es: previewCopy("es"), fr: previewCopy("fr") };
 
 /** Call only after public visibility admission. Reads this retained answer/trace,
  * never a question, request, viewer preference, provider, store or receipt.

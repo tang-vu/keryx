@@ -40,6 +40,7 @@ const OPENING_CAVEATS = [
   { label: "Độ tin cậy thấp", closer: "Kết quả chưa hoàn chỉnh." },
   { label: "Baixa confiança", closer: "Trate este resultado como provisório." },
   { label: "Confianza baja", closer: "Trate este resultado como provisional." },
+  { label: "Confiance faible", closer: "Considérez ce résultat comme provisoire." },
 ] as const;
 
 /** Exact introductions from the current grounded-answer writer. A later
@@ -61,6 +62,10 @@ const DELIVERY_LEADS = [
   "Solo fragmentos de las fuentes; el borrador no se presenta como conclusión y la síntesis completa sigue sin verificarse.",
   "No hay una respuesta respaldada: la síntesis o la revisión de las evidencias no se completó. Se conservan las lecturas y los recibos originales.",
   "No hay una respuesta respaldada: el contenido leído no proporcionó fragmentos admitidos para los objetivos de investigación.",
+  "Résumé rédigé par un modèle, avec citations pour chaque phrase. Chaque phrase est accompagnée de l'extrait original utilisé pour la vérifier.",
+  "Extraits des sources uniquement ; le brouillon n'est pas présenté comme une conclusion et l'exhaustivité de la synthèse reste non vérifiée.",
+  "Aucune réponse étayée : la synthèse ou la vérification des preuves n'a pas abouti. Les lectures et reçus originaux sont conservés.",
+  "Aucune réponse étayée : le contenu lu n'a fourni aucun extrait admis pour les objectifs de recherche.",
 ] as const;
 
 const TARGET_LABELS = [
@@ -68,6 +73,8 @@ const TARGET_LABELS = [
   { heading: "Yêu cầu nghiên cứu", topic: "Chủ đề yêu cầu (chưa xác minh)" },
   { heading: "Objetivo de pesquisa", topic: "Tema solicitado (não verificado)" },
   { heading: "Objetivo de investigación", topic: "Tema solicitado (no verificado)" },
+  // French typography places a space before the colon emitted by the renderer.
+  { heading: "Objectif de recherche", topic: "Sujet demandé (non vérifié) " },
 ] as const;
 
 /** Normalize a question for dedupe: lowercase, collapse whitespace, drop trailing punctuation. */
@@ -97,6 +104,7 @@ function bulletNotice(count: number): string[] {
     `Chưa thể trình bày ${count} gạch đầu dòng ngắn mà vẫn giữ mọi yêu cầu và trích đoạn đủ điều kiện; các yêu cầu được trình bày bên dưới.`,
     `Não foi possível apresentar ${count} tópicos curtos preservando todos os objetivos e trechos qualificados; os objetivos são apresentados abaixo.`,
     `No fue posible presentar ${count} puntos breves conservando todos los objetivos y fragmentos admitidos; los objetivos se presentan a continuación.`,
+    `Impossible de présenter ${count} points courts tout en conservant chaque objectif et chaque extrait admis ; la présentation par objectif suit.`,
   ];
 }
 

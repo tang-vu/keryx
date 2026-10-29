@@ -30,6 +30,27 @@ type Catalogue = Readonly<Record<DesktopNeutralKey, string>>;
 
 export const desktopNeutralCatalogues = Object.freeze({
   en: english,
+  fr: Object.freeze({
+    "nativeDesktop.workspace.none": "Aucun espace de travail ouvert",
+    "nativeDesktop.workspace.open": "Ouvrir un espace de travail",
+    "nativeDesktop.workspace.new": "Nouvel espace de travail",
+    "nativeDesktop.workspace.create": "Créer un espace de travail ",
+    "nativeDesktop.workspace.openExisting": "Ouvrir un espace existant",
+    "nativeDesktop.workspace.refresh": "↻ Actualiser",
+    "nativeDesktop.workspace.refreshTasks": "Actualiser les tâches",
+    "nativeDesktop.task.new": "＋ Nouvelle tâche de recherche",
+    "nativeDesktop.task.section": "02 / TÂCHES DE RECHERCHE ",
+    "nativeDesktop.breadcrumb.task": "DÉTAILS DE LA TÂCHE",
+    "nativeDesktop.breadcrumb.desk": "BUREAU DE RECHERCHE",
+    "nativeDesktop.task.title": "Tâche de recherche",
+    "nativeDesktop.desk.title": "Bureau de recherche",
+    "nativeDesktop.task.question": "Question de recherche",
+    "nativeDesktop.task.questionPlaceholder": "Que souhaitez-vous étudier ?",
+    "nativeDesktop.task.depth": "PROFONDEUR DE RECHERCHE",
+    "nativeDesktop.reference.eyebrow": "BIBLIOTHÈQUE LOCALE",
+    "nativeDesktop.reference.title": "Copies des références",
+    "nativeDesktop.reference.import": "+ Importer un fichier",
+  }),
   vi: Object.freeze({
     "nativeDesktop.workspace.none": "Chưa mở không gian làm việc",
     "nativeDesktop.workspace.open": "Mở không gian làm việc",

@@ -25,7 +25,7 @@ export const EVIDENCE_REVIEW_GUIDANCE =
   STATEMENT_REVIEW_GUIDANCE;
 
 export const STATEMENT_LANGUAGE_REVIEW_GUIDANCE =
-  " For every statement, independently identify its actual generated prose language as statementLanguage: en, vi, pt, es or UNKNOWN. " +
+  " For every statement, independently identify its actual generated prose language as statementLanguage: en, vi, pt, es, fr or UNKNOWN. " +
   "Observe the statement itself, excluding the original quote; a requested language or prompt does not prove the output language. " +
   "Mixed, unsupported or ambiguous language is UNKNOWN. This observation is a model assessment, never human approval. ";
 

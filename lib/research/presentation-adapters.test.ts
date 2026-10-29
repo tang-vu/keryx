@@ -22,7 +22,7 @@ vi.mock("@/lib/config", async original => {
 });
 import { POST } from "../../app/api/v1/chat/completions/route";
 import { createRemoteMcpServer, remoteResearchResult } from "../mcp/remote-server";
-const locales = ["en", "vi", "pt", "es"] as const;
+const locales = ["en", "vi", "pt", "es", "fr"] as const;
 const preparedDeps = { db: {}, engine: { name: "synthetic-presentation" }, gateway: { mode: "offline" } };
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
@@ -45,7 +45,7 @@ it.each(locales.flatMap(language => [false, true].map(stream => [language, strea
     expect(mocks.deps).toHaveBeenCalledExactlyOnceWith({ model: undefined });
     expect(mocks.collect.mock.calls[0][1]).toEqual({ deps: preparedDeps, onStep: expect.any(Function) });
     expect(input).toMatchObject({ question: presentationQuestions.en, budget: 0, provenance: { surface: "api", ownershipMethod: "unknown" } });
-    for (const forbidden of ["language", "answerLanguage", "requestedLanguage", "originalQuestion"])
+    for (const forbidden of ["language", "presentationLanguage", "answerLanguage", "requestedLanguage", "originalQuestion"])
       expect(input).not.toHaveProperty(forbidden);
     const run = presentationRun(), expected = keryxMeta(run);
     if (stream) {
@@ -64,10 +64,10 @@ it.each(locales.flatMap(language => [false, true].map(stream => [language, strea
     }
     expect(fetchMock).not.toHaveBeenCalled(); expect(mocks.db).not.toHaveBeenCalled();
   });
-it.each(["fr", "zh-Hans", "es-ES", null, {}, 3])("API rejects unsupported language %j before admission/provider calls with stable invalid_request code", async language => {
+it.each(["de", "zh-Hans", "es-ES", null, {}, 3])("API rejects unsupported language %j before admission/provider calls with stable invalid_request code", async language => {
   const response = await POST(request(language)); expect(response.status).toBe(400);
   expect(await response.json()).toEqual({ error: { type: "invalid_request_error", code: "invalid_request",
-    message: "language must be en, vi, pt, pt-BR or es (generated labels only)" } });
+    message: "language must be en, vi, pt, pt-BR, es or fr (generated labels only)" } });
   expect(mocks.admission).not.toHaveBeenCalled(); expect(mocks.collect).not.toHaveBeenCalled(); expect(fetchMock).not.toHaveBeenCalled();
   expect(mocks.deps).not.toHaveBeenCalled();
 });
@@ -96,6 +96,7 @@ it.each(locales)("remote MCP %s explicit labels preserve structured bytes and do
     expect(content).toContain(researchPresentationCatalogues[language].requestedUnknown.replace("{language}", language));
     expect(runner).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ question: run.question, budget: 0 }));
     expect(runner.mock.calls[0][0]).not.toHaveProperty("language"); expect(runner.mock.calls[0][0]).not.toHaveProperty("originalQuestion");
+    expect(runner.mock.calls[0][0]).not.toHaveProperty("presentationLanguage");
     expect(fetchMock).not.toHaveBeenCalled();
   } finally { await client.close(); await server.close(); }
 });
@@ -103,7 +104,7 @@ it("remote MCP rejects unsupported label locale without running research", async
   const runner = vi.fn(async () => presentationRun()), server = createRemoteMcpServer({ budgetCap: 0, clientChannel: "other" }, runner);
   const client = new Client({ name: "offline-refusal", version: "1" }), [a, b] = InMemoryTransport.createLinkedPair();
   try { await server.connect(b); await client.connect(a);
-    const response = await client.callTool({ name: "research", arguments: { question: presentationQuestions.en, language: "fr" } });
+    const response = await client.callTool({ name: "research", arguments: { question: presentationQuestions.en, language: "de" } });
     expect(response.isError).toBe(true); expect(runner).not.toHaveBeenCalled(); expect(fetchMock).not.toHaveBeenCalled();
   } finally { await client.close(); await server.close(); }
 });

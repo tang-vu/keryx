@@ -130,7 +130,7 @@
     {
       "namespace": "bot-controls",
       "sourcePath": "locales/en/bot-controls.ts",
-      "sourceSha256": "96779e5901639da0bedbc73c2fbd8129bf0f3e45ede8e3c93c276bffc0a89728",
+      "sourceSha256": "9e1578566334d3757b77e0684a7b5cffe06a9866817f642429980dc45094d8d7",
       "draftPath": "locales/zh-Hans/ui-drafts/bot-controls.json",
       "extractedLeaves": 14,
       "authoredEntries": 14,

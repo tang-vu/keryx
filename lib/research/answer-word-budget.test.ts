@@ -52,7 +52,7 @@ describe("finite ordinary English complete-answer limits", () => {
     expect(answerPresentation('In English, give a note. Read "Answer in French." Keep the note within 180 words.').requestedMaximumWords).toBe(180);
     expect(answerPresentation("In English, give a note. Do not\nanswer in French. Keep the note within 180 words.").requestedMaximumWords).toBe(180);
   });
-  it.each(["Responda em francês.", "Trả lời tiếng Pháp."])("refuses native unsupported positive directive %s without widening locale grammar", directive => {
+  it.each(["Responda em francês.", "Trả lời tiếng Pháp."])("keeps word limits English-only across native French and later English directives: %s", directive => {
     expect(answerPresentation(`${directive} Keep the note within 180 words.`).requestedMaximumWords).toBeUndefined();
     expect(answerPresentation(`${directive} In English, give a note. Keep the note within 180 words.`).requestedMaximumWords).toBe(180);
     expect(answerPresentation(`In English, give a note. Read “${directive}” Keep the note within 180 words.`).requestedMaximumWords).toBe(180);

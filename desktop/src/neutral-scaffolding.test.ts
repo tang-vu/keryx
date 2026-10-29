@@ -7,13 +7,14 @@ import { clientPresentationLanguage } from "../../shared/i18n/client-language";
 import { desktopNeutralCatalogues, desktopNeutralMessages, type DesktopNeutralKey } from "../../shared/i18n/desktop-neutral";
 import type { DesktopAPI, TaskRow, WorkspaceView } from "./contracts";
 
-const locales = ["en", "vi", "pt", "es"] as const;
+const locales = ["en", "vi", "pt", "es", "fr"] as const;
 const keys = Object.keys(desktopNeutralCatalogues.en) as DesktopNeutralKey[];
 const samples = [
   ["en", "Open workspace", "RESEARCH DESK", "Research question", "RESEARCH DEPTH", "Reference snapshots"],
   ["vi", "Mở không gian làm việc", "BÀN NGHIÊN CỨU", "Câu hỏi nghiên cứu", "ĐỘ SÂU NGHIÊN CỨU", "Bản chụp tài liệu tham khảo"],
   ["pt", "Abrir espaço de trabalho", "MESA DE PESQUISA", "Pergunta de pesquisa", "PROFUNDIDADE DA PESQUISA", "Cópias de referências"],
   ["es", "Abrir espacio de trabajo", "MESA DE INVESTIGACIÓN", "Pregunta de investigación", "PROFUNDIDAD DE LA INVESTIGACIÓN", "Copias de referencias"],
+  ["fr", "Ouvrir un espace de travail", "BUREAU DE RECHERCHE", "Question de recherche", "PROFONDEUR DE RECHERCHE", "Copies des références"],
 ] as const;
 
 describe("bounded neutral Desktop catalogue", () => {
@@ -122,6 +123,9 @@ describe("real Desktop neutral renderer binding", () => {
     // Existing auto/system selection is used before changing the existing override.
     expectLabel("nativeDesktop.workspace.open", ".sidebar-actions button", clientPresentationLanguage("vi-VN"));
     await overrideLanguage(language);
+    const languageSelector = dom.window.document.querySelector<HTMLSelectElement>("select[aria-label]")!;
+    expect(languageSelector.closest("label")?.getAttribute("lang")).toBe(language);
+    expect(languageSelector.querySelector(`option[value="${language}"]`)?.getAttribute("lang")).toBe(language);
     for (const [key, selector] of [
       ["nativeDesktop.workspace.open", ".sidebar-actions button:first-child"],
       ["nativeDesktop.workspace.new", ".sidebar-actions button:last-child"],
