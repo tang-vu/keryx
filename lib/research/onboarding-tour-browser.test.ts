@@ -154,9 +154,21 @@ it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const)
       expect(buttons.every(rect => rect.height >= 44 && rect.left >= 0 && rect.right <= width && rect.top >= 0 && rect.bottom <= 844)).toBe(true);
       expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
       if (font > 16 && index === 1) {
-        expect(await reader.evaluate(element => element.clientHeight > 44 && element.scrollHeight > element.clientHeight)).toBe(true);
-        await reader.focus(); const top = await reader.evaluate(element => element.scrollTop);
-        await page.keyboard.press("PageDown"); await expect.poll(() => reader.evaluate(element => element.scrollTop)).toBeGreaterThan(top);
+        const geometry = await reader.evaluate(element => ({ height: element.clientHeight, contentHeight: element.scrollHeight }));
+        expect(geometry.height).toBeGreaterThan(44);
+        // Desktop fallback fonts can fit the complete Russian paragraph without scrolling.
+        // Narrow enlarged-text cases must still exercise keyboard scrolling.
+        if (width === 320) expect(geometry.contentHeight).toBeGreaterThan(geometry.height);
+        if (geometry.contentHeight > geometry.height) {
+          await reader.focus(); const top = await reader.evaluate(element => element.scrollTop);
+          await page.keyboard.press("PageDown"); await expect.poll(() => reader.evaluate(element => element.scrollTop)).toBeGreaterThan(top);
+        } else {
+          expect(await reader.evaluate(element => {
+            const bounds = element.getBoundingClientRect(), range = document.createRange();
+            range.selectNodeContents(element.querySelector("p")!);
+            return Array.from(range.getClientRects()).every(rect => rect.top >= bounds.top && rect.bottom <= bounds.bottom);
+          }), "A guide that needs no scrolling must show its complete paragraph").toBe(true);
+        }
       }
       if (nativeScreenshots) await page.screenshot({ path: join(nativeScreenshots, `guide-native-${frame}-step-${index + 1}.png`) });
       const action = dialog.getByRole("button", { name: message(index === 3 ? "researchTour.done" : "researchTour.next"), exact: true });

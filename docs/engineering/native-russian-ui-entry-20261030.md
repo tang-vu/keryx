@@ -42,6 +42,12 @@ keyboard navigation, minimum control sizes, English financial notices and all
 prior language cases retain their assertions. Built informational-route acceptance
 also derives its preview matrix from the shared prepared-locale registry.
 
+The enlarged desktop check accepts a fully visible paragraph when the platform's
+fallback font fits it without scrolling. Where it overflows, PageDown must move
+the focused reading region. The narrow enlarged-text cases still require overflow
+and keyboard scrolling; a shorter font must not turn fully visible text into a
+test failure.
+
 Regeneration writes changed outputs only. Its `--check` mode still validates every
 prepared preview, current English binding and required coverage floor. Existing
 language artifacts and critical-review gates are preserved. Full exact-head CI,
