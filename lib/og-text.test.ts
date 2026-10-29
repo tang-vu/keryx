@@ -1,7 +1,7 @@
 import { isValidElement, type ReactElement } from "react";
 import sharp from "sharp";
 import { expect, it } from "vitest";
-import { publicPreviewText } from "./og-text";
+import { publicPreviewText, publicPreviewFittedText } from "./og-text";
 
 const bounds = { fontSize: 32, maxWidth: 1120, maxHeight: 550, color: "#1B1712" };
 interface ImageProps { src: string; alt: string; width: number; height: number }
@@ -65,4 +65,22 @@ it.each([
 });
 it("refuses oversized native text before allocating a raster", async () => {
   await expect(publicPreviewText("ह".repeat(513), bounds)).rejects.toThrow("Invalid public preview text bounds");
+});
+
+it.each([
+  ["Japanese", "研究者".repeat(26)],
+  ["Korean", "한국어 연구자 ".repeat(10).trim()],
+  ["Hindi", "शोध ".repeat(20).trim()],
+  ["Latin", "LongName".repeat(10)],
+  ["mixed original", "Café हिन्दी 日本語 한국어 <i>प्रमाण</i> & {question}"],
+])("fits a complete %s field in its profile region without truncating the original", async (_name, text) => {
+  const { props, png } = image(await publicPreviewFittedText(text, { fontSize: 64, maxWidth: 1060, maxHeight: 160, color: "#26261f" }));
+  expect(props.alt).toBe(text);
+  expect(props.width).toBeGreaterThan(0); expect(props.width).toBeLessThanOrEqual(1060);
+  expect(props.height).toBeGreaterThan(0); expect(props.height).toBeLessThanOrEqual(160);
+  expect((await sharp(png).stats()).isOpaque).toBe(false);
+});
+
+it("preserves a blank original field without asking Pango to render empty ink", async () => {
+  expect(await publicPreviewFittedText(" \t ", bounds)).toBe(" \t ");
 });

@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { PublicResearcherProfile } from "../../components/keryx/public-researcher-profile";
 import type { PublicProfileSnapshot } from "./public-profile";
 import * as fontHelpers from "../og-fonts";
+import * as textHelpers from "../og-text";
 import { publicProfileCopy as copy } from "@/locales/en/public-profiles";
 
 type ImageOptions = NonNullable<ConstructorParameters<typeof import("next/og").ImageResponse>[1]>;
@@ -93,6 +94,7 @@ describe("actual public profile metadata and preview consumers", () => {
 
   it.each(["unpublished", "profiles disabled", "privacy disabled", "storage refusal"])("refuses %s across head, page and image", async state => {
     const fonts = vi.spyOn(fontHelpers, "publicPreviewFonts");
+    const shaping = vi.spyOn(textHelpers, "publicPreviewFittedText");
     if (state === "unpublished") fixture.snapshot = null;
     if (state === "profiles disabled") vi.stubEnv("KERYX_PUBLIC_PROFILES_ENABLED", "false");
     if (state === "privacy disabled") vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false");
@@ -104,6 +106,7 @@ describe("actual public profile metadata and preview consumers", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.text()).toBe("");
     expect(fonts).not.toHaveBeenCalled();
+    expect(shaping).not.toHaveBeenCalled();
     expect(fixture.image).not.toHaveBeenCalled();
   });
 
@@ -122,14 +125,49 @@ describe("actual public profile metadata and preview consumers", () => {
     expect(options.fonts?.map(font => font.name)).toEqual(faces);
     expect(renderToStaticMarkup(element)).toContain(fontHelpers.publicPreviewFontFamily);
     const dom = new JSDOM(renderToStaticMarkup(element));
-    try { expect(Array.from(dom.window.document.body.firstElementChild!.children).map(node => node.textContent))
-      .toEqual([`${copy.brand} · @alice`, text.displayName, text.purpose || text.about, copy.imageOwnership]); }
+    try {
+      expect(Array.from(dom.window.document.body.firstElementChild!.children).map(node => node.querySelector("img")?.alt ?? node.textContent))
+        .toEqual([`${copy.brand} · @alice`, text.displayName, text.purpose || text.about, copy.imageOwnership]);
+      const images = Array.from(dom.window.document.querySelectorAll("img"));
+      expect(images).toHaveLength(2);
+      images.forEach((image, index) => {
+        expect(image.width).toBeLessThanOrEqual(1060);
+        expect(image.height).toBeLessThanOrEqual(index === 0 ? 160 : 140);
+      });
+    }
     finally { dom.window.close(); }
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(fixture.read).toHaveBeenCalledTimes(2);
     expect(fetch).not.toHaveBeenCalled();
     expect(JSON.stringify(fixture.snapshot)).toBe(before);
     expect({ contentType, dynamic, revalidate, size }).toEqual({ contentType: "image/png", dynamic: "force-dynamic", revalidate: 0, size: { width: 1200, height: 630 } });
+  });
+
+  it.each(["unpublished", "displayed text removed", "final read refused"])("refuses the old public card when %s during held text shaping", async change => {
+    let release!: (text: string) => void;
+    const shaping = vi.spyOn(textHelpers, "publicPreviewFittedText").mockReturnValue(new Promise(resolve => { release = resolve; }));
+    const pending = profileImage(params());
+    await vi.waitFor(() => expect(shaping).toHaveBeenCalledTimes(2));
+    expect(fixture.read).toHaveBeenCalledTimes(1);
+    expect(fixture.image).not.toHaveBeenCalled();
+    if (change === "unpublished") fixture.snapshot = null;
+    if (change === "displayed text removed") fixture.snapshot = { ...profile };
+    if (change === "final read refused") fixture.read.mockRejectedValue(Error("erased/private storage sentinel"));
+    release("prepared original text");
+    const response = await pending;
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.text()).toBe("");
+    expect(fixture.read).toHaveBeenCalledTimes(2);
+    expect(fixture.image).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("propagates shaping failure without rendering or a provider fallback", async () => {
+    vi.spyOn(textHelpers, "publicPreviewFittedText").mockRejectedValue(Error("local shaping refused"));
+    await expect(profileImage(params())).rejects.toThrow("local shaping refused");
+    expect(fixture.image).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it.each(["unpublished", "displayed text removed", "final read refused"])("refuses the old public card when %s during held font I/O", async change => {
@@ -163,6 +201,15 @@ describe("actual public profile metadata and preview consumers", () => {
   it.each([
     ["vi", "Nguyễn Ánh", "Vì sao nghiên cứu cần nguồn đáng tin cậy?"],
     ["han", "中文研究者", "人工智能为什么需要可靠的来源与引用证据？"],
+    ["de", "Deutsche Forschung", "Quellen prüfen und Einschränkungen erhalten."],
+    ["ja", "日本語の研究者", "研究資料の出典と引用を確認してください。"],
+    ["ko", "한국어 연구자", "연구 보고서와 인용 근거를 확인하세요."],
+    ["hi", "हिन्दी शोधकर्ता", "शोध रिपोर्ट, उद्धरण, प्रमाण, प्रश्न और उत्तर।"],
+    ["id", "Peneliti Indonesia", "Periksa sumber, kutipan, dan keterbatasan bukti."],
+    ["hi-long", "शोध ".repeat(20).trim(), "प्रमाण ".repeat(20).trim()],
+    ["ja-long", "研究者".repeat(26), "出典と証拠を確認します。".repeat(10)],
+    ["latin-long", "LongName".repeat(10), "OriginalPurpose".repeat(10)],
+    ["mixed", "Café हिन्दी 日本語 한국어", "Literal <i>प्रमाण</i> & café 日本語 한국어 {question}"],
   ])("renders the actual %s profile ImageResponse with bundled fonts", async (language, displayName, purpose) => {
     fixture.snapshot = { ...profile, displayName, purpose };
     fixture.renderPng = true;
@@ -177,6 +224,16 @@ describe("actual public profile metadata and preview consumers", () => {
     });
     vi.stubGlobal("fetch", localFetch);
     const response = await profileImage(params());
+    const element = fixture.image.mock.calls[0][0];
+    const dom = new JSDOM(renderToStaticMarkup(element));
+    try {
+      const images = Array.from(dom.window.document.querySelectorAll("img"));
+      expect(images.map(image => image.alt)).toEqual([displayName, purpose]);
+      expect(images.every(image => image.width <= 1060)).toBe(true);
+      expect(images[0].height).toBeLessThanOrEqual(160);
+      expect(images[1].height).toBeLessThanOrEqual(140);
+      expect(images.every(image => image.style.flexShrink === "0")).toBe(true);
+    } finally { dom.window.close(); }
     const bytes = Buffer.from(await response.arrayBuffer());
     expect([...bytes.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
     expect(bytes.readUInt32BE(16)).toBe(1200);

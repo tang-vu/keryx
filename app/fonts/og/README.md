@@ -1,7 +1,7 @@
 # Public preview fonts
 
 These unmodified static fonts are loaded from disk by `lib/og-fonts.ts` for public
-dispatch, creator and wanted Open Graph images. No font service is required for
+dispatch, creator, wanted and researcher-profile Open Graph images. No font service is required for
 Vietnamese, Simplified Chinese, Japanese, Korean or Hindi text. This provides glyph coverage without
 selecting an answer language or activating a translated interface.
 
@@ -41,7 +41,15 @@ recorded-language presentation; financial and historical-network wording stays E
 
 Glyph coverage is not sufficient for Devanagari conjuncts and vowel positioning.
 `lib/og-text.ts` uses the already locked Sharp 0.35.5 Pango/HarfBuzz text renderer
-and the local Devanagari font to create bounded PNG text nodes for these strings
-before Satori lays out the card. Original text is escaped as literal Pango text;
-other scripts keep their existing text nodes. The browser/Pango comparison and
-actual dispatch, creator and wanted image tests cover this shaping boundary.
+and these local faces to create bounded PNG text nodes for these strings before
+Satori lays out the card. A process-local initialization registers the six fixed
+font files with libvips, including mixed-script fallback; no host fonts or remote
+font service are needed for the listed scripts. Original text is escaped as literal
+Pango text, with automatic hyphen insertion disabled. Dispatch, creator and wanted
+keep their existing text nodes outside Devanagari.
+
+Researcher profiles also fit complete names and introductions in bounded regions
+for every script. Long fields rewrap at a smaller size instead of overlapping the
+ownership caption. Publication is rechecked after both font loading and shaping.
+The actual compiled-profile fixture uses an empty fontconfig, checks the build's
+font/native-library trace and retains eleven native, mixed and long-field PNGs.
