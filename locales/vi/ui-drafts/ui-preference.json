@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ui-preference.ts",
-  "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+  "sourceSha256": "cd4d2e048a95204a23cfd64efd0957e7b38345618c94e467f575e98b4354ac19",
   "entries": {
     "language": {
       "source": "Interface language",
@@ -55,6 +55,18 @@
     "loadFailed": {
       "source": "Translation could not load. English is shown; select the language to retry.",
       "text": "Không thể tải bản dịch. Đang hiển thị tiếng Anh; chọn ngôn ngữ để thử lại."
+    },
+    "answerLanguageTitle": {
+      "source": "Request an answer language",
+      "text": "Yêu cầu ngôn ngữ trả lời"
+    },
+    "answerLanguageBody": {
+      "source": "Include a language instruction in your question. Interface language changes menus and labels; saved answers keep their original text.",
+      "text": "Ghi yêu cầu về ngôn ngữ ngay trong câu hỏi. Ngôn ngữ giao diện thay đổi menu và nhãn; câu trả lời đã lưu vẫn giữ nguyên văn bản gốc."
+    },
+    "answerLanguageExamples": {
+      "source": "Supported language instructions",
+      "text": "Các yêu cầu ngôn ngữ được hỗ trợ"
     }
   }
 }

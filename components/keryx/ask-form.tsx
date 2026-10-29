@@ -21,6 +21,7 @@ import { useResearchVisibility, type ResearchPublicationSelection } from "@/lib/
 import type { RunVisibility } from "@/lib/run-privacy/contracts";
 import { ResearchVisibilityPicker } from "./research-visibility-picker";
 import { UiText, UiMessage, useUiMessages } from "@/lib/i18n/ui-copy";
+import { AnswerLanguageHelp } from "./answer-language-help";
 
 
 
@@ -276,6 +277,7 @@ export function AskForm({ disabled, onAsk, payer = "treasury", parentId, parentV
             className="mt-3 min-h-[88px] w-full resize-y border border-ink-3/75 bg-paper px-3 py-3 font-serif text-lg leading-relaxed text-ink outline-none placeholder:text-ink-3 focus-visible:border-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50 sm:min-h-[104px] sm:text-xl"
           />
           <p id="ask-keyboard-hint" className="mt-1 text-xs text-ink-3"><UiMessage messageKey="researchEntry.keyboardHint" /></p>
+          {visibility.ready && visibility.visibility === "public" && !conversation && !parentId && !parentRef.current && !paidScholarly && <AnswerLanguageHelp />}
           {(researchPaused || !checking && !availability) && availabilityPanel}
 
           <div className="mt-4 border-t border-line pt-4">

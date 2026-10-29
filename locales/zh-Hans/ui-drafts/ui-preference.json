@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ui-preference.ts",
-  "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+  "sourceSha256": "cd4d2e048a95204a23cfd64efd0957e7b38345618c94e467f575e98b4354ac19",
   "entries": {
     "language": {
       "source": "Interface language",
@@ -55,6 +55,18 @@
     "loadFailed": {
       "source": "Translation could not load. English is shown; select the language to retry.",
       "text": "无法加载译文。现显示英文；选择语言以重试。"
+    },
+    "answerLanguageTitle": {
+      "source": "Request an answer language",
+      "text": "指定回答语言"
+    },
+    "answerLanguageBody": {
+      "source": "Include a language instruction in your question. Interface language changes menus and labels; saved answers keep their original text.",
+      "text": "请在问题中写明语言要求。界面语言会更改菜单和标签；已保存的回答保留原文。"
+    },
+    "answerLanguageExamples": {
+      "source": "Supported language instructions",
+      "text": "支持的语言指令"
     }
   }
 }

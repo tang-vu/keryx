@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ui-preference.ts",
-  "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+  "sourceSha256": "cd4d2e048a95204a23cfd64efd0957e7b38345618c94e467f575e98b4354ac19",
   "entries": {
     "language": {
       "source": "Interface language",
@@ -39,6 +39,18 @@
     "loadFailed": {
       "source": "Translation could not load. English is shown; select the language to retry.",
       "text": "अनुवाद लोड नहीं हो सका। अंग्रेज़ी दिखाई जा रही है; फिर कोशिश करने के लिए भाषा दोबारा चुनें।"
+    },
+    "answerLanguageTitle": {
+      "source": "Request an answer language",
+      "text": "उत्तर की भाषा का अनुरोध करें"
+    },
+    "answerLanguageBody": {
+      "source": "Include a language instruction in your question. Interface language changes menus and labels; saved answers keep their original text.",
+      "text": "अपने सवाल में भाषा का निर्देश शामिल करें। इंटरफ़ेस की भाषा मेन्यू और लेबल बदलती है; सहेजे गए उत्तर अपना मूल पाठ रखते हैं।"
+    },
+    "answerLanguageExamples": {
+      "source": "Supported language instructions",
+      "text": "समर्थित भाषाओं के निर्देश"
     }
   }
 }

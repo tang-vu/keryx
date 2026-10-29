@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/ui-preference.ts",
-  "sourceSha256": "161b9d9ae6c11912b01f1ea61084627176af17a3f601d8aa41b853d991a2e57b",
+  "sourceSha256": "cd4d2e048a95204a23cfd64efd0957e7b38345618c94e467f575e98b4354ac19",
   "entries": {
     "language": {
       "source": "Interface language",
@@ -39,6 +39,18 @@
     "loadFailed": {
       "source": "Translation could not load. English is shown; select the language to retry.",
       "text": "Impossible de charger la traduction. L’anglais est affiché ; sélectionnez à nouveau la langue pour réessayer."
+    },
+    "answerLanguageTitle": {
+      "source": "Request an answer language",
+      "text": "Demander une langue de réponse"
+    },
+    "answerLanguageBody": {
+      "source": "Include a language instruction in your question. Interface language changes menus and labels; saved answers keep their original text.",
+      "text": "Ajoutez une instruction de langue à votre question. La langue de l'interface modifie les menus et les libellés ; les réponses enregistrées conservent leur texte original."
+    },
+    "answerLanguageExamples": {
+      "source": "Supported language instructions",
+      "text": "Instructions de langue prises en charge"
     }
   }
 }

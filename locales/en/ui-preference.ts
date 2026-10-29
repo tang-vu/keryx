@@ -1,4 +1,4 @@
-/** Preference controls only. Existing payment, consent, legal and onboarding copy stays English. */
+/** Language controls and question help. Critical payment, consent and legal copy stays English. */
 export const uiPreferenceMessages = Object.freeze({
   language: "Interface language",
   english: "English",
@@ -13,6 +13,9 @@ export const uiPreferenceMessages = Object.freeze({
   unavailable: "Account language is unavailable. Your browser choice still applies.",
   memoryOnly: "Language applies here. Browser storage is unavailable; it may not survive this session.",
   loadFailed: "Translation could not load. English is shown; select the language to retry.",
+  answerLanguageTitle: "Request an answer language",
+  answerLanguageBody: "Include a language instruction in your question. Interface language changes menus and labels; saved answers keep their original text.",
+  answerLanguageExamples: "Supported language instructions",
 } as const);
 export type UiPreferenceKey = keyof typeof uiPreferenceMessages;
 export function uiPreferenceCopy(key: UiPreferenceKey): string { return uiPreferenceMessages[key]; }
