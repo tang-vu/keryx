@@ -244,6 +244,8 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
     if (clearOnSubmit) setQuestion("");
   };
 
+  const offerLanguageHelp = showAnswerLanguageHelp && visibility.ready && visibility.visibility === "public" &&
+    !conversation && !parentId && !parentRef.current && !paidScholarly;
   const availabilityPanel = (
     <div className="mt-3 border border-line bg-paper p-3 text-sm text-ink-2" role="status">
       <p>{checking ? <UiMessage messageKey="researchEntry.checking" /> : researchPaused ? RESEARCH_PAUSED_MESSAGE :
@@ -258,7 +260,7 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
   return (
     <div data-tour="ask-form">
       <div className="kx-research-composer border border-line bg-paper shadow-[0_4px_24px_-12px_rgba(27,23,18,0.25)]">
-        <div className="p-4 sm:p-6">
+        <div className={offerLanguageHelp ? "p-3 sm:p-6" : "p-4 sm:p-6"}>
           <label htmlFor="ask-question" className="block font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-2">
             <UiMessage messageKey="researchEntry.question" />
           </label>
@@ -275,13 +277,13 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
             maxLength={MAX_ASK_QUESTION_CHARS}
             disabled={disabled}
             aria-describedby="ask-keyboard-hint"
-            className="mt-3 min-h-[88px] w-full resize-y border border-ink-3/75 bg-paper px-3 py-3 font-serif text-lg leading-relaxed text-ink outline-none placeholder:text-ink-3 focus-visible:border-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50 sm:min-h-[104px] sm:text-xl"
+            className={`${offerLanguageHelp ? "mt-1 sm:mt-3" : "mt-3"} min-h-[88px] w-full resize-y border border-ink-3/75 bg-paper px-3 py-3 font-serif text-lg leading-relaxed text-ink outline-none placeholder:text-ink-3 focus-visible:border-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal disabled:opacity-50 sm:min-h-[104px] sm:text-xl`}
           />
           <p id="ask-keyboard-hint" className="mt-1 text-xs text-ink-3"><UiMessage messageKey="researchEntry.keyboardHint" /></p>
-          {showAnswerLanguageHelp && visibility.ready && visibility.visibility === "public" && !conversation && !parentId && !parentRef.current && !paidScholarly && <AnswerLanguageHelp />}
+          {offerLanguageHelp && <AnswerLanguageHelp />}
           {(researchPaused || !checking && !availability) && availabilityPanel}
 
-          <div className="mt-4 border-t border-line pt-4">
+          <div className={offerLanguageHelp ? "border-t border-line sm:mt-4 sm:pt-4" : "mt-4 border-t border-line pt-4"}>
           <div className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-6">
           <fieldset className="min-w-0">
             <legend className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-ink-2"><UiMessage messageKey="researchEntry.depth" /></legend>

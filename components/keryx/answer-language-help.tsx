@@ -8,9 +8,9 @@ import { answerLanguageInstructions } from "@/shared/i18n/answer-language-instru
 /** Manual, question-adjacent guidance. Opening it changes only this disclosure. */
 export function AnswerLanguageHelp() {
   const id = useId(), [open, setOpen] = useState(false);
-  return <div className="mt-1 text-xs leading-relaxed text-ink-2" data-answer-language-help>
+  return <div className="text-xs leading-relaxed text-ink-2" data-answer-language-help>
     <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}
-      className="min-h-11 text-left underline decoration-ink-3 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
+      className="block min-h-11 text-left underline decoration-ink-3 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
       <UiText source={uiPreferenceCopy("answerLanguageTitle")} namespaces={["ui-preference"]} />
     </button>
     <div id={id} hidden={!open} className="pb-2">
