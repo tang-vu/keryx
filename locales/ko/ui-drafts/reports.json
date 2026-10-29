@@ -63,6 +63,26 @@
     "reportReading.estimated": {
       "source": "{coverage}% estimated",
       "text": "{coverage}% 추정"
+    },
+    "reportActions.copy": {
+      "source": "Copy report",
+      "text": "보고서 복사"
+    },
+    "reportActions.download": {
+      "source": "Download report",
+      "text": "보고서 다운로드"
+    },
+    "reportActions.openSaved": {
+      "source": "Open saved report",
+      "text": "저장된 보고서 열기"
+    },
+    "reportActions.copyUnavailable": {
+      "source": "Copy unavailable. Download the report instead.",
+      "text": "복사할 수 없습니다. 대신 보고서를 다운로드하세요."
+    },
+    "reportActions.downloadUnavailable": {
+      "source": "Download unavailable. Open the saved report instead.",
+      "text": "다운로드할 수 없습니다. 대신 저장된 보고서를 여세요."
     }
   }
 }

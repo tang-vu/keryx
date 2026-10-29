@@ -63,6 +63,26 @@
     "reportReading.estimated": {
       "source": "{coverage}% estimated",
       "text": "{coverage}% अनुमानित"
+    },
+    "reportActions.copy": {
+      "source": "Copy report",
+      "text": "रिपोर्ट कॉपी करें"
+    },
+    "reportActions.download": {
+      "source": "Download report",
+      "text": "रिपोर्ट डाउनलोड करें"
+    },
+    "reportActions.openSaved": {
+      "source": "Open saved report",
+      "text": "सहेजी गई रिपोर्ट खोलें"
+    },
+    "reportActions.copyUnavailable": {
+      "source": "Copy unavailable. Download the report instead.",
+      "text": "कॉपी नहीं हो सकी। इसके बजाय रिपोर्ट डाउनलोड करें।"
+    },
+    "reportActions.downloadUnavailable": {
+      "source": "Download unavailable. Open the saved report instead.",
+      "text": "डाउनलोड नहीं हो सका। इसके बजाय सहेजी गई रिपोर्ट खोलें।"
     }
   }
 }

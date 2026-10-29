@@ -8,10 +8,12 @@ import { chromium, type Browser, type Page } from "playwright";
 
 let browser: Browser, bundle: string, css: string;
 const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR;
+const nativeScreenshots = process.env.KERYX_NATIVE_GUIDANCE_SCREENSHOT_DIR
+  ? join(process.env.KERYX_NATIVE_GUIDANCE_SCREENSHOT_DIR, "report-controls") : undefined;
 type Fixture = { mode(value: "defer" | "throw" | "missing"): void; settle(success: boolean): void;
   report(index: number): void; writes: string[]; failDownload(value: boolean): void;
   failLink(stage: "none" | "create" | "append" | "click"): void;
-  allocated: string[]; revoked: string[]; connections: boolean[] };
+  allocated: string[]; revoked: string[]; connections: boolean[]; locale(value: string): Promise<void> };
 const fonts = `@font-face{font-family:ReportDisplay;src:url('/fonts/bodoni-moda-latin.woff2')}@font-face{font-family:ReportSerif;src:url('/fonts/spectral-latin-400.woff2')}@font-face{font-family:ReportMono;src:url('/fonts/spline-sans-mono-latin.woff2')}
   :root{--font-bodoni:ReportDisplay;--font-spectral:ReportSerif;--font-spline-mono:ReportMono}`;
 
@@ -19,6 +21,9 @@ beforeAll(async () => {
   bundle = (await build({
     stdin: { contents: `import React,{StrictMode,useState}from'react';import{createRoot}from'react-dom/client';
       import{ReportActions}from'./components/keryx/report-actions';
+      import{UiCopyContext,englishUiCopy}from'./lib/i18n/ui-copy-context';
+      import{createMessages}from'./lib/i18n/messages';import{createRichMessages}from'./lib/i18n/rich-messages';
+      import{loadUiPreview}from'./lib/i18n/ui-preview-catalogues';
       const pending=[];let mode='defer',downloadFailure='none';
       const nativeCreate=URL.createObjectURL.bind(URL),nativeRevoke=URL.revokeObjectURL.bind(URL),nativeElement=document.createElement.bind(document),
         nativeAppend=document.body.appendChild.bind(document.body),nativeClick=HTMLAnchorElement.prototype.click;
@@ -38,13 +43,16 @@ beforeAll(async () => {
         citations:[{marker:'S1',sourceId:'source',sourceName:'Synthetic publisher',itemTitle:'Observed public source',itemUrl:'https://publisher.invalid/article',contentVersion:'recorded-v2',weight:1,reward:0,rationale:'fixture'}],
         evidence:[{marker:'S1',claim:'Measured result',quote:'Exact recorded excerpt.',qualifiesForAnswer:true,qualifiesForReward:false}]}));
       const payments=[{kind:'citation',sourceName:'Synthetic writer',amountUsdc:0.001,settled:false,settlementStatus:'pending'}];
-      function App(){const[index,setIndex]=useState(0);fixture.report=setIndex;return <><h2 style={{fontFamily:'var(--font-bodoni)',fontSize:30,marginBottom:16}}>{reports[index].question}</h2><ReportActions run={reports[index]} meta={null} payments={payments}/></>}
+      function App(){const[index,setIndex]=useState(0),[ui,setUi]=useState(englishUiCopy);fixture.report=setIndex;
+        fixture.locale=async locale=>{const preview=await loadUiPreview(locale);setUi({...englishUiCopy,locale,preview,message:createMessages(locale,preview.$messages),richMessage:createRichMessages(locale,preview.$messages)});document.documentElement.lang=locale;};
+        return <UiCopyContext.Provider value={ui}><><h2 style={{fontFamily:'var(--font-bodoni)',fontSize:30,marginBottom:16}}>{reports[index].question}</h2><ReportActions run={reports[index]} meta={null} payments={payments}/></></UiCopyContext.Provider>}
       createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMode>);`, loader: "tsx", resolveDir: process.cwd() },
     bundle: true, write: false, platform: "browser", format: "iife",
     define: { "process.env.NODE_ENV": '"production"', "process.env": "{}" },
   })).outputFiles[0].text;
   css = (await postcss([tailwind({ base: process.cwd() })]).process(await readFile("app/globals.css", "utf8"), { from: resolve("app/globals.css") })).css;
   if (screenshots) await mkdir(screenshots, { recursive: true });
+  if (nativeScreenshots) await mkdir(nativeScreenshots, { recursive: true });
   browser = await chromium.launch({ headless: true });
 }, 30_000);
 afterAll(async () => { await browser?.close(); });
@@ -79,6 +87,56 @@ const lifecycle = (page: Page) => page.evaluate(() => {
   const value = (window as unknown as { reportFixture: Fixture }).reportFixture;
   return { allocated: value.allocated, revoked: value.revoked, connections: value.connections };
 });
+
+it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
+  "keeps actual $locale report export and native recovery controls intact at $width", async ({ locale, width }) => {
+    const draft = JSON.parse(await readFile(`locales/${locale}/ui-drafts/reports.json`, "utf8"));
+    const native = (key: string) => draft.entries[key].text as string;
+    await fixture(async page => {
+      await page.evaluate(locale => (window as unknown as { reportFixture: Fixture }).reportFixture.locale(locale), locale);
+      const copy = page.getByRole("button", { name: native("reportActions.copy"), exact: true });
+      const download = page.getByRole("button", { name: native("reportActions.download"), exact: true });
+      const saved = page.locator('a[href="/dispatch/report%2Falpha%3Fx%3D1"]'), status = page.getByRole("status");
+      await copy.waitFor(); expect(await saved.textContent()).toBe(`${native("reportActions.openSaved")}→`);
+      expect(await copy.locator("[lang]").getAttribute("lang")).toBe(locale);
+      expect(await download.locator("[lang]").getAttribute("lang")).toBe(locale);
+      await copy.click(); await settle(page, false);
+      await expect.poll(() => status.textContent()).toBe(native("reportActions.copyUnavailable"));
+      expect(await status.locator("[lang]").getAttribute("lang")).toBe(locale);
+      const exported = (await writes(page))[0];
+      if (nativeScreenshots) await page.screenshot({ path: join(nativeScreenshots, `report-controls-${locale}-${width}-copy-unavailable.png`), fullPage: true });
+      await page.evaluate(() => (window as unknown as { reportFixture: Fixture }).reportFixture.failDownload(true));
+      await download.click(); await expect.poll(() => status.textContent()).toBe(native("reportActions.downloadUnavailable"));
+      expect(await status.locator("[lang]").getAttribute("lang")).toBe(locale);
+      if (nativeScreenshots) await page.screenshot({ path: join(nativeScreenshots, `report-controls-${locale}-${width}-download-unavailable.png`), fullPage: true });
+      expect(await saved.getAttribute("href")).toBe("/dispatch/report%2Falpha%3Fx%3D1");
+      expect(await page.locator('a[href="/operator/evidence"] [lang]').getAttribute("lang")).toBe("en");
+      const geometry = await page.locator("button, a").evaluateAll(elements => elements.map(element => {
+        const rect = element.getBoundingClientRect(); return { width: rect.width, height: rect.height, left: rect.left, right: rect.right };
+      }));
+      expect(geometry.every(box => box.width >= 44 && box.height >= 44 && box.left >= 0 && box.right <= width)).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
+      await page.evaluate(() => (window as unknown as { reportFixture: Fixture }).reportFixture.failDownload(false));
+      const pendingDownload = page.waitForEvent("download"); await download.click(); const file = await pendingDownload;
+      expect(file.suggestedFilename()).toBe("keryx-report-reportalphax1.md");
+      const stream = await file.createReadStream(); if (!stream) throw Error("Actual native UI download missing");
+      const parts: Buffer[] = []; for await (const part of stream) parts.push(Buffer.from(part));
+      expect(Buffer.concat(parts).toString("utf8")).toBe(exported);
+      expect(exported).toContain("First report body [S1]."); expect(exported).toContain("https://publisher.invalid/article");
+      expect(exported).toContain("recorded-v2"); expect(exported).toContain("Exact recorded excerpt.");
+      expect(exported).toContain("citation · pending"); expect(exported).toContain("A citation alone does not prove settlement");
+      await expect.poll(() => status.textContent()).toBe("Report downloaded with citations and payment states.");
+      expect(await status.locator('[lang="en"]').count()).toBe(1);
+      await copy.click(); await settle(page, true);
+      await expect.poll(() => status.textContent()).toBe("Report copied with citations and payment states.");
+      expect(await status.locator('[lang="en"]').count()).toBe(1);
+      expect((await writes(page))[1]).toBe(exported);
+      await page.evaluate(() => (window as unknown as { reportFixture: Fixture }).reportFixture.locale("en"));
+      await expect.poll(() => page.getByRole("button", { name: "Copy report", exact: true }).count()).toBe(1);
+      expect(await status.textContent()).toBe("Report copied with citations and payment states.");
+    }, width);
+  }, 15_000,
+);
 
 it.each(["create", "append", "click"] as const)("releases allocated URLs when report download fails at %s and permits an exact retry", async stage => {
   await fixture(async page => {
