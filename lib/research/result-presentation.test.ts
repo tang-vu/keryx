@@ -10,10 +10,10 @@ import { researchPresentationCatalogues } from "./presentation-messages";
 import { presentationQuestions, presentationRun } from "./presentation.test-fixture";
 import { config } from "../config";
 import { finalizeAnswerLanguage } from "./answer-language-provenance";
-const locales = ["en", "vi", "pt", "es", "fr"] as const;
+const locales = ["en", "vi", "pt", "es", "fr", "zh-Hans"] as const;
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-it.each(["en", "vi", "pt", "es", "fr"] as const)("%s actual stdio handler binds observed labels and discloses an override", async language => {
+it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("%s actual stdio handler binds observed labels and discloses an override", async language => {
   const run = presentationRun(), queryId = "original-completed-query";
   const packet = { ...finalizeAnswerLanguage({ answer: run.answer, rendererLanguage: language, statements: [], proposals: [] })!, queryId };
   const result = { answer: run.answer, citations: [], totalToCreators: 0.000001, amountPaid: "0.100000",

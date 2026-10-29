@@ -6,7 +6,7 @@ import { finalizeAnswerLanguage, readCompletedAnswerLanguage } from "../research
 import { createStdioResearchHandler } from "../research/result-presentation";
 import { researchPresentationCatalogues } from "../research/presentation-messages";
 
-it.each(["en", "vi", "pt", "es", "fr"] as const)("completed %s server/handler preserves answer, quotation, evidence and economics", async language => {
+it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("completed %s server/handler preserves answer, quotation, evidence and economics", async language => {
   // Synthetic closed contract; no producer execution, provider, network or payment.
   const run = { ...presentationRun(), paymentMode: "real" as const };
   const quote = quoteA2aResearch(0.05, "deep"), timing = { acceptedAt: "2026-10-11T23:59:58.000Z", startedAt: "2026-10-11T23:59:59.000Z" };

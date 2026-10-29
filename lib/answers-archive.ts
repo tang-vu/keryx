@@ -36,6 +36,7 @@ const METADATA_EXCERPT_LEN = 160;
 /** Opening caveats the current delivery writer prepends. The preview may skip
  * only this exact wording; it never rewrites, translates or grades the answer. */
 const OPENING_CAVEATS = [
+  { label: "低置信度", closer: "请将此结果视为暂定结果。" },
   { label: "Low confidence", closer: "Treat this as provisional." },
   { label: "Độ tin cậy thấp", closer: "Kết quả chưa hoàn chỉnh." },
   { label: "Baixa confiança", closer: "Trate este resultado como provisório." },
@@ -46,6 +47,10 @@ const OPENING_CAVEATS = [
 /** Exact introductions from the current grounded-answer writer. A later
  * original sentence may follow one of these; the stored answer is not edited. */
 const DELIVERY_LEADS = [
+  "摘要由模型撰写，逐句附有引用。每句话均与检查时使用的来源原文配对显示。",
+  "仅提供来源摘录；草稿不作为结论呈现，综合结果的完整性仍未核实。研究目标是待调查的主题，并非已证实的结论。",
+  "尚无证据支持的答案：综合或证据检查未能完成。原始阅读结果和凭证均已保留。",
+  "尚无证据支持的答案：已读内容未能为研究目标提供获准使用的摘录。",
   "Model-written summary with sentence-level citations. Each sentence is followed by the verbatim source text it was checked against; sentences without a qualifying excerpt were removed.",
   "Source excerpts only. The draft is withheld as a conclusion; complete synthesis is unverified. Qualifying source excerpts are quoted below. Research targets are topics to investigate, not established conclusions.",
   "No supported answer. Synthesis or evidence review did not complete; evidence for the research targets could not be assessed. Original reads and receipts are retained.",
@@ -100,6 +105,7 @@ function stripExactLead(text: string, lead: string): string | null {
 
 function bulletNotice(count: number): string[] {
   return [
+    `无法在保留每项研究目标和所有获准摘录的同时用 ${count} 个简短要点呈现；下文按研究目标展开。`,
     `Could not present ${count} short bullets while preserving every target and qualifying excerpt; the target layout follows.`,
     `Chưa thể trình bày ${count} gạch đầu dòng ngắn mà vẫn giữ mọi yêu cầu và trích đoạn đủ điều kiện; các yêu cầu được trình bày bên dưới.`,
     `Não foi possível apresentar ${count} tópicos curtos preservando todos os objetivos e trechos qualificados; os objetivos são apresentados abaixo.`,
@@ -115,6 +121,8 @@ function escapeRegExp(value: string): string {
 /** Skip one exact target heading and its quoted requested topic when a later
  * sentence remains. A topic whose quote contains a closing curly quote stays. */
 function skipTargetLabel(text: string): string | null {
+  const chinese = /^研究目标 \d+ 所请求的主题（未核实）：“[^”]*”\s+([\s\S]+)$/u.exec(text);
+  if (chinese?.[1]) return chinese[1];
   for (const label of TARGET_LABELS) {
     const pattern = new RegExp(`^${escapeRegExp(label.heading)} \\d+ ${escapeRegExp(label.topic)}: “[^”]*”\\s+([\\s\\S]+)$`, "u");
     const match = pattern.exec(text);

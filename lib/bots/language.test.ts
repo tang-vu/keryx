@@ -75,7 +75,8 @@ describe("finite control locale authority", () => {
     expect(botHelpLanguage({ explicit: "pt-BR", stored: "vi", platformLocale: "es-ES" })).toEqual({ language: "pt", source: "explicit" });
     expect(botHelpLanguage({ stored: "vi", platformLocale: "es" })).toEqual({ language: "vi", source: "stored" });
     expect(botHelpLanguage({ stored: "auto", platformLocale: "es-ES" })).toEqual({ language: "es", source: "platform" });
-    expect(botHelpLanguage({ explicit: "de", platformLocale: "zh-Hans" })).toEqual({ language: "en", source: "default" });
+    expect(botHelpLanguage({ explicit: "de", platformLocale: "zh-Hans" })).toEqual({ language: "zh-Hans", source: "platform" });
+    expect(botHelpLanguage({ platformLocale: "zh-TW" })).toEqual({ language: "en", source: "default" });
     expect(botLanguage("pt-PT")).toBeUndefined();
     expect(botHelpLanguage()).toEqual({ language: "en", source: "default" });
   });
@@ -91,7 +92,7 @@ describe("finite control locale authority", () => {
     for (const rendered of [telegram(locale), slack(locale), discord(locale)]) {
       expect(rendered).toContain(copy.reviewBoundary);
       expect(rendered).toContain(copy.languageHelp);
-      expect(rendered).toContain("/language en|vi|pt|es|fr|auto");
+      expect(rendered).toContain("/language en|vi|pt|es|fr|zh-Hans|auto");
       expect(rendered).toContain("/status");
       expect(rendered).not.toMatch(/translated|traduzid|traducid|được dịch/u);
     }

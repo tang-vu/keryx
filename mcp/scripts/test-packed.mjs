@@ -86,6 +86,7 @@ try {
     { question: "Explain the café protocol – keep [PACKED-V3-PARTIAL] exact.", language: "pt-BR", readCheckpoints: capture(partialPacket) },
     { question: "Explain the café protocol – keep [PACKED-V3-PRIVATE] exact.", language: "vi", readCheckpoints: capture(privatePacket) },
     { question: "Expliquez le protocole café – gardez [PACKED-FR-AVAILABLE] exact.", language: "fr", readCheckpoints: capture(packet) },
+    { question: "请用简体中文回答。解释 café 协议，保留 [PACKED-ZH-AVAILABLE] 原文。", language: "zh-Hans", readCheckpoints: capture(packet) },
   ];
   const publicResult = {
     answer: "Exact untranslated fixture answer: café – [S1].",
@@ -219,7 +220,7 @@ globalThis.fetch=async(input,init)=>{
     assert.equal(listed.tools.find(tool => tool.name === "paper_lookup").annotations.readOnlyHint, true);
     assert.deepEqual(listed.tools.find(tool => tool.name === "paper_lookup").inputSchema.properties.language.enum, ["en", "fr", "vi"]);
     assert.equal(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.question.maxLength, 2000);
-    assert.deepEqual(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.language.enum, ["en", "vi", "pt", "pt-BR", "es", "fr"]);
+    assert.deepEqual(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.language.enum, ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans"]);
     return { call: (name, args = {}) => request("tools/call", { name, arguments: args }), counts,
       stop: async () => { await stopChild(child); children.delete(child); lines.close(); } };
   }
@@ -277,11 +278,15 @@ globalThis.fetch=async(input,init)=>{
       assert.match(text, /Níveis de execução por etapa/); assert.match(text, /preparação da resposta \(2,560 tokens\)/);
       assert.match(text, /Informações financeiras \(em inglês\):/);
       assert(text.includes("Idioma dos rótulos: pt. O idioma da resposta não foi registrado; o texto original permanece inalterado."));
-    } else {
-      assert.equal(vector.language, "fr");
+    } else if (vector.language === "fr") {
       assert.match(text, /Niveaux d'exécution par étape/); assert.match(text, /préparation de la réponse \(2,560 tokens\)/);
       assert.match(text, /Détails financiers \(en anglais\) :/);
       assert(text.includes("Langue des libellés : fr. La langue de la réponse n'a pas été enregistrée ; son texte original est conservé."));
+    } else {
+      assert.equal(vector.language, "zh-Hans");
+      assert.match(text, /各步骤所用层级/); assert.match(text, /答案准备 \(2,560 tokens\)/);
+      assert.match(text, /财务详情（英文）：/);
+      assert(text.includes("标签语言：zh-Hans。未记录答案语言；答案原文保持不变。"));
     }
     assert.match(text, /— Paid Keryx 0\.1 USDC/);
     assert.match(text, /Recorded creator total: \$0\.000001; citation allocations \(not individual settlement proof\):/);
@@ -296,8 +301,8 @@ globalThis.fetch=async(input,init)=>{
     presented.push(data);
   }
   await presentation.stop(); const presentationCounts = JSON.parse(await readFile(presentation.counts, "utf8"));
-  assert.equal(presentationCounts.paid, 4); assert.equal(presentationCounts.recovery, 0); assert.equal(presentationCounts.bibliography, 0);
-  assert.equal(presentationCounts.researchRequests.length, 8); assert.equal(presentationCounts.researchResults.length, 4);
+  assert.equal(presentationCounts.paid, 5); assert.equal(presentationCounts.recovery, 0); assert.equal(presentationCounts.bibliography, 0);
+  assert.equal(presentationCounts.researchRequests.length, 10); assert.equal(presentationCounts.researchResults.length, 5);
   for (const [index, vector] of portVectors.entries()) {
     const body = { question: vector.question, budget: 0.05, researchMode: "deep", responseMode: "async" };
     assert.deepEqual(presentationCounts.researchRequests.slice(index * 2, index * 2 + 2),
@@ -320,7 +325,7 @@ globalThis.fetch=async(input,init)=>{
   await recovery.stop(); const recoveryCounts = JSON.parse(await readFile(recovery.counts, "utf8")); assert.equal(recoveryCounts.paid, 0); assert.equal(recoveryCounts.recovery, 1);
   }
   console.log(JSON.stringify({ networks: ["arcTestnet", "arc"], package: installedPackage.name, version: installedPackage.version, node: process.version,
-    dependencies, cases: ["keyless initialize/tools/status without wallet creation", "free exact-version bibliography GET and explicit provider failure with retained snapshot", "funded caller status", "actual SDK signed purchase", "recorded per-step heuristic tier", "finite research language refusal before custody", "local stdio labels including French with unchanged paid body, evidence, amounts and receipt hashes", "compiled v3 available, partial optimizer and private-field refusal", "original response-loss barrier and no second debit", "new-process keyless GET-only recovery"], liveNetwork: false }));
+    dependencies, cases: ["keyless initialize/tools/status without wallet creation", "free exact-version bibliography GET and explicit provider failure with retained snapshot", "funded caller status", "actual SDK signed purchase", "recorded per-step heuristic tier", "finite research language refusal before custody", "local stdio labels including French and Simplified Chinese with unchanged paid body, evidence, amounts and receipt hashes", "compiled v3 available, partial optimizer and private-field refusal", "original response-loss barrier and no second debit", "new-process keyless GET-only recovery"], liveNetwork: false }));
 } finally {
   const stopped = await Promise.allSettled([...children].map(stopChild));
   // Only the mkdtemp-created acceptance workspace is removed.

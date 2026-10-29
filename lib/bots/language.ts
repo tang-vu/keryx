@@ -7,12 +7,14 @@ import { botControlsVietnamese } from "../../locales/vi/bot-controls";
 import { botControlsPortuguese } from "../../locales/pt-BR/bot-controls";
 import { botControlsSpanish } from "../../locales/es/bot-controls";
 import { botControlsFrench } from "../../locales/fr/bot-controls";
+import { botControlsChinese } from "../../locales/zh-Hans/bot-controls";
+import { systemPresentationLanguage } from "../../shared/i18n/presentation-language";
 import { readBotAnswerPreference, writeBotAnswerPreference } from "./answer-preference";
 
-export type BotLanguage = "en" | "vi" | "pt" | "es" | "fr";
+export type BotLanguage = "en" | "vi" | "pt" | "es" | "fr" | "zh-Hans";
 export type BotLanguagePreference = BotLanguage | "auto";
 export const botControlsCatalogues = Object.freeze({ en: botControlsEnglish, vi: botControlsVietnamese,
-  pt: botControlsPortuguese, es: botControlsSpanish, fr: botControlsFrench });
+  pt: botControlsPortuguese, es: botControlsSpanish, fr: botControlsFrench, "zh-Hans": botControlsChinese });
 
 /** Finite shipped bot catalogue; unrelated UI locales do not grant bot support. */
 export function botLanguage(value: unknown): BotLanguage | undefined {
@@ -23,11 +25,12 @@ export function botLanguage(value: unknown): BotLanguage | undefined {
     case "pt": case "pt-br": return "pt";
     case "es": return "es";
     case "fr": return "fr";
+    case "zh-hans": return "zh-Hans";
     default: return undefined;
   }
 }
 function platformLanguage(value: unknown) {
-  return typeof value === "string" ? botLanguage(value.split("-")[0]) : undefined;
+  return systemPresentationLanguage(value);
 }
 export function botHelpLanguage(input: { explicit?: unknown; stored?: BotLanguagePreference; platformLocale?: unknown } = {}) {
   const explicit = botLanguage(input.explicit), stored = botLanguage(input.stored), platform = platformLanguage(input.platformLocale);

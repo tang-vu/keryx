@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
 
   if (body.scholarly !== undefined && typeof body.scholarly !== "boolean") return openaiError("scholarly must be a boolean", 400, "invalid_request");
   if (body.mode !== undefined && body.mode !== "quick" && body.mode !== "deep") return openaiError("mode must be quick or deep", 400, "invalid_request");
-  if (body.language !== undefined && !presentationLanguage(body.language)) return openaiError("language must be en, vi, pt, pt-BR, es or fr (generated labels only)", 400, "invalid_request");
+  if (body.language !== undefined && !presentationLanguage(body.language)) return openaiError("language must be en, vi, pt, pt-BR, es, fr or zh-Hans (generated labels only)", 400, "invalid_request");
   const parsedQuestion = parseAskQuestion(lastUserQuestion(body.messages));
   if (!parsedQuestion.success) {
     return openaiError(parsedQuestion.error, 400, "invalid_request");

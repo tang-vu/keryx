@@ -1,11 +1,11 @@
-import type { BotControlsCatalogue } from "../en/bot-controls";
+import { botControlsEnglish, type BotControlsCatalogue } from "../en/bot-controls";
 
 /** Ordinary controls, separate from answer observation and financial/claim authority. */
 export const botControlsChinese = Object.freeze({
   introduction: "提出问题，即可获得附有引用的答案。",
   usage: "用法：",
   exampleQuestion: "x402 是什么？",
-  reviewBoundary: "先审查后执行仅适用于已通过身份验证的实时浏览器；此处拒绝审查模式参数。",
+  reviewBoundary: botControlsEnglish.reviewBoundary,
   privateQuestion: "在此私聊中，也可以直接输入问题。",
   status: "状态：",
   financialDetails: "财务详情（英文）：",

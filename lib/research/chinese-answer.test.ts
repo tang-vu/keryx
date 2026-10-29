@@ -14,6 +14,9 @@ import type { ProposedEvidence, SynthInput } from "../llm/reasoning-engine";
 import { languageReviewedProposals, reviewedStatementLanguage } from "./answer-language-review";
 import { finalizeAnswerLanguage, projectCompletedAnswerLanguage, readCompletedAnswerLanguage, recordedAnswerLanguage } from "./answer-language-provenance";
 import { confidenceBanner, evidenceConfidenceReason, ordinaryConfidence } from "./confidence-copy";
+import { researchFollowUp } from "../agent/research-follow-up";
+import { publicReadRecoveryLines } from "../agent/read-recovery";
+import { synthesisFailureDetail } from "../agent/synthesis-failure";
 
 const last = (question: string) => chineseAnswerInstructions(question.normalize("NFC").toLowerCase())
   .filter(instruction => instruction.eligible).at(-1)?.language;
@@ -113,6 +116,28 @@ const source = { sourceId: "synthetic-chinese", sourceName: "Original source <li
   sourceKind: "public-reference" as const, text: quote };
 const proposal: ProposedEvidence = { claimIndex: 0, marker: "S1", quote,
   quoteSpan: { start: 0, end: quote.length }, support: 0.9, statement, statementSupport: 0.9 };
+
+it("reports observed Chinese PDF scope and bounded recovery without changing retained inputs or permitting a new payment", () => {
+  const scope = { format: "keryx-pdf-text-scope-v1" as const, pagesRead: 3, totalPages: 5, pagesWithoutText: [2], textLimitReached: false };
+  const input = { vi: false, language: "zh-Hans" as const, outcomes: [{ name: "Original PDF", code: "pdf-extraction-unavailable" }],
+    gathered: [{ ...source, webProvenance: { retrievedAt: "2026-10-29T00:00:00Z", publisherGroup: "synthetic.example",
+      normalizedBodyHash: "synthetic", extraction: "pdf" as const, truncated: true, pdfTextScope: scope } }], conflicts: [], paymentReviewRequired: true };
+  const before = JSON.stringify(input), followUp = researchFollowUp(input);
+  expect(followUp).toContain("后续步骤");
+  expect(followUp).toContain("3"); expect(followUp).toContain("5");
+  expect(followUp).toContain("未执行 OCR");
+  expect(followUp).toContain("Before any new paid attempt, inspect this job's original payment receipts");
+  expect(JSON.stringify(input)).toBe(before);
+  const outcomes = Array.from({ length: 11 }, (_, index) => ({ name: `Original${index}`, code: "unknown-new-code" }));
+  const rows = publicReadRecoveryLines([...outcomes, outcomes[0]], false, false, true);
+  expect(rows).toHaveLength(9); expect(rows.at(-1)).toContain("另有 3 次读取失败");
+  expect(rows[0]).toContain("此失败不能证明文档不存在");
+  for (const stage of ["input", "generation", "review", "synthesis"] as const) {
+    expect(synthesisFailureDetail(stage, 1, false, false, true)).toContain("不能证明文档缺乏证据");
+    expect(synthesisFailureDetail(stage, 1, false, false, true)).toContain("before any new paid request");
+    expect(synthesisFailureDetail(stage, 0, false, false, true)).toBe("");
+  }
+});
 function reviewed(language: unknown) {
   return applyEvidenceReview([proposal], { reviews: [{ index: 0, support: 0.9, statementSupport: 0.9, statementLanguage: language }] }, new Set([0]), true);
 }

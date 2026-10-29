@@ -3,9 +3,10 @@ import { reportPresentationVietnamese } from "../../locales/vi/report-presentati
 import { reportPresentationPortuguese } from "../../locales/pt-BR/report-presentation";
 import { reportPresentationSpanish } from "../../locales/es/report-presentation";
 import { reportPresentationFrench } from "../../locales/fr/report-presentation";
+import { reportPresentationChinese } from "../../locales/zh-Hans/report-presentation";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
 export const reportPresentationCatalogues = Object.freeze({ en: reportPresentationEnglish, vi: reportPresentationVietnamese,
-  pt: reportPresentationPortuguese, es: reportPresentationSpanish, fr: reportPresentationFrench });
+  pt: reportPresentationPortuguese, es: reportPresentationSpanish, fr: reportPresentationFrench, "zh-Hans": reportPresentationChinese });
 type Key = keyof typeof reportPresentationEnglish;
 type Names<T extends string> = T extends `${string}{${infer Name}}${infer Tail}` ? Name | Names<Tail> : never;
 type Values<K extends Key> = [Names<typeof reportPresentationEnglish[K]>] extends [never] ? [] : [Record<Names<typeof reportPresentationEnglish[K]>, string | number>];
