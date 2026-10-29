@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AskForm } from "@/components/keryx/ask-form";
 import { UiCopyContext, englishUiCopy } from "./ui-copy-context";
+import { loadUiPreview } from "./ui-preview-catalogues";
 import { preparedLocales, type UiLocale } from "./locales";
 import { uiPreferenceMessages } from "@/locales/en/ui-preference";
 import { answerLanguageInstructions } from "@/shared/i18n/answer-language-instructions";
@@ -24,13 +25,13 @@ function draft(locale: UiLocale) {
   if (locale === "en") return { entries: Object.fromEntries(Object.entries(uiPreferenceMessages).map(([key, source]) => [key, { source, text: source }])) };
   return JSON.parse(readFileSync(`locales/${locale}/ui-drafts/ui-preference.json`, "utf8"));
 }
-function value(locale: UiLocale) {
-  return { ...englishUiCopy, locale, preview: { "ui-preference": Object.fromEntries(Object.values(draft(locale).entries)
-    .map(row => { const entry = row as { source: string; text: string }; return [entry.source, entry.text]; })) } };
+async function value(locale: UiLocale) {
+  return { ...englishUiCopy, locale, preview: await loadUiPreview(locale) };
 }
 async function render(locale: UiLocale, props: Partial<React.ComponentProps<typeof AskForm>> = {}) {
   const onAsk = vi.fn();
-  await act(async () => root.render(h(UiCopyContext.Provider, { value: value(locale), children: h(AskForm, { onAsk, ...props }) })));
+  const copy = await value(locale);
+  await act(async () => root.render(h(UiCopyContext.Provider, { value: copy, children: h(AskForm, { onAsk, ...props }) })));
   await vi.waitFor(() => expect(requests.some(request => request.path === "/api/ask/visibility")).toBe(true));
   return onAsk;
 }

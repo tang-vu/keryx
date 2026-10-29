@@ -111,12 +111,14 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
       await page.locator('label[for="ask-question"]').filter({ hasText: "What do you want to know?" }).waitFor();
       assert.equal(askRequests, 0, "Language changes must never submit or sign research");
       assert.deepEqual(errors, [], "No browser runtime errors");
-      results.push({ width, locales: ["en", ...locales], routes: ["/", "/about", "/get-started"], errors, askRequests });
+      results.push({ width, locales: ["en", ...locales], routes: ["/", "/about", "/get-started"], errors, askRequests,
+        answerLanguageHelp: { locales, examples: answerLanguageInstructions.length, nativeLanguageTags: true,
+          openedWithEnter: true, closedWithSpace: true, originalQuestionUnchanged: true } });
     } finally {
       await context.unrouteAll({ behavior: "wait" });
       await context.close();
     }
   }
   if (output) await writeFile(resolve(output, "result.json"), JSON.stringify(results, null, 2));
-  console.log(`PASS: ${locales.length} interface previews at 390/1366px, About explanations, English legal copy, navigation, reload, exact drafts and English reset.`);
+  console.log(`PASS: ${locales.length} interface previews at 390/1366px, native answer-language instructions and keyboard help, About explanations, English legal copy, navigation, reload, exact drafts and English reset.`);
 }
