@@ -13,6 +13,7 @@ import { DecisionReviews } from "./decision-reviews";
 
 import { savedReportRecoveryPath } from "@/lib/research/ask-stream-lifecycle";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { recordedAnswerLanguage } from "@/lib/research/answer-language-provenance";
 
 
 
@@ -43,7 +44,7 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
     </div>
     <div className="min-w-0">
       {state.run && <div id={`answer-${turn.id}`} className="kx-research-answer">
-        <AnswerCard run={state.run} meta={state.meta} payments={state.payments} permalink={`${typeof window === "undefined" ? "" : window.location.origin}/dispatch/${state.run.id}`} />
+        <AnswerCard run={state.run} answerLanguage={recordedAnswerLanguage(state.run)} meta={state.meta} payments={state.payments} permalink={`${typeof window === "undefined" ? "" : window.location.origin}/dispatch/${state.run.id}`} />
         <ReportActions run={state.run} meta={state.meta} payments={state.payments} />
       </div>}
       {streaming && !state.run && <div className="kx-research-live border border-line bg-paper" role="status" aria-live="polite">
