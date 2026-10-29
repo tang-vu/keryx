@@ -24,7 +24,9 @@ Original quotes, topics, URLs, identifiers, versions, receipts and machine field
 remain literal. Reading and reward eligibility are separate.
 
 Web answer examples, public metadata/OG labels, API schemas, remote and stdio MCP,
-CLI, Desktop, extension and bot consumers share the finite presentation support.
+CLI, Desktop and bot consumers share the finite presentation support. The extension
+keeps its thin hosted-client role and receives the server's unchanged answer;
+its copied display formatter remains byte-identical to the shared implementation.
 Russian citation counts use Russian plural forms, including 2/4, 11 and 21/22.
 The authenticated recipient/preference and privacy boundaries are unchanged.
 Discord registration source includes the new choice; registration is not executed.
@@ -48,3 +50,11 @@ source closure grew from 499 to 502 files. All fields other than source fingerpr
 are identical to the previous current artifact, including every trial, budget,
 payment simulation, effect counter and metric. Outbound attempts remain zero;
 the historical v1 artifact is preserved.
+
+Hosted checks exposed a missing Russian display-locale entry and old finite lists
+in Desktop and clean-installed MCP tests. The display registry now supports Russian
+numbers/dates while integer accounting and pre-sign decimal formatting stay exact.
+The actual Desktop fixture includes Russian. The packed MCP test appends a Russian
+transport vector, preserving every prior vector position, private refusal, exact
+paid-body hash, custody, journal and recovery assertion. Full hosted acceptance of
+these corrections is required; syntax checks alone do not qualify the packed client.

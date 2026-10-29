@@ -35,6 +35,30 @@ describe("locale presentation preserves exact monetary authority", () => {
   });
 });
 
+describe("Russian display with unchanged canonical authority", () => {
+  it.each([[1, "0,000001 USDC"], [49, "0,000049 USDC"], [1000001, "1,000001 USDC"]] as const)(
+    "keeps every recorded micro digit for %s", (micros, expected) => {
+      expect(formatAmount(micros, { denomination: "USDC" }, "ru")).toBe(expected);
+    });
+  it("groups display digits without parsing them back into signing or accounting", () => {
+    expect(formatAmount("1234000001", { denomination: "USDC" }, "ru")).toBe("1\u00a0234,000001 USDC");
+    expect(formatAmount("9007199254740991", { denomination: "USDC", useGrouping: false }, "ru")).toBe("9007199254,740991 USDC");
+    expect(formatSigningUsdc("1234000001")).toBe("1234.000001 USDC");
+    expect(formatUsdcMicros("9007199254740991", { denomination: "USDC" })).toBe("9007199254.740991 USDC");
+  });
+  it("retains UTC and calendar identities with native date and plural labels", () => {
+    expect(formatDate("2026-10-11T07:30:00.123456+07:00", "ru", "UTC")!.utc).toBe("2026-10-11T00:30:00.123456Z");
+    expect(formatCalendarDate("2026-10-11", "ru")!.date).toBe("2026-10-11");
+    expect(formatCalendarDate("2026-02-30", "ru")).toBeNull();
+    expect(formatNumber(1234.5, {}, "ru")).toBe("1\u00a0234,5");
+    expect([1, 2, 5, 11, 21, 22].map(count => plural(count, "ru"))).toEqual(["one", "few", "many", "many", "one", "few"]);
+  });
+  it("refuses malformed micro amounts and exact unknown display codes", () => {
+    for (const value of ["01", "1.1", "1e6", -0, NaN, 0.1, null]) expect(formatAmount(value, {}, "ru")).toBe("Amount unavailable");
+    expect(() => formatNumber(1, {}, "ru-RU" as DisplayLocale)).toThrow("Unsupported display locale");
+  });
+});
+
 describe("date, clock and plural presentation", () => {
   it("uses a viewer zone explicitly and preserves exact UTC for hover/details", () => {
     const utc = "2026-10-09T00:30:00.000Z";

@@ -64,7 +64,7 @@ export function sumRecordedUsdc(values) {
 
 // Display support does not activate an interface translation. Keep pt for existing bot callers.
 const DISPLAY_LOCALES = { en: "en-US", vi: "vi-VN", "zh-Hans": "zh-CN", pt: "pt-BR", "pt-BR": "pt-BR",
-  es: "es-ES", fr: "fr-FR", de: "de-DE", ja: "ja-JP", ko: "ko-KR", hi: "hi-IN", id: "id-ID" };
+  es: "es-ES", fr: "fr-FR", de: "de-DE", ja: "ja-JP", ko: "ko-KR", hi: "hi-IN", id: "id-ID", ru: "ru-RU" };
 function intlLocale(locale) {
   if (!Object.hasOwn(DISPLAY_LOCALES, locale)) throw new Error("Unsupported display locale");
   return DISPLAY_LOCALES[locale];
