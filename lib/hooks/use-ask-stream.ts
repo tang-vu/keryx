@@ -44,6 +44,7 @@ import { privateResearchCopy } from "../../locales/en/run-claim-research";
 import type { ResearchPublicationSelection } from "./use-research-visibility";
 import type { RunVisibility } from "../run-privacy/contracts";
 import { savedPlanningFailureId } from "../research/planning-failure";
+import { researchRecoveryCopy } from "../research/research-recovery-copy";
 
 export type StreamMode = "real" | "offline";
 
@@ -541,14 +542,15 @@ export function useAskStream(opts?: AskStreamOpts) {
           // A `done` or `error` event already moved us out of "streaming" — keep that.
           if (s.status !== "streaming") return s;
           // Otherwise the stream ended with no terminal event (server restart, dropped
-          // connection): don't freeze on a "done" with no answer — surface a retryable error.
+          // connection): preserve the original recovery reference and explain
+          // uncertainty without suggesting another research/payment attempt.
           return s.run
             ? { ...s, status: "done" }
             : {
                 ...s,
                 status: "error",
                 errorKind: "generic",
-                error: "The connection dropped before the dispatch finished — please try again.",
+                error: researchRecoveryCopy.interrupted,
               };
         });
       } catch (err) {
