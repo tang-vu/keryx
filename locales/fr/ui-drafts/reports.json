@@ -83,6 +83,146 @@
     "reportActions.downloadUnavailable": {
       "source": "Download unavailable. Open the saved report instead.",
       "text": "Téléchargement indisponible. Ouvrez le rapport enregistré à la place."
+    },
+    "citationExport.title": {
+      "source": "Reference export",
+      "text": "Exporter les références"
+    },
+    "citationExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "Télécharger BibTeX"
+    },
+    "citationExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "Télécharger CSL-JSON"
+    },
+    "citationExport.ris": {
+      "source": "Download RIS (Zotero)",
+      "text": "Télécharger RIS (Zotero)"
+    },
+    "citationExport.references.one": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "Références d’articles : {count}. Titres, liens et dates enregistrés ; les notices scientifiques observées incluent aussi les auteurs, DOI et métadonnées de revue fournis, avec des limites de lecture. Vérifiez les métadonnées avant de les utiliser dans un article. Importez le fichier RIS dans Zotero avec File → Import."
+    },
+    "citationExport.omitted.one": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "Citations omises faute de titre d’article ou de lien utilisable : {count}."
+    },
+    "citationExport.references.other": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "Références d’articles : {count}. Titres, liens et dates enregistrés ; les notices scientifiques observées incluent aussi les auteurs, DOI et métadonnées de revue fournis, avec des limites de lecture. Vérifiez les métadonnées avant de les utiliser dans un article. Importez le fichier RIS dans Zotero avec File → Import."
+    },
+    "citationExport.omitted.other": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "Citations omises faute de titre d’article ou de lien utilisable : {count}."
+    },
+    "bibliographyExport.label": {
+      "source": "Bibliography exports",
+      "text": "Exports bibliographiques"
+    },
+    "bibliographyExport.provenance": {
+      "source": "Original metadata and field provenance",
+      "text": "Métadonnées originales et provenance des champs"
+    },
+    "bibliographyExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "Télécharger BibTeX"
+    },
+    "bibliographyExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "Télécharger CSL-JSON"
+    },
+    "bibliographyExport.ris": {
+      "source": "Download RIS",
+      "text": "Télécharger RIS"
+    },
+    "reportSourceLens.unavailable": {
+      "source": "Source inspection unavailable: this report has no stored excerpt ledger.",
+      "text": "Inspection des sources indisponible : ce rapport ne contient aucun registre d’extraits enregistré."
+    },
+    "reportSourceLens.empty": {
+      "source": "No inspectable non-demo excerpts are recorded for source inspection.",
+      "text": "Aucun extrait consultable autre que ceux de démonstration n’est enregistré pour l’inspection des sources."
+    },
+    "reportSourceLens.title": {
+      "source": "What if a source were missing?",
+      "text": "Et s’il manquait une source ?"
+    },
+    "reportSourceLens.localView": {
+      "source": "Local excerpt view",
+      "text": "Vue locale des extraits"
+    },
+    "reportSourceLens.originalExcerpts": {
+      "source": "Original excerpts",
+      "text": "Extraits originaux"
+    },
+    "reportSourceLens.viewExcerpts": {
+      "source": "Excerpts in this view",
+      "text": "Extraits dans cette vue"
+    },
+    "reportSourceLens.intro": {
+      "source": "Temporarily leave out one source to see which research targets retain excerpts in this report.",
+      "text": "Écartez temporairement une source pour voir quels objectifs de recherche conservent des extraits dans ce rapport."
+    },
+    "reportSourceLens.select": {
+      "source": "Inspect without",
+      "text": "Examiner sans"
+    },
+    "reportSourceLens.keepAll": {
+      "source": "Keep every source",
+      "text": "Conserver toutes les sources"
+    },
+    "reportSourceLens.restore": {
+      "source": "Restore source",
+      "text": "Rétablir la source"
+    },
+    "reportSourceLens.original": {
+      "source": "Showing the original excerpt ledger.",
+      "text": "Affichage du registre original des extraits."
+    },
+    "reportSourceLens.missing": {
+      "source": "No inspectable excerpts in the original report.",
+      "text": "Aucun extrait consultable dans le rapport original."
+    },
+    "reportSourceLens.lost": {
+      "source": "No excerpts remain in this view.",
+      "text": "Il ne reste aucun extrait dans cette vue."
+    },
+    "reportSourceLens.inspect": {
+      "source": "Inspect remaining excerpts",
+      "text": "Examiner les extraits restants"
+    },
+    "reportSourceLens.remaining.one": {
+      "source": "{count} recorded excerpt remains.",
+      "text": "Il reste {count} extrait enregistré."
+    },
+    "reportSourceLens.remaining.other": {
+      "source": "{count} recorded excerpts remain.",
+      "text": "Il reste {count} extraits enregistrés."
+    },
+    "reportSourceLens.omitted.one": {
+      "source": "{count} research target loses its last recorded excerpt without {source}.",
+      "text": "{count} objectif de recherche perd son dernier extrait enregistré sans {source}."
+    },
+    "reportSourceLens.omitted.other": {
+      "source": "{count} research targets lose their last recorded excerpt without {source}.",
+      "text": "{count} objectifs de recherche perdent leur dernier extrait enregistré sans {source}."
+    },
+    "reportSourceLens.alreadyMissing.one": {
+      "source": " {count} target already had no inspectable excerpts.",
+      "text": " {count} objectif n’avait déjà aucun extrait consultable."
+    },
+    "reportSourceLens.alreadyMissing.other": {
+      "source": " {count} targets already had no inspectable excerpts.",
+      "text": " {count} objectifs n’avaient déjà aucun extrait consultable."
+    },
+    "reportSourceLens.version": {
+      "source": "{marker} · {source} · version {version}",
+      "text": "{marker} · {source} · version : {version}"
+    },
+    "reportSourceLens.versionTitle": {
+      "source": "{marker} · {source} · {title} · version {version}",
+      "text": "{marker} · {source} · {title} · version : {version}"
     }
   }
 }
