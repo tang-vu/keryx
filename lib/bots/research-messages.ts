@@ -4,11 +4,17 @@ import { botResearchPortuguese } from "../../locales/pt-BR/bot-research";
 import { botResearchSpanish } from "../../locales/es/bot-research";
 import { botResearchFrench } from "../../locales/fr/bot-research";
 import { botResearchChinese } from "../../locales/zh-Hans/bot-research";
+import { botResearchGerman } from "../../locales/de/bot-research";
+import { botResearchJapanese } from "../../locales/ja/bot-research";
+import { botResearchKorean } from "../../locales/ko/bot-research";
+import { botResearchHindi } from "../../locales/hi/bot-research";
+import { botResearchIndonesian } from "../../locales/id/bot-research";
 import { answerPresentation } from "../research/answer-presentation";
 import { researchAdmissionError } from "../research/availability-contract";
 import type { PresentationLanguage } from "../research/presentation-language";
 
 export const botResearchCatalogues = Object.freeze({
+  de: botResearchGerman, ja: botResearchJapanese, ko: botResearchKorean, hi: botResearchHindi, id: botResearchIndonesian,
   en: botResearchEnglish, vi: botResearchVietnamese,
   pt: botResearchPortuguese, es: botResearchSpanish, fr: botResearchFrench, "zh-Hans": botResearchChinese,
 });

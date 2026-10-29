@@ -103,8 +103,8 @@ describe("actual ordinary question authority", () => {
     expect(presentationLanguage(locale)).toBe(locale === "zh-Hans" ? "zh-Hans" : undefined);
   });
   it.each(["zh-TW", "zh-HK", "zh-MO", "zh-Hant", "zh-Hant-CN", "ja-JP", "zh-invalid-@@"])(
-    "does not relabel an unsupported script or malformed locale as Hans: %s", locale => {
-      expect(systemPresentationLanguage(locale)).toBeUndefined();
+    "keeps other scripts and malformed locales separate from Hans: %s", locale => {
+      expect(systemPresentationLanguage(locale)).toBe(locale === "ja-JP" ? "ja" : undefined);
       expect(presentationLanguage(locale)).toBeUndefined();
     });
 });
@@ -171,7 +171,7 @@ describe("actual reviewed Chinese sentence and renderer boundaries", () => {
     expect(engine.packets[0].system).toContain("write each statement in Simplified Chinese");
     expect(engine.packets[1].system).toContain("a requested language or prompt does not prove");
     expect(engine.packets[1].system).toContain("Traditional Chinese, mixed, unsupported or ambiguous language is UNKNOWN");
-    expect(engine.packets[1].data.schema).toContain('"zh-Hans"|"UNKNOWN"');
+    expect(engine.packets[1].data.schema).toContain('"zh-Hans"|"de"|"ja"|"ko"|"hi"|"id"|"UNKNOWN"');
     expect(reviewedStatementLanguage(result.evidence[0])).toBe("zh-Hans");
     const built = fixture(result.evidence);
     expect(built.answer).toContain(statement); expect(built.answer).toContain(`来源原文：“${quote}”`);

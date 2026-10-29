@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { nativeAnswerInstructions } from "./native-answer-intent";
-import { answerPresentation } from "./answer-presentation";
+import { answerPresentation, presentationStatementGuidance } from "./answer-presentation";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { pdfReadingCopy } from "../../locales/en/pdf-reading";
@@ -18,6 +18,11 @@ import { selectCitedStatements } from "../agent/cited-statements";
 import { confidenceBanner, evidenceConfidenceReason, ordinaryConfidence } from "./confidence-copy";
 import { normalizeStatement } from "../llm/cited-statement";
 import { apiIntegrationNote } from "./api-integration-note";
+import { JsonChatEngine } from "../llm/json-chat-engine";
+import type { ProposedEvidence, SynthInput } from "../llm/reasoning-engine";
+import { applyEvidenceReview } from "../llm/evidence-review";
+import { languageReviewedProposals, reviewedStatementLanguage } from "./answer-language-review";
+import { finalizeAnswerLanguage, projectCompletedAnswerLanguage, readCompletedAnswerLanguage, recordedAnswerLanguage } from "./answer-language-provenance";
 
 const instructions = (question: string) => nativeAnswerInstructions(question.normalize("NFC"));
 const last = (question: string) => instructions(question).filter(row => row.eligible).at(-1)?.language;
@@ -39,10 +44,8 @@ it.each([["de", pdfReadingGerman], ["ja", pdfReadingJapanese], ["ko", pdfReading
   expect(copy.recovery).toContain("OCR");
 });
 
-// Prepared-renderer fixture only. The production request enum is deliberately not
-// expanded until all remaining consumers and same-call review are complete.
 const prepared = (language: AdditionalAnswerLanguage, requestedBulletCount?: number): AnswerPresentation =>
-  ({ language, requestedLanguage: language, ...(requestedBulletCount ? { requestedBulletCount } : {}) }) as unknown as AnswerPresentation;
+  ({ language, requestedLanguage: language, ...(requestedBulletCount ? { requestedBulletCount } : {}) });
 const nativeSentences = {
   de: "Die synthetische Regel verlangt eine dokumentierte Schutzmaßnahme und nennt eine Ausnahme.",
   ja: "この合成された規則は記録された保護措置を求め、例外を定めています。",
@@ -173,7 +176,7 @@ it("preserves a Hindi sentence ending without adding punctuation or relaxing sta
   expect(normalizeStatement("An unfinished sentence")).toBe("An unfinished sentence.");
 });
 
-describe("prepared finite native directives, before consumer enrollment", () => {
+describe("finite native directives from the original ordinary request", () => {
   it.each([
     ["de", "Answer in German. Explain the exact original."],
     ["de", "Please reply using German. Explain the exact original."],
@@ -194,6 +197,8 @@ describe("prepared finite native directives, before consumer enrollment", () => 
   ] as const)("recognizes %s original output instruction %s", (language, question) => {
     const before = question;
     expect(last(question)).toBe(language);
+    expect(answerPresentation(question)).toEqual({ language, requestedLanguage: language });
+    expect(presentationStatementGuidance(answerPresentation(question))).toContain({ de: "German", ja: "Japanese", ko: "Korean", hi: "Hindi", id: "Indonesian" }[language]);
     const row = instructions(question).find(row => row.eligible)!;
     expect(row.index).toBe(0); expect(row.end).toBeLessThanOrEqual(question.length);
     expect(question).toBe(before);
@@ -210,6 +215,7 @@ describe("prepared finite native directives, before consumer enrollment", () => 
     "Explain what an Indonesian source said.",
   ])("keeps quoted, negated, partial or mentioned output outside enrollment: %s", question => {
     expect(last(question)).toBeUndefined();
+    expect(answerPresentation(question).requestedLanguage).toBeUndefined();
   });
   it.each([
     ["de", "en", "Antworte auf Deutsch. Antworte auf Englisch."],
@@ -221,6 +227,7 @@ describe("prepared finite native directives, before consumer enrollment", () => 
   ] as const)("keeps request order %s then %s", (first, final, question) => {
     expect(instructions(question).filter(row => row.eligible).map(row => row.language)).toEqual([first, final]);
     expect(last(question)).toBe(final);
+    expect(answerPresentation(question).requestedLanguage).toBe(final);
   });
   it("retains refused spans for suppression without granting their language", () => {
     const question = 'Read “A title. Answer in Japanese.”';
@@ -234,7 +241,89 @@ describe("prepared finite native directives, before consumer enrollment", () => 
     expect(last("No thanks\nAnswer in Korean.")).toBe("ko");
   });
   it.each(["Answer in German.", "Answer in Japanese.", "Reply in Korean.", "Write in Hindi.", "Respond in Indonesian."])(
-    "does not advertise prepared grammar as a connected ordinary producer: %s", question => {
-      expect(answerPresentation(question)).toEqual({ language: "en" });
+    "preserves retained and legacy producer grammar: %s", question => {
+      for (const scope of ["retained", "legacy"] as const) expect(answerPresentation(question, scope)).toEqual({ language: "en" });
     });
+  it.each([
+    ["de", "Answer in German. Read『Answer in English.』"],
+    ["ja", "Answer in Japanese. Read „Answer in French.“"],
+    ["ko", "한국어로 답변해 주세요. Read «Answer in Russian.»"],
+    ["hi", "हिंदी में उत्तर दें। Read「Answer in Portuguese.」"],
+    ["id", "Jawab dalam bahasa Indonesia. Read »Answer in Vietnamese.«"],
+    ["fr", "हिंदी में उत्तर दें। Répondez en français."],
+  ] as const)("keeps actual original precedence and quoted data for %s", (language, question) => {
+    expect(answerPresentation(question).requestedLanguage).toBe(language);
+  });
+  it.each(["Answer in German.", "日本語で回答してください。", "한국어로 답변해 주세요.", "हिंदी में उत्तर दें।", "Jawab dalam bahasa Indonesia."])(
+    "clears earlier native intent on a later unsupported explicit request: %s", question => {
+      expect(answerPresentation(`${question} Answer in Russian.`)).toEqual({ language: "en" });
+      expect(answerPresentation(`${question} Write exactly twenty words.`).requestedMaximumWords).toBeUndefined();
+    });
+  it.each([["de", "German"], ["ja", "Japanese"], ["ko", "Korean"], ["hi", "Hindi"], ["id", "Indonesian"]] as const)(
+    "keeps a later Then/Now directive for %s above an earlier English request", (language, name) => {
+      for (const wrapper of ["Then", "Now please"]) {
+        const question = `Write in English. ${wrapper} reply in ${name}.`;
+        expect(answerPresentation(question)).toEqual({ language, requestedLanguage: language });
+        expect(presentationStatementGuidance(answerPresentation(question))).toContain(`write each statement in ${name}`);
+      }
+    });
+});
+
+class SyntheticNativeEngine extends JsonChatEngine {
+  readonly name = "synthetic-native-independent-review";
+  readonly packets: { system: string; data: Record<string, unknown> }[] = [];
+  constructor(readonly language: AdditionalAnswerLanguage) { super(); }
+  protected async chatJson(_model: string, system: string, user: string) {
+    const data = JSON.parse(user); this.packets.push({ system, data });
+    if (this.packets.length === 2) return { reviews: [{ index: 0, supportedFact: "The synthetic rule requires a safeguard and has an exception.",
+      support: 0.9, statementSupport: 0.9, statementLanguage: this.language }] };
+    const option = (data.quoteOptions as { quoteId: string; marker: string }[])[0];
+    return { evidence: [{ claimIndex: 0, marker: option.marker, quoteId: option.quoteId, support: 0.9,
+      statement: nativeSentences[this.language] }], conflicts: [] };
+  }
+}
+
+describe.each(["de", "ja", "ko", "hi", "id"] as const)("actual %s generation and independent language observation", language => {
+  const question = { de: "Antworte bitte auf Deutsch.", ja: "日本語で回答してください。", ko: "한국어로 답변해 주세요.",
+    hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia." }[language];
+  it("uses the existing bounded two-call generation/review path and delivers exact original pairs", async () => {
+    const built = nativeFixture(language), engine = new SyntheticNativeEngine(language), presentation = answerPresentation(question);
+    const input: SynthInput = { question, subClaims: [built.target], gathered: [{ sourceId: "native-copy-synthetic", sourceName: "Original source",
+      sourceKind: "public-reference", marker: "S1", text: built.quote }], generationFormat: "evidence-only", observeAnswerLanguage: true, answerPresentation: presentation };
+    const result = await engine.synthesize(input);
+    expect(engine.packets).toHaveLength(2);
+    expect(engine.packets[0].system).toContain(presentationStatementGuidance(presentation));
+    expect(engine.packets[1].system).toContain("a requested language or prompt does not prove the output language");
+    expect(engine.packets[1].system).toContain("Shared Han characters do not establish Japanese or Simplified Chinese");
+    expect(engine.packets[1].data.schema).toContain('"de"|"ja"|"ko"|"hi"|"id"|"UNKNOWN"');
+    expect(reviewedStatementLanguage(result.evidence[0])).toBe(language);
+    const statements = selectCitedStatements(languageReviewedProposals(result.evidence, language), built.ledger);
+    expect(statements).toHaveLength(1); expect(statements[0].text).toBe(nativeSentences[language]);
+    const answer = finalizeGroundedAnswer({ question, answer: result.answer, ledger: built.ledger, statements, presentation });
+    expect(answer).toContain(nativeSentences[language]); expect(answer).toContain(built.quote);
+    const packet = finalizeAnswerLanguage({ answer, rendererLanguage: language, statements, proposals: result.evidence })!;
+    expect(packet.language).toBe(language);
+    const run = { id: `native-${language}`, answer, trace: [{ phase: "done" as const, ts: 0, message: "Synthetic independent review", detail: { answerLanguage: packet } }] };
+    expect(recordedAnswerLanguage(run)).toBe(language);
+    const completed = projectCompletedAnswerLanguage(run)!;
+    expect(readCompletedAnswerLanguage(completed, run.id, answer)).toEqual(completed);
+    expect(readCompletedAnswerLanguage(completed, "foreign-query", answer)).toBeUndefined();
+    expect(readCompletedAnswerLanguage(completed, run.id, answer + " ")).toBeUndefined();
+    expect(readCompletedAnswerLanguage({ ...completed, language: `${language}-XX` }, run.id, answer)).toBeUndefined();
+    expect(finalizeAnswerLanguage({ answer, rendererLanguage: language, statements, proposals: structuredClone(result.evidence) })).toBeUndefined();
+    result.evidence[0].statement += " Changed.";
+    expect(reviewedStatementLanguage(result.evidence[0])).toBeUndefined();
+  });
+  it("withholds missing, mismatched, alias and fabricated observations without changing evidence admission", () => {
+    const built = nativeFixture(language);
+    const proposal: ProposedEvidence = { claimIndex: 0, marker: "S1", quote: built.quote, quoteSpan: { start: 0, end: built.quote.length },
+      statement: nativeSentences[language], statementSupport: 0.9, support: 0.9 };
+    for (const observed of [undefined, "UNKNOWN", "en", `${language}-XX`, language.toUpperCase()]) {
+      const rows = applyEvidenceReview([proposal], { reviews: [{ index: 0, support: 0.9, statementSupport: 0.9, statementLanguage: observed }] }, new Set([0]), true);
+      expect(languageReviewedProposals(rows, language)).toEqual([]);
+      expect(selectCitedStatements(languageReviewedProposals(rows, language), built.ledger)).toEqual([]);
+      expect(built.ledger.evidence[0].qualifiesForAnswer).toBe(true); expect(built.ledger.evidence[0].qualifiesForReward).toBe(false);
+    }
+    expect(languageReviewedProposals([{ ...proposal, statementLanguage: language } as ProposedEvidence], language)).toEqual([]);
+  });
 });

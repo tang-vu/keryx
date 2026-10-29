@@ -1,7 +1,9 @@
 import type { QueryRun } from "../types";
 export const presentationQuestions = { en: "Answer in English. Explain x402.", vi: "Trả lời bằng tiếng Việt. Giải thích x402.",
   pt: "Responda em português. Explique x402.", es: "En español, explique x402.", fr: "Répondez en français. Expliquez x402.",
-  "zh-Hans": "请用简体中文回答。解释 x402。" } as const;
+  "zh-Hans": "请用简体中文回答。解释 x402。", de: "Antworte bitte auf Deutsch. Erkläre x402.",
+  ja: "日本語で回答してください。x402を説明してください。", ko: "한국어로 답변해 주세요. x402를 설명해 주세요.",
+  hi: "कृपया हिंदी में उत्तर दें। x402 समझाएँ।", id: "Tolong jawab dalam bahasa Indonesia. Jelaskan x402." } as const;
 export function presentationRun(question: string = presentationQuestions.en): QueryRun {
   const source = { sourceId: "source-original", sourceName: "Source 日本語 & <original>", itemId: "article-original",
     itemUrl: "https://example.invalid/original", contentVersion: "sha256:" + "a".repeat(64) };

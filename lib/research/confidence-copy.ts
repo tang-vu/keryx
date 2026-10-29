@@ -1,6 +1,7 @@
 import type { AnswerPresentation } from "./answer-presentation";
 import type { Confidence } from "../types";
 import { nativeAnswerCopy, nativeCount } from "./native-answer-copy";
+import { isAdditionalAnswerLanguage } from "./native-answer-intent";
 
 type Language = AnswerPresentation["language"];
 type Rationale = { kind: "no-citation" | "no-coverage" | "incomplete" | "explained-conflict" | "synthetic" }
@@ -8,8 +9,10 @@ type Rationale = { kind: "no-citation" | "no-coverage" | "incomplete" | "explain
 
 /** Copy only: the caller computes the same confidence level and evidence gates. */
 export function evidenceConfidenceReason(language: Language, rationale: Rationale): string {
-  const native = nativeAnswerCopy(language);
-  if (native) return nativeCount(native.confidence[rationale.kind], "count" in rationale ? rationale.count : 0);
+  if (isAdditionalAnswerLanguage(language)) {
+    const native = nativeAnswerCopy(language)!;
+    return nativeCount(native.confidence[rationale.kind], "count" in rationale ? rationale.count : 0);
+  }
   switch (rationale.kind) {
     case "synthetic": return {
       "zh-Hans": "本次运行包含合成演示材料，不能用于建立事实置信度",
@@ -86,8 +89,8 @@ export function evidenceConfidenceReason(language: Language, rationale: Rational
  * sentences may supply a higher level; excerpt-only and unavailable stay Low. */
 export function ordinaryConfidence(language: Language, delivery: "unavailable" | "summary" | "excerpts", assessment: string,
   reviewedSummary?: Confidence): Confidence {
-  const native = nativeAnswerCopy(language);
-  if (native) {
+  if (isAdditionalAnswerLanguage(language)) {
+    const native = nativeAnswerCopy(language)!;
     const summary = delivery === "summary" ? reviewedSummary : undefined;
     return { level: summary?.level ?? "Low", reason: delivery === "unavailable" ? native.delivery.unavailable
       : `${native.delivery[delivery]} ${native.assessment}: ${summary?.reason ?? assessment}` };
@@ -126,8 +129,8 @@ export function ordinaryConfidence(language: Language, delivery: "unavailable" |
 
 export function confidenceBanner(answer: string, verdict: Confidence, language: Language): string {
   if (verdict.level !== "Low") return answer;
-  const native = nativeAnswerCopy(language);
-  if (native) {
+  if (isAdditionalAnswerLanguage(language)) {
+    const native = nativeAnswerCopy(language)!;
     return `> ⚠ ${native.lowConfidence} — ${verdict.reason.replace(/[.!?。！？।]$/u, "")}${native.sentenceEnd} ${native.provisional}\n\n${answer}`;
   }
   const copy = {

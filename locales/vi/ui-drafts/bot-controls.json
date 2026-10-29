@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/bot-controls.ts",
-  "sourceSha256": "e68d2b89852db3d9c24d3885aa1b3df09f9561569a73192a47a62760a1057949",
+  "sourceSha256": "716e768af760e7befd03cb8ed65ae7ab65ebf416013827daacf7265d110e5af6",
   "entries": {
     "introduction": {
       "source": "Ask a question to receive an answer with citations.",
@@ -33,8 +33,8 @@
       "text": "Thông tin tài chính (tiếng Anh):"
     },
     "languageHelp": {
-      "source": "Use /language en|vi|pt|es|fr|zh-Hans|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
-      "text": "Dùng /language en|vi|pt|es|fr|zh-Hans|auto để chọn ngôn ngữ câu trả lời và trợ giúp. Yêu cầu ngôn ngữ rõ ràng trong câu hỏi gốc được ưu tiên; auto theo ngôn ngữ câu hỏi."
+      "source": "Use /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
+      "text": "Dùng /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|auto để chọn ngôn ngữ câu trả lời và trợ giúp. Yêu cầu ngôn ngữ rõ ràng trong câu hỏi gốc được ưu tiên; auto theo ngôn ngữ câu hỏi."
     },
     "languageCurrent": {
       "source": "Answer language preference: {preference}.",
@@ -49,8 +49,8 @@
       "text": "Không thể đọc hoặc xác nhận việc lưu lựa chọn ngôn ngữ. Không xác nhận đã lưu thành công."
     },
     "languageInvalid": {
-      "source": "Supported values: en, vi, pt (also pt-BR), es, fr, zh-Hans, auto.",
-      "text": "Các giá trị hỗ trợ: en, vi, pt (hoặc pt-BR), es, fr, zh-Hans, auto."
+      "source": "Supported values: en, vi, pt (also pt-BR), es, fr, zh-Hans, de, ja, ko, hi, id, auto.",
+      "text": "Các giá trị hỗ trợ: en, vi, pt (hoặc pt-BR), es, fr, zh-Hans, de, ja, ko, hi, id, auto."
     },
     "languagePrivate": {
       "source": "Set or inspect your language preference in a private chat with Keryx.",

@@ -10,10 +10,10 @@ import { researchPresentationCatalogues } from "./presentation-messages";
 import { presentationQuestions, presentationRun } from "./presentation.test-fixture";
 import { config } from "../config";
 import { finalizeAnswerLanguage } from "./answer-language-provenance";
-const locales = ["en", "vi", "pt", "es", "fr", "zh-Hans"] as const;
+const locales = ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const;
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 
-it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("%s actual stdio handler binds observed labels and discloses an override", async language => {
+it.each(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const)("%s actual stdio handler binds observed labels and discloses an override", async language => {
   const run = presentationRun(), queryId = "original-completed-query";
   const packet = { ...finalizeAnswerLanguage({ answer: run.answer, rendererLanguage: language, statements: [], proposals: [] })!, queryId };
   const result = { answer: run.answer, citations: [], totalToCreators: 0.000001, amountPaid: "0.100000",
@@ -85,7 +85,7 @@ it("explicit unknown/mismatched context is disclosed; no translated-answer claim
   expect(presentationLocaleNotice(unknown)).toBe(researchPresentationCatalogues.vi.requestedUnknown.replace("{language}", "vi"));
   const mismatch = livePresentationLocale({ requestedLanguage: "vi", recordedAnswerLanguage: "es" });
   expect(presentationLocaleNotice(mismatch)).toContain("es"); expect(mismatch.agreement).toBe("MISMATCH");
-  expect(presentationLocaleNotice(livePresentationLocale({ requestedLanguage: "de" }))).toBe(researchPresentationCatalogues.en.unsupported);
+  expect(presentationLocaleNotice(livePresentationLocale({ requestedLanguage: "zz-unsupported" }))).toBe(researchPresentationCatalogues.en.unsupported);
   expect(presentationLocaleNotice(livePresentationLocale({ requestedLanguage: "vi", recordedAnswerLanguage: "vi" }))).toBe("");
 });
 it.each(locales)("%s output-limit/serving notices reuse bounded public records without exposing raw provider metadata", language => {

@@ -1,6 +1,9 @@
 /** Additional ordinary-answer directives. Callers retain their own scope gates;
  * this helper neither detects arbitrary prose language nor changes a question. */
 export type AdditionalAnswerLanguage = "de" | "ja" | "ko" | "hi" | "id";
+export function isAdditionalAnswerLanguage(value: unknown): value is AdditionalAnswerLanguage {
+  return value === "de" || value === "ja" || value === "ko" || value === "hi" || value === "id";
+}
 export interface NativeAnswerInstruction {
   index: number;
   end: number;
@@ -16,7 +19,7 @@ const names = new Map<string, AdditionalAnswerLanguage | "en">([
 ].map(([name, language]) => [name.normalize("NFC"), language as AdditionalAnswerLanguage | "en"]));
 
 const forms = [
-  String.raw`(?<![\p{L}\p{N}_])(?:please\s+)?(?:answer|respond|reply|write)\s+(?:only\s+)?(?:in|using)\s+(german|japanese|korean|hindi|indonesian)(?![\p{L}\p{N}_-])`,
+  String.raw`(?<![\p{L}\p{N}_])(?:(?:then|now)\s+)?(?:please\s+)?(?:answer|respond|reply|write)\s+(?:only\s+)?(?:in|using)\s+(german|japanese|korean|hindi|indonesian)(?![\p{L}\p{N}_-])`,
   String.raw`(?<![\p{L}\p{N}_])(?:(?:antworte|antworten\s+sie|schreibe|schreiben\s+sie)(?:\s+bitte)?\s+)?auf\s+(deutsch|englisch)(?![\p{L}\p{N}_-])`,
   String.raw`(日本語|英語)で\s*(?:回答して|答えて|返答して|書いて|説明して)(?:ください|下さい)`,
   String.raw`(한국어|영어)로\s*(?:답변|대답|답|응답|작성)해\s*(?:주세요|주십시오)`,

@@ -9,6 +9,8 @@ export const botControlsKorean = Object.freeze({
   status: "상태:",
   financialDetails: "결제 세부 정보(영어):",
   languageCurrent: "선호 답변 언어: {preference}.",
+  languageHelp: "/language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|auto로 답변과 도움말 언어를 설정하세요. 원래 질문에 명시한 답변 언어가 우선하며 auto는 질문을 따릅니다.",
+  languageInvalid: "지원 값: en, vi, pt(pt-BR도 가능), es, fr, zh-Hans, de, ja, ko, hi, id, auto.",
   languageSaved: "답변 및 도움말 언어 설정을 저장했습니다: {preference}.",
   languageUnavailable: "언어 설정을 읽거나 저장 완료를 확인하지 못했습니다. 저장에 성공했다고 표시하지 않습니다.",
   languagePrivate: "Keryx와의 비공개 채팅에서 언어 설정을 지정하거나 확인해 주세요.",

@@ -17,13 +17,18 @@ describe("ordinary scaffold language fallback", () => {
     "Explique si la Luna gira sobre su eje y para qué sirve esa explicación.",
     "Preciso información sobre la Luna para esta investigación.",
     "Sou professora e preciso de uma explicação. Write in Italian.",
-    "Sou professora e preciso de uma explicação. Antworte auf Deutsch.",
+    "Sou professora e preciso de uma explicação. Answer in Russian.",
     "Sou professora e preciso de uma explicação. Write in Klingon.",
   ])("does not infer Portuguese for unsupported or ambiguous output: %s", question => {
     const presentation = answerPresentation(question);
     expect(presentation.language).toBe("en");
     expect(presentation.requestedLanguage).toBeUndefined();
     expect(presentationStatementGuidance(presentation)).toBe("");
+  });
+  it("honors a newly admitted German command after Portuguese context", () => {
+    const presentation = answerPresentation("Sou professora e preciso de uma explicação. Antworte auf Deutsch.");
+    expect(presentation).toEqual({ language: "de", requestedLanguage: "de" });
+    expect(presentationStatementGuidance(presentation)).toContain("German");
   });
 
   it.each([

@@ -1,6 +1,7 @@
 import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
 import { publicPreviewFonts, publicPreviewFontFamily } from "@/lib/og-fonts";
+import { publicPreviewText } from "@/lib/og-text";
 import {
   findWantedBrief,
   loadWantedBoard,
@@ -42,6 +43,7 @@ export default async function WantedClaimOgImage({
   }
 
   const headline = claim.length > 150 ? `${claim.slice(0, 147)}…` : claim;
+  const headlineText = await publicPreviewText(headline, { fontSize: 50, maxWidth: 1060, maxHeight: 200, color: "#1B1712" });
 
   return new ImageResponse(
     (
@@ -85,7 +87,7 @@ export default async function WantedClaimOgImage({
           >
             {uiCopy("wantedCard.paidClaim")}
           </div>
-          <div style={{ fontSize: 50, lineHeight: 1.08, fontWeight: 700 }}>{headline}</div>
+          <div style={{ ...(typeof headlineText === "string" ? {} : { display: "flex" as const }), fontSize: 50, lineHeight: 1.08, fontWeight: 700 }}>{headlineText}</div>
         </div>
 
         <div style={{ display: "flex", gap: 72 }}>

@@ -76,7 +76,8 @@ function retainedTerminal(packet: unknown): QueryRun["trace"][number] {
   return { phase: "done", ts: 0, message: "Synthetic recorded terminal packet", detail: { answerLanguage: packet } };
 }
 function retainedMetadataRun(language: PresentationLanguage, method: RecordedMethod = "deterministic-renderer") {
-  const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada.", fr: "Preuves enregistrées.", "zh-Hans": "已记录的证据。" } satisfies Record<PresentationLanguage, string>;
+  const prose = { en: "Recorded evidence.", vi: "Bằng chứng được ghi lại.", pt: "Evidência registrada.", es: "Evidencia registrada.", fr: "Preuves enregistrées.", "zh-Hans": "已记录的证据。",
+    de: "Erfasste Belege.", ja: "記録された根拠です。", ko: "기록된 근거입니다.", hi: "दर्ज साक्ष्य उपलब्ध हैं।", id: "Bukti telah dicatat." } satisfies Record<PresentationLanguage, string>;
   const value = run("Literal original 中文 question {question}", `${prose[language]} “Original 1 source cited {excerpt}” [S1]`);
   value.trace = [retainedTerminal(retainedLanguagePacket(value.answer, language, method))];
   value.totalSpent = 0.123456; value.totalToCreators = 0.000001;
@@ -86,6 +87,9 @@ function retainedMetadataRun(language: PresentationLanguage, method: RecordedMet
   return value;
 }
 const metadataExpected = {
+  de: { title: "Keryx-Recherchebericht", source: "zitierte Quelle" }, ja: { title: "Keryx調査レポート", source: "件の引用出典" },
+  ko: { title: "Keryx 조사 보고서", source: "개 출처 인용" }, hi: { title: "Keryx शोध रिपोर्ट", source: "उद्धृत स्रोत" },
+  id: { title: "Laporan Keryx", source: "sumber dikutip" },
   "zh-Hans": { title: "Keryx 研究报告", source: "个引用来源" },
   en: { title: "Keryx Dispatch", source: "source cited" }, vi: { title: "Báo cáo Keryx", source: "nguồn được trích dẫn" },
   pt: { title: "Relatório Keryx", source: "fonte citada" }, es: { title: "Informe Keryx", source: "fuente citada" },
@@ -93,7 +97,7 @@ const metadataExpected = {
 };
 
 describe("actual metadata caller selects bounded recorded-language presentation", () => {
-  const matrix = (["en", "vi", "pt", "es", "fr", "zh-Hans"] as const).flatMap(language =>
+  const matrix = (["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const).flatMap(language =>
     (["deterministic-renderer", "reviewed-statements-and-renderer"] as const).flatMap(method =>
       [false, true].map(historical => ({ language, method, historical }))));
   it.each(matrix)("renders $language / $method / historical=$historical without altering originals", async ({ language, method, historical }) => {

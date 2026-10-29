@@ -40,11 +40,24 @@ import { synthesisFailureDetail } from "../agent/synthesis-failure";
 import { requestedSourceReport } from "../agent/requested-source-report";
 import { requestedSources } from "../web-research/requested-sources";
 import { emptyEvidenceAnswer, emptyPublicEvidenceDetail } from "../agent/empty-public-evidence";
+import { nativeClientCatalogues } from "../../shared/i18n/native-client-copy";
+import { clientLanguageNames, clientLanguageControls, clientPresentationLanguage, clientPresentationMessages } from "../../shared/i18n/client-language";
+import { desktopNeutralCatalogues, desktopNeutralMessages } from "../../shared/i18n/desktop-neutral";
+import { isPresentationLanguage, presentationLanguage, systemPresentationLanguage } from "../../shared/i18n/presentation-language";
+import { researchPresentationMessages } from "./presentation-messages";
+import { reportPresentationMessages } from "./report-messages";
+import { livePresentationLocale, recordedPresentationLocale } from "./presentation-language";
+import { botControlResponse, botControlsCatalogues, botLanguage, botPreferenceKey, type BotRecipient } from "../bots/language";
+import { botAnswerPreferenceKey, botAnswerPresentation } from "../bots/answer-preference";
+import { botResearchMessages } from "../bots/research-messages";
+import { citationEmailMessages } from "../notify/citation-messages";
+import { archiveAnswerSnippet } from "../answers-archive";
+import { nativeAnswerCopy } from "./native-answer-copy";
 
 const fields = (text: string) => [...text.matchAll(/\{([A-Za-z][A-Za-z0-9]*)\}/gu)].map(match => match[1]).sort();
 const financialResearch = ["citations", "apiAllocations", "apiTotal", "noRewards", "remoteTotal", "reportPayments"] as const;
 const neutralBot = ["weight", "sourcesOne", "sourcesOther", "fullTrace", "failure", "discordUsage"] as const;
-const englishControl = ["reviewBoundary", "languageHelp", "languageInvalid"] as const;
+const englishControl = ["reviewBoundary"] as const;
 
 describe.each([
   ["de", researchPresentationGerman, reportPresentationGerman, botResearchGerman, botControlsGerman, pdfReadingGerman],
@@ -80,9 +93,7 @@ describe.each([
   });
 });
 
-// Prepared consumers only; remove this fixture cast when ordinary production
-// enrollment and independent observation are complete for all five languages.
-const preparedLanguage = (locale: AdditionalAnswerLanguage) => locale as unknown as PresentationLanguage;
+const presentationCode = (locale: AdditionalAnswerLanguage): PresentationLanguage => locale;
 const original = "https://developer.mozilla.org/en-US/docs/Web/API/AbortController#examples";
 function originalInput() {
   const requested = requestedSources(`Use ${original}`);
@@ -100,7 +111,7 @@ function originalRead(qualified = true) {
 }
 
 describe.each(["de", "ja", "ko", "hi", "id"] as const)("prepared %s observed read and recovery boundaries", locale => {
-  const language = preparedLanguage(locale), copy = nativeRecoveryCopy(locale)!, pdf = nativePdfReadingCopy(locale)!;
+  const language = presentationCode(locale), copy = nativeRecoveryCopy(locale)!, pdf = nativePdfReadingCopy(locale)!;
   it("provides every bounded operational category without translating machine failure codes", () => {
     expect(Object.keys(copy.readFailure).sort()).toEqual(["publisher-verification-required", "pdf-extraction-unavailable",
       "html-extraction-unavailable", "article-byte-limit", "document-identity-changed", "empty-or-duplicate-body",
@@ -251,3 +262,81 @@ it.each([undefined, null, "de-DE", "ja-JP", "ko-KR", "hi-IN", "id-ID", "en", "co
   "does not treat a regional alias or object key as native recovery language: %s", language => {
     expect(nativeRecoveryCopy(language)).toBeUndefined(); expect(nativePdfReadingCopy(language)).toBeUndefined();
   });
+
+describe.each(["de", "ja", "ko", "hi", "id"] as const)("actual %s neutral application consumers", locale => {
+  const copy = nativeClientCatalogues[locale];
+  const question = { de: "Antworte bitte auf Deutsch.", ja: "日本語で回答してください。", ko: "한국어로 답변해 주세요.",
+    hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia." }[locale];
+  it("accepts exact codes and system labels without granting regional aliases output-language authority", () => {
+    expect(presentationLanguage(locale)).toBe(locale); expect(isPresentationLanguage(locale)).toBe(true);
+    const regional = { de: "de-DE", ja: "ja-JP", ko: "ko-KR", hi: "hi-IN", id: "id-ID" }[locale];
+    expect(systemPresentationLanguage(regional)).toBe(locale); expect(clientPresentationLanguage(regional)).toBe(locale);
+    expect(presentationLanguage(regional)).toBeUndefined(); expect(isPresentationLanguage(regional)).toBe(false);
+    expect(botLanguage(locale)).toBe(locale); expect(botLanguage(regional)).toBeUndefined();
+    expect(clientPresentationLanguage("en-US", locale)).toBe(locale);
+  });
+  it("provides complete neutral CLI controls and the existing nineteen Desktop labels", () => {
+    expect(clientLanguageNames[locale]).toBe(copy.name);
+    expect(Object.keys(copy.controls).sort()).toEqual(Object.keys(clientLanguageControls.en).sort());
+    expect(clientPresentationMessages(locale).controls).toBe(copy.controls);
+    expect(Object.keys(copy.desktop).sort()).toEqual(Object.keys(desktopNeutralCatalogues.en).sort());
+    for (const [key, value] of Object.entries(copy.desktop)) {
+      expect(desktopNeutralMessages(locale)(key as keyof typeof copy.desktop)).toBe(value);
+      expect(value.trim()).not.toBe(""); expect(fields(value)).toEqual([]);
+    }
+    expect(() => desktopNeutralMessages(locale)("nativeDesktop.payment.approve" as never)).toThrow("Unknown neutral Desktop message");
+  });
+  it("uses native report/bot labels while preserving canonical financial and review-boundary strings", () => {
+    expect(clientPresentationMessages(locale).research("confidence")).toBe(researchPresentationMessages(locale)("confidence"));
+    expect(reportPresentationMessages(locale)("documentVersion", { version: "Original <version> {version}" })).toContain("Original <version> {version}");
+    expect(researchPresentationMessages(locale)("apiTotal", { amount: "1.000001", mode: "pending" }))
+      .toBe("Recorded to creators: 1.000001 · payment mode: pending.");
+    expect(botResearchMessages(question)("paused")).toBe(botResearchEnglish.paused);
+    expect(botResearchMessages(question)("settlementNotice")).toBe(botResearchEnglish.settlementNotice);
+    expect(botControlsCatalogues[locale].reviewBoundary).toBe(botControlsEnglish.reviewBoundary);
+  });
+  it("does not promote selected labels or question intent into recorded answer-language evidence", () => {
+    const selected = livePresentationLocale({ requestedLanguage: locale, originalQuestion: question });
+    expect(selected.language).toBe(locale); expect(selected.answerLanguage).toBe("UNKNOWN"); expect(selected.agreement).toBe("UNKNOWN");
+    expect(recordedPresentationLocale(`${locale}-XX`).answerLanguage).toBe("UNKNOWN");
+    const mismatch = livePresentationLocale({ requestedLanguage: locale, recordedAnswerLanguage: "en", originalQuestion: question });
+    expect(mismatch.language).toBe(locale); expect(mismatch.answerLanguage).toBe("en"); expect(mismatch.agreement).toBe("MISMATCH");
+  });
+  it("stores only an authenticated scoped bot preference with readback and keeps an original English instruction first", async () => {
+    const recipient: BotRecipient = { platform: "telegram", scope: "telegram", userId: "123456789" };
+    const values = new Map<string, string>(), store = async () => ({ getSyncState: async (key: string) => values.get(key) ?? null,
+      setSyncState: async (key: string, value: string) => { values.set(key, value); } });
+    const reply = await botControlResponse({ control: { action: "language", value: locale }, recipient }, store);
+    expect(reply.language).toBe(locale); expect(reply.text).toContain(botControlsCatalogues[locale].languageSaved.replace("{preference}", locale));
+    expect(values.get(botAnswerPreferenceKey(recipient)!)).toBe(locale); expect(values.get(botPreferenceKey(recipient)!)).toBe(locale);
+    const original = "Answer in English. Keep the original question unchanged.";
+    expect((await botAnswerPresentation(original, recipient, store)).language).toBe("en");
+    expect((await botAnswerPresentation(question, recipient, store)).language).toBe(locale);
+    expect((await botAnswerPresentation("Original question without an output directive.", recipient, store)).language).toBe(locale);
+    const unconfirmed = await botControlResponse({ control: { action: "language", value: locale }, recipient },
+      async () => ({ getSyncState: async () => null, setSyncState: async () => {} }));
+    expect(unconfirmed.text).not.toContain(botControlsCatalogues[locale].languageSaved.replace("{preference}", locale));
+  });
+  it("translates only email navigation and preserves all settlement, ownership and payout-rate prose in English", () => {
+    const email = citationEmailMessages[locale];
+    expect(Object.keys(email).sort()).toEqual(Object.keys(citationEmailMessages.en).sort());
+    for (const [key, value] of Object.entries(citationEmailMessages.en)) {
+      expect(fields((email as Record<string, string>)[key])).toEqual(fields(value));
+      if (!Object.hasOwn(copy.email, key)) expect((email as Record<string, string>)[key]).toBe(value);
+    }
+    for (const [key, value] of Object.entries(copy.email)) expect((email as Record<string, string>)[key]).toBe(value);
+    expect(Object.isFrozen(copy)).toBe(true); expect(Object.isFrozen(copy.controls)).toBe(true);
+    expect(Object.isFrozen(copy.desktop)).toBe(true); expect(Object.isFrozen(copy.email)).toBe(true);
+  });
+  it("extracts exact native delivery openings for previews while keeping the caution, original quote and evidence gap", () => {
+    const ordinary = nativeAnswerCopy(locale)!;
+    const original = "Literal source café 日本語 & original [S1]";
+    const heading = `### ${ordinary.target} 1\n\n${ordinary.topic}: “Original target”`;
+    const answer = `${ordinary.summaryIntro}\n\n${heading}\n\n${original}`;
+    expect(archiveAnswerSnippet(answer)).toBe("Literal source café 日本語 & original");
+    expect(archiveAnswerSnippet(`> ⚠ ${ordinary.lowConfidence} — Original assessment. ${ordinary.provisional}\n\n${answer}`))
+      .toBe(`⚠ ${ordinary.lowConfidence} — Literal source café 日本語 & original`);
+    expect(archiveAnswerSnippet(ordinary.summaryIntro)).toBe(ordinary.summaryIntro);
+    expect(archiveAnswerSnippet(`${ordinary.summaryIntro}\n\n${heading}\n\n${ordinary.gap}`)).toBe(ordinary.gap);
+  });
+});

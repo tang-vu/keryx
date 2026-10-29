@@ -26,7 +26,7 @@ Options:
   --budget USDC             Nonnegative source cap, at most six decimal places.
   --model ID                Override the configured reasoning model.
   --web                     Allow configured external web/search providers.
-  --language LANGUAGE       Presentation labels: auto, en, vi, pt, pt-BR, es, fr or zh-Hans.
+  --language LANGUAGE       Presentation labels: auto, en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi or id.
   --private-claim-fd FD      Dedicated inherited private pipe; direct Node launcher only.
 
 Without a question, the existing sample question is used.
@@ -54,7 +54,7 @@ for (let i = 0; i < argv.length; i++) {
   } else if (argv[i] === "--language") {
     if (languageOverride !== undefined) throw new Error("Duplicate presentation language option.");
     languageOverride = argv[++i];
-    if (!languageOverride || languageOverride.startsWith("-")) throw new Error("--language requires en, vi, pt, pt-BR, es, fr, zh-Hans or auto.");
+    if (!languageOverride || languageOverride.startsWith("-")) throw new Error("--language requires en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi, id or auto.");
     clientPresentationLanguage(undefined, languageOverride);
   } else if (argv[i] === "--web") {
     allowExternalWeb = true;

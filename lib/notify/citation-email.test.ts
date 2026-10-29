@@ -61,7 +61,7 @@ describe("shouldSendEmail (rate cap)", () => {
 });
 
 describe("buildCitationEmailContent", () => {
-  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("localizes %s navigation while retaining original financial facts", async language => {
+  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const)("localizes %s navigation while retaining original financial facts", async language => {
     const { citationEmailMessages } = await import("./citation-messages");
     const content = buildCitationEmailContent(payload(), { base: "https://keryx.cc", unsubToken: "tok123", language });
     expect(content.text).toContain(citationEmailMessages[language].trace);
@@ -206,7 +206,7 @@ ${"  "}
     expect(result).toEqual(buildCitationEmailContent(payload(), { ...opts, language: "en" }));
   });
 
-  it.each([undefined, null, "de", "VI", "vi-VN", "es-MX", "pt-br", "", "toString", "__proto__", { language: "vi" }])(
+  it.each([undefined, null, "zz-unsupported", "VI", "vi-VN", "es-MX", "pt-br", "", "toString", "__proto__", { language: "vi" }])(
     "uses deterministic English for missing/unsupported language %j without inferring question/source language", language => {
       const input = payload({ source: { id: "src-1", name: "Nguồn tiếng Việt" }, query: { id: "q-1", question: "Trả lời bằng tiếng Việt." } });
       expect(buildCitationEmailContent(input, { ...opts, language: language as PresentationLanguage }))

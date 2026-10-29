@@ -4,9 +4,16 @@ import { researchPresentationPortuguese } from "../../locales/pt-BR/research-pre
 import { researchPresentationSpanish } from "../../locales/es/research-presentation";
 import { researchPresentationFrench } from "../../locales/fr/research-presentation";
 import { researchPresentationChinese } from "../../locales/zh-Hans/research-presentation";
+import { researchPresentationGerman } from "../../locales/de/research-presentation";
+import { researchPresentationJapanese } from "../../locales/ja/research-presentation";
+import { researchPresentationKorean } from "../../locales/ko/research-presentation";
+import { researchPresentationHindi } from "../../locales/hi/research-presentation";
+import { researchPresentationIndonesian } from "../../locales/id/research-presentation";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
 
 export const researchPresentationCatalogues = Object.freeze({ en: researchPresentationEnglish, vi: researchPresentationVietnamese,
+  de: researchPresentationGerman, ja: researchPresentationJapanese, ko: researchPresentationKorean,
+  hi: researchPresentationHindi, id: researchPresentationIndonesian,
   pt: researchPresentationPortuguese, es: researchPresentationSpanish, fr: researchPresentationFrench, "zh-Hans": researchPresentationChinese });
 type Key = keyof typeof researchPresentationEnglish;
 type Names<T extends string> = T extends `${string}{${infer Name}}${infer Tail}` ? Name | Names<Tail> : never;

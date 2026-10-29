@@ -8,12 +8,18 @@ import { botControlsPortuguese } from "../../locales/pt-BR/bot-controls";
 import { botControlsSpanish } from "../../locales/es/bot-controls";
 import { botControlsFrench } from "../../locales/fr/bot-controls";
 import { botControlsChinese } from "../../locales/zh-Hans/bot-controls";
-import { systemPresentationLanguage } from "../../shared/i18n/presentation-language";
+import { botControlsGerman } from "../../locales/de/bot-controls";
+import { botControlsJapanese } from "../../locales/ja/bot-controls";
+import { botControlsKorean } from "../../locales/ko/bot-controls";
+import { botControlsHindi } from "../../locales/hi/bot-controls";
+import { botControlsIndonesian } from "../../locales/id/bot-controls";
+import { systemPresentationLanguage, type PresentationLanguage } from "../../shared/i18n/presentation-language";
 import { readBotAnswerPreference, writeBotAnswerPreference } from "./answer-preference";
 
-export type BotLanguage = "en" | "vi" | "pt" | "es" | "fr" | "zh-Hans";
+export type BotLanguage = PresentationLanguage;
 export type BotLanguagePreference = BotLanguage | "auto";
 export const botControlsCatalogues = Object.freeze({ en: botControlsEnglish, vi: botControlsVietnamese,
+  de: botControlsGerman, ja: botControlsJapanese, ko: botControlsKorean, hi: botControlsHindi, id: botControlsIndonesian,
   pt: botControlsPortuguese, es: botControlsSpanish, fr: botControlsFrench, "zh-Hans": botControlsChinese });
 
 /** Finite shipped bot catalogue; unrelated UI locales do not grant bot support. */
@@ -26,6 +32,11 @@ export function botLanguage(value: unknown): BotLanguage | undefined {
     case "es": return "es";
     case "fr": return "fr";
     case "zh-hans": return "zh-Hans";
+    case "de": return "de";
+    case "ja": return "ja";
+    case "ko": return "ko";
+    case "hi": return "hi";
+    case "id": return "id";
     default: return undefined;
   }
 }

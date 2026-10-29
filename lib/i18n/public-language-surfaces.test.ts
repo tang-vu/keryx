@@ -291,7 +291,7 @@ function expectQuoteLanguages(html: string, quote: typeof quoteCases[number], la
 }
 
 describe("recorded generated-prose DOM caller chain", () => {
-  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("transfers exact retained %s bytes through the page and both real callers", async language => {
+  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const)("transfers exact retained %s bytes through the page and both real callers", async language => {
     const value = retainedRun(language);
     expect(recordedAnswerLanguage(value)).toBe(language);
     const before = JSON.stringify(value);
@@ -333,7 +333,7 @@ describe("recorded generated-prose DOM caller chain", () => {
     ["duplicate", value => ({ ...value, trace: [...value.trace, value.trace[0]] })],
     ["malformed digest", value => ({ ...value, trace: [terminal({ ...retainedPacket(value.answer), answerSha256: "not-a-digest" })] })],
     ["extra packet field", value => ({ ...value, trace: [terminal({ ...retainedPacket(value.answer), requestedLanguage: "vi" })] })],
-    ["unknown language", value => ({ ...value, trace: [terminal(retainedPacket(value.answer, "ja"))] })],
+    ["unknown language", value => ({ ...value, trace: [terminal(retainedPacket(value.answer, "zz-unsupported"))] })],
     ["Chinese locale alias", value => ({ ...value, trace: [terminal(retainedPacket(value.answer, "zh-CN"))] })],
     ["Traditional Chinese", value => ({ ...value, trace: [terminal(retainedPacket(value.answer, "zh-Hant"))] })],
     ["future packet", value => ({ ...value, trace: [terminal({ ...retainedPacket(value.answer), format: "keryx-answer-language-v2" })] })],

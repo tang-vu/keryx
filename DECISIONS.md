@@ -1,5 +1,29 @@
 # Keryx — Decision Log
 
+## Extend ordinary answers to German, Japanese, Korean, Hindi and Indonesian — 2026-10-29
+
+Enroll `de`, `ja`, `ko`, `hi` and `id` in the existing bounded ordinary producer,
+independent statement review and final-byte/query-bound readers together. Keep
+explicit original-question intent, authenticated bot preferences, client labels
+and UI previews separate. Retained private, execution-limited and teaching
+producers preserve their prior grammar. Original targets, quotations, identifiers
+and financial authority keep their existing scope; unobserved operational prose
+cannot establish a whole-answer language.
+
+Add neutral labels through the established client allowlists and preserve English
+financial, consent and custody copy. Source-bound PDF notices retain their actual
+reading scope. No translation call, new payment authority or autonomous retry is
+introduced. Native answer attribution still uses the existing model call, so
+identical live contribution weights are not promised.
+
+Bundle licensed local Japanese, Korean and Devanagari font assets for public
+metadata. Glyph coverage alone did not fix Hindi: use bounded local Sharp/Pango
+shaping for Devanagari text after public admission, including native captions
+beside an English original. Reuse the already locked Sharp version as an explicit
+dependency; other scripts keep the existing text nodes. The
+[source and acceptance map](docs/engineering/native-language-expansion-20261029.md)
+records the separate visual, CI, human-review and coordinated-release gates.
+
 ## Add Simplified Chinese with script-aware labels and observed ordinary delivery — 2026-10-29
 
 Extend the existing ordinary renderer and independent same-call statement review

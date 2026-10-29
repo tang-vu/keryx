@@ -4,8 +4,15 @@ import { reportPresentationPortuguese } from "../../locales/pt-BR/report-present
 import { reportPresentationSpanish } from "../../locales/es/report-presentation";
 import { reportPresentationFrench } from "../../locales/fr/report-presentation";
 import { reportPresentationChinese } from "../../locales/zh-Hans/report-presentation";
+import { reportPresentationGerman } from "../../locales/de/report-presentation";
+import { reportPresentationJapanese } from "../../locales/ja/report-presentation";
+import { reportPresentationKorean } from "../../locales/ko/report-presentation";
+import { reportPresentationHindi } from "../../locales/hi/report-presentation";
+import { reportPresentationIndonesian } from "../../locales/id/report-presentation";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
 export const reportPresentationCatalogues = Object.freeze({ en: reportPresentationEnglish, vi: reportPresentationVietnamese,
+  de: reportPresentationGerman, ja: reportPresentationJapanese, ko: reportPresentationKorean,
+  hi: reportPresentationHindi, id: reportPresentationIndonesian,
   pt: reportPresentationPortuguese, es: reportPresentationSpanish, fr: reportPresentationFrench, "zh-Hans": reportPresentationChinese });
 type Key = keyof typeof reportPresentationEnglish;
 type Names<T extends string> = T extends `${string}{${infer Name}}${infer Tail}` ? Name | Names<Tail> : never;

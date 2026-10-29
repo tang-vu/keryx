@@ -3,6 +3,7 @@ import { createMessages } from "@/lib/i18n/messages";
 import { ImageResponse } from "next/og";
 import { getDb } from "@/lib/db";
 import { publicPreviewFonts, publicPreviewFontFamily } from "@/lib/og-fonts";
+import { publicPreviewText } from "@/lib/og-text";
 
 const uiCopy = createMessages("en");
 
@@ -49,6 +50,7 @@ export default async function CreatorOgImage({
   let serial = 0;
   for (const ch of id) serial = (serial * 31 + ch.charCodeAt(0)) % 100000;
   const serialLabel = String(serial).padStart(5, "0");
+  const headlineText = await publicPreviewText(headline, { fontSize: 64, maxWidth: 1060, maxHeight: 190, color: "#1B1712" });
 
   return new ImageResponse(
     (
@@ -92,8 +94,8 @@ export default async function CreatorOgImage({
           >
             {uiCopy("creatorSocial.earns")}
           </div>
-          <div style={{ fontSize: 64, lineHeight: 1.05, fontWeight: 700 }}>
-            {headline}
+          <div style={{ ...(typeof headlineText === "string" ? {} : { display: "flex" as const }), fontSize: 64, lineHeight: 1.05, fontWeight: 700 }}>
+            {headlineText}
           </div>
         </div>
 

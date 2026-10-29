@@ -9,6 +9,8 @@ export const botControlsIndonesian = Object.freeze({
   status: "Status:",
   financialDetails: "Rincian keuangan (bahasa Inggris):",
   languageCurrent: "Preferensi bahasa jawaban: {preference}.",
+  languageHelp: "Gunakan /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|auto untuk memilih bahasa jawaban dan bantuan. Instruksi bahasa yang eksplisit dalam pertanyaan asli diutamakan; auto mengikuti pertanyaan.",
+  languageInvalid: "Nilai yang didukung: en, vi, pt (juga pt-BR), es, fr, zh-Hans, de, ja, ko, hi, id, auto.",
   languageSaved: "Preferensi bahasa jawaban dan bantuan tersimpan: {preference}.",
   languageUnavailable: "Preferensi bahasa tidak dapat dibaca atau dipastikan tersimpan. Tidak ada klaim penyimpanan berhasil.",
   languagePrivate: "Atur atau periksa preferensi bahasa Anda dalam percakapan pribadi dengan Keryx.",

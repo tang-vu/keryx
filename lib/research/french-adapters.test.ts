@@ -17,7 +17,7 @@ afterEach(() => vi.unstubAllGlobals());
 it("selects French client and complete neutral desktop controls without granting UI, payment or storage authority", () => {
   expect(Object.isFrozen(canonicalPresentationLanguages)).toBe(true);
   expect(isPresentationLanguage("fr")).toBe(true);
-  for (const value of ["fr-FR", "pt-BR", "de", { toString: () => "fr" }, null])
+  for (const value of ["fr-FR", "pt-BR", "zz-unsupported", { toString: () => "fr" }, null])
     expect(isPresentationLanguage(value)).toBe(false);
   expect(clientPresentationLanguage("fr-FR")).toBe("fr");
   expect(clientPresentationLanguage("vi-VN", "fr")).toBe("fr");
@@ -50,7 +50,7 @@ it("saves French only through an authenticated recipient-scoped explicit command
   const response = await botControlResponse({ control: { action: "language", value: "fr" }, recipient }, store);
   expect(response.language).toBe("fr");
   expect(response.text).toContain("Préférence de langue des réponses et de l'aide enregistrée : fr.");
-  expect(response.text).toContain("en|vi|pt|es|fr|zh-Hans|auto");
+  expect(response.text).toContain("en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|auto");
   expect(state.get(botPreferenceKey(recipient)!)).toBe("fr");
   expect(state.get(botAnswerPreferenceKey(recipient)!)).toBe("fr");
   const question = "Keep original <question> {count} 日本語";

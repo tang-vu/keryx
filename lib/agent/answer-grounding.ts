@@ -5,6 +5,7 @@ import type { CitedStatement } from "./cited-statements";
 import type { AnswerPresentation } from "../research/answer-presentation";
 import { compactStatementGroups } from "./compact-statement-groups";
 import { nativeAnswerCopy, nativeCount, type NativeAnswerCopy } from "../research/native-answer-copy";
+import { isAdditionalAnswerLanguage } from "../research/native-answer-intent";
 
 function literal(value: string): string {
   // The reading UI's small renderer does not decode Markdown escapes/entities. Invisible
@@ -105,7 +106,7 @@ function compactSummary(presentation: AnswerPresentation, ledger: EvidenceLedger
   const groups = compactStatementGroups(summary, qualifying);
   if (!groups || groups.length !== count || groups.some(group => group.length > 4)) return undefined;
   const native = nativeAnswerCopy(presentation.language);
-  const copy = native ? { source: native.source, note: native.compactNote } : {
+  const copy = isAdditionalAnswerLanguage(presentation.language) ? { source: native!.source, note: native!.compactNote } : {
     en: { source: "Source text", note: "Model-written and model-checked summaries; inspect the paired source excerpts. Full synthesis and source correctness remain unverified. Payment states are recorded separately." },
     vi: { source: "Nguyên văn nguồn", note: "Tóm tắt do mô hình viết và kiểm tra; hãy đối chiếu trích đoạn đi kèm. Chưa xác minh tính đầy đủ của tổng hợp và tính đúng đắn của nguồn. Thanh toán được ghi riêng." },
     pt: { source: "Texto da fonte", note: "Resumos escritos e verificados por modelos; confira os trechos citados. A síntese completa e a exatidão das fontes permanecem não verificadas. Os pagamentos são registrados separadamente." },

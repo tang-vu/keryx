@@ -12,6 +12,8 @@ import { mdnModelReplay } from "../lib/agent/fixtures/mdn-model-replay";
 import { applyEvidenceReview } from "../lib/llm/evidence-review";
 import { languageReviewedProposals } from "../lib/research/answer-language-review";
 import { finalizeAnswerLanguage } from "../lib/research/answer-language-provenance";
+import { nativeAnswerCopy } from "../lib/research/native-answer-copy";
+import type { AdditionalAnswerLanguage } from "../lib/research/native-answer-intent";
 
 const question = "Em português brasileiro, escreva três tópicos curtos explicando os tipos e o padrão.";
 const quotes = ["submit: O botão envia os dados ao servidor. Esse é o padrão sem o atributo type.",
@@ -53,10 +55,39 @@ const chineseAnswer = finalizeGroundedAnswer({ question: chineseQuestion, answer
   statements: chineseStatements, presentation: answerPresentation(chineseQuestion) });
 const chinesePacket = finalizeAnswerLanguage({ answer: chineseAnswer, rendererLanguage: "zh-Hans", statements: chineseStatements, proposals: chineseProposals });
 assert(chinesePacket?.language === "zh-Hans" && chinesePacket.method === "reviewed-statements-and-renderer");
+const nativeSentences = {
+  de: ["Submit sendet die Formulardaten an den Server.", "Ohne type ist submit die Voreinstellung.",
+    "Reset setzt die Steuerelemente auf ihre Anfangswerte zurück.", "Button besitzt kein Standardverhalten."],
+  ja: ["Submit はフォームのデータをサーバーへ送信します。", "type が未指定の場合、submit が既定値です。",
+    "Reset はコントロールを初期値に戻します。", "Button 自体には既定の動作がありません。"],
+  ko: ["Submit은 양식 데이터를 서버로 전송합니다.", "type을 지정하지 않으면 기본값은 submit입니다.",
+    "Reset은 컨트롤을 초기값으로 되돌립니다.", "Button에는 기본 동작이 없습니다."],
+  hi: ["Submit फ़ॉर्म का डेटा सर्वर को भेजता है।", "type नहीं दिए जाने पर submit डिफ़ॉल्ट होता है।",
+    "Reset नियंत्रणों को उनके प्रारंभिक मानों पर लौटाता है।", "Button का कोई डिफ़ॉल्ट व्यवहार नहीं होता है।"],
+  id: ["Submit mengirim data formulir ke server.", "Tanpa type, perilaku bawaan adalah submit.",
+    "Reset mengembalikan kontrol ke nilai awalnya.", "Button tidak memiliki perilaku bawaan."],
+} as const;
+const nativeDirectives = { de: "Antworte bitte auf Deutsch.", ja: "日本語で回答してください。", ko: "한국어로 답변해 주세요.",
+  hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia." } as const;
+const nativeScenarios = (["de", "ja", "ko", "hi", "id"] as const satisfies readonly AdditionalAnswerLanguage[]).map(language => {
+  const statements = nativeSentences[language];
+  const rows = applyEvidenceReview(proposals.map((proposal, index) => ({ ...proposal, statement: statements[index] })),
+    { reviews: proposals.map((_proposal, index) => ({ index, support: 0.9, statementSupport: 0.9, statementLanguage: language })) },
+    new Set(proposals.map((_proposal, index) => index)), true);
+  const selected = selectCitedStatements(languageReviewedProposals(rows, language), ledger);
+  const original = nativeDirectives[language] + " Write three short bullets explaining the types and default.";
+  const presentation = answerPresentation(original);
+  assert.equal(presentation.requestedLanguage, language); assert.equal(selected.length, 4);
+  const rendered = finalizeGroundedAnswer({ question: original, answer: "Withheld draft [S1]", ledger, statements: selected, presentation });
+  const packet = finalizeAnswerLanguage({ answer: rendered, rendererLanguage: language, statements: selected, proposals: rows });
+  assert(packet?.language === language && packet.method === "reviewed-statements-and-renderer");
+  return { name: `synthetic-${language}-reviewed`, answer: rendered, sentences: statements, quotes, citations: 3,
+    language: packet.language, pairs: selected.map(row => ({ text: row.text, quote: row.quote })), sourceId: "fixture", sourceName: "Synthetic source" };
+});
 const chunks = path.resolve(process.env.NEXT_DIST_DIR ?? ".next", "static/chunks");
 const css = readdirSync(chunks).filter(file => file.endsWith(".css")).map(file => readFileSync(path.join(chunks, file), "utf8")).join("\n");
 assert(css.includes(".list-disc"), "Build current production CSS before this acceptance check");
-const artifacts = path.resolve(".artifacts");
+const artifacts = path.resolve(process.env.KERYX_ARTIFACT_DIR ?? ".artifacts");
 mkdirSync(artifacts, { recursive: true });
 const replay = mdnModelReplay();
 const scenarios = [{ name: "synthetic", answer, sentences, quotes, citations: 3, language: undefined,
@@ -66,7 +97,7 @@ const scenarios = [{ name: "synthetic", answer, sentences, quotes, citations: 3,
   { name: "synthetic-fr-reviewed", answer: frenchAnswer, sentences: frenchSentences, quotes, citations: 3, language: frenchPacket.language,
     pairs: frenchStatements.map(row => ({ text: row.text, quote: row.quote })), sourceId: "fixture", sourceName: "Synthetic source" },
   { name: "synthetic-zh-reviewed", answer: chineseAnswer, sentences: chineseSentences, quotes, citations: 3, language: chinesePacket.language,
-    pairs: chineseStatements.map(row => ({ text: row.text, quote: row.quote })), sourceId: "fixture", sourceName: "Synthetic source" }];
+    pairs: chineseStatements.map(row => ({ text: row.text, quote: row.quote })), sourceId: "fixture", sourceName: "Synthetic source" }, ...nativeScenarios];
 const results = [];
 const browser = await chromium.launch({ headless: true });
 try {
@@ -110,12 +141,13 @@ createRoot(document.getElementById('root')).render(<AnswerMarkdown text={${JSON.
     assert(firstText.includes(scenario.sentences[0]) && firstText.includes(scenario.quotes[0]));
     if (scenario.name === "retained-mdn") assert(firstText.includes(scenario.sentences[4]));
     else assert(firstText.includes(scenario.sentences[1]));
-    if (scenario.language === "fr" || scenario.language === "zh-Hans") {
+    if (scenario.language) {
       assert.equal(await page.locator(`main > div[lang="${scenario.language}"]`).count(), 1);
       assert.equal(await page.locator('main span[lang="und"]').count(), 3);
       const originals = await page.locator('main span[lang="und"]').allTextContents();
       assert.deepEqual(originals, quotes.map(quote => `“${quote}”`));
-      assert((await page.locator("main").innerText()).includes(scenario.language === "fr" ? "Texte de la source" : "来源原文"));
+      const sourceLabel = nativeAnswerCopy(scenario.language)?.source ?? (scenario.language === "fr" ? "Texte de la source" : "来源原文");
+      assert((await page.locator("main").innerText()).includes(sourceLabel));
     }
     assert.deepEqual(errors, []);
     assert.deepEqual(externalRequests, []);

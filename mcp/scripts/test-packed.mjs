@@ -87,6 +87,21 @@ try {
     { question: "Explain the café protocol – keep [PACKED-V3-PRIVATE] exact.", language: "vi", readCheckpoints: capture(privatePacket) },
     { question: "Expliquez le protocole café – gardez [PACKED-FR-AVAILABLE] exact.", language: "fr", readCheckpoints: capture(packet) },
     { question: "请用简体中文回答。解释 café 协议，保留 [PACKED-ZH-AVAILABLE] 原文。", language: "zh-Hans", readCheckpoints: capture(packet) },
+    { question: "Antworte bitte auf Deutsch. Erkläre café und erhalte [PACKED-DE-AVAILABLE].", language: "de", readCheckpoints: capture(packet),
+      serving: "Ausführungsstufen je Schritt", preparation: "Antwortvorbereitung", financial: "Finanzielle Angaben (Englisch):",
+      notice: "Sprache der Beschriftungen: de. Die Antwortsprache wurde nicht erfasst; der Originaltext bleibt erhalten." },
+    { question: "日本語で回答してください。café と [PACKED-JA-AVAILABLE] の原文を保持してください。", language: "ja", readCheckpoints: capture(packet),
+      serving: "各段階で使われた階層", preparation: "回答の準備", financial: "財務詳細（英語）：",
+      notice: "ラベルの言語：ja。回答の言語は記録されていません。回答の原文は変更していません。" },
+    { question: "한국어로 답변해 주세요. café와 [PACKED-KO-AVAILABLE] 원문을 보존하세요.", language: "ko", readCheckpoints: capture(packet),
+      serving: "단계별 실행 등급", preparation: "답변 준비", financial: "결제 세부 정보(영어):",
+      notice: "표시 문구 언어: ko. 답변 언어는 기록되지 않았으며 원문은 그대로 유지됩니다." },
+    { question: "कृपया हिंदी में उत्तर दें। café और [PACKED-HI-AVAILABLE] का मूल पाठ रखें।", language: "hi", readCheckpoints: capture(packet),
+      serving: "हर चरण का निष्पादन स्तर", preparation: "उत्तर की तैयारी", financial: "वित्तीय विवरण (अंग्रेज़ी में):",
+      notice: "लेबल की भाषा: hi। उत्तर की भाषा दर्ज नहीं है; उसका मूल पाठ सुरक्षित है।" },
+    { question: "Tolong jawab dalam bahasa Indonesia. Pertahankan café dan [PACKED-ID-AVAILABLE].", language: "id", readCheckpoints: capture(packet),
+      serving: "Tingkat eksekusi per langkah", preparation: "persiapan jawaban", financial: "Rincian keuangan (bahasa Inggris):",
+      notice: "Bahasa label: id. Bahasa jawaban tidak tercatat; teks aslinya tetap dipertahankan." },
   ];
   const publicResult = {
     answer: "Exact untranslated fixture answer: café – [S1].",
@@ -220,7 +235,7 @@ globalThis.fetch=async(input,init)=>{
     assert.equal(listed.tools.find(tool => tool.name === "paper_lookup").annotations.readOnlyHint, true);
     assert.deepEqual(listed.tools.find(tool => tool.name === "paper_lookup").inputSchema.properties.language.enum, ["en", "fr", "vi"]);
     assert.equal(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.question.maxLength, 2000);
-    assert.deepEqual(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.language.enum, ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans"]);
+    assert.deepEqual(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.language.enum, ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"]);
     return { call: (name, args = {}) => request("tools/call", { name, arguments: args }), counts,
       stop: async () => { await stopChild(child); children.delete(child); lines.close(); } };
   }
@@ -282,6 +297,9 @@ globalThis.fetch=async(input,init)=>{
       assert.match(text, /Niveaux d'exécution par étape/); assert.match(text, /préparation de la réponse \(2,560 tokens\)/);
       assert.match(text, /Détails financiers \(en anglais\) :/);
       assert(text.includes("Langue des libellés : fr. La langue de la réponse n'a pas été enregistrée ; son texte original est conservé."));
+    } else if (vector.serving) {
+      assert(text.includes(vector.serving)); assert(text.includes(`${vector.preparation} (2,560 tokens)`));
+      assert(text.includes(vector.financial)); assert(text.includes(vector.notice));
     } else {
       assert.equal(vector.language, "zh-Hans");
       assert.match(text, /各步骤所用层级/); assert.match(text, /答案准备 \(2,560 tokens\)/);
@@ -301,8 +319,8 @@ globalThis.fetch=async(input,init)=>{
     presented.push(data);
   }
   await presentation.stop(); const presentationCounts = JSON.parse(await readFile(presentation.counts, "utf8"));
-  assert.equal(presentationCounts.paid, 5); assert.equal(presentationCounts.recovery, 0); assert.equal(presentationCounts.bibliography, 0);
-  assert.equal(presentationCounts.researchRequests.length, 10); assert.equal(presentationCounts.researchResults.length, 5);
+  assert.equal(presentationCounts.paid, portVectors.length); assert.equal(presentationCounts.recovery, 0); assert.equal(presentationCounts.bibliography, 0);
+  assert.equal(presentationCounts.researchRequests.length, portVectors.length * 2); assert.equal(presentationCounts.researchResults.length, portVectors.length);
   for (const [index, vector] of portVectors.entries()) {
     const body = { question: vector.question, budget: 0.05, researchMode: "deep", responseMode: "async" };
     assert.deepEqual(presentationCounts.researchRequests.slice(index * 2, index * 2 + 2),

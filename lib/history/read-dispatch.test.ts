@@ -171,7 +171,7 @@ describe("public dispatch recorded-language consumer", () => {
     return { metadata, question: jsonLd[0].mainEntity, answer: jsonLd[0].mainEntity.acceptedAnswer };
   }
 
-  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"])("passes exact %s final-byte provenance to the actual public head and Answer only", async language => {
+  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"])("passes exact %s final-byte provenance to the actual public head and Answer only", async language => {
     const value = recorded(language), before = JSON.stringify(value);
     const { metadata, question, answer } = await languageSurfaces(value);
     expect(metadata.other?.["DC.language"]).toBe(language);
@@ -192,7 +192,7 @@ describe("public dispatch recorded-language consumer", () => {
       if (kind === "duplicate") value.trace = [...value.trace, ...value.trace];
       if (kind === "conflicting") value.trace.push({ ...value.trace[0], detail: { answerLanguage: { ...packet, language: "en" } } });
       if (kind === "final-byte-mismatch") value.answer += " ";
-      if (kind === "future") packet.language = "ja";
+      if (kind === "future") packet.language = "zz-unsupported";
       if (kind === "Chinese locale alias") packet.language = "zh-CN";
       if (kind === "Traditional Chinese") packet.language = "zh-Hant";
       if (kind === "extra-field") packet.viewerLanguage = "vi";

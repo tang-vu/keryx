@@ -40,7 +40,7 @@ describe("bounded neutral CLI scaffolding", () => {
   });
 
   it("retains refusal of unsupported explicit overrides", () => {
-    for (const override of ["de", "en-US", "", null, {}, 0]) {
+    for (const override of ["zz-unsupported", "en-US", "", null, {}, 0]) {
       expect(() => clientPresentationLanguage("vi-VN", override)).toThrow("Unsupported presentation language");
     }
   });
@@ -56,7 +56,7 @@ describe("bounded neutral CLI scaffolding", () => {
     expect(clientPresentationMessages(language).controls).toMatchObject({ engine, sourceCap, question, runId });
   });
 
-  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("uses recorded %s for completed labels without rewriting answer/quote bytes", language => {
+  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const)("uses recorded %s for completed labels without rewriting answer/quote bytes", language => {
     const run = completedRun(language);
     const before = JSON.stringify(run);
     const selected = clientPresentationLanguage("vi-VN", "es");
@@ -77,7 +77,7 @@ describe("bounded neutral CLI scaffolding", () => {
       { ...run, trace: [] },
       { ...run, answer: run.answer.normalize("NFD") },
       { ...run, trace: [...run.trace, ...run.trace] },
-      ...[{ ...packet, format: "future" }, { ...packet, language: "de" },
+      ...[{ ...packet, format: "future" }, { ...packet, language: "zz-unsupported" },
         { ...packet, humanApproved: true }, { language: "pt" }].map(answerLanguage => ({
         ...run, trace: [{ ...step, detail: { answerLanguage } }],
       })),
@@ -85,7 +85,7 @@ describe("bounded neutral CLI scaffolding", () => {
     for (const invalid of invalidRuns) {
       const before = JSON.stringify(invalid);
       expect(recordedAnswerLanguage(invalid)).toBeUndefined();
-      for (const selected of ["en", "vi", "pt", "es", "fr", "zh-Hans"] as const) {
+      for (const selected of ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const) {
         expect(clientPresentationMessages(recordedAnswerLanguage(invalid) ?? selected).controls.runId)
           .toBe(clientPresentationMessages(selected).controls.runId);
       }

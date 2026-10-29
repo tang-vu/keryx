@@ -12,6 +12,9 @@ import type { Confidence, QueryRun } from "./types";
 import { deriveConfidence } from "./agent/confidence";
 import { recordedAnswerLanguage } from "./research/answer-language-provenance";
 import type { PresentationLanguage } from "../shared/i18n/presentation-language";
+import { nativeAnswerCopy, nativeCount } from "./research/native-answer-copy";
+
+const nativeCopies = (["de", "ja", "ko", "hi", "id"] as const).map(language => nativeAnswerCopy(language)!);
 
 export interface ArchiveEntry {
   id: string;
@@ -36,6 +39,7 @@ const METADATA_EXCERPT_LEN = 160;
 /** Opening caveats the current delivery writer prepends. The preview may skip
  * only this exact wording; it never rewrites, translates or grades the answer. */
 const OPENING_CAVEATS = [
+  ...nativeCopies.map(copy => ({ label: copy.lowConfidence, closer: copy.provisional })),
   { label: "低置信度", closer: "请将此结果视为暂定结果。" },
   { label: "Low confidence", closer: "Treat this as provisional." },
   { label: "Độ tin cậy thấp", closer: "Kết quả chưa hoàn chỉnh." },
@@ -47,6 +51,7 @@ const OPENING_CAVEATS = [
 /** Exact introductions from the current grounded-answer writer. A later
  * original sentence may follow one of these; the stored answer is not edited. */
 const DELIVERY_LEADS = [
+  ...nativeCopies.flatMap(copy => [copy.summaryIntro, copy.excerptIntro, copy.unavailableIntro, copy.emptyIntro]),
   "摘要由模型撰写，逐句附有引用。每句话均与检查时使用的来源原文配对显示。",
   "仅提供来源摘录；草稿不作为结论呈现，综合结果的完整性仍未核实。研究目标是待调查的主题，并非已证实的结论。",
   "尚无证据支持的答案：综合或证据检查未能完成。原始阅读结果和凭证均已保留。",
@@ -74,6 +79,7 @@ const DELIVERY_LEADS = [
 ] as const;
 
 const TARGET_LABELS = [
+  ...nativeCopies.map(copy => ({ heading: copy.target, topic: copy.topic })),
   { heading: "Research target", topic: "Requested topic (unverified)" },
   { heading: "Yêu cầu nghiên cứu", topic: "Chủ đề yêu cầu (chưa xác minh)" },
   { heading: "Objetivo de pesquisa", topic: "Tema solicitado (não verificado)" },
@@ -105,6 +111,7 @@ function stripExactLead(text: string, lead: string): string | null {
 
 function bulletNotice(count: number): string[] {
   return [
+    ...nativeCopies.map(copy => nativeCount(copy.compactNotice, count)),
     `无法在保留每项研究目标和所有获准摘录的同时用 ${count} 个简短要点呈现；下文按研究目标展开。`,
     `Could not present ${count} short bullets while preserving every target and qualifying excerpt; the target layout follows.`,
     `Chưa thể trình bày ${count} gạch đầu dòng ngắn mà vẫn giữ mọi yêu cầu và trích đoạn đủ điều kiện; các yêu cầu được trình bày bên dưới.`,

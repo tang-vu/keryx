@@ -10,6 +10,8 @@ import { sourceHtmlLayout } from "../llm/source-text-blocks";
 import { buildQuoteOptions } from "../llm/quote-options";
 import { applyEvidenceReview, EVIDENCE_REVIEW_GUIDANCE, STATEMENT_LANGUAGE_REVIEW_GUIDANCE } from "../llm/evidence-review";
 import { recordedAnswerLanguage } from "../research/answer-language-provenance";
+import type { PresentationLanguage } from "../research/presentation-language";
+import { presentationQuestions } from "../research/presentation.test-fixture";
 import { completeAnswerSentenceSegments } from "./sentence-note-answer";
 import { buildAnswerText as telegramAnswerText } from "../telegram/ask-message";
 import { buildAnswerMessage as discordAnswerMessage } from "../discord/ask-interaction";
@@ -246,7 +248,7 @@ function buy(c: { id: string; name: string; price: number }, ev = 0.8): Decision
 
 interface EngineOverrides {
   /** Explicit synthetic independent observation; never inferred from a question. */
-  reviewedStatementLanguage?: "en" | "vi" | "pt" | "es" | "fr" | "zh-Hans" | "UNKNOWN";
+  reviewedStatementLanguage?: PresentationLanguage | "UNKNOWN";
   decide?: (input: DecideInput) => Decision[];
   sufficiency?: (input: SufficiencyInput) => SufficiencyResult;
   reevaluate?: (input: ReevaluateInput) => {
@@ -509,9 +511,11 @@ describe("ordinary recorded answer language", () => {
   const quote = "Original café evidence preserves its qualification.";
   const sentences = { en: "The evidence retains a qualification.", vi: "Bằng chứng giữ lại một điều kiện.",
     pt: "A evidência conserva uma qualificação.", es: "La evidencia conserva una salvedad.", fr: "Les preuves conservent une réserve.",
-    "zh-Hans": "证据保留了原始材料中的限定条件。" } as const;
-  async function languageRun(options: { language?: "en" | "vi" | "pt" | "es" | "fr" | "zh-Hans";
-    observation?: "en" | "vi" | "pt" | "es" | "fr" | "zh-Hans" | "UNKNOWN"; originalQuestion?: string;
+    "zh-Hans": "证据保留了原始材料中的限定条件。", de: "Die Belege behalten eine Einschränkung bei.",
+    ja: "証拠には元の限定条件が残されています。", ko: "증거에는 원래의 제한 조건이 유지됩니다.",
+    hi: "साक्ष्य में मूल शर्त बनी रहती है।", id: "Bukti mempertahankan batasan aslinya." } as const;
+  async function languageRun(options: { language?: PresentationLanguage;
+    observation?: PresentationLanguage | "UNKNOWN"; originalQuestion?: string;
     private?: boolean; package?: boolean; teaching?: boolean; pending?: boolean; fundingFails?: boolean } = {}) {
     const statement = sentences[options.observation === "UNKNOWN" ? "en" : options.observation ?? options.language ?? "vi"];
     const item: SourceItem = { id: "language-item", sourceId: "language-source", title: "Synthetic original",
@@ -549,7 +553,7 @@ describe("ordinary recorded answer language", () => {
     }
     return { run, gateway, statement, effects };
   }
-  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans"] as const)("records %s only from reviewed delivered statements and renderer, across final consumers", async language => {
+  it.each(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id"] as const)("records %s only from reviewed delivered statements and renderer, across final consumers", async language => {
     const { run, gateway, statement, effects } = await languageRun({ language, observation: language });
     expect(recordedAnswerLanguage(run)).toBe(language);
     expect(run.answer).toContain(statement);
@@ -602,6 +606,36 @@ describe("ordinary recorded answer language", () => {
     expect(recordedAnswerLanguage(run)).toBe("zh-Hans");
     expect(run.answer).toContain(sentences["zh-Hans"]);
     expect(run.evidence?.map(row => row.quote)).toEqual([quote]);
+  });
+  describe.each(["de", "ja", "ko", "hi", "id"] as const)("%s ordinary producer admission", language => {
+    it("honors original-question intent before a different trusted preference", async () => {
+      const { run, statement } = await languageRun({ language: "fr", observation: language,
+        originalQuestion: presentationQuestions[language] });
+      expect(recordedAnswerLanguage(run)).toBe(language);
+      expect(run.answer).toContain(statement);
+      expect(run.evidence?.map(row => row.quote)).toEqual([quote]);
+    });
+    it.each([undefined, "en", "UNKNOWN"] as const)("withholds %s mismatched prose while retaining evidence and fixed payments", async observation => {
+      const observed = await languageRun({ language, observation: language });
+      const rejected = await languageRun({ language, observation });
+      expect(rejected.run.answer).not.toContain(rejected.statement);
+      expect(recordedAnswerLanguage(rejected.run)).toBe(language);
+      expect(rejected.run.trace.at(-1)?.detail).toMatchObject({ answerLanguage: { method: "deterministic-renderer" } });
+      expect(rejected.run.evidence).toEqual(observed.run.evidence);
+      expect(rejected.run.citations.map(row => [row.marker, row.sourceId, row.weight, row.reward]))
+        .toEqual(observed.run.citations.map(row => [row.marker, row.sourceId, row.weight, row.reward]));
+      expect(rejected.gateway.citationCalls).toEqual(observed.gateway.citationCalls);
+      expect(rejected.run.totalSpent).toBe(observed.run.totalSpent);
+    });
+    it.each([{ private: true }, { package: true }, { teaching: true }, { pending: true }, { fundingFails: true }])(
+      "retains special/operational proof boundaries %j", async options => {
+        const { run } = await languageRun({ language, observation: language,
+          originalQuestion: presentationQuestions[language], ...options });
+        expect(recordedAnswerLanguage(run)).toBeUndefined();
+        expect(run.trace.at(-1)?.detail ?? {}).not.toHaveProperty("answerLanguage");
+        if (options.pending) expect(run.answer).toContain("Before any new paid attempt");
+        if (options.fundingFails) expect(run.answer).toContain("Funding readiness is unknown");
+      });
   });
   it.each([{ private: true }, { package: true }, { teaching: true }, { pending: true }, { fundingFails: true }])(
     "keeps simplified Chinese special/operational output without whole-answer language proof %j", async options => {
