@@ -61,7 +61,7 @@ function assertPrivate(body: Record<string, unknown>, platform: Platform) {
   else if (platform === "slack") expect(body.response_type).toBe("ephemeral");
   else expect(body).toMatchObject({ method: "sendMessage", chat_id: 789, protect_content: true });
 }
-it.each(platforms.flatMap(platform => (["en", "vi", "pt", "es"] as const).map(language => [platform, language] as const)))
+it.each(platforms.flatMap(platform => (["en", "vi", "pt", "es", "fr", "zh-Hans"] as const).map(language => [platform, language] as const)))
   ("%s saves %s help preference for the verified sender, with no paid admission or outbound call", async (platform, language) => {
     const saved = await (await handlers[platform](request(platform, "language", language))).json();
     assertPrivate(saved, platform);
@@ -104,7 +104,9 @@ it.each(platforms)("%s reports storage failure without claiming a save or leakin
   expect(JSON.stringify(response)).not.toContain("private backend"); expect(mocks.after).toEqual([]);
 });
 it.each(["telegram", "discord"] as const)("%s bare help uses supported sender locale, with English fallback", async platform => {
-  for (const [hint, expected] of [["vi", "vi"], ["pt-BR", "pt"], ["es-ES", "es"], ["zh-Hans", "en"]] as const) {
+  for (const [hint, expected] of [["vi", "vi"], ["pt-BR", "pt"], ["es-ES", "es"], ["fr-FR", "fr"],
+    ["zh-Hans", "zh-Hans"], ["zh-CN", "zh-Hans"], ["zh-SG", "zh-Hans"],
+    ["zh-Hant", "en"], ["zh-TW", "en"], ["zh-HK", "en"], ["de", "en"]] as const) {
     const reply = await (await handlers[platform](request(platform, "help", undefined, { platformLocale: hint }))).json();
     expect(text(reply, platform)).toContain(botControlsCatalogues[expected].languageHelp);
   }
