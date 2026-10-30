@@ -5,6 +5,7 @@ import { ordinaryAnswerKorean } from "../../locales/ko/ordinary-answer";
 import { ordinaryAnswerHindi } from "../../locales/hi/ordinary-answer";
 import { ordinaryAnswerIndonesian } from "../../locales/id/ordinary-answer";
 import { ordinaryAnswerRussian } from "../../locales/ru/ordinary-answer";
+import { ordinaryAnswerArabic } from "../../locales/ar/ordinary-answer";
 
 /** Prepared ordinary-answer copy. Enrollment, evidence and money remain caller-owned.
  * These machine drafts do not attest human translation review or output language. */
@@ -36,7 +37,7 @@ export interface NativeAnswerCopy {
 
 const copy: Readonly<Record<AdditionalAnswerLanguage, NativeAnswerCopy>> = Object.freeze({
   de: ordinaryAnswerGerman, ja: ordinaryAnswerJapanese, ko: ordinaryAnswerKorean,
-  hi: ordinaryAnswerHindi, id: ordinaryAnswerIndonesian, ru: ordinaryAnswerRussian,
+  hi: ordinaryAnswerHindi, id: ordinaryAnswerIndonesian, ru: ordinaryAnswerRussian, ar: ordinaryAnswerArabic,
 });
 
 /** Exact prepared code only; regional/request aliases never imply observed prose. */

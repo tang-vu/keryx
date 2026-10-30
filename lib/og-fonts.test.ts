@@ -83,6 +83,7 @@ describe("local public preview glyphs", () => {
 
   it.each([
     ["vi", "Tiếng Việt: Vì sao nghiên cứu cần nguồn đáng tin cậy?"],
+    ["ar", "ما المصادر التي تدعم ادعاءات هذا البحث وحدوده؟"],
     ["zh-Hans", "中文：人工智能为什么需要可靠的来源与引用证据？"],
     ["de", "Welche Quellen belegen diese Aussage und ihre Einschränkungen?"],
     ["ja", "この研究の主張と制限を裏付ける出典は何ですか？"],
@@ -112,6 +113,7 @@ describe("local public preview glyphs", () => {
 
   it.each([
     ["zh-Hans", "仅用于检查字形的合成文本。", "个引用来源", "Keryx Sans SC"],
+    ["ar", "نص اصطناعي لاختبار تشكيل الحروف فقط.", "مصدر مستشهد به", "Keryx Sans Arabic"],
     ["ja", "字形を確認するための合成テキストです。", "件の引用出典", "Keryx Sans JP"],
     ["ko", "글자 모양 확인용 합성 텍스트입니다.", "개 출처 인용", "Keryx Sans KR"],
   ] as const)("loads local %s caption fonts when the original question is English", async (language, answer, caption, face) => {

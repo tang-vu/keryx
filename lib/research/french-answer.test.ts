@@ -98,7 +98,7 @@ it("generates French guidance before the same independent bounded review, then d
   expect(engine.packets).toHaveLength(2);
   expect(engine.packets[0].system).toContain("write each statement in French");
   expect(engine.packets[1].system).toContain("a requested language or prompt does not prove");
-  expect(engine.packets[1].data.schema).toContain('"fr"|"zh-Hans"|"de"|"ja"|"ko"|"hi"|"id"|"ru"|"UNKNOWN"');
+  expect(engine.packets[1].data.schema).toContain('"fr"|"zh-Hans"|"de"|"ja"|"ko"|"hi"|"id"|"ru"|"ar"|"UNKNOWN"');
   expect(reviewedStatementLanguage(result.evidence[0])).toBe("fr");
   const built = fixture(result.evidence);
   expect(built.answer).toContain(statement);

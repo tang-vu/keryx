@@ -22,7 +22,7 @@ vi.mock("@/lib/config", async original => {
 });
 import { POST } from "../../app/api/v1/chat/completions/route";
 import { createRemoteMcpServer, remoteResearchResult } from "../mcp/remote-server";
-const locales = ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"] as const;
+const locales = ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const;
 const preparedDeps = { db: {}, engine: { name: "synthetic-presentation" }, gateway: { mode: "offline" } };
 let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
@@ -67,7 +67,7 @@ it.each(locales.flatMap(language => [false, true].map(stream => [language, strea
 it.each(["zz-unsupported", "zh", "zh-CN", "zh-Hant", "es-ES", null, {}, 3])("API rejects unsupported language %j before admission/provider calls with stable invalid_request code", async language => {
   const response = await POST(request(language)); expect(response.status).toBe(400);
   expect(await response.json()).toEqual({ error: { type: "invalid_request_error", code: "invalid_request",
-    message: "language must be en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi, id or ru (generated labels only)" } });
+    message: "language must be en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi, id, ru or ar (generated labels only)" } });
   expect(mocks.admission).not.toHaveBeenCalled(); expect(mocks.collect).not.toHaveBeenCalled(); expect(fetchMock).not.toHaveBeenCalled();
   expect(mocks.deps).not.toHaveBeenCalled();
 });

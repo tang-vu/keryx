@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/bot-controls.ts",
-  "sourceSha256": "7155659116030623294e098398ea394db45df6f931b19c5ae09da9c9640dbb89",
+  "sourceSha256": "e62e7a1a235e3b69351e9868d7a3b6f9d0ba26d595066ef72d31a15df9244411",
   "entries": {
     "introduction": {
       "source": "Ask a question to receive an answer with citations.",
@@ -33,8 +33,8 @@
       "text": "财务详情（英文）："
     },
     "languageHelp": {
-      "source": "Use /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|ru|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
-      "text": "使用 /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|ru|auto 设置回答和帮助的语言。原始问题中明确的输出语言指令优先；auto 跟随问题语言。"
+      "source": "Use /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|ru|ar|auto to set answer and help language. An explicit output-language instruction in your original question takes priority; auto follows the question.",
+      "text": "使用 /language en|vi|pt|es|fr|zh-Hans|de|ja|ko|hi|id|ru|ar|auto 设置回答和帮助的语言。原始问题中明确的输出语言指令优先；auto 跟随问题语言。"
     },
     "languageCurrent": {
       "source": "Answer language preference: {preference}.",
@@ -49,8 +49,8 @@
       "text": "无法读取语言偏好或确认已保存。不宣称保存成功。"
     },
     "languageInvalid": {
-      "source": "Supported values: en, vi, pt (also pt-BR), es, fr, zh-Hans, de, ja, ko, hi, id, ru, auto.",
-      "text": "支持的值：en、vi、pt（也支持 pt-BR）、es、fr、zh-Hans、de、ja、ko、hi、id、ru、auto。"
+      "source": "Supported values: en, vi, pt (also pt-BR), es, fr, zh-Hans, de, ja, ko, hi, id, ru, ar, auto.",
+      "text": "支持的值：en、vi、pt（也支持 pt-BR）、es、fr、zh-Hans、de、ja、ko、hi、id、ru、ar、auto。"
     },
     "languagePrivate": {
       "source": "Set or inspect your language preference in a private chat with Keryx.",

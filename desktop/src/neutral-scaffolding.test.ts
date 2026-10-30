@@ -7,9 +7,10 @@ import { clientPresentationLanguage } from "../../shared/i18n/client-language";
 import { desktopNeutralCatalogues, desktopNeutralMessages, type DesktopNeutralKey } from "../../shared/i18n/desktop-neutral";
 import type { DesktopAPI, TaskRow, WorkspaceView } from "./contracts";
 
-const locales = ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"] as const;
+const locales = ["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const;
 const keys = Object.keys(desktopNeutralCatalogues.en) as DesktopNeutralKey[];
 const samples = [
+  ["ar", "فتح مساحة عمل", "مكتب البحث", "سؤال البحث", "عمق البحث", "نسخ المراجع"],
   ["ru", "Открыть рабочее пространство", "ИССЛЕДОВАТЕЛЬСКИЙ СТОЛ", "Исследовательский вопрос", "ГЛУБИНА ИССЛЕДОВАНИЯ", "Копии справочных материалов"],
   ["zh-Hans", "打开工作区", "研究工作台", "研究问题", "研究深度", "参考资料副本"],
   ["en", "Open workspace", "RESEARCH DESK", "Research question", "RESEARCH DEPTH", "Reference snapshots"],

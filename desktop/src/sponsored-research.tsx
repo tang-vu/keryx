@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import type { DesktopAPI, SponsoredResearchResult } from "./contracts";
 import { createMessages } from "../../lib/i18n/messages";
+import { originalTechnicalText } from "../../shared/i18n/original-technical-text";
 
 const copy = createMessages("en");
 
@@ -95,7 +96,7 @@ export function SponsoredResearch({ api, unavailable = false }: { api: Pick<Desk
     {state === "uncertain" && <div className="sponsored-uncertain" role="status"><strong>{copy("nativeDesktop.sponsored.uncertain")}</strong>{copy("nativeDesktop.sponsored.uncertainBoundary")}</div>}
     {result && <section className="panel sponsored-result" aria-label={copy("nativeDesktop.sponsored.resultLabel")}>
       <div className="panel-heading"><div><span className="eyebrow">{copy("nativeDesktop.sponsored.answerEyebrow")}</span><h2>{copy("nativeDesktop.sponsored.resultTitle")}</h2></div></div>
-      <div className="answer"><p>{result.answer}</p></div>
+      <div className="answer"><p lang="und" dir="auto">{originalTechnicalText(result.answer)}</p></div>
       <div className="sponsored-citations"><h3>{copy("nativeDesktop.sponsored.citations")}</h3>{result.citations.length ? <ol>{result.citations.map((citation, index) => <li key={index}><strong>{citation.sourceName}</strong>{publicUrl(citation.sourceUrl) && <SelectableUrl label={copy("nativeDesktop.sponsored.citationUrl", { number: index + 1 })} url={publicUrl(citation.sourceUrl)!}/>}</li>)}</ol> : <p>{copy("nativeDesktop.sponsored.noCitations")}</p>}</div>
       <div className="sponsored-receipt"><strong>{copy("nativeDesktop.sponsored.receiptTitle")}</strong><p>{copy("nativeDesktop.sponsored.receiptBoundary")}</p></div>
     </section>}

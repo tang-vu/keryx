@@ -14,6 +14,7 @@ import { createRichMessages } from "./rich-messages";
 import { loadUiPreview } from "./ui-preview-catalogues";
 
 const answers: Record<PresentationLanguage, string> = {
+  ar: "هذه إجابة محفوظة باللغة العربية.",
   en: "A recorded English answer.", vi: "Đây là câu trả lời tiếng Việt đã lưu.",
   pt: "Esta é uma resposta em português.", es: "Esta es una respuesta en español.",
   fr: "Voici une réponse en français.", "zh-Hans": "这是一条已保存的中文回答。",
@@ -63,7 +64,7 @@ it.each([
   ["invalid digest", (run: QueryRun) => { packet(run).answerSha256 = `0x${"0".repeat(64)}`; }],
   ["request alias", (run: QueryRun) => { packet(run).language = "pt-BR"; }],
   ["regional alias", (run: QueryRun) => { packet(run).language = "ja-JP"; }],
-  ["unknown language", (run: QueryRun) => { packet(run).language = "ar"; }],
+  ["unknown language", (run: QueryRun) => { packet(run).language = "fa"; }],
   ["future format", (run: QueryRun) => { packet(run).format = "keryx-answer-language-v2"; }],
   ["unknown method", (run: QueryRun) => { packet(run).method = "requested-language"; }],
   ["wrong scope", (run: QueryRun) => { packet(run).scope = "whole-report"; }],

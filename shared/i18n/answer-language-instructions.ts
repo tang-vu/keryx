@@ -14,4 +14,5 @@ export const answerLanguageInstructions = Object.freeze([
   { language: "hi", name: "हिन्दी", instruction: "कृपया हिंदी में उत्तर दें।" },
   { language: "id", name: "Bahasa Indonesia", instruction: "Tolong jawab dalam bahasa Indonesia." },
   { language: "ru", name: "Русский", instruction: "Ответьте по-русски." },
+  { language: "ar", name: "العربية", instruction: "أجب بالعربية." },
 ] as const satisfies readonly { language: PresentationLanguage; name: string; instruction: string }[]);

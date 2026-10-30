@@ -10,7 +10,7 @@ export const MAX_EVIDENCE_REVIEW_INPUT_BYTES = 32_000;
 // policies remain separate and may impose a smaller cap. Never raise those caps.
 const REVIEW_FRAMING_BYTES = 1024;
 const legacySchema = '{"reviews":[{"index":number,"supportedFact":string,"support":number(0..1),"statementSupport":number(0..1) when the row has a statement}]}';
-const languageSchema = '{"reviews":[{"index":number,"supportedFact":string,"support":number(0..1),"statementSupport":number(0..1) when the row has a statement,"statementLanguage":"en"|"vi"|"pt"|"es"|"fr"|"zh-Hans"|"de"|"ja"|"ko"|"hi"|"id"|"ru"|"UNKNOWN" when the row has a statement}]}';
+const languageSchema = '{"reviews":[{"index":number,"supportedFact":string,"support":number(0..1),"statementSupport":number(0..1) when the row has a statement,"statementLanguage":"en"|"vi"|"pt"|"es"|"fr"|"zh-Hans"|"de"|"ja"|"ko"|"hi"|"id"|"ru"|"ar"|"UNKNOWN" when the row has a statement}]}';
 
 /** Build the private verifier input. Unbound/over-budget rows never gain review authority. */
 export function buildEvidenceReviewInput(input: {

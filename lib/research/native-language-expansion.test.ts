@@ -47,6 +47,7 @@ it.each([["de", pdfReadingGerman], ["ja", pdfReadingJapanese], ["ko", pdfReading
 const prepared = (language: AdditionalAnswerLanguage, requestedBulletCount?: number): AnswerPresentation =>
   ({ language, requestedLanguage: language, ...(requestedBulletCount ? { requestedBulletCount } : {}) });
 const nativeSentences = {
+  ar: "تتطلب القاعدة الاصطناعية إجراء حماية موثقًا وتذكر استثناءً.",
   ru: "Синтетическое правило требует документированной меры защиты и указывает исключение.",
   de: "Die synthetische Regel verlangt eine dokumentierte Schutzmaßnahme und nennt eine Ausnahme.",
   ja: "この合成された規則は記録された保護措置を求め、例外を定めています。",
@@ -67,7 +68,7 @@ function nativeFixture(language: AdditionalAnswerLanguage, options: { coverage?:
   return { ledger, quote, target, targets, statements: selectCitedStatements(rows, ledger) };
 }
 
-describe.each(["de", "ja", "ko", "hi", "id", "ru"] as const)("prepared %s ordinary renderer boundaries", language => {
+describe.each(["de", "ja", "ko", "hi", "id", "ru", "ar"] as const)("prepared %s ordinary renderer boundaries", language => {
   const copy = nativeAnswerCopy(language)!;
   const render = (built: ReturnType<typeof nativeFixture>, statements = built.statements, unavailable = false, count?: number) =>
     finalizeGroundedAnswer({ question: "Original request", answer: "Unreviewed draft [S1]", ledger: built.ledger, statements,
@@ -284,9 +285,9 @@ class SyntheticNativeEngine extends JsonChatEngine {
   }
 }
 
-describe.each(["de", "ja", "ko", "hi", "id", "ru"] as const)("actual %s generation and independent language observation", language => {
+describe.each(["de", "ja", "ko", "hi", "id", "ru", "ar"] as const)("actual %s generation and independent language observation", language => {
   const question = { de: "Antworte bitte auf Deutsch.", ja: "日本語で回答してください。", ko: "한국어로 답변해 주세요.",
-    hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia.", ru: "Ответьте по-русски." }[language];
+    hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia.", ru: "Ответьте по-русски.", ar: "أجب بالعربية." }[language];
   it("uses the existing bounded two-call generation/review path and delivers exact original pairs", async () => {
     const built = nativeFixture(language), engine = new SyntheticNativeEngine(language), presentation = answerPresentation(question);
     const input: SynthInput = { question, subClaims: [built.target], gathered: [{ sourceId: "native-copy-synthetic", sourceName: "Original source",
@@ -296,7 +297,7 @@ describe.each(["de", "ja", "ko", "hi", "id", "ru"] as const)("actual %s generati
     expect(engine.packets[0].system).toContain(presentationStatementGuidance(presentation));
     expect(engine.packets[1].system).toContain("a requested language or prompt does not prove the output language");
     expect(engine.packets[1].system).toContain("Shared Han characters do not establish Japanese or Simplified Chinese");
-    expect(engine.packets[1].data.schema).toContain('"de"|"ja"|"ko"|"hi"|"id"|"ru"|"UNKNOWN"');
+    expect(engine.packets[1].data.schema).toContain('"de"|"ja"|"ko"|"hi"|"id"|"ru"|"ar"|"UNKNOWN"');
     expect(reviewedStatementLanguage(result.evidence[0])).toBe(language);
     const statements = selectCitedStatements(languageReviewedProposals(result.evidence, language), built.ledger);
     expect(statements).toHaveLength(1); expect(statements[0].text).toBe(nativeSentences[language]);

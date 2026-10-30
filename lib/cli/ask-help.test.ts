@@ -40,7 +40,8 @@ it.each(["--help", "-h"])("prints successful keyless ask help for %s without loa
   expect(result.status).toBe(0);
   expect(result.stdout).toContain("Usage: npm run ask --");
   for (const option of ["--budget", "--model", "--web", "--language", "--private-claim-fd"]) expect(result.stdout).toContain(option);
-  expect(result.stdout).toContain("hi, id or ru.");
+  expect(result.stdout).toContain("hi, id, ru or ar.");
+  expect(result.stdout).toContain('include "Answer in Arabic." in the question; --language changes labels only.');
   expect(result.stdout).toContain("Model and search operating costs are separate");
   expect(result.stderr).not.toContain("CLI_EXECUTION_GRAPH_BLOCKED");
 });
