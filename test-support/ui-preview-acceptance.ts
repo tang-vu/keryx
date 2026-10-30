@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import type { Browser } from "playwright";
+import type { Browser, Page } from "playwright";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { preparedLocales, uiLocaleNames } from "../lib/i18n/locales";
 import { productGuideCopy } from "../locales/en/product-guide";
 import { answerLanguageInstructions } from "../shared/i18n/answer-language-instructions";
+import { setupCopy } from "../locales/en/get-started";
 
 /** Real compiled pages and language controls; no research, payment or external requests. */
 export async function checkUiPreviews(browser: Browser, base: string, output?: string) {
@@ -14,6 +15,41 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
   const drafts = Object.fromEntries(await Promise.all(locales.map(async locale => [locale,
     Object.fromEntries(await Promise.all(["core-inline", "get-started", "ui-preference", "product-guide"].map(async namespace =>
       [namespace, JSON.parse(await readFile(`locales/${locale}/ui-drafts/${namespace}.json`, "utf8"))])))])));
+  const checkSetupPage = async (page: Page, locale: typeof locales[number], width: number) => {
+    const entries = drafts[locale]["get-started"].entries;
+    const cards = page.locator('[aria-labelledby="choose-keryx"] article');
+    assert.equal(await cards.count(), setupCopy.surfaces.length);
+    for (const [index, surface] of setupCopy.surfaces.entries()) {
+      const card = cards.nth(index);
+      for (const field of ["title", "tag", "action"] as const) {
+        const text = entries[`surfaces.${index}.${field}`].text;
+        const leaf = card.getByText(text, { exact: true });
+        assert.equal(await leaf.count(), 1, `${locale}/${width} ${surface.id} ${field}`);
+        const language = text === surface[field] ? "en" : locale;
+        assert.equal(await leaf.evaluate(element => element.closest("[lang]")?.getAttribute("lang")), language);
+        if (locale === "ar")
+          assert.equal(await leaf.evaluate(element => getComputedStyle(element).direction), language === "ar" ? "rtl" : "ltr");
+      }
+      assert.equal(await card.locator("a").getAttribute("href"), surface.href);
+      if (surface.id !== "desktop")
+        assert.equal(await card.getByText(entries[`surfaces.${index}.body`].text, { exact: true }).count(), 1);
+    }
+    const retained = cards.nth(1).getByText(setupCopy.surfaces[1].body, { exact: true });
+    assert.equal(await retained.evaluate(element => element.closest("[lang]")?.getAttribute("lang")), "en");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `${locale}/${width} setup overflow`);
+    if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-setup.png`), fullPage: true });
+    const platform = page.locator('[aria-labelledby="setup-faq"] details').nth(2);
+    const summary = platform.locator("summary");
+    assert.equal(await summary.textContent(), entries["start.faq.2.question"].text);
+    await summary.press("Enter");
+    assert.equal(await platform.getAttribute("open"), "");
+    const answer = platform.getByText(entries["start.faq.2.answer"].text, { exact: true });
+    assert.equal(await answer.evaluate(element => element.closest("[lang]")?.getAttribute("lang")), locale);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `${locale}/${width} expanded platform guidance overflow`);
+    if (output) await platform.screenshot({ path: resolve(output, `${locale}-${width}-setup-platform.png`) });
+    await summary.press("Space");
+    assert.equal(await platform.getAttribute("open"), null);
+  };
   const results = [];
   for (const width of [390, 1366]) {
     const context = await browser.newContext({ viewport: { width, height: 950 }, locale: "en-US" });
@@ -107,8 +143,7 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
         if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-about.png`), fullPage: true });
         await page.goto(`${base}/get-started`, { waitUntil: "networkidle" });
         await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["start.title"].text, exact: true }).waitFor();
-        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `${locale}/${width} setup overflow`);
-        if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-setup.png`), fullPage: true });
+        await checkSetupPage(page, locale, width);
         await page.reload({ waitUntil: "networkidle" });
         await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["start.title"].text, exact: true }).waitFor();
         await page.goto(base, { waitUntil: "networkidle" });
@@ -116,9 +151,21 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
       }
       await select().selectOption("en");
       await page.locator('label[for="ask-question"]').filter({ hasText: "What do you want to know?" }).waitFor();
+      if (width === 390) {
+        await page.setViewportSize({ width: 320, height: 950 });
+        await page.goto(`${base}/get-started`, { waitUntil: "networkidle" });
+        for (const locale of locales) {
+          await select().selectOption(locale);
+          await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["start.title"].text, exact: true }).waitFor();
+          await checkSetupPage(page, locale, 320);
+        }
+        await select().selectOption("en");
+      }
       assert.equal(askRequests, 0, "Language changes must never submit or sign research");
       assert.deepEqual(errors, [], "No browser runtime errors");
       results.push({ width, locales: ["en", ...locales], routes: ["/", "/about", "/get-started"], errors, askRequests,
+        setupChoices: { locales, surfaces: setupCopy.surfaces.length, originalDestinations: true,
+          platformDisclosureKeyboard: true, widths: width === 390 ? [320, 390] : [1366] },
         answerLanguageHelp: { locales, examples: answerLanguageInstructions.length, nativeLanguageTags: true,
           openedWithEnter: true, closedWithSpace: true, originalQuestionUnchanged: true } });
     } finally {
@@ -127,5 +174,5 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
     }
   }
   if (output) await writeFile(resolve(output, "result.json"), JSON.stringify(results, null, 2));
-  console.log(`PASS: ${locales.length} interface previews at 390/1366px, native answer-language instructions and keyboard help, About explanations, English legal copy, navigation, reload, exact drafts and English reset.`);
+  console.log(`PASS: ${locales.length} interface previews at 390/1366px, seven setup choices at 320/390/1366px, keyboard platform guidance, native answer-language instructions and keyboard help, About explanations, English legal copy, navigation, reload, exact drafts and English reset.`);
 }

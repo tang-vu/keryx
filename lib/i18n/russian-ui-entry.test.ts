@@ -8,7 +8,7 @@ import { getUiPreview, loadUiPreview } from "./ui-preview-catalogues";
 import { validateNamespacePreview } from "./ui-shell-catalogue";
 
 const namespaces = {
-  "core-inline": 16, "get-started": 19, "pdf-reading": 5, "product-guide": 95,
+  "core-inline": 16, "get-started": 56, "pdf-reading": 5, "product-guide": 95,
   reports: 55, "research-flow": 39, shell: 17, "source-directory": 112, "ui-preference": 12,
 } as const;
 const read = (file: string) => readFileSync(file, "utf8");
