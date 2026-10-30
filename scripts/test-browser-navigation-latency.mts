@@ -106,7 +106,11 @@ try {
           // The unavailable-fee link is conditional on the visible creator
           // section's metrics response, not part of the dashboard's section nav.
           if (fragment === "#payment-proof-title") await page.locator("#current-creators").scrollIntoViewIfNeeded();
-          const sectionLink = page.locator(`main a[href="${fragment}"]`);
+          // Streaming can retain hidden page content. Exercise the user's
+          // visible control while still rejecting two visible matching links.
+          const sectionLink = page.locator(`main a[href="${fragment}"]:visible`);
+          await sectionLink.waitFor({ state: "visible" });
+          assert.equal(await sectionLink.count(), 1, "One visible section navigation control");
           if (width === 390) await sectionLink.tap(); else await sectionLink.click();
           await page.waitForURL(returnUrl);
           await page.waitForFunction(id => {

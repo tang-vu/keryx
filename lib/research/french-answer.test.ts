@@ -135,7 +135,7 @@ it("binds French final prose to exact final bytes and query, preserving unknown 
   expect(finalizeAnswerLanguage({ ...built, rendererLanguage: "fr", proposals: structuredClone(built.rows) })).toBeUndefined();
   const html = renderToStaticMarkup(createElement(AnswerMarkdown, { text: built.answer, citations: [], language: packet.language }));
   expect(html).toContain('lang="fr"');
-  expect(html).toContain(`<span lang="und">“${quote}”</span>`);
+  expect(html).toContain(`<bdi lang="und" dir="auto">“${quote}”</bdi>`);
   built.rows[0].statement += " Changed.";
   expect(reviewedStatementLanguage(built.rows[0])).toBeUndefined();
 });

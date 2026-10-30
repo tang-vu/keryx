@@ -145,8 +145,8 @@ createRoot(document.getElementById('root')).render(<AnswerMarkdown text={${JSON.
     else assert(firstText.includes(scenario.sentences[1]));
     if (scenario.language) {
       assert.equal(await page.locator(`main > div[lang="${scenario.language}"]`).count(), 1);
-      assert.equal(await page.locator('main span[lang="und"]').count(), 3);
-      const originals = await page.locator('main span[lang="und"]').allTextContents();
+      assert.equal(await page.locator('main bdi[lang="und"][dir="auto"]').count(), 3);
+      const originals = await page.locator('main bdi[lang="und"][dir="auto"]').allTextContents();
       assert.deepEqual(originals, quotes.map(quote => `“${quote}”`));
       const sourceLabel = nativeAnswerCopy(scenario.language)?.source ?? (scenario.language === "fr" ? "Texte de la source" : "来源原文");
       assert((await page.locator("main").innerText()).includes(sourceLabel));

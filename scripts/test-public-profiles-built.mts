@@ -42,7 +42,7 @@ try {
   // Copy only these fixed local font files, retaining their complete bytes.
   await mkdir(join(fixture, "app/fonts/og"), { recursive: true });
   const fontFiles = ["noto-sans-regular.ttf", "noto-sans-math-regular.ttf", "noto-sans-sc-regular.otf",
-    "noto-sans-jp-regular.otf", "noto-sans-kr-regular.otf", "noto-sans-devanagari-regular.ttf"];
+    "noto-sans-jp-regular.otf", "noto-sans-kr-regular.otf", "noto-sans-devanagari-regular.ttf", "noto-sans-arabic-regular.ttf"];
   for (const name of fontFiles) {
     const original = await readFile(join(source, "app/fonts/og", name));
     const target = join(fixture, "app/fonts/og", name);
@@ -57,7 +57,7 @@ try {
   assert(trace.files.some(path => /\/sharp\/dist\/index\.(?:mjs|cjs)$/.test(path)), "Compiled profile trace must retain the Sharp entry point");
   assert(trace.files.some(path => /\/sharp-[^/]+\.node$/.test(path)), "Compiled profile trace must retain the native Sharp binding");
   assert(trace.files.some(path => /\/libvips-cpp\.so\./.test(path)), "Compiled profile trace must retain libvips");
-  checks.push("actual compiled profile trace retains six bundled fonts, Sharp entry point, native binding and libvips");
+  checks.push("actual compiled profile trace retains seven bundled fonts, Sharp entry point, native binding and libvips");
   // The owned child must shape these scripts with bundled faces alone. This
   // isolated empty fontconfig is never applied to the runner or another process.
   const fontconfig = join(fixture, "empty-fontconfig.xml");
@@ -281,6 +281,8 @@ try {
     ["ja-long", "研究者".repeat(26), "出典と証拠を確認します。".repeat(10)],
     ["latin-long", "LongName".repeat(10), "OriginalPurpose".repeat(10)],
     ["mixed", "Café हिन्दी 日本語 한국어", "Literal <i>प्रमाण</i> & café 日本語 한국어 {question}"],
+    ["arabic", "باحث في المصادر", "هذه إجابة عربية موثقة. البحث والمصادر والأدلة"],
+    ["arabic-mixed", "باحث Original {count}", "المصدر [1] USDC 0.05 https://example.test/a?x=1 “Original <literal> {count}”"],
   ]) {
     await database.privateProfiles.update(alice, { handle: "fixture_researcher", displayName,
       bio: "UNSELECTED PRIVATE PROFILE BIO", purpose, links: [] });
@@ -300,7 +302,7 @@ try {
     await writeFile(join(fixture, `profile-og-${name}.png`), png, { flag: "wx" });
     ogPreviews.push({ name, displayName, purpose, sha256: createHash("sha256").update(png).digest("hex"), bytes: png.length });
   }
-  checks.push("eleven owner-republished actual built OG previews: native/mixed scripts, bounded long fields, literal originals; empty system fontconfig");
+  checks.push("thirteen owner-republished actual built OG previews: native/mixed scripts, bounded long fields, Arabic joins and literal originals; empty system fontconfig");
   assert.equal((await request("/api/me/public-profile", owner("DELETE"))).status, 200);
   for (const path of publicPaths) assert.equal((await request(path)).status, 404);
   assert.doesNotMatch(await (await request("/sitemap.xml")).text(), /\/u\/fixture_researcher/);

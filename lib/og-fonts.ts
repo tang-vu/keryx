@@ -9,6 +9,7 @@ let japanese: Promise<OgFont> | undefined;
 let korean: Promise<OgFont> | undefined;
 let devanagari: Promise<OgFont> | undefined;
 let math: Promise<OgFont> | undefined;
+let arabic: Promise<OgFont> | undefined;
 
 /** Local, licensed fonts. Script selection is glyph coverage, never answer-language evidence. */
 export async function publicPreviewFonts(text: string): Promise<OgFont[]> {
@@ -46,8 +47,14 @@ export async function publicPreviewFonts(text: string): Promise<OgFont[]> {
       .catch(error => { devanagari = undefined; throw error; });
     fonts.push(await devanagari);
   }
+  if (/\p{Script=Arabic}/u.test(text)) {
+    arabic ??= readFile(join(process.cwd(), "app/fonts/og/noto-sans-arabic-regular.ttf"))
+      .then(data => ({ name: "Keryx Sans Arabic", data, weight: 400 as const, style: "normal" as const }))
+      .catch(error => { arabic = undefined; throw error; });
+    fonts.push(await arabic);
+  }
   return fonts;
 }
 
 /** Use these loaded faces instead of relying on the image renderer's network font fallback. */
-export const publicPreviewFontFamily = "Keryx Sans, Keryx Sans JP, Keryx Sans KR, Keryx Sans SC, Keryx Sans Devanagari, Keryx Math";
+export const publicPreviewFontFamily = "Keryx Sans, Keryx Sans JP, Keryx Sans KR, Keryx Sans SC, Keryx Sans Devanagari, Keryx Math, Keryx Sans Arabic";

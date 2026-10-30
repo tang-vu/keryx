@@ -60,6 +60,7 @@ describe("local public preview glyphs", () => {
     ["Hindi", "हिन्दी: शोध रिपोर्ट, उद्धरण, प्रमाण, प्रश्न और उत्तर। क्ष त्र ज्ञ श्र", 2],
     ["Indonesian", "Bahasa Indonesia: Periksa sumber, kutipan, dan bukti.", 1],
     ["Russian", "Русский: проверьте источники, цитаты, ограничения и данные. Ёж, её, й, щ, ы, ю, я.", 1],
+    ["Arabic original", "المصدر الأصلي: البحث والأدلة والمقتطفات. إجابة مُوثَّقَة.", 2],
   ])("renders %s without requesting fallback fonts", async (_language, text, count) => {
     const fetch = vi.fn(localRendererAsset);
     vi.stubGlobal("fetch", fetch);
@@ -145,6 +146,26 @@ describe("local public preview glyphs", () => {
     expect(remoteProtocols(fetch)).toEqual([]);
     if (process.env.KERYX_PREVIEW_CAPTURE_DIR)
       await writeFile(join(process.env.KERYX_PREVIEW_CAPTURE_DIR, "dispatch-hi-original-en.png"), bytes);
+  }, 30_000);
+
+  it("renders Arabic original fields without changing unknown answer-language evidence or requesting fonts", async () => {
+    fixture.text = "المصدر الأصلي: البحث والأدلة والمقتطفات. إجابة مُوثَّقَة.";
+    const original = fixture.text;
+    expect(fixture.recordedLanguage).toBeUndefined();
+    const fonts = vi.spyOn(fontHelpers, "publicPreviewFonts"), textRender = vi.spyOn(textHelpers, "publicPreviewText");
+    const fetch = vi.fn(localRendererAsset); vi.stubGlobal("fetch", fetch);
+    for (const [name, render] of [["dispatch", dispatchPreview], ["creator", creatorPreview], ["wanted", wantedPreview]] as const) {
+      const response = await render({ params: Promise.resolve({ id: "synthetic-public-arabic-original" }) });
+      const bytes = Buffer.from(await response.arrayBuffer());
+      expect(bytes.readUInt32BE(16)).toBe(1200); expect(bytes.readUInt32BE(20)).toBe(630);
+      const selectedFonts: Awaited<ReturnType<typeof publicPreviewFonts>> = await fonts.mock.results.at(-1)!.value;
+      expect(selectedFonts.some(font => font.name === "Keryx Sans Arabic")).toBe(true);
+      expect(textRender.mock.calls.some(([text]) => text === original)).toBe(true);
+      if (process.env.KERYX_PREVIEW_CAPTURE_DIR)
+        await writeFile(join(process.env.KERYX_PREVIEW_CAPTURE_DIR, `${name}-arabic-original.png`), bytes);
+    }
+    expect(fixture.text).toBe(original); expect(fixture.recordedLanguage).toBeUndefined();
+    expect(remoteProtocols(fetch)).toEqual([]);
   }, 30_000);
 
   it("renders identical generic dispatch previews for unknown, private and unlisted input without reading their question", async () => {

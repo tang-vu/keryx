@@ -145,7 +145,7 @@ describe("actual public language surfaces", () => {
     const text = 'Generated sentence. Source text: “Original “nested” quotation” [S1]';
     const html = renderToStaticMarkup(createElement(AnswerMarkdown, { text, citations: [], language: "vi", onCitationClick: () => {} }));
     expect(html).toContain('<div lang="vi"');
-    expect(html).toContain('<span lang="und">“Original');
+    expect(html).toContain('<bdi lang="und" dir="auto">“Original');
     expect(html).toContain('Original “nested” quotation');
     expect(html).toContain('<button lang="en"');
     expect(renderToStaticMarkup(createElement(AnswerMarkdown, { text, citations: [] }))).toContain('<div lang="und"');
@@ -180,7 +180,14 @@ function installDispatch(value: QueryRun, visibility: RunVisibility = "public", 
   return reader;
 }
 const dispatchParams = () => ({ params: Promise.resolve({ id: "synthetic-dom-dispatch" }) });
-const generatedLanguage = (html: string) => html.match(/<div lang="([^"]+)" class="space-y-5 font-serif/)?.[1];
+function generatedLanguage(html: string) {
+  const dom = new JSDOM(html);
+  try {
+    const bodies = dom.window.document.querySelectorAll('div[lang].space-y-5.font-serif');
+    expect(bodies).toHaveLength(1);
+    return bodies[0].getAttribute("lang");
+  } finally { dom.window.close(); }
+}
 async function renderDispatch(value: QueryRun) {
   installDispatch(value);
   return renderToStaticMarkup(await DispatchPage(dispatchParams()));
@@ -299,7 +306,7 @@ describe("recorded generated-prose DOM caller chain", () => {
     expect(generatedLanguage(html)).toBe(language);
     expect(html).toContain("Generated prose sentinel.");
     expect(html).toContain('<p lang="und"');
-    expect(html).toContain('<span lang="und">“Original “nested” quotation”</span>');
+    expect(html).toContain('<bdi lang="und" dir="auto">“Original “nested” quotation”</bdi>');
     expect(html).toContain('<button lang="en"');
     expect(html).toContain("Archived dispatch");
     expect(html).toContain("The reading");
@@ -376,7 +383,7 @@ describe("recorded generated-prose DOM caller chain", () => {
     expect(value.answer).not.toContain(SYNTHETIC_EVIDENCE_NOTICE);
   });
 
-  it("preserves English shell, financial fields and machine values while changing only the answer tag", () => {
+  it("preserves English shell, financial fields and machine values while changing only answer language and reading direction", () => {
     const value = retainedRun();
     const payments: PaymentRecord[] = [{ kind: "operating-fee", queryId: value.id, sourceId: "synthetic-fee",
       sourceName: "Synthetic fee", payer: `0x${"1".repeat(40)}`, payee: `0x${"2".repeat(40)}`,
@@ -386,7 +393,9 @@ describe("recorded generated-prose DOM caller chain", () => {
     const run = publicQueryRun(value);
     const html = renderToStaticMarkup(createElement(DispatchView, { run, payments, answerLanguage: recordedAnswerLanguage(value) }));
     const unknown = renderToStaticMarkup(createElement(DispatchView, { run, payments }));
-    expect(html.replace('<div lang="vi"', '<div lang="und"')).toBe(unknown);
+    expect(html).toContain('<div lang="vi" dir="ltr"');
+    expect(unknown).toContain('<div lang="und" dir="auto"');
+    expect(html.replace('<div lang="vi" dir="ltr"', '<div lang="und" dir="auto"')).toBe(unknown);
     expect(html).toContain("$0.123456");
     expect(html).toContain("0.000001");
     expect(html).toContain("synthetic_reference_123");
