@@ -1,4 +1,6 @@
 import { mkdir, readFile } from "node:fs/promises";
+import { decisionReviewCopy } from "./decision-review-copy";
+import { answerLanguageInstructions } from "../../shared/i18n/answer-language-instructions";
 import { join, resolve } from "node:path";
 import { beforeAll, afterAll, expect, it } from "vitest";
 import { build } from "esbuild";
@@ -65,10 +67,12 @@ beforeAll(async () => {
 }, 30_000);
 afterAll(async () => { await browser?.close(); });
 
-it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const).flatMap(locale =>
+it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const).flatMap(locale =>
   [320, 1366].map(width => ({ locale, width, font: 16 }))), { locale: "fr" as const, width: 320, font: 24 },
   { locale: "pt-BR" as const, width: 320, font: 32 },
-  { locale: "ru" as const, width: 320, font: 32 }, { locale: "ru" as const, width: 1366, font: 32 }])("keeps the native $locale first-use journey and unsent originals intact at $width with $font px text", async ({ locale, width, font }) => {
+  { locale: "ru" as const, width: 320, font: 32 }, { locale: "ru" as const, width: 1366, font: 32 },
+  { locale: "ar" as const, width: 390, font: 16 },
+  ...[320, 390, 1366].map(width => ({ locale: "ar" as const, width, font: 32 }))])("keeps the native $locale first-use journey and unsent originals intact at $width with $font px text", async ({ locale, width, font }) => {
   const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
   const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: "reduce", serviceWorkers: "block" });
   const errors: string[] = [], requests: Array<{ path: string; method: string }> = [], unexpected: string[] = [];
@@ -118,6 +122,20 @@ it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const)
         rect.bottom <= guide!.y + 1 || rect.top >= guide!.y + guide!.height - 1);
     }, guideBounds);
     expect(kickerClear, "The guide trigger must leave the complete native kicker visible").toBe(true);
+    if (locale === "ar") {
+      const globe = await page.getByTestId("chat-globe").locator("svg").first().boundingBox();
+      expect(globe).toBeTruthy();
+      const titleGeometry = await page.locator(".kx-research-title").evaluate((element, circle) => {
+        const range = document.createRange(); range.selectNodeContents(element);
+        const rects = Array.from(range.getClientRects());
+        return { clear: rects.every(rect => rect.right <= circle!.x + 1 || rect.left >= circle!.x + circle!.width - 1 ||
+          rect.bottom <= circle!.y + 1 || rect.top >= circle!.y + circle!.height - 1),
+          title: element.getBoundingClientRect().toJSON(), rects: rects.map(rect => rect.toJSON()), circle,
+          direction: getComputedStyle(element).direction };
+      }, globe);
+      if (!titleGeometry.clear && nativeScreenshots) await page.screenshot({ path: join(nativeScreenshots, `arabic-hero-finding-${width}-font${font}.png`), fullPage: true });
+      expect(titleGeometry.clear, `The painted globe must leave every Arabic headline glyph clear: ${JSON.stringify(titleGeometry)}`).toBe(true);
+    }
     const submitFits = await page.locator('[data-tour="dispatch-btn"]').evaluate(button => {
       const bounds = button.getBoundingClientRect();
       return Array.from(button.querySelectorAll("[lang]")).every(span => {
@@ -149,6 +167,12 @@ it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const)
       expect(await reader.locator("h2 [lang]").getAttribute("lang")).toBe(index === 0 || index === 2 ? "en" : locale);
       expect(await reader.locator("p [lang]").getAttribute("lang")).toBe(index === 1 ? locale : "en");
       expect(await reader.locator("p").textContent()).toBe(message(body, { network: ARC_TESTNET_PROFILE.label }));
+      if (locale === "ar") {
+        expect(await page.locator("html").getAttribute("dir")).toBe("rtl");
+        expect(await input.getAttribute("dir")).toBe("auto");
+        expect(await reader.locator("h2 [lang]").evaluate(element => getComputedStyle(element).direction)).toBe(index === 0 || index === 2 ? "ltr" : "rtl");
+        expect(await reader.locator("p [lang]").evaluate(element => getComputedStyle(element).direction)).toBe(index === 1 ? "rtl" : "ltr");
+      }
       const bounds = await dialog.boundingBox(); expect(bounds && bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= width && bounds.y + bounds.height <= 844).toBe(true);
       const buttons = await dialog.locator("button").evaluateAll(elements => elements.map(element => { const rect = element.getBoundingClientRect(); return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, height: rect.height }; }));
       expect(buttons.every(rect => rect.height >= 44 && rect.left >= 0 && rect.right <= width && rect.top >= 0 && rect.bottom <= 844)).toBe(true);
@@ -172,12 +196,32 @@ it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const)
       }
       if (nativeScreenshots) await page.screenshot({ path: join(nativeScreenshots, `guide-native-${frame}-step-${index + 1}.png`) });
       const action = dialog.getByRole("button", { name: message(index === 3 ? "researchTour.done" : "researchTour.next"), exact: true });
+      if (locale === "ar") expect(await action.locator('[aria-hidden="true"]').evaluate(element => getComputedStyle(element, "::before").content)).toContain("←");
       await action.focus(); await page.keyboard.press("Enter");
     }
     await expect.poll(() => page.locator("[data-keryx-tour-portal]").count()).toBe(0);
     expect(await trigger.evaluate(element => document.activeElement === element)).toBe(true);
     expect(await input.inputValue()).toBe(original); expect(await page.getByTestId("paper-metadata-handoff").getAttribute("href")).toBe(metadataHref);
     expect(await page.evaluate(() => (window as unknown as { guideFixture: GuideFixture }).guideFixture.budgetEvents)).toBe(1);
+    if (locale === "ar") {
+      const privacy = page.getByTestId("research-visibility").getByRole("status");
+      expect(await privacy.isVisible()).toBe(true);
+      expect(await privacy.locator('[lang="en"]').getAttribute("dir")).toBe("ltr");
+      expect(await privacy.locator('[lang="en"]').evaluate(element => getComputedStyle(element).direction)).toBe("ltr");
+      const reviewNotice = page.getByText(decisionReviewCopy.modeNotice, { exact: true });
+      expect(await reviewNotice.getAttribute("lang")).toBe("en");
+      expect(await reviewNotice.evaluate(element => getComputedStyle(element).direction)).toBe("ltr");
+      const help = page.locator("[data-answer-language-help]");
+      await help.getByRole("button").click();
+      for (const example of answerLanguageInstructions) {
+        const code = help.locator(`code[lang="${example.language}"]`);
+        expect(await code.textContent()).toBe(example.instruction);
+        expect(await code.evaluate(element => getComputedStyle(element).direction)).toBe(example.language === "ar" ? "rtl" : "ltr");
+      }
+      expect(await input.inputValue()).toBe(original);
+      if (nativeScreenshots) await help.screenshot({ path: join(nativeScreenshots, `guide-native-help-${frame}.png`) });
+      await help.getByRole("button").click();
+    }
     await selector.selectOption("en"); await expect.poll(() => page.locator("html").getAttribute("lang")).toBe("en");
     expect(await input.inputValue()).toBe(original); expect(await handle!.evaluate(element => element.isConnected)).toBe(true);
     expect(requests.length).toBeGreaterThan(0); expect(unexpected).toEqual([]); expect(errors).toEqual([]);

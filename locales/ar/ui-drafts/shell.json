@@ -1,0 +1,76 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/shell.ts",
+  "sourceSha256": "98de613c0f20357e8d901f40f221f5e183141096b6713f44c0c02baa5d0c1e5a",
+  "entries": {
+    "shellNavigation.ask": {
+      "source": "Ask a question",
+      "text": "اطرح سؤالًا"
+    },
+    "shellNavigation.answers": {
+      "source": "Past answers",
+      "text": "إجابات سابقة"
+    },
+    "shellNavigation.sources": {
+      "source": "Sources",
+      "text": "المصادر"
+    },
+    "shellNavigation.literature": {
+      "source": "Literature workspace",
+      "text": "مساحة عمل المراجع البحثية"
+    },
+    "shellNavigation.creators": {
+      "source": "For creators",
+      "text": "لمنشئي المحتوى"
+    },
+    "shellNavigation.mySources": {
+      "source": "My sources",
+      "text": "مصادري"
+    },
+    "shellNavigation.myDispatches": {
+      "source": "My dispatches",
+      "text": "تقاريري"
+    },
+    "shellNavigation.playground": {
+      "source": "Playground",
+      "text": "مساحة التجربة"
+    },
+    "shellNavigation.developer": {
+      "source": "Dev portal",
+      "text": "بوابة المطورين"
+    },
+    "shellHeader.creatorAction": {
+      "source": "For creators ▸",
+      "text": "لمنشئي المحتوى ◂"
+    },
+    "shellHeader.closeMenu": {
+      "source": "Close menu",
+      "text": "إغلاق القائمة"
+    },
+    "shellHeader.openMenu": {
+      "source": "Open menu",
+      "text": "فتح القائمة"
+    },
+    "shellHeader.mobileNavigation": {
+      "source": "Mobile navigation",
+      "text": "التنقل على الهاتف"
+    },
+    "shellHeader.explore": {
+      "source": "Explore",
+      "text": "استكشف"
+    },
+    "shellHeader.moreTools": {
+      "source": "More tools",
+      "text": "أدوات إضافية"
+    },
+    "shellFooter.house": {
+      "source": "The house",
+      "text": "عن Keryx"
+    },
+    "shellFooter.docsAndProof": {
+      "source": "Docs & proof",
+      "text": "الأدلة والوثائق"
+    }
+  }
+}

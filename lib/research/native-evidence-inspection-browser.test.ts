@@ -77,7 +77,7 @@ beforeAll(async () => {
 }, 30_000);
 afterAll(async () => browser?.close());
 
-it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
+it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
   "keeps actual $locale excerpt inspection and original reference downloads local at $width", async ({ locale, width }) => {
     const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
     const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: "reduce", acceptDownloads: true, serviceWorkers: "block" });
@@ -96,6 +96,7 @@ it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(l
       await page.goto("https://evidence.test/"); await page.addScriptTag({ content: bundle });
       const language = page.locator("[data-language-switcher] select"); await expect.poll(() => language.isEnabled()).toBe(true);
       await language.selectOption(locale); await expect.poll(() => page.locator("html").getAttribute("lang")).toBe(locale);
+      expect(await page.locator("html").getAttribute("dir")).toBe(locale === "ar" ? "rtl" : "ltr");
       const lens = page.locator("#lens"); await lens.locator(":scope > details > summary").click();
       const select = lens.getByRole("combobox"), rows = lens.locator("ol > li");
       expect(await rows.first().locator("dd").allTextContents()).toEqual(["2", "2"]);
@@ -111,6 +112,10 @@ it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(l
       }
       expect(await lens.getByRole("status").textContent()).toContain(message("reportSourceLens.omitted.one", { count: 1, source: first.sourceName }));
       expect(await rows.first().locator("h3").textContent()).toBe(claim); expect(await rows.first().locator("h3").getAttribute("lang")).toBe("und");
+      expect(await rows.first().locator("h3").getAttribute("dir")).toBe("auto");
+      expect(await rows.first().locator("h3").evaluate(element => getComputedStyle(element).direction)).toBe("ltr");
+      expect(await rows.first().locator("blockquote p").first().getAttribute("dir")).toBe("auto");
+      expect(await rows.first().locator('h3 bdi[dir="ltr"]').textContent()).toBe("<literal> {count}");
       expect(await lens.locator('[lang="en"]').filter({ hasText: englishMessages["reportSourceLens.qualification"] }).count()).toBe(1);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       if (capture) await lens.screenshot({ path: join(capture, `evidence-${locale}-${width}-omitted.png`) });
@@ -146,6 +151,8 @@ it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(l
       expect(await bibliographyPanel.getByRole("alert").locator('[lang="en"]').textContent()).toBe(englishMessages["bibliographyExport.failed"]);
       await bibliographyPanel.locator("details > summary").click(); expect(await bibliographyPanel.locator("pre").textContent()).toBe(JSON.stringify(record, null, 2));
       expect(await bibliographyPanel.locator("pre").getAttribute("lang")).toBe("und");
+      expect(await bibliographyPanel.locator("pre").getAttribute("dir")).toBe("ltr");
+      expect(await bibliographyPanel.locator("pre").evaluate(element => getComputedStyle(element).direction)).toBe("ltr");
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       if (capture) await page.locator("#exports").screenshot({ path: join(capture, `evidence-${locale}-${width}-exports-failed.png`) });
       const alternate = locale === "fr" ? "ja" : "fr"; await language.selectOption(alternate);

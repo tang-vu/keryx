@@ -7,6 +7,7 @@ import { build, type Plugin } from "esbuild";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { chromium, type Page } from "playwright";
+import ts from "typescript";
 
 const args = process.argv.slice(2);
 assert(args.length === 0 || args.length === 2 && args[0] === "--baseline" && /^[a-f0-9]{40}$/.test(args[1]), "Only an exact baseline commit may be selected");
@@ -21,7 +22,18 @@ const plugins: Plugin[] = baseline ? [{ name: "exact-historical-globe", setup(ap
 const chat = await readFile("components/keryx/research-chat.tsx", "utf8");
 const section = chat.match(/return <section className="([^"]+)"/)?.[1];
 const header = chat.match(/<header className="([^"]+)"/)?.[1];
-const placement = chat.match(/<div aria-hidden="true" data-testid="chat-globe"[\s\S]*?<\/div>/)?.[0];
+const chatTree = ts.createSourceFile("research-chat.tsx", chat, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+const placements: ts.JsxElement[] = [];
+function findPlacement(node: ts.Node) {
+  if (ts.isJsxElement(node) && node.openingElement.tagName.getText(chatTree) === "div" &&
+    node.openingElement.attributes.properties.some(attribute => ts.isJsxAttribute(attribute) &&
+      attribute.name.getText(chatTree) === "data-testid" && attribute.initializer &&
+      ts.isStringLiteral(attribute.initializer) && attribute.initializer.text === "chat-globe")) placements.push(node);
+  ts.forEachChild(node, findPlacement);
+}
+findPlacement(chatTree);
+assert.equal(placements.length, 1, "Use the complete unique canonical JSX placement, including nested wrappers");
+const placement = placements[0]?.getText(chatTree);
 assert(section && header && placement && placement.includes("<GlobeWatermark"), "Canonical globe placement changed; review the fixture");
 const bundle = await build({
   stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';

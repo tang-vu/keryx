@@ -142,12 +142,12 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
   const hasTurns = visibleHistory.length > 0 || visibleRequest !== null;
   return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-research-intro={introduceProduct ? "" : undefined} aria-label={message("researchChat.label")}>
     <header className="kx-research-hero relative mb-3 min-h-[116px] border-b border-line pb-3 sm:mb-6 sm:min-h-[168px] sm:pb-6" data-tour="hero">
-      <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute right-0 top-[44px] h-[56px] w-[56px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
-        <GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" />
+      <div aria-hidden="true" data-testid="chat-globe" className="pointer-events-none absolute end-0 top-[44px] h-[56px] w-[56px] opacity-60 sm:top-0 sm:h-[140px] sm:w-[140px]">
+        <div dir="ltr"><GlobeWatermark className="h-[140px] w-[140px] origin-top-left scale-[0.4] sm:scale-100" /></div>
       </div>
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
         <p data-testid="hero-kicker" className="kx-research-kicker min-w-0 font-mono text-[11px] uppercase tracking-[0.14em] text-seal [overflow-wrap:anywhere]">{introduceProduct ? <UiText source={uiEnglish_productGuideCopy("product.heroKicker")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.kicker" />}</p>
-        <div data-testid="hero-guide" className="relative z-10 min-w-0 max-w-full sm:mr-[156px]"><OnboardingTour /></div>
+        <div data-testid="hero-guide" className="relative z-10 min-w-0 max-w-full sm:me-[156px]"><OnboardingTour /></div>
       </div>
       <h1 className={`kx-research-title mt-3 max-w-[calc(100%_-_84px)] font-display ${introduceProduct ? "text-[clamp(30px,9vw,64px)] tracking-[-0.035em]" : "text-[clamp(32px,5vw,46px)]"} leading-none sm:max-w-[calc(100%_-_156px)] sm:leading-tight`}>{introduceProduct ? <UiText source={uiEnglish_productGuideCopy("product.heroTitle")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.title" />}</h1>
       <p className="kx-research-intro mt-3 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:max-w-[min(60ch,calc(100%_-_156px))] sm:text-lg sm:leading-relaxed">{introduceProduct && payer === "treasury" ? <UiText source={uiEnglish_productGuideCopy("product.heroBody")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.introduction" />}</p>

@@ -58,7 +58,7 @@ beforeAll(async () => {
 }, 30_000);
 afterAll(async () => browser?.close());
 
-it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
+it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
   "preserves actual $locale stop/new/follow-up handoffs and original bytes at $width", async ({ locale, width }) => {
     const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
     const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: "reduce", serviceWorkers: "block" });
@@ -94,6 +94,12 @@ it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const).fla
       expect(await active.getByText(message("researchTurn.findingSources"), { exact: true }).count()).toBe(1);
       expect(await active.locator(".kx-research-request p:last-child").textContent()).toBe(question);
       expect(await active.locator(".kx-research-request p:last-child").getAttribute("lang")).toBe("und");
+      if (locale === "ar") {
+        expect(await input.getAttribute("lang")).toBe("und");
+        expect(await input.getAttribute("dir")).toBe("auto");
+        expect(await active.locator(".kx-research-request p:last-child").getAttribute("dir")).toBe("auto");
+        expect(await active.locator(".kx-research-request p:last-child").evaluate(element => getComputedStyle(element).direction)).toBe("ltr");
+      }
       await active.locator("summary").click(); await active.getByText(message("decisionLog.connecting"), { exact: true }).waitFor();
       expect(await active.locator('summary [lang="en"]').count()).toBe(1);
       if (capture) await chat.screenshot({ path: join(capture, `conversation-${locale}-${width}-waiting.png`) });
@@ -113,6 +119,8 @@ it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const).fla
       expect((await asks())[1].body).toMatchObject({ question: nextQuestion, budget: 0, mode: "quick", visibility: "public" });
       expect((await asks())[1].body).not.toHaveProperty("parentId");
       const form = page.locator("#follow-up-fixture"), followInput = form.locator("textarea");
+      expect(await followInput.getAttribute("lang")).toBe("und");
+      expect(await followInput.getAttribute("dir")).toBe("auto");
       expect(await followInput.getAttribute("placeholder")).toBe(message("followUp.placeholder")); expect(await followInput.getAttribute("maxlength")).toBe("500");
       const submit = form.getByRole("button", { name: message("followUp.submit"), exact: true }); expect(await submit.isDisabled()).toBe(true);
       await followInput.fill(followUp); expect(await followInput.inputValue()).toBe(followUp); await followInput.press("Control+Enter");

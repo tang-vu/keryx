@@ -19,7 +19,7 @@ import { SUPPORT_MAILTO } from "@/lib/public-support";
 import { researchGuidesCopy } from "@/locales/en/research-guides";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { LanguageSwitcher } from "./language-switcher";
-import { useUiCopy, useUiCopyFunction, useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
+import { UiMessage, UiRichMessage, useUiCopy, useUiCopyFunction, useUiMessages } from "@/lib/i18n/ui-copy";
 
 
 
@@ -99,7 +99,6 @@ function FooterCol({ title, links }: { title: string; links: FooterLink[] }) {
 }
 
 export function SiteFooter() {
-  const richMessage = useUiRichMessages();
   const shell = useLocale(), { locale } = shell, message = useUiMessages(shell.message);
   const guide = useUiCopyFunction("product-guide", productGuideCopy), setup = useUiCopy("get-started", setupCopy);
   const claim = useUiCopy("run-claim-research", privateResearchCopy);
@@ -114,8 +113,8 @@ export function SiteFooter() {
                 Keryx
               </span>
             </div>
-            <p lang={locale} className="mt-4 max-w-[42ch] font-serif text-[16px] leading-[1.55] text-ink-3">
-              {richMessage("shellFooter.etymology", { gap: " ", word: <span className="italic text-ink">κῆρυξ</span> })}
+            <p className="mt-4 max-w-[42ch] font-serif text-[16px] leading-[1.55] text-ink-3">
+              <UiRichMessage messageKey="shellFooter.etymology" values={{ gap: " ", word: <span lang="el" dir="ltr" className="italic text-ink">κῆρυξ</span> }} />
             </p>
           </div>
 
@@ -124,9 +123,9 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-10 flex flex-wrap justify-between gap-3 border-t border-ink pt-5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-3">
-          <span lang="en">{message("shellFooter.copyright", { year: 2026 })}</span>
+          <span><UiMessage messageKey="shellFooter.copyright" values={{ year: 2026 }} /></span>
           <LanguageSwitcher />
-          <span lang="en" className="text-seal">{richMessage("shellFooter.originalEvidence", { network: currentArcLabel })}</span>
+          <span className="text-seal"><UiRichMessage messageKey="shellFooter.originalEvidence" values={{ network: currentArcLabel }} /></span>
         </div>
       </div>
     </footer>

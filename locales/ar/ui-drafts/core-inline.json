@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "lib/i18n/messages.ts",
+  "sourceSha256": "37ac7ad5e8f7daf683952524320809f87a27d21ed650959de267137fd2cc6c2d",
+  "entries": {
+    "researchEntry.ask": {
+      "source": "Ask Keryx",
+      "text": "اسأل Keryx"
+    },
+    "researchEntry.question": {
+      "source": "What do you want to know?",
+      "text": "ما الذي تريد معرفته؟"
+    },
+    "researchEntry.placeholder": {
+      "source": "Ask a question worth reading for...",
+      "text": "اطرح سؤالًا يستحق البحث والقراءة…"
+    },
+    "researchEntry.depth": {
+      "source": "Research depth",
+      "text": "عمق البحث"
+    },
+    "researchEntry.quick": {
+      "source": "quick",
+      "text": "سريع"
+    },
+    "researchEntry.deep": {
+      "source": "deep",
+      "text": "متعمق"
+    },
+    "researchEntry.researching": {
+      "source": "Researching...",
+      "text": "جارٍ البحث…"
+    },
+    "researchEntry.moreOptions": {
+      "source": "More options",
+      "text": "خيارات إضافية"
+    },
+    "researchEntry.model": {
+      "source": "AI model",
+      "text": "نموذج الذكاء الاصطناعي"
+    },
+    "researchEntry.savedReports": {
+      "source": "My saved reports",
+      "text": "تقاريري المحفوظة"
+    },
+    "researchEntry.keyboardHint": {
+      "source": "Enter for a new line · Ctrl/⌘ + Enter to ask",
+      "text": "Enter لسطر جديد · Ctrl/⌘ + Enter لإرسال السؤال"
+    },
+    "researchEntry.metadataLookup": {
+      "source": "Look up free paper metadata",
+      "text": "ابحث عن بيانات وصفية مجانية للأوراق البحثية"
+    },
+    "researchEntry.metadataLookupLabel": {
+      "source": "Look up free paper metadata: title, authors or DOI",
+      "text": "ابحث عن بيانات وصفية مجانية للأوراق البحثية: العنوان أو المؤلفون أو DOI"
+    },
+    "researchEntry.quickHint": {
+      "source": "Quick: up to 2 focused reads.",
+      "text": "سريع: قراءة ما يصل إلى مصدرين محددين."
+    },
+    "researchEntry.deepHint": {
+      "source": "Deep: up to 4 reads, including marketplace discovery and a coverage check.",
+      "text": "متعمق: قراءة ما يصل إلى 4 مصادر، مع اكتشاف مصادر في السوق وفحص التغطية."
+    },
+    "researchEntry.examplesLabel": {
+      "source": "Example questions",
+      "text": "أمثلة على الأسئلة"
+    }
+  }
+}

@@ -64,8 +64,8 @@ function ReportActionsForRun({ run, meta, payments }: Props) {
         <svg aria-hidden="true" className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4" /></svg>
         <span><UiMessage messageKey="reportActions.download" /></span>
       </button>
-      <a href={`/dispatch/${encodeURIComponent(run.id)}`} className={buttonClass + " border-transparent text-ink-2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink"}><UiMessage messageKey="reportActions.openSaved" /><span aria-hidden="true">→</span></a>
-      <a href="/operator/evidence" className={buttonClass + " border-transparent text-ink-2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink"}><span lang="en">{evidenceProcurementCopy.links.commission}</span><span aria-hidden="true">→</span></a>
+      <a href={`/dispatch/${encodeURIComponent(run.id)}`} className={buttonClass + " border-transparent text-ink-2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink"}><UiMessage messageKey="reportActions.openSaved" /><span aria-hidden="true" className="rtl:rotate-180">→</span></a>
+      <a href="/operator/evidence" className={buttonClass + " border-transparent text-ink-2 underline decoration-line underline-offset-4 hover:text-ink hover:decoration-ink"}><span lang="en" dir="ltr">{evidenceProcurementCopy.links.commission}</span><span aria-hidden="true" className="rtl:rotate-180">→</span></a>
     </div>
     <p role="status" aria-atomic="true" className={`mt-2 min-h-5 text-[13px] leading-relaxed ${failed ? "text-seal" : "text-paid"}`}>{notice ? <UiMessage messageKey={notice} /> : ""}</p>
   </div>;

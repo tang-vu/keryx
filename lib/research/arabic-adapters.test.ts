@@ -45,7 +45,7 @@ it.each([undefined, null, "1.2", "01", "9007199254740992", -1, 0.1, NaN, -0])("r
 });
 
 it("keeps Arabic answer identity independent from UI enrollment and changed historical bytes", () => {
-  expect(preparedLocales).not.toContain("ar");
+  expect(preparedLocales).toContain("ar");
   expect(shippedUiLocales).toEqual(["en"]);
   const run = retained();
   run.answer += " Changed.";

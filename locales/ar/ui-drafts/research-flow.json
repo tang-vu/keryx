@@ -1,0 +1,164 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/research-flow.ts",
+  "sourceSha256": "08624b2d69b1e55478bca2ec23697acc8155b21698c9019762c07581a9487014",
+  "entries": {
+    "researchTour.open": {
+      "source": "How it works",
+      "text": "كيف يعمل؟"
+    },
+    "researchTour.label": {
+      "source": "How Keryx works",
+      "text": "كيف يعمل Keryx"
+    },
+    "researchTour.questionTitle": {
+      "source": "Ask a question",
+      "text": "اطرح سؤالًا"
+    },
+    "researchTour.questionBody": {
+      "source": "Enter the research question you want answered. You can inspect decisions as the answer streams.",
+      "text": "أدخل سؤال البحث الذي تريد الإجابة عنه. يمكنك فحص القرارات أثناء ظهور الإجابة."
+    },
+    "researchTour.startTitle": {
+      "source": "Start research",
+      "text": "ابدأ البحث"
+    },
+    "researchTour.closeLabel": {
+      "source": "Close tour",
+      "text": "إغلاق الجولة"
+    },
+    "researchTour.close": {
+      "source": "Close",
+      "text": "إغلاق"
+    },
+    "researchTour.back": {
+      "source": "Back",
+      "text": "السابق"
+    },
+    "researchTour.done": {
+      "source": "Done",
+      "text": "تم"
+    },
+    "researchTour.next": {
+      "source": "Next",
+      "text": "التالي"
+    },
+    "researchTour.step": {
+      "source": "Step {number} of {total}",
+      "text": "الخطوة {number} من {total}"
+    },
+    "decisionLog.jumpToLatest": {
+      "source": "Jump to latest",
+      "text": "انتقل إلى الأحدث"
+    },
+    "decisionLog.followingLatest": {
+      "source": "Following latest steps",
+      "text": "متابعة أحدث الخطوات"
+    },
+    "decisionLog.readingEarlier": {
+      "source": "Reading earlier steps",
+      "text": "قراءة الخطوات السابقة"
+    },
+    "decisionLog.scrollHint": {
+      "source": "Scroll inside the log to read earlier steps. Jump to latest to follow new steps.",
+      "text": "مرّر داخل السجل لقراءة الخطوات السابقة. انتقل إلى الأحدث لمتابعة الخطوات الجديدة."
+    },
+    "decisionLog.title": {
+      "source": "The decision",
+      "text": "القرار"
+    },
+    "decisionLog.label": {
+      "source": "Decision log",
+      "text": "سجل القرارات"
+    },
+    "researchChat.label": {
+      "source": "Research conversation",
+      "text": "محادثة البحث"
+    },
+    "researchChat.kicker": {
+      "source": "Research with Keryx",
+      "text": "ابحث مع Keryx"
+    },
+    "researchChat.title": {
+      "source": "Ask Keryx",
+      "text": "اسأل Keryx"
+    },
+    "researchChat.introduction": {
+      "source": "Get a cited answer. Inspect source decisions.",
+      "text": "احصل على إجابة مع استشهادات. وافحص قرارات اختيار المصادر."
+    },
+    "researchChat.turnsLabel": {
+      "source": "Conversation turns",
+      "text": "جولات المحادثة"
+    },
+    "researchChat.followUpContext": {
+      "source": "Follow-ups use the previous question only, not its answer or the full chat. Include the details you want researched.",
+      "text": "تستخدم أسئلة المتابعة السؤال السابق فقط، دون إجابته أو المحادثة كاملة. أضف التفاصيل التي تريد البحث عنها."
+    },
+    "researchChat.newResearch": {
+      "source": "New research",
+      "text": "بحث جديد"
+    },
+    "researchChat.stopResearch": {
+      "source": "Stop research",
+      "text": "إيقاف البحث"
+    },
+    "researchChat.toolsLabel": {
+      "source": "Research tools",
+      "text": "أدوات البحث"
+    },
+    "researchChat.savedReports": {
+      "source": "My saved reports",
+      "text": "تقاريري المحفوظة"
+    },
+    "researchTurn.inProgress": {
+      "source": "Keryx · Research in progress",
+      "text": "Keryx · البحث جارٍ"
+    },
+    "researchTurn.findingSources": {
+      "source": "Finding sources worth reading…",
+      "text": "جارٍ العثور على مصادر تستحق القراءة…"
+    },
+    "decisionLog.deciding": {
+      "source": "deciding",
+      "text": "جارٍ اتخاذ القرار"
+    },
+    "decisionLog.connecting": {
+      "source": "Waiting for research updates…",
+      "text": "في انتظار تحديثات البحث…"
+    },
+    "decisionLog.newSteps.one": {
+      "source": "{count} new step",
+      "text": "خطوات جديدة: {count}"
+    },
+    "decisionLog.newSteps.other": {
+      "source": "{count} new steps",
+      "text": "خطوات جديدة: {count}"
+    },
+    "decisionLog.steps.one": {
+      "source": "{count} steps",
+      "text": "عدد الخطوات: {count}"
+    },
+    "decisionLog.steps.other": {
+      "source": "{count} steps",
+      "text": "عدد الخطوات: {count}"
+    },
+    "followUp.title": {
+      "source": "Ask a follow-up",
+      "text": "اطرح سؤال متابعة"
+    },
+    "followUp.questionLabel": {
+      "source": "Your follow-up question",
+      "text": "سؤال المتابعة"
+    },
+    "followUp.placeholder": {
+      "source": "How does that compare to…?",
+      "text": "كيف يُقارَن ذلك بـ…؟"
+    },
+    "followUp.submit": {
+      "source": "Dispatch follow-up",
+      "text": "أرسل سؤال المتابعة"
+    }
+  }
+}

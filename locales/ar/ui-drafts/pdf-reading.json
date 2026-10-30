@@ -1,0 +1,28 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/pdf-reading.ts",
+  "sourceSha256": "eeb3bf3c3bc763f6771e486d44c9f6fd779e4e0354b7b50f917e8cdca8be1ebc",
+  "entries": {
+    "summary": {
+      "source": "PDF text extraction visited {read} of {total} pages.",
+      "text": "شمل استخراج نص PDF عدد {read} من أصل {total} صفحة."
+    },
+    "emptyPages": {
+      "source": "No text was extracted from visited pages {pages}. These pages may be scanned, blank or otherwise unavailable to the text reader.",
+      "text": "لم يُستخرج نص من الصفحات التي زِيرت: {pages}. قد تكون هذه الصفحات ممسوحة ضوئيًا أو فارغة أو غير متاحة لقارئ النص لسبب آخر."
+    },
+    "limit": {
+      "source": "A page or character limit stopped text extraction before the document was complete. Read the remaining original pages directly before making whole-document conclusions; a character cutoff can leave the last visited page incomplete. Retain this snapshot for comparison.",
+      "text": "توقف استخراج النص بسبب حدّ الصفحات أو الأحرف قبل اكتمال المستند. اقرأ الصفحات الأصلية المتبقية مباشرة قبل استخلاص نتائج تتعلق بالمستند كله؛ فقد يترك حدّ الأحرف آخر صفحة تمت زيارتها غير مكتملة. احتفظ بهذه اللقطة للمقارنة."
+    },
+    "textOnly": {
+      "source": "Only the available PDF text layer was read; images and figures were not interpreted.",
+      "text": "قُرئت طبقة النص المتاحة في PDF فقط؛ ولم تُفسَّر الصور أو الأشكال."
+    },
+    "recovery": {
+      "source": "Check the same original version. If needed, obtain a text-layer PDF, publisher text or a separately OCR-processed copy; this run did not perform OCR.",
+      "text": "راجع النسخة الأصلية نفسها. عند الحاجة، احصل على PDF ذي طبقة نصية أو نص الناشر أو نسخة عولجت بصورة منفصلة باستخدام OCR؛ لم يُجرِ هذا التشغيل معالجة OCR."
+    }
+  }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { originalTechnicalText } from "@/shared/i18n/original-technical-text";
 import { createMessages, type MessageKey } from "@/lib/i18n/messages";
 import { useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { EvidenceMatrixInput } from "@/lib/research/evidence-matrix";
@@ -54,7 +55,7 @@ export function SourceEvidenceLensView({ model, selectId, selectRef, onOmit, mes
           aria-describedby={`${selectId}-notice`}
           className="mt-2 block min-h-[44px] w-full min-w-0 max-w-full border border-line bg-paper px-3 py-2 font-serif text-base text-ink [contain:paint] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
           <option value="">{copy("reportSourceLens.keepAll")}</option>
-          {model.sources.map(source => <option key={source.sourceId} value={source.sourceId}>{source.sourceName}</option>)}
+          {model.sources.map(source => <option lang="und" dir="auto" key={source.sourceId} value={source.sourceId}>{source.sourceName}</option>)}
         </select>
       </label>
       {omitted && <button type="button" onClick={() => onOmit(null)} className="min-h-[44px] min-w-0 max-w-full border border-ink bg-ink px-4 py-2 text-sm text-paper transition-colors duration-180 hover:bg-paper hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal motion-reduce:transition-none">{text("reportSourceLens.restore")}</button>}
@@ -67,7 +68,7 @@ export function SourceEvidenceLensView({ model, selectId, selectRef, onOmit, mes
     <ol aria-label={copy("reportSourceLens.title")} className="my-5 grid min-w-0 grid-cols-1 gap-4 @min-[44rem]/source-lens:grid-cols-2">
       {model.rows.map(row => <li key={row.claimIndex} className={cn("min-w-0 border bg-paper p-4 transition-colors duration-180 motion-reduce:transition-none sm:p-5", row.state === "lost-last-excerpt" ? "border-seal/50" : "border-line")}>
         <header>
-        <h3 id={`${selectId}-claim-${row.claimIndex}`} lang="und" className="font-serif text-lg leading-relaxed text-ink [overflow-wrap:anywhere]">{row.claim}</h3>
+        <h3 id={`${selectId}-claim-${row.claimIndex}`} lang="und" dir="auto" className="font-serif text-lg leading-relaxed text-ink [overflow-wrap:anywhere]">{originalTechnicalText(row.claim)}</h3>
         <p key={`${row.state}-${row.remaining.length}`} className={cn("mt-2 text-sm leading-relaxed [overflow-wrap:anywhere] motion-safe:animate-[kxSourceArrive_180ms_ease-out_both]", row.state === "lost-last-excerpt" ? "text-seal" : "text-ink-3")}>
           {row.state === "already-missing" ? text("reportSourceLens.missing") : row.state === "lost-last-excerpt" ? text("reportSourceLens.lost") : text(row.remaining.length === 1 ? "reportSourceLens.remaining.one" : "reportSourceLens.remaining.other", { count: row.remaining.length })}
         </p>
@@ -79,7 +80,7 @@ export function SourceEvidenceLensView({ model, selectId, selectRef, onOmit, mes
         {row.remaining.length > 0 && <details>
           <summary aria-describedby={`${selectId}-claim-${row.claimIndex}`} className="min-h-[44px] cursor-pointer py-3 text-sm text-ink-2 hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">{text("reportSourceLens.inspect")}</summary>
           {row.remaining.map((item, index) => <blockquote key={index} className="mt-2 border-l border-line pl-3 font-serif text-sm">
-            <p lang="und" className="whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">“{item.quote}”</p>
+            <p lang="und" dir="auto" className="whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">“{originalTechnicalText(item.quote)}”</p>
             <p className="mt-1 text-ink-3 [overflow-wrap:anywhere]">{item.contentVersion ? item.itemTitle ? text("reportSourceLens.versionTitle", { marker: item.marker, source: item.sourceName, title: item.itemTitle, version: item.contentVersion }) : text("reportSourceLens.version", { marker: item.marker, source: item.sourceName, version: item.contentVersion }) : <>{item.marker} · {item.sourceName}{item.itemTitle ? ` · ${item.itemTitle}` : ""}</>}</p>
           </blockquote>)}
         </details>}

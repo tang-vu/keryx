@@ -2,7 +2,7 @@
 
 import type { RunVisibility } from "@/lib/run-privacy/contracts";
 import type { useResearchVisibility } from "@/lib/hooks/use-research-visibility";
-import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { UiMessage, useUiMessages } from "@/lib/i18n/ui-copy";
 
 
 
@@ -14,20 +14,20 @@ export function ResearchVisibilityPicker({ preference, disabled, parentVisibilit
   const message = useUiMessages();
   return <div className={compact ? "mb-2" : "mt-3 border-t border-line pt-3"} data-testid="research-visibility">
     <label className="flex min-h-11 flex-wrap items-center gap-3 font-mono text-xs text-ink">
-      {message("researchVisibility.label")}
+      <UiMessage messageKey="researchVisibility.label" />
       <select value={preference.visibility} disabled={disabled || !preference.ready} onChange={event => preference.choose(event.target.value as RunVisibility)}
         className="min-h-11 border border-ink bg-paper px-3 py-2">
-        {(["public", "unlisted", "private"] as const).map(value => <option key={value} value={value}
+        {(["public", "unlisted", "private"] as const).map(value => <option dir="auto" key={value} value={value}
           disabled={!!allowedVisibilities && !allowedVisibilities.includes(value) || !preference.privacyActive && value !== "public" || value === "private" && !preference.wallet
             || !!parentVisibility && exposure[value] > exposure[parentVisibility]}>{message(`researchVisibility.${value}`)}</option>)}
       </select>
     </label>
     <p className={compact ? "mt-1 text-xs leading-4 text-ink-2 sm:text-sm sm:leading-relaxed" : "mt-1 text-sm leading-relaxed text-ink-2"} role="status">
-      {preference.status === "loading" ? message("researchVisibility.loading") : preference.status === "error"
-        ? message("researchVisibility.unavailable") : message(`researchVisibility.${preference.visibility}Notice`)}
+      <UiMessage messageKey={preference.status === "loading" ? "researchVisibility.loading" : preference.status === "error"
+        ? "researchVisibility.unavailable" : `researchVisibility.${preference.visibility}Notice`} />
     </p>
-    {preference.status === "error" && <button type="button" onClick={preference.retry} disabled={disabled} className="min-h-11 text-sm underline">{message("researchVisibility.retry")}</button>}
-    {showContextHint && preference.ready && <p className={compact ? "mt-1 text-[11px] leading-4 text-ink-3 sm:text-xs" : "mt-1 text-xs text-ink-3"}>{parentVisibility && parentVisibility !== "public"
-      ? message("researchVisibility.followUp") : !preference.wallet ? message("researchVisibility.signIn") : message("researchVisibility.questionOnly")}</p>}
+    {preference.status === "error" && <button type="button" onClick={preference.retry} disabled={disabled} className="min-h-11 text-sm underline"><UiMessage messageKey="researchVisibility.retry" /></button>}
+    {showContextHint && preference.ready && <p className={compact ? "mt-1 text-[11px] leading-4 text-ink-3 sm:text-xs" : "mt-1 text-xs text-ink-3"}><UiMessage messageKey={parentVisibility && parentVisibility !== "public"
+      ? "researchVisibility.followUp" : !preference.wallet ? "researchVisibility.signIn" : "researchVisibility.questionOnly"} /></p>}
   </div>;
 }

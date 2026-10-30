@@ -248,7 +248,7 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
     !conversation && !parentId && !parentRef.current && !paidScholarly;
   const availabilityPanel = (
     <div className="mt-3 border border-line bg-paper p-3 text-sm text-ink-2" role="status">
-      <p>{checking ? <UiMessage messageKey="researchEntry.checking" /> : researchPaused ? RESEARCH_PAUSED_MESSAGE :
+      <p lang="und" dir="auto">{checking ? <UiMessage messageKey="researchEntry.checking" /> : researchPaused ? RESEARCH_PAUSED_MESSAGE :
         availability?.message ?? RESEARCH_AVAILABILITY_UNKNOWN}</p>
       <div className="flex flex-wrap gap-x-3">
         <a href="/me/asks" className="inline-flex min-h-11 items-center py-3 underline"><UiMessage messageKey="researchEntry.savedReports" /></a>
@@ -266,6 +266,8 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
           </label>
           <textarea
             id="ask-question"
+            lang="und"
+            dir="auto"
             ref={questionRef}
             value={question}
             onChange={(e) => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(e.target.value); }}
@@ -371,8 +373,8 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
               <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={paidScholarly} disabled={disabled || payer !== "session"} onChange={event => setPaidScholarly(event.target.checked)} /> <UiMessage messageKey="researchEntry.paidScholarly" /></label>
               <p className="text-xs text-ink-3"><UiMessage messageKey="researchEntry.paidScholarlyNotice" /></p>
             </>}
-            <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={reviewFirst} disabled={disabled || payer !== "session" && !reviewFirst} onChange={event => setReviewFirst(event.target.checked)} />{reviewCopy.mode}</label>
-            <p className="mt-1 text-xs text-ink-3">{reviewCopy.modeNotice}</p>
+            <label className="mt-2 flex min-h-11 items-center gap-2 font-mono text-xs text-ink"><input type="checkbox" checked={reviewFirst} disabled={disabled || payer !== "session" && !reviewFirst} onChange={event => setReviewFirst(event.target.checked)} /><span lang="en" dir="ltr">{reviewCopy.mode}</span></label>
+            <p lang="en" dir="ltr" className="mt-1 text-xs text-ink-3">{reviewCopy.modeNotice}</p>
             <a href={paperLibraryHref(question)} aria-label={message("researchEntry.metadataLookupLabel")} lang={message("researchEntry.metadataLookupLabel") === englishMessages["researchEntry.metadataLookupLabel"] ? "en" : locale} className="inline-flex min-h-11 items-center font-serif text-sm text-seal underline" data-testid="paper-metadata-handoff">
               <UiMessage messageKey="researchEntry.metadataLookup" />
             </a>

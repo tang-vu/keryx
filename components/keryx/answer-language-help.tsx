@@ -10,7 +10,7 @@ export function AnswerLanguageHelp() {
   const id = useId(), [open, setOpen] = useState(false);
   return <div className="text-xs leading-relaxed text-ink-2" data-answer-language-help>
     <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(value => !value)}
-      className="block min-h-11 text-left underline decoration-ink-3 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
+      className="block min-h-11 text-start underline decoration-ink-3 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal">
       <UiText source={uiPreferenceCopy("answerLanguageTitle")} namespaces={["ui-preference"]} />
     </button>
     <div id={id} hidden={!open} className="pb-2">
@@ -19,10 +19,13 @@ export function AnswerLanguageHelp() {
         <UiText source={uiPreferenceCopy("answerLanguageExamples")} namespaces={["ui-preference"]} />
       </p>
       <ul aria-labelledby={`${id}-examples`} className="mt-1 space-y-1">
-        {answerLanguageInstructions.map(example => <li key={example.language} className="flex min-w-0 flex-wrap gap-x-2">
-          <span lang={example.language}>{example.name}</span>
-          <code lang={example.language} className="break-words font-mono">{example.instruction}</code>
-        </li>)}
+        {answerLanguageInstructions.map(example => {
+          const direction = example.language === "ar" ? "rtl" : "ltr";
+          return <li key={example.language} dir={direction} className="flex min-w-0 flex-wrap gap-x-2">
+            <span lang={example.language} dir={direction}>{example.name}</span>
+            <code lang={example.language} dir={direction} className="break-words font-mono">{example.instruction}</code>
+          </li>;
+        })}
       </ul>
     </div>
   </div>;

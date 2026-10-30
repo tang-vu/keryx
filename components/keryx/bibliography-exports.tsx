@@ -35,7 +35,7 @@ export function BibliographyExports({ result }: { result: BibliographicTaskResul
     {failed && <p role="alert" className="mt-2 text-sm text-seal"><UiMessage messageKey="bibliographyExport.failed" /></p>}
     <details className="mt-3 text-xs text-ink-3">
       <summary className="min-h-11 cursor-pointer py-3"><UiMessage messageKey="bibliographyExport.provenance" /></summary>
-      <pre lang="und" className="max-h-72 overflow-auto whitespace-pre-wrap break-words border border-line bg-paper-2 p-3">{JSON.stringify(result.record, null, 2)}</pre>
+      <pre lang="und" dir="ltr" className="max-h-72 overflow-auto whitespace-pre-wrap break-words border border-line bg-paper-2 p-3">{JSON.stringify(result.record, null, 2)}</pre>
     </details>
   </section>;
 }

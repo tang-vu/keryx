@@ -12,5 +12,5 @@ export function SourceLibraryInput({ kind, defaultValue, className }: {
     author: { name: "author", maxLength: 120, placeholder: copy("sourceFilter.authorPlaceholder") },
     doi: { name: "doi", maxLength: 200, placeholder: copy("sourceFilter.doiPlaceholder", { identifier: "10.…", url: "https://doi.org/…" }) },
   };
-  return <input {...fields[kind]} defaultValue={defaultValue} className={className} />;
+  return <input {...fields[kind]} lang="und" dir="auto" defaultValue={defaultValue} className={className} />;
 }

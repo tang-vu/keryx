@@ -1,3 +1,4 @@
+import { originalTechnicalText } from "@/shared/i18n/original-technical-text";
 import { DisplayTime } from "@/components/keryx/display-time";
 import { formatDate } from "@/lib/i18n/format";
 
@@ -26,10 +27,10 @@ export function CitedSourceCard({ entry, compact = false }: { entry: CitedSource
     : entry.truncated ? "sourceCited.scopeBounded.unrecorded" : "sourceCited.scope.unrecorded";
   return <article className="flex min-w-0 flex-col border border-line bg-paper p-5 transition-colors hover:border-brass focus-within:border-brass [overflow-wrap:anywhere] sm:p-6">
     <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-paid"><UiMessage messageKey={"sourceCited.kicker"} /></p>
-    <h3 lang="und" className="mt-2 font-display text-[23px] font-medium leading-snug text-ink">
-      <a href={entry.url} target="_blank" rel="noopener noreferrer" className={`group min-h-11 hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-seal ${compact ? "line-clamp-3" : "block"}`}>{entry.title}<ArrowUpRight aria-hidden="true" className="ml-1 inline h-4 w-4 motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-0.5 motion-safe:group-hover:-translate-y-0.5" /></a>
+    <h3 lang="und" dir="auto" className="mt-2 font-display text-[23px] font-medium leading-snug text-ink">
+      <a href={entry.url} target="_blank" rel="noopener noreferrer" className={`group min-h-11 hover:text-seal focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-seal ${compact ? "line-clamp-3" : "block"}`}>{originalTechnicalText(entry.title)}<ArrowUpRight aria-hidden="true" className="ml-1 inline h-4 w-4 motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-x-0.5 motion-safe:group-hover:-translate-y-0.5" /></a>
     </h3>
-    <p lang="und" className="mt-2 break-words font-mono text-[11px] text-ink-3">{entry.publisher}</p>
+    <p lang="und" dir="auto" className="mt-2 break-words font-mono text-[11px] text-ink-3">{originalTechnicalText(entry.publisher)}</p>
     <p className="mt-4 border-l-2 border-line pl-3 font-serif text-[15px] leading-relaxed text-ink-2">
       {scope ? <UiMessage messageKey={scope} /> : entry.truncated ? <UiMessage messageKey="sourceCited.unclassifiedBounded" /> : undefined}
     </p>
