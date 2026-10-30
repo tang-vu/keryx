@@ -44,6 +44,7 @@ export function SetupGuide({ current, title, body, children }: { current: string
 
 export function SetupSteps({ steps }: { steps: readonly string[] }) {
   return <ol className="mt-4 list-decimal space-y-3 pl-6 font-serif leading-relaxed text-ink-2">
-    {steps.map(step => <li key={step} className="pl-1"><UiText source={step} namespaces={["get-started"]} /></li>)}
+    {steps.map(step => <li key={step} className="pl-1"><UiText source={step} namespaces={["get-started"]}
+      literals={step.match(/-setup\.exe|-win32-x64\.zip|-release\.json|-SHA256SUMS\.txt|manifest\.json|chrome:\/\/extensions|edge:\/\/extensions|Developer mode|Load unpacked/gu) ?? undefined} /></li>)}
   </ol>;
 }

@@ -21,14 +21,37 @@ export function useUiCopyFunction<T extends (...args: never[]) => string>(namesp
   return useMemo(() => ((...args: Parameters<T>) => previewText(preview, copy(...args), [namespace])) as T, [preview, namespace, copy]);
 }
 
-/** Explicit authored-copy leaf for Server Components. Never wrap original report/user data. */
-export function UiText({ source, namespaces, plain = false }: { source: string | number | null; namespaces?: readonly string[]; plain?: boolean }) {
+function literalContent(text: string, source: string, literals: readonly string[]): ReactNode {
+  const allowed = [...new Set(literals)].filter(token => token.length > 0 && source.includes(token));
+  if (!allowed.length) return text;
+  const parts: ReactNode[] = [];
+  let cursor = 0;
+  while (cursor < text.length) {
+    let found = -1, literal = "";
+    for (const token of allowed) {
+      const index = text.indexOf(token, cursor);
+      if (index >= 0 && (found < 0 || index < found || index === found && token.length > literal.length)) {
+        found = index; literal = token;
+      }
+    }
+    if (found < 0) { parts.push(text.slice(cursor)); break; }
+    if (found > cursor) parts.push(text.slice(cursor, found));
+    parts.push(<bdi key={`${found}:${literal}`} lang="en" dir="ltr" translate="no" style={{ display: "inline-block", whiteSpace: "nowrap" }}>{literal}</bdi>);
+    cursor = found + literal.length;
+  }
+  return parts;
+}
+
+/** Explicit authored-copy leaf for Server Components. Never wrap original report/user data.
+ * Optional literals must be exact technical tokens from that authored English source. */
+export function UiText({ source, namespaces, plain = false, literals }: { source: string | number | null; namespaces?: readonly string[]; plain?: boolean; literals?: readonly string[] }) {
   const { preview, locale } = useContext(UiCopyContext) ?? english;
   if (typeof source !== "string") return source;
   const text = previewText(preview, source, namespaces);
   if (plain || locale === "en") return text;
   const language = text === source ? "en" : locale;
-  return <span lang={language} dir={locale === "ar" ? localeDirection(language) : undefined}>{text}</span>;
+  const content = text === source || !literals ? text : literalContent(text, source, literals);
+  return <span lang={language} dir={locale === "ar" ? localeDirection(language) : undefined}>{content}</span>;
 }
 
 export function UiMessage({ messageKey, values, plain = false }: { messageKey: MessageKey; values?: Record<string, string | number>; plain?: boolean }) {

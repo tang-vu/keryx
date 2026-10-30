@@ -227,6 +227,86 @@
     "surfaces.6.action": {
       "source": "Find your chat app",
       "text": "Temukan aplikasi percakapan Anda"
+    },
+    "download.title": {
+      "source": "Bring Keryx to your workflow.",
+      "text": "Hadirkan Keryx dalam alur kerja Anda."
+    },
+    "download.desktopTitle": {
+      "source": "Keryx Operator for Windows",
+      "text": "Keryx Operator untuk Windows"
+    },
+    "download.desktopTag": {
+      "source": "Windows x64 · Alpha",
+      "text": "Windows x64 · Alfa"
+    },
+    "download.desktopRequirements": {
+      "source": "Windows x64 and Microsoft Edge WebView2 Runtime. Node is bundled; a separate Node installation is not required. Updates are manual in this alpha.",
+      "text": "Windows x64 dan Microsoft Edge WebView2 Runtime. Node sudah disertakan; Anda tidak perlu menginstalnya secara terpisah. Pembaruan pada versi alfa ini dilakukan secara manual."
+    },
+    "download.installer": {
+      "source": "Choose Windows installer",
+      "text": "Pilih penginstal Windows"
+    },
+    "download.portable": {
+      "source": "Choose portable ZIP",
+      "text": "Pilih ZIP portabel"
+    },
+    "download.manifest": {
+      "source": "Release manifest and checksums",
+      "text": "Manifes rilis dan checksum"
+    },
+    "download.webview": {
+      "source": "Get WebView2 Runtime",
+      "text": "Dapatkan WebView2 Runtime"
+    },
+    "download.desktopSteps.0": {
+      "source": "Open the release assets and choose the -setup.exe installer or -win32-x64.zip portable build. Review the matching -release.json manifest and -SHA256SUMS.txt checksums.",
+      "text": "Buka berkas rilis dan pilih penginstal -setup.exe atau versi portabel -win32-x64.zip. Periksa manifes -release.json dan checksum -SHA256SUMS.txt yang sesuai."
+    },
+    "download.desktopSteps.1": {
+      "source": "Run the installer in your normal Windows user session. Install WebView2 Runtime if it is missing. For the portable build, extract and keep the whole folder together.",
+      "text": "Jalankan penginstal dalam sesi pengguna Windows Anda yang biasa. Instal WebView2 Runtime jika belum ada. Untuk versi portabel, ekstrak isinya dan simpan seluruh folder tetap bersama."
+    },
+    "download.extensionTitle": {
+      "source": "Keryx in your browser",
+      "text": "Keryx di browser Anda"
+    },
+    "download.extensionTag": {
+      "source": "Chromium · Manual install",
+      "text": "Chromium · Instalasi manual"
+    },
+    "download.extensionBody": {
+      "source": "Ask about selected text from the toolbar or right-click menu. Inspect the research trace, open cited sources and export recorded references from a completed report.",
+      "text": "Ajukan pertanyaan tentang teks yang dipilih melalui bilah alat atau menu klik kanan. Periksa alur riset, buka sumber yang dikutip, dan ekspor referensi yang tercatat dari laporan yang telah selesai."
+    },
+    "download.extensionDownload": {
+      "source": "Download extension ZIP",
+      "text": "Unduh ZIP ekstensi"
+    },
+    "download.extensionRequirements": {
+      "source": "Use Chrome or Edge on desktop, or another compatible Chromium browser. For the ZIP, follow the unpacked-install steps below and enable Developer mode. The public Chrome Web Store listing is also available; check its displayed version before installing.",
+      "text": "Gunakan Chrome atau Edge di komputer, atau browser Chromium lain yang kompatibel. Untuk ZIP, ikuti langkah pemasangan tanpa paket di bawah dan aktifkan mode pengembang (Developer mode). Halaman publik di Chrome Web Store juga tersedia; periksa versi yang ditampilkan sebelum menginstal."
+    },
+    "download.extensionSteps.0": {
+      "source": "Download and extract the extension ZIP. The extracted directory contains manifest.json directly.",
+      "text": "Unduh dan ekstrak ZIP ekstensi. Berkas manifest.json berada langsung di dalam folder hasil ekstraksi."
+    },
+    "download.extensionSteps.1": {
+      "source": "Open chrome://extensions in Chrome or edge://extensions in Edge, then turn on Developer mode.",
+      "text": "Buka chrome://extensions di Chrome atau edge://extensions di Edge, lalu aktifkan mode pengembang (Developer mode)."
+    },
+    "download.extensionSteps.2": {
+      "source": "Choose Load unpacked and select the extracted directory containing manifest.json. Pin Keryx to your toolbar.",
+      "text": "Pilih Muat yang belum dipaketkan (Load unpacked), lalu pilih folder hasil ekstraksi yang berisi manifest.json. Sematkan Keryx ke bilah alat Anda."
+    },
+    "download.alternativeTitle": {
+      "source": "Use Keryx without a download",
+      "text": "Gunakan Keryx tanpa mengunduh"
+    },
+    "download.alternativeBody": {
+      "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
+      "text": "Aplikasi web berfungsi di browser komputer dan ponsel. Asisten AI dapat terhubung melalui MCP jarak jauh; pengembang dapat menggunakan API yang dihosting."
     }
   }
 }

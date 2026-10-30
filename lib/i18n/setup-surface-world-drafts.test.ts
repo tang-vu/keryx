@@ -26,9 +26,9 @@ it.each(partialLocales)("%s supplies every neutral surface title, purpose and ac
   const catalogue = draft(locale);
   expect(catalogue.status).toBe("machineDraft");
   expect(catalogue.review).toBeNull();
-  expect(validateNamespaceDraft(catalogue, source, glossary).coveredKeys).toHaveLength(56);
+  expect(validateNamespaceDraft(catalogue, source, glossary).coveredKeys).toHaveLength(76);
   const selected = validateNamespacePreview(catalogue, source, Object.keys(catalogue.entries));
-  expect(Object.keys(selected)).toHaveLength(56);
+  expect(Object.keys(selected)).toHaveLength(76);
   const preview = await loadUiPreview(locale);
   for (const [index, surface] of setupCopy.surfaces.entries()) {
     for (const field of ["title", "tag", "action"] as const)

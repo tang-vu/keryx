@@ -227,6 +227,86 @@
     "surfaces.6.action": {
       "source": "Find your chat app",
       "text": "채팅 앱 찾기"
+    },
+    "download.title": {
+      "source": "Bring Keryx to your workflow.",
+      "text": "Keryx를 업무 흐름에 더하세요."
+    },
+    "download.desktopTitle": {
+      "source": "Keryx Operator for Windows",
+      "text": "Windows용 Keryx Operator"
+    },
+    "download.desktopTag": {
+      "source": "Windows x64 · Alpha",
+      "text": "Windows x64 · 알파 버전"
+    },
+    "download.desktopRequirements": {
+      "source": "Windows x64 and Microsoft Edge WebView2 Runtime. Node is bundled; a separate Node installation is not required. Updates are manual in this alpha.",
+      "text": "Windows x64와 Microsoft Edge WebView2 Runtime이 필요합니다. Node가 포함되어 있어 별도로 설치할 필요가 없습니다. 이 알파 버전의 업데이트는 수동으로 진행합니다."
+    },
+    "download.installer": {
+      "source": "Choose Windows installer",
+      "text": "Windows 설치 프로그램 선택"
+    },
+    "download.portable": {
+      "source": "Choose portable ZIP",
+      "text": "포터블 ZIP 선택"
+    },
+    "download.manifest": {
+      "source": "Release manifest and checksums",
+      "text": "릴리스 매니페스트 및 체크섬"
+    },
+    "download.webview": {
+      "source": "Get WebView2 Runtime",
+      "text": "WebView2 Runtime 받기"
+    },
+    "download.desktopSteps.0": {
+      "source": "Open the release assets and choose the -setup.exe installer or -win32-x64.zip portable build. Review the matching -release.json manifest and -SHA256SUMS.txt checksums.",
+      "text": "릴리스 파일을 열고 -setup.exe 설치 프로그램 또는 -win32-x64.zip 포터블 버전을 선택하세요. 해당 버전의 -release.json 매니페스트와 -SHA256SUMS.txt 체크섬을 확인하세요."
+    },
+    "download.desktopSteps.1": {
+      "source": "Run the installer in your normal Windows user session. Install WebView2 Runtime if it is missing. For the portable build, extract and keep the whole folder together.",
+      "text": "평소 사용하는 Windows 사용자 세션에서 설치 프로그램을 실행하세요. WebView2 Runtime이 없으면 설치하세요. 포터블 버전은 압축을 풀고 폴더 전체를 함께 보관하세요."
+    },
+    "download.extensionTitle": {
+      "source": "Keryx in your browser",
+      "text": "브라우저에서 사용하는 Keryx"
+    },
+    "download.extensionTag": {
+      "source": "Chromium · Manual install",
+      "text": "Chromium · 수동 설치"
+    },
+    "download.extensionBody": {
+      "source": "Ask about selected text from the toolbar or right-click menu. Inspect the research trace, open cited sources and export recorded references from a completed report.",
+      "text": "도구 모음이나 마우스 오른쪽 버튼 메뉴에서 선택한 텍스트에 관해 질문하세요. 리서치 과정을 살펴보고, 인용 출처를 열고, 완료된 보고서에 기록된 참고 자료를 내보낼 수 있습니다."
+    },
+    "download.extensionDownload": {
+      "source": "Download extension ZIP",
+      "text": "확장 프로그램 ZIP 다운로드"
+    },
+    "download.extensionRequirements": {
+      "source": "Use Chrome or Edge on desktop, or another compatible Chromium browser. For the ZIP, follow the unpacked-install steps below and enable Developer mode. The public Chrome Web Store listing is also available; check its displayed version before installing.",
+      "text": "컴퓨터에서 Chrome이나 Edge 또는 다른 호환 Chromium 브라우저를 사용하세요. ZIP은 아래의 압축 해제 설치 절차에 따라 설치하고 개발자 모드(Developer mode)를 켜세요. 공개 Chrome Web Store 페이지도 이용할 수 있습니다. 설치하기 전에 표시된 버전을 확인하세요."
+    },
+    "download.extensionSteps.0": {
+      "source": "Download and extract the extension ZIP. The extracted directory contains manifest.json directly.",
+      "text": "확장 프로그램 ZIP을 다운로드하고 압축을 푸세요. 압축을 푼 폴더 바로 안에 manifest.json이 있습니다."
+    },
+    "download.extensionSteps.1": {
+      "source": "Open chrome://extensions in Chrome or edge://extensions in Edge, then turn on Developer mode.",
+      "text": "Chrome에서 chrome://extensions 또는 Edge에서 edge://extensions를 연 다음 개발자 모드(Developer mode)를 켜세요."
+    },
+    "download.extensionSteps.2": {
+      "source": "Choose Load unpacked and select the extracted directory containing manifest.json. Pin Keryx to your toolbar.",
+      "text": "압축해제된 확장 프로그램을 로드합니다(Load unpacked)를 선택하고 manifest.json이 있는 압축 해제 폴더를 지정하세요. Keryx를 도구 모음에 고정하세요."
+    },
+    "download.alternativeTitle": {
+      "source": "Use Keryx without a download",
+      "text": "다운로드 없이 Keryx 사용하기"
+    },
+    "download.alternativeBody": {
+      "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
+      "text": "웹 앱은 컴퓨터와 모바일 브라우저에서 작동합니다. AI 도우미는 원격 MCP로 연결할 수 있고, 개발자는 호스팅 API를 사용할 수 있습니다."
     }
   }
 }

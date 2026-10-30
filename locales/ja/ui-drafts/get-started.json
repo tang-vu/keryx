@@ -227,6 +227,86 @@
     "surfaces.6.action": {
       "source": "Find your chat app",
       "text": "チャットアプリを選ぶ"
+    },
+    "download.title": {
+      "source": "Bring Keryx to your workflow.",
+      "text": "Keryxをいつもの作業に取り入れましょう。"
+    },
+    "download.desktopTitle": {
+      "source": "Keryx Operator for Windows",
+      "text": "Windows向けKeryx Operator"
+    },
+    "download.desktopTag": {
+      "source": "Windows x64 · Alpha",
+      "text": "Windows x64 · アルファ版"
+    },
+    "download.desktopRequirements": {
+      "source": "Windows x64 and Microsoft Edge WebView2 Runtime. Node is bundled; a separate Node installation is not required. Updates are manual in this alpha.",
+      "text": "Windows x64とMicrosoft Edge WebView2 Runtimeが必要です。Nodeは同梱されているため、別途インストールする必要はありません。このアルファ版の更新は手動です。"
+    },
+    "download.installer": {
+      "source": "Choose Windows installer",
+      "text": "Windowsインストーラーを選ぶ"
+    },
+    "download.portable": {
+      "source": "Choose portable ZIP",
+      "text": "ポータブル版ZIPを選ぶ"
+    },
+    "download.manifest": {
+      "source": "Release manifest and checksums",
+      "text": "リリースマニフェストとチェックサム"
+    },
+    "download.webview": {
+      "source": "Get WebView2 Runtime",
+      "text": "WebView2 Runtimeを入手"
+    },
+    "download.desktopSteps.0": {
+      "source": "Open the release assets and choose the -setup.exe installer or -win32-x64.zip portable build. Review the matching -release.json manifest and -SHA256SUMS.txt checksums.",
+      "text": "リリースの配布ファイルを開き、-setup.exeのインストーラーか、-win32-x64.zipのポータブル版を選びます。対応する-release.jsonのマニフェストと-SHA256SUMS.txtのチェックサムを確認してください。"
+    },
+    "download.desktopSteps.1": {
+      "source": "Run the installer in your normal Windows user session. Install WebView2 Runtime if it is missing. For the portable build, extract and keep the whole folder together.",
+      "text": "通常のWindowsユーザーセッションでインストーラーを実行します。WebView2 Runtimeがなければインストールしてください。ポータブル版は展開し、フォルダー全体をまとめて保管します。"
+    },
+    "download.extensionTitle": {
+      "source": "Keryx in your browser",
+      "text": "ブラウザーで使うKeryx"
+    },
+    "download.extensionTag": {
+      "source": "Chromium · Manual install",
+      "text": "Chromium · 手動インストール"
+    },
+    "download.extensionBody": {
+      "source": "Ask about selected text from the toolbar or right-click menu. Inspect the research trace, open cited sources and export recorded references from a completed report.",
+      "text": "ツールバーや右クリックメニューから、選択したテキストについて質問できます。リサーチの経過を確認し、引用元を開いたり、完了したレポートに記録された参考文献をエクスポートしたりできます。"
+    },
+    "download.extensionDownload": {
+      "source": "Download extension ZIP",
+      "text": "拡張機能のZIPをダウンロード"
+    },
+    "download.extensionRequirements": {
+      "source": "Use Chrome or Edge on desktop, or another compatible Chromium browser. For the ZIP, follow the unpacked-install steps below and enable Developer mode. The public Chrome Web Store listing is also available; check its displayed version before installing.",
+      "text": "パソコンのChromeやEdge、または互換性のあるChromiumブラウザーを使ってください。ZIPの場合は、以下の展開済み拡張機能のインストール手順に従い、デベロッパーモード（Developer mode）を有効にします。Chrome Web Storeの公開ページも利用できます。インストール前に表示されているバージョンを確認してください。"
+    },
+    "download.extensionSteps.0": {
+      "source": "Download and extract the extension ZIP. The extracted directory contains manifest.json directly.",
+      "text": "拡張機能のZIPをダウンロードして展開します。展開先のフォルダー直下にmanifest.jsonがあります。"
+    },
+    "download.extensionSteps.1": {
+      "source": "Open chrome://extensions in Chrome or edge://extensions in Edge, then turn on Developer mode.",
+      "text": "Chromeでchrome://extensions、またはEdgeでedge://extensionsを開き、デベロッパーモード（Developer mode）を有効にします。"
+    },
+    "download.extensionSteps.2": {
+      "source": "Choose Load unpacked and select the extracted directory containing manifest.json. Pin Keryx to your toolbar.",
+      "text": "「パッケージ化されていない拡張機能を読み込む」（Load unpacked）を選び、manifest.jsonを含む展開済みフォルダーを指定します。Keryxをツールバーに固定してください。"
+    },
+    "download.alternativeTitle": {
+      "source": "Use Keryx without a download",
+      "text": "ダウンロードせずにKeryxを使う"
+    },
+    "download.alternativeBody": {
+      "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
+      "text": "Webアプリはパソコンやモバイルのブラウザーで動作します。AIアシスタントはリモートMCPで接続でき、開発者はホスト型APIを利用できます。"
     }
   }
 }
