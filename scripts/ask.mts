@@ -26,10 +26,11 @@ Options:
   --budget USDC             Nonnegative source cap, at most six decimal places.
   --model ID                Override the configured reasoning model.
   --web                     Allow configured external web/search providers.
-  --language LANGUAGE       Presentation labels: auto, en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi, id or ru.
+  --language LANGUAGE       Presentation labels: auto, en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi, id, ru or ar.
   --private-claim-fd FD      Dedicated inherited private pipe; direct Node launcher only.
 
 Without a question, the existing sample question is used.
+For Arabic generated prose, include "Answer in Arabic." in the question; --language changes labels only.
 Model and search operating costs are separate from the source cap.
 Private claim setup: docs/engineering/private-cli-claims-262.md`);
   process.exit(0);
@@ -54,7 +55,7 @@ for (let i = 0; i < argv.length; i++) {
   } else if (argv[i] === "--language") {
     if (languageOverride !== undefined) throw new Error("Duplicate presentation language option.");
     languageOverride = argv[++i];
-    if (!languageOverride || languageOverride.startsWith("-")) throw new Error("--language requires en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi, id, ru or auto.");
+    if (!languageOverride || languageOverride.startsWith("-")) throw new Error("--language requires en, vi, pt, pt-BR, es, fr, zh-Hans, de, ja, ko, hi, id, ru, ar or auto.");
     clientPresentationLanguage(undefined, languageOverride);
   } else if (argv[i] === "--web") {
     allowExternalWeb = true;

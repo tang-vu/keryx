@@ -12,6 +12,8 @@ import { pdfReadingKorean } from "../../locales/ko/pdf-reading";
 import { pdfReadingHindi } from "../../locales/hi/pdf-reading";
 import { pdfReadingIndonesian } from "../../locales/id/pdf-reading";
 import { pdfReadingRussian } from "../../locales/ru/pdf-reading";
+import { pdfReadingArabic } from "../../locales/ar/pdf-reading";
+import { researchRecoveryArabic } from "../../locales/ar/research-recovery";
 
 export interface NativeRecoveryCopy {
   readonly publicSource: string;
@@ -32,10 +34,10 @@ export interface NativeRecoveryCopy {
 
 const copy: Readonly<Record<AdditionalAnswerLanguage, NativeRecoveryCopy>> = Object.freeze({
   de: researchRecoveryGerman, ja: researchRecoveryJapanese, ko: researchRecoveryKorean,
-  hi: researchRecoveryHindi, id: researchRecoveryIndonesian, ru: researchRecoveryRussian,
+  hi: researchRecoveryHindi, id: researchRecoveryIndonesian, ru: researchRecoveryRussian, ar: researchRecoveryArabic,
 });
 const pdf: Readonly<Record<AdditionalAnswerLanguage, typeof pdfReadingCopy>> = Object.freeze({
-  de: pdfReadingGerman, ja: pdfReadingJapanese, ko: pdfReadingKorean, hi: pdfReadingHindi, id: pdfReadingIndonesian, ru: pdfReadingRussian,
+  de: pdfReadingGerman, ja: pdfReadingJapanese, ko: pdfReadingKorean, hi: pdfReadingHindi, id: pdfReadingIndonesian, ru: pdfReadingRussian, ar: pdfReadingArabic,
 });
 
 /** Original request scope is checked by callers. Aliases are not output evidence. */

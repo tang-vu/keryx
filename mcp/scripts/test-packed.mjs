@@ -1,4 +1,4 @@
-﻿import assert from "node:assert/strict";
+import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtemp, writeFile, readFile, readdir, rm, access } from "node:fs/promises";
@@ -105,6 +105,9 @@ try {
     { question: "Ответьте по-русски. Объясните café и сохраните [PACKED-RU-AVAILABLE].", language: "ru", readCheckpoints: capture(packet),
       serving: "Уровни выполнения по шагам", preparation: "подготовка ответа", financial: "Финансовые сведения (на английском):",
       notice: "Язык подписей: ru. Язык ответа не записан; исходный текст не изменён." },
+    { question: "أجب بالعربية. اشرح café واحتفظ بالنص [PACKED-AR-AVAILABLE].", language: "ar", readCheckpoints: capture(packet),
+      serving: "طبقات التنفيذ حسب الخطوة", preparation: "إعداد الإجابة", financial: "التفاصيل المالية (بالإنجليزية):",
+      notice: "لغة التسميات: ar. لم تُسجَّل لغة الإجابة؛ ولم يتغير النص الأصلي." },
   ];
   const publicResult = {
     answer: "Exact untranslated fixture answer: café – [S1].",
@@ -238,7 +241,7 @@ globalThis.fetch=async(input,init)=>{
     assert.equal(listed.tools.find(tool => tool.name === "paper_lookup").annotations.readOnlyHint, true);
     assert.deepEqual(listed.tools.find(tool => tool.name === "paper_lookup").inputSchema.properties.language.enum, ["en", "fr", "vi"]);
     assert.equal(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.question.maxLength, 2000);
-    assert.deepEqual(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.language.enum, ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"]);
+    assert.deepEqual(listed.tools.find(tool => tool.name === "ask_keryx").inputSchema.properties.language.enum, ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru", "ar"]);
     return { call: (name, args = {}) => request("tools/call", { name, arguments: args }), counts,
       stop: async () => { await stopChild(child); children.delete(child); lines.close(); } };
   }

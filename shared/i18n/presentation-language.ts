@@ -1,6 +1,6 @@
-export const presentationLanguages = ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"] as const;
+export const presentationLanguages = ["en", "vi", "pt", "pt-BR", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const;
 export type RequestedPresentationLanguage = typeof presentationLanguages[number];
-export const canonicalPresentationLanguages = Object.freeze(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru"] as const);
+export const canonicalPresentationLanguages = Object.freeze(["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const);
 export type PresentationLanguage = typeof canonicalPresentationLanguages[number];
 
 /** Exact observed language only. Request aliases are not output evidence. */

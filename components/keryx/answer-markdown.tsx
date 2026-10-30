@@ -13,6 +13,7 @@ import type { Citation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { PresentationLanguage } from "@/lib/research/presentation-language";
 import { quotedOriginalSpan } from "@/lib/i18n/quoted-originals";
+import { originalTechnicalText } from "@/shared/i18n/original-technical-text";
 
 const copy = createMessages("en");
 
@@ -30,30 +31,13 @@ const CITATION_RE = /\[(S\d+)\]/g;
 // including inside real markup; neither opening nor closing may consume them.
 const INLINE_RE = /(\*\*(?!\u200b)(?:\*\u200b|[^*])+\*(?!\u200b)\*(?!\u200b)|\*(?!\u200b)(?:\*\u200b|[^*])+\*(?!\u200b)|`(?!\u200b)(?:`\u200b|[^`])+`(?!\u200b))/g;
 
-/** Technical delimiters inside an RTL original still have literal LTR syntax.
- * Isolate complete adjacent tokens without changing text or assigning a language. */
-function renderOriginalTechnicalText(text: string): ReactNode {
-  const token = String.raw`(?:https?://[^\s“”<>]+|<[^<>\r\n]+>|\{[^{}\r\n]+\})`;
-  const matches = [...text.matchAll(new RegExp(`${token}(?:[ \\t]+${token})*`, "gu"))];
-  if (!matches.length) return text;
-  const nodes: ReactNode[] = [];
-  let cursor = 0;
-  for (const match of matches) {
-    if (match.index! > cursor) nodes.push(text.slice(cursor, match.index));
-    nodes.push(<bdi key={match.index} dir="ltr">{match[0]}</bdi>);
-    cursor = match.index! + match[0].length;
-  }
-  if (cursor < text.length) nodes.push(text.slice(cursor));
-  return nodes;
-}
-
 /** Clip the original span from the unsplit text to each displayed fragment. */
 function renderOriginalQuotes(text: string, original: ReturnType<typeof quotedOriginalSpan>, offset: number): ReactNode {
   if (!original) return text;
   const start = Math.max(0, original.start - offset);
   const end = Math.min(text.length, original.end - offset);
   if (end <= start) return text;
-  return <>{text.slice(0, start)}<bdi lang="und" dir="auto">{renderOriginalTechnicalText(text.slice(start, end))}</bdi>{text.slice(end)}</>;
+  return <>{text.slice(0, start)}<bdi lang="und" dir="auto">{originalTechnicalText(text.slice(start, end))}</bdi>{text.slice(end)}</>;
 }
 
 function renderInline(
@@ -191,9 +175,9 @@ export function AnswerMarkdown({
     3,
   );
   return (
-    // Every admitted prose language is currently LTR. Unknown content may choose
-    // its reading direction without acquiring a generated-prose language label.
-    <div lang={language ?? "und"} dir={language ? "ltr" : "auto"} className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink [overflow-wrap:anywhere]", className)}>
+    // Known Arabic prose reads RTL. Unknown content chooses its reading direction
+    // without acquiring a generated-prose language label.
+    <div lang={language ?? "und"} dir={language === "ar" ? "rtl" : language ? "ltr" : "auto"} className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink [overflow-wrap:anywhere]", className)}>
       {blocks.map(({ trimmed, heading, list }, bi) => {
         if (list) return (
           <ul key={`b${bi}`} className="list-disc space-y-3 ps-6">

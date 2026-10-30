@@ -157,7 +157,7 @@ purchase or reward anyone. Signed quotations confer no payout or source ownershi
 authority; coverage/reviews remain declarations and payment is unobserved. See
 [the workflow and remaining hosted/funded gates](../docs/evidence-procurement.md).
 
-The source supports optional `language: en|vi|pt|pt-BR|es|fr|zh-Hans|de|ja|ko|hi|id|ru` on `ask_keryx` for
+The source supports optional `language: en|vi|pt|pt-BR|es|fr|zh-Hans|de|ja|ko|hi|id|ru|ar` on `ask_keryx` for
 human-readable presentation only. It is consumed locally after the buyer returns: it is not
 added to the paid request/body/hash or forwarded as a model-language directive. Omission uses
 the original question's finite selector; explicit overrides disclose that actual answer language
@@ -166,6 +166,10 @@ answer/excerpts, structured result, custody/recovery path, payment/settlement au
 canonical USDC amount and receipts stay unchanged. Package build/publication and actual delivery
 remain root-owned gates; no live call is required or executed by these source checks. See
 [the exact shared contract and coordinator inputs](../docs/engineering/research-presentation-language-276-2026-10-12.md).
+
+For a new ordinary Arabic answer, put `أجب بالعربية.` or `Answer in Arabic.` in
+`question`; `language: "ar"` selects labels only. Stored answers retain their
+original text and require their existing recorded-language evidence.
 
 App **0.27.60** is the next coordinated candidate for bounded ordinary optimizer
 replay, presentation-only research/bot labels and default-OFF deadline observation.

@@ -56,6 +56,8 @@ const chineseAnswer = finalizeGroundedAnswer({ question: chineseQuestion, answer
 const chinesePacket = finalizeAnswerLanguage({ answer: chineseAnswer, rendererLanguage: "zh-Hans", statements: chineseStatements, proposals: chineseProposals });
 assert(chinesePacket?.language === "zh-Hans" && chinesePacket.method === "reviewed-statements-and-renderer");
 const nativeSentences = {
+  ar: ["يرسل Submit بيانات النموذج إلى الخادم.", "إذا لم يُحدَّد type، فالقيمة الافتراضية هي submit.",
+    "يعيد Reset عناصر التحكم إلى قيمها الأولية.", "لا يملك Button سلوكًا افتراضيًا."],
   ru: ["Submit отправляет данные формы на сервер.", "Если type не указан, по умолчанию используется submit.",
     "Reset возвращает элементам управления исходные значения.", "У Button нет поведения по умолчанию."],
   de: ["Submit sendet die Formulardaten an den Server.", "Ohne type ist submit die Voreinstellung.",
@@ -70,8 +72,8 @@ const nativeSentences = {
     "Reset mengembalikan kontrol ke nilai awalnya.", "Button tidak memiliki perilaku bawaan."],
 } as const;
 const nativeDirectives = { de: "Antworte bitte auf Deutsch.", ja: "日本語で回答してください。", ko: "한국어로 답변해 주세요.",
-  hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia.", ru: "Ответьте по-русски." } as const;
-const nativeScenarios = (["de", "ja", "ko", "hi", "id", "ru"] as const satisfies readonly AdditionalAnswerLanguage[]).map(language => {
+  hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia.", ru: "Ответьте по-русски.", ar: "أجب بالعربية." } as const;
+const nativeScenarios = (["de", "ja", "ko", "hi", "id", "ru", "ar"] as const satisfies readonly AdditionalAnswerLanguage[]).map(language => {
   const statements = nativeSentences[language];
   const rows = applyEvidenceReview(proposals.map((proposal, index) => ({ ...proposal, statement: statements[index] })),
     { reviews: proposals.map((_proposal, index) => ({ index, support: 0.9, statementSupport: 0.9, statementLanguage: language })) },
@@ -145,6 +147,7 @@ createRoot(document.getElementById('root')).render(<AnswerMarkdown text={${JSON.
     else assert(firstText.includes(scenario.sentences[1]));
     if (scenario.language) {
       assert.equal(await page.locator(`main > div[lang="${scenario.language}"]`).count(), 1);
+      assert.equal(await page.locator(`main > div[lang="${scenario.language}"]`).getAttribute("dir"), scenario.language === "ar" ? "rtl" : "ltr");
       assert.equal(await page.locator('main bdi[lang="und"][dir="auto"]').count(), 3);
       const originals = await page.locator('main bdi[lang="und"][dir="auto"]').allTextContents();
       assert.deepEqual(originals, quotes.map(quote => `“${quote}”`));

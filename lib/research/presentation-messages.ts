@@ -10,11 +10,12 @@ import { researchPresentationKorean } from "../../locales/ko/research-presentati
 import { researchPresentationHindi } from "../../locales/hi/research-presentation";
 import { researchPresentationIndonesian } from "../../locales/id/research-presentation";
 import { researchPresentationRussian } from "../../locales/ru/research-presentation";
+import { researchPresentationArabic } from "../../locales/ar/research-presentation";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
 
 export const researchPresentationCatalogues = Object.freeze({ en: researchPresentationEnglish, vi: researchPresentationVietnamese,
   de: researchPresentationGerman, ja: researchPresentationJapanese, ko: researchPresentationKorean,
-  hi: researchPresentationHindi, id: researchPresentationIndonesian, ru: researchPresentationRussian,
+  hi: researchPresentationHindi, id: researchPresentationIndonesian, ru: researchPresentationRussian, ar: researchPresentationArabic,
   pt: researchPresentationPortuguese, es: researchPresentationSpanish, fr: researchPresentationFrench, "zh-Hans": researchPresentationChinese });
 type Key = keyof typeof researchPresentationEnglish;
 type Names<T extends string> = T extends `${string}{${infer Name}}${infer Tail}` ? Name | Names<Tail> : never;

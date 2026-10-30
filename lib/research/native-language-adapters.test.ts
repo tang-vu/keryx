@@ -34,6 +34,11 @@ import { pdfReadingKorean } from "../../locales/ko/pdf-reading";
 import { pdfReadingHindi } from "../../locales/hi/pdf-reading";
 import { pdfReadingIndonesian } from "../../locales/id/pdf-reading";
 import { pdfReadingRussian } from "../../locales/ru/pdf-reading";
+import { researchPresentationArabic } from "../../locales/ar/research-presentation";
+import { reportPresentationArabic } from "../../locales/ar/report-presentation";
+import { botResearchArabic } from "../../locales/ar/bot-research";
+import { botControlsArabic } from "../../locales/ar/bot-controls";
+import { pdfReadingArabic } from "../../locales/ar/pdf-reading";
 import { nativePdfReadingCopy, nativeRecoveryCopy, nativeRecoveryFormat } from "./native-recovery-copy";
 import type { AdditionalAnswerLanguage } from "./native-answer-intent";
 import type { PresentationLanguage } from "../../shared/i18n/presentation-language";
@@ -48,7 +53,7 @@ import { emptyEvidenceAnswer, emptyPublicEvidenceDetail } from "../agent/empty-p
 import { nativeClientCatalogues } from "../../shared/i18n/native-client-copy";
 import { clientLanguageNames, clientLanguageControls, clientPresentationLanguage, clientPresentationMessages } from "../../shared/i18n/client-language";
 import { desktopNeutralCatalogues, desktopNeutralMessages } from "../../shared/i18n/desktop-neutral";
-import { isPresentationLanguage, presentationLanguage, systemPresentationLanguage } from "../../shared/i18n/presentation-language";
+import { canonicalPresentationLanguages, isPresentationLanguage, presentationLanguage, systemPresentationLanguage } from "../../shared/i18n/presentation-language";
 import { researchPresentationMessages } from "./presentation-messages";
 import { reportPresentationMessages } from "./report-messages";
 import { livePresentationLocale, recordedPresentationLocale } from "./presentation-language";
@@ -64,6 +69,14 @@ const financialResearch = ["citations", "apiAllocations", "apiTotal", "noRewards
 const neutralBot = ["weight", "sourcesOne", "sourcesOther", "fullTrace", "failure", "discordUsage"] as const;
 const englishControl = ["reviewBoundary"] as const;
 
+it.each(Object.entries(botControlsCatalogues))("lists every finite answer code in %s bot help and invalid-value guidance", (_locale, controls) => {
+  for (const code of canonicalPresentationLanguages) {
+    const exactCode = new RegExp(`(?<![\\p{L}\\p{N}_-])${code}(?![\\p{L}\\p{N}_-])`, "u");
+    expect(controls.languageHelp).toMatch(exactCode);
+    expect(controls.languageInvalid).toMatch(exactCode);
+  }
+});
+
 describe.each([
   ["de", researchPresentationGerman, reportPresentationGerman, botResearchGerman, botControlsGerman, pdfReadingGerman],
   ["ja", researchPresentationJapanese, reportPresentationJapanese, botResearchJapanese, botControlsJapanese, pdfReadingJapanese],
@@ -71,6 +84,7 @@ describe.each([
   ["hi", researchPresentationHindi, reportPresentationHindi, botResearchHindi, botControlsHindi, pdfReadingHindi],
   ["id", researchPresentationIndonesian, reportPresentationIndonesian, botResearchIndonesian, botControlsIndonesian, pdfReadingIndonesian],
   ["ru", researchPresentationRussian, reportPresentationRussian, botResearchRussian, botControlsRussian, pdfReadingRussian],
+  ["ar", researchPresentationArabic, reportPresentationArabic, botResearchArabic, botControlsArabic, pdfReadingArabic],
 ] as const)("prepared %s consumer catalogues", (_locale, research, report, bot, controls, pdf) => {
   it.each([
     ["research", research, researchPresentationEnglish], ["report", report, reportPresentationEnglish],
@@ -116,7 +130,7 @@ function originalRead(qualified = true) {
   return value;
 }
 
-describe.each(["de", "ja", "ko", "hi", "id", "ru"] as const)("prepared %s observed read and recovery boundaries", locale => {
+describe.each(["de", "ja", "ko", "hi", "id", "ru", "ar"] as const)("prepared %s observed read and recovery boundaries", locale => {
   const language = presentationCode(locale), copy = nativeRecoveryCopy(locale)!, pdf = nativePdfReadingCopy(locale)!;
   it("provides every bounded operational category without translating machine failure codes", () => {
     expect(Object.keys(copy.readFailure).sort()).toEqual(["publisher-verification-required", "pdf-extraction-unavailable",
@@ -269,13 +283,13 @@ it.each([undefined, null, "de-DE", "ja-JP", "ko-KR", "hi-IN", "id-ID", "en", "co
     expect(nativeRecoveryCopy(language)).toBeUndefined(); expect(nativePdfReadingCopy(language)).toBeUndefined();
   });
 
-describe.each(["de", "ja", "ko", "hi", "id", "ru"] as const)("actual %s neutral application consumers", locale => {
+describe.each(["de", "ja", "ko", "hi", "id", "ru", "ar"] as const)("actual %s neutral application consumers", locale => {
   const copy = nativeClientCatalogues[locale];
   const question = { de: "Antworte bitte auf Deutsch.", ja: "日本語で回答してください。", ko: "한국어로 답변해 주세요.",
-    hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia.", ru: "Ответьте по-русски." }[locale];
+    hi: "कृपया हिंदी में उत्तर दें।", id: "Tolong jawab dalam bahasa Indonesia.", ru: "Ответьте по-русски.", ar: "أجب بالعربية." }[locale];
   it("accepts exact codes and system labels without granting regional aliases output-language authority", () => {
     expect(presentationLanguage(locale)).toBe(locale); expect(isPresentationLanguage(locale)).toBe(true);
-    const regional = { de: "de-DE", ja: "ja-JP", ko: "ko-KR", hi: "hi-IN", id: "id-ID", ru: "ru-RU" }[locale];
+    const regional = { de: "de-DE", ja: "ja-JP", ko: "ko-KR", hi: "hi-IN", id: "id-ID", ru: "ru-RU", ar: "ar-SA" }[locale];
     expect(systemPresentationLanguage(regional)).toBe(locale); expect(clientPresentationLanguage(regional)).toBe(locale);
     expect(presentationLanguage(regional)).toBeUndefined(); expect(isPresentationLanguage(regional)).toBe(false);
     expect(botLanguage(locale)).toBe(locale); expect(botLanguage(regional)).toBeUndefined();

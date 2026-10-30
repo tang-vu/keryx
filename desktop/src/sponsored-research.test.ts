@@ -104,6 +104,20 @@ describe("native sponsored research UI", () => {
     for (const [name, call] of Object.entries(api)) if (name !== "researchSponsored") expect(call).not.toHaveBeenCalled();
   });
 
+  it.each(["نص عربي أصلي <literal> {count} USDC 0.000001 https://original.test/a?x=1", "Exact English original <literal> {count}"])(
+    "reads the original with automatic direction and unknown language: %s", async answer => {
+      research.mockResolvedValue({ ok: true, result: { ...result, answer } });
+      await mount(); await fill(); await act(async () => submit());
+      const prose = find(".sponsored-result .answer p");
+      expect(prose.textContent).toBe(answer);
+      expect(prose.getAttribute("lang")).toBe("und");
+      expect(prose.getAttribute("dir")).toBe("auto");
+      expect(prose.querySelector('bdi[dir="ltr"]')?.textContent).toBe("<literal> {count}");
+      expect(prose.querySelector("literal")).toBeNull();
+      expect(dom.window.document.body.textContent).toContain("Pending or planned rewards are not settled payments");
+      expect(research).toHaveBeenCalledTimes(1);
+    });
+
   it("shows a confirmed refusal and requires new public intent before a deliberate fresh request", async () => {
     research.mockResolvedValue({ ok: false, uncertain: false, message: "Sponsored quota is exhausted (HTTP 429)." });
     await mount(); await fill(); await act(async () => submit());

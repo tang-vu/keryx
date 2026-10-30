@@ -8,6 +8,7 @@ import type { dispatchMetadataCopy } from "./report-metadata";
 // catalogue or human approval of financial/trust terminology. All financial,
 // confidence, historical-network and original-bibliography wording stays English.
 const ordinaryLabels = {
+  ar: { title: "{question} — تقرير بحث Keryx", one: "مصدر مستشهد به", other: "مصادر مستشهد بها", serial: "سلسلة 2026 — العدد {serial}" },
   de: { title: "{question} — Keryx-Recherchebericht", one: "zitierte Quelle", other: "zitierte Quellen", serial: "Serie 2026 — Ausgabe {serial}" },
   ja: { title: "{question} — Keryx調査レポート", one: "件の引用出典", other: "件の引用出典", serial: "2026年シリーズ — 第{serial}号" },
   ko: { title: "{question} — Keryx 조사 보고서", one: "개 출처 인용", other: "개 출처 인용", serial: "2026 시리즈 — 제{serial}호" },
@@ -29,12 +30,16 @@ const ordinaryLabels = {
 
 const russianCounts = Object.freeze({ one: "источник процитирован", few: "источника процитировано", many: "источников процитировано", other: "источника процитировано" });
 const russianPlural = new Intl.PluralRules("ru");
+const arabicCounts = Object.freeze({ zero: "مصادر مستشهد بها", one: "مصدر مستشهد به", two: "مصدران مستشهد بهما",
+  few: "مصادر مستشهد بها", many: "مصدرًا مستشهدًا به", other: "مصدر مستشهد به" });
+const arabicPlural = new Intl.PluralRules("ar");
 
 function previewCopy(language: PresentationLanguage, count?: number) {
   if (language === "en") return createMessages("en");
   const base = ordinaryLabels[language];
-  const counted = language === "ru" && count !== undefined
-    ? russianCounts[russianPlural.select(count) as keyof typeof russianCounts] : undefined;
+  const counted = count === undefined ? undefined : language === "ru"
+    ? russianCounts[russianPlural.select(count) as keyof typeof russianCounts] : language === "ar"
+      ? arabicCounts[arabicPlural.select(count) as keyof typeof arabicCounts] : undefined;
   const labels = counted ? { ...base, one: counted, other: counted } : base;
   const catalogue: MessageCatalogue = {
     "reportDispatch.title": labels.title,
@@ -61,7 +66,7 @@ function previewCopy(language: PresentationLanguage, count?: number) {
 }
 
 const copies = { en: previewCopy("en"), vi: previewCopy("vi"), pt: previewCopy("pt"), es: previewCopy("es"), fr: previewCopy("fr"), "zh-Hans": previewCopy("zh-Hans"),
-  de: previewCopy("de"), ja: previewCopy("ja"), ko: previewCopy("ko"), hi: previewCopy("hi"), id: previewCopy("id"), ru: previewCopy("ru") };
+  de: previewCopy("de"), ja: previewCopy("ja"), ko: previewCopy("ko"), hi: previewCopy("hi"), id: previewCopy("id"), ru: previewCopy("ru"), ar: previewCopy("ar") };
 
 /** Call only after public visibility admission. Reads this retained answer/trace,
  * never a question, request, viewer preference, provider, store or receipt.
@@ -74,13 +79,13 @@ export function recordedReportPreview(run: Pick<QueryRun, "answer" | "trace">) {
     answerLanguage, presentationLanguage,
     title: (question: string) => copy("reportDispatch.title", { question }),
     serial: (serial: string) => copy("reportSocial.serial", { serial }),
-    citedLabel: (count: number) => (presentationLanguage === "ru" ? previewCopy("ru", count) : copy)(count === 1 ? "reportSocial.cited.one" : "reportSocial.cited.other"),
+    citedLabel: (count: number) => (presentationLanguage === "ru" || presentationLanguage === "ar" ? previewCopy(presentationLanguage, count) : copy)(count === 1 ? "reportSocial.cited.one" : "reportSocial.cited.other"),
     metadataCopy: (input: Parameters<typeof dispatchMetadataCopy>[0]) => {
       const history = input.historical ? "historical" : "current";
       const kind = input.bibliographic ? "bibliography" : input.confidence !== undefined ? "confidence" : "plain";
       const form = input.count === 1 ? "one" : "other";
       const values = { ...input, confidence: input.confidence ?? "" };
-      const countedCopy = presentationLanguage === "ru" ? previewCopy("ru", input.count) : copy;
+      const countedCopy = presentationLanguage === "ru" || presentationLanguage === "ar" ? previewCopy(presentationLanguage, input.count) : copy;
       return {
         description: countedCopy(`reportMetadata.${history}.${kind}.${form}`, values),
         openGraph: countedCopy(`reportMetadata.og.${history}.${kind}.${form}`, values),
