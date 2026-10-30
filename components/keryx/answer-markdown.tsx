@@ -30,13 +30,30 @@ const CITATION_RE = /\[(S\d+)\]/g;
 // including inside real markup; neither opening nor closing may consume them.
 const INLINE_RE = /(\*\*(?!\u200b)(?:\*\u200b|[^*])+\*(?!\u200b)\*(?!\u200b)|\*(?!\u200b)(?:\*\u200b|[^*])+\*(?!\u200b)|`(?!\u200b)(?:`\u200b|[^`])+`(?!\u200b))/g;
 
+/** Technical delimiters inside an RTL original still have literal LTR syntax.
+ * Isolate complete adjacent tokens without changing text or assigning a language. */
+function renderOriginalTechnicalText(text: string): ReactNode {
+  const token = String.raw`(?:https?://[^\s“”<>]+|<[^<>\r\n]+>|\{[^{}\r\n]+\})`;
+  const matches = [...text.matchAll(new RegExp(`${token}(?:[ \\t]+${token})*`, "gu"))];
+  if (!matches.length) return text;
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  for (const match of matches) {
+    if (match.index! > cursor) nodes.push(text.slice(cursor, match.index));
+    nodes.push(<bdi key={match.index} dir="ltr">{match[0]}</bdi>);
+    cursor = match.index! + match[0].length;
+  }
+  if (cursor < text.length) nodes.push(text.slice(cursor));
+  return nodes;
+}
+
 /** Clip the original span from the unsplit text to each displayed fragment. */
 function renderOriginalQuotes(text: string, original: ReturnType<typeof quotedOriginalSpan>, offset: number): ReactNode {
   if (!original) return text;
   const start = Math.max(0, original.start - offset);
   const end = Math.min(text.length, original.end - offset);
   if (end <= start) return text;
-  return <>{text.slice(0, start)}<span lang="und">{text.slice(start, end)}</span>{text.slice(end)}</>;
+  return <>{text.slice(0, start)}<bdi lang="und" dir="auto">{renderOriginalTechnicalText(text.slice(start, end))}</bdi>{text.slice(end)}</>;
 }
 
 function renderInline(
@@ -75,6 +92,7 @@ function renderInline(
       return (
         <code
           key={key}
+          dir="ltr"
           className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[0.82em] text-ink [overflow-wrap:anywhere]"
         >
           {renderOriginalQuotes(part.slice(1, -1), original, start + 1)}
@@ -111,7 +129,7 @@ function renderCitationText(
     // Compact readers can hand off to the full report instead of an inspector.
     // Without a handler, keep the reference visible without promising an action.
     if (!onCitationClick) {
-      nodes.push(<span lang="en" key={`${keyBase}-c${idx}`} title={title} className="mx-0.5 font-mono text-[0.72em] font-semibold text-seal">
+      nodes.push(<span lang="en" dir="ltr" key={`${keyBase}-c${idx}`} title={title} className="mx-0.5 font-mono text-[0.72em] font-semibold text-seal">
         [{marker.replace(/\D/g, "") || marker}]
       </span>);
       last = m.index + m[0].length;
@@ -121,6 +139,7 @@ function renderCitationText(
     nodes.push(
       <button
         lang="en"
+        dir="ltr"
         key={`${keyBase}-c${idx}`}
         type="button"
         onClick={(event) => onCitationClick?.(marker, event.currentTarget)}
@@ -172,10 +191,12 @@ export function AnswerMarkdown({
     3,
   );
   return (
-    <div lang={language ?? "und"} className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink [overflow-wrap:anywhere]", className)}>
+    // Every admitted prose language is currently LTR. Unknown content may choose
+    // its reading direction without acquiring a generated-prose language label.
+    <div lang={language ?? "und"} dir={language ? "ltr" : "auto"} className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink [overflow-wrap:anywhere]", className)}>
       {blocks.map(({ trimmed, heading, list }, bi) => {
         if (list) return (
-          <ul key={`b${bi}`} className="list-disc space-y-3 pl-6">
+          <ul key={`b${bi}`} className="list-disc space-y-3 ps-6">
             {list.map((item, index) => <li key={`b${bi}-l${index}`}>
               {renderWithCitations(item, citations, `b${bi}-l${index}`, onCitationClick)}
             </li>)}

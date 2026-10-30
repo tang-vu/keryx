@@ -24,6 +24,7 @@ function textRenderer() {
       ["Noto Sans SC", "noto-sans-sc-regular.otf"],
       ["Noto Sans Devanagari", "noto-sans-devanagari-regular.ttf"],
       ["Noto Sans Math", "noto-sans-math-regular.ttf"],
+      ["Noto Sans Arabic", "noto-sans-arabic-regular.ttf"],
     ]) {
       const fontfile = join(process.cwd(), "app/fonts/og", filename);
       await access(fontfile, constants.R_OK);
@@ -35,12 +36,13 @@ function textRenderer() {
   return bundledRenderer;
 }
 
-/** Satori has glyph coverage without full Devanagari shaping. Rasterize only
- * that script with the local Pango/HarfBuzz renderer before ImageResponse layout.
+/** Arabic joins and Devanagari clusters need script shaping. Rasterize these
+ * scripts with the local Pango/HarfBuzz renderer before ImageResponse layout.
  * Call after public visibility admission; this helper reads no records or URLs.
- * Other scripts keep the original text node and existing layout byte-for-byte. */
+ * Other scripts keep the original text node and existing layout byte-for-byte.
+ * Glyph selection never establishes generated-prose language evidence. */
 export async function publicPreviewText(text: string, options: PreviewTextOptions): Promise<string | ReactElement> {
-  if (!/[\p{Script=Devanagari}।॥]/u.test(text)) return text;
+  if (!/[\p{Script=Devanagari}\p{Script=Arabic}।॥]/u.test(text)) return text;
   return publicPreviewFittedText(text, options);
 }
 
@@ -62,7 +64,7 @@ export async function publicPreviewFittedText(text: string, options: PreviewText
   const sharp = await textRenderer();
   const input = {
     text: `<span foreground="${options.color}" insert_hyphens="false">${literal}</span>`,
-    font: `Noto Sans,Noto Sans JP,Noto Sans KR,Noto Sans SC,Noto Sans Devanagari,Noto Sans Math ${options.fontSize}`,
+    font: `Noto Sans,Noto Sans JP,Noto Sans KR,Noto Sans SC,Noto Sans Devanagari,Noto Sans Math${/\p{Script=Arabic}/u.test(display) ? ",Noto Sans Arabic" : ""} ${options.fontSize}`,
     rgba: true, width: options.maxWidth, wrap: "word-char" as const,
   };
   let raster = await sharp({ text: { ...input, dpi: 72 }, limitInputPixels: 1_500_000 })

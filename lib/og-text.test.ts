@@ -29,6 +29,17 @@ it("shapes Hindi clusters within the independent browser-reference width instead
   expect(metadata.width).toBe(props.width); expect(metadata.height).toBe(props.height);
 });
 
+it("shapes original Arabic letters and marks without changing the original alternative text", async () => {
+  const text = "هذه إجابة عربية موثقة. البحث والمصادر والأدلة";
+  const { props, png } = image(await publicPreviewText(text, { ...bounds, fontSize: 36, maxWidth: 1000 }));
+  expect(props.alt).toBe(text);
+  // Independently captured Chromium/Pango font qualification is about647px;
+  // the current bundled faces show missing-glyph boxes over two lines.
+  expect(props.width).toBeGreaterThan(600); expect(props.width).toBeLessThan(700);
+  expect(props.height).toBeGreaterThan(25); expect(props.height).toBeLessThan(75);
+  expect((await sharp(png).metadata()).width).toBe(props.width);
+});
+
 it("renders markup-like original text literally without applying an injected Pango colour", async () => {
   const text = '<span foreground="red">हिन्दी</span> & <b>उत्तर</b>';
   const { props, png } = image(await publicPreviewText(text, bounds));

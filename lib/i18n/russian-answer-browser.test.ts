@@ -89,7 +89,7 @@ it.each([320, 1366].flatMap(width => [18, 27].map(font => ({ width, font }))))(
       expect(await page.locator("main [lang='ru']").count()).toBeGreaterThan(0);
       expect(await page.locator("html").getAttribute("lang")).toBe("fr");
       expect(await page.locator("main p").first().evaluate(element => getComputedStyle(element).fontSize)).toBe(`${font}px`);
-      const original = page.locator('span[lang="und"]').filter({ hasText: quote });
+      const original = page.locator('bdi[lang="und"][dir="auto"]').filter({ hasText: quote });
       expect(await original.innerText()).toContain(quote);
       expect(await page.locator("main").innerText()).toContain(statement);
       expect(await page.locator("main").innerText()).toContain(target);
