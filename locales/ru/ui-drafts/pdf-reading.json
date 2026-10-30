@@ -1,0 +1,28 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/pdf-reading.ts",
+  "sourceSha256": "eeb3bf3c3bc763f6771e486d44c9f6fd779e4e0354b7b50f917e8cdca8be1ebc",
+  "entries": {
+    "summary": {
+      "source": "PDF text extraction visited {read} of {total} pages.",
+      "text": "При извлечении текста PDF обработано страниц: {read} из {total}."
+    },
+    "emptyPages": {
+      "source": "No text was extracted from visited pages {pages}. These pages may be scanned, blank or otherwise unavailable to the text reader.",
+      "text": "Не получен текст с посещённых страниц {pages}. Это могут быть сканы, пустые страницы или страницы, иначе недоступные средству чтения текста."
+    },
+    "limit": {
+      "source": "A page or character limit stopped text extraction before the document was complete. Read the remaining original pages directly before making whole-document conclusions; a character cutoff can leave the last visited page incomplete. Retain this snapshot for comparison.",
+      "text": "Извлечение текста остановлено из-за ограничения числа страниц или символов до завершения документа. Прежде чем делать выводы обо всём документе, прочитайте оставшиеся исходные страницы напрямую; ограничение символов может оборвать последнюю посещённую страницу. Сохраните этот снимок для сравнения."
+    },
+    "textOnly": {
+      "source": "Only the available PDF text layer was read; images and figures were not interpreted.",
+      "text": "Прочитан только доступный текстовый слой PDF; изображения и рисунки не интерпретировались."
+    },
+    "recovery": {
+      "source": "Check the same original version. If needed, obtain a text-layer PDF, publisher text or a separately OCR-processed copy; this run did not perform OCR.",
+      "text": "Проверьте ту же исходную версию. При необходимости получите PDF с текстовым слоем, текст издателя или отдельно обработанную с помощью OCR копию; в этом запуске OCR не выполнялось."
+    }
+  }
+}

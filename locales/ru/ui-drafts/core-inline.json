@@ -1,0 +1,72 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "lib/i18n/messages.ts",
+  "sourceSha256": "37ac7ad5e8f7daf683952524320809f87a27d21ed650959de267137fd2cc6c2d",
+  "entries": {
+    "researchEntry.ask": {
+      "source": "Ask Keryx",
+      "text": "Спросить Keryx"
+    },
+    "researchEntry.question": {
+      "source": "What do you want to know?",
+      "text": "Что вы хотите узнать?"
+    },
+    "researchEntry.placeholder": {
+      "source": "Ask a question worth reading for...",
+      "text": "Задайте вопрос для исследования…"
+    },
+    "researchEntry.depth": {
+      "source": "Research depth",
+      "text": "Глубина исследования"
+    },
+    "researchEntry.quick": {
+      "source": "quick",
+      "text": "быстрое"
+    },
+    "researchEntry.deep": {
+      "source": "deep",
+      "text": "подробное"
+    },
+    "researchEntry.researching": {
+      "source": "Researching...",
+      "text": "Идёт исследование…"
+    },
+    "researchEntry.moreOptions": {
+      "source": "More options",
+      "text": "Дополнительные параметры"
+    },
+    "researchEntry.model": {
+      "source": "AI model",
+      "text": "Модель ИИ"
+    },
+    "researchEntry.savedReports": {
+      "source": "My saved reports",
+      "text": "Мои сохранённые отчёты"
+    },
+    "researchEntry.keyboardHint": {
+      "source": "Enter for a new line · Ctrl/⌘ + Enter to ask",
+      "text": "Enter — новая строка · Ctrl/⌘ + Enter — задать вопрос"
+    },
+    "researchEntry.metadataLookup": {
+      "source": "Look up free paper metadata",
+      "text": "Найти бесплатные метаданные статьи"
+    },
+    "researchEntry.metadataLookupLabel": {
+      "source": "Look up free paper metadata: title, authors or DOI",
+      "text": "Найти бесплатные метаданные статьи: название, авторы или DOI"
+    },
+    "researchEntry.quickHint": {
+      "source": "Quick: up to 2 focused reads.",
+      "text": "Быстрый режим: не более 2 целевых чтений."
+    },
+    "researchEntry.deepHint": {
+      "source": "Deep: up to 4 reads, including marketplace discovery and a coverage check.",
+      "text": "Подробный режим: не более 4 чтений, включая поиск в каталоге источников и проверку охвата."
+    },
+    "researchEntry.examplesLabel": {
+      "source": "Example questions",
+      "text": "Примеры вопросов"
+    }
+  }
+}

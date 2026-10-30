@@ -1,0 +1,56 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ui-preference.ts",
+  "sourceSha256": "cd4d2e048a95204a23cfd64efd0957e7b38345618c94e467f575e98b4354ac19",
+  "entries": {
+    "language": {
+      "source": "Interface language",
+      "text": "Язык интерфейса"
+    },
+    "previewNotice": {
+      "source": "Preview: machine draft, not human reviewed. Some interface text remains in English. Critical payment, consent and legal text stays in English.",
+      "text": "Предпросмотр: машинный черновик без проверки человеком. Часть интерфейса остаётся на английском. Ключевые тексты о платежах, согласии и правовых условиях остаются на английском."
+    },
+    "checking": {
+      "source": "Checking language preference…",
+      "text": "Проверяем языковую настройку…"
+    },
+    "saving": {
+      "source": "Saving account language…",
+      "text": "Сохраняем язык для учётной записи…"
+    },
+    "accountSaved": {
+      "source": "Language saved to this account.",
+      "text": "Язык сохранён для этой учётной записи."
+    },
+    "browserSaved": {
+      "source": "Language saved in this browser.",
+      "text": "Язык сохранён в этом браузере."
+    },
+    "unavailable": {
+      "source": "Account language is unavailable. Your browser choice still applies.",
+      "text": "Языковая настройка учётной записи недоступна. Выбор в браузере продолжает действовать."
+    },
+    "memoryOnly": {
+      "source": "Language applies here. Browser storage is unavailable; it may not survive this session.",
+      "text": "Язык применяется здесь. Хранилище браузера недоступно; настройка может не сохраниться после завершения сеанса."
+    },
+    "loadFailed": {
+      "source": "Translation could not load. English is shown; select the language to retry.",
+      "text": "Не удалось загрузить перевод. Отображается английский; выберите язык, чтобы повторить попытку."
+    },
+    "answerLanguageTitle": {
+      "source": "Request an answer language",
+      "text": "Как запросить язык ответа"
+    },
+    "answerLanguageBody": {
+      "source": "Include a language instruction in your question. Interface language changes menus and labels; saved answers keep their original text.",
+      "text": "Укажите нужный язык в своём вопросе. Язык интерфейса меняет меню и подписи; сохранённые ответы остаются в исходном виде."
+    },
+    "answerLanguageExamples": {
+      "source": "Supported language instructions",
+      "text": "Поддерживаемые языковые инструкции"
+    }
+  }
+}

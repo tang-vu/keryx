@@ -1,0 +1,456 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-directory.ts",
+  "sourceSha256": "65d55254a6598bc0ae3b73b25bf1d70eb005ef6c7bfcf07ac98c7aaac189abae",
+  "entries": {
+    "sourceFeed.fullText": {
+      "source": "Full text in feed",
+      "text": "Полный текст в ленте"
+    },
+    "sourceFeed.excerpt": {
+      "source": "Excerpt in feed",
+      "text": "Отрывок в ленте"
+    },
+    "sourceFeed.abstract": {
+      "source": "Abstract in feed",
+      "text": "Аннотация в ленте"
+    },
+    "sourceFeed.metadata": {
+      "source": "Metadata only",
+      "text": "Только метаданные"
+    },
+    "sourceFeed.untitled": {
+      "source": "Untitled feed item",
+      "text": "Запись ленты без названия"
+    },
+    "sourceFeed.kicker": {
+      "source": "Free public reference",
+      "text": "Бесплатный общедоступный источник"
+    },
+    "sourceFeed.topics": {
+      "source": "Topics",
+      "text": "Темы"
+    },
+    "sourceFeed.compactItems": {
+      "source": "From the retained feed",
+      "text": "Из сохранённой ленты"
+    },
+    "sourceFeed.empty": {
+      "source": "No feed items retained in this snapshot.",
+      "text": "В этом снимке нет сохранённых записей ленты."
+    },
+    "sourceFeed.collectedUnavailable": {
+      "source": "Feed collection time unavailable",
+      "text": "Время сбора ленты недоступно"
+    },
+    "sourceFeed.matching.one": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "Подходящие сохранённые записи ленты · {count} из {total}"
+    },
+    "sourceFeed.latest.one": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "Последние сохранённые записи ленты · в снимке: {count}"
+    },
+    "sourceFeed.matching.other": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "Подходящие сохранённые записи ленты · {count} из {total}"
+    },
+    "sourceFeed.latest.other": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "Последние сохранённые записи ленты · в снимке: {count}"
+    },
+    "sourceFeed.more.one": {
+      "source": "Show {count} more retained item",
+      "text": "Показать ещё сохранённые записи: {count}"
+    },
+    "sourceFeed.more.other": {
+      "source": "Show {count} more retained items",
+      "text": "Показать ещё сохранённые записи: {count}"
+    },
+    "sourceFeed.collected": {
+      "source": "Feed collected {date}",
+      "text": "Лента собрана: {date}"
+    },
+    "sourceCited.kicker": {
+      "source": "Cited public document",
+      "text": "Цитируемый общедоступный документ"
+    },
+    "sourceCited.readUnavailable": {
+      "source": "Read time not recorded",
+      "text": "Время чтения не записано"
+    },
+    "sourceCited.citationUnavailable": {
+      "source": "Citation date not recorded",
+      "text": "Дата цитирования не записана"
+    },
+    "sourceCited.inspect": {
+      "source": "Inspect cited answer →",
+      "text": "Посмотреть ответ с цитатой →"
+    },
+    "sourceCited.scope.full_text": {
+      "source": "Full text recorded",
+      "text": "Сохранён полный текст"
+    },
+    "sourceCited.scopeBounded.full_text": {
+      "source": "Full text recorded · Bounded extraction",
+      "text": "Сохранён полный текст · Извлечение ограничено"
+    },
+    "sourceCited.scope.excerpt": {
+      "source": "Excerpt recorded",
+      "text": "Сохранён отрывок"
+    },
+    "sourceCited.scopeBounded.excerpt": {
+      "source": "Excerpt recorded · Bounded extraction",
+      "text": "Сохранён отрывок · Извлечение ограничено"
+    },
+    "sourceCited.scope.abstract": {
+      "source": "Abstract recorded",
+      "text": "Сохранена аннотация"
+    },
+    "sourceCited.scopeBounded.abstract": {
+      "source": "Abstract recorded · Bounded extraction",
+      "text": "Сохранена аннотация · Извлечение ограничено"
+    },
+    "sourceCited.scope.metadata_only": {
+      "source": "Metadata only",
+      "text": "Только метаданные"
+    },
+    "sourceCited.scopeBounded.metadata_only": {
+      "source": "Metadata only · Bounded extraction",
+      "text": "Только метаданные · Извлечение ограничено"
+    },
+    "sourceCited.scope.unrecorded": {
+      "source": "Reading scope not recorded",
+      "text": "Объём прочитанного не записан"
+    },
+    "sourceCited.scopeBounded.unrecorded": {
+      "source": "Reading scope not recorded · Bounded extraction",
+      "text": "Объём прочитанного не записан · Извлечение ограничено"
+    },
+    "sourceCited.observed": {
+      "source": "Read observed {date}",
+      "text": "Чтение зафиксировано: {date}"
+    },
+    "sourceCited.lastCited": {
+      "source": "Last cited {date}",
+      "text": "Последнее цитирование: {date}"
+    },
+    "sourceExplore.topics": {
+      "source": "Topics",
+      "text": "Темы"
+    },
+    "sourceExplore.ask": {
+      "source": "Ask with this source →",
+      "text": "Задать вопрос с этим источником →"
+    },
+    "sourcePreview.title": {
+      "source": "Explore the sources",
+      "text": "Изучите источники"
+    },
+    "sourcePreview.browse": {
+      "source": "Browse the source library →",
+      "text": "Открыть библиотеку источников →"
+    },
+    "sourcePreview.citationUnavailable": {
+      "source": "Citation history unavailable",
+      "text": "История цитирования недоступна"
+    },
+    "sourcePreview.referenceUnavailable": {
+      "source": "Public reference count unavailable",
+      "text": "Число общедоступных источников недоступно"
+    },
+    "sourcePreview.creatorUnavailable": {
+      "source": "Creator listing count unavailable",
+      "text": "Число предложений авторов недоступно"
+    },
+    "sourcePreview.snapshotsUnavailable": {
+      "source": "Public reference snapshots could not be loaded. Reload to retry.",
+      "text": "Не удалось загрузить снимки общедоступных источников. Обновите страницу, чтобы повторить попытку."
+    },
+    "sourcePreview.empty": {
+      "source": "No retained sources are listed yet. Keryx can still discover supported public documents in response to a question.",
+      "text": "Сохранённых источников пока нет. Keryx по-прежнему может находить поддерживаемые общедоступные документы в ответ на вопрос."
+    },
+    "sourcePreview.documents.one": {
+      "source": "{count} recently cited public document",
+      "text": "Недавно цитируемые общедоступные документы: {count}"
+    },
+    "sourcePreview.feeds.one": {
+      "source": "{count} public feed",
+      "text": "Общедоступные ленты: {count}"
+    },
+    "sourcePreview.creators.one": {
+      "source": "{count} creator listing",
+      "text": "Предложения авторов: {count}"
+    },
+    "sourcePreview.documents.other": {
+      "source": "{count} recently cited public documents",
+      "text": "Недавно цитируемые общедоступные документы: {count}"
+    },
+    "sourcePreview.feeds.other": {
+      "source": "{count} public feeds",
+      "text": "Общедоступные ленты: {count}"
+    },
+    "sourcePreview.creators.other": {
+      "source": "{count} creator listings",
+      "text": "Предложения авторов: {count}"
+    },
+    "sourceFilter.title": {
+      "source": "Find a source",
+      "text": "Найти источник"
+    },
+    "sourceFilter.topic": {
+      "source": "Topic",
+      "text": "Тема"
+    },
+    "sourceFilter.allTopics": {
+      "source": "All topics",
+      "text": "Все темы"
+    },
+    "sourceFilter.collection": {
+      "source": "Collection",
+      "text": "Коллекция"
+    },
+    "sourceFilter.allCollections": {
+      "source": "All collections",
+      "text": "Все коллекции"
+    },
+    "sourceFilter.sort": {
+      "source": "Sort",
+      "text": "Сортировка"
+    },
+    "sourceFilter.collectionOrder": {
+      "source": "Collection order",
+      "text": "Порядок коллекций"
+    },
+    "sourceFilter.nameOrder": {
+      "source": "Name A–Z",
+      "text": "По названию (A–Z)"
+    },
+    "sourceFilter.latest": {
+      "source": "Latest recorded observation",
+      "text": "Сначала новые записи"
+    },
+    "sourceFilter.paperFilters": {
+      "source": "Paper filters · selects research-paper records",
+      "text": "Фильтры статей · выбирают записи научных работ"
+    },
+    "sourceFilter.author": {
+      "source": "Author",
+      "text": "Автор"
+    },
+    "sourceFilter.authorPlaceholder": {
+      "source": "Author name",
+      "text": "Имя автора"
+    },
+    "sourceFilter.doi": {
+      "source": "Exact DOI",
+      "text": "Точный DOI"
+    },
+    "sourceFilter.find": {
+      "source": "Find sources",
+      "text": "Найти источники"
+    },
+    "sourceFilter.topicsLabel": {
+      "source": "Browse source topics",
+      "text": "Просмотреть темы источников"
+    },
+    "sourceFilter.clear": {
+      "source": "Clear filters",
+      "text": "Сбросить фильтры"
+    },
+    "sourceFilter.placeholder": {
+      "source": "Try {database}, agents or {domain}",
+      "text": "Попробуйте {database}, агентов или {domain}"
+    },
+    "sourceFilter.doiPlaceholder": {
+      "source": "{identifier} or {url}",
+      "text": "{identifier} или {url}"
+    },
+    "sourceCited.unclassifiedBounded": {
+      "source": " · Bounded extraction",
+      "text": " · Извлечение ограничено"
+    },
+    "sourceLibrary.title": {
+      "source": "Sources — research papers, public references and creator listings",
+      "text": "Источники — научные работы, общедоступные материалы и предложения авторов"
+    },
+    "sourceLibrary.name": {
+      "source": "Keryx Sources",
+      "text": "Источники Keryx"
+    },
+    "sourceLibrary.crumb": {
+      "source": "Sources",
+      "text": "Источники"
+    },
+    "sourceLibrary.kicker": {
+      "source": "The reading library",
+      "text": "Библиотека для чтения"
+    },
+    "sourceLibrary.papers": {
+      "source": "Research papers",
+      "text": "Научные работы"
+    },
+    "sourceLibrary.citedDocuments": {
+      "source": "Recently cited documents",
+      "text": "Недавно цитируемые документы"
+    },
+    "sourceLibrary.unavailable": {
+      "source": "Unavailable",
+      "text": "Недоступно"
+    },
+    "sourceLibrary.publicHistory": {
+      "source": "From public answer history",
+      "text": "Из истории общедоступных ответов"
+    },
+    "sourceLibrary.publicReferences": {
+      "source": "Public references",
+      "text": "Общедоступные источники"
+    },
+    "sourceLibrary.creatorListings": {
+      "source": "Creator listings",
+      "text": "Предложения авторов"
+    },
+    "sourceLibrary.directoryUnavailable": {
+      "source": "Part of the directory could not be loaded. Available records are shown below; a missing count is not an empty catalog.",
+      "text": "Часть каталога не удалось загрузить. Ниже показаны доступные записи; отсутствие числа не означает, что каталог пуст."
+    },
+    "sourceLibrary.reviewQuestion": {
+      "source": "Working on a literature review?",
+      "text": "Готовите обзор литературы?"
+    },
+    "sourceLibrary.reviewNotice": {
+      "source": "Save papers, record screening notes and prepare a comparison. Your list stays on this browser.",
+      "text": "Сохраняйте работы, записывайте заметки об отборе и готовьте сравнение. Ваш список остаётся в этом браузере."
+    },
+    "sourceLibrary.openWorkspace": {
+      "source": "Open literature workspace →",
+      "text": "Открыть рабочее пространство для литературы →"
+    },
+    "sourceLibrary.freeDiscovery": {
+      "source": "Original records · free discovery",
+      "text": "Исходные записи · бесплатный поиск"
+    },
+    "sourceLibrary.papersEmpty": {
+      "source": "No starter paper matches these filters. You can search the repositories below.",
+      "text": "Ни одна работа из начального списка не соответствует фильтрам. Можно выполнить поиск в репозиториях ниже."
+    },
+    "sourceLibrary.emptyTitle": {
+      "source": "No sources match these filters",
+      "text": "Нет источников, соответствующих фильтрам"
+    },
+    "sourceLibrary.clear": {
+      "source": "Clear filters",
+      "text": "Сбросить фильтры"
+    },
+    "sourceLibrary.citedTitle": {
+      "source": "Cited in past answers",
+      "text": "Цитировались в предыдущих ответах"
+    },
+    "sourceLibrary.citationsUnavailable": {
+      "source": "Public citation history is temporarily unavailable. Reload to retry; other source collections remain available.",
+      "text": "История общедоступных цитат временно недоступна. Обновите страницу, чтобы повторить попытку; другие коллекции источников остаются доступны."
+    },
+    "sourceLibrary.feedNotice": {
+      "source": "These are retained feed snapshots. Keryx also discovers supported websites and PDFs when you ask a question; this directory is not a complete index of the web. A feed excerpt, abstract or video description may omit the full work. Listing here does not certify content accuracy.",
+      "text": "Это сохранённые снимки лент. Когда вы задаёте вопрос, Keryx также находит поддерживаемые сайты и PDF; этот каталог не является полным индексом интернета. Отрывок из ленты, аннотация или описание видео могут не содержать полную работу. Наличие в каталоге не подтверждает достоверность содержания."
+    },
+    "sourceLibrary.referencesUnavailable": {
+      "source": "Public references are temporarily unavailable. Try this page again to inspect the retained catalog.",
+      "text": "Общедоступные источники временно недоступны. Повторно откройте эту страницу, чтобы просмотреть сохранённый каталог."
+    },
+    "sourceLibrary.ask": {
+      "source": "ask a question",
+      "text": "задать вопрос"
+    },
+    "sourceLibrary.creatorsUnavailable": {
+      "source": "Creator listings are temporarily unavailable. Public references have their own availability and free-reading status.",
+      "text": "Предложения авторов временно недоступны. Доступность общедоступных источников и возможность их бесплатного чтения определяются отдельно."
+    },
+    "sourceLibrary.creatorsEmpty": {
+      "source": "No creator listings are recorded yet.",
+      "text": "Предложений авторов пока не записано."
+    },
+    "sourceLibrary.unanswered": {
+      "source": "See what the corpus couldn't answer",
+      "text": "Посмотреть, на что корпус источников не смог ответить"
+    },
+    "sourceLibrary.emphasis": {
+      "source": "explore.",
+      "text": "изучить."
+    },
+    "sourceLibrary.heading": {
+      "source": "Sources to {emphasis}",
+      "text": "Источники, которые можно {emphasis}"
+    },
+    "sourceLibrary.paperRecords.one": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "Работы · найденных записей: {count} · текст работ не прочитан"
+    },
+    "sourceLibrary.feedItems.one": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "Сохранённые ленты · записей лент: {count}"
+    },
+    "sourceLibrary.paperMatches.one": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "Подходящих работ: {count} · записей в начальном списке: {total}. Фильтры автора, года и DOI применяются к этой библиографии."
+    },
+    "sourceLibrary.documentsMatched.one": {
+      "source": "{count} documents match this view.",
+      "text": "Документов, соответствующих этому представлению: {count}."
+    },
+    "sourceLibrary.paperRecords.other": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "Работы · найденных записей: {count} · текст работ не прочитан"
+    },
+    "sourceLibrary.feedItems.other": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "Сохранённые ленты · записей лент: {count}"
+    },
+    "sourceLibrary.paperMatches.other": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "Подходящих работ: {count} · записей в начальном списке: {total}. Фильтры автора, года и DOI применяются к этой библиографии."
+    },
+    "sourceLibrary.documentsMatched.other": {
+      "source": "{count} documents match this view.",
+      "text": "Документов, соответствующих этому представлению: {count}."
+    },
+    "sourceLibrary.feedItemsUnavailable": {
+      "source": "Retained feeds · item count unavailable",
+      "text": "Сохранённые ленты · число записей недоступно"
+    },
+    "sourceLibrary.morePapers.one": {
+      "source": "Show {count} more paper references",
+      "text": "Показать ещё ссылки на работы: {count}"
+    },
+    "sourceLibrary.moreCited.one": {
+      "source": "Show {count} more cited documents",
+      "text": "Показать ещё цитируемые документы: {count}"
+    },
+    "sourceLibrary.moreFeeds.one": {
+      "source": "Show {count} more retained feeds",
+      "text": "Показать ещё сохранённые ленты: {count}"
+    },
+    "sourceLibrary.morePapers.other": {
+      "source": "Show {count} more paper references",
+      "text": "Показать ещё ссылки на работы: {count}"
+    },
+    "sourceLibrary.moreCited.other": {
+      "source": "Show {count} more cited documents",
+      "text": "Показать ещё цитируемые документы: {count}"
+    },
+    "sourceLibrary.moreFeeds.other": {
+      "source": "Show {count} more retained feeds",
+      "text": "Показать ещё сохранённые ленты: {count}"
+    },
+    "sourceLibrary.externalIndexes": {
+      "source": "Explore broader scholarly indexes: {openAlex} · {doaj}. These external links open their indexes; Keryx makes no background queries to them.",
+      "text": "Ищите в более широких научных индексах: {openAlex} · {doaj}. Эти внешние ссылки открывают соответствующие индексы; Keryx не отправляет в них фоновые запросы."
+    },
+    "sourceLibrary.feedEmpty": {
+      "source": "No public feed snapshots are retained yet. You can still {ask} with a public source URL.",
+      "text": "Снимков общедоступных лент пока не сохранено. Вы по-прежнему можете {ask}, указав URL общедоступного источника."
+    }
+  }
+}

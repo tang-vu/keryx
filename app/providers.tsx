@@ -19,7 +19,7 @@ import { loadUiPreview } from "@/lib/i18n/ui-preview-catalogues";
 
 // Explicit machine-draft interface previews. Critical payment, consent and
 // legal copy retains its English authority and existing review requirements.
-const shellPreviewLocales = ["en", "vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const;
+const shellPreviewLocales = ["en", "vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const;
 
 function LocaleBoundary({ children }: { children: React.ReactNode }) {
   const { address, isConnected } = useAccount();

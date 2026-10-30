@@ -39,7 +39,7 @@ export function generateUiPreviews(check = false) {
   const sharedNamespaces = new Set(["core-inline", ...[...read("lib/i18n/messages.ts")
     .matchAll(/from "\.\.\/\.\.\/locales\/en\/([^"/]+)"/g)].map(match => match[1])]);
   const digests = {};
-  for (const locale of ["vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"]) {
+  for (const locale of ["vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"]) {
     const namespaces = {}, messages = {};
     const inputs = [];
     const partial = !["vi", "zh-Hans"].includes(locale);
@@ -87,7 +87,7 @@ export function generateUiPreviews(check = false) {
     const file = `locales/generated/${locale}-ui-preview.ts`;
     if (check) {
       if (read(file).replace(/\r\n?/g, "\n") !== output) throw Error(`${file} is stale; run node scripts/generate-ui-previews.mjs`);
-    } else {
+    } else if (!existsSync(path.join(root, file)) || read(file).replace(/\r\n?/g, "\n") !== output) {
       mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
       writeFileSync(path.join(root, file), output);
     }
@@ -102,7 +102,8 @@ export function generateUiPreviews(check = false) {
       const shellFile = `locales/${locale}/ui-shell-preview.ts`;
       if (check) {
         if (read(shellFile).replace(/\r\n?/g, "\n") !== shellOutput) throw Error(`${shellFile} is stale; regenerate UI previews`);
-      } else writeFileSync(path.join(root, shellFile), shellOutput);
+      } else if (!existsSync(path.join(root, shellFile)) || read(shellFile).replace(/\r\n?/g, "\n") !== shellOutput)
+        writeFileSync(path.join(root, shellFile), shellOutput);
     }
     digests[locale] = digest;
   }

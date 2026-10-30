@@ -151,6 +151,7 @@ const loaders = {
   ko: () => import("@/locales/ko/ui-shell-preview").then(module => module.uiShellPreview),
   hi: () => import("@/locales/hi/ui-shell-preview").then(module => module.uiShellPreview),
   id: () => import("@/locales/id/ui-shell-preview").then(module => module.uiShellPreview),
+  ru: () => import("@/locales/ru/ui-shell-preview").then(module => module.uiShellPreview),
 };
 /** No target import for English or a disabled/unsupported locale. Only the selected chunk loads. */
 export async function loadUiShellCatalogue(locale: UiLocale, enabled: readonly UiLocale[], report = reportShellFallback,

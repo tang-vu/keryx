@@ -65,9 +65,10 @@ beforeAll(async () => {
 }, 30_000);
 afterAll(async () => { await browser?.close(); });
 
-it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(locale =>
+it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const).flatMap(locale =>
   [320, 1366].map(width => ({ locale, width, font: 16 }))), { locale: "fr" as const, width: 320, font: 24 },
-  { locale: "pt-BR" as const, width: 320, font: 32 }])("keeps the native $locale first-use journey and unsent originals intact at $width with $font px text", async ({ locale, width, font }) => {
+  { locale: "pt-BR" as const, width: 320, font: 32 },
+  { locale: "ru" as const, width: 320, font: 32 }, { locale: "ru" as const, width: 1366, font: 32 }])("keeps the native $locale first-use journey and unsent originals intact at $width with $font px text", async ({ locale, width, font }) => {
   const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
   const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: "reduce", serviceWorkers: "block" });
   const errors: string[] = [], requests: Array<{ path: string; method: string }> = [], unexpected: string[] = [];
@@ -153,9 +154,21 @@ it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatM
       expect(buttons.every(rect => rect.height >= 44 && rect.left >= 0 && rect.right <= width && rect.top >= 0 && rect.bottom <= 844)).toBe(true);
       expect(await dialog.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
       if (font > 16 && index === 1) {
-        expect(await reader.evaluate(element => element.clientHeight > 44 && element.scrollHeight > element.clientHeight)).toBe(true);
-        await reader.focus(); const top = await reader.evaluate(element => element.scrollTop);
-        await page.keyboard.press("PageDown"); await expect.poll(() => reader.evaluate(element => element.scrollTop)).toBeGreaterThan(top);
+        const geometry = await reader.evaluate(element => ({ height: element.clientHeight, contentHeight: element.scrollHeight }));
+        expect(geometry.height).toBeGreaterThan(44);
+        // Desktop fallback fonts can fit the complete Russian paragraph without scrolling.
+        // Narrow enlarged-text cases must still exercise keyboard scrolling.
+        if (width === 320) expect(geometry.contentHeight).toBeGreaterThan(geometry.height);
+        if (geometry.contentHeight > geometry.height) {
+          await reader.focus(); const top = await reader.evaluate(element => element.scrollTop);
+          await page.keyboard.press("PageDown"); await expect.poll(() => reader.evaluate(element => element.scrollTop)).toBeGreaterThan(top);
+        } else {
+          expect(await reader.evaluate(element => {
+            const bounds = element.getBoundingClientRect(), range = document.createRange();
+            range.selectNodeContents(element.querySelector("p")!);
+            return Array.from(range.getClientRects()).every(rect => rect.top >= bounds.top && rect.bottom <= bounds.bottom);
+          }), "A guide that needs no scrolling must show its complete paragraph").toBe(true);
+        }
       }
       if (nativeScreenshots) await page.screenshot({ path: join(nativeScreenshots, `guide-native-${frame}-step-${index + 1}.png`) });
       const action = dialog.getByRole("button", { name: message(index === 3 ? "researchTour.done" : "researchTour.next"), exact: true });

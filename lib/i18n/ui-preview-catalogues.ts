@@ -12,6 +12,7 @@ const loaders = {
   ko: () => import("@/locales/generated/ko-ui-preview").then(module => module.default),
   hi: () => import("@/locales/generated/hi-ui-preview").then(module => module.default),
   id: () => import("@/locales/generated/id-ui-preview").then(module => module.default),
+  ru: () => import("@/locales/generated/ru-ui-preview").then(module => module.default),
 };
 const cache = new Map<UiLocale, Promise<UiPreview>>();
 const loaded = new Map<UiLocale, UiPreview>();
