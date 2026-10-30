@@ -198,7 +198,7 @@ describe("actual reviewed Chinese sentence and renderer boundaries", () => {
       expect(readCompletedAnswerLanguage({ ...completed, language }, run.id, run.answer)).toBeUndefined();
     expect(finalizeAnswerLanguage({ ...built, rendererLanguage: "zh-Hans", proposals: structuredClone(built.rows) })).toBeUndefined();
     const html = renderToStaticMarkup(createElement(AnswerMarkdown, { text: built.answer, citations: [], language: packet.language }));
-    expect(html).toContain('lang="zh-Hans"'); expect(html).toContain(`<span lang="und">“${quote}”</span>`);
+    expect(html).toContain('lang="zh-Hans"'); expect(html).toContain(`<bdi lang="und" dir="auto">“${quote}”</bdi>`);
     built.rows[0].statement += " Changed."; expect(reviewedStatementLanguage(built.rows[0])).toBeUndefined();
   });
   it("keeps evidence gaps, unavailable assessment and confidence limitations in native copy", () => {
