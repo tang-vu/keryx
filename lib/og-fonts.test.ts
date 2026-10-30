@@ -158,7 +158,8 @@ describe("local public preview glyphs", () => {
       const response = await render({ params: Promise.resolve({ id: "synthetic-public-arabic-original" }) });
       const bytes = Buffer.from(await response.arrayBuffer());
       expect(bytes.readUInt32BE(16)).toBe(1200); expect(bytes.readUInt32BE(20)).toBe(630);
-      expect((await fonts.mock.results.at(-1)!.value).some(font => font.name === "Keryx Sans Arabic")).toBe(true);
+      const selectedFonts: Awaited<ReturnType<typeof publicPreviewFonts>> = await fonts.mock.results.at(-1)!.value;
+      expect(selectedFonts.some(font => font.name === "Keryx Sans Arabic")).toBe(true);
       expect(textRender.mock.calls.some(([text]) => text === original)).toBe(true);
       if (process.env.KERYX_PREVIEW_CAPTURE_DIR)
         await writeFile(join(process.env.KERYX_PREVIEW_CAPTURE_DIR, `${name}-arabic-original.png`), bytes);
