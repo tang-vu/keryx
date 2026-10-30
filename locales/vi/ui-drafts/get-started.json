@@ -378,7 +378,7 @@
     },
     "download.desktopSteps.1": {
       "source": "Run the installer in your normal Windows user session. Install WebView2 Runtime if it is missing. For the portable build, extract and keep the whole folder together.",
-      "text": "Chạy bộ cài trong phiên người dùng Windows thông thường. Cài WebView2 Runtime nếu thiếu. Với bản di động, giải nén và giữ toàn bộ thư mục cùng nhau."
+      "text": "Chạy bộ cài trong phiên người dùng Windows thông thường. Cài WebView2 Runtime nếu thiếu. Với bản ZIP chạy trực tiếp (portable), giải nén và giữ nguyên toàn bộ thư mục."
     },
     "download.desktopSteps.2": {
       "source": "Open Keryx Operator and choose or create a private local workspace. Prepare a task or inspect an existing task's receipts.",
