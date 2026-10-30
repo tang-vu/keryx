@@ -82,7 +82,7 @@
     },
     "navigation.entryBody": {
       "source": "Use Keryx in your browser, on Windows, from an AI assistant or inside your own tools. Find the right setup and see what each option supports.",
-      "text": "Nutzen Sie Keryx im Browser, unter Windows, über einen KI-Assistenten oder in Ihren eigenen Werkzeugen. Finden Sie die passende Einrichtung und erfahren Sie, was jede Option unterstützt."
+      "text": "Nutze Keryx im Browser, unter Windows, über einen KI-Assistenten oder in deinen eigenen Werkzeugen. Finde die passende Einrichtung und erfahre, was jede Option unterstützt."
     },
     "common.status": {
       "source": "Service status",
@@ -118,7 +118,7 @@
     },
     "start.faq.2.answer": {
       "source": "Use the web app in a supported browser. The downloadable Operator alpha currently supports Windows x64. There are no Keryx mobile, macOS or Linux installers offered here; compatible MCP and API clients have their own platform requirements.",
-      "text": "Nutzen Sie die Web-App in einem unterstützten Browser. Die herunterladbare Alpha-Version von Operator unterstützt derzeit Windows x64. Hier werden keine Keryx-Installationsprogramme für Mobilgeräte, macOS oder Linux angeboten; kompatible MCP- und API-Clients haben eigene Plattformanforderungen."
+      "text": "Nutze die Web-App in einem unterstützten Browser. Die herunterladbare Alpha-Version von Operator unterstützt derzeit Windows x64. Hier werden keine Keryx-Installationsprogramme für Mobilgeräte, macOS oder Linux angeboten; kompatible MCP- und API-Clients haben eigene Plattformanforderungen."
     },
     "surfaces.0.title": {
       "source": "Web app",
@@ -130,7 +130,7 @@
     },
     "surfaces.0.body": {
       "source": "Ask a shareable question, inspect source choices and reopen a cited report.",
-      "text": "Stellen Sie eine Frage, die Sie teilen können, prüfen Sie die Quellenauswahl und öffnen Sie einen Bericht mit Quellenangaben erneut."
+      "text": "Stelle eine Frage, die du teilen kannst, prüfe die Quellenauswahl und öffne einen Bericht mit Quellenangaben erneut."
     },
     "surfaces.0.action": {
       "source": "Open the web app",
@@ -158,7 +158,7 @@
     },
     "surfaces.2.body": {
       "source": "Highlight text, ask from your toolbar and keep the original source links close by.",
-      "text": "Markieren Sie Text, stellen Sie Fragen über die Symbolleiste und behalten Sie die Links zu den Originalquellen im Blick."
+      "text": "Markiere Text, stelle Fragen über die Symbolleiste und behalte die Links zu den Originalquellen im Blick."
     },
     "surfaces.2.action": {
       "source": "Install the extension",
@@ -174,7 +174,7 @@
     },
     "surfaces.3.body": {
       "source": "Bring Keryx tools into Codex, Claude Code, Cursor or a compatible MCP client.",
-      "text": "Binden Sie Keryx-Werkzeuge in Codex, Claude Code, Cursor oder einen kompatiblen MCP-Client ein."
+      "text": "Binde Keryx-Werkzeuge in Codex, Claude Code, Cursor oder einen kompatiblen MCP-Client ein."
     },
     "surfaces.3.action": {
       "source": "Choose an MCP connection",
@@ -190,7 +190,7 @@
     },
     "surfaces.4.body": {
       "source": "Integrate cited research and streamed source decisions into your own application.",
-      "text": "Integrieren Sie Recherche mit Quellenangaben und laufend übertragene Quellenentscheidungen in Ihre eigene Anwendung."
+      "text": "Integriere Recherche mit Quellenangaben und laufend übertragene Quellenentscheidungen in deine eigene Anwendung."
     },
     "surfaces.4.action": {
       "source": "Explore the API",
@@ -206,7 +206,7 @@
     },
     "surfaces.5.body": {
       "source": "Inspect Operator tasks or use the documented research and buyer commands.",
-      "text": "Prüfen Sie Operator-Aufgaben oder nutzen Sie die dokumentierten Recherche- und Kaufbefehle."
+      "text": "Prüfe Operator-Aufgaben oder nutze die dokumentierten Recherche- und Kaufbefehle."
     },
     "surfaces.5.action": {
       "source": "Set up the CLI",
@@ -222,7 +222,7 @@
     },
     "surfaces.6.body": {
       "source": "Ask Keryx from a chat or a community workspace.",
-      "text": "Fragen Sie Keryx in einem Chat oder im Arbeitsbereich einer Community."
+      "text": "Frage Keryx in einem Chat oder im Arbeitsbereich einer Community."
     },
     "surfaces.6.action": {
       "source": "Find your chat app",
