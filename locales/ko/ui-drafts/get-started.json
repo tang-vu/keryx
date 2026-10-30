@@ -79,6 +79,154 @@
     "common.copied": {
       "source": "Copied",
       "text": "복사됨"
+    },
+    "navigation.entryBody": {
+      "source": "Use Keryx in your browser, on Windows, from an AI assistant or inside your own tools. Find the right setup and see what each option supports.",
+      "text": "브라우저, Windows, AI 도우미 또는 직접 만든 도구에서 Keryx를 사용하세요. 알맞은 설정 방법을 찾고 각 옵션에서 지원하는 기능을 확인하세요."
+    },
+    "common.status": {
+      "source": "Service status",
+      "text": "서비스 상태"
+    },
+    "common.version": {
+      "source": "Version",
+      "text": "버전"
+    },
+    "common.release": {
+      "source": "Release notes & checksums",
+      "text": "릴리스 노트 및 체크섬"
+    },
+    "start.accountTitle": {
+      "source": "An account is optional for the trial",
+      "text": "체험에는 계정이 필수가 아닙니다"
+    },
+    "start.accountAction": {
+      "source": "Sign in & account setup",
+      "text": "로그인 및 계정 설정"
+    },
+    "start.faqTitle": {
+      "source": "Before you install",
+      "text": "설치하기 전에"
+    },
+    "start.faq.0.question": {
+      "source": "Which option should I choose?",
+      "text": "어떤 옵션을 선택해야 하나요?"
+    },
+    "start.faq.2.question": {
+      "source": "Can I use Keryx on my phone, Mac or Linux?",
+      "text": "휴대전화, Mac 또는 Linux에서 Keryx를 사용할 수 있나요?"
+    },
+    "start.faq.2.answer": {
+      "source": "Use the web app in a supported browser. The downloadable Operator alpha currently supports Windows x64. There are no Keryx mobile, macOS or Linux installers offered here; compatible MCP and API clients have their own platform requirements.",
+      "text": "지원되는 브라우저에서 웹 앱을 사용하세요. 다운로드 가능한 Operator 알파 버전은 현재 Windows x64를 지원합니다. 여기서는 모바일, macOS 또는 Linux용 Keryx 설치 프로그램을 제공하지 않습니다. 호환되는 MCP 및 API 클라이언트에는 각각 별도의 플랫폼 요구 사항이 있습니다."
+    },
+    "surfaces.0.title": {
+      "source": "Web app",
+      "text": "웹 앱"
+    },
+    "surfaces.0.tag": {
+      "source": "No install",
+      "text": "설치 불필요"
+    },
+    "surfaces.0.body": {
+      "source": "Ask a shareable question, inspect source choices and reopen a cited report.",
+      "text": "공유할 수 있는 질문을 하고, 출처 선택을 확인하고, 인용이 포함된 보고서를 다시 열어 보세요."
+    },
+    "surfaces.0.action": {
+      "source": "Open the web app",
+      "text": "웹 앱 열기"
+    },
+    "surfaces.1.title": {
+      "source": "Windows desktop",
+      "text": "Windows 데스크톱"
+    },
+    "surfaces.1.tag": {
+      "source": "Operator alpha",
+      "text": "Operator alpha"
+    },
+    "surfaces.1.action": {
+      "source": "Download & install",
+      "text": "다운로드 및 설치"
+    },
+    "surfaces.2.title": {
+      "source": "Browser extension",
+      "text": "브라우저 확장 프로그램"
+    },
+    "surfaces.2.tag": {
+      "source": "Manual install",
+      "text": "수동 설치"
+    },
+    "surfaces.2.body": {
+      "source": "Highlight text, ask from your toolbar and keep the original source links close by.",
+      "text": "텍스트를 선택하고 도구 모음에서 질문하며 원본 출처 링크를 가까이 두세요."
+    },
+    "surfaces.2.action": {
+      "source": "Install the extension",
+      "text": "확장 프로그램 설치"
+    },
+    "surfaces.3.title": {
+      "source": "MCP for AI assistants",
+      "text": "AI 도우미용 MCP"
+    },
+    "surfaces.3.tag": {
+      "source": "Remote or local",
+      "text": "원격 또는 로컬"
+    },
+    "surfaces.3.body": {
+      "source": "Bring Keryx tools into Codex, Claude Code, Cursor or a compatible MCP client.",
+      "text": "Codex, Claude Code, Cursor 또는 호환 MCP 클라이언트에 Keryx 도구를 추가하세요."
+    },
+    "surfaces.3.action": {
+      "source": "Choose an MCP connection",
+      "text": "MCP 연결 선택"
+    },
+    "surfaces.4.title": {
+      "source": "API for developers",
+      "text": "개발자용 API"
+    },
+    "surfaces.4.tag": {
+      "source": "OpenAI compatible",
+      "text": "OpenAI 호환"
+    },
+    "surfaces.4.body": {
+      "source": "Integrate cited research and streamed source decisions into your own application.",
+      "text": "인용을 포함한 리서치와 실시간으로 전달되는 출처 선택 결정을 직접 만든 앱에 통합하세요."
+    },
+    "surfaces.4.action": {
+      "source": "Explore the API",
+      "text": "API 살펴보기"
+    },
+    "surfaces.5.title": {
+      "source": "Command line",
+      "text": "명령줄"
+    },
+    "surfaces.5.tag": {
+      "source": "From source",
+      "text": "소스 코드에서 사용"
+    },
+    "surfaces.5.body": {
+      "source": "Inspect Operator tasks or use the documented research and buyer commands.",
+      "text": "Operator 작업을 확인하거나 문서에 안내된 리서치 및 구매 명령을 사용하세요."
+    },
+    "surfaces.5.action": {
+      "source": "Set up the CLI",
+      "text": "CLI 설정"
+    },
+    "surfaces.6.title": {
+      "source": "Chat bots",
+      "text": "채팅 봇"
+    },
+    "surfaces.6.tag": {
+      "source": "Telegram · Discord · Slack",
+      "text": "Telegram · Discord · Slack"
+    },
+    "surfaces.6.body": {
+      "source": "Ask Keryx from a chat or a community workspace.",
+      "text": "채팅이나 커뮤니티 작업 공간에서 Keryx에 질문하세요."
+    },
+    "surfaces.6.action": {
+      "source": "Find your chat app",
+      "text": "채팅 앱 찾기"
     }
   }
 }

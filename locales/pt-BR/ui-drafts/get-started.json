@@ -79,6 +79,154 @@
     "common.copied": {
       "source": "Copied",
       "text": "Copiado"
+    },
+    "navigation.entryBody": {
+      "source": "Use Keryx in your browser, on Windows, from an AI assistant or inside your own tools. Find the right setup and see what each option supports.",
+      "text": "Use o Keryx no navegador, no Windows, em um assistente de IA ou nas suas próprias ferramentas. Encontre a configuração adequada e veja o que cada opção oferece."
+    },
+    "common.status": {
+      "source": "Service status",
+      "text": "Status do serviço"
+    },
+    "common.version": {
+      "source": "Version",
+      "text": "Versão"
+    },
+    "common.release": {
+      "source": "Release notes & checksums",
+      "text": "Notas da versão e somas de verificação"
+    },
+    "start.accountTitle": {
+      "source": "An account is optional for the trial",
+      "text": "A conta é opcional para o teste"
+    },
+    "start.accountAction": {
+      "source": "Sign in & account setup",
+      "text": "Entrar e configurar a conta"
+    },
+    "start.faqTitle": {
+      "source": "Before you install",
+      "text": "Antes de instalar"
+    },
+    "start.faq.0.question": {
+      "source": "Which option should I choose?",
+      "text": "Qual opção devo escolher?"
+    },
+    "start.faq.2.question": {
+      "source": "Can I use Keryx on my phone, Mac or Linux?",
+      "text": "Posso usar o Keryx no celular, Mac ou Linux?"
+    },
+    "start.faq.2.answer": {
+      "source": "Use the web app in a supported browser. The downloadable Operator alpha currently supports Windows x64. There are no Keryx mobile, macOS or Linux installers offered here; compatible MCP and API clients have their own platform requirements.",
+      "text": "Use o aplicativo web em um navegador compatível. A versão alfa do Operator disponível para download atualmente suporta Windows x64. Não há instaladores do Keryx para celular, macOS ou Linux aqui; os clientes MCP e API compatíveis têm seus próprios requisitos de plataforma."
+    },
+    "surfaces.0.title": {
+      "source": "Web app",
+      "text": "Aplicativo web"
+    },
+    "surfaces.0.tag": {
+      "source": "No install",
+      "text": "Sem instalação"
+    },
+    "surfaces.0.body": {
+      "source": "Ask a shareable question, inspect source choices and reopen a cited report.",
+      "text": "Faça uma pergunta que possa compartilhar, confira a seleção de fontes e reabra um relatório com citações."
+    },
+    "surfaces.0.action": {
+      "source": "Open the web app",
+      "text": "Abrir o aplicativo web"
+    },
+    "surfaces.1.title": {
+      "source": "Windows desktop",
+      "text": "Aplicativo para Windows"
+    },
+    "surfaces.1.tag": {
+      "source": "Operator alpha",
+      "text": "Operator alpha"
+    },
+    "surfaces.1.action": {
+      "source": "Download & install",
+      "text": "Baixar e instalar"
+    },
+    "surfaces.2.title": {
+      "source": "Browser extension",
+      "text": "Extensão do navegador"
+    },
+    "surfaces.2.tag": {
+      "source": "Manual install",
+      "text": "Instalação manual"
+    },
+    "surfaces.2.body": {
+      "source": "Highlight text, ask from your toolbar and keep the original source links close by.",
+      "text": "Selecione um texto, pergunte pela barra de ferramentas e mantenha os links das fontes originais por perto."
+    },
+    "surfaces.2.action": {
+      "source": "Install the extension",
+      "text": "Instalar a extensão"
+    },
+    "surfaces.3.title": {
+      "source": "MCP for AI assistants",
+      "text": "MCP para assistentes de IA"
+    },
+    "surfaces.3.tag": {
+      "source": "Remote or local",
+      "text": "Remoto ou local"
+    },
+    "surfaces.3.body": {
+      "source": "Bring Keryx tools into Codex, Claude Code, Cursor or a compatible MCP client.",
+      "text": "Adicione as ferramentas do Keryx ao Codex, Claude Code, Cursor ou a um cliente MCP compatível."
+    },
+    "surfaces.3.action": {
+      "source": "Choose an MCP connection",
+      "text": "Escolher uma conexão MCP"
+    },
+    "surfaces.4.title": {
+      "source": "API for developers",
+      "text": "API para desenvolvedores"
+    },
+    "surfaces.4.tag": {
+      "source": "OpenAI compatible",
+      "text": "Compatível com OpenAI"
+    },
+    "surfaces.4.body": {
+      "source": "Integrate cited research and streamed source decisions into your own application.",
+      "text": "Integre pesquisa com citações e decisões sobre fontes transmitidas em tempo real ao seu próprio aplicativo."
+    },
+    "surfaces.4.action": {
+      "source": "Explore the API",
+      "text": "Explorar a API"
+    },
+    "surfaces.5.title": {
+      "source": "Command line",
+      "text": "Linha de comando"
+    },
+    "surfaces.5.tag": {
+      "source": "From source",
+      "text": "A partir do código-fonte"
+    },
+    "surfaces.5.body": {
+      "source": "Inspect Operator tasks or use the documented research and buyer commands.",
+      "text": "Inspecione tarefas do Operator ou use os comandos documentados de pesquisa e compra."
+    },
+    "surfaces.5.action": {
+      "source": "Set up the CLI",
+      "text": "Configurar a CLI"
+    },
+    "surfaces.6.title": {
+      "source": "Chat bots",
+      "text": "Bots de chat"
+    },
+    "surfaces.6.tag": {
+      "source": "Telegram · Discord · Slack",
+      "text": "Telegram · Discord · Slack"
+    },
+    "surfaces.6.body": {
+      "source": "Ask Keryx from a chat or a community workspace.",
+      "text": "Pergunte ao Keryx em um chat ou em um espaço de trabalho da comunidade."
+    },
+    "surfaces.6.action": {
+      "source": "Find your chat app",
+      "text": "Encontrar seu aplicativo de chat"
     }
   }
 }
