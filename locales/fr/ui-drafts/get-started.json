@@ -227,6 +227,86 @@
     "surfaces.6.action": {
       "source": "Find your chat app",
       "text": "Trouver votre application de discussion"
+    },
+    "download.title": {
+      "source": "Bring Keryx to your workflow.",
+      "text": "Intégrez Keryx à votre façon de travailler."
+    },
+    "download.desktopTitle": {
+      "source": "Keryx Operator for Windows",
+      "text": "Keryx Operator pour Windows"
+    },
+    "download.desktopTag": {
+      "source": "Windows x64 · Alpha",
+      "text": "Windows x64 · Alpha"
+    },
+    "download.desktopRequirements": {
+      "source": "Windows x64 and Microsoft Edge WebView2 Runtime. Node is bundled; a separate Node installation is not required. Updates are manual in this alpha.",
+      "text": "Windows x64 et Microsoft Edge WebView2 Runtime. Node est inclus ; aucune installation séparée de Node n’est nécessaire. Les mises à jour sont manuelles dans cette version alpha."
+    },
+    "download.installer": {
+      "source": "Choose Windows installer",
+      "text": "Choisir le programme d’installation Windows"
+    },
+    "download.portable": {
+      "source": "Choose portable ZIP",
+      "text": "Choisir l’archive ZIP portable"
+    },
+    "download.manifest": {
+      "source": "Release manifest and checksums",
+      "text": "Manifeste de version et sommes de contrôle"
+    },
+    "download.webview": {
+      "source": "Get WebView2 Runtime",
+      "text": "Obtenir WebView2 Runtime"
+    },
+    "download.desktopSteps.0": {
+      "source": "Open the release assets and choose the -setup.exe installer or -win32-x64.zip portable build. Review the matching -release.json manifest and -SHA256SUMS.txt checksums.",
+      "text": "Ouvrez les fichiers de la version et choisissez le programme d’installation -setup.exe ou la version portable -win32-x64.zip. Vérifiez le manifeste -release.json et les sommes de contrôle -SHA256SUMS.txt correspondants."
+    },
+    "download.desktopSteps.1": {
+      "source": "Run the installer in your normal Windows user session. Install WebView2 Runtime if it is missing. For the portable build, extract and keep the whole folder together.",
+      "text": "Exécutez le programme d’installation dans votre session Windows habituelle. Installez WebView2 Runtime s’il manque. Pour la version portable, extrayez l’archive et conservez le dossier complet."
+    },
+    "download.extensionTitle": {
+      "source": "Keryx in your browser",
+      "text": "Keryx dans votre navigateur"
+    },
+    "download.extensionTag": {
+      "source": "Chromium · Manual install",
+      "text": "Chromium · Installation manuelle"
+    },
+    "download.extensionBody": {
+      "source": "Ask about selected text from the toolbar or right-click menu. Inspect the research trace, open cited sources and export recorded references from a completed report.",
+      "text": "Posez une question sur le texte sélectionné depuis la barre d’outils ou le menu contextuel. Examinez le déroulement de la recherche, ouvrez les sources citées et exportez les références enregistrées d’un rapport terminé."
+    },
+    "download.extensionDownload": {
+      "source": "Download extension ZIP",
+      "text": "Télécharger le ZIP de l’extension"
+    },
+    "download.extensionRequirements": {
+      "source": "Use Chrome or Edge on desktop, or another compatible Chromium browser. For the ZIP, follow the unpacked-install steps below and enable Developer mode. The public Chrome Web Store listing is also available; check its displayed version before installing.",
+      "text": "Utilisez Chrome ou Edge sur ordinateur, ou un autre navigateur Chromium compatible. Pour le ZIP, suivez les étapes d’installation de l’extension non empaquetée ci-dessous et activez le mode développeur (Developer mode). La fiche publique du Chrome Web Store est également disponible ; vérifiez la version affichée avant l’installation."
+    },
+    "download.extensionSteps.0": {
+      "source": "Download and extract the extension ZIP. The extracted directory contains manifest.json directly.",
+      "text": "Téléchargez et extrayez le ZIP de l’extension. Le fichier manifest.json se trouve directement dans le dossier extrait."
+    },
+    "download.extensionSteps.1": {
+      "source": "Open chrome://extensions in Chrome or edge://extensions in Edge, then turn on Developer mode.",
+      "text": "Ouvrez chrome://extensions dans Chrome ou edge://extensions dans Edge, puis activez le mode développeur (Developer mode)."
+    },
+    "download.extensionSteps.2": {
+      "source": "Choose Load unpacked and select the extracted directory containing manifest.json. Pin Keryx to your toolbar.",
+      "text": "Choisissez Charger l’extension non empaquetée (Load unpacked), puis sélectionnez le dossier extrait contenant manifest.json. Épinglez Keryx à votre barre d’outils."
+    },
+    "download.alternativeTitle": {
+      "source": "Use Keryx without a download",
+      "text": "Utilisez Keryx sans téléchargement"
+    },
+    "download.alternativeBody": {
+      "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
+      "text": "L’application web fonctionne dans les navigateurs sur ordinateur et sur mobile. Les assistants IA peuvent se connecter via le MCP distant ; les développeurs peuvent utiliser l’API hébergée."
     }
   }
 }

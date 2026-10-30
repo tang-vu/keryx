@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import type { Browser, Page } from "playwright";
+import type { Browser, Locator, Page } from "playwright";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { preparedLocales, uiLocaleNames } from "../lib/i18n/locales";
 import { productGuideCopy } from "../locales/en/product-guide";
 import { answerLanguageInstructions } from "../shared/i18n/answer-language-instructions";
 import { setupCopy } from "../locales/en/get-started";
+import { installationLinks } from "../lib/public-installation";
 
 /** Real compiled pages and language controls; no research, payment or external requests. */
 export async function checkUiPreviews(browser: Browser, base: string, output?: string) {
@@ -49,6 +50,66 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
     if (output) await platform.screenshot({ path: resolve(output, `${locale}-${width}-setup-platform.png`) });
     await summary.press("Space");
     assert.equal(await platform.getAttribute("open"), null);
+  };
+  const checkDownloadPage = async (page: Page, locale: typeof locales[number], width: number) => {
+    const entries = drafts[locale]["get-started"].entries;
+    const copy = setupCopy.download;
+    const checkLeaf = async (scope: Locator, key: string, original: string) => {
+      const text = entries[key]?.text ?? original;
+      const leaf = scope.getByText(text, { exact: true });
+      assert.equal(await leaf.count(), 1, `${locale}/${width} download ${key}`);
+      const language = text === original ? "en" : locale;
+      assert.equal(await leaf.evaluate(element => element.closest("[lang]")?.getAttribute("lang")), language);
+      if (locale === "ar")
+        assert.equal(await leaf.evaluate(element => getComputedStyle(element).direction), language === "ar" ? "rtl" : "ltr");
+    };
+    await checkLeaf(page.locator("main h1"), "download.title", copy.title);
+    for (const [id, fields, steps] of [
+      ["desktop", ["desktopTitle", "desktopTag", "desktopRequirements", "installer", "portable", "manifest", "webview"], copy.desktopSteps],
+      ["extension", ["extensionTitle", "extensionTag", "extensionBody", "extensionDownload", "extensionRequirements"], copy.extensionSteps],
+    ] as const) {
+      const section = page.locator(`#${id}`);
+      for (const field of fields) await checkLeaf(section, `download.${field}`, copy[field]);
+      assert.equal(await section.locator("ol li").count(), steps.length);
+      for (const [index, original] of steps.entries()) {
+        const key = `download.${id}Steps.${index}`;
+        // Critical later steps remain canonical English under the current filter.
+        const text = id === "desktop" && index >= 2 || id === "extension" && index === 3 ? original : entries[key].text;
+        const leaf = section.locator("ol li").nth(index).locator("span");
+        assert.equal(await leaf.textContent(), text);
+        assert.equal(await leaf.getAttribute("lang"), text === original ? "en" : locale);
+        if (locale === "ar") assert.equal(await leaf.evaluate(element => getComputedStyle(element).direction), text === original ? "ltr" : "rtl");
+        const literals = text === original ? [] : [...original.matchAll(/-setup\.exe|-win32-x64\.zip|-release\.json|-SHA256SUMS\.txt|manifest\.json|chrome:\/\/extensions|edge:\/\/extensions|Developer mode|Load unpacked/gu)]
+          .map(match => match[0]).filter(token => text.includes(token)).sort();
+        assert.deepEqual((await leaf.locator("bdi").allTextContents()).sort(), literals);
+        for (const token of await leaf.locator("bdi").all()) {
+          assert.equal(await token.getAttribute("lang"), "en");
+          assert.equal(await token.evaluate(element => getComputedStyle(element).direction), "ltr");
+          assert.equal(await token.evaluate(element => getComputedStyle(element).whiteSpace), "nowrap");
+        }
+      }
+    }
+    for (const field of ["alternativeTitle", "alternativeBody"] as const)
+      await checkLeaf(page.locator("main"), `download.${field}`, copy[field]);
+    for (const original of [copy.body, copy.desktopBody, copy.desktopBoundary, copy.desktopVersion,
+      copy.extensionVersion, copy.extensionBoundary]) {
+      const leaf = page.getByText(original, { exact: true });
+      assert.equal(await leaf.count(), 1);
+      assert.equal(await leaf.evaluate(element => element.closest("[lang]")?.getAttribute("lang")), "en");
+    }
+    assert.deepEqual(await page.locator("#desktop a").evaluateAll(links => links.map(link => link.getAttribute("href"))), [
+      installationLinks.installer, installationLinks.portable, installationLinks.release,
+      installationLinks.manifest, installationLinks.webview, `${installationLinks.docs}desktop-alpha.md`,
+    ]);
+    assert.deepEqual(await page.locator("#extension a").evaluateAll(links => links.map(link => link.getAttribute("href"))), [
+      installationLinks.extensionSource, installationLinks.extensionStore,
+      "https://github.com/tang-vu/keryx/blob/main/extension/README.md",
+    ]);
+    assert.equal(await page.locator('nav a[aria-current="page"]').getAttribute("href"), "/download");
+    assert((await page.title()).includes(copy.metadata), "Download metadata retains English authority");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `${locale}/${width} download overflow`);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-download.png`), fullPage: true });
   };
   const results = [];
   for (const width of [390, 1366]) {
@@ -146,6 +207,11 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
         await checkSetupPage(page, locale, width);
         await page.reload({ waitUntil: "networkidle" });
         await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["start.title"].text, exact: true }).waitFor();
+        await page.goto(`${base}/download`, { waitUntil: "networkidle" });
+        await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["download.title"].text, exact: true }).waitFor();
+        await checkDownloadPage(page, locale, width);
+        await page.reload({ waitUntil: "networkidle" });
+        await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["download.title"].text, exact: true }).waitFor();
         await page.goto(base, { waitUntil: "networkidle" });
         await page.locator('label[for="ask-question"]').filter({ hasText: expected }).waitFor();
       }
@@ -159,13 +225,21 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
           await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["start.title"].text, exact: true }).waitFor();
           await checkSetupPage(page, locale, 320);
         }
+        await page.goto(`${base}/download`, { waitUntil: "networkidle" });
+        for (const locale of locales) {
+          await select().selectOption(locale);
+          await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["download.title"].text, exact: true }).waitFor();
+          await checkDownloadPage(page, locale, 320);
+        }
         await select().selectOption("en");
       }
       assert.equal(askRequests, 0, "Language changes must never submit or sign research");
       assert.deepEqual(errors, [], "No browser runtime errors");
-      results.push({ width, locales: ["en", ...locales], routes: ["/", "/about", "/get-started"], errors, askRequests,
+      results.push({ width, locales: ["en", ...locales], routes: ["/", "/about", "/get-started", "/download"], errors, askRequests,
         setupChoices: { locales, surfaces: setupCopy.surfaces.length, originalDestinations: true,
           platformDisclosureKeyboard: true, widths: width === 390 ? [320, 390] : [1366] },
+        downloadGuidance: { locales, originalDestinations: true, technicalLiterals: true,
+          criticalEnglishRetained: true, reload: true, widths: width === 390 ? [320, 390] : [1366] },
         answerLanguageHelp: { locales, examples: answerLanguageInstructions.length, nativeLanguageTags: true,
           openedWithEnter: true, closedWithSpace: true, originalQuestionUnchanged: true } });
     } finally {
@@ -174,5 +248,5 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
     }
   }
   if (output) await writeFile(resolve(output, "result.json"), JSON.stringify(results, null, 2));
-  console.log(`PASS: ${locales.length} interface previews at 390/1366px, seven setup choices at 320/390/1366px, keyboard platform guidance, native answer-language instructions and keyboard help, About explanations, English legal copy, navigation, reload, exact drafts and English reset.`);
+  console.log(`PASS: ${locales.length} interface previews at 390/1366px, seven setup choices and download guidance at 320/390/1366px, exact installation destinations and step language, keyboard platform guidance, native answer-language instructions and keyboard help, About explanations, English legal copy, navigation, reload, exact drafts and English reset.`);
 }
