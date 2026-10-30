@@ -42,7 +42,7 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
   return <article className="min-w-0 space-y-4" aria-label={message("researchTurn.label", { question: turn.question })} data-testid="research-turn">
     <div className="kx-research-request ml-auto max-w-[90%] border border-line bg-paper-2 px-4 py-3 sm:px-6">
       <p className="font-mono text-[11px] uppercase tracking-wide text-ink-3"><UiMessage messageKey="researchTurn.requestSummary" values={{ payer: turn.payer, amount: fmtUsdc(state.budget) }} /></p>
-      <p lang="und" className="mt-1 whitespace-pre-wrap break-words font-serif text-lg text-ink">{turn.question}</p>
+      <p lang="und" dir="auto" className="mt-1 whitespace-pre-wrap break-words font-serif text-lg text-ink">{turn.question}</p>
     </div>
     <div className="min-w-0">
       {state.run && <div id={`answer-${turn.id}`} className="kx-research-answer">
@@ -57,14 +57,14 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
           </span>
           <div className="min-w-0 pt-1">
             <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-seal"><UiMessage messageKey="researchTurn.inProgress" /></p>
-            <p className="mt-2 break-words font-serif text-lg leading-relaxed sm:text-xl">{latestMessage != null ? <span lang="und">{latestMessage}</span> : <UiMessage messageKey="researchTurn.findingSources" />}</p>
+            <p className="mt-2 break-words font-serif text-lg leading-relaxed sm:text-xl">{latestMessage != null ? <span lang="und" dir="auto">{latestMessage}</span> : <UiMessage messageKey="researchTurn.findingSources" />}</p>
           </div>
         </div>
         <div className="kx-research-track" aria-hidden="true"><span /></div>
       </div>}
       {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2"><UiMessage messageKey="researchTurn.stoppedNotice" /></p>}
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        <p lang={state.error === researchRecoveryCopy.interrupted ? "en" : state.error != null ? "und" : undefined}>{state.error ?? <UiMessage messageKey="researchTurn.failed" />}</p>
+        <p lang={state.error === researchRecoveryCopy.interrupted ? "en" : state.error != null ? "und" : undefined} dir={state.error === researchRecoveryCopy.interrupted ? "ltr" : state.error != null ? "auto" : undefined}>{state.error ?? <UiMessage messageKey="researchTurn.failed" />}</p>
         {recoveryPath && <div className="mt-3 space-y-2">
           <a href={recoveryPath} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="break-all underline underline-offset-4"><UiMessage messageKey="reportActions.openSaved" /></a>
         </div>}

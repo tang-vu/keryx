@@ -1,5 +1,5 @@
 /** Prepared locales are not release authority. Only English UI currently ships. */
-export const preparedLocales = ["en", "vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const;
+export const preparedLocales = ["en", "vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const;
 export type UiLocale = typeof preparedLocales[number];
 export const shippedUiLocales: readonly UiLocale[] = ["en"];
 /** Native names remain recognizable while a different interface language is selected. */
@@ -9,6 +9,7 @@ export const uiLocaleNames: Readonly<Record<UiLocale, string>> = {
   fr: "Français (preview)", de: "Deutsch (preview)", ja: "日本語 (preview)",
   ko: "한국어 (preview)", hi: "हिन्दी (preview)", id: "Bahasa Indonesia (preview)",
   ru: "Русский (preview)",
+  ar: "العربية (preview)",
 };
 
 export function normalizeUiLocale(value: unknown): UiLocale | null {
@@ -19,7 +20,7 @@ export function normalizeUiLocale(value: unknown): UiLocale | null {
       return locale.script && locale.script !== "Latn" ? null : locale.language as UiLocale;
     }
     if (locale.language === "pt") return !locale.script || locale.script === "Latn" ? "pt-BR" : null;
-    const scripted = { ja: "Jpan", ko: "Kore", hi: "Deva", ru: "Cyrl" } as const;
+    const scripted = { ja: "Jpan", ko: "Kore", hi: "Deva", ru: "Cyrl", ar: "Arab" } as const;
     if (Object.hasOwn(scripted, locale.language)) {
       const language = locale.language as keyof typeof scripted;
       return !locale.script || locale.script === scripted[language] ? language : null;
@@ -62,4 +63,4 @@ export function negotiateUiLocale(preferences: LocalePreferences,
   return { locale: "en", source: "default" };
 }
 
-export function localeDirection(_locale: UiLocale): "ltr" { return "ltr"; }
+export function localeDirection(locale: UiLocale): "ltr" | "rtl" { return locale === "ar" ? "rtl" : "ltr"; }

@@ -1,0 +1,228 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/reports.ts",
+  "sourceSha256": "c382523e9b0216952efe118a5e28d1ba77c298f0c6bb7c38fe28d5b8e1ca2b5b",
+  "entries": {
+    "reportEvidence.title": {
+      "source": "Recorded evidence",
+      "text": "الأدلة المسجَّلة"
+    },
+    "reportEvidence.recorded": {
+      "source": "Targets with inspectable excerpts: {count}/{total}.",
+      "text": "محاور البحث ذات المقتطفات القابلة للفحص: {count}/{total}."
+    },
+    "reportEvidence.unavailable": {
+      "source": "This report has no stored excerpt ledger; target support cannot be inspected here.",
+      "text": "لا يتضمن هذا التقرير سجلًا محفوظًا للمقتطفات؛ ولا يمكن فحص دعم محاور البحث هنا."
+    },
+    "reportEvidence.notice": {
+      "source": "Excerpt presence and estimated support do not establish a complete or factually correct answer.",
+      "text": "وجود المقتطفات وتقدير الدعم لا يثبتان اكتمال الإجابة أو صحتها الواقعية."
+    },
+    "reportEvidence.inspectCount": {
+      "source": "Targets with missing excerpts or a low recorded support estimate: {count}.",
+      "text": "محاور البحث التي تفتقر إلى مقتطفات أو لها تقدير دعم مسجَّل منخفض: {count}."
+    },
+    "reportEvidence.inspect": {
+      "source": "Inspect targets and prepare a follow-up",
+      "text": "افحص محاور البحث وأعدّ سؤال متابعة"
+    },
+    "reportEvidence.targetUnavailable": {
+      "source": "Excerpt ledger unavailable",
+      "text": "سجل المقتطفات غير متاح"
+    },
+    "reportEvidence.missing": {
+      "source": "No qualifying excerpt recorded",
+      "text": "لم يُسجَّل مقتطف مستوفٍ للشروط"
+    },
+    "reportEvidence.excerpts": {
+      "source": "Inspectable excerpts: {count}",
+      "text": "المقتطفات القابلة للفحص: {count}"
+    },
+    "reportEvidence.prepare": {
+      "source": "Prepare follow-up",
+      "text": "إعداد سؤال متابعة"
+    },
+    "reportEvidence.prepareNotice": {
+      "source": "Opens an editable question. Review the question and budget before starting a new research run, which may incur charges.",
+      "text": "يفتح سؤالًا قابلًا للتحرير. راجع السؤال والميزانية قبل بدء بحث جديد قد تترتب عليه رسوم."
+    },
+    "reportEvidence.draft": {
+      "source": "Investigate this research target: “{target}”. Find source excerpts, explain what they support and identify what remains unknown. Original question: “{question}”.",
+      "text": "ابحث في محور البحث هذا: «{target}». اعثر على مقتطفات من المصادر، واشرح ما تدعمه، وحدّد ما لا يزال مجهولًا. السؤال الأصلي: «{question}»."
+    },
+    "reportEvidence.selection": {
+      "source": "Selected sources: {selected}/{eligible} proposals",
+      "text": "المصادر المختارة: {selected}/{eligible} من المقترحات"
+    },
+    "reportEvidence.selectionNotice": {
+      "source": "Source selection is a plan. Inspect the recorded excerpts for actual evidence; selection counts do not measure answer support.",
+      "text": "اختيار المصادر خطة. افحص المقتطفات المسجَّلة لمعرفة الأدلة الفعلية؛ ولا تقيس أعداد المصادر المختارة مدى دعم الإجابة."
+    },
+    "reportReading.estimated": {
+      "source": "{coverage}% estimated",
+      "text": "تقدير {coverage}%"
+    },
+    "reportActions.copy": {
+      "source": "Copy report",
+      "text": "نسخ التقرير"
+    },
+    "reportActions.download": {
+      "source": "Download report",
+      "text": "تنزيل التقرير"
+    },
+    "reportActions.openSaved": {
+      "source": "Open saved report",
+      "text": "فتح التقرير المحفوظ"
+    },
+    "reportActions.copyUnavailable": {
+      "source": "Copy unavailable. Download the report instead.",
+      "text": "النسخ غير متاح. نزّل التقرير بدلًا من ذلك."
+    },
+    "reportActions.downloadUnavailable": {
+      "source": "Download unavailable. Open the saved report instead.",
+      "text": "التنزيل غير متاح. افتح التقرير المحفوظ بدلًا من ذلك."
+    },
+    "citationExport.title": {
+      "source": "Reference export",
+      "text": "تصدير المراجع"
+    },
+    "citationExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "تنزيل BibTeX"
+    },
+    "citationExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "تنزيل CSL-JSON"
+    },
+    "citationExport.ris": {
+      "source": "Download RIS (Zotero)",
+      "text": "تنزيل RIS (Zotero)"
+    },
+    "citationExport.references.one": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "عدد مراجع المقالات: {count}. تتضمن العناوين والروابط والتواريخ المسجَّلة؛ وتضم السجلات البحثية المرصودة أيضًا بيانات المؤلفين وDOI والمجلة المقدَّمة، مع حدود القراءة. راجع البيانات الوصفية قبل استخدامها في ورقة بحثية. استورد RIS إلى Zotero عبر File → Import."
+    },
+    "citationExport.omitted.one": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "عدد الاستشهادات المحذوفة لعدم توفر عنوان مقالة أو رابط مقالة صالح للاستخدام: {count}."
+    },
+    "citationExport.references.other": {
+      "source": "{count} article references. Recorded titles, links and dates; observed scholarly records also include supplied authors, DOI and journal metadata with read limits. Review metadata before using in a paper. Import RIS into Zotero with File → Import.",
+      "text": "عدد مراجع المقالات: {count}. تتضمن العناوين والروابط والتواريخ المسجَّلة؛ وتضم السجلات البحثية المرصودة أيضًا بيانات المؤلفين وDOI والمجلة المقدَّمة، مع حدود القراءة. راجع البيانات الوصفية قبل استخدامها في ورقة بحثية. استورد RIS إلى Zotero عبر File → Import."
+    },
+    "citationExport.omitted.other": {
+      "source": "{count} citations omitted because an article title or usable article link is unavailable.",
+      "text": "عدد الاستشهادات المحذوفة لعدم توفر عنوان مقالة أو رابط مقالة صالح للاستخدام: {count}."
+    },
+    "bibliographyExport.label": {
+      "source": "Bibliography exports",
+      "text": "تصدير قائمة المراجع"
+    },
+    "bibliographyExport.provenance": {
+      "source": "Original metadata and field provenance",
+      "text": "البيانات الوصفية الأصلية ومصدر كل حقل"
+    },
+    "bibliographyExport.bibtex": {
+      "source": "Download BibTeX",
+      "text": "تنزيل BibTeX"
+    },
+    "bibliographyExport.cslJson": {
+      "source": "Download CSL-JSON",
+      "text": "تنزيل CSL-JSON"
+    },
+    "bibliographyExport.ris": {
+      "source": "Download RIS",
+      "text": "تنزيل RIS"
+    },
+    "reportSourceLens.unavailable": {
+      "source": "Source inspection unavailable: this report has no stored excerpt ledger.",
+      "text": "فحص المصادر غير متاح: لا يتضمن هذا التقرير سجلًا محفوظًا للمقتطفات."
+    },
+    "reportSourceLens.empty": {
+      "source": "No inspectable non-demo excerpts are recorded for source inspection.",
+      "text": "لم تُسجَّل مقتطفات قابلة للفحص من خارج العرض التجريبي لفحص المصادر."
+    },
+    "reportSourceLens.title": {
+      "source": "What if a source were missing?",
+      "text": "ماذا لو غاب أحد المصادر؟"
+    },
+    "reportSourceLens.localView": {
+      "source": "Local excerpt view",
+      "text": "عرض محلي للمقتطفات"
+    },
+    "reportSourceLens.originalExcerpts": {
+      "source": "Original excerpts",
+      "text": "المقتطفات الأصلية"
+    },
+    "reportSourceLens.viewExcerpts": {
+      "source": "Excerpts in this view",
+      "text": "المقتطفات في هذا العرض"
+    },
+    "reportSourceLens.intro": {
+      "source": "Temporarily leave out one source to see which research targets retain excerpts in this report.",
+      "text": "استبعد مصدرًا واحدًا مؤقتًا لمعرفة محاور البحث التي تحتفظ بمقتطفات في هذا التقرير."
+    },
+    "reportSourceLens.select": {
+      "source": "Inspect without",
+      "text": "افحص دون المصدر"
+    },
+    "reportSourceLens.keepAll": {
+      "source": "Keep every source",
+      "text": "الاحتفاظ بجميع المصادر"
+    },
+    "reportSourceLens.restore": {
+      "source": "Restore source",
+      "text": "استعادة المصدر"
+    },
+    "reportSourceLens.original": {
+      "source": "Showing the original excerpt ledger.",
+      "text": "يُعرض سجل المقتطفات الأصلي."
+    },
+    "reportSourceLens.missing": {
+      "source": "No inspectable excerpts in the original report.",
+      "text": "لا توجد مقتطفات قابلة للفحص في التقرير الأصلي."
+    },
+    "reportSourceLens.lost": {
+      "source": "No excerpts remain in this view.",
+      "text": "لم يتبقَّ أي مقتطف في هذا العرض."
+    },
+    "reportSourceLens.inspect": {
+      "source": "Inspect remaining excerpts",
+      "text": "افحص المقتطفات المتبقية"
+    },
+    "reportSourceLens.remaining.one": {
+      "source": "{count} recorded excerpt remains.",
+      "text": "عدد المقتطفات المسجَّلة المتبقية: {count}."
+    },
+    "reportSourceLens.remaining.other": {
+      "source": "{count} recorded excerpts remain.",
+      "text": "عدد المقتطفات المسجَّلة المتبقية: {count}."
+    },
+    "reportSourceLens.omitted.one": {
+      "source": "{count} research target loses its last recorded excerpt without {source}.",
+      "text": "محاور البحث التي تفقد آخر مقتطف مسجَّل لها دون {source}: {count}."
+    },
+    "reportSourceLens.omitted.other": {
+      "source": "{count} research targets lose their last recorded excerpt without {source}.",
+      "text": "محاور البحث التي تفقد آخر مقتطف مسجَّل لها دون {source}: {count}."
+    },
+    "reportSourceLens.alreadyMissing.one": {
+      "source": " {count} target already had no inspectable excerpts.",
+      "text": " محاور البحث التي كانت تفتقر أصلًا إلى مقتطفات قابلة للفحص: {count}."
+    },
+    "reportSourceLens.alreadyMissing.other": {
+      "source": " {count} targets already had no inspectable excerpts.",
+      "text": " محاور البحث التي كانت تفتقر أصلًا إلى مقتطفات قابلة للفحص: {count}."
+    },
+    "reportSourceLens.version": {
+      "source": "{marker} · {source} · version {version}",
+      "text": "{marker} · {source} · الإصدار {version}"
+    },
+    "reportSourceLens.versionTitle": {
+      "source": "{marker} · {source} · {title} · version {version}",
+      "text": "{marker} · {source} · {title} · الإصدار {version}"
+    }
+  }
+}

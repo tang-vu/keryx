@@ -14,7 +14,7 @@ import { UiMessage, useUiCopy, useUiMessages } from "./ui-copy";
 import { getUiPreview, loadUiPreview } from "./ui-preview-catalogues";
 import { formatLocalizedUsdc, formatSigningUsdc, formatLocalizedInstant, formatLocalizedNumber } from "./format";
 
-const added = ["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const;
+const added = ["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const;
 const h = React.createElement;
 let root: Root, container: HTMLDivElement;
 const fetcher = vi.fn(async (_path: RequestInfo | URL) => new Response(null, { status: 401 }));

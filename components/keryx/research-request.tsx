@@ -80,7 +80,7 @@ function ResearchRequestForm({ mode, budget, version, total, payee }: ResearchRe
 
   return <div className="mt-6 border-t border-line pt-5">
     <label htmlFor="research-question" className="font-mono text-xs">{copy("researchRequest.question")}</label>
-    <textarea id="research-question" value={question} onChange={(event) => {
+    <textarea id="research-question" lang="und" dir="auto" value={question} onChange={(event) => {
       operation.current?.abort(); operation.current = null;
       setVerifiedRequest(null); setChecking(false); setStatus("");
       copyAttempt.current = null; setCopyPending(false);
@@ -92,13 +92,13 @@ function ResearchRequestForm({ mode, budget, version, total, payee }: ResearchRe
     {ready && <ResearchCheckout question={question} mode={mode} budget={budget} version={version} total={total} payee={payee} />}
     <details className="mt-5"><summary className="cursor-pointer font-mono text-xs">{copy("researchRequest.ownAgent")}</summary>
     <p className="mt-3 font-serif text-sm text-ink-2">{richCopy("researchRequest.protocolNotice", { endpoint: <code>POST /api/agent/ask</code>, amount: total, network: currentArcLabel })}</p>
-    <pre className="mt-4 overflow-x-auto border border-line bg-paper-2 p-4 text-xs">{request}</pre>
+    <pre lang="und" dir="ltr" className="mt-4 overflow-x-auto border border-line bg-paper-2 p-4 text-xs">{request}</pre>
     <button disabled={!question.trim() || copyPending} aria-busy={copyPending} onClick={() => void copyRequest()} className="mt-3 border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40">{copy("researchRequest.copy")}</button>
     <button disabled={!question.trim()} onClick={() => {
       setDownloadError("");
       try { downloadBrowserText(request + "\n", "request.json", "application/json"); }
       catch { setDownloadError(copy("evidenceMatrix.downloadUnavailable")); }
-    }} className="ml-3 mt-3 border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40">{copy("researchRequest.download")}</button>
+    }} className="ms-3 mt-3 border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40">{copy("researchRequest.download")}</button>
     <p className="mt-3 font-serif text-sm text-ink-2">{richCopy("researchRequest.guideNotice", { guideLink: <a className="underline" href="https://github.com/tang-vu/keryx/blob/main/docs/buyer-agent.md" target="_blank" rel="noopener noreferrer">{copy("researchRequest.buyerGuide")}</a>, network: currentArcLabel })}</p>
     <p role="status" className="mt-2 font-serif text-sm">{copied}</p>
     {downloadError && <p role="status" className="mt-2 font-serif text-sm text-seal">{downloadError}</p>}

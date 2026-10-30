@@ -4,6 +4,7 @@ import { createElement, useContext, useMemo, type JSX, type ReactNode } from "re
 import { englishMessages, type MessageKey } from "./messages";
 import { previewCopy, previewMessage, previewText } from "./ui-preview";
 import { UiCopyContext, englishUiCopy as english } from "./ui-copy-context";
+import { localeDirection } from "./locales";
 
 export function useUiMessages(fallback = english.message) {
   return useContext(UiCopyContext)?.message ?? fallback;
@@ -26,7 +27,8 @@ export function UiText({ source, namespaces, plain = false }: { source: string |
   if (typeof source !== "string") return source;
   const text = previewText(preview, source, namespaces);
   if (plain || locale === "en") return text;
-  return <span lang={text === source ? "en" : locale}>{text}</span>;
+  const language = text === source ? "en" : locale;
+  return <span lang={language} dir={locale === "ar" ? localeDirection(language) : undefined}>{text}</span>;
 }
 
 export function UiMessage({ messageKey, values, plain = false }: { messageKey: MessageKey; values?: Record<string, string | number>; plain?: boolean }) {
@@ -35,7 +37,8 @@ export function UiMessage({ messageKey, values, plain = false }: { messageKey: M
   const text = message(messageKey, values);
   const original = (english.message as typeof message)(messageKey, values);
   if (plain || locale === "en") return text;
-  return <span lang={text === original ? "en" : locale}>{text}</span>;
+  const language = text === original ? "en" : locale;
+  return <span lang={language} dir={locale === "ar" ? localeDirection(language) : undefined}>{text}</span>;
 }
 
 export function UiRichMessage({ messageKey, values, plain = false }: { messageKey: MessageKey; values?: Record<string, ReactNode>; plain?: boolean }) {
@@ -43,7 +46,8 @@ export function UiRichMessage({ messageKey, values, plain = false }: { messageKe
   const { preview, locale } = useContext(UiCopyContext) ?? english;
   const source = englishMessages[messageKey];
   if (plain || locale === "en") return rich(messageKey, values);
-  return <span lang={previewMessage(preview, messageKey, source) === source ? "en" : locale}>{rich(messageKey, values)}</span>;
+  const language = previewMessage(preview, messageKey, source) === source ? "en" : locale;
+  return <span lang={language} dir={locale === "ar" ? localeDirection(language) : undefined}>{rich(messageKey, values)}</span>;
 }
 
 /** Own the native element; Server Component children are opaque Flight nodes. */

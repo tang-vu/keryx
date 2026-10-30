@@ -50,6 +50,8 @@ export function FollowUpForm({ parentId }: { parentId: string }) {
           </label>
           <textarea
             id="follow-up"
+            lang="und"
+            dir="auto"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => {

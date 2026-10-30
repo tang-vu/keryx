@@ -56,7 +56,7 @@ it("changes both server leaves and client copy without remounting, changing orig
   await mount();
   const input = container.querySelector<HTMLInputElement>("#draft")!;
   input.value = "Exact unsent question <USDC> {count}";
-  for (const locale of ["vi", "zh-Hans", "en"] as const) {
+  for (const locale of ["vi", "zh-Hans", "ar", "en"] as const) {
     await select(locale);
     await vi.waitFor(() => expect(container.querySelector("#locale")!.textContent).toBe(locale));
     const message = container.querySelector("#message")!.textContent;
@@ -68,6 +68,13 @@ it("changes both server leaves and client copy without remounting, changing orig
     expect(container.querySelector("#critical")!.textContent).toBe(englishMessages["account.signatureInstruction"]);
     if (locale === "en") expect(container.querySelector("#critical span")).toBeNull();
     else expect(container.querySelector("#critical span")!.getAttribute("lang")).toBe("en");
+    if (locale === "ar") {
+      expect(container.querySelector("#leaf span")!.getAttribute("dir")).toBe("rtl");
+      expect(container.querySelector("#critical span")!.getAttribute("dir")).toBe("ltr");
+      expect(container.querySelector("#paper h3")!.getAttribute("lang")).toBe("und");
+      expect(container.querySelector("#paper h3")!.getAttribute("dir")).toBe("auto");
+      expect(container.querySelector("#paper p.break-words")!.getAttribute("dir")).toBe("auto");
+    }
     expect(input.value).toBe("Exact unsent question <USDC> {count}");
     expect(container.querySelector("#rich strong")!.textContent).toBe("Original node");
   }

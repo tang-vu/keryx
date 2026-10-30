@@ -15,7 +15,7 @@ let browser: Browser, css: string, bundle: string;
 const capture = process.env.KERYX_NATIVE_GUIDANCE_SCREENSHOT_DIR ? join(process.env.KERYX_NATIVE_GUIDANCE_SCREENSHOT_DIR, "source-library") : undefined;
 const cited: CitedSourceHistoryEntry = { url: "https://original.test/paper?literal={count}", title: "Metadata only", publisher: "Original publisher 日本語 हिन्दी", runId: "original/run?x=1", citedAt: "", deliveryKind: "excerpt", truncated: true };
 const feed: PublicReference = { id: "public:original", name: "Clear filters", url: "https://original.test/feed", rssUrl: "https://original.test/rss", active: true,
-  description: "Original description <literal> {count} 日本語 हिन्दी", tags: ["Topics", "Original tag"],
+  description: "وصف أصلي <literal> {count} 日本語 हिन्दी", tags: ["Topics", "Original tag"],
   items: (["full_text", "excerpt", "abstract", "metadata_only"] as const).map((deliveryKind, i) => ({ id: `original-${i}`, title: `Original item ${i} {count}`, link: `https://original.test/item/${i}`, summary: "Original summary", content: "Original content", deliveryKind })) };
 const explore: ExploreSource = { id: "explore:original", name: "Find sources", url: "https://original.test/guide?x=1&y=2", description: "Original directory description {count}", topic: "data-infrastructure", tags: ["Original metadata tag"] };
 
@@ -50,7 +50,7 @@ beforeAll(async () => {
 }, 30_000);
 afterAll(async () => browser?.close());
 
-it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
+it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
   "keeps actual $locale source discovery, scope and native GET handoffs local at $width", async ({ locale, width }) => {
     const preview = await loadUiPreview(locale), message = createMessages(locale, preview.$messages);
     const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: "reduce", timezoneId: "UTC", serviceWorkers: "block" });
@@ -79,6 +79,18 @@ it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const).fla
       expect(await page.locator("#unknown article > p.border-l-2").textContent()).toBe(message("sourceCited.scopeBounded.unrecorded"));
       expect(await page.locator("#cited h3").getAttribute("lang")).toBe("und"); expect(await page.locator("#cited h3").textContent()).toBe(cited.title);
       expect(await page.locator("#feed h3").textContent()).toContain(feed.name); expect(await page.locator("#explore h3").textContent()).toBe(explore.name);
+      if (locale === "ar") {
+        expect(await search.getAttribute("lang")).toBe("und"); expect(await search.getAttribute("dir")).toBe("auto");
+        for (const selector of ["#cited h3", "#feed h3", "#explore h3"]) {
+          expect(await page.locator(selector).getAttribute("dir")).toBe("auto");
+          expect(await page.locator(selector).evaluate(element => getComputedStyle(element).direction)).toBe("ltr");
+        }
+        const original = page.locator('#feed p[lang="und"]').filter({ hasText: feed.description });
+        expect(await original.textContent()).toBe(feed.description);
+        expect(await original.getAttribute("dir")).toBe("auto");
+        expect(await original.evaluate(element => getComputedStyle(element).direction)).toBe("rtl");
+        expect(await original.locator('bdi[dir="ltr"]').textContent()).toBe("<literal> {count}");
+      }
       expect(await page.locator("#feed ul[aria-label]").getAttribute("aria-label")).toBe(message("sourceFeed.topics"));
       expect(await page.locator("#feed ul[aria-label] li").allTextContents()).toEqual(feed.tags);
       await page.locator("#feed details summary").click();

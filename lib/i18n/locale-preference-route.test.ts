@@ -45,7 +45,7 @@ describe("private locale route", () => {
     f.session.mockResolvedValueOnce({ db: f.db, wallet: bob, currentId: "other" });
     expect((await f.handle(request("PUT"))).status).toBe(409); expect(f.write).not.toHaveBeenCalled();
   });
-  it.each(["vi", "ru"] as const)("stores %s as a tiny scalar in a locale-only server-owner/network/configured-origin namespace", async locale => {
+  it.each(["vi", "ru", "ar"] as const)("stores %s as a tiny scalar in a locale-only server-owner/network/configured-origin namespace", async locale => {
     const f = fixture(); const response = await f.handle(request("PUT", {}, JSON.stringify({ version: 1, locale })));
     expect(response.status).toBe(200); expect(response.headers.get("cache-control")).toBe("private, no-store");
     const key = accountLocaleKey(origin, network, owner);

@@ -13,7 +13,7 @@ import { createMessages, englishMessages } from "./messages";
 import { createRichMessages } from "./rich-messages";
 import { loadUiPreview } from "./ui-preview-catalogues";
 
-const locales = ["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const;
+const locales = ["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const;
 const keys = ["citationExport.title", "citationExport.bibtex", "citationExport.cslJson", "citationExport.ris", "citationExport.references.one",
   "citationExport.omitted.one", "citationExport.references.other", "citationExport.omitted.other", "bibliographyExport.label", "bibliographyExport.provenance",
   "bibliographyExport.bibtex", "bibliographyExport.cslJson", "bibliographyExport.ris", "reportSourceLens.unavailable", "reportSourceLens.empty",

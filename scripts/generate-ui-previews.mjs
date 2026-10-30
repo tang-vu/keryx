@@ -39,7 +39,7 @@ export function generateUiPreviews(check = false) {
   const sharedNamespaces = new Set(["core-inline", ...[...read("lib/i18n/messages.ts")
     .matchAll(/from "\.\.\/\.\.\/locales\/en\/([^"/]+)"/g)].map(match => match[1])]);
   const digests = {};
-  for (const locale of ["vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"]) {
+  for (const locale of ["vi", "zh-Hans", "es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"]) {
     const namespaces = {}, messages = {};
     const inputs = [];
     const partial = !["vi", "zh-Hans"].includes(locale);

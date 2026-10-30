@@ -71,7 +71,7 @@ export function SourceLibraryFilters({ filters, total, matched, publishers }: {
           </details>
         </div>
       </fieldset>
-      <button type="submit" className="mt-1 inline-flex min-h-12 items-center justify-between gap-3 border border-ink bg-ink px-4 py-3 font-mono text-xs text-paper transition-colors hover:bg-ink/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal sm:col-span-2 lg:col-span-1 lg:col-start-3"><UiMessage messageKey={"sourceFilter.find"} /><span aria-hidden="true">→</span></button>
+      <button type="submit" className="mt-1 inline-flex min-h-12 items-center justify-between gap-3 border border-ink bg-ink px-4 py-3 font-mono text-xs text-paper transition-colors hover:bg-ink/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal sm:col-span-2 lg:col-span-1 lg:col-start-3"><UiMessage messageKey={"sourceFilter.find"} /><span aria-hidden="true" className="rtl:rotate-180">→</span></button>
     </Form></div>
     <UiElement as="nav" namespaces={["source-directory"]} names={["aria-label"]} attributes={{ "aria-label": copy("sourceFilter.topicsLabel"), "className": "mt-5 flex flex-wrap gap-2 border-t border-line pt-4" }}>
       {Object.entries(LIBRARY_TOPICS).filter(([value]) => value !== "other").map(([value, label]) => <Link key={value}

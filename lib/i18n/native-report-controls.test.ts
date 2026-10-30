@@ -13,7 +13,7 @@ import { loadUiPreview } from "./ui-preview-catalogues";
 import { researchReportMarkdown } from "../research-report-export";
 import type { QueryRun } from "../types";
 
-const added = ["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const;
+const added = ["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const;
 const keys = ["reportActions.copy", "reportActions.download", "reportActions.openSaved",
   "reportActions.copyUnavailable", "reportActions.downloadUnavailable"] as const;
 const run: QueryRun = { id: "original/record?x=1", question: "Original <question> {count} 日本語 / हिन्दी",

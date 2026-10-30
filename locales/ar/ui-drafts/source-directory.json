@@ -1,0 +1,456 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/source-directory.ts",
+  "sourceSha256": "65d55254a6598bc0ae3b73b25bf1d70eb005ef6c7bfcf07ac98c7aaac189abae",
+  "entries": {
+    "sourceFeed.fullText": {
+      "source": "Full text in feed",
+      "text": "النص الكامل في الخلاصة"
+    },
+    "sourceFeed.excerpt": {
+      "source": "Excerpt in feed",
+      "text": "مقتطف في الخلاصة"
+    },
+    "sourceFeed.abstract": {
+      "source": "Abstract in feed",
+      "text": "ملخّص في الخلاصة"
+    },
+    "sourceFeed.metadata": {
+      "source": "Metadata only",
+      "text": "بيانات وصفية فقط"
+    },
+    "sourceFeed.untitled": {
+      "source": "Untitled feed item",
+      "text": "عنصر خلاصة بلا عنوان"
+    },
+    "sourceFeed.kicker": {
+      "source": "Free public reference",
+      "text": "مرجع عام مجاني"
+    },
+    "sourceFeed.topics": {
+      "source": "Topics",
+      "text": "الموضوعات"
+    },
+    "sourceFeed.compactItems": {
+      "source": "From the retained feed",
+      "text": "من الخلاصة المحفوظة"
+    },
+    "sourceFeed.empty": {
+      "source": "No feed items retained in this snapshot.",
+      "text": "لا توجد عناصر خلاصة محفوظة في هذه اللقطة."
+    },
+    "sourceFeed.collectedUnavailable": {
+      "source": "Feed collection time unavailable",
+      "text": "وقت جمع الخلاصة غير متاح"
+    },
+    "sourceFeed.matching.one": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "عناصر الخلاصة المحفوظة المطابقة · {count} من {total}"
+    },
+    "sourceFeed.latest.one": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "أحدث عناصر الخلاصة المحفوظة · العدد في اللقطة: {count}"
+    },
+    "sourceFeed.matching.other": {
+      "source": "Matching retained feed items · {count} of {total}",
+      "text": "عناصر الخلاصة المحفوظة المطابقة · {count} من {total}"
+    },
+    "sourceFeed.latest.other": {
+      "source": "Latest retained feed items · {count} in snapshot",
+      "text": "أحدث عناصر الخلاصة المحفوظة · العدد في اللقطة: {count}"
+    },
+    "sourceFeed.more.one": {
+      "source": "Show {count} more retained item",
+      "text": "عرض عناصر محفوظة إضافية: {count}"
+    },
+    "sourceFeed.more.other": {
+      "source": "Show {count} more retained items",
+      "text": "عرض عناصر محفوظة إضافية: {count}"
+    },
+    "sourceFeed.collected": {
+      "source": "Feed collected {date}",
+      "text": "جُمعت الخلاصة في {date}"
+    },
+    "sourceCited.kicker": {
+      "source": "Cited public document",
+      "text": "مستند عام مستشهد به"
+    },
+    "sourceCited.readUnavailable": {
+      "source": "Read time not recorded",
+      "text": "وقت القراءة غير مسجَّل"
+    },
+    "sourceCited.citationUnavailable": {
+      "source": "Citation date not recorded",
+      "text": "تاريخ الاستشهاد غير مسجَّل"
+    },
+    "sourceCited.inspect": {
+      "source": "Inspect cited answer →",
+      "text": "افحص الإجابة ذات الاستشهادات ←"
+    },
+    "sourceCited.scope.full_text": {
+      "source": "Full text recorded",
+      "text": "النص الكامل مسجَّل"
+    },
+    "sourceCited.scopeBounded.full_text": {
+      "source": "Full text recorded · Bounded extraction",
+      "text": "النص الكامل مسجَّل · استخراج محدود النطاق"
+    },
+    "sourceCited.scope.excerpt": {
+      "source": "Excerpt recorded",
+      "text": "مقتطف مسجَّل"
+    },
+    "sourceCited.scopeBounded.excerpt": {
+      "source": "Excerpt recorded · Bounded extraction",
+      "text": "مقتطف مسجَّل · استخراج محدود النطاق"
+    },
+    "sourceCited.scope.abstract": {
+      "source": "Abstract recorded",
+      "text": "ملخّص مسجَّل"
+    },
+    "sourceCited.scopeBounded.abstract": {
+      "source": "Abstract recorded · Bounded extraction",
+      "text": "ملخّص مسجَّل · استخراج محدود النطاق"
+    },
+    "sourceCited.scope.metadata_only": {
+      "source": "Metadata only",
+      "text": "بيانات وصفية فقط"
+    },
+    "sourceCited.scopeBounded.metadata_only": {
+      "source": "Metadata only · Bounded extraction",
+      "text": "بيانات وصفية فقط · استخراج محدود النطاق"
+    },
+    "sourceCited.scope.unrecorded": {
+      "source": "Reading scope not recorded",
+      "text": "نطاق القراءة غير مسجَّل"
+    },
+    "sourceCited.scopeBounded.unrecorded": {
+      "source": "Reading scope not recorded · Bounded extraction",
+      "text": "نطاق القراءة غير مسجَّل · استخراج محدود النطاق"
+    },
+    "sourceCited.observed": {
+      "source": "Read observed {date}",
+      "text": "رُصدت القراءة في {date}"
+    },
+    "sourceCited.lastCited": {
+      "source": "Last cited {date}",
+      "text": "آخر استشهاد في {date}"
+    },
+    "sourceExplore.topics": {
+      "source": "Topics",
+      "text": "الموضوعات"
+    },
+    "sourceExplore.ask": {
+      "source": "Ask with this source →",
+      "text": "اطرح سؤالًا باستخدام هذا المصدر ←"
+    },
+    "sourcePreview.title": {
+      "source": "Explore the sources",
+      "text": "استكشف المصادر"
+    },
+    "sourcePreview.browse": {
+      "source": "Browse the source library →",
+      "text": "تصفّح مكتبة المصادر ←"
+    },
+    "sourcePreview.citationUnavailable": {
+      "source": "Citation history unavailable",
+      "text": "سجل الاستشهادات غير متاح"
+    },
+    "sourcePreview.referenceUnavailable": {
+      "source": "Public reference count unavailable",
+      "text": "عدد المراجع العامة غير متاح"
+    },
+    "sourcePreview.creatorUnavailable": {
+      "source": "Creator listing count unavailable",
+      "text": "عدد إدراجات منشئي المحتوى غير متاح"
+    },
+    "sourcePreview.snapshotsUnavailable": {
+      "source": "Public reference snapshots could not be loaded. Reload to retry.",
+      "text": "تعذّر تحميل لقطات المراجع العامة. أعد التحميل للمحاولة مجددًا."
+    },
+    "sourcePreview.empty": {
+      "source": "No retained sources are listed yet. Keryx can still discover supported public documents in response to a question.",
+      "text": "لا توجد مصادر محفوظة مدرجة بعد. يظل بإمكان Keryx اكتشاف مستندات عامة مدعومة استجابةً لسؤال."
+    },
+    "sourcePreview.documents.one": {
+      "source": "{count} recently cited public document",
+      "text": "عدد المستندات العامة المستشهد بها مؤخرًا: {count}"
+    },
+    "sourcePreview.feeds.one": {
+      "source": "{count} public feed",
+      "text": "عدد الخلاصات العامة: {count}"
+    },
+    "sourcePreview.creators.one": {
+      "source": "{count} creator listing",
+      "text": "عدد إدراجات منشئي المحتوى: {count}"
+    },
+    "sourcePreview.documents.other": {
+      "source": "{count} recently cited public documents",
+      "text": "عدد المستندات العامة المستشهد بها مؤخرًا: {count}"
+    },
+    "sourcePreview.feeds.other": {
+      "source": "{count} public feeds",
+      "text": "عدد الخلاصات العامة: {count}"
+    },
+    "sourcePreview.creators.other": {
+      "source": "{count} creator listings",
+      "text": "عدد إدراجات منشئي المحتوى: {count}"
+    },
+    "sourceFilter.title": {
+      "source": "Find a source",
+      "text": "اعثر على مصدر"
+    },
+    "sourceFilter.topic": {
+      "source": "Topic",
+      "text": "الموضوع"
+    },
+    "sourceFilter.allTopics": {
+      "source": "All topics",
+      "text": "جميع الموضوعات"
+    },
+    "sourceFilter.collection": {
+      "source": "Collection",
+      "text": "المجموعة"
+    },
+    "sourceFilter.allCollections": {
+      "source": "All collections",
+      "text": "جميع المجموعات"
+    },
+    "sourceFilter.sort": {
+      "source": "Sort",
+      "text": "الترتيب"
+    },
+    "sourceFilter.collectionOrder": {
+      "source": "Collection order",
+      "text": "ترتيب المجموعة"
+    },
+    "sourceFilter.nameOrder": {
+      "source": "Name A–Z",
+      "text": "الاسم A–Z"
+    },
+    "sourceFilter.latest": {
+      "source": "Latest recorded observation",
+      "text": "الأحدث أولًا"
+    },
+    "sourceFilter.paperFilters": {
+      "source": "Paper filters · selects research-paper records",
+      "text": "مرشحات الأوراق البحثية · لاختيار سجلات الأوراق"
+    },
+    "sourceFilter.author": {
+      "source": "Author",
+      "text": "المؤلف"
+    },
+    "sourceFilter.authorPlaceholder": {
+      "source": "Author name",
+      "text": "اسم المؤلف"
+    },
+    "sourceFilter.doi": {
+      "source": "Exact DOI",
+      "text": "DOI الدقيق"
+    },
+    "sourceFilter.find": {
+      "source": "Find sources",
+      "text": "ابحث عن مصادر"
+    },
+    "sourceFilter.topicsLabel": {
+      "source": "Browse source topics",
+      "text": "تصفّح موضوعات المصادر"
+    },
+    "sourceFilter.clear": {
+      "source": "Clear filters",
+      "text": "مسح المرشحات"
+    },
+    "sourceFilter.placeholder": {
+      "source": "Try {database}, agents or {domain}",
+      "text": "جرّب {database} أو الوكلاء أو {domain}"
+    },
+    "sourceFilter.doiPlaceholder": {
+      "source": "{identifier} or {url}",
+      "text": "{identifier} أو {url}"
+    },
+    "sourceCited.unclassifiedBounded": {
+      "source": " · Bounded extraction",
+      "text": " · استخراج محدود النطاق"
+    },
+    "sourceLibrary.title": {
+      "source": "Sources — research papers, public references and creator listings",
+      "text": "المصادر — أوراق بحثية ومراجع عامة وإدراجات منشئي المحتوى"
+    },
+    "sourceLibrary.name": {
+      "source": "Keryx Sources",
+      "text": "مصادر Keryx"
+    },
+    "sourceLibrary.crumb": {
+      "source": "Sources",
+      "text": "المصادر"
+    },
+    "sourceLibrary.kicker": {
+      "source": "The reading library",
+      "text": "مكتبة القراءة"
+    },
+    "sourceLibrary.papers": {
+      "source": "Research papers",
+      "text": "أوراق بحثية"
+    },
+    "sourceLibrary.citedDocuments": {
+      "source": "Recently cited documents",
+      "text": "مستندات مستشهد بها مؤخرًا"
+    },
+    "sourceLibrary.unavailable": {
+      "source": "Unavailable",
+      "text": "غير متاح"
+    },
+    "sourceLibrary.publicHistory": {
+      "source": "From public answer history",
+      "text": "من سجل الإجابات العامة"
+    },
+    "sourceLibrary.publicReferences": {
+      "source": "Public references",
+      "text": "مراجع عامة"
+    },
+    "sourceLibrary.creatorListings": {
+      "source": "Creator listings",
+      "text": "إدراجات منشئي المحتوى"
+    },
+    "sourceLibrary.directoryUnavailable": {
+      "source": "Part of the directory could not be loaded. Available records are shown below; a missing count is not an empty catalog.",
+      "text": "تعذّر تحميل جزء من الدليل. تُعرض السجلات المتاحة أدناه؛ وغياب العدد لا يعني أن الفهرس فارغ."
+    },
+    "sourceLibrary.reviewQuestion": {
+      "source": "Working on a literature review?",
+      "text": "هل تعمل على مراجعة للأدبيات؟"
+    },
+    "sourceLibrary.reviewNotice": {
+      "source": "Save papers, record screening notes and prepare a comparison. Your list stays on this browser.",
+      "text": "احفظ الأوراق، وسجّل ملاحظات الفرز، وأعدّ مقارنة. تبقى قائمتك في هذا المتصفح."
+    },
+    "sourceLibrary.openWorkspace": {
+      "source": "Open literature workspace →",
+      "text": "افتح مساحة عمل المراجع البحثية ←"
+    },
+    "sourceLibrary.freeDiscovery": {
+      "source": "Original records · free discovery",
+      "text": "سجلات أصلية · اكتشاف مجاني"
+    },
+    "sourceLibrary.papersEmpty": {
+      "source": "No starter paper matches these filters. You can search the repositories below.",
+      "text": "لا تطابق أي ورقة من المجموعة الأولية هذه المرشحات. يمكنك البحث في المستودعات أدناه."
+    },
+    "sourceLibrary.emptyTitle": {
+      "source": "No sources match these filters",
+      "text": "لا تطابق أي مصادر هذه المرشحات"
+    },
+    "sourceLibrary.clear": {
+      "source": "Clear filters",
+      "text": "مسح المرشحات"
+    },
+    "sourceLibrary.citedTitle": {
+      "source": "Cited in past answers",
+      "text": "مستشهد بها في إجابات سابقة"
+    },
+    "sourceLibrary.citationsUnavailable": {
+      "source": "Public citation history is temporarily unavailable. Reload to retry; other source collections remain available.",
+      "text": "سجل الاستشهادات العامة غير متاح مؤقتًا. أعد التحميل للمحاولة مجددًا؛ وتبقى مجموعات المصادر الأخرى متاحة."
+    },
+    "sourceLibrary.feedNotice": {
+      "source": "These are retained feed snapshots. Keryx also discovers supported websites and PDFs when you ask a question; this directory is not a complete index of the web. A feed excerpt, abstract or video description may omit the full work. Listing here does not certify content accuracy.",
+      "text": "هذه لقطات محفوظة للخلاصات. يكتشف Keryx أيضًا المواقع وملفات PDF المدعومة عندما تطرح سؤالًا؛ ولا يُعد هذا الدليل فهرسًا كاملًا للويب. قد لا يتضمن مقتطف الخلاصة أو الملخّص أو وصف الفيديو العمل كاملًا. ولا يثبت الإدراج هنا دقة المحتوى."
+    },
+    "sourceLibrary.referencesUnavailable": {
+      "source": "Public references are temporarily unavailable. Try this page again to inspect the retained catalog.",
+      "text": "المراجع العامة غير متاحة مؤقتًا. جرّب هذه الصفحة مجددًا لفحص الفهرس المحفوظ."
+    },
+    "sourceLibrary.ask": {
+      "source": "ask a question",
+      "text": "اطرح سؤالًا"
+    },
+    "sourceLibrary.creatorsUnavailable": {
+      "source": "Creator listings are temporarily unavailable. Public references have their own availability and free-reading status.",
+      "text": "إدراجات منشئي المحتوى غير متاحة مؤقتًا. للمراجع العامة حالة توفر وقراءة مجانية مستقلة."
+    },
+    "sourceLibrary.creatorsEmpty": {
+      "source": "No creator listings are recorded yet.",
+      "text": "لم تُسجَّل أي إدراجات لمنشئي المحتوى بعد."
+    },
+    "sourceLibrary.unanswered": {
+      "source": "See what the corpus couldn't answer",
+      "text": "اعرف ما لم تستطع مجموعة المصادر الإجابة عنه"
+    },
+    "sourceLibrary.emphasis": {
+      "source": "explore.",
+      "text": "تستكشفها."
+    },
+    "sourceLibrary.heading": {
+      "source": "Sources to {emphasis}",
+      "text": "مصادر كي {emphasis}"
+    },
+    "sourceLibrary.paperRecords.one": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "أعمال · عدد السجلات المرصودة: {count} · نص الورقة غير مقروء"
+    },
+    "sourceLibrary.feedItems.one": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "خلاصات محفوظة · عدد عناصر الخلاصات: {count}"
+    },
+    "sourceLibrary.paperMatches.one": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "أعمال مطابقة: {count} · سجلات أولية: {total}. تنطبق مرشحات المؤلف والسنة وDOI على قائمة المراجع هذه."
+    },
+    "sourceLibrary.documentsMatched.one": {
+      "source": "{count} documents match this view.",
+      "text": "عدد المستندات المطابقة لهذا العرض: {count}."
+    },
+    "sourceLibrary.paperRecords.other": {
+      "source": "Works · {count} observed records · paper text unread",
+      "text": "أعمال · عدد السجلات المرصودة: {count} · نص الورقة غير مقروء"
+    },
+    "sourceLibrary.feedItems.other": {
+      "source": "Retained feeds · {count} feed items",
+      "text": "خلاصات محفوظة · عدد عناصر الخلاصات: {count}"
+    },
+    "sourceLibrary.paperMatches.other": {
+      "source": "{count} matching works · {total} starter records. Author, year and DOI filters apply to this bibliography.",
+      "text": "أعمال مطابقة: {count} · سجلات أولية: {total}. تنطبق مرشحات المؤلف والسنة وDOI على قائمة المراجع هذه."
+    },
+    "sourceLibrary.documentsMatched.other": {
+      "source": "{count} documents match this view.",
+      "text": "عدد المستندات المطابقة لهذا العرض: {count}."
+    },
+    "sourceLibrary.feedItemsUnavailable": {
+      "source": "Retained feeds · item count unavailable",
+      "text": "خلاصات محفوظة · عدد العناصر غير متاح"
+    },
+    "sourceLibrary.morePapers.one": {
+      "source": "Show {count} more paper references",
+      "text": "عرض مراجع أوراق إضافية: {count}"
+    },
+    "sourceLibrary.moreCited.one": {
+      "source": "Show {count} more cited documents",
+      "text": "عرض مستندات مستشهد بها إضافية: {count}"
+    },
+    "sourceLibrary.moreFeeds.one": {
+      "source": "Show {count} more retained feeds",
+      "text": "عرض خلاصات محفوظة إضافية: {count}"
+    },
+    "sourceLibrary.morePapers.other": {
+      "source": "Show {count} more paper references",
+      "text": "عرض مراجع أوراق إضافية: {count}"
+    },
+    "sourceLibrary.moreCited.other": {
+      "source": "Show {count} more cited documents",
+      "text": "عرض مستندات مستشهد بها إضافية: {count}"
+    },
+    "sourceLibrary.moreFeeds.other": {
+      "source": "Show {count} more retained feeds",
+      "text": "عرض خلاصات محفوظة إضافية: {count}"
+    },
+    "sourceLibrary.externalIndexes": {
+      "source": "Explore broader scholarly indexes: {openAlex} · {doaj}. These external links open their indexes; Keryx makes no background queries to them.",
+      "text": "استكشف فهارس بحثية أوسع: {openAlex} · {doaj}. تفتح هذه الروابط الخارجية فهارسها؛ ولا يرسل Keryx استعلامات إليها في الخلفية."
+    },
+    "sourceLibrary.feedEmpty": {
+      "source": "No public feed snapshots are retained yet. You can still {ask} with a public source URL.",
+      "text": "لا توجد لقطات محفوظة لخلاصات عامة بعد. يظل بإمكانك أن {ask} باستخدام URL لمصدر عام."
+    }
+  }
+}

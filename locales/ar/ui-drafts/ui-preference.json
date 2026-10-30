@@ -1,0 +1,56 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/ui-preference.ts",
+  "sourceSha256": "cd4d2e048a95204a23cfd64efd0957e7b38345618c94e467f575e98b4354ac19",
+  "entries": {
+    "language": {
+      "source": "Interface language",
+      "text": "لغة الواجهة"
+    },
+    "previewNotice": {
+      "source": "Preview: machine draft, not human reviewed. Some interface text remains in English. Critical payment, consent and legal text stays in English.",
+      "text": "معاينة: ترجمة آلية أولية لم يراجعها إنسان. تبقى بعض نصوص الواجهة بالإنجليزية، ومنها النصوص الحساسة المتعلقة بالدفع والموافقة والشؤون القانونية."
+    },
+    "checking": {
+      "source": "Checking language preference…",
+      "text": "جارٍ التحقق من تفضيل اللغة…"
+    },
+    "saving": {
+      "source": "Saving account language…",
+      "text": "جارٍ حفظ لغة الحساب…"
+    },
+    "accountSaved": {
+      "source": "Language saved to this account.",
+      "text": "حُفظت اللغة لهذا الحساب."
+    },
+    "browserSaved": {
+      "source": "Language saved in this browser.",
+      "text": "حُفظت اللغة في هذا المتصفح."
+    },
+    "unavailable": {
+      "source": "Account language is unavailable. Your browser choice still applies.",
+      "text": "لغة الحساب غير متاحة. يبقى اختيارك في المتصفح ساريًا."
+    },
+    "memoryOnly": {
+      "source": "Language applies here. Browser storage is unavailable; it may not survive this session.",
+      "text": "تُطبَّق اللغة هنا. التخزين في المتصفح غير متاح؛ وقد لا يستمر هذا الاختيار بعد انتهاء الجلسة."
+    },
+    "loadFailed": {
+      "source": "Translation could not load. English is shown; select the language to retry.",
+      "text": "تعذّر تحميل الترجمة. تُعرض الإنجليزية؛ اختر اللغة للمحاولة مجددًا."
+    },
+    "answerLanguageTitle": {
+      "source": "Request an answer language",
+      "text": "اطلب لغة للإجابة"
+    },
+    "answerLanguageBody": {
+      "source": "Include a language instruction in your question. Interface language changes menus and labels; saved answers keep their original text.",
+      "text": "أضف تعليمات اللغة إلى سؤالك. تغيّر لغة الواجهة القوائم والتسميات؛ وتحتفظ الإجابات المحفوظة بنصها الأصلي."
+    },
+    "answerLanguageExamples": {
+      "source": "Supported language instructions",
+      "text": "تعليمات اللغات المدعومة"
+    }
+  }
+}

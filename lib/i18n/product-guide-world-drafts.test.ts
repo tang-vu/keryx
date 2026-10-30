@@ -19,7 +19,7 @@ vi.mock("@/components/keryx/site-footer", () => ({ SiteFooter: () => null }));
 vi.mock("@/components/keryx/about-research-story", () => ({ AboutResearchStory: () => null }));
 vi.mock("next/link", () => ({ default: ({ children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => React.createElement("a", props, children) }));
 
-const locales = ["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru"] as const;
+const locales = ["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const;
 const sourcePath = "locales/en/product-guide.ts";
 const binding = extractNamespaceCopy(sourcePath, readFileSync(sourcePath, "utf8"));
 const glossary = JSON.parse(readFileSync("locales/glossary/en.json", "utf8"));

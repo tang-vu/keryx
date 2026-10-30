@@ -24,6 +24,7 @@ beforeAll(async () => {
       import{UiCopyContext,englishUiCopy}from'./lib/i18n/ui-copy-context';
       import{createMessages}from'./lib/i18n/messages';import{createRichMessages}from'./lib/i18n/rich-messages';
       import{loadUiPreview}from'./lib/i18n/ui-preview-catalogues';
+      import{localeDirection}from'./lib/i18n/locales';
       const pending=[];let mode='defer',downloadFailure='none';
       const nativeCreate=URL.createObjectURL.bind(URL),nativeRevoke=URL.revokeObjectURL.bind(URL),nativeElement=document.createElement.bind(document),
         nativeAppend=document.body.appendChild.bind(document.body),nativeClick=HTMLAnchorElement.prototype.click;
@@ -44,7 +45,7 @@ beforeAll(async () => {
         evidence:[{marker:'S1',claim:'Measured result',quote:'Exact recorded excerpt.',qualifiesForAnswer:true,qualifiesForReward:false}]}));
       const payments=[{kind:'citation',sourceName:'Synthetic writer',amountUsdc:0.001,settled:false,settlementStatus:'pending'}];
       function App(){const[index,setIndex]=useState(0),[ui,setUi]=useState(englishUiCopy);fixture.report=setIndex;
-        fixture.locale=async locale=>{const preview=await loadUiPreview(locale);setUi({...englishUiCopy,locale,preview,message:createMessages(locale,preview.$messages),richMessage:createRichMessages(locale,preview.$messages)});document.documentElement.lang=locale;};
+        fixture.locale=async locale=>{const preview=await loadUiPreview(locale);setUi({...englishUiCopy,locale,preview,message:createMessages(locale,preview.$messages),richMessage:createRichMessages(locale,preview.$messages)});document.documentElement.lang=locale;document.documentElement.dir=localeDirection(locale);};
         return <UiCopyContext.Provider value={ui}><><h2 style={{fontFamily:'var(--font-bodoni)',fontSize:30,marginBottom:16}}>{reports[index].question}</h2><ReportActions run={reports[index]} meta={null} payments={payments}/></></UiCopyContext.Provider>}
       createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMode>);`, loader: "tsx", resolveDir: process.cwd() },
     bundle: true, write: false, platform: "browser", format: "iife",
@@ -88,7 +89,7 @@ const lifecycle = (page: Page) => page.evaluate(() => {
   return { allocated: value.allocated, revoked: value.revoked, connections: value.connections };
 });
 
-it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
+it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
   "keeps actual $locale report export and native recovery controls intact at $width", async ({ locale, width }) => {
     const draft = JSON.parse(await readFile(`locales/${locale}/ui-drafts/reports.json`, "utf8"));
     const native = (key: string) => draft.entries[key].text as string;
@@ -98,6 +99,7 @@ it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id"] as const).flatMap(l
       const download = page.getByRole("button", { name: native("reportActions.download"), exact: true });
       const saved = page.locator('a[href="/dispatch/report%2Falpha%3Fx%3D1"]'), status = page.getByRole("status");
       await copy.waitFor(); expect(await saved.textContent()).toBe(`${native("reportActions.openSaved")}→`);
+      expect(await page.locator("html").getAttribute("dir")).toBe(locale === "ar" ? "rtl" : "ltr");
       expect(await copy.locator("[lang]").getAttribute("lang")).toBe(locale);
       expect(await download.locator("[lang]").getAttribute("lang")).toBe(locale);
       await copy.click(); await settle(page, false);
