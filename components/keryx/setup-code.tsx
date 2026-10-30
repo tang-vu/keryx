@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { setupCopy } from "@/locales/en/get-started";
-import { useUiCopy } from "@/lib/i18n/ui-copy";
+import { UiText, useUiCopy } from "@/lib/i18n/ui-copy";
 const uiEnglish_setupCopy = setupCopy;
 
 
@@ -13,6 +13,8 @@ export function SetupCode(props: { title: string; value: string }) {
 
 function SetupCodeExample({ title, value }: { title: string; value: string }) {
   const setupCopy = useUiCopy("get-started", uiEnglish_setupCopy);
+  const translatedTitle = useUiCopy("get-started", title);
+  const titleId = useId();
   const [status, setStatus] = useState<"idle" | "pending" | "copied" | "failed">("idle");
   const pending = useRef(false), mounted = useRef(true);
   const example = useRef<HTMLPreElement>(null);
@@ -40,12 +42,12 @@ function SetupCodeExample({ title, value }: { title: string; value: string }) {
   }
   return <div className="mt-4 min-w-0 border border-line bg-paper-2">
     <div className="flex items-center justify-between gap-3 border-b border-line px-4">
-      <p className="font-mono text-xs text-ink-2">{title}</p>
-      <button type="button" onClick={copy} aria-busy={status === "pending"} aria-disabled={status === "pending"} aria-label={`${setupCopy.common.copy} ${title}`} className="min-h-11 shrink-0 font-mono text-xs text-paid underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal aria-disabled:cursor-wait">
-        {status === "copied" ? setupCopy.common.copied : setupCopy.common.copy}
+      <p id={titleId} className="font-mono text-xs text-ink-2"><UiText source={title} namespaces={["get-started"]} /></p>
+      <button type="button" onClick={copy} aria-busy={status === "pending"} aria-disabled={status === "pending"} aria-label={`${setupCopy.common.copy} ${translatedTitle}`} className="min-h-11 shrink-0 font-mono text-xs text-paid underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal aria-disabled:cursor-wait">
+        <UiText source={status === "copied" ? uiEnglish_setupCopy.common.copied : uiEnglish_setupCopy.common.copy} namespaces={["get-started"]} />
       </button>
     </div>
-    <pre ref={example} tabIndex={0} aria-label={title} className="max-w-full overflow-x-auto p-4 font-mono text-xs leading-relaxed text-ink focus-visible:outline-2 focus-visible:outline-seal"><code>{value}</code></pre>
-    <p role="status" aria-atomic="true" className="px-4 font-mono text-xs text-seal">{status === "failed" ? setupCopy.common.copyFailed : status === "copied" ? setupCopy.common.copied : ""}</p>
+    <pre ref={example} tabIndex={0} aria-labelledby={titleId} dir="ltr" translate="no" className="max-w-full overflow-x-auto p-4 font-mono text-xs leading-relaxed text-ink focus-visible:outline-2 focus-visible:outline-seal"><code lang="en">{value}</code></pre>
+    <p role="status" aria-atomic="true" className="px-4 font-mono text-xs text-seal"><UiText source={status === "failed" ? uiEnglish_setupCopy.common.copyFailed : status === "copied" ? uiEnglish_setupCopy.common.copied : ""} namespaces={["get-started"]} /></p>
   </div>;
 }

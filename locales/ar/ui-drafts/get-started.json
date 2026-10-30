@@ -307,6 +307,106 @@
     "download.alternativeBody": {
       "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
       "text": "يعمل تطبيق الويب في متصفحات الحاسوب والهاتف. يمكن لمساعدي الذكاء الاصطناعي الاتصال عبر MCP عن بُعد، ويمكن للمطوّرين استخدام واجهة API المستضافة."
+    },
+    "integrations.title": {
+      "source": "Keryx, connected.",
+      "text": "اربط Keryx بأدواتك."
+    },
+    "integrations.mcpTitle": {
+      "source": "Connect an AI assistant with MCP",
+      "text": "اربط مساعد ذكاء اصطناعي عبر MCP"
+    },
+    "integrations.remoteTitle": {
+      "source": "Remote MCP",
+      "text": "MCP عن بُعد"
+    },
+    "integrations.remoteAction": {
+      "source": "Open remote MCP setup",
+      "text": "افتح إعداد MCP عن بُعد"
+    },
+    "integrations.remoteEndpoint": {
+      "source": "Hosted MCP endpoint",
+      "text": "نقطة اتصال MCP المستضافة"
+    },
+    "integrations.stdioTitle": {
+      "source": "Local stdio MCP",
+      "text": "MCP محلي عبر stdio"
+    },
+    "integrations.stdioConfig": {
+      "source": "Stdio client configuration",
+      "text": "إعداد عميل Stdio"
+    },
+    "integrations.apiTitle": {
+      "source": "Build with the API",
+      "text": "طوّر باستخدام API"
+    },
+    "integrations.apiBase": {
+      "source": "Chat Completions base URL",
+      "text": "عنوان URL الأساسي لـ Chat Completions"
+    },
+    "integrations.apiModel": {
+      "source": "Model",
+      "text": "النموذج"
+    },
+    "integrations.apiConfigTitle": {
+      "source": "Connect an OpenAI-compatible client",
+      "text": "اربط عميلًا متوافقًا مع OpenAI"
+    },
+    "integrations.apiReadOnly": {
+      "source": "Check available models (Bash, read-only)",
+      "text": "تحقق من النماذج المتاحة (Bash، للقراءة فقط)"
+    },
+    "integrations.apiReference": {
+      "source": "OpenAPI reference",
+      "text": "مرجع OpenAPI"
+    },
+    "integrations.apiRecipes": {
+      "source": "SDK examples & streaming guide",
+      "text": "أمثلة SDK ودليل البث"
+    },
+    "integrations.cliTitle": {
+      "source": "Work from the command line",
+      "text": "اعمل من سطر الأوامر"
+    },
+    "integrations.cliBody": {
+      "source": "The source checkout includes Operator, research and buyer commands. The CLI is currently distributed with the repository; keryx-mcp is the separate npm MCP package.",
+      "text": "تتضمن الشيفرة المصدرية أوامر Operator والبحث والمشتري. تُوزَّع CLI حاليًا مع المستودع؛ أما keryx-mcp فهو حزمة MCP منفصلة على npm."
+    },
+    "integrations.cliRequirements": {
+      "source": "Git, Node 22.19+ or 24+, and the pinned npm 11.19.0 installer. Clone the project and install dependencies before running commands.",
+      "text": "تحتاج إلى Git وNode 22.19+ أو 24+، وإصدار npm المحدد 11.19.0. استنسخ المشروع وثبّت التبعيات قبل تشغيل الأوامر."
+    },
+    "integrations.cliSetup": {
+      "source": "Install from source & inspect help",
+      "text": "ثبّت من المصدر وراجع المساعدة"
+    },
+    "integrations.cliGuide": {
+      "source": "CLI commands & configuration",
+      "text": "أوامر CLI وإعداداتها"
+    },
+    "integrations.botsTitle": {
+      "source": "Ask from your chat app",
+      "text": "اسأل من تطبيق الدردشة"
+    },
+    "integrations.telegramBody": {
+      "source": "Open the Keryx bot and send a question. In a group, use /ask followed by your question.",
+      "text": "افتح بوت Keryx وأرسل سؤالًا. في المجموعة، استخدم /ask متبوعًا بسؤالك."
+    },
+    "integrations.telegramAction": {
+      "source": "Open Telegram bot",
+      "text": "افتح بوت Telegram"
+    },
+    "integrations.discordAction": {
+      "source": "Add to Discord",
+      "text": "أضف إلى Discord"
+    },
+    "integrations.slackAction": {
+      "source": "Slack administrator setup",
+      "text": "إعداد Slack للمسؤولين"
+    },
+    "integrations.selfHost": {
+      "source": "Self-hosting guide",
+      "text": "دليل الاستضافة الذاتية"
     }
   }
 }
