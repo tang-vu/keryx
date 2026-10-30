@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import { recordedReportPreview } from "../i18n/recorded-report-preview";
 import type { QueryRun } from "../types";
 import { shippedUiLocales, preparedLocales } from "../i18n/locales";
-import { formatAmount, formatSigningUsdc, selectPlural } from "../display/recorded-usdc";
+import { formatAmount, formatSigningUsdc, selectPlural } from "../display/recorded-usdc.mjs";
 
 const answer = "هذه إجابة أصلية محفوظة. “Original source {count} 1 source cited” [S1]";
 function retained(): Pick<QueryRun, "answer" | "trace"> {
