@@ -1,5 +1,6 @@
 import { mkdir, readFile } from "node:fs/promises";
 import { decisionReviewCopy } from "./decision-review-copy";
+import { answerLanguageInstructions } from "../../shared/i18n/answer-language-instructions";
 import { join, resolve } from "node:path";
 import { beforeAll, afterAll, expect, it } from "vitest";
 import { build } from "esbuild";
@@ -210,6 +211,16 @@ it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as 
       const reviewNotice = page.getByText(decisionReviewCopy.modeNotice, { exact: true });
       expect(await reviewNotice.getAttribute("lang")).toBe("en");
       expect(await reviewNotice.evaluate(element => getComputedStyle(element).direction)).toBe("ltr");
+      const help = page.locator("[data-answer-language-help]");
+      await help.getByRole("button").click();
+      for (const example of answerLanguageInstructions) {
+        const code = help.locator(`code[lang="${example.language}"]`);
+        expect(await code.textContent()).toBe(example.instruction);
+        expect(await code.evaluate(element => getComputedStyle(element).direction)).toBe(example.language === "ar" ? "rtl" : "ltr");
+      }
+      expect(await input.inputValue()).toBe(original);
+      if (nativeScreenshots) await help.screenshot({ path: join(nativeScreenshots, `guide-native-help-${frame}.png`) });
+      await help.getByRole("button").click();
     }
     await selector.selectOption("en"); await expect.poll(() => page.locator("html").getAttribute("lang")).toBe("en");
     expect(await input.inputValue()).toBe(original); expect(await handle!.evaluate(element => element.isConnected)).toBe(true);

@@ -37,6 +37,15 @@ the existing language-aware message leaves now isolate those notices without
 changing visibility choices, disabled conditions or callbacks.
 Original JSON in request and bibliographic inspection panels explicitly reads
 LTR while retaining unknown-language identity and exact original text.
+Compiled-page inspection also exposed instruction examples inheriting the
+interface direction and an English footer description marked as Arabic.
+Each fixed native instruction now uses its own direction, and the footer's
+authored message leaves declare their actual language. Instruction text,
+the Greek word, question bytes and critical-copy filters remain unchanged.
+The initial-globe browser fixture now extracts the complete JSX element through
+the existing TypeScript parser. Its previous non-greedy `div` expression cut
+the nested graphic wrapper short. First-paint bounds, the delayed real atlas,
+DPR 1/2, reduced motion and visibility assertions remain intact.
 The browser checks cover normal and enlarged Arabic text at 320, 390 and
 1366 px, keyboard focus and PageDown reading, original question preservation
 and English financial notices. Source browsing, stop/new/follow-up handoffs,

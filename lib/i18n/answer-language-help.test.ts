@@ -88,6 +88,9 @@ it.each(preparedLocales)("%s disclosure exposes native examples and preserves th
   for (const row of answerLanguageInstructions) {
     expect(panel.querySelector(`code[lang="${row.language}"]`)?.textContent).toBe(row.instruction);
     expect(panel.querySelector(`li > span[lang="${row.language}"]`)?.textContent).toBe(row.name);
+    const direction = row.language === "ar" ? "rtl" : "ltr";
+    expect(panel.querySelector(`code[lang="${row.language}"]`)?.getAttribute("dir")).toBe(direction);
+    expect(panel.querySelector(`li > span[lang="${row.language}"]`)?.parentElement?.getAttribute("dir")).toBe(direction);
   }
   await act(async () => button.click());
   expect(panel.hidden).toBe(true); expect(input.value).toBe(original); expect(onAsk).not.toHaveBeenCalled();

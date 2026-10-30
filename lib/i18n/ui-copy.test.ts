@@ -11,6 +11,7 @@ import { loadUiPreview } from "./ui-preview-catalogues";
 import { setupCopy } from "@/locales/en/get-started";
 import { englishMessages } from "./messages";
 import { PaperCard } from "@/components/keryx/paper-card";
+import { SiteFooter } from "@/components/keryx/site-footer";
 import type { PaperRecord } from "@/lib/papers/types";
 
 vi.mock("@/components/keryx/paper-save-button", () => ({ PaperSaveButton: () => null }));
@@ -36,6 +37,7 @@ function Probe() {
     h("div", { id: "paper" }, h(PaperCard, { group: { id: "paper:original", record: paper, records: [paper] } })),
     h("p", { id: "critical" }, h(UiMessage, { messageKey: "account.signatureInstruction" })),
     h("p", { id: "rich" }, rich("archiveIndex.title", { emphasis: h("strong", null, "Original node") })),
+    h("div", { id: "footer" }, h(SiteFooter)),
     h(UiElement, { as: "input", names: ["placeholder"], attributes: { id: "draft", defaultValue: "Unsent original draft", placeholder: englishMessages["researchEntry.placeholder"] } }));
 }
 async function mount(prepareLocale: (locale: UiLocale) => Promise<unknown> = loadUiPreview) {
@@ -71,6 +73,10 @@ it("changes both server leaves and client copy without remounting, changing orig
     if (locale === "ar") {
       expect(container.querySelector("#leaf span")!.getAttribute("dir")).toBe("rtl");
       expect(container.querySelector("#critical span")!.getAttribute("dir")).toBe("ltr");
+      const footerOriginal = container.querySelector('#footer footer p > [lang="en"]')!;
+      expect(footerOriginal.textContent).toBe("From the Greek κῆρυξ — a herald: the one sent to carry a message, and paid for the carrying.");
+      expect(footerOriginal.getAttribute("dir")).toBe("ltr");
+      expect(footerOriginal.querySelector('[lang="el"]')!.textContent).toBe("κῆρυξ");
       expect(container.querySelector("#paper h3")!.getAttribute("lang")).toBe("und");
       expect(container.querySelector("#paper h3")!.getAttribute("dir")).toBe("auto");
       expect(container.querySelector("#paper p.break-words")!.getAttribute("dir")).toBe("auto");

@@ -62,8 +62,15 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
         for (const example of answerLanguageInstructions) {
           assert.equal(await help.locator(`code[lang="${example.language}"]`).textContent(), example.instruction);
           assert.equal(await help.locator(`li > span[lang="${example.language}"]`).textContent(), example.name);
+          const direction = example.language === "ar" ? "rtl" : "ltr";
+          assert.equal(await help.locator(`code[lang="${example.language}"]`).evaluate(element => getComputedStyle(element).direction), direction);
         }
         assert.equal(await page.locator("#ask-question").inputValue(), original, "Opening language guidance never edits the question");
+        if (locale === "ar") {
+          const etymology = page.locator("footer p").filter({ hasText: "From the Greek" });
+          assert.equal(await etymology.locator(':scope > [lang="en"]').getAttribute("dir"), "ltr");
+          assert.equal(await etymology.locator('[lang="el"]').textContent(), "κῆρυξ");
+        }
         assert.equal(askRequests, 0, "Language guidance never submits or signs research");
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, "Expanded language guidance fits the viewport");
         if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-answer-language-help.png`), fullPage: true });
