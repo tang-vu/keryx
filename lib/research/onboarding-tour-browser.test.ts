@@ -104,6 +104,7 @@ it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as 
     const metadataHref = await page.getByTestId("paper-metadata-handoff").getAttribute("href");
     await selector.selectOption(locale);
     await expect.poll(() => page.locator("html").getAttribute("lang")).toBe(locale);
+    await page.evaluate(() => document.fonts.ready);
     expect(await page.locator("#ask-keyboard-hint [lang]").textContent()).toBe(message("researchEntry.keyboardHint"));
     expect(await page.locator("#ask-keyboard-hint [lang]").getAttribute("lang")).toBe(locale);
     await page.locator("summary").filter({ hasText: message("researchEntry.moreOptions") }).click();
@@ -194,6 +195,7 @@ it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as 
           }), "A guide that needs no scrolling must show its complete paragraph").toBe(true);
         }
       }
+      await expectAlignedSpotlight(page, ["hero", "ask-form", "budget", "dispatch-btn"][index]);
       if (nativeScreenshots) await page.screenshot({ path: join(nativeScreenshots, `guide-native-${frame}-step-${index + 1}.png`) });
       const action = dialog.getByRole("button", { name: message(index === 3 ? "researchTour.done" : "researchTour.next"), exact: true });
       if (locale === "ar") expect(await action.locator('[aria-hidden="true"]').evaluate(element => getComputedStyle(element, "::before").content)).toContain("←");
@@ -319,6 +321,41 @@ async function pixel(page: Page, x: number, y: number) {
     return [...context.getImageData(0, 0, 1, 1).data];
   }, [...bytes]);
 }
+
+async function expectAlignedSpotlight(page: Page, targetName: string) {
+  await expect.poll(() => page.evaluate(name => {
+    const target = document.querySelector<HTMLElement>(`[data-tour="${name}"]`);
+    const mask = document.querySelector<SVGRectElement>('[data-keryx-tour-portal] mask rect[fill="black"]');
+    if (!target || !mask) return false;
+    const bounds = target.getBoundingClientRect();
+    const left = Math.max(4, bounds.left), right = Math.min(innerWidth - 4, bounds.right);
+    const top = Math.max(4, bounds.top), bottom = Math.min(innerHeight - 4, bounds.bottom);
+    const x = Number(mask.getAttribute("x")), y = Number(mask.getAttribute("y"));
+    const width = Number(mask.getAttribute("width")), height = Number(mask.getAttribute("height"));
+    return left < right && top < bottom && x <= left + 1 && y <= top + 1 && x + width >= right - 1 && y + height >= bottom - 1;
+  }, targetName)).toBe(true);
+}
+
+it.each([320, 1366])("realigns the complete guide cutout after late target text wrapping at %ipx", async width => {
+  await fixture(async page => {
+    const dialog = await open(page);
+    for (let index = 0; index < 3; index++) {
+      await dialog.getByRole("button", { name: "Next", exact: true }).click();
+      await dialog.getByText(`Step ${index + 2} of 4`, { exact: true }).waitFor();
+    }
+    await expectAlignedSpotlight(page, "dispatch-btn");
+    const target = page.locator('[data-tour="dispatch-btn"]');
+    const before = await target.boundingBox(); expect(before).toBeTruthy();
+    await target.evaluate(element => { element.style.width = "160px"; element.style.fontSize = "32px"; });
+    await expect.poll(async () => (await target.boundingBox())!.height > before!.height + 40).toBe(true);
+    await expectAlignedSpotlight(page, "dispatch-btn");
+    const after = (await target.boundingBox())!;
+    expect((await pixel(page, after.x + 16, after.y + after.height - 16)).slice(0, 3)).toEqual([225, 215, 192]);
+    await page.keyboard.press("Escape"); await restored(page);
+    expect(await page.getByLabel("Retained question").inputValue()).toBe("An intact user question");
+    expect(await page.getByLabel("Retained budget").inputValue()).toBe("0.04");
+  }, width);
+});
 
 it.each([320, 390, 768, 1366].flatMap(width => (["reduce", "no-preference"] as const).map(motion => ({ width, motion }))))(
   "shows the real guide target with native keyboard reading at $width/$motion", async ({ width, motion }) => {

@@ -29,3 +29,9 @@ only the header, footer and Next Link boundary; hosted compiled acceptance remai
 required. Required PR/domain/platform checks, direct original visual review, exact
 squash provenance and owned cleanup precede source closure. Runtime and publication
 delivery remain with the existing ROOT/Circle batch owner.
+
+Native first-use screenshots also wait for loaded fonts and a spotlight that covers
+the actual visible target. Two late text-wrapping cases exercise the existing resize
+observer without changing production code. This keeps enlarged-text captures from
+recording an intermediate highlight before its queued measurement has settled;
+focus, inert background, original questions and zero-submission checks remain.
