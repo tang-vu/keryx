@@ -307,6 +307,106 @@
     "download.alternativeBody": {
       "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
       "text": "Die Web-App funktioniert in Desktop- und Mobilbrowsern. KI-Assistenten können sich über Remote MCP verbinden; Entwickler können die gehostete API nutzen."
+    },
+    "integrations.title": {
+      "source": "Keryx, connected.",
+      "text": "Keryx, vernetzt."
+    },
+    "integrations.mcpTitle": {
+      "source": "Connect an AI assistant with MCP",
+      "text": "Verbinde einen KI-Assistenten über MCP"
+    },
+    "integrations.remoteTitle": {
+      "source": "Remote MCP",
+      "text": "Remote-MCP"
+    },
+    "integrations.remoteAction": {
+      "source": "Open remote MCP setup",
+      "text": "Einrichtung für Remote-MCP öffnen"
+    },
+    "integrations.remoteEndpoint": {
+      "source": "Hosted MCP endpoint",
+      "text": "Gehosteter MCP-Endpunkt"
+    },
+    "integrations.stdioTitle": {
+      "source": "Local stdio MCP",
+      "text": "Lokales MCP über stdio"
+    },
+    "integrations.stdioConfig": {
+      "source": "Stdio client configuration",
+      "text": "Konfiguration des Stdio-Clients"
+    },
+    "integrations.apiTitle": {
+      "source": "Build with the API",
+      "text": "Entwickle mit der API"
+    },
+    "integrations.apiBase": {
+      "source": "Chat Completions base URL",
+      "text": "Basis-URL für Chat Completions"
+    },
+    "integrations.apiModel": {
+      "source": "Model",
+      "text": "Modell"
+    },
+    "integrations.apiConfigTitle": {
+      "source": "Connect an OpenAI-compatible client",
+      "text": "Verbinde einen mit OpenAI kompatiblen Client"
+    },
+    "integrations.apiReadOnly": {
+      "source": "Check available models (Bash, read-only)",
+      "text": "Verfügbare Modelle abfragen (Bash, nur lesend)"
+    },
+    "integrations.apiReference": {
+      "source": "OpenAPI reference",
+      "text": "OpenAPI-Referenz"
+    },
+    "integrations.apiRecipes": {
+      "source": "SDK examples & streaming guide",
+      "text": "SDK-Beispiele und Streaming-Anleitung"
+    },
+    "integrations.cliTitle": {
+      "source": "Work from the command line",
+      "text": "Arbeite über die Befehlszeile"
+    },
+    "integrations.cliBody": {
+      "source": "The source checkout includes Operator, research and buyer commands. The CLI is currently distributed with the repository; keryx-mcp is the separate npm MCP package.",
+      "text": "Der Quellcode enthält Befehle für Operator, Recherche und Käufer. Die CLI wird derzeit mit dem Repository verteilt; keryx-mcp ist das separate MCP-Paket auf npm."
+    },
+    "integrations.cliRequirements": {
+      "source": "Git, Node 22.19+ or 24+, and the pinned npm 11.19.0 installer. Clone the project and install dependencies before running commands.",
+      "text": "Git, Node 22.19+ oder 24+ und npm in der festgelegten Version 11.19.0. Klone das Projekt und installiere die Abhängigkeiten, bevor du Befehle ausführst."
+    },
+    "integrations.cliSetup": {
+      "source": "Install from source & inspect help",
+      "text": "Aus dem Quellcode installieren und Hilfe ansehen"
+    },
+    "integrations.cliGuide": {
+      "source": "CLI commands & configuration",
+      "text": "CLI-Befehle und Konfiguration"
+    },
+    "integrations.botsTitle": {
+      "source": "Ask from your chat app",
+      "text": "Frage aus deiner Chat-App"
+    },
+    "integrations.telegramBody": {
+      "source": "Open the Keryx bot and send a question. In a group, use /ask followed by your question.",
+      "text": "Öffne den Keryx-Bot und sende eine Frage. Verwende in einer Gruppe /ask, gefolgt von deiner Frage."
+    },
+    "integrations.telegramAction": {
+      "source": "Open Telegram bot",
+      "text": "Telegram-Bot öffnen"
+    },
+    "integrations.discordAction": {
+      "source": "Add to Discord",
+      "text": "Zu Discord hinzufügen"
+    },
+    "integrations.slackAction": {
+      "source": "Slack administrator setup",
+      "text": "Einrichtung für Slack-Administratoren"
+    },
+    "integrations.selfHost": {
+      "source": "Self-hosting guide",
+      "text": "Anleitung zum Selbsthosting"
     }
   }
 }

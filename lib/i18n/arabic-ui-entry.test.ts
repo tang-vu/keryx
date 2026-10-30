@@ -6,7 +6,7 @@ import { englishMessages, createMessages } from "./messages";
 import { emptyUiPreview, previewText } from "./ui-preview";
 import { getUiPreview, loadUiPreview } from "./ui-preview-catalogues";
 
-const namespaces = { "core-inline": 16, "get-started": 76, "pdf-reading": 5, "product-guide": 95,
+const namespaces = { "core-inline": 16, "get-started": 101, "pdf-reading": 5, "product-guide": 95,
   reports: 55, "research-flow": 39, shell: 17, "source-directory": 112, "ui-preference": 12 };
 const read = (path: string) => readFileSync(path, "utf8");
 const glossary = JSON.parse(read("locales/glossary/en.json"));

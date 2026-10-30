@@ -6,7 +6,72 @@ import { preparedLocales, uiLocaleNames } from "../lib/i18n/locales";
 import { productGuideCopy } from "../locales/en/product-guide";
 import { answerLanguageInstructions } from "../shared/i18n/answer-language-instructions";
 import { setupCopy } from "../locales/en/get-started";
-import { installationLinks } from "../lib/public-installation";
+import { installationLinks, setupExamples } from "../lib/public-installation";
+
+/** Integration setup checks shared by compiled pages and the explicitly mocked source fixture. */
+export async function checkIntegrationGuide(page: Page, locale: string, width: number, entries: Readonly<Record<string, { text: string }>>, output?: string) {
+  const guide = setupCopy.integrations;
+  const translated = (key: string, original: string) => entries[key]?.text ?? original;
+  const examples = [
+    ["remoteEndpoint", guide.remoteEndpoint, setupExamples.remoteEndpoint], ["stdioConfig", guide.stdioConfig, setupExamples.stdio],
+    ["apiReadOnly", guide.apiReadOnly, setupExamples.models], ["apiExample", guide.apiExample, setupExamples.chat],
+    ["cliSetup", guide.cliSetup, setupExamples.cli],
+  ] as const;
+  const codes = page.locator("main pre"); assert.equal(await codes.count(), examples.length);
+  for (const [index, [key, original, command]] of examples.entries()) {
+    const code = codes.nth(index), header = code.locator("xpath=preceding-sibling::div[1]");
+    const title = key === "apiExample" ? original : translated(`integrations.${key}`, original);
+    assert.equal(await code.textContent(), command);
+    assert.equal(await code.getAttribute("aria-labelledby"), await header.locator("p").getAttribute("id"));
+    assert.equal(await code.locator("code").getAttribute("lang"), "en"); assert.equal(await code.getAttribute("translate"), "no");
+    assert.equal(await code.evaluate(element => getComputedStyle(element).direction), "ltr");
+    assert.equal(await header.locator("p span").textContent(), title);
+    assert.equal(await header.locator("p span").getAttribute("lang"), title === original ? "en" : locale);
+    assert.equal(await header.locator("button").getAttribute("aria-label"), `${entries["common.copy"].text} ${title}`);
+  }
+  for (const original of [guide.body, guide.remoteBody, guide.remoteStep, guide.stdioBody, guide.stdioRequirements,
+    guide.stdioStep, guide.apiBody, guide.apiExampleNotice, guide.a2aBody, guide.cliBoundary, guide.botsBody]) {
+    const leaf = page.locator("main").getByText(original, { exact: true }); assert.equal(await leaf.count(), 1);
+    assert.equal(await leaf.evaluate(element => element.closest("[lang]")?.getAttribute("lang")), "en");
+  }
+  const telegram = page.locator("#bots article").first().locator("p > span");
+  assert.equal(await telegram.textContent(), entries["integrations.telegramBody"].text);
+  assert.equal(await telegram.locator("bdi").textContent(), "/ask");
+  assert.equal(await telegram.locator("bdi").evaluate(element => getComputedStyle(element).direction), "ltr");
+  assert.equal(await telegram.locator("bdi").evaluate(element => getComputedStyle(element).whiteSpace), "nowrap");
+  const packageName = page.locator("#cli > p").first().locator("bdi");
+  assert.equal(await packageName.textContent(), "keryx-mcp");
+  assert.equal(await packageName.evaluate(element => getComputedStyle(element).direction), "ltr");
+  assert.equal(await packageName.evaluate(element => getComputedStyle(element).whiteSpace), "nowrap");
+  const versions = page.locator("#cli > p").nth(1).locator("bdi");
+  assert.deepEqual(await versions.allTextContents(), ["22.19+", "24+", "11.19.0"]);
+  for (const version of await versions.all()) assert.equal(await version.evaluate(element => getComputedStyle(element).direction), "ltr");
+  assert.deepEqual(await page.locator("#bots article > a:first-of-type").evaluateAll(links => links.map(link => link.getAttribute("href"))), [
+    installationLinks.telegram, installationLinks.discord, `${installationLinks.docs}slack-bot-setup.md`,
+  ]);
+  assert.equal(await page.locator('nav a[aria-current="page"]').getAttribute("href"), "/integrations");
+  assert((await page.title()).includes(guide.metadata));
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `${locale}/${width} integration overflow`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-integrations.png`), fullPage: true });
+  await page.evaluate(() => {
+    const state = window as unknown as { setupPreviewCopies: string[] }; state.setupPreviewCopies = [];
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { async writeText(text: string) { state.setupPreviewCopies.push(text); } } });
+  });
+  for (const code of await codes.all()) {
+    const wrapper = code.locator(".."); const button = wrapper.locator("button");
+    await button.press("Enter"); await wrapper.getByRole("status").getByText(entries["common.copied"].text, { exact: true }).waitFor();
+    await button.press("Tab"); assert.equal(await code.evaluate(element => document.activeElement === element), true);
+  }
+  assert.deepEqual(await page.evaluate(() => (window as unknown as { setupPreviewCopies: string[] }).setupPreviewCopies), examples.map(example => example[2]));
+  await page.evaluate(() => Object.defineProperty(navigator, "clipboard", { configurable: true, value: { async writeText() { throw Error("synthetic clipboard refusal"); } } }));
+  await codes.first().locator("..").locator("button").press("Enter");
+  const failure = codes.first().locator("..").getByRole("status");
+  await failure.getByText(setupCopy.common.copyFailed, { exact: true }).waitFor();
+  assert.equal(await failure.locator("span").getAttribute("lang"), "en");
+  assert.equal(await failure.locator("span").evaluate(element => getComputedStyle(element).direction), "ltr");
+  assert.equal(await page.evaluate(() => window.getSelection()?.toString()), examples[0][2]);
+}
 
 /** Real compiled pages and language controls; no research, payment or external requests. */
 export async function checkUiPreviews(browser: Browser, base: string, output?: string) {
@@ -111,6 +176,8 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
     await page.evaluate(() => window.scrollTo(0, 0));
     if (output) await page.screenshot({ path: resolve(output, `${locale}-${width}-download.png`), fullPage: true });
   };
+  const checkIntegrationPage = (page: Page, locale: typeof locales[number], width: number) =>
+    checkIntegrationGuide(page, locale, width, drafts[locale]["get-started"].entries, output);
   const results = [];
   for (const width of [390, 1366]) {
     const context = await browser.newContext({ viewport: { width, height: 950 }, locale: "en-US" });
@@ -212,6 +279,11 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
         await checkDownloadPage(page, locale, width);
         await page.reload({ waitUntil: "networkidle" });
         await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["download.title"].text, exact: true }).waitFor();
+        await page.goto(`${base}/integrations`, { waitUntil: "networkidle" });
+        await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["integrations.title"].text, exact: true }).waitFor();
+        await checkIntegrationPage(page, locale, width);
+        await page.reload({ waitUntil: "networkidle" });
+        await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["integrations.title"].text, exact: true }).waitFor();
         await page.goto(base, { waitUntil: "networkidle" });
         await page.locator('label[for="ask-question"]').filter({ hasText: expected }).waitFor();
       }
@@ -231,15 +303,24 @@ export async function checkUiPreviews(browser: Browser, base: string, output?: s
           await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["download.title"].text, exact: true }).waitFor();
           await checkDownloadPage(page, locale, 320);
         }
+        await page.goto(`${base}/integrations`, { waitUntil: "networkidle" });
+        for (const locale of locales) {
+          await select().selectOption(locale);
+          await page.getByRole("heading", { name: drafts[locale]["get-started"].entries["integrations.title"].text, exact: true }).waitFor();
+          await checkIntegrationPage(page, locale, 320);
+        }
         await select().selectOption("en");
       }
       assert.equal(askRequests, 0, "Language changes must never submit or sign research");
       assert.deepEqual(errors, [], "No browser runtime errors");
-      results.push({ width, locales: ["en", ...locales], routes: ["/", "/about", "/get-started", "/download"], errors, askRequests,
+      results.push({ width, locales: ["en", ...locales], routes: ["/", "/about", "/get-started", "/download", "/integrations"], errors, askRequests,
         setupChoices: { locales, surfaces: setupCopy.surfaces.length, originalDestinations: true,
           platformDisclosureKeyboard: true, widths: width === 390 ? [320, 390] : [1366] },
         downloadGuidance: { locales, originalDestinations: true, technicalLiterals: true,
           criticalEnglishRetained: true, reload: true, widths: width === 390 ? [320, 390] : [1366] },
+        integrationGuidance: { locales, originalCommandsAndDestinations: true, accessibleTranslatedTitles: true,
+          originalLtrExamplesAndLiterals: true, keyboardCopyAndManualSelection: true, criticalEnglishRetained: true,
+          reload: true, widths: width === 390 ? [320, 390] : [1366] },
         answerLanguageHelp: { locales, examples: answerLanguageInstructions.length, nativeLanguageTags: true,
           openedWithEnter: true, closedWithSpace: true, originalQuestionUnchanged: true } });
     } finally {

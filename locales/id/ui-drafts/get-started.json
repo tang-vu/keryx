@@ -307,6 +307,106 @@
     "download.alternativeBody": {
       "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
       "text": "Aplikasi web berfungsi di browser komputer dan ponsel. Asisten AI dapat terhubung melalui MCP jarak jauh; pengembang dapat menggunakan API yang dihosting."
+    },
+    "integrations.title": {
+      "source": "Keryx, connected.",
+      "text": "Keryx, terhubung."
+    },
+    "integrations.mcpTitle": {
+      "source": "Connect an AI assistant with MCP",
+      "text": "Hubungkan asisten AI dengan MCP"
+    },
+    "integrations.remoteTitle": {
+      "source": "Remote MCP",
+      "text": "MCP jarak jauh"
+    },
+    "integrations.remoteAction": {
+      "source": "Open remote MCP setup",
+      "text": "Buka pengaturan MCP jarak jauh"
+    },
+    "integrations.remoteEndpoint": {
+      "source": "Hosted MCP endpoint",
+      "text": "Endpoint MCP yang dihosting"
+    },
+    "integrations.stdioTitle": {
+      "source": "Local stdio MCP",
+      "text": "MCP lokal melalui stdio"
+    },
+    "integrations.stdioConfig": {
+      "source": "Stdio client configuration",
+      "text": "Konfigurasi klien Stdio"
+    },
+    "integrations.apiTitle": {
+      "source": "Build with the API",
+      "text": "Kembangkan dengan API"
+    },
+    "integrations.apiBase": {
+      "source": "Chat Completions base URL",
+      "text": "URL dasar Chat Completions"
+    },
+    "integrations.apiModel": {
+      "source": "Model",
+      "text": "Model"
+    },
+    "integrations.apiConfigTitle": {
+      "source": "Connect an OpenAI-compatible client",
+      "text": "Hubungkan klien yang kompatibel dengan OpenAI"
+    },
+    "integrations.apiReadOnly": {
+      "source": "Check available models (Bash, read-only)",
+      "text": "Periksa model yang tersedia (Bash, hanya baca)"
+    },
+    "integrations.apiReference": {
+      "source": "OpenAPI reference",
+      "text": "Referensi OpenAPI"
+    },
+    "integrations.apiRecipes": {
+      "source": "SDK examples & streaming guide",
+      "text": "Contoh SDK dan panduan streaming"
+    },
+    "integrations.cliTitle": {
+      "source": "Work from the command line",
+      "text": "Bekerja dari baris perintah"
+    },
+    "integrations.cliBody": {
+      "source": "The source checkout includes Operator, research and buyer commands. The CLI is currently distributed with the repository; keryx-mcp is the separate npm MCP package.",
+      "text": "Kode sumber mencakup perintah Operator, riset, dan pembeli. CLI saat ini didistribusikan bersama repositori; keryx-mcp adalah paket MCP npm yang terpisah."
+    },
+    "integrations.cliRequirements": {
+      "source": "Git, Node 22.19+ or 24+, and the pinned npm 11.19.0 installer. Clone the project and install dependencies before running commands.",
+      "text": "Git, Node 22.19+ atau 24+, dan npm pada versi yang ditetapkan, 11.19.0. Klon proyek dan instal dependensinya sebelum menjalankan perintah."
+    },
+    "integrations.cliSetup": {
+      "source": "Install from source & inspect help",
+      "text": "Instal dari kode sumber dan lihat bantuan"
+    },
+    "integrations.cliGuide": {
+      "source": "CLI commands & configuration",
+      "text": "Perintah dan konfigurasi CLI"
+    },
+    "integrations.botsTitle": {
+      "source": "Ask from your chat app",
+      "text": "Bertanya dari aplikasi chat Anda"
+    },
+    "integrations.telegramBody": {
+      "source": "Open the Keryx bot and send a question. In a group, use /ask followed by your question.",
+      "text": "Buka bot Keryx dan kirim pertanyaan. Di grup, gunakan /ask diikuti pertanyaan Anda."
+    },
+    "integrations.telegramAction": {
+      "source": "Open Telegram bot",
+      "text": "Buka bot Telegram"
+    },
+    "integrations.discordAction": {
+      "source": "Add to Discord",
+      "text": "Tambahkan ke Discord"
+    },
+    "integrations.slackAction": {
+      "source": "Slack administrator setup",
+      "text": "Pengaturan untuk administrator Slack"
+    },
+    "integrations.selfHost": {
+      "source": "Self-hosting guide",
+      "text": "Panduan hosting mandiri"
     }
   }
 }

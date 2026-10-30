@@ -307,6 +307,106 @@
     "download.alternativeBody": {
       "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
       "text": "웹 앱은 컴퓨터와 모바일 브라우저에서 작동합니다. AI 도우미는 원격 MCP로 연결할 수 있고, 개발자는 호스팅 API를 사용할 수 있습니다."
+    },
+    "integrations.title": {
+      "source": "Keryx, connected.",
+      "text": "Keryx를 연결하세요."
+    },
+    "integrations.mcpTitle": {
+      "source": "Connect an AI assistant with MCP",
+      "text": "MCP로 AI 도우미 연결"
+    },
+    "integrations.remoteTitle": {
+      "source": "Remote MCP",
+      "text": "원격 MCP"
+    },
+    "integrations.remoteAction": {
+      "source": "Open remote MCP setup",
+      "text": "원격 MCP 설정 열기"
+    },
+    "integrations.remoteEndpoint": {
+      "source": "Hosted MCP endpoint",
+      "text": "호스팅된 MCP 엔드포인트"
+    },
+    "integrations.stdioTitle": {
+      "source": "Local stdio MCP",
+      "text": "로컬 stdio MCP"
+    },
+    "integrations.stdioConfig": {
+      "source": "Stdio client configuration",
+      "text": "Stdio 클라이언트 설정"
+    },
+    "integrations.apiTitle": {
+      "source": "Build with the API",
+      "text": "API로 개발하기"
+    },
+    "integrations.apiBase": {
+      "source": "Chat Completions base URL",
+      "text": "Chat Completions 기본 URL"
+    },
+    "integrations.apiModel": {
+      "source": "Model",
+      "text": "모델"
+    },
+    "integrations.apiConfigTitle": {
+      "source": "Connect an OpenAI-compatible client",
+      "text": "OpenAI 호환 클라이언트 연결"
+    },
+    "integrations.apiReadOnly": {
+      "source": "Check available models (Bash, read-only)",
+      "text": "사용 가능한 모델 확인 (Bash, 읽기 전용)"
+    },
+    "integrations.apiReference": {
+      "source": "OpenAPI reference",
+      "text": "OpenAPI 참조 문서"
+    },
+    "integrations.apiRecipes": {
+      "source": "SDK examples & streaming guide",
+      "text": "SDK 예제 및 스트리밍 가이드"
+    },
+    "integrations.cliTitle": {
+      "source": "Work from the command line",
+      "text": "명령줄에서 작업하기"
+    },
+    "integrations.cliBody": {
+      "source": "The source checkout includes Operator, research and buyer commands. The CLI is currently distributed with the repository; keryx-mcp is the separate npm MCP package.",
+      "text": "소스 코드에는 Operator, 리서치 및 구매자용 명령이 포함되어 있습니다. CLI는 현재 저장소와 함께 배포되며, keryx-mcp는 별도의 npm MCP 패키지입니다."
+    },
+    "integrations.cliRequirements": {
+      "source": "Git, Node 22.19+ or 24+, and the pinned npm 11.19.0 installer. Clone the project and install dependencies before running commands.",
+      "text": "Git, Node 22.19+ 또는 24+, 지정된 버전의 npm 11.19.0이 필요합니다. 명령을 실행하기 전에 프로젝트를 복제하고 의존성을 설치하세요."
+    },
+    "integrations.cliSetup": {
+      "source": "Install from source & inspect help",
+      "text": "소스에서 설치하고 도움말 확인"
+    },
+    "integrations.cliGuide": {
+      "source": "CLI commands & configuration",
+      "text": "CLI 명령 및 설정"
+    },
+    "integrations.botsTitle": {
+      "source": "Ask from your chat app",
+      "text": "채팅 앱에서 질문하기"
+    },
+    "integrations.telegramBody": {
+      "source": "Open the Keryx bot and send a question. In a group, use /ask followed by your question.",
+      "text": "Keryx 봇을 열고 질문을 보내세요. 그룹에서는 /ask 뒤에 질문을 입력하세요."
+    },
+    "integrations.telegramAction": {
+      "source": "Open Telegram bot",
+      "text": "Telegram 봇 열기"
+    },
+    "integrations.discordAction": {
+      "source": "Add to Discord",
+      "text": "Discord에 추가"
+    },
+    "integrations.slackAction": {
+      "source": "Slack administrator setup",
+      "text": "Slack 관리자 설정"
+    },
+    "integrations.selfHost": {
+      "source": "Self-hosting guide",
+      "text": "자체 호스팅 가이드"
     }
   }
 }

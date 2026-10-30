@@ -6,15 +6,18 @@ import { chromium, type Browser, type Page } from "playwright";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { setupCopy } from "@/locales/en/get-started";
+import { setupExamples } from "@/lib/public-installation";
 
 let browser: Browser, bundle: string, css: string;
 const first = "curl https://example.invalid/first\n# Example only", second = "printf '<new example>'";
-type Fixture = { writes: string[]; mount(value: string, title?: string): void; mode(value: string): void; settle(ok: boolean): void; hide(): void };
+type Fixture = { writes: string[]; mount(value: string, title?: string): void; locale(value: string): Promise<void>; mode(value: string): void; settle(ok: boolean): void; hide(): void };
 beforeAll(async () => {
   bundle = (await build({ stdin: { loader: "tsx", resolveDir: process.cwd(), contents: `
     import React,{StrictMode}from'react';import{createRoot}from'react-dom/client';import{SetupCode}from'./components/keryx/setup-code';
-    const root=createRoot(document.getElementById('root'));let mode='defer';const pending=[];
-    const f=window.exampleFixture={writes:[],mount(value=${JSON.stringify(first)},title='First example'){root.render(<StrictMode><SetupCode title={title} value={value}/></StrictMode>);},hide(){root.render(null)},
+    import{UiCopyContext,englishUiCopy}from'./lib/i18n/ui-copy-context';import{loadUiPreview}from'./lib/i18n/ui-preview-catalogues';import{localeDirection}from'./lib/i18n/locales';
+    const root=createRoot(document.getElementById('root'));let mode='defer',view=englishUiCopy,currentValue=${JSON.stringify(first)},currentTitle='First example';const pending=[];
+    const f=window.exampleFixture={writes:[],mount(value=${JSON.stringify(first)},title='First example'){currentValue=value;currentTitle=title;root.render(<StrictMode><UiCopyContext.Provider value={view}><SetupCode title={title} value={value}/></UiCopyContext.Provider></StrictMode>);},hide(){root.render(null)},
+      async locale(locale){const preview=await loadUiPreview(locale);view={...englishUiCopy,locale,preview};document.documentElement.lang=locale;document.documentElement.dir=localeDirection(locale);f.mount(currentValue,currentTitle);},
       mode(value){mode=value;Object.defineProperty(navigator,'clipboard',{configurable:true,value:value==='missing'?undefined:{writeText(text){f.writes.push(text);if(mode==='throw')throw Error('PRIVATE_CLIPBOARD_DETAIL');if(mode==='reject')return Promise.reject(Error('PRIVATE_PERMISSION_DETAIL'));return new Promise((resolve,reject)=>pending.push({resolve,reject}));}}});},
       settle(ok){const value=pending.shift();if(!value)throw Error('No pending copy');ok?value.resolve():value.reject(Error('PRIVATE_PERMISSION_DETAIL'));}};f.mode('defer');f.mount();` }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"', "process.env": "{}" } })).outputFiles[0].text;
   css = (await postcss([tailwind({ base: process.cwd() })]).process(await readFile("app/globals.css", "utf8"), { from: path.resolve("app/globals.css") })).css;
@@ -70,4 +73,31 @@ it.each([320, 1366])("keeps keyboard focus and the example within the page at %i
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   await button(page).click(); await settle(page, true);
   await expect.poll(() => button(page).textContent()).toBe(setupCopy.common.copied);
+}, width));
+
+it.each([320, 1366])("keeps Arabic labels, LTR original commands and honest copy recovery at %ipx", async width => fixture(async page => {
+  const draft = JSON.parse(await readFile("locales/ar/ui-drafts/get-started.json", "utf8")).entries;
+  const command = setupExamples.cli, title = setupCopy.integrations.cliSetup;
+  await page.evaluate(async ({ command, title }) => {
+    const f = (window as unknown as { exampleFixture: Fixture }).exampleFixture;
+    f.mount(command, title); await f.locale("ar");
+  }, { command, title });
+  await page.getByRole("button", { name: `${draft["common.copy"].text} ${draft["integrations.cliSetup"].text}`, exact: true }).waitFor();
+  expect(await page.locator("html").getAttribute("dir")).toBe("rtl");
+  expect(await page.locator("pre").getAttribute("aria-labelledby")).toBe(await page.locator("main > div > div > p").getAttribute("id"));
+  expect(await page.locator("pre code").getAttribute("lang")).toBe("en");
+  expect(await page.locator("pre").getAttribute("translate")).toBe("no");
+  expect(await page.locator("pre").evaluate(element => getComputedStyle(element).direction)).toBe("ltr");
+  expect(await page.locator("pre").textContent()).toBe(command);
+  expect(await page.locator("main > div > div > p > span").getAttribute("lang")).toBe("ar");
+  await button(page).focus(); await page.keyboard.press("Enter"); await settle(page, false);
+  await expect.poll(() => page.getByRole("status").textContent()).toBe(setupCopy.common.copyFailed);
+  expect(await page.getByRole("status").locator("span").getAttribute("lang")).toBe("en");
+  expect(await page.getByRole("status").locator("span").evaluate(element => getComputedStyle(element).direction)).toBe("ltr");
+  expect(await page.evaluate(() => window.getSelection()?.toString())).toBe(command);
+  await button(page).click(); await settle(page, true);
+  await expect.poll(() => page.getByRole("status").textContent()).toBe(draft["common.copied"].text);
+  expect(await page.getByRole("status").locator("span").getAttribute("lang")).toBe("ar");
+  expect(await writes(page)).toEqual([command, command]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 }, width));

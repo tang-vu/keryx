@@ -307,6 +307,106 @@
     "download.alternativeBody": {
       "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
       "text": "वेब ऐप कंप्यूटर और मोबाइल ब्राउज़र में काम करता है। AI सहायक रिमोट MCP के ज़रिए जुड़ सकते हैं; डेवलपर होस्टेड API इस्तेमाल कर सकते हैं।"
+    },
+    "integrations.title": {
+      "source": "Keryx, connected.",
+      "text": "Keryx को जोड़ें।"
+    },
+    "integrations.mcpTitle": {
+      "source": "Connect an AI assistant with MCP",
+      "text": "MCP से AI सहायक जोड़ें"
+    },
+    "integrations.remoteTitle": {
+      "source": "Remote MCP",
+      "text": "रिमोट MCP"
+    },
+    "integrations.remoteAction": {
+      "source": "Open remote MCP setup",
+      "text": "रिमोट MCP का सेटअप खोलें"
+    },
+    "integrations.remoteEndpoint": {
+      "source": "Hosted MCP endpoint",
+      "text": "होस्टेड MCP एंडपॉइंट"
+    },
+    "integrations.stdioTitle": {
+      "source": "Local stdio MCP",
+      "text": "स्थानीय stdio MCP"
+    },
+    "integrations.stdioConfig": {
+      "source": "Stdio client configuration",
+      "text": "Stdio क्लाइंट का कॉन्फ़िगरेशन"
+    },
+    "integrations.apiTitle": {
+      "source": "Build with the API",
+      "text": "API से बनाएँ"
+    },
+    "integrations.apiBase": {
+      "source": "Chat Completions base URL",
+      "text": "Chat Completions का बेस URL"
+    },
+    "integrations.apiModel": {
+      "source": "Model",
+      "text": "मॉडल"
+    },
+    "integrations.apiConfigTitle": {
+      "source": "Connect an OpenAI-compatible client",
+      "text": "OpenAI-संगत क्लाइंट जोड़ें"
+    },
+    "integrations.apiReadOnly": {
+      "source": "Check available models (Bash, read-only)",
+      "text": "उपलब्ध मॉडल देखें (Bash, केवल पढ़ने के लिए)"
+    },
+    "integrations.apiReference": {
+      "source": "OpenAPI reference",
+      "text": "OpenAPI संदर्भ"
+    },
+    "integrations.apiRecipes": {
+      "source": "SDK examples & streaming guide",
+      "text": "SDK उदाहरण और स्ट्रीमिंग मार्गदर्शिका"
+    },
+    "integrations.cliTitle": {
+      "source": "Work from the command line",
+      "text": "कमांड लाइन से काम करें"
+    },
+    "integrations.cliBody": {
+      "source": "The source checkout includes Operator, research and buyer commands. The CLI is currently distributed with the repository; keryx-mcp is the separate npm MCP package.",
+      "text": "सोर्स कोड में Operator, रिसर्च और खरीदार के कमांड शामिल हैं। CLI फ़िलहाल रिपॉज़िटरी के साथ वितरित होती है; keryx-mcp एक अलग npm MCP पैकेज है।"
+    },
+    "integrations.cliRequirements": {
+      "source": "Git, Node 22.19+ or 24+, and the pinned npm 11.19.0 installer. Clone the project and install dependencies before running commands.",
+      "text": "Git, Node 22.19+ या 24+, और निर्धारित npm 11.19.0 चाहिए। कमांड चलाने से पहले प्रोजेक्ट क्लोन करें और उसकी निर्भरताएँ इंस्टॉल करें।"
+    },
+    "integrations.cliSetup": {
+      "source": "Install from source & inspect help",
+      "text": "सोर्स से इंस्टॉल करें और सहायता देखें"
+    },
+    "integrations.cliGuide": {
+      "source": "CLI commands & configuration",
+      "text": "CLI कमांड और कॉन्फ़िगरेशन"
+    },
+    "integrations.botsTitle": {
+      "source": "Ask from your chat app",
+      "text": "अपने चैट ऐप से पूछें"
+    },
+    "integrations.telegramBody": {
+      "source": "Open the Keryx bot and send a question. In a group, use /ask followed by your question.",
+      "text": "Keryx बॉट खोलें और सवाल भेजें। समूह में /ask के बाद अपना सवाल लिखें।"
+    },
+    "integrations.telegramAction": {
+      "source": "Open Telegram bot",
+      "text": "Telegram बॉट खोलें"
+    },
+    "integrations.discordAction": {
+      "source": "Add to Discord",
+      "text": "Discord में जोड़ें"
+    },
+    "integrations.slackAction": {
+      "source": "Slack administrator setup",
+      "text": "Slack एडमिन के लिए सेटअप"
+    },
+    "integrations.selfHost": {
+      "source": "Self-hosting guide",
+      "text": "खुद होस्ट करने की मार्गदर्शिका"
     }
   }
 }

@@ -16,7 +16,7 @@ const read = file => readFileSync(path.join(root, file), "utf8");
 // Agreed entry-preview floor. Missing namespaces or lost authored coverage must
 // fail, even when somebody regenerates the compiled chunks after deleting text.
 const entryPreviewMinimums = {
-  "core-inline": { authored: 16, preview: 16 }, "get-started": { authored: 76, preview: 76 },
+  "core-inline": { authored: 16, preview: 16 }, "get-started": { authored: 101, preview: 101 },
   "research-flow": { authored: 39, preview: 39 },
   "product-guide": { authored: 95, preview: 48 }, shell: { authored: 17, preview: 17 },
   reports: { authored: 55, preview: 54 }, "pdf-reading": { authored: 5, preview: 5 },

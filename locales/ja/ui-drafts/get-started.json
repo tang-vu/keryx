@@ -307,6 +307,106 @@
     "download.alternativeBody": {
       "source": "The web app works on desktop and mobile browsers. AI assistants can connect through remote MCP; developers can use the hosted API.",
       "text": "Webアプリはパソコンやモバイルのブラウザーで動作します。AIアシスタントはリモートMCPで接続でき、開発者はホスト型APIを利用できます。"
+    },
+    "integrations.title": {
+      "source": "Keryx, connected.",
+      "text": "Keryxをつなげよう。"
+    },
+    "integrations.mcpTitle": {
+      "source": "Connect an AI assistant with MCP",
+      "text": "MCPでAIアシスタントを接続"
+    },
+    "integrations.remoteTitle": {
+      "source": "Remote MCP",
+      "text": "リモートMCP"
+    },
+    "integrations.remoteAction": {
+      "source": "Open remote MCP setup",
+      "text": "リモートMCPの設定を開く"
+    },
+    "integrations.remoteEndpoint": {
+      "source": "Hosted MCP endpoint",
+      "text": "ホスト型MCPのエンドポイント"
+    },
+    "integrations.stdioTitle": {
+      "source": "Local stdio MCP",
+      "text": "ローカルのstdio MCP"
+    },
+    "integrations.stdioConfig": {
+      "source": "Stdio client configuration",
+      "text": "Stdioクライアントの設定"
+    },
+    "integrations.apiTitle": {
+      "source": "Build with the API",
+      "text": "APIを使って開発"
+    },
+    "integrations.apiBase": {
+      "source": "Chat Completions base URL",
+      "text": "Chat CompletionsのベースURL"
+    },
+    "integrations.apiModel": {
+      "source": "Model",
+      "text": "モデル"
+    },
+    "integrations.apiConfigTitle": {
+      "source": "Connect an OpenAI-compatible client",
+      "text": "OpenAI互換クライアントを接続"
+    },
+    "integrations.apiReadOnly": {
+      "source": "Check available models (Bash, read-only)",
+      "text": "利用可能なモデルを確認（Bash、読み取り専用）"
+    },
+    "integrations.apiReference": {
+      "source": "OpenAPI reference",
+      "text": "OpenAPIリファレンス"
+    },
+    "integrations.apiRecipes": {
+      "source": "SDK examples & streaming guide",
+      "text": "SDKの例とストリーミングガイド"
+    },
+    "integrations.cliTitle": {
+      "source": "Work from the command line",
+      "text": "コマンドラインで作業"
+    },
+    "integrations.cliBody": {
+      "source": "The source checkout includes Operator, research and buyer commands. The CLI is currently distributed with the repository; keryx-mcp is the separate npm MCP package.",
+      "text": "ソースコードには、Operator、リサーチ、購入者向けのコマンドが含まれています。CLIは現在リポジトリとともに配布されています。keryx-mcpは別のnpm MCPパッケージです。"
+    },
+    "integrations.cliRequirements": {
+      "source": "Git, Node 22.19+ or 24+, and the pinned npm 11.19.0 installer. Clone the project and install dependencies before running commands.",
+      "text": "Git、Node 22.19+または24+、指定バージョンのnpm 11.19.0が必要です。コマンドを実行する前に、プロジェクトをクローンして依存関係をインストールしてください。"
+    },
+    "integrations.cliSetup": {
+      "source": "Install from source & inspect help",
+      "text": "ソースからインストールしてヘルプを確認"
+    },
+    "integrations.cliGuide": {
+      "source": "CLI commands & configuration",
+      "text": "CLIのコマンドと設定"
+    },
+    "integrations.botsTitle": {
+      "source": "Ask from your chat app",
+      "text": "チャットアプリから質問"
+    },
+    "integrations.telegramBody": {
+      "source": "Open the Keryx bot and send a question. In a group, use /ask followed by your question.",
+      "text": "Keryxのボットを開いて質問を送信してください。グループでは、/askの後に質問を入力します。"
+    },
+    "integrations.telegramAction": {
+      "source": "Open Telegram bot",
+      "text": "Telegramボットを開く"
+    },
+    "integrations.discordAction": {
+      "source": "Add to Discord",
+      "text": "Discordに追加"
+    },
+    "integrations.slackAction": {
+      "source": "Slack administrator setup",
+      "text": "Slack管理者向けの設定"
+    },
+    "integrations.selfHost": {
+      "source": "Self-hosting guide",
+      "text": "セルフホスティングガイド"
     }
   }
 }
