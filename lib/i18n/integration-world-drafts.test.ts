@@ -73,7 +73,7 @@ it.each(preparedLocales.filter(locale => locale !== "en"))("%s renders actual in
   expect(command.textContent).toBe("/ask"); expect(command.getAttribute("dir")).toBe("ltr");
   expect(command.getAttribute("lang")).toBe("en"); expect(command.style.whiteSpace).toBe("nowrap");
   const requirements = root.querySelectorAll("#cli > p > span")[1];
-  const packageName = root.querySelector("#cli > p > span bdi")!;
+  const packageName = root.querySelector<HTMLElement>("#cli > p > span bdi")!;
   expect(packageName.textContent).toBe("keryx-mcp"); expect(packageName.getAttribute("dir")).toBe("ltr");
   expect(packageName.style.whiteSpace).toBe("nowrap");
   expect(requirements.textContent).toBe(translated(guide.cliRequirements));
