@@ -1,0 +1,24 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/shared-helpers.ts",
+  "sourceSha256": "abbd0f90681948fe923c0125bddbc9d380288258f8b8243d28d2c4ccad3c6f5d",
+  "entries": {
+    "paperWorkspace.screening.unscreened": {
+      "source": "To screen",
+      "text": "A fazer triagem"
+    },
+    "paperWorkspace.screening.include": {
+      "source": "Include",
+      "text": "Incluir"
+    },
+    "paperWorkspace.screening.exclude": {
+      "source": "Exclude",
+      "text": "Excluir"
+    },
+    "paperWorkspace.screening.undecided": {
+      "source": "Undecided",
+      "text": "Indeciso"
+    }
+  }
+}

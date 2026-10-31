@@ -223,6 +223,306 @@
     "reportSourceLens.versionTitle": {
       "source": "{marker} · {source} · {title} · version {version}",
       "text": "{marker} · {source} · {title} · 버전 {version}"
+    },
+    "literatureWorkspace.staleFocusError": {
+      "source": "Your review focus changed in another tab. Load the saved focus before saving again.",
+      "text": "다른 탭에서 검토 방향이 변경되었습니다. 저장된 방향을 불러온 후 다시 저장하세요."
+    },
+    "literatureWorkspace.focusSaved": {
+      "source": "Review focus saved on this browser.",
+      "text": "이 브라우저에 검토 방향을 저장했습니다."
+    },
+    "literatureWorkspace.titleLabel": {
+      "source": "Review title",
+      "text": "검토 제목"
+    },
+    "literatureWorkspace.titlePlaceholder": {
+      "source": "My literature review",
+      "text": "내 문헌 검토"
+    },
+    "literatureWorkspace.questionLabel": {
+      "source": "Research question or inclusion criteria",
+      "text": "연구 질문 또는 포함 기준"
+    },
+    "literatureWorkspace.staleFocus": {
+      "source": "The saved review focus changed in another tab or restore. Your unsaved draft is still here.",
+      "text": "다른 탭이나 복원 작업으로 저장된 검토 방향이 변경되었습니다. 저장하지 않은 초안은 여기에 남아 있습니다."
+    },
+    "literatureWorkspace.loadFocus": {
+      "source": "Load saved focus",
+      "text": "저장된 방향 불러오기"
+    },
+    "literatureWorkspace.saveFocus": {
+      "source": "Save review focus",
+      "text": "검토 방향 저장"
+    },
+    "literatureWorkspace.stalePaperError": {
+      "source": "This paper changed in another tab. Load its saved screening before saving again.",
+      "text": "다른 탭에서 이 논문이 변경되었습니다. 저장된 선별 내용을 불러온 후 다시 저장하세요."
+    },
+    "literatureWorkspace.screeningSaved": {
+      "source": "Screening and notes saved on this browser.",
+      "text": "이 브라우저에 선별 내용과 메모를 저장했습니다."
+    },
+    "literatureWorkspace.screeningDecision": {
+      "source": "Your screening decision",
+      "text": "내 선별 결정"
+    },
+    "literatureWorkspace.notesLabel": {
+      "source": "Why keep or exclude this paper? What needs checking?",
+      "text": "이 논문을 포함하거나 제외하는 이유는 무엇인가요? 무엇을 확인해야 하나요?"
+    },
+    "literatureWorkspace.staleScreening": {
+      "source": "Saved screening changed in another tab or restore. Your unsaved notes are still here.",
+      "text": "다른 탭이나 복원 작업으로 저장된 선별 내용이 변경되었습니다. 저장하지 않은 메모는 여기에 남아 있습니다."
+    },
+    "literatureWorkspace.loadScreening": {
+      "source": "Load saved screening",
+      "text": "저장된 선별 내용 불러오기"
+    },
+    "literatureWorkspace.notesNotice": {
+      "source": "These are your own notes. Saving them does not read the paper or verify its findings.",
+      "text": "직접 작성한 메모입니다. 저장해도 논문을 읽거나 연구 결과를 검증하지 않습니다."
+    },
+    "literatureWorkspace.saveScreening": {
+      "source": "Save screening and notes",
+      "text": "선별 내용과 메모 저장"
+    },
+    "literatureWorkspace.compare": {
+      "source": "Compare",
+      "text": "비교"
+    },
+    "literatureWorkspace.contributorsUnavailable": {
+      "source": "Contributors unavailable",
+      "text": "기여자 정보 없음"
+    },
+    "literatureWorkspace.open": {
+      "source": "Open paper record ↗",
+      "text": "논문 기록 열기 ↗"
+    },
+    "literatureWorkspace.notes": {
+      "source": "Your screening notes",
+      "text": "내 선별 메모"
+    },
+    "literatureWorkspace.editNotes": {
+      "source": "Edit screening and notes",
+      "text": "선별 내용과 메모 수정"
+    },
+    "literatureWorkspace.removalDetails": {
+      "source": "Saved record and removal",
+      "text": "저장된 기록 및 삭제"
+    },
+    "literatureWorkspace.removeCancelled": {
+      "source": "Removal cancelled. Your paper is still saved.",
+      "text": "삭제를 취소했습니다. 논문은 계속 저장되어 있습니다."
+    },
+    "literatureWorkspace.removed": {
+      "source": "Paper removed from this browser.",
+      "text": "이 브라우저에서 논문을 삭제했습니다."
+    },
+    "literatureWorkspace.remove": {
+      "source": "Remove saved paper",
+      "text": "저장된 논문 삭제"
+    },
+    "literatureWorkspace.loading": {
+      "source": "Loading your saved workspace…",
+      "text": "저장된 작업 공간 불러오는 중…"
+    },
+    "literatureWorkspace.focusTitle": {
+      "source": "Start with your review question",
+      "text": "검토 질문부터 시작하세요"
+    },
+    "literatureWorkspace.focusExample": {
+      "source": "Keep a focus for screening. For example: which retrieval methods improve factual grounding, and under what evaluation conditions?",
+      "text": "선별 방향을 정해 두세요. 예를 들어, 어떤 검색 방법이 사실적 근거를 개선하며 어떤 평가 조건에서 그러한 효과가 있는지 질문할 수 있습니다."
+    },
+    "literatureWorkspace.papers": {
+      "source": "Your papers",
+      "text": "내 논문"
+    },
+    "literatureWorkspace.find": {
+      "source": "Find and save papers →",
+      "text": "논문 찾아 저장하기 →"
+    },
+    "literatureWorkspace.filter": {
+      "source": "Show screening decisions",
+      "text": "선별 결정별로 보기"
+    },
+    "literatureWorkspace.filterAll": {
+      "source": "All saved papers",
+      "text": "저장된 모든 논문"
+    },
+    "literatureWorkspace.ris": {
+      "source": "Download shown references (RIS)",
+      "text": "표시된 참고문헌 다운로드 (RIS)"
+    },
+    "literatureWorkspace.csl": {
+      "source": "Download shown references (CSL-JSON)",
+      "text": "표시된 참고문헌 다운로드 (CSL-JSON)"
+    },
+    "literatureWorkspace.prepare": {
+      "source": "Prepare comparison →",
+      "text": "비교 준비 →"
+    },
+    "literatureWorkspace.selectTwo": {
+      "source": "Select two papers to compare",
+      "text": "비교할 논문 두 편 선택"
+    },
+    "literatureWorkspace.clearSelection": {
+      "source": "Clear comparison selection",
+      "text": "비교 선택 해제"
+    },
+    "literatureWorkspace.emptyTitle": {
+      "source": "Build a review you can return to.",
+      "text": "나중에 이어서 할 수 있는 문헌 검토를 만드세요."
+    },
+    "literatureWorkspace.emptyFind": {
+      "source": "Find papers in the starter library or search repositories.",
+      "text": "시작 라이브러리에서 논문을 찾거나 저장소를 검색하세요."
+    },
+    "literatureWorkspace.emptySave": {
+      "source": "Save an exact paper record, then record why it belongs in your review.",
+      "text": "논문의 정확한 기록을 저장한 다음 검토에 포함하는 이유를 기록하세요."
+    },
+    "literatureWorkspace.emptyCompare": {
+      "source": "Compare two papers or export the screening list to continue your work.",
+      "text": "논문 두 편을 비교하거나 선별 목록을 내보내 작업을 이어 가세요."
+    },
+    "literatureWorkspace.browse": {
+      "source": "Browse research papers →",
+      "text": "연구 논문 둘러보기 →"
+    },
+    "literatureWorkspace.filterEmpty": {
+      "source": "No papers have this screening decision. Choose another filter to see your saved list.",
+      "text": "이 선별 결정에 해당하는 논문이 없습니다. 다른 필터를 선택해 저장된 목록을 확인하세요."
+    },
+    "literatureWorkspace.portable": {
+      "source": "Keep your work portable",
+      "text": "작업 내용 가져가기"
+    },
+    "literatureWorkspace.csvPrepared": {
+      "source": "Screening CSV download prepared.",
+      "text": "선별 목록 CSV 다운로드가 준비되었습니다."
+    },
+    "literatureWorkspace.csv": {
+      "source": "Download screening CSV",
+      "text": "선별 목록 CSV 다운로드"
+    },
+    "literatureWorkspace.backupPrepared": {
+      "source": "Workspace backup download prepared.",
+      "text": "작업 공간 백업 다운로드가 준비되었습니다."
+    },
+    "literatureWorkspace.backup": {
+      "source": "Download JSON backup",
+      "text": "JSON 백업 다운로드"
+    },
+    "literatureWorkspace.storedPrepared": {
+      "source": "Original stored data download prepared.",
+      "text": "저장된 원본 데이터 다운로드가 준비되었습니다."
+    },
+    "literatureWorkspace.stored": {
+      "source": "Download stored data",
+      "text": "저장된 데이터 다운로드"
+    },
+    "literatureWorkspace.restoreLabel": {
+      "source": "Restore a workspace backup (JSON, up to 1 MiB)",
+      "text": "작업 공간 백업 복원 (JSON, 최대 1 MiB)"
+    },
+    "literatureWorkspace.tooLarge": {
+      "source": "Backup exceeds the 1 MiB limit. Existing workspace has been kept.",
+      "text": "백업이 1 MiB 한도를 초과합니다. 기존 작업 공간은 유지되었습니다."
+    },
+    "literatureWorkspace.unreadable": {
+      "source": "Backup could not be read.",
+      "text": "백업을 읽을 수 없습니다."
+    },
+    "literatureWorkspace.untitled": {
+      "source": "Untitled review",
+      "text": "제목 없는 검토"
+    },
+    "literatureWorkspace.restored": {
+      "source": "Backup restored on this browser.",
+      "text": "이 브라우저에서 백업을 복원했습니다."
+    },
+    "literatureWorkspace.restoring": {
+      "source": "Restoring workspace…",
+      "text": "작업 공간 복원 중…"
+    },
+    "literatureWorkspace.restore": {
+      "source": "Replace workspace with this backup",
+      "text": "이 백업으로 작업 공간 교체"
+    },
+    "literatureWorkspace.cancelRestore": {
+      "source": "Cancel restore",
+      "text": "복원 취소"
+    },
+    "literatureWorkspace.clearDetails": {
+      "source": "Clear this browser’s literature workspace",
+      "text": "이 브라우저의 문헌 작업 공간 비우기"
+    },
+    "literatureWorkspace.clearCancelled": {
+      "source": "Clear cancelled. Your workspace has been kept.",
+      "text": "비우기를 취소했습니다. 작업 공간은 유지되었습니다."
+    },
+    "literatureWorkspace.cleared": {
+      "source": "Literature workspace cleared on this browser.",
+      "text": "이 브라우저의 문헌 작업 공간을 비웠습니다."
+    },
+    "literatureWorkspace.clear": {
+      "source": "Clear saved workspace",
+      "text": "저장된 작업 공간 비우기"
+    },
+    "literatureWorkspace.compareLabel": {
+      "source": "Compare {title}",
+      "text": "{title} 비교"
+    },
+    "literatureWorkspace.metadata": {
+      "source": "Metadata only · Peer review unknown",
+      "text": "메타데이터만 있음 · 동료 심사 여부 알 수 없음"
+    },
+    "literatureWorkspace.metadataIncomplete": {
+      "source": "Metadata only · Peer review unknown · Incomplete contributors ({recorded}/{total})",
+      "text": "메타데이터만 있음 · 동료 심사 여부 알 수 없음 · 기여자 정보 불완전 ({recorded}/{total})"
+    },
+    "literatureWorkspace.observed": {
+      "source": "Metadata observed {date} ↗",
+      "text": "메타데이터 확인일 {date} ↗"
+    },
+    "literatureWorkspace.snapshot": {
+      "source": "Saved {date}. Retains the first saved snapshot of this exact paper link; imported records are not revalidated.",
+      "text": "저장일 {date}. 이 정확한 논문 링크에 대해 처음 저장한 스냅샷을 유지하며, 가져온 기록은 다시 검증하지 않습니다."
+    },
+    "literatureWorkspace.selection.one": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "{count}편 표시 · 비교 대상으로 {selected}/2편 선택"
+    },
+    "literatureWorkspace.risPrepared.one": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "표시된 논문 {count}편의 RIS 다운로드가 준비되었습니다."
+    },
+    "literatureWorkspace.cslPrepared.one": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "표시된 논문 {count}편의 CSL-JSON 다운로드가 준비되었습니다."
+    },
+    "literatureWorkspace.backupSummary.one": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename}: 논문 {count}편 · {title}"
+    },
+    "literatureWorkspace.selection.other": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "{count}편 표시 · 비교 대상으로 {selected}/2편 선택"
+    },
+    "literatureWorkspace.risPrepared.other": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "표시된 논문 {count}편의 RIS 다운로드가 준비되었습니다."
+    },
+    "literatureWorkspace.cslPrepared.other": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "표시된 논문 {count}편의 CSL-JSON 다운로드가 준비되었습니다."
+    },
+    "literatureWorkspace.backupSummary.other": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename}: 논문 {count}편 · {title}"
     }
   }
 }

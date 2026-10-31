@@ -223,6 +223,306 @@
     "reportSourceLens.versionTitle": {
       "source": "{marker} · {source} · {title} · version {version}",
       "text": "{marker} · {source} · {title} · الإصدار {version}"
+    },
+    "literatureWorkspace.staleFocusError": {
+      "source": "Your review focus changed in another tab. Load the saved focus before saving again.",
+      "text": "تغيّر محور المراجعة في علامة تبويب أخرى. حمّل المحور المحفوظ قبل الحفظ مرة أخرى."
+    },
+    "literatureWorkspace.focusSaved": {
+      "source": "Review focus saved on this browser.",
+      "text": "حُفظ محور المراجعة في هذا المتصفح."
+    },
+    "literatureWorkspace.titleLabel": {
+      "source": "Review title",
+      "text": "عنوان المراجعة"
+    },
+    "literatureWorkspace.titlePlaceholder": {
+      "source": "My literature review",
+      "text": "مراجعتي للأدبيات"
+    },
+    "literatureWorkspace.questionLabel": {
+      "source": "Research question or inclusion criteria",
+      "text": "سؤال البحث أو معايير الإدراج"
+    },
+    "literatureWorkspace.staleFocus": {
+      "source": "The saved review focus changed in another tab or restore. Your unsaved draft is still here.",
+      "text": "تغيّر محور المراجعة المحفوظ في علامة تبويب أخرى أو أثناء الاستعادة. لا تزال مسودتك غير المحفوظة هنا."
+    },
+    "literatureWorkspace.loadFocus": {
+      "source": "Load saved focus",
+      "text": "تحميل المحور المحفوظ"
+    },
+    "literatureWorkspace.saveFocus": {
+      "source": "Save review focus",
+      "text": "حفظ محور المراجعة"
+    },
+    "literatureWorkspace.stalePaperError": {
+      "source": "This paper changed in another tab. Load its saved screening before saving again.",
+      "text": "تغيّرت هذه الورقة في علامة تبويب أخرى. حمّل قرار الفرز المحفوظ قبل الحفظ مرة أخرى."
+    },
+    "literatureWorkspace.screeningSaved": {
+      "source": "Screening and notes saved on this browser.",
+      "text": "حُفظ قرار الفرز والملاحظات في هذا المتصفح."
+    },
+    "literatureWorkspace.screeningDecision": {
+      "source": "Your screening decision",
+      "text": "قرارك بشأن الفرز"
+    },
+    "literatureWorkspace.notesLabel": {
+      "source": "Why keep or exclude this paper? What needs checking?",
+      "text": "لماذا تُبقي هذه الورقة أو تستبعدها؟ وما الذي يحتاج إلى تحقق؟"
+    },
+    "literatureWorkspace.staleScreening": {
+      "source": "Saved screening changed in another tab or restore. Your unsaved notes are still here.",
+      "text": "تغيّر قرار الفرز المحفوظ في علامة تبويب أخرى أو أثناء الاستعادة. لا تزال ملاحظاتك غير المحفوظة هنا."
+    },
+    "literatureWorkspace.loadScreening": {
+      "source": "Load saved screening",
+      "text": "تحميل قرار الفرز المحفوظ"
+    },
+    "literatureWorkspace.notesNotice": {
+      "source": "These are your own notes. Saving them does not read the paper or verify its findings.",
+      "text": "هذه ملاحظاتك الشخصية. حفظها لا يقرأ الورقة ولا يتحقق من نتائجها."
+    },
+    "literatureWorkspace.saveScreening": {
+      "source": "Save screening and notes",
+      "text": "حفظ قرار الفرز والملاحظات"
+    },
+    "literatureWorkspace.compare": {
+      "source": "Compare",
+      "text": "مقارنة"
+    },
+    "literatureWorkspace.contributorsUnavailable": {
+      "source": "Contributors unavailable",
+      "text": "معلومات المساهمين غير متاحة"
+    },
+    "literatureWorkspace.open": {
+      "source": "Open paper record ↗",
+      "text": "فتح سجل الورقة ↗"
+    },
+    "literatureWorkspace.notes": {
+      "source": "Your screening notes",
+      "text": "ملاحظاتك بشأن الفرز"
+    },
+    "literatureWorkspace.editNotes": {
+      "source": "Edit screening and notes",
+      "text": "تعديل قرار الفرز والملاحظات"
+    },
+    "literatureWorkspace.removalDetails": {
+      "source": "Saved record and removal",
+      "text": "السجل المحفوظ والإزالة"
+    },
+    "literatureWorkspace.removeCancelled": {
+      "source": "Removal cancelled. Your paper is still saved.",
+      "text": "أُلغيت الإزالة. لا تزال ورقتك محفوظة."
+    },
+    "literatureWorkspace.removed": {
+      "source": "Paper removed from this browser.",
+      "text": "أُزيلت الورقة من هذا المتصفح."
+    },
+    "literatureWorkspace.remove": {
+      "source": "Remove saved paper",
+      "text": "إزالة الورقة المحفوظة"
+    },
+    "literatureWorkspace.loading": {
+      "source": "Loading your saved workspace…",
+      "text": "جارٍ تحميل مساحة عملك المحفوظة…"
+    },
+    "literatureWorkspace.focusTitle": {
+      "source": "Start with your review question",
+      "text": "ابدأ بسؤال المراجعة"
+    },
+    "literatureWorkspace.focusExample": {
+      "source": "Keep a focus for screening. For example: which retrieval methods improve factual grounding, and under what evaluation conditions?",
+      "text": "حدّد محورًا لفرز الأوراق. مثلًا: ما أساليب الاسترجاع التي تحسّن الاستناد إلى الحقائق، وفي أي ظروف تقييم؟"
+    },
+    "literatureWorkspace.papers": {
+      "source": "Your papers",
+      "text": "أوراقك البحثية"
+    },
+    "literatureWorkspace.find": {
+      "source": "Find and save papers →",
+      "text": "البحث عن أوراق وحفظها →"
+    },
+    "literatureWorkspace.filter": {
+      "source": "Show screening decisions",
+      "text": "عرض قرارات الفرز"
+    },
+    "literatureWorkspace.filterAll": {
+      "source": "All saved papers",
+      "text": "جميع الأوراق المحفوظة"
+    },
+    "literatureWorkspace.ris": {
+      "source": "Download shown references (RIS)",
+      "text": "تنزيل المراجع المعروضة (RIS)"
+    },
+    "literatureWorkspace.csl": {
+      "source": "Download shown references (CSL-JSON)",
+      "text": "تنزيل المراجع المعروضة (CSL-JSON)"
+    },
+    "literatureWorkspace.prepare": {
+      "source": "Prepare comparison →",
+      "text": "إعداد المقارنة →"
+    },
+    "literatureWorkspace.selectTwo": {
+      "source": "Select two papers to compare",
+      "text": "اختر ورقتين للمقارنة"
+    },
+    "literatureWorkspace.clearSelection": {
+      "source": "Clear comparison selection",
+      "text": "إلغاء تحديد أوراق المقارنة"
+    },
+    "literatureWorkspace.emptyTitle": {
+      "source": "Build a review you can return to.",
+      "text": "أنشئ مراجعة يمكنك العودة إليها."
+    },
+    "literatureWorkspace.emptyFind": {
+      "source": "Find papers in the starter library or search repositories.",
+      "text": "اعثر على أوراق في المكتبة الأولية أو ابحث في المستودعات."
+    },
+    "literatureWorkspace.emptySave": {
+      "source": "Save an exact paper record, then record why it belongs in your review.",
+      "text": "احفظ السجل الدقيق للورقة، ثم دوّن سبب إدراجها في مراجعتك."
+    },
+    "literatureWorkspace.emptyCompare": {
+      "source": "Compare two papers or export the screening list to continue your work.",
+      "text": "قارن ورقتين أو صدّر قائمة الفرز لمتابعة عملك."
+    },
+    "literatureWorkspace.browse": {
+      "source": "Browse research papers →",
+      "text": "تصفّح الأوراق البحثية →"
+    },
+    "literatureWorkspace.filterEmpty": {
+      "source": "No papers have this screening decision. Choose another filter to see your saved list.",
+      "text": "لا توجد أوراق بهذا القرار من قرارات الفرز. اختر مرشحًا آخر لعرض قائمتك المحفوظة."
+    },
+    "literatureWorkspace.portable": {
+      "source": "Keep your work portable",
+      "text": "خذ عملك معك"
+    },
+    "literatureWorkspace.csvPrepared": {
+      "source": "Screening CSV download prepared.",
+      "text": "أصبح تنزيل قائمة الفرز بصيغة CSV جاهزًا."
+    },
+    "literatureWorkspace.csv": {
+      "source": "Download screening CSV",
+      "text": "تنزيل قائمة الفرز بصيغة CSV"
+    },
+    "literatureWorkspace.backupPrepared": {
+      "source": "Workspace backup download prepared.",
+      "text": "أصبح تنزيل النسخة الاحتياطية لمساحة العمل جاهزًا."
+    },
+    "literatureWorkspace.backup": {
+      "source": "Download JSON backup",
+      "text": "تنزيل نسخة احتياطية بصيغة JSON"
+    },
+    "literatureWorkspace.storedPrepared": {
+      "source": "Original stored data download prepared.",
+      "text": "أصبح تنزيل البيانات الأصلية المخزّنة جاهزًا."
+    },
+    "literatureWorkspace.stored": {
+      "source": "Download stored data",
+      "text": "تنزيل البيانات المخزّنة"
+    },
+    "literatureWorkspace.restoreLabel": {
+      "source": "Restore a workspace backup (JSON, up to 1 MiB)",
+      "text": "استعادة نسخة احتياطية لمساحة العمل بصيغة JSON، حتى 1 MiB"
+    },
+    "literatureWorkspace.tooLarge": {
+      "source": "Backup exceeds the 1 MiB limit. Existing workspace has been kept.",
+      "text": "تتجاوز النسخة الاحتياطية حد 1 MiB. تم الاحتفاظ بمساحة العمل الحالية."
+    },
+    "literatureWorkspace.unreadable": {
+      "source": "Backup could not be read.",
+      "text": "تعذّرت قراءة النسخة الاحتياطية."
+    },
+    "literatureWorkspace.untitled": {
+      "source": "Untitled review",
+      "text": "مراجعة بلا عنوان"
+    },
+    "literatureWorkspace.restored": {
+      "source": "Backup restored on this browser.",
+      "text": "استُعيدت النسخة الاحتياطية في هذا المتصفح."
+    },
+    "literatureWorkspace.restoring": {
+      "source": "Restoring workspace…",
+      "text": "جارٍ استعادة مساحة العمل…"
+    },
+    "literatureWorkspace.restore": {
+      "source": "Replace workspace with this backup",
+      "text": "استبدال مساحة العمل بهذه النسخة الاحتياطية"
+    },
+    "literatureWorkspace.cancelRestore": {
+      "source": "Cancel restore",
+      "text": "إلغاء الاستعادة"
+    },
+    "literatureWorkspace.clearDetails": {
+      "source": "Clear this browser’s literature workspace",
+      "text": "مسح مساحة عمل مراجعة الأدبيات في هذا المتصفح"
+    },
+    "literatureWorkspace.clearCancelled": {
+      "source": "Clear cancelled. Your workspace has been kept.",
+      "text": "أُلغي المسح. تم الاحتفاظ بمساحة عملك."
+    },
+    "literatureWorkspace.cleared": {
+      "source": "Literature workspace cleared on this browser.",
+      "text": "مُسحت مساحة عمل مراجعة الأدبيات في هذا المتصفح."
+    },
+    "literatureWorkspace.clear": {
+      "source": "Clear saved workspace",
+      "text": "مسح مساحة العمل المحفوظة"
+    },
+    "literatureWorkspace.compareLabel": {
+      "source": "Compare {title}",
+      "text": "مقارنة {title}"
+    },
+    "literatureWorkspace.metadata": {
+      "source": "Metadata only · Peer review unknown",
+      "text": "بيانات وصفية فقط · حالة مراجعة الأقران غير معروفة"
+    },
+    "literatureWorkspace.metadataIncomplete": {
+      "source": "Metadata only · Peer review unknown · Incomplete contributors ({recorded}/{total})",
+      "text": "بيانات وصفية فقط · حالة مراجعة الأقران غير معروفة · معلومات المساهمين غير مكتملة ({recorded}/{total})"
+    },
+    "literatureWorkspace.observed": {
+      "source": "Metadata observed {date} ↗",
+      "text": "رُصدت البيانات الوصفية بتاريخ {date} ↗"
+    },
+    "literatureWorkspace.snapshot": {
+      "source": "Saved {date}. Retains the first saved snapshot of this exact paper link; imported records are not revalidated.",
+      "text": "حُفظ بتاريخ {date}. يُحتفظ بأول نسخة محفوظة لهذا الرابط الدقيق للورقة؛ ولا يُعاد التحقق من السجلات المستوردة."
+    },
+    "literatureWorkspace.selection.one": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "المعروض: {count} · المحدد للمقارنة: {selected}/2"
+    },
+    "literatureWorkspace.risPrepared.one": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "أصبح تنزيل RIS للورقة المعروضة ({count}) جاهزًا."
+    },
+    "literatureWorkspace.cslPrepared.one": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "أصبح تنزيل CSL-JSON للورقة المعروضة ({count}) جاهزًا."
+    },
+    "literatureWorkspace.backupSummary.one": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename}: عدد الأوراق {count} · {title}"
+    },
+    "literatureWorkspace.selection.other": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "المعروض: {count} · المحدد للمقارنة: {selected}/2"
+    },
+    "literatureWorkspace.risPrepared.other": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "أصبح تنزيل RIS للأوراق المعروضة ({count}) جاهزًا."
+    },
+    "literatureWorkspace.cslPrepared.other": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "أصبح تنزيل CSL-JSON للأوراق المعروضة ({count}) جاهزًا."
+    },
+    "literatureWorkspace.backupSummary.other": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename}: عدد الأوراق {count} · {title}"
     }
   }
 }

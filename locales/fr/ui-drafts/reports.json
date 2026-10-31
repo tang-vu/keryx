@@ -223,6 +223,306 @@
     "reportSourceLens.versionTitle": {
       "source": "{marker} · {source} · {title} · version {version}",
       "text": "{marker} · {source} · {title} · version : {version}"
+    },
+    "literatureWorkspace.staleFocusError": {
+      "source": "Your review focus changed in another tab. Load the saved focus before saving again.",
+      "text": "L’orientation de la revue a changé dans un autre onglet. Chargez l’orientation enregistrée avant d’enregistrer à nouveau."
+    },
+    "literatureWorkspace.focusSaved": {
+      "source": "Review focus saved on this browser.",
+      "text": "Orientation de la revue enregistrée dans ce navigateur."
+    },
+    "literatureWorkspace.titleLabel": {
+      "source": "Review title",
+      "text": "Titre de la revue"
+    },
+    "literatureWorkspace.titlePlaceholder": {
+      "source": "My literature review",
+      "text": "Ma revue de littérature"
+    },
+    "literatureWorkspace.questionLabel": {
+      "source": "Research question or inclusion criteria",
+      "text": "Question de recherche ou critères d’inclusion"
+    },
+    "literatureWorkspace.staleFocus": {
+      "source": "The saved review focus changed in another tab or restore. Your unsaved draft is still here.",
+      "text": "L’orientation enregistrée de la revue a changé dans un autre onglet ou lors d’une restauration. Votre brouillon non enregistré est toujours ici."
+    },
+    "literatureWorkspace.loadFocus": {
+      "source": "Load saved focus",
+      "text": "Charger l’orientation enregistrée"
+    },
+    "literatureWorkspace.saveFocus": {
+      "source": "Save review focus",
+      "text": "Enregistrer l’orientation de la revue"
+    },
+    "literatureWorkspace.stalePaperError": {
+      "source": "This paper changed in another tab. Load its saved screening before saving again.",
+      "text": "Cet article a changé dans un autre onglet. Chargez sa sélection enregistrée avant d’enregistrer à nouveau."
+    },
+    "literatureWorkspace.screeningSaved": {
+      "source": "Screening and notes saved on this browser.",
+      "text": "Sélection et notes enregistrées dans ce navigateur."
+    },
+    "literatureWorkspace.screeningDecision": {
+      "source": "Your screening decision",
+      "text": "Votre décision de sélection"
+    },
+    "literatureWorkspace.notesLabel": {
+      "source": "Why keep or exclude this paper? What needs checking?",
+      "text": "Pourquoi retenir ou exclure cet article ? Que faut-il vérifier ?"
+    },
+    "literatureWorkspace.staleScreening": {
+      "source": "Saved screening changed in another tab or restore. Your unsaved notes are still here.",
+      "text": "La sélection enregistrée a changé dans un autre onglet ou lors d’une restauration. Vos notes non enregistrées sont toujours ici."
+    },
+    "literatureWorkspace.loadScreening": {
+      "source": "Load saved screening",
+      "text": "Charger la sélection enregistrée"
+    },
+    "literatureWorkspace.notesNotice": {
+      "source": "These are your own notes. Saving them does not read the paper or verify its findings.",
+      "text": "Ce sont vos propres notes. Les enregistrer ne lit pas l’article et ne vérifie pas ses résultats."
+    },
+    "literatureWorkspace.saveScreening": {
+      "source": "Save screening and notes",
+      "text": "Enregistrer la sélection et les notes"
+    },
+    "literatureWorkspace.compare": {
+      "source": "Compare",
+      "text": "Comparer"
+    },
+    "literatureWorkspace.contributorsUnavailable": {
+      "source": "Contributors unavailable",
+      "text": "Contributeurs non renseignés"
+    },
+    "literatureWorkspace.open": {
+      "source": "Open paper record ↗",
+      "text": "Ouvrir la fiche de l’article ↗"
+    },
+    "literatureWorkspace.notes": {
+      "source": "Your screening notes",
+      "text": "Vos notes de sélection"
+    },
+    "literatureWorkspace.editNotes": {
+      "source": "Edit screening and notes",
+      "text": "Modifier la sélection et les notes"
+    },
+    "literatureWorkspace.removalDetails": {
+      "source": "Saved record and removal",
+      "text": "Fiche enregistrée et suppression"
+    },
+    "literatureWorkspace.removeCancelled": {
+      "source": "Removal cancelled. Your paper is still saved.",
+      "text": "Suppression annulée. Votre article est toujours enregistré."
+    },
+    "literatureWorkspace.removed": {
+      "source": "Paper removed from this browser.",
+      "text": "Article supprimé de ce navigateur."
+    },
+    "literatureWorkspace.remove": {
+      "source": "Remove saved paper",
+      "text": "Supprimer l’article enregistré"
+    },
+    "literatureWorkspace.loading": {
+      "source": "Loading your saved workspace…",
+      "text": "Chargement de votre espace de travail enregistré…"
+    },
+    "literatureWorkspace.focusTitle": {
+      "source": "Start with your review question",
+      "text": "Commencez par la question de votre revue"
+    },
+    "literatureWorkspace.focusExample": {
+      "source": "Keep a focus for screening. For example: which retrieval methods improve factual grounding, and under what evaluation conditions?",
+      "text": "Gardez un objectif pour la sélection. Par exemple : quelles méthodes de recherche documentaire améliorent l’ancrage factuel, et dans quelles conditions d’évaluation ?"
+    },
+    "literatureWorkspace.papers": {
+      "source": "Your papers",
+      "text": "Vos articles"
+    },
+    "literatureWorkspace.find": {
+      "source": "Find and save papers →",
+      "text": "Trouver et enregistrer des articles →"
+    },
+    "literatureWorkspace.filter": {
+      "source": "Show screening decisions",
+      "text": "Afficher les décisions de sélection"
+    },
+    "literatureWorkspace.filterAll": {
+      "source": "All saved papers",
+      "text": "Tous les articles enregistrés"
+    },
+    "literatureWorkspace.ris": {
+      "source": "Download shown references (RIS)",
+      "text": "Télécharger les références affichées (RIS)"
+    },
+    "literatureWorkspace.csl": {
+      "source": "Download shown references (CSL-JSON)",
+      "text": "Télécharger les références affichées (CSL-JSON)"
+    },
+    "literatureWorkspace.prepare": {
+      "source": "Prepare comparison →",
+      "text": "Préparer la comparaison →"
+    },
+    "literatureWorkspace.selectTwo": {
+      "source": "Select two papers to compare",
+      "text": "Sélectionnez deux articles à comparer"
+    },
+    "literatureWorkspace.clearSelection": {
+      "source": "Clear comparison selection",
+      "text": "Effacer la sélection pour comparaison"
+    },
+    "literatureWorkspace.emptyTitle": {
+      "source": "Build a review you can return to.",
+      "text": "Créez une revue que vous pourrez reprendre."
+    },
+    "literatureWorkspace.emptyFind": {
+      "source": "Find papers in the starter library or search repositories.",
+      "text": "Trouvez des articles dans la bibliothèque de départ ou dans les dépôts."
+    },
+    "literatureWorkspace.emptySave": {
+      "source": "Save an exact paper record, then record why it belongs in your review.",
+      "text": "Enregistrez la fiche exacte d’un article, puis notez pourquoi il a sa place dans votre revue."
+    },
+    "literatureWorkspace.emptyCompare": {
+      "source": "Compare two papers or export the screening list to continue your work.",
+      "text": "Comparez deux articles ou exportez la liste de sélection pour poursuivre votre travail."
+    },
+    "literatureWorkspace.browse": {
+      "source": "Browse research papers →",
+      "text": "Parcourir les articles de recherche →"
+    },
+    "literatureWorkspace.filterEmpty": {
+      "source": "No papers have this screening decision. Choose another filter to see your saved list.",
+      "text": "Aucun article ne correspond à cette décision de sélection. Choisissez un autre filtre pour voir votre liste enregistrée."
+    },
+    "literatureWorkspace.portable": {
+      "source": "Keep your work portable",
+      "text": "Emportez votre travail avec vous"
+    },
+    "literatureWorkspace.csvPrepared": {
+      "source": "Screening CSV download prepared.",
+      "text": "Téléchargement de la sélection en CSV préparé."
+    },
+    "literatureWorkspace.csv": {
+      "source": "Download screening CSV",
+      "text": "Télécharger la sélection en CSV"
+    },
+    "literatureWorkspace.backupPrepared": {
+      "source": "Workspace backup download prepared.",
+      "text": "Téléchargement de la sauvegarde de l’espace de travail préparé."
+    },
+    "literatureWorkspace.backup": {
+      "source": "Download JSON backup",
+      "text": "Télécharger la sauvegarde JSON"
+    },
+    "literatureWorkspace.storedPrepared": {
+      "source": "Original stored data download prepared.",
+      "text": "Téléchargement des données d’origine stockées préparé."
+    },
+    "literatureWorkspace.stored": {
+      "source": "Download stored data",
+      "text": "Télécharger les données stockées"
+    },
+    "literatureWorkspace.restoreLabel": {
+      "source": "Restore a workspace backup (JSON, up to 1 MiB)",
+      "text": "Restaurer une sauvegarde de l’espace de travail (JSON, jusqu’à 1 MiB)"
+    },
+    "literatureWorkspace.tooLarge": {
+      "source": "Backup exceeds the 1 MiB limit. Existing workspace has been kept.",
+      "text": "La sauvegarde dépasse la limite de 1 MiB. L’espace de travail existant a été conservé."
+    },
+    "literatureWorkspace.unreadable": {
+      "source": "Backup could not be read.",
+      "text": "Impossible de lire la sauvegarde."
+    },
+    "literatureWorkspace.untitled": {
+      "source": "Untitled review",
+      "text": "Revue sans titre"
+    },
+    "literatureWorkspace.restored": {
+      "source": "Backup restored on this browser.",
+      "text": "Sauvegarde restaurée dans ce navigateur."
+    },
+    "literatureWorkspace.restoring": {
+      "source": "Restoring workspace…",
+      "text": "Restauration de l’espace de travail…"
+    },
+    "literatureWorkspace.restore": {
+      "source": "Replace workspace with this backup",
+      "text": "Remplacer l’espace de travail par cette sauvegarde"
+    },
+    "literatureWorkspace.cancelRestore": {
+      "source": "Cancel restore",
+      "text": "Annuler la restauration"
+    },
+    "literatureWorkspace.clearDetails": {
+      "source": "Clear this browser’s literature workspace",
+      "text": "Effacer l’espace de revue de littérature de ce navigateur"
+    },
+    "literatureWorkspace.clearCancelled": {
+      "source": "Clear cancelled. Your workspace has been kept.",
+      "text": "Effacement annulé. Votre espace de travail a été conservé."
+    },
+    "literatureWorkspace.cleared": {
+      "source": "Literature workspace cleared on this browser.",
+      "text": "Espace de revue de littérature effacé dans ce navigateur."
+    },
+    "literatureWorkspace.clear": {
+      "source": "Clear saved workspace",
+      "text": "Effacer l’espace de travail enregistré"
+    },
+    "literatureWorkspace.compareLabel": {
+      "source": "Compare {title}",
+      "text": "Comparer {title}"
+    },
+    "literatureWorkspace.metadata": {
+      "source": "Metadata only · Peer review unknown",
+      "text": "Métadonnées uniquement · Évaluation par les pairs inconnue"
+    },
+    "literatureWorkspace.metadataIncomplete": {
+      "source": "Metadata only · Peer review unknown · Incomplete contributors ({recorded}/{total})",
+      "text": "Métadonnées uniquement · Évaluation par les pairs inconnue · Contributeurs incomplets ({recorded}/{total})"
+    },
+    "literatureWorkspace.observed": {
+      "source": "Metadata observed {date} ↗",
+      "text": "Métadonnées observées le {date} ↗"
+    },
+    "literatureWorkspace.snapshot": {
+      "source": "Saved {date}. Retains the first saved snapshot of this exact paper link; imported records are not revalidated.",
+      "text": "Enregistré le {date}. Conserve la première copie enregistrée de ce lien exact vers l’article ; les fiches importées ne sont pas revalidées."
+    },
+    "literatureWorkspace.selection.one": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "{count} affiché · {selected}/2 sélectionnés pour comparaison"
+    },
+    "literatureWorkspace.risPrepared.one": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "Téléchargement RIS préparé pour {count} article affiché."
+    },
+    "literatureWorkspace.cslPrepared.one": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "Téléchargement CSL-JSON préparé pour {count} article affiché."
+    },
+    "literatureWorkspace.backupSummary.one": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename} : {count} article · {title}"
+    },
+    "literatureWorkspace.selection.other": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "{count} affichés · {selected}/2 sélectionnés pour comparaison"
+    },
+    "literatureWorkspace.risPrepared.other": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "Téléchargement RIS préparé pour {count} articles affichés."
+    },
+    "literatureWorkspace.cslPrepared.other": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "Téléchargement CSL-JSON préparé pour {count} articles affichés."
+    },
+    "literatureWorkspace.backupSummary.other": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename} : {count} articles · {title}"
     }
   }
 }

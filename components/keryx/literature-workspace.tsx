@@ -14,7 +14,8 @@ import { reportComparisonCopy } from "@/locales/en/report-comparison";
 import { changeLiteratureWorkspace, clearLiteratureWithRecovery, clearLiteratureWorkspace, replaceLiteratureWorkspace, useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { literatureComparisonDraft, literatureScreeningCsv, MAX_LITERATURE_BYTES, MAX_SAVED_PAPERS,
   SCREENING_STATES, serializeLiteratureWorkspace, type LiteratureEntry, type LiteratureWorkspace as Workspace } from "@/lib/papers/literature-workspace";
-import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+import { UiMessage, UiText, useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
+import { reportMessages } from "@/locales/en/reports";
 import { searchLiteratureEntries } from "@/lib/papers/literature-search";
 import { LITERATURE_SORTS, sortLiteratureEntries, type LiteratureSort } from "@/lib/papers/literature-sort";
 import { literatureSearchCopy as searchEnglish } from "@/locales/en/literature-search";
@@ -31,6 +32,17 @@ const field = "mt-1 block min-h-11 w-full min-w-0 border border-line bg-paper-2 
 const buttonBase = "inline-flex min-h-11 items-center justify-center border px-3 py-2 font-mono text-xs hover:border-ink disabled:opacity-50";
 const button = `${buttonBase} border-line text-seal`;
 type Action = (action: () => void | Promise<void>, success: string) => Promise<void>;
+
+// SCREENING_STATES also supplies fixed English CSV values. Localize display only.
+const screeningMessageKeys = {
+  unscreened: "paperWorkspace.screening.unscreened",
+  include: "paperWorkspace.screening.include",
+  exclude: "paperWorkspace.screening.exclude",
+  undecided: "paperWorkspace.screening.undecided",
+} as const;
+function screeningLabel(copy: ReturnType<typeof useUiMessages>, state: LiteratureEntry["screening"]) {
+  return copy(screeningMessageKeys[state]);
+}
 
 function useUnsavedWarning(dirty: boolean) {
   useEffect(() => {
@@ -58,8 +70,8 @@ function ReviewFocus({ workspace, act }: { workspace: Workspace; act: Action }) 
       setBase(draft);
     }, copy("literatureWorkspace.focusSaved"));
   }}>
-    <label className="font-mono text-xs text-ink-2">{copy("literatureWorkspace.titleLabel")}<input name="title" maxLength={120} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} placeholder={copy("literatureWorkspace.titlePlaceholder")} className={field} /></label>
-    <label className="font-mono text-xs text-ink-2">{copy("literatureWorkspace.questionLabel")}<textarea name="question" maxLength={600} value={draft.question} onChange={event => setDraft({ ...draft, question: event.target.value })} rows={3} className={field} /></label>
+    <label className="min-w-0 break-words font-mono text-xs text-ink-2">{copy("literatureWorkspace.titleLabel")}<input name="title" maxLength={120} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} placeholder={copy("literatureWorkspace.titlePlaceholder")} className={field} /></label>
+    <label className="min-w-0 break-words font-mono text-xs text-ink-2">{copy("literatureWorkspace.questionLabel")}<textarea name="question" maxLength={600} value={draft.question} onChange={event => setDraft({ ...draft, question: event.target.value })} rows={3} className={field} /></label>
     {stale && <div role="status" className="font-serif text-sm text-seal"><p>{copy("literatureWorkspace.staleFocus")}</p>
       <button type="button" className={`${button} mt-2`} onClick={() => { const next = { title: workspace.title, question: workspace.question }; setBase(next); setDraft(next); }}>{copy("literatureWorkspace.loadFocus")}</button></div>}
     <button type="submit" className={`${button} justify-self-start`}>{copy("literatureWorkspace.saveFocus")}</button>
@@ -85,7 +97,7 @@ function ScreeningEditor({ entry, act }: { entry: LiteratureEntry; act: Action }
     }, copy("literatureWorkspace.screeningSaved"));
   }}>
     <label className="block font-mono text-xs text-ink-2">{copy("literatureWorkspace.screeningDecision")}
-      <select name="screening" value={draft.screening} onChange={event => setDraft({ ...draft, screening: event.target.value as LiteratureEntry["screening"] })} className={field}>{Object.entries(SCREENING_STATES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+      <select name="screening" value={draft.screening} onChange={event => setDraft({ ...draft, screening: event.target.value as LiteratureEntry["screening"] })} className={field}>{Object.keys(SCREENING_STATES).map(value => <option key={value} value={value}>{screeningLabel(copy, value as LiteratureEntry["screening"])}</option>)}</select>
     </label>
     <label className="block font-mono text-xs text-ink-2">{copy("literatureWorkspace.notesLabel")}
       <textarea name="notes" value={draft.notes} onChange={event => setDraft({ ...draft, notes: event.target.value })} maxLength={2000} rows={4} className={field} />
@@ -105,7 +117,7 @@ function SavedPaper({ entry, selected, selectionFull, toggle, act }: {
   const paper = entry.paper;
   return <article className="min-w-0 border border-line bg-paper p-5 sm:p-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <span className="font-mono text-xs text-ink-3">{SCREENING_STATES[entry.screening]} · {PAPER_REPOSITORIES[paper.repository]}</span>
+      <span className="font-mono text-xs text-ink-3">{screeningLabel(copy, entry.screening)} · {PAPER_REPOSITORIES[paper.repository]}</span>
       <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 font-mono text-xs text-ink-2">
         <input type="checkbox" checked={selected} disabled={!selected && selectionFull} onChange={toggle} aria-label={copy("literatureWorkspace.compareLabel", { title: paper.title })} className="h-4 w-4 accent-seal" /> {copy("literatureWorkspace.compare")}
       </label>
@@ -192,7 +204,7 @@ export function LiteratureWorkspace() {
   }, "");
 
   return <div className="mt-7 space-y-6">
-    <p className="max-w-[75ch] font-serif text-sm leading-relaxed text-ink-2">{copy("literatureWorkspace.privacy")}</p>
+    <p className="max-w-[75ch] font-serif text-sm leading-relaxed text-ink-2"><UiMessage messageKey="literatureWorkspace.privacy" /></p>
     {!ready && <p role="status" className="font-serif text-sm text-ink-2">{copy("literatureWorkspace.loading")}</p>}
     {error && <p role="alert" className="border border-seal bg-paper p-4 font-serif text-sm text-seal">{error}</p>}
     <div role={failure ? "alert" : "status"} aria-live="polite" className="break-words font-serif text-sm text-seal">{failure || message}</div>
@@ -247,7 +259,7 @@ export function LiteratureWorkspace() {
             {query !== "" && <button type="button" className={`${button} mt-2`} onClick={() => { setQuery(""); searchInput.current?.focus(); }}>{searchCopy.clear}</button>}
           </div>
           <label className="font-mono text-xs text-ink-2">{copy("literatureWorkspace.filter")}<select value={filter} onChange={event => setFilter(event.target.value)} className={field}>
-            <option value="all">{copy("literatureWorkspace.filterAll")}</option>{Object.entries(SCREENING_STATES).map(([value, label]) => <option key={value} value={value}>{label} ({searched.filter(entry => entry.screening === value).length})</option>)}
+            <option value="all">{copy("literatureWorkspace.filterAll")}</option>{Object.keys(SCREENING_STATES).map(value => <option key={value} value={value}>{screeningLabel(copy, value as LiteratureEntry["screening"])} ({searched.filter(entry => entry.screening === value).length})</option>)}
           </select></label>
           <div className="min-w-0 max-w-full">
             <label htmlFor={sortId} className="font-mono text-xs text-ink-2">{searchCopy.sortLabel}</label>
@@ -257,31 +269,31 @@ export function LiteratureWorkspace() {
           </div>
           <div className="space-y-2">
             <p role="status" className="font-serif text-sm text-ink-2">{copy(visible.length === 1 ? "literatureWorkspace.selection.one" : "literatureWorkspace.selection.other", { count: visible.length, selected: active.length })}</p>
-            <button type="button" disabled={visible.length === 0} className={button} onClick={() => act(() => {
+            <button type="button" disabled={visible.length === 0} aria-label={copy("literatureWorkspace.ris")} className={button} onClick={() => act(() => {
               const exported = paperReferencesRis(visible.map(entry => entry.paper));
               downloadBrowserText(exported.content, "keryx-literature-references.ris", "application/x-research-info-systems;charset=utf-8");
-            }, copy(visible.length === 1 ? "literatureWorkspace.risPrepared.one" : "literatureWorkspace.risPrepared.other", { count: visible.length }))}>{copy("literatureWorkspace.ris")}</button>
-            <button type="button" disabled={visible.length === 0} className={button} onClick={() => act(() => {
+            }, copy(visible.length === 1 ? "literatureWorkspace.risPrepared.one" : "literatureWorkspace.risPrepared.other", { count: visible.length }))}><UiText source={reportMessages["literatureWorkspace.ris"]} namespaces={["reports"]} literals={["(RIS)"]} /></button>
+            <button type="button" disabled={visible.length === 0} aria-label={copy("literatureWorkspace.csl")} className={button} onClick={() => act(() => {
               const exported = paperReferencesCslJson(visible.map(entry => entry.paper));
               downloadBrowserText(exported.content, "keryx-literature-references.json", "application/json;charset=utf-8");
-            }, copy(visible.length === 1 ? "literatureWorkspace.cslPrepared.one" : "literatureWorkspace.cslPrepared.other", { count: visible.length }))}>{copy("literatureWorkspace.csl")}</button>
+            }, copy(visible.length === 1 ? "literatureWorkspace.cslPrepared.one" : "literatureWorkspace.cslPrepared.other", { count: visible.length }))}><UiText source={reportMessages["literatureWorkspace.csl"]} namespaces={["reports"]} literals={["(CSL-JSON)"]} /></button>
             <button type="button" disabled={visible.length === 0} className={button} onClick={() => void downloadReferences("bibtex")}>{copy("bibliographyExport.bibtex")}</button>
             <button type="button" disabled={visible.length === 0} className={button} onClick={() => void downloadReferences("markdown")}>{formatCopy.markdown}</button>
           </div>
         </div>
-        <p className="mt-2 font-serif text-xs text-ink-3">{copy("literatureWorkspace.referencesNotice")}</p>
+        <p className="mt-2 font-serif text-xs text-ink-3"><UiMessage messageKey="literatureWorkspace.referencesNotice" /></p>
         <p className="mt-2 font-serif text-xs text-ink-3">{searchCopy.scope}</p>
         <p className="mt-2 font-serif text-xs text-ink-3">{searchCopy.sortNotice}</p>
         <LiteratureBulkScreening key={editingRevision} workspace={workspace} visible={visible} />
         <div className="mt-4 border border-line bg-panel p-4">
-          <p className="font-serif text-sm text-ink-2">{copy("literatureWorkspace.compareNotice")}</p>
+          <p className="font-serif text-sm text-ink-2"><UiMessage messageKey="literatureWorkspace.compareNotice" /></p>
           <LiteratureComparisonPreview entries={active.flatMap(url => workspace.entries.filter(entry => entry.paper.url === url)
             .map(({ paper, screening }) => ({ paper, screening, matchesSearch: searchMatches.has(paper.url) })))} filter={filter} savedQuestion={workspace.question} draft={draft}
             onRemove={url => setSelected(active.filter(selectedUrl => selectedUrl !== url))} />
           <div className="mt-3 flex flex-wrap gap-3">{draft ? <Link prefetch={false} href={`/?q=${encodeURIComponent(draft)}&mode=deep`} className={`${buttonBase} border-ink bg-seal text-paper`}>{copy("literatureWorkspace.prepare")}</Link> : <button disabled className={button}>{copy("literatureWorkspace.selectTwo")}</button>}
             {active.length > 0 && <button type="button" className={button} onClick={() => setSelected([])}>{copy("literatureWorkspace.clearSelection")}</button>}
           </div>
-          <p className="mt-2 font-serif text-xs text-ink-3">{copy("literatureWorkspace.draftPrivacy")}</p>
+          <p className="mt-2 font-serif text-xs text-ink-3"><UiMessage messageKey="literatureWorkspace.draftPrivacy" /></p>
           {draftError && <p role="alert" className="mt-2 font-serif text-sm text-seal">{draftError}</p>}
         </div>
         {workspace.entries.length === 0 ? <div className="mt-5 border border-dashed border-line bg-paper p-6">
@@ -298,15 +310,15 @@ export function LiteratureWorkspace() {
 
     {ready && <section aria-labelledby="literature-portability" className="border border-line bg-paper p-5 sm:p-6">
       <h2 id="literature-portability" className="font-display text-2xl text-ink">{copy("literatureWorkspace.portable")}</h2>
-      <p className="mt-2 font-serif text-sm leading-relaxed text-ink-2">{copy("literatureWorkspace.portableNotice")}</p>
+      <p className="mt-2 font-serif text-sm leading-relaxed text-ink-2"><UiMessage messageKey="literatureWorkspace.portableNotice" /></p>
       <div className="mt-4 flex flex-wrap gap-3">
         <Link href="/me/bibliographies" prefetch={false} className={button}>{bibliographyCopy.manage}</Link>
-        <button type="button" disabled={!!error || workspace.entries.length === 0} className={button} onClick={() => act(() => downloadBrowserText(literatureScreeningCsv(workspace), "keryx-literature-screening.csv", "text/csv;charset=utf-8"), copy("literatureWorkspace.csvPrepared"))}>{copy("literatureWorkspace.csv")}</button>
-        <button type="button" disabled={!!error} className={button} onClick={() => act(() => downloadBrowserText(serializeLiteratureWorkspace(workspace), "keryx-literature-backup.json", "application/json"), copy("literatureWorkspace.backupPrepared"))}>{copy("literatureWorkspace.backup")}</button>
+        <button type="button" disabled={!!error || workspace.entries.length === 0} aria-label={copy("literatureWorkspace.csv")} className={button} onClick={() => act(() => downloadBrowserText(literatureScreeningCsv(workspace), "keryx-literature-screening.csv", "text/csv;charset=utf-8"), copy("literatureWorkspace.csvPrepared"))}><UiText source={reportMessages["literatureWorkspace.csv"]} namespaces={["reports"]} literals={["CSV"]} /></button>
+        <button type="button" disabled={!!error} aria-label={copy("literatureWorkspace.backup")} className={button} onClick={() => act(() => downloadBrowserText(serializeLiteratureWorkspace(workspace), "keryx-literature-backup.json", "application/json"), copy("literatureWorkspace.backupPrepared"))}><UiText source={reportMessages["literatureWorkspace.backup"]} namespaces={["reports"]} literals={["JSON"]} /></button>
         {raw !== undefined && <button type="button" className={button} onClick={() => act(() => downloadBrowserText(raw, "keryx-literature-stored-data.json", "application/json"), copy("literatureWorkspace.storedPrepared"))}>{copy("literatureWorkspace.stored")}</button>}
       </div>
-      <label className="mt-5 block font-mono text-xs text-ink-2">{copy("literatureWorkspace.restoreLabel")}
-        <input type="file" accept=".json,application/json" disabled={restoring || adding || clearing || recovering} className={`${field} max-w-full`} onChange={async event => {
+      <label className="mt-5 block font-mono text-xs text-ink-2"><UiText source={reportMessages["literatureWorkspace.restoreLabel"]} namespaces={["reports"]} literals={["JSON", "1 MiB"]} />
+        <input type="file" accept=".json,application/json" aria-label={copy("literatureWorkspace.restoreLabel")} disabled={restoring || adding || clearing || recovering} className={`${field} max-w-full`} onChange={async event => {
           const file = event.currentTarget.files?.[0]; event.currentTarget.value = "";
           const generation = ++importGeneration.current; setPending(undefined);
           if (!file) return;
@@ -333,7 +345,7 @@ export function LiteratureWorkspace() {
             <ul className="space-y-3">{importPreview.additions.map(entry => <li key={entry.paper.url} className="min-w-0 border-t border-line pt-3">
               <a href={entry.paper.url} target="_blank" rel="noopener noreferrer" className="break-words font-serif text-sm text-seal underline">{entry.paper.title}</a>
               <p className="break-words font-mono text-xs text-ink-3">{entry.paper.url}</p>
-              <p className="mt-1 font-mono text-xs text-ink-2">{SCREENING_STATES[entry.screening]}</p>
+              <p className="mt-1 font-mono text-xs text-ink-2">{screeningLabel(copy, entry.screening)}</p>
               {entry.notes && <p className="mt-2 whitespace-pre-wrap break-words font-serif text-sm text-ink-2">{entry.notes}</p>}
             </li>)}</ul>
           </details>}
@@ -353,7 +365,7 @@ export function LiteratureWorkspace() {
             setAdding(false);
           }}>{adding ? importCopy.adding : importCopy.add}</button>
         </section>}
-        <p className="mt-2 font-serif text-sm text-ink-2">{copy("literatureWorkspace.restoreNotice")}</p>
+        <p className="mt-2 font-serif text-sm text-ink-2"><UiMessage messageKey="literatureWorkspace.restoreNotice" /></p>
         <div className="mt-3 flex flex-wrap gap-3"><button type="button" disabled={restoring || adding || clearing || recovering} className={button} onClick={async () => {
           const generation = importGeneration.current, captured = pending;
           setRestoring(true);
@@ -367,7 +379,7 @@ export function LiteratureWorkspace() {
           <button type="button" disabled={restoring} className={button} onClick={() => { ++importGeneration.current; setPending(undefined); }}>{copy("literatureWorkspace.cancelRestore")}</button></div>
       </div>}
       <details className="mt-5 border-t border-line pt-2"><summary ref={clearSummary} className="min-h-11 cursor-pointer py-3 font-mono text-xs text-ink-3 underline">{copy("literatureWorkspace.clearDetails")}</summary>
-        <p className="mt-2 font-serif text-sm text-ink-2">{copy("literatureWorkspace.clearNotice")}</p>
+        <p className="mt-2 font-serif text-sm text-ink-2"><UiMessage messageKey="literatureWorkspace.clearNotice" /></p>
         {!error && <p className="mt-2 font-serif text-sm text-ink-2">{recoveryCopy.beforeClear}</p>}
         <button type="button" disabled={clearing || recovering || restoring || adding || !!cleared || (!!error && raw === undefined)} className={`${button} mt-3`} onClick={async () => {
           if (!window.confirm(copy("literatureWorkspace.clearConfirm"))) { setFailure(copy("literatureWorkspace.clearCancelled")); setMessage(""); return; }
