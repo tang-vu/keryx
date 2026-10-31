@@ -56,6 +56,28 @@ function fixture() {
   };
 }
 
+test("unexpected source diagnostics identify the host with bounded credential-free output", () => {
+  const sources = original.sources.replace("mirror+file:/etc/apt/apt-mirrors.txt", "https://runner-user:secret-password@us-west-2.ec2.archive.ubuntu.com/ubuntu/?token=private-token#private-fragment");
+  assert.throws(() => browserAptPlan({ ...original, sources }), error => {
+    assert.match(error.message, /refusing to replace mirrors/);
+    assert.match(error.message, /https:\/\/us-west-2\.ec2\.archive\.ubuntu\.com\/ubuntu\//);
+    assert.doesNotMatch(error.message, /runner-user|secret-password|private-token|private-fragment/);
+    return true;
+  });
+  for (const uri of ["not-a-uri", "file:/private-runner-path", `https://example.test/${"x".repeat(2000)}`]) {
+    const { io, files, writes } = fixture();
+    const copies = uri.length > 2000 ? 1 : 20;
+    files.set("/etc/apt/sources.list.d/ubuntu.sources", `URIs: ${Array(copies).fill(uri).join(" ")}\n`.repeat(copies));
+    assert.throws(() => prepareBrowserApt(io), error => {
+      assert.match(error.message, /refusing to replace mirrors/);
+      assert(error.message.length < 1200);
+      assert.doesNotMatch(error.message, /private-runner-path/);
+      return true;
+    });
+    assert.equal(writes.length, 0);
+  }
+});
+
 test("fixed runner files get HTTPS failover and bounded transport without changing source trust; repeat is safe", () => {
   const { io, files, writes } = fixture();
   prepareBrowserApt(io);

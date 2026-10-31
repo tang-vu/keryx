@@ -29,6 +29,56 @@ $password = ConvertTo-SecureString (([guid]::NewGuid().ToString('N')) + 'aA1!') 
 $principal = "$env:COMPUTERNAME\$name"
 $userCreated = $false
 $passed = $false
+function Save-SmokeEvidence {
+  $artifactRoot = [IO.Path]::GetFullPath((Join-Path $repository '.artifacts/desktop-standard-user'))
+  if (-not $artifactRoot.StartsWith($repository.TrimEnd('\') + '\', [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Invalid standard-user diagnostic artifact root'
+  }
+  $destination = Join-Path $artifactRoot ([IO.Path]::GetFileName($work))
+  foreach ($directory in @((Join-Path $repository '.artifacts'), $artifactRoot)) {
+    if ((Test-Path -LiteralPath $directory) -and
+        ((Get-Item -LiteralPath $directory -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+      throw 'Smoke artifact root is a reparse point'
+    }
+  }
+  if (Test-Path -LiteralPath $destination) { throw 'Smoke diagnostic destination already exists' }
+  [void][IO.Directory]::CreateDirectory($destination)
+  $sources = @()
+  foreach ($name in @('stdout.log', 'stderr.log')) {
+    $file = Join-Path $work $name
+    if (Test-Path -LiteralPath $file -PathType Leaf) { $sources += [pscustomobject]@{ source = $file; name = $name } }
+  }
+  $launches = @(Get-ChildItem -LiteralPath $work -Directory -Filter 'keryx-tauri-smoke-*')
+  if ($launches.Count -gt 64) { throw 'Too many owned smoke launch directories' }
+  foreach ($directory in $launches) {
+    if ($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Smoke diagnostic directory is a reparse point' }
+    $file = Join-Path $directory.FullName 'launch-diagnostics.json'
+    if (Test-Path -LiteralPath $file -PathType Leaf) {
+      $sources += [pscustomobject]@{ source = $file; name = $directory.Name + '-launch.json' }
+    }
+  }
+  $records = @()
+  foreach ($source in $sources) {
+    $file = Get-Item -LiteralPath $source.source -Force
+    if (($file.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $file.Length -gt 8MB) {
+      throw 'Smoke diagnostic original is a reparse point or exceeds its evidence bound'
+    }
+    $target = Join-Path $destination $source.name
+    if (Test-Path -LiteralPath $target) { throw 'Smoke diagnostic destination already exists' }
+    Copy-Item -LiteralPath $file.FullName -Destination $target
+    $digest = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+    if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -cne $digest) { throw 'Smoke diagnostic retention changed bytes' }
+    $records += [pscustomobject]@{ name = $source.name; bytes = $file.Length; sha256 = $digest.ToLowerInvariant() }
+  }
+  $metadata = [pscustomobject]@{
+    format = 'keryx-standard-user-smoke-diagnostics-v1'
+    expectedSourceCommit = $expectedSourceCommit
+    capturedAtUtc = [DateTime]::UtcNow.ToString('O')
+    standardUserSmokePassed = $passed
+    files = @($records)
+  }
+  [IO.File]::WriteAllText((Join-Path $destination 'retention.json'), ($metadata | ConvertTo-Json -Depth 5), [Text.UTF8Encoding]::new($false))
+}
 try {
   New-Item -ItemType Directory -Path $work | Out-Null
   New-LocalUser -Name $name -Password $password -AccountNeverExpires -PasswordNeverExpires | Out-Null
@@ -52,7 +102,13 @@ try {
   }
   $passed = $true
 } finally {
+  $evidenceFailure = $null
+  if (Test-Path -LiteralPath $work -PathType Container) {
+    try { Save-SmokeEvidence }
+    catch { $evidenceFailure = $_; Write-Error "Standard-user diagnostics were not retained: $_" -ErrorAction Continue }
+  }
   if ($userCreated) { Remove-LocalUser -Name $name -ErrorAction Continue }
-  if ($passed) { Remove-Item -LiteralPath $work -Recurse -Force }
+  if ($passed -and -not $evidenceFailure) { Remove-Item -LiteralPath $work -Recurse -Force }
   else { Write-Error "Standard-user smoke files retained at $work" -ErrorAction Continue }
+  if ($passed -and $evidenceFailure) { throw $evidenceFailure }
 }
