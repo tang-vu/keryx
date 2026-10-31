@@ -1,0 +1,40 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/literature-search.ts",
+  "sourceSha256": "fdebf7104a5b7734ab952847616d89c58b13620f83909c1e3791638ce01d43f5",
+  "entries": {
+    "label": {
+      "source": "Search saved papers and notes",
+      "text": "Rechercher dans les articles enregistrés et les notes"
+    },
+    "clear": {
+      "source": "Clear search",
+      "text": "Effacer la recherche"
+    },
+    "empty": {
+      "source": "No saved papers match this search and screening filter.",
+      "text": "Aucun article enregistré ne correspond à cette recherche et au filtre de sélection."
+    },
+    "outsideSearch": {
+      "source": "Outside the current search; still selected.",
+      "text": "Hors de la recherche actuelle ; toujours sélectionné."
+    },
+    "sortLabel": {
+      "source": "Sort saved papers",
+      "text": "Trier les articles enregistrés"
+    },
+    "sorts.saved": {
+      "source": "Saved order",
+      "text": "Ordre d’enregistrement"
+    },
+    "sorts.title": {
+      "source": "Title",
+      "text": "Titre"
+    },
+    "sorts.recent": {
+      "source": "Recently saved",
+      "text": "Enregistrés récemment"
+    }
+  }
+}

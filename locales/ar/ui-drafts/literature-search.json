@@ -1,0 +1,40 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/literature-search.ts",
+  "sourceSha256": "fdebf7104a5b7734ab952847616d89c58b13620f83909c1e3791638ce01d43f5",
+  "entries": {
+    "label": {
+      "source": "Search saved papers and notes",
+      "text": "البحث في الأوراق المحفوظة والملاحظات"
+    },
+    "clear": {
+      "source": "Clear search",
+      "text": "مسح البحث"
+    },
+    "empty": {
+      "source": "No saved papers match this search and screening filter.",
+      "text": "لا توجد أوراق محفوظة تطابق هذا البحث ومرشّح الفرز."
+    },
+    "outsideSearch": {
+      "source": "Outside the current search; still selected.",
+      "text": "خارج البحث الحالي؛ ما زالت محددة."
+    },
+    "sortLabel": {
+      "source": "Sort saved papers",
+      "text": "ترتيب الأوراق المحفوظة"
+    },
+    "sorts.saved": {
+      "source": "Saved order",
+      "text": "ترتيب الحفظ"
+    },
+    "sorts.title": {
+      "source": "Title",
+      "text": "العنوان"
+    },
+    "sorts.recent": {
+      "source": "Recently saved",
+      "text": "المحفوظة مؤخرًا"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/literature-search.ts",
+  "sourceSha256": "fdebf7104a5b7734ab952847616d89c58b13620f83909c1e3791638ce01d43f5",
+  "entries": {
+    "label": {
+      "source": "Search saved papers and notes",
+      "text": "सहेजे गए शोधपत्रों और नोट्स में खोजें"
+    },
+    "clear": {
+      "source": "Clear search",
+      "text": "खोज साफ़ करें"
+    },
+    "empty": {
+      "source": "No saved papers match this search and screening filter.",
+      "text": "कोई भी सहेजा गया शोधपत्र इस खोज और चयन फ़िल्टर से मेल नहीं खाता।"
+    },
+    "outsideSearch": {
+      "source": "Outside the current search; still selected.",
+      "text": "वर्तमान खोज से बाहर है; फिर भी चयनित है।"
+    },
+    "sortLabel": {
+      "source": "Sort saved papers",
+      "text": "सहेजे गए शोधपत्रों को क्रम में लगाएँ"
+    },
+    "sorts.saved": {
+      "source": "Saved order",
+      "text": "सहेजने का क्रम"
+    },
+    "sorts.title": {
+      "source": "Title",
+      "text": "शीर्षक"
+    },
+    "sorts.recent": {
+      "source": "Recently saved",
+      "text": "हाल में सहेजे गए"
+    }
+  }
+}

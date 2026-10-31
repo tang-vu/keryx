@@ -1,0 +1,40 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/literature-search.ts",
+  "sourceSha256": "fdebf7104a5b7734ab952847616d89c58b13620f83909c1e3791638ce01d43f5",
+  "entries": {
+    "label": {
+      "source": "Search saved papers and notes",
+      "text": "저장된 논문과 메모 검색"
+    },
+    "clear": {
+      "source": "Clear search",
+      "text": "검색 지우기"
+    },
+    "empty": {
+      "source": "No saved papers match this search and screening filter.",
+      "text": "이 검색과 선별 필터에 맞는 저장된 논문이 없습니다."
+    },
+    "outsideSearch": {
+      "source": "Outside the current search; still selected.",
+      "text": "현재 검색 결과에 없지만 선택은 유지됩니다."
+    },
+    "sortLabel": {
+      "source": "Sort saved papers",
+      "text": "저장된 논문 정렬"
+    },
+    "sorts.saved": {
+      "source": "Saved order",
+      "text": "저장 순서"
+    },
+    "sorts.title": {
+      "source": "Title",
+      "text": "제목"
+    },
+    "sorts.recent": {
+      "source": "Recently saved",
+      "text": "최근 저장순"
+    }
+  }
+}
