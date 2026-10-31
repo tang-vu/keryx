@@ -223,6 +223,306 @@
     "reportSourceLens.versionTitle": {
       "source": "{marker} · {source} · {title} · version {version}",
       "text": "{marker} · {source} · {title} · バージョン{version}"
+    },
+    "literatureWorkspace.staleFocusError": {
+      "source": "Your review focus changed in another tab. Load the saved focus before saving again.",
+      "text": "別のタブでレビューの方針が変更されました。保存済みの方針を読み込んでから、もう一度保存してください。"
+    },
+    "literatureWorkspace.focusSaved": {
+      "source": "Review focus saved on this browser.",
+      "text": "レビューの方針をこのブラウザーに保存しました。"
+    },
+    "literatureWorkspace.titleLabel": {
+      "source": "Review title",
+      "text": "レビューのタイトル"
+    },
+    "literatureWorkspace.titlePlaceholder": {
+      "source": "My literature review",
+      "text": "私の文献レビュー"
+    },
+    "literatureWorkspace.questionLabel": {
+      "source": "Research question or inclusion criteria",
+      "text": "研究の問い、または採用基準"
+    },
+    "literatureWorkspace.staleFocus": {
+      "source": "The saved review focus changed in another tab or restore. Your unsaved draft is still here.",
+      "text": "別のタブまたは復元によって、保存済みのレビュー方針が変更されました。未保存の下書きはここに残っています。"
+    },
+    "literatureWorkspace.loadFocus": {
+      "source": "Load saved focus",
+      "text": "保存済みの方針を読み込む"
+    },
+    "literatureWorkspace.saveFocus": {
+      "source": "Save review focus",
+      "text": "レビューの方針を保存"
+    },
+    "literatureWorkspace.stalePaperError": {
+      "source": "This paper changed in another tab. Load its saved screening before saving again.",
+      "text": "別のタブでこの論文が変更されました。保存済みの選別内容を読み込んでから、もう一度保存してください。"
+    },
+    "literatureWorkspace.screeningSaved": {
+      "source": "Screening and notes saved on this browser.",
+      "text": "選別内容とメモをこのブラウザーに保存しました。"
+    },
+    "literatureWorkspace.screeningDecision": {
+      "source": "Your screening decision",
+      "text": "選別の判断"
+    },
+    "literatureWorkspace.notesLabel": {
+      "source": "Why keep or exclude this paper? What needs checking?",
+      "text": "この論文を採用または除外する理由は何ですか？何を確認する必要がありますか？"
+    },
+    "literatureWorkspace.staleScreening": {
+      "source": "Saved screening changed in another tab or restore. Your unsaved notes are still here.",
+      "text": "別のタブまたは復元によって、保存済みの選別内容が変更されました。未保存のメモはここに残っています。"
+    },
+    "literatureWorkspace.loadScreening": {
+      "source": "Load saved screening",
+      "text": "保存済みの選別内容を読み込む"
+    },
+    "literatureWorkspace.notesNotice": {
+      "source": "These are your own notes. Saving them does not read the paper or verify its findings.",
+      "text": "これはご自身のメモです。保存しても、論文の読解や研究結果の検証は行われません。"
+    },
+    "literatureWorkspace.saveScreening": {
+      "source": "Save screening and notes",
+      "text": "選別内容とメモを保存"
+    },
+    "literatureWorkspace.compare": {
+      "source": "Compare",
+      "text": "比較"
+    },
+    "literatureWorkspace.contributorsUnavailable": {
+      "source": "Contributors unavailable",
+      "text": "貢献者の情報なし"
+    },
+    "literatureWorkspace.open": {
+      "source": "Open paper record ↗",
+      "text": "論文の記録を開く ↗"
+    },
+    "literatureWorkspace.notes": {
+      "source": "Your screening notes",
+      "text": "選別に関するメモ"
+    },
+    "literatureWorkspace.editNotes": {
+      "source": "Edit screening and notes",
+      "text": "選別内容とメモを編集"
+    },
+    "literatureWorkspace.removalDetails": {
+      "source": "Saved record and removal",
+      "text": "保存済みの記録と削除"
+    },
+    "literatureWorkspace.removeCancelled": {
+      "source": "Removal cancelled. Your paper is still saved.",
+      "text": "削除をキャンセルしました。論文は保存されたままです。"
+    },
+    "literatureWorkspace.removed": {
+      "source": "Paper removed from this browser.",
+      "text": "このブラウザーから論文を削除しました。"
+    },
+    "literatureWorkspace.remove": {
+      "source": "Remove saved paper",
+      "text": "保存済みの論文を削除"
+    },
+    "literatureWorkspace.loading": {
+      "source": "Loading your saved workspace…",
+      "text": "保存済みのワークスペースを読み込み中…"
+    },
+    "literatureWorkspace.focusTitle": {
+      "source": "Start with your review question",
+      "text": "レビューの問いから始めましょう"
+    },
+    "literatureWorkspace.focusExample": {
+      "source": "Keep a focus for screening. For example: which retrieval methods improve factual grounding, and under what evaluation conditions?",
+      "text": "選別の方針を定めましょう。例えば、どの検索手法が事実に基づく根拠付けを改善するのか、また、どのような評価条件で改善するのか、といった問いです。"
+    },
+    "literatureWorkspace.papers": {
+      "source": "Your papers",
+      "text": "保存した論文"
+    },
+    "literatureWorkspace.find": {
+      "source": "Find and save papers →",
+      "text": "論文を探して保存 →"
+    },
+    "literatureWorkspace.filter": {
+      "source": "Show screening decisions",
+      "text": "選別の判断で絞り込む"
+    },
+    "literatureWorkspace.filterAll": {
+      "source": "All saved papers",
+      "text": "保存済みのすべての論文"
+    },
+    "literatureWorkspace.ris": {
+      "source": "Download shown references (RIS)",
+      "text": "表示中の参考文献をダウンロード (RIS)"
+    },
+    "literatureWorkspace.csl": {
+      "source": "Download shown references (CSL-JSON)",
+      "text": "表示中の参考文献をダウンロード (CSL-JSON)"
+    },
+    "literatureWorkspace.prepare": {
+      "source": "Prepare comparison →",
+      "text": "比較を準備 →"
+    },
+    "literatureWorkspace.selectTwo": {
+      "source": "Select two papers to compare",
+      "text": "比較する論文を2件選択"
+    },
+    "literatureWorkspace.clearSelection": {
+      "source": "Clear comparison selection",
+      "text": "比較対象の選択を解除"
+    },
+    "literatureWorkspace.emptyTitle": {
+      "source": "Build a review you can return to.",
+      "text": "後から再開できるレビューを作りましょう。"
+    },
+    "literatureWorkspace.emptyFind": {
+      "source": "Find papers in the starter library or search repositories.",
+      "text": "入門用ライブラリーやリポジトリーで論文を探します。"
+    },
+    "literatureWorkspace.emptySave": {
+      "source": "Save an exact paper record, then record why it belongs in your review.",
+      "text": "論文の正確な記録を保存し、レビューに含める理由を記録します。"
+    },
+    "literatureWorkspace.emptyCompare": {
+      "source": "Compare two papers or export the screening list to continue your work.",
+      "text": "論文2件を比較するか、選別リストをエクスポートして作業を続けます。"
+    },
+    "literatureWorkspace.browse": {
+      "source": "Browse research papers →",
+      "text": "研究論文を探す →"
+    },
+    "literatureWorkspace.filterEmpty": {
+      "source": "No papers have this screening decision. Choose another filter to see your saved list.",
+      "text": "この選別の判断に該当する論文はありません。別のフィルターを選ぶと、保存済みのリストを表示できます。"
+    },
+    "literatureWorkspace.portable": {
+      "source": "Keep your work portable",
+      "text": "作業内容を持ち出す"
+    },
+    "literatureWorkspace.csvPrepared": {
+      "source": "Screening CSV download prepared.",
+      "text": "選別リストのCSVダウンロードを準備しました。"
+    },
+    "literatureWorkspace.csv": {
+      "source": "Download screening CSV",
+      "text": "選別リストのCSVをダウンロード"
+    },
+    "literatureWorkspace.backupPrepared": {
+      "source": "Workspace backup download prepared.",
+      "text": "ワークスペースのバックアップのダウンロードを準備しました。"
+    },
+    "literatureWorkspace.backup": {
+      "source": "Download JSON backup",
+      "text": "JSONバックアップをダウンロード"
+    },
+    "literatureWorkspace.storedPrepared": {
+      "source": "Original stored data download prepared.",
+      "text": "保存されている元データのダウンロードを準備しました。"
+    },
+    "literatureWorkspace.stored": {
+      "source": "Download stored data",
+      "text": "保存データをダウンロード"
+    },
+    "literatureWorkspace.restoreLabel": {
+      "source": "Restore a workspace backup (JSON, up to 1 MiB)",
+      "text": "ワークスペースのバックアップを復元 (JSON、最大1 MiB)"
+    },
+    "literatureWorkspace.tooLarge": {
+      "source": "Backup exceeds the 1 MiB limit. Existing workspace has been kept.",
+      "text": "バックアップが1 MiBの上限を超えています。既存のワークスペースは保持されました。"
+    },
+    "literatureWorkspace.unreadable": {
+      "source": "Backup could not be read.",
+      "text": "バックアップを読み取れませんでした。"
+    },
+    "literatureWorkspace.untitled": {
+      "source": "Untitled review",
+      "text": "無題のレビュー"
+    },
+    "literatureWorkspace.restored": {
+      "source": "Backup restored on this browser.",
+      "text": "このブラウザーでバックアップを復元しました。"
+    },
+    "literatureWorkspace.restoring": {
+      "source": "Restoring workspace…",
+      "text": "ワークスペースを復元中…"
+    },
+    "literatureWorkspace.restore": {
+      "source": "Replace workspace with this backup",
+      "text": "このバックアップでワークスペースを置き換える"
+    },
+    "literatureWorkspace.cancelRestore": {
+      "source": "Cancel restore",
+      "text": "復元をキャンセル"
+    },
+    "literatureWorkspace.clearDetails": {
+      "source": "Clear this browser’s literature workspace",
+      "text": "このブラウザーの文献ワークスペースを消去"
+    },
+    "literatureWorkspace.clearCancelled": {
+      "source": "Clear cancelled. Your workspace has been kept.",
+      "text": "消去をキャンセルしました。ワークスペースは保持されました。"
+    },
+    "literatureWorkspace.cleared": {
+      "source": "Literature workspace cleared on this browser.",
+      "text": "このブラウザーの文献ワークスペースを消去しました。"
+    },
+    "literatureWorkspace.clear": {
+      "source": "Clear saved workspace",
+      "text": "保存済みのワークスペースを消去"
+    },
+    "literatureWorkspace.compareLabel": {
+      "source": "Compare {title}",
+      "text": "{title} を比較"
+    },
+    "literatureWorkspace.metadata": {
+      "source": "Metadata only · Peer review unknown",
+      "text": "メタデータのみ · 査読の有無は不明"
+    },
+    "literatureWorkspace.metadataIncomplete": {
+      "source": "Metadata only · Peer review unknown · Incomplete contributors ({recorded}/{total})",
+      "text": "メタデータのみ · 査読の有無は不明 · 貢献者の情報が不完全 ({recorded}/{total})"
+    },
+    "literatureWorkspace.observed": {
+      "source": "Metadata observed {date} ↗",
+      "text": "メタデータの確認日 {date} ↗"
+    },
+    "literatureWorkspace.snapshot": {
+      "source": "Saved {date}. Retains the first saved snapshot of this exact paper link; imported records are not revalidated.",
+      "text": "保存日 {date}。この論文の正確なリンクについて、最初に保存したスナップショットを保持します。インポートした記録は再検証されません。"
+    },
+    "literatureWorkspace.selection.one": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "{count}件を表示 · 比較対象は{selected}/2件"
+    },
+    "literatureWorkspace.risPrepared.one": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "表示中の論文{count}件のRISダウンロードを準備しました。"
+    },
+    "literatureWorkspace.cslPrepared.one": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "表示中の論文{count}件のCSL-JSONダウンロードを準備しました。"
+    },
+    "literatureWorkspace.backupSummary.one": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename}: 論文{count}件 · {title}"
+    },
+    "literatureWorkspace.selection.other": {
+      "source": "{count} shown · {selected}/2 selected for comparison",
+      "text": "{count}件を表示 · 比較対象は{selected}/2件"
+    },
+    "literatureWorkspace.risPrepared.other": {
+      "source": "RIS download prepared for {count} shown papers.",
+      "text": "表示中の論文{count}件のRISダウンロードを準備しました。"
+    },
+    "literatureWorkspace.cslPrepared.other": {
+      "source": "CSL-JSON download prepared for {count} shown papers.",
+      "text": "表示中の論文{count}件のCSL-JSONダウンロードを準備しました。"
+    },
+    "literatureWorkspace.backupSummary.other": {
+      "source": "{filename}: {count} papers · {title}",
+      "text": "{filename}: 論文{count}件 · {title}"
     }
   }
 }
