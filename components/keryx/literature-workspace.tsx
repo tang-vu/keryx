@@ -60,7 +60,7 @@ function ReviewFocus({ workspace, act }: { workspace: Workspace; act: Action }) 
   const stale = workspace.title !== base.title || workspace.question !== base.question;
   const edited = draft.title !== base.title || draft.question !== base.question;
   useUnsavedWarning(edited && (draft.title !== workspace.title || draft.question !== workspace.question));
-  return <form className="mt-4 grid gap-4" onSubmit={event => {
+  return <form className="mt-4 grid min-w-0 grid-cols-1 gap-4" onSubmit={event => {
     event.preventDefault();
     act(async () => {
       await changeLiteratureWorkspace(current => {
@@ -74,7 +74,7 @@ function ReviewFocus({ workspace, act }: { workspace: Workspace; act: Action }) 
     <label className="min-w-0 break-words font-mono text-xs text-ink-2">{copy("literatureWorkspace.questionLabel")}<textarea name="question" maxLength={600} value={draft.question} onChange={event => setDraft({ ...draft, question: event.target.value })} rows={3} className={field} /></label>
     {stale && <div role="status" className="font-serif text-sm text-seal"><p>{copy("literatureWorkspace.staleFocus")}</p>
       <button type="button" className={`${button} mt-2`} onClick={() => { const next = { title: workspace.title, question: workspace.question }; setBase(next); setDraft(next); }}>{copy("literatureWorkspace.loadFocus")}</button></div>}
-    <button type="submit" className={`${button} justify-self-start`}>{copy("literatureWorkspace.saveFocus")}</button>
+    <button type="submit" className={`${button} min-w-0 max-w-full justify-self-start [overflow-wrap:anywhere]`}>{copy("literatureWorkspace.saveFocus")}</button>
   </form>;
 }
 
