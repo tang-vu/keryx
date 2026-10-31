@@ -99,7 +99,7 @@ export default function IntegrationsPage() {
           { title: guide.slack, body: guide.slackBody, action: guide.slackAction, href: `${links.docs}slack-bot-setup.md`, docs: null },
         ].map(bot => <article key={bot.title} className="flex flex-col border border-line bg-paper p-6">
           <h3 className="font-display text-2xl"><UiText namespaces={["get-started"]} source={bot.title} /></h3>
-          <p className="mb-3 mt-3 flex-1 font-serif leading-relaxed text-ink-2"><UiText namespaces={["get-started"]} source={bot.body} literals={["/ask"]} /></p>
+          <p className="mb-3 mt-3 flex-1 font-serif leading-relaxed text-ink-2"><UiText namespaces={["get-started"]} source={bot.body} literals={["/ask", "/keryx"]} /></p>
           <a href={bot.href} className={setupLinkClass}><UiText namespaces={["get-started"]} source={bot.action} /></a>
           {bot.docs && <a href={`${links.docs}${bot.docs}`} className={setupLinkClass}><UiText namespaces={["get-started"]} source={guide.selfHost} /></a>}
         </article>)}

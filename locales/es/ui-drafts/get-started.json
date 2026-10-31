@@ -407,6 +407,14 @@
     "integrations.selfHost": {
       "source": "Self-hosting guide",
       "text": "Guía de alojamiento propio"
+    },
+    "integrations.discordBody": {
+      "source": "Add the Keryx application to a server you manage, then use /ask with your question. Review Discord's requested permissions before installing.",
+      "text": "Añade la aplicación de Keryx a un servidor que administres y usa /ask seguido de tu pregunta. Revisa los permisos que solicita Discord antes de instalarla."
+    },
+    "integrations.slackBody": {
+      "source": "A workspace administrator creates the Slack app from Keryx's documented manifest and configures /keryx. A public one-click OAuth installer is not offered here.",
+      "text": "Un administrador del espacio de trabajo crea la aplicación de Slack a partir del manifiesto documentado de Keryx y configura /keryx. Aquí no se ofrece un instalador OAuth público de un solo clic."
     }
   }
 }

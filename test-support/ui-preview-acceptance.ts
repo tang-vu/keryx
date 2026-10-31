@@ -34,11 +34,19 @@ export async function checkIntegrationGuide(page: Page, locale: string, width: n
     const leaf = page.locator("main").getByText(original, { exact: true }); assert.equal(await leaf.count(), 1);
     assert.equal(await leaf.evaluate(element => element.closest("[lang]")?.getAttribute("lang")), "en");
   }
-  const telegram = page.locator("#bots article").first().locator("p > span");
-  assert.equal(await telegram.textContent(), entries["integrations.telegramBody"].text);
-  assert.equal(await telegram.locator("bdi").textContent(), "/ask");
-  assert.equal(await telegram.locator("bdi").evaluate(element => getComputedStyle(element).direction), "ltr");
-  assert.equal(await telegram.locator("bdi").evaluate(element => getComputedStyle(element).whiteSpace), "nowrap");
+  const botCards = page.locator("#bots article");
+  assert.equal(await botCards.count(), 3);
+  for (const [index, [key, original, token]] of [
+    ["telegramBody", guide.telegramBody, "/ask"], ["discordBody", guide.discordBody, "/ask"], ["slackBody", guide.slackBody, "/keryx"],
+  ].entries()) {
+    const body = botCards.nth(index).locator("p > span"), command = body.locator("bdi");
+    const text = translated(`integrations.${key}`, original);
+    assert.equal(await body.textContent(), text);
+    assert.equal(await body.getAttribute("lang"), text === original ? "en" : locale);
+    assert.equal(await command.textContent(), token); assert.equal(await command.getAttribute("lang"), "en");
+    assert.equal(await command.evaluate(element => getComputedStyle(element).direction), "ltr");
+    assert.equal(await command.evaluate(element => getComputedStyle(element).whiteSpace), "nowrap");
+  }
   const packageName = page.locator("#cli > p").first().locator("bdi");
   assert.equal(await packageName.textContent(), "keryx-mcp");
   assert.equal(await packageName.evaluate(element => getComputedStyle(element).direction), "ltr");
@@ -49,6 +57,12 @@ export async function checkIntegrationGuide(page: Page, locale: string, width: n
   assert.deepEqual(await page.locator("#bots article > a:first-of-type").evaluateAll(links => links.map(link => link.getAttribute("href"))), [
     installationLinks.telegram, installationLinks.discord, `${installationLinks.docs}slack-bot-setup.md`,
   ]);
+  const botLinks = await botCards.locator("a").all();
+  await botLinks[0].focus();
+  for (let index = 1; index < botLinks.length; index++) {
+    await botLinks[index - 1].press("Tab");
+    assert.equal(await botLinks[index].evaluate(element => document.activeElement === element), true);
+  }
   assert.equal(await page.locator('nav a[aria-current="page"]').getAttribute("href"), "/integrations");
   assert((await page.title()).includes(guide.metadata));
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `${locale}/${width} integration overflow`);

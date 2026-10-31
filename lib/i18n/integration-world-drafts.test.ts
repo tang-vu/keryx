@@ -33,13 +33,15 @@ const critical = [guide.body, guide.remoteBody, guide.remoteStep, guide.stdioBod
 it.each(partialLocales)("%s supplies neutral integration guidance without approving payment, custody or privacy copy", async locale => {
   const value = draft(locale);
   expect(value.status).toBe("machineDraft"); expect(value.review).toBeNull();
-  expect(validateNamespaceDraft(value, source, glossary).coveredKeys).toHaveLength(101);
+  expect(validateNamespaceDraft(value, source, glossary).coveredKeys).toHaveLength(103);
   const entries = Object.entries(value.entries).filter(([key]) => key.startsWith("integrations.")) as Array<[string, { source: string; text: string }]>;
-  expect(entries).toHaveLength(25);
+  expect(entries).toHaveLength(27);
   const preview = await loadUiPreview(locale);
   for (const [, entry] of entries) expect(previewText(preview, entry.source, ["get-started"])).toBe(entry.text);
   for (const original of critical) expect(previewText(preview, original, ["get-started"])).toBe(original);
-  expect(value.entries["integrations.telegramBody"].text).toContain("/ask");
+  for (const key of ["telegramBody", "discordBody"]) expect(value.entries[`integrations.${key}`].text).toContain("/ask");
+  expect(value.entries["integrations.slackBody"].text).toContain("/keryx");
+  expect(value.entries["integrations.slackBody"].text).toContain("OAuth");
   expect(shippedUiLocales).toEqual(["en"]);
 });
 
@@ -67,11 +69,16 @@ it.each(preparedLocales.filter(locale => locale !== "en"))("%s renders actual in
     expect(header.querySelector("p span")?.getAttribute("lang")).toBe(translated(title) === title ? "en" : locale);
     expect(header.querySelector("button")?.getAttribute("aria-label")).toBe(`${translated(setupCopy.common.copy)} ${translated(title)}`);
   }
-  const body = root.querySelector("#bots article p > span")!;
-  expect(body.textContent).toBe(translated(guide.telegramBody));
-  const command = body.querySelector("bdi")!;
-  expect(command.textContent).toBe("/ask"); expect(command.getAttribute("dir")).toBe("ltr");
-  expect(command.getAttribute("lang")).toBe("en"); expect(command.style.whiteSpace).toBe("nowrap");
+  for (const [index, [original, token]] of [
+    [guide.telegramBody, "/ask"], [guide.discordBody, "/ask"], [guide.slackBody, "/keryx"],
+  ].entries()) {
+    const body = root.querySelectorAll("#bots article p > span")[index];
+    expect(body.textContent).toBe(translated(original));
+    expect(body.getAttribute("lang")).toBe(translated(original) === original ? "en" : locale);
+    const command = body.querySelector("bdi")!;
+    expect(command.textContent).toBe(token); expect(command.getAttribute("dir")).toBe("ltr");
+    expect(command.getAttribute("lang")).toBe("en"); expect(command.style.whiteSpace).toBe("nowrap");
+  }
   const requirements = root.querySelectorAll("#cli > p > span")[1];
   const packageName = root.querySelector<HTMLElement>("#cli > p > span bdi")!;
   expect(packageName.textContent).toBe("keryx-mcp"); expect(packageName.getAttribute("dir")).toBe("ltr");
