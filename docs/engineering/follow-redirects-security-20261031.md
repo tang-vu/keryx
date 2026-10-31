@@ -33,3 +33,16 @@ domain and platform checks. Remaining moderate/low advisories retain their own
 review scope. Exact-head PR acceptance, merge provenance and actual-main
 publication checks precede source closure. Runtime delivery remains under the
 existing ROOT/Circle release owner; this source patch does not deploy production.
+
+Two hosted standard-user portable launches did not expose the WebView2 CDP
+endpoint. Their WMI diagnostic also timed out before the window-handle query, so
+the root cause remains unproven. Keep the existing 30-second startup acceptance
+and every packaged test. Record the disposable user's actual token integrity and
+elevation, observe the owned window independently of WMI, and retain bounded
+original startup JSON/stdout/stderr as a separate CI artifact. Do not retain the
+browser profile, credentials or dependency/build caches. These are test-harness
+diagnostics; application runtime, machine policies and user defaults are unchanged.
+
+The [upstream elevated-host report](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5645)
+is a diagnostic lead. The observed non-administrator fixture has not established
+that cause; actual token and process evidence must decide the next correction.

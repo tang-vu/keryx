@@ -87,9 +87,26 @@ async function unusedPort() {
 async function launchDiagnostic(child, profile, port, lastConnectionError) {
   let processes = [];
   let mainWindowHandle = null;
+  let mainWindowProcess = null;
+  let windowDiagnosticError = null;
   let diagnosticError = null;
   let browserLaunchFlags = [];
   let browserLaunchFlagsError = null;
+  // Keep the cheap owned-process observation independent of the WMI query.
+  // A cold/blocked WMI provider must not discard an available window handle.
+  try {
+    const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", String.raw`
+      $p = Get-Process -Id ${Number(child.pid)} -ErrorAction Stop
+      [pscustomobject]@{
+        pid = $p.Id; name = $p.ProcessName; sessionId = $p.SessionId
+        mainWindowHandle = [long]$p.MainWindowHandle; responding = $p.Responding
+        startedAtUtc = $p.StartTime.ToUniversalTime().ToString('O')
+        cpuMs = $p.TotalProcessorTime.TotalMilliseconds
+      } | ConvertTo-Json -Compress`],
+    { encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 4096 });
+    mainWindowProcess = JSON.parse(output);
+    mainWindowHandle = Number(mainWindowProcess.mainWindowHandle);
+  } catch (error) { windowDiagnosticError = String(error).slice(0, 300); }
   try {
     const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
       "Get-CimInstance Win32_Process | Select-Object Name,ProcessId,ParentProcessId,SessionId | ConvertTo-Json -Compress"],
@@ -108,10 +125,6 @@ async function launchDiagnostic(child, profile, port, lastConnectionError) {
       }
     }
     processes = rows.filter(row => selected.has(row.ProcessId));
-    const windowOutput = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
-      `(Get-Process -Id ${Number(child.pid)} -ErrorAction Stop).MainWindowHandle`],
-    { encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 1024 });
-    mainWindowHandle = Number(windowOutput.trim());
   } catch (error) { diagnosticError = String(error).slice(0, 300); }
   const browserPids = processes.filter(row => row.Name?.toLowerCase() === "msedgewebview2.exe")
     .map(row => Number(row.ProcessId)).filter(pid => Number.isSafeInteger(pid) && pid > 0);
@@ -165,10 +178,11 @@ async function launchDiagnostic(child, profile, port, lastConnectionError) {
   const profileEntries = await readdir(profile).catch(() => []);
   return { childPid: child.pid, exitCode: child.exitCode, signalCode: child.signalCode,
     lastConnectionError: lastConnectionError?.message?.slice(0, 500) ?? null, mainWindowHandle,
-    processes, profileEntries, diagnosticError, browserLaunchFlags, browserLaunchFlagsError };
+    mainWindowProcess, windowDiagnosticError, processes, profileEntries, diagnosticError, browserLaunchFlags, browserLaunchFlagsError };
 }
 
 async function launch(config, executable = exe) {
+  const launchStartedAt = Date.now();
   await writeFile(configPath, JSON.stringify({ root: temporary, ...config }));
   const port = await unusedPort();
   const allowed = new Set(["systemroot", "windir", "userprofile", "appdata", "localappdata",
@@ -195,6 +209,15 @@ async function launch(config, executable = exe) {
     }
     if (!browser) {
       const diagnostic = await launchDiagnostic(child, profile, port, lastConnectionError);
+      const expectedSourceCommit = process.env.KERYX_EXPECTED_SOURCE_COMMIT;
+      const retained = { ...diagnostic, expectedSourceCommit: /^[a-f0-9]{40}$/.test(expectedSourceCommit ?? "") ? expectedSourceCommit : null,
+        executableName: basename(executable), startedAtUtc: new Date(launchStartedAt).toISOString(),
+        observedAtUtc: new Date().toISOString(), elapsedMs: Date.now() - launchStartedAt, expectedDebugPort: port };
+      // This is the freshly created smoke directory, retained on failure below.
+      // Keep original JSON rather than depending on a terminal error's formatting.
+      try {
+        await writeFile(join(temporary, "launch-diagnostics.json"), JSON.stringify(retained, null, 2) + "\n", { flag: "wx" });
+      } catch (error) { diagnostic.retentionError = String(error).slice(0, 300); }
       throw Error(`Packaged WebView2 did not expose its test CDP endpoint: ${JSON.stringify(diagnostic)}`);
     }
     let page;

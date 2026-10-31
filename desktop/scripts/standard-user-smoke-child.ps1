@@ -25,8 +25,60 @@ public static class KeryxDesktopContext {
   public static extern bool GetUserProfileDirectory(IntPtr token, StringBuilder path, ref int length);
   [DllImport("shell32.dll", ExactSpelling = true)]
   public static extern int SHGetKnownFolderPath(ref Guid folder, uint flags, IntPtr token, out IntPtr path);
+  [DllImport("advapi32.dll", SetLastError = true)]
+  [return: MarshalAs(UnmanagedType.Bool)]
+  public static extern bool GetTokenInformation(IntPtr token, int informationClass, IntPtr information, uint length, out uint needed);
 }
 '@
+function Read-SmokeTokenInformation([IntPtr]$Token, [int]$InformationClass, [scriptblock]$ReadValue) {
+  [uint32]$needed = 0
+  if ($InformationClass -in @(18, 20)) {
+    # TOKEN_ELEVATION_TYPE and TOKEN_ELEVATION each contain one DWORD.
+    # These fixed-size queries can refuse a zero-length sizing probe.
+    $needed = 4
+  } elseif ($InformationClass -eq 25) {
+    $sized = [KeryxDesktopContext]::GetTokenInformation($Token, $InformationClass, [IntPtr]::Zero, 0, [ref]$needed)
+    $errorCode = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+    if ($sized -or $errorCode -ne 122 -or $needed -lt [IntPtr]::Size -or $needed -gt 4096) {
+      throw "Cannot size smoke token information $InformationClass (error $errorCode)"
+    }
+  } else {
+    throw 'Unsupported smoke token information class'
+  }
+  $buffer = [Runtime.InteropServices.Marshal]::AllocHGlobal([int]$needed)
+  try {
+    [uint32]$returned = 0
+    if (-not [KeryxDesktopContext]::GetTokenInformation($Token, $InformationClass, $buffer, $needed, [ref]$returned) -or
+        $returned -lt 4 -or $returned -gt $needed) {
+      throw "Cannot read smoke token information $InformationClass"
+    }
+    & $ReadValue $buffer $returned
+  } finally { [Runtime.InteropServices.Marshal]::FreeHGlobal($buffer) }
+}
+function Read-SmokeTokenContext([IntPtr]$Token) {
+  $integritySid = Read-SmokeTokenInformation $Token 25 {
+    param($Buffer, $Length)
+    if ($Length -lt [IntPtr]::Size) { throw 'Smoke token integrity label is incomplete' }
+    $sid = [Runtime.InteropServices.Marshal]::ReadIntPtr($Buffer)
+    [Security.Principal.SecurityIdentifier]::new($sid).Value
+  }
+  if ($integritySid -notmatch '^S-1-16-[0-9]+$') { throw 'Smoke token integrity SID is invalid' }
+  $elevated = Read-SmokeTokenInformation $Token 20 {
+    param($Buffer)
+    [Runtime.InteropServices.Marshal]::ReadInt32($Buffer) -ne 0
+  }
+  $elevationType = Read-SmokeTokenInformation $Token 18 {
+    param($Buffer)
+    [Runtime.InteropServices.Marshal]::ReadInt32($Buffer)
+  }
+  if ($elevationType -notin @(1, 2, 3)) { throw 'Smoke token elevation type is invalid' }
+  [pscustomobject]@{
+    integritySid = $integritySid
+    integrityRid = [uint32]($integritySid.Split('-')[-1])
+    elevated = [bool]$elevated
+    elevationType = $elevationType
+  }
+}
 function Get-UserObjectName([IntPtr]$Handle) {
   if ($Handle -eq [IntPtr]::Zero) { return 'unavailable' }
   $name = [Text.StringBuilder]::new(256)
@@ -159,10 +211,13 @@ $machineRuntime = Get-ItemPropertyValue -LiteralPath "HKLM:\SOFTWARE\WOW6432Node
 $userRuntime = Get-ItemPropertyValue -LiteralPath "HKCU:\Software\Microsoft\EdgeUpdate\Clients\$runtimeGuid" -Name pv -ErrorAction SilentlyContinue
 if ($machineRuntime -isnot [string]) { $machineRuntime = $null }
 if ($userRuntime -isnot [string]) { $userRuntime = $null }
+$tokenContext = Read-SmokeTokenContext $identity.Token
 [pscustomobject]@{
+  observedAtUtc = [DateTime]::UtcNow.ToString('O')
   standardUserContext = $true
   sessionId = (Get-Process -Id $PID).SessionId
   administrator = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+  tokenContext = $tokenContext
   windowStation = Get-UserObjectName ([KeryxDesktopContext]::GetProcessWindowStation())
   desktop = Get-UserObjectName ([KeryxDesktopContext]::GetThreadDesktop([KeryxDesktopContext]::GetCurrentThreadId()))
   profileRoot = $profileRoot
