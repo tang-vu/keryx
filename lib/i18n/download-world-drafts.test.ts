@@ -27,7 +27,7 @@ const literals = (text: string) => [...text.matchAll(literalTokens)].map(match =
 it.each(partialLocales)("%s supplies neutral installation guidance with exact file and browser literals", async locale => {
   const value = draft(locale);
   expect(value.status).toBe("machineDraft"); expect(value.review).toBeNull();
-  expect(validateNamespaceDraft(value, source, glossary).coveredKeys).toHaveLength(101);
+  expect(validateNamespaceDraft(value, source, glossary).coveredKeys).toHaveLength(103);
   const entries = Object.entries(value.entries).filter(([key]) => key.startsWith("download.")) as Array<[string, { source: string; text: string }]>;
   expect(entries).toHaveLength(20);
   const preview = await loadUiPreview(locale);
