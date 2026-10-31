@@ -51,6 +51,22 @@ The earlier failed runners reported 156.0.4314.50. That difference does not prov
 a runtime regression or a fix: the previous token/window observations are missing,
 and current exact-source platform acceptance remains required.
 
+A later runner using 156.0.4314.50 connected to CDP but did not expose the app page
+within the same startup deadline. Retain diagnostics for page, bridge and shell
+failures as well as connection failures. Record each readiness time, the failure
+stage, the connected browser version and bounded page/target observations. Strip
+credentials, queries, fragments and non-app paths from observed URLs; bound the
+complete target query, including session creation, to two seconds. Successful
+launches also report readiness times and the actual browser version. Preserve
+the original errors, three 15-second readiness waits and owned-process cleanup.
+
+An isolated local observation of that exact portable package reached its app page
+and bridge on actual WebView2 156.0.4314.50. This narrows the investigation; it does
+not accept the failing fresh-account CI fixture or establish its cause. Do not
+change runtime versions, application navigation authority or machine policies
+based on the version difference alone. Current full packaged acceptance remains
+required.
+
 One Ubuntu browser-signing lane refused its runner's APT source configuration
 before browser installation or test execution. Add a bounded URI summary to that
 existing refusal, stripping credentials, queries and fragments. Preserve every
