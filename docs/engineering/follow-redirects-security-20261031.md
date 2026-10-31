@@ -14,6 +14,13 @@ root declarations, existing overrides and audit threshold stay unchanged. Regist
 tarball SHA-512 integrity is verified before isolated local qualification; shared
 dependencies and production installations are not modified.
 
+The controlled paying-source study binds the complete lockfile. Reproduce all 48
+offline trials against the qualified patched graph, then check the generated
+artifact and write-up again. The source closure, closed corpus, protocol, trial
+outputs and outcomes remain exact; only the lock fingerprint changes. The
+existing outbound denial, zero model/search calls and simulation-only boundary
+remain intact. Do not edit the fingerprint directly or waive the drift check.
+
 The existing security-dependency test lane now exercises loopback redirects with
 same-realm and cross-realm sensitive-header arrays, object and array-form headers,
 custom and built-in credentials, unrelated safe headers and same-origin behavior.
