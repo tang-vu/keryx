@@ -1,0 +1,40 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/literature-search.ts",
+  "sourceSha256": "fdebf7104a5b7734ab952847616d89c58b13620f83909c1e3791638ce01d43f5",
+  "entries": {
+    "label": {
+      "source": "Search saved papers and notes",
+      "text": "Buscar artigos salvos e notas"
+    },
+    "clear": {
+      "source": "Clear search",
+      "text": "Limpar busca"
+    },
+    "empty": {
+      "source": "No saved papers match this search and screening filter.",
+      "text": "Nenhum artigo salvo corresponde a esta busca e ao filtro de triagem."
+    },
+    "outsideSearch": {
+      "source": "Outside the current search; still selected.",
+      "text": "Fora da busca atual; continua selecionado."
+    },
+    "sortLabel": {
+      "source": "Sort saved papers",
+      "text": "Ordenar artigos salvos"
+    },
+    "sorts.saved": {
+      "source": "Saved order",
+      "text": "Ordem de salvamento"
+    },
+    "sorts.title": {
+      "source": "Title",
+      "text": "Título"
+    },
+    "sorts.recent": {
+      "source": "Recently saved",
+      "text": "Salvos recentemente"
+    }
+  }
+}

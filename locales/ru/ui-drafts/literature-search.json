@@ -1,0 +1,40 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/literature-search.ts",
+  "sourceSha256": "fdebf7104a5b7734ab952847616d89c58b13620f83909c1e3791638ce01d43f5",
+  "entries": {
+    "label": {
+      "source": "Search saved papers and notes",
+      "text": "Поиск по сохранённым статьям и заметкам"
+    },
+    "clear": {
+      "source": "Clear search",
+      "text": "Очистить поиск"
+    },
+    "empty": {
+      "source": "No saved papers match this search and screening filter.",
+      "text": "Нет сохранённых статей, соответствующих этому поиску и фильтру отбора."
+    },
+    "outsideSearch": {
+      "source": "Outside the current search; still selected.",
+      "text": "Вне текущего поиска; по-прежнему выбрана."
+    },
+    "sortLabel": {
+      "source": "Sort saved papers",
+      "text": "Сортировать сохранённые статьи"
+    },
+    "sorts.saved": {
+      "source": "Saved order",
+      "text": "Порядок сохранения"
+    },
+    "sorts.title": {
+      "source": "Title",
+      "text": "Название"
+    },
+    "sorts.recent": {
+      "source": "Recently saved",
+      "text": "Недавно сохранённые"
+    }
+  }
+}

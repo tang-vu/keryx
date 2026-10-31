@@ -9,7 +9,7 @@ import { validateNamespacePreview } from "./ui-shell-catalogue";
 
 const namespaces = {
   "core-inline": 16, "get-started": 103, "pdf-reading": 5, "product-guide": 95,
-  reports: 130, "shared-helpers": 4, "research-flow": 39, shell: 17, "source-directory": 112, "ui-preference": 12,
+  reports: 130, "shared-helpers": 4, "literature-search": 8, "research-flow": 39, shell: 17, "source-directory": 112, "ui-preference": 12,
 } as const;
 const read = (file: string) => readFileSync(file, "utf8");
 const glossary = JSON.parse(read("locales/glossary/en.json"));

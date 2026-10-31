@@ -1,0 +1,40 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/literature-search.ts",
+  "sourceSha256": "fdebf7104a5b7734ab952847616d89c58b13620f83909c1e3791638ce01d43f5",
+  "entries": {
+    "label": {
+      "source": "Search saved papers and notes",
+      "text": "Cari makalah tersimpan dan catatan"
+    },
+    "clear": {
+      "source": "Clear search",
+      "text": "Hapus pencarian"
+    },
+    "empty": {
+      "source": "No saved papers match this search and screening filter.",
+      "text": "Tidak ada makalah tersimpan yang cocok dengan pencarian dan filter penyaringan ini."
+    },
+    "outsideSearch": {
+      "source": "Outside the current search; still selected.",
+      "text": "Di luar pencarian saat ini; tetap dipilih."
+    },
+    "sortLabel": {
+      "source": "Sort saved papers",
+      "text": "Urutkan makalah tersimpan"
+    },
+    "sorts.saved": {
+      "source": "Saved order",
+      "text": "Urutan penyimpanan"
+    },
+    "sorts.title": {
+      "source": "Title",
+      "text": "Judul"
+    },
+    "sorts.recent": {
+      "source": "Recently saved",
+      "text": "Baru disimpan"
+    }
+  }
+}

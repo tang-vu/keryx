@@ -255,7 +255,7 @@ export function LiteratureWorkspace() {
                 onChange={event => setQuery(event.target.value)} aria-describedby={searchHelpId} className={field}
                 onKeyDown={event => { if (event.key === "Escape" && !event.nativeEvent.isComposing) { event.preventDefault(); setQuery(""); } }} />
             </label>
-            <p id={searchHelpId} className="mt-2 font-serif text-xs text-ink-3">{searchCopy.guidance}</p>
+            <p id={searchHelpId} className="mt-2 font-serif text-xs text-ink-3"><UiText source={searchEnglish.guidance} namespaces={["literature-search"]} /></p>
             {query !== "" && <button type="button" className={`${button} mt-2`} onClick={() => { setQuery(""); searchInput.current?.focus(); }}>{searchCopy.clear}</button>}
           </div>
           <label className="font-mono text-xs text-ink-2">{copy("literatureWorkspace.filter")}<select value={filter} onChange={event => setFilter(event.target.value)} className={field}>
@@ -264,7 +264,8 @@ export function LiteratureWorkspace() {
           <div className="min-w-0 max-w-full">
             <label htmlFor={sortId} className="font-mono text-xs text-ink-2">{searchCopy.sortLabel}</label>
             <select id={sortId} value={sort} onChange={event => setSort(event.currentTarget.value as LiteratureSort)} className={field}>
-              {LITERATURE_SORTS.map(value => <option key={value} value={value}>{searchCopy.sorts[value]}</option>)}
+              {LITERATURE_SORTS.map(value => <option key={value} value={value} lang={searchCopy.sorts[value] === searchEnglish.sorts[value] ? "en" : undefined}
+                dir={searchCopy.sorts[value] === searchEnglish.sorts[value] ? "ltr" : undefined}>{searchCopy.sorts[value]}</option>)}
             </select>
           </div>
           <div className="space-y-2">
@@ -282,8 +283,8 @@ export function LiteratureWorkspace() {
           </div>
         </div>
         <p className="mt-2 font-serif text-xs text-ink-3"><UiMessage messageKey="literatureWorkspace.referencesNotice" /></p>
-        <p className="mt-2 font-serif text-xs text-ink-3">{searchCopy.scope}</p>
-        <p className="mt-2 font-serif text-xs text-ink-3">{searchCopy.sortNotice}</p>
+        <p className="mt-2 font-serif text-xs text-ink-3"><UiText source={searchEnglish.scope} namespaces={["literature-search"]} /></p>
+        <p className="mt-2 font-serif text-xs text-ink-3"><UiText source={searchEnglish.sortNotice} namespaces={["literature-search"]} /></p>
         <LiteratureBulkScreening key={editingRevision} workspace={workspace} visible={visible} />
         <div className="mt-4 border border-line bg-panel p-4">
           <p className="font-serif text-sm text-ink-2"><UiMessage messageKey="literatureWorkspace.compareNotice" /></p>
