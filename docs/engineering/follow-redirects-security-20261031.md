@@ -58,6 +58,18 @@ runner, OS, source, mirror and network-configuration check and privileged write
 boundary. Observe the actual source configuration before adapting it; no unknown
 mirror or source is accepted by this diagnostic change.
 
+Direct review of the diagnostic candidate's native originals found partial
+spotlights around the wrapped Portuguese and Russian submit buttons at 320px
+with 32px text, despite passing DOM-alignment checks. Keep the production tour's
+resize observation unchanged. Await fonts and rendered frames before checking
+alignment, then inspect the bottom paper margin in the exact PNG being retained.
+Preserve failed originals before refusing the test. A local negative control
+rejects the actual partial hosted image and accepts the current complete image;
+all 48 focused tour cases pass, including late wrapping, focus restoration,
+keyboard reading and unsent-input preservation. This strengthens capture
+acceptance and does not establish a persistent production rendering failure.
+Corrected exact-source hosted originals and full CI remain required.
+
 The [upstream elevated-host report](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5645)
 is a diagnostic lead. The observed non-administrator fixture has not established
 that cause; actual token and process evidence must decide the next correction.
