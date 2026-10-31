@@ -25,7 +25,7 @@ const draft = (locale: string, namespace: string) => JSON.parse(read(`locales/${
 it.each(locales)("%s binds75 workspace messages and4 screening labels without admitting sensitive notices", async locale => {
   const preview = await loadUiPreview(locale);
   expect(core).toHaveLength(75); expect(helpers).toHaveLength(4);
-  for (const [namespace, keys, expected] of [["reports", core, 130], ["shared-helpers", helpers, 4]] as const) {
+  for (const [namespace, keys, expected] of [["reports", core, 140], ["shared-helpers", helpers, 4]] as const) {
     const value = draft(locale, namespace), sourcePath = `locales/en/${namespace}.ts`;
     const binding = { namespace, ...extractNamespaceCopy(sourcePath, read(sourcePath)) };
     expect(value.status).toBe("machineDraft"); expect(value.review).toBeNull();

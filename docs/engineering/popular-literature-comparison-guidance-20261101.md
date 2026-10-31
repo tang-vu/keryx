@@ -35,7 +35,7 @@ changes notes, writes storage, submits a question or starts research/payment.
 
 ## Focused validation and required admission
 
-Focused validation covers 86 unique Vitest cases in five files and 49 copy-guard
+Focused validation covers 138 unique Vitest cases in seven files and 49 copy-guard
 contracts. This includes all four screening states across five repository
 identities, rich-message language and direction, original-data preservation,
 accessible remove/prepared-question labels, empty selection and no-focus states.
@@ -50,7 +50,12 @@ captures support original-scale visual review. The initial test assertions were
 corrected to count admitted message keys rather than deduplicated English-text
 keys, provide a synthetic Crossref fixture, and locate the focus textbox by its
 accessible role. Those failed diagnostic receipts remain separate from accepted
-results; reruns do not increase the unique-case count.
+results; reruns do not increase the unique-case count. Hosted CI also exposed two
+older complete-report total assertions that still expected 130. Both now require
+exactly 140, while their 75 workspace/35 inspection subsets and sensitive-copy
+exclusions stay intact; all 52 cases in those two files pass locally. This
+correction changes tests and this validation note only, preserving the reviewed
+interface, catalogue inputs and original captures.
 
 The copy guard passes with no new baseline exception. All 505 paid-study source
 inputs are unchanged, with no unresolved inputs or need for another 48-case
