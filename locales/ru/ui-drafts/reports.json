@@ -523,6 +523,46 @@
     "literatureWorkspace.backupSummary.other": {
       "source": "{filename}: {count} papers · {title}",
       "text": "{filename}: количество статей — {count} · {title}"
+    },
+    "literatureComparison.label": {
+      "source": "Comparison selection",
+      "text": "Выбор для сравнения"
+    },
+    "literatureComparison.title": {
+      "source": "Papers selected for comparison",
+      "text": "Статьи, выбранные для сравнения"
+    },
+    "literatureComparison.outsideFilter": {
+      "source": "Outside the current screening filter; still selected.",
+      "text": "Вне текущего фильтра отбора; по-прежнему выбрана."
+    },
+    "literatureComparison.remove": {
+      "source": "Remove from comparison",
+      "text": "Убрать из сравнения"
+    },
+    "literatureComparison.focus": {
+      "source": "Saved focus used in the draft",
+      "text": "Сохранённая тема обзора, используемая в черновике"
+    },
+    "literatureComparison.noFocus": {
+      "source": "No saved review focus. The draft uses the general comparison questions.",
+      "text": "Тема обзора не сохранена. В черновике используются общие вопросы для сравнения."
+    },
+    "literatureComparison.reviewQuestion": {
+      "source": "Review prepared question",
+      "text": "Проверить подготовленный вопрос"
+    },
+    "literatureComparison.preparedQuestion": {
+      "source": "Prepared comparison question",
+      "text": "Подготовленный вопрос для сравнения"
+    },
+    "literatureComparison.paper": {
+      "source": "Paper {number} · {screening} · {repository}",
+      "text": "Статья {number} · {screening} · {repository}"
+    },
+    "literatureComparison.removeLabel": {
+      "source": "Remove paper {number} from comparison",
+      "text": "Убрать статью {number} из сравнения"
     }
   }
 }

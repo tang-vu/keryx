@@ -19,7 +19,7 @@ const entryPreviewMinimums = {
   "core-inline": { authored: 16, preview: 16 }, "get-started": { authored: 103, preview: 103 },
   "research-flow": { authored: 39, preview: 39 },
   "product-guide": { authored: 95, preview: 48 }, shell: { authored: 17, preview: 17 },
-  reports: { authored: 130, preview: 129 }, "shared-helpers": { authored: 4, preview: 4 }, "literature-search": { authored: 8, preview: 8 }, "pdf-reading": { authored: 5, preview: 5 },
+  reports: { authored: 140, preview: 139 }, "shared-helpers": { authored: 4, preview: 4 }, "literature-search": { authored: 8, preview: 8 }, "pdf-reading": { authored: 5, preview: 5 },
   "source-directory": { authored: 112, preview: 112 },
   // The conservative critical-copy filter retains the loadFailed status in English.
   "ui-preference": { authored: 9, preview: 8 },

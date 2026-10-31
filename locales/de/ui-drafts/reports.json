@@ -523,6 +523,46 @@
     "literatureWorkspace.backupSummary.other": {
       "source": "{filename}: {count} papers · {title}",
       "text": "{filename}: {count} Artikel · {title}"
+    },
+    "literatureComparison.label": {
+      "source": "Comparison selection",
+      "text": "Vergleichsauswahl"
+    },
+    "literatureComparison.title": {
+      "source": "Papers selected for comparison",
+      "text": "Zum Vergleich ausgewählte Artikel"
+    },
+    "literatureComparison.outsideFilter": {
+      "source": "Outside the current screening filter; still selected.",
+      "text": "Außerhalb des aktuellen Sichtungsfilters; weiterhin ausgewählt."
+    },
+    "literatureComparison.remove": {
+      "source": "Remove from comparison",
+      "text": "Aus dem Vergleich entfernen"
+    },
+    "literatureComparison.focus": {
+      "source": "Saved focus used in the draft",
+      "text": "Im Entwurf verwendete gespeicherte Fragestellung"
+    },
+    "literatureComparison.noFocus": {
+      "source": "No saved review focus. The draft uses the general comparison questions.",
+      "text": "Es ist keine Fragestellung für die Übersicht gespeichert. Der Entwurf verwendet die allgemeinen Vergleichsfragen."
+    },
+    "literatureComparison.reviewQuestion": {
+      "source": "Review prepared question",
+      "text": "Vorbereitete Frage prüfen"
+    },
+    "literatureComparison.preparedQuestion": {
+      "source": "Prepared comparison question",
+      "text": "Vorbereitete Vergleichsfrage"
+    },
+    "literatureComparison.paper": {
+      "source": "Paper {number} · {screening} · {repository}",
+      "text": "Artikel {number} · {screening} · {repository}"
+    },
+    "literatureComparison.removeLabel": {
+      "source": "Remove paper {number} from comparison",
+      "text": "Artikel {number} aus dem Vergleich entfernen"
     }
   }
 }

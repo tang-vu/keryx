@@ -7,7 +7,7 @@ import { emptyUiPreview, previewText } from "./ui-preview";
 import { getUiPreview, loadUiPreview } from "./ui-preview-catalogues";
 
 const namespaces = { "core-inline": 16, "get-started": 103, "pdf-reading": 5, "product-guide": 95,
-  reports: 130, "shared-helpers": 4, "literature-search": 8, "research-flow": 39, shell: 17, "source-directory": 112, "ui-preference": 12 };
+  reports: 140, "shared-helpers": 4, "literature-search": 8, "research-flow": 39, shell: 17, "source-directory": 112, "ui-preference": 12 };
 const read = (path: string) => readFileSync(path, "utf8");
 const glossary = JSON.parse(read("locales/glossary/en.json"));
 const draft = (namespace: string) => JSON.parse(read(`locales/ar/ui-drafts/${namespace}.json`));

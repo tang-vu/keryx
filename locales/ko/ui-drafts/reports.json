@@ -523,6 +523,46 @@
     "literatureWorkspace.backupSummary.other": {
       "source": "{filename}: {count} papers · {title}",
       "text": "{filename}: 논문 {count}편 · {title}"
+    },
+    "literatureComparison.label": {
+      "source": "Comparison selection",
+      "text": "비교 대상 선택"
+    },
+    "literatureComparison.title": {
+      "source": "Papers selected for comparison",
+      "text": "비교 대상으로 선택한 논문"
+    },
+    "literatureComparison.outsideFilter": {
+      "source": "Outside the current screening filter; still selected.",
+      "text": "현재 선별 필터에 맞지 않지만 선택은 유지됩니다."
+    },
+    "literatureComparison.remove": {
+      "source": "Remove from comparison",
+      "text": "비교 대상에서 제외"
+    },
+    "literatureComparison.focus": {
+      "source": "Saved focus used in the draft",
+      "text": "초안에 사용한 저장된 검토 방향"
+    },
+    "literatureComparison.noFocus": {
+      "source": "No saved review focus. The draft uses the general comparison questions.",
+      "text": "저장된 검토 방향이 없습니다. 초안에는 일반적인 비교 질문을 사용합니다."
+    },
+    "literatureComparison.reviewQuestion": {
+      "source": "Review prepared question",
+      "text": "준비된 질문 검토"
+    },
+    "literatureComparison.preparedQuestion": {
+      "source": "Prepared comparison question",
+      "text": "준비된 비교 질문"
+    },
+    "literatureComparison.paper": {
+      "source": "Paper {number} · {screening} · {repository}",
+      "text": "논문 {number} · {screening} · {repository}"
+    },
+    "literatureComparison.removeLabel": {
+      "source": "Remove paper {number} from comparison",
+      "text": "논문 {number}: 비교 대상에서 제외"
     }
   }
 }

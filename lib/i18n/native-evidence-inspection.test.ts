@@ -38,7 +38,7 @@ async function prepared(locale: typeof locales[number]) {
 it.each(locales)("%s binds all35 ordinary inspection/reference leaves while keeping critical qualification and failures English", async locale => {
   const path = "locales/en/reports.ts", binding = extractNamespaceCopy(path, readFileSync(path, "utf8"));
   const draft = JSON.parse(readFileSync(`locales/${locale}/ui-drafts/reports.json`, "utf8"));
-  expect(draft.status).toBe("machineDraft"); expect(draft.review).toBeNull(); expect(Object.keys(draft.entries)).toHaveLength(130);
+  expect(draft.status).toBe("machineDraft"); expect(draft.review).toBeNull(); expect(Object.keys(draft.entries)).toHaveLength(140);
   const valid = validateNamespaceDraft(draft, binding, JSON.parse(readFileSync("locales/glossary/en.json", "utf8")));
   const preview = await loadUiPreview(locale);
   for (const key of keys) {

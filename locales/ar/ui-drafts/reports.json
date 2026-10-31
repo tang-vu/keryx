@@ -523,6 +523,46 @@
     "literatureWorkspace.backupSummary.other": {
       "source": "{filename}: {count} papers · {title}",
       "text": "{filename}: عدد الأوراق {count} · {title}"
+    },
+    "literatureComparison.label": {
+      "source": "Comparison selection",
+      "text": "اختيار أوراق للمقارنة"
+    },
+    "literatureComparison.title": {
+      "source": "Papers selected for comparison",
+      "text": "الأوراق المحددة للمقارنة"
+    },
+    "literatureComparison.outsideFilter": {
+      "source": "Outside the current screening filter; still selected.",
+      "text": "خارج مرشّح الفرز الحالي؛ ما زالت محددة."
+    },
+    "literatureComparison.remove": {
+      "source": "Remove from comparison",
+      "text": "إزالة من المقارنة"
+    },
+    "literatureComparison.focus": {
+      "source": "Saved focus used in the draft",
+      "text": "محور المراجعة المحفوظ المستخدم في المسودة"
+    },
+    "literatureComparison.noFocus": {
+      "source": "No saved review focus. The draft uses the general comparison questions.",
+      "text": "لم يُحفظ محور للمراجعة. تستخدم المسودة أسئلة المقارنة العامة."
+    },
+    "literatureComparison.reviewQuestion": {
+      "source": "Review prepared question",
+      "text": "مراجعة السؤال المُعدّ"
+    },
+    "literatureComparison.preparedQuestion": {
+      "source": "Prepared comparison question",
+      "text": "سؤال المقارنة المُعدّ"
+    },
+    "literatureComparison.paper": {
+      "source": "Paper {number} · {screening} · {repository}",
+      "text": "الورقة {number} · {screening} · {repository}"
+    },
+    "literatureComparison.removeLabel": {
+      "source": "Remove paper {number} from comparison",
+      "text": "إزالة الورقة {number} من المقارنة"
     }
   }
 }

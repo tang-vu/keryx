@@ -523,6 +523,46 @@
     "literatureWorkspace.backupSummary.other": {
       "source": "{filename}: {count} papers · {title}",
       "text": "{filename}: {count} शोधपत्र · {title}"
+    },
+    "literatureComparison.label": {
+      "source": "Comparison selection",
+      "text": "तुलना के लिए चयन"
+    },
+    "literatureComparison.title": {
+      "source": "Papers selected for comparison",
+      "text": "तुलना के लिए चुने गए शोधपत्र"
+    },
+    "literatureComparison.outsideFilter": {
+      "source": "Outside the current screening filter; still selected.",
+      "text": "वर्तमान चयन फ़िल्टर से बाहर है; फिर भी चयनित है।"
+    },
+    "literatureComparison.remove": {
+      "source": "Remove from comparison",
+      "text": "तुलना से हटाएँ"
+    },
+    "literatureComparison.focus": {
+      "source": "Saved focus used in the draft",
+      "text": "मसौदे में इस्तेमाल किया गया सहेजा हुआ समीक्षा विषय"
+    },
+    "literatureComparison.noFocus": {
+      "source": "No saved review focus. The draft uses the general comparison questions.",
+      "text": "समीक्षा का विषय सहेजा नहीं गया है। मसौदे में तुलना के सामान्य प्रश्नों का उपयोग होता है।"
+    },
+    "literatureComparison.reviewQuestion": {
+      "source": "Review prepared question",
+      "text": "तैयार प्रश्न की समीक्षा करें"
+    },
+    "literatureComparison.preparedQuestion": {
+      "source": "Prepared comparison question",
+      "text": "तुलना के लिए तैयार प्रश्न"
+    },
+    "literatureComparison.paper": {
+      "source": "Paper {number} · {screening} · {repository}",
+      "text": "शोधपत्र {number} · {screening} · {repository}"
+    },
+    "literatureComparison.removeLabel": {
+      "source": "Remove paper {number} from comparison",
+      "text": "शोधपत्र {number} को तुलना से हटाएँ"
     }
   }
 }
