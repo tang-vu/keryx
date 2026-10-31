@@ -42,6 +42,21 @@ elevation, observe the owned window independently of WMI, and retain bounded
 original startup JSON/stdout/stderr as a separate CI artifact. Do not retain the
 browser profile, credentials or dependency/build caches. These are test-harness
 diagnostics; application runtime, machine policies and user defaults are unchanged.
+Retain the same bounded evidence from the independent fresh-package consumer,
+using a distinct artifact name, even when its smoke fails.
+
+The first diagnostic candidate passed portable and current-user installer checks
+with a measured medium-integrity, non-elevated token and WebView2 155.0.4283.62.
+The earlier failed runners reported 156.0.4314.50. That difference does not prove
+a runtime regression or a fix: the previous token/window observations are missing,
+and current exact-source platform acceptance remains required.
+
+One Ubuntu browser-signing lane refused its runner's APT source configuration
+before browser installation or test execution. Add a bounded URI summary to that
+existing refusal, stripping credentials, queries and fragments. Preserve every
+runner, OS, source, mirror and network-configuration check and privileged write
+boundary. Observe the actual source configuration before adapting it; no unknown
+mirror or source is accepted by this diagnostic change.
 
 The [upstream elevated-host report](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5645)
 is a diagnostic lead. The observed non-administrator fixture has not established

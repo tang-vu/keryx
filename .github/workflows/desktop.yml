@@ -152,6 +152,14 @@ jobs:
       - name: Exercise downloaded portable and installed app as a standard Windows user
         shell: pwsh
         run: ./desktop/scripts/standard-user-smoke.ps1 -Package "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64"
+      - name: Retain fresh-consumer startup and permission diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-standard-user-consumer-${{ github.sha }}-${{ github.run_id }}
+          path: .artifacts/desktop-standard-user/
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Verify downloaded package was restored after fault checks
         run: node --import tsx desktop/scripts/check-package.mjs "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64"
         env:
