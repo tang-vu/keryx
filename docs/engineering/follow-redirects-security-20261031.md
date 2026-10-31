@@ -67,6 +67,23 @@ change runtime versions, application navigation authority or machine policies
 based on the version difference alone. Current full packaged acceptance remains
 required.
 
+Both fresh-account runners for the all-stage diagnostic candidate passed all
+portable and installed checks, but their connected browser versions were still
+155.0.4283.62. Keep those successful originals with that measured scope. They do
+not qualify the observed 156 failure. Before either runner's standard-user smoke,
+require a machine runtime at least 156.0.4314.50. This is a regression fixture
+floor; it does not change the app's supported runtime requirements.
+
+On an older disposable GitHub-hosted Windows X64 runner, use Microsoft's signed
+Evergreen standalone installer and read the installed version back. Follow the
+[documented deployment and detection flow](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution).
+Refuse other hosts, non-elevated setup, invalid versions/signatures, installer
+errors or an older readback. Keep setup bounded and then run every original
+portable/installed assertion in the fresh non-elevated account. Verify the actual
+connected versions in both retained smoke streams before admission. This fixture
+preparation must not run on the development or production machine, downgrade a
+runtime, edit policies or increase the application's startup deadline.
+
 One Ubuntu browser-signing lane refused its runner's APT source configuration
 before browser installation or test execution. Add a bounded URI summary to that
 existing refusal, stripping credentials, queries and fragments. Preserve every
