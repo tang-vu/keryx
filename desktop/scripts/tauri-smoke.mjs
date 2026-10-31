@@ -84,12 +84,29 @@ async function unusedPort() {
   return port;
 }
 
-async function launchDiagnostic(child, profile, port, lastConnectionError) {
+async function launchDiagnostic(child, profile, port, lastConnectionError, browser = null) {
   let processes = [];
   let mainWindowHandle = null;
+  let mainWindowProcess = null;
+  let windowDiagnosticError = null;
   let diagnosticError = null;
   let browserLaunchFlags = [];
   let browserLaunchFlagsError = null;
+  // Keep the cheap owned-process observation independent of the WMI query.
+  // A cold/blocked WMI provider must not discard an available window handle.
+  try {
+    const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", String.raw`
+      $p = Get-Process -Id ${Number(child.pid)} -ErrorAction Stop
+      [pscustomobject]@{
+        pid = $p.Id; name = $p.ProcessName; sessionId = $p.SessionId
+        mainWindowHandle = [long]$p.MainWindowHandle; responding = $p.Responding
+        startedAtUtc = $p.StartTime.ToUniversalTime().ToString('O')
+        cpuMs = $p.TotalProcessorTime.TotalMilliseconds
+      } | ConvertTo-Json -Compress`],
+    { encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 4096 });
+    mainWindowProcess = JSON.parse(output);
+    mainWindowHandle = Number(mainWindowProcess.mainWindowHandle);
+  } catch (error) { windowDiagnosticError = String(error).slice(0, 300); }
   try {
     const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
       "Get-CimInstance Win32_Process | Select-Object Name,ProcessId,ParentProcessId,SessionId | ConvertTo-Json -Compress"],
@@ -108,10 +125,6 @@ async function launchDiagnostic(child, profile, port, lastConnectionError) {
       }
     }
     processes = rows.filter(row => selected.has(row.ProcessId));
-    const windowOutput = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
-      `(Get-Process -Id ${Number(child.pid)} -ErrorAction Stop).MainWindowHandle`],
-    { encoding: "utf8", windowsHide: true, timeout: 5000, maxBuffer: 1024 });
-    mainWindowHandle = Number(windowOutput.trim());
   } catch (error) { diagnosticError = String(error).slice(0, 300); }
   const browserPids = processes.filter(row => row.Name?.toLowerCase() === "msedgewebview2.exe")
     .map(row => Number(row.ProcessId)).filter(pid => Number.isSafeInteger(pid) && pid > 0);
@@ -163,12 +176,55 @@ async function launchDiagnostic(child, profile, port, lastConnectionError) {
     } catch (error) { browserLaunchFlagsError = String(error).slice(0, 300); }
   }
   const profileEntries = await readdir(profile).catch(() => []);
+  let connectedBrowserVersion = null;
+  let browserVersionDiagnosticError = null;
+  let observedPages = [];
+  let pagesDiagnosticError = null;
+  let observedTargets = [];
+  let targetDiagnosticError = null;
+  if (browser) {
+    const safeUrl = value => {
+      if (value === "about:blank") return value;
+      try {
+        const url = new URL(value);
+        if (!["http:", "https:", "tauri:"].includes(url.protocol)) return `[${url.protocol}]`;
+        const path = ["/", "/index.html"].includes(url.pathname) ? url.pathname : "/[other-path]";
+        return `${url.protocol}//${url.host}${path}`.slice(0, 240);
+      } catch { return "[invalid-url]"; }
+    };
+    let session;
+    let timer;
+    try { connectedBrowserVersion = browser.version().slice(0, 100); }
+    catch (error) { browserVersionDiagnosticError = String(error).slice(0, 300); }
+    try {
+      observedPages = browser.contexts().slice(0, 4).flatMap(context => context.pages().slice(0, 16))
+        .slice(0, 16).map(page => ({ url: safeUrl(page.url()) }));
+    } catch (error) { pagesDiagnosticError = String(error).slice(0, 300); }
+    try {
+      const targets = await Promise.race([
+        (async () => {
+          session = await browser.newBrowserCDPSession();
+          return session.send("Target.getTargets");
+        })(),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(Error("Owned target diagnostic timed out")), 2000); }),
+      ]);
+      observedTargets = targets.targetInfos.slice(0, 16).map(target => ({
+        type: String(target.type).slice(0, 40), attached: Boolean(target.attached), url: safeUrl(target.url),
+      }));
+    } catch (error) { targetDiagnosticError = String(error).slice(0, 400); }
+    finally {
+      clearTimeout(timer);
+      if (session) await Promise.race([session.detach().catch(() => undefined), delay(1000)]);
+    }
+  }
   return { childPid: child.pid, exitCode: child.exitCode, signalCode: child.signalCode,
     lastConnectionError: lastConnectionError?.message?.slice(0, 500) ?? null, mainWindowHandle,
-    processes, profileEntries, diagnosticError, browserLaunchFlags, browserLaunchFlagsError };
+    mainWindowProcess, windowDiagnosticError, processes, profileEntries, diagnosticError, browserLaunchFlags, browserLaunchFlagsError,
+    connectedBrowserVersion, browserVersionDiagnosticError, observedPages, pagesDiagnosticError, observedTargets, targetDiagnosticError };
 }
 
 async function launch(config, executable = exe) {
+  const launchStartedAt = Date.now();
   await writeFile(configPath, JSON.stringify({ root: temporary, ...config }));
   const port = await unusedPort();
   const allowed = new Set(["systemroot", "windir", "userprofile", "appdata", "localappdata",
@@ -183,20 +239,42 @@ async function launch(config, executable = exe) {
   child.once("error", error => { spawnError = error; });
   let browser;
   let lastConnectionError;
+  const deadline = Date.now() + 30000;
+  let phase = "cdp";
+  const timings = { cdpReadyMs: null, appPageReadyMs: null, bridgeReadyMs: null };
+  let diagnosticAttempted = false;
+  const retainDiagnostic = async startupError => {
+    diagnosticAttempted = true;
+    const diagnostic = await launchDiagnostic(child, profile, port, lastConnectionError, browser);
+    const expectedSourceCommit = process.env.KERYX_EXPECTED_SOURCE_COMMIT;
+    const retained = { ...diagnostic, expectedSourceCommit: /^[a-f0-9]{40}$/.test(expectedSourceCommit ?? "") ? expectedSourceCommit : null,
+      executableName: basename(executable), startedAtUtc: new Date(launchStartedAt).toISOString(),
+      observedAtUtc: new Date().toISOString(), elapsedMs: Date.now() - launchStartedAt, expectedDebugPort: port,
+      phase, timings, cdpConnected: Boolean(browser), acceptanceDeadlineAtUtc: new Date(deadline).toISOString(),
+      startupError: startupError?.message?.slice(0, 500) ?? null };
+    // Preserve the original failure evidence in this freshly owned smoke root.
+    try {
+      await writeFile(join(temporary, "launch-diagnostics.json"), JSON.stringify(retained, null, 2) + "\n", { flag: "wx" });
+    } catch (error) {
+      diagnostic.retentionError = String(error).slice(0, 300);
+      console.error(`Could not retain owned launch diagnostic: ${diagnostic.retentionError}`);
+    }
+    return diagnostic;
+  };
   try {
-    const deadline = Date.now() + 30000;
     while (Date.now() < deadline) {
       if (spawnError) throw spawnError;
       if (child.exitCode !== null || child.signalCode !== null) {
         throw Error(`Packaged app exited early (${child.exitCode ?? child.signalCode})`);
       }
-      try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 1500 }); break; }
+      try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`, { timeout: 1500 }); timings.cdpReadyMs = Date.now() - launchStartedAt; break; }
       catch (error) { lastConnectionError = error; await delay(250); }
     }
     if (!browser) {
-      const diagnostic = await launchDiagnostic(child, profile, port, lastConnectionError);
+      const diagnostic = await retainDiagnostic(lastConnectionError);
       throw Error(`Packaged WebView2 did not expose its test CDP endpoint: ${JSON.stringify(diagnostic)}`);
     }
+    phase = "app-page";
     let page;
     while (Date.now() < deadline && !page) {
       page = browser.contexts().flatMap(context => context.pages())
@@ -204,11 +282,24 @@ async function launch(config, executable = exe) {
       if (!page) await delay(100);
     }
     if (!page) throw Error("Packaged Keryx WebView2 page did not load");
+    timings.appPageReadyMs = Date.now() - launchStartedAt;
+    phase = "bridge";
     await page.waitForFunction(() => !!window.keryxDesktop, { timeout: 15000 });
+    timings.bridgeReadyMs = Date.now() - launchStartedAt;
+    phase = "shell-visible";
     await page.locator(".app-shell").waitFor({ state: "visible", timeout: 15000 });
+    phase = "shell-loaded";
     await page.locator(".loading-state").waitFor({ state: "hidden", timeout: 15000 });
+    let webView2Version = null;
+    try { webView2Version = browser.version().slice(0, 100); } catch { /* Diagnostic metadata does not change readiness. */ }
+    console.log(JSON.stringify({ packagedTauriLaunch: "ready", webView2Version,
+      ...timings, readyMs: Date.now() - launchStartedAt }));
     return { child, browser, page };
   } catch (error) {
+    if (!diagnosticAttempted) {
+      try { await retainDiagnostic(error); }
+      catch (captureError) { console.error(`Could not retain owned launch diagnostic: ${String(captureError).slice(0, 300)}`); }
+    }
     await browser?.close().catch(() => undefined);
     child.kill();
     throw error;

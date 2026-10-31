@@ -18,6 +18,21 @@ const httpsMirrors = [
 ].join("\n") + "\n";
 const networkConfig = 'Acquire::http::Timeout "60";\nAcquire::https::Timeout "60";\nAcquire::Retries "2";\n';
 
+function observedSourceUris(uris) {
+  const values = uris.slice(0, 4).map(value => value.split(/\s+/).slice(0, 4).map(uri => {
+    if (uri === `mirror+file:${mirrorPath}`) return uri;
+    try {
+      const parsed = new URL(uri);
+      if (!["http:", "https:"].includes(parsed.protocol)) return "[unexpected URI scheme]";
+      // Runner configuration is public, but never echo URI credentials or queries.
+      return `${parsed.protocol}//${parsed.host}${parsed.pathname.slice(0, 160)}`;
+    } catch {
+      return "[invalid URI]";
+    }
+  }));
+  return JSON.stringify({ fields: uris.length, values }).slice(0, 1024);
+}
+
 export function assertRunnerContext({ env, platform, arch }) {
   if (platform !== "linux" || arch !== "x64" || env.GITHUB_ACTIONS !== "true" ||
       env.RUNNER_ENVIRONMENT !== "github-hosted" || env.RUNNER_OS !== "Linux") {
@@ -45,7 +60,7 @@ export function browserAptPlan({ osRelease, sources, mirrors, network = null }) 
     if (currentField === "uris") uris.push(field[2].trim());
   }
   if (uris.length === 0 || uris.some(value => value !== `mirror+file:${mirrorPath}`)) {
-    throw new Error("Unexpected Ubuntu runner source configuration; refusing to replace mirrors.");
+    throw new Error(`Unexpected Ubuntu runner source configuration; refusing to replace mirrors. Observed URI summary: ${observedSourceUris(uris)}`);
   }
   if (mirrors !== runnerMirrors && mirrors !== httpsMirrors) {
     throw new Error("Unexpected Ubuntu runner mirror list; refusing to replace mirrors.");

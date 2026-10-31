@@ -1,4 +1,4 @@
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { decisionReviewCopy } from "./decision-review-copy";
 import { answerLanguageInstructions } from "../../shared/i18n/answer-language-instructions";
 import { join, resolve } from "node:path";
@@ -196,7 +196,16 @@ it.each([...(["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as 
         }
       }
       await expectAlignedSpotlight(page, ["hero", "ask-form", "budget", "dispatch-btn"][index]);
-      if (nativeScreenshots) await page.screenshot({ path: join(nativeScreenshots, `guide-native-${frame}-step-${index + 1}.png`) });
+      const inspectDispatchPaint = index === 3 && width < 640 && font > 16;
+      if (nativeScreenshots || inspectDispatchPaint) {
+        const image = await page.screenshot();
+        // Retain the exact image being checked, including a failed original.
+        if (nativeScreenshots) await writeFile(join(nativeScreenshots, `guide-native-${frame}-step-${index + 1}.png`), image);
+        if (inspectDispatchPaint) {
+          const painted = await dispatchCutoutPaint(page, image);
+          expect(painted, "The captured cutout must expose the bottom of the complete wrapped submit button").toMatchObject({ matches: true });
+        }
+      }
       const action = dialog.getByRole("button", { name: message(index === 3 ? "researchTour.done" : "researchTour.next"), exact: true });
       if (locale === "ar") expect(await action.locator('[aria-hidden="true"]').evaluate(element => getComputedStyle(element, "::before").content)).toContain("←");
       await action.focus(); await page.keyboard.press("Enter");
@@ -323,6 +332,8 @@ async function pixel(page: Page, x: number, y: number) {
 }
 
 async function expectAlignedSpotlight(page: Page, targetName: string) {
+  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   await expect.poll(() => page.evaluate(name => {
     const target = document.querySelector<HTMLElement>(`[data-tour="${name}"]`);
     const mask = document.querySelector<SVGRectElement>('[data-keryx-tour-portal] mask rect[fill="black"]');
@@ -334,6 +345,25 @@ async function expectAlignedSpotlight(page: Page, targetName: string) {
     const width = Number(mask.getAttribute("width")), height = Number(mask.getAttribute("height"));
     return left < right && top < bottom && x <= left + 1 && y <= top + 1 && x + width >= right - 1 && y + height >= bottom - 1;
   }, targetName)).toBe(true);
+}
+
+async function dispatchCutoutPaint(page: Page, image: Uint8Array) {
+  return page.evaluate(async bytes => {
+    const target = document.querySelector<HTMLElement>('[data-tour="dispatch-btn"]')!;
+    const bounds = target.getBoundingClientRect();
+    // Inside the eight-pixel cutout padding, beside the button's bottom edge.
+    // The button and scrim share the same ink color, so sample the paper margin.
+    const x = Math.floor(bounds.left - 4), y = Math.floor(bounds.bottom - 4);
+    const bitmap = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
+    const canvas = document.createElement("canvas"); canvas.width = bitmap.width; canvas.height = bitmap.height;
+    const context = canvas.getContext("2d")!; context.drawImage(bitmap, 0, 0); bitmap.close();
+    if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) throw new Error("Dispatch cutout probe is outside the captured viewport");
+    const actual = [...context.getImageData(x, y, 1, 1).data];
+    context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--paper").trim();
+    context.fillRect(0, 0, 1, 1);
+    const expected = [...context.getImageData(0, 0, 1, 1).data];
+    return { matches: actual.every((value, index) => value === expected[index]), actual, expected, x, y, target: bounds.toJSON() };
+  }, [...image]);
 }
 
 it.each([320, 1366])("realigns the complete guide cutout after late target text wrapping at %ipx", async width => {

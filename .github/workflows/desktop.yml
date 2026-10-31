@@ -93,9 +93,20 @@ jobs:
         run: cargo +1.98.1-x86_64-pc-windows-msvc test --manifest-path desktop/src-tauri/Cargo.toml --release --features tauri/custom-protocol --locked
       - name: Verify packaged helper workspace selection migration
         run: node desktop/scripts/test-helper-selection.mjs desktop/release/KeryxOperator-win32-x64/dist
+      - name: Prepare current WebView2 regression fixture on disposable runner
+        shell: pwsh
+        run: ./desktop/scripts/prepare-ci-webview.ps1
       - name: Exercise portable and installed app as a standard Windows user
         shell: pwsh
         run: ./desktop/scripts/standard-user-smoke.ps1 -Package desktop/release/KeryxOperator-win32-x64
+      - name: Retain standard-user startup and permission diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-standard-user-${{ github.sha }}-${{ github.run_id }}
+          path: .artifacts/desktop-standard-user/
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Verify icon, source identity, native writer and bundled Node
         run: node --import tsx desktop/scripts/check-package.mjs desktop/release/KeryxOperator-win32-x64
       - name: Upload exact packaged desktop for a fresh Windows consumer
@@ -141,9 +152,20 @@ jobs:
           KERYX_EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
       - name: Verify downloaded helper workspace selection migration
         run: node desktop/scripts/test-helper-selection.mjs "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64/dist"
+      - name: Prepare current WebView2 regression fixture on fresh disposable runner
+        shell: pwsh
+        run: ./desktop/scripts/prepare-ci-webview.ps1
       - name: Exercise downloaded portable and installed app as a standard Windows user
         shell: pwsh
         run: ./desktop/scripts/standard-user-smoke.ps1 -Package "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64"
+      - name: Retain fresh-consumer startup and permission diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-standard-user-consumer-${{ github.sha }}-${{ github.run_id }}
+          path: .artifacts/desktop-standard-user/
+          if-no-files-found: ignore
+          retention-days: 30
       - name: Verify downloaded package was restored after fault checks
         run: node --import tsx desktop/scripts/check-package.mjs "${{ runner.temp }}/keryx-operator-downloaded/KeryxOperator-win32-x64"
         env:

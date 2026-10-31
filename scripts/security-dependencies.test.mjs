@@ -1,10 +1,80 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { createServer } from "node:http";
+import { once } from "node:events";
+import { runInNewContext } from "node:vm";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
 const proxyaddr = require("proxy-addr");
 const { SourceMapConsumer, SourceNode } = require("source-map-js");
+const redirectHttp = require("follow-redirects").http;
+
+// GHSA-mrwp-f3q8-3g9p: caller-declared custom credentials must not follow a
+// cross-origin redirect when sensitiveHeaders was created in another realm.
+async function redirectHeaders(t, { crossOrigin, crossRealm, arrayHeaders }) {
+  const destination = createServer((request, response) => {
+    response.setHeader("Content-Type", "application/json");
+    response.end(JSON.stringify(request.headers));
+  });
+  const origin = createServer((request, response) => {
+    if (request.url === "/final") {
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify(request.headers));
+    } else {
+      response.writeHead(302, { Location: crossOrigin ? `http://127.0.0.1:${destination.address().port}/final` : "/final" });
+      response.end();
+    }
+  });
+  for (const server of [destination, origin]) {
+    t.after(() => new Promise((resolve, reject) => {
+      server.close(error => error ? reject(error) : resolve());
+      server.closeAllConnections();
+    }));
+    server.listen(0, "127.0.0.1");
+    await once(server, "listening");
+  }
+  const sensitiveHeaders = crossRealm ? runInNewContext("['X-API-Key']") : ["X-API-Key"];
+  assert.equal(Array.isArray(sensitiveHeaders), true);
+  assert.equal(sensitiveHeaders instanceof Array, !crossRealm);
+  const fields = { "X-API-Key": "synthetic-key", "X-Harmless": "keep", Authorization: "synthetic-auth", "Proxy-Authorization": "synthetic-proxy", Cookie: "synthetic=cookie" };
+  return new Promise((resolve, reject) => {
+    const request = redirectHttp.get(`http://127.0.0.1:${origin.address().port}/start`, {
+      headers: arrayHeaders ? Object.entries(fields).flat() : fields,
+      sensitiveHeaders, maxRedirects: 2, agent: false,
+    }, response => {
+      let body = "";
+      response.setEncoding("utf8");
+      response.on("data", chunk => { body += chunk; });
+      response.on("error", reject);
+      response.on("end", () => {
+        try { resolve(JSON.parse(body)); } catch (error) { reject(error); }
+      });
+    });
+    request.on("error", reject);
+    request.setTimeout(2000, () => request.destroy(new Error("Loopback redirect timed out")));
+  });
+}
+
+for (const arrayHeaders of [false, true]) {
+  for (const crossRealm of [false, true]) {
+    test(`cross-origin redirects strip custom and built-in credentials (${arrayHeaders ? "array" : "object"} headers, ${crossRealm ? "cross" : "same"} realm)`, { timeout: 10000 }, async t => {
+      const headers = await redirectHeaders(t, { crossOrigin: true, crossRealm, arrayHeaders });
+      assert.equal(headers["x-api-key"], undefined);
+      assert.equal(headers.authorization, undefined);
+      assert.equal(headers["proxy-authorization"], undefined);
+      assert.equal(headers.cookie, undefined);
+      assert.equal(headers["x-harmless"], "keep");
+    });
+  }
+  test(`same-origin redirects retain declared custom credentials (${arrayHeaders ? "array" : "object"} headers, cross realm)`, { timeout: 10000 }, async t => {
+    const headers = await redirectHeaders(t, { crossOrigin: false, crossRealm: true, arrayHeaders });
+    assert.equal(headers["x-api-key"], "synthetic-key");
+    assert.equal(headers.authorization, "synthetic-auth");
+    assert.equal(headers.cookie, "synthetic=cookie");
+    assert.equal(headers["x-harmless"], "keep");
+  });
+}
 
 // GHSA-jqcg-44mw-7w3h: short IPv6 trust prefixes must not trust an unrelated
 // IPv4 peer and let its forwarded header replace the actual socket origin.
