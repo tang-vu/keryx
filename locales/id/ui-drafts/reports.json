@@ -523,6 +523,46 @@
     "literatureWorkspace.backupSummary.other": {
       "source": "{filename}: {count} papers · {title}",
       "text": "{filename}: {count} makalah · {title}"
+    },
+    "literatureComparison.label": {
+      "source": "Comparison selection",
+      "text": "Pilihan perbandingan"
+    },
+    "literatureComparison.title": {
+      "source": "Papers selected for comparison",
+      "text": "Makalah yang dipilih untuk dibandingkan"
+    },
+    "literatureComparison.outsideFilter": {
+      "source": "Outside the current screening filter; still selected.",
+      "text": "Di luar filter penyaringan saat ini; tetap dipilih."
+    },
+    "literatureComparison.remove": {
+      "source": "Remove from comparison",
+      "text": "Keluarkan dari perbandingan"
+    },
+    "literatureComparison.focus": {
+      "source": "Saved focus used in the draft",
+      "text": "Fokus tersimpan yang digunakan dalam draf"
+    },
+    "literatureComparison.noFocus": {
+      "source": "No saved review focus. The draft uses the general comparison questions.",
+      "text": "Belum ada fokus tinjauan yang disimpan. Draf memakai pertanyaan perbandingan umum."
+    },
+    "literatureComparison.reviewQuestion": {
+      "source": "Review prepared question",
+      "text": "Tinjau pertanyaan yang disiapkan"
+    },
+    "literatureComparison.preparedQuestion": {
+      "source": "Prepared comparison question",
+      "text": "Pertanyaan perbandingan yang disiapkan"
+    },
+    "literatureComparison.paper": {
+      "source": "Paper {number} · {screening} · {repository}",
+      "text": "Makalah {number} · {screening} · {repository}"
+    },
+    "literatureComparison.removeLabel": {
+      "source": "Remove paper {number} from comparison",
+      "text": "Keluarkan makalah {number} dari perbandingan"
     }
   }
 }

@@ -16,7 +16,6 @@ import { pdfReadingCopy } from "@/locales/en/pdf-reading";
 import { reportComparisonCopy } from "@/locales/en/report-comparison";
 import { pdfReadingNotice } from "../research/pdf-reading";
 import type { PaperRecord } from "../papers/types";
-import { SCREENING_STATES } from "../papers/literature-workspace";
 import { PAPER_REPOSITORIES } from "../papers/types";
 import { evidenceFollowUpContext, evidenceFollowUpHref } from "../research/answer-evidence-status";
 
@@ -68,7 +67,7 @@ for (const locale of preparedLocales) it(`${locale} exposes actual report-label 
   const source = container.querySelector(`a[href="${paper.url}"]`)!;
   expect(source.textContent).toBe(paper.title); expect(source.querySelector("[lang]")).toBeNull();
   expect(container.querySelector("section.min-w-0 ol li p")!.textContent).toBe(message("literatureComparison.paper", {
-    number: 1, screening: SCREENING_STATES.include, repository: PAPER_REPOSITORIES.arxiv,
+    number: 1, screening: message("paperWorkspace.screening.include"), repository: PAPER_REPOSITORIES.arxiv,
   }));
   expect(container.querySelector("pre")!.textContent).toBe(originalDraft);
   expect([...container.querySelectorAll("p")].some(node => node.textContent === originalFocus)).toBe(true);
