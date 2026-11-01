@@ -107,9 +107,20 @@ async function locale(page: Page, value: UiLocale) {
   await page.evaluate(value => (window as unknown as { evidenceWorldFixture: Fixture }).evidenceWorldFixture.locale(value), value);
   await expect.poll(() => page.locator("html").getAttribute("lang")).toBe(value);
 }
+const downloadBursts = new WeakMap<Page, { startedAt: number; count: number }>();
 async function download(page: Page, name: string) {
+  // Chromium's LocalFrame::ShouldThrottleDownload silently drops the eleventh
+  // download inside a one-second burst, including explicit button clicks. Keep
+  // every real download assertion; pace only this unusually rapid test sequence.
+  const burst = downloadBursts.get(page);
+  if (burst?.count === 10) await new Promise(done => setTimeout(done, Math.max(0, 1100 - (performance.now() - burst.startedAt))));
   const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name, exact: true }).click()]);
-  return readFile((await file.path())!, "utf8");
+  const text = await readFile((await file.path())!, "utf8");
+  // Start after the first delivered file, so UI/scroll/download latency cannot
+  // make our next burst begin before Chromium's actual first-download timestamp.
+  if (!burst || burst.count === 10) downloadBursts.set(page, { startedAt: performance.now(), count: 1 });
+  else burst.count++;
+  return text;
 }
 async function capture(locator: Locator, name: string) {
   if (!captures) return;

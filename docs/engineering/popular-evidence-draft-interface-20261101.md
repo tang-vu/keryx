@@ -33,3 +33,11 @@ Acceptance requires focused real-editor/import/export/locale-switch tests,
 responsive browser originals, the applicable full PR/domain/platform workflows,
 exact-main publication acceptance and verified owned cleanup. Earlier accepted
 comparison work is a base, not acceptance of this changed editor.
+
+The browser fixture preserves every actual JSON/Markdown/LaTeX/BibTeX/RIS
+download and its byte comparison. Chromium silently drops requests after ten
+downloads inside one second (`LocalFrame::ShouldThrottleDownload`), so the fixture
+paces successive ten-download bursts past that interval. Its clock starts after
+the first delivered file to account for action/scroll latency. This does not retry
+a failed download, extend the download-event timeout, mock the exporter, or change
+production download behavior. See the [Chromium implementation](https://github.com/chromium/chromium/blob/main/third_party/blink/renderer/core/frame/local_frame.cc).
