@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Keryx Operator",
-  "version": "0.4.40",
+  "version": "0.4.41",
   "identifier": "cc.keryx.operator",
   "mainBinaryName": "KeryxOperator",
   "build": {
@@ -9,25 +9,34 @@
   },
   "app": {
     "withGlobalTauri": false,
-    "windows": [{
-      "label": "main",
-      "create": false,
-      "title": "Keryx Operator",
-      "width": 1240,
-      "height": 850,
-      "minWidth": 760,
-      "minHeight": 600,
-      "backgroundColor": "#f1e9d7"
-    }],
+    "windows": [
+      {
+        "label": "main",
+        "create": false,
+        "title": "Keryx Operator",
+        "width": 1240,
+        "height": 850,
+        "minWidth": 760,
+        "minHeight": 600,
+        "backgroundColor": "#f1e9d7"
+      }
+    ],
     "security": {
-      "capabilities": ["main"],
+      "capabilities": [
+        "main"
+      ],
       "csp": "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; form-action 'none'; base-uri 'none'; object-src 'none'; frame-src 'none'"
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": ["../assets/icon.ico", "../assets/icon.png"],
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "../assets/icon.ico",
+      "../assets/icon.png"
+    ],
     "resources": {
       "../dist/helper.cjs": "dist/helper.cjs",
       "../dist/source-commit.txt": "dist/source-commit.txt",
