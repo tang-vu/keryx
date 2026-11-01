@@ -1,0 +1,312 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-drafts.json",
+  "sourceSha256": "b5149b6454955d1a1070de1a860625a932863e4ea739f5d8753a878126864df5",
+  "entries": {
+    "page.back": {
+      "source": "Back to your saved review",
+      "text": "العودة إلى مراجعتك المحفوظة"
+    },
+    "page.heading": {
+      "source": "Build a draft from retained excerpts.",
+      "text": "أنشئ مسودة من المقتطفات المحفوظة."
+    },
+    "page.navigation": {
+      "source": "Build a retained-evidence draft",
+      "text": "إنشاء مسودة من الأدلة المحفوظة"
+    },
+    "workspace.loading": {
+      "source": "Loading saved review…",
+      "text": "جارٍ تحميل المراجعة المحفوظة…"
+    },
+    "workspace.clear": {
+      "source": "Clear this tab’s draft",
+      "text": "مسح مسودة علامة التبويب هذه"
+    },
+    "workspace.cleared": {
+      "source": "Draft cleared from this tab. Your saved paper list remains.",
+      "text": "مُسحت المسودة من علامة التبويب هذه. ما زالت قائمة أوراقك المحفوظة موجودة."
+    },
+    "import.label": {
+      "source": "Retained Keryx report JSON",
+      "text": "JSON لتقرير Keryx محفوظ"
+    },
+    "import.button": {
+      "source": "Import report in this tab",
+      "text": "استيراد التقرير في علامة التبويب هذه"
+    },
+    "import.summary": {
+      "source": "Reports: {reports} · matching retained excerpts: {excerpts}",
+      "text": "التقارير: {reports} · المقتطفات المحفوظة المطابقة: {excerpts}"
+    },
+    "claim.label": {
+      "source": "Claim assessment",
+      "text": "تقييم الادعاء"
+    },
+    "claim.passage": {
+      "source": "Your original passage",
+      "text": "نصك الأصلي"
+    },
+    "claim.add": {
+      "source": "Add selected claim",
+      "text": "إضافة الادعاء المحدد"
+    },
+    "claim.reviewer": {
+      "source": "Your name for an optional assessment",
+      "text": "اسمك لتقييم اختياري"
+    },
+    "claim.paper": {
+      "source": "Exact cited paper",
+      "text": "الورقة المستشهد بها بالضبط"
+    },
+    "claim.unavailable": {
+      "source": "Retained source evidence unavailable",
+      "text": "الأدلة المحفوظة من المصدر غير متاحة"
+    },
+    "claim.assessed": {
+      "source": "Your assessment: {assessment}",
+      "text": "تقييمك: {assessment}"
+    },
+    "claim.recordAssessment": {
+      "source": "Record my {assessment} assessment",
+      "text": "تسجيل تقييمي: {assessment}"
+    },
+    "claim.excerptVersion": {
+      "source": "{version} · report {report}",
+      "text": "{version} · التقرير {report}"
+    },
+    "claim.verdicts.supported": {
+      "source": "supported",
+      "text": "مدعوم"
+    },
+    "claim.verdicts.partly-supported": {
+      "source": "partly supported",
+      "text": "مدعوم جزئيًا"
+    },
+    "claim.verdicts.not-found": {
+      "source": "not found",
+      "text": "لم يُعثر عليه"
+    },
+    "theme.label": {
+      "source": "Related-work themes",
+      "text": "موضوعات الأعمال ذات الصلة"
+    },
+    "theme.heading": {
+      "source": "Related-work evidence themes",
+      "text": "موضوعات الأدلة للأعمال ذات الصلة"
+    },
+    "theme.assemble": {
+      "source": "Assemble retained contributions",
+      "text": "تجميع الإسهامات المحفوظة"
+    },
+    "theme.regenerate": {
+      "source": "Regenerate this theme from selected excerpts",
+      "text": "إعادة إنشاء هذا الموضوع من المقتطفات المحددة"
+    },
+    "theme.title": {
+      "source": "Theme title",
+      "text": "عنوان الموضوع"
+    },
+    "theme.notes": {
+      "source": "Your synthesis notes (unverified)",
+      "text": "ملاحظاتك التركيبية (غير متحقق منها)"
+    },
+    "theme.clearExcerpts": {
+      "source": "Clear this theme’s excerpt selections",
+      "text": "مسح اختيارات المقتطفات لهذا الموضوع"
+    },
+    "theme.add": {
+      "source": "Add theme",
+      "text": "إضافة موضوع"
+    },
+    "theme.unreadHeading": {
+      "source": "Included papers without usable retained excerpts",
+      "text": "الأوراق المُدرجة التي لا تتوفر لها مقتطفات محفوظة قابلة للاستخدام"
+    },
+    "reading.prepare": {
+      "source": "Prepare reading request in a new tab",
+      "text": "إعداد طلب قراءة في علامة تبويب جديدة"
+    },
+    "reading.clear": {
+      "source": "Clear reading observations",
+      "text": "مسح ملاحظات القراءة"
+    },
+    "reading.status": {
+      "source": "Your reading observation",
+      "text": "ملاحظتك بشأن القراءة"
+    },
+    "reading.unknown": {
+      "source": "Reading status not recorded",
+      "text": "حالة القراءة غير مسجلة"
+    },
+    "reading.unread": {
+      "source": "Not read",
+      "text": "لم تُقرأ"
+    },
+    "reading.unavailable": {
+      "source": "Unavailable",
+      "text": "غير متاحة"
+    },
+    "reading.reason": {
+      "source": "Your reason (optional)",
+      "text": "السبب لديك (اختياري)"
+    },
+    "reading.unreadHeading": {
+      "source": "Unread papers (your observation)",
+      "text": "الأوراق غير المقروءة (بحسب ملاحظتك)"
+    },
+    "reading.unavailableHeading": {
+      "source": "Unavailable papers (your observation)",
+      "text": "الأوراق غير المتاحة (بحسب ملاحظتك)"
+    },
+    "statement.heading": {
+      "source": "Statements in this theme",
+      "text": "العبارات في هذا الموضوع"
+    },
+    "statement.add": {
+      "source": "Add statement",
+      "text": "إضافة عبارة"
+    },
+    "statement.remove": {
+      "source": "Remove this statement",
+      "text": "إزالة هذه العبارة"
+    },
+    "statement.kind": {
+      "source": "What this sentence does",
+      "text": "دور هذه الجملة"
+    },
+    "statement.kinds.contribution": {
+      "source": "Describes one paper’s contribution",
+      "text": "يصف إسهام ورقة واحدة"
+    },
+    "statement.kinds.agreement": {
+      "source": "States where papers agree",
+      "text": "يذكر مواضع الاتفاق بين الأوراق"
+    },
+    "statement.kinds.disagreement": {
+      "source": "States where papers disagree",
+      "text": "يذكر مواضع الاختلاف بين الأوراق"
+    },
+    "statement.kinds.gap": {
+      "source": "States a gap",
+      "text": "يذكر فجوة"
+    },
+    "statement.text": {
+      "source": "Your sentence",
+      "text": "جملتك"
+    },
+    "statement.papers": {
+      "source": "Papers this sentence names",
+      "text": "الأوراق التي تسميها هذه الجملة"
+    },
+    "statement.excerpts": {
+      "source": "Retained excerpts this sentence relies on",
+      "text": "المقتطفات المحفوظة التي تستند إليها هذه الجملة"
+    },
+    "download.markdown": {
+      "source": "Download Markdown",
+      "text": "تنزيل Markdown"
+    },
+    "download.latex": {
+      "source": "Download LaTeX",
+      "text": "تنزيل LaTeX"
+    },
+    "download.bibtex": {
+      "source": "Download BibTeX",
+      "text": "تنزيل BibTeX"
+    },
+    "download.ris": {
+      "source": "Download RIS",
+      "text": "تنزيل RIS"
+    },
+    "page.introduction": {
+      "source": "Select exact claim spans, record your own assessments, and organise read excerpts into related-work themes.",
+      "text": "حدّد مقاطع الادعاءات بدقة، وسجّل تقييماتك الخاصة، ونظّم المقتطفات التي قرأتها ضمن موضوعات الأعمال ذات الصلة."
+    },
+    "page.noScript": {
+      "source": "Enable JavaScript for this local editor. No passage or report is uploaded automatically.",
+      "text": "فعّل JavaScript لهذا المحرر المحلي. لا يُرفع أي نص أو تقرير تلقائيًا."
+    },
+    "workspace.includeFirst": {
+      "source": "Mark papers Include in the literature workspace before assembling this draft.",
+      "text": "علّم الأوراق بخيار «إدراج» في مساحة عمل مراجعة الأدبيات قبل تجميع هذه المسودة."
+    },
+    "workspace.changed": {
+      "source": "A selected excerpt or saved paper changed, or this draft exceeds its limit. Remove that selection or clear the draft; your edits remain below.",
+      "text": "تغيّر مقتطف محدد أو ورقة محفوظة، أو تجاوزت هذه المسودة حدها. أزل ذلك الاختيار أو امسح المسودة؛ تبقى تعديلاتك أدناه."
+    },
+    "import.guidance": {
+      "source": "Use a report returned by the API/MCP with its retained citation and excerpt ledger. Bibliography alone cannot describe a paper. Imported bytes are your responsibility; this editor does not authenticate their origin.",
+      "text": "استخدم تقريرًا أعادته API/MCP مع سجل الاستشهادات والمقتطفات المحفوظ. لا تكفي قائمة المراجع وحدها لوصف ورقة. البايتات المستوردة مسؤوليتك؛ لا يتحقق هذا المحرر من أصالتها أو مصدرها."
+    },
+    "import.success": {
+      "source": "Report imported locally. Matching excerpts are available for selection; the report origin and semantic support remain unverified.",
+      "text": "استُورد التقرير محليًا. المقتطفات المطابقة متاحة للاختيار؛ ما زال مصدر التقرير ومدى دعمه للمعنى غير متحقق منهما."
+    },
+    "import.refused": {
+      "source": "Report not imported. Use a unique retained report with id/queryId, subClaims, citations and evidence; check the 64 KiB draft limit. Your existing draft remains.",
+      "text": "لم يُستورد التقرير. استخدم تقريرًا محفوظًا فريدًا يحتوي على id/queryId وsubClaims وcitations وevidence؛ وتحقق من حد المسودة البالغ 64 KiB. تبقى مسودتك الحالية كما هي."
+    },
+    "claim.selectFirst": {
+      "source": "Select the exact claim text in your passage first.",
+      "text": "حدّد أولًا النص الدقيق للادعاء في نصك الأصلي."
+    },
+    "claim.unavailableGuidance": {
+      "source": "An unavailable source is never reported as unsupported.",
+      "text": "لا يُوصَف المصدر غير المتاح بأنه لا يدعم الادعاء."
+    },
+    "theme.guidance": {
+      "source": "Group exact excerpts before writing. A statement about a paper is exported only with a citation and the retained excerpt you select for it; quotations and your free-form notes stay separate, and notes remain marked as unverified.",
+      "text": "جمّع المقتطفات الدقيقة قبل الكتابة. لا تُصدَّر عبارة عن ورقة إلا مع استشهاد والمقتطف المحفوظ الذي تختاره لها؛ تبقى الاقتباسات وملاحظاتك الحرة منفصلة، وتظل الملاحظات موسومة بأنها غير متحقق منها."
+    },
+    "theme.assemblyRefused": {
+      "source": "Assembly refused. Select one to 24 retained excerpts for regeneration, or make room within the 16-theme and 64 KiB limits. Your edits remain.",
+      "text": "رُفض التجميع. اختر من مقتطف محفوظ واحد إلى 24 مقتطفًا لإعادة الإنشاء، أو أفسح مساحة ضمن حدَّي 16 موضوعًا و64 KiB. تبقى تعديلاتك كما هي."
+    },
+    "reading.guidance": {
+      "source": "Missing retained evidence does not tell us whether a paper was read. Record your observation for this exact saved record; it is not a Keryx access check. Unread and unavailable papers export in separate lists and are never described or cited.",
+      "text": "لا يدل غياب الأدلة المحفوظة على ما إذا كانت الورقة قد قُرئت. سجّل ملاحظتك لهذا السجل المحفوظ بعينه؛ فهذا ليس فحص وصول من Keryx. تُصدَّر الأوراق غير المقروءة وغير المتاحة في قائمتين منفصلتين، ولا توصف ولا يُستشهد بها مطلقًا."
+    },
+    "statement.guidance": {
+      "source": "Write one sentence at a time. Choose what it does, the papers it names and the retained excerpt it relies on. Keryx checks that each named paper has a selected excerpt; it does not check that the excerpt supports your wording.",
+      "text": "اكتب جملة واحدة في كل مرة. اختر دورها، والأوراق التي تسميها، والمقتطف المحفوظ الذي تستند إليه. يتحقق Keryx من وجود مقتطف محدد لكل ورقة مسماة؛ ولا يتحقق من أن المقتطف يدعم صياغتك."
+    },
+    "statement.paperUnread": {
+      "source": "{title} — no retained excerpt; cannot be described",
+      "text": "{title} — لا يوجد مقتطف محفوظ؛ لا يمكن وصف الورقة"
+    },
+    "statement.empty": {
+      "source": "Write the sentence to include it in the draft.",
+      "text": "اكتب الجملة لتضمينها في المسودة."
+    },
+    "statement.bound": {
+      "source": "Will be exported with its citation and excerpt links.",
+      "text": "ستُصدَّر مع استشهادها وروابط مقتطفاتها."
+    },
+    "statement.authorGap": {
+      "source": "Will be exported as your own stated gap. It cites no paper and stays marked as unverified.",
+      "text": "ستُصدَّر بوصفها فجوة ذكرتها أنت. لا تستشهد بأي ورقة، وتظل موسومة بأنها غير متحقق منها."
+    },
+    "statement.needsOnePaper": {
+      "source": "Not exported yet: a contribution names exactly one paper.",
+      "text": "لم تُصدَّر بعد: يجب أن يذكر الإسهام ورقة واحدة بالضبط."
+    },
+    "statement.needsTwoPapers": {
+      "source": "Not exported yet: agreement and disagreement name at least two papers.",
+      "text": "لم تُصدَّر بعد: يجب أن يذكر الاتفاق والاختلاف ورقتين على الأقل."
+    },
+    "statement.needsExcerpt": {
+      "source": "Not exported yet: select a retained excerpt for every paper this sentence names.",
+      "text": "لم تُصدَّر بعد: حدّد مقتطفًا محفوظًا لكل ورقة تسميها هذه الجملة."
+    },
+    "download.refused": {
+      "source": "Export refused: an exact record or selected excerpt is unavailable or changed.",
+      "text": "رُفض التصدير: سجل بعينه أو مقتطف محدد غير متاح أو تغيّر."
+    },
+    "download.backupRefused": {
+      "source": "Backup refused: check the current exact record and excerpt selections.",
+      "text": "رُفض النسخ الاحتياطي: تحقق من السجل الحالي بعينه ومن اختيارات المقتطفات."
+    }
+  }
+}

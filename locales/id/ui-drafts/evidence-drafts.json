@@ -1,0 +1,312 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-drafts.json",
+  "sourceSha256": "b5149b6454955d1a1070de1a860625a932863e4ea739f5d8753a878126864df5",
+  "entries": {
+    "page.back": {
+      "source": "Back to your saved review",
+      "text": "Kembali ke tinjauan tersimpan Anda"
+    },
+    "page.heading": {
+      "source": "Build a draft from retained excerpts.",
+      "text": "Buat draf dari kutipan yang disimpan."
+    },
+    "page.navigation": {
+      "source": "Build a retained-evidence draft",
+      "text": "Buat draf dari bukti tersimpan"
+    },
+    "workspace.loading": {
+      "source": "Loading saved review…",
+      "text": "Memuat tinjauan tersimpan…"
+    },
+    "workspace.clear": {
+      "source": "Clear this tab’s draft",
+      "text": "Kosongkan draf di tab ini"
+    },
+    "workspace.cleared": {
+      "source": "Draft cleared from this tab. Your saved paper list remains.",
+      "text": "Draf di tab ini telah dikosongkan. Daftar makalah tersimpan Anda tetap ada."
+    },
+    "import.label": {
+      "source": "Retained Keryx report JSON",
+      "text": "JSON laporan Keryx yang disimpan"
+    },
+    "import.button": {
+      "source": "Import report in this tab",
+      "text": "Impor laporan ke tab ini"
+    },
+    "import.summary": {
+      "source": "Reports: {reports} · matching retained excerpts: {excerpts}",
+      "text": "Laporan: {reports} · kutipan tersimpan yang cocok: {excerpts}"
+    },
+    "claim.label": {
+      "source": "Claim assessment",
+      "text": "Penilaian klaim"
+    },
+    "claim.passage": {
+      "source": "Your original passage",
+      "text": "Teks asli Anda"
+    },
+    "claim.add": {
+      "source": "Add selected claim",
+      "text": "Tambahkan klaim yang dipilih"
+    },
+    "claim.reviewer": {
+      "source": "Your name for an optional assessment",
+      "text": "Nama Anda untuk penilaian opsional"
+    },
+    "claim.paper": {
+      "source": "Exact cited paper",
+      "text": "Makalah persis yang dikutip"
+    },
+    "claim.unavailable": {
+      "source": "Retained source evidence unavailable",
+      "text": "Bukti sumber yang disimpan tidak tersedia"
+    },
+    "claim.assessed": {
+      "source": "Your assessment: {assessment}",
+      "text": "Penilaian Anda: {assessment}"
+    },
+    "claim.recordAssessment": {
+      "source": "Record my {assessment} assessment",
+      "text": "Catat penilaian saya: {assessment}"
+    },
+    "claim.excerptVersion": {
+      "source": "{version} · report {report}",
+      "text": "{version} · laporan {report}"
+    },
+    "claim.verdicts.supported": {
+      "source": "supported",
+      "text": "didukung"
+    },
+    "claim.verdicts.partly-supported": {
+      "source": "partly supported",
+      "text": "didukung sebagian"
+    },
+    "claim.verdicts.not-found": {
+      "source": "not found",
+      "text": "tidak ditemukan"
+    },
+    "theme.label": {
+      "source": "Related-work themes",
+      "text": "Tema penelitian terkait"
+    },
+    "theme.heading": {
+      "source": "Related-work evidence themes",
+      "text": "Tema bukti penelitian terkait"
+    },
+    "theme.assemble": {
+      "source": "Assemble retained contributions",
+      "text": "Susun kontribusi yang disimpan"
+    },
+    "theme.regenerate": {
+      "source": "Regenerate this theme from selected excerpts",
+      "text": "Buat ulang tema ini dari kutipan yang dipilih"
+    },
+    "theme.title": {
+      "source": "Theme title",
+      "text": "Judul tema"
+    },
+    "theme.notes": {
+      "source": "Your synthesis notes (unverified)",
+      "text": "Catatan sintesis Anda (belum diverifikasi)"
+    },
+    "theme.clearExcerpts": {
+      "source": "Clear this theme’s excerpt selections",
+      "text": "Kosongkan pilihan kutipan tema ini"
+    },
+    "theme.add": {
+      "source": "Add theme",
+      "text": "Tambahkan tema"
+    },
+    "theme.unreadHeading": {
+      "source": "Included papers without usable retained excerpts",
+      "text": "Makalah yang disertakan tanpa kutipan tersimpan yang dapat digunakan"
+    },
+    "reading.prepare": {
+      "source": "Prepare reading request in a new tab",
+      "text": "Siapkan permintaan membaca di tab baru"
+    },
+    "reading.clear": {
+      "source": "Clear reading observations",
+      "text": "Hapus pengamatan pembacaan"
+    },
+    "reading.status": {
+      "source": "Your reading observation",
+      "text": "Pengamatan pembacaan Anda"
+    },
+    "reading.unknown": {
+      "source": "Reading status not recorded",
+      "text": "Status pembacaan belum dicatat"
+    },
+    "reading.unread": {
+      "source": "Not read",
+      "text": "Belum dibaca"
+    },
+    "reading.unavailable": {
+      "source": "Unavailable",
+      "text": "Tidak tersedia"
+    },
+    "reading.reason": {
+      "source": "Your reason (optional)",
+      "text": "Alasan Anda (opsional)"
+    },
+    "reading.unreadHeading": {
+      "source": "Unread papers (your observation)",
+      "text": "Makalah yang belum dibaca (pengamatan Anda)"
+    },
+    "reading.unavailableHeading": {
+      "source": "Unavailable papers (your observation)",
+      "text": "Makalah yang tidak tersedia (pengamatan Anda)"
+    },
+    "statement.heading": {
+      "source": "Statements in this theme",
+      "text": "Pernyataan dalam tema ini"
+    },
+    "statement.add": {
+      "source": "Add statement",
+      "text": "Tambahkan pernyataan"
+    },
+    "statement.remove": {
+      "source": "Remove this statement",
+      "text": "Hapus pernyataan ini"
+    },
+    "statement.kind": {
+      "source": "What this sentence does",
+      "text": "Fungsi kalimat ini"
+    },
+    "statement.kinds.contribution": {
+      "source": "Describes one paper’s contribution",
+      "text": "Menjelaskan kontribusi satu makalah"
+    },
+    "statement.kinds.agreement": {
+      "source": "States where papers agree",
+      "text": "Menyatakan kesepakatan antar makalah"
+    },
+    "statement.kinds.disagreement": {
+      "source": "States where papers disagree",
+      "text": "Menyatakan perbedaan pendapat antar makalah"
+    },
+    "statement.kinds.gap": {
+      "source": "States a gap",
+      "text": "Menyatakan kesenjangan"
+    },
+    "statement.text": {
+      "source": "Your sentence",
+      "text": "Kalimat Anda"
+    },
+    "statement.papers": {
+      "source": "Papers this sentence names",
+      "text": "Makalah yang disebut dalam kalimat ini"
+    },
+    "statement.excerpts": {
+      "source": "Retained excerpts this sentence relies on",
+      "text": "Kutipan tersimpan yang menjadi dasar kalimat ini"
+    },
+    "download.markdown": {
+      "source": "Download Markdown",
+      "text": "Unduh Markdown"
+    },
+    "download.latex": {
+      "source": "Download LaTeX",
+      "text": "Unduh LaTeX"
+    },
+    "download.bibtex": {
+      "source": "Download BibTeX",
+      "text": "Unduh BibTeX"
+    },
+    "download.ris": {
+      "source": "Download RIS",
+      "text": "Unduh RIS"
+    },
+    "page.introduction": {
+      "source": "Select exact claim spans, record your own assessments, and organise read excerpts into related-work themes.",
+      "text": "Pilih rentang teks klaim yang tepat, catat penilaian Anda sendiri, lalu susun kutipan yang sudah dibaca ke dalam tema penelitian terkait."
+    },
+    "page.noScript": {
+      "source": "Enable JavaScript for this local editor. No passage or report is uploaded automatically.",
+      "text": "Aktifkan JavaScript untuk editor lokal ini. Tidak ada teks atau laporan yang diunggah secara otomatis."
+    },
+    "workspace.includeFirst": {
+      "source": "Mark papers Include in the literature workspace before assembling this draft.",
+      "text": "Tandai makalah sebagai ‘Sertakan’ di ruang kerja literatur sebelum menyusun draf ini."
+    },
+    "workspace.changed": {
+      "source": "A selected excerpt or saved paper changed, or this draft exceeds its limit. Remove that selection or clear the draft; your edits remain below.",
+      "text": "Kutipan yang dipilih atau makalah tersimpan berubah, atau draf ini melampaui batasnya. Hapus pilihan tersebut atau kosongkan draf; suntingan Anda tetap ada di bawah."
+    },
+    "import.guidance": {
+      "source": "Use a report returned by the API/MCP with its retained citation and excerpt ledger. Bibliography alone cannot describe a paper. Imported bytes are your responsibility; this editor does not authenticate their origin.",
+      "text": "Gunakan laporan yang dikembalikan oleh API/MCP beserta catatan sitasi dan kutipan yang disimpan. Bibliografi saja tidak cukup untuk mendeskripsikan makalah. Byte yang diimpor menjadi tanggung jawab Anda; editor ini tidak mengautentikasi asalnya."
+    },
+    "import.success": {
+      "source": "Report imported locally. Matching excerpts are available for selection; the report origin and semantic support remain unverified.",
+      "text": "Laporan diimpor secara lokal. Kutipan yang cocok tersedia untuk dipilih; asal laporan dan dukungan maknanya tetap belum diverifikasi."
+    },
+    "import.refused": {
+      "source": "Report not imported. Use a unique retained report with id/queryId, subClaims, citations and evidence; check the 64 KiB draft limit. Your existing draft remains.",
+      "text": "Laporan tidak diimpor. Gunakan laporan tersimpan yang unik dengan id/queryId, subClaims, citations, dan evidence; periksa batas draf 64 KiB. Draf Anda yang ada tetap dipertahankan."
+    },
+    "claim.selectFirst": {
+      "source": "Select the exact claim text in your passage first.",
+      "text": "Pilih terlebih dahulu teks klaim yang tepat dalam teks Anda."
+    },
+    "claim.unavailableGuidance": {
+      "source": "An unavailable source is never reported as unsupported.",
+      "text": "Sumber yang tidak tersedia tidak pernah dilaporkan sebagai tidak mendukung klaim."
+    },
+    "theme.guidance": {
+      "source": "Group exact excerpts before writing. A statement about a paper is exported only with a citation and the retained excerpt you select for it; quotations and your free-form notes stay separate, and notes remain marked as unverified.",
+      "text": "Kelompokkan kutipan yang persis sebelum menulis. Pernyataan tentang makalah hanya diekspor bersama sitasi dan kutipan tersimpan yang Anda pilih untuknya; kutipan dan catatan bebas Anda tetap terpisah, dan catatan tetap ditandai belum diverifikasi."
+    },
+    "theme.assemblyRefused": {
+      "source": "Assembly refused. Select one to 24 retained excerpts for regeneration, or make room within the 16-theme and 64 KiB limits. Your edits remain.",
+      "text": "Penyusunan ditolak. Pilih satu hingga 24 kutipan tersimpan untuk membuat ulang, atau sediakan ruang dalam batas 16 tema dan 64 KiB. Suntingan Anda tetap dipertahankan."
+    },
+    "reading.guidance": {
+      "source": "Missing retained evidence does not tell us whether a paper was read. Record your observation for this exact saved record; it is not a Keryx access check. Unread and unavailable papers export in separate lists and are never described or cited.",
+      "text": "Tidak adanya bukti tersimpan tidak menunjukkan apakah sebuah makalah telah dibaca. Catat pengamatan Anda untuk rekaman tersimpan yang persis ini; ini bukan pemeriksaan akses oleh Keryx. Makalah yang belum dibaca dan yang tidak tersedia diekspor dalam daftar terpisah serta tidak pernah dideskripsikan atau disitasi."
+    },
+    "statement.guidance": {
+      "source": "Write one sentence at a time. Choose what it does, the papers it names and the retained excerpt it relies on. Keryx checks that each named paper has a selected excerpt; it does not check that the excerpt supports your wording.",
+      "text": "Tulis satu kalimat setiap kali. Pilih fungsinya, makalah yang disebut, dan kutipan tersimpan yang menjadi dasarnya. Keryx memeriksa bahwa setiap makalah yang disebut memiliki kutipan yang dipilih; Keryx tidak memeriksa apakah kutipan itu mendukung redaksi Anda."
+    },
+    "statement.paperUnread": {
+      "source": "{title} — no retained excerpt; cannot be described",
+      "text": "{title} — tidak ada kutipan tersimpan; tidak dapat dideskripsikan"
+    },
+    "statement.empty": {
+      "source": "Write the sentence to include it in the draft.",
+      "text": "Tulis kalimat agar disertakan dalam draf."
+    },
+    "statement.bound": {
+      "source": "Will be exported with its citation and excerpt links.",
+      "text": "Akan diekspor bersama sitasi dan tautan kutipannya."
+    },
+    "statement.authorGap": {
+      "source": "Will be exported as your own stated gap. It cites no paper and stays marked as unverified.",
+      "text": "Akan diekspor sebagai kesenjangan yang Anda nyatakan sendiri. Tidak menyitasi makalah apa pun dan tetap ditandai belum diverifikasi."
+    },
+    "statement.needsOnePaper": {
+      "source": "Not exported yet: a contribution names exactly one paper.",
+      "text": "Belum diekspor: kontribusi menyebut tepat satu makalah."
+    },
+    "statement.needsTwoPapers": {
+      "source": "Not exported yet: agreement and disagreement name at least two papers.",
+      "text": "Belum diekspor: kesepakatan dan perbedaan pendapat menyebut setidaknya dua makalah."
+    },
+    "statement.needsExcerpt": {
+      "source": "Not exported yet: select a retained excerpt for every paper this sentence names.",
+      "text": "Belum diekspor: pilih kutipan tersimpan untuk setiap makalah yang disebut dalam kalimat ini."
+    },
+    "download.refused": {
+      "source": "Export refused: an exact record or selected excerpt is unavailable or changed.",
+      "text": "Ekspor ditolak: rekaman yang persis atau kutipan yang dipilih tidak tersedia atau telah berubah."
+    },
+    "download.backupRefused": {
+      "source": "Backup refused: check the current exact record and excerpt selections.",
+      "text": "Pencadangan ditolak: periksa rekaman yang persis saat ini dan pilihan kutipan."
+    }
+  }
+}

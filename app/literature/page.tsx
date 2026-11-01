@@ -8,7 +8,7 @@ import { LiteratureWorkspace } from "@/components/keryx/literature-workspace";
 import { SponsoredTrialNotice } from "@/components/keryx/sponsored-trial-notice";
 import { evidenceDraftCopy as draftCopy } from "@/lib/research/evidence-draft-copy";
 import { draftCheckCopy as checkCopy } from "@/lib/research/draft-check-copy";
-import { UiElement, UiMessage } from "@/lib/i18n/ui-copy";
+import { UiElement, UiMessage, UiText } from "@/lib/i18n/ui-copy";
 
 
 
@@ -30,7 +30,7 @@ export default function LiteraturePage() {
       <UiElement as="nav" names={["aria-label"]} attributes={{ "aria-label": copy("literaturePage.workflowLabel"), "className": "mt-5 flex flex-wrap gap-3" }}>
         <Link prefetch={false} href="/sources?kind=paper#research-papers" className="inline-flex min-h-11 items-center border border-ink bg-seal px-4 py-2 font-mono text-xs text-paper"><UiMessage messageKey={"literaturePage.find"} /></Link>
         <Link href="#literature-project" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline"><UiMessage messageKey={"literaturePage.focus"} /></Link>
-        <Link prefetch={false} href="/literature/drafts" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{draftCopy.page.navigation}</Link>
+        <Link prefetch={false} href="/literature/drafts" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline"><UiText source={draftCopy.page.navigation} namespaces={["evidence-drafts"]} /></Link>
         <Link prefetch={false} href="/literature/check" className="inline-flex min-h-11 items-center px-2 py-2 font-mono text-xs text-seal underline">{checkCopy.page.navigation}</Link>
       </UiElement>
       <div className="mt-6"><SponsoredTrialNotice prepareQuestion /></div>
