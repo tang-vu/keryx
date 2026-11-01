@@ -45,7 +45,8 @@ describe("validated caller text at the web follow-up adapter", () => {
     await response.text();
     expect(mocks.runAgent).toHaveBeenCalledOnce();
     const input = mocks.runAgent.mock.calls[0][0] as RunInput;
-    expect(input.question).toMatch(/^Following on/);
+    expect(input.question.startsWith(question)).toBe(true);
+    expect(input.question).toContain("How does the older API work?");
     expect(input.originalQuestion).toBe(question);
     expect(input.originalQuestion).not.toContain("older API");
   });
