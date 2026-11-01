@@ -294,6 +294,41 @@ test("successful setup reports original official mirror identity only after veri
   assert.equal(files.get("/etc/apt/sources.list.d/ubuntu.sources"), original.sources + "By-Hash: force\n");
 });
 
+test("separate main and security stanzas can both use the hosted mirror file without losing metadata", () => {
+  const shared = splitSources.replace("http://security.ubuntu.com/ubuntu", "mirror+file:/etc/apt/apt-mirrors.txt");
+  for (const newline of ["\n", "\r\n"]) for (const reverse of [false, true]) {
+    const sources = (reverse ? shared.trimEnd().split("\n\n").reverse().join("\n\n") + "\n" : shared).replaceAll("\n", newline);
+    const { io, files, writes } = fixture(); files.set("/etc/apt/sources.list.d/ubuntu.sources", sources);
+    assert.equal(prepareBrowserApt(io).configurationReadbackVerified, true);
+    const secured = files.get("/etc/apt/sources.list.d/ubuntu.sources");
+    assert.equal(secured.replace(/^By-Hash: force\r?\n/gm, ""), sources);
+    assert.equal([...secured.matchAll(/^By-Hash: force\r?$/gm)].length, 2);
+    assert.equal([...secured.matchAll(/^URIs: mirror\+file:\/etc\/apt\/apt-mirrors\.txt\r?$/gm)].length, 2);
+    prepareBrowserApt(io);
+    assert.equal(files.get("/etc/apt/sources.list.d/ubuntu.sources"), secured);
+    assert.equal(writes.length, 5);
+    assert(!writes.slice(3).some(row => row.path.endsWith("ubuntu.sources")));
+  }
+});
+
+test("shared mirror stanzas still refuse missing, duplicate, mismatched or untrusted Ubuntu pockets before writes", () => {
+  const shared = splitSources.replace("http://security.ubuntu.com/ubuntu", "mirror+file:/etc/apt/apt-mirrors.txt");
+  for (const sources of [
+    shared.replace("Suites: noble-security", "Suites: noble noble-updates noble-backports"),
+    shared.replace("Suites: noble noble-updates noble-backports", "Suites: noble-security"),
+    shared.replace("Suites: noble-security", "Suites: noble-security noble-updates"),
+    shared.replace("noble-backports", "noble-security"),
+    shared + shared,
+    shared.replaceAll("ubuntu-archive-keyring.gpg", "other-keyring.gpg"),
+    shared + "Trusted: yes\n", shared + "By-Hash: no\n",
+    shared.replace("mirror+file:/etc/apt/apt-mirrors.txt", "https://example.test/ubuntu"),
+  ]) {
+    const { io, files, writes } = fixture(); files.set("/etc/apt/sources.list.d/ubuntu.sources", sources);
+    assert.throws(() => prepareBrowserApt(io), /refusing to replace mirrors/);
+    assert.equal(writes.length, 0);
+  }
+});
+
 test("actual CLI refuses ordinary local execution", () => {
   const result = spawnSync(process.execPath, [fileURLToPath(new URL("./ci-browser-apt.mjs", import.meta.url))], {
     env: { ...process.env, GITHUB_ACTIONS: "false" }, encoding: "utf8", timeout: 5000,

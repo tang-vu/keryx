@@ -85,13 +85,12 @@ function officialUbuntuSources(sources) {
         stanza.has("architectures") && !sameTokens(stanza.get("architectures"), ["amd64"]) &&
         !sameTokens(stanza.get("architectures"), ["amd64", "i386"])) return null;
   }
-  const main = stanzas.filter(stanza => stanza.get("uris") === `mirror+file:${mirrorPath}`);
-  const security = stanzas.filter(stanza => /^https?:\/\/security\.ubuntu\.com\/ubuntu\/?$/.test(stanza.get("uris") ?? ""));
-  if (main.length !== 1) return null;
-  if (stanzas.length === 1) {
-    if (security.length || !sameTokens(main[0].get("suites"), ["noble", "noble-updates", "noble-backports", "noble-security"])) return null;
-  } else if (security.length !== 1 || !sameTokens(main[0].get("suites"), ["noble", "noble-updates", "noble-backports"]) ||
-      security[0].get("suites") !== "noble-security") return null;
+  const mirrorUri = `mirror+file:${mirrorPath}`;
+  const mainSuites = ["noble", "noble-updates", "noble-backports", ...(stanzas.length === 1 ? ["noble-security"] : [])];
+  const main = stanzas.filter(stanza => stanza.get("uris") === mirrorUri && sameTokens(stanza.get("suites"), mainSuites));
+  const security = stanzas.filter(stanza => stanza.get("suites") === "noble-security" &&
+    (stanza.get("uris") === mirrorUri || /^https?:\/\/security\.ubuntu\.com\/ubuntu\/?$/.test(stanza.get("uris") ?? "")));
+  if (main.length !== 1 || security.length !== stanzas.length - 1) return null;
   const newline = sources.match(/\r?\n/)?.[0] ?? "\n";
   const immutable = blocks.map(block => {
     if (!block.fields.size || block.fields.has("by-hash")) return block.text;

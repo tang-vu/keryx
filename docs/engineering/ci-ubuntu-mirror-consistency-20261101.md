@@ -18,6 +18,13 @@ fixture alone does not establish that historical file's contents.
 Successful CLI setup reports the sanitized original mirror identities after every
 planned file has passed readback, so current hosted input variants can be verified.
 
+The first repair candidate also refused an ordinary two-stanza source file whose
+main and security pockets both use the hosted mirror list. Its new strict parser
+had omitted that previously supported shape. The corrected parser requires one
+exact main-suite group and one exact security pocket, accepting the shared mirror
+URI in both while preserving each stanza's metadata and every refusal gate.
+Current hosted execution is still required; the failed first candidate stays failed.
+
 Each validated Ubuntu source stanza receives `By-Hash: force`. This requests an
 index through its expected hash rather than a mutable index filename, avoiding
 cross-mirror index publication races when the requested immutable index exists.
