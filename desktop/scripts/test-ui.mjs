@@ -65,9 +65,14 @@ async function openPage(scenario, width, height) {
   await page.goto(`http://127.0.0.1:${address.port}/`);
   await page.locator(".loading-state").waitFor({ state: "hidden" });
   const fontsReady = await page.evaluate(async () => {
+    // ready covers currently needed layout fonts, not every declared face. A
+    // React screen can introduce another family after that promise resolves.
+    const names = ["Bodoni Moda", "Spectral", "Spline Sans Mono"];
+    const loaded = await Promise.all(names.map(name => document.fonts.load(`12px "${name}"`)));
     await document.fonts.ready;
-    return ["Bodoni Moda", "Spectral", "Spline Sans Mono"]
-      .every(name => document.fonts.check(`12px "${name}"`));
+    // An undeclared family may pass check via fallback; require actual faces.
+    return loaded.every(faces => faces.length > 0 && faces.every(face => face.status === "loaded"))
+      && names.every(name => document.fonts.check(`12px "${name}"`));
   });
   if (!fontsReady) throw Error(`Bundled Mint fonts failed to load in ${scenario}`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
