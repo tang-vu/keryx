@@ -11,9 +11,10 @@ import { EvidenceDraftText } from "@/components/keryx/evidence-draft-text";
 import { englishUiCopy, UiCopyContext } from "./ui-copy-context";
 import { evidenceDraftCopy as copy } from "../research/evidence-draft-copy";
 import type { UiLocale } from "./locales";
+import type { UiPreview } from "./ui-preview";
 
 function render(template: string | undefined, values: Record<string, ReactNode>, locale: UiLocale = "ar", source = copy.statement.paperUnread) {
-  const preview = template === undefined ? {} : { "evidence-drafts": { [source]: template } };
+  const preview: UiPreview = template === undefined ? {} : { "evidence-drafts": { [source]: template } };
   const markup = renderToStaticMarkup(createElement(UiCopyContext.Provider, { value: { ...englishUiCopy, locale, preview } }, createElement(EvidenceDraftText, { source, values })));
   const container = document.createElement("div"); container.innerHTML = markup;
   return { markup, container };
