@@ -40,7 +40,7 @@ import { privacyReadsActive, type RunVisibility } from "@/lib/run-privacy/contra
 import { privacyBinding } from "@/lib/run-privacy/auth";
 import { prepareAskPublication } from "@/lib/run-privacy/ask-publication";
 import { PublicationError } from "@/lib/run-privacy/publication";
-import { buildFollowUpQuestion } from "@/lib/agent/follow-up-question";
+import { resolveFollowUpQuestion, type FollowUpParent } from "@/lib/agent/follow-up-question";
 import { getGrant } from "@/lib/payments/session-grants";
 import { isPaymentRecord } from "@/lib/payments/payment-state";
 import { awaitSignature } from "@/lib/payments/pending-signatures";
@@ -51,7 +51,7 @@ import type {
 import type { QueryRun, ResearchMode, TraceStep } from "@/lib/types";
 import { newRunUsage } from "@/lib/research/usage-provenance";
 import { sponsoredUsageContext } from "@/lib/research/sponsored-usage";
-import { MAX_ASK_QUESTION_CHARS, parseAskQuestion, parseResearchMode } from "@/lib/ask-input";
+import { parseAskQuestion, parseResearchMode } from "@/lib/ask-input";
 import { recordActivationEvent } from "@/lib/activation";
 import { isAddress } from "viem";
 import { readRetainedMainnetSessionAuthority } from "@/lib/payments/retained-session-authority";
@@ -117,27 +117,30 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Follow-up: anchor the question to its parent so "how does that compare?" is answerable. Only
-  // the parent *question* is carried — never its answer, which sources were paid to produce. An
-  // unknown parent id degrades to a standalone ask rather than failing the dispatch.
+  // Keep validated caller text distinct from bounded, authorized question-only
+  // ancestry. Prior answers are never input; unknown immediate parents stay standalone.
   const asker = (await getSession())?.address?.toLowerCase();
   let parentId: string | undefined;
   let parentVisibility: RunVisibility | undefined;
   let askQuestion = question;
+  let readFollowUpParent: ((id: string) => Promise<FollowUpParent | null>) | undefined;
   const requestedParentId =
     typeof body.parentId === "string" && body.parentId.trim() && body.parentId.trim().length <= 256 ? body.parentId.trim() : undefined;
   if (requestedParentId) {
     const parentDb=await getDb();
-    const parent = await resolveDispatch(requestedParentId,parentDb,asker&&privacyReadsActive(parentDb) ? {wallet:asker,binding:privacyBinding()} : undefined);
+    const actor = asker && privacyReadsActive(parentDb) ? { wallet: asker, binding: privacyBinding() } : undefined;
+    const parent = await resolveDispatch(requestedParentId, parentDb, actor);
     if (parent) {
-      parentId = parent.run.id;
-      parentVisibility = parent.visibility;
-      // Historical rows predate the input bound. Keep one old dispatch from expanding a new model
-      // prompt without limit while preserving enough context for a useful follow-up.
-      askQuestion = buildFollowUpQuestion(
-        parent.run.question.slice(0, MAX_ASK_QUESTION_CHARS),
-        question,
-      );
+      const onlyQuestion = (value: NonNullable<typeof parent>): FollowUpParent => ({
+        id: value.run.id, question: value.run.question, parentId: value.run.parentId, visibility: value.visibility,
+      });
+      const initial = onlyQuestion(parent);
+      parentId = initial.id; parentVisibility = initial.visibility;
+      readFollowUpParent = async id => {
+        if (id === requestedParentId) return initial;
+        const ancestor = await resolveDispatch(id, parentDb, actor);
+        return ancestor ? onlyQuestion(ancestor) : null;
+      };
     }
   }
 
@@ -253,6 +256,21 @@ export async function POST(req: NextRequest) {
   const askBudget = useBrowserCoSign
     ? Math.min(coercedBudget, remainingGrantUsdc!, questionCapUsdc)
     : Math.min(coercedBudget, config.anonMaxBudget);
+
+  // The existing immediate-parent/publication guards run before admission.
+  // Additional ancestry reads require that admission and reuse the captured parent.
+  if (readFollowUpParent && requestedParentId) {
+    const context = await resolveFollowUpQuestion({ question, parentId: requestedParentId, read: readFollowUpParent, signal: req.signal });
+    parentId = context.parentId; askQuestion = context.researchQuestion;
+    if (context.parentVisibility !== parentVisibility) {
+      try { publication = await prepareAskPublication(req, body.visibility, asker, context.parentVisibility); }
+      catch (error) {
+        return Response.json({ error: error instanceof PublicationError ? error.code : "visibility_unavailable",
+          message: error instanceof PublicationError ? error.message : "Question visibility is unavailable. Please try again." },
+        { status: error instanceof PublicationError ? error.status : 503, headers: { "Cache-Control": "private, no-store", "Vary": "Cookie, X-Keryx-Expected-Wallet" } });
+      }
+    }
+  }
 
   const isBot = !!config.botKey && req.nextUrl.searchParams.get("bot") === config.botKey;
   const queryId = crypto.randomUUID();
@@ -393,6 +411,9 @@ export async function POST(req: NextRequest) {
         // If we broke early due to abort, skip saving — the run is incomplete.
         if (res.done) {
           const run = res.value as QueryRun;
+          // The agent reasons over askQuestion; history, returned reports and the
+          // next follow-up retain only this request's validated caller question.
+          run.question = question;
           let isReturning = false;
           if (!isBot && asker) {
             try {
@@ -435,7 +456,7 @@ export async function POST(req: NextRequest) {
         // history for an arbitrary later-stage failure, cancellation or payment boundary.
         if (planningFailure && deps && !agentAbort.signal.aborted && !retainPaymentHistory && planningTrace.every(step => step.phase === "decompose")) {
           const provenance = { version: 1 as const, surface: "web" as const, ownershipMethod: asker ? "session" as const : "unknown" as const };
-          const failed: QueryRun = { id: queryId, question: askQuestion, budget: askBudget, researchMode,
+          const failed: QueryRun = { id: queryId, question, budget: askBudget, researchMode,
             engine: effectiveEngineName(deps.engine), planningFailure, provenance,
             usage: newRunUsage({ asker, provenance, usageContext }, config.profile.networkId, config.devWallets ?? []),
             reasoningAttempts: reasoningAttempts(deps.engine), llmUsage: reasoningUsage(deps.engine), llmCalls: reasoningCalls(deps.engine),
