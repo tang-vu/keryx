@@ -10,6 +10,8 @@ import { installationLinks, setupExamples } from "../lib/public-installation";
 
 /** Integration setup checks shared by compiled pages and the explicitly mocked source fixture. */
 export async function checkIntegrationGuide(page: Page, locale: string, width: number, entries: Readonly<Record<string, { text: string }>>, output?: string) {
+  // Spanish and Portuguese share this heading; text alone cannot await a locale change.
+  await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
   const guide = setupCopy.integrations;
   const translated = (key: string, original: string) => entries[key]?.text ?? original;
   const examples = [
