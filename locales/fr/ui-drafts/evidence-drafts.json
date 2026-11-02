@@ -1,0 +1,312 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-drafts.json",
+  "sourceSha256": "b5149b6454955d1a1070de1a860625a932863e4ea739f5d8753a878126864df5",
+  "entries": {
+    "page.back": {
+      "source": "Back to your saved review",
+      "text": "Revenir à votre revue enregistrée"
+    },
+    "page.heading": {
+      "source": "Build a draft from retained excerpts.",
+      "text": "Créez un brouillon à partir d’extraits conservés."
+    },
+    "page.navigation": {
+      "source": "Build a retained-evidence draft",
+      "text": "Créer un brouillon à partir de preuves conservées"
+    },
+    "workspace.loading": {
+      "source": "Loading saved review…",
+      "text": "Chargement de la revue enregistrée…"
+    },
+    "workspace.clear": {
+      "source": "Clear this tab’s draft",
+      "text": "Effacer le brouillon de cet onglet"
+    },
+    "workspace.cleared": {
+      "source": "Draft cleared from this tab. Your saved paper list remains.",
+      "text": "Le brouillon a été effacé de cet onglet. Votre liste d’articles enregistrés est conservée."
+    },
+    "import.label": {
+      "source": "Retained Keryx report JSON",
+      "text": "JSON du rapport Keryx conservé"
+    },
+    "import.button": {
+      "source": "Import report in this tab",
+      "text": "Importer le rapport dans cet onglet"
+    },
+    "import.summary": {
+      "source": "Reports: {reports} · matching retained excerpts: {excerpts}",
+      "text": "Rapports : {reports} · extraits conservés correspondants : {excerpts}"
+    },
+    "claim.label": {
+      "source": "Claim assessment",
+      "text": "Évaluation d’affirmation"
+    },
+    "claim.passage": {
+      "source": "Your original passage",
+      "text": "Votre passage original"
+    },
+    "claim.add": {
+      "source": "Add selected claim",
+      "text": "Ajouter l’affirmation sélectionnée"
+    },
+    "claim.reviewer": {
+      "source": "Your name for an optional assessment",
+      "text": "Votre nom pour une évaluation facultative"
+    },
+    "claim.paper": {
+      "source": "Exact cited paper",
+      "text": "L’article cité exact"
+    },
+    "claim.unavailable": {
+      "source": "Retained source evidence unavailable",
+      "text": "Les preuves conservées de la source sont indisponibles"
+    },
+    "claim.assessed": {
+      "source": "Your assessment: {assessment}",
+      "text": "Votre évaluation : {assessment}"
+    },
+    "claim.recordAssessment": {
+      "source": "Record my {assessment} assessment",
+      "text": "Consigner mon évaluation : {assessment}"
+    },
+    "claim.excerptVersion": {
+      "source": "{version} · report {report}",
+      "text": "{version} · rapport {report}"
+    },
+    "claim.verdicts.supported": {
+      "source": "supported",
+      "text": "étayé"
+    },
+    "claim.verdicts.partly-supported": {
+      "source": "partly supported",
+      "text": "partiellement étayé"
+    },
+    "claim.verdicts.not-found": {
+      "source": "not found",
+      "text": "non trouvé"
+    },
+    "theme.label": {
+      "source": "Related-work themes",
+      "text": "Thèmes des travaux connexes"
+    },
+    "theme.heading": {
+      "source": "Related-work evidence themes",
+      "text": "Thèmes de preuves pour les travaux connexes"
+    },
+    "theme.assemble": {
+      "source": "Assemble retained contributions",
+      "text": "Assembler les contributions conservées"
+    },
+    "theme.regenerate": {
+      "source": "Regenerate this theme from selected excerpts",
+      "text": "Régénérer ce thème à partir des extraits sélectionnés"
+    },
+    "theme.title": {
+      "source": "Theme title",
+      "text": "Titre du thème"
+    },
+    "theme.notes": {
+      "source": "Your synthesis notes (unverified)",
+      "text": "Vos notes de synthèse (non vérifiées)"
+    },
+    "theme.clearExcerpts": {
+      "source": "Clear this theme’s excerpt selections",
+      "text": "Effacer les sélections d’extraits de ce thème"
+    },
+    "theme.add": {
+      "source": "Add theme",
+      "text": "Ajouter un thème"
+    },
+    "theme.unreadHeading": {
+      "source": "Included papers without usable retained excerpts",
+      "text": "Articles inclus sans extraits conservés utilisables"
+    },
+    "reading.prepare": {
+      "source": "Prepare reading request in a new tab",
+      "text": "Préparer une demande de lecture dans un nouvel onglet"
+    },
+    "reading.clear": {
+      "source": "Clear reading observations",
+      "text": "Effacer les observations de lecture"
+    },
+    "reading.status": {
+      "source": "Your reading observation",
+      "text": "Votre observation de lecture"
+    },
+    "reading.unknown": {
+      "source": "Reading status not recorded",
+      "text": "État de lecture non consigné"
+    },
+    "reading.unread": {
+      "source": "Not read",
+      "text": "Non lu"
+    },
+    "reading.unavailable": {
+      "source": "Unavailable",
+      "text": "Indisponible"
+    },
+    "reading.reason": {
+      "source": "Your reason (optional)",
+      "text": "Votre raison (facultatif)"
+    },
+    "reading.unreadHeading": {
+      "source": "Unread papers (your observation)",
+      "text": "Articles non lus (votre observation)"
+    },
+    "reading.unavailableHeading": {
+      "source": "Unavailable papers (your observation)",
+      "text": "Articles indisponibles (votre observation)"
+    },
+    "statement.heading": {
+      "source": "Statements in this theme",
+      "text": "Énoncés de ce thème"
+    },
+    "statement.add": {
+      "source": "Add statement",
+      "text": "Ajouter un énoncé"
+    },
+    "statement.remove": {
+      "source": "Remove this statement",
+      "text": "Retirer cet énoncé"
+    },
+    "statement.kind": {
+      "source": "What this sentence does",
+      "text": "Rôle de cette phrase"
+    },
+    "statement.kinds.contribution": {
+      "source": "Describes one paper’s contribution",
+      "text": "Décrit la contribution d’un article"
+    },
+    "statement.kinds.agreement": {
+      "source": "States where papers agree",
+      "text": "Indique les points d’accord entre articles"
+    },
+    "statement.kinds.disagreement": {
+      "source": "States where papers disagree",
+      "text": "Indique les points de désaccord entre articles"
+    },
+    "statement.kinds.gap": {
+      "source": "States a gap",
+      "text": "Formule une lacune"
+    },
+    "statement.text": {
+      "source": "Your sentence",
+      "text": "Votre phrase"
+    },
+    "statement.papers": {
+      "source": "Papers this sentence names",
+      "text": "Articles nommés dans cette phrase"
+    },
+    "statement.excerpts": {
+      "source": "Retained excerpts this sentence relies on",
+      "text": "Extraits conservés sur lesquels s’appuie cette phrase"
+    },
+    "download.markdown": {
+      "source": "Download Markdown",
+      "text": "Télécharger Markdown"
+    },
+    "download.latex": {
+      "source": "Download LaTeX",
+      "text": "Télécharger LaTeX"
+    },
+    "download.bibtex": {
+      "source": "Download BibTeX",
+      "text": "Télécharger BibTeX"
+    },
+    "download.ris": {
+      "source": "Download RIS",
+      "text": "Télécharger RIS"
+    },
+    "page.introduction": {
+      "source": "Select exact claim spans, record your own assessments, and organise read excerpts into related-work themes.",
+      "text": "Sélectionnez les passages exacts des affirmations, consignez vos propres évaluations et organisez les extraits lus par thèmes de travaux connexes."
+    },
+    "page.noScript": {
+      "source": "Enable JavaScript for this local editor. No passage or report is uploaded automatically.",
+      "text": "Activez JavaScript pour cet éditeur local. Aucun passage ni rapport n’est téléversé automatiquement."
+    },
+    "workspace.includeFirst": {
+      "source": "Mark papers Include in the literature workspace before assembling this draft.",
+      "text": "Marquez les articles « Inclure » dans l’espace de revue de littérature avant d’assembler ce brouillon."
+    },
+    "workspace.changed": {
+      "source": "A selected excerpt or saved paper changed, or this draft exceeds its limit. Remove that selection or clear the draft; your edits remain below.",
+      "text": "Un extrait sélectionné ou un article enregistré a changé, ou ce brouillon dépasse sa limite. Retirez cette sélection ou effacez le brouillon ; vos modifications restent ci-dessous."
+    },
+    "import.guidance": {
+      "source": "Use a report returned by the API/MCP with its retained citation and excerpt ledger. Bibliography alone cannot describe a paper. Imported bytes are your responsibility; this editor does not authenticate their origin.",
+      "text": "Utilisez un rapport renvoyé par l’API/MCP avec son registre conservé de citations et d’extraits. La bibliographie seule ne permet pas de décrire un article. Les octets importés sont sous votre responsabilité ; cet éditeur n’authentifie pas leur origine."
+    },
+    "import.success": {
+      "source": "Report imported locally. Matching excerpts are available for selection; the report origin and semantic support remain unverified.",
+      "text": "Rapport importé localement. Les extraits correspondants peuvent être sélectionnés ; l’origine du rapport et l’appui sémantique restent non vérifiés."
+    },
+    "import.refused": {
+      "source": "Report not imported. Use a unique retained report with id/queryId, subClaims, citations and evidence; check the 64 KiB draft limit. Your existing draft remains.",
+      "text": "Rapport non importé. Utilisez un rapport conservé unique avec id/queryId, subClaims, citations et evidence ; vérifiez la limite de 64 KiB du brouillon. Votre brouillon actuel est conservé."
+    },
+    "claim.selectFirst": {
+      "source": "Select the exact claim text in your passage first.",
+      "text": "Sélectionnez d’abord le texte exact de l’affirmation dans votre passage."
+    },
+    "claim.unavailableGuidance": {
+      "source": "An unavailable source is never reported as unsupported.",
+      "text": "Une source indisponible n’est jamais présentée comme ne soutenant pas l’affirmation."
+    },
+    "theme.guidance": {
+      "source": "Group exact excerpts before writing. A statement about a paper is exported only with a citation and the retained excerpt you select for it; quotations and your free-form notes stay separate, and notes remain marked as unverified.",
+      "text": "Regroupez les extraits exacts avant d’écrire. Un énoncé sur un article n’est exporté qu’avec une référence à l’article et l’extrait conservé que vous sélectionnez pour lui ; les citations textuelles et vos notes libres restent séparées, et les notes restent signalées comme non vérifiées."
+    },
+    "theme.assemblyRefused": {
+      "source": "Assembly refused. Select one to 24 retained excerpts for regeneration, or make room within the 16-theme and 64 KiB limits. Your edits remain.",
+      "text": "Assemblage refusé. Sélectionnez entre un et 24 extraits conservés pour régénérer, ou libérez de la place dans les limites de 16 thèmes et 64 KiB. Vos modifications sont conservées."
+    },
+    "reading.guidance": {
+      "source": "Missing retained evidence does not tell us whether a paper was read. Record your observation for this exact saved record; it is not a Keryx access check. Unread and unavailable papers export in separate lists and are never described or cited.",
+      "text": "L’absence de preuves conservées ne permet pas de savoir si un article a été lu. Consignez votre observation pour cet enregistrement sauvegardé précis ; il ne s’agit pas d’un contrôle d’accès de Keryx. Les articles non lus et indisponibles sont exportés dans des listes séparées et ne sont jamais décrits ni cités."
+    },
+    "statement.guidance": {
+      "source": "Write one sentence at a time. Choose what it does, the papers it names and the retained excerpt it relies on. Keryx checks that each named paper has a selected excerpt; it does not check that the excerpt supports your wording.",
+      "text": "Écrivez une phrase à la fois. Choisissez son rôle, les articles qu’elle nomme et l’extrait conservé sur lequel elle s’appuie. Keryx vérifie qu’un extrait est sélectionné pour chaque article nommé ; il ne vérifie pas que l’extrait étaye votre formulation."
+    },
+    "statement.paperUnread": {
+      "source": "{title} — no retained excerpt; cannot be described",
+      "text": "{title} — aucun extrait conservé ; description impossible"
+    },
+    "statement.empty": {
+      "source": "Write the sentence to include it in the draft.",
+      "text": "Écrivez la phrase pour l’inclure dans le brouillon."
+    },
+    "statement.bound": {
+      "source": "Will be exported with its citation and excerpt links.",
+      "text": "Sera exporté avec sa référence et les liens vers ses extraits."
+    },
+    "statement.authorGap": {
+      "source": "Will be exported as your own stated gap. It cites no paper and stays marked as unverified.",
+      "text": "Sera exporté comme une lacune que vous avez formulée. Aucun article n’est cité et la mention non vérifié est conservée."
+    },
+    "statement.needsOnePaper": {
+      "source": "Not exported yet: a contribution names exactly one paper.",
+      "text": "Pas encore exporté : une contribution nomme exactement un article."
+    },
+    "statement.needsTwoPapers": {
+      "source": "Not exported yet: agreement and disagreement name at least two papers.",
+      "text": "Pas encore exporté : les accords et désaccords nomment au moins deux articles."
+    },
+    "statement.needsExcerpt": {
+      "source": "Not exported yet: select a retained excerpt for every paper this sentence names.",
+      "text": "Pas encore exporté : sélectionnez un extrait conservé pour chaque article nommé dans cette phrase."
+    },
+    "download.refused": {
+      "source": "Export refused: an exact record or selected excerpt is unavailable or changed.",
+      "text": "Export refusé : un enregistrement exact ou un extrait sélectionné est indisponible ou a changé."
+    },
+    "download.backupRefused": {
+      "source": "Backup refused: check the current exact record and excerpt selections.",
+      "text": "Sauvegarde refusée : vérifiez l’enregistrement exact actuel et les sélections d’extraits."
+    }
+  }
+}

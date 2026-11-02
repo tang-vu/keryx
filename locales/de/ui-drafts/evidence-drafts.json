@@ -1,0 +1,312 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-drafts.json",
+  "sourceSha256": "b5149b6454955d1a1070de1a860625a932863e4ea739f5d8753a878126864df5",
+  "entries": {
+    "page.back": {
+      "source": "Back to your saved review",
+      "text": "Zur gespeicherten Übersicht zurück"
+    },
+    "page.heading": {
+      "source": "Build a draft from retained excerpts.",
+      "text": "Einen Entwurf aus aufbewahrten Auszügen erstellen."
+    },
+    "page.navigation": {
+      "source": "Build a retained-evidence draft",
+      "text": "Entwurf mit aufbewahrten Belegen erstellen"
+    },
+    "workspace.loading": {
+      "source": "Loading saved review…",
+      "text": "Gespeicherte Übersicht wird geladen…"
+    },
+    "workspace.clear": {
+      "source": "Clear this tab’s draft",
+      "text": "Entwurf in diesem Tab leeren"
+    },
+    "workspace.cleared": {
+      "source": "Draft cleared from this tab. Your saved paper list remains.",
+      "text": "Der Entwurf in diesem Tab wurde geleert. Die gespeicherte Artikelliste bleibt erhalten."
+    },
+    "import.label": {
+      "source": "Retained Keryx report JSON",
+      "text": "JSON des aufbewahrten Keryx-Berichts"
+    },
+    "import.button": {
+      "source": "Import report in this tab",
+      "text": "Bericht in diesen Tab importieren"
+    },
+    "import.summary": {
+      "source": "Reports: {reports} · matching retained excerpts: {excerpts}",
+      "text": "Berichte: {reports} · passende aufbewahrte Auszüge: {excerpts}"
+    },
+    "claim.label": {
+      "source": "Claim assessment",
+      "text": "Bewertung einer Aussage"
+    },
+    "claim.passage": {
+      "source": "Your original passage",
+      "text": "Ihre ursprüngliche Textpassage"
+    },
+    "claim.add": {
+      "source": "Add selected claim",
+      "text": "Ausgewählte Aussage hinzufügen"
+    },
+    "claim.reviewer": {
+      "source": "Your name for an optional assessment",
+      "text": "Ihr Name für eine optionale Bewertung"
+    },
+    "claim.paper": {
+      "source": "Exact cited paper",
+      "text": "Genau die zitierte Arbeit"
+    },
+    "claim.unavailable": {
+      "source": "Retained source evidence unavailable",
+      "text": "Aufbewahrte Belege der Quelle sind nicht verfügbar"
+    },
+    "claim.assessed": {
+      "source": "Your assessment: {assessment}",
+      "text": "Ihre Bewertung: {assessment}"
+    },
+    "claim.recordAssessment": {
+      "source": "Record my {assessment} assessment",
+      "text": "Meine Bewertung festhalten: {assessment}"
+    },
+    "claim.excerptVersion": {
+      "source": "{version} · report {report}",
+      "text": "{version} · Bericht {report}"
+    },
+    "claim.verdicts.supported": {
+      "source": "supported",
+      "text": "gestützt"
+    },
+    "claim.verdicts.partly-supported": {
+      "source": "partly supported",
+      "text": "teilweise gestützt"
+    },
+    "claim.verdicts.not-found": {
+      "source": "not found",
+      "text": "nicht gefunden"
+    },
+    "theme.label": {
+      "source": "Related-work themes",
+      "text": "Themen verwandter Arbeiten"
+    },
+    "theme.heading": {
+      "source": "Related-work evidence themes",
+      "text": "Themen mit Belegen zu verwandten Arbeiten"
+    },
+    "theme.assemble": {
+      "source": "Assemble retained contributions",
+      "text": "Aufbewahrte Beiträge zusammenstellen"
+    },
+    "theme.regenerate": {
+      "source": "Regenerate this theme from selected excerpts",
+      "text": "Dieses Thema aus den ausgewählten Auszügen neu erstellen"
+    },
+    "theme.title": {
+      "source": "Theme title",
+      "text": "Titel des Themas"
+    },
+    "theme.notes": {
+      "source": "Your synthesis notes (unverified)",
+      "text": "Ihre Synthesenotizen (ungeprüft)"
+    },
+    "theme.clearExcerpts": {
+      "source": "Clear this theme’s excerpt selections",
+      "text": "Auszugsauswahl dieses Themas leeren"
+    },
+    "theme.add": {
+      "source": "Add theme",
+      "text": "Thema hinzufügen"
+    },
+    "theme.unreadHeading": {
+      "source": "Included papers without usable retained excerpts",
+      "text": "Einbezogene Arbeiten ohne nutzbare aufbewahrte Auszüge"
+    },
+    "reading.prepare": {
+      "source": "Prepare reading request in a new tab",
+      "text": "Leseanfrage in einem neuen Tab vorbereiten"
+    },
+    "reading.clear": {
+      "source": "Clear reading observations",
+      "text": "Lesebeobachtungen leeren"
+    },
+    "reading.status": {
+      "source": "Your reading observation",
+      "text": "Ihre Lesebeobachtung"
+    },
+    "reading.unknown": {
+      "source": "Reading status not recorded",
+      "text": "Lesestatus nicht erfasst"
+    },
+    "reading.unread": {
+      "source": "Not read",
+      "text": "Nicht gelesen"
+    },
+    "reading.unavailable": {
+      "source": "Unavailable",
+      "text": "Nicht verfügbar"
+    },
+    "reading.reason": {
+      "source": "Your reason (optional)",
+      "text": "Ihre Begründung (optional)"
+    },
+    "reading.unreadHeading": {
+      "source": "Unread papers (your observation)",
+      "text": "Ungelesene Arbeiten (Ihre Beobachtung)"
+    },
+    "reading.unavailableHeading": {
+      "source": "Unavailable papers (your observation)",
+      "text": "Nicht verfügbare Arbeiten (Ihre Beobachtung)"
+    },
+    "statement.heading": {
+      "source": "Statements in this theme",
+      "text": "Aussagen in diesem Thema"
+    },
+    "statement.add": {
+      "source": "Add statement",
+      "text": "Aussage hinzufügen"
+    },
+    "statement.remove": {
+      "source": "Remove this statement",
+      "text": "Diese Aussage entfernen"
+    },
+    "statement.kind": {
+      "source": "What this sentence does",
+      "text": "Funktion dieses Satzes"
+    },
+    "statement.kinds.contribution": {
+      "source": "Describes one paper’s contribution",
+      "text": "Beschreibt den Beitrag einer Arbeit"
+    },
+    "statement.kinds.agreement": {
+      "source": "States where papers agree",
+      "text": "Benennt Übereinstimmungen zwischen Arbeiten"
+    },
+    "statement.kinds.disagreement": {
+      "source": "States where papers disagree",
+      "text": "Benennt Punkte, in denen Arbeiten nicht übereinstimmen"
+    },
+    "statement.kinds.gap": {
+      "source": "States a gap",
+      "text": "Benennt eine Lücke"
+    },
+    "statement.text": {
+      "source": "Your sentence",
+      "text": "Ihr Satz"
+    },
+    "statement.papers": {
+      "source": "Papers this sentence names",
+      "text": "In diesem Satz genannte Arbeiten"
+    },
+    "statement.excerpts": {
+      "source": "Retained excerpts this sentence relies on",
+      "text": "Aufbewahrte Auszüge, auf die sich der Satz stützt"
+    },
+    "download.markdown": {
+      "source": "Download Markdown",
+      "text": "Markdown herunterladen"
+    },
+    "download.latex": {
+      "source": "Download LaTeX",
+      "text": "LaTeX herunterladen"
+    },
+    "download.bibtex": {
+      "source": "Download BibTeX",
+      "text": "BibTeX herunterladen"
+    },
+    "download.ris": {
+      "source": "Download RIS",
+      "text": "RIS herunterladen"
+    },
+    "page.introduction": {
+      "source": "Select exact claim spans, record your own assessments, and organise read excerpts into related-work themes.",
+      "text": "Wählen Sie die genauen Textstellen der Aussagen, halten Sie Ihre eigenen Bewertungen fest und ordnen Sie gelesene Auszüge nach Themen verwandter Arbeiten."
+    },
+    "page.noScript": {
+      "source": "Enable JavaScript for this local editor. No passage or report is uploaded automatically.",
+      "text": "Aktivieren Sie JavaScript für diesen lokalen Editor. Textpassagen und Berichte werden nicht automatisch hochgeladen."
+    },
+    "workspace.includeFirst": {
+      "source": "Mark papers Include in the literature workspace before assembling this draft.",
+      "text": "Markieren Sie Arbeiten im Literaturbereich als „Aufnehmen“, bevor Sie diesen Entwurf zusammenstellen."
+    },
+    "workspace.changed": {
+      "source": "A selected excerpt or saved paper changed, or this draft exceeds its limit. Remove that selection or clear the draft; your edits remain below.",
+      "text": "Ein ausgewählter Auszug oder eine gespeicherte Arbeit hat sich geändert, oder der Entwurf überschreitet sein Limit. Entfernen Sie diese Auswahl oder leeren Sie den Entwurf; Ihre Änderungen bleiben unten erhalten."
+    },
+    "import.guidance": {
+      "source": "Use a report returned by the API/MCP with its retained citation and excerpt ledger. Bibliography alone cannot describe a paper. Imported bytes are your responsibility; this editor does not authenticate their origin.",
+      "text": "Verwenden Sie einen von API/MCP zurückgegebenen Bericht mit seinem aufbewahrten Zitier- und Auszugsprotokoll. Bibliografische Angaben allein erlauben keine Beschreibung einer Arbeit. Für die importierten Bytes sind Sie verantwortlich; der Editor bestätigt deren Herkunft nicht."
+    },
+    "import.success": {
+      "source": "Report imported locally. Matching excerpts are available for selection; the report origin and semantic support remain unverified.",
+      "text": "Bericht lokal importiert. Passende Auszüge können ausgewählt werden; die Herkunft des Berichts und die inhaltliche Stützung bleiben ungeprüft."
+    },
+    "import.refused": {
+      "source": "Report not imported. Use a unique retained report with id/queryId, subClaims, citations and evidence; check the 64 KiB draft limit. Your existing draft remains.",
+      "text": "Bericht nicht importiert. Verwenden Sie einen aufbewahrten Bericht mit eindeutiger Kennung und id/queryId, subClaims, citations sowie evidence; prüfen Sie das Entwurfslimit von 64 KiB. Ihr bisheriger Entwurf bleibt erhalten."
+    },
+    "claim.selectFirst": {
+      "source": "Select the exact claim text in your passage first.",
+      "text": "Wählen Sie zuerst den genauen Wortlaut der Aussage in Ihrer Textpassage aus."
+    },
+    "claim.unavailableGuidance": {
+      "source": "An unavailable source is never reported as unsupported.",
+      "text": "Eine nicht verfügbare Quelle wird nie als Quelle dargestellt, die die Aussage nicht stützt."
+    },
+    "theme.guidance": {
+      "source": "Group exact excerpts before writing. A statement about a paper is exported only with a citation and the retained excerpt you select for it; quotations and your free-form notes stay separate, and notes remain marked as unverified.",
+      "text": "Gruppieren Sie vor dem Schreiben die genauen Auszüge. Eine Aussage über eine Arbeit wird nur mit einer Quellenangabe und dem dafür ausgewählten aufbewahrten Auszug exportiert; Zitate und Ihre freien Notizen bleiben getrennt, und die Notizen bleiben als ungeprüft gekennzeichnet."
+    },
+    "theme.assemblyRefused": {
+      "source": "Assembly refused. Select one to 24 retained excerpts for regeneration, or make room within the 16-theme and 64 KiB limits. Your edits remain.",
+      "text": "Zusammenstellung abgelehnt. Wählen Sie zur Neuerstellung mindestens einen und höchstens 24 aufbewahrte Auszüge oder schaffen Sie Platz innerhalb der Grenzen von 16 Themen und 64 KiB. Ihre Änderungen bleiben erhalten."
+    },
+    "reading.guidance": {
+      "source": "Missing retained evidence does not tell us whether a paper was read. Record your observation for this exact saved record; it is not a Keryx access check. Unread and unavailable papers export in separate lists and are never described or cited.",
+      "text": "Fehlende aufbewahrte Belege sagen nicht aus, ob eine Arbeit gelesen wurde. Erfassen Sie Ihre Beobachtung für genau diesen gespeicherten Datensatz; dies ist keine Zugriffsprüfung durch Keryx. Ungelesene und nicht verfügbare Arbeiten werden in getrennten Listen exportiert und nie beschrieben oder zitiert."
+    },
+    "statement.guidance": {
+      "source": "Write one sentence at a time. Choose what it does, the papers it names and the retained excerpt it relies on. Keryx checks that each named paper has a selected excerpt; it does not check that the excerpt supports your wording.",
+      "text": "Schreiben Sie jeweils einen Satz. Wählen Sie seine Funktion, die genannten Arbeiten und den aufbewahrten Auszug, auf den er sich stützt. Keryx prüft, ob für jede genannte Arbeit ein Auszug ausgewählt ist; es prüft nicht, ob dieser Auszug Ihre Formulierung inhaltlich stützt."
+    },
+    "statement.paperUnread": {
+      "source": "{title} — no retained excerpt; cannot be described",
+      "text": "{title} — kein aufbewahrter Auszug; kann nicht beschrieben werden"
+    },
+    "statement.empty": {
+      "source": "Write the sentence to include it in the draft.",
+      "text": "Schreiben Sie den Satz, um ihn in den Entwurf aufzunehmen."
+    },
+    "statement.bound": {
+      "source": "Will be exported with its citation and excerpt links.",
+      "text": "Wird mit Quellenangabe und Auszugsverknüpfungen exportiert."
+    },
+    "statement.authorGap": {
+      "source": "Will be exported as your own stated gap. It cites no paper and stays marked as unverified.",
+      "text": "Wird als von Ihnen selbst benannte Lücke exportiert. Sie zitiert keine Arbeit und bleibt als ungeprüft gekennzeichnet."
+    },
+    "statement.needsOnePaper": {
+      "source": "Not exported yet: a contribution names exactly one paper.",
+      "text": "Noch nicht exportiert: Ein Beitrag nennt genau eine Arbeit."
+    },
+    "statement.needsTwoPapers": {
+      "source": "Not exported yet: agreement and disagreement name at least two papers.",
+      "text": "Noch nicht exportiert: Bei Übereinstimmung oder Widerspruch müssen mindestens zwei Arbeiten genannt sein."
+    },
+    "statement.needsExcerpt": {
+      "source": "Not exported yet: select a retained excerpt for every paper this sentence names.",
+      "text": "Noch nicht exportiert: Wählen Sie für jede in diesem Satz genannte Arbeit einen aufbewahrten Auszug."
+    },
+    "download.refused": {
+      "source": "Export refused: an exact record or selected excerpt is unavailable or changed.",
+      "text": "Export abgelehnt: Ein genauer Datensatz oder ein ausgewählter Auszug ist nicht verfügbar oder wurde geändert."
+    },
+    "download.backupRefused": {
+      "source": "Backup refused: check the current exact record and excerpt selections.",
+      "text": "Sicherung abgelehnt: Prüfen Sie den aktuellen genauen Datensatz und die Auszugsauswahl."
+    }
+  }
+}

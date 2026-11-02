@@ -1,18 +1,20 @@
 "use client";
 
-import { Fragment, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useContext, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { assembleEvidenceDraftRequest, buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, EVIDENCE_DRAFT_NOTICE, MAX_EVIDENCE_DRAFT_BYTES,
   type EvidenceDraftRequest } from "@/lib/research/evidence-draft";
 import { exportEvidenceDraft } from "@/lib/research/evidence-draft-export";
-import { evidenceDraftCopy as copy, evidenceDraftCopyText as copyText } from "@/lib/research/evidence-draft-copy";
+import { evidenceDraftCopy as copy } from "@/lib/research/evidence-draft-copy";
 import { RELATED_WORK_STATEMENT_KINDS } from "@/lib/research/related-work-statements";
 import { relatedWorkReadingDraft } from "@/lib/research/related-work-generation";
 import { appendCompletedEvidenceDraftImport } from "@/components/keryx/completed-evidence-draft-import";
 import { CompletedEvidenceDraftSelector } from "@/components/keryx/completed-evidence-draft-selector";
 import { completedEvidenceDraftSelectionCopy as completedCopy } from "@/locales/en/completed-evidence-draft-selection";
-import { useUiCopy } from "@/lib/i18n/ui-copy";
+import { UiText, useUiCopy } from "@/lib/i18n/ui-copy";
+import { EvidenceDraftText } from "./evidence-draft-text";
+import { UiCopyContext } from "@/lib/i18n/ui-copy-context";
 import { EvidenceDraftRestore } from "./evidence-draft-restore";
 import { PdfReadingScope } from "./pdf-reading-scope";
 import { evidenceDraftEditingCopy as editingEnglish } from "@/locales/en/evidence-draft-editing";
@@ -21,7 +23,10 @@ const uiEnglish_completedCopy = completedCopy;
 
 
 const field = "mt-2 block w-full min-w-0 rounded-none border border-line bg-paper px-3 py-2 font-serif text-sm text-ink";
-const button = "inline-flex min-h-11 items-center border border-ink px-3 py-2 font-mono text-xs text-ink disabled:opacity-50";
+// Native select text cannot wrap. Repeat its value visibly for narrow/zoomed views;
+// hide the duplicate from the accessible label because the control exposes it.
+const selectionCaption = "mt-1 block font-serif text-sm text-ink-2 [overflow-wrap:anywhere]";
+const button = "inline-flex min-h-11 min-w-0 max-w-full items-center whitespace-normal [overflow-wrap:anywhere] border border-ink px-3 py-2 font-mono text-xs text-ink disabled:opacity-50";
 const assessmentLabels = copy.claim.verdicts;
 type Editors = Pick<EvidenceDraftRequest, "reports" | "passage" | "claims" | "themes" | "readingStatuses">;
 type DraftRecovery = { kind: "clear" | "claim" | "theme"; editors: Editors; workspace: EvidenceDraftRequest["workspace"]; reportJson: string;
@@ -48,7 +53,8 @@ function nextEditorId(prefix: "claim" | "theme" | "statement", rows: readonly { 
 }
 
 export function EvidenceDraftWorkspace() {
-  const completedCopy = useUiCopy("completed-evidence-draft-selection", uiEnglish_completedCopy);
+  const ui = useUiCopy("evidence-drafts", copy);
+  const locale = useContext(UiCopyContext)?.locale ?? "en";
   const editingCopy = useUiCopy("evidence-draft-editing", editingEnglish);
   const store = useLiteratureWorkspace(), [editors, setEditors] = useState(empty), [reportJson, setReportJson] = useState("");
   const [restoredWorkspace, setRestoredWorkspace] = useState<EvidenceDraftRequest["workspace"]>();
@@ -110,7 +116,7 @@ export function EvidenceDraftWorkspace() {
     setRecovery(undefined); setRestoredWorkspace(next.workspace); setEditors(next.editors);
     setRetainedSnapshot(next.retainedSnapshot); setReportJson(next.reportJson); setReviewer(next.reviewer);
     passageEdit.current = undefined; setPassageNeedsSelection(next.passageNeedsSelection);
-    setMessage(next.kind === "clear" ? editingCopy.clearRestored : editingCopy.removalRestored); passageRef.current?.focus();
+    setMessage(next.kind === "clear" ? editingEnglish.clearRestored : editingEnglish.removalRestored); passageRef.current?.focus();
   };
   const recoveryControl = recovery && <aside className="mt-5 min-w-0 border border-line bg-paper-2 p-4">
     <button type="button" ref={undoRef} className={button} aria-describedby={recoveryHintId} onClick={restoreRecovery}>
@@ -141,12 +147,12 @@ export function EvidenceDraftWorkspace() {
     }
     catch { setMessage(copy.download.backupRefused); }
   };
-  return <section className="mt-8 space-y-6" aria-label={copy.workspace.label}>
-    <p className="font-serif text-sm leading-relaxed text-ink-2">{EVIDENCE_DRAFT_NOTICE}</p>
-    <p className="font-serif text-sm text-ink-2">{copy.workspace.privacy}</p>
-    {!workspaceReady && <p role="status">{copy.workspace.loading}</p>}
+  return <section className="mt-8 min-w-0 space-y-6 [overflow-wrap:anywhere]" aria-label={ui.workspace.label}>
+    <p className="font-serif text-sm leading-relaxed text-ink-2"><span lang="en" dir="ltr">{EVIDENCE_DRAFT_NOTICE}</span></p>
+    <p className="font-serif text-sm text-ink-2"><UiText source={copy.workspace.privacy} namespaces={["evidence-drafts"]} /></p>
+    {!workspaceReady && <p role="status"><UiText source={copy.workspace.loading} namespaces={["evidence-drafts"]} /></p>}
     {workspaceError && <p role="alert" className="text-seal">{workspaceError}</p>}
-    {included.length === 0 && <p className="font-serif text-sm text-ink-2">{copy.workspace.includeFirst}</p>}
+    {included.length === 0 && <p className="font-serif text-sm text-ink-2"><UiText source={copy.workspace.includeFirst} namespaces={["evidence-drafts"]} /></p>}
     <EvidenceDraftRestore context={restoreContext} canSave={!!draft} onSave={backupFile} onRestore={(packet, expectedContext) => {
       if (liveRestoreContext.current !== expectedContext) return false;
       try {
@@ -166,7 +172,7 @@ export function EvidenceDraftWorkspace() {
       try {
         const next = appendCompletedEvidenceDraftImport(liveEditors.current, liveWorkspace.current, value);
         setRecovery(undefined);
-        liveEditors.current = next; setEditors(next); setMessage(completedCopy.imported);
+        liveEditors.current = next; setEditors(next); setMessage(uiEnglish_completedCopy.imported);
         return true;
       } catch { return false; }
     }} />
@@ -185,16 +191,16 @@ export function EvidenceDraftWorkspace() {
         setMessage(copy.import.success);
       } catch { setMessage(copy.import.refused); }
     }}>
-      <label className="font-mono text-xs text-ink-2">{copy.import.label}
-        <textarea className={field} value={reportJson} onChange={event => { setRecovery(undefined); setReportJson(event.target.value); }} maxLength={MAX_EVIDENCE_DRAFT_BYTES} rows={5} spellCheck={false} />
+      <label className="font-mono text-xs text-ink-2"><UiText source={copy.import.label} namespaces={["evidence-drafts"]} />
+        <textarea dir="ltr" translate="no" className={field} value={reportJson} onChange={event => { setRecovery(undefined); setReportJson(event.target.value); }} maxLength={MAX_EVIDENCE_DRAFT_BYTES} rows={5} spellCheck={false} />
       </label>
-      <p className="mt-2 font-serif text-xs text-ink-3">{copy.import.guidance}</p>
-      <button type="submit" className={`${button} mt-3`} disabled={!workspaceReady || !included.length || editors.reports.length >= 8}>{copy.import.button}</button>
-      <p className="mt-2 font-mono text-xs text-ink-3">{copyText(copy.import.summary, { reports: editors.reports.length, excerpts: draft?.excerpts.length ?? 0 })}</p>
+      <p className="mt-2 font-serif text-xs text-ink-3"><UiText source={copy.import.guidance} namespaces={["evidence-drafts"]} /></p>
+      <button type="submit" className={`${button} mt-3`} disabled={!workspaceReady || !included.length || editors.reports.length >= 8}><UiText source={copy.import.button} namespaces={["evidence-drafts"]} /></button>
+      <p className="mt-2 font-mono text-xs text-ink-3"><EvidenceDraftText source={copy.import.summary} values={{ reports: editors.reports.length, excerpts: draft?.excerpts.length ?? 0 }} /></p>
     </form>
-    <section className="border border-line bg-paper p-5" aria-label={copy.claim.label}>
-      <label className="font-mono text-xs text-ink-2">{copy.claim.passage}
-        <textarea ref={passageRef} className={field} rows={6} maxLength={12000} value={editors.passage} onChange={event => {
+    <section className="border border-line bg-paper p-5" aria-label={ui.claim.label}>
+      <label className="font-mono text-xs text-ink-2"><UiText source={copy.claim.passage} namespaces={["evidence-drafts"]} />
+        <textarea ref={passageRef} dir="auto" translate="no" className={field} rows={6} maxLength={12000} value={editors.passage} onChange={event => {
           const passage = event.target.value;
           const rebased = rebaseEvidenceDraftClaims(editors.passage, passage, editors.claims, passageEdit.current);
           passageEdit.current = undefined;
@@ -202,54 +208,55 @@ export function EvidenceDraftWorkspace() {
           if (rebased.removed) setPassageNeedsSelection(true);
         }} />
       </label>
-      <p role={passageNeedsSelection ? "status" : undefined} className={`mt-2 font-serif text-xs ${passageNeedsSelection ? "text-seal" : "text-ink-3"}`}>{copy.claim.selectFirst}</p>
+      <p role={passageNeedsSelection ? "status" : undefined} className={`mt-2 font-serif text-xs ${passageNeedsSelection ? "text-seal" : "text-ink-3"}`}><UiText source={copy.claim.selectFirst} namespaces={["evidence-drafts"]} /></p>
       <button type="button" className={`${button} mt-3`} disabled={!included.length || editors.claims.length >= 32} onClick={() => {
         const element = passageRef.current; if (!element || element.selectionStart === element.selectionEnd) { setMessage(copy.claim.selectFirst); return; }
         update({ claims: [...editors.claims, { id: nextEditorId("claim", editors.claims), start: element.selectionStart,
           end: element.selectionEnd, paperUrls: [included[0].paper.url], excerptIds: [] }] });
         setPassageNeedsSelection(false);
-      }}>{copy.claim.add}</button>
-      <label className="mt-4 block font-mono text-xs text-ink-2">{copy.claim.reviewer}
-        <input className={field} value={reviewer} maxLength={120} onChange={event => { setRecovery(undefined); setReviewer(event.target.value); }} />
+      }}><UiText source={copy.claim.add} namespaces={["evidence-drafts"]} /></button>
+      <label className="mt-4 block font-mono text-xs text-ink-2"><UiText source={copy.claim.reviewer} namespaces={["evidence-drafts"]} />
+        <input dir="auto" translate="no" className={field} value={reviewer} maxLength={120} onChange={event => { setRecovery(undefined); setReviewer(event.target.value); }} />
       </label>
       {editors.claims.map((claim, index) => {
         const result = draft?.claims.find(row => row.id === claim.id);
         const replace = (changes: Partial<typeof claim>) => update({ claims: editors.claims.map(row => row.id === claim.id ? { ...row, ...changes } : row) });
         return <Fragment key={claim.id}>{claimUndoIndex === index && recoveryControl}<article className="mt-5 border-t border-line pt-4">
-          <p className="whitespace-pre-wrap font-serif text-sm text-ink">{editors.passage.slice(claim.start, claim.end)}</p>
-          <label className="mt-3 block font-mono text-xs text-ink-2">{copy.claim.paper}
+          <p dir="auto" translate="no" className="whitespace-pre-wrap font-serif text-sm text-ink">{editors.passage.slice(claim.start, claim.end)}</p>
+          <label className="mt-3 block font-mono text-xs text-ink-2"><UiText source={copy.claim.paper} namespaces={["evidence-drafts"]} />
             <select className={field} value={claim.paperUrls[0]} onChange={event => replace({ paperUrls: [event.target.value], excerptIds: [], assessment: undefined })}>
-              {included.map(row => <option key={row.paper.url} value={row.paper.url}>{row.paper.title}</option>)}
+              {included.map(row => <option key={row.paper.url} value={row.paper.url} dir="auto" translate="no">{row.paper.title}</option>)}
             </select>
+            <span aria-hidden="true" className={selectionCaption}><bdi dir="auto" translate="no">{included.find(row => row.paper.url === claim.paperUrls[0])?.paper.title}</bdi></span>
           </label>
           {(draft?.excerpts ?? []).filter(row => claim.paperUrls.includes(row.paperUrl)).map(row => <label key={row.id} className="mt-3 flex gap-3 font-serif text-sm text-ink-2">
             <input type="checkbox" className="mt-1" checked={claim.excerptIds.includes(row.id)} onChange={() => replace({ excerptIds: toggle(claim.excerptIds, row.id), assessment: undefined })} />
-            <span>{row.quote}<span className="block font-mono text-xs text-ink-3">{copyText(copy.claim.excerptVersion, { version: row.contentVersion, report: row.reportId })}</span><PdfReadingScope provenance={{ extraction: "pdf", pdfTextScope: row.pdfTextScope }} /></span>
+            <span className="min-w-0"><bdi dir="auto" translate="no">{row.quote}</bdi><span className="block font-mono text-xs text-ink-3"><EvidenceDraftText source={copy.claim.excerptVersion} values={{ version: <bdi dir="ltr" translate="no">{row.contentVersion}</bdi>, report: <bdi dir="ltr" translate="no">{row.reportId}</bdi> }} /></span><PdfReadingScope provenance={{ extraction: "pdf", pdfTextScope: row.pdfTextScope }} /></span>
           </label>)}
-          <p className="mt-3 font-mono text-xs text-seal">{result?.status === "source-unavailable" ? copy.claim.unavailable : result?.assessment ? copyText(copy.claim.assessed, { assessment: assessmentLabels[result.assessment.verdict] }) : copy.claim.pending}</p>
-          <p className="mt-2 font-serif text-xs text-ink-3">{result?.evidenceNotice} {copy.claim.unavailableGuidance}</p>
+          <p className="mt-3 font-mono text-xs text-seal">{result?.status === "source-unavailable" ? <UiText source={copy.claim.unavailable} namespaces={["evidence-drafts"]} /> : result?.assessment ? <EvidenceDraftText source={copy.claim.assessed} values={{ assessment: <UiText source={assessmentLabels[result.assessment.verdict]} namespaces={["evidence-drafts"]} /> }} /> : <UiText source={copy.claim.pending} namespaces={["evidence-drafts"]} />}</p>
+          <p className="mt-2 font-serif text-xs text-ink-3">{result?.evidenceNotice && <span lang="en" dir="ltr" className="block">{result.evidenceNotice}</span>}<UiText source={copy.claim.unavailableGuidance} namespaces={["evidence-drafts"]} /></p>
           {(["supported", "partly-supported", "not-found"] as const).map(verdict => <button key={verdict} type="button" className={`${button} mr-2 mt-3`}
             disabled={!reviewer.trim() || !result || result.unavailable.length > 0 || (verdict === "not-found" ? claim.excerptIds.length > 0 : claim.excerptIds.length === 0)} onClick={() => replace({ assessment: {
               origin: "user-assessment", reviewer: reviewer.trim(), reviewedAt: new Date().toISOString(), verdict,
               claimText: result!.text, paperUrls: [...claim.paperUrls], excerptIds: [...claim.excerptIds], excerpts: result!.excerpts,
-            } })}>{copyText(copy.claim.recordAssessment, { assessment: assessmentLabels[verdict] })}</button>)}
+            } })}><EvidenceDraftText source={copy.claim.recordAssessment} values={{ assessment: <UiText source={assessmentLabels[verdict]} namespaces={["evidence-drafts"]} /> }} /></button>)}
           <button type="button" className={`${button} mt-3`} onClick={() => {
             if (!window.confirm(editingCopy.confirmClaim)) return;
             try {
               const checkpoint = recoverySnapshot("claim");
               setRecovery(checkpoint);
               setEditors(current => ({ ...current, claims: current.claims.filter(row => row.id !== claim.id) }));
-              setMessage(editingCopy.claimRemoved);
-            } catch { setMessage(editingCopy.removalRefused); }
+              setMessage(editingEnglish.claimRemoved);
+            } catch { setMessage(editingEnglish.removalRefused); }
           }}>{editingCopy.removeClaim}</button>
         </article></Fragment>;
       })}
       {claimUndoIndex === editors.claims.length && recoveryControl}
     </section>
-    <section aria-label={copy.theme.label} className="border border-line bg-paper p-5">
-      <h2 className="font-display text-xl text-ink">{copy.theme.heading}</h2>
-      <p className="mt-2 font-serif text-sm text-ink-2">{copy.theme.guidance}</p>
-      <p className="mt-2 font-serif text-xs text-ink-3">{copy.theme.assemblyGuidance}</p>
+    <section aria-label={ui.theme.label} className="border border-line bg-paper p-5">
+      <h2 className="font-display text-xl text-ink"><UiText source={copy.theme.heading} namespaces={["evidence-drafts"]} /></h2>
+      <p className="mt-2 font-serif text-sm text-ink-2"><UiText source={copy.theme.guidance} namespaces={["evidence-drafts"]} /></p>
+      <p className="mt-2 font-serif text-xs text-ink-3"><UiText source={copy.theme.assemblyGuidance} namespaces={["evidence-drafts"]} /></p>
       <button type="button" className={`${button} mt-3`} disabled={!draft || !excerpts.length} onClick={() => {
         try {
           const assembled = assembleEvidenceDraftRequest(request, { mode: "append" });
@@ -257,26 +264,26 @@ export function EvidenceDraftWorkspace() {
           update({ themes: [...editors.themes, ...assembled.themes.slice(request.themes.length)] }); setMessage(copy.theme.assembled);
         }
         catch { setMessage(copy.theme.assemblyRefused); }
-      }}>{copy.theme.assemble}</button>
+      }}><UiText source={copy.theme.assemble} namespaces={["evidence-drafts"]} /></button>
       {editors.themes.map((theme, index) => {
         const replace = (changes: Partial<typeof theme>) => update({ themes: editors.themes.map(row => row.id === theme.id ? { ...row, ...changes } : row) });
         return <Fragment key={theme.id}>{themeUndoIndex === index && recoveryControl}<article className="mt-5 border-t border-line pt-4">
-          <label className="font-mono text-xs text-ink-2">{copy.theme.title}<input className={field} maxLength={120} value={theme.title} onChange={event => replace({ title: event.target.value })} /></label>
-          <label className="mt-3 block font-mono text-xs text-ink-2">{copy.theme.notes}<textarea className={field} rows={4} maxLength={2000} value={theme.authorNote} onChange={event => replace({ authorNote: event.target.value })} /></label>
+          <label className="font-mono text-xs text-ink-2"><UiText source={copy.theme.title} namespaces={["evidence-drafts"]} /><input dir="auto" translate="no" className={field} maxLength={120} value={theme.title} onChange={event => replace({ title: event.target.value })} /></label>
+          <label className="mt-3 block font-mono text-xs text-ink-2"><UiText source={copy.theme.notes} namespaces={["evidence-drafts"]} /><textarea dir="auto" translate="no" className={field} rows={4} maxLength={2000} value={theme.authorNote} onChange={event => replace({ authorNote: event.target.value })} /></label>
           {(draft?.excerpts ?? []).map(row => <label key={row.id} className="mt-3 flex gap-3 font-serif text-sm text-ink-2">
             <input type="checkbox" className="mt-1" checked={theme.excerptIds.includes(row.id)} onChange={() => replace({ excerptIds: toggle(theme.excerptIds, row.id) })} />
-            <span>{row.quote}<span className="block break-all font-mono text-xs text-ink-3">{row.paperUrl} · {row.contentVersion}</span><PdfReadingScope provenance={{ extraction: "pdf", pdfTextScope: row.pdfTextScope }} /></span>
+            <span className="min-w-0"><bdi dir="auto" translate="no">{row.quote}</bdi><span className="block break-all font-mono text-xs text-ink-3"><bdi dir="ltr" translate="no">{row.paperUrl}</bdi> · <bdi dir="ltr" translate="no">{row.contentVersion}</bdi></span><PdfReadingScope provenance={{ extraction: "pdf", pdfTextScope: row.pdfTextScope }} /></span>
           </label>)}
-          <button type="button" className={`${button} mt-3`} onClick={() => replace({ excerptIds: [] })}>{copy.theme.clearExcerpts}</button>
+          <button type="button" className={`${button} mt-3`} onClick={() => replace({ excerptIds: [] })}><UiText source={copy.theme.clearExcerpts} namespaces={["evidence-drafts"]} /></button>
           <button type="button" className={`${button} ml-2 mt-3`} disabled={!draft || !theme.excerptIds.length} onClick={() => {
             try {
               const assembled = assembleEvidenceDraftRequest(request, { mode: "regenerate", themeId: theme.id });
               replace({ statements: assembled.themes.find(row => row.id === theme.id)!.statements }); setMessage(copy.theme.regenerated);
             }
             catch { setMessage(copy.theme.assemblyRefused); }
-          }}>{copy.theme.regenerate}</button>
-          <h3 className="mt-5 font-mono text-xs text-ink-2">{copy.statement.heading}</h3>
-          <p className="mt-2 font-serif text-xs text-ink-3">{copy.statement.guidance}</p>
+          }}><UiText source={copy.theme.regenerate} namespaces={["evidence-drafts"]} /></button>
+          <h3 className="mt-5 font-mono text-xs text-ink-2"><UiText source={copy.statement.heading} namespaces={["evidence-drafts"]} /></h3>
+          <p className="mt-2 font-serif text-xs text-ink-3"><UiText source={copy.statement.guidance} namespaces={["evidence-drafts"]} /></p>
           {(theme.statements ?? []).map(statement => {
             const result = draft?.themes.find(row => row.id === theme.id)?.statements.find(row => row.id === statement.id);
             const change = (changes: Partial<Statement>) => replace({ statements: (theme.statements ?? []).map(row => row.id === statement.id ? { ...row, ...changes } : row) });
@@ -284,15 +291,16 @@ export function EvidenceDraftWorkspace() {
               : result.status === "author-gap" ? copy.statement.authorGap : result.withheldReason !== "paper-count" ? copy.statement.needsExcerpt
               : statement.kind === "contribution" ? copy.statement.needsOnePaper : copy.statement.needsTwoPapers;
             return <div key={statement.id} className="mt-4 min-w-0 border-l border-line pl-4">
-              <label className="block font-mono text-xs text-ink-2">{copy.statement.kind}
+              <label className="block font-mono text-xs text-ink-2"><UiText source={copy.statement.kind} namespaces={["evidence-drafts"]} />
                 <select className={field} value={statement.kind} onChange={event => change({ kind: event.target.value as Statement["kind"] })}>
-                  {RELATED_WORK_STATEMENT_KINDS.map(kind => <option key={kind} value={kind}>{copy.statement.kinds[kind]}</option>)}
+                  {RELATED_WORK_STATEMENT_KINDS.map(kind => <option key={kind} value={kind} lang={ui.statement.kinds[kind] === copy.statement.kinds[kind] ? "en" : locale} dir="auto">{ui.statement.kinds[kind]}</option>)}
                 </select>
+                <span aria-hidden="true" className={selectionCaption}><UiText source={copy.statement.kinds[statement.kind]} namespaces={["evidence-drafts"]} /></span>
               </label>
-              <label className="mt-3 block font-mono text-xs text-ink-2">{copy.statement.text}
-                <textarea className={field} rows={3} maxLength={600} value={statement.text} onChange={event => change({ text: event.target.value })} />
+              <label className="mt-3 block font-mono text-xs text-ink-2"><UiText source={copy.statement.text} namespaces={["evidence-drafts"]} />
+                <textarea dir="auto" translate="no" className={field} rows={3} maxLength={600} value={statement.text} onChange={event => change({ text: event.target.value })} />
               </label>
-              <fieldset className="mt-3 min-w-0"><legend className="font-mono text-xs text-ink-2">{copy.statement.papers}</legend>
+              <fieldset className="mt-3 min-w-0"><legend className="font-mono text-xs text-ink-2"><UiText source={copy.statement.papers} namespaces={["evidence-drafts"]} /></legend>
                 {included.map(row => {
                   const url = row.paper.url, named = statement.paperUrls.includes(url), read = excerpts.some(excerpt => excerpt.paperUrl === url);
                   return <label key={url} className={choice}>
@@ -301,43 +309,43 @@ export function EvidenceDraftWorkspace() {
                       const paperUrls = toggle(statement.paperUrls, url);
                       change({ paperUrls, excerptIds: statement.excerptIds.filter(id => excerpts.some(excerpt => excerpt.id === id && paperUrls.includes(excerpt.paperUrl))) });
                     }} />
-                    <span>{read ? row.paper.title : copyText(copy.statement.paperUnread, { title: row.paper.title })}</span>
+                    <span className="min-w-0">{read ? <bdi dir="auto" translate="no">{row.paper.title}</bdi> : <EvidenceDraftText source={copy.statement.paperUnread} values={{ title: <bdi dir="auto" translate="no">{row.paper.title}</bdi> }} />}</span>
                   </label>;
                 })}
               </fieldset>
-              {statement.paperUrls.length > 0 && <fieldset className="mt-3 min-w-0"><legend className="font-mono text-xs text-ink-2">{copy.statement.excerpts}</legend>
+              {statement.paperUrls.length > 0 && <fieldset className="mt-3 min-w-0"><legend className="font-mono text-xs text-ink-2"><UiText source={copy.statement.excerpts} namespaces={["evidence-drafts"]} /></legend>
                 {excerpts.filter(row => statement.paperUrls.includes(row.paperUrl)).map(row => {
                   const chosen = statement.excerptIds.includes(row.id);
                   return <label key={row.id} className={choice}>
                     <input type="checkbox" className="mt-1" checked={chosen} disabled={!chosen && statement.excerptIds.length >= 16} onChange={() => change({ excerptIds: toggle(statement.excerptIds, row.id) })} />
-                    <span>{row.quote}<span className="block break-all font-mono text-xs text-ink-3">{row.paperUrl} · {row.contentVersion}</span><PdfReadingScope provenance={{ extraction: "pdf", pdfTextScope: row.pdfTextScope }} /></span>
+                    <span className="min-w-0"><bdi dir="auto" translate="no">{row.quote}</bdi><span className="block break-all font-mono text-xs text-ink-3"><bdi dir="ltr" translate="no">{row.paperUrl}</bdi> · <bdi dir="ltr" translate="no">{row.contentVersion}</bdi></span><PdfReadingScope provenance={{ extraction: "pdf", pdfTextScope: row.pdfTextScope }} /></span>
                   </label>;
                 })}
               </fieldset>}
-              <p className="mt-3 font-mono text-xs text-seal">{status}</p>
-              <button type="button" className={`${button} mt-3`} onClick={() => replace({ statements: (theme.statements ?? []).filter(row => row.id !== statement.id) })}>{copy.statement.remove}</button>
+              <p className="mt-3 font-mono text-xs text-seal"><UiText source={status} namespaces={["evidence-drafts"]} /></p>
+              <button type="button" className={`${button} mt-3`} onClick={() => replace({ statements: (theme.statements ?? []).filter(row => row.id !== statement.id) })}><UiText source={copy.statement.remove} namespaces={["evidence-drafts"]} /></button>
             </div>;
           })}
           <button type="button" className={`${button} mt-4`} disabled={(theme.statements ?? []).length >= 24} onClick={() => replace({
-            statements: [...(theme.statements ?? []), { id: nextEditorId("statement", editors.themes.flatMap(row => row.statements ?? [])), kind: "contribution", text: "", paperUrls: [], excerptIds: [] }] })}>{copy.statement.add}</button>
+            statements: [...(theme.statements ?? []), { id: nextEditorId("statement", editors.themes.flatMap(row => row.statements ?? [])), kind: "contribution", text: "", paperUrls: [], excerptIds: [] }] })}><UiText source={copy.statement.add} namespaces={["evidence-drafts"]} /></button>
           <button type="button" className={`${button} ml-2 mt-4`} onClick={() => {
             if (!window.confirm(editingCopy.confirmTheme)) return;
             try {
               const checkpoint = recoverySnapshot("theme");
               setRecovery(checkpoint);
               setEditors(current => ({ ...current, themes: current.themes.filter(row => row.id !== theme.id) }));
-              setMessage(editingCopy.themeRemoved);
-            } catch { setMessage(editingCopy.removalRefused); }
+              setMessage(editingEnglish.themeRemoved);
+            } catch { setMessage(editingEnglish.removalRefused); }
           }}>{editingCopy.removeTheme}</button>
         </article></Fragment>;
       })}
       {themeUndoIndex === editors.themes.length && recoveryControl}
-      <button type="button" className={`${button} mt-4`} disabled={editors.themes.length >= 16} onClick={() => update({ themes: [...editors.themes, { id: nextEditorId("theme", editors.themes), title: copy.theme.newTitle, authorNote: "", excerptIds: [] }] })}>{copy.theme.add}</button>
-      <button type="button" className={`${button} ml-2 mt-4`} disabled={!editors.readingStatuses?.length} onClick={() => update({ readingStatuses: [] })}>{copy.reading.clear}</button>
+      <button type="button" className={`${button} mt-4`} disabled={editors.themes.length >= 16} onClick={() => update({ themes: [...editors.themes, { id: nextEditorId("theme", editors.themes), title: copy.theme.newTitle, authorNote: "", excerptIds: [] }] })}><UiText source={copy.theme.add} namespaces={["evidence-drafts"]} /></button>
+      <button type="button" className={`${button} ml-2 mt-4`} disabled={!editors.readingStatuses?.length} onClick={() => update({ readingStatuses: [] })}><UiText source={copy.reading.clear} namespaces={["evidence-drafts"]} /></button>
       {!!draft?.unread.length && <div className="mt-5">
-        <h3 className="font-mono text-xs text-ink-2">{copy.theme.unreadHeading}</h3>
-        <p className="mt-2 font-serif text-xs text-ink-3">{copy.reading.guidance}</p>
-        <p className="mt-2 font-serif text-xs text-ink-3">{copy.reading.prepareGuidance}</p>
+        <h3 className="font-mono text-xs text-ink-2"><UiText source={copy.theme.unreadHeading} namespaces={["evidence-drafts"]} /></h3>
+        <p className="mt-2 font-serif text-xs text-ink-3"><UiText source={copy.reading.guidance} namespaces={["evidence-drafts"]} /></p>
+        <p className="mt-2 font-serif text-xs text-ink-3"><UiText source={copy.reading.prepareGuidance} namespaces={["evidence-drafts"]} /></p>
         {draft.unread.map(row => {
           const observation = editors.readingStatuses?.find(status => status.paperUrl === row.paper.url);
           const observe = (status: "unread" | "unavailable" | "", reason: string) => update({ readingStatuses: [
@@ -347,25 +355,26 @@ export function EvidenceDraftWorkspace() {
           let readHref: string | undefined;
           try { readHref = `/?${new URLSearchParams({ q: relatedWorkReadingDraft(workspace, row.paper.url), mode: "deep" })}`; } catch { /* Keep the editor when the normal question limit refuses. */ }
           return <div key={row.paper.url} className="mt-3">
-            <p className="break-all font-serif text-sm text-ink-2">{row.paper.title} · {row.paper.url}</p>
-            {readHref && <a href={readHref} target="_blank" rel="noopener noreferrer" className={`${button} mt-2`}>{copy.reading.prepare}</a>}
-            <label className="font-mono text-xs text-ink-2">{copy.reading.status}
+            <p className="break-all font-serif text-sm text-ink-2"><bdi dir="auto" translate="no">{row.paper.title}</bdi> · <bdi dir="ltr" translate="no">{row.paper.url}</bdi></p>
+            {readHref && <a href={readHref} target="_blank" rel="noopener noreferrer" className={`${button} mt-2`}><UiText source={copy.reading.prepare} namespaces={["evidence-drafts"]} /></a>}
+            <label className="mt-3 block font-mono text-xs text-ink-2"><UiText source={copy.reading.status} namespaces={["evidence-drafts"]} />
               <select className={field} value={observation?.status ?? ""} onChange={event => observe(event.target.value as "unread" | "unavailable" | "", observation?.reason ?? "")}>
-                <option value="">{copy.reading.unknown}</option><option value="unread">{copy.reading.unread}</option><option value="unavailable">{copy.reading.unavailable}</option>
+                <option value="" lang={ui.reading.unknown === copy.reading.unknown ? "en" : locale} dir="auto">{ui.reading.unknown}</option><option value="unread" lang={ui.reading.unread === copy.reading.unread ? "en" : locale} dir="auto">{ui.reading.unread}</option><option value="unavailable" lang={ui.reading.unavailable === copy.reading.unavailable ? "en" : locale} dir="auto">{ui.reading.unavailable}</option>
               </select>
+              <span aria-hidden="true" className={selectionCaption}><UiText source={observation?.status === "unread" ? copy.reading.unread : observation?.status === "unavailable" ? copy.reading.unavailable : copy.reading.unknown} namespaces={["evidence-drafts"]} /></span>
             </label>
-            {observation && <label className="mt-2 block font-mono text-xs text-ink-2">{copy.reading.reason}
-              <input className={field} maxLength={300} value={observation.reason} onChange={event => observe(observation.status, event.target.value)} />
+            {observation && <label className="mt-2 block font-mono text-xs text-ink-2"><UiText source={copy.reading.reason} namespaces={["evidence-drafts"]} />
+              <input dir="auto" translate="no" className={field} maxLength={300} value={observation.reason} onChange={event => observe(observation.status, event.target.value)} />
             </label>}
           </div>;
         })}
-        {draft.reading.unread.length > 0 && <p className="mt-3 font-serif text-sm">{copy.reading.unreadHeading}: {draft.reading.unread.map(row => row.paper.title).join("; ")}</p>}
-        {draft.reading.unavailable.length > 0 && <p className="mt-3 font-serif text-sm">{copy.reading.unavailableHeading}: {draft.reading.unavailable.map(row => row.paper.title).join("; ")}</p>}
+        {draft.reading.unread.length > 0 && <p className="mt-3 font-serif text-sm"><UiText source={copy.reading.unreadHeading} namespaces={["evidence-drafts"]} />: <bdi dir="auto" translate="no">{draft.reading.unread.map(row => row.paper.title).join("; ")}</bdi></p>}
+        {draft.reading.unavailable.length > 0 && <p className="mt-3 font-serif text-sm"><UiText source={copy.reading.unavailableHeading} namespaces={["evidence-drafts"]} />: <bdi dir="auto" translate="no">{draft.reading.unavailable.map(row => row.paper.title).join("; ")}</bdi></p>}
       </div>}
     </section>
-    {error && <p role="alert" className="font-serif text-sm text-seal">{error}</p>}
-    <div className="flex flex-wrap gap-3">{(["markdown", "latex", "bibtex", "ris"] as const).map(format => <button key={format} type="button" className={button} disabled={!draft} onClick={() => exportFile(format)}>{copy.download[format]}</button>)}
-      <button type="button" className={button} disabled={!draft} onClick={backupFile}>{copy.download.backup}</button>
+    {error && <p role="alert" className="font-serif text-sm text-seal"><UiText source={error} namespaces={["evidence-drafts"]} /></p>}
+    <div className="flex flex-wrap gap-3">{(["markdown", "latex", "bibtex", "ris"] as const).map(format => <button key={format} type="button" className={button} disabled={!draft} onClick={() => exportFile(format)}><UiText source={copy.download[format]} namespaces={["evidence-drafts"]} /></button>)}
+      <button type="button" className={button} disabled={!draft} onClick={backupFile}><UiText source={copy.download.backup} namespaces={["evidence-drafts"]} /></button>
       <button type="button" className={button} onClick={() => {
         if (!window.confirm(editingCopy.confirmClear)) return;
         try {
@@ -379,9 +388,9 @@ export function EvidenceDraftWorkspace() {
           setRecovery(checkpoint); setRestoredWorkspace(undefined); setEditors(next);
           setRetainedSnapshot(retainedEditorsSnapshot(next)); setReportJson(""); setReviewer("");
           passageEdit.current = undefined; setPassageNeedsSelection(false); setMessage(copy.workspace.cleared);
-        } catch { setMessage(editingCopy.clearRefused); }
-      }}>{copy.workspace.clear}</button></div>
+        } catch { setMessage(editingEnglish.clearRefused); }
+      }}><UiText source={copy.workspace.clear} namespaces={["evidence-drafts"]} /></button></div>
     {recovery?.kind === "clear" && recoveryControl}
-    <p role="status" aria-live="polite" className="font-serif text-sm text-seal">{message}</p>
+    <p role="status" aria-live="polite" className="font-serif text-sm text-seal"><UiText source={message} namespaces={["evidence-drafts", "evidence-draft-editing", "completed-evidence-draft-selection"]} /></p>
   </section>;
 }

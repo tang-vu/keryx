@@ -1,0 +1,312 @@
+{
+  "status": "machineDraft",
+  "review": null,
+  "sourcePath": "locales/en/evidence-drafts.json",
+  "sourceSha256": "b5149b6454955d1a1070de1a860625a932863e4ea739f5d8753a878126864df5",
+  "entries": {
+    "page.back": {
+      "source": "Back to your saved review",
+      "text": "저장한 문헌 검토로 돌아가기"
+    },
+    "page.heading": {
+      "source": "Build a draft from retained excerpts.",
+      "text": "보관된 발췌문으로 초안을 만드세요."
+    },
+    "page.navigation": {
+      "source": "Build a retained-evidence draft",
+      "text": "보관된 근거로 초안 만들기"
+    },
+    "workspace.loading": {
+      "source": "Loading saved review…",
+      "text": "저장한 문헌 검토를 불러오는 중…"
+    },
+    "workspace.clear": {
+      "source": "Clear this tab’s draft",
+      "text": "이 탭의 초안 지우기"
+    },
+    "workspace.cleared": {
+      "source": "Draft cleared from this tab. Your saved paper list remains.",
+      "text": "이 탭의 초안을 지웠습니다. 저장한 논문 목록은 유지됩니다."
+    },
+    "import.label": {
+      "source": "Retained Keryx report JSON",
+      "text": "보관된 Keryx 보고서 JSON"
+    },
+    "import.button": {
+      "source": "Import report in this tab",
+      "text": "이 탭으로 보고서 가져오기"
+    },
+    "import.summary": {
+      "source": "Reports: {reports} · matching retained excerpts: {excerpts}",
+      "text": "보고서: {reports} · 일치하는 보관 발췌문: {excerpts}"
+    },
+    "claim.label": {
+      "source": "Claim assessment",
+      "text": "주장 평가"
+    },
+    "claim.passage": {
+      "source": "Your original passage",
+      "text": "원본 문단"
+    },
+    "claim.add": {
+      "source": "Add selected claim",
+      "text": "선택한 주장 추가"
+    },
+    "claim.reviewer": {
+      "source": "Your name for an optional assessment",
+      "text": "선택적 평가에 사용할 이름"
+    },
+    "claim.paper": {
+      "source": "Exact cited paper",
+      "text": "인용한 정확한 논문"
+    },
+    "claim.unavailable": {
+      "source": "Retained source evidence unavailable",
+      "text": "보관된 출처 근거를 사용할 수 없음"
+    },
+    "claim.assessed": {
+      "source": "Your assessment: {assessment}",
+      "text": "내 평가: {assessment}"
+    },
+    "claim.recordAssessment": {
+      "source": "Record my {assessment} assessment",
+      "text": "내 평가 기록: {assessment}"
+    },
+    "claim.excerptVersion": {
+      "source": "{version} · report {report}",
+      "text": "{version} · 보고서 {report}"
+    },
+    "claim.verdicts.supported": {
+      "source": "supported",
+      "text": "근거 있음"
+    },
+    "claim.verdicts.partly-supported": {
+      "source": "partly supported",
+      "text": "일부 근거 있음"
+    },
+    "claim.verdicts.not-found": {
+      "source": "not found",
+      "text": "찾지 못함"
+    },
+    "theme.label": {
+      "source": "Related-work themes",
+      "text": "관련 연구 주제"
+    },
+    "theme.heading": {
+      "source": "Related-work evidence themes",
+      "text": "관련 연구 근거를 정리하는 주제"
+    },
+    "theme.assemble": {
+      "source": "Assemble retained contributions",
+      "text": "보관된 기여 내용 구성"
+    },
+    "theme.regenerate": {
+      "source": "Regenerate this theme from selected excerpts",
+      "text": "선택한 발췌문으로 이 주제 다시 생성"
+    },
+    "theme.title": {
+      "source": "Theme title",
+      "text": "주제 제목"
+    },
+    "theme.notes": {
+      "source": "Your synthesis notes (unverified)",
+      "text": "종합 메모 (검증되지 않음)"
+    },
+    "theme.clearExcerpts": {
+      "source": "Clear this theme’s excerpt selections",
+      "text": "이 주제의 발췌문 선택 해제"
+    },
+    "theme.add": {
+      "source": "Add theme",
+      "text": "주제 추가"
+    },
+    "theme.unreadHeading": {
+      "source": "Included papers without usable retained excerpts",
+      "text": "사용 가능한 보관 발췌문이 없는 포함 논문"
+    },
+    "reading.prepare": {
+      "source": "Prepare reading request in a new tab",
+      "text": "새 탭에서 읽기 요청 준비"
+    },
+    "reading.clear": {
+      "source": "Clear reading observations",
+      "text": "읽기 관찰 기록 지우기"
+    },
+    "reading.status": {
+      "source": "Your reading observation",
+      "text": "내 읽기 관찰 기록"
+    },
+    "reading.unknown": {
+      "source": "Reading status not recorded",
+      "text": "읽기 상태가 기록되지 않음"
+    },
+    "reading.unread": {
+      "source": "Not read",
+      "text": "읽지 않음"
+    },
+    "reading.unavailable": {
+      "source": "Unavailable",
+      "text": "이용 불가"
+    },
+    "reading.reason": {
+      "source": "Your reason (optional)",
+      "text": "이유 (선택 사항)"
+    },
+    "reading.unreadHeading": {
+      "source": "Unread papers (your observation)",
+      "text": "읽지 않은 논문 (내 관찰)"
+    },
+    "reading.unavailableHeading": {
+      "source": "Unavailable papers (your observation)",
+      "text": "이용할 수 없는 논문 (내 관찰)"
+    },
+    "statement.heading": {
+      "source": "Statements in this theme",
+      "text": "이 주제의 서술"
+    },
+    "statement.add": {
+      "source": "Add statement",
+      "text": "서술 추가"
+    },
+    "statement.remove": {
+      "source": "Remove this statement",
+      "text": "이 서술 삭제"
+    },
+    "statement.kind": {
+      "source": "What this sentence does",
+      "text": "이 문장의 역할"
+    },
+    "statement.kinds.contribution": {
+      "source": "Describes one paper’s contribution",
+      "text": "논문 한 편의 기여를 설명"
+    },
+    "statement.kinds.agreement": {
+      "source": "States where papers agree",
+      "text": "논문들이 일치하는 부분을 서술"
+    },
+    "statement.kinds.disagreement": {
+      "source": "States where papers disagree",
+      "text": "논문들이 의견을 달리하는 부분을 서술"
+    },
+    "statement.kinds.gap": {
+      "source": "States a gap",
+      "text": "연구 공백을 서술"
+    },
+    "statement.text": {
+      "source": "Your sentence",
+      "text": "내 문장"
+    },
+    "statement.papers": {
+      "source": "Papers this sentence names",
+      "text": "이 문장에서 언급하는 논문"
+    },
+    "statement.excerpts": {
+      "source": "Retained excerpts this sentence relies on",
+      "text": "이 문장의 근거로 선택한 보관 발췌문"
+    },
+    "download.markdown": {
+      "source": "Download Markdown",
+      "text": "Markdown 다운로드"
+    },
+    "download.latex": {
+      "source": "Download LaTeX",
+      "text": "LaTeX 다운로드"
+    },
+    "download.bibtex": {
+      "source": "Download BibTeX",
+      "text": "BibTeX 다운로드"
+    },
+    "download.ris": {
+      "source": "Download RIS",
+      "text": "RIS 다운로드"
+    },
+    "page.introduction": {
+      "source": "Select exact claim spans, record your own assessments, and organise read excerpts into related-work themes.",
+      "text": "주장의 정확한 범위를 선택하고 직접 내린 평가를 기록한 뒤, 읽은 발췌문을 관련 연구 주제별로 정리하세요."
+    },
+    "page.noScript": {
+      "source": "Enable JavaScript for this local editor. No passage or report is uploaded automatically.",
+      "text": "이 로컬 편집기를 사용하려면 JavaScript를 활성화하세요. 문단이나 보고서는 자동으로 업로드되지 않습니다."
+    },
+    "workspace.includeFirst": {
+      "source": "Mark papers Include in the literature workspace before assembling this draft.",
+      "text": "이 초안을 구성하기 전에 문헌 작업 공간에서 논문을 ‘포함’으로 표시하세요."
+    },
+    "workspace.changed": {
+      "source": "A selected excerpt or saved paper changed, or this draft exceeds its limit. Remove that selection or clear the draft; your edits remain below.",
+      "text": "선택한 발췌문이나 저장한 논문이 바뀌었거나 초안이 한도를 초과했습니다. 해당 선택을 해제하거나 초안을 지우세요. 편집 내용은 아래에 남아 있습니다."
+    },
+    "import.guidance": {
+      "source": "Use a report returned by the API/MCP with its retained citation and excerpt ledger. Bibliography alone cannot describe a paper. Imported bytes are your responsibility; this editor does not authenticate their origin.",
+      "text": "API/MCP가 반환한 보고서와 보관된 인용·발췌 기록을 사용하세요. 참고문헌 정보만으로는 논문 내용을 설명할 수 없습니다. 가져온 바이트에 대한 책임은 사용자에게 있으며, 이 편집기는 출처를 인증하지 않습니다."
+    },
+    "import.success": {
+      "source": "Report imported locally. Matching excerpts are available for selection; the report origin and semantic support remain unverified.",
+      "text": "보고서를 로컬로 가져왔습니다. 일치하는 발췌문을 선택할 수 있습니다. 보고서의 출처와 내용상 뒷받침 여부는 검증되지 않았습니다."
+    },
+    "import.refused": {
+      "source": "Report not imported. Use a unique retained report with id/queryId, subClaims, citations and evidence; check the 64 KiB draft limit. Your existing draft remains.",
+      "text": "보고서를 가져오지 않았습니다. id/queryId, subClaims, citations, evidence가 있는 중복되지 않는 보관 보고서를 사용하고 초안의 64 KiB 한도를 확인하세요. 기존 초안은 유지됩니다."
+    },
+    "claim.selectFirst": {
+      "source": "Select the exact claim text in your passage first.",
+      "text": "먼저 원본 문단에서 주장의 정확한 텍스트를 선택하세요."
+    },
+    "claim.unavailableGuidance": {
+      "source": "An unavailable source is never reported as unsupported.",
+      "text": "이용할 수 없는 출처를 주장을 뒷받침하지 않는 출처로 표시하지 않습니다."
+    },
+    "theme.guidance": {
+      "source": "Group exact excerpts before writing. A statement about a paper is exported only with a citation and the retained excerpt you select for it; quotations and your free-form notes stay separate, and notes remain marked as unverified.",
+      "text": "작성하기 전에 정확한 발췌문을 묶으세요. 논문에 관한 서술은 인용 정보와 해당 서술에 선택한 보관 발췌문이 있을 때만 내보냅니다. 인용문과 자유롭게 작성한 메모는 분리되며, 메모에는 검증되지 않았다는 표시가 유지됩니다."
+    },
+    "theme.assemblyRefused": {
+      "source": "Assembly refused. Select one to 24 retained excerpts for regeneration, or make room within the 16-theme and 64 KiB limits. Your edits remain.",
+      "text": "구성이 거부되었습니다. 다시 생성할 보관 발췌문을 하나부터 24개까지 선택하거나, 16개 주제 및 64 KiB 한도 내에 여유를 만드세요. 편집 내용은 유지됩니다."
+    },
+    "reading.guidance": {
+      "source": "Missing retained evidence does not tell us whether a paper was read. Record your observation for this exact saved record; it is not a Keryx access check. Unread and unavailable papers export in separate lists and are never described or cited.",
+      "text": "보관된 근거가 없다고 해서 논문을 읽었는지 알 수 있는 것은 아닙니다. 정확히 이 저장 기록에 대한 자신의 관찰을 기록하세요. 이는 Keryx의 접근 확인이 아닙니다. 읽지 않은 논문과 이용할 수 없는 논문은 별도 목록으로 내보내며, 내용을 서술하거나 인용하지 않습니다."
+    },
+    "statement.guidance": {
+      "source": "Write one sentence at a time. Choose what it does, the papers it names and the retained excerpt it relies on. Keryx checks that each named paper has a selected excerpt; it does not check that the excerpt supports your wording.",
+      "text": "문장을 하나씩 작성하세요. 문장의 역할, 언급하는 논문, 근거로 삼을 보관 발췌문을 선택하세요. Keryx는 언급한 논문마다 선택된 발췌문이 있는지 확인하지만, 그 발췌문이 작성한 표현을 뒷받침하는지는 확인하지 않습니다."
+    },
+    "statement.paperUnread": {
+      "source": "{title} — no retained excerpt; cannot be described",
+      "text": "{title} — 보관된 발췌문이 없어 내용을 설명할 수 없음"
+    },
+    "statement.empty": {
+      "source": "Write the sentence to include it in the draft.",
+      "text": "초안에 포함할 문장을 작성하세요."
+    },
+    "statement.bound": {
+      "source": "Will be exported with its citation and excerpt links.",
+      "text": "인용 정보와 발췌문 링크를 포함해 내보냅니다."
+    },
+    "statement.authorGap": {
+      "source": "Will be exported as your own stated gap. It cites no paper and stays marked as unverified.",
+      "text": "직접 서술한 연구 공백으로 내보냅니다. 논문을 인용하지 않으며 검증되지 않았다는 표시가 유지됩니다."
+    },
+    "statement.needsOnePaper": {
+      "source": "Not exported yet: a contribution names exactly one paper.",
+      "text": "아직 내보내지 않음: 기여 서술에는 정확히 한 편의 논문을 언급해야 합니다."
+    },
+    "statement.needsTwoPapers": {
+      "source": "Not exported yet: agreement and disagreement name at least two papers.",
+      "text": "아직 내보내지 않음: 일치점과 이견 서술에는 최소 두 편의 논문을 언급해야 합니다."
+    },
+    "statement.needsExcerpt": {
+      "source": "Not exported yet: select a retained excerpt for every paper this sentence names.",
+      "text": "아직 내보내지 않음: 이 문장에서 언급하는 논문마다 보관된 발췌문을 선택하세요."
+    },
+    "download.refused": {
+      "source": "Export refused: an exact record or selected excerpt is unavailable or changed.",
+      "text": "내보내기 거부: 정확한 기록이나 선택한 발췌문을 이용할 수 없거나 변경되었습니다."
+    },
+    "download.backupRefused": {
+      "source": "Backup refused: check the current exact record and excerpt selections.",
+      "text": "백업 거부: 현재의 정확한 기록과 발췌문 선택을 확인하세요."
+    }
+  }
+}
