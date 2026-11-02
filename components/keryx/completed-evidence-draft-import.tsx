@@ -5,11 +5,8 @@ import { buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, 
   type EvidenceDraftRequest } from "@/lib/research/evidence-draft";
 import type { LiteratureWorkspace } from "@/lib/papers/literature-workspace";
 import type { CompletedEvidenceDraftPacket, CompletedReadSelection } from "@/lib/research/completed-evidence-draft";
-import { completedEvidenceDraftImportCopy as copy } from "@/locales/en/completed-evidence-draft-selection";
-import { useUiCopy } from "@/lib/i18n/ui-copy";
-const uiEnglish_copy = copy;
-
-
+import { completedEvidenceDraftImportCopy as english } from "@/locales/en/completed-evidence-draft-selection";
+import { UiText, useUiCopy } from "@/lib/i18n/ui-copy";
 export interface CompletedEvidenceDraftImportProps {
   currentOwner: string | null;
   /** An explicit completed selection with its previously retained snapshot digest.
@@ -61,9 +58,9 @@ const selectionKey = (value: CompletedReadSelection) => JSON.stringify([value.id
 /** An explicit action only. No history polling, automatic paid read, persistence,
  * telemetry, URL selector, engine dispatch or private answer rendering. */
 export function CompletedEvidenceDraftImport(props: CompletedEvidenceDraftImportProps) {
-  const copy = useUiCopy("completed-evidence-draft-selection", uiEnglish_copy);
+  const copy = useUiCopy("completed-evidence-draft-selection", english);
   const { currentOwner, selection, workspace, baseUrl, network } = props;
-  const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false), [message, setMessage] = useState<"" | "empty" | "imported" | "unavailable" | "timedOut">("");
   const pending = useRef<AbortController | null>(null), mounted = useRef(false);
   const key = JSON.stringify({ currentOwner, selection, workspace: evidenceDraftWorkspace(workspace), baseUrl, network });
   const latest = useRef({ key, onImport: props.onImport });
@@ -114,13 +111,13 @@ export function CompletedEvidenceDraftImport(props: CompletedEvidenceDraftImport
         || !selection.sources.some(source => source.itemUrl === row.paperUrl))) throw new Error();
       const count = buildEvidenceDraft(editable).excerpts.length;
       if (!latest.current.onImport({ report, readingStatuses })) throw new Error();
-      if (!count) { setMessage(copy.empty); return; }
-      setMessage(copy.imported);
+      if (!count) { setMessage("empty"); return; }
+      setMessage("imported");
     } catch {
       if (mounted.current && latest.current.key === capturedKey && !controller.signal.aborted)
-        setMessage(copy.unavailable);
+        setMessage("unavailable");
       else if (mounted.current && latest.current.key === capturedKey)
-        setMessage(copy.timedOut);
+        setMessage("timedOut");
     } finally {
       clearTimeout(timer);
       if (pending.current === controller) pending.current = null;
@@ -128,11 +125,11 @@ export function CompletedEvidenceDraftImport(props: CompletedEvidenceDraftImport
     }
   }
   return <section className="border border-line bg-paper p-5" aria-label={copy.label}>
-    <p className="font-serif text-sm text-ink-2">{copy.guidance}</p>
-    <p className="mt-2 font-serif text-xs text-ink-3">{copy.privacy}</p>
+    <p className="font-serif text-sm text-ink-2"><UiText source={english.guidance} namespaces={["completed-evidence-draft-selection"]} /></p>
+    <p className="mt-2 font-serif text-xs text-ink-3"><UiText source={english.privacy} namespaces={["completed-evidence-draft-selection"]} /></p>
     <button type="button" className={`${button} mt-3`} disabled={busy || !currentOwner || !selection} onClick={() => void importCompleted()}>
-      {busy ? copy.reading : copy.import}
+      <UiText source={busy ? english.reading : english.import} namespaces={["completed-evidence-draft-selection"]} />
     </button>
-    <p role="status" aria-live="polite" className="mt-2 font-serif text-sm text-seal">{message}</p>
+    <p role="status" aria-live="polite" className="mt-2 font-serif text-sm text-seal"><UiText source={message ? english[message] : ""} namespaces={["completed-evidence-draft-selection"]} /></p>
   </section>;
 }
