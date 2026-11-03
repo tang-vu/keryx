@@ -53,8 +53,8 @@ export class ResearchPlanningError extends ReasoningOutputValidationError {
         : `A valid plan with at most ${MAX_RESEARCH_TARGETS} independent research targets could not be prepared.`;
     // Keep private question excerpts out of Error.message, telemetry and server error logs.
     super(message + (vi
-      ? " Hãy chọn một đối tượng hoặc một khía cạnh so sánh cho mỗi câu hỏi, giữ các URL/phiên bản và điều kiện nguồn của yêu cầu gốc."
-      : " Choose one comparison subject or dimension per question, keeping the original source URLs/versions and qualifications."), outputTokenLimit);
+      ? " Hãy nêu rõ chủ đề và kết quả bạn cần, chẳng hạn lời giải thích, bản so sánh, kế hoạch hoặc danh sách lựa chọn. Nếu yêu cầu có nhiều đối tượng hay khía cạnh, hãy chọn một trọng tâm hẹp hơn, giữ các URL/phiên bản và điều kiện nguồn của yêu cầu gốc."
+      : " State the topic and the result you need, such as an explanation, comparison, plan or shortlist. If the request covers several subjects or dimensions, choose a narrower focus, keeping the original source URLs/versions and qualifications."), outputTokenLimit);
     this.language = vi ? "vi" : "en";
     this.#scopeChoices = Object.freeze(refinementChoices(question));
   }
