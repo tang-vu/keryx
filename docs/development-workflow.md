@@ -99,6 +99,13 @@ Other owners' holds, the existing ROOT/Circle release authority and every
 required acceptance/payment/security/custody gate remain in force. Concurrent
 active sessions continue to use the shared coordinator and explicit handoffs.
 
+Owner-confirmed November 3, 2026: finish authorized development, review, checks,
+commits, PRs and serialized source merges autonomously. Only deployment and
+release/publication wait for the user's explicit command. A no-deploy/no-release
+instruction does not hold an accepted source merge. Inspect automatic delivery
+triggers before merging and keep release-version allocation for the later
+authorized release. Required checks, ownership and financial/custody gates remain.
+
 If main advances, reconcile and validate the combined candidate where required;
 old CI evidence cannot establish acceptance of new combined source.
 
@@ -110,14 +117,16 @@ alone does not require a
 runtime version bump, package/installer rebuild, production deployment or Arc
 Canteen product announcement.
 
-For a user-visible runtime update, perform one coordinated release after merge:
+When the user explicitly requests deployment/release for a runtime update,
+perform one coordinated release of accepted merged source:
 deploy current accepted `origin/main` with the reviewed `npm run redeploy` flow,
 verify health commit/profile, verify applicable package/installer identity, then
 publish the authorized concise product update. Preserve all operational drains,
 backups, retained-original recovery and spending gates in
 [the mainnet update flow](mainnet-update-flow.md). A combined release is allowed
-only when its combined source and applicable gates are verified; do not leave
-completed user-visible changes indefinitely undeployed.
+only when its combined source and applicable gates are verified. Record accepted
+source awaiting the user's command; a source merge is not deployment or release
+authorization.
 
 ## Evidence and supported surfaces
 

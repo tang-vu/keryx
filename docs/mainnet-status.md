@@ -1,5 +1,38 @@
 # Current Arc mainnet deployment
 
+## Latest retained delivery: app 0.27.96 — November 2, 2026
+
+The completed release96 record identifies application **0.27.96**, source
+**`8c3cb261af1970d9c15ff1ff59a3cd11d7981834`**, on Arc mainnet. Its retained
+post-restoration observation records public HTTP 200, the matching application
+build, operational health and maintenance cleared. These are November 2 delivery
+observations, not a continuous availability guarantee or a fresh November 3 probe.
+The November 3 assessment's three public API reads returned HTTP 403 from that
+client; they do not establish a production outage or a successful health check.
+
+| Surface | Accepted identity and evidence boundary |
+| --- | --- |
+| Hosted web/API | App **0.27.96**, source **`8c3cb261`**, accepted exact-source main CI and retained public restoration |
+| Hosted MCP | Server version **0.3.19**; hosted application cohort above |
+| GitHub MCP artifact | **0.4.43**, publication/download acceptance bound to source96 |
+| npm / official MCP Registry | **0.4.43** retains independently accepted source95 provenance; no new source96 npm/Registry publication is claimed |
+| Operator desktop | Published **0.4.41**, source96 package acceptance; owner-machine installation is unverified |
+| Browser extension | **0.1.4.3**, existing verified inputs and handoff role; no new extension release |
+
+The [release96 record](engineering/release96-20261102.md) describes the included
+source changes, publication boundaries and the failed short-maintenance target.
+[Exact-source main CI](https://github.com/tang-vu/keryx/actions/runs/41429639098)
+and the [GitHub release](https://github.com/tang-vu/keryx/releases/tag/v0.27.96)
+provide public source/distribution references. A package version alone does not
+prove a matching local installation or npm provenance.
+
+The November 3 owner clarification authorizes routine reviewed/check-passing
+source merges; deployment and release/publication await an explicit user command.
+Keep the installed96 cohort serving. Any later operation must first qualify each
+role's fresh-start requirements, including finite policy/grant expiry; source
+preparation and historical healthy processes cannot substitute for that check.
+The dated observations below remain historical and are not the current version.
+
 ## October 16 health readback
 
 A read-only [health](https://keryx.cc/api/health) check at `2026-10-16T08:22:29.241Z`

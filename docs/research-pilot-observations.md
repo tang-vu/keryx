@@ -110,5 +110,8 @@ Illustrative input always remains `illustrative-no-real-pilot-evidence`. Even
 complete operator-entered targets are explicitly unverified assertions, not proof
 of human identity, demand, realized profit or independently certified paid pilots.
 Keep the input and aggregate output private; publication and participant consent
-need their own authority. This November 3 source work is held from main merge,
-deployment, release, publication, new funding and autonomous operation.
+need their own authority. The November 3 owner clarification authorizes routine
+reviewed/check-passing source merges. Deployment and release/publication wait for
+the user's explicit command; new funding and autonomous operation retain their
+existing separate authority gates. No actual pilot participants or evaluation
+consent have been provided for this source work.
