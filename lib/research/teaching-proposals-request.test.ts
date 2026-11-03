@@ -16,6 +16,35 @@ describe("original caller teaching request admission", () => {
     expect(parseTeachingProposalRequest(englishTeachingQuestion)).toMatchObject({ language: "en", explanationMaximumWords: 99 });
     expect(parseTeachingProposalRequest(englishTeachingQuestion.replace("under", "at most"))).toMatchObject({ explanationMaximumWords: 100 });
   });
+  it.each([
+    vietnameseTeachingQuestion.replace("Viết bằng tiếng Việt", "Viết giúp tôi bằng tiếng Việt"),
+    vietnameseTeachingQuestion.replace("Viết bằng tiếng Việt", "Soạn bằng tiếng Việt"),
+    vietnameseTeachingQuestion.replace("Viết bằng tiếng Việt", "Trình bày bằng tiếng Việt"),
+    vietnameseTeachingQuestion.replace("hoạt động 10 phút", "hoạt động kéo dài 10 phút"),
+    vietnameseTeachingQuestion.replace("hoạt động 10 phút", "hoạt động trong 10phút"),
+    vietnameseTeachingQuestion.replace("câu hỏi cuối giờ có đáp án", "câu hỏi kiểm tra cuối giờ kèm đáp án"),
+    vietnameseTeachingQuestion.replace("giải thích dưới 100 từ", "giải thích ngắn gọn dưới 100 từ"),
+  ])("admits explicit Vietnamese caller paraphrases without changing the requested limits: %s", question => {
+    const request = parseTeachingProposalRequest(question)!;
+    expect(request).toMatchObject({ language: "vi", durationMinutes: 10, exampleCount: 2, explanationMaximumWords: 99 });
+    expect(validTeachingProposalRequest(request, question)).toBe(true);
+    expect(validTeachingProposalRequest(request, vietnameseTeachingQuestion)).toBe(false);
+  });
+  it("does not mistake the word-count ceiling for a prohibition on the following examples", () => {
+    expect(parseTeachingProposalRequest(vietnameseTeachingQuestion.replace("dưới 100 từ", "không quá 100 từ")))
+      .toMatchObject({ language: "vi", durationMinutes: 10, exampleCount: 2, explanationMaximumWords: 100 });
+  });
+  it.each([
+    vietnameseTeachingQuestion.replace("Viết bằng tiếng Việt", "Đừng trình bày bằng tiếng Việt"),
+    vietnameseTeachingQuestion.replace("Viết bằng tiếng Việt", "Không soạn bằng tiếng Việt"),
+    vietnameseTeachingQuestion.replace("một hoạt động 10 phút", "một hoạt động kéo dài 10.5 phút"),
+    vietnameseTeachingQuestion.replace("một hoạt động 10 phút", "một hoạt động trong -10phút"),
+    vietnameseTeachingQuestion.replace("hai ví dụ", "không đưa hai ví dụ"),
+    vietnameseTeachingQuestion.replace("dưới 100 từ", "không quá 100 chữ"),
+    vietnameseTeachingQuestion.replace("câu hỏi cuối giờ có đáp án", "câu hỏi kiểm tra cuối giờ không kèm đáp án"),
+  ])("keeps negated, fractional and ambiguous paraphrases inactive: %s", question => {
+    expect(parseTeachingProposalRequest(question)).toBeUndefined();
+  });
   it.each([".", ";", "!", "?"])("keeps a source-purchase prohibition separate from the next request after %s", separator => {
     const english = englishTeachingQuestion.replace("Propose a", `Do not buy sources${separator} Propose a`);
     const vietnamese = vietnameseTeachingQuestion.replace("cần một hoạt động", `không mua nguồn${separator} Cần một hoạt động`);
