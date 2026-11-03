@@ -1,0 +1,27 @@
+{
+  "name": "keryx-cloudflare-migration",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit --project tsconfig.json && node --test test/*.test.mjs",
+    "build": "node ../../scripts/patch-legacy-zod.mjs ../.. && vite build --config vite.config.ts",
+    "test:built": "node test-built.mjs",
+    "preview:deploy": "cf deploy --prebuilt --mode production"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.10",
+    "@vinext/cloudflare": "1.3.2",
+    "@vitejs/plugin-react": "6.2.1",
+    "@vitejs/plugin-rsc": "0.5.38",
+    "cf": "1.0.0-beta.26",
+    "miniflare": "5.20261023.3-beta",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-server-dom-webpack": "19.3.1",
+    "vinext": "1.4.2",
+    "vite": "8.3.5",
+    "typescript": "5.9.3",
+    "@types/node": "25.4.0"
+  },
+  "overrides": { "fflate": "0.8.3" }
+}

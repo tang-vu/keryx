@@ -1,0 +1,6 @@
+/.vinext/
+/.next/
+/.cloudflare/
+/dist/
+/node_modules/
+/next-env.d.ts

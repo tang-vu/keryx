@@ -8667,6 +8667,18 @@ missing/unpriced charges, invoices, profit and human identity stay unmeasured.
 Feedback never executes revision, research, refund, settlement or renewal. See
 [contracts and configuration](docs/engineering/requester-usefulness-20261024.md).
 
+## Isolate Cloudflare compatibility from financial and storage authority (2026-11-03)
+
+Qualify the existing application on Workers in a separate dependency graph and
+private preview before replacing the deployed Node runtime. Preserve canonical
+security headers, the pinned Circle browser decoder, authored styles and metadata.
+Block API/MCP and writes while native storage, custody and co-sign coordination
+remain unported; health must state that production readiness is false. Do not
+route the preview through the VPS or treat an ephemeral Container disk as durable
+SQLite. Retain the VPS and current domain until complete data, privacy, financial,
+recovery and performance acceptance. See
+[migration boundaries and cost assumptions](docs/engineering/cloudflare-full-migration.md).
+
 ## Discover watch metadata only after one explicit owner action (2026-11-03)
 
 Keep the existing local-curated watch check unchanged. A separate authenticated,
