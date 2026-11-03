@@ -30,7 +30,7 @@ These results do not establish completed checklists or recommendations, accuracy
 customer usefulness or vendor cost/latency savings.
 
 Qualification uses the same frozen questions, supplied discovery candidates and
-reader snapshots. Only this heuristic module differs across the 546 project
+reader snapshots. Only this heuristic module differs across the 548 project
 inputs. Three hundred paid/creator/inconsistent-kind/marketplace controls retain
 exact decision objects, and decomposition, sufficiency, reevaluation, synthesis
 and attribution methods remain exact. Replays deny outbound network and child
