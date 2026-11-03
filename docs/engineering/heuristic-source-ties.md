@@ -19,10 +19,22 @@ attribution; unchanged source-selection decisions do not establish economic
 equivalence. Reading, spending, custody and settlement authority stay with their
 existing layers.
 
-Temporary counterfactual runs on the twelve retained questions admitted both
-R11 copies instead of one. They did not change source read attempts or fix the
-R09 comparison, R13 factual-quote ranking or R14 changed-limit gaps. They are
-offline supplied-snapshot evidence, not production search, customer acceptance,
-complete synthesis or provider cost/latency evidence. The local implementation
-passes 120 focused extraction, version, relevance and evidence-ledger controls.
-Official study refresh and required exact-source CI remain pending.
+Twenty-four matched runs on the twelve retained questions admitted both R11
+copies instead of one, including both exported references. They did not change
+source read attempts or fix the R09 comparison, R13 factual-quote ranking or R14
+changed-limit gaps. Five other reasoning methods remained identical, including
+source decisions and attribution.
+
+A read-only candidate from the unchanged controlled-study worker completed all
+48 offline trials with zero outbound attempts. Twelve trials changed citations
+and simulated reward distribution: additional excerpts from the primary source
+received part of the existing citation pool. Across the matrix, fixture-defined
+fact matches rose from 30 to 42. Every source proposal, read and re-evaluation,
+fetch total and citation total remained identical; every budget bound held.
+This does not establish semantic accuracy or live economic equivalence.
+
+These are offline supplied-snapshot and synthetic-fixture results, not production
+search, customer acceptance, complete synthesis or provider cost/latency evidence.
+The local implementation passes 120 focused extraction, version, relevance and
+evidence-ledger controls, application/operational typechecks and scoped lint.
+Official tracked study refresh and required exact-source CI remain pending.
