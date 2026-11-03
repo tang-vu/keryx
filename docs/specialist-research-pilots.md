@@ -46,6 +46,37 @@ Current delivery/evidence gates can still return partial coverage or excerpts.
 Questions retain the existing 2,000-character boundary; there is no truncation.
 Starting URLs are unread leads, subject to the ordinary transport/evidence gates.
 
+## Caller-defined work beyond the presets
+
+The `custom` track accepts a requested `deliverable` (1–160 characters) and
+`reviewCriteria` (one to three strings, each 1–100 characters), alongside the same
+question, context and source leads. It supports preparing work such as an incident
+investigation, an operational checklist or a lesson outline without forcing it
+into an API, competitor or literature template. Both `/briefs` and `research:brief`
+prepare the same existing Deep request. For example:
+
+```json
+{
+  "track": "custom",
+  "decision": "What should we verify before changing our webhook retry policy?",
+  "context": "Separate observed delivery events from untested explanations.",
+  "sourceLeads": [],
+  "deliverable": "A source-backed investigation checklist with missing inputs visible.",
+  "reviewCriteria": [
+    "Distinguish source findings from proposed checks.",
+    "Preserve documented version limits and conditions."
+  ]
+}
+```
+
+The request labels these as caller requirements, not findings or recorded
+acceptance. The separate checklist retains the caller's criteria verbatim after
+trimming. Existing evidence, reading and output limits still apply; a requested
+checklist, diagnosis or recommendation may remain incomplete. Preparation starts
+no research or payment. Editing the custom output or criteria invalidates the
+preview and copy confirmation just like editing the question. The draft stays
+in page memory. Existing three-track inputs and request envelopes are unchanged.
+
 ## Price from a useful outcome and complete costs
 
 Current Quick/Deep/Monthly quotes and immutable original terms remain authoritative.

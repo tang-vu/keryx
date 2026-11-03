@@ -78,11 +78,31 @@ try {
         await page.locator(`input[value="${track}"]`).check();
         await page.getByLabel(copy.decision).fill(`Synthetic ${track} decision, not a live task.`);
         await page.getByLabel(copy.context).fill("Synthetic small-team constraints.");
+        if (track === "custom") {
+          await page.getByLabel(copy.deliverable).fill("A source-backed process checklist.");
+          await page.getByLabel(copy.reviewCriteria).fill("Separate observed events from hypotheses.\nShow missing original documents.");
+        }
         await page.getByLabel(copy.sources).fill("https://example.org/docs");
         await page.getByRole("button", { name: copy.prepare, exact: true }).click();
         const question = await page.getByRole("textbox", { name: copy.review, exact: true }).inputValue();
         assert(question.includes(specialistBriefs[track].instruction));
         assert(question.includes("Unread source leads:"));
+        if (track === "custom") {
+          assert(question.includes("A source-backed process checklist."));
+          assert(question.includes("Separate observed events from hypotheses."));
+          assert(question.includes("Show missing original documents."));
+          // Caller criteria stay literal even when they resemble markup.
+          await page.getByLabel(copy.reviewCriteria).fill("<img src=x onerror=alert(1)>\nKeep missing inputs visible.");
+          assert.equal(await page.getByRole("textbox", { name: copy.review, exact: true }).count(), 0);
+          await page.getByRole("button", { name: copy.prepare, exact: true }).click();
+          assert.equal(await page.locator("#brief-request-heading").locator("..").locator("img").count(), 0);
+          await page.getByLabel(copy.reviewCriteria).fill("One\nTwo\nThree\nFour");
+          await page.getByRole("button", { name: copy.prepare, exact: true }).click();
+          await page.getByRole("alert").filter({ hasText: copy.customInvalid }).waitFor();
+          assert.equal(await page.getByRole("button", { name: copy.download, exact: true }).count(), 0);
+          await page.getByLabel(copy.reviewCriteria).fill("Separate observed events from hypotheses.\nShow missing original documents.");
+          await page.getByRole("button", { name: copy.prepare, exact: true }).click();
+        }
         assert.equal(await page.getByRole("link", { name: copy.checkout, exact: true }).getAttribute("href"), "/research?mode=deep#paid-research");
         assert.equal(await page.getByRole("link", { name: copy.trial, exact: true }).getAttribute("href"), "/?mode=deep#dispatch");
         const downloading = page.waitForEvent("download");
@@ -145,7 +165,7 @@ try {
       assert.deepEqual(outbound, []); assert.deepEqual(errors, []);
     } finally { await context.unrouteAll({ behavior: "wait" }); await context.close(); }
   }
-  console.log("PASS built specialist drafts: all three tracks, mobile layout, copy/download, unsafe-lead refusal, stale-result invalidation, no persistence and empty Deep trial handoff; no research/payment requests.");
+  console.log("PASS built research drafts: three presets and custom deliverable/criteria, mobile layout, copy/download, scope and unsafe-lead refusal, literal caller text, stale-result invalidation, no persistence and empty Deep trial handoff; no research/payment requests.");
 } finally {
   await browser.close();
   if (child && !didExit) child.kill();

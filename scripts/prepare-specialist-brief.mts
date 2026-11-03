@@ -5,7 +5,7 @@ import { prepareSpecialistBrief } from "../lib/research/specialist-briefs";
 
 const args = process.argv.slice(2);
 if (args.length === 1 && args[0] === "--help") {
-  console.log("Usage: npm run research:brief -- --input brief.json\nFields: track (api-platform | saas-competition | scholarly-literature), decision, context, sourceLeads. Prints a prepared request and review checklist. No job, quote or payment is submitted.");
+  console.log("Usage: npm run research:brief -- --input brief.json\nFields: track (api-platform | saas-competition | scholarly-literature | custom), decision, context, sourceLeads. Custom also requires deliverable (up to 160 characters) and reviewCriteria (1-3 strings, up to 100 characters each). Prints a prepared request and review checklist. No job, quote or payment is submitted.");
 } else {
   let file: Awaited<ReturnType<typeof open>> | undefined;
   try {
