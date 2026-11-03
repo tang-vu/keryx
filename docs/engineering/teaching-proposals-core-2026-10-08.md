@@ -1,5 +1,18 @@
 # Reviewed teaching proposal core - October 8, 2026
 
+## Current source clarification — November 3, 2026
+
+The October 11 unglossed-target limitation below is historical. Later structural
+body sampling (`ff2edb28`) retains the actual NASA definition passages for the
+unglossed Vietnamese case; the current retained-original integration test admits
+the lesson only after its separate synthetic factual/proposal review. This is
+source regression evidence, not a live model-quality or production rollout claim.
+The original caller now also accepts explicit Vietnamese wording described in
+[the paraphrase contract](teaching-paraphrases-20261103.md), with the same request
+hash, bounds, quote admission and independent-review requirements. The teaching
+flag and existing rollout hold remain unchanged. November 3 source work is held
+from main merge, deployment and release by the owner's instruction.
+
 ## Explicit multilingual target glosses select observed source headings — October 11, 2026
 
 The PR406 frozen candidate `04301c98` established a real retrieval gap: its

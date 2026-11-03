@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, rmdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -23,6 +23,33 @@ describe("read-only local pilot CLI", () => {
     expect(report.tracks).toHaveLength(3);
     expect(report.overall.evidence.status).toBe("not-established");
     expect(report.overall.serviceFeeOnlyContribution.status).toBe("unknown");
+    expect(report.overall.requesterObservations).toMatchObject({ consentedObservationJobs: 0, responseRate: null,
+      usefulnessAmongResponses: null, partialModelCosts: { bounds: null }, groups: { targetStatus: "illustrative-no-real-pilot-evidence" } });
+  });
+
+  it("reports original requester observations without echoing consent, group or evidence identifiers", () => {
+    const directory = mkdtempSync(join(tmpdir(), "keryx-pilot-observations-")), file = join(directory, "input.json");
+    try {
+      const input = JSON.parse(readFileSync("docs/research-pilot-example.json", "utf8")), job = input.jobs[0];
+      job.status = "completed";
+      job.requesterObservation = { format: "keryx-pilot-requester-observation-v1",
+        consent: { scope: "private-pilot-evaluation", evidenceId: "ev-privateConsent0001", recordedAt: job.initiatedAt },
+        observedAt: new Date(Date.parse(job.initiatedAt) + 3600_000).toISOString(), evidenceId: "ev-privateObservation0001", choice: "revise",
+        observations: { format: "keryx-recorded-job-observations-v1", generationDurationMs: 1234,
+          durationBasis: "recorded-orchestrator-completion", modelCostUsd: null, costBasis: "partial-captured-policy-estimate",
+          recordedCalls: 2, failedCalls: 0, pendingCalls: 0, missingUsageCalls: 1, unpricedUsageRecords: 1, usageRecords: 1,
+          excluded: "search-infrastructure-gas-and-unrecorded-provider-charges", invoice: null, profit: null },
+        group: { groupId: "group-privateGroup0001", classification: "unknown", evidenceId: "ev-privateGroup0001" },
+        fundingWallet: { walletId: "wallet-privateWallet0001", evidenceId: "ev-privateWallet0001" } };
+      writeFileSync(file, JSON.stringify(input));
+      const output = execFileSync(process.execPath, [...args, "--input", file], { encoding: "utf8" });
+      const report = JSON.parse(output);
+      expect(report.overall.requesterObservations).toMatchObject({ consentedObservationJobs: 1, needsRevision: 1,
+        recordedDuration: { medianMs: 1234 }, partialModelCosts: { bounds: null, missingUsageCalls: 1, unpricedUsageRecords: 1 } });
+      expect(report.overall.outcomes.acceptedIndependentPaidJobs).toBe(0);
+      for (const value of ["privateConsent0001", "privateObservation0001", "privateGroup0001", "privateWallet0001", job.jobId]) expect(output).not.toContain(value);
+      expect(readFileSync(file, "utf8")).toBe(JSON.stringify(input));
+    } finally { rmSync(file, { force: true }); rmdirSync(directory); }
   });
 
   it("rejects unknown/duplicate args without echoing values", () => {

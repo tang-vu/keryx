@@ -26,7 +26,16 @@ function WatchEditor({ wallet }: { wallet: string }) {
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [generation, setGeneration] = useState(0);
   const [result, setResult] = useState<TopicWatchResult | null>(null), [editing, setEditing] = useState<TopicWatchState | null>(null);
+  const [currentConsent, setCurrentConsent] = useState<Record<string, number>>({});
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const epoch = useRef(0), mutation = useRef(false);
+  useEffect(() => {
+    const expiries = watches.filter(watch => watch.status === "active" && watch.spec.expiresAtMs > nowMs).map(watch => watch.spec.expiresAtMs);
+    if (!expiries.length) return;
+    // UI expiry only: this timer cannot fetch, run a check or mutate watch state.
+    const timer = setTimeout(() => setNowMs(Date.now()), Math.max(0, Math.min(2_147_483_647, Math.min(...expiries) - Date.now())));
+    return () => clearTimeout(timer);
+  }, [watches, nowMs]);
   async function request(path: string, method = "GET", body?: unknown, revision?: number) {
     const response = await fetch(`/api/me/topic-watches${path}`, { method, cache: "no-store", credentials: "same-origin",
       signal: AbortSignal.timeout(15000), headers: { "x-keryx-expected-wallet": wallet,
@@ -48,7 +57,7 @@ function WatchEditor({ wallet }: { wallet: string }) {
   }
   useEffect(() => {
     void refresh();
-    const changed = () => { epoch.current++; setGeneration(value => value + 1); setWatches([]); setLoaded(false); setEditing(null); setResult(null); setError(copy("topicWatch.accountChanged")); };
+    const changed = () => { epoch.current++; setGeneration(value => value + 1); setWatches([]); setLoaded(false); setEditing(null); setResult(null); setCurrentConsent({}); setError(copy("topicWatch.accountChanged")); };
     window.addEventListener("keryx:auth", changed);
     window.addEventListener("focus", changed);
     let channel: BroadcastChannel | undefined;
@@ -71,25 +80,34 @@ function WatchEditor({ wallet }: { wallet: string }) {
   }
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // This event handler must capture actual submission time, not a stale render clock.
+    // eslint-disable-next-line react-hooks/purity -- Runs only on the explicit form submit.
+    const submittedAtMs = Date.now();
     const form = new FormData(event.currentTarget), id = editing?.key.watchId ?? crypto.randomUUID();
     const spec: TopicWatchSpec = { watchId: id, question: String(form.get("question")), keywords: terms(form.get("keywords")),
       authors: terms(form.get("authors")), venues: terms(form.get("venues")), cadenceMs: Number(form.get("cadence")) * 60_000,
       periodMs: Number(form.get("period")) * 86_400_000, maximumChecksPerPeriod: Number(form.get("checks")),
       maximumRowsPerCheck: 32, maximumDigestItems: 16,
-      expiresAtMs: editing?.spec.expiresAtMs ?? Date.now() + Number(form.get("expiry")) * 86_400_000,
+      expiresAtMs: editing?.spec.expiresAtMs ?? submittedAtMs + Number(form.get("expiry")) * 86_400_000,
       requestedCaps: { perCheckMicroUsdc: 0, perPeriodMicroUsdc: 0 },
       consent: { manualMetadata: true, emptyHeartbeat: form.get("heartbeat") === "on" } };
     void mutate(() => request(editing ? `/${id}` : "", editing ? "PUT" : "POST", spec, editing?.revision));
   }
-  function control(watch: TopicWatchState, action: "check" | "pause" | "resume" | "cancel") {
+  function control(watch: TopicWatchState, action: "check" | "check-current" | "pause" | "resume" | "cancel") {
+    if (action === "check-current") {
+      if (currentConsent[watch.key.watchId] !== watch.revision) return;
+      setCurrentConsent(current => { const next = { ...current }; delete next[watch.key.watchId]; return next; });
+    }
     void mutate(() => request(`/${watch.key.watchId}`, action === "cancel" ? "DELETE" : "POST",
-      action === "cancel" ? undefined : { action }, watch.revision));
+      action === "cancel" ? undefined : action === "check-current" ? { action, consent: "send-keywords-to-crossref-once" } : { action }, watch.revision));
   }
   return <section className="space-y-5" aria-label={copy("topicWatch.title")}>
     <p>{copy("topicWatch.scope")}</p>
+    <p>{copy("topicWatch.currentScope")}</p>
     <button className={button} disabled={busy} onClick={() => { void refresh(); }}>{copy("topicWatch.refresh")}</button>
     {error && <p role="alert">{error}</p>}
     {result && <div role="status"><p>{copy("topicWatch.result", { status: result.status, code: result.code ? `: ${result.code}` : "", paidRequests: result.paidRequests })}</p>
+      {result.counts && <p>{copy("topicWatch.metadataCounts", { observed: result.counts.observedRows, unknown: result.counts.unknownRows, matches: result.counts.newMatches })}</p>}
       {result.digest && <><p>{result.digest.line}</p><ul>{result.digest.items.map(item => <li key={`${item.identitySha256}:${item.metadataSha256}`}>
         <a href={item.url} target="_blank" rel="noopener noreferrer" className="underline">{item.title}</a>
         <span> — {item.matchReasons.map(reason => `${reason.field}: ${reason.term}`).join("; ")}</span>
@@ -112,11 +130,21 @@ function WatchEditor({ wallet }: { wallet: string }) {
       {editing && <button className={button} type="button" onClick={() => setEditing(null)}>{copy("topicWatch.close")}</button>}
     </form>
     {loaded && watches.length === 0 && <p>{copy("topicWatch.empty")}</p>}
-    <ul className="space-y-5">{watches.map(watch => <li className="border border-line p-4" key={watch.key.watchId}>
+    <ul className="space-y-5">{watches.map(watch => <li className="border border-line p-4" style={{ overflowWrap: "anywhere", minWidth: 0 }} key={watch.key.watchId}>
       <h2>{watch.spec.question}</h2><p>{copy("topicWatch.state", { status: watch.status, revision: watch.revision, expires: new Date(watch.spec.expiresAtMs).toISOString() })}</p>
       <p>{copy("topicWatch.keywordValues", { keywords: watch.spec.keywords.join(", ") })}</p>
+      <label className="my-3 flex min-h-11 items-start gap-3">
+        <input type="checkbox" className="mt-1 size-5 shrink-0" checked={currentConsent[watch.key.watchId] === watch.revision}
+          disabled={busy || watch.status !== "active" || nowMs >= watch.spec.expiresAtMs}
+          onChange={event => { const checked = event.target.checked; setCurrentConsent(current => {
+            const next = { ...current }; if (checked) next[watch.key.watchId] = watch.revision; else delete next[watch.key.watchId]; return next;
+          }); }} />
+        <span>{copy("topicWatch.currentConsent", { keywords: watch.spec.keywords.join(", ") })}</span>
+      </label>
       <div className="flex flex-wrap gap-2">
-        <button className={button} disabled={busy || watch.status !== "active" || Date.now() >= watch.spec.expiresAtMs} onClick={() => control(watch, "check")}>{copy("topicWatch.check")}</button>
+        <button className={button} disabled={busy || watch.status !== "active" || nowMs >= watch.spec.expiresAtMs} onClick={() => control(watch, "check")}>{copy("topicWatch.check")}</button>
+        <button className={button} disabled={busy || watch.status !== "active" || nowMs >= watch.spec.expiresAtMs || currentConsent[watch.key.watchId] !== watch.revision}
+          onClick={() => control(watch, "check-current")}>{copy("topicWatch.checkCurrent")}</button>
         <button className={button} disabled={busy || watch.status === "cancelled"} onClick={() => control(watch, watch.status === "paused" ? "resume" : "pause")}>{watch.status === "paused" ? copy("topicWatch.resume") : copy("topicWatch.pause")}</button>
         <button className={button} disabled={busy || watch.status === "cancelled"} onClick={() => control(watch, "cancel")}>{copy("topicWatch.cancel")}</button>
         <button className={button} disabled={busy || watch.status === "cancelled" || watch.nextSlot !== 0} onClick={() => setEditing(watch)}>{copy("topicWatch.edit")}</button>

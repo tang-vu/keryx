@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pilotRequesterObservationSchema, summarizePilotRequesterObservations } from "./research-pilot-observations";
 
 const ZERO = BigInt(0);
 const ONE = BigInt(1);
@@ -61,8 +62,11 @@ const job = z.object({
     offeredServiceFeeUsdc: money.nullable(),
     response: z.enum(["would-pay", "declined", "unknown"]), evidenceId,
   }).strict(),
+  requesterObservation: pilotRequesterObservationSchema.optional(),
 }).strict().superRefine((value, context) => {
   const issue = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
+  if (value.requesterObservation && (value.status !== "completed" || Date.parse(value.requesterObservation.observedAt) < Date.parse(value.initiatedAt)))
+    issue("Requester observations need completed work and a time after the request");
   if (value.payment.status === "settled"
       && (value.payment.serviceFeeUsdc === null || value.payment.settledAt === null || value.payment.receiptEvidenceId === null)) {
     issue("Settled payment needs recorded amount, time and receipt reference");
@@ -135,6 +139,18 @@ export const researchPilotSchema = z.object({
   if (new Set(receipts).size !== receipts.length) issue("A receipt cannot fund several cohort jobs");
   const origins = value.jobs.flatMap(item => item.origin.evidenceId === null ? [] : [item.origin.evidenceId]);
   if (new Set(origins).size !== origins.length) issue("Request-origin evidence cannot represent several distinct jobs");
+  const observations = value.jobs.flatMap(item => item.requesterObservation ? [item.requesterObservation] : []);
+  if (new Set(observations.map(item => item.evidenceId)).size !== observations.length) issue("An original observation cannot represent several distinct jobs");
+  const groupClasses = new Map<string, string>();
+  for (const observation of observations) {
+    if (Date.parse(observation.observedAt) >= end) issue("Requester observation is outside the reporting period");
+    const group = observation.group;
+    if (group && group.classification !== "unknown") {
+      const previous = groupClasses.get(group.groupId);
+      if (previous && previous !== group.classification) issue("Conflicting group classification");
+      groupClasses.set(group.groupId, group.classification);
+    }
+  }
   for (const item of value.jobs) {
     const initiated = Date.parse(item.initiatedAt);
     if (initiated < start || initiated >= end) issue("All listed jobs must originate within the reporting period");
@@ -301,6 +317,7 @@ function summarize(input: ResearchPilotInput, trackId?: typeof RESEARCH_PILOT_TR
     outcomes: { acceptedJobsAll: jobs.filter(item => item.outcome.status === "accepted").length,
       acceptedIndependentPaidJobs: accepted.length, acceptedIndependentPaidBuyers: acceptanceBuyers.size,
       sameTrackIndependentReturningBuyers: returnBuyers.size },
+    requesterObservations: summarizePilotRequesterObservations(jobs, independentPayment, qualifyingOutcome, input.basis),
     willingness: { evidencedWouldPayResponses: jobs.filter(item => item.willingness.response === "would-pay").length,
       evidencedDeclinedResponses: jobs.filter(item => item.willingness.response === "declined").length,
       label: "declared-willingness-is-not-payment" },
@@ -355,6 +372,7 @@ export function evaluateResearchPilot(value: unknown) {
     tracks, overall,
     notes: [
       "Amounts and evidence references are entered assertions, never independently verified receipts or invoices. Keep input and aggregate output private.",
+      "Requester usefulness is an explicit consent-backed choice, not acceptance inferred from payment or silence. Duration and partial model-cost samples keep missing/unpriced records explicit and never enter financial contribution or invoices. Group association and second-week counts are entered records, not verified people or paid-pilot completion.",
       "Every failed, cancelled, pending, sponsored and team job belongs in its complete cost cohort; do not select only successful paid work. Allocate shared direct costs once.",
       "Independently paid failed/cancelled work with any unrefunded service fee remains an unresolved delivery/remedy liability. It cannot enter the retained-job denominator and suppresses contribution and retained-fee planning until fully refunded.",
       "Only independently funded, evidenced Arc mainnet settled service fees enter receipts. Testnet, simulation, sponsored funds, creator reserve and willingness answers do not.",

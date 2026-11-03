@@ -6,6 +6,7 @@ import { downloadBrowserText } from "@/lib/browser-text-download";
 import { useUiCopy } from "@/lib/i18n/ui-copy";
 import { emptyMatrixRow, literatureMatrixCsv, MATRIX_FIELDS, MAX_MATRIX_CELL_CHARS, MAX_MATRIX_ROWS, type MatrixField, type MatrixRow } from "@/lib/research-tools/literature-matrix";
 import { appendLiteratureMatrix, literatureMatrixJson, MatrixFileError, MAX_MATRIX_FILE_BYTES, readLiteratureMatrixFile, type MatrixDocument, type MatrixFileKind } from "@/lib/research-tools/literature-matrix-file";
+import { MATRIX_RECOVERY_DISABLED, MATRIX_RECOVERY_KEY, readMatrixRecovery, writeMatrixRecovery } from "@/lib/research-tools/literature-matrix-recovery";
 import { researchGuidesCopy } from "@/locales/en/research-guides";
 
 const fieldClass = "mt-2 block min-h-11 w-full min-w-0 rounded-none border border-line bg-paper-2 px-3 py-2 font-serif text-base text-ink";
@@ -28,6 +29,11 @@ export function LiteratureReviewMatrix() {
   const addButton = useRef<HTMLButtonElement>(null);
   const focusAdded = useRef(false);
   const prefix = useId();
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  const [recoveryEnabled, setRecoveryEnabled] = useState(true);
+  const [recoveryBlocked, setRecoveryBlocked] = useState(false);
+  const [recoveryStatus, setRecoveryStatus] = useState<"saved" | "disabled" | "unavailable" | "invalid" | "empty">("empty");
+  const recoveryInitialized = useRef(false);
   useEffect(() => {
     if (!focusAdded.current) return;
     focusAdded.current = false;
@@ -37,6 +43,69 @@ export function LiteratureReviewMatrix() {
   const csv = () => literatureMatrixCsv(question, rows.map(row => row.value));
   const snapshot = () => ({ question, rows: rows.map(row => row.value) });
   const hasNotes = question !== "" || rows.length > 0;
+  const latest = useRef({ document: snapshot(), dirty: false, recover: false });
+  useEffect(() => {
+    latest.current = { document: { question, rows: rows.map(row => row.value) }, dirty: hasNotes && revision !== savedRevision,
+      recover: recoveryReady && recoveryEnabled && !recoveryBlocked };
+  }, [question, rows, hasNotes, revision, savedRevision, recoveryReady, recoveryEnabled, recoveryBlocked]);
+  useEffect(() => {
+    if (recoveryInitialized.current) return;
+    recoveryInitialized.current = true;
+    try {
+      const text = window.sessionStorage.getItem(MATRIX_RECOVERY_KEY);
+      if (text !== null) {
+        const recovered = readMatrixRecovery(text);
+        if (recovered === "disabled") { setRecoveryEnabled(false); setRecoveryStatus("disabled"); }
+        else if (currentRevision.current === 0) {
+          setQuestion(recovered.question); setRows(recovered.rows.map(value => ({ id: nextId.current++, value })));
+          currentRevision.current++; setRevision(currentRevision.current); setStatus(copy.recovered);
+        } else { setRecoveryBlocked(true); setRecoveryStatus("invalid"); }
+      }
+    } catch { setRecoveryBlocked(true); setRecoveryStatus("unavailable"); }
+    setRecoveryReady(true);
+  }, [copy.recovered]);
+  useEffect(() => {
+    if (!recoveryReady || !recoveryEnabled || recoveryBlocked) return;
+    try {
+      if (hasNotes) window.sessionStorage.setItem(MATRIX_RECOVERY_KEY, writeMatrixRecovery({ question, rows: rows.map(row => row.value) }));
+      else window.sessionStorage.removeItem(MATRIX_RECOVERY_KEY);
+      setRecoveryStatus(hasNotes ? "saved" : "empty");
+    } catch { setRecoveryStatus("unavailable"); }
+  }, [question, rows, hasNotes, recoveryReady, recoveryEnabled, recoveryBlocked]);
+  useEffect(() => {
+    function flush() {
+      const state = latest.current;
+      if (!state.recover) return;
+      try {
+        if (state.document.question !== "" || state.document.rows.length) window.sessionStorage.setItem(MATRIX_RECOVERY_KEY, writeMatrixRecovery(state.document));
+        else window.sessionStorage.removeItem(MATRIX_RECOVERY_KEY);
+      } catch { /* The visible save effect already reports refused recovery. */ }
+    }
+    function navigate(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
+      const target = new URL(link.href, window.location.href);
+      if (target.origin !== window.location.origin || (target.pathname === window.location.pathname && target.search === window.location.search)) return;
+      flush();
+      if (latest.current.dirty && !window.confirm(copy.leaveConfirmation)) {
+        event.preventDefault(); event.stopImmediatePropagation();
+      }
+    }
+    // Capture before a client-side Link can unmount the worksheet. Browser Back is
+    // recovered from the same tab copy; no router/history implementation is patched.
+    document.addEventListener("click", navigate, true);
+    window.addEventListener("pagehide", flush);
+    return () => { document.removeEventListener("click", navigate, true); window.removeEventListener("pagehide", flush); };
+  }, [copy.leaveConfirmation]);
+  function changeRecovery(enabled: boolean) {
+    try {
+      if (!enabled) window.sessionStorage.setItem(MATRIX_RECOVERY_KEY, MATRIX_RECOVERY_DISABLED);
+      else if (hasNotes) window.sessionStorage.setItem(MATRIX_RECOVERY_KEY, writeMatrixRecovery(snapshot()));
+      else window.sessionStorage.removeItem(MATRIX_RECOVERY_KEY);
+      setRecoveryEnabled(enabled); setRecoveryBlocked(false); setRecoveryStatus(enabled ? (hasNotes ? "saved" : "empty") : "disabled");
+    } catch { setRecoveryStatus("unavailable"); }
+  }
   useEffect(() => () => { ++importGeneration.current; copyAttempt.current = null; }, []);
   useEffect(() => {
     if (!hasNotes || revision === savedRevision) return;
@@ -99,6 +168,14 @@ export function LiteratureReviewMatrix() {
   return <section aria-labelledby="matrix-heading" className="mt-8 border border-ink bg-paper p-4 sm:p-7">
     <h2 id="matrix-heading" className="font-display text-2xl text-ink">{copy.title}</h2>
     <p className="mt-3 max-w-[78ch] font-serif leading-relaxed text-ink-2">{copy.privacyNotice}</p>
+    <label className="mt-4 flex min-h-11 items-start gap-3 font-serif text-sm text-ink-2">
+      <input type="checkbox" className="mt-1 size-5 shrink-0 accent-seal" checked={recoveryEnabled} disabled={!recoveryReady} onChange={event => changeRecovery(event.target.checked)} />
+      <span>{copy.recoveryChoice}</span>
+    </label>
+    <p aria-live="polite" className="mt-2 max-w-[78ch] font-serif text-sm text-ink-3">{
+      recoveryStatus === "saved" ? copy.recoverySaved : recoveryStatus === "disabled" ? copy.recoveryDisabled :
+        recoveryStatus === "unavailable" || recoveryStatus === "invalid" ? copy.recoveryUnavailable : copy.recoveryNotice}</p>
+    {recoveryBlocked && <button type="button" className={`${buttonClass} mt-3`} onClick={() => changeRecovery(true)}>{copy.replaceRecovery}</button>}
     {hasNotes && revision !== savedRevision && <p className="mt-3 font-serif text-sm text-seal">{copy.unsaved}</p>}
     <div className="mt-6 font-mono text-xs text-ink-2"><label htmlFor={`${prefix}-question`}>{copy.question}</label>
       <textarea id={`${prefix}-question`} maxLength={MAX_MATRIX_CELL_CHARS} rows={2} value={question} placeholder={copy.questionPlaceholder} onChange={event => { setQuestion(event.target.value); changed(); }} className={fieldClass} />

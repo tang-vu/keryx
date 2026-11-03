@@ -3,7 +3,7 @@ import { constants } from "node:fs";
 import { evaluateResearchPilot } from "../lib/economics/research-pilot";
 
 const MAX_INPUT_BYTES = 2 * 1024 * 1024;
-const HELP = "Usage: npm run research:pilot -- --input PRIVATE_JSON_FILE\nEvaluate a bounded local JSON cohort without loading environment, database, network or payment services. Prints private aggregate JSON only; customer, question, buyer/job and evidence IDs are omitted. Entered receipts and cost evidence are not independently verified. This does not establish sustainability, realized profit or authorize pricing, spending or outreach. Keep private input/output outside tracked files. docs/research-pilot-template.json contains illustrative empty cohorts only.";
+const HELP = "Usage: npm run research:pilot -- --input PRIVATE_JSON_FILE\nEvaluate a bounded local JSON cohort without loading environment, database, network or payment services. Prints private aggregate JSON only; customer, question, buyer/job and evidence IDs are omitted. Entered receipts and cost evidence are not independently verified. Optional requesterObservation records require explicit evaluation consent; silence, missing duration/costs and group identity remain unverified. See docs/research-pilot-observations.md for intake and second-week targets. This does not establish sustainability, realized profit or authorize pricing, spending or outreach. Keep private input/output outside tracked files. docs/research-pilot-template.json contains illustrative empty cohorts only.";
 
 async function main() {
   const args = process.argv.slice(2);

@@ -71,7 +71,7 @@ const origin = { in: "header", name: "Origin", required: true, schema: { type: "
 const revision = { in: "header", name: "If-Match", required: true, schema: { type: "string", pattern: '^"([1-9]\\d{0,15})"$' },
   description: "Positive safe integer <= Number.MAX_SAFE_INTEGER, in double quotes. Not an ETag response; obtain revision from read/list. No wildcard or weak validator." };
 const pathId = { in: "path", name: "id", required: true, schema: id };
-const description = "Manual local-curated-catalog metadata only; no scheduler, catch-up, live provider, model, paid requests or payment authority. No query parameters accepted (including token/owner selectors). Existing WebSession cookie is verified by accountSessionContext; exact selected DB, wallet and session remain fixed across awaits and native transactional CAS. API keys/Authorization cannot substitute. GET without Origin is allowed; supplied Origin is checked. No ETag or Vary header is emitted by this factory. Digests are lexical matches, not factual support or literature completeness.";
+const description = "Manual metadata checks only; legacy check uses the local curated catalog. External metadata is available only through a separate consent-bound check-current action. No scheduler, catch-up, model, paid requests or payment authority. No query parameters accepted (including token/owner selectors). Existing WebSession cookie is verified by accountSessionContext; exact selected DB, wallet and session remain fixed across awaits and native transactional CAS. API keys/Authorization cannot substitute. GET without Origin is allowed; supplied Origin is checked. No ETag or Vary header is emitted by this factory. Digests are lexical matches, not factual support or literature completeness.";
 const body = (schema: unknown) => ({ required: true, description: "application/json; maximum 16,384 streamed bytes, five-second body deadline, fatal UTF-8 and strict JSON parsing.", content: { "application/json": { schema } } });
 const invalidInput = error("Query string, invalid id/wallet, malformed/oversized/slow JSON or strict spec refused.", ["invalid_watch", "invalid_owner_precondition"]);
 const semanticRefusal = object({ result: resultWith(["refused"]) });
@@ -101,8 +101,12 @@ export const topicWatchOpenApiPaths = {
     put: { operationId: "updateOwnTopicWatch", summary: "Replace unchecked watch settings", security: [{ WebSession: [] }], description,
       parameters: [owner, pathId, origin, revision], requestBody: body(specInput), responses: { ...mutationResponses, "400": invalidInput,
         "200": response("Unchecked settings updated.", object({ result: resultWith(["controlled"]) })), "422": specRefusal } },
-    post: { operationId: "controlOwnTopicWatch", summary: "Explicit check, pause, resume or cancel", security: [{ WebSession: [] }], description,
-      parameters: [owner, pathId, origin, revision], requestBody: body(object({ action: { type: "string", enum: ["check", "pause", "resume", "cancel"] } })), responses: mutationResponses },
+    post: { operationId: "controlOwnTopicWatch", summary: "Explicit metadata check, pause, resume or cancel", security: [{ WebSession: [] }],
+      description: description + " Legacy check reads the local curated catalog. A separate check-current action requires explicit per-request consent to send title keywords once to Crossref, with up to six recently indexed records. No question/session/owner data, paper bodies, paid fallback or automatic retry. The same session, claim, expiry, limits and watermark apply; this is not a complete literature search.",
+      parameters: [owner, pathId, origin, revision], requestBody: body({ oneOf: [
+        object({ action: { type: "string", enum: ["check", "pause", "resume", "cancel"] } }),
+        object({ action: { const: "check-current" }, consent: { const: "send-keywords-to-crossref-once" } }),
+      ] }), responses: mutationResponses },
     delete: { operationId: "cancelOwnTopicWatch", summary: "Cancel while retaining tombstone and history", security: [{ WebSession: [] }], description: description + " No request body is read; this never deletes or recreates the key.",
       parameters: [owner, pathId, origin, revision], responses: { ...mutationResponses, "400": invalidInput,
         "200": response("Cancelled or already cancelled; retained tombstone.", object({ result: resultWith(["controlled"]) })) } },
