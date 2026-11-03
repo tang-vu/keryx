@@ -1,0 +1,73 @@
+name: Cloudflare migration
+
+on:
+  pull_request:
+    paths:
+      - 'cloudflare/migration/**'
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'locales/**'
+      - 'shared/**'
+      - 'public/**'
+      - 'next.config.ts'
+      - 'package*.json'
+      - 'scripts/cloudflare-migration.mjs'
+      - 'scripts/circle-sdk-browser-loader.cjs'
+      - 'scripts/patch-legacy-zod.mjs'
+      - 'scripts/legacy-zod-patches.json'
+      - 'tsconfig.json'
+      - '.github/workflows/cloudflare-migration.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare/migration/**'
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'locales/**'
+      - 'shared/**'
+      - 'public/**'
+      - 'next.config.ts'
+      - 'package*.json'
+      - 'scripts/cloudflare-migration.mjs'
+      - 'scripts/circle-sdk-browser-loader.cjs'
+      - 'scripts/patch-legacy-zod.mjs'
+      - 'scripts/legacy-zod-patches.json'
+      - 'tsconfig.json'
+      - '.github/workflows/cloudflare-migration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      KERYX_NETWORK: arcTestnet
+      NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
+      KERYX_FORCE_OFFLINE: '1'
+      NEXT_PUBLIC_SUPABASE_URL: ''
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ''
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            cloudflare/migration/package-lock.json
+      # The reviewed postinstall applies required, hash-verified validation patches.
+      - run: npm ci --no-audit --no-fund
+      - run: npm ci --ignore-scripts --prefix cloudflare/migration
+      - run: node scripts/cloudflare-migration.mjs --summary
+      - run: npm run check --prefix cloudflare/migration
+      - run: npm run build --prefix cloudflare/migration
+      - run: npx playwright install --with-deps chromium
+      - name: Exercise the compiled workerd runtime and browser
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/.local/tmp/cloudflare-browser"
+          KERYX_CLOUDFLARE_TEST_DIR="$GITHUB_WORKSPACE/.local/tmp/cloudflare-browser" npm run test:built --prefix cloudflare/migration
