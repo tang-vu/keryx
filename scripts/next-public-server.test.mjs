@@ -92,7 +92,7 @@ test('pinned production Next sees public HTTPS origin on a private ephemeral soc
     await mkdir(join(dir, 'app', 'api', 'cached'), { recursive: true });
     await mkdir(join(dir, 'public'));
     await writeFile(join(dir, 'public', 'pixel.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1cAAAAASUVORK5CYII=', 'base64'));
-    for (const file of ['lib/web-research/extraction-worker.ts', 'lib/web-research/html-reader.ts',
+    for (const file of ['lib/web-research/extraction-worker.ts', 'lib/web-research/extraction-failure.ts', 'lib/web-research/html-reader.ts',
       'lib/web-research/html-reader-worker.mjs', 'lib/web-research/html-content-worker.mjs', 'lib/web-research/html-visibility.mjs',
       'lib/web-research/html-section-worker.mjs', 'lib/web-research/html-section-scope.ts',
       'lib/web-research/pdf-reader.ts', 'lib/web-research/pdf-reader-worker.mjs', 'lib/web-research/pdf-text-scope.ts',
