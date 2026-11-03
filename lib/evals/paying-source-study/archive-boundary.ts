@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { sha256 } from "./contract";
+import { canonical, sha256 } from "./contract";
+import type { StudyArtifact } from "./report";
 
 // Accepted historical bytes, normalized only for Git's Windows line endings.
 // A new engine result belongs to a new baseline, never an overwritten archive.
@@ -21,5 +22,18 @@ export function assertStudyArchives(root: string): void {
       throw new Error(`Archived study is not a bounded regular file: ${archive.path}`);
     if (sha256(fs.readFileSync(file, "utf8").replaceAll("\r\n", "\n")) !== archive.sha256)
       throw new Error(`Archived study drifted: ${archive.path}; retain the accepted history and create a new baseline`);
+  }
+}
+
+/** Current source/lock fingerprints may be refreshed after reproduction, but
+ * changing a published baseline's protocol or actual trials needs a new revision. */
+export function assertCurrentStudyRewrite(previous: unknown, next: StudyArtifact): void {
+  const prior = previous && typeof previous === "object" ? previous as Partial<StudyArtifact> : {};
+  if (prior.baselineRevision !== 3 || next.baselineRevision !== 3 ||
+      prior.outboundAttempts !== 0 || next.outboundAttempts !== 0)
+    throw new Error("Current study baseline is not a recognized offline revision3");
+  for (const key of ["version", "corpusSha256", "design", "canonicalOmissions", "trials"] as const) {
+    if (canonical(prior[key]) !== canonical(next[key]))
+      throw new Error(`Current study baseline3 ${key} changed; preserve its outcomes and create a new baseline revision`);
   }
 }

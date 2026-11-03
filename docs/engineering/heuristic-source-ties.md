@@ -41,7 +41,9 @@ The [revision 3 study](../studies/paying-for-sources-2026-11-04.md) retains thes
 actual outputs separately. Its artifact schema remains version 1 and records
 baseline revision 3 explicitly. The CLI writes only v3 and refuses any drift in
 the accepted v1/v2 data and reports, allowing Git CRLF/LF normalization only.
+Rewriting an existing v3 also requires identical protocol and actual trial rows;
+only reproduced source/lock fingerprints may refresh without a new baseline.
 Historical v2 source/lock manifests are frozen with those bytes; v3 independently
 binds the current source closure and lock. All original v1-to-v2 economic equality
-assertions remain, alongside 61 passing study, archive-integrity and boundary
+assertions remain, alongside 67 passing study, archive-integrity and boundary
 tests. Required exact-source PR/main CI remains pending.

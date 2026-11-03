@@ -6,6 +6,7 @@ import { canonical, microFromUsdc, parseCorpus, sha256 } from "./contract";
 import { renderStudy, type StudyArtifact } from "./report";
 import { sourceInputs } from "./source-inputs";
 import { assertSimulated } from "./runner";
+import { assertCurrentStudyRewrite } from "./archive-boundary";
 import type { PaymentRecord } from "../../types";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -64,4 +65,27 @@ it("records changed counterpart attribution while retaining all48 simulated budg
   expect(changedPayments).toBe(12);
   expect(archived.trials.reduce((sum, trial) => sum + trial.metrics.completeFactIds.length, 0)).toBe(30);
   expect(current.trials.reduce((sum, trial) => sum + trial.metrics.completeFactIds.length, 0)).toBe(42);
+});
+
+it("allows a source/lock fingerprint refresh only when actual protocol and trials stay identical", () => {
+  const refreshed = { ...current, runtimeSources: { "new-input.ts": "a".repeat(64) }, lockSha256: "b".repeat(64) };
+  expect(() => assertCurrentStudyRewrite(current, refreshed)).not.toThrow();
+});
+
+it("refuses to overwrite a baseline with changed actual output", () => {
+  const changed = structuredClone(current);
+  changed.trials[0].output.answer += " Changed source result.";
+  expect(() => assertCurrentStudyRewrite(current, changed)).toThrow(/trials changed/);
+});
+
+it("refuses a different corpus even if its trial rows were copied unchanged", () => {
+  expect(() => assertCurrentStudyRewrite(current, { ...current, corpusSha256: "c".repeat(64) })).toThrow(/corpusSha256 changed/);
+});
+
+it.each([undefined, 2])("refuses an unrecognized earlier artifact revision (%s)", baselineRevision => {
+  expect(() => assertCurrentStudyRewrite({ ...current, baselineRevision }, current)).toThrow(/recognized offline revision3/);
+});
+
+it("cannot refresh an artifact that recorded attempted outbound I/O", () => {
+  expect(() => assertCurrentStudyRewrite(current, { ...current, outboundAttempts: 1 })).toThrow(/recognized offline revision3/);
 });

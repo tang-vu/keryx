@@ -6,7 +6,7 @@ import { artifact, renderStudy, type StudyArtifact } from "../lib/evals/paying-s
 import { artifactTextEqual, canonical, parseCorpus, sha256 } from "../lib/evals/paying-source-study/contract";
 import { denyOutbound, studyEnvironment } from "../lib/evals/paying-source-study/offline-boundary";
 import { sourceInputs } from "../lib/evals/paying-source-study/source-inputs";
-import { assertStudyArchives } from "../lib/evals/paying-source-study/archive-boundary";
+import { assertCurrentStudyRewrite, assertStudyArchives } from "../lib/evals/paying-source-study/archive-boundary";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const corpusPath = path.join(root, "fixtures/evals/studies/paying-source-corpus-v1.json");
@@ -49,6 +49,12 @@ if (args[0] === "--internal-worker") {
   const report = renderStudy(result, corpus, "counterparts-v3");
   assertStudyArchives(root);
   if (args[0] === "--write") {
+    if (fs.existsSync(resultsPath)) {
+      const stat = fs.lstatSync(resultsPath);
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 4 * 1024 * 1024)
+        throw new Error("Current study artifact is not a bounded regular file");
+      assertCurrentStudyRewrite(JSON.parse(fs.readFileSync(resultsPath, "utf8")), result);
+    }
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(resultsPath, bytesOut); fs.writeFileSync(reportPath, report);
     console.log("Wrote 48 actual offline trials and generated study; no settled payments or outbound calls.");
