@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { canonical, microFromUsdc, parseCorpus, sha256 } from "./contract";
 import { renderStudy, type StudyArtifact } from "./report";
 import { assertSimulated } from "./runner";
-import { sourceInputs } from "./source-inputs";
+import { assertStudyArchives } from "./archive-boundary";
 import type { PaymentRecord } from "../../types";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -15,18 +15,16 @@ const prior = JSON.parse(text("fixtures/evals/studies/paying-source-results-v1.j
 const current = JSON.parse(text("fixtures/evals/studies/paying-source-results-v2.json")) as StudyArtifact;
 
 describe("archive-integrated controlled study baseline", () => {
-  it("binds the current literal source closure, lock and unchanged closed corpus", () => {
-    const inputs = sourceInputs(root, path.join(root, "scripts/eval-paying-source-study.mts"));
-    expect(current.runtimeSources).toEqual(inputs.files);
-    expect(current.unresolvedSourceInputs).toEqual(inputs.unresolved);
-    expect(current.lockSha256).toBe(sha256(text("package-lock.json")));
+  it("pins both historical source/lock manifests and reports without rewriting them for the current engine", () => {
+    assertStudyArchives(root);
+    expect(current.lockSha256).toMatch(/^[a-f0-9]{64}$/);
     expect(current.corpusSha256).toBe(sha256(canonical(corpus)));
     expect(current.corpusSha256).toBe(prior.corpusSha256);
     expect(current.version).toBe(1);
     expect(current.runtimeSources["lib/db/public-reference-archive.ts"]).toHaveLength(64);
   }, 60_000);
 
-  it("preserves v1 rendering and exactly renders the separately dated current report", () => {
+  it("preserves v1 rendering and exactly renders the separately dated v2 archive report", () => {
     expect(renderStudy(prior, corpus)).toBe(text("docs/studies/paying-for-sources-2026-10-09.md"));
     expect(renderStudy(current, corpus, "archive-v2")).toBe(text("docs/studies/paying-for-sources-2026-10-13.md"));
     expect(renderStudy(current, corpus, "archive-v2")).toContain("paying-source-results-v2.json");

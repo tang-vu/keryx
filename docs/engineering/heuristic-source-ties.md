@@ -25,7 +25,7 @@ source read attempts or fix the R09 comparison, R13 factual-quote ranking or R14
 changed-limit gaps. Five other reasoning methods remained identical, including
 source decisions and attribution.
 
-A read-only candidate from the unchanged controlled-study worker completed all
+A candidate from the controlled-study worker completed all
 48 offline trials with zero outbound attempts. Twelve trials changed citations
 and simulated reward distribution: additional excerpts from the primary source
 received part of the existing citation pool. Across the matrix, fixture-defined
@@ -37,4 +37,11 @@ These are offline supplied-snapshot and synthetic-fixture results, not productio
 search, customer acceptance, complete synthesis or provider cost/latency evidence.
 The local implementation passes 120 focused extraction, version, relevance and
 evidence-ledger controls, application/operational typechecks and scoped lint.
-Official tracked study refresh and required exact-source CI remain pending.
+The [revision 3 study](../studies/paying-for-sources-2026-11-04.md) retains these
+actual outputs separately. Its artifact schema remains version 1 and records
+baseline revision 3 explicitly. The CLI writes only v3 and refuses any drift in
+the accepted v1/v2 data and reports, allowing Git CRLF/LF normalization only.
+Historical v2 source/lock manifests are frozen with those bytes; v3 independently
+binds the current source closure and lock. All original v1-to-v2 economic equality
+assertions remain, alongside 61 passing study, archive-integrity and boundary
+tests. Required exact-source PR/main CI remains pending.
