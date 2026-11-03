@@ -18,6 +18,8 @@ export function SpecialistBriefBuilder() {
   const [decision, setDecision] = useState("");
   const [context, setContext] = useState("");
   const [sources, setSources] = useState("");
+  const [deliverable, setDeliverable] = useState("");
+  const [reviewCriteria, setReviewCriteria] = useState("");
   const [prepared, setPrepared] = useState<Prepared | null>(null);
   const [error, setError] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
@@ -28,6 +30,8 @@ export function SpecialistBriefBuilder() {
     event.preventDefault(); revision.current++; setCopyStatus("");
     try {
       setPrepared(prepareSpecialistBrief({ track, decision, context,
+        ...(track === "custom" ? { deliverable,
+          reviewCriteria: reviewCriteria.split(/\r?\n/u).map(value => value.trim()).filter(Boolean) } : {}),
         sourceLeads: sources.split(/\r?\n/u).map(value => value.trim()).filter(Boolean) }));
       setError(false);
     } catch { setPrepared(null); setError(true); }
@@ -75,6 +79,17 @@ export function SpecialistBriefBuilder() {
             onChange={event => { setContext(event.target.value); clear(); }} className={fieldClass} />
         </label>
       </div>
+      {track === "custom" && <div className="grid items-start gap-6 md:grid-cols-2">
+        <label className="grid gap-2 font-mono text-sm">{copy.deliverable}
+          <textarea required maxLength={160} rows={3} value={deliverable} placeholder={copy.deliverablePlaceholder}
+            onChange={event => { setDeliverable(event.target.value); clear(); }} className={fieldClass} />
+        </label>
+        <label className="grid gap-2 font-mono text-sm">{copy.reviewCriteria}
+          <textarea required maxLength={304} rows={3} value={reviewCriteria} aria-describedby="brief-criteria-help"
+            onChange={event => { setReviewCriteria(event.target.value); clear(); }} className={fieldClass} />
+          <span id="brief-criteria-help" className="font-serif text-sm text-ink-3">{copy.reviewCriteriaHelp}</span>
+        </label>
+      </div>}
       <label className="grid max-w-[76ch] gap-2 font-mono text-sm">{copy.sources}
         <textarea maxLength={325} rows={2} value={sources} aria-describedby="brief-source-help"
           onChange={event => { setSources(event.target.value); clear(); }} className={fieldClass} />
@@ -82,13 +97,13 @@ export function SpecialistBriefBuilder() {
       </label>
       <p className="max-w-[80ch] font-serif text-sm text-seal">{copy.privacy}</p>
       <button type="submit" className="min-h-11 bg-ink px-5 py-3 font-mono text-sm text-paper">{copy.prepare}</button>
-      {error && <p role="alert" className="max-w-[80ch] font-serif text-seal">{copy.invalid}</p>}
+      {error && <p role="alert" className="max-w-[80ch] font-serif text-seal">{copy.invalid}{track === "custom" ? ` ${copy.customInvalid}` : ""}</p>}
     </form>
     {prepared && <section className="mt-8 border border-paid bg-paper p-5 sm:p-7" aria-labelledby="brief-request-heading">
       <h2 id="brief-request-heading" className="font-display text-2xl">{copy.review}</h2>
       <textarea aria-label={copy.review} readOnly value={prepared.request.question} rows={10} className={`${fieldClass} mt-4 text-sm`} />
       <h3 className="mt-5 font-display text-xl">{copy.rubric}</h3>
-      <ul className="mt-3 list-disc space-y-2 pl-5 font-serif text-ink-2">{prepared.acceptanceChecklist.map(item => <li key={item}>{item}</li>)}</ul>
+      <ul className="mt-3 list-disc space-y-2 pl-5 font-serif text-ink-2">{prepared.acceptanceChecklist.map((item, index) => <li key={index} className="break-words [overflow-wrap:anywhere]">{item}</li>)}</ul>
       <p className="mt-3 font-serif text-sm text-ink-3">{copy.rubricNotice}</p>
       <div className="mt-4 flex flex-wrap gap-4">
         <button type="button" onClick={copyRequest} disabled={copyPending} className="min-h-11 border border-ink px-4 py-2 font-mono text-sm disabled:opacity-50">{copy.copy}</button>

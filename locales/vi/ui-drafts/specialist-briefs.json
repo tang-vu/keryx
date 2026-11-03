@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/specialist-briefs.ts",
-  "sourceSha256": "9eaff07e9e8f9e44d3ae40bbe70c0e2c0338142e4a8319c32992ab541ff97f33",
+  "sourceSha256": "6f7b19cf40062b4a28165f4d7238a5b14a7a8c58edc4bac6d820a3bc249d6266",
   "entries": {
     "title": {
       "source": "Research for a decision.",
@@ -13,8 +13,8 @@
       "text": "Bản tóm lược nghiên cứu tập trung"
     },
     "description": {
-      "source": "Prepare a focused API comparison, SaaS market brief or literature overview with an explicit scope and review checklist.",
-      "text": "Chuẩn bị so sánh API, tóm lược thị trường SaaS hoặc tổng quan tài liệu tập trung với phạm vi và danh sách xem xét rõ ràng."
+      "source": "Prepare a research request for your own workflow, or start with an API comparison, SaaS market brief or literature overview. Define the output and review criteria.",
+      "text": "Chuẩn bị yêu cầu nghiên cứu cho công việc của bạn, hoặc bắt đầu bằng so sánh API, thị trường SaaS hay tổng quan tài liệu. Xác định đầu ra và tiêu chí xem xét."
     },
     "kicker": {
       "source": "Focused research briefs",
@@ -215,6 +215,46 @@
     "apiPlatform.instruction": {
       "source": "Inspect up to two named APIs/platforms for this integration. Use primary documentation for the requested versions and platform. Keep each supported constraint and its conditions beside the exact excerpt and citation. Show actual read scope and missing evidence. Label any implementation check as a proposal; do not infer API behavior from an unrelated policy or metadata.",
       "text": "Kiểm tra tối đa hai API/nền tảng được nêu tên cho tích hợp này. Dùng tài liệu gốc cho phiên bản và nền tảng được yêu cầu. Đặt mỗi ràng buộc có bằng chứng cùng điều kiện áp dụng cạnh đúng đoạn trích và trích dẫn. Hiển thị phạm vi đọc thực tế và bằng chứng còn thiếu. Ghi rõ mọi kiểm tra triển khai là đề xuất; không suy ra hành vi API từ chính sách hay siêu dữ liệu không liên quan."
+    },
+    "deliverable": {
+      "source": "The result you need",
+      "text": "Kết quả bạn cần"
+    },
+    "deliverablePlaceholder": {
+      "source": "A comparison table, a source-backed checklist, an investigation brief…",
+      "text": "Bảng so sánh, danh sách kiểm tra dựa trên nguồn, bản điều tra…"
+    },
+    "reviewCriteria": {
+      "source": "Your review criteria",
+      "text": "Tiêu chí xem xét của bạn"
+    },
+    "reviewCriteriaHelp": {
+      "source": "One to three criteria, one per line; up to 100 characters each. These describe what you will check, not facts already established.",
+      "text": "Từ một đến ba tiêu chí, mỗi dòng một tiêu chí; tối đa 100 ký tự mỗi tiêu chí. Đây là điều bạn sẽ kiểm tra, chưa phải sự thật đã được xác minh."
+    },
+    "customInvalid": {
+      "source": "For a custom brief, also name the result in up to 160 characters and add one to three review criteria of up to 100 characters each.",
+      "text": "Với yêu cầu tùy chỉnh, hãy nêu kết quả trong tối đa 160 ký tự và thêm từ một đến ba tiêu chí xem xét, tối đa 100 ký tự mỗi tiêu chí."
+    },
+    "custom.title": {
+      "source": "Your own research workflow",
+      "text": "Công việc nghiên cứu của bạn"
+    },
+    "custom.audience": {
+      "source": "For work beyond the preset topics",
+      "text": "Dành cho công việc ngoài các chủ đề có sẵn"
+    },
+    "custom.scope": {
+      "source": "Define one question, the output you need and your own review criteria.",
+      "text": "Nêu một câu hỏi, đầu ra cần nhận và tiêu chí xem xét của bạn."
+    },
+    "custom.placeholder": {
+      "source": "What should we verify before changing our support process?",
+      "text": "Cần xác minh những gì trước khi thay đổi quy trình hỗ trợ?"
+    },
+    "custom.instruction": {
+      "source": "Use relevant originals. Separate cited findings, proposed actions and caller criteria. Retain dates, conditions and read limits; show unsupported parts and missing inputs.",
+      "text": "Dùng tài liệu gốc phù hợp. Tách phát hiện có trích dẫn, hành động đề xuất và tiêu chí của người yêu cầu. Giữ ngày, điều kiện và phạm vi đã đọc; nêu phần chưa có căn cứ và dữ liệu còn thiếu."
     }
   }
 }
