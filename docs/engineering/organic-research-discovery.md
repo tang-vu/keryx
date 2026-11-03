@@ -15,7 +15,8 @@ claims. The two guides have direct summaries, section anchors, source references
 illustrative examples and links to the existing literature/research surfaces.
 No synthetic study is presented as actual evidence.
 
-The worksheet uses tab memory only, with 50 sources and 2,000 characters per cell.
+The worksheet holds 50 sources and 2,000 characters per cell. Its optional
+same-tab recovery now follows the [matrix recovery contract](matrix-recovery-20261103.md).
 It makes no model, retrieval, payment, account or server persistence request. Its
 empty template is also downloadable without JavaScript. CSV output quotes multiline
 values and uses the existing formula-neutralizing cell encoder. The exported
@@ -38,7 +39,10 @@ template row opens as an empty worksheet. CSV is comma-separated with headers;
 semicolon-separated or mixed-question spreadsheets need adjustment before import.
 The page shows unsaved changes and adds a browser reload/close warning while work
 has changed since the last editable-file download or import. This warning is not
-an autosave or an internal-navigation guarantee; readers must keep their file.
+a lasting backup. Tab recovery can restore the worksheet after reload or a return
+to the page, and ordinary same-tab links ask before leaving unsaved work. Readers
+must still keep their editable file for work after the tab closes or when recovery
+is disabled/unavailable.
 
 The same file picker accepts the existing `/literature` workspace backup. Its
 strict, versioned personal-bibliography schema and 1 MiB limit remain authoritative.

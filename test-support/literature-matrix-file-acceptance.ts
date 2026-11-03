@@ -34,8 +34,12 @@ export async function checkLiteratureMatrixFiles(page: Page) {
   await page.getByRole("button", { name: copy.cancel, exact: true }).click();
   assert.equal(await page.getByLabel(copy.columns.finding, { exact: true }).inputValue(), finding);
 
-  // A genuine reload empties the tab; the downloaded editable file resumes it exactly.
+  // A genuine reload recovers this tab exactly; file import remains independently usable.
   await page.reload();
+  await page.getByText(copy.recovered, { exact: true }).waitFor();
+  assert.equal(await page.getByLabel(copy.question, { exact: true }).inputValue(), question);
+  assert.equal(await page.getByLabel(copy.columns.title, { exact: true }).inputValue(), title);
+  assert.equal(await page.getByLabel(copy.columns.finding, { exact: true }).inputValue(), finding);
   await page.getByLabel(copy.open, { exact: true }).setInputFiles({ name: "matrix.json", mimeType: "application/json", buffer: backup });
   await preview.waitFor();
   await page.getByRole("button", { name: copy.replace, exact: true }).click();

@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/research-guides.ts",
-  "sourceSha256": "86dbf1a55a01b6310c134a1373a95650694f3a2bdbe05618343638ba90ba5633",
+  "sourceSha256": "6f0b1f88886497ce38cdca024bc551d831ade6d5f58dfdb4d5a177e6a3b41d30",
   "entries": {
     "navigation": {
       "source": "Research guides",
@@ -525,8 +525,8 @@
       "text": "已打开矩阵。修改后请保存新的可编辑副本。"
     },
     "tool.privacyNotice": {
-      "source": "Your entries and imported files stay in this tab and are not uploaded or automatically saved. Save an editable file before reloading or leaving, then open that file here to continue.",
-      "text": "你输入的内容和导入的文件仅保留在此标签页中，不会上传或自动保存。刷新或离开前请保存可编辑文件，之后在此打开该文件继续。"
+      "source": "Your entries and imported files stay in your browser and are not uploaded. Tab recovery can keep a temporary copy while this tab remains open. Save an editable file for your next reading session or a lasting backup.",
+      "text": "输入内容和导入文件保留在浏览器中，不会上传。标签页打开期间，恢复功能可以保留临时副本。请保存可编辑文件，以便下次阅读时继续使用或作为长期备份。"
     },
     "tool.noQuestion": {
       "source": "No research question recorded.",
@@ -609,12 +609,44 @@
       "text": "免费文献综述矩阵工具"
     },
     "tool.unsaved": {
-      "source": "Changes in this tab are not saved. Save an editable file to keep them.",
-      "text": "此标签页中的更改尚未保存。请保存可编辑文件以保留更改。"
+      "source": "Changes are not in an editable backup. Save an editable file to keep them after the tab closes.",
+      "text": "更改尚未保存到可编辑备份中。请保存可编辑文件，以便关闭标签页后继续保留。"
     },
     "tool.untitledSource": {
       "source": "Untitled source",
       "text": "未命名来源"
+    },
+    "tool.recoveryChoice": {
+      "source": "Keep a recovery copy in this tab",
+      "text": "在此标签页保留恢复副本"
+    },
+    "tool.recoveryNotice": {
+      "source": "A recovery copy stays in this browser tab and can restore your notes after a reload or a return to this page. Nothing is uploaded. Save an editable file to keep your work after the tab closes.",
+      "text": "恢复副本仅保留在此浏览器标签页中，可在重新加载或返回本页后恢复笔记。不会上传任何内容。请保存可编辑文件，以便关闭标签页后继续保留工作。"
+    },
+    "tool.recoverySaved": {
+      "source": "Recovery copy updated in this tab. Save an editable file for a lasting backup.",
+      "text": "已更新此标签页的恢复副本。请保存可编辑文件作为长期备份。"
+    },
+    "tool.recoveryDisabled": {
+      "source": "Tab recovery is off. Save an editable file before leaving to keep your notes.",
+      "text": "已关闭标签页恢复。离开前请保存可编辑文件以保留笔记。"
+    },
+    "tool.recoveryUnavailable": {
+      "source": "The browser could not read or update recovery. An older copy may remain. Your current notes are still here; save an editable file before leaving.",
+      "text": "浏览器无法读取或更新恢复副本，旧副本可能仍然存在。当前笔记仍在此处；离开前请保存可编辑文件。"
+    },
+    "tool.recovered": {
+      "source": "Your matrix was recovered from this tab. Save an editable file to keep it after the tab closes.",
+      "text": "已从此标签页恢复矩阵。请保存可编辑文件，以便关闭标签页后继续保留。"
+    },
+    "tool.replaceRecovery": {
+      "source": "Replace recovery with my current matrix",
+      "text": "用当前矩阵替换恢复副本"
+    },
+    "tool.leaveConfirmation": {
+      "source": "Leave this matrix? Save an editable file to keep your notes. Tab recovery, when available, lasts only for this tab.",
+      "text": "要离开此矩阵吗？请保存可编辑文件以保留笔记。可用时，标签页恢复副本也仅限此标签页。"
     }
   }
 }
