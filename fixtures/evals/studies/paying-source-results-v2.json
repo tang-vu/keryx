@@ -276,7 +276,7 @@
     "lib/llm/evidence-review-input.ts": "6497ea79ce43a13dcb1af1da99e8e424ed5cf271b18b2a12644fd670470843cc",
     "lib/llm/evidence-review.ts": "836df8ebf6a742fe7c2f26081185aef5e26941604e0f39aea1c95837115e35a5",
     "lib/llm/evidence-span.ts": "3b1dec4f0cf51a2cb52bd454beacbaed9d5b4864c13ec8754f780ffabbd7fff4",
-    "lib/llm/heuristic-engine.ts": "546e950a1e1a85684062b35a4db1dedde535a8e196d9774d55b22ab5fac3453e",
+    "lib/llm/heuristic-engine.ts": "b8260d5538736c266888341f61dc93014664157a0b5c4dfb74a694af965f4af2",
     "lib/llm/json-chat-engine.ts": "e36bfa1b52cceecebc8642ef5da0989024b34f5595357c16598c52cbb4d37d86",
     "lib/llm/openai-compatible-engine.ts": "337954a32b416c5527dc92a9abbdcb567bfad6cc8a0b203fb60596e15aa09fb9",
     "lib/llm/ordinary-compute-budget.ts": "0bd1104d9e36b3ac8cb106fead91c363965e77bd3df7846b107affe2d8254fc5",
