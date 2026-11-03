@@ -35,7 +35,7 @@ export function selectPublicRunRows(db: DatabaseSync, query: PrivacyList) {
  * publication grant: callers must supply freshly filtered originals every time.
  * No full JSON or run/trace graph is retained. No TTL or publication revision substitutes for comparing the actual original bytes. */
 export function createPublicArchiveReader(db: DatabaseSync) {
-  const cache = new Map<string, { digest: string; createdAt: string; entry: ArchiveEntry | null; bytes: number }>();
+  const cache = new Map<string, { digest: string; createdAt: string; card: string; bytes: number }>();
   let bytes = 0;
   const project = (row: ReturnType<typeof selectPublicRunRows>[number]): PublicArchiveRow => {
     const id = privacyId.parse(row.id), createdAt = String(row.created_at), original = String(row.data);
@@ -44,8 +44,10 @@ export function createPublicArchiveReader(db: DatabaseSync) {
     if (!value || value.digest !== digest || value.createdAt !== createdAt) {
       const run = validatePrivacyRun(JSON.parse(original), id);
       if (run.createdAt !== createdAt) throw new PrivacyError("privacy_unavailable");
-      const entry = archiveEntryFromRun(run);
-      value = { digest, createdAt, entry, bytes: Buffer.byteLength(JSON.stringify(entry)) + id.length + createdAt.length + 128 };
+      // Retain owned, bounded card bytes. Slices of an answer or parsed strings
+      // must not keep a much larger original backing string alive in the cache.
+      const card = JSON.stringify(archiveEntryFromRun(run));
+      value = { digest, createdAt, card, bytes: Buffer.byteLength(card) + id.length + createdAt.length + 128 };
       const previous = cache.get(id);
       if (previous) { bytes -= previous.bytes; cache.delete(id); }
       // Oversized cards remain valid, but are revalidated rather than retained.
@@ -58,7 +60,7 @@ export function createPublicArchiveReader(db: DatabaseSync) {
       }
     }
     // A caller cannot poison later public reads by mutating a returned card.
-    return { id, createdAt, entry: structuredClone(value.entry) };
+    return { id, createdAt, entry: JSON.parse(value.card) as ArchiveEntry | null };
   };
   return (query: PrivacyList): PublicArchiveRow[] => {
     z.number().int().min(1).max(32).parse(query.take);

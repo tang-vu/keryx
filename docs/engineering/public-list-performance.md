@@ -21,7 +21,8 @@ characters. Parsing and validation/stringification consumed about 4.5 seconds.
 - The connection-local cache retains at most 4,000 cards, 8 MiB of accounted card
   text, and 64 KiB per card. It retains neither full originals nor trace graphs.
   Every lookup reads a currently public/unerased original, compares its actual
-  byte digest and column identity, and clones returned cards. A changed original
+  byte digest and column identity, and returns freshly parsed card objects. The cache holds serialized card bytes,
+  preventing string slices from retaining a large original backing string. A changed original
   takes the existing full validation/language/confidence path. Oversized cards
   are valid but uncached; oversized/invalid originals still refuse.
 - The archive retains question/language dedupe, citation/payment/newest ranking,
@@ -61,14 +62,14 @@ All units exited and were collected; no serving process or database was changed.
 
 | Same-process native operation | Elapsed | Maximum observed event-loop delay |
 | --- | ---: | ---: |
-| Full-reader control with the new SQL selection | 7.15 s | 7.14 s |
-| Slim reader, cold card cache | 5.64 s | 1.47 s |
-| Slim reader, first warm scan | 3.52 s | 1.44 s |
-| Slim reader, second warm scan | 3.41 s | 1.44 s |
+| Full-reader control with the new SQL selection | 7.14 s | 7.13 s |
+| Slim reader, cold card cache | 6.03 s | 1.67 s |
+| Slim reader, first warm scan | 3.53 s | 1.53 s |
+| Slim reader, second warm scan | 3.76 s | 1.72 s |
 
 All four produced the same 208-card JSON digest, including order and every card
 field. Cold validation fell from 505 to 297 originals; warm scans parsed and
-validated no unchanged originals. These are contained native-reader measurements,
+validated no unchanged originals (only small card JSON, about 9?10 ms total). These are contained native-reader measurements,
 not a deployed end-to-end browser speed claim. Large originals are still freshly
 read and hashed; cold startup, the remaining schema checks, cited history and
 network/asset loading still cost time. A digest-UDF experiment did not improve

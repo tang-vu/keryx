@@ -47,7 +47,7 @@ it("reuses only a bounded card and validates changed original bytes including la
   const parse = vi.spyOn(JSON, "parse");
   const first = (await store.archivePage!({ take: 10 }))[0];
   expect(first.entry?.answerLanguage).toBe("vi");
-  const originalParses = () => parse.mock.calls.filter(([text]) => typeof text === "string" && text.includes('"id":"current"')).length;
+  const originalParses = () => parse.mock.calls.filter(([text]) => typeof text === "string" && text.includes('"id":"current"') && text.includes('"trace":')).length;
   expect(originalParses()).toBe(1);
   first.entry!.sourceNames.push("Poison"); first.entry!.answerSnippet = "Poison";
   expect((await store.archivePage!({ take: 10 }))[0].entry).toEqual(buildArchive([value])[0]);
@@ -85,7 +85,7 @@ it("does not retain oversized cards or accept an original above the existing val
   await save(run("large", { question: "q".repeat(70_000) }));
   const parse = vi.spyOn(JSON, "parse");
   await store.archivePage!({ take: 1 }); await store.archivePage!({ take: 1 });
-  expect(parse.mock.calls.filter(([text]) => typeof text === "string" && text.includes('"id":"large"'))).toHaveLength(2);
+  expect(parse.mock.calls.filter(([text]) => typeof text === "string" && text.includes('"id":"large"') && text.includes('"trace":'))).toHaveLength(2);
   db.prepare("UPDATE query_runs SET data=? WHERE id='large'").run(JSON.stringify(run("large", { answer: "x".repeat(4_000_001) })));
   await expect(store.archivePage!({ take: 1 })).rejects.toThrow("privacy_unavailable");
 });
@@ -101,5 +101,5 @@ it("evicts old cards when retained text reaches the connection's memory budget",
   }
   const parse = vi.spyOn(JSON, "parse");
   expect((await store.archivePage!({ ids: ["bounded139"], take: 1 }))[0].entry?.question).toHaveLength(62_000);
-  expect(parse.mock.calls.filter(([text]) => typeof text === "string" && text.includes('"id":"bounded139"'))).toHaveLength(1);
+  expect(parse.mock.calls.filter(([text]) => typeof text === "string" && text.includes('"id":"bounded139"') && text.includes('"trace":'))).toHaveLength(1);
 });

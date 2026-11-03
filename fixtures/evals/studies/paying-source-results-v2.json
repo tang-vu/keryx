@@ -180,7 +180,7 @@
     "lib/db/profile-identities-storage-domain.ts": "2e495a20e0d794b98a639fbeee1ea572a0967c6f5a30efb8bf1e6380dc500f90",
     "lib/db/profile-identities-supabase.ts": "291d431d66c8b512d8d416edbe4175814bc8b50551bab2ac077c4687e321e513",
     "lib/db/profile-sqlite-schema-data.ts": "1012351716927126221ac084c9cd5e38c8cfe17581c4e897ee72295787bbb4ce",
-    "lib/db/public-archive-page-sqlite.ts": "07fc07f2a8250062bb2eaa89c5bb679a3bdfb90b1dc627f6c07a777c291ede3d",
+    "lib/db/public-archive-page-sqlite.ts": "103ed685fd1375c570969025393c7c059f7677660b9935e19aefccb14419eee0",
     "lib/db/public-profile-functions.ts": "fb442fb826df25fe9881ca4024fa47683679678fede1da265a5c47e7809189e9",
     "lib/db/public-profiles-sqlite.ts": "91689da0a8594dd0fc9f9dfbca5e98232475add79f6ede098e7d4c4cc4d04f5b",
     "lib/db/public-profiles-supabase.ts": "61b83b374464be9214f3477ff19b1a916e15a4796a59f8f62f4d399a6bf88eb6",

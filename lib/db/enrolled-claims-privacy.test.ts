@@ -144,7 +144,7 @@ it("native archive cards reuse validated originals while rechecking changed byte
   await f.privacy.change("owned", actor(), { visibility: "public", revision: 0, requestId: randomUUID() });
   const parse = vi.spyOn(JSON, "parse");
   try {
-    const originals = () => parse.mock.calls.filter(([text]) => typeof text === "string" && text.includes('"id":"owned"')).length;
+    const originals = () => parse.mock.calls.filter(([text]) => typeof text === "string" && text.includes('"id":"owned"') && text.includes('"trace":')).length;
     expect((await f.privacy.archivePage!({ take: 32 }))[0].entry).toEqual(buildArchive([original])[0]);
     const cold = originals(); expect(cold).toBeGreaterThan(0);
     expect((await f.privacy.archivePage!({ take: 32 }))[0].entry).toEqual(buildArchive([original])[0]);
