@@ -25,6 +25,21 @@ beforeEach(() => {
 });
 afterEach(() => { vi.restoreAllMocks(); if (db.isOpen) db.close(); });
 
+it("keeps storage-only constructors/lists independent of archive presentation modules", async () => {
+  vi.resetModules();
+  const unavailable = vi.fn(() => { throw Error("Synthetic unavailable archive presentation"); });
+  vi.doMock("../answers-archive", unavailable);
+  try {
+    const { createSqliteRunPrivacy: createIsolated } = await import("./run-privacy-sqlite");
+    const isolated = createIsolated(db);
+    expect(await isolated.list({ take: 1 })).toEqual([]);
+    expect(unavailable).not.toHaveBeenCalled();
+    await expect(isolated.archivePage!({ take: 1 })).rejects.toThrow();
+    expect(unavailable).toHaveBeenCalledOnce();
+    expect(await isolated.list({ take: 1 })).toEqual([]);
+  } finally { vi.doUnmock("../answers-archive"); vi.resetModules(); }
+});
+
 it("retains exact public ordering, keysets, parents, ID filters and empty-answer window rows", async () => {
   for (const value of [run("a"), run("b", { parentId: "a" }), run("c", { answer: "" }), run("hidden"), run("link")]) {
     await save(value, value.id === "hidden" ? "private" : value.id === "link" ? "unlisted" : "public");

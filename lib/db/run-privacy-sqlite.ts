@@ -160,7 +160,8 @@ export function createEnrolledSqliteRunPrivacy(db: DatabaseSync): RunPrivacyStor
 /** Original privacy journal and projections, privately composed by constructors. */
 function privacyPort(db: DatabaseSync, guard: (write?: boolean) => void, claims?: RunOwnershipHistoryStore,
   afterNative?: () => void): RunPrivacyStore {
-  const archive = createPublicArchiveReader(db);
+  let archive: Awaited<ReturnType<typeof createPublicArchiveReader>> | undefined;
+  let loadingArchive: ReturnType<typeof createPublicArchiveReader> | undefined;
   const row = (id: string) => db.prepare(`SELECT q.data,q.asker,p.visibility,p.revision,p.erased,p.retained_owner,p.retained_digest,p.retained_binding
     FROM query_runs q LEFT JOIN run_privacy p ON p.run_id=q.id WHERE q.id=?`).get(privacyId.parse(id));
   function transaction<T>(action: () => T): T {
@@ -249,6 +250,11 @@ function privacyPort(db: DatabaseSync, guard: (write?: boolean) => void, claims?
     },
     async archivePage(query) {
       guard();
+      if (!archive) {
+        const reader = await (loadingArchive ??= createPublicArchiveReader(db));
+        guard(); // Authority may have changed while the module was loading.
+        archive = reader;
+      }
       return archive(query);
     },
     async settlement(id) {

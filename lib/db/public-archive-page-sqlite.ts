@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
-import { archiveEntryFromRun, type ArchiveEntry } from "../answers-archive";
+import type { ArchiveEntry } from "../answers-archive";
 import { PrivacyError, privacyId, validatePrivacyRun, type PrivacyList } from "../run-privacy/contracts";
 import type { PublicArchiveRow } from "../run-privacy/archive-page";
 import { MAX_USAGE_RUNS } from "../usage/contracts";
@@ -34,7 +34,10 @@ export function selectPublicRunRows(db: DatabaseSync, query: PrivacyList) {
 /** One bounded derived-card cache per privacy port/connection. This is never a
  * publication grant: callers must supply freshly filtered originals every time.
  * No full JSON or run/trace graph is retained. No TTL or publication revision substitutes for comparing the actual original bytes. */
-export function createPublicArchiveReader(db: DatabaseSync) {
+export async function createPublicArchiveReader(db: DatabaseSync) {
+  // Storage/owner CLIs need only the SQL reader. Load presentation dependencies
+  // only when an archive caller actually asks for cards.
+  const { archiveEntryFromRun } = await import("../answers-archive");
   const cache = new Map<string, { digest: string; createdAt: string; card: string; bytes: number }>();
   let bytes = 0;
   const project = (row: ReturnType<typeof selectPublicRunRows>[number]): PublicArchiveRow => {
