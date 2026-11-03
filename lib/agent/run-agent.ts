@@ -31,7 +31,7 @@ import { tavilyProvider } from "../web-research/tavily-provider";
 import { admitBoundedResearch, bindBoundedResearchAdmission } from "../research/research-allowance";
 import { admitBusinessCanaryRun, bindBusinessCanaryAdmission } from "../business-operator/canary-policy";
 import { BusinessCanaryEngine } from "../business-operator/canary-suppliers";
-import { ArticleReadError, articleFailureCode, articleReadDiagnostic, gatheredArticle, readArticle } from "../web-research/article-reader";
+import { ArticleReadError, articleFailureCode, articleReadDiagnostic, articleExtractionDiagnostic, gatheredArticle, readArticle } from "../web-research/article-reader";
 import { sourceReadDetail } from "../research/source-read-outcomes";
 import { bodyIdentity, canonicalUrl } from "../web-research/url-identity";
 import { isPublicReferenceId } from "../public-references/catalog";
@@ -536,11 +536,13 @@ async function* runAdmittedAgent(
   const seenWebUrls = new Set<string>();
   let lastWebFailure = "unavailable";
   let lastWebDiagnostic: ReturnType<typeof articleReadDiagnostic>;
+  let lastWebExtractionDiagnostic: ReturnType<typeof articleExtractionDiagnostic>;
   const scholarlyReadFailures: string[] = [];
   const publicReadOutcomes: Array<{ name: string; code: string; assetId?: string }> = [];
   async function fetchWeb(id: string): Promise<GatheredContent | null> {
     lastWebFailure = "web-operation-limit";
     lastWebDiagnostic = undefined;
+    lastWebExtractionDiagnostic = undefined;
     const candidate = webCandidates.get(id);
     if (!candidate?.item?.itemUrl || webAttempts >= (input.researchMode === "quick" ? 4 : 12) || webRemainingMs <= 0) {
       publicReadOutcomes.push({ name: candidate?.name ?? "Public source", code: lastWebFailure, assetId: id });
@@ -633,7 +635,9 @@ async function* runAdmittedAgent(
           webProvenance: extracted.webProvenance };
       }
       return extracted;
-    } catch (error) { lastWebFailure = articleFailureCode(error); lastWebDiagnostic = articleReadDiagnostic(error); publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure, assetId: id }); return null; }
+    } catch (error) { lastWebFailure = articleFailureCode(error); lastWebDiagnostic = articleReadDiagnostic(error);
+      lastWebExtractionDiagnostic = effects.scope.kind === "public" ? articleExtractionDiagnostic(error) : undefined;
+      publicReadOutcomes.push({ name: candidate.name, code: lastWebFailure, assetId: id }); return null; }
     finally { webRemainingMs -= Date.now() - operationStarted; }
   }
   for (const candidate of publicCandidates.values()) {
@@ -1256,7 +1260,9 @@ async function* runAdmittedAgent(
       if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
       if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker });
         yield emit("fetch", `Read extracted public text from ${read.itemUrl} - ${marker}; quote matching establishes source grounding, not fact verification.`, sourceReadDetail(d.assetId ?? d.sourceId, "public", "succeeded")); }
-      else yield emit("fetch", `Public page unavailable (${lastWebFailure}); no evidence admitted. Continuing research.`, sourceReadDetail(d.assetId ?? d.sourceId, "public", "failed", lastWebFailure, lastWebDiagnostic));
+      else yield emit("fetch", `Public page unavailable (${lastWebFailure}); no evidence admitted. Continuing research.`, {
+        ...sourceReadDetail(d.assetId ?? d.sourceId, "public", "failed", lastWebFailure, lastWebDiagnostic),
+        ...(lastWebExtractionDiagnostic ? { extractionDiagnostic: lastWebExtractionDiagnostic } : {}) });
       if (read && (yield* assessInitialRead(d))) break;
       continue;
     }
@@ -1586,7 +1592,9 @@ async function* runAdmittedAgent(
           if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
           if (read) { const marker = `S${++markerN}`; gathered.push({ ...read, marker }); attentionUsed++; gatheredIds.add(recId);
             yield emit("reevaluate", `READ original public page ${read.itemUrl}, 0 USDC - ${marker}`, sourceReadDetail(recId, "public", "succeeded")); }
-          else yield emit("reevaluate", `Public gap read unavailable (${lastWebFailure}); claim remains unknown.`, sourceReadDetail(recId, "public", "failed", lastWebFailure, lastWebDiagnostic));
+          else yield emit("reevaluate", `Public gap read unavailable (${lastWebFailure}); claim remains unknown.`, {
+            ...sourceReadDetail(recId, "public", "failed", lastWebFailure, lastWebDiagnostic),
+            ...(lastWebExtractionDiagnostic ? { extractionDiagnostic: lastWebExtractionDiagnostic } : {}) });
           continue;
         }
         const publicRead = publicReads.get(recId);

@@ -8,6 +8,7 @@ import { observedHtmlTextLayout, type HtmlTextLayout } from "./html-text-layout"
 import { publicFetchFailure, safePublicFetchDiagnostic, type PublicFetchDiagnostic } from "../net/public-fetch-diagnostic";
 import { observedPdfTextScope, pdfTextScopeTruncated, type PdfTextScope } from "./pdf-text-scope";
 import { observedHtmlSectionScope, type HtmlSectionScope } from "./html-section-scope";
+import { extractionFailure, rememberExtractionFailure } from "./extraction-failure";
 
 export interface ArticleRead { text: string; title: string; finalUrl: string; kind: "html" | "text" | "pdf"; truncated: boolean; htmlTextLayout?: HtmlTextLayout; pdfTextScope?: PdfTextScope; htmlSectionScope?: HtmlSectionScope }
 export type ArticleFailureCode = "invalid-url" | "document-identity-changed" | "publisher-verification-required" | "transport-unavailable" | "article-byte-limit" | "html-extraction-unavailable" | "pdf-extraction-unavailable" | "cancelled";
@@ -20,6 +21,18 @@ export class ArticleReadError extends Error {
 }
 export function articleReadDiagnostic(error: unknown): PublicFetchDiagnostic | undefined {
   return error instanceof ArticleReadError ? safePublicFetchDiagnostic(error.diagnostic) : publicFetchFailure(error);
+}
+export function articleExtractionDiagnostic(error: unknown) {
+  if (!(error instanceof ArticleReadError)) return;
+  const diagnostic = extractionFailure(error);
+  return diagnostic && (error.code === "html-extraction-unavailable" && diagnostic.format === "html" ||
+    error.code === "pdf-extraction-unavailable" && diagnostic.format === "pdf") ? diagnostic : undefined;
+}
+function extractionReadError(code: ArticleFailureCode, cause: unknown) {
+  const error = new ArticleReadError(code), diagnostic = extractionFailure(cause);
+  if (code !== "cancelled" && diagnostic && diagnostic.format === (code === "pdf-extraction-unavailable" ? "pdf" : "html"))
+    rememberExtractionFailure(error, diagnostic);
+  return error;
 }
 export function articleFailureCode(error: unknown): ArticleFailureCode {
   if (error instanceof ArticleReadError) return error.code;
@@ -64,7 +77,7 @@ export const readArticle: ArticleReader = async (url, signal, options) => {
       throw new ArticleReadError("publisher-verification-required");
     }
     if (fetched.contentType === "application/pdf") {
-      const result = await extractPdfText(fetched.bytes, { signal, maxPages: 20, maxChars: 60000, timeoutMs: 5000 }).catch(() => { throw new ArticleReadError(signal?.aborted ? "cancelled" : "pdf-extraction-unavailable"); });
+      const result = await extractPdfText(fetched.bytes, { signal, maxPages: 20, maxChars: 60000, timeoutMs: 5000 }).catch(error => { throw extractionReadError(signal?.aborted ? "cancelled" : "pdf-extraction-unavailable", error); });
       return { text: result.text, title: new URL(fetched.finalUrl).hostname, finalUrl: fetched.finalUrl, kind: "pdf", truncated: result.truncated,
         pdfTextScope: { format: "keryx-pdf-text-scope-v1", pagesRead: result.pagesRead, totalPages: result.totalPages,
           pagesWithoutText: result.pagesWithoutText, textLimitReached: result.textLimitReached } };
@@ -73,7 +86,7 @@ export const readArticle: ArticleReader = async (url, signal, options) => {
     // inert markup normalization inside the bounded worker, not to JS payloads.
     if (fetched.bytes.length > 500000 && (fetched.contentType === "text/plain" || fetched.contentType === "text/markdown")) throw new ArticleReadError("article-byte-limit");
     const text = new TextDecoder().decode(fetched.bytes);
-    return fetched.contentType === "text/plain" || fetched.contentType === "text/markdown" ? extractArticle(text, fetched.finalUrl, fetched.contentType) : await extractHtml(text, fetched.finalUrl, signal, fragment).catch(() => { throw new ArticleReadError(signal?.aborted ? "cancelled" : "html-extraction-unavailable"); });
+    return fetched.contentType === "text/plain" || fetched.contentType === "text/markdown" ? extractArticle(text, fetched.finalUrl, fetched.contentType) : await extractHtml(text, fetched.finalUrl, signal, fragment).catch(error => { throw extractionReadError(signal?.aborted ? "cancelled" : "html-extraction-unavailable", error); });
 };
 export function gatheredArticle(id: string, article: ArticleRead): GatheredContent {
   const finalUrl = canonicalUrl(article.finalUrl);
