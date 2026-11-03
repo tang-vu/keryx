@@ -48,6 +48,23 @@ function sharedTerms(query: Set<string>, doc: Set<string>): string[] {
   return [...query].filter((t) => doc.has(t)).slice(0, 5);
 }
 
+// A short discovery title cannot cover every word of a long research request.
+// Match at least two topic words within one target; generic document labels alone
+// do not justify another read. This is metadata relevance, never evidence support.
+const GENERIC_TITLE_TERMS = new Set("source sources document documents documentation research paper papers report reports public page pages reference references overview introduction guide study studies version current updated official primary text metadata".split(" "));
+function titleRelevance(target: Set<string>, title: Set<string>): number {
+  const terms = [...title].filter(term => !GENERIC_TITLE_TERMS.has(term));
+  const matches = terms.filter(term => target.has(term)).length;
+  return matches >= 2 ? matches / terms.length : 0;
+}
+function hasHttpOriginal(value: string | undefined): boolean {
+  if (!value || value.length > 2048) return false;
+  try {
+    const url = new URL(value);
+    return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password;
+  } catch { return false; }
+}
+
 export class HeuristicEngine implements ReasoningEngine {
   readonly name = "heuristic";
 
@@ -83,9 +100,18 @@ export class HeuristicEngine implements ReasoningEngine {
       // Multi-part instructions must not dilute the matching document target.
       // Keep the existing attention/spend floor; use measured lexical overlap
       // with that exact target rather than inventing a minimum confidence/value.
-      const value = Math.max(overlap(qTokens, docTokens), ...requestedTargets.map(index => overlap(claimTokens[index], docTokens)));
+      const ordinaryValue = Math.max(overlap(qTokens, docTokens), ...requestedTargets.map(index => overlap(claimTokens[index], docTokens)));
+      // Recover skipped zero-cost public originals without rescoring existing
+      // positive proposals, which could otherwise crowd out a comparison source.
+      // Paid/creator/external and explicit arXiv-version proposals stay unchanged.
+      const titleScores = c.sourceKind === "public-reference" && c.item?.sourceKind === "public-reference" &&
+        c.fetchPrice === 0 && !c.external && hasHttpOriginal(c.item.itemUrl) &&
+        requestedIds.size === 0 && ordinaryValue < (c.cached ? 0.08 : 0.12)
+        ? claimTokens.map(target => titleRelevance(target, tokenize(c.name))) : [];
+      const titleValue = Math.max(0, ...titleScores);
+      const value = Math.max(ordinaryValue, titleValue);
       const targets = claimTokens
-        .map((ct, i) => (overlap(ct, docTokens) > 0.15 || requestedTargets.includes(i) ? i : -1))
+        .map((ct, i) => (overlap(ct, docTokens) > 0.15 || requestedTargets.includes(i) || titleScores[i] > 0.15 ? i : -1))
         .filter((i) => i >= 0);
       const terms = sharedTerms(qTokens, docTokens);
 
@@ -96,10 +122,14 @@ export class HeuristicEngine implements ReasoningEngine {
         rationale = `${c.cached ? "Reuse" : "Read"} the zero-cost public original explicitly requested as arXiv ${requestedId}. URL/version and evidence checks still apply; this selection does not establish factual support.`;
       } else if (c.cached && value >= 0.08) {
         action = "CACHE";
-        rationale = `Already cached and still relevant (matches ${terms.join(", ") || "topic"}); reuse for free instead of paying again.`;
+        rationale = titleValue > ordinaryValue
+          ? `Reuse the cached free public original: multiple title terms match research target ${targets.map(t => t + 1).join(" & ")}. Metadata suggests relevance, not factual support; original and evidence checks still apply.`
+          : `Already cached and still relevant (matches ${terms.join(", ") || "topic"}); reuse for free instead of paying again.`;
       } else if (value >= 0.12) {
         action = "BUY";
-        rationale = `Strong topical match on ${terms.join(", ") || "the question"}${targets.length ? `, addresses sub-claim ${targets.map((t) => t + 1).join(" & ")}` : ""}; worth the ${c.fetchPrice} USDC toll.`;
+        rationale = titleValue > ordinaryValue
+          ? `Read the free public original: multiple title terms match research target ${targets.map(t => t + 1).join(" & ")}. Metadata suggests relevance, not factual support; original and evidence checks still apply.`
+          : `Strong topical match on ${terms.join(", ") || "the question"}${targets.length ? `, addresses sub-claim ${targets.map((t) => t + 1).join(" & ")}` : ""}; worth the ${c.fetchPrice} USDC toll.`;
       } else {
         action = "SKIP";
         rationale = `Weak match (${terms.length ? "only " + terms.join(", ") : "no key terms"}); not worth ${c.fetchPrice} USDC.`;
