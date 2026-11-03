@@ -66,12 +66,12 @@ included allowances gives USD 1.68048, or USD 6.68048 with the Workers base fee.
 Measure actual peak memory and invocation usage before choosing the final type.
 An always-running application container has a different cost profile.
 
-The current CLI credential can inspect the account but the subscription-create
-request returned Cloudflare HTTP 403 (authentication error). Workers Paid has
-not been enabled. An account billing administrator must enable the plan or grant
-the necessary billing permission before uploading the paid-size preview. No
-production routing, Container or data import depends on that failure being
-treated as success.
+The subscription-create request returned Cloudflare HTTP 403 (authentication
+error). This migration has not enabled a paid subscription. That response
+identifies the CLI's billing permission; it does not establish the account's
+current Workers plan. Verify Workers plans and the actual upload entitlement
+before asking an administrator to upgrade an account that may already be Paid.
+No production routing, Container or data import is accepted by this observation.
 
 ## Completion and cutover
 
