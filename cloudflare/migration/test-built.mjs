@@ -1,6 +1,6 @@
 /** Actual workerd + browser compatibility. No production request, credential or database. */
 import assert from "node:assert/strict";
-import { mkdir, readFile, readdir } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
@@ -41,7 +41,8 @@ const runtime = new Miniflare(convertV4MiniflareOptions({
   bindings: { MIGRATION_PREVIEW_TOKEN: token, KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1", CATALOG_GENERATION: "synthetic-catalog-v1" },
   d1Databases: { CATALOG_DB: "catalog-built-fixture" }, r2Buckets: { CATALOG_BLOBS: "catalog-built-blobs" },
   assets: { directory: resolve(build, "assets"), binding: "ASSETS", routerConfig: { has_user_worker: true, invoke_user_worker_ahead_of_assets: true } },
-  resourcePersistencePath: resolve(temporary, "state"), host: "127.0.0.1", port: 0,
+  // Repeated acceptance runs must never reuse a previous fixture's schema/data.
+  resourcePersistencePath: await mkdtemp(resolve(temporary, "runtime-")), host: "127.0.0.1", port: 0,
   outboundService: async request => {
     outbound.push({ method: request.method, origin: new URL(request.url).origin });
     return new Response("Isolated compatibility fixture", { status: 503 });
