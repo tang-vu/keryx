@@ -147,12 +147,17 @@ function observeSql(referenceSql?: string) {
     .filter(sql => /(?:^|;)\s*(?:CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|REPLACE|VACUUM|REINDEX|ATTACH|DETACH)\b/i.test(sql));
   return { exec, prepare, writes, references: () => references.size };
 }
+// The bounded privacy list now materializes IDs before retrieving originals.
+// Keep fault injection on the actual body statement, including an empty result.
+function selectsPrivacyListBody(query: string) {
+  return query.includes("SELECT q.id,q.created_at,q.data FROM chosen c JOIN query_runs q");
+}
 function afterPublicSelection(effect: () => void, selection = 1) {
   let scheduled = false, batches = 0;
   const original = DatabaseSync.prototype.prepare;
   vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (this: DatabaseSync, query: string) {
     const statement = Reflect.apply(original, this, [query]);
-    if (!/SELECT q\.data FROM query_runs q JOIN run_privacy p/.test(query)) return statement;
+    if (!selectsPrivacyListBody(query)) return statement;
     return new Proxy(statement, { get(target, key) {
       if (key === "all") return (...args: unknown[]) => {
         const rows = Reflect.apply(target.all, target, args);
@@ -289,7 +294,7 @@ it("uses public-only native privacy on readonly history and never selects an OFF
   expect((await port.history(window, "outside", 100)).map(row => row.id)).toEqual(["public"]);
   expect(await port.publishedHistory!(window, "outside", 100)).toMatchObject({ windowRuns: 1 });
   expect((await port.summary(window)).columns[0].researchRuns).toBe(4);
-  const bodyReads = sql.prepare.mock.calls.map(call => call[0]).filter(query => /SELECT q\.data\b/.test(query));
+  const bodyReads = sql.prepare.mock.calls.map(call => call[0]).filter(query => /SELECT q\.data\b/.test(query) || selectsPrivacyListBody(query));
   expect(bodyReads.length).toBeGreaterThan(0);
   expect(bodyReads.every(query => /p\.visibility='public'/.test(query))).toBe(true);
   expect(sql.writes()).toEqual([]); sql.exec.mockRestore(); sql.prepare.mockRestore();
@@ -357,7 +362,7 @@ it("preserves the generic published mixed-ID tie sample at limit1 with full popu
   const result = await port.publishedHistory!(window, "outside", 1);
   expect(result).toEqual(expected);
   expect(rechecks).toEqual([{ ids: 2, take: 2, inTransaction: true }]);
-  expect(sql.prepare.mock.calls.map(call => call[0]).filter(query => /SELECT q\.data\b/.test(query))
+  expect(sql.prepare.mock.calls.map(call => call[0]).filter(query => /SELECT q\.data\b/.test(query) || selectsPrivacyListBody(query))
     .every(query => /p\.visibility='public'/.test(query))).toBe(true);
   expect(JSON.stringify(result)).not.toContain("hidden-tie"); expect(JSON.stringify(result)).not.toContain("script-tie");
   expect((await port.history(window, "outside", 1)).map(row => row.id)).toEqual(["a"]);
@@ -426,7 +431,7 @@ it.each(["history", "publishedHistory"] as const)("empty %s still permanently re
   const rawPrepare = DatabaseSync.prototype.prepare; let scheduled = false;
   vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (this: DatabaseSync, query: string) {
     const statement = Reflect.apply(rawPrepare, this, [query]);
-    if (!/SELECT q\.data FROM query_runs q JOIN run_privacy p/.test(query)) return statement;
+    if (!selectsPrivacyListBody(query)) return statement;
     return new Proxy(statement, { get(target, key) {
       if (key === "all") return (...args: unknown[]) => {
         const rows = Reflect.apply(target.all, target, args);
@@ -573,7 +578,7 @@ it.each(["history", "publishedHistory"] as const)("active %s observes a pending 
   const original = DatabaseSync.prototype.prepare;
   vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function (this: DatabaseSync, query: string) {
     const statement = Reflect.apply(original, this, [query]);
-    if (!/SELECT q\.data FROM query_runs q JOIN run_privacy p/.test(query)) return statement;
+    if (!selectsPrivacyListBody(query)) return statement;
     return new Proxy(statement, { get(target, key) {
       if (key === "all") return (...args: unknown[]) => {
         Reflect.apply(target.all, target, args);
