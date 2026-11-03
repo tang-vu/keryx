@@ -445,6 +445,10 @@ pub fn run() {
         ])
         .setup(|app| {
             let smoke = SmokeConfig::from_env();
+            let browser_options = match &smoke {
+                Ok(Some(config)) => config.browser_options().map_err(std::io::Error::other)?,
+                _ => None,
+            };
             let host = match &smoke {
                 Ok(config) => Host::start(&app.handle(), config.as_ref()).map(Arc::new),
                 Err(error) => Err(error.clone()),
@@ -460,7 +464,13 @@ pub fn run() {
                 .ok_or_else(|| {
                     std::io::Error::other("The main desktop window is missing from configuration")
                 })?;
-            tauri::WebviewWindowBuilder::from_config(app, main)?
+            let mut builder = tauri::WebviewWindowBuilder::from_config(app, main)?;
+            if let Some((profile, arguments)) = browser_options {
+                builder = builder
+                    .data_directory(profile)
+                    .additional_browser_args(&arguments);
+            }
+            builder
                 .on_navigation(local_app_url)
                 .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
                 .build()?;
