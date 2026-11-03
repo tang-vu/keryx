@@ -147,6 +147,21 @@ describe("mounted manual watch controls in a real browser (authored, UNRUN)", ()
       expect(await page.evaluate(() => (window as unknown as { calls: { body?: string }[] }).calls.filter(call => call.body?.includes('"check-current"')).length)).toBe(1);
     } finally { await context.close(); }
   });
+  it("keeps maximum-length original question and consent keywords readable at 320px", async () => {
+    const context = await browser.newContext({ viewport: { width: 320, height: 900 }, serviceWorkers: "block" });
+    try {
+      const page = await sameOriginFixture(context), question = "Q".repeat(2000), keyword = "t".repeat(80);
+      await page.getByLabel("Review question", { exact: true }).fill(question);
+      await page.getByLabel("Title keywords", { exact: false }).fill(keyword);
+      await page.getByLabel("I consent", { exact: false }).check();
+      await page.getByRole("button", { name: "Create watch", exact: true }).click();
+      await page.getByRole("heading", { name: question, exact: true }).waitFor();
+      expect(await page.getByLabel("Allow this check", { exact: false }).locator("..").textContent()).toContain(keyword);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      expect(await page.evaluate(() => (window as unknown as { rows: { spec: { question: string; keywords: string[] } }[] }).rows[0].spec))
+        .toMatchObject({ question, keywords: [keyword] });
+    } finally { await context.close(); }
+  });
   it.each([360, 1366])("requires consent and actual clicks for create/edit/pause/resume/check/cancel at %ipx", async width => {
     const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block" });
     try {

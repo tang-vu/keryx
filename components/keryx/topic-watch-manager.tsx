@@ -130,7 +130,7 @@ function WatchEditor({ wallet }: { wallet: string }) {
       {editing && <button className={button} type="button" onClick={() => setEditing(null)}>{copy("topicWatch.close")}</button>}
     </form>
     {loaded && watches.length === 0 && <p>{copy("topicWatch.empty")}</p>}
-    <ul className="space-y-5">{watches.map(watch => <li className="border border-line p-4" key={watch.key.watchId}>
+    <ul className="space-y-5">{watches.map(watch => <li className="border border-line p-4" style={{ overflowWrap: "anywhere", minWidth: 0 }} key={watch.key.watchId}>
       <h2>{watch.spec.question}</h2><p>{copy("topicWatch.state", { status: watch.status, revision: watch.revision, expires: new Date(watch.spec.expiresAtMs).toISOString() })}</p>
       <p>{copy("topicWatch.keywordValues", { keywords: watch.spec.keywords.join(", ") })}</p>
       <label className="my-3 flex min-h-11 items-start gap-3">
