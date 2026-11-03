@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
 import type { QueryRun } from "./types";
 import type { PrivacyList } from "./run-privacy/contracts";
+import { archiveEntryFromRun } from "./answers-archive";
 
 const fixtures = vi.hoisted(() => ({ db: vi.fn(), archive: vi.fn() }));
 vi.mock("@/lib/db", () => ({ getDb: fixtures.db }));
@@ -19,9 +20,14 @@ function listing(rows: QueryRun[], hidden = new Set<string>()) {
     (!query.before || row.createdAt < query.before.createdAt || row.createdAt === query.before.createdAt && row.id < query.before.id))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)).slice(0, query.take);
 }
+let slim = false;
 function admit(list: (query: PrivacyList) => Promise<QueryRun[]> | QueryRun[]) {
   const raw = vi.fn(() => { throw Error("Broad original enumeration is forbidden"); });
-  fixtures.db.mockResolvedValue({ runPrivacyActive: true, runPrivacy: { list }, iterateRecentQueries: raw });
+  fixtures.db.mockResolvedValue({ runPrivacyActive: true, runPrivacy: { list,
+    ...(slim ? { archivePage: async (query: PrivacyList) => (await list(query)).map(row => ({
+      id: row.id, createdAt: row.createdAt, entry: archiveEntryFromRun(row),
+    })) } : {}),
+  }, iterateRecentQueries: raw });
   return raw;
 }
 
@@ -31,7 +37,20 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-describe("archive publication admission", () => {
+describe.each(["full", "slim"])("archive publication admission (%s reader)", mode => {
+  beforeEach(() => { slim = mode === "slim"; });
+  if (mode === "slim") it("lets other requests run during a cold scan and rechecks publication after that yield", async () => {
+    const value = run("yielded"), hidden = new Set<string>();
+    let serviced = false;
+    const list = listing([value], hidden);
+    admit(query => {
+      const rows = list(query);
+      if (!query.before && !query.ids) setImmediate(() => { serviced = true; hidden.add(value.id); });
+      return rows;
+    });
+    const { getArchiveCached } = await import("./answers-archive-cache");
+    expect(await getArchiveCached()).toEqual([]); expect(serviced).toBe(true);
+  });
   it("excludes private, unlisted and erased rich duplicates before selection", async () => {
     const rows = [run("private", undefined, true), run("unlisted", undefined, true), run("erased", undefined, true), run("public")];
     const raw = admit(listing(rows, new Set(["private", "unlisted", "erased"])));

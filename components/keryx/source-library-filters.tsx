@@ -23,9 +23,9 @@ export function SourceLibraryFilters({ filters, total, matched, publishers }: {
         <h2 id="browse-sources-title" className="font-display text-[30px] leading-tight text-ink"><UiMessage messageKey={"sourceFilter.title"} /></h2>
         <p role="status" className="mt-2 max-w-[65ch] font-serif text-sm leading-relaxed text-ink-3"><UiMessage messageKey={publishers === 1 ? "sourceFilter.summary.one" : "sourceFilter.summary.other"} values={{ matched, total, publishers }} /></p>
       </div>
-      {active && <Link href="/sources#browse-sources" className="inline-flex min-h-11 shrink-0 items-center border border-line bg-paper-2 px-3 py-2 font-mono text-[11px] text-seal hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"><UiMessage messageKey={"sourceFilter.clear"} /></Link>}
+      {active && <Link prefetch={false} href="/sources#browse-sources" className="inline-flex min-h-11 shrink-0 items-center border border-line bg-paper-2 px-3 py-2 font-mono text-[11px] text-seal hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal"><UiMessage messageKey={"sourceFilter.clear"} /></Link>}
     </header>
-    <div key={JSON.stringify(filters)}><Form action="/sources#browse-sources" className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div key={JSON.stringify(filters)}><Form prefetch={false} action="/sources#browse-sources" className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <label className="min-w-0 sm:col-span-2 lg:col-span-3">
         <span className={labelClass}><UiMessage messageKey={"sourceFilter.search"} /></span>
         <div className="relative">
@@ -74,7 +74,7 @@ export function SourceLibraryFilters({ filters, total, matched, publishers }: {
       <button type="submit" className="mt-1 inline-flex min-h-12 items-center justify-between gap-3 border border-ink bg-ink px-4 py-3 font-mono text-xs text-paper transition-colors hover:bg-ink/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal sm:col-span-2 lg:col-span-1 lg:col-start-3"><UiMessage messageKey={"sourceFilter.find"} /><span aria-hidden="true" className="rtl:rotate-180">→</span></button>
     </Form></div>
     <UiElement as="nav" namespaces={["source-directory"]} names={["aria-label"]} attributes={{ "aria-label": copy("sourceFilter.topicsLabel"), "className": "mt-5 flex flex-wrap gap-2 border-t border-line pt-4" }}>
-      {Object.entries(LIBRARY_TOPICS).filter(([value]) => value !== "other").map(([value, label]) => <Link key={value}
+      {Object.entries(LIBRARY_TOPICS).filter(([value]) => value !== "other").map(([value, label]) => <Link prefetch={false} key={value}
         href={libraryBrowseHref(filters, { topic: value as LibraryFilters["topic"] })} aria-current={filters.topic === value ? "page" : undefined}
         className={`inline-flex min-h-11 items-center border px-3 py-2 font-mono text-[11px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-seal ${filters.topic === value ? "border-ink bg-ink text-paper" : "border-line bg-paper text-ink-2 hover:border-ink hover:bg-paper-2"}`}>{label}</Link>)}
     </UiElement>

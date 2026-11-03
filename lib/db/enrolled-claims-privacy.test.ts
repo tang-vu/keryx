@@ -19,6 +19,7 @@ import { createEnrolledSqliteRunClaims, createSqliteRunClaims } from "./run-clai
 import { createEnrolledSqliteRunOwnershipHistory, createSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
 import { createEnrolledSqliteRunPrivacy, createSqliteRunPrivacy } from "./run-privacy-sqlite";
 import { createEnrolledSqliteAdapter, createReadonlyEnrolledSqliteAdapter } from "./enrolled-sqlite-adapter";
+import { buildArchive } from "../answers-archive";
 
 const alice = `0x${"a".repeat(40)}`, bob = `0x${"b".repeat(40)}`;
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -134,6 +135,44 @@ it("visibility changes require explicit active owner authority and preserve fina
   const result = await f.privacy.change("owned", actor(), { visibility: "public", revision: 0, requestId: randomUUID() });
   expect(result.visibility).toBe("public"); expect((await f.privacy.list({ take: 50 })).map(run => run.id)).toEqual(["owned"]);
   expect(money(f.file)).toBe(before);
+});
+it("native archive cards reuse validated originals while rechecking changed bytes, visibility and erasure", async () => {
+  const f = native(), before = money(f.file);
+  const original = JSON.parse(String(rows(f.file, "query_runs").find(row => row.id === "owned")!.data)) as QueryRun;
+  original.citations = [{ marker: "S1", sourceId: "fixture", sourceName: "Synthetic fixture", weight: 1, reward: 0, rationale: "" }];
+  edit(f.file, db => db.prepare("UPDATE query_runs SET data=? WHERE id='owned'").run(JSON.stringify(original)));
+  await f.privacy.change("owned", actor(), { visibility: "public", revision: 0, requestId: randomUUID() });
+  const parse = vi.spyOn(JSON, "parse");
+  try {
+    const originals = () => parse.mock.calls.filter(([text]) => typeof text === "string" && text.includes('"id":"owned"') && text.includes('"trace":')).length;
+    expect((await f.privacy.archivePage!({ take: 32 }))[0].entry).toEqual(buildArchive([original])[0]);
+    const cold = originals(); expect(cold).toBeGreaterThan(0);
+    expect((await f.privacy.archivePage!({ take: 32 }))[0].entry).toEqual(buildArchive([original])[0]);
+    expect(originals()).toBe(cold);
+    const changed = { ...original, answer: "Fresh native original" };
+    edit(f.file, db => db.prepare("UPDATE query_runs SET data=? WHERE id='owned'").run(JSON.stringify(changed)));
+    expect((await f.privacy.archivePage!({ take: 32 }))[0].entry).toEqual(buildArchive([changed])[0]);
+    expect(originals()).toBeGreaterThan(cold);
+    await f.privacy.change("owned", actor(), { visibility: "private", revision: 1, requestId: randomUUID() });
+    expect(await f.privacy.archivePage!({ take: 32 })).toEqual([]);
+    await f.privacy.change("owned", actor(), { visibility: "public", revision: 2, requestId: randomUUID() });
+    await f.privacy.archivePage!({ take: 32 });
+    await f.privacy.erase("owned", actor(), { revision: 3, requestId: randomUUID() });
+    expect(await f.privacy.archivePage!({ take: 32 })).toEqual([]);
+    expect(money(f.file)).toBe(before);
+    f.connection.close(); await expect(f.privacy.archivePage!({ take: 32 })).rejects.toThrow("privacy_unavailable");
+  } finally { parse.mockRestore(); }
+});
+it("a cached native archive card cannot revive after a runtime guard refusal", async () => {
+  let refused = false;
+  const f = native(false, () => { if (refused) throw Error("Synthetic runtime authority refusal"); });
+  const original = JSON.parse(String(rows(f.file, "query_runs").find(row => row.id === "owned")!.data)) as QueryRun;
+  original.citations = [{ marker: "S1", sourceId: "fixture", sourceName: "Synthetic fixture", weight: 1, reward: 0, rationale: "" }];
+  edit(f.file, db => db.prepare("UPDATE query_runs SET data=? WHERE id='owned'").run(JSON.stringify(original)));
+  await f.privacy.change("owned", actor(), { visibility: "public", revision: 0, requestId: randomUUID() });
+  expect((await f.privacy.archivePage!({ take: 32 }))[0].entry?.answerSnippet).toBe(original.answer);
+  refused = true; await expect(f.privacy.archivePage!({ take: 32 })).rejects.toThrow("privacy_unavailable");
+  refused = false; await expect(f.privacy.archivePage!({ take: 32 })).rejects.toThrow("privacy_unavailable");
 });
 it("erasure retains exact financial amounts, original payment journal and a nonresurrectable tombstone", async () => {
   const f = native(), before = money(f.file); await f.privacy.erase("owned", actor(), { revision: 0, requestId: randomUUID() });

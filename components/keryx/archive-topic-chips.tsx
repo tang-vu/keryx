@@ -30,7 +30,7 @@ export function ArchiveTopicChips({
         <UiMessage messageKey={"archiveTopics.title"} />
       </span>
       {activeSlug && (
-        <Link href="/answers" className={`${CHIP} border-line bg-paper text-ink-3 hover:border-ink hover:text-ink`}>
+        <Link prefetch={false} href="/answers" className={`${CHIP} border-line bg-paper text-ink-3 hover:border-ink hover:text-ink`}>
           <UiMessage messageKey={"archiveTopics.all"} />
         </Link>
       )}
@@ -41,6 +41,7 @@ export function ArchiveTopicChips({
           </span>
         ) : (
           <Link
+            prefetch={false}
             key={t.slug}
             href={`/answers/topic/${t.slug}`}
             className={`${CHIP} border-line bg-paper text-ink-2 hover:border-seal hover:text-seal`}
@@ -56,7 +57,7 @@ export function ArchiveTopicChips({
             {topics.slice(5).map((t) => t.slug === activeSlug ? (
               <span key={t.slug} aria-current="page" className={`${CHIP} border-ink bg-ink text-paper`}>{t.label} {t.count}</span>
             ) : (
-              <Link key={t.slug} href={`/answers/topic/${t.slug}`} className={`${CHIP} border-line bg-paper text-ink-2 hover:border-seal hover:text-seal`}>{t.label} <span className="text-ink-3">{t.count}</span></Link>
+              <Link prefetch={false} key={t.slug} href={`/answers/topic/${t.slug}`} className={`${CHIP} border-line bg-paper text-ink-2 hover:border-seal hover:text-seal`}>{t.label} <span className="text-ink-3">{t.count}</span></Link>
             ))}
           </div>
         </details>

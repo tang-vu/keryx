@@ -246,6 +246,25 @@ function retainCandidate(best: Map<string, ArchiveEntry>, run: QueryRun) {
   if (!previous || betterThanEntry(run, previous)) best.set(key, toEntry(run, answerLanguage));
 }
 
+/** Derive a card only from the same complete, validated run as the legacy reader. */
+export function archiveEntryFromRun(run: QueryRun): ArchiveEntry | null {
+  if (!run.answer?.trim() || !run.citations?.length || !normalizeQuestion(run.question)) return null;
+  return toEntry(run, recordedAnswerLanguage(run) ?? "und");
+}
+
+/** Same winner and ordering rules, after storage has derived slim cards. */
+export async function buildArchiveEntryStream(entries: AsyncIterable<ArchiveEntry>): Promise<ArchiveEntry[]> {
+  const best = new Map<string, ArchiveEntry>();
+  for await (const entry of entries) {
+    const key = JSON.stringify([normalizeQuestion(entry.question), entry.answerLanguage ?? "und"]);
+    const previous = best.get(key);
+    if (!previous || entry.citationCount > previous.citationCount
+      || entry.citationCount === previous.citationCount && (entry.toCreators > previous.toCreators
+        || entry.toCreators === previous.toCreators && entry.createdAt > previous.createdAt)) best.set(key, entry);
+  }
+  return finishArchive(best);
+}
+
 function finishArchive(best: Map<string, ArchiveEntry>): ArchiveEntry[] {
   return [...best.values()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }

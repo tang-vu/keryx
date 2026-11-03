@@ -9,7 +9,7 @@ import { erasedRun, pendingPollSchema, PrivacyError, privacyId, privacyMutation,
   type PrivacyActor, type PrivacyState, type RunPrivacyStore } from "../run-privacy/contracts";
 import type { RunOwnershipHistoryStore } from "../run-claims/history";
 import { runClaimBindingSchema } from "../run-claims/contracts";
-import { MAX_USAGE_RUNS } from "../usage/contracts";
+import { createPublicArchiveReader, selectPublicRunRows } from "./public-archive-page-sqlite";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 
 /** SOURCE ONLY. Install explicitly in an isolated fixture or after a separately approved rollout.
@@ -151,7 +151,7 @@ export function createEnrolledSqliteRunPrivacy(db: DatabaseSync): RunPrivacyStor
           if (!input || typeof input !== "object" || runClaimBindingSchema.parse(Reflect.get(input, "binding")).network !== identity.network) throw unavailable();
         } catch { throw unavailable(); }
       }
-      const result = await Reflect.apply(port[name], port, args); check(); return result;
+      const result = await Reflect.apply(port[name]!, port, args); check(); return result;
     } });
   }
   return Object.freeze(wrapped);
@@ -160,6 +160,8 @@ export function createEnrolledSqliteRunPrivacy(db: DatabaseSync): RunPrivacyStor
 /** Original privacy journal and projections, privately composed by constructors. */
 function privacyPort(db: DatabaseSync, guard: (write?: boolean) => void, claims?: RunOwnershipHistoryStore,
   afterNative?: () => void): RunPrivacyStore {
+  let archive: Awaited<ReturnType<typeof createPublicArchiveReader>> | undefined;
+  let loadingArchive: ReturnType<typeof createPublicArchiveReader> | undefined;
   const row = (id: string) => db.prepare(`SELECT q.data,q.asker,p.visibility,p.revision,p.erased,p.retained_owner,p.retained_digest,p.retained_binding
     FROM query_runs q LEFT JOIN run_privacy p ON p.run_id=q.id WHERE q.id=?`).get(privacyId.parse(id));
   function transaction<T>(action: () => T): T {
@@ -243,14 +245,17 @@ function privacyPort(db: DatabaseSync, guard: (write?: boolean) => void, claims?
       return { exists: !!db.prepare("SELECT 1 FROM query_runs WHERE id=?").get(id), item: null };
     },
     async list(query) {
-      guard(); const take = z.number().int().min(1).max(2500).parse(query.take), args: (string | number)[] = [];
-      let filter = "";
-      if (query.before) { privacyId.parse(query.before.id); filter += " AND (q.created_at<? OR (q.created_at=? AND q.id<?))"; args.push(query.before.createdAt,query.before.createdAt,query.before.id); }
-      if (query.parentId) { filter += " AND q.parent_id=?"; args.push(privacyId.parse(query.parentId)); }
-      if (query.ids) { filter += " AND q.id IN (SELECT value FROM json_each(?))"; args.push(JSON.stringify(z.array(privacyId).max(MAX_USAGE_RUNS).parse(query.ids))); }
-      args.push(take);
-      return db.prepare(`SELECT q.data FROM query_runs q JOIN run_privacy p ON p.run_id=q.id WHERE p.visibility='public' AND p.erased=0${filter}
-        ORDER BY q.created_at DESC,q.id DESC LIMIT ?`).all(...args).map(value => validatePrivacyRun(JSON.parse(String(value.data))));
+      guard();
+      return selectPublicRunRows(db, query).map(value => validatePrivacyRun(JSON.parse(String(value.data))));
+    },
+    async archivePage(query) {
+      guard();
+      if (!archive) {
+        const reader = await (loadingArchive ??= createPublicArchiveReader(db));
+        guard(); // Authority may have changed while the module was loading.
+        archive = reader;
+      }
+      return archive(query);
     },
     async settlement(id) {
       guard(); const value = db.prepare("SELECT id,created_at,budget,engine,total_spent,total_to_creators FROM query_runs WHERE id=?").get(privacyId.parse(id));
