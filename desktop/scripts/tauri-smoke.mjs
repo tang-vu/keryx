@@ -225,15 +225,15 @@ async function launchDiagnostic(child, profile, port, lastConnectionError, brows
 
 async function launch(config, executable = exe) {
   const launchStartedAt = Date.now();
-  await writeFile(configPath, JSON.stringify({ root: temporary, ...config }));
   const port = await unusedPort();
+  await writeFile(configPath, JSON.stringify({ root: temporary, ...config, debugPort: port }));
   const allowed = new Set(["systemroot", "windir", "userprofile", "appdata", "localappdata",
     "temp", "tmp", "comspec", "homedrive", "homepath", "pathext"]);
   const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => allowed.has(name.toLowerCase())));
   env.KERYX_DESKTOP_SMOKE_CONFIG = configPath;
-  env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = `--remote-debugging-port=${port} --remote-allow-origins=*`;
-  const profile = join(temporary, "webview-data");
-  env.WEBVIEW2_USER_DATA_FOLDER = profile;
+  // The validated smoke fixture supplies these through the WebView API. Keep
+  // each launch's profile distinct when its debugging arguments change.
+  const profile = join(temporary, `webview-data-${port}`);
   const child = spawn(executable, [], { env, windowsHide: true, stdio: "ignore" });
   let spawnError;
   child.once("error", error => { spawnError = error; });
