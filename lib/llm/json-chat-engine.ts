@@ -30,6 +30,8 @@ import { EVIDENCE_ONLY_SCHEMA, evidenceOnlyEnvelope, evidenceOnlyGuidance } from
 import { validTeachingProposalRequest } from "../research/teaching-proposals-request";
 import { prepareTeachingProposals, reviewTeachingProposals, teachingProposalReviewInput,
   TEACHING_PROPOSAL_GENERATION_GUIDANCE, type PreparedTeachingProposals } from "../research/teaching-proposals";
+import { validWorkProductRequest } from "../research/work-product-request";
+import { prepareWorkProduct, reviewWorkProduct, workProductReviewInput, WORK_PRODUCT_GENERATION_GUIDANCE } from "../research/work-products";
 import type {
   AttributeInput,
   DecideInput,
@@ -306,6 +308,8 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     // teaching flag on a legacy/decision-brief input cannot alter their contract.
     const teachingRequest = input.generationFormat === "evidence-only" && !input.answerFormat && input.teachingRequest &&
       validTeachingProposalRequest(input.teachingRequest, input.question) ? input.teachingRequest : undefined;
+    const workProductRequest = input.generationFormat === "evidence-only" && !input.answerFormat && !input.teachingRequest &&
+      input.workProductRequest && validWorkProductRequest(input.workProductRequest, input.question) ? input.workProductRequest : undefined;
     const ordinaryScope = input.generationFormat === "evidence-only" && !input.answerFormat && !input.teachingRequest &&
       ordinaryComputeSnapshot(this) !== undefined;
     const sources = this.evidenceSources(input);
@@ -323,6 +327,16 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     let generationSystem = this.synthesisGenerationGuidance(input), generationJson = JSON.stringify(generation);
     const generationTokens = this.synthesisGenerationTokens(input);
     let teachingGeneration = false;
+    let workProductGeneration = false;
+    if (workProductRequest) {
+      const system = generationSystem + " " + WORK_PRODUCT_GENERATION_GUIDANCE;
+      const json = JSON.stringify({ ...generation, workProductRequest,
+        schema: generation.schema.slice(0, -1) + ',"workProductSections":[{"id":string,"heading":string,"text":string,"premiseIds":string[],"conditions":string[]}]}' });
+      try {
+        this.validateChatJsonInput(config.synthesisModel, system, json, generationTokens);
+        generationSystem = system; generationJson = json; workProductGeneration = true;
+      } catch { /* Preserve the unchanged factual generation; no proposal retry. */ }
+    }
     if (teachingRequest) {
       const system = generationSystem + " For this admitted teaching request, also return teachingProposals. " +
         TEACHING_PROPOSAL_GENERATION_GUIDANCE +
@@ -340,6 +354,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     // Retain the admitted ceiling even when the ordinary packet omits a redundant prose draft.
     const out = await this.measuredChatJson("synthesize", config.synthesisModel, generationSystem, generationJson, generationTokens);
     const proposals = resolveQuoteEvidence(out.evidence, quoteOptions);
+    const workProduct = workProductRequest ? workProductGeneration
+      ? prepareWorkProduct(workProductRequest, input.question, proposals, out.workProductSections)
+      : { gaps: ["invalid-product" as const] } : undefined;
     const teaching: PreparedTeachingProposals | undefined = teachingRequest ? teachingGeneration
       ? prepareTeachingProposals(teachingRequest, input.question, proposals, out.teachingProposals)
       : { gaps: [{ reason: "invalid-proposals" }] } : undefined;
@@ -347,6 +364,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     let reviewedIndexes: ReadonlySet<number> = new Set();
     let synthesisOutputLimit: SynthesisOutputLimit | undefined;
     let teachingReview = false;
+    let workProductReview = false;
     if (proposals.length) {
       try {
         const reviewInput = this.synthesisEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims,
@@ -354,6 +372,18 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         reviewedIndexes = reviewInput.reviewedIndexes;
         let reviewSystem = EVIDENCE_REVIEW_GUIDANCE + (ordinaryScope ? ORDINARY_SCOPE_REVIEW_GUIDANCE : "") + (observeLanguage
           ? STATEMENT_LANGUAGE_REVIEW_GUIDANCE : ""), reviewJson = reviewInput.json;
+        if (workProduct?.packet) {
+          try {
+            const addition = workProductReviewInput(workProduct.packet), factual = JSON.parse(reviewInput.json);
+            const system = reviewSystem + " " + addition.guidance;
+            const json = JSON.stringify({ ...factual, workProduct: addition.packet,
+              schema: factual.schema.slice(0, -1) + ',"workProductReview":' + addition.schema + '}' });
+            if (Buffer.byteLength(system + json, "utf8") + 1024 <= MAX_EVIDENCE_REVIEW_INPUT_BYTES) {
+              this.validateChatJsonInput(config.llmModel, system, json, this.budgetFor(Math.min(proposals.length, MAX_REVIEWED_EVIDENCE)));
+              reviewSystem = system; reviewJson = json; workProductReview = true;
+            }
+          } catch { /* Keep every factual row/context and the original one-call review. */ }
+        }
         if (teaching?.packet?.proposals.length) {
           try {
             const teachingInput = teachingProposalReviewInput(teaching.packet);
@@ -395,6 +425,9 @@ export abstract class JsonChatEngine implements ReasoningEngine {
         : { evidenceReview: "unavailable" as const, synthesisFailure: "review" as const } : {}),
       conflicts: parseConflicts(out.conflicts),
       ...(synthesisOutputLimit ? { synthesisOutputLimit } : {}),
+      ...(workProduct ? { workProduct: { preparationGaps: workProduct.gaps,
+        ...(workProductReview && workProduct.packet ? { reviewed: reviewWorkProduct(workProduct.packet,
+          review && typeof review === "object" ? (review as Record<string, unknown>).workProductReview : undefined) } : {}) } } : {}),
       ...(teaching ? { teachingProposals: { preparationGaps: teaching.gaps,
         ...(teachingReview && teaching.packet ? { reviewed: reviewTeachingProposals(teaching.packet,
           review && typeof review === "object" ? (review as Record<string, unknown>).teachingProposalReview : undefined) } : {}) } } : {}),

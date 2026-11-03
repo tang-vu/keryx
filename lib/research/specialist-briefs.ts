@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AskQuestionSchema } from "../ask-input";
 import { specialistBriefCopy as copy } from "../../locales/en/specialist-briefs";
 import { API_INTEGRATION_NOTE_REQUEST } from "./api-integration-note-request";
+import { WORK_PRODUCT_REQUEST, WORK_PRODUCT_INSTRUCTION } from "./work-product-intent";
 
 const PRESET_BRIEF_IDS = ["api-platform", "saas-competition", "scholarly-literature"] as const;
 export const SPECIALIST_BRIEF_IDS = [...PRESET_BRIEF_IDS, "custom"] as const;
@@ -11,7 +12,7 @@ export const specialistBriefs = {
   "api-platform": copy.apiPlatform,
   "saas-competition": copy.saasCompetition,
   "scholarly-literature": copy.scholarlyLiterature,
-  custom: copy.custom,
+  custom: { ...copy.custom, instruction: WORK_PRODUCT_INSTRUCTION },
 } as const;
 
 const sourceLead = z.string().trim().max(160).url().refine(value => {
@@ -38,7 +39,7 @@ export function prepareSpecialistBrief(value: unknown) {
   const input = specialistBriefInputSchema.parse(value);
   const brief = specialistBriefs[input.track];
   const question = AskQuestionSchema.parse([
-    input.track === "api-platform" ? API_INTEGRATION_NOTE_REQUEST : "",
+    input.track === "api-platform" ? API_INTEGRATION_NOTE_REQUEST : input.track === "custom" ? WORK_PRODUCT_REQUEST : "",
     brief.instruction,
     `Question: ${input.decision}`,
     ...(input.track === "custom" ? [

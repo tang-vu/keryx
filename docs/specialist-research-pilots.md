@@ -69,6 +69,13 @@ prepare the same existing Deep request. For example:
 }
 ```
 
+The custom request also opts into a [reviewed proposed work product](engineering/requested-work-products.md):
+a bounded plan, checklist or comparison note based on surviving factual premises.
+It uses the existing generation and independent review calls and is appended
+after attribution and settlement. Rejected or lost premises withhold dependent
+parts. This source capability does not establish useful live delivery, override
+the separate teaching rollout hold or guarantee the requested outcome.
+
 The request labels these as caller requirements, not findings or recorded
 acceptance. The separate checklist retains the caller's criteria verbatim after
 trimming. Existing evidence, reading and output limits still apply; a requested

@@ -142,6 +142,9 @@ import { finalizeAnswerLanguage } from "../research/answer-language-provenance";
 import { apiIntegrationNote } from "../research/api-integration-note";
 import { requestsApiIntegrationNote } from "../research/api-integration-note-request";
 import { languageReviewedProposals } from "../research/answer-language-review";
+import { parseWorkProductRequest } from "../research/work-product-request";
+import { deliverWorkProduct } from "../research/work-products";
+import { workProductAnswer } from "../research/work-products-presentation";
 
 export interface RunInput {
   /** Validated bot adapter preference only; never accept from public request JSON. */
@@ -1876,6 +1879,14 @@ async function* runAdmittedAgent(
     !input.targetAsset && !input.paidScholarly && !input.answerFormat && process.env.KERYX_DECISION_BRIEF !== "1" &&
     (input.originalQuestion === undefined || input.originalQuestion === input.question)
     ? parseTeachingProposalRequest(input.originalQuestion ?? input.question) : undefined;
+  // New explicit first-turn caller format, including current best-effort public
+  // packages. The accepted execution limits still control every read/expansion.
+  // Historical/private/teaching/targeted originals cannot acquire this contract.
+  const workProductRequest = ordinaryPresentation && process.env.KERYX_TEACHING_PROPOSALS !== "1" &&
+    (origin !== "engine" || input.allowExternalWeb === true) &&
+    (input.originalQuestion === undefined || input.originalQuestion === input.question) &&
+    !presentation.requestedBulletCount && !presentation.requestedSentenceCount && !presentation.requestedMaximumWords
+    ? parseWorkProductRequest(input.originalQuestion ?? input.question) : undefined;
   // A retained/package/teaching path must not acquire note generation from a
   // stray count recognized later than the ordinary first-turn admission.
   const { requestedSentenceCount: _withheldNoteCount, ...withoutNoteCount } = presentation;
@@ -1883,6 +1894,7 @@ async function* runAdmittedAgent(
     answerPresentation: finalSentenceNote && !teachingRequest ? presentation : withoutNoteCount,
     ...(observeAnswerLanguage ? { observeAnswerLanguage: true as const } : {}),
     ...(teachingRequest ? { teachingRequest } : {}),
+    ...(workProductRequest ? { workProductRequest } : {}),
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
   catch (error) {
@@ -1946,6 +1958,8 @@ async function* runAdmittedAgent(
   // Sentences are admitted against the final ledger, after every source, quote and review gate.
   const citedStatements = brief ? [] : selectCitedStatements(observeAnswerLanguage
     ? languageReviewedProposals(synthesized.evidence ?? [], presentation.language) : synthesized.evidence ?? [], ledger);
+  const workProduct = workProductRequest && !brief ? deliverWorkProduct(workProductRequest,
+    synthesized.workProduct?.reviewed, ledger, citedStatements, synthesized.workProduct?.preparationGaps) : undefined;
   if (teachingRequest && !brief) {
     teachingProposals = deliverTeachingProposals(teachingRequest,
       synthesized.teachingProposals?.reviewed, ledger, citedStatements, synthesized.teachingProposals?.preparationGaps);
@@ -2346,8 +2360,9 @@ async function* runAdmittedAgent(
   // Append proposals after contribution allocation and settlement. Their text,
   // labels and gaps cannot enter factual coverage or model attribution input.
   if (teachingProposals) answer += `\n\n${teachingProposalAnswer(teachingProposals)}`;
+  if (workProduct) answer += `\n\n${workProductAnswer(workProduct, presentation.language)}`;
   // Additional follow-up/recency/special prose is not observed by this narrow contract.
-  if (observeAnswerLanguage && !brief && !followUp && !recencyRequirement)
+  if (observeAnswerLanguage && !brief && !workProduct && !followUp && !recencyRequirement)
     languageFinalization = { rendererLanguage: presentation.language, statements: citedStatements, proposals: synthesized.evidence ?? [] };
   return finish(answer);
 

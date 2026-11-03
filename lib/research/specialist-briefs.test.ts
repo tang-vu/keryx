@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_ASK_QUESTION_CHARS, parseAskQuestion } from "../ask-input";
-import { SPECIALIST_BRIEF_IDS, prepareSpecialistBrief } from "./specialist-briefs";
+import { SPECIALIST_BRIEF_IDS, specialistBriefs, prepareSpecialistBrief } from "./specialist-briefs";
 import { a2aResearchPackageForVersion } from "../a2a/research-package-definition";
 
 const input = () => ({ track: "api-platform", decision: "Compare API A and API B for our queue.",
@@ -18,6 +18,7 @@ describe("specialist request preparation", () => {
     expect(result.request).not.toHaveProperty("payTo");
     expect(result.request.question).toContain("Unread source leads:");
     expect(result.acceptanceChecklist).toHaveLength(track === "custom" ? 2 : 3);
+    expect(result.request.question).toContain(specialistBriefs[track].instruction);
   });
   it("preserves caller wording and labels leads without inventing read evidence", () => {
     const result = prepareSpecialistBrief({ ...input(), decision: "  Que choisir pour notre projet ?  " });

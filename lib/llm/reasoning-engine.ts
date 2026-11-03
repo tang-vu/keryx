@@ -204,6 +204,9 @@ export interface SynthInput {
   /** Trusted original caller opt-in, ordinary evidence-only synthesis only.
    * Never infer this request from model/source output or retained originals. */
   teachingRequest?: import("../research/teaching-proposals-request").TeachingProposalRequest;
+  /** Explicit original caller format request, checked again against question.
+   * This creates no execution, factual or financial authority. */
+  workProductRequest?: import("../research/work-product-request").WorkProductRequest;
 }
 
 /** A factual disagreement the agent found between sources while writing the answer,
@@ -257,6 +260,12 @@ export interface SynthResult {
   teachingProposals?: {
     reviewed?: import("../research/teaching-proposals").ReviewedTeachingProposals;
     preparationGaps: import("../research/teaching-proposals").TeachingProposalGap[];
+  };
+  /** Server-local review capability; append only after final premises and payments.
+   * Never serialize this internal packet as a public result or receipt field. */
+  workProduct?: {
+    reviewed?: import("../research/work-products").ReviewedWorkProduct;
+    preparationGaps: import("../research/work-products").WorkProductGap[];
   };
 }
 
