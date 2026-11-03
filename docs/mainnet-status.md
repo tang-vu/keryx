@@ -26,7 +26,8 @@ and the [GitHub release](https://github.com/tang-vu/keryx/releases/tag/v0.27.96)
 provide public source/distribution references. A package version alone does not
 prove a matching local installation or npm provenance.
 
-The November 3 owner direction holds new work from deployment and release.
+The November 3 owner clarification authorizes routine reviewed/check-passing
+source merges; deployment and release/publication await an explicit user command.
 Keep the installed96 cohort serving. Any later operation must first qualify each
 role's fresh-start requirements, including finite policy/grant expiry; source
 preparation and historical healthy processes cannot substitute for that check.

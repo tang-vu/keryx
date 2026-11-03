@@ -135,10 +135,18 @@ exact-source revalidation after main changes and retention gates still apply.
 Record source-role authority separately from release ownership so a solo source
 merge cannot silently become a release takeover.
 
+Owner-confirmed November 3, 2026: automatically complete authorized source work,
+including reviewed/check-passing serialized merges. Only deployment and
+release/publication await an explicit user command. Do not infer a blanket source
+merge hold from a no-deploy/no-release instruction. Inspect automatic delivery
+triggers and preserve release-version allocation for the later authorized release.
+Every existing owner, CI, payment/security/custody and funding gate still applies.
+
 ### Release coordination
 
 For an agreed multi-PR batch, merge its accepted outcomes, verify the combined
-source and applicable surface gates, then perform one combined release. Record
+source and applicable surface gates, and record source awaiting delivery. Perform
+one combined deployment/release only after the user's explicit command. Record
 the included PRs, full target commit, app/package/installer versions, release
 owner, phase, evidence and pending work in `release.json`. Only that owner
 allocates shared versions, publishes packages/installers, deploys, handles rollback

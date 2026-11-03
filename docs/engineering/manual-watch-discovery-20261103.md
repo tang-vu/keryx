@@ -41,5 +41,6 @@ Source acceptance covers adapter bounds/provenance, actual domain watermark and
 failure paths, authenticated action admission, UI consent, the existing native
 store controls, OpenAPI and applicable PR/platform CI. All provider responses in
 regressions are synthetic; no independent adoption or live discovery result is
-claimed. Scheduling, standing spend, paid delivery, main merge, deployment and
-release remain held by the owner.
+claimed. Reviewed/check-passing source merges are authorized. Deployment and
+release/publication await an explicit user command; scheduling, standing spend
+and paid delivery retain their existing separate authority gates.
