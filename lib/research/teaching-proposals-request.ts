@@ -20,17 +20,17 @@ export function parseTeachingProposalRequest(originalQuestion: string): Teaching
   if (!originalQuestion.trim() || originalQuestion.length > 30_000) return;
   const question = originalQuestion.normalize("NFC").toLowerCase()
     .replace(/```[\s\S]*?```|`[^`]*`|“[^”]*”|"[^"\r\n]*"/gu, " ");
-  // This initial natural-language contract deliberately covers the retained
-  // Vietnamese task and explicit English equivalents, not arbitrary lessons.
-  const languageMatches = [...question.matchAll(/(?<![\p{L}\p{N}_])(?:viết|trả lời|đáp)\s+(?:bằng\s+)?tiếng\s+([\p{L}\p{M}]+)|(?<![\p{L}\p{N}_])(?:write|answer|respond)\s+in\s+([\p{L}\p{M}]+)/gu)];
+  // Explicit caller paraphrases retain the same bounded lesson contract; no
+  // model/source text or implied language can supply missing requirements.
+  const languageMatches = [...question.matchAll(/(?<![\p{L}\p{N}_])(?:viết|trả lời|đáp|soạn|trình bày)\s+(?:giúp\s+(?:tôi|mình)\s+)?(?:bằng\s+)?tiếng\s+([\p{L}\p{M}]+)|(?<![\p{L}\p{N}_])(?:write|answer|respond)\s+in\s+([\p{L}\p{M}]+)/gu)];
   if (languageMatches.length !== 1 || negative(question, languageMatches[0].index!)) return;
   const name = languageMatches[0][1] ?? languageMatches[0][2];
   const language = name === "việt" || name === "vietnamese" ? "vi" : name === "anh" || name === "english" ? "en" : undefined;
   if (!language) return;
-  const activity = unique(question, /(?:một|1)\s+hoạt động\s+(\d+)\s+phút|(?:a|one|1)\s+(\d+)[- ]minute\s+(?:classroom\s+)?activity/gu);
+  const activity = unique(question, /(?:một|1)\s+hoạt động\s+(?:(?:kéo dài|dài|trong)\s+)?(\d+)\s*phút|(?:a|one|1)\s+(\d+)[- ]minute\s+(?:classroom\s+)?activity/gu);
   const examples = unique(question, /(một|hai|ba|bốn|\d+)\s+ví dụ[^.;\n]{0,70}phân loại|(one|two|three|four|\d+)\s+(?:invented\s+)?classification examples?/gu);
-  const exit = unique(question, /(?:một|1)\s+câu hỏi cuối giờ\s+có đáp án|(?:an?|one|1)\s+exit (?:question|ticket)\s+with\s+(?:an?\s+)?answer/gu);
-  const explanation = unique(question, /giải thích\s+(dưới|không quá|tối đa)\s+(\d+)\s+từ|explanation\s+(under|at most|up to)\s+(\d+)\s+words/gu);
+  const exit = unique(question, /(?:một|1)\s+câu hỏi\s+(?:kiểm tra\s+)?cuối giờ\s+(?:có|kèm)\s+đáp án|(?:an?|one|1)\s+exit (?:question|ticket)\s+with\s+(?:an?\s+)?answer/gu);
+  const explanation = unique(question, /giải thích\s+(?:ngắn gọn\s+)?(dưới|không quá|tối đa)\s+(\d+)\s+từ|explanation\s+(under|at most|up to)\s+(\d+)\s+words/gu);
   // Explicit proposal labeling is required. Historical NASA-tested activity
   // questions cannot activate this contract merely by mentioning the same nouns.
   if (!activity || !examples || !exit || !explanation ||
@@ -51,7 +51,10 @@ export function parseTeachingProposalRequest(originalQuestion: string): Teaching
 function negative(text: string, index: number) {
   // A separate sentence or semicolon ends the prohibition. A line break alone
   // does not: "Do not\npropose" must still refuse the request.
-  const clause = text.slice(Math.max(0, index - 55), index).split(/[.!?;]/u).at(-1) ?? "";
+  const clause = (text.slice(Math.max(0, index - 55), index).split(/[.!?;]/u).at(-1) ?? "")
+    // An exact word ceiling is a bound, not a prohibition on the next item.
+    // Other negation, including a later "đừng", remains available to the check.
+    .replace(/(?<![\p{L}\p{M}\p{N}_])không quá\s+\d+\s+từ(?![\p{L}\p{M}\p{N}_])/gu, "giới hạn từ");
   return /(?<![\p{L}\p{M}\p{N}_])(?:không|đừng|do not|don't|cannot|can't|not)\s+(?:\S+\s+){0,3}$/u.test(clause);
 }
 function unique(text: string, pattern: RegExp) {

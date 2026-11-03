@@ -102,8 +102,16 @@ export async function checkResearchGuides(browser: Browser, origin: string, evid
         for (const key of ["privacyNotice", "filePrivacyHelp", "exportPrivacyNotice"] as const)
           await page.getByText(copy.tool[key], { exact: true }).waitFor();
         const question = `Original question <${locale}> {count} USDC`, note = `Original evidence: <source> ${locale} =1+2`;
+        const findings = page.getByLabel(translated("tool.columns.finding"), { exact: true });
+        if (locale === "vi") {
+          assert.equal(await findings.count(), 0);
+          await page.getByRole("button", { name: translated("tool.add"), exact: true }).click();
+        } else {
+          assert.equal(await findings.count(), 1, "Locale navigation recovers the existing source instead of silently clearing notes");
+          assert.equal(await findings.inputValue(), "Original evidence: <source> vi =1+2");
+          assert.equal(await page.getByLabel(translated("tool.question"), { exact: true }).inputValue(), "Original question <vi> {count} USDC");
+        }
         await page.getByLabel(translated("tool.question"), { exact: true }).fill(question);
-        await page.getByRole("button", { name: translated("tool.add"), exact: true }).click();
         await page.getByLabel(translated("tool.columns.finding"), { exact: true }).fill(note);
         assert.equal(await page.getByLabel(translated("tool.question"), { exact: true }).inputValue(), question);
         assert.equal(await page.getByLabel(translated("tool.columns.finding"), { exact: true }).inputValue(), note);

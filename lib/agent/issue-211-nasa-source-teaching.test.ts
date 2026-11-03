@@ -99,7 +99,7 @@ class SyntheticNasaTeachingTransport extends JsonChatEngine {
   }
 }
 
-async function drive(options: { enabled?: boolean; failure?: Failure; untranslated?: boolean } = {}) {
+async function drive(options: { enabled?: boolean; failure?: Failure; untranslated?: boolean; originalQuestion?: string } = {}) {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(snapshot.capturedAtUtc));
   if (options.enabled === false) vi.stubEnv("KERYX_TEACHING_PROPOSALS", undefined);
@@ -125,7 +125,7 @@ async function drive(options: { enabled?: boolean; failure?: Failure; untranslat
     engine, effects, readWebArticle: read, webSearch: { search } as unknown as AgentDeps["webSearch"],
     gateway: { mode: "real", agentAddress: () => "0x0000000000000000000000000000000000000001", ensureFunded: deniedPayment,
       payFetch: deniedPayment, payCitation: deniedPayment } as unknown as PaymentGateway };
-  const iterator = runAgent({ queryId: "fresh-nasa-original-teacher", question: retained.question, origin: "web", budget: 0, researchMode: "quick" }, deps);
+  const iterator = runAgent({ queryId: "fresh-nasa-original-teacher", question: options.originalQuestion ?? retained.question, origin: "web", budget: 0, researchMode: "quick" }, deps);
   let row = await iterator.next(); while (!row.done) row = await iterator.next();
   return { run: row.value, transport, synthesize, attribute, read, search, deniedPayment };
 }
@@ -214,6 +214,25 @@ it("retains actual NASA premises for unglossed targets and admits the lesson onl
   const sources = f.transport.packets[0].packet.sources as { passages: { text: string }[] }[];
   expect(sources[0].passages.reduce((sum, passage) => sum + passage.text.length, 0)).toBeLessThanOrEqual(2000);
   expect(f.read).toHaveBeenCalledOnce(); expect(f.deniedPayment).not.toHaveBeenCalled();
+});
+
+it.each([
+  retained.question.replace("Viết bằng tiếng Việt", "Trình bày bằng tiếng Việt"),
+  retained.question.replace("hoạt động 10 phút", "hoạt động kéo dài 10 phút"),
+  retained.question.replace("câu hỏi cuối giờ có đáp án", "câu hỏi kiểm tra cuối giờ kèm đáp án"),
+  retained.question.replace("giải thích dưới 100 từ", "giải thích ngắn gọn không quá 100 từ"),
+])("delivers explicit Vietnamese paraphrases through actual NASA extraction and the unchanged independent review: %s", async originalQuestion => {
+  const f = await drive({ failure: "unglossed-targets", originalQuestion });
+  expect(f.run.question).toBe(originalQuestion);
+  expect(f.run.teachingProposals!.complete).toBe(true);
+  expect(f.run.teachingProposals!.admittedStatements.map(row => row.text)).toEqual(statements);
+  expect(f.run.teachingProposals!.proposals.map(row => row.proposal.kind))
+    .toEqual(["activity", "classification-example", "classification-example", "exit-question"]);
+  expect(f.transport.packets).toHaveLength(2);
+  expect(f.read).toHaveBeenCalledOnce(); expect(f.deniedPayment).not.toHaveBeenCalled();
+  const receipt = buildResearchReceipt(f.run, []);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  expect(receipt.payload.teachingProposals).toEqual(f.run.teachingProposals);
 });
 
 it("withholds false NASA-performed attribution while preserving separately reviewed examples", async () => {
