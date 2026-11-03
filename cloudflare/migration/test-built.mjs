@@ -1,11 +1,15 @@
 /** Actual workerd + browser compatibility. No production request, credential or database. */
 import assert from "node:assert/strict";
-import { mkdir, readFile, readdir } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
+import { ManagedCatalog } from "./src/managed-catalog.ts";
+import catalogProfile from "./src/catalog-profile.json" with { type: "json" };
+import { CATALOG_IDENTITY } from "./src/catalog-schema.mjs";
+import { publicReferenceItemId } from "../../lib/public-references/catalog-contract.ts";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const require = createRequire(new URL("../../package.json", import.meta.url));
@@ -34,9 +38,11 @@ const runtime = new Miniflare(convertV4MiniflareOptions({
   name: config.name, compatibilityDate: config.compatibilityDate,
   compatibilityFlags: config.compatibilityFlags,
   modules, modulesRoot: bundleRoot,
-  bindings: { MIGRATION_PREVIEW_TOKEN: token, KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1" },
+  bindings: { MIGRATION_PREVIEW_TOKEN: token, KERYX_NETWORK: "arcTestnet", NEXT_PUBLIC_KERYX_NETWORK: "arcTestnet", KERYX_FORCE_OFFLINE: "1", CATALOG_GENERATION: "synthetic-catalog-v1" },
+  d1Databases: { CATALOG_DB: "catalog-built-fixture" }, r2Buckets: { CATALOG_BLOBS: "catalog-built-blobs" },
   assets: { directory: resolve(build, "assets"), binding: "ASSETS", routerConfig: { has_user_worker: true, invoke_user_worker_ahead_of_assets: true } },
-  resourcePersistencePath: resolve(temporary, "state"), host: "127.0.0.1", port: 0,
+  // Repeated acceptance runs must never reuse a previous fixture's schema/data.
+  resourcePersistencePath: await mkdtemp(resolve(temporary, "runtime-")), host: "127.0.0.1", port: 0,
   outboundService: async request => {
     outbound.push({ method: request.method, origin: new URL(request.url).origin });
     return new Response("Isolated compatibility fixture", { status: 503 });
@@ -54,6 +60,21 @@ try {
   for (const path of ["/api/ask", "/api/ask/sign", "/mcp"]) {
     assert.equal((await call(path, { method: "POST", headers: { Authorization: `Bearer ${token}` } })).status, 503);
   }
+  assert.equal((await call("/__migration/catalog")).status, 401);
+  const authorization = { Authorization: `Bearer ${token}` };
+  assert.equal((await call("/__migration/catalog", { headers: authorization })).status, 503, "Missing catalog schema cannot masquerade as an empty library");
+  const db = await runtime.getD1Database("CATALOG_DB"), bucket = await runtime.getR2Bucket("CATALOG_BLOBS");
+  const schema = [...catalogProfile.objects].sort((a, b) => ["table", "index", "trigger"].indexOf(a[1]) - ["table", "index", "trigger"].indexOf(b[1]));
+  await db.batch(schema.map(row => db.prepare(row[2])));
+  await db.prepare("INSERT INTO catalog_control(generation,identity,revision,ready) VALUES (?,?,0,1)").bind("synthetic-catalog-v1", CATALOG_IDENTITY).run();
+  const catalog = new ManagedCatalog(db, bucket, "synthetic-catalog-v1"), referenceId = "public:cloudflare-fixture", link = "https://fixture.invalid/article";
+  await catalog.upsertPublicReference({ id: referenceId, name: "Synthetic fixture", url: "https://fixture.invalid/", rssUrl: "https://fixture.invalid/feed",
+    description: "Synthetic public catalog acceptance only", tags: [], active: true, items: [{ id: publicReferenceItemId(referenceId, link), title: "Synthetic article",
+      link, summary: "Synthetic summary", content: "Synthetic retained original, not production evidence", deliveryKind: "excerpt" }] });
+  const catalogPage = await (await call("/__migration/catalog", { headers: authorization })).json();
+  assert.equal(catalogPage.total, 1); assert.equal(catalogPage.productionReady, false);
+  assert.equal(catalogPage.items[0].content, undefined, "Browsing projects metadata, never retained body text");
+  assert.equal((await call("/__migration/catalog", { method: "POST", headers: authorization })).status, 503, "Preview has no mutation route");
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ extraHTTPHeaders: { Authorization: `Bearer ${token}` } });
   await context.route("**/*", route => new URL(route.request().url()).origin === url.origin

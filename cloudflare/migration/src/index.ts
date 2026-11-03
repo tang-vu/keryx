@@ -1,12 +1,18 @@
 import { previewResponse } from "./preview-policy.mjs";
+import type { CatalogEnv } from "./catalog-response";
 
 declare const __KERYX_SOURCE_COMMIT__: string;
 
 export default {
-  async fetch(request: Request, env: { MIGRATION_PREVIEW_TOKEN?: string;
+  async fetch(request: Request, env: CatalogEnv & { MIGRATION_PREVIEW_TOKEN?: string;
     ASSETS: { fetch(request: Request): Promise<Response> } }, context: unknown): Promise<Response> {
     return previewResponse(request, env,
       async () => {
+        const path = new URL(request.url).pathname;
+        if (path === "/__migration/catalog" || path.startsWith("/__migration/catalog/")) {
+          const { catalogResponse } = await import("./catalog-response");
+          return catalogResponse(request, env);
+        }
         // User-worker-first admission also covers assets. Serve the bound static
         // files only after the gate, then hand application routes to the renderer.
         const asset = await env.ASSETS.fetch(request);

@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": { "incremental": false, "plugins": [], "types": ["node"] },
-  "include": ["src/**/*.ts", "vite.config.ts", "cloudflare.config.ts"],
+  "include": ["src/**/*.ts", "test/fixtures/**/*.ts", "vite.config.ts", "cloudflare.config.ts"],
   "exclude": ["node_modules", "dist", ".cloudflare"]
 }
