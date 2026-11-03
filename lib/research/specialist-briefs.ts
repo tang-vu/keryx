@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AskQuestionSchema } from "../ask-input";
 import { specialistBriefCopy as copy } from "../../locales/en/specialist-briefs";
 import { API_INTEGRATION_NOTE_REQUEST } from "./api-integration-note-request";
+import { WORK_PRODUCT_REQUEST } from "./work-product-intent";
 
 const PRESET_BRIEF_IDS = ["api-platform", "saas-competition", "scholarly-literature"] as const;
 export const SPECIALIST_BRIEF_IDS = [...PRESET_BRIEF_IDS, "custom"] as const;
@@ -38,8 +39,8 @@ export function prepareSpecialistBrief(value: unknown) {
   const input = specialistBriefInputSchema.parse(value);
   const brief = specialistBriefs[input.track];
   const question = AskQuestionSchema.parse([
-    input.track === "api-platform" ? API_INTEGRATION_NOTE_REQUEST : "",
-    brief.instruction,
+    input.track === "api-platform" ? API_INTEGRATION_NOTE_REQUEST : input.track === "custom" ? WORK_PRODUCT_REQUEST : "",
+    input.track === "custom" ? "Separate cited findings and draft proposals; retain dates, conditions and read limits." : brief.instruction,
     `Question: ${input.decision}`,
     ...(input.track === "custom" ? [
       `Requested deliverable (caller request, not evidence): ${input.deliverable}`,

@@ -1,5 +1,18 @@
 # Keryx — Decision Log
 
+## Deliver caller-requested draft work products after canonical attribution - 2026-11-04
+
+An explicit original custom brief may request a proposed plan, checklist or
+comparison. Add bounded sections to the existing factual generation and complete
+independent review, retaining every original source context and model/input/output
+cap. Bind each proposal to surviving exact factual statements and a runtime review
+capability. Append only after attribution and settlement; proposals add no factual
+coverage, citation weight, spending or execution authority. Retain protected
+originals, package limits and the separate teaching activation hold. Preserve the
+caller checklist, unknowns and partial-delivery notices. Shared answer/report and
+receipt paths carry the draft; model review is not human acceptance. See
+[the work-product contract](docs/engineering/requested-work-products.md).
+
 ## Reuse archive cards only after reading current public originals - 2026-11-03
 
 The measured Answers bottleneck is repeated synchronous materialization and JSON
