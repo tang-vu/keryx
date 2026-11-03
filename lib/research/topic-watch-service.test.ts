@@ -89,8 +89,8 @@ describe("mounted manual watch controls in a real browser (authored, UNRUN)", ()
         if(method==='PUT')watch.spec=body;
         else if(method==='DELETE')watch.status='cancelled';
         else if(body.action==='pause')watch.status='paused';else if(body.action==='resume')watch.status='active';
-        else if(body.action==='check'){watch.nextSlot++;watch.history.push({kind:'check',slot:0,status:'unchanged',newMatches:0})}
-        return Response.json({result:{status:body?.action==='check'?'unchanged':'controlled',paidRequests:0}});
+        else if(body.action==='check'||body.action==='check-current'){watch.nextSlot++;watch.history.push({kind:'check',slot:0,status:'unchanged',newMatches:0})}
+        return Response.json({result:{status:body?.action==='check'||body?.action==='check-current'?'unchanged':'controlled',paidRequests:0}});
       };
       createRoot(document.getElementById('root')).render(<TopicWatchManager/>);
     ` }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' },
@@ -115,6 +115,38 @@ describe("mounted manual watch controls in a real browser (authored, UNRUN)", ()
     await page.addScriptTag({ content: bundle }); await page.getByText("No private watches saved.").waitFor();
     return page;
   }
+  it.each([360, 1366])("requires a fresh revision-bound checkbox for each current-metadata action at %ipx", async width => {
+    const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block" });
+    try {
+      const page = await sameOriginFixture(context);
+      await page.getByLabel("Review question", { exact: true }).fill("PRIVATE question not sent to Crossref");
+      await page.getByLabel("Title keywords", { exact: false }).fill("transformer");
+      await page.getByLabel("I consent", { exact: false }).check();
+      await page.getByRole("button", { name: "Create watch", exact: true }).click();
+      await page.getByRole("heading", { name: "PRIVATE question not sent to Crossref" }).waitFor();
+      const check = page.getByRole("button", { name: "Check current Crossref metadata", exact: true });
+      const consent = page.getByLabel("Allow this check", { exact: false });
+      expect(await check.isDisabled()).toBe(true); expect(await consent.isChecked()).toBe(false);
+      await check.evaluate(button => (button as HTMLButtonElement).click());
+      expect(await page.evaluate(() => (window as unknown as { calls: { body?: string }[] }).calls.filter(call => call.body?.includes('"check-current"')).length)).toBe(0);
+      await consent.check(); await check.click();
+      await page.getByText("unchanged. Paid requests: 0.", { exact: true }).waitFor();
+      const calls = await page.evaluate(() => (window as unknown as { calls: { method: string; headers: Record<string, string>; body?: string }[] }).calls.filter(call => call.body?.includes('"check-current"')));
+      expect(calls).toHaveLength(1);
+      expect(JSON.parse(calls[0].body!)).toEqual({ action: "check-current", consent: "send-keywords-to-crossref-once" });
+      expect(calls[0].headers["If-Match"]).toBe('"1"');
+      expect(await consent.isChecked()).toBe(false); expect(await check.isDisabled()).toBe(true);
+      await consent.check(); await page.getByRole("button", { name: "Pause", exact: true }).click();
+      await page.getByRole("button", { name: "Resume", exact: true }).click();
+      expect(await consent.isChecked()).toBe(false); expect(await check.isDisabled()).toBe(true);
+      await consent.check(); await page.evaluate(() => window.dispatchEvent(new Event("keryx:auth")));
+      await page.getByText("Account changed. Refresh to verify this session.").waitFor();
+      await page.getByRole("button", { name: "Refresh watches", exact: true }).click();
+      await page.getByRole("heading", { name: "PRIVATE question not sent to Crossref" }).waitFor();
+      expect(await consent.isChecked()).toBe(false); expect(await check.isDisabled()).toBe(true);
+      expect(await page.evaluate(() => (window as unknown as { calls: { body?: string }[] }).calls.filter(call => call.body?.includes('"check-current"')).length)).toBe(1);
+    } finally { await context.close(); }
+  });
   it.each([360, 1366])("requires consent and actual clicks for create/edit/pause/resume/check/cancel at %ipx", async width => {
     const context = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: "block" });
     try {

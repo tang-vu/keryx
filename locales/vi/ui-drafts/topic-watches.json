@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/topic-watches.ts",
-  "sourceSha256": "da619acd121f4e293b428684dc8d402443b4ac2c578719dc67f7374a7fc447a2",
+  "sourceSha256": "593327a33e3a61a9aaef82f82a9c0915325fc2ada94406c92bea1887aa9dae0c",
   "entries": {
     "topicWatch.accountChanged": {
       "source": "Account changed. Refresh to verify this session.",
@@ -145,8 +145,8 @@
       "text": "Lưu cài đặt"
     },
     "topicWatch.scope": {
-      "source": "Manual checks compare the local curated scholarly catalog. They do not search for newly published papers or read paper bodies. Spend: 0 USDC; spending capacity: 0. Scheduling and funded watches are unavailable.",
-      "text": "Kiểm tra thủ công so sánh danh mục học thuật tuyển chọn cục bộ. Không tìm bài vừa xuất bản hay đọc nội dung bài. Chi: 0 USDC; khả năng chi: 0. Chưa có theo dõi theo lịch hoặc được cấp vốn."
+      "source": "Local checks compare the curated scholarly catalog. They do not search for newly published papers or read paper bodies. Spend: 0 USDC; spending capacity: 0. Scheduling and funded watches are unavailable.",
+      "text": "Kiểm tra cục bộ đối chiếu danh mục học thuật tuyển chọn. Chúng không tìm bài mới xuất bản hay đọc nội dung bài. Chi tiêu: 0 USDC; khả năng chi tiêu: 0. Tác vụ định kỳ và theo dõi có trả phí chưa khả dụng."
     },
     "topicWatch.signIn": {
       "source": "Sign in to manage private watches",
@@ -171,6 +171,22 @@
     "topicWatch.venues": {
       "source": "Venues, comma separated (optional, up to 4)",
       "text": "Nơi xuất bản, ngăn cách bằng dấu phẩy (tùy chọn, tối đa 4)"
+    },
+    "topicWatch.currentScope": {
+      "source": "An optional current check sends your title keywords to Crossref once and compares up to six recently indexed metadata records. It does not send your private question, read papers or make paid requests. Index updates are not publication dates, and this bounded page is not a complete literature search. Check limits, pause, expiry and the existing watermark still apply.",
+      "text": "Một lần kiểm tra hiện tại tùy chọn gửi từ khóa tiêu đề của bạn tới Crossref và đối chiếu tối đa sáu bản ghi metadata được lập chỉ mục gần đây. Câu hỏi riêng tư không được gửi, nội dung bài không được đọc và không có yêu cầu trả phí. Thời điểm cập nhật chỉ mục không phải ngày xuất bản; trang kết quả có giới hạn này không phải tìm kiếm tài liệu đầy đủ. Giới hạn kiểm tra, tạm dừng, hết hạn và watermark hiện có vẫn áp dụng."
+    },
+    "topicWatch.currentConsent": {
+      "source": "Allow this check to send only these title keywords to Crossref: {keywords}. No paper bodies or paid requests.",
+      "text": "Cho phép lần kiểm tra này chỉ gửi các từ khóa tiêu đề sau tới Crossref: {keywords}. Không đọc nội dung bài hay tạo yêu cầu trả phí."
+    },
+    "topicWatch.checkCurrent": {
+      "source": "Check current Crossref metadata",
+      "text": "Kiểm tra metadata Crossref hiện tại"
+    },
+    "topicWatch.metadataCounts": {
+      "source": "Metadata observed: {observed}; incomplete rows: {unknown}; new lexical matches: {matches}.",
+      "text": "Metadata đã quan sát: {observed}; bản ghi chưa đầy đủ: {unknown}; kết quả từ khóa mới: {matches}."
     }
   }
 }
