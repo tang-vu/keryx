@@ -17,7 +17,8 @@ import { privacyReadsActive, requirePrivacy } from "./run-privacy/contracts";
  */
 
 import { getDb } from "@/lib/db";
-import { buildArchiveStream, type ArchiveEntry } from "@/lib/answers-archive";
+import { buildArchiveStream, buildArchiveEntryStream, type ArchiveEntry } from "@/lib/answers-archive";
+import { setImmediate as yieldToRequests } from "node:timers/promises";
 import { getTestnetArchive } from "./history/testnet-archive";
 
 /** How many raw runs the archive is built from. See the note above before changing. */
@@ -34,6 +35,32 @@ let privacyObserved = privacyReadsActive({});
 
 async function publicArchive(db: Awaited<ReturnType<typeof getDb>>): Promise<ArchiveEntry[]> {
   const privacy = requirePrivacy(db);
+  if (privacy.archivePage) {
+    const page = privacy.archivePage.bind(privacy);
+    const candidates = async function* () {
+      let count = 0, before: { id: string; createdAt: string } | undefined;
+      while (count < ARCHIVE_WINDOW_RUNS) {
+        const rows = await page({ take: Math.min(32, ARCHIVE_WINDOW_RUNS - count), before });
+        if (!rows.length) break;
+        for (const row of rows) { count++; if (row.entry) yield row.entry; }
+        before = { id: rows.at(-1)!.id, createdAt: rows.at(-1)!.createdAt };
+        // Cold validation must not monopolize the server for an entire archive.
+        // No transaction spans this yield; publication below reads fresh bodies.
+        await yieldToRequests();
+      }
+    };
+    const selected = await buildArchiveEntryStream(candidates());
+    const published = async function* () {
+      for (let offset = 0; offset < selected.length; offset += 32) {
+        const ids = selected.slice(offset, offset + 32).map(entry => entry.id), allowed = new Set(ids);
+        for (const row of await page({ ids, take: ids.length })) {
+          if (!allowed.delete(row.id) || row.entry && row.entry.id !== row.id) throw new Error("Unadmitted archive publication identity");
+          if (row.entry) yield row.entry;
+        }
+      }
+    };
+    return buildArchiveEntryStream(published());
+  }
   const candidates = async function* () {
     let count = 0, before: { id: string; createdAt: string } | undefined;
     while (count < ARCHIVE_WINDOW_RUNS) {

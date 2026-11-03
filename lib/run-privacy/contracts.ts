@@ -31,6 +31,8 @@ export interface RunPrivacyStore {
   /** Filters in storage before retrieving any text; hidden and erased originals never leave this port. */
   read(id: string, actor?: PrivacyActor): Promise<PrivacyRead>;
   list(query: PrivacyList): Promise<QueryRun[]>;
+  /** Optional slim reader (1–32 rows); each call admits current public originals in storage. */
+  archivePage?(query: PrivacyList): Promise<import("./archive-page").PublicArchiveRow[]>;
   /** Shared memory uses only publicly listed research; private topic text never becomes cross-owner context. */
   memories(take:number):Promise<import("../db/keryx-db").QueryMemoryEntry[]>;
   offers(take:number):Promise<PrivacyOffer[]>;

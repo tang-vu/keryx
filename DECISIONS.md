@@ -1,5 +1,25 @@
 # Keryx — Decision Log
 
+## Reuse archive cards only after reading current public originals - 2026-11-03
+
+The measured Answers bottleneck is repeated synchronous materialization and JSON
+validation of large run traces. Keep SQLite and the existing native admission,
+schema, identity and privacy checks. Materialize the ordered/limited ID window
+before fetching originals, and derive slim cards inside the guarded privacy port.
+Bound each connection's card cache by count, bytes and per-card size. Compare the
+SHA-256 of the actual freshly selected original on every cache lookup; publication
+revisions and elapsed time grant no reuse. Keep no raw JSON or parsed trace graph.
+
+Retain the original archive window, keyset, language/confidence evidence, winner
+rules and final publication reread. Yield between initial scan pages so other
+requests can run, then use current bodies for publication. Storage refusal never
+selects a legacy cache. Ordinary/full-reader adapters retain their fallback.
+Disable speculative topic/filter navigation for the measured expensive routes.
+
+The [acceptance map](docs/engineering/public-list-performance.md) records native
+read-only measurements, exact card parity and privacy/failure coverage. This is a
+source optimization; production delivery keeps its existing release authority.
+
 ## Transfer public catalog data without transferring storage authority - 2026-11-03
 
 Export only public publishers, current article headers, immutable historical

@@ -7,6 +7,8 @@ import {
   archiveAnswerSnippet,
   buildArchive,
   buildArchiveStream,
+  buildArchiveEntryStream,
+  archiveEntryFromRun,
   extractiveAnswerPreview,
   metadataAnswerExcerpt,
   normalizeQuestion,
@@ -65,6 +67,13 @@ describe("cleanText", () => {
 });
 
 describe("buildArchive", () => {
+  it("selects identical winners/order from complete runs and derived cards, including ties and languages", async () => {
+    const rows = [run({ id: "a" }), run({ id: "b", totalToCreators: 0.006 }), run({ id: "c", question: "Other?" }),
+      recorded({ id: "vi" }, "vi"), recorded({ id: "en" }, "en"), run({ id: "empty", answer: "" }),
+      run({ id: "no-citations", citations: [] }), run({ id: "blank-question", question: "?! " })];
+    async function* entries() { for (const row of rows) { const entry = archiveEntryFromRun(row); if (entry) yield entry; } }
+    expect(await buildArchiveEntryStream(entries())).toEqual(buildArchive(rows));
+  });
   it("keeps a winner per normalized question and recorded generated-prose language in both scans", async () => {
     const vietnamese = recorded({ id: "vi-thin", question: "  WHAT is x402?! ", answer: "Synthetic generated prose. “Original topic”" }, "vi");
     const rich = { ...vietnamese, id: "vi-rich", citations: [...vietnamese.citations, { ...vietnamese.citations[0], marker: "S2" }] };
