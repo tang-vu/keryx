@@ -27,6 +27,38 @@ scripts independently from the Node application's acceptance. The built test
 requires `KERYX_CLOUDFLARE_TEST_DIR` under the canonical checkout's `.local/`, and
 blocks external network access while exercising real workerd and Chromium.
 
+The managed public catalog adapter implements the native publisher, archive,
+literal search and keyset-pagination contract. Pure validation/query code is
+shared with the native adapter; its file, schema, transaction and write-capacity
+guards are retained. The new adapter is not the application database selector.
+Only credential-gated, metadata-only `GET /__migration/catalog`, `/stats` and
+`/publishers` preview endpoints use it. No HTTP mutation or financial capability
+is exposed. D1/R2 provisioning and production data import are separate operations.
+
+D1 stores publication pointers and immutable index revisions. Private R2 stores
+the exact original and normalized JSON bytes under SHA-256 keys, avoiding D1's
+2,000,000-byte row limit without raising the native 2 MiB field bound. Existing
+objects are verified, never repaired or overwritten. Reads share a primary D1
+snapshot, verify publisher/body provenance, then check publication revision in a
+new primary session after R2 loading. Stale publication observations fail closed.
+
+Every D1 batch checks the compiled, source-known schema and catalog identity
+inside the transaction. The adapter cannot install or repair DDL. Writes stage
+bounded immutable objects and index chunks before atomically publishing article
+pointers, publisher metadata and a compare-and-swap revision. A failed or
+interrupted stage remains invisible; retry can finish the same index. Queries
+join only the current revision's terms. Completed terms and historical versions
+are retained and immutable. Generations isolate catalogs and cursors; `ready=0`
+allows preparation while refusing reads. Operations retain bounded fields,
+input bytes and a 15-second deadline; these are explicit capacity refusals,
+not clipped content or silent truncation.
+
+The workerd tests exercise actual D1/R2 bindings against native SQLite, including
+all query orders, 32-term search, historical-version recovery, bodies larger than
+D1 rows, interrupted-index retry, concurrent publication/schema changes,
+corrupted objects and forbidden payout fields. The compiled browser test also
+checks credential admission and the metadata-only catalog endpoint.
+
 Run `node scripts/cloudflare-migration.mjs --summary` for a read-only inventory
 of reachable native-runtime constraints and the actual persistence interface.
 The framework's compatibility percentage does not inspect native storage,
@@ -54,8 +86,10 @@ also require explicit domain adapters, rather than JSON serialization of trust.
 
 Published rates checked November 3:
 [Workers](https://developers.cloudflare.com/workers/platform/pricing/) and
-[Containers](https://developers.cloudflare.com/containers/platform/pricing/).
-Workers starts at USD 5/month. The initial planning range is USD 5–10/month for
+[Containers](https://developers.cloudflare.com/containers/platform/pricing/),
+[D1](https://developers.cloudflare.com/d1/platform/pricing/) and
+[R2](https://developers.cloudflare.com/r2/pricing/).
+Workers starts at USD 5/month. The updated planning range is USD 5–15/month for
 small traffic and storage, excluding tax, AI/search, existing account usage and
 usage above the assumptions. This is an estimate, not a hard spending cap.
 
@@ -66,11 +100,22 @@ included allowances gives USD 1.68048, or USD 6.68048 with the Workers base fee.
 Measure actual peak memory and invocation usage before choosing the final type.
 An always-running application container has a different cost profile.
 
+For the catalog, assume no more than 250 new articles/day, approximately 127
+terms/article as observed in the initial source inventory, three D1 row/index
+writes per term, fewer than 50,000 R2 writes and 200,000 R2 reads/month, and
+1 GB retained storage. Allow USD 3 for D1 writes, USD 4.50/0.36 for rounded R2
+Class A/B operations and USD 0.02 for storage if shared included allowances are
+already consumed. Combined with the conservative base/Container calculation,
+this is approximately USD 14.56/month before other above-assumption usage.
+Actual D1 index maintenance and Worker/DO usage must be measured during staging;
+this estimate grants no additional financial policy, funding or spending cap.
+
 The subscription-create request returned Cloudflare HTTP 403 (authentication
 error). This migration has not enabled a paid subscription. That response
 identifies the CLI's billing permission; it does not establish the account's
-current Workers plan. Verify Workers plans and the actual upload entitlement
-before asking an administrator to upgrade an account that may already be Paid.
+current Workers plan. The owner's Workers plans view and a successful private
+preview upload subsequently confirmed the existing Workers Paid entitlement.
+No second subscription is needed.
 No production routing, Container or data import is accepted by this observation.
 
 ## Completion and cutover

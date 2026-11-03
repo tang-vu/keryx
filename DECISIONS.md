@@ -1,5 +1,28 @@
 # Keryx — Decision Log
 
+## Keep Cloudflare public catalog publication atomic across D1 and R2 - 2026-11-03
+
+Share the existing pure public publisher/article validation, provenance, literal
+search and pagination contract with an isolated Cloudflare adapter. Preserve the
+native SQLite implementation's enrollment, file and transaction authority. This
+public-only adapter does not select the application's private/financial store or
+confer ownership, prices, payout addresses or signing authority.
+
+Keep exact original/normalized JSON bytes in private content-addressed R2, within
+the existing 2 MiB field limit. D1 holds metadata and versioned search terms.
+Stage bounded immutable objects and index chunks, then publish complete pointers
+and publisher metadata in one schema-guarded D1 compare-and-swap transaction.
+Interrupted staging cannot expose incomplete content and is retryable. Every
+read verifies actual object bytes and publisher provenance, then checks the
+publication revision through a fresh primary session after asynchronous I/O.
+No time-based rights cache, target DDL repair or HTTP write API is introduced.
+
+The [migration acceptance map](docs/engineering/cloudflare-full-migration.md)
+requires real workerd D1/R2 parity/failure tests and compiled preview/browser
+checks. Production import, financial/custody migration, paid resources, full
+supported-surface acceptance and domain cutover remain separate gates. Keep the
+VPS serving until the complete Cloudflare environment is accepted.
+
 ## Extend native first-use guidance and preserve the language of English fallbacks — 2026-10-29
 
 Add source-bound neutral keyboard, metadata, depth, tour and decision-log copy to

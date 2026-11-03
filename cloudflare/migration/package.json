@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "tsc --noEmit --project tsconfig.json && node --test test/*.test.mjs",
+    "check": "node catalog-profile.mjs && tsc --noEmit --project tsconfig.json && node --import tsx --test test/*.test.mjs",
     "build": "node ../../scripts/patch-legacy-zod.mjs ../.. && vite build --config vite.config.ts",
-    "test:built": "node test-built.mjs",
+    "test:built": "node --import tsx test-built.mjs",
     "preview:deploy": "cf deploy --prebuilt --mode production"
   },
   "devDependencies": {
