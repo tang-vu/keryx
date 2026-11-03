@@ -34,8 +34,10 @@ reload, cancelled/accepted client navigation and Back, disabled recovery,
 malformed records, denied storage and quota failures. The existing built-page
 file-acceptance journey additionally proves that reload restores the current
 notes before independently exercising the unchanged file-import workflow.
-Metadata, payment and research APIs receive no new requests. New authored copy
-uses the existing locale fallback until translated preview strings are supplied.
+Metadata, payment and research APIs receive no new requests. Vietnamese and
+Simplified Chinese machine-draft previews, source bindings and coverage manifests
+include the new copy. Critical confirmation/privacy text keeps the existing
+English-authoritative human-review gate; other locales use fallback.
 
 This is source work only. Required PR CI and review remain acceptance gates;
 deployment, package publication, release and version allocation are held by the
