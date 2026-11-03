@@ -179,6 +179,59 @@ export class ManagedCatalog implements PublicReferenceDb {
     publicReferenceSchema.shape.id.parse(id);
     return this.#write(id, items, kind, observedAt);
   }
+  /** Private operator READ-ONLY inspection of an initial prepared generation.
+   * Does not expose body text, change readiness or admit a financial store.
+   * A live application write advances revision and refuses this import audit. */
+  async inspectPrepared(kind: "publishers" | "versions" | "terms", after?: string) {
+    if (!["publishers", "versions", "terms"].includes(kind)) throw unavailable();
+    const keys = kind === "publishers" ? ["id"] : kind === "versions" ? ["reference_id", "item_id", "revision"]
+      : ["term", "reference_id", "item_id", "revision"];
+    let boundary: string[] = [];
+    if (after !== undefined) {
+      try {
+        if (after.length > 4096 || Buffer.from(after, "base64url").toString("base64url") !== after) throw unavailable();
+        const value: unknown = JSON.parse(Buffer.from(after, "base64url").toString("utf8"));
+        if (!Array.isArray(value) || value.length !== keys.length + 2 || value[0] !== this.#generation || value[1] !== kind
+          || !value.slice(2).every(part => typeof part === "string" && part.length <= 100)) throw unavailable();
+        boundary = value.slice(2);
+      } catch { throw new PublicReferenceArchiveError("invalid-cursor", "Invalid prepared catalog cursor"); }
+    }
+    const table = { publishers: "public_references", versions: "public_reference_article_versions", terms: "public_reference_article_terms" }[kind];
+    const limit = kind === "terms" ? 2048 : 50;
+    const clause = boundary.length ? ` AND (${keys.map(key => "t." + key).join(",")})>(${keys.map(() => "?").join(",")})` : "";
+    const current = kind === "versions" ? `,(SELECT json_object('canonical_url',a.canonical_url,'current_revision',a.current_revision,
+      'first_collected_at',a.first_collected_at,'last_collected_at',a.last_collected_at,'published_at',a.published_at,'sort_at',a.sort_at)
+      FROM public_reference_articles a WHERE a.generation=t.generation AND a.reference_id=t.reference_id AND a.item_id=t.item_id AND a.current_revision=t.revision) current_article` : "";
+    const ctx = context(), data = await this.#read([{ sql: `SELECT t.*${current} FROM ${table} t WHERE t.generation=?${clause}
+      ORDER BY ${keys.map(key => "t." + key).join(",")} LIMIT ?`, params: [this.#generation, ...boundary, limit + 1] }], false, 0);
+    const rows = data.rows[0].slice(0, limit);
+    await mapBounded(rows, async row => {
+      if (kind === "publishers") { await this.#publisher(row, ctx); return; }
+      if (kind === "terms") {
+        if (typeof row.term !== "string" || row.term.length > 100 || !Number.isInteger(row.weight) || Number(row.weight) < 1 || Number(row.weight) > 9) throw unavailable();
+        publicReferenceSchema.shape.id.parse(row.reference_id); publicReferenceItemSchema.shape.id.parse(row.item_id);
+        if (typeof row.revision !== "string" || !/^[a-f0-9]{64}$/.test(row.revision)) throw unavailable();
+        return;
+      }
+      const item_snapshot = await this.#blob(row.snapshot_key, ctx), original_snapshot = await this.#blob(row.original_key, ctx);
+      const item = publicReferenceItemSchema.parse(JSON.parse(item_snapshot));
+      const projection = { ...row, item_snapshot, original_snapshot, current_revision: row.revision, canonical_url: item.link,
+        first_collected_at: row.collected_at, last_collected_at: row.collected_at,
+        published_at: item.publishedAt ? timestamp(item.publishedAt) : null,
+        sort_at: item.publishedAt ? timestamp(item.publishedAt) : row.collected_at };
+      readArticle(projection);
+      if (row.current_article !== null) {
+        if (typeof row.current_article !== "string") throw unavailable();
+        row.current_article = JSON.parse(row.current_article);
+        readArticle({ ...projection, ...row.current_article as Record<string, unknown> });
+      }
+    });
+    tick(ctx); await this.#read([], false, 0); tick(ctx);
+    const last = rows.at(-1);
+    return { generation: this.#generation, revision: 0, kind, rows,
+      objects: [...ctx.blobs].map(([key, text]) => ({ key, sha256: sha(text), bytes: Buffer.byteLength(text) })),
+      ...(data.rows[0].length > limit && last ? { nextCursor: Buffer.from(JSON.stringify([this.#generation, kind, ...keys.map(key => last[key])])).toString("base64url") } : {}) };
+  }
   async #stageIndexes(id: string, items: Map<string, PublicReferenceItem>, states: Map<string, { revision: string }>, revision: number, ctx: Context) {
     if (!items.size) return;
     const known = await this.#read([{ sql: `SELECT item_id,revision,terms_count,terms_digest,complete FROM catalog_index_revisions
@@ -308,3 +361,7 @@ function compareUtf8(a: string, b: string): number {
   }
   return (a.length - i) - (b.length - j);
 }
+
+// Pure, source-known request templates for the explicit OFFLINE operator plan.
+// These exports carry no database/bucket capability or HTTP mutation route.
+export { guard as catalogGuard, jsonBatches as catalogJsonBatches, jsonFields as catalogJsonFields };

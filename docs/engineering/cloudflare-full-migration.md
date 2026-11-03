@@ -59,6 +59,68 @@ D1 rows, interrupted-index retry, concurrent publication/schema changes,
 corrupted objects and forbidden payout fields. The compiled browser test also
 checks credential admission and the metadata-only catalog endpoint.
 
+## Public-data transfer tools
+
+`operator/export-selected-public-catalog.ts` is an explicit Node operator entry
+point, not application startup. It accepts only
+`--export-selected-public-catalog`, uses the existing environment-selected sealed
+SQLite deployment with its source-known profile and a read-only connection, and
+never accepts a database filename. Its stdout is a private canonical JSONL
+snapshot, not an authority grant or completed whole-store intake. Keep it under
+canonical `.local/backups/` with owner/SYSTEM-only Windows permissions.
+
+Before target access, verify native SQLite allocation containment using a separate
+in-memory pressure probe. The entry point checks its actual Linux cgroup memory
+limit (128–512 MiB) and disabled swap before opening the selected store. The
+qualified operation uses a 384 MiB/no-swap transient unit, read-only system
+mounts, configured `IPAddressDeny=any` and a 150-second outer deadline. Record the actual
+OOM refusal and owned process/unit cleanup for the probe, then reuse that proof
+only while the platform and configuration match. A heap-limit PRAGMA readback
+does not substitute for this proof.
+
+Mutable publisher/article/version headers and the literal term-index digest share
+a read transaction capped at 15 seconds. Bounded keyset pages and an incremental
+SHA-256 over canonical term JSONL avoid one hash allocation per term. Exact
+immutable version bodies are then read four rows at a time after releasing the
+header snapshot, preserving raw original JSON and source rowids without holding
+the transaction open during transfer. A final metadata/index snapshot reports
+changes during export. The entire export has a 120-second processing deadline,
+2 MiB field, 32 MiB metadata, 500,000-row and 192 MiB output bounds. Failure
+emits fixed diagnostics and no completed footer; incomplete files are refused.
+
+`operator/public-catalog-plan.ts` exposes the offline `planPublicCatalog` operator
+function. Give it an accepted private export and a fresh directory under
+canonical `.local/tmp/`; ensure that directory inherits owner/SYSTEM-only access
+before writing real data. It does not access a network or production store.
+Strict public DTOs, canonical framing, byte/count bounds and a rolling source
+digest bind every record. Re-derive current index weights from retained bodies
+and compare the exact ordered digest with the source index; an inconsistent
+source cache is refused, never silently repaired. Preserve historical raw bytes
+as content-addressed object files and retain the unique source snapshot separately
+from these regenerable object/SQL caches.
+
+The plan emits an empty-target-only bootstrap and bounded D1 batches guarded by
+the compiled schema, expected generation, revision zero and `ready=0`. It does
+not set `ready=1` or expose an HTTP importer. Use the pinned Node/CLI toolchain,
+manually provision the dedicated resources after the cost report, upload exact
+objects, and verify actual remote bodies, metadata, term digest and counts before
+an explicit final seal. `KERYX_CATALOG_DB_ID` and `KERYX_CATALOG_GENERATION` are
+trusted build inputs for that accepted private catalog. They cannot activate
+production payment, routing or private-store authority. A stable copied public
+catalog still requires fresh privacy checks/delta migration at final cutover.
+
+The credential-gated `GET /__migration/catalog/verify/{publishers,versions,terms}`
+endpoints inspect only the initial generation at revision zero, including while
+`ready=0`. They cannot publish or repair anything. Bound cursors to generation,
+kind and full ordered keys; a live publication revision refuses import inspection.
+Publisher and retained-version inspection reads actual R2 bytes, validates hashes
+and native provenance, and checks any current article header against that body.
+Return metadata and freshly computed object hash/size receipts, never body text.
+Terms use bounded pages for an operator's exact ordered digest comparison.
+Every inspection finishes with a fresh primary schema/revision fence after I/O.
+Verify complete expected row/object sets and digests before the separate seal;
+an upload acknowledgement alone is not a completed migration audit.
+
 Run `node scripts/cloudflare-migration.mjs --summary` for a read-only inventory
 of reachable native-runtime constraints and the actual persistence interface.
 The framework's compatibility percentage does not inspect native storage,

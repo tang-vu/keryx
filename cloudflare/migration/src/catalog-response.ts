@@ -16,6 +16,14 @@ export async function catalogResponse(request: Request, env: CatalogEnv): Promis
   try {
     const catalog = new ManagedCatalog(env.CATALOG_DB, env.CATALOG_BLOBS, env.CATALOG_GENERATION);
     const marker = { deployment: "cloudflare-catalog-preview", generation: env.CATALOG_GENERATION, productionReady: false };
+    const inspections = new Map<string, "publishers" | "versions" | "terms">([
+      ["/__migration/catalog/verify/publishers", "publishers"], ["/__migration/catalog/verify/versions", "versions"], ["/__migration/catalog/verify/terms", "terms"],
+    ]);
+    const kind = inspections.get(url.pathname);
+    if (kind) {
+      if ([...url.searchParams.keys()].some(key => key !== "after") || url.searchParams.getAll("after").length > 1) return Response.json({ error: "invalid_catalog_query" }, { status: 400 });
+      return Response.json({ ...marker, inspection: await catalog.inspectPrepared(kind, url.searchParams.get("after") ?? undefined) });
+    }
     if (url.pathname === "/__migration/catalog/stats") return Response.json({ ...marker, ...await catalog.publicReferenceArchiveStats() });
     if (url.pathname === "/__migration/catalog/publishers") {
       const publishers = (await catalog.listPublicReferences()).map(({ items: _items, ...metadata }) => metadata);
