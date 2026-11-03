@@ -53,7 +53,8 @@ it.each(formats)("retains the original heap, environment, pipes and precise time
 it.each(formats)("observes asynchronous worker start and stdin failures without retaining vendor text: %s", async format => {
   for (const [event, reason] of [["start", "worker-start"], ["stdin", "worker-io"]] as const) {
     const child = worker(), promise = caught(invoke(format));
-    (event === "start" ? child : child.stdin).emit("error", new Error("PRIVATE vendor error with /system/path"));
+    const errorEvent = new Error("PRIVATE vendor error with /system/path");
+    if (event === "start") child.emit("error", errorEvent);else child.stdin.emit("error", errorEvent);
     const error = await promise;expect(extractionFailure(error)).toEqual({ format, reason });
     expect(JSON.stringify(extractionFailure(error))).not.toContain("PRIVATE");released();
   }

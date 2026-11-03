@@ -35,10 +35,10 @@ Existing recovery prose remains; a stage observation alone is not a repair or a
 reason to rerun paid work.
 
 All containment remains: one shared parser slot per server process; the loaded
-code's immutable worker binding; pinned executable and64MiB heap; secret-free
-environment; HTML2MiB input/4-second timer/400,000-byte output; and the PDF byte,
+code's immutable worker binding; pinned executable and 64 MiB heap; secret-free
+environment; HTML 2 MiB input/4-second timer/400,000-byte output; and the PDF byte,
 page, character, timeout and output bounds. The public article reader retains
-its20-page/60,000-character/5-second PDF options. Existing abort, first-stop and
+its 20-page/60,000-character/5-second PDF options. Existing abort, first-stop and
 release paths remain. No SystemRoot workaround is added: direct Python spawning
 was not equivalent to the actual working Node/libuv wrapper.
 
