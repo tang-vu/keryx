@@ -8666,3 +8666,22 @@ Record partial captured-policy cost bounds and completion duration honestly;
 missing/unpriced charges, invoices, profit and human identity stay unmeasured.
 Feedback never executes revision, research, refund, settlement or renewal. See
 [contracts and configuration](docs/engineering/requester-usefulness-20261024.md).
+
+## Discover watch metadata only after one explicit owner action (2026-11-03)
+
+Keep the existing local-curated watch check unchanged. A separate authenticated,
+same-origin `check-current` action requires per-request consent to send the watch's
+keywords to Crossref. Use one bounded GET to the fixed official metadata endpoint,
+ordered by recent indexing, with no model, paper-body read, paid search, signing,
+payment proof, automatic retry, curated fallback or background execution. Do not
+send the private research question, wallet, watch ID, author/venue filters or
+session data to the provider. Apply filters locally to the returned metadata.
+
+The original verified session, native watch port, positive claim/CAS, expiry,
+check/period limits, pause/cancel, uncertainty and watermark remain authoritative.
+Provider failure or a late/revoked observation cannot advance the watermark or
+be presented as an empty successful check. Index recency is not publication date
+or complete literature coverage. Existing record fingerprints exclude observation
+time, so refreshing the same metadata cannot invent a new work. No native schema
+or financial authority changes. Scheduling, standing spend and paid delivery stay
+held. Source work and its PR remain unmerged under the owner's no-release direction.

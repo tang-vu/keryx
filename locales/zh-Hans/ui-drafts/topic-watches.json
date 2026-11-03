@@ -2,7 +2,7 @@
   "status": "machineDraft",
   "review": null,
   "sourcePath": "locales/en/topic-watches.ts",
-  "sourceSha256": "da619acd121f4e293b428684dc8d402443b4ac2c578719dc67f7374a7fc447a2",
+  "sourceSha256": "593327a33e3a61a9aaef82f82a9c0915325fc2ada94406c92bea1887aa9dae0c",
   "entries": {
     "topicWatch.accountChanged": {
       "source": "Account changed. Refresh to verify this session.",
@@ -145,8 +145,8 @@
       "text": "保存设置"
     },
     "topicWatch.scope": {
-      "source": "Manual checks compare the local curated scholarly catalog. They do not search for newly published papers or read paper bodies. Spend: 0 USDC; spending capacity: 0. Scheduling and funded watches are unavailable.",
-      "text": "手动检查对比本地精选学术目录，不搜索新发表论文，也不读取论文正文。支出：0 USDC；支出能力：0。定时监测和有资金的监测不可用。"
+      "source": "Local checks compare the curated scholarly catalog. They do not search for newly published papers or read paper bodies. Spend: 0 USDC; spending capacity: 0. Scheduling and funded watches are unavailable.",
+      "text": "本地检查对照精选学术目录，不搜索新发表的论文，也不读取论文正文。支出：0 USDC；支出能力：0。定时任务和付费跟踪不可用。"
     },
     "topicWatch.signIn": {
       "source": "Sign in to manage private watches",
@@ -171,6 +171,22 @@
     "topicWatch.venues": {
       "source": "Venues, comma separated (optional, up to 4)",
       "text": "发表场所，以逗号分隔（可选，最多 4 个）"
+    },
+    "topicWatch.currentScope": {
+      "source": "An optional current check sends your title keywords to Crossref once and compares up to six recently indexed metadata records. It does not send your private question, read papers or make paid requests. Index updates are not publication dates, and this bounded page is not a complete literature search. Check limits, pause, expiry and the existing watermark still apply.",
+      "text": "可选的当前检查会将标题关键词发送给 Crossref 一次，并比较最多六条最近索引的元数据记录。不会发送私人问题、读取论文或发出付费请求。索引更新时间不是发表日期，此有限结果页也不是完整的文献检索。检查次数限制、暂停、到期和现有记录水位仍然适用。"
+    },
+    "topicWatch.currentConsent": {
+      "source": "Allow this check to send only these title keywords to Crossref: {keywords}. No paper bodies or paid requests.",
+      "text": "允许本次检查仅将以下标题关键词发送给 Crossref：{keywords}。不读取论文正文，也不发出付费请求。"
+    },
+    "topicWatch.checkCurrent": {
+      "source": "Check current Crossref metadata",
+      "text": "检查当前 Crossref 元数据"
+    },
+    "topicWatch.metadataCounts": {
+      "source": "Metadata observed: {observed}; incomplete rows: {unknown}; new lexical matches: {matches}.",
+      "text": "已观察元数据：{observed}；不完整记录：{unknown}；新关键词匹配：{matches}。"
     }
   }
 }

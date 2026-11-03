@@ -57,6 +57,14 @@ describe("topic watch supported contract (authored UNRUN)", () => {
     expect(Object.keys(collection.post.responses).sort()).toEqual(["201", "400", "401", "403", "409", "422", "428", "503"]);
   });
 });
+it("keeps legacy controls closed and requires explicit one-check consent for current discovery", () => {
+  const schema = JSON.parse(JSON.stringify(item.post.requestBody.content["application/json"].schema));
+  expect(schema.oneOf).toHaveLength(2);
+  expect(schema.oneOf[0].properties.action.enum).toEqual(["check", "pause", "resume", "cancel"]);
+  expect(schema.oneOf[1]).toMatchObject({ additionalProperties: false, required: ["action", "consent"],
+    properties: { action: { const: "check-current" }, consent: { const: "send-keywords-to-crossref-once" } } });
+});
+
 describe("factory failure controls: synthetic session boundary, UNRUN; not native/payment acceptance", () => {
   it.each(['W/"1"', '"0"', '"9007199254740992"', '1', '*', '"1", "2"'])("refuses If-Match %s before body parsing or write", async match => {
     const f = boundary();

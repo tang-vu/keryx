@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { KeryxDB } from "../db/keryx-db";
 import { isConfiguredSameOrigin } from "../auth-origin";
 import { PAPER_CATALOG } from "../papers/catalog";
+import { currentTopicWatchMetadata } from "./topic-watch-discovery";
 import { controlTopicWatch, createTopicWatch, runTopicWatchCheck, topicWatchSpecSchema, updateTopicWatch,
   type TopicWatchDependencies, type TopicWatchMetadataPort, type TopicWatchResult } from "./topic-watches";
 import type { TopicWatchSession } from "../db/topic-watches-sqlite";
@@ -12,7 +13,10 @@ const headers = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-r
   "X-Robots-Tag": "noindex, nofollow", "X-Content-Type-Options": "nosniff" };
 const json = (value: unknown, status = 200) => Response.json(value, { status, headers });
 const idSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/);
-const actionSchema = z.object({ action: z.enum(["check", "pause", "resume", "cancel"]) }).strict();
+const actionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.enum(["check", "pause", "resume", "cancel"]) }).strict(),
+  z.object({ action: z.literal("check-current"), consent: z.literal("send-keywords-to-crossref-once") }).strict(),
+]);
 
 /** Bounded existing local scholarly metadata only. Deliberately does not import
  * the search module (which also contains live provider reachability). This
@@ -82,14 +86,17 @@ async function dependencies(session: TopicWatchAccountSession, original: TopicWa
       compareAndSwap: (key, revision, next, deadline) => guarded(() => store.compareAndSwap(key, revision, next, deadline)) },
     metadata: { read: (request, signal) => guarded(() => localTopicWatchMetadata.read(request, signal)) },
   };
-  return { deps, list: () => guarded(() => store.list()), assertCurrent };
+  return { deps, list: () => guarded(() => store.list()), assertCurrent,
+    withMetadata: (metadata: TopicWatchMetadataPort): TopicWatchDependencies => ({ ...deps,
+      metadata: { read: (request, signal) => guarded(() => metadata.read(request, signal)) } }) };
 }
 
 function resultStatus(result: TopicWatchResult) {
   return result.status === "conflict" || result.status === "overlap" ? 409 : result.status === "refused"
     ? result.code === "not-found" ? 404 : result.code === "dependency-unavailable" || result.code === "owner-unavailable" ? 503 : 422 : 200;
 }
-export function createTopicWatchManagement(session: TopicWatchAccountSession, baseUrl: unknown) {
+export function createTopicWatchManagement(session: TopicWatchAccountSession, baseUrl: unknown,
+  currentMetadata: TopicWatchMetadataPort = currentTopicWatchMetadata) {
   async function execute(req: Request, operation: "list" | "read" | "create" | "update" | "action" | "cancel", id?: string) {
     try {
       if (new URL(req.url).search || id !== undefined && !idSchema.safeParse(id).success) return json({ error: "invalid_watch" }, 400);
@@ -132,7 +139,8 @@ export function createTopicWatchManagement(session: TopicWatchAccountSession, ba
         } else {
           const action = actionSchema.safeParse(raw);
           if (!action.success) return json({ error: "invalid_watch_action" }, 400);
-          result = action.data.action === "check" ? await runTopicWatchCheck(bound.deps, key, req.signal, revision)
+          result = action.data.action === "check-current" ? await runTopicWatchCheck(bound.withMetadata(currentMetadata), key, req.signal, revision)
+            : action.data.action === "check" ? await runTopicWatchCheck(bound.deps, key, req.signal, revision)
             : await controlTopicWatch(bound.deps, key, action.data.action === "resume" ? "active"
               : action.data.action === "pause" ? "paused" : "cancelled", revision);
         }

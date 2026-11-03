@@ -1,5 +1,14 @@
 # Topic watches: private manual product — 2026-10-15
 
+## November 3 source extension
+
+The local catalog-only description below remains the legacy `check` contract.
+A separate [explicit current-metadata check](manual-watch-discovery-20261103.md)
+adds one consent-bound Crossref metadata request. It preserves existing watch
+state/storage and all owner/session, claim, cap, cancellation and watermark gates.
+Scheduling, funded watches and delivery remain held. This source extension is
+not deployed or released.
+
 Architecture/threat decision recorded before runtime edits. Original #284 remains
 OPEN: scheduling, funded watches, standing spend and email/bot delivery are not
 authorized or implemented here. This slice mounts `/me/watches` and same-origin
