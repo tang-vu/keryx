@@ -25,6 +25,7 @@ const build = fileURLToPath(new URL(".cloudflare/output/v0/workers/default/", im
 const config = JSON.parse(await readFile(resolve(build, "worker.config.json"), "utf8"));
 assert.equal(config.name, "keryx-migration-preview");
 assert.deepEqual(config.assets.runWorkerFirst, ["/*"]);
+assert.deepEqual(config.placement, { region: "aws:ap-southeast-1" });
 assert(!config.routes && !config.triggers && !config.containers, "Compatibility preview cannot provision production routing or paid execution");
 const token = "x".repeat(43), outbound = [];
 const bundleRoot = resolve(build, "bundle");

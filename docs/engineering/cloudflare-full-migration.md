@@ -121,6 +121,16 @@ Every inspection finishes with a fresh primary schema/revision fence after I/O.
 Verify complete expected row/object sets and digests before the separate seal;
 an upload acknowledgement alone is not a completed migration audit.
 
+The private preview requests execution near Singapore with
+`placement.region = "aws:ap-southeast-1"`, since its dedicated stores were
+provisioned with APAC location hints. The initial live queries reached distant
+ingress locations and took several seconds while loading verified R2 bodies.
+Ingress location alone does not establish where every binding executed. Compare
+actual request duration and the placement response header after deployment;
+the hint is not a guarantee of store location, data residency or faster service.
+Keep the credential gate ahead of assets and application routes when testing
+placement. This configuration does not admit production traffic or payments.
+
 Run `node scripts/cloudflare-migration.mjs --summary` for a read-only inventory
 of reachable native-runtime constraints and the actual persistence interface.
 The framework's compatibility percentage does not inspect native storage,

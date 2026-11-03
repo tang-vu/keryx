@@ -13,6 +13,9 @@ export default defineConfig({
     compatibilityFlags: ["nodejs_compat"],
     workersDev: true,
     previewUrls: false,
+    // The dedicated catalog stores were provisioned in APAC. Measure this hint
+    // against the default placement before accepting production performance.
+    placement: { region: "aws:ap-southeast-1" },
     assets: { htmlHandling: "none", notFoundHandling: "none", runWorkerFirst: ["/*"] },
     env: {
       ASSETS: bindings.assets(),
