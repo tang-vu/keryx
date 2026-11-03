@@ -1,5 +1,31 @@
 # Keryx — Decision Log
 
+## Transfer public catalog data without transferring storage authority - 2026-11-03
+
+Export only public publishers, current article headers, immutable historical
+versions and the regenerable index digest from the already selected read-only
+native store. Keep mutable headers and index quantities in a short snapshot;
+release it before streaming retained version bodies, then report whether the
+source changed. Preserve raw original JSON and source rowids in a private export.
+Demonstrate actual native allocation containment before target access; retain
+fixed field, metadata, row, output and elapsed bounds without changing the native
+whole-store intake, financial or enrollment gates.
+
+Generate an offline, strictly typed public-data plan. Rebuild literal index
+weights from the retained bodies and compare the complete source index digest;
+do not repair an inconsistent source. Bootstrap only an empty dedicated target,
+stage under the compiled schema and revision-zero/unready guards, and leave
+publication disabled. Private read-only Worker inspection verifies actual remote
+body bytes and provenance, all retained-version/current-header metadata and full
+index pages before a separate operator seal. No HTTP writer, generic SQL route,
+new financial capability or signing authority is introduced.
+
+The [migration acceptance map](docs/engineering/cloudflare-full-migration.md)
+records real D1/R2 replay, corruption, pagination, source-change and no-early-
+publication checks. Public transfer acceptance is separate from all private/
+financial storage, custody, distributed co-sign, parser and supported-surface
+requirements for full Cloudflare readiness. Keep the predecessor serving.
+
 ## Keep Cloudflare public catalog publication atomic across D1 and R2 - 2026-11-03
 
 Share the existing pure public publisher/article validation, provenance, literal

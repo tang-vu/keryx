@@ -71,6 +71,17 @@ try {
   await catalog.upsertPublicReference({ id: referenceId, name: "Synthetic fixture", url: "https://fixture.invalid/", rssUrl: "https://fixture.invalid/feed",
     description: "Synthetic public catalog acceptance only", tags: [], active: true, items: [{ id: publicReferenceItemId(referenceId, link), title: "Synthetic article",
       link, summary: "Synthetic summary", content: "Synthetic retained original, not production evidence", deliveryKind: "excerpt" }] });
+  // Explicit fixture-only import state, matching the offline operator bootstrap.
+  await db.prepare("UPDATE catalog_control SET ready=0,revision=0 WHERE generation='synthetic-catalog-v1'").run();
+  assert.equal((await call("/__migration/catalog", { headers: authorization })).status, 503);
+  assert.equal((await call("/__migration/catalog/verify/versions")).status, 401);
+  const inspected = await (await call("/__migration/catalog/verify/versions", { headers: authorization })).json();
+  assert.equal(inspected.inspection.rows.length, 1); assert.equal(inspected.productionReady, false);
+  assert(!JSON.stringify(inspected).includes("Synthetic retained original"));
+  assert.equal((await call("/__migration/catalog/verify/versions", { method: "POST", headers: authorization })).status, 503);
+  assert.equal((await call("/__migration/catalog/verify/versions?unexpected=1", { headers: authorization })).status, 400);
+  assert.equal(await db.prepare("SELECT ready FROM catalog_control WHERE generation='synthetic-catalog-v1'").first("ready"), 0);
+  await db.prepare("UPDATE catalog_control SET ready=1 WHERE generation='synthetic-catalog-v1'").run(); // Explicit fixture seal.
   const catalogPage = await (await call("/__migration/catalog", { headers: authorization })).json();
   assert.equal(catalogPage.total, 1); assert.equal(catalogPage.productionReady, false);
   assert.equal(catalogPage.items[0].content, undefined, "Browsing projects metadata, never retained body text");
