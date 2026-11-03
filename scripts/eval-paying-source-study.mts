@@ -6,14 +6,16 @@ import { artifact, renderStudy, type StudyArtifact } from "../lib/evals/paying-s
 import { artifactTextEqual, canonical, parseCorpus, sha256 } from "../lib/evals/paying-source-study/contract";
 import { denyOutbound, studyEnvironment } from "../lib/evals/paying-source-study/offline-boundary";
 import { sourceInputs } from "../lib/evals/paying-source-study/source-inputs";
+import { assertCurrentStudyRewrite, assertStudyArchives } from "../lib/evals/paying-source-study/archive-boundary";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const corpusPath = path.join(root, "fixtures/evals/studies/paying-source-corpus-v1.json");
-const resultsPath = path.join(root, "fixtures/evals/studies/paying-source-results-v2.json");
-const reportPath = path.join(root, "docs/studies/paying-for-sources-2026-10-13.md");
+const resultsPath = path.join(root, "fixtures/evals/studies/paying-source-results-v3.json");
+const reportPath = path.join(root, "docs/studies/paying-for-sources-2026-11-04.md");
 const args = process.argv.slice(2);
 if (args.length !== 1 || !["--check", "--write", "--internal-worker"].includes(args[0]))
   throw new Error("Use --check or --write; no provider, private input or payment options are accepted");
+assertStudyArchives(root);
 function readCorpus() {
   if (fs.statSync(corpusPath).size > 128 * 1024) throw new Error("Controlled study corpus exceeds 128 KiB bound");
   return parseCorpus(JSON.parse(fs.readFileSync(corpusPath, "utf8")));
@@ -25,7 +27,7 @@ if (args[0] === "--internal-worker") {
   const { runStudy } = await import("../lib/evals/paying-source-study/runner");
   const trials = await runStudy(corpus);
   const inputs = sourceInputs(root, fileURLToPath(import.meta.url));
-  process.stdout.write(canonical(artifact(corpus, trials, inputs, sha256(fs.readFileSync(path.join(root, "package-lock.json"), "utf8").replaceAll("\r\n", "\n")), boundary.attempts())));
+  process.stdout.write(canonical({ ...artifact(corpus, trials, inputs, sha256(fs.readFileSync(path.join(root, "package-lock.json"), "utf8").replaceAll("\r\n", "\n")), boundary.attempts()), baselineRevision: 3 }));
 } else {
   const child = spawn(process.execPath, ["--import", "tsx", "--no-warnings", fileURLToPath(import.meta.url), "--internal-worker"],
     { cwd: root, env: studyEnvironment(), stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
@@ -42,10 +44,17 @@ if (args[0] === "--internal-worker") {
   const bytesOut = Buffer.concat(chunks).toString("utf8");
   const result = JSON.parse(bytesOut) as StudyArtifact;
   const corpus = readCorpus();
-  if (result.trials.length !== 48 || result.outboundAttempts !== 0 || result.corpusSha256 !== sha256(canonical(corpus)))
+  if (result.baselineRevision !== 3 || result.trials.length !== 48 || result.outboundAttempts !== 0 || result.corpusSha256 !== sha256(canonical(corpus)))
     throw new Error("Controlled study artifact failed matrix boundary");
-  const report = renderStudy(result, corpus, "archive-v2");
+  const report = renderStudy(result, corpus, "counterparts-v3");
+  assertStudyArchives(root);
   if (args[0] === "--write") {
+    if (fs.existsSync(resultsPath)) {
+      const stat = fs.lstatSync(resultsPath);
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 4 * 1024 * 1024)
+        throw new Error("Current study artifact is not a bounded regular file");
+      assertCurrentStudyRewrite(JSON.parse(fs.readFileSync(resultsPath, "utf8")), result);
+    }
     fs.mkdirSync(path.dirname(reportPath), { recursive: true });
     fs.writeFileSync(resultsPath, bytesOut); fs.writeFileSync(reportPath, report);
     console.log("Wrote 48 actual offline trials and generated study; no settled payments or outbound calls.");

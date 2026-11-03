@@ -257,25 +257,34 @@ export class HeuristicEngine implements ReasoningEngine {
       const claim = claims[claimIndex]!;
       const ct = tokenize(claim);
       const exactTargets = targetArxivIds(claim);
-      let best: { score: number; sentence: string; marker: string; span?: EvidenceSpan } = { score: 0, sentence: "", marker: "" };
+      let bestScore = 0;
+      let bestExcerpts: { score: number; sentence: string; marker: string; span: EvidenceSpan }[] = [];
       for (const g of input.gathered) {
         const observedArxivId = arxivDocumentId(g.itemUrl ?? "");
         if (exactTargets.length && (!observedArxivId || !exactTargets.includes(observedArxivId))) continue;
         for (const span of completeEvidenceSpans(g)) {
           const s = g.text.slice(span.start, span.end);
           const score = overlap(ct, tokenize(s));
-          if (score > best.score) best = { score, sentence: s, marker: g.marker, span };
+          if (score > bestScore) {
+            bestScore = score;
+            bestExcerpts = [{ score, sentence: s, marker: g.marker, span }];
+          } else if (score > 0 && score === bestScore && bestExcerpts.length < 2 &&
+            !bestExcerpts.some(excerpt => excerpt.marker === g.marker)) {
+            // Preserve a bounded counterpart instead of resolving an equal match
+            // by gather order alone. This does not detect or resolve a conflict.
+            bestExcerpts.push({ score, sentence: s, marker: g.marker, span });
+          }
         }
       }
-      if (best.sentence) {
-        cited.add(best.marker);
-        lines.push(`${best.sentence} [${best.marker}]`);
+      for (const excerpt of bestExcerpts) {
+        cited.add(excerpt.marker);
+        lines.push(`${excerpt.sentence} [${excerpt.marker}]`);
         evidence.push({
           claimIndex,
-          marker: best.marker,
-          quote: best.sentence,
-          quoteSpan: best.span,
-          support: round(best.score),
+          marker: excerpt.marker,
+          quote: excerpt.sentence,
+          quoteSpan: excerpt.span,
+          support: round(excerpt.score),
         });
       }
     }

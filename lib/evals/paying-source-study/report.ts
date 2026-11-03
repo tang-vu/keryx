@@ -4,6 +4,8 @@ import { BUDGETS, PRICES, canonical, sha256 } from "./contract";
 
 export interface StudyArtifact {
   version: 1; corpusSha256: string; runtimeSources: Record<string, string>; unresolvedSourceInputs: string[]; lockSha256: string;
+  /** Baseline revision, separate from the unchanged artifact/protocol schema. */
+  baselineRevision?: 3;
   design: { engine: "heuristic"; mode: "offline"; network: "eip155:5042002"; modelCalls: 0; searchCalls: 0;
     citationPoolRatio: 0.5; attentionLimit: 4; reevaluateRounds: 1; freshStoreAndCachePerTrial: true };
   outboundAttempts: number; canonicalOmissions: string[]; trials: StudyTrial[];
@@ -31,10 +33,10 @@ function summarize(trials: StudyTrial[]) {
     toll: String(trials.reduce((total, trial) => total + BigInt(trial.metrics.fetchMicro), BigInt(0))),
     reward: String(trials.reduce((total, trial) => total + BigInt(trial.metrics.citationMicro), BigInt(0))), policyChanges };
 }
-export function renderStudy(result: StudyArtifact, corpus: StudyCorpus, revision: "v1" | "archive-v2" = "v1"): string {
-  const current = revision === "archive-v2";
-  const date = current ? "2026-10-13" : "2026-10-09";
-  const resultsFile = current ? "paying-source-results-v2.json" : "paying-source-results-v1.json";
+export function renderStudy(result: StudyArtifact, corpus: StudyCorpus, revision: "v1" | "archive-v2" | "counterparts-v3" = "v1"): string {
+  const current = revision !== "v1";
+  const date = revision === "counterparts-v3" ? "2026-11-04" : current ? "2026-10-13" : "2026-10-09";
+  const resultsFile = revision === "counterparts-v3" ? "paying-source-results-v3.json" : current ? "paying-source-results-v2.json" : "paying-source-results-v1.json";
   const row = (label: string, trials: StudyTrial[]) => {
     const s = summarize(trials);
     return `| ${label} | ${trials.length} | ${s.reads} / ${s.paid} | ${s.claims} | ${s.facts} | ${s.citations} | ${s.toll} / ${s.reward} | ${s.policyChanges} |`;
@@ -43,7 +45,12 @@ export function renderStudy(result: StudyArtifact, corpus: StudyCorpus, revision
   const concentration = result.trials.filter(trial => trial.metrics.rewardHhi !== null);
   const mean = (field: "rewardHhi" | "topRewardShare") => concentration.length === 0 ? "not measured (no reward-bearing trials)"
     : (concentration.reduce((total, trial) => { const ratio = trial.metrics[field]!; return total + Number(ratio.numerator) / Number(ratio.denominator); }, 0) / concentration.length).toFixed(4);
-  return `# Paying for sources: a controlled offline fixture study (${date})${current ? `
+  return `# Paying for sources: a controlled offline fixture study (${date})${revision === "counterparts-v3" ? `
+
+This is baseline revision 3 of the unchanged 48-cell protocol, reproduced with bounded equally relevant source counterparts. The [October 9 study](paying-for-sources-2026-10-09.md), [October 13 archive revision](paying-for-sources-2026-10-13.md), and their v1/v2 outputs remain frozen historical records. The CLI checks their accepted normalized-byte hashes before and after current reproduction and writes only the v3 artifact and this report. Existing v3 protocol and trial outcomes must also remain identical on a rewrite; source/lock fingerprints can refresh after reproduction, while changed outcomes require a new baseline revision. The artifact/protocol schema remains version 1; the current artifact explicitly records baseline revision 3.
+
+The heuristic can now retain at most two distinct source markers at the same highest positive lexical score per target, with the existing complete-span, exact-document, evidence and payment gates. New admitted excerpts can change simulated citation distribution. Corpus, prices, budgets, scoring rubric, outbound denial and simulation-only payment checks are unchanged. This revision is the current CLI/CI baseline; archived outcomes are not required to equal the changed engine's outcomes.
+` : current ? `
 
 This is baseline revision 2 of the unchanged 48-cell protocol, reproduced against the source-library archive candidate. The [October 9 study](paying-for-sources-2026-10-09.md) and its v1 outputs remain historical records. The isolated per-trial in-memory store now explicitly permits the archive query read; corpus, prices, budgets, scoring, outbound denial and simulation-only payment checks are unchanged. This revision is the current CLI/CI baseline; the JSON artifact schema remains version 1.
 ` : ""}
