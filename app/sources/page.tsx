@@ -15,6 +15,8 @@ import type { PublicReferencePage } from "@/lib/public-references/archive";
 import { CitedSourceCard } from "@/components/keryx/cited-source-card";
 import { ExploreSourceCard } from "@/components/keryx/explore-source-card";
 import { SourceLibraryFilters } from "@/components/keryx/source-library-filters";
+import { LibraryPagination } from "@/components/keryx/library-pagination";
+import { paginateLibrary, type LibraryPaginationContext } from "@/lib/sources/library-pagination";
 import { PaperCard } from "@/components/keryx/paper-card";
 import { PaperSearchPanel } from "@/components/keryx/paper-search-panel";
 import { PAPER_CATALOG } from "@/lib/papers/catalog";
@@ -105,6 +107,14 @@ export default async function SourcesPage({ searchParams }: {
     record: data.records.find(record => paperMatches(record, filters)) ?? data.record }));
   const matches = browseLibrary(allRecords, filters);
   const showCollection = (kind: LibraryRecord["kind"]) => filters.kind === "all" || filters.kind === kind;
+  const paperPage = paginateLibrary(visiblePapers, "paper", params.paperPage);
+  const explorePage = paginateLibrary(visibleExplore, "explore", params.explorePage);
+  const citedPage = paginateLibrary(visibleCited, "cited", params.citedPage);
+  const feedPage = paginateLibrary(visibleFeeds, "feed", params.feedPage);
+  const creatorPage = paginateLibrary(visibleCreators, "creator", params.creatorPage);
+  const pagination: LibraryPaginationContext = { filters, articles: articleFilters, pages: {
+    paper: paperPage.page, explore: explorePage.page, cited: citedPage.page, feed: feedPage.page, creator: creatorPage.page,
+  } };
 
   const jsonLd = [
     {
@@ -200,8 +210,8 @@ export default async function SourcesPage({ searchParams }: {
           </div>
           <p className="mt-3 max-w-[75ch] font-serif text-[15px] leading-relaxed text-ink-2"><UiMessage messageKey={"sourceLibrary.bibliographyNotice"} /></p>
           <p className="mt-2 font-mono text-[11px] text-ink-3"><UiMessage messageKey={visiblePapers.length === 1 ? "sourceLibrary.paperMatches.one" : "sourceLibrary.paperMatches.other"} values={{ count: visiblePapers.length, total: PAPER_CATALOG.length }} /></p>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">{visiblePapers.slice(0, 8).map(group => <PaperCard key={group.id} group={group} />)}</div>
-          {visiblePapers.length > 8 && <details className="mt-5 border border-line bg-paper p-5"><summary className="min-h-11 cursor-pointer py-2 font-mono text-xs text-seal underline"><UiMessage messageKey={visiblePapers.length - 8 === 1 ? "sourceLibrary.morePapers.one" : "sourceLibrary.morePapers.other"} values={{ count: visiblePapers.length - 8 }} /></summary><div className="mt-4 grid gap-4 md:grid-cols-2">{visiblePapers.slice(8).map(group => <PaperCard key={group.id} group={group} />)}</div></details>}
+          <div className="mt-5 grid gap-4 md:grid-cols-2">{paperPage.items.map(group => <PaperCard key={group.id} group={group} />)}</div>
+          <LibraryPagination kind="paper" {...paperPage} context={pagination} />
           {visiblePapers.length === 0 && <p className="mt-4 font-serif text-sm text-ink-2"><UiMessage messageKey={"sourceLibrary.papersEmpty"} /></p>}
           <PaperSearchPanel key={JSON.stringify(filters)} initialQuery={filters.doi ?? filters.q} author={filters.author} year={filters.year} />
           <p className="mt-4 font-serif text-sm text-ink-2"><UiRichMessage messageKey={"sourceLibrary.externalIndexes"} values={{ openAlex: <a href="https://openalex.org/" target="_blank" rel="noopener noreferrer" className="text-seal underline">OpenAlex ↗</a>, doaj: <a href="https://doaj.org/" target="_blank" rel="noopener noreferrer" className="text-seal underline">DOAJ ↗</a> }} /></p>
@@ -217,8 +227,8 @@ export default async function SourcesPage({ searchParams }: {
             <span className="font-mono text-[11px] text-ink-3"><UiMessage messageKey={visibleExplore.length === 1 ? "sourceLibrary.publisherCount.one" : "sourceLibrary.publisherCount.other"} values={{ count: visibleExplore.length }} /></span>
           </div>
           <p className="mt-3 max-w-[75ch] font-serif text-[15px] leading-relaxed text-ink-2"><UiMessage messageKey={"sourceLibrary.publisherNotice"} /></p>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">{visibleExplore.slice(0, 12).map(({ data }) => <ExploreSourceCard key={data.id} source={data} />)}</div>
-          {visibleExplore.length > 12 && <details className="mt-5 border border-line bg-paper p-5"><summary className="min-h-11 cursor-pointer py-2 font-mono text-xs text-seal underline"><UiMessage messageKey={visibleExplore.length - 12 === 1 ? "sourceLibrary.morePublishers.one" : "sourceLibrary.morePublishers.other"} values={{ count: visibleExplore.length - 12 }} /></summary><div className="mt-4 grid gap-4 md:grid-cols-2">{visibleExplore.slice(12).map(({ data }) => <ExploreSourceCard key={data.id} source={data} />)}</div></details>}
+          <div className="mt-5 grid gap-4 md:grid-cols-2">{explorePage.items.map(({ data }) => <ExploreSourceCard key={data.id} source={data} />)}</div>
+          <LibraryPagination kind="explore" {...explorePage} context={pagination} />
         </section>}
 
         {showCollection("cited") && (citedSources.status === "unavailable" || visibleCited.length > 0) && <section id="cited-sources" className="mt-10 scroll-mt-6" aria-labelledby="cited-sources-title">
@@ -226,8 +236,8 @@ export default async function SourcesPage({ searchParams }: {
           {citedSources.status === "ready" ? <>
             <p className="mt-3 max-w-[75ch] font-serif text-[15px] leading-relaxed text-ink-2"><UiMessage messageKey={citedSources.runCount === 1 ? "sourceLibrary.citedNotice.one" : "sourceLibrary.citedNotice.other"} values={{ count: citedSources.runCount }} /></p>
             <p className="mt-2 font-mono text-[11px] text-ink-3"><UiMessage messageKey={visibleCited.length === 1 ? "sourceLibrary.documentsMatched.one" : "sourceLibrary.documentsMatched.other"} values={{ count: visibleCited.length }} /></p>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">{visibleCited.slice(0, 12).map(({ data }) => <CitedSourceCard key={data.url} entry={data} />)}</div>
-            {visibleCited.length > 12 && <details className="mt-5 border border-line bg-paper p-5"><summary className="min-h-11 cursor-pointer py-2 font-mono text-xs text-seal underline"><UiMessage messageKey={visibleCited.length - 12 === 1 ? "sourceLibrary.moreCited.one" : "sourceLibrary.moreCited.other"} values={{ count: visibleCited.length - 12 }} /></summary><div className="mt-4 grid gap-4 md:grid-cols-2">{visibleCited.slice(12).map(({ data }) => <CitedSourceCard key={data.url} entry={data} />)}</div></details>}
+            <div className="mt-5 grid gap-4 md:grid-cols-2">{citedPage.items.map(({ data }) => <CitedSourceCard key={data.url} entry={data} />)}</div>
+            <LibraryPagination kind="cited" {...citedPage} context={pagination} />
           </> : <p role="status" className="mt-5 border border-line bg-paper p-5 font-serif text-[15px] text-ink-2"><UiMessage messageKey={"sourceLibrary.citationsUnavailable"} /></p>}
         </section>}
 
@@ -240,9 +250,9 @@ export default async function SourcesPage({ searchParams }: {
             <UiMessage messageKey={"sourceLibrary.feedNotice"} />
           </p>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {visibleFeeds.slice(0, 12).map(({ data }) => <PublicReferenceCard key={data.id} reference={data} matchingQuery={filters.q} />)}
+            {feedPage.items.map(({ data }) => <PublicReferenceCard key={data.id} reference={data} matchingQuery={filters.q} />)}
           </div>
-          {visibleFeeds.length > 12 && <details className="mt-5 border border-line bg-paper p-5"><summary className="min-h-11 cursor-pointer py-2 font-mono text-xs text-seal underline"><UiMessage messageKey={visibleFeeds.length - 12 === 1 ? "sourceLibrary.moreFeeds.one" : "sourceLibrary.moreFeeds.other"} values={{ count: visibleFeeds.length - 12 }} /></summary><div className="mt-4 grid gap-4 md:grid-cols-2">{visibleFeeds.slice(12).map(({ data }) => <PublicReferenceCard key={data.id} reference={data} matchingQuery={filters.q} />)}</div></details>}
+          <LibraryPagination kind="feed" {...feedPage} context={pagination} />
           {publicReferences.status === "unavailable" ? (
             <p className="mt-5 border border-line bg-paper p-5 font-serif text-[15px] text-ink-2">
               <UiMessage messageKey={"sourceLibrary.referencesUnavailable"} />
@@ -272,8 +282,9 @@ export default async function SourcesPage({ searchParams }: {
             </p>
           )}
           <div className="mt-5 flex flex-col gap-4">
-            {visibleCreators.map(({ data }) => <SourceRegistryRow key={data.source.id} {...data} />)}
+            {creatorPage.items.map(({ data }) => <SourceRegistryRow key={data.source.id} {...data} />)}
           </div>
+          <LibraryPagination kind="creator" {...creatorPage} context={pagination} />
           {registry.status === "unavailable" ? (
             <p className="mt-5 border border-line bg-paper p-5 font-serif text-[15px] text-ink-2">
               <UiMessage messageKey={"sourceLibrary.creatorsUnavailable"} />
