@@ -4,7 +4,7 @@ import { researchResponseLanguage } from "./empty-public-evidence";
 import type { CitedStatement } from "./cited-statements";
 import type { AnswerPresentation } from "../research/answer-presentation";
 import { compactStatementGroups } from "./compact-statement-groups";
-import { nativeAnswerCopy, nativeCount, type NativeAnswerCopy } from "../research/native-answer-copy";
+import { nativeAnswerCopy, type NativeAnswerCopy } from "../research/native-answer-copy";
 import { isAdditionalAnswerLanguage } from "../research/native-answer-intent";
 
 function literal(value: string): string {
@@ -46,13 +46,7 @@ export function finalizeGroundedAnswer(input: {
   const withNotice = (body: string) => {
     const count = input.presentation?.requestedBulletCount;
     if (!count) return body;
-    const notice = native ? nativeCount(native.compactNotice, count) : input.presentation!.language === "pt"
-      ? `Não foi possível apresentar ${count} tópicos curtos preservando todos os objetivos e trechos qualificados; os objetivos são apresentados abaixo.`
-      : input.presentation!.language === "es" ? `No fue posible presentar ${count} puntos breves conservando todos los objetivos y fragmentos admitidos; los objetivos se presentan a continuación.`
-      : input.presentation!.language === "fr" ? `Impossible de présenter ${count} points courts tout en conservant chaque objectif et chaque extrait admis ; la présentation par objectif suit.`
-      : input.presentation!.language === "zh-Hans" ? `无法在保留每项研究目标和所有获准摘录的同时用 ${count} 个简短要点呈现；下文按研究目标展开。`
-      : vi ? `Chưa thể trình bày ${count} gạch đầu dòng ngắn mà vẫn giữ mọi yêu cầu và trích đoạn đủ điều kiện; các yêu cầu được trình bày bên dưới.`
-      : `Could not present ${count} short bullets while preserving every target and qualifying excerpt; the target layout follows.`;
+    const notice = bulletCountNotice(input.presentation!);
     return `${notice}\n\n${body}`;
   };
   if (native) return withNotice(nativeGroundedAnswer(native, ledger, qualifying, summary, input.synthesisUnavailable));
@@ -94,8 +88,31 @@ export function finalizeGroundedAnswer(input: {
 }
 
 /** Preserve each statement/excerpt binding; grouping never adds synthesized prose. */
+export function compactGroundedAnswer(input: Parameters<typeof finalizeGroundedAnswer>[0], maximum = false): string | undefined {
+  if (!input.presentation) return;
+  const qualifying = input.ledger.evidence.filter(item => (item.qualifiesForAnswer ?? item.qualifiesForReward) &&
+    input.ledger.acceptedMarkers.has(item.marker));
+  const summary = (input.statements ?? []).filter(statement => qualifying.some(item => item.claimIndex === statement.claimIndex &&
+    item.marker === statement.marker && item.quote === statement.quote));
+  return compactSummary(input.presentation, input.ledger, qualifying, summary, maximum);
+}
+
+/** Reuse the existing label copy; ≤ is a bound, never an exact-count claim. */
+export function bulletCountNotice(presentation: AnswerPresentation, maximum = false): string {
+  const count = presentation.requestedBulletCount;
+  if (!count || !Number.isInteger(count) || count < 1 || count > 8) return "";
+  const label = maximum ? `≤ ${count}` : String(count), native = nativeAnswerCopy(presentation.language);
+  return native ? native.compactNotice.replaceAll("{count}", label) : presentation.language === "pt"
+    ? `Não foi possível apresentar ${label} tópicos curtos preservando todos os objetivos e trechos qualificados; os objetivos são apresentados abaixo.`
+    : presentation.language === "es" ? `No fue posible presentar ${label} puntos breves conservando todos los objetivos y fragmentos admitidos; los objetivos se presentan a continuación.`
+    : presentation.language === "fr" ? `Impossible de présenter ${label} points courts tout en conservant chaque objectif et chaque extrait admis ; la présentation par objectif suit.`
+    : presentation.language === "zh-Hans" ? `无法在保留每项研究目标和所有获准摘录的同时用 ${label} 个简短要点呈现；下文按研究目标展开。`
+    : presentation.language === "vi" ? `Chưa thể trình bày ${label} gạch đầu dòng ngắn mà vẫn giữ mọi yêu cầu và trích đoạn đủ điều kiện; các yêu cầu được trình bày bên dưới.`
+    : `Could not present ${label} short bullets while preserving every target and qualifying excerpt; the target layout follows.`;
+}
+
 function compactSummary(presentation: AnswerPresentation, ledger: EvidenceLedger,
-  qualifying: EvidenceLedger["evidence"], summary: CitedStatement[]): string | undefined {
+  qualifying: EvidenceLedger["evidence"], summary: CitedStatement[], maximum = false): string | undefined {
   const count = presentation.requestedBulletCount;
   if (!count || !Number.isInteger(count) || count < 1 || count > 8 || !ledger.claimCoverage.length ||
       ledger.claimCoverage.some(claim => !(claim.coverage >= MIN_REWARD_SUPPORT) ||
@@ -104,7 +121,8 @@ function compactSummary(presentation: AnswerPresentation, ledger: EvidenceLedger
         statement.marker === item.marker && statement.quote === item.quote)) ||
       [...ledger.acceptedMarkers].some(marker => !summary.some(statement => statement.marker === marker))) return undefined;
   const groups = compactStatementGroups(summary, qualifying);
-  if (!groups || groups.length !== count || groups.some(group => group.length > 4)) return undefined;
+  if (!groups || !groups.length || (maximum ? groups.length > count : groups.length !== count) ||
+      groups.some(group => group.length > 4)) return undefined;
   const native = nativeAnswerCopy(presentation.language);
   const copy = isAdditionalAnswerLanguage(presentation.language) ? { source: native!.source, note: native!.compactNote } : {
     en: { source: "Source text", note: "Model-written and model-checked summaries; inspect the paired source excerpts. Full synthesis and source correctness remain unverified. Payment states are recorded separately." },
