@@ -33,9 +33,21 @@ const cases = {
   applicationVi: { question: "Hãy đề xuất một cách kiểm tra an toàn khi tác vụ có thể được giao lại. Giữ nguyên điều chưa biết, không thực hiện thao tác.", deliverable: "Một quy trình kiểm tra được đề xuất có điều kiện.",
     context: "Chưa rõ khả năng của nhà cung cấp và môi trường kiểm tra.", fact: "Hàng đợi giả lập có thể giao lại cùng một thông điệp.",
     sections: [{ id: "w1", heading: "Đề xuất kiểm tra việc giao lại", text: "Đề xuất kiểm tra việc giao lại trong môi trường cô lập trước khi lựa chọn quy trình thử lại.", premiseIds: ["e1"], conditions: ["Nếu có môi trường kiểm tra ngoài vận hành thực."] }] },
+  methodRetry: { question: "We receive repeated events. How should we prevent duplicate fulfilment without losing an event after a worker crash?", deliverable: "A proposed crash and duplicate investigation.",
+    context: "Provider and storage guarantees remain unknown.", fact: "The fictional event system may redeliver an acknowledged event.",
+    sections: [{ id: "w1", heading: "Proposed crash investigation", text: "Propose checking the crash boundaries and retained event records in an isolated fixture before choosing a deduplication procedure.", premiseIds: ["e1"], conditions: ["If an isolated fixture and observable storage are available; provider and storage guarantees remain unverified."] }] },
+  methodPilot: { question: "We have eight analysts. How should we measure a pilot before renewing?", deliverable: "A conditional pilot measurement draft.",
+    context: "Baseline measurements and task comparability are unknown.", fact: "The fictional pilot source describes measuring a workflow against its baseline.",
+    sections: [{ id: "w1", heading: "Proposed baseline check", text: "Propose recording comparable tasks and their baseline measurements before interpreting a pilot outcome.", premiseIds: ["e1"], conditions: ["If comparable tasks can be agreed; no time savings or statistical validity is established."] }] },
+  methodTriage: { question: "How should we triage a shared inbox without a complex ticketing system?", deliverable: "A conditional triage draft.",
+    context: "Staff coverage and response commitments are unknown.", fact: "The fictional support source distinguishes failures from requests for new capabilities.",
+    sections: [{ id: "w1", heading: "Proposed inbox categories", text: "Propose separating reported failures from new-capability requests, retaining unclear reports for review.", premiseIds: ["e1"], conditions: ["If the team can review unclear reports; no response commitment is inferred."] }] },
+  methodVi: { question: "Mình nên đo lường hiệu quả thử nghiệm thế nào khi chưa có số liệu gốc?", deliverable: "Đề xuất kiểm tra số liệu gốc.",
+    context: "Chưa rõ dữ liệu và điều kiện so sánh.", fact: "Nguồn giả lập mô tả việc so sánh số liệu thử nghiệm với số liệu gốc.",
+    sections: [{ id: "w1", heading: "Đề xuất chuẩn bị số liệu gốc", text: "Đề xuất ghi nhận số liệu gốc trước khi đánh giá kết quả thử nghiệm.", premiseIds: ["e1"], conditions: ["Nếu có thể thu thập số liệu trong điều kiện so sánh được; chưa kết luận hiệu quả."] }] },
 };
 type Case = keyof typeof cases;
-afterEach(() => { vi.unstubAllEnvs();vi.useRealTimers(); });
+afterEach(() => { vi.unstubAllEnvs();vi.unstubAllGlobals();vi.useRealTimers(); });
 
 class Transport extends JsonChatEngine {
   readonly name = "synthetic-work-product-transport";
@@ -63,6 +75,7 @@ async function drive(kind: Case, options: { plain?: boolean; reject?: boolean; l
     deliverable: sample.deliverable, reviewCriteria: ["Keep missing inputs and limitations explicit."] });
   const question = (options.ordinary ? sample.question : prepared.request.question) + (options.explicitLimit ? " Answer in exactly two sentences." : "");
   const denied = vi.fn(async () => { throw new Error("This synthetic zero-budget fixture cannot move money"); });
+  vi.stubGlobal("fetch", denied);
   const transport = new Transport(sample, options.reject ?? false, options.unmetCriterion ?? false), synthesize = vi.fn((value: SynthInput) =>
     transport.synthesize(options.plain ? { ...value, workProductRequest: undefined } : value));
   const attribute = vi.fn(async (value: { used: { sourceId: string }[] }) => value.used.map(row => ({ sourceId: row.sourceId, weight: 1, rationale: "Synthetic factual contribution" })));
@@ -113,7 +126,7 @@ it.each([{ changedOriginal: true }, { teaching: true }, { private: true }])("doe
   expect(f.run.answer).not.toContain(cases.operations.sections[0].text);expect(f.denied).not.toHaveBeenCalled();
 });
 
-it.each(["study", "operations", "comparison", "applicationEn", "applicationVi"] as const)("delivers an ordinary %s request with complete caller scope and the same factual/financial result", async kind => {
+it.each(["study", "operations", "comparison", "applicationEn", "applicationVi", "methodRetry", "methodPilot", "methodTriage", "methodVi"] as const)("delivers an ordinary %s request with complete caller scope and the same factual/financial result", async kind => {
   const baseline = await drive(kind, { ordinary: true, plain: true }), f = await drive(kind, { ordinary: true });
   const request = f.synthesize.mock.calls[0][0].workProductRequest!;
   expect(request).toMatchObject({ version: 2, criteria: [cases[kind].question] });
@@ -142,14 +155,14 @@ it.each([{ changedOriginal: true }, { teaching: true }, { private: true }, { exp
   expect(f.run.answer).not.toContain(cases.operations.sections[0].text);expect(f.denied).not.toHaveBeenCalled();
 });
 
-it.each((["applicationEn", "applicationVi"] as const).flatMap(kind =>
+it.each((["applicationEn", "applicationVi", "methodRetry", "methodPilot", "methodTriage", "methodVi"] as const).flatMap(kind =>
   [{ reject: true }, { losePremise: true }].map(options => ({ kind, options }))))("withholds a newly recognized $kind draft when its review or factual premise fails: $options", async ({ kind, options }) => {
   const f = await drive(kind, { ...options, ordinary: true });
   expect(f.run.answer).not.toContain(cases[kind].sections[0].text);
   expect(f.denied).not.toHaveBeenCalled();expect(f.transport.calls).toHaveLength(2);
 });
 
-it.each((["applicationEn", "applicationVi"] as const).flatMap(kind =>
+it.each((["applicationEn", "applicationVi", "methodRetry", "methodPilot", "methodTriage", "methodVi"] as const).flatMap(kind =>
   [{ changedOriginal: true }, { teaching: true }, { private: true }, { explicitLimit: true }].map(options => ({ kind, options }))))("keeps newly recognized $kind input behind the existing protected-scope gate: $options", async ({ kind, options }) => {
   const f = await drive(kind, { ...options, ordinary: true });
   if ("private" in options) { expect(f.synthesize).not.toHaveBeenCalled();expect(f.read).not.toHaveBeenCalled(); }
