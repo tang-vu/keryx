@@ -159,6 +159,31 @@ jobs:
           node --test scripts/security-dependencies.test.mjs scripts/sharp-security.test.mjs
           npm audit --omit=dev --audit-level=high
 
+      - name: All locked dependency graphs (high gate, isolated metadata)
+        if: needs.scope.outputs.scope == 'full'
+        run: |
+          npm ci --prefix mcp --ignore-scripts --no-audit --no-fund
+          npm ci --prefix cloudflare/ops-monitor --ignore-scripts --no-audit --no-fund
+          npm ci --prefix cloudflare/source-upkeep --ignore-scripts --no-audit --no-fund
+          node scripts/patch-legacy-zod.mjs
+          npx tsc --noEmit --project tsconfig.ops-scripts.json
+          node --test scripts/security-dependency-graphs.test.mjs
+          node scripts/audit-dependency-graphs.mjs --npm-cli "$(npm root -g)/npm/bin/npm-cli.js" --out .artifacts/dependency-audits
+
+      - name: Retain locked dependency audit originals
+        if: always() && needs.scope.outputs.scope == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: locked-dependency-audits-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .artifacts/dependency-audits/**/audit.json
+            .artifacts/dependency-audits/**/audit.stderr.txt
+            .artifacts/dependency-audits/**/summary.json
+            .artifacts/dependency-audits/**/package.json
+            .artifacts/dependency-audits/**/package-lock.json
+          if-no-files-found: error
+          include-hidden-files: true
+
   unit-tests:
     name: Unit tests (${{ matrix.shard }}/3)
     needs: scope

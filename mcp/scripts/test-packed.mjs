@@ -5,6 +5,8 @@ import { mkdtemp, writeFile, readFile, readdir, rm, access } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
+import { createRequire } from "node:module";
+import { Worker } from "node:worker_threads";
 import { installPackedConsumer } from "./packed-consumer-install.mjs";
 
 const tarball = resolve(process.argv[2]);
@@ -41,6 +43,49 @@ try {
   for (const name of ["viem", "@modelcontextprotocol/sdk", "zod"]) {
     dependencies[name] = JSON.parse(await readFile(join(workspace, "node_modules", name, "package.json"), "utf8")).version;
     assert.equal(dependencies[name], installedPackage.dependencies[name]);
+  }
+  // Repository overrides are not inherited by a clean external consumer.
+  // Inspect every actual installed parser copy and exercise those exact bytes.
+  const consumerLock = JSON.parse(await readFile(join(workspace, "package-lock.json"), "utf8"));
+  assert.equal(consumerLock.lockfileVersion, 3);
+  const consumerRequire = createRequire(join(workspace, "package.json"));
+  const dependencySecurity = {};
+  for (const [name, floors] of [["fast-uri", { 2: [4, 8], 3: [1, 9], 4: [2, 3] }], ["ip-address", { 10: [7, 4] }]]) {
+    const copies = Object.entries(consumerLock.packages).filter(([path]) => path === `node_modules/${name}` || path.endsWith(`/node_modules/${name}`));
+    assert(copies.length > 0, `Clean consumer must qualify its ${name} graph`);
+    dependencySecurity[name] = [];
+    for (const [path, record] of copies) {
+      assert.match(record.version, /^\d+\.\d+\.\d+$/u);
+      const [major, minor, patch] = record.version.split(".").map(Number), floor = floors[major];
+      assert(floor && (minor > floor[0] || minor === floor[0] && patch >= floor[1]), `Clean consumer has an unqualified ${name} version`);
+      const location = join(workspace, path), installed = JSON.parse(await readFile(join(location, "package.json"), "utf8"));
+      assert.equal(installed.name, name); assert.equal(installed.version, record.version);
+      dependencySecurity[name].push({ path, version: installed.version });
+      if (name === "fast-uri") {
+        const uri = consumerRequire(location);
+        assert.equal(uri.normalize("https://example.org/source"), "https://example.org/source");
+        for (const input of ["%6Aavascript:alert(1)", "%u006Aavascript:alert(1)"]) {
+          for (const normalize of [() => uri.normalize(input), () => uri.resolve("https://example.org/", input), () => uri.parse(input).scheme]) {
+            let result;
+            try { result = normalize(); } catch { continue; }
+            assert(!/^(?:javascript|vbscript|data)(?::|$)/iu.test(String(result)));
+          }
+        }
+      } else {
+        assert.equal(consumerRequire(location).Address6.isValid("2001:db8::1"), true);
+        const worker = new Worker(`const {parentPort,workerData}=require('node:worker_threads');
+          parentPort.postMessage(require(workerData).Address6.isValid('%'.repeat(100000)+'\\n'));`,
+        { eval: true, workerData: location, resourceLimits: { maxOldGenerationSizeMb: 64 } });
+        try {
+          const valid = await new Promise((accept, reject) => {
+            const timer = setTimeout(() => reject(new Error("Clean consumer IPv6 rejection exceeded deadline")), 2000);
+            worker.once("message", result => { clearTimeout(timer); accept(result); });
+            worker.once("error", error => { clearTimeout(timer); reject(error); });
+          });
+          assert.equal(valid, false);
+        } finally { await worker.terminate(); }
+      }
+    }
   }
   const installedInputs = JSON.parse(await readFile(join(workspace, "node_modules/keryx-mcp/dist/build-inputs.json"), "utf8"));
   const expectedInputs = JSON.parse(await readFile(new URL("../dist/build-inputs.json", import.meta.url), "utf8"));
@@ -351,7 +396,7 @@ globalThis.fetch=async(input,init)=>{
   await recovery.stop(); const recoveryCounts = JSON.parse(await readFile(recovery.counts, "utf8")); assert.equal(recoveryCounts.paid, 0); assert.equal(recoveryCounts.recovery, 1);
   }
   console.log(JSON.stringify({ networks: ["arcTestnet", "arc"], package: installedPackage.name, version: installedPackage.version, node: process.version,
-    dependencies, cases: ["keyless initialize/tools/status without wallet creation", "free exact-version bibliography GET and explicit provider failure with retained snapshot", "funded caller status", "actual SDK signed purchase", "recorded per-step heuristic tier", "finite research language refusal before custody", "local stdio labels including French and Simplified Chinese with unchanged paid body, evidence, amounts and receipt hashes", "compiled v3 available, partial optimizer and private-field refusal", "original response-loss barrier and no second debit", "new-process keyless GET-only recovery"], liveNetwork: false }));
+    dependencies, dependencySecurity, cases: ["keyless initialize/tools/status without wallet creation", "free exact-version bibliography GET and explicit provider failure with retained snapshot", "funded caller status", "actual SDK signed purchase", "recorded per-step heuristic tier", "finite research language refusal before custody", "local stdio labels including French and Simplified Chinese with unchanged paid body, evidence, amounts and receipt hashes", "compiled v3 available, partial optimizer and private-field refusal", "original response-loss barrier and no second debit", "new-process keyless GET-only recovery"], liveNetwork: false }));
 } finally {
   const stopped = await Promise.allSettled([...children].map(stopChild));
   // Only the mkdtemp-created acceptance workspace is removed.
