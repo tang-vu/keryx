@@ -16,6 +16,25 @@ question. Duplicate or malformed blocks refuse the addition. All maximum field
 inputs still fit the existing 2,000-character question bound, without clipping
 caller text or URLs. The other presets and request envelopes remain unchanged.
 
+The structured request keeps its existing version 1 schema. Clear ordinary
+requests can also ask directly for a proposed checklist, plan, runbook, brief or
+comparison, including first-person preparation questions. Bounded English,
+Vietnamese and Simplified Chinese grammar recognizes an output label from the
+original caller text. Quoted/code spans, source-attributed instructions, negated
+output requests and prepared envelopes cannot select this ordinary format.
+Classroom generation keeps its separate gate. Recognition is conservative and
+does not claim general intent understanding.
+
+An ordinary version 2 request retains the entire unchanged original question as
+its single review criterion, up to the existing 2,000-character public limit.
+The label alone cannot discard language, time horizon, URLs, negation, missing
+inputs or qualifications. It is metadata rather than a factual premise or a
+completion verdict. The original digest, exact parser result and full criterion
+must all match; the independent review sees the original question in full.
+Existing structured deliverable/criterion limits are unchanged. A longer review
+criterion still passes the original input/output and review packet preflight;
+refusal keeps the existing factual flow without another attempt.
+
 Only an explicit first-turn public caller can select this format. Added follow-up
 context, private jobs, wanted assets, paid scholarly work, decision briefs,
 teaching mode and explicit bullet/sentence/word limits retain their prior flows.
@@ -90,3 +109,8 @@ control; attribution input, evidence, reads, citations and financial result must
 remain identical. Rendered answer, report and valid receipt retain the draft
 without its private review object. No live model/search/payment allowance or
 observed successful live IELTS delivery is claimed.
+
+The same controls also exercise ordinary caller requests without a custom-brief
+wrapper. A rejected full-question criterion cannot promote a partial proposal to
+completion. Historical public answers motivated these cases; controlled model
+responses establish contract behavior rather than successful live task delivery.

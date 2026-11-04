@@ -34,7 +34,7 @@ afterEach(() => { vi.unstubAllEnvs();vi.useRealTimers(); });
 class Transport extends JsonChatEngine {
   readonly name = "synthetic-work-product-transport";
   packets: Record<string, unknown>[] = [];
-  constructor(private sample: typeof cases[Case], private reject: boolean) { super(); }
+  constructor(private sample: typeof cases[Case], private reject: boolean, private unmetCriterion = false) { super(); }
   protected async chatJson(_model: string, _system: string, user: string) {
     const packet = JSON.parse(user);this.packets.push(packet);
     if (this.packets.length === 1) {
@@ -46,18 +46,18 @@ class Transport extends JsonChatEngine {
     return { reviews: (packet.evidence as { index: number }[]).map(row => ({ index: row.index, supportedFact: this.sample.fact, support: 0.9, statementSupport: 0.9 })),
       ...(product ? { workProductReview: { digest: product.digest, sections: product.sections.map(row => ({ id: row.id, premiseIds: row.premiseIds,
         premiseConsistency: "supported", proposalOnly: "supported", scope: this.reject ? "unsupported" : "supported", conditions: "supported", language: "supported" })),
-        criteria: product.request.criteria.map((_v, index) => ({ index, status: "supported" })) } } : {}) };
+        criteria: product.request.criteria.map((_v, index) => ({ index, status: this.unmetCriterion ? "unsupported" : "supported" })) } } : {}) };
   }
 }
-async function drive(kind: Case, options: { plain?: boolean; reject?: boolean; losePremise?: boolean; changedOriginal?: boolean; teaching?: boolean; private?: boolean } = {}) {
+async function drive(kind: Case, options: { plain?: boolean; reject?: boolean; losePremise?: boolean; changedOriginal?: boolean; teaching?: boolean; private?: boolean; ordinary?: boolean; unmetCriterion?: boolean; explicitLimit?: boolean } = {}) {
   vi.useFakeTimers({ toFake: ["Date"] });vi.setSystemTime(new Date("2026-11-04T00:00:00Z"));
   vi.stubEnv("KERYX_TEACHING_PROPOSALS", options.teaching ? "1" : "0");
   const sample = cases[kind], url = "https://example.org/synthetic-original";
   const prepared = prepareSpecialistBrief({ track: "custom", decision: sample.question, context: sample.context, sourceLeads: [url],
     deliverable: sample.deliverable, reviewCriteria: ["Keep missing inputs and limitations explicit."] });
-  const question = prepared.request.question;
+  const question = (options.ordinary ? sample.question : prepared.request.question) + (options.explicitLimit ? " Answer in exactly two sentences." : "");
   const denied = vi.fn(async () => { throw new Error("This synthetic zero-budget fixture cannot move money"); });
-  const transport = new Transport(sample, options.reject ?? false), synthesize = vi.fn((value: SynthInput) =>
+  const transport = new Transport(sample, options.reject ?? false, options.unmetCriterion ?? false), synthesize = vi.fn((value: SynthInput) =>
     transport.synthesize(options.plain ? { ...value, workProductRequest: undefined } : value));
   const attribute = vi.fn(async (value: { used: { sourceId: string }[] }) => value.used.map(row => ({ sourceId: row.sourceId, weight: 1, rationale: "Synthetic factual contribution" })));
   const engine = { name: "synthetic-work-product-agent", decompose: async () => ["What does the synthetic source establish?"],
@@ -71,7 +71,8 @@ async function drive(kind: Case, options: { plain?: boolean; reject?: boolean; l
     saveMemory: async () => {}, notifyCitation: () => {}, alert: () => {}, activation: async () => {} };
   const read = vi.fn(async (finalUrl: string) => ({ finalUrl, text: sample.fact, title: "Synthetic original only", kind: "text" as const, truncated: false }));
   const deps: AgentDeps = { engine, effects, db: { listSources: async () => [], listPublicReferences: async () => [] } as unknown as KeryxDB,
-    readWebArticle: read, webSearch: { search: vi.fn(async () => []) } as unknown as AgentDeps["webSearch"],
+    readWebArticle: read, webSearch: { search: vi.fn(async () => options.ordinary ?
+      [{ title: "Synthetic original only", url, snippet: "Unread synthetic search metadata; never evidence." }] : []) } as unknown as AgentDeps["webSearch"],
     gateway: { mode: "real", agentAddress: () => "0x0000000000000000000000000000000000000001", ensureFunded: denied, payFetch: denied, payCitation: denied } as unknown as PaymentGateway };
   const input: RunInput = { queryId, question, origin: "web", researchMode: "deep", budget: 0,
     executionLimits: { attentionLimit: 1, reevaluateRounds: 0 }, ...(options.changedOriginal ? { originalQuestion: "A different original caller request." } : {}) };
@@ -103,5 +104,34 @@ it.each([{ changedOriginal: true }, { teaching: true }, { private: true }])("doe
   const f = await drive("operations", options);
   if (options.private) { expect(f.synthesize).not.toHaveBeenCalled();expect(f.read).not.toHaveBeenCalled(); }
   else { expect(f.synthesize).toHaveBeenCalledOnce();expect(f.synthesize.mock.calls[0][0].workProductRequest).toBeUndefined(); }
+  expect(f.run.answer).not.toContain(cases.operations.sections[0].text);expect(f.denied).not.toHaveBeenCalled();
+});
+
+it.each(["study", "operations", "comparison"] as const)("delivers an ordinary %s request with complete caller scope and the same factual/financial result", async kind => {
+  const baseline = await drive(kind, { ordinary: true, plain: true }), f = await drive(kind, { ordinary: true });
+  const request = f.synthesize.mock.calls[0][0].workProductRequest!;
+  expect(request).toMatchObject({ version: 2, criteria: [cases[kind].question] });
+  expect(f.synthesize.mock.calls[0][0].question).toBe(cases[kind].question);
+  expect(f.transport.packets[1].workProduct).toMatchObject({ originalQuestion: cases[kind].question, request });
+  expect(f.run.answer).toContain(cases[kind].sections[0].text);expect(f.transport.calls).toHaveLength(2);expect(f.read).toHaveBeenCalledOnce();
+  expect(f.attribute.mock.calls).toEqual(baseline.attribute.mock.calls);expect(f.run.evidence).toEqual(baseline.run.evidence);
+  expect(f.run.citations).toEqual(baseline.run.citations);expect(f.run.claimCoverage).toEqual(baseline.run.claimCoverage);
+  expect(f.run.totalSpent).toBe(baseline.run.totalSpent);expect(f.run.totalToCreators).toBe(baseline.run.totalToCreators);
+  expect(f.denied).not.toHaveBeenCalled();expect(f.attribute.mock.calls[0][0]).not.toHaveProperty("workProduct");
+  expect(verifyResearchReceipt(buildResearchReceipt(f.run, [])).valid).toBe(true);
+});
+it.each([{ reject: true }, { losePremise: true }])("withholds ordinary proposals after rejected review or lost factual premises: %j", async options => {
+  const f = await drive("operations", { ...options, ordinary: true });
+  expect(f.run.answer).not.toContain(cases.operations.sections[0].text);expect(f.denied).not.toHaveBeenCalled();expect(f.transport.calls).toHaveLength(2);
+});
+it("cannot promote a partial ordinary draft to completion when the full original criterion is rejected", async () => {
+  const f = await drive("operations", { ordinary: true, unmetCriterion: true });
+  expect(f.run.answer).toContain(cases.operations.sections[0].text);
+  expect(f.run.answer).toContain("Some requested parts remain unverified.");expect(f.denied).not.toHaveBeenCalled();expect(f.transport.calls).toHaveLength(2);
+});
+it.each([{ changedOriginal: true }, { teaching: true }, { private: true }, { explicitLimit: true }])("preserves ordinary caller and protected-format gates: %j", async options => {
+  const f = await drive("operations", { ...options, ordinary: true });
+  if (options.private) { expect(f.synthesize).not.toHaveBeenCalled();expect(f.read).not.toHaveBeenCalled(); }
+  else expect(f.synthesize.mock.calls[0][0].workProductRequest).toBeUndefined();
   expect(f.run.answer).not.toContain(cases.operations.sections[0].text);expect(f.denied).not.toHaveBeenCalled();
 });
