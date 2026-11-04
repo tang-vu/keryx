@@ -18,7 +18,7 @@ export function explicitBulletWordLimit(question: string, language: Presentation
     const before = text.slice(0, unit.index!);
     const standalone = /(?:^|[.!?;\n\r\u2028\u2029])\s*(?:please\s+)?(?:keep\s+(?:the\s+)?(?:note|answer|response)\s+(?:within|at most)|(?:answer|respond)\s+in\s+(?:at most|no more than))\s+$/u.exec(before)
       ?? /(?:^|[.!?;\n\r\u2028\u2029])\s*(?:(?:hãy|xin)\s+)?(?:viết|trả lời|giữ\s+(?:câu|phần)\s+trả lời)\s+(?:tối đa|không quá)\s+$/u.exec(before);
-    if (standalone && /(?:do\s+not|don't|never|đừng|không)\s+(?:(?:explicitly|only|chỉ)\s+)?$/u.test(before.slice(0,
+    if (standalone && /(?:do\s+not|don't|not|never|đừng|không)\s+(?:(?:explicitly|only|ever|chỉ|bao giờ|tuyệt đối)\s+){0,2}$/u.test(before.slice(0,
       standalone.index + standalone[0].search(/[\p{L}]/u)))) return;
     const inline = /(?:bullets?|bullet\s+points?|gạch\s+đầu\s+dòng)\s*,\s*(?:at\s+most|no\s+more\s+than|tối\s+đa|không\s+quá)\s+$/u.test(before);
     if (!standalone && !inline) return;

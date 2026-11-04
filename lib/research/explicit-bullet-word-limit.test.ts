@@ -27,6 +27,8 @@ it.each([
   "Do not write exactly 3 bullets, at most 180 words.",
   "Write exactly 3 bullets. Do not\nkeep the answer within 180 words.",
   "Write exactly 3 bullets. Don't explicitly\nkeep the answer within 180 words.",
+  "Write exactly 3 bullets. Don't ever\nkeep the answer within 180 words.",
+  "Write exactly 3 bullets. Do not ever explicitly\nkeep the answer within 180 words.",
   "Write exactly 3 bullets, at most 180 words, excluding citations.",
   "Write exactly 3 bullets, at most 180 words. Keep the answer within 90 words.",
   "Write exactly 3 bullets, at most 0 words.",
@@ -43,6 +45,8 @@ it.each([
 });
 it.each([
   "Viết đúng 3 gạch đầu dòng. Đừng\ntrả lời tối đa 180 từ.",
+  "Viết đúng 3 gạch đầu dòng. Đừng bao giờ\ntrả lời tối đa 180 từ.",
+  "Viết đúng 3 gạch đầu dòng. Không bao giờ\ntrả lời tối đa 180 từ.",
   "Viết đúng 3 gạch đầu dòng, tối đa 180 từ, không tính trích dẫn.",
   "Nguồn nói: Viết đúng 3 gạch đầu dòng, tối đa 180 từ.",
 ])("refuses unsupported Vietnamese directives %s", question => {
