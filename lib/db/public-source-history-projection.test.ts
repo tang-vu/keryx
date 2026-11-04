@@ -10,6 +10,7 @@ import { SEED_EVIDENCE_FINGERPRINTS } from "../research/seed-evidence-fingerprin
 import { PrivacyError } from "../run-privacy/contracts";
 import { loadCitedSourceHistory } from "../sources/cited-source-history";
 import { readSqlitePublicSourceHistory } from "./public-source-history-projection";
+import { readSqlitePublicQuestions } from "./public-question-projection";
 import { createEnrolledSqliteRunPrivacy, createSqliteRunPrivacy, isEnrolledSqlitePrivacyContention, RUN_PRIVACY_SQL } from "./run-privacy-sqlite";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 import { syntheticStorageIdentity } from "./storage-identity-fixture";
@@ -50,7 +51,7 @@ function fixture(orphan = false) {
 }
 
 describe("bounded public source history SQLite projection", () => {
-  it.each(["\u2003\u00a0\n", "a\ud800b", "Tiếng Việt 🌍", "\u200b"])("preserves exact JavaScript answer presence for %j", async answer => {
+  it.each(["\u2003\u00a0\n", "a\ud800b", "Tiếng Việt 🌍", "\u200b", "a\0b"])("preserves exact JavaScript answer presence for %j", async answer => {
     const f = fixture(); f.add(run("public", { answer }));
     expect((await readSqlitePublicSourceHistory(f.db))[0].hasAnswer).toBe(!!answer.trim());
   });
@@ -93,7 +94,7 @@ describe("bounded public source history SQLite projection", () => {
     expect(current.entries.some(entry => entry.url.includes("/999"))).toBe(false);
     expect(forbidden).not.toHaveBeenCalled();
   });
-  it.each(["a\ud800b", "Tiếng Việt 🌍", 'quote " and backslash \\', "line\nnext"])("retains canonical citation strings and excludes unused nested prose: %j", async title => {
+  it.each(["a\ud800b", "Tiếng Việt 🌍", 'quote " and backslash \\', "line\nnext", "a\0b"])("retains canonical citation strings and excludes unused nested prose: %j", async title => {
     const f = fixture();
     const value = run("public", { citations: [citation(1, { itemTitle: title, rationale: "PRIVATE_RATIONALE_SENTINEL",
       webProvenance: { retrievedAt: "2026-11-04T00:00:00Z", extraction: "pdf", truncated: true,
@@ -138,6 +139,20 @@ describe("bounded public source history SQLite projection", () => {
   it.each(["malformed", "[]", "{}", '{"id":"public","budget":1e999}'])("refuses malformed or missing canonical metadata %s", async value => {
     const f = fixture(); f.add(run()); f.replace("public", value);
     await expect(readSqlitePublicSourceHistory(f.db)).rejects.toThrow("privacy_unavailable");
+  });
+  it.each(["trailing-comma", "unquoted-key", "comment", "raw-nul-suffix", "blob"])("retains the original strict JSON refusal in both public projections: %s", async kind => {
+    const f = fixture(); f.add(run()); const strict = JSON.stringify(run());
+    const raw = kind === "trailing-comma" ? strict.replace(/\}$/u, ",}") : kind === "unquoted-key" ? strict.replace('"id":', "id:")
+      : kind === "comment" ? "/* fixture */" + strict : kind === "raw-nul-suffix" ? strict + "\0ignored" : Buffer.from(strict);
+    f.db.prepare("UPDATE query_runs SET data=? WHERE id='public'").run(raw);
+    const stored = f.db.prepare("SELECT data FROM query_runs WHERE id='public'").get()!.data;
+    expect(() => JSON.parse(String(stored))).toThrow();
+    await expect(readSqlitePublicSourceHistory(f.db)).rejects.toThrow("privacy_unavailable");
+    expect(() => readSqlitePublicQuestions(f.db, ["public"])).toThrow("privacy_unavailable");
+  });
+  it("preserves a legitimate escaped NUL inside canonical question text", () => {
+    const f = fixture(); f.add(run("public", { question: "a\0b" }));
+    expect(readSqlitePublicQuestions(f.db, ["public"])).toEqual([{ id: "public", question: "a\0b" }]);
   });
   it("refuses physical UTF8 overflow even when discarded duplicate/unknown fields would parse to a small run", async () => {
     const f = fixture(); f.add(run()); f.replace("public", { ...run(), trace: ["界".repeat(1_400_000)] });

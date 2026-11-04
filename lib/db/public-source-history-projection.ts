@@ -56,7 +56,10 @@ export async function readSqlitePublicSourceHistory(db: DatabaseSync): Promise<P
       SELECT q.id,q.created_at FROM query_runs q JOIN run_privacy p ON p.run_id=q.id
       WHERE p.visibility='public' AND p.erased=0 ORDER BY q.created_at DESC,q.id DESC LIMIT 50)
       SELECT q.id,length(CAST(q.data AS BLOB)) AS data_bytes,
-        CASE WHEN length(CAST(q.data AS BLOB))>4000000 THEN NULL ELSE (
+        CASE WHEN typeof(q.data)!='text' THEN NULL
+          WHEN length(CAST(q.data AS BLOB))>4000000 THEN NULL
+          WHEN instr(q.data,char(0))>0 THEN NULL
+          WHEN json_valid(q.data)=0 THEN NULL ELSE (
           SELECT json_group_array(json_array(key,type,CASE WHEN key IN
             ('id','createdAt','budget','totalSpent','totalToCreators','answer','decisions','citations','evidence','claimCoverage') THEN value ELSE NULL END))
           FROM json_each(q.data) WHERE key IN (${fields.map(key => `'${key}'`).join(",")})) END AS fields

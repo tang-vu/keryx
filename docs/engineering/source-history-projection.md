@@ -12,6 +12,12 @@ only those originals. Hidden, erased and absent-policy originals never enter JSO
 inspection. Physical original UTF8 is capped at 4,000,000 bytes. Required root
 fields must occur exactly once with their existing types, canonical IDs must
 match the row, and duplicate selected provenance fields refuse the projection.
+Both this projection and the existing canonical-question projection also require
+SQLite text containing strict JSON with no raw NUL byte. SQLite's permissive JSON
+reader otherwise accepts JSON5 and ignores a NUL suffix that the original
+`JSON.parse` reader rejects; JSON stored as a BLOB is refused too. Escaped NUL
+characters inside valid JSON strings remain supported. Size is checked before
+these additional scans.
 Question, engine, subclaim and trace contents are omitted after their required
 types are checked. No schema is installed or repaired by this reader.
 
