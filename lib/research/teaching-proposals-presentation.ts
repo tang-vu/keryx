@@ -1,4 +1,5 @@
 import type { TeachingProposalDelivery } from "./teaching-proposals";
+import { portugueseTeachingProposalAnswer } from "./portuguese-teaching-presentation";
 
 /** Literal proposal text cannot become Markdown structure or citation controls. */
 function literal(value: string): string {
@@ -8,6 +9,7 @@ function literal(value: string): string {
 }
 
 export function teachingProposalAnswer(delivery: TeachingProposalDelivery): string {
+  if (delivery.request.language === "pt") return portugueseTeachingProposalAnswer(delivery, literal);
   const vi = delivery.request.language === "vi";
   const lines = [vi ? "### Đề xuất dạy học" : "### Teaching proposals", ""];
   if (delivery.proposals.length) lines.push(vi ? "Các hoạt động và tình huống dưới đây là đề xuất của Keryx, dựa trên kiến thức đã dẫn nguồn ở trên."

@@ -137,6 +137,8 @@ export interface TeachingProposalDelivery {
   gaps: TeachingProposalGap[]; explanationWords: number; complete: boolean;
 }
 export const TEACHING_PROPOSAL_LABELS = {
+  pt: { activity: "Atividade de sala de aula proposta pelo Keryx", "classification-example": "Exemplo de classificação proposto pelo Keryx",
+    "exit-question": "Pergunta final proposta pelo Keryx" },
   vi: { activity: "Hoạt động do Keryx đề xuất", "classification-example": "Ví dụ phân loại do Keryx đề xuất",
     "exit-question": "Câu hỏi cuối giờ do Keryx đề xuất" },
   en: { activity: "Proposed classroom activity", "classification-example": "Proposed classification example",
