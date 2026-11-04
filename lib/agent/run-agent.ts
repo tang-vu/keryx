@@ -25,6 +25,7 @@ import { discoverScholarly } from "../scholarly/discovery";
 import { paperCanResearch, paperDuplicatesPublicBody } from "../scholarly/paid-gate";
 import { questionDois } from "../scholarly/doi";
 import { discoverWeb } from "../web-research/discovery";
+import { observeTrustedTavilySearch } from "./search-failure-observation";
 import { requestedSources } from "../web-research/requested-sources";
 import { requestedSourceReport } from "./requested-source-report";
 import { arxivDocumentId } from "../scholarly/arxiv-identity";
@@ -523,9 +524,14 @@ async function* runAdmittedAgent(
     const operationStarted = Date.now();
     try {
       let configured = deps.webSearch ?? null, configurationFailed = false;
+      let searchObservation: ReturnType<typeof observeTrustedTavilySearch> | undefined;
       if (!configured) try {
         configured = config.webSearchProvider === "searxng" ? searxngProvider(config.webSearchUrl)
           : config.webSearchProvider === "tavily" ? tavilyProvider(config.tavilyApiKey) : null;
+        if (configured && config.webSearchProvider === "tavily") {
+          searchObservation = observeTrustedTavilySearch(configured);
+          configured = searchObservation.provider;
+        }
       } catch { configurationFailed = true; }
       const discovered = await discoverWeb(configured, input.question,
         subClaims, input.researchMode === "quick", webSignal());
@@ -533,7 +539,7 @@ async function* runAdmittedAgent(
       for (const candidate of discovered.candidates.values()) admitWeb(candidate);
       if (discovered.withheldDiscussionPreviews) yield emit("discover",
         discovered.withheldDiscussionPreviews + " discussion-page previews withheld because the request asks for official documentation. Other previews are not thereby verified as official.");
-      yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${discovered.candidates.size} public page previews/leads, ${discovered.failedQueries} unavailable queries${!configured ? configurationFailed ? "; search configuration unavailable, supplied URL leads only" : "; search provider not configured, supplied URL leads only" : ""}${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Previews and supplied URLs are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`);
+      yield emit("discover", `Web search: ${discovered.attemptedQueries}/${discovered.queries} planned queries attempted, ${discovered.succeededQueries} succeeded, ${discovered.candidates.size} public page previews/leads, ${discovered.failedQueries} unavailable queries${!configured ? configurationFailed ? "; search configuration unavailable, supplied URL leads only" : "; search provider not configured, supplied URL leads only" : ""}${discovered.cancelled ? "; search deadline or cancellation reached" : ""}${discovered.truncatedQueries ? "; query text bounded at 500 characters" : ""}. Previews and supplied URLs are discovery only. Public reads spend no USDC; model and service operating costs remain separate.`, searchObservation?.failureDetail(discovered));
     } catch { webDiscovery = { status: "unavailable" }; yield emit("discover", "Web search unavailable; continuing with the available catalog. No web evidence was established."); }
     finally { webRemainingMs -= Date.now() - operationStarted; }
     if (input.signal?.aborted) throw new DOMException("Research cancelled", "AbortError");
