@@ -1,6 +1,7 @@
 import { arxivDocumentId, targetArxivIds } from "../scholarly/arxiv-identity";
 import { hasKnownSyntheticFingerprint } from "../research/evidence-provenance";
 import { discussionDoesNotMeetDocumentRequest } from "../research/source-requirements";
+import { requestedNamedPublisher, publisherSourceMismatch } from "../research/named-publisher-source";
 import { isCompleteEvidenceSpan } from "../llm/evidence-span";
 import type { SupplementalSpanCapability } from "../llm/supplemental-span-capability";
 /**
@@ -67,6 +68,7 @@ export function buildEvidenceLedger(input: {
   );
   const evidence: EvidenceRecord[] = [];
   let droppedEvidence = 0;
+  const requestedPublisher = requestedNamedPublisher(input.question ?? "");
 
   for (const proposal of input.proposedEvidence) {
     const claimIndex = Number(proposal?.claimIndex);
@@ -80,7 +82,8 @@ export function buildEvidenceLedger(input: {
       !source ||
       !quoteOccursInSource(quote, source.text) ||
       !isCompleteEvidenceSpan(source, quote, proposal.quoteSpan, input.supplementalCapability) ||
-      discussionDoesNotMeetDocumentRequest(input.question ?? "", source.itemUrl, input.subClaims[claimIndex])
+      discussionDoesNotMeetDocumentRequest(input.question ?? "", source.itemUrl, input.subClaims[claimIndex]) ||
+      (requestedPublisher !== undefined && publisherSourceMismatch(requestedPublisher, source.itemUrl))
     ) {
       droppedEvidence++;
       continue;
