@@ -99,6 +99,8 @@ it("adds reviewed Portuguese proposals after identical factual admission and mon
   expect(after.run.teachingProposals).toMatchObject({ complete: true, request: { language: "pt", durationMinutes: 10, exampleCount: 2, explanationMaximumWords: 99 } });
   expect(before.run.teachingProposals).toBeUndefined();
   expect(after.transport.packets).toHaveLength(2); expect(before.transport.packets).toHaveLength(2);
+  expect(after.transport.packets[0].system).toContain("in Portuguese");
+  expect(after.transport.packets[0].system).not.toContain("in English");
   // Existing cap calculation for two factual rows plus four proposals.
   expect(after.transport.packets.map(row => row.cap)).toEqual([2304, 1536]);
   for (const key of ["question", "subClaims", "quoteOptions", "sources"])

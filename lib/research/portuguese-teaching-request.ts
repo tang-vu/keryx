@@ -21,13 +21,13 @@ function unique(text: string, source: string): RegExpMatchArray | undefined {
 
 /** Finite original-caller Portuguese admission; no source text or model plan. */
 export function portugueseTeachingRequest(original: string): { selected: true; fields?: PortugueseTeachingFields } | undefined {
-  const text = original.normalize("NFC").toLowerCase()
-    .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`]*`|“[^”]*”|‘[^’]*’|"[^"\r\n]*"|^\s*>.*$/gmu, " ");
+  const text = withoutQuotedInstructions(original.normalize("NFC").toLowerCase());
   const languages = [...text.matchAll(/(?<![\p{L}\p{M}\p{N}_])(?:(escreva|responda)\s+em\s+([\p{L}\p{M}-]+)|(?:write|answer|respond)\s+in\s+([\p{L}\p{M}-]+)|(?:viết|trả lời|đáp|soạn|trình bày)\s+(?:bằng\s+)?tiếng\s+([\p{L}\p{M}-]+))/gu)];
   if (!languages.some(match => match[1])) return;
   const inactive = { selected: true as const };
   if (languages.length !== 1 || languages[0][2] !== "português" || negated(text, languages[0].index!) ||
-      /(?:^|\n)\s*(?:question|constraints|pergunta|fonte|source)\s*:/u.test(text) ||
+      /(?:^|[\r\n\u2028\u2029])[^\S\r\n\u2028\u2029]*(?:question|constraints|pergunta)\s*[:：]/u.test(text) ||
+      /(?:^|[\r\n\u2028\u2029])[^\S\r\n\u2028\u2029]*(?:(?:a|o|the|our|this)\s+)?(?:fonte|documento|página|artigo|texto|source|document|article|transcript)(?=$|[\s:：])[^\r\n\u2028\u2029:：]{0,100}(?:\b(?:diz|pede|instrui|solicita|manda|says|text|excerpt|instructions)\b|[:：])/u.test(text) ||
       /\b(?:fonte|documento|página|artigo|texto)\s+(?:diz|pede|instrui|solicita|manda)\b/u.test(text) ||
       /^\s*(?:explique|analise|avalie|traduza|cite)\s+(?:a\s+)?(?:frase|instrução|pedido)\b/u.test(text)) return inactive;
 
@@ -54,4 +54,23 @@ export function portugueseTeachingRequest(original: string): { selected: true; f
       !Number.isSafeInteger(exampleCount) || exampleCount < 1 || exampleCount > 4 ||
       !Number.isSafeInteger(explanationMaximumWords) || explanationMaximumWords < 1 || explanationMaximumWords > 200) return inactive;
   return { selected: true, fields: { durationMinutes, exampleCount, explanationMaximumWords } };
+}
+
+/** Quoted/source instructions cannot supply original-caller lesson authority. */
+function withoutQuotedInstructions(value: string): string {
+  const pairs: Record<string, string> = { '"': '"', "'": "'", "“": "”", "‘": "’", "«": "»" };
+  let visible = "";
+  for (let index = 0; index < value.length; index++) {
+    const char = value[index];
+    const fence = char === "`" || char === "~" ? value.slice(index).match(/^(?:`+|~{3,})/u)?.[0] : undefined;
+    const closing = fence ?? (pairs[char] && (char !== "'" || index === 0 || !/[\p{L}\p{M}\p{N}]/u.test(value[index - 1])) ? pairs[char] : undefined);
+    if (!closing) { visible += char; continue; }
+    const start = index;index += fence?.length ?? 1;
+    for (; index < value.length; index++) {
+      if (!fence && value[index] === "\\") { index++;continue; }
+      if (value.startsWith(closing, index)) { index += closing.length;break; }
+    }
+    visible += value.slice(start, index).replace(/[^\r\n\u2028\u2029]/g, " ");index--;
+  }
+  return visible.replace(/^[^\S\r\n\u2028\u2029]*>[^\r\n\u2028\u2029]*/gmu, " ");
 }

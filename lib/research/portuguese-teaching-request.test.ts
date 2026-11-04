@@ -21,6 +21,7 @@ it.each([
   question.replace("marque os exemplos e a atividade", "identifique a atividade e os exemplos"),
   question.replace("termine com uma pergunta e sua resposta", "uma pergunta final com resposta"),
   question.normalize("NFD"),
+  `Uso d'água apenas como contexto. ${question}`,
 ])("keeps the same finite Portuguese fields for an explicit supported paraphrase: %s", original => {
   expect(parseTeachingProposalRequest(original)).toMatchObject({ language: "pt", durationMinutes: 10, exampleCount: 2, explanationMaximumWords: 99 });
 });
@@ -71,4 +72,18 @@ it("does not intercept an existing English or Vietnamese request through quoted 
   const english = "Propose a 10-minute classroom activity, two classification examples and one exit question with an answer. Write in English: explanation under 100 words. Label activities and invented examples as proposed.";
   expect(parseTeachingProposalRequest(english + ' "Responda em português"')).toMatchObject({ language: "en", exampleCount: 2 });
   expect(parseTeachingProposalRequest(question.replace("português", "portuguesês"))).toBeUndefined();
+});
+
+it.each([
+  `Fonte NASA diz:\n${question}`,
+  `Artigo NASA:\r${question}`,
+  `Source NASA says:\u2028${question}`,
+  `Pergunta:\u2029${question}`,
+  `'${question}'`,
+  `“Quoted \\"inner\\". ${question}”`,
+  JSON.stringify(`Quoted "inner". ${question}`),
+  `\`\`\`\`text\n${question}\n\`\`\`\``,
+  `~~~~text\n${question}\n~~~~`,
+])("keeps source envelopes and complete quoted/code teaching instructions inert: %s", original => {
+  expect(parseTeachingProposalRequest(original)).toBeUndefined();
 });
