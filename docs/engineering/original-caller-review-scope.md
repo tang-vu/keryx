@@ -26,8 +26,9 @@ support/language judgments, creator eligibility and exact payment authority rema
 separate gates. The shared engine serves its existing web/API/MCP/CLI/bot roles;
 desktop and extension transports require no new public field or distribution version.
 
-The JsonChatEngine call-site change is prepared separately until its exact held-file
-scope is authorized. Proposal-only in-memory test loading is not committed runtime
-integration or CI acceptance. Final delivery still requires the real call-site patch,
-current-study source closure with all 48 whole trials and four originals preserved,
-and actual full/native/domain/platform/build PR and exact-main acceptance.
+Controlled checks cover exact caller retention, incompatible conditions, bounded
+UTF-8 packets, refusal and private packet compatibility. These are information
+preservation checks, not historical model replay or independent semantic validation.
+The current-study source closure must preserve all 48 whole trials and four original
+archives. Actual full/native/domain/platform/build PR and exact-main acceptance
+remain required before source completion.

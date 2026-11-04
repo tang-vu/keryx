@@ -368,7 +368,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     if (proposals.length) {
       try {
         const reviewInput = this.synthesisEvidenceReviewInput({ proposals, options: quoteOptions, gathered: input.gathered, subClaims: input.subClaims,
-          observeLanguage, ordinaryScope });
+          observeLanguage, ordinaryScope, ...(ordinaryScope ? { originalQuestion: input.question } : {}) });
         reviewedIndexes = reviewInput.reviewedIndexes;
         let reviewSystem = EVIDENCE_REVIEW_GUIDANCE + (ordinaryScope ? ORDINARY_SCOPE_REVIEW_GUIDANCE : "") + (observeLanguage
           ? STATEMENT_LANGUAGE_REVIEW_GUIDANCE : ""), reviewJson = reviewInput.json;
