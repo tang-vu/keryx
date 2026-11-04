@@ -4,8 +4,8 @@ export function explicitWorkProductLabel(question: string): string | undefined {
   if (question.length > 2_000) return;
   const visible = withoutQuotedText(question).trimStart();
   // Prepared request envelopes retain their own parsers and rollout contracts.
-  if (/(?:^|\n)\s*(?:Question|Constraints|Unread source leads):/u.test(visible) ||
-      /(?:^|\n)\s*(?:(?:the|our|this)\s+)?(?:Source|Document|Article|Transcript|Nguồn|Tài liệu|Trích đoạn|来源|文档|原文|摘录)\s*(?:says|text|excerpt|content|quote|instructions|nói|ghi|:|：)/iu.test(visible)) return;
+  if (/(?:^|[\r\n\u2028\u2029])[^\S\r\n\u2028\u2029]*(?:Question|Constraints|Unread source leads)[:：]/u.test(visible) ||
+      /(?:^|[\r\n\u2028\u2029])[^\S\r\n\u2028\u2029]*(?:(?:the|our|this)\s+)?(?:Source|Document|Article|Transcript|Nguồn(?!\s+lực\b)|Tài liệu|Trích đoạn|来源|文档|原文|摘录)(?=$|[\s:：])[^\r\n\u2028\u2029:：]{0,100}(?:\b(?:says|text|excerpt|content|quote|instructions|nói|ghi)\b|[:：])/iu.test(visible)) return;
   // Classroom generation remains behind its separate activation/review gates.
   if (/\b(?:classroom|lesson\s+plan|lesson\s+script|exit\s+question|classification\s+exercise)\b|giáo án|hoạt động (?:trên lớp|lớp học)|câu hỏi kết thúc|教案|课堂活动|退出问题/iu.test(visible)) return;
   // Do not append another format when the caller bounds the overall answer,
@@ -33,21 +33,39 @@ export function explicitWorkProductLabel(question: string): string | undefined {
     const label = pattern.exec(visible)?.[1];
     if (label) return label;
   }
+  // A prospective application question can request a draft without naming a
+  // plan/checklist. Existing labels above retain precedence and their contract.
+  const prospective = [
+    /(?:^|[.!?。！？\r\n\u2028\u2029])\s*how\s+(?:can|should|could|would)\s+(?:I|we|you)\s+(?:(?:best|safely|reliably|practically)\s+)?(make|design|build|structure|configure|implement|adapt|apply|handle|troubleshoot|set up)\b(?=\s+[^?\r\n\u2028\u2029]*[\p{L}\p{N}])/iu,
+    /(?:^|[.!?。！？\r\n\u2028\u2029])\s*(?:xin\s+)?(?:hãy\s+)?(?:đề xuất|gợi ý)\s+(?:(?:một|vài)\s+)?(cách|phương án|quy trình|các bước)(?![\p{L}\p{N}_])/iu,
+    /(?:^|[.!?。！？\r\n\u2028\u2029])\s*(?:tôi|mình|chúng tôi)\s+(?:nên|có thể)\s+(làm|thiết kế|xây dựng|cấu hình|triển khai|áp dụng|xử lý)[^.!?\r\n\u2028\u2029]{0,160}(?:thế nào|làm sao|ra sao)/iu,
+  ].map(pattern => pattern.exec(visible)?.[1]).find(Boolean);
+  if (!prospective) return;
+  // These new forms cannot bypass an explicit no-procedure instruction, a
+  // bounded answer format, or the separate classroom-generation rollout.
+  if (/\b(?:do not|don't|never|no need to)\s+(?:give|create|make|prepare|draft|write|produce|propose|build|design|include)[^.!?\r\n\u2028\u2029]{0,80}\b(?:steps|workflow|procedure|approach)\b/iu.test(visible) ||
+      /(?:đừng|không (?:cần|được|nên))[^.!?\r\n\u2028\u2029]{0,80}(?:cách|phương án|quy trình|các bước)/iu.test(visible) ||
+      /\b(?:lesson|classroom|classwork|workshop)\b|\b(?:activity|exercise)\b[^.!?\r\n\u2028\u2029]{0,60}\b(?:class|students|pupils)\b|(?:bài tập|hoạt động)[^.!?\r\n\u2028\u2029]{0,60}(?:học sinh|lớp học)/iu.test(visible) ||
+      /(?<![\p{L}\p{N}_])(?:\d{1,4}|um|uma|uno|una|dois|dos|três|tres|quatro|cuatro|cinco|seis|sete|siete|oito|ocho|nove|nueve|dez|diez|onze|once|doze|doce)\s+(?:palavras?|palabras?|frases?|oraciones|oración|tópicos?|pontos?|puntos?)(?![\p{L}\p{N}_])/iu.test(visible)) return;
+  return prospective;
 }
 
 /** Mask quoted/code spans before recognizing intent, preserving offsets and the
  * original digest input. Apostrophes inside words are not quotation delimiters. */
 function withoutQuotedText(value: string): string {
-  const closeFor: Record<string, string> = { '"': '"', "'": "'", "`": "`", "“": "”", "‘": "’", "「": "」", "『": "』", "«": "»" };
-  let closing: string | undefined;
+  const closeFor: Record<string, string> = { '"': '"', "'": "'", "“": "”", "‘": "’", "「": "」", "『": "』", "«": "»" };
   let visible = "";
   for (let index = 0; index < value.length; index++) {
     const char = value[index];
-    if (closing) { visible += char === "\n" ? "\n" : " "; if (char === closing) closing = undefined; continue; }
-    if (closeFor[char] && (char !== "'" || index === 0 || !/[\p{L}\p{N}]/u.test(value[index - 1]))) {
-      closing = closeFor[char]; visible += " "; continue;
+    const delimiter = char === "`" ? value.slice(index).match(/^`+/u)![0]
+      : closeFor[char] && (char !== "'" || index === 0 || !/[\p{L}\p{N}]/u.test(value[index - 1])) ? closeFor[char] : undefined;
+    if (!delimiter) { visible += char; continue; }
+    const start = index; index += char === "`" ? delimiter.length : 1;
+    for (; index < value.length; index++) {
+      if (char !== "`" && value[index] === "\\") { index++; continue; }
+      if (value.startsWith(delimiter, index)) { index += delimiter.length; break; }
     }
-    visible += char;
+    visible += value.slice(start, index).replace(/[^\r\n\u2028\u2029]/gu, " "); index--;
   }
   return visible;
 }

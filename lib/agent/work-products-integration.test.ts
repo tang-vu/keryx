@@ -27,6 +27,12 @@ const cases = {
   comparison: { question: "Compare two documented storage choices for our small service.", deliverable: "A comparison note with conditional verification steps.",
     context: "The workload and restore objectives remain unknown.", fact: "The synthetic storage comparison leaves restore performance unmeasured.",
     sections: [{ id: "w1", heading: "Proposed comparison criterion", text: "Keep restore performance undecided and propose comparing both choices against the same restore objective.", premiseIds: ["e1"], conditions: ["If a common workload and restore objective can be agreed."] }] },
+  applicationEn: { question: "How would you make a message-processing job safe to retry when provider behavior is unknown?", deliverable: "A conditional proposed investigation workflow.",
+    context: "Provider behavior and an isolated test environment remain unknown.", fact: "The fictional queue can deliver the same message more than once.",
+    sections: [{ id: "w1", heading: "Proposed repeated-delivery check", text: "Propose a controlled repeated-delivery test before choosing a retry procedure.", premiseIds: ["e1"], conditions: ["If an isolated nonproduction environment is available."] }] },
+  applicationVi: { question: "Hãy đề xuất một cách kiểm tra an toàn khi tác vụ có thể được giao lại. Giữ nguyên điều chưa biết, không thực hiện thao tác.", deliverable: "Một quy trình kiểm tra được đề xuất có điều kiện.",
+    context: "Chưa rõ khả năng của nhà cung cấp và môi trường kiểm tra.", fact: "Hàng đợi giả lập có thể giao lại cùng một thông điệp.",
+    sections: [{ id: "w1", heading: "Đề xuất kiểm tra việc giao lại", text: "Đề xuất kiểm tra việc giao lại trong môi trường cô lập trước khi lựa chọn quy trình thử lại.", premiseIds: ["e1"], conditions: ["Nếu có môi trường kiểm tra ngoài vận hành thực."] }] },
 };
 type Case = keyof typeof cases;
 afterEach(() => { vi.unstubAllEnvs();vi.useRealTimers(); });
@@ -107,7 +113,7 @@ it.each([{ changedOriginal: true }, { teaching: true }, { private: true }])("doe
   expect(f.run.answer).not.toContain(cases.operations.sections[0].text);expect(f.denied).not.toHaveBeenCalled();
 });
 
-it.each(["study", "operations", "comparison"] as const)("delivers an ordinary %s request with complete caller scope and the same factual/financial result", async kind => {
+it.each(["study", "operations", "comparison", "applicationEn", "applicationVi"] as const)("delivers an ordinary %s request with complete caller scope and the same factual/financial result", async kind => {
   const baseline = await drive(kind, { ordinary: true, plain: true }), f = await drive(kind, { ordinary: true });
   const request = f.synthesize.mock.calls[0][0].workProductRequest!;
   expect(request).toMatchObject({ version: 2, criteria: [cases[kind].question] });
@@ -134,4 +140,19 @@ it.each([{ changedOriginal: true }, { teaching: true }, { private: true }, { exp
   if (options.private) { expect(f.synthesize).not.toHaveBeenCalled();expect(f.read).not.toHaveBeenCalled(); }
   else expect(f.synthesize.mock.calls[0][0].workProductRequest).toBeUndefined();
   expect(f.run.answer).not.toContain(cases.operations.sections[0].text);expect(f.denied).not.toHaveBeenCalled();
+});
+
+it.each((["applicationEn", "applicationVi"] as const).flatMap(kind =>
+  [{ reject: true }, { losePremise: true }].map(options => ({ kind, options }))))("withholds a newly recognized $kind draft when its review or factual premise fails: $options", async ({ kind, options }) => {
+  const f = await drive(kind, { ...options, ordinary: true });
+  expect(f.run.answer).not.toContain(cases[kind].sections[0].text);
+  expect(f.denied).not.toHaveBeenCalled();expect(f.transport.calls).toHaveLength(2);
+});
+
+it.each((["applicationEn", "applicationVi"] as const).flatMap(kind =>
+  [{ changedOriginal: true }, { teaching: true }, { private: true }, { explicitLimit: true }].map(options => ({ kind, options }))))("keeps newly recognized $kind input behind the existing protected-scope gate: $options", async ({ kind, options }) => {
+  const f = await drive(kind, { ...options, ordinary: true });
+  if ("private" in options) { expect(f.synthesize).not.toHaveBeenCalled();expect(f.read).not.toHaveBeenCalled(); }
+  else expect(f.synthesize.mock.calls[0][0].workProductRequest).toBeUndefined();
+  expect(f.run.answer).not.toContain(cases[kind].sections[0].text);expect(f.denied).not.toHaveBeenCalled();
 });
