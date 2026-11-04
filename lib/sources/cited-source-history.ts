@@ -1,6 +1,8 @@
 import type { KeryxDB } from "../db/keryx-db";
 import type { ContentDeliveryKind, QueryRun } from "../types";
 import { hasKnownSyntheticFingerprint } from "../research/evidence-provenance";
+import { privacyReadsActive, publicSourceHistoryRowSchema, requirePrivacy } from "../run-privacy/contracts";
+import type { PublicSourceHistoryRow } from "../run-privacy/contracts";
 
 const RUN_LIMIT = 50;
 const DOCUMENT_LIMIT = 40;
@@ -21,7 +23,7 @@ export interface CitedSourceHistoryEntry {
   extraction?: "html" | "text" | "pdf";
 }
 
-function isPublicRun(run: QueryRun): boolean {
+function isPublicRun(run: Pick<QueryRun, "id" | "createdAt">): boolean {
   return !!run && typeof run.id === "string" && run.id.trim().length > 0 && run.id.length <= 256 &&
     !/^prv_/i.test(run.id) && typeof run.createdAt === "string" &&
     run.createdAt.length <= 64 && Number.isFinite(Date.parse(run.createdAt));
@@ -46,11 +48,15 @@ function documentKey(value: unknown): string | null {
  * within the latest 50 returned records. Entries retain the newest citation snapshot.
  * A failed read throws so the caller can distinguish unavailable from empty history.
  */
-export async function loadCitedSourceHistory(db: Pick<KeryxDB, "listRecentQueries">): Promise<{
+export async function loadCitedSourceHistory(db: Pick<KeryxDB, "listRecentQueries"> & Partial<Pick<KeryxDB, "runPrivacy" | "runPrivacyActive">>): Promise<{
   entries: CitedSourceHistoryEntry[];
   runCount: number;
 }> {
-  const returned = await db.listRecentQueries(RUN_LIMIT);
+  const privacy = privacyReadsActive(db) ? requirePrivacy(db) : null;
+  const slim = !!privacy?.sourceHistory;
+  const returned: (QueryRun | PublicSourceHistoryRow)[] = slim
+    ? publicSourceHistoryRowSchema.array().max(RUN_LIMIT).parse(await privacy!.sourceHistory!())
+    : await db.listRecentQueries(RUN_LIMIT);
   if (!Array.isArray(returned)) throw new Error("Public source history unavailable");
   const seenRuns = new Set<string>();
   const runs = returned.slice(0, RUN_LIMIT).filter(isPublicRun)
@@ -62,8 +68,10 @@ export async function loadCitedSourceHistory(db: Pick<KeryxDB, "listRecentQuerie
     });
   const documents = new Map<string, CitedSourceHistoryEntry>();
   for (const run of runs) {
-    if (typeof run.answer !== "string" || !run.answer.trim() || !Array.isArray(run.citations)) continue;
-    for (const citation of run.citations.slice(0, CITATIONS_PER_RUN)) {
+    const hasAnswer = slim ? (run as PublicSourceHistoryRow).hasAnswer
+      : typeof (run as QueryRun).answer === "string" && !!(run as QueryRun).answer.trim();
+    if (!hasAnswer || !Array.isArray(run.citations)) continue;
+    for (const citation of run.citations.slice(0, CITATIONS_PER_RUN) as QueryRun["citations"]) {
       if (!citation || citation.sourceKind !== "public-reference" || citation.evidenceProvenance === "synthetic-demo" ||
         hasKnownSyntheticFingerprint(citation) || typeof citation.itemTitle !== "string" || !citation.itemTitle.trim()) continue;
       const key = documentKey(citation.itemUrl);
