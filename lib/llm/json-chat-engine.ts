@@ -340,7 +340,7 @@ export abstract class JsonChatEngine implements ReasoningEngine {
     if (teachingRequest) {
       const system = generationSystem + " For this admitted teaching request, also return teachingProposals. " +
         TEACHING_PROPOSAL_GENERATION_GUIDANCE +
-        `Write factual statements in ${teachingRequest.language === "vi" ? "Vietnamese" : "English"}, with at most ${teachingRequest.explanationMaximumWords} explanatory words collectively. ` +
+        `Write factual statements in ${teachingRequest.language === "vi" ? "Vietnamese" : teachingRequest.language === "pt" ? "Portuguese" : "English"}, with at most ${teachingRequest.explanationMaximumWords} explanatory words collectively. ` +
         "Preserve every factual qualification. Prioritize factual evidence; omit proposals rather than weakening facts to fit the unchanged output budget.";
       const json = JSON.stringify({ ...generation, teachingRequest,
         schema: generation.schema.slice(0, -1) + ',"teachingProposals":[{"id":string,"kind":"activity"|"classification-example"|"exit-question","text":string,"premiseIds":string[],"conditions":string[],"durationMinutes":number (activity only),"answer":string (examples/exit only)}]}' });

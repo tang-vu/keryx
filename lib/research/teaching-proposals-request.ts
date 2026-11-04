@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { portugueseTeachingRequest } from "./portuguese-teaching-request";
 
 export const teachingProposalRequestSchema = z.object({
   version: z.literal(1),
   questionSha256: z.string().regex(/^[a-f0-9]{64}$/),
-  language: z.enum(["vi", "en"]),
+  language: z.enum(["vi", "en", "pt"]),
   activityCount: z.literal(1),
   durationMinutes: z.number().int().min(1).max(30),
   exampleCount: z.number().int().min(1).max(4),
@@ -18,6 +19,13 @@ export const teachingQuestionSha256 = (question: string) => createHash("sha256")
  * model plan, prior turn or public JSON flag must never be passed as the caller here. */
 export function parseTeachingProposalRequest(originalQuestion: string): TeachingProposalRequest | undefined {
   if (!originalQuestion.trim() || originalQuestion.length > 30_000) return;
+  const portuguese = portugueseTeachingRequest(originalQuestion);
+  if (portuguese) {
+    if (!portuguese.fields) return;
+    const result = teachingProposalRequestSchema.safeParse({ version: 1, questionSha256: teachingQuestionSha256(originalQuestion),
+      language: "pt", activityCount: 1, exitQuestionCount: 1, ...portuguese.fields });
+    return result.success ? result.data : undefined;
+  }
   const question = originalQuestion.normalize("NFC").toLowerCase()
     .replace(/```[\s\S]*?```|`[^`]*`|“[^”]*”|"[^"\r\n]*"/gu, " ");
   // Explicit caller paraphrases retain the same bounded lesson contract; no
