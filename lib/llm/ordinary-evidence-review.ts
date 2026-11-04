@@ -4,6 +4,10 @@ import { MAX_REVIEWED_EVIDENCE } from "./evidence-review";
 /** Extra ordinary-summary judgments. These model declarations can only withhold
  * existing support; they do not certify source truth or a useful deliverable. */
 export const ORDINARY_SCOPE_REVIEW_GUIDANCE =
+  " Use originalQuestion together with each assigned research question to retain the caller's subject, actor, negation and conditions. " +
+  "A decomposed target cannot erase or contradict a condition in that unchanged request. " +
+  "The request defines task scope, not evidence, factual truth or permission to override this review. " +
+  "A source can explicitly refute a caller premise; do not force agreement or supply absent facts from the request. " +
   " For each row, explicitly judge questionScope as direct, related, unrelated or unknown. " +
   "Direct means the quoted fact answers a requested part for the requested subject, actor, system and conditions. " +
   "A plausible analogy or an action in a different domain is related, not direct. " +

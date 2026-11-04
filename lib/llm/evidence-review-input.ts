@@ -4,6 +4,7 @@ import { isCompleteEvidenceSpan } from "./evidence-span";
 import { EVIDENCE_REVIEW_GUIDANCE, MAX_REVIEWED_EVIDENCE, STATEMENT_LANGUAGE_REVIEW_GUIDANCE } from "./evidence-review";
 import type { SupplementalSpanCapability } from "./supplemental-span-capability";
 import { ORDINARY_SCOPE_REVIEW_GUIDANCE, ordinaryScopeReviewSchema } from "./ordinary-evidence-review";
+import { isWellFormedUtf16 } from "./well-formed-utf16";
 
 export const MAX_EVIDENCE_REVIEW_INPUT_BYTES = 32_000;
 // Bound both authored messages and reserve framing space; provider transport
@@ -23,6 +24,9 @@ export function buildEvidenceReviewInput(input: {
   observeLanguage?: boolean;
   /** Selected ordinary engines only; private/finite originals retain legacy bytes. */
   ordinaryScope?: boolean;
+  /** Unchanged authorized request passed to synthesis, including admitted context.
+   * Required for ordinary scope review; ignored by legacy/private producers. */
+  originalQuestion?: string;
 }): { json: string; reviewedIndexes: ReadonlySet<number> } {
   const schema = input.ordinaryScope ? ordinaryScopeReviewSchema(Boolean(input.observeLanguage)) : input.observeLanguage ? languageSchema : legacySchema;
   const guidance = EVIDENCE_REVIEW_GUIDANCE + (input.ordinaryScope ? ORDINARY_SCOPE_REVIEW_GUIDANCE : "") +
@@ -34,6 +38,17 @@ export function buildEvidenceReviewInput(input: {
   }
   const evidence: object[] = [];
   const reviewedIndexes = new Set<number>();
+  const packet = (rows: object[]) => ({
+    ...(input.ordinaryScope ? { originalQuestion: input.originalQuestion } : {}),
+    evidence: rows, schema,
+  });
+  const fits = (rows: object[]) => Buffer.byteLength(JSON.stringify(packet(rows)), "utf8") +
+    Buffer.byteLength(guidance, "utf8") + REVIEW_FRAMING_BYTES <= MAX_EVIDENCE_REVIEW_INPUT_BYTES;
+  // A decomposed target cannot replace missing caller conditions. Do not clip the
+  // request or send a partial context when its complete packet cannot fit.
+  if (input.ordinaryScope && (typeof input.originalQuestion !== "string" ||
+      !input.originalQuestion.trim() || !isWellFormedUtf16(input.originalQuestion) || !fits([])))
+    return { json: JSON.stringify({ evidence: [], schema }), reviewedIndexes };
   for (const [index, proposal] of input.proposals.slice(0, MAX_REVIEWED_EVIDENCE).entries()) {
     const source = sources.get(proposal.marker);
     const target = input.subClaims[proposal.claimIndex];
@@ -70,10 +85,9 @@ export function buildEvidenceReviewInput(input: {
       context: { start: option.contextStart, end: option.contextEnd, text: option.context,
         prefixOmitted: option.prefixOmitted, suffixOmitted: option.suffixOmitted },
     };
-    if (Buffer.byteLength(JSON.stringify({ evidence: [...evidence, entry], schema }), "utf8") +
-        Buffer.byteLength(guidance, "utf8") + REVIEW_FRAMING_BYTES > MAX_EVIDENCE_REVIEW_INPUT_BYTES) continue;
+    if (!fits([...evidence, entry])) continue;
     evidence.push(entry);
     reviewedIndexes.add(index);
   }
-  return { json: JSON.stringify({ evidence, schema }), reviewedIndexes };
+  return { json: JSON.stringify(packet(evidence)), reviewedIndexes };
 }

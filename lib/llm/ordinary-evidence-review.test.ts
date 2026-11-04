@@ -106,7 +106,8 @@ describe("ordinary engine review and retained-original boundary", () => {
     const proposals = resolveQuoteEvidence(Array.from({ length: 32 }, () => ({ claimIndex: 0,
       marker: "S1", quoteId: option.quoteId, support: 0.9, statement })), options);
     const subClaims = ["Requested API constraint and its exact retained context. ".repeat(80)];
-    const result = buildEvidenceReviewInput({ proposals, options, gathered: input.gathered, subClaims, ordinaryScope: true });
+    const result = buildEvidenceReviewInput({ proposals, options, gathered: input.gathered, subClaims,
+      ordinaryScope: true, originalQuestion: input.question });
     const packet = JSON.parse(result.json);
     expect(result.reviewedIndexes.size).toBeGreaterThan(0);
     expect(result.reviewedIndexes.size).toBeLessThan(32);

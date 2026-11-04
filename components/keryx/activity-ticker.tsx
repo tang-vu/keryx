@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fmtUsdc } from "./phase-style";
 import { useUiMessages } from "@/lib/i18n/ui-copy";
+import { startActivityPolling } from "./activity-polling";
 
 
 
@@ -38,25 +39,19 @@ export function ActivityTicker() {
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      try {
-        const res = await fetch("/api/activity", { cache: "no-store" });
+    return startActivityPolling<ActivityItem[]>({
+      visibility: document,
+      read: async (signal) => {
+        const res = await fetch("/api/activity", { cache: "no-store", signal });
         if (!res.ok) throw new Error("Activity unavailable");
         const data = await res.json();
         if (data.error) throw new Error("Activity unavailable");
         if (!Array.isArray(data.activity)) throw new Error("Invalid activity feed");
-        if (alive) { setItems(data.activity); setState(data.activity.length ? "ready" : "empty"); }
-      } catch {
-        if (alive) { setItems([]); setState("error"); }
-      }
-    };
-    load();
-    const t = setInterval(load, 20_000);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
+        return data.activity;
+      },
+      receive: (activity) => { setItems(activity); setState(activity.length ? "ready" : "empty"); },
+      unavailable: () => { setItems([]); setState("error"); },
+    });
   }, []);
 
   if (state === "empty") return null;

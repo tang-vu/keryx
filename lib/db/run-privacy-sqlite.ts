@@ -10,6 +10,8 @@ import { erasedRun, pendingPollSchema, PrivacyError, privacyId, privacyMutation,
 import type { RunOwnershipHistoryStore } from "../run-claims/history";
 import { runClaimBindingSchema } from "../run-claims/contracts";
 import { createPublicArchiveReader, selectPublicRunRows } from "./public-archive-page-sqlite";
+import { readSqlitePublicQuestions } from "./public-question-projection";
+import { readSqlitePublicSourceHistory } from "./public-source-history-projection";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 
 /** SOURCE ONLY. Install explicitly in an isolated fixture or after a separately approved rollout.
@@ -247,6 +249,14 @@ function privacyPort(db: DatabaseSync, guard: (write?: boolean) => void, claims?
     async list(query) {
       guard();
       return selectPublicRunRows(db, query).map(value => validatePrivacyRun(JSON.parse(String(value.data))));
+    },
+    async questions(ids) {
+      guard();
+      return readSqlitePublicQuestions(db, ids);
+    },
+    async sourceHistory() {
+      guard();
+      return readSqlitePublicSourceHistory(db);
     },
     async archivePage(query) {
       guard();

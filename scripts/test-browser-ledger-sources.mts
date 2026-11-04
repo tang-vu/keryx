@@ -452,7 +452,19 @@ try {
 
       await open("/sources");
       await page.getByRole("heading", { name: "Sources to explore." }).waitFor();
-      assert.equal(await page.locator("#research-papers article").count(), paperGroups.length);
+      const pagedPaperUrls = new Set<string>();
+      for (let number = 1; number <= Math.ceil(paperGroups.length / 8); number++) {
+        await page.evaluate(number => (window as unknown as { fixtureRenderSources: (params: object) => Promise<void> }).fixtureRenderSources({ paperPage: String(number) }), number);
+        await page.waitForFunction(number => document.querySelector('#research-papers nav [aria-current="page"]')?.textContent === String(number), number);
+        const urls = await page.locator("#research-papers article h3 a").evaluateAll(links => links.map(link => link.getAttribute("href")!));
+        assert.equal(urls.length, Math.min(8, paperGroups.length - (number - 1) * 8));
+        for (const url of urls) { assert(!pagedPaperUrls.has(url), "A work appears on only one page"); pagedPaperUrls.add(url); }
+      }
+      assert.equal(pagedPaperUrls.size, paperGroups.length, "Every configured work remains reachable");
+      for (const group of paperGroups) assert(group.records.some(record => pagedPaperUrls.has(record.url)), "Every original work retains its paper record");
+      await page.evaluate(() => (window as unknown as { fixtureRenderSources: (params: object) => Promise<void> }).fixtureRenderSources({}));
+      await page.waitForFunction(() => document.querySelector('#research-papers nav [aria-current="page"]')?.textContent === "1");
+      assert.equal(await page.locator("#research-papers article").count(), 8);
       await page.getByText("Publisher control unverified", { exact: true }).waitFor();
       await page.getByText("Excerpt in feed").first().waitFor();
       await page.getByText("Show 1 more retained item", { exact: true }).click();
@@ -482,7 +494,7 @@ try {
       assert.equal(await page.getByLabel("Author", { exact: true }).inputValue(), "");
       assert.equal(await page.getByLabel("Publication year", { exact: true }).inputValue(), "");
       assert.equal(await page.getByLabel("Exact DOI", { exact: true }).inputValue(), "");
-      assert.equal(await page.locator("#research-papers article").count(), paperGroups.length);
+      assert.equal(await page.locator("#research-papers article").count(), 8);
       await page.getByLabel(sourceSearchLabel).fill("postgresql.org");
       await page.getByLabel("Collection", { exact: true }).selectOption("explore");
       await page.getByLabel("Topic", { exact: true }).selectOption("data-infrastructure");
