@@ -40,14 +40,23 @@ export function explicitWorkProductLabel(question: string): string | undefined {
     /(?:^|[.!?。！？\r\n\u2028\u2029])\s*(?:xin\s+)?(?:hãy\s+)?(?:đề xuất|gợi ý)\s+(?:(?:một|vài)\s+)?(cách|phương án|quy trình|các bước)(?![\p{L}\p{N}_])/iu,
     /(?:^|[.!?。！？\r\n\u2028\u2029])\s*(?:tôi|mình|chúng tôi)\s+(?:nên|có thể)\s+(làm|thiết kế|xây dựng|cấu hình|triển khai|áp dụng|xử lý)[^.!?\r\n\u2028\u2029]{0,160}(?:thế nào|làm sao|ra sao)/iu,
   ].map(pattern => pattern.exec(visible)?.[1]).find(Boolean);
-  if (!prospective) return;
+  // First-person method questions request an approach for the caller's work.
+  // Recognize actions across subjects; no topic, source or customer allowlist.
+  // Keep descriptive third-person and dictionary questions on ordinary facts.
+  const practical = prospective ? undefined : [
+    /(?:^|[.!?。！？\r\n\u2028\u2029])\s*how\s+(?:can|should|could|would)\s+(?:I|we)\s+(?:(?:best|safely|reliably|practically)\s+)?(prevent|avoid|measure|estimate|triage|prioritize|identify|separate|scope|sample|evaluate|test|validate|track|monitor|reduce|improve|run|keep|stop|pass|distinguish|decide|select|set|define)\b(?=\s+[^.!?\r\n\u2028\u2029]*[\p{L}\p{N}])(?!\s+(?:the\s+)?(?:word|term|phrase|meaning|concept)\b)/iu,
+    /(?:^|[.!?。！？\r\n\u2028\u2029])\s*(?:tôi|mình|chúng tôi)\s+(?:nên|có thể)\s+(đo lường|ước tính|phân loại|ưu tiên|ngăn|tránh|phân biệt|đánh giá|lựa chọn|kiểm chứng)[^.!?\r\n\u2028\u2029]{0,160}(?:thế nào|làm sao|ra sao)/iu,
+  ].map(pattern => pattern.exec(visible)?.[1]).find(Boolean);
+  if (!prospective && !practical) return;
+  // Restrict additional exclusions to the new forms, preserving old labels.
+  if (practical && /\b(?:do not|don't|never|no need to)\s+(?:give|create|make|prepare|draft|write|produce|propose|build|design|include|suggest)[^.!?\r\n\u2028\u2029]{0,80}\b(?:methods?|recommendations?|suggestions?)\b/iu.test(visible)) return;
   // These new forms cannot bypass an explicit no-procedure instruction, a
   // bounded answer format, or the separate classroom-generation rollout.
   if (/\b(?:do not|don't|never|no need to)\s+(?:give|create|make|prepare|draft|write|produce|propose|build|design|include)[^.!?\r\n\u2028\u2029]{0,80}\b(?:steps|workflow|procedure|approach)\b/iu.test(visible) ||
       /(?:đừng|không (?:cần|được|nên))[^.!?\r\n\u2028\u2029]{0,80}(?:cách|phương án|quy trình|các bước)/iu.test(visible) ||
       /\b(?:lesson|classroom|classwork|workshop)\b|\b(?:activity|exercise)\b[^.!?\r\n\u2028\u2029]{0,60}\b(?:class|students|pupils)\b|(?:bài tập|hoạt động)[^.!?\r\n\u2028\u2029]{0,60}(?:học sinh|lớp học)/iu.test(visible) ||
       /(?<![\p{L}\p{N}_])(?:\d{1,4}|um|uma|uno|una|dois|dos|três|tres|quatro|cuatro|cinco|seis|sete|siete|oito|ocho|nove|nueve|dez|diez|onze|once|doze|doce)\s+(?:palavras?|palabras?|frases?|oraciones|oración|tópicos?|pontos?|puntos?)(?![\p{L}\p{N}_])/iu.test(visible)) return;
-  return prospective;
+  return prospective ?? practical;
 }
 
 /** Mask quoted/code spans before recognizing intent, preserving offsets and the
@@ -57,15 +66,15 @@ function withoutQuotedText(value: string): string {
   let visible = "";
   for (let index = 0; index < value.length; index++) {
     const char = value[index];
-    const delimiter = char === "`" ? value.slice(index).match(/^`+/u)![0]
-      : closeFor[char] && (char !== "'" || index === 0 || !/[\p{L}\p{N}]/u.test(value[index - 1])) ? closeFor[char] : undefined;
+    const fence = char === "`" || char === "~" ? value.slice(index).match(/^(?:`+|~{3,})/u)?.[0] : undefined;
+    const delimiter = fence ?? (closeFor[char] && (char !== "'" || index === 0 || !/[\p{L}\p{N}]/u.test(value[index - 1])) ? closeFor[char] : undefined);
     if (!delimiter) { visible += char; continue; }
-    const start = index; index += char === "`" ? delimiter.length : 1;
+    const start = index; index += fence?.length ?? 1;
     for (; index < value.length; index++) {
-      if (char !== "`" && value[index] === "\\") { index++; continue; }
+      if (!fence && value[index] === "\\") { index++; continue; }
       if (value.startsWith(delimiter, index)) { index += delimiter.length; break; }
     }
     visible += value.slice(start, index).replace(/[^\r\n\u2028\u2029]/gu, " "); index--;
   }
-  return visible;
+  return visible.replace(/^[^\S\r\n\u2028\u2029]*>[^\r\n\u2028\u2029]*/gmu, " ");
 }
