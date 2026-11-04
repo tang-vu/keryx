@@ -14,6 +14,8 @@ import { synthesisFailureDetail } from "./synthesis-failure";
 import { parseSynthesisOutputLimit, synthesisOutputLimitFromError } from "../llm/output-limit-diagnostic";
 import { finalizeGroundedAnswer } from "./answer-grounding";
 import { explicitBulletCount } from "../research/explicit-bullet-count";
+import { explicitBulletWordLimit } from "../research/explicit-bullet-word-limit";
+import { finishCombinedAnswerLimits } from "./combined-answer-limits";
 import { prepareBulletCountAnswer, finishBulletCountAnswer, type BulletCountAnswer } from "./bullet-count-answer";
 import { compactWordBudgetAnswer, finishWordBudgetAnswer } from "./word-budget-answer";
 import { compactSentenceNoteAnswer, finishSentenceNoteAnswer, withSentenceNoteNotices, type SentenceNoteAnswer } from "./sentence-note-answer";
@@ -316,11 +318,15 @@ async function* runAdmittedAgent(
     process.env.KERYX_TEACHING_PROPOSALS !== "1"
     ? trustedAnswerPresentation(answerPresentation(input.originalQuestion ?? input.question), input.presentationLanguage) : undefined;
   const initialWordBudget = initialPresentation?.requestedMaximumWords;
-  const explicitBullets = initialPresentation && !initialPresentation.requestedMaximumWords && !initialPresentation.requestedSentenceCount
+  let finalCombinedWordLimit = initialPresentation && !initialPresentation.requestedSentenceCount &&
+    (origin !== "engine" || input.allowExternalWeb === true) &&
+    (input.originalQuestion === undefined || input.originalQuestion === input.question)
+    ? explicitBulletWordLimit(input.question, initialPresentation.language) : undefined;
+  const explicitBullets = initialPresentation && (!initialWordBudget || finalCombinedWordLimit) && !initialPresentation.requestedSentenceCount
     ? explicitBulletCount(input.originalQuestion ?? input.question) : undefined;
   let finalBulletCount: BulletCountAnswer | undefined = explicitBullets?.kind === "recognized"
     ? { request: explicitBullets, presentation: initialPresentation! } : undefined;
-  let finalWordBudget: { maximumWords: number; compactAnswer?: string } | undefined = initialWordBudget
+  let finalWordBudget: { maximumWords: number; compactAnswer?: string } | undefined = initialWordBudget && !finalCombinedWordLimit
     ? { maximumWords: initialWordBudget } : undefined;
   let finalSentenceNote: { count: number; compactAnswer?: SentenceNoteAnswer } | undefined = initialPresentation?.requestedSentenceCount
     ? { count: initialPresentation.requestedSentenceCount } : undefined;
@@ -2094,6 +2100,9 @@ async function* runAdmittedAgent(
       { question: input.question, answer, ledger, statements: citedStatements, synthesisUnavailable: Boolean(synthesisFailure) },
       answer, verdict.level === "Low" && used.length > 0 ? verdict : undefined);
   }
+  // Keep proposed work products on their existing delivery contract. This new
+  // projection only has the factual statement/excerpt binding needed to fit.
+  if (!ordinaryPresentation || brief || teachingRequest || workProductRequest) finalCombinedWordLimit = undefined;
 
   // 6) ATTRIBUTE contribution weights
   if (used.length > 0) {
@@ -2531,7 +2540,13 @@ async function* runAdmittedAgent(
         { answer, requestedSentenceCount: finalSentenceNote.count, noteSentenceCount: delivered.noteSentenceCount,
           sentenceSegments: delivered.sentenceSegments, outcome: delivered.outcome });
     }
-    if (finalBulletCount) {
+    if (finalBulletCount && finalCombinedWordLimit) {
+      const delivered = finishCombinedAnswerLimits(answer, finalBulletCount, finalCombinedWordLimit);
+      answer = delivered.answer;
+      emit("synthesize", "Final combined bullet and complete-answer word limits; evidence and payment decisions are unchanged.",
+        { answer, requestedBulletCount: finalBulletCount.request.count, mode: finalBulletCount.request.mode,
+          maximumWords: finalCombinedWordLimit, words: delivered.words, bullets: delivered.bullets, outcome: delivered.outcome });
+    } else if (finalBulletCount) {
       const delivered = finishBulletCountAnswer(answer, finalBulletCount);
       answer = delivered.answer;
       emit("synthesize", "Final explicit bullet-count projection; evidence and payment decisions are unchanged.",
