@@ -5,6 +5,8 @@ import { selectCitedStatements } from "./cited-statements";
 import { answerPresentation } from "../research/answer-presentation";
 import type { ProposedEvidence } from "../llm/reasoning-engine";
 import { mdnModelReplay } from "./fixtures/mdn-model-replay";
+import { explicitBulletCount } from "../research/explicit-bullet-count";
+import { prepareBulletCountAnswer, finishBulletCountAnswer } from "./bullet-count-answer";
 
 // Synthetic deterministic delivery fixture, not a live model/usefulness evaluation.
 const quotes = ["submit: O botão envia os dados do formulário para o servidor. Esse é o padrão se o atributo não for especificado.",
@@ -39,8 +41,46 @@ function deliver(data = fixture(), caller = question, optIn = true) {
   return finalizeGroundedAnswer({ question: caller, answer: "Fabricated draft conclusion [S1]",
     ledger: data.ledger, statements: data.selected, ...(optIn ? { presentation: answerPresentation(caller) } : {}) });
 }
+function project(data: ReturnType<typeof fixture>, caller: string) {
+  const request = explicitBulletCount(caller);
+  if (request?.kind !== "recognized") throw new Error("Fixture requires an explicit count");
+  const canonical = deliver(data, caller), presentation = answerPresentation(caller);
+  const prepared = prepareBulletCountAnswer({ request, presentation },
+    { question: caller, answer: canonical, ledger: data.ledger, statements: data.selected }, canonical);
+  return finishBulletCountAnswer(canonical, prepared).answer;
+}
 
 describe("ordinary grounded presentation", () => {
+  it.each([
+    ["Write exactly 3 bullets.", 3], ["Write at most 4 bullets.", 3],
+    ["Viết đúng 3 gạch đầu dòng.", 3], ["Viết tối đa 4 gạch đầu dòng.", 3],
+  ])("preserves every fact, quote and target in the caller's count contract: %s", (caller, count) => {
+    const data = fixture(), before = JSON.stringify(data.ledger, (_key, value) => value instanceof Set ? [...value] : value);
+    const answer = project(data, caller as string);
+    expect(answer.match(/^- /gm)).toHaveLength(count as number);
+    for (const statement of statements) expect(answer).toContain(statement);
+    for (const quote of quotes) expect(answer).toContain(`“${quote}”`);
+    expect([...extractAnswerMarkers(answer)]).toEqual(["S1"]);
+    expect(JSON.stringify(data.ledger, (_key, value) => value instanceof Set ? [...value] : value)).toBe(before);
+  });
+  it.each(["Write at most 2 bullets.", "Viết tối đa 2 gạch đầu dòng."])("retains all evidence on an impossible upper bound: %s", caller => {
+    const answer = project(fixture(), caller);
+    expect(answer).toContain("≤ 2");
+    expect(answer).toMatch(/Research target 4|Yêu cầu nghiên cứu 4/u);
+    for (const statement of statements) expect(answer).toContain(statement);
+    for (const quote of quotes) expect(answer).toContain(`“${quote}”`);
+  });
+  it.each([{ missing: 1 }, { partial: true }, { failedReview: 1 }, { extraQuote: true }])("never uses a maximum to conceal an incomplete evidence set: %j", options => {
+    const data = fixture(options), answer = project(data, "Write at most 4 bullets.");
+    expect(answer).toContain("Could not present ≤ 4 short bullets");
+    expect(answer).toContain("Research target 4");
+    for (const statement of data.selected) expect(answer).toContain(statement.text);
+    for (const item of data.ledger.evidence.filter(item => item.qualifiesForAnswer)) expect(answer).toContain(item.quote);
+  });
+  it("does not pad an exact four-count or lose the upper-bound marker in another prepared label language", () => {
+    expect(project(fixture(), "Write exactly 4 bullets.")).toContain("Could not present 4 short bullets");
+    expect(project(fixture(), "Write at most 2 bullets. Answer in Japanese.")).toContain("≤ 2");
+  });
   it("replays the retained five-sentence MDN model output as three bullets, retaining all four targets and every original pairing", () => {
     const data = mdnModelReplay();
     const before = JSON.stringify(data.ledger, (_key, value) => value instanceof Set ? [...value] : value);

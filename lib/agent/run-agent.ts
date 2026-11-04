@@ -13,6 +13,8 @@ import { documentAlreadyRead, documentSelectionKey } from "./document-selection"
 import { synthesisFailureDetail } from "./synthesis-failure";
 import { parseSynthesisOutputLimit, synthesisOutputLimitFromError } from "../llm/output-limit-diagnostic";
 import { finalizeGroundedAnswer } from "./answer-grounding";
+import { explicitBulletCount } from "../research/explicit-bullet-count";
+import { prepareBulletCountAnswer, finishBulletCountAnswer, type BulletCountAnswer } from "./bullet-count-answer";
 import { compactWordBudgetAnswer, finishWordBudgetAnswer } from "./word-budget-answer";
 import { compactSentenceNoteAnswer, finishSentenceNoteAnswer, withSentenceNoteNotices, type SentenceNoteAnswer } from "./sentence-note-answer";
 import { selectCitedStatements } from "./cited-statements";
@@ -313,6 +315,10 @@ async function* runAdmittedAgent(
     process.env.KERYX_TEACHING_PROPOSALS !== "1"
     ? trustedAnswerPresentation(answerPresentation(input.originalQuestion ?? input.question), input.presentationLanguage) : undefined;
   const initialWordBudget = initialPresentation?.requestedMaximumWords;
+  const explicitBullets = initialPresentation && !initialPresentation.requestedMaximumWords && !initialPresentation.requestedSentenceCount
+    ? explicitBulletCount(input.originalQuestion ?? input.question) : undefined;
+  let finalBulletCount: BulletCountAnswer | undefined = explicitBullets?.kind === "recognized"
+    ? { request: explicitBullets, presentation: initialPresentation! } : undefined;
   let finalWordBudget: { maximumWords: number; compactAnswer?: string } | undefined = initialWordBudget
     ? { maximumWords: initialWordBudget } : undefined;
   let finalSentenceNote: { count: number; compactAnswer?: SentenceNoteAnswer } | undefined = initialPresentation?.requestedSentenceCount
@@ -2075,6 +2081,14 @@ async function* runAdmittedAgent(
     : `Prepared source excerpts citing ${citedSourceCount} source(s); complete synthesis is unverified`, { answer });
   yield emit("verdict", `Confidence: ${verdict.level} — ${verdict.reason}.`, verdict);
 
+  // New count directions project after settlement. Keep the existing factual
+  // packets and this exact canonical answer as attribution/payment input.
+  if (finalBulletCount && ordinaryPresentation && !brief && !teachingRequest) {
+    finalBulletCount = prepareBulletCountAnswer({ ...finalBulletCount, presentation },
+      { question: input.question, answer, ledger, statements: citedStatements, synthesisUnavailable: Boolean(synthesisFailure) },
+      answer, verdict.level === "Low" && used.length > 0 ? verdict : undefined);
+  }
+
   // 6) ATTRIBUTE contribution weights
   if (used.length > 0) {
     // Contribution weights bind to articles. Duplicate publisher IDs get unique
@@ -2510,6 +2524,13 @@ async function* runAdmittedAgent(
       emit("synthesize", "Final sentence-note projection with separately labeled exact originals and mandatory notices; evidence and payment decisions are unchanged.",
         { answer, requestedSentenceCount: finalSentenceNote.count, noteSentenceCount: delivered.noteSentenceCount,
           sentenceSegments: delivered.sentenceSegments, outcome: delivered.outcome });
+    }
+    if (finalBulletCount) {
+      const delivered = finishBulletCountAnswer(answer, finalBulletCount);
+      answer = delivered.answer;
+      emit("synthesize", "Final explicit bullet-count projection; evidence and payment decisions are unchanged.",
+        { answer, requestedBulletCount: finalBulletCount.request.count, mode: finalBulletCount.request.mode,
+          bullets: delivered.bullets, outcome: delivered.outcome });
     }
     const totalSpent = round(
       payments
