@@ -39,6 +39,12 @@ const cases = {
   methodPilot: { question: "We have eight analysts. How should we measure a pilot before renewing?", deliverable: "A conditional pilot measurement draft.",
     context: "Baseline measurements and task comparability are unknown.", fact: "The fictional pilot source describes measuring a workflow against its baseline.",
     sections: [{ id: "w1", heading: "Proposed baseline check", text: "Propose recording comparable tasks and their baseline measurements before interpreting a pilot outcome.", premiseIds: ["e1"], conditions: ["If comparable tasks can be agreed; no time savings or statistical validity is established."] }] },
+  implicitCheck: { question: "Working links are insufficient. What's a quick way to check whether a citation supports the answer?", deliverable: "A conditional citation checking draft.",
+    context: "The original claim and source context remain to be inspected.", fact: "The fictional source distinguishes a working link from support for a claim.",
+    sections: [{ id: "w1", heading: "Proposed claim check", text: "Propose selecting a claim and checking its cited passage before interpreting the other citations.", premiseIds: ["e1"], conditions: ["If the original passage is available; this check has not run and does not verify every claim."] }] },
+  implicitSpot: { question: "Is there a practical way to spot record mismatches without checking every record by hand?", deliverable: "A conditional record checking draft.",
+    context: "The collection and error distribution remain unknown.", fact: "The fictional source describes comparing selected records against their originals.",
+    sections: [{ id: "w1", heading: "Proposed sample check", text: "Propose comparing selected records with their originals and retaining the scope of the unchecked records.", premiseIds: ["e1"], conditions: ["If original records are available; finding no mismatch does not establish that every record is correct."] }] },
   methodTriage: { question: "How should we triage a shared inbox without a complex ticketing system?", deliverable: "A conditional triage draft.",
     context: "Staff coverage and response commitments are unknown.", fact: "The fictional support source distinguishes failures from requests for new capabilities.",
     sections: [{ id: "w1", heading: "Proposed inbox categories", text: "Propose separating reported failures from new-capability requests, retaining unclear reports for review.", premiseIds: ["e1"], conditions: ["If the team can review unclear reports; no response commitment is inferred."] }] },
@@ -67,7 +73,7 @@ class Transport extends JsonChatEngine {
         criteria: product.request.criteria.map((_v, index) => ({ index, status: this.unmetCriterion ? "unsupported" : "supported" })) } } : {}) };
   }
 }
-async function drive(kind: Case, options: { plain?: boolean; reject?: boolean; losePremise?: boolean; changedOriginal?: boolean; teaching?: boolean; private?: boolean; ordinary?: boolean; unmetCriterion?: boolean; explicitLimit?: boolean } = {}) {
+async function drive(kind: Case, options: { plain?: boolean; reject?: boolean; losePremise?: boolean; changedOriginal?: boolean; teaching?: boolean; private?: boolean; ordinary?: boolean; unmetCriterion?: boolean; explicitLimit?: boolean; unavailableRead?: boolean } = {}) {
   vi.useFakeTimers({ toFake: ["Date"] });vi.setSystemTime(new Date("2026-11-04T00:00:00Z"));
   vi.stubEnv("KERYX_TEACHING_PROPOSALS", options.teaching ? "1" : "0");
   const sample = cases[kind], url = "https://example.org/synthetic-original";
@@ -88,7 +94,10 @@ async function drive(kind: Case, options: { plain?: boolean; reject?: boolean; l
   const effects: ResearchEffects = { scope: options.private ? { kind: "job", queryId } : { kind: "public" }, discoverExternal: async () => [], decisionContext: async () => ({ sample: 0 }),
     getCached: async () => null, getCachedAt: async () => null, setCached: async () => {}, recordPayment: denied, saveQueryRun: vi.fn(async () => {}),
     saveMemory: async () => {}, notifyCitation: () => {}, alert: () => {}, activation: async () => {} };
-  const read = vi.fn(async (finalUrl: string) => ({ finalUrl, text: sample.fact, title: "Synthetic original only", kind: "text" as const, truncated: false }));
+  const read = vi.fn(async (finalUrl: string) => {
+    if (options.unavailableRead) throw new Error("Synthetic original read unavailable");
+    return { finalUrl, text: sample.fact, title: "Synthetic original only", kind: "text" as const, truncated: false };
+  });
   const deps: AgentDeps = { engine, effects, db: { listSources: async () => [], listPublicReferences: async () => [] } as unknown as KeryxDB,
     readWebArticle: read, webSearch: { search: vi.fn(async () => options.ordinary ?
       [{ title: "Synthetic original only", url, snippet: "Unread synthetic search metadata; never evidence." }] : []) } as unknown as AgentDeps["webSearch"],
@@ -126,7 +135,7 @@ it.each([{ changedOriginal: true }, { teaching: true }, { private: true }])("doe
   expect(f.run.answer).not.toContain(cases.operations.sections[0].text);expect(f.denied).not.toHaveBeenCalled();
 });
 
-it.each(["study", "operations", "comparison", "applicationEn", "applicationVi", "methodRetry", "methodPilot", "methodTriage", "methodVi"] as const)("delivers an ordinary %s request with complete caller scope and the same factual/financial result", async kind => {
+it.each(["study", "operations", "comparison", "applicationEn", "applicationVi", "methodRetry", "methodPilot", "methodTriage", "methodVi", "implicitCheck", "implicitSpot"] as const)("delivers an ordinary %s request with complete caller scope and the same factual/financial result", async kind => {
   const baseline = await drive(kind, { ordinary: true, plain: true }), f = await drive(kind, { ordinary: true });
   const request = f.synthesize.mock.calls[0][0].workProductRequest!;
   expect(request).toMatchObject({ version: 2, criteria: [cases[kind].question] });
@@ -155,17 +164,25 @@ it.each([{ changedOriginal: true }, { teaching: true }, { private: true }, { exp
   expect(f.run.answer).not.toContain(cases.operations.sections[0].text);expect(f.denied).not.toHaveBeenCalled();
 });
 
-it.each((["applicationEn", "applicationVi", "methodRetry", "methodPilot", "methodTriage", "methodVi"] as const).flatMap(kind =>
+it.each((["applicationEn", "applicationVi", "methodRetry", "methodPilot", "methodTriage", "methodVi", "implicitCheck", "implicitSpot"] as const).flatMap(kind =>
   [{ reject: true }, { losePremise: true }].map(options => ({ kind, options }))))("withholds a newly recognized $kind draft when its review or factual premise fails: $options", async ({ kind, options }) => {
   const f = await drive(kind, { ...options, ordinary: true });
   expect(f.run.answer).not.toContain(cases[kind].sections[0].text);
   expect(f.denied).not.toHaveBeenCalled();expect(f.transport.calls).toHaveLength(2);
 });
 
-it.each((["applicationEn", "applicationVi", "methodRetry", "methodPilot", "methodTriage", "methodVi"] as const).flatMap(kind =>
+it.each((["applicationEn", "applicationVi", "methodRetry", "methodPilot", "methodTriage", "methodVi", "implicitCheck", "implicitSpot"] as const).flatMap(kind =>
   [{ changedOriginal: true }, { teaching: true }, { private: true }, { explicitLimit: true }].map(options => ({ kind, options }))))("keeps newly recognized $kind input behind the existing protected-scope gate: $options", async ({ kind, options }) => {
   const f = await drive(kind, { ...options, ordinary: true });
   if ("private" in options) { expect(f.synthesize).not.toHaveBeenCalled();expect(f.read).not.toHaveBeenCalled(); }
   else expect(f.synthesize.mock.calls[0][0].workProductRequest).toBeUndefined();
   expect(f.run.answer).not.toContain(cases[kind].sections[0].text);expect(f.denied).not.toHaveBeenCalled();
+});
+
+it.each(["implicitCheck", "implicitSpot"] as const)("retains unsupported delivery when $kind has no successful original read", async kind => {
+  const f = await drive(kind, { ordinary: true, unavailableRead: true });
+  expect(f.read).toHaveBeenCalledOnce();expect(f.synthesize).not.toHaveBeenCalled();expect(f.transport.calls).toHaveLength(0);
+  expect(f.run.answer).toContain("No supported answer");expect(f.run.answer).not.toContain(cases[kind].sections[0].text);
+  expect(f.run.totalSpent).toBe(0);expect(f.run.totalToCreators).toBe(0);expect(f.denied).not.toHaveBeenCalled();
+  expect(verifyResearchReceipt(buildResearchReceipt(f.run, [])).valid).toBe(true);
 });
