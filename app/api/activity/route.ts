@@ -1,4 +1,5 @@
-import { listedQuestion, publicFinancialPayment } from "@/lib/run-privacy/public";
+import { publicFinancialPayment } from "@/lib/run-privacy/public";
+import { listedQuestions } from "@/lib/run-privacy/listed-questions";
 /**
  * GET /api/activity — the most recent REAL settled citations (source, question, reward, time).
  *
@@ -25,13 +26,7 @@ export async function GET() {
 
     // Attach the question each citation was for — dedupe queryIds so it's one lookup per query.
     const queryIds = [...new Set(citations.map((p) => p.queryId).filter(Boolean))];
-    const questionById = new Map<string, string>();
-    await Promise.all(
-      queryIds.map(async (qid) => {
-        const question = await listedQuestion(db,qid);
-        if (question) questionById.set(qid, question);
-      }),
-    );
+    const questionById = await listedQuestions(db, queryIds);
 
     const activity = citations.map((p) => ({
       sourceId: p.sourceId,
