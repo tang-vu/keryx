@@ -19,7 +19,10 @@ export function readSqlitePublicQuestions(db: DatabaseSync, rawIds: string[]): P
       WHERE p.visibility='public' AND p.erased=0 AND q.id IN (SELECT value FROM json_each(?))
       ORDER BY q.created_at DESC,q.id DESC LIMIT 32)
       SELECT q.id,length(CAST(q.data AS BLOB)) AS data_bytes,
-        CASE WHEN length(CAST(q.data AS BLOB))>4000000 THEN NULL ELSE (
+        CASE WHEN typeof(q.data)!='text' THEN NULL
+          WHEN length(CAST(q.data AS BLOB))>4000000 THEN NULL
+          WHEN instr(q.data,char(0))>0 THEN NULL
+          WHEN json_valid(q.data)=0 THEN NULL ELSE (
           SELECT json_group_array(json_array(f.key,f.type,CASE
             WHEN f.key IN ('id','createdAt','question','engine') AND f.type='text'
               OR f.key IN ('budget','totalSpent','totalToCreators') AND f.type IN ('integer','real')
