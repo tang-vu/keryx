@@ -6,6 +6,9 @@ import { originalOrderPaymentSchema } from "../a2a/overdue-types";
 export const visibilitySchema = z.enum(["private", "unlisted", "public"]);
 export type RunVisibility = z.infer<typeof visibilitySchema>;
 export const privacyId = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
+export const publicQuestionIdsSchema = z.array(privacyId).max(32).transform(ids => [...new Set(ids)]);
+export const publicQuestionSchema = z.object({ id: privacyId, question: z.string() }).strict();
+export type PublicQuestion = z.infer<typeof publicQuestionSchema>;
 export const privacyWallet = z.string().transform(value => value.toLowerCase()).pipe(z.string().regex(/^0x[a-f0-9]{40}$/));
 export const privacySession = z.string().regex(/^[a-f0-9]{64}$/);
 export const privacyMutation = z.object({ visibility: visibilitySchema.optional(), revision: z.number().int().min(0),
@@ -31,6 +34,8 @@ export interface RunPrivacyStore {
   /** Filters in storage before retrieving any text; hidden and erased originals never leave this port. */
   read(id: string, actor?: PrivacyActor): Promise<PrivacyRead>;
   list(query: PrivacyList): Promise<QueryRun[]>;
+  /** Fresh storage-filtered canonical questions only; no answer/trace materialization. */
+  questions?(ids: string[]): Promise<PublicQuestion[]>;
   /** Optional slim reader (1–32 rows); each call admits current public originals in storage. */
   archivePage?(query: PrivacyList): Promise<import("./archive-page").PublicArchiveRow[]>;
   /** Shared memory uses only publicly listed research; private topic text never becomes cross-owner context. */
