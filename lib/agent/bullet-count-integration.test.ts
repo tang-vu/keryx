@@ -10,6 +10,7 @@ import * as bulletIntent from "../research/explicit-bullet-count";
 import { buildResearchReceipt, verifyResearchReceipt } from "../research-receipt";
 import { researchReportMarkdown } from "../research-report-export";
 import { prepareSpecialistBrief } from "../research/specialist-briefs";
+import { completeAnswerWords } from "../research/answer-word-budget";
 
 // Synthetic facts and controlled reviewer judgments. This tests the real shared
 // orchestrator and JsonChatEngine packets, not live model quality or user utility.
@@ -36,7 +37,8 @@ class Transport extends JsonChatEngine {
 }
 afterEach(() => { vi.restoreAllMocks();vi.unstubAllEnvs();vi.unstubAllGlobals();vi.useRealTimers(); });
 
-async function drive(question: string, options: { baseline?: boolean; reject?: boolean; private?: boolean; package?: boolean; teaching?: boolean } = {}) {
+async function drive(question: string, options: { baseline?: boolean; reject?: boolean; private?: boolean; package?: boolean; teaching?: boolean;
+  empty?: boolean; originalQuestion?: string } = {}) {
   vi.useFakeTimers({ toFake: ["Date"] });vi.setSystemTime(new Date("2026-11-04T00:00:00Z"));
   vi.stubEnv("KERYX_TEACHING_PROPOSALS", options.teaching ? "1" : "0");
   const selector = options.baseline ? vi.spyOn(bulletIntent, "explicitBulletCount").mockReturnValue(undefined) : undefined;
@@ -61,9 +63,10 @@ async function drive(question: string, options: { baseline?: boolean; reject?: b
   });
   const deps: AgentDeps = { engine, effects, readWebArticle: read,
     db: { listSources: async () => [], listPublicReferences: async () => [] } as unknown as KeryxDB,
-    webSearch: { search: vi.fn(async () => [{ title: "Synthetic queue original", url, snippet: "Unread discovery metadata, never evidence." }]) },
+    webSearch: { search: vi.fn(async () => options.empty ? [] : [{ title: "Synthetic queue original", url, snippet: "Unread discovery metadata, never evidence." }]) },
     gateway: { mode: "real", agentAddress: () => "0x0000000000000000000000000000000000000001", ensureFunded: denied, payFetch: denied, payCitation: denied } as unknown as PaymentGateway };
   const input: RunInput = { queryId, question, origin: "web", researchMode: "quick", budget: 0,
+    ...(options.originalQuestion ? { originalQuestion: options.originalQuestion } : {}),
     ...(options.package ? { executionLimits: { attentionLimit: 1, reevaluateRounds: 0 } } : {}) };
   try {
     const iterator = runAgent(input, deps);let step = await iterator.next();while (!step.done) step = await iterator.next();
@@ -92,6 +95,59 @@ it.each([
   expect(current.run.trace.find(row => row.message.startsWith("Final explicit bullet-count"))?.detail).toMatchObject({ outcome: "met" });
   const receipt = buildResearchReceipt(current.run, []);expect(verifyResearchReceipt(receipt).valid).toBe(true);
   expect(receipt.payload.dispatch.answer).toBe(current.run.answer);expect(researchReportMarkdown(current.run, null, [])).toContain(current.run.answer);
+});
+
+it.each([
+  "Explain queue behavior. Write exactly 3 bullets, at most 180 words.",
+  "Explain queue behavior. Write at most 4 bullets, at most 180 words.",
+  "Explain queue behavior. Write exactly 3 bullets. Keep the answer within 180 words.",
+  "Giải thích hàng đợi. Viết bằng tiếng Việt đúng 3 gạch đầu dòng, tối đa 180 từ.",
+  "Giải thích hàng đợi. Viết bằng tiếng Việt tối đa 4 gạch đầu dòng, không quá 180 từ.",
+])("meets both final constraints with unchanged evidence, model calls and financial results: %s", async question => {
+  const baseline = await drive(question, { baseline: true }), current = await drive(question);
+  expect(current.run.answer.match(/^- /gm)).toHaveLength(3);
+  expect(completeAnswerWords(current.run.answer)).toBeLessThanOrEqual(180);
+  const projection = current.run.trace.find(row => row.message.startsWith("Final combined bullet"));
+  expect(projection?.detail).toMatchObject({ outcome: "met", maximumWords: 180, bullets: 3, words: completeAnswerWords(current.run.answer) });
+  expect(current.transport.packets).toEqual(baseline.transport.packets);expect(current.transport.packets).toHaveLength(2);
+  expect(current.synthesize.mock.calls).toEqual(baseline.synthesize.mock.calls);
+  expect(current.attribute.mock.calls).toEqual(baseline.attribute.mock.calls);
+  expect(current.run.evidence).toEqual(baseline.run.evidence);expect(current.run.claimCoverage).toEqual(baseline.run.claimCoverage);
+  expect(current.run.decisions).toEqual(baseline.run.decisions);expect(current.run.citations).toEqual(baseline.run.citations);
+  expect(current.run.totalSpent).toBe(baseline.run.totalSpent);expect(current.run.totalToCreators).toBe(baseline.run.totalToCreators);
+  expect(current.readMetadata).toEqual(baseline.readMetadata);expect(current.denied).not.toHaveBeenCalled();
+  for (const fact of facts) expect(current.run.answer).toContain(fact);
+  const receipt = buildResearchReceipt(current.run, []);expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  expect(receipt.payload.dispatch.answer).toBe(current.run.answer);expect(researchReportMarkdown(current.run, null, [])).toContain(current.run.answer);
+});
+
+it.each([
+  ["Viết bằng tiếng Việt đúng 3 gạch đầu dòng, tối đa 10 từ.", {}],
+  ["Viết bằng tiếng Việt đúng 4 gạch đầu dòng, tối đa 180 từ.", {}],
+  ["Viết bằng tiếng Việt đúng 3 gạch đầu dòng, tối đa 180 từ.", { reject: true }],
+  [`Đọc ${url}. Viết bằng tiếng Việt đúng 3 gạch đầu dòng, tối đa 180 từ.`, {}],
+] as const)("retains complete canonical content when either final constraint cannot fit: %s", async (instruction, options) => {
+  const question = `Giải thích hàng đợi. ${instruction}`, baseline = await drive(question, { ...options, baseline: true }), current = await drive(question, options);
+  expect(current.run.answer.endsWith(baseline.run.answer)).toBe(true);
+  expect(current.run.answer).toContain("Chưa thể đáp ứng đồng thời");
+  expect(current.run.trace.find(row => row.message.startsWith("Final combined bullet"))?.detail).toMatchObject({ outcome: "unmet" });
+  expect(current.run.evidence).toEqual(baseline.run.evidence);expect(current.run.citations).toEqual(baseline.run.citations);
+  expect(current.attribute.mock.calls).toEqual(baseline.attribute.mock.calls);expect(current.denied).not.toHaveBeenCalled();
+});
+
+it.each([{ private: true }, { package: true }, { teaching: true }, { originalQuestion: "Original queue request." }])
+  ("keeps protected and augmented requests outside the combined projection: %j", async options => {
+    const current = await drive("Explain queue behavior. Write exactly 3 bullets, at most 180 words.", options);
+    expect(current.run.trace.some(row => row.message.startsWith("Final combined bullet"))).toBe(false);
+    expect(current.denied).not.toHaveBeenCalled();
+  });
+
+it("preserves a no-source early result and accurately reports the unmet joint format", async () => {
+  const question = "Giải thích hàng đợi. Viết bằng tiếng Việt đúng 3 gạch đầu dòng, tối đa 180 từ.";
+  const baseline = await drive(question, { baseline: true, empty: true }), current = await drive(question, { empty: true });
+  expect(current.run.answer.endsWith(baseline.run.answer)).toBe(true);
+  expect(current.run.trace.find(row => row.message.startsWith("Final combined bullet"))?.detail).toMatchObject({ outcome: "unmet" });
+  expect(current.transport.packets).toHaveLength(0);expect(current.read).not.toHaveBeenCalled();expect(current.denied).not.toHaveBeenCalled();
 });
 
 it.each(["Write exactly 4 bullets.", "Write at most 2 bullets."])("keeps every admitted fact and reports an unmet format: %s", async direction => {
