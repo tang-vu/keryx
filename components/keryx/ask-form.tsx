@@ -272,7 +272,7 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
             value={question}
             onChange={(e) => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(e.target.value); }}
             onKeyDown={(e) => {
-              if (!e.nativeEvent.isComposing && (e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); submit(); }
+              if (!e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229 && (e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); submit(); }
             }}
             placeholder={message("researchEntry.placeholder")}
             rows={2}

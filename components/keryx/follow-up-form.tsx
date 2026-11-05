@@ -55,7 +55,10 @@ export function FollowUpForm({ parentId }: { parentId: string }) {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
+              if (!e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229 && e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                submit();
+              }
             }}
             maxLength={MAX_Q}
             rows={2}
