@@ -17,10 +17,8 @@ import { privateMerchantPolicySchema } from "@/lib/buyer/private-merchant-policy
 import { config } from "@/lib/config";
 import { quoteA2aResearch } from "@/lib/a2a/pricing";
 import { parseBuyerBudget } from "@/lib/a2a/buyer-workspace";
-import { monthlyAdmissionQuote } from "@/lib/monthly/readiness";
-import { ResearchMonthly } from "@/components/keryx/research-monthly";
-import { getDb } from "@/lib/db";
-import { assertMainnetHostedResearchReady } from "@/lib/payments/mainnet-hosted-gateway";
+import { monthlyConfigured } from "@/lib/monthly/readiness";
+import { ResearchMonthlyOffer } from "@/components/keryx/research-monthly-offer";
 import { RESEARCH_AVAILABILITY_UNKNOWN } from "@/lib/research/availability-contract";
 import { UiMessage, UiRichMessage, UiText } from "@/lib/i18n/ui-copy";
 
@@ -47,17 +45,7 @@ export default async function ResearchPage({ searchParams }: {
   const quote = budget !== null && validMode ? quoteA2aResearch(budget, mode) : null;
   const configured = !!config.sellerAddress && process.env.KERYX_FORCE_OFFLINE !== "1"
     && (!config.profile.testnet || !!config.funderKey);
-  const available = await (async () => { try {
-    if (!configured) return false;
-    if (config.profile.testnet) return !!config.funderKey;
-    if (!quote) return false;
-    await assertMainnetHostedResearchReady(await getDb(), String(Math.round(quote.creatorBudgetUsdc * 1e6)));
-    return true;
-  } catch { return false; } })();
   const privatePolicy = privateMerchantPolicySchema.safeParse({ privatePayee: process.env.KERYX_PRIVATE_RESEARCH_PAYEE, publicResearchPayee: config.sellerAddress });
-  const monthlyQuote = await (async () => { try {
-    return await monthlyAdmissionQuote(await getDb());
-  } catch { return null; } })();
   return (
     <div className="min-h-screen bg-paper-2 text-ink">
       <SiteHeader />
@@ -95,7 +83,7 @@ export default async function ResearchPage({ searchParams }: {
             <p className="mt-4 font-serif text-ink-2"><UiText source={[copy(quote.researchPackage.execution.attentionLimit === 1 ? "paidResearch.sources.one" : "paidResearch.sources.other", { count: quote.researchPackage.execution.attentionLimit }), copy(quote.researchPackage.execution.reevaluateRounds === 1 ? "paidResearch.rounds.one" : "paidResearch.rounds.other", { count: quote.researchPackage.execution.reevaluateRounds }), copy("paidResearch.target", { seconds: quote.researchPackage.serviceLevel.targetCompletionMs / 1000 })].join(" · ")} /></p>
             <p className="mt-2 font-serif text-sm text-ink-3"><UiMessage messageKey={"paidResearch.terms"} /></p>
             {configured ? <>
-              {!available && <p role="status" className="mt-4 text-seal">{RESEARCH_AVAILABILITY_UNKNOWN}</p>}
+              <p role="status" className="mt-4 text-seal">{RESEARCH_AVAILABILITY_UNKNOWN}</p>
               <p className="mt-4 break-all font-mono text-xs"><UiRichMessage messageKey={"paidResearch.paymentIdentity"} values={{ network: config.networkId, payee: config.sellerAddress, lineBreak: <br /> }} /></p>
               <ResearchRequest key={`${mode}:${quote.creatorBudgetUsdc}`} mode={mode} budget={quote.creatorBudgetUsdc} version={quote.researchPackage.version} total={quote.totalPriceUsdc} payee={config.sellerAddress} />
             </> : <p role="status" className="mt-4 text-seal"><UiMessage messageKey={"paidResearch.unavailable"} values={{ network: config.profile.label }} /></p>}
@@ -104,7 +92,7 @@ export default async function ResearchPage({ searchParams }: {
         <ResearchSavedJobs />
         </ResearchWorkspace>
         <ResearchAccountJobs />
-        {monthlyQuote && <ResearchMonthly quote={monthlyQuote} />}
+        {monthlyConfigured() && <ResearchMonthlyOffer />}
         {process.env.KERYX_PRIVATE_RESEARCH_ENABLED === "1" && privatePolicy.success
           && <ResearchPrivateCheckout merchants={privatePolicy.data} />}
         <ResearchPrivateJobs />
