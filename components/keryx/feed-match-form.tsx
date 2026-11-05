@@ -119,7 +119,10 @@ export function FeedMatchForm({
               value={rssUrl}
               onChange={(e) => setRssUrl(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") check();
+                if (!e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229 && e.key === "Enter") {
+                  e.preventDefault();
+                  void check();
+                }
               }}
               maxLength={2048}
               placeholder="https://yourblog.com/feed.xml"
