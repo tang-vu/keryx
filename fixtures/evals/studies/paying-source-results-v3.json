@@ -105,7 +105,7 @@
     "lib/bibliographies/private-bibliography.ts": "1bc50063cd70cbb2ec717f4c7fc38044200a6382b20fdbd89bfe3857546f0dbb",
     "lib/browser-payment-profile.ts": "dd5f462f7bb1d1962c00851cf9af2e54bd69d24053902980c15e5a353caa0498",
     "lib/browser-receipt-integrity.ts": "a7a6510c102b434e0e6423670be1dd20f1d30a5dc1a0e8c3461b2be9f96204df",
-    "lib/business-operator/canary-policy.ts": "23e4986bebbb9b07cf93b6547b09a39cc656a6d8424994b458ecee67cb1d1104",
+    "lib/business-operator/canary-policy.ts": "840533708041cc16a6bdf7c676befa1b9b9f3ac12d60decbe7940a3455503abe",
     "lib/business-operator/canary-research-isolation.ts": "9ef28cd91a0362d4d4283bf00c2a95d994053712305e55684b17e58bafb7a49a",
     "lib/business-operator/canary-suppliers.ts": "568f163766d455e46ac59824754ddda0f061c3490e086415c8414eb5e861f6b5",
     "lib/business-operator/continuation-epoch.ts": "b1ad954f34d01fe98b7ea7e1d1b1a0b14110aae6e1fcb5964d35085b639cb3a4",
