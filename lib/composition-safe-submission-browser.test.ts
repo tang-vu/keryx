@@ -81,14 +81,14 @@ it.each(shortcuts)("does not hand off a follow-up at $phase ($modifier+Enter)", 
     await question.dispatchEvent("compositionstart", { data: "入力" });
     if (!composing) await question.dispatchEvent("compositionend", { data: "入力" });
     expect(await enter(question, composing, modifier, keyCode), "IME retains the default Enter action").toBe(true);
-    expect(await page.evaluate(() => (window as HandoffWindow).handoffs)).toEqual([]);
+    expect(await page.evaluate(() => (window as unknown as HandoffWindow).handoffs)).toEqual([]);
     expect(posts).toEqual([]);
     expect(await question.inputValue()).toBe("入力中 · Đang chọn chữ");
     await question.dispatchEvent("compositionend", { data: "入力完了" });
     const completed = "入力完了 · Điều gì & tại sao? # hỏi tiếp";
     await question.fill(completed);
     expect(await enter(question, false, modifier), "An accepted shortcut consumes Enter").toBe(false);
-    const handoffs = await page.evaluate(() => (window as HandoffWindow).handoffs);
+    const handoffs = await page.evaluate(() => (window as unknown as HandoffWindow).handoffs);
     expect(handoffs).toHaveLength(1);
     const target = new URL(handoffs[0], page.url());
     expect(target.pathname).toBe("/");
@@ -104,13 +104,13 @@ it("keeps plain Enter as a newline and the deliberate button handoff unchanged",
     await question.fill("First line");
     await question.press("End"); await question.press("Enter");
     expect(await question.inputValue()).toBe("First line\n");
-    expect(await page.evaluate(() => (window as HandoffWindow).handoffs)).toEqual([]);
+    expect(await page.evaluate(() => (window as unknown as HandoffWindow).handoffs)).toEqual([]);
     const button = page.locator("#follow-up").locator("..").getByRole("button");
     await question.fill(" "); expect(await button.isDisabled()).toBe(true);
     await question.fill("Q".repeat(500));
     expect(await question.getAttribute("maxlength")).toBe("500");
     await button.click();
-    const handoffs = await page.evaluate(() => (window as HandoffWindow).handoffs);
+    const handoffs = await page.evaluate(() => (window as unknown as HandoffWindow).handoffs);
     expect(handoffs).toHaveLength(1);
     expect(new URL(handoffs[0], page.url()).searchParams.get("q")).toBe("Q".repeat(500));
   });
@@ -131,7 +131,7 @@ it.each(compositionCases)("does not send a feed-check request for $phase Enter, 
     await page.getByText("Fixture response", { exact: true }).waitFor();
     expect(posts).toEqual([{ rssUrl: completed, gapId: "gap-recorded" }]);
     expect(await input.inputValue()).toBe(completed);
-    expect(await page.evaluate(() => (window as HandoffWindow).handoffs)).toEqual([]);
+    expect(await page.evaluate(() => (window as unknown as HandoffWindow).handoffs)).toEqual([]);
   });
 });
 
@@ -144,11 +144,11 @@ it.each(shortcuts)("keeps the primary composer safe at $phase with $modifier+Ent
     await input.dispatchEvent("compositionstart", { data: "日本語" });
     if (!composing) await input.dispatchEvent("compositionend", { data: "日本語" });
     expect(await enter(input, composing, modifier, keyCode)).toBe(true);
-    expect(await page.evaluate(() => (window as HandoffWindow).asks)).toEqual([]);
+    expect(await page.evaluate(() => (window as unknown as HandoffWindow).asks)).toEqual([]);
     expect(await input.inputValue()).toBe(completed);
     await input.dispatchEvent("compositionend", { data: "日本語" });
     expect(await enter(input, false, modifier)).toBe(false);
-    expect(await page.evaluate(() => (window as HandoffWindow).asks)).toEqual([
+    expect(await page.evaluate(() => (window as unknown as HandoffWindow).asks)).toEqual([
       { question: completed, budget: 0.05, publication: { visibility: "public", expectedWallet: null } },
     ]);
     expect(posts).toEqual([]);
