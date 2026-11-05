@@ -83,3 +83,38 @@ test("gate dependency inventory stays aligned with the workflow", () => {
   assert.match(gate, /needs: \[scope, checks, unit-tests, integration, browser-source, production\]/);
   for (const name of requiredJobs) assert(workflow.includes(`\n  ${name}:\n`), name);
 });
+
+test("production members keep independent cancellation and complete step selection", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8").replace(/\r\n/g, "\n");
+  const production = workflow.split("\n  production:\n")[1]?.split("\n  lint:\n")[0];
+  assert(production);
+  const [header, steps] = production.split("    steps:\n");
+  assert.match(header, /timeout-minutes: 30\n/);
+  assert.match(header, /fail-fast: false\n/);
+  assert.match(header, /lane: \[routes, ui\]/);
+  assert(header.includes("-production-${{ matrix.lane }}-"), "members cannot cancel or serialize each other");
+  assert(header.includes("cancel-in-progress: ${{ github.event_name == 'pull_request' }}"));
+  assert(!production.includes("continue-on-error:"));
+  assert(!header.includes("max-parallel: 1"));
+  const common = new Set(["actions/checkout@v4", "actions/setup-node@v4", "Pin project npm installer", "Install dependencies",
+    "Browser runner APT setup tests (no system changes)", "Prepare official Ubuntu HTTPS mirrors for browser dependencies",
+    "Install Chromium for unit and browser checks", "Build (Next.js)"]);
+  const selected = { routes: 0, ui: 0 }, artifacts = new Set();
+  for (const block of steps.split(/(?=^      - (?:name|uses):)/m).filter(block => block.trim())) {
+    const name = block.match(/^      - (?:name|uses): (.+)/)?.[1]; assert(name);
+    const conditions = [...block.matchAll(/^        if: (.+)$/gm)].map(match => match[1]);
+    if (common.has(name)) {
+      assert.deepEqual(conditions, [], `${name} must prepare both isolated checkouts`); common.delete(name); continue;
+    }
+    assert.equal(conditions.length, 1, `${name} must run in exactly one known member`);
+    const owner = conditions[0].match(/^(?:always\(\) && )?matrix\.lane == '(routes|ui)'$/)?.[1];
+    assert(owner, `${name} has an unknown or permissive selector`); selected[owner]++;
+    if (block.includes("uses: actions/upload-artifact@v4")) {
+      assert(conditions[0].startsWith("always() && "), `${name} must retain failure evidence`);
+      const artifact = block.match(/^          name: (.+)$/m)?.[1]; assert(artifact);
+      assert(!artifacts.has(artifact), `${artifact} cannot collide across members`); artifacts.add(artifact);
+    }
+  }
+  assert.equal(common.size, 0, "both members retain every shared preparation step");
+  assert(selected.routes > 0 && selected.ui > 0);
+});
