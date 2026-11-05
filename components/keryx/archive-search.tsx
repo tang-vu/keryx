@@ -17,7 +17,7 @@
  * With JavaScript off the box does nothing and the full page stays visible — the archive reads
  * exactly as it did before this existed.
  */
-import { Children, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Children, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Search, X } from "lucide-react";
 import { useUiCopy, useUiMessages } from "@/lib/i18n/ui-copy";
@@ -33,6 +33,45 @@ export interface ArchiveSearchEntry {
 }
 
 const OTHERS_SHOWN = 25;
+const SEARCH_LOCATION_EVENT = "keryx:archive-search-location";
+
+function subscribeToSearchLocation(notify: () => void) {
+  window.addEventListener("popstate", notify);
+  window.addEventListener(SEARCH_LOCATION_EVENT, notify);
+  return () => {
+    window.removeEventListener("popstate", notify);
+    window.removeEventListener(SEARCH_LOCATION_EVENT, notify);
+  };
+}
+
+const searchLocationSnapshot = () => window.location.search;
+const serverSearchLocationSnapshot = () => "";
+
+function readSearchLocation(search: string) {
+  const params = new URLSearchParams(search);
+  const rawPage = params.get("searchPage") ?? "";
+  return { query: params.get("q") ?? "", page: /^[1-9]\d{0,5}$/.test(rawPage) ? Number(rawPage) - 1 : 0 };
+}
+
+function writeSearchLocation(query: string, page: number, push = false) {
+  const url = new URL(window.location.href);
+  const searching = archiveSearchWords(query).length > 0;
+  if (searching) url.searchParams.set("q", query);
+  else url.searchParams.delete("q");
+  if (searching && page > 0) url.searchParams.set("searchPage", String(page + 1));
+  else url.searchParams.delete("searchPage");
+  if (url.href === window.location.href) return;
+  try {
+    // Next copies its router metadata into external writes. Passing its own marker
+    // back would bypass that integration; preserve other state without the markers.
+    const state = { ...window.history.state };
+    delete state.__NA;
+    delete state._N;
+    window.history[push ? "pushState" : "replaceState"](state, "", url.href);
+  } catch {
+    // Browser restrictions must never make the local filter unusable.
+  }
+}
 
 export function ArchiveSearch({
   terms,
@@ -56,8 +95,21 @@ export function ArchiveSearch({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const pageJumpPendingRef = useRef(false);
   const resultsId = useId();
-  const [query, setQuery] = useState("");
-  const [resultPage, setResultPage] = useState(0);
+  const locationSearch = useSyncExternalStore(subscribeToSearchLocation, searchLocationSnapshot, serverSearchLocationSnapshot);
+  // Keep local input usable if history writes are refused, and retain typed whitespace.
+  // A new URL (including a reused Next route) invalidates this local projection.
+  const [draft, setDraft] = useState<{ search: string; query: string; page: number } | null>(null);
+  const { query, page: resultPage } = draft?.search === locationSearch ? draft : readSearchLocation(locationSearch);
+  const saveSearch = (nextQuery: string, nextPage: number, push = false) => {
+    writeSearchLocation(nextQuery, nextPage, push);
+    setDraft({ search: window.location.search, query: nextQuery, page: nextPage });
+    window.dispatchEvent(new Event(SEARCH_LOCATION_EVENT));
+  };
+  const editQuery = (next: string) => {
+    pageJumpPendingRef.current = false;
+    // Save before navigation/reload can start; replacing adds no typing history.
+    saveSearch(next, 0);
+  };
   const words = archiveSearchWords(query);
   const searching = words.length > 0;
   const cards = Children.toArray(children);
@@ -79,7 +131,7 @@ export function ArchiveSearch({
   const goToPage = (next: number) => {
     if (next === page) return;
     pageJumpPendingRef.current = true;
-    setResultPage(next);
+    saveSearch(query, next, true);
   };
   useLayoutEffect(() => {
     if (!pageJumpPendingRef.current) return;
@@ -89,8 +141,7 @@ export function ArchiveSearch({
   }, [page]);
   const clearSearch = () => {
     pageJumpPendingRef.current = false;
-    setQuery("");
-    setResultPage(0);
+    saveSearch("", 0);
     inputRef.current?.focus();
   };
 
@@ -104,7 +155,7 @@ export function ArchiveSearch({
           type="search"
           ref={inputRef}
           value={query}
-          onChange={(e) => { pageJumpPendingRef.current = false; setQuery(e.target.value); setResultPage(0); }}
+          onChange={(e) => editQuery(e.target.value)}
           onKeyDown={event => { if (!event.nativeEvent.isComposing && event.key === "Escape" && searching) { event.preventDefault(); clearSearch(); } }}
           placeholder={placeholder ?? copy("archiveFilter.placeholder")}
           aria-label={copy("archiveFilter.label")}
