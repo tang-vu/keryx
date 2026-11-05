@@ -418,7 +418,7 @@
     "lib/research/evidence-provenance.ts": "abd04b783b9502c26ce6bd0ae023b92f45037e7717c9775218c8a125cf9474dc",
     "lib/research/explicit-bullet-count.ts": "907c0fa026da65455593837e89a96f630fb098e6dc4e70a02d7060f9bb1735c4",
     "lib/research/explicit-bullet-word-limit.ts": "8e30f28e10cf8ad43f01020b571aece6e2f9c8318f0595a3e50302ee1d08d9e9",
-    "lib/research/explicit-work-product-intent.ts": "063bf3ce50c7e04751052f6cee47dff0c6752c7710ad9cefac36633090f328f7",
+    "lib/research/explicit-work-product-intent.ts": "00a7af2f52145c54f87f4e07d7e99edf3b9858b121e7031b00c741930a1ae015",
     "lib/research/named-publisher-source.ts": "eded45cbc498fcbd346329d0c6c3eba2476243147a059e030a0b717c477451bf",
     "lib/research/native-answer-copy.ts": "b96d116ba156538d030d55f584a5830f086d01a41de7c8714d89a68a02d7311b",
     "lib/research/native-answer-intent.ts": "f07b0cdb5a2dd0fc32b89f3924738935f3dc48dbcb851d3549dbd95afcefe477",
