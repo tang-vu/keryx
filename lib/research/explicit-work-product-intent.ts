@@ -46,16 +46,19 @@ export function explicitWorkProductLabel(question: string): string | undefined {
   const practical = prospective ? undefined : [
     /(?:^|[.!?。！？\r\n\u2028\u2029])\s*how\s+(?:can|should|could|would)\s+(?:I|we)\s+(?:(?:best|safely|reliably|practically)\s+)?(prevent|avoid|measure|estimate|triage|prioritize|identify|separate|scope|sample|evaluate|test|validate|track|monitor|reduce|improve|run|keep|stop|pass|distinguish|decide|select|set|define)\b(?=\s+[^.!?\r\n\u2028\u2029]*[\p{L}\p{N}])(?!\s+(?:the\s+)?(?:word|term|phrase|meaning|concept)\b)/iu,
     /(?:^|[.!?。！？\r\n\u2028\u2029])\s*(?:tôi|mình|chúng tôi)\s+(?:nên|có thể)\s+(đo lường|ước tính|phân loại|ưu tiên|ngăn|tránh|phân biệt|đánh giá|lựa chọn|kiểm chứng)[^.!?\r\n\u2028\u2029]{0,160}(?:thế nào|làm sao|ra sao)/iu,
+    // A caller can explicitly ask for a method without naming I/we. The
+    // way-to-action grammar is subject independent; it supplies no facts.
+    /(?:^|[.!?。！？\r\n\u2028\u2029])\s*(?:is\s+there|what(?:['’]s|\s+is))\s+(?:a|an|the)\s+(?:(?:practical|quick|simple|reliable|safe|lightweight|systematic)\s+)?(?:way|method|approach)\s+(?:for\s+(?:me|us)\s+)?to\s+(check|spot|verify|prevent|avoid|measure|estimate|triage|prioritize|identify|separate|scope|sample|evaluate|test|validate|track|monitor|reduce|improve|run|keep|stop|distinguish|decide|select|define)\b(?=\s+[^.!?\r\n\u2028\u2029]*[\p{L}\p{N}])(?!\s+(?:the\s+)?(?:word|term|phrase|meaning|concept)\b)/iu,
   ].map(pattern => pattern.exec(visible)?.[1]).find(Boolean);
   if (!prospective && !practical) return;
   // Restrict additional exclusions to the new forms, preserving old labels.
-  if (practical && /\b(?:do not|don't|never|no need to)\s+(?:give|create|make|prepare|draft|write|produce|propose|build|design|include|suggest)[^.!?\r\n\u2028\u2029]{0,80}\b(?:methods?|recommendations?|suggestions?)\b/iu.test(visible)) return;
+  if (practical && /\b(?:do not|don't|never|no need to)\s+(?:give|create|make|prepare|draft|write|produce|propose|build|design|include|suggest)[^.!?\r\n\u2028\u2029]{0,80}\b(?:methods?|ways?|recommendations?|suggestions?)\b/iu.test(visible)) return;
   // These new forms cannot bypass an explicit no-procedure instruction, a
   // bounded answer format, or the separate classroom-generation rollout.
   if (/\b(?:do not|don't|never|no need to)\s+(?:give|create|make|prepare|draft|write|produce|propose|build|design|include)[^.!?\r\n\u2028\u2029]{0,80}\b(?:steps|workflow|procedure|approach)\b/iu.test(visible) ||
       /(?:đừng|không (?:cần|được|nên))[^.!?\r\n\u2028\u2029]{0,80}(?:cách|phương án|quy trình|các bước)/iu.test(visible) ||
       /\b(?:lesson|classroom|classwork|workshop)\b|\b(?:activity|exercise)\b[^.!?\r\n\u2028\u2029]{0,60}\b(?:class|students|pupils)\b|(?:bài tập|hoạt động)[^.!?\r\n\u2028\u2029]{0,60}(?:học sinh|lớp học)/iu.test(visible) ||
-      /(?<![\p{L}\p{N}_])(?:\d{1,4}|um|uma|uno|una|dois|dos|três|tres|quatro|cuatro|cinco|seis|sete|siete|oito|ocho|nove|nueve|dez|diez|onze|once|doze|doce)\s+(?:palavras?|palabras?|frases?|oraciones|oración|tópicos?|pontos?|puntos?)(?![\p{L}\p{N}_])/iu.test(visible)) return;
+      /(?<![\p{L}\p{N}_])(?:\d{1,4}|um|uma|uno|una|dois|duas|dos|três|tres|quatro|cuatro|cinco|seis|sete|siete|oito|ocho|nove|nueve|dez|diez|onze|once|doze|doce)\s+(?:palavras?|palabras?|frases?|oraciones|oración|tópicos?|pontos?|puntos?)(?![\p{L}\p{N}_])/iu.test(visible)) return;
   return prospective ?? practical;
 }
 
