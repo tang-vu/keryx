@@ -15,11 +15,13 @@ const server = vi.hoisted(() => ({
   config: { sellerAddress: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", funderKey: "", networkId: "eip155:5042",
     profile: { testnet: false, label: "Arc" }, defaultBudget: 0.05, a2aMaxBudget: 0.5, a2aFeeUsdc: 0.02, a2aDeepFeeUsdc: 0.04 },
   ready: vi.fn().mockRejectedValue(new Error("Synthetic capacity observation unavailable")),
+  db: vi.fn(() => { throw new Error("Page observation must not initialize payment storage"); }),
+  monthly: vi.fn(() => { throw new Error("Page observation must not check Monthly admission"); }),
 }));
 vi.mock("@/lib/config", () => ({ config: server.config }));
-vi.mock("@/lib/db", () => ({ getDb: async () => ({}) }));
+vi.mock("@/lib/db", () => ({ getDb: server.db }));
 vi.mock("@/lib/payments/mainnet-hosted-gateway", () => ({ assertMainnetHostedResearchReady: server.ready }));
-vi.mock("@/lib/monthly/readiness", () => ({ monthlyAdmissionQuote: async () => null }));
+vi.mock("@/lib/monthly/readiness", () => ({ monthlyConfigured: () => true, monthlyAdmissionQuote: server.monthly }));
 vi.mock("@/components/keryx/site-header", () => ({ SiteHeader: () => null }));
 vi.mock("@/components/keryx/site-footer", () => ({ SiteFooter: () => null }));
 vi.mock("@/components/keryx/research-chat", () => ({ ResearchChat: () => null }));
@@ -32,15 +34,19 @@ vi.mock("@/components/keryx/research-private-jobs", () => ({ ResearchPrivateJobs
 vi.mock("@/components/keryx/research-private-checkout", () => ({ ResearchPrivateCheckout: () => null }));
 vi.mock("@/components/keryx/research-evidence-browser", () => ({ ResearchEvidenceBrowser: () => null }));
 vi.mock("@/components/keryx/research-monthly", () => ({ ResearchMonthly: () => null }));
+vi.mock("@/components/keryx/research-monthly-offer", () => ({ ResearchMonthlyOffer: () => createElement("div", { id: "monthly-price-entry" }) }));
 
-it("keeps configured question preparation visible when the SSR capacity observation fails", async () => {
+it("renders ordinary chat and configured preparation without payment storage or capacity observations", async () => {
   vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
   try {
     const { default: ResearchPage } = await import("../../app/research/page");
     const html = renderToStaticMarkup(await ResearchPage({ searchParams: Promise.resolve({}) }));
-    expect(server.ready).toHaveBeenCalledWith({}, "50000");
+    expect(server.ready).not.toHaveBeenCalled();
+    expect(server.db).not.toHaveBeenCalled();
+    expect(server.monthly).not.toHaveBeenCalled();
     expect(html).toContain('id="server-preparation"');
     expect(html).toContain(RESEARCH_AVAILABILITY_UNKNOWN);
+    expect(html).toContain('id="monthly-price-entry"');
   } finally { vi.unstubAllEnvs(); }
 });
 
