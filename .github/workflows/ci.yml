@@ -588,7 +588,7 @@ jobs:
           node --import tsx scripts/test-browser-header-feedback.mts --webkit
 
       - name: Product discovery, pricing and support (built, offline, no research or payment)
-        if: matrix.lane == 'routes'
+        if: matrix.lane == 'ui'
         env:
           KERYX_NETWORK: arcTestnet
           NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
@@ -597,7 +597,7 @@ jobs:
         run: npm run test:browser-product-guide
 
       - name: Retain product and language preview phone/desktop screenshots
-        if: always() && matrix.lane == 'routes'
+        if: always() && matrix.lane == 'ui'
         uses: actions/upload-artifact@v4
         with:
           name: product-language-preview-${{ github.sha }}
