@@ -150,6 +150,9 @@ import { languageReviewedProposals } from "../research/answer-language-review";
 import { parseWorkProductRequest } from "../research/work-product-request";
 import { deliverWorkProduct } from "../research/work-products";
 import { workProductAnswer } from "../research/work-products-presentation";
+import { parseAnswerTableRequest } from "../research/answer-table-request";
+import { deliverAnswerTable } from "../research/answer-table";
+import { answerTableMarkdown } from "../research/answer-table-presentation";
 
 export interface RunInput {
   /** Validated bot adapter preference only; never accept from public request JSON. */
@@ -1908,10 +1911,12 @@ async function* runAdmittedAgent(
   // New explicit first-turn caller format, including current best-effort public
   // packages. The accepted execution limits still control every read/expansion.
   // Historical/private/teaching/targeted originals cannot acquire this contract.
-  const workProductRequest = ordinaryPresentation && process.env.KERYX_TEACHING_PROPOSALS !== "1" &&
+  const tableOrWorkProductEligible = ordinaryPresentation && process.env.KERYX_TEACHING_PROPOSALS !== "1" &&
     (origin !== "engine" || input.allowExternalWeb === true) &&
     (input.originalQuestion === undefined || input.originalQuestion === input.question) &&
-    !presentation.requestedBulletCount && !presentation.requestedSentenceCount && !presentation.requestedMaximumWords
+    !presentation.requestedBulletCount && !presentation.requestedSentenceCount && !presentation.requestedMaximumWords;
+  const answerTableRequest = tableOrWorkProductEligible ? parseAnswerTableRequest(input.originalQuestion ?? input.question) : undefined;
+  const workProductRequest = tableOrWorkProductEligible
     ? parseWorkProductRequest(input.originalQuestion ?? input.question) : undefined;
   // A retained/package/teaching path must not acquire note generation from a
   // stray count recognized later than the ordinary first-turn admission.
@@ -1921,6 +1926,7 @@ async function* runAdmittedAgent(
     ...(observeAnswerLanguage ? { observeAnswerLanguage: true as const } : {}),
     ...(teachingRequest ? { teachingRequest } : {}),
     ...(workProductRequest ? { workProductRequest } : {}),
+    ...(answerTableRequest ? { answerTableRequest } : {}),
     ...(input.answerFormat === "decision-brief" || process.env.KERYX_DECISION_BRIEF === "1"
       ? { answerFormat: "decision-brief" as const } : {}) }); }
   catch (error) {
@@ -2398,8 +2404,12 @@ async function* runAdmittedAgent(
   // labels and gaps cannot enter factual coverage or model attribution input.
   if (teachingProposals) answer += `\n\n${teachingProposalAnswer(teachingProposals)}`;
   if (workProduct) answer += `\n\n${workProductAnswer(workProduct, presentation.language)}`;
+  if (answerTableRequest && !brief) {
+    const table = deliverAnswerTable(answerTableRequest, synthesized.answerTable, ledger, citedStatements);
+    answer = `${answerTableMarkdown(table, presentation.language)}\n\n${answer}`;
+  }
   // Additional follow-up/recency/special prose is not observed by this narrow contract.
-  if (observeAnswerLanguage && !brief && !workProduct && !followUp && !recencyRequirement)
+  if (observeAnswerLanguage && !brief && !workProduct && !answerTableRequest && !followUp && !recencyRequirement)
     languageFinalization = { rendererLanguage: presentation.language, statements: citedStatements, proposals: synthesized.evidence ?? [] };
   return finish(answer);
 
