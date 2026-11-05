@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import type { PresentationLanguage } from "@/lib/research/presentation-language";
 import { quotedOriginalSpan } from "@/lib/i18n/quoted-originals";
 import { originalTechnicalText } from "@/shared/i18n/original-technical-text";
+import { parseMarkdownTable, type MarkdownTable } from "@/lib/research/markdown-table";
 
 const copy = createMessages("en");
 
@@ -160,13 +161,13 @@ export function AnswerMarkdown({
   language,
   onCitationClick,
 }: AnswerMarkdownProps) {
-  const blocks: { trimmed: string; heading: RegExpExecArray | null; list?: string[] }[] = [];
+  const blocks: { trimmed: string; heading: RegExpExecArray | null; list?: string[]; table?: MarkdownTable }[] = [];
   for (const trimmed of text.split(/\n{2,}/).map(block => block.trim()).filter(Boolean)) {
     const lines = trimmed.split("\n");
     const list = lines.every(line => /^- \S/u.test(line)) ? lines.map(line => line.slice(2)) : undefined;
     const previous = blocks.at(-1);
     if (list && previous?.list) previous.list.push(...list);
-    else blocks.push({ trimmed, heading: /^(#{1,3})\s+(.*)$/.exec(trimmed), list });
+    else blocks.push({ trimmed, heading: /^(#{1,3})\s+(.*)$/.exec(trimmed), list, table: parseMarkdownTable(trimmed) });
   }
   // Each answer is a section within its host. Normalize the shallowest emitted
   // heading to h2 while preserving the report's relative heading depths.
@@ -178,7 +179,23 @@ export function AnswerMarkdown({
     // Known Arabic prose reads RTL. Unknown content chooses its reading direction
     // without acquiring a generated-prose language label.
     <div lang={language ?? "und"} dir={language === "ar" ? "rtl" : language ? "ltr" : "auto"} className={cn("space-y-5 font-serif text-[18px] leading-[1.7] text-ink [overflow-wrap:anywhere]", className)}>
-      {blocks.map(({ trimmed, heading, list }, bi) => {
+      {blocks.map(({ trimmed, heading, list, table }, bi) => {
+        if (table) return (
+          <div key={`b${bi}`} role="region" aria-label={table.headers.join(" / ")} tabIndex={0} className="max-w-full overflow-x-auto rounded border border-ink/15 focus-visible:outline-2 focus-visible:outline-seal">
+            <table className="w-full min-w-[28rem] border-collapse text-start text-base leading-relaxed">
+              <thead className="bg-paper-2">
+                <tr>{table.headers.map((header, ci) => <th key={ci} scope="col" className="min-w-40 border-b border-ink/15 px-4 py-3 text-start font-semibold">
+                  {renderWithCitations(header, citations, `b${bi}-h${ci}`, onCitationClick)}
+                </th>)}</tr>
+              </thead>
+              <tbody>{table.rows.map((row, ri) => <tr key={ri} className="border-b border-ink/10 last:border-0">
+                {row.map((cell, ci) => <td key={ci} className="min-w-40 px-4 py-3 align-top">
+                  {renderWithCitations(cell, citations, `b${bi}-r${ri}-c${ci}`, onCitationClick)}
+                </td>)}
+              </tr>)}</tbody>
+            </table>
+          </div>
+        );
         if (list) return (
           <ul key={`b${bi}`} className="list-disc space-y-3 ps-6">
             {list.map((item, index) => <li key={`b${bi}-l${index}`}>

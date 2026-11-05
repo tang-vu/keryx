@@ -207,6 +207,8 @@ export interface SynthInput {
   /** Explicit original caller format request, checked again against question.
    * This creates no execution, factual or financial authority. */
   workProductRequest?: import("../research/work-product-request").WorkProductRequest;
+  /** Original caller-only table projection; never factual/payment authority. */
+  answerTableRequest?: import("../research/answer-table-request").AnswerTableRequest;
 }
 
 /** A factual disagreement the agent found between sources while writing the answer,
@@ -267,6 +269,8 @@ export interface SynthResult {
     reviewed?: import("../research/work-products").ReviewedWorkProduct;
     preparationGaps: import("../research/work-products").WorkProductGap[];
   };
+  /** Runtime review capability, never serialized as a public receipt field. */
+  answerTable?: import("../research/answer-table").ReviewedAnswerTable;
 }
 
 export interface AttributeInput {
