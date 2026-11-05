@@ -322,9 +322,16 @@ function queryArchive(db: DatabaseSync, input: PublicReferenceQuery): PublicRefe
   const plan = prepareArchiveQuery(input);
   const total = Number(db.prepare(plan.total.sql).get(...plan.total.params)!.n);
   const rows = db.prepare(plan.page.sql).all(...plan.page.params);
-  for (const referenceId of new Set(rows.slice(0, plan.limit).map(row => String(row.reference_id)))) {
-    const publisher = db.prepare("SELECT id,active,rss_url,snapshot FROM public_references WHERE id=?").get(referenceId);
-    if (!publisher || !decodeReference(publisher).active) throw new Error("Public archived publisher provenance differs");
+  const referenceIds = [...new Set(rows.slice(0, plan.limit).map(row => String(row.reference_id)))];
+  if (referenceIds.length) {
+    // The page bounds this lookup to at most 100 publishers. Keep every original
+    // validation in the same read snapshot without one guarded statement per ID.
+    const publishers = db.prepare(`SELECT id,active,rss_url,snapshot FROM public_references
+      WHERE id IN (${referenceIds.map(() => "?").join(",")})`).all(...referenceIds);
+    if (publishers.length !== referenceIds.length) throw new Error("Public archived publisher provenance differs");
+    for (const publisher of publishers) {
+      if (!decodeReference(publisher).active) throw new Error("Public archived publisher provenance differs");
+    }
   }
   return finishArchiveQuery(plan, total, rows);
 }
