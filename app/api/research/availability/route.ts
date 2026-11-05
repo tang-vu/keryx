@@ -1,8 +1,8 @@
-import { readResearchAvailability } from "@/lib/research/availability";
+import { readResearchAvailabilityForDisplay } from "@/lib/research/availability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export function GET() {
-  return Response.json(readResearchAvailability(), { headers: { "Cache-Control": "no-store" } });
+  return Response.json(readResearchAvailabilityForDisplay(), { headers: { "Cache-Control": "no-store" } });
 }

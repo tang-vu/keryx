@@ -140,15 +140,16 @@ function loadPolicy(file: string, digest: string, now?: Date): ConfiguredCanary 
   return { policy: validateBusinessCanaryPolicy(JSON.parse(bytes.toString("utf8")), now), file, digest,
     directory: businessCanaryDirectory() };
 }
-function configured(): ConfiguredCanary | null {
+function configured(observeClosure?: (closed: BusinessCanaryClosure) => void): ConfiguredCanary | null {
   const directory = businessCanaryDirectory(), window = path.join(directory, "window.json");
   const file = process.env.KERYX_BUSINESS_CANARY_FILE, digest = process.env.KERYX_BUSINESS_CANARY_SHA256;
   if (file === undefined && digest === undefined) {
     if (exists(directory)) {
       protectedPath(directory, true);
       // Closing is an explicit, evidence-checked operation; expiry/removal never releases holds.
-      if (!retainedBusinessCanaryClosure())
-        refuse("active registry requires its unchanged selectors");
+      const closed = retainedBusinessCanaryClosure();
+      if (!closed) return refuse("active registry requires its unchanged selectors");
+      observeClosure?.(closed);
     }
     return null;
   }
@@ -310,6 +311,16 @@ export function canaryResearchPaused(): boolean {
   try {
     if (configuredBusinessCanary() !== null) return true;
     const closed = retainedBusinessCanaryClosure();
+    return closed?.admissionPaused === true && !retainedCanaryResearchIsolation(retainedFailedBusinessCanaryAuthority());
+  } catch { return true; }
+}
+/** Advisory display only. Reuse a validated closure within this observation, never
+ * across calls. Admission and supplier guards retain their independent fresh reads. */
+export function canaryResearchPausedForDisplay(): boolean {
+  try {
+    let observedClosure: BusinessCanaryClosure | undefined;
+    if (configured(closed => { observedClosure = closed; }) !== null) return true;
+    const closed = observedClosure ?? retainedBusinessCanaryClosure();
     return closed?.admissionPaused === true && !retainedCanaryResearchIsolation(retainedFailedBusinessCanaryAuthority());
   } catch { return true; }
 }

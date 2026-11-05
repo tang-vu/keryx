@@ -1,4 +1,4 @@
-import { canaryResearchPaused } from "../business-operator/canary-policy";
+import { canaryResearchPaused, canaryResearchPausedForDisplay } from "../business-operator/canary-policy";
 import { parseResearchAvailability, ResearchAdmissionHeldError } from "./availability-contract";
 
 /** Filesystem-only, fail-closed observation. Never initializes DB, consumes quota or grants authority. */
@@ -9,4 +9,9 @@ export function readResearchAvailability() {
 export function assertOrdinaryResearchAvailable() {
   const availability = readResearchAvailability();
   if (availability.state === "paused") throw new ResearchAdmissionHeldError(availability.message);
+}
+
+/** Public display observation only; each submission still requires fresh admission. */
+export function readResearchAvailabilityForDisplay() {
+  return parseResearchAvailability({ state: canaryResearchPausedForDisplay() ? "paused" : "not-paused" })!;
 }
