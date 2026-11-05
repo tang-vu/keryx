@@ -57,6 +57,20 @@ race across jobs. Browser and compiled-production checks retain their original
 assertions and settings. Sharding changes test allocation, not test isolation or
 selection. Within a lane, dependent steps remain sequential.
 
+The production job has two matrix members, `routes` and `ui`, after the original
+serial workload reached its 30-minute limit even without artifact service errors.
+Each member has its own checkout, dependency installation and offline testnet
+Next build. The existing checks and artifact payloads run once in their assigned
+member; shared setup and the build run in both. Test commands, fixture settings,
+artifact names and retention policies keep their existing behavior.
+
+Both production members retain the 30-minute limit. Their PR cancellation keys
+include the member name, so they cannot cancel or serialize each other. Fail-fast
+is disabled: one failure does not discard the other member's evidence. The stable
+aggregate still requires the whole production matrix to succeed, alongside all
+other existing lanes. Main, manual and publication cancellation policy is unchanged;
+this introduces no build-artifact reuse or publication/version change.
+
 The stable `build-and-test` status is an ungrouped, always-running aggregate gate.
 Every applicable lane must succeed. Failed, cancelled, missing or unexpectedly skipped
 results refuse acceptance; docs-only skips are explicit. Applicable separate

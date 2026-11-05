@@ -513,9 +513,15 @@ jobs:
     if: needs.scope.outputs.scope == 'full'
     runs-on: ubuntu-24.04
     concurrency:
-      group: ${{ github.workflow }}-production-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+      group: ${{ github.workflow }}-production-${{ matrix.lane }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 30
+    # Every original check still runs. Each member builds from its own checkout;
+    # a failure cannot cancel the other member or satisfy the aggregate gate.
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [routes, ui]
     steps:
       - uses: actions/checkout@v4
 
@@ -541,9 +547,11 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Normal mainnet production worker and CSP (synthetic, no funds)
+        if: matrix.lane == 'routes'
         run: npm run test:browser-mainnet-normal-built
 
       - name: Mobile header touch and portaled wallet selection (synthetic, no funds)
+        if: matrix.lane == 'routes'
         run: |
           npx playwright install --with-deps webkit
           npm run test:browser-mobile-header
@@ -558,17 +566,21 @@ jobs:
         run: npm run build
 
       - name: Saved report comparison (real WebCrypto, local files and downloads)
+        if: matrix.lane == 'ui'
         run: node --import tsx scripts/test-browser-report-comparison.mts --built
 
       - name: Immutable cohort actual Next restart (reuse build, offline testnet)
+        if: matrix.lane == 'routes'
         env:
           KERYX_RELEASE_REHEARSAL_RESULT: ${{ runner.temp }}/immutable-release-rehearsal.json
         run: node scripts/rehearse-built-release.mjs
 
       - name: iPhone route prefetch and delayed navigation (built, offline GET only)
+        if: matrix.lane == 'routes'
         run: node --import tsx scripts/test-browser-mobile-navigation-built.mts --webkit
 
       - name: Dynamic page navigation (built, offline GET only)
+        if: matrix.lane == 'routes'
         run: |
           node --import tsx scripts/test-browser-navigation-latency.mts
           node --import tsx scripts/test-browser-navigation-latency.mts --webkit
@@ -576,6 +588,7 @@ jobs:
           node --import tsx scripts/test-browser-header-feedback.mts --webkit
 
       - name: Product discovery, pricing and support (built, offline, no research or payment)
+        if: matrix.lane == 'ui'
         env:
           KERYX_NETWORK: arcTestnet
           NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
@@ -584,7 +597,7 @@ jobs:
         run: npm run test:browser-product-guide
 
       - name: Retain product and language preview phone/desktop screenshots
-        if: always()
+        if: always() && matrix.lane == 'ui'
         uses: actions/upload-artifact@v4
         with:
           name: product-language-preview-${{ github.sha }}
@@ -593,15 +606,18 @@ jobs:
           retention-days: 7
 
       - name: Decision Lab compiled route and mobile layout (offline)
+        if: matrix.lane == 'routes'
         run: npm run test:decision-lab-built
 
       - name: Specialist brief preparation (built, offline, no research or payment)
+        if: matrix.lane == 'routes'
         run: npm run test:browser-specialist-briefs
       - name: Reviewed claim costs and decision receipt audit (built, local data only)
+        if: matrix.lane == 'routes'
         run: node --import tsx scripts/test-browser-research-evidence-audit.mts
 
       - name: Retain immutable cohort rehearsal result
-        if: always()
+        if: always() && matrix.lane == 'routes'
         uses: actions/upload-artifact@v4
         with:
           name: immutable-release-rehearsal-${{ github.sha }}
@@ -609,12 +625,13 @@ jobs:
           if-no-files-found: ignore
 
       - name: Private claim initial document and one-shot web handoff (built, synthetic)
+        if: matrix.lane == 'routes'
         env:
           KERYX_PRIVATE_WEB_RESULT: ${{ runner.temp }}/private-run-claim-built.json
         run: node --import tsx scripts/test-run-claims-private-web-built.mts
 
       - name: Retain private claim built-browser acceptance
-        if: always()
+        if: always() && matrix.lane == 'routes'
         uses: actions/upload-artifact@v4
         with:
           name: private-run-claim-built-${{ github.sha }}
@@ -622,6 +639,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Completed private history (compiled, isolated synthetic originals)
+        if: matrix.lane == 'routes'
         run: |
           owned="$PWD/output/private-history268-built"
           mkdir -p "$owned/temp" "$owned/tsx-cache"
@@ -642,7 +660,7 @@ jobs:
           NODE
 
       - name: Retain compiled private history acceptance
-        if: always()
+        if: always() && matrix.lane == 'routes'
         uses: actions/upload-artifact@v4
         with:
           name: private-history268-built-${{ github.sha }}
@@ -652,14 +670,16 @@ jobs:
           if-no-files-found: ignore
 
       - name: Public transfer ledger (built API, sealed offline SQLite and production CSS)
+        if: matrix.lane == 'routes'
         run: node --import tsx scripts/test-public-job-ledger-built.mts
 
       - name: Public researcher profile built routes and phone CSS (isolated offline SQLite)
+        if: matrix.lane == 'routes'
         timeout-minutes: 3
         run: |
           env -i PATH="$PATH" HOME="$HOME" RUNNER_TEMP="$RUNNER_TEMP" KERYX_NETWORK=arcTestnet NEXT_PUBLIC_KERYX_NETWORK=arcTestnet KERYX_FORCE_OFFLINE=1 KERYX_EXTERNAL_DISCOVERY=0 KERYX_PUBLIC_PROFILES_ENABLED=true KERYX_RUN_PRIVACY_ENABLED=true node --import tsx scripts/test-public-profiles-built.mts --acceptance
       - name: Retain actual built public profile route and phone result
-        if: always()
+        if: always() && matrix.lane == 'routes'
         uses: actions/upload-artifact@v4
         with:
           name: public-profile-built-${{ github.sha }}
@@ -674,37 +694,48 @@ jobs:
           include-hidden-files: true
 
       - name: Private bibliography snapshots (built routes, isolated SQLite and synthetic sessions)
+        if: matrix.lane == 'routes'
         run: node --import tsx scripts/test-private-bibliography-built.mts
       - name: Decision reviews (built owner routes and DOM, isolated SQLite and synthetic sessions)
+        if: matrix.lane == 'routes'
         run: KERYX_NETWORK=arcTestnet NEXT_PUBLIC_KERYX_NETWORK=arcTestnet KERYX_FORCE_OFFLINE=1 node --import tsx scripts/test-decision-reviews-built.mts
 
       - name: Prepaid A2A acceptance built routes and owner UI (synthetic, no execution)
+        if: matrix.lane == 'routes'
         run: node --import tsx scripts/test-deliverable-acceptance-built.mts
       - name: Recorded purchase outcomes built public API and report (isolated replay, no spending)
+        if: matrix.lane == 'routes'
         run: KERYX_NETWORK=arcTestnet NEXT_PUBLIC_KERYX_NETWORK=arcTestnet KERYX_FORCE_OFFLINE=1 node --import tsx scripts/test-purchase-outcomes-built.mts
       - name: Private identity configured Origin behind Next proxy (built, synthetic pre-auth)
+        if: matrix.lane == 'routes'
         run: node --import tsx scripts/test-server-profile-identities-origin.mts
 
       - name: Private account page and API boundary (current build, isolated offline refusals)
+        if: matrix.lane == 'routes'
         run: node --import tsx scripts/test-account-membership-private-built.mts
 
       - name: Empty evidence (actual minified production orchestrator, no network)
+        if: matrix.lane == 'routes'
         run: npm run test:built-empty-evidence
 
       - name: Bounded research allowance (actual minified factory and orchestrator, synthetic providers)
+        if: matrix.lane == 'routes'
         run: npm run test:built-research-allowance
 
       - name: Bounded document readers (assembled production trace, no network)
+        if: matrix.lane == 'routes'
         run: node scripts/test-web-readers-traced.mjs
 
       - name: HTML evidence structure (actual minified reader and quote boundaries, no network)
+        if: matrix.lane == 'routes'
         run: node scripts/test-built-html-evidence.cjs
 
       - name: Ordinary answer presentation (production CSS, synthetic and retained replay, no spending)
+        if: matrix.lane == 'ui'
         run: npm run test:answer-presentation
 
       - name: Ordinary answer presentation screenshots
-        if: always()
+        if: always() && matrix.lane == 'ui'
         uses: actions/upload-artifact@v4
         with:
           name: answer-presentation-screenshots
@@ -713,24 +744,30 @@ jobs:
           include-hidden-files: true
 
       - name: Research reading UX (offline Chromium and responsive layout)
+        if: matrix.lane == 'ui'
         env:
           KERYX_FORCE_OFFLINE: "1"
           KERYX_UX_SCREENSHOT_DIR: ${{ runner.temp }}/research-ux-screenshots
         run: npm run test:browser-research-ux
 
       - name: Business Operator production page (offline Chromium, synthetic status)
+        if: matrix.lane == 'ui'
         run: node --import tsx scripts/test-browser-operator-business.mts
 
       - name: Private profile UI (production CSS, synthetic owner sessions, no outbound requests)
+        if: matrix.lane == 'ui'
         run: node --import tsx scripts/test-browser-private-profiles.mts
 
       - name: Owned history UI (production CSS, synthetic privacy and owner races)
+        if: matrix.lane == 'ui'
         run: node --import tsx scripts/test-browser-owned-history.mts
 
       - name: Private verified identity UI (production CSS, synthetic consent and owner isolation)
+        if: matrix.lane == 'ui'
         run: node --import tsx scripts/test-browser-profile-identities.mts
 
       - name: Identity OAuth cross-site return (hermetic Chromium, genuine temporary sessions)
+        if: matrix.lane == 'ui'
         env:
           KERYX_NETWORK: arcTestnet
           NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
@@ -739,12 +776,13 @@ jobs:
         run: node --import tsx scripts/test-browser-identity-oauth-return.mts
 
       - name: Report feedback confirmation and response races (built CSS, hermetic Chromium)
+        if: matrix.lane == 'ui'
         env:
           KERYX_FEEDBACK_SCREENSHOT_DIR: ${{ runner.temp }}/feedback-ux-screenshots
         run: npm run test:browser-answer-feedback
 
       - name: Report feedback screenshots
-        if: always()
+        if: always() && matrix.lane == 'ui'
         uses: actions/upload-artifact@v4
         with:
           name: feedback-ux-screenshots
@@ -752,12 +790,13 @@ jobs:
           if-no-files-found: ignore
 
       - name: Original requester feedback and recorded job observations (built CSS, hermetic Chromium)
+        if: matrix.lane == 'ui'
         env:
           KERYX_FEEDBACK_SCREENSHOT_DIR: ${{ runner.temp }}/requester-feedback-screenshots
         run: node --import tsx scripts/test-browser-requester-feedback.mts
 
       - name: Original requester feedback screenshots
-        if: always()
+        if: always() && matrix.lane == 'ui'
         uses: actions/upload-artifact@v4
         with:
           name: requester-feedback-screenshots
@@ -765,23 +804,27 @@ jobs:
           if-no-files-found: ignore
 
       - name: Literature workspace built navigation and responsive UI (offline, no research)
+        if: matrix.lane == 'ui'
         env:
           KERYX_LITERATURE_SCREENSHOT_DIR: ${{ runner.temp }}/literature-ux-screenshots
         run: npm run test:browser-literature-built
 
       - name: Private evidence drafts built interactions (offline, no research)
+        if: matrix.lane == 'ui'
         run: node --import tsx scripts/test-browser-evidence-drafts.mts
 
       - name: Evidence procurement request, signatures and restored reviews (offline, synthetic providers)
+        if: matrix.lane == 'ui'
         run: node --import tsx scripts/test-browser-evidence-procurement.mts
 
       - name: Stored excerpt readability (built CSS, hermetic Chromium)
+        if: matrix.lane == 'ui'
         env:
           KERYX_EVIDENCE_SCREENSHOT_DIR: ${{ runner.temp }}/evidence-readability
         run: node --import tsx scripts/test-browser-evidence-readability.mts
 
       - name: Stored excerpt readability screenshots
-        if: always()
+        if: always() && matrix.lane == 'ui'
         uses: actions/upload-artifact@v4
         with:
           name: evidence-readability-screenshots
@@ -789,12 +832,13 @@ jobs:
           if-no-files-found: ignore
 
       - name: Model output-limit notice (built CSS, hermetic Chromium)
+        if: matrix.lane == 'ui'
         env:
           KERYX_OUTPUT_LIMIT_SCREENSHOT_DIR: ${{ runner.temp }}/output-limit-ux-screenshots
         run: npm run test:browser-output-limit
 
       - name: Model output-limit screenshots
-        if: always()
+        if: always() && matrix.lane == 'ui'
         uses: actions/upload-artifact@v4
         with:
           name: output-limit-ux-screenshots
@@ -802,7 +846,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Literature workspace screenshots
-        if: always()
+        if: always() && matrix.lane == 'ui'
         uses: actions/upload-artifact@v4
         with:
           name: literature-ux-screenshots
@@ -810,7 +854,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Research reading UX screenshots
-        if: always()
+        if: always() && matrix.lane == 'ui'
         uses: actions/upload-artifact@v4
         with:
           name: research-ux-screenshots
@@ -818,6 +862,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Withdrawal production framework headers (loopback, no authentication or payment)
+        if: matrix.lane == 'ui'
         env:
           # This secret-free CI server must use explicit offline cache semantics.
           # Real production startup correctly requires CONTENT_MASTER_KEY.
@@ -825,6 +870,7 @@ jobs:
         run: node --import tsx scripts/test-withdrawal-framework-headers.mts
 
       - name: Registration sponsor framework boundary (synthetic reverse proxy, no signing)
+        if: matrix.lane == 'ui'
         run: node --import tsx scripts/test-registration-sponsor-framework.mts
 
   lint:
