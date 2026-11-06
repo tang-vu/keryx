@@ -50,3 +50,58 @@ it("omits malformed and unproven runs without reading private payloads or invoki
   expect(captureLedgerRun(run)).toBeNull(); expect(getter).not.toHaveBeenCalled();
   expect(captureLedgerRun({ ...ledgerRun(), decisions: Array(1001).fill({ sourceId: "source" }) })).toBeNull();
 });
+
+it("uses a present native metadata page without hydrating generic run bodies", async () => {
+  const snapshot = captureLedgerRun(ledgerRun())!;
+  const page = vi.fn().mockReturnValueOnce({ snapshots: [snapshot, null], before: { id: "last-public", createdAt: LEDGER_FIXTURE_TIME } })
+    .mockReturnValueOnce({ snapshots: [], before: null });
+  const iterateRecentQueries = vi.fn(async function* (): AsyncIterable<QueryRun> { throw new Error("Unexpected full-run hydration"); });
+  const listPayments = vi.fn(async () => [ledgerPayment()]);
+  const result = await readOperatorLedger({ publicLedgerRuns: { page }, iterateRecentQueries, listPayments }, "eip155:5042002", 7, () => LEDGER_FIXTURE_TIME);
+  expect(page.mock.calls).toEqual([[{ take: 32 }], [{ take: 32, before: { id: "last-public", createdAt: LEDGER_FIXTURE_TIME } }]]);
+  expect(iterateRecentQueries).not.toHaveBeenCalled();expect(listPayments).toHaveBeenCalledWith(1001);
+  expect(result.payload.jobs).toHaveLength(1);expect(result.payload.entries).toHaveLength(2);
+});
+
+it("propagates a present native metadata refusal before payment reads or generic fallback", async () => {
+  const page = vi.fn(() => { throw new Error("Native metadata refusal"); });
+  const iterateRecentQueries = vi.fn(async function* () { yield ledgerRun(); });
+  const listPayments = vi.fn(async () => []);
+  await expect(readOperatorLedger({ publicLedgerRuns: { page }, iterateRecentQueries, listPayments }, "eip155:5042002"))
+    .rejects.toThrow("Native metadata refusal");
+  expect(iterateRecentQueries).not.toHaveBeenCalled();expect(listPayments).not.toHaveBeenCalled();
+});
+
+it("caps native positions at the same 251 sentinel including excluded originals", async () => {
+  let count = 0;
+  const page = vi.fn(({ take }: { take: number }) => {
+    const snapshots = Array.from({ length: take }, () => {
+      const n = count++;return n === 0 ? null : captureLedgerRun(ledgerRun({ id: `run-${n}` }));
+    });
+    return { snapshots, before: { id: `cursor-${1000-count}`, createdAt: LEDGER_FIXTURE_TIME } };
+  });
+  const iterateRecentQueries = vi.fn(async function* () { yield ledgerRun(); });
+  const reader = { publicLedgerRuns: { page }, iterateRecentQueries, listPayments: async () => [] };
+  const result = await readOperatorLedger(reader, "eip155:5042002", 7, () => LEDGER_FIXTURE_TIME);
+  expect(result.payload.jobs).toHaveLength(249);expect(result.payload.scope.runLimitReached).toBe(true);
+  expect(page.mock.calls.map(([query]) => query.take)).toEqual([32,32,32,32,32,32,32,27]);expect(iterateRecentQueries).not.toHaveBeenCalled();
+});
+
+it("does not invoke a native capability getter or read an unsupported proxy property", async () => {
+  const getter = vi.fn();const methods = { async *iterateRecentQueries() { yield ledgerRun(); }, async listPayments() { return []; } };
+  const withGetter = Object.defineProperty({ ...methods }, "publicLedgerRuns", { get: getter });
+  await expect(readOperatorLedger(withGetter, "eip155:5042002")).rejects.toThrow("capability unavailable");expect(getter).not.toHaveBeenCalled();
+  const unsupported = new Proxy(methods, { get(target, key) {
+    if (key === "publicLedgerRuns") throw Error("Unsupported enrolled proxy property");return Reflect.get(target, key);
+  }, getOwnPropertyDescriptor() { return undefined; } });
+  expect((await readOperatorLedger(unsupported, "eip155:5042002", 7, () => LEDGER_FIXTURE_TIME)).payload.jobs).toHaveLength(1);
+});
+
+it("refuses oversized or nonprogressing native pages before payment hydration", async () => {
+  const iterateRecentQueries = vi.fn(async function* () { yield ledgerRun(); }), listPayments = vi.fn(async () => []);
+  const cursor = { id: "same", createdAt: LEDGER_FIXTURE_TIME };
+  for (const page of [() => ({ snapshots: Array(33).fill(null), before: cursor }), () => ({ snapshots: [null], before: cursor })]) {
+    await expect(readOperatorLedger({ publicLedgerRuns: { page }, iterateRecentQueries, listPayments }, "eip155:5042002")).rejects.toThrow();
+  }
+  expect(iterateRecentQueries).not.toHaveBeenCalled();expect(listPayments).not.toHaveBeenCalled();
+});

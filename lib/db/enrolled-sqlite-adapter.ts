@@ -13,6 +13,7 @@ import { createEnrolledSqliteRunClaims } from "./run-claims-sqlite";
 import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
 import { createEnrolledSqliteRunPrivacy } from "./run-privacy-sqlite";
 import { createEnrolledSqlitePublicUsage } from "./public-usage-sqlite";
+import { createEnrolledSqlitePublicLedgerRuns } from "./public-ledger-sqlite";
 import { runClaimsEnabled } from "../run-claims/contracts";
 import { withRunReadProjection } from "../run-privacy/projection";
 import { projectRecordedEvidenceProvenance } from "../research/evidence-provenance";
@@ -353,6 +354,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       }) });
     }
     Object.defineProperty(facade, "runPrivacyActive", { value: privacyActive });
+    if (readOnly && privacyActive && deployment.identity.authorityMode === "mainnet-real")
+      Object.defineProperty(facade, "publicLedgerRuns", { value: createEnrolledSqlitePublicLedgerRuns(db) });
     for (const name of ["runClaims", "runOwnershipHistory", "runPrivacy"] as const) {
       if (core[name]) Object.defineProperty(facade, name, { value: core[name] });
     }
