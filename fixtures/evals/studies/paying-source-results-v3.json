@@ -395,7 +395,7 @@
     "lib/research/answer-language-review.ts": "b9e6e25d5c974cae1fda163fddf43b116d6b53d0a8a8f880a64852081530aa50",
     "lib/research/answer-presentation.ts": "36a18c34fe866bf7773a6846300215deb34d9e3d5895da9e53bc39081ada473c",
     "lib/research/answer-table-presentation.ts": "7c9067bf5f4008dd5621cf6df3d7995b0013760f0e50ed61c2b9ef09ad444f04",
-    "lib/research/answer-table-request.ts": "00b035e5785c8aeedb886ccc9d08e43f0a167c8ea3b196fef482d3d027f87bc0",
+    "lib/research/answer-table-request.ts": "6a233c7ce68eb8a553eebd2ed8df3ace74f46846d4121a67b939d48e1bf5ba9b",
     "lib/research/answer-table.ts": "14b0beef31ec6593a36413c1106b82bf175ea807128f08031337c691838416de",
     "lib/research/answer-word-budget.ts": "32ddd706e00b9dcf50d029023ccc48ea48f824b7fd6ad5d9a71a03edb0766654",
     "lib/research/api-integration-note-request.ts": "2a838de99317b9cdc62bec91b6eb9d12a9073fc80cabf9b692a425b6ad66d0b9",

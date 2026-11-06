@@ -30,6 +30,14 @@ const samples = {
   vi: { question: "Hãy tạo bảng so sánh dữ kiện, đề xuất kiểm tra và điều chưa biết về việc giao lại thông điệp.",
     fact: "Hàng đợi giả lập có thể giao lại cùng một thông điệp.", columns: ["Tình huống", "Dữ kiện", "Đề xuất", "Chưa biết"],
     label: "Giao lại thông điệp", proposal: "Đề xuất thử nghiệm việc giao lại trong môi trường cô lập.", condition: "Nếu có môi trường kiểm tra ngoài vận hành thực." },
+  comparisonEn: { question: "Compare the two response-recovery choices in a compact table. Keep unknown idempotency behavior explicit.",
+    fact: "The synthetic queue can deliver the same message more than once.", columns: ["Choice", "Source finding", "Proposed check", "Unknown"],
+    label: "Response recovery", comparisonLabels: ["Retry the identical request", "Start a new run"],
+    proposal: "Propose an isolated repeated-delivery test.", condition: "If an isolated test environment is available." },
+  comparisonVi: { question: "Hãy so sánh hai lựa chọn xử lý phản hồi bị mất bằng một bảng. Giữ rõ hành vi idempotency chưa biết.",
+    fact: "Hàng đợi giả lập có thể giao lại cùng một thông điệp.", columns: ["Lựa chọn", "Dữ kiện", "Đề xuất", "Chưa biết"],
+    label: "Xử lý phản hồi bị mất", comparisonLabels: ["Thử lại yêu cầu giống hệt", "Bắt đầu lượt chạy mới"],
+    proposal: "Đề xuất thử nghiệm việc giao lại trong môi trường cô lập.", condition: "Nếu có môi trường kiểm tra ngoài vận hành thực." },
 };
 type Sample = typeof samples[keyof typeof samples];
 type Options = { plain?: boolean; reject?: boolean; losePremise?: boolean; changedOriginal?: boolean; teaching?: boolean; private?: boolean; limit?: boolean; engineOrigin?: boolean };
@@ -44,8 +52,9 @@ class Transport extends JsonChatEngine {
       const option = (packet.quoteOptions as { quoteId: string; text: string; marker: string }[]).find(row => row.text === this.sample.fact)!;
       return { evidence: [{ claimIndex: 0, marker: option.marker, quoteId: option.quoteId, support: 0.9, statement: this.sample.fact }], conflicts: [],
         ...("outline" in this.sample ? { workProductSections: [{ id: "w1", heading: "Proposed transaction outline", text: this.sample.outline, premiseIds: ["e1"], conditions: [this.sample.condition] }] } : {}),
-        answerTable: { columns: this.sample.columns, rows: [[{ kind: "label", text: this.sample.label }, { kind: "facts", evidenceIds: ["e1"] },
-          { kind: "proposal", text: this.sample.proposal, premiseIds: ["e1"], conditions: [this.sample.condition] }, { kind: "unknown" }]] } };
+        answerTable: { columns: this.sample.columns, rows: ("comparisonLabels" in this.sample ? this.sample.comparisonLabels : [this.sample.label])
+          .map(label => [{ kind: "label", text: label }, { kind: "facts", evidenceIds: ["e1"] },
+            { kind: "proposal", text: this.sample.proposal, premiseIds: ["e1"], conditions: [this.sample.condition] }, { kind: "unknown" }]) } };
     }
     const table = packet.answerTable as AnswerTablePacket | undefined;
     const product = packet.workProduct as WorkProductPacket | undefined;
@@ -83,7 +92,7 @@ async function drive(kind: keyof typeof samples, options: Options = {}) {
   const iterator = runAgent(input, deps); let step = await iterator.next(); while (!step.done) step = await iterator.next();
   return { run: step.value, denied, read, synthesize, transport, attribute, effects };
 }
-it.each(["decision", "paper", "vi", "combined"] as const)("delivers %s table through actual orchestration with unchanged factual/financial attribution", async kind => {
+it.each(["decision", "paper", "vi", "combined", "comparisonEn", "comparisonVi"] as const)("delivers %s table through actual orchestration with unchanged factual/financial attribution", async kind => {
   const base = await drive(kind, { plain: true }), f = await drive(kind), sample = samples[kind];
   expect(f.transport.calls).toHaveLength(2); expect(f.read).toHaveBeenCalledOnce(); expect(f.denied).not.toHaveBeenCalled();
   expect(f.transport.packets[1].answerTable).toMatchObject({ originalQuestion: sample.question });
@@ -94,6 +103,13 @@ it.each(["decision", "paper", "vi", "combined"] as const)("delivers %s table thr
   expect(f.run.answer).toContain(sample.proposal); expect(f.run.answer).toContain(sample.condition);
   const canonical = base.run.answer.slice(base.run.answer.indexOf("\n\n") + 2); expect(f.run.answer.endsWith(canonical)).toBe(true);
   expect(renderToStaticMarkup(createElement(AnswerMarkdown, { text: f.run.answer, citations: f.run.citations }))).toContain("<table");
+  if ("comparisonLabels" in sample) {
+    expect(f.transport.packets[1].answerTable).toMatchObject({ table: { rows: sample.comparisonLabels.map(label => [
+      { kind: "label", text: label }, { kind: "facts", evidenceIds: ["e1"] },
+      { kind: "proposal", text: sample.proposal, premiseIds: ["e1"], conditions: [sample.condition] }, { kind: "unknown" },
+    ]) } });
+    for (const label of sample.comparisonLabels) expect(f.run.answer).toContain(label);
+  }
   const receipt = buildResearchReceipt(f.run, []); expect(verifyResearchReceipt(receipt).valid).toBe(true);
   expect(JSON.stringify(receipt.payload)).toContain(sample.proposal); expect(JSON.stringify(receipt.payload)).not.toContain('"acceptedCells"');
   expect(researchReportMarkdown(f.run, null, [])).toContain(f.run.answer);
