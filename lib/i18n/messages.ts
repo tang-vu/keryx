@@ -470,8 +470,12 @@ export function createMessages(locale: UiLocale, catalogue: MessageCatalogue = {
   if (Reflect.ownKeys(catalogue).some(key => typeof key !== "string") ||
     Object.values(descriptors).some(descriptor => !("value" in descriptor))) throw new Error("Invalid message catalogue properties");
   const selected = Object.freeze(Object.fromEntries(Object.entries(descriptors).map(([key, descriptor]) => [key, descriptor.value]))) as MessageCatalogue;
-  const checked = validateMessageCatalogue(selected);
-  if (checked.invalid.length) throw new Error(`Invalid message catalogue: ${checked.invalid.join(", ")}`);
+  // An empty snapshot has no translations to validate. Avoid constructing the
+  // full missing-message list for the common English/fallback-only path.
+  if (Object.keys(selected).length) {
+    const checked = validateMessageCatalogue(selected);
+    if (checked.invalid.length) throw new Error(`Invalid message catalogue: ${checked.invalid.join(", ")}`);
+  }
   return function message<K extends MessageKey>(key: K, ...args: MessageArguments<K>): string {
     if (!Object.hasOwn(englishMessages, key)) throw new Error("Unknown English source message");
     const translated = Object.hasOwn(selected, key) ? selected[key] : undefined;
