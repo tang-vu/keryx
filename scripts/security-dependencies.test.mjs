@@ -8,6 +8,7 @@ import { once } from "node:events";
 import { runInNewContext } from "node:vm";
 import { spawn } from "node:child_process";
 import test from "node:test";
+import "./solana-rpc-security.test.mjs";
 
 const require = createRequire(import.meta.url);
 const proxyaddr = require("proxy-addr");
