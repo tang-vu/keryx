@@ -2,7 +2,7 @@ import type { KeryxDB } from "../db/keryx-db";
 import { captureLedgerPayment, captureLedgerRun, iso, type LedgerRunSnapshot } from "./capture";
 import { LEDGER_PAYMENT_LIMIT, LEDGER_RUN_LIMIT } from "./contracts";
 import { projectOperatorLedger } from "./projection";
-import { ledgerRunCursor, publicLedgerRunReader, type PublicLedgerRunCursor } from "./native-pages";
+import { publicLedgerRunReader } from "./native-runs";
 
 export type PublicLedgerReader = Pick<KeryxDB, "iterateRecentQueries" | "listPayments" | "publicLedgerRuns">;
 
@@ -15,21 +15,11 @@ export async function readOperatorLedger(reader: PublicLedgerReader, network: st
   let scanned = 0, runLimitReached = false;
   const native = publicLedgerRunReader(reader);
   if (native) {
-    let before: PublicLedgerRunCursor | undefined;
-    while (scanned <= LEDGER_RUN_LIMIT) {
-      const take = Math.min(32, LEDGER_RUN_LIMIT + 1 - scanned);
-      const page = native.page({ take, ...(before ? { before } : {}) });
-      if (!page || !Array.isArray(page.snapshots) || page.snapshots.length > take ||
-        page.snapshots.length === 0 && page.before !== null || page.snapshots.length > 0 && !ledgerRunCursor(page.before))
-        throw new Error("Ledger native page unavailable");
-      if (!page.snapshots.length) break;
-      if (before && page.before && !(page.before.createdAt < before.createdAt ||
-        page.before.createdAt === before.createdAt && page.before.id < before.id)) throw new Error("Ledger native cursor unavailable");
-      for (const snapshot of page.snapshots) {
-        if (++scanned > LEDGER_RUN_LIMIT) { runLimitReached = true; break; }
-        if (snapshot) runs.push(snapshot);
-      }
-      before = page.before!;
+    const snapshots = native.read(LEDGER_RUN_LIMIT + 1);
+    if (!Array.isArray(snapshots) || snapshots.length > LEDGER_RUN_LIMIT + 1) throw new Error("Ledger native metadata unavailable");
+    for (const snapshot of snapshots) {
+      if (++scanned > LEDGER_RUN_LIMIT) { runLimitReached = true; break; }
+      if (snapshot) runs.push(snapshot);
     }
   } else {
     for await (const value of reader.iterateRecentQueries(LEDGER_RUN_LIMIT + 1)) {

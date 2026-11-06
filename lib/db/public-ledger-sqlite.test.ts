@@ -81,10 +81,10 @@ it("sorts bounded public metadata, counts excluded positions and retains no orig
     add(db, "z-erased");db.prepare("UPDATE run_privacy SET erased=1 WHERE run_id='z-erased'").run();
   });
   const before = readFileSync(f.file), port = createEnrolledSqlitePublicLedgerRuns(f.open().db);
-  expect(Object.isFrozen(port)).toBe(true);expect(Object.keys(port)).toEqual(["page"]);
-  const first = port.page({ take: 2 });expect(first.snapshots.map(s => s?.id ?? null)).toEqual([null, "c"]);
-  const second = port.page({ take: 2, before: first.before! });expect(second.snapshots.map(s => s?.id)).toEqual(["b", "a"]);
-  expect(port.page({ take: 2, before: second.before! })).toEqual({ snapshots: [], before: null });
+  expect(Object.isFrozen(port)).toBe(true);expect(Object.keys(port)).toEqual(["read"]);
+  const first = port.read(2);expect(first.map(s => s?.id ?? null)).toEqual([null, "c"]);
+  const second = port.read(4);expect(second.map(s => s?.id ?? null)).toEqual([null, "c", "b", "a"]);
+  expect(port.read(10)).toHaveLength(4);
   const serialized = JSON.stringify([first, second]);expect(serialized).not.toMatch(/PRIVATE-|z-private|z-unlisted|z-erased|question|answer|rationale|trace|asker/);
   expect(readFileSync(f.file)).toEqual(before);
 });
@@ -104,43 +104,47 @@ it("matches the existing full privacy/provenance projection, including stored fl
   });
   const connection = f.open(), privacy = createEnrolledSqliteRunPrivacy(connection.db);
   const full = await projectRecordedEvidenceProvenanceList(async () => new Set(["source:creator-one", "item:other-creator:item-one"]), await privacy.list({ take: 32 }));
-  const page = createEnrolledSqlitePublicLedgerRuns(connection.db).page({ take: 32 });
-  expect(page.snapshots).toEqual(full.map(captureLedgerRun));
-  expect(page.snapshots.every(s => s!.references[0].synthetic)).toBe(true);
+  const page = createEnrolledSqlitePublicLedgerRuns(connection.db).read(251);
+  expect(page).toEqual(full.map(captureLedgerRun));
+  expect(page.every(s => s!.references[0].synthetic)).toBe(true);
   expect(expected).toHaveLength(3);
 });
 
-it("loads large originals one at a time without .all bodies or a data sorter", () => {
+it("bounds actual native body allocations at four byte-guarded originals without a data sorter", () => {
   const f = fixture(db => { for (let n = 0; n < 17; n++) add(db, `large-${String(n).padStart(2, "0")}`, "public", { answer: "PRIVATE-LARGE-BODY".repeat(50_000), trace: [] }); });
   const connection = f.open(), port = createEnrolledSqlitePublicLedgerRuns(connection.db), original = DatabaseSync.prototype.prepare;
-  let bodies = 0;
+  let bodies = 0, batches = 0;
   vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function(this: DatabaseSync, sql: string) {
     const statement = Reflect.apply(original, this, [sql]);
-    if (!sql.includes("SELECT q.data FROM query_runs")) return statement;
+    if (!sql.includes("THEN q.data END AS data FROM query_runs")) return statement;
     expect(sql).not.toMatch(/ORDER BY/);
+    expect(sql).toContain("length(CAST(q.data AS BLOB))<=4000000");
     return new Proxy(statement, { get(target, key) {
-      if (key === "all") return () => { throw Error("Full-body allocation refused"); };
-      if (key === "get") return (...args: unknown[]) => { bodies++;return Reflect.apply(target.get, target, args); };
+      if (key === "all") return (...args: unknown[]) => {
+        const rows = Reflect.apply(target.all, target, args);batches++;bodies += rows.length;
+        expect(rows.length).toBeLessThanOrEqual(4);
+        expect(rows.reduce((sum: number, row: { data: unknown }) => sum + Buffer.byteLength(String(row.data)), 0)).toBeLessThanOrEqual(16_000_000);return rows;
+      };
       const value = Reflect.get(target, key, target);return typeof value === "function" ? value.bind(target) : value;
     } });
   });
-  const page = port.page({ take: 32 });expect(page.snapshots).toHaveLength(17);expect(bodies).toBe(17);
+  const page = port.read(251);expect(page).toHaveLength(17);expect(bodies).toBe(17);expect(batches).toBe(5);
   expect(Buffer.byteLength(JSON.stringify(page))).toBeLessThan(16_000);expect(JSON.stringify(page)).not.toContain("PRIVATE-LARGE-BODY");
 });
 
-it("sees withdrawal between pages and permanently refuses a changed runtime manifest", () => {
+it("sees withdrawal between captures and permanently refuses a changed runtime manifest", () => {
   const f = fixture(db => { add(db, "a");add(db, "b"); }), port = createEnrolledSqlitePublicLedgerRuns(f.open().db);
-  const first = port.page({ take: 1 });expect(first.snapshots[0]?.id).toBe("b");
+  const first = port.read(1);expect(first[0]?.id).toBe("b");
   f.edit(db => db.prepare("UPDATE run_privacy SET visibility='private' WHERE run_id='a'").run());
-  expect(port.page({ take: 1, before: first.before! }).snapshots).toEqual([]);
-  writeFileSync(f.manifestPath, "{}");expect(() => port.page({ take: 1 })).toThrow();
-  writeFileSync(f.manifestPath, f.manifest);expect(() => port.page({ take: 1 })).toThrow();
+  expect(port.read(2).map(s => s?.id)).toEqual(["b"]);
+  writeFileSync(f.manifestPath, "{}");expect(() => port.read(1)).toThrow();
+  writeFileSync(f.manifestPath, f.manifest);expect(() => port.read(1)).toThrow();
 });
 
 it("refuses a privacy-policy change rather than downgrading to an ordinary reader", () => {
   const f = fixture(db => add(db, "a")), port = createEnrolledSqlitePublicLedgerRuns(f.open().db);
-  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false");expect(() => port.page({ take: 1 })).toThrow();
-  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");expect(() => port.page({ take: 1 })).toThrow();
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "false");expect(() => port.read(1)).toThrow();
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");expect(() => port.read(1)).toThrow();
 });
 
 it("rejects a changed manifest during the real body read before metadata escapes", () => {
@@ -148,20 +152,20 @@ it("rejects a changed manifest during the real body read before metadata escapes
   let observed = false;
   vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function(this: DatabaseSync, sql: string) {
     const statement = Reflect.apply(original, this, [sql]);
-    if (!sql.includes("SELECT q.data FROM query_runs")) return statement;
+    if (!sql.includes("THEN q.data END AS data FROM query_runs")) return statement;
     return new Proxy(statement, { get(target, key) {
-      if (key === "get") return (...args: unknown[]) => { const row = Reflect.apply(target.get, target, args);observed = true;writeFileSync(f.manifestPath, "{}");return row; };
+      if (key === "all") return (...args: unknown[]) => { const rows = Reflect.apply(target.all, target, args);observed = true;writeFileSync(f.manifestPath, "{}");return rows; };
       const value = Reflect.get(target, key, target);return typeof value === "function" ? value.bind(target) : value;
     } });
   });
-  expect(() => port.page({ take: 1 })).toThrow();expect(observed).toBe(true);
+  expect(() => port.read(1)).toThrow();expect(observed).toBe(true);
 });
 
 it("drops metadata withdrawn by a real writer at snapshot commit", () => {
   const f = fixture(db => add(db, "a")), port = createEnrolledSqlitePublicLedgerRuns(f.open().db);
   const prepare = DatabaseSync.prototype.prepare, exec = DatabaseSync.prototype.exec;let selected = false, withdrawn = false;
   vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function(this: DatabaseSync, sql: string) {
-    if (sql.includes("SELECT q.data FROM query_runs")) selected = true;
+    if (sql.includes("THEN q.data END AS data FROM query_runs")) selected = true;
     return Reflect.apply(prepare, this, [sql]);
   });
   vi.spyOn(DatabaseSync.prototype, "exec").mockImplementation(function(this: DatabaseSync, sql: string) {
@@ -171,30 +175,50 @@ it("drops metadata withdrawn by a real writer at snapshot commit", () => {
     }
     return result;
   });
-  expect(port.page({ take: 1 }).snapshots).toEqual([null]);expect(withdrawn).toBe(true);
+  expect(port.read(1)).toEqual([null]);expect(withdrawn).toBe(true);
 });
 
-it("refuses newly unknown schema between pages without repair or fallback", () => {
+it("refuses newly unknown schema between captures without repair or fallback", () => {
   const f = fixture(db => { add(db, "a");add(db, "b"); }), port = createEnrolledSqlitePublicLedgerRuns(f.open().db);
-  const first = port.page({ take: 1 });
+  port.read(1);
   f.edit(db => db.exec("CREATE TABLE unreviewed_ledger_test(id TEXT)"));
-  expect(() => port.page({ take: 1, before: first.before! })).toThrow();
+  expect(() => port.read(1)).toThrow();
 });
 
-it.each([0, 33, 1.5])("refuses an invalid page bound %s", take => {
+it.each([0, 252, 1.5])("refuses an invalid capture bound %s", take => {
   const f = fixture(), port = createEnrolledSqlitePublicLedgerRuns(f.open().db);
-  expect(() => port.page({ take })).toThrow();
+  expect(() => port.read(take)).toThrow();
 });
 
 it("refuses malformed or misbound original data without emitting metadata", () => {
   for (const data of ['{"id":"a"}', JSON.stringify(ledgerRun({ id: "other", paymentMode: "offline", fundingOwner: "offline" }))]) {
     const f = fixture(db => { add(db, "a");db.prepare("UPDATE query_runs SET data=? WHERE id='a'").run(data); });
-    const port = createEnrolledSqlitePublicLedgerRuns(f.open().db);expect(() => port.page({ take: 1 })).toThrow();
+    const port = createEnrolledSqlitePublicLedgerRuns(f.open().db);expect(() => port.read(1)).toThrow();
   }
 });
 
-it("exposes the page only through the genuine selected native facade and keeps the legacy ledger output exact", async () => {
+it("refuses oversized raw JSON in SQL before allocating its original body", () => {
   const f = fixture(db => {
+    const run = add(db, "a");db.prepare("UPDATE query_runs SET data=? WHERE id='a'").run(" ".repeat(4_000_000) + JSON.stringify(run));
+  });
+  const port = createEnrolledSqlitePublicLedgerRuns(f.open().db), prepare = DatabaseSync.prototype.prepare;let observed = false;
+  vi.spyOn(DatabaseSync.prototype, "prepare").mockImplementation(function(this: DatabaseSync, sql: string) {
+    const statement = Reflect.apply(prepare, this, [sql]);
+    if (!sql.includes("THEN q.data END AS data FROM query_runs")) return statement;
+    return new Proxy(statement, { get(target, key) {
+      if (key === "all") return (...args: unknown[]) => {
+        const rows = Reflect.apply(target.all, target, args);observed = true;expect(rows).toHaveLength(1);expect(rows[0].data).toBeNull();return rows;
+      };
+      const value = Reflect.get(target, key, target);return typeof value === "function" ? value.bind(target) : value;
+    } });
+  });
+  expect(() => port.read(1)).toThrow();expect(observed).toBe(true);
+});
+
+it("exposes metadata only through the genuine selected native facade and keeps the legacy ledger output exact", async () => {
+  const f = fixture(db => {
+    db.prepare("INSERT INTO sources(id,name,url,tags,fetch_price,evidence_provenance) VALUES(?,?,?,?,?,?)")
+      .run("creator-one", "Synthetic source", "https://fixture.example/source", "[]", 0, "synthetic-demo");
     add(db, "a");add(db, "b");add(db, "hidden", "private");
     db.prepare(`INSERT INTO payment_events(id,created_at,kind,query_id,source_id,source_name,payer,payee,amount_usdc,network,settled,settlement_status,origin)
       VALUES('simulated-one',?,'fetch','a','creator-one','Synthetic',?,?,0.000003,?,0,'simulated','web')`)
@@ -212,6 +236,25 @@ it("exposes the page only through the genuine selected native facade and keeps t
     const legacy = await readOperatorLedger({ iterateRecentQueries: reader!.iterateRecentQueries.bind(reader), listPayments: reader!.listPayments.bind(reader) }, network, 7, () => LEDGER_FIXTURE_TIME);
     const native = await readOperatorLedger(reader!, network, 7, () => LEDGER_FIXTURE_TIME);
     expect(native).toEqual(legacy);expect(native.payload.jobs).toHaveLength(2);expect(native.payload.entries).toEqual([]);
-    expect(native.payload.jobs.flatMap(j => j.legs).every(l => l.state === "simulated")).toBe(true);expect(readFileSync(f.file)).toEqual(before);
+    expect(native.payload.jobs.flatMap(j => j.legs).every(l => l.state === "uncertain" && l.reason === "synthetic-demo")).toBe(true);expect(readFileSync(f.file)).toEqual(before);
   } finally { if (reader) closeReadonlyApplicationStorage(reader); }
+}, 30_000);
+
+it("serves the actual HTTP JSON and CSV routes through selected native metadata without generic hydration", async () => {
+  const f = fixture(db => add(db, "http-native", "public", { createdAt: new Date().toISOString() }));
+  vi.resetModules();vi.stubEnv("KERYX_NETWORK", "arc");vi.stubEnv("NEXT_PUBLIC_KERYX_NETWORK", "arc");vi.stubEnv("KERYX_FORCE_OFFLINE", "0");
+  vi.stubEnv("KERYX_REGISTRY_ADDRESS", `0x${"3".repeat(40)}`);vi.stubEnv("NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS", `0x${"3".repeat(40)}`);
+  vi.stubEnv("KERYX_STORAGE_MANIFEST", f.manifestPath);vi.stubEnv("KERYX_SQLITE_PATH", f.file);vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true");vi.stubEnv("CONTENT_MASTER_KEY", "11".repeat(32));
+  const outbound = vi.spyOn(globalThis, "fetch").mockImplementation(async () => { throw Error("Native HTTP fixture network denied"); });
+  const { SqliteAdapter } = await import("./sqlite-adapter");
+  const generic = vi.spyOn(SqliteAdapter.prototype, "iterateRecentQueries");
+  const json = await import("../../app/api/operator/ledger/route");
+  const before = readFileSync(f.file);
+  const response = await json.GET(new Request("http://fixture.local/api/operator/ledger?days=7"));
+  expect(response.status).toBe(200);expect(response.headers.get("cache-control")).toContain("no-store");
+  const body = await response.json();expect(body.payload.jobs.map((j: {id:string}) => j.id)).toEqual(["http-native"]);expect(body.payload.entries).toEqual([]);
+  expect(JSON.stringify(body)).not.toMatch(/PRIVATE-|question|answer|rationale|trace/);
+  const exported = await json.GET(new Request("http://fixture.local/api/operator/ledger?days=7&format=csv"));
+  expect(exported.status).toBe(200);expect(exported.headers.get("cache-control")).toContain("no-store");
+  expect(await exported.text()).not.toMatch(/PRIVATE-/);expect(generic).not.toHaveBeenCalled();expect(outbound).not.toHaveBeenCalled();expect(readFileSync(f.file)).toEqual(before);
 }, 30_000);

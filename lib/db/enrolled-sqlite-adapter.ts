@@ -354,8 +354,6 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
       }) });
     }
     Object.defineProperty(facade, "runPrivacyActive", { value: privacyActive });
-    if (readOnly && privacyActive && deployment.identity.authorityMode === "mainnet-real")
-      Object.defineProperty(facade, "publicLedgerRuns", { value: createEnrolledSqlitePublicLedgerRuns(db) });
     for (const name of ["runClaims", "runOwnershipHistory", "runPrivacy"] as const) {
       if (core[name]) Object.defineProperty(facade, name, { value: core[name] });
     }
@@ -378,6 +376,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
         if (privacyActive !== (process.env.KERYX_RUN_PRIVACY_ENABLED === "true")) throw new Error("Enrolled SQLite privacy policy changed during construction");
         return createEnrolledSqlitePublicUsage(db);
       })() });
+      if (readOnly && privacyActive)
+        Object.defineProperty(facade, "publicLedgerRuns", { value: createEnrolledSqlitePublicLedgerRuns(db) });
     }
     const identities = createEnrolledSqliteProfileIdentities(db);
     if (identities) Object.defineProperty(facade, "profileIdentities", { value: identities });
