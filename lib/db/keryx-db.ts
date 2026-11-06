@@ -230,6 +230,8 @@ export interface KeryxDB extends PublicReferenceArchiveDb {
   readonly runPrivacyActive?: boolean;
   /** Optional ordinary-storage classified usage. Enrolled/native profiles expose no fallback. */
   readonly publicUsage?: import("../usage/contracts").PublicUsageStore;
+  /** Selected native public ledger metadata only; absent readers retain the bounded generic path. */
+  readonly publicLedgerRuns?: import("../operator-ledger/native-runs").PublicLedgerRunReader;
   /** Default-off anonymous ownership-only sidecar; exact pre-existing ordinary schema only.
    * Absent on enrolled/native/archive/private facades; grants no payment or original authority. */
   readonly runClaims?: import("../run-claims/contracts").RunClaimsStore;

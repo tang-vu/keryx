@@ -1,5 +1,31 @@
 # Keryx — Decision Log
 
+## Capture bounded public ledger metadata inside a fresh native read snapshot - 2026-11-07
+
+The public transfer ledger needs associations, funding classification and recorded
+source provenance, rather than complete archived answers. Its generic SQLite
+iterator repeatedly crosses guarded asynchronous privacy/provenance reads. Keep
+that iterator and every existing guard intact. Add a closed synchronous metadata
+reader only to the selected readonly mainnet SQLite facade when the full native
+privacy profile is active. Cap it at the existing 251-position sentinel.
+
+Every call checks full selected native/runtime authority before and inside its
+read transaction, after projection, after commit, and after a fresh publication
+check. The verified SQL wrapper also retains all of its per-statement guards.
+Sort bounded identifiers, then read at most four originals per internal batch.
+Bound each raw original at 4,000,000 bytes in SQL before materialization, retain
+full original validation and the same stored/seed synthetic provenance projection,
+and detach retained metadata from original JSON backing stores. No raw handle,
+callback, full-history array, cached permission, migration or private fallback
+leaves this capability. Malformed identity/time bindings refuse the read.
+
+Preserve the existing 250-run/1000-payment output limits, sequential payment read,
+conflicting-reference quarantine, exact amounts, partial/separate-read-snapshot
+disclosure and JSON/CSV integrity contract. A missing capability retains the
+generic path; a present refusal propagates. This source change grants no signing,
+funding, settlement, publication or deployment authority. See
+[the public ledger contract](docs/engineering/operator-job-ledger-286.md).
+
 ## Deliver caller-requested draft work products after canonical attribution - 2026-11-04
 
 An explicit original custom brief may request a proposed plan, checklist or

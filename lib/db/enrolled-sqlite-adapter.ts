@@ -13,6 +13,7 @@ import { createEnrolledSqliteRunClaims } from "./run-claims-sqlite";
 import { createEnrolledSqliteRunOwnershipHistory } from "./run-ownership-history-sqlite";
 import { createEnrolledSqliteRunPrivacy } from "./run-privacy-sqlite";
 import { createEnrolledSqlitePublicUsage } from "./public-usage-sqlite";
+import { createEnrolledSqlitePublicLedgerRuns } from "./public-ledger-sqlite";
 import { runClaimsEnabled } from "../run-claims/contracts";
 import { withRunReadProjection } from "../run-privacy/projection";
 import { projectRecordedEvidenceProvenance } from "../research/evidence-provenance";
@@ -375,6 +376,8 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
         if (privacyActive !== (process.env.KERYX_RUN_PRIVACY_ENABLED === "true")) throw new Error("Enrolled SQLite privacy policy changed during construction");
         return createEnrolledSqlitePublicUsage(db);
       })() });
+      if (readOnly && privacyActive)
+        Object.defineProperty(facade, "publicLedgerRuns", { value: createEnrolledSqlitePublicLedgerRuns(db) });
     }
     const identities = createEnrolledSqliteProfileIdentities(db);
     if (identities) Object.defineProperty(facade, "profileIdentities", { value: identities });

@@ -18,6 +18,25 @@ admits only readers returned by its no-argument read-only factory, pins the actu
 handle or existing Supabase terminal closer, and permits disposal after configuration
 revocation without probing undeclared facade properties or gaining fresh authority.
 
+The selected readonly mainnet SQLite facade exposes an optional closed metadata
+capture when its full native privacy profile is active. One synchronous call
+selects at most the existing 251 run positions, sorts identifiers rather than
+bodies, and reads at most four public originals per internal batch. SQL refuses
+raw values over 4,000,000 bytes before returning their bodies; this also refuses
+oversized whitespace-padded legacy JSON even if its normalized form is smaller.
+Full original validation, index identity/time binding, stored source/item
+synthetic flags and seed-fingerprint demotion precede the same ledger projection.
+Retained snapshots contain detached metadata rather than archived prose/trace.
+
+Fresh full native/runtime checks surround the read transaction and its commit;
+all existing verified per-statement guards remain active. A fresh public/erased
+lookup after commit drops metadata withdrawn during the snapshot. No permission,
+original body or raw handle is cached between requests. Unsupported readers keep
+the existing bounded iterator; a present capability's refusal never invokes a
+fallback. The complete bounded payment slice is still read afterwards, including
+records needed to quarantine conflicting references. Runs and payments remain
+separate read snapshots, with partial coverage and unknown business results.
+
 The eligible cohort requires persisted, validated `RunProvenance` from the web ingress,
 `origin: web`, and the existing public `query_runs` domain. The actual web ingress stamps
 web/session or web/unknown guest provenance and saves its completed public run; private v2
