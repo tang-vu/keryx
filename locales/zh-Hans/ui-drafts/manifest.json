@@ -6492,7 +6492,7 @@
     {
       "namespace": "core-inline",
       "sourcePath": "lib/i18n/messages.ts",
-      "sourceSha256": "37ac7ad5e8f7daf683952524320809f87a27d21ed650959de267137fd2cc6c2d",
+      "sourceSha256": "f3d85eef26e994ae7defeb90a5a1c21f47e98cb93ec04a938f7046f71138acaf",
       "draftPath": "locales/zh-Hans/ui-drafts/core-inline.json",
       "extractedLeaves": 390,
       "authoredEntries": 390,

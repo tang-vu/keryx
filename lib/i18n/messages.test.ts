@@ -57,6 +57,29 @@ describe("typed English catalogue and selected translations", () => {
     expect(validateMessageCatalogue(inherited).missing).toContain("navigation.home");
   });
 
+  it("keeps empty null-prototype catalogues on English fallback with missing reports and parameter checks", () => {
+    const report = vi.fn();
+    const messages = createMessages("ar", Object.create(null), report);
+    expect(messages("navigation.home")).toBe("Home");
+    expect(messages("report.question", { question: "Original {count} العربية" }))
+      .toBe("Question: Original {count} العربية");
+    expect(report.mock.calls).toEqual([["ar", "navigation.home"], ["ar", "report.question"]]);
+    // @ts-expect-error The English fallback retains mandatory named parameters.
+    expect(() => messages("report.question")).toThrow("Missing message parameter");
+    expect(validateMessageCatalogue({}).missing).toEqual(Object.keys(englishMessages));
+  });
+
+  it("rejects symbols and hidden accessors even when no enumerable translation keys are present", () => {
+    const accessor = vi.fn(() => "Wrong home");
+    const hidden = Object.defineProperty({}, "navigation.home", { get: accessor });
+    expect(Object.keys(hidden)).toEqual([]);
+    expect(() => createMessages("en", hidden)).toThrow("Invalid message catalogue properties");
+    expect(accessor).not.toHaveBeenCalled();
+    const symbolic = Object.defineProperty({}, Symbol("translation"), { value: "Wrong home" });
+    expect(Object.keys(symbolic)).toEqual([]);
+    expect(() => createMessages("en", symbolic)).toThrow("Invalid message catalogue properties");
+  });
+
   it("keeps the validated selected catalogue independent of caller mutation", () => {
     const catalogue = { "navigation.home": "Trang chủ" };
     const messages = createMessages("vi", catalogue);
