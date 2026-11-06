@@ -118,7 +118,7 @@ export const privateJobHistoryDetailSchema = z.object({ ...pageFields,
 }).strict().refine(v => v.wallet === v.row.ownerWallet && v.row.createdAt === v.result.createdAt && v.row.savedAt === v.result.savedAt);
 export type PrivateJobHistoryDetail = z.infer<typeof privateJobHistoryDetailSchema>;
 export const privateJobHistoryDetailInputSchema = z.object({
-  id: privateJobPositionSchema.shape.id.describe("Exact completed private-job ID returned in your authenticated history page; keep it private."),
+  id: privateJobPositionSchema.shape.id,
 }).strict();
 export function parsePrivateJobHistoryInput(raw: unknown) {
   return privateJobHistoryInputSchema.parse(boundedPortableCopy(raw, PRIVATE_JOB_HISTORY_BOUNDS.requestBytes));
