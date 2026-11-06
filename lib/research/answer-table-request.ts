@@ -13,6 +13,7 @@ export function parseAnswerTableRequest(question: string): AnswerTableRequest | 
   // question, including exact URLs/versions, remains the digest/review input.
   const visible = visibleDirections(question).replace(/https?:\/\/[^\s]+/giu, url => ` source ${/[,;.!?]+$/u.exec(url)?.[0] ?? ""}`);
   if (/(?:^|[\r\n])\s*(?:Question|Constraints|Unread source leads|Source|Document|Article|Transcript|Nguồn|Tài liệu)\s*[:：]/iu.test(visible) ||
+      /(?:^|[\r\n\u2028\u2029])[^\S\r\n\u2028\u2029]*(?:(?:the|our|this)\s+)?(?:Source|Document|Article|Transcript|Nguồn(?!\s+lực\b)|Tài liệu|Trích đoạn)(?=$|[\s:：])[^\r\n\u2028\u2029:：]{0,100}(?:\b(?:says|text|excerpt|content|quote|instructions|nói|ghi)\b|[:：])/iu.test(visible) ||
       /\b(?:classroom|lesson|exit question|classification exercise|workshop)\b|\b(?:activities|activity|exercises?)\b[^.!?]{0,60}\b(?:students|pupils|class)\b|giáo án|hoạt động (?:lớp học|trên lớp)|bài tập/iu.test(visible)) return;
   // A table must not silently supersede an independently bounded answer.
   if (/\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*[-–—]?\s*(?:words?|sentences?|bullets?)\b|(?:\d+|một|hai|ba|bốn|năm|sáu|bảy|tám|chín|mười)\s+(?:từ|câu|gạch đầu dòng)(?![\p{L}\p{N}_])/iu.test(visible)) return;
@@ -21,7 +22,11 @@ export function parseAnswerTableRequest(question: string): AnswerTableRequest | 
     /(?:^|[.!?;\r\n])\s*(?:please\s+)?use\s+[^.!?;\r\n]{1,120}\s+to\s+(?:write|create|make|produce|prepare)\s+[^.!?;\r\n]{0,80}\btable\b/iu.test(visible) ||
     /(?:^|[.!?;\r\n])\s*(?:please\s+)?use\s+(?:a\s+)?(?:(?:compact|small|short|comparison|decision)\s+)?table\s*(?:[.!?;\r\n]|$|to\s+(?:show|present|compare|summarize|explain)\b)/iu.test(visible) ||
     /(?:^|[.!?;\r\n])\s*(?:I|we)\s+(?:need|want|would like)\b[^.!?;\r\n]{0,100}\btable\b/iu.test(visible) ||
-    /(?:^|[.!?;\r\n])\s*(?:(?:xin|hãy)\s+)?(?:tạo|lập|viết|đưa|cho|cung cấp|trình bày)\s+[^.!?;\r\n]{0,100}?bảng(?![\p{L}\p{N}_])/iu.test(visible);
+    /(?:^|[.!?;\r\n])\s*(?:(?:xin|hãy)\s+)?(?:tạo|lập|viết|đưa|cho|cung cấp|trình bày)\s+[^.!?;\r\n]{0,100}?bảng(?![\p{L}\p{N}_])/iu.test(visible) ||
+    // A comparison can name its format after the subjects. Requiring the
+    // format phrase avoids treating database-table subjects as output intent.
+    /(?:^|[.!?;\r\n])\s*(?:(?:using|based on)\s+[^.!?;\r\n]{1,150},\s*)?(?:(?:please|can you|could you|would you)\s+)?(?:compare|contrast)\b[^.!?;\r\n]{1,130}?\b(?:in|as|using)\s+(?:(?:a|an|the)\s+)?(?:(?:compact|small|short|comparison|markdown)\s+)?table\b/iu.test(visible) ||
+    /(?:^|[.!?;\r\n])\s*(?:(?:xin|hãy)\s+)?(?:so sánh|đối chiếu)(?![\p{L}\p{N}_])[^.!?;\r\n]{1,130}?(?:\s+bằng|\s+trong|\s+dưới\s+dạng)\s+(?:một\s+)?bảng(?![\p{L}\p{N}_])/iu.test(visible);
   return requested ? { version: 1, questionSha256: createHash("sha256").update(question).digest("hex") } : undefined;
 }
 
