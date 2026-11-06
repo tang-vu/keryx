@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { once } from "node:events";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
@@ -9,6 +12,96 @@ const require = createRequire(import.meta.url);
 const proxyaddr = require("proxy-addr");
 const { SourceMapConsumer, SourceNode } = require("source-map-js");
 const redirectHttp = require("follow-redirects").http;
+
+// GHSA-rmxm-3fg6-px4f: the static adapter must not decode a routed path again
+// and serve a protected file without running its prefix middleware. This is a
+// synthetic dependency regression, not a claim that Keryx mounts serveStatic.
+test("static adapter preserves protected prefixes and ordinary file responses", { timeout: 10000 }, async t => {
+  const { Hono } = require("hono");
+  const { createAdaptorServer } = require("@hono/node-server");
+  const { serveStatic } = require("@hono/node-server/serve-static");
+  const root = await mkdtemp(join(tmpdir(), "keryx-static-security-"));
+  let server;
+  t.after(async () => {
+    if (server?.listening) await new Promise((resolve, reject) => {
+      server.close(error => error ? reject(error) : resolve());
+      server.closeAllConnections();
+    });
+    await rm(root, { recursive: true, force: true });
+  });
+  await mkdir(join(root, "files", "admin"), { recursive: true });
+  await writeFile(join(root, "files", "admin", "private.txt"), "synthetic protected content");
+  for (const name of ["public.txt", "hello world.txt", "炎.txt"])
+    await writeFile(join(root, "files", name), "synthetic public content");
+  const app = new Hono();
+  app.use("/files/admin/*", c => c.text("Unauthorized", 401));
+  app.use("/files/*", serveStatic({ root }));
+  // The patch also changes HTTP response framing in getRequestListener, which
+  // the SDK's Node transport imports. Exercise bodies and bodyless statuses.
+  app.get("/adapter/text", c => c.text("adapter 炎"));
+  app.get("/adapter/bytes", () => new Response(new Uint8Array([65, 66])));
+  app.get("/adapter/blob", () => new Response(new Blob(["adapter blob"])));
+  for (const status of [204, 304])
+    app.get(`/adapter/${status}`, () => new Response(null, { status, headers: { "X-Adapter": "retained" } }));
+  app.get("/adapter/events", () => new Response(new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("event: result\ndata: synthetic\n\n"));
+      controller.close();
+    },
+  }), { headers: { "Content-Type": "text/event-stream" } }));
+  server = createAdaptorServer(app);
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  // Send the literal request target: a URL helper could normalize it first.
+  const request = (path, method = "GET") => new Promise((resolve, reject) => {
+    const req = httpRequest({ hostname: "127.0.0.1", port: server.address().port, path, method, agent: false }, response => {
+      let body = "";
+      response.setEncoding("utf8");
+      response.on("data", chunk => { body += chunk; });
+      response.on("error", reject);
+      response.on("end", () => resolve({ status: response.statusCode, headers: response.headers, body }));
+    });
+    req.on("error", reject);
+    req.setTimeout(2000, () => req.destroy(new Error("Loopback static request timed out")));
+    req.end();
+  });
+  for (const path of ["/files/admin/private.txt", "/files/%61dmin/private.txt"])
+    assert.deepEqual(await request(path).then(({ status, body }) => ({ status, body })), { status: 401, body: "Unauthorized" });
+  for (const path of ["/files/%%36%31dmin/private.txt", "/files/%2561dmin/private.txt", "/files/admin%2Fprivate.txt"]) {
+    const response = await request(path);
+    assert.equal(response.status, 404, path);
+    assert.doesNotMatch(response.body, /synthetic protected content/, path);
+  }
+  for (const path of ["/files/public.txt", "/files/hello%20world.txt", "/files/%E7%82%8E.txt"]) {
+    const response = await request(path);
+    assert.equal(response.status, 200, path);
+    assert.equal(response.body, "synthetic public content", path);
+    assert.match(response.headers["content-type"], /^text\/plain/);
+  }
+  const head = await request("/files/public.txt", "HEAD");
+  assert.equal(head.status, 200);
+  assert.equal(head.body, "");
+  assert.equal(Number(head.headers["content-length"]), Buffer.byteLength("synthetic public content"));
+  assert.equal((await request("/files/missing.txt")).status, 404);
+  for (const [path, body] of [["/adapter/text", "adapter 炎"], ["/adapter/bytes", "AB"], ["/adapter/blob", "adapter blob"]]) {
+    const response = await request(path);
+    assert.equal(response.status, 200, path);
+    assert.equal(response.body, body, path);
+    assert.equal(Number(response.headers["content-length"]), Buffer.byteLength(body), path);
+    assert.equal(response.headers["transfer-encoding"], undefined, path);
+  }
+  for (const status of [204, 304]) {
+    const response = await request(`/adapter/${status}`);
+    assert.equal(response.status, status);
+    assert.equal(response.body, "");
+    assert.equal(response.headers["x-adapter"], "retained");
+    assert.equal(response.headers["transfer-encoding"], undefined);
+  }
+  const events = await request("/adapter/events");
+  assert.equal(events.status, 200);
+  assert.equal(events.headers["content-type"], "text/event-stream");
+  assert.equal(events.body, "event: result\ndata: synthetic\n\n");
+});
 
 // GHSA-mrwp-f3q8-3g9p: caller-declared custom credentials must not follow a
 // cross-origin redirect when sensitiveHeaders was created in another realm.
