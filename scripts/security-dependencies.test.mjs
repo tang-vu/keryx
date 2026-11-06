@@ -6,12 +6,70 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { once } from "node:events";
 import { runInNewContext } from "node:vm";
+import { spawn } from "node:child_process";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
 const proxyaddr = require("proxy-addr");
 const { SourceMapConsumer, SourceNode } = require("source-map-js");
 const redirectHttp = require("follow-redirects").http;
+
+// GHSA-378v-28hj-76wf: legacy development conversion helpers pin an older BN
+// whose maskn(0) corrupts its state. Bound the worker so a regression cannot
+// hang this test process while serializing or dividing the resulting zero.
+test("legacy development BN instances remain usable after masking to zero", { timeout: 15000 }, async t => {
+  for (const parent of ["ethjs-unit", "number-to-bn"]) {
+    const parentRequire = createRequire(require.resolve(parent));
+    const bnPath = parentRequire.resolve("bn.js");
+    const child = spawn(process.execPath, ["--input-type=commonjs", "-e", `
+      const BN = require(process.argv[1]);
+      process.stdout.write("ready\\n");
+      const zero = new BN(255).maskn(0);
+      process.stdout.write(JSON.stringify({ decimal: zero.toString(10), quotient: zero.div(new BN(3)).toString(10), bits: zero.bitLength() }));
+    `, bnPath], { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    t.after(() => child.kill());
+    let stdout = "", stderr = "", timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; child.kill(); }, 4000);
+    child.stdout.on("data", chunk => {
+      stdout += chunk;
+      if (stdout.length > 4096) child.kill();
+    });
+    child.stderr.on("data", chunk => { stderr = (stderr + chunk).slice(-4096); });
+    const code = await new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", resolve);
+    }).finally(() => clearTimeout(timer));
+    assert.ok(stdout.startsWith("ready\n"), `${parent} worker did not initialize: ${stderr}`);
+    assert.equal(timedOut, false, `${parent} BN worker exceeded deadline`);
+    assert.equal(code, 0, `${parent}: ${stderr}`);
+    assert.deepEqual(JSON.parse(stdout.slice("ready\n".length)), { decimal: "0", quotient: "0", bits: 0 });
+  }
+});
+
+test("legacy development integer and unit conversions retain exact values and errors", () => {
+  const numberToBN = require("number-to-bn");
+  const { toWei, fromWei } = require("ethjs-unit");
+  const cases = [
+    [0, "0"], [1, "1"], [-1, "-1"], [Number.MAX_SAFE_INTEGER, "9007199254740991"],
+    [" 00123 ", "123"], ["0xff", "255"], ["-0xff", "-255"],
+    ["123456789012345678901234567890", "123456789012345678901234567890"],
+  ];
+  for (const [input, expected] of cases) assert.equal(numberToBN(input).toString(10), expected);
+  for (const input of ["1.5", "0xzz", "Infinity", undefined, null, {}, [], true])
+    assert.throws(() => numberToBN(input));
+  for (const [value, unit, expected] of [
+    ["1", "ether", "1000000000000000000"],
+    ["-1.000000000000000001", "ether", "-1000000000000000001"],
+    ["123456789.123456789123456789", "ether", "123456789123456789123456789"],
+    ["1.000001", "mwei", "1000001"], ["0.000000001", "gwei", "1"],
+  ]) {
+    assert.equal(toWei(value, unit).toString(10), expected);
+    assert.equal(fromWei(expected, unit), value);
+  }
+  for (const input of [".", "1.2.3", "invalid", "0.0000000000000000001"])
+    assert.throws(() => toWei(input, "ether"));
+  assert.throws(() => toWei("1", "unknown-unit"));
+});
 
 // GHSA-rmxm-3fg6-px4f: the static adapter must not decode a routed path again
 // and serve a protected file without running its prefix middleware. This is a
