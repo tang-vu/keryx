@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { sourceLearningId, validateSourceLearningReport } from "./source-learning-contract";
 
-const input = z.object({ sourceId: sourceLearningId }).strict();
+const input = z.object({ sourceId: sourceLearningId.describe("Existing registered source ID whose recorded public learning report to inspect; supply the ID, not a URL.") }).strict();
 interface Registrar {
   registerTool(name: string, options: { title: string; description: string; inputSchema: typeof input;
     annotations: { readOnlyHint: boolean; destructiveHint: boolean; idempotentHint: boolean; openWorldHint: boolean } },

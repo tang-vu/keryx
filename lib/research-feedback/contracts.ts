@@ -3,8 +3,9 @@ import { isWellFormedUtf16 } from "../llm/well-formed-utf16";
 
 export const feedbackChoiceSchema = z.enum(["useful", "revise", "reject"]);
 export const feedbackInputSchema = z.object({
-  choice: feedbackChoiceSchema,
-  reason: z.string().max(1000).refine(value => isWellFormedUtf16(value) && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)).default(""),
+  choice: feedbackChoiceSchema.describe("Your opinion of this exact delivered answer: useful, revise or reject."),
+  reason: z.string().max(1000).refine(value => isWellFormedUtf16(value) && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)).default("")
+    .describe("Optional private explanation of your choice, up to 1000 characters; defaults to empty."),
 }).strict();
 export type FeedbackInput = z.infer<typeof feedbackInputSchema>;
 export const feedbackRowSchema = feedbackInputSchema.extend({

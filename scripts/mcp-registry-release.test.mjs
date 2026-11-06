@@ -36,6 +36,14 @@ test('rejects namespace, version, remote, package, extra manifest fields and wor
     (m) => { m.packages[0].registryBaseUrl = 'https://mirror.example'; },
     (m) => { m.packages[0].transport.type = 'streamable-http'; },
     (m) => { m._meta = { authority: 'invented' }; },
+    (m) => { delete m.title; },
+    (m) => { m.title = 'Another server'; },
+    (m) => { delete m.icons; },
+    (m) => { m.icons[0].src = 'https://other.example/icon.svg'; },
+    (m) => { m.icons[0].src = 'http://keryx.cc/icon.svg'; },
+    (m) => { m.icons[0].mimeType = 'text/html'; },
+    (m) => { m.icons[0].sizes = ['1x1']; },
+    (m) => { m.icons.push(clone(m.icons[0])); },
   ]) {
     const changed = clone(manifest); mutate(changed);
     assert.throws(() => validateRelease(changed, pkg, context));

@@ -15,12 +15,14 @@ const wellFormed = (text: string) => {
   return true;
 };
 export const acceptanceInputSchema = z.object({
-  originalFingerprint: digestSchema, deliveredDigest: digestSchema,
-  expectedRevision: z.number().int().min(0).max(99),
-  idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/),
-  choice: z.enum(["accept", "revise", "reject"]),
-  reason: z.string().max(1000).refine(wellFormed).refine(value => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)).default(""),
-  publishState: z.boolean().default(false),
+  originalFingerprint: digestSchema.describe("Original delivery fingerprint from the current acceptance snapshot; preserve it exactly."),
+  deliveredDigest: digestSchema.describe("Exact delivered-version digest from the current acceptance snapshot."),
+  expectedRevision: z.number().int().min(0).max(99).describe("Current revision from deliverable_acceptance_read; stale revisions are refused."),
+  idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/).describe("Stable request key of 16-128 letters, digits, underscores or hyphens; reuse for an exact retry."),
+  choice: z.enum(["accept", "revise", "reject"]).describe("The original customer's explicit choice: accept, request revision, or reject this delivery."),
+  reason: z.string().max(1000).refine(wellFormed).refine(value => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)).default("")
+    .describe("Optional private explanation, up to 1000 characters; defaults to empty."),
+  publishState: z.boolean().default(false).describe("Explicit consent to share only choice state and timestamp publicly; defaults to false. Reason stays private."),
 }).strict();
 export type AcceptanceInput = z.infer<typeof acceptanceInputSchema>;
 export const acceptanceAuthoritySchema = z.discriminatedUnion("kind", [

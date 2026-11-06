@@ -106,7 +106,8 @@ server.registerTool(
     inputSchema: {
       reviewFirst: z.literal(false).optional().describe("Review-first requires the authenticated live browser; this adapter refuses true."),
       mode: z.never().optional().describe("Interactive review mode is unavailable on stdio."),
-      researchMode: z.never().optional(), responseMode: z.never().optional(),
+      researchMode: z.never().optional().describe("Unsupported on paid stdio research; omit this field."),
+      responseMode: z.never().optional().describe("Unsupported response override; omit this field."),
       question: z.string().max(8192).trim().min(3).max(MAX_ASK_QUESTION_CHARS)
         .describe(`The research question to ask Keryx (3–${MAX_ASK_QUESTION_CHARS} characters after trimming).`),
       language: z.enum(presentationLanguages).optional().describe("Language of generated labels only. Does not change the paid body/hash, original question or answer. Defaults to verified completed-answer language when available; unknown stays unknown, and a differing override is disclosed."),

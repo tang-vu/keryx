@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { purchaseOutcomeId, validatePurchaseOutcomes } from "./purchase-outcomes-contract";
 
-const input = z.object({ dispatchId: purchaseOutcomeId }).strict();
+const input = z.object({ dispatchId: purchaseOutcomeId.describe("Existing public dispatch ID whose retained purchase outcomes to inspect; supply the ID, not a URL.") }).strict();
 interface Registrar {
   registerTool(name: string, options: { title: string; description: string; inputSchema: typeof input;
     annotations: { readOnlyHint: boolean; destructiveHint: boolean; idempotentHint: boolean; openWorldHint: boolean } },
