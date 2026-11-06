@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { verifyOperatorLedger } from "./export";
 
-const input = z.object({ days: z.number().int().min(1).max(31).optional() }).strict();
+const input = z.object({ days: z.number().int().min(1).max(31).optional().describe("Lookback window in days, 1-31 inclusive; defaults to 7 on the selected network.") }).strict();
 interface LedgerRegistrar {
   registerTool(name: string, options: { title: string; description: string; inputSchema: typeof input;
     annotations: { readOnlyHint: boolean; destructiveHint: boolean; idempotentHint: boolean; openWorldHint: boolean } },

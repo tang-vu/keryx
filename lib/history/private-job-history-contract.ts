@@ -27,11 +27,13 @@ export function comparePrivateJobPosition(a: PrivateJobPosition, b: PrivateJobPo
   return at < bt ? -1 : at > bt ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 export const privateJobHistoryInputSchema = z.object({
-  limit: z.number().int().min(1).max(25).default(25),
-  cursor: z.string().regex(/^[A-Za-z0-9_-]{1,2000}$/).optional(),
-  search: text(200).optional(), surface: z.enum(RUN_SURFACES).optional(),
-  network: z.enum(["eip155:5042", "eip155:5042002"]).optional(),
-  from: privateJobDateSchema.optional(), to: privateJobDateSchema.optional(),
+  limit: z.number().int().min(1).max(25).default(25).describe("Maximum completed private-job rows per bounded page, 1-25 inclusive; defaults to 25."),
+  cursor: z.string().regex(/^[A-Za-z0-9_-]{1,2000}$/).optional().describe("Private opaque cursor from this owner's previous page with identical filters; preserve it exactly."),
+  search: text(200).optional().describe("Literal case-sensitive substring in your saved private-job questions, up to 200 characters."),
+  surface: z.enum(RUN_SURFACES).optional().describe("Filter recorded job origin; missing provenance remains unknown."),
+  network: z.enum(["eip155:5042", "eip155:5042002"]).optional().describe("Filter recorded network: eip155:5042 for Arc or eip155:5042002 for Arc testnet; selects no signer."),
+  from: privateJobDateSchema.optional().describe("Inclusive creation-time lower bound in UTC (Z or +00:00), retaining up to six fractional digits."),
+  to: privateJobDateSchema.optional().describe("Inclusive creation-time upper bound in the same UTC format; must not precede from."),
 }).strict().refine(v => !v.from || !v.to || privateJobTime(v.from) <= privateJobTime(v.to), "Reversed dates");
 export type PrivateJobHistoryInput = z.input<typeof privateJobHistoryInputSchema>;
 export const privateJobHistoryCursorSchema = z.object({
@@ -115,7 +117,9 @@ export const privateJobHistoryDetailSchema = z.object({ ...pageFields,
   }).strict(),
 }).strict().refine(v => v.wallet === v.row.ownerWallet && v.row.createdAt === v.result.createdAt && v.row.savedAt === v.result.savedAt);
 export type PrivateJobHistoryDetail = z.infer<typeof privateJobHistoryDetailSchema>;
-export const privateJobHistoryDetailInputSchema = z.object({ id: privateJobPositionSchema.shape.id }).strict();
+export const privateJobHistoryDetailInputSchema = z.object({
+  id: privateJobPositionSchema.shape.id.describe("Exact completed private-job ID returned in your authenticated history page; keep it private."),
+}).strict();
 export function parsePrivateJobHistoryInput(raw: unknown) {
   return privateJobHistoryInputSchema.parse(boundedPortableCopy(raw, PRIVATE_JOB_HISTORY_BOUNDS.requestBytes));
 }

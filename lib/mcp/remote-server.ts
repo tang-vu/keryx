@@ -150,7 +150,8 @@ export function createRemoteMcpServer(
         "New runs record remote MCP ingress. A verified ask-scoped API key attributes the run to its wallet; anonymous runs have no wallet owner. Editable client names establish no identity or spending authority.",
       inputSchema: {
         reviewFirst: z.literal(false).optional().describe("Review-first requires the authenticated live browser; this adapter refuses true."),
-        researchMode: z.never().optional(), responseMode: z.never().optional(),
+        researchMode: z.never().optional().describe("Unsupported alias; omit this field and use mode for research depth."),
+        responseMode: z.never().optional().describe("Unsupported response override; omit this field."),
         question: z.string().trim().min(3).max(4_000).describe("Research question."),
         language: z.enum(presentationLanguages).optional().describe("Language of generated labels only; the original question and answer are unchanged. Omitted labels follow qualified recorded answer language when available; historical and unqualified answer language remains unknown."),
         budget: z

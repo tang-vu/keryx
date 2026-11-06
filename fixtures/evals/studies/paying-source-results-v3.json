@@ -238,7 +238,7 @@
     "lib/db/topic-watches-sqlite.ts": "03ce91d20e7d3d78ac255980b6173f91743c24168464e866339f70c0e8792abd",
     "lib/db/withdrawal-records.ts": "9e2eb713f0fe936c81a24ecc9adae6f4062bd048a33b81d6588526e5fd28f04c",
     "lib/db/zotero-sqlite.ts": "3f77d494748b658986fe29267aa6465ea5f76b3c551742cad082bd3f1285a5bb",
-    "lib/deliverable-acceptance/contracts.ts": "b4cfe9e5379af4cfbfddd09fb674cc75e0849dec684172a5c1c758237939b56e",
+    "lib/deliverable-acceptance/contracts.ts": "6fd706afe441d26257b8b2818c24a612707c0b4e0eb5fbdcbfd21b3d58a2f2b0",
     "lib/deliverable-acceptance/original.ts": "751906f0f087e6e1bffb8f7bb7ecceed4d96d259503e20452e60abeed2d79b7b",
     "lib/economics/provider-cost-policy.ts": "f998d66bf4e520a86a1045659545b0762c854e526a94b755e60cb5f956796f9b",
     "lib/economics/stage-costs.ts": "76a005953aed9b6ffa4221c89e232cb5c21191addcdbc47af08415311fdaba3b",

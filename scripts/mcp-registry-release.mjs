@@ -17,10 +17,12 @@ export function validateRelease(manifest, pkg, { version, repository, ref }) {
   assert.equal(pkg.mcpName, namespace);
   assert.equal(manifest.name, namespace, 'Manifest namespace must belong to the OIDC repository owner');
   assert.equal(manifest.version, version);
-  assert.deepEqual(Object.keys(manifest).sort(), ['$schema', 'description', 'name', 'packages', 'remotes', 'repository', 'version', 'websiteUrl'].sort());
+  assert.deepEqual(Object.keys(manifest).sort(), ['$schema', 'description', 'icons', 'name', 'packages', 'remotes', 'repository', 'title', 'version', 'websiteUrl'].sort());
   assert.equal(manifest.$schema, 'https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json');
   assert.ok(typeof manifest.description === 'string' && manifest.description.trim().length > 0);
   assert.equal(manifest.websiteUrl, 'https://keryx.cc');
+  assert.equal(manifest.title, 'Keryx');
+  assert.deepEqual(manifest.icons, [{ src: 'https://keryx.cc/icon.svg', mimeType: 'image/svg+xml', sizes: ['any'] }]);
   assert.deepEqual(manifest.repository, { url: 'https://github.com/tang-vu/keryx', source: 'github', subfolder: 'mcp' });
   assert.deepEqual(manifest.remotes, [{ type: 'streamable-http', url: 'https://keryx.cc/mcp' }]);
   assert.deepEqual(manifest.packages, [{

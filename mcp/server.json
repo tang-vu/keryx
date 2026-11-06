@@ -25,5 +25,15 @@
         "type": "stdio"
       }
     }
+  ],
+  "title": "Keryx",
+  "icons": [
+    {
+      "src": "https://keryx.cc/icon.svg",
+      "mimeType": "image/svg+xml",
+      "sizes": [
+        "any"
+      ]
+    }
   ]
 }
