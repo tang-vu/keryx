@@ -9,12 +9,14 @@ import type { SourceRecencyFeedMetadata } from "../sources/source-recency";
 import { archiveSearchTerms, publicArticleAssetId, type PublicReferenceArticle } from "../public-references/archive";
 import type { SourceItem } from "../types";
 
-function retainedDiscoveryExcerpt(item: SourceItem, query: string): string {
+function prepareDiscoveryExcerpt(item: SourceItem): (terms: readonly string[]) => string {
   const body = item.content.slice(0, 200_000), lower = body.toLowerCase();
-  const positions = archiveSearchTerms(query).map(term => lower.indexOf(term)).filter(position => position >= 0);
-  if (!positions.length) return item.summary.slice(0, 600);
-  const start = Math.max(0, Math.min(...positions) - 100);
-  return body.slice(start, start + 600);
+  return terms => {
+    const positions = terms.map(term => lower.indexOf(term)).filter(position => position >= 0);
+    if (!positions.length) return item.summary.slice(0, 600);
+    const start = Math.max(0, Math.min(...positions) - 100);
+    return body.slice(start, start + 600);
+  };
 }
 
 /** Snapshot public evidence once before reasoning. Refreshes cannot substitute content mid-run. */
@@ -26,12 +28,14 @@ export async function discoverPublicReferences(db: PublicReferenceDb, question: 
   const recencyObservations: Readonly<SourceRecencyFeedMetadata>[] = [];
   const itemClaimUrls = new Map<string, string[]>();
   const archivedByReference = new Map<string, PublicReferenceArticle[]>();
+  const targets = [...new Set([question, ...subClaims])];
+  const targetTerms = targets.map(archiveSearchTerms);
+  const previewTerms = archiveSearchTerms([question, ...subClaims].join(" "));
   let archiveStatus: "completed" | "unsupported" | "unavailable" | "withheld" = db.queryPublicReferenceItems
     ? recency ? "withheld" : "completed" : "unsupported";
   if (db.queryPublicReferenceItems && !recency) {
     // Retrieve against each target so a broad question cannot fill every slot before
     // a narrower target gets a chance. This is retrieval capacity, not retained storage.
-    const targets = [...new Set([question, ...subClaims])];
     const results = await Promise.allSettled(targets.map(query => db.queryPublicReferenceItems!({
       query: query.slice(0, 500), match: "any", sort: "relevance", limit: 12,
     })));
@@ -66,12 +70,20 @@ export async function discoverPublicReferences(db: PublicReferenceDb, question: 
     const gap = resolution?.status === "withheld" ? resolution.gap : !resolution ? sourceRecencyGap(recency, reference) : null;
     if (gap) { recencyGaps.push(gap); continue; }
     if (resolution?.status === "eligible") recencyObservations.push(resolution.observation);
+    // Reuse bounded body preparation only within this publisher's captured snapshot.
+    // Selected resolver items may differ from the ordinary ranking items.
+    const excerpts = new Map<SourceItem, ReturnType<typeof prepareDiscoveryExcerpt>>();
+    const excerpt = (item: SourceItem, terms: readonly string[]) => {
+      let prepared = excerpts.get(item);
+      if (!prepared) { prepared = prepareDiscoveryExcerpt(item); excerpts.set(item, prepared); }
+      return prepared(terms);
+    };
     const selected = new Map<string, SourceItem>();
     if (resolution?.status === "eligible") selected.set(resolution.selected.id, resolution.selected);
-    else for (const target of [...new Set([question, ...subClaims])]) {
+    else for (const [index, target] of targets.entries()) {
       // Rank retained body matches too, without rewriting the original summary or
       // version. The matched passage remains a discovery preview until selected.
-      const ranked = items.map(item => ({ ...item, summary: `${item.summary} ${retainedDiscoveryExcerpt(item, target)}` }));
+      const ranked = items.map(item => ({ ...item, summary: `${item.summary} ${excerpt(item, targetTerms[index])}` }));
       const proposal = selectRelevantSourceItem(target, [target], [], ranked);
       const item = proposal ? items.find(original => original.id === proposal.id) : undefined;
       if (item?.content.trim()) selected.set(item.id, item);
@@ -87,7 +99,7 @@ export async function discoverPublicReferences(db: PublicReferenceDb, question: 
       id: assetId, sourceId: reference.id, item: identity, sourceKind: "public-reference",
       name: `${reference.name} - ${item.title}`, description: `${reference.description} Free public feed reference; no creator payout.`,
       tags: reference.tags, fetchPrice: 0, cached: true,
-      preview: `- ${item.title}: ${retainedDiscoveryExcerpt(item, [question, ...subClaims].join(" "))}`,
+      preview: `- ${item.title}: ${excerpt(item, previewTerms)}`,
     };
 
     publicCandidates.set(assetId, candidate);

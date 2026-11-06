@@ -74,4 +74,39 @@ describe("historical public article discovery", () => {
       queryPublicReferenceItems: async () => ({ items: [archived(recent)], total: 1 }) }, "SQLite backup", ["SQLite backup"], null);
     expect(result.publicReads.size).toBe(0);
   });
+  it("keeps distinct body-only targets, original evidence and fresh content on the next discovery", async () => {
+    const topics = ["SQLite backups", "Postgres replication", "Redis expiry"];
+    const history = topics.map((topic, index) => {
+      const item = archived(snapshot("Engineering notes", "Generic opening. ".repeat(100) + `${topic} preserves the documented behavior.`,
+        `https://publisher.test/topic-${index}`));
+      item.summary = "Generic engineering notes.";
+      return item;
+    });
+    const recent = snapshot("Unrelated news", "A different announcement.", "https://publisher.test/new");
+    const db = { listPublicReferences: async () => [recent],
+      queryPublicReferenceItems: async () => ({ items: history, total: history.length }) };
+    const discover = () => discoverPublicReferences(db, topics[0], [...topics, topics[0]], null);
+    const first = await discover();
+    expect([...first.publicReads.values()].map(read => read.itemUrl)).toEqual(history.map(item => item.link));
+    for (const [index, candidate] of [...first.publicCandidates.values()].entries()) {
+      expect(candidate.preview).toContain(topics[index]);
+      expect(candidate.item?.itemId).toBe(history[index].id);
+    }
+    const oldRead = first.publicReads.get(reference.id)!;
+    history[0].content += " New captured details.";
+    const next = await discover();
+    expect(next.publicReads.get(reference.id)?.text).toBe(history[0].content);
+    expect(next.publicReads.get(reference.id)?.contentVersion).not.toBe(oldRead.contentVersion);
+    expect(oldRead.text).not.toContain("New captured details.");
+  });
+  it("keeps Unicode previews and the bounded discovery window without truncating retained evidence", async () => {
+    const visible = snapshot("Engineering notes", "Generic opening. ".repeat(100) + "DỮ LIỆU được giữ nguyên.", "https://publisher.test/unicode");
+    visible.items[0].summary = "Summary fallback.";
+    const result = await discoverPublicReferences({ listPublicReferences: async () => [visible] }, "dữ liệu", ["dữ liệu"], null);
+    expect(result.publicCandidates.get(reference.id)?.preview).toContain("DỮ LIỆU");
+    const beyond = { ...visible, items: [{ ...visible.items[0], content: "x".repeat(200_000) + " DỮ LIỆU" }] };
+    const bounded = await discoverPublicReferences({ listPublicReferences: async () => [beyond] }, "dữ liệu", [], null);
+    expect(bounded.publicCandidates.get(reference.id)?.preview).toBe("- Engineering notes: Summary fallback.");
+    expect(bounded.publicReads.get(reference.id)?.text).toBe(beyond.items[0].content);
+  });
 });

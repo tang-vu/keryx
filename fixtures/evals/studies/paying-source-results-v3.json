@@ -77,7 +77,7 @@
     "lib/agent/external-discovery.ts": "3385af254c7394d8a0551537cd7d14b49c547ddf617ca59e8467f3962f32c259",
     "lib/agent/operating-fee.ts": "75d8f70b423e2b687a43c526fd8bdda220a57f9871f63deafc31b689e81775d8",
     "lib/agent/optimizer-checkpoint-capture.ts": "61c9eb080406a8fec1cf699a9811377ac40e0922e6440dd517f2efeb06b62af2",
-    "lib/agent/public-reference-evidence.ts": "96f3eb0353e2a049e7a60f1e649ab4e46baaff6277faebf7b51d8a5cb2755031",
+    "lib/agent/public-reference-evidence.ts": "05a3fabef1f00fc2eb797fd32c6004b3c93d511a92279523331d5466afda8b41",
     "lib/agent/query-memory.ts": "442593e4a76285b8c90a7ae6160b2abccb4bc35027e2b559208ea6eebda97c36",
     "lib/agent/read-checkpoint-capture.ts": "4656c6d3bd9e1613ad9cf6d5f95ecefdd8db4cd2cb4389901874bdcc4bac5c75",
     "lib/agent/read-recovery.ts": "a784e06cb4a13f4992188c43408204e390ae229c93390d3928ca10da892dccae",
