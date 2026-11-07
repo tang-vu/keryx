@@ -28,7 +28,7 @@ function WatchEditor({ wallet }: { wallet: string }) {
   const [result, setResult] = useState<TopicWatchResult | null>(null), [editing, setEditing] = useState<TopicWatchState | null>(null);
   const [currentConsent, setCurrentConsent] = useState<Record<string, number>>({});
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const epoch = useRef(0), mutation = useRef(false);
+  const epoch = useRef(0), mutation = useRef(false), refreshSequence = useRef(0);
   useEffect(() => {
     const expiries = watches.filter(watch => watch.status === "active" && watch.spec.expiresAtMs > nowMs).map(watch => watch.spec.expiresAtMs);
     if (!expiries.length) return;
@@ -47,12 +47,13 @@ function WatchEditor({ wallet }: { wallet: string }) {
     return data;
   }
   async function refresh() {
-    const attempt = epoch.current;
+    const attempt = epoch.current, sequence = ++refreshSequence.current;
+    const isCurrent = () => attempt === epoch.current && sequence === refreshSequence.current;
     try {
       const data = await request("");
-      if (attempt === epoch.current) { setWatches(data.watches); setLoaded(true); setError(""); }
+      if (isCurrent()) { setWatches(data.watches); setLoaded(true); setError(""); }
     } catch (failure) {
-      if (attempt === epoch.current) { setWatches([]); setLoaded(false); setError(failure instanceof Error ? failure.message : copy("topicWatch.listUnavailable")); }
+      if (isCurrent()) { setWatches([]); setLoaded(false); setError(failure instanceof Error ? failure.message : copy("topicWatch.listUnavailable")); }
     }
   }
   useEffect(() => {
@@ -68,6 +69,9 @@ function WatchEditor({ wallet }: { wallet: string }) {
   }, [wallet]);
   async function mutate(operation: () => Promise<{ result: TopicWatchResult }>) {
     if (mutation.current) return;
+    // A read started before this write cannot publish during its acknowledgement
+    // or replace the canonical refresh that follows an accepted write.
+    refreshSequence.current++;
     mutation.current = true; setBusy(true); setError(""); setResult(null);
     const attempt = epoch.current;
     try {
@@ -104,7 +108,7 @@ function WatchEditor({ wallet }: { wallet: string }) {
   return <section className="space-y-5" aria-label={copy("topicWatch.title")}>
     <p>{copy("topicWatch.scope")}</p>
     <p>{copy("topicWatch.currentScope")}</p>
-    <button className={button} disabled={busy} onClick={() => { void refresh(); }}>{copy("topicWatch.refresh")}</button>
+    <button className={button} disabled={busy} onClick={() => { if (!mutation.current) void refresh(); }}>{copy("topicWatch.refresh")}</button>
     {error && <p role="alert">{error}</p>}
     {result && <div role="status"><p>{copy("topicWatch.result", { status: result.status, code: result.code ? `: ${result.code}` : "", paidRequests: result.paidRequests })}</p>
       {result.counts && <p>{copy("topicWatch.metadataCounts", { observed: result.counts.observedRows, unknown: result.counts.unknownRows, matches: result.counts.newMatches })}</p>}
