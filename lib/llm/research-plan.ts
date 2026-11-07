@@ -2,6 +2,7 @@ import { MAX_RESEARCH_TARGETS } from "./research-target-limits";
 import { researchAdmissionError } from "../research/availability-contract";
 import { ReasoningOutputValidationError, outputTokenLimitFromValidatedError } from "./reasoning-engine";
 import { ResearchSelectionError } from "./research-selection";
+import { callerScopeResearchPlan } from "./caller-scope-plan";
 
 export type PlanningRefusalReason = "expanded_output" | "invalid_output" | "needs_refinement";
 
@@ -153,6 +154,15 @@ export function parseResearchPlan(question: string, output: Record<string, unkno
   if (output.constraints !== undefined && (!Array.isArray(output.constraints) || output.constraints.length > 16 ||
     !output.constraints.every(value => typeof value === "string" && value.trim().length > 0 && value.length <= 600))) {
     throw new ResearchPlanningError(question, "invalid_output");
+  }
+  if (output.request !== undefined) {
+    if (output.status !== "complete" || output.comparison !== undefined ||
+      (output.claims !== undefined && (!Array.isArray(output.claims) || output.claims.length !== 0))) {
+      throw new ResearchPlanningError(question, "invalid_output");
+    }
+    const result = callerScopeResearchPlan(question, output.request, (output.constraints ?? []) as string[]);
+    if ("reason" in result) throw new ResearchPlanningError(question, result.reason);
+    return result.claims;
   }
   if (output.comparison !== undefined) {
     // Mixed opaque claims cannot be discarded in favor of a plausible structure.
