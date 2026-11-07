@@ -17,6 +17,15 @@ a prevented client transition does not exempt later reloads. Modified clicks,
 downloads, new windows and same-document links keep their existing behavior.
 External same-tab departures retain the browser's native unload warning.
 
+The research composer uses the same guard for a nonempty question after a user
+edit or an explicit draft restoration, including a rejected question reopened
+for review. Submitting or clearing the question disarms its registration; another
+edit or restoration rearms it. An untouched shared-link prefill does not count
+as an edit. Existing wallet/revision binding hides an old owner's draft and
+immediately removes its warning. This adds no draft persistence or automatic Ask.
+During a same-owner context recheck, the field may be temporarily hidden but its
+generic dirty registration stays active until the verified identity changes.
+
 This guard covers clicked anchors and native reload/close. It does not intercept
 browser Back/Forward, programmatic client routing, process crashes or browser
 termination; those need separate recovery design. Evidence Matrix retains its
