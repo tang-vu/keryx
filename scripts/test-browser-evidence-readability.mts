@@ -47,7 +47,7 @@ import{ResearchPrivateResult}from'./components/keryx/research-private-result';
 window.syntheticRequests=[];
 window.fetch=async(input,init={})=>{window.syntheticRequests.push({url:String(input),method:init.method||'GET'});return new Response(JSON.stringify({up:0,down:0}),{status:String(input).includes('/receipt')?404:200,headers:{'content-type':'application/json'}});};
 createRoot(document.getElementById('root')).render(<>
-<section data-view="answer"><AnswerCard run={${JSON.stringify(run)}} meta={null}/></section>
+<section data-view="answer"><AnswerCard run={${JSON.stringify(run)}} meta={null} publicFollowUp/></section>
 <section data-view="public-job"><ResearchJobDetails job={${JSON.stringify(publicJob)}}/></section>
 <section data-view="private-job"><ResearchPrivateResult job={${JSON.stringify(privateJob)}}/></section>
 </>);`, loader: "tsx", resolveDir: process.cwd() }, bundle: true, write: false, metafile: true, platform: "browser", format: "iife", jsx: "automatic",

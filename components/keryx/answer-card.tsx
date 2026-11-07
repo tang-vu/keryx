@@ -42,7 +42,7 @@ import { AnswerEvidenceStatus } from "./answer-evidence-status";
 
 
 
-export function AnswerCard({ run, answerLanguage, meta, permalink, payments = [], showFeedback = true, historicalNetwork }: { run: QueryRun; answerLanguage?: PresentationLanguage; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[]; showFeedback?: boolean; historicalNetwork?: string }) {
+export function AnswerCard({ run, answerLanguage, meta, permalink, payments = [], showFeedback = true, historicalNetwork, publicFollowUp = false, onPrepareEvidenceFollowUp }: { run: QueryRun; answerLanguage?: PresentationLanguage; meta: AskMeta | null; permalink?: string; payments?: PaymentRecord[]; showFeedback?: boolean; historicalNetwork?: string; publicFollowUp?: boolean; onPrepareEvidenceFollowUp?: (draft: string) => void }) {
   const copy = useUiMessages();
   const originalAnswer = run.answer;
   run = demoteSyntheticEvidence(run);
@@ -94,7 +94,9 @@ export function AnswerCard({ run, answerLanguage, meta, permalink, payments = []
       <div className="border border-ink bg-paper">
         <div className="px-6 py-6 sm:px-9">
           <div className="max-w-[64ch]">
-            {!bibliography && <AnswerEvidenceStatus run={run} />}
+            {!bibliography && <AnswerEvidenceStatus run={run}
+              allowPublicFollowUp={publicFollowUp && (!meta?.visibility || meta.visibility === "public")}
+              onPrepareFollowUp={onPrepareEvidenceFollowUp} />}
             <AnswerMarkdown
               language={generatedProseLanguage}
               text={run.answer}

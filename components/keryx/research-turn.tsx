@@ -28,7 +28,9 @@ export interface ResearchTurnData {
   stopped?: boolean;
 }
 
-export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
+export function ResearchTurn({ turn, publicFollowUp = false, onPrepareEvidenceFollowUp }: {
+  turn: ResearchTurnData; publicFollowUp?: boolean; onPrepareEvidenceFollowUp?: (draft: string) => void;
+}) {
   const message = useUiMessages();
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const { state, stopped } = turn;
@@ -46,7 +48,8 @@ export function ResearchTurn({ turn }: { turn: ResearchTurnData }) {
     </div>
     <div className="min-w-0">
       {state.run && <div id={`answer-${turn.id}`} className="kx-research-answer">
-        <AnswerCard run={state.run} answerLanguage={recordedAnswerLanguage(state.run)} meta={state.meta} payments={state.payments} permalink={`${typeof window === "undefined" ? "" : window.location.origin}/dispatch/${state.run.id}`} />
+        <AnswerCard run={state.run} answerLanguage={recordedAnswerLanguage(state.run)} meta={state.meta} payments={state.payments} permalink={`${typeof window === "undefined" ? "" : window.location.origin}/dispatch/${state.run.id}`}
+          publicFollowUp={publicFollowUp} onPrepareEvidenceFollowUp={onPrepareEvidenceFollowUp} />
         <ReportActions run={state.run} meta={state.meta} payments={state.payments} />
       </div>}
       {streaming && !state.run && <div className="kx-research-live border border-line bg-paper" role="status" aria-live="polite">

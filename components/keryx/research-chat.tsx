@@ -57,6 +57,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
   const [request, setRequest] = useState<ScopedRequest | null>(null);
   const [rootRequest, setRootRequest] = useState(false);
   const [anchor, setAnchor] = useState<string | undefined>(initialRequest?.parentId);
+  const [evidenceParent, setEvidenceParent] = useState<{ id: string; visibility: RunVisibility } | null>(null);
   const [reopened, setReopened] = useState<{ id: number; question: string; budget: number; researchPaused: false; replace: true;
     binding?: { wallet: string | null; revision: number } } | undefined>(
     initialRequest ? { id: 0, question: initialRequest.question, budget: initialRequest.budget, researchPaused: false, replace: true } : undefined);
@@ -87,19 +88,19 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
   });
   const streaming = state.status === "streaming";
   const payer = grantBinding.paused ? "paused" : grantBinding.expired ? "expired" : grantBinding.sessionId ? "session" : "treasury";
-  const parentId = rootRequest ? null : state.run?.id ?? anchor;
+  const parentId = rootRequest ? null : evidenceParent?.id ?? state.run?.id ?? anchor;
   const activeRequest = useRef<ScopedRequest | null>(null), activeState = useRef(state);
   useLayoutEffect(() => { activeRequest.current = request; activeState.current = state; }, [request, state]);
   const clearOwnedTurns = useCallback(() => {
     setReopened(undefined);
-    setHistory(previous => previous.filter(turn => !hidden(turn, turn.state)));
-    if (activeRequest.current && hidden(activeRequest.current, activeState.current)) {
+    setHistory(previous => previous.filter(turn => !privateClaims && !hidden(turn, turn.state)));
+    if (activeRequest.current && (privateClaims || hidden(activeRequest.current, activeState.current))) {
       activeRequest.current = null; setRequest(null); reset();
     }
-    setAnchor(undefined); setRootRequest(true); privateHandoff.clear();
-  }, [reset, privateHandoff]);
+    setEvidenceParent(null); setAnchor(undefined); setRootRequest(true); privateHandoff.clear();
+  }, [reset, privateHandoff, privateClaims]);
   const inheritedTurn = history.find(turn => turn.state.run?.id === parentId);
-  const parentVisibility = parentId ? state.meta?.visibility ?? request?.publication.visibility
+  const parentVisibility = parentId ? evidenceParent?.visibility ?? state.meta?.visibility ?? request?.publication.visibility
     ?? inheritedTurn?.state.meta?.visibility ?? inheritedTurn?.publication.visibility
     ?? (parentId === initialRequest?.parentId ? initialRequest?.visibility : undefined) : undefined;
   const publicationPreference = useResearchVisibility(parentVisibility, { onOwnerBoundary: clearOwnedTurns });
@@ -108,7 +109,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
     if (request && state.meta?.visibility === "private" && (!state.meta.visibilityOwner
       || state.meta.visibilityOwner.toLowerCase() !== request.publication.expectedWallet)) clearOwnedTurns();
   }, [request, state.meta, clearOwnedTurns]);
-  const canDisplay = (turn: ScopedRequest, captured: AskStreamState) => !hidden(turn, captured)
+  const canDisplay = (turn: ScopedRequest, captured: AskStreamState) => !privateClaims && !hidden(turn, captured)
     || publicationPreference.ready && turn.ownerRevision === publicationPreference.identityRevision
       && turn.publication.expectedWallet === publicationPreference.wallet
       && (captured.meta?.visibility !== "private" || !!captured.meta.visibilityOwner
@@ -127,6 +128,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
     setReopened(undefined);
     if (request) setHistory(previous => [...previous, { ...request, state }]);
     setAnchor(rootRequest ? undefined : parentId ?? undefined);
+    setEvidenceParent(null);
     const next = { id: ++sequence.current, question, publication: selected, ownerRevision: publicationPreference.getIdentityRevision(),
       payer: payer === "session" ? message("researchChat.sessionPayer") : payer === "expired" ? message("researchChat.expiredPayer") : message("researchChat.treasuryPayer") };
     activeRequest.current = next; setRequest(next);
@@ -138,6 +140,20 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
     setHistory(previous => [...previous, { ...request, state, stopped: true }]);
     setRequest(null);
     reset();
+  };
+  const prepareEvidenceFollowUp = (turn: ScopedTurn, question: string) => {
+    const publication = publicationPreference.getSelection(), revision = publicationPreference.getIdentityRevision();
+    const captured = activeState.current, run = turn.state.run;
+    if (!run || !publication || captured.status === "streaming" || activeRequest.current?.id !== request?.id
+      || privateClaims && !readPrivateDocument()) return;
+    if ((privateClaims || hidden(turn, turn.state)) && (turn.ownerRevision !== revision || turn.publication.expectedWallet !== publication.expectedWallet
+      || turn.state.meta?.visibility === "private" && (!turn.state.meta.visibilityOwner
+        || turn.state.meta.visibilityOwner.toLowerCase() !== publication.expectedWallet))) return;
+    const visibility = [turn.publication.visibility, turn.state.meta?.visibility];
+    setEvidenceParent({ id: run.id, visibility: visibility.includes("private") ? "private" : visibility.includes("unlisted") ? "unlisted" : "public" });
+    setRootRequest(false);
+    setReopened({ id: --recoverySequence.current, question, budget: turn.state.budget, researchPaused: false, replace: true,
+      binding: { wallet: publication.expectedWallet, revision } });
   };
   const hasTurns = visibleHistory.length > 0 || visibleRequest !== null;
   return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-research-intro={introduceProduct ? "" : undefined} aria-label={message("researchChat.label")}>
@@ -153,13 +169,22 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
       <p className="kx-research-intro mt-3 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:max-w-[min(60ch,calc(100%_-_156px))] sm:text-lg sm:leading-relaxed">{introduceProduct && payer === "treasury" ? <UiText source={uiEnglish_productGuideCopy("product.heroBody")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.introduction" />}</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label={message("researchChat.turnsLabel")}>
-      {visibleHistory.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
-      {visibleRequest && <div ref={activeTurnRef} className="scroll-mt-24"><ResearchTurn key={visibleRequest.id} turn={{ ...visibleRequest, state }} /></div>}
+      {visibleHistory.map(turn => <ResearchTurn key={turn.id} turn={turn} publicFollowUp={!privateClaims && turn.publication.visibility === "public"}
+        onPrepareEvidenceFollowUp={!streaming ? draft => prepareEvidenceFollowUp(turn, draft) : undefined} />)}
+      {visibleRequest && <div ref={activeTurnRef} className="scroll-mt-24"><ResearchTurn key={visibleRequest.id} turn={{ ...visibleRequest, state }} publicFollowUp={!privateClaims && visibleRequest.publication.visibility === "public"}
+        onPrepareEvidenceFollowUp={!streaming ? draft => prepareEvidenceFollowUp({ ...visibleRequest, state }, draft) : undefined} /></div>}
     </div>}
     <div id="dispatch" className="scroll-mt-24">
       {hasTurns && <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="max-w-[64ch] text-xs text-ink-3"><UiMessage messageKey={parentId ? "researchChat.followUpContext" : "researchChat.newQuestionContext"} /></p>
-        {!streaming && parentId && <button type="button" onClick={() => { setRootRequest(true); setAnchor(undefined); }} className="min-h-11 px-2 font-mono text-xs underline underline-offset-4"><UiMessage messageKey="researchChat.newResearch" /></button>}
+        {!streaming && parentId && <button type="button" onClick={() => {
+          if (evidenceParent) {
+            const selection = publicationPreference.getSelection();
+            if (!selection) return;
+            publicationPreference.choose(selection.visibility);
+          }
+          setEvidenceParent(null); setRootRequest(true); setAnchor(undefined);
+        }} className="min-h-11 px-2 font-mono text-xs underline underline-offset-4"><UiMessage messageKey="researchChat.newResearch" /></button>}
         {streaming && <button type="button" onClick={stop} className="min-h-11 border border-seal px-3 py-2 font-mono text-xs text-seal"><UiMessage messageKey="researchChat.stopResearch" /></button>}
       </div>}
       {privateClaims && !protectedDocument && <p role="status" className="mt-3 text-seal">{privateResearchCopy.fullNavigation}</p>}

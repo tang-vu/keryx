@@ -21,7 +21,7 @@ window.renderEvidenceLanguage=async({locale,run,pdfTextScope})=>{
 const preview=await loadUiPreview(locale);
 const value={...englishUiCopy,locale,preview,message:createMessages(locale,preview.$messages),richMessage:createRichMessages(locale,preview.$messages)};
 root.render(<UiCopyContext.Provider value={value}>
-<section data-view="language-evidence"><AnswerEvidenceStatus run={run}/></section>
+<section data-view="language-evidence"><AnswerEvidenceStatus run={run} allowPublicFollowUp/></section>
 <section data-view="language-pdf"><PdfReadingScope provenance={{extraction:'pdf',pdfTextScope}}/></section>
 </UiCopyContext.Provider>);
 };`, loader: "tsx", resolveDir: root }, bundle: true, write: false, metafile: true,

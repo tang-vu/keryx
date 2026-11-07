@@ -2,9 +2,11 @@
 
 import { useId } from "react";
 import { UiMessage, useUiMessages } from "@/lib/i18n/ui-copy";
-import { buildAnswerEvidenceStatus, evidenceFollowUpContext, evidenceFollowUpHref, type AnswerEvidenceInput } from "@/lib/research/answer-evidence-status";
+import { boundedEvidenceFollowUpDraft, buildAnswerEvidenceStatus, evidenceFollowUpContext, evidenceFollowUpHref, type AnswerEvidenceInput } from "@/lib/research/answer-evidence-status";
 
-export function AnswerEvidenceStatus({ run }: { run: AnswerEvidenceInput }) {
+export function AnswerEvidenceStatus({ run, allowPublicFollowUp = false, onPrepareFollowUp }: {
+  run: AnswerEvidenceInput; allowPublicFollowUp?: boolean; onPrepareFollowUp?: (draft: string) => void;
+}) {
   const copy = useUiMessages();
   const titleId = useId();
   const status = buildAnswerEvidenceStatus(run);
@@ -27,12 +29,17 @@ export function AnswerEvidenceStatus({ run }: { run: AnswerEvidenceInput }) {
               ? <UiMessage messageKey="reportEvidence.missing" /> : <UiMessage messageKey="reportEvidence.excerpts" values={{ count: target.excerpts }} />}
             {status.available && target.estimate !== null ? <> · <UiMessage messageKey="reportReading.estimated" values={{ coverage: Math.round(target.estimate * 100) }} /></> : ""}
           </p>
-          {/* A full navigation ensures even the live ask page rereads its draft URL. */}
-          <a href={evidenceFollowUpHref(run.id, copy("reportEvidence.draft", evidenceFollowUpContext(run.question, target.claim)))}
+          {/* Only an explicitly public context may put report text in a URL. */}
+          {allowPublicFollowUp ? <a href={evidenceFollowUpHref(run.id, copy("reportEvidence.draft", evidenceFollowUpContext(run.question, target.claim)))}
             className="mt-1 inline-flex min-h-11 items-center text-sm text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal">
             <UiMessage messageKey="reportEvidence.prepare" />
             <span className="sr-only">: {target.claim}</span>
-          </a>
+          </a> : <button type="button" disabled={!onPrepareFollowUp}
+            onClick={() => onPrepareFollowUp?.(boundedEvidenceFollowUpDraft(copy("reportEvidence.draft", evidenceFollowUpContext(run.question, target.claim))))}
+            className="mt-1 inline-flex min-h-11 items-center text-start text-sm text-seal underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-seal disabled:cursor-not-allowed disabled:opacity-50">
+            <UiMessage messageKey="reportEvidence.prepare" />
+            <span className="sr-only">: {target.claim}</span>
+          </button>}
         </li>)}
       </ol>
       <p className="mt-3 text-sm text-ink-3"><UiMessage messageKey="reportEvidence.prepareNotice" /></p>

@@ -134,7 +134,7 @@ describe("editable evidence follow-up", () => {
       return new Response(JSON.stringify(data), { headers: { "Content-Type": "application/json" } });
     }));
     try {
-      await act(async () => { root.render(createElement(AnswerEvidenceStatus, { run })); });
+      await act(async () => { root.render(createElement(AnswerEvidenceStatus, { run, allowPublicFollowUp: true })); });
       const details = container.querySelector("details")!;
       details.open = true;
       const link = container.querySelector<HTMLAnchorElement>("a")!;

@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { selectPlural } from "@/lib/i18n/format";
 
 import { DisplayTime } from "@/components/keryx/display-time";
@@ -46,6 +47,8 @@ export function DispatchView({
   const mode = run.paymentMode ?? null;
   const recordedNetwork = historical ? historicalNetwork ?? "unknown" : undefined;
   const readCheckpoints = historical ? null : projectActualReadCheckpoints(run);
+  const [prepared, setPrepared] = useState<{ runId: string; question: string; sequence: number } | null>(null);
+  const draft = prepared?.runId === run.id ? prepared : null;
 
   return (
     <>
@@ -65,10 +68,12 @@ export function DispatchView({
         </div>
       </div>
 
-      {!historical && visibility && <ResearchRecovery question={run.question} budget={run.budget} parentId={run.id} visibility={visibility} expectedWallet={recoveryWallet} />}
+      {!historical && visibility && <ResearchRecovery key={`${run.id}:${draft?.sequence ?? 0}`} question={draft?.question ?? run.question} budget={run.budget} parentId={run.id} visibility={visibility} expectedWallet={recoveryWallet} initiallyOpened={!!draft} />}
 
       <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(280px,330px)]">
-        <AnswerCard run={run} answerLanguage={answerLanguage} meta={null} payments={payments} showFeedback={!historical} historicalNetwork={recordedNetwork} />
+        <AnswerCard run={run} answerLanguage={answerLanguage} meta={null} payments={payments} showFeedback={!historical} historicalNetwork={recordedNetwork}
+          publicFollowUp={visibility === "public" || historical && visibility === undefined}
+          onPrepareEvidenceFollowUp={!historical && visibility ? question => setPrepared(previous => ({ runId: run.id, question, sequence: (previous?.sequence ?? 0) + 1 })) : undefined} />
         <aside className="min-w-0 lg:sticky lg:top-6" aria-label={copy("reportDispatchView.paymentEvidence")}>
           <CreatorsPaidPanel payments={payments} mode={mode} streaming={false} historicalNetwork={recordedNetwork} />
         </aside>
