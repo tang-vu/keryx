@@ -5,6 +5,7 @@ import { build } from "esbuild";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { chromium, type Browser, type Page } from "playwright";
+import { JSDOM } from "jsdom";
 
 let browser: Browser, bundle: string, css: string;
 const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR;
@@ -13,6 +14,7 @@ const nativeScreenshots = process.env.KERYX_NATIVE_GUIDANCE_SCREENSHOT_DIR
 type Fixture = { mode(value: "defer" | "throw" | "missing"): void; settle(success: boolean): void;
   report(index: number): void; writes: string[]; failDownload(value: boolean): void;
   failLink(stage: "none" | "create" | "append" | "click"): void;
+  sourceUrl(value: string): void;
   allocated: string[]; revoked: string[]; connections: boolean[]; locale(value: string): Promise<void> };
 const fonts = `@font-face{font-family:ReportDisplay;src:url('/fonts/bodoni-moda-latin.woff2')}@font-face{font-family:ReportSerif;src:url('/fonts/spectral-latin-400.woff2')}@font-face{font-family:ReportMono;src:url('/fonts/spline-sans-mono-latin.woff2')}
   :root{--font-bodoni:ReportDisplay;--font-spectral:ReportSerif;--font-spline-mono:ReportMono}`;
@@ -44,9 +46,10 @@ beforeAll(async () => {
         citations:[{marker:'S1',sourceId:'source',sourceName:'Synthetic publisher',itemTitle:'Observed public source',itemUrl:'https://publisher.invalid/article',contentVersion:'recorded-v2',weight:1,reward:0,rationale:'fixture'}],
         evidence:[{marker:'S1',claim:'Measured result',quote:'Exact recorded excerpt.',qualifiesForAnswer:true,qualifiesForReward:false}]}));
       const payments=[{kind:'citation',sourceName:'Synthetic writer',amountUsdc:0.001,settled:false,settlementStatus:'pending'}];
-      function App(){const[index,setIndex]=useState(0),[ui,setUi]=useState(englishUiCopy);fixture.report=setIndex;
+      function App(){const[index,setIndex]=useState(0),[ui,setUi]=useState(englishUiCopy),[sourceUrl,setSourceUrl]=useState(null);fixture.report=setIndex;fixture.sourceUrl=setSourceUrl;
         fixture.locale=async locale=>{const preview=await loadUiPreview(locale);setUi({...englishUiCopy,locale,preview,message:createMessages(locale,preview.$messages),richMessage:createRichMessages(locale,preview.$messages)});document.documentElement.lang=locale;document.documentElement.dir=localeDirection(locale);};
-        return <UiCopyContext.Provider value={ui}><><h2 style={{fontFamily:'var(--font-bodoni)',fontSize:30,marginBottom:16}}>{reports[index].question}</h2><ReportActions run={reports[index]} meta={null} payments={payments}/></></UiCopyContext.Provider>}
+        const run=sourceUrl?{...reports[index],citations:reports[index].citations.map(citation=>({...citation,itemUrl:sourceUrl}))}:reports[index];
+        return <UiCopyContext.Provider value={ui}><><h2 style={{fontFamily:'var(--font-bodoni)',fontSize:30,marginBottom:16}}>{reports[index].question}</h2><ReportActions run={run} meta={null} payments={payments}/></></UiCopyContext.Provider>}
       createRoot(document.getElementById('root')).render(<StrictMode><App/></StrictMode>);`, loader: "tsx", resolveDir: process.cwd() },
     bundle: true, write: false, platform: "browser", format: "iife",
     define: { "process.env.NODE_ENV": '"production"', "process.env": "{}" },
@@ -87,6 +90,33 @@ const writes = (page: Page) => page.evaluate(() => (window as unknown as { repor
 const lifecycle = (page: Page) => page.evaluate(() => {
   const value = (window as unknown as { reportFixture: Fixture }).reportFixture;
   return { allocated: value.allocated, revoked: value.revoked, connections: value.connections };
+});
+
+it.each([
+  "https://publisher.invalid/article?ref=![tracking](https://tracker.invalid/pixel)",
+  "https://publisher.invalid/article?ref=[replacement](https://other.invalid/article)",
+  "https://[2001:4860:4860::8888]/article?ref=![tracking](https://tracker.invalid/pixel)&next=&copy;",
+  "https://publisher.invalid/article?ref=%252F&next=%5Bencoded%5D",
+])("keeps the source destination intact in actual Copy and Download artifacts: %s", async itemUrl => {
+  await fixture(async page => {
+    await page.evaluate(value => (window as unknown as { reportFixture: Fixture }).reportFixture.sourceUrl(value), itemUrl);
+    await page.getByRole("button", { name: "Copy report", exact: true }).click(); await settle(page, true);
+    const copied = (await writes(page))[0];
+    const pending = page.waitForEvent("download"); await page.getByRole("button", { name: "Download report", exact: true }).click();
+    const file = await pending, stream = await file.createReadStream(); if (!stream) throw Error("Actual source URL report download missing");
+    const parts: Buffer[] = []; for await (const part of stream) parts.push(Buffer.from(part));
+    const downloaded = Buffer.concat(parts).toString("utf8"), href = new URL(itemUrl).href;
+    expect(downloaded).toBe(copied);
+    const line = copied.split("\n").find(value => value.startsWith("S1:"))!, fragment = JSDOM.fragment(line), links = fragment.querySelectorAll("a");
+    expect(links).toHaveLength(1); expect(links[0].getAttributeNames()).toEqual(["href"]);
+    expect(links[0].getAttribute("href")).toBe(href); expect(links[0].textContent).toBe(href);
+    expect(fragment.querySelectorAll("img,script,style,iframe")).toHaveLength(0);
+    expect(copied).toContain("First report body [S1]."); expect(copied).toContain("Exact recorded excerpt.");
+    expect(copied).toContain("citation · pending"); expect(copied).toContain("A citation alone does not prove settlement");
+    expect(file.suggestedFilename()).toBe("keryx-report-reportalphax1.md");
+    await expect.poll(() => page.getByRole("status").textContent()).toBe("Report downloaded with citations and payment states.");
+    await expect.poll(async () => (await lifecycle(page)).revoked).toEqual((await lifecycle(page)).allocated);
+  });
 });
 
 it.each((["es", "pt-BR", "fr", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const).flatMap(locale => [320, 1366].map(width => ({ locale, width }))))(
