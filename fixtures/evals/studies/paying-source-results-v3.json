@@ -21,7 +21,7 @@
     "reevaluateRounds": 1,
     "searchCalls": 0
   },
-  "lockSha256": "a87f2aff0b8741845d638e28dab41f9e2ca405c9f0cc3b93c09df57c2e38bcb4",
+  "lockSha256": "1e1fc05bca31616290aff0465b65c1c649dfef625b5c89e13db32b768e1dc855",
   "outboundAttempts": 0,
   "runtimeSources": {
     "lib/a2a/account-history.ts": "6ab94d83204d3fca655cc83023cd8028d77d300cab406d4f033e14ebc3efb29d",
@@ -311,7 +311,7 @@
     "lib/llm/supplemental-span-capability.ts": "eaf1a33f5b6809f7aa18a590bf52899d4841126a587f7e807d1cb85f6d5b3f77",
     "lib/llm/well-formed-utf16.ts": "fb8deb1ffd5a2087159f1ba6016190cb3484820af0b6b2c8faa3341a0dadc320",
     "lib/net/public-fetch-diagnostic.ts": "105ee8caccb07dacaffcbeafe03b46010483264669e4a8b7ce6fff22153f7def",
-    "lib/net/public-fetch.ts": "aae4d8a51d345dd60e77608f9af10050d3d0def4edb3ac3fd89e2c794ff64e4a",
+    "lib/net/public-fetch.ts": "f2cbd77e5bd21df492f992db097aa3cae113f30da7f6bcd1c1d2e3e469c13696",
     "lib/notify/alert.ts": "2c621a74b912601a950bd526f56efd8b6431294d54596ce53b4460769a670bfb",
     "lib/notify/citation-email.ts": "db3c0c29e84cf72e9391d9227ac98ba1efcce732e12e9441b9ab27bac1077395",
     "lib/notify/citation-messages.ts": "bab91f93a5ff1866280c806abcbff2c76beb75bdbdbdc2c0674d192e33e4d7a6",
@@ -495,7 +495,8 @@
     "lib/sources/source-recency.ts": "4900d069e93207537a4b11a4d99fce88c7e8f67353b332b9919c137c81a5b9f8",
     "lib/usage/contracts.ts": "3136d82e318426273c7cc22a02c7dd8aec82ce54341ba1c3d09797578b3c2f52",
     "lib/utils.ts": "a47fc6c815c346b2ad71f0201d5f942c8b2f6833104b24b33ee3bc5f4e25455c",
-    "lib/web-research/article-reader.ts": "82b84f2dba6ebfc9ddfece03953fdb1cd69a8a4f2e117d84c937f705131245a8",
+    "lib/web-research/article-encoding.ts": "a55c9aa6adf35693024a05a592504a6c91745958cf976eca64c0dcddf76138af",
+    "lib/web-research/article-reader.ts": "f079eca8125b7dec20f3770c85e2ba938d7a87ad6b7611308b03e66050ccb59a",
     "lib/web-research/discovery.ts": "5be9cc2a6e78cedd66f589ff13eb9b5d670b86eaf2a1dc0841b738c22efa638e",
     "lib/web-research/extraction-failure.ts": "8083360023e0acc54637a4e79c868c30901bcbf6c99551e959369404c32281de",
     "lib/web-research/extraction-worker.ts": "24e4f6a399c0cc26103da5e4fa0640e41ddd079ffbc74eeb1e023d7dfcffa41b",

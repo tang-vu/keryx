@@ -108,6 +108,26 @@ it("keeps feed negotiation unchanged after an article read", async () => {
     "User-Agent": "Keryx-FeedCheck/1", Accept: "application/rss+xml, application/xml, text/xml, */*",
   });
 });
+
+it.each([
+  ['text/html; CHARSET="Windows-1252"', "Windows-1252"],
+  ['text/html; profile="section; charset=gbk"; charset="shift_jis"', "shift_jis"],
+  ["text/html; charset=windows-1252; charset=utf-8", "windows-1252"],
+  ['text/html; charset="' + " ".repeat(65) + 'gbk' + " ".repeat(65) + '"', "gbk"],
+  ["text/html; charset=" + "x".repeat(65), undefined],
+  ["text/html", undefined],
+] as const)("retains only the terminal bounded MIME charset: %s", async (header, charset) => {
+  mocks.fetch.mockResolvedValueOnce(new Response(null, { status: 302,
+    headers: { location: "https://second.example/article", "content-type": "text/html; charset=gbk" } }))
+    .mockResolvedValueOnce(new Response("original body", { headers: { "content-type": header, "x-private-fixture": "PRIVATE_HEADER" } }));
+  const result = await fetchPublicBytes("https://first.example/article", { representation: "article", httpsOnly: true });
+  expect(result).toMatchObject({ finalUrl: "https://second.example/article", contentType: "text/html" });
+  expect(result.charset).toBe(charset);
+  if (charset === undefined) expect(result).not.toHaveProperty("charset");
+  expect(JSON.stringify(result)).not.toContain("PRIVATE_HEADER");
+  expect(mocks.lookup).toHaveBeenCalledTimes(2); expect(mocks.fetch).toHaveBeenCalledTimes(2);
+  await expect(pinnedAddresses(1)).resolves.toEqual([publicV4]);
+});
 it("refuses private and nonHTTPS redirects before opening a second socket", async () => {
   for (const location of ["https://127.0.0.1/private", "https://198.18.0.1/private", "https://[2001:db8::1]/private", "http://second.example/a"]) {
     mocks.fetch.mockReset().mockResolvedValue(new Response(null, { status: 302, headers: { location } }));

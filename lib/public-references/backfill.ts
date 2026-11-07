@@ -3,6 +3,7 @@ import { open, readFile, rename, rm, mkdir } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { z } from "zod";
 import { fetchPublicDocument, fetchPublicBytes, UnsafeTargetError } from "../net/public-fetch";
+import { decodeArticleText } from "../web-research/article-encoding";
 import type { ArticleRead, ArticleReader } from "../web-research/article-reader";
 import { canonicalPublicArticleUrl, publicReferenceItemId, publicReferenceItemSchema, type PublicReference } from "./catalog";
 import type { PublicReferenceArchiveDb, PublicReferenceItem } from "./archive";
@@ -114,7 +115,7 @@ export async function readBackfillArticle(url: string, signal?: AbortSignal): Pr
     const result = await (await import("../web-research/pdf-reader")).extractPdfText(fetched.bytes, { signal, maxPages: 20, maxChars: 60_000, timeoutMs: 5000 });
     return { ...result, title: new URL(url).hostname, finalUrl: url, kind: "pdf" };
   }
-  const text = new TextDecoder().decode(fetched.bytes);
+  const text = decodeArticleText(fetched.bytes, fetched.contentType, fetched.charset);
   if (fetched.contentType === "text/plain" || fetched.contentType === "text/markdown") {
     if (fetched.bytes.length > 500_000) throw new Error("article-byte-limit");
     return (await import("../web-research/article-reader")).extractArticle(text, url, fetched.contentType);
