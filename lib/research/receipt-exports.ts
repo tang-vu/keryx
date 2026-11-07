@@ -66,9 +66,15 @@ export function exportsFromCheckedReceipt(receipt: unknown) {
     const item = evidence.safeParse(value);
     return item.success ? [{ ...item.data, ...receiptWebProvenance(value), ...(hasKnownSyntheticFingerprint(item.data) ? { evidenceProvenance: "synthetic-demo" as const, qualifiesForAnswer: false, qualifiesForReward: false, support: 0 } : {}), claimIndex: row.claimIndex, claim: row.claim }] : [];
   }));
+  // Match the live read projection: older receipts may mark only a citation or
+  // one excerpt. Keep every same-marker excerpt illustrative in this export.
+  const syntheticMarkers = new Set([...citations, ...records]
+    .filter(item => item.evidenceProvenance === "synthetic-demo").map(item => item.marker));
+  const projectedRecords = records.map(item => syntheticMarkers.has(item.marker)
+    ? { ...item, evidenceProvenance: "synthetic-demo" as const, qualifiesForAnswer: false, qualifiesForReward: false, support: 0 } : item);
   const input = { citations, subClaims: [] as string[], claimCoverage: claims.map(row => ({
     claimIndex: row.claimIndex, claim: row.claim, coverage: 0, coveredBy: [] as string[] })),
-    evidence: ledger.success ? records : undefined };
+    evidence: ledger.success ? projectedRecords : undefined };
   return researchExports(input);
 }
 
