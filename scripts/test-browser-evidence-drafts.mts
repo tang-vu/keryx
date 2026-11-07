@@ -251,7 +251,7 @@ async function main() {
       // Blank statements and reviewer input are not in the JSON packet. Even
       // after requesting a backup, unloading must still warn about those inputs.
       const departure = page.waitForEvent("dialog");
-      const cancelledDeparture = page.locator('a[href="/literature"]').first().click();
+      const cancelledDeparture = page.locator('main a[href="/literature"]').click();
       const departureDialog = await departure; assert.equal(departureDialog.type(), "confirm"); await departureDialog.dismiss();
       await cancelledDeparture; assert.equal(new URL(page.url()).pathname, "/literature/drafts");
       assert.equal(await articles.first().getByLabel("Your sentence").inputValue(), unfinishedText);
