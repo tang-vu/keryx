@@ -14,6 +14,36 @@ function noStructureInjection(text: string) {
 }
 
 describe("literal report metadata", () => {
+  it.each([
+    "https://publisher.example/paper?ref=![tracking](https://tracker.invalid/pixel)",
+    "https://publisher.example/paper?ref=[replacement](https://other.invalid/article)",
+    "https://publisher.example/paper?ref=**Trusted**",
+    "https://publisher.example/paper?ref=`hidden`",
+    "https://publisher.example/paper?ref=&copy;&amp;next=1",
+    "https://publisher.example/paper#ref=![tracking](https://tracker.invalid/pixel)",
+    "https://publisher.example/paper?a=1&b=2",
+    "https://publisher.example/papers/(draft)[1]?q=한글#é",
+    "https://publisher.example/paper?x=%5Bencoded%5D&ref=%252F",
+  ])("exports the complete source URL as one portable Markdown link: %s", itemUrl => {
+    const run = { ...original, confidence: { level: "Low" as const, reason: "Retained assessment." },
+      citations: [{ ...original.citations[0], itemUrl }] }, before = JSON.stringify(run);
+    const text = researchReportMarkdown(run, null, []), href = new URL(itemUrl).href;
+    const links = [...text.matchAll(/<(https?:\/\/[^<>\s]+)>/g)];
+    expect(links.map(match => match[1])).toEqual([href]);
+    expect(text).toContain(`S1: Article — <${href}>`);
+    expect(text).toContain(original.answer); expect(text).toContain("Low — Retained assessment.");
+    expect(JSON.stringify(run)).toBe(before);
+  });
+  it.each(["javascript:alert(1)", "data:text/html,untrusted", "file:///private/report", "ftp://publisher.example/paper",
+    "https://user:secret@publisher.example/paper", "https://user@publisher.example/paper", "not a URL", ""])(
+    "keeps source URL refusal and recorded citation identity for %s", itemUrl => {
+      const run = { ...original, citations: [{ ...original.citations[0], itemUrl }] }, before = JSON.stringify(run);
+      const text = researchReportMarkdown(run, null, []);
+      expect([...text.matchAll(/<(https?:\/\/[^<>\s]+)>/g)]).toEqual([]);
+      expect(text).toContain("S1: Article"); expect(text).toContain("retained-v1");
+      expect(text).not.toContain(itemUrl || "not a URL"); expect(text).not.toContain("secret@");
+      expect(text).toContain(original.answer); expect(JSON.stringify(run)).toBe(before);
+    });
   it("keeps the stored confidence reason literal instead of forging report sections or citations", () => {
     const run = { ...original, confidence: { level: "Low" as const, reason: injection } }, before = JSON.stringify(run);
     const text = researchReportMarkdown(run, null, []);

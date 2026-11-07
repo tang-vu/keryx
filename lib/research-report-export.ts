@@ -43,7 +43,9 @@ export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, paym
   lines.push(labels.sources, "");
   for (const citation of run.citations) {
     const url = safeUrl(citation.itemUrl);
-    lines.push(`${reportLiteral(citation.marker)}: ${reportLiteral(citation.itemTitle ?? citation.sourceName)}${url ? ` — ${url}` : ""}`);
+    // A URL's query or fragment can contain Markdown image/link delimiters.
+    // Keep the complete canonical destination inside one portable autolink.
+    lines.push(`${reportLiteral(citation.marker)}: ${reportLiteral(citation.itemTitle ?? citation.sourceName)}${url ? ` — <${url}>` : ""}`);
     if (citation.contentVersion) lines.push(ordinary("documentVersion", { version: reportLiteral(citation.contentVersion) }));
     if (citation.accessKind === "creator-free") lines.push(copy("reportExport.freeAccess"));
     if (citation.sourceClaim) lines.push(copy("reportExport.creatorPolicy", { policy: reportLiteral(JSON.stringify({ id: citation.sourceClaim.id,
