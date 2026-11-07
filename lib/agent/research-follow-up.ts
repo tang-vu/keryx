@@ -22,7 +22,13 @@ export function researchFollowUp(input: {
   const french = input.language === "fr";
   const chinese = input.language === "zh-Hans";
   const native = nativeRecoveryCopy(input.language), nativePdf = nativePdfReadingCopy(input.language);
-  const rows = publicReadRecoveryLines(input.outcomes, vi, french, chinese, input.language);
+  // A later accepted read resolves this asset's earlier access/extraction gap.
+  // Keep every attempt in the original trace; current scope limits are reported below.
+  // Titles, publisher IDs and other document assets cannot resolve one another.
+  const readPublicIds = new Set(input.gathered.filter(source => source.sourceKind === "public-reference" && source.text.trim().length > 0)
+    .map(source => source.assetId ?? source.sourceId));
+  const unresolved = input.outcomes.filter(outcome => !outcome.assetId || !readPublicIds.has(outcome.assetId));
+  const rows = publicReadRecoveryLines(unresolved, vi, french, chinese, input.language);
   const synthesis = synthesisFailureDetail(input.synthesisFailure, input.gathered.length, vi, french, chinese, input.language);
   if (synthesis) rows.unshift(`- ${synthesis}`);
   const limited = input.gathered.filter(source => source.webProvenance?.truncated ||
