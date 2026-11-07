@@ -71,7 +71,7 @@ for (const locale of preparedLocales) it(`${locale} exposes actual report-label 
   }));
   expect(container.querySelector("pre")!.textContent).toBe(originalDraft);
   expect([...container.querySelectorAll("p")].some(node => node.textContent === originalFocus)).toBe(true);
-  const button = container.querySelector("section.min-w-0 button")!;
+  const button = container.querySelector<HTMLButtonElement>("section.min-w-0 button")!;
   const name = document.getElementById(button.getAttribute("aria-labelledby")!)!;
   expect(name.textContent).toBe(message("literatureComparison.removeLabel", { number: 1 }));
   expect(language(name.querySelector("[lang]") ?? name))
