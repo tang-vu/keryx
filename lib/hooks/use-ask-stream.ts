@@ -553,15 +553,17 @@ export function useAskStream(opts?: AskStreamOpts) {
                 error: researchRecoveryCopy.interrupted,
               };
         });
-      } catch (err) {
+      } catch {
         if (!isCurrent()) return;
         privateClaimHandoff?.fail();
-        if ((err as Error)?.name === "AbortError") return;
-        setState((s) => privateClaimHandoff && s.run ? { ...s, status: "done" } : ({
+        // A received terminal event remains authoritative even if its transport
+        // later fails. Reset/Stop aborts are already excluded by isCurrent().
+        // A current request's AbortError is still an interrupted delivery.
+        setState((s) => s.status !== "streaming" ? s : ({
           ...s,
           status: "error",
           errorKind: "generic",
-          error: err instanceof Error ? err.message : String(err),
+          error: researchRecoveryCopy.interrupted,
         }));
       }
     },
