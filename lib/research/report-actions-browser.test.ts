@@ -5,6 +5,7 @@ import { build } from "esbuild";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { chromium, type Browser, type Page } from "playwright";
+import { JSDOM } from "jsdom";
 
 let browser: Browser, bundle: string, css: string;
 const screenshots = process.env.KERYX_UX_SCREENSHOT_DIR;
@@ -94,6 +95,8 @@ const lifecycle = (page: Page) => page.evaluate(() => {
 it.each([
   "https://publisher.invalid/article?ref=![tracking](https://tracker.invalid/pixel)",
   "https://publisher.invalid/article?ref=[replacement](https://other.invalid/article)",
+  "https://[2001:4860:4860::8888]/article?ref=![tracking](https://tracker.invalid/pixel)&next=&copy;",
+  "https://publisher.invalid/article?ref=%252F&next=%5Bencoded%5D",
 ])("keeps the source destination intact in actual Copy and Download artifacts: %s", async itemUrl => {
   await fixture(async page => {
     await page.evaluate(value => (window as unknown as { reportFixture: Fixture }).reportFixture.sourceUrl(value), itemUrl);
@@ -103,8 +106,11 @@ it.each([
     const file = await pending, stream = await file.createReadStream(); if (!stream) throw Error("Actual source URL report download missing");
     const parts: Buffer[] = []; for await (const part of stream) parts.push(Buffer.from(part));
     const downloaded = Buffer.concat(parts).toString("utf8"), href = new URL(itemUrl).href;
-    expect(downloaded).toBe(copied); expect(copied).toContain(`S1: Observed public source — <${href}>`);
-    expect([...copied.matchAll(/<(https?:\/\/[^<>\s]+)>/g)].map(match => match[1])).toEqual([href]);
+    expect(downloaded).toBe(copied);
+    const line = copied.split("\n").find(value => value.startsWith("S1:"))!, fragment = JSDOM.fragment(line), links = fragment.querySelectorAll("a");
+    expect(links).toHaveLength(1); expect(links[0].getAttributeNames()).toEqual(["href"]);
+    expect(links[0].getAttribute("href")).toBe(href); expect(links[0].textContent).toBe(href);
+    expect(fragment.querySelectorAll("img,script,style,iframe")).toHaveLength(0);
     expect(copied).toContain("First report body [S1]."); expect(copied).toContain("Exact recorded excerpt.");
     expect(copied).toContain("citation · pending"); expect(copied).toContain("A citation alone does not prove settlement");
     expect(file.suggestedFilename()).toBe("keryx-report-reportalphax1.md");

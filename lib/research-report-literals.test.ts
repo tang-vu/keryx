@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { JSDOM } from "jsdom";
 import { researchReportMarkdown } from "./research-report-export";
 import type { PaymentRecord, QueryRun } from "./types";
 
@@ -15,6 +16,21 @@ function noStructureInjection(text: string) {
 
 describe("literal report metadata", () => {
   it.each([
+    "https://[2001:4860:4860::8888]/paper?a=1&b=2",
+    "https://[2001:4860:4860::8888]/paper?ref=![tracking](https://tracker.invalid/pixel)&next=[replacement](https://other.invalid/article)",
+    "https://[2001:4860:4860::8888]/paper?ref=&copy;&quot;%3E`code`**bold**#tail",
+    "https://publisher.example/paper?x=%5Bencoded%5D&ref=%252F",
+    "https://publisher.example/paper?x=100%raw&ref=%252F",
+  ])("retains native authority, percent escapes and literal URL data in one link: %s", itemUrl => {
+    const run = { ...original, citations: [{ ...original.citations[0], itemUrl }] }, before = JSON.stringify(run);
+    const text = researchReportMarkdown(run, null, []), line = text.split("\n").find(value => value.startsWith("S1:"))!;
+    const fragment = JSDOM.fragment(line), links = fragment.querySelectorAll("a"), href = new URL(itemUrl).href;
+    expect(links).toHaveLength(1); expect(links[0].getAttributeNames()).toEqual(["href"]);
+    expect(links[0].getAttribute("href")).toBe(href); expect(links[0].textContent).toBe(href); expect(links[0].href).toBe(href);
+    expect(fragment.querySelectorAll("img,script,style,iframe")).toHaveLength(0);
+    expect(text).toContain(original.answer); expect(JSON.stringify(run)).toBe(before);
+  });
+  it.each([
     "https://publisher.example/paper?ref=![tracking](https://tracker.invalid/pixel)",
     "https://publisher.example/paper?ref=[replacement](https://other.invalid/article)",
     "https://publisher.example/paper?ref=**Trusted**",
@@ -28,9 +44,10 @@ describe("literal report metadata", () => {
     const run = { ...original, confidence: { level: "Low" as const, reason: "Retained assessment." },
       citations: [{ ...original.citations[0], itemUrl }] }, before = JSON.stringify(run);
     const text = researchReportMarkdown(run, null, []), href = new URL(itemUrl).href;
-    const links = [...text.matchAll(/<(https?:\/\/[^<>\s]+)>/g)];
-    expect(links.map(match => match[1])).toEqual([href]);
-    expect(text).toContain(`S1: Article — <${href}>`);
+    const line = text.split("\n").find(value => value.startsWith("S1:"))!, fragment = JSDOM.fragment(line), native = fragment.querySelectorAll("a");
+    expect(native).toHaveLength(1); expect(native[0].getAttributeNames()).toEqual(["href"]);
+    expect(native[0].getAttribute("href")).toBe(href); expect(native[0].textContent).toBe(href);
+    expect(fragment.querySelectorAll("img,script,style,iframe")).toHaveLength(0);
     expect(text).toContain(original.answer); expect(text).toContain("Low — Retained assessment.");
     expect(JSON.stringify(run)).toBe(before);
   });
@@ -39,6 +56,9 @@ describe("literal report metadata", () => {
     "keeps source URL refusal and recorded citation identity for %s", itemUrl => {
       const run = { ...original, citations: [{ ...original.citations[0], itemUrl }] }, before = JSON.stringify(run);
       const text = researchReportMarkdown(run, null, []);
+      const line = text.split("\n").find(value => value.startsWith("S1:"))!;
+      expect(line).toBe("S1: Article");
+      expect(JSDOM.fragment(line).querySelectorAll("a,img,script,style,iframe")).toHaveLength(0);
       expect([...text.matchAll(/<(https?:\/\/[^<>\s]+)>/g)]).toEqual([]);
       expect(text).toContain("S1: Article"); expect(text).toContain("retained-v1");
       expect(text).not.toContain(itemUrl || "not a URL"); expect(text).not.toContain("secret@");

@@ -9,11 +9,19 @@ import { createMessages } from "./i18n/messages";
 
 const copy = createMessages("en");
 
-function safeUrl(value?: string): string | null {
+function safeUrl(value?: string): URL | null {
   try {
     const url = new URL(value ?? "");
-    return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url.href : null;
+    return ["http:", "https:"].includes(url.protocol) && !url.username && !url.password ? url : null;
   } catch { return null; }
+}
+
+function sourceUrlMarkdown(url: URL): string {
+  // Markdown URI encoders can rewrite the target or displayed URL. A native
+  // anchor keeps both intact. Entity-encode HTML/Markdown delimiters in both
+  // fields so URL data cannot supply markup, attributes or embedded images.
+  const literal = url.href.replace(/[&<>"'\\`*_{}\[\]()#!|~]/g, char => `&#${char.codePointAt(0)};`);
+  return `<a href="${literal}">${literal}</a>`;
 }
 
 /** Recorded scalar text is data, never Markdown structure or citation controls. */
@@ -44,8 +52,8 @@ export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, paym
   for (const citation of run.citations) {
     const url = safeUrl(citation.itemUrl);
     // A URL's query or fragment can contain Markdown image/link delimiters.
-    // Keep the complete canonical destination inside one portable autolink.
-    lines.push(`${reportLiteral(citation.marker)}: ${reportLiteral(citation.itemTitle ?? citation.sourceName)}${url ? ` — <${url}>` : ""}`);
+    // Keep the complete canonical destination inside one source reference.
+    lines.push(`${reportLiteral(citation.marker)}: ${reportLiteral(citation.itemTitle ?? citation.sourceName)}${url ? ` — ${sourceUrlMarkdown(url)}` : ""}`);
     if (citation.contentVersion) lines.push(ordinary("documentVersion", { version: reportLiteral(citation.contentVersion) }));
     if (citation.accessKind === "creator-free") lines.push(copy("reportExport.freeAccess"));
     if (citation.sourceClaim) lines.push(copy("reportExport.creatorPolicy", { policy: reportLiteral(JSON.stringify({ id: citation.sourceClaim.id,
