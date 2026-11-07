@@ -1,6 +1,39 @@
 # Current Arc mainnet deployment
 
-## Latest verified delivery: app 0.27.100 — November 6, 2026
+## Latest verified delivery: app 0.27.101 — November 7, 2026
+
+The completed release101 cohort identifies application **0.27.101**, source
+**`78d34ac41548e251f84dc2c8e5e0574cd0d19a19`**, on Arc mainnet. Its retained public
+restoration acceptance at `2026-11-07T03:14:22Z` records HTTP 200, matching source,
+network `arc` and maintenance cleared. These are dated delivery observations,
+not a continuous availability guarantee or a fresh research, funding or settlement
+trial. A later November 7 read from the documentation client's network returned
+HTTP 403; that response establishes neither an outage nor a fresh
+successful health check.
+
+| Surface | Accepted identity and evidence boundary |
+| --- | --- |
+| Hosted web/API | App **0.27.101**, source **`78d34ac4`**; accepted release101 public restoration above |
+| Hosted MCP | Server **0.3.19**, verified during release101 public postflight; distinct from the package version |
+| GitHub MCP artifact | **0.4.47**; release101's [source manifest](https://github.com/tang-vu/keryx/releases/download/v0.27.101/keryx-mcp-0.4.47.tgz.source.json) binds the artifact to source101 |
+| npm / official MCP Registry | **0.4.47**, published from source101; exact-version and latest readbacks match the committed manifest, npm integrity matches the GitHub tarball, and cryptographic Sigstore source/workflow provenance was accepted |
+| Operator desktop | Published **0.4.44**; source101 [release manifest](https://github.com/tang-vu/keryx/releases/download/v0.27.101/KeryxOperator-78d34ac41548e251f84dc2c8e5e0574cd0d19a19-release.json), independent standard-user Windows acceptance, and portable/installed smoke tests. Owner-machine installation remains unverified |
+| Browser extension | **0.1.4.3**, unchanged verified inputs and existing handoff role; no new extension release |
+
+The [release101 notes and assets](https://github.com/tang-vu/keryx/releases/tag/v0.27.101)
+and its successful [exact-source main CI](https://github.com/tang-vu/keryx/actions/runs/42329688098)
+identify the accepted source/distribution cohort. See also
+[distribution](mcp-distribution.md). Published packages and installer acceptance do
+not prove that a user's local client has been installed or updated.
+
+Later accepted source commits on `main` are not part of this installed cohort.
+Routine reviewed/check-passing source merges remain authorized; deployment and
+release/publication require a separate explicit user command. Keep installed101
+serving, preserve its originals and existing ROOT/Circle authority, and do not
+repeat this completed release. The sections below retain dated historical
+observations rather than current-version instructions.
+
+## Retained delivery: app 0.27.100 — November 6, 2026
 
 The completed release100 cohort identifies application **0.27.100**, source
 **`db6302568c8020e1922ba52fc00336b3d49bf909`**, on Arc mainnet. A passive
@@ -28,12 +61,9 @@ retains the distinct npm publication provenance; see also
 [distribution](mcp-distribution.md). Versions and published assets do not prove
 that a user's local client has been installed or updated.
 
-Later accepted source commits on `main` are not part of this installed cohort.
-Routine reviewed/check-passing source merges remain authorized; deployment and
-release/publication require a separate explicit user command. Keep the installed100
-cohort serving, preserve its originals and existing ROOT/Circle authority, and do
-not repeat this completed release. The sections below retain dated historical
-observations rather than current-version instructions.
+The identities above describe release100's historical delivery boundary.
+Release101 supersedes it. Preserve its qualified recovery originals; do not
+redeploy or republish this completed cohort.
 
 ## Retained delivery: app 0.27.96 — November 2, 2026
 

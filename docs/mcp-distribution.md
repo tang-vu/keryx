@@ -1,8 +1,29 @@
 # MCP package distribution
 
-## App 0.27.70 delivered — October 16
+## Latest accepted distribution: app 0.27.101 — November 7
 
-[v0.27.70](https://github.com/tang-vu/keryx/releases/tag/v0.27.70) is the delivered
+The accepted [v0.27.101 cohort](https://github.com/tang-vu/keryx/releases/tag/v0.27.101)
+binds source **`78d34ac41548e251f84dc2c8e5e0574cd0d19a19`**. The published MCP
+package is **0.4.47** and Operator Desktop is **0.4.44**. Hosted MCP retains its
+distinct server version **0.3.19**; the unchanged extension is **0.1.4.3**.
+
+The [MCP source manifest](https://github.com/tang-vu/keryx/releases/download/v0.27.101/keryx-mcp-0.4.47.tgz.source.json)
+and [desktop release manifest](https://github.com/tang-vu/keryx/releases/download/v0.27.101/KeryxOperator-78d34ac41548e251f84dc2c8e5e0574cd0d19a19-release.json)
+identify the downloaded, source-bound assets. Release101 acceptance includes
+matching npm tarball integrity, cryptographically verified npm Sigstore
+source/workflow provenance, and official MCP Registry exact/latest readbacks.
+Desktop portable and installed smoke tests passed in independent standard-user
+Windows profiles. This verifies distribution; owner-machine desktop installation
+remains unverified.
+
+See [current mainnet status](mainnet-status.md) for dated hosted restoration and
+the full surface table. Later source merges are separate from this installed and
+published cohort. No new version, publication or deployment is allocated here;
+the following sections retain historical delivery/preparation records.
+
+## Retained app 0.27.70 delivery — October 16
+
+[v0.27.70](https://github.com/tang-vu/keryx/releases/tag/v0.27.70) was the delivered
 web app at commit `2dda3717`. The release note publishes MCP **0.4.25** and
 Operator Desktop **0.4.23** assets from that source. Hosted MCP stays **0.3.18**.
 The extension stays **0.1.4.2**. Owner Desktop installation was not verified.
