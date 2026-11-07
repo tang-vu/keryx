@@ -42,6 +42,23 @@ it("cannot reach High from one known publisher's articles across distinct domain
   expect(researchVerdict({ ...base, conflicts: [] }).level).toBe("High");
 });
 
+it("keeps a later duplicate marker usable for its own supported target without adding a group", () => {
+  const sources = [...base.sources, { ...base.sources[0], marker: "S3", itemUrl: "https://a.example/reprint" }];
+  const coverage = [base.coverage[0], { claimIndex: 1, claim: "Which archival period applies?", coverage: 0.9, coveredBy: ["S3", "S2"] }];
+  expect(researchVerdict({ ...base, sources, coverage, conflicts: [], citedMarkers: ["S1", "S2", "S3"], sourceMarkers: ["S1", "S2", "S3"] }).level).toBe("High");
+});
+
+it("merges a body-copy bridge before counting another article from the copied publisher", () => {
+  const sources = [base.sources[0], { ...base.sources[0], marker: "S3", sourceId: "b", itemUrl: "https://b.example/copy" }, base.sources[1]];
+  for (const ordered of [sources, [...sources].reverse()]) {
+    expect(researchVerdict({ ...base, sources: ordered, conflicts: [], citedMarkers: ["S1", "S2", "S3"], sourceMarkers: ["S1", "S2", "S3"] }).level).toBe("Moderate");
+  }
+});
+
+it("does not count an empty source body as another corroborating group", () => {
+  expect(researchVerdict({ ...base, conflicts: [], sources: [{ ...base.sources[0], text: " \t\n" }, base.sources[1]] }).level).toBe("Moderate");
+});
+
 it("localizes reasons while preserving every confidence classification and input", () => {
   const cases = [
     { ...base, conflicts: [], citedMarkers: [] },

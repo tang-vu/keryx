@@ -1,11 +1,12 @@
 import type { GatheredContent } from "../llm";
-import { publisherGroup } from "../web-research/url-identity";
+import { bodyIdentity, publisherGroup } from "../web-research/url-identity";
 import { normalizeDoi } from "./doi";
 
-/** Known shared publisher/work identity can only reduce domain-group diversity, never raise it. */
+/** Observed publisher/work/body links can only reduce domain-group diversity. */
 export function scholarlyWorkGroups(sources: readonly GatheredContent[], cited: ReadonlySet<string>): Map<string, string> {
   const parents = new Map<string, string>(), markerDomains = new Map<string, string>(), doiDomains = new Map<string, string>();
   const publisherDomains = new Map<string, string>();
+  const bodyDomains = new Map<string, string>();
   function root(group: string): string {
     const next = parents.get(group);
     if (!next || next === group) return group;
@@ -26,6 +27,14 @@ export function scholarlyWorkGroups(sources: readonly GatheredContent[], cited: 
       const other = publisherDomains.get(source.sourceId);
       if (other) union(group, other);
       else publisherDomains.set(source.sourceId, group);
+    }
+    // Group copies before mapping markers. Dropping a later copied marker can
+    // hide its strong evidence for one target or miss a transitive publisher link.
+    // Missing bodies supply no observed shared-content identity.
+    if (source.text.trim()) {
+      const body = bodyIdentity(source.text), other = bodyDomains.get(body);
+      if (other) union(group, other);
+      else bodyDomains.set(body, group);
     }
     // Discovery metadata and absent/malformed DOI cannot manufacture a shared-work link.
     const doi = source.scholarly?.evidenceScope ? normalizeDoi(source.scholarly.doi ?? "") : undefined;

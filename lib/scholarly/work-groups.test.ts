@@ -48,3 +48,38 @@ it("ignores uncited records, unread metadata, absent DOI and malformed identity 
   expect(new Set(scholarlyWorkGroups(sources, new Set(["S1", "S2"])).values()).size).toBe(2);
   expect(scholarlyWorkGroups(sources, new Set(["S1", "S2"])).has("S3")).toBe(false);
 });
+
+it("merges observed normalized body copies without needing DOI or shared publisher metadata", () => {
+  const sources = [source("S1", "one.example"), source("S2", "two.example")];
+  sources[0].text = "  Same\u00a0observed body.\n";
+  sources[1].text = "Same observed  body.";
+  const cited = new Set(["S1", "S2"]), before = JSON.stringify(sources);
+  expect(new Set(scholarlyWorkGroups(sources, cited).values()).size).toBe(1);
+  expect(Object.fromEntries(scholarlyWorkGroups(sources, cited))).toEqual(Object.fromEntries(scholarlyWorkGroups([...sources].reverse(), cited)));
+  expect(JSON.stringify(sources)).toBe(before);
+});
+
+it("merges body, domain, DOI and publisher-ID bridges transitively for every source order", () => {
+  const sources = [source("S1", "one.example"), source("S2", "two.example"), source("S3", "two.example", "10.1234/bridge"),
+    source("S4", "three.example", "10.1234/bridge"), source("S5", "four.example")];
+  sources[1].text = sources[0].text;
+  sources[4].sourceId = sources[3].sourceId;
+  function* orders<T>(values: T[]): Generator<T[]> {
+    if (!values.length) { yield []; return; }
+    for (let i = 0; i < values.length; i++) for (const rest of orders(values.filter((_, index) => index !== i))) yield [values[i]!, ...rest];
+  }
+  const cited = new Set(sources.map(row => row.marker)), before = JSON.stringify(sources);
+  for (const ordered of orders(sources)) {
+    expect(Object.fromEntries(scholarlyWorkGroups(ordered, cited))).toEqual({ S1: "four.example", S2: "four.example", S3: "four.example", S4: "four.example", S5: "four.example" });
+  }
+  expect(JSON.stringify(sources)).toBe(before);
+});
+
+it("does not link distinct publishers through missing bodies or uncited copies", () => {
+  const sources = [source("S1", "one.example"), source("S2", "two.example"), source("S3", "three.example")];
+  sources[0].text = ""; sources[1].text = " \t"; sources[2].text = "";
+  expect(new Set(scholarlyWorkGroups(sources, new Set(["S1", "S2"])).values()).size).toBe(2);
+  sources[0].text = "A real observed body."; sources[1].text = "An independently observed body."; sources[2].text = sources[0].text;
+  sources[2].sourceId = sources[1].sourceId;
+  expect(new Set(scholarlyWorkGroups(sources, new Set(["S1", "S2"])).values()).size).toBe(2);
+});
