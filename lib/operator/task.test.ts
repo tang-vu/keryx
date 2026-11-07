@@ -18,6 +18,7 @@ import { readBibliographicTask, type BibliographicTaskResult } from "../research
 import { recognizeBibliographicTask } from "../research/bibliographic-task-request";
 import { frenchArxivTask } from "../research/fixtures/bibliographic-task-questions";
 import { formatOperatorResearchExport } from "./result";
+import { SEED_EVIDENCE_FINGERPRINTS } from "../research/seed-evidence-fingerprints";
 
 const roots: string[] = [];
 const payer = `0x${"1".repeat(40)}`;
@@ -194,6 +195,38 @@ it.each([
   expect(await readFile(receiptPath, "utf8")).toBe(originalReceipt);
   expect(await readFile(join(task, "buyer/intent.json"), "utf8")).toBe(intent);
 });
+
+it.each(["citation-label", "citation-fingerprint", "evidence-label", "evidence-fingerprint", "missing-fingerprint"])(
+  "retains same-marker demo qualification after checked offline recovery: %s", async signal => {
+    const { task } = await fixture();
+    await createLegacyOperatorTask(task, { request, payee, maxTotalMicros: "100000" }); await buyerJournal(task);
+    const seed = SEED_EVIDENCE_FINGERPRINTS.find(row => row.itemTitle === "Measuring x402 settlement latency on Arc")!;
+    const identity = { marker: "S1", sourceId: "archived-source", sourceName: "Archived publisher", itemId: "archived-item",
+      itemTitle: seed.itemTitle, itemUrl: seed.itemUrl, contentVersion: "archived-v1" };
+    const body = { bodyHash: seed.bodyHash, deliveryKind: "abstract", storageMode: "db_encrypted", plaintextBytes: 123 };
+    const citation = { ...identity, weight: 1, rewardPlannedUsdc: .01, rationale: "Retained",
+      ...(signal === "citation-label" ? { evidenceProvenance: "synthetic-demo" } : {}),
+      ...(signal === "citation-fingerprint" ? { contentReceipt: body } : {}) };
+    const claims = ["First retained target", "Second retained target"].map((claim, claimIndex) => ({ claim, claimIndex,
+      evidence: [{ ...identity, quote: claimIndex ? "Second exact retained excerpt." : "First exact retained excerpt.",
+        support: .8, qualifiesForAnswer: true, qualifiesForReward: false,
+        ...(claimIndex === 0 && signal === "evidence-label" ? { evidenceProvenance: "synthetic-demo" } : {}),
+        ...(claimIndex === 0 && signal === "evidence-fingerprint" ? { contentReceipt: body } : {}) }] }));
+    const completed = await completedRecovery(task, "Retained original answer [S1]", [citation], undefined, claims);
+    expect(completed.localResult.state).toBe("saved");
+    const snapshot = await readFile(join(task, "result.json"), "utf8"), receiptPath = join(task, "buyer", JSON.parse(snapshot).receiptFile);
+    const originalReceipt = await readFile(receiptPath, "utf8"), intent = await readFile(join(task, "buyer/intent.json"), "utf8");
+    const raw = await readOperatorResult(task), result = await readOperatorResearchResult(task), marked = signal !== "missing-fingerprint";
+    const csv = formatOperatorResearchExport(result!, "evidence-csv");
+    expect(csv.match(/Illustrative demo excerpt/g) ?? []).toHaveLength(marked ? 2 : 0);
+    expect(csv.match(/Recorded excerpt/g) ?? []).toHaveLength(marked ? 0 : 2);
+    expect(csv).toContain("First exact retained excerpt."); expect(csv).toContain("Second exact retained excerpt.");
+    expect(result!.answer).toBe("Retained original answer [S1]"); expect(result!.receiptDigest).toBe(raw!.receiptDigest);
+    expect(result!.authority).toBe(raw!.authority); expect(result!.paymentAtCheck).toBe("unconfirmed");
+    expect((await operatorTaskStatus(task)).payment).toBe("unknown");
+    expect(await readFile(join(task, "result.json"), "utf8")).toBe(snapshot); expect(await readFile(receiptPath, "utf8")).toBe(originalReceipt);
+    expect(await readFile(join(task, "buyer/intent.json"), "utf8")).toBe(intent);
+  });
 
 it("rejects edited answer, receipt, task binding, and oversized saved files", async () => {
   const { task } = await fixture();

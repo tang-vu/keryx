@@ -7,6 +7,8 @@ import { frenchArxivTask } from "./fixtures/bibliographic-task-questions";
 import { buildResearchReceipt, researchReceiptDigest, verifyResearchReceipt } from "../research-receipt";
 import { researchExports } from "./surface-result";
 import type { QueryRun, SourceItemIdentity } from "../types";
+import { demoteSyntheticEvidence } from "./evidence-provenance";
+import { SEED_EVIDENCE_FINGERPRINTS } from "./seed-evidence-fingerprints";
 
 async function recordedBibliography() {
   const body = readFileSync(new URL("./fixtures/arxiv-2005.11401v4-bibliography.html", import.meta.url), "utf8");
@@ -156,4 +158,46 @@ it("retains existing refusal for an over-bound citation section", () => {
   const before = JSON.stringify(receipt), result = exportsFromCheckedReceipt(receipt);
   expect(result.bibtex.count).toBe(0); expect(result.ris.count).toBe(0); expect(result.cslJson.count).toBe(0);
   expect(result.evidenceCsv).not.toContain("Exact retained paragraph."); expect(JSON.stringify(receipt)).toBe(before);
+});
+
+type DemoSignal = "citation-label" | "citation-fingerprint" | "evidence-label" | "evidence-fingerprint" | "missing-fingerprint" | "unmarked";
+const demoSignals: DemoSignal[] = ["citation-label", "citation-fingerprint", "evidence-label", "evidence-fingerprint", "missing-fingerprint", "unmarked"];
+
+it.each(demoSignals)("keeps recovered and live demo-marker exports equivalent for %s", signal => {
+  const seed = SEED_EVIDENCE_FINGERPRINTS.find(row => row.itemTitle === "Measuring x402 settlement latency on Arc")!;
+  const seedMetadata = signal.includes("fingerprint");
+  const identity = { marker: "S1", sourceId: "archived-source", sourceName: "Archived publisher", itemId: "archived-item", contentVersion: "archived-v1",
+    itemTitle: seedMetadata ? seed.itemTitle : "Retained original paper", itemUrl: seedMetadata ? seed.itemUrl : "https://publisher.example/retained",
+    sourceKind: "public-reference" as const, webProvenance: observed };
+  const body = { bodyHash: seed.bodyHash, deliveryKind: "abstract" as const, storageMode: "db_encrypted" as const, plaintextBytes: 123 };
+  const run = scopedRun(observed);
+  run.subClaims = ["First retained target", "Second retained target", "Unrelated target"];
+  run.citations = [{ ...identity, weight: 1, reward: 0, rationale: "Retained" }, { ...identity, marker: "S2", sourceId: "other-source",
+    itemId: "other-item", itemTitle: "Unmarked control", itemUrl: "https://other.example/paper", weight: 0, reward: 0, rationale: "Control" }];
+  run.evidence = [0, 1, 2].map(index => ({ ...run.citations[index === 2 ? 1 : 0], claimIndex: index, claim: run.subClaims[index],
+    quote: ["First exact retained excerpt.", "Second exact retained excerpt.", "Unrelated exact retained excerpt."][index],
+    support: .8, qualifiesForAnswer: true, qualifiesForReward: false }));
+  run.claimCoverage = run.subClaims.map((claim, claimIndex) => ({ claim, claimIndex, coverage: .8, coveredBy: [claimIndex === 2 ? "S2" : "S1"] }));
+  if (signal === "citation-label") run.citations[0].evidenceProvenance = "synthetic-demo";
+  if (signal === "citation-fingerprint") run.citations[0].contentReceipt = body;
+  if (signal === "evidence-label") run.evidence[0].evidenceProvenance = "synthetic-demo";
+  if (signal === "evidence-fingerprint") run.evidence[0].contentReceipt = body;
+  // Construct a controlled old receipt before sealing. The current producer
+  // already demotes these markers, so preserve the older per-record shape here.
+  const receipt = buildResearchReceipt({ ...run, citations: [], evidence: [] }, []);
+  receipt.payload.citations = run.citations.map(({ reward, ...row }) => ({ ...row, rewardPlannedUsdc: reward }));
+  receipt.payload.claims = run.subClaims.map((claim, claimIndex) => ({ claim, claimIndex, coverage: .8, coveredBy: [claimIndex === 2 ? "S2" : "S1"],
+    evidence: run.evidence!.filter(row => row.claimIndex === claimIndex).map(({ claim: _claim, claimIndex: _index, ...row }) => row) }));
+  receipt.integrity.digest = researchReceiptDigest(receipt.payload);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  const originalRun = JSON.stringify(run), originalReceipt = JSON.stringify(receipt);
+  const result = exportsFromCheckedReceipt(receipt), expected = researchExports(demoteSyntheticEvidence(run));
+  expect(result).toEqual(expected);
+  const marked = signal !== "missing-fingerprint" && signal !== "unmarked";
+  expect(result.evidenceCsv.match(/Illustrative demo excerpt/g) ?? []).toHaveLength(marked ? 2 : 0);
+  expect(result.evidenceCsv.match(/Recorded excerpt/g) ?? []).toHaveLength(marked ? 1 : 3);
+  for (const row of run.evidence) expect(result.evidenceCsv).toContain(row.quote);
+  expect(result.evidenceCsv).toContain(JSON.stringify(observed.retrievedAt));
+  expect(JSON.stringify(run)).toBe(originalRun); expect(JSON.stringify(receipt)).toBe(originalReceipt);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
 });
