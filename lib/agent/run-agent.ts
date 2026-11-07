@@ -1662,7 +1662,10 @@ async function* runAdmittedAgent(
           yield emit("reevaluate", `SKIP ${source.name}: manuscript rights or registry terms changed before this read.`);
           continue;
         }
-        const retainedCache = asset.priceUsdc > 0 && freshCache.has(recId) ? await effects.getCached(asset.cacheKey).catch(() => null) : null;
+        const cachedText = asset.priceUsdc > 0 && freshCache.has(recId) ? await effects.getCached(asset.cacheKey).catch(() => null) : null;
+        // Fresh metadata is only a hint. Match initial cache admission and keep
+        // a valid body's original bytes for source hashes and quote offsets.
+        const retainedCache = cachedText?.trim() ? cachedText : null;
         // Discovery's fresh-cache hint admits a zero-cost candidate, not a paid fallback. An
         // evicted/empty copy must still fit the remaining fetch allocation before any admission.
         if (mayReuseCache && !retainedCache && checkpoint({ kind: "budget", present: true, gathered: false,
