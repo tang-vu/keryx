@@ -139,6 +139,19 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
     setRequest(null);
     reset();
   };
+  const prepareEvidenceFollowUp = (turn: ScopedTurn, question: string) => {
+    const publication = publicationPreference.getSelection(), revision = publicationPreference.getIdentityRevision();
+    const captured = activeState.current, run = turn.state.run;
+    if (!run || !publication || captured.status === "streaming" || activeRequest.current?.id !== request?.id) return;
+    if (hidden(turn, turn.state) && (turn.ownerRevision !== revision || turn.publication.expectedWallet !== publication.expectedWallet
+      || turn.state.meta?.visibility === "private" && (!turn.state.meta.visibilityOwner
+        || turn.state.meta.visibilityOwner.toLowerCase() !== publication.expectedWallet))) return;
+    if (request) setHistory(previous => previous.some(item => item.id === request.id) ? previous : [...previous, { ...request, state: captured }]);
+    activeRequest.current = null; setRequest(null); reset();
+    setAnchor(run.id); setRootRequest(false);
+    setReopened({ id: --recoverySequence.current, question, budget: turn.state.budget, researchPaused: false, replace: true,
+      binding: { wallet: publication.expectedWallet, revision } });
+  };
   const hasTurns = visibleHistory.length > 0 || visibleRequest !== null;
   return <section className="mx-auto max-w-[960px] px-4 pb-8 pt-2 sm:px-[30px] sm:pt-6" data-research-intro={introduceProduct ? "" : undefined} aria-label={message("researchChat.label")}>
     <header className="kx-research-hero relative mb-3 min-h-[116px] border-b border-line pb-3 sm:mb-6 sm:min-h-[168px] sm:pb-6" data-tour="hero">
@@ -153,8 +166,10 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
       <p className="kx-research-intro mt-3 max-w-[calc(100%_-_84px)] font-serif text-sm leading-5 text-ink-2 sm:max-w-[min(60ch,calc(100%_-_156px))] sm:text-lg sm:leading-relaxed">{introduceProduct && payer === "treasury" ? <UiText source={uiEnglish_productGuideCopy("product.heroBody")} namespaces={["product-guide"]} /> : <UiMessage messageKey="researchChat.introduction" />}</p>
     </header>
     {hasTurns && <div className="space-y-8 py-4" aria-label={message("researchChat.turnsLabel")}>
-      {visibleHistory.map(turn => <ResearchTurn key={turn.id} turn={turn} />)}
-      {visibleRequest && <div ref={activeTurnRef} className="scroll-mt-24"><ResearchTurn key={visibleRequest.id} turn={{ ...visibleRequest, state }} /></div>}
+      {visibleHistory.map(turn => <ResearchTurn key={turn.id} turn={turn} publicFollowUp={turn.publication.visibility === "public"}
+        onPrepareEvidenceFollowUp={!streaming ? draft => prepareEvidenceFollowUp(turn, draft) : undefined} />)}
+      {visibleRequest && <div ref={activeTurnRef} className="scroll-mt-24"><ResearchTurn key={visibleRequest.id} turn={{ ...visibleRequest, state }} publicFollowUp={visibleRequest.publication.visibility === "public"}
+        onPrepareEvidenceFollowUp={!streaming ? draft => prepareEvidenceFollowUp({ ...visibleRequest, state }, draft) : undefined} /></div>}
     </div>}
     <div id="dispatch" className="scroll-mt-24">
       {hasTurns && <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

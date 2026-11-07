@@ -42,8 +42,13 @@ export function evidenceFollowUpContext(question: string, target: string) {
 
 /** An ordinary editable ask link. Never add run=1, a budget or a model override. */
 export function evidenceFollowUpHref(parentId: string, draft: string): string {
-  const q = draft.trim().slice(0, MAX_ASK_QUESTION_CHARS).replace(/[\uD800-\uDBFF]$/u, "");
+  const q = boundedEvidenceFollowUpDraft(draft);
   const params = new URLSearchParams({ q });
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parentId)) params.set("parent", parentId);
   return `/?${params}`;
+}
+
+/** Shared composer bound for public links and protected in-memory drafts. */
+export function boundedEvidenceFollowUpDraft(draft: string): string {
+  return draft.trim().slice(0, MAX_ASK_QUESTION_CHARS).replace(/[\uD800-\uDBFF]$/u, "");
 }

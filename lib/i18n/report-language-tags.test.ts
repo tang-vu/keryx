@@ -42,7 +42,7 @@ for (const locale of preparedLocales) it(`${locale} exposes actual report-label 
   await act(async () => root.render(h(UiCopyContext.Provider, { value: ui },
     h("div", { id: "pdf" }, h(PdfReadingScope, { provenance: { extraction: "pdf", pdfTextScope: scope } })),
     h("div", { id: "comparison-link" }, h(ReportComparisonLink)),
-    h("div", { id: "evidence-status" }, h(AnswerEvidenceStatus, { run: evidence })),
+    h("div", { id: "evidence-status" }, h(AnswerEvidenceStatus, { run: evidence, allowPublicFollowUp: true })),
     h(LiteratureComparisonPreview, { entries: [{ paper, screening: "include", matchesSearch: false }], filter: "exclude",
       savedQuestion: originalFocus, draft: originalDraft, onRemove: remove }))));
   const selectedPdf = previewCopy(preview, "pdf-reading", pdfReadingCopy);
@@ -71,7 +71,7 @@ for (const locale of preparedLocales) it(`${locale} exposes actual report-label 
   }));
   expect(container.querySelector("pre")!.textContent).toBe(originalDraft);
   expect([...container.querySelectorAll("p")].some(node => node.textContent === originalFocus)).toBe(true);
-  const button = container.querySelector("button")!;
+  const button = container.querySelector("section.min-w-0 button")!;
   const name = document.getElementById(button.getAttribute("aria-labelledby")!)!;
   expect(name.textContent).toBe(message("literatureComparison.removeLabel", { number: 1 }));
   expect(language(name.querySelector("[lang]") ?? name))
