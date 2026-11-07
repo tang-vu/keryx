@@ -76,7 +76,7 @@ it("blocks client navigation when confirmation is unavailable and keeps exact in
 
 it("leaves modified, non-self, download, same-document, external and already-cancelled clicks alone", () => fixture(async page => {
   const result = await page.evaluate(() => {
-    const prompts: string[] = []; window.confirm = message => { prompts.push(message); return false; };
+    const prompts: string[] = []; window.confirm = message => { prompts.push(message ?? ""); return false; };
     const dispatch = (href: string, attributes: Record<string, string> = {}, init: MouseEventInit = {}, cancelled = false) => {
       const link = document.createElement("a"); link.href = href;
       for (const [name, value] of Object.entries(attributes)) link.setAttribute(name, value);

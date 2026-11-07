@@ -76,7 +76,7 @@ it("cancels in-app departure once for all dirty editors without losing private i
   await page.evaluate(() => {
     const probe = window as unknown as { leaveChecks: string[]; routeVisits: number; unmountLibrary(): void };
     probe.leaveChecks = []; probe.routeVisits = 0;
-    window.confirm = message => { probe.leaveChecks.push(message); return false; };
+    window.confirm = message => { probe.leaveChecks.push(message ?? ""); return false; };
     const link = document.createElement("a"); link.href = "/other"; link.id = "client-departure";
     link.textContent = "Fixture client navigation";
     link.addEventListener("click", event => {
