@@ -197,7 +197,19 @@ try {
     assert.equal(await metadataLink.getAttribute("href"), "/sources?kind=paper&q=2005.11401v4#research-papers");
     const box = await metadataLink.boundingBox(); assert(box && box.height >= 43 && box.x >= 0 && box.x + box.width <= width + 1);
     await metadataLink.screenshot({ path: join(screenshots, `metadata-handoff-${width}.png`) });
-    await metadataLink.click();
+    const unsentQuestion = await composer.inputValue();
+    const cancelledHandoff = page.waitForEvent("dialog");
+    const cancelledClick = metadataLink.click();
+    const cancelledPrompt = await cancelledHandoff;
+    assert.equal(cancelledPrompt.type(), "confirm");
+    assert(!cancelledPrompt.message().includes(unsentQuestion), "Discard prompt cannot contain private question text");
+    await cancelledPrompt.dismiss(); await cancelledClick;
+    assert.equal(await composer.inputValue(), unsentQuestion, "Cancelled metadata handoff preserves the exact draft");
+    const acceptedHandoff = page.waitForEvent("dialog");
+    const acceptedClick = metadataLink.click();
+    const acceptedPrompt = await acceptedHandoff;
+    assert.equal(acceptedPrompt.type(), "confirm");
+    await acceptedPrompt.accept(); await acceptedClick;
     // Count the queried catalogue after this document navigation finishes streaming.
     await page.waitForURL(`${base}/sources?kind=paper&q=2005.11401v4#research-papers`, { waitUntil: "load" });
     assert.equal(await page.getByRole("searchbox", { name: "Title, topic, DOI or versioned arXiv identifier" }).inputValue(), "2005.11401v4");
