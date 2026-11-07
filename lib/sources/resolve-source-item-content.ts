@@ -115,7 +115,7 @@ async function resolveDeliveredContent(
     if (!invalid) return item.content;
     return fallbackOrThrow(item, options, invalid);
   }
-  if (options.allowSummaryFallback && item.summary) return item.summary;
+  if (options.allowSummaryFallback && item.summary?.trim()) return item.summary;
   throw new Error(`article ${item.id} has no deliverable content`);
 }
 
@@ -124,6 +124,9 @@ async function invalidReceiptReason(
   plaintext: string,
   expectedManifestSigner?: string,
 ): Promise<string | null> {
+  // Matching commitments do not make an empty body readable. Keep valid text
+  // unchanged; exact reads never substitute a preview for an unavailable body.
+  if (!plaintext.trim()) return "article body is empty or whitespace-only";
   if (item.bodyHash && item.bodyHash !== contentBodyHash(plaintext)) {
     return "article body does not match its content receipt hash";
   }
@@ -150,6 +153,6 @@ function fallbackOrThrow(
   options: ResolveOptions,
   reason: string,
 ): string {
-  if (options.allowSummaryFallback && item.summary) return item.summary;
+  if (options.allowSummaryFallback && item.summary?.trim()) return item.summary;
   throw new Error(`${reason} (${item.id})`);
 }

@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { encryptContent } from "@/lib/ipfs/content-crypto";
+import { contentBodyHash, contentBytes } from "@/lib/sources/content-receipt";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -79,6 +81,33 @@ describe("paid article route", () => {
     expect(mocks.settleThenServe).not.toHaveBeenCalled();
     expect(db.setCached).not.toHaveBeenCalled();
   });
+
+
+  it.each([false, true].flatMap(encrypted => ["", " \t\n\r", "\u00a0\u2003"].map(text => ({ encrypted, text }))))(
+    "refuses blank exact content at free and paid producer boundaries, encrypted=$encrypted text=$text", async ({ encrypted, text }) => {
+      const previousKey = process.env.CONTENT_MASTER_KEY; process.env.CONTENT_MASTER_KEY = "89".repeat(32);
+      try {
+        let selected: SourceItem = { ...item, content: text, bodyHash: contentBodyHash(text), plaintextBytes: contentBytes(text) };
+        if (encrypted) {
+          const envelope = encryptContent(text);
+          selected = { ...selected, content: envelope.cipherB64, storageMode: "db_encrypted", itemKeyEnc: envelope.wrappedKeyB64,
+            itemIv: envelope.ivB64, itemAuthTag: envelope.authTagB64, itemWrapIv: envelope.wrapIvB64 };
+        }
+        db.getItem.mockResolvedValue(selected);
+        const identity = sourceItemIdentity(selected), request = () => new NextRequest(`https://keryx.test/api/source/source-1/item/article-1?version=${encodeURIComponent(identity.contentVersion)}`);
+        const context = { params: Promise.resolve({ id: source.id, itemId: item.id }) };
+        db.getSource.mockResolvedValue({ ...source, fetchPrice: 0 });
+        const free = await GET(request(), context);
+        expect(free.status).toBe(503); expect(await free.json()).toMatchObject({ error: expect.any(String) });
+        expect(mocks.settleThenServe).not.toHaveBeenCalled(); expect(db.setCached).not.toHaveBeenCalled();
+        db.getSource.mockResolvedValue(source);
+        await GET(request(), context);
+        expect(mocks.settleThenServe).toHaveBeenCalledOnce();
+        const [, , produce] = mocks.settleThenServe.mock.calls[0];
+        await expect(produce({ payer: "synthetic-buyer", transaction: "synthetic-settlement" })).rejects.toThrow();
+        expect(db.setCached).not.toHaveBeenCalled();
+      } finally { if (previousKey === undefined) delete process.env.CONTENT_MASTER_KEY; else process.env.CONTENT_MASTER_KEY = previousKey; }
+    });
 
   it("binds the challenge and paid response to one exact article version", async () => {
     const identity = sourceItemIdentity(item);
