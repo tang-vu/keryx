@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useContext, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useUnsavedNavigation } from "@/lib/hooks/use-unsaved-navigation";
 import { useLiteratureWorkspace } from "@/lib/papers/literature-browser-store";
 import { downloadBrowserText } from "@/lib/browser-text-download";
 import { assembleEvidenceDraftRequest, buildEvidenceDraft, evidenceDraftReportSchema, evidenceDraftWorkspace, EVIDENCE_DRAFT_NOTICE, MAX_EVIDENCE_DRAFT_BYTES,
@@ -80,12 +81,7 @@ export function EvidenceDraftWorkspace() {
   const hasUnretainedInputs = !!reportJson || !!reviewer || editors.themes.some(theme => theme.statements?.some(row => !row.text.trim()));
   const editorSnapshot = retainedEditorsSnapshot(editors);
   const hasUnsavedChanges = hasUnretainedInputs || editorSnapshot !== retainedSnapshot;
-  useLayoutEffect(() => {
-    if (!hasUnsavedChanges) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = "true"; };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [hasUnsavedChanges]);
+  useUnsavedNavigation(hasUnsavedChanges);
   const [resetRevision, setResetRevision] = useState(0);
   const importEpoch = useRef(0), activeImportEpoch = resetRevision;
   const restoreContext = useMemo(() => ({ editors, reportJson, reviewer, workspace }), [editors, reportJson, reviewer, workspace]);

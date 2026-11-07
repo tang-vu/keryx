@@ -1,5 +1,6 @@
 /** Existing English helper presentation. Canonical exports stay English; no locale or authority rollout. */
 export const sharedHelperMessages = Object.freeze({
+  "unsavedNavigation.confirm": "You have unsaved changes. Leave this page and discard them?",
   "signingAmount.exactDetails": "({micros} micro-USDC; decimal point, no grouping)",
   "displayTime.unavailable": "Unavailable",
   "paymentAuthorization.prepared": "reserved, not exposed",
