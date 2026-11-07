@@ -57,14 +57,22 @@ race across jobs. Browser and compiled-production checks retain their original
 assertions and settings. Sharding changes test allocation, not test isolation or
 selection. Within a lane, dependent steps remain sequential.
 
-The production job has two matrix members, `routes` and `ui`, after the original
-serial workload reached its 30-minute limit even without artifact service errors.
+The production job has three matrix members: `routes`, `ui` and `product`.
+The original serial workload first split into routes and UI after reaching its
+30-minute limit even without artifact service errors. Product discovery now has
+its own member: in two accepted runs, this browser check took 423 and 432 seconds
+in the UI member, ahead of research reading and private draft interactions.
+These are individual observations, not a guaranteed speedup.
+
 Each member has its own checkout, dependency installation and offline testnet
 Next build. The existing checks and artifact payloads run once in their assigned
-member; shared setup and the build run in both. Test commands, fixture settings,
-artifact names and retention policies keep their existing behavior.
+member; shared setup and the build run in all three. The extra installation/build
+is the cost of removing product discovery from the serial UI workload. Test
+commands, fixture settings, artifact names and retention policies keep their
+existing behavior. Only the product browser check and its screenshot retention
+move to the product member.
 
-Both production members retain the 30-minute limit. Their PR cancellation keys
+All production members retain the 30-minute limit. Their PR cancellation keys
 include the member name, so they cannot cancel or serialize each other. Fail-fast
 is disabled: one failure does not discard the other member's evidence. The stable
 aggregate still requires the whole production matrix to succeed, alongside all
@@ -165,6 +173,7 @@ queue time from real CI. No fixed speedup or quality parity is claimed before
 runner acceptance. Compare equivalent workloads and include retries and fixes.
 
 References: [GitHub job dependencies](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idneeds),
+[matrix strategies](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/run-job-variations),
 [PR concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency),
 [cancellable failure handling](https://docs.github.com/en/actions/reference/workflows-and-actions/expressions#always),
 [Vitest sharding](https://vitest.dev/guide/cli.html#shard).
