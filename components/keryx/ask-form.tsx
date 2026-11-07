@@ -12,6 +12,7 @@ import type { ResearchMode } from "@/lib/types";
 import { currentArcLabel } from "@/lib/arc-network-display";
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 import { useResearchAvailability } from "@/lib/hooks/use-research-availability";
+import { useUnsavedNavigation } from "@/lib/hooks/use-unsaved-navigation";
 import { RESEARCH_AVAILABILITY_UNKNOWN, RESEARCH_PAUSED_MESSAGE } from "@/lib/research/availability-contract";
 import { paperLibraryHref } from "@/lib/papers/handoff";
 import { createMessages, englishMessages } from "@/lib/i18n/messages";
@@ -115,8 +116,14 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
   // An unbound draft is editable while the first visibility context is loading.
   // Only the server response can bind it to an owner; it cannot be submitted yet.
   const [draft, setDraft] = useState<{ question: string; wallet: string | null | undefined; revision: number } | null>(null);
+  const [draftEdited, setDraftEdited] = useState(false);
   const question = draft && draft.revision === visibility.identityRevision &&
     (draft.wallet === undefined || visibility.ready && draft.wallet === visibility.wallet) ? draft.question : "";
+  // Keep a generic dirty token during a same-owner recheck, even while the
+  // field is hidden. A confirmed binding/revision change removes it immediately.
+  useUnsavedNavigation(draftEdited && !!draft && draft.revision === visibility.identityRevision
+    && (draft.wallet === undefined || !visibility.ready || draft.wallet === visibility.wallet)
+    && draft.question.trim().length > 0);
   const setQuestion = useCallback((next: string | ((current: string) => string)) => {
     const publication = visibility.getSelection();
     const revision = visibility.getIdentityRevision();
@@ -153,6 +160,7 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
         || visibility.getIdentityRevision() !== revision) return;
       restored.current = restoreQuestion.id;
       setQuestion(current => restoreQuestion.replace || !current.trim() ? restoreQuestion.question : current);
+      setDraftEdited(true);
       if (typeof restoreQuestion.budget === "number" && Number.isFinite(restoreQuestion.budget) && restoreQuestion.budget >= 0)
         setBudget(Math.min(0.08, restoreQuestion.budget));
     }, 0);
@@ -230,6 +238,7 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
       if (!current || revision !== visibility.getIdentityRevision() || current.expectedWallet !== publication.expectedWallet || current.visibility !== publication.visibility) return;
       onAsk(shared.q!, Math.min(shared.budget ?? 0.05, maximumBudget), shared.parent ?? undefined,
         shared.model ?? undefined, shared.mode, undefined, undefined, undefined, publication);
+      setDraftEdited(false);
       if (clearOnSubmit) setQuestion("");
     }, 0);
     return () => window.clearTimeout(timer);
@@ -241,6 +250,7 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
     const publication = visibility.getSelection();
     if (!publication || !draft || draft.revision !== visibility.getIdentityRevision() || draft.wallet !== publication.expectedWallet) return;
     onAsk(q, effectiveBudget, parentId === undefined ? parentRef.current : parentId ?? undefined, model || undefined, researchMode, scholarly, paidScholarly && payer === "session" && testnet, reviewFirst, publication);
+    setDraftEdited(false);
     if (clearOnSubmit) setQuestion("");
   };
 
@@ -270,7 +280,7 @@ export function AskForm({ disabled, showAnswerLanguageHelp = false, onAsk, payer
             dir="auto"
             ref={questionRef}
             value={question}
-            onChange={(e) => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(e.target.value); }}
+            onChange={(e) => { sharedAutoRef.current = null; setSharedQuestion(null); setQuestion(e.target.value); setDraftEdited(true); }}
             onKeyDown={(e) => {
               if (!e.nativeEvent.isComposing && e.nativeEvent.keyCode !== 229 && (e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); submit(); }
             }}
