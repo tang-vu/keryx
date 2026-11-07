@@ -1,13 +1,16 @@
 # Evidence follow-up drafts and report visibility
 
 Evidence-target follow-ups from private and unlisted reports use an editable
-in-memory composer. The report question and target are not placed in a draft URL,
+in-memory composer. The same restriction applies to private-document claim reports,
+even when their publication metadata says public. The report question and target are not placed in a draft URL,
 browser history or browser storage. Preparing a draft makes no research or payment
 request. The user still reviews the question and budget and presses Ask.
 
 The live conversation reuses its existing restoration and visibility controls.
 It retains the selected report as the parent, including when that report is an
-older turn, and preserves the captured owner/revision. Preparation is disabled
+older turn, and preserves the captured owner/revision. Selecting the parent does
+not reset the original stream or erase its one-shot private account claim handoff.
+Dropping the selected parent keeps the draft's hidden visibility. Preparation is disabled
 during streaming. An owner boundary clears a hidden draft, and even a retained
 queued restoration callback must pass the existing current-owner checks.
 

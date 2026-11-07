@@ -5,6 +5,7 @@ import { build } from "esbuild";
 import { chromium, type Browser } from "playwright";
 import { AnswerCard } from "../../components/keryx/answer-card";
 import type { QueryRun } from "../types";
+import { privateDocumentBootstrap } from "../run-claims/web-bootstrap";
 
 const run: QueryRun = { id: "11111111-1111-4111-8111-111111111111", question: "PRIVATE-QUESTION-7f2a",
   subClaims: ["PRIVATE-TARGET-91bd"], answer: "Retained answer with an unresolved target.",
@@ -45,7 +46,7 @@ beforeAll(async () => {
     window.showPublicReport=()=>root.render(<DispatchView run={{...run,id:'33333333-3333-4333-8333-333333333333',question:'PUBLIC QUESTION',subClaims:['PUBLIC TARGET'],answer:'PUBLIC ANSWER'}} payments={[]} visibility="public"/>);
     root.render(location.pathname==='/saved'
       ?<DispatchView run={run} payments={[]} visibility={p.get('visibility')} recoveryWallet=${JSON.stringify(owner)}/>
-      :<ResearchChat/>);
+      :<ResearchChat privateClaims={location.pathname==='/research/private'}/>);
   ` }, bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: {
     "process.env": "{}", "process.env.NODE_ENV": '"production"',
     "process.env.NEXT_PUBLIC_KERYX_NETWORK": '"arc"',
@@ -69,10 +70,10 @@ beforeAll(async () => {
 }, 30000);
 afterAll(async () => { await browser?.close(); });
 
-async function mount(path: "/saved" | "/live", visibility: "private" | "unlisted" | "public", holdSecond = false) {
+async function mount(path: "/saved" | "/live" | "/research/private", visibility: "private" | "unlisted" | "public", holdSecond = false) {
   const context = await browser.newContext();
-  let wallet = owner;
-  const asks: Array<{ body: Record<string, unknown>; wallet?: string }> = [], urls: string[] = [];
+  let wallet: string | null = path === "/research/private" ? null : owner;
+  const asks: Array<{ body: Record<string, unknown>; wallet?: string; document?: string }> = [], urls: string[] = [];
   let releasePending: (() => Promise<void>) | undefined;
   await context.route("**/*", route => {
     const request = route.request(), url = new URL(request.url()); urls.push(request.url());
@@ -82,21 +83,24 @@ async function mount(path: "/saved" | "/live", visibility: "private" | "unlisted
     if (url.pathname === "/api/sources") return route.fulfill({ json: { sources: [] } });
     if (url.pathname === "/api/metrics") return route.fulfill({ json: { metrics: {}, recentPayments: [] } });
     if (url.pathname === "/api/ask") {
-      const body = request.postDataJSON(); asks.push({ body, wallet: request.headers()["x-keryx-expected-wallet"] });
+      const body = request.postDataJSON(); asks.push({ body, wallet: request.headers()["x-keryx-expected-wallet"], document: request.headers()["x-keryx-private-document"] });
       const digit = String(asks.length), result = { ...run, question: body.question, budget: body.budget,
         id: `${digit.repeat(8)}-${digit.repeat(4)}-4${digit.repeat(3)}-8${digit.repeat(3)}-${digit.repeat(12)}` };
+      const claim = path === "/research/private" ? `event: private-run-claim\ndata: ${JSON.stringify({ version: 1, runId: result.id, status: "available",
+        delivery: { version: 1, claimUrl: `https://evidence-follow-up.test/claim-run#${"f".repeat(64)}`, expiresAt: new Date(Date.now() + 60000).toISOString() } })}\n\n` : "";
       const fulfill = () => route.fulfill({ contentType: "text/event-stream", body:
-        `event: meta\ndata: ${JSON.stringify({ mode: "offline", engine: "fixture", visibility, visibilityOwner: wallet })}\n\nevent: done\ndata: ${JSON.stringify(result)}\n\n` });
+        `event: meta\ndata: ${JSON.stringify({ mode: "offline", engine: "fixture", visibility: body.visibility, visibilityOwner: wallet })}\n\nevent: done\ndata: ${JSON.stringify(result)}\n\n${claim}` });
       if (holdSecond && asks.length === 2) { releasePending = fulfill; return; }
       return fulfill();
     }
     if (url.pathname.startsWith("/api/")) throw new Error(`Unexpected request: ${url.pathname}`);
-    return route.fulfill({ contentType: "text/html", body: '<div id="root"></div>' });
+    const bootstrap = path === "/research/private" ? `<script nonce="fixture-nonce">${privateDocumentBootstrap(`fixture.${"x".repeat(43)}`, "fixture-nonce")}</script>` : "";
+    return route.fulfill({ contentType: "text/html", body: `${bootstrap}<div id="root"></div>` });
   });
   const page = await context.newPage(); page.setDefaultTimeout(7000);
   await page.goto(`https://evidence-follow-up.test${path}?visibility=${visibility}`);
   await page.addScriptTag({ content: bundle });
-  if (path === "/live") {
+  if (path !== "/saved") {
     await page.getByLabel("What do you want to know?").fill(run.question);
     await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
   }
@@ -184,6 +188,38 @@ it("blocks hidden preparation during streaming and preserves the selected older 
   } finally { await context.close(); }
 }, 20000);
 
+it.each(["private", "unlisted"] as const)("keeps an older %s target scoped after a newer public report and after dropping its parent", async visibility => {
+  const { context, page, asks } = await mount("/live", visibility);
+  try {
+    await page.getByRole("button", { name: "New research", exact: true }).click();
+    const visibilityPicker = page.getByTestId("research-visibility").locator("select");
+    await visibilityPicker.evaluate(select => { select.closest("details")!.open = true; });
+    await visibilityPicker.selectOption("public");
+    await page.getByLabel("What do you want to know?").fill("New public question.");
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="research-turn"]').length === 2);
+    const first = page.locator('[data-testid="research-turn"]').first();
+    await first.getByText("Inspect targets and prepare a follow-up", { exact: true }).click();
+    await first.getByRole("button", { name: /Prepare follow-up/ }).first().click();
+    await page.waitForFunction(target => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value.includes(target), run.subClaims[0]);
+    expect(await visibilityPicker.inputValue()).toBe(visibility);
+    expect(asks).toHaveLength(2);
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="research-turn"]').length === 3);
+    expect(asks[2].body).toMatchObject({ parentId: run.id, visibility });
+    await first.getByRole("button", { name: /Prepare follow-up/ }).first().click();
+    await page.waitForFunction(target => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value.includes(target), run.subClaims[0]);
+    const draft = await page.getByLabel("What do you want to know?").inputValue();
+    await page.getByRole("button", { name: "New research", exact: true }).click();
+    expect(await page.getByLabel("What do you want to know?").inputValue()).toBe(draft);
+    expect(await visibilityPicker.inputValue()).toBe(visibility);
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="research-turn"]').length === 4);
+    expect(asks[3].body.visibility).toBe(visibility);
+    expect(asks[3].body.parentId).toBeUndefined();
+  } finally { await context.close(); }
+}, 20000);
+
 it("does not restore a queued hidden draft after an owner boundary", async () => {
   const { context, page, asks, setOwner } = await mount("/live", "private");
   try {
@@ -223,5 +259,28 @@ it("does not carry a prepared hidden draft into a different saved report", async
       expect(url.searchParams.get("q") ?? "").not.toContain(run.subClaims[0]);
     }
     expect(asks).toEqual([]);
+  } finally { await context.close(); }
+}, 15000);
+
+it("keeps an anonymous private-document claim handoff available while preparing a target", async () => {
+  const { context, page, asks } = await mount("/research/private", "public");
+  try {
+    const claim = page.getByRole("button", { name: "Open private account claim", exact: true });
+    await claim.waitFor();
+    expect(asks[0].wallet).toBe("anonymous");
+    expect(asks[0].document).toBe(`fixture.${"x".repeat(43)}`);
+    await page.getByText("Inspect targets and prepare a follow-up", { exact: true }).click();
+    expect(await page.locator('a[href*="?q="]').count()).toBe(0);
+    await page.getByRole("button", { name: /Prepare follow-up/ }).first().click();
+    await page.waitForFunction(target => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value.includes(target), run.subClaims[0]);
+    expect(await claim.isVisible()).toBe(true);
+    expect(asks).toHaveLength(1);
+    await page.evaluate(() => {
+      Reflect.set(window, "claimOpened", []);
+      window.open = ((url: string | URL | undefined) => { Reflect.get(window, "claimOpened").push(String(url)); return null; }) as typeof window.open;
+    });
+    await claim.click();
+    expect(await page.evaluate(() => Reflect.get(window, "claimOpened"))).toEqual([`https://evidence-follow-up.test/claim-run#${"f".repeat(64)}`]);
+    expect(await claim.count()).toBe(0);
   } finally { await context.close(); }
 }, 15000);
