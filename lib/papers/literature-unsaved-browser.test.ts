@@ -69,6 +69,31 @@ const notes = (page: Page, index = 0) => card(page, index).getByLabel(copy("lite
 const editNotes = async (page: Page, index = 0) => { await card(page, index).getByText(copy("literatureWorkspace.editNotes"), { exact: true }).click(); };
 const saveNotes = (page: Page, index = 0) => card(page, index).getByRole("button", { name: copy("literatureWorkspace.saveScreening"), exact: true });
 
+it("cancels in-app departure once for all dirty editors without losing private input", () => fixture(320, async (page, raw) => {
+  await focus(page).fill("PRIVATE unsaved focus");
+  await editNotes(page); await editNotes(page, 1);
+  await notes(page).fill("PRIVATE first unsaved note"); await notes(page, 1).fill("PRIVATE second unsaved note");
+  await page.evaluate(() => {
+    const probe = window as unknown as { leaveChecks: string[]; routeVisits: number; unmountLibrary(): void };
+    probe.leaveChecks = []; probe.routeVisits = 0;
+    window.confirm = message => { probe.leaveChecks.push(message ?? ""); return false; };
+    const link = document.createElement("a"); link.href = "/other"; link.id = "client-departure";
+    link.textContent = "Fixture client navigation";
+    link.addEventListener("click", event => {
+      if (event.defaultPrevented) return;
+      event.preventDefault(); probe.routeVisits++; probe.unmountLibrary();
+    });
+    document.body.append(link);
+  });
+  await page.locator("#client-departure").click();
+  expect(await page.evaluate(() => (window as unknown as { routeVisits: number }).routeVisits)).toBe(0);
+  expect(await page.evaluate(() => (window as unknown as { leaveChecks: string[] }).leaveChecks.length)).toBe(1);
+  expect(await focus(page).inputValue()).toBe("PRIVATE unsaved focus");
+  expect(await notes(page).inputValue()).toBe("PRIVATE first unsaved note");
+  expect(await notes(page, 1).inputValue()).toBe("PRIVATE second unsaved note");
+  expect(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY)).toBe(raw);
+}));
+
 it("warns for private focus, notes and decisions, becomes clean on exact revert, and removes listeners on unmount", () => fixture(1440, async (page, raw) => {
   await expectWarning(page, false);
   const title = page.getByLabel(copy("literatureWorkspace.titleLabel")), original = await title.inputValue();

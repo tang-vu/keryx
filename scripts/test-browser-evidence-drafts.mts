@@ -250,6 +250,11 @@ async function main() {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1), false, `Removal overflow at ${width}`);
       // Blank statements and reviewer input are not in the JSON packet. Even
       // after requesting a backup, unloading must still warn about those inputs.
+      const departure = page.waitForEvent("dialog");
+      const cancelledDeparture = page.locator('main a[href="/literature"]').click();
+      const departureDialog = await departure; assert.equal(departureDialog.type(), "confirm"); await departureDialog.dismiss();
+      await cancelledDeparture; assert.equal(new URL(page.url()).pathname, "/literature/drafts");
+      assert.equal(await articles.first().getByLabel("Your sentence").inputValue(), unfinishedText);
       const warning = page.waitForEvent("dialog");
       const cancelledReload = page.reload().then(() => false, () => true);
       const dialog = await warning; assert.equal(dialog.type(), "beforeunload"); await dialog.dismiss();

@@ -11,8 +11,8 @@
   "totals": {
     "englishNamespaceFiles": 76,
     "coreInlineSources": 1,
-    "extractedLeaves": 6418,
-    "authoredEntries": 6389,
+    "extractedLeaves": 6419,
+    "authoredEntries": 6390,
     "nonTranslatableMachineIdentifiers": 29,
     "uncoveredEntries": 0,
     "completeNamespaces": 77
@@ -5201,10 +5201,10 @@
     {
       "namespace": "shared-helpers",
       "sourcePath": "locales/en/shared-helpers.ts",
-      "sourceSha256": "abbd0f90681948fe923c0125bddbc9d380288258f8b8243d28d2c4ccad3c6f5d",
+      "sourceSha256": "3866e0a84ddf6aded991fe5b4ddfe5639fd721bacd92aa22adfd49370635b1dc",
       "draftPath": "locales/vi/ui-drafts/shared-helpers.json",
-      "extractedLeaves": 73,
-      "authoredEntries": 73,
+      "extractedLeaves": 74,
+      "authoredEntries": 74,
       "coveredKeys": [
         "displayTime.unavailable",
         "evidenceMatrix.statusIllustrative",
@@ -5278,7 +5278,8 @@
         "sourceBrowse.topic.creators",
         "sourceBrowse.topic.infrastructure",
         "sourceBrowse.topic.other",
-        "sourceBrowse.topic.payments"
+        "sourceBrowse.topic.payments",
+        "unsavedNavigation.confirm"
       ],
       "nonTranslatableMachineIdentifiers": [],
       "uncoveredKeys": [],

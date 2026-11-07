@@ -23,6 +23,7 @@ import { literatureImportCopy as importEnglish } from "@/locales/en/literature-i
 import { addMissingLiteraturePapers, previewLiteratureImport, readLiteratureWorkspaceFile } from "@/lib/papers/literature-import";
 import { hasSavedLiterature, restoreClearedLiterature } from "@/lib/papers/literature-clear-recovery";
 import { literatureClearRecoveryCopy as recoveryEnglish } from "@/locales/en/literature-clear-recovery";
+import { useUnsavedNavigation } from "@/lib/hooks/use-unsaved-navigation";
 
 
 
@@ -45,12 +46,7 @@ function screeningLabel(copy: ReturnType<typeof useUiMessages>, state: Literatur
 }
 
 function useUnsavedWarning(dirty: boolean) {
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  useUnsavedNavigation(dirty);
 }
 
 function ReviewFocus({ workspace, act }: { workspace: Workspace; act: Action }) {

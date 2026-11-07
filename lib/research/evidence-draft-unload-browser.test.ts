@@ -57,6 +57,26 @@ async function fixture(run: (page: Page) => Promise<void>, width = 1440) {
   } finally { await context.close(); }
 }
 
+it("cancels client departure without losing author input or changing the retained JSON baseline", async () => {
+  await fixture(async page => {
+    await openBackup(page);
+    await page.getByLabel(copy.theme.notes).fill("PRIVATE unsaved author note");
+    await page.evaluate(() => {
+      window.confirm = () => false;
+      const link = document.createElement("a"); link.href = "/literature"; link.id = "leave-draft"; link.textContent = "Leave fixture";
+      link.addEventListener("click", event => { if (!event.defaultPrevented) {
+        event.preventDefault(); (window as unknown as { unmountDraft(): void }).unmountDraft();
+      } }); document.body.append(link);
+    });
+    await page.locator("#leave-draft").click();
+    expect(await page.getByLabel(copy.theme.notes).inputValue()).toBe("PRIVATE unsaved author note");
+    await expectWarning(page, true);
+    expect((await download(page)).themes[0].authorNote).toBe("PRIVATE unsaved author note"); await expectWarning(page, false);
+    // Downloading retains the new baseline; no stale registration may block a clean departure.
+    await page.locator("#leave-draft").click(); expect(await page.getByLabel(copy.theme.notes).count()).toBe(0);
+  });
+});
+
 it("protects author edits, returns to clean when reverted, and detaches on unmount", async () => {
   await fixture(async page => {
     await expectWarning(page, false);

@@ -73,6 +73,15 @@ try {
     await page.getByRole("heading", { name: "Your papers 2/50" }).waitFor();
     await page.getByLabel("Review title", { exact: true }).fill("Retrieval review");
     await page.getByLabel("Research question or inclusion criteria").fill("A".repeat(600));
+    const beforeDeparture = await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY);
+    const departure = page.waitForEvent("dialog");
+    const cancelledDeparture = page.locator('a[href="/literature/drafts"]').first().click();
+    const departureDialog = await departure; assert.equal(departureDialog.type(), "confirm"); await departureDialog.dismiss();
+    await cancelledDeparture;
+    assert.equal(new URL(page.url()).pathname, "/literature");
+    assert.equal(await page.getByLabel("Review title", { exact: true }).inputValue(), "Retrieval review");
+    assert.equal(await page.getByLabel("Research question or inclusion criteria").inputValue(), "A".repeat(600));
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), LITERATURE_STORAGE_KEY), beforeDeparture);
     await page.getByRole("button", { name: "Save review focus" }).click();
     await page.getByText("Review focus saved on this browser.", { exact: true }).waitFor();
     const entries = page.locator("main article");
