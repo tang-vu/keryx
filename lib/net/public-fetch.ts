@@ -25,6 +25,7 @@
 import { lookup } from "node:dns/promises";
 import { isIP, type LookupFunction } from "node:net";
 import { Agent, fetch as undiciFetch } from "undici";
+import { MIMEType } from "node:util";
 import { publicFetchFailure, rememberPublicFetchFailure, type PublicFetchReason } from "./public-fetch-diagnostic";
 
 export interface FetchLimits {
@@ -251,7 +252,16 @@ export async function fetchPublicDocument(raw: string, limits: FetchLimits = {})
   return { ...value, text: new TextDecoder().decode(value.bytes) };
 }
 
-export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): Promise<{ bytes: Uint8Array; finalUrl: string; contentType: string }> {
+/** Retain only a bounded MIME charset parameter, never the full untrusted header.
+ * MIME parsing handles quotes, case and duplicate parameters consistently. */
+function responseCharset(contentType: string): string | undefined {
+  try {
+    const charset = new MIMEType(contentType).params.get("charset")?.replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g, "");
+    return charset && charset.length <= 64 ? charset : undefined;
+  } catch { return undefined; }
+}
+
+export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): Promise<{ bytes: Uint8Array; finalUrl: string; contentType: string; charset?: string }> {
   const { timeoutMs, maxBytes, maxHops } = { ...DEFAULTS, ...limits };
   const started = Date.now();
   let readingBody = false;
@@ -291,13 +301,16 @@ export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): P
           await res.body?.cancel();
           throw targetRefusal("the document response is partial or ranged", "partial-response");
         }
-        const contentType = (res.headers.get("content-type") ?? "").split(";", 1)[0]!.trim().toLowerCase();
+        const contentTypeHeader = res.headers.get("content-type") ?? "";
+        const contentType = contentTypeHeader.split(";", 1)[0]!.trim().toLowerCase();
         if (limits.allowedContentTypes && !limits.allowedContentTypes.includes(contentType)) {
           await res.body?.cancel();
           throw targetRefusal("unsupported document type", "unsupported-content-type");
         }
         readingBody = true;
-        return { bytes: await readCappedBytes(res as unknown as Response, maxBytes), finalUrl: url.href, contentType };
+        const charset = responseCharset(contentTypeHeader);
+        return { bytes: await readCappedBytes(res as unknown as Response, maxBytes), finalUrl: url.href, contentType,
+          ...(charset === undefined ? {} : { charset }) };
       } finally {
         await dispatcher.close();
       }

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ARTICLE_ENCODINGS, encodedArticleBytes, encodedArticleText } from "../../test-support/article-encoding-fixtures";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -20,6 +21,12 @@ afterEach(async () => {
 });
 
 describe("historical article extraction transport", () => {
+  it.each(ARTICLE_ENCODINGS)("preserves the $name publisher wording through explicit historical reading", async fixture => {
+    vi.spyOn(publicFetch, "fetchPublicBytes").mockResolvedValueOnce({ bytes: encodedArticleBytes(fixture),
+      contentType: "text/html", charset: fixture.charset, finalUrl: "https://publisher.test/old" });
+    expect(await readBackfillArticle("https://publisher.test/old")).toMatchObject({ kind: "html", title: fixture.text,
+      text: encodedArticleText(fixture), finalUrl: "https://publisher.test/old", truncated: false });
+  });
   it("pins HTTPS/zero redirects/byte/time limits and preserves observed excerpt extraction", async () => {
     const transport = vi.spyOn(publicFetch, "fetchPublicBytes").mockResolvedValueOnce({ bytes: new TextEncoder().encode("An old public document."), contentType: "text/plain", finalUrl: "https://publisher.test/old" });
     const article = await readBackfillArticle("https://publisher.test/old");

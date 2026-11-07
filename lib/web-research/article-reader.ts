@@ -9,6 +9,7 @@ import { publicFetchFailure, safePublicFetchDiagnostic, type PublicFetchDiagnost
 import { observedPdfTextScope, pdfTextScopeTruncated, type PdfTextScope } from "./pdf-text-scope";
 import { observedHtmlSectionScope, type HtmlSectionScope } from "./html-section-scope";
 import { extractionFailure, rememberExtractionFailure } from "./extraction-failure";
+import { decodeArticleText } from "./article-encoding";
 
 export interface ArticleRead { text: string; title: string; finalUrl: string; kind: "html" | "text" | "pdf"; truncated: boolean; htmlTextLayout?: HtmlTextLayout; pdfTextScope?: PdfTextScope; htmlSectionScope?: HtmlSectionScope }
 export type ArticleFailureCode = "invalid-url" | "document-identity-changed" | "publisher-verification-required" | "transport-unavailable" | "article-byte-limit" | "html-extraction-unavailable" | "pdf-extraction-unavailable" | "cancelled";
@@ -85,7 +86,7 @@ export const readArticle: ArticleReader = async (url, signal, options) => {
     // Plain formats keep their byte cap. HTML now applies that same cap after
     // inert markup normalization inside the bounded worker, not to JS payloads.
     if (fetched.bytes.length > 500000 && (fetched.contentType === "text/plain" || fetched.contentType === "text/markdown")) throw new ArticleReadError("article-byte-limit");
-    const text = new TextDecoder().decode(fetched.bytes);
+    const text = decodeArticleText(fetched.bytes, fetched.contentType, fetched.charset);
     return fetched.contentType === "text/plain" || fetched.contentType === "text/markdown" ? extractArticle(text, fetched.finalUrl, fetched.contentType) : await extractHtml(text, fetched.finalUrl, signal, fragment).catch(error => { throw extractionReadError(signal?.aborted ? "cancelled" : "html-extraction-unavailable", error); });
 };
 export function gatheredArticle(id: string, article: ArticleRead): GatheredContent {
