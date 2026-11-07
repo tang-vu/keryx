@@ -79,7 +79,7 @@ export const readArticle: ArticleReader = async (url, signal, options) => {
     }
     if (fetched.contentType === "application/pdf") {
       const result = await extractPdfText(fetched.bytes, { signal, maxPages: 20, maxChars: 60000, timeoutMs: 5000 }).catch(error => { throw extractionReadError(signal?.aborted ? "cancelled" : "pdf-extraction-unavailable", error); });
-      return { text: result.text, title: new URL(fetched.finalUrl).hostname, finalUrl: fetched.finalUrl, kind: "pdf", truncated: result.truncated,
+      return { text: result.text, title: new URL(fetched.finalUrl).hostname, finalUrl: fetched.finalUrl, kind: "pdf", truncated: result.truncated || fetched.partialResponse === true,
         pdfTextScope: { format: "keryx-pdf-text-scope-v1", pagesRead: result.pagesRead, totalPages: result.totalPages,
           pagesWithoutText: result.pagesWithoutText, textLimitReached: result.textLimitReached } };
     }
@@ -87,7 +87,8 @@ export const readArticle: ArticleReader = async (url, signal, options) => {
     // inert markup normalization inside the bounded worker, not to JS payloads.
     if (fetched.bytes.length > 500000 && (fetched.contentType === "text/plain" || fetched.contentType === "text/markdown")) throw new ArticleReadError("article-byte-limit");
     const text = decodeArticleText(fetched.bytes, fetched.contentType, fetched.charset);
-    return fetched.contentType === "text/plain" || fetched.contentType === "text/markdown" ? extractArticle(text, fetched.finalUrl, fetched.contentType) : await extractHtml(text, fetched.finalUrl, signal, fragment).catch(error => { throw extractionReadError(signal?.aborted ? "cancelled" : "html-extraction-unavailable", error); });
+    const article = fetched.contentType === "text/plain" || fetched.contentType === "text/markdown" ? extractArticle(text, fetched.finalUrl, fetched.contentType) : await extractHtml(text, fetched.finalUrl, signal, fragment).catch(error => { throw extractionReadError(signal?.aborted ? "cancelled" : "html-extraction-unavailable", error); });
+    return fetched.partialResponse ? { ...article, truncated: true } : article;
 };
 export function gatheredArticle(id: string, article: ArticleRead): GatheredContent {
   const finalUrl = canonicalUrl(article.finalUrl);

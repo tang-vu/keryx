@@ -261,7 +261,9 @@ function responseCharset(contentType: string): string | undefined {
   } catch { return undefined; }
 }
 
-export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): Promise<{ bytes: Uint8Array; finalUrl: string; contentType: string; charset?: string }> {
+/** A successful response may explicitly be partial. Retain that bounded fact;
+ * absence of the flag is not independent proof of document completeness. */
+export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): Promise<{ bytes: Uint8Array; finalUrl: string; contentType: string; charset?: string; partialResponse?: true }> {
   const { timeoutMs, maxBytes, maxHops } = { ...DEFAULTS, ...limits };
   const started = Date.now();
   let readingBody = false;
@@ -297,7 +299,8 @@ export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): P
           continue;
         }
         if (!res.ok) throw targetRefusal(`the feed answered ${res.status}`, "http-status", res.status);
-        if (limits.requireFullResponse && (res.status !== 200 || res.headers.has("content-range"))) {
+        const partialResponse = res.status === 206 || res.headers.has("content-range");
+        if (limits.requireFullResponse && (res.status !== 200 || partialResponse)) {
           await res.body?.cancel();
           throw targetRefusal("the document response is partial or ranged", "partial-response");
         }
@@ -310,6 +313,7 @@ export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): P
         readingBody = true;
         const charset = responseCharset(contentTypeHeader);
         return { bytes: await readCappedBytes(res as unknown as Response, maxBytes), finalUrl: url.href, contentType,
+          ...(partialResponse ? { partialResponse: true as const } : {}),
           ...(charset === undefined ? {} : { charset }) };
       } finally {
         await dispatcher.close();
