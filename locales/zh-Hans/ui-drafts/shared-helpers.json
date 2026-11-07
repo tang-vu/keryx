@@ -295,6 +295,10 @@
     "reasoningServing.stepMore.other": {
       "source": "{step}: {engines} + {count} more ({state}; {fallback})",
       "text": "{step}：{engines} + 另有 {count} 个（{state}；{fallback}）"
+    },
+    "unsavedNavigation.confirm": {
+      "source": "You have unsaved changes. Leave this page and discard them?",
+      "text": "你有尚未保存的更改。要离开此页面并放弃这些更改吗？"
     }
   }
 }

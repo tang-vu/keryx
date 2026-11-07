@@ -2,7 +2,7 @@
   "locale": "zh-Hans",
   "status": "machineDraft",
   "review": null,
-  "complete": false,
+  "complete": true,
   "authority": "en",
   "sourceHashNormalization": "UTF-8 text with CRLF/CR normalized to LF",
   "structuralLeafConvention": "Unique structural leaves remain flat (nested object paths and zero-based array indices). Each distinct root sharing a flat leaf is qualified by its actual exported declaration identity, even for equal text. Re-export aliases of the same declaration are traversed once. Duplicate structural or resulting keys refuse. Core-inline covers only englishMessages literal leaves; imported namespace spreads are separately inventoried. External report-presentation aliases retain their structural paths and exact source expressions.",
@@ -12,10 +12,10 @@
     "englishNamespaceFiles": 76,
     "coreInlineSources": 1,
     "extractedLeaves": 6419,
-    "authoredEntries": 6389,
+    "authoredEntries": 6390,
     "nonTranslatableMachineIdentifiers": 29,
-    "uncoveredEntries": 1,
-    "completeNamespaces": 76
+    "uncoveredEntries": 0,
+    "completeNamespaces": 77
   },
   "namespaces": [
     {
@@ -5204,7 +5204,7 @@
       "sourceSha256": "3866e0a84ddf6aded991fe5b4ddfe5639fd721bacd92aa22adfd49370635b1dc",
       "draftPath": "locales/zh-Hans/ui-drafts/shared-helpers.json",
       "extractedLeaves": 74,
-      "authoredEntries": 73,
+      "authoredEntries": 74,
       "coveredKeys": [
         "displayTime.unavailable",
         "evidenceMatrix.statusIllustrative",
@@ -5278,12 +5278,11 @@
         "sourceBrowse.topic.creators",
         "sourceBrowse.topic.infrastructure",
         "sourceBrowse.topic.other",
-        "sourceBrowse.topic.payments"
-      ],
-      "nonTranslatableMachineIdentifiers": [],
-      "uncoveredKeys": [
+        "sourceBrowse.topic.payments",
         "unsavedNavigation.confirm"
       ],
+      "nonTranslatableMachineIdentifiers": [],
+      "uncoveredKeys": [],
       "sourceAliases": {}
     },
     {

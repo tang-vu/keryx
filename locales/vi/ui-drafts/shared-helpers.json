@@ -295,6 +295,10 @@
     "reasoningServing.stepMore.other": {
       "source": "{step}: {engines} + {count} more ({state}; {fallback})",
       "text": "{step}: {engines} + thêm {count} ({state}; {fallback})"
+    },
+    "unsavedNavigation.confirm": {
+      "source": "You have unsaved changes. Leave this page and discard them?",
+      "text": "Bạn có thay đổi chưa lưu. Rời trang này và bỏ các thay đổi đó?"
     }
   }
 }
