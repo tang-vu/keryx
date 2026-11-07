@@ -72,3 +72,15 @@ it("never offers a public recovery link for a private transport or a stopped/rep
   expect(hook.state.status).toBe("idle");
   expect(container.querySelector("a")).toBeNull();
 });
+
+it.each(["TypeError", "AbortError"])("ignores an old reader's %s after another question has started", async name => {
+  await start(); await meta("public");
+  await start(); await meta("unlisted", 1);
+  const current = JSON.stringify(hook.state);
+  await act(async () => streams[0].error(Object.assign(new Error("Old transport failed"), { name })));
+  expect(JSON.stringify(hook.state)).toBe(current); expect(hook.state.status).toBe("streaming");
+  await act(async () => streams[1].close());
+  expect(hook.state.status).toBe("error");
+  expect(container.querySelector("a")?.getAttribute("href")).toBe(`/dispatch/${reportId}`);
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
