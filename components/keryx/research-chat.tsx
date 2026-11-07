@@ -30,9 +30,11 @@ type ScopedTurn = ResearchTurnData & { publication: ResearchPublicationSelection
 type ScopedRequest = Omit<ScopedTurn, "state">;
 const hidden = (turn: ScopedRequest, state: AskStreamState) => turn.publication.visibility !== "public" || !!state.meta?.visibility && state.meta.visibility !== "public";
 
-export function ResearchChat({ paidHref = "/research#paid-research", privateClaims = false, introduceProduct = false, initialRequest }: {
+export function ResearchChat({ paidHref = "/research#paid-research", privateClaims = false, introduceProduct = false, initialRequest, preparedFollowUp, onPreparationReadyChange }: {
   paidHref?: string; privateClaims?: boolean; introduceProduct?: boolean;
   initialRequest?: { question: string; budget: number; parentId: string; visibility: RunVisibility; expectedWallet: string | null };
+  preparedFollowUp?: { id: number; question: string };
+  onPreparationReadyChange?: (ready: boolean) => void;
 }) {
   const message = useUiMessages();
   const privateResearchCopy = useUiCopy("run-claim-research", uiEnglish_privateResearchCopy);
@@ -62,6 +64,7 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
     binding?: { wallet: string | null; revision: number } } | undefined>(
     initialRequest ? { id: 0, question: initialRequest.question, budget: initialRequest.budget, researchPaused: false, replace: true } : undefined);
   const recoverySequence = useRef(0);
+  const preparedFollowUpId = useRef(preparedFollowUp?.id);
   const sequence = useRef(0);
   const activeTurnRef = useRef<HTMLDivElement>(null);
   const requestId = request?.id;
@@ -104,6 +107,22 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
     ?? inheritedTurn?.state.meta?.visibility ?? inheritedTurn?.publication.visibility
     ?? (parentId === initialRequest?.parentId ? initialRequest?.visibility : undefined) : undefined;
   const publicationPreference = useResearchVisibility(parentVisibility, { onOwnerBoundary: clearOwnedTurns });
+  const preparationReady = publicationPreference.ready && !streaming && (!privateClaims || protectedDocument)
+    && (!initialRequest || initialRequest.visibility === "public" || initialRequest.expectedWallet === publicationPreference.wallet);
+  useEffect(() => { onPreparationReadyChange?.(preparationReady); }, [onPreparationReadyChange, preparationReady]);
+  useEffect(() => {
+    if (!preparedFollowUp || preparedFollowUp.id === preparedFollowUpId.current) return;
+    // Consume a refused click too: it must not become a deferred draft after
+    // streaming or an owner transition. Accepted clicks leave the stream intact.
+    preparedFollowUpId.current = preparedFollowUp.id;
+    const publication = publicationPreference.getSelection(), revision = publicationPreference.getIdentityRevision();
+    if (!initialRequest || privateClaims || activeState.current.status === "streaming" || !publication
+      || initialRequest.visibility !== "public" && initialRequest.expectedWallet !== publication.expectedWallet) return;
+    setEvidenceParent({ id: initialRequest.parentId, visibility: initialRequest.visibility });
+    setRootRequest(false);
+    setReopened({ id: --recoverySequence.current, question: preparedFollowUp.question, budget: initialRequest.budget,
+      researchPaused: false, replace: true, binding: { wallet: publication.expectedWallet, revision } });
+  }, [preparedFollowUp, initialRequest, privateClaims, publicationPreference.getSelection, publicationPreference.getIdentityRevision]);
   useEffect(() => () => reset(), [reset]);
   useEffect(() => {
     if (request && state.meta?.visibility === "private" && (!state.meta.visibilityOwner
