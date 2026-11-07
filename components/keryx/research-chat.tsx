@@ -109,7 +109,9 @@ export function ResearchChat({ paidHref = "/research#paid-research", privateClai
   const publicationPreference = useResearchVisibility(parentVisibility, { onOwnerBoundary: clearOwnedTurns });
   const preparationReady = publicationPreference.ready && !streaming && (!privateClaims || protectedDocument)
     && (!initialRequest || initialRequest.visibility === "public" || initialRequest.expectedWallet === publicationPreference.wallet);
-  useEffect(() => { onPreparationReadyChange?.(preparationReady); }, [onPreparationReadyChange, preparationReady]);
+  // Saved-report actions must reflect this committed stream/owner state before
+  // paint; a passive notification leaves an enabled action on the previous state.
+  useLayoutEffect(() => { onPreparationReadyChange?.(preparationReady); }, [onPreparationReadyChange, preparationReady]);
   useEffect(() => {
     if (!preparedFollowUp || preparedFollowUp.id === preparedFollowUpId.current) return;
     // Consume a refused click too: it must not become a deferred draft after
