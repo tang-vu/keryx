@@ -17,6 +17,11 @@ queued restoration callback must pass the existing current-owner checks.
 Saved reports open the existing recovery composer with the selected target in
 memory, the original budget, report parent, visibility and verified viewer wallet.
 Changing the displayed report cannot reuse the prior report's prepared draft.
+Choosing another target on the same saved report reuses its conversation instead
+of remounting it: completed turns stay visible, and a running request is not
+aborted. Preparation is disabled while streaming or while the verified owner
+context is unavailable. A later explicit draft still selects the original saved
+report as parent and restores its budget and visibility before manual submission.
 Server parent access, visibility inheritance and spending checks remain the
 authority when the user submits; this UI does not grant access or spending.
 

@@ -43,6 +43,7 @@ beforeAll(async () => {
     import{DispatchView}from'./app/dispatch/[id]/dispatch-view';
     const p=new URLSearchParams(location.search),run=${JSON.stringify(run)};
     const root=createRoot(document.getElementById('root'));
+    window.showOriginalReport=()=>root.render(<DispatchView run={run} payments={[]} visibility={p.get('visibility')} recoveryWallet=${JSON.stringify(owner)}/>);
     window.showPublicReport=()=>root.render(<DispatchView run={{...run,id:'33333333-3333-4333-8333-333333333333',question:'PUBLIC QUESTION',subClaims:['PUBLIC TARGET'],answer:'PUBLIC ANSWER'}} payments={[]} visibility="public"/>);
     root.render(location.pathname==='/saved'
       ?<DispatchView run={run} payments={[]} visibility={p.get('visibility')} recoveryWallet=${JSON.stringify(owner)}/>
@@ -161,6 +162,121 @@ it("retains public live follow-up links without starting another ask", async () 
     expect(asks).toHaveLength(1);
   } finally { await context.close(); }
 }, 15000);
+
+it.each(["private", "unlisted"] as const)("preserves completed saved %s follow-ups when preparing another original target", async visibility => {
+  const { context, page, asks } = await mount("/saved", visibility);
+  try {
+    await page.getByText("Inspect targets and prepare a follow-up", { exact: true }).click();
+    const originalTarget = page.getByRole("button", { name: /Prepare follow-up/ }).last();
+    await originalTarget.click();
+    await page.waitForFunction(() => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value.length > 0);
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.getByRole("button", { name: "New research", exact: true }).waitFor();
+    await page.getByLabel("What do you want to know?").fill("Second saved follow-up stays visible.");
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="research-turn"]').length === 2);
+    await page.getByRole("button", { name: "New research", exact: true }).waitFor();
+    await originalTarget.click();
+    await page.waitForFunction(target => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value.includes(target), run.subClaims[0]);
+    expect(await page.locator('[data-testid="research-turn"]').count()).toBe(2);
+    expect(await page.locator("body").innerText()).toContain("Second saved follow-up stays visible.");
+    expect(asks).toHaveLength(2);
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="research-turn"]').length === 3);
+    expect(asks[2].body).toMatchObject({ parentId: run.id, visibility, budget: run.budget });
+    expect(asks[2].wallet).toBe(owner);
+  } finally { await context.close(); }
+}, 20000);
+
+it("prepares a saved target in a composer already opened from the original question", async () => {
+  const { context, page, asks } = await mount("/saved", "private");
+  try {
+    await page.getByRole("button", { name: "Reopen original question", exact: true }).click();
+    await page.waitForFunction(question => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value === question, run.question);
+    await page.getByLabel("What do you want to know?").fill("Unsubmitted replacement draft.");
+    await page.getByText("Inspect targets and prepare a follow-up", { exact: true }).click();
+    await page.getByRole("button", { name: /Prepare follow-up/ }).click();
+    await page.waitForFunction(target => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value.includes(target), run.subClaims[0]);
+    expect(await page.getByLabel("What do you want to know?").inputValue()).toContain(run.question);
+    expect(asks).toEqual([]);
+    expect(await page.locator('a[href*="?q="]').count()).toBe(0);
+  } finally { await context.close(); }
+}, 15000);
+
+it("refuses saved-target reselection without aborting an active follow-up", async () => {
+  const { context, page, asks, releasePending } = await mount("/saved", "private", true);
+  try {
+    await page.getByText("Inspect targets and prepare a follow-up", { exact: true }).click();
+    const originalTarget = page.getByRole("button", { name: /Prepare follow-up/ }).last();
+    await originalTarget.click();
+    await page.waitForFunction(() => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value.length > 0);
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.getByRole("button", { name: "New research", exact: true }).waitFor();
+    await page.getByLabel("What do you want to know?").fill("Active saved follow-up.");
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.getByRole("button", { name: "Stop research", exact: true }).waitFor();
+    expect(await originalTarget.isDisabled()).toBe(true);
+    await originalTarget.evaluate(button => button.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(await page.getByRole("button", { name: "Stop research", exact: true }).isVisible()).toBe(true);
+    expect(asks).toHaveLength(2);
+    await releasePending();
+    await page.getByRole("button", { name: "New research", exact: true }).waitFor();
+    expect(await originalTarget.isEnabled()).toBe(true);
+    expect(await page.locator('[data-testid="research-turn"]').count()).toBe(2);
+    expect(await page.locator("body").innerText()).toContain("Active saved follow-up.");
+  } finally { await context.close(); }
+}, 20000);
+
+it.each(["private", "unlisted"] as const)("discards a queued replacement saved %s draft across a confirmed owner boundary", async visibility => {
+  const { context, page, asks, setOwner } = await mount("/saved", visibility);
+  try {
+    await page.getByText("Inspect targets and prepare a follow-up", { exact: true }).click();
+    const originalTarget = page.getByRole("button", { name: /Prepare follow-up/ }).last();
+    await originalTarget.click();
+    await page.waitForFunction(() => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value.length > 0);
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.getByRole("button", { name: "New research", exact: true }).waitFor();
+    await page.evaluate(() => {
+      const ordinary = window.setTimeout.bind(window), callbacks: Array<() => void> = [];
+      Reflect.set(window, "heldSavedRestoreCallbacks", callbacks);
+      window.setTimeout = ((callback: TimerHandler, delay?: number, ...args: unknown[]) => {
+        if (delay === 0 && typeof callback === "function") { callbacks.push(() => callback(...args)); return ordinary(() => {}, 0); }
+        return ordinary(callback, delay, ...args);
+      }) as typeof window.setTimeout;
+    });
+    await originalTarget.click();
+    await page.waitForFunction(() => (Reflect.get(window, "heldSavedRestoreCallbacks") as unknown[]).length > 0);
+    setOwner(`0x${"b".repeat(40)}`);
+    await Promise.all([page.waitForResponse(response => new URL(response.url()).pathname === "/api/ask/visibility"), page.evaluate(() => window.dispatchEvent(new Event("focus")))]);
+    await page.waitForFunction(() => document.querySelectorAll('[data-testid="research-turn"]').length === 0);
+    await page.evaluate(() => { for (const callback of Reflect.get(window, "heldSavedRestoreCallbacks") as Array<() => void>) callback(); });
+    expect(await page.getByLabel("What do you want to know?").inputValue()).toBe("");
+    expect(await originalTarget.isDisabled()).toBe(true);
+    expect(asks).toHaveLength(1);
+  } finally { await context.close(); }
+}, 20000);
+
+it("does not retain a busy preparation state when returning to a collapsed saved report", async () => {
+  const { context, page, asks } = await mount("/saved", "private", true);
+  try {
+    await page.getByRole("button", { name: "Reopen original question", exact: true }).click();
+    await page.waitForFunction(question => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value === question, run.question);
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.getByRole("button", { name: "New research", exact: true }).waitFor();
+    await page.getByLabel("What do you want to know?").fill("Request before changing reports.");
+    await page.getByRole("button", { name: "Ask Keryx", exact: true }).click();
+    await page.getByRole("button", { name: "Stop research", exact: true }).waitFor();
+    await page.evaluate(() => Reflect.get(window, "showPublicReport")());
+    await page.getByText("PUBLIC ANSWER", { exact: true }).waitFor();
+    await page.evaluate(() => Reflect.get(window, "showOriginalReport")());
+    await page.getByRole("button", { name: "Reopen original question", exact: true }).waitFor();
+    await page.getByText("Inspect targets and prepare a follow-up", { exact: true }).click();
+    await page.getByRole("button", { name: /Prepare follow-up/ }).click();
+    await page.waitForFunction(target => (document.querySelector("#ask-question") as HTMLTextAreaElement)?.value.includes(target), run.subClaims[0]);
+    expect(asks).toHaveLength(2);
+    expect(await page.locator('[data-testid="research-turn"]').count()).toBe(0);
+  } finally { await context.close(); }
+}, 20000);
 
 it("blocks hidden preparation during streaming and preserves the selected older parent afterward", async () => {
   const { context, page, asks, releasePending } = await mount("/live", "private", true);
