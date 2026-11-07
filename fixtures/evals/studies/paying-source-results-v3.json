@@ -481,7 +481,7 @@
     "lib/sources/public-source-claim-service.ts": "c18f5df084b83393bf3ad9c200bfe9b3aa4f27d486531cfc3026723c875eabc8",
     "lib/sources/public-source-claim.ts": "32758b51a74bd98e0da0aceedc2a9c12ab09fc99cd73ebaa48f2014daf8d1fd8",
     "lib/sources/registration-sponsor-protocol.ts": "04f477f6c306fc87704226e3b13db278c7e596d7b2825a96e522f50e2e30ca83",
-    "lib/sources/resolve-source-item-content.ts": "fa4cc1e68f7078edb5364884086b335a97997c7e52b486e0a32b86b6e400b3b2",
+    "lib/sources/resolve-source-item-content.ts": "a0097e78c9ed2c2b983fa834fa84cf13973ea7af6be85906c7c8ac68f65eae27",
     "lib/sources/retained-recency-adapter.ts": "e7f40634d98020a16a5ff2f25b3f160ab490227e21448868235b508744434d82",
     "lib/sources/seed-data.ts": "63b55c0d802e174caa7c0242d9ad3e502f1c23a16622d947d82671c561e95d6c",
     "lib/sources/seed-provenance.ts": "4f32797e24f09129e4b145a897df52313ff0ec87ef04c09314cc8641a45663f7",
