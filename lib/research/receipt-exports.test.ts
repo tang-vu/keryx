@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { readBibliographicTask } from "./bibliographic-task";
 import { recognizeBibliographicTask } from "./bibliographic-task-request";
 import { frenchArxivTask } from "./fixtures/bibliographic-task-questions";
-import { buildResearchReceipt, verifyResearchReceipt } from "../research-receipt";
+import { buildResearchReceipt, researchReceiptDigest, verifyResearchReceipt } from "../research-receipt";
 import { researchExports } from "./surface-result";
 import type { QueryRun, SourceItemIdentity } from "../types";
 
@@ -61,7 +61,7 @@ const observed = { retrievedAt: "2026-10-24T10:00:00Z", publisherGroup: "publish
   normalizedBodyHash: "a".repeat(64), extraction: "html" as const, truncated: false };
 function scopedRun(webProvenance?: SourceItemIdentity["webProvenance"]): QueryRun {
   const identity = { marker: "S1", sourceId: "public:original", sourceName: "Publisher", itemId: "original",
-    itemUrl: "https://publisher.example/paper?v=2", contentVersion: "v2", sourceKind: "public-reference" as const, webProvenance };
+    itemTitle: "Retained original paper", itemUrl: "https://publisher.example/paper?v=2", contentVersion: "v2", sourceKind: "public-reference" as const, webProvenance };
   return { id: "receipt-scope-fixture", question: "What does the original say?", engine: "offline", budget: 0,
     subClaims: ["Recorded target"], answer: "Exact retained paragraph. [S1]", decisions: [],
     citations: [{ ...identity, weight: 1, reward: 0, rationale: "" }],
@@ -114,4 +114,46 @@ it("does not evaluate accessors in optional extraction metadata", () => {
   Object.defineProperty(receipt.payload.claims[0].evidence[0], "webProvenance", { get() { reads++; throw Error("No getter"); } });
   expect(exportsFromCheckedReceipt(receipt).evidenceCsv).toContain("Exact retained paragraph.");
   expect(reads).toBe(0);
+});
+
+const unsupportedLedgers = [
+  { name: "null", value: null }, { name: "object", value: { format: "unsupported-ledger" } },
+  { name: "text", value: "unsupported-ledger" }, { name: "number", value: 7 }, { name: "boolean", value: false },
+  { name: "over-bound array", value: Array.from({ length: 257 }, (_, claimIndex) => ({ claimIndex,
+    claim: "UNSUPPORTED_LEDGER_TARGET", evidence: [] })) },
+];
+
+it.each(unsupportedLedgers)("keeps independent citation exports when the checked claims ledger is $name", ({ value }) => {
+  const receipt = buildResearchReceipt(scopedRun(observed), []);
+  // Construct the controlled legacy/unsupported receipt before its integrity check.
+  // Export must never repair or re-seal an original that the caller checked.
+  Object.assign(receipt.payload, { claims: value }); receipt.integrity.digest = researchReceiptDigest(receipt.payload);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  const before = JSON.stringify(receipt), expected = exportsFromCheckedReceipt({ payload: { citations: receipt.payload.citations } });
+  const result = exportsFromCheckedReceipt(receipt);
+  expect(result.bibtex).toEqual(expected.bibtex); expect(result.bibtex.count).toBe(1);
+  expect(result.ris).toEqual(expected.ris); expect(result.cslJson).toEqual(expected.cslJson);
+  expect(result.evidenceCsv).not.toContain("Exact retained paragraph.");
+  expect(result.evidenceCsv).not.toContain("Recorded target"); expect(result.evidenceCsv).not.toContain("UNSUPPORTED_LEDGER_TARGET");
+  expect(JSON.stringify(receipt)).toBe(before); expect(verifyResearchReceipt(receipt).valid).toBe(true);
+});
+
+it("keeps the supported 256-claim boundary and independently drops a malformed row", () => {
+  const receipt = buildResearchReceipt(scopedRun(observed), []), first = receipt.payload.claims[0];
+  Object.assign(receipt.payload, { claims: [first, ...Array.from({ length: 254 }, (_, i) => ({ claimIndex: i + 1,
+    claim: `Bounded target ${i + 1}`, evidence: [] })), { unsupported: "one bad row" }] });
+  receipt.integrity.digest = researchReceiptDigest(receipt.payload);
+  const before = JSON.stringify(receipt), result = exportsFromCheckedReceipt(receipt);
+  expect(result.bibtex.count).toBe(1); expect(result.evidenceCsv).toContain("Exact retained paragraph.");
+  expect(result.evidenceCsv).toContain("Bounded target 254"); expect(result.evidenceCsv).not.toContain("one bad row");
+  expect(JSON.stringify(receipt)).toBe(before); expect(verifyResearchReceipt(receipt).valid).toBe(true);
+});
+
+it("retains existing refusal for an over-bound citation section", () => {
+  const receipt = buildResearchReceipt(scopedRun(observed), []);
+  Object.assign(receipt.payload, { citations: Array.from({ length: 65 }, () => receipt.payload.citations[0]) });
+  receipt.integrity.digest = researchReceiptDigest(receipt.payload);
+  const before = JSON.stringify(receipt), result = exportsFromCheckedReceipt(receipt);
+  expect(result.bibtex.count).toBe(0); expect(result.ris.count).toBe(0); expect(result.cslJson.count).toBe(0);
+  expect(result.evidenceCsv).not.toContain("Exact retained paragraph."); expect(JSON.stringify(receipt)).toBe(before);
 });
