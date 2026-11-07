@@ -13,6 +13,23 @@ const run = {
 const payment = (settled: boolean, settlementStatus?: PaymentRecord["settlementStatus"]) => ({ sourceName: "Writer", amountUsdc: 0.001, kind: "citation", settled, settlementStatus } as PaymentRecord);
 
 describe("research report export", () => {
+  it.each((["en", "vi", "pt", "es", "fr", "zh-Hans", "de", "ja", "ko", "hi", "id", "ru", "ar"] as const)
+    .flatMap(language => (["Low", "Moderate", "High"] as const).map(level => ({ language, level }))))(
+    "retains the recorded $level assessment and $language heading without reassessing or rewriting originals", ({ language, level }) => {
+      const reason = "Recorded assessment: the available evidence has this bounded support.";
+      const packet = finalizeAnswerLanguage({ answer: run.answer, rendererLanguage: language, statements: [], proposals: [] });
+      const snapshot = { ...run, confidence: { level, reason },
+        trace: [{ phase: "done", ts: 0, message: "Done", detail: { answerLanguage: packet } }] } as QueryRun;
+      const before = JSON.stringify(snapshot), text = researchReportMarkdown(snapshot, null, []);
+      expect(text).toContain(recordedReportPresentation(language).labels.confidence);
+      expect(text).toContain(level); expect(text).toContain(reason);
+      expect(text).toContain(snapshot.answer); expect(JSON.stringify(snapshot)).toBe(before);
+    });
+  it("does not invent a confidence assessment for an older report without one", () => {
+    const before = JSON.stringify(run), text = researchReportMarkdown(run, null, []);
+    expect(text).not.toContain(recordedReportPresentation(undefined).labels.confidence);
+    expect(text).toContain(run.answer); expect(JSON.stringify(run)).toBe(before);
+  });
   it.each(["en", "vi", "pt", "es"] as const)("uses recorded %s final-answer provenance for report headings without changing originals", language => {
     const packet = finalizeAnswerLanguage({ answer: run.answer, rendererLanguage: language, statements: [], proposals: [] });
     const snapshot = { ...run, trace: [{ phase: "done", ts: 0, message: "Done", detail: { answerLanguage: packet } }] } as QueryRun;
