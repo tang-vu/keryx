@@ -517,11 +517,11 @@ jobs:
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     timeout-minutes: 30
     # Every original check still runs. Each member builds from its own checkout;
-    # a failure cannot cancel the other member or satisfy the aggregate gate.
+    # a failure cannot cancel another member or satisfy the aggregate gate.
     strategy:
       fail-fast: false
       matrix:
-        lane: [routes, ui]
+        lane: [routes, ui, product]
     steps:
       - uses: actions/checkout@v4
 
@@ -588,7 +588,7 @@ jobs:
           node --import tsx scripts/test-browser-header-feedback.mts --webkit
 
       - name: Product discovery, pricing and support (built, offline, no research or payment)
-        if: matrix.lane == 'ui'
+        if: matrix.lane == 'product'
         env:
           KERYX_NETWORK: arcTestnet
           NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
@@ -597,7 +597,7 @@ jobs:
         run: npm run test:browser-product-guide
 
       - name: Retain product and language preview phone/desktop screenshots
-        if: always() && matrix.lane == 'ui'
+        if: always() && matrix.lane == 'product'
         uses: actions/upload-artifact@v4
         with:
           name: product-language-preview-${{ github.sha }}

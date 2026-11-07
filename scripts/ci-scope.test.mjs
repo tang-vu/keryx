@@ -91,7 +91,7 @@ test("production members keep independent cancellation and complete step selecti
   const [header, steps] = production.split("    steps:\n");
   assert.match(header, /timeout-minutes: 30\n/);
   assert.match(header, /fail-fast: false\n/);
-  assert.match(header, /lane: \[routes, ui\]/);
+  assert.match(header, /lane: \[routes, ui, product\]/);
   assert(header.includes("-production-${{ matrix.lane }}-"), "members cannot cancel or serialize each other");
   assert(header.includes("cancel-in-progress: ${{ github.event_name == 'pull_request' }}"));
   assert(!production.includes("continue-on-error:"));
@@ -99,22 +99,29 @@ test("production members keep independent cancellation and complete step selecti
   const common = new Set(["actions/checkout@v4", "actions/setup-node@v4", "Pin project npm installer", "Install dependencies",
     "Browser runner APT setup tests (no system changes)", "Prepare official Ubuntu HTTPS mirrors for browser dependencies",
     "Install Chromium for unit and browser checks", "Build (Next.js)"]);
-  const selected = { routes: 0, ui: 0 }, artifacts = new Set();
+  const selected = { routes: 0, ui: 0, product: 0 }, artifacts = new Set(), seen = new Set();
+  const product = new Set(["Product discovery, pricing and support (built, offline, no research or payment)",
+    "Retain product and language preview phone/desktop screenshots"]);
   for (const block of steps.split(/(?=^      - (?:name|uses):)/m).filter(block => block.trim())) {
     const name = block.match(/^      - (?:name|uses): (.+)/)?.[1]; assert(name);
+    assert(!seen.has(name), `${name} cannot run twice`); seen.add(name);
     const conditions = [...block.matchAll(/^        if: (.+)$/gm)].map(match => match[1]);
     if (common.has(name)) {
-      assert.deepEqual(conditions, [], `${name} must prepare both isolated checkouts`); common.delete(name); continue;
+      assert.deepEqual(conditions, [], `${name} must prepare every isolated checkout`); common.delete(name); continue;
     }
     assert.equal(conditions.length, 1, `${name} must run in exactly one known member`);
-    const owner = conditions[0].match(/^(?:always\(\) && )?matrix\.lane == '(routes|ui)'$/)?.[1];
+    const owner = conditions[0].match(/^(?:always\(\) && )?matrix\.lane == '(routes|ui|product)'$/)?.[1];
     assert(owner, `${name} has an unknown or permissive selector`); selected[owner]++;
+    if (owner === "product") assert(product.delete(name), `${name} must stay in its original member`);
+    else assert(!product.has(name), `${name} must run only in the isolated product member`);
     if (block.includes("uses: actions/upload-artifact@v4")) {
       assert(conditions[0].startsWith("always() && "), `${name} must retain failure evidence`);
       const artifact = block.match(/^          name: (.+)$/m)?.[1]; assert(artifact);
       assert(!artifacts.has(artifact), `${artifact} cannot collide across members`); artifacts.add(artifact);
     }
   }
-  assert.equal(common.size, 0, "both members retain every shared preparation step");
+  assert.equal(common.size, 0, "all members retain every shared preparation step");
+  assert.equal(product.size, 0, "the product check and its failure screenshots must both remain scheduled");
+  assert.equal(selected.product, 2, "only the product check and its original artifact move");
   assert(selected.routes > 0 && selected.ui > 0);
 });
