@@ -83,7 +83,7 @@
     "lib/agent/read-recovery.ts": "a784e06cb4a13f4992188c43408204e390ae229c93390d3928ca10da892dccae",
     "lib/agent/requested-source-report.ts": "d70454d86aa807f509ff78ff7058888b785b3765310fbf947d68836cf61da217",
     "lib/agent/research-effects.ts": "03b112db36a63a94a8a00f644cefb1d9b65c3b91016053d1e9ba7532d5c98174",
-    "lib/agent/research-follow-up.ts": "35726245aaca6ec3d88946069730023baf40f992665f0072cb0dee859f125ad8",
+    "lib/agent/research-follow-up.ts": "75dce719ca438172799529a804c98a927b8ebb8e4dd6e8b96d26e24a92499046",
     "lib/agent/research-verdict.ts": "30f1abb81ab37d84a765c7f1d5285be7a72145db899bf13132286f29c68f7084",
     "lib/agent/run-agent.ts": "f4a30c585d7925d575f668c0336e7e736dc3eeb212d39021dc5fa9cc3ffcb8a8",
     "lib/agent/run-bibliographic-agent.ts": "ec1ed1ed8e24e62be35a1952723fa1bc33a628f0addad9f792d430a6e588c3e2",

@@ -1309,6 +1309,51 @@ it("merges a search preview for the same original without losing requested fragm
   }
 });
 
+it("does not recommend recovering an original already read successfully on the existing second pass", async () => {
+  const originalUrl = "https://publisher.example/original";
+  const secondaryUrl = "https://secondary.example/context";
+  let originalId = "", originalAttempts = 0;
+  const engine = fakeEngine({
+    decide: input => {
+      originalId = input.candidates.find(candidate => candidate.item?.itemUrl === originalUrl)!.id;
+      return input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: 0 }),
+        ...(candidate.item?.itemUrl === "https://unused.example/lead" ? { action: "SKIP" as const, targets: [] } : {}) }));
+    },
+    sufficiency: input => ({ sufficient: false, rationale: "Synthetic remaining gap",
+      perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.1, coveredBy: [] })) }),
+    reevaluate: () => ({ shouldBuyMore: true, recommendedIds: [originalId], rationale: "Synthetic existing second-pass recovery" }),
+  });
+  const gateway = fakeGateway(), d = deps([], engine, gateway);
+  d.webSearch = { search: async () => [{ title: "Unused lead", url: "https://unused.example/lead", snippet: "Unverified preview" }] };
+  d.readWebArticle = vi.fn(async url => {
+    if (url === originalUrl && ++originalAttempts === 1) throw new ArticleReadError("html-extraction-unavailable");
+    return { text: url === originalUrl ? "The recovered original retains its exact source qualifications." : "Secondary context retains its distinct source qualifications.",
+      title: url === originalUrl ? "Recovered original" : "Secondary context", finalUrl: url, kind: "html" as const, truncated: false };
+  });
+  const { run, steps } = await drive({ question: `Compare ${originalUrl} with ${secondaryUrl}.`, origin: "web", budget: 0,
+    researchMode: "deep", executionLimits: { attentionLimit: 3, reevaluateRounds: 1 } }, d);
+  expect(originalAttempts).toBe(2);
+  expect(d.readWebArticle).toHaveBeenCalledTimes(3);
+  const observations = steps.flatMap(step => {
+    const outcome = (step.detail as { sourceRead?: { assetId: string; status: string } } | undefined)?.sourceRead;
+    return outcome?.assetId === originalId ? [outcome.status] : [];
+  });
+  expect(observations).toEqual(["failed", "succeeded"]);
+  expect(run.citations.map(citation => citation.itemUrl)).toContain(originalUrl);
+  expect(gateway.fetchCalls).toEqual([]);
+  expect(gateway.citationCalls).toEqual([]);
+  expect(run.totalSpent).toBe(0);
+  // The original failed attempt remains in the trace, while final guidance
+  // reflects the accepted read already retained in this same research run.
+  expect(run.answer).not.toContain("HTML text extraction failed");
+  const receipt = buildResearchReceipt(run, []);
+  expect(verifyResearchReceipt(receipt).valid).toBe(true);
+  expect(receipt.payload.dispatch.answer).toBe(run.answer);
+  expect(remoteResearchResult(run).answer).toBe(run.answer);
+  expect(a2aResponseFromRun(run, quoteA2aResearch(0, "deep")).answer).toBe(run.answer);
+  expect(researchReportMarkdown(run, null, [])).toContain(run.answer);
+});
+
 it("reports supplied originals' read failures and existing URLs in empty recovery without leaking transport details", async () => {
   const d = deps([], fakeEngine(), fakeGateway());
   d.webSearch = { search: async () => [] };
