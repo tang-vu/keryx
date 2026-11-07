@@ -37,6 +37,7 @@ export function researchReportMarkdown(run: QueryRun, meta: AskMeta | null, paym
     ? presentationReasoningText(reasoning, report.locale.language) : "";
   if (limit) lines.push(`> ${limit}`, "");
   lines.push(run.answer, "");
+  if (run.confidence) lines.push(`${labels.confidence} ${reportLiteral(run.confidence.level)} — ${reportLiteral(run.confidence.reason)}`, "");
   const bibliography = projectBibliographicTask(run.bibliography);
   if (bibliography) lines.push(labels.bibliography, "", "```bibtex", bibliography.bibliographyExports.bibtex.content, "```", "", "```ris", bibliography.bibliographyExports.ris.content, "```", "");
   lines.push(labels.sources, "");

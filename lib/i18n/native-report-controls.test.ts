@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
+import { Blob as NodeBlob } from "node:buffer";
 import { afterEach, expect, it, vi } from "vitest";
 import { ReportActions } from "@/components/keryx/report-actions";
 import { extractNamespaceCopy, validateNamespaceDraft } from "../../scripts/check-ui-copy.mjs";
@@ -18,9 +19,10 @@ const keys = ["reportActions.copy", "reportActions.download", "reportActions.ope
   "reportActions.copyUnavailable", "reportActions.downloadUnavailable"] as const;
 const run: QueryRun = { id: "original/record?x=1", question: "Original <question> {count} 日本語 / हिन्दी",
   answer: "Original answer [S1].", createdAt: "2026-10-29T00:00:00Z", engine: "synthetic", budget: 0,
-  totalSpent: 0, totalToCreators: 0, subClaims: [], decisions: [], citations: [], trace: [] };
+  totalSpent: 0, totalToCreators: 0, subClaims: [], decisions: [], citations: [], trace: [],
+  confidence: { level: "Moderate", reason: "Stored review has limited corroboration." } };
 let root: Root | undefined, container: HTMLDivElement | undefined;
-afterEach(async () => { if (root) await act(async () => root!.unmount()); root = undefined; container?.remove(); container = undefined; vi.unstubAllGlobals(); });
+afterEach(async () => { if (root) await act(async () => root!.unmount()); root = undefined; container?.remove(); container = undefined; vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 it.each(added)("%s binds all5 neutral report controls while keeping financial success notices excluded", async locale => {
   const sourcePath = "locales/en/reports.ts";
@@ -54,8 +56,32 @@ it("marks the actual financial clipboard confirmation English without changing o
   await act(async () => root!.render(React.createElement(UiCopyContext.Provider, { value: context }, React.createElement(ReportActions, { run, meta: null, payments: [] }))));
   await act(async () => container!.querySelector("button")!.click());
   expect(writeText).toHaveBeenCalledOnce(); expect(writeText.mock.calls[0][0]).toBe(researchReportMarkdown(run, null, []));
+  expect(writeText.mock.calls[0][0]).toContain(run.confidence!.level);
+  expect(writeText.mock.calls[0][0]).toContain(run.confidence!.reason);
   const notice = container.querySelector('[role="status"]')!;
   expect(notice.textContent).toBe(englishMessages["reportActions.copied"]);
   expect(notice.querySelector('[lang="en"]')).not.toBeNull();
+  expect(JSON.stringify(run)).toBe(before);
+});
+
+it("downloads the recorded confidence and original answer through the actual report control", async () => {
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true); vi.stubGlobal("Blob", NodeBlob);
+  const blobs: NodeBlob[] = [], downloads: string[] = [], revoke = vi.fn();
+  vi.stubGlobal("URL", new Proxy(URL, { get(target, property, receiver) {
+    if (property === "createObjectURL") return (blob: NodeBlob) => { blobs.push(blob); return "blob:report-export"; };
+    if (property === "revokeObjectURL") return revoke;
+    return Reflect.get(target, property, receiver);
+  } }));
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function(this: HTMLAnchorElement) { downloads.push(this.download); });
+  const before = JSON.stringify(run);
+  container = document.createElement("div"); document.body.append(container); root = createRoot(container);
+  await act(async () => root!.render(React.createElement(ReportActions, { run, meta: null, payments: [] })));
+  vi.useFakeTimers();
+  await act(async () => container!.querySelectorAll("button")[1].click());
+  expect(downloads).toEqual(["keryx-report-originalrecordx1.md"]); expect(blobs).toHaveLength(1);
+  const text = await blobs[0].text();
+  vi.runAllTimers(); expect(revoke).toHaveBeenCalledWith("blob:report-export");
+  expect(text).toBe(researchReportMarkdown(run, null, [])); expect(text).toContain(run.answer);
+  expect(text).toContain(run.confidence!.level); expect(text).toContain(run.confidence!.reason);
   expect(JSON.stringify(run)).toBe(before);
 });

@@ -14,6 +14,11 @@ function noStructureInjection(text: string) {
 }
 
 describe("literal report metadata", () => {
+  it("keeps the stored confidence reason literal instead of forging report sections or citations", () => {
+    const run = { ...original, confidence: { level: "Low" as const, reason: injection } }, before = JSON.stringify(run);
+    const text = researchReportMarkdown(run, null, []);
+    noStructureInjection(text); expect(text).toContain("Low"); expect(JSON.stringify(run)).toBe(before);
+  });
   it("keeps a requested question as data while retaining authored answer Markdown", () => {
     const run = { ...original, question: injection }, before = JSON.stringify(run);
     noStructureInjection(researchReportMarkdown(run, null, [])); expect(JSON.stringify(run)).toBe(before);
