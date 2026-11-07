@@ -4998,6 +4998,54 @@ describe("omitted-assertion completion boundary", () => {
     expect(effects.saveQueryRun).toHaveBeenCalledWith(run);
   });
 
+  it.each([false, true])("retains duplicate-article confidence through the actual runner and receipts with reversed-catalog=%s", async reverseCatalog => {
+    const body = "Approval is required before a protected action. Audit trails retain the approval identity.";
+    const sources = [makeSource({ id: "duplicate-publisher-a", fetchPrice: 0.004 }), makeSource({ id: "independent-publisher-b", fetchPrice: 0.004 })];
+    const copies: SourceItem[] = ["weak", "strong"].map(id => ({ id, sourceId: sources[0].id,
+      title: id === "weak" ? "Audit identity" : "Approval action", link: `https://a.example/${id}`,
+      summary: id === "weak" ? "Audit identity" : "Approval action", content: body }));
+    if (reverseCatalog) copies.reverse();
+    const other: SourceItem = { id: "independent", sourceId: sources[1].id, title: "Approval ordering",
+      link: "https://b.example/approval", summary: "Approval identity", content: "The action must wait until canonical approval is provided. The audit entry records the approval identity used." };
+    let gatheredItems: string[] = [];
+    const engine = fakeEngine({
+      decide: input => input.candidates.map(candidate => ({ ...buy({ id: candidate.id, name: candidate.name, price: candidate.fetchPrice }),
+        targets: candidate.item?.itemId === "weak" ? [1] : candidate.item?.itemId === "strong" ? [0] : [0, 1] })),
+      sufficiency: input => ({ sufficient: input.gathered.length === 3, rationale: "Controlled complete assessment",
+        perClaim: input.subClaims.map(claim => ({ claim, coverage: 0.9, coveredBy: input.gathered.map(row => row.marker) })) }),
+      synthesize: input => {
+        gatheredItems = input.gathered.map(row => row.itemId!);
+        return { answer: input.gathered.map(row => `[${row.marker}]`).join(" "), citedMarkers: input.gathered.map(row => row.marker),
+          evidence: input.gathered.flatMap(row => (row.itemId === "weak" ? [1] : row.itemId === "strong" ? [0] : [0, 1]).map(claimIndex => ({ claimIndex, marker: row.marker,
+            quote: row.itemId === "weak" ? "Audit trails retain the approval identity." : row.itemId === "strong"
+              ? "Approval is required before a protected action." : claimIndex === 0
+                ? "The action must wait until canonical approval is provided." : "The audit entry records the approval identity used.",
+            support: 0.9, statementSupport: 0.9,
+            statement: row.itemId === "weak" ? "Audit trails preserve the identity attached to an approval." : row.itemId === "strong"
+              ? "Protected actions require prior approval." : claimIndex === 0
+                ? "The action waits for canonical approval." : "An audit entry records which approval identity was used." }))) };
+      },
+    });
+    engine.decompose = async () => ["How is approval authorized?", "Which audit identity is retained?"];
+    const gateway = fakeGateway(), effects = isolatedTestEffects();
+    const run = await collectRun({ question: "Explain approval and audit.", budget: 0.03,
+      executionLimits: { attentionLimit: 3, reevaluateRounds: 0 } },
+      { deps: { ...deps(sources, engine, gateway, { items: { [sources[0].id]: copies, [sources[1].id]: [other] } }), effects } });
+    expect(new Set(gatheredItems.filter(id => id === "weak" || id === "strong"))).toEqual(new Set(["weak", "strong"]));
+    expect(gateway.fetchCalls).toHaveLength(3);
+    expect(run.evidence?.filter(row => row.qualifiesForAnswer)).toHaveLength(4);
+    expect(run.confidence?.level).toBe("High");
+    expect(run.trace.find(step => step.phase === "verdict")?.detail).toEqual(run.confidence);
+    expect(run.totalSpent).toBeCloseTo(3 * 0.004 + 0.03 * config.citationPoolRatio, 8);
+    const payments = vi.mocked(effects.recordPayment).mock.calls.map(([payment]) => payment);
+    const receipt = buildResearchReceipt(run, payments);
+    expect(verifyResearchReceipt(receipt).valid).toBe(true);
+    expect(receipt.payload.dispatch.confidence).toEqual(run.confidence);
+    expect(remoteResearchResult(run).confidence).toEqual(run.confidence);
+    expect(surfaceResearch(run).evidence.map(row => row.quote).sort()).toEqual(run.evidence?.map(row => row.quote).sort());
+    expect(effects.saveQueryRun).toHaveBeenCalledWith(run);
+  });
+
   it("keeps the emitted and completed confidence Low for a skipped offline synthetic candidate", async () => {
     const quote = "The protocol binds approval to canonical action identity.";
     const source = makeSource({ id: "real-summary" }), demo = makeSource({ id: "skipped-demo", evidenceProvenance: "synthetic-demo" });

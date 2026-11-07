@@ -2,7 +2,6 @@ import type { ClaimCoverageRecord, Confidence } from "../types";
 import type { Conflict } from "../llm/reasoning-engine";
 import { MIN_REWARD_SUPPORT } from "./evidence-ledger";
 import type { GatheredContent } from "../llm";
-import { bodyIdentity } from "../web-research/url-identity";
 import { scholarlyWorkGroups } from "../scholarly/work-groups";
 import type { AnswerPresentation } from "../research/answer-presentation";
 import { evidenceConfidenceReason } from "../research/confidence-copy";
@@ -26,13 +25,13 @@ export function researchVerdict(input: { coverage: ClaimCoverageRecord[]; citedM
   if (input.finalAssessmentSufficient !== true) return { level: "Low",
     reason: evidenceConfidenceReason(language, { kind: "incomplete" }) };
   if (input.conflicts.length) return { level: "Moderate", reason: evidenceConfidenceReason(language, { kind: "explained-conflict" }) };
-  const groups = new Set<string>(), bodies = new Set<string>(), groupByMarker = new Map<string, string>();
+  const groups = new Set<string>(), groupByMarker = new Map<string, string>();
   const workGroups = scholarlyWorkGroups(input.sources ?? [], cited);
   for (const source of input.sources ?? []) {
-    if (!cited.has(source.marker)) continue;
-    const body = bodyIdentity(source.text), group = workGroups.get(source.marker) ?? "";
-    if (!group || bodies.has(body)) continue;
-    bodies.add(body); groups.add(group);
+    if (!cited.has(source.marker) || !source.text.trim()) continue;
+    const group = workGroups.get(source.marker) ?? "";
+    if (!group) continue;
+    groups.add(group);
     groupByMarker.set(source.marker, group);
   }
   if (input.coverage.every(claim => claim.coverage >= 0.7 &&

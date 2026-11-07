@@ -23,6 +23,30 @@ function fixture() {
 }
 
 describe("confidence in delivered reviewed summaries", () => {
+  it("is invariant to a weaker duplicate preceding the strong delivered marker", () => {
+    const body = "Approval is required before a protected action. Audit trails retain the approval identity.";
+    const sources: GatheredContent[] = [
+      { marker: "S1", sourceId: "publisher-a", sourceName: "A", itemUrl: "https://a.example/original", text: body },
+      { marker: "S2", sourceId: "publisher-a", sourceName: "A", itemUrl: "https://a.example/reprint", text: body },
+      { marker: "S3", sourceId: "publisher-b", sourceName: "B", itemUrl: "https://b.example/approval", text: "The action must wait until canonical approval is provided." },
+    ];
+    const proposals = fixtureEvidenceSpans(sources, [
+      { claimIndex: 0, marker: "S1", quote: "Audit trails retain the approval identity.", support: 0.55, statementSupport: 0.9, statement: "An audit trail retains an approval identity." },
+      { claimIndex: 0, marker: "S2", quote: "Approval is required before a protected action.", support: 0.9, statementSupport: 0.9, statement: "Protected actions require prior approval." },
+      { claimIndex: 0, marker: "S3", quote: sources[2].text, support: 0.9, statementSupport: 0.9, statement: "The action waits for canonical approval." },
+    ]);
+    const ledger = buildEvidenceLedger({ subClaims: ["How is an action approved?"], gathered: sources,
+      answer: "Approval [S1] [S2] [S3].", declaredMarkers: ["S1", "S2", "S3"], proposedEvidence: proposals,
+      finalAssessment: [{ claim: "How is an action approved?", coverage: 0.9, coveredBy: ["S1", "S2", "S3"] }] });
+    const statements = selectCitedStatements(proposals, ledger), before = JSON.stringify({ ...ledger, acceptedMarkers: [...ledger.acceptedMarkers] });
+    expect(statements.map(row => row.marker)).toEqual(["S1", "S2", "S3"]);
+    const orders = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+    const levels = orders.map(order => reviewedSummaryConfidence({ ledger, statements, sources: order.map(index => sources[index]), conflicts: [], finalAssessmentSufficient: true }).level);
+    expect(levels).toEqual(Array(6).fill("High"));
+    expect(JSON.stringify({ ...ledger, acceptedMarkers: [...ledger.acceptedMarkers] })).toBe(before);
+    expect(reviewedSummaryConfidence({ ledger, statements, sources, conflicts: [], finalAssessmentSufficient: false }).level).toBe("Low");
+  });
+
   it("distinguishes absent, singly supported and strongly corroborated sentences without changing the ledger", () => {
     const input = fixture(), before = JSON.stringify(input);
     expect(reviewedSummaryConfidence(input).level).toBe("High");
