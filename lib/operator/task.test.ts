@@ -131,7 +131,7 @@ it("retains an interrupted buyer directory as incomplete, without inferring fail
   await expect(resumeOperatorTask(task, vi.fn() as never)).rejects.toThrow("No complete buyer journal");
 });
 
-async function completedRecovery(task: string, answer: string, citations: unknown[] = [], bibliography?: BibliographicTaskResult) {
+async function completedRecovery(task: string, answer: string, citations: unknown[] = [], bibliography?: BibliographicTaskResult, claims?: unknown) {
   const intent = await readBuyerJournal(join(task, "buyer"));
   const job = { queryId: intent.queryId, status: "completed", answer, researchPackage: a2aResearchPackage("quick"),
     pricing: { totalPriceUsdc: 0.05, serviceFeeUsdc: 0.02, creatorBudgetUsdc: 0.03,
@@ -139,7 +139,7 @@ async function completedRecovery(task: string, answer: string, citations: unknow
   const payload = { schema: RESEARCH_RECEIPT_SCHEMA,
     dispatch: { id: intent.queryId, question: intent.request.question, answer, answerSha256: sha256(answer),
       budgetUsdc: intent.request.budget, researchMode: "quick" },
-    citations, ...(bibliography ? { bibliography } : {}), settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.01,
+    citations, ...(claims === undefined ? {} : { claims }), ...(bibliography ? { bibliography } : {}), settlement: { mode: "real", ledgerCompleteness: "complete", settledCreatorUsdc: 0.01,
       pendingCreatorUsdc: 0.005, simulatedCreatorUsdc: 0 } };
   const digest = researchReceiptDigest(payload);
   const receipt = { payload, integrity: { algorithm: "sha256", canonicalization: RESEARCH_RECEIPT_CANONICALIZATION,
@@ -167,6 +167,32 @@ it("saves only a completed verified answer, reopens it offline, and exports a pr
   expect(brief).toContain("Creator source"); expect(brief).toContain("private research");
   expect(brief).not.toContain((await readBuyerJournal(join(task, "buyer"))).queryId);
   expect(brief).not.toContain(payee);
+});
+
+it.each([
+  { name: "null", value: null }, { name: "object", value: { format: "unsupported-ledger" } },
+  { name: "text", value: "unsupported-ledger" }, { name: "number", value: 7 }, { name: "boolean", value: false },
+  { name: "over-bound array", value: Array.from({ length: 257 }, (_, claimIndex) => ({ claimIndex,
+    claim: "UNSUPPORTED_LEDGER_TARGET", evidence: [] })) },
+])("recovers citation exports from an original checked receipt with a $name claims ledger", async ({ value }) => {
+  const { task } = await fixture();
+  await createLegacyOperatorTask(task, { request, payee, maxTotalMicros: "100000" }); await buyerJournal(task);
+  const completed = await completedRecovery(task, "Retained answer [S1]", [{ marker: "S1", sourceId: "source", sourceName: "Creator",
+    itemTitle: "Retained paper", itemUrl: "https://example.org/paper", itemId: "paper-v1", contentVersion: "v1",
+    weight: 1, rewardPlannedUsdc: 0.01, rationale: "read" }], undefined, value);
+  expect(completed.localResult.state).toBe("saved");
+  const snapshot = await readFile(join(task, "result.json"), "utf8"), receiptPath = join(task, "buyer", JSON.parse(snapshot).receiptFile);
+  const originalReceipt = await readFile(receiptPath, "utf8"), intent = await readFile(join(task, "buyer/intent.json"), "utf8");
+  const raw = await readOperatorResult(task), result = await readOperatorResearchResult(task);
+  expect(result!.answer).toBe("Retained answer [S1]"); expect(result!.authority).toBe(raw!.authority);
+  expect(result!.receiptDigest).toBe(raw!.receiptDigest); expect(result!.paymentAtCheck).toBe("unconfirmed");
+  expect(result!.researchExports.bibtex.count).toBe(1);
+  for (const format of ["bibtex", "ris", "csl-json"] as const) expect(formatOperatorResearchExport(result!, format)).toContain("Retained paper");
+  expect(formatOperatorResearchExport(result!, "evidence-csv")).not.toContain("UNSUPPORTED_LEDGER_TARGET");
+  expect((await operatorTaskStatus(task)).payment).toBe("unknown");
+  expect(await readFile(join(task, "result.json"), "utf8")).toBe(snapshot);
+  expect(await readFile(receiptPath, "utf8")).toBe(originalReceipt);
+  expect(await readFile(join(task, "buyer/intent.json"), "utf8")).toBe(intent);
 });
 
 it("rejects edited answer, receipt, task binding, and oversized saved files", async () => {

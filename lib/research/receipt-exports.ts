@@ -50,13 +50,16 @@ function receiptWebProvenance(record: unknown) {
  * Parse the read model separately: an older or malformed optional ledger cannot break recovery. */
 export function exportsFromCheckedReceipt(receipt: unknown) {
   const parsed = z.object({ payload: z.object({ citations: z.array(z.unknown()).max(64).optional(),
-    claims: z.array(z.unknown()).max(256).optional() }) }).safeParse(receipt);
+    claims: z.unknown().optional() }) }).safeParse(receipt);
   const payload = parsed.success ? parsed.data.payload : {};
   const citations = (payload.citations ?? []).flatMap(value => {
     const item = citation.safeParse(value);
     return item.success ? [{ ...item.data, ...receiptWebProvenance(value), ...(hasKnownSyntheticFingerprint(item.data) ? { evidenceProvenance: "synthetic-demo" as const } : {}), reward: item.data.rewardPlannedUsdc }] : [];
   });
-  const claims = (payload.claims ?? []).flatMap(value => {
+  // An unsupported optional ledger must not erase independently valid citations.
+  // Keep the same bound and leave unavailable claims unknown, never repaired.
+  const ledger = z.array(z.unknown()).max(256).safeParse(payload.claims);
+  const claims = (ledger.success ? ledger.data : []).flatMap(value => {
     const item = claim.safeParse(value); return item.success ? [item.data] : [];
   });
   const records = claims.flatMap(row => row.evidence.flatMap(value => {
@@ -65,7 +68,7 @@ export function exportsFromCheckedReceipt(receipt: unknown) {
   }));
   const input = { citations, subClaims: [] as string[], claimCoverage: claims.map(row => ({
     claimIndex: row.claimIndex, claim: row.claim, coverage: 0, coveredBy: [] as string[] })),
-    evidence: payload.claims === undefined ? undefined : records };
+    evidence: ledger.success ? records : undefined };
   return researchExports(input);
 }
 
