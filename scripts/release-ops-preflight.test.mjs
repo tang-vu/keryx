@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { inspectAlertFile, inspectCron, inspectUnits, runPreflight } from './release-ops-preflight.mjs';
+import * as preflight from './release-ops-preflight.mjs';
 
 const expectedCron = [
   '0 * * * * cd /root/keryx && /usr/bin/npm run backup >> backup.log 2>&1 # keryx-backup',
@@ -13,6 +16,8 @@ const expectedCron = [
 ].join('\n');
 const observed = (output, ok = true) => ({ output, ok });
 const unit = (load, active = 'inactive', pid = '0') => observed(`LoadState=${load}\nActiveState=${active}\nMainPID=${pid}\n`);
+const publicUnit = (state = 'enabled', active = 'active', pid = '123', load = 'loaded') =>
+  observed(`LoadState=${load}\nActiveState=${active}\nMainPID=${pid}\nUnitFileState=${state}\n`);
 const release = '8bc7cffeac2d9d90bdb834581d7607ecf4b1cb03';
 const pinnedBackup = `0 * * * * cd /root/keryx && /usr/bin/node --import /root/keryx/node_modules/tsx/dist/loader.mjs --no-warnings --env-file=.env.local --env-file=/root/.config/keryx-backup.env /root/.local/share/keryx-backup/${release}/scripts/backup-db.mts >> /root/keryx/data/backups/backup.log 2>&1 # keryx-backup`;
 const backupCheck = (entry) => inspectCron(entry).find((check) => check.label === 'cron:backup');
@@ -130,13 +135,142 @@ test('full preflight surfaces missing alert without exposing command or file con
     calls.push([name, args]);
     if (name === 'crontab') return observed(expectedCron);
     if (name === 'pm2') return observed('123\n');
+    if (['pm2-root.service', 'cloudflared.service'].includes(args[1])) return publicUnit();
     if (args[1] === 'keryx-private-worker.service') return unit('loaded', 'active', '123');
     return unit('not-found');
   };
   const checks = runPreflight({ command, readEnv: () => 'KERYX_ALERT_WEBHOOK=private-value' });
   assert.ok(checks.every((check) => check.status !== 'fail'));
-  assert.equal(calls.length, 6);
+  assert.equal(calls.length, 8);
   assert.ok(calls.filter(([name]) => name === 'systemctl').every(([, args]) => args.includes('--no-pager')));
   assert.ok(!JSON.stringify(checks).includes('private-value'));
   assert.equal(runPreflight({ command, readEnv: () => '' }).at(-1).status, 'fail');
+});
+
+function inventory(publicOverrides = {}) {
+  const calls = [];
+  const command = (name, args) => {
+    calls.push([name, args]);
+    if (name === 'crontab') return observed(expectedCron);
+    if (name === 'pm2') return observed('123\n');
+    if (name !== 'systemctl' || args[0] !== 'show') throw Error('Unexpected mutation or command');
+    if (Object.hasOwn(publicOverrides, args[1])) return publicOverrides[args[1]];
+    if (args[1] === 'pm2-root.service') return publicUnit('enabled', 'inactive', '0');
+    if (['cloudflared.service', 'keryx-maintenance-front-door.service'].includes(args[1])) return publicUnit();
+    if (args[1] === 'keryx-private-worker.service') return unit('loaded', 'active', '456');
+    return unit('not-found');
+  };
+  return { calls, command, readEnv: () => 'KERYX_ALERT_WEBHOOK=synthetic-private-token' };
+}
+const bootCheck = (checks, label) => checks.find((check) => check.label === `boot:${label}`);
+
+test('full inventory detects disabled PM2 boot even while both named PM2 roles report running', () => {
+  const options = inventory({ 'pm2-root.service': publicUnit('disabled') });
+  const checks = runPreflight(options);
+  assert.equal(checks.filter((check) => check.label.startsWith('pm2:') && check.status === 'pass').length, 2);
+  assert.equal(bootCheck(checks, 'pm2').status, 'fail');
+  assert.match(bootCheck(checks, 'pm2').detail, /persistently enabled/);
+});
+
+test('enabled PM2 boot may be inactive when the named-role daemon was started outside systemd', () => {
+  const checks = runPreflight(inventory());
+  assert.equal(bootCheck(checks, 'pm2').status, 'pass');
+  assert.equal(bootCheck(checks, 'tunnel').status, 'pass');
+  assert.match(bootCheck(checks, 'pm2').detail, /verify named PM2 role PIDs separately/);
+});
+
+for (const state of ['enabled-runtime', 'disabled', 'masked', 'static', 'linked', 'alias', 'indirect', '']) {
+  test(`public boot refuses ${state || 'missing'} persistence even while tunnel is active`, () => {
+    const checks = runPreflight(inventory({ 'cloudflared.service': publicUnit(state) }));
+    assert.equal(bootCheck(checks, 'tunnel').status, 'fail');
+  });
+}
+
+test('enabled public proxy units must also be running with positive PIDs', () => {
+  for (const observation of [publicUnit('enabled', 'inactive', '0'), publicUnit('enabled', 'failed', '0'), publicUnit('enabled', 'active', '0'), publicUnit('enabled', 'active', '-1')]) {
+    const options = { ...inventory({ 'cloudflared.service': observation, 'keryx-maintenance-front-door.service': observation }), requireFrontDoor: true };
+    const checks = runPreflight(options);
+    assert.equal(bootCheck(checks, 'tunnel').status, 'fail');
+    assert.equal(bootCheck(checks, 'front-door').status, 'fail');
+  }
+});
+
+test('failed, missing or malformed PM2 boot observations never pass despite a running daemon', () => {
+  for (const observation of [
+    publicUnit('enabled', 'failed', '0'), publicUnit('enabled', 'active', '0'), publicUnit('enabled', 'inactive', '0', 'not-found'),
+    observed(publicUnit().output, false), observed(''), observed(publicUnit().output.replace('UnitFileState=enabled\n', '')),
+    observed(publicUnit().output + 'UnitFileState=enabled\n'), observed(publicUnit().output + 'unexpected-private-token\n'),
+    observed(publicUnit().output.replace('MainPID=123', 'MainPID=not-a-pid')),
+  ]) {
+    const checks = runPreflight(inventory({ 'pm2-root.service': observation }));
+    assert.equal(bootCheck(checks, 'pm2').status, 'fail');
+    assert.doesNotMatch(JSON.stringify(checks), /unexpected-private-token|synthetic-private-token|not-a-pid/);
+  }
+});
+
+test('direct-origin inventory leaves front-door applicability explicit and does not query or activate it', () => {
+  const options = inventory();
+  const checks = runPreflight(options);
+  assert.equal(bootCheck(checks, 'front-door').status, 'info');
+  assert.match(bootCheck(checks, 'front-door').detail, /ingress route unverified/);
+  assert.ok(!options.calls.some(([, args]) => args.includes('keryx-maintenance-front-door.service')));
+});
+
+test('front-door ingress requires its own persistent and active service independently of healthy application PIDs', () => {
+  for (const observation of [publicUnit('disabled'), publicUnit('enabled', 'inactive', '0'), publicUnit('enabled', 'inactive', '0', 'not-found')]) {
+    const checks = runPreflight({ ...inventory({ 'keryx-maintenance-front-door.service': observation }), requireFrontDoor: true });
+    assert.equal(bootCheck(checks, 'front-door').status, 'fail');
+    assert.equal(bootCheck(checks, 'pm2').status, 'pass');
+  }
+  assert.equal(bootCheck(runPreflight({ ...inventory(), requireFrontDoor: true }), 'front-door').status, 'pass');
+});
+
+test('boot-only command reads only selected systemd properties without touching PM2, cron, held workers or ENV', () => {
+  const options = inventory();
+  options.readEnv = () => { throw Error('ENV must not be read'); };
+  const checks = preflight.runPreflightCommand(['--public-boot-only', '--require-front-door'], options);
+  assert.ok(checks.every((check) => check.status === 'pass'));
+  assert.equal(checks.length, 3);
+  assert.deepEqual(options.calls.map(([, args]) => args[1]), ['pm2-root.service', 'cloudflared.service', 'keryx-maintenance-front-door.service']);
+  for (const [name, args] of options.calls) {
+    assert.equal(name, 'systemctl');
+    assert.deepEqual(args, ['show', args[1], '--property=LoadState,ActiveState,MainPID,UnitFileState', '--no-pager']);
+  }
+});
+
+test('boot-only without front-door requirement preserves explicit route uncertainty', () => {
+  const options = inventory();
+  const checks = preflight.runPreflightCommand(['--public-boot-only'], options);
+  assert.deepEqual(checks.map((check) => check.status), ['pass', 'pass', 'info']);
+  assert.equal(options.calls.length, 2);
+});
+
+test('invalid or contradictory boot-only CLI controls refuse before any host or ENV read', () => {
+  for (const args of [['--unexpected'], ['--public-boot-only', '--require-withdrawal-timer']]) {
+    const options = inventory();
+    options.readEnv = () => { throw Error('ENV must not be read'); };
+    assert.throws(() => preflight.runPreflightCommand(args, options), /Usage:/);
+    assert.equal(options.calls.length, 0);
+  }
+});
+
+test('actual CLI rejects contradictory controls before attempting a host inspection', () => {
+  const child = spawnSync(process.execPath, [fileURLToPath(new URL('./release-ops-preflight.mjs', import.meta.url)),
+    '--public-boot-only', '--require-withdrawal-timer'], { encoding: 'utf8' });
+  assert.equal(child.status, 2);
+  assert.equal(child.stdout, '');
+  assert.match(child.stderr, /^Usage:/);
+  assert.doesNotMatch(child.stderr, /private|token|ENV/);
+});
+
+test('actual boot-only CLI fails honestly when systemctl is unavailable without leaking command diagnostics', () => {
+  const child = spawnSync(process.execPath, [fileURLToPath(new URL('./release-ops-preflight.mjs', import.meta.url)),
+    '--public-boot-only', '--require-front-door'], { encoding: 'utf8', env: { ...process.env, PATH: '' } });
+  assert.equal(child.status, 1);
+  assert.equal(child.stderr, '');
+  const lines = child.stdout.trim().split(/\r?\n/);
+  assert.equal(lines.length, 3);
+  for (const label of ['pm2', 'tunnel', 'front-door'])
+    assert.ok(lines.includes(`FAIL boot:${label}: boot properties unavailable or unit not loaded`));
+  assert.doesNotMatch(child.stdout, /ENOENT|private|token|ENV|cron/);
 });

@@ -88,15 +88,70 @@ export function inspectUnits(worker, timer, cycle, requireTimer = false) {
   return results;
 }
 
-export function runPreflight({ command, readEnv, requireTimer = false }) {
+function inspectPublicBoot(label, observation, requireRunning) {
+  const fields = ['LoadState', 'ActiveState', 'MainPID', 'UnitFileState'];
+  const values = new Map();
+  // Read only the requested properties. Ambiguous/truncated output cannot prove
+  // persistent startup, and raw host output must never enter a diagnostic.
+  for (const line of observation.ok ? observation.output.split(/\r?\n/).filter(Boolean) : []) {
+    const at = line.indexOf('=');
+    const key = line.slice(0, at);
+    if (at < 1 || !fields.includes(key) || values.has(key)) {
+      return result(label, 'fail', 'boot properties unavailable or malformed');
+    }
+    values.set(key, line.slice(at + 1));
+  }
+  if (values.size !== fields.length || values.get('LoadState') !== 'loaded')
+    return result(label, 'fail', 'boot properties unavailable or unit not loaded');
+  // is-enabled also succeeds for states such as enabled-runtime and static.
+  // Require the persistent enabled state used by the approved public services.
+  if (values.get('UnitFileState') !== 'enabled')
+    return result(label, 'fail', 'unit not persistently enabled; review boot configuration');
+  const active = values.get('ActiveState'), pid = values.get('MainPID');
+  const running = active === 'active' && /^[1-9]\d*$/.test(pid);
+  if (!running && (requireRunning || active !== 'inactive' || pid !== '0'))
+    return result(label, 'fail', 'unit not in the expected running state');
+  return result(label, 'pass', requireRunning
+    ? 'active with PID; persistently enabled'
+    : 'persistently enabled; verify named PM2 role PIDs separately');
+}
+
+export function runPublicBootPreflight({ command, requireFrontDoor = false }) {
+  const show = (unit) => command('systemctl', ['show', unit,
+    '--property=LoadState,ActiveState,MainPID,UnitFileState', '--no-pager']);
+  const checks = [
+    inspectPublicBoot('boot:pm2', show('pm2-root.service'), false),
+    inspectPublicBoot('boot:tunnel', show('cloudflared.service'), true),
+  ];
+  checks.push(requireFrontDoor
+    ? inspectPublicBoot('boot:front-door', show('keryx-maintenance-front-door.service'), true)
+    : result('boot:front-door', 'info', 'not required by this invocation; ingress route unverified'));
+  return checks;
+}
+
+export function runPreflight({ command, readEnv, requireTimer = false, requireFrontDoor = false }) {
   const cron = command('crontab', ['-l']);
   const checks = cron.ok ? inspectCron(cron.output) : cronJobs.map(([tag]) => result(`cron:${tag}`, 'fail', 'crontab unavailable'));
   for (const name of ['keryx', 'keryx-a2a-worker']) checks.push(inspectPid(name, command('pm2', ['pid', name])));
   const show = (unit) => command('systemctl', ['show', unit, '--property=LoadState,ActiveState,MainPID', '--no-pager']);
   checks.push(...inspectUnits(show('keryx-private-worker.service'), show('keryx-withdrawal-cycle.timer'), show('keryx-withdrawal-cycle.service'), requireTimer));
+  checks.push(...runPublicBootPreflight({ command, requireFrontDoor }));
   try { checks.push(inspectAlertFile(readEnv())); }
   catch { checks.push(result('alert:delivery', 'fail', 'environment file unreadable')); }
   return checks;
+}
+
+const usage = 'Usage: node scripts/release-ops-preflight.mjs [--require-withdrawal-timer] [--require-front-door] [--public-boot-only]';
+class PreflightUsageError extends Error {}
+
+export function runPreflightCommand(args, options) {
+  const allowed = ['--require-withdrawal-timer', '--require-front-door', '--public-boot-only'];
+  const bootOnly = args.includes('--public-boot-only');
+  if (args.some((arg) => !allowed.includes(arg)) || bootOnly && args.includes('--require-withdrawal-timer'))
+    throw new PreflightUsageError(usage);
+  const selected = { ...options, requireFrontDoor: args.includes('--require-front-door') };
+  return bootOnly ? runPublicBootPreflight(selected)
+    : runPreflight({ ...selected, requireTimer: args.includes('--require-withdrawal-timer') });
 }
 
 function command(name, args) {
@@ -105,13 +160,13 @@ function command(name, args) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const args = process.argv.slice(2);
-  if (args.some((arg) => arg !== '--require-withdrawal-timer')) {
-    console.error('Usage: node scripts/release-ops-preflight.mjs [--require-withdrawal-timer]');
-    process.exitCode = 2;
-  } else {
-    const checks = runPreflight({ command, readEnv: () => readFileSync('.env.local', 'utf8'), requireTimer: args.includes('--require-withdrawal-timer') });
+  try {
+    const checks = runPreflightCommand(process.argv.slice(2), { command, readEnv: () => readFileSync('.env.local', 'utf8') });
     for (const check of checks) console.log(`${check.status.toUpperCase()} ${check.label}: ${check.detail}`);
     if (checks.some((check) => check.status === 'fail')) process.exitCode = 1;
+  } catch (error) {
+    const invalidArgs = error instanceof PreflightUsageError;
+    console.error(invalidArgs ? usage : 'Preflight inspection unavailable');
+    process.exitCode = invalidArgs ? 2 : 1;
   }
 }
