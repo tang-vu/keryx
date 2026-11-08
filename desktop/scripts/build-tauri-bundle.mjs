@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, realpathSync } from "node:fs";
+import { closeSync, constants, existsSync, fchmodSync, fstatSync, fsyncSync, ftruncateSync, lstatSync, openSync, readSync, realpathSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
@@ -12,6 +12,60 @@ const DOWNLOADS = new Set([
 ]);
 const MAX_ATTEMPTS = 3;
 const TAIL_CHARACTERS = 65536;
+const MAX_PORTABLE_BYTES = 128 * 1024 * 1024;
+const PORTABLE_MARKER = Buffer.from("__TAURI_BUNDLE_TYPE_VAR_UNK");
+const NSIS_MARKER = Buffer.from("__TAURI_BUNDLE_TYPE_VAR_NSS");
+
+function openPortable(path, flags) {
+  const before = lstatSync(path);
+  if (!before.isFile() || before.isSymbolicLink()) throw new Error("Native portable output is not a regular file");
+  const fd = openSync(path, flags | (process.platform === "win32" ? 0 : constants.O_NOFOLLOW));
+  try {
+    const info = fstatSync(fd), current = lstatSync(path);
+    if (!info.isFile() || current.isSymbolicLink() || info.dev !== current.dev || info.ino !== current.ino || info.size > MAX_PORTABLE_BYTES)
+      throw new Error("Native portable output changed or exceeds the byte bound");
+    return { fd, info };
+  } catch (error) { closeSync(fd); throw error; }
+}
+
+function capturePortable(path) {
+  const { fd, info } = openPortable(path, constants.O_RDONLY);
+  try {
+    const bytes = Buffer.alloc(info.size); let offset = 0;
+    while (offset < bytes.length) {
+      const read = readSync(fd, bytes, offset, bytes.length - offset, offset);
+      if (!read) throw new Error("Incomplete native portable read"); offset += read;
+    }
+    const marker = bytes.indexOf(PORTABLE_MARKER);
+    if (fstatSync(fd).size !== info.size || bytes.subarray(0, 2).toString() !== "MZ" || marker < 0 ||
+        bytes.indexOf(PORTABLE_MARKER, marker + PORTABLE_MARKER.length) >= 0 || bytes.includes(NSIS_MARKER))
+      throw new Error("Native portable output does not contain its unique original UNK marker");
+    return { bytes, mode: info.mode & 0o777 };
+  } finally { closeSync(fd); }
+}
+
+function restorePortable(path, original) {
+  // Restore the exact freshly compiled bytes, never rewrite a marker or touch
+  // the installed/bundled executable. Refuse missing or redirected targets.
+  const { fd } = openPortable(path, constants.O_RDWR);
+  try {
+    let offset = 0;
+    while (offset < original.bytes.length) {
+      const written = writeSync(fd, original.bytes, offset, original.bytes.length - offset, offset);
+      if (!written) throw new Error("Incomplete native portable restoration"); offset += written;
+    }
+    ftruncateSync(fd, original.bytes.length); fchmodSync(fd, original.mode); fsyncSync(fd);
+    if (fstatSync(fd).size !== original.bytes.length) throw new Error("Native portable restoration size mismatch");
+    const chunk = Buffer.alloc(Math.min(TAIL_CHARACTERS, original.bytes.length)); offset = 0;
+    while (offset < original.bytes.length) {
+      const length = Math.min(chunk.length, original.bytes.length - offset);
+      const read = readSync(fd, chunk, 0, length, offset);
+      if (read !== length || !chunk.subarray(0, length).equals(original.bytes.subarray(offset, offset + length)))
+        throw new Error("Native portable restoration bytes mismatch");
+      offset += length;
+    }
+  } finally { closeSync(fd); }
+}
 
 function transientToolDownload(output) {
   const lines = output.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "").split(/\r?\n/).map(line => line.trim()).filter(Boolean);
@@ -24,11 +78,11 @@ function transientToolDownload(output) {
 }
 
 /** @returns {Promise<{code: number, interrupted: boolean, output: string}>} */
-function attempt(cliPath, cwd, signal) {
+function attempt(cliPath, args, cwd, signal) {
   return new Promise(resolveAttempt => {
     const taskkill = process.platform === "win32" ? join(process.env.SystemRoot || "C:\\Windows", "System32", "taskkill.exe") : null;
     if (taskkill && !existsSync(taskkill)) throw new Error("Windows process-tree termination is unavailable");
-    const child = spawn(process.execPath, [cliPath, "build", "--", "--locked"], {
+    const child = spawn(process.execPath, [cliPath, ...args], {
       cwd, stdio: ["inherit", "pipe", "pipe"], detached: process.platform !== "win32", windowsHide: true,
     });
     let output = "", spawnFailed = false, interrupted = false;
@@ -68,18 +122,28 @@ function attempt(cliPath, cwd, signal) {
 }
 
 /**
- * Fixed build arguments and attempt ceiling; options allow real-process tests.
+ * One locked compile, bounded bundle attempts and exact portable preservation.
  * @param {{cliPath?: string, cwd?: string, backoffMs?: number, signal?: AbortSignal}} options
  */
 export async function bundleTauri({ cliPath = cli, cwd = desktop, backoffMs = 5000, signal } = {}) {
   if (!Number.isSafeInteger(backoffMs) || backoffMs < 0 || backoffMs > 10000) throw new Error("Invalid Tauri retry backoff");
+  if (signal?.aborted) return { code: 1, attempts: 0 };
+  const build = await attempt(cliPath, ["build", "--no-bundle", "--", "--locked"], cwd, signal);
+  if (build.interrupted || signal?.aborted) return { code: 1, attempts: 0 };
+  if (build.code !== 0) return { code: build.code, attempts: 0 };
+  const executable = join(cwd, "src-tauri", "target", "release", "KeryxOperator.exe");
+  let original;
+  try { original = capturePortable(executable); }
+  catch (error) { process.stderr.write(`Cannot retain native portable original: ${error.message}\n`); return { code: 1, attempts: 0 }; }
   for (let number = 1; number <= MAX_ATTEMPTS; number++) {
     if (signal?.aborted) return { code: 1, attempts: number - 1 };
-    const result = await attempt(cliPath, cwd, signal);
+    let result;
+    try { result = await attempt(cliPath, ["bundle"], cwd, signal); }
+    finally { restorePortable(executable, original); }
     if (result.interrupted || signal?.aborted) return { code: 1, attempts: number };
     if (result.code === 0 || number === MAX_ATTEMPTS || !transientToolDownload(result.output))
       return { code: result.code, attempts: number };
-    process.stderr.write(`Transient pinned Tauri tool download failure; retrying build (${number + 1}/${MAX_ATTEMPTS}).\n`);
+    process.stderr.write(`Transient pinned Tauri tool download failure; retrying bundle (${number + 1}/${MAX_ATTEMPTS}).\n`);
     try { await pause(backoffMs * number, undefined, { signal }); }
     catch (error) { if (error.name === "AbortError") return { code: 1, attempts: number }; throw error; }
   }
