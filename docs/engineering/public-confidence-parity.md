@@ -12,9 +12,16 @@ recalculates confidence, changes evidence thresholds or upgrades a judgement.
 Opaque historical trace entries are ignored without losing the admitted answer.
 A later recognized verdict with an unsupported reason is omitted rather than
 reviving an older assessment; absent legacy reasons retain their existing empty
-explanation. The core confidence reader and receipt construction are unchanged.
+explanation. Receipt construction is unchanged.
 The assessment remains the agent's recorded evaluation, not independent factual
 verification, intended-artifact acceptance or settlement evidence.
+
+The shared legacy reader also skips opaque trace entries when archives,
+comparisons, receipts and A2A service summaries load them. If a recognized last
+verdict's explanation cannot be converted using the historical rules, its
+assessment is unavailable; an older grade is never revived. Stored-field
+precedence and successful historical explanation conversions remain unchanged.
+These guards do not change grading, source selection or settlement authority.
 
 Only the known scalar fields are copied. Unsupported levels, non-string reasons
 and reasons exceeding the existing sponsored public-snapshot text bound of
