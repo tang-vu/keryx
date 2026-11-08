@@ -18,7 +18,7 @@ const MAX_FRAGMENT_CHARACTERS = 120;
 const STOP_WORDS = new Set("a an and are as at be by can do does for from how in is it of on or that the their this to what when where which who why with".split(" "));
 
 function terms(text: string): Set<string> {
-  return new Set((text.normalize("NFKC").toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])
+  return new Set((text.normalize("NFKC").toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*/gu) ?? [])
     .filter((term) => term.length > 1 && !STOP_WORDS.has(term)));
 }
 
@@ -276,7 +276,9 @@ export function selectEvidencePassages(text: string, question: string, subClaims
   const relevantTerms = new Set(retrievalTargets.flatMap(target => [...target]));
   const frequencies = new Map<string, number>();
   const buckets: Map<string, number>[] = Array.from({ length: Math.ceil(scanned.length / WINDOW_STRIDE) }, () => new Map());
-  for (const token of scanned.matchAll(/[\p{L}\p{N}]+/gu)) {
+  // Keep attached marks with their word before normalization. Scan the original
+  // text so compact anchors retain its UTF-16 offsets, including decomposed text.
+  for (const token of scanned.matchAll(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*/gu)) {
     const term = token[0].normalize("NFKC").toLowerCase();
     if (!relevantTerms.has(term)) continue;
     frequencies.set(term, (frequencies.get(term) ?? 0) + 1);
