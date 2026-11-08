@@ -90,6 +90,7 @@
     "scripts/ask.mts",
     "scripts/ask-sponsored.mts",
     "scripts/ask-sponsored.test.mts",
+    "scripts/public-confidence-consumers.test.mts",
     "scripts/test-sponsored-mcp-package.mts",
     "scripts/history.mts",
     "scripts/private-job-history.mts",
