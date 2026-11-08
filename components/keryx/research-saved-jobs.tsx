@@ -20,7 +20,7 @@ type Result = Awaited<ReturnType<typeof resumeBrowserResearch>>;
 
 export function ResearchSavedJobs() {
   const message = useUiMessages();
-  const { selection, revision, select, refresh } = useResearchWorkspace();
+  const { selection, revision, select, clearSelection, refresh } = useResearchWorkspace();
   const [rows, setRows] = useState<BrowserJournal[]>([]);
   const [storageError, setStorageError] = useState("");
   const [lookup, setLookup] = useState<{ key: string; result: Result | null; error: string } | null>(null);
@@ -95,13 +95,17 @@ export function ResearchSavedJobs() {
         <button type="button" className={control} onClick={() => {
           void exportBrowserJournal(selection.id).then(text => downloadBuyerJson(text, "recovery"), () => setError(message("savedResearch.exportFailed")));
         }}>{message("savedResearch.export")}</button>
-        <button type="button" className={control} onClick={() => setRemoval(selection.id)}>{message("savedResearch.remove")}</button>
+        <button type="button" className={control} onClick={() => setRemoval(key)}>{message("savedResearch.remove")}</button>
         <button type="button" className={control} onClick={() => { select(null); setLookup(null); setActionError(null); setRemoval(null); }}>{message("savedResearch.close")}</button>
       </div>
-      {removal === selection.id && <div className="mt-4 border border-seal p-4">
+      {removal === key && <div className="mt-4 border border-seal p-4">
         <p className="font-serif text-sm">{message("savedResearch.removalBoundary")}</p>
         <button type="button" className={`${control} mt-3`} onClick={() => {
-          void deleteBrowserJournal(selection.id).then(() => { select(null); setLookup(null); setRemoval(null); }, () => setError(message("savedResearch.removalFailed")));
+          void deleteBrowserJournal(selection.id).then(() => {
+            clearSelection(selection);
+            setLookup(previous => previous?.key === key ? null : previous);
+            setRemoval(previous => previous === key ? null : previous);
+          }, () => setError(message("savedResearch.removalFailed")));
         }}>{message("savedResearch.confirmRemoval")}</button>
       </div>}
       <p role="status" aria-live="polite" className="mt-4 font-mono text-xs">{loading ? message("savedResearch.loading") : visible?.status.replaceAll("_", " ")}</p>
