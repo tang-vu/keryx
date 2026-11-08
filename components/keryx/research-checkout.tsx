@@ -4,7 +4,7 @@ import { formatAmount } from "@/lib/i18n/format";
 
 import { browserPaymentProfile } from "@/lib/browser-payment-profile";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
 import { WalletPicker } from "./wallet-picker";
 import { ResearchFunding } from "./research-funding";
@@ -41,6 +41,8 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
   const [creditRevision, setCreditRevision] = useState(0);
   const [message, setMessage] = useState("");
   const [recovery, setRecovery] = useState<string | null>(null);
+  const [recoveryError, setRecoveryError] = useState("");
+  const recoveryErrorId = useId();
   const operation = useRef<AbortController | null>(null);
   const [accountSession, setAccountSession] = useState<AccountPurchaseSession | null>(null);
   const [accountChecking, setAccountChecking] = useState(false);
@@ -79,13 +81,23 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
     };
   }, []);
 
+  function downloadRecovery(text: string) {
+    setRecoveryError("");
+    try { downloadBuyerJson(text, "recovery"); }
+    catch (error) {
+      setRecoveryError(copy("evidenceMatrix.downloadUnavailable"));
+      // onPrepared must still stop before signing when export preparation fails.
+      throw error;
+    }
+  }
+
   async function purchase() {
     if (!wallet || !review || !reviewCurrent || !accepted || operation.current || fundingBusy) return;
     if (accountAccepted && !ownership.current) return;
     const accountConsent = ownership.current;
     const abort = new AbortController(); operation.current = abort;
     setCreditRevision(value => value + 1);
-    setBusy(true); setRecovery(null); setMessage(copy("researchCheckout.checking"));
+    setBusy(true); setRecovery(null); setRecoveryError(""); setMessage(copy("researchCheckout.checking"));
     let preparedId: string | null = null;
     try {
       const signer = connectedBuyerWallet(wallet, review.payer, abort.signal);
@@ -96,7 +108,7 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
           const text = JSON.stringify(intent, null, 2) + "\n";
           setRecovery(text); workspace.refresh();
           setMessage(copy("researchCheckout.recoveryReady"));
-          downloadBuyerJson(text, "recovery");
+          downloadRecovery(text);
         },
       });
       if (!abort.signal.aborted) {
@@ -157,7 +169,13 @@ export function ResearchCheckout({ question, mode, budget, version, total, payee
       {!reviewCurrent && <p role="status" className="text-seal">{copy("researchCheckout.reviewChanged")}</p>}
       <button type="button" disabled={!accepted || !reviewCurrent || busy || fundingBusy} className={`${control} bg-ink text-paper`} onClick={() => { void purchase(); }}>{busy ? copy("researchCheckout.purchasing") : copy("researchCheckout.buy", { amount: formatAmount(BigInt(review.amount), { minimumFractionDigits: 6, useGrouping: false }) })}</button>
     </div>}
-    {recovery && <button type="button" className={control} onClick={() => downloadBuyerJson(recovery, "recovery")}>{copy("researchCheckout.downloadRecovery")}</button>}
+    {recovery && <div>
+      <button type="button" className={control} aria-describedby={recoveryError ? recoveryErrorId : undefined} onClick={() => {
+        try { downloadRecovery(recovery); }
+        catch { /* downloadRecovery already retains the local retry feedback. */ }
+      }}>{copy("researchCheckout.downloadRecovery")}</button>
+      {recoveryError && <p id={recoveryErrorId} role="alert" className="mt-2 font-serif text-sm text-seal">{recoveryError}</p>}
+    </div>}
     <p role="status" aria-live="polite" className="font-serif text-sm">{message}</p>
   </div>;
 }
