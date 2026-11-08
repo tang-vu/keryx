@@ -1,4 +1,4 @@
-/** GET /api/payments?limit=50 → recent settled/simulated/pending attempts (live feed). */
+/** GET /api/payments?limit=50 → recent attempts; unavailable reads return503, not empty history. */
 
 import { NextRequest } from "next/server";
 import { getDb } from "@/lib/db";
@@ -12,7 +12,11 @@ export async function GET(req: NextRequest) {
   if (params.getAll("limit").length > 1 || raw !== null && (!/^[1-9]\d*$/.test(raw) || !Number.isSafeInteger(Number(raw))))
     return Response.json({ error: "invalid_limit" }, { status: 400, headers: { "Cache-Control": "no-store" } });
   const limit = raw === null ? 50 : Math.min(200, Number(raw));
-  const db = await getDb();
-  const payments = await db.listPayments(limit);
-  return Response.json({ payments:payments.map(publicFinancialPayment) },{headers:{"Cache-Control":"no-store"}});
+  try {
+    const db = await getDb();
+    const payments = await db.listPayments(limit);
+    return Response.json({ payments:payments.map(publicFinancialPayment) },{headers:{"Cache-Control":"no-store"}});
+  } catch {
+    return Response.json({ error: "Payment history unavailable" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
 }

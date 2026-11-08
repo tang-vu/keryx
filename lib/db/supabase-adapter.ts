@@ -124,11 +124,10 @@ import {
 import { activationWindow, emptyActivationCounts } from "../activation";
 
 /**
- * supabase-js normally resolves PostgREST failures as `{ data, error }`. Most adapter methods
- * intentionally return domain data rather than Supabase result objects, so silently ignoring
- * `error` can make a failed ledger write look successful. Making non-2xx responses reject at the
- * transport boundary gives every read/write normal promise semantics and keeps caller catch paths
- * effective.
+ * Keep non-2xx transport failures diagnosable. The SDK may retry idempotent
+ * requests and convert even a rejected fetch into a resolved `{ data, error }`
+ * result. Domain callers still need to check error and the expected data shape;
+ * a throwing fetch alone does not guarantee operation-level rejection.
  */
 export async function throwingSupabaseFetch(
   input: RequestInfo | URL,
@@ -1345,13 +1344,14 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async listPayments(limit: number): Promise<PaymentRecord[]> {
-    const { data } = await this.domainCall("list_payments", { p_limit: limit }, (_args) => this.#sb
+    const { data, error } = await this.domainCall("list_payments", { p_limit: limit }, (_args) => this.#sb
       .from("payment_events")
       .select("*")
       .or("authorization_phase.is.null,authorization_phase.not.in.(prepared,cancelled_unexposed)")
       .order("created_at", { ascending: false })
       .limit(_args.p_limit));
-    return (data ?? []).map(rowToPayment);
+    if (error || !Array.isArray(data)) throw new Error("Payment history unavailable");
+    return data.map(rowToPayment);
   }
 
   async recordActivationEvent(event: ActivationEvent, day: string): Promise<void> {

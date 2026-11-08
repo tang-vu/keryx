@@ -230,7 +230,7 @@
     "lib/db/storage-identity-snapshot.ts": "8b69fe5238c38a52f4554556f584e99ca575ee67142713cdcb1a6c34dbe94322",
     "lib/db/storage-identity-sqlite.ts": "074376ab42988f42b34cf3a1649d7f2585a881dfa94644087ba40dc0c169e67c",
     "lib/db/storage-identity.ts": "0804c3e5b784c7cffa6b687ebb605b2728bf70525d3c006b49667c76c9b312a8",
-    "lib/db/supabase-adapter.ts": "7daa339f218888116deb3819885228070cfdddf6ad429f136aeab26ead8dde6d",
+    "lib/db/supabase-adapter.ts": "59d48111329ef3d3d995a5b85754a12715dac82cba1401c7817ffcf5148afbb6",
     "lib/db/supabase-authority.ts": "7216bae7eb4d850777dd10f833ffd9bb1a0330b5f875078d7bfefc48b8bc6602",
     "lib/db/supabase-browser-signing-originals.ts": "73ed69c9bbed0dec93c5c182532e547b5dde4d2a632d02ea5464f9848f095d1b",
     "lib/db/supabase-enrolled-methods.ts": "4db70c64e02d4522d5bc69fb03fe5a08c04e4dcf986e896e447c3cdbc779fecd",
