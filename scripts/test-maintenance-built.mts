@@ -285,7 +285,7 @@ try {
   try { await front?.close(); } catch { cleanupFailures.push("Owned front door close failed"); }
   closeSync(log); proof.applicationAudit = audit; proof.cleanupFailures = cleanupFailures;
   proof.passed = passed && appExited && cleanupFailures.length === 0; proof.ownedApplicationExited = appExited;
-  proof.frontDoorSources = Object.fromEntries(["lib/maintenance/front-door.ts", "lib/maintenance/planned-window.ts", "scripts/next-public-server.mjs"]
+  proof.frontDoorSources = Object.fromEntries(["lib/maintenance/front-door.ts", "lib/maintenance/planned-window.ts", "scripts/next-public-server.mjs", "scripts/next-public-observation.mjs"]
     .map(file => [file, digest(readFileSync(join(source, file)).toString().replace(/\r\n/g, "\n"))]));
   await writeFile(join(evidence, "proof.json"), JSON.stringify(proof, null, 2));
   assert.deepEqual(cleanupFailures, [], "Owned resource cleanup must complete");

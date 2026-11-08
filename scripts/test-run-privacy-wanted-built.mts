@@ -910,7 +910,7 @@ async function main() {
     "Ordinary Next caches required; immutable/useBuildConfig/custom-cache evidence is inapplicable");
   assert.ok(!["export", "standalone"].includes(required.config.output));
   const inputPins: Record<string, string> = { ...callerPins };
-  for (const file of ["next.config.ts", "package.json", "package-lock.json", "scripts/next-public-server.mjs",
+  for (const file of ["next.config.ts", "package.json", "package-lock.json", "scripts/next-public-server.mjs", "scripts/next-public-observation.mjs",
     "scripts/test-private-bibliography-built.mts", "test-support/next-config-fixture.ts", "lib/db/run-privacy-sqlite.ts",
     "lib/db/query-run-record.ts", "lib/auth-session.ts", "scripts/test-run-privacy-wanted-built.mts"])
     inputPins[file] = sha(await readFile(join(source, file)));

@@ -9,6 +9,7 @@ on:
       - "app/layout.tsx"
       - "scripts/maintenance-front-door.mts"
       - "scripts/next-public-server.mjs"
+      - "scripts/next-public-observation.mjs"
       - "scripts/test-maintenance-built.mts"
       - "scripts/test-fixtures/maintenance-built-app.mjs"
       - "deploy/maintenance/**"

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { mkdtemp, mkdir, writeFile, readFile, readdir, lstat, cp, copyFile, symlink } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { request } from 'node:http';
+import { createServer, request } from 'node:http';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { preparationEnvironment } from './prepare-immutable-release.mjs';
 import { startNextPublicServer, NEXT_VERSION } from './next-public-server.mjs';
+import { createPublicRequestObservation } from './next-public-observation.mjs';
 import { startPreparedPublicRole, readPreparedPublicHealth, drainPreparedPublicRole } from './rehearse-prepared-release.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -85,6 +86,7 @@ test('pinned production Next sees public HTTPS origin on a private ephemeral soc
     await writeFile(join(dir, 'package.json'), JSON.stringify({ name: 'keryx-public-origin-fixture', private: true }));
     await mkdir(join(dir, 'scripts'));
     await copyFile(join(root, 'scripts', 'next-public-server.mjs'), join(dir, 'scripts', 'next-public-server.mjs'));
+    await copyFile(join(root, 'scripts', 'next-public-observation.mjs'), join(dir, 'scripts', 'next-public-observation.mjs'));
     await copyFile(join(root, 'scripts', 'immutable-next-cache.cjs'), join(dir, 'scripts', 'immutable-next-cache.cjs'));
     await mkdir(join(dir, 'app', 'api', 'origin'), { recursive: true });
     await mkdir(join(dir, 'app', 'api', 'health'), { recursive: true });
@@ -166,7 +168,12 @@ export async function GET(request){
     const pending = get(physicalPort, { path: '/api/origin?delay=1' });
     await new Promise((accept) => setTimeout(accept, 80));
     let closed = false;
-    const closing = running.close().then(() => { closed = true; });
+    const priorLog = console.log;
+    let closing;
+    try {
+      console.log = () => { throw Error('Synthetic diagnostic sink unavailable'); };
+      closing = running.close().then(() => { closed = true; });
+    } finally { console.log = priorLog; }
     await new Promise((accept) => setTimeout(accept, 40));
     assert.equal(closed, false, 'HTTP close must wait for the active response');
     assert.equal((await pending).status, 200);
@@ -293,12 +300,25 @@ setInterval(()=>{},60000);`;
         child.once('exit', () => reject(new Error('CLI exited before ready')));
       });
       await ready;
-      const active = get(childPort, { path: '/api/origin?delay=1' });
+      const active = get(childPort, { path: '/api/origin?delay=1&private=synthetic-private-receipt' });
       await new Promise((accept) => setTimeout(accept, 80));
       child.kill('SIGTERM');
       assert.equal((await active).status, 200);
       assert.deepEqual(await exited, { code: 143, signal: null });
       assert.match(stdout, /"httpDrained":true/);
+      const observations = stdout.split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line))
+        .filter(value => value.format === 'keryx-public-request-observation-v1');
+      assert.deepEqual(observations.map(value => value.stage), ['drain-start', 'http-drained']);
+      assert.equal(observations[0].seen, 1);
+      assert.equal(observations[1].active, 0);
+      assert.equal(observations[1].responsesFinished, 1);
+      assert.equal(observations[1].closedBeforeFinish, 0);
+      assert.deepEqual(observations[1].groups.map(value => [value.surface, value.method]), [['api', 'get-head']]);
+      assert.doesNotMatch(JSON.stringify(observations), /synthetic-private-receipt|api\/origin|delay=/);
+      for (const observation of observations) {
+        assert.ok(Buffer.byteLength(JSON.stringify(observation)) < 8192);
+        assert.ok(Object.values(observation.memory).every(value => Number.isSafeInteger(value) && value > 0));
+      }
     }
     evidence.accepted = true;
   } finally {
@@ -309,4 +329,121 @@ setInterval(()=>{},60000);`;
     // No test timeout or failure authorizes removing a live or ambiguous role.
     console.log(JSON.stringify(evidence));
   }
+});
+
+async function observedHttp(handler, run) {
+  const observation = createPublicRequestObservation();
+  const server = createServer((req, res) => { observation.observe(req, res); handler(req, res); });
+  await new Promise(accept => server.listen(0, '127.0.0.1', accept));
+  try { await run(server.address().port, observation); }
+  finally {
+    // Only this test-owned ephemeral native fixture, never a production role.
+    server.closeAllConnections();
+    await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));
+  }
+}
+
+function nativeRequest(port, { path = '/', method = 'GET', body = '', headers = {} } = {}) {
+  return new Promise((accept, reject) => {
+    const req = request({ hostname: '127.0.0.1', port, path, method, headers, agent: false }, res => {
+      let body = '';
+      res.setEncoding('utf8'); res.on('data', chunk => { body += chunk; }); res.on('error', reject);
+      res.once('end', () => accept({ status: res.statusCode, body, headers: res.headers }));
+    });
+    req.on('error', reject); req.end(body);
+  });
+}
+
+test('public request observation: preserves native private POST, error and HEAD responses without retaining their contents', { timeout: 10000 }, async () => {
+  const sentinel = 'SYNTHETIC_PRIVATE';
+  let bodyListeners;
+  await observedHttp((req, res) => {
+    bodyListeners = req.listenerCount('data');
+    if (req.method !== 'POST') { res.statusCode = req.method === 'HEAD' ? 200 : 503; res.end(sentinel); return; }
+    let body = ''; req.setEncoding('utf8'); req.on('data', chunk => { body += chunk; });
+    req.once('end', () => {
+      res.setHeader('x-fixture', 'unchanged');
+      res.end(JSON.stringify({ target: req.url, auth: req.headers.authorization, cookie: req.headers.cookie, body }));
+    });
+  }, async (port, observation) => {
+    const input = { path: `/api/ask/${sentinel}?receipt=${sentinel}`, method: 'POST', body: `${sentinel}-signature`,
+      headers: { authorization: `Bearer ${sentinel}`, cookie: `${sentinel}=session` } };
+    const response = await nativeRequest(port, input);
+    assert.equal(response.status, 200); assert.equal(response.headers['x-fixture'], 'unchanged');
+    assert.deepEqual(JSON.parse(response.body), { target: input.path, auth: input.headers.authorization, cookie: input.headers.cookie, body: input.body });
+    assert.equal((await nativeRequest(port, { path: `/${sentinel}` })).status, 503);
+    assert.deepEqual(await nativeRequest(port, { path: `/api/health?token=${sentinel}`, method: 'HEAD' }).then(value => [value.status, value.body]), [200, '']);
+    assert.equal(bodyListeners, 0, 'Observation must never consume the request body');
+    const snapshot = observation.snapshot('http-drained');
+    assert.deepEqual([snapshot.seen, snapshot.active, snapshot.responsesFinished, snapshot.closedBeforeFinish], [3, 0, 3, 0]);
+    assert.equal(snapshot.groups.find(value => value.surface === 'page').statusFamilies[4], 1);
+    assert.doesNotMatch(JSON.stringify(snapshot), /SYNTHETIC_PRIVATE|signature|receipt=|Bearer|session/);
+  });
+});
+
+test('public request observation: native SSE disconnect counts once as premature close and preserves streamed bytes', { timeout: 10000 }, async () => {
+  let serverClosed;
+  const closed = new Promise(accept => { serverClosed = accept; });
+  await observedHttp((_req, res) => {
+    res.once('close', () => setImmediate(serverClosed));
+    res.writeHead(200, { 'content-type': 'text/event-stream' }); res.write('data: SYNTHETIC_PRIVATE\n\n');
+  }, async (port, observation) => {
+    const first = await new Promise((accept, reject) => {
+      const req = request({ hostname: '127.0.0.1', port, path: '/api/ask?token=SYNTHETIC_PRIVATE', agent: false }, res => {
+        res.on('error', error => { if (error.code !== 'ECONNRESET') reject(error); });
+        res.once('data', chunk => { accept({ bytes: chunk.toString(), status: res.statusCode, type: res.headers['content-type'] }); res.destroy(); });
+      });
+      req.on('error', error => { if (error.code !== 'ECONNRESET') reject(error); }); req.end();
+    });
+    assert.deepEqual(first, { bytes: 'data: SYNTHETIC_PRIVATE\n\n', status: 200, type: 'text/event-stream' });
+    await closed;
+    const snapshot = observation.snapshot('http-drained');
+    assert.deepEqual([snapshot.seen, snapshot.active, snapshot.responsesFinished, snapshot.closedBeforeFinish], [1, 0, 0, 1]);
+    assert.deepEqual(snapshot.groups[0].statusFamilies, [0, 0, 0, 0, 0, 0]);
+    assert.doesNotMatch(JSON.stringify(snapshot), /SYNTHETIC_PRIVATE|api\/ask|token=/);
+  });
+});
+
+test('public request observation: native pending responses stay active until their own finish', { timeout: 10000 }, async () => {
+  const held = [];
+  await observedHttp((_req, res) => { held.push(res); res.flushHeaders(); }, async (port, observation) => {
+    const open = (path, method) => new Promise((accept, reject) => {
+      const req = request({ hostname: '127.0.0.1', port, path, method, agent: false }, res => {
+        let body = ''; const ended = new Promise((done, fail) => {
+          res.setEncoding('utf8'); res.on('data', chunk => { body += chunk; }); res.on('error', fail); res.once('end', () => done(body));
+        });
+        accept({ ended, status: res.statusCode });
+      }); req.on('error', reject); req.end();
+    });
+    const first = await open('/api/health?private=SYNTHETIC_PRIVATE', 'GET');
+    const second = await open('/api/orders/SYNTHETIC_PRIVATE', 'POST');
+    const pending = observation.snapshot('drain-start');
+    assert.equal(pending.active, 2); assert.equal(pending.responsesFinished, 0);
+    assert.deepEqual(pending.groups.map(value => [value.surface, value.method, value.active]), [['health', 'get-head', 1], ['api', 'post', 1]]);
+    assert.ok(pending.groups.every(value => Number.isSafeInteger(value.busyForMs) && value.busyForMs >= 0));
+    held[0].end('first original'); assert.equal(await first.ended, 'first original');
+    assert.equal(observation.snapshot('drain-start').active, 1);
+    assert.equal(observation.snapshot('drain-start').groups[0].busyForMs, 0);
+    held[1].end('second original'); assert.equal(await second.ended, 'second original');
+    const drained = observation.snapshot('http-drained');
+    assert.deepEqual([drained.seen, drained.active, drained.responsesFinished, drained.closedBeforeFinish], [2, 0, 2, 0]);
+    assert.doesNotMatch(JSON.stringify([pending, drained]), /SYNTHETIC_PRIVATE|orders|private=/);
+  });
+});
+
+test('public request observation: many unique native targets retain only twelve fixed groups and a bounded record', { timeout: 10000 }, async () => {
+  await observedHttp((_req, res) => res.end('original'), async (port, observation) => {
+    for (let i = 0; i < 8; i++) for (const path of ['/api/health?x=', '/api/private/', '/_next/static/', '/private/'])
+      for (const method of ['GET', 'POST', 'OPTIONS']) {
+        const response = await nativeRequest(port, { path: `${path}SYNTHETIC_PRIVATE_${i}`, method });
+        assert.equal(response.body, 'original');
+      }
+    const snapshot = observation.snapshot('http-drained');
+    assert.deepEqual([snapshot.seen, snapshot.active, snapshot.responsesFinished, snapshot.closedBeforeFinish], [96, 0, 96, 0]);
+    assert.equal(snapshot.groups.length, 12);
+    assert.ok(snapshot.groups.every(value => ['health', 'api', 'asset', 'page'].includes(value.surface)
+      && ['get-head', 'post', 'other'].includes(value.method) && value.seen === 8));
+    assert.ok(Buffer.byteLength(JSON.stringify(snapshot)) < 8192);
+    assert.doesNotMatch(JSON.stringify(snapshot), /SYNTHETIC_PRIVATE|static\/|private\/|x=/);
+  });
 });
