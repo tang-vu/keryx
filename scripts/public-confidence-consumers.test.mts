@@ -3,21 +3,22 @@ import { afterEach, expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { buildChunk, buildCompletion, keryxMeta } from "../openai-compat";
-import { remoteResearchResult } from "../mcp/remote-server";
-import { buildResearchReceipt } from "../research-receipt";
-import { a2aResponseFromRun } from "../a2a/result";
-import { quoteA2aResearch } from "../a2a/pricing";
-import type { Confidence, QueryRun } from "../types";
-import { researchSponsored } from "../../shared/sponsored-research-client";
-import { runSponsoredCli } from "../../scripts/ask-sponsored.mts";
-import { registerSponsoredResearchTool } from "../../mcp/sponsored-research.mts";
-import type { KeryxAnswer } from "../../mcp/keryx-buyer.mts";
-import { presentationRun } from "./presentation.test-fixture";
-import { surfaceResearch } from "./surface-result";
-import { createStdioResearchHandler, remoteResearchText } from "./result-presentation";
-import { livePresentationLocale, presentationLanguages } from "./presentation-language";
-import { researchPresentationMessages } from "./presentation-messages";
+import { buildChunk, buildCompletion, keryxMeta } from "../lib/openai-compat";
+import { remoteResearchResult } from "../lib/mcp/remote-server";
+import { buildResearchReceipt } from "../lib/research-receipt";
+import { validatePrivacyRun } from "../lib/run-privacy/contracts";
+import { a2aResponseFromRun } from "../lib/a2a/result";
+import { quoteA2aResearch } from "../lib/a2a/pricing";
+import type { Confidence, QueryRun } from "../lib/types";
+import { researchSponsored } from "../shared/sponsored-research-client";
+import { runSponsoredCli } from "./ask-sponsored.mts";
+import { registerSponsoredResearchTool } from "../mcp/sponsored-research.mts";
+import type { KeryxAnswer } from "../mcp/keryx-buyer.mts";
+import { presentationRun } from "../lib/research/presentation.test-fixture";
+import { surfaceResearch } from "../lib/research/surface-result";
+import { createStdioResearchHandler, remoteResearchText } from "../lib/research/result-presentation";
+import { livePresentationLocale, presentationLanguages } from "../lib/research/presentation-language";
+import { researchPresentationMessages } from "../lib/research/presentation-messages";
 
 const levels = ["High", "Moderate", "Low"] as const;
 const origin = "https://confidence.example";
@@ -119,6 +120,29 @@ it("recovers the last existing verdict rather than replacing historical assessme
   const before = hash(record);
   for (const result of [surfaceResearch(record), keryxMeta(record), remoteResearchResult(record)])
     expect(result).toHaveProperty("confidence", { level: "Moderate", reason: "Last recorded verdict." });
+  expect(hash(record)).toBe(before);
+});
+
+const historicalVerdict = (level: Confidence["level"], reason: unknown) => ({ phase: "verdict", ts: 1, message: "Recorded", detail: { level, reason } });
+it.each([
+  { trace: [null], expected: undefined },
+  { trace: [historicalVerdict("Moderate", "Original verdict."), null], expected: { level: "Moderate", reason: "Original verdict." } },
+  { trace: [historicalVerdict("Low", "Original limitation."), {}, false, "opaque", null], expected: { level: "Low", reason: "Original limitation." } },
+  { trace: [historicalVerdict("High", "Older verdict."), historicalVerdict("Low", { toString: "unsupported" })], expected: undefined },
+  { trace: [historicalVerdict("Moderate", "Original verdict."), { phase: "verdict", detail: { level: "Certain", reason: "Unknown grade." } }], expected: { level: "Moderate", reason: "Original verdict." } },
+  { trace: [null], stored: { level: "High", reason: "First-class assessment." }, expected: { level: "High", reason: "First-class assessment." } },
+  { trace: [historicalVerdict("High", "Older verdict.")], stored: { level: "Low", reason: null }, expected: undefined },
+])("keeps an admitted legacy answer readable with opaque trace data %#", ({ trace, stored, expected }) => {
+  // The actual persisted-run admission contract deliberately retains opaque
+  // trace entries. Optional confidence projection cannot invalidate that run.
+  const record = validatePrivacyRun(JSON.parse(JSON.stringify({ ...run(), trace, confidence: stored })), id);
+  const before = hash(record);
+  for (const result of [surfaceResearch(record), keryxMeta(record), remoteResearchResult(record)]) {
+    if (expected) expect(result).toHaveProperty("confidence", expected);
+    else expect(JSON.parse(JSON.stringify(result))).not.toHaveProperty("confidence");
+    expect(result.citations).toHaveLength(record.citations.length);
+  }
+  expect(buildCompletion(record, "keryx").choices[0].message.content).toContain(record.answer);
   expect(hash(record)).toBe(before);
 });
 

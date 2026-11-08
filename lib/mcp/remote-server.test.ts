@@ -220,7 +220,8 @@ describe("recorded confidence public projection", () => {
     const before = JSON.stringify(run), result = await read(run);
     expect(result.structuredContent).toMatchObject({ confidence: { level, reason }, answer: run.answer,
       totalToCreatorsUsdc: run.totalToCreators, settledPayments: run.settledPayments });
-    expect(Object.keys(result.structuredContent!.confidence as object).sort()).toEqual(["level", "reason"]);
+    const fields = result.structuredContent as Record<string, unknown>;
+    expect(Object.keys(fields.confidence as object).sort()).toEqual(["level", "reason"]);
     expect(JSON.stringify(result)).not.toContain("PRIVATE-CREDENTIAL");
     expect((result.content as { text: string }[])[0].text).toContain(`Confidence: ${level}`);
     expect(JSON.stringify(run)).toBe(before);
@@ -228,7 +229,8 @@ describe("recorded confidence public projection", () => {
   it("keeps a historical verdict distinct from a genuinely absent assessment through the actual SDK", async () => {
     const legacy = completedRun(); legacy.confidence = undefined;
     legacy.trace = [{ phase: "verdict", ts: 1, message: "recorded", detail: { level: "Moderate", reason: "Existing verdict." } }];
-    expect((await read(legacy)).structuredContent?.confidence).toEqual({ level: "Moderate", reason: "Existing verdict." });
+    const legacyFields = (await read(legacy)).structuredContent as Record<string, unknown>;
+    expect(legacyFields.confidence).toEqual({ level: "Moderate", reason: "Existing verdict." });
     const absent = completedRun(); absent.confidence = undefined;
     const result = await read(absent);
     expect(JSON.parse(JSON.stringify(result.structuredContent))).not.toHaveProperty("confidence");

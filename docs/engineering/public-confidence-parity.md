@@ -9,6 +9,10 @@ Projection uses the existing recorded-confidence reader: the stored field wins;
 otherwise the last recognized historical verdict supplies the assessment.
 Synthetic-evidence demotion still runs first. Neither projection nor transport
 recalculates confidence, changes evidence thresholds or upgrades a judgement.
+Opaque historical trace entries are ignored without losing the admitted answer.
+A later recognized verdict with an unsupported reason is omitted rather than
+reviving an older assessment; absent legacy reasons retain their existing empty
+explanation. The core confidence reader and receipt construction are unchanged.
 The assessment remains the agent's recorded evaluation, not independent factual
 verification, intended-artifact acceptance or settlement evidence.
 
