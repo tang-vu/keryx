@@ -64,9 +64,10 @@ export interface AskMeta {
  * differently: `rate-limit` (research capacity used up → wait before another
  * request), `session-expired` (grant lapsed → recover prompt), `generic` (any
  * other failure → plain error box), or `maintenance` (validated front-door503
- * → fixed status link and retained draft, with no automatic retry).
+ * → fixed status link and retained draft, with no automatic retry), or `gateway`
+ * (502/504 → unknown upstream outcome and manual recovery of the original).
  */
-export type AskErrorKind = "generic" | "rate-limit" | "session-expired" | "research-paused" | "maintenance";
+export type AskErrorKind = "generic" | "rate-limit" | "session-expired" | "research-paused" | "maintenance" | "gateway";
 
 export interface AskStreamState {
   status: "idle" | "streaming" | "done" | "error";
@@ -88,6 +89,8 @@ export interface AskStreamState {
   retryAfter: number | null;
   /** Validated front-door refusal only; fixed local status action, never retry authority. */
   maintenance?: MaintenanceRefusal;
+  /** Transport observation only; no admission, research or settlement conclusion. */
+  gatewayStatus?: 502 | 504;
 }
 
 const INITIAL: AskStreamState = {
@@ -460,6 +463,15 @@ export function useAskStream(opts?: AskStreamOpts) {
 
         if (!res.ok || !res.body) {
           privateClaimHandoff?.fail();
+          if (res.status === 502 || res.status === 504) {
+            // Do not wait for an arbitrary gateway body (or its cancellation) to
+            // finish. The original POST's outcome remains unknown either way.
+            void res.body?.cancel().catch(() => {});
+            const failure = parseAskHttpError("", res.status, null);
+            setState(s => ({ ...s, status: "error", errorKind: "gateway", error: failure.message,
+              gatewayStatus: failure.gatewayStatus, retryAfter: null }));
+            return;
+          }
           // Read the error body once (as text), then try JSON — so we can react to a
           // structured session_expired without consuming the stream body twice.
           const bodyText = await res.text().catch(() => "");
