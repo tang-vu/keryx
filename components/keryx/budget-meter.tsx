@@ -29,7 +29,7 @@ export function stepPaymentTotals(steps: TraceStep[]): {
 } {
   const totals = { settled: 0, pending: 0, simulated: 0, failed: 0, unverified: 0 };
   for (const s of steps) {
-    if (s.phase !== "fetch" && s.phase !== "settle") continue;
+    if (!s || s.phase !== "fetch" && s.phase !== "settle") continue;
     if (!isPaymentRecord(s.detail) || !Number.isFinite(s.detail.amountUsdc) || s.detail.amountUsdc <= 0) continue;
     const status = paymentSettlementStatus(s.detail);
     if (s.detail.settled !== (status === "settled")) {

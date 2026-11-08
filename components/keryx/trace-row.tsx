@@ -22,24 +22,27 @@ import { useUiMessages } from "@/lib/i18n/ui-copy";
 
 export function TraceRow({ step }: { step: TraceStep }) {
   const message = useUiMessages();
-  const ps = PHASE_STYLES[step.phase] ?? PHASE_STYLES.done;
-  const Icon = ps.icon;
+  const phase = step?.phase;
+  const ps = typeof phase === "string" && Object.hasOwn(PHASE_STYLES, phase) ? PHASE_STYLES[phase] : undefined;
+  const Icon = ps?.icon;
+  const chip = ps?.chip ?? "bg-paper-2 text-ink-3 border-line";
+  const recordedMessage = typeof step?.message === "string" ? step.message : message("format.unavailable");
   const decision =
-    step.phase === "decide" && isDecisionRecord(step.detail)
+    phase === "decide" && isDecisionRecord(step.detail)
       ? step.detail
       : null;
-  const diagnostic = step.phase === "decide" ? parseSelectionDiagnostic(step.detail) : undefined;
+  const diagnostic = phase === "decide" ? parseSelectionDiagnostic(step.detail) : undefined;
 
   return (
-    <div className="flex min-w-0 gap-3 py-3 [overflow-wrap:anywhere]">
+    <div className="flex min-w-0 gap-3 py-3 [overflow-wrap:anywhere]" data-trace-unavailable={!ps || typeof step?.message !== "string" ? true : undefined}>
       <div className="relative flex flex-col items-center">
         <span
           className={cn(
             "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border",
-            ps.chip,
+            chip,
           )}
         >
-          <Icon className="h-3.5 w-3.5" />
+          {Icon ? <Icon className="h-3.5 w-3.5" /> : <span aria-hidden>?</span>}
         </span>
         <span className="mt-1 w-px flex-1 bg-border" aria-hidden />
       </div>
@@ -49,10 +52,10 @@ export function TraceRow({ step }: { step: TraceStep }) {
           <span
             className={cn(
               "rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide",
-              ps.chip,
+              chip,
             )}
           >
-            {ps.label}
+            {ps?.label ?? message("format.unavailable")}
           </span>
           {decision && <DecisionBadge decision={decision} />}
         </div>
@@ -60,9 +63,9 @@ export function TraceRow({ step }: { step: TraceStep }) {
         {decision ? (
           <DecisionBody decision={decision} />
         ) : diagnostic ? (
-          <SelectionDiagnosticBody message={step.message} diagnostic={diagnostic} />
+          <SelectionDiagnosticBody message={recordedMessage} diagnostic={diagnostic} />
         ) : (
-          <p className="mt-1 text-sm leading-snug text-ink-2">{step.message}</p>
+          <p className="mt-1 text-sm leading-snug text-ink-2">{recordedMessage}</p>
         )}
       </div>
     </div>

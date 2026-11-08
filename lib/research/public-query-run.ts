@@ -11,12 +11,12 @@ export function publicQueryRun(run: QueryRun): Omit<QueryRun, "originalFulfillme
     if (failure) projected.planningFailure = failure;
     else delete projected.planningFailure;
   }
-  if (run.trace.some(step => Object.hasOwn(step, "readCheckpoints"))) {
+  if (run.trace.some(step => step != null && Object.hasOwn(step, "readCheckpoints"))) {
     // Validate while the original/private marker still exists. Unknown/future packets
     // never pass through the raw QueryRun API even when the ordinary answer is public.
     const capture = projectActualReadCheckpoints(run);
     projected.trace = run.trace.map(step => {
-      if (!Object.hasOwn(step, "readCheckpoints")) return step;
+      if (step == null || !Object.hasOwn(step, "readCheckpoints")) return step;
       const fields = Object.getOwnPropertyDescriptors(step); delete fields.readCheckpoints;
       const publicStep = Object.defineProperties({}, fields) as typeof step;
       if (capture && step.phase === "done") publicStep.readCheckpoints = capture;

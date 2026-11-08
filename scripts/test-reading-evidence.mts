@@ -31,6 +31,7 @@ import { createRoot } from 'react-dom/client';
 import { AnswerCard } from './components/keryx/answer-card';
 import { ReasoningConsole } from './components/keryx/reasoning-console';
 import { DispatchView } from './app/dispatch/[id]/dispatch-view';
+import { publicQueryRun } from './lib/research/public-query-run';
 import { buildEvidenceLedger } from './lib/agent/evidence-ledger';
 import { finalizeGroundedAnswer } from './lib/agent/answer-grounding';
 const citation = {marker:'S1', sourceId:'source-1', sourceName:'Research Journal', itemId:'article-1', itemTitle:'The article: an unusually long title about measured evidence and a disputed claim across several research teams', itemUrl:'https://example.org/article', contentVersion:'recorded-v2', weight:1, reward:0.003, rationale:'evidence'};
@@ -57,9 +58,11 @@ function groundedFixture(covered){
     claimCoverage:ledger.claimCoverage,evidence:ledger.evidence,citations:[{...identity,weight:1,reward:0,rationale:'Qualified quoted contribution'}],
     confidence:{level:'Low',reason:'Complete synthesis and per-assertion support remain unverified'}};
 }
-function App(){const [steps,setSteps]=React.useState(trace);const [grounding,setGrounding]=React.useState(null);
+function App(){const [steps,setSteps]=React.useState(trace);const [grounding,setGrounding]=React.useState(null);const [opaque,setOpaque]=React.useState(null);
+window.showOpaqueReport=()=>{const value=JSON.parse(JSON.stringify({...run,trace:[null,19,false,'Opaque retained value',[],{phase:'future-observation',message:'Original future message',ts:2},{phase:'toString',message:'Original inherited-name message',ts:2},{phase:'discover',message:{text:'OPAQUE_OBJECT_SENTINEL'},ts:2},{phase:'discover',message:'Original timestamp message',ts:{toString:null}},...trace]}));const original=JSON.stringify(value);window.opaqueReportUnchanged=()=>JSON.stringify(value)===original;setOpaque(value);};
 window.prepareGroundingFixture=covered=>{const next=groundedFixture(covered);window.commitGroundingFixture=()=>setGrounding(next);};
 window.addStep=()=>setSteps(s=>[...s,{phase:'discover',ts:s.length,message:'Step '+s.length}]);
+if(opaque)return <section data-testid="opaque-trace-report"><DispatchView run={publicQueryRun(opaque)} payments={payments} historical={true}/></section>;
 if(grounding)return <section data-testid="grounding-result" data-run-id={grounding.id}><AnswerCard run={grounding} meta={null}/></section>;
 return <><div style={{height:900}}>Reading fixture</div><DispatchView run={run} payments={payments}/><ReasoningConsole steps={steps} streaming={true} budget={0.01}/></>};
 createRoot(document.getElementById('root')).render(<App/>);
@@ -357,7 +360,22 @@ try {
     assert.equal(await result.getByRole("button", { name: /Open evidence for Protocol article/ }).count(), covered ? 2 : 1,
       "only quoted evidence should create answer citation controls");
   }
+  await page.evaluate(() => (window as unknown as { showOpaqueReport(): void }).showOpaqueReport());
+  const opaqueReport = page.getByTestId("opaque-trace-report"); await opaqueReport.waitFor();
+  await opaqueReport.locator("summary").filter({ hasText: "49 steps" }).click();
+  const opaqueLog = opaqueReport.getByRole("region", { name: "Decision log", exact: true }); await opaqueLog.waitFor();
+  assert.equal(await opaqueLog.getByRole("listitem").count(), 49, "opaque entries retain their original positions and row count");
+  assert.equal(await opaqueLog.locator('[data-trace-unavailable="true"]').count(), 8, "unsupported entries use unavailable copy instead of completed phases");
+  for (const message of ["Original future message", "Original inherited-name message", "Original timestamp message", "Step 0"]) assert.equal(await opaqueLog.getByText(message, { exact: true }).count(), 1);
+  assert.match(await opaqueReport.innerText(), /A grounded finding/);
+  assert(!(await opaqueReport.innerText()).includes("OPAQUE_OBJECT_SENTINEL"));
+  for (const width of [320, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    assert(await opaqueLog.evaluate(element => element.scrollWidth <= element.clientWidth + 1), `opaque log retains horizontal fit at ${width}px`);
+  }
+  assert.equal(await page.evaluate(() => (window as unknown as { opaqueReportUnchanged(): boolean }).opaqueReportUnchanged()), true);
   assert.deepEqual(errors, []);
+  console.log("PASS: opaque stored trace public projection and full minified report browser render;49 rows,8 unavailable rows, original answer/messages,320/1280px fit, immutable input,zero page errors");
   console.log("PASS: citation evidence/payment state, modal focus/scroll, contained log following, minified omitted-assertion projection, unverified target labels, and held-render result-identity synchronization");
 } finally {
   await browser.close();
