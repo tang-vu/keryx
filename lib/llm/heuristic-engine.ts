@@ -29,8 +29,10 @@ const STOP = new Set(
 );
 
 function tokenize(text: string): Set<string> {
+  // Normalize matching terms only; quotations and their offsets stay original.
+  // A word with accents must not become unrelated ASCII fragments (résumé -> sum).
   return new Set(
-    (text.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter(
+    (text.normalize("NFC").toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*/gu) ?? []).filter(
       (w) => w.length > 2 && !STOP.has(w),
     ),
   );
