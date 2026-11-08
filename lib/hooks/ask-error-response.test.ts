@@ -55,7 +55,7 @@ it("preserves ordinary flat errors, message-only responses and non-JSON text", (
   expect(parseAskHttpError('{"error":"rate_limit","message":"Quota held","retryAfter":12}', 429, "30"))
     .toEqual({ code: "rate_limit", message: "Quota held", retryAfter: 12 });
   expect(parseAskHttpError('{"message":"Ordinary refusal"}', 400, null).message).toBe("Ordinary refusal");
-  expect(parseAskHttpError("Upstream unavailable", 502, null).message).toBe("Upstream unavailable");
+  expect(parseAskHttpError("Ordinary unavailable", 500, null).message).toBe("Ordinary unavailable");
 });
 
 it("keeps normal front-door draining, expired windows and unplanned unknown outcomes distinct", () => {

@@ -38,6 +38,7 @@ export function ResearchTurn({ turn, publicFollowUp = false, onPrepareEvidenceFo
   const latestMessage = state.steps.at(-1)?.message;
   const recoveryPath = !stopped && state.status === "error" && !state.run ? savedReportRecoveryPath(state.meta) : null;
   const totals = stepPaymentTotals(state.steps);
+  const gateway = state.errorKind === "gateway" && (state.gatewayStatus === 502 || state.gatewayStatus === 504);
   const unsettled = (["pending", "simulated", "unverified", "failed"] as const)
     .filter(status => totals[status] > 0)
     .map(status => message(({ pending: "researchTurn.paymentPending", simulated: "researchTurn.paymentSimulated", unverified: "researchTurn.paymentUnverified", failed: "researchTurn.paymentFailed" } as const)[status], { amount: fmtUsdc(totals[status]) })).join(" · ");
@@ -67,7 +68,9 @@ export function ResearchTurn({ turn, publicFollowUp = false, onPrepareEvidenceFo
       </div>}
       {stopped && <p role="status" className="border border-line bg-paper p-4 text-sm text-ink-2"><UiMessage messageKey="researchTurn.stoppedNotice" /></p>}
       {!stopped && state.status === "error" && <div role="alert" className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        <p lang={state.error === researchRecoveryCopy.interrupted ? "en" : state.error != null ? "und" : undefined} dir={state.error === researchRecoveryCopy.interrupted ? "ltr" : state.error != null ? "auto" : undefined}>{state.error ?? <UiMessage messageKey="researchTurn.failed" />}</p>
+        {gateway ? <p><UiMessage messageKey="researchError.httpFallback" values={{ status: state.gatewayStatus! }} />{" "}<UiMessage messageKey="researchError.unknownOutcome" /></p>
+          : <p lang={state.error === researchRecoveryCopy.interrupted ? "en" : state.error != null ? "und" : undefined} dir={state.error === researchRecoveryCopy.interrupted ? "ltr" : state.error != null ? "auto" : undefined}>{state.error ?? <UiMessage messageKey="researchTurn.failed" />}</p>}
+        {gateway && <a href="/status" target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="mt-2 inline-block underline underline-offset-4"><UiMessage messageKey="researchError.serviceStatus" /></a>}
         {recoveryPath && <div className="mt-3 space-y-2">
           <a href={recoveryPath} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" className="break-all underline underline-offset-4"><UiMessage messageKey="reportActions.openSaved" /></a>
         </div>}

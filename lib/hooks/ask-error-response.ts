@@ -13,6 +13,8 @@ export interface AskHttpError {
   message: string;
   retryAfter: number | null;
   maintenance?: MaintenanceRefusal;
+  /** A failed intermediary response cannot establish application admission. */
+  gatewayStatus?: 502 | 504;
 }
 const record = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
@@ -41,6 +43,10 @@ function frontDoor(value: unknown): value is Record<string, unknown> & { code: s
 
 /** One already-read HTTP error body. Never returns an object as renderable copy or starts a retry. */
 export function parseAskHttpError(body: string, status: number, retryHeader: string | null): AskHttpError {
+  // The HTTP status owns this classification. A proxy's HTML/JSON body and wait
+  // header cannot prove that the original POST was refused or stopped upstream.
+  if (status === 502 || status === 504) return { gatewayStatus: status, retryAfter: null,
+    message: `${message("researchError.httpFallback", { status })} ${message("researchError.unknownOutcome")}` };
   const retryAfter = retryHeader && /^[0-9]{1,6}$/.test(retryHeader) ? Number(retryHeader) : null;
   const fallback = message("researchError.httpFallback", { status });
   let parsed: unknown;
