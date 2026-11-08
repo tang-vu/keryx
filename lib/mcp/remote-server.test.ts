@@ -201,6 +201,41 @@ function completedRun(): QueryRun {
   };
 }
 
+describe("recorded confidence public projection", () => {
+  async function read(run: QueryRun) {
+    const runner = vi.fn(async () => run), network = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Forbidden network"));
+    const server = createRemoteMcpServer({ budgetCap: 0.03, clientChannel: "other" }, runner);
+    const client = new Client({ name: "recorded-confidence", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await server.connect(serverTransport); await client.connect(clientTransport);
+      const result = await client.callTool({ name: "research", arguments: { question: run.question } });
+      expect(result.isError).not.toBe(true); expect(runner).toHaveBeenCalledOnce(); expect(network).not.toHaveBeenCalled();
+      return result;
+    } finally { await client.close(); await server.close(); network.mockRestore(); }
+  }
+  it.each(["High", "Moderate", "Low"] as const)("carries exact %s level/reason through the actual SDK without unrelated archived properties", async level => {
+    const run = completedRun(), reason = "Original assessment café 🌍. Not independent verification.";
+    run.confidence = { level, reason, privateTicket: "PRIVATE-CREDENTIAL" } as typeof run.confidence;
+    const before = JSON.stringify(run), result = await read(run);
+    expect(result.structuredContent).toMatchObject({ confidence: { level, reason }, answer: run.answer,
+      totalToCreatorsUsdc: run.totalToCreators, settledPayments: run.settledPayments });
+    expect(Object.keys(result.structuredContent!.confidence as object).sort()).toEqual(["level", "reason"]);
+    expect(JSON.stringify(result)).not.toContain("PRIVATE-CREDENTIAL");
+    expect((result.content as { text: string }[])[0].text).toContain(`Confidence: ${level}`);
+    expect(JSON.stringify(run)).toBe(before);
+  });
+  it("keeps a historical verdict distinct from a genuinely absent assessment through the actual SDK", async () => {
+    const legacy = completedRun(); legacy.confidence = undefined;
+    legacy.trace = [{ phase: "verdict", ts: 1, message: "recorded", detail: { level: "Moderate", reason: "Existing verdict." } }];
+    expect((await read(legacy)).structuredContent?.confidence).toEqual({ level: "Moderate", reason: "Existing verdict." });
+    const absent = completedRun(); absent.confidence = undefined;
+    const result = await read(absent);
+    expect(JSON.parse(JSON.stringify(result.structuredContent))).not.toHaveProperty("confidence");
+    expect((result.content as { text: string }[])[0].text).not.toContain("Confidence:");
+  });
+});
+
 describe("remote MCP server", () => {
   it.each([{ reviewFirst: true }, { mode: "review-first" }, { researchMode: "review-first" }, { responseMode: "reviewFirst" }])("refuses unsupported review intent before research: %j", async intent => {
     const runner = vi.fn(async () => completedRun()), server = createRemoteMcpServer({ budgetCap: 0.03, clientChannel: "other" }, runner);

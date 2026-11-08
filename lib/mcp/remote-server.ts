@@ -91,7 +91,6 @@ export function remoteResearchResult(run: QueryRun) {
     answer: run.answer,
     ...surfaceResearch(run),
     totalToCreatorsUsdc: run.totalToCreators,
-    confidence: run.confidence,
     engine: run.engine,
     paymentAttempts: run.paymentAttempts ?? 0,
     settledPayments: run.settledPayments ?? 0,

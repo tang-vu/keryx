@@ -5,6 +5,7 @@ import type { Confidence } from "../types";
 import { researchPresentationMessages } from "./presentation-messages";
 import { readCompletedAnswerLanguage, type CompletedAnswerLanguageProvenance } from "./answer-language-provenance";
 import { livePresentationLocale, recordedPresentationLocale, type PresentationLanguage, type PresentationLocale, type RequestedPresentationLanguage } from "./presentation-language";
+import { projectRecordedConfidence } from "./recorded-confidence";
 
 /** The resolution is presentation metadata, never a new response/receipt/answer-language field. */
 export function presentationLocaleNotice(locale: PresentationLocale): string {
@@ -72,6 +73,7 @@ export interface RemotePresentationResult extends ReasoningSurface {
 /** Caller supplies the existing public projection; no private reads/enrichment or new response fields. */
 export function remoteResearchText(result: RemotePresentationResult, locale: PresentationLocale): string {
   const copy = researchPresentationMessages(locale.language);
+  const confidence = projectRecordedConfidence(result.confidence);
   const rewards = result.citations.length ? result.citations.map(c => `- ${c.source}: ${formatRecordedUsdc(c.rewardPlannedUsdc, { minimumFractionDigits: 4 })} USDC`).join("\n")
     : `- ${copy("noRewards")}`;
   const settlement = result.paymentMode === "real" ? `${result.settledPayments}/${result.paymentAttempts} payment attempts settled`
@@ -87,11 +89,12 @@ export function remoteResearchText(result: RemotePresentationResult, locale: Pre
   return `${result.answer}\n\n${presentationReasoningText(result, locale.language)}\n\n` +
     `${copy("citations")}\n${rewards}\n\n` + copy("evidence", { covered: result.claimCoverage.filter(c => c.coverage >= 0.4).length, total: result.claimCoverage.length }) +
     `\n${selectionText}\n` + (locale.language === "en" ? "" : `${copy("financialDetails")}\n`) + authority +
-    `${copy("confidence")} ${result.confidence?.level ?? "Low"} · ${result.dispatchUrl}` + (notice ? `\n\n${notice}` : "");
+    (confidence ? `${copy("confidence")} ${confidence.level} · ` : `${copy("dispatch")} `) + result.dispatchUrl + (notice ? `\n\n${notice}` : "");
 }
 
 export interface StdioPresentationResult extends Partial<ReasoningSurface> {
   status?: string; queryId?: string; answerLanguage?: CompletedAnswerLanguageProvenance;
+  confidence?: Confidence;
   answer: string; citations: { source: string; reward: number }[]; totalToCreators: number; settlementId?: string; amountPaid?: string;
 }
 /** The paid request/body/hash/custody path is intentionally not an input to this text renderer. */

@@ -105,6 +105,7 @@ export async function getStatus(): Promise<WalletStatus> {
 export type KeryxCitation = { source: string; reward: number; weight?: number };
 export type KeryxAnswer = Partial<ReasoningSurface> & { answer: string; citations: KeryxCitation[]; creatorsPaid: number | null; totalToCreators: number; feePaid: number;
   status?: string; queryId?: string; answerLanguage?: CompletedAnswerLanguageProvenance;
+  confidence?: import("../lib/types").Confidence;
   /** Optional recorded roles, never body evidence, settlement or purchase authority. */
   bibliography?: import("../lib/types").QueryRun["bibliography"];
   bibliographyExports?: import("../lib/research/bibliographic-task").BibliographicTaskResult["bibliographyExports"] & { cslJson?: { count: number; content: string } };

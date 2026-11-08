@@ -1,5 +1,7 @@
 /** Hosted anonymous research only. This module must remain browser-safe and custody-free. */
 import { feedbackDeliverySchema, type FeedbackDelivery } from "../lib/research-feedback/contracts";
+import { projectRecordedConfidence } from "../lib/research/recorded-confidence";
+import type { Confidence } from "../lib/types";
 export type SponsoredResearchInput = {
   question: string;
   mode?: "quick" | "deep";
@@ -12,6 +14,7 @@ export type SponsoredResearchResult = {
   queryId: string;
   dispatchUrl: string;
   citations: Array<{ sourceName: string; sourceUrl?: string; [key: string]: unknown }>;
+  confidence?: Confidence;
   [key: string]: unknown;
 };
 
@@ -164,6 +167,11 @@ function terminalResult(meta: Record<string, unknown>, answer: string, origin: s
   if (!answer.trim() || !Array.isArray(meta.citations)) return invalidResponse("The terminal report lacked an answer or citations.");
   const fields: Record<string, unknown> = {};
   for (const key of PUBLIC_FIELDS) if (meta[key] !== undefined) fields[key] = meta[key];
+  // Optional auxiliary metadata is projected before the recursive snapshot:
+  // unknown/private properties and malformed assessments never become output
+  // and cannot turn a valid answer into a failed research request.
+  const confidence = projectRecordedConfidence(meta.confidence);
+  if (confidence) fields.confidence = confidence;
   const safe = publicSnapshot(fields) as Record<string, unknown>;
   const citations = (safe.citations as unknown[]).map(value => {
     const citation = record(value);
