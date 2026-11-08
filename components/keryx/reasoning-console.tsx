@@ -125,7 +125,7 @@ export function ReasoningConsole({ steps, streaming, budget }: ReasoningConsoleP
         <div ref={scrollRef} onScroll={onScroll} role="region" tabIndex={0} aria-label={message("decisionLog.label")} aria-describedby={`${descriptionId}-hint ${descriptionId}-mode`} className="max-h-[60vh] min-h-[320px] min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2 [overflow-anchor:none] [scrollbar-gutter:stable] focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-seal sm:max-h-[68vh] sm:px-5">
           <ol ref={contentRef} role="list" className="relative min-w-0 divide-y divide-line/60">
             {steps.map((step, i) => (
-              <li key={`${step.phase}-${step.ts}-${i}`} className={streaming && following && i === steps.length - 1 ? "motion-safe:animate-[kxUp_260ms_cubic-bezier(.16,1,.3,1)_both]" : undefined}>
+              <li key={i} className={streaming && following && i === steps.length - 1 ? "motion-safe:animate-[kxUp_260ms_cubic-bezier(.16,1,.3,1)_both]" : undefined}>
                 <TraceRow step={step} />
               </li>
             ))}

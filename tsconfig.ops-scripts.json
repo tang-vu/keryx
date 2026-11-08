@@ -5,6 +5,7 @@
     "incremental": false
   },
   "include": [
+    "scripts/test-reading-evidence.mts",
     "scripts/compare-research.mts",
     "scripts/compare-research.test.mts",
     "scripts/test-browser-report-comparison.mts",

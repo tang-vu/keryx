@@ -43,7 +43,7 @@ export function sourceReadSummary(run: Pick<QueryRun, "decisions" | "trace">) {
   const selectedCache = new Set(run.decisions.filter(d => d.action === "CACHE" && !publicIds.has(d.assetId ?? d.sourceId)).map(d => d.assetId ?? d.sourceId));
   const ids = new Set(run.decisions.map(d => d.assetId ?? d.sourceId)), outcomes = new Map<string, SourceReadOutcome>();
   for (const step of run.trace) {
-    if (step.phase !== "fetch" && step.phase !== "reevaluate" || !step.detail || typeof step.detail !== "object") continue;
+    if (!step || step.phase !== "fetch" && step.phase !== "reevaluate" || !step.detail || typeof step.detail !== "object") continue;
     const outcome = parseOutcome(Object.getOwnPropertyDescriptor(step.detail, "sourceRead")?.value);
     if (outcome && ids.has(outcome.assetId) && (outcome.kind === "public") === publicIds.has(outcome.assetId)) outcomes.set(outcome.assetId, outcome);
   }

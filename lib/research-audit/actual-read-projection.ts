@@ -28,7 +28,7 @@ export function ordinaryPublicCheckpointRun(run: Pick<QueryRun, "id" | "original
 export function projectActualReadCheckpoints(run: Pick<QueryRun, "id" | "trace" | "originalFulfillment">) {
   try {
     if (!ordinaryPublicCheckpointRun(run)) return null;
-    const candidates = run.trace.filter(step => Object.hasOwn(step, "readCheckpoints"));
+    const candidates = run.trace.filter(step => step != null && Object.hasOwn(step, "readCheckpoints"));
     if (candidates.length !== 1 || candidates[0].phase !== "done") return null;
     const descriptor = Object.getOwnPropertyDescriptor(candidates[0], "readCheckpoints");
     if (!descriptor || !("value" in descriptor)) return null;
