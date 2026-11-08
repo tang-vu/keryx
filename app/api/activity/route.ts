@@ -1,7 +1,9 @@
-import { publicFinancialPayment } from "@/lib/run-privacy/public";
+import { config } from "@/lib/config";
+import { recordedArcProfile } from "@/lib/arc-network-display";
+import { paymentSettlementStatus } from "@/lib/payments/payment-state";
 import { listedQuestions } from "@/lib/run-privacy/listed-questions";
 /**
- * GET /api/activity — the most recent REAL settled citations (source, question, reward, time).
+ * GET /api/activity — recent consistently settled citations on the selected network.
  *
  * Public, no auth. Feeds the live landing ticker and lets external agents/tools see what Keryx
  * is actively citing + paying for right now. Only settled citation payments are returned — the
@@ -18,10 +20,12 @@ const LIMIT = 15;
 export async function GET() {
   try {
     const db = await getDb();
-    // Pull a generous recent slice, then keep only settled citations (the creator-paying events).
+    // Qualify retained states and recorded rail before the page/enrichment limit.
+    // This read projection cannot repair a conflicting row or relabel history.
     const recent = await db.listPayments(80);
     const citations = recent
-      .filter((p) => p.kind === "citation" && p.settled)
+      .filter((p) => p.kind === "citation" && p.settled === true && paymentSettlementStatus(p) === "settled"
+        && recordedArcProfile(p.network)?.networkId === config.networkId)
       .slice(0, LIMIT);
 
     // Attach the question each citation was for — dedupe queryIds so it's one lookup per query.
