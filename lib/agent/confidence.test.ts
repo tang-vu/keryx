@@ -64,4 +64,19 @@ describe("deriveConfidence", () => {
     );
     expect(c!.level).toBe("High");
   });
+
+  it.each(["High", "Moderate", "Low"] as const)("preserves the exact stored %s assessment before historical trace", level => {
+    const confidence = { level, reason: "Stored original explanation" };
+    expect(deriveConfidence(run({ confidence, trace: [verdictStep("High", "Older verdict")] }))).toBe(confidence);
+  });
+
+  it.each([
+    { reason: undefined, expected: "" }, { reason: null, expected: "" },
+    { reason: 42, expected: "42" }, { reason: false, expected: "false" },
+    { reason: [], expected: "" }, { reason: ["old", "explanation"], expected: "old,explanation" },
+    { reason: { historical: true }, expected: "[object Object]" },
+  ])("preserves historical explanation conversion: $expected", ({ reason, expected }) => {
+    expect(deriveConfidence(run({ trace: [{ phase: "verdict", message: "Recorded verdict", ts: 1,
+      detail: { level: "Moderate", reason } }] }))).toEqual({ level: "Moderate", reason: expected });
+  });
 });

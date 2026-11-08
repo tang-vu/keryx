@@ -66,7 +66,7 @@
     "lib/agent/cited-statements.ts": "742b1c42bd2764833ac3493ad193fe9258a1fe154d759b4d76b18704b8139e2f",
     "lib/agent/combined-answer-limits.ts": "d36a6e39b6bf1c50f444ea8398f044d39cc328263bebc7adba46da97c4cb1cbc",
     "lib/agent/compact-statement-groups.ts": "c78cb523902515bb308c5949734f5901976db30ee2b7405aa7f62011f7a29b4e",
-    "lib/agent/confidence.ts": "5a5402cc9da8bb108bc204e32a0462a059a34ed7c7514d70a9ff15a1f750d6f9",
+    "lib/agent/confidence.ts": "76808ac8d4cabcd4923293c65cc0fe92f4407dacff2f381022d4aec7d564433c",
     "lib/agent/coverage-precheck.ts": "6cbb1e69b68ca95a73be4dc10de1021cd95ecf6436b69d04fbbc60c0f2bdfd9f",
     "lib/agent/decision-brief.ts": "914ad5ef815f033b7c9d760c763614b7c5677eb5c59dd9ae23a4fa45e5dada6d",
     "lib/agent/document-selection.ts": "efa9e99bed403763a09803f70e3f05bcef5558da15c47af280be4a482a90e314",

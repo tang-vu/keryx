@@ -15,11 +15,18 @@ function fromVerdictStep(run: QueryRun): Confidence | null {
   // Last verdict wins — a run only emits one, but reading from the end is robust to any future
   // re-verdict step without changing this call site.
   for (let i = run.trace.length - 1; i >= 0; i--) {
-    const step = run.trace[i]!;
-    if (step.phase !== "verdict") continue;
+    const step = run.trace[i];
+    // Persisted runs admit opaque historical entries, including JSON null.
+    if (!step || step.phase !== "verdict") continue;
     const d = step.detail as Partial<Confidence> | undefined;
     if (d && typeof d.level === "string" && LEVELS.has(d.level as Confidence["level"])) {
-      return { level: d.level as Confidence["level"], reason: String(d.reason ?? "") };
+      try {
+        return { level: d.level as Confidence["level"], reason: String(d.reason ?? "") };
+      } catch {
+        // A JSON object may shadow toString. The last recognized verdict still
+        // wins: leave its assessment unavailable instead of reviving an older one.
+        return null;
+      }
     }
   }
   return null;
