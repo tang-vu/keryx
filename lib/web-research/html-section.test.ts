@@ -129,3 +129,58 @@ it("handles direct optional list/paragraph end tags without guessing formatting 
 it("refuses an ambiguous peer heading nested inside a still-open section wrapper", async () => {
   await expect(extractHtml(`<main>${section}<div><h2>Ambiguous end</h2></div></main>`, url, undefined, "limits")).rejects.toThrow();
 });
+
+it.each([
+  [2, `<span id="limits"></span>Limits &amp; conditions`],
+  [4, `<span>4.3. </span>The <dfn id="limits"><code>limits</code></dfn> condition`],
+  [3, `Before <a id="limits" href="#limits">the limit</a> and after`],
+  [2, `<a name="limits"></a>Limits &amp; conditions`],
+  [6, `<span><em><strong id="limits">Limits</strong></em></span> and conditions`],
+])("reads an inline anchor as its entire owning h%i section: %s", async (level, inline) => {
+  const selected = `<h${level}>${inline}</h${level}><p>${fact.repeat(3)}</p><pre>if (x &lt; 3) {\n  retry();\n}</pre>`;
+  const html = `<html><head><title>Inline manual</title></head><body><main><p>Unrelated café 🌍 prefix.</p>${selected}<h${level}>Outside peer</h${level}><p>Unrelated tail.</p></main></body></html>`;
+  const result = await extractHtml(html, url, undefined, "limits");
+  expect(result).toMatchObject({ title: "Inline manual", truncated: true,
+    htmlSectionScope: { fragment: "limits", headingLevel: level, documentCharacters: html.length,
+      documentSha256: createHash("sha256").update(html).digest("hex") } });
+  expect(result.text).toContain(fact.trim());
+  expect(result.text).toContain("if (x < 3) {\n  retry();\n}");
+  expect(result.text).not.toMatch(/Unrelated|Outside peer/);
+  expect(html.slice(result.htmlSectionScope!.htmlStart, result.htmlSectionScope!.htmlEnd)).toBe(selected);
+  expect(gatheredArticle("public:inline", result).htmlTextLayout?.headings).toHaveLength(1);
+});
+
+it("stops an inline heading anchor at its parent close while retaining deeper headings", async () => {
+  const selected = `<h2>Before <span id="limits">Limits</span> after</h2><p>${fact.repeat(3)}</p><section><h3>Exception</h3><p>Retry can duplicate delivery.</p></section>`;
+  const html = `<main><section>${selected}</section><p>Outside parent.</p></main>`;
+  const result = await extractHtml(html, url, undefined, "limits");
+  expect(result.text).toContain("Before Limits after");
+  expect(result.text).toContain("Retry can duplicate delivery.");
+  expect(result.text).not.toContain("Outside parent");
+  expect(html.slice(result.htmlSectionScope!.htmlStart, result.htmlSectionScope!.htmlEnd)).toBe(selected);
+});
+
+it.each([
+  `<span id="limits">Outside</span><h2>Later heading</h2>`,
+  `<p><span id="limits">Paragraph</span></p><h2>Later heading</h2>`,
+  `<h2><div><span id="limits">Block wrapper</span></div></h2>`,
+  `<h2><input id="limits" value="Form field"></h2>`,
+  `<h2><span hidden id="limits">Hidden anchor</span></h2>`,
+  `<h2 aria-hidden="true"><span id="limits">Hidden heading</span></h2>`,
+  `<h2><span style="visibility:hidden"><dfn id="limits" style="visibility:visible">Reset</dfn></span></h2>`,
+  `<nav><h2><span id="limits">Navigation</span></h2></nav>`,
+  `<template><h2><span id="limits">Template</span></h2></template>`,
+  `<h2><svg><foreignObject><span id="limits">Foreign</span></foreignObject></svg></h2>`,
+  `<h2><span id="limits">Limits</span></h2><div hidden id="limits"></div>`,
+  `<h2 id="limits"><span id="limits">Duplicate in heading</span></h2>`,
+  `<h2><span id="limits">Limits</span></h2><div><h2>Ambiguous peer</h2></div>`,
+  `<h2><span id="limits">Unbalanced</h2></span>`,
+])("refuses hidden, ambiguous and non-inline heading anchor ancestry %#", async heading => {
+  await expect(extractHtml(`<main>${heading}<p>${fact.repeat(3)}</p></main>`, url, undefined, "limits")).rejects.toThrow();
+});
+
+it("counts the entire owning heading against selected-section bounds and releases admission", async () => {
+  await expect(extractHtml(`<main><h2>${"x".repeat(500001)}<span id="limits">Limits</span></h2><p>${fact.repeat(3)}</p></main>`, url, undefined, "limits")).rejects.toThrow();
+  const result = await extractHtml(`<main><h2><span id="limits">Limits</span></h2><p>${fact.repeat(3)}</p></main>`, url, undefined, "limits");
+  expect(result.text).toContain(fact.trim());
+});
