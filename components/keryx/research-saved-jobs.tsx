@@ -3,7 +3,7 @@ import { DisplayTime } from "@/components/keryx/display-time";
 
 
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { listBrowserJournals, importBrowserJournal, exportBrowserJournal, deleteBrowserJournal, type BrowserJournal } from "@/lib/buyer/browser-journal";
 import { resumeBrowserResearch } from "@/lib/buyer/browser-client";
 import { downloadBuyerJson } from "@/lib/buyer/download";
@@ -20,9 +20,15 @@ type Result = Awaited<ReturnType<typeof resumeBrowserResearch>>;
 
 export function ResearchSavedJobs() {
   const message = useUiMessages();
-  const { selection, revision, select, clearSelection, refresh } = useResearchWorkspace();
+  const { selection, revision, importSelection, select, beginImport, completeImport, clearSelection, refresh } = useResearchWorkspace();
   const [rows, setRows] = useState<BrowserJournal[]>([]);
   const [storageError, setStorageError] = useState("");
+  const [importError, setImportError] = useState<{ attempt: symbol; message: string } | null>(null);
+  const importState = useRef<{ active: boolean; attempt: symbol | null }>({ active: false, attempt: null });
+  useLayoutEffect(() => {
+    importState.current.active = true;
+    return () => { importState.current.active = false; };
+  }, []);
   const [lookup, setLookup] = useState<{ key: string; result: Result | null; error: string } | null>(null);
   const [actionError, setActionError] = useState<{ key: string; message: string } | null>(null);
   const [removal, setRemoval] = useState<string | null>(null);
@@ -77,13 +83,19 @@ export function ResearchSavedJobs() {
       <label className={`${control} cursor-pointer`}>{message("savedResearch.import")}<input type="file" accept="application/json,.json" className="sr-only" onChange={async event => {
         const file = event.target.files?.[0]; event.target.value = "";
         if (!file) return;
+        const attempt = beginImport(); importState.current.attempt = attempt; setImportError(null);
         try {
           if (file.size > 65536) throw new Error("Recovery file too large");
-          const row = await importBrowserJournal(await file.text()); setStorageError(""); open(row.queryId);
-        } catch { setStorageError(message("savedResearch.importFailed")); }
+          const row = await importBrowserJournal(await file.text());
+          if (importState.current.active) completeImport(row.queryId, attempt);
+        } catch {
+          if (importState.current.active && importState.current.attempt === attempt)
+            setImportError({ attempt, message: message("savedResearch.importFailed") });
+        }
       }} /></label>
     </div>
     {storageError && <p role="alert" className="mt-3 font-serif text-seal">{storageError}</p>}
+    {importError && importError.attempt === importSelection && <p role="alert" className="mt-3 font-serif text-seal">{importError.message}</p>}
     {!rows.length && !storageError && <p className="mt-4 font-serif text-sm">{message("savedResearch.empty")}</p>}
     <ul className="mt-4 grid gap-3 sm:grid-cols-2">{rows.map(row => <li key={row.queryId}><button type="button" onClick={() => open(row.queryId)} aria-pressed={selection?.id === row.queryId} className="h-full w-full border border-line p-4 text-left aria-pressed:border-ink">
       <span className="block break-words font-serif">{row.intent.request.question}</span>
