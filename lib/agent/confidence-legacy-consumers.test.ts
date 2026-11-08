@@ -13,7 +13,7 @@ const id = "eaf71ac0-cbf3-4c6d-b691-0c45ffcb6ba1";
 const verdict = (level: string, reason: unknown = "Recorded explanation") => ({ phase: "verdict", ts: 1, message: "Recorded verdict", detail: { level, reason } });
 const high: Confidence = { level: "High", reason: "Recorded explanation" };
 const low: Confidence = { level: "Low", reason: "Stored assessment" };
-const cases: { name: string; trace: unknown[]; stored?: Confidence; expected: Confidence | null }[] = [
+const cases: { name: string; trace: unknown[]; stored?: unknown; expected: Confidence | null }[] = [
   { name: "no verdict among opaque entries", trace: [null, 0, "historical entry", [], false], expected: null },
   { name: "verdict before a null entry", trace: [verdict("High"), null], expected: high },
   { name: "verdict after a null entry", trace: [null, verdict("High")], expected: high },
@@ -21,9 +21,12 @@ const cases: { name: string; trace: unknown[]; stored?: Confidence; expected: Co
   { name: "recognized later verdict whose explanation cannot be converted", trace: [verdict("High"), verdict("Low", { toString: null })], expected: null },
   { name: "nested unconvertible explanation", trace: [verdict("High"), verdict("Low", [{ toString: null }])], expected: null },
   { name: "stored assessment before opaque history", trace: [verdict("High"), null], stored: low, expected: low },
+  ...[undefined, null, 42, true, [], ["legacy", { privateNote: "PRIVATE" }], { privateNote: "PRIVATE" }, { toString: null }]
+    .map((reason, index) => ({ name: `recognized stored assessment with unsupported explanation ${index}`,
+      trace: [verdict("High", "Older grade")], stored: { level: "Moderate", reason }, expected: null })),
 ];
 
-function admitted(trace: unknown[], confidence?: Confidence) {
+function admitted(trace: unknown[], confidence?: unknown) {
   // Exercise the real persisted-JSON contract, rather than casting a fabricated
   // trace into the typed reader. Keep the serialized original unchanged.
   return validatePrivacyRun(JSON.parse(JSON.stringify({ ...presentationRun(), id, trace, confidence })), id);

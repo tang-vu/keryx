@@ -11,6 +11,10 @@ import type { Confidence, QueryRun } from "../types";
 
 const LEVELS = new Set<Confidence["level"]>(["High", "Moderate", "Low"]);
 
+export function isConfidenceLevel(value: unknown): value is Confidence["level"] {
+  return typeof value === "string" && LEVELS.has(value as Confidence["level"]);
+}
+
 function fromVerdictStep(run: QueryRun): Confidence | null {
   // Last verdict wins — a run only emits one, but reading from the end is robust to any future
   // re-verdict step without changing this call site.
@@ -19,9 +23,9 @@ function fromVerdictStep(run: QueryRun): Confidence | null {
     // Persisted runs admit opaque historical entries, including JSON null.
     if (!step || step.phase !== "verdict") continue;
     const d = step.detail as Partial<Confidence> | undefined;
-    if (d && typeof d.level === "string" && LEVELS.has(d.level as Confidence["level"])) {
+    if (d && isConfidenceLevel(d.level)) {
       try {
-        return { level: d.level as Confidence["level"], reason: String(d.reason ?? "") };
+        return { level: d.level, reason: String(d.reason ?? "") };
       } catch {
         // A JSON object may shadow toString. The last recognized verdict still
         // wins: leave its assessment unavailable instead of reviving an older one.
@@ -32,9 +36,11 @@ function fromVerdictStep(run: QueryRun): Confidence | null {
   return null;
 }
 
-/** The dispatch's confidence, or null when neither the field nor a verdict step is present
- *  (e.g. a run that errored before synthesis). */
+/** The dispatch's readable confidence, or null when unavailable. A recognized
+ * stored level still takes precedence when its explanation is malformed: omit
+ * that optional assessment rather than reviving an older verdict. */
 export function deriveConfidence(run: QueryRun): Confidence | null {
-  if (run.confidence && LEVELS.has(run.confidence.level)) return run.confidence;
+  if (run.confidence && isConfidenceLevel(run.confidence.level))
+    return typeof run.confidence.reason === "string" ? run.confidence : null;
   return fromVerdictStep(run);
 }
