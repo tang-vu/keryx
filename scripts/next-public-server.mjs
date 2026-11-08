@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { lstatSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { createPublicRequestObservation } from './next-public-observation.mjs';
 
 export const PUBLIC_ORIGIN = 'https://keryx.cc';
 export const NEXT_VERSION = '16.4.1';
@@ -65,7 +66,9 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939, 
   const next = requireApp('next');
   let handle;
   let draining = false;
+  const observation = createPublicRequestObservation();
   const server = createServer({ shouldUpgradeCallback: () => false }, (req, res) => {
+    observation.observe(req, res);
     if (!hasPublicHttpsMetadata(req)) {
       res.writeHead(421, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
       res.end('Public HTTPS metadata required');
@@ -114,12 +117,19 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939, 
     server.listen(port, '127.0.0.1');
   });
   let closing;
+  const observeDrain = stage => {
+    // Diagnostics are best effort; the existing positive drain/closed receipt
+    // remains authoritative. Never let logging prevent graceful shutdown.
+    try { console.log(JSON.stringify(observation.snapshot(stage))); } catch { /* retain original close behavior */ }
+  };
   const close = () => {
     if (!closing) closing = (async () => {
       draining = true;
+      observeDrain('drain-start');
       // Never force-close active API/SSE requests. Next's close uses allSettled;
       // the owned HTTP listener must have positively drained before calling it.
       await new Promise((accept, reject) => server.close((error) => error ? reject(error) : accept()));
+      observeDrain('http-drained');
       await app.close();
       await requireApp('next/dist/trace').flushAllTraces();
     })();
