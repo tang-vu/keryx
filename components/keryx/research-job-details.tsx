@@ -1,5 +1,6 @@
 "use client";
 import { formatNumber, formatRecordedAmount } from "@/lib/i18n/format";
+import { useId } from "react";
 
 import { createMessages } from "@/lib/i18n/messages";
 
@@ -15,8 +16,9 @@ import { useUiMessages } from "@/lib/i18n/ui-copy";
 const message = createMessages("en");
 const usdc = (value: number | null | undefined) => value == null ? message("researchJobDetails.unknown") : `${formatRecordedAmount(value, { minimumFractionDigits: 6 })} USDC`;
 
-export function ResearchJobDetails({ job, onDownloadReceipt }: { job: BuyerJob; onDownloadReceipt?: () => void }) {
+export function ResearchJobDetails({ job, onDownloadReceipt, receiptDownloadError }: { job: BuyerJob; onDownloadReceipt?: () => void; receiptDownloadError?: string }) {
   const message = useUiMessages();
+  const receiptErrorId = useId();
   return (
     <div className="mt-5 space-y-6">
       <AccountJobs orderId={job.queryId} />
@@ -45,7 +47,10 @@ export function ResearchJobDetails({ job, onDownloadReceipt }: { job: BuyerJob; 
         <p className="font-serif">{claim.claim}</p><p className="mt-2 font-mono text-xs">{message("researchJobDetails.coverage", { rate: formatNumber((claim.coverage * 100), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}</p>
         {job.evidence?.filter((item) => item.claimIndex === claim.claimIndex).map((item, i) => <blockquote key={i} className="mt-3 border-l border-line pl-3 font-serif text-sm [overflow-wrap:anywhere]"><p className="whitespace-pre-wrap">“{item.quote}”</p><cite>{item.sourceName}</cite></blockquote>)}
       </li>)}</ol></div>}
-      {job.status === "completed" && (onDownloadReceipt ? <button type="button" onClick={onDownloadReceipt} className="inline-block border border-ink px-4 py-3 font-mono text-xs">{message("researchJobDetails.downloadReceipt")}</button> : <a href={`/api/dispatch/${job.queryId}/receipt`} referrerPolicy="no-referrer" className="inline-block border border-ink px-4 py-3 font-mono text-xs">{message("researchJobDetails.openReceipt")}</a>)}
+      {job.status === "completed" && (onDownloadReceipt ? <>
+        <button type="button" onClick={onDownloadReceipt} aria-describedby={receiptDownloadError ? receiptErrorId : undefined} className="inline-block border border-ink px-4 py-3 font-mono text-xs">{message("researchJobDetails.downloadReceipt")}</button>
+        {receiptDownloadError && <p id={receiptErrorId} role="alert" className="font-serif text-seal">{receiptDownloadError}</p>}
+      </> : <a href={`/api/dispatch/${job.queryId}/receipt`} referrerPolicy="no-referrer" className="inline-block border border-ink px-4 py-3 font-mono text-xs">{message("researchJobDetails.openReceipt")}</a>)}
       <p className="font-serif text-xs text-ink-3">{message("researchJobDetails.receiptBoundary")}</p>
     </div>
   );

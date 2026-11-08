@@ -17,6 +17,7 @@ import { useUiMessages } from "@/lib/i18n/ui-copy";
 
 const control = "border border-ink px-4 py-2 font-mono text-xs disabled:opacity-40";
 type Result = Awaited<ReturnType<typeof resumeBrowserResearch>>;
+type LocalAction = "export" | "removal" | "receipt";
 
 export function ResearchSavedJobs() {
   const message = useUiMessages();
@@ -32,10 +33,11 @@ export function ResearchSavedJobs() {
   const [lookup, setLookup] = useState<{ key: string; result: Result | null; error: string } | null>(null);
   const [removalError, setRemovalError] = useState<{ key: string; message: string } | null>(null);
   const [exportError, setExportError] = useState<{ key: string; message: string } | null>(null);
-  const actions = useRef<{ selection: typeof selection; export: symbol | null; removal: symbol | null } | null>(null);
+  const [receiptError, setReceiptError] = useState<{ key: string; message: string } | null>(null);
+  const actions = useRef<{ selection: typeof selection; export: symbol | null; removal: symbol | null; receipt: symbol | null } | null>(null);
   useLayoutEffect(() => {
     // A reopened view of the same journal is a different feedback context.
-    actions.current = { selection, export: null, removal: null };
+    actions.current = { selection, export: null, removal: null, receipt: null };
     return () => { actions.current = null; };
   }, [selection]);
   const [removal, setRemoval] = useState<string | null>(null);
@@ -74,23 +76,23 @@ export function ResearchSavedJobs() {
     return () => { abort.abort(); clearTimeout(timer); };
   }, [selection]);
 
-  function open(id: string) { setLookup(null); setRemovalError(null); setExportError(null); setRemoval(null); select(id); }
+  function open(id: string) { setLookup(null); setRemovalError(null); setExportError(null); setReceiptError(null); setRemoval(null); select(id); }
   const key = selection ? `${selection.id}:${selection.revision}` : "";
   const visible = lookup?.key === key ? lookup.result : null;
   const loading = !!selection && lookup?.key !== key;
   const error = removalError?.key === key ? removalError.message : lookup?.key === key ? lookup.error : "";
-  function beginAction(kind: "export" | "removal") {
+  function beginAction(kind: LocalAction) {
     const attempt = Symbol(kind), active = actions.current;
     if (active && active.selection === selection) active[kind] = attempt;
-    if (kind === "export") setExportError(null); else setRemovalError(null);
+    if (kind === "export") setExportError(null); else if (kind === "removal") setRemovalError(null); else setReceiptError(null);
     return attempt;
   }
-  function failAction(kind: "export" | "removal", expected: symbol, message: string) {
+  function failAction(kind: LocalAction, expected: symbol, message: string) {
     const active = actions.current;
     if (!active || active.selection !== selection || active[kind] !== expected) return;
     // An older callback cannot erase another view's error or an unrelated
     // local operation's feedback. Storage effects remain owned by the operation.
-    if (kind === "export") setExportError({ key, message }); else setRemovalError({ key, message });
+    if (kind === "export") setExportError({ key, message }); else if (kind === "removal") setRemovalError({ key, message }); else setReceiptError({ key, message });
   }
 
   return <section aria-labelledby="saved-jobs-heading" className="border border-line bg-paper p-6">
@@ -129,7 +131,7 @@ export function ResearchSavedJobs() {
           catch { failAction("export", attempt, message("savedResearch.exportFailed")); }
         }}>{message("savedResearch.export")}</button>
         <button type="button" className={control} onClick={() => setRemoval(key)}>{message("savedResearch.remove")}</button>
-        <button type="button" className={control} onClick={() => { select(null); setLookup(null); setRemovalError(null); setExportError(null); setRemoval(null); }}>{message("savedResearch.close")}</button>
+        <button type="button" className={control} onClick={() => { select(null); setLookup(null); setRemovalError(null); setExportError(null); setReceiptError(null); setRemoval(null); }}>{message("savedResearch.close")}</button>
       </div>
       {removal === key && <div className="mt-4 border border-seal p-4">
         <p className="font-serif text-sm">{message("savedResearch.removalBoundary")}</p>
@@ -149,7 +151,11 @@ export function ResearchSavedJobs() {
         <p className="mt-3 font-serif text-sm">{visible.payment.state === "seller_reported_settled" ? message("savedResearch.sellerAcknowledged") : message("savedResearch.noAcknowledgement")}</p>
         {visible.status === "not_found_uncertain" ? <p className="mt-3 font-serif text-seal">{message("savedResearch.notFoundUncertain")}</p> : <>
           {"verification" in visible && visible.verification && <p className="mt-3 font-serif text-sm">{message("savedResearch.integrityNotice")}</p>}
-          <ResearchJobDetails job={visible} onDownloadReceipt={"receipt" in visible ? () => downloadBuyerJson(JSON.stringify(visible.receipt, null, 2) + "\n", "receipt") : undefined} />
+          <ResearchJobDetails job={visible} receiptDownloadError={receiptError?.key === key ? receiptError.message : undefined} onDownloadReceipt={"receipt" in visible ? () => {
+            const attempt = beginAction("receipt");
+            try { downloadBuyerJson(JSON.stringify(visible.receipt, null, 2) + "\n", "receipt"); }
+            catch { failAction("receipt", attempt, message("evidenceMatrix.downloadUnavailable")); }
+          } : undefined} />
         </>}
       </>}
     </div>}
