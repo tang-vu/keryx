@@ -4,7 +4,7 @@ Issue [#164](https://github.com/tang-vu/keryx/issues/164), October 5, 2026. This
 bounded preparation and inspection boundary. Owner-confirmed October 26:
 prepare and qualify the candidate while the current website serves, then drain
 only for a short final handover. The reviewed entry points refuse the historical
-stop-before-build mode. The replacement still needs actual production acceptance;
+stop-before-build mode. Every new candidate still needs actual production acceptance;
 preparation alone waives none of the original, financial, custody or Operator gates.
 
 Mainnet preparation now binds the complete public compilation profile, including
@@ -14,15 +14,57 @@ the actual runtime ENV and checks the compiled artifact's private headers. See t
 [manual inputs](hosted-immutable-preparation.md); older six-value preparation is
 retained as historical evidence and cannot be promoted through the current gate.
 
-## Current authority and the problem
+## Current operating order — November 9, 2026
 
-Reviewed mainnet deployment verifies exited public web/A2A definitions before
-changing `/root/keryx`. Private workers also import source and dependencies from
-that directory. Typechecking and Next compilation therefore run after writers
-have drained. The reviewed 0.26.11 release reported a 6.7-minute Next compilation
-plus several minutes of typechecking; those are historical observations, not a
-general availability guarantee. Removing the early drain while mutating this
-shared source/dependency directory would break the protection it provides.
+The latest verified delivery is [application 0.27.101](mainnet-status.md), source
+`78d34ac41548e251f84dc2c8e5e0574cd0d19a19`. Its
+[release record](https://github.com/tang-vu/keryx/releases/tag/v0.27.101)
+records isolated dependencies, mainnet compilation and intended-host acceptance
+while the predecessor served. The final maintenance interval was 164.184 seconds,
+with no dependency installation or build during maintenance. This is one dated
+delivery measurement, not an availability promise or acceptance of later source.
+
+The current web/A2A roles use an explicitly reviewed immutable cohort, with
+operational cwd and protected ENV/storage bindings retained at `/root/keryx`.
+Use the [mainnet update flow](mainnet-update-flow.md) for the release owner's
+single batched deployment after an explicit user release command:
+
+1. Freeze the accepted full source and its actual required CI/domain evidence.
+   Prepare independent dependencies and a secret-free mainnet artifact in
+   isolation, with the complete reviewed public compilation profile. Inspect its
+   source, bytes, trace closure, build ID and runtime compatibility while the
+   predecessor keeps serving. Evidence reuse needs matching source, inputs,
+   environment and checked surface; an installed older artifact is not a new build.
+2. Before announcing maintenance or draining, freshly check every previously
+   active role's startup requirements: finite policy/grant expiry, custody,
+   ENV/storage identity, queue admission and applicable Operator/original gates.
+   A healthy long-running process or a read-only prerequisite subset does not
+   qualify a fresh writable role. Keep the predecessor serving if a prerequisite
+   is expired, missing or uncertain; this guide authorizes no renewal or funding.
+3. Open the owned maintenance window only for the final reviewed cutover and
+   required fast verification. Positively drain every affected writer, preserve
+   pending/ambiguous state, and use the prepared staged role configuration with
+   all reviewed controls. A timing target never authorizes force-kill or replay.
+4. Verify exact source/build/role identities, original and financial state,
+   internal/public health and applicable client surfaces before clearing the
+   owned window. Restore only previously authorized roles; preserve held schedules
+   and recovery originals. Release101 does not authorize another installation,
+   automatic rollback, publication or deletion of a retained cohort.
+
+Issue [#164](https://github.com/tang-vu/keryx/issues/164) remains open. The dated
+admission map below preserves its original criteria; a completed cohort does not
+close every criterion or transfer its acceptance to another candidate. Later
+accepted `main` changes require their own release admission. Routine source-only
+merges and a read-only readiness check do not open maintenance.
+
+### Historical shared-source constraint
+
+The earlier ordinary mainnet flow drained public web/A2A and affected private
+writers before changing the shared `/root/keryx` source/dependency directory.
+Typechecking and compilation then ran inside maintenance. Release 0.26.11
+reported a 6.7-minute Next compilation plus several minutes of typechecking.
+These observations explain the immutable design; they do not prescribe the
+current stop order. Mutating a tree still used by serving roles remains unsafe.
 
 The existing [reviewed role helper](../scripts/redeploy-reviewed-roles.mjs) defaults to
 fixed `/root/keryx` paths, executable arguments and ENV-file custody. A staged
@@ -76,11 +118,12 @@ Git replacement objects and inherited Git configuration/environment overrides
 cannot substitute another accepted object. Every Git invocation explicitly disables
 lazy promisor fetches, so missing partial-clone objects refuse before a candidate
 is created. Git must support `--no-lazy-fetch`; older versions fail closed even if
-they would ignore `GIT_NO_LAZY_FETCH`. A read-only capability check confirmed that
-production Git 2.43.0 rejects this option; the prerequisite remains unmet there,
-and the current deployment does not use this helper.
-This work neither upgrades production Git nor authorizes staging there. No secret
-configuration is printed.
+they would ignore `GIT_NO_LAZY_FETCH`. A historical read-only capability check
+found that production Git 2.43.0 rejected this option. That observation applies to
+running `stage` with that Git; it is not a current inventory or a prohibition on
+separately reviewed off-host preparation and verified cohort import. Check the
+actual selected builder's capability before staging. This helper neither upgrades
+Git nor authorizes production staging/import. No secret configuration is printed.
 
 `inspect` records a candidate **after separately authorized isolated preparation**.
 It rechecks every original source file, hashes the entire source/dependency/Next
@@ -105,7 +148,7 @@ export secrets or manufacture build/check results. A release inspector must hold
 exclusive candidate-preparation access; these filesystem checks do not establish
 protection against a concurrent hostile administrator or kernel compromise.
 
-Example read-only preparation commands on a separately reviewed host are:
+Example candidate preparation and inspection commands on a separately reviewed host are:
 
 ```bash
 # Requires a pre-existing protected release root and an accepted local Git object.
@@ -131,7 +174,10 @@ secret-free offline build with different embedded public settings.
 selects [prepare-immutable-release.mjs](../scripts/prepare-immutable-release.mjs) before
 the SSH/WSL transport or deployment path. All paths must be absolute; Windows
 slash spelling is normalized before the staging API's canonical-root checks.
-The production redeploy command without arguments retains its existing behavior.
+Without preparation arguments, the command enters the deployment path. Reviewed
+mainnet use requires the complete protected controls and
+`KERYX_REDEPLOY_STAGED_RELEASE=1`; the entry point refuses reviewed ordinary
+stop-before-build delivery. Do not run a bare default command as a readiness probe.
 An unknown or incomplete preparation command refuses rather than falling through
 to a deployment. Preparation grants no production admission or writer-hold authority.
 Append the single explicit `--mainnet-public-build` option when preparing an
@@ -147,7 +193,11 @@ dropping them would produce an artifact with that supported connector disabled.
 Also supply the reviewed public write/read registry addresses as matching nonzero
 server/public twins: `KERYX_REGISTRY_ADDRESS` / `NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS`
 and `KERYX_REGISTRY_READ_ADDRESS` / `NEXT_PUBLIC_KERYX_REGISTRY_READ_ADDRESS`.
-Use only these public values, without mounting or loading the runtime ENV file.
+Also supply all eight additional public controls listed in the
+[manual inputs](hosted-immutable-preparation.md), covering privacy, WalletConnect,
+registry versions/origins and the withdrawal block window. All fourteen validated
+values belong to the same reviewed deployment. Do not mount or load the runtime
+ENV file into the builder.
 
 The builder materializes the exact full Git commit using the existing staging
 boundary, then copies independently installed dependencies into its own candidate.
@@ -159,7 +209,7 @@ or changes an existing dependency tree. An installation receipt is input evidenc
 not proof of the contents of each package; complete artifact hashes and trace
 closure still bind the actual copied bytes.
 
-Node24.21.0/npm11.19.0 are required. Fixed, sequential commands run the actual
+Node24.22.1/npm11.19.0 are required. Fixed, sequential commands run the actual
 TypeScript/MTS checks, Vitest suite and Next production build. Typechecking has a
 fixed 4 GiB V8 heap; the other commands retain their 1.5 GiB heap. A fresh environment
 selects arcTestnet/offline, blanks Supabase and omits runtime credentials, funded
@@ -231,9 +281,9 @@ retains source/artifact/runtime pins and real failures in an uploaded result. It
 does not manufacture a preparation/check receipt or bypass aggregate CI acceptance.
 Hosted Linux timing measures the runner/resource shape, not the production VPS.
 
-## Required production builder and handover design
+## Candidate-specific production builder and handover gates
 
-The production extension still needs reviewed, independently installed Linux
+Each production candidate needs reviewed, independently installed Linux
 dependencies and a secret-free build whose exact browser settings match the mainnet
 browser network/registry/origin bindings without granting the builder real runtime
 custody or payment/storage authority. Prove both explicit offline-fixture preparation
@@ -271,10 +321,10 @@ from the immutable cohort. The explicit serialized-build launcher now selects
 immutable build seeds remain readable, cache writes stay in bounded process memory,
 and optimized images are recomputed without disk persistence. Ordinary startup
 retains its configuration. Intended-host full-application cache/trace acceptance
-remains open. Do not introduce a compatibility symlink that lets old scripts
-silently select whichever generation is current.
+must bind the candidate being admitted. Do not introduce a compatibility symlink
+that lets old scripts silently select whichever generation is current.
 
-## Reviewed staged role adapter (production acceptance pending)
+## Reviewed staged role adapter (candidate acceptance required)
 
 `KERYX_REDEPLOY_STAGED_RELEASE=1` is an explicit prebuilt branch of the existing
 reviewed redeploy shell. It requires all four reviewed maintenance controls and
@@ -337,9 +387,10 @@ any migration or later refusal keeps public roles stopped and retains all builds
 without replay or predecessor restart. Target normal/TWO-original, backup,
 identity/schema/EXCLUSIVE, ENV/custody and Operator checks still belong to the
 owner's stopped-writer acceptance. This source path does not perform them early
-or declare the candidate production-ready. Actual intended-host staged rollout,
-rollback/off-box evidence and matched availability measurements remain open for
-original #164; the successful ordinary app67 release does not replace them.
+or declare the candidate production-ready. Intended-host staged rollout,
+rollback/off-box evidence and matched availability measurements remain explicit
+candidate gates. The historical ordinary app67 delivery did not satisfy them;
+the later release101 record above describes its own admitted staged cohort.
 
 ## Compatibility, rollback, retention and surface gates
 
@@ -445,9 +496,11 @@ build configuration from `.next/required-server-files.json`, which is included i
 artifact inspection. Next's documented custom-server `conf` input keeps startup
 independent of TypeScript config import resolution from the operational storage
 cwd. Missing, linked, oversized or incompatible build configuration refuses;
-ordinary public-server startup keeps its existing config-loading behavior. Pinned
-Next 16.3.8's custom-server router initialization does not forward `conf`; during
-that initialization the launcher supplies the same serialized-config process input
+ordinary public-server startup keeps its existing config-loading behavior. The
+original Next 16.3.8 qualification found that custom-server router initialization
+did not forward `conf`; the current launcher pins Next 16.4.1 and retains this
+serialized-config path. During that initialization the launcher supplies the same
+serialized-config process input
 as Next's generated launcher, then restores its prior value. It derives this
 input only from the inspected artifact and changes no financial/runtime ENV file.
 The rehearsal eval entry has its own argv identity, so importing the public-server
@@ -465,7 +518,7 @@ the process. Neither is actual PM2/systemd, Keryx worker, SSE, SQLite or mainnet
 acceptance. Generated fixture artifacts are labeled synthetic and never reported
 as production builds or real payments.
 
-The issue remains open until the isolated Next/toolchain and actual-runtime evidence
+The original issue remains open until the isolated Next/toolchain and actual-runtime evidence
 has been accepted on the intended Linux resource shape, plus application
 start/worker/maintenance and DB compatibility checks, graceful writer-drain/crash
 recovery, off-box retention/retrieval, and reviewed rollback all pass. Record a
@@ -473,7 +526,8 @@ timed no-spend Linux rehearsal on the intended host/resource shape, then define 
 practical maintenance target using the observed preparation, drain and handover
 distributions. Validate that target on one reviewed ordinary production release.
 Do not choose a numeric availability promise from this tiny synthetic fixture or
-remove the current early drain before those acceptance records exist. No paid
+substitute an unqualified cutover for those acceptance records. Preparation still
+stays outside maintenance under the current operating order above. No paid
 exercise, new schedule, custody change or forced economic recovery is authorized
 by this plan.
 
@@ -501,9 +555,10 @@ The hosted idle timings belong to their original CI cohort, not production59 or
 an intended-host availability target. A successful ordinary release establishes
 its own delivery; passive health/normal observations cannot substitute for staged
 builder, every-writer, schema, cache, compiled rollback or retrieval acceptance.
-The current early-drain deployment remains authoritative and original #164 stays
-OPEN until all original criteria and real delivery evidence are accepted. No
-additional paid trial, new funding, schedule or custody gate is introduced here.
+This October 12 map predates the later staged deliveries and does not prescribe
+their current stop order. Original #164 stays OPEN until all original criteria and
+real delivery evidence are accepted. No additional paid trial, new funding,
+schedule or custody gate is introduced here.
 
 ## Cohort extraction, cache and recovery source — 2026-10-12
 
@@ -559,7 +614,7 @@ ACK through final required public readiness, and handover from the last positive
 writer exit through that same readiness. The root must choose a finite target
 from matched intended-host observations and validate it on one reviewed ordinary
 production release using these same intervals. A missed target retains the hold;
-it cannot justify force kill, uncertain payment replay or early drain removal.
+it cannot justify force kill, uncertain payment replay or skipping a required drain.
 Web/API, hosted MCP, A2A and bots inherit hosted extraction behavior. Source CLI
 uses its own loaded code root; packaged stdio MCP, desktop and extension retain
 their established hosted handoffs and distribution authority. Root owns the final
