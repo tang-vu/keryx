@@ -12,6 +12,7 @@ import { runClaimBindingSchema } from "../run-claims/contracts";
 import { createPublicArchiveReader, selectPublicRunRows } from "./public-archive-page-sqlite";
 import { readSqlitePublicQuestions } from "./public-question-projection";
 import { readSqlitePublicSourceHistory } from "./public-source-history-projection";
+import { readSqlitePublicLearningPage } from "./public-source-learning-projection";
 import { installSqliteApplicationSchema } from "./sqlite-application-schema";
 
 /** SOURCE ONLY. Install explicitly in an isolated fixture or after a separately approved rollout.
@@ -257,6 +258,10 @@ function privacyPort(db: DatabaseSync, guard: (write?: boolean) => void, claims?
     async sourceHistory() {
       guard();
       return readSqlitePublicSourceHistory(db);
+    },
+    async learningPage(query) {
+      guard();
+      return readSqlitePublicLearningPage(db, query);
     },
     async archivePage(query) {
       guard();

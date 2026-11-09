@@ -1,15 +1,13 @@
 import type { KeryxDB } from "../db/keryx-db";
 import type { QueryRun } from "../types";
-import { privacyReadsActive, requirePrivacy } from "../run-privacy/contracts";
+import { privacyReadsActive, requirePrivacy, type PublicSourceLearningRun } from "../run-privacy/contracts";
 import { parseRunUsage } from "./usage-provenance";
 import { parseRunProvenance } from "./run-provenance";
 import { sourceLearningId, parseSourceLearningSnapshot, validateSourceLearningReport,
   SOURCE_LEARNING_SCAN, SOURCE_LEARNING_SAMPLE, type SourceLearningReport } from "./source-learning-contract";
 
 type Network = SourceLearningReport["network"];
-type LearningRun = Pick<QueryRun, "id" | "createdAt" | "usage" | "sourceLearning" | "paymentMode" | "originalFulfillment" | "asker" | "provenance"> & {
-  decisions: Array<Pick<QueryRun["decisions"][number], "sourceId">>;
-};
+type LearningRun = PublicSourceLearningRun;
 /** Bounded public-store aggregate. Private job stores and legacy query_memories are never read. */
 export async function readSourceLearning(db: Pick<KeryxDB, "getSource" | "iterateRecentQueries" | "runPrivacy" | "runPrivacyActive">,
   sourceId: string, network: Network): Promise<SourceLearningReport | null> {
@@ -18,6 +16,21 @@ export async function readSourceLearning(db: Pick<KeryxDB, "getSource" | "iterat
   if (privacy) await privacy.list({ take: 1, ids: [] });
   if (!await db.getSource(sourceId)) return null;
   const rows: LearningRun[] = [];
+  if (privacy?.learningPage) {
+    let before: { id: string; createdAt: string } | undefined;
+    while (rows.length < SOURCE_LEARNING_SCAN) {
+      const take = Math.min(32, SOURCE_LEARNING_SCAN - rows.length);
+      const page = await privacy.learningPage({ take, ...(before ? { before } : {}) });
+      if (page.length > take) throw new Error("privacy_unavailable");
+      if (!page.length) break;
+      const last = page.at(-1)!;
+      if (before && last.id === before.id && last.createdAt === before.createdAt) throw new Error("privacy_unavailable");
+      rows.push(...page.map(run => ({ ...run, decisions: run.decisions.filter(decision => decision.sourceId === sourceId) })));
+      if (page.length < take) break;
+      before = { id: last.id, createdAt: last.createdAt };
+    }
+    return aggregateSourceLearning(sourceId, network, rows);
+  }
   let scanned = 0;
   for await (const candidate of db.iterateRecentQueries(SOURCE_LEARNING_SCAN)) {
     // Iterator revocation consumes its bound; do not refill rejected/hidden candidates.
