@@ -10,6 +10,7 @@ import { join, resolve, sep } from "node:path";
 import { chromium, webkit, type Route } from "playwright";
 import { copyNextConfigFixture } from "../test-support/next-config-fixture";
 import { fulfillBuiltGet } from "../test-support/fulfill-built-get";
+import { createNavigationRouteDrain } from "../test-support/navigation-route-drain";
 
 const source = process.cwd(), temporary = await mkdtemp(join(tmpdir(), "keryx-navigation-latency-"));
 assert(resolve(temporary).startsWith(resolve(tmpdir()) + sep));
@@ -36,7 +37,7 @@ console.log(JSON.stringify({ phase: "browser-launch-start", engine: engine.name(
 const browser = await engine.launch({ headless: true });
 console.log(JSON.stringify({ phase: "browser-launch-complete", engine: engine.name() }));
 let child: ReturnType<typeof spawn> | undefined, didExit = false, stopped: Promise<void> | undefined;
-const held = new Set<Route>();
+let fixtureFailed = false, fixtureFailure: unknown;
 try {
   await copyNextConfigFixture(source, temporary);
   for (const folder of ["node_modules", ".next", "public"])
@@ -66,11 +67,13 @@ try {
       const entryPath = suppliedEntryPath ?? (destination === "/usage" ? "/proof" : destination === "/history/testnet" ? "/dashboard" : "/");
       const returnUrl = origin + entryPath + fragment;
       const context = await browser.newContext({ viewport: { width, height: 844 }, hasTouch: width === 390, isMobile: width === 390 });
+      const drain = createNavigationRouteDrain(), held = drain.held;
+      let caseFailed = false, caseFailure: unknown;
       try {
         const page = await context.newPage(), errors: string[] = [];
         page.on("pageerror", error => errors.push(error.message));
         let finalRoute: Route | undefined;
-        await context.route("**/*", async route => {
+        await context.route("**/*", route => drain.handle(route, async () => {
           const request = route.request(), url = new URL(request.url());
           if (url.origin !== origin || request.method() !== "GET") return route.abort();
           if (fragment === "#payment-proof-title" && url.pathname === "/api/metrics")
@@ -89,7 +92,7 @@ try {
             finalRoute = route; held.add(route); return;
           }
           return fulfillBuiltGet(route, physicalOrigin);
-        });
+        }));
         const prefetch = page.waitForResponse(response => new URL(response.url()).pathname === destination &&
           response.request().headers()["next-router-prefetch"] === "1" &&
           response.request().headers()["next-router-segment-prefetch"] === undefined);
@@ -233,13 +236,17 @@ try {
         assert.deepEqual(errors, []);
         console.log(JSON.stringify({ engine: engine.name(), width, entryPath, destination, fragment, loadingMs, finalResponseWithheld: true }));
       } catch (error) {
+        caseFailed = true; caseFailure = error;
         console.error(JSON.stringify({ diagnostic: "navigation-case-failure", engine: engine.name(), width,
           entryPath, destination, fragment, error: String(error).slice(0, 2000) }));
         throw error;
       } finally {
         console.log(JSON.stringify({ phase: "context-cleanup-start", engine: engine.name(), width, destination, heldRouteCount: held.size }));
-        await context.unrouteAll({ behavior: "ignoreErrors" });
-        await context.close();
+        try { await drain.closeContext(context); }
+        catch (cleanupFailure) {
+          if (caseFailed) throw new AggregateError([caseFailure, cleanupFailure], "Navigation case and cleanup failed");
+          throw cleanupFailure;
+        }
         console.log(JSON.stringify({ phase: "context-cleanup-complete", engine: engine.name(), width, destination }));
       }
     }
@@ -248,13 +255,22 @@ try {
     assert.equal((await fetch(physicalOrigin + path)).status, 404, `${path} keeps its HTTP status`);
   assert.equal((await fetch(physicalOrigin + "/purchase-outcomes")).status, 200, "Purchase outcomes remains available");
   console.log("PASS: mobile header and internal links switch before delayed data; cancellation, destination headings, history and 404 preserved.");
+} catch (error) {
+  fixtureFailed = true; fixtureFailure = error; throw error;
 } finally {
-  console.log(JSON.stringify({ phase: "final-cleanup-start", engine: engine.name(), heldRouteCount: held.size, serverExited: didExit }));
-  for (const route of held) await route.abort().catch(() => undefined);
-  await browser.close();
-  console.log(JSON.stringify({ phase: "browser-cleanup-complete", engine: engine.name(), serverExited: didExit }));
-  if (child && !didExit) { child.kill(); await stopped; }
-  console.log(JSON.stringify({ phase: "server-cleanup-complete", engine: engine.name(), serverExited: didExit }));
-  assert(!child || didExit, "Server exited before fixture cleanup");
-  await rm(temporary, { recursive: true, force: true });
+  console.log(JSON.stringify({ phase: "final-cleanup-start", engine: engine.name(), serverExited: didExit }));
+  const cleanupFailures: unknown[] = [];
+  try {
+    await browser.close();
+    console.log(JSON.stringify({ phase: "browser-cleanup-complete", engine: engine.name(), serverExited: didExit }));
+  } catch (error) { cleanupFailures.push(error); }
+  try {
+    if (child && !didExit) { child.kill(); await stopped; }
+    assert(!child || didExit, "Server exited before fixture cleanup");
+    console.log(JSON.stringify({ phase: "server-cleanup-complete", engine: engine.name(), serverExited: didExit }));
+    await rm(temporary, { recursive: true, force: true });
+  } catch (error) { cleanupFailures.push(error); }
+  if (cleanupFailures.length) {
+    throw new AggregateError(fixtureFailed ? [fixtureFailure, ...cleanupFailures] : cleanupFailures, "Navigation fixture disposal failed");
+  }
 }
