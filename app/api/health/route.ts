@@ -71,13 +71,18 @@ export async function GET() {
   try {
     const db = await getDb();
     beginPhase("metrics-and-jobs");
-    const [m, a2aJobs] = await Promise.all([db.metrics(), db.a2aOperationsSnapshot(Date.now())]);
+    const snapshot = await db.readPublicHealthSnapshot?.(Date.now(), !!config.registryReadAddress);
+    const [m, a2aJobs] = snapshot ? [snapshot.metrics, snapshot.jobs]
+      : await Promise.all([db.metrics(), db.a2aOperationsSnapshot(Date.now())]);
     beginPhase("sync-state");
-    const readSyncState = syncStateSnapshot(db, [
+    const stateKeys = [
       ...(config.registryReadAddress ? ["lastSyncedBlock", PARITY_STATE_KEY] : []),
       DISPATCH_HEALTH_STATE_KEY, SETTLEMENT_PARITY_STATE_KEY,
       PENDING_RECONCILIATION_STATE_KEY, "a2aWorker",
-    ]);
+    ];
+    const readSyncState = snapshot
+      ? async (key: string) => snapshot.syncState.has(key) ? snapshot.syncState.get(key) ?? null : db.getSyncState(key)
+      : syncStateSnapshot(db, stateKeys);
 
     // Registry section: served from sync_state only — the hourly parity watchdog
     // (scripts/check-registry.mts) does the chain reads; the probe stays chain-free.
