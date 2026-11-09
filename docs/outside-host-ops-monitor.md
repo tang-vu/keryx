@@ -219,7 +219,11 @@ The alert requires inspection; it does not authorize repeating purchases or payo
 2. Use the existing `keryx-vps` SSH alias. Check host reachability/disk/memory first,
    then `pm2 status`, bounded recent `keryx` error logs, and
    `systemctl status cloudflared`. Compare local port 3939 health with public HTTPS
-   health to isolate application versus tunnel/network failure. Avoid printing
+   health to isolate application versus tunnel/network failure. The private
+   listener requires `Host: keryx.cc` and `X-Forwarded-Proto: https`; a bare
+   loopback URL returns 421, which is a metadata refusal rather than failed
+   application readiness. Use the [bounded native profile procedure](engineering/native-origin-profile.md)
+   when the process is online but busy or unresponsive. Avoid printing
    environments, keys, private request bodies or full health payment telemetry.
 3. For a reachable but degraded application, inspect existing operational watchdog
    summaries, worker heartbeat and ambiguous-payment recovery using their documented
