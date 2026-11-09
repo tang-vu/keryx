@@ -37,13 +37,20 @@ export function requestedSourceReport(input: {
         ? `Đã trích xuất có giới hạn từ ${quoted(read.itemUrl!)}; ${qualified ? "giữ được đoạn trích đủ điều kiện" : "chưa giữ được bằng chứng đủ điều kiện"}.`
         : `Bounded text extracted from ${quoted(read.itemUrl!)}; ${qualified ? "qualifying excerpts retained" : "no qualifying evidence retained"}.`;
       if (read.webProvenance?.truncated) status += native ? native.truncated : chinese ? " 提取已被截断。" : fr ? " L'extraction a été tronquée." : pt ? " A extração foi truncada." : input.vi ? " Bản trích xuất bị cắt." : " Extraction was truncated.";
-      if (read.publicDeliveryKind === "abstract" || read.scholarly?.evidenceScope === "abstract-page") status += native ? native.abstract : chinese
+      if (read.scholarly?.evidenceScope === "abstract-page") status += native ? native.abstract : chinese
         ? " 仅读取了摘要页面；全文证据不可用。" : fr
         ? " Seule la page du résumé a été lue ; les preuves du texte intégral ne sont pas disponibles." : pt
         ? " Apenas a página do resumo foi lida; a evidência do artigo completo não está disponível."
         : input.vi
         ? " Chỉ đọc trang tóm tắt; toàn văn bài báo chưa có."
         : " Only the abstract page was read; full-paper evidence is unavailable.";
+      else if (read.publicDeliveryKind === "abstract") status += native ? native.summary : chinese
+        ? " 来源仅提供摘要或简介；尚未确认已阅读全文。" : fr
+        ? " La source a fourni un résumé ou une présentation ; la lecture du texte intégral n'est pas établie." : pt
+        ? " A fonte forneceu um resumo ou uma apresentação; a leitura do texto integral não foi confirmada."
+        : input.vi
+        ? " Nguồn chỉ cung cấp bản tóm tắt hoặc giới thiệu; chưa xác nhận đã đọc toàn văn."
+        : " The source supplied an abstract or summary; full-text reading has not been established.";
     } else if (failure) status = native ? nativeRecoveryFormat(native.failed, { code: reportLabel(failure.code) }) : chinese ? `读取失败：${reportLabel(failure.code)}。` : fr ? `Échec de lecture : ${reportLabel(failure.code)}.` : pt ? `Falha na leitura: ${reportLabel(failure.code)}.` : input.vi ? `Đọc thất bại: ${reportLabel(failure.code)}.` : `Read failed: ${reportLabel(failure.code)}.`;
     else status = `${decision?.action === "SKIP" ? "SKIP" : native ? native.notRead : chinese ? "未读取" : fr ? "Non lu" : pt ? "Não lida" : input.vi ? "Chưa đọc" : "Not read"}: ${reportLabel(decision?.rationale ?? (native ? native.incomplete : chinese ? "未能在本次运行的限制内完成读取。" : fr ? "La lecture n'a pas abouti dans les limites de cette recherche." : pt ? "A leitura não foi concluída dentro dos limites desta execução." : input.vi ? "Chưa hoàn tất lượt đọc trong giới hạn lượt này." : "A read did not complete within this run's limits."))}`;
     const section = input.withheld ? undefined : read?.webProvenance?.htmlSectionScope;

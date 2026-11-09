@@ -53,6 +53,7 @@ export const researchRecoveryKorean = Object.freeze({
     qualified: "채택 조건을 충족하는 발췌가 보존됨", unqualified: "채택 조건을 충족하는 근거가 보존되지 않음",
     truncated: " 추출이 잘렸습니다.",
     abstract: " 초록 페이지만 읽었으며 전문 근거는 사용할 수 없습니다.",
+    summary: " 출처는 초록 또는 요약만 제공했습니다. 전문을 읽었다고 확인되지 않았습니다.",
     failed: "읽기 실패: {code}.", notRead: "읽지 않음",
     incomplete: "이번 실행의 제한 안에서 읽기가 완료되지 않았습니다.",
     section: " 제목 아래 절 {section}만 읽었으며 주변 문서는 읽지 않았습니다.",

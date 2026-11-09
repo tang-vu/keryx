@@ -61,11 +61,11 @@ describe("supplied original operational labels", () => {
     expect(data.evidence[0].qualifiesForReward).toBe(false);
   });
 
-  it("keeps withheld and abstract-only scope explicit", () => {
+  it("keeps withheld and source-supplied summary scope explicit", () => {
     const data = read(true);
     data.gathered[0].publicDeliveryKind = "abstract";
     expect(requestedSourceReport({ ...data, language: "pt" })).toContain(
-      "Apenas a página do resumo foi lida; a evidência do artigo completo não está disponível.");
+      "A fonte forneceu um resumo ou uma apresentação; a leitura do texto integral não foi confirmada.");
     const withheld = requestedSourceReport({ ...data, language: "pt", withheld: true });
     expect(withheld).toContain("Não lida: o acesso a documentos externos está desativado no escopo desta execução.");
     expect(withheld).not.toContain("Texto extraído");

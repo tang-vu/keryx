@@ -53,6 +53,7 @@ export const researchRecoveryGerman = Object.freeze({
     qualified: "zugelassene Auszüge behalten", unqualified: "keine zugelassenen Belege behalten",
     truncated: " Die Extraktion wurde abgeschnitten.",
     abstract: " Nur die Abstract-Seite wurde gelesen; Volltextbelege sind nicht verfügbar.",
+    summary: " Die Quelle lieferte nur eine Zusammenfassung oder Einführung; eine Volltextlektüre ist nicht belegt.",
     failed: "Lesen fehlgeschlagen: {code}.", notRead: "Nicht gelesen",
     incomplete: "Das Lesen wurde innerhalb der Grenzen dieses Durchlaufs nicht abgeschlossen.",
     section: " Nur der Überschriftenabschnitt {section} wurde gelesen; das umgebende Dokument wurde nicht gelesen.",
