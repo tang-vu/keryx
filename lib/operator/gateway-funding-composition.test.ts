@@ -125,6 +125,7 @@ describe("dormant Operator funding release", () => {
           || importer === "scripts/restore-public-research.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           // Finite synthetic-only measurement; it cannot be reached by the application graph.
           || importer === "scripts/measure-enrolled-health.mts" && target === "lib/db/enrolled-sqlite-adapter.ts"
+          || importer === "scripts/measure-enrolled-source-learning.mts" && target === "lib/db/enrolled-sqlite-adapter.ts"
           || importer === "lib/db/storage-identity-connection.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts";
         expect(permitted, `Unreviewed storage selector: ${importer} -> ${target}`).toBe(true);
       }
@@ -137,6 +138,34 @@ describe("dormant Operator funding release", () => {
     expect(visited.has("lib/db/storage-identity.ts")).toBe(true);
     expect(visited.has("scripts/restore-public-research.mts")).toBe(false);
     expect(visited.has("scripts/measure-enrolled-health.mts")).toBe(false);
+    const measurementFile = "scripts/measure-enrolled-source-learning.mts";
+    expect(visited.has(measurementFile)).toBe(false);
+    const measurement = ts.createSourceFile(measurementFile,
+      readFileSync(join(cwd, measurementFile), "utf8"), ts.ScriptTarget.Latest, true);
+    let readonlyImports = 0;
+    let readonlyCalls = 0;
+    const inspectMeasurement = (node: ts.Node) => {
+      if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword
+        && node.arguments[0] && ts.isStringLiteralLike(node.arguments[0])
+        && resolveImport(measurementFile, node.arguments[0].text) === "lib/db/enrolled-sqlite-adapter.ts") {
+        readonlyImports++;
+        if (!ts.isAwaitExpression(node.parent) || !ts.isVariableDeclaration(node.parent.parent)
+          || !ts.isObjectBindingPattern(node.parent.parent.name)) throw new Error("Measurement must select only the readonly factory");
+        expect(node.parent.parent.name.elements.map(binding => ({
+          name: binding.name.getText(measurement), property: binding.propertyName?.getText(measurement),
+          rest: !!binding.dotDotDotToken, fallback: !!binding.initializer,
+        }))).toEqual([{ name: "createReadonlyEnrolledSqliteAdapter", property: undefined, rest: false, fallback: false }]);
+      }
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+        && node.expression.text === "createReadonlyEnrolledSqliteAdapter") {
+        readonlyCalls++;
+        expect(node.arguments).toHaveLength(0);
+      }
+      ts.forEachChild(node, inspectMeasurement);
+    };
+    inspectMeasurement(measurement);
+    expect(readonlyImports).toBe(1);
+    expect(readonlyCalls).toBe(1);
     const composition = readFileSync(join(process.cwd(), "lib/operator/gateway-funding-composition.ts"), "utf8");
     expect(composition).not.toMatch(/\bimport\s*\(/);
   });
