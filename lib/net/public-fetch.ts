@@ -291,6 +291,12 @@ export async function fetchPublicBytes(raw: string, limits: FetchLimits = {}): P
             : { "User-Agent": "Keryx-FeedCheck/1", Accept: "application/rss+xml, application/xml, text/xml, */*" },
         });
 
+        // A verification page can replace the requested resource independently
+        // of status/type. Only the explicit header supplies this signal.
+        if (res.headers.get("cf-mitigated") === "challenge") {
+          await res.body?.cancel().catch(() => undefined);
+          throw targetRefusal("publisher verification is required", "publisher-verification-required");
+        }
         if (res.status >= 300 && res.status < 400) {
           const location = res.headers.get("location");
           if (!location) throw targetRefusal("that address redirects nowhere", "redirect-unavailable");
