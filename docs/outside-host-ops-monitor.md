@@ -67,7 +67,7 @@ restored freshness checks, while durable NTP synchronization remains open. See t
   network I/O. A process restart loses the queue but retains consumed slots and
   notification attempt counts/deadlines. Corrupt state fails closed and requires inspection.
   State contains only slot, counters, verdict, check time, incident/diagnostic flags,
-  a monotonic incident sequence and at most two notification delivery records. Raw health JSON, payment telemetry,
+  a monotonic incident sequence and at most two notification delivery records with bounded reason labels. Raw health JSON, payment telemetry,
   exception text, keys and private payloads are neither stored nor sent to Telegram.
 - Each notice has a stable incident/kind ID. Its attempt count and next eligible time
   are persisted as `attempted` **before** Telegram `sendMessage`. HTTP 200 with
@@ -86,6 +86,47 @@ restored freshness checks, while durable NTP synchronization remains open. See t
   exactly-once delivery. A prolonged provider outage can exhaust all three attempts.
   Inspect the private group and state before a manual follow-up; preserve the journal.
   Recovery readiness does not prove payment resolution.
+
+### Opening-check context and existing journals
+
+New outage notices add `Opening check: ...` from the check that crosses the
+three-failure threshold. Earlier failures may have different classes. This label
+is a probe observation, not a root-cause diagnosis or a claim that every alert is a
+502. The captured value stays with the notice through later failures, recovery,
+delivery retries and process restarts.
+
+| Stored reason | Opening-check label |
+| --- | --- |
+| `unreachable` | request timeout or transport failure |
+| `http` | HTTP error or refused redirect |
+| `payload` | invalid or oversized health response |
+| `degraded` | degraded service status (HTTP 200) |
+| `stale` | invalid, old or future health timestamp |
+
+Only these static labels reach the message. Raw response bodies, exception text,
+URLs, payment data and arbitrary strings are not interpolated. Recovery notices
+retain their endpoint-readiness-only wording; they do not claim an incident's
+underlying cause is fixed.
+
+Application state format 3 strictly accepts format 2 journals and normalizes their
+notices with `reason: null`. The old format did not save an opening reason, so old
+pending notices keep their original message text. A later `healthy` or other
+current verdict cannot reconstruct that history. Migration preserves incident
+sequence/IDs, slots, streak counters, consumed diagnostic flags, delivery states,
+attempt counts and next-attempt deadlines. Invalid data still requires inspection.
+Reading status normalizes only the returned view; the next admitted mutation
+persists format 3 through the existing write-before-I/O path. There is no state
+reset, extra probe, notification, namespace, Cron change or Durable Object class
+migration.
+
+Source acceptance does not deploy this Worker or migrate live storage. A later
+authorized deployment must keep these journals. An older format-2-only Worker
+will refuse a persisted format 3 record; do not roll back by resetting storage or
+silently discarding pending notices. Rollback needs a format-3-compatible reader.
+The native workerd test seeds only a virtual fixture object and restarts its
+SQLite-backed runtime to verify migration, old pending text, preserved retry
+limits and terminal suppression; those seed/read controls are outside the
+deployed Worker module.
 
 ## Free-plan boundary
 
