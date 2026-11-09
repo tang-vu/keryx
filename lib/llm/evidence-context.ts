@@ -5,7 +5,8 @@ import { sourceSentenceSegments, type SourceExtraction } from "./source-sentence
 import { sourceHtmlLayout, sourceTextBlocks } from "./source-text-blocks";
 import { observedHtmlTextLayout, type HtmlTextLayout } from "../web-research/html-text-layout";
 import { enumeratedContext, enumeratedContextRange } from "./enumerated-context";
-import { structuralContextSamples } from "./structural-context-sample";
+import { MAX_STRUCTURAL_SAMPLES, structuralContextSamples } from "./structural-context-sample";
+import { observeStructuralReserve } from "./structural-context-reserve";
 
 const MAX_SOURCE_CHARACTERS = 200_000;
 const PASSAGE_CHARACTERS = 600;
@@ -389,24 +390,9 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     }
     for (const anchor of anchors) nominate(anchor, true);
   }
-  const spareWindows: Window[] = [];
-  if (!offsets.length && !namedOffsets.length && layout && !layout.limited && scanned.length === text.length &&
-    subClaims.some(claim => [...claim.slice(0, 8192)].some(character => /\p{L}/u.test(character) && character.codePointAt(0)! > 127))) {
-    const samples = structuralContextSamples(scanned, blocks, layout, PASSAGE_CHARACTERS, siblingContexts)
-      .sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start);
-    for (const range of samples) {
-      let existing: Window | undefined;
-      for (const window of seen.values()) if (window.start === range.start && window.end === range.end) { existing = window; break; }
-      if (existing) { spareWindows.push(existing); continue; }
-      // Original nominations and pools are complete. Only their unused ceiling
-      // can admit another intact block; no original candidate is displaced.
-      if (nominated >= nominationLimit) break;
-      nominated++;
-      const body = scanned.slice(range.start, range.end), words = terms(body);
-      spareWindows.push({ ...range, text: body, words, structuralContext: false,
-        questionScore: questionTerms.size ? [...questionTerms].filter(term => words.has(term)).length / questionTerms.size : 0 });
-    }
-  }
+  const structuralSamples = !offsets.length && !namedOffsets.length && layout && !layout.limited && scanned.length === text.length &&
+    subClaims.some(claim => [...claim.slice(0, 8192)].some(character => /\p{L}/u.test(character) && character.codePointAt(0)! > 127))
+    ? structuralContextSamples(scanned, blocks, layout, PASSAGE_CHARACTERS, siblingContexts, true) : [];
   // Retain the opening for context, then balance relevance across the requested targets.
   // Whitespace-only text has no blocks, but remains a bounded verbatim excerpt.
   if (!opening) addWindow(0, Math.min(PASSAGE_CHARACTERS, scanned.length));
@@ -479,19 +465,56 @@ export function selectEvidencePassages(text: string, question: string, subClaims
     return result;
   };
   let passages = compact(selected);
-  // Only fill unused slots/characters after the original lexical selection. A
-  // fuller intact block leads this small structural sample, never a claim of
-  // topical relevance. Explicit heading/fragment/gloss hints retain precedence.
-  for (const sample of spareWindows) {
-    const combined = compact([...passages, sample]);
-    const characters = combined.reduce((sum, passage) => sum + passage.text.length, 0);
-    if (combined.length > MAX_WINDOWS || characters > MAX_CONTEXT_CHARACTERS ||
-      characters === passages.reduce((sum, passage) => sum + passage.text.length, 0)) continue;
-    const retained = windows.find(window => window.start === sample.start && window.end === sample.end);
-    if (!retained && windows.length >= candidateLimit) continue;
-    if (!retained) windows.push(sample);
-    passages = combined;
+  const spareWindows: Window[] = [];
+  let offered = 0;
+  const fullerFirst = (a: { start: number; end: number }, b: { start: number; end: number }) =>
+    (b.end - b.start) - (a.end - a.start) || a.start - b.start;
+  const primary = structuralSamples.slice(0, MAX_STRUCTURAL_SAMPLES).sort(fullerFirst);
+  const reserve = structuralSamples.slice(MAX_STRUCTURAL_SAMPLES).sort(fullerFirst);
+  // Preserve the original primary opportunity even when the construction ceiling
+  // was nearly full. Covered primary blocks used to consume nominations too;
+  // releasing those counts must not let a previously excluded primary jump ahead.
+  let originalNominations = nominated;
+  const originalPrimary = [];
+  for (const range of primary) {
+    const existing = [...seen.values()].some(window => window.start === range.start && window.end === range.end);
+    if (!existing && originalNominations >= nominationLimit) break;
+    if (!existing) originalNominations++;
+    originalPrimary.push(range);
   }
+  // Keep the original primary opportunity before trying the fixed reserve. A
+  // wholly delivered block adds no context and consumes no spare nomination.
+  // New context only fills remaining room; no selected bytes are displaced.
+  let baseline = passages;
+  for (const [phase, ranges] of [originalPrimary, reserve].entries()) {
+    if (phase === 1) baseline = passages;
+    for (const range of ranges) {
+      if (passages.some(passage => passage.start <= range.start && passage.end >= range.end)) continue;
+      if (offered >= MAX_STRUCTURAL_SAMPLES) break;
+      let sample: Window | undefined;
+      for (const window of seen.values()) if (window.start === range.start && window.end === range.end) { sample = window; break; }
+      if (!sample) {
+        // Original nominations/pools and lexical selection are complete. Only the
+        // same unused construction ceiling can admit another intact body block.
+        if (nominated >= nominationLimit) break;
+        nominated++;
+        const body = scanned.slice(range.start, range.end), words = terms(body);
+        sample = { ...range, text: body, words, structuralContext: false,
+          questionScore: questionTerms.size ? [...questionTerms].filter(term => words.has(term)).length / questionTerms.size : 0 };
+      }
+      offered++;
+      spareWindows.push(sample);
+      const combined = compact([...passages, sample]);
+      const characters = combined.reduce((sum, passage) => sum + passage.text.length, 0);
+      if (combined.length > MAX_WINDOWS || characters > MAX_CONTEXT_CHARACTERS ||
+        characters === passages.reduce((sum, passage) => sum + passage.text.length, 0)) continue;
+      const retained = windows.find(window => window.start === sample.start && window.end === sample.end);
+      if (!retained && windows.length >= candidateLimit) continue;
+      if (!retained) windows.push(sample);
+      passages = combined;
+    }
+  }
+  if (passages !== baseline) observeStructuralReserve(text, passages, baseline);
   const additionalSamples = spareWindows.filter(sample => {
     for (const window of seen.values()) if (window.start === sample.start && window.end === sample.end) return false;
     return true;

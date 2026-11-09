@@ -6,6 +6,7 @@ import { sourceSentenceSegments, type SourceExtraction } from "./source-sentence
 import { sourceHtmlLayout, sourceTextBlocks } from "./source-text-blocks";
 import type { HtmlTextLayout } from "../web-research/html-text-layout";
 import { visibleEnumerationKind } from "./enumerated-context";
+import { structuralReserveBaseline } from "./structural-context-reserve";
 
 export interface ContextualQuoteOption {
   quoteId: string;
@@ -191,55 +192,61 @@ export function buildContextualQuoteOptions(sources: ReturnType<typeof evidenceC
     const options: ContextualQuoteOption[] = [];
     const offeredSpans = new Set<string>();
     const completeSpans = policy.completeSentencesOnly ? completeEvidenceSpans(original) : [];
-    let passages = policy.completeSentencesOnly
-      ? completeSpans.filter(span => source.passages.some(passage => passage.start <= span.start && passage.end >= span.end))
-        .map(span => ({ ...span, text: original.text.slice(span.start, span.end) }))
-      : source.passages;
-    if (policy.completeSentencesOnly && policy.includeShortBlocks === true) {
-      // Existing sentence choices and their IDs retain first claim on the menu.
-      // Alternatives use spare capacity; compactness cannot evict a late fact.
-      passages = [...passages, ...completeShortItems(original, scanned, source.passages, completeSpans, layout)];
-    }
-    if (policy.completeSentencesOnly && policy.includeAdjacentSentences === true) {
-      passages = [...passages, ...adjacentSentences(original, scanned, source.passages, completeSpans)];
-    }
-    passages: for (const passage of passages) {
-      // Strict spans already have shared source boundaries. Resegmenting original
-      // PDF line wraps here would turn a complete span back into a sentence tail.
-      const sentences = policy.completeSentencesOnly
-        ? [{ index: 0, segment: passage.text }] : segmenter.segment(passage.text);
-      for (const sentence of sentences) {
-        const [bodyStart, bodyEnd] = trimSpan(scanned, passage.start + sentence.index,
-          Math.min(scanned.length, passage.start + sentence.index + sentence.segment.length));
-        const body = scanned.slice(bodyStart, bodyEnd);
-        let offset = 0;
-        while (offset < body.length) {
-          if (options.length === MAX_QUOTES) break passages;
-          let limit = Math.min(body.length, offset + MAX_QUOTE_CHARACTERS);
-          if (limit < body.length) {
-            const space = body.lastIndexOf(" ", limit);
-            if (space >= offset + 8) limit = space;
-            else if (highSurrogate(body[limit - 1])) limit--;
+    const baseline = structuralReserveBaseline(original.text, source.passages);
+    const selections = baseline ? [baseline, source.passages] : [source.passages];
+    // Preserve every original choice/ID, including optional alternatives, before
+    // spare structural context fills remaining menu slots. Segment the source once.
+    selections: for (const selected of selections) {
+      let passages = policy.completeSentencesOnly
+        ? completeSpans.filter(span => selected.some(passage => passage.start <= span.start && passage.end >= span.end))
+          .map(span => ({ ...span, text: original.text.slice(span.start, span.end) }))
+        : selected;
+      if (policy.completeSentencesOnly && policy.includeShortBlocks === true) {
+        // Existing sentence choices and their IDs retain first claim on the menu.
+        // Alternatives use spare capacity; compactness cannot evict a late fact.
+        passages = [...passages, ...completeShortItems(original, scanned, selected, completeSpans, layout)];
+      }
+      if (policy.completeSentencesOnly && policy.includeAdjacentSentences === true) {
+        passages = [...passages, ...adjacentSentences(original, scanned, selected, completeSpans)];
+      }
+      for (const passage of passages) {
+        // Strict spans already have shared source boundaries. Resegmenting original
+        // PDF line wraps here would turn a complete span back into a sentence tail.
+        const sentences = policy.completeSentencesOnly
+          ? [{ index: 0, segment: passage.text }] : segmenter.segment(passage.text);
+        for (const sentence of sentences) {
+          const [bodyStart, bodyEnd] = trimSpan(scanned, passage.start + sentence.index,
+            Math.min(scanned.length, passage.start + sentence.index + sentence.segment.length));
+          const body = scanned.slice(bodyStart, bodyEnd);
+          let offset = 0;
+          while (offset < body.length) {
+            if (options.length === MAX_QUOTES) break selections;
+            let limit = Math.min(body.length, offset + MAX_QUOTE_CHARACTERS);
+            if (limit < body.length) {
+              const space = body.lastIndexOf(" ", limit);
+              if (space >= offset + 8) limit = space;
+              else if (highSurrogate(body[limit - 1])) limit--;
+            }
+            const [start, end] = trimSpan(scanned, bodyStart + offset, bodyStart + limit);
+            const key = `${start}:${end}`;
+            if (end - start >= 8 && !offeredSpans.has(key)) {
+              offeredSpans.add(key);
+              const [contextStart, contextEnd] = contextSpan(scanned, start, end, boundaries);
+              options.push({
+                quoteId: `q${sourceIndex}_${options.length}`, marker: source.marker,
+                text: scanned.slice(start, end), start, end,
+                contextStart, contextEnd, context: scanned.slice(contextStart, contextEnd),
+                prefixOmitted: contextStart > 0, suffixOmitted: contextEnd < original.text.length,
+              });
+            }
+            if (limit === body.length) break;
+            // Match the bounded overlapping word chunks used by the quote menu, but
+            // retain their location rather than recovering duplicate text with indexOf.
+            const next = offset + Math.max(1, Math.floor((limit - offset) / 2));
+            const space = body.indexOf(" ", next);
+            offset = space >= next && space < limit ? space + 1 : next;
+            if (lowSurrogate(body[offset] ?? "")) offset++;
           }
-          const [start, end] = trimSpan(scanned, bodyStart + offset, bodyStart + limit);
-          const key = `${start}:${end}`;
-          if (end - start >= 8 && !offeredSpans.has(key)) {
-            offeredSpans.add(key);
-            const [contextStart, contextEnd] = contextSpan(scanned, start, end, boundaries);
-            options.push({
-              quoteId: `q${sourceIndex}_${options.length}`, marker: source.marker,
-              text: scanned.slice(start, end), start, end,
-              contextStart, contextEnd, context: scanned.slice(contextStart, contextEnd),
-              prefixOmitted: contextStart > 0, suffixOmitted: contextEnd < original.text.length,
-            });
-          }
-          if (limit === body.length) break;
-          // Match the bounded overlapping word chunks used by the quote menu, but
-          // retain their location rather than recovering duplicate text with indexOf.
-          const next = offset + Math.max(1, Math.floor((limit - offset) / 2));
-          const space = body.indexOf(" ", next);
-          offset = space >= next && space < limit ? space + 1 : next;
-          if (lowSurrogate(body[offset] ?? "")) offset++;
         }
       }
     }
