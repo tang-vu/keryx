@@ -1,6 +1,6 @@
 import type { HtmlTextLayout, TextRegion } from "../web-research/html-text-layout";
 
-const MAX_SAMPLES = 4;
+export const MAX_STRUCTURAL_SAMPLES = 4;
 const SAMPLES_PER_SECTION = 2;
 const label = (text: string) => text.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
 
@@ -10,8 +10,11 @@ const label = (text: string) => text.normalize("NFKC").trim().replace(/\s+/gu, "
  * existing context path. No fetched bytes or evidence authority are added.
  */
 export function structuralContextSamples(text: string, blocks: readonly TextRegion[], layout: HtmlTextLayout,
-  maximumBlockCharacters: number, enumerations?: ReadonlyMap<number, TextRegion>): TextRegion[] {
+  maximumBlockCharacters: number, enumerations?: ReadonlyMap<number, TextRegion>, includeReserve = false): TextRegion[] {
   if (layout.limited) return [];
+  // A fixed second batch supplies offsets only. The caller offers at most four
+  // uncovered samples, keeping effective primary context before the reserve.
+  const limit = includeReserve === true ? MAX_STRUCTURAL_SAMPLES * 2 : MAX_STRUCTURAL_SAMPLES;
   const headings = layout.headings;
   const lastHeading = new Map(headings.map(heading => [label(text.slice(heading.start, heading.end)), heading.start]));
   const firstLink = new Map<number, string>();
@@ -40,7 +43,7 @@ export function structuralContextSamples(text: string, blocks: readonly TextRegi
       layout.preformatted.some(region => region.start < block.end && region.end > block.start)) continue;
     samples.push(block);
     counts.set(section, (counts.get(section) ?? 0) + 1);
-    if (samples.length === MAX_SAMPLES) break;
+    if (samples.length === limit) break;
   }
   return samples;
 }
