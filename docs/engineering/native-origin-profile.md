@@ -87,6 +87,60 @@ the predecessor. Record both the sample count and unresolved frames. Missing JIT
 symbols, omitted frame pointers, limited depth, dropped samples or an idle window
 can prevent a useful call chain. No samples do not prove no work occurred.
 
+## Reviewed one-shot command
+
+`scripts/profile-public-origin.py` implements the bounded collection above for
+the reviewed native, root-owned PM2 role layout. It requires Linux root and the
+following operator-supplied identities from the current operational record:
+
+```text
+python3 /path/to/reviewed/profile-public-origin.py
+  --web-pid <pid> --web-start <proc-start-ticks>
+  --worker-pid <pid> --worker-start <proc-start-ticks>
+  --daemon-pid <pid> --daemon-start <proc-start-ticks>
+  --source <full-installed-source-commit>
+  --config <reviewed-private-archive/roles.json>
+  --config-sha256 <full-reviewed-config-sha256>
+```
+
+This is an argument outline. Pass arguments directly to a subprocess; do not
+copy stale PIDs or interpolate an unreviewed shell command. The config must be a
+root-owned regular file under the existing private release archives. The command
+checks its digest and both exact native launch commands, then binds the current
+daemon PID file, root UIDs, Node executable, web/worker parent, cwd, command line,
+four source/runtime environment markers and `/proc` start ticks. It checks again
+after the HTTP observation and after a recording. Other environment values are
+neither reported nor copied into the recorder. These checks establish the
+declared process binding, not release-artifact integrity or recovery authority.
+
+Without `--profile`, it prints one JSON observation to stdout. It takes a native
+CPU tick delta across a half-second wait and one fixed two-second loopback health
+GET with the required ingress headers. It does not invoke PM2, import application
+code, start a missing daemon, retry the request or inspect application variables.
+Exit zero means the observation completed; inspect the HTTP status and curl exit
+code separately. It is not a complete readiness, database or payment verdict.
+
+Only an explicit `--profile` can attach the recorder, and only when the observed
+web CPU rate is at least 80% of one core and the HTTP probe times out or returns
+5xx. Healthy/not-busy observations skip collection; 421, redirects, other 4xx and
+unrelated curl errors refuse it. There is no force switch, retry or installed
+watchdog. An operator still needs the existing finite production diagnostic
+scope; possession of this command does not grant attachment or recovery authority.
+
+In profile mode, stdout contains only binary pipe-format profile bytes, including
+any retained partial bytes; stderr contains the JSON verdict and recorder log.
+Use separate binary-safe evidence files and retain the process exit code even on
+failure. The command bounds retained stdout to 2 MiB, recorder stderr to 16 KiB
+and collection to 12 seconds, followed by at most three seconds of helper cleanup.
+It creates a new helper session and signals only that helper/session on a limit
+or interruption, never the pinned web or worker. It disables recorder config and
+build-ID cache writes. Nonzero recorder exit, a limit, missing pipe header or
+changed target binding produces an incomplete/refused verdict, not a successful
+capture. A valid header and exit zero still require decoding and sample attribution
+before the data supports a useful diagnosis. Python documents the binary streams,
+child-session and return-code behavior in its
+[subprocess reference](https://docs.python.org/3/library/subprocess.html).
+
 ## Qualification on November 9, 2026
 
 An isolated Node 24.22.1 process on the existing VPS performed synchronous crypto
@@ -111,6 +165,19 @@ the outage, identify its cause or qualify an arbitrary future target/runtime.
 The [request observations during drain](public-request-observation.md) provide
 separate workload aggregates when the event loop can run; they cannot explain an
 earlier fully blocked loop or count requests still waiting in the kernel queue.
+
+The implemented command was also checked against the installed roles in
+observation mode, without production attachment. Its exact collector then ran on
+a separate owned Node 24.22.1 crypto fixture. Recording and decoding exited zero:
+27,632 bytes, 97 samples across 1.980 seconds, all attributed to the fixture PID,
+with native PBKDF2/HMAC frames and no reported lost events. There were unresolved
+frames; this does not establish complete JavaScript call chains. Separate real
+child-process trials exceeded a reduced byte limit and a deadline; each retained
+its partial bytes, reported the failure and closed its own helper. Portable unit
+tests cover binding, refusal, capture decisions and both output pipes. Subsequent
+checks found those helpers absent, the same production role start times, no
+inspector listener and a correctly formed loopback HTTP 200. These are mechanism
+checks, not an outage reproduction or proof that its trigger has been repaired.
 
 ## Recovery and closure
 
