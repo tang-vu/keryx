@@ -28,6 +28,11 @@ export interface PrivacyActor { wallet: string; sessionHash?: string; binding: R
 export interface PrivacyState { visibility: RunVisibility; revision: number; erased: boolean }
 export interface PrivacyRead { exists: boolean; item: { run: QueryRun; state: PrivacyState } | null }
 export interface PrivacyList { take: number; before?: { id: string; createdAt: string }; parentId?: string; ids?: string[] }
+/** Internal learning inputs only; no question, answer, trace or citation body. */
+export type PublicSourceLearningRun = Pick<QueryRun, "id" | "createdAt" | "usage" | "sourceLearning" | "paymentMode" | "asker" | "provenance"> & {
+  originalFulfillment?: unknown;
+  decisions: Array<Pick<QueryRun["decisions"][number], "sourceId">>;
+};
 export const pendingPollSchema=z.object({queryId:z.string().regex(/^a2a_[a-f0-9]{64}$/),status:z.literal("running"),
   createdAt:z.string().max(64),startedAt:z.string().max(64).nullable(),amountUsdc:z.number().finite().nonnegative(),
   creatorBudgetUsdc:z.number().finite().nonnegative(),serviceFeeUsdc:z.number().finite().nonnegative(),
@@ -48,6 +53,8 @@ export interface RunPrivacyStore {
   questions?(ids: string[]): Promise<PublicQuestion[]>;
   /** Latest 50 freshly public originals; provenance projected before answer presence/citation bounds. */
   sourceHistory?(): Promise<PublicSourceHistoryRow[]>;
+  /** Fresh public-only metadata, ordered like list; 1–32 rows, no enduring cache. */
+  learningPage?(query: Pick<PrivacyList, "take" | "before">): Promise<PublicSourceLearningRun[]>;
   /** Optional slim reader (1–32 rows); each call admits current public originals in storage. */
   archivePage?(query: PrivacyList): Promise<import("./archive-page").PublicArchiveRow[]>;
   /** Shared memory uses only publicly listed research; private topic text never becomes cross-owner context. */
