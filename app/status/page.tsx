@@ -1,6 +1,7 @@
 "use client";
 import { formatNumber, formatRecordedAmount } from "@/lib/i18n/format";
 import { DisplayTime } from "@/components/keryx/display-time";
+import { readStatusHealth, type StatusHealth } from "@/lib/ops/status-health";
 
 /**
  * /status — uptime and settlement health. Polls /api/health and shows whether the
@@ -39,17 +40,7 @@ import { useUiMessages, useUiRichMessages } from "@/lib/i18n/ui-copy";
 
 
 
-interface Health {
-  ok: boolean;
-  status?: "operational" | "degraded";
-  db: string;
-  commit: string | null;
-  uptimeSeconds: number;
-  reasoning: string;
-  settles: string;
-  network: string;
-  rpcProvider: string;
-  time: string;
+interface Health extends StatusHealth {
   registry?: RegistryHealth | null;
   dispatches?: DispatchHealth | null;
   settlement?: SettlementHealth | null;
@@ -97,8 +88,9 @@ export default function StatusPage() {
     let alive = true;
     const poll = async () => {
       try {
-        const r = await fetch("/api/health", { cache: "no-store", signal: AbortSignal.timeout(8_000) });
-        const j = (await r.json()) as Health;
+        const r = await fetch("/api/health", { cache: "no-store", redirect: "error", signal: AbortSignal.timeout(8_000) });
+        const j = await readStatusHealth(r);
+        if (!j) throw new Error("Health observation unavailable");
         if (alive) {
           setHealth(j);
           setReachable(true);
@@ -131,8 +123,8 @@ export default function StatusPage() {
     };
   }, []);
 
-  const up = reachable && health?.ok && health.status !== "degraded";
-  const label = !reachable ? message("statusPage.unreachable") : !health ? message("statusPage.checkingService") : up ? message("statusPage.serviceAvailable") : message("statusPage.degraded");
+  const up = reachable && health?.status === "operational";
+  const label = !reachable ? message("statusPage.unavailable") : !health ? message("statusPage.checkingService") : up ? message("statusPage.serviceAvailable") : message("statusPage.degraded");
 
   return (
     <div className="min-h-screen bg-paper-2">
