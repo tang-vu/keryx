@@ -70,11 +70,44 @@ function fragmentHeadingOffsets(text: string, blocks: { start: number; end: numb
   }).slice(0, MAX_FRAGMENT_HINTS);
 }
 
+/** Literal one-line code names are retrieval hints, not executable Markdown or
+ * source instructions. Block code and unmatched delimiters supply no new hint. */
+function codeHeadingNames(question: string): { offset: number; name: string }[] {
+  const fences: { start: number; end: number }[] = [];
+  let open: { start: number; delimiter: string; length: number } | undefined;
+  for (const line of question.matchAll(/[^\r\n]*(?:\r\n|\r|\n|$)/gu)) {
+    const value = line[0].replace(/[\r\n]+$/u, "");
+    const fence = /^ {0,3}(`{3,}|~{3,})(.*)$/u.exec(value);
+    if (!fence) continue;
+    if (open) {
+      if (fence[1]![0] === open.delimiter && fence[1]!.length >= open.length && /^[ \t]*$/u.test(fence[2]!)) {
+        fences.push({ start: open.start, end: line.index + line[0].length });
+        open = undefined;
+      }
+    } else if (fence[1]![0] !== "`" || !fence[2]!.includes("`")) {
+      open = { start: line.index, delimiter: fence[1]![0]!, length: fence[1]!.length };
+    }
+  }
+  if (open) fences.push({ start: open.start, end: question.length });
+  const names: { offset: number; name: string }[] = [];
+  for (const match of question.matchAll(/(?<!`)(`+)([^`\r\n]{1,120})\1(?!`)/gu)) {
+    if (fences.some(range => range.start <= match.index && match.index < range.end)) continue;
+    const lineStart = Math.max(question.lastIndexOf("\n", match.index - 1), question.lastIndexOf("\r", match.index - 1)) + 1;
+    if (/^(?: {4}|\t)/u.test(question.slice(lineStart, match.index))) continue;
+    names.push({ offset: match.index, name: match[2]! });
+  }
+  return names;
+}
+
 function namedHeadingOffsets(text: string, question: string, layout?: HtmlTextLayout): number[] {
   if (!layout) return [];
   const names = new Set<string>();
-  for (const match of question.slice(0, 8192).matchAll(/"([^"\r\n]{1,120})"|“([^”\r\n]{1,120})”|«([^»\r\n]{1,120})»/gu)) {
-    const key = namedHeadingKey(match[1] ?? match[2] ?? match[3]!);
+  const bounded = question.slice(0, 8192);
+  const hints = [...bounded.matchAll(/"([^"\r\n]{1,120})"|“([^”\r\n]{1,120})”|«([^»\r\n]{1,120})»/gu)]
+    .map(match => ({ offset: match.index, name: match[1] ?? match[2] ?? match[3]! }));
+  hints.push(...codeHeadingNames(bounded));
+  for (const hint of hints.sort((a, b) => a.offset - b.offset)) {
+    const key = namedHeadingKey(hint.name);
     if (key) names.add(key);
     if (names.size === MAX_FRAGMENT_HINTS) break;
   }
