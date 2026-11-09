@@ -20,7 +20,9 @@ const STOP_WORDS = new Set("a an and are as at be by can do does for from how in
 
 function terms(text: string): Set<string> {
   return new Set((text.normalize("NFKC").toLowerCase().match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}]*/gu) ?? [])
-    .filter((term) => term.length > 1 && !STOP_WORDS.has(term)));
+    // A one-digit reference can distinguish an explicitly requested numbered
+    // fact. Keep the existing token boundaries; this is no numeric inference.
+    .filter((term) => (term.length > 1 || /^\p{Nd}$/u.test(term)) && !STOP_WORDS.has(term)));
 }
 
 function unionCharacters(ranges: { start: number; end: number }[]): number {
