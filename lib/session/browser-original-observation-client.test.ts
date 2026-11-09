@@ -10,7 +10,7 @@ import path from "node:path";
 import { observationFixture } from "../payments/browser-original-observation.test-fixture";
 import { createSyntheticOriginalObservationServer } from "../payments/browser-original-observation-server";
 import { createSyntheticOriginalObservationClient } from "./browser-original-observation-client";
-import { OBSERVATION_PATH } from "../payments/browser-original-observation-protocol";
+import { OBSERVATION_PATH, OBSERVATION_CLOCK_PATH } from "../payments/browser-original-observation-protocol";
 async function serve(
   f: Awaited<ReturnType<typeof observationFixture>>,
   override?: (req: IncomingMessage, res: ServerResponse) => boolean
@@ -212,13 +212,21 @@ it("actual Chromium accepts stable UTC offsets and refuses injected elapsed jump
   let origin = "",
     delay = 0,
     clockSuccess = 0,
-    originalReads = 0;
+    originalReads = 0,
+    handlerCalls = 0;
   const server = createServer((req, res) => {
     if (req.url === "/") {
       res.writeHead(200, { "Content-Type": "text/html" });
       res.end(`<script>${bundle.outputFiles[0].text}</script>`);
       return;
     }
+    const apiPath = req.url?.split("?")[0];
+    if (apiPath !== OBSERVATION_PATH && apiPath !== OBSERVATION_CLOCK_PATH) {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+    handlerCalls++;
     void (async () => {
       const headers = new Headers();
       for (const [key, value] of Object.entries(req.headers))
@@ -227,7 +235,7 @@ it("actual Chromium accepts stable UTC offsets and refuses injected elapsed jump
       const response = await handler(
         new Request(origin + req.url, { headers })
       );
-      if (req.url?.includes("/clock") && response.status === 200)
+      if (apiPath === OBSERVATION_CLOCK_PATH && response.status === 200)
         clockSuccess++;
       if (req.url === OBSERVATION_PATH) originalReads++;
       res.writeHead(response.status, Object.fromEntries(response.headers));
@@ -284,6 +292,17 @@ it("actual Chromium accepts stable UTC offsets and refuses injected elapsed jump
         page.on("pageerror", error => pageErrors.push(error.message));
         await page.goto(origin);
         expect(pageErrors).toEqual([]);
+        if (mode === "past") {
+          // Background asset requests must not enter the rate-limited protocol
+          // handler. The real browser may also request its own favicon.
+          const background = await page.evaluate(async () => Promise.all(
+            Array.from({ length: 8 }, async (_, index) => (await fetch(
+              `/favicon.ico?clock-fixture-background=${index}`, { cache: "no-store" },
+            )).status),
+          ));
+          expect(background).toEqual(Array(8).fill(404));
+        }
+        const clocksBefore = clockSuccess, originalsBefore = originalReads;
         const pass = await page.evaluate(
           async (args) => {
             const fixture = window as unknown as {
@@ -304,12 +323,21 @@ it("actual Chromium accepts stable UTC offsets and refuses injected elapsed jump
           }
         );
         expect(pass).toBe(mode === "past" || mode === "future");
+        expect(clockSuccess - clocksBefore, mode).toBe(1);
+        expect(originalReads - originalsBefore, mode).toBe(pass ? 1 : 0);
+        expect(pageErrors).toEqual([]);
+        console.log(JSON.stringify({ format: "keryx-observation-clock-case-v1", mode,
+          accepted: pass, successfulClockReads: clockSuccess - clocksBefore,
+          originalReads: originalReads - originalsBefore,
+          checkedBackgroundRequests: mode === "past" ? 8 : 0,
+          backgroundStatus: mode === "past" ? 404 : null }));
       } finally {
         await context.close();
       }
     }
     expect(clockSuccess).toBe(5);
     expect(originalReads).toBe(2);
+    expect(handlerCalls).toBe(7);
     expect(f.state() === before).toBe(true);
   } finally {
     await browser?.close();
