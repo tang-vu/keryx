@@ -69,7 +69,10 @@ export const readArticle: ArticleReader = async (url, signal, options) => {
   const fragment = requestedHtmlFragment(url, options);
   const fetched = await fetchPublicBytes(url, { maxBytes: 2 * 1024 * 1024, timeoutMs: 8000, maxHops: 3, signal,
     representation: "article", httpsOnly: true, allowedContentTypes: ["text/html", "application/xhtml+xml", "text/plain", "text/markdown", "application/pdf"] }).catch(error => {
-      throw new ArticleReadError(signal?.aborted ? "cancelled" : error instanceof UnsafeTargetError && error.message === "that file is too large to read" ? "article-byte-limit" : "transport-unavailable", publicFetchFailure(error));
+      const diagnostic = publicFetchFailure(error);
+      throw new ArticleReadError(signal?.aborted ? "cancelled" : diagnostic?.reason === "publisher-verification-required"
+        ? "publisher-verification-required" : error instanceof UnsafeTargetError && error.message === "that file is too large to read"
+        ? "article-byte-limit" : "transport-unavailable", diagnostic);
     });
     // OpenReview can return a successful HTML response at this verification route.
     // Its instructions are an access failure, never text from the requested paper.

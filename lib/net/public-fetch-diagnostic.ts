@@ -1,6 +1,6 @@
 /** Fixed, content-free transport facts. Never retain an error message, address or URL. */
 export const publicFetchReasons = ["invalid-url", "blocked-address", "dns-unavailable", "tls-unavailable",
-  "connection-unavailable", "timeout", "cancelled", "http-status", "redirect-unavailable", "redirect-limit",
+  "connection-unavailable", "timeout", "cancelled", "publisher-verification-required", "http-status", "redirect-unavailable", "redirect-limit",
   "unsupported-content-type", "partial-response", "byte-limit", "body-unavailable", "transport-unavailable"] as const;
 export type PublicFetchReason = typeof publicFetchReasons[number];
 export interface PublicFetchDiagnostic { reason: PublicFetchReason; elapsedMs: number; httpStatus?: number }
