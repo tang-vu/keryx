@@ -123,6 +123,8 @@ describe("dormant Operator funding release", () => {
           || importer === "lib/db/public-profiles-sqlite.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/owner-run-assignment.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "scripts/restore-public-research.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
+          // Finite synthetic-only measurement; it cannot be reached by the application graph.
+          || importer === "scripts/measure-enrolled-health.mts" && target === "lib/db/enrolled-sqlite-adapter.ts"
           || importer === "lib/db/storage-identity-connection.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts";
         expect(permitted, `Unreviewed storage selector: ${importer} -> ${target}`).toBe(true);
       }
@@ -134,6 +136,7 @@ describe("dormant Operator funding release", () => {
     expect(visited.has("lib/sources/enrolled-content-cache.ts")).toBe(true);
     expect(visited.has("lib/db/storage-identity.ts")).toBe(true);
     expect(visited.has("scripts/restore-public-research.mts")).toBe(false);
+    expect(visited.has("scripts/measure-enrolled-health.mts")).toBe(false);
     const composition = readFileSync(join(process.cwd(), "lib/operator/gateway-funding-composition.ts"), "utf8");
     expect(composition).not.toMatch(/\bimport\s*\(/);
   });

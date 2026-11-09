@@ -24,6 +24,7 @@ import { createEnrolledSqlitePrivateProfiles } from "./private-profiles-enrolled
 import { createEnrolledSqliteTopicWatches } from "./topic-watches-sqlite";
 import { createEnrolledSqlitePendingJobOwners } from "./pending-job-owners-sqlite";
 import { createEnrolledSqliteOwnerRunAssignments } from "./owner-run-assignments-sqlite";
+import { readSqliteDashboardMetrics } from "./dashboard-metric-rows";
 
 /** Explicit behavior inventory, including verifyApiKey's last-used write. New methods require review. */
 export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
@@ -327,7 +328,11 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
         if (access.startsWith("mainnet-") && deployment.identity.authorityMode !== "mainnet-real") throw new Error("Research purchase authority is unavailable in enrolled storage");
         if (readOnly && (access === "write" || access === "mainnet-write" || name === "assertResearchPurchaseAuthority")) throw new Error("Readonly enrolled SQLite mutation refused");
         assert();
-        const result = Reflect.apply(Reflect.get(core, name), core, args);
+        // The fixed metrics read combines four input scans into one guarded SQL
+        // statement. Preserve this facade's admission and post-await assertion;
+        // the ordinary core method and all connection guards remain unchanged.
+        const result = name === "metrics" ? readSqliteDashboardMetrics(db)
+          : Reflect.apply(Reflect.get(core, name), core, args);
         if (name === "iterateRecentQueries") {
           return (async function* () {
             const iterator = (result as AsyncIterable<unknown>)[Symbol.asyncIterator]();
