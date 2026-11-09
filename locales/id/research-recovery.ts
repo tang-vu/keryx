@@ -53,6 +53,7 @@ export const researchRecoveryIndonesian = Object.freeze({
     qualified: "petikan yang memenuhi syarat disimpan", unqualified: "tidak ada bukti yang memenuhi syarat disimpan",
     truncated: " Ekstraksi terpotong.",
     abstract: " Hanya halaman abstrak yang dibaca; bukti teks lengkap tidak tersedia.",
+    summary: " Sumber hanya menyediakan abstrak atau ringkasan; pembacaan teks lengkap belum dipastikan.",
     failed: "Pembacaan gagal: {code}.", notRead: "Belum dibaca",
     incomplete: "Pembacaan tidak selesai dalam batas proses ini.",
     section: " Hanya bagian judul {section} yang dibaca; dokumen di sekitarnya belum dibaca.",

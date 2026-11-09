@@ -26,7 +26,7 @@ export interface NativeRecoveryCopy {
   readonly synthesisSummary: string;
   readonly followUp: Readonly<Record<"title" | "notice" | "truncated" | "scholarlyAbstract" | "abstract" | "conflict", string>>;
   readonly requested: Readonly<Record<"title" | "withheld" | "extracted" | "qualified" | "unqualified" |
-    "truncated" | "abstract" | "failed" | "notRead" | "incomplete" | "section" | "unreadFragment" | "untargetedFragment", string>>;
+    "truncated" | "abstract" | "summary" | "failed" | "notRead" | "incomplete" | "section" | "unreadFragment" | "untargetedFragment", string>>;
   readonly empty: Readonly<Record<"prefix" | "noEvidence" | "discoveryWithheld" | "discoveryUnconfigured" |
     "discoveryUnavailable" | "discoveryCounts" | "failedOriginals" | "noOriginal" | "skipped" | "suppliedUrls" |
     "scholarly" | "narrow" | "limitations", string>>;

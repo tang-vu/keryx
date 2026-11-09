@@ -53,6 +53,7 @@ export const researchRecoveryJapanese = Object.freeze({
     qualified: "採用条件を満たす抜粋を保持しています", unqualified: "採用条件を満たす根拠は保持されていません",
     truncated: " 抽出は途中で打ち切られました。",
     abstract: " 要旨ページのみを読みました。全文の根拠は利用できません。",
+    summary: " 出典は要旨または概要のみを提供しました。全文を読んだことは確認できません。",
     failed: "閲覧失敗：{code}。", notRead: "未閲覧",
     incomplete: "この実行の制限内で閲覧が完了しませんでした。",
     section: " 見出しの節{section}のみを読み、周囲の文書は読んでいません。",

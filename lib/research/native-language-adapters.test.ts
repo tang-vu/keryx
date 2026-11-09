@@ -209,10 +209,12 @@ describe.each(["de", "ja", "ko", "hi", "id", "ru", "ar"] as const)("prepared %s 
     input.gathered[0].publicDeliveryKind = "abstract";
     const answer = requestedSourceReport({ ...input, language });
     expect(answer).toContain(nativeRecoveryFormat(copy.requested.section, { section: "`#examples`" }));
-    expect(answer).toContain(copy.requested.abstract); expect(answer).not.toContain(copy.requested.untargetedFragment);
+    expect(answer).toContain(copy.requested.summary); expect(answer).not.toContain(copy.requested.abstract);
+    expect(answer).not.toContain(copy.requested.untargetedFragment);
     const withheld = requestedSourceReport({ ...input, language, withheld: true });
     expect(withheld).toContain(copy.requested.withheld); expect(withheld).toContain(copy.requested.unreadFragment);
     expect(withheld).not.toContain(copy.requested.qualified); expect(withheld).not.toContain(copy.requested.abstract);
+    expect(withheld).not.toContain(copy.requested.summary);
     expect(withheld).not.toContain(nativeRecoveryFormat(copy.requested.section, { section: "`#examples`" }));
     expect(requestedSourceReport({ ...originalInput(), language })).toContain(copy.requested.incomplete);
   });
