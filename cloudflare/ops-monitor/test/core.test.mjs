@@ -99,3 +99,96 @@ test("drill uses only fixed unavailable route, refuses redirects and requires ex
     assert.equal(calls, 1);
   }
 });
+
+const openingLabels = new Map([
+  ["unreachable", "request timeout or transport failure"],
+  ["http", "HTTP error or refused redirect"],
+  ["payload", "invalid or oversized health response"],
+  ["degraded", "degraded service status (HTTP 200)"],
+  ["stale", "invalid, old or future health timestamp"],
+]);
+
+for (const [reason, label] of openingLabels) {
+  test(`incident snapshots the opening ${reason} check across later failure and recovery`, () => {
+    const previous = advance(advance(initialState(), "http", now), "unreachable", now);
+    const before = structuredClone(previous);
+    let state = advance(previous, reason, now);
+    assert.equal(state.version, 3);
+    assert.equal(state.notices[0].reason, reason);
+    assert.deepEqual(previous, before);
+    const opening = structuredClone(state.notices[0]);
+    const text = noticeText(opening, false);
+    assert.ok(text.includes(`Opening check: ${label}.`));
+    assert.ok(text.length < 600);
+    for (const next of ["stale", "http", "healthy", "degraded", "healthy", "healthy"]) state = advance(state, next, now);
+    assert.equal(state.reason, "healthy");
+    assert.deepEqual(state.notices[0], opening);
+    assert.equal(state.notices[1].reason, "healthy");
+    assert.equal(noticeText(state.notices[0], false), text);
+    assert.deepEqual(validateState(JSON.parse(JSON.stringify(state))), state);
+  });
+}
+
+function legacyState(delivery = "attempted") {
+  const attempts = ["pending", "disabled"].includes(delivery) ? 0 : delivery === "confirmed" ? 1 : 2;
+  return { version: 2, slot: 1234, failures: 0, successes: 2, incident: false, incidentSequence: 87,
+    reason: "healthy", checkedAt: now, consumed: true,
+    notices: ["outage", "recovery"].map(kind => ({ kind, id: `incident-87-${kind}`, delivery, attempts,
+      nextAttemptAt: attempts ? now + 300_000 : null })) };
+}
+
+for (const delivery of ["pending", "attempted", "confirmed", "unconfirmed", "disabled"]) {
+  test(`legacy ${delivery} journals normalize without resetting or inventing an opening reason`, () => {
+    const legacy = legacyState(delivery), before = structuredClone(legacy);
+    const normalized = validateState(legacy);
+    assert.deepEqual(legacy, before);
+    assert.deepEqual(normalized, { ...before, version: 3,
+      notices: before.notices.map(notice => ({ ...notice, reason: null })) });
+    assert.deepEqual(validateState(JSON.parse(JSON.stringify(normalized))), normalized);
+    assert.equal(noticeText(normalized.notices[0], false),
+      "Keryx health incident: three consecutive failed checks. Inspect https://keryx.cc/status and the incident runbook. No payment or job action was taken. Notice incident-87-outage. Delivery may repeat when an acknowledgement is lost (maximum three attempts).");
+  });
+}
+
+test("advancing a legacy active incident preserves its old pending notice and completes the same recovery", () => {
+  const legacy = legacyState();
+  legacy.incident = true; legacy.failures = 3; legacy.successes = 0; legacy.reason = "http";
+  legacy.notices.pop();
+  let state = advance(legacy, "healthy", now);
+  assert.equal(state.version, 3);
+  assert.equal(state.incident, true);
+  assert.deepEqual(state.notices, legacy.notices.map(notice => ({ ...notice, reason: null })));
+  state = advance(state, "healthy", now);
+  assert.equal(state.incident, false);
+  assert.equal(state.incidentSequence, 87);
+  assert.equal(state.notices[1].id, "incident-87-recovery");
+  assert.equal(state.notices[1].reason, "healthy");
+  assert.equal(state.slot, legacy.slot);
+  assert.equal(state.consumed, legacy.consumed);
+});
+
+test("both state formats refuse malformed or unreviewed notice context", () => {
+  const legacy = legacyState(), current = validateState(legacy);
+  const bad = [
+    { ...legacy, extra: "fixture-private" }, { ...legacy, version: 1 }, { ...legacy, version: 4 },
+    { ...legacy, notices: legacy.notices.map(n => ({ ...n, reason: "http" })) },
+    { ...legacy, notices: [{ ...legacy.notices[0], attempts: 4 }] },
+    { ...legacy, notices: [{ ...legacy.notices[0], id: "incident-86-outage" }] },
+    { ...current, notices: [{ ...current.notices[0], reason: "healthy" }] },
+    { ...current, notices: [{ ...current.notices[1], reason: "http" }] },
+    { ...current, notices: [{ ...current.notices[0], reason: "fixture-private" }] },
+    { ...current, notices: [{ ...current.notices[0], reason: { raw: "fixture-private" } }] },
+    { ...current, notices: [{ ...current.notices[0], reason: undefined }] },
+    { ...current, notices: [{ ...current.notices[0], rawHealth: "fixture-private" }] },
+  ];
+  for (const state of bad) assert.throws(() => validateState(state), /Monitor state invalid/);
+});
+
+test("notice rendering uses static reason labels and preserves the recovery limitation", () => {
+  const text = noticeText({ kind: "outage", id: "incident-1-outage", reason: "fixture-private", rawHealth: "fixture-private" }, false);
+  assert.ok(!text.includes("fixture-private"));
+  assert.ok(!text.includes("Opening check:"));
+  const state = ["http", "http", "degraded", "healthy", "healthy"].reduce((s, reason) => advance(s, reason, now), initialState());
+  assert.equal(noticeText(state.notices[1], false),
+    "Keryx health recovered: two consecutive healthy checks. This confirms endpoint readiness only; review outstanding incidents separately. Notice incident-1-recovery. Delivery may repeat when an acknowledgement is lost (maximum three attempts).");
+});

@@ -21,6 +21,13 @@ function createRuntime(notifications = "true", runId = "runtime-acceptance") {
         import worker, { MonitorState } from './worker.mjs';
         export class RuntimeMonitorState extends MonitorState {
           async fetch(request) {
+            if(new URL(request.url).pathname === '/__testLegacy') {
+              await this.state.storage.put('state',await request.json());
+              return Response.json({status:'fixture_seeded'});
+            }
+            if(new URL(request.url).pathname === '/__testStored') {
+              return Response.json(await this.state.storage.get('state'));
+            }
             if(new URL(request.url).pathname === '/__testDue') {
               const state = await this.state.storage.get('state');
               for(const notice of state.notices) notice.nextAttemptAt = Date.now()-1;
@@ -37,9 +44,11 @@ function createRuntime(notifications = "true", runId = "runtime-acceptance") {
               return Response.json({status:'completed'}); }
             catch { return Response.json({status:'failed'}, {status:503}); }
           }
-          if(url.pathname === '/__due') {
+          if(['/__due','/__legacy','/__stored'].includes(url.pathname)) {
             const stub=env.MONITOR.get(env.MONITOR.idFromName('diagnostic-'+env.DIAGNOSTIC_RUN_ID));
-            return stub.fetch('https://internal.invalid/__testDue');
+            const path={'/__due':'/__testDue','/__legacy':'/__testLegacy','/__stored':'/__testStored'}[url.pathname];
+            return stub.fetch('https://internal.invalid'+path, url.pathname === '/__legacy'
+              ? {method:'POST',body:await request.text()} : {});
           }
           return worker.fetch(request,env);
         }};` },
@@ -87,8 +96,12 @@ try {
   assert.equal(diagnostic.control, "healthy");
   assert.equal(diagnostic.state.incident, false);
   assert.deepEqual(diagnostic.state.notices.map(n => n.delivery), ["confirmed", "confirmed"]);
+  assert.equal(diagnostic.state.version, 3);
+  assert.deepEqual(diagnostic.state.notices.map(n => n.reason), ["http", "healthy"]);
   assert.equal(telegram().length, 2);
   assert.ok(telegram().every(n => n.body.text.startsWith("[DRILL] ")));
+  assert.match(telegram()[0].body.text, /Opening check: HTTP error or refused redirect/);
+  assert.ok(!telegram()[1].body.text.includes("Opening check:"));
   assert.deepEqual(outbound.filter(n => n.method === "GET").map(n => n.url), [
     "https://keryx.cc/api/health",
     ...Array(3).fill("https://keryx.cc/api/keryx-ops-monitor-drill-unavailable"),
@@ -132,6 +145,12 @@ try {
     runtime = createRuntime("true", "unconfirmed");
   }
   assert.equal(telegram().length, countBeforeRetries+4); // Two records, max three attempts each.
+  const retried = telegram().slice(countBeforeRetries - 2);
+  for (const kind of ["outage", "recovery"]) {
+    const messages = retried.filter(n => n.body.text.includes(`Notice incident-1-${kind}.`));
+    assert.equal(messages.length, 3);
+    assert.equal(new Set(messages.map(n => n.body.text)).size, 1);
+  }
   const count = telegram().length;
   await runtime.dispose();
   runtime = createRuntime("false", "disabled");
@@ -158,6 +177,47 @@ try {
   assert.equal((await (await call("/diagnostic", "POST")).json()).status, "already_consumed");
   assert.equal(outbound.length, requestsAfterControl);
   assert.equal(telegram().length, count);
+  // Seed a version2 journal only through this virtual harness, never the Worker.
+  // Dispose/reopen actual SQLite-backed workerd before and after normalization.
+  await runtime.dispose();
+  runtime = createRuntime("true", "legacy");
+  const legacy = { version: 2, slot: 1234, failures: 0, successes: 2, incident: false, incidentSequence: 87,
+    reason: "healthy", checkedAt: Date.now(), consumed: true,
+    notices: [
+      { kind: "outage", id: "incident-87-outage", delivery: "attempted", attempts: 2, nextAttemptAt: Date.now() + 300_000 },
+      { kind: "recovery", id: "incident-87-recovery", delivery: "confirmed", attempts: 1, nextAttemptAt: Date.now() + 300_000 },
+    ] };
+  assert.equal((await (await call("/__legacy", "POST", { body: JSON.stringify(legacy) })).json()).status, "fixture_seeded");
+  await runtime.dispose(); runtime = createRuntime("true", "legacy");
+  const beforeLegacy = outbound.length;
+  const migratedRead = await (await call("/diagnostic", "POST")).json();
+  assert.equal(migratedRead.status, "already_consumed");
+  assert.deepEqual(migratedRead.state, { ...legacy, version: 3, notices: legacy.notices.map(n => ({ ...n, reason: null })) });
+  assert.equal(outbound.length, beforeLegacy);
+  assert.deepEqual(await (await call("/__stored")).json(), legacy); // Read did not write migration or reset retries.
+  await call("/__due"); // Existing test-only deadline fixture, never a production operation.
+  const dueLegacy = await (await call("/__stored")).json();
+  assert.equal(dueLegacy.version, 2);
+  await runtime.dispose(); runtime = createRuntime("true", "legacy");
+  telegramMode = "confirmed";
+  const deliveryStarted = Date.now();
+  const deliveredLegacy = await (await call("/diagnostic", "POST")).json();
+  const deliveryEnded = Date.now();
+  const nextAttemptAt = deliveredLegacy.state.notices[0].nextAttemptAt;
+  assert.ok(nextAttemptAt >= deliveryStarted + 300_000 - 1000 && nextAttemptAt <= deliveryEnded + 300_000 + 1000);
+  const expectedLegacy = { ...dueLegacy, version: 3, notices: dueLegacy.notices.map(n => ({ ...n, reason: null })) };
+  expectedLegacy.notices[0] = { ...dueLegacy.notices[0], reason: null, delivery: "confirmed", attempts: 3, nextAttemptAt };
+  assert.deepEqual(deliveredLegacy.state, expectedLegacy);
+  assert.ok(deliveredLegacy.state.notices[0].nextAttemptAt > dueLegacy.notices[0].nextAttemptAt);
+  assert.equal(outbound.length, beforeLegacy + 1);
+  assert.equal(telegram().length, count + 1);
+  assert.equal(telegram().at(-1).body.text,
+    "[DRILL] legacy Keryx health incident: three consecutive failed checks. Inspect https://keryx.cc/status and the incident runbook. No payment or job action was taken. Notice incident-87-outage. Delivery may repeat when an acknowledgement is lost (maximum three attempts).");
+  assert.deepEqual(await (await call("/__stored")).json(), deliveredLegacy.state);
+  await runtime.dispose(); runtime = createRuntime("true", "legacy");
+  await call("/diagnostic", "POST");
+  assert.equal(outbound.length, beforeLegacy + 1);
+  console.log("workerd notice reason passed: persisted opening class, stable retry text after recovery, strict legacy migration and unchanged pending text, counters, consumed state and terminal suppression across native restarts");
   console.log("workerd monitor passed: fixed external drill protocol, durable bounded retries across restart, confirmed suppression, auth, redirect refusal, Cron claim, default-disabled messages");
 } finally {
   await runtime?.dispose();

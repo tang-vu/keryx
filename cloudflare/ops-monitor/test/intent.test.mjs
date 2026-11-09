@@ -147,3 +147,78 @@ test("authenticated stalled request body is rejected within five seconds before 
   assert.equal(calls, 0);
   assert.ok(Date.now() - started >= 4_900 && Date.now() - started < 8_000);
 });
+
+test("legacy status is read-only and the next claimed probe persists migration before outbound I/O", async () => {
+  const originalNow = Date.now, previousFetch = globalThis.fetch;
+  const now = originalNow(), slot = Math.floor(now / SLOT_MS);
+  Date.now = () => now;
+  let stored = { version: 2, slot: slot - 1, failures: 3, successes: 0, incident: true, incidentSequence: 87,
+    reason: "http", checkedAt: now - SLOT_MS, consumed: true,
+    notices: [{ kind: "outage", id: "incident-87-outage", delivery: "attempted", attempts: 2, nextAttemptAt: now + SLOT_MS }] };
+  const original = structuredClone(stored), writes = [], requests = [];
+  const storage = { get: async () => structuredClone(stored), put: async (_key, state) => {
+    stored = structuredClone(state); writes.push(structuredClone(state));
+  } };
+  globalThis.fetch = async (url, options) => {
+    requests.push(url);
+    assert.equal(options.method, "GET");
+    assert.equal(url, "https://keryx.cc/api/health");
+    assert.equal(writes.length, 1);
+    assert.equal(stored.version, 3);
+    assert.equal(stored.slot, slot);
+    assert.deepEqual(stored.notices, original.notices.map(notice => ({ ...notice, reason: null })));
+    return Response.json({ name: "keryx", ok: true, db: "ok", status: "operational", time: new Date(now).toISOString() });
+  };
+  try {
+    const status = await new MonitorState({ storage }, env).fetch(new Request("https://internal.invalid/status"));
+    assert.equal((await status.json()).version, 3);
+    assert.deepEqual(stored, original);
+    assert.equal(writes.length, 0);
+    assert.equal(requests.length, 0);
+    const request = () => new Request("https://internal.invalid/probe", { method: "POST" });
+    const response = await new MonitorState({ storage }, env).fetch(request());
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).status, "completed");
+    assert.equal(stored.incident, true);
+    assert.equal(stored.successes, 1);
+    assert.equal(stored.consumed, true);
+    assert.equal(stored.notices[0].attempts, 2);
+    assert.equal(stored.notices[0].nextAttemptAt, original.notices[0].nextAttemptAt);
+    const beforeDuplicate = structuredClone(stored), writeCount = writes.length;
+    assert.equal((await (await new MonitorState({ storage }, env).fetch(request())).json()).status, "already_claimed");
+    assert.deepEqual(stored, beforeDuplicate);
+    assert.equal(writes.length, writeCount);
+    assert.equal(requests.length, 1);
+  } finally { Date.now = originalNow; globalThis.fetch = previousFetch; }
+});
+
+test("a pending outage retries its persisted opening reason after readiness has recovered", async () => {
+  const originalNow = Date.now, previousFetch = globalThis.fetch;
+  let now = originalNow(); Date.now = () => now;
+  let stored = ["http", "http", "degraded"].reduce((s, reason) => advance(s, reason, now), initialState());
+  const storage = { put: async (_key, value) => { stored = structuredClone(value); } };
+  const messages = [];
+  globalThis.fetch = async (_url, options) => {
+    messages.push(JSON.parse(options.body).text);
+    if (messages.length === 1) throw new Error("fixture lost ACK");
+    return acknowledgement();
+  };
+  try {
+    await new MonitorState({ storage }, env).deliver(stored, false);
+    assert.equal(stored.notices[0].attempts, 1);
+    stored = advance(advance(stored, "healthy", now), "healthy", now);
+    await new MonitorState({ storage }, env).deliver(stored, false);
+    assert.equal(stored.reason, "healthy");
+    assert.equal(messages.length, 2);
+    assert.match(messages[1], /health recovered/);
+    now += SLOT_MS;
+    await new MonitorState({ storage }, env).deliver(JSON.parse(JSON.stringify(stored)), false);
+    assert.equal(messages.length, 3);
+    assert.equal(messages[0], messages[2]);
+    assert.match(messages[2], /Opening check: degraded service status \(HTTP 200\)/);
+    assert.equal(stored.notices[0].reason, "degraded");
+    assert.equal(stored.notices[0].attempts, 2);
+    assert.equal(stored.notices[0].delivery, "confirmed");
+    assert.equal(stored.notices[1].delivery, "confirmed");
+  } finally { Date.now = originalNow; globalThis.fetch = previousFetch; }
+});

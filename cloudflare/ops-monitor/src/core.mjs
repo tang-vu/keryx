@@ -4,15 +4,22 @@ export const SLOT_MS = 300_000;
 export const TIMEOUT_MS = 8_000;
 const BODY_LIMIT = 32_768;
 const REASONS = new Set(["healthy", "unreachable", "http", "payload", "degraded", "stale"]);
+const OPENING_LABELS = new Map([
+  ["unreachable", "request timeout or transport failure"],
+  ["http", "HTTP error or refused redirect"],
+  ["payload", "invalid or oversized health response"],
+  ["degraded", "degraded service status (HTTP 200)"],
+  ["stale", "invalid, old or future health timestamp"],
+]);
 
 export function initialState() {
-  return { version: 2, slot: -1, failures: 0, successes: 0, incident: false, incidentSequence: 0,
+  return { version: 3, slot: -1, failures: 0, successes: 0, incident: false, incidentSequence: 0,
     reason: "healthy", checkedAt: null, notices: [], consumed: false };
 }
 
 export function validateState(value) {
   const stateKeys = ["version", "slot", "failures", "successes", "incident", "incidentSequence", "reason", "checkedAt", "notices", "consumed"];
-  if (!value || value.version !== 2 || !Number.isSafeInteger(value.slot) || value.slot < -1 ||
+  if (!value || ![2, 3].includes(value.version) || !Number.isSafeInteger(value.slot) || value.slot < -1 ||
       !Number.isInteger(value.failures) || value.failures < 0 || value.failures > 3 ||
       !Number.isInteger(value.successes) || value.successes < 0 || value.successes > 2 ||
       typeof value.incident !== "boolean" || typeof value.consumed !== "boolean" ||
@@ -23,31 +30,37 @@ export function validateState(value) {
       !Array.isArray(value.notices) || value.notices.length > 2 ||
       (value.notices.length > 0 && value.incidentSequence === 0) ||
       new Set(value.notices.map(n => n?.id)).size !== value.notices.length ||
-      value.notices.some(n => !validNotice(n, value.incidentSequence))) {
+      value.notices.some(n => !validNotice(n, value.incidentSequence, value.version))) {
     throw new Error("Monitor state invalid; operator inspection required");
   }
-  return value;
+  // Old notices never recorded their opening reason. In particular, the latest
+  // healthy state cannot explain a pending outage. Keep old text and every
+  // journal field; existing admitted pre-I/O writes persist this normalization.
+  return value.version === 2 ? { ...value, version: 3,
+    notices: value.notices.map(notice => ({ ...notice, reason: null })) } : value;
 }
 
-function validNotice(notice, sequence) {
-  const keys = ["kind", "id", "delivery", "attempts", "nextAttemptAt"];
+function validNotice(notice, sequence, version) {
+  const keys = ["kind", "id", "delivery", "attempts", "nextAttemptAt", ...(version === 3 ? ["reason"] : [])];
   return notice && Object.keys(notice).length === keys.length &&
     Object.keys(notice).every(key => keys.includes(key)) && ["outage", "recovery"].includes(notice.kind) &&
     notice.id === `incident-${sequence}-${notice.kind}` &&
+    (version === 2 || notice.reason === null ||
+      (notice.kind === "outage" ? OPENING_LABELS.has(notice.reason) : notice.reason === "healthy")) &&
     ["pending", "attempted", "confirmed", "unconfirmed", "disabled"].includes(notice.delivery) &&
     Number.isInteger(notice.attempts) && notice.attempts >= 0 && notice.attempts <= 3 &&
     (notice.attempts === 0 ? notice.nextAttemptAt === null && ["pending", "disabled"].includes(notice.delivery)
       : Number.isSafeInteger(notice.nextAttemptAt) && notice.nextAttemptAt >= 0 && notice.delivery !== "pending");
 }
 
-function newNotice(kind, sequence) {
-  return { kind, id: `incident-${sequence}-${kind}`, delivery: "pending", attempts: 0, nextAttemptAt: null };
+function newNotice(kind, sequence, reason) {
+  return { kind, id: `incident-${sequence}-${kind}`, delivery: "pending", attempts: 0, nextAttemptAt: null, reason };
 }
 
 export function advance(previous, reason, now) {
-  validateState(previous);
+  const validated = validateState(previous);
   if (!REASONS.has(reason)) throw new Error("Invalid probe reason");
-  const state = structuredClone(previous);
+  const state = structuredClone(validated);
   state.reason = reason;
   state.checkedAt = now;
   if (reason === "healthy") {
@@ -55,7 +68,7 @@ export function advance(previous, reason, now) {
     state.successes = Math.min(2, state.successes + 1);
     if (state.incident && state.successes === 2) {
       state.incident = false;
-      state.notices.push(newNotice("recovery", state.incidentSequence));
+      state.notices.push(newNotice("recovery", state.incidentSequence, reason));
     }
   } else {
     state.successes = 0;
@@ -65,7 +78,7 @@ export function advance(previous, reason, now) {
       if (state.incidentSequence === Number.MAX_SAFE_INTEGER) throw new Error("Incident sequence exhausted");
       state.incidentSequence++;
       // Keep only the current incident, never an unbounded history.
-      state.notices = [newNotice("outage", state.incidentSequence)];
+      state.notices = [newNotice("outage", state.incidentSequence, reason)];
     }
   }
   return state;
@@ -124,8 +137,10 @@ async function probeUrl(url, fetcher, now, expectedUnavailableStatus) {
 
 export function noticeText(notice, diagnostic, runId) {
   const prefix = diagnostic ? `[DRILL] ${runId} ` : "";
+  const label = OPENING_LABELS.get(notice.reason);
+  const opening = label ? ` Opening check: ${label}.` : "";
   const message = notice.kind === "outage"
-    ? `${prefix}Keryx health incident: three consecutive failed checks. Inspect https://keryx.cc/status and the incident runbook. No payment or job action was taken.`
+    ? `${prefix}Keryx health incident: three consecutive failed checks.${opening} Inspect https://keryx.cc/status and the incident runbook. No payment or job action was taken.`
     : `${prefix}Keryx health recovered: two consecutive healthy checks. This confirms endpoint readiness only; review outstanding incidents separately.`;
   return `${message} Notice ${notice.id}. Delivery may repeat when an acknowledgement is lost (maximum three attempts).`;
 }
