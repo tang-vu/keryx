@@ -5,7 +5,7 @@ import { calculateDashboardMetrics, type MetricPaymentRow, type MetricRunRow,
 // One fixed read snapshot, no joins/deduplication or JSON representation. Native
 // values and integer-read errors cross the same guarded prepare/all operations.
 // Column0 tags the source; columns1..12 keep each original SELECT's field order.
-const INPUT_ROWS = `SELECT 0 AS metric_group,amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer,tx_hash,NULL,NULL,NULL
+export const SQLITE_DASHBOARD_INPUT_ROWS = `SELECT 0 AS metric_group,amount_usdc,source_id,query_id,kind,origin,settled,settlement_status,payer,tx_hash,NULL,NULL,NULL
   FROM payment_events
   UNION ALL SELECT 1,id,origin,asker,duration_ms,payment_mode,payment_attempts,settled_payments,confidence_level,mcp_client,evidence_claim_count,grounded_claim_count,rewarded_citation_count
   FROM query_runs
@@ -14,15 +14,8 @@ const INPUT_ROWS = `SELECT 0 AS metric_group,amount_usdc,source_id,query_id,kind
   UNION ALL SELECT 3,status,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
   FROM gap_intents`;
 
-/** Internal fixed read for the enrolled facade. Its existing before/after
- * admission and the verified connection's fresh SQL guards remain authoritative.
- * No result, statement or successful admission survives this operation. */
-export async function readSqliteDashboardMetrics(db: DatabaseSync) {
-  const statement = db.prepare(INPUT_ROWS);
-  // This is statement-local (Node>=22.16), not a connection policy change. Dense
-  // arrays avoid creating padded named-property objects for the UNION rows.
-  statement.setReturnArrays(true);
-  const rows = statement.all() as unknown as SQLOutputValue[][];
+/** Pure decoder shared by the fixed metric and public-health SELECTs. */
+export function dashboardMetricsFromSqliteRows(rows: readonly SQLOutputValue[][]) {
   const payments: MetricPaymentRow[] = [], runs: MetricRunRow[] = [];
   const feedback: MetricFeedbackRow[] = [], gapIntents: MetricGapIntentRow[] = [];
   for (const row of rows) {
@@ -52,6 +45,11 @@ export async function readSqliteDashboardMetrics(db: DatabaseSync) {
       default: throw new Error("Unexpected dashboard metric source");
     }
   }
+  return calculateDashboardMetrics(payments, runs, feedback, gapIntents);
+}
+
+/** The optional account index keeps its independent native/error boundary. */
+export function readSqliteRecordedAccounts(db: DatabaseSync): number | null {
   let recordedAccounts: number | null = null;
   try {
     // Preserve the existing separate optional account-index error boundary.
@@ -62,5 +60,16 @@ export async function readSqliteDashboardMetrics(db: DatabaseSync) {
     const count = row?.n;
     if (typeof count === "number" && Number.isSafeInteger(count) && count >= 0) recordedAccounts = count;
   } catch { /* Account-index availability is independent from research/payment metrics. */ }
-  return { ...calculateDashboardMetrics(payments, runs, feedback, gapIntents), recordedAccounts };
+  return recordedAccounts;
+}
+
+/** Internal fixed read for the enrolled facade. Its existing before/after
+ * admission and the verified connection's fresh SQL guards remain authoritative.
+ * No result, statement or successful admission survives this operation. */
+export async function readSqliteDashboardMetrics(db: DatabaseSync) {
+  const statement = db.prepare(SQLITE_DASHBOARD_INPUT_ROWS);
+  // Statement-local (Node>=22.16); the verified connection policy stays intact.
+  statement.setReturnArrays(true);
+  const rows = statement.all() as unknown as SQLOutputValue[][];
+  return { ...dashboardMetricsFromSqliteRows(rows), recordedAccounts: readSqliteRecordedAccounts(db) };
 }

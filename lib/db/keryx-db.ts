@@ -1,4 +1,5 @@
 import type { AccountMembershipStore } from "../accounts/contracts";
+import type { PublicHealthSnapshot } from "./public-health-snapshot";
 import type { PublicReference } from "../public-references/catalog";
 import type { PublicReferenceArchiveDb } from "../public-references/archive";
 import type { PrivateProfilesStore } from "../profiles/private-profile";
@@ -654,6 +655,9 @@ export interface KeryxDB extends PublicReferenceArchiveDb {
    *  all-time leaderboard instead of a capped recent-feed slice. */
   listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]>;
   metrics(): Promise<DashboardMetrics>;
+  /** Optional fixed read composition. Unavailable data reads may return undefined
+   * after current admission succeeds; a revoked adapter must still throw. */
+  readPublicHealthSnapshot?(nowMs: number, includeRegistry: boolean): Promise<PublicHealthSnapshot | undefined>;
   /** Per payee wallet: settled USDC in, recorded cash-outs out. The settlement-parity watchdog
    *  reconciles these against what Circle's Gateway says it holds for the same address, so both
    *  sides must be all-time totals — a capped slice would read as a shortfall. Inbound platform

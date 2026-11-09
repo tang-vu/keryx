@@ -7,6 +7,7 @@ import { createRequire, syncBuiltinESMExports } from "node:module";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import type { KeryxDB } from "../lib/db/keryx-db";
 
 export interface NativeReadCounts {
   nativePrepares: number;
@@ -22,6 +23,7 @@ const digest = (text: string | Buffer) => createHash("sha256").update(text).dige
 const sourceHashes = Object.fromEntries([
   "scripts/measure-enrolled-health.mts", "lib/db/enrolled-sqlite-adapter.ts", "lib/db/dashboard-metric-rows.ts",
   "lib/db/sqlite-adapter.ts", "lib/db/storage-identity-connection.ts", "lib/db/sqlite-application-schema-profile.ts",
+  "lib/db/health-read-rows.ts", "lib/db/public-health-snapshot.ts",
 ].filter(name => existsSync(join(source, name))).map(name => [name, digest(readFileSync(join(source, name), "utf8").replaceAll("\r\n", "\n"))]));
 
 function fixtureEnvironment(): NodeJS.ProcessEnv {
@@ -112,8 +114,9 @@ if (!arguments_.length) {
       jobs: () => reader.a2aOperationsSnapshot(nowMs),
       sync: async () => [...await reader.getSyncStates(keys)],
       healthReadSet: async () => {
-        const [metrics, jobs] = await Promise.all([reader.metrics(), reader.a2aOperationsSnapshot(nowMs)]);
-        return { metrics, jobs, sync: [...await reader.getSyncStates(keys)] };
+        const snapshot = await (reader as KeryxDB).readPublicHealthSnapshot!(nowMs, true);
+        assert(snapshot, "Genuine enrolled health composition must execute, not fall back");
+        return { metrics: snapshot.metrics, jobs: snapshot.jobs, sync: [...snapshot.syncState] };
       },
     };
     const measurements: Record<string, unknown> = {};

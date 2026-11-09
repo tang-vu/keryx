@@ -25,6 +25,7 @@ import { createEnrolledSqliteTopicWatches } from "./topic-watches-sqlite";
 import { createEnrolledSqlitePendingJobOwners } from "./pending-job-owners-sqlite";
 import { createEnrolledSqliteOwnerRunAssignments } from "./owner-run-assignments-sqlite";
 import { readSqliteDashboardMetrics } from "./dashboard-metric-rows";
+import { readSqlitePublicHealthSnapshot } from "./health-read-rows";
 
 /** Explicit behavior inventory, including verifyApiKey's last-used write. New methods require review. */
 export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
@@ -233,6 +234,7 @@ export const ENROLLED_SQLITE_METHOD_ACCESS = Object.freeze({
   getCreatorWithdrawalAttestation: "read",
   listWithdrawals: "read",
   metrics: "read",
+  readPublicHealthSnapshot: "read",
   economics: "read",
   settlementLedger: "read",
   mintApiKey: "write",
@@ -316,6 +318,9 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
     }
     const publicNames = Object.getOwnPropertyNames(SqliteAdapter.prototype).filter(name =>
       !["constructor", "encryptLegacyCacheRows", "insertPayment", "insertA2aOriginal", "assertOrdinaryResearchAuthority", "readEvidenceProvenance", "init", "close"].includes(name));
+    // Optional fixed composition belongs only to this genuine facade; ordinary
+    // adapters keep their existing independent reads and core prototype.
+    publicNames.push("readPublicHealthSnapshot");
     const reviewed = Object.keys(ENROLLED_SQLITE_METHOD_ACCESS);
     if (canonicalJson(publicNames.sort()) !== canonicalJson(reviewed.sort()))
       throw new Error("Enrolled SQLite method inventory requires review");
@@ -328,10 +333,14 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
         if (access.startsWith("mainnet-") && deployment.identity.authorityMode !== "mainnet-real") throw new Error("Research purchase authority is unavailable in enrolled storage");
         if (readOnly && (access === "write" || access === "mainnet-write" || name === "assertResearchPurchaseAuthority")) throw new Error("Readonly enrolled SQLite mutation refused");
         assert();
-        // The fixed metrics read combines four input scans into one guarded SQL
-        // statement. Preserve this facade's admission and post-await assertion;
-        // the ordinary core method and all connection guards remain unchanged.
+        if (name === "readPublicHealthSnapshot" && (args.length !== 2
+          || typeof args[0] !== "number" || !Number.isSafeInteger(args[0])
+          || args[0] < -8_640_000_000_000_000 + 86_400_000 || args[0] > 8_640_000_000_000_000
+          || typeof args[1] !== "boolean")) throw new Error("Invalid public-health read inputs");
+        // Fixed read compositions preserve this facade's admission/post-await
+        // assertions and every verified connection prepare/statement guard.
         const result = name === "metrics" ? readSqliteDashboardMetrics(db)
+          : name === "readPublicHealthSnapshot" ? readSqlitePublicHealthSnapshot(db, args[0] as number, args[1] as boolean)
           : Reflect.apply(Reflect.get(core, name), core, args);
         if (name === "iterateRecentQueries") {
           return (async function* () {
@@ -343,7 +352,13 @@ async function create(readOnly: boolean): Promise<SqliteAdapter> {
         }
         return Promise.resolve(result).then(
           (value: unknown) => { assert(); return value; },
-          (error: unknown) => { assert(); throw error; }
+          (error: unknown) => {
+            assert();
+            // A revoked/closed facade throws above. Only a data-read failure
+            // under current valid admission may use the legacy error boundaries.
+            if (name === "readPublicHealthSnapshot") return undefined;
+            throw error;
+          }
         );
       } });
     }
