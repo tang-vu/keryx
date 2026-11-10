@@ -69,7 +69,7 @@ function get(port, { path = '/api/origin', headers = { Host: 'keryx.cc', 'X-Forw
 
 test('pinned production Next sees public HTTPS origin on a private ephemeral socket', { timeout: 180000 }, async () => {
   // Webpack on Windows cannot resolve Next's cross-drive absolute entry paths.
-  const temporaryRoot = process.platform === 'win32' ? join(root, '.next-public-fixtures') : tmpdir();
+  const temporaryRoot = process.env.KERYX_NEXT_FIXTURE_ROOT || (process.platform === 'win32' ? join(root, '.next-public-fixtures') : tmpdir());
   await mkdir(temporaryRoot, { recursive: true });
   const dir = await mkdtemp(join(temporaryRoot, 'keryx-next-public-origin-'));
   const candidate = dir + '-candidate';
@@ -79,6 +79,15 @@ test('pinned production Next sees public HTTPS origin on a private ephemeral soc
   let running;
   const priorMode = process.env.NODE_ENV;
   const priorDist = process.env.NEXT_DIST_DIR;
+  const priorDiagnosticUntil = process.env.KERYX_PUBLIC_REQUEST_DIAGNOSTIC_UNTIL;
+  const diagnosticLog = console.log, compiledDiagnosticRows = [];
+  console.log = (...values) => {
+    for (const value of values) if (typeof value === 'string' && value.startsWith('{')) {
+      try { const row = JSON.parse(value); if (row.format === 'keryx-private-request-diagnostic-v1') compiledDiagnosticRows.push(row); } catch { /* retain original output */ }
+    }
+    diagnosticLog(...values);
+  };
+  delete process.env.KERYX_PUBLIC_REQUEST_DIAGNOSTIC_UNTIL;
   process.env.NODE_ENV = 'production';
   process.env.NEXT_DIST_DIR = '.next';
   try {
@@ -139,8 +148,9 @@ export async function GET(request){
     assert.equal(requireFixture('next/package.json').version, NEXT_VERSION);
     evidence.builds.push(await compileFixture(dir, requireFixture.resolve('next/dist/bin/next'), dir));
     const originalCwd = process.cwd();
+    process.env.KERYX_PUBLIC_REQUEST_DIAGNOSTIC_UNTIL = new Date(Date.now() + 300000).toISOString();
     try { process.chdir(dir); running = await startNextPublicServer({ dir, port: 0 }); }
-    finally { process.chdir(originalCwd); }
+    finally { process.chdir(originalCwd); delete process.env.KERYX_PUBLIC_REQUEST_DIAGNOSTIC_UNTIL; }
     const { physicalPort } = running.receipt;
     assert.equal(running.server.keepAliveTimeout, 100000);
     assert.equal(running.server.keepAliveTimeoutBuffer, 5000);
@@ -165,6 +175,17 @@ export async function GET(request){
     assert.equal((await get(physicalPort, { headers: {
       Host: 'keryx.cc', 'X-Forwarded-Proto': 'https', Connection: 'Upgrade', Upgrade: 'websocket',
     } })).status, 426);
+    const privateTarget = '/api/origin?private=SYNTHETIC_PRIVATE_COMPILED';
+    assert.equal(JSON.parse((await get(physicalPort, { path: privateTarget })).body).url, 'https://keryx.cc' + privateTarget);
+    const actualCatalog = await readFile(join(dir, '.next', 'app-path-routes-manifest.json'));
+    const opened = compiledDiagnosticRows.find(row => row.event === 'window-open');
+    assert.equal(opened.catalogSha256, createHash('sha256').update(actualCatalog).digest('hex'));
+    assert.equal(opened.templateCount, new Set(Object.values(JSON.parse(actualCatalog))).size);
+    assert.deepEqual(compiledDiagnosticRows.filter(row => row.event === 'start').map(row => row.incomingTemplate), ['/api/origin', '/api/origin']);
+    assert.equal(compiledDiagnosticRows.filter(row => row.event === 'finish').length, 2, 'Rejected Host/proto/upgrade never enter the diagnostic window');
+    assert.doesNotMatch(JSON.stringify(compiledDiagnosticRows), /SYNTHETIC_PRIVATE_COMPILED|evil\.example|private=/);
+    evidence.finiteDiagnostic = { catalogSha256: opened.catalogSha256, templateCount: opened.templateCount,
+      actualCompiledOriginRequests: 2, metadataAndUpgradeRejectionsExcluded: true, rows: [...compiledDiagnosticRows] };
     const pending = get(physicalPort, { path: '/api/origin?delay=1' });
     await new Promise((accept) => setTimeout(accept, 80));
     let closed = false;
@@ -325,6 +346,8 @@ setInterval(()=>{},60000);`;
     if (running) await running.close();
     if (priorMode === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = priorMode;
     if (priorDist === undefined) delete process.env.NEXT_DIST_DIR; else process.env.NEXT_DIST_DIR = priorDist;
+    console.log = diagnosticLog;
+    if (priorDiagnosticUntil === undefined) delete process.env.KERYX_PUBLIC_REQUEST_DIAGNOSTIC_UNTIL; else process.env.KERYX_PUBLIC_REQUEST_DIAGNOSTIC_UNTIL = priorDiagnosticUntil;
     // Retain compiled cohorts, original logs and failed preparation for review.
     // No test timeout or failure authorizes removing a live or ambiguous role.
     console.log(JSON.stringify(evidence));
@@ -446,4 +469,244 @@ test('public request observation: many unique native targets retain only twelve 
     assert.ok(Buffer.byteLength(JSON.stringify(snapshot)) < 8192);
     assert.doesNotMatch(JSON.stringify(snapshot), /SYNTHETIC_PRIVATE|static\/|private\/|x=/);
   });
+});
+
+
+test('finite request diagnostic: records before native handler work without retaining its target or body', { timeout: 10000 }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'keryx-finite-diagnostic-'));
+  await mkdir(join(dir, '.next'));
+  await writeFile(join(dir, '.next', 'app-path-routes-manifest.json'), JSON.stringify({
+    '/api/runs/[id]/route': '/api/runs/[id]', '/page': '/',
+  }));
+  const lines = [], sentinel = 'SYNTHETIC_PRIVATE_FINITE';
+  const observation = createPublicRequestObservation({ dir,
+    diagnosticUntil: new Date(Date.now() + 30000).toISOString(), writeDiagnostic: line => lines.push(line) });
+  let beforeHandler, bodyListeners;
+  const server = createServer((req, res) => {
+    observation.observe(req, res, true);
+    beforeHandler = lines.map(line => JSON.parse(line)); bodyListeners = req.listenerCount('data');
+    let body = ''; req.setEncoding('utf8'); req.on('data', chunk => { body += chunk; });
+    req.once('end', () => { res.statusCode = 201; res.setHeader('x-original', 'retained');
+      res.end(JSON.stringify({ target: req.url, authorization: req.headers.authorization, body })); });
+  });
+  await new Promise(accept => server.listen(0, '127.0.0.1', accept));
+  try {
+    const input = { path: `/api/runs/${sentinel}?wallet=${sentinel}`, method: 'POST', body: `${sentinel}-signature`,
+      headers: { authorization: `Bearer ${sentinel}` } };
+    const response = await nativeRequest(server.address().port, input);
+    assert.equal(response.status, 201); assert.equal(response.headers['x-original'], 'retained');
+    assert.deepEqual(JSON.parse(response.body), { target: input.path, authorization: input.headers.authorization, body: input.body });
+    assert.equal(bodyListeners, 0);
+    const started = beforeHandler.filter(row => row.event === 'start');
+    assert.equal(started.length, 1, 'The start record must exist before handler work; a drain-only snapshot is insufficient');
+    assert.equal(started[0].incomingTemplate, '/api/runs/[id]'); assert.equal(started[0].sequence, 1);
+    const ended = lines.map(line => JSON.parse(line)).filter(row => row.event === 'finish');
+    assert.equal(ended.length, 1); assert.equal(ended[0].sequence, 1); assert.equal(ended[0].statusCode, 201);
+    assert.ok(Number.isSafeInteger(ended[0].elapsedMs) && ended[0].elapsedMs >= 0);
+    assert.ok(Number.isSafeInteger(ended[0].processCpuMicros) && ended[0].processCpuMicros >= 0);
+    assert.doesNotMatch(lines.join('\n'), /SYNTHETIC_PRIVATE|wallet=|Bearer|signature/);
+  } finally {
+    observation.dispose?.(); server.closeAllConnections();
+    await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));
+  }
+});
+
+
+async function diagnosticDirectory(manifest = { '/api/runs/[id]/route': '/api/runs/[id]', '/page': '/' }) {
+  const dir = await mkdtemp(join(tmpdir(), 'keryx-finite-controls-'));
+  await mkdir(join(dir, '.next'));
+  await writeFile(join(dir, '.next', 'app-path-routes-manifest.json'), Buffer.isBuffer(manifest) ? manifest : JSON.stringify(manifest));
+  return dir;
+}
+
+async function finiteHttp(handler, run, options = {}) {
+  const dir = options.dir ?? await diagnosticDirectory(); const rows = [];
+  const observation = createPublicRequestObservation({ dir, diagnosticUntil: new Date(Date.now() + 30000).toISOString(),
+    writeDiagnostic: line => rows.push(JSON.parse(line)), ...options });
+  const server = createServer((req, res) => { observation.observe(req, res, true); handler(req, res); });
+  await new Promise(accept => server.listen(0, '127.0.0.1', accept));
+  try { await run(server.address().port, rows, observation); }
+  finally {
+    observation.dispose(); server.closeAllConnections();
+    await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));
+  }
+}
+
+test('finite request diagnostic: matches the complete catalog without logging parameters and keeps static priority', { timeout: 10000 }, async () => {
+  const dir = await diagnosticDirectory({ '/page': '/', '/api/runs/[id]/route': '/api/runs/[id]',
+    '/api/runs/summary/route': '/api/runs/summary', '/files/[...parts]/page': '/files/[...parts]',
+    '/docs/[[...parts]]/page': '/docs/[[...parts]]' });
+  await finiteHttp((_req, res) => res.end('original'), async (port, rows) => {
+    const cases = [['/', '/'], ['/api/runs/summary?secret=SYNTHETIC_PRIVATE', '/api/runs/summary'],
+      ['/api/runs/SYNTHETIC_PRIVATE', '/api/runs/[id]'], ['/files/SYNTHETIC_PRIVATE/other', '/files/[...parts]'],
+      ['/files', 'unmatched'], ['/docs', '/docs/[[...parts]]'], ['/docs/SYNTHETIC_PRIVATE/a', '/docs/[[...parts]]'],
+      ['/unknown/SYNTHETIC_PRIVATE', 'unmatched'], ['/' + 'x'.repeat(2050) + 'SYNTHETIC_PRIVATE', 'unmatched']];
+    for (const [path] of cases) assert.equal((await nativeRequest(port, { path })).body, 'original');
+    assert.deepEqual(rows.filter(row => row.event === 'start').map(row => row.incomingTemplate), cases.map(row => row[1]));
+    assert.doesNotMatch(JSON.stringify(rows), /SYNTHETIC_PRIVATE|secret=/);
+    assert.equal(rows[0].templateCount, 5); assert.match(rows[0].catalogSha256, /^[0-9a-f]{64}$/);
+  }, { dir });
+});
+
+test('finite request diagnostic: OFF and invalid windows or catalogs leave native HTTP unchanged', { timeout: 10000 }, async () => {
+  const invalidDir = await diagnosticDirectory(Buffer.alloc(512 * 1024 + 1, 32));
+  const ambiguousDir = await diagnosticDirectory({ '/a': '/api/[id]', '/b': '/api/[wallet]' });
+  const linkedDir = await diagnosticDirectory();
+  const { link } = await import('node:fs/promises');
+  await link(join(linkedDir, '.next', 'app-path-routes-manifest.json'), join(linkedDir, '.next', 'second-hardlink.json'));
+  const cases = [
+    { diagnosticUntil: undefined, dir: join(invalidDir, 'does-not-exist'), disabled: false },
+    { diagnosticUntil: '', disabled: false },
+    { diagnosticUntil: 'SYNTHETIC_PRIVATE', disabled: true },
+    { diagnosticUntil: new Date(Date.now() - 1000).toISOString(), disabled: true },
+    { diagnosticUntil: new Date(Date.now() + 601000).toISOString(), disabled: true },
+    { dir: join(invalidDir, 'does-not-exist'), disabled: true },
+    { dir: invalidDir, disabled: true }, { dir: ambiguousDir, disabled: true }, { dir: linkedDir, disabled: true },
+  ];
+  for (const { disabled, ...options } of cases) {
+    await finiteHttp((_req, res) => { res.statusCode = 503; res.end('original-unready'); }, async (port, rows, observation) => {
+      assert.deepEqual(await nativeRequest(port).then(row => [row.status, row.body]), [503, 'original-unready']);
+      assert.equal(rows.filter(row => row.event === 'disabled').length, disabled ? 1 : 0);
+      assert.equal(rows.filter(row => row.event === 'start').length, 0);
+      assert.equal(observation.snapshot('http-drained').responsesFinished, 1);
+      assert.doesNotMatch(JSON.stringify(rows), /SYNTHETIC_PRIVATE|does-not-exist|second-hardlink/);
+    }, options);
+  }
+});
+
+test('finite request diagnostic: concurrent and lifetime caps never reject HTTP or replenish completed slots', { timeout: 10000 }, async () => {
+  const held = [];
+  await finiteHttp((req, res) => {
+    if (req.url.startsWith('/held/')) { held.push(res); res.flushHeaders(); } else res.end('original');
+  }, async (port, rows, observation) => {
+    const opened = [];
+    for (let index = 0; index < 16; index++) {
+      opened.push(await new Promise((accept, reject) => {
+        const req = request({ hostname: '127.0.0.1', port, path: `/held/SYNTHETIC_PRIVATE_${index}`, agent: false }, res => {
+          let body = ''; const ended = new Promise((done, fail) => {
+            res.setEncoding('utf8'); res.on('data', chunk => { body += chunk; }); res.on('error', fail); res.once('end', () => done(body));
+          }); accept({ ended });
+        }); req.on('error', reject); req.end();
+      }));
+    }
+    assert.equal(rows.filter(row => row.event === 'start').length, 16);
+    assert.equal((await nativeRequest(port)).body, 'original');
+    assert.equal(rows.filter(row => row.event === 'start').length, 16, 'Active cap affects diagnostics only');
+    for (const res of held) res.end('retained');
+    assert.deepEqual(await Promise.all(opened.map(row => row.ended)), Array(16).fill('retained'));
+    for (let index = 0; index < 24; index++) assert.equal((await nativeRequest(port)).body, 'original');
+    assert.equal(rows.filter(row => row.event === 'start').length, 32);
+    assert.equal(rows.filter(row => row.event === 'finish').length, 32);
+    assert.equal(rows.filter(row => row.event === 'window-close').length, 1);
+    const end = rows.find(row => row.event === 'window-close');
+    assert.deepEqual([end.reason, end.started, end.finished, end.skippedBusy, end.unresolved], ['budget', 32, 32, 1, 0]);
+    assert.equal(rows.length, 66); assert.ok(rows.every(row => Buffer.byteLength(JSON.stringify(row)) <= 2048));
+    assert.equal(observation.snapshot('http-drained').responsesFinished, 41);
+    assert.doesNotMatch(JSON.stringify(rows), /SYNTHETIC_PRIVATE|held\//);
+  });
+});
+
+test('finite request diagnostic: monotonic expiry survives clock rollback without closing a pending response', { timeout: 10000 }, async () => {
+  const originalNow = Date.now, dir = await diagnosticDirectory();
+  let expire, held, entered;
+  const expired = new Promise(accept => { expire = accept; });
+  const started = new Promise(accept => { entered = accept; }); const rows = [];
+  const observation = createPublicRequestObservation({ dir, diagnosticUntil: new Date(Date.now() + 300).toISOString(),
+    writeDiagnostic: line => { const row = JSON.parse(line); rows.push(row); if (row.event === 'window-close') expire(); } });
+  const server = createServer((req, res) => { observation.observe(req, res, true); held = res; res.flushHeaders(); entered(); });
+  await new Promise(accept => server.listen(0, '127.0.0.1', accept));
+  try {
+    const response = nativeRequest(server.address().port);
+    await started; Date.now = () => originalNow() - 3600000;
+    await expired;
+    assert.equal(held.destroyed, false); assert.equal(held.writableEnded, false);
+    held.end('original-after-expiry'); assert.equal((await response).body, 'original-after-expiry');
+    assert.equal(rows.filter(row => row.event === 'start').length, 1);
+    assert.equal(rows.filter(row => ['finish', 'close'].includes(row.event)).length, 0);
+    assert.deepEqual(rows.filter(row => row.event === 'window-close').map(row => [row.reason, row.unresolved]), [['expired', 1]]);
+  } finally {
+    Date.now = originalNow; observation.dispose(); server.closeAllConnections();
+    await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));
+  }
+});
+
+test('finite request diagnostic: forward expiry and a throwing sink cannot alter HTTP or passive counts', { timeout: 10000 }, async () => {
+  const originalNow = Date.now;
+  try {
+    await finiteHttp((_req, res) => res.end('original'), async (port, rows) => {
+      Date.now = () => originalNow() + 3600000;
+      assert.equal((await nativeRequest(port)).body, 'original');
+      assert.equal(rows.filter(row => row.event === 'start').length, 0);
+      assert.equal(rows.filter(row => row.event === 'window-close').length, 1);
+    });
+  } finally { Date.now = originalNow; }
+  let writes = 0;
+  await finiteHttp((_req, res) => res.end('original'), async (port, _rows, observation) => {
+    for (let index = 0; index < 4; index++) assert.equal((await nativeRequest(port)).body, 'original');
+    assert.equal(writes, 2, 'A failed start sink disables this window without retries');
+    assert.equal(observation.snapshot('http-drained').responsesFinished, 4);
+  }, { writeDiagnostic: () => { if (++writes === 2) throw Error('SYNTHETIC_PRIVATE_SINK'); } });
+});
+
+test('finite request diagnostic: native SSE bytes and disconnect settle once without body observation', { timeout: 10000 }, async () => {
+  let closed; const serverClosed = new Promise(accept => { closed = accept; });
+  await finiteHttp((req, res) => {
+    assert.equal(req.listenerCount('data'), 0);
+    res.once('close', () => setImmediate(closed));
+    res.writeHead(200, { 'content-type': 'text/event-stream' }); res.write('data: SYNTHETIC_PRIVATE\n\n');
+  }, async (port, rows, observation) => {
+    const first = await new Promise((accept, reject) => {
+      const req = request({ hostname: '127.0.0.1', port, path: '/api/runs/SYNTHETIC_PRIVATE?signature=SYNTHETIC_PRIVATE', agent: false }, res => {
+        res.on('error', error => { if (error.code !== 'ECONNRESET') reject(error); });
+        res.once('data', chunk => { accept({ status: res.statusCode, body: chunk.toString() }); res.destroy(); });
+      }); req.on('error', error => { if (error.code !== 'ECONNRESET') reject(error); }); req.end();
+    });
+    assert.deepEqual(first, { status: 200, body: 'data: SYNTHETIC_PRIVATE\n\n' });
+    await serverClosed;
+    assert.equal(rows.filter(row => row.event === 'close').length, 1); assert.equal(rows.filter(row => row.event === 'finish').length, 0);
+    assert.equal(observation.snapshot('http-drained').closedBeforeFinish, 1);
+    observation.dispose(); observation.dispose();
+    assert.equal(rows.filter(row => row.event === 'window-close').length, 1);
+    assert.doesNotMatch(JSON.stringify(rows), /SYNTHETIC_PRIVATE|signature=/);
+  });
+});
+
+test('finite request diagnostic: default stdout reaches a reader while the owned child handler blocks and its timer never holds exit', { timeout: 10000 }, async () => {
+  const dir = await diagnosticDirectory(), release = join(dir, 'parent-release');
+  const code = `import {createPublicRequestObservation} from ${JSON.stringify(new URL('./next-public-observation.mjs', import.meta.url).href)};
+import {createServer} from 'node:http';import {existsSync} from 'node:fs';
+const observation=createPublicRequestObservation({dir:${JSON.stringify(dir)},diagnosticUntil:new Date(Date.now()+60000).toISOString()});
+const server=createServer((req,res)=>{observation.observe(req,res,true);const until=performance.now()+3000;
+while(!existsSync(${JSON.stringify(release)})&&performance.now()<until)Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,1);
+res.end(existsSync(${JSON.stringify(release)})?'original-released':'missing-before-handler-output');server.close();});
+server.listen(0,'127.0.0.1',()=>console.log(JSON.stringify({port:server.address().port})));`;
+  const child = spawn(process.execPath, ['--input-type=module', '-e', code], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+  let buffer = '', bytes = 0, ready, fail, stderr = '', outputError = null;
+  const port = new Promise((accept, reject) => { ready = accept; fail = reject; });
+  const exit = new Promise(accept => child.once('close', (code, signal) => { fail(Error('Child ended before readiness')); accept({ code, signal }); }));
+  const rows = [];
+  child.once('error', fail);
+  child.stdout.on('data', chunk => {
+    bytes += chunk.length; if (bytes > 16384) { outputError = 'output-bound'; child.kill('SIGTERM'); return; }
+    buffer += chunk.toString();
+    for (let end; (end = buffer.indexOf('\n')) !== -1;) {
+      const line = buffer.slice(0, end); buffer = buffer.slice(end + 1);
+      try {
+        const row = JSON.parse(line); rows.push(row);
+        if (row.port) ready(row.port);
+        if (row.event === 'start') writeFile(release, 'only-parent-after-observed-start').catch(error => { outputError = error.code; child.kill('SIGTERM'); });
+      } catch { outputError = 'invalid-owned-child-json'; child.kill('SIGTERM'); }
+    }
+  });
+  child.stderr.on('data', chunk => { bytes += chunk.length; stderr += chunk.toString(); if (bytes > 16384) child.kill('SIGTERM'); });
+  const deadline = setTimeout(() => { outputError = 'owned-child-deadline'; child.kill('SIGTERM'); }, 6000);
+  try {
+    const response = await nativeRequest(await port);
+    assert.equal(response.body, 'original-released', 'Only a start record delivered while the child is blocked can release this handler');
+    assert.deepEqual(await exit, { code: 0, signal: null }); assert.equal(outputError, null, stderr);
+    assert.equal(rows.filter(row => row.event === 'start').length, 1); assert.equal(rows.filter(row => row.event === 'finish').length, 1);
+    assert.equal(rows.filter(row => row.event === 'window-close').length, 0, 'The still-future unref timer cannot hold child exit');
+  } finally {
+    clearTimeout(deadline); if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM'); await exit;
+  }
 });
