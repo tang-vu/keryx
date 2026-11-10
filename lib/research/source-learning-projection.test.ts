@@ -6,7 +6,7 @@ import { createSqliteRunPrivacy, RUN_PRIVACY_SQL } from "../db/run-privacy-sqlit
 import { installSqliteApplicationSchema } from "../db/sqlite-application-schema";
 import { writeSqliteQueryRun } from "../db/query-run-record";
 import { createTrustedUsageContext, newRunUsage } from "./usage-provenance";
-import { readSourceLearning } from "./source-learning-server";
+import { aggregateSourceLearning, readSourceLearning } from "./source-learning-server";
 import { sourceLearningResponse } from "./source-learning-http";
 
 const opened: DatabaseSync[] = [];
@@ -78,6 +78,73 @@ it("uses a fresh storage page after publication is withdrawn between pages", asy
   };
   const report = await readSourceLearning({ ...f.store, runPrivacy: { ...f.privacy, learningPage } }, source.id, network);
   expect(report!.records[0].offered).toBe(39); expect(report).toEqual(await readSourceLearning(f.legacy, source.id, network));
+});
+
+it.each(["withdrawn", "erased"])("services queued privacy work before another page reads a %s observation", async change => {
+  const f = fixture(); for (let index = 0; index < 40; index++) f.add(run(index));
+  let calls = 0, serviced = false, queued: NodeJS.Immediate | undefined;
+  const learningPage: NonNullable<typeof f.privacy.learningPage> = async query => {
+    const page = await f.privacy.learningPage!(query);
+    if (++calls === 1) queued = setImmediate(() => {
+      serviced = true;
+      f.db.prepare(change === "erased"
+        ? "UPDATE run_privacy SET erased=1,revision=revision+1 WHERE run_id='public_001'"
+        : "UPDATE run_privacy SET visibility='private',revision=revision+1 WHERE run_id='public_001'").run();
+    });
+    return page;
+  };
+  try {
+    const report = await readSourceLearning({ ...f.store, runPrivacy: { ...f.privacy, learningPage } }, source.id, network);
+    expect({ serviced, offered: report!.records[0].offered, calls }).toEqual({ serviced: true, offered: 39, calls: 2 });
+    expect(report).toEqual(await readSourceLearning(f.legacy, source.id, network));
+  } finally { if (queued) clearImmediate(queued); }
+});
+
+it("services queued work between every full page and stops at300 without an extra wait", async () => {
+  const f = fixture(), values = Array.from({ length: 300 }, (_, index) => run(index)); values.forEach(value => f.add(value));
+  const events: string[] = [], queued: NodeJS.Immediate[] = []; let calls = 0;
+  const learningPage: NonNullable<typeof f.privacy.learningPage> = async query => {
+    const page = await f.privacy.learningPage!(query), current = ++calls; events.push(`page${current}`);
+    queued.push(setImmediate(() => events.push(`other${current}`)));
+    return page;
+  };
+  try {
+    const report = await readSourceLearning({ ...f.store, runPrivacy: { ...f.privacy, learningPage } }, source.id, network);
+    expect(report).toEqual(aggregateSourceLearning(source.id, network, values));
+    expect(events).toEqual(Array.from({ length: 10 }, (_, index) => index === 9
+      ? ["page10"] : [`page${index + 1}`, `other${index + 1}`]).flat());
+    expect(calls).toBe(10);
+  } finally { queued.forEach(clearImmediate); }
+});
+
+it.each([0, 1])("returns a terminal page of %i rows without an unnecessary event-loop wait", async count => {
+  const f = fixture(); if (count) f.add(run(0)); let serviced = false, queued: NodeJS.Immediate | undefined;
+  const learningPage: NonNullable<typeof f.privacy.learningPage> = async query => {
+    const page = await f.privacy.learningPage!(query); queued = setImmediate(() => { serviced = true; }); return page;
+  };
+  try {
+    const report = await readSourceLearning({ ...f.store, runPrivacy: { ...f.privacy, learningPage } }, source.id, network);
+    expect(report).not.toBeNull(); expect(serviced).toBe(false);
+  } finally { if (queued) clearImmediate(queued); }
+});
+
+it("refuses a queued close before a later selected page without fallback or private error detail", async () => {
+  const f = fixture(); for (let index = 0; index < 40; index++) f.add(run(index));
+  let calls = 0, queued: NodeJS.Immediate | undefined;
+  const scan = vi.fn(f.store.iterateRecentQueries);
+  const learningPage: NonNullable<typeof f.privacy.learningPage> = async query => {
+    calls++;
+    const page = await f.privacy.learningPage!(query);
+    if (calls === 1) queued = setImmediate(() => { opened.splice(opened.indexOf(f.db), 1); f.db.close(); });
+    return page;
+  };
+  try {
+    const response = await sourceLearningResponse(new Request("https://synthetic-learning.invalid"), source.id,
+      () => readSourceLearning({ ...f.store, runPrivacy: { ...f.privacy, learningPage }, iterateRecentQueries: scan }, source.id, network));
+    expect(response.status).toBe(503); expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.text()).not.toMatch(/database|sqlite|closed/i);
+    expect(calls).toBe(2); expect(scan).not.toHaveBeenCalled();
+  } finally { if (queued) clearImmediate(queued); }
 });
 
 it("does not fall back or invent an empty report when the selected metadata capability fails", async () => {
