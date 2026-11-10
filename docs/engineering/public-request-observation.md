@@ -1,5 +1,9 @@
 # Public request observations during drain
 
+This section describes the default passive observer. A separate
+[finite private window](finite-request-diagnostics.md) can record incoming
+source-template candidates before handler work only when explicitly configured.
+
 An installed web process stopped answering public and loopback requests while
 PM2 still reported it online. Its later shutdown receipt proved a normal SIGINT
 drain, and existing health timings appeared only after probes completed. The

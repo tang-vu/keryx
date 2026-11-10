@@ -66,10 +66,11 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939, 
   const next = requireApp('next');
   let handle;
   let draining = false;
-  const observation = createPublicRequestObservation();
+  const observation = createPublicRequestObservation({ dir: appDir, diagnosticUntil: process.env.KERYX_PUBLIC_REQUEST_DIAGNOSTIC_UNTIL });
   const server = createServer({ shouldUpgradeCallback: () => false }, (req, res) => {
-    observation.observe(req, res);
-    if (!hasPublicHttpsMetadata(req)) {
+    const publicMetadata = hasPublicHttpsMetadata(req);
+    observation.observe(req, res, publicMetadata && req.headers.upgrade === undefined && !draining);
+    if (!publicMetadata) {
       res.writeHead(421, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
       res.end('Public HTTPS metadata required');
       return;
@@ -93,8 +94,10 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939, 
   server.keepAliveTimeoutBuffer = 5000;
   server.maxRequestsPerSocket = 0;
   // Public request metadata is independent of the private physical socket.
-  const app = next({ dev: false, dir: appDir, hostname: 'keryx.cc', port: 443, httpServer: server,
+  let app;
+  try { app = next({ dev: false, dir: appDir, hostname: 'keryx.cc', port: 443, httpServer: server,
     ...(useBuildConfig ? { conf } : {}) });
+  } catch (error) { observation.dispose(); throw error; }
   const priorConfig = process.env.__NEXT_PRIVATE_STANDALONE_CONFIG;
   try {
     // Pinned Next 16.4.1's custom-server prepare/router path does not forward
@@ -102,7 +105,7 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939, 
     // sourced exclusively from the inspected build, during initialization.
     if (useBuildConfig) process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = JSON.stringify(conf);
     await app.prepare();
-  } finally {
+  } catch (error) { observation.dispose(); throw error; } finally {
     if (useBuildConfig) {
       if (priorConfig === undefined) delete process.env.__NEXT_PRIVATE_STANDALONE_CONFIG;
       else process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = priorConfig;
@@ -115,7 +118,7 @@ export async function startNextPublicServer({ dir = process.cwd(), port = 3939, 
     server.once('error', fail);
     server.once('listening', ready);
     server.listen(port, '127.0.0.1');
-  });
+  }).catch(error => { observation.dispose(); throw error; });
   let closing;
   const observeDrain = stage => {
     // Diagnostics are best effort; the existing positive drain/closed receipt
