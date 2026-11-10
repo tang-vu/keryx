@@ -1,4 +1,4 @@
-/** UNRUN by the source author. Genuine disposable native SQLite and real selector/routes.
+/** Genuine disposable native SQLite and real selector/routes.
  * Every observation is synthetic; no provider, signature, spending or live settlement. */
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
@@ -308,6 +308,7 @@ it("counts the full published population beyond100 using genuine readonly privac
   vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native(), saved = originals(f.file), bytes = readFileSync(f.file);
   const rawExec = DatabaseSync.prototype.exec, rawPrepare = DatabaseSync.prototype.prepare, sql = observeSql();
   let transaction = 0;
+  let preparations = 0;
   const rechecks: Array<{ transaction: number; ids: number; take: unknown; inTransaction: boolean }> = [];
   sql.exec.mockImplementation(function (this: DatabaseSync, query: string) {
     if (query === "BEGIN") transaction++;
@@ -316,6 +317,7 @@ it("counts the full published population beyond100 using genuine readonly privac
   sql.prepare.mockImplementation(function (this: DatabaseSync, query: string) {
     const statement = Reflect.apply(rawPrepare, this, [query]);
     if (!/SELECT q\.data,q\.id,q\.created_at,p\.visibility,p\.revision,p\.erased/.test(query)) return statement;
+    preparations++;
     const snapshot = { transaction, inTransaction: this.isTransaction };
     return new Proxy(statement, { get(target, key) {
       if (key === "all") return (...args: unknown[]) => {
@@ -329,11 +331,63 @@ it("counts the full published population beyond100 using genuine readonly privac
   expect(result.windowRuns).toBe(105); expect(result.runs.map(row => row.id)).toEqual(["public-104", "public-103", "public-102"]);
   expect(rechecks.map(row => [row.ids, row.take, row.inTransaction])).toEqual([[100, 100, true], [5, 5, true]]);
   expect(new Set(rechecks.map(row => row.transaction)).size).toBe(1);
+  expect(preparations).toBe(1);
   expect(JSON.stringify(result)).not.toContain("hidden");
   expect((await port.summary(window)).columns[0]).toMatchObject({ researchRuns: 106, settledMicros: "3" });
   expect(sql.writes()).toEqual([]); sql.exec.mockRestore(); sql.prepare.mockRestore();
   expect(originals(f.file)).toBe(saved); expect(readFileSync(f.file)).toEqual(bytes);
 }, 20000);
+
+it("prepares a new publication statement for each request on the same readonly port", async () => {
+  const f = fixture(db => { for (let index = 0; index < 105; index++) save(db, `repeat-${String(index).padStart(3, "0")}`, "outside"); });
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native();
+  const bytes = readFileSync(f.file), rawPrepare = DatabaseSync.prototype.prepare, sql = observeSql(); let preparations = 0;
+  sql.prepare.mockImplementation(function (this: DatabaseSync, query: string) {
+    if (/SELECT q\.data,q\.id,q\.created_at,p\.visibility,p\.revision,p\.erased/.test(query)) preparations++;
+    return Reflect.apply(rawPrepare, this, [query]);
+  });
+  const first = await port.publishedHistory!(window, "outside", 1), second = await port.publishedHistory!(window, "outside", 1);
+  expect(second).toEqual(first); expect(first.windowRuns).toBe(105); expect(preparations).toBe(2);
+  expect(sql.writes()).toEqual([]); sql.exec.mockRestore(); sql.prepare.mockRestore(); expect(readFileSync(f.file)).toEqual(bytes);
+});
+
+it("does not prepare a publication body statement for an empty native population", async () => {
+  const f = fixture(); vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native();
+  const bytes = readFileSync(f.file), rawPrepare = DatabaseSync.prototype.prepare, sql = observeSql(); let preparations = 0;
+  sql.prepare.mockImplementation(function (this: DatabaseSync, query: string) {
+    if (/SELECT q\.data,q\.id,q\.created_at,p\.visibility,p\.revision,p\.erased/.test(query)) preparations++;
+    return Reflect.apply(rawPrepare, this, [query]);
+  });
+  expect(await port.publishedHistory!(window, "outside", 1)).toEqual({ windowRuns: 0, runs: [] }); expect(preparations).toBe(0);
+  expect(sql.writes()).toEqual([]); sql.exec.mockRestore(); sql.prepare.mockRestore(); expect(readFileSync(f.file)).toEqual(bytes);
+});
+
+it("rechecks the manifest during the second execution of a publication statement and permanently refuses drift", async () => {
+  const f = fixture(db => { for (let index = 0; index < 105; index++) save(db, `drift-${index}`, "outside"); });
+  vi.stubEnv("KERYX_RUN_PRIVACY_ENABLED", "true"); const { port } = f.native();
+  const bytes = readFileSync(f.file), rawPrepare = DatabaseSync.prototype.prepare, sql = observeSql(); let executions = 0;
+  sql.prepare.mockImplementation(function (this: DatabaseSync, query: string) {
+    const statement = Reflect.apply(rawPrepare, this, [query]);
+    if (!/SELECT q\.data,q\.id,q\.created_at,p\.visibility,p\.revision,p\.erased/.test(query)) return statement;
+    return new Proxy(statement, { get(target, key) {
+      if (key === "all") return (...args: unknown[]) => {
+        if (++executions === 2) {
+          const changed = JSON.parse(f.manifest); changed.identity.storageId = "00000000-0000-4000-8000-000000000000";
+          writeFileSync(f.manifestPath, canonicalJson(changed));
+        }
+        return Reflect.apply(target.all, target, args);
+      };
+      const value = Reflect.get(target, key, target); return typeof value === "function" ? value.bind(target) : value;
+    } });
+  });
+  try {
+    await expect(port.publishedHistory!(window, "outside", 1)).rejects.toThrow(UsageUnavailable); expect(executions).toBe(2);
+    writeFileSync(f.manifestPath, f.manifest);
+    await expect(port.publishedHistory!(window, "outside", 1)).rejects.toThrow(UsageUnavailable);
+    expect(sql.writes()).toEqual([]);
+  } finally { writeFileSync(f.manifestPath, f.manifest); sql.exec.mockRestore(); sql.prepare.mockRestore(); }
+  expect(readFileSync(f.file)).toEqual(bytes);
+});
 it("preserves the generic published mixed-ID tie sample at limit1 with full population and bounded native revalidation", async () => {
   const rows = [run("a", "outside"), run("Z", "outside"), run("hidden-tie", "outside"), run("script-tie", "scripted")];
   const f = fixture(db => {

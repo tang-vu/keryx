@@ -199,7 +199,7 @@
     "lib/db/public-source-claims.ts": "2fdd3472db62288a72a952839c37991597dd8289115f7eec023db57390df2b68",
     "lib/db/public-source-history-projection.ts": "bd61a0d76bfe930bef52bdcc2a103069b4768a8542149868fba8fbc5c0652c24",
     "lib/db/public-source-learning-projection.ts": "45973dbc85c743e8e5b991ea4b0435dc1cb8b6361e43dcd05ff6a7344c1547eb",
-    "lib/db/public-usage-sqlite.ts": "cc3a2fdb44da58d2100fbee20280273b7f42b0e312484afb40eb1bd31e47a01e",
+    "lib/db/public-usage-sqlite.ts": "1d88d5a4ba8bcc1c5eb158b47c167f952e88a827cf74e71581dfbd904681f974",
     "lib/db/public-usage-supabase.ts": "6aec2cd4f758a49db4691c44463b5e46a08e67df880b39a1049fcf1dbbf37150",
     "lib/db/query-run-record.ts": "921d950faeaaa5dae78521f13c9ddffc9f02a4eb6255d3e7d7adeb00ee25edcd",
     "lib/db/recent-query-stream.ts": "8cb5d3cf3edee9546ef38dd1a47ea7df5eb8e68956dd5aa1ee29296de33dd3ef",

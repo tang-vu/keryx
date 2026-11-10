@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
 import type { QueryRun } from "../types";
 import type { RunPrivacyStore } from "../run-privacy/contracts";
 import { privacyId, validatePrivacyRun } from "../run-privacy/contracts";
@@ -137,16 +137,19 @@ export function createEnrolledSqlitePublicUsage(db: DatabaseSync): PublicUsageSt
     return snapshot(() => {
       assertVerifiedSqliteNativeUserDomainPolicy(db);
       const runs: QueryRun[] = []; let windowRuns = 0;
+      // Scoped to this snapshot, with fresh native guards on every execution.
+      // Empty populations do not prepare a body read; no statement spans calls.
+      let read: StatementSync | undefined;
       for (let start = 0; start < candidates.length; start += 100) {
         const batch = candidates.slice(start, start + 100), expected = new Map(batch.map(row => [row.id, row]));
         const ids = batch.map(row => privacyId.parse(row.id)), publishedBatch: QueryRun[] = [];
-        const rows = db.prepare(`SELECT q.data,q.id,q.created_at,p.visibility,p.revision,p.erased,
+        const rows = (read ??= db.prepare(`SELECT q.data,q.id,q.created_at,p.visibility,p.revision,p.erased,
           CASE WHEN json_valid(q.data) AND json_type(q.data,'$.usage')='object'
             AND length(CAST(json_extract(q.data,'$.usage') AS BLOB))<=2048
             THEN json_extract(q.data,'$.usage') END AS usage
           FROM query_runs q JOIN run_privacy p ON p.run_id=q.id
           WHERE p.visibility='public' AND p.erased=0 AND q.id IN (SELECT value FROM json_each(?))
-          ORDER BY q.created_at DESC,q.id DESC LIMIT ?`).all(JSON.stringify(ids), batch.length);
+          ORDER BY q.created_at DESC,q.id DESC LIMIT ?`)).all(JSON.stringify(ids), batch.length);
         if (rows.length > batch.length || new Set(rows.map(row => row.id)).size !== rows.length) throw new UsageUnavailable();
         for (const row of rows) {
           if (typeof row.id !== "string" || typeof row.created_at !== "string") throw new UsageUnavailable();
