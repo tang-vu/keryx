@@ -37,6 +37,14 @@ explicit privacy-OFF retain the existing streaming behavior. A selected capabili
 that fails does not fall back to another reader. Existing readiness checks still
 precede source lookup; storage failures remain generic, uncached 503 responses.
 
+Between full pages, the server awaits an event-loop turn before requesting another
+page, using the same `node:timers/promises` immediate as the public archive. An
+already-resolved storage promise alone can keep the whole scan in the microtask
+queue. The explicit turn lets queued work run between batches. Empty and partial
+pages, failures and the 300-row limit return without an extra turn.
+Each SQLite page and the final aggregation still run synchronously; this is not a
+request latency deadline or a bound on unrelated server work.
+
 Publication is checked for each page's storage snapshot. This is not a transaction
 or continuous visibility lock across all pages of one report. Retraction before a
 later page is read removes that row; already collected observations are subject to
@@ -69,13 +77,16 @@ Empty-fixture median CPU rose about 8% while native prepares fell from 190 to 16
 that increase was within the predeclared 20% tolerance. Review added the privacy
 revision check, terminal partial-page bound and NUL-safe fulfillment exclusion.
 Explicitly bounded source-review refreshes reused the unchanged baseline. On the
-current code, the 300-row call used 1,474.384
+metadata-reader revision introduced by PR 897, the 300-row call used 1,474.384
 CPU milliseconds, 535 native prepares and 455 schema reads, versus 85,754.832
 CPU milliseconds, 54,843 prepares and 46,662 schema reads on that baseline. Whole
 report hashes still matched and database bytes remained unchanged. The final
 empty call used 233.603 CPU milliseconds and 166 prepares. There is one current
 sample per shape; the initial prototype numbers do not substitute for these
-current-source checks. No baseline or failed trial was repeated for this refresh.
+checks of that exact revision. No baseline or failed trial was repeated for this refresh.
+Those CPU samples precede the inter-page event-loop turn and are not new cost
+measurements of the scheduled reader. Its regression checks use actual queued
+callbacks and SQLite pages, with no timing thresholds or mocked timers.
 
 Tests cover full-report parity and the public scan bound, large omitted text,
 corrupt envelopes and revisions, publication changes between pages, native
@@ -84,6 +95,10 @@ financial columns. Required Linux native-policy cases remain acceptance gates;
 a Windows-only inode skip is not a passing result. Current study reproduction,
 application and operational-script types, scoped lint, and required exact PR/main
 domain and platform CI remain separate gates.
+Scheduling checks also cover every page transition, no final-page wait, queued
+withdrawal or erasure before a later page, and a queued storage close that must
+refuse rather than fall back. They do not turn observations collected on earlier
+pages into a continuous publication grant.
 
 No production outage trigger was sampled by this work. The measured reduction is
 not evidence that this endpoint initiated a previous CPU incident. Deployment and

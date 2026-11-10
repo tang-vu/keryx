@@ -1,3 +1,4 @@
+import { setImmediate as yieldToRequests } from "node:timers/promises";
 import type { KeryxDB } from "../db/keryx-db";
 import type { QueryRun } from "../types";
 import { privacyReadsActive, requirePrivacy, type PublicSourceLearningRun } from "../run-privacy/contracts";
@@ -28,6 +29,9 @@ export async function readSourceLearning(db: Pick<KeryxDB, "getSource" | "iterat
       rows.push(...page.map(run => ({ ...run, decisions: run.decisions.filter(decision => decision.sourceId === sourceId) })));
       if (page.length < take) break;
       before = { id: last.id, createdAt: last.createdAt };
+      // A resolved storage promise alone need not service queued server work.
+      // The next page still performs its own fresh privacy/native admission.
+      if (rows.length < SOURCE_LEARNING_SCAN) await yieldToRequests();
     }
     return aggregateSourceLearning(sourceId, network, rows);
   }
