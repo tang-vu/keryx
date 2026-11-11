@@ -39,6 +39,21 @@ connection counts and disposal during a real database read. The fixture removes
 its own container and verifies absence; other containers remain outside its scope.
 Those configured resource bounds are not a native-pressure enforcement experiment.
 
+The same owned fixture tests `scripts/postgres/rehearse-snapshot.mts` against an
+empty private PostgreSQL namespace. Its row encoding preserves SQLite storage
+classes, signed 64-bit integers, real-number bits and raw text/blob bytes, including
+embedded NUL and invalid UTF-8. It carries those bytes as hexadecimal strings;
+PostgreSQL text/JSONB conversion cannot silently replace or reject original bytes.
+The copy includes empty/internal tables and the complete original schema text.
+It reads back bounded pages from PostgreSQL and compares every encoded row,
+sequence, count and digest before committing. Duplicate attempts refuse rather
+than overwrite an existing rehearsal copy; runtime readers cannot observe it.
+The source must be a private consistent snapshot with an owned read transaction.
+Virtual/shadow/generated storage and oversized rows refuse for separate review.
+This is a lossless private staging copy, not a restored application schema or a
+verified financial migration. It creates neither runtime grants nor enrollment,
+does not decrypt caches, and exposes no command that switches the application.
+
 The fixture uses synthetic identities and functions. It does not load application
 credentials, import production data, execute payments, enroll a store or establish
 current mainnet domain parity. The dedicated preparation workflow and full required

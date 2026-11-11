@@ -42,9 +42,9 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Typed operational and application contracts
         run: npm run typecheck
-      - name: Bounded transport and terminal-disposal regressions
-        run: npx vitest run lib/db/postgres/connection.test.ts --maxWorkers=1
-      - name: Actual synthetic PostgreSQL transport and role isolation
+      - name: Bounded transport, terminal disposal and lossless row regressions
+        run: npx vitest run lib/db/postgres/connection.test.ts scripts/postgres/typed-snapshot.test.mts --maxWorkers=1
+      - name: Actual synthetic PostgreSQL transport, role isolation and snapshot copy
         run: |
           docker pull postgres:17-alpine
           node --import tsx --no-warnings scripts/postgres/test-bootstrap.mts

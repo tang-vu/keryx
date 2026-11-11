@@ -3,9 +3,11 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
+import { DatabaseSync } from "node:sqlite";
 import { setTimeout as delay } from "node:timers/promises";
 import { createPostgresBootstrapTransport, PostgresStorageBusy, PostgresStorageUnavailable } from "../../lib/db/postgres/connection";
 import { STORAGE_MAINNET_PROFILE_DIGEST, type StorageIdentity } from "../../lib/db/storage-identity";
+import { rehearseSqliteSnapshot } from "./rehearse-snapshot.mts";
 
 const name = `keryx-postgres-bootstrap-${randomUUID()}`;
 const password = randomBytes(24).toString("hex");
@@ -98,10 +100,35 @@ try {
   await assert.rejects(transport.read("identity", identity), PostgresStorageUnavailable);
   assert.equal(sql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_fixture_reader';"), "0");
   transport = undefined;
+  // Separate operational role and namespace: the runtime fixture reader has
+  // no permission to import or observe this private migration copy.
+  sql(`CREATE ROLE keryx_fixture_importer LOGIN PASSWORD '${password}';
+    GRANT CREATE ON DATABASE postgres TO keryx_fixture_importer;`);
+  const importer = { endpoint: { kind: "loopback" as const, port }, database: "postgres", role: "keryx_fixture_importer", password };
+  const snapshot = new DatabaseSync(":memory:");
+  let snapshotResult: Awaited<ReturnType<typeof rehearseSqliteSnapshot>>;
+  try {
+    snapshot.exec(`CREATE TABLE sample(a,b,c,d,e,f,g);
+      CREATE TABLE empty_table(id INTEGER PRIMARY KEY AUTOINCREMENT);
+      INSERT INTO sample VALUES(NULL,9223372036854775807,-9223372036854775808,1.5,x'00ff',CAST(x'00c3ff' AS TEXT),'');
+      WITH RECURSIVE n(x) AS(VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<129)
+      INSERT INTO sample SELECT x,'duplicate',NULL,0.1,x'ff',CAST(x'c3ff' AS TEXT),'' FROM n;
+      BEGIN;`);
+    snapshotResult = await rehearseSqliteSnapshot(snapshot, importer);
+    assert.equal(snapshotResult.totalRows, 130); assert.equal(snapshotResult.tables.length, 3);
+    assert.equal(snapshotResult.verified, true); assert.equal(snapshotResult.applicationBackendSwitched, false);
+    const count = sql("SELECT count(*) FROM keryx_migration.snapshot_rows"); assert.equal(count, "130");
+    // A second attempt refuses rather than merging into or replacing a copy.
+    await assert.rejects(rehearseSqliteSnapshot(snapshot, importer));
+    assert.equal(sql("SELECT count(*) FROM keryx_migration.snapshot_rows"), count);
+    assert.throws(() => sql("SET ROLE keryx_fixture_reader; SELECT * FROM keryx_migration.snapshot_rows;"));
+  } finally { snapshot.close(); }
+  assert.equal(sql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_fixture_importer';"), "0");
   console.log(JSON.stringify({ format: "keryx-postgres-bootstrap-qualification-v1", passed: true, image, serverVersion: version,
     liveProductionCalls: 0, paidOperations: 0, syntheticIdentityOnly: true, eventLoopServiced: true,
     configuredConnections: 2, actualConnections: connections, boundedQueueRefused: true, closedResultsRefused: true,
-    directProtectedWriteRefused: true, limitations: "Actual PG transport fixture only; no current mainnet domain parity, production enrollment, data migration or cutover acceptance." }));
+    directProtectedWriteRefused: true, snapshotRehearsal: snapshotResult,
+    limitations: "Actual PG transport and synthetic lossless-copy fixture only; no current mainnet domain parity, production enrollment, application migration or cutover acceptance." }));
 } finally {
   await transport?.close();
   if (owned) {
