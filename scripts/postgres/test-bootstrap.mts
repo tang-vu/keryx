@@ -33,7 +33,9 @@ try {
   let ready = false;
   const startupDeadline = performance.now() + 20_000;
   while (performance.now() < startupDeadline) {
-    try { docker(["exec", name, "pg_isready", "-U", "postgres"], undefined, 2_000); ready = true; break; }
+    // The image starts a temporary Unix-only server while initializing. Wait
+    // for the final TCP listener so its deliberate shutdown is not readiness.
+    try { docker(["exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], undefined, 2_000); ready = true; break; }
     catch { await delay(100); }
   }
   if (!ready) {
