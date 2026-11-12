@@ -12,6 +12,8 @@ const CALLS = Object.freeze({
   ...APPLICATION_READ_CALLS,
   ...AUTH_WRITE_CALLS,
   ...OPERATIONAL_WRITE_CALLS,
+  personalHistoryList:{sql:"SELECT public.storage_personal_history_list($1::jsonb,$2::text,$3::text,$4::jsonb,$5::integer,$6::jsonb,$7::jsonb) AS result",args:5,write:false,bytes:4194304,transaction:true},
+  personalHistoryReceipts:{sql:"SELECT public.storage_personal_history_receipts($1::jsonb,$2::text,$3::text,$4::integer) AS result",args:2,write:false,bytes:4194304,transaction:true},
   profileIdentityList:{sql:"SELECT public.storage_profile_identity_list($1::jsonb,$2::text,$3::text) AS result",args:1,write:false,bytes:8192,transaction:true},
   profileIdentityBegin:{sql:"SELECT public.storage_profile_identity_begin($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text) AS result",args:5,write:true,bytes:256},
   profileIdentityConsume:{sql:"SELECT public.storage_profile_identity_consume($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text) AS result",args:5,write:true,bytes:256},

@@ -9027,3 +9027,19 @@ unknown and never triggers retry. Actual two-connection qualification checks
 single consumption and competing external-identity claims, while SQLite parity
 checks replacement, unlink, session revocation and deletion. This is protocol
 acceptance, not installed factory provenance or completed production migration.
+
+### 2026-11-12: project bounded personal history and receipts inside PostgreSQL
+
+Reuse the current history filter/cursor/provenance validation as private native
+SOURCE. Read only owner-attributed summaries and the existing financial receipt
+allowlist; omit answers, fulfillment, raw run JSON and parent identifier values.
+Retain UTC millisecond timestamps, binary tie ordering, literal search, unknown
+historical provenance and recorded-owner checks. Keep the caller's obligation to
+prove current research ownership before requesting internal receipt projections.
+
+Bound each projected row before JSON conversion and cumulative wire size before
+the final aggregate, under the same native read snapshot and data lock. Preserve
+the 51-summary and 201-receipt sentinel limits, omission of unexposed payments,
+actual reader-role access and terminal close. Qualification compares SQLite with
+PostgreSQL and stores large private answers that never enter the result. Privacy,
+claims, membership and complete runtime/cutover retain their separate acceptance.

@@ -290,3 +290,12 @@ callbacks, unlink/profile deletion, durable session revocation, ORCID checksum a
 lost-COMMIT acknowledgement. No provider login, network request, production data
 or financial operation is performed. All five entries share the existing pool
 and identity/source contract; this composition does not enroll an application.
+
+`--personal-history` (focused `--personal-history-only`) adds two actual read-only
+entries for owner-attributed summaries and internal financial receipts. Twenty
+SQLite comparisons cover equal-time cursor pages, literal search, filters,
+historical provenance, recorded-owner mismatch, oversized rows, 51/201 sentinel
+bounds, unexposed receipt omission and terminal close. Large private answers and
+unneeded parent identifier values stay outside the SQL projection. Receipt callers
+must still prove current ownership through the privacy port; this protocol grants
+no new account, claim, sharing or financial authority.
