@@ -61,6 +61,35 @@ source checks retain their separate acceptance roles.
 
 ## Remaining application admission
 
+The first native financial domain is qualified separately through
+`scripts/postgres/test-session-consents.mts`. It installs the same source into two
+fresh synthetic PostgreSQL17 databases, compares their complete native catalog
+contracts, and seals the target with the independently generated source metadata.
+The source and target use UTF-8 with the C locale, retaining binary ordering and
+avoiding a contract tied to an arbitrary host locale. Runtime-role and database
+connection limits are included in that independently checked catalog contract.
+Every domain call checks the full expected mainnet identity, source contract,
+held/active control, finite deadlines, transaction isolation and durability settings
+inside its native transaction. A dedicated role owns the private helpers; runtime
+roles receive only the named domain calls. Mutations share a finite native lock and
+protected transaction-scoped writer, while observation works in a real read-only
+transaction. No SQL handle or generic transaction callback becomes an application port.
+
+The consent ledger covers v1/v2 issuance, exactly-once concurrent consumption,
+retained cumulative signer spend, failed-admission rollback, expired challenges,
+hosted-signer separation, pending withdrawal barriers and historical owner proofs.
+Catalog drift, direct writes, private-context calls and role escalation refuse.
+Its withdrawal/hosted dependency rows exercise admission barriers only; this does
+not qualify withdrawal protocols, hosted settlement or the full application backend.
+The current application factory continues selecting its existing admitted store.
+
+The typed consent transport keeps only the fixed issue/consume/read calls and
+source/identity bindings. A lost acknowledgement, malformed result or disposal
+after a submitted write reports an unknown outcome; it never retries the write.
+The native fixture suppresses the PostgreSQL `ReadyForQuery(IDLE)` frame after
+`CommandComplete`, then reconciles through a separate healthy connection. Exactly
+one retained grant exists after that genuine committed-but-unacknowledged attempt.
+
 The current enrolled PostgreSQL/Supabase lane has explicit refusals for mainnet
 research purchases, original fulfillment, hosted treasury, owner consent and
 withdrawals. Its older sealed contract does not accept a mainnet identity. Current

@@ -8820,3 +8820,20 @@ schema/identity admission, complete import comparisons, encrypted-cache identity
 bindings and the qualified writer-pause/cutover/rollback gates pass. Preserve the
 current serving release during preparation and keep independent custody/journal
 stores on their reviewed defaults. See [the migration contract](docs/postgres-mainnet-migration.md).
+
+## Qualify PostgreSQL financial domains inside native transactions (2026-11-12)
+
+Build the native mainnet backend as explicit domain procedures owned by a dedicated
+NOLOGIN role. Runtime roles receive named calls; private helpers, raw tables and
+transaction writer contexts stay inaccessible. Check the complete expected identity,
+independently generated source metadata, active control and native deadline/durability
+settings in each operation's transaction. Serialize mutations and retain coherent
+read-only observations with bounded native locks.
+
+Start with owner consent: preserve both signed formats, retained signer consumption,
+atomic single-use grant admission and hosted/withdrawal barriers. Qualify source and
+target separately on actual PostgreSQL, including concurrency, rollback, expired
+challenges, read-only transactions and catalog drift. This domain profile grants no
+complete application readiness, production enrollment or authority to select a new
+backend; the existing application continues serving until every current domain,
+original, data-transfer and cutover gate is accepted.
