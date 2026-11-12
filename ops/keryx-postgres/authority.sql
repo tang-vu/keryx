@@ -81,12 +81,17 @@ BEGIN
   OR (SELECT mode FROM keryx_storage.control WHERE singleton) IS DISTINCT FROM 'active' THEN RAISE EXCEPTION 'storage identity unavailable'; END IF;
  SELECT * INTO policy FROM keryx_storage.operations WHERE operation=selected;
  IF NOT FOUND OR (NOT policy.read_only AND session_user<>'keryx_app') THEN RAISE EXCEPTION 'storage operation refused'; END IF;
- -- One coherent financial observation, or one serialized financial mutation.
- IF policy.read_only THEN PERFORM pg_advisory_xact_lock_shared(634781904177022::bigint);
- ELSE PERFORM pg_advisory_xact_lock(634781904177022::bigint); END IF;
+ -- The control lock above pins the active identity/schema generation throughout
+ -- fresh catalog admission. Do that work before serializing mutable financial
+ -- data; otherwise a full catalog scan consumes every competing writer's lock
+ -- deadline. No successful metadata check is cached or shared across calls.
  SELECT * INTO contract FROM keryx_storage.source_contract WHERE singleton;
  IF NOT FOUND OR digest IS DISTINCT FROM contract.source_digest OR contract.expected_metadata IS DISTINCT FROM keryx_storage.catalog_contract()
  THEN RAISE EXCEPTION 'native storage source contract unavailable'; END IF;
+ -- All current balances, originals, nonces and CAS conditions are still read
+ -- and changed only after this operation obtains its shared/exclusive data lock.
+ IF policy.read_only THEN PERFORM pg_advisory_xact_lock_shared(634781904177022::bigint);
+ ELSE PERFORM pg_advisory_xact_lock(634781904177022::bigint); END IF;
  IF NOT policy.read_only THEN INSERT INTO keryx_storage.writer VALUES(txid_current(),stored.identity_digest,selected); END IF;
 END; $$;
 CREATE FUNCTION keryx_storage.leave_operation() RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$

@@ -12,6 +12,7 @@ const CALLS = Object.freeze({
   ...APPLICATION_READ_CALLS,
   ...AUTH_WRITE_CALLS,
   ...OPERATIONAL_WRITE_CALLS,
+  dashboardMetrics:{sql:"SELECT public.storage_dashboard_metrics($1::jsonb,$2::text) AS result",args:0,write:false,bytes:65536,transaction:true},
   issue: { sql: "SELECT public.storage_issue_session_grant_consent($1::jsonb,$2::text,$3::text) AS result", args: 1, write: true, bytes: 0 },
   consume: { sql: "SELECT public.storage_consume_session_grant_consent($1::jsonb,$2::text,$3::text,$4::text,$5::text) AS result", args: 3, write: true, bytes: 0 },
   get: { sql: "SELECT public.storage_get_session_grant_consent($1::jsonb,$2::text,$3::text,$4::text) AS result", args: 2, write: false, bytes: 16384 },

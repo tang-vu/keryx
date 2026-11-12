@@ -1557,6 +1557,10 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async metrics(): Promise<DashboardMetrics> {
+    if(this.#native){
+      this.assertEntry();const result=await this.#native.authority.rpcResult("dashboard_metrics",{});this.assertEntry();
+      if(result.error)throw result.error;return result.data as DashboardMetrics;
+    }
     // Optional account metadata gets its own short deadline alongside the core
     // reads, so unavailable indexing cannot consume the browser's metric budget.
     const accountCount = this.recordedAccountCount();

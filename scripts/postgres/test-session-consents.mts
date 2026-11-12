@@ -1,7 +1,7 @@
 /** Real native domain qualification on two independently installed synthetic
  * databases. No production data/credentials, signing, vendor IO or payment. */
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync,spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { Client } from "pg";
@@ -29,6 +29,9 @@ import { nativeAuthApplicationSource } from "./auth-domain-source.mts";
 import { qualifyAuthDomains } from "./qualify-auth-domains.mts";
 import { nativeOperationalApplicationSource } from "./operational-domain-source.mts";
 import { qualifyOperationalDomains } from "./qualify-operational-domains.mts";
+import { nativeBoundedReadApplicationSource } from "./bounded-read-source.mts";
+import { qualifyBoundedReads } from "./qualify-bounded-reads.mts";
+import { qualifyDashboardMetrics } from "./qualify-dashboard-metrics.mts";
 import { createPostgresApplicationDomainTransport,type PostgresApplicationDomainTransport } from "../../lib/db/postgres/application-domain-transport";
 import { nativeCurrentApplicationSource } from "./current-application-source.mts";
 import { inspectApplicationTableParity } from "./application-table-parity.mts";
@@ -76,8 +79,10 @@ try {
     CREATE ROLE keryx_reader LOGIN NOINHERIT CONNECTION LIMIT 4 PASSWORD '${password}';
     CREATE DATABASE native_source WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
     CREATE DATABASE native_target WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;`);
+  const boundedReadsOnly=process.argv.includes("--bounded-reads-only");
+  const withBoundedReads=process.argv.includes("--bounded-reads")||boundedReadsOnly;
   const operationalOnly=process.argv.includes("--operational-only");
-  const withOperational=process.argv.includes("--operational")||operationalOnly;
+  const withOperational=process.argv.includes("--operational")||operationalOnly||withBoundedReads;
   const authOnly=process.argv.includes("--auth-only");
   const withAuth=process.argv.includes("--auth")||authOnly||withOperational;
   const currentTables=process.argv.includes("--current-application-tables")||withAuth;
@@ -91,7 +96,7 @@ try {
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
@@ -175,7 +180,10 @@ try {
     if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
-  const auth=withAuth?await qualifyAuthDomains({transport:nativeTransport as PostgresApplicationDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  const dashboard=withBoundedReads?await qualifyDashboardMetrics({transport:nativeTransport as PostgresApplicationDomainTransport,identity,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  const boundedReads=withBoundedReads?await qualifyBoundedReads({transport:nativeTransport as PostgresApplicationReadTransport,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  if(boundedReadsOnly){console.log(JSON.stringify({passed:true,boundedReadsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,boundedReads,dashboard,applicationBackendSwitched:false}));return;}
+  const auth=withAuth?await qualifyAuthDomains({contentionClient:app,transport:nativeTransport as PostgresApplicationDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(authOnly){console.log(JSON.stringify({passed:true,authOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,auth,currentTableConstraints,applicationBackendSwitched:false}));return;}
   const operational=withOperational?await qualifyOperationalDomains({transport:nativeTransport as PostgresApplicationDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(operationalOnly){console.log(JSON.stringify({passed:true,operationalOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,auth,operational,currentTableConstraints,applicationBackendSwitched:false}));return;}
@@ -283,8 +291,14 @@ try {
     ...(currentTables?{currentTableConstraints}:{}),
     ...(auth?{auth}:{}),
     ...(operational?{operational}:{}),
+    ...(boundedReads?{boundedReads,dashboard}:{}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
     limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
+} catch(error) {
+  if(owned){try{const logs=spawnSync('docker',['logs','--tail','80',name],{encoding:'utf8',timeout:5000,maxBuffer:131072,windowsHide:true});
+    const messages=(String(logs.stdout)+String(logs.stderr)).split(/\r?\n/).filter(line=>line.includes(' ERROR: ')).slice(-4).map(line=>line.slice(line.indexOf(' ERROR: ')+8, line.indexOf(' ERROR: ')+248));
+    console.error(JSON.stringify({syntheticNativeFixtureErrors:messages}));}catch{}}
+  throw error;
 } finally {
   await ackProxy?.close();
   await Promise.allSettled(transports.map(transport => transport.close()));
