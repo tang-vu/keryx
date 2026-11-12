@@ -8883,3 +8883,23 @@ request and attestation. Native fixtures compare these operations with SQLite
 using unfunded signatures and labelled synthetic recorded observations. This
 ledger increment grants no new hosted authorization/private execution admission,
 funding, policy renewal, complete backend readiness or production cutover.
+
+
+### 2026-11-12: qualify native financial protocols against application tables
+
+Build the financial compatibility reference from the existing application SQL
+source through migration 72 and the native mainnet ledger. Install source and
+target independently before sealing either target contract. Select profile pins
+in fresh DDL, preserve imported original values, and retain direct-table/legacy-RPC
+refusals. Use text-backed UUID domains to preserve representation; exercise native
+boolean payments and JSONB originals. Hosted originals use their native ledger
+checks rather than the old browser-only payment constraint requiring a grant epoch.
+Foreign-network browser imports still fail their explicit table constraint, inside
+a transaction. This remains a source qualification harness, with no application
+factory provenance, selected backend, production import or custody authority.
+
+The native descriptor keeps all raw and encoded bounds and all metadata fields,
+materializing one measured entry set for its final aggregation. Actual PostgreSQL
+must produce the same descriptor as the existing two-pass body, reject escaped
+field overflow and retain revoked legacy/table access. No successful authority is
+cached. Local timing is recorded separately from required production load proof.

@@ -7,7 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { Client } from "pg";
 import { nativeConsentDomainSource, nativeFundingDomainSource, nativeWithdrawalDomainSource, nativeCreatorWithdrawalDomainSource, nativeHostedLedgerSource, nativeOwnerWithdrawalSource } from "./native-domain-source.mts";
 import { qualifyFunding } from "./qualify-funding.mts";
-import { exportPostgres17SchemaContract } from "../helpers/enrolled-postgres-schema-contract.mts";
+import { POSTGRES17_SCHEMA_CONTRACT_BODY,exportPostgres17SchemaContract } from "../helpers/enrolled-postgres-schema-contract.mts";
 import { postgresPoolConfiguration } from "../../lib/db/postgres/connection";
 import { STORAGE_MAINNET_PROFILE_DIGEST, storageIdentityDigest, type StorageIdentity } from "../../lib/db/storage-identity";
 import { canonicalJson } from "../../lib/canonical-json";
@@ -24,6 +24,7 @@ import { createPostgresHostedLedgerTransport, type PostgresHostedLedgerTransport
 import { qualifyHostedLedger } from "./qualify-hosted-ledger.mts";
 import { createPostgresOwnerWithdrawalTransport, type PostgresOwnerWithdrawalTransport } from "../../lib/db/postgres/owner-withdrawal-transport";
 import { qualifyOwnerWithdrawals } from "./qualify-owner-withdrawals.mts";
+import { nativeApplicationFinancialReferenceSource } from "./application-reference-source.mts";
 
 const name = `keryx-postgres-consents-${randomUUID()}`, password = randomBytes(24).toString("hex");
 const docker = (args: string[], input?: string, timeout = 30_000) => execFileSync("docker", args,
@@ -44,6 +45,7 @@ const clients: Client[] = [];
 const transports: PostgresConsentTransport[] = [];
 let ackProxy: Awaited<ReturnType<typeof startCommitAckLossProxy>> | undefined;
 process.once("exit", () => { if (owned) try { docker(["rm", "-f", name]); } catch {} });
+async function qualify(){
 try {
   const image = docker(["image", "inspect", "postgres:17-alpine", "--format", "{{.Id}}"] ).trim();
   owned = true;
@@ -62,20 +64,48 @@ try {
     CREATE ROLE keryx_reader LOGIN NOINHERIT CONNECTION LIMIT 4 PASSWORD '${password}';
     CREATE DATABASE native_source WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
     CREATE DATABASE native_target WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;`);
-  const withOwner = process.argv.includes("--owner-withdrawals");
+  const catalogOnly=process.argv.includes("--catalog-only");
+  const withApplicationReference = process.argv.includes("--application-financial-reference")||catalogOnly;
+  const withOwner = process.argv.includes("--owner-withdrawals") || withApplicationReference;
   const withHosted = process.argv.includes("--hosted-ledger") || withOwner;
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
+    if(withApplicationReference)sql(database,`GRANT CREATE ON DATABASE ${database} TO keryx_owner;CREATE PUBLICATION supabase_realtime;ALTER PUBLICATION supabase_realtime OWNER TO keryx_owner;`);
     sql(database, "SET statement_timeout='30s'; GRANT CREATE ON SCHEMA public TO keryx_owner; BEGIN;\n" + source.sql + "\nCOMMIT;");
+  }
+  let catalogMeasurement:unknown;
+  if(withApplicationReference){
+    catalogMeasurement=JSON.parse(sql('native_source',`CREATE FUNCTION pg_temp.baseline_catalog() RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $baseline$${POSTGRES17_SCHEMA_CONTRACT_BODY}$baseline$;
+      CREATE FUNCTION pg_temp.measure_catalog() RETURNS jsonb LANGUAGE plpgsql AS $check$
+      DECLARE baseline jsonb;observed jsonb;started timestamptz;b_ms numeric;n_ms numeric;
+      BEGIN started:=clock_timestamp();baseline:=pg_temp.baseline_catalog();b_ms:=extract(epoch from clock_timestamp()-started)*1000;
+        started:=clock_timestamp();observed:=keryx_storage.catalog_contract();n_ms:=extract(epoch from clock_timestamp()-started)*1000;
+        IF baseline IS DISTINCT FROM observed THEN RAISE EXCEPTION 'native descriptor parity failed';END IF;
+        RETURN jsonb_build_object('allDescriptorFieldsEqual',true,'baselineMs',b_ms,'nativeMs',n_ms,'metadataCached',false);
+      END;$check$;SELECT pg_temp.measure_catalog();`));
   }
   const describe = "SET statement_timeout='5s'; SELECT keryx_storage.catalog_contract();";
   const reference = exportPostgres17SchemaContract(JSON.parse(sql("native_source", describe)));
   const target = exportPostgres17SchemaContract(JSON.parse(sql("native_target", describe)));
   assert.equal(target.sha256, reference.sha256, "Target must match a separately built SOURCE before its seal is inserted");
+  if(withApplicationReference){
+    // Raw source is below its bound, but JSON escaping makes one descriptor
+    // exceed its separate field bound. Refuse before the final aggregation.
+    const body="SELECT '"+'\\'.repeat(70000)+"'::text";
+    sql('native_source',`SET ROLE keryx_owner;CREATE FUNCTION public.metadata_bound_probe() RETURNS text LANGUAGE sql AS '${body.replaceAll("'","''")}';RESET ROLE;`);
+    assert.throws(()=>sql('native_source',describe),/schema contract metadata bound/);
+    sql('native_source','SET ROLE keryx_owner;DROP FUNCTION public.metadata_bound_probe();RESET ROLE;');
+    assert.equal(exportPostgres17SchemaContract(JSON.parse(sql('native_source',describe))).sha256,reference.sha256);
+    assert.equal(sql('native_target',"SELECT count(*) FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND left(p.proname,8)<>'storage_' AND (has_function_privilege('keryx_app',p.oid,'EXECUTE') OR has_function_privilege('keryx_reader',p.oid,'EXECUTE'));"),'0');
+    assert.equal(sql('native_target',"SELECT count(*) FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND a.attnum>0 AND NOT a.attisdropped AND (has_column_privilege('keryx_app',c.oid,a.attnum,'SELECT') OR has_column_privilege('keryx_reader',c.oid,a.attnum,'SELECT'));"),'0');
+  }
+  if(catalogOnly){console.log(JSON.stringify({passed:true,catalogOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,metadataBoundRefused:true,legacyRpcAndColumnReadsRefused:true,applicationBackendSwitched:false}));return;}
+
   sql("native_target", `INSERT INTO keryx_storage.identity VALUES(true,${literal(identity)},'${storageIdentityDigest(identity)}');
     INSERT INTO keryx_storage.source_contract VALUES(true,${literal(JSON.parse(reference.canonicalJson))},'${reference.sha256}');
     INSERT INTO public.browser_signer_capacity VALUES('${signer}',7);
@@ -109,7 +139,7 @@ try {
   assert.equal(race.filter(r => r.status === "fulfilled").length, 1, JSON.stringify(race.map(r => r.status === "rejected"
     ? { status: r.status, code: r.reason?.code, message: String(r.reason?.message).slice(0, 240) } : { status: r.status })));
   assert.equal(race.filter(r => r.status === "rejected").length, 1);
-  assert.equal(sql("native_target", `SELECT spent::text FROM public.session_grants WHERE session_id='${owner}';`), "0.000007");
+  assert.equal(sql("native_target", `SELECT spent=0.000007 FROM public.session_grants WHERE session_id='${owner}';`), "t");
   assert.equal(sql("native_target", `SELECT spent_micro FROM public.browser_signer_capacity WHERE signer='${signer}';`), "7");
   const low = consent({ capMicroUsdc: "6" }); await issue(low); await assert.rejects(consume(app, low));
   assert.equal(sql("native_target", `SELECT consumed_at IS NULL FROM public.session_grant_consents WHERE grant_epoch='${low.grantEpoch}';`), "t");
@@ -133,7 +163,7 @@ try {
   sql("native_target", `UPDATE keryx_storage.control SET mode='held';
     INSERT INTO public.session_grant_consents VALUES('${expired.grantEpoch}','${owner}','${signer}',${literal(canonicalJson(expired))}#>>'{}',${old},${old + 90000},NULL,NULL,NULL);
     INSERT INTO public.hosted_treasury_policies VALUES('synthetic-policy','${hosted.sessAddr}','public','{}');
-    INSERT INTO public.creator_withdrawal_requests VALUES('synthetic-original','${ownerWithdrawal.sessAddr}','{}');
+    INSERT INTO public.creator_withdrawal_requests(id,owner,data) VALUES('0x${"99".repeat(32)}','${ownerWithdrawal.sessAddr}','{}');
     INSERT INTO public.session_withdrawal_preparations(request_id,recovery_owner,signer,grant_epoch,data)
      VALUES('synthetic-session-original','${owner}','${sessionWithdrawal.sessAddr}','${v2.grantEpoch}',
       jsonb_build_object('format','keryx-session-withdrawal-preparation-v1','network','eip155:5042','requestId','synthetic-session-original',
@@ -164,7 +194,7 @@ try {
   await assert.rejects(app.query("SELECT keryx_storage.require_operation($1::jsonb,$2::text,'consume_session_grant_consent')", [JSON.stringify(identity), reference.sha256]));
   assert.equal(sql("native_target", "SELECT count(*) FROM keryx_storage.writer;"), "0");
   const funding = withFunding ? await qualifyFunding({ transport: nativeTransport as PostgresSessionTransport,
-    ownerSql: statement => sql("native_target", statement) }) : undefined;
+    ownerSql: statement => sql("native_target", statement),applicationTableReference:withApplicationReference }) : undefined;
   const withdrawals = withWithdrawals ? await qualifySessionWithdrawals({ transport: nativeTransport as PostgresWithdrawalTransport,
     options: { endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, digest: reference.sha256,
     ownerSql: statement => sql("native_target", statement), ...(withCreator ? { creatorTransport: nativeTransport as PostgresCreatorWithdrawalTransport } : {}) }) : undefined;
@@ -173,7 +203,7 @@ try {
     ownerSql: statement => sql("native_target", statement) }) : undefined;
   const hostedLedger = withHosted ? await qualifyHostedLedger({ transport: nativeTransport as PostgresHostedLedgerTransport,
     options: { endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, digest: reference.sha256,
-    ownerSql: statement => sql("native_target", statement) }) : undefined;
+    ownerSql: statement => sql("native_target", statement),applicationTableReference:withApplicationReference }) : undefined;
   const ownerWithdrawals = withOwner ? await qualifyOwnerWithdrawals({ transport: nativeTransport as PostgresOwnerWithdrawalTransport,
     ownerSql: statement => sql("native_target", statement) }) : undefined;
   assert.throws(() => sql("native_target", "UPDATE keryx_storage.source_contract SET source_digest=repeat('0',64);"));
@@ -189,6 +219,7 @@ try {
     ...(creator ? { creator } : {}),
     ...(hostedLedger ? { hostedLedger } : {}),
     ...(ownerWithdrawals ? { ownerWithdrawals } : {}),
+    ...(withApplicationReference?{applicationFinancialReference:true,catalogMeasurement,completeApplicationAdmitted:false}:{}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
     limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
 } finally {
@@ -200,3 +231,6 @@ try {
     docker(["rm", "-f", name]); assert.equal(docker(["ps", "-aq", "--filter", `name=^/${name}$`]).trim(), ""); owned = false;
   }
 }
+
+}
+await qualify();

@@ -3,8 +3,13 @@ name: PostgreSQL Mainnet Preparation
 on:
   pull_request:
     paths:
-      - "lib/db/postgres/**"
-      - "lib/db/storage-identity*"
+      - "lib/db/**"
+      - "lib/gateway/**"
+      - "lib/payments/**"
+      - "lib/session/**"
+      - "lib/arc-network-profile.ts"
+      - "supabase/migrations/**"
+      - "scripts/helpers/enrolled-postgres-schema-contract*"
       - "lib/canonical-json.ts"
       - "scripts/postgres/**"
       - "ops/keryx-postgres/**"
@@ -51,3 +56,6 @@ jobs:
           node --import tsx --no-warnings scripts/postgres/test-bootstrap.mts
       - name: Native consent, funding, withdrawals and retained hosted ledger
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --owner-withdrawals
+
+      - name: Financial protocols on independent application-table source and target
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --application-financial-reference

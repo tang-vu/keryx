@@ -134,6 +134,27 @@ it does not qualify new hosted authorization or private execution admission.
 Those protocols, complete application composition, source/domain parity and the
 production data transfer/cutover remain required before backend selection.
 
+The `--application-financial-reference` profile also installs the existing
+application-table source through migration 72, followed by the qualified native
+financial ledger, into two separate empty namespaces. Profile constants are
+selected in source DDL; imported rows and historical evidence are never relabelled.
+Text-backed UUID domains preserve original UUID representation. Native boolean
+payments and JSONB originals exercise the same accounting and withdrawal protocols.
+The old browser-only payment check is replaced by the native original tuple/state
+checks because hosted payments have a separate policy ledger and no browser epoch.
+A foreign-network browser original is rejected by its table constraint during a
+transactional fixture import; no partial import or held control remains afterward.
+Legacy public RPC and direct table privileges remain revoked from application
+roles. This profile qualifies financial table compatibility only; later tables,
+all application ports and production migration still require acceptance.
+
+The native descriptor materializes its bounded metadata once per call. A real
+PostgreSQL comparison requires every descriptor field to equal the existing
+reference and checks escaped-field overflow before final aggregation. This removes
+a repeated scan; it neither caches successful authority nor skips schema checks.
+The harness records local timing and independently verifies legacy RPC and raw
+column-read refusals. These timings are not compiled production load acceptance.
+
 The current enrolled PostgreSQL/Supabase lane has explicit refusals for mainnet
 research purchases, original fulfillment, hosted treasury, owner consent and
 withdrawals. Its older sealed contract does not accept a mainnet identity. Current

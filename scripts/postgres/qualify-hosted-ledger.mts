@@ -34,12 +34,12 @@ function original(p:HostedTreasuryPolicy,privateJob=false){
   const authorization:Row={nonce:id,policy_digest:hostedTreasuryPolicyDigest(p),signer:p.signer,query_id:jobId,amount_micro:7,original:canonicalJson({context,payload}),submitted:0};
   return{authorization,payment,context,payload,submission,jobId,workerId};
 }
-export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerTransport;options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(s:string)=>string}){
-  const db=new DatabaseSync(':memory:'),t=input.transport,q=(v:string|number|null)=>v===null?'NULL':typeof v==='number'?String(v):`'${v.replaceAll("'","''")}'`;let vectors=0;
+export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerTransport;options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(s:string)=>string;applicationTableReference?:boolean}){
+  const db=new DatabaseSync(':memory:'),t=input.transport,q=(v:string|number|null)=>v===null?'NULL':typeof v==='number'?String(v):`'${v.replaceAll("'","''")}'`;let vectors=0,sourceImportRefusals=0;
   const insert=(table:string,row:Row)=>{
     const cols=Object.keys(row);assert(/^[a-z_]+$/.test(table)&&cols.every(c=>/^[a-z_]+$/.test(c)));
     db.prepare(`INSERT INTO ${table}(${cols.join(',')}) VALUES(${cols.map(()=>'?').join(',')})`).run(...cols.map(c=>row[c]));
-    return`INSERT INTO public.${table}(${cols.join(',')}) VALUES(${cols.map(c=>q(row[c])).join(',')});`;
+    return`INSERT INTO public.${table}(${cols.join(',')}) VALUES(${cols.map(c=>table==='payment_events'&&c==='settled'&&input.applicationTableReference?(row[c]===1?'true':'false'):q(row[c])).join(',')});`;
   };
   const compare=async(signer:string,role?:'public'|'private')=>{
     let expected:ReturnType<typeof sqliteHostedAccounting>|undefined;try{expected=sqliteHostedAccounting(db,signer,role);}catch{}
@@ -48,7 +48,7 @@ export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerT
   const admit=async(p:HostedTreasuryPolicy,role:'public'|'private')=>{
     assert.equal(await t.admitHostedTreasuryPolicy(p,role),admitSqliteHostedPolicy(db,p,input.identity,role));vectors++;
   };
-  const seed=(o:ReturnType<typeof original>,options:{payment?:boolean;proof?:boolean;confirmation?:boolean;foreignProof?:boolean;changedConfirmation?:boolean}={})=>{
+  const seed=(o:ReturnType<typeof original>,options:{payment?:boolean;proof?:boolean;confirmation?:boolean;foreignProof?:boolean;changedConfirmation?:boolean;refuseImport?:string}={})=>{
     let sql="UPDATE keryx_storage.control SET mode='held';";
     sqliteJournalTransaction(db,()=>{
       sql+=insert('hosted_treasury_authorizations',o.authorization);
@@ -62,7 +62,15 @@ export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerT
           data:JSON.stringify({kind:'fetch',sourceId:'synthetic-source',itemId:null,submission})});
         if(options.confirmation)sql+=insert('private_creator_confirmations',{authorization_id:String(o.authorization.nonce),data:JSON.stringify({transaction:'synthetic-private-confirmed',submission:{...submission,...(options.changedConfirmation?{amountMicros:'6'}:{})}})});
       }
-    });input.ownerSql(sql+"UPDATE keryx_storage.control SET mode='active';");
+    });const statement='BEGIN;'+sql+"UPDATE keryx_storage.control SET mode='active';COMMIT;";
+    if(options.refuseImport){
+      assert.throws(()=>input.ownerSql(statement),new RegExp(options.refuseImport));
+      assert.throws(()=>sqliteHostedAccounting(db,String(o.authorization.signer)));
+      assert.equal(input.ownerSql("SELECT mode FROM keryx_storage.control WHERE singleton;"),'active');
+      assert.equal(input.ownerSql(`SELECT count(*) FROM public.hosted_treasury_authorizations WHERE nonce=${q(o.authorization.nonce)};`),'0');
+      sourceImportRefusals++;return false;
+    }
+    input.ownerSql(statement);return true;
   };
   try{
     db.exec('BEGIN');installMainnetApplicationSchema(db);db.exec('COMMIT');await compare(wallet());
@@ -85,7 +93,9 @@ export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerT
       if(kind==='settled-label')o.payment.settlement_status='settled';if(kind==='settled-flag')o.payment.settled=1;
       if(kind==='missing-receipt')Object.assign(o.payment,{settled:1,settlement_status:'settled',tx_hash:null});
       if(kind==='wrong-original-value'){o.payload.message.value='6';o.authorization.original=canonicalJson({context:o.context,payload:o.payload});}
-      seed(o,{payment:kind!=='missing-payment'});await compare(p.signer);
+      const rejected=input.applicationTableReference&&['settled-label','settled-flag'].includes(kind);
+      if(seed(o,{payment:kind!=='missing-payment',...(rejected?{refuseImport:'payment_events_settlement_status_check'}:{})}))await compare(p.signer);
+      else assert.deepEqual(await t.hostedTreasuryAccounting(p.signer),{retainedMicroUsdc:'0',confirmedMicroUsdc:'0'});
     }
     for(const kind of ['prepared','missing-proof','submitted','foreign-proof','confirmed','changed-confirmation','public-leak'] as const){
       const p=policy(input.identity);await admit(p,'private');const o=original(p,true);if(kind!=='prepared')o.authorization.submitted=1;
@@ -101,7 +111,7 @@ export async function qualifyHostedLedger(input:{transport:PostgresHostedLedgerT
       await assert.rejects(t.submitHostedAuthorization(lost.signer,pending.submission,header));
     }finally{await broken.close();await proxy.close();}
     assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
-    return{vectors,policyIdentityAndHistoricalRole:true,publicAndPrivateRetainedAccounting:true,singleOriginalSubmission:true,actualLostSubmissionCommitAck:true,
+    return{vectors,sourceImportRefusals,policyIdentityAndHistoricalRole:true,publicAndPrivateRetainedAccounting:true,singleOriginalSubmission:true,actualLostSubmissionCommitAck:true,
       noAutomaticRetry:true,paidOperations:0,vendorRequests:0,authorizationAdmissionQualified:false,privateExecutionQualified:false};
   }finally{db.close();}
 }

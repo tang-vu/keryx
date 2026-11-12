@@ -13,29 +13,29 @@ type Row = Record<string, string | number | null>;
 interface Original { intent: Row; binding?: Row; payment?: Row }
 const baseline = "2026-11-12T00:00:00.000Z";
 function original(signer: string, amount: number, settled: boolean, createdAt = "2026-11-12T00:00:01.000Z"): Original {
-  const nonce = `0x${randomBytes(32).toString("hex")}`, epoch = randomUUID(), payee = `0x${"88".repeat(20)}`;
+  const nonce = `0x${randomBytes(32).toString("hex")}`, epoch = randomUUID(), payee = `0x${"88".repeat(20)}`, queryId=randomUUID();
   return {
-    intent: { nonce, session_id: randomUUID(), request_id: randomUUID(), query_id: randomUUID(), grant_epoch: epoch,
+    intent: { nonce, session_id: randomUUID(), request_id: randomUUID(), query_id: queryId, grant_epoch: epoch,
       signer, network: ARC_MAINNET_PROFILE.networkId, token: ARC_MAINNET_PROFILE.usdcAddress.toLowerCase(),
       gateway_contract: ARC_MAINNET_PROFILE.gatewayWallet.toLowerCase(), source_id: "synthetic-source", kind: "fetch", payee,
       amount_micro_usdc: amount, phase: "prepared", created_at: createdAt },
     binding: { nonce, requirements: "{}", payment_metadata: "{}" },
-    payment: { id: `x402:${nonce}`, created_at: "2026-11-12T00:00:02.000Z", kind: "fetch", payer: signer, payee,
+    payment: { id: `x402:${nonce}`, created_at: "2026-11-12T00:00:02.000Z", kind: "fetch", query_id:queryId,source_id:'synthetic-source',payer: signer, payee,
       amount_usdc: amount / 1e6, network: ARC_MAINNET_PROFILE.networkId, settled: settled ? 1 : 0,
       settlement_status: settled ? "settled" : "pending", authorization_phase: settled ? "settled" : "submission_attempted",
       authorization_id: nonce, grant_epoch: epoch, tx_hash: settled ? "synthetic-observed-transaction" : null },
   };
 }
-export async function qualifyFunding(input: { transport: PostgresSessionTransport; ownerSql: (text: string) => string }) {
+export async function qualifyFunding(input: { transport: PostgresSessionTransport; ownerSql: (text: string) => string;applicationTableReference?:boolean }) {
   const db = new DatabaseSync(":memory:");
   const q = (value: string | number | null): string => value === null ? "NULL" : typeof value === "number" ? String(value) : `'${value.replaceAll("'", "''")}'`;
   const insert = (table: string, row: Row) => {
     const columns = Object.keys(row);
     assert(columns.every(key => /^[a-z_]+$/.test(key)) && /^[a-z_]+$/.test(table));
     db.prepare(`INSERT INTO ${table}(${columns.join(",")}) VALUES(${columns.map(() => "?").join(",")})`).run(...columns.map(key => row[key]));
-    return `INSERT INTO public.${table}(${columns.join(",")}) VALUES(${columns.map(key => q(row[key])).join(",")});`;
+    return `INSERT INTO public.${table}(${columns.join(",")}) VALUES(${columns.map(key => table==='payment_events'&&key==='settled'&&input.applicationTableReference?(row[key]===1?'true':'false'):q(row[key])).join(",")});`;
   };
-  let vectors = 0;
+  let vectors = 0, sourceImportRefusals=0;
   try {
     db.exec("BEGIN"); installMainnetApplicationSchema(db); db.exec("COMMIT");
     db.exec("UPDATE browser_journal_control SET active=1 WHERE id=1");
@@ -51,7 +51,15 @@ export async function qualifyFunding(input: { transport: PostgresSessionTranspor
         }
         for (const payment of vector.extra ?? []) sql += insert("payment_events", payment);
       });
-      sql += "UPDATE keryx_storage.control SET mode='active';"; input.ownerSql(sql);
+      sql += "UPDATE keryx_storage.control SET mode='active';";
+      if(input.applicationTableReference && label==='foreign original rail'){
+        assert.throws(()=>input.ownerSql('BEGIN;'+sql+'COMMIT;'));
+        assert.equal(input.ownerSql("SELECT mode FROM keryx_storage.control WHERE singleton;"),'active');
+        assert.equal(input.ownerSql(`SELECT count(*) FROM public.browser_authorization_intents WHERE signer='${signer}';`),'0');
+        for(const after of [undefined,baseline]){assert.throws(()=>sqliteSessionFundingAccounting(db,signer,after));sourceImportRefusals++;}
+        return;
+      }
+      input.ownerSql('BEGIN;'+sql+'COMMIT;');
       for (const after of [undefined, baseline]) {
         let expected: ReturnType<typeof sqliteSessionFundingAccounting> | undefined;
         try { expected = sqliteSessionFundingAccounting(db, signer, after); } catch {}
@@ -79,6 +87,6 @@ export async function qualifyFunding(input: { transport: PostgresSessionTranspor
     await run("legacy SQLite real retains its sub-micro tolerance", s => { const o = original(s, 7, true); o.payment!.amount_usdc = (7 + 0.0000005) / 1e6; return { retained: 7, originals: [o] }; });
     await run("difference outside legacy tolerance refuses", s => { const o = original(s, 7, true); o.payment!.amount_usdc = (7 + 0.000002) / 1e6; return { retained: 7, originals: [o] }; });
     await run("lifetime totals are not the recent-query sample", s => ({ retained: 301, originals: Array.from({ length: 301 }, () => original(s, 1, true)) }));
-    return { differentialVectors: vectors, originalCases: 17, source: "current SQLite mainnet accounting", native: "PostgreSQL17", paidOperations: 0 };
+    return { differentialVectors: vectors, sourceImportRefusals, originalCases: 17, source: "current SQLite mainnet accounting", native: "PostgreSQL17", paidOperations: 0 };
   } finally { db.close(); }
 }
