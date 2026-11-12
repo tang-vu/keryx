@@ -90,6 +90,17 @@ The native fixture suppresses the PostgreSQL `ReadyForQuery(IDLE)` frame after
 `CommandComplete`, then reconciles through a separate healthy connection. Exactly
 one retained grant exists after that genuine committed-but-unacknowledged attempt.
 
+The extended fixture (`--funding`) also qualifies native lifetime session funding
+accounting against the current SQLite implementation. Its 34 differential cases
+cover pending/failed debits, exact settled originals, late pre-baseline confirmations,
+missing capacity/bindings/payments, foreign rails, tuple conflicts, orphan payments,
+legacy real-number tolerance and more than 300 retained originals. The observation
+returns integer micro-USDC strings; it cannot release held exposure or renew a cap.
+The composed consent/funding transport shares one two-connection pool with eight
+queued requests. Malformed accounting, oversized results, queue saturation, reader
+failure and disposal refuse; none becomes an empty successful funding history.
+These read protocols do not implement browser payment admission or settlement.
+
 The current enrolled PostgreSQL/Supabase lane has explicit refusals for mainnet
 research purchases, original fulfillment, hosted treasury, owner consent and
 withdrawals. Its older sealed contract does not accept a mainnet identity. Current

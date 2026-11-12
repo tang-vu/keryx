@@ -5,7 +5,8 @@ import { execFileSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { Client } from "pg";
-import { nativeConsentDomainSource } from "./native-domain-source.mts";
+import { nativeConsentDomainSource, nativeFundingDomainSource } from "./native-domain-source.mts";
+import { qualifyFunding } from "./qualify-funding.mts";
 import { exportPostgres17SchemaContract } from "../helpers/enrolled-postgres-schema-contract.mts";
 import { postgresPoolConfiguration } from "../../lib/db/postgres/connection";
 import { STORAGE_MAINNET_PROFILE_DIGEST, storageIdentityDigest, type StorageIdentity } from "../../lib/db/storage-identity";
@@ -14,6 +15,7 @@ import { parseSessionGrantConsent, type SessionGrantConsent } from "../../lib/pa
 import { ARC_MAINNET_PROFILE } from "../../lib/arc-network-profile";
 import { createPostgresConsentTransport, PostgresConsentWriteOutcomeUnknown, type PostgresConsentTransport } from "../../lib/db/postgres/consent-transport";
 import { startCommitAckLossProxy } from "./commit-ack-loss.mts";
+import { createPostgresSessionTransport, type PostgresSessionTransport } from "../../lib/db/postgres/session-transport";
 
 const name = `keryx-postgres-consents-${randomUUID()}`, password = randomBytes(24).toString("hex");
 const docker = (args: string[], input?: string, timeout = 30_000) => execFileSync("docker", args,
@@ -52,7 +54,8 @@ try {
     CREATE ROLE keryx_reader LOGIN NOINHERIT CONNECTION LIMIT 4 PASSWORD '${password}';
     CREATE DATABASE native_source WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
     CREATE DATABASE native_target WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;`);
-  const source = nativeConsentDomainSource();
+  const withFunding = process.argv.includes("--funding");
+  const source = withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
     sql(database, "SET statement_timeout='30s'; GRANT CREATE ON SCHEMA public TO keryx_owner; BEGIN;\n" + source.sql + "\nCOMMIT;");
@@ -71,7 +74,7 @@ try {
     client.on("error", () => {}); clients.push(client); await client.connect(); return client;
   };
   const app = await connect("keryx_app"), other = await connect("keryx_app"), reader = await connect("keryx_reader");
-  const nativeTransport = createPostgresConsentTransport({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
+  const nativeTransport = (withFunding ? createPostgresSessionTransport : createPostgresConsentTransport)({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
   transports.push(nativeTransport);
   const issue = (value: unknown, expected = identity, digest = reference.sha256) => app.query(
     "SELECT public.storage_issue_session_grant_consent($1::jsonb,$2::text,$3::text) AS result", [JSON.stringify(expected), digest, canonicalJson(value)]);
@@ -145,6 +148,8 @@ try {
   await assert.rejects(app.query("SET ROLE keryx_owner"));
   await assert.rejects(app.query("SELECT keryx_storage.require_operation($1::jsonb,$2::text,'consume_session_grant_consent')", [JSON.stringify(identity), reference.sha256]));
   assert.equal(sql("native_target", "SELECT count(*) FROM keryx_storage.writer;"), "0");
+  const funding = withFunding ? await qualifyFunding({ transport: nativeTransport as PostgresSessionTransport,
+    ownerSql: statement => sql("native_target", statement) }) : undefined;
   assert.throws(() => sql("native_target", "UPDATE keryx_storage.source_contract SET source_digest=repeat('0',64);"));
   sql("native_target", "ALTER TABLE public.session_grants ADD COLUMN unexpected_drift text;");
   await assert.rejects(issue(consent()));
@@ -153,9 +158,9 @@ try {
     concurrentConsumeExactlyOnce: true, cumulativeSignerSpendRetained: true, failedConsumeRolledBack: true,
     v1AndV2: true, expiredChallengeRefused: true, hostedAndWithdrawalBarriers: true,
     readonlyTransaction: true, unsafeDurabilityAndIsolationRefused: true, rawWriteAndContextRefused: true, contractDriftRefused: true,
-    nativeTypedTransport: true, actualLostCommitAckReconciled: true, automaticWriteRetry: false,
+    nativeTypedTransport: true, actualLostCommitAckReconciled: true, automaticWriteRetry: false, ...(funding ? { funding } : {}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
-    limitations: "Native consent domain only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
+    limitations: "Native consent and optional funding observation only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
 } finally {
   await ackProxy?.close();
   await Promise.allSettled(transports.map(transport => transport.close()));

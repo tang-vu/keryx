@@ -8837,3 +8837,18 @@ challenges, read-only transactions and catalog drift. This domain profile grants
 complete application readiness, production enrollment or authority to select a new
 backend; the existing application continues serving until every current domain,
 original, data-transfer and cutover gate is accepted.
+
+## Share bounded PostgreSQL domain transport and retain lifetime funding evidence (2026-11-12)
+
+Compose native consent and funding ports over one source-defined call catalogue and
+one bounded pool. Each SQL entry point still verifies identity/source/control inside
+its native transaction. No arbitrary SQL or transaction callback escapes the channel.
+Terminal disposal suppresses late results across the composed ports, and dispatched
+writes remain unknown after lost acknowledgement without an automatic retry.
+
+Read session funding from all retained original intents and their canonical payment
+and binding tuples. Pending/failed exposure earns no confirmed credit, and a late
+confirmation of a pre-baseline original earns no new-deposit credit. Preserve the
+existing SQLite real-number tolerance when checking imported payment amounts while
+keeping totals as exact integer micro-USDC. Differential native fixtures are the
+acceptance for this limited domain, not full application admission or cutover.
