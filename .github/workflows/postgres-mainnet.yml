@@ -49,5 +49,5 @@ jobs:
         run: |
           docker pull postgres:17-alpine
           node --import tsx --no-warnings scripts/postgres/test-bootstrap.mts
-      - name: Native mainnet-profile consent ledger and independent source contract
-        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts
+      - name: Native consent, lifetime funding parity and independent source contract
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --funding
