@@ -126,6 +126,8 @@ describe("dormant Operator funding release", () => {
           // Finite synthetic-only measurement; it cannot be reached by the application graph.
           || importer === "scripts/measure-enrolled-health.mts" && target === "lib/db/enrolled-sqlite-adapter.ts"
           || importer === "scripts/measure-enrolled-source-learning.mts" && target === "lib/db/enrolled-sqlite-adapter.ts"
+          // Synthetic native/SQLite parity oracle; never imported by a runtime entry.
+          || importer === "scripts/postgres/qualify-workspaces.mts" && target === "lib/db/enrolled-sqlite-schema-profile.ts"
           || importer === "lib/db/storage-identity-connection.ts" && target === "lib/db/enrolled-sqlite-schema-profile.ts";
         expect(permitted, `Unreviewed storage selector: ${importer} -> ${target}`).toBe(true);
       }
@@ -138,6 +140,7 @@ describe("dormant Operator funding release", () => {
     expect(visited.has("lib/db/storage-identity.ts")).toBe(true);
     expect(visited.has("scripts/restore-public-research.mts")).toBe(false);
     expect(visited.has("scripts/measure-enrolled-health.mts")).toBe(false);
+    expect(visited.has("scripts/postgres/qualify-workspaces.mts")).toBe(false);
     const measurementFile = "scripts/measure-enrolled-source-learning.mts";
     expect(visited.has(measurementFile)).toBe(false);
     const measurement = ts.createSourceFile(measurementFile,

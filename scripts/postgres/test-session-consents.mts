@@ -151,6 +151,11 @@ try {
   const describe = "SET statement_timeout='5s'; SELECT keryx_storage.catalog_contract();";
   const reference = exportNativePostgresSchemaContract(sql("native_source", describe));
   const target = exportNativePostgresSchemaContract(sql("native_target", describe));
+  if(target.sha256!==reference.sha256){
+    const expected=JSON.parse(reference.canonicalJson),actual=JSON.parse(target.canonicalJson);
+    for(const key of Object.keys(expected.sections))if(JSON.stringify(expected.sections[key])!==JSON.stringify(actual.sections[key]))
+      console.error(JSON.stringify({syntheticCatalogMismatch:key,source:expected.sections[key],target:actual.sections[key]}));
+  }
   assert.equal(target.sha256, reference.sha256, "Target must match a separately built SOURCE before its seal is inserted");
   if(withNativeRuntime){
     assert.equal(sql('native_source',`SELECT encode(sha256(convert_to((${literal(JSON.parse(reference.canonicalJson))})::text,'UTF8')),'hex');`),reference.sha256,'Independent SOURCE wire digest must match the native constraint');
