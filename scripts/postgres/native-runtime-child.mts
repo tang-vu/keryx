@@ -18,7 +18,7 @@ async function main(){
   endpoint:{kind:'loopback',port:5432},credentialPaths:{application:appPath,reader:readerPath}}};
  writeFileSync(manifestPath,canonicalJson(manifest),{mode:0o600});
  process.env.KERYX_STORAGE_MANIFEST=manifestPath;process.env.CONTENT_MASTER_KEY=input.mode==='missing-key'?'':input.mode==='wrong-key'?'ff'.repeat(32):input.key;
- process.env.KERYX_RUN_PRIVACY_ENABLED='true';process.env.KERYX_RUN_CLAIMS_ENABLED='true';
+ process.env.KERYX_RUN_PRIVACY_ENABLED='true';process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='true';
  let outbound=0;globalThis.fetch=async()=>{outbound++;throw new Error('Synthetic native runtime forbids outbound HTTP');};
  const application=await import('../../lib/db/application-storage'),native=await import('../../lib/db/postgres/runtime-adapter'),privateFile=await import('../../lib/db/postgres/private-credential');
  let checks=0;
@@ -56,6 +56,7 @@ async function main(){
   assert.deepEqual(await privacy.memories(1),[]);assert.deepEqual(await privacy.offers(1),[]);assert.equal(await privacy.pending('missing'),null);assert.equal((await privacy.settlement(id))?.question,'');checks++;
   await assert.rejects(privacy.creationReady(),/readonly_operation/);await assert.rejects(privacy.export(id,actor,'12345678-1234-4234-8234-123456789abc'),/readonly_operation/);checks++;
   process.env.KERYX_RUN_PRIVACY_ENABLED='false';assert.throws(()=>reader.runPrivacy);process.env.KERYX_RUN_PRIVACY_ENABLED='true';checks++;
+  process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='false';assert.throws(()=>reader.runPrivacy);process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='true';checks++;
   const before=performance.now();await reader.metrics();const observedReadMs=performance.now()-before;
   // A changed credential is not adopted by an already-created facade.
   writeFileSync(readerPath,credential('keryx_reader','different-synthetic-password'));assert.throws(()=>reader.metrics());writeFileSync(readerPath,credential('keryx_reader'));checks++;

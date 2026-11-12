@@ -100,12 +100,13 @@ try {
   const profileIdentitiesOnly=process.argv.includes("--profile-identities-only");
   const personalHistoryOnly=process.argv.includes("--personal-history-only");
   const nativeRuntimeOnly=process.argv.includes("--native-runtime-only");
+  const nativeFactoryOnly=process.argv.includes("--native-factory-only");
   const originalJsonOnly=process.argv.includes("--original-json-only");
   const runClaimsOnly=process.argv.includes("--run-claims-only");
   const ownershipHistoryOnly=process.argv.includes("--ownership-history-only");
   const privacyOnly=process.argv.includes("--privacy-only");
   const runtimeSourceReferenceOnly=process.argv.includes("--runtime-source-reference-only");
-  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly;
+  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeFactoryOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly;
   const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
   const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly||withProfileIdentities;
@@ -219,6 +220,10 @@ try {
     if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
+  if(nativeFactoryOnly){
+    const nativeRuntime=await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
+    console.log(JSON.stringify({passed:true,nativeFactoryOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,nativeRuntime,applicationBackendSwitched:false}));return;
+  }
   if(privacyOnly){
     const privacy=await qualifyPrivacy({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
     console.log(JSON.stringify({passed:true,privacyOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,privacy,runtimeQualified:false,applicationBackendSwitched:false}));return;
