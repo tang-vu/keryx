@@ -27,7 +27,10 @@ async function main(){
  assert.throws(()=>privateFile.readPrivatePostgresCredential(readerPath,'keryx_app'));checks++;
  if(input.mode==='wrong-credential-role')writeFileSync(readerPath,credential('keryx_app'));
  if(input.mode!=='success'){
-  await assert.rejects(application.createReadonlyApplicationStorage());checks++;
+  if(input.mode==='wrong-source'){
+   chmodSync(readerPath,0o644);
+   await assert.rejects(application.createReadonlyApplicationStorage(),/adapter_not_initialized/);
+  }else await assert.rejects(application.createReadonlyApplicationStorage());checks++;
   assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,resourcePressureQualified:false,selectedApplicationWriter:false}));return;
  }
  const reader=await application.createReadonlyApplicationStorage();assert(reader);checks++;

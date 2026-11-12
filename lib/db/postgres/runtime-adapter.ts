@@ -14,6 +14,7 @@ import { refuseStorage,type StorageIdentity } from '../storage-identity';
 import { createPostgresApplicationDomainAuthority } from './application-domain-authority';
 import { readPrivatePostgresCredential } from './private-credential';
 import { createPostgresRuntimeTransport } from './runtime-transport';
+import { NATIVE_READONLY_RUNTIME_PROFILE } from './runtime-profile';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
 /** Deliberately closed until all writer/current-domain/data gates are qualified. */
@@ -28,6 +29,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  const deployment=readRuntimeStorageDeployment();
  if(process.platform!=='linux'||deployment.backend.kind!=='postgres'||config.profile!==ARC_MAINNET_PROFILE
   ||deployment.identity.authorityMode!=='mainnet-real')refuseStorage('identity_mismatch');
+ if(deployment.backend.sourceDigest!==NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256)refuseStorage('adapter_not_initialized');
  const selected=deployment.backend,expectedWire=canonicalJson(deployment),credential=readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader'),key=keyFingerprint();
  const transport=createPostgresRuntimeTransport({endpoint:selected.endpoint,database:selected.database,role:'keryx_reader',password:credential.password},deployment.identity,selected.sourceDigest);
  let closed=false,closing:Promise<void>|undefined;

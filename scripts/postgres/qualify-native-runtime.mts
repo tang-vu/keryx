@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { randomBytes,randomUUID } from 'node:crypto';
-import { mkdtempSync,realpathSync,rmdirSync,unlinkSync } from 'node:fs';
+import { mkdirSync,mkdtempSync,readFileSync,realpathSync,rmdirSync,unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname,join,resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +13,12 @@ import type { StorageIdentity } from '../../lib/db/storage-identity';
 export async function qualifyNativeRuntime(input:{postgresContainer:string;password:string;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  assert.match(input.postgresContainer,/^keryx-postgres-consents-[a-f0-9-]{36}$/);
  const docker=(args:string[],wire?:string)=>execFileSync('docker',args,{input:wire,encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:131072,stdio:['pipe','pipe','pipe']}).trim();
- const folder=mkdtempSync(join(tmpdir(),'keryx-native-runtime-')),bundle=join(folder,'child.cjs'),key=randomBytes(32).toString('hex'),owner='0x'+'a8'.repeat(20),cacheId='synthetic-runtime-cache';
+ // Hosted Linux Docker did not see the runner's /tmp bundle. Keep the bind
+ // source under the same checkout filesystem as the already mounted deps.
+ // Windows keeps its task-owned TEMP; never copy dependencies into this folder.
+ const fixtureRoot=process.platform==='linux'?resolve('.local/tmp/postgres-mainnet-migration-20261111/os-tmp'):tmpdir();
+ mkdirSync(fixtureRoot,{recursive:true});
+ const folder=mkdtempSync(join(fixtureRoot,'keryx-native-runtime-')),bundle=join(folder,'child.cjs'),key=randomBytes(32).toString('hex'),owner='0x'+'a8'.repeat(20),cacheId='synthetic-runtime-cache';
  const q=(s:string)=>"'"+s.replaceAll("'","''")+"'",pg=(s:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+s+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
  const image=docker(['image','inspect','node:24.22.1-bookworm-slim','--format','{{.Id}}']),deps=realpathSync(dirname(dirname(fileURLToPath(import.meta.resolve('pg/package.json'))))),containers=new Set<string>();let vectors=0;
  const seal=(id:string,identity:StorageIdentity)=>{const previous=process.env.CONTENT_MASTER_KEY;try{process.env.CONTENT_MASTER_KEY=key;return sealEnrolledCacheText('Synthetic cached text; no payment',id,identity);}finally{if(previous===undefined)delete process.env.CONTENT_MASTER_KEY;else process.env.CONTENT_MASTER_KEY=previous;}};
@@ -34,6 +39,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
  };
  try{
   buildSync({entryPoints:[fileURLToPath(new URL('./native-runtime-child.mts',import.meta.url))],outfile:bundle,bundle:true,platform:'node',target:'node24',format:'cjs',packages:'external',logLevel:'silent'});
+  assert(readFileSync(bundle).byteLength>0,'The compiled child must exist before Docker target access');
   pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker) VALUES('synthetic-runtime-run','2026-01-02T03:04:05.000Z','Original',0,jsonb_build_object('asker',${q(owner)}),${q(owner)});INSERT INTO public.cache_items(source_id,text) VALUES(${q(cacheId)},${q(envelope)});`);
   const baseline=input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),success=run('success');
   assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
@@ -48,7 +54,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   for(const name of containers){try{docker(['rm','-f',name]);}catch{}}
   pg(`DELETE FROM public.cache_items WHERE source_id=${q(cacheId)};DELETE FROM public.query_runs WHERE id='synthetic-runtime-run';`);
   // Only this fixture's one generated bundle, then its empty unique directory.
-  assert.equal(realpathSync(folder).toLowerCase(),resolve(folder).toLowerCase());assert.equal(dirname(folder).toLowerCase(),resolve(tmpdir()).toLowerCase());
+  assert.equal(realpathSync(folder).toLowerCase(),resolve(folder).toLowerCase());assert.equal(dirname(folder).toLowerCase(),resolve(fixtureRoot).toLowerCase());
   try{unlinkSync(bundle);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}rmdirSync(folder);
  }
 }

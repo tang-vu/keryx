@@ -315,6 +315,14 @@ Linux files must belong to the current UID, have one link, deny group/other acce
 fit 4 KiB and have no symbolic path component. A reader opens only its own role
 credential. Legacy SQLite/Supabase selectors alongside PostgreSQL refuse.
 
+The native catalog digest is SHA-256 of the actual PostgreSQL `jsonb::text` wire
+(`keryx-postgres17-jsonb-text-sha256-v1`), with the normalized descriptor digest
+retained separately. SQL binds stored expected metadata to that digest at seal
+and on every operation. The factory accepts only the package's independently
+generated `runtime-profile.ts` artifact; configuration cannot allocate approval.
+`--runtime-source-reference-only` emits a separate fresh SOURCE reference, with
+`runtimeQualified: false`; it is not runtime/factory acceptance.
+
 `createReadonlyApplicationStorage()` uses the zero-argument native factory.
 Construction verifies the current identity/catalog and authenticates every bounded
 cache envelope with its source and all nine logical identity fields. Missing or

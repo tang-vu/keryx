@@ -9064,3 +9064,11 @@ outbound HTTP. Actual pressure, full data and selected production load remain
 separate requirements. Retain the existing full catalog algorithm: controlled
 serialization/projection experiments showed no consistent material gain, and JIT
 was not the observed cause. Keep all catalog fields, bounds, deadlines and checks.
+
+Pin the factory to the package's independent SOURCE artifact before opening its
+credential/target. Bind the frozen expected metadata to its native JSONB-wire
+SHA-256 both at seal and on every operation; the existing JavaScript-normalized
+descriptor hash remains separate. A valid-looking manifest digest or self-matching
+target must not allocate another approved runtime profile. Reference-only source
+generation reports no runtime acceptance and still requires the complete factory
+and domain fixture plus exact-head CI before merge.
