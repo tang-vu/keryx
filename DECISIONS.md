@@ -9117,3 +9117,28 @@ Leave uncertain commit acknowledgements unknown without automatic reissue or
 consume retries. Actual native race and lost-ACK tests must inspect the retained
 claim row. Typed protocol composition remains separate from private installed
 factory provenance, full current-domain coverage and production admission.
+
+## Read a bounded online copy, then rehearse full data off the VPS (2026-11-13)
+
+Keep the predecessor serving while SQLite's online backup API reads a pinned
+read transaction. Verify actual native memory, swap, CPU, PID, network and hard
+time limits before opening the private hashed manifest or source. Create one
+exclusive private output, finalize only that copy, verify schema/pages/header
+and absent sidecars, fsync and retain its exact hash. A successful copy confers
+no storage enrollment or write authority.
+
+Full typed inventory exceeded the live VPS's 25-second processing budget in
+the article-term index. Keep that refusal; move heavy data intake to a separate
+development Docker profile with independently checked cgroup limits, no external
+network, read-only input and a parent-enforced deadline. Qualify actual SQLite
+native OOM and blocked-child deadline enforcement before private target access.
+Windows host ACLs and a verified read-only mount are explicit operator input
+requirements; runtime Linux private credential checks remain unchanged.
+
+Keep original data on the canonical host volume and generic code alone in the
+temporary image. Rehearse every typed row into an empty private PG17 namespace
+and compare persisted rows, ordinals, schema, counts and digests before commit.
+Use a separately bounded ephemeral, no-swap PG instance and importer, with no
+public application schema, runtime grants or installed provenance. Staging
+fidelity does not establish native application materialization, cache-key
+continuity, financial-domain parity or a safe writer cutover.

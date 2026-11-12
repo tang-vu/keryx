@@ -25,3 +25,19 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Synthetic capacity and actual cgroup native-memory refusal
         run: sudo "$(command -v node)" --import tsx scripts/test-storage-provenance-capacity.mts
+      - name: Readonly online WAL backup and native allocation containment
+        run: sudo "$(command -v node)" --import tsx scripts/postgres/test-online-snapshot.mts
+  development-offline-intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: docker pull node@sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c
+      - run: docker pull postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+      - name: Native memory enforcement and blocked-child hard deadline
+        run: node --import tsx scripts/postgres/qualify-offline-intake.mts --rehearse
