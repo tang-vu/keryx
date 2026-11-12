@@ -8,6 +8,8 @@ import type { PrivateProfilesStore } from '../../profiles/private-profile';
 import type { ProfileIdentitiesStore } from '../../profiles/verified-identities';
 import type { PersonalHistoryStore } from '../../history/personal-history';
 import type { RunOwnershipHistoryStore } from '../../run-claims/history';
+import { runClaimsEnabled } from '../../run-claims/contracts';
+import type { RunPrivacyStore } from '../../run-privacy/contracts';
 import type { KeryxDB } from '../keryx-db';
 import { readRuntimeStorageDeployment } from '../runtime-storage-config';
 import { assembleNativePostgresBusinessCore } from '../supabase-adapter';
@@ -24,7 +26,7 @@ export async function createPostgresRuntimeAdapter():Promise<KeryxDB>{
  return refuseStorage('adapter_not_initialized');
 }
 /** Linux read-only observation profile. It does not admit application writers,
- * signing or the still-unported privacy/claim/account surfaces. */
+ * signing or the still-unported claim/account writers. */
 export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  if(arguments.length)refuseStorage('invalid_operation');
  const deployment=readRuntimeStorageDeployment();
@@ -32,11 +34,12 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   ||deployment.identity.authorityMode!=='mainnet-real')refuseStorage('identity_mismatch');
  if(deployment.backend.sourceDigest!==NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256)refuseStorage('adapter_not_initialized');
  const selected=deployment.backend,expectedWire=canonicalJson(deployment),credential=readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader'),key=keyFingerprint();
- const transport=createPostgresRuntimeTransport({endpoint:selected.endpoint,database:selected.database,role:'keryx_reader',password:credential.password},deployment.identity,selected.sourceDigest);
+ const claimsEnabled=runClaimsEnabled(process.env),privacyActive=process.env.KERYX_RUN_PRIVACY_ENABLED==='true';
+ const transport=createPostgresRuntimeTransport({endpoint:selected.endpoint,database:selected.database,role:'keryx_reader',password:credential.password},deployment.identity,selected.sourceDigest,claimsEnabled);
  let closed=false,closing:Promise<void>|undefined;
  const entry=()=>{
   if(closed)refuseStorage('adapter_not_initialized');
-  if(canonicalJson(readRuntimeStorageDeployment())!==expectedWire||keyFingerprint()!==key
+  if(canonicalJson(readRuntimeStorageDeployment())!==expectedWire||keyFingerprint()!==key||runClaimsEnabled(process.env)!==claimsEnabled||(process.env.KERYX_RUN_PRIVACY_ENABLED==='true')!==privacyActive
    ||readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader').fingerprint!==credential.fingerprint)refuseStorage('identity_mismatch');
  };
  const guard=async()=>{entry();await transport.verifyRuntimeAuthority();entry();};
@@ -51,6 +54,14 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
  const history:PersonalHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.personalHistory.list(owner,query)),receipts:(id,take)=>read(()=>transport.personalHistory.receipts!(id,take))} satisfies PersonalHistoryStore);
  const ownership:RunOwnershipHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.runOwnershipHistory.list(owner,query)),read:(owner,binding,id)=>read(()=>transport.runOwnershipHistory.read(owner,binding,id))} satisfies RunOwnershipHistoryStore);
+ const privacy:RunPrivacyStore=Object.freeze({
+  creationReady:readonly,read:(id,actor)=>read(()=>transport.runPrivacy.read(id,actor)),owner:(id,actor)=>read(()=>transport.runPrivacy.owner(id,actor)),
+  list:query=>read(()=>transport.runPrivacy.list(query)),defaults:actor=>read(()=>transport.runPrivacy.defaults(actor)),
+  questions:ids=>read(()=>transport.runPrivacy.questions!(ids)),sourceHistory:()=>read(()=>transport.runPrivacy.sourceHistory!()),
+  learningPage:query=>read(()=>transport.runPrivacy.learningPage!(query)),archivePage:query=>read(()=>transport.runPrivacy.archivePage!(query)),
+  memories:take=>read(()=>transport.runPrivacy.memories(take)),offers:take=>read(()=>transport.runPrivacy.offers(take)),
+  settlement:id=>read(()=>transport.runPrivacy.settlement(id)),pending:id=>read(()=>transport.runPrivacy.pending(id)),setDefault:readonly,change:readonly,erase:readonly,export:readonly,
+ } satisfies RunPrivacyStore);
  try{
   entry();const cache=await transport.readColdCache();entry();
   for(const row of cache.cacheRows){openEnrolledCacheText(row.text,row.sourceId,deployment.identity);entry();}
@@ -62,6 +73,8 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='profileIdentities')return identities;
     if(property==='personalHistory')return history;
     if(property==='runOwnershipHistory')return ownership;
+    if(property==='runPrivacyActive')return privacyActive;
+    if(property==='runPrivacy')return privacyActive?privacy:undefined;
     // Only currently qualified bounded observations escape this profile.
     if(property!=='init'&&property!=='metrics')refuseStorage('invalid_operation');
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;

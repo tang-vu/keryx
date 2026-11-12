@@ -5,6 +5,7 @@ import { postgresPoolConfiguration, PostgresStorageBusy, PostgresStorageUnavaila
 import { APPLICATION_READ_CALLS } from "./application-read-calls";
 import { AUTH_WRITE_CALLS } from "./auth-write-calls";
 import { OPERATIONAL_WRITE_CALLS } from "./operational-write-calls";
+import { PRIVACY_CALLS } from './privacy-calls';
 
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
@@ -12,6 +13,7 @@ const CALLS = Object.freeze({
   ...APPLICATION_READ_CALLS,
   ...AUTH_WRITE_CALLS,
   ...OPERATIONAL_WRITE_CALLS,
+  ...PRIVACY_CALLS,
   ownershipHistoryList:{sql:"SELECT public.storage_ownership_history_list($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::jsonb,$7::integer,$8::jsonb,$9::jsonb) AS result",args:7,write:false,bytes:4198400,transaction:true},
   ownershipHistoryRead:{sql:"SELECT public.storage_ownership_history_read($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text) AS result",args:4,write:false,bytes:8008192,transaction:true},
   runClaimsReady:{sql:"SELECT public.storage_run_claims_ready($1::jsonb,$2::text) AS result",args:0,write:false,bytes:256,transaction:true},
@@ -82,7 +84,7 @@ export function createPostgresDomainChannel(options: PostgresConnectionOptions, 
       if (closed || typeof operation !== "string" || !Object.hasOwn(CALLS, operation)) unavailable();
       const selected = CALLS[operation];
       if (!Array.isArray(args) || args.length !== selected.args || args.some(value => value !== null && typeof value !== "string")
-        || Buffer.byteLength(JSON.stringify(args)) > 65536) unavailable();
+        || Buffer.byteLength(JSON.stringify(args)) > ('inputBytes' in selected?selected.inputBytes:65536)) unavailable();
       if (pending >= 10) throw new PostgresStorageBusy();
       let submitted = false, request: Promise<unknown> | undefined;
       pending++;

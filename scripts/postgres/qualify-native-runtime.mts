@@ -13,6 +13,7 @@ import type { StorageIdentity } from '../../lib/db/storage-identity';
 import { heldHistoryProjectionSql } from './run-history-projection.mts';
 import { heldOwnershipHistoryProjectionSql,sqliteOwnershipHistoryProjection } from './ownership-history-projection.mts';
 import { DatabaseSync } from 'node:sqlite';
+import { heldPrivacyProjectionSql,sqlitePrivacyProjection } from './privacy-projection.mts';
 export async function qualifyNativeRuntime(input:{postgresContainer:string;password:string;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  assert.match(input.postgresContainer,/^keryx-postgres-consents-[a-f0-9-]{36}$/);
  const docker=(args:string[],wire?:string)=>execFileSync('docker',args,{input:wire,encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:131072,stdio:['pipe','pipe','pipe']}).trim();
@@ -51,11 +52,11 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   candidateImage=docker(['commit','--change','LABEL keryx.native-runtime-fixture='+staging,staging]);
   assert.match(candidateImage,/^sha256:[a-f0-9]{64}$/);
   docker(['rm',staging]);containers.delete(staging);
-  const original=JSON.stringify({id:'synthetic-runtime-run',createdAt:'2026-01-02T03:04:05.000Z',question:'Original',asker:owner,totalSpent:0,totalToCreators:0,paymentMode:'offline'});
-  const oracle=new DatabaseSync(':memory:');let ownershipProjection:string;
-  try{oracle.exec('CREATE TABLE query_runs(id TEXT,created_at TEXT,asker TEXT,data TEXT)');oracle.prepare('INSERT INTO query_runs VALUES(?,?,?,?)').run('synthetic-runtime-run','2026-01-02T03:04:05.000Z',owner,original);ownershipProjection=heldOwnershipHistoryProjectionSql('synthetic-runtime-run',sqliteOwnershipHistoryProjection(oracle,'synthetic-runtime-run'));}finally{oracle.close();}
-  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker) VALUES('synthetic-runtime-run','2026-01-02T03:04:05.000Z','Original',0,${q(original)}::json,${q(owner)});`+
-   heldHistoryProjectionSql('synthetic-runtime-run',{sha256:createHash('sha256').update(original).digest('hex'),recordedOwner:owner,ownerInvalid:false,funded:false,provenance:null})+ownershipProjection+`INSERT INTO public.cache_items(source_id,text) VALUES(${q(cacheId)},${q(envelope)});`);
+  const original=JSON.stringify({id:'synthetic-runtime-run',createdAt:'2026-01-02T03:04:05.000Z',question:'Original',answer:'Original answer',budget:0,engine:'heuristic',subClaims:[],decisions:[],citations:[],trace:[],asker:owner,totalSpent:0,totalToCreators:0,paymentMode:'offline',uninterpreted:'\0\ud800'});
+  const oracle=new DatabaseSync(':memory:');let ownershipProjection:string,privacyProjection:string;
+  try{oracle.exec('CREATE TABLE query_runs(id TEXT,created_at TEXT,asker TEXT,data TEXT)');oracle.prepare('INSERT INTO query_runs VALUES(?,?,?,?)').run('synthetic-runtime-run','2026-01-02T03:04:05.000Z',owner,original);ownershipProjection=heldOwnershipHistoryProjectionSql('synthetic-runtime-run',sqliteOwnershipHistoryProjection(oracle,'synthetic-runtime-run'));privacyProjection=heldPrivacyProjectionSql('synthetic-runtime-run',sqlitePrivacyProjection(oracle,'synthetic-runtime-run'));}finally{oracle.close();}
+  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker,engine,total_spent,total_to_creators,answer) VALUES('synthetic-runtime-run','2026-01-02T03:04:05.000Z','Original',0,${q(original)}::json,${q(owner)},'heuristic',0,0,'Original answer');INSERT INTO public.run_privacy(run_id,visibility,updated_at) VALUES('synthetic-runtime-run','public','2026-01-02T03:04:05.000Z');`+
+   heldHistoryProjectionSql('synthetic-runtime-run',{sha256:createHash('sha256').update(original).digest('hex'),recordedOwner:owner,ownerInvalid:false,funded:false,provenance:null})+ownershipProjection+privacyProjection+`INSERT INTO public.cache_items(source_id,text) VALUES(${q(cacheId)},${q(envelope)});`);
   const baseline=input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),success=run('success');
   assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   for(const mode of ['wrong-identity','wrong-source','wrong-key','missing-key','wrong-credential-role']){run(mode);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);}

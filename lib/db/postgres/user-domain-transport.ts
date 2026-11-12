@@ -13,22 +13,27 @@ import { composePostgresRunClaims } from './claims-transport';
 import type { RunClaimsStore } from '../../run-claims/contracts';
 import { composePostgresOwnershipHistory } from './ownership-history-transport';
 import type { RunOwnershipHistoryStore } from '../../run-claims/history';
+import { composePostgresPrivacy } from './privacy-transport';
+import type { RunPrivacyStore } from '../../run-privacy/contracts';
+import { composePostgresPublication } from './publication-transport';
 export interface PostgresUserDomainTransport extends PostgresApplicationDomainTransport {
  readonly privateProfiles:PrivateProfilesStore;
  readonly profileIdentities:ProfileIdentitiesStore;
  readonly personalHistory:PersonalHistoryStore;
  readonly runClaims:RunClaimsStore;
  readonly runOwnershipHistory:RunOwnershipHistoryStore;
+ readonly runPrivacy:RunPrivacyStore;
+ readonly saveQueryRun:ReturnType<typeof composePostgresPublication>;
 }
 /** Same native pool/identity; a protocol composition confers no installed
  * factory provenance, authenticated web session or another owner's authority. */
-export function createPostgresUserDomainTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string):PostgresUserDomainTransport {
+export function createPostgresUserDomainTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string,claimsEnabled=true):PostgresUserDomainTransport {
  const expected=validateStorageIdentity(identity);
- return composePostgresUserDomainTransport(createPostgresDomainChannel(options,expected,digest),expected,options.role!=='keryx_app');
+ return composePostgresUserDomainTransport(createPostgresDomainChannel(options,expected,digest),expected,options.role!=='keryx_app',claimsEnabled);
 }
-export function composePostgresUserDomainTransport(channel:PostgresDomainChannel,identity:StorageIdentity,readOnly:boolean):PostgresUserDomainTransport {
+export function composePostgresUserDomainTransport(channel:PostgresDomainChannel,identity:StorageIdentity,readOnly:boolean,claimsEnabled=true):PostgresUserDomainTransport {
  const expected=validateStorageIdentity(identity),unavailable=()=>new PrivateProfileError('profile_unavailable');
- if(typeof readOnly!=='boolean')throw unavailable();
+ if(typeof readOnly!=='boolean'||typeof claimsEnabled!=='boolean')throw unavailable();
  const live=()=>{if(channel.closed)throw unavailable();};
  const writer=()=>{live();if(readOnly)throw unavailable();};
  const privateProfiles:PrivateProfilesStore=Object.freeze({
@@ -57,5 +62,5 @@ export function composePostgresUserDomainTransport(channel:PostgresDomainChannel
    try{z.object({deleted:z.literal(true)}).strict().parse(value);}catch{throw new PostgresDomainWriteOutcomeUnknown();}
   },
  } satisfies PrivateProfilesStore);
- return Object.freeze({...composePostgresApplicationDomainTransport(channel,expected),privateProfiles,profileIdentities:composePostgresProfileIdentities(channel,readOnly),personalHistory:composePostgresPersonalHistory(channel),runClaims:composePostgresRunClaims(channel,expected.network,readOnly),runOwnershipHistory:composePostgresOwnershipHistory(channel,expected.network)});
+ return Object.freeze({...composePostgresApplicationDomainTransport(channel,expected),privateProfiles,profileIdentities:composePostgresProfileIdentities(channel,readOnly),personalHistory:composePostgresPersonalHistory(channel),runClaims:composePostgresRunClaims(channel,expected.network,readOnly),runOwnershipHistory:composePostgresOwnershipHistory(channel,expected.network),runPrivacy:composePostgresPrivacy(channel,expected.network,readOnly,claimsEnabled),saveQueryRun:composePostgresPublication(channel,readOnly)});
 }

@@ -10,7 +10,7 @@ import { buildSync } from 'esbuild';
 import { setTimeout as delay } from 'node:timers/promises';
 const image='node@sha256:be8204d4bd327363357f532187b752ff62759c31bedf98e9e18fc08c9cbd605c';
 const pgImage='postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24';
-assert.equal(process.version,'v24.22.1');const args=process.argv.slice(2),rehearsal=args.at(-1)==='--rehearse',audit=args.at(-1)==='--audit-run-domains';if(rehearsal||audit)args.pop();assert([0,2].includes(args.length));if(audit)assert.equal(args.length,2);
+assert.equal(process.version,'v24.22.1');const args=process.argv.slice(2),rehearsal=args.at(-1)==='--rehearse',audit=args.at(-1)==='--audit-run-domains',privacyAudit=args.at(-1)==='--audit-run-privacy';if(rehearsal||audit||privacyAudit)args.pop();assert([0,2].includes(args.length));if(audit||privacyAudit)assert.equal(args.length,2);
 const [input,expectedHash]=args;
 if(input){
  assert.match(expectedHash,/^[a-f0-9]{64}$/);assert.equal(realpathSync(input).toLowerCase(),resolve(input).toLowerCase());const stat=lstatSync(input);assert(stat.isFile()&&!stat.isSymbolicLink()&&stat.size>0&&stat.size<=536870912);
@@ -25,13 +25,13 @@ mkdirSync(root,{recursive:true});assert.equal(realpathSync(root).toLowerCase(),r
 const bundle=join(folder,'child.cjs'),staging='keryx-offline-intake-'+randomUUID(),containers=new Set<string>();let candidate:string|undefined;
 let pgContainer:string|undefined;const password=randomBytes(24).toString('hex');
 const docker=(args:string[],timeout=15000)=>execFileSync('docker',args,{encoding:'utf8',windowsHide:true,timeout,maxBuffer:524288,stdio:['ignore','pipe','pipe']}).trim();
-async function run(mode:'pressure'|'deadline'|'synthetic'|'inventory'|'rehearsal'|'synthetic-rehearsal'|'domain-audit',memory='512m'){
+async function run(mode:'pressure'|'deadline'|'synthetic'|'inventory'|'rehearsal'|'synthetic-rehearsal'|'domain-audit'|'privacy-audit',memory='512m'){
  const name='keryx-offline-intake-'+randomUUID();containers.add(name);
  try{
   const isRehearsal=mode.endsWith('rehearsal');
   const args=['run','-i','--name',name,'--label','keryx.offline-intake='+staging,'--network',isRehearsal?'container:'+pgContainer:'none','--user','0:0','--read-only','--memory',memory,'--memory-swap',memory,'--cpus','.25','--pids-limit','32','--cap-drop','ALL','--security-opt','no-new-privileges','--ulimit','core=0','--tmpfs','/run/keryx-intake:rw,nosuid,noexec,mode=0700,size=16m'];
-  if(mode==='inventory'||mode==='rehearsal'||mode==='domain-audit')args.push('--mount',`type=bind,source=${resolve(input)},target=/input/snapshot.sqlite,readonly`);
-  args.push(candidate!,'/usr/bin/timeout','--signal=KILL',mode==='deadline'?'5s':isRehearsal?'1800s':'300s','node','--no-warnings','--max-old-space-size=256','/child.cjs',mode);if(mode==='inventory'||mode==='rehearsal'||mode==='domain-audit')args.push(expectedHash);
+  if(mode==='inventory'||mode==='rehearsal'||mode==='domain-audit'||mode==='privacy-audit')args.push('--mount',`type=bind,source=${resolve(input)},target=/input/snapshot.sqlite,readonly`);
+  args.push(candidate!,'/usr/bin/timeout','--signal=KILL',mode==='deadline'?'5s':isRehearsal?'1800s':'300s','node','--no-warnings','--max-old-space-size=256','/child.cjs',mode);if(mode==='inventory'||mode==='rehearsal'||mode==='domain-audit'||mode==='privacy-audit')args.push(expectedHash);
   const result=await new Promise<{code:number|null;stdout:string}>(resolveResult=>{
    const child=spawn('docker',args,{windowsHide:true,stdio:['pipe','pipe','ignore']});child.stdin.on('error',()=>{});child.stdin.end(isRehearsal?JSON.stringify({password}):'');let stdout='',done=false;
    const timer=setTimeout(()=>{try{docker(['kill',name]);}finally{child.kill();}},isRehearsal?1810000:310000);
@@ -47,14 +47,14 @@ async function run(mode:'pressure'|'deadline'|'synthetic'|'inventory'|'rehearsal
 }
 try{
  assert.match(docker(['image','inspect',image,'--format','{{.Id}}']),/^sha256:[a-f0-9]{64}$/);
- buildSync({entryPoints:[fileURLToPath(new URL('./offline-intake-child.mts',import.meta.url))],outfile:bundle,bundle:true,platform:'node',target:'node24',format:'cjs',external:['pg-native'],logLevel:'silent'});
+ buildSync({entryPoints:[fileURLToPath(new URL('./offline-intake-child.mts',import.meta.url))],outfile:bundle,bundle:true,platform:'node',target:'node24',format:'cjs',minifyWhitespace:true,external:['pg-native'],logLevel:'silent'});
  const bytes=readFileSync(bundle);assert(bytes.length>0&&bytes.length<1048576);containers.add(staging);
  docker(['create','--name',staging,'--label','keryx.offline-intake='+staging,'--network','none',image,'node','--version']);docker(['cp',bundle,staging+':/child.cjs']);candidate=docker(['commit','--change','LABEL keryx.offline-intake='+staging,staging]);assert.match(candidate,/^sha256:[a-f0-9]{64}$/);docker(['rm',staging]);containers.delete(staging);
  const outside=await run('pressure','256m');assert.notEqual(outside.code,0);assert.equal(outside.reports[0]?.actualKernelLimitsVerified,undefined);assert.equal(outside.state.OOMKilled,false);
  const pressure=await run('pressure');assert.notEqual(pressure.code,0);assert.equal(pressure.reports[0]?.actualKernelLimitsVerified,true);assert.equal(pressure.state.OOMKilled,true);
  const deadline=await run('deadline');assert.equal(deadline.code,137);assert.equal(deadline.reports[0]?.actualKernelLimitsVerified,true);assert.equal(deadline.state.OOMKilled,false);
  const synthetic=await run('synthetic');assert.equal(synthetic.code,0);const fixture=synthetic.reports[0] as {fullTypedInventoryComplete:boolean;totalRows:number;tables:{columns:{unsafeJsInteger:number;textNul:number;blob:number}[]}[]};assert.equal(fixture.fullTypedInventoryComplete,true);assert.equal(fixture.totalRows,1);assert.equal(fixture.tables[0].columns[1].unsafeJsInteger,1);assert.equal(fixture.tables[0].columns[3].textNul,1);assert.equal(fixture.tables[0].columns[4].blob,1);
- const qualification={format:'keryx-development-offline-intake-qualification-v1',image,compiledSha256:createHash('sha256').update(bytes).digest('hex'),actualNativeSqliteOom:true,actualHardDeadlineKilledBlockedChild:true,wrongMemoryRefusedBeforeTarget:true,syntheticInt64RealNulBlob:true,privateInputCopiedIntoImage:false,selectedApplicationWriter:false};
+ const qualification={format:'keryx-development-offline-intake-qualification-v1',image,compiledSha256:createHash('sha256').update(bytes).digest('hex'),compiledBytes:bytes.length,compiledByteLimitExclusive:1048576,actualNativeSqliteOom:true,actualHardDeadlineKilledBlockedChild:true,wrongMemoryRefusedBeforeTarget:true,syntheticInt64RealNulBlob:true,privateInputCopiedIntoImage:false,selectedApplicationWriter:false};
  console.log(JSON.stringify({qualification}));
  if(rehearsal){
   pgContainer='keryx-offline-intake-'+randomUUID();containers.add(pgContainer);
@@ -65,7 +65,7 @@ try{
   // schema is created. This ephemeral password never appears in evidence.
   execFileSync('docker',['exec','-i',pgContainer,'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres'],{input:`CREATE ROLE keryx_rehearsal LOGIN PASSWORD '${password}';GRANT CREATE ON DATABASE postgres TO keryx_rehearsal;`,windowsHide:true,timeout:10000,stdio:['pipe','ignore','ignore']});
   const actual=await run(input?'rehearsal':'synthetic-rehearsal');console.log(JSON.stringify({workerExit:actual.code,oomKilled:actual.state.OOMKilled,postgresActualKernelLimitsVerified:true,postgresMemoryBytes:3221225472,postgresSwapBytes:0,postgresImage:pgImage,report:actual.reports.at(-1)??null}));assert.equal(actual.code,0);assert.equal(actual.reports.at(-1)?.verified,true);
- }else if(input){const actual=await run(audit?'domain-audit':'inventory');console.log(JSON.stringify({workerExit:actual.code,oomKilled:actual.state.OOMKilled,report:actual.reports.at(-1)??null}));assert.equal(actual.code,0);if(audit)assert.equal(actual.reports.at(-1)?.format,'keryx-run-domain-real-data-audit-v1');else assert.equal(actual.reports.at(-1)?.fullTypedInventoryComplete,true);}
+ }else if(input){const actual=await run(privacyAudit?'privacy-audit':audit?'domain-audit':'inventory');console.log(JSON.stringify({workerExit:actual.code,oomKilled:actual.state.OOMKilled,report:actual.reports.at(-1)??null}));assert.equal(actual.code,0);if(privacyAudit)assert.equal(actual.reports.at(-1)?.format,'keryx-run-privacy-real-data-audit-v1');else if(audit)assert.equal(actual.reports.at(-1)?.format,'keryx-run-domain-real-data-audit-v1');else assert.equal(actual.reports.at(-1)?.fullTypedInventoryComplete,true);}
 }finally{
  for(const name of containers){if(docker(['ps','-aq','--filter','name=^/'+name+'$'])){assert.equal(docker(['inspect',name,'--format','{{index .Config.Labels "keryx.offline-intake"}}']),staging);docker(['rm','-f',name]);}}
  if(candidate){assert.equal(docker(['image','inspect',candidate,'--format','{{index .Config.Labels "keryx.offline-intake"}}']),staging);docker(['image','rm',candidate]);assert.equal(docker(['image','ls','-q','--filter','label=keryx.offline-intake='+staging]),'');}
