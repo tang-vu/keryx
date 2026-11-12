@@ -8805,3 +8805,18 @@ or complete literature coverage. Existing record fingerprints exclude observatio
 time, so refreshing the same metadata cannot invent a new work. No native schema
 or financial authority changes. Scheduling, standing spend and paid delivery stay
 held. Source work and its PR remain unmerged under the owner's no-release direction.
+
+## Prepare a bounded native PostgreSQL migration (2026-11-11)
+
+The owner selected PostgreSQL for application storage. Start with a private,
+asynchronous native transport and fixed bootstrap reads, with bounded connections,
+queueing, server/client deadlines and JSON output. Closing admission must suppress
+late results and drain admitted reads before ending the pool; queued acquisition
+promises must not be stranded. Keep the old Supabase lane distinct.
+
+The transport alone grants no installed mainnet provenance or financial authority.
+Do not switch the selected backend until current mainnet/domain parity, source-bound
+schema/identity admission, complete import comparisons, encrypted-cache identity
+bindings and the qualified writer-pause/cutover/rollback gates pass. Preserve the
+current serving release during preparation and keep independent custody/journal
+stores on their reviewed defaults. See [the migration contract](docs/postgres-mainnet-migration.md).

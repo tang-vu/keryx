@@ -1,0 +1,50 @@
+name: PostgreSQL Mainnet Preparation
+
+on:
+  pull_request:
+    paths:
+      - "lib/db/postgres/**"
+      - "lib/db/storage-identity*"
+      - "lib/canonical-json.ts"
+      - "scripts/postgres/**"
+      - "package*.json"
+      - "tsconfig*.json"
+      - ".github/workflows/postgres-mainnet.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  postgres-preparation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      KERYX_NETWORK: arcTestnet
+      NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
+      KERYX_FORCE_OFFLINE: "1"
+      SUPABASE_URL: ""
+      SUPABASE_SERVICE_ROLE_KEY: ""
+      NEXT_PUBLIC_SUPABASE_URL: ""
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Typed operational and application contracts
+        run: npm run typecheck
+      - name: Bounded transport, terminal disposal and lossless row regressions
+        run: npx vitest run lib/db/postgres/connection.test.ts scripts/postgres/typed-snapshot.test.mts --maxWorkers=1
+      - name: Actual synthetic PostgreSQL transport, role isolation and snapshot copy
+        run: |
+          docker pull postgres:17-alpine
+          node --import tsx --no-warnings scripts/postgres/test-bootstrap.mts

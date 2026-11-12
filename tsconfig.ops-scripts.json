@@ -5,6 +5,7 @@
     "incremental": false
   },
   "include": [
+    "scripts/postgres/**/*.mts",
     "scripts/test-reading-evidence.mts",
     "scripts/compare-research.mts",
     "scripts/compare-research.test.mts",
