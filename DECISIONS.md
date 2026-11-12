@@ -8935,3 +8935,17 @@ byte counts in UTF-8, ASCII identifier rules and JSON kind/length constraints.
 Retain original mainnet challenge metadata/context. This completes the table
 source only: optional-domain mutation/trigger semantics and exact materialization
 remain required before any installed factory or production switch.
+
+
+### 2026-11-12: preserve native web authentication semantics
+
+Expose six fixed web-auth writes through the shared native pool and source-pinned
+writer context. Keep every other legacy write closed. Preserve single-use nonce
+consumption, wallet-scoped session revocation, and retained first-seen/display
+identity during user sign-in updates. Keep user timestamp wire values as text in
+the independent fresh source. Wallet lookup is exact after normalization.
+
+Actual PostgreSQL qualification races nonce consumption and drops a successful
+write acknowledgement; uncertain writes are never retried automatically. A native
+reader cannot write. These named protocols do not select an installed backend or
+authorize production admission before the remaining domain and migration gates.

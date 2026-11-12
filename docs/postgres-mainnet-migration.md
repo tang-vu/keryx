@@ -240,3 +240,12 @@ cutover. Verify the actual backend, exact source, public health and required use
 surfaces afterward. Retain the required originals and one verified unique evidence
 copy; remove only owned regenerable preparation data after completion. The owner's
 migration command grants no new funding, policy renewal or autonomous schedules.
+
+
+Native web authentication is exercised with `test-session-consents.mts --auth`
+(or `--auth-only` for the focused fixture). Six fixed writer entries share the
+financial/read pool. Sixteen synthetic vectors cover nonce expiry/single use,
+actual concurrent consumption, wallet-scoped session revocation, duplicate-hash
+refusal, retained user identity, exact wallet lookup, reader write refusal and
+actual lost-COMMIT acknowledgement without retry. No real login, vendor request,
+production data or selected application backend is involved.
