@@ -9072,3 +9072,32 @@ descriptor hash remains separate. A valid-looking manifest digest or self-matchi
 target must not allocate another approved runtime profile. Reference-only source
 generation reports no runtime acceptance and still requires the complete factory
 and domain fixture plus exact-head CI before merge.
+
+## Preserve retained run JSON bytes and SQLite summary meaning
+
+Store the next native profile's `query_runs.data` as `json`, preserving the exact
+UTF-8 text already bound by anonymous claims and privacy erasure digests.
+`jsonb` normalization cannot replace those originals or justify rewriting their
+digests. Actual PG17 tests also rejected unrelated escaped NUL/surrogate content
+when a JSON accessor attempted to extract a harmless summary field.
+
+Keep a private digest-bound history projection separate from the full original.
+The held intake producer reads the current SQLite projection directly; JSON.parse
+resolves repeated keys differently and is not an equivalent legacy importer.
+Bind derivatives to exact original SHA-256 on insertion, invalidate them when
+original bytes change, and refuse owner reads with missing derivatives before
+applying projection filters. Summary SQL never parses or returns the private run
+body. This is derivative storage, with no change to retained payment evidence,
+claim digests, ownership authority or production admission. Native claim/privacy
+protocols, full-data materialization and the writer factory retain their gates.
+
+The prepared PostgreSQL service must recover independently of application
+transactions. A native synthetic pressure test exposed the default OOM stop
+policy, no restart policy and one-hour stop timeout before application admission.
+Disable swap inside the existing 1 GiB/75% CPU/64-task envelope. Let the postmaster
+handle an OOM-killed backend; restart a failed main process with a 5-second delay,
+at most three starts per five minutes, and a 30-second stop timeout. The corrected
+prepared instance survived a real cgroup OOM kill and recovered automatically
+while all twelve predecessor website probes stayed healthy. This is one bounded
+service-recovery observation, not selected-backend load acceptance or permission
+to retry an ambiguous application write or payment.

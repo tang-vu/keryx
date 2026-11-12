@@ -2,7 +2,7 @@
  * Same bounded PostgreSQL fixture; never a caller-injected facade or guard. */
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { randomBytes,randomUUID } from 'node:crypto';
+import { createHash,randomBytes,randomUUID } from 'node:crypto';
 import { mkdirSync,mkdtempSync,readFileSync,realpathSync,rmdirSync,unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname,join,resolve } from 'node:path';
@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { buildSync } from 'esbuild';
 import { sealEnrolledCacheText } from '../../lib/sources/enrolled-content-cache';
 import type { StorageIdentity } from '../../lib/db/storage-identity';
+import { heldHistoryProjectionSql } from './run-history-projection.mts';
 export async function qualifyNativeRuntime(input:{postgresContainer:string;password:string;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  assert.match(input.postgresContainer,/^keryx-postgres-consents-[a-f0-9-]{36}$/);
  const docker=(args:string[],wire?:string)=>execFileSync('docker',args,{input:wire,encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:131072,stdio:['pipe','pipe','pipe']}).trim();
@@ -48,7 +49,9 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   candidateImage=docker(['commit','--change','LABEL keryx.native-runtime-fixture='+staging,staging]);
   assert.match(candidateImage,/^sha256:[a-f0-9]{64}$/);
   docker(['rm',staging]);containers.delete(staging);
-  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker) VALUES('synthetic-runtime-run','2026-01-02T03:04:05.000Z','Original',0,jsonb_build_object('asker',${q(owner)}),${q(owner)});INSERT INTO public.cache_items(source_id,text) VALUES(${q(cacheId)},${q(envelope)});`);
+  const original=JSON.stringify({asker:owner});
+  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker) VALUES('synthetic-runtime-run','2026-01-02T03:04:05.000Z','Original',0,${q(original)}::json,${q(owner)});`+
+   heldHistoryProjectionSql('synthetic-runtime-run',{sha256:createHash('sha256').update(original).digest('hex'),recordedOwner:owner,ownerInvalid:false,funded:false,provenance:null})+`INSERT INTO public.cache_items(source_id,text) VALUES(${q(cacheId)},${q(envelope)});`);
   const baseline=input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),success=run('success');
   assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   for(const mode of ['wrong-identity','wrong-source','wrong-key','missing-key','wrong-credential-role']){run(mode);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);}

@@ -41,6 +41,7 @@ import { nativePersonalHistorySource } from "./personal-history-source.mts";
 import { qualifyPersonalHistory } from "./qualify-personal-history.mts";
 import { nativeRuntimeSource } from "./native-runtime-source.mts";
 import { qualifyNativeRuntime } from "./qualify-native-runtime.mts";
+import { qualifyOriginalJson } from "./qualify-original-json.mts";
 import { createPostgresRuntimeTransport } from "../../lib/db/postgres/runtime-transport";
 import { NATIVE_READONLY_RUNTIME_PROFILE } from "../../lib/db/postgres/runtime-profile";
 import { createPostgresUserDomainTransport,type PostgresUserDomainTransport } from "../../lib/db/postgres/user-domain-transport";
@@ -95,8 +96,9 @@ try {
   const profileIdentitiesOnly=process.argv.includes("--profile-identities-only");
   const personalHistoryOnly=process.argv.includes("--personal-history-only");
   const nativeRuntimeOnly=process.argv.includes("--native-runtime-only");
+  const originalJsonOnly=process.argv.includes("--original-json-only");
   const runtimeSourceReferenceOnly=process.argv.includes("--runtime-source-reference-only");
-  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||runtimeSourceReferenceOnly;
+  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||runtimeSourceReferenceOnly||originalJsonOnly;
   const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
   const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly||withProfileIdentities;
@@ -210,9 +212,11 @@ try {
     if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
+  const originalJson=withNativeRuntime?await qualifyOriginalJson({transport:nativeTransport as PostgresUserDomainTransport,network:identity.network,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  if(originalJsonOnly){console.log(JSON.stringify({passed:true,originalJsonOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,originalJson,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   const nativeRuntime=withNativeRuntime?await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
-  if(nativeRuntimeOnly){console.log(JSON.stringify({passed:true,nativeRuntimeOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,nativeRuntime,applicationBackendSwitched:false}));return;}
-  const personalHistory=withPersonalHistory?await qualifyPersonalHistory({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  if(nativeRuntimeOnly){console.log(JSON.stringify({passed:true,nativeRuntimeOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,originalJson,nativeRuntime,applicationBackendSwitched:false}));return;}
+  const personalHistory=withPersonalHistory?await qualifyPersonalHistory({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement),originalProjection:withNativeRuntime}):undefined;
   if(personalHistoryOnly){console.log(JSON.stringify({passed:true,personalHistoryOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,personalHistory,applicationBackendSwitched:false}));return;}
   const profileIdentities=withProfileIdentities?await qualifyProfileIdentities({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(profileIdentitiesOnly){console.log(JSON.stringify({passed:true,profileIdentitiesOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,profileIdentities,applicationBackendSwitched:false}));return;}
@@ -334,6 +338,7 @@ try {
     ...(profileIdentities?{profileIdentities}:{}),
     ...(personalHistory?{personalHistory}:{}),
     ...(nativeRuntime?{nativeRuntime}:{}),
+    ...(originalJson?{originalJson}:{}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
     limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
 } catch(error) {
