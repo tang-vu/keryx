@@ -27,3 +27,15 @@ export function nativeFundingDomainSource(): Readonly<{ sql: string; sha256: str
   const sql = nativeConsentDomainSource().sql + "\n" + funding;
   return Object.freeze({ sql, sha256: createHash("sha256").update(sql).digest("hex") });
 }
+export function nativeWithdrawalDomainSource(): Readonly<{ sql: string; sha256: string }> {
+  const withdrawals = readFileSync(new URL("../../ops/keryx-postgres/session-withdrawals.sql", import.meta.url), "utf8").replaceAll("\r\n", "\n");
+  if (Buffer.byteLength(withdrawals) > 131072) throw new Error("Native withdrawal source bound exceeded");
+  const sql = nativeFundingDomainSource().sql + "\n" + withdrawals;
+  return Object.freeze({ sql, sha256: createHash("sha256").update(sql).digest("hex") });
+}
+export function nativeCreatorWithdrawalDomainSource(): Readonly<{ sql: string; sha256: string }> {
+  const creator = readFileSync(new URL("../../ops/keryx-postgres/creator-withdrawals.sql", import.meta.url), "utf8").replaceAll("\r\n", "\n");
+  if (Buffer.byteLength(creator) > 131072) throw new Error("Native creator withdrawal source bound exceeded");
+  const sql = nativeWithdrawalDomainSource().sql + "\n" + creator;
+  return Object.freeze({ sql, sha256: createHash("sha256").update(sql).digest("hex") });
+}

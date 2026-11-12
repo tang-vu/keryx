@@ -8852,3 +8852,18 @@ confirmation of a pre-baseline original earns no new-deposit credit. Preserve th
 existing SQLite real-number tolerance when checking imported payment amounts while
 keeping totals as exact integer micro-USDC. Differential native fixtures are the
 acceptance for this limited domain, not full application admission or cutover.
+
+## Preserve PostgreSQL withdrawal originals and single-use exposure (2026-11-12)
+
+Use the existing pure signed-protocol validators before named native withdrawal
+commands. Native transactions recheck the exact retained proof/original, accounting,
+phase and immutable creator request/attestation dependencies before mutation. A
+reservation pauses payment admission without clearing cumulative capacity. Retain
+prepared cancellation, exposed signing and authenticated publication-abort barriers;
+only a separately accepted completion clears its pending withdrawal liability.
+
+Keep creator transfer claims nonrenewable and bind saved attestations to their
+original request and claim. Request matching never implies chain finality. Qualify
+concurrent transitions, lost exposure/claim acknowledgements and actual equal-time
+cursor paging against SQLite on native PostgreSQL. This protocol composition still
+does not admit a complete application backend or a production cutover.

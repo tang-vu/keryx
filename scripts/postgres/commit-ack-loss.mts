@@ -6,7 +6,7 @@ import { createServer, connect, type Socket } from "node:net";
 
 export async function startCommitAckLossProxy(upstreamPort: number) {
   if (!Number.isSafeInteger(upstreamPort) || upstreamPort < 1 || upstreamPort > 65535) throw new Error("Invalid owned fixture port");
-  let armed = false, dropped = false, commands = 0;
+  let armed = false, dropped = false, commands = 0, skipped = 0;
   const sockets = new Set<Socket>();
   const own = (socket: Socket) => { sockets.add(socket); socket.once("close", () => sockets.delete(socket)); return socket; };
   const server = createServer(client => {
@@ -31,7 +31,8 @@ export async function startCommitAckLossProxy(upstreamPort: number) {
         if (type === "C") { completed = true; commands++; }
         if (type === "Z") {
           if (armed && completed && length === 5 && packet[5] === 73) {
-            armed = false; dropped = true; stop(); return;
+            if (skipped > 0) skipped--;
+            else { armed = false; dropped = true; stop(); return; }
           }
           completed = false;
         }
@@ -44,7 +45,10 @@ export async function startCommitAckLossProxy(upstreamPort: number) {
   if (!address || typeof address === "string") throw new Error("Owned fixture proxy did not listen");
   return Object.freeze({
     port: address.port,
-    arm() { if (armed || dropped) throw new Error("Owned acknowledgement loss already armed"); armed = true; },
+    arm(skipCompleted = 0) {
+      if (armed || dropped || !Number.isSafeInteger(skipCompleted) || skipCompleted < 0 || skipCompleted > 4) throw new Error("Owned acknowledgement loss already armed or invalid");
+      skipped = skipCompleted; armed = true;
+    },
     observation: () => ({ dropped, commands }),
     async close() {
       const closing = [...sockets].map(socket => new Promise<void>(resolve => {

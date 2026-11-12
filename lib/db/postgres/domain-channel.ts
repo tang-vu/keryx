@@ -11,6 +11,19 @@ const CALLS = Object.freeze({
   get: { sql: "SELECT public.storage_get_session_grant_consent($1::jsonb,$2::text,$3::text,$4::text) AS result", args: 2, write: false, bytes: 16384 },
   funding: { sql: "SELECT public.storage_session_funding_accounting($1::jsonb,$2::text,$3::text,$4::text) AS result", args: 2, write: false, bytes: 1024 },
   retained: { sql: "SELECT public.storage_browser_signer_retained_spend($1::jsonb,$2::text,$3::text) AS result", args: 1, write: false, bytes: 64 },
+  withdrawalAccounting: { sql: "SELECT public.storage_session_withdrawal_accounting($1::jsonb,$2::text,$3::text) AS result", args: 1, write: false, bytes: 65536 },
+  withdrawalRead: { sql: "SELECT public.storage_read_session_withdrawal($1::jsonb,$2::text,$3::text,$4::text) AS result", args: 2, write: false, bytes: 65536 },
+  withdrawalPending: { sql: "SELECT public.storage_pending_session_withdrawal($1::jsonb,$2::text,$3::text,$4::text) AS result", args: 2, write: false, bytes: 65536 },
+  withdrawalReserve: { sql: "SELECT public.storage_reserve_session_withdrawal($1::jsonb,$2::text,$3::text) AS result", args: 1, write: true, bytes: 0 },
+  withdrawalExpose: { sql: "SELECT public.storage_expose_session_withdrawal($1::jsonb,$2::text,$3::text,$4::text,$5::text) AS result", args: 3, write: true, bytes: 0 },
+  withdrawalCancel: { sql: "SELECT public.storage_cancel_session_withdrawal($1::jsonb,$2::text,$3::text,$4::text,$5::text) AS result", args: 3, write: true, bytes: 0 },
+  withdrawalAbort: { sql: "SELECT public.storage_abort_session_withdrawal($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text) AS result", args: 4, write: true, bytes: 0 },
+  withdrawalComplete: { sql: "SELECT public.storage_complete_session_withdrawal($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text) AS result", args: 4, write: true, bytes: 0 },
+  creatorRead: { sql: "SELECT public.storage_creator_withdrawal_read($1::jsonb,$2::text,$3::text,$4::text) AS result", args: 2, write: false, bytes: 32768 },
+  creatorHistory: { sql: "SELECT public.storage_creator_withdrawal_history($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text) AS result", args: 4, write: false, bytes: 524288 },
+  creatorReserve: { sql: "SELECT public.storage_creator_withdrawal_reserve($1::jsonb,$2::text,$3::text) AS result", args: 1, write: true, bytes: 0 },
+  creatorClaim: { sql: "SELECT public.storage_creator_withdrawal_claim($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text) AS result", args: 4, write: true, bytes: 512 },
+  creatorAttestation: { sql: "SELECT public.storage_creator_withdrawal_attestation($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text) AS result", args: 5, write: true, bytes: 12288 },
 });
 export class PostgresDomainWriteOutcomeUnknown extends Error {
   constructor() { super("Storage write outcome requires original-bound reconciliation"); }
@@ -37,7 +50,7 @@ export function createPostgresDomainChannel(options: PostgresConnectionOptions, 
       if (closed || typeof operation !== "string" || !Object.hasOwn(CALLS, operation)) unavailable();
       const selected = CALLS[operation];
       if (!Array.isArray(args) || args.length !== selected.args || args.some(value => value !== null && typeof value !== "string")
-        || Buffer.byteLength(JSON.stringify(args)) > 16384) unavailable();
+        || Buffer.byteLength(JSON.stringify(args)) > 65536) unavailable();
       if (pending >= 10) throw new PostgresStorageBusy();
       let submitted = false, request: Promise<unknown> | undefined;
       pending++;
@@ -50,7 +63,7 @@ export function createPostgresDomainChannel(options: PostgresConnectionOptions, 
           || ![114, 3802].includes(result.fields[0].dataTypeID)) unavailable();
         const row = result.rows[0] as unknown[];
         if (!Array.isArray(row) || row.length !== 1) unavailable();
-        if (selected.write) { if (row[0] !== null) unavailable(); return null; }
+        if (selected.write && selected.bytes === 0) { if (row[0] !== null) unavailable(); return null; }
         if (row[0] === null) return null;
         if (typeof row[0] !== "string" || Buffer.byteLength(row[0]) > selected.bytes) unavailable();
         const value: unknown = JSON.parse(row[0]);
