@@ -7,6 +7,7 @@ import { AUTH_WRITE_CALLS } from "./auth-write-calls";
 import { OPERATIONAL_WRITE_CALLS } from "./operational-write-calls";
 import { PRIVACY_CALLS } from './privacy-calls';
 import { WORKSPACE_CALLS } from './workspace-calls';
+import { CONTENT_WRITE_CALLS } from './content-write-calls';
 
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
@@ -16,6 +17,7 @@ const CALLS = Object.freeze({
   ...OPERATIONAL_WRITE_CALLS,
   ...PRIVACY_CALLS,
   ...WORKSPACE_CALLS,
+  ...CONTENT_WRITE_CALLS,
   ownershipHistoryList:{sql:"SELECT public.storage_ownership_history_list($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::jsonb,$7::integer,$8::jsonb,$9::jsonb) AS result",args:7,write:false,bytes:4198400,transaction:true},
   ownershipHistoryRead:{sql:"SELECT public.storage_ownership_history_read($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text) AS result",args:4,write:false,bytes:8008192,transaction:true},
   runClaimsReady:{sql:"SELECT public.storage_run_claims_ready($1::jsonb,$2::text) AS result",args:0,write:false,bytes:256,transaction:true},

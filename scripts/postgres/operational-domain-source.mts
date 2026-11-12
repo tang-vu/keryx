@@ -2,10 +2,10 @@
 import { createHash } from 'node:crypto';
 import { nativeAuthApplicationSource } from './auth-domain-source.mts';
 import { nativeApplicationJsonEntrySource } from './source-json-entries.mts';
-import { APPLICATION_WRITE_OPERATIONS } from '../../lib/db/postgres/application-domain-transport';
+import { BASE_APPLICATION_WRITE_OPERATIONS } from '../../lib/db/postgres/application-domain-transport';
 import { OPERATIONAL_WRITE_OPERATIONS } from '../../lib/db/postgres/operational-write-calls';
 export function nativeOperationalApplicationSource(){
- const base=nativeAuthApplicationSource(),names=Object.keys(APPLICATION_WRITE_OPERATIONS);
+ const base=nativeAuthApplicationSource(),names=Object.keys(BASE_APPLICATION_WRITE_OPERATIONS);
  if(names.length!==17||Object.keys(OPERATIONAL_WRITE_OPERATIONS).length!==11)throw new Error('Operational source inventory changed; review required');
  const sql=base.sql+`\nSET ROLE keryx_owner;
 CREATE OR REPLACE FUNCTION keryx_storage.enter_operation(expected jsonb,selected text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$

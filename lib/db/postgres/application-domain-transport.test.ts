@@ -27,4 +27,14 @@ describe('native application writes',()=>{
   expect(state.end).not.toHaveBeenCalled();finish({rows:[['true']],fields:[{name:'result',dataTypeID:3802}]});await outcome;await closing;
   await expect(t.applicationWrite('consume_auth_challenge',{})).rejects.toThrow(PostgresStorageUnavailable);expect(state.end).toHaveBeenCalledTimes(1);
  });
+ it('admits a bounded content batch without widening authentication writes',async()=>{
+  const t=make(),body='x'.repeat(100000),args={p_row:[{id:'synthetic-item',content:body}]},pending=t.applicationWrite('add_items',args);args.p_row[0].content='changed';await pending;
+  expect(state.query.mock.calls[0][0].text).toBe('SELECT public.storage_application_add_items($1::jsonb,$2::text,$3::jsonb) AS result');
+  expect(JSON.parse(state.query.mock.calls[0][0].values[2]).p_row[0].content).toBe(body);
+  await expect(t.applicationWrite('create_auth_challenge',{p_hash:body})).rejects.toThrow(PostgresStorageUnavailable);expect(state.query).toHaveBeenCalledTimes(1);await t.close();
+ });
+ it('refuses oversized content before submission and retains the small setter bound',async()=>{
+  const t=make();await expect(t.applicationWrite('save_query_memory',{p_row:{topics:['x'.repeat(1048576)]}})).rejects.toThrow(PostgresStorageUnavailable);
+  await expect(t.applicationWrite('set_source_notify',{p_row:{secret:'x'.repeat(65536)}})).rejects.toThrow(PostgresStorageUnavailable);expect(state.query).not.toHaveBeenCalled();await t.close();
+ });
 });

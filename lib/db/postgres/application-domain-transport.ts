@@ -6,9 +6,11 @@ import { PostgresStorageUnavailable,type PostgresConnectionOptions } from "./con
 import { createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from "./domain-channel";
 import { AUTH_WRITE_OPERATIONS } from "./auth-write-calls";
 import { OPERATIONAL_WRITE_OPERATIONS } from "./operational-write-calls";
+import { CONTENT_WRITE_OPERATIONS,CONTENT_WRITE_INPUT_BYTES } from './content-write-calls';
 import { composePostgresApplicationReadTransport,type PostgresApplicationReadTransport } from "./application-read-transport";
 
-export const APPLICATION_WRITE_OPERATIONS=Object.freeze({...AUTH_WRITE_OPERATIONS,...OPERATIONAL_WRITE_OPERATIONS});
+export const BASE_APPLICATION_WRITE_OPERATIONS=Object.freeze({...AUTH_WRITE_OPERATIONS,...OPERATIONAL_WRITE_OPERATIONS});
+export const APPLICATION_WRITE_OPERATIONS=Object.freeze({...BASE_APPLICATION_WRITE_OPERATIONS,...CONTENT_WRITE_OPERATIONS});
 
 export type PostgresAuthWrite=keyof typeof AUTH_WRITE_OPERATIONS;
 export type PostgresApplicationWrite=keyof typeof APPLICATION_WRITE_OPERATIONS;
@@ -34,7 +36,8 @@ export function composePostgresApplicationDomainTransport(channel:PostgresDomain
       if(channel.closed||typeof operation!=="string"||!Object.hasOwn(APPLICATION_WRITE_OPERATIONS,operation)
         ||!args||typeof args!=="object"||Array.isArray(args))throw new PostgresStorageUnavailable();
       let wire:string;
-      try{wire=canonicalJson(args);if(Buffer.byteLength(wire)>65536)throw new Error();}catch{throw new PostgresStorageUnavailable();}
+      const limit=Object.hasOwn(CONTENT_WRITE_INPUT_BYTES,operation)?CONTENT_WRITE_INPUT_BYTES[operation as keyof typeof CONTENT_WRITE_INPUT_BYTES]:65536;
+      try{wire=canonicalJson(args);if(Buffer.byteLength(wire)>limit)throw new Error();}catch{throw new PostgresStorageUnavailable();}
       const value=await channel.call(APPLICATION_WRITE_OPERATIONS[operation],[wire]);
       if(channel.closed)throw new PostgresDomainWriteOutcomeUnknown();
       return value;
