@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { prepareBrowserDns } from "./ci-browser-dns.mjs";
 
 const mirrorPath = "/etc/apt/apt-mirrors.txt";
 const sourcesPath = "/etc/apt/sources.list.d/ubuntu.sources";
@@ -206,5 +207,6 @@ function installConfig({ path, content }) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   console.log(JSON.stringify(prepareBrowserApt()));
+  console.log(JSON.stringify(await prepareBrowserDns()));
   console.log("Browser CI uses official Ubuntu HTTPS mirrors, immutable Ubuntu indexes, 60s APT connection/data timeouts and two retries.");
 }
