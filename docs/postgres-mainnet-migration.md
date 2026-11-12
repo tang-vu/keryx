@@ -356,6 +356,25 @@ intake limit; full-data rehearsal must account for every retained row before
 the complete runtime can be admitted.
 This does not qualify native claim/privacy writers or a complete import.
 
+The next native claim protocol adds fixed availability, issue and consume calls
+on the same bounded channel. Its derivative records the current SQLite
+`JSON.parse` original-eligibility rules separately from SQLite's history
+projection rules. Original bytes and their retained digest stay unchanged.
+Changing original bytes, ID or completion time invalidates the derivative.
+Issuance and consumption recheck the exact original, current A2A membership,
+durable SIWE session, binding, deadline and single-use state under the existing
+writer lock. A claim changes only its ownership sidecar.
+
+Known claim failures return only after the inner write block has rolled back.
+An uncertain acknowledgement stays `PostgresDomainWriteOutcomeUnknown`; it does
+not generate a new token, reissue a ticket or retry consumption. Actual PG17
+qualification compares the current SQLite implementation, including concurrent
+consume, expired ticket/session, replaced/revoked session owner, A2A exclusion,
+escaped NUL/surrogate originals and a lost actual commit acknowledgement.
+This protocol composition grants no installed writer-facade provenance. Ownership
+history, privacy/publication, full import and complete writer admission remain
+separate work.
+
 `createReadonlyApplicationStorage()` uses the zero-argument native factory.
 Construction verifies the current identity/catalog and authenticates every bounded
 cache envelope with its source and all nine logical identity fields. Missing or

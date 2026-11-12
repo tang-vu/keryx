@@ -9101,3 +9101,19 @@ prepared instance survived a real cgroup OOM kill and recovered automatically
 while all twelve predecessor website probes stayed healthy. This is one bounded
 service-recovery observation, not selected-backend load acceptance or permission
 to retry an ambiguous application write or payment.
+
+## Native anonymous claims retain exact original eligibility
+
+Qualify anonymous claim issue/consume as fixed native operations on the existing
+channel. Preserve the current Node JSON.parse eligibility separately from
+SQLite's repeated-key history projection; bind both to the unchanged original
+wire digest. Invalidate derivatives on original bytes, ID or completion-time
+changes. Recheck A2A exclusion, the current durable SIWE session, exact binding,
+ticket deadline and unclaimed state while holding the native writer lock.
+Claims update ownership sidecars only and never reinterpret the claimant as payer.
+
+Return only known claim refusals after the inner write block has rolled back.
+Leave uncertain commit acknowledgements unknown without automatic reissue or
+consume retries. Actual native race and lost-ACK tests must inspect the retained
+claim row. Typed protocol composition remains separate from private installed
+factory provenance, full current-domain coverage and production admission.
