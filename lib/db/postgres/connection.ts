@@ -55,7 +55,7 @@ export function postgresPoolConfiguration(options: PostgresConnectionOptions): P
     host, port: endpoint.port, database: options.database, user: options.role, password: options.password,
     ssl: false, application_name: "keryx-postgres-guarded", max: ACTIVE_CONNECTIONS,
     connectionTimeoutMillis: 2_000, idleTimeoutMillis: 30_000, query_timeout: 6_000,
-    options: "-c statement_timeout=5000 -c lock_timeout=1000 -c idle_in_transaction_session_timeout=5000 -c client_encoding=UTF8",
+    options: "-c statement_timeout=5000 -c lock_timeout=1000 -c idle_in_transaction_session_timeout=5000 -c client_encoding=UTF8 -c timezone=UTC -c synchronous_commit=on",
     allowExitOnIdle: true,
     // Size-check the actual JSON wire value before allocating its object graph.
     types: { getTypeParser: (oid, format) => format !== "binary" && (oid === 114 || oid === 3802)

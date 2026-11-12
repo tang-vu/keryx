@@ -7,6 +7,7 @@ on:
       - "lib/db/storage-identity*"
       - "lib/canonical-json.ts"
       - "scripts/postgres/**"
+      - "ops/keryx-postgres/**"
       - "package*.json"
       - "tsconfig*.json"
       - ".github/workflows/postgres-mainnet.yml"
@@ -43,8 +44,10 @@ jobs:
       - name: Typed operational and application contracts
         run: npm run typecheck
       - name: Bounded transport, terminal disposal and lossless row regressions
-        run: npx vitest run lib/db/postgres/connection.test.ts scripts/postgres/typed-snapshot.test.mts --maxWorkers=1
+        run: npx vitest run lib/db/postgres scripts/postgres/typed-snapshot.test.mts --maxWorkers=1
       - name: Actual synthetic PostgreSQL transport, role isolation and snapshot copy
         run: |
           docker pull postgres:17-alpine
           node --import tsx --no-warnings scripts/postgres/test-bootstrap.mts
+      - name: Native mainnet-profile consent ledger and independent source contract
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts
