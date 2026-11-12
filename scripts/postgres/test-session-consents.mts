@@ -44,6 +44,8 @@ import { qualifyNativeRuntime } from "./qualify-native-runtime.mts";
 import { qualifyOriginalJson } from "./qualify-original-json.mts";
 import { nativePrivacySource } from './privacy-source.mts';
 import { qualifyPrivacy } from './qualify-privacy.mts';
+import { qualifyWorkspaces } from './qualify-workspaces.mts';
+import { nativeWorkspacesSource } from './workspaces-source.mts';
 import { qualifyOwnershipHistory } from './qualify-ownership-history.mts';
 import { qualifyRunClaims } from "./qualify-run-claims.mts";
 import { createPostgresRuntimeTransport } from "../../lib/db/postgres/runtime-transport";
@@ -105,9 +107,10 @@ try {
   const runClaimsOnly=process.argv.includes("--run-claims-only");
   const ownershipHistoryOnly=process.argv.includes("--ownership-history-only");
   const privacyOnly=process.argv.includes("--privacy-only");
+  const workspacesOnly=process.argv.includes("--workspaces-only");
   const runtimeSourceReferenceOnly=process.argv.includes("--runtime-source-reference-only");
   const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeFactoryOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly;
-  const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly;
+  const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly||workspacesOnly;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
   const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly||withProfileIdentities;
   const boundedReadsOnly=process.argv.includes("--bounded-reads-only");
@@ -127,7 +130,7 @@ try {
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = privacyOnly ? nativePrivacySource() : withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = workspacesOnly ? nativeWorkspacesSource() : privacyOnly ? nativePrivacySource() : withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
@@ -220,6 +223,10 @@ try {
     if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
+  if(workspacesOnly){
+    const workspaces=await qualifyWorkspaces({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
+    console.log(JSON.stringify({passed:true,workspacesOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,workspaces,runtimeQualified:false,applicationBackendSwitched:false}));return;
+  }
   if(nativeFactoryOnly){
     const nativeRuntime=await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
     console.log(JSON.stringify({passed:true,nativeFactoryOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,nativeRuntime,applicationBackendSwitched:false}));return;
@@ -235,8 +242,9 @@ try {
   const originalJson=withNativeRuntime?await qualifyOriginalJson({transport:nativeTransport as PostgresUserDomainTransport,network:identity.network,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(originalJsonOnly){console.log(JSON.stringify({passed:true,originalJsonOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,originalJson,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   const privacy=withNativeRuntime?await qualifyPrivacy({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  const workspaces=withNativeRuntime?await qualifyWorkspaces({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const nativeRuntime=withNativeRuntime?await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
-  if(nativeRuntimeOnly){console.log(JSON.stringify({passed:true,nativeRuntimeOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,originalJson,privacy,nativeRuntime,applicationBackendSwitched:false}));return;}
+  if(nativeRuntimeOnly){console.log(JSON.stringify({passed:true,nativeRuntimeOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,originalJson,privacy,workspaces,nativeRuntime,applicationBackendSwitched:false}));return;}
   const personalHistory=withPersonalHistory?await qualifyPersonalHistory({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement),originalProjection:withNativeRuntime}):undefined;
   if(personalHistoryOnly){console.log(JSON.stringify({passed:true,personalHistoryOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,personalHistory,applicationBackendSwitched:false}));return;}
   const profileIdentities=withProfileIdentities?await qualifyProfileIdentities({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
@@ -360,6 +368,7 @@ try {
     ...(personalHistory?{personalHistory}:{}),
     ...(nativeRuntime?{nativeRuntime}:{}),
     ...(privacy?{privacy}:{}),
+    ...(workspaces?{workspaces}:{}),
     ...(originalJson?{originalJson}:{}),
     ...(runClaims?{runClaims}:{}),
     ...(ownershipHistory?{ownershipHistory}:{}),

@@ -9182,3 +9182,20 @@ do not truncate or raise every transport limit. The retained public corpus
 exceeds one collection bound, so full report callers require bounded iteration.
 Observation-factory privacy reads do not admit the complete application writer,
 text-scalar compatibility, native full-data materialization or production cutover.
+
+## Preserve private workspace tokens and monotonic watch state (2026-11-13)
+
+Use fixed native bibliography operations with the current hash-only sharing
+tokens, owner limit and revision checks. Select metadata without bibliography
+bodies. Bind manual-watch operations to the exact original durable session and
+compare deadline, revision and transitions atomically in storage. Retain terminal
+history, pending-check identity, watermark, creation time and cancelled keys.
+
+Keep an exact-state digest-bound private derivative for the existing Node
+canonical transition rules. SOURCE intake validates original bytes and row binding;
+new writes use a pure captured Node packet. Invalidate the derivative on any
+original/key/revision change, and refuse missing derivatives. No original question
+text or enduring authorization grant is stored in this metadata. Known failures
+return only after rollback; lost actual commit acknowledgements remain unknown
+and never cause automatic retry. Read-only factory composition adds no scheduling,
+financial or complete application-writer authority.

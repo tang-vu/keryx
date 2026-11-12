@@ -10,6 +10,8 @@ import type { PersonalHistoryStore } from '../../history/personal-history';
 import type { RunOwnershipHistoryStore } from '../../run-claims/history';
 import { runClaimsEnabled } from '../../run-claims/contracts';
 import type { RunPrivacyStore } from '../../run-privacy/contracts';
+import type { PrivateBibliographiesStore } from '../../bibliographies/private-bibliography';
+import type { TopicWatchesPort,PrivateTopicWatchStore } from '../topic-watches-sqlite';
 import type { KeryxDB } from '../keryx-db';
 import { readRuntimeStorageDeployment } from '../runtime-storage-config';
 import { assembleNativePostgresBusinessCore } from '../supabase-adapter';
@@ -62,6 +64,8 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
   memories:take=>read(()=>transport.runPrivacy.memories(take)),offers:take=>read(()=>transport.runPrivacy.offers(take)),
   settlement:id=>read(()=>transport.runPrivacy.settlement(id)),pending:id=>read(()=>transport.runPrivacy.pending(id)),setDefault:readonly,change:readonly,erase:readonly,export:readonly,
  } satisfies RunPrivacyStore);
+ const bibliographies:PrivateBibliographiesStore=Object.freeze({list:owner=>read(()=>transport.privateBibliographies.list(owner)),read:token=>read(()=>transport.privateBibliographies.read(token)),create:readonly,replace:readonly,revoke:readonly} satisfies PrivateBibliographiesStore);
+ const watches:TopicWatchesPort=Object.freeze({bindSession(session){entry();const bound=transport.topicWatches.bindSession(session);return Object.freeze({list:()=>read(()=>bound.list()),read:key=>read(()=>bound.read(key)),compareAndSwap:readonly} satisfies PrivateTopicWatchStore);}} satisfies TopicWatchesPort);
  try{
   entry();const cache=await transport.readColdCache();entry();
   for(const row of cache.cacheRows){openEnrolledCacheText(row.text,row.sourceId,deployment.identity);entry();}
@@ -75,6 +79,8 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='runOwnershipHistory')return ownership;
     if(property==='runPrivacyActive')return privacyActive;
     if(property==='runPrivacy')return privacyActive?privacy:undefined;
+    if(property==='privateBibliographies')return bibliographies;
+    if(property==='topicWatches')return watches;
     // Only currently qualified bounded observations escape this profile.
     if(property!=='init'&&property!=='metrics')refuseStorage('invalid_operation');
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;

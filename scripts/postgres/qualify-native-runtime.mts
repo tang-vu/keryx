@@ -14,6 +14,10 @@ import { heldHistoryProjectionSql } from './run-history-projection.mts';
 import { heldOwnershipHistoryProjectionSql,sqliteOwnershipHistoryProjection } from './ownership-history-projection.mts';
 import { DatabaseSync } from 'node:sqlite';
 import { heldPrivacyProjectionSql,sqlitePrivacyProjection } from './privacy-projection.mts';
+import { createTopicWatch,type TopicWatchState } from '../../lib/research/topic-watches';
+import { topicWatchProjection } from '../../lib/db/postgres/watch-packet';
+import { heldWatchProjectionSql } from './watch-projection.mts';
+import { canonicalJson } from '../../lib/canonical-json';
 export async function qualifyNativeRuntime(input:{postgresContainer:string;password:string;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
  assert.match(input.postgresContainer,/^keryx-postgres-consents-[a-f0-9-]{36}$/);
  const docker=(args:string[],wire?:string)=>execFileSync('docker',args,{input:wire,encoding:'utf8',windowsHide:true,timeout:120000,maxBuffer:131072,stdio:['pipe','pipe','pipe']}).trim();
@@ -27,6 +31,10 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
  const staging='keryx-postgres-runtime-'+randomUUID();let candidateImage:string|undefined;
  const seal=(id:string,identity:StorageIdentity)=>{const previous=process.env.CONTENT_MASTER_KEY;try{process.env.CONTENT_MASTER_KEY=key;return sealEnrolledCacheText('Synthetic cached text; no payment',id,identity);}finally{if(previous===undefined)delete process.env.CONTENT_MASTER_KEY;else process.env.CONTENT_MASTER_KEY=previous;}};
  const envelope=seal(cacheId,input.identity);
+ const now=Date.now(),session={hash:'ab'.repeat(32),wallet:owner,issuedAt:now-1000,expiresAt:now+86400000},bibliographyId='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',bibliographyToken='a9'.repeat(32);
+ let watch:TopicWatchState|undefined;
+ const created=await createTopicWatch({store:{async read(){return null;},async compareAndSwap(_key,_revision,next){watch=next;return true;}},now:()=>now,isOwnerCurrent:wallet=>wallet===owner,metadata:{async read(){throw new Error('Synthetic native factory does not run metadata checks');}}},owner,{watchId:'synthetic-runtime-watch',question:'Synthetic metadata',keywords:['term'],authors:[],venues:[],cadenceMs:60000,periodMs:86400000,maximumChecksPerPeriod:4,maximumRowsPerCheck:32,maximumDigestItems:16,expiresAtMs:now+86400000,requestedCaps:{perCheckMicroUsdc:0,perPeriodMicroUsdc:0},consent:{manualMetadata:true,emptyHeartbeat:false}});
+ assert.equal(created.status,'created');assert(watch);const watchWire=canonicalJson(watch);
  const run=(mode:string)=>{
   const name='keryx-postgres-runtime-'+randomUUID();containers.add(name);
   try{
@@ -34,7 +42,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
     '--network','container:'+input.postgresContainer,'--tmpfs','/run/keryx-runtime:rw,nosuid,noexec,mode=0700,size=16m',
     '-e','KERYX_NETWORK=arc','-e','NEXT_PUBLIC_KERYX_NETWORK=arc','-e','KERYX_FORCE_OFFLINE=0','-e','BASE_URL=https://keryx.cc',
     '-e','KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555','-e','NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555',
-    candidateImage!,'node','--max-old-space-size=256','/child.cjs'],JSON.stringify({mode,identity:input.identity,digest:input.digest,password:input.password,key,owner})));
+    candidateImage!,'node','--max-old-space-size=256','/child.cjs'],JSON.stringify({mode,identity:input.identity,digest:input.digest,password:input.password,key,owner,session})));
    assert.equal(result.passed,true);assert.equal(result.outbound,0);assert.equal(result.selectedApplicationWriter,false);vectors+=result.checks;return result;
   }finally{
    const remaining=docker(['ps','-aq','--filter',`name=^/${name}$`]);if(remaining)docker(['rm','-f',name]);assert.equal(docker(['ps','-aq','--filter',`name=^/${name}$`]),'');containers.delete(name);
@@ -56,7 +64,10 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
   const oracle=new DatabaseSync(':memory:');let ownershipProjection:string,privacyProjection:string;
   try{oracle.exec('CREATE TABLE query_runs(id TEXT,created_at TEXT,asker TEXT,data TEXT)');oracle.prepare('INSERT INTO query_runs VALUES(?,?,?,?)').run('synthetic-runtime-run','2026-01-02T03:04:05.000Z',owner,original);ownershipProjection=heldOwnershipHistoryProjectionSql('synthetic-runtime-run',sqliteOwnershipHistoryProjection(oracle,'synthetic-runtime-run'));privacyProjection=heldPrivacyProjectionSql('synthetic-runtime-run',sqlitePrivacyProjection(oracle,'synthetic-runtime-run'));}finally{oracle.close();}
   pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker,engine,total_spent,total_to_creators,answer) VALUES('synthetic-runtime-run','2026-01-02T03:04:05.000Z','Original',0,${q(original)}::json,${q(owner)},'heuristic',0,0,'Original answer');INSERT INTO public.run_privacy(run_id,visibility,updated_at) VALUES('synthetic-runtime-run','public','2026-01-02T03:04:05.000Z');`+
-   heldHistoryProjectionSql('synthetic-runtime-run',{sha256:createHash('sha256').update(original).digest('hex'),recordedOwner:owner,ownerInvalid:false,funded:false,provenance:null})+ownershipProjection+privacyProjection+`INSERT INTO public.cache_items(source_id,text) VALUES(${q(cacheId)},${q(envelope)});`);
+   heldHistoryProjectionSql('synthetic-runtime-run',{sha256:createHash('sha256').update(original).digest('hex'),recordedOwner:owner,ownerInvalid:false,funded:false,provenance:null})+ownershipProjection+privacyProjection+`INSERT INTO public.cache_items(source_id,text) VALUES(${q(cacheId)},${q(envelope)});
+   INSERT INTO public.private_bibliographies(id,wallet,token_hash,title,content,reference_count,revision,created_at,updated_at) VALUES(${q(bibliographyId)},${q(owner)},${q(createHash('sha256').update('keryx-private-bib-v1:'+bibliographyToken).digest('hex'))},'Synthetic bibliography','Synthetic bibliography content',0,1,'2026-01-02T03:04:05.000Z','2026-01-02T03:04:05.000Z');
+   INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES(${q(session.hash)},${q(owner)},${session.issuedAt},${session.expiresAt});
+   INSERT INTO public.topic_watches(wallet,id,revision,state) VALUES(${q(owner)},'synthetic-runtime-watch',1,${q(watchWire)});`+heldWatchProjectionSql(topicWatchProjection(watchWire)));
   const baseline=input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),success=run('success');
   assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);
   for(const mode of ['wrong-identity','wrong-source','wrong-key','missing-key','wrong-credential-role']){run(mode);assert.equal(input.ownerSql("SELECT count(*) FROM pg_stat_activity WHERE usename='keryx_reader';"),baseline);}
@@ -69,7 +80,7 @@ export async function qualifyNativeRuntime(input:{postgresContainer:string;passw
  }finally{
   for(const name of containers){try{docker(['rm','-f',name]);}catch{}}
   if(candidateImage){assert.equal(docker(['image','inspect',candidateImage,'--format','{{index .Config.Labels "keryx.native-runtime-fixture"}}']),staging);docker(['image','rm',candidateImage]);assert.equal(docker(['image','ls','-q','--filter','label=keryx.native-runtime-fixture='+staging]),'');}
-  pg(`DELETE FROM public.cache_items WHERE source_id=${q(cacheId)};DELETE FROM public.query_runs WHERE id='synthetic-runtime-run';`);
+  pg(`DELETE FROM public.cache_items WHERE source_id=${q(cacheId)};DELETE FROM public.query_runs WHERE id='synthetic-runtime-run';DELETE FROM keryx_storage.topic_watch_projection WHERE wallet=${q(owner)} AND id='synthetic-runtime-watch';DELETE FROM public.topic_watches WHERE wallet=${q(owner)} AND id='synthetic-runtime-watch';DELETE FROM public.private_bibliographies WHERE id=${q(bibliographyId)};DELETE FROM public.web_sessions WHERE hash=${q(session.hash)};`);
   // Only this fixture's one generated bundle, then its empty unique directory.
   assert.equal(realpathSync(folder).toLowerCase(),resolve(folder).toLowerCase());assert.equal(dirname(folder).toLowerCase(),resolve(fixtureRoot).toLowerCase());
   try{unlinkSync(bundle);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}rmdirSync(folder);

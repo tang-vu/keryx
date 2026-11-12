@@ -1,0 +1,70 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { mkdirSync,mkdtempSync,unlinkSync,rmdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join,resolve } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { createSqlitePrivateBibliographies } from '../../lib/db/private-bibliographies-sqlite';
+import { createPostgresDomainChannel } from '../../lib/db/postgres/domain-channel';
+import { composePostgresBibliographies } from '../../lib/db/postgres/bibliographies-transport';
+import { composePostgresWatches } from '../../lib/db/postgres/watches-transport';
+import { installMainnetApplicationSchema } from '../../lib/db/mainnet-application-schema';
+import { installNativeUserDomainSchema } from '../../lib/db/native-user-domain-schema';
+import { insertStorageIdentity,installStorageFences } from '../../lib/db/storage-identity-sqlite';
+import { openVerifiedSqliteStorage } from '../../lib/db/storage-identity-connection';
+import { supportedSqliteApplicationProfiles } from '../../lib/db/enrolled-sqlite-schema-profile';
+import { syntheticStorageIdentity } from '../../lib/db/storage-identity-fixture';
+import { STORAGE_MAINNET_PROFILE_DIGEST,type StorageIdentity } from '../../lib/db/storage-identity';
+import { createEnrolledSqliteTopicWatches } from '../../lib/db/topic-watches-sqlite';
+import { createTopicWatch,runTopicWatchCheck,controlTopicWatch,parseTopicWatchState,type TopicWatchDependencies } from '../../lib/research/topic-watches';
+import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection';
+import { startCommitAckLossProxy } from './commit-ack-loss.mts';
+import { PostgresDomainWriteOutcomeUnknown } from '../../lib/db/postgres/domain-channel';
+import { topicWatchProjection } from '../../lib/db/postgres/watch-packet';
+import { heldWatchProjectionSql } from './watch-projection.mts';
+export async function qualifyWorkspaces(input:{options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
+ const channel=createPostgresDomainChannel(input.options,input.identity,input.digest),bibliographies=composePostgresBibliographies(channel,false),watches=composePostgresWatches(channel,false);
+ const channels=[channel];let proxy:Awaited<ReturnType<typeof startCommitAckLossProxy>>|undefined;
+ const db=new DatabaseSync(':memory:'),sqliteBibliographies=createSqlitePrivateBibliographies(db),owner='0x'+'f1'.repeat(20),other='0x'+'f2'.repeat(20),session={hash:'f3'.repeat(32),wallet:owner,issuedAt:Date.now()-1000,expiresAt:Date.now()+86400000};let vectors=0;
+ const q=(s:string)=>"'"+s.replaceAll("'","''")+"'",pg=(s:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+s+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
+ const root=process.platform==='linux'?resolve('.local/tmp/postgres-mainnet-migration-20261111/os-tmp'):tmpdir();mkdirSync(root,{recursive:true});const folder=mkdtempSync(join(root,'keryx-workspace-oracle-')),file=join(folder,'source.sqlite');let opened:ReturnType<typeof openVerifiedSqliteStorage>|undefined;
+ try{
+  const first=await bibliographies.create(owner,{title:'Synthetic bibliography',papers:[]}),oracle=await sqliteBibliographies.create(owner,{title:'Synthetic bibliography',papers:[]});
+  assert.equal(first.bibliography.title,oracle.bibliography.title);assert.equal(first.bibliography.count,oracle.bibliography.count);assert.equal(first.bibliography.revision,1);vectors++;
+  assert.deepEqual(await bibliographies.read(first.token),await sqliteBibliographies.read(oracle.token));vectors++;
+  assert.equal(input.ownerSql(`SELECT token_hash FROM public.private_bibliographies WHERE id=${q(first.bibliography.id)};`),createHash('sha256').update('keryx-private-bib-v1:'+first.token).digest('hex'));vectors++;
+  assert.deepEqual(await bibliographies.list(other),await sqliteBibliographies.list(other));vectors++;
+  for(const port of [{store:bibliographies,id:first.bibliography.id},{store:sqliteBibliographies,id:oracle.bibliography.id}])await assert.rejects(port.store.replace(other,port.id,{title:'Other',papers:[]},1),/bibliography_not_found/);vectors++;
+  const replaced=await bibliographies.replace(owner,first.bibliography.id,{title:'Replacement',papers:[]},1),replacedOracle=await sqliteBibliographies.replace(owner,oracle.bibliography.id,{title:'Replacement',papers:[]},1);assert.equal(replaced.title,replacedOracle.title);assert.equal(replaced.revision,2);vectors++;
+  for(const port of [{store:bibliographies,id:first.bibliography.id},{store:sqliteBibliographies,id:oracle.bibliography.id}])await assert.rejects(port.store.revoke(owner,port.id,1),/bibliography_conflict/);vectors++;
+  await bibliographies.revoke(owner,first.bibliography.id,2);await sqliteBibliographies.revoke(owner,oracle.bibliography.id,2);assert.equal(await bibliographies.read(first.token),null);assert.deepEqual(await bibliographies.list(owner),await sqliteBibliographies.list(owner));vectors++;
+  for(let index=0;index<19;index++){await bibliographies.create(other,{title:'Capacity',papers:[]});await sqliteBibliographies.create(other,{title:'Capacity',papers:[]});}
+  for(const store of [bibliographies,sqliteBibliographies]){const results=await Promise.allSettled([store.create(other,{title:'Capacity',papers:[]}),store.create(other,{title:'Capacity',papers:[]})]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.filter(r=>r.status==='rejected'&&String(r.reason).includes('bibliography_limit')).length,1);}assert.equal((await bibliographies.list(other)).length,20);vectors++;
+  const sqliteIdentity:StorageIdentity={...syntheticStorageIdentity('testnet-real'),format:'keryx-mainnet-storage-identity-v1',authorityMode:'mainnet-real',network:'eip155:5042',profileDigest:STORAGE_MAINNET_PROFILE_DIGEST};
+  const raw=new DatabaseSync(file);try{raw.exec('BEGIN');installMainnetApplicationSchema(raw);installNativeUserDomainSchema(raw);raw.prepare('INSERT INTO web_sessions VALUES(?,?,?,?)').run(session.hash,session.wallet,session.issuedAt,session.expiresAt);insertStorageIdentity(raw,sqliteIdentity);installStorageFences(raw,sqliteIdentity);raw.exec('COMMIT');}finally{raw.close();}
+  opened=openVerifiedSqliteStorage(file,sqliteIdentity,{runtimeGuard(){},applicationProfiles:supportedSqliteApplicationProfiles(true)});
+  const source=createEnrolledSqliteTopicWatches(opened.db)!.bindSession(session),native=watches.bindSession(session);pg(`INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES(${q(session.hash)},${q(owner)},${session.issuedAt},${session.expiresAt});`);
+  const now=Date.now(),spec={watchId:'synthetic-native-workspace',question:'Synthetic metadata only',keywords:['transformer'],authors:[],venues:[],cadenceMs:60000,periodMs:86400000,maximumChecksPerPeriod:4,maximumRowsPerCheck:32,maximumDigestItems:16,expiresAtMs:now+86400000,requestedCaps:{perCheckMicroUsdc:0,perPeriodMicroUsdc:0},consent:{manualMetadata:true as const,emptyHeartbeat:false}},key={ownerWallet:owner,watchId:spec.watchId};
+  const deps=(store:typeof source):TopicWatchDependencies=>({store,now:()=>now,isOwnerCurrent:wallet=>wallet===owner,metadata:{read:async()=>({version:1,scope:'metadata-only',status:'empty',complete:true,rows:[]})}});
+  const created=await createTopicWatch(deps(native),owner,spec);assert.equal(created.status,'created');assert.deepEqual(created,await createTopicWatch(deps(source),owner,spec));vectors++;
+  const surrogate={...spec,watchId:'synthetic-native-workspace-surrogate',question:'Synthetic metadata \ud800'},refused=await createTopicWatch(deps(native),owner,surrogate);assert.equal(refused.status,'refused');assert.deepEqual(refused,await createTopicWatch(deps(source),owner,surrogate));vectors++;
+  assert.deepEqual(await native.read(key),await source.read(key));assert.deepEqual(await native.list(),await source.list());vectors++;
+  const checked=await runTopicWatchCheck(deps(native),key);assert.equal(checked.status,'unchanged');assert.deepEqual(checked,await runTopicWatchCheck(deps(source),key));vectors++;
+  assert.deepEqual(await native.read(key),await source.read(key));vectors++;
+  const completed=parseTopicWatchState(await source.read(key)),rewritten={...completed,revision:completed.revision+1,history:completed.history.map(entry=>entry.kind==='check'?{...entry,finishedAtMs:entry.finishedAtMs!+1}:entry)};
+  assert.equal(await native.compareAndSwap(key,completed.revision,rewritten,Date.now()+30000),false);assert.equal(await source.compareAndSwap(key,completed.revision,rewritten,Date.now()+30000),false);vectors++;
+  const grown={...completed,revision:completed.revision+1,watermark:[{identitySha256:'a5'.repeat(32),metadataSha256:'b5'.repeat(32)}]};assert.equal(await native.compareAndSwap(key,completed.revision,grown,Date.now()+30000),true);assert.equal(await source.compareAndSwap(key,completed.revision,grown,Date.now()+30000),true);vectors++;
+  const removed={...grown,revision:grown.revision+1,watermark:[]};assert.equal(await native.compareAndSwap(key,grown.revision,removed,Date.now()+30000),false);assert.equal(await source.compareAndSwap(key,grown.revision,removed,Date.now()+30000),false);vectors++;
+  const paused={...grown,revision:grown.revision+1,status:'paused' as const};assert.equal(await native.compareAndSwap(key,grown.revision,paused,0),false);assert.equal(await source.compareAndSwap(key,grown.revision,paused,0),false);vectors++;
+  for(const store of [native,source]){const results=await Promise.all([store.compareAndSwap(key,grown.revision,paused,Date.now()+30000),store.compareAndSwap(key,grown.revision,paused,Date.now()+30000)]);assert.deepEqual(results.sort(),[false,true]);}vectors++;
+  assert.deepEqual(await native.read(key),await source.read(key));vectors++;
+  assert(input.options.endpoint.kind==='loopback');proxy=await startCommitAckLossProxy(input.options.endpoint.port);const lossy=createPostgresDomainChannel({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);channels.push(lossy);const lost=composePostgresWatches(lossy,false).bindSession(session);await lost.list();proxy.arm();const lostNext={...paused,revision:paused.revision+1};await assert.rejects(lost.compareAndSwap(key,paused.revision,lostNext,Date.now()+30000),e=>e instanceof PostgresDomainWriteOutcomeUnknown);assert.equal(proxy.observation().dropped,true);assert.equal(await source.compareAndSwap(key,paused.revision,lostNext,Date.now()+30000),true);assert.deepEqual(await native.read(key),await source.read(key));vectors++;
+  assert.deepEqual(await controlTopicWatch(deps(native),key,'paused'),await controlTopicWatch(deps(source),key,'paused'));vectors++;
+  assert.deepEqual(await controlTopicWatch(deps(native),key,'cancelled'),await controlTopicWatch(deps(source),key,'cancelled'));vectors++;
+  const cancelled=parseTopicWatchState(await source.read(key));assert.equal(cancelled.status,'cancelled');assert.equal(await native.compareAndSwap(key,cancelled.revision,{...cancelled,revision:cancelled.revision+1,status:'active'},Date.now()+30000),false);assert.equal(await source.compareAndSwap(key,cancelled.revision,{...cancelled,revision:cancelled.revision+1,status:'active'},Date.now()+30000),false);vectors++;
+  const reader=createPostgresDomainChannel({...input.options,role:'keryx_reader'},input.identity,input.digest);channels.push(reader);const readOnlyWatch=composePostgresWatches(reader,true).bindSession(session),readOnlyBib=composePostgresBibliographies(reader,true);assert.deepEqual(await readOnlyWatch.list(),await source.list());assert.equal((await readOnlyBib.list(other)).length,20);await assert.rejects(readOnlyWatch.compareAndSwap(key,null,cancelled,Date.now()+30000),/watch_unavailable/);await assert.rejects(readOnlyBib.create(owner,{title:'Unused',papers:[]}),/bibliography_unavailable/);vectors++;
+  const original=input.ownerSql(`SELECT state FROM public.topic_watches WHERE wallet=${q(owner)} AND id=${q(key.watchId)};`),changedOriginal=original+' ';pg(`UPDATE public.topic_watches SET state=${q(changedOriginal)} WHERE wallet=${q(owner)} AND id=${q(key.watchId)};`);await assert.rejects(native.read(key),/watch_unavailable/);pg(heldWatchProjectionSql(topicWatchProjection(changedOriginal)));assert.deepEqual(await native.read(key),await source.read(key));vectors++;
+  pg(`DELETE FROM public.web_sessions WHERE hash=${q(session.hash)};`);opened.db.prepare('DELETE FROM web_sessions WHERE hash=?').run(session.hash);await assert.rejects(native.list(),/watch_session_changed/);await assert.rejects(source.list(),/watch_session_changed/);vectors++;
+  return {vectors,currentSqliteOracle:true,privateBibliographyTokensAndRevisions:true,concurrentBibliographyCapacityEnforced:true,manualMetadataWatchOnly:true,exactStateAndSourceTransitions:true,terminalHistoryAndWatermarkRetained:true,concurrentCasExactlyOnce:true,actualLostWatchCommitAcknowledgement:true,noAutomaticRetry:true,originalBytesInvalidatePrivateDerivative:true,readOnlyRoleRefusesEffects:true,cancelledTombstoneRetained:true,durableSessionRevocation:true,productionData:false,paidOperations:0,runtimeQualified:false};
+ }finally{await Promise.all(channels.map(c=>c.close()));if(proxy)await proxy.close();opened?.close();db.close();pg(`DELETE FROM keryx_storage.topic_watch_projection WHERE wallet=${q(owner)};DELETE FROM public.topic_watches WHERE wallet=${q(owner)};DELETE FROM public.private_bibliographies WHERE wallet IN(${q(owner)},${q(other)});DELETE FROM public.web_sessions WHERE hash=${q(session.hash)};`);for(const suffix of ['','-wal','-shm','-journal'])try{unlinkSync(file+suffix);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}rmdirSync(folder);}
+}

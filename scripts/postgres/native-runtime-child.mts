@@ -5,7 +5,7 @@ import { chmodSync,linkSync,readFileSync,readSync,rmSync,symlinkSync,writeFileSy
 import { canonicalJson } from '../../lib/canonical-json';
 async function main(){
  const buffer=Buffer.alloc(16385);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=16384);
- const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string};
+ const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number}};
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid!(),0);
  const cgroup=(name:string)=>readFileSync('/sys/fs/cgroup/'+name,'utf8').trim();
  const limits={memoryMax:cgroup('memory.max'),swapMax:cgroup('memory.swap.max'),cpuMax:cgroup('cpu.max'),pidsMax:cgroup('pids.max')};
@@ -57,6 +57,10 @@ async function main(){
   await assert.rejects(privacy.creationReady(),/readonly_operation/);await assert.rejects(privacy.export(id,actor,'12345678-1234-4234-8234-123456789abc'),/readonly_operation/);checks++;
   process.env.KERYX_RUN_PRIVACY_ENABLED='false';assert.throws(()=>reader.runPrivacy);process.env.KERYX_RUN_PRIVACY_ENABLED='true';checks++;
   process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='false';assert.throws(()=>reader.runPrivacy);process.env.KERYX_ANONYMOUS_RUN_CLAIMS_ENABLED='true';checks++;
+  const bibliographies=reader.privateBibliographies!;assert.equal((await bibliographies.list(input.owner))[0].id,'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');assert.deepEqual(await bibliographies.read('a9'.repeat(32)),{content:'Synthetic bibliography content'});checks++;
+  await assert.rejects(bibliographies.create(input.owner,{title:'Unused',papers:[]}),/readonly_operation/);checks++;
+  const bound=reader.topicWatches!.bindSession(input.session);assert.equal((await bound.list())[0].key.watchId,'synthetic-runtime-watch');assert.equal((await bound.read({ownerWallet:input.owner,watchId:'synthetic-runtime-watch'}) as {revision:number}).revision,1);checks++;
+  await assert.rejects(bound.compareAndSwap({ownerWallet:input.owner,watchId:'synthetic-runtime-watch'},null,{} as never,Date.now()+1000),/readonly_operation/);checks++;
   const before=performance.now();await reader.metrics();const observedReadMs=performance.now()-before;
   // A changed credential is not adopted by an already-created facade.
   writeFileSync(readerPath,credential('keryx_reader','different-synthetic-password'));assert.throws(()=>reader.metrics());writeFileSync(readerPath,credential('keryx_reader'));checks++;
@@ -64,6 +68,7 @@ async function main(){
   await application.closeReadonlyApplicationStorage(reader);assert.equal((await outcome).returned,false);await assert.rejects(native.assertPostgresRuntimeIdentity(reader));await assert.rejects(captured.list(input.owner,{filters:{},take:1}));checks++;
   await assert.rejects(ownership.read(input.owner,binding,'synthetic-runtime-run'));checks++;
   await assert.rejects(privacy.read(id,actor));checks++;
+  await assert.rejects(bibliographies.list(input.owner));await assert.rejects(bound.list());checks++;
   assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,resourcePressureQualified:false,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,coldCacheAuthenticated:true,inputCapturedBeforeAwait:true,actualTerminalDrain:true,observedReadMs,selectedApplicationWriter:false,productionData:false,paidOperations:0}));
  }finally{await native.closePostgresRuntimeAdapter(reader);}
 }

@@ -435,7 +435,8 @@ belongs only to the factory-created facade, and asynchronous disposal drains its
 single bounded pool.
 
 The observation profile exposes dashboard metrics, private-profile reads, verified
-identity lists, bounded personal/ownership history and enabled privacy reads. Other methods and all
+identity lists, bounded personal/ownership history, enabled privacy reads and private
+bibliography/watch reads. Other methods and all
 writers refuse. `getDb()` cannot fall back to SQLite or Supabase after an explicit
 PostgreSQL selection, including an unsupported testnet declaration. This profile
 does not yet admit the full application, privacy/claim/account writers or payments.
@@ -535,3 +536,33 @@ bound and refuses as a whole if exceeded; remaining report/list callers need
 bounded iteration before full application admission. Native materialization,
 cache-key continuity, remaining domains, full writer and compiled load/cutover
 qualification are still required.
+
+## Native private workspaces
+
+Bibliography persistence uses fixed token reads, owner metadata lists and atomic
+create/replace/revoke operations. Keep the existing token-hash namespace,
+20-record owner limit and optimistic revision rules. List queries select metadata
+only. Replacing a snapshot keeps its token; revocation invalidates its URL.
+Unknown write acknowledgements do not trigger a new token or automatic retry.
+
+Manual topic watches bind an immutable copy of the original durable session.
+Every operation checks its exact hash, wallet and issued/expiry timestamps in
+storage. CAS checks the current revision, trusted store deadline and owner limit
+under the same native writer lock. Preserve completed history, pending-check
+identity, existing watermark entries, creation time and used specification;
+cancelled states remain tombstones. This port adds persistence to the existing
+manual metadata workflow; it adds no scheduler, funding or payment authority.
+
+A private digest-bound watch derivative preserves the current Node validation
+and canonical comparison rules. It stores hashes of transition fields instead
+of private question text. Held SOURCE intake validates the exact retained state
+bytes; new writes capture one pure Node packet. Original/owner/ID/revision changes
+invalidate the derivative, and a missing derivative refuses. The genuine
+observation factory exposes only bibliography and session-bound watch reads.
+Its writer methods refuse before parsing caller data.
+
+`qualify-offline-intake.mts <private-snapshot> <sha256> --audit-workspaces`
+checks retained workspace compatibility inside the qualified native resource
+profile and reports counts/digests only. The retained snapshot has no bibliography
+records and one valid watch. This does not materialize the application database,
+admit the complete writer or qualify production load/cutover.
