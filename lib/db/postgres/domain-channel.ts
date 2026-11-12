@@ -4,12 +4,14 @@ import { validateStorageIdentity, type StorageIdentity } from "../storage-identi
 import { postgresPoolConfiguration, PostgresStorageBusy, PostgresStorageUnavailable, type PostgresConnectionOptions } from "./connection";
 import { APPLICATION_READ_CALLS } from "./application-read-calls";
 import { AUTH_WRITE_CALLS } from "./auth-write-calls";
+import { OPERATIONAL_WRITE_CALLS } from "./operational-write-calls";
 
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
 const CALLS = Object.freeze({
   ...APPLICATION_READ_CALLS,
   ...AUTH_WRITE_CALLS,
+  ...OPERATIONAL_WRITE_CALLS,
   issue: { sql: "SELECT public.storage_issue_session_grant_consent($1::jsonb,$2::text,$3::text) AS result", args: 1, write: true, bytes: 0 },
   consume: { sql: "SELECT public.storage_consume_session_grant_consent($1::jsonb,$2::text,$3::text,$4::text,$5::text) AS result", args: 3, write: true, bytes: 0 },
   get: { sql: "SELECT public.storage_get_session_grant_consent($1::jsonb,$2::text,$3::text,$4::text) AS result", args: 2, write: false, bytes: 16384 },

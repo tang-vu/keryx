@@ -8949,3 +8949,21 @@ Actual PostgreSQL qualification races nonce consumption and drops a successful
 write acknowledgement; uncertain writes are never retried automatically. A native
 reader cannot write. These named protocols do not select an installed backend or
 authorize production admission before the remaining domain and migration gates.
+
+
+### 2026-11-12: retain operational admission and authentication audit writes
+
+Extend the closed native writer inventory with eleven fixed operational calls for
+rate windows, reasoning circuit leases, API identities/usage and aggregate feedback
+and activation events. Keep all other legacy writes closed. A two-connection race
+retains exactly one allowed rate request/probe; acknowledged and uncertain counter
+writes never gain an automatic retry. Preserve API-key timestamp wire values and
+wallet/scopes/source restrictions. Native API-key authentication awaits its audit
+write, matching SQLite's completed write before returning a verified identity.
+
+The private SQL usage counter explicitly qualifies its table under the native
+restricted search path. Actual PostgreSQL qualification found the legacy bare
+relation failed there. The expanded combined workflow retains every financial
+assertion and has a 25-minute bound for its larger source/profile. This source
+increment does not select the backend or admit production before the remaining
+financial, optional-domain, exact-data and runtime/cutover checks.

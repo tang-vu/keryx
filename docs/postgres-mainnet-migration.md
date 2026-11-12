@@ -249,3 +249,12 @@ actual concurrent consumption, wallet-scoped session revocation, duplicate-hash
 refusal, retained user identity, exact wallet lookup, reader write refusal and
 actual lost-COMMIT acknowledgement without retry. No real login, vendor request,
 production data or selected application backend is involved.
+
+
+Operational qualification (`--operational`, focused `--operational-only`) adds
+eleven named writes to the same native pool. Twenty-seven current-SQLite parity
+vectors cover rate-window reset and concurrent admission, cooldown/probe leases,
+wallet-scoped API-key revocation, retained key restrictions, concurrent daily
+counters, feedback/activation aggregates and actual lost-COMMIT acknowledgement
+without retry. Native API authentication waits for its audit write. Reader roles
+remain unable to write, and no operational identity grants payment authority.

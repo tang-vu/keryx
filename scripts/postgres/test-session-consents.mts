@@ -27,6 +27,8 @@ import { qualifyOwnerWithdrawals } from "./qualify-owner-withdrawals.mts";
 import { qualifyCurrentTableConstraints } from "./qualify-current-tables.mts";
 import { nativeAuthApplicationSource } from "./auth-domain-source.mts";
 import { qualifyAuthDomains } from "./qualify-auth-domains.mts";
+import { nativeOperationalApplicationSource } from "./operational-domain-source.mts";
+import { qualifyOperationalDomains } from "./qualify-operational-domains.mts";
 import { createPostgresApplicationDomainTransport,type PostgresApplicationDomainTransport } from "../../lib/db/postgres/application-domain-transport";
 import { nativeCurrentApplicationSource } from "./current-application-source.mts";
 import { inspectApplicationTableParity } from "./application-table-parity.mts";
@@ -74,8 +76,10 @@ try {
     CREATE ROLE keryx_reader LOGIN NOINHERIT CONNECTION LIMIT 4 PASSWORD '${password}';
     CREATE DATABASE native_source WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
     CREATE DATABASE native_target WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;`);
+  const operationalOnly=process.argv.includes("--operational-only");
+  const withOperational=process.argv.includes("--operational")||operationalOnly;
   const authOnly=process.argv.includes("--auth-only");
-  const withAuth=process.argv.includes("--auth")||authOnly;
+  const withAuth=process.argv.includes("--auth")||authOnly||withOperational;
   const currentTables=process.argv.includes("--current-application-tables")||withAuth;
   const inventoryOnly=process.argv.includes("--inventory-only");
   const applicationDomainsOnly=process.argv.includes("--application-domains-only");
@@ -87,7 +91,7 @@ try {
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
@@ -173,6 +177,8 @@ try {
 
   const auth=withAuth?await qualifyAuthDomains({transport:nativeTransport as PostgresApplicationDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(authOnly){console.log(JSON.stringify({passed:true,authOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,auth,currentTableConstraints,applicationBackendSwitched:false}));return;}
+  const operational=withOperational?await qualifyOperationalDomains({transport:nativeTransport as PostgresApplicationDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  if(operationalOnly){console.log(JSON.stringify({passed:true,operationalOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,auth,operational,currentTableConstraints,applicationBackendSwitched:false}));return;}
   const issue = (value: unknown, expected = identity, digest = reference.sha256) => app.query(
     "SELECT public.storage_issue_session_grant_consent($1::jsonb,$2::text,$3::text) AS result", [JSON.stringify(expected), digest, canonicalJson(value)]);
   const consume = (client: Client, value: SessionGrantConsent, signature = sig) => client.query(
@@ -276,6 +282,7 @@ try {
     ...(withApplicationReference?{applicationFinancialReference:true,catalogMeasurement,completeApplicationAdmitted:false}:{}),
     ...(currentTables?{currentTableConstraints}:{}),
     ...(auth?{auth}:{}),
+    ...(operational?{operational}:{}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
     limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
 } finally {
