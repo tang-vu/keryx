@@ -7,11 +7,12 @@ import { OFFLINE_SNAPSHOT_LIMITS } from '../../lib/db/storage-provenance';
 import { checkSnapshotSidecars,checkSnapshotUnchanged,configureSnapshotConnection,validateSnapshotHeader } from '../../lib/db/storage-provenance-snapshot';
 import { inventorySnapshot,type InventoryDiagnostic } from './typed-inventory.mts';
 import { rehearseSqliteSnapshot } from './rehearse-snapshot.mts';
+import { auditRunDomains } from './audit-run-domains.mts';
 const diagnostic:InventoryDiagnostic={stage:'containment',table:null,rows:0,wireBytes:0,started:performance.now()};
 async function main(){
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid?.(),0);assert.equal(process.ppid,1);
- const mode=process.argv[2];assert(['pressure','deadline','synthetic','inventory','rehearsal','synthetic-rehearsal'].includes(mode));
- const rehearsal=mode.endsWith('rehearsal'),synthetic=mode==='synthetic'||mode==='synthetic-rehearsal';assert.equal(process.argv.length,mode==='inventory'||mode==='rehearsal'?4:3);
+ const mode=process.argv[2];assert(['pressure','deadline','synthetic','inventory','rehearsal','synthetic-rehearsal','domain-audit'].includes(mode));
+ const rehearsal=mode.endsWith('rehearsal'),synthetic=mode==='synthetic'||mode==='synthetic-rehearsal';assert.equal(process.argv.length,mode==='inventory'||mode==='rehearsal'||mode==='domain-audit'?4:3);
  const kernel=(name:string)=>readFileSync('/sys/fs/cgroup/'+name,'utf8').trim();
  const limits={memoryMax:kernel('memory.max'),swapMax:kernel('memory.swap.max'),cpuMax:kernel('cpu.max'),pidsMax:kernel('pids.max')};
  assert.deepEqual(limits,{memoryMax:'536870912',swapMax:'0',cpuMax:'25000 100000',pidsMax:'32'});
@@ -42,6 +43,10 @@ async function main(){
   const opened=fstatSync(fd,{bigint:true});assert.equal(opened.ino,before.ino);assert.equal(opened.dev,before.dev);validateSnapshotHeader(fd);
   diagnostic.stage='file-hash';const hash=createHash('sha256');for await(const chunk of createReadStream(target))hash.update(chunk);assert.equal(hash.digest('hex'),expectedHash);
   db=new DatabaseSync(target,{readOnly:true,allowExtension:false,timeout:1000});configureSnapshotConnection(db,OFFLINE_SNAPSHOT_LIMITS);db.exec('BEGIN');
+  if(mode==='domain-audit'){
+   diagnostic.stage='domain-projection-audit';const audit=auditRunDomains(db,diagnostic.started+250000);db.exec('ROLLBACK');db.close();db=undefined;checkSnapshotUnchanged(target,fd,before.size,before.mtimeNs);
+   console.log(JSON.stringify({snapshotSha256:expectedHash,...audit,limits,hardDeadlineSeconds:300,elapsedMs:Math.round(performance.now()-diagnostic.started),enrollmentAuthorized:false,modeIdentityAccepted:false,applicationBackendSwitched:false,paymentActions:0,jobActions:0}));return;
+  }
   if(rehearsal){
    const buffer=Buffer.alloc(2049);let bytes=0;while(bytes<buffer.length){const count=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!count)break;bytes+=count;}assert(bytes<=2048);
    const packet=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {password:string};assert.deepEqual(Object.keys(packet),['password']);assert.match(packet.password,/^[a-f0-9]{48}$/);
