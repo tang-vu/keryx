@@ -9142,3 +9142,21 @@ Use a separately bounded ephemeral, no-swap PG instance and importer, with no
 public application schema, runtime grants or installed provenance. Staging
 fidelity does not establish native application materialization, cache-key
 continuity, financial-domain parity or a safe writer cutover.
+
+## Preserve recorded and claimed ownership in bounded native reads (2026-11-13)
+
+Keep recorded and consumed-claim ownership as one deduplicated predicate. Check
+the original raw digest, completion time, exact binding and current A2A membership
+on every claimed read; ticket expiry does not revoke an already consumed claim.
+Store a separate digest-bound allowlist derivative so list reads do not retrieve
+private original bodies. Preserve SQLite first-key filters/eligibility separately
+from Node last-key original/summary validation, including repeated keys and
+unrelated escaped NUL/surrogate fields. Invalidate on original/ID/time/owner changes.
+
+Owner-private detail returns bounded original bytes, then validates owner and
+coordinates without normalizing receipts or assigning the claimant as payer.
+Use fixed calls on the same guarded channel and retain actual read-only
+transactions, before-await input capture, publication guards and terminal close.
+Only the genuine zero-argument observation factory may publish these reads.
+This does not open the complete writer, privacy/publication or payments. Rehearse
+the actual retained originals through the SOURCE producers before materialization.

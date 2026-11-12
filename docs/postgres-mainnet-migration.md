@@ -446,3 +446,45 @@ and runs it in separate Linux processes against the independently sealed fixture
 The process verifies its 512 MiB memory/no-swap, one CPU and 64-PID cgroup settings
 before target access. These readbacks and cold-construction checks do not qualify
 native pressure enforcement, compiled Next load or production cutover.
+
+## Native private ownership history
+
+`--ownership-history-only` qualifies the current SQLite recorded/claimed owner
+predicate against native PG17. Both reads use the same identity, fresh catalog
+check, native data lock and bounded pool. The network and exact claim binding
+are captured before the first await. A consumed claim remains associated after
+ticket expiry; a changed original, completion time or current A2A membership
+removes that association. A recorded association wins and is returned once.
+
+A separate private `run_ownership_projection` binds its allowlist summary and
+validation flags to the exact retained original digest. Its producer preserves
+SQLite's first repeated-key filter/eligibility behavior separately from Node's
+last-key original validation and summary. It retains the SQLite question-search
+bytes without PostgreSQL Unicode decoding. Missing derivatives refuse before
+filters can hide them. Changing original bytes, ID, completion time or scalar
+owner invalidates the derivative. Only the held owner or an explicitly scoped
+native writer may create or remove it.
+
+List SQL returns bounded summaries without projecting private original bodies.
+The owner-private single-original call returns bounded exact UTF-8 bytes as hex;
+the typed port validates current owner/ID/time without rewriting the packet.
+The operation has its own finite result bound; global input/result limits do not
+increase. The genuine read-only factory publishes these two reads behind its
+publication guard and terminal disposal. This adds no privacy mutation, public
+sharing, claim writer, payment or complete application-writer authority.
+
+`qualify-offline-intake.mts <private-snapshot> <sha256> --audit-run-domains`
+applies both SOURCE projection producers to every retained run inside the native
+offline containment profile. It reports counts/digests and current A2A amount and
+cache-envelope compatibility metadata only. It does not emit private values,
+decrypt caches, modify originals or materialize an application database.
+
+The retained snapshot's 93 application tables and all column sequences match
+the current SQLite SOURCE. Its 94th table is the original one-row
+`keryx_storage_identity`. Preserve those original bytes in the private staging
+copy and required original; never relabel or copy that SQLite physical identity
+as PostgreSQL enrollment. The real audit projected all 311 originals, found no
+invalid summaries or first/last-key eligibility differences, and found no
+nonpositive retained A2A amount. All 54 cache values have the bound-envelope
+prefix, totaling 78,178 bytes. These metadata checks do not authenticate or
+decrypt the ciphertext; cache-key and new identity continuity remain required.

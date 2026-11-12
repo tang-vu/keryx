@@ -42,6 +42,7 @@ import { qualifyPersonalHistory } from "./qualify-personal-history.mts";
 import { nativeRuntimeSource } from "./native-runtime-source.mts";
 import { qualifyNativeRuntime } from "./qualify-native-runtime.mts";
 import { qualifyOriginalJson } from "./qualify-original-json.mts";
+import { qualifyOwnershipHistory } from './qualify-ownership-history.mts';
 import { qualifyRunClaims } from "./qualify-run-claims.mts";
 import { createPostgresRuntimeTransport } from "../../lib/db/postgres/runtime-transport";
 import { NATIVE_READONLY_RUNTIME_PROFILE } from "../../lib/db/postgres/runtime-profile";
@@ -99,8 +100,9 @@ try {
   const nativeRuntimeOnly=process.argv.includes("--native-runtime-only");
   const originalJsonOnly=process.argv.includes("--original-json-only");
   const runClaimsOnly=process.argv.includes("--run-claims-only");
+  const ownershipHistoryOnly=process.argv.includes("--ownership-history-only");
   const runtimeSourceReferenceOnly=process.argv.includes("--runtime-source-reference-only");
-  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly;
+  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly;
   const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
   const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly||withProfileIdentities;
@@ -214,6 +216,8 @@ try {
     if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
+  const ownershipHistory=withNativeRuntime?await qualifyOwnershipHistory({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  if(ownershipHistoryOnly){console.log(JSON.stringify({passed:true,ownershipHistoryOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,ownershipHistory,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   const runClaims=withNativeRuntime?await qualifyRunClaims({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(runClaimsOnly){console.log(JSON.stringify({passed:true,runClaimsOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,runClaims,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   const originalJson=withNativeRuntime?await qualifyOriginalJson({transport:nativeTransport as PostgresUserDomainTransport,network:identity.network,ownerSql:statement=>sql('native_target',statement)}):undefined;
@@ -344,6 +348,7 @@ try {
     ...(nativeRuntime?{nativeRuntime}:{}),
     ...(originalJson?{originalJson}:{}),
     ...(runClaims?{runClaims}:{}),
+    ...(ownershipHistory?{ownershipHistory}:{}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
     limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
 } catch(error) {

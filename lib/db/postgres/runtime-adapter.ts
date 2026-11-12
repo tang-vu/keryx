@@ -7,6 +7,7 @@ import { openEnrolledCacheText } from '../../sources/enrolled-content-cache';
 import type { PrivateProfilesStore } from '../../profiles/private-profile';
 import type { ProfileIdentitiesStore } from '../../profiles/verified-identities';
 import type { PersonalHistoryStore } from '../../history/personal-history';
+import type { RunOwnershipHistoryStore } from '../../run-claims/history';
 import type { KeryxDB } from '../keryx-db';
 import { readRuntimeStorageDeployment } from '../runtime-storage-config';
 import { assembleNativePostgresBusinessCore } from '../supabase-adapter';
@@ -49,6 +50,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  const profiles:PrivateProfilesStore=Object.freeze({get:(owner,network)=>read(()=>transport.privateProfiles.get(owner,network)),update:readonly,delete:readonly} satisfies PrivateProfilesStore);
  const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
  const history:PersonalHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.personalHistory.list(owner,query)),receipts:(id,take)=>read(()=>transport.personalHistory.receipts!(id,take))} satisfies PersonalHistoryStore);
+ const ownership:RunOwnershipHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.runOwnershipHistory.list(owner,query)),read:(owner,binding,id)=>read(()=>transport.runOwnershipHistory.read(owner,binding,id))} satisfies RunOwnershipHistoryStore);
  try{
   entry();const cache=await transport.readColdCache();entry();
   for(const row of cache.cacheRows){openEnrolledCacheText(row.text,row.sourceId,deployment.identity);entry();}
@@ -59,6 +61,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='privateProfiles')return profiles;
     if(property==='profileIdentities')return identities;
     if(property==='personalHistory')return history;
+    if(property==='runOwnershipHistory')return ownership;
     // Only currently qualified bounded observations escape this profile.
     if(property!=='init'&&property!=='metrics')refuseStorage('invalid_operation');
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;
