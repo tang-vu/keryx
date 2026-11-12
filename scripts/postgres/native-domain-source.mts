@@ -39,3 +39,15 @@ export function nativeCreatorWithdrawalDomainSource(): Readonly<{ sql: string; s
   const sql = nativeWithdrawalDomainSource().sql + "\n" + creator;
   return Object.freeze({ sql, sha256: createHash("sha256").update(sql).digest("hex") });
 }
+export function nativeHostedLedgerSource(): Readonly<{ sql: string; sha256: string }> {
+  let ledger = readFileSync(new URL("../../ops/keryx-postgres/hosted-ledger.sql", import.meta.url), "utf8").replaceAll("\r\n", "\n");
+  if (Buffer.byteLength(ledger)>131072 || ledger.split("{{USDC_ADDRESS}}").length!==3) throw new Error("Native hosted ledger source refused");
+  ledger=ledger.replaceAll("{{USDC_ADDRESS}}", ARC_MAINNET_PROFILE.usdcAddress.toLowerCase());
+  const sql=nativeCreatorWithdrawalDomainSource().sql+"\n"+ledger;
+  return Object.freeze({sql,sha256:createHash("sha256").update(sql).digest("hex")});
+}
+export function nativeOwnerWithdrawalSource(): Readonly<{ sql: string; sha256: string }> {
+  const owner=readFileSync(new URL("../../ops/keryx-postgres/owner-withdrawals.sql",import.meta.url),"utf8").replaceAll("\r\n","\n");
+  if(Buffer.byteLength(owner)>131072)throw new Error("Native owner withdrawal source bound exceeded");
+  const sql=nativeHostedLedgerSource().sql+"\n"+owner;return Object.freeze({sql,sha256:createHash("sha256").update(sql).digest("hex")});
+}

@@ -24,6 +24,14 @@ const CALLS = Object.freeze({
   creatorReserve: { sql: "SELECT public.storage_creator_withdrawal_reserve($1::jsonb,$2::text,$3::text) AS result", args: 1, write: true, bytes: 0 },
   creatorClaim: { sql: "SELECT public.storage_creator_withdrawal_claim($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text) AS result", args: 4, write: true, bytes: 512 },
   creatorAttestation: { sql: "SELECT public.storage_creator_withdrawal_attestation($1::jsonb,$2::text,$3::text,$4::text,$5::text,$6::text,$7::text) AS result", args: 5, write: true, bytes: 12288 },
+  hostedAccounting: { sql: "SELECT public.storage_hosted_accounting($1::jsonb,$2::text,$3::text,$4::text) AS result", args: 2, write: false, bytes: 256 },
+  hostedPolicy: { sql: "SELECT public.storage_hosted_admit_policy($1::jsonb,$2::text,$3::text,$4::text,$5::text) AS result", args: 3, write: true, bytes: 0 },
+  hostedSubmit: { sql: "SELECT public.storage_hosted_submit($1::jsonb,$2::text,$3::text,$4::text,$5::text) AS result", args: 3, write: true, bytes: 0 },
+  hostedConfirm: { sql: "SELECT public.storage_hosted_confirm($1::jsonb,$2::text,$3::text,$4::text,$5::text) AS result", args: 3, write: true, bytes: 0 },
+  ownerAccounting: { sql: "SELECT public.storage_creator_owner_accounting($1::jsonb,$2::text,$3::text) AS result", args: 1, write: false, bytes: 512 },
+  ownerCompletion: { sql: "SELECT public.storage_creator_owner_completion($1::jsonb,$2::text,$3::text,$4::text) AS result", args: 2, write: false, bytes: 32768 },
+  ownerAdmit: { sql: "SELECT public.storage_creator_owner_admit($1::jsonb,$2::text,$3::text,$4::jsonb,$5::text) AS result", args: 3, write: true, bytes: 0 },
+  ownerComplete: { sql: "SELECT public.storage_creator_owner_complete($1::jsonb,$2::text,$3::text) AS result", args: 1, write: true, bytes: 0 },
 });
 export class PostgresDomainWriteOutcomeUnknown extends Error {
   constructor() { super("Storage write outcome requires original-bound reconciliation"); }

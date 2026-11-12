@@ -1,13 +1,11 @@
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
-import { concatHex, encodePacked, keccak256 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ARC_MAINNET_PROFILE as profile } from "../../lib/arc-network-profile";
 import { canonicalJson } from "../../lib/canonical-json";
-import { prepareWithdrawIntentForProfile } from "../../lib/gateway/withdraw-intent-core";
 import { withdrawTypedData } from "../../lib/gateway/withdraw-protocol";
-import { createWithdrawalRequest, type WithdrawalRequestRecord } from "../../lib/gateway/withdrawal-request";
+import { createWithdrawalRequest } from "../../lib/gateway/withdrawal-request";
 import { installMainnetApplicationSchema } from "../../lib/db/mainnet-application-schema";
 import { sqliteJournalTransaction } from "../../lib/db/sqlite-browser-journal";
 import { reserveSqliteWithdrawalRequest, getSqliteWithdrawalRequest, claimSqliteWithdrawalTransfer, getSqliteWithdrawalTransferClaim } from "../../lib/db/creator-withdrawal-requests";
@@ -19,29 +17,16 @@ import { PostgresDomainWriteOutcomeUnknown } from "../../lib/db/postgres/domain-
 import type { PostgresConnectionOptions } from "../../lib/db/postgres/connection";
 import type { StorageIdentity } from "../../lib/db/storage-identity";
 import { startCommitAckLossProxy } from "./commit-ack-loss.mts";
+import { nativeCreatorWithdrawalFixture,nativeCreatorAttestationFixture } from "./withdrawal-fixtures";
 
 /** Unfunded deterministic fixture wallets. This never reads a custody file or
  * makes a vendor/RPC call; a matched attestation is not a finality assertion. */
-const account=privateKeyToAccount(`0x${"33".repeat(32)}`),attester=privateKeyToAccount(`0x${"44".repeat(32)}`);
-async function fixture(){
-  const burnIntent={...prepareWithdrawIntentForProfile(profile,account.address,"50000",account.address,"100"),maxBlockHeight:"1100"};
-  return createWithdrawalRequest({burnIntent,signature:await account.signTypedData(withdrawTypedData(burnIntent))},
-    {owner:account.address,recipient:account.address,domain:profile.cctpDomain,gatewayWallet:profile.gatewayWallet,gatewayMinter:profile.gatewayMinter,
-      asset:profile.usdcAddress,maxValueMicros:"50000",maxFeeMicros:"100"},profile);
-}
-async function response(record:WithdrawalRequestRecord){
-  const s=record.request.burnIntent.spec;
-  const encoded=concatHex([encodePacked(["bytes4","uint32","uint32","uint32"],["0xca85def7",s.version,s.sourceDomain,s.destinationDomain]),
-    s.sourceContract,s.destinationContract,s.sourceToken,s.destinationToken,s.sourceDepositor,s.destinationRecipient,s.sourceSigner,s.destinationCaller,
-    encodePacked(["uint256","bytes32","uint32"],[BigInt(s.value),s.salt,0])]);
-  const attestation=concatHex([encodePacked(["bytes4","uint256","uint32"],["0xff6fb334",BigInt(1200),340]),encoded]);
-  return{transferId:randomUUID(),attestation,expirationBlock:"1200",signature:await attester.signMessage({message:{raw:keccak256(attestation)}})};
-}
+const account=privateKeyToAccount(`0x${"33".repeat(32)}`);
 export async function qualifyCreatorWithdrawals(input:{transport:PostgresCreatorWithdrawalTransport;options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(statement:string)=>string}){
   const db=new DatabaseSync(":memory:"),t=input.transport,q=(s:string)=>`'${s.replaceAll("'","''")}'`;let comparisons=0;
   try{
     db.exec('BEGIN');installMainnetApplicationSchema(db);db.exec('COMMIT');
-    const r=await fixture();assert.deepEqual(await t.reserveCreatorWithdrawal(r),await reserveSqliteWithdrawalRequest(db,r));comparisons++;
+    const r=await nativeCreatorWithdrawalFixture();assert.deepEqual(await t.reserveCreatorWithdrawal(r),await reserveSqliteWithdrawalRequest(db,r));comparisons++;
     assert.deepEqual(await t.reserveCreatorWithdrawal(r),await reserveSqliteWithdrawalRequest(db,r));comparisons++;
     assert.deepEqual(await t.getCreatorWithdrawal(r.id,r.owner),await getSqliteWithdrawalRequest(db,r.id,r.owner));comparisons++;
     assert.equal(await t.getCreatorWithdrawal(r.id,`0x${"99".repeat(20)}`),null);
@@ -58,7 +43,7 @@ export async function qualifyCreatorWithdrawals(input:{transport:PostgresCreator
     const sourceClaims=await Promise.all([claimSqliteWithdrawalTransfer(db,r.id,r.owner),claimSqliteWithdrawalTransfer(db,r.id,r.owner)]);
     assert.equal(sourceClaims.filter(Boolean).length,1);const sourceClaim=sourceClaims.find(Boolean)!;
     assert.deepEqual(await t.getCreatorWithdrawalTransferClaim(r.id,r.owner),nativeClaim);assert.deepEqual(await getSqliteWithdrawalTransferClaim(db,r.id,r.owner),sourceClaim);comparisons++;
-    const proof=await response(r),saved=await t.saveCreatorWithdrawalAttestation(r.id,r.owner,nativeClaim.claimId,proof),source=await saveSqliteWithdrawalAttestation(db,r.id,r.owner,sourceClaim.claimId,proof);
+    const proof=await nativeCreatorAttestationFixture(r),saved=await t.saveCreatorWithdrawalAttestation(r.id,r.owner,nativeClaim.claimId,proof),source=await saveSqliteWithdrawalAttestation(db,r.id,r.owner,sourceClaim.claimId,proof);
     assert.equal(canonicalJson({...saved,savedAt:undefined}),canonicalJson({...source,savedAt:undefined}));comparisons++;
     assert.deepEqual(await t.saveCreatorWithdrawalAttestation(r.id,r.owner,nativeClaim.claimId,proof),saved);comparisons++;
     assert.deepEqual(await t.getCreatorWithdrawalAttestation(r.id,r.owner),saved);assert.deepEqual(await getSqliteWithdrawalAttestation(db,r.id,r.owner),source);comparisons++;
@@ -66,7 +51,7 @@ export async function qualifyCreatorWithdrawals(input:{transport:PostgresCreator
     await assert.rejects(t.saveCreatorWithdrawalAttestation(r.id,r.owner,randomUUID(),proof));
     await assert.rejects(t.reserveCreatorWithdrawal({...r,owner:`0x${"99".repeat(20)}`}));
 
-    const uncertain=await fixture();await t.reserveCreatorWithdrawal(uncertain);await reserveSqliteWithdrawalRequest(db,uncertain);
+    const uncertain=await nativeCreatorWithdrawalFixture();await t.reserveCreatorWithdrawal(uncertain);await reserveSqliteWithdrawalRequest(db,uncertain);
     assert.equal(input.options.endpoint.kind,'loopback');const proxy=await startCommitAckLossProxy(input.options.endpoint.port);
     const broken=createPostgresCreatorWithdrawalTransport({...input.options,endpoint:{kind:'loopback',port:proxy.port}},input.identity,input.digest);
     try{
@@ -78,7 +63,7 @@ export async function qualifyCreatorWithdrawals(input:{transport:PostgresCreator
     // Equal-time tie breakers are actual retained rows, independently installed
     // in both fixtures. No update of an immutable timestamp is used to arrange it.
     const stamp='2026-11-12T04:00:00.000Z';let sql="UPDATE keryx_storage.control SET mode='held';";
-    for(let i=0;i<8;i++){const row=await fixture(),data=JSON.stringify(row);
+    for(let i=0;i<8;i++){const row=await nativeCreatorWithdrawalFixture(),data=JSON.stringify(row);
       sqliteJournalTransaction(db,()=>db.prepare('INSERT INTO creator_withdrawal_requests(id,owner,data,created_at) VALUES(?,?,?,?)').run(row.id,row.owner,data,stamp));
       sql+=`INSERT INTO public.creator_withdrawal_requests(id,owner,data,created_at) VALUES(${q(row.id)},${q(row.owner)},${q(data)},${q(stamp)});`;
     }input.ownerSql(sql+"UPDATE keryx_storage.control SET mode='active';");
