@@ -9043,3 +9043,24 @@ the 51-summary and 201-receipt sentinel limits, omission of unexposed payments,
 actual reader-role access and terminal close. Qualification compares SQLite with
 PostgreSQL and stores large private answers that never enter the result. Privacy,
 claims, membership and complete runtime/cutover retain their separate acceptance.
+
+### 2026-11-12: construct a genuine native PostgreSQL observation facade
+
+Add an explicit local PostgreSQL backend to the protected deployment manifest and
+separate canonical Linux role credentials. Reject conflicting legacy selectors;
+keep application writers closed until the full current profile and data are
+qualified. The zero-argument read factory owns its private facade provenance,
+fixed reader role, current configuration and one bounded native pool. Assembled
+business cores, injected guards and caller-wrapped objects cannot inherit it.
+
+Before publishing the facade, check the full independent catalog/identity and
+authenticate every bounded encrypted cache envelope using its original source
+and logical storage identity. Preserve immutable process configuration, exact
+argument capture, fresh publication checks and terminal asynchronous drain. Expose
+only the qualified bounded observations; this is not complete application or
+signing authority. Test the actual compiled factory on Linux with native file
+permissions and cgroup readback, isolated synthetic credentials/data and no
+outbound HTTP. Actual pressure, full data and selected production load remain
+separate requirements. Retain the existing full catalog algorithm: controlled
+serialization/projection experiments showed no consistent material gain, and JIT
+was not the observed cause. Keep all catalog fields, bounds, deadlines and checks.

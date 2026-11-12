@@ -12,6 +12,8 @@ const CALLS = Object.freeze({
   ...APPLICATION_READ_CALLS,
   ...AUTH_WRITE_CALLS,
   ...OPERATIONAL_WRITE_CALLS,
+  nativeRuntimeAuthority:{sql:"SELECT public.storage_native_runtime_authority($1::jsonb,$2::text) AS result",args:0,write:false,bytes:8192,transaction:true},
+  nativeRuntimeColdRead:{sql:"SELECT public.storage_native_runtime_cold_read($1::jsonb,$2::text) AS result",args:0,write:false,bytes:12582912,transaction:true},
   personalHistoryList:{sql:"SELECT public.storage_personal_history_list($1::jsonb,$2::text,$3::text,$4::jsonb,$5::integer,$6::jsonb,$7::jsonb) AS result",args:5,write:false,bytes:4194304,transaction:true},
   personalHistoryReceipts:{sql:"SELECT public.storage_personal_history_receipts($1::jsonb,$2::text,$3::text,$4::integer) AS result",args:2,write:false,bytes:4194304,transaction:true},
   profileIdentityList:{sql:"SELECT public.storage_profile_identity_list($1::jsonb,$2::text,$3::text) AS result",args:1,write:false,bytes:8192,transaction:true},

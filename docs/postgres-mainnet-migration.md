@@ -13,6 +13,10 @@ where applicable, the source contract digest as bound parameters. It publishes n
 pool, raw SQL, transaction callback, enrollment operation or installed-adapter
 provenance. The existing SQLite and Supabase factories do not select it.
 
+An explicit PostgreSQL manifest can now select the controlled Linux observation
+factory described below. Application writers remain closed while the remaining
+current domains, full-data rehearsal and cutover are being completed.
+
 Each process has two connections and at most eight additional pending reads.
 Server-side statement and lock timeouts complement client connection/query bounds.
 Connection coordinates and the password are explicit; ambient `PG*` settings cannot
@@ -299,3 +303,36 @@ bounds, unexposed receipt omission and terminal close. Large private answers and
 unneeded parent identifier values stay outside the SQL projection. Receipt callers
 must still prove current ownership through the privacy port; this protocol grants
 no new account, claim, sharing or financial authority.
+
+## Controlled native observation factory
+
+The deployment manifest's `postgres` backend declares a local `endpoint` (Unix
+socket directory or loopback port), `database`, the independent reference catalog
+digest as `sourceDigest`, and distinct absolute `credentialPaths.application` and
+`credentialPaths.reader`. Credentials are separate canonical JSON files with
+`format: "keryx-postgres-role-credential-v1"`, the exact role and `password`.
+Linux files must belong to the current UID, have one link, deny group/other access,
+fit 4 KiB and have no symbolic path component. A reader opens only its own role
+credential. Legacy SQLite/Supabase selectors alongside PostgreSQL refuse.
+
+`createReadonlyApplicationStorage()` uses the zero-argument native factory.
+Construction verifies the current identity/catalog and authenticates every bounded
+cache envelope with its source and all nine logical identity fields. Missing or
+wrong keys, foreign cache bindings, plaintext and oversized data refuse. Each
+published read retains a fresh SQL operation check and publication guard; changes
+to the pinned manifest, key or credential are refused. Private WeakMap provenance
+belongs only to the factory-created facade, and asynchronous disposal drains its
+single bounded pool.
+
+The observation profile exposes dashboard metrics, private-profile reads, verified
+identity lists and bounded personal history/receipts. Other methods and all
+writers refuse. `getDb()` cannot fall back to SQLite or Supabase after an explicit
+PostgreSQL selection, including an unsupported testnet declaration. This profile
+does not yet admit the full application, privacy/claims/accounts or payments.
+
+Use `--native-runtime` (focused `--native-runtime-only`) with the existing native
+fixture and `node:24.22.1-bookworm-slim`. It compiles the actual application factory
+and runs it in separate Linux processes against the independently sealed fixture.
+The process verifies its 512 MiB memory/no-swap, one CPU and 64-PID cgroup settings
+before target access. These readbacks and cold-construction checks do not qualify
+native pressure enforcement, compiled Next load or production cutover.

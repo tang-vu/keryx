@@ -38,6 +38,9 @@ import { nativeProfileIdentitiesSource } from "./profile-identities-source.mts";
 import { qualifyProfileIdentities } from "./qualify-profile-identities.mts";
 import { nativePersonalHistorySource } from "./personal-history-source.mts";
 import { qualifyPersonalHistory } from "./qualify-personal-history.mts";
+import { nativeRuntimeSource } from "./native-runtime-source.mts";
+import { qualifyNativeRuntime } from "./qualify-native-runtime.mts";
+import { createPostgresRuntimeTransport } from "../../lib/db/postgres/runtime-transport";
 import { createPostgresUserDomainTransport,type PostgresUserDomainTransport } from "../../lib/db/postgres/user-domain-transport";
 import { createPostgresApplicationDomainTransport,type PostgresApplicationDomainTransport } from "../../lib/db/postgres/application-domain-transport";
 import { nativeCurrentApplicationSource } from "./current-application-source.mts";
@@ -89,7 +92,9 @@ try {
   const privateProfilesOnly=process.argv.includes("--private-profiles-only");
   const profileIdentitiesOnly=process.argv.includes("--profile-identities-only");
   const personalHistoryOnly=process.argv.includes("--personal-history-only");
-  const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly;
+  const nativeRuntimeOnly=process.argv.includes("--native-runtime-only");
+  const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly;
+  const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
   const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly||withProfileIdentities;
   const boundedReadsOnly=process.argv.includes("--bounded-reads-only");
@@ -109,7 +114,7 @@ try {
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
@@ -164,7 +169,7 @@ try {
     client.on("error", () => {}); clients.push(client); await client.connect(); return client;
   };
   const app = await connect("keryx_app"), other = await connect("keryx_app"), reader = await connect("keryx_reader");
-  const createTransport = withPrivateProfiles ? createPostgresUserDomainTransport : withAuth ? createPostgresApplicationDomainTransport : withApplicationDomains ? createPostgresApplicationReadTransport : withOwner ? createPostgresOwnerWithdrawalTransport : withHosted ? createPostgresHostedLedgerTransport : withCreator ? createPostgresCreatorWithdrawalTransport : withWithdrawals ? createPostgresWithdrawalTransport : withFunding ? createPostgresSessionTransport : createPostgresConsentTransport;
+  const createTransport = withNativeRuntime ? createPostgresRuntimeTransport : withPrivateProfiles ? createPostgresUserDomainTransport : withAuth ? createPostgresApplicationDomainTransport : withApplicationDomains ? createPostgresApplicationReadTransport : withOwner ? createPostgresOwnerWithdrawalTransport : withHosted ? createPostgresHostedLedgerTransport : withCreator ? createPostgresCreatorWithdrawalTransport : withWithdrawals ? createPostgresWithdrawalTransport : withFunding ? createPostgresSessionTransport : createPostgresConsentTransport;
   const nativeTransport = createTransport({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
   transports.push(nativeTransport);
   if(withApplicationDomains){
@@ -193,6 +198,8 @@ try {
     if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
+  const nativeRuntime=withNativeRuntime?await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  if(nativeRuntimeOnly){console.log(JSON.stringify({passed:true,nativeRuntimeOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,nativeRuntime,applicationBackendSwitched:false}));return;}
   const personalHistory=withPersonalHistory?await qualifyPersonalHistory({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(personalHistoryOnly){console.log(JSON.stringify({passed:true,personalHistoryOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,personalHistory,applicationBackendSwitched:false}));return;}
   const profileIdentities=withProfileIdentities?await qualifyProfileIdentities({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
@@ -314,6 +321,7 @@ try {
     ...(privateProfiles?{privateProfiles}:{}),
     ...(profileIdentities?{profileIdentities}:{}),
     ...(personalHistory?{personalHistory}:{}),
+    ...(nativeRuntime?{nativeRuntime}:{}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
     limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
 } catch(error) {

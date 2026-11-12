@@ -53,9 +53,10 @@ jobs:
       - name: Actual synthetic PostgreSQL transport, role isolation and snapshot copy
         run: |
           docker pull postgres:17-alpine
+          docker pull node:24.22.1-bookworm-slim
           node --import tsx --no-warnings scripts/postgres/test-bootstrap.mts
       - name: Native consent, funding, withdrawals and retained hosted ledger
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --owner-withdrawals
 
-      - name: Current application, personal history, bounded reads and financial protocols
-        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --personal-history
+      - name: Native Linux cold factory, current protocols and financial regressions
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --native-runtime
