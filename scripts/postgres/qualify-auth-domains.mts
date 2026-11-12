@@ -2,6 +2,8 @@
  * external delivery, live user data or installed application provenance. */
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
+import type { Client } from 'pg';
+import { setTimeout as delay } from 'node:timers/promises';
 import { createHash,randomUUID } from 'node:crypto';
 import { installMainnetApplicationSchema } from '../../lib/db/mainnet-application-schema';
 import { installNativeUserDomainSchema } from '../../lib/db/native-user-domain-schema';
@@ -12,7 +14,7 @@ import { PostgresDomainWriteOutcomeUnknown } from '../../lib/db/postgres/domain-
 import type { PostgresConnectionOptions } from '../../lib/db/postgres/connection';
 import type { StorageIdentity } from '../../lib/db/storage-identity';
 import { startCommitAckLossProxy } from './commit-ack-loss.mts';
-export async function qualifyAuthDomains(input:{transport:PostgresApplicationDomainTransport;options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;ownerSql:(sql:string)=>string}){
+export async function qualifyAuthDomains(input:{transport:PostgresApplicationDomainTransport;options:PostgresConnectionOptions;identity:StorageIdentity;digest:string;contentionClient:Client;ownerSql:(sql:string)=>string}){
  const db=new DatabaseSync(':memory:'),owner='0x'+'a9'.repeat(20),other='0x'+'b8'.repeat(20),hash=()=>createHash('sha256').update(randomUUID()).digest('hex'),now=Date.now();let vectors=0;
  const native=assembleNativePostgresBusinessCore({identity:input.identity,authority:createPostgresApplicationDomainAuthority(input.transport),assertEntry:()=>{},verify:async()=>{await input.transport.applicationRead('get_sync_state',{p_key:'synthetic-auth-authority'});}});
  const nonce=(h:string,issued:number,expires:number)=>{db.prepare('DELETE FROM auth_challenges WHERE expires_at<=?').run(issued);db.prepare('INSERT INTO auth_challenges VALUES(?,?,?)').run(h,issued,expires);};
@@ -23,7 +25,15 @@ export async function qualifyAuthDomains(input:{transport:PostgresApplicationDom
  try{
   db.exec('BEGIN');installMainnetApplicationSchema(db,{publicReferenceArchive:true});installNativeUserDomainSchema(db);db.exec('COMMIT');await native.adapter.init();
   for(const [issued,expires,at] of [[now-10,now+1000,now],[now+10,now+1000,now],[now-1000,now,now]] as const){const h=hash();nonce(h,issued,expires);await native.adapter.createAuthChallenge(h,issued,expires);assert.equal(await native.adapter.consumeAuthChallenge(h,at),consume(h,at));vectors++;assert.equal(await native.adapter.consumeAuthChallenge(h,at),consume(h,at));vectors++;}
-  const raceHash=hash();await native.adapter.createAuthChallenge(raceHash,now-1,now+1000);const raced=await Promise.all([native.adapter.consumeAuthChallenge(raceHash,now),native.adapter.consumeAuthChallenge(raceHash,now)]);assert.equal(raced.filter(Boolean).length,1);vectors++;
+  for(let round=0;round<8;round++){const raceHash=hash();await native.adapter.createAuthChallenge(raceHash,now-1,now+1000);const raced=await Promise.all([native.adapter.consumeAuthChallenge(raceHash,now),native.adapter.consumeAuthChallenge(raceHash,now)]);assert.equal(raced.filter(Boolean).length,1);vectors++;}
+  const contended=hash();await native.adapter.createAuthChallenge(contended,now-1,now+1000);
+  await input.contentionClient.query('BEGIN');
+  try{
+   await input.contentionClient.query('SELECT pg_advisory_xact_lock_shared(634781904177021::bigint),pg_advisory_xact_lock(634781904177022::bigint)');
+   const pending=Promise.all([native.adapter.consumeAuthChallenge(contended,now),native.adapter.consumeAuthChallenge(contended,now)]);
+   const outcome=pending.then(value=>({value}),error=>({error}));
+   await delay(750);await input.contentionClient.query('COMMIT');const done=await outcome;if('error' in done)throw done.error;assert.equal(done.value.filter(Boolean).length,1);vectors++;
+  }finally{await input.contentionClient.query('ROLLBACK');}
   const first=hash(),second=hash(),foreign=hash();for(const [h,w,issued] of [[first,owner,now-2],[second,owner,now-1],[foreign,other,now-1]] as const){session(h,w,issued,now+1000);await native.adapter.createWebSession({hash:h,wallet:w,issuedAt:issued,expiresAt:now+1000});}
   assert.deepEqual(await native.adapter.listWebSessions(owner,now),list(owner,now));vectors++;
   await native.adapter.revokeWebSession(first,other);db.prepare('DELETE FROM web_sessions WHERE hash=? AND wallet=?').run(first,other);assert.deepEqual(await native.adapter.listWebSessions(owner,now),list(owner,now));vectors++;
@@ -38,6 +48,6 @@ export async function qualifyAuthDomains(input:{transport:PostgresApplicationDom
   try{proxy.arm();await assert.rejects(broken.applicationWrite('create_auth_challenge',{p_hash:lost,p_issued_at:now-1,p_expires_at:now+1000}),PostgresDomainWriteOutcomeUnknown);assert.deepEqual(proxy.observation(),{dropped:true,commands:1});assert.equal(await native.adapter.consumeAuthChallenge(lost,now),true);assert.equal(await native.adapter.consumeAuthChallenge(lost,now),false);vectors++;}finally{await broken.close();await proxy.close();}
   const reader=createPostgresApplicationDomainTransport({...input.options,role:'keryx_reader'},input.identity,input.digest);try{await assert.rejects(reader.applicationWrite('create_auth_challenge',{p_hash:hash(),p_issued_at:now-1,p_expires_at:now+1000}));vectors++;}finally{await reader.close();}
   assert.equal(input.ownerSql('SELECT count(*) FROM keryx_storage.writer;'),'0');
-  return {vectors,singleUseNonce:true,actualConcurrentConsume:true,walletScopedRevocation:true,retainedFirstSeenAndHandle:true,exactWalletLookup:true,actualLostCommitAck:true,noAutomaticRetry:true,readonlyWritesRefused:true,productionData:false,paidOperations:0};
+  return {vectors,singleUseNonce:true,actualConcurrentConsume:true,concurrentConsumeRounds:8,contendedFinancialLock:true,walletScopedRevocation:true,retainedFirstSeenAndHandle:true,exactWalletLookup:true,actualLostCommitAck:true,noAutomaticRetry:true,readonlyWritesRefused:true,productionData:false,paidOperations:0};
  }finally{native.hooks.close();db.close();}
 }

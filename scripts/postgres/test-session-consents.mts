@@ -1,7 +1,7 @@
 /** Real native domain qualification on two independently installed synthetic
  * databases. No production data/credentials, signing, vendor IO or payment. */
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync,spawnSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { Client } from "pg";
@@ -183,7 +183,7 @@ try {
   const dashboard=withBoundedReads?await qualifyDashboardMetrics({transport:nativeTransport as PostgresApplicationDomainTransport,identity,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const boundedReads=withBoundedReads?await qualifyBoundedReads({transport:nativeTransport as PostgresApplicationReadTransport,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(boundedReadsOnly){console.log(JSON.stringify({passed:true,boundedReadsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,boundedReads,dashboard,applicationBackendSwitched:false}));return;}
-  const auth=withAuth?await qualifyAuthDomains({transport:nativeTransport as PostgresApplicationDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  const auth=withAuth?await qualifyAuthDomains({contentionClient:app,transport:nativeTransport as PostgresApplicationDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(authOnly){console.log(JSON.stringify({passed:true,authOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,auth,currentTableConstraints,applicationBackendSwitched:false}));return;}
   const operational=withOperational?await qualifyOperationalDomains({transport:nativeTransport as PostgresApplicationDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(operationalOnly){console.log(JSON.stringify({passed:true,operationalOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,auth,operational,currentTableConstraints,applicationBackendSwitched:false}));return;}
@@ -294,6 +294,11 @@ try {
     ...(boundedReads?{boundedReads,dashboard}:{}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
     limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
+} catch(error) {
+  if(owned){try{const logs=spawnSync('docker',['logs','--tail','80',name],{encoding:'utf8',timeout:5000,maxBuffer:131072,windowsHide:true});
+    const messages=(String(logs.stdout)+String(logs.stderr)).split(/\r?\n/).filter(line=>line.includes(' ERROR: ')).slice(-4).map(line=>line.slice(line.indexOf(' ERROR: ')+8, line.indexOf(' ERROR: ')+248));
+    console.error(JSON.stringify({syntheticNativeFixtureErrors:messages}));}catch{}}
+  throw error;
 } finally {
   await ackProxy?.close();
   await Promise.allSettled(transports.map(transport => transport.close()));

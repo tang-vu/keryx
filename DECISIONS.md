@@ -8975,7 +8975,13 @@ Check cumulative encoded result bytes before aggregating 24 fixed list readers
 and five projected scans. Preserve their complete-result refusal, argument and
 cursor rules, and hold the existing native observation locks across both passes.
 Metric scans omit answer bodies and use the union of fields their existing callers
-consume. A per-row conversion and remaining custom families retain separate data
+consume. Fresh full-schema verification runs while holding the shared
+control lock, before taking the financial data lock. The control lock pins the
+active identity/schema generation; every current balance, nonce and CAS condition
+is still inspected under its original data lock. This removes metadata work from
+the serialized writer window while retaining both timeout limits and all fresh
+checks. A repeated nonce race behind an actual 750 ms financial lock reproduces
+the old lock timeout and qualifies the changed ordering. A per-row conversion and remaining custom families retain separate data
 and memory qualification requirements.
 
 The native dashboard uses one fixed read-only aggregate operation under the same
