@@ -101,6 +101,23 @@ queued requests. Malformed accounting, oversized results, queue saturation, read
 failure and disposal refuse; none becomes an empty successful funding history.
 These read protocols do not implement browser payment admission or settlement.
 
+The `--creator` qualification additionally composes session withdrawals and creator
+request/transfer/attestation protocols on that same bounded channel. Session
+reservation checks the retained owner proof and current liabilities, then pauses
+the active grant atomically. Prepared cancellation, signing exposure, authenticated
+publication abort and completion retain their original barriers. An actual lost
+commit acknowledgement after exposure cannot become a cancelled unsigned request.
+
+Creator requests retain the unique underlying transfer spec and an initial transfer
+claim that can be won only once. A lost claim acknowledgement is reconciled by
+reading the retained claim; retry cannot grant another initial transfer. Saved
+attestations are matched to the original request and claim, retaining their
+`request-matched-only` authority. Actual same-time history pagination is compared
+with SQLite. Session completion is exercised through those actual native creator
+protocols using unfunded synthetic signatures and a labelled recorded observation;
+it makes no vendor/chain call and supplies no production finality proof. Hosted
+treasury, complete application parity and production cutover remain pending.
+
 The current enrolled PostgreSQL/Supabase lane has explicit refusals for mainnet
 research purchases, original fulfillment, hosted treasury, owner consent and
 withdrawals. Its older sealed contract does not accept a mainnet identity. Current

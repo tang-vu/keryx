@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { Client } from "pg";
-import { nativeConsentDomainSource, nativeFundingDomainSource } from "./native-domain-source.mts";
+import { nativeConsentDomainSource, nativeFundingDomainSource, nativeWithdrawalDomainSource, nativeCreatorWithdrawalDomainSource } from "./native-domain-source.mts";
 import { qualifyFunding } from "./qualify-funding.mts";
 import { exportPostgres17SchemaContract } from "../helpers/enrolled-postgres-schema-contract.mts";
 import { postgresPoolConfiguration } from "../../lib/db/postgres/connection";
@@ -16,6 +16,10 @@ import { ARC_MAINNET_PROFILE } from "../../lib/arc-network-profile";
 import { createPostgresConsentTransport, PostgresConsentWriteOutcomeUnknown, type PostgresConsentTransport } from "../../lib/db/postgres/consent-transport";
 import { startCommitAckLossProxy } from "./commit-ack-loss.mts";
 import { createPostgresSessionTransport, type PostgresSessionTransport } from "../../lib/db/postgres/session-transport";
+import { createPostgresWithdrawalTransport, type PostgresWithdrawalTransport } from "../../lib/db/postgres/withdrawal-transport";
+import { qualifySessionWithdrawals } from "./qualify-session-withdrawals.mts";
+import { createPostgresCreatorWithdrawalTransport, type PostgresCreatorWithdrawalTransport } from "../../lib/db/postgres/creator-withdrawal-transport";
+import { qualifyCreatorWithdrawals } from "./qualify-creator-withdrawals.mts";
 
 const name = `keryx-postgres-consents-${randomUUID()}`, password = randomBytes(24).toString("hex");
 const docker = (args: string[], input?: string, timeout = 30_000) => execFileSync("docker", args,
@@ -54,8 +58,10 @@ try {
     CREATE ROLE keryx_reader LOGIN NOINHERIT CONNECTION LIMIT 4 PASSWORD '${password}';
     CREATE DATABASE native_source WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
     CREATE DATABASE native_target WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;`);
-  const withFunding = process.argv.includes("--funding");
-  const source = withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const withCreator = process.argv.includes("--creator");
+  const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
+  const withFunding = process.argv.includes("--funding") || withWithdrawals;
+  const source = withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
     sql(database, "SET statement_timeout='30s'; GRANT CREATE ON SCHEMA public TO keryx_owner; BEGIN;\n" + source.sql + "\nCOMMIT;");
@@ -74,7 +80,8 @@ try {
     client.on("error", () => {}); clients.push(client); await client.connect(); return client;
   };
   const app = await connect("keryx_app"), other = await connect("keryx_app"), reader = await connect("keryx_reader");
-  const nativeTransport = (withFunding ? createPostgresSessionTransport : createPostgresConsentTransport)({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
+  const createTransport = withCreator ? createPostgresCreatorWithdrawalTransport : withWithdrawals ? createPostgresWithdrawalTransport : withFunding ? createPostgresSessionTransport : createPostgresConsentTransport;
+  const nativeTransport = createTransport({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
   transports.push(nativeTransport);
   const issue = (value: unknown, expected = identity, digest = reference.sha256) => app.query(
     "SELECT public.storage_issue_session_grant_consent($1::jsonb,$2::text,$3::text) AS result", [JSON.stringify(expected), digest, canonicalJson(value)]);
@@ -122,7 +129,9 @@ try {
     INSERT INTO public.hosted_treasury_policies VALUES('synthetic-policy','${hosted.sessAddr}','public','{}');
     INSERT INTO public.creator_withdrawal_requests VALUES('synthetic-original','${ownerWithdrawal.sessAddr}','{}');
     INSERT INTO public.session_withdrawal_preparations(request_id,recovery_owner,signer,grant_epoch,data)
-     VALUES('synthetic-session-original','${owner}','${sessionWithdrawal.sessAddr}','${v2.grantEpoch}','{}');
+     VALUES('synthetic-session-original','${owner}','${sessionWithdrawal.sessAddr}','${v2.grantEpoch}',
+      jsonb_build_object('format','keryx-session-withdrawal-preparation-v1','network','eip155:5042','requestId','synthetic-session-original',
+       'ownerAddr','${owner}','sessAddr','${sessionWithdrawal.sessAddr}','grantEpoch','${v2.grantEpoch}')::text);
     UPDATE keryx_storage.control SET mode='active';`);
   await assert.rejects(consume(app, expired));
   for (const blocked of [hosted, ownerWithdrawal, sessionWithdrawal]) {
@@ -150,6 +159,12 @@ try {
   assert.equal(sql("native_target", "SELECT count(*) FROM keryx_storage.writer;"), "0");
   const funding = withFunding ? await qualifyFunding({ transport: nativeTransport as PostgresSessionTransport,
     ownerSql: statement => sql("native_target", statement) }) : undefined;
+  const withdrawals = withWithdrawals ? await qualifySessionWithdrawals({ transport: nativeTransport as PostgresWithdrawalTransport,
+    options: { endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, digest: reference.sha256,
+    ownerSql: statement => sql("native_target", statement), ...(withCreator ? { creatorTransport: nativeTransport as PostgresCreatorWithdrawalTransport } : {}) }) : undefined;
+  const creator = withCreator ? await qualifyCreatorWithdrawals({ transport: nativeTransport as PostgresCreatorWithdrawalTransport,
+    options: { endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, digest: reference.sha256,
+    ownerSql: statement => sql("native_target", statement) }) : undefined;
   assert.throws(() => sql("native_target", "UPDATE keryx_storage.source_contract SET source_digest=repeat('0',64);"));
   sql("native_target", "ALTER TABLE public.session_grants ADD COLUMN unexpected_drift text;");
   await assert.rejects(issue(consent()));
@@ -159,8 +174,10 @@ try {
     v1AndV2: true, expiredChallengeRefused: true, hostedAndWithdrawalBarriers: true,
     readonlyTransaction: true, unsafeDurabilityAndIsolationRefused: true, rawWriteAndContextRefused: true, contractDriftRefused: true,
     nativeTypedTransport: true, actualLostCommitAckReconciled: true, automaticWriteRetry: false, ...(funding ? { funding } : {}),
+    ...(withdrawals ? { withdrawals } : {}),
+    ...(creator ? { creator } : {}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
-    limitations: "Native consent and optional funding observation only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
+    limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
 } finally {
   await ackProxy?.close();
   await Promise.allSettled(transports.map(transport => transport.close()));

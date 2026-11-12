@@ -2,7 +2,7 @@ import type { SessionFundingAccounting } from "../session-funding-accounting";
 import type { StorageIdentity } from "../storage-identity";
 import { PostgresStorageUnavailable, type PostgresConnectionOptions } from "./connection";
 import { composePostgresConsentTransport, type PostgresConsentTransport } from "./consent-transport";
-import { createPostgresDomainChannel } from "./domain-channel";
+import { createPostgresDomainChannel, type PostgresDomainChannel } from "./domain-channel";
 
 export interface PostgresSessionTransport extends PostgresConsentTransport {
   sessionFundingAccounting(signer: string, after?: string): Promise<SessionFundingAccounting>;
@@ -17,6 +17,9 @@ const micro = (value: unknown): value is string => typeof value === "string" && 
  * eight queued requests rather than allocating a pool for every domain. */
 export function createPostgresSessionTransport(options: PostgresConnectionOptions, identity: StorageIdentity, sourceDigest: string): PostgresSessionTransport {
   const channel = createPostgresDomainChannel(options, identity, sourceDigest);
+  return composePostgresSessionTransport(channel);
+}
+export function composePostgresSessionTransport(channel: PostgresDomainChannel): PostgresSessionTransport {
   return Object.freeze({
     ...composePostgresConsentTransport(channel),
     async sessionFundingAccounting(signer: string, after?: string): Promise<SessionFundingAccounting> {
