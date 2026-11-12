@@ -244,7 +244,7 @@ function privacyPort(db: DatabaseSync, guard: (write?: boolean) => void, claims?
       const current = db.prepare(`SELECT q.data,p.visibility,p.revision,p.erased FROM query_runs q LEFT JOIN run_privacy p ON p.run_id=q.id
         WHERE q.id=? AND coalesce(p.visibility,'unlisted') IN ('public','unlisted') AND coalesce(p.erased,0)=0`).get(id);
       if (current) return { exists: true, item: { run: validatePrivacyRun(JSON.parse(String(current.data)),id), state: stateOf(current) } };
-      if (input) { const verified = await proof(id,input); if (verified) { const item = owned(id,verified); if (!item.state.erased) return { exists:true,item }; } }
+      if (input) { const verified = await proof(id,input); if (verified) { const { run, state } = owned(id,verified); if (!state.erased) return { exists:true,item:{run,state} }; } }
       return { exists: !!db.prepare("SELECT 1 FROM query_runs WHERE id=?").get(id), item: null };
     },
     async list(query) {

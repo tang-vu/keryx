@@ -49,7 +49,7 @@ jobs:
       - name: Typed operational and application contracts
         run: npm run typecheck
       - name: Bounded transport, terminal disposal and lossless row regressions
-        run: npx vitest run lib/db/postgres lib/db/postgres-business-core.test.ts scripts/postgres/typed-snapshot.test.mts scripts/postgres/ownership-history-projection.test.mts --maxWorkers=1
+        run: npx vitest run lib/db/postgres lib/db/postgres-business-core.test.ts scripts/postgres/typed-snapshot.test.mts scripts/postgres/ownership-history-projection.test.mts scripts/postgres/privacy-projection.test.mts scripts/postgres/publication-packet.test.mts --maxWorkers=1
       - name: Actual synthetic PostgreSQL transport, role isolation and snapshot copy
         run: |
           docker pull postgres:17-alpine

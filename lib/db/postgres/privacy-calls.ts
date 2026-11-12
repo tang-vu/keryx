@@ -1,0 +1,21 @@
+/** Closed native calls; input/result exceptions apply only to the named operation. */
+export const PRIVACY_CALLS=Object.freeze({
+ publicationReady:{sql:'SELECT public.storage_publication_ready($1::jsonb,$2::text) AS result',args:0,write:false,bytes:256,transaction:true},
+ publicationSave:{sql:'SELECT public.storage_publication_save($1::jsonb,$2::text,$3::text) AS result',args:1,write:true,bytes:256,inputBytes:67108864},
+ privacyRead:{sql:'SELECT public.storage_privacy_read($1::jsonb,$2::text,$3::text,$4::jsonb,$5::boolean) AS result',args:3,write:false,bytes:8008192,transaction:true},
+ privacyOwner:{sql:'SELECT public.storage_privacy_owner($1::jsonb,$2::text,$3::text,$4::jsonb,$5::boolean) AS result',args:3,write:false,bytes:8008192,transaction:true},
+ privacyDefaults:{sql:'SELECT public.storage_privacy_defaults($1::jsonb,$2::text,$3::jsonb) AS result',args:1,write:false,bytes:256,transaction:true},
+ privacySettlement:{sql:'SELECT public.storage_privacy_settlement($1::jsonb,$2::text,$3::text) AS result',args:1,write:false,bytes:65536,transaction:true},
+ privacyPending:{sql:'SELECT public.storage_privacy_pending($1::jsonb,$2::text,$3::text) AS result',args:1,write:false,bytes:8192,transaction:true},
+ privacyList:{sql:'SELECT public.storage_privacy_list($1::jsonb,$2::text,$3::jsonb) AS result',args:1,write:false,bytes:33562624,inputBytes:2097152,transaction:true},
+ privacyMemories:{sql:'SELECT public.storage_privacy_memories($1::jsonb,$2::text,$3::integer) AS result',args:1,write:false,bytes:4196352,transaction:true},
+ privacyOffers:{sql:'SELECT public.storage_privacy_offers($1::jsonb,$2::text,$3::integer) AS result',args:1,write:false,bytes:4196352,transaction:true},
+ privacyQuestions:{sql:"SELECT public.storage_privacy_slim($1::jsonb,$2::text,'questions',$3::jsonb) AS result",args:1,write:false,bytes:16777216,transaction:true},
+ privacySourceHistory:{sql:"SELECT public.storage_privacy_slim($1::jsonb,$2::text,'source_history',$3::jsonb) AS result",args:1,write:false,bytes:16777216,transaction:true},
+ privacyLearningPage:{sql:"SELECT public.storage_privacy_slim($1::jsonb,$2::text,'learning_page',$3::jsonb) AS result",args:1,write:false,bytes:16777216,transaction:true},
+ privacyArchivePage:{sql:"SELECT public.storage_privacy_slim($1::jsonb,$2::text,'archive_page',$3::jsonb) AS result",args:1,write:false,bytes:16777216,transaction:true},
+ privacyDefault:{sql:"SELECT public.storage_privacy_mutation($1::jsonb,$2::text,'default',$3::text,$4::jsonb,$5::text,$6::boolean) AS result",args:4,write:true,bytes:256},
+ privacyVisibility:{sql:"SELECT public.storage_privacy_mutation($1::jsonb,$2::text,'visibility',$3::text,$4::jsonb,$5::text,$6::boolean) AS result",args:4,write:true,bytes:512},
+ privacyErase:{sql:"SELECT public.storage_privacy_mutation($1::jsonb,$2::text,'erase',$3::text,$4::jsonb,$5::text,$6::boolean) AS result",args:4,write:true,bytes:512},
+ privacyExport:{sql:"SELECT public.storage_privacy_mutation($1::jsonb,$2::text,'export',$3::text,$4::jsonb,$5::text,$6::boolean) AS result",args:4,write:true,bytes:8008192},
+});

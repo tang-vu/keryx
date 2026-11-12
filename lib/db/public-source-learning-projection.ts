@@ -20,6 +20,15 @@ function decoded(type: string, value: unknown): unknown {
   return value;
 }
 
+/** Fixed SQLite SOURCE expression only; it conveys no publication authority. */
+export const SQLITE_PUBLIC_LEARNING_FIELDS = `CASE WHEN typeof(q.data)!='text' THEN NULL WHEN length(CAST(q.data AS BLOB))>4000000 THEN NULL
+          WHEN instr(q.data,char(0))>0 THEN NULL WHEN json_valid(q.data)=0 THEN NULL ELSE (
+          SELECT json_group_array(json_array(key,type,CASE
+            WHEN key='originalFulfillment' THEN CASE WHEN type IN ('null','false') THEN 0
+              WHEN type IN ('integer','real') THEN value!=0 WHEN type='text' THEN length(CAST(value AS BLOB))>0 ELSE 1 END
+            WHEN key IN ('id','createdAt','budget','totalSpent','totalToCreators','decisions','usage','sourceLearning','paymentMode','asker','provenance') THEN value
+            ELSE NULL END)) FROM json_each(q.data) WHERE key IN (${fields.map(key => `'${key}'`).join(",")})) END`;
+
 /** Called only inside the existing fresh guarded privacy port. The SQL snapshot
  * filters publication before loading metadata; no original body or grant cache. */
 export function readSqlitePublicLearningPage(db: DatabaseSync, input: Pick<PrivacyList, "take" | "before">): PublicSourceLearningRun[] {
@@ -32,15 +41,19 @@ export function readSqlitePublicLearningPage(db: DatabaseSync, input: Pick<Priva
       SELECT q.id,q.created_at,p.revision AS privacy_revision FROM query_runs q JOIN run_privacy p ON p.run_id=q.id
       WHERE p.visibility='public' AND p.erased=0${before} ORDER BY q.created_at DESC,q.id DESC LIMIT ?)
       SELECT q.id,q.created_at,c.privacy_revision,length(CAST(q.data AS BLOB)) AS data_bytes,
-        CASE WHEN typeof(q.data)!='text' THEN NULL WHEN length(CAST(q.data AS BLOB))>4000000 THEN NULL
-          WHEN instr(q.data,char(0))>0 THEN NULL WHEN json_valid(q.data)=0 THEN NULL ELSE (
-          SELECT json_group_array(json_array(key,type,CASE
-            WHEN key='originalFulfillment' THEN CASE WHEN type IN ('null','false') THEN 0
-              WHEN type IN ('integer','real') THEN value!=0 WHEN type='text' THEN length(CAST(value AS BLOB))>0 ELSE 1 END
-            WHEN key IN ('id','createdAt','budget','totalSpent','totalToCreators','decisions','usage','sourceLearning','paymentMode','asker','provenance') THEN value
-            ELSE NULL END)) FROM json_each(q.data) WHERE key IN (${fields.map(key => `'${key}'`).join(",")})) END AS fields
+        ${SQLITE_PUBLIC_LEARNING_FIELDS} AS fields
       FROM chosen c JOIN query_runs q ON q.id=c.id ORDER BY c.created_at DESC,c.id DESC`).all(...args);
-    return rows.map(raw => {
+    return decodeSqlitePublicLearningRows(rows);
+  } catch (error) {
+    if (error instanceof PrivacyError) throw error;
+    throw new PrivacyError("privacy_unavailable");
+  }
+}
+
+/** Pure validation of storage-filtered learning metadata; no publication grant. */
+export function decodeSqlitePublicLearningRows(rawRows:unknown):PublicSourceLearningRun[]{
+ const rows=z.array(z.unknown()).max(32).parse(rawRows);
+ return rows.map(raw => {
       const row = rowSchema.parse(raw), metadata = metadataSchema.parse(JSON.parse(row.fields));
       const values = new Map(metadata.map(([key, type, value]) => [key, { type, value }]));
       if (values.size !== metadata.length || required.some(key => !values.has(key)) ||
@@ -54,8 +67,4 @@ export function readSqlitePublicLearningPage(db: DatabaseSync, input: Pick<Priva
         paymentMode: run.paymentMode, originalFulfillment: !!run.originalFulfillment, asker: run.asker, provenance: run.provenance,
         decisions: run.decisions.map(decision => ({ sourceId: decision.sourceId })) };
     });
-  } catch (error) {
-    if (error instanceof PrivacyError) throw error;
-    throw new PrivacyError("privacy_unavailable");
-  }
 }

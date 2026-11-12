@@ -1,0 +1,14 @@
+import { describe,it,expect,vi } from 'vitest';
+import { createHash } from 'node:crypto';
+import { composePostgresPublication } from './publication-transport';
+import { PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
+import type { QueryRun } from '../../types';
+const run=():QueryRun=>({id:'synthetic-publication',createdAt:'2026-01-01T00:00:00.000Z',question:'Original question',answer:'Answer',budget:0,engine:'heuristic',totalSpent:0,totalToCreators:0,subClaims:[],decisions:[],citations:[],trace:[]});
+function fixture(readOnly=false){let closed=false;const call=vi.fn<PostgresDomainChannel['call']>(),channel:PostgresDomainChannel={get closed(){return closed;},call,async close(){closed=true;}};return {channel,call,save:composePostgresPublication(channel,readOnly)};}
+function acknowledgement(args:readonly(string|null)[]){const p=JSON.parse(args[0]!);return {id:p.row.id,originalSha256:createHash('sha256').update(Buffer.from(p.originalHex,'hex')).digest('hex')};}
+describe('atomic native publication boundary',()=>{
+ it('refuses readonly work before evaluating caller data',async()=>{const f=fixture(true),get=vi.fn();await expect(f.save({get id(){get();return 'unused';}} as QueryRun)).rejects.toThrow('privacy_unavailable');expect(get).not.toHaveBeenCalled();expect(f.call).not.toHaveBeenCalled();});
+ it('captures complete packet before awaiting and verifies the original-bound acknowledgement',async()=>{const f=fixture(),input=run();let finish!:(v:unknown)=>void;f.call.mockReturnValue(new Promise(r=>{finish=r;}));const pending=f.save(input);input.question='Mutated';const args=f.call.mock.calls[0][1];expect(JSON.parse(args[0]!).row.question).toBe('Original question');finish(acknowledgement(args));await pending;expect(f.call.mock.calls[0][0]).toBe('publicationSave');});
+ it('does not retry uncertain writes or reinterpret malformed acknowledgements as success',async()=>{const f=fixture();f.call.mockRejectedValueOnce(new PostgresDomainWriteOutcomeUnknown());await expect(f.save(run())).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);f.call.mockResolvedValueOnce({id:'synthetic-publication',originalSha256:'00'.repeat(32)});await expect(f.save(run())).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);expect(f.call).toHaveBeenCalledTimes(2);});
+ it('publishes exact known rollback refusal and keeps close terminal',async()=>{const f=fixture();f.call.mockResolvedValueOnce({error:'privacy_unavailable'});await expect(f.save(run())).rejects.toThrow('privacy_unavailable');let finish!:(v:unknown)=>void;f.call.mockReturnValue(new Promise(r=>{finish=r;}));const pending=f.save(run()),check=expect(pending).rejects.toBeInstanceOf(PostgresDomainWriteOutcomeUnknown);await f.channel.close();finish(acknowledgement(f.call.mock.calls[1][1]));await check;await expect(f.save(run())).rejects.toThrow('privacy_unavailable');});
+});

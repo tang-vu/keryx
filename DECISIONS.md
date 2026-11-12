@@ -9160,3 +9160,25 @@ transactions, before-await input capture, publication guards and terminal close.
 Only the genuine zero-argument observation factory may publish these reads.
 This does not open the complete writer, privacy/publication or payments. Rehearse
 the actual retained originals through the SOURCE producers before materialization.
+
+## Keep native publication, privacy and private derivatives atomic (2026-11-13)
+
+Preserve raw JSON originals as `json`, with exact digest-bound private
+question/history/learning/archive and prospective-erasure derivatives. Use the
+current SQLite expressions for SOURCE intake and a separately differential-tested
+pure Node producer for new writes. A fixed native operation writes the original,
+record mapping and derivatives with fresh creation intent in one transaction.
+Retained policy wins for every resave, historical ID and orphan sidecar.
+
+Filter public visibility in storage before loading any original. Resolve current
+source/item provenance in the same SQL snapshot; keep slim public metadata
+separate from original bodies. Visibility and erasure require current sessions,
+revision checks and exact request-byte idempotency. Preserve financial retention,
+erased-owner binding and tombstones. A lost actual commit acknowledgement remains
+unknown until original-bound reconciliation; no automatic write retry is added.
+
+Keep finite per-operation bounds. Refuse an oversized collection as a whole;
+do not truncate or raise every transport limit. The retained public corpus
+exceeds one collection bound, so full report callers require bounded iteration.
+Observation-factory privacy reads do not admit the complete application writer,
+text-scalar compatibility, native full-data materialization or production cutover.

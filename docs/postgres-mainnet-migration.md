@@ -435,10 +435,10 @@ belongs only to the factory-created facade, and asynchronous disposal drains its
 single bounded pool.
 
 The observation profile exposes dashboard metrics, private-profile reads, verified
-identity lists and bounded personal history/receipts. Other methods and all
+identity lists, bounded personal/ownership history and enabled privacy reads. Other methods and all
 writers refuse. `getDb()` cannot fall back to SQLite or Supabase after an explicit
 PostgreSQL selection, including an unsupported testnet declaration. This profile
-does not yet admit the full application, privacy/claims/accounts or payments.
+does not yet admit the full application, privacy/claim/account writers or payments.
 
 Use `--native-runtime` (focused `--native-runtime-only`) with the existing native
 fixture and `node:24.22.1-bookworm-slim`. It compiles the actual application factory
@@ -488,3 +488,50 @@ invalid summaries or first/last-key eligibility differences, and found no
 nonpositive retained A2A amount. All 54 cache values have the bound-envelope
 prefix, totaling 78,178 bytes. These metadata checks do not authenticate or
 decrypt the ciphertext; cache-key and new identity continuity remain required.
+
+## Native privacy and publication
+
+The privacy protocol filters current publication state in PostgreSQL before
+returning any original. Owner reads retain recorded-owner precedence, exact
+consumed-claim binding and the separately retained owner/digest after erasure.
+Mutation checks include a live SIWE session, revision and exact request bytes.
+Visibility, audit and erasure run in one scoped transaction; protected financial
+originals remain under their existing retention holds. Erasure removes ordinary
+memory and question-derived gap text, retains financial counters and installs
+digest-bound derivatives of the erased original. Tombstones prevent resaves.
+
+New publication captures one pure Node packet before awaiting. The fixed native
+operation commits the exact raw JSON, scalar record mapping, publication state
+and three private derivatives atomically. It uses no SQLite runtime connection.
+Fresh creation applies explicit visibility or the saved default; a resave,
+historical run or orphan sidecar keeps retained policy. Numeric record counters
+use decimal casts. Unknown fields in the raw JSON remain unchanged, including
+escaped NUL/surrogate fields. PostgreSQL text scalars that cannot represent the
+input refuse before submission; full writer admission still requires caller
+compatibility and failure-path qualification for those inputs.
+
+Private SOURCE producers preserve the current SQLite metadata expressions.
+Public questions, archive cards and learning pages avoid full answer/trace reads.
+Source-history metadata retains answer presence and allowlist evidence fields;
+each call resolves current source/item provenance in the same SQL snapshot.
+These private derivatives confer no visibility or enduring authorization cache.
+The zero-argument observation factory exposes enabled privacy reads only;
+creation, sharing, export audits and erasure remain refused on its reader role.
+Feature flags, manifest, credential and key changes invalidate the facade.
+
+The native fixture compares actual SQLite behavior, concurrent revisions,
+session revocation, claimed erasure, changing source/item provenance and lost
+actual publication/erasure commit acknowledgements. Uncertain writes are never
+automatically retried. `--privacy-only` qualifies the candidate protocol without
+allocating installed-factory provenance; the complete `--native-runtime` fixture
+retains the independently pinned SOURCE/catalog and genuine compiled Linux factory.
+
+`qualify-offline-intake.mts <private-snapshot> <sha256> --audit-run-privacy`
+checks all retained privacy/erasure derivatives inside the qualified offline
+native resource profile. It publishes counts/digests only. This audit does not
+materialize or enroll an application database. The retained snapshot contains
+about 108 MB of public originals. A full-body collection has a finite 32 MiB
+bound and refuses as a whole if exceeded; remaining report/list callers need
+bounded iteration before full application admission. Native materialization,
+cache-key continuity, remaining domains, full writer and compiled load/cutover
+qualification are still required.

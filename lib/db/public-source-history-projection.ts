@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import type { QueryRun } from '../types';
 import { z } from "zod";
 import { projectRecordedEvidenceProvenanceList, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { PrivacyError, privacyId, publicSourceHistoryRowSchema, validatePrivacyRun, type PublicSourceHistoryRow } from "../run-privacy/contracts";
@@ -48,6 +49,15 @@ function citationMetadata(raw: unknown) {
   return result;
 }
 
+/** Fixed SQLite SOURCE expression only; it conveys no publication authority. */
+export const SQLITE_PUBLIC_SOURCE_HISTORY_FIELDS = `CASE WHEN typeof(q.data)!='text' THEN NULL
+          WHEN length(CAST(q.data AS BLOB))>4000000 THEN NULL
+          WHEN instr(q.data,char(0))>0 THEN NULL
+          WHEN json_valid(q.data)=0 THEN NULL ELSE (
+          SELECT json_group_array(json_array(key,type,CASE WHEN key IN
+            ('id','createdAt','budget','totalSpent','totalToCreators','answer','decisions','citations','evidence','claimCoverage') THEN value ELSE NULL END))
+          FROM json_each(q.data) WHERE key IN (${fields.map(key => `'${key}'`).join(",")})) END`;
+
 /** Internal to the existing fresh guarded privacy port. No connection, caller
  * snapshot, cache, original writer or alternate storage authority is installed. */
 export async function readSqlitePublicSourceHistory(db: DatabaseSync): Promise<PublicSourceHistoryRow[]> {
@@ -56,15 +66,27 @@ export async function readSqlitePublicSourceHistory(db: DatabaseSync): Promise<P
       SELECT q.id,q.created_at FROM query_runs q JOIN run_privacy p ON p.run_id=q.id
       WHERE p.visibility='public' AND p.erased=0 ORDER BY q.created_at DESC,q.id DESC LIMIT 50)
       SELECT q.id,length(CAST(q.data AS BLOB)) AS data_bytes,
-        CASE WHEN typeof(q.data)!='text' THEN NULL
-          WHEN length(CAST(q.data AS BLOB))>4000000 THEN NULL
-          WHEN instr(q.data,char(0))>0 THEN NULL
-          WHEN json_valid(q.data)=0 THEN NULL ELSE (
-          SELECT json_group_array(json_array(key,type,CASE WHEN key IN
-            ('id','createdAt','budget','totalSpent','totalToCreators','answer','decisions','citations','evidence','claimCoverage') THEN value ELSE NULL END))
-          FROM json_each(q.data) WHERE key IN (${fields.map(key => `'${key}'`).join(",")})) END AS fields
+        ${SQLITE_PUBLIC_SOURCE_HISTORY_FIELDS} AS fields
       FROM chosen c JOIN query_runs q ON q.id=c.id ORDER BY c.created_at DESC,c.id DESC`).all();
-    const runs = rows.map(raw => {
+    const runs = decodeSqlitePublicSourceHistoryRows(rows);
+    const projected = await projectRecordedEvidenceProvenanceList(async lookup => recordedProvenance(db, lookup), runs);
+    return publicSourceHistoryRowsFromRuns(projected);
+  } catch (error) {
+    if (error instanceof PrivacyError) throw error;
+    throw new PrivacyError("privacy_unavailable");
+  }
+}
+
+/** Final allowlist only; callers must first enforce publication and live provenance. */
+export function publicSourceHistoryRowsFromRuns(runs:QueryRun[]):PublicSourceHistoryRow[]{
+ return runs.map(run=>publicSourceHistoryRowSchema.parse({id:run.id,createdAt:run.createdAt,
+  hasAnswer:typeof run.answer==='string'&&!!run.answer.trim(),citations:run.citations.slice(0,100).map(citationMetadata)}));
+}
+
+/** Pure metadata decoding; apply current source/item provenance after filtering. */
+export function decodeSqlitePublicSourceHistoryRows(rawRows:unknown){
+ const rows=z.array(z.unknown()).max(50).parse(rawRows);
+ return rows.map(raw => {
       const row = rowSchema.parse(raw), metadata = metadataSchema.parse(JSON.parse(row.fields));
       const values = new Map(metadata.map(([key, type, value]) => [key, { type, value }]));
       if (values.size !== metadata.length || required.some(key => !values.has(key))) throw new PrivacyError("privacy_unavailable");
@@ -79,11 +101,4 @@ export async function readSqlitePublicSourceHistory(db: DatabaseSync): Promise<P
       // demotion logic. Omitted required fields were type-checked in SQLite.
       return validatePrivacyRun({ ...kept, question: "", engine: "", subClaims: [], trace: [] }, row.id);
     });
-    const projected = await projectRecordedEvidenceProvenanceList(async lookup => recordedProvenance(db, lookup), runs);
-    return projected.map(run => publicSourceHistoryRowSchema.parse({ id: run.id, createdAt: run.createdAt,
-      hasAnswer: typeof run.answer === "string" && !!run.answer.trim(), citations: run.citations.slice(0, 100).map(citationMetadata) }));
-  } catch (error) {
-    if (error instanceof PrivacyError) throw error;
-    throw new PrivacyError("privacy_unavailable");
-  }
 }
