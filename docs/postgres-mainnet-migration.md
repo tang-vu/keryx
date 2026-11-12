@@ -77,6 +77,56 @@ credentials, import production data, execute payments, enroll a store or establi
 current mainnet domain parity. The dedicated preparation workflow and full required
 source checks retain their separate acceptance roles.
 
+## Online copy and offline full-data intake
+
+`create-online-snapshot-child.mts` reads the explicitly hashed private deployment
+manifest and opens its declared SQLite database read-only. Before either file is
+opened it verifies the actual dedicated systemd cgroup: 256 MiB, zero swap,
+50% CPU, 32 tasks, a private network namespace and a 30-second hard deadline.
+It uses SQLite's online backup API with a pinned read transaction, bounded page
+batches, raw schema hashes and a new exclusive private output. Only that owned
+copy is finalized to DELETE journal mode, checked for absent sidecars, fsynced
+and hashed. Existing outputs refuse without being overwritten. This operator
+tool does not load application environment, signing keys or runtime adapters.
+
+`test-online-snapshot.mts` qualifies actual native SQLite OOM enforcement,
+concurrent WAL writes, lossless int64/real/NUL-text/blob copying, outside-unit
+refusal, retained output refusal and removal of only its own systemd units.
+The production source remains open and serving during the copy.
+
+Full inventory and rehearsal run on the development host rather than extending
+the live VPS copy's resource window. `qualify-offline-intake.mts` compiles generic
+code into a uniquely labelled Docker image; the private snapshot remains at its
+original host path through an actual read-only file mount. Windows inputs require
+explicit protected ACLs restricted to the current user, SYSTEM and Administrators;
+Linux inputs require private ownership and mode. This is a separate operator
+input profile, not a relaxation of runtime credential-file admission.
+
+The child verifies actual Linux cgroup limits of 512 MiB, zero swap, 25% CPU and
+32 PIDs, no capabilities, no new privileges, a read-only root and loopback-only
+networking before input access. A verified PID-1 `timeout` enforces the hard
+deadline even if native SQLite blocks JavaScript. Qualification first proves an
+actual native-allocation OOM, kills a deliberately blocked child at its deadline,
+refuses wrong memory limits and verifies synthetic full-fidelity values.
+
+The November 13 retained rehearsal point contains 94 SQLite tables and 400,932
+rows, including 311 query runs. Its complete typed inventory finished within the
+development profile; the earlier 25-second VPS inventory refused at its deadline.
+That snapshot is a rehearsal point while the live database continues writing.
+It cannot be used as the final cutover state without a separately verified drain
+and final consistent copy.
+
+With `--rehearse`, the controller creates an isolated PostgreSQL 17 instance with
+no external network or published port, a read-only root, 3 GiB and zero swap.
+Its private data is temporary RAM-backed storage. The 512-MiB child shares only
+that loopback network, opens the source read-only and uses a separate restricted
+importer. A verified 30-minute external deadline bounds the complete staging
+copy and every-row readback. Only metadata and digests leave the child; neither
+private rows nor credentials enter the code image or evidence. Owned containers,
+the generic image and temporary bundle are removed after the operation. This
+lossless staging rehearsal grants no current application materialization,
+cache-decryption, enrollment or backend-switch authority.
+
 ## Remaining application admission
 
 The first native financial domain is qualified separately through
