@@ -41,6 +41,7 @@ import { nativePersonalHistorySource } from "./personal-history-source.mts";
 import { qualifyPersonalHistory } from "./qualify-personal-history.mts";
 import { nativeRuntimeSource } from "./native-runtime-source.mts";
 import { qualifyNativeRuntime } from "./qualify-native-runtime.mts";
+import { qualifyOriginalJson } from "./qualify-original-json.mts";
 import { createPostgresRuntimeTransport } from "../../lib/db/postgres/runtime-transport";
 import { NATIVE_READONLY_RUNTIME_PROFILE } from "../../lib/db/postgres/runtime-profile";
 import { createPostgresUserDomainTransport,type PostgresUserDomainTransport } from "../../lib/db/postgres/user-domain-transport";
@@ -210,6 +211,7 @@ try {
     if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
+  const originalJson=withNativeRuntime?await qualifyOriginalJson({transport:nativeTransport as PostgresUserDomainTransport,network:identity.network,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const nativeRuntime=withNativeRuntime?await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(nativeRuntimeOnly){console.log(JSON.stringify({passed:true,nativeRuntimeOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,nativeRuntime,applicationBackendSwitched:false}));return;}
   const personalHistory=withPersonalHistory?await qualifyPersonalHistory({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
@@ -334,6 +336,7 @@ try {
     ...(profileIdentities?{profileIdentities}:{}),
     ...(personalHistory?{personalHistory}:{}),
     ...(nativeRuntime?{nativeRuntime}:{}),
+    ...(originalJson?{originalJson}:{}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
     limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
 } catch(error) {
