@@ -32,6 +32,9 @@ import { qualifyOperationalDomains } from "./qualify-operational-domains.mts";
 import { nativeBoundedReadApplicationSource } from "./bounded-read-source.mts";
 import { qualifyBoundedReads } from "./qualify-bounded-reads.mts";
 import { qualifyDashboardMetrics } from "./qualify-dashboard-metrics.mts";
+import { nativePrivateProfilesSource } from "./private-profiles-source.mts";
+import { qualifyPrivateProfiles } from "./qualify-private-profiles.mts";
+import { createPostgresUserDomainTransport,type PostgresUserDomainTransport } from "../../lib/db/postgres/user-domain-transport";
 import { createPostgresApplicationDomainTransport,type PostgresApplicationDomainTransport } from "../../lib/db/postgres/application-domain-transport";
 import { nativeCurrentApplicationSource } from "./current-application-source.mts";
 import { inspectApplicationTableParity } from "./application-table-parity.mts";
@@ -79,8 +82,10 @@ try {
     CREATE ROLE keryx_reader LOGIN NOINHERIT CONNECTION LIMIT 4 PASSWORD '${password}';
     CREATE DATABASE native_source WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
     CREATE DATABASE native_target WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;`);
+  const privateProfilesOnly=process.argv.includes("--private-profiles-only");
+  const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly;
   const boundedReadsOnly=process.argv.includes("--bounded-reads-only");
-  const withBoundedReads=process.argv.includes("--bounded-reads")||boundedReadsOnly;
+  const withBoundedReads=process.argv.includes("--bounded-reads")||boundedReadsOnly||withPrivateProfiles;
   const operationalOnly=process.argv.includes("--operational-only");
   const withOperational=process.argv.includes("--operational")||operationalOnly||withBoundedReads;
   const authOnly=process.argv.includes("--auth-only");
@@ -96,7 +101,7 @@ try {
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
@@ -151,7 +156,7 @@ try {
     client.on("error", () => {}); clients.push(client); await client.connect(); return client;
   };
   const app = await connect("keryx_app"), other = await connect("keryx_app"), reader = await connect("keryx_reader");
-  const createTransport = withAuth ? createPostgresApplicationDomainTransport : withApplicationDomains ? createPostgresApplicationReadTransport : withOwner ? createPostgresOwnerWithdrawalTransport : withHosted ? createPostgresHostedLedgerTransport : withCreator ? createPostgresCreatorWithdrawalTransport : withWithdrawals ? createPostgresWithdrawalTransport : withFunding ? createPostgresSessionTransport : createPostgresConsentTransport;
+  const createTransport = withPrivateProfiles ? createPostgresUserDomainTransport : withAuth ? createPostgresApplicationDomainTransport : withApplicationDomains ? createPostgresApplicationReadTransport : withOwner ? createPostgresOwnerWithdrawalTransport : withHosted ? createPostgresHostedLedgerTransport : withCreator ? createPostgresCreatorWithdrawalTransport : withWithdrawals ? createPostgresWithdrawalTransport : withFunding ? createPostgresSessionTransport : createPostgresConsentTransport;
   const nativeTransport = createTransport({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
   transports.push(nativeTransport);
   if(withApplicationDomains){
@@ -180,6 +185,8 @@ try {
     if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
+  const privateProfiles=withPrivateProfiles?await qualifyPrivateProfiles({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  if(privateProfilesOnly){console.log(JSON.stringify({passed:true,privateProfilesOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,privateProfiles,applicationBackendSwitched:false}));return;}
   const dashboard=withBoundedReads?await qualifyDashboardMetrics({transport:nativeTransport as PostgresApplicationDomainTransport,identity,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const boundedReads=withBoundedReads?await qualifyBoundedReads({transport:nativeTransport as PostgresApplicationReadTransport,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(boundedReadsOnly){console.log(JSON.stringify({passed:true,boundedReadsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,boundedReads,dashboard,applicationBackendSwitched:false}));return;}
@@ -292,6 +299,7 @@ try {
     ...(auth?{auth}:{}),
     ...(operational?{operational}:{}),
     ...(boundedReads?{boundedReads,dashboard}:{}),
+    ...(privateProfiles?{privateProfiles}:{}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
     limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
 } catch(error) {

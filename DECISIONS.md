@@ -8996,3 +8996,18 @@ Actual synthetic PostgreSQL qualification compares the current SQLite dashboard
 and exercises 20,000 stored answers with a roughly 1 KiB response. This is not
 production load or complete migration acceptance; economics/leaderboard and other
 whole-report paths still require their own bounded native implementation.
+
+
+### 2026-11-12: compose current private profiles on the native guarded store
+
+Reuse the fixed PostgreSQL profile-input validator as private SOURCE, preserving
+its field/link checks and the current SQLite normalization. Add three named native
+entries on the shared pool with exact owner/network response checks, original
+creation timestamps, bounded profile/activity projections and explicit FK-cascade
+relations. Retain recorded questions when deleting mutable profile metadata.
+
+Return only the known handle-conflict outcome after its unique violation rolls
+back. Keep uncertain writes unacknowledged without retry, prevent late results
+after disposal, and refuse reader writes before input parsing. This protocol
+composition is not factory enrollment or a new authenticated session; other user
+domains, source/materialization and runtime cutover gates remain in force.
