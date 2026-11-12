@@ -191,7 +191,7 @@
     "lib/db/postgres/publication-transport.ts": "b655c34fc2122ac1318d5eb0978deed8c8c598379665ce476531880eaf4978ef",
     "lib/db/postgres/read-domain-authority.ts": "3089c5c69d2656d53038c1ae4e05d731b5d10b998f25cede2e88347271e412cf",
     "lib/db/postgres/runtime-adapter.ts": "700a7d4764b647be6c77c228a1786612d7977b5560c091a2e32ad4966c4c5b35",
-    "lib/db/postgres/runtime-profile.ts": "a5a6faa0712410440158b34aaff3290bb824fd948ee0bd8317e559adfb31580b",
+    "lib/db/postgres/runtime-profile.ts": "14421efe52727ce2f1d8b6646bef502ceab62b710e059ff75597cdb42aed5742",
     "lib/db/postgres/runtime-transport.ts": "4201db2850f9ee36a90821220f98e627335605b4d0f2026013f2c44562b1cc03",
     "lib/db/postgres/session-transport.ts": "8b63afe6da61e5a3c681c3e28bf8dbf219aa09b367beb2e2cca95db9bb0df1c0",
     "lib/db/postgres/user-domain-transport.ts": "ff9cc917d4f59f0a7e2306c6120f0bb759bd6eed3bdbbc47ead7982cf792e8a5",

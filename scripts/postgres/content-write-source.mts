@@ -16,6 +16,17 @@ export function nativeContentWriteSource(){
  });
  if(currentGapFunctions.length!==3||new Set(currentGapFunctions.map(m=>m[1])).size!==3)throw new Error('Current gap SOURCE inventory changed');
  const gaps=currentGapFunctions.map(m=>m[0].replaceAll('now()',()=>`to_char(${m[1]==='claim_gap_intent'?'to_timestamp(p_now::numeric/1000)':'transaction_timestamp()'} AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`)).join('\n');
+ const privacyInput=readFileSync(new URL('../../ops/keryx-postgres/privacy.sql',import.meta.url),'utf8').replaceAll('\r\n','\n');
+ const privacyFunctions=[...privacyInput.matchAll(/CREATE FUNCTION public\.(storage_privacy_memories|storage_privacy_offers)\([\s\S]*?\nEND;\$\$;/g)];
+ if(privacyFunctions.length!==2||new Set(privacyFunctions.map(m=>m[1])).size!==2)throw new Error('Content privacy read SOURCE inventory changed');
+ const privacyReads=privacyFunctions.map(m=>{
+  let fn=m[0].replace('CREATE FUNCTION','CREATE OR REPLACE FUNCTION');
+  for(const field of m[1]==='storage_privacy_memories'?['created_at']:['created_at','updated_at']){
+   const before=`to_char(r.${field} AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`;
+   if(fn.split(before).length!==2)throw new Error('Content privacy timestamp SOURCE changed');fn=fn.replace(before,()=>`r.${field}`);
+  }
+  return fn;
+ }).join('\n');
  const sql=base.sql+`\nSET ROLE keryx_owner;
 CREATE OR REPLACE FUNCTION keryx_storage.enter_operation(expected jsonb,selected text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 BEGIN
@@ -30,6 +41,7 @@ DO $$ DECLARE t text;BEGIN FOREACH t IN ARRAY ARRAY['sources','source_items','so
 END LOOP;END;$$;
 ${content}
 ${gaps}
+${privacyReads}
 -- Retain the same finite encrypted-cache admission as the current native SQLite
 -- writer, so a successful update cannot make the next cold factory unreadable.
 CREATE OR REPLACE FUNCTION public.storage_set_cached(p_expected_identity jsonb,p_row jsonb) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
