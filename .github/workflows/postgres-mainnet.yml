@@ -28,7 +28,7 @@ concurrency:
 jobs:
   postgres-preparation:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       KERYX_NETWORK: arcTestnet
       NEXT_PUBLIC_KERYX_NETWORK: arcTestnet
@@ -57,5 +57,5 @@ jobs:
       - name: Native consent, funding, withdrawals and retained hosted ledger
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --owner-withdrawals
 
-      - name: Current application, web auth and financial protocols
-        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --auth
+      - name: Current application, authentication, operational state and financial protocols
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --operational

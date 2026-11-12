@@ -2229,11 +2229,14 @@ export class SupabaseAdapter implements KeryxDB {
     );
     if (!match) return null;
 
-    // Fire-and-forget last_used_at update.
-    void this.domainCall("verify_api_key_2", { p_row: { last_used_at: new Date().toISOString() }, p_id: data.id as string }, (_args) => this.#sb
+    // Native sign-in waits for its audit write so refusal cannot become an
+    // unhandled rejection or publish an unaudited successful authentication.
+    const lastUsed = this.domainCall("verify_api_key_2", { p_row: { last_used_at: new Date().toISOString() }, p_id: data.id as string }, (_args) => this.#sb
       .from("api_keys")
       .update(_args.p_row)
       .eq("id", _args.p_id));
+    if (this.#native) await lastUsed;
+    else void lastUsed;
 
     return {
       walletAddress: data.wallet as string,

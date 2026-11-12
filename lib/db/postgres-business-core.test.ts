@@ -44,4 +44,14 @@ describe('native PostgreSQL shared business-code assembly',()=>{
   vi.stubEnv('CONTENT_MASTER_KEY','11'.repeat(32));const f=fixture();await f.adapter.init();f.rpc.mockResolvedValue({data:{text:'unbound legacy plaintext'},error:null});
   await expect(f.adapter.getCached('synthetic')).rejects.toThrow();
  });
+ it('waits for a native API-key audit before publishing authentication',async()=>{
+  const f=fixture();await f.adapter.init();const hash='12'.repeat(32);let finish!:(v:DomainResult)=>void,returned=false;
+  f.rpc.mockImplementation(async(name?:unknown)=>name==='verify_api_key'?{data:{id:'synthetic',key_hash:hash,wallet:'wallet',scopes:'read',source_ids:null},error:null}:await new Promise<DomainResult>(resolve=>{finish=resolve;}));
+  const request=f.adapter.verifyApiKey('synthetic',hash).then(value=>{returned=true;return value;});await vi.waitFor(()=>expect(finish).toBeTypeOf('function'));expect(returned).toBe(false);finish({data:null,error:null});expect((await request)?.keyId).toBe('synthetic');
+ });
+ it('surfaces native API-key audit failure without an unhandled background write',async()=>{
+  const f=fixture();await f.adapter.init();const hash='12'.repeat(32);
+  f.rpc.mockImplementation(async(name?:unknown)=>{if(name==='verify_api_key')return {data:{id:'synthetic',key_hash:hash,wallet:'wallet'},error:null};throw new Error('native audit unavailable');});
+  await expect(f.adapter.verifyApiKey('synthetic',hash)).rejects.toThrow('native audit unavailable');
+ });
 });
