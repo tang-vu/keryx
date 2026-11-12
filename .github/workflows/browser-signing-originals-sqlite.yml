@@ -36,6 +36,7 @@ on:
       - "eslint.config.*"
       - "package*.json"
       - "scripts/ci-browser-apt*"
+      - "scripts/ci-browser-dns*"
       - ".github/workflows/browser-signing-originals-sqlite.yml"
   workflow_dispatch:
 

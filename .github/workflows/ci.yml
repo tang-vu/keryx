@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: "24.22.1"
       - name: Check scope and aggregate failure handling
-        run: node --test scripts/ci-scope.test.mjs scripts/ci-browser-apt.test.mjs
+        run: node --test scripts/ci-scope.test.mjs scripts/ci-browser-apt.test.mjs scripts/ci-browser-dns.test.mjs
       - name: Classify PR merged-tree changes (main and unknown mean full)
         id: changes
         env:
