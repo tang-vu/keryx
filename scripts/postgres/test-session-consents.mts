@@ -7,7 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { Client } from "pg";
 import { nativeConsentDomainSource, nativeFundingDomainSource, nativeWithdrawalDomainSource, nativeCreatorWithdrawalDomainSource, nativeHostedLedgerSource, nativeOwnerWithdrawalSource } from "./native-domain-source.mts";
 import { qualifyFunding } from "./qualify-funding.mts";
-import { POSTGRES17_SCHEMA_CONTRACT_BODY } from "../helpers/enrolled-postgres-schema-contract.mts";
+import { nativePostgres17DescriptorBody } from './native-catalog-body.mts';
 import { exportNativePostgresSchemaContract } from "./native-contract.mts";
 import { postgresPoolConfiguration } from "../../lib/db/postgres/connection";
 import { STORAGE_MAINNET_PROFILE_DIGEST, storageIdentityDigest, type StorageIdentity } from "../../lib/db/storage-identity";
@@ -44,6 +44,8 @@ import { qualifyNativeRuntime } from "./qualify-native-runtime.mts";
 import { qualifyOriginalJson } from "./qualify-original-json.mts";
 import { nativePrivacySource } from './privacy-source.mts';
 import { qualifyPrivacy } from './qualify-privacy.mts';
+import { qualifyWorkspaces } from './qualify-workspaces.mts';
+import { nativeWorkspacesSource } from './workspaces-source.mts';
 import { qualifyOwnershipHistory } from './qualify-ownership-history.mts';
 import { qualifyRunClaims } from "./qualify-run-claims.mts";
 import { createPostgresRuntimeTransport } from "../../lib/db/postgres/runtime-transport";
@@ -79,7 +81,7 @@ let ackProxy: Awaited<ReturnType<typeof startCommitAckLossProxy>> | undefined;
 process.once("exit", () => { if (owned) try { docker(["rm", "-f", name]); } catch {} });
 async function qualify(){
 try {
-  const image = docker(["image", "inspect", "postgres:17-alpine", "--format", "{{.Id}}"] ).trim();
+  const image = docker(["image", "inspect", "postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065", "--format", "{{.Id}}"] ).trim();
   owned = true;
   docker(["run", "-d", "--name", name, "--user", "postgres", "--read-only", "--memory", "768m", "--cpus", "1", "--pids-limit", "64",
     "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--tmpfs", "/var/lib/postgresql/data:rw,nosuid,uid=70,gid=70,size=256m",
@@ -105,9 +107,10 @@ try {
   const runClaimsOnly=process.argv.includes("--run-claims-only");
   const ownershipHistoryOnly=process.argv.includes("--ownership-history-only");
   const privacyOnly=process.argv.includes("--privacy-only");
+  const workspacesOnly=process.argv.includes("--workspaces-only");
   const runtimeSourceReferenceOnly=process.argv.includes("--runtime-source-reference-only");
   const withNativeRuntime=process.argv.includes("--native-runtime")||nativeRuntimeOnly||nativeFactoryOnly||runtimeSourceReferenceOnly||originalJsonOnly||runClaimsOnly||ownershipHistoryOnly;
-  const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly;
+  const withPersonalHistory=process.argv.includes("--personal-history")||personalHistoryOnly||withNativeRuntime||privacyOnly||workspacesOnly;
   const withProfileIdentities=process.argv.includes("--profile-identities")||profileIdentitiesOnly||withPersonalHistory;
   const withPrivateProfiles=process.argv.includes("--private-profiles")||privateProfilesOnly||withProfileIdentities;
   const boundedReadsOnly=process.argv.includes("--bounded-reads-only");
@@ -127,7 +130,7 @@ try {
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = privacyOnly ? nativePrivacySource() : withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = workspacesOnly ? nativeWorkspacesSource() : privacyOnly ? nativePrivacySource() : withNativeRuntime ? nativeRuntimeSource() : withPersonalHistory ? nativePersonalHistorySource() : withProfileIdentities ? nativeProfileIdentitiesSource() : withPrivateProfiles ? nativePrivateProfilesSource() : withBoundedReads ? nativeBoundedReadApplicationSource() : withOperational ? nativeOperationalApplicationSource() : withAuth ? nativeAuthApplicationSource() : currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
@@ -136,7 +139,7 @@ try {
   }
   let catalogMeasurement:unknown;
   if(withApplicationReference){
-    catalogMeasurement=JSON.parse(sql('native_source',`CREATE FUNCTION pg_temp.baseline_catalog() RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $baseline$${POSTGRES17_SCHEMA_CONTRACT_BODY}$baseline$;
+    catalogMeasurement=JSON.parse(sql('native_source',`CREATE FUNCTION pg_temp.baseline_catalog() RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $baseline$${nativePostgres17DescriptorBody()}$baseline$;
       CREATE FUNCTION pg_temp.measure_catalog() RETURNS jsonb LANGUAGE plpgsql AS $check$
       DECLARE baseline jsonb;observed jsonb;started timestamptz;b_ms numeric;n_ms numeric;
       BEGIN started:=clock_timestamp();baseline:=pg_temp.baseline_catalog();b_ms:=extract(epoch from clock_timestamp()-started)*1000;
@@ -148,7 +151,24 @@ try {
   const describe = "SET statement_timeout='5s'; SELECT keryx_storage.catalog_contract();";
   const reference = exportNativePostgresSchemaContract(sql("native_source", describe));
   const target = exportNativePostgresSchemaContract(sql("native_target", describe));
+  if(target.sha256!==reference.sha256){
+    const expected=JSON.parse(reference.canonicalJson),actual=JSON.parse(target.canonicalJson);
+    for(const key of Object.keys(expected.sections))if(JSON.stringify(expected.sections[key])!==JSON.stringify(actual.sections[key]))
+      console.error(JSON.stringify({syntheticCatalogMismatch:key,source:expected.sections[key],target:actual.sections[key]}));
+  }
   assert.equal(target.sha256, reference.sha256, "Target must match a separately built SOURCE before its seal is inserted");
+  // PG17.12's per-attribute WAL versions differ across the two fresh installs.
+  // Both real schema options must still invalidate admission independently.
+  const backendVersion=Number(sql('native_source','SHOW server_version_num;'));
+  assert.equal(backendVersion,170012,'The reviewed native fixture engine is pinned');
+  const sourceVersions=sql('native_source',"SELECT attoptions::text FROM pg_attribute WHERE attrelid='keryx_storage.identity'::regclass AND attname='identity';"),targetVersions=sql('native_target',"SELECT attoptions::text FROM pg_attribute WHERE attrelid='keryx_storage.identity'::regclass AND attname='identity';");
+  assert.match(sourceVersions,/pg_attver=[0-9]+/);assert.notEqual(sourceVersions,targetVersions);
+  for(const option of ['n_distinct','n_distinct_inherited']){
+    sql('native_source',`ALTER TABLE keryx_storage.identity ALTER COLUMN identity SET (${option}=0.5);`);
+    assert.notEqual(exportNativePostgresSchemaContract(sql('native_source',describe)).sha256,reference.sha256,'Real column options must remain in the contract');
+    sql('native_source',`ALTER TABLE keryx_storage.identity ALTER COLUMN identity RESET (${option});`);
+    assert.equal(exportNativePostgresSchemaContract(sql('native_source',describe)).sha256,reference.sha256);
+  }
   if(withNativeRuntime){
     assert.equal(sql('native_source',`SELECT encode(sha256(convert_to((${literal(JSON.parse(reference.canonicalJson))})::text,'UTF8')),'hex');`),reference.sha256,'Independent SOURCE wire digest must match the native constraint');
     assert.throws(()=>sql('native_source',"INSERT INTO keryx_storage.source_contract VALUES(true,'{}'::jsonb,'"+'00'.repeat(32)+"');"),/source_contract_digest/);
@@ -220,6 +240,10 @@ try {
     if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
   }
 
+  if(workspacesOnly){
+    const workspaces=await qualifyWorkspaces({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
+    console.log(JSON.stringify({passed:true,workspacesOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,workspaces,runtimeQualified:false,applicationBackendSwitched:false}));return;
+  }
   if(nativeFactoryOnly){
     const nativeRuntime=await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)});
     console.log(JSON.stringify({passed:true,nativeFactoryOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,nativeRuntime,applicationBackendSwitched:false}));return;
@@ -235,8 +259,9 @@ try {
   const originalJson=withNativeRuntime?await qualifyOriginalJson({transport:nativeTransport as PostgresUserDomainTransport,network:identity.network,ownerSql:statement=>sql('native_target',statement)}):undefined;
   if(originalJsonOnly){console.log(JSON.stringify({passed:true,originalJsonOnly:true,sourceSha256:source.sha256,referenceContract:reference.sha256,originalJson,runtimeQualified:false,applicationBackendSwitched:false}));return;}
   const privacy=withNativeRuntime?await qualifyPrivacy({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
+  const workspaces=withNativeRuntime?await qualifyWorkspaces({options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
   const nativeRuntime=withNativeRuntime?await qualifyNativeRuntime({postgresContainer:name,password,identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
-  if(nativeRuntimeOnly){console.log(JSON.stringify({passed:true,nativeRuntimeOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,originalJson,privacy,nativeRuntime,applicationBackendSwitched:false}));return;}
+  if(nativeRuntimeOnly){console.log(JSON.stringify({passed:true,nativeRuntimeOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,originalJson,privacy,workspaces,nativeRuntime,applicationBackendSwitched:false}));return;}
   const personalHistory=withPersonalHistory?await qualifyPersonalHistory({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement),originalProjection:withNativeRuntime}):undefined;
   if(personalHistoryOnly){console.log(JSON.stringify({passed:true,personalHistoryOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,personalHistory,applicationBackendSwitched:false}));return;}
   const profileIdentities=withProfileIdentities?await qualifyProfileIdentities({transport:nativeTransport as PostgresUserDomainTransport,options:{endpoint:{kind:'loopback',port},database:'native_target',role:'keryx_app',password},identity,digest:reference.sha256,ownerSql:statement=>sql('native_target',statement)}):undefined;
@@ -360,6 +385,7 @@ try {
     ...(personalHistory?{personalHistory}:{}),
     ...(nativeRuntime?{nativeRuntime}:{}),
     ...(privacy?{privacy}:{}),
+    ...(workspaces?{workspaces}:{}),
     ...(originalJson?{originalJson}:{}),
     ...(runClaims?{runClaims}:{}),
     ...(ownershipHistory?{ownershipHistory}:{}),

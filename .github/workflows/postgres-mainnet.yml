@@ -53,6 +53,7 @@ jobs:
       - name: Actual synthetic PostgreSQL transport, role isolation and snapshot copy
         run: |
           docker pull postgres:17-alpine
+          docker pull postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065
           docker pull node:24.22.1-bookworm-slim
           node --import tsx --no-warnings scripts/postgres/test-bootstrap.mts
       - name: Native consent, funding, withdrawals and retained hosted ledger

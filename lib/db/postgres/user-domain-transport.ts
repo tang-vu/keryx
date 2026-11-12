@@ -16,6 +16,8 @@ import type { RunOwnershipHistoryStore } from '../../run-claims/history';
 import { composePostgresPrivacy } from './privacy-transport';
 import type { RunPrivacyStore } from '../../run-privacy/contracts';
 import { composePostgresPublication } from './publication-transport';
+import { composePostgresBibliographies } from './bibliographies-transport';
+import { composePostgresWatches } from './watches-transport';
 export interface PostgresUserDomainTransport extends PostgresApplicationDomainTransport {
  readonly privateProfiles:PrivateProfilesStore;
  readonly profileIdentities:ProfileIdentitiesStore;
@@ -24,6 +26,8 @@ export interface PostgresUserDomainTransport extends PostgresApplicationDomainTr
  readonly runOwnershipHistory:RunOwnershipHistoryStore;
  readonly runPrivacy:RunPrivacyStore;
  readonly saveQueryRun:ReturnType<typeof composePostgresPublication>;
+ readonly privateBibliographies:ReturnType<typeof composePostgresBibliographies>;
+ readonly topicWatches:ReturnType<typeof composePostgresWatches>;
 }
 /** Same native pool/identity; a protocol composition confers no installed
  * factory provenance, authenticated web session or another owner's authority. */
@@ -62,5 +66,5 @@ export function composePostgresUserDomainTransport(channel:PostgresDomainChannel
    try{z.object({deleted:z.literal(true)}).strict().parse(value);}catch{throw new PostgresDomainWriteOutcomeUnknown();}
   },
  } satisfies PrivateProfilesStore);
- return Object.freeze({...composePostgresApplicationDomainTransport(channel,expected),privateProfiles,profileIdentities:composePostgresProfileIdentities(channel,readOnly),personalHistory:composePostgresPersonalHistory(channel),runClaims:composePostgresRunClaims(channel,expected.network,readOnly),runOwnershipHistory:composePostgresOwnershipHistory(channel,expected.network),runPrivacy:composePostgresPrivacy(channel,expected.network,readOnly,claimsEnabled),saveQueryRun:composePostgresPublication(channel,readOnly)});
+ return Object.freeze({...composePostgresApplicationDomainTransport(channel,expected),privateProfiles,profileIdentities:composePostgresProfileIdentities(channel,readOnly),personalHistory:composePostgresPersonalHistory(channel),runClaims:composePostgresRunClaims(channel,expected.network,readOnly),runOwnershipHistory:composePostgresOwnershipHistory(channel,expected.network),runPrivacy:composePostgresPrivacy(channel,expected.network,readOnly,claimsEnabled),saveQueryRun:composePostgresPublication(channel,readOnly),privateBibliographies:composePostgresBibliographies(channel,readOnly),topicWatches:composePostgresWatches(channel,readOnly)});
 }

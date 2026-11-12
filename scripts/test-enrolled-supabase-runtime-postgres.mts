@@ -39,7 +39,10 @@ try {
   }
   owned.add(name); // Register before creation, including timeout-after-create.
   docker(["run", "-d", "--name", name, "--network", "none", "--memory", "512m", "--cpus", "1",
-    "-e", "POSTGRES_HOST_AUTH_METHOD=trust", "postgres:17-alpine"]);
+    // This retained protocol's immutable descriptor predates PG17.12's internal
+    // pg_attver metadata. Run its exact qualified engine; native migration
+    // qualification separately covers the security-patched PG17.12 engine.
+    "-e", "POSTGRES_HOST_AUTH_METHOD=trust", "postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24"]);
   const startupDeadline = performance.now() + 30_000;
   let ready = false;
   while (performance.now() < startupDeadline) {
