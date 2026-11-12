@@ -8867,3 +8867,19 @@ original request and claim. Request matching never implies chain finality. Quali
 concurrent transitions, lost exposure/claim acknowledgements and actual equal-time
 cursor paging against SQLite on native PostgreSQL. This protocol composition still
 does not admit a complete application backend or a production cutover.
+
+## Retain hosted custody roles and aggregate owner liabilities on PostgreSQL (2026-11-12)
+
+Bind retained hosted policies to the immutable store identity and their historical
+public/private signer role. Read original authorization/payment/submission tuples
+before reporting confirmed spend, and retain exposure for pending or failed
+originals. Keep submission single use after lost acknowledgements; neither a
+transport error nor confirmation failure renews the original.
+
+Creator owner withdrawal admission compares all retained session, hosted and
+withdrawal liabilities in the native writer transaction. Pause active grants
+without resetting cumulative spend, and complete only against the exact saved
+request and attestation. Native fixtures compare these operations with SQLite
+using unfunded signatures and labelled synthetic recorded observations. This
+ledger increment grants no new hosted authorization/private execution admission,
+funding, policy renewal, complete backend readiness or production cutover.

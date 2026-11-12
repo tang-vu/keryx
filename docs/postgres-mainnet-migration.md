@@ -118,6 +118,22 @@ protocols using unfunded synthetic signatures and a labelled recorded observatio
 it makes no vendor/chain call and supplies no production finality proof. Hosted
 treasury, complete application parity and production cutover remain pending.
 
+The `--owner-withdrawals` profile adds the retained hosted ledger and creator owner
+withdrawals. Policy storage remains bound to the exact immutable store identity
+and historical public/private custody role. Accounting checks original public
+payment tuples and private submission/confirmation dependencies, retains failed
+and pending exposure, and never treats a missing proof as zero spent. Native
+submission is single use; an actual lost commit acknowledgement does not renew it.
+
+Owner withdrawal admission compares the complete current local liability baseline,
+checks fresh available capacity, and pauses grants without clearing retained
+consumption. Completion requires the exact saved original request and attestation.
+Synthetic recorded observations are explicitly labelled and make no chain request.
+The current fixture adds 40 hosted-ledger and eight owner-withdrawal comparisons;
+it does not qualify new hosted authorization or private execution admission.
+Those protocols, complete application composition, source/domain parity and the
+production data transfer/cutover remain required before backend selection.
+
 The current enrolled PostgreSQL/Supabase lane has explicit refusals for mainnet
 research purchases, original fulfillment, hosted treasury, owner consent and
 withdrawals. Its older sealed contract does not accept a mainnet identity. Current
