@@ -8917,3 +8917,21 @@ path retains identity-bound authentication. This assembly is not an installed
 factory or provenance, attaches no ordinary optional ports, and does not admit
 production while current domain, report-memory, data-transfer and cutover gates
 remain open. Preserve the ordinary and enrolled Supabase paths and test them.
+
+
+### 2026-11-12: complete the current application table source without rounding revisions
+
+Add the remaining 34 current mainnet tables, nine columns and 22 indexes as fixed
+native SOURCE declarations. Require their SQLite source-declaration hashes to
+match before independently installing and comparing source/target metadata.
+Transient writer rows must be empty and use native transaction IDs; no copied
+SQLite writer row grants a native capability. The existing additional legacy
+policy projection is not current owner-consent authority.
+
+A differential test exposed PostgreSQL bigint assignment rounding `0.5` into a
+stored integer. Use a bounded NUMERIC affinity domain in the newly ported tables
+and preserve explicit integral/int64 checks plus each source field bound. Keep
+byte counts in UTF-8, ASCII identifier rules and JSON kind/length constraints.
+Retain original mainnet challenge metadata/context. This completes the table
+source only: optional-domain mutation/trigger semantics and exact materialization
+remain required before any installed factory or production switch.

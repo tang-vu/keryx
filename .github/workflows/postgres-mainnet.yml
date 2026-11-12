@@ -57,5 +57,5 @@ jobs:
       - name: Native consent, funding, withdrawals and retained hosted ledger
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --owner-withdrawals
 
-      - name: Application reads, business decoders and finance on independent source/target
-        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --application-domains
+      - name: Current application tables, read decoders and financial protocols
+        run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --current-application-tables

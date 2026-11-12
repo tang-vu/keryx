@@ -24,6 +24,9 @@ import { createPostgresHostedLedgerTransport, type PostgresHostedLedgerTransport
 import { qualifyHostedLedger } from "./qualify-hosted-ledger.mts";
 import { createPostgresOwnerWithdrawalTransport, type PostgresOwnerWithdrawalTransport } from "../../lib/db/postgres/owner-withdrawal-transport";
 import { qualifyOwnerWithdrawals } from "./qualify-owner-withdrawals.mts";
+import { qualifyCurrentTableConstraints } from "./qualify-current-tables.mts";
+import { nativeCurrentApplicationSource } from "./current-application-source.mts";
+import { inspectApplicationTableParity } from "./application-table-parity.mts";
 import { assembleNativePostgresBusinessCore } from "../../lib/db/supabase-adapter";
 import { createPostgresReadDomainAuthority } from "../../lib/db/postgres/read-domain-authority";
 import { nativeApplicationDomainsReferenceSource } from "./application-domains-source.mts";
@@ -68,8 +71,10 @@ try {
     CREATE ROLE keryx_reader LOGIN NOINHERIT CONNECTION LIMIT 4 PASSWORD '${password}';
     CREATE DATABASE native_source WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
     CREATE DATABASE native_target WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;`);
+  const currentTables=process.argv.includes("--current-application-tables");
+  const inventoryOnly=process.argv.includes("--inventory-only");
   const applicationDomainsOnly=process.argv.includes("--application-domains-only");
-  const withApplicationDomains=process.argv.includes("--application-domains")||applicationDomainsOnly;
+  const withApplicationDomains=process.argv.includes("--application-domains")||applicationDomainsOnly||inventoryOnly||currentTables;
   const catalogOnly=process.argv.includes("--catalog-only");
   const withApplicationReference = process.argv.includes("--application-financial-reference")||catalogOnly||withApplicationDomains;
   const withOwner = process.argv.includes("--owner-withdrawals") || withApplicationReference;
@@ -77,7 +82,7 @@ try {
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = currentTables ? nativeCurrentApplicationSource() : withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
@@ -99,6 +104,16 @@ try {
   const reference = exportPostgres17SchemaContract(JSON.parse(sql("native_source", describe)));
   const target = exportPostgres17SchemaContract(JSON.parse(sql("native_target", describe)));
   assert.equal(target.sha256, reference.sha256, "Target must match a separately built SOURCE before its seal is inserted");
+  let currentTableConstraints:unknown;
+  if(currentTables){
+    const inventory=inspectApplicationTableParity(reference.canonicalJson);
+    assert.equal(inventory.sqliteTables,93);assert.equal(inventory.sqliteColumns,601);assert.deepEqual(inventory.missingTables,[]);
+    assert.deepEqual(inventory.missingColumns.map(t=>({name:t.name,columns:t.columns.map(c=>c.name)})),[
+      {name:'browser_journal_writer',columns:['id']},{name:'browser_signing_v2_writer',columns:['id']},{name:'browser_signing_v3_writer',columns:['id']}]);
+    assert.equal(sql('native_target','SELECT (SELECT count(*) FROM public.browser_journal_writer)+(SELECT count(*) FROM public.browser_signing_v2_writer)+(SELECT count(*) FROM public.browser_signing_v3_writer);'),'0');
+    currentTableConstraints=qualifyCurrentTableConstraints(statement=>sql('native_target',statement));
+  }
+  if(inventoryOnly){console.log(JSON.stringify({passed:true,sourceSha256:source.sha256,referenceContract:reference.sha256,currentTableConstraints,schemaInventory:inspectApplicationTableParity(reference.canonicalJson)}));return;}
   if(withApplicationReference){
     // Raw source is below its bound, but JSON escaping makes one descriptor
     // exceed its separate field bound. Refuse before the final aggregation.
@@ -252,6 +267,7 @@ try {
     ...(hostedLedger ? { hostedLedger } : {}),
     ...(ownerWithdrawals ? { ownerWithdrawals } : {}),
     ...(withApplicationReference?{applicationFinancialReference:true,catalogMeasurement,completeApplicationAdmitted:false}:{}),
+    ...(currentTables?{currentTableConstraints}:{}),
     paidOperations: 0, productionDataRead: false, applicationBackendSwitched: false,
     limitations: "Native consent/funding and explicitly selected withdrawal protocols only. Remaining financial protocols, full application/profile parity and production cutover are not admitted." }));
 } finally {
