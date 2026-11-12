@@ -7,7 +7,8 @@ SET ROLE keryx_owner;
 CREATE TABLE keryx_storage.identity(singleton boolean PRIMARY KEY CHECK(singleton),identity jsonb NOT NULL,
  identity_digest text NOT NULL CHECK(identity_digest ~ '^[0-9a-f]{64}$'));
 CREATE TABLE keryx_storage.source_contract(singleton boolean PRIMARY KEY CHECK(singleton),expected_metadata jsonb NOT NULL,
- source_digest text NOT NULL CHECK(source_digest ~ '^[0-9a-f]{64}$'));
+ source_digest text NOT NULL CHECK(source_digest ~ '^[0-9a-f]{64}$'),
+ CONSTRAINT source_contract_digest CHECK(source_digest=encode(sha256(convert_to(expected_metadata::text,'UTF8')),'hex')));
 CREATE TABLE keryx_storage.control(singleton boolean PRIMARY KEY CHECK(singleton),mode text NOT NULL CHECK(mode IN('held','active','retired')),
  origin text NOT NULL DEFAULT 'https://keryx.cc');
 INSERT INTO keryx_storage.control(singleton,mode) VALUES(true,'held');
@@ -86,7 +87,9 @@ BEGIN
  -- data; otherwise a full catalog scan consumes every competing writer's lock
  -- deadline. No successful metadata check is cached or shared across calls.
  SELECT * INTO contract FROM keryx_storage.source_contract WHERE singleton;
- IF NOT FOUND OR digest IS DISTINCT FROM contract.source_digest OR contract.expected_metadata IS DISTINCT FROM keryx_storage.catalog_contract()
+ IF NOT FOUND OR digest IS DISTINCT FROM contract.source_digest
+  OR digest IS DISTINCT FROM encode(sha256(convert_to(contract.expected_metadata::text,'UTF8')),'hex')
+  OR contract.expected_metadata IS DISTINCT FROM keryx_storage.catalog_contract()
  THEN RAISE EXCEPTION 'native storage source contract unavailable'; END IF;
  -- All current balances, originals, nonces and CAS conditions are still read
  -- and changed only after this operation obtains its shared/exclusive data lock.

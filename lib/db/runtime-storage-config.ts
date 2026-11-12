@@ -5,7 +5,10 @@ import { validateStorageIdentity, type StorageIdentity } from "./storage-identit
 
 /** Node-only authority configuration. Never import into browser/shared config. */
 export const STORAGE_MANIFEST_MAX_BYTES = 8192;
-export type StorageBackend = Readonly<{ kind: "sqlite"; databasePath: string } | { kind: "supabase"; url: string }>;
+export type PostgresStorageBackend=Readonly<{kind:"postgres";database:string;sourceDigest:string;
+  endpoint:Readonly<{kind:"loopback";port:number}|{kind:"unix";directory:string;port:number}>;
+  credentialPaths:Readonly<{application:string;reader:string}>}>;
+export type StorageBackend = Readonly<{ kind: "sqlite"; databasePath: string } | { kind: "supabase"; url: string } | PostgresStorageBackend>;
 export interface StorageDeploymentManifest {
   readonly format: "keryx-storage-deployment-v1";
   readonly identity: Readonly<StorageIdentity>;
@@ -33,7 +36,7 @@ function targetStat(target: string) {
   return stat;
 }
 /** Expected artifact inspection may describe a lost source; it never opens or accepts that store. */
-function declaredSqliteTarget(target: string): void {
+function declaredFileTarget(target: string): void {
   if (target.length > 2048 || !isAbsolute(target) || resolve(target) !== target || target.includes("\0")) refuse();
   const root = parse(target).root, parts = relative(root, target).split(sep);
   let current = root;
@@ -86,7 +89,7 @@ export function inspectStorageDeploymentManifest(env: Readonly<Record<string, st
     if (selected?.kind === "sqlite") {
       const fields = exactKeys(selected, "databasePath,kind");
       if (typeof fields.databasePath !== "string") refuse();
-      declaredSqliteTarget(fields.databasePath);
+      declaredFileTarget(fields.databasePath);
       backend = Object.freeze({ kind: "sqlite", databasePath: fields.databasePath });
     } else if (selected?.kind === "supabase") {
       const fields = exactKeys(selected, "kind,url");
@@ -94,6 +97,26 @@ export function inspectStorageDeploymentManifest(env: Readonly<Record<string, st
       const url = new URL(fields.url);
       if (url.protocol !== "https:" || url.username || url.password || url.origin !== fields.url) refuse();
       backend = Object.freeze({ kind: "supabase", url: fields.url });
+    } else if(selected?.kind==="postgres"){
+      const fields=exactKeys(selected,"credentialPaths,database,endpoint,kind,sourceDigest"),paths=exactKeys(fields.credentialPaths,"application,reader");
+      if(typeof fields.database!=="string"||!/^[a-z][a-z0-9_]{0,62}$/.test(fields.database)
+        ||typeof fields.sourceDigest!=="string"||!/^[a-f0-9]{64}$/.test(fields.sourceDigest)
+        ||typeof paths.application!=="string"||typeof paths.reader!=="string"||paths.application===paths.reader)refuse();
+      declaredFileTarget(paths.application);declaredFileTarget(paths.reader);
+      const candidate=fields.endpoint as {kind?:unknown};let endpoint:PostgresStorageBackend["endpoint"];
+      if(candidate?.kind==="loopback"){
+        const value=exactKeys(candidate,"kind,port");
+        if(typeof value.port!=="number"||!Number.isSafeInteger(value.port)||value.port<1||value.port>65535)refuse();
+        endpoint=Object.freeze({kind:"loopback",port:value.port});
+      }else if(candidate?.kind==="unix"){
+        const value=exactKeys(candidate,"directory,kind,port");
+        if(typeof value.port!=="number"||!Number.isSafeInteger(value.port)||value.port<1||value.port>65535||typeof value.directory!=="string"
+          ||value.directory.length>1024||!/^\/(?:[a-zA-Z0-9_.-]+\/)*[a-zA-Z0-9_.-]+$/.test(value.directory)
+          ||value.directory.split("/").some(part=>part==="."||part===".."))refuse();
+        endpoint=Object.freeze({kind:"unix",directory:value.directory,port:value.port});
+      }else refuse();
+      backend=Object.freeze({kind:"postgres",database:fields.database,sourceDigest:fields.sourceDigest,endpoint,
+        credentialPaths:Object.freeze({application:paths.application,reader:paths.reader})});
     } else refuse();
     return Object.freeze({ format: "keryx-storage-deployment-v1", identity, backend });
   } catch { throw new RuntimeStorageRefused(); }
@@ -110,7 +133,9 @@ export function readRuntimeStorageDeployment(): Readonly<StorageDeploymentManife
   if (current.backend.kind === "sqlite") {
     try { targetStat(current.backend.databasePath); } catch { refuse(); }
     if (process.env.KERYX_SQLITE_PATH !== undefined && process.env.KERYX_SQLITE_PATH !== current.backend.databasePath) refuse();
-  } else if (process.env.NEXT_PUBLIC_SUPABASE_URL !== current.backend.url || !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) refuse();
+  } else if(current.backend.kind==="supabase"){
+    if(process.env.NEXT_PUBLIC_SUPABASE_URL !== current.backend.url || !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim())refuse();
+  } else if(process.env.KERYX_SQLITE_PATH||process.env.NEXT_PUBLIC_SUPABASE_URL||process.env.SUPABASE_SERVICE_ROLE_KEY)refuse();
   const manifestPath = process.env.KERYX_STORAGE_MANIFEST!;
   if (!runtimeSnapshot) runtimeSnapshot = { manifestPath, deployment: current };
   else if (manifestPath !== runtimeSnapshot.manifestPath || canonicalJson(current) !== canonicalJson(runtimeSnapshot.deployment)) refuse();

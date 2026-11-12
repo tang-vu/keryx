@@ -4,9 +4,10 @@ import { readRuntimeStorageDeployment } from "./runtime-storage-config";
 import { createEnrolledSqliteAdapter, createReadonlyEnrolledSqliteAdapter, assertEnrolledSqliteAdapter } from "./enrolled-sqlite-adapter";
 import { createEnrolledSupabaseAdapter, createReadonlyEnrolledSupabaseAdapter, closeEnrolledSupabaseAdapter } from "./enrolled-supabase-adapter";
 import { storagePaymentProfile, refuseStorage } from "./storage-identity";
+import { createPostgresRuntimeAdapter,createReadonlyPostgresRuntimeAdapter,closePostgresRuntimeAdapter } from "./postgres/runtime-adapter";
 import type { KeryxDB } from "./keryx-db";
 
-const readonlyClosers = new WeakMap<KeryxDB, () => void>();
+const readonlyClosers = new WeakMap<KeryxDB, () => void | Promise<void>>();
 
 /** Application role only: verified storage access grants neither wallet custody nor funding-executor authority. */
 export async function createApplicationStorage(): Promise<KeryxDB | undefined> {
@@ -16,8 +17,10 @@ export async function createApplicationStorage(): Promise<KeryxDB | undefined> {
   if (profile === ARC_TESTNET_PROFILE && process.env.KERYX_STORAGE_MANIFEST === undefined) return undefined;
   const deployment = readRuntimeStorageDeployment();
   if (storagePaymentProfile(deployment.identity) !== profile) refuseStorage("identity_mismatch");
+  if(profile===ARC_TESTNET_PROFILE&&deployment.backend.kind==="postgres")refuseStorage("invalid_profile");
   if (profile === ARC_TESTNET_PROFILE) return undefined;
   if (deployment.identity.authorityMode !== "mainnet-real") refuseStorage("identity_mismatch");
+  if(deployment.backend.kind==="postgres")return createPostgresRuntimeAdapter();
   return deployment.backend.kind === "sqlite" ? createEnrolledSqliteAdapter() : createEnrolledSupabaseAdapter();
 }
 /** Operator observation role: use only the sealed selected store's read-only facade.
@@ -30,6 +33,10 @@ export async function createReadonlyApplicationStorage(): Promise<KeryxDB | unde
   const deployment = readRuntimeStorageDeployment();
   if (storagePaymentProfile(deployment.identity) !== profile) refuseStorage("identity_mismatch");
   if (profile === ARC_MAINNET_PROFILE && deployment.identity.authorityMode !== "mainnet-real") refuseStorage("identity_mismatch");
+  if(deployment.backend.kind==="postgres"){
+    const reader=await createReadonlyPostgresRuntimeAdapter();
+    readonlyClosers.set(reader,()=>closePostgresRuntimeAdapter(reader));return reader;
+  }
   if (deployment.backend.kind === "sqlite") {
     const reader = await createReadonlyEnrolledSqliteAdapter();
     readonlyClosers.set(reader, () => reader.close());
@@ -41,11 +48,11 @@ export async function createReadonlyApplicationStorage(): Promise<KeryxDB | unde
 }
 /** Terminal disposal only for this boundary's selected read-only readers. No
  * selector, constructor or renewed financial/storage authority is exposed. */
-export function closeReadonlyApplicationStorage(reader: KeryxDB): void {
+export function closeReadonlyApplicationStorage(reader: KeryxDB): void | Promise<void> {
   if (arguments.length !== 1) refuseStorage("invalid_operation");
   const close = readonlyClosers.get(reader);
   if (!close) refuseStorage("invalid_operation");
-  try { close(); } finally { readonlyClosers.delete(reader); }
+  try { return close(); } finally { readonlyClosers.delete(reader); }
 }
 /** Verify the already-selected application facade; this does not construct or
  * select another datastore, custody account or funding authority. */
