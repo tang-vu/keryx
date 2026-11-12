@@ -3,7 +3,20 @@ import { refuseStorage, validateStorageIdentity, type StorageIdentity } from "./
 
 // Ports carry only checked transport, never installed-runtime provenance. Only
 // the private runtime factory can construct an installed enrolled adapter.
-const domainPorts = new WeakMap<object, SupabaseAuthority>();
+export type StorageDomainResult=Pick<Awaited<ReturnType<SupabaseAuthority["rpcResult"]>>,"data"|"error">;
+export interface StorageDomainAuthority {
+  rpcResult(name:string,args?:Record<string,unknown>):PromiseLike<StorageDomainResult>;
+}
+const domainPorts = new WeakMap<object, StorageDomainAuthority>();
+
+/** Internal RPC-only business-code port. Registration is not installed facade
+ * provenance and cannot admit an application backend or paid signer. */
+export function storageDomainClient(authority:StorageDomainAuthority):SupabaseClient {
+  const port=Object.freeze({rpc:(name:string,args:Record<string,unknown>={})=>authority.rpcResult(name,args),
+    from:()=>refuseStorage("invalid_operation")});
+  domainPorts.set(port,authority);
+  return port as unknown as SupabaseClient;
+}
 
 /** The operation and arguments are fixed in each helper. No query translator. */
 export async function callSupabaseDomain<T, A extends Record<string, unknown>>(
@@ -69,10 +82,7 @@ export class SupabaseAuthority {
   /** RPC-only port for existing domain validators; no client or .from escape. */
   domainClient(): SupabaseClient {
     if (!this.#ready || !this.#adapterReady()) refuseStorage("adapter_not_initialized");
-    const port = Object.freeze({ rpc: (name: string, args: Record<string, unknown> = {}) => this.rpcResult(name, args),
-      from: () => refuseStorage("invalid_operation") });
-    domainPorts.set(port, this);
-    return port as unknown as SupabaseClient;
+    return storageDomainClient(this);
   }
 
   /** Startup can only inspect/reseal cache rows, never admit financial authority. */

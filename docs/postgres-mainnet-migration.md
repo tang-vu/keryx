@@ -155,6 +155,26 @@ a repeated scan; it neither caches successful authority nor skips schema checks.
 The harness records local timing and independently verifies legacy RPC and raw
 column-read refusals. These timings are not compiled production load acceptance.
 
+The `--application-domains` profile composes 78 existing named read contracts
+with the financial reference. Their fixed native entries validate exact JSON
+argument keys, require a real read-only transaction, and verify caller-pinned
+identity and schema inside it. The internal legacy RPCs remain ungranted, and the
+legacy write bridge always refuses. Reads share the financial transport's bounded
+pool and queue; failed transactions discard their client and never retry.
+
+The shared business core can now use this RPC-only port without constructing a
+Supabase SDK client or fabricating a Supabase deployment. Native cache reads keep
+the identity-bound encrypted envelope. Core assembly, injected callbacks and type
+casts still confer no installed application provenance. Ordinary optional ports
+are not attached to the native core. Actual database checks exercise the catalog,
+user/KV getters and shared source/item decoders; the full financial fixture still
+runs against the larger independently constructed source.
+
+This read composition does not qualify every legacy result shape or its native
+memory use. Complete current-domain coverage, bounded report projections and
+pre-aggregation limits, native pressure tests, optional ports, writes and the
+closed application factory remain prerequisites for production selection.
+
 The current enrolled PostgreSQL/Supabase lane has explicit refusals for mainnet
 research purchases, original fulfillment, hosted treasury, owner consent and
 withdrawals. Its older sealed contract does not accept a mainnet identity. Current

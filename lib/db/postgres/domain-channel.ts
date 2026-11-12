@@ -2,10 +2,12 @@ import { Pool } from "pg";
 import { canonicalJson } from "../../canonical-json";
 import { validateStorageIdentity, type StorageIdentity } from "../storage-identity";
 import { postgresPoolConfiguration, PostgresStorageBusy, PostgresStorageUnavailable, type PostgresConnectionOptions } from "./connection";
+import { APPLICATION_READ_CALLS } from "./application-read-calls";
 
 // Source-defined calls only: callers cannot supply SQL, function names, transaction
 // callbacks, expected metadata, role changes or a connection to the runtime.
 const CALLS = Object.freeze({
+  ...APPLICATION_READ_CALLS,
   issue: { sql: "SELECT public.storage_issue_session_grant_consent($1::jsonb,$2::text,$3::text) AS result", args: 1, write: true, bytes: 0 },
   consume: { sql: "SELECT public.storage_consume_session_grant_consent($1::jsonb,$2::text,$3::text,$4::text,$5::text) AS result", args: 3, write: true, bytes: 0 },
   get: { sql: "SELECT public.storage_get_session_grant_consent($1::jsonb,$2::text,$3::text,$4::text) AS result", args: 2, write: false, bytes: 16384 },
@@ -64,7 +66,22 @@ export function createPostgresDomainChannel(options: PostgresConnectionOptions, 
       pending++;
       try {
         submitted = true;
-        const query = pool.query({ text: selected.sql, rowMode: "array", values: [expectedWire, sourceDigest, ...args] });
+        const statement = { text: selected.sql, rowMode: "array" as const, values: [expectedWire, sourceDigest, ...args] };
+        // These read adapters may traverse existing private domain helpers. A
+        // real read-only transaction enforces their nonmutation transitively.
+        // Only these fixed statements run here; no transaction callback escapes.
+        const query = "transaction" in selected && selected.transaction ? (async () => {
+          const client = await pool.connect();
+          let complete = false;
+          try {
+            if (closed) unavailable();
+            await client.query("BEGIN READ ONLY");
+            const result = await client.query(statement);
+            await client.query("COMMIT");
+            complete = true;
+            return result;
+          } finally { client.release(!complete); }
+        })() : pool.query(statement);
         request = query; inFlight.add(query);
         const result = await query;
         if (closed || result.rows.length !== 1 || result.fields.length !== 1 || result.fields[0].name !== "result"

@@ -4,7 +4,8 @@ import { storagePaymentProfile } from "./storage-identity";
 import { projectRecordedEvidenceProvenanceList, projectRecordedEvidenceProvenance, type EvidenceProvenanceLookup } from "../research/evidence-provenance";
 import { publicReferenceSchema, type PublicReference } from "../public-references/catalog";
 import type { StorageDeploymentManifest } from "./runtime-storage-config";
-import { SupabaseAuthority } from "./supabase-authority";
+import { SupabaseAuthority,type StorageDomainAuthority } from "./supabase-authority";
+import { validateStorageIdentity,type StorageIdentity } from "./storage-identity";
 import { canonicalJson } from "../canonical-json";
 import { refuseStorage, StorageIdentityRefused } from "./storage-identity";
 import { SUPABASE_RUNTIME_CONTRACT } from "./supabase-runtime-contract";
@@ -149,6 +150,13 @@ type EnrolledConstruction = Readonly<{
   readDeployment: () => Readonly<StorageDeploymentManifest>;
 }>;
 const enrolledConstructions = new WeakMap<object, EnrolledConstruction>();
+export interface NativePostgresBusinessCoreOptions {
+  readonly identity:StorageIdentity;
+  readonly authority:StorageDomainAuthority&{domainClient():SupabaseClient};
+  readonly assertEntry:()=>void;
+  readonly verify:()=>Promise<void>;
+}
+const nativeConstructions = new WeakMap<object,Readonly<NativePostgresBusinessCoreOptions>>();
 const enrolledEntryGuards = new WeakMap<object, { verify: () => Promise<void>; close: () => void }>();
 /** Internal shared-code assembly only. Arbitrary clients or guards assembled here
  * confer NO installed runtime provenance. Only the separate zero-argument factory
@@ -161,6 +169,16 @@ export function assembleAuthorityBoundSupabaseCore(
   enrolledConstructions.set(capability, Object.freeze({ client, deployment, readDeployment }));
   const adapter = new SupabaseAdapter(capability);
   return { adapter, hooks: enrolledEntryGuards.get(adapter)! };
+}
+
+/** Shared business-code assembly only. This does not select PostgreSQL, inspect
+ * deployment configuration, install optional ports or confer installed authority.
+ * Only a complete zero-argument native factory may later own that provenance. */
+export function assembleNativePostgresBusinessCore(options:NativePostgresBusinessCoreOptions){
+  const capability=Object.freeze({});
+  nativeConstructions.set(capability,Object.freeze({...options,identity:validateStorageIdentity(options.identity)}));
+  const adapter=new SupabaseAdapter(capability);
+  return {adapter,hooks:enrolledEntryGuards.get(adapter)!};
 }
 
 export class SupabaseAdapter implements KeryxDB {
@@ -179,17 +197,20 @@ export class SupabaseAdapter implements KeryxDB {
   #sb: SupabaseClient;
   #enrolled?: { deployment: Readonly<StorageDeploymentManifest>; authority: SupabaseAuthority;
     readDeployment: () => Readonly<StorageDeploymentManifest>; ready: boolean };
+  #native?:Readonly<NativePostgresBusinessCoreOptions>&{ready:boolean;closed:boolean};
 
   constructor(capability?: object) {
     this.#runPrivacyActive = process.env.KERYX_RUN_PRIVACY_ENABLED === "true";
     const construction = capability === undefined ? undefined : enrolledConstructions.get(capability);
+    const native=capability===undefined?undefined:nativeConstructions.get(capability);
     const deployment = construction?.deployment;
     // Ordinary readers retain an immutable public accessor. Enrolled facades
     // have no own key: their reflection refusals must satisfy Proxy invariants.
-    if (!deployment) Object.defineProperty(this,"runPrivacyActive",{get:()=>this.#runPrivacyActive});
-    if (capability !== undefined && !construction) refuseStorage("invalid_operation");
+    if (!deployment&&!native) Object.defineProperty(this,"runPrivacyActive",{get:()=>this.#runPrivacyActive});
+    if (capability !== undefined && !construction&&!native) refuseStorage("invalid_operation");
     if (deployment && deployment.backend.kind !== "supabase") refuseStorage("identity_mismatch");
-    this.#sb = construction?.client ?? createClient(
+    if(native)this.#native={...native,ready:false,closed:false};
+    this.#sb = native?.authority.domainClient() ?? construction?.client ?? createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
@@ -197,19 +218,19 @@ export class SupabaseAdapter implements KeryxDB {
         global: { fetch: throwingSupabaseFetch },
       },
     );
-    if (!deployment && runClaimsEnabled(process.env)) {
+    if (!deployment && !native && runClaimsEnabled(process.env)) {
       Object.defineProperty(this, "runClaims", { value: createSupabaseRunClaims(this.#sb) });
       Object.defineProperty(this, "runOwnershipHistory", { value: createSupabaseRunOwnershipHistory(this.#sb) });
     }
-    if (!deployment && this.runPrivacyActive) Object.defineProperty(this,"runPrivacy",{value:withRunReadProjection(
+    if (!deployment && !native && this.runPrivacyActive) Object.defineProperty(this,"runPrivacy",{value:withRunReadProjection(
       createSupabaseRunPrivacy(this.#sb,runClaimsEnabled(process.env)),run=>projectRecordedEvidenceProvenance(lookup=>this.readEvidenceProvenance(lookup),run))});
-    if (!deployment) Object.defineProperty(this, "privateProfiles", { value: createSupabasePrivateProfiles(this.#sb) });
-    if (!deployment) Object.defineProperty(this, "deliverableAcceptance", { value: createSupabaseDeliverableAcceptance(this.#sb) });
-    if (!deployment) Object.defineProperty(this, "personalHistory", { value: createSupabasePersonalHistory(this.#sb) });
-    if (!deployment) Object.defineProperty(this, "decisionReviews", { value: createSupabaseDecisionReviews(this.#sb) });
-    if (!deployment) Object.defineProperty(this, "publicUsage", { value: createSupabasePublicUsage(this.#sb,this.runPrivacyActive ? () => requirePrivacy(this) : undefined) });
-    if (!deployment && this.privateProfiles) Object.defineProperty(this, "profileIdentities", { value: createSupabaseProfileIdentities(this.#sb, this.privateProfiles) });
-    if (!deployment && this.runPrivacyActive && process.env.KERYX_PUBLIC_PROFILES_ENABLED === "true")
+    if (!deployment && !native) Object.defineProperty(this, "privateProfiles", { value: createSupabasePrivateProfiles(this.#sb) });
+    if (!deployment && !native) Object.defineProperty(this, "deliverableAcceptance", { value: createSupabaseDeliverableAcceptance(this.#sb) });
+    if (!deployment && !native) Object.defineProperty(this, "personalHistory", { value: createSupabasePersonalHistory(this.#sb) });
+    if (!deployment && !native) Object.defineProperty(this, "decisionReviews", { value: createSupabaseDecisionReviews(this.#sb) });
+    if (!deployment && !native) Object.defineProperty(this, "publicUsage", { value: createSupabasePublicUsage(this.#sb,this.runPrivacyActive ? () => requirePrivacy(this) : undefined) });
+    if (!deployment && !native && this.privateProfiles) Object.defineProperty(this, "profileIdentities", { value: createSupabaseProfileIdentities(this.#sb, this.privateProfiles) });
+    if (!deployment && !native && this.runPrivacyActive && process.env.KERYX_PUBLIC_PROFILES_ENABLED === "true")
       Object.defineProperty(this,"publicProfiles",{value:createSupabasePublicProfiles(this.#sb,runClaimsEnabled(process.env))});
     if (deployment) this.#enrolled = { deployment, ready: false, readDeployment: construction!.readDeployment,
       authority: new SupabaseAuthority(this.#sb, deployment.identity, () => { this.assertEntry(); return this.#enrolled?.ready === true; }) };
@@ -221,9 +242,16 @@ export class SupabaseAdapter implements KeryxDB {
         data.sourceContractDigest !== SUPABASE_RUNTIME_CONTRACT.afterDigest) refuseStorage("identity_unavailable");
       this.assertEntry();
     }, close: () => { this.#enrolled!.ready = false; } });
+    if(native)enrolledEntryGuards.set(this,{verify:async()=>{this.assertEntry();await native.verify();this.assertEntry();},
+      close:()=>{this.#native!.closed=true;this.#native!.ready=false;}});
   }
 
+  private get isAuthorityBound(){return this.#native!==undefined||this.#enrolled!==undefined;}
+  private get boundIdentity(){return this.#native?.identity??this.#enrolled?.deployment.identity;}
+  private get boundAuthority(){return this.#native?.authority??this.#enrolled?.authority;}
+
   private assertEntry(initializing = false): void {
+    if(this.#native){const n=this.#native;n.assertEntry();if(n.closed||!initializing&&!n.ready)refuseStorage("adapter_not_initialized");return;}
     const lane = this.#enrolled;
     if (!lane) return;
     if (canonicalJson(lane.readDeployment()) !== canonicalJson(lane.deployment)) refuseStorage("identity_mismatch");
@@ -233,6 +261,7 @@ export class SupabaseAdapter implements KeryxDB {
   /** Fixed operation/arguments are written at each call site. The enrolled lane
    * never executes the legacy closure, including on errors or missing RPCs. */
   private async domainCall<T, A extends Record<string, unknown>>(operation: string, args: A, legacy: (args: A) => PromiseLike<T>): Promise<T> {
+    if(this.#native){this.assertEntry();const result=await this.#native.authority.rpcResult(operation,args);this.assertEntry();if(result.error)throw result.error;return result as T;}
     if (!this.#enrolled) return legacy(args);
     this.assertEntry(operation === "init");
     const result = operation === "init"
@@ -244,6 +273,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   private domainRpc(name: string, args: Record<string, unknown> = {}) {
+    if(this.#native){this.assertEntry();return this.#native.authority.rpcResult(name,args).then(result=>{this.assertEntry();return result;});}
     if (!this.#enrolled) return this.#sb.rpc(name, args);
     this.assertEntry();
     return this.#enrolled.authority.rpcResult(name, args).then(result => {
@@ -253,6 +283,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   private helperRpcClient(): SupabaseClient {
+    if(this.#native){this.assertEntry();return this.#native.authority.domainClient();}
     if (!this.#enrolled) return this.#sb;
     this.assertEntry();
     // Existing RPC-only domain validators see only the checked RPC operation.
@@ -262,6 +293,7 @@ export class SupabaseAdapter implements KeryxDB {
 
   async init(): Promise<void> {
     this.assertEntry(true);
+    if(this.#native){await this.#native.verify();this.assertEntry(true);this.#native.ready=true;return;}
     if (this.#enrolled) {
       await this.#enrolled.authority.init();
       const identity = this.#enrolled.deployment.identity;
@@ -312,12 +344,12 @@ export class SupabaseAdapter implements KeryxDB {
     const pageSize = 1_000;
     const rows: Record<string, unknown>[] = [];
     for (let from = 0; ; from += pageSize) {
-      if (this.#enrolled) {
+      if (this.isAuthorityBound) {
         const operation = ({ payment_events: "scan_payment_metrics", query_runs: "scan_query_metrics",
           answer_feedback: "scan_feedback_metrics", gap_intents: "scan_gap_metrics",
           a2a_orders: "scan_order_economics" } as Record<string, string>)[table];
         if (!operation || from > 200_000) refuseStorage("invalid_operation");
-        const { data, error } = await this.#enrolled.authority.rpcResult(operation, { p_offset: from, p_limit: pageSize });
+        const { data, error } = await this.boundAuthority!.rpcResult(operation, { p_offset: from, p_limit: pageSize });
         if (error || !Array.isArray(data) || data.length > pageSize) refuseStorage("invalid_operation");
         rows.push(...data);
         if (data.length < pageSize) return rows;
@@ -570,7 +602,7 @@ export class SupabaseAdapter implements KeryxDB {
   async getSourceItemByLink(sourceId: string, exactItemUrl: string): Promise<SourceItem | null> {
     // No enrolled SQL operation/schema exists for this new catalog read. Keep
     // sealed authority closed rather than use legacy REST through that lane.
-    if (this.#enrolled) { this.assertEntry(); refuseStorage("invalid_operation"); }
+    if (this.isAuthorityBound) { this.assertEntry(); refuseStorage("invalid_operation"); }
     const { data, error } = await this.#sb.from("source_items").select("*")
       .eq("source_id", sourceId).eq("link", exactItemUrl).limit(2);
     if (error) throw error;
@@ -857,13 +889,14 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getCached(sourceId: string): Promise<string | null> {
-    if (this.#enrolled && this.#enrolled.deployment.identity.authorityMode !== "testnet-offline" && !hasContentKey()) refuseStorage("cache_key_unavailable");
+    const identity=this.boundIdentity;
+    if (identity && identity.authorityMode !== "testnet-offline" && !hasContentKey()) refuseStorage("cache_key_unavailable");
     const { data } = await this.domainCall("get_cached", { p_source_id: sourceId }, (_args) => this.#sb
       .from("cache_items")
       .select("text")
       .eq("source_id", _args.p_source_id)
       .maybeSingle());
-    if (this.#enrolled) return openEnrolledCacheText(data?.text, sourceId, this.#enrolled.deployment.identity);
+    if (identity) return openEnrolledCacheText(data?.text, sourceId, identity);
     return data?.text ? openCacheText(data.text) : null;
   }
 
@@ -877,9 +910,10 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async setCached(sourceId: string, text: string): Promise<void> {
+    const identity=this.boundIdentity;
     await this.domainCall("set_cached", { p_row: {
         source_id: sourceId,
-        text: this.#enrolled ? sealEnrolledCacheText(text, sourceId, this.#enrolled.deployment.identity) : sealCacheText(text),
+        text: identity ? sealEnrolledCacheText(text, sourceId, identity) : sealCacheText(text),
         updated_at: new Date().toISOString(),
       } }, (_args) => this.#sb
       .from("cache_items")
@@ -947,7 +981,7 @@ export class SupabaseAdapter implements KeryxDB {
 
   async saveQueryRun(run: QueryRun, publication?: { visibility: import("../run-privacy/contracts").RunVisibility }): Promise<void> {
     if (publication !== undefined || this.runPrivacyActive) {
-      if (!this.runPrivacyActive || this.#enrolled) {
+      if (!this.runPrivacyActive || this.isAuthorityBound) {
         const { PrivacyError } = await import("../run-privacy/contracts");
         throw new PrivacyError("privacy_unavailable");
       }
@@ -1129,7 +1163,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   private assertOrdinaryResearchAuthority(): void {
-    if (this.#enrolled) refuseStorage("invalid_operation");
+    if (this.isAuthorityBound) refuseStorage("invalid_operation");
   }
   async assertResearchPurchaseAuthority(network: string): Promise<void> {
     this.assertOrdinaryResearchAuthority();
@@ -1176,7 +1210,7 @@ export class SupabaseAdapter implements KeryxDB {
 
   async listUnfinishedA2aOrders(limit: number): Promise<UnfinishedA2aOrders> {
     // No sealed whole-queue read contract exists for the enrolled PostgreSQL domain.
-    if (this.#enrolled) throw new Error("Native PostgreSQL unfinished-order observation is not admitted");
+    if (this.isAuthorityBound) throw new Error("Native PostgreSQL unfinished-order observation is not admitted");
     const bound = unfinishedA2aOrderLimit(limit);
     const { data, error, count } = await this.#sb.from("a2a_orders").select("*", { count: "exact" }).in("status", ["running", "failed"])
       .order("created_at", { ascending: true }).order("id", { ascending: true }).limit(bound + 1);
@@ -1190,7 +1224,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async hasA2aOriginalSettlement(expected: A2aOriginalClaim): Promise<boolean> {
-    if (this.#enrolled) throw new Error("Native PostgreSQL exact original settlement proof is not admitted");
+    if (this.isAuthorityBound) throw new Error("Native PostgreSQL exact original settlement proof is not admitted");
     const binding = validateA2aOriginalClaim(expected, ARC_TESTNET_PROFILE);
     const { data, error } = await this.#sb.rpc("has_original_a2a_settlement_v1", { p_expected: binding });
     if (error) throw error;
@@ -1201,7 +1235,7 @@ export class SupabaseAdapter implements KeryxDB {
   async claimNextA2aOrder(workerId: string, startedAt: string, expectedOriginal?: A2aOriginalClaim): Promise<A2aOrder | null> {
     if (expectedOriginal !== undefined) {
       // The additive ordinary RPC does not grant an enrolled native writer capability.
-      if (this.#enrolled) throw new Error("Native PostgreSQL exact original claim is not admitted");
+      if (this.isAuthorityBound) throw new Error("Native PostgreSQL exact original claim is not admitted");
       const binding = validateA2aOriginalClaim(expectedOriginal, ARC_TESTNET_PROFILE);
       validateA2aClaimWorker(workerId, startedAt);
       const { data, error } = await this.#sb.rpc("claim_original_a2a_order_v1", {
@@ -1300,7 +1334,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async a2aOperationsSnapshot(nowMs: number): Promise<A2aOperationsSnapshot> {
-    if (!this.#enrolled) {
+    if (!this.isAuthorityBound) {
       // Keep completion cohorts and existing counts in one whole-database read.
       // Never enrich this aggregate with a capped REST slice of private orders.
       const snapshot = await this.operatorPublicSnapshot(nowMs);
@@ -1463,7 +1497,7 @@ export class SupabaseAdapter implements KeryxDB {
 
   async listPaymentsBySource(sourceId: string): Promise<PaymentRecord[]> {
     // Enrolled RPC already returns a complete bounded result or refuses; keep its authority.
-    if (this.#enrolled) {
+    if (this.isAuthorityBound) {
       const { data, error } = await this.domainCall("list_payments_by_source", { p_source_id: sourceId, p_kind: "inbound" },
         async (): Promise<{ data: Record<string, unknown>[] | null; error: unknown }> => { throw new Error("Enrolled source payment reader required"); });
       if (error) throw error;
@@ -1540,7 +1574,7 @@ export class SupabaseAdapter implements KeryxDB {
     ];
     // Each enrolled scan verifies the full source contract within its own outer
     // statement deadline. Avoid making those checks compete with one another.
-    const [paymentRows, runRows, feedbackRows, gapIntentRows] = this.#enrolled
+    const [paymentRows, runRows, feedbackRows, gapIntentRows] = this.isAuthorityBound
       ? [await reads[0](), await reads[1](), await reads[2](), await reads[3]()]
       : await Promise.all(reads.map(read => read()));
     const metrics = calculateDashboardMetrics(
@@ -1595,7 +1629,7 @@ export class SupabaseAdapter implements KeryxDB {
   private async recordedAccountCount(): Promise<number | null> {
     // The enrolled contract has no reviewed account-aggregate operation. Preserve
     // its guard/role boundary without scanning users or inventing a new RPC.
-    if (this.#enrolled) return null;
+    if (this.isAuthorityBound) return null;
     try {
       const patterns = ["^0x[0-9a-f]{40}$", "^0[xX][0-9a-fA-F]{40}$"];
       const counts = await Promise.all(patterns.map((pattern, index) => {
@@ -1618,7 +1652,7 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async economics() {
-    const identity = this.#enrolled?.deployment.identity;
+    const identity = this.boundIdentity;
     const profile = identity ? storagePaymentProfile(identity) : ARC_TESTNET_PROFILE;
     const [runRows, paymentRows, a2aOrderRows] = await Promise.all([
       this.allRows("query_runs", "id,economics_data"),
@@ -1943,8 +1977,8 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async admitBrowserSourceSigningOriginal(input: BrowserSourceOriginalAdmission) {
-    const captured = this.#enrolled ? JSON.parse(canonicalJson(input)) as BrowserSourceOriginalAdmission : input;
-    const catalog = this.#enrolled ? this.#browserSourceAdmissionCatalog(captured) : this;
+    const captured = this.isAuthorityBound ? JSON.parse(canonicalJson(input)) as BrowserSourceOriginalAdmission : input;
+    const catalog = this.isAuthorityBound ? this.#browserSourceAdmissionCatalog(captured) : this;
     return admitSupabaseBrowserSourceSigningOriginal(this.helperRpcClient(), captured, createBrowserOriginalSourceAuthority(catalog));
   }
   async readExposedBrowserSigningSnapshotForSigner(signer:string,sessionId:string,requestId:string) {return readExposedSupabaseBrowserSigningSnapshotForSigner(this.helperRpcClient(),signer,sessionId,requestId);}
@@ -2292,8 +2326,8 @@ export class SupabaseAdapter implements KeryxDB {
   }
 
   async getFeedbackStats(queryId?: string): Promise<FeedbackStats> {
-    if (this.#enrolled) {
-      const { data, error } = await this.#enrolled.authority.rpcResult("get_feedback_stats", { p_query_id: queryId || null });
+    if (this.isAuthorityBound) {
+      const { data, error } = await this.boundAuthority!.rpcResult("get_feedback_stats", { p_query_id: queryId || null });
       if (error || !data || ![data.total, data.up, data.down].every(Number.isSafeInteger)
         || data.total < 0 || data.up < 0 || data.down < 0 || data.up + data.down !== data.total) refuseStorage("invalid_operation");
       return { total: data.total, up: data.up, down: data.down, rate: data.total > 0 ? round(data.up / data.total) : 0 };
