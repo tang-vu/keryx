@@ -270,3 +270,14 @@ answers. The native dashboard returns about 1 KiB and preserves the existing
 historical-evidence label. It never falls back to loading all history after a
 native refusal. Single-row conversion, other reports/custom readers and compiled
 selected-backend load remain separate qualification requirements.
+
+
+The private-profile protocol (`--private-profiles`, focused
+`--private-profiles-only`) reuses the fixed input validator in private SOURCE and
+exposes three identity-bound native entries. Fourteen actual PostgreSQL vectors
+compare normalized fields and owner activity with current SQLite, including 1,201
+recorded questions, retained creation time, concurrent handle claims, exact
+network scope, lost-COMMIT acknowledgement, reader refusal, terminal close and
+profile FK cascade without deleting research history. These are synthetic
+protocol checks; installed optional-port provenance and complete backend
+admission remain required.
