@@ -281,3 +281,12 @@ network scope, lost-COMMIT acknowledgement, reader refusal, terminal close and
 profile FK cascade without deleting research history. These are synthetic
 protocol checks; installed optional-port provenance and complete backend
 admission remain required.
+
+Native profile-identity qualification uses `--profile-identities` (focused
+`--profile-identities-only`). Seventeen synthetic PostgreSQL vectors compare the
+current SQLite lifecycle and exercise actual concurrent challenge consumption,
+external-identity uniqueness, retained verification during replacement, superseded
+callbacks, unlink/profile deletion, durable session revocation, ORCID checksum and
+lost-COMMIT acknowledgement. No provider login, network request, production data
+or financial operation is performed. All five entries share the existing pool
+and identity/source contract; this composition does not enroll an application.

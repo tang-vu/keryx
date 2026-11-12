@@ -9011,3 +9011,19 @@ back. Keep uncertain writes unacknowledged without retry, prevent late results
 after disposal, and refuse reader writes before input parsing. This protocol
 composition is not factory enrollment or a new authenticated session; other user
 domains, source/materialization and runtime cutover gates remain in force.
+
+### 2026-11-12: retain session-bound identity lineage on native PostgreSQL
+
+Compose five fixed profile-identity entries on the existing bounded pool. Reuse
+the reviewed ORCID/GitHub validation and challenge transitions as private SOURCE,
+with the active native identity/catalog and writer context replacing ordinary
+admission. Keep verification timestamps as exact ISO TEXT. Reader lists use an
+actual read-only transaction; every writer rechecks saved profile, current
+lineage, deadline and the durable wallet-bound session inside its transaction.
+
+Known expired/profile-required/unique-identity errors are returned only after
+rolling back all provisional changes. A lost write acknowledgement remains
+unknown and never triggers retry. Actual two-connection qualification checks
+single consumption and competing external-identity claims, while SQLite parity
+checks replacement, unlink, session revocation and deletion. This is protocol
+acceptance, not installed factory provenance or completed production migration.

@@ -5,8 +5,11 @@ import { validateStorageIdentity,type StorageIdentity } from '../storage-identit
 import type { PostgresConnectionOptions } from './connection';
 import { createPostgresDomainChannel,PostgresDomainWriteOutcomeUnknown,type PostgresDomainChannel } from './domain-channel';
 import { composePostgresApplicationDomainTransport,type PostgresApplicationDomainTransport } from './application-domain-transport';
+import { composePostgresProfileIdentities } from './profile-identities-transport';
+import type { ProfileIdentitiesStore } from '../../profiles/verified-identities';
 export interface PostgresUserDomainTransport extends PostgresApplicationDomainTransport {
  readonly privateProfiles:PrivateProfilesStore;
+ readonly profileIdentities:ProfileIdentitiesStore;
 }
 /** Same native pool/identity; a protocol composition confers no installed
  * factory provenance, authenticated web session or another owner's authority. */
@@ -45,5 +48,5 @@ export function composePostgresUserDomainTransport(channel:PostgresDomainChannel
    try{z.object({deleted:z.literal(true)}).strict().parse(value);}catch{throw new PostgresDomainWriteOutcomeUnknown();}
   },
  } satisfies PrivateProfilesStore);
- return Object.freeze({...composePostgresApplicationDomainTransport(channel,expected),privateProfiles});
+ return Object.freeze({...composePostgresApplicationDomainTransport(channel,expected),privateProfiles,profileIdentities:composePostgresProfileIdentities(channel,readOnly)});
 }
