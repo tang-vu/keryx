@@ -8903,3 +8903,17 @@ materializing one measured entry set for its final aggregation. Actual PostgreSQ
 must produce the same descriptor as the existing two-pass body, reject escaped
 field overflow and retain revoked legacy/table access. No successful authority is
 cached. Local timing is recorded separately from required production load proof.
+
+
+### 2026-11-12: share business decoders through fixed native read entries
+
+Compose existing named PostgreSQL read contracts under caller-pinned native
+identity/schema admission in actual read-only transactions. Keep their legacy
+entrypoints ungranted and their old write bridge closed. All native ports share
+one bounded pool; a failed transaction discards its connection without retry.
+The existing business core accepts a separately guarded native RPC port without
+constructing an SDK client or claiming a Supabase deployment. Its native cache
+path retains identity-bound authentication. This assembly is not an installed
+factory or provenance, attaches no ordinary optional ports, and does not admit
+production while current domain, report-memory, data-transfer and cutover gates
+remain open. Preserve the ordinary and enrolled Supabase paths and test them.

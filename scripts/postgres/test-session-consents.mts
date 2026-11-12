@@ -24,6 +24,10 @@ import { createPostgresHostedLedgerTransport, type PostgresHostedLedgerTransport
 import { qualifyHostedLedger } from "./qualify-hosted-ledger.mts";
 import { createPostgresOwnerWithdrawalTransport, type PostgresOwnerWithdrawalTransport } from "../../lib/db/postgres/owner-withdrawal-transport";
 import { qualifyOwnerWithdrawals } from "./qualify-owner-withdrawals.mts";
+import { assembleNativePostgresBusinessCore } from "../../lib/db/supabase-adapter";
+import { createPostgresReadDomainAuthority } from "../../lib/db/postgres/read-domain-authority";
+import { nativeApplicationDomainsReferenceSource } from "./application-domains-source.mts";
+import { createPostgresApplicationReadTransport,type PostgresApplicationReadTransport } from "../../lib/db/postgres/application-read-transport";
 import { nativeApplicationFinancialReferenceSource } from "./application-reference-source.mts";
 
 const name = `keryx-postgres-consents-${randomUUID()}`, password = randomBytes(24).toString("hex");
@@ -64,14 +68,16 @@ try {
     CREATE ROLE keryx_reader LOGIN NOINHERIT CONNECTION LIMIT 4 PASSWORD '${password}';
     CREATE DATABASE native_source WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;
     CREATE DATABASE native_target WITH TEMPLATE template0 ENCODING 'UTF8' LOCALE_PROVIDER libc LC_COLLATE 'C' LC_CTYPE 'C' CONNECTION LIMIT 16;`);
+  const applicationDomainsOnly=process.argv.includes("--application-domains-only");
+  const withApplicationDomains=process.argv.includes("--application-domains")||applicationDomainsOnly;
   const catalogOnly=process.argv.includes("--catalog-only");
-  const withApplicationReference = process.argv.includes("--application-financial-reference")||catalogOnly;
+  const withApplicationReference = process.argv.includes("--application-financial-reference")||catalogOnly||withApplicationDomains;
   const withOwner = process.argv.includes("--owner-withdrawals") || withApplicationReference;
   const withHosted = process.argv.includes("--hosted-ledger") || withOwner;
   const withCreator = process.argv.includes("--creator") || withHosted;
   const withWithdrawals = process.argv.includes("--withdrawals") || withCreator;
   const withFunding = process.argv.includes("--funding") || withWithdrawals;
-  const source = withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
+  const source = withApplicationDomains ? nativeApplicationDomainsReferenceSource() : withApplicationReference ? nativeApplicationFinancialReferenceSource() : withOwner ? nativeOwnerWithdrawalSource() : withHosted ? nativeHostedLedgerSource() : withCreator ? nativeCreatorWithdrawalDomainSource() : withWithdrawals ? nativeWithdrawalDomainSource() : withFunding ? nativeFundingDomainSource() : nativeConsentDomainSource();
   if(withApplicationReference)sql('postgres','CREATE ROLE anon NOLOGIN;CREATE ROLE authenticated NOLOGIN;CREATE ROLE service_role NOLOGIN;');
   for (const database of ["native_source", "native_target"] as const) {
     assert.equal(sql(database, "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public';"), "0");
@@ -116,9 +122,35 @@ try {
     client.on("error", () => {}); clients.push(client); await client.connect(); return client;
   };
   const app = await connect("keryx_app"), other = await connect("keryx_app"), reader = await connect("keryx_reader");
-  const createTransport = withOwner ? createPostgresOwnerWithdrawalTransport : withHosted ? createPostgresHostedLedgerTransport : withCreator ? createPostgresCreatorWithdrawalTransport : withWithdrawals ? createPostgresWithdrawalTransport : withFunding ? createPostgresSessionTransport : createPostgresConsentTransport;
+  const createTransport = withApplicationDomains ? createPostgresApplicationReadTransport : withOwner ? createPostgresOwnerWithdrawalTransport : withHosted ? createPostgresHostedLedgerTransport : withCreator ? createPostgresCreatorWithdrawalTransport : withWithdrawals ? createPostgresWithdrawalTransport : withFunding ? createPostgresSessionTransport : createPostgresConsentTransport;
   const nativeTransport = createTransport({ endpoint: { kind: "loopback", port }, database: "native_target", role: "keryx_app", password }, identity, reference.sha256);
   transports.push(nativeTransport);
+  if(withApplicationDomains){
+    const read=(nativeTransport as PostgresApplicationReadTransport).applicationRead;
+    assert.deepEqual(await read('list_all_sources',{}),[]);
+    assert.deepEqual(await read('list_sources',{p_active:true}),[]);
+    assert.equal(await read('get_user',{p_wallet_address:owner}),null);
+    assert.equal(await read('get_sync_state',{p_key:'synthetic-missing'}),null);
+    await assert.rejects(read('get_user',{p_wallet_address:owner,unexpected:true}));
+    await assert.rejects(app.query('SELECT public.storage_application_list_all_sources($1::jsonb,$2::text,$3::jsonb)',[canonicalJson(identity),reference.sha256,'{}']));
+    sql('native_target',`INSERT INTO public.sources(id,name,wallet_address) VALUES('synthetic-domain-source','Synthetic native domain','${owner}');`);
+    const sources=await read('list_all_sources',{});assert(Array.isArray(sources)&&sources.length===1&&sources[0].id==='synthetic-domain-source');
+    await assert.rejects(app.query('SELECT public.storage_list_all_sources($1::jsonb)',[canonicalJson(identity)]));
+    const business=assembleNativePostgresBusinessCore({identity,authority:createPostgresReadDomainAuthority(nativeTransport as PostgresApplicationReadTransport),
+      assertEntry:()=>{},verify:async()=>{await read('get_sync_state',{p_key:'synthetic-authority-read'});}});
+    await business.adapter.init();
+    try{
+      const decoded=await business.adapter.listAllSources();assert.equal(decoded.length,1);assert.equal(decoded[0].id,'synthetic-domain-source');
+      assert.equal((await business.adapter.getSource('synthetic-domain-source'))?.name,'Synthetic native domain');
+      assert.equal(await business.adapter.getUser(owner),null);assert.equal(await business.adapter.getSyncState('synthetic-missing'),null);
+      assert.deepEqual(await business.adapter.getItems('synthetic-domain-source'),[]);
+    }finally{business.hooks.close();}
+    await assert.rejects(business.adapter.listAllSources());
+
+    await assert.rejects(app.query('SELECT public.storage_set_sync_state($1::jsonb,$2::jsonb)',[canonicalJson(identity),JSON.stringify({key:'unsafe',value:'x'})]));
+    if(applicationDomainsOnly){console.log(JSON.stringify({passed:true,applicationDomainsOnly:true,image,sourceSha256:source.sha256,referenceContract:reference.sha256,catalogMeasurement,guardedNativeReads:true,sharedBusinessDecoders:true,actualReadOnlyTransaction:true,legacyReadAndWritesRefused:true,applicationBackendSwitched:false}));return;}
+  }
+
   const issue = (value: unknown, expected = identity, digest = reference.sha256) => app.query(
     "SELECT public.storage_issue_session_grant_consent($1::jsonb,$2::text,$3::text) AS result", [JSON.stringify(expected), digest, canonicalJson(value)]);
   const consume = (client: Client, value: SessionGrantConsent, signature = sig) => client.query(
