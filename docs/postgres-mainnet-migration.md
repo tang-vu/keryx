@@ -566,3 +566,14 @@ checks retained workspace compatibility inside the qualified native resource
 profile and reports counts/digests only. The retained snapshot has no bibliography
 records and one valid watch. This does not materialize the application database,
 admit the complete writer or qualify production load/cutover.
+
+The native SOURCE fixture is pinned to the official PostgreSQL 17.12 image. Its
+catalog comparison omits only one well-formed, unsigned 64-bit `pg_attver` column
+option on patched PG17. That backend-owned WAL version differs between independent
+installations; every other column option and every structural/security descriptor
+still participates. Actual independent installs and changes to both `n_distinct`
+options exercise the distinction. Keep the server's composite-type safety checks
+enabled. See the [upstream attribute-version design](https://github.com/postgres/postgres/blob/REL_17_STABLE/src/backend/catalog/README.attver.md)
+and [17.12 release notes](https://www.postgresql.org/docs/17/release-17-12.html).
+The retained, dormant Supabase acceptance fixture runs its exact original 17.11
+image and immutable contract; it does not grant a new production backend profile.

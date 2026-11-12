@@ -7,7 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { Client } from "pg";
 import { nativeConsentDomainSource, nativeFundingDomainSource, nativeWithdrawalDomainSource, nativeCreatorWithdrawalDomainSource, nativeHostedLedgerSource, nativeOwnerWithdrawalSource } from "./native-domain-source.mts";
 import { qualifyFunding } from "./qualify-funding.mts";
-import { POSTGRES17_SCHEMA_CONTRACT_BODY } from "../helpers/enrolled-postgres-schema-contract.mts";
+import { nativePostgres17DescriptorBody } from './native-catalog-body.mts';
 import { exportNativePostgresSchemaContract } from "./native-contract.mts";
 import { postgresPoolConfiguration } from "../../lib/db/postgres/connection";
 import { STORAGE_MAINNET_PROFILE_DIGEST, storageIdentityDigest, type StorageIdentity } from "../../lib/db/storage-identity";
@@ -81,7 +81,7 @@ let ackProxy: Awaited<ReturnType<typeof startCommitAckLossProxy>> | undefined;
 process.once("exit", () => { if (owned) try { docker(["rm", "-f", name]); } catch {} });
 async function qualify(){
 try {
-  const image = docker(["image", "inspect", "postgres:17-alpine", "--format", "{{.Id}}"] ).trim();
+  const image = docker(["image", "inspect", "postgres@sha256:d3244e8ce3f165ee3c93d9c4a4b1d0fe48b3a89e2287b717fdcbbde92d405065", "--format", "{{.Id}}"] ).trim();
   owned = true;
   docker(["run", "-d", "--name", name, "--user", "postgres", "--read-only", "--memory", "768m", "--cpus", "1", "--pids-limit", "64",
     "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--tmpfs", "/var/lib/postgresql/data:rw,nosuid,uid=70,gid=70,size=256m",
@@ -139,7 +139,7 @@ try {
   }
   let catalogMeasurement:unknown;
   if(withApplicationReference){
-    catalogMeasurement=JSON.parse(sql('native_source',`CREATE FUNCTION pg_temp.baseline_catalog() RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $baseline$${POSTGRES17_SCHEMA_CONTRACT_BODY}$baseline$;
+    catalogMeasurement=JSON.parse(sql('native_source',`CREATE FUNCTION pg_temp.baseline_catalog() RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $baseline$${nativePostgres17DescriptorBody()}$baseline$;
       CREATE FUNCTION pg_temp.measure_catalog() RETURNS jsonb LANGUAGE plpgsql AS $check$
       DECLARE baseline jsonb;observed jsonb;started timestamptz;b_ms numeric;n_ms numeric;
       BEGIN started:=clock_timestamp();baseline:=pg_temp.baseline_catalog();b_ms:=extract(epoch from clock_timestamp()-started)*1000;
@@ -157,6 +157,18 @@ try {
       console.error(JSON.stringify({syntheticCatalogMismatch:key,source:expected.sections[key],target:actual.sections[key]}));
   }
   assert.equal(target.sha256, reference.sha256, "Target must match a separately built SOURCE before its seal is inserted");
+  // PG17.12's per-attribute WAL versions differ across the two fresh installs.
+  // Both real schema options must still invalidate admission independently.
+  const backendVersion=Number(sql('native_source','SHOW server_version_num;'));
+  assert.equal(backendVersion,170012,'The reviewed native fixture engine is pinned');
+  const sourceVersions=sql('native_source',"SELECT attoptions::text FROM pg_attribute WHERE attrelid='keryx_storage.identity'::regclass AND attname='identity';"),targetVersions=sql('native_target',"SELECT attoptions::text FROM pg_attribute WHERE attrelid='keryx_storage.identity'::regclass AND attname='identity';");
+  assert.match(sourceVersions,/pg_attver=[0-9]+/);assert.notEqual(sourceVersions,targetVersions);
+  for(const option of ['n_distinct','n_distinct_inherited']){
+    sql('native_source',`ALTER TABLE keryx_storage.identity ALTER COLUMN identity SET (${option}=0.5);`);
+    assert.notEqual(exportNativePostgresSchemaContract(sql('native_source',describe)).sha256,reference.sha256,'Real column options must remain in the contract');
+    sql('native_source',`ALTER TABLE keryx_storage.identity ALTER COLUMN identity RESET (${option});`);
+    assert.equal(exportNativePostgresSchemaContract(sql('native_source',describe)).sha256,reference.sha256);
+  }
   if(withNativeRuntime){
     assert.equal(sql('native_source',`SELECT encode(sha256(convert_to((${literal(JSON.parse(reference.canonicalJson))})::text,'UTF8')),'hex');`),reference.sha256,'Independent SOURCE wire digest must match the native constraint');
     assert.throws(()=>sql('native_source',"INSERT INTO keryx_storage.source_contract VALUES(true,'{}'::jsonb,'"+'00'.repeat(32)+"');"),/source_contract_digest/);

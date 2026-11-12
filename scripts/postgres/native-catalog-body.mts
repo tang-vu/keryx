@@ -1,8 +1,24 @@
 /** Source-only native catalog descriptor. It retains every field and raw bound
  * of the reviewed descriptor, and materializes its measured entries once. */
 import { POSTGRES17_SCHEMA_CONTRACT_BODY } from "../helpers/enrolled-postgres-schema-contract.mts";
+/** PG17.12 stores a WAL LSN in the backend-owned pg_attver column option.
+ * It differs across independent installations and is not schema authority.
+ * Keep every other option (including near matches and malformed values).
+ * https://github.com/postgres/postgres/blob/REL_17_STABLE/src/backend/catalog/README.attver.md
+ * Historical Supabase manifests remain exact, with their original PG17.11 fixture.
+ */
+export function nativePostgres17DescriptorBody():string{
+ const source=POSTGRES17_SCHEMA_CONTRACT_BODY,before="'options',a.attoptions,";
+ if(source.split(before).length!==3)throw new Error('Native column option descriptor changed');
+ return source.replaceAll(before,()=>`'options',CASE WHEN current_setting('server_version_num')::integer>=170012
+  AND (SELECT count(*) FROM unnest(a.attoptions) v WHERE v LIKE 'pg_attver=%')=1
+  AND EXISTS(SELECT 1 FROM unnest(a.attoptions) v WHERE CASE WHEN v ~ '^pg_attver=(0|[1-9][0-9]{0,19})$'
+   THEN split_part(v,'=',2)::numeric<=18446744073709551615 ELSE false END)
+  THEN nullif(ARRAY(SELECT v FROM unnest(a.attoptions) WITH ORDINALITY x(v,ord) WHERE v NOT LIKE 'pg_attver=%' ORDER BY ord),ARRAY[]::text[])
+  ELSE a.attoptions END,`);
+}
 export function nativeCatalogBody():string{
-  const baseline=POSTGRES17_SCHEMA_CONTRACT_BODY;
+  const baseline=nativePostgres17DescriptorBody();
   const start=baseline.indexOf('  -- Each descriptor row is checked before the final aggregate.');
   const final=baseline.indexOf('  with entries as (',baseline.indexOf('  with entries as (',start)+1);
   if(start<0||final<0)throw new Error('Native catalog source shape refused');

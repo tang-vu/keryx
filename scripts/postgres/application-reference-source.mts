@@ -3,14 +3,13 @@
  * target discovery, installation on an existing namespace or runtime selection. */
 import { readFileSync,readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { nativeCatalogBody } from "./native-catalog-body.mts";
-import { POSTGRES17_SCHEMA_CONTRACT_BODY } from "../helpers/enrolled-postgres-schema-contract.mts";
+import { nativeCatalogBody,nativePostgres17DescriptorBody } from "./native-catalog-body.mts";
 import { ARC_MAINNET_PROFILE,ARC_TESTNET_PROFILE } from "../../lib/arc-network-profile";
 import { nativeDomainAuthoritySource,nativeOwnerWithdrawalSource } from "./native-domain-source.mts";
 
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 function replaceOnce(sql:string,before:string,after:string){
-  if(sql.split(before).length!==2)throw new Error('Application reference source adaptation refused');return sql.replace(before,after);
+  if(sql.split(before).length!==2)throw new Error('Application reference source adaptation refused');return sql.replace(before,()=>after);
 }
 export function nativeApplicationFinancialReferenceSource(){
   const directory=new URL('../../supabase/migrations/',import.meta.url);
@@ -36,7 +35,7 @@ export function nativeApplicationFinancialReferenceSource(){
     base=base.slice(0,offset)+"\n  if session_user='postgres' and (select mode from keryx_storage.control where singleton)='held' then\n    if tg_op='DELETE' then return old; else return new; end if;\n  end if;"+base.slice(offset);
   }
   const standaloneAuthority=nativeDomainAuthoritySource().sql;
-  let authority=replaceOnce(replaceOnce(standaloneAuthority,POSTGRES17_SCHEMA_CONTRACT_BODY,nativeCatalogBody()),
+  let authority=replaceOnce(replaceOnce(standaloneAuthority,nativePostgres17DescriptorBody(),nativeCatalogBody()),
     "IF NOT policy.read_only THEN INSERT INTO keryx_storage.writer VALUES(txid_current(),stored.identity_digest,selected); END IF;",
     "IF NOT policy.read_only THEN INSERT INTO keryx_storage.writer VALUES(txid_current(),stored.identity_digest,selected);\n"+
     "  IF selected=ANY(ARRAY['consume_session_grant_consent','reserve_session_withdrawal','creator_owner_admit','hosted_submit','hosted_confirm']) THEN\n"+

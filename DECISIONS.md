@@ -9199,3 +9199,12 @@ text or enduring authorization grant is stored in this metadata. Known failures
 return only after rollback; lost actual commit acknowledgements remain unknown
 and never cause automatic retry. Read-only factory composition adds no scheduling,
 financial or complete application-writer authority.
+
+Native qualification uses pinned PostgreSQL 17.12. Normalize only its backend-owned
+`pg_attver` WAL version when comparing separate SOURCE/target installations, with
+exact name, canonical unsigned 64-bit value, unique occurrence and patched-server
+checks. Preserve every other option and descriptor and prove actual option drift
+still refuses admission. This follows the [upstream versioning design](https://github.com/postgres/postgres/blob/REL_17_STABLE/src/backend/catalog/README.attver.md).
+Keep the historical dormant Supabase profile's exact 17.11 fixture and immutable
+contract separate. This changes synthetic qualification, not production activation
+or an authorization to downgrade a deployed database.

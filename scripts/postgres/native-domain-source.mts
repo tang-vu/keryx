@@ -2,7 +2,7 @@
  * Never discover a target or generate its expected contract from its own data. */
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { POSTGRES17_SCHEMA_CONTRACT_BODY } from "../helpers/enrolled-postgres-schema-contract.mts";
+import { nativePostgres17DescriptorBody } from './native-catalog-body.mts';
 import { STORAGE_MAINNET_PROFILE_DIGEST } from "../../lib/db/storage-identity";
 import { ARC_MAINNET_PROFILE } from "../../lib/arc-network-profile";
 
@@ -10,7 +10,7 @@ export function nativeDomainAuthoritySource(): Readonly<{ sql: string; sha256: s
   let sql = readFileSync(new URL("../../ops/keryx-postgres/authority.sql", import.meta.url), "utf8").replaceAll("\r\n", "\n");
   if (Buffer.byteLength(sql) > 131072 || sql.split("{{MAINNET_PROFILE_DIGEST}}").length !== 2 || sql.split("{{CATALOG_BODY}}").length !== 2)
     throw new Error("Native PostgreSQL source template refused");
-  sql = sql.replace("{{MAINNET_PROFILE_DIGEST}}", STORAGE_MAINNET_PROFILE_DIGEST).replace("{{CATALOG_BODY}}", POSTGRES17_SCHEMA_CONTRACT_BODY);
+  sql = sql.replace("{{MAINNET_PROFILE_DIGEST}}", STORAGE_MAINNET_PROFILE_DIGEST).replace("{{CATALOG_BODY}}", ()=>nativePostgres17DescriptorBody());
   return Object.freeze({ sql, sha256: createHash("sha256").update(sql).digest("hex") });
 }
 export function nativeConsentDomainSource(): Readonly<{ sql: string; sha256: string }> {
