@@ -47,14 +47,14 @@ async function run(mode:'pressure'|'deadline'|'synthetic'|'inventory'|'rehearsal
 }
 try{
  assert.match(docker(['image','inspect',image,'--format','{{.Id}}']),/^sha256:[a-f0-9]{64}$/);
- buildSync({entryPoints:[fileURLToPath(new URL('./offline-intake-child.mts',import.meta.url))],outfile:bundle,bundle:true,platform:'node',target:'node24',format:'cjs',external:['pg-native'],logLevel:'silent'});
+ buildSync({entryPoints:[fileURLToPath(new URL('./offline-intake-child.mts',import.meta.url))],outfile:bundle,bundle:true,platform:'node',target:'node24',format:'cjs',minifyWhitespace:true,external:['pg-native'],logLevel:'silent'});
  const bytes=readFileSync(bundle);assert(bytes.length>0&&bytes.length<1048576);containers.add(staging);
  docker(['create','--name',staging,'--label','keryx.offline-intake='+staging,'--network','none',image,'node','--version']);docker(['cp',bundle,staging+':/child.cjs']);candidate=docker(['commit','--change','LABEL keryx.offline-intake='+staging,staging]);assert.match(candidate,/^sha256:[a-f0-9]{64}$/);docker(['rm',staging]);containers.delete(staging);
  const outside=await run('pressure','256m');assert.notEqual(outside.code,0);assert.equal(outside.reports[0]?.actualKernelLimitsVerified,undefined);assert.equal(outside.state.OOMKilled,false);
  const pressure=await run('pressure');assert.notEqual(pressure.code,0);assert.equal(pressure.reports[0]?.actualKernelLimitsVerified,true);assert.equal(pressure.state.OOMKilled,true);
  const deadline=await run('deadline');assert.equal(deadline.code,137);assert.equal(deadline.reports[0]?.actualKernelLimitsVerified,true);assert.equal(deadline.state.OOMKilled,false);
  const synthetic=await run('synthetic');assert.equal(synthetic.code,0);const fixture=synthetic.reports[0] as {fullTypedInventoryComplete:boolean;totalRows:number;tables:{columns:{unsafeJsInteger:number;textNul:number;blob:number}[]}[]};assert.equal(fixture.fullTypedInventoryComplete,true);assert.equal(fixture.totalRows,1);assert.equal(fixture.tables[0].columns[1].unsafeJsInteger,1);assert.equal(fixture.tables[0].columns[3].textNul,1);assert.equal(fixture.tables[0].columns[4].blob,1);
- const qualification={format:'keryx-development-offline-intake-qualification-v1',image,compiledSha256:createHash('sha256').update(bytes).digest('hex'),actualNativeSqliteOom:true,actualHardDeadlineKilledBlockedChild:true,wrongMemoryRefusedBeforeTarget:true,syntheticInt64RealNulBlob:true,privateInputCopiedIntoImage:false,selectedApplicationWriter:false};
+ const qualification={format:'keryx-development-offline-intake-qualification-v1',image,compiledSha256:createHash('sha256').update(bytes).digest('hex'),compiledBytes:bytes.length,compiledByteLimitExclusive:1048576,actualNativeSqliteOom:true,actualHardDeadlineKilledBlockedChild:true,wrongMemoryRefusedBeforeTarget:true,syntheticInt64RealNulBlob:true,privateInputCopiedIntoImage:false,selectedApplicationWriter:false};
  console.log(JSON.stringify({qualification}));
  if(rehearsal){
   pgContainer='keryx-offline-intake-'+randomUUID();containers.add(pgContainer);
