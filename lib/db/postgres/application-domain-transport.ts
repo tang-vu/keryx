@@ -1,3 +1,5 @@
+import type { DashboardMetrics } from "../../types";
+import { dashboardMetricsFromPostgresAggregate } from "./dashboard-aggregate";
 import { canonicalJson } from "../../canonical-json";
 import { validateStorageIdentity,type StorageIdentity } from "../storage-identity";
 import { PostgresStorageUnavailable,type PostgresConnectionOptions } from "./connection";
@@ -11,6 +13,7 @@ export const APPLICATION_WRITE_OPERATIONS=Object.freeze({...AUTH_WRITE_OPERATION
 export type PostgresAuthWrite=keyof typeof AUTH_WRITE_OPERATIONS;
 export type PostgresApplicationWrite=keyof typeof APPLICATION_WRITE_OPERATIONS;
 export interface PostgresApplicationDomainTransport extends PostgresApplicationReadTransport {
+  dashboardMetrics():Promise<DashboardMetrics>;
   applicationWrite(operation:PostgresApplicationWrite,args:Readonly<Record<string,unknown>>):Promise<unknown>;
 }
 /** Qualified named ports only. It cannot select or enroll an application store. */
@@ -21,6 +24,12 @@ export function createPostgresApplicationDomainTransport(options:PostgresConnect
 export function composePostgresApplicationDomainTransport(channel:PostgresDomainChannel,identity:StorageIdentity):PostgresApplicationDomainTransport{
   return Object.freeze({
     ...composePostgresApplicationReadTransport(channel,identity),
+    async dashboardMetrics(){
+      if(channel.closed)throw new PostgresStorageUnavailable();
+      const value=await channel.call("dashboardMetrics",[]);
+      if(channel.closed)throw new PostgresStorageUnavailable();
+      return dashboardMetricsFromPostgresAggregate(value);
+    },
     async applicationWrite(operation:PostgresApplicationWrite,args:Readonly<Record<string,unknown>>){
       if(channel.closed||typeof operation!=="string"||!Object.hasOwn(APPLICATION_WRITE_OPERATIONS,operation)
         ||!args||typeof args!=="object"||Array.isArray(args))throw new PostgresStorageUnavailable();

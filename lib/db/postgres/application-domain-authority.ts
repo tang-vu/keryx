@@ -8,6 +8,7 @@ export function createPostgresApplicationDomainAuthority(transport:PostgresAppli
   const read=createPostgresReadDomainAuthority(transport);
   const authority:StorageDomainAuthority={
     async rpcResult(name:string,args:Record<string,unknown>={}){
+      if(name==="dashboard_metrics"){if(!args||typeof args!=="object"||Array.isArray(args)||Object.keys(args).length)throw new Error("Native report arguments refused");return {data:await transport.dashboardMetrics(),error:null};}
       if(Object.hasOwn(APPLICATION_WRITE_OPERATIONS,name))return {data:await transport.applicationWrite(name as PostgresApplicationWrite,args),error:null};
       return await read.rpcResult(name,args);
     },

@@ -54,4 +54,9 @@ describe('native PostgreSQL shared business-code assembly',()=>{
   f.rpc.mockImplementation(async(name?:unknown)=>{if(name==='verify_api_key')return {data:{id:'synthetic',key_hash:hash,wallet:'wallet'},error:null};throw new Error('native audit unavailable');});
   await expect(f.adapter.verifyApiKey('synthetic',hash)).rejects.toThrow('native audit unavailable');
  });
+ it('uses one native dashboard observation and never falls back to whole-table scans',async()=>{
+  const f=fixture();await f.adapter.init();const observation={totalQueries:123};f.rpc.mockResolvedValue({data:observation,error:null});
+  expect(await f.adapter.metrics()).toBe(observation);expect(f.rpc).toHaveBeenCalledExactlyOnceWith('dashboard_metrics',{});expect(state.sdk).not.toHaveBeenCalled();
+  f.rpc.mockRejectedValue(new Error('native report unavailable'));await expect(f.adapter.metrics()).rejects.toThrow('native report unavailable');
+ });
 });

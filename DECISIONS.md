@@ -8967,3 +8967,26 @@ relation failed there. The expanded combined workflow retains every financial
 assertion and has a 25-minute bound for its larger source/profile. This source
 increment does not select the backend or admit production before the remaining
 financial, optional-domain, exact-data and runtime/cutover checks.
+
+
+### 2026-11-12: bound native result aggregation and keep dashboard input in PostgreSQL
+
+Check cumulative encoded result bytes before aggregating 24 fixed list readers
+and five projected scans. Preserve their complete-result refusal, argument and
+cursor rules, and hold the existing native observation locks across both passes.
+Metric scans omit answer bodies and use the union of fields their existing callers
+consume. A per-row conversion and remaining custom families retain separate data
+and memory qualification requirements.
+
+The native dashboard uses one fixed read-only aggregate operation under the same
+identity/source contract and bounded pool. Keep settlement classification, source
+creator payouts, sponsored operating fees, pending/failed originals, account
+deduplication, MCP ordering and historical evidence labels equal to the current
+SQLite calculator. Trim operating transaction evidence using ECMAScript whitespace
+semantics. Return bounded summaries and perform the reference final rounding in
+TypeScript. Never fall back to full-table native scans after a dashboard refusal.
+
+Actual synthetic PostgreSQL qualification compares the current SQLite dashboard
+and exercises 20,000 stored answers with a roughly 1 KiB response. This is not
+production load or complete migration acceptance; economics/leaderboard and other
+whole-report paths still require their own bounded native implementation.

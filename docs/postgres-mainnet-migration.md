@@ -258,3 +258,14 @@ wallet-scoped API-key revocation, retained key restrictions, concurrent daily
 counters, feedback/activation aggregates and actual lost-COMMIT acknowledgement
 without retry. Native API authentication waits for its audit write. Reader roles
 remain unable to write, and no operational identity grants payment authority.
+
+
+`--bounded-reads` adds cumulative wire-byte checks before 29 fixed native list/scan
+aggregations, plus a constant-size native dashboard. Focused qualification uses
+`--bounded-reads-only`: 15 list/scan vectors and 14 dashboard comparisons cover
+escaped-wire overflow, complete-result refusal, projected metric scans, settlement
+classification, account normalization, MCP/evidence semantics and 20,000 synthetic
+answers. The native dashboard returns about 1 KiB and preserves the existing
+historical-evidence label. It never falls back to loading all history after a
+native refusal. Single-row conversion, other reports/custom readers and compiled
+selected-backend load remain separate qualification requirements.
