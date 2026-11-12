@@ -43,6 +43,20 @@ connection counts and disposal during a real database read. The fixture removes
 its own container and verifies absence; other containers remain outside its scope.
 Those configured resource bounds are not a native-pressure enforcement experiment.
 
+The separately prepared VPS instance has a 1 GiB memory ceiling, zero swap,
+75% CPU quota and 64-task ceiling. Apply
+[`service-recovery.conf`](../ops/keryx-postgres/service-recovery.conf) to that
+instance: let PostgreSQL recover an OOM-killed backend, restart a failed main
+process under a bounded restart policy, and cap the stop deadline at 30 seconds.
+The original service policy stopped the instance after a backend OOM and allowed
+a one-hour shutdown wait. A controlled synthetic aggregate exposed that behavior
+before any application database or login was installed. After the policy fix,
+one actual cgroup OOM kill recovered automatically; all 12 concurrent predecessor
+website checks returned HTTP 200 and the synthetic database was removed. This
+qualifies that prepared-service failure case, with SQLite still serving the
+website. It does not qualify selected-backend load or a production cutover.
+Database process recovery never authorizes application payment/write retries.
+
 The same owned fixture tests `scripts/postgres/rehearse-snapshot.mts` against an
 empty private PostgreSQL namespace. Its row encoding preserves SQLite storage
 classes, signed 64-bit integers, real-number bits and raw text/blob bytes, including
@@ -322,6 +336,25 @@ and on every operation. The factory accepts only the package's independently
 generated `runtime-profile.ts` artifact; configuration cannot allocate approval.
 `--runtime-source-reference-only` emits a separate fresh SOURCE reference, with
 `runtimeQualified: false`; it is not runtime/factory acceptance.
+
+Retained `query_runs.data` uses PostgreSQL `json` in the next original-byte
+profile. Claims and privacy digests bind the exact UTF-8 text, including key
+order, whitespace, escape and numeric spellings; never recompute an existing
+digest from normalized JSONB. PostgreSQL documents these representation
+differences in its [JSON types reference](https://www.postgresql.org/docs/17/datatype-json.html).
+
+JSON accessors can reject escaped NUL/surrogate values in unrelated private
+fields. Owner summaries therefore read a private, digest-bound
+`keryx_storage.run_history_projection` derivative, with no original body in the
+summary query. The SOURCE intake producer reads SQLite's existing projection,
+including its repeated-key and provenance rules. A projection insert checks its
+original digest; changing the original invalidates the derivative. A missing
+owner derivative refuses the read even when a filter could hide that row.
+Import uses the held owner lane; ordinary roles cannot edit the derivative.
+The bounded producer refuses originals above its 4,000,000-byte projection
+intake limit; full-data rehearsal must account for every retained row before
+the complete runtime can be admitted.
+This does not qualify native claim/privacy writers or a complete import.
 
 `createReadonlyApplicationStorage()` uses the zero-argument native factory.
 Construction verifies the current identity/catalog and authenticates every bounded

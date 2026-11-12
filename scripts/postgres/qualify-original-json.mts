@@ -8,11 +8,14 @@ import { createSqliteRunClaims,RUN_CLAIMS_SQL } from '../../lib/db/run-claims-sq
 import { createSqliteRunOwnershipHistory } from '../../lib/db/run-ownership-history-sqlite';
 import { createSqliteRunPrivacy,RUN_PRIVACY_SQL } from '../../lib/db/run-privacy-sqlite';
 import type { PostgresUserDomainTransport } from '../../lib/db/postgres/user-domain-transport';
+import { heldHistoryProjectionSql,sqliteOriginalHistoryProjection } from './run-history-projection.mts';
+import { createSqlitePersonalHistory } from '../../lib/db/personal-history-sqlite';
+import { runClaimBindingSchema } from '../../lib/run-claims/contracts';
 export async function qualifyOriginalJson(input:{transport:PostgresUserDomainTransport;network:string;ownerSql:(sql:string)=>string}){
  const db=new DatabaseSync(':memory:'),owner='0x'+'b6'.repeat(20),stamp='2026-01-02T03:04:05.000Z',now=Date.parse(stamp)+1000;
  const hash=(s:string)=>createHash('sha256').update(s).digest('hex'),q=(s:string)=>"'"+s.replaceAll("'","''")+"'";
  const pg=(s:string)=>input.ownerSql("BEGIN;UPDATE keryx_storage.control SET mode='held';"+s+"UPDATE keryx_storage.control SET mode='active';COMMIT;");
- const binding={network:input.network,origin:'https://keryx.cc'},sessionHash=hash('synthetic-original-session');let vectors=0;
+ const binding=runClaimBindingSchema.parse({network:input.network,origin:'https://keryx.cc'}),sessionHash=hash('synthetic-original-session');let vectors=0;
  const base=(id:string)=>({id,question:'Synthetic original byte preservation',createdAt:stamp,budget:0,engine:'heuristic',answer:'Private fixture answer',subClaims:[],decisions:[],citations:[],trace:[],totalSpent:0,totalToCreators:0,paymentMode:'offline'});
  const variants:[string,(id:string)=>string][]=[
   ['minified',id=>JSON.stringify(base(id))],
@@ -33,24 +36,38 @@ export async function qualifyOriginalJson(input:{transport:PostgresUserDomainTra
    await claims.issue({runId:id,completedAt:stamp,tokenHash,binding});await claims.claim({tokenHash,wallet:owner,sessionHash,binding});
    const claim=db.prepare('SELECT * FROM anonymous_run_claims WHERE run_id=?').get(id)!;assert.equal(claim.original_sha256,hash(wire));
    assert.deepEqual((await history.read(owner,binding,id))?.run,JSON.parse(wire));
-   pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data) VALUES(${q(id)},${q(stamp)},'Synthetic original byte preservation',0,${q(wire)}::json);
+   pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data) VALUES(${q(id)},${q(stamp)},'Synthetic original byte preservation',0,${q(wire)}::json);`+heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id))+`
 INSERT INTO public.anonymous_run_claims(run_id,network,origin,token_hash,original_sha256,completed_at,issued_at,expires_at,claimed_wallet,claimed_at) VALUES(${q(id)},${q(binding.network)},${q(binding.origin)},${q(tokenHash)},${q(String(claim.original_sha256))},${q(stamp)},${claim.issued_at},${claim.expires_at},${q(owner)},${claim.claimed_at});`);
    const saved=JSON.parse(input.ownerSql(`SELECT jsonb_build_object('wire',r.data::text,'sha',keryx_storage.run_original_sha256(r.data),'claimSha',c.original_sha256,'matches',keryx_storage.run_original_sha256(r.data)=c.original_sha256) FROM public.query_runs r JOIN public.anonymous_run_claims c ON c.run_id=r.id WHERE r.id=${q(id)};`));
    assert.equal(saved.wire,wire);assert.equal(saved.sha,hash(wire));assert.equal(saved.claimSha,claim.original_sha256);assert.equal(saved.matches,true);vectors++;
    if(name==='indented'){
     assert.notEqual(input.ownerSql(`SELECT encode(sha256(convert_to((data::jsonb)::text,'UTF8')),'hex') FROM public.query_runs WHERE id=${q(id)};`),claim.original_sha256);vectors++;
     pg(`UPDATE public.query_runs SET data=${q(wire+' ')}::json WHERE id=${q(id)};`);
+    assert.equal(input.ownerSql(`SELECT count(*) FROM keryx_storage.run_history_projection WHERE run_id=${q(id)};`),'0');vectors++;
     assert.equal(input.ownerSql(`SELECT keryx_storage.run_original_sha256(r.data)=c.original_sha256 FROM public.query_runs r JOIN public.anonymous_run_claims c ON c.run_id=r.id WHERE r.id=${q(id)};`),'f');
-    pg(`UPDATE public.query_runs SET data=${q(wire)}::json WHERE id=${q(id)};`);vectors++;
+    pg(`UPDATE public.query_runs SET data=${q(wire)}::json WHERE id=${q(id)};`+heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id)));vectors++;
    }
   }
   // A private answer must never be converted just to extract a safe summary.
   const id='synthetic-original-recorded',wire=JSON.stringify({...base(id),asker:owner}).replace('Private fixture answer','private\\u0000answer\\ud800');
-  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker) VALUES(${q(id)},${q(stamp)},'Original projection sentinel',0,${q(wire)}::json,${q(owner)});`);
-  const rows=await input.transport.personalHistory.list(owner,{filters:{search:'Original projection sentinel'},take:1});assert.equal(rows.length,1);assert.equal(rows[0].id,id);assert(!JSON.stringify(rows).includes('private'));vectors++;
+  db.prepare('INSERT INTO query_runs(id,created_at,question,budget,data,asker,total_spent,total_to_creators) VALUES(?,?,?,0,?,?,0,0)').run(id,stamp,'Original projection sentinel',wire,owner);
+  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker) VALUES(${q(id)},${q(stamp)},'Original projection sentinel',0,${q(wire)}::json,${q(owner)});`+heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id)));
+  const query={filters:{search:'Original projection sentinel'},take:1},rows=await input.transport.personalHistory.list(owner,query);assert.deepEqual(rows,await createSqlitePersonalHistory(db).list(owner,query));assert.equal(rows.length,1);assert(!JSON.stringify(rows).includes('private'));vectors++;
+  pg(`DELETE FROM keryx_storage.run_history_projection WHERE run_id=${q(id)};`);await assert.rejects(input.transport.personalHistory.list(owner,{filters:{funding:'browser-recorded'},take:1}));vectors++;
+  pg(heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id)));
+  const badProjection={...sqliteOriginalHistoryProjection(db,id),sha256:'00'.repeat(32)};assert.throws(()=>pg(heldHistoryProjectionSql(id,badProjection)),/projection binding refused/);vectors++;
+  assert.throws(()=>input.ownerSql(heldHistoryProjectionSql(id,sqliteOriginalHistoryProjection(db,id))),/projection writer required/);vectors++;
+  assert.throws(()=>input.ownerSql('SET SESSION AUTHORIZATION keryx_app;UPDATE keryx_storage.run_history_projection SET funded=NOT funded;'),/permission denied/);vectors++;
+  // SQLite resolves repeated keys differently from JSON.parse. Import its exact
+  // current projection, rather than reinterpreting a preserved legacy packet.
+  const duplicateId='synthetic-original-duplicate-projection',duplicateWire=JSON.stringify({...base(duplicateId),asker:owner}).slice(0,-1)+',"askerFunded":true,"askerFunded":false,"provenance":{"version":1,"surface":"api","surface":"web","ownershipMethod":"session"},"private\\u0000key":"unprojected"}';
+  db.prepare('INSERT INTO query_runs(id,created_at,question,budget,data,asker,total_spent,total_to_creators) VALUES(?,?,?,0,?,?,0,0)').run(duplicateId,stamp,'Original duplicate projection',duplicateWire,owner);
+  const duplicateProjection=sqliteOriginalHistoryProjection(db,duplicateId);assert.equal(duplicateProjection.funded,true);assert.equal(duplicateProjection.provenance,null);assert.equal(JSON.parse(duplicateWire).askerFunded,false);
+  pg(`INSERT INTO public.query_runs(id,created_at,question,budget,data,asker) VALUES(${q(duplicateId)},${q(stamp)},'Original duplicate projection',0,${q(duplicateWire)}::json,${q(owner)});`+heldHistoryProjectionSql(duplicateId,duplicateProjection));
+  for(const filters of [{search:'Original '},{surface:'unknown'},{funding:'browser-recorded'}] as const){const page={filters,take:51};assert.deepEqual(await input.transport.personalHistory.list(owner,page),await createSqlitePersonalHistory(db).list(owner,page));vectors++;}
   // Exercise the actual SQLite erasure writer and retain its existing digest.
   const erasedId='synthetic-original-erased',original=JSON.stringify({...base(erasedId),asker:owner});
-  db.prepare('INSERT INTO query_runs(id,created_at,question,budget,data,asker) VALUES(?,?,?,0,?,?)').run(erasedId,stamp,'Private fixture',original,owner);
+  db.prepare('INSERT INTO query_runs(id,created_at,question,budget,data,asker,total_spent,total_to_creators) VALUES(?,?,?,0,?,?,0,0)').run(erasedId,stamp,'Private fixture',original,owner);
   const privacy=createSqliteRunPrivacy(db,history),actor={wallet:owner,binding,sessionHash};
   // Privacy uses the live clock, independently of the explicit claim clock.
   db.prepare('UPDATE web_sessions SET issued_at=?,expires_at=? WHERE hash=?').run(Date.now()-1000,Date.now()+60000,sessionHash);
