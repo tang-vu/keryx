@@ -175,6 +175,23 @@ memory use. Complete current-domain coverage, bounded report projections and
 pre-aggregation limits, native pressure tests, optional ports, writes and the
 closed application factory remain prerequisites for production selection.
 
+The `--current-application-tables` profile also installs the 34 remaining
+application tables, nine retained/current columns and 22 additional indexes.
+Every added table and index is tied to its current SQLite SOURCE declaration
+hash, and source and target are built independently. All 93 SQLite application
+tables are represented; the native reference has one additional legacy policy
+projection. The three transient SQLite writer IDs deliberately map to native
+transaction IDs and must be empty. Their rows are never imported as capabilities.
+
+New integer-affinity fields use a bounded numeric domain with explicit integer
+checks where the source requires them. This avoids PostgreSQL's implicit bigint
+assignment rounding accepting a fractional revision that SQLite rejects. Native
+constraints retain the source's ASCII wallet/handle rules, JSON kinds/array limits
+and UTF-8 byte bounds; 18 differential cases cover those boundaries. Mainnet browser
+challenge metadata/context retention is also enforced. These are table/index and
+existing-protocol qualifications. Complete optional-domain triggers and mutation
+semantics, exact typed materialization and runtime admission are still pending.
+
 The current enrolled PostgreSQL/Supabase lane has explicit refusals for mainnet
 research purchases, original fulfillment, hosted treasury, owner consent and
 withdrawals. Its older sealed contract does not accept a mainnet identity. Current
