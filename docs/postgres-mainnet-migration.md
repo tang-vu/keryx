@@ -627,3 +627,17 @@ checks retained originals and reports counts/digests only. The rehearsal snapsho
 contains 2,344 compatible review records and one verdict. The audit uses the
 verified 512-MiB/no-swap/offline child and its original hard deadline; it does not
 materialize the application database or grant writer/cutover authority.
+
+## Fresh authority before native cache cryptography
+
+Recheck native authority asynchronously after the cold-cache read and before
+opening envelopes. The shared native core also verifies authority after reading
+cached ciphertext and before decryption, and before sealing a cache write. Its
+primitive string inputs are captured before waiting; disposal or changed authority
+prevents crypto and submission. Keep source/identity AAD, key fingerprints and
+the existing codec/size limits.
+
+The compiled Linux fixture can hold a completed cold-read acknowledgement while
+its synthetic owner actually revokes database authority. It then requires factory
+refusal with zero decryption calls and drains the reader connections. This is a
+fixture-only protocol barrier; it provides no runtime callback or target discovery.

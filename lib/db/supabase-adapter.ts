@@ -901,6 +901,7 @@ export class SupabaseAdapter implements KeryxDB {
       .select("text")
       .eq("source_id", _args.p_source_id)
       .maybeSingle());
+    if(this.#native){await this.#native.verify();this.assertEntry();}
     if (identity) return openEnrolledCacheText(data?.text, sourceId, identity);
     return data?.text ? openCacheText(data.text) : null;
   }
@@ -916,6 +917,10 @@ export class SupabaseAdapter implements KeryxDB {
 
   async setCached(sourceId: string, text: string): Promise<void> {
     const identity=this.boundIdentity;
+    if(this.#native){
+      this.assertEntry();if(typeof sourceId!=='string'||typeof text!=='string')refuseStorage('invalid_operation');
+      await this.#native.verify();this.assertEntry();
+    }
     await this.domainCall("set_cached", { p_row: {
         source_id: sourceId,
         text: identity ? sealEnrolledCacheText(text, sourceId, identity) : sealCacheText(text),
