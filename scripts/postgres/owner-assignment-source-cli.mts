@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync,readFileSync,writeFileSync,unlinkSync,mkdirSync,rmdirSync } from 'node:fs';
-import { join,resolve } from 'node:path';
+import { join,resolve,dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { buildSync } from 'esbuild';
 import { canonicalJson } from '../../lib/canonical-json';
@@ -17,7 +17,12 @@ export function sourceOwnerAssignment(folder:string,file:string,identity:Storage
  assert(!existsSync(file+'-wal')&&!existsSync(file+'-shm')&&!existsSync(file+'-journal'),'SOURCE is closed before transfer');
  try{
   mkdirSync(join(folder,'scripts'));
-  buildSync({entryPoints:[resolve('scripts/owner-run-assignment.mts')],outfile:bundle,bundle:true,platform:'node',target:'node24',format:'esm',banner:{js:"import {createRequire as __fixtureCreateRequire} from 'node:module'; const require=__fixtureCreateRequire(import.meta.url);"},logLevel:'silent'});
+  // Temporary synthetic-only diagnosis of the hosted Linux refusal. Preserve
+  // every source auth/storage check; expand only the CLI's caught error output.
+  const entry=resolve('scripts/owner-run-assignment.mts'),source=readFileSync(entry,'utf8'),needle='process.stderr.write(canonicalJson({ error:';
+  assert.equal(source.split(needle).length,2);
+  const diagnostic=source.replace(needle,"process.stderr.write(canonicalJson({ fixtureDiagnostic: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : null, error:");
+  buildSync({stdin:{contents:diagnostic,resolveDir:dirname(entry),sourcefile:entry,loader:'ts'},outfile:bundle,bundle:true,platform:'node',target:'node24',format:'esm',banner:{js:"import {createRequire as __fixtureCreateRequire} from 'node:module'; const require=__fixtureCreateRequire(import.meta.url);"},logLevel:'silent'});
   writeFileSync(manifest,canonicalJson({format:'keryx-storage-deployment-v1',identity,backend:{kind:'sqlite',databasePath:'/work/source.sqlite'}}),{flag:'wx',mode:0o600});
   writeFileSync(operation,canonicalJson(input),{flag:'wx',mode:0o600});
   const command=['--no-warnings','scripts/owner-run-assignment.mts',input.action,'--storage-manifest','/work/storage.json','--identity-digest',storageIdentityDigest(identity),'--input','/work/input.json','--approve-operation-digest',assignmentDigest('owner-operation',input)];
