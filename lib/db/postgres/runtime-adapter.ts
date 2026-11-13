@@ -25,6 +25,7 @@ import { composeNativeFinancialObservation } from './financial-observation';
 import type { PublicUsageStore } from '../../usage/contracts';
 import type { PublicLedgerRunReader } from '../../operator-ledger/native-runs';
 import { capturePublicLedgerLimit } from './ledger-transport';
+import { acceptanceWallet,networkSchema,deliverableIdSchema,type DeliverableAcceptanceStore } from '../../deliverable-acceptance/contracts';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
 /** Deliberately closed until all writer/current-domain/data gates are qualified. */
@@ -64,6 +65,14 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  } satisfies PublicUsageStore);
  const ledger:PublicLedgerRunReader=Object.freeze({async read(raw:number){entry();const take=capturePublicLedgerLimit(raw);await guard();const result=await transport.publicLedgerRuns.read(take);entry();return result;}});
  const readonly=async():Promise<never>=>refuseStorage('readonly_operation');
+ // Capture selectors before the authority await, then read the current original
+ // and sharing consent in the final native snapshot. No stale pre-guard result.
+ const acceptance:DeliverableAcceptanceStore=Object.freeze({
+  async read(owner,network,id){entry();const args=[acceptanceWallet(owner),networkSchema.parse(network),deliverableIdSchema.parse(id)] as const;await guard();const result=await transport.deliverableAcceptance.read(...args);entry();return result;},
+  async publicState(network,id){entry();const args=[networkSchema.parse(network),deliverableIdSchema.parse(id)] as const;await guard();const result=await transport.deliverableAcceptance.publicState(...args);entry();return result;},
+  async metrics(network){entry();const selected=networkSchema.parse(network);await guard();const result=await transport.deliverableAcceptance.metrics(selected);entry();return result;},
+  submit:readonly,
+ } satisfies DeliverableAcceptanceStore);
  const profiles:PrivateProfilesStore=Object.freeze({get:(owner,network)=>read(()=>transport.privateProfiles.get(owner,network)),update:readonly,delete:readonly} satisfies PrivateProfilesStore);
  const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
  const history:PersonalHistoryStore=Object.freeze({list:(owner,query)=>read(()=>transport.personalHistory.list(owner,query)),receipts:(id,take)=>read(()=>transport.personalHistory.receipts!(id,take))} satisfies PersonalHistoryStore);
@@ -97,6 +106,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='topicWatches')return watches;
     if(property==='publicUsage')return usage;
     if(property==='publicLedgerRuns')return privacyActive?ledger:undefined;
+    if(property==='deliverableAcceptance')return acceptance;
     if(typeof property==='string'&&Object.hasOwn(financial,property)){
      const method=Reflect.get(financial,property) as (...args:unknown[])=>Promise<unknown>;
      return(...args:unknown[])=>read(()=>method(...args));

@@ -1,5 +1,23 @@
 # Keryx — Decision Log
 
+## Preserve customer original fingerprints across PostgreSQL storage - 2026-11-13
+
+Deliverable choices bind the exact retained SQLite order/delivery representation
+and immutable acceptance store UUID. Keep a private SOURCE derivative of those
+bytes; JSONB key ordering, parsed JSON fields and timestamp rendering must not
+allocate new fingerprints for an existing delivery. Compare the entire current
+native order and fresh purchase/inbound tuple before using the derivative, and
+invalidate it on every order update. A future A2A writer must refresh it inside
+its bounded write scope before full writer admission.
+
+Use fixed native read/submit operations with current session/key authority,
+revision CAS and exact idempotency. Preserve uncertain acknowledgement outcomes
+without automatic retry. Choices grant no refund, revision or payment execution.
+The genuine read facade performs its original/consent read after the authority
+await, preventing stale public consent from crossing that boundary. Complete
+writer, data import, production capacity and cutover remain separate gates. See
+[the migration contract](docs/postgres-mainnet-migration.md).
+
 ## Capture bounded public ledger metadata inside a fresh native read snapshot - 2026-11-07
 
 The public transfer ledger needs associations, funding classification and recorded

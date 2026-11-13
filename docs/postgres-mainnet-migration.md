@@ -744,3 +744,33 @@ derivatives, escaped content versions and reader/disposal boundaries.
 and emits counts, byte totals and a digest. These are protocol/data compatibility
 checks; they do not admit the complete writer, import application tables or
 establish production capacity.
+
+## Native customer deliverable choices
+
+Preserve the immutable acceptance store UUID and the exact SQLite `SELECT *`
+order JSON, including property order and JSON stored as TEXT. Existing original
+fingerprints hash that representation and the exact delivery token; PostgreSQL
+JSONB reserialization cannot replace it. A private SOURCE derivative retains the
+original text and hashes. The native read compares every current order field,
+with explicit JSON/date representation conversion, and independently requires
+the current exact purchase/inbound tuple. Any order update invalidates the
+derivative. Future A2A writers must publish its replacement before complete writer
+admission; no caller can install one through the read facade.
+
+Fixed native choice operations preserve current session/key scope authority,
+revision CAS, exact idempotency, private reasons and explicit public consent.
+Concurrent revisions have one winner. An uncertain write acknowledgement remains
+unknown until an explicit same-key request reconciles it; there is no automatic
+write retry. Neither a choice nor recorded settlement rows execute a refund,
+revision, payment or job. Public choice counts remain labelled unmeasured.
+
+The genuine read factory captures selectors, awaits fresh authority and then reads
+the current original/consent in its final native transaction. It exposes read,
+public state and counts, while refusing submission before inspecting its input.
+`--acceptance-only` compares actual PostgreSQL against genuine selected SQLite,
+including expired/revoked authority, original changes, concurrent CAS and actual
+lost commit acknowledgement. The compiled Linux factory also withdraws consent
+after a committed authority read to prove that the final observation sees it.
+`--audit-acceptance` checks the retained original inside the contained read-only
+child and emits counts/digests. These checks do not import application tables or
+open the full production writer.
