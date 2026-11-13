@@ -31,6 +31,11 @@ export async function qualifyRunClaims(input:{transport:PostgresUserDomainTransp
   };
   const issue=async(row:ReturnType<typeof save>)=>{const result=await native.issue(row.request);now=Date.parse(result.issuedAt);assert.deepEqual(result,await sqlite.issue(row.request));vectors++;return result;};
   await native.assertAvailable();vectors++;
+  // The SOURCE compares the original date bytes, not merely the instant. A
+  // retained offset representation cannot authorize a normalized UTC ticket.
+  const offset=save('offset-original',{},date.replace('Z','+00:00')),normalized={...offset.request,completedAt:date};
+  now=Date.now();await assert.rejects(sqlite.issue(normalized),code('claim_unavailable'));
+  await assert.rejects(native.issue(normalized),code('claim_unavailable'));vectors++;
   const first=save('first');await issue(first);const receipt=await native.claim(attempt(first.id));now=Date.parse(receipt.claimedAt);assert.deepEqual(receipt,await sqlite.claim(attempt(first.id)));vectors++;
   assert.equal(input.ownerSql(`SELECT data::text FROM public.query_runs WHERE id=${q(first.id)};`),first.wire);assert.equal(input.ownerSql(`SELECT asker IS NULL FROM public.query_runs WHERE id=${q(first.id)};`),'t');vectors++;
   await assert.rejects(native.claim(attempt(first.id)),code('claim_unavailable'));await assert.rejects(sqlite.claim(attempt(first.id)),code('claim_unavailable'));vectors++;
