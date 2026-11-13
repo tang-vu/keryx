@@ -641,3 +641,22 @@ The compiled Linux fixture can hold a completed cold-read acknowledgement while
 its synthetic owner actually revokes database authority. It then requires factory
 refusal with zero decryption calls and drains the reader connections. This is a
 fixture-only protocol barrier; it provides no runtime callback or target discovery.
+
+## Native public health observation
+
+Use one fixed read-only operation for metrics, current A2A operations and the four
+worker/reconciliation sync keys, including the two registry keys only when
+configured. The existing control/data locks protect all inputs. Reuse the current
+dashboard aggregation inside that operation without a second full catalog scan;
+keep fresh identity, catalog, durability and authority checks for every request.
+
+Retain SQLite's completion markers and ordinary/recovered/unknown latency cohorts.
+Read sync keys in one bounded batch, preserving requested order, missing nulls and
+literal Unicode. Refuse a whole observation beyond 1,000 relevant jobs, 4 MiB of
+job packets or 4 MiB of sync values; never publish a truncated healthy result.
+The read facade can return an unavailable snapshot for a data-bound failure only
+after a fresh authority check succeeds. Revoked authority and disposal still reject.
+
+Synthetic PostgreSQL/SQLite parity and the genuine compiled Linux factory qualify
+this observation path. They do not prove production load capacity or identify the
+cause of historical timeout incidents. Complete writer and cutover remain closed.

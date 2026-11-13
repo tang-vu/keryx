@@ -62,6 +62,19 @@ async function main(){
   await assert.rejects(native.assertPostgresRuntimeIdentity(reader,'write'));await assert.rejects(native.assertPostgresRuntimeIdentity(new Proxy(reader,{})));checks++;
   await assert.rejects(application.createApplicationStorage());checks++;
   const metrics=await reader.metrics();assert.equal(metrics.totalQueries,1);checks++;
+  const health=reader.readPublicHealthSnapshot!,sync=reader.getSyncStates!,jobs=reader.a2aOperationsSnapshot.bind(reader),healthNow=Date.parse('2026-10-09T12:00:00.000Z');
+  assert.deepEqual([...(await sync(['dispatchHealth','dispatchHealth','missing']))],[['dispatchHealth',null],['missing',null]]);checks++;
+  const snapshot=await health(healthNow,true);assert(snapshot);assert.deepEqual(snapshot.metrics,metrics);assert.equal(snapshot.syncState.size,6);assert.deepEqual(snapshot.jobs,await jobs(healthNow));assert.notEqual(snapshot.jobs.completionLatencyCohorts,null);checks++;
+  assert.equal((await health(healthNow,false))?.syncState.size,4);assert.throws(()=>health(NaN,false));assert.throws(()=>health(healthNow,1 as never));checks++;
+  const healthAdmin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});
+  try{
+   await healthAdmin.connect();
+   await healthAdmin.query("BEGIN;UPDATE keryx_storage.control SET mode='held';INSERT INTO public.sync_state(key,value) VALUES('dispatchHealth',repeat('x',4194305));UPDATE keryx_storage.control SET mode='active';COMMIT;");
+   assert.equal(await health(healthNow,false),undefined);checks++;
+   await healthAdmin.query("BEGIN;UPDATE keryx_storage.control SET mode='held';DELETE FROM public.sync_state WHERE key='dispatchHealth';UPDATE keryx_storage.control SET mode='active';COMMIT;");
+   assert(await health(healthNow,false));checks++;
+   await healthAdmin.query("UPDATE keryx_storage.control SET mode='held';");await assert.rejects(health(healthNow,false));await assert.rejects(sync([]));checks++;
+  }finally{try{await healthAdmin.query("ROLLBACK;UPDATE keryx_storage.control SET mode='active';");}finally{await healthAdmin.end();}}
   assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),[]);assert.equal(Object.getPrototypeOf(reader),null);checks++;
   const profile=await reader.privateProfiles!.get(input.owner,'eip155:5042');assert.equal(profile.profile,null);assert.equal(profile.activity.questions,1);checks++;
   assert.equal((await reader.profileIdentities!.list(input.owner)).identities.length,0);checks++;
@@ -96,6 +109,7 @@ async function main(){
   await assert.rejects(privacy.read(id,actor));checks++;
   await assert.rejects(bibliographies.list(input.owner));await assert.rejects(bound.list());checks++;
   await assert.rejects(reviews.list(input.owner,'cccccccc-cccc-4ccc-8ccc-cccccccccccc'));checks++;
+  await assert.rejects(sync([]));await assert.rejects(jobs(healthNow));assert.throws(()=>health(healthNow,false));checks++;
   assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,resourcePressureQualified:false,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,coldCacheAuthenticated:true,inputCapturedBeforeAwait:true,actualTerminalDrain:true,observedReadMs,selectedApplicationWriter:false,productionData:false,paidOperations:0}));
  }finally{await native.closePostgresRuntimeAdapter(reader);}
 }

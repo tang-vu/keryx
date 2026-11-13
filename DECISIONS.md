@@ -9255,3 +9255,18 @@ Use an actual committed-read acknowledgement barrier in the compiled Linux
 fixture to revoke authority between read and crypto and require zero decryption
 calls. Preserve private zero-argument factory provenance and keep the complete
 application writer closed pending its remaining gates.
+
+## Read native public health under one protected observation (2026-11-13)
+
+Compose current dashboard metrics, completion-marker-aware job health and the
+configured sync keys in one fixed read-only PostgreSQL operation. Hold the native
+control/data locks across all inputs and perform full fresh metadata admission
+once. Preserve the existing metric calculation; private nested helpers check their
+named read scope without repeating the catalog scan. There is no TTL or authority
+cache and no caller-provided SQL, pool or transaction callback.
+
+Retain current SQLite registry selection, missing-key behavior and completion
+cohorts. Refuse complete-read bounds instead of returning partial health. A valid
+read facade may report an unavailable snapshot on a data failure only after fresh
+authority verification; authority changes and disposal remain errors. This read
+protocol does not admit the complete application writer or production cutover.

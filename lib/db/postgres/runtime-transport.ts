@@ -4,9 +4,10 @@ import { validateStorageIdentity,type StorageIdentity } from '../storage-identit
 import { PostgresStorageUnavailable,type PostgresConnectionOptions } from './connection';
 import { createPostgresDomainChannel,type PostgresDomainChannel } from './domain-channel';
 import { composePostgresUserDomainTransport,type PostgresUserDomainTransport } from './user-domain-transport';
+import { composePostgresHealth,type PostgresHealthTransport } from './health-transport';
 const cacheRow=z.object({sourceId:z.string().min(1).max(256),text:z.string().max(2097152)}).strict();
 export interface NativeColdCacheSnapshot {readonly cacheRows:readonly Readonly<{sourceId:string;text:string}>[];readonly cacheRowCount:number;readonly cacheWireBytes:number;}
-export interface PostgresRuntimeTransport extends PostgresUserDomainTransport {verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
+export interface PostgresRuntimeTransport extends PostgresUserDomainTransport,PostgresHealthTransport {verifyRuntimeAuthority():Promise<void>;readColdCache():Promise<NativeColdCacheSnapshot>;}
 /** Actual fixed reads on one native pool. This transport cannot enroll a facade. */
 export function createPostgresRuntimeTransport(options:PostgresConnectionOptions,identity:StorageIdentity,digest:string,claimsEnabled=false):PostgresRuntimeTransport {
  const expected=validateStorageIdentity(identity);return composePostgresRuntimeTransport(createPostgresDomainChannel(options,expected,digest),expected,digest,options.role!=='keryx_app',claimsEnabled);
@@ -18,6 +19,7 @@ export function composePostgresRuntimeTransport(channel:PostgresDomainChannel,id
  const cold=authority.extend({format:z.literal('keryx-native-storage-cold-read-v1'),cacheRows:z.array(cacheRow).max(512),cacheRowCount:z.number().int().min(0).max(512),cacheWireBytes:z.number().int().min(0).max(8388608)}).strict();
  return Object.freeze({
   ...composePostgresUserDomainTransport(channel,expected,readOnly,claimsEnabled),
+  ...composePostgresHealth(channel),
   async verifyRuntimeAuthority(){
    live();try{const value=authority.parse(await channel.call('nativeRuntimeAuthority',[]));live();if(canonicalJson(validateStorageIdentity(value.identity))!==wire)throw unavailable();}
    catch{throw unavailable();}
