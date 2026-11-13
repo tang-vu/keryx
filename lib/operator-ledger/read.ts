@@ -15,7 +15,7 @@ export async function readOperatorLedger(reader: PublicLedgerReader, network: st
   let scanned = 0, runLimitReached = false;
   const native = publicLedgerRunReader(reader);
   if (native) {
-    const snapshots = native.read(LEDGER_RUN_LIMIT + 1);
+    const snapshots = await native.read(LEDGER_RUN_LIMIT + 1);
     if (!Array.isArray(snapshots) || snapshots.length > LEDGER_RUN_LIMIT + 1) throw new Error("Ledger native metadata unavailable");
     for (const snapshot of snapshots) {
       if (++scanned > LEDGER_RUN_LIMIT) { runLimitReached = true; break; }

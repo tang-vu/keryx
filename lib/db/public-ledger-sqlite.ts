@@ -34,7 +34,7 @@ function recordedRuns(db: DatabaseSync, runs: QueryRun[]): QueryRun[] {
 /** Genuine selected full native user-domain connection only. Fresh full checks
  * surround every synchronous snapshot; no cached admission/visibility, ordinary
  * constructor, caller guard, schema installation or financial capability. */
-export function createEnrolledSqlitePublicLedgerRuns(db: DatabaseSync): PublicLedgerRunReader {
+export function createEnrolledSqlitePublicLedgerRuns(db: DatabaseSync): {read(limit:number):Array<ReturnType<typeof captureLedgerRun>>} {
   if (arguments.length !== 1) throw unavailable();
   let refused = false, admitted = false;
   const retire = () => { refused = true; if (admitted) { try { db.close(); } catch { /* permanently refused */ } } };

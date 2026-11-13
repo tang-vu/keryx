@@ -1,9 +1,9 @@
 import { plain, type LedgerRunSnapshot } from "./capture";
 
 export interface PublicLedgerRunReader {
-  /** One synchronous, bounded native snapshot. Null positions still consume
+  /** One bounded native snapshot. Null positions still consume
    * the scan. No full run, question, answer, callback, cursor or handle escapes. */
-  read(limit: number): Array<LedgerRunSnapshot | null>;
+  read(limit: number): Array<LedgerRunSnapshot | null> | Promise<Array<LedgerRunSnapshot | null>>;
 }
 
 /** An unsupported enrolled proxy may refuse unknown property reads. A present
