@@ -1,5 +1,27 @@
 # Keryx — Decision Log
 
+## Import Source derivatives before native cold-cache qualification - 2026-11-14
+
+After public-cell fidelity, derive history, ownership, privacy, usage, ledger,
+review, watch and acceptance metadata from the same read-only SQLite transaction.
+Insert into empty native private projection tables with parameters; re-read every
+row, including bytea, JSON null and SQL NULL distinctions. Existing original-SHA,
+date, owner and store fences remain authoritative. A projection failure rolls
+back the complete derivative transaction; an unknown commit is never retried.
+
+Pass the original Source logical identity and independently authenticated cache
+digest to a separate compiled Linux read-only runtime process. Use the existing
+content master key and unchanged ciphertext, with the actual zero-argument
+application factory. A wrong-key factory must refuse before a valid factory can
+qualify. Compare native ciphertext and plaintext digests with Source without
+logging either body or key. The isolated target is active only for this read-only
+experiment, then returns to held with all reader connections drained.
+
+Keep the 512MiB intake and read-only runtime profiles distinct, their compiled
+code bounds unchanged, and staging outside the runtime catalog. This closes
+neither complete-writer admission nor fresh-live-input, production capacity,
+startup authority or ROOT cutover requirements.
+
 ## Retain typed originals while rehearsing native public data - 2026-11-14
 
 Use a separate operator database for the lossless SQLite schema and typed row
