@@ -1033,3 +1033,40 @@ The original Supabase `source_items` cascade is not present in SQLite and cannot
 erase retained items or force a fabricated parent during import. Current source
 lookup remains mandatory before paid bundle/article delivery; live registry terms,
 source claims and settlement still provide their existing independent gates.
+
+### Source metadata and original-key cold factory
+
+The same development controller follows public-cell verification with eight
+private projection imports: history, ownership, privacy, usage, public ledger,
+decision reviews, topic watches and acceptance originals. Producers read the
+original SQLite transaction; no derivative is reconstructed from normalized
+target data. Preserve the original acceptance store and old fingerprints.
+Parameterized insertion and actual re-read compare every field, including
+bytea, JSON null and SQL NULL. Refuse existing derivative rows. A synthetic
+native-original mismatch after earlier domain inserts must roll back all eight
+tables before the unchanged Source can be imported successfully.
+
+The snapshot child authenticates the existing cache and passes only its digest,
+counts and Source logical identity to a separate compiled read-only runtime
+child. A retained trial requires the existing `CONTENT_MASTER_KEY`; the key
+travels through bounded stdin and is never logged or copied into an image.
+Synthetic trials generate their own isolated key and encrypted fixture row.
+This qualification requires a nonempty authenticated cache with no NULL rows;
+public-cell fidelity separately preserves all original cache cells.
+
+The cold child uses real root-private Linux credentials and the actual
+zero-argument `createReadonlyApplicationStorage` factory. Its wrong-key attempt
+must refuse, then the original key must authenticate every native envelope.
+Compare Source and native source IDs, ciphertext hashes and plaintext hashes,
+preserving their original identity-bound AAD. Do not rewrap, mint an identity,
+read target identity as an expected value, or claim settlement from cache.
+HTTP is denied and the network namespace has no outbound route.
+
+The cold process retains the existing read-only runtime limits: 512MiB memory,
+no swap, 256MiB JS heap, one CPU, 64 PIDs and a 16MiB compiled-code cap. It runs
+after the separate 512MiB intake child exits; their resource profiles are not
+combined or relaxed. Its hard deadline is three minutes. The isolated target
+is active only for the read-only experiment, then is held again with no remaining
+application/reader connections. The complete application writer stays closed.
+Successful rehearsal still requires fresh live data, actual production load,
+every-role startup admission and authorized ROOT cutover before delivery.

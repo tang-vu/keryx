@@ -19,7 +19,7 @@ export class NativeMaterializationUnavailable extends Error{
  constructor(readonly diagnostic:{stage:string;table:string|null;pgCode:string|null;constraint:string|null;column?:string|null;commitOutcome:'not_attempted'|'unknown'}){super('Native materialization unavailable');}
 }
 const identifier=(value:string)=>{if(!/^[a-z][a-z0-9_]{0,62}$/.test(value))throw Error('Native materialization identifier refused');return '"'+value+'"';};
-function containment(){
+export function assertDevelopmentMaterializationContainment(){
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid!(),0);assert.equal(process.ppid,1);
  for(const [name,expected] of [['memory.max','536870912'],['memory.swap.max','0'],['cpu.max','25000 100000'],['pids.max','32']])assert.equal(readFileSync('/sys/fs/cgroup/'+name,'utf8').trim(),expected);
  const status=readFileSync('/proc/self/status','utf8');assert(/^CapEff:\s+0+$/m.test(status)&&/^NoNewPrivs:\s+1$/m.test(status));
@@ -51,7 +51,7 @@ function rowKey(plan:Plan,values:readonly (string|null)[]){
  assert.equal(values.length,plan.types.length);return JSON.stringify(values.map((value,i)=>nativeMaterializationValueKey(plan.types[i],value)));
 }
 export async function materializeNativeSnapshot(db:DatabaseSync,options:PostgresConnectionOptions,referenceWire:string){
- containment();assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(options.database,'native_materialized');assert.equal(options.role,'postgres');assert.deepEqual(options.endpoint,{kind:'loopback',port:5432});assert(/^[a-f0-9]{48}$/.test(options.password));
+ assertDevelopmentMaterializationContainment();assert(db.isTransaction&&db.prepare('PRAGMA query_only').get()?.query_only===1);assert.equal(options.database,'native_materialized');assert.equal(options.role,'postgres');assert.deepEqual(options.endpoint,{kind:'loopback',port:5432});assert(/^[a-f0-9]{48}$/.test(options.password));
  const reference=exportNativePostgresSchemaContract(referenceWire);assert.equal(reference.sha256,NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256);
  const identity=readStorageIdentity(db);assert.equal(identity.authorityMode,'mainnet-real');assert.equal(identity.network,'eip155:5042');
  const pg=new Client(postgresPoolConfiguration(options)),staging=new Client(postgresPoolConfiguration({...options,database:'native_staging'}));pg.on('error',()=>{});staging.on('error',()=>{});let stage='connect',table:string|null=null,commit=false,started=false;

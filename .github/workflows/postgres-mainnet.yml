@@ -62,7 +62,7 @@ jobs:
       - name: Native Linux cold factory, current protocols and financial regressions
         run: node --import tsx --no-warnings scripts/postgres/test-session-consents.mts --native-runtime
 
-      - name: Held native public materialization and exact typed originals
+      - name: Held native public data, Source metadata and original-key cold factory
         env:
           NODE_OPTIONS: --max-old-space-size=512
         run: node --import tsx --no-warnings scripts/postgres/qualify-native-materialization.mts --synthetic

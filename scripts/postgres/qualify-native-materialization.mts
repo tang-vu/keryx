@@ -23,10 +23,17 @@ if(input){
  if(process.platform==='win32')execFileSync('powershell.exe',['-NoProfile','-NonInteractive','-Command',"$ErrorActionPreference='Stop';$a=Get-Acl -LiteralPath $env:KERYX_SNAPSHOT_INPUT;if(-not $a.AreAccessRulesProtected){throw 'Private ACL required'};$u=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value;foreach($r in $a.Access){$s=$r.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value;if($r.IsInherited -or $r.AccessControlType -ne 'Allow' -or @($u,'S-1-5-18','S-1-5-32-544') -notcontains $s){throw 'Unexpected private ACL principal'}}"],{env:{...process.env,KERYX_SNAPSHOT_INPUT:input},windowsHide:true,timeout:10000,stdio:'pipe'});
  else{assert.equal(st.uid,process.getuid?.());assert.equal(st.nlink,1);assert.equal(st.mode&0o077,0);}
 }
-const name='keryx-native-materialization-'+randomUUID(),password=randomBytes(24).toString('hex');let owned=false;
-let folder:string|undefined,bundle:string|undefined,nodeName:string|undefined;
+const name='keryx-native-materialization-'+randomUUID(),password=randomBytes(24).toString('hex'),key=synthetic?randomBytes(32).toString('hex'):process.env.CONTENT_MASTER_KEY;let owned=false;
+if(!sourcePlanOnly)assert(typeof key==='string'&&/^[a-fA-F0-9]{64}$/.test(key));
+let folder:string|undefined,bundle:string|undefined,coldBundle:string|undefined,nodeName:string|undefined;
 const docker=(args:string[],input?:string,timeout=30000)=>execFileSync('docker',args,{input,encoding:'utf8',windowsHide:true,timeout,maxBuffer:8388608,stdio:['pipe','pipe','pipe']}).trim();
 const sql=(database:'postgres'|'native_source'|'native_materialized',query:string)=>docker(['exec','-i',name,'psql','-X','-qAt','-v','ON_ERROR_STOP=1','-U','postgres','-d',database],query);
+const runChild=(run:string[],packet:string,deadline:number)=>new Promise<{code:number|null;stdout:string}>(resolveResult=>{
+ const child=spawn('docker',run,{windowsHide:true,stdio:['pipe','pipe','ignore']});child.stdin.on('error',()=>{});child.stdin.end(packet);let stdout='',done=false;
+ const stop=()=>{try{if(nodeName)docker(['kill',nodeName]);}finally{child.kill();}};
+ const timer=setTimeout(stop,deadline);child.stdout.on('data',(chunk:Buffer)=>{stdout+=chunk.toString('utf8');if(Buffer.byteLength(stdout)>262144)stop();});
+ const finish=(code:number|null)=>{if(done)return;done=true;clearTimeout(timer);resolveResult({code,stdout});};child.once('error',()=>finish(null));child.once('close',finish);
+});
 try{
  const source=nativeRuntimeSource();assert.equal(source.sha256,NATIVE_READONLY_RUNTIME_PROFILE.sourceSqlSha256);
  assert.match(docker(['image','inspect',pgImage,'--format','{{.Id}}']),/^sha256:[a-f0-9]{64}$/);
@@ -58,22 +65,37 @@ try{
   const compiled=readFileSync(bundle);assert(compiled.length>0&&compiled.length<=4194304);nodeName='keryx-native-materialization-node-'+randomUUID();
   const run=['run','-i','--name',nodeName,'--label','keryx.native-materialization-node='+name,'--network','container:'+name,'--user','0:0','--read-only','--memory','512m','--memory-swap','512m','--cpus','.25','--pids-limit','32','--cap-drop','ALL','--security-opt','no-new-privileges','--ulimit','core=0','--tmpfs','/run/keryx-intake:rw,nosuid,noexec,mode=0700,size=16m','--mount',`type=bind,source=${bundle},target=/child.cjs,readonly`];
   if(input)run.push('--mount',`type=bind,source=${input},target=/input/snapshot.sqlite,readonly`);run.push(nodeImage,'/usr/bin/timeout','--signal=KILL','1800s','node','--no-warnings','--max-old-space-size=256','/child.cjs','--materialize');
-  const packet=JSON.stringify({mode:retained?'retained':'synthetic',password,referenceWire,...(expectedHash?{expectedHash}:{})});assert(Buffer.byteLength(packet)<=8388608);
-  const result=await new Promise<{code:number|null;stdout:string}>(resolveResult=>{
-   const child=spawn('docker',run,{windowsHide:true,stdio:['pipe','pipe','ignore']});child.stdin.on('error',()=>{});child.stdin.end(packet);let stdout='',done=false;
-   const timer=setTimeout(()=>{try{if(nodeName)docker(['kill',nodeName]);}finally{child.kill();}},1810000);
-   child.stdout.on('data',(chunk:Buffer)=>{stdout+=chunk.toString('utf8');if(Buffer.byteLength(stdout)>262144){try{if(nodeName)docker(['kill',nodeName]);}finally{child.kill();}}});
-   const finish=(code:number|null)=>{if(done)return;done=true;clearTimeout(timer);resolveResult({code,stdout});};child.once('error',()=>finish(null));child.once('close',finish);
-  });
+  const packet=JSON.stringify({mode:retained?'retained':'synthetic',password,referenceWire,key,...(expectedHash?{expectedHash}:{})});assert(Buffer.byteLength(packet)<=8388608);
+  const result=await runChild(run,packet,1810000);
   const state=JSON.parse(docker(['inspect',nodeName,'--format','{{json .State}}'])) as {Running:boolean;OOMKilled:boolean};assert(!state.Running);
   const reports=result.stdout.split(/\r?\n/).filter(s=>s.startsWith('{')).map(s=>JSON.parse(s) as Record<string,unknown>),report=reports.at(-1)??null;
+  const sourceIdentityForColdChild=report?.sourceIdentityForColdChild;delete report?.sourceIdentityForColdChild;
   console.log(JSON.stringify({format:'keryx-native-materialization-qualification-v1',sourceSqlSha256:source.sha256,catalogSha256:reference.sha256,independentFreshSourceTargetEqual:true,postgresImage:pgImage,nodeImage,compiledSha256:createHash('sha256').update(compiled).digest('hex'),compiledBytes:compiled.length,compiledByteLimitInclusive:4194304,postgresMemoryBytes:3221225472,postgresSwapBytes:0,privateInputCopiedIntoImage:false,workerExit:result.code,oomKilled:state.OOMKilled,report,productionChanged:false,applicationBackendSwitched:false}));
   assert.equal(result.code,0);assert.equal(state.OOMKilled,false);assert.equal(report?.passed,true);
+  assert.equal(docker(['inspect',nodeName,'--format','{{index .Config.Labels "keryx.native-materialization-node"}}']),name);docker(['rm',nodeName]);nodeName=undefined;
+  coldBundle=join(folder,'cold.cjs');buildSync({entryPoints:[fileURLToPath(new URL('./native-materialized-cold-child.mts',import.meta.url))],outfile:coldBundle,bundle:true,platform:'node',target:'node24',format:'cjs',minifyWhitespace:true,external:['pg-native'],logLevel:'silent'});
+  const coldCompiled=readFileSync(coldBundle);assert(coldCompiled.length>0&&coldCompiled.length<=16777216);
+  nodeName='keryx-native-materialization-cold-'+randomUUID();
+  const coldRun=['run','-i','--name',nodeName,'--label','keryx.native-materialization-node='+name,'--network','container:'+name,'--user','0:0','--read-only','--memory','512m','--memory-swap','512m','--cpus','1','--pids-limit','64','--cap-drop','ALL','--security-opt','no-new-privileges','--ulimit','core=0','--tmpfs','/run/keryx-runtime:rw,nosuid,noexec,mode=0700,size=16m','--mount',`type=bind,source=${coldBundle},target=/cold.cjs,readonly`,
+   '-e','KERYX_NETWORK=arc','-e','NEXT_PUBLIC_KERYX_NETWORK=arc','-e','KERYX_FORCE_OFFLINE=0','-e','BASE_URL=https://keryx.cc',
+   '-e','KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555','-e','NEXT_PUBLIC_KERYX_REGISTRY_ADDRESS=0x5555555555555555555555555555555555555555',
+   nodeImage,'/usr/bin/timeout','--signal=KILL','180s','node','--no-warnings','--max-old-space-size=256','/cold.cjs','--cold'];
+  const coldPacket=JSON.stringify({identity:sourceIdentityForColdChild,password,key,cache:report.cache});assert(Buffer.byteLength(coldPacket)<=32768);
+  sql('native_materialized',"BEGIN;UPDATE keryx_storage.control SET mode='active' WHERE singleton;COMMIT;");
+  try{
+   const coldResult=await runChild(coldRun,coldPacket,190000),coldState=JSON.parse(docker(['inspect',nodeName,'--format','{{json .State}}'])) as {Running:boolean;OOMKilled:boolean};assert(!coldState.Running);
+   const coldReports=coldResult.stdout.split(/\r?\n/).filter(s=>s.startsWith('{')).map(s=>JSON.parse(s) as Record<string,unknown>),coldReport=coldReports.at(-1)??null;
+   console.log(JSON.stringify({format:'keryx-native-materialized-cold-qualification-v1',compiledSha256:createHash('sha256').update(coldCompiled).digest('hex'),compiledBytes:coldCompiled.length,compiledByteLimitInclusive:16777216,workerExit:coldResult.code,oomKilled:coldState.OOMKilled,report:coldReport,productionChanged:false,applicationBackendSwitched:false}));
+   assert.equal(coldResult.code,0);assert.equal(coldState.OOMKilled,false);assert.equal(coldReport?.passed,true);
+  }finally{sql('native_materialized',"BEGIN;UPDATE keryx_storage.control SET mode='held' WHERE singleton;COMMIT;");}
+  assert.equal(sql('native_materialized',"SELECT mode FROM keryx_storage.control WHERE singleton;"),'held');
+  assert.equal(sql('postgres',"SELECT count(*) FROM pg_stat_activity WHERE usename IN('keryx_app','keryx_reader');"),'0');
+  console.log(JSON.stringify({format:'keryx-native-projection-and-cold-qualification-v1',passed:true,sourceDerivedProjectionsMaterialized:true,genuineOriginalKeyColdFactory:true,sourceIdentityUsedAsExpectation:true,isolatedTargetReturnedHeld:true,actualReaderConnectionsDrained:true,completeApplicationWriterQualified:false,productionChanged:false,applicationBackendSwitched:false}));
  }
 }catch{
  console.error(JSON.stringify({format:'keryx-native-materialization-source-plan-v1',passed:false,reason:'native_materialization_source_unavailable',productionChanged:false}));process.exitCode=1;
 }finally{
  if(nodeName&&docker(['ps','-aq','--filter','name=^/'+nodeName+'$'])){assert.equal(docker(['inspect',nodeName,'--format','{{index .Config.Labels "keryx.native-materialization-node"}}']),name);docker(['rm','-f',nodeName]);}
  if(owned){assert.equal(docker(['inspect',name,'--format','{{index .Config.Labels "keryx.native-materialization"}}']),name);docker(['rm','-f',name]);assert.equal(docker(['ps','-aq','--filter','name=^/'+name+'$']),'');owned=false;}
- if(bundle)unlinkSync(bundle);if(folder)rmdirSync(folder);
+ if(bundle)unlinkSync(bundle);if(coldBundle)unlinkSync(coldBundle);if(folder)rmdirSync(folder);
 }
