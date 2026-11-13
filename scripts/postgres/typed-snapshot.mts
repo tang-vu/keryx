@@ -65,13 +65,15 @@ export function snapshotTables(db: DatabaseSync): readonly SnapshotTable[] {
 /** Preserve SQLite storage classes, full signed int64, IEEE-754 real bits,
  * and raw text/blob bytes. Text is read as hex, avoiding UTF-8 replacement,
  * embedded-NUL truncation and PostgreSQL text/JSONB Unicode restrictions. */
-export function* snapshotRows(db: DatabaseSync, table: SnapshotTable): Generator<SnapshotRow> {
+export function* snapshotRows(db: DatabaseSync, table: SnapshotTable, orderBy: readonly string[] = []): Generator<SnapshotRow> {
   if (!db.isTransaction || !table.columns.length || table.columns.length > MAX_COLUMNS) refuse();
+  if (!Array.isArray(orderBy) || orderBy.length > MAX_COLUMNS || new Set(orderBy).size !== orderBy.length
+    || orderBy.some(name => !table.columns.includes(name))) refuse();
   const projection = table.columns.flatMap((name, i) => {
     const column = identifier(name);
     return [`typeof(${column}) AS t${i}`, `CASE WHEN typeof(${column}) IN ('text','blob') THEN lower(hex(CAST(${column} AS BLOB))) ELSE ${column} END AS v${i}`];
   }).join(",");
-  const statement = db.prepare(`SELECT ${projection} FROM ${identifier(table.name)}`);
+  const statement = db.prepare(`SELECT ${projection} FROM ${identifier(table.name)}${orderBy.length ? ' ORDER BY ' + orderBy.map(name => identifier(name) + ' COLLATE BINARY').join(',') : ''}`);
   statement.setReadBigInts(true);
   for (const raw of statement.iterate()) {
     const row: SnapshotValue[] = table.columns.map((_name, i) => {
