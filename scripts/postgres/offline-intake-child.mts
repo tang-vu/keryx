@@ -10,10 +10,11 @@ import { rehearseSqliteSnapshot } from './rehearse-snapshot.mts';
 import { auditRunDomains } from './audit-run-domains.mts';
 import { auditRunPrivacy } from './audit-run-privacy.mts';
 import { auditWorkspaces } from './audit-workspaces.mts';
+import { auditReviews } from './audit-reviews.mts';
 const diagnostic:InventoryDiagnostic={stage:'containment',table:null,rows:0,wireBytes:0,started:performance.now()};
 async function main(){
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid?.(),0);assert.equal(process.ppid,1);
- const mode=process.argv[2];assert(['pressure','deadline','synthetic','inventory','rehearsal','synthetic-rehearsal','domain-audit','privacy-audit','workspace-audit'].includes(mode));
+ const mode=process.argv[2];assert(['pressure','deadline','synthetic','inventory','rehearsal','synthetic-rehearsal','domain-audit','privacy-audit','workspace-audit','review-audit'].includes(mode));
  const rehearsal=mode.endsWith('rehearsal'),synthetic=mode==='synthetic'||mode==='synthetic-rehearsal';assert.equal(process.argv.length,mode==='inventory'||mode==='rehearsal'||mode.endsWith('-audit')?4:3);
  const kernel=(name:string)=>readFileSync('/sys/fs/cgroup/'+name,'utf8').trim();
  const limits={memoryMax:kernel('memory.max'),swapMax:kernel('memory.swap.max'),cpuMax:kernel('cpu.max'),pidsMax:kernel('pids.max')};
@@ -46,7 +47,7 @@ async function main(){
   diagnostic.stage='file-hash';const hash=createHash('sha256');for await(const chunk of createReadStream(target))hash.update(chunk);assert.equal(hash.digest('hex'),expectedHash);
   db=new DatabaseSync(target,{readOnly:true,allowExtension:false,timeout:1000});configureSnapshotConnection(db,OFFLINE_SNAPSHOT_LIMITS);db.exec('BEGIN');
   if(mode.endsWith('-audit')){
-   diagnostic.stage=mode;const audit=(mode==='domain-audit'?auditRunDomains:mode==='privacy-audit'?auditRunPrivacy:auditWorkspaces)(db,diagnostic.started+250000);db.exec('ROLLBACK');db.close();db=undefined;checkSnapshotUnchanged(target,fd,before.size,before.mtimeNs);
+   diagnostic.stage=mode;const audit=(mode==='domain-audit'?auditRunDomains:mode==='privacy-audit'?auditRunPrivacy:mode==='review-audit'?auditReviews:auditWorkspaces)(db,diagnostic.started+250000);db.exec('ROLLBACK');db.close();db=undefined;checkSnapshotUnchanged(target,fd,before.size,before.mtimeNs);
    console.log(JSON.stringify({snapshotSha256:expectedHash,...audit,limits,hardDeadlineSeconds:300,elapsedMs:Math.round(performance.now()-diagnostic.started),enrollmentAuthorized:false,modeIdentityAccepted:false,applicationBackendSwitched:false,paymentActions:0,jobActions:0}));return;
   }
   if(rehearsal){

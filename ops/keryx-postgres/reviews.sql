@@ -21,9 +21,10 @@ BEGIN
 END;$$;
 CREATE TRIGGER native_review_projection_writer BEFORE INSERT OR UPDATE OR DELETE ON keryx_storage.review_projection FOR EACH ROW EXECUTE FUNCTION keryx_storage.review_projection_fence();
 CREATE FUNCTION keryx_storage.review_projection_invalidate() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
-BEGIN DELETE FROM keryx_storage.review_projection WHERE id=OLD.id;RETURN NEW;END;$$;
-CREATE TRIGGER native_review_projection_invalidate AFTER UPDATE OF input_json,run_id,network ON public.decision_review_records FOR EACH ROW
- WHEN(OLD.input_json IS DISTINCT FROM NEW.input_json OR OLD.run_id IS DISTINCT FROM NEW.run_id OR OLD.network IS DISTINCT FROM NEW.network) EXECUTE FUNCTION keryx_storage.review_projection_invalidate();
+BEGIN
+ IF OLD.input_json IS DISTINCT FROM NEW.input_json OR OLD.run_id IS DISTINCT FROM NEW.run_id OR OLD.network IS DISTINCT FROM NEW.network THEN DELETE FROM keryx_storage.review_projection WHERE id=OLD.id;END IF;RETURN NEW;
+END;$$;
+CREATE TRIGGER native_review_projection_invalidate AFTER UPDATE OF input_json,run_id,network ON public.decision_review_records FOR EACH ROW EXECUTE FUNCTION keryx_storage.review_projection_invalidate();
 CREATE FUNCTION keryx_storage.review_metadata(r public.decision_review_records) RETURNS jsonb LANGUAGE plpgsql SET search_path=pg_catalog,pg_temp AS $$
 DECLARE result jsonb;BEGIN
  SELECT metadata INTO result FROM keryx_storage.review_projection p WHERE p.id=r.id AND p.original_sha256=encode(sha256(convert_to(r.input_json,'UTF8')),'hex')

@@ -7,7 +7,8 @@ import { captureReviewPacket } from './review-packet';
 const unavailable=()=>new DecisionReviewError('review_unavailable');
 const rawRow=z.object({id:z.string(),inputHex:z.string().max(16384),createdAt:z.string(),expiresAt:z.string().nullable(),state:z.string(),action:z.string(),rule:z.string(),verdictHex:z.string().max(16384).nullable()}).strict();
 function fromHex(raw:string){if(raw.length%2||/[^0-9a-f]/.test(raw))throw unavailable();return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.from(raw,'hex')));}
-function record(raw:unknown){const r=rawRow.parse(raw),input=captureDecisionSchema.parse(fromHex(r.inputHex));return decisionReviewSchema.parse({...input,initialCodeAction:input.codeAction,initialCodeRule:input.codeRule,id:r.id,createdAt:r.createdAt,expiresAt:r.expiresAt,state:r.state,codeAction:r.action,codeRule:r.rule,verdict:r.verdictHex===null?null:fromHex(r.verdictHex)});}
+export function decodeNativeReviewRow(raw:unknown){const r=rawRow.parse(raw),input=captureDecisionSchema.parse(fromHex(r.inputHex));return decisionReviewSchema.parse({...input,initialCodeAction:input.codeAction,initialCodeRule:input.codeRule,id:r.id,createdAt:r.createdAt,expiresAt:r.expiresAt,state:r.state,codeAction:r.action,codeRule:r.rule,verdict:r.verdictHex===null?null:fromHex(r.verdictHex)});}
+const record=decodeNativeReviewRow;
 const readOps=['reviewReady','reviewRead','reviewList','reviewMetrics'] as const;
 type Read=typeof readOps[number];
 type Write='reviewCapture'|'reviewBegin'|'reviewVerdict'|'reviewConsume'|'reviewCancel'|'reviewExpire'|'reviewObserve';
