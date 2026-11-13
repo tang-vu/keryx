@@ -9,6 +9,7 @@ import { sqliteOriginalHistoryProjection } from './run-history-projection.mts';
 import { sqliteOwnershipHistoryProjection } from './ownership-history-projection.mts';
 import { archiveEntryFromRun } from '../../lib/answers-archive';
 import { slimPrivacyHistoryFields } from '../../lib/db/postgres/privacy-metadata';
+import { sqliteUsageProjection,heldUsageProjectionSql } from './usage-projection.mts';
 export function sqlitePrivacyProjection(db:DatabaseSync,id:string,includeErasure=true){
  const row=db.prepare(`SELECT q.id,q.created_at,q.asker,length(CAST(q.data AS BLOB)) data_bytes,
  CASE WHEN length(CAST(q.data AS BLOB))<=4000000 THEN q.data END original,
@@ -33,10 +34,10 @@ export function sqlitePrivacyProjection(db:DatabaseSync,id:string,includeErasure
   }finally{prospective.close();}
  }
  return Object.freeze({sha256:createHash('sha256').update(row.original).digest('hex'),dataBytes:Number(row.data_bytes),valid,eraseWire,originalFulfillment,
-  questionFields:typeof row.question_fields==='string'?row.question_fields:null,historyFields:history.fields,historyReferences:history.references,learningFields:typeof row.learning_fields==='string'?row.learning_fields:null,archiveWire,eraseProjection});
+  questionFields:typeof row.question_fields==='string'?row.question_fields:null,historyFields:history.fields,historyReferences:history.references,learningFields:typeof row.learning_fields==='string'?row.learning_fields:null,archiveWire,eraseProjection,usage:sqliteUsageProjection(db,id)});
 }
 export function heldPrivacyProjectionSql(id:string,p:ReturnType<typeof sqlitePrivacyProjection>){
  if(!/^[A-Za-z0-9_-]{1,128}$/.test(id)||!/^[a-f0-9]{64}$/.test(p.sha256))throw new Error('Privacy SOURCE projection refused');
  const q=(s:string)=>"'"+s.replaceAll("'","''")+"'",text=(s:string|null)=>s===null?'NULL':q(s);
- return `INSERT INTO keryx_storage.run_privacy_projection(run_id,original_sha256,data_bytes,original_valid,erase_wire,original_fulfillment,question_fields,history_fields,history_references,learning_fields,archive_wire,erase_projection) VALUES(${q(id)},${q(p.sha256)},${p.dataBytes},${p.valid},${text(p.eraseWire)},${p.originalFulfillment},${text(p.questionFields)},${text(p.historyFields)},${q(JSON.stringify(p.historyReferences))}::jsonb,${text(p.learningFields)},${text(p.archiveWire)},${p.eraseProjection===null?'NULL':q(JSON.stringify(p.eraseProjection))+'::jsonb'});`;
+ return `INSERT INTO keryx_storage.run_privacy_projection(run_id,original_sha256,data_bytes,original_valid,erase_wire,original_fulfillment,question_fields,history_fields,history_references,learning_fields,archive_wire,erase_projection) VALUES(${q(id)},${q(p.sha256)},${p.dataBytes},${p.valid},${text(p.eraseWire)},${p.originalFulfillment},${text(p.questionFields)},${text(p.historyFields)},${q(JSON.stringify(p.historyReferences))}::jsonb,${text(p.learningFields)},${text(p.archiveWire)},${p.eraseProjection===null?'NULL':q(JSON.stringify(p.eraseProjection))+'::jsonb'});`+heldUsageProjectionSql(id,p.usage);
 }

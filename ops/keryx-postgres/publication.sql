@@ -1,7 +1,7 @@
 SET ROLE keryx_owner;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
  ('publication_ready',ARRAY[]::text[],true,true),
- ('publication_save',ARRAY['query_runs','run_privacy','run_history_projection','run_ownership_projection','run_privacy_projection']::text[],true,false);
+ ('publication_save',ARRAY['query_runs','run_privacy','run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection']::text[],true,false);
 CREATE FUNCTION public.storage_publication_ready(expected jsonb,digest text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 BEGIN
  IF current_setting('transaction_read_only')<>'on' THEN RAISE EXCEPTION 'native publication read-only transaction required';END IF;
@@ -23,6 +23,7 @@ BEGIN
   OR original->>'question' IS DISTINCT FROM r->>'question' OR original->>'answer' IS DISTINCT FROM r->>'answer'
   OR packet->'history'->>'sha256' IS DISTINCT FROM fingerprint OR packet->'ownership'->>'sha256' IS DISTINCT FROM fingerprint
   OR packet->'privacy'->>'sha256' IS DISTINCT FROM fingerprint OR packet->'privacy'->>'valid' IS DISTINCT FROM 'true'
+  OR packet->'privacy'->'usage'->>'sha256' IS DISTINCT FROM fingerprint OR packet->'privacy'->'usage'->>'bodyIdentityValid' IS DISTINCT FROM 'true'
  THEN RAISE EXCEPTION 'privacy_unavailable';END IF;
  IF EXISTS(SELECT 1 FROM public.run_privacy WHERE run_id=selected_id AND erased=1) THEN RAISE EXCEPTION 'privacy_erased';END IF;
  fresh:=NOT EXISTS(SELECT 1 FROM public.query_runs WHERE id=selected_id) AND NOT EXISTS(SELECT 1 FROM public.run_privacy WHERE run_id=selected_id);
@@ -39,6 +40,7 @@ BEGIN
  DELETE FROM keryx_storage.run_history_projection WHERE run_id=selected_id;
  DELETE FROM keryx_storage.run_ownership_projection WHERE run_id=selected_id;
  DELETE FROM keryx_storage.run_privacy_projection WHERE run_id=selected_id;
+ DELETE FROM keryx_storage.usage_projection WHERE run_id=selected_id;
  PERFORM keryx_storage.install_run_projection(selected_id,packet,true);
  RETURN jsonb_build_object('id',selected_id,'originalSha256',fingerprint);
 END;$$;

@@ -22,6 +22,7 @@ import { readPrivatePostgresCredential } from './private-credential';
 import { createPostgresRuntimeTransport } from './runtime-transport';
 import { NATIVE_READONLY_RUNTIME_PROFILE } from './runtime-profile';
 import { composeNativeFinancialObservation } from './financial-observation';
+import type { PublicUsageStore } from '../../usage/contracts';
 const facades=new WeakMap<object,{identity:Readonly<StorageIdentity>;guard:()=>Promise<void>;close:()=>Promise<void>;closed:()=>boolean}>();
 const keyFingerprint=()=>{if(!hasContentKey())refuseStorage('cache_migration_required');return createHash('sha256').update(process.env.CONTENT_MASTER_KEY!).digest('hex');};
 /** Deliberately closed until all writer/current-domain/data gates are qualified. */
@@ -39,7 +40,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  if(deployment.backend.sourceDigest!==NATIVE_READONLY_RUNTIME_PROFILE.catalogSha256)refuseStorage('adapter_not_initialized');
  const selected=deployment.backend,expectedWire=canonicalJson(deployment),credential=readPrivatePostgresCredential(selected.credentialPaths.reader,'keryx_reader'),key=keyFingerprint();
  const claimsEnabled=runClaimsEnabled(process.env),privacyActive=process.env.KERYX_RUN_PRIVACY_ENABLED==='true';
- const transport=createPostgresRuntimeTransport({endpoint:selected.endpoint,database:selected.database,role:'keryx_reader',password:credential.password},deployment.identity,selected.sourceDigest,claimsEnabled);
+ const transport=createPostgresRuntimeTransport({endpoint:selected.endpoint,database:selected.database,role:'keryx_reader',password:credential.password},deployment.identity,selected.sourceDigest,claimsEnabled,privacyActive);
  let closed=false,closing:Promise<void>|undefined;
  const entry=()=>{
   if(closed)refuseStorage('adapter_not_initialized');
@@ -54,6 +55,11 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
  // A separate fresh guard still checks authority before publishing the result.
  const read=async<T>(work:()=>Promise<T>)=>{entry();const value=await work();await guard();return value;};
  const financial=composeNativeFinancialObservation(transport);
+ const usage:PublicUsageStore=Object.freeze({
+  summary:window=>read(()=>transport.publicUsage.summary(window)),
+  async history(window,cohort,limit){const plan=await read(()=>transport.prepareUsageHistory(window,cohort,limit,false));entry();const result=await transport.finishUsageHistory(plan);entry();return result;},
+  async publishedHistory(window,cohort,limit){const plan=await read(()=>transport.prepareUsageHistory(window,cohort,limit,true));entry();const result=await transport.finishPublishedUsageHistory(plan);entry();return result;},
+ } satisfies PublicUsageStore);
  const readonly=async():Promise<never>=>refuseStorage('readonly_operation');
  const profiles:PrivateProfilesStore=Object.freeze({get:(owner,network)=>read(()=>transport.privateProfiles.get(owner,network)),update:readonly,delete:readonly} satisfies PrivateProfilesStore);
  const identities:ProfileIdentitiesStore=Object.freeze({list:owner=>read(()=>transport.profileIdentities.list(owner)),begin:readonly,consume:readonly,complete:readonly,unlink:readonly} satisfies ProfileIdentitiesStore);
@@ -86,6 +92,7 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='privateBibliographies')return bibliographies;
     if(property==='decisionReviews')return reviews;
     if(property==='topicWatches')return watches;
+    if(property==='publicUsage')return usage;
     if(typeof property==='string'&&Object.hasOwn(financial,property)){
      const method=Reflect.get(financial,property) as (...args:unknown[])=>Promise<unknown>;
      return(...args:unknown[])=>read(()=>method(...args));

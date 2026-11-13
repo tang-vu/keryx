@@ -10,6 +10,7 @@ import { economicsRunSample } from '../../economics/testnet-economics';
 import { archiveEntryFromRun } from '../../answers-archive';
 import type { QueryRun } from '../../types';
 import { slimPrivacyHistoryFields } from './privacy-metadata';
+import { publicationUsageMetadata,usageBodyMetadata } from './usage-metadata';
 type ValueKind='null'|'array'|'object'|'text'|'integer'|'real'|'true'|'false';
 function kind(value:unknown):ValueKind{
  if(value===null)return 'null';if(Array.isArray(value))return 'array';if(typeof value==='object')return 'object';if(typeof value==='string')return 'text';if(typeof value==='boolean')return value?'true':'false';
@@ -33,10 +34,11 @@ function fieldWire(run:Record<string,unknown>,mode:'question'|'history'|'learnin
   return [key,type,projected];
  }));
 }
+type UsageProjection={sha256:string}&ReturnType<typeof publicationUsageMetadata>&ReturnType<typeof usageBodyMetadata>;
 interface PublicationDerivatives {
  history:{sha256:string;recordedOwner:string|null;ownerInvalid:boolean;funded:boolean;provenance:ReturnType<typeof parseRunProvenance>|null;anonymousClaimEligible:boolean};
  ownership:{sha256:string;questionHex:string;historyEligible:boolean;recordedValid:boolean;claimedValid:boolean;summary:ReturnType<typeof summarizeOwnershipOriginal>|null};
- privacy:{sha256:string;dataBytes:number;valid:boolean;eraseWire:string;originalFulfillment:boolean;questionFields:string;historyFields:string|null;historyReferences:ReturnType<typeof slimPrivacyHistoryFields>['references'];learningFields:string;archiveWire:string|null;eraseProjection:PublicationDerivatives|null};
+ privacy:{sha256:string;dataBytes:number;valid:boolean;eraseWire:string;originalFulfillment:boolean;questionFields:string;historyFields:string|null;historyReferences:ReturnType<typeof slimPrivacyHistoryFields>['references'];learningFields:string;archiveWire:string|null;eraseProjection:PublicationDerivatives|null;usage:UsageProjection};
 }
 function derive(run:QueryRun,wire:string,recordedOwner:string|null,includeErasure:boolean):PublicationDerivatives{
  const raw=run as unknown as Record<string,unknown>,sha256=createHash('sha256').update(wire).digest('hex'),dataBytes=Buffer.byteLength(wire);
@@ -47,7 +49,8 @@ function derive(run:QueryRun,wire:string,recordedOwner:string|null,includeErasur
  const ownership={sha256,questionHex:Buffer.from(run.question).toString('hex'),historyEligible:eligible,recordedValid:owned('recorded'),claimedValid:owned('claimed'),summary};
  const slim=slimPrivacyHistoryFields(fieldWire(raw,'history'));let archiveWire:string|null=null;try{archiveWire=JSON.stringify(archiveEntryFromRun(run));}catch{}
  const eraseWire=JSON.stringify(erasedRun(run)),eraseProjection=includeErasure?derive(JSON.parse(eraseWire) as QueryRun,eraseWire,recordedOwner,false):null;
- const privacy={sha256,dataBytes,valid:true,eraseWire,originalFulfillment:!!run.originalFulfillment,questionFields:fieldWire(raw,'question'),historyFields:slim.fields,historyReferences:slim.references,learningFields:fieldWire(raw,'learning'),archiveWire,eraseProjection};
+ const usage={sha256,...publicationUsageMetadata(raw),...usageBodyMetadata(run,run.id,run.createdAt)};
+ const privacy={sha256,dataBytes,valid:true,eraseWire,originalFulfillment:!!run.originalFulfillment,questionFields:fieldWire(raw,'question'),historyFields:slim.fields,historyReferences:slim.references,learningFields:fieldWire(raw,'learning'),archiveWire,eraseProjection,usage};
  return {history,ownership,privacy};
 }
 function text(value:unknown,nullable=false):string|null{

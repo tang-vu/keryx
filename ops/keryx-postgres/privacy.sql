@@ -166,6 +166,7 @@ DECLARE h jsonb;o jsonb;p jsonb;
 BEGIN
  IF packet IS NULL OR jsonb_typeof(packet)<>'object' OR octet_length(packet::text)>16777216 THEN RAISE EXCEPTION 'privacy_unavailable';END IF;
  h:=packet->'history';o:=packet->'ownership';p:=packet->'privacy';
+ PERFORM keryx_storage.install_usage_projection(selected_id,p->'usage');
  INSERT INTO keryx_storage.run_history_projection(run_id,original_sha256,recorded_owner,owner_invalid,funded,provenance,anonymous_claim_eligible)
   VALUES(selected_id,h->>'sha256',h->>'recordedOwner',(h->>'ownerInvalid')::boolean,(h->>'funded')::boolean,nullif(h->'provenance','null'::jsonb),(h->>'anonymousClaimEligible')::boolean);
  INSERT INTO keryx_storage.run_ownership_projection(run_id,original_sha256,question_search,history_eligible,recorded_valid,claimed_valid,summary)
@@ -176,7 +177,7 @@ END;$$;
 INSERT INTO keryx_storage.operations(operation,relations,real_only,read_only) VALUES
  ('privacy_default',ARRAY['run_privacy_defaults','run_privacy_audit']::text[],true,false),
  ('privacy_visibility',ARRAY['run_privacy','run_privacy_audit']::text[],true,false),
- ('privacy_erase',ARRAY['query_runs','run_privacy','run_privacy_audit','query_memories','gap_intents','run_history_projection','run_ownership_projection','run_privacy_projection']::text[],true,false),
+ ('privacy_erase',ARRAY['query_runs','run_privacy','run_privacy_audit','query_memories','gap_intents','run_history_projection','run_ownership_projection','run_privacy_projection','usage_projection']::text[],true,false),
  ('privacy_export',ARRAY['run_privacy_audit']::text[],true,false);
 CREATE FUNCTION keryx_storage.privacy_mutate(selected_action text,selected_id text,actor jsonb,input_wire text,claims boolean) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,pg_temp AS $$
 DECLARE wallet text;input jsonb;prior text;current_state jsonb;result jsonb;original_digest text;projection keryx_storage.run_privacy_projection%rowtype;request_id text;requested text;
