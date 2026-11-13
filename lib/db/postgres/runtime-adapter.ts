@@ -84,6 +84,13 @@ export async function createReadonlyPostgresRuntimeAdapter():Promise<KeryxDB>{
     if(property==='privateBibliographies')return bibliographies;
     if(property==='decisionReviews')return reviews;
     if(property==='topicWatches')return watches;
+    if(property==='getSyncStates')return(keys:readonly string[])=>read(()=>transport.getSyncStates(keys));
+    if(property==='a2aOperationsSnapshot')return(nowMs:number)=>read(()=>transport.currentA2aOperationsSnapshot(nowMs));
+    if(property==='readPublicHealthSnapshot')return(...args:unknown[])=>{
+     entry();if(args.length!==2||typeof args[0]!=='number'||!Number.isSafeInteger(args[0])||args[0]< -8640000000000000+86400000||args[0]>8640000000000000||typeof args[1]!=='boolean')refuseStorage('invalid_operation');
+     const now=args[0] as number,registry=args[1] as boolean;
+     return (async()=>{try{return await read(()=>transport.readPublicHealthSnapshot(now,registry));}catch{await guard();return undefined;}})();
+    };
     // Only currently qualified bounded observations escape this profile.
     if(property!=='init'&&property!=='metrics')refuseStorage('invalid_operation');
     const method=Reflect.get(target,property) as (...args:unknown[])=>Promise<unknown>;
