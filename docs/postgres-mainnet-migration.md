@@ -675,3 +675,16 @@ it over stdin. Keep the original read-only mount, verified native-memory pressur
 and hard deadline. Counts, source/key fingerprints and digests leave the child;
 plaintext and key bytes do not. These audits do not import application tables,
 rebind cache ciphertext to a target identity, enroll a store or start jobs.
+
+## Qualified native financial observations
+
+The genuine read factory binds the existing fixed consent, retained signer
+capacity, funding, withdrawal and hosted-ledger observation ports to the current
+`KeryxDB` method names. They share the existing native channel and preserve fresh
+authority/configuration checks and terminal disposal. These observations retain
+the original protocol validators and accounting rules; they do not read through
+the legacy RPC bridge or allocate another connection pool.
+
+Mutation methods remain absent from this facade. Reading retained policy or
+withdrawal history does not renew a policy, authorize a withdrawal, reset capacity,
+submit a payment or open complete application-writer admission.
