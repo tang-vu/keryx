@@ -8,9 +8,10 @@ import { Client } from 'pg';
 import { startReadonlyCommitBarrier } from './readonly-commit-barrier.mts';
 import { publicLedgerRunReader } from '../../lib/operator-ledger/native-runs';
 import type { AcceptanceSnapshot,PublicAcceptance,AcceptanceMetrics } from '../../lib/deliverable-acceptance/contracts';
+import type { AccountBinding,AccountPrecondition,AccountSnapshot,InteractiveSession } from '../../lib/accounts/contracts';
 async function main(){
  const buffer=Buffer.alloc(16385);let bytes=0;while(bytes<buffer.length){const n=readSync(0,buffer,bytes,buffer.length-bytes,null);if(!n)break;bytes+=n;}assert(bytes<=16384);
- const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics}};
+ const input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(buffer.subarray(0,bytes))) as {mode:string;identity:Record<string,unknown>;digest:string;password:string;key:string;owner:string;session:{hash:string;wallet:string;issuedAt:number;expiresAt:number};acceptance:{owner:string;network:string;id:string;snapshot:AcceptanceSnapshot;publicState:PublicAcceptance;metrics:AcceptanceMetrics};account:{session:InteractiveSession;binding:AccountBinding;snapshot:AccountSnapshot;offer:AccountPrecondition}};
  assert.equal(process.platform,'linux');assert.equal(process.version,'v24.22.1');assert.equal(process.getuid!(),0);
  const cgroup=(name:string)=>readFileSync('/sys/fs/cgroup/'+name,'utf8').trim();
  const limits={memoryMax:cgroup('memory.max'),swapMax:cgroup('memory.swap.max'),cpuMax:cgroup('cpu.max'),pidsMax:cgroup('pids.max')};
@@ -63,6 +64,14 @@ async function main(){
   }finally{try{if(observer)await application.closeReadonlyApplicationStorage(observer);await admin.query("ROLLBACK;BEGIN;UPDATE keryx_storage.control SET mode='held';UPDATE public.run_privacy SET visibility='public' WHERE run_id='synthetic-runtime-run';UPDATE keryx_storage.control SET mode='active';COMMIT;");}finally{await admin.end();await barrier?.close();}}
  }
  if(input.mode==='wrong-credential-role')writeFileSync(readerPath,credential('keryx_app'));
+ if(input.mode==='withdrawn-before-account-read'){
+  const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});let barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,observer:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>;
+  try{
+   await admin.connect();barrier=await startReadonlyCommitBarrier(5432,async()=>{await admin.query("BEGIN;UPDATE keryx_storage.control SET mode='held';");await admin.query('DELETE FROM public.web_sessions WHERE hash=$1',[input.session.hash]);await admin.query("UPDATE keryx_storage.control SET mode='active';COMMIT;");});manifest.backend.endpoint.port=barrier.port;writeFileSync(manifestPath,canonicalJson(manifest));observer=await application.createReadonlyApplicationStorage();assert(observer);const accounts=observer.accountMembership!;
+   assert.deepEqual(await accounts.resolve(input.account.session,input.account.binding),input.account.snapshot);checks++;barrier.arm();await assert.rejects(accounts.resolve(input.account.session,input.account.binding),/account_unauthenticated/);checks++;assert.deepEqual(barrier.observation(),{intercepted:true,completed:true,failed:false});checks++;
+   console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,genuineZeroArgumentReadonlyFactory:true,actualCommittedAuthorityReadThenSessionRevocation:true,finalNativeAccountReadAfterAuthorityAwait:true,selectedApplicationWriter:false,productionData:false,paidOperations:0}));return;
+  }finally{try{if(observer)await application.closeReadonlyApplicationStorage(observer);await admin.query("ROLLBACK;BEGIN;UPDATE keryx_storage.control SET mode='held';");await admin.query('DELETE FROM public.web_sessions WHERE hash=$1',[input.session.hash]);await admin.query('INSERT INTO public.web_sessions(hash,wallet,issued_at,expires_at) VALUES($1,$2,$3,$4)',[input.session.hash,input.session.wallet,input.session.issuedAt,input.session.expiresAt]);await admin.query("UPDATE keryx_storage.control SET mode='active';COMMIT;");}finally{await admin.end();await barrier?.close();}}
+ }
  if(input.mode==='withdrawn-before-acceptance-read'){
   const admin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});let barrier:Awaited<ReturnType<typeof startReadonlyCommitBarrier>>|undefined,observer:Awaited<ReturnType<typeof application.createReadonlyApplicationStorage>>;
   try{
@@ -91,6 +100,11 @@ async function main(){
   const acceptance=reader.deliverableAcceptance!,acceptanceArgs=[input.acceptance.owner,input.acceptance.network,input.acceptance.id] as const;
   assert.deepEqual(await acceptance.read(...acceptanceArgs),input.acceptance.snapshot);assert.deepEqual(await acceptance.publicState(input.acceptance.network,input.acceptance.id),input.acceptance.publicState);assert.deepEqual(await acceptance.metrics(input.acceptance.network),input.acceptance.metrics);checks++;
   let acceptanceParsed=0;await assert.rejects(acceptance.submit(...acceptanceArgs,{get choice(){acceptanceParsed++;throw Error();}} as never,{} as never),/readonly_operation/);assert.equal(acceptanceParsed,0);checks++;
+  const accountDescriptor=Object.getOwnPropertyDescriptor(reader,'accountMembership');assert(accountDescriptor&&!accountDescriptor.enumerable&&accountDescriptor.value===reader.accountMembership);const accounts=reader.accountMembership!;
+  const getWebSession=reader.getWebSession;
+  assert.deepEqual(await accounts.offer(input.account.session,input.account.binding),input.account.offer);assert.deepEqual(await accounts.resolve(input.account.session,input.account.binding),input.account.snapshot);await accounts.assertCurrent(input.account.snapshot);checks++;
+  assert.deepEqual(await getWebSession(input.session.hash),input.session);checks++;
+  let accountParsed=0;await assert.rejects(accounts.resume({get wallet(){accountParsed++;throw Error();}} as never,{} as never,{} as never,{} as never),/readonly_operation/);assert.equal(accountParsed,0);assert.equal(accounts.prepareHistoryFence,undefined);checks++;
   const funding=reader.sessionFundingAccounting.bind(reader),financialId='0x'+'cd'.repeat(32),missingEpoch='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
   const financialAdmin=new Client({host:'127.0.0.1',port:5432,user:'postgres',database:'native_target',password:input.password,ssl:false,connectionTimeoutMillis:1000,query_timeout:5000,options:'-c statement_timeout=4000 -c lock_timeout=1000',application_name:'keryx-synthetic-owner'});let journalActive:boolean|undefined;
   try{
@@ -122,7 +136,7 @@ async function main(){
    assert(await health(healthNow,false));checks++;
    await healthAdmin.query("UPDATE keryx_storage.control SET mode='held';");await assert.rejects(health(healthNow,false));await assert.rejects(sync([]));await assert.rejects(funding(input.owner));checks++;
   }finally{try{await healthAdmin.query("ROLLBACK;UPDATE keryx_storage.control SET mode='active';");}finally{await healthAdmin.end();}}
-  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
+  assert.throws(()=>Reflect.get(reader,'getQueryRun'));assert.throws(()=>Reflect.get(reader,'upsertSource'));assert.throws(()=>Reflect.get(reader,'saveQueryRun'));assert.deepEqual(Reflect.ownKeys(reader),['publicLedgerRuns','accountMembership']);assert.deepEqual(Object.keys(reader),['publicLedgerRuns']);assert.equal(Object.getPrototypeOf(reader),null);checks++;
   const profile=await reader.privateProfiles!.get(input.owner,'eip155:5042');assert.equal(profile.profile,null);assert.equal(profile.activity.questions,1);checks++;
   assert.equal((await reader.profileIdentities!.list(input.owner)).identities.length,0);checks++;
   let parsed=0;await assert.rejects(reader.privateProfiles!.update(input.owner,{get displayName(){parsed++;return 'unused';}} as never));assert.equal(parsed,0);checks++;
@@ -161,6 +175,7 @@ async function main(){
   await assert.rejects(publicUsage.summary(usageWindow));await assert.rejects(publicUsage.history(usageWindow,'unknown',1));checks++;
   await assert.rejects(async()=>ledger.read(1));checks++;
   await assert.rejects(acceptance.read(...acceptanceArgs));await assert.rejects(acceptance.publicState(input.acceptance.network,input.acceptance.id));await assert.rejects(acceptance.metrics(input.acceptance.network));checks++;
+  await assert.rejects(accounts.resolve(input.account.session,input.account.binding));await assert.rejects(getWebSession(input.session.hash));checks++;
   assert.equal(outbound,0);console.log(JSON.stringify({passed:true,mode:input.mode,checks,platform:process.platform,node:process.version,outbound,limits,resourcePressureQualified:false,actualPrivatePermissions:true,genuineZeroArgumentReadonlyFactory:true,exactFacadeProvenance:true,coldCacheAuthenticated:true,inputCapturedBeforeAwait:true,actualTerminalDrain:true,observedReadMs,selectedApplicationWriter:false,productionData:false,paidOperations:0}));
  }finally{await native.closePostgresRuntimeAdapter(reader);}
 }

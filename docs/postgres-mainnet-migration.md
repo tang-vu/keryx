@@ -796,3 +796,39 @@ actual reader role, missing former individual entrypoints and current function
 inventory. The compiled Linux factory and complete native financial/domain CI
 remain required before accepting a new runtime profile. This changes internal
 native entrypoints without changing public product contracts or production storage.
+
+## Native account membership journal
+
+Nine fixed operations preserve the existing six-table account journal: offer,
+resolve, current, resume, issue, take, complete, unlink and revoke. Native checks
+bind the exact durable login, membership revision, credential generation, origin,
+network and consent. The dedicated mainnet profile requires the enrolled origin
+and network; this does not qualify arbitrary cross-origin account enrollment.
+JWT authentication remains the server caller's responsibility. A session hash is
+a selector, never a credential or payment authorization.
+
+Keep the exact stored challenge TEXT and lease commitment. Invalid take attempts
+commit their consumed marker, while ordinary refused mutations roll back. Concurrent
+take/complete operations have one winner. Unknown commit acknowledgement stays
+unknown and receives no automatic retry. New login/resume retains the credential
+generation; unlink/revocation cannot resurrect an old session. Keep eight wallets,
+eight live challenges and the existing 1024-entry retention limits. No financial
+row or signing authority belongs to these write scopes.
+
+`--accounts-only` compares actual PostgreSQL with genuine selected SQLite,
+including current-session changes, actual writer blocking followed by revocation
+or expiry, retained challenge limits and a real lost commit acknowledgement.
+The compiled Linux readonly factory exposes offer/resolve/current and exact
+durable web-session reads. It captures inputs before awaiting authority and performs
+the final native account read afterwards; a committed session revocation at that
+boundary refuses the result. Mutations refuse before inspecting inputs, and
+captured methods refuse after terminal close.
+
+The factory supplies no `prepareHistoryFence`. The existing history seal is
+synchronous; replacing it with an asynchronous function would leave a gap before
+private history serialization. A qualified final asynchronous original/privacy/
+membership observation and its route consumers remain required. The complete
+application writer, materialized import, production capacity and cutover also
+remain closed. The retained original's accepted typed inventory contains zero
+rows in all six account tables; that census does not establish future import or
+history authorization.
